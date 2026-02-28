@@ -973,17 +973,43 @@ function writeGEDCOM() {
 // ─────────────────────────────────────
 function exportGEDCOM() {
   const content = writeGEDCOM();
+  const d = new Date();
+  const filename = `stammbaum_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.ged`;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  if (isIOS && navigator.canShare) {
+    // iOS: Web Share API → „In Dateien sichern" → direkt iCloud wählen
+    const file = new File([content], filename, { type: 'text/plain' });
+    if (navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: filename
+      }).then(() => {
+        changed = false;
+        updateChangedIndicator();
+        showToast('✓ Gespeichert');
+      }).catch(err => {
+        if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen');
+      });
+      return;
+    }
+  }
+
+  // Desktop / Fallback: normaler Download
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  const d = new Date();
-  a.download = `stammbaum_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.ged`;
+  a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+
   changed = false;
   updateChangedIndicator();
-  showToast('✓ Datei heruntergeladen – in iCloud ablegen');
+  showToast('✓ Datei heruntergeladen');
 }
 
 // ─────────────────────────────────────
