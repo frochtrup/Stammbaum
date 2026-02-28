@@ -498,7 +498,7 @@ body {
     <div class="ub-icon">📜</div>
     <h3>GEDCOM-Datei öffnen</h3>
     <p>Tippen Sie hier oder ziehen Sie<br>eine .ged Datei hierher</p>
-    <input type="file" id="fileInput" accept=".ged,.gedcom,.GED,text/plain,text/*" capture="false">
+    <input type="file" id="fileInput" accept=".ged,.gedcom,.GED,text/plain,text/*">
   </div>
 
   <div class="icloud-hint">
@@ -534,17 +534,19 @@ body {
     <button class="tab active" onclick="switchTab('persons')">Personen</button>
     <button class="tab" onclick="switchTab('families')">Familien</button>
     <button class="tab" onclick="switchTab('sources')">Quellen</button>
+    <button class="tab" onclick="switchTab('places')">Orte</button>
   </div>
 
   <div id="tab-persons">
     <div class="search-wrap">
-      <input class="search-input" type="search" id="searchInput" placeholder="Name suchen…" oninput="filterPersons(this.value)">
+      <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" oninput="filterPersons(this.value)">
     </div>
     <div id="personList"></div>
   </div>
 
   <div id="tab-families" style="display:none"></div>
   <div id="tab-sources" style="display:none"></div>
+  <div id="tab-places" style="display:none"></div>
 
   <button class="fab" id="fabBtn" onclick="showAddSheet()" title="Neu hinzufügen">＋</button>
 </div>
@@ -791,7 +793,7 @@ body {
     </div>
   </div>
 </div>
-<input type="file" id="fileInput2" accept=".ged,.gedcom,.GED,text/plain,text/*" capture="false" style="display:none">
+<input type="file" id="fileInput2" accept=".ged,.gedcom,.GED,text/plain,text/*" style="display:none">
 
 <div class="toast" id="toast"></div>
 
@@ -816,130 +818,299 @@ function nextId(prefix) {
 }
 
 // ─────────────────────────────────────
-//  GEDCOM PARSER
+//  GEDCOM PARSER  (v3 – geo fixed)
 // ─────────────────────────────────────
 function parseGEDCOM(text) {
+  text = text.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/);
-  const individuals = {}, families = {}, sources = {};
-  let cur = null, curType = null, curTag = null, subTag = null;
+
+  const individuals = {}, families = {}, sources = {}, notes = {};
+  let cur = null, curType = null;
+  // Simple flat context tracking
+  let lv1tag = '';   // current level-1 tag
+  let lv2tag = '';   // current level-2 tag
+  let lv3tag = '';   // current level-3 tag
+  let evIdx  = -1;   // current event index in cur.events
+  let inMap  = false; // are we inside a MAP block?
+  let mapParent = ''; // which lv1 tag owns current MAP (BIRT/DEAT/etc.)
 
   for (let raw of lines) {
     const line = raw.trim();
     if (!line) continue;
     const m = line.match(/^(\d+)\s+(\S+)(.*)?$/);
     if (!m) continue;
-    const lv = parseInt(m[1]);
+    const lv  = parseInt(m[1]);
     const tag = m[2].trim();
     const val = (m[3] || '').trim();
 
+    // ── Level 0 ──
     if (lv === 0) {
-      curTag = null; subTag = null;
-      if (tag.startsWith('@') && val === 'INDI') {
-        cur = { id: tag, name:'', surname:'', given:'', sex:'U', birth:{}, death:{}, events:[], famc:[], fams:[], notes:[], sources:[] };
+      lv1tag = lv2tag = lv3tag = '';
+      evIdx = -1; inMap = false; mapParent = '';
+      if (tag.startsWith('@') && val.trim() === 'INDI') {
+        cur = {
+          id: tag, name:'', surname:'', given:'', prefix:'', suffix:'',
+          sex:'U',
+          birth:{ date:'', place:'', lati:null, long:null },
+          death:{ date:'', place:'', lati:null, long:null },
+          chr:{ date:'', place:'', lati:null, long:null },
+          buri:{ date:'', place:'', lati:null, long:null },
+          events:[], famc:[], fams:[],
+          noteRefs:[], noteText:'',
+          media:[], titl:'', reli:'', lastChanged:''
+        };
         individuals[tag] = cur; curType = 'INDI';
-      } else if (tag.startsWith('@') && val === 'FAM') {
-        cur = { id: tag, husb:null, wife:null, children:[], marr:{} };
+      } else if (tag.startsWith('@') && val.trim() === 'FAM') {
+        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null}, engag:{}, noteText:'' };
         families[tag] = cur; curType = 'FAM';
-      } else if (tag.startsWith('@') && val === 'SOUR') {
-        cur = { id: tag, title:'', author:'', date:'', repo:'', text:'' };
+      } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
+        cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', text:'', media:[] };
         sources[tag] = cur; curType = 'SOUR';
+      } else if (tag.startsWith('@') && val.trim() === 'NOTE') {
+        cur = { id:tag, text:'' };
+        notes[tag] = cur; curType = 'NOTE';
       } else { curType = null; cur = null; }
       continue;
     }
     if (!cur) continue;
 
+    // Track context tags
+    if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; }
+    if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; }
+    if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } }
+
+    // ── INDIVIDUAL ──
     if (curType === 'INDI') {
+
       if (lv === 1) {
-        curTag = tag;
+        evIdx = -1;
         if (tag === 'NAME') {
           const sn = val.match(/\/([^\/]*)\//) || [];
           cur.surname = sn[1] ? sn[1].trim() : '';
-          cur.given = val.replace(/\/[^\/]*\//, '').trim();
-          cur.name = (cur.given + (cur.surname ? ' ' + cur.surname : '')).trim() || val.replace(/\//g,'').trim();
-        } else if (tag === 'SEX') { cur.sex = val; }
-        else if (tag === 'FAMC') { cur.famc.push(val); }
-        else if (tag === 'FAMS') { cur.fams.push(val); }
-        else if (tag === 'NOTE') { cur.notes.push(val); }
-        else if (['OCCU','RESI','EDUC','RELI','EMIG','IMMI','NATU','EVEN'].includes(tag)) {
-          cur.events.push({ type: tag, value: val, date:'', place:'' });
-          subTag = 'EVENT:' + (cur.events.length - 1);
+          cur.given   = val.replace(/\/[^\/]*\//, '').trim();
+          cur.name    = (cur.given + (cur.surname ? ' ' + cur.surname : '')).trim() || val.replace(/\//g,'').trim();
         }
-      } else if (lv === 2) {
-        if (curTag === 'BIRT') {
-          if (tag==='DATE') cur.birth.date = val;
-          if (tag==='PLAC') cur.birth.place = val;
-        } else if (curTag === 'DEAT') {
-          if (tag==='DATE') cur.death.date = val;
-          if (tag==='PLAC') cur.death.place = val;
-        } else if (subTag && subTag.startsWith('EVENT:')) {
-          const idx = parseInt(subTag.split(':')[1]);
-          if (tag==='DATE') cur.events[idx].date = val;
-          if (tag==='PLAC') cur.events[idx].place = val;
-        } else if (curTag === 'NOTE') {
-          if (cur.notes.length > 0) cur.notes[cur.notes.length-1] += ' ' + val;
+        else if (tag === 'SEX')  cur.sex  = val;
+        else if (tag === 'TITL') cur.titl = val;
+        else if (tag === 'RELI') cur.reli = val;
+        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'' });
+        else if (tag === 'FAMS') cur.fams.push(val);
+        else if (tag === 'NOTE') { if (!val.startsWith('@')) cur.noteText += val; else cur.noteRefs.push(val); }
+        else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
+        else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP'].includes(tag)) {
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'' });
+          evIdx = cur.events.length - 1;
         }
       }
+
+      else if (lv === 2) {
+        // Name parts
+        if (lv1tag === 'NAME') {
+          if (tag === 'GIVN') { cur.given = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
+          if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
+          if (tag === 'NPFX') cur.prefix = val;
+          if (tag === 'NSFX') cur.suffix = val;
+        }
+        // Vital events
+        else if (lv1tag === 'BIRT') { if (tag==='DATE') cur.birth.date=val; if (tag==='PLAC') cur.birth.place=val; }
+        else if (lv1tag === 'DEAT') { if (tag==='DATE') cur.death.date=val; if (tag==='PLAC') cur.death.place=val; }
+        else if (lv1tag === 'CHR')  { if (tag==='DATE') cur.chr.date=val;   if (tag==='PLAC') cur.chr.place=val; }
+        else if (lv1tag === 'BURI') { if (tag==='DATE') cur.buri.date=val;  if (tag==='PLAC') cur.buri.place=val; }
+        // Other events
+        else if (evIdx >= 0 && cur.events[evIdx]) {
+          const ev = cur.events[evIdx];
+          if (tag==='DATE')         ev.date = val;
+          if (tag==='PLAC')         ev.place = val;
+          if (tag==='TYPE')         ev.eventType = val;
+          if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
+        }
+        // Family relationship
+        if (lv1tag === 'FAMC' && cur.famc.length) {
+          const fref = cur.famc[cur.famc.length-1];
+          if (tag==='_FREL') fref.frel = val;
+          if (tag==='_MREL') fref.mrel = val;
+        }
+        // Media
+        if (lv1tag === 'OBJE' && cur.media.length) {
+          if (tag==='FILE') cur.media[cur.media.length-1].file = val;
+        }
+        // Notes continuation
+        if (lv1tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
+          cur.noteText += (tag==='CONT'?'\n':'') + val;
+        // Last changed
+        if (lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
+      }
+
+      else if (lv === 3) {
+        // Media title/form
+        if (lv1tag === 'OBJE' && lv2tag === 'FILE' && tag === 'TITL' && cur.media.length)
+          cur.media[cur.media.length-1].title = val;
+        if (lv1tag === 'OBJE' && tag === 'TITL' && cur.media.length)
+          cur.media[cur.media.length-1].title = val;
+      }
+
+      else if (lv === 4) {
+        // GEO: MAP is at lv3, so LATI/LONG are at lv4
+        if (inMap) {
+          const coord = parseGeoCoord(val);
+          if (mapParent === 'BIRT') { if (tag==='LATI') cur.birth.lati=coord; if (tag==='LONG') cur.birth.long=coord; }
+          else if (mapParent === 'DEAT') { if (tag==='LATI') cur.death.lati=coord; if (tag==='LONG') cur.death.long=coord; }
+          else if (mapParent === 'CHR')  { if (tag==='LATI') cur.chr.lati=coord;   if (tag==='LONG') cur.chr.long=coord; }
+          else if (mapParent === 'BURI') { if (tag==='LATI') cur.buri.lati=coord;  if (tag==='LONG') cur.buri.long=coord; }
+          else if (evIdx >= 0 && cur.events[evIdx]) {
+            if (tag==='LATI') cur.events[evIdx].lati = coord;
+            if (tag==='LONG') cur.events[evIdx].long = coord;
+          }
+        }
+      }
+
+      // CONC/CONT for inline notes at any level
+      if (lv1tag === 'NOTE' && lv > 1 && (tag==='CONC'||tag==='CONT'))
+        cur.noteText += (tag==='CONT'?'\n':'') + val;
     }
 
+    // ── FAMILY ──
     if (curType === 'FAM') {
       if (lv === 1) {
-        curTag = tag;
         if (tag==='HUSB') cur.husb = val;
         else if (tag==='WIFE') cur.wife = val;
         else if (tag==='CHIL') cur.children.push(val);
-      } else if (lv === 2 && curTag === 'MARR') {
-        if (tag==='DATE') cur.marr.date = val;
-        if (tag==='PLAC') cur.marr.place = val;
+      }
+      else if (lv === 2) {
+        if (lv1tag==='MARR') { if (tag==='DATE') cur.marr.date=val; if (tag==='PLAC') cur.marr.place=val; }
+        if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT')) cur.noteText += (tag==='CONT'?'\n':'') + val;
+      }
+      else if (lv === 4 && inMap && mapParent === 'MARR') {
+        const coord = parseGeoCoord(val);
+        if (tag==='LATI') cur.marr.lati = coord;
+        if (tag==='LONG') cur.marr.long = coord;
       }
     }
 
+    // ── SOURCE ──
     if (curType === 'SOUR') {
       if (lv === 1) {
-        if (tag==='TITL') cur.title = val;
+        if (tag==='TITL')      cur.title  = val;
+        else if (tag==='ABBR') cur.abbr   = val;
         else if (tag==='AUTH') cur.author = val;
-        else if (tag==='DATE') cur.date = val;
-        else if (tag==='REPO') cur.repo = val;
-        else if (tag==='TEXT') cur.text = val;
+        else if (tag==='DATE') cur.date   = val;
+        else if (tag==='PUBL') cur.publ   = val;
+        else if (tag==='REPO') cur.repo   = val;
+        else if (tag==='TEXT') cur.text   = val;
+        else if (tag==='OBJE') cur.media.push({ file:'', title:'' });
+      }
+      else if (lv === 2) {
+        if (lv1tag==='TITL' && (tag==='CONC'||tag==='CONT')) cur.title += (tag==='CONT'?'\n':'') + val;
+        if (lv1tag==='OBJE' && cur.media.length) {
+          if (tag==='FILE') cur.media[cur.media.length-1].file  = val;
+          if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+        }
       }
     }
+
+    // ── NOTE record ──
+    if (curType === 'NOTE') {
+      if (tag==='CONC') cur.text += val;
+      else if (tag==='CONT') cur.text += '\n' + val;
+    }
   }
-  return { individuals, families, sources };
+
+  // Resolve NOTE references
+  for (const p of Object.values(individuals)) {
+    for (const ref of p.noteRefs) {
+      if (ref && notes[ref]) p.noteText += (p.noteText ? '\n' : '') + notes[ref].text;
+    }
+  }
+
+  return { individuals, families, sources, notes };
+}
+
+
+
+// Parse GEDCOM geo coordinate: N52.15 → 52.15, W3.48 → -3.48
+function parseGeoCoord(val) {
+  if (!val) return null;
+  const m = val.match(/^([NSEW])([\d.]+)$/i);
+  if (!m) return parseFloat(val) || null;
+  const sign = (m[1].toUpperCase() === 'S' || m[1].toUpperCase() === 'W') ? -1 : 1;
+  return sign * parseFloat(m[2]);
 }
 
 // ─────────────────────────────────────
-//  GEDCOM WRITER
+//  GEDCOM WRITER  (v2 – vollständig)
 // ─────────────────────────────────────
 function writeGEDCOM() {
   const lines = [];
+  const d = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
   lines.push('0 HEAD');
   lines.push('1 SOUR Stammbaum-App');
+  lines.push('2 VERS 1.0');
   lines.push('1 GEDC');
   lines.push('2 VERS 5.5.1');
   lines.push('1 CHAR UTF-8');
-  lines.push('1 DATE ' + new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
+  lines.push(`1 DATE ${dateStr}`);
+
+  function geoLines(obj, indent) {
+    if (obj && obj.lati !== null && obj.long !== null) {
+      lines.push(`${indent} MAP`);
+      const latStr = (obj.lati >= 0 ? 'N' : 'S') + Math.abs(obj.lati);
+      const lonStr = (obj.long >= 0 ? 'E' : 'W') + Math.abs(obj.long);
+      lines.push(`${indent+1} LATI ${latStr}`);
+      lines.push(`${indent+1} LONG ${lonStr}`);
+    }
+  }
+
+  function eventBlock(tag, obj, lv) {
+    if (!obj || (!obj.date && !obj.place)) return;
+    lines.push(`${lv} ${tag}`);
+    if (obj.date)  lines.push(`${lv+1} DATE ${obj.date}`);
+    if (obj.place) {
+      lines.push(`${lv+1} PLAC ${obj.place}`);
+      geoLines(obj, lv+2);
+    }
+  }
 
   for (const p of Object.values(db.individuals)) {
     lines.push(`0 ${p.id} INDI`);
-    const nameStr = (p.given ? p.given + ' ' : '') + (p.surname ? '/' + p.surname + '/' : '');
+    // Name with sub-tags
+    const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
     lines.push(`1 NAME ${nameStr.trim()}`);
+    if (p.given)   lines.push(`2 GIVN ${p.given}`);
+    if (p.surname) lines.push(`2 SURN ${p.surname}`);
+    if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
+    if (p.titl)    lines.push(`1 TITL ${p.titl}`);
     if (p.sex && p.sex !== 'U') lines.push(`1 SEX ${p.sex}`);
-    if (p.birth.date || p.birth.place) {
-      lines.push('1 BIRT');
-      if (p.birth.date) lines.push(`2 DATE ${p.birth.date}`);
-      if (p.birth.place) lines.push(`2 PLAC ${p.birth.place}`);
-    }
-    if (p.death.date || p.death.place) {
-      lines.push('1 DEAT');
-      if (p.death.date) lines.push(`2 DATE ${p.death.date}`);
-      if (p.death.place) lines.push(`2 PLAC ${p.death.place}`);
-    }
+
+    eventBlock('BIRT', p.birth, 1);
+    eventBlock('CHR',  p.chr,   1);
+    eventBlock('DEAT', p.death, 1);
+    eventBlock('BURI', p.buri,  1);
+
     for (const ev of p.events) {
       lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
-      if (ev.date) lines.push(`2 DATE ${ev.date}`);
-      if (ev.place) lines.push(`2 PLAC ${ev.place}`);
+      if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
+      if (ev.date)  lines.push(`2 DATE ${ev.date}`);
+      if (ev.place) {
+        lines.push(`2 PLAC ${ev.place}`);
+        geoLines(ev, 3);
+      }
     }
-    for (const n of p.notes) lines.push(`1 NOTE ${n}`);
-    for (const f of p.famc) lines.push(`1 FAMC ${f}`);
+
+    if (p.noteText) {
+      const noteLines = p.noteText.split('\n');
+      lines.push(`1 NOTE ${noteLines[0]}`);
+      for (let i = 1; i < noteLines.length; i++) lines.push(`2 CONT ${noteLines[i]}`);
+    }
+
+    for (const fref of p.famc) {
+      const famId = typeof fref === 'string' ? fref : fref.famId;
+      lines.push(`1 FAMC ${famId}`);
+      if (typeof fref === 'object' && fref.frel) lines.push(`2 _FREL ${fref.frel}`);
+      if (typeof fref === 'object' && fref.mrel) lines.push(`2 _MREL ${fref.mrel}`);
+    }
     for (const f of p.fams) lines.push(`1 FAMS ${f}`);
   }
 
@@ -948,20 +1119,19 @@ function writeGEDCOM() {
     if (f.husb) lines.push(`1 HUSB ${f.husb}`);
     if (f.wife) lines.push(`1 WIFE ${f.wife}`);
     for (const c of f.children) lines.push(`1 CHIL ${c}`);
-    if (f.marr.date || f.marr.place) {
-      lines.push('1 MARR');
-      if (f.marr.date) lines.push(`2 DATE ${f.marr.date}`);
-      if (f.marr.place) lines.push(`2 PLAC ${f.marr.place}`);
-    }
+    eventBlock('MARR', f.marr, 1);
+    if (f.noteText) lines.push(`1 NOTE ${f.noteText}`);
   }
 
   for (const s of Object.values(db.sources)) {
     lines.push(`0 ${s.id} SOUR`);
-    if (s.title) lines.push(`1 TITL ${s.title}`);
+    if (s.abbr)   lines.push(`1 ABBR ${s.abbr}`);
+    if (s.title)  lines.push(`1 TITL ${s.title}`);
     if (s.author) lines.push(`1 AUTH ${s.author}`);
-    if (s.date) lines.push(`1 DATE ${s.date}`);
-    if (s.repo) lines.push(`1 REPO ${s.repo}`);
-    if (s.text) lines.push(`1 TEXT ${s.text}`);
+    if (s.date)   lines.push(`1 DATE ${s.date}`);
+    if (s.publ)   lines.push(`1 PUBL ${s.publ}`);
+    if (s.repo)   lines.push(`1 REPO ${s.repo}`);
+    if (s.text)   lines.push(`1 TEXT ${s.text}`);
   }
 
   lines.push('0 TRLR');
@@ -1009,6 +1179,7 @@ function exportGEDCOM() {
 
   changed = false;
   updateChangedIndicator();
+  try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
   showToast('✓ Datei heruntergeladen');
 }
 
@@ -1039,6 +1210,7 @@ function confirmNewFile() {
   db = { individuals: {}, families: {}, sources: {} };
   changed = false;
   updateChangedIndicator();
+  try { localStorage.removeItem('stammbaum_ged'); localStorage.removeItem('stammbaum_filename'); } catch(e) {}
   showView('v-landing');
 }
 
@@ -1047,7 +1219,12 @@ function readFile(file) {
   reader.onload = e => {
     try {
       db = parseGEDCOM(e.target.result);
-      showMain(); showToast('✓ Datei geladen');
+      // Cache in localStorage for auto-reload next time
+      try {
+        localStorage.setItem('stammbaum_ged', e.target.result);
+        localStorage.setItem('stammbaum_filename', file.name);
+      } catch(e) { /* storage full – ignore */ }
+      showMain(); showToast('✓ ' + file.name + ' geladen');
     } catch(err) { showToast('⚠ Fehler beim Laden'); }
   };
   reader.readAsText(file, 'UTF-8');
@@ -1058,6 +1235,22 @@ function loadDemo() {
   db = parseGEDCOM(demo);
   showMain(); showToast('✓ Demo geladen');
 }
+
+// Auto-load last file from localStorage on startup
+function tryAutoLoad() {
+  try {
+    const saved = localStorage.getItem('stammbaum_ged');
+    const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
+    if (saved && saved.length > 10) {
+      db = parseGEDCOM(saved);
+      showMain();
+      showToast('✓ ' + fname + ' automatisch geladen');
+      return true;
+    }
+  } catch(e) { /* no storage or parse error */ }
+  return false;
+}
+window.addEventListener('load', () => { tryAutoLoad(); });
 
 // ─────────────────────────────────────
 //  NAVIGATION
@@ -1077,11 +1270,12 @@ function showMain() {
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', ['persons','families','sources'][i] === tab);
+    t.classList.toggle('active', ['persons','families','sources','places'][i] === tab);
   });
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
+  document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
   renderTab();
 }
 
@@ -1089,6 +1283,7 @@ function renderTab() {
   if (currentTab === 'persons') renderPersonList(Object.values(db.individuals));
   else if (currentTab === 'families') renderFamilyList();
   else if (currentTab === 'sources') renderSourceList();
+  else if (currentTab === 'places') renderPlaceList();
 }
 
 function updateStats() {
@@ -1148,11 +1343,35 @@ function renderPersonList(persons) {
 function filterPersons(q) {
   const lower = q.toLowerCase().trim();
   const all = Object.values(db.individuals);
-  renderPersonList(lower ? all.filter(p =>
-    (p.name||'').toLowerCase().includes(lower) ||
-    (p.surname||'').toLowerCase().includes(lower) ||
-    (p.given||'').toLowerCase().includes(lower)
-  ) : all);
+  if (!lower) { renderPersonList(all); return; }
+
+  renderPersonList(all.filter(p => {
+    // Name
+    if ((p.name||'').toLowerCase().includes(lower)) return true;
+    if ((p.surname||'').toLowerCase().includes(lower)) return true;
+    if ((p.given||'').toLowerCase().includes(lower)) return true;
+    if ((p.prefix||'').toLowerCase().includes(lower)) return true;
+    if ((p.titl||'').toLowerCase().includes(lower)) return true;
+    // Birth / death / burial / chr
+    if ((p.birth.date||'').toLowerCase().includes(lower)) return true;
+    if ((p.birth.place||'').toLowerCase().includes(lower)) return true;
+    if ((p.death.date||'').toLowerCase().includes(lower)) return true;
+    if ((p.death.place||'').toLowerCase().includes(lower)) return true;
+    if ((p.chr.place||'').toLowerCase().includes(lower)) return true;
+    if ((p.buri.place||'').toLowerCase().includes(lower)) return true;
+    // Events: value, place, date, eventType
+    for (const ev of p.events) {
+      if ((ev.value||'').toLowerCase().includes(lower)) return true;
+      if ((ev.place||'').toLowerCase().includes(lower)) return true;
+      if ((ev.date||'').toLowerCase().includes(lower)) return true;
+      if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
+    }
+    // Notes
+    if ((p.noteText||'').toLowerCase().includes(lower)) return true;
+    // Religion
+    if ((p.reli||'').toLowerCase().includes(lower)) return true;
+    return false;
+  }));
 }
 
 // ─────────────────────────────────────
@@ -1203,6 +1422,136 @@ function renderSourceList() {
 }
 
 // ─────────────────────────────────────
+//  PLACE LIST
+// ─────────────────────────────────────
+function collectPlaces() {
+  const places = new Map();
+
+  function addPlace(placeName, personId, eventType, lati, long) {
+    if (!placeName || !placeName.trim()) return;
+    const key = placeName.trim();
+    if (!places.has(key)) places.set(key, { name: key, personIds: new Set(), eventTypes: new Set(), lati: null, long: null });
+    const pl = places.get(key);
+    if (personId) pl.personIds.add(personId);
+    if (eventType) pl.eventTypes.add(eventType);
+    // Store first found geo coords
+    if (pl.lati === null && lati !== null && lati !== undefined) { pl.lati = lati; pl.long = long; }
+  }
+
+  for (const p of Object.values(db.individuals)) {
+    addPlace(p.birth.place, p.id, 'Geburt', p.birth.lati, p.birth.long);
+    addPlace(p.death.place, p.id, 'Tod', p.death.lati, p.death.long);
+    addPlace(p.chr.place,   p.id, 'Taufe', null, null);
+    addPlace(p.buri.place,  p.id, 'Beerdigung', p.buri.lati, p.buri.long);
+    for (const ev of p.events) addPlace(ev.place, p.id, ev.eventType || ev.type, ev.lati, ev.long);
+  }
+  for (const f of Object.values(db.families)) {
+    addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long);
+    addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long);
+  }
+  return places;
+}
+
+function renderPlaceList() {
+  const el = document.getElementById('tab-places');
+  const places = collectPlaces();
+
+  if (!places.size) {
+    el.innerHTML = '<div class="empty">Keine Orte in den Daten gefunden</div>';
+    return;
+  }
+
+  const sorted = [...places.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  let html = '';
+  let lastLetter = '';
+
+  for (const place of sorted) {
+    const fl = place.name[0].toUpperCase();
+    if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
+    const count = place.personIds.size;
+    const hasGeo = place.lati !== null;
+    const geoIcon = hasGeo ? '📍' : '·';
+    html += `<div class="person-row" onclick="showPlaceDetail('${esc(place.name)}')">
+      <div class="p-avatar" style="font-size:1.1rem">${geoIcon}</div>
+      <div class="p-info">
+        <div class="p-name">${esc(place.name)}</div>
+        <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte verfügbar' : ''}</div>
+      </div>
+      <span class="p-arrow">›</span>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+function showPlaceDetail(placeName) {
+  const places = collectPlaces();
+  const place = places.get(placeName);
+  if (!place) return;
+
+  currentPersonId = null; currentFamilyId = null; currentSourceId = null;
+  document.getElementById('detailTopTitle').textContent = '📍 Ort';
+  document.getElementById('editBtn').style.display = 'none';
+
+  let html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar" style="font-size:1.8rem; border-color:var(--gold-dim)">📍</div>
+    <div class="detail-name">${esc(placeName)}</div>
+    <div class="detail-id">${place.personIds.size} Person${place.personIds.size !== 1 ? 'en' : ''}</div>
+  </div>`;
+
+  // Map link if geo available
+  if (place.lati !== null) {
+    html += `<div class="section fade-up">
+      <div class="section-title">Standort</div>
+      <a href="https://maps.apple.com/?ll=${place.lati},${place.long}&q=${encodeURIComponent(placeName)}"
+         target="_blank"
+         style="display:flex;align-items:center;gap:10px;padding:10px 0;color:var(--gold);text-decoration:none;font-size:0.9rem">
+        🗺 In Apple Maps öffnen
+        <span style="font-size:0.75rem;color:var(--text-muted)">${place.lati.toFixed(4)}, ${place.long.toFixed(4)}</span>
+      </a>
+    </div>`;
+  }
+
+  // Build detailed list: person + which event connects them to this place
+  const evLabels = { Geburt:'Geburt', Tod:'Tod', Taufe:'Taufe', Beerdigung:'Beerdigung', Heirat:'Heirat', OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion', EMIG:'Auswanderung', IMMI:'Einwanderung', EVEN:'Ereignis' };
+  const entries = [];
+  for (const p of Object.values(db.individuals)) {
+    if (p.birth.place && p.birth.place.trim() === placeName)
+      entries.push({ person: p, role: 'Geburt' + (p.birth.date ? ' · ' + p.birth.date : '') });
+    if (p.death.place && p.death.place.trim() === placeName)
+      entries.push({ person: p, role: 'Tod' + (p.death.date ? ' · ' + p.death.date : '') });
+    if (p.chr.place && p.chr.place.trim() === placeName)
+      entries.push({ person: p, role: 'Taufe' + (p.chr.date ? ' · ' + p.chr.date : '') });
+    if (p.buri.place && p.buri.place.trim() === placeName)
+      entries.push({ person: p, role: 'Beerdigung' + (p.buri.date ? ' · ' + p.buri.date : '') });
+    for (const ev of p.events) {
+      if (ev.place && ev.place.trim() === placeName)
+        entries.push({ person: p, role: (ev.eventType || evLabels[ev.type] || ev.type) + (ev.date ? ' · ' + ev.date : '') });
+    }
+  }
+  for (const f of Object.values(db.families)) {
+    if (f.marr.place && f.marr.place.trim() === placeName) {
+      for (const pid of [f.husb, f.wife]) {
+        if (!pid) continue;
+        const p = db.individuals[pid];
+        if (p) entries.push({ person: p, role: 'Heirat' + (f.marr.date ? ' · ' + f.marr.date : '') });
+      }
+    }
+  }
+
+  entries.sort((a, b) => (a.person.name || '').localeCompare(b.person.name || '', 'de'));
+
+  html += `<div class="section fade-up">
+    <div class="section-title">Personen an diesem Ort</div>`;
+  for (const e of entries) {
+    html += relRow(e.person, e.role);
+  }
+  html += `</div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+  showView('v-detail');
+}
+
+// ─────────────────────────────────────
 //  DETAIL: PERSON
 // ─────────────────────────────────────
 function showDetail(id) {
@@ -1213,15 +1562,18 @@ function showDetail(id) {
   currentSourceId = null;
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
+  document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showPersonForm(id);
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
 
+  const fullName = [p.prefix, p.name].filter(Boolean).join(' ');
+
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar ${sc}">${ic}</div>
-    <div class="detail-name">${esc(p.name || id)}</div>
-    <div class="detail-id">${id}</div>
+    <div class="detail-name">${esc(fullName || id)}</div>
+    <div class="detail-id">${id}${p.lastChanged ? ' · geändert ' + p.lastChanged : ''}</div>
   </div>`;
 
   // Life data
@@ -1231,27 +1583,60 @@ function showDetail(id) {
       <button class="section-add" onclick="showEventForm('${id}')">+ Ereignis</button>
     </div>`;
 
-  if (p.birth.date || p.birth.place)
-    html += factRow('Geburt', [p.birth.date, p.birth.place].filter(Boolean).join(', '));
-  if (p.death.date || p.death.place)
-    html += factRow('Tod', [p.death.date, p.death.place].filter(Boolean).join(', '));
+  if (p.birth.date || p.birth.place) {
+    const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
+      ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+    html += factRow('Geburt', [p.birth.date, p.birth.place].filter(Boolean).join(', '), geoBtn);
+  }
+  if (p.chr.date || p.chr.place)
+    html += factRow('Taufe', [p.chr.date, p.chr.place].filter(Boolean).join(', '));
+  if (p.death.date || p.death.place) {
+    const geoBtn = (p.death.lati !== null && p.death.lati !== undefined)
+      ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+    html += factRow('Tod', [p.death.date, p.death.place].filter(Boolean).join(', '), geoBtn);
+  }
+  if (p.buri.date || p.buri.place) {
+    const geoBtn = (p.buri.lati !== null && p.buri.lati !== undefined)
+      ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+    html += factRow('Beerdigung', [p.buri.date, p.buri.place].filter(Boolean).join(', '), geoBtn);
+  }
 
-  const evLabels = { OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion', EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung', EVEN:'Ereignis' };
+  const evLabels = { OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion',
+    EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung', EVEN:'Ereignis',
+    GRAD:'Abschluss', ADOP:'Adoption', TITL:'Titel' };
   p.events.forEach(ev => {
-    const label = evLabels[ev.type] || ev.type;
-    const val = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
-    html += factRow(label, val);
+    const label = ev.eventType || evLabels[ev.type] || ev.type;
+    const geoBtn = (ev.lati !== null && ev.lati !== undefined)
+      ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+    const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+    html += factRow(label, parts, geoBtn);
   });
 
-  if (!p.birth.date && !p.death.date && !p.events.length)
+  if (p.titl) html += factRow('Titel', p.titl);
+  if (p.reli) html += factRow('Religion', p.reli);
+
+  if (!p.birth.date && !p.death.date && !p.events.length && !p.chr.date && !p.buri.date)
     html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Lebensdaten eingetragen</div>`;
 
   html += `</div>`;
 
   // Notes
-  if (p.notes.length) {
-    html += `<div class="section fade-up"><div class="section-title">Notizen</div>`;
-    p.notes.forEach(n => html += `<div style="font-size:0.88rem;color:var(--text-dim);margin-bottom:6px">${esc(n)}</div>`);
+  if (p.noteText) {
+    html += `<div class="section fade-up"><div class="section-title">Notizen</div>
+      <div style="font-size:0.88rem;color:var(--text-dim);line-height:1.6;white-space:pre-wrap">${esc(p.noteText)}</div>
+    </div>`;
+  }
+
+  // Media
+  if (p.media && p.media.length) {
+    html += `<div class="section fade-up"><div class="section-title">Medien (${p.media.length})</div>`;
+    for (const m of p.media) {
+      const fname = m.file ? m.file.split(/[\\/]/).pop() : '–';
+      html += `<div class="fact-row">
+        <span class="fact-lbl">📷</span>
+        <span class="fact-val" style="font-size:0.82rem">${esc(m.title || fname)}</span>
+      </div>`;
+    }
     html += `</div>`;
   }
 
@@ -1276,7 +1661,8 @@ function showDetail(id) {
   // Parents
   if (p.famc.length) {
     html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Eltern</div></div>`;
-    for (const famId of p.famc) {
+    for (const fref of p.famc) {
+      const famId = typeof fref === 'string' ? fref : fref.famId;
       const fam = db.families[famId];
       if (!fam) continue;
       for (const pid of [fam.husb, fam.wife]) {
@@ -1304,6 +1690,7 @@ function showFamilyDetail(id) {
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || id;
 
   document.getElementById('detailTopTitle').textContent = 'Familie';
+  document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showFamilyForm(id);
 
   let html = `<div class="detail-hero fade-up">
@@ -1340,6 +1727,7 @@ function showSourceDetail(id) {
   currentFamilyId = null;
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
+  document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showSourceForm(id);
 
   let html = `<div class="detail-hero fade-up">
@@ -1358,8 +1746,8 @@ function showSourceDetail(id) {
   showView('v-detail');
 }
 
-function factRow(label, value) {
-  return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}</span></div>`;
+function factRow(label, value, rawSuffix) {
+  return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}</span></div>`;
 }
 
 function relRow(person, role) {
