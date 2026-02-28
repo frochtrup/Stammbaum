@@ -52,7 +52,7 @@
 | `WIFE` | 1 | `wife` | ID der Person |
 | `CHIL` | 1 | `children[]` | ID der Person |
 | `MARR` | 1 | `marr.{date,place,lati,long,sources}` | |
-| `ENGA` | 1 | `engag.{date,place}` | Verlobung (gelesen, nicht bearbeitet) |
+| `ENGA` | 1 | `engag.{date,place}` | Verlobung (gelesen und geschrieben, nicht bearbeitet) |
 | `NOTE` | 1 | `noteText` | |
 | `SOUR` | 1–3 | `sourceRefs` (Set) | |
 
@@ -136,21 +136,23 @@ if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
 
 0 @Ixx@ INDI
 1 NAME Vorname /Nachname/
-2 GIVN / SURN / NPFX
-1 TITL / 1 SEX
-1 BIRT / 2 DATE / 2 PLAC / 3 MAP / 4 LATI / 4 LONG
-1 CHR / 1 DEAT / 1 BURI  (gleiche Struktur)
+2 GIVN / SURN / NPFX / NSFX
+1 TITL / 1 RELI / 1 SEX
+1 BIRT / 2 DATE / 2 PLAC / 3 MAP / 4 LATI / 4 LONG / 2 SOUR
+1 CHR / 1 DEAT / 1 BURI  (gleiche Struktur inkl. SOUR)
 1 OCCU ... / 1 EVEN ... (alle events[])
-  2 TYPE (wenn eventType gesetzt)
-  2 DATE / 2 PLAC / 3 MAP / 4 LATI / 4 LONG
+  2 TYPE / 2 DATE / 2 PLAC / 3 MAP / 4 LATI / 4 LONG / 2 SOUR
 1 NOTE ... (mit 2 CONT für Zeilenumbrüche)
 1 FAMC + 2 _FREL / 2 _MREL
 1 FAMS
+1 OBJE + 2 FILE / 3 TITL
+1 CHAN + 2 DATE
 
 0 @Fxx@ FAM
 1 HUSB / 1 WIFE / 1 CHIL
-1 MARR + 2 DATE / 2 PLAC / 3 MAP / ...
-1 NOTE
+1 MARR + 2 DATE / 2 PLAC / 3 MAP / 2 SOUR
+1 ENGA + 2 DATE / 2 PLAC
+1 NOTE (mit 2 CONT für Zeilenumbrüche)
 
 0 @Sxx@ SOUR
 1 ABBR / 1 TITL / 1 AUTH / 1 DATE / 1 PUBL / 1 REPO / 1 TEXT
@@ -159,15 +161,16 @@ if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
 ```
 
 ### Was NICHT geschrieben wird (aber beim Laden erhalten bleibt)
-Beim Bearbeiten einer Person werden mit `...existing` alle unbekannten Felder auf das neue Objekt kopiert. Das bedeutet: Tags die der Parser nicht kennt (z.B. `ADDR`, `EMAIL`, `WWW`, `RESN`, `_STAT`) gehen beim nächsten Speichern verloren, da der Writer sie nicht ausgibt.
+Tags die der Parser nicht kennt (z.B. `ADDR`, `EMAIL`, `WWW`, `RESN`, `_STAT`) gehen beim nächsten Speichern verloren, da der Writer sie nicht ausgibt.
 
 **Bekannte Verluste beim Roundtrip:**
-- `ADDR` (Adresse)
+- `ADDR` (Adresse unter RESI)
 - `_STAT` (Status: Never Married etc., Legacy-spezifisch)
 - `QUAY` (Qualitätsbewertung der Quelle)
-- `PAGE` (Seitenangabe bei Quell-Referenz)
-- Foto-Pfade werden in `media[]` gespeichert aber **nicht** in GEDCOM zurückgeschrieben
-- `SOUR`-Referenzen mit `PAGE`/`QUAY` Sub-Tags werden als einfache Referenzen zurückgeschrieben
+- `PAGE` (Seitenangabe bei Quell-Referenz) — SOUR-Referenzen werden ohne PAGE/QUAY zurückgeschrieben
+- `NOTE`-Records als `@ref@` — werden beim Laden in `noteText` aufgelöst und als Inline-NOTE zurückgeschrieben
+- `notes`-Records (0 @Nxx@ NOTE) werden nicht neu ausgegeben
+- `2 SOUR` unter `1 RELI` — RELI-Quellen (1 Occurrence in MeineDaten.ged, kein UI-Effekt)
 
 ---
 

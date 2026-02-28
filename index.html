@@ -848,6 +848,9 @@ body {
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
           ☁️ &nbsp; Als GEDCOM speichern
         </button>
+        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
+          🗄 &nbsp; <span>Original-Backup herunterladen</span>
+        </button>
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
           🗂 &nbsp; Demo-Daten laden
         </button>
@@ -872,6 +875,7 @@ body {
 // ─────────────────────────────────────
 let db = { individuals: {}, families: {}, sources: {} };
 let changed = false;
+let _originalGedText = null;   // In-memory backup des zuletzt geladenen Originals
 let currentPersonId = null;
 let currentFamilyId = null;
 let currentSourceId = null;
@@ -916,15 +920,15 @@ function parseGEDCOM(text) {
       if (tag.startsWith('@') && val.trim() === 'INDI') {
         cur = {
           id: tag, name:'', surname:'', given:'', prefix:'', suffix:'',
-          sex:'U',
+          sex:'U', uid:'', topSources:[],
           birth:{ date:'', place:'', lati:null, long:null, sources:[] },
-          death:{ date:'', place:'', lati:null, long:null, sources:[] },
+          death:{ date:'', place:'', lati:null, long:null, sources:[], cause:'' },
           chr:{ date:'', place:'', lati:null, long:null, sources:[] },
           buri:{ date:'', place:'', lati:null, long:null, sources:[] },
           events:[], famc:[], fams:[],
           noteRefs:[], noteText:'',
           media:[], titl:'', reli:'', lastChanged:'',
-          sourceRefs: new Set()
+          nameSources:[], sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
@@ -963,10 +967,11 @@ function parseGEDCOM(text) {
         else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'' });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') { if (!val.startsWith('@')) cur.noteText += val; else cur.noteRefs.push(val); }
-        else if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        else if (tag === '_UID') cur.uid = val;
+        else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); }
         else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', sources:[] });
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', sources:[] });
           evIdx = cur.events.length - 1;
         }
       }
@@ -978,6 +983,7 @@ function parseGEDCOM(text) {
           if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
           if (tag === 'NPFX') cur.prefix = val;
           if (tag === 'NSFX') cur.suffix = val;
+          if (tag === 'SOUR' && val.startsWith('@')) { cur.nameSources.push(val); cur.sourceRefs.add(val); }
         }
         // Vital events
         else if (lv1tag === 'BIRT') {
@@ -988,6 +994,7 @@ function parseGEDCOM(text) {
         else if (lv1tag === 'DEAT') {
           if (tag==='DATE') cur.death.date=val;
           if (tag==='PLAC') cur.death.place=val;
+          if (tag==='CAUS') cur.death.cause=val;
           if (tag==='SOUR' && val.startsWith('@')) { cur.death.sources.push(val); cur.sourceRefs.add(val); }
         }
         else if (lv1tag === 'CHR') {
@@ -1006,6 +1013,7 @@ function parseGEDCOM(text) {
           if (tag==='DATE')  ev.date = val;
           if (tag==='PLAC')  ev.place = val;
           if (tag==='TYPE')  ev.eventType = val;
+          if (tag==='NOTE')  ev.note = val;
           if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
           if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
         }
@@ -1019,9 +1027,6 @@ function parseGEDCOM(text) {
         if (lv1tag === 'OBJE' && cur.media.length) {
           if (tag==='FILE') cur.media[cur.media.length-1].file = val;
         }
-        // Notes continuation
-        if (lv1tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
-          cur.noteText += (tag==='CONT'?'\n':'') + val;
         // Last changed
         if (lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
         // Collect source references at level 2
@@ -1034,6 +1039,9 @@ function parseGEDCOM(text) {
           cur.media[cur.media.length-1].title = val;
         if (lv1tag === 'OBJE' && tag === 'TITL' && cur.media.length)
           cur.media[cur.media.length-1].title = val;
+        // Event note continuation
+        if (evIdx >= 0 && lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
+          cur.events[evIdx].note += (tag==='CONT'?'\n':'') + val;
         // Collect source references at level 3
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
@@ -1066,6 +1074,7 @@ function parseGEDCOM(text) {
         if (tag==='HUSB') cur.husb = val;
         else if (tag==='WIFE') cur.wife = val;
         else if (tag==='CHIL') cur.children.push(val);
+        else if (tag==='NOTE') { if (!val.startsWith('@')) cur.noteText = val; }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
       else if (lv === 2) {
@@ -1073,6 +1082,10 @@ function parseGEDCOM(text) {
           if (tag==='DATE') cur.marr.date=val;
           if (tag==='PLAC') cur.marr.place=val;
           if (tag==='SOUR' && val.startsWith('@')) { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); cur.sourceRefs.add(val); }
+        }
+        if (lv1tag==='ENGA') {
+          if (tag==='DATE') cur.engag.date = val;
+          if (tag==='PLAC') cur.engag.place = val;
         }
         if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT')) cur.noteText += (tag==='CONT'?'\n':'') + val;
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
@@ -1164,13 +1177,15 @@ function writeGEDCOM() {
   }
 
   function eventBlock(tag, obj, lv) {
-    if (!obj || (!obj.date && !obj.place)) return;
+    if (!obj || (!obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length))) return;
     lines.push(`${lv} ${tag}`);
     if (obj.date)  lines.push(`${lv+1} DATE ${obj.date}`);
+    if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
     if (obj.place) {
       lines.push(`${lv+1} PLAC ${obj.place}`);
       geoLines(obj, lv+2);
     }
+    if (obj.sources) for (const s of obj.sources) lines.push(`${lv+1} SOUR ${s}`);
   }
 
   for (const p of Object.values(db.individuals)) {
@@ -1181,8 +1196,12 @@ function writeGEDCOM() {
     if (p.given)   lines.push(`2 GIVN ${p.given}`);
     if (p.surname) lines.push(`2 SURN ${p.surname}`);
     if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
+    if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
+    for (const s of (p.nameSources || [])) lines.push(`2 SOUR ${s}`);
     if (p.titl)    lines.push(`1 TITL ${p.titl}`);
+    if (p.reli)    lines.push(`1 RELI ${p.reli}`);
     if (p.sex && p.sex !== 'U') lines.push(`1 SEX ${p.sex}`);
+    for (const s of (p.topSources || [])) lines.push(`1 SOUR ${s}`);
 
     eventBlock('BIRT', p.birth, 1);
     eventBlock('CHR',  p.chr,   1);
@@ -1197,6 +1216,12 @@ function writeGEDCOM() {
         lines.push(`2 PLAC ${ev.place}`);
         geoLines(ev, 3);
       }
+      if (ev.note) {
+        const nl = ev.note.split('\n');
+        lines.push(`2 NOTE ${nl[0]}`);
+        for (let i = 1; i < nl.length; i++) lines.push(`3 CONT ${nl[i]}`);
+      }
+      if (ev.sources) for (const s of ev.sources) lines.push(`2 SOUR ${s}`);
     }
 
     if (p.noteText) {
@@ -1212,6 +1237,16 @@ function writeGEDCOM() {
       if (typeof fref === 'object' && fref.mrel) lines.push(`2 _MREL ${fref.mrel}`);
     }
     for (const f of p.fams) lines.push(`1 FAMS ${f}`);
+    for (const m of p.media) {
+      lines.push(`1 OBJE`);
+      if (m.file)  lines.push(`2 FILE ${m.file}`);
+      if (m.title) lines.push(`3 TITL ${m.title}`);
+    }
+    if (p.uid) lines.push(`1 _UID ${p.uid}`);
+    if (p.lastChanged) {
+      lines.push(`1 CHAN`);
+      lines.push(`2 DATE ${p.lastChanged}`);
+    }
   }
 
   for (const f of Object.values(db.families)) {
@@ -1220,7 +1255,16 @@ function writeGEDCOM() {
     if (f.wife) lines.push(`1 WIFE ${f.wife}`);
     for (const c of f.children) lines.push(`1 CHIL ${c}`);
     eventBlock('MARR', f.marr, 1);
-    if (f.noteText) lines.push(`1 NOTE ${f.noteText}`);
+    if (f.engag && (f.engag.date || f.engag.place)) {
+      lines.push(`1 ENGA`);
+      if (f.engag.date)  lines.push(`2 DATE ${f.engag.date}`);
+      if (f.engag.place) lines.push(`2 PLAC ${f.engag.place}`);
+    }
+    if (f.noteText) {
+      const noteLines = f.noteText.split('\n');
+      lines.push(`1 NOTE ${noteLines[0]}`);
+      for (let i = 1; i < noteLines.length; i++) lines.push(`2 CONT ${noteLines[i]}`);
+    }
   }
 
   for (const s of Object.values(db.sources)) {
@@ -1310,7 +1354,12 @@ function confirmNewFile() {
   db = { individuals: {}, families: {}, sources: {} };
   changed = false;
   updateChangedIndicator();
-  try { localStorage.removeItem('stammbaum_ged'); localStorage.removeItem('stammbaum_filename'); } catch(e) {}
+  _originalGedText = null;
+  try {
+    localStorage.removeItem('stammbaum_ged'); localStorage.removeItem('stammbaum_filename');
+    localStorage.removeItem('stammbaum_ged_backup'); localStorage.removeItem('stammbaum_backup_filename'); localStorage.removeItem('stammbaum_backup_date');
+  } catch(e) {}
+  updateBackupBtn();
   showView('v-landing');
 }
 
@@ -1319,11 +1368,16 @@ function readFile(file) {
   reader.onload = e => {
     try {
       db = parseGEDCOM(e.target.result);
-      // Cache in localStorage for auto-reload next time
+      _originalGedText = e.target.result;
+      const backupDate = new Date().toLocaleDateString('de-DE');
       try {
         localStorage.setItem('stammbaum_ged', e.target.result);
         localStorage.setItem('stammbaum_filename', file.name);
+        localStorage.setItem('stammbaum_ged_backup', e.target.result);
+        localStorage.setItem('stammbaum_backup_filename', file.name);
+        localStorage.setItem('stammbaum_backup_date', backupDate);
       } catch(e) { /* storage full – ignore */ }
+      updateBackupBtn();
       showMain(); showToast('✓ ' + file.name + ' geladen');
     } catch(err) { showToast('⚠ Fehler beim Laden'); }
   };
@@ -1343,7 +1397,9 @@ function tryAutoLoad() {
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
     if (saved && saved.length > 10) {
       db = parseGEDCOM(saved);
+      _originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showMain();
+      updateBackupBtn();
       showToast('✓ ' + fname + ' automatisch geladen');
       return true;
     }
@@ -1351,6 +1407,40 @@ function tryAutoLoad() {
   return false;
 }
 window.addEventListener('load', () => { tryAutoLoad(); });
+
+function updateBackupBtn() {
+  const btn = document.getElementById('backupMenuBtn');
+  if (!btn) return;
+  const fname = localStorage.getItem('stammbaum_backup_filename') || '';
+  const date  = localStorage.getItem('stammbaum_backup_date') || '';
+  const hasBackup = !!(_originalGedText || localStorage.getItem('stammbaum_ged_backup'));
+  btn.style.opacity = hasBackup ? '1' : '0.4';
+  btn.querySelector('span').textContent = hasBackup
+    ? `Original-Backup herunterladen${date ? ' (' + date + ')' : ''}`
+    : 'Original-Backup (keines vorhanden)';
+}
+
+function downloadBackup() {
+  const backup = _originalGedText || localStorage.getItem('stammbaum_ged_backup');
+  if (!backup) { showToast('⚠ Kein Backup vorhanden'); return; }
+  const fname = localStorage.getItem('stammbaum_backup_filename') || 'stammbaum.ged';
+  const backupName = fname.replace(/\.ged$/i, '') + '_original.ged';
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS && navigator.canShare) {
+    const file = new File([backup], backupName, { type: 'text/plain' });
+    if (navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: backupName }).catch(() => {});
+      return;
+    }
+  }
+  const blob = new Blob([backup], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = backupName; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+  showToast('✓ Original-Backup heruntergeladen');
+}
 
 // ─────────────────────────────────────
 //  NAVIGATION
