@@ -380,6 +380,46 @@ body {
 .form-row .form-group { flex: 1; }
 
 .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+
+/* Source widget */
+.src-widget { margin-bottom: 16px; }
+.src-tags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-bottom: 8px; }
+.src-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--surface2); border: 1px solid var(--gold-dim);
+  border-radius: 20px; padding: 3px 10px 3px 12px;
+  font-size: 0.78rem; color: var(--gold); cursor: default;
+  font-family: 'Source Serif 4', serif;
+}
+.src-tag-x {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; font-size: 0.9rem; padding: 0; line-height: 1;
+}
+.src-tag-x:active { color: var(--red); }
+.src-add-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: none; border: 1px dashed var(--border);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 0.78rem; color: var(--text-muted);
+  cursor: pointer; font-family: 'Source Serif 4', serif;
+}
+.src-add-btn:active { border-color: var(--gold-dim); color: var(--gold); }
+/* Source picker inside modal */
+.src-picker { display:none; margin-top:6px; }
+.src-picker.open { display:block; }
+.src-picker-list {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); max-height: 180px; overflow-y: auto;
+}
+.src-picker-item {
+  padding: 9px 12px; cursor: pointer; font-size: 0.85rem;
+  border-bottom: 1px solid var(--border); color: var(--text-dim);
+  display: flex; justify-content: space-between;
+}
+.src-picker-item:last-child { border-bottom: none; }
+.src-picker-item:active { background: var(--surface2); }
+.src-picker-item.selected { color: var(--gold); }
+.src-picker-empty { padding: 12px; color: var(--text-muted); font-size: 0.82rem; text-align: center; }
 .btn {
   flex: 1; padding: 12px;
   border-radius: var(--radius-sm); border: none;
@@ -638,6 +678,14 @@ body {
         <label class="form-label">Notiz</label>
         <input class="form-input" id="pf-note" placeholder="Weitere Informationen…">
       </div>
+      <div class="src-widget" id="pf-src-widget">
+        <label class="form-label">Quellen</label>
+        <div class="src-tags" id="pf-src-tags"></div>
+        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('pf')">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="pf-src-picker">
+          <div class="src-picker-list" id="pf-src-list"></div>
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalPerson')">Abbrechen</button>
         <button class="btn btn-save" onclick="savePerson()">Speichern</button>
@@ -677,6 +725,14 @@ body {
       <div class="form-group">
         <label class="form-label">Kinder (IDs, kommagetrennt)</label>
         <input class="form-input" id="ff-children" placeholder="@I003@, @I004@">
+      </div>
+      <div class="src-widget" id="ff-src-widget">
+        <label class="form-label">Quellen (Heirat)</label>
+        <div class="src-tags" id="ff-src-tags"></div>
+        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('ff')">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="ff-src-picker">
+          <div class="src-picker-list" id="ff-src-list"></div>
+        </div>
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalFamily')">Abbrechen</button>
@@ -734,6 +790,8 @@ body {
     <div class="sheet-title">Ereignis hinzufügen</div>
     <div class="sheet-body">
       <input type="hidden" id="ef-pid">
+      <input type="hidden" id="ef-evidx">
+      <input type="hidden" id="ef-evidx">
       <div class="form-group">
         <label class="form-label">Ereignistyp</label>
         <select class="form-select" id="ef-type">
@@ -761,9 +819,17 @@ body {
           <input class="form-input" id="ef-place" placeholder="München">
         </div>
       </div>
+      <div class="src-widget" id="ef-src-widget">
+        <label class="form-label">Quellen</label>
+        <div class="src-tags" id="ef-src-tags"></div>
+        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('ef')">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="ef-src-picker">
+          <div class="src-picker-list" id="ef-src-list"></div>
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalEvent')">Abbrechen</button>
-        <button class="btn btn-save" onclick="saveEvent()">Hinzufügen</button>
+        <button class="btn btn-save" id="saveEventBtn" onclick="saveEvent()">Hinzufügen</button>
       </div>
     </div>
   </div>
@@ -851,17 +917,18 @@ function parseGEDCOM(text) {
         cur = {
           id: tag, name:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U',
-          birth:{ date:'', place:'', lati:null, long:null },
-          death:{ date:'', place:'', lati:null, long:null },
-          chr:{ date:'', place:'', lati:null, long:null },
-          buri:{ date:'', place:'', lati:null, long:null },
+          birth:{ date:'', place:'', lati:null, long:null, sources:[] },
+          death:{ date:'', place:'', lati:null, long:null, sources:[] },
+          chr:{ date:'', place:'', lati:null, long:null, sources:[] },
+          buri:{ date:'', place:'', lati:null, long:null, sources:[] },
           events:[], famc:[], fams:[],
           noteRefs:[], noteText:'',
-          media:[], titl:'', reli:'', lastChanged:''
+          media:[], titl:'', reli:'', lastChanged:'',
+          sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null}, engag:{}, noteText:'' };
+        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null}, engag:{}, noteText:'', sourceRefs: new Set() };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', text:'', media:[] };
@@ -896,9 +963,10 @@ function parseGEDCOM(text) {
         else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'' });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') { if (!val.startsWith('@')) cur.noteText += val; else cur.noteRefs.push(val); }
+        else if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'' });
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', sources:[] });
           evIdx = cur.events.length - 1;
         }
       }
@@ -912,17 +980,34 @@ function parseGEDCOM(text) {
           if (tag === 'NSFX') cur.suffix = val;
         }
         // Vital events
-        else if (lv1tag === 'BIRT') { if (tag==='DATE') cur.birth.date=val; if (tag==='PLAC') cur.birth.place=val; }
-        else if (lv1tag === 'DEAT') { if (tag==='DATE') cur.death.date=val; if (tag==='PLAC') cur.death.place=val; }
-        else if (lv1tag === 'CHR')  { if (tag==='DATE') cur.chr.date=val;   if (tag==='PLAC') cur.chr.place=val; }
-        else if (lv1tag === 'BURI') { if (tag==='DATE') cur.buri.date=val;  if (tag==='PLAC') cur.buri.place=val; }
+        else if (lv1tag === 'BIRT') {
+          if (tag==='DATE') cur.birth.date=val;
+          if (tag==='PLAC') cur.birth.place=val;
+          if (tag==='SOUR' && val.startsWith('@')) { cur.birth.sources.push(val); cur.sourceRefs.add(val); }
+        }
+        else if (lv1tag === 'DEAT') {
+          if (tag==='DATE') cur.death.date=val;
+          if (tag==='PLAC') cur.death.place=val;
+          if (tag==='SOUR' && val.startsWith('@')) { cur.death.sources.push(val); cur.sourceRefs.add(val); }
+        }
+        else if (lv1tag === 'CHR') {
+          if (tag==='DATE') cur.chr.date=val;
+          if (tag==='PLAC') cur.chr.place=val;
+          if (tag==='SOUR' && val.startsWith('@')) { cur.chr.sources.push(val); cur.sourceRefs.add(val); }
+        }
+        else if (lv1tag === 'BURI') {
+          if (tag==='DATE') cur.buri.date=val;
+          if (tag==='PLAC') cur.buri.place=val;
+          if (tag==='SOUR' && val.startsWith('@')) { cur.buri.sources.push(val); cur.sourceRefs.add(val); }
+        }
         // Other events
         else if (evIdx >= 0 && cur.events[evIdx]) {
           const ev = cur.events[evIdx];
-          if (tag==='DATE')         ev.date = val;
-          if (tag==='PLAC')         ev.place = val;
-          if (tag==='TYPE')         ev.eventType = val;
+          if (tag==='DATE')  ev.date = val;
+          if (tag==='PLAC')  ev.place = val;
+          if (tag==='TYPE')  ev.eventType = val;
           if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
+          if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
         }
         // Family relationship
         if (lv1tag === 'FAMC' && cur.famc.length) {
@@ -939,6 +1024,8 @@ function parseGEDCOM(text) {
           cur.noteText += (tag==='CONT'?'\n':'') + val;
         // Last changed
         if (lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
+        // Collect source references at level 2
+        if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
 
       else if (lv === 3) {
@@ -947,6 +1034,8 @@ function parseGEDCOM(text) {
           cur.media[cur.media.length-1].title = val;
         if (lv1tag === 'OBJE' && tag === 'TITL' && cur.media.length)
           cur.media[cur.media.length-1].title = val;
+        // Collect source references at level 3
+        if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
 
       else if (lv === 4) {
@@ -962,6 +1051,8 @@ function parseGEDCOM(text) {
             if (tag==='LONG') cur.events[evIdx].long = coord;
           }
         }
+        // Collect source references at level 4
+        if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
 
       // CONC/CONT for inline notes at any level
@@ -975,10 +1066,19 @@ function parseGEDCOM(text) {
         if (tag==='HUSB') cur.husb = val;
         else if (tag==='WIFE') cur.wife = val;
         else if (tag==='CHIL') cur.children.push(val);
+        else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
       else if (lv === 2) {
-        if (lv1tag==='MARR') { if (tag==='DATE') cur.marr.date=val; if (tag==='PLAC') cur.marr.place=val; }
+        if (lv1tag==='MARR') {
+          if (tag==='DATE') cur.marr.date=val;
+          if (tag==='PLAC') cur.marr.place=val;
+          if (tag==='SOUR' && val.startsWith('@')) { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); cur.sourceRefs.add(val); }
+        }
         if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT')) cur.noteText += (tag==='CONT'?'\n':'') + val;
+        if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+      }
+      else if (lv === 3) {
+        if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
       else if (lv === 4 && inMap && mapParent === 'MARR') {
         const coord = parseGeoCoord(val);
@@ -1413,9 +1513,11 @@ function renderSourceList() {
 
   let html = '';
   for (const s of srcs) {
+    const refCount = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
+                   + Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
     html += `<div class="source-card" onclick="showSourceDetail('${s.id}')">
-      <div class="source-title">${esc(s.title || s.id)}</div>
-      <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}</div>
+      <div class="source-title">${esc(s.abbr || s.title || s.id)}</div>
+      <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}${refCount ? ` · ${refCount} Ref.` : ''}</div>
     </div>`;
   }
   el.innerHTML = html;
@@ -1586,30 +1688,39 @@ function showDetail(id) {
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += factRow('Geburt', [p.birth.date, p.birth.place].filter(Boolean).join(', '), geoBtn);
+    html += `<div class="fact-row"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
+    html += sourceTagsHtml(p.birth.sources);
   }
-  if (p.chr.date || p.chr.place)
+  if (p.chr.date || p.chr.place) {
     html += factRow('Taufe', [p.chr.date, p.chr.place].filter(Boolean).join(', '));
+    html += sourceTagsHtml(p.chr.sources);
+  }
   if (p.death.date || p.death.place) {
     const geoBtn = (p.death.lati !== null && p.death.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += factRow('Tod', [p.death.date, p.death.place].filter(Boolean).join(', '), geoBtn);
+    html += `<div class="fact-row"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
+    html += sourceTagsHtml(p.death.sources);
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = (p.buri.lati !== null && p.buri.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += factRow('Beerdigung', [p.buri.date, p.buri.place].filter(Boolean).join(', '), geoBtn);
+    html += `<div class="fact-row"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
+    html += sourceTagsHtml(p.buri.sources);
   }
 
   const evLabels = { OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion',
     EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung', EVEN:'Ereignis',
     GRAD:'Abschluss', ADOP:'Adoption', TITL:'Titel' };
-  p.events.forEach(ev => {
+  p.events.forEach((ev, idx) => {
     const label = ev.eventType || evLabels[ev.type] || ev.type;
     const geoBtn = (ev.lati !== null && ev.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
     const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
-    html += factRow(label, parts, geoBtn);
+    html += `<div class="fact-row" onclick="showEventForm('${id}',${idx})" style="cursor:pointer">
+      <span class="fact-lbl">${esc(label)}</span>
+      <span class="fact-val">${esc(parts)}${geoBtn}</span>
+    </div>`;
+    html += sourceTagsHtml(ev.sources || []);
   });
 
   if (p.titl) html += factRow('Titel', p.titl);
@@ -1702,7 +1813,12 @@ function showFamilyDetail(id) {
   if (f.marr.date || f.marr.place) {
     html += `<div class="section fade-up"><div class="section-title">Heirat</div>`;
     if (f.marr.date) html += factRow('Datum', f.marr.date);
-    if (f.marr.place) html += factRow('Ort', f.marr.place);
+    if (f.marr.place) {
+      const geoBtn = (f.marr.lati !== null && f.marr.lati !== undefined)
+        ? `<a href="https://maps.apple.com/?ll=${f.marr.lati},${f.marr.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+      html += factRow('Ort', f.marr.place, geoBtn);
+    }
+    html += sourceTagsHtml(f.marr.sources || [...(f.sourceRefs||[])]);
     html += `</div>`;
   }
 
@@ -1730,17 +1846,64 @@ function showSourceDetail(id) {
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showSourceForm(id);
 
+  // Collect all persons and families referencing this source
+  const refPersons = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));
+  const refFamilies = Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(id));
+
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">📖</div>
-    <div class="detail-name">${esc(s.title || id)}</div>
-    <div class="detail-id">${id}</div>
-  </div>
-  <div class="section fade-up"><div class="section-title">Details</div>`;
+    <div class="detail-name">${esc(s.abbr || s.title || id)}</div>
+    <div class="detail-id">${id} · ${refPersons.length + refFamilies.length} Referenzen</div>
+  </div>`;
+
+  // Source details
+  html += `<div class="section fade-up"><div class="section-title">Details</div>`;
+  if (s.title && s.abbr && s.title !== s.abbr) html += factRow('Titel', s.title);
   if (s.author) html += factRow('Autor', s.author);
-  if (s.date) html += factRow('Datum', s.date);
-  if (s.repo) html += factRow('Aufbewahrung', s.repo);
-  if (s.text) html += factRow('Notiz', s.text);
+  if (s.publ)   html += factRow('Verlag', s.publ);
+  if (s.date)   html += factRow('Datum', s.date);
+  if (s.repo)   html += factRow('Aufbewahrung', s.repo);
+  if (s.text)   html += factRow('Notiz', s.text);
   html += `</div>`;
+
+  // Referencing persons
+  if (refPersons.length) {
+    const sorted = [...refPersons].sort((a, b) => (a.name||'').localeCompare(b.name||'', 'de'));
+    html += `<div class="section fade-up">
+      <div class="section-title">Personen (${refPersons.length})</div>`;
+    for (const p of sorted) {
+      let meta = '';
+      if (p.birth.date) meta += '* ' + p.birth.date;
+      if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+      html += relRow(p, meta || '–');
+    }
+    html += `</div>`;
+  }
+
+  // Referencing families
+  if (refFamilies.length) {
+    html += `<div class="section fade-up">
+      <div class="section-title">Familien (${refFamilies.length})</div>`;
+    for (const f of refFamilies) {
+      const husb = f.husb ? db.individuals[f.husb] : null;
+      const wife = f.wife ? db.individuals[f.wife] : null;
+      const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+      const meta = f.marr.date ? '⚭ ' + f.marr.date : '';
+      html += `<div class="rel-row" onclick="showFamilyDetail('${f.id}')">
+        <div class="rel-avatar" style="font-size:0.9rem">👨‍👩‍👧</div>
+        <div class="rel-info">
+          <div class="rel-name">${esc(title)}</div>
+          <div class="rel-role">${esc(meta) || '–'}</div>
+        </div>
+        <span class="p-arrow">›</span>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  if (!refPersons.length && !refFamilies.length) {
+    html += `<div class="section fade-up"><div class="empty" style="padding:16px 0">Keine Referenzen gefunden</div></div>`;
+  }
 
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
@@ -1748,6 +1911,20 @@ function showSourceDetail(id) {
 
 function factRow(label, value, rawSuffix) {
   return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}</span></div>`;
+}
+
+// Render small source badge links for a list of source IDs
+function sourceTagsHtml(sourceIds) {
+  if (!sourceIds) return '';
+  const ids = sourceIds instanceof Set ? [...sourceIds] : (Array.isArray(sourceIds) ? sourceIds : []);
+  if (!ids.length) return '';
+  const tags = ids.map(sid => {
+    const s = db.sources[sid];
+    if (!s) return '';
+    const label = (s.abbr || s.title || sid).substring(0, 25);
+    return `<span onclick="showSourceDetail('${sid}')" style="display:inline-block;background:var(--surface2);border:1px solid var(--gold-dim);border-radius:12px;padding:2px 8px;font-size:0.72rem;color:var(--gold-dim);cursor:pointer;margin:2px 3px 2px 0;font-family:'Source Serif 4',serif">📖 ${esc(label)}</span>`;
+  }).filter(Boolean).join('');
+  return tags ? `<div style="margin-top:4px">${tags}</div>` : '';
 }
 
 function relRow(person, role) {
@@ -1761,6 +1938,73 @@ function relRow(person, role) {
     </div>
     <span class="p-arrow">›</span>
   </div>`;
+}
+
+// ─────────────────────────────────────
+//  SOURCE WIDGET
+//  srcState[prefix] = Set of source IDs currently selected
+// ─────────────────────────────────────
+const srcState = {};
+
+function initSrcWidget(prefix, selectedIds) {
+  const ids = selectedIds instanceof Set ? [...selectedIds] : (Array.isArray(selectedIds) ? selectedIds : []);
+  srcState[prefix] = new Set(ids);
+  renderSrcTags(prefix);
+  renderSrcPicker(prefix);
+  document.getElementById(prefix + '-src-picker').classList.remove('open');
+}
+
+function renderSrcTags(prefix) {
+  const container = document.getElementById(prefix + '-src-tags');
+  const selected = srcState[prefix] || new Set();
+  if (!selected.size) {
+    container.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>';
+    return;
+  }
+  container.innerHTML = [...selected].map(sid => {
+    const s = db.sources[sid];
+    const label = s ? (s.abbr || s.title || sid) : sid;
+    return `<span class="src-tag">
+      ${esc(label.length > 30 ? label.slice(0,28)+'…' : label)}
+      <button type="button" onclick="removeSrc('${prefix}','${sid}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
+    </span>`;
+  }).join('');
+}
+
+function renderSrcPicker(prefix) {
+  const list = document.getElementById(prefix + '-src-list');
+  const selected = srcState[prefix] || new Set();
+  const srcs = Object.values(db.sources).sort((a,b) => (a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'));
+  if (!srcs.length) {
+    list.innerHTML = '<div class="src-picker-empty">Noch keine Quellen vorhanden</div>';
+    return;
+  }
+  list.innerHTML = srcs.map(s => {
+    const label = s.abbr || s.title || s.id;
+    const isSel = selected.has(s.id);
+    return `<div class="src-picker-item ${isSel ? 'selected' : ''}" onclick="toggleSrc('${prefix}','${s.id}')">
+      ${isSel ? '✓ ' : ''}${esc(label)}
+    </div>`;
+  }).join('');
+}
+
+function toggleSrcPicker(prefix) {
+  const picker = document.getElementById(prefix + '-src-picker');
+  picker.classList.toggle('open');
+  if (picker.classList.contains('open')) renderSrcPicker(prefix);
+}
+
+function toggleSrc(prefix, sid) {
+  const set = srcState[prefix] || (srcState[prefix] = new Set());
+  if (set.has(sid)) set.delete(sid); else set.add(sid);
+  renderSrcTags(prefix);
+  renderSrcPicker(prefix);
+}
+
+function removeSrc(prefix, sid) {
+  if (srcState[prefix]) srcState[prefix].delete(sid);
+  renderSrcTags(prefix);
+  renderSrcPicker(prefix);
 }
 
 // ─────────────────────────────────────
@@ -1786,8 +2030,9 @@ function showPersonForm(id) {
   document.getElementById('pf-ddate').value = p?.death?.date || '';
   document.getElementById('pf-dplace').value = p?.death?.place || '';
   document.getElementById('pf-occu').value = p?.events?.find(e => e.type === 'OCCU')?.value || '';
-  document.getElementById('pf-note').value = p?.notes?.[0] || '';
+  document.getElementById('pf-note').value = p?.noteText || '';
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
+  initSrcWidget('pf', p?.sourceRefs || []);
   openModal('modalPerson');
 }
 
@@ -1807,19 +2052,27 @@ function savePerson() {
 
   const existing = db.individuals[id] || {};
   const events = existing.events ? existing.events.filter(e => e.type !== 'OCCU') : [];
-  if (occu) events.unshift({ type: 'OCCU', value: occu, date: '', place: '' });
+  if (occu) events.unshift({ type: 'OCCU', value: occu, date: '', place: '', lati:null, long:null, eventType:'' });
 
   db.individuals[id] = {
     ...existing,
     id, given, surname,
     name: (given + (surname ? ' ' + surname : '')).trim(),
-    sex, birth: { date: bdate, place: bplace },
-    death: { date: ddate, place: dplace },
+    sex,
+    birth: { ...(existing.birth||{}), date: bdate, place: bplace },
+    death: { ...(existing.death||{}), date: ddate, place: dplace },
+    chr: existing.chr || { date:'', place:'' },
+    buri: existing.buri || { date:'', place:'' },
     events,
-    notes: note ? [note] : (existing.notes || []),
+    noteText: note,
+    noteRefs: existing.noteRefs || [],
     famc: existing.famc || [],
     fams: existing.fams || [],
-    sources: existing.sources || []
+    media: existing.media || [],
+    titl: existing.titl || '',
+    reli: existing.reli || '',
+    lastChanged: existing.lastChanged || '',
+    sourceRefs: srcState['pf'] || new Set()
   };
 
   closeModal('modalPerson');
@@ -1871,6 +2124,7 @@ function showFamilyForm(id) {
   document.getElementById('ff-mplace').value = f?.marr?.place || '';
   document.getElementById('ff-children').value = f?.children?.join(', ') || '';
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
+  initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
   openModal('modalFamily');
 }
 
@@ -1883,7 +2137,14 @@ function saveFamily() {
   const childrenRaw = document.getElementById('ff-children').value;
   const children = childrenRaw.split(',').map(s => s.trim()).filter(Boolean);
 
-  db.families[id] = { id, husb, wife, children, marr: { date: mdate, place: mplace } };
+  const existingFam = db.families[id] || {};
+  db.families[id] = {
+    ...existingFam,
+    id, husb, wife, children,
+    marr: { ...(existingFam.marr||{}), date: mdate, place: mplace, sources: [...(srcState['ff'] || [])] },
+    noteText: existingFam.noteText || '',
+    sourceRefs: srcState['ff'] || new Set()
+  };
 
   // Update FAMS/FAMC references
   for (const p of Object.values(db.individuals)) {
@@ -1964,12 +2225,18 @@ function deleteSource() {
 // ─────────────────────────────────────
 //  FORMS: EVENT
 // ─────────────────────────────────────
-function showEventForm(personId) {
+function showEventForm(personId, evIdx) {
+  const p = db.individuals[personId];
+  const ev = (evIdx !== undefined && p) ? p.events[evIdx] : null;
   document.getElementById('ef-pid').value = personId;
-  document.getElementById('ef-type').value = 'OCCU';
-  document.getElementById('ef-val').value = '';
-  document.getElementById('ef-date').value = '';
-  document.getElementById('ef-place').value = '';
+  document.getElementById('ef-evidx').value = evIdx !== undefined ? evIdx : '';
+  document.getElementById('ef-type').value = ev?.type || 'OCCU';
+  document.getElementById('ef-val').value = ev?.value || '';
+  document.getElementById('ef-date').value = ev?.date || '';
+  document.getElementById('ef-place').value = ev?.place || '';
+  initSrcWidget('ef', ev?.sources || []);
+  document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
+  document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   openModal('modalEvent');
 }
 
@@ -1977,16 +2244,31 @@ function saveEvent() {
   const pid = document.getElementById('ef-pid').value;
   const p = db.individuals[pid];
   if (!p) return;
-  p.events.push({
+  const evIdxRaw = document.getElementById('ef-evidx').value;
+  const evIdx = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
+
+  const ev = {
     type: document.getElementById('ef-type').value,
     value: document.getElementById('ef-val').value.trim(),
     date: document.getElementById('ef-date').value.trim(),
-    place: document.getElementById('ef-place').value.trim()
-  });
+    place: document.getElementById('ef-place').value.trim(),
+    lati: null, long: null, eventType: '',
+    sources: [...(srcState['ef'] || [])]
+  };
+
+  if (evIdx !== null && p.events[evIdx]) {
+    // Preserve existing geo data when editing
+    ev.lati = p.events[evIdx].lati;
+    ev.long = p.events[evIdx].long;
+    ev.eventType = p.events[evIdx].eventType || '';
+    p.events[evIdx] = ev;
+  } else {
+    p.events.push(ev);
+  }
+
   closeModal('modalEvent');
-  markChanged();
-  showToast('✓ Ereignis hinzugefügt');
-  showDetail(pid);
+  markChanged(); updateStats();
+  if (currentPersonId === pid) showDetail(pid);
 }
 
 // ─────────────────────────────────────
