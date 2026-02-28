@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stammbaum">
+<title>Stammbaum</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #18140f;
+  --surface:   #211c14;
+  --surface2:  #2a2318;
+  --surface3:  #342c1e;
+  --border:    #3e3424;
+  --gold:      #c8a84a;
+  --gold-lt:   #e5c96e;
+  --gold-dim:  #7a6328;
+  --gold-glow: rgba(200,168,74,0.15);
+  --text:      #f2e8d4;
+  --text-dim:  #a0906e;
+  --text-muted:#5a4e38;
+  --blue:      #4a7ab5;
+  --blue-dim:  #2a4a72;
+  --pink:      #a84a6e;
+  --pink-dim:  #6e2a42;
+  --green:     #4a9060;
+  --red:       #c04040;
+  --radius:    14px;
+  --radius-sm: 9px;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Source Serif 4', serif;
+  font-weight: 300;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+/* ═══════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════ */
+.topbar {
+  position: sticky; top: 0; z-index: 200;
+  background: rgba(24,20,15,0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  display: flex; align-items: center;
+  min-height: 52px;
+  gap: 10px;
+}
+.topbar-inner {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 10px 0;
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem; color: var(--gold);
+  letter-spacing: 0.06em; flex: 1;
+}
+.topbar-btn {
+  background: none; border: none;
+  color: var(--gold); font-size: 0.9rem;
+  cursor: pointer; padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-family: 'Source Serif 4', serif;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.topbar-btn:active { background: var(--surface2); }
+.topbar-btn.back { color: var(--text-dim); }
+.topbar-btn.primary { color: var(--gold-lt); font-weight: 600; }
+
+/* ═══════════════════════════════════════
+   VIEWS
+═══════════════════════════════════════ */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ═══════════════════════════════════════
+   LANDING
+═══════════════════════════════════════ */
+#v-landing {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  min-height: 100dvh; gap: 28px;
+  padding: 48px 24px;
+  text-align: center;
+}
+#v-landing.active { display: flex; }
+
+.brand h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 3rem; font-weight: 700;
+  color: var(--gold); letter-spacing: 0.04em;
+  line-height: 1;
+}
+.brand p {
+  margin-top: 8px; color: var(--text-dim);
+  font-style: italic; font-size: 0.95rem;
+}
+.ornament { color: var(--gold-dim); letter-spacing: 0.4em; font-size: 1.2rem; }
+
+.upload-box {
+  width: 100%; max-width: 340px;
+  border: 2px dashed var(--gold-dim);
+  border-radius: var(--radius);
+  padding: 32px 20px; cursor: pointer;
+  background: var(--surface);
+  transition: all 0.2s;
+}
+.upload-box:active, .upload-box.drag { border-color: var(--gold); background: var(--surface2); }
+.upload-box .ub-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.upload-box h3 {
+  font-family: 'Playfair Display', serif;
+  color: var(--gold-lt); font-size: 1rem; margin-bottom: 5px;
+}
+.upload-box p { color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; }
+#fileInput { display: none; }
+
+.icloud-hint {
+  max-width: 340px; text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-size: 0.82rem; color: var(--text-dim);
+  line-height: 1.6;
+}
+.icloud-hint strong { color: var(--gold-lt); }
+
+.btn-ghost {
+  background: none; border: 1px solid var(--border);
+  color: var(--text-muted); padding: 8px 22px;
+  border-radius: 20px; cursor: pointer;
+  font-family: 'Source Serif 4', serif;
+  font-size: 0.85rem; transition: all 0.2s;
+}
+.btn-ghost:active { border-color: var(--gold-dim); color: var(--text-dim); }
+
+/* ═══════════════════════════════════════
+   STATS BAR
+═══════════════════════════════════════ */
+.stats-bar {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.stat {
+  flex: 1; text-align: center;
+  padding: 10px 4px;
+  border-right: 1px solid var(--border);
+}
+.stat:last-child { border-right: none; }
+.stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem; color: var(--gold);
+}
+.stat-lbl {
+  font-size: 0.65rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+
+/* ═══════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════ */
+.search-wrap {
+  padding: 10px 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.search-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 13px;
+  color: var(--text);
+  font-family: 'Source Serif 4', serif;
+  font-size: 0.95rem; outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--gold-dim); }
+.search-input::placeholder { color: var(--text-muted); }
+
+/* ═══════════════════════════════════════
+   PERSON LIST
+═══════════════════════════════════════ */
+#personList { padding-bottom: 100px; }
+
+.alpha-sep {
+  padding: 4px 14px;
+  font-size: 0.68rem; color: var(--gold-dim);
+  background: var(--bg);
+  font-family: 'Playfair Display', serif;
+  letter-spacing: 0.08em;
+}
+.person-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.person-row:active { background: var(--surface2); }
+.p-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; flex-shrink: 0; color: var(--text-muted);
+}
+.p-avatar.m { border-color: var(--blue-dim); color: var(--blue); }
+.p-avatar.f { border-color: var(--pink-dim); color: var(--pink); }
+.p-info { flex: 1; min-width: 0; }
+.p-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.98rem; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.p-meta {
+  font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.p-arrow { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ═══════════════════════════════════════
+   DETAIL VIEW
+═══════════════════════════════════════ */
+#v-detail { padding-bottom: 100px; }
+#v-detail.active { display: block; }
+
+.detail-hero {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 24px 16px; text-align: center;
+}
+.detail-avatar {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: var(--surface2); border: 2px solid var(--gold-dim);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; margin: 0 auto 14px; color: var(--gold-dim);
+}
+.detail-avatar.m { border-color: var(--blue); color: var(--blue); }
+.detail-avatar.f { border-color: var(--pink); color: var(--pink); }
+.detail-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.55rem; color: var(--gold-lt); line-height: 1.2;
+}
+.detail-id { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+
+.section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.16em; color: var(--gold-dim);
+  font-family: 'Source Serif 4', serif; font-weight: 400;
+}
+.section-add {
+  background: none; border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 0.75rem;
+  padding: 3px 10px; border-radius: 12px; cursor: pointer;
+  font-family: 'Source Serif 4', serif; transition: all 0.15s;
+}
+.section-add:active { border-color: var(--gold-dim); color: var(--gold-dim); }
+
+.fact-row {
+  display: flex; gap: 10px; margin-bottom: 9px; font-size: 0.88rem;
+}
+.fact-lbl { color: var(--text-muted); min-width: 88px; flex-shrink: 0; font-style: italic; }
+.fact-val { color: var(--text); }
+
+.rel-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: opacity 0.15s;
+}
+.rel-row:last-child { border-bottom: none; }
+.rel-row:active { opacity: 0.6; }
+.rel-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.9rem; flex-shrink: 0; color: var(--text-muted);
+}
+.rel-avatar.m { border-color: var(--blue-dim); color: var(--blue); }
+.rel-avatar.f { border-color: var(--pink-dim); color: var(--pink); }
+.rel-info { flex: 1; }
+.rel-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.92rem; color: var(--text);
+}
+.rel-role { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
+
+/* ═══════════════════════════════════════
+   BOTTOM FAB
+═══════════════════════════════════════ */
+.fab {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: 20px; z-index: 300;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--gold);
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; color: var(--bg);
+  box-shadow: 0 4px 20px rgba(200,168,74,0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.fab:active { transform: scale(0.94); box-shadow: 0 2px 10px rgba(200,168,74,0.3); }
+
+/* ═══════════════════════════════════════
+   MODAL / SHEET
+═══════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.7);
+  display: none; align-items: flex-end;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+
+.sheet {
+  width: 100%; background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--border);
+  padding: 0 0 env(safe-area-inset-bottom, 16px);
+  max-height: 90dvh;
+  overflow-y: auto;
+  animation: slideUp 0.28s cubic-bezier(0.32,0.72,0,1);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.sheet-handle {
+  width: 36px; height: 4px; border-radius: 2px;
+  background: var(--border); margin: 12px auto 0;
+}
+.sheet-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; color: var(--gold-lt);
+  padding: 16px 20px 0;
+}
+.sheet-body { padding: 16px 20px; }
+
+/* Form elements */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--text-muted); margin-bottom: 6px;
+  font-family: 'Source Serif 4', serif;
+}
+.form-input, .form-select {
+  width: 100%; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; color: var(--text);
+  font-family: 'Source Serif 4', serif; font-size: 0.95rem;
+  outline: none; transition: border-color 0.2s;
+  -webkit-appearance: none; appearance: none;
+}
+.form-input:focus, .form-select:focus { border-color: var(--gold-dim); }
+.form-input::placeholder { color: var(--text-muted); }
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+
+.btn-row { display: flex; gap: 10px; margin-top: 20px; }
+.btn {
+  flex: 1; padding: 12px;
+  border-radius: var(--radius-sm); border: none;
+  cursor: pointer; font-family: 'Source Serif 4', serif;
+  font-size: 0.95rem; font-weight: 400;
+  transition: opacity 0.15s;
+}
+.btn:active { opacity: 0.7; }
+.btn-cancel { background: var(--surface2); color: var(--text-dim); }
+.btn-save { background: var(--gold); color: var(--bg); font-weight: 600; }
+.btn-danger { background: var(--red); color: #fff; }
+
+/* ═══════════════════════════════════════
+   EXPORT BAR
+═══════════════════════════════════════ */
+.export-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0; z-index: 100;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 10px;
+}
+.export-btn {
+  flex: 1; padding: 11px;
+  border-radius: var(--radius-sm); border: none;
+  cursor: pointer; font-family: 'Source Serif 4', serif;
+  font-size: 0.88rem; transition: opacity 0.15s;
+}
+.export-btn:active { opacity: 0.7; }
+.export-btn.icloud { background: var(--gold); color: var(--bg); font-weight: 600; }
+.export-btn.new-person { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
+
+/* ═══════════════════════════════════════
+   TOAST
+═══════════════════════════════════════ */
+.toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2); border: 1px solid var(--gold-dim);
+  color: var(--text); padding: 9px 18px; border-radius: 20px;
+  font-size: 0.83rem; opacity: 0; transition: opacity 0.25s;
+  z-index: 1000; white-space: nowrap; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* ═══════════════════════════════════════
+   SOURCES VIEW
+═══════════════════════════════════════ */
+.source-card {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.source-card:active { background: var(--surface2); }
+.source-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.95rem; color: var(--text);
+}
+.source-meta { font-size: 0.76rem; color: var(--text-muted); margin-top: 3px; }
+
+/* ═══════════════════════════════════════
+   CHANGED INDICATOR
+═══════════════════════════════════════ */
+.changed-dot {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--gold);
+  margin-left: 6px; vertical-align: middle;
+}
+
+/* ═══════════════════════════════════════
+   TABS
+═══════════════════════════════════════ */
+.tabs {
+  display: flex; background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  flex: 1; padding: 11px 4px; text-align: center;
+  font-size: 0.78rem; color: var(--text-muted);
+  cursor: pointer; border: none; background: none;
+  font-family: 'Source Serif 4', serif;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+/* ═══════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════ */
+.empty { padding: 40px 24px; text-align: center; color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
+
+/* ═══════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(12px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.fade-up { animation: fadeUp 0.3s ease both; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     LANDING VIEW
+══════════════════════════════════════ -->
+<div id="v-landing" class="view active">
+  <div class="brand">
+    <div class="ornament">✦  ✦  ✦</div>
+    <h1>Stammbaum</h1>
+    <p>GEDCOM · Viewer &amp; Editor</p>
+  </div>
+
+  <div class="upload-box" id="uploadBox">
+    <div class="ub-icon">📜</div>
+    <h3>GEDCOM-Datei öffnen</h3>
+    <p>Tippen Sie hier oder ziehen Sie<br>eine .ged Datei hierher</p>
+    <input type="file" id="fileInput" accept=".ged,.gedcom,.GED">
+  </div>
+
+  <div class="icloud-hint">
+    <strong>📱 iPhone:</strong><br>
+    Tippen Sie auf „GEDCOM-Datei öffnen" → im Dateipicker zu iCloud Drive → Genealogie → <em>meinStammbaum.ged</em> navigieren.<br><br>
+    <strong>🔒 Ihre Daten bleiben auf Ihrem Gerät.</strong> Nichts wird hochgeladen oder geteilt.<br><br>
+    <strong>☁️ Speichern:</strong> Tippen Sie auf „Speichern" → die .ged Datei wird heruntergeladen → in iCloud Drive ablegen → fertig.
+  </div>
+
+  <button class="btn-ghost" onclick="loadDemo()">Demo-Daten laden</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN VIEW (Tabs: Personen / Quellen)
+══════════════════════════════════════ -->
+<div id="v-main" class="view">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span class="topbar-title">⚘ Stammbaum <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
+      <button class="topbar-btn" onclick="exportGEDCOM()" title="Als GEDCOM speichern">☁️ Speichern</button>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-num" id="sPersons">0</div><div class="stat-lbl">Personen</div></div>
+    <div class="stat"><div class="stat-num" id="sFamilies">0</div><div class="stat-lbl">Familien</div></div>
+    <div class="stat"><div class="stat-num" id="sEvents">0</div><div class="stat-lbl">Ereignisse</div></div>
+    <div class="stat"><div class="stat-num" id="sSources">0</div><div class="stat-lbl">Quellen</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('persons')">Personen</button>
+    <button class="tab" onclick="switchTab('families')">Familien</button>
+    <button class="tab" onclick="switchTab('sources')">Quellen</button>
+  </div>
+
+  <div id="tab-persons">
+    <div class="search-wrap">
+      <input class="search-input" type="search" id="searchInput" placeholder="Name suchen…" oninput="filterPersons(this.value)">
+    </div>
+    <div id="personList"></div>
+  </div>
+
+  <div id="tab-families" style="display:none"></div>
+  <div id="tab-sources" style="display:none"></div>
+
+  <button class="fab" id="fabBtn" onclick="showAddSheet()" title="Neu hinzufügen">＋</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     DETAIL VIEW
+══════════════════════════════════════ -->
+<div id="v-detail" class="view">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <button class="topbar-btn back" onclick="showMain()">← Zurück</button>
+      <span class="topbar-title" id="detailTopTitle"></span>
+      <button class="topbar-btn primary" onclick="showEditSheet()" id="editBtn">Bearbeiten</button>
+    </div>
+  </div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MODALS
+══════════════════════════════════════ -->
+
+<!-- Add chooser -->
+<div class="modal-overlay" id="modalAdd">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Neu hinzufügen</div>
+    <div class="sheet-body">
+      <div class="btn-row" style="flex-direction:column; gap:10px">
+        <button class="btn btn-save" onclick="closeModal('modalAdd'); showPersonForm(null)">👤 Neue Person</button>
+        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showFamilyForm(null)">👨‍👩‍👧 Neue Familie</button>
+        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showSourceForm(null)">📖 Neue Quelle</button>
+        <button class="btn btn-cancel" onclick="closeModal('modalAdd')">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Person form -->
+<div class="modal-overlay" id="modalPerson">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="personFormTitle">Person bearbeiten</div>
+    <div class="sheet-body">
+      <input type="hidden" id="pf-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Vorname</label>
+          <input class="form-input" id="pf-given" placeholder="Anna">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nachname</label>
+          <input class="form-input" id="pf-surname" placeholder="Müller">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Geschlecht</label>
+        <select class="form-select" id="pf-sex">
+          <option value="U">Unbekannt</option>
+          <option value="M">Männlich</option>
+          <option value="F">Weiblich</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Geburtsdatum</label>
+          <input class="form-input" id="pf-bdate" placeholder="12 MAR 1890">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Geburtsort</label>
+          <input class="form-input" id="pf-bplace" placeholder="München">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sterbedatum</label>
+          <input class="form-input" id="pf-ddate" placeholder="5 NOV 1952">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sterbeort</label>
+          <input class="form-input" id="pf-dplace" placeholder="Berlin">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Beruf</label>
+        <input class="form-input" id="pf-occu" placeholder="Bäckermeister">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz</label>
+        <input class="form-input" id="pf-note" placeholder="Weitere Informationen…">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalPerson')">Abbrechen</button>
+        <button class="btn btn-save" onclick="savePerson()">Speichern</button>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-danger" id="deletePersonBtn" onclick="deletePerson()" style="width:100%">Person löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Family form -->
+<div class="modal-overlay" id="modalFamily">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="familyFormTitle">Familie bearbeiten</div>
+    <div class="sheet-body">
+      <input type="hidden" id="ff-id">
+      <div class="form-group">
+        <label class="form-label">Ehemann / Vater</label>
+        <select class="form-select" id="ff-husb"><option value="">– keiner –</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ehefrau / Mutter</label>
+        <select class="form-select" id="ff-wife"><option value="">– keine –</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Heiratsdatum</label>
+          <input class="form-input" id="ff-mdate" placeholder="10 JUN 1920">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Heiratsort</label>
+          <input class="form-input" id="ff-mplace" placeholder="München">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kinder (IDs, kommagetrennt)</label>
+        <input class="form-input" id="ff-children" placeholder="@I003@, @I004@">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalFamily')">Abbrechen</button>
+        <button class="btn btn-save" onclick="saveFamily()">Speichern</button>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-danger" id="deleteFamilyBtn" onclick="deleteFamily()" style="width:100%">Familie löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Source form -->
+<div class="modal-overlay" id="modalSource">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sourceFormTitle">Quelle bearbeiten</div>
+    <div class="sheet-body">
+      <input type="hidden" id="sf-id">
+      <div class="form-group">
+        <label class="form-label">Titel</label>
+        <input class="form-input" id="sf-title" placeholder="Kirchenbuch München 1850–1900">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Autor / Institution</label>
+        <input class="form-input" id="sf-auth" placeholder="Pfarramt St. Peter">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Datum / Jahr</label>
+        <input class="form-input" id="sf-date" placeholder="1890">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ort / Aufbewahrung</label>
+        <input class="form-input" id="sf-repo" placeholder="Stadtarchiv München">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz / Beschreibung</label>
+        <input class="form-input" id="sf-text" placeholder="Weitere Details…">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalSource')">Abbrechen</button>
+        <button class="btn btn-save" onclick="saveSource()">Speichern</button>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-danger" id="deleteSourceBtn" onclick="deleteSource()" style="width:100%">Quelle löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Event to person -->
+<div class="modal-overlay" id="modalEvent">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Ereignis hinzufügen</div>
+    <div class="sheet-body">
+      <input type="hidden" id="ef-pid">
+      <div class="form-group">
+        <label class="form-label">Ereignistyp</label>
+        <select class="form-select" id="ef-type">
+          <option value="OCCU">Beruf</option>
+          <option value="RESI">Wohnort</option>
+          <option value="EDUC">Bildung</option>
+          <option value="RELI">Religion</option>
+          <option value="EMIG">Auswanderung</option>
+          <option value="IMMI">Einwanderung</option>
+          <option value="NATU">Einbürgerung</option>
+          <option value="EVEN">Sonstiges</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Wert / Beschreibung</label>
+        <input class="form-input" id="ef-val" placeholder="z.B. Schreiner">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Datum</label>
+          <input class="form-input" id="ef-date" placeholder="1910">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ort</label>
+          <input class="form-input" id="ef-place" placeholder="München">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalEvent')">Abbrechen</button>
+        <button class="btn btn-save" onclick="saveEvent()">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────
+let db = { individuals: {}, families: {}, sources: {} };
+let changed = false;
+let currentPersonId = null;
+let currentFamilyId = null;
+let currentSourceId = null;
+let currentTab = 'persons';
+let idCounter = 1000;
+
+function nextId(prefix) {
+  idCounter++;
+  return `@${prefix}${idCounter}@`;
+}
+
+// ─────────────────────────────────────
+//  GEDCOM PARSER
+// ─────────────────────────────────────
+function parseGEDCOM(text) {
+  const lines = text.split(/\r?\n/);
+  const individuals = {}, families = {}, sources = {};
+  let cur = null, curType = null, curTag = null, subTag = null;
+
+  for (let raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    const m = line.match(/^(\d+)\s+(\S+)(.*)?$/);
+    if (!m) continue;
+    const lv = parseInt(m[1]);
+    const tag = m[2].trim();
+    const val = (m[3] || '').trim();
+
+    if (lv === 0) {
+      curTag = null; subTag = null;
+      if (tag.startsWith('@') && val === 'INDI') {
+        cur = { id: tag, name:'', surname:'', given:'', sex:'U', birth:{}, death:{}, events:[], famc:[], fams:[], notes:[], sources:[] };
+        individuals[tag] = cur; curType = 'INDI';
+      } else if (tag.startsWith('@') && val === 'FAM') {
+        cur = { id: tag, husb:null, wife:null, children:[], marr:{} };
+        families[tag] = cur; curType = 'FAM';
+      } else if (tag.startsWith('@') && val === 'SOUR') {
+        cur = { id: tag, title:'', author:'', date:'', repo:'', text:'' };
+        sources[tag] = cur; curType = 'SOUR';
+      } else { curType = null; cur = null; }
+      continue;
+    }
+    if (!cur) continue;
+
+    if (curType === 'INDI') {
+      if (lv === 1) {
+        curTag = tag;
+        if (tag === 'NAME') {
+          const sn = val.match(/\/([^\/]*)\//) || [];
+          cur.surname = sn[1] ? sn[1].trim() : '';
+          cur.given = val.replace(/\/[^\/]*\//, '').trim();
+          cur.name = (cur.given + (cur.surname ? ' ' + cur.surname : '')).trim() || val.replace(/\//g,'').trim();
+        } else if (tag === 'SEX') { cur.sex = val; }
+        else if (tag === 'FAMC') { cur.famc.push(val); }
+        else if (tag === 'FAMS') { cur.fams.push(val); }
+        else if (tag === 'NOTE') { cur.notes.push(val); }
+        else if (['OCCU','RESI','EDUC','RELI','EMIG','IMMI','NATU','EVEN'].includes(tag)) {
+          cur.events.push({ type: tag, value: val, date:'', place:'' });
+          subTag = 'EVENT:' + (cur.events.length - 1);
+        }
+      } else if (lv === 2) {
+        if (curTag === 'BIRT') {
+          if (tag==='DATE') cur.birth.date = val;
+          if (tag==='PLAC') cur.birth.place = val;
+        } else if (curTag === 'DEAT') {
+          if (tag==='DATE') cur.death.date = val;
+          if (tag==='PLAC') cur.death.place = val;
+        } else if (subTag && subTag.startsWith('EVENT:')) {
+          const idx = parseInt(subTag.split(':')[1]);
+          if (tag==='DATE') cur.events[idx].date = val;
+          if (tag==='PLAC') cur.events[idx].place = val;
+        } else if (curTag === 'NOTE') {
+          if (cur.notes.length > 0) cur.notes[cur.notes.length-1] += ' ' + val;
+        }
+      }
+    }
+
+    if (curType === 'FAM') {
+      if (lv === 1) {
+        curTag = tag;
+        if (tag==='HUSB') cur.husb = val;
+        else if (tag==='WIFE') cur.wife = val;
+        else if (tag==='CHIL') cur.children.push(val);
+      } else if (lv === 2 && curTag === 'MARR') {
+        if (tag==='DATE') cur.marr.date = val;
+        if (tag==='PLAC') cur.marr.place = val;
+      }
+    }
+
+    if (curType === 'SOUR') {
+      if (lv === 1) {
+        if (tag==='TITL') cur.title = val;
+        else if (tag==='AUTH') cur.author = val;
+        else if (tag==='DATE') cur.date = val;
+        else if (tag==='REPO') cur.repo = val;
+        else if (tag==='TEXT') cur.text = val;
+      }
+    }
+  }
+  return { individuals, families, sources };
+}
+
+// ─────────────────────────────────────
+//  GEDCOM WRITER
+// ─────────────────────────────────────
+function writeGEDCOM() {
+  const lines = [];
+  lines.push('0 HEAD');
+  lines.push('1 SOUR Stammbaum-App');
+  lines.push('1 GEDC');
+  lines.push('2 VERS 5.5.1');
+  lines.push('1 CHAR UTF-8');
+  lines.push('1 DATE ' + new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'short',year:'numeric'}).toUpperCase());
+
+  for (const p of Object.values(db.individuals)) {
+    lines.push(`0 ${p.id} INDI`);
+    const nameStr = (p.given ? p.given + ' ' : '') + (p.surname ? '/' + p.surname + '/' : '');
+    lines.push(`1 NAME ${nameStr.trim()}`);
+    if (p.sex && p.sex !== 'U') lines.push(`1 SEX ${p.sex}`);
+    if (p.birth.date || p.birth.place) {
+      lines.push('1 BIRT');
+      if (p.birth.date) lines.push(`2 DATE ${p.birth.date}`);
+      if (p.birth.place) lines.push(`2 PLAC ${p.birth.place}`);
+    }
+    if (p.death.date || p.death.place) {
+      lines.push('1 DEAT');
+      if (p.death.date) lines.push(`2 DATE ${p.death.date}`);
+      if (p.death.place) lines.push(`2 PLAC ${p.death.place}`);
+    }
+    for (const ev of p.events) {
+      lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
+      if (ev.date) lines.push(`2 DATE ${ev.date}`);
+      if (ev.place) lines.push(`2 PLAC ${ev.place}`);
+    }
+    for (const n of p.notes) lines.push(`1 NOTE ${n}`);
+    for (const f of p.famc) lines.push(`1 FAMC ${f}`);
+    for (const f of p.fams) lines.push(`1 FAMS ${f}`);
+  }
+
+  for (const f of Object.values(db.families)) {
+    lines.push(`0 ${f.id} FAM`);
+    if (f.husb) lines.push(`1 HUSB ${f.husb}`);
+    if (f.wife) lines.push(`1 WIFE ${f.wife}`);
+    for (const c of f.children) lines.push(`1 CHIL ${c}`);
+    if (f.marr.date || f.marr.place) {
+      lines.push('1 MARR');
+      if (f.marr.date) lines.push(`2 DATE ${f.marr.date}`);
+      if (f.marr.place) lines.push(`2 PLAC ${f.marr.place}`);
+    }
+  }
+
+  for (const s of Object.values(db.sources)) {
+    lines.push(`0 ${s.id} SOUR`);
+    if (s.title) lines.push(`1 TITL ${s.title}`);
+    if (s.author) lines.push(`1 AUTH ${s.author}`);
+    if (s.date) lines.push(`1 DATE ${s.date}`);
+    if (s.repo) lines.push(`1 REPO ${s.repo}`);
+    if (s.text) lines.push(`1 TEXT ${s.text}`);
+  }
+
+  lines.push('0 TRLR');
+  return lines.join('\r\n');
+}
+
+// ─────────────────────────────────────
+//  EXPORT / DOWNLOAD
+// ─────────────────────────────────────
+function exportGEDCOM() {
+  const content = writeGEDCOM();
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date();
+  a.download = `stammbaum_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.ged`;
+  a.click();
+  URL.revokeObjectURL(url);
+  changed = false;
+  updateChangedIndicator();
+  showToast('✓ Datei heruntergeladen – in iCloud ablegen');
+}
+
+// ─────────────────────────────────────
+//  FILE LOADING
+// ─────────────────────────────────────
+document.getElementById('uploadBox').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) readFile(e.target.files[0]);
+});
+document.getElementById('uploadBox').addEventListener('dragover', e => {
+  e.preventDefault(); e.currentTarget.classList.add('drag');
+});
+document.getElementById('uploadBox').addEventListener('dragleave', e => e.currentTarget.classList.remove('drag'));
+document.getElementById('uploadBox').addEventListener('drop', e => {
+  e.preventDefault(); e.currentTarget.classList.remove('drag');
+  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+});
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      db = parseGEDCOM(e.target.result);
+      showMain(); showToast('✓ Datei geladen');
+    } catch(err) { showToast('⚠ Fehler beim Laden'); }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function loadDemo() {
+  const demo = `0 HEAD\n1 SOUR Demo\n1 GEDC\n2 VERS 5.5.1\n1 CHAR UTF-8\n0 @I001@ INDI\n1 NAME Johann /Müller/\n1 SEX M\n1 BIRT\n2 DATE 12 MAR 1845\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 3 NOV 1912\n2 PLAC München, Bayern\n1 OCCU Bäckermeister\n1 FAMS @F001@\n0 @I002@ INDI\n1 NAME Maria /Huber/\n1 SEX F\n1 BIRT\n2 DATE 5 JUN 1850\n2 PLAC Augsburg, Bayern\n1 DEAT\n2 DATE 20 FEB 1930\n2 PLAC München, Bayern\n1 FAMS @F001@\n0 @I003@ INDI\n1 NAME Heinrich /Müller/\n1 SEX M\n1 BIRT\n2 DATE 8 JAN 1872\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 15 APR 1940\n2 PLAC München, Bayern\n1 OCCU Kaufmann\n1 FAMC @F001@\n1 FAMS @F002@\n0 @I004@ INDI\n1 NAME Anna /Schmidt/\n1 SEX F\n1 BIRT\n2 DATE 22 SEP 1875\n2 PLAC Nürnberg, Bayern\n1 FAMS @F002@\n0 @I005@ INDI\n1 NAME Karl /Müller/\n1 SEX M\n1 BIRT\n2 DATE 14 JUL 1900\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @I006@ INDI\n1 NAME Elisabeth /Müller/\n1 SEX F\n1 BIRT\n2 DATE 3 MAR 1903\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @S001@ SOUR\n1 TITL Kirchenbuch München St. Peter\n1 AUTH Stadtarchiv München\n1 DATE 1845-1912\n0 @F001@ FAM\n1 HUSB @I001@\n1 WIFE @I002@\n1 CHIL @I003@\n1 MARR\n2 DATE 10 JUN 1870\n2 PLAC München, Bayern\n0 @F002@ FAM\n1 HUSB @I003@\n1 WIFE @I004@\n1 CHIL @I005@\n1 CHIL @I006@\n1 MARR\n2 DATE 5 APR 1898\n2 PLAC München, Bayern\n0 TRLR`;
+  db = parseGEDCOM(demo);
+  showMain(); showToast('✓ Demo geladen');
+}
+
+// ─────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showMain() {
+  showView('v-main');
+  updateStats();
+  renderTab();
+}
+
+function showMain() {
+  showView('v-main');
+  updateStats();
+  renderTab();
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['persons','families','sources'][i] === tab);
+  });
+  document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
+  document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
+  document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
+  renderTab();
+}
+
+function renderTab() {
+  if (currentTab === 'persons') renderPersonList(Object.values(db.individuals));
+  else if (currentTab === 'families') renderFamilyList();
+  else if (currentTab === 'sources') renderSourceList();
+}
+
+function updateStats() {
+  const persons = Object.values(db.individuals);
+  const families = Object.values(db.families);
+  let events = 0;
+  persons.forEach(p => {
+    if (p.birth.date || p.birth.place) events++;
+    if (p.death.date || p.death.place) events++;
+    events += p.events.length;
+  });
+  families.forEach(f => { if (f.marr.date || f.marr.place) events++; });
+  document.getElementById('sPersons').textContent = persons.length;
+  document.getElementById('sFamilies').textContent = families.length;
+  document.getElementById('sEvents').textContent = events;
+  document.getElementById('sSources').textContent = Object.keys(db.sources).length;
+}
+
+function updateChangedIndicator() {
+  document.getElementById('changedIndicator').style.display = changed ? 'inline-block' : 'none';
+}
+
+function markChanged() { changed = true; updateChangedIndicator(); }
+
+// ─────────────────────────────────────
+//  PERSON LIST
+// ─────────────────────────────────────
+function renderPersonList(persons) {
+  const sorted = [...persons].sort((a, b) =>
+    (a.surname || a.given || a.name || '').localeCompare(b.surname || b.given || b.name || '', 'de')
+  );
+  const list = document.getElementById('personList');
+  if (!sorted.length) { list.innerHTML = '<div class="empty">Noch keine Personen</div>'; return; }
+
+  let html = '', lastLetter = '';
+  for (const p of sorted) {
+    const fl = (p.surname || p.given || p.name || '?')[0].toUpperCase();
+    if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
+    const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
+    const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
+    let meta = '';
+    if (p.birth.date) meta += '* ' + p.birth.date;
+    if (p.birth.place) meta += (meta ? ', ' : '') + p.birth.place;
+    if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+    html += `<div class="person-row" onclick="showDetail('${p.id}')">
+      <div class="p-avatar ${sc}">${ic}</div>
+      <div class="p-info">
+        <div class="p-name">${esc(p.name || p.id)}</div>
+        <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
+      </div>
+      <span class="p-arrow">›</span>
+    </div>`;
+  }
+  list.innerHTML = html;
+}
+
+function filterPersons(q) {
+  const lower = q.toLowerCase().trim();
+  const all = Object.values(db.individuals);
+  renderPersonList(lower ? all.filter(p =>
+    (p.name||'').toLowerCase().includes(lower) ||
+    (p.surname||'').toLowerCase().includes(lower) ||
+    (p.given||'').toLowerCase().includes(lower)
+  ) : all);
+}
+
+// ─────────────────────────────────────
+//  FAMILY LIST
+// ─────────────────────────────────────
+function renderFamilyList() {
+  const el = document.getElementById('tab-families');
+  const fams = Object.values(db.families);
+  if (!fams.length) { el.innerHTML = '<div class="empty">Noch keine Familien</div>'; return; }
+
+  let html = '';
+  for (const f of fams) {
+    const husb = f.husb ? db.individuals[f.husb] : null;
+    const wife = f.wife ? db.individuals[f.wife] : null;
+    const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+    let meta = '';
+    if (f.marr.date) meta += '⚭ ' + f.marr.date;
+    if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
+    if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
+    html += `<div class="person-row" onclick="showFamilyDetail('${f.id}')">
+      <div class="p-avatar">👨‍👩‍👧</div>
+      <div class="p-info">
+        <div class="p-name">${esc(title)}</div>
+        <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
+      </div>
+      <span class="p-arrow">›</span>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ─────────────────────────────────────
+//  SOURCE LIST
+// ─────────────────────────────────────
+function renderSourceList() {
+  const el = document.getElementById('tab-sources');
+  const srcs = Object.values(db.sources);
+  if (!srcs.length) { el.innerHTML = '<div class="empty">Noch keine Quellen</div>'; return; }
+
+  let html = '';
+  for (const s of srcs) {
+    html += `<div class="source-card" onclick="showSourceDetail('${s.id}')">
+      <div class="source-title">${esc(s.title || s.id)}</div>
+      <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}</div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ─────────────────────────────────────
+//  DETAIL: PERSON
+// ─────────────────────────────────────
+function showDetail(id) {
+  const p = db.individuals[id];
+  if (!p) return;
+  currentPersonId = id;
+  currentFamilyId = null;
+  currentSourceId = null;
+
+  document.getElementById('detailTopTitle').textContent = p.name || id;
+  document.getElementById('editBtn').onclick = () => showPersonForm(id);
+
+  const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
+  const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
+
+  let html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar ${sc}">${ic}</div>
+    <div class="detail-name">${esc(p.name || id)}</div>
+    <div class="detail-id">${id}</div>
+  </div>`;
+
+  // Life data
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Lebensdaten</div>
+      <button class="section-add" onclick="showEventForm('${id}')">+ Ereignis</button>
+    </div>`;
+
+  if (p.birth.date || p.birth.place)
+    html += factRow('Geburt', [p.birth.date, p.birth.place].filter(Boolean).join(', '));
+  if (p.death.date || p.death.place)
+    html += factRow('Tod', [p.death.date, p.death.place].filter(Boolean).join(', '));
+
+  const evLabels = { OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion', EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung', EVEN:'Ereignis' };
+  p.events.forEach(ev => {
+    const label = evLabels[ev.type] || ev.type;
+    const val = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+    html += factRow(label, val);
+  });
+
+  if (!p.birth.date && !p.death.date && !p.events.length)
+    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Lebensdaten eingetragen</div>`;
+
+  html += `</div>`;
+
+  // Notes
+  if (p.notes.length) {
+    html += `<div class="section fade-up"><div class="section-title">Notizen</div>`;
+    p.notes.forEach(n => html += `<div style="font-size:0.88rem;color:var(--text-dim);margin-bottom:6px">${esc(n)}</div>`);
+    html += `</div>`;
+  }
+
+  // As spouse
+  if (p.fams.length) {
+    html += `<div class="section fade-up">
+      <div class="section-head"><div class="section-title">Ehepartner &amp; Kinder</div></div>`;
+    for (const famId of p.fams) {
+      const fam = db.families[famId];
+      if (!fam) continue;
+      const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
+      const partner = partnerId ? db.individuals[partnerId] : null;
+      if (partner) html += relRow(partner, 'Ehepartner' + (fam.marr.date ? ' · ' + fam.marr.date : ''));
+      for (const cid of fam.children) {
+        const child = db.individuals[cid];
+        if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''));
+      }
+    }
+    html += `</div>`;
+  }
+
+  // Parents
+  if (p.famc.length) {
+    html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Eltern</div></div>`;
+    for (const famId of p.famc) {
+      const fam = db.families[famId];
+      if (!fam) continue;
+      for (const pid of [fam.husb, fam.wife]) {
+        if (!pid) continue;
+        const parent = db.individuals[pid];
+        if (parent) html += relRow(parent, parent.sex === 'M' ? 'Vater' : parent.sex === 'F' ? 'Mutter' : 'Elternteil');
+      }
+    }
+    html += `</div>`;
+  }
+
+  document.getElementById('detailContent').innerHTML = html;
+  showView('v-detail');
+}
+
+function showFamilyDetail(id) {
+  const f = db.families[id];
+  if (!f) return;
+  currentFamilyId = id;
+  currentPersonId = null;
+  currentSourceId = null;
+
+  const husb = f.husb ? db.individuals[f.husb] : null;
+  const wife = f.wife ? db.individuals[f.wife] : null;
+  const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || id;
+
+  document.getElementById('detailTopTitle').textContent = 'Familie';
+  document.getElementById('editBtn').onclick = () => showFamilyForm(id);
+
+  let html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
+    <div class="detail-name">${esc(title)}</div>
+    <div class="detail-id">${id}</div>
+  </div>`;
+
+  if (f.marr.date || f.marr.place) {
+    html += `<div class="section fade-up"><div class="section-title">Heirat</div>`;
+    if (f.marr.date) html += factRow('Datum', f.marr.date);
+    if (f.marr.place) html += factRow('Ort', f.marr.place);
+    html += `</div>`;
+  }
+
+  html += `<div class="section fade-up"><div class="section-title">Mitglieder</div>`;
+  if (husb) html += relRow(husb, 'Ehemann / Vater');
+  if (wife) html += relRow(wife, 'Ehefrau / Mutter');
+  for (const cid of f.children) {
+    const child = db.individuals[cid];
+    if (child) html += relRow(child, 'Kind');
+  }
+  html += `</div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+  showView('v-detail');
+}
+
+function showSourceDetail(id) {
+  const s = db.sources[id];
+  if (!s) return;
+  currentSourceId = id;
+  currentPersonId = null;
+  currentFamilyId = null;
+
+  document.getElementById('detailTopTitle').textContent = 'Quelle';
+  document.getElementById('editBtn').onclick = () => showSourceForm(id);
+
+  let html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar" style="font-size:1.8rem">📖</div>
+    <div class="detail-name">${esc(s.title || id)}</div>
+    <div class="detail-id">${id}</div>
+  </div>
+  <div class="section fade-up"><div class="section-title">Details</div>`;
+  if (s.author) html += factRow('Autor', s.author);
+  if (s.date) html += factRow('Datum', s.date);
+  if (s.repo) html += factRow('Aufbewahrung', s.repo);
+  if (s.text) html += factRow('Notiz', s.text);
+  html += `</div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+  showView('v-detail');
+}
+
+function factRow(label, value) {
+  return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}</span></div>`;
+}
+
+function relRow(person, role) {
+  const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
+  const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
+  return `<div class="rel-row" onclick="showDetail('${person.id}')">
+    <div class="rel-avatar ${sc}">${ic}</div>
+    <div class="rel-info">
+      <div class="rel-name">${esc(person.name || person.id)}</div>
+      <div class="rel-role">${esc(role)}</div>
+    </div>
+    <span class="p-arrow">›</span>
+  </div>`;
+}
+
+// ─────────────────────────────────────
+//  FORMS: PERSON
+// ─────────────────────────────────────
+function showAddSheet() { openModal('modalAdd'); }
+function showEditSheet() {
+  if (currentPersonId) showPersonForm(currentPersonId);
+  else if (currentFamilyId) showFamilyForm(currentFamilyId);
+  else if (currentSourceId) showSourceForm(currentSourceId);
+}
+
+function showPersonForm(id) {
+  closeModal('modalAdd');
+  const p = id ? db.individuals[id] : null;
+  document.getElementById('personFormTitle').textContent = p ? 'Person bearbeiten' : 'Neue Person';
+  document.getElementById('pf-id').value = id || '';
+  document.getElementById('pf-given').value = p?.given || '';
+  document.getElementById('pf-surname').value = p?.surname || '';
+  document.getElementById('pf-sex').value = p?.sex || 'U';
+  document.getElementById('pf-bdate').value = p?.birth?.date || '';
+  document.getElementById('pf-bplace').value = p?.birth?.place || '';
+  document.getElementById('pf-ddate').value = p?.death?.date || '';
+  document.getElementById('pf-dplace').value = p?.death?.place || '';
+  document.getElementById('pf-occu').value = p?.events?.find(e => e.type === 'OCCU')?.value || '';
+  document.getElementById('pf-note').value = p?.notes?.[0] || '';
+  document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
+  openModal('modalPerson');
+}
+
+function savePerson() {
+  const id = document.getElementById('pf-id').value || nextId('I');
+  const given = document.getElementById('pf-given').value.trim();
+  const surname = document.getElementById('pf-surname').value.trim();
+  const sex = document.getElementById('pf-sex').value;
+  const bdate = document.getElementById('pf-bdate').value.trim();
+  const bplace = document.getElementById('pf-bplace').value.trim();
+  const ddate = document.getElementById('pf-ddate').value.trim();
+  const dplace = document.getElementById('pf-dplace').value.trim();
+  const occu = document.getElementById('pf-occu').value.trim();
+  const note = document.getElementById('pf-note').value.trim();
+
+  if (!given && !surname) { showToast('⚠ Bitte Namen eingeben'); return; }
+
+  const existing = db.individuals[id] || {};
+  const events = existing.events ? existing.events.filter(e => e.type !== 'OCCU') : [];
+  if (occu) events.unshift({ type: 'OCCU', value: occu, date: '', place: '' });
+
+  db.individuals[id] = {
+    ...existing,
+    id, given, surname,
+    name: (given + (surname ? ' ' + surname : '')).trim(),
+    sex, birth: { date: bdate, place: bplace },
+    death: { date: ddate, place: dplace },
+    events,
+    notes: note ? [note] : (existing.notes || []),
+    famc: existing.famc || [],
+    fams: existing.fams || [],
+    sources: existing.sources || []
+  };
+
+  closeModal('modalPerson');
+  markChanged();
+  updateStats();
+  renderTab();
+  showToast('✓ Person gespeichert');
+
+  if (currentPersonId === id) showDetail(id);
+}
+
+function deletePerson() {
+  const id = document.getElementById('pf-id').value;
+  if (!id || !db.individuals[id]) return;
+  if (!confirm(`${db.individuals[id].name || id} wirklich löschen?`)) return;
+
+  // Remove from families
+  for (const f of Object.values(db.families)) {
+    if (f.husb === id) f.husb = null;
+    if (f.wife === id) f.wife = null;
+    f.children = f.children.filter(c => c !== id);
+  }
+  delete db.individuals[id];
+  closeModal('modalPerson');
+  markChanged(); updateStats();
+  showMain(); showToast('✓ Person gelöscht');
+}
+
+// ─────────────────────────────────────
+//  FORMS: FAMILY
+// ─────────────────────────────────────
+function showFamilyForm(id) {
+  closeModal('modalAdd');
+  const f = id ? db.families[id] : null;
+  document.getElementById('familyFormTitle').textContent = f ? 'Familie bearbeiten' : 'Neue Familie';
+  document.getElementById('ff-id').value = id || '';
+
+  // Populate person selects
+  const persons = Object.values(db.individuals).sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
+  const optionsAll = '<option value="">– keine –</option>' + persons.map(p =>
+    `<option value="${p.id}">${esc(p.name || p.id)}</option>`
+  ).join('');
+  document.getElementById('ff-husb').innerHTML = optionsAll;
+  document.getElementById('ff-wife').innerHTML = optionsAll;
+
+  document.getElementById('ff-husb').value = f?.husb || '';
+  document.getElementById('ff-wife').value = f?.wife || '';
+  document.getElementById('ff-mdate').value = f?.marr?.date || '';
+  document.getElementById('ff-mplace').value = f?.marr?.place || '';
+  document.getElementById('ff-children').value = f?.children?.join(', ') || '';
+  document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
+  openModal('modalFamily');
+}
+
+function saveFamily() {
+  const id = document.getElementById('ff-id').value || nextId('F');
+  const husb = document.getElementById('ff-husb').value || null;
+  const wife = document.getElementById('ff-wife').value || null;
+  const mdate = document.getElementById('ff-mdate').value.trim();
+  const mplace = document.getElementById('ff-mplace').value.trim();
+  const childrenRaw = document.getElementById('ff-children').value;
+  const children = childrenRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+  db.families[id] = { id, husb, wife, children, marr: { date: mdate, place: mplace } };
+
+  // Update FAMS/FAMC references
+  for (const p of Object.values(db.individuals)) {
+    p.fams = p.fams.filter(f => f !== id);
+    p.famc = p.famc.filter(f => f !== id);
+  }
+  if (husb && db.individuals[husb]) { if (!db.individuals[husb].fams.includes(id)) db.individuals[husb].fams.push(id); }
+  if (wife && db.individuals[wife]) { if (!db.individuals[wife].fams.includes(id)) db.individuals[wife].fams.push(id); }
+  for (const cid of children) {
+    if (db.individuals[cid]) { if (!db.individuals[cid].famc.includes(id)) db.individuals[cid].famc.push(id); }
+  }
+
+  closeModal('modalFamily');
+  markChanged(); updateStats();
+  renderTab();
+  showToast('✓ Familie gespeichert');
+  if (currentFamilyId === id) showFamilyDetail(id);
+}
+
+function deleteFamily() {
+  const id = document.getElementById('ff-id').value;
+  if (!id) return;
+  if (!confirm('Familie wirklich löschen?')) return;
+  for (const p of Object.values(db.individuals)) {
+    p.fams = p.fams.filter(f => f !== id);
+    p.famc = p.famc.filter(f => f !== id);
+  }
+  delete db.families[id];
+  closeModal('modalFamily');
+  markChanged(); updateStats();
+  showMain(); showToast('✓ Familie gelöscht');
+}
+
+// ─────────────────────────────────────
+//  FORMS: SOURCE
+// ─────────────────────────────────────
+function showSourceForm(id) {
+  closeModal('modalAdd');
+  const s = id ? db.sources[id] : null;
+  document.getElementById('sourceFormTitle').textContent = s ? 'Quelle bearbeiten' : 'Neue Quelle';
+  document.getElementById('sf-id').value = id || '';
+  document.getElementById('sf-title').value = s?.title || '';
+  document.getElementById('sf-auth').value = s?.author || '';
+  document.getElementById('sf-date').value = s?.date || '';
+  document.getElementById('sf-repo').value = s?.repo || '';
+  document.getElementById('sf-text').value = s?.text || '';
+  document.getElementById('deleteSourceBtn').style.display = s ? 'block' : 'none';
+  openModal('modalSource');
+}
+
+function saveSource() {
+  const id = document.getElementById('sf-id').value || nextId('S');
+  db.sources[id] = {
+    id,
+    title: document.getElementById('sf-title').value.trim(),
+    author: document.getElementById('sf-auth').value.trim(),
+    date: document.getElementById('sf-date').value.trim(),
+    repo: document.getElementById('sf-repo').value.trim(),
+    text: document.getElementById('sf-text').value.trim()
+  };
+  closeModal('modalSource');
+  markChanged(); updateStats();
+  renderTab();
+  showToast('✓ Quelle gespeichert');
+  if (currentSourceId === id) showSourceDetail(id);
+}
+
+function deleteSource() {
+  const id = document.getElementById('sf-id').value;
+  if (!id) return;
+  if (!confirm('Quelle wirklich löschen?')) return;
+  delete db.sources[id];
+  closeModal('modalSource');
+  markChanged(); updateStats();
+  showMain(); showToast('✓ Quelle gelöscht');
+}
+
+// ─────────────────────────────────────
+//  FORMS: EVENT
+// ─────────────────────────────────────
+function showEventForm(personId) {
+  document.getElementById('ef-pid').value = personId;
+  document.getElementById('ef-type').value = 'OCCU';
+  document.getElementById('ef-val').value = '';
+  document.getElementById('ef-date').value = '';
+  document.getElementById('ef-place').value = '';
+  openModal('modalEvent');
+}
+
+function saveEvent() {
+  const pid = document.getElementById('ef-pid').value;
+  const p = db.individuals[pid];
+  if (!p) return;
+  p.events.push({
+    type: document.getElementById('ef-type').value,
+    value: document.getElementById('ef-val').value.trim(),
+    date: document.getElementById('ef-date').value.trim(),
+    place: document.getElementById('ef-place').value.trim()
+  });
+  closeModal('modalEvent');
+  markChanged();
+  showToast('✓ Ereignis hinzugefügt');
+  showDetail(pid);
+}
+
+// ─────────────────────────────────────
+//  MODAL HELPERS
+// ─────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+// Close on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ─────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
