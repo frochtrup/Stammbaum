@@ -89,7 +89,7 @@ body {
    LANDING
 ═══════════════════════════════════════ */
 #v-landing {
-  display: flex; flex-direction: column;
+  display: none; flex-direction: column;
   align-items: center; justify-content: center;
   min-height: 100dvh; gap: 28px;
   padding: 48px 24px;
@@ -518,7 +518,8 @@ body {
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
-      <button class="topbar-btn" onclick="exportGEDCOM()" title="Als GEDCOM speichern">☁️ Speichern</button>
+      <button class="topbar-btn" onclick="exportGEDCOM()" title="Speichern">☁️</button>
+      <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
 
@@ -766,6 +767,32 @@ body {
   </div>
 </div>
 
+<!-- Menu drawer -->
+<div class="modal-overlay" id="modalMenu">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Menü</div>
+    <div class="sheet-body">
+      <div class="btn-row" style="flex-direction:column; gap:10px">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); document.getElementById('fileInput2').click()">
+          📂 &nbsp; Andere Datei laden
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
+          ☁️ &nbsp; Als GEDCOM speichern
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
+          🗂 &nbsp; Demo-Daten laden
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
+          🗑 &nbsp; Datei schließen / neu beginnen
+        </button>
+        <button class="btn btn-cancel" onclick="closeModal('modalMenu')">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+<input type="file" id="fileInput2" accept=".ged,.gedcom,.GED" style="display:none">
+
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════════════════════════════
@@ -975,6 +1002,20 @@ document.getElementById('uploadBox').addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
 });
 
+document.getElementById('fileInput2').addEventListener('change', e => {
+  if (e.target.files[0]) readFile(e.target.files[0]);
+});
+
+function confirmNewFile() {
+  if (changed) {
+    if (!confirm('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
+  }
+  db = { individuals: {}, families: {}, sources: {} };
+  changed = false;
+  updateChangedIndicator();
+  showView('v-landing');
+}
+
 function readFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
@@ -999,12 +1040,6 @@ function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
-}
-
-function showMain() {
-  showView('v-main');
-  updateStats();
-  renderTab();
 }
 
 function showMain() {
