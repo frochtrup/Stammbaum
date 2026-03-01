@@ -99,7 +99,7 @@ body {
 
 .tree-card {
   position: absolute;
-  width: 96px; height: 56px;
+  width: 96px; height: 64px;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -112,7 +112,7 @@ body {
 }
 .tree-card:not(.tree-card-empty):active { border-color: var(--gold); background: var(--surface3); }
 .tree-card-center {
-  width: 120px; height: 68px;
+  width: 120px; height: 80px;
   border-color: var(--gold);
   background: var(--surface3);
 }
@@ -124,7 +124,8 @@ body {
 .tree-sex  { font-size: 0.65rem; color: var(--text-muted); line-height: 1; }
 .tree-name {
   font-size: 0.7rem; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25;
+  overflow: hidden; line-height: 1.2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .tree-card-center .tree-name { font-size: 0.82rem; color: var(--gold-lt); font-weight: 600; }
 .tree-yr   { font-size: 0.62rem; color: var(--text-dim); line-height: 1; }
@@ -1574,7 +1575,7 @@ function readFile(file) {
         localStorage.setItem('stammbaum_backup_date', backupDate);
       } catch(e) { /* storage full – ignore */ }
       updateBackupBtn();
-      showMain(); showToast('✓ ' + file.name + ' geladen');
+      showStartView(); showToast('✓ ' + file.name + ' geladen');
     } catch(err) { showToast('⚠ Fehler beim Laden'); }
   };
   reader.readAsText(file, 'UTF-8');
@@ -1583,7 +1584,7 @@ function readFile(file) {
 function loadDemo() {
   const demo = `0 HEAD\n1 SOUR Demo\n1 GEDC\n2 VERS 5.5.1\n1 CHAR UTF-8\n0 @I001@ INDI\n1 NAME Johann /Müller/\n1 SEX M\n1 BIRT\n2 DATE 12 MAR 1845\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 3 NOV 1912\n2 PLAC München, Bayern\n1 OCCU Bäckermeister\n1 FAMS @F001@\n0 @I002@ INDI\n1 NAME Maria /Huber/\n1 SEX F\n1 BIRT\n2 DATE 5 JUN 1850\n2 PLAC Augsburg, Bayern\n1 DEAT\n2 DATE 20 FEB 1930\n2 PLAC München, Bayern\n1 FAMS @F001@\n0 @I003@ INDI\n1 NAME Heinrich /Müller/\n1 SEX M\n1 BIRT\n2 DATE 8 JAN 1872\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 15 APR 1940\n2 PLAC München, Bayern\n1 OCCU Kaufmann\n1 FAMC @F001@\n1 FAMS @F002@\n0 @I004@ INDI\n1 NAME Anna /Schmidt/\n1 SEX F\n1 BIRT\n2 DATE 22 SEP 1875\n2 PLAC Nürnberg, Bayern\n1 FAMS @F002@\n0 @I005@ INDI\n1 NAME Karl /Müller/\n1 SEX M\n1 BIRT\n2 DATE 14 JUL 1900\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @I006@ INDI\n1 NAME Elisabeth /Müller/\n1 SEX F\n1 BIRT\n2 DATE 3 MAR 1903\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @S001@ SOUR\n1 TITL Kirchenbuch München St. Peter\n1 AUTH Stadtarchiv München\n1 DATE 1845-1912\n0 @F001@ FAM\n1 HUSB @I001@\n1 WIFE @I002@\n1 CHIL @I003@\n1 MARR\n2 DATE 10 JUN 1870\n2 PLAC München, Bayern\n0 @F002@ FAM\n1 HUSB @I003@\n1 WIFE @I004@\n1 CHIL @I005@\n1 CHIL @I006@\n1 MARR\n2 DATE 5 APR 1898\n2 PLAC München, Bayern\n0 TRLR`;
   db = parseGEDCOM(demo);
-  showMain(); showToast('✓ Demo geladen');
+  showStartView(); showToast('✓ Demo geladen');
 }
 
 // Auto-load last file from localStorage on startup
@@ -1594,7 +1595,7 @@ function tryAutoLoad() {
     if (saved && saved.length > 10) {
       db = parseGEDCOM(saved);
       _originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
-      showMain();
+      showStartView();
       updateBackupBtn();
       showToast('✓ ' + fname + ' automatisch geladen');
       return true;
@@ -1651,6 +1652,24 @@ function showMain() {
   showView('v-main');
   updateStats();
   renderTab();
+}
+
+// Kleinste numerische Personen-ID
+function smallestPersonId() {
+  const ids = Object.keys(db.individuals || {});
+  if (!ids.length) return null;
+  return ids.sort((a, b) => {
+    const na = parseInt(a.replace(/\D/g, '')) || 0;
+    const nb = parseInt(b.replace(/\D/g, '')) || 0;
+    return na - nb;
+  })[0];
+}
+
+// Startansicht nach Datei-Load: Tree der Person mit kleinster ID
+function showStartView() {
+  showMain();
+  const startId = smallestPersonId();
+  if (startId) showTree(startId);
 }
 
 function switchTab(tab) {
@@ -1995,71 +2014,73 @@ function showTree(personId) {
   currentPersonId = personId;
   currentTreeId   = personId;
 
-  const CW = 120, CH = 68;      // center card
-  const W  = 96,  H  = 56;      // regular card
-  const HGAP = 10, VGAP = 48;
+  const CW = 120, CH = 80;      // Zentrum-Karte
+  const W  = 96,  H  = 64;      // reguläre Karte
+  const HGAP = 10, VGAP = 44;
+  const MGAP = 20;               // Lücke Person ↔ Ehepartner
   const SLOT = W + HGAP;
-  const PAD  = 24;
+  const PAD  = 20;
   const ROW  = H + VGAP;
 
-  // ── Vorfahren: binärer Baum, 3 Ebenen ──
-  const anc = {
-    1: [null, null],
-    2: [null, null, null, null],
-    3: new Array(8).fill(null)
-  };
-  function fillAnc(pid, lv, i) {
-    if (!pid || lv > 3) return;
-    const par = getParentIds(pid);
-    anc[lv][i * 2]     = par.father;
-    anc[lv][i * 2 + 1] = par.mother;
-    fillAnc(par.father, lv + 1, i * 2);
-    fillAnc(par.mother, lv + 1, i * 2 + 1);
+  // ── Vorfahren (2 Ebenen) ──
+  const par0  = getParentIds(personId);
+  const anc1  = [par0.father, par0.mother];
+  const par_f = par0.father ? getParentIds(par0.father) : { father: null, mother: null };
+  const par_m = par0.mother ? getParentIds(par0.mother) : { father: null, mother: null };
+  const anc2  = [par_f.father, par_f.mother, par_m.father, par_m.mother];
+
+  // ── Erster Ehepartner aus fams ──
+  const spouseId = (() => {
+    for (const famId of (p.fams || [])) {
+      const fam = db.families[famId];
+      if (!fam) continue;
+      if (fam.husb && fam.husb !== personId) return fam.husb;
+      if (fam.wife && fam.wife !== personId) return fam.wife;
+    }
+    return null;
+  })();
+
+  // ── Direkte Kinder (max. 4 pro Zeile) ──
+  const children = getChildIds(personId);
+  const MAX_CHILD_COLS = 4;
+  const childRows = [];
+  for (let i = 0; i < children.length; i += MAX_CHILD_COLS) {
+    childRows.push(children.slice(i, i + MAX_CHILD_COLS));
   }
-  const par0 = getParentIds(personId);
-  anc[1][0] = par0.father; anc[1][1] = par0.mother;
-  fillAnc(par0.father, 2, 0);
-  fillAnc(par0.mother, 2, 1);
 
-  // ── Nachkommen: allgemeiner Baum, 3 Ebenen ──
-  // desc[lv] = [{id, parentIdx, localIdx}]
-  const desc = [[], [], []];
-  getChildIds(personId).forEach((id, i) =>
-    desc[0].push({ id, parentIdx: -1, localIdx: i }));
-  desc[0].forEach((c, ci) =>
-    getChildIds(c.id).forEach(id =>
-      desc[1].push({ id, parentIdx: ci, localIdx: desc[1].length })));
-  desc[1].forEach((c, ci) =>
-    getChildIds(c.id).forEach(id =>
-      desc[2].push({ id, parentIdx: ci, localIdx: desc[2].length })));
+  // ── Layout-Breite ──
+  const ancW   = 4 * SLOT;
+  const childW = childRows.length > 0 ? Math.max(...childRows.map(r => r.length * SLOT)) : 0;
+  const coupleW = spouseId ? CW + MGAP + W : CW;
+  const totalW  = Math.max(ancW, childW, coupleW) + PAD * 2;
+  const cx      = totalW / 2;   // Layout-Zentrum (= Mitte Personen-Karte)
 
-  // ── Breite & Höhe ──
-  const ancW  = 8 * SLOT;
-  const descW = Math.max(...[0, 1, 2].map(lv => desc[lv].length * SLOT), SLOT);
-  const totalW = Math.max(ancW, descW, CW) + PAD * 2;
-  const cx     = totalW / 2;
-
-  // Y-Position jeder Zeile (-3=Ururgroßeltern … 0=Zentrum … +3=Ururenkel)
-  const cy = PAD + 3 * ROW;
+  // ── Y-Positionen ──
+  const baseY = PAD + 2 * ROW;
   function ry(lv) {
-    return lv <= 0
-      ? cy + lv * ROW
-      : cy + CH + VGAP + (lv - 1) * ROW;
+    if (lv <= 0) return baseY + lv * ROW;
+    return baseY + CH + VGAP + (lv - 1) * ROW;
   }
-  const totalH = ry(3) + H + PAD;
+  const totalH = ry(1) + Math.max(childRows.length, 1) * ROW - VGAP + PAD;
 
-  // X-Position Vorfahren-Slot (8-Slot-Gitter, zentriert über cx)
-  function ax(lv, i) {
-    const n     = Math.pow(2, lv);
-    const start = cx - (n * SLOT) / 2;
-    return start + i * SLOT + SLOT / 2 - W / 2;
+  // ── X-Positionen Vorfahren (4 GP-Slots, zentriert bei cx) ──
+  function gpCX(i)  { return cx - 2 * SLOT + (i + 0.5) * SLOT; }
+  function gpX(i)   { return gpCX(i) - W / 2; }
+  function parCX(i) { return (gpCX(i * 2) + gpCX(i * 2 + 1)) / 2; }
+  function parX(i)  { return parCX(i) - W / 2; }
+
+  // ── Person immer bei cx, Ehepartner rechts ──
+  const personCX = cx;
+  const personX  = cx - CW / 2;
+  const spouseX  = cx + CW / 2 + MGAP;
+  const spouseCX = spouseX + W / 2;
+
+  // Kind-Zeilen zentriert zwischen Person und Ehepartner
+  const familyCX = spouseId ? (personCX + spouseCX) / 2 : personCX;
+  function childRowCX(row, i) {
+    return familyCX - (row.length * SLOT) / 2 + (i + 0.5) * SLOT;
   }
-  // X-Position Nachkommen-Slot
-  function dx(lv, i) {
-    const n = desc[lv].length;
-    if (!n) return cx - W / 2;
-    return cx - (n * SLOT) / 2 + i * SLOT + SLOT / 2 - W / 2;
-  }
+  function childRowX(row, i) { return childRowCX(row, i) - W / 2; }
 
   // ── DOM aufbauen ──
   document.getElementById('treeTopTitle').textContent = p.name || personId;
@@ -2076,7 +2097,6 @@ function showTree(personId) {
   svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
   svg.innerHTML = '';
 
-  // Bezier-Linie: (x1,y1)=oben → (x2,y2)=unten
   function line(x1, y1, x2, y2) {
     const mid = (y1 + y2) / 2;
     const el  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -2101,7 +2121,7 @@ function showTree(personId) {
     const q    = db.individuals[id];
     if (!q) return;
     const icon = q.sex === 'M' ? '♂' : q.sex === 'F' ? '♀' : '◇';
-    const nm   = (q.name || id).length > 17 ? (q.name || id).slice(0, 16) + '…' : (q.name || id);
+    const nm   = q.name || id;
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
@@ -2113,45 +2133,50 @@ function showTree(personId) {
     wrap.appendChild(div);
   }
 
-  // Zentrum
-  mkCard(personId, cx - CW / 2, cy, true);
+  // ── Großeltern + Linien zu Eltern ──
+  anc2.forEach((id, i) => {
+    mkCard(id, gpX(i), ry(-2), false);
+    line(gpCX(i), ry(-2) + H, parCX(Math.floor(i / 2)), ry(-1));
+  });
 
-  // Vorfahren + Linien
-  for (let lv = 1; lv <= 3; lv++) {
-    const n = Math.pow(2, lv);
-    for (let i = 0; i < n; i++) {
-      const x = ax(lv, i), y = ry(-lv);
-      mkCard(anc[lv][i], x, y, false);
-      const mx = x + W / 2, bot = y + H;
-      if (lv === 1) {
-        // Vorfahren-Ebene 1 → Zentrum
-        line(mx, bot, cx + (i === 0 ? -CW / 5 : CW / 5), cy);
-      } else {
-        // Vorfahren-Ebene lv → Eltern-Ebene
-        line(mx, bot, ax(lv - 1, Math.floor(i / 2)) + W / 2, ry(-(lv - 1)));
-      }
-    }
+  // ── Eltern + Linien zu Person ──
+  anc1.forEach((id, i) => {
+    mkCard(id, parX(i), ry(-1), false);
+    line(parCX(i), ry(-1) + H, personCX + (i === 0 ? -CW * 0.18 : CW * 0.18), ry(0));
+  });
+
+  // ── Zentrum ──
+  mkCard(personId, personX, ry(0), true);
+
+  // ── Ehepartner + gestrichelte Verbindungslinie ──
+  if (spouseId) {
+    mkCard(spouseId, spouseX, ry(0) + (CH - H) / 2, false);
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    el.setAttribute('x1', personX + CW);
+    el.setAttribute('y1', ry(0) + CH / 2);
+    el.setAttribute('x2', spouseX);
+    el.setAttribute('y2', ry(0) + CH / 2);
+    el.setAttribute('stroke', 'var(--gold)');
+    el.setAttribute('stroke-width', '1.5');
+    el.setAttribute('stroke-dasharray', '5 3');
+    svg.appendChild(el);
   }
 
-  // Nachkommen + Linien
-  for (let lv = 0; lv < 3; lv++) {
-    desc[lv].forEach((item, i) => {
-      const x = dx(lv, i), y = ry(lv + 1);
-      mkCard(item.id, x, y, false);
-      const mx = x + W / 2;
-      if (lv === 0) {
-        line(cx + (i < desc[0].length / 2 ? -CW / 5 : CW / 5), cy + CH, mx, y);
-      } else {
-        line(dx(lv - 1, item.parentIdx) + W / 2, ry(lv) + H, mx, y);
-      }
+  // ── Kinder + Linien (mehrere Zeilen möglich) ──
+  childRows.forEach((row, rowIdx) => {
+    const rowY = ry(1) + rowIdx * ROW;
+    row.forEach((id, i) => {
+      const cxI = childRowCX(row, i);
+      mkCard(id, childRowX(row, i), rowY, false);
+      line(familyCX, ry(0) + CH, cxI, rowY);
     });
-  }
+  });
 
   showView('v-tree');
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
-    sc.scrollLeft = Math.max(0, cx - sc.clientWidth  / 2);
-    sc.scrollTop  = Math.max(0, ry(-3) - PAD);
+    sc.scrollLeft = Math.max(0, cx - sc.clientWidth / 2);
+    sc.scrollTop  = Math.max(0, ry(-2) - PAD);
   }, 60);
 }
 
@@ -2307,7 +2332,9 @@ function showFamilyDetail(id) {
   document.getElementById('detailTopTitle').textContent = 'Familie';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showFamilyForm(id);
-  document.getElementById('treeBtn').style.display = 'none';
+  const _famTreeTarget = f.husb || f.wife || null;
+  document.getElementById('treeBtn').style.display = _famTreeTarget ? '' : 'none';
+  if (_famTreeTarget) document.getElementById('treeBtn').onclick = () => showTree(_famTreeTarget);
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
