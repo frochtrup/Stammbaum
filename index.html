@@ -2423,9 +2423,13 @@ function showTree(personId) {
   }
 
   // ── Layout-Breite ──
-  const ancW   = 4 * SLOT;
-  const childW = childRows.length > 0 ? Math.max(...childRows.map(r => r.length * SLOT)) : 0;
+  // familyCX liegt bei cx + familyOffset (= Mitte zwischen Person und Ehepartner).
+  // Kinder sind um familyCX zentriert → Canvas muss diesen Rechts-Offset kompensieren.
+  const familyOffset = spouseId ? (CW / 2 + MGAP + W / 2) / 2 : 0;  // 64px bei Ehepartner
+  const ancW    = 4 * SLOT;
   const coupleW = spouseId ? CW + MGAP + W : CW;
+  const childMaxCols = childRows.length > 0 ? Math.max(...childRows.map(r => r.length)) : 0;
+  const childW  = childMaxCols > 0 ? childMaxCols * SLOT + 2 * familyOffset : 0;
   const totalW  = Math.max(ancW, childW, coupleW) + PAD * 2;
   const cx      = totalW / 2;   // Layout-Zentrum (= Mitte Personen-Karte)
 
