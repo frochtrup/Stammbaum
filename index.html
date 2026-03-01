@@ -2423,13 +2423,11 @@ function showTree(personId) {
   }
 
   // ── Layout-Breite ──
-  // familyCX liegt bei cx + familyOffset (= Mitte zwischen Person und Ehepartner).
-  // Kinder sind um familyCX zentriert → Canvas muss diesen Rechts-Offset kompensieren.
-  const familyOffset = spouseId ? (CW / 2 + MGAP + W / 2) / 2 : 0;  // 64px bei Ehepartner
+  // Alle Ebenen (Großeltern, Person, Kinder) werden auf die ausgewählte Person zentriert.
   const ancW    = 4 * SLOT;
   const coupleW = spouseId ? CW + MGAP + W : CW;
   const childMaxCols = childRows.length > 0 ? Math.max(...childRows.map(r => r.length)) : 0;
-  const childW  = childMaxCols > 0 ? childMaxCols * SLOT + 2 * familyOffset : 0;
+  const childW  = childMaxCols * SLOT;
   const totalW  = Math.max(ancW, childW, coupleW) + PAD * 2;
   const cx      = totalW / 2;   // Layout-Zentrum (= Mitte Personen-Karte)
 
@@ -2453,8 +2451,8 @@ function showTree(personId) {
   const spouseX  = cx + CW / 2 + MGAP;
   const spouseCX = spouseX + W / 2;
 
-  // Kind-Zeilen zentriert zwischen Person und Ehepartner
-  const familyCX = spouseId ? (personCX + spouseCX) / 2 : personCX;
+  // Kind-Zeilen auf Person zentriert (wie Großeltern-Ebene) — kein asymmetrischer Offset
+  const familyCX = personCX;
   function childRowCX(row, i) {
     return familyCX - (row.length * SLOT) / 2 + (i + 0.5) * SLOT;
   }
