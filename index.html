@@ -589,6 +589,23 @@ body {
 .source-meta { font-size: 0.76rem; color: var(--text-muted); margin-top: 3px; }
 
 /* ═══════════════════════════════════════
+   REPO-BADGE in Quellenliste
+═══════════════════════════════════════ */
+.repo-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--surface2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  margin-left: 6px;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
+}
+
+/* ═══════════════════════════════════════
    QUELLEN-BADGE (kompakt)
 ═══════════════════════════════════════ */
 .src-badge {
@@ -702,10 +719,16 @@ body {
   </div>
 
   <div id="tab-sources" style="display:none">
-    <div class="search-wrap">
-      <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSourcesDebounced(this.value)">
+    <div class="search-wrap" style="display:flex;gap:8px;align-items:center">
+      <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSourcesDebounced(this.value)" style="flex:1;width:auto">
+      <button id="repoJumpBtn" class="btn" style="display:none;flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" onclick="document.getElementById('repoSection').scrollIntoView({behavior:'smooth'})">🏛 Archive</button>
     </div>
     <div id="sourceList"></div>
+    <div id="repoSection" style="margin-top:8px;display:none">
+      <div style="font-size:0.72rem;color:var(--text-muted);padding:4px 16px 6px;
+                  text-transform:uppercase;letter-spacing:0.06em">Archive</div>
+      <div id="repoList"></div>
+    </div>
   </div>
 
   <div id="tab-places" style="display:none">
@@ -927,8 +950,24 @@ body {
         <input class="form-input" id="sf-publ" placeholder="Archiv München, 2001">
       </div>
       <div class="form-group">
-        <label class="form-label">Aufbewahrungsort</label>
-        <input class="form-input" id="sf-repo" placeholder="Stadtarchiv München">
+        <label class="form-label">Aufbewahrungsort (Archiv)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="sf-repo-display"
+               style="flex:1;min-width:0;font-size:0.9rem;padding:8px 0;
+                      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                      color:var(--text-muted)">–</div>
+          <button class="btn" id="sf-repo-clear"
+                  style="padding:6px 10px;font-size:0.85rem;display:none;
+                         background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)"
+                  onclick="sfRepoClear()">×</button>
+          <button class="btn" style="padding:6px 10px;font-size:0.85rem"
+                  onclick="openRepoPicker()">Wählen</button>
+        </div>
+        <input type="hidden" id="sf-repo">
+      </div>
+      <div class="form-group" id="sf-caln-group" style="display:none">
+        <label class="form-label">Signatur / Bestellnummer (CALN)</label>
+        <input class="form-input" id="sf-caln" placeholder="IV/342">
       </div>
       <div class="form-group">
         <label class="form-label">Notiz / Beschreibung</label>
@@ -1084,6 +1123,67 @@ body {
   </div>
 </div>
 
+<!-- Archiv-Formular -->
+<div class="modal-overlay" id="modalRepo">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="repoFormTitle">Archiv bearbeiten</div>
+    <div class="sheet-body">
+      <input type="hidden" id="rf-id">
+      <div class="form-group">
+        <label class="form-label">Name</label>
+        <input class="form-input" id="rf-name" placeholder="Stadtarchiv München">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Adresse</label>
+        <textarea class="form-input" id="rf-addr" rows="2"
+          placeholder="Winzererstr. 68&#10;80797 München"
+          style="resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telefon</label>
+        <input class="form-input" id="rf-phon" placeholder="+49 89 …" type="tel">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Website</label>
+        <input class="form-input" id="rf-www" placeholder="https://…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-Mail</label>
+        <input class="form-input" id="rf-email" placeholder="archiv@…">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalRepo')">Abbrechen</button>
+        <button class="btn btn-save" onclick="saveRepo()">Speichern</button>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-danger" id="deleteRepoBtn" onclick="deleteRepo()" style="width:100%">
+          Archiv löschen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Archiv-Picker -->
+<div class="modal-overlay" id="modalRepoPicker">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Archiv wählen</div>
+    <div class="sheet-body">
+      <input class="form-input" id="repoPickerSearch"
+             placeholder="Archiv suchen…" autocomplete="off"
+             oninput="renderRepoPicker(this.value)">
+      <div id="repoPickerList"
+           style="max-height:280px;overflow-y:auto;margin-top:8px"></div>
+      <div class="btn-row" style="margin-top:12px;flex-direction:column;gap:8px">
+        <button class="btn btn-save" onclick="repoPickerCreateNew()">＋ Neues Archiv erstellen</button>
+        <button class="btn btn-cancel" onclick="closeModal('modalRepoPicker')">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Menu drawer -->
 <div class="modal-overlay" id="modalMenu">
   <div class="sheet">
@@ -1101,7 +1201,7 @@ body {
           🗄 &nbsp; <span>Original-Backup herunterladen</span>
         </button>
         <button id="dirMenuBtn" class="btn" style="display:none;background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); pickSaveDir()">
-          📁 &nbsp; <span id="dirMenuLabel">Speicher-Verzeichnis wählen</span>
+          📁 &nbsp; <span id="dirMenuLabel">Speicher-Ordner wählen</span>
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
           🗂 &nbsp; Demo-Daten laden
@@ -1123,7 +1223,7 @@ body {
     <div class="sheet-title">Hilfe &amp; Anleitung</div>
     <div class="sheet-body">
       <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-bottom:14px;letter-spacing:0.04em">
-        Stammbaum PWA · Version 1.0 · März 2026
+        Stammbaum PWA · Version 1.1 · März 2026
       </div>
       <div style="font-size:0.85rem;color:var(--text-dim);line-height:1.7">
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">GEDCOM-Datei öffnen</strong><br>
@@ -1153,7 +1253,7 @@ body {
 // ─────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────
-let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {} };
+let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {} };
 let changed = false;
 let _placesCache = null;  // Cache für collectPlaces(); wird in markChanged() geleert
 let _originalGedText = null;   // In-memory backup des zuletzt geladenen Originals
@@ -1173,6 +1273,8 @@ let _skipHistoryPush = false; // gesetzt während goBack() navigiert
 let _relMode     = '';    // 'spouse' | 'child' | 'parent'
 let _relAnchorId = '';    // personId (spouse/parent) oder famId (child)
 let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonForm()
+let currentRepoId    = null;
+let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
 
 function nextId(prefix) {
   idCounter++;
@@ -1194,7 +1296,7 @@ function parseGEDCOM(text) {
   text = text.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/);
 
-  const individuals = {}, families = {}, sources = {}, notes = {};
+  const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
   let cur = null, curType = null;
   // Simple flat context tracking
   let lv1tag = '';   // current level-1 tag
@@ -1236,11 +1338,14 @@ function parseGEDCOM(text) {
         cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null}, engag:{}, noteText:'', sourceRefs: new Set() };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', text:'', media:[] };
+        cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[] };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && val.trim() === 'NOTE') {
         cur = { id:tag, text:'' };
         notes[tag] = cur; curType = 'NOTE';
+      } else if (tag.startsWith('@') && val.trim() === 'REPO') {
+        cur = { id:tag, name:'', addr:'', phon:'', www:'', email:'', lastChanged:'' };
+        repositories[tag] = cur; curType = 'REPO';
       } else { curType = null; cur = null; }
       continue;
     }
@@ -1421,7 +1526,7 @@ function parseGEDCOM(text) {
         else if (tag==='AUTH') cur.author = val;
         else if (tag==='DATE') cur.date   = val;
         else if (tag==='PUBL') cur.publ   = val;
-        else if (tag==='REPO') cur.repo   = val;
+        else if (tag==='REPO') { cur.repo = val; cur.repoCallNum = ''; }
         else if (tag==='TEXT') cur.text   = val;
         else if (tag==='OBJE') cur.media.push({ file:'', title:'' });
       }
@@ -1432,6 +1537,7 @@ function parseGEDCOM(text) {
           if (tag==='TITL') cur.media[cur.media.length-1].title = val;
         }
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
+        if (lv1tag==='REPO' && tag==='CALN') cur.repoCallNum = val;
       }
     }
 
@@ -1439,6 +1545,20 @@ function parseGEDCOM(text) {
     if (curType === 'NOTE') {
       if (tag==='CONC') cur.text += val;
       else if (tag==='CONT') cur.text += '\n' + val;
+    }
+
+    // ── REPO record ──
+    if (curType === 'REPO') {
+      if (lv === 1) {
+        if (tag==='NAME')       cur.name  = val;
+        else if (tag==='ADDR')  cur.addr  = val;
+        else if (tag==='PHON')  cur.phon  = val;
+        else if (tag==='WWW')   cur.www   = val;
+        else if (tag==='EMAIL') cur.email = val;
+      } else if (lv === 2) {
+        if (lv1tag==='ADDR' && tag==='CONT') cur.addr += '\n' + val;
+        if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
+      }
     }
   }
 
@@ -1449,7 +1569,7 @@ function parseGEDCOM(text) {
     }
   }
 
-  return { individuals, families, sources, notes };
+  return { individuals, families, sources, notes, repositories };
 }
 
 
@@ -1474,7 +1594,7 @@ function writeGEDCOM() {
 
   lines.push('0 HEAD');
   lines.push('1 SOUR Stammbaum-App');
-  lines.push('2 VERS 1.0');
+  lines.push('2 VERS 1.1');
   lines.push('1 GEDC');
   lines.push('2 VERS 5.5.1');
   lines.push('1 CHAR UTF-8');
@@ -1600,12 +1720,29 @@ function writeGEDCOM() {
     if (s.author) lines.push(`1 AUTH ${s.author}`);
     if (s.date)   lines.push(`1 DATE ${s.date}`);
     if (s.publ)   lines.push(`1 PUBL ${s.publ}`);
-    if (s.repo)   lines.push(`1 REPO ${s.repo}`);
+    if (s.repo) {
+    lines.push(`1 REPO ${s.repo}`);
+    if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
+  }
     if (s.text)   lines.push(`1 TEXT ${s.text}`);
     if (s.lastChanged) {
       lines.push(`1 CHAN`);
       lines.push(`2 DATE ${s.lastChanged}`);
     }
+  }
+
+  for (const r of Object.values(db.repositories)) {
+    lines.push(`0 ${r.id} REPO`);
+    if (r.name) lines.push(`1 NAME ${r.name}`);
+    if (r.addr) {
+      const al = r.addr.split('\n');
+      lines.push(`1 ADDR ${al[0]}`);
+      for (let i = 1; i < al.length; i++) lines.push(`2 CONT ${al[i]}`);
+    }
+    if (r.phon)  lines.push(`1 PHON ${r.phon}`);
+    if (r.www)   lines.push(`1 WWW ${r.www}`);
+    if (r.email) lines.push(`1 EMAIL ${r.email}`);
+    if (r.lastChanged) { lines.push(`1 CHAN`); lines.push(`2 DATE ${r.lastChanged}`); }
   }
 
   lines.push('0 TRLR');
@@ -1648,11 +1785,7 @@ function idbDel(key) {
 //  FILE SYSTEM ACCESS (Desktop-Speichern)
 // ─────────────────────────────────────
 function updateDirMenuBtn() {
-  const btn = document.getElementById('dirMenuBtn');
-  if (!btn || !('showDirectoryPicker' in window)) return;
-  btn.style.display = '';
-  document.getElementById('dirMenuLabel').textContent =
-    _dirHandle ? `Speicher-Verzeichnis: ${_dirHandle.name}` : 'Speicher-Verzeichnis wählen';
+  // Verzeichnis-Speichern deaktiviert (nicht zuverlässig auf macOS/iCloud)
 }
 
 async function restoreDirHandle() {
@@ -1682,7 +1815,16 @@ async function saveToDirectory() {
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const basename = filename.replace(/\.ged$/i, '');
 
-  // Verzeichnis holen (einmalig wählen)
+  // Verzeichnis holen: gespeichertes reaktivieren, sonst neu wählen
+  if (!_dirHandle) {
+    try {
+      const stored = await idbGet('dirHandle');
+      if (stored) {
+        const perm = await stored.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') { _dirHandle = stored; updateDirMenuBtn(); }
+      }
+    } catch(e) {}
+  }
   if (!_dirHandle) {
     try {
       _dirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
@@ -1704,34 +1846,27 @@ async function saveToDirectory() {
   }
 
   try {
-    // 1. Hauptdatei überschreiben
+    // Hauptdatei schreiben
     const mainHandle = await _dirHandle.getFileHandle(filename, { create: true });
     const mainWriter = await mainHandle.createWritable();
     await mainWriter.write(gedText);
     await mainWriter.close();
 
-    // 2. backup/-Unterordner anlegen
-    const backupDir = await _dirHandle.getDirectoryHandle('backup', { create: true });
-
-    // 3. Nächste Versionsnummer ermitteln
-    const today  = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-    const prefix = `${basename}_${today}_`;
-    let n = 1;
-    for await (const name of backupDir.keys()) {
-      if (name.startsWith(prefix) && name.endsWith('.ged')) n++;
-    }
-    const backupName = `${prefix}${String(n).padStart(3, '0')}.ged`;
-
-    // 4. Versioniertes Backup schreiben
-    const backupHandle = await backupDir.getFileHandle(backupName, { create: true });
-    const backupWriter = await backupHandle.createWritable();
-    await backupWriter.write(gedText);
-    await backupWriter.close();
-
-    // 5. State
     try { localStorage.setItem('stammbaum_ged', gedText); } catch(e) {}
     changed = false; updateChangedIndicator();
-    showToast(`✓ ${filename} · Backup: backup/${backupName}`);
+
+    // Backup in Download-Ordner
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const backupName = `${basename}_${ts}.ged`;
+    const blob = new Blob([gedText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = backupName; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+    showToast(`✓ ${filename} · Backup: ${backupName}`);
     return true;
   } catch(e) {
     showToast('⚠ Fehler: ' + e.message);
@@ -1743,12 +1878,6 @@ async function saveToDirectory() {
 //  EXPORT / DOWNLOAD
 // ─────────────────────────────────────
 function exportGEDCOM() {
-  // Desktop mit File System Access API → direkt ins Verzeichnis
-  if ('showDirectoryPicker' in window) {
-    saveToDirectory();
-    return;
-  }
-
   // iOS / Fallback
   const content  = writeGEDCOM();
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
@@ -1955,6 +2084,7 @@ function _beforeDetailNavigate() {
     if      (currentPersonId) _navHistory.push({ type: 'person', id: currentPersonId });
     else if (currentFamilyId) _navHistory.push({ type: 'family', id: currentFamilyId });
     else if (currentSourceId) _navHistory.push({ type: 'source', id: currentSourceId });
+    else if (currentRepoId)   _navHistory.push({ type: 'repo',   id: currentRepoId });
     // Place: Name liegt nicht in einer ID-Variable – über detailTopTitle rekonstruieren
     else {
       const title = document.getElementById('detailTopTitle')?.textContent;
@@ -1977,6 +2107,7 @@ function goBack() {
   if      (prev.type === 'person') showDetail(prev.id);
   else if (prev.type === 'family') showFamilyDetail(prev.id);
   else if (prev.type === 'source') showSourceDetail(prev.id);
+  else if (prev.type === 'repo')   showRepoDetail(prev.id);
   else if (prev.type === 'place')  showPlaceDetail(prev.name);
   else if (prev.type === 'tree')   showTree(prev.id);
   else showMain();
@@ -2015,7 +2146,7 @@ function switchTab(tab) {
 function renderTab() {
   if (currentTab === 'persons') renderPersonList(Object.values(db.individuals));
   else if (currentTab === 'families') renderFamilyList();
-  else if (currentTab === 'sources') renderSourceList();
+  else if (currentTab === 'sources') { renderSourceList(); renderRepoList(); }
   else if (currentTab === 'places') renderPlaceList();
 }
 
@@ -2151,8 +2282,10 @@ function renderSourceList(srcs) {
   for (const s of srcs) {
     const refCount = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
                    + Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
+    const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && db.repositories[s.repo];
+    const repoBadge = hasRepo ? `<span class="repo-badge" style="cursor:pointer" onclick="event.stopPropagation();showRepoDetail('${s.repo}')">🏛</span>` : '';
     html += `<div class="source-card" data-sid="${s.id}" onclick="showSourceDetail(this.dataset.sid)">
-      <div class="source-title">${esc(s.abbr || s.title || s.id)}</div>
+      <div class="source-title">${esc(s.abbr || s.title || s.id)}${repoBadge}</div>
       <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}${refCount ? ` · ${refCount} Ref.` : ''}</div>
     </div>`;
   }
@@ -2168,6 +2301,24 @@ function filterSources(q) {
     (s.abbr||'').toLowerCase().includes(lower)  ||
     (s.author||'').toLowerCase().includes(lower)
   ));
+}
+
+function renderRepoList() {
+  const section = document.getElementById('repoSection');
+  const el      = document.getElementById('repoList');
+  const repos   = Object.values(db.repositories || {});
+  const jumpBtn = document.getElementById('repoJumpBtn');
+  if (!repos.length) { section.style.display = 'none'; if (jumpBtn) jumpBtn.style.display = 'none'; return; }
+  section.style.display = '';
+  if (jumpBtn) jumpBtn.style.display = '';
+  const sorted = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
+  el.innerHTML = sorted.map(r => {
+    const srcCount = Object.values(db.sources).filter(s => s.repo === r.id).length;
+    return `<div class="source-card" onclick="showRepoDetail('${r.id}')">
+      <div class="source-title">${esc(r.name || r.id)}</div>
+      <div class="source-meta">${r.addr ? esc(r.addr.split('\n')[0]) : '&nbsp;'}${srcCount ? ' · ' + srcCount + ' Quel.' : ''}</div>
+    </div>`;
+  }).join('');
 }
 
 // ─────────────────────────────────────
@@ -2461,7 +2612,7 @@ function showPlaceDetail(placeName) {
   const place = places.get(placeName);
   if (!place) return;
   _beforeDetailNavigate();
-  currentPersonId = null; currentFamilyId = null; currentSourceId = null;
+  currentPersonId = null; currentFamilyId = null; currentSourceId = null; currentRepoId = null;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showPlaceForm(placeName);
@@ -2764,6 +2915,7 @@ function showDetail(id) {
   currentPersonId = id;
   currentFamilyId = null;
   currentSourceId = null;
+  currentRepoId   = null;
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
@@ -2910,6 +3062,7 @@ function showFamilyDetail(id) {
   currentFamilyId = id;
   currentPersonId = null;
   currentSourceId = null;
+  currentRepoId   = null;
 
   const husb = f.husb ? db.individuals[f.husb] : null;
   const wife = f.wife ? db.individuals[f.wife] : null;
@@ -2964,6 +3117,7 @@ function showSourceDetail(id) {
   currentSourceId = id;
   currentPersonId = null;
   currentFamilyId = null;
+  currentRepoId   = null;
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
@@ -2987,7 +3141,17 @@ function showSourceDetail(id) {
   if (s.author) html += factRow('Autor', s.author);
   if (s.date)   html += factRow('Datum', s.date);
   if (s.publ)   html += factRow('Verlag', s.publ);
-  if (s.repo)   html += factRow('Aufbewahrung', s.repo);
+  if (s.repo) {
+    if (s.repo.match(/^@[^@]+@$/) && db.repositories[s.repo]) {
+      const r = db.repositories[s.repo];
+      const callNum = s.repoCallNum ? ` · Signatur: ${esc(s.repoCallNum)}` : '';
+      html += `<div class="fact-row"><span class="fact-lbl">Aufbewahrung</span>
+        <span class="fact-val"><span class="btn-link"
+          onclick="showRepoDetail('${s.repo}')">${esc(r.name || s.repo)}</span>${callNum}</span></div>`;
+    } else {
+      html += factRow('Aufbewahrung', s.repo);
+    }
+  }
   if (s.text)   html += `<div class="fact-row"><span class="fact-lbl">Notiz</span><span class="fact-val" style="white-space:pre-wrap;line-height:1.5">${esc(s.text)}</span></div>`;
   if (!s.abbr && !s.title && !s.author && !s.date && !s.publ && !s.repo && !s.text)
     html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
@@ -3363,8 +3527,10 @@ function showSourceForm(id) {
   document.getElementById('sf-auth').value  = s?.author || '';
   document.getElementById('sf-date').value  = s?.date   || '';
   document.getElementById('sf-publ').value  = s?.publ   || '';
-  document.getElementById('sf-repo').value  = s?.repo   || '';
-  document.getElementById('sf-text').value  = s?.text   || '';
+  document.getElementById('sf-repo').value  = s?.repo         || '';
+  document.getElementById('sf-caln').value  = s?.repoCallNum  || '';
+  document.getElementById('sf-text').value  = s?.text         || '';
+  sfRepoUpdateDisplay();
   document.getElementById('deleteSourceBtn').style.display = s ? 'block' : 'none';
   openModal('modalSource');
 }
@@ -3386,6 +3552,7 @@ function saveSource() {
     date:        document.getElementById('sf-date').value.trim(),
     publ:        document.getElementById('sf-publ').value.trim(),
     repo:        document.getElementById('sf-repo').value.trim(),
+    repoCallNum: document.getElementById('sf-caln').value.trim(),
     text:        document.getElementById('sf-text').value.trim(),
     lastChanged: gedDate
   };
@@ -3404,6 +3571,170 @@ function deleteSource() {
   closeModal('modalSource');
   markChanged(); updateStats();
   showMain(); showToast('✓ Quelle gelöscht');
+}
+
+// ─────────────────────────────────────
+//  FORMS: REPO (Archive)
+// ─────────────────────────────────────
+
+function sfRepoUpdateDisplay() {
+  const repoId  = (document.getElementById('sf-repo').value || '').trim();
+  const display = document.getElementById('sf-repo-display');
+  const clearBtn = document.getElementById('sf-repo-clear');
+  const calnGrp  = document.getElementById('sf-caln-group');
+  if (repoId.match(/^@[^@]+@$/)) {
+    const r = db.repositories[repoId];
+    display.textContent    = r ? (r.name || repoId) : repoId;
+    display.style.color    = 'var(--gold)';
+    clearBtn.style.display = '';
+    calnGrp.style.display  = '';
+  } else if (repoId) {
+    display.textContent    = repoId;
+    display.style.color    = 'var(--text)';
+    clearBtn.style.display = '';
+    calnGrp.style.display  = 'none';
+  } else {
+    display.textContent    = '–';
+    display.style.color    = 'var(--text-muted)';
+    clearBtn.style.display = 'none';
+    calnGrp.style.display  = 'none';
+  }
+}
+function sfRepoClear() {
+  document.getElementById('sf-repo').value = '';
+  document.getElementById('sf-caln').value = '';
+  sfRepoUpdateDisplay();
+}
+function openRepoPicker() {
+  document.getElementById('repoPickerSearch').value = '';
+  renderRepoPicker('');
+  openModal('modalRepoPicker');
+}
+
+function renderRepoPicker(q) {
+  const list = document.getElementById('repoPickerList');
+  let repos = Object.values(db.repositories);
+  if (q) { const lq = q.toLowerCase(); repos = repos.filter(r => (r.name||r.id).toLowerCase().includes(lq)); }
+  repos = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
+  list.innerHTML = '';
+  if (!repos.length) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Keine Archive gefunden</div>';
+    return;
+  }
+  for (const r of repos) {
+    const row = document.createElement('div');
+    row.className = 'person-row';
+    row.innerHTML = `<div class="person-row-info">
+      <div class="person-row-name">${esc(r.name || r.id)}</div>
+      ${r.addr ? `<div class="person-row-meta">${esc(r.addr.split('\n')[0])}</div>` : ''}
+    </div><div class="row-arrow">›</div>`;
+    row.addEventListener('click', () => repoPickerSelect(r.id));
+    list.appendChild(row);
+  }
+}
+function repoPickerSelect(repoId) {
+  closeModal('modalRepoPicker');
+  document.getElementById('sf-repo').value = repoId;
+  sfRepoUpdateDisplay();
+}
+function repoPickerCreateNew() {
+  closeModal('modalRepoPicker');
+  _pendingRepoLink = { sourceId: document.getElementById('sf-id').value };
+  showRepoForm(null);
+}
+
+function showRepoDetail(id) {
+  const r = db.repositories[id]; if (!r) return;
+  _beforeDetailNavigate();
+  currentRepoId = id; currentPersonId = null; currentFamilyId = null; currentSourceId = null;
+  document.getElementById('detailTopTitle').textContent = 'Archiv';
+  document.getElementById('editBtn').style.display = '';
+  document.getElementById('editBtn').onclick = () => showRepoForm(id);
+  document.getElementById('treeBtn').style.display = 'none';
+
+  const linkedSources = Object.values(db.sources).filter(s => s.repo === id);
+  let html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar" style="font-size:1.8rem">🏛</div>
+    <div class="detail-name">${esc(r.name || id)}</div>
+    <div class="detail-id">${id}${r.lastChanged ? ' · geändert ' + r.lastChanged : ''}</div>
+  </div>
+  <div class="section fade-up"><div class="section-title">Details</div>`;
+  if (r.addr)  html += factRow('Adresse', r.addr.replace(/\n/g, ', '));
+  if (r.phon)  html += factRow('Telefon', r.phon);
+  if (r.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${esc(r.www)}" target="_blank" rel="noopener">${esc(r.www)}</a></span></div>`;
+  if (r.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span></div>`;
+  if (!r.addr && !r.phon && !r.www && !r.email)
+    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
+  html += `</div>`;
+  if (linkedSources.length) {
+    html += `<div class="section fade-up"><div class="section-title">Quellen (${linkedSources.length})</div>`;
+    for (const s of linkedSources.sort((a,b)=>(a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'))) {
+      html += `<div class="source-card" onclick="showSourceDetail('${s.id}')">
+        <div class="source-title">${esc(s.abbr || s.title || s.id)}</div>
+        <div class="source-meta">${s.repoCallNum ? 'Signatur: ' + esc(s.repoCallNum) : '&nbsp;'}</div>
+      </div>`;
+    }
+    html += `</div>`;
+  } else {
+    html += `<div class="section fade-up"><div class="empty" style="padding:16px 0">Keine verknüpften Quellen</div></div>`;
+  }
+  document.getElementById('detailContent').innerHTML = html;
+  showView('v-detail');
+}
+
+function showRepoForm(id) {
+  const r = id ? db.repositories[id] : null;
+  document.getElementById('repoFormTitle').textContent = r ? 'Archiv bearbeiten' : 'Neues Archiv';
+  document.getElementById('rf-id').value    = id    || '';
+  document.getElementById('rf-name').value  = r?.name  || '';
+  document.getElementById('rf-addr').value  = r?.addr  || '';
+  document.getElementById('rf-phon').value  = r?.phon  || '';
+  document.getElementById('rf-www').value   = r?.www   || '';
+  document.getElementById('rf-email').value = r?.email || '';
+  document.getElementById('deleteRepoBtn').style.display = r ? 'block' : 'none';
+  openModal('modalRepo');
+}
+
+function saveRepo() {
+  const id = document.getElementById('rf-id').value || nextId('R');
+  const name = document.getElementById('rf-name').value.trim();
+  if (!name) { showToast('⚠ Name erforderlich'); return; }
+  const now = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  db.repositories[id] = {
+    id, name,
+    addr:  document.getElementById('rf-addr').value.trim(),
+    phon:  document.getElementById('rf-phon').value.trim(),
+    www:   document.getElementById('rf-www').value.trim(),
+    email: document.getElementById('rf-email').value.trim(),
+    lastChanged: `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`
+  };
+  closeModal('modalRepo');
+  markChanged();
+  showToast('✓ Archiv gespeichert');
+  if (_pendingRepoLink) {
+    _pendingRepoLink = null;
+    document.getElementById('sf-repo').value = id;
+    sfRepoUpdateDisplay();
+    openModal('modalSource');
+  } else if (currentRepoId === id) {
+    showRepoDetail(id);
+  }
+}
+
+function deleteRepo() {
+  const id = document.getElementById('rf-id').value; if (!id) return;
+  const linked = Object.values(db.sources).filter(s => s.repo === id);
+  const msg = linked.length
+    ? `Archiv löschen? ${linked.length} Quelle(n) verlieren die Archiv-Verknüpfung.`
+    : 'Archiv wirklich löschen?';
+  if (!confirm(msg)) return;
+  for (const s of linked) { s.repo = ''; s.repoCallNum = ''; }
+  delete db.repositories[id];
+  closeModal('modalRepo');
+  markChanged();
+  showMain();
+  showToast('✓ Archiv gelöscht');
 }
 
 // ─────────────────────────────────────

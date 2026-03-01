@@ -15,7 +15,7 @@
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe aktuell:** ~3120 Zeilen · ~90 Funktionen · ~165 KB
+**Größe aktuell:** ~4000 Zeilen · ~130 Funktionen · ~210 KB
 
 ---
 
@@ -31,7 +31,7 @@
 - Zielgruppe (Hobby-Genealoge) versteht ein einzelnes File
 
 **Konsequenzen:**
-- Datei wächst mit neuen Features (~3100 Z. jetzt)
+- Datei wächst mit neuen Features (~3600 Z. jetzt)
 - Ab ~5000 Zeilen sollte Aufteilung in CSS/JS-Dateien erwogen werden
 - Kein Hot-Reload, kein TypeScript, kein Linting
 
@@ -57,9 +57,10 @@ markChanged(); updateStats(); renderTab();
 
 ```javascript
 let db = {
-  individuals: { '@I1@': { ...Person }, '@I2@': { ... } },
-  families:    { '@F1@': { ...Familie } },
-  sources:     { '@S1@': { ...Quelle } },
+  individuals:  { '@I1@': { ...Person }, '@I2@': { ... } },
+  families:     { '@F1@': { ...Familie } },
+  sources:      { '@S1@': { ...Quelle } },
+  repositories: { '@R1@': { ...Archiv } },  // v1.2
 };
 let changed = false;  // Änderungs-Flag
 ```
@@ -111,17 +112,22 @@ Der Parser behandelt MAP auf Level 3 **und** Level 2.
 
 ---
 
-### ADR-007: File System Access API + IndexedDB für Desktop-Speichern
-**Entscheidung:** Desktop-Browser nutzen `showDirectoryPicker()` zum einmaligen Verzeichnis-Wählen, danach automatisches Speichern.
+### ADR-007: Desktop-Export via `<a download>` (aktuell)
+**Entscheidung (v1.2):** Desktop-Export immer via Blob + `<a download>` — Datei landet im Browser-Download-Ordner.
+
+**Grund:** `showDirectoryPicker()` + `createWritable()` schlug auf macOS + iCloud Drive wiederholt fehl (`NotAllowedError`, 0 KB-Dateien). Die File System Access API ist auf iCloud Drive nicht zuverlässig.
+
+**Konsequenz:** Nutzer muss die heruntergeladene Datei ggf. manuell an den richtigen Speicherort verschieben. Direktes Zurückschreiben in die Quelldatei ist noch nicht gelöst (offenes Todo).
 
 ```javascript
-// Handle wird in IndexedDB persistiert (nicht JSON-serialisierbar → kein localStorage)
-const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
-await idbPut('dirHandle', dir);
-// Jeder Speichervorgand schreibt:
-// 1. [dir]/MeineDaten.ged         (überschrieben)
-// 2. [dir]/backup/MeineDaten_YYYY-MM-DD_NNN.ged (versioniert)
+// exportGEDCOM() auf Desktop:
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = filename;   // Original-Dateiname
+a.click();
 ```
+
+**iOS:** Unverändert — Share Sheet mit Hauptdatei + Zeitstempel-Backup.
 
 ---
 
@@ -205,7 +211,11 @@ body
 │   ├── #modalSource    Quelle bearbeiten
 │   ├── #modalEvent     Ereignis hinzufügen / bearbeiten (inkl. BIRT/CHR/DEAT/BURI)
 │   ├── #modalPlace     Ort umbenennen
-│   ├── #modalMenu      ☰ Menü (Speichern, Backup, Verzeichnis, neue Datei)
+│   ├── #modalNewPlace  Neuen Ort anlegen
+│   ├── #modalRelPicker Beziehungs-Picker: Person suchen/wählen oder neu erstellen (v1.1)
+│   ├── #modalRepo      Archiv bearbeiten/erstellen (v1.2)
+│   ├── #modalRepoPicker Archiv-Picker im Quellen-Formular (v1.2)
+│   ├── #modalMenu      ☰ Menü (Speichern, Backup, neue Datei)
 │   └── #modalHelp      Hilfe & Anleitung (iPhone-Workflow, Desktop-Backup etc.)
 │
 ├── .fab                Floating Action Button (＋), ausgeblendet auf Orte-Tab + Baum
@@ -317,9 +327,24 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
   author:      'Stadtarchiv München',
   date:        '1845-1912',
   publ:        '',
-  repo:        '',
+  repo:        '@R1@',        // @Rxx@-Referenz ODER Legacy-Freitext ODER ''
+  repoCallNum: 'IV/342',      // 2 CALN unter 1 REPO (v1.2)
   text:        '',
   lastChanged: '1 MAR 2026',  // CHAN/DATE — auto-gesetzt beim Speichern
+}
+```
+
+### Archiv (`db.repositories['@Rxx@']`) — v1.2
+
+```javascript
+{
+  id:          '@R1@',
+  name:        'Stadtarchiv München',
+  addr:        'Winzererstr. 68\n80797 München',  // \n für Mehrzeiligkeit
+  phon:        '+49 89 233-30010',
+  www:         'https://www.stadtarchiv.muenchen.de',
+  email:       'stadtarchiv@muenchen.de',
+  lastChanged: '1 MAR 2026',
 }
 ```
 
@@ -336,11 +361,13 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
 | Navigation | 1640–1830 | `showView()`, `showMain()`, `showStartView()`, `smallestPersonId()`, `switchTab()`, `renderTab()`, `updateStats()`, `markChanged()`, `setBnavActive()`, `bnavTree()`, `bnavTab()`, `_beforeDetailNavigate()`, `goBack()` |
 | Personen-Liste | 1860–1930 | `renderPersonList()`, `filterPersons()` |
 | Familien-Liste | 1930–1990 | `renderFamilyList()`, `filterFamilies()` |
-| Quellen-Liste | 1990–2040 | `renderSourceList()`, `filterSources()` |
-| Orte-System | 2040–2110 | `collectPlaces()`, `renderPlaceList()`, `filterPlaces()`, `showPlaceDetail()`, `showPlaceForm()`, `savePlace()` |
+| Quellen-Liste | 1990–2060 | `renderSourceList()`, `filterSources()`, `renderRepoList()` |
+| Orte-System | 2060–2140 | `collectPlaces()`, `renderPlaceList()`, `filterPlaces()`, `showPlaceDetail()`, `showPlaceForm()`, `savePlace()` |
 | Stammbaum (Sanduhr) | 2120–2320 | `getParentIds()`, `getChildIds()`, `showTree()`, `mkCard()`, `line()`, `lineHalf()` |
 | Detail-Ansichten | 2320–2560 | `showDetail()`, `showFamilyDetail()`, `showSourceDetail()` |
-| Render-Helfer | 2560–2660 | `factRow()`, `srcNum()`, `sourceTagsHtml()`, `relRow()` |
+| Beziehungs-Picker | 2560–2620 | `showAddSpouseFlow()`, `showAddChildFlow()`, `showAddParentFlow()`, `renderRelPicker()`, `relPickerSelect()`, `relPickerCreateNew()`, `openRelFamilyForm()`, `unlinkMember()` |
+| Archiv-CRUD | 2620–2720 | `showRepoDetail()`, `showRepoForm()`, `saveRepo()`, `deleteRepo()`, `renderRepoPicker()`, `repoPickerSelect()`, `repoPickerCreateNew()`, `sfRepoUpdateDisplay()`, `sfRepoClear()`, `openRepoPicker()` |
+| Render-Helfer | 2620–2720 | `factRow()`, `srcNum()`, `sourceTagsHtml()`, `relRow()` |
 | Quellen-Widget | 2660–2720 | `initSrcWidget()`, `renderSrcTags()`, `renderSrcPicker()`, `toggleSrc()`, `removeSrc()`, `updateSrcPage()` |
 | Formulare | 2720–2980 | `showPersonForm()`, `savePerson()`, `showFamilyForm()`, `saveFamily()`, `showEventForm()`, `saveEvent()`, `onEventTypeChange()`, `showSourceForm()`, `saveSource()` |
 | Utils | 2980–3010 | `esc()`, `showToast()`, `openModal()`, `closeModal()` |
@@ -351,20 +378,28 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
 ## Globale Variablen
 
 ```javascript
-let db = { individuals:{}, families:{}, sources:{} };  // Hauptdaten
+let db = { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{} };  // Hauptdaten
 let changed = false;               // Ungespeicherte Änderungen?
+let _placesCache = null;           // Cache für collectPlaces(); geleert in markChanged()
 let currentPersonId  = null;       // Aktive Detailansicht
 let currentFamilyId  = null;
 let currentSourceId  = null;
+let currentRepoId    = null;       // v1.2: aktive Archiv-Detailansicht
 let currentTab = 'persons';        // Aktiver Tab: 'persons'|'families'|'sources'|'places'
 let currentTreeId = null;          // Aktive Person in Sanduhr-Ansicht
 const srcState = {};               // Zustand des Quellen-Widgets: {prefix: Set}
 const srcPageState = {};           // Seitenangaben pro Quelle: {prefix: {sid: page}}
-let _dirHandle = null;             // FileSystemDirectoryHandle (Desktop-Speichern)
-let _idb = null;                   // IndexedDB-Instanz (für _dirHandle-Persistenz)
+let _dirHandle = null;             // (ungenutzt seit v1.2 — File System Access API entfernt)
+let _idb = null;                   // IndexedDB-Instanz
 let _originalGedText = '';         // Original-GEDCOM beim Laden (für Backup)
 const _navHistory = [];            // Navigations-Stack für goBack() — {type, id|name}
 let _skipHistoryPush = false;      // gesetzt während goBack() navigiert
+// Beziehungs-Picker (v1.1)
+let _relMode     = '';             // 'spouse'|'child'|'parent'
+let _relAnchorId = '';             // personId (spouse/parent) oder famId (child)
+let _pendingRelation = null;       // {mode, anchorId} — gesetzt vor showPersonForm()
+// REPO-Feature (v1.2)
+let _pendingRepoLink = null;       // {sourceId} — gesetzt vor showRepoForm(null) aus Quellen-Formular
 ```
 
 ---
@@ -416,10 +451,13 @@ let _skipHistoryPush = false;      // gesetzt während goBack() navigiert
 | `.person-row` | Listen-Eintrag: Avatar-Kreis · Name + Meta · Pfeil |
 | `.detail-hero` | Großes Avatar + Name ganz oben in Detailansicht |
 | `.section` | Inhalts-Abschnitt mit `.section-title` |
+| `.section-head` | Flexbox-Zeile: `.section-title` links, `.section-add`-Button rechts |
+| `.section-add` | Kleiner Add-Button im Sektions-Kopf (min-width: 100px, border 1px, rounded) |
 | `.fact-row` | Label–Wert-Zeile (z.B. „Geburt · 12 MAR 1890, München") |
 | `.family-nav-row` | Klickbare Familie-Link-Zeile in Person-Detail (⚭ Familie ›) |
 | `.row-arrow` | Pfeil-Icon in `.family-nav-row` |
 | `.rel-row` | Personen-Verknüpfung mit Pfeil (Eltern, Kinder, Partner) |
+| `.unlink-btn` | Kreisförmiger ×-Button (24px) zum Trennen von Beziehungen in rel-row |
 | `.source-card` | Quellen-Karte in der Quellen-Liste |
 | `.src-badge` | Kompakter Quellen-Badge: §N (inline in fact-row, gold-dim, 0.62rem) |
 | `.src-picker-item` | Eintrag in der Quellen-Auswahlliste |
@@ -432,7 +470,7 @@ let _skipHistoryPush = false;      // gesetzt während goBack() navigiert
 | `.tree-wrap` | Absolut-positionierter Canvas (Breite/Höhe per JS gesetzt) |
 | `.tree-svg` | SVG-Overlay für Bezier-Verbindungslinien |
 | `.tree-card` | Personen-Karte im Baum (96×64 px) |
-| `.tree-card-center` | Zentrum-Karte (120×80 px, gold umrandet) |
+| `.tree-card-center` | Zentrum-Karte (160×80 px, gold umrandet) |
 | `.tree-card-half` | Halbgeschwister-Karte (gestrichelter Rahmen, gold-dim) |
 | `.tree-half-badge` | „½"-Badge auf Halbgeschwister-Karten (bottom-right) |
 | `.tree-card-empty` | Ghost-Karte für unbekannte Vorfahren (opacity 0.18, gestrichelt) |
@@ -456,7 +494,7 @@ Ebene +1:         [K0] [K1] [K2] [K3]        ← max. 4 Kinder/Zeile, mehrzeilig
 
 **Konstanten:**
 - Reguläre Karte: W=96px, H=64px
-- Zentrum-Karte: CW=120px, CH=80px
+- Zentrum-Karte: CW=160px, CH=80px
 - HGAP=10, VGAP=44, MGAP=20 (Person↔Ehepartner), SLOT=106, PAD=20
 
 **Layout-Breite** = max(4×SLOT, max-Kinder-Zeile×SLOT, Person+MGAP+W) + 2×PAD
@@ -473,26 +511,23 @@ Ebene +1:         [K0] [K1] [K2] [K3]        ← max. 4 Kinder/Zeile, mehrzeilig
 
 ---
 
-## Speichern/Backup-Architektur
+## Speichern/Backup-Architektur (v1.2)
 
 ```
 exportGEDCOM()
     │
-    ├── Desktop: 'showDirectoryPicker' in window
-    │   └── saveToDirectory()
-    │       ├── _dirHandle aus IndexedDB laden (restoreDirHandle beim Start)
-    │       ├── ggf. showDirectoryPicker() → _dirHandle neu wählen
-    │       ├── [dir]/MeineDaten.ged  ← überschreiben
-    │       └── [dir]/backup/MeineDaten_YYYY-MM-DD_NNN.ged  ← neu
-    │
-    ├── iOS: navigator.share
+    ├── iOS: navigator.canShare
     │   └── navigator.share({ files: [main, backup] })
     │       ├── MeineDaten.ged
     │       └── MeineDaten_YYYY-MM-DD_HHmmss.ged
     │
-    └── Fallback: Blob-Download
-        └── <a download="MeineDaten.ged">
+    └── Desktop: <a download>
+        └── MeineDaten.ged → Browser-Download-Ordner
 ```
+
+**Bekannte Einschränkung:** Direktes Zurückschreiben in die Quelldatei auf dem Mac
+nicht gelöst (File System Access API + iCloud Drive = `NotAllowedError`).
+Nutzer muss Datei nach dem Download ggf. manuell verschieben.
 
 ---
 

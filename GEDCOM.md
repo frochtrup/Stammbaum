@@ -74,9 +74,22 @@
 | `AUTH` | 1 | `author` | |
 | `DATE` | 1 | `date` | |
 | `PUBL` | 1 | `publ` | Verlag |
-| `REPO` | 1 | `repo` | Aufbewahrungsort |
+| `REPO` | 1 | `repo` | `@Rxx@`-Referenz auf REPO-Record **oder** Legacy-Freitext |
+| `CALN` | 2 | `repoCallNum` | Signatur / Bestellnummer (unter `1 REPO`) |
 | `TEXT` | 1 | `text` | Notiz / Beschreibung |
 | `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum; wird beim Speichern auto-gesetzt |
+
+### REPO (Archiv / Bibliothek) — v1.2
+
+| Tag | Level | Feld in `db.repositories` | |
+|---|---|---|---|
+| `NAME` | 1 | `name` | Vollständiger Name des Archivs |
+| `ADDR` | 1 | `addr` | Adresse (mehrzeilig via `2 CONT`) |
+| `CONT` | 2 | `addr` (angehängt) | Folgezeilen der Adresse |
+| `PHON` | 1 | `phon` | Telefonnummer |
+| `WWW` | 1 | `www` | Website-URL |
+| `EMAIL` | 1 | `email` | E-Mail-Adresse |
+| `CHAN` | 1 | `lastChanged` | via `2 DATE` |
 
 ### NOTE (Notiz-Record)
 Werden beim Parsen in `notes`-Map gespeichert und beim Anzeigen über `noteRefs` aufgelöst. Werden beim Export als Inline-NOTE zurückgeschrieben (Record-Struktur geht verloren).
@@ -182,7 +195,18 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 1 SOUR @Sxx@                      ← sourceRefs (ohne marr-Quellen)
 
 0 @Sxx@ SOUR
-1 ABBR / 1 TITL / 1 AUTH / 1 DATE / 1 PUBL / 1 REPO / 1 TEXT
+1 ABBR / 1 TITL / 1 AUTH / 1 DATE / 1 PUBL
+1 REPO @Rxx@                      ← wenn @Rxx@-Referenz
+  2 CALN [Signatur]               ← wenn repoCallNum gesetzt
+1 REPO [Freitext]                 ← wenn Legacy-Freitext (kein CALN)
+1 TEXT
+1 CHAN / 2 DATE [lastChanged]
+
+0 @Rxx@ REPO                      ← v1.2: vor TRLR
+1 NAME [name]
+1 ADDR [erste Zeile]
+  2 CONT [Folgezeile]
+1 PHON / 1 WWW / 1 EMAIL
 1 CHAN / 2 DATE [lastChanged]
 
 0 TRLR
@@ -215,10 +239,11 @@ Für die Volltextsuche funktioniert das gut (Jahreszahlen sind enthalten). Für 
 ## ID-Vergabe
 ```javascript
 function nextId(prefix) {
-  // prefix: 'I' für Personen, 'F' für Familien, 'S' für Quellen
+  // prefix: 'I' für Personen, 'F' für Familien, 'S' für Quellen, 'R' für Repos
   const existing = Object.keys(
     prefix === 'I' ? db.individuals :
-    prefix === 'F' ? db.families : db.sources
+    prefix === 'F' ? db.families :
+    prefix === 'R' ? db.repositories : db.sources
   );
   const nums = existing.map(id => parseInt(id.replace(/\D/g,''))||0);
   const next = (Math.max(0, ...nums) + 1);

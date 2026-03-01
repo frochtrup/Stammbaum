@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 1.0
+# Stammbaum PWA — Version 1.2
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -20,7 +20,7 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (~3120 Zeilen, alles in einer Datei)
+├── index.html          ← gesamte App (~4000 Zeilen, alles in einer Datei)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
@@ -45,10 +45,11 @@ stammbaum/
 |---|---|
 | GEDCOM öffnen | Datei-Picker, `accept="*/*"` (iOS-kompatibel) |
 | Auto-Load | Letzte Datei in `localStorage` gecacht → automatisch beim Start |
-| Desktop Speichern | File System Access API → Verzeichnis einmalig wählen, dann automatisch |
-| Desktop Backup | Versionierte Sicherung: `backup/MeineDaten_YYYY-MM-DD_NNN.ged` |
+| Desktop Speichern | `<a download>` → Datei landet im Browser-Download-Ordner |
 | iOS Speichern | `navigator.share()` → zwei Dateien: Hauptdatei + Zeitstempel-Backup |
 | Demo-Modus | Beispiel-Daten ohne eigene Datei |
+
+> **Hinweis Mac:** Gespeicherte Datei liegt im Browser-Download-Ordner und muss ggf. manuell an den Originalort (iCloud Drive) verschoben werden. Direktes Zurückschreiben ist noch nicht zuverlässig gelöst.
 
 ### Sanduhr-Ansicht (Stammbaum)
 - Grafische Familienansicht: Großeltern → Eltern → Person + Ehepartner → Kinder
@@ -74,8 +75,9 @@ stammbaum/
 
 ### Quellen-Tab
 - **Suche** nach Titel, Kurzname, Autor
-- Liste: Kurzname (ABBR), Autor, Datum, Anzahl Referenzen
+- Liste: Kurzname (ABBR), Autor, Datum, Anzahl Referenzen, 🏛-Badge bei verknüpftem Archiv
 - Detail: alle Metadaten + alle referenzierenden Personen und Familien
+- **Archive-Sektion**: alle REPO-Records mit Quellen-Zähler; Sprungbutton „🏛 Archive"
 
 ### Orte-Tab
 - **Suche** nach Ortsname
@@ -90,10 +92,15 @@ stammbaum/
 | Person | Name (Vor-/Nachname, Präfix, Suffix), Geschlecht, Titel, Religion, Notiz |
 | Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/…), Datum, Ort, Adresse (bei RESI), Todesursache (bei DEAT), Quellen + Seitenangabe |
 | Familie | Eltern (Dropdown), Heirat (Datum, Ort), Kinder hinzufügen/entfernen, Quellen |
-| Quelle | Titel, Kurzname, Autor, Datum, Verlag, Aufbewahrungsort, Notiz |
+| Quelle | Titel, Kurzname, Autor, Datum, Verlag, Archiv (aus REPO-Liste), Signatur (CALN), Notiz |
+| Archiv | Name, Adresse, Telefon, Website, E-Mail |
 | Ort | Name umbenennen (wirkt sich auf alle Personen und Familien aus) |
 
-**Quellen-Widget**: einheitlich in allen Formularen — Tags mit ✕, aufklappbare Picker-Liste mit allen Quellen; im Ereignis-Formular zusätzlich editierbares Seitenfeld (PAGE) pro Quelle
+**Beziehungen modellieren** (v1.1): `+ Ehepartner`, `+ Kind`, `+ Elternteil` direkt in den Detailansichten — bestehende Person wählen oder neue erstellen → Familien-Formular öffnet vorausgefüllt.
+
+**Archive / Repositories** (v1.2): GEDCOM `0 @Rxx@ REPO`-Records vollständig unterstützt — Picker im Quellen-Formular, Detailansicht mit verlinkten Quellen, CALN (Signatur).
+
+**Quellen-Widget**: einheitlich in allen Formularen — Tags mit ✕, aufklappbare Picker-Liste; im Ereignis-Formular zusätzlich editierbares Seitenfeld (PAGE) pro Quelle.
 
 ---
 
@@ -103,20 +110,21 @@ stammbaum/
 ┌──────────────────────────────────────────────┐
 │  index.html                                  │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~3120 Zeilen · ~90 Funktionen · ~165 KB     │
+│  ~4000 Zeilen · ~130 Funktionen · ~210 KB    │
 │                                              │
 │  Globaler State: let db = {                  │
-│    individuals, families, sources            │
+│    individuals, families, sources,           │
+│    repositories, extraPlaces                 │
 │  }                                           │
 │                                              │
 │  Persistenz:                                 │
 │  - localStorage (GEDCOM-Text, Auto-Load)     │
-│  - IndexedDB (Verzeichnis-Handle Desktop)    │
+│  - IndexedDB (Datei-Handle, Reserve)         │
 └──────────────────────────────────────────────┘
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **1 Diff in 2796 Personen** (MeineDaten_ancestris.ged)
-**Version 1.0** — März 2026
+**Version 1.2** — März 2026
 
 ---
 
@@ -148,7 +156,8 @@ iPhone Safari → Stammbaum App
      (zwei Dateien: Hauptdatei + Zeitstempel-Backup)
 
 Änderungen speichern (Mac):
-  └─ ☁ Speichern → Verzeichnis wählen (einmalig) → überschreibt + Backup-Ordner
+  └─ ☁ Speichern → lädt MeineDaten.ged in Download-Ordner
+     → Datei manuell nach iCloud Drive/Genealogie verschieben
 
 Ancestris (Mac):
   └─ Datei → Import → GEDCOM → MeineDaten.ged übernehmen
@@ -163,7 +172,7 @@ python3 -m http.server 8080
 # → http://localhost:8080
 ```
 
-Oder direkt `index.html` im Browser öffnen (reicht für die meisten Features; File System Access API erfordert einen HTTP-Server).
+Oder direkt `index.html` im Browser öffnen.
 
 ---
 

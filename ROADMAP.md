@@ -1,5 +1,56 @@
 # Roadmap
 
+## Version 1.2 ✅ (März 2026)
+
+### REPO-Feature: Archive/Repositories
+- `db.repositories` — neues Dictionary für GEDCOM `0 @Rxx@ REPO`-Records
+- Parser: `0 @Rxx@ REPO` mit NAME, ADDR, PHON, WWW, EMAIL, CHAN/DATE
+- `1 REPO @Rxx@` in SOUR + `2 CALN` → `s.repoCallNum`
+- Writer: REPO-Records vor TRLR, `2 CALN` nach `1 REPO` in SOUR
+- `#modalRepo` — Archiv-Formular mit allen Feldern
+- `#modalRepoPicker` — Archiv-Picker im Quellen-Formular (Suche + "Neues Archiv")
+- `showRepoDetail()` — Detailansicht mit verlinkten Quellen
+- Quellen-Liste: `🏛`-Badge klickbar → Archiv-Detail; "🏛 Archive"-Sprungbutton
+- Quellen-Tab: "Archive"-Sektion mit `renderRepoList()`
+- Navigation vollständig: History-Stack, `goBack()`, `showEditSheet()` unterstützen REPO
+
+### Speichern/Export überarbeitet (Desktop)
+- File System Access API entfernt — auf macOS + iCloud Drive unzuverlässig
+- Desktop-Export jetzt immer via `<a download>` → Browser-Download-Ordner
+- iOS: Share Sheet unverändert (Hauptdatei + Backup)
+- **Offen:** Direktes Speichern auf den Mac (ohne Browser-Download) nicht gelöst
+
+---
+
+## Version 1.1 ✅ (März 2026)
+
+### Neue Beziehungen modellieren
+- Beziehungs-Picker `#modalRelPicker` für Ehepartner / Kind / Elternteil
+- Einstieg über `+ Ehepartner` / `+ Kind` / `+ Elternteil` direkt in den Detailansichten
+- Flow: bestehende Person wählen **oder** neue Person erstellen → Familien-Formular öffnet vorausgefüllt
+- `_pendingRelation`-Mechanismus: nach `savePerson()` öffnet automatisch `showFamilyForm()` mit Vorausfüllung
+- `openRelFamilyForm()`: erkennt freien Slot in bestehender Elternfamilie
+
+### Verbindungen trennen
+- `×`-Button (`unlink-btn`) in `.rel-row` über optionalen dritten Parameter von `relRow()`
+- `unlinkMember(famId, personId)`: trennt husb / wife / child — aktualisiert beide Seiten der Beziehung
+- In Person-Detail: `×` bei Ehepartner + Kindern; `×` am Herkunftsfamilien-Header
+- In Familien-Detail: `×` bei allen Mitgliedern
+
+### Orte-Tab: Neue Orte + Autocomplete
+- Manuelle Orte (`db.extraPlaces`) in localStorage persistent
+- Orts-Autocomplete (case-insensitiv, Substring-Matching) in allen Ort-Eingabefeldern
+- `+ Neuer Ort` über FAB-Chooser (`#modalNewPlace`)
+- Lösch-Button für ungenutzte Extra-Orte in Orts-Detail
+
+### UI-Verbesserungen
+- Zentrum-Karte im Baum: 120 px → 160 px (mehr Platz für lange Namen)
+- `section-add`-Buttons standardisiert: `min-width: 100px`, `text-align: center`
+- `+ Kind` auch in Personen-Detailansicht (pro Familien-Block)
+- Sektionen „Ehepartner & Kinder" und „Eltern" immer sichtbar (auch ohne Einträge)
+
+---
+
 ## Version 1.0 ✅ (März 2026)
 
 Testdatei: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
@@ -54,13 +105,11 @@ Bewusst akzeptierte Verluste:
 - Geburt/Tod-Felder aus Personen-Formular entfernt (nur noch über Ereignis-Formular)
 - Orts-Detailansicht: Ort umbenennen (ersetzt in allen INDI + FAM)
 
-### Phase 3b: Speichern/Backup ✅ (März 2026)
-- Desktop (Chrome/Edge/Firefox): File System Access API
-  - Verzeichnis einmalig wählen, danach automatisch speichern
-  - Hauptdatei überschreiben + versioniertes Backup (MeineDaten_YYYY-MM-DD_NNN.ged)
-  - Verzeichnis-Handle in IndexedDB persistiert
+### Phase 3b: Speichern/Backup ✅ (März 2026, überarbeitet v1.2)
+- Desktop: `<a download>` → Browser-Download-Ordner mit Original-Dateiname
+  - File System Access API entfernt (iCloud Drive: `NotAllowedError`, 0 KB-Dateien)
 - iOS: Zwei Dateien im Share Sheet (Hauptdatei + Zeitstempel-Backup)
-- Fallback: Blob-Download mit Original-Dateiname
+- **Offen: Direktes Speichern auf dem Mac** — Datei soll ohne manuelles Verschieben direkt am Ursprungsort gespeichert werden (iCloud Drive-Kompatibilität ungeklärt)
 
 ### Phase 4: Sanduhr-Ansicht ✅ (März 2026)
 Grafische Familienansicht als scrollbarer Baum.
@@ -163,6 +212,22 @@ if (p.photoBase64) {
 - [ ] Mehrere Ehepartner darstellen (aktuell: nur erster Ehepartner)
 - [ ] Vorfahren-Modus: reiner Vorfahren-Baum (mehr als 2 Ebenen hoch)
 - [ ] Navigation in Geschwister möglich (Klick auf Halbgeschwister → Baum zentriert)
+
+---
+
+## Direktes Speichern auf dem Mac (offen, hohe Priorität)
+
+Das GEDCOM direkt am Ursprungsort speichern, ohne dass der Nutzer die Datei nach dem Download verschieben muss.
+
+**Bisherige Versuche:**
+- `showDirectoryPicker()` + `createWritable()` → `NotAllowedError` / 0 KB auf iCloud Drive
+- `showSaveFilePicker()` + `createWritable()` → gleicher Fehler
+
+**Mögliche Ansätze:**
+- [ ] `showSaveFilePicker()` mit `startIn: 'documents'` — erfordert erneutes Testen
+- [ ] Native App-Shell (Electron/Tauri) — kein Browser, direktes Dateisystem
+- [ ] Safari-Test: Verhält sich Safari auf Mac anders als Chrome bei iCloud Drive?
+- [ ] Nutzer-Workflow: Chrome-Download-Ordner auf iCloud Drive zeigen lassen
 
 ---
 
