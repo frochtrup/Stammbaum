@@ -693,7 +693,6 @@ body {
       <span class="topbar-title" id="treeTopTitle"></span>
       <button class="topbar-btn" onclick="exportGEDCOM()" title="Speichern">☁️</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
-      <button class="topbar-btn primary" id="treeDetailBtn">Detail</button>
     </div>
   </div>
   <div class="tree-scroll" id="treeScroll">
@@ -1793,12 +1792,15 @@ function _beforeDetailNavigate() {
       if (title && title !== '📍 Ort') _navHistory.push({ type: 'place', name: title });
     }
   } else {
-    // Liste / Baum → Detail: History löschen (frischer Einstieg)
     _navHistory.length = 0;
+    // Baum → Detail: Tree-Eintrag pushen damit Zurück zum Baum führt
+    if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
+      _navHistory.push({ type: 'tree', id: currentTreeId });
+    }
   }
 }
 
-// "← Zurück" – geht zur vorherigen Detail-Ansicht oder zur Liste
+// "← Zurück" – geht zur vorherigen Detail-Ansicht, zum Baum oder zur Liste
 function goBack() {
   const prev = _navHistory.pop();
   if (!prev) { showMain(); return; }
@@ -1807,6 +1809,7 @@ function goBack() {
   else if (prev.type === 'family') showFamilyDetail(prev.id);
   else if (prev.type === 'source') showSourceDetail(prev.id);
   else if (prev.type === 'place')  showPlaceDetail(prev.name);
+  else if (prev.type === 'tree')   showTree(prev.id);
   else showMain();
   _skipHistoryPush = false;
 }
@@ -2240,7 +2243,6 @@ function showTree(personId) {
 
   // ── DOM aufbauen ──
   document.getElementById('treeTopTitle').textContent = p.name || personId;
-  document.getElementById('treeDetailBtn').onclick = () => showDetail(personId);
 
   const wrap = document.getElementById('treeWrap');
   wrap.style.width  = totalW + 'px';
