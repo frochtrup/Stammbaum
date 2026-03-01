@@ -664,9 +664,26 @@ body {
     <div id="personList"></div>
   </div>
 
-  <div id="tab-families" style="display:none"></div>
-  <div id="tab-sources" style="display:none"></div>
-  <div id="tab-places" style="display:none"></div>
+  <div id="tab-families" style="display:none">
+    <div class="search-wrap">
+      <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamilies(this.value)">
+    </div>
+    <div id="familyList"></div>
+  </div>
+
+  <div id="tab-sources" style="display:none">
+    <div class="search-wrap">
+      <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSources(this.value)">
+    </div>
+    <div id="sourceList"></div>
+  </div>
+
+  <div id="tab-places" style="display:none">
+    <div class="search-wrap">
+      <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" oninput="filterPlaces(this.value)">
+    </div>
+    <div id="placeList"></div>
+  </div>
 
   <button class="fab" id="fabBtn" onclick="showAddSheet()" title="Neu hinzufügen">＋</button>
 </div>
@@ -1930,10 +1947,10 @@ function filterPersons(q) {
 // ─────────────────────────────────────
 //  FAMILY LIST
 // ─────────────────────────────────────
-function renderFamilyList() {
-  const el = document.getElementById('tab-families');
-  const fams = Object.values(db.families);
-  if (!fams.length) { el.innerHTML = '<div class="empty">Noch keine Familien</div>'; return; }
+function renderFamilyList(fams) {
+  const el = document.getElementById('familyList');
+  if (!fams) fams = Object.values(db.families);
+  if (!fams.length) { el.innerHTML = '<div class="empty">Keine Familien gefunden</div>'; return; }
 
   let html = '';
   for (const f of fams) {
@@ -1956,13 +1973,28 @@ function renderFamilyList() {
   el.innerHTML = html;
 }
 
+function filterFamilies(q) {
+  const lower = q.toLowerCase().trim();
+  const all = Object.values(db.families);
+  if (!lower) { renderFamilyList(all); return; }
+  renderFamilyList(all.filter(f => {
+    const husb = f.husb ? db.individuals[f.husb] : null;
+    const wife = f.wife ? db.individuals[f.wife] : null;
+    if (husb && (husb.name||'').toLowerCase().includes(lower)) return true;
+    if (wife && (wife.name||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr.place||'').toLowerCase().includes(lower)) return true;
+    return false;
+  }));
+}
+
 // ─────────────────────────────────────
 //  SOURCE LIST
 // ─────────────────────────────────────
-function renderSourceList() {
-  const el = document.getElementById('tab-sources');
-  const srcs = Object.values(db.sources);
-  if (!srcs.length) { el.innerHTML = '<div class="empty">Noch keine Quellen</div>'; return; }
+function renderSourceList(srcs) {
+  const el = document.getElementById('sourceList');
+  if (!srcs) srcs = Object.values(db.sources);
+  if (!srcs.length) { el.innerHTML = '<div class="empty">Keine Quellen gefunden</div>'; return; }
 
   let html = '';
   for (const s of srcs) {
@@ -1974,6 +2006,17 @@ function renderSourceList() {
     </div>`;
   }
   el.innerHTML = html;
+}
+
+function filterSources(q) {
+  const lower = q.toLowerCase().trim();
+  const all = Object.values(db.sources);
+  if (!lower) { renderSourceList(all); return; }
+  renderSourceList(all.filter(s =>
+    (s.title||'').toLowerCase().includes(lower) ||
+    (s.abbr||'').toLowerCase().includes(lower)  ||
+    (s.author||'').toLowerCase().includes(lower)
+  ));
 }
 
 // ─────────────────────────────────────
@@ -2007,19 +2050,17 @@ function collectPlaces() {
   return places;
 }
 
-function renderPlaceList() {
-  const el = document.getElementById('tab-places');
-  const places = collectPlaces();
-
-  if (!places.size) {
-    el.innerHTML = '<div class="empty">Keine Orte in den Daten gefunden</div>';
-    return;
+function renderPlaceList(sorted) {
+  const el = document.getElementById('placeList');
+  if (!sorted) {
+    const places = collectPlaces();
+    if (!places.size) { el.innerHTML = '<div class="empty">Keine Orte in den Daten gefunden</div>'; return; }
+    sorted = [...places.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
   }
+  if (!sorted.length) { el.innerHTML = '<div class="empty">Keine Orte gefunden</div>'; return; }
 
-  const sorted = [...places.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
   let html = '';
   let lastLetter = '';
-
   for (const place of sorted) {
     const fl = place.name[0].toUpperCase();
     if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
@@ -2036,6 +2077,13 @@ function renderPlaceList() {
     </div>`;
   }
   el.innerHTML = html;
+}
+
+function filterPlaces(q) {
+  const lower = q.toLowerCase().trim();
+  const all = [...collectPlaces().values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  if (!lower) { renderPlaceList(all); return; }
+  renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
 }
 
 function showPlaceForm(placeName) {
