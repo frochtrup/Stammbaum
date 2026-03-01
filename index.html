@@ -86,6 +86,50 @@ body {
 .view.active { display: block; }
 
 /* ═══════════════════════════════════════
+   STAMMBAUM-ANSICHT (SANDUHR)
+═══════════════════════════════════════ */
+.tree-scroll {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  height: calc(100dvh - 52px);
+  background: var(--bg);
+}
+.tree-wrap { position: relative; }
+.tree-svg  { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+.tree-card {
+  position: absolute;
+  width: 96px; height: 56px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 5px 7px;
+  display: flex; flex-direction: column;
+  justify-content: center; gap: 1px;
+  transition: border-color 0.12s, background 0.12s;
+  user-select: none;
+}
+.tree-card:not(.tree-card-empty):active { border-color: var(--gold); background: var(--surface3); }
+.tree-card-center {
+  width: 120px; height: 68px;
+  border-color: var(--gold);
+  background: var(--surface3);
+}
+.tree-card-empty {
+  opacity: 0.18; cursor: default;
+  border-style: dashed;
+  align-items: center; justify-content: center;
+}
+.tree-sex  { font-size: 0.65rem; color: var(--text-muted); line-height: 1; }
+.tree-name {
+  font-size: 0.7rem; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.25;
+}
+.tree-card-center .tree-name { font-size: 0.82rem; color: var(--gold-lt); font-weight: 600; }
+.tree-yr   { font-size: 0.62rem; color: var(--text-dim); line-height: 1; }
+
+/* ═══════════════════════════════════════
    LANDING
 ═══════════════════════════════════════ */
 #v-landing {
@@ -599,10 +643,27 @@ body {
     <div class="topbar-inner">
       <button class="topbar-btn back" onclick="showMain()">← Zurück</button>
       <span class="topbar-title" id="detailTopTitle"></span>
+      <button class="topbar-btn" id="treeBtn" style="display:none;font-size:1rem" title="Sanduhr-Ansicht">⧖</button>
       <button class="topbar-btn primary" onclick="showEditSheet()" id="editBtn">Bearbeiten</button>
     </div>
   </div>
   <div id="detailContent"></div>
+</div>
+
+<!-- Stammbaum-Ansicht (Sanduhr) -->
+<div id="v-tree" class="view">
+  <div class="topbar">
+    <div class="topbar-inner">
+      <button class="topbar-btn back" onclick="showDetail(currentTreeId)">← Zurück</button>
+      <span class="topbar-title" id="treeTopTitle"></span>
+      <button class="topbar-btn primary" id="treeDetailBtn">Detail</button>
+    </div>
+  </div>
+  <div class="tree-scroll" id="treeScroll">
+    <div class="tree-wrap" id="treeWrap">
+      <svg class="tree-svg" id="treeSvg"></svg>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -1847,6 +1908,7 @@ function showPlaceDetail(placeName) {
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showPlaceForm(placeName);
+  document.getElementById('treeBtn').style.display = 'none';
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem; border-color:var(--gold-dim)">📍</div>
@@ -1908,6 +1970,192 @@ function showPlaceDetail(placeName) {
 }
 
 // ─────────────────────────────────────
+//  STAMMBAUM-ANSICHT (SANDUHR)
+// ─────────────────────────────────────
+function getParentIds(pid) {
+  const p = db.individuals[pid];
+  if (!p?.famc?.length) return { father: null, mother: null };
+  const ref   = p.famc[0];
+  const famId = typeof ref === 'string' ? ref : ref.famId;
+  const fam   = db.families[famId];
+  return { father: fam?.husb || null, mother: fam?.wife || null };
+}
+
+function getChildIds(pid) {
+  const p = db.individuals[pid];
+  if (!p) return [];
+  return (p.fams || []).flatMap(famId => db.families[famId]?.children || []);
+}
+
+let currentTreeId = null;
+
+function showTree(personId) {
+  const p = db.individuals[personId];
+  if (!p) return;
+  currentPersonId = personId;
+  currentTreeId   = personId;
+
+  const CW = 120, CH = 68;      // center card
+  const W  = 96,  H  = 56;      // regular card
+  const HGAP = 10, VGAP = 48;
+  const SLOT = W + HGAP;
+  const PAD  = 24;
+  const ROW  = H + VGAP;
+
+  // ── Vorfahren: binärer Baum, 3 Ebenen ──
+  const anc = {
+    1: [null, null],
+    2: [null, null, null, null],
+    3: new Array(8).fill(null)
+  };
+  function fillAnc(pid, lv, i) {
+    if (!pid || lv > 3) return;
+    const par = getParentIds(pid);
+    anc[lv][i * 2]     = par.father;
+    anc[lv][i * 2 + 1] = par.mother;
+    fillAnc(par.father, lv + 1, i * 2);
+    fillAnc(par.mother, lv + 1, i * 2 + 1);
+  }
+  const par0 = getParentIds(personId);
+  anc[1][0] = par0.father; anc[1][1] = par0.mother;
+  fillAnc(par0.father, 2, 0);
+  fillAnc(par0.mother, 2, 1);
+
+  // ── Nachkommen: allgemeiner Baum, 3 Ebenen ──
+  // desc[lv] = [{id, parentIdx, localIdx}]
+  const desc = [[], [], []];
+  getChildIds(personId).forEach((id, i) =>
+    desc[0].push({ id, parentIdx: -1, localIdx: i }));
+  desc[0].forEach((c, ci) =>
+    getChildIds(c.id).forEach(id =>
+      desc[1].push({ id, parentIdx: ci, localIdx: desc[1].length })));
+  desc[1].forEach((c, ci) =>
+    getChildIds(c.id).forEach(id =>
+      desc[2].push({ id, parentIdx: ci, localIdx: desc[2].length })));
+
+  // ── Breite & Höhe ──
+  const ancW  = 8 * SLOT;
+  const descW = Math.max(...[0, 1, 2].map(lv => desc[lv].length * SLOT), SLOT);
+  const totalW = Math.max(ancW, descW, CW) + PAD * 2;
+  const cx     = totalW / 2;
+
+  // Y-Position jeder Zeile (-3=Ururgroßeltern … 0=Zentrum … +3=Ururenkel)
+  const cy = PAD + 3 * ROW;
+  function ry(lv) {
+    return lv <= 0
+      ? cy + lv * ROW
+      : cy + CH + VGAP + (lv - 1) * ROW;
+  }
+  const totalH = ry(3) + H + PAD;
+
+  // X-Position Vorfahren-Slot (8-Slot-Gitter, zentriert über cx)
+  function ax(lv, i) {
+    const n     = Math.pow(2, lv);
+    const start = cx - (n * SLOT) / 2;
+    return start + i * SLOT + SLOT / 2 - W / 2;
+  }
+  // X-Position Nachkommen-Slot
+  function dx(lv, i) {
+    const n = desc[lv].length;
+    if (!n) return cx - W / 2;
+    return cx - (n * SLOT) / 2 + i * SLOT + SLOT / 2 - W / 2;
+  }
+
+  // ── DOM aufbauen ──
+  document.getElementById('treeTopTitle').textContent = p.name || personId;
+  document.getElementById('treeDetailBtn').onclick = () => showDetail(personId);
+
+  const wrap = document.getElementById('treeWrap');
+  wrap.style.width  = totalW + 'px';
+  wrap.style.height = totalH + 'px';
+  wrap.querySelectorAll('.tree-card').forEach(el => el.remove());
+
+  const svg = document.getElementById('treeSvg');
+  svg.setAttribute('width',   totalW);
+  svg.setAttribute('height',  totalH);
+  svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
+  svg.innerHTML = '';
+
+  // Bezier-Linie: (x1,y1)=oben → (x2,y2)=unten
+  function line(x1, y1, x2, y2) {
+    const mid = (y1 + y2) / 2;
+    const el  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    el.setAttribute('d', `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`);
+    el.setAttribute('stroke', 'var(--border)');
+    el.setAttribute('stroke-width', '1.5');
+    el.setAttribute('fill', 'none');
+    svg.appendChild(el);
+  }
+
+  function mkCard(id, x, y, isCenter) {
+    const div = document.createElement('div');
+    div.className = 'tree-card' + (isCenter ? ' tree-card-center' : '');
+    div.style.left = Math.round(x) + 'px';
+    div.style.top  = Math.round(y) + 'px';
+    if (!id) {
+      div.classList.add('tree-card-empty');
+      div.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem">?</span>';
+      wrap.appendChild(div);
+      return;
+    }
+    const q    = db.individuals[id];
+    if (!q) return;
+    const icon = q.sex === 'M' ? '♂' : q.sex === 'F' ? '♀' : '◇';
+    const nm   = (q.name || id).length > 17 ? (q.name || id).slice(0, 16) + '…' : (q.name || id);
+    const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
+    const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
+    const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
+    div.innerHTML =
+      `<div class="tree-sex">${icon}</div>` +
+      `<div class="tree-name">${esc(nm)}</div>` +
+      (yr ? `<div class="tree-yr">${yr}</div>` : '');
+    div.onclick = isCenter ? () => showDetail(id) : () => showTree(id);
+    wrap.appendChild(div);
+  }
+
+  // Zentrum
+  mkCard(personId, cx - CW / 2, cy, true);
+
+  // Vorfahren + Linien
+  for (let lv = 1; lv <= 3; lv++) {
+    const n = Math.pow(2, lv);
+    for (let i = 0; i < n; i++) {
+      const x = ax(lv, i), y = ry(-lv);
+      mkCard(anc[lv][i], x, y, false);
+      const mx = x + W / 2, bot = y + H;
+      if (lv === 1) {
+        // Vorfahren-Ebene 1 → Zentrum
+        line(mx, bot, cx + (i === 0 ? -CW / 5 : CW / 5), cy);
+      } else {
+        // Vorfahren-Ebene lv → Eltern-Ebene
+        line(mx, bot, ax(lv - 1, Math.floor(i / 2)) + W / 2, ry(-(lv - 1)));
+      }
+    }
+  }
+
+  // Nachkommen + Linien
+  for (let lv = 0; lv < 3; lv++) {
+    desc[lv].forEach((item, i) => {
+      const x = dx(lv, i), y = ry(lv + 1);
+      mkCard(item.id, x, y, false);
+      const mx = x + W / 2;
+      if (lv === 0) {
+        line(cx + (i < desc[0].length / 2 ? -CW / 5 : CW / 5), cy + CH, mx, y);
+      } else {
+        line(dx(lv - 1, item.parentIdx) + W / 2, ry(lv) + H, mx, y);
+      }
+    });
+  }
+
+  showView('v-tree');
+  setTimeout(() => {
+    const sc = document.getElementById('treeScroll');
+    sc.scrollLeft = Math.max(0, cx - sc.clientWidth  / 2);
+    sc.scrollTop  = Math.max(0, ry(-3) - PAD);
+  }, 60);
+}
+
+// ─────────────────────────────────────
 //  DETAIL: PERSON
 // ─────────────────────────────────────
 function showDetail(id) {
@@ -1920,6 +2168,8 @@ function showDetail(id) {
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showPersonForm(id);
+  document.getElementById('treeBtn').style.display = '';
+  document.getElementById('treeBtn').onclick = () => showTree(id);
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
@@ -2057,6 +2307,7 @@ function showFamilyDetail(id) {
   document.getElementById('detailTopTitle').textContent = 'Familie';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showFamilyForm(id);
+  document.getElementById('treeBtn').style.display = 'none';
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
@@ -2099,6 +2350,7 @@ function showSourceDetail(id) {
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showSourceForm(id);
+  document.getElementById('treeBtn').style.display = 'none';
 
   // Collect all persons and families referencing this source
   const refPersons = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));
