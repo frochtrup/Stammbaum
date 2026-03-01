@@ -11,13 +11,16 @@
 | `SURN` | 2 | `surname` | Überschreibt NAME-Parsing |
 | `NPFX` | 2 | `prefix` | z.B. „Dr.-Ing." |
 | `NSFX` | 2 | `suffix` | z.B. „Jr." |
+| `SOUR` | 2 | `nameSources[]` | SOUR direkt unter NAME |
 | `SEX` | 1 | `sex` | M / F → sonst 'U' |
 | `TITL` | 1 | `titl` | Adelstitel etc. |
-| `RELI` | 1 | `reli` | Religion |
-| `BIRT` | 1 | `birth.{date,place,lati,long,sources}` | |
-| `CHR` | 1 | `chr.{date,place,lati,long,sources}` | Taufe |
-| `DEAT` | 1 | `death.{date,place,lati,long,sources}` | |
-| `BURI` | 1 | `buri.{date,place,lati,long,sources}` | Beerdigung |
+| `RELI` | 1 | `reli` | Religion (String) |
+| `_UID` | 1 | `uid` | Ancestris/Legacy UUID |
+| `BIRT` | 1 | `birth.{date,place,lati,long,sources}` | Sonder-Objekt |
+| `CHR` | 1 | `chr.{date,place,lati,long,sources}` | Taufe, Sonder-Objekt |
+| `DEAT` | 1 | `death.{date,place,lati,long,sources,cause}` | Sonder-Objekt |
+| `BURI` | 1 | `buri.{date,place,lati,long,sources}` | Beerdigung, Sonder-Objekt |
+| `CAUS` | 2 | `death.cause` | Sterbeursache (unter DEAT) |
 | `OCCU` | 1 | `events[]` type='OCCU' | Beruf |
 | `RESI` | 1 | `events[]` type='RESI' | Wohnort |
 | `EDUC` | 1 | `events[]` type='EDUC' | Bildung |
@@ -27,34 +30,38 @@
 | `EVEN` | 1 | `events[]` type='EVEN' | Allgemeines Ereignis |
 | `GRAD` | 1 | `events[]` type='GRAD' | Abschluss |
 | `ADOP` | 1 | `events[]` type='ADOP' | Adoption |
+| `MILI` | 1 | `events[]` type='MILI' | Militärdienst |
 | `TYPE` | 2 | `events[].eventType` | Unter EVEN: „Schule", „Hochschule" etc. |
 | `DATE` | 2 | `events[].date` | Freitext, Legacy-Format |
-| `PLAC` | 2 | `events[].place` | |
+| `PLAC` | 2 | `events[].place` | Ortsname |
 | `MAP` | 3 | *(Kontext)* | Legacy: Level 3 (Standard: Level 2) |
 | `LATI` | 4 | `events[].lati` | N52.15 → 52.15, S → negativ |
 | `LONG` | 4 | `events[].long` | E7.33 → 7.33, W → negativ |
-| `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen |
+| `NOTE` | 2 | `events[].note` | Notiz direkt unter Ereignis |
+| `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt |
+| `SOUR` | 1 | `topSources[]` | SOUR direkt unter INDI (Level 1) |
 | `NOTE` | 1 | `noteText` / `noteRefs[]` | Inline-Text oder @Ref@ |
 | `CONC`/`CONT` | 2 | `noteText` (angehängt) | Mehrzeilige Notizen |
 | `OBJE` | 1 | `media[].{file,title}` | Foto-Referenz |
-| `FILE` | 2 | `media[].file` | Unter OBJE |
+| `FILE` | 2 | `media[].file` | Pfad (oft Windows-Pfad aus Legacy) |
+| `TITL` | 3 | `media[].title` | Unter OBJE/FILE |
 | `FAMC` | 1 | `famc[].{famId,frel,mrel}` | Kind-in-Familie |
 | `_FREL` | 2 | `famc[].frel` | Vater-Beziehungstyp (Legacy) |
 | `_MREL` | 2 | `famc[].mrel` | Mutter-Beziehungstyp (Legacy) |
-| `FAMS` | 1 | `fams[]` | Ehepartner-in-Familie |
+| `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
 | `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum |
 
 ### FAM (Familie)
 
-| Tag | Level | Feld | |
+| Tag | Level | Feld | Notizen |
 |---|---|---|---|
 | `HUSB` | 1 | `husb` | ID der Person |
 | `WIFE` | 1 | `wife` | ID der Person |
-| `CHIL` | 1 | `children[]` | ID der Person |
-| `MARR` | 1 | `marr.{date,place,lati,long,sources}` | |
-| `ENGA` | 1 | `engag.{date,place}` | Verlobung (gelesen und geschrieben, nicht bearbeitet) |
-| `NOTE` | 1 | `noteText` | |
-| `SOUR` | 1–3 | `sourceRefs` (Set) | |
+| `CHIL` | 1 | `children[]` | IDs der Kinder |
+| `MARR` | 1 | `marr.{date,place,lati,long,sources}` | Heirat |
+| `ENGA` | 1 | `engag.{date,place}` | Verlobung (geparst + geschrieben, kein Edit) |
+| `NOTE` | 1 | `noteText` | Inline-Text mit CONT-Unterstützung |
+| `SOUR` | 1–3 | `sourceRefs` (Set) + `marr.sources[]` | |
 
 ### SOUR (Quelle)
 
@@ -69,7 +76,7 @@
 | `TEXT` | 1 | `text` | Notiz / Beschreibung |
 
 ### NOTE (Notiz-Record)
-Werden beim Parsen in `notes`-Map gespeichert und beim Anzeigen über `noteRefs` aufgelöst. Nicht editierbar.
+Werden beim Parsen in `notes`-Map gespeichert und beim Anzeigen über `noteRefs` aufgelöst. Werden beim Export als Inline-NOTE zurückgeschrieben (Record-Struktur geht verloren).
 
 ---
 
@@ -88,9 +95,10 @@ let mapParent = ''; // welcher lv1tag gehört zur aktuellen MAP?
 ```
 
 Bei jeder Zeile:
+- `lv===0`: neues Haupt-Record (INDI / FAM / SOUR / NOTE / TRLR)
 - `lv===1`: alle Kontext-Vars zurücksetzen, neuen lv1tag setzen
-- `lv===2`: lv2tag setzen, `inMap=false` (außer tag==='MAP')
-- `lv===3`: wenn tag==='MAP' → `inMap=true`, `mapParent=lv1tag`
+- `lv===2`: lv2tag setzen, inMap=false (außer tag==='MAP')
+- `lv===3`: wenn tag==='MAP' → inMap=true, mapParent=lv1tag
 
 ### Geo-Koordinaten Parsing
 ```javascript
@@ -104,16 +112,18 @@ function parseGeoCoord(val) {
 ```
 
 ### Quellen-Sammlung (multi-level)
-Quellen werden auf **allen Ebenen** (1–4) gesammelt, sowohl pro Ereignis als auch in der Person-Gesamt-Referenz:
+Quellen werden auf **allen Ebenen** gesammelt, sowohl pro Ereignis als auch in der Gesamt-Referenz der Person:
 
 ```javascript
-// Level 2 in BIRT-Block:
-if (lv1tag === 'BIRT' && tag==='SOUR' && val.startsWith('@')) {
+// Level 2 unter BIRT:
+if (lv1tag === 'BIRT' && tag==='SOUR') {
   cur.birth.sources.push(val);   // für dieses Ereignis
   cur.sourceRefs.add(val);       // für die Gesamtperson
 }
-// Level 3 (unter DATE/PLAC):
-if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+// Level 3+ (unter DATE/PLAC):
+if (tag === 'SOUR') cur.sourceRefs.add(val);
+// Level 1 direkt unter INDI:
+if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 ```
 
 ---
@@ -125,34 +135,44 @@ if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
 - Kodierung: UTF-8
 - Header mit aktuellem Datum
 
-### Was geschrieben wird
+### Vollständige Ausgabe-Struktur
 ```
 0 HEAD
-1 SOUR Stammbaum-App
-2 VERS 1.0
+1 SOUR Stammbaum-App / 2 VERS 1.0
 1 GEDC / 2 VERS 5.5.1
 1 CHAR UTF-8
 1 DATE [aktuelles Datum]
 
 0 @Ixx@ INDI
 1 NAME Vorname /Nachname/
-2 GIVN / SURN / NPFX / NSFX
-1 TITL / 1 RELI / 1 SEX
-1 BIRT / 2 DATE / 2 PLAC / 3 MAP / 4 LATI / 4 LONG / 2 SOUR
-1 CHR / 1 DEAT / 1 BURI  (gleiche Struktur inkl. SOUR)
-1 OCCU ... / 1 EVEN ... (alle events[])
-  2 TYPE / 2 DATE / 2 PLAC / 3 MAP / 4 LATI / 4 LONG / 2 SOUR
-1 NOTE ... (mit 2 CONT für Zeilenumbrüche)
-1 FAMC + 2 _FREL / 2 _MREL
-1 FAMS
-1 OBJE + 2 FILE / 3 TITL
-1 CHAN + 2 DATE
+  2 GIVN / SURN / NPFX / NSFX
+  2 SOUR @Sxx@                   ← nameSources[]
+1 SEX M/F
+1 TITL / 1 RELI
+1 _UID [uid]
+1 BIRT / 1 CHR / 1 DEAT / 1 BURI
+  2 DATE / 2 PLAC
+  3 MAP / 4 LATI / 4 LONG         ← wenn Koordinaten vorhanden
+  2 SOUR @Sxx@                    ← birth.sources[]
+  2 CAUS [cause]                  ← nur bei DEAT
+1 [OCCU|RESI|EDUC|EMIG|IMMI|NATU|EVEN|GRAD|ADOP|MILI] [value]
+  2 TYPE / 2 DATE / 2 PLAC
+  3 MAP / 4 LATI / 4 LONG
+  2 SOUR @Sxx@
+  2 NOTE [text] / 3 CONT [...]
+1 NOTE [noteText] / 2 CONT [...]
+1 SOUR @Sxx@                      ← topSources[]
+1 FAMC @Fxx@ / 2 _FREL / 2 _MREL
+1 FAMS @Fxx@
+1 OBJE / 2 FILE [path] / 3 TITL [title]
+1 CHAN / 2 DATE [lastChanged]
 
 0 @Fxx@ FAM
-1 HUSB / 1 WIFE / 1 CHIL
-1 MARR + 2 DATE / 2 PLAC / 3 MAP / 2 SOUR
-1 ENGA + 2 DATE / 2 PLAC
-1 NOTE (mit 2 CONT für Zeilenumbrüche)
+1 HUSB @Ixx@ / 1 WIFE @Ixx@ / 1 CHIL @Ixx@
+1 MARR / 2 DATE / 2 PLAC / 3 MAP / 2 SOUR @Sxx@
+1 ENGA / 2 DATE / 2 PLAC
+1 NOTE [noteText] / 2 CONT [...]
+1 SOUR @Sxx@                      ← sourceRefs (ohne marr-Quellen)
 
 0 @Sxx@ SOUR
 1 ABBR / 1 TITL / 1 AUTH / 1 DATE / 1 PUBL / 1 REPO / 1 TEXT
@@ -160,30 +180,29 @@ if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
 0 TRLR
 ```
 
-### Was NICHT geschrieben wird (aber beim Laden erhalten bleibt)
-Tags die der Parser nicht kennt (z.B. `ADDR`, `EMAIL`, `WWW`, `RESN`, `_STAT`) gehen beim nächsten Speichern verloren, da der Writer sie nicht ausgibt.
-
-**Bekannte Verluste beim Roundtrip:**
-- `ADDR` (Adresse unter RESI)
-- `_STAT` (Status: Never Married etc., Legacy-spezifisch)
-- `QUAY` (Qualitätsbewertung der Quelle)
-- `PAGE` (Seitenangabe bei Quell-Referenz) — SOUR-Referenzen werden ohne PAGE/QUAY zurückgeschrieben
-- `NOTE`-Records als `@ref@` — werden beim Laden in `noteText` aufgelöst und als Inline-NOTE zurückgeschrieben
-- `notes`-Records (0 @Nxx@ NOTE) werden nicht neu ausgegeben
-- `2 SOUR` unter `1 RELI` — RELI-Quellen (1 Occurrence in MeineDaten.ged, kein UI-Effekt)
+### Was NICHT geschrieben wird (bekannte Verluste)
+| Tag | Grund |
+|---|---|
+| `ADDR` | Nie geparst |
+| `_STAT` | Nie geparst (Legacy: Never Married etc.) |
+| `QUAY` | Qualitätsbewertung — vereinfacht |
+| `PAGE` | Seitenangabe bei Quell-Referenz — vereinfacht |
+| `NOTE`-Records (`0 @Nxx@ NOTE`) | Werden nicht neu ausgegeben |
+| `2 SOUR` unter `1 RELI` | RELI ist noch ein String, kein Objekt |
+| `EMAIL`, `WWW`, `RESN` | Nie geparst |
 
 ---
 
 ## Datums-Format
-GEDCOM-Datumsangaben werden als **Freitext** gespeichert und nicht geparst:
-- `12 MAR 1890`
-- `ABT 1875` (ungefähr)
-- `BEF 1900` (vor)
-- `AFT 1850` (nach)
-- `1973 To 1977` (Zeitraum, Legacy-Format)
-- `Aug 1977 To Jul 1984`
+GEDCOM-Datumsangaben werden als **Freitext** gespeichert und nicht normiert:
+- `12 MAR 1890` — Standardformat
+- `ABT 1875` — ungefähr (About)
+- `BEF 1900` — vor (Before)
+- `AFT 1850` — nach (After)
+- `1973 To 1977` — Zeitraum (Legacy-Format)
+- `Aug 1977 To Jul 1984` — Zeitraum mit Monaten
 
-Für die Suche funktioniert das gut (Jahreszahlen sind enthalten). Für Sortierung nach Datum wäre Parsing nötig (nicht implementiert).
+Für die Volltextsuche funktioniert das gut (Jahreszahlen sind enthalten). Für Sortierung nach Datum wäre Normierung nötig (nicht implementiert).
 
 ---
 
@@ -195,9 +214,21 @@ function nextId(prefix) {
     prefix === 'I' ? db.individuals :
     prefix === 'F' ? db.families : db.sources
   );
-  // Findet die höchste vorhandene Nummer und inkrementiert
   const nums = existing.map(id => parseInt(id.replace(/\D/g,''))||0);
   const next = (Math.max(0, ...nums) + 1);
   return `@${prefix}${next}@`;
 }
 ```
+
+## Startperson nach Datei-Load
+```javascript
+function smallestPersonId() {
+  return Object.keys(db.individuals)
+    .sort((a, b) => {
+      const na = parseInt(a.replace(/\D/g, '')) || 0;
+      const nb = parseInt(b.replace(/\D/g, '')) || 0;
+      return na - nb;
+    })[0] || null;
+}
+```
+Nach dem Laden wird `showTree(smallestPersonId())` aufgerufen — die Person mit der niedrigsten numerischen ID wird als Startpunkt der Sanduhr-Ansicht gesetzt.
