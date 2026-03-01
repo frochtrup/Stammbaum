@@ -91,7 +91,7 @@ body {
 .tree-scroll {
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  height: calc(100dvh - 52px);
+  height: calc(100dvh - 52px - 57px - env(safe-area-inset-bottom, 0px));
   background: var(--bg);
 }
 .tree-wrap { position: relative; }
@@ -129,6 +129,19 @@ body {
 }
 .tree-card-center .tree-name { font-size: 0.82rem; color: var(--gold-lt); font-weight: 600; }
 .tree-yr   { font-size: 0.62rem; color: var(--text-dim); line-height: 1; }
+.tree-card-half {
+  border-style: dashed;
+  border-color: var(--gold-dim);
+  background: var(--bg);
+}
+.tree-card-half .tree-name { color: var(--text-dim); }
+.tree-half-badge {
+  position: absolute;
+  bottom: 3px; right: 5px;
+  font-size: 0.6rem; color: var(--gold-dim);
+  font-family: 'Playfair Display', serif;
+  font-style: italic; line-height: 1;
+}
 
 /* ═══════════════════════════════════════
    LANDING
@@ -191,28 +204,47 @@ body {
 }
 .btn-ghost:active { border-color: var(--gold-dim); color: var(--text-dim); }
 
+.landing-tagline {
+  color: var(--text-muted); font-size: 0.78rem;
+  text-align: center; max-width: 300px;
+  line-height: 1.7; font-style: italic;
+}
+.btn-link {
+  background: none; border: none;
+  color: var(--gold-dim); font-size: 0.82rem;
+  cursor: pointer; text-decoration: underline;
+  font-family: 'Source Serif 4', serif;
+  padding: 0;
+}
+.btn-link:active { color: var(--gold); }
+
 /* ═══════════════════════════════════════
-   STATS BAR
+   BOTTOM NAVIGATION
 ═══════════════════════════════════════ */
-.stats-bar {
-  display: flex; gap: 0;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 400;
+  background: rgba(24,20,15,0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.stat {
-  flex: 1; text-align: center;
-  padding: 10px 4px;
-  border-right: 1px solid var(--border);
+.bnav-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 8px 2px 10px; border: none; background: none;
+  cursor: pointer; gap: 3px;
+  color: var(--text-muted);
+  transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
 }
-.stat:last-child { border-right: none; }
-.stat-num {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.3rem; color: var(--gold);
-}
-.stat-lbl {
-  font-size: 0.65rem; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: 0.1em;
-}
+.bnav-btn.active { color: var(--gold); }
+.bnav-btn:active { opacity: 0.7; }
+.bnav-icon { font-size: 1.2rem; line-height: 1; }
+.bnav-lbl  { font-size: 0.62rem; font-family: 'Source Serif 4', serif; letter-spacing: 0.02em; }
 
 /* ═══════════════════════════════════════
    SEARCH
@@ -239,7 +271,7 @@ body {
 /* ═══════════════════════════════════════
    PERSON LIST
 ═══════════════════════════════════════ */
-#personList { padding-bottom: 100px; }
+#personList { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 
 .alpha-sep {
   padding: 4px 14px;
@@ -278,7 +310,7 @@ body {
 /* ═══════════════════════════════════════
    DETAIL VIEW
 ═══════════════════════════════════════ */
-#v-detail { padding-bottom: 100px; }
+#v-detail { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
 #v-detail.active { display: block; }
 
 .detail-hero {
@@ -354,7 +386,7 @@ body {
 ═══════════════════════════════════════ */
 .fab {
   position: fixed;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   right: 20px; z-index: 300;
   width: 56px; height: 56px; border-radius: 50%;
   background: var(--gold);
@@ -502,7 +534,7 @@ body {
    TOAST
 ═══════════════════════════════════════ */
 .toast {
-  position: fixed; bottom: 80px; left: 50%;
+  position: fixed; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); left: 50%;
   transform: translateX(-50%);
   background: var(--surface2); border: 1px solid var(--gold-dim);
   color: var(--text); padding: 9px 18px; border-radius: 20px;
@@ -527,6 +559,22 @@ body {
 .source-meta { font-size: 0.76rem; color: var(--text-muted); margin-top: 3px; }
 
 /* ═══════════════════════════════════════
+   QUELLEN-BADGE (kompakt)
+═══════════════════════════════════════ */
+.src-badge {
+  display: inline-flex; align-items: center;
+  background: none;
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px; padding: 0px 5px;
+  font-size: 0.62rem; color: var(--gold-dim);
+  cursor: pointer; margin: 1px 2px 1px 5px;
+  font-family: 'Source Serif 4', serif;
+  vertical-align: middle; line-height: 1.6;
+  transition: color 0.12s, border-color 0.12s;
+}
+.src-badge:active { color: var(--gold); border-color: var(--gold); }
+
+/* ═══════════════════════════════════════
    CHANGED INDICATOR
 ═══════════════════════════════════════ */
 .changed-dot {
@@ -536,21 +584,26 @@ body {
 }
 
 /* ═══════════════════════════════════════
-   TABS
+   FAMILY LINK ROW (in Detail-Ansicht)
 ═══════════════════════════════════════ */
-.tabs {
-  display: flex; background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.tab {
-  flex: 1; padding: 11px 4px; text-align: center;
-  font-size: 0.78rem; color: var(--text-muted);
-  cursor: pointer; border: none; background: none;
+.family-nav-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; margin-bottom: 4px;
+  color: var(--gold-lt); font-size: 0.82rem;
+  cursor: pointer; border-bottom: 1px solid var(--border);
   font-family: 'Source Serif 4', serif;
-  border-bottom: 2px solid transparent;
-  transition: all 0.15s;
 }
-.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.family-nav-row:active { opacity: 0.6; }
+.family-nav-row .fnr-label { display: flex; align-items: center; gap: 6px; }
+.family-nav-row .fnr-icon { font-size: 1rem; }
+.row-arrow { color: var(--gold-dim); font-size: 1.15rem; line-height: 1; }
+
+/* ═══════════════════════════════════════
+   LIST TAB CONTENT PADDING
+═══════════════════════════════════════ */
+#tab-families, #tab-sources, #tab-places {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
 
 /* ═══════════════════════════════════════
    EMPTY STATE
@@ -586,14 +639,10 @@ body {
     <input type="file" id="fileInput" accept="*/*">
   </div>
 
-  <div class="icloud-hint">
-    <strong>📱 iPhone:</strong><br>
-    Tippen Sie auf „GEDCOM-Datei öffnen" → im Dateipicker zu iCloud Drive → Genealogie → <em>meinStammbaum.ged</em> navigieren.<br><br>
-    <strong>🔒 Ihre Daten bleiben auf Ihrem Gerät.</strong> Nichts wird hochgeladen oder geteilt.<br><br>
-    <strong>☁️ Speichern:</strong> Tippen Sie auf „Speichern" → die .ged Datei wird heruntergeladen → in iCloud Drive ablegen → fertig.
-  </div>
+  <p class="landing-tagline">Vollständig im Browser · Keine Installation · Keine Cloud</p>
 
-  <button class="btn-ghost" onclick="loadDemo()">Demo-Daten laden</button>
+  <button class="btn-ghost" onclick="loadDemo()">Demo laden</button>
+  <button class="btn-link" onclick="openModal('modalHelp')">Hilfe &amp; Anleitung ›</button>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -606,20 +655,6 @@ body {
       <button class="topbar-btn" onclick="exportGEDCOM()" title="Speichern">☁️</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
-  </div>
-
-  <div class="stats-bar">
-    <div class="stat"><div class="stat-num" id="sPersons">0</div><div class="stat-lbl">Personen</div></div>
-    <div class="stat"><div class="stat-num" id="sFamilies">0</div><div class="stat-lbl">Familien</div></div>
-    <div class="stat"><div class="stat-num" id="sEvents">0</div><div class="stat-lbl">Ereignisse</div></div>
-    <div class="stat"><div class="stat-num" id="sSources">0</div><div class="stat-lbl">Quellen</div></div>
-  </div>
-
-  <div class="tabs">
-    <button class="tab active" onclick="switchTab('persons')">Personen</button>
-    <button class="tab" onclick="switchTab('families')">Familien</button>
-    <button class="tab" onclick="switchTab('sources')">Quellen</button>
-    <button class="tab" onclick="switchTab('places')">Orte</button>
   </div>
 
   <div id="tab-persons">
@@ -642,7 +677,7 @@ body {
 <div id="v-detail" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <button class="topbar-btn back" onclick="showMain()">← Zurück</button>
+      <button class="topbar-btn back" onclick="goBack()">← Zurück</button>
       <span class="topbar-title" id="detailTopTitle"></span>
       <button class="topbar-btn" id="treeBtn" style="display:none;font-size:1rem" title="Sanduhr-Ansicht">⧖</button>
       <button class="topbar-btn primary" onclick="showEditSheet()" id="editBtn">Bearbeiten</button>
@@ -655,8 +690,9 @@ body {
 <div id="v-tree" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <button class="topbar-btn back" onclick="showDetail(currentTreeId)">← Zurück</button>
       <span class="topbar-title" id="treeTopTitle"></span>
+      <button class="topbar-btn" onclick="exportGEDCOM()" title="Speichern">☁️</button>
+      <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
       <button class="topbar-btn primary" id="treeDetailBtn">Detail</button>
     </div>
   </div>
@@ -666,6 +702,32 @@ body {
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════
+     GLOBALE BOTTOM NAVIGATION
+══════════════════════════════════════ -->
+<nav class="bottom-nav" id="bottomNav" style="display:none">
+  <button class="bnav-btn" id="bnav-tree" onclick="bnavTree()">
+    <span class="bnav-icon">⧖</span>
+    <span class="bnav-lbl">Baum</span>
+  </button>
+  <button class="bnav-btn" id="bnav-persons" onclick="bnavTab('persons')">
+    <span class="bnav-icon">♻</span>
+    <span class="bnav-lbl">Personen</span>
+  </button>
+  <button class="bnav-btn" id="bnav-families" onclick="bnavTab('families')">
+    <span class="bnav-icon">⚭</span>
+    <span class="bnav-lbl">Familien</span>
+  </button>
+  <button class="bnav-btn" id="bnav-sources" onclick="bnavTab('sources')">
+    <span class="bnav-icon">§</span>
+    <span class="bnav-lbl">Quellen</span>
+  </button>
+  <button class="bnav-btn" id="bnav-places" onclick="bnavTab('places')">
+    <span class="bnav-icon">📍</span>
+    <span class="bnav-lbl">Orte</span>
+  </button>
+</nav>
 
 <!-- ══════════════════════════════════════
      MODALS
@@ -935,6 +997,31 @@ body {
 </div>
 <input type="file" id="fileInput2" accept="*/*" style="display:none">
 
+<!-- Hilfe-Modal -->
+<div class="modal-overlay" id="modalHelp">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Hilfe &amp; Anleitung</div>
+    <div class="sheet-body">
+      <div style="font-size:0.85rem;color:var(--text-dim);line-height:1.7">
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">GEDCOM-Datei öffnen</strong><br>
+        Tippen Sie auf „GEDCOM-Datei öffnen" auf dem Startbildschirm. Auf dem iPhone navigieren Sie im Dateipicker zu iCloud Drive → Genealogie → Ihre .ged-Datei.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Speichern (iPhone / iPad)</strong><br>
+        Tippen Sie auf das ☁️-Symbol oben rechts. Die .ged-Datei wird heruntergeladen — legen Sie sie in iCloud Drive ab.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Speichern (Desktop / Mac)</strong><br>
+        Wählen Sie im Menü „Speicher-Verzeichnis wählen". Danach speichert ☁️ direkt in Ihr Verzeichnis inkl. automatischem Backup.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Navigation</strong><br>
+        Nutzen Sie die untere Navigationsleiste um zwischen Baum, Personen, Familien, Quellen und Orten zu wechseln. Aus der Detailansicht gelangen Sie mit „← Zurück" wieder zur Liste.</p>
+        <p style="margin-bottom:0"><strong style="color:var(--gold-lt)">Datenschutz</strong><br>
+        Alle Daten bleiben auf Ihrem Gerät. Es wird nichts hochgeladen oder geteilt.</p>
+      </div>
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn btn-cancel" onclick="closeModal('modalHelp')">Schließen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ══════════════════════════════════════
@@ -953,6 +1040,11 @@ let currentFamilyId = null;
 let currentSourceId = null;
 let currentTab = 'persons';
 let idCounter = 1000;
+
+// ─── Navigations-History ────────────────
+// Ermöglicht "Zurück" durch verschachtelte Detail-Ansichten
+const _navHistory = [];       // Stack von {type, id|name}
+let _skipHistoryPush = false; // gesetzt während goBack() navigiert
 
 function nextId(prefix) {
   idCounter++;
@@ -1646,12 +1738,77 @@ function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  // Bottom-Nav: sichtbar in v-main und v-tree, ausgeblendet in v-landing und v-detail
+  const showNav = (id === 'v-main' || id === 'v-tree');
+  document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
+  // FAB: nur in v-main und nur wenn kein Orte-Tab aktiv
+  const showFab = (id === 'v-main') && (currentTab !== 'places');
+  document.getElementById('fabBtn').style.display = showFab ? '' : 'none';
+}
+
+// Bottom-Nav: aktiven Button hervorheben
+function setBnavActive(name) {
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('bnav-' + name);
+  if (btn) btn.classList.add('active');
+}
+
+// Bottom-Nav: Baum-Tab
+function bnavTree() {
+  setBnavActive('tree');
+  const id = currentTreeId || smallestPersonId();
+  if (id) showTree(id);
+  else { showView('v-main'); setBnavActive('persons'); }
+}
+
+// Bottom-Nav: Listen-Tabs
+function bnavTab(name) {
+  currentTab = name;
+  setBnavActive(name);
+  showView('v-main');
+  switchTab(name);
 }
 
 function showMain() {
+  _navHistory.length = 0; // Liste = frischer Start, History löschen
+  setBnavActive(currentTab || 'persons');
   showView('v-main');
   updateStats();
   renderTab();
+}
+
+// ─── History-Navigation ───────────────────────────────────────────
+// Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/
+// showPlaceDetail stehen.
+function _beforeDetailNavigate() {
+  if (_skipHistoryPush) return; // Rückwärts-Navigation, nichts pushen
+  if (document.getElementById('v-detail').classList.contains('active')) {
+    // Detail → Detail: aktuellen Zustand in History sichern
+    if      (currentPersonId) _navHistory.push({ type: 'person', id: currentPersonId });
+    else if (currentFamilyId) _navHistory.push({ type: 'family', id: currentFamilyId });
+    else if (currentSourceId) _navHistory.push({ type: 'source', id: currentSourceId });
+    // Place: Name liegt nicht in einer ID-Variable – über detailTopTitle rekonstruieren
+    else {
+      const title = document.getElementById('detailTopTitle')?.textContent;
+      if (title && title !== '📍 Ort') _navHistory.push({ type: 'place', name: title });
+    }
+  } else {
+    // Liste / Baum → Detail: History löschen (frischer Einstieg)
+    _navHistory.length = 0;
+  }
+}
+
+// "← Zurück" – geht zur vorherigen Detail-Ansicht oder zur Liste
+function goBack() {
+  const prev = _navHistory.pop();
+  if (!prev) { showMain(); return; }
+  _skipHistoryPush = true;
+  if      (prev.type === 'person') showDetail(prev.id);
+  else if (prev.type === 'family') showFamilyDetail(prev.id);
+  else if (prev.type === 'source') showSourceDetail(prev.id);
+  else if (prev.type === 'place')  showPlaceDetail(prev.name);
+  else showMain();
+  _skipHistoryPush = false;
 }
 
 // Kleinste numerische Personen-ID
@@ -1667,6 +1824,7 @@ function smallestPersonId() {
 
 // Startansicht nach Datei-Load: Tree der Person mit kleinster ID
 function showStartView() {
+  currentTab = 'persons';
   showMain();
   const startId = smallestPersonId();
   if (startId) showTree(startId);
@@ -1674,13 +1832,12 @@ function showStartView() {
 
 function switchTab(tab) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach((t, i) => {
-    t.classList.toggle('active', ['persons','families','sources','places'][i] === tab);
-  });
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
   document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
+  // FAB ausblenden auf Orte-Tab
+  document.getElementById('fabBtn').style.display = tab === 'places' ? 'none' : '';
   renderTab();
 }
 
@@ -1692,19 +1849,7 @@ function renderTab() {
 }
 
 function updateStats() {
-  const persons = Object.values(db.individuals);
-  const families = Object.values(db.families);
-  let events = 0;
-  persons.forEach(p => {
-    if (p.birth.date || p.birth.place) events++;
-    if (p.death.date || p.death.place) events++;
-    events += p.events.length;
-  });
-  families.forEach(f => { if (f.marr.date || f.marr.place) events++; });
-  document.getElementById('sPersons').textContent = persons.length;
-  document.getElementById('sFamilies').textContent = families.length;
-  document.getElementById('sEvents').textContent = events;
-  document.getElementById('sSources').textContent = Object.keys(db.sources).length;
+  // Stats-Leiste entfernt – Funktion bleibt als No-op erhalten
 }
 
 function updateChangedIndicator() {
@@ -1922,7 +2067,7 @@ function showPlaceDetail(placeName) {
   const places = collectPlaces();
   const place = places.get(placeName);
   if (!place) return;
-
+  _beforeDetailNavigate();
   currentPersonId = null; currentFamilyId = null; currentSourceId = null;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
@@ -2013,6 +2158,7 @@ function showTree(personId) {
   if (!p) return;
   currentPersonId = personId;
   currentTreeId   = personId;
+  setBnavActive('tree');
 
   const CW = 120, CH = 80;      // Zentrum-Karte
   const W  = 96,  H  = 64;      // reguläre Karte
@@ -2029,19 +2175,29 @@ function showTree(personId) {
   const par_m = par0.mother ? getParentIds(par0.mother) : { father: null, mother: null };
   const anc2  = [par_f.father, par_f.mother, par_m.father, par_m.mother];
 
-  // ── Erster Ehepartner aus fams ──
+  // ── Erster Ehepartner aus fams (mit Familien-ID) ──
+  let spouseFamId = null;
   const spouseId = (() => {
     for (const famId of (p.fams || [])) {
       const fam = db.families[famId];
       if (!fam) continue;
-      if (fam.husb && fam.husb !== personId) return fam.husb;
-      if (fam.wife && fam.wife !== personId) return fam.wife;
+      if (fam.husb && fam.husb !== personId) { spouseFamId = famId; return fam.husb; }
+      if (fam.wife && fam.wife !== personId) { spouseFamId = famId; return fam.wife; }
     }
     return null;
   })();
 
-  // ── Direkte Kinder (max. 4 pro Zeile) ──
-  const children = getChildIds(personId);
+  // ── Kinder: Hauptfamilie vs. Halbgeschwister ──
+  // Hauptfamilie = Familie mit dargestelltem Ehepartner;
+  // fehlt ein Partner, gilt die erste fams-Einheit als Hauptfamilie.
+  if (!spouseFamId && p.fams && p.fams.length > 0) spouseFamId = p.fams[0];
+  const mainChildren = spouseFamId ? (db.families[spouseFamId]?.children || []) : [];
+  const halfChildren = (p.fams || [])
+    .filter(fid => fid !== spouseFamId)
+    .flatMap(fid => db.families[fid]?.children || []);
+  const children = [...mainChildren, ...halfChildren];
+  const halfSiblingSet = new Set(halfChildren);
+
   const MAX_CHILD_COLS = 4;
   const childRows = [];
   for (let i = 0; i < children.length; i += MAX_CHILD_COLS) {
@@ -2107,9 +2263,22 @@ function showTree(personId) {
     svg.appendChild(el);
   }
 
-  function mkCard(id, x, y, isCenter) {
+  function lineHalf(x1, y1, x2, y2) {
+    const mid = (y1 + y2) / 2;
+    const el  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    el.setAttribute('d', `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`);
+    el.setAttribute('stroke', 'var(--gold-dim)');
+    el.setAttribute('stroke-width', '1.5');
+    el.setAttribute('stroke-dasharray', '4 3');
+    el.setAttribute('fill', 'none');
+    svg.appendChild(el);
+  }
+
+  function mkCard(id, x, y, isCenter, isHalf = false) {
     const div = document.createElement('div');
-    div.className = 'tree-card' + (isCenter ? ' tree-card-center' : '');
+    div.className = 'tree-card' +
+      (isCenter ? ' tree-card-center' : '') +
+      (isHalf   ? ' tree-card-half'   : '');
     div.style.left = Math.round(x) + 'px';
     div.style.top  = Math.round(y) + 'px';
     if (!id) {
@@ -2128,7 +2297,8 @@ function showTree(personId) {
     div.innerHTML =
       `<div class="tree-sex">${icon}</div>` +
       `<div class="tree-name">${esc(nm)}</div>` +
-      (yr ? `<div class="tree-yr">${yr}</div>` : '');
+      (yr ? `<div class="tree-yr">${yr}</div>` : '') +
+      (isHalf ? `<div class="tree-half-badge">½</div>` : '');
     div.onclick = isCenter ? () => showDetail(id) : () => showTree(id);
     wrap.appendChild(div);
   }
@@ -2166,9 +2336,11 @@ function showTree(personId) {
   childRows.forEach((row, rowIdx) => {
     const rowY = ry(1) + rowIdx * ROW;
     row.forEach((id, i) => {
-      const cxI = childRowCX(row, i);
-      mkCard(id, childRowX(row, i), rowY, false);
-      line(familyCX, ry(0) + CH, cxI, rowY);
+      const cxI   = childRowCX(row, i);
+      const isHalf = halfSiblingSet.has(id);
+      mkCard(id, childRowX(row, i), rowY, false, isHalf);
+      if (isHalf) lineHalf(familyCX, ry(0) + CH, cxI, rowY);
+      else        line(familyCX, ry(0) + CH, cxI, rowY);
     });
   });
 
@@ -2186,6 +2358,7 @@ function showTree(personId) {
 function showDetail(id) {
   const p = db.individuals[id];
   if (!p) return;
+  _beforeDetailNavigate();
   currentPersonId = id;
   currentFamilyId = null;
   currentSourceId = null;
@@ -2217,24 +2390,20 @@ function showDetail(id) {
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" onclick="showEventForm('${id}','BIRT')" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
-    html += sourceTagsHtml(p.birth.sources);
+    html += `<div class="fact-row" onclick="showEventForm('${id}','BIRT')" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources)}</span></div>`;
   }
   if (p.chr.date || p.chr.place) {
-    html += `<div class="fact-row" onclick="showEventForm('${id}','CHR')" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}</span></div>`;
-    html += sourceTagsHtml(p.chr.sources);
+    html += `<div class="fact-row" onclick="showEventForm('${id}','CHR')" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources)}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = (p.death.lati !== null && p.death.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" onclick="showEventForm('${id}','DEAT')" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
-    html += sourceTagsHtml(p.death.sources);
+    html += `<div class="fact-row" onclick="showEventForm('${id}','DEAT')" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources)}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = (p.buri.lati !== null && p.buri.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" onclick="showEventForm('${id}','BURI')" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
-    html += sourceTagsHtml(p.buri.sources);
+    html += `<div class="fact-row" onclick="showEventForm('${id}','BURI')" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources)}</span></div>`;
   }
 
   const evLabels = { OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion',
@@ -2247,9 +2416,8 @@ function showDetail(id) {
     const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
     html += `<div class="fact-row" onclick="showEventForm('${id}',${idx})" style="cursor:pointer">
       <span class="fact-lbl">${esc(label)}</span>
-      <span class="fact-val">${esc(parts)}${geoBtn}</span>
+      <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}</span>
     </div>`;
-    html += sourceTagsHtml(ev.sources || []);
   });
 
   if (p.titl) html += factRow('Titel', p.titl);
@@ -2287,6 +2455,11 @@ function showDetail(id) {
     for (const famId of p.fams) {
       const fam = db.families[famId];
       if (!fam) continue;
+      const marriageLabel = fam.marr.date ? fam.marr.date : famId;
+      html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
+        <span class="fnr-label"><span class="fnr-icon">⚭</span> Familie · ${esc(marriageLabel)}</span>
+        <span class="row-arrow">›</span>
+      </div>`;
       const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
       const partner = partnerId ? db.individuals[partnerId] : null;
       if (partner) html += relRow(partner, 'Ehepartner' + (fam.marr.date ? ' · ' + fam.marr.date : ''));
@@ -2305,6 +2478,10 @@ function showDetail(id) {
       const famId = typeof fref === 'string' ? fref : fref.famId;
       const fam = db.families[famId];
       if (!fam) continue;
+      html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
+        <span class="fnr-label"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
+        <span class="row-arrow">›</span>
+      </div>`;
       for (const pid of [fam.husb, fam.wife]) {
         if (!pid) continue;
         const parent = db.individuals[pid];
@@ -2321,6 +2498,7 @@ function showDetail(id) {
 function showFamilyDetail(id) {
   const f = db.families[id];
   if (!f) return;
+  _beforeDetailNavigate();
   currentFamilyId = id;
   currentPersonId = null;
   currentSourceId = null;
@@ -2344,13 +2522,13 @@ function showFamilyDetail(id) {
 
   if (f.marr.date || f.marr.place) {
     html += `<div class="section fade-up"><div class="section-title">Heirat</div>`;
-    if (f.marr.date) html += factRow('Datum', f.marr.date);
+    const marrSrc = (f.marr.sources?.length) ? f.marr.sources : (f.sourceRefs?.length ? [...f.sourceRefs] : null);
+    if (f.marr.date) html += factRow('Datum', f.marr.date, '', f.marr.place ? null : marrSrc);
     if (f.marr.place) {
       const geoBtn = (f.marr.lati !== null && f.marr.lati !== undefined)
         ? `<a href="https://maps.apple.com/?ll=${f.marr.lati},${f.marr.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-      html += factRow('Ort', f.marr.place, geoBtn);
+      html += factRow('Ort', f.marr.place, geoBtn, marrSrc);
     }
-    html += sourceTagsHtml(f.marr.sources || [...(f.sourceRefs||[])]);
     html += `</div>`;
   }
 
@@ -2370,6 +2548,7 @@ function showFamilyDetail(id) {
 function showSourceDetail(id) {
   const s = db.sources[id];
   if (!s) return;
+  _beforeDetailNavigate();
   currentSourceId = id;
   currentPersonId = null;
   currentFamilyId = null;
@@ -2442,22 +2621,28 @@ function showSourceDetail(id) {
   showView('v-detail');
 }
 
-function factRow(label, value, rawSuffix) {
-  return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}</span></div>`;
+function factRow(label, value, rawSuffix, srcIds) {
+  const badges = srcIds ? sourceTagsHtml(srcIds) : '';
+  return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}${badges}</span></div>`;
 }
 
-// Render small source badge links for a list of source IDs
+// Extrahiert die Quellennummer aus einer GEDCOM-ID (@S042@ → 42)
+function srcNum(sid) {
+  const m = sid.match(/\d+/);
+  return m ? parseInt(m[0], 10) : sid;
+}
+
+// Kompakte Quellen-Badges: §42 — inline in fact-val einbettbar
 function sourceTagsHtml(sourceIds) {
   if (!sourceIds) return '';
   const ids = sourceIds instanceof Set ? [...sourceIds] : (Array.isArray(sourceIds) ? sourceIds : []);
   if (!ids.length) return '';
-  const tags = ids.map(sid => {
+  return ids.map(sid => {
     const s = db.sources[sid];
     if (!s) return '';
-    const label = (s.abbr || s.title || sid).substring(0, 25);
-    return `<span onclick="showSourceDetail('${sid}')" style="display:inline-block;background:var(--surface2);border:1px solid var(--gold-dim);border-radius:12px;padding:2px 8px;font-size:0.72rem;color:var(--gold-dim);cursor:pointer;margin:2px 3px 2px 0;font-family:'Source Serif 4',serif">📖 ${esc(label)}</span>`;
+    const tooltip = esc((s.abbr || s.title || sid).substring(0, 60));
+    return `<span class="src-badge" onclick="event.stopPropagation();showSourceDetail('${sid}')" title="${tooltip}">§${srcNum(sid)}</span>`;
   }).filter(Boolean).join('');
-  return tags ? `<div style="margin-top:4px">${tags}</div>` : '';
 }
 
 function relRow(person, role) {
