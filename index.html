@@ -650,26 +650,6 @@ body {
           <option value="F">Weiblich</option>
         </select>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Geburtsdatum</label>
-          <input class="form-input" id="pf-bdate" placeholder="12 MAR 1890">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Geburtsort</label>
-          <input class="form-input" id="pf-bplace" placeholder="München">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Sterbedatum</label>
-          <input class="form-input" id="pf-ddate" placeholder="5 NOV 1952">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Sterbeort</label>
-          <input class="form-input" id="pf-dplace" placeholder="Berlin">
-        </div>
-      </div>
       <div class="form-group">
         <label class="form-label">Beruf</label>
         <input class="form-input" id="pf-occu" placeholder="Bäckermeister">
@@ -791,10 +771,13 @@ body {
     <div class="sheet-body">
       <input type="hidden" id="ef-pid">
       <input type="hidden" id="ef-evidx">
-      <input type="hidden" id="ef-evidx">
       <div class="form-group">
         <label class="form-label">Ereignistyp</label>
-        <select class="form-select" id="ef-type">
+        <select class="form-select" id="ef-type" onchange="onEventTypeChange()">
+          <option value="BIRT">Geburt</option>
+          <option value="CHR">Taufe</option>
+          <option value="DEAT">Tod</option>
+          <option value="BURI">Beerdigung</option>
           <option value="OCCU">Beruf</option>
           <option value="RESI">Wohnort</option>
           <option value="EDUC">Bildung</option>
@@ -805,9 +788,13 @@ body {
           <option value="EVEN">Sonstiges</option>
         </select>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="ef-val-group">
         <label class="form-label">Wert / Beschreibung</label>
         <input class="form-input" id="ef-val" placeholder="z.B. Schreiner">
+      </div>
+      <div class="form-group" id="ef-cause-group" style="display:none">
+        <label class="form-label">Todesursache</label>
+        <input class="form-input" id="ef-cause" placeholder="z.B. Typhus">
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -835,6 +822,25 @@ body {
   </div>
 </div>
 
+<!-- Place rename form -->
+<div class="modal-overlay" id="modalPlace">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Ort umbenennen</div>
+    <div class="sheet-body">
+      <input type="hidden" id="pl-old">
+      <div class="form-group">
+        <label class="form-label">Ortsname</label>
+        <input class="form-input" id="pl-name">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalPlace')">Abbrechen</button>
+        <button class="btn btn-save" onclick="savePlace()">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Menu drawer -->
 <div class="modal-overlay" id="modalMenu">
   <div class="sheet">
@@ -850,6 +856,9 @@ body {
         </button>
         <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
           🗄 &nbsp; <span>Original-Backup herunterladen</span>
+        </button>
+        <button id="dirMenuBtn" class="btn" style="display:none;background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); pickSaveDir()">
+          📁 &nbsp; <span id="dirMenuLabel">Speicher-Verzeichnis wählen</span>
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
           🗂 &nbsp; Demo-Daten laden
@@ -876,6 +885,7 @@ body {
 let db = { individuals: {}, families: {}, sources: {} };
 let changed = false;
 let _originalGedText = null;   // In-memory backup des zuletzt geladenen Originals
+let _dirHandle = null;         // FileSystemDirectoryHandle (Desktop-Speichern)
 let currentPersonId = null;
 let currentFamilyId = null;
 let currentSourceId = null;
@@ -1283,46 +1293,171 @@ function writeGEDCOM() {
 }
 
 // ─────────────────────────────────────
+//  INDEXEDDB HELPERS (für Dir-Handle)
+// ─────────────────────────────────────
+let _idb = null;
+function _getIDB() {
+  if (_idb) return Promise.resolve(_idb);
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('stammbaum_app', 1);
+    r.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+    r.onsuccess = e => { _idb = e.target.result; res(_idb); };
+    r.onerror = rej;
+  });
+}
+function idbGet(key) {
+  return _getIDB().then(d => new Promise((res, rej) => {
+    const r = d.transaction('kv','readonly').objectStore('kv').get(key);
+    r.onsuccess = e => res(e.target.result); r.onerror = rej;
+  }));
+}
+function idbPut(key, val) {
+  return _getIDB().then(d => new Promise((res, rej) => {
+    const r = d.transaction('kv','readwrite').objectStore('kv').put(val, key);
+    r.onsuccess = () => res(); r.onerror = rej;
+  }));
+}
+function idbDel(key) {
+  return _getIDB().then(d => new Promise((res, rej) => {
+    const r = d.transaction('kv','readwrite').objectStore('kv').delete(key);
+    r.onsuccess = () => res(); r.onerror = rej;
+  }));
+}
+
+// ─────────────────────────────────────
+//  FILE SYSTEM ACCESS (Desktop-Speichern)
+// ─────────────────────────────────────
+function updateDirMenuBtn() {
+  const btn = document.getElementById('dirMenuBtn');
+  if (!btn || !('showDirectoryPicker' in window)) return;
+  btn.style.display = '';
+  document.getElementById('dirMenuLabel').textContent =
+    _dirHandle ? `Speicher-Verzeichnis: ${_dirHandle.name}` : 'Speicher-Verzeichnis wählen';
+}
+
+async function restoreDirHandle() {
+  if (!('showDirectoryPicker' in window)) return;
+  try {
+    const h = await idbGet('dirHandle');
+    if (!h) return;
+    const perm = await h.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') { _dirHandle = h; updateDirMenuBtn(); }
+  } catch(e) {}
+}
+
+async function pickSaveDir() {
+  if (!('showDirectoryPicker' in window)) return;
+  try {
+    _dirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
+    await idbPut('dirHandle', _dirHandle);
+    updateDirMenuBtn();
+    showToast('✓ Verzeichnis: ' + _dirHandle.name);
+  } catch(e) {
+    if (e.name !== 'AbortError') showToast('⚠ Kein Verzeichnis gewählt');
+  }
+}
+
+async function saveToDirectory() {
+  const gedText  = writeGEDCOM();
+  const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
+  const basename = filename.replace(/\.ged$/i, '');
+
+  // Verzeichnis holen (einmalig wählen)
+  if (!_dirHandle) {
+    try {
+      _dirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
+      await idbPut('dirHandle', _dirHandle);
+      updateDirMenuBtn();
+    } catch(e) {
+      if (e.name !== 'AbortError') showToast('⚠ Kein Verzeichnis gewählt');
+      return false;
+    }
+  }
+
+  // Schreibrecht sicherstellen
+  let perm = await _dirHandle.queryPermission({ mode: 'readwrite' });
+  if (perm === 'prompt') perm = await _dirHandle.requestPermission({ mode: 'readwrite' });
+  if (perm !== 'granted') {
+    _dirHandle = null; await idbDel('dirHandle'); updateDirMenuBtn();
+    showToast('⚠ Kein Schreibzugriff – bitte Verzeichnis neu wählen');
+    return false;
+  }
+
+  try {
+    // 1. Hauptdatei überschreiben
+    const mainHandle = await _dirHandle.getFileHandle(filename, { create: true });
+    const mainWriter = await mainHandle.createWritable();
+    await mainWriter.write(gedText);
+    await mainWriter.close();
+
+    // 2. backup/-Unterordner anlegen
+    const backupDir = await _dirHandle.getDirectoryHandle('backup', { create: true });
+
+    // 3. Nächste Versionsnummer ermitteln
+    const today  = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const prefix = `${basename}_${today}_`;
+    let n = 1;
+    for await (const name of backupDir.keys()) {
+      if (name.startsWith(prefix) && name.endsWith('.ged')) n++;
+    }
+    const backupName = `${prefix}${String(n).padStart(3, '0')}.ged`;
+
+    // 4. Versioniertes Backup schreiben
+    const backupHandle = await backupDir.getFileHandle(backupName, { create: true });
+    const backupWriter = await backupHandle.createWritable();
+    await backupWriter.write(gedText);
+    await backupWriter.close();
+
+    // 5. State
+    try { localStorage.setItem('stammbaum_ged', gedText); } catch(e) {}
+    changed = false; updateChangedIndicator();
+    showToast(`✓ ${filename} · Backup: backup/${backupName}`);
+    return true;
+  } catch(e) {
+    showToast('⚠ Fehler: ' + e.message);
+    return false;
+  }
+}
+
+// ─────────────────────────────────────
 //  EXPORT / DOWNLOAD
 // ─────────────────────────────────────
 function exportGEDCOM() {
-  const content = writeGEDCOM();
-  const d = new Date();
-  const filename = `stammbaum_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.ged`;
+  // Desktop mit File System Access API → direkt ins Verzeichnis
+  if ('showDirectoryPicker' in window) {
+    saveToDirectory();
+    return;
+  }
 
+  // iOS / Fallback
+  const content  = writeGEDCOM();
+  const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   if (isIOS && navigator.canShare) {
-    // iOS: Web Share API → „In Dateien sichern" → direkt iCloud wählen
-    const file = new File([content], filename, { type: 'text/plain' });
-    if (navigator.canShare({ files: [file] })) {
-      navigator.share({
-        files: [file],
-        title: filename
-      }).then(() => {
-        changed = false;
-        updateChangedIndicator();
-        showToast('✓ Gespeichert');
-      }).catch(err => {
-        if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen');
-      });
+    const basename   = filename.replace(/\.ged$/i, '');
+    const now        = new Date();
+    const today      = now.toISOString().slice(0, 10);
+    const time       = now.toTimeString().slice(0, 8).replace(/:/g, '');
+    const backupName = `${basename}_${today}_${time}.ged`;
+    const mainFile   = new File([content], filename,   { type: 'text/plain' });
+    const backupFile = new File([content], backupName, { type: 'text/plain' });
+    if (navigator.canShare({ files: [mainFile] })) {
+      navigator.share({ files: [mainFile, backupFile], title: filename })
+        .then(() => { changed = false; updateChangedIndicator(); showToast('✓ Gespeichert'); })
+        .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
       return;
     }
   }
 
-  // Desktop / Fallback: normaler Download
+  // Download-Fallback
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-
-  changed = false;
-  updateChangedIndicator();
+  changed = false; updateChangedIndicator();
   try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
   showToast('✓ Datei heruntergeladen');
 }
@@ -1406,7 +1541,7 @@ function tryAutoLoad() {
   } catch(e) { /* no storage or parse error */ }
   return false;
 }
-window.addEventListener('load', () => { tryAutoLoad(); });
+window.addEventListener('load', () => { tryAutoLoad(); restoreDirHandle(); updateDirMenuBtn(); });
 
 function updateBackupBtn() {
   const btn = document.getElementById('backupMenuBtn');
@@ -1675,6 +1810,34 @@ function renderPlaceList() {
   el.innerHTML = html;
 }
 
+function showPlaceForm(placeName) {
+  document.getElementById('pl-old').value  = placeName;
+  document.getElementById('pl-name').value = placeName;
+  openModal('modalPlace');
+}
+
+function savePlace() {
+  const oldName = document.getElementById('pl-old').value;
+  const newName = document.getElementById('pl-name').value.trim();
+  if (!newName) { showToast('⚠ Ortsname darf nicht leer sein'); return; }
+  closeModal('modalPlace');
+  if (newName === oldName) return;
+  for (const p of Object.values(db.individuals)) {
+    if (p.birth.place  === oldName) p.birth.place  = newName;
+    if (p.chr.place    === oldName) p.chr.place    = newName;
+    if (p.death.place  === oldName) p.death.place  = newName;
+    if (p.buri.place   === oldName) p.buri.place   = newName;
+    for (const ev of p.events) if (ev.place === oldName) ev.place = newName;
+  }
+  for (const f of Object.values(db.families)) {
+    if (f.marr.place        === oldName) f.marr.place        = newName;
+    if (f.engag?.place      === oldName) f.engag.place       = newName;
+  }
+  markChanged();
+  showToast('✓ Ort umbenannt');
+  showPlaceDetail(newName);
+}
+
 function showPlaceDetail(placeName) {
   const places = collectPlaces();
   const place = places.get(placeName);
@@ -1682,7 +1845,8 @@ function showPlaceDetail(placeName) {
 
   currentPersonId = null; currentFamilyId = null; currentSourceId = null;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
-  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('editBtn').style.display = '';
+  document.getElementById('editBtn').onclick = () => showPlaceForm(placeName);
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem; border-color:var(--gold-dim)">📍</div>
@@ -1778,23 +1942,23 @@ function showDetail(id) {
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
+    html += `<div class="fact-row" onclick="showEventForm('${id}','BIRT')" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
     html += sourceTagsHtml(p.birth.sources);
   }
   if (p.chr.date || p.chr.place) {
-    html += factRow('Taufe', [p.chr.date, p.chr.place].filter(Boolean).join(', '));
+    html += `<div class="fact-row" onclick="showEventForm('${id}','CHR')" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}</span></div>`;
     html += sourceTagsHtml(p.chr.sources);
   }
   if (p.death.date || p.death.place) {
     const geoBtn = (p.death.lati !== null && p.death.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
+    html += `<div class="fact-row" onclick="showEventForm('${id}','DEAT')" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
     html += sourceTagsHtml(p.death.sources);
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = (p.buri.lati !== null && p.buri.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
+    html += `<div class="fact-row" onclick="showEventForm('${id}','BURI')" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}</span></div>`;
     html += sourceTagsHtml(p.buri.sources);
   }
 
@@ -2115,10 +2279,6 @@ function showPersonForm(id) {
   document.getElementById('pf-given').value = p?.given || '';
   document.getElementById('pf-surname').value = p?.surname || '';
   document.getElementById('pf-sex').value = p?.sex || 'U';
-  document.getElementById('pf-bdate').value = p?.birth?.date || '';
-  document.getElementById('pf-bplace').value = p?.birth?.place || '';
-  document.getElementById('pf-ddate').value = p?.death?.date || '';
-  document.getElementById('pf-dplace').value = p?.death?.place || '';
   document.getElementById('pf-occu').value = p?.events?.find(e => e.type === 'OCCU')?.value || '';
   document.getElementById('pf-note').value = p?.noteText || '';
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
@@ -2131,10 +2291,6 @@ function savePerson() {
   const given = document.getElementById('pf-given').value.trim();
   const surname = document.getElementById('pf-surname').value.trim();
   const sex = document.getElementById('pf-sex').value;
-  const bdate = document.getElementById('pf-bdate').value.trim();
-  const bplace = document.getElementById('pf-bplace').value.trim();
-  const ddate = document.getElementById('pf-ddate').value.trim();
-  const dplace = document.getElementById('pf-dplace').value.trim();
   const occu = document.getElementById('pf-occu').value.trim();
   const note = document.getElementById('pf-note').value.trim();
 
@@ -2149,8 +2305,8 @@ function savePerson() {
     id, given, surname,
     name: (given + (surname ? ' ' + surname : '')).trim(),
     sex,
-    birth: { ...(existing.birth||{}), date: bdate, place: bplace },
-    death: { ...(existing.death||{}), date: ddate, place: dplace },
+    birth: existing.birth || { date:'', place:'', lati:null, long:null, sources:[] },
+    death: existing.death || { date:'', place:'', lati:null, long:null, sources:[], cause:'' },
     chr: existing.chr || { date:'', place:'' },
     buri: existing.buri || { date:'', place:'' },
     events,
@@ -2315,18 +2471,47 @@ function deleteSource() {
 // ─────────────────────────────────────
 //  FORMS: EVENT
 // ─────────────────────────────────────
+const _SPECIAL_OBJ = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
+const _SPECIAL_LBL = { BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung' };
+
+function onEventTypeChange() {
+  const t = document.getElementById('ef-type').value;
+  document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ) ? 'none' : '';
+  document.getElementById('ef-cause-group').style.display = (t === 'DEAT')       ? ''     : 'none';
+}
+
 function showEventForm(personId, evIdx) {
   const p = db.individuals[personId];
-  const ev = (evIdx !== undefined && p) ? p.events[evIdx] : null;
-  document.getElementById('ef-pid').value = personId;
-  document.getElementById('ef-evidx').value = evIdx !== undefined ? evIdx : '';
-  document.getElementById('ef-type').value = ev?.type || 'OCCU';
-  document.getElementById('ef-val').value = ev?.value || '';
-  document.getElementById('ef-date').value = ev?.date || '';
-  document.getElementById('ef-place').value = ev?.place || '';
-  initSrcWidget('ef', ev?.sources || []);
-  document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
-  document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
+  const isSpecial  = typeof evIdx === 'string' && evIdx in _SPECIAL_OBJ;
+  const isExisting = typeof evIdx === 'number';
+  const typeEl = document.getElementById('ef-type');
+
+  document.getElementById('ef-pid').value    = personId;
+  document.getElementById('ef-evidx').value  = isExisting ? evIdx : '';
+
+  if (isSpecial) {
+    const obj = p[_SPECIAL_OBJ[evIdx]] || {};
+    typeEl.value = evIdx; typeEl.disabled = true;
+    document.getElementById('ef-val').value   = '';
+    document.getElementById('ef-date').value  = obj.date  || '';
+    document.getElementById('ef-place').value = obj.place || '';
+    document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
+    initSrcWidget('ef', obj.sources || []);
+    document.querySelector('#modalEvent .sheet-title').textContent = _SPECIAL_LBL[evIdx] + ' bearbeiten';
+    document.getElementById('saveEventBtn').textContent = 'Speichern';
+  } else {
+    const ev = isExisting ? p.events[evIdx] : null;
+    typeEl.disabled = false;
+    typeEl.value = ev?.type || 'OCCU';
+    document.getElementById('ef-val').value   = ev?.value || '';
+    document.getElementById('ef-date').value  = ev?.date  || '';
+    document.getElementById('ef-place').value = ev?.place || '';
+    document.getElementById('ef-cause').value = '';
+    initSrcWidget('ef', ev?.sources || []);
+    document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
+    document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
+  }
+  onEventTypeChange();
   openModal('modalEvent');
 }
 
@@ -2334,26 +2519,36 @@ function saveEvent() {
   const pid = document.getElementById('ef-pid').value;
   const p = db.individuals[pid];
   if (!p) return;
-  const evIdxRaw = document.getElementById('ef-evidx').value;
-  const evIdx = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
+  const type = document.getElementById('ef-type').value;
 
-  const ev = {
-    type: document.getElementById('ef-type').value,
-    value: document.getElementById('ef-val').value.trim(),
-    date: document.getElementById('ef-date').value.trim(),
-    place: document.getElementById('ef-place').value.trim(),
-    lati: null, long: null, eventType: '',
-    sources: [...(srcState['ef'] || [])]
-  };
-
-  if (evIdx !== null && p.events[evIdx]) {
-    // Preserve existing geo data when editing
-    ev.lati = p.events[evIdx].lati;
-    ev.long = p.events[evIdx].long;
-    ev.eventType = p.events[evIdx].eventType || '';
-    p.events[evIdx] = ev;
+  if (type in _SPECIAL_OBJ) {
+    const key = _SPECIAL_OBJ[type];
+    p[key] = { ...(p[key] || {}),
+      date:    document.getElementById('ef-date').value.trim(),
+      place:   document.getElementById('ef-place').value.trim(),
+      sources: [...(srcState['ef'] || [])]
+    };
+    if (type === 'DEAT') p[key].cause = document.getElementById('ef-cause').value.trim();
   } else {
-    p.events.push(ev);
+    const evIdxRaw = document.getElementById('ef-evidx').value;
+    const evIdx    = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
+    const ev = {
+      type,
+      value:     document.getElementById('ef-val').value.trim(),
+      date:      document.getElementById('ef-date').value.trim(),
+      place:     document.getElementById('ef-place').value.trim(),
+      lati: null, long: null, eventType: '', note: '',
+      sources:   [...(srcState['ef'] || [])]
+    };
+    if (evIdx !== null && p.events[evIdx]) {
+      ev.lati      = p.events[evIdx].lati;
+      ev.long      = p.events[evIdx].long;
+      ev.eventType = p.events[evIdx].eventType || '';
+      ev.note      = p.events[evIdx].note      || '';
+      p.events[evIdx] = ev;
+    } else {
+      p.events.push(ev);
+    }
   }
 
   closeModal('modalEvent');
