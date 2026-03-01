@@ -20,11 +20,12 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (~3104 Zeilen, alles in einer Datei)
+├── index.html          ← gesamte App (~3120 Zeilen, alles in einer Datei)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
-└── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
+├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
+└── MEMORY.md           ← Projekt-Memory für KI-Kontext
 ```
 
 ---
@@ -87,7 +88,7 @@ stammbaum/
 | Was | Felder |
 |---|---|
 | Person | Name (Vor-/Nachname, Präfix, Suffix), Geschlecht, Titel, Religion, Notiz |
-| Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/…), Datum, Ort, Todesursache, Quellen |
+| Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/…), Datum, Ort, Adresse (bei RESI), Todesursache (bei DEAT), Quellen |
 | Familie | Eltern (Dropdown), Heirat (Datum, Ort), Kinder hinzufügen/entfernen, Quellen |
 | Quelle | Titel, Kurzname, Autor, Datum, Verlag, Aufbewahrungsort, Notiz |
 | Ort | Name umbenennen (wirkt sich auf alle Personen und Familien aus) |
@@ -102,7 +103,7 @@ stammbaum/
 ┌──────────────────────────────────────────────┐
 │  index.html                                  │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~3104 Zeilen · ~90 Funktionen · ~160 KB     │
+│  ~3120 Zeilen · ~90 Funktionen · ~165 KB     │
 │                                              │
 │  Globaler State: let db = {                  │
 │    individuals, families, sources            │

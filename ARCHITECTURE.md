@@ -15,7 +15,7 @@
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe aktuell:** ~3104 Zeilen · ~90 Funktionen · ~160 KB
+**Größe aktuell:** ~3120 Zeilen · ~90 Funktionen · ~165 KB
 
 ---
 
@@ -268,7 +268,8 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
   // Weitere Ereignisse
   events: [
     { type:'OCCU', value:'Kaufmann', date:'', place:'', lati:null, long:null,
-      sources:[], note:'', eventType:'' }
+      sources:[], note:'', addr:'', eventType:'' }
+    // addr: Adresse (2 ADDR), nur bei RESI relevant; note: akkumuliert bei mehreren 2 NOTE
   ],
 
   // Quellen
@@ -310,13 +311,14 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
 
 ```javascript
 {
-  abbr:   'KB München St. Peter',
-  title:  'Kirchenbuch München St. Peter',
-  author: 'Stadtarchiv München',
-  date:   '1845-1912',
-  publ:   '',
-  repo:   '',
-  text:   '',
+  abbr:        'KB München St. Peter',
+  title:       'Kirchenbuch München St. Peter',
+  author:      'Stadtarchiv München',
+  date:        '1845-1912',
+  publ:        '',
+  repo:        '',
+  text:        '',
+  lastChanged: '1 MAR 2026',  // CHAN/DATE — auto-gesetzt beim Speichern
 }
 ```
 
@@ -497,7 +499,7 @@ exportGEDCOM()
 | Problem | Ursache | Status |
 |---|---|---|
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Still ignoriert wenn voll |
-| ADDR, _STAT gehen verloren | Writer kennt die Tags nicht | Bewusst akzeptiert |
+| _STAT geht verloren | Writer kennt den Tag nicht | Bewusst akzeptiert |
 | QUAY, PAGE an Quellen gehen verloren | Vereinfacht | Bewusst akzeptiert |
 | NOTE @ref@ → Inline-NOTE | Records werden aufgelöst | Bewusst akzeptiert |
 | Fotos nicht ladbar | Windows-Pfade aus Legacy | Phase 5 geplant |
