@@ -112,7 +112,7 @@ body {
 }
 .tree-card:not(.tree-card-empty):active { border-color: var(--gold); background: var(--surface3); }
 .tree-card-center {
-  width: 120px; height: 80px;
+  width: 160px; height: 80px;
   border-color: var(--gold);
   background: var(--surface3);
 }
@@ -366,6 +366,7 @@ body {
   color: var(--text-muted); font-size: 0.75rem;
   padding: 3px 10px; border-radius: 12px; cursor: pointer;
   font-family: 'Source Serif 4', serif; transition: all 0.15s;
+  min-width: 100px; text-align: center; flex-shrink: 0;
 }
 .section-add:active { border-color: var(--gold-dim); color: var(--gold-dim); }
 
@@ -396,6 +397,13 @@ body {
   font-size: 0.92rem; color: var(--text);
 }
 .rel-role { font-size: 0.72rem; color: var(--text-muted); font-style: italic; }
+.unlink-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  border-radius: 50%; width: 24px; height: 24px; font-size: 0.85rem;
+  cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; transition: all 0.15s; line-height: 1;
+}
+.unlink-btn:active { border-color: #c0392b; color: #c0392b; }
 
 /* ═══════════════════════════════════════
    BOTTOM FAB
@@ -1053,6 +1061,29 @@ body {
   </div>
 </div>
 
+<!-- Beziehungs-Picker: Ehepartner / Kind / Elternteil verknüpfen -->
+<div class="modal-overlay" id="modalRelPicker">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="relPickerTitle">Person verknüpfen</div>
+    <div class="sheet-body">
+      <input class="form-input" id="relPickerSearch"
+             placeholder="Name suchen…" autocomplete="off"
+             oninput="renderRelPicker(this.value)">
+      <div id="relPickerList"
+           style="max-height:280px;overflow-y:auto;margin-top:8px"></div>
+      <div class="btn-row" style="margin-top:12px;flex-direction:column;gap:8px">
+        <button class="btn btn-save" onclick="relPickerCreateNew()">
+          ＋ Neue Person erstellen
+        </button>
+        <button class="btn btn-cancel" onclick="closeModal('modalRelPicker')">
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Menu drawer -->
 <div class="modal-overlay" id="modalMenu">
   <div class="sheet">
@@ -1137,6 +1168,11 @@ let idCounter = 1000;
 // Ermöglicht "Zurück" durch verschachtelte Detail-Ansichten
 const _navHistory = [];       // Stack von {type, id|name}
 let _skipHistoryPush = false; // gesetzt während goBack() navigiert
+
+// ─── Beziehungs-Picker ──────────────────
+let _relMode     = '';    // 'spouse' | 'child' | 'parent'
+let _relAnchorId = '';    // personId (spouse/parent) oder famId (child)
+let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonForm()
 
 function nextId(prefix) {
   idCounter++;
@@ -2273,6 +2309,153 @@ function deleteExtraPlace(name) {
   renderTab();
 }
 
+// ─────────────────────────────────────────────────────────────────
+//  BEZIEHUNGS-PICKER
+// ─────────────────────────────────────────────────────────────────
+
+function showAddSpouseFlow(personId) {
+  _relMode = 'spouse'; _relAnchorId = personId;
+  document.getElementById('relPickerTitle').textContent = 'Ehepartner verknüpfen';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
+}
+
+function showAddChildFlow(famId) {
+  _relMode = 'child'; _relAnchorId = famId;
+  document.getElementById('relPickerTitle').textContent = 'Kind hinzufügen';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
+}
+
+function showAddParentFlow(personId) {
+  _relMode = 'parent'; _relAnchorId = personId;
+  document.getElementById('relPickerTitle').textContent = 'Elternteil verknüpfen';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
+}
+
+function renderRelPicker(q) {
+  const list = document.getElementById('relPickerList');
+  const famcIdOf = c => typeof c === 'string' ? c : c.famId;
+  let persons = Object.values(db.individuals);
+
+  if (_relMode === 'spouse') {
+    const p = db.individuals[_relAnchorId];
+    const excl = new Set([_relAnchorId,
+      ...(p?.fams || []).flatMap(fid => {
+        const f = db.families[fid]; return f ? [f.husb, f.wife] : [];
+      }).filter(Boolean)
+    ]);
+    persons = persons.filter(x => !excl.has(x.id));
+  } else if (_relMode === 'child') {
+    const f = db.families[_relAnchorId];
+    if (f) {
+      const excl = new Set([...(f.children || []), f.husb, f.wife].filter(Boolean));
+      persons = persons.filter(x => !excl.has(x.id));
+    }
+  } else if (_relMode === 'parent') {
+    persons = persons.filter(x => x.id !== _relAnchorId);
+  }
+
+  if (q) {
+    const lq = q.toLowerCase();
+    persons = persons.filter(x => (x.name || x.id).toLowerCase().includes(lq));
+  }
+
+  persons = persons.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de')).slice(0, 60);
+
+  list.innerHTML = '';
+  if (!persons.length) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Keine Treffer</div>';
+    return;
+  }
+  for (const p of persons) {
+    const meta = [p.birth?.date ? '* ' + p.birth.date : '', p.death?.date ? '† ' + p.death.date : ''].filter(Boolean).join('  ');
+    const row = document.createElement('div');
+    row.className = 'person-row';
+    row.dataset.pid = p.id;
+    row.innerHTML = `<div class="person-row-info">
+      <div class="person-row-name">${esc(p.name || p.id)}</div>
+      ${meta ? `<div class="person-row-meta">${esc(meta)}</div>` : ''}
+    </div><div class="row-arrow">›</div>`;
+    row.addEventListener('click', () => relPickerSelect(p.id));
+    list.appendChild(row);
+  }
+}
+
+function relPickerSelect(selectedId) {
+  closeModal('modalRelPicker');
+  openRelFamilyForm(_relAnchorId, selectedId, _relMode);
+}
+
+function relPickerCreateNew() {
+  closeModal('modalRelPicker');
+  _pendingRelation = { mode: _relMode, anchorId: _relAnchorId };
+  showPersonForm(null);
+}
+
+function openRelFamilyForm(anchorId, partnerId, mode) {
+  const famcIdOf = c => typeof c === 'string' ? c : c.famId;
+  if (mode === 'spouse') {
+    const p = db.individuals[anchorId];
+    const q = db.individuals[partnerId];
+    let husb = anchorId, wife = partnerId;
+    if (p?.sex === 'F' || q?.sex === 'M') { husb = partnerId; wife = anchorId; }
+    showFamilyForm(null, { husb, wife });
+
+  } else if (mode === 'child') {
+    showFamilyForm(anchorId, { addChild: partnerId });
+
+  } else if (mode === 'parent') {
+    const p   = db.individuals[anchorId];
+    const par = db.individuals[partnerId];
+    // Freien Slot in vorhandener Elternfamilie suchen
+    let targetFamId = null;
+    for (const fc of (p?.famc || [])) {
+      const fid = famcIdOf(fc);
+      const f = db.families[fid];
+      if (!f) continue;
+      if (!f.husb && par?.sex !== 'F') { targetFamId = fid; break; }
+      if (!f.wife && par?.sex === 'F') { targetFamId = fid; break; }
+    }
+    if (targetFamId) {
+      const slot = par?.sex === 'F' ? 'wife' : 'husb';
+      showFamilyForm(targetFamId, { [slot]: partnerId });
+    } else {
+      const husb = par?.sex === 'F' ? undefined : partnerId;
+      const wife = par?.sex === 'F' ? partnerId : undefined;
+      showFamilyForm(null, { husb, wife, addChild: anchorId });
+    }
+  }
+}
+
+function unlinkMember(famId, personId) {
+  if (!confirm('Verbindung wirklich trennen?')) return;
+  const f = db.families[famId];
+  const p = db.individuals[personId];
+  if (!f || !p) return;
+  const famcIdOf = c => typeof c === 'string' ? c : c.famId;
+
+  if (f.husb === personId) {
+    f.husb = null;
+    p.fams = p.fams.filter(id => id !== famId);
+  } else if (f.wife === personId) {
+    f.wife = null;
+    p.fams = p.fams.filter(id => id !== famId);
+  } else if (f.children.includes(personId)) {
+    f.children = f.children.filter(id => id !== personId);
+    p.famc = p.famc.filter(c => famcIdOf(c) !== famId);
+  } else return; // nichts gefunden
+
+  markChanged(); updateStats(); renderTab();
+  showToast('✓ Verbindung getrennt');
+  if (currentFamilyId === famId) showFamilyDetail(famId);
+  else if (currentPersonId) showDetail(currentPersonId);
+}
+
 function showPlaceDetail(placeName) {
   const places = collectPlaces();
   const place = places.get(placeName);
@@ -2378,7 +2561,7 @@ function showTree(personId) {
   currentTreeId   = personId;
   setBnavActive('tree');
 
-  const CW = 120, CH = 80;      // Zentrum-Karte
+  const CW = 160, CH = 80;      // Zentrum-Karte
   const W  = 96,  H  = 64;      // reguläre Karte
   const HGAP = 10, VGAP = 44;
   const MGAP = 20;               // Lücke Person ↔ Ehepartner
@@ -2664,48 +2847,57 @@ function showDetail(id) {
     html += `</div>`;
   }
 
-  // As spouse
-  if (p.fams.length) {
-    html += `<div class="section fade-up">
-      <div class="section-head"><div class="section-title">Ehepartner &amp; Kinder</div></div>`;
-    for (const famId of p.fams) {
-      const fam = db.families[famId];
-      if (!fam) continue;
-      const marriageLabel = fam.marr.date ? fam.marr.date : famId;
-      html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
-        <span class="fnr-label"><span class="fnr-icon">⚭</span> Familie · ${esc(marriageLabel)}</span>
-        <span class="row-arrow">›</span>
-      </div>`;
-      const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
-      const partner = partnerId ? db.individuals[partnerId] : null;
-      if (partner) html += relRow(partner, 'Ehepartner' + (fam.marr.date ? ' · ' + fam.marr.date : ''));
-      for (const cid of fam.children) {
-        const child = db.individuals[cid];
-        if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''));
-      }
+  // As spouse — immer anzeigen (Button auch wenn noch keine Familie)
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Ehepartner &amp; Kinder</div>
+      <button class="section-add" data-pid="${id}" onclick="showAddSpouseFlow(this.dataset.pid)">+ Ehepartner</button>
+    </div>`;
+  for (const famId of p.fams) {
+    const fam = db.families[famId];
+    if (!fam) continue;
+    const marriageLabel = fam.marr.date ? fam.marr.date : famId;
+    html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
+      <span class="fnr-label"><span class="fnr-icon">⚭</span> Familie · ${esc(marriageLabel)}</span>
+      <span class="row-arrow">›</span>
+    </div>`;
+    const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
+    const partner = partnerId ? db.individuals[partnerId] : null;
+    if (partner) html += relRow(partner, 'Ehepartner' + (fam.marr.date ? ' · ' + fam.marr.date : ''), famId);
+    for (const cid of fam.children) {
+      const child = db.individuals[cid];
+      if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''), famId);
     }
-    html += `</div>`;
+    html += `<div style="display:flex;justify-content:flex-end;padding:2px 0 8px">
+      <button class="section-add" data-fid="${famId}" onclick="showAddChildFlow(this.dataset.fid)">+ Kind</button>
+    </div>`;
   }
+  html += `</div>`;
 
-  // Parents
-  if (p.famc.length) {
-    html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Eltern</div></div>`;
-    for (const fref of p.famc) {
-      const famId = typeof fref === 'string' ? fref : fref.famId;
-      const fam = db.families[famId];
-      if (!fam) continue;
-      html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
-        <span class="fnr-label"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
-        <span class="row-arrow">›</span>
-      </div>`;
-      for (const pid of [fam.husb, fam.wife]) {
-        if (!pid) continue;
-        const parent = db.individuals[pid];
-        if (parent) html += relRow(parent, parent.sex === 'M' ? 'Vater' : parent.sex === 'F' ? 'Mutter' : 'Elternteil');
-      }
+  // Parents — immer anzeigen (Button auch wenn noch keine Eltern)
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Eltern</div>
+      <button class="section-add" data-pid="${id}" onclick="showAddParentFlow(this.dataset.pid)">+ Elternteil</button>
+    </div>`;
+  for (const fref of p.famc) {
+    const famId = typeof fref === 'string' ? fref : fref.famId;
+    const fam = db.families[famId];
+    if (!fam) continue;
+    html += `<div class="family-nav-row" style="display:flex;align-items:center;gap:6px">
+      <span class="fnr-label" style="flex:1;cursor:pointer" onclick="showFamilyDetail('${famId}')"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
+      <button class="unlink-btn" data-fid="${famId}" data-pid="${id}"
+        onclick="unlinkMember(this.dataset.fid, this.dataset.pid)"
+        title="Aus Herkunftsfamilie austragen">×</button>
+      <span class="row-arrow" style="cursor:pointer" onclick="showFamilyDetail('${famId}')">›</span>
+    </div>`;
+    for (const pid of [fam.husb, fam.wife]) {
+      if (!pid) continue;
+      const parent = db.individuals[pid];
+      if (parent) html += relRow(parent, parent.sex === 'M' ? 'Vater' : parent.sex === 'F' ? 'Mutter' : 'Elternteil');
     }
-    html += `</div>`;
   }
+  html += `</div>`;
 
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
@@ -2748,12 +2940,16 @@ function showFamilyDetail(id) {
     html += `</div>`;
   }
 
-  html += `<div class="section fade-up"><div class="section-title">Mitglieder</div>`;
-  if (husb) html += relRow(husb, 'Ehemann / Vater');
-  if (wife) html += relRow(wife, 'Ehefrau / Mutter');
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Mitglieder</div>
+      <button class="section-add" data-fid="${id}" onclick="showAddChildFlow(this.dataset.fid)">+ Kind</button>
+    </div>`;
+  if (husb) html += relRow(husb, 'Ehemann / Vater', id);
+  if (wife) html += relRow(wife, 'Ehefrau / Mutter', id);
   for (const cid of f.children) {
     const child = db.individuals[cid];
-    if (child) html += relRow(child, 'Kind');
+    if (child) html += relRow(child, 'Kind', id);
   }
   html += `</div>`;
 
@@ -2864,15 +3060,21 @@ function sourceTagsHtml(sourceIds) {
   }).filter(Boolean).join('');
 }
 
-function relRow(person, role) {
+function relRow(person, role, unlinkFamId) {
   const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
   const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
+  const unlinkBtn = unlinkFamId
+    ? `<button class="unlink-btn" data-fid="${unlinkFamId}" data-pid="${person.id}"
+         onclick="event.stopPropagation(); unlinkMember(this.dataset.fid, this.dataset.pid)"
+         title="Verbindung trennen">×</button>`
+    : '';
   return `<div class="rel-row" data-pid="${person.id}" onclick="showDetail(this.dataset.pid)">
     <div class="rel-avatar ${sc}">${ic}</div>
     <div class="rel-info">
       <div class="rel-name">${esc(person.name || person.id)}</div>
       <div class="rel-role">${esc(role)}</div>
     </div>
+    ${unlinkBtn}
     <span class="p-arrow">›</span>
   </div>`;
 }
@@ -3022,8 +3224,15 @@ function savePerson() {
   markChanged();
   updateStats();
   renderTab();
-  showToast('✓ Person gespeichert');
 
+  if (_pendingRelation) {
+    const rel = _pendingRelation;
+    _pendingRelation = null;
+    showToast('✓ Person erstellt');
+    setTimeout(() => openRelFamilyForm(rel.anchorId, id, rel.mode), 80);
+    return;
+  }
+  showToast('✓ Person gespeichert');
   if (currentPersonId === id) showDetail(id);
 }
 
@@ -3047,7 +3256,7 @@ function deletePerson() {
 // ─────────────────────────────────────
 //  FORMS: FAMILY
 // ─────────────────────────────────────
-function showFamilyForm(id) {
+function showFamilyForm(id, ctx) {
   closeModal('modalAdd');
   const f = id ? db.families[id] : null;
   document.getElementById('familyFormTitle').textContent = f ? 'Familie bearbeiten' : 'Neue Familie';
@@ -3068,6 +3277,19 @@ function showFamilyForm(id) {
   document.getElementById('ff-children').value = f?.children?.join(', ') || '';
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
+
+  // Vorausfüllung aus Beziehungs-Picker-Kontext
+  if (ctx) {
+    if (ctx.husb !== undefined) document.getElementById('ff-husb').value = ctx.husb || '';
+    if (ctx.wife !== undefined) document.getElementById('ff-wife').value = ctx.wife || '';
+    if (ctx.addChild) {
+      const cur = (document.getElementById('ff-children').value || '')
+        .split(',').map(s => s.trim()).filter(Boolean);
+      if (!cur.includes(ctx.addChild)) cur.push(ctx.addChild);
+      document.getElementById('ff-children').value = cur.join(', ');
+    }
+  }
+
   openModal('modalFamily');
 }
 
