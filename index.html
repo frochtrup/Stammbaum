@@ -944,6 +944,10 @@ body {
         <label class="form-label">Todesursache</label>
         <input class="form-input" id="ef-cause" placeholder="z.B. Typhus">
       </div>
+      <div class="form-group" id="ef-addr-group" style="display:none">
+        <label class="form-label">Adresse</label>
+        <textarea class="form-input" id="ef-addr" rows="2" placeholder="Hauptstraße 5&#10;80331 München" style="resize:vertical;box-sizing:border-box"></textarea>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Datum</label>
@@ -1159,7 +1163,7 @@ function parseGEDCOM(text) {
         else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); }
         else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', sources:[] });
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[] });
           evIdx = cur.events.length - 1;
         }
       }
@@ -1201,7 +1205,8 @@ function parseGEDCOM(text) {
           if (tag==='DATE')  ev.date = val;
           if (tag==='PLAC')  ev.place = val;
           if (tag==='TYPE')  ev.eventType = val;
-          if (tag==='NOTE')  ev.note = val;
+          if (tag==='NOTE')  ev.note += (ev.note ? '\n' : '') + val;
+          if (tag==='ADDR')  ev.addr = (ev.addr ? ev.addr + '\n' : '') + val;
           if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
           if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
         }
@@ -1306,6 +1311,7 @@ function parseGEDCOM(text) {
           if (tag==='FILE') cur.media[cur.media.length-1].file  = val;
           if (tag==='TITL') cur.media[cur.media.length-1].title = val;
         }
+        if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
       }
     }
 
@@ -1409,6 +1415,11 @@ function writeGEDCOM() {
         lines.push(`2 NOTE ${nl[0]}`);
         for (let i = 1; i < nl.length; i++) lines.push(`3 CONT ${nl[i]}`);
       }
+      if (ev.addr) {
+        const al = ev.addr.split('\n');
+        lines.push(`2 ADDR ${al[0]}`);
+        for (let i = 1; i < al.length; i++) lines.push(`3 CONT ${al[i]}`);
+      }
       if (ev.sources) for (const s of ev.sources) lines.push(`2 SOUR ${s}`);
     }
 
@@ -1464,6 +1475,10 @@ function writeGEDCOM() {
     if (s.publ)   lines.push(`1 PUBL ${s.publ}`);
     if (s.repo)   lines.push(`1 REPO ${s.repo}`);
     if (s.text)   lines.push(`1 TEXT ${s.text}`);
+    if (s.lastChanged) {
+      lines.push(`1 CHAN`);
+      lines.push(`2 DATE ${s.lastChanged}`);
+    }
   }
 
   lines.push('0 TRLR');
@@ -2623,7 +2638,7 @@ function showSourceDetail(id) {
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">📖</div>
     <div class="detail-name">${esc(s.abbr || s.title || id)}</div>
-    <div class="detail-id">${id} · ${refPersons.length + refFamilies.length} Referenzen</div>
+    <div class="detail-id">${id} · ${refPersons.length + refFamilies.length} Referenzen${s.lastChanged ? ' · geändert ' + s.lastChanged : ''}</div>
   </div>`;
 
   // Source details
@@ -2970,15 +2985,20 @@ function showSourceForm(id) {
 
 function saveSource() {
   const id = document.getElementById('sf-id').value || nextId('S');
+  const existing = db.sources[id] || {};
+  const now = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const gedDate = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
   db.sources[id] = {
     id,
-    abbr:   document.getElementById('sf-abbr').value.trim(),
-    title:  document.getElementById('sf-title').value.trim(),
-    author: document.getElementById('sf-auth').value.trim(),
-    date:   document.getElementById('sf-date').value.trim(),
-    publ:   document.getElementById('sf-publ').value.trim(),
-    repo:   document.getElementById('sf-repo').value.trim(),
-    text:   document.getElementById('sf-text').value.trim()
+    abbr:        document.getElementById('sf-abbr').value.trim(),
+    title:       document.getElementById('sf-title').value.trim(),
+    author:      document.getElementById('sf-auth').value.trim(),
+    date:        document.getElementById('sf-date').value.trim(),
+    publ:        document.getElementById('sf-publ').value.trim(),
+    repo:        document.getElementById('sf-repo').value.trim(),
+    text:        document.getElementById('sf-text').value.trim(),
+    lastChanged: gedDate
   };
   closeModal('modalSource');
   markChanged(); updateStats();
@@ -3005,8 +3025,9 @@ const _SPECIAL_LBL = { BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung'
 
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
-  document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ) ? 'none' : '';
+  document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
   document.getElementById('ef-cause-group').style.display = (t === 'DEAT')       ? ''     : 'none';
+  document.getElementById('ef-addr-group').style.display  = (t === 'RESI')       ? ''     : 'none';
 }
 
 function showEventForm(personId, evIdx) {
@@ -3036,6 +3057,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-date').value  = ev?.date  || '';
     document.getElementById('ef-place').value = ev?.place || '';
     document.getElementById('ef-cause').value = '';
+    document.getElementById('ef-addr').value  = ev?.addr  || '';
     initSrcWidget('ef', ev?.sources || []);
     document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
@@ -3066,6 +3088,7 @@ function saveEvent() {
       value:     document.getElementById('ef-val').value.trim(),
       date:      document.getElementById('ef-date').value.trim(),
       place:     document.getElementById('ef-place').value.trim(),
+      addr:      document.getElementById('ef-addr').value.trim(),
       lati: null, long: null, eventType: '', note: '',
       sources:   [...(srcState['ef'] || [])]
     };

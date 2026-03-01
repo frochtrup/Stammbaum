@@ -37,7 +37,8 @@
 | `MAP` | 3 | *(Kontext)* | Legacy: Level 3 (Standard: Level 2) |
 | `LATI` | 4 | `events[].lati` | N52.15 → 52.15, S → negativ |
 | `LONG` | 4 | `events[].long` | E7.33 → 7.33, W → negativ |
-| `NOTE` | 2 | `events[].note` | Notiz direkt unter Ereignis |
+| `NOTE` | 2 | `events[].note` | Mehrere NOTEs akkumuliert mit `\n` |
+| `ADDR` | 2 | `events[].addr` | Adresse (nur RESI relevant), `3 CONT` für Zeilen |
 | `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt |
 | `SOUR` | 1 | `topSources[]` | SOUR direkt unter INDI (Level 1) |
 | `NOTE` | 1 | `noteText` / `noteRefs[]` | Inline-Text oder @Ref@ |
@@ -74,6 +75,7 @@
 | `PUBL` | 1 | `publ` | Verlag |
 | `REPO` | 1 | `repo` | Aufbewahrungsort |
 | `TEXT` | 1 | `text` | Notiz / Beschreibung |
+| `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum; wird beim Speichern auto-gesetzt |
 
 ### NOTE (Notiz-Record)
 Werden beim Parsen in `notes`-Map gespeichert und beim Anzeigen über `noteRefs` aufgelöst. Werden beim Export als Inline-NOTE zurückgeschrieben (Record-Struktur geht verloren).
@@ -160,6 +162,7 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
   3 MAP / 4 LATI / 4 LONG
   2 SOUR @Sxx@
   2 NOTE [text] / 3 CONT [...]
+  2 ADDR [text] / 3 CONT [...]    ← nur wenn ev.addr gesetzt
 1 NOTE [noteText] / 2 CONT [...]
 1 SOUR @Sxx@                      ← topSources[]
 1 FAMC @Fxx@ / 2 _FREL / 2 _MREL
@@ -176,6 +179,7 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 
 0 @Sxx@ SOUR
 1 ABBR / 1 TITL / 1 AUTH / 1 DATE / 1 PUBL / 1 REPO / 1 TEXT
+1 CHAN / 2 DATE [lastChanged]
 
 0 TRLR
 ```
@@ -183,7 +187,6 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 ### Was NICHT geschrieben wird (bekannte Verluste)
 | Tag | Grund |
 |---|---|
-| `ADDR` | Nie geparst |
 | `_STAT` | Nie geparst (Legacy: Never Married etc.) |
 | `QUAY` | Qualitätsbewertung — vereinfacht |
 | `PAGE` | Seitenangabe bei Quell-Referenz — vereinfacht |

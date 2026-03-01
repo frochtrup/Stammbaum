@@ -33,10 +33,15 @@ Alle wichtigen Felder überleben Parse→Write→Parse:
 - 2 NOTE unter Events, 2 SOUR unter NAME, SOUR direkt auf INDI
 
 Bewusst akzeptierte Verluste:
-- ADDR, _STAT — nie geparst
+- _STAT — nie geparst
 - QUAY, PAGE an Quell-Referenzen — vereinfacht
 - NOTE-Records als @ref@ → werden zu Inline-NOTE
 - 2 SOUR unter 1 RELI — 1 Vorkommen, kein UI-Effekt
+
+### Phase 2.6: GEDCOM-Nachbesserungen ✅ (März 2026)
+- **SOUR/CHAN**: Änderungsdatum von Quellen-Records wird geparst, gespeichert und beim Export zurückgeschrieben. `saveSource()` setzt `lastChanged` automatisch auf heutiges Datum (GEDCOM-Format).
+- **Multiple NOTEs unter Events**: Mehrere `2 NOTE`-Tags unter einem Ereignis werden jetzt akkumuliert (statt überschrieben), mit `\n` verbunden, beim Export als `CONT` ausgegeben.
+- **RESI/ADDR**: Adress-Subtag (`2 ADDR`) unter Wohnort-Ereignissen wird in `ev.addr` gespeichert, im Ereignis-Formular editierbar (nur bei Typ RESI sichtbar) und beim Export als `2 ADDR / 3 CONT` ausgegeben.
 
 ### Phase 3a: UI-Cleanups ✅ (März 2026)
 - BIRT/CHR/DEAT/BURI in Detailansicht anklickbar (gleiches Formular wie andere Events)
@@ -174,7 +179,7 @@ if (p.photoBase64) {
 | Problem | Ursache | Workaround |
 |---|---|---|
 | localStorage-Limit | MeineDaten.ged ≈ 5 MB, localStorage ≈ 5–10 MB | Wird still ignoriert wenn voll |
-| GEDCOM-Roundtrip verliert Tags | Writer kennt nicht alle Tags | ADDR, _STAT etc. gehen verloren |
+| GEDCOM-Roundtrip verliert Tags | Writer kennt nicht alle Tags | _STAT etc. gehen verloren |
 
 ### Mittel
 | Problem | Ursache | Workaround |
