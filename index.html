@@ -218,6 +218,22 @@ body {
 }
 .btn-link:active { color: var(--gold); }
 
+/* ── Place Autocomplete ─────────────────── */
+.place-input-wrap { position: relative; }
+.place-dropdown {
+  position: absolute; z-index: 600; top: 100%; left: 0; right: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto;
+  display: none; box-shadow: 0 4px 16px rgba(0,0,0,.45);
+}
+.place-dropdown-item {
+  padding: 9px 12px; cursor: pointer;
+  font-size: 0.85rem; color: var(--text);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.place-dropdown-item:last-child { border-bottom: none; }
+.place-dropdown-item:hover { background: rgba(255,255,255,.07); color: var(--gold-lt); }
+
 /* ═══════════════════════════════════════
    BOTTOM NAVIGATION
 ═══════════════════════════════════════ */
@@ -665,28 +681,28 @@ body {
 
   <div id="tab-persons">
     <div class="search-wrap">
-      <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" oninput="filterPersons(this.value)">
+      <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" oninput="filterPersonsDebounced(this.value)">
     </div>
     <div id="personList"></div>
   </div>
 
   <div id="tab-families" style="display:none">
     <div class="search-wrap">
-      <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamilies(this.value)">
+      <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)">
     </div>
     <div id="familyList"></div>
   </div>
 
   <div id="tab-sources" style="display:none">
     <div class="search-wrap">
-      <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSources(this.value)">
+      <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSourcesDebounced(this.value)">
     </div>
     <div id="sourceList"></div>
   </div>
 
   <div id="tab-places" style="display:none">
     <div class="search-wrap">
-      <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" oninput="filterPlaces(this.value)">
+      <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" oninput="filterPlacesDebounced(this.value)">
     </div>
     <div id="placeList"></div>
   </div>
@@ -765,6 +781,7 @@ body {
         <button class="btn btn-save" onclick="closeModal('modalAdd'); showPersonForm(null)">👤 Neue Person</button>
         <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showFamilyForm(null)">👨‍👩‍👧 Neue Familie</button>
         <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showSourceForm(null)">📖 Neue Quelle</button>
+        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showNewPlaceForm()">📍 Neuer Ort</button>
         <button class="btn btn-cancel" onclick="closeModal('modalAdd')">Abbrechen</button>
       </div>
     </div>
@@ -845,7 +862,10 @@ body {
         </div>
         <div class="form-group">
           <label class="form-label">Heiratsort</label>
-          <input class="form-input" id="ff-mplace" placeholder="München">
+          <div class="place-input-wrap">
+            <input class="form-input" id="ff-mplace" placeholder="München" autocomplete="off">
+            <div class="place-dropdown" id="ff-mplace-dd"></div>
+          </div>
         </div>
       </div>
       <div class="form-group">
@@ -961,7 +981,10 @@ body {
         </div>
         <div class="form-group">
           <label class="form-label">Ort</label>
-          <input class="form-input" id="ef-place" placeholder="München">
+          <div class="place-input-wrap">
+            <input class="form-input" id="ef-place" placeholder="München" autocomplete="off">
+            <div class="place-dropdown" id="ef-place-dd"></div>
+          </div>
         </div>
       </div>
       <div class="src-widget" id="ef-src-widget">
@@ -994,6 +1017,37 @@ body {
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalPlace')">Abbrechen</button>
         <button class="btn btn-save" onclick="savePlace()">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Neuer Ort -->
+<div class="modal-overlay" id="modalNewPlace">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Neuer Ort</div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label class="form-label">Ortsname *</label>
+        <div class="place-input-wrap">
+          <input class="form-input" id="np-name" placeholder="München, Bayern" autocomplete="off">
+          <div class="place-dropdown" id="np-name-dd"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Breitengrad</label>
+          <input class="form-input" id="np-lati" type="number" step="any" placeholder="48.1374">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Längengrad</label>
+          <input class="form-input" id="np-long" type="number" step="any" placeholder="11.5755">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalNewPlace')">Abbrechen</button>
+        <button class="btn btn-save" onclick="saveNewPlace()">Hinzufügen</button>
       </div>
     </div>
   </div>
@@ -1068,8 +1122,9 @@ body {
 // ─────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────
-let db = { individuals: {}, families: {}, sources: {} };
+let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {} };
 let changed = false;
+let _placesCache = null;  // Cache für collectPlaces(); wird in markChanged() geleert
 let _originalGedText = null;   // In-memory backup des zuletzt geladenen Originals
 let _dirHandle = null;         // FileSystemDirectoryHandle (Desktop-Speichern)
 let currentPersonId = null;
@@ -1087,6 +1142,14 @@ function nextId(prefix) {
   idCounter++;
   return `@${prefix}${idCounter}@`;
 }
+
+// Globale Label-Map für GEDCOM-Ereignis-Typen (DRY: wird in showDetail + showPlaceDetail genutzt)
+const EVENT_LABELS = {
+  Geburt:'Geburt', Tod:'Tod', Taufe:'Taufe', Beerdigung:'Beerdigung', Heirat:'Heirat',
+  OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion',
+  EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung',
+  EVEN:'Ereignis', GRAD:'Abschluss', ADOP:'Adoption', TITL:'Titel'
+};
 
 // ─────────────────────────────────────
 //  GEDCOM PARSER  (v3 – geo fixed)
@@ -1439,7 +1502,7 @@ function writeGEDCOM() {
         lines.push(`2 NOTE ${nl[0]}`);
         for (let i = 1; i < nl.length; i++) lines.push(`3 CONT ${nl[i]}`);
       }
-      if (ev.addr) {
+      if (ev.addr && ev.type === 'RESI') {
         const al = ev.addr.split('\n');
         lines.push(`2 ADDR ${al[0]}`);
         for (let i = 1; i < al.length; i++) lines.push(`3 CONT ${al[i]}`);
@@ -1485,6 +1548,7 @@ function writeGEDCOM() {
       lines.push(`1 ENGA`);
       if (f.engag.date)  lines.push(`2 DATE ${f.engag.date}`);
       if (f.engag.place) lines.push(`2 PLAC ${f.engag.place}`);
+      if (f.engag.sources) for (const s of f.engag.sources) lines.push(`2 SOUR ${s}`);
     }
     if (f.noteText) {
       const noteLines = f.noteText.split('\n');
@@ -1706,7 +1770,7 @@ function confirmNewFile() {
   if (changed) {
     if (!confirm('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
   }
-  db = { individuals: {}, families: {}, sources: {} };
+  db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces() };
   changed = false;
   updateChangedIndicator();
   _originalGedText = null;
@@ -1719,19 +1783,20 @@ function confirmNewFile() {
 }
 
 function readFile(file) {
+  if (file.size > 50 * 1024 * 1024) { showToast('⚠ Datei zu groß (max. 50 MB)'); return; }
   const reader = new FileReader();
   reader.onload = e => {
     try {
       db = parseGEDCOM(e.target.result);
+      db.extraPlaces = loadExtraPlaces();
       _originalGedText = e.target.result;
       const backupDate = new Date().toLocaleDateString('de-DE');
-      try {
-        localStorage.setItem('stammbaum_ged', e.target.result);
-        localStorage.setItem('stammbaum_filename', file.name);
-        localStorage.setItem('stammbaum_ged_backup', e.target.result);
-        localStorage.setItem('stammbaum_backup_filename', file.name);
-        localStorage.setItem('stammbaum_backup_date', backupDate);
-      } catch(e) { /* storage full – ignore */ }
+      const tryLS = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
+      tryLS('stammbaum_ged',             e.target.result);
+      tryLS('stammbaum_filename',        file.name);
+      tryLS('stammbaum_ged_backup',      e.target.result);
+      tryLS('stammbaum_backup_filename', file.name);
+      tryLS('stammbaum_backup_date',     backupDate);
       updateBackupBtn();
       showStartView(); showToast('✓ ' + file.name + ' geladen');
     } catch(err) { showToast('⚠ Fehler beim Laden'); }
@@ -1742,6 +1807,7 @@ function readFile(file) {
 function loadDemo() {
   const demo = `0 HEAD\n1 SOUR Demo\n1 GEDC\n2 VERS 5.5.1\n1 CHAR UTF-8\n0 @I001@ INDI\n1 NAME Johann /Müller/\n1 SEX M\n1 BIRT\n2 DATE 12 MAR 1845\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 3 NOV 1912\n2 PLAC München, Bayern\n1 OCCU Bäckermeister\n1 FAMS @F001@\n0 @I002@ INDI\n1 NAME Maria /Huber/\n1 SEX F\n1 BIRT\n2 DATE 5 JUN 1850\n2 PLAC Augsburg, Bayern\n1 DEAT\n2 DATE 20 FEB 1930\n2 PLAC München, Bayern\n1 FAMS @F001@\n0 @I003@ INDI\n1 NAME Heinrich /Müller/\n1 SEX M\n1 BIRT\n2 DATE 8 JAN 1872\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 15 APR 1940\n2 PLAC München, Bayern\n1 OCCU Kaufmann\n1 FAMC @F001@\n1 FAMS @F002@\n0 @I004@ INDI\n1 NAME Anna /Schmidt/\n1 SEX F\n1 BIRT\n2 DATE 22 SEP 1875\n2 PLAC Nürnberg, Bayern\n1 FAMS @F002@\n0 @I005@ INDI\n1 NAME Karl /Müller/\n1 SEX M\n1 BIRT\n2 DATE 14 JUL 1900\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @I006@ INDI\n1 NAME Elisabeth /Müller/\n1 SEX F\n1 BIRT\n2 DATE 3 MAR 1903\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @S001@ SOUR\n1 TITL Kirchenbuch München St. Peter\n1 AUTH Stadtarchiv München\n1 DATE 1845-1912\n0 @F001@ FAM\n1 HUSB @I001@\n1 WIFE @I002@\n1 CHIL @I003@\n1 MARR\n2 DATE 10 JUN 1870\n2 PLAC München, Bayern\n0 @F002@ FAM\n1 HUSB @I003@\n1 WIFE @I004@\n1 CHIL @I005@\n1 CHIL @I006@\n1 MARR\n2 DATE 5 APR 1898\n2 PLAC München, Bayern\n0 TRLR`;
   db = parseGEDCOM(demo);
+  db.extraPlaces = loadExtraPlaces();
   showStartView(); showToast('✓ Demo geladen');
 }
 
@@ -1752,6 +1818,7 @@ function tryAutoLoad() {
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
     if (saved && saved.length > 10) {
       db = parseGEDCOM(saved);
+      db.extraPlaces = loadExtraPlaces();
       _originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
       updateBackupBtn();
@@ -1807,9 +1874,8 @@ function showView(id) {
   // Bottom-Nav: sichtbar in v-main und v-tree, ausgeblendet in v-landing und v-detail
   const showNav = (id === 'v-main' || id === 'v-tree');
   document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
-  // FAB: nur in v-main und nur wenn kein Orte-Tab aktiv
-  const showFab = (id === 'v-main') && (currentTab !== 'places');
-  document.getElementById('fabBtn').style.display = showFab ? '' : 'none';
+  // FAB: sichtbar in v-main (alle Tabs inkl. Orte)
+  document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
 }
 
 // Bottom-Nav: aktiven Button hervorheben
@@ -1906,8 +1972,7 @@ function switchTab(tab) {
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
   document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
-  // FAB ausblenden auf Orte-Tab
-  document.getElementById('fabBtn').style.display = tab === 'places' ? 'none' : '';
+  document.getElementById('fabBtn').style.display = '';
   renderTab();
 }
 
@@ -1926,7 +1991,7 @@ function updateChangedIndicator() {
   document.getElementById('changedIndicator').style.display = changed ? 'inline-block' : 'none';
 }
 
-function markChanged() { changed = true; updateChangedIndicator(); }
+function markChanged() { changed = true; _placesCache = null; updateChangedIndicator(); }
 
 // ─────────────────────────────────────
 //  PERSON LIST
@@ -2011,7 +2076,7 @@ function renderFamilyList(fams) {
     if (f.marr.date) meta += '⚭ ' + f.marr.date;
     if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
     if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
-    html += `<div class="person-row" onclick="showFamilyDetail('${f.id}')">
+    html += `<div class="person-row" data-fid="${f.id}" onclick="showFamilyDetail(this.dataset.fid)">
       <div class="p-avatar">👨‍👩‍👧</div>
       <div class="p-info">
         <div class="p-name">${esc(title)}</div>
@@ -2050,7 +2115,7 @@ function renderSourceList(srcs) {
   for (const s of srcs) {
     const refCount = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
                    + Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
-    html += `<div class="source-card" onclick="showSourceDetail('${s.id}')">
+    html += `<div class="source-card" data-sid="${s.id}" onclick="showSourceDetail(this.dataset.sid)">
       <div class="source-title">${esc(s.abbr || s.title || s.id)}</div>
       <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}${refCount ? ` · ${refCount} Ref.` : ''}</div>
     </div>`;
@@ -2073,6 +2138,7 @@ function filterSources(q) {
 //  PLACE LIST
 // ─────────────────────────────────────
 function collectPlaces() {
+  if (_placesCache) return _placesCache;
   const places = new Map();
 
   function addPlace(placeName, personId, eventType, lati, long) {
@@ -2097,6 +2163,12 @@ function collectPlaces() {
     addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long);
     addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long);
   }
+  // Manuell hinzugefügte Orte (extraPlaces) einmischen — nur wenn noch nicht vorhanden
+  for (const ep of Object.values(db.extraPlaces)) {
+    if (!places.has(ep.name))
+      places.set(ep.name, { name: ep.name, personIds: new Set(), eventTypes: new Set(), lati: ep.lati ?? null, long: ep.long ?? null });
+  }
+  _placesCache = places;
   return places;
 }
 
@@ -2159,9 +2231,46 @@ function savePlace() {
     if (f.marr.place        === oldName) f.marr.place        = newName;
     if (f.engag?.place      === oldName) f.engag.place       = newName;
   }
+  // extraPlaces mitumbenennen
+  if (db.extraPlaces[oldName]) {
+    db.extraPlaces[newName] = { ...db.extraPlaces[oldName], name: newName };
+    delete db.extraPlaces[oldName];
+    saveExtraPlaces();
+  }
   markChanged();
   showToast('✓ Ort umbenannt');
   showPlaceDetail(newName);
+}
+
+function showNewPlaceForm() {
+  document.getElementById('np-name').value = '';
+  document.getElementById('np-lati').value = '';
+  document.getElementById('np-long').value = '';
+  openModal('modalNewPlace');
+}
+
+function saveNewPlace() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) { showToast('⚠ Ortsname erforderlich'); return; }
+  if (collectPlaces().has(name)) { showToast('⚠ Ort bereits vorhanden'); return; }
+  const lati = parseFloat(document.getElementById('np-lati').value) || null;
+  const long = parseFloat(document.getElementById('np-long').value) || null;
+  db.extraPlaces[name] = { name, lati, long };
+  saveExtraPlaces();
+  _placesCache = null;
+  closeModal('modalNewPlace');
+  showToast('✓ Ort hinzugefügt');
+  renderTab();
+}
+
+function deleteExtraPlace(name) {
+  if (!confirm('Ort wirklich entfernen?')) return;
+  delete db.extraPlaces[name];
+  saveExtraPlaces();
+  _placesCache = null;
+  goBack();
+  showToast('✓ Ort entfernt');
+  renderTab();
 }
 
 function showPlaceDetail(placeName) {
@@ -2181,6 +2290,15 @@ function showPlaceDetail(placeName) {
     <div class="detail-id">${place.personIds.size} Person${place.personIds.size !== 1 ? 'en' : ''}</div>
   </div>`;
 
+  // Lösch-Button für manuell hinzugefügte Orte ohne verknüpfte Personen
+  if (place.personIds.size === 0 && db.extraPlaces[placeName]) {
+    html += `<div style="padding:4px 0 12px">
+      <button class="btn btn-danger" style="width:100%"
+        data-pname="${placeName.replace(/"/g,'&quot;')}"
+        onclick="deleteExtraPlace(this.dataset.pname)">Ort entfernen</button>
+    </div>`;
+  }
+
   // Map link if geo available
   if (place.lati !== null) {
     html += `<div class="section fade-up">
@@ -2195,7 +2313,6 @@ function showPlaceDetail(placeName) {
   }
 
   // Build detailed list: person + which event connects them to this place
-  const evLabels = { Geburt:'Geburt', Tod:'Tod', Taufe:'Taufe', Beerdigung:'Beerdigung', Heirat:'Heirat', OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion', EMIG:'Auswanderung', IMMI:'Einwanderung', EVEN:'Ereignis' };
   const entries = [];
   for (const p of Object.values(db.individuals)) {
     if (p.birth.place && p.birth.place.trim() === placeName)
@@ -2208,7 +2325,7 @@ function showPlaceDetail(placeName) {
       entries.push({ person: p, role: 'Beerdigung' + (p.buri.date ? ' · ' + p.buri.date : '') });
     for (const ev of p.events) {
       if (ev.place && ev.place.trim() === placeName)
-        entries.push({ person: p, role: (ev.eventType || evLabels[ev.type] || ev.type) + (ev.date ? ' · ' + ev.date : '') });
+        entries.push({ person: p, role: (ev.eventType || EVENT_LABELS[ev.type] || ev.type) + (ev.date ? ' · ' + ev.date : '') });
     }
   }
   for (const f of Object.values(db.families)) {
@@ -2484,37 +2601,34 @@ function showDetail(id) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
-      <button class="section-add" onclick="showEventForm('${id}')">+ Ereignis</button>
+      <button class="section-add" data-pid="${id}" onclick="showEventForm(this.dataset.pid)">+ Ereignis</button>
     </div>`;
 
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" onclick="showEventForm('${id}','BIRT')" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources)}</span></div>`;
+    html += `<div class="fact-row" data-pid="${id}" data-ev="BIRT" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources)}</span></div>`;
   }
   if (p.chr.date || p.chr.place) {
-    html += `<div class="fact-row" onclick="showEventForm('${id}','CHR')" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources)}</span></div>`;
+    html += `<div class="fact-row" data-pid="${id}" data-ev="CHR" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources)}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = (p.death.lati !== null && p.death.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" onclick="showEventForm('${id}','DEAT')" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources)}</span></div>`;
+    html += `<div class="fact-row" data-pid="${id}" data-ev="DEAT" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources)}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = (p.buri.lati !== null && p.buri.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" onclick="showEventForm('${id}','BURI')" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources)}</span></div>`;
+    html += `<div class="fact-row" data-pid="${id}" data-ev="BURI" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources)}</span></div>`;
   }
 
-  const evLabels = { OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion',
-    EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung', EVEN:'Ereignis',
-    GRAD:'Abschluss', ADOP:'Adoption', TITL:'Titel' };
   p.events.forEach((ev, idx) => {
-    const label = ev.eventType || evLabels[ev.type] || ev.type;
+    const label = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
     const geoBtn = (ev.lati !== null && ev.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
     const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
-    html += `<div class="fact-row" onclick="showEventForm('${id}',${idx})" style="cursor:pointer">
+    html += `<div class="fact-row" data-pid="${id}" data-ev="${idx}" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer">
       <span class="fact-lbl">${esc(label)}</span>
       <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}</span>
     </div>`;
@@ -2744,14 +2858,14 @@ function sourceTagsHtml(sourceIds) {
     const s = db.sources[sid];
     if (!s) return '';
     const tooltip = esc((s.abbr || s.title || sid).substring(0, 60));
-    return `<span class="src-badge" onclick="event.stopPropagation();showSourceDetail('${sid}')" title="${tooltip}">§${srcNum(sid)}</span>`;
+    return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showSourceDetail(this.dataset.sid)" title="${tooltip}">§${srcNum(sid)}</span>`;
   }).filter(Boolean).join('');
 }
 
 function relRow(person, role) {
   const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
   const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
-  return `<div class="rel-row" onclick="showDetail('${person.id}')">
+  return `<div class="rel-row" data-pid="${person.id}" onclick="showDetail(this.dataset.pid)">
     <div class="rel-avatar ${sc}">${ic}</div>
     <div class="rel-info">
       <div class="rel-name">${esc(person.name || person.id)}</div>
@@ -2886,10 +3000,10 @@ function savePerson() {
     id, given, surname,
     name: (given + (surname ? ' ' + surname : '')).trim(),
     sex,
-    birth: existing.birth || { date:'', place:'', lati:null, long:null, sources:[] },
-    death: existing.death || { date:'', place:'', lati:null, long:null, sources:[], cause:'' },
-    chr: existing.chr || { date:'', place:'' },
-    buri: existing.buri || { date:'', place:'' },
+    birth: existing.birth || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+    death: existing.death || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, cause:'' },
+    chr:   existing.chr   || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+    buri:  existing.buri  || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
     events,
     noteText: note,
     noteRefs: existing.noteRefs || [],
@@ -2959,6 +3073,7 @@ function saveFamily() {
   const id = document.getElementById('ff-id').value || nextId('F');
   const husb = document.getElementById('ff-husb').value || null;
   const wife = document.getElementById('ff-wife').value || null;
+  if (!husb && !wife) { showToast('⚠ Mindestens ein Elternteil erforderlich'); return; }
   const mdate = document.getElementById('ff-mdate').value.trim();
   const mplace = document.getElementById('ff-mplace').value.trim();
   const childrenRaw = document.getElementById('ff-children').value;
@@ -2974,14 +3089,19 @@ function saveFamily() {
   };
 
   // Update FAMS/FAMC references
+  // famc entries are objects {famId, frel, mrel}, fams entries are strings
+  const famcId = f => (typeof f === 'string' ? f : f.famId);
   for (const p of Object.values(db.individuals)) {
     p.fams = p.fams.filter(f => f !== id);
-    p.famc = p.famc.filter(f => f !== id);
+    p.famc = p.famc.filter(f => famcId(f) !== id);
   }
   if (husb && db.individuals[husb]) { if (!db.individuals[husb].fams.includes(id)) db.individuals[husb].fams.push(id); }
   if (wife && db.individuals[wife]) { if (!db.individuals[wife].fams.includes(id)) db.individuals[wife].fams.push(id); }
   for (const cid of children) {
-    if (db.individuals[cid]) { if (!db.individuals[cid].famc.includes(id)) db.individuals[cid].famc.push(id); }
+    if (db.individuals[cid]) {
+      if (!db.individuals[cid].famc.some(f => famcId(f) === id))
+        db.individuals[cid].famc.push({ famId: id, frel: '', mrel: '' });
+    }
   }
 
   closeModal('modalFamily');
@@ -2995,9 +3115,10 @@ function deleteFamily() {
   const id = document.getElementById('ff-id').value;
   if (!id) return;
   if (!confirm('Familie wirklich löschen?')) return;
+  const famcId2 = f => (typeof f === 'string' ? f : f.famId);
   for (const p of Object.values(db.individuals)) {
     p.fams = p.fams.filter(f => f !== id);
-    p.famc = p.famc.filter(f => f !== id);
+    p.famc = p.famc.filter(f => famcId2(f) !== id);
   }
   delete db.families[id];
   closeModal('modalFamily');
@@ -3027,13 +3148,16 @@ function showSourceForm(id) {
 function saveSource() {
   const id = document.getElementById('sf-id').value || nextId('S');
   const existing = db.sources[id] || {};
+  const abbr  = document.getElementById('sf-abbr').value.trim();
+  const title = document.getElementById('sf-title').value.trim();
+  if (!abbr && !title) { showToast('⚠ Kurzname oder Titel erforderlich'); return; }
   const now = new Date();
   const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
   const gedDate = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
   db.sources[id] = {
     id,
-    abbr:        document.getElementById('sf-abbr').value.trim(),
-    title:       document.getElementById('sf-title').value.trim(),
+    abbr,
+    title,
     author:      document.getElementById('sf-auth').value.trim(),
     date:        document.getElementById('sf-date').value.trim(),
     publ:        document.getElementById('sf-publ').value.trim(),
@@ -3072,6 +3196,8 @@ function onEventTypeChange() {
 }
 
 function showEventForm(personId, evIdx) {
+  // data-Attribute liefern immer Strings — numerische Indizes zurückkonvertieren
+  if (typeof evIdx === 'string' && evIdx !== '' && !(evIdx in _SPECIAL_OBJ) && !isNaN(evIdx)) evIdx = +evIdx;
   const p = db.individuals[personId];
   const isSpecial  = typeof evIdx === 'string' && evIdx in _SPECIAL_OBJ;
   const isExisting = typeof evIdx === 'number';
@@ -3148,6 +3274,7 @@ function saveEvent() {
 
   closeModal('modalEvent');
   markChanged(); updateStats();
+  showToast('✓ Ereignis gespeichert');
   if (currentPersonId === pid) showDetail(pid);
 }
 
@@ -3164,10 +3291,37 @@ function closeModal(id) {
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
 });
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = document.querySelector('.modal-overlay.open');
+  if (open) open.classList.remove('open');
+});
 
 // ─────────────────────────────────────
 //  UTILS
 // ─────────────────────────────────────
+
+// ── Extra-Places Persistenz ──────────
+function loadExtraPlaces() {
+  try {
+    const r = localStorage.getItem('stammbaum_extraplaces');
+    return r ? JSON.parse(r).reduce((o, p) => { o[p.name] = p; return o; }, {}) : {};
+  } catch(e) { return {}; }
+}
+function saveExtraPlaces() {
+  try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(db.extraPlaces))); } catch(e) {}
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+const filterPersonsDebounced  = debounce(filterPersons,  200);
+const filterFamiliesDebounced = debounce(filterFamilies, 200);
+const filterSourcesDebounced  = debounce(filterSources,  200);
+const filterPlacesDebounced   = debounce(filterPlaces,   200);
+
 function esc(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -3180,6 +3334,51 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
+
+// ─────────────────────────────────────
+//  PLACE AUTOCOMPLETE
+// ─────────────────────────────────────
+function initPlaceAutocomplete(inputId, ddId) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    dd.innerHTML = '';
+    if (!q) { dd.style.display = 'none'; return; }
+    const names = [...collectPlaces().values()]
+      .map(p => p.name)
+      .filter(n => n.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aStart = a.toLowerCase().startsWith(q);
+        const bStart = b.toLowerCase().startsWith(q);
+        if (aStart !== bStart) return aStart ? -1 : 1;
+        return a.localeCompare(b, 'de');
+      })
+      .slice(0, 12);
+    if (!names.length) { dd.style.display = 'none'; return; }
+    names.forEach(name => {
+      const item = document.createElement('div');
+      item.className = 'place-dropdown-item';
+      item.textContent = name;
+      item.addEventListener('mousedown', () => {
+        input.value = name;
+        dd.style.display = 'none';
+      });
+      dd.appendChild(item);
+    });
+    dd.style.display = 'block';
+  });
+
+  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
+// Autocomplete für alle Ortsfelder einmalig initialisieren
+initPlaceAutocomplete('ef-place',  'ef-place-dd');
+initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd');
+initPlaceAutocomplete('np-name',   'np-name-dd');
 </script>
 </body>
 </html>
