@@ -20,7 +20,7 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (~2869 Zeilen, alles in einer Datei)
+├── index.html          ← gesamte App (~3104 Zeilen, alles in einer Datei)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
@@ -30,6 +30,14 @@ stammbaum/
 ---
 
 ## Features
+
+### Navigation
+| Feature | Details |
+|---|---|
+| Globale Bottom-Nav | 5 Tabs: ⧖ Baum · ♻ Personen · ⚭ Familien · § Quellen · 📍 Orte |
+| Baum als Standardansicht | Nach Datei-Load wird der Sanduhr-Baum gezeigt |
+| History-Navigation | Zurück-Button merkt Herkunft: Detail→Detail→Baum navigiert korrekt zurück |
+| Menü überall erreichbar | ☰ Menü-Button in Baum- und Listenansicht |
 
 ### Laden & Speichern
 | Feature | Details |
@@ -44,28 +52,32 @@ stammbaum/
 ### Sanduhr-Ansicht (Stammbaum)
 - Grafische Familienansicht: Großeltern → Eltern → Person + Ehepartner → Kinder
 - Klick auf jede Karte → neu zentrieren; Klick auf Zentrum → Detailansicht
+- Zurück aus Detailansicht führt direkt zum Baum zurück
+- Halbgeschwister (aus anderen Ehen) mit gestricheltem Rahmen + `½`-Badge markiert
 - Kinder mehrzeilig bei mehr als 4 (max. 4 pro Zeile)
 - Startansicht nach Datei-Load: Person mit kleinster ID
-- Erreichbar über ⧖-Button in Personen- und Familienansicht
 
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
 - **Suche** über: Name, Titel, alle Ereignisse (Typ, Wert, Datum, Ort), Notizen, Religion
 - **Detail**: Geburt, Taufe, Tod (inkl. Todesursache), Beerdigung, alle weiteren Ereignisse
-- **Bearbeiten**: alle Ereignisse über einheitliches Formular (auch BIRT/CHR/DEAT/BURI)
+- **Quellen-Badges** `§N` direkt in der Ereigniszeile → klickbar zur Quellen-Detailansicht
 - **📍** Geo-Links öffnen Apple Maps bei Ereignissen mit Koordinaten
-- **📖** Quellen-Badges pro Ereignis → klickbar zur Quellen-Detailansicht
+- **Familie-Links**: direkte Navigationszeilen zu Ehe-Familie und Herkunftsfamilie
 
 ### Familien-Tab
+- **Suche** nach Name, Heiratsdatum, Heiratsort
 - Liste: Elternpaar, Heiratsdatum, Kinderanzahl
 - Detail: Heirat (Datum, Ort, Geo-Link, Quellen), Mitglieder anklickbar
 - ⧖-Button öffnet Sanduhr zentriert auf den Ehemann
 
 ### Quellen-Tab
+- **Suche** nach Titel, Kurzname, Autor
 - Liste: Kurzname (ABBR), Autor, Datum, Anzahl Referenzen
 - Detail: alle Metadaten + alle referenzierenden Personen und Familien
 
 ### Orte-Tab
+- **Suche** nach Ortsname
 - Automatisch aus allen Ereignissen gesammelt (Geburt, Taufe, Tod, Beerdigung, weitere)
 - Alphabetisch mit 📍 bei vorhandenen Koordinaten
 - Detail: Apple Maps Link + alle Personen dieses Ortes
@@ -90,7 +102,7 @@ stammbaum/
 ┌──────────────────────────────────────────────┐
 │  index.html                                  │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~2869 Zeilen · ~80 Funktionen · ~145 KB     │
+│  ~3104 Zeilen · ~90 Funktionen · ~160 KB     │
 │                                              │
 │  Globaler State: let db = {                  │
 │    individuals, families, sources            │

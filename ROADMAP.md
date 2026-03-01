@@ -1,6 +1,6 @@
 # Roadmap
 
-## Aktueller Stand: Phase 4 abgeschlossen ✅
+## Aktueller Stand: Phase 7 (UX-Remake) abgeschlossen ✅ (März 2026)
 
 Testdatei: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
@@ -71,6 +71,43 @@ Kinder (1+ Zeilen)  →  max. 4 pro Zeile, mehrzeilig bei >4
 - Startansicht nach Datei-Load: Tree der Person mit kleinster ID
 - SVG Bezier-Kurven als Verbindungslinien
 
+### Phase 7: UI/UX-Remake ✅ (März 2026)
+
+#### Globale Bottom-Navigation
+- Horizontale Tabs + Stats-Leiste ersetzt durch Bottom-Nav mit 5 gleichwertigen Tabs
+- Tabs: ⧖ Baum | ♻ Personen | ⚭ Familien | § Quellen | 📍 Orte
+- Bottom-Nav sichtbar in Baum + Listen, ausgeblendet in Detail + Landing
+- FAB ausgeblendet auf Orte-Tab und Baum-Tab
+- Baum-Topbar: ☁️ Speichern + ☰ Menü direkt erreichbar
+
+#### Navigation & History
+- Navigations-History-Stack: `_navHistory[]` mit `_beforeDetailNavigate()` + `goBack()`
+- Zurück aus Detailansicht → vorherige Detailansicht (Person→Familie→Zurück→Person)
+- Zurück aus Detailansicht → Baum (wenn von dort gekommen)
+- Detail-Button aus Baum-Topbar entfernt (Klick auf Zentrumskarte öffnet Detail)
+
+#### Direkte Familien-Links in Personendetail
+- Abschnitt „Ehepartner & Kinder": klickbare „⚭ Familie · Datum"-Zeile vor jedem Partner
+- Abschnitt „Eltern": klickbare „⚭ Herkunftsfamilie · ID"-Zeile vor Vater/Mutter
+
+#### Halbgeschwister im Baum
+- Kinder aus anderen Ehen der Zentrumsperson → gestrichelter Kartenrahmen + `½`-Badge
+- Verbindungslinien zu Halbgeschwistern gestrichelt (gold-dim)
+
+#### Kompakte Quellen-Badges
+- Quellen-Badges von Titelblöcken zu `§N`-Inline-Badges verkleinert
+- Direkt in der Ereigniszeile (inline in `fact-val`), kein separates Div
+- Klick auf Badge: stopPropagation (verhindert Ereignis-Formular) + öffnet Quellen-Detail
+
+#### Landing-Screen vereinfacht
+- Langer iCloud-Hilfetext entfernt
+- Kurztagline + „Hilfe & Anleitung ›" → neues `#modalHelp` Bottom-Sheet
+
+#### Suche in allen Tabs
+- Familien: Suche nach Name, Heiratsdatum, Heiratsort
+- Quellen: Suche nach Titel, Kurzname, Autor
+- Orte: Suche nach Ortsname
+
 ---
 
 ## Phase 5: Fotos (offen)
@@ -100,39 +137,34 @@ if (p.photoBase64) {
 
 ---
 
-## Phase 6: Suche & Filter (offen)
+## Phase 6: Erweiterte Suche & Filter (offen)
 
 - [ ] Filtern nach Geburtsjahrgang (z.B. 1850–1900)
-- [ ] Filtern nach Ort (alle Personen aus Ort X)
-- [ ] Filtern nach Quelle (alle Personen mit Quelle X)
+- [ ] Filtern nach Ort (alle Personen aus Ort X) — direkt aus Orts-Detail erreichbar
+- [ ] Filtern nach Quelle (alle Personen mit Quelle X) — direkt aus Quellen-Detail erreichbar
 - [ ] Duplikate finden (gleicher Name + ähnliche Daten)
 - [ ] Sortierung in Listen (nach Name / Geburtsjahr)
 
 ---
 
-## Phase 7: UX-Verbesserungen (offen)
+## Phase 8: Stammbaum-Erweiterungen (offen)
 
-### Personen-Formular
-- [ ] Person zu bestehender Familie hinzufügen (direkt aus Detailansicht)
-- [ ] Taufe und Beerdigung editierbar (bereits implementiert über Ereignis-Formular ✅)
+- [ ] Zoom (Pinch-to-Zoom auf Mobile)
+- [ ] Mehrere Ehepartner darstellen (aktuell: nur erster Ehepartner)
+- [ ] Vorfahren-Modus: reiner Vorfahren-Baum (mehr als 2 Ebenen hoch)
+- [ ] Navigation in Geschwister möglich (Klick auf Halbgeschwister → Baum zentriert)
 
-### Import
-- [ ] Konfliktauflösung beim Importieren (wenn neuere GEDCOM-Version vorliegt)
-- [ ] Merge zweier GEDCOM-Dateien
+---
 
-### Export
-- [ ] Quellenreferenzen mit PAGE/QUAY zurückschreiben
+## Phase 9: Technische Verbesserungen (offen)
 
-### UX
 - [ ] Undo/Redo (letzte 10 Änderungen)
 - [ ] Offline-Modus / Service Worker (App funktioniert ohne Internet)
 - [ ] PWA-Manifest prüfen (Icons, Splash Screen)
 - [ ] Tastatur-Shortcuts für Desktop
-
-### Stammbaum
-- [ ] Zoom (Pinch-to-Zoom auf Mobile)
-- [ ] Mehrere Ehepartner darstellen
-- [ ] Vorfahren-Modus: reiner Vorfahren-Baum (mehr als 2 Ebenen)
+- [ ] Import: Konfliktauflösung beim Importieren (wenn neuere GEDCOM-Version vorliegt)
+- [ ] Merge zweier GEDCOM-Dateien
+- [ ] Quellenreferenzen mit PAGE/QUAY zurückschreiben
 
 ---
 
@@ -155,7 +187,6 @@ if (p.photoBase64) {
 |---|---|
 | Datumsformat nicht normiert | Freitext, keine Sortierung nach Datum möglich |
 | ENGA (Verlobung) wird geparst aber nicht editierbar | Niedrige Priorität |
-| Lange Ortsnamen in Listen abgeschnitten | Kosmetisch |
 | Sanduhr zeigt nur ersten Ehepartner | Mehrfach-Ehen noch nicht unterstützt |
 
 ---

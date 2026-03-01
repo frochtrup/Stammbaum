@@ -873,8 +873,12 @@ body {
     <div class="sheet-body">
       <input type="hidden" id="sf-id">
       <div class="form-group">
+        <label class="form-label">Kurzname (ABBR)</label>
+        <input class="form-input" id="sf-abbr" placeholder="KB München St. Peter">
+      </div>
+      <div class="form-group">
         <label class="form-label">Titel</label>
-        <input class="form-input" id="sf-title" placeholder="Kirchenbuch München 1850–1900">
+        <input class="form-input" id="sf-title" placeholder="Kirchenbuch München St. Peter 1850–1900">
       </div>
       <div class="form-group">
         <label class="form-label">Autor / Institution</label>
@@ -885,12 +889,16 @@ body {
         <input class="form-input" id="sf-date" placeholder="1890">
       </div>
       <div class="form-group">
-        <label class="form-label">Ort / Aufbewahrung</label>
+        <label class="form-label">Verlag / Publikation</label>
+        <input class="form-input" id="sf-publ" placeholder="Archiv München, 2001">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Aufbewahrungsort</label>
         <input class="form-input" id="sf-repo" placeholder="Stadtarchiv München">
       </div>
       <div class="form-group">
         <label class="form-label">Notiz / Beschreibung</label>
-        <input class="form-input" id="sf-text" placeholder="Weitere Details…">
+        <textarea class="form-input" id="sf-text" rows="3" placeholder="Weitere Details…" style="resize:vertical;box-sizing:border-box"></textarea>
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalSource')">Abbrechen</button>
@@ -2620,12 +2628,15 @@ function showSourceDetail(id) {
 
   // Source details
   html += `<div class="section fade-up"><div class="section-title">Details</div>`;
-  if (s.title && s.abbr && s.title !== s.abbr) html += factRow('Titel', s.title);
+  if (s.abbr)                          html += factRow('Kurzname', s.abbr);
+  if (s.title && s.title !== s.abbr)   html += factRow('Titel', s.title);
   if (s.author) html += factRow('Autor', s.author);
-  if (s.publ)   html += factRow('Verlag', s.publ);
   if (s.date)   html += factRow('Datum', s.date);
+  if (s.publ)   html += factRow('Verlag', s.publ);
   if (s.repo)   html += factRow('Aufbewahrung', s.repo);
-  if (s.text)   html += factRow('Notiz', s.text);
+  if (s.text)   html += `<div class="fact-row"><span class="fact-lbl">Notiz</span><span class="fact-val" style="white-space:pre-wrap;line-height:1.5">${esc(s.text)}</span></div>`;
+  if (!s.abbr && !s.title && !s.author && !s.date && !s.publ && !s.repo && !s.text)
+    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
   html += `</div>`;
 
   // Referencing persons
@@ -2945,12 +2956,14 @@ function showSourceForm(id) {
   closeModal('modalAdd');
   const s = id ? db.sources[id] : null;
   document.getElementById('sourceFormTitle').textContent = s ? 'Quelle bearbeiten' : 'Neue Quelle';
-  document.getElementById('sf-id').value = id || '';
-  document.getElementById('sf-title').value = s?.title || '';
-  document.getElementById('sf-auth').value = s?.author || '';
-  document.getElementById('sf-date').value = s?.date || '';
-  document.getElementById('sf-repo').value = s?.repo || '';
-  document.getElementById('sf-text').value = s?.text || '';
+  document.getElementById('sf-id').value    = id || '';
+  document.getElementById('sf-abbr').value  = s?.abbr   || '';
+  document.getElementById('sf-title').value = s?.title  || '';
+  document.getElementById('sf-auth').value  = s?.author || '';
+  document.getElementById('sf-date').value  = s?.date   || '';
+  document.getElementById('sf-publ').value  = s?.publ   || '';
+  document.getElementById('sf-repo').value  = s?.repo   || '';
+  document.getElementById('sf-text').value  = s?.text   || '';
   document.getElementById('deleteSourceBtn').style.display = s ? 'block' : 'none';
   openModal('modalSource');
 }
@@ -2959,11 +2972,13 @@ function saveSource() {
   const id = document.getElementById('sf-id').value || nextId('S');
   db.sources[id] = {
     id,
-    title: document.getElementById('sf-title').value.trim(),
+    abbr:   document.getElementById('sf-abbr').value.trim(),
+    title:  document.getElementById('sf-title').value.trim(),
     author: document.getElementById('sf-auth').value.trim(),
-    date: document.getElementById('sf-date').value.trim(),
-    repo: document.getElementById('sf-repo').value.trim(),
-    text: document.getElementById('sf-text').value.trim()
+    date:   document.getElementById('sf-date').value.trim(),
+    publ:   document.getElementById('sf-publ').value.trim(),
+    repo:   document.getElementById('sf-repo').value.trim(),
+    text:   document.getElementById('sf-text').value.trim()
   };
   closeModal('modalSource');
   markChanged(); updateStats();
