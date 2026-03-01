@@ -1,4 +1,4 @@
-# Stammbaum PWA
+# Stammbaum PWA — Version 1.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -88,12 +88,12 @@ stammbaum/
 | Was | Felder |
 |---|---|
 | Person | Name (Vor-/Nachname, Präfix, Suffix), Geschlecht, Titel, Religion, Notiz |
-| Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/…), Datum, Ort, Adresse (bei RESI), Todesursache (bei DEAT), Quellen |
+| Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/…), Datum, Ort, Adresse (bei RESI), Todesursache (bei DEAT), Quellen + Seitenangabe |
 | Familie | Eltern (Dropdown), Heirat (Datum, Ort), Kinder hinzufügen/entfernen, Quellen |
 | Quelle | Titel, Kurzname, Autor, Datum, Verlag, Aufbewahrungsort, Notiz |
 | Ort | Name umbenennen (wirkt sich auf alle Personen und Familien aus) |
 
-**Quellen-Widget**: einheitlich in allen Formularen — Tags mit ✕, aufklappbare Picker-Liste mit allen Quellen
+**Quellen-Widget**: einheitlich in allen Formularen — Tags mit ✕, aufklappbare Picker-Liste mit allen Quellen; im Ereignis-Formular zusätzlich editierbares Seitenfeld (PAGE) pro Quelle
 
 ---
 
@@ -116,6 +116,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **1 Diff in 2796 Personen** (MeineDaten_ancestris.ged)
+**Version 1.0** — März 2026
 
 ---
 

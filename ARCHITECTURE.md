@@ -129,10 +129,10 @@ await idbPut('dirHandle', dir);
 **Entscheidung:** Die vier Hauptereignisse werden nicht in `p.events[]` gespeichert, sondern als eigene Objekte auf der Person.
 
 ```javascript
-p.birth = { date, place, lati, long, sources }
-p.chr   = { date, place, lati, long, sources }
-p.death = { date, place, lati, long, sources, cause }
-p.buri  = { date, place, lati, long, sources }
+p.birth = { date, place, lati, long, sources, sourcePages }
+p.chr   = { date, place, lati, long, sources, sourcePages }
+p.death = { date, place, lati, long, sources, sourcePages, cause }
+p.buri  = { date, place, lati, long, sources, sourcePages }
 p.events = [ { type, date, place, ... } ]  // alle anderen
 ```
 
@@ -260,15 +260,16 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
   uid:         'ABC123',                 // _UID (Ancestris)
 
   // Hauptereignisse (Sonder-Objekte, nicht in events[])
-  birth: { date:'8 JAN 1872', place:'München', lati:48.1, long:11.5, sources:['@S1@'] },
-  chr:   { date:'', place:'', lati:null, long:null, sources:[] },
-  death: { date:'15 APR 1940', place:'München', lati:null, long:null, sources:[], cause:'Herzversagen' },
-  buri:  { date:'', place:'', lati:null, long:null, sources:[] },
+  birth: { date:'8 JAN 1872', place:'München', lati:48.1, long:11.5, sources:['@S1@'], sourcePages:{'@S1@':'47'} },
+  chr:   { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+  death: { date:'15 APR 1940', place:'München', lati:null, long:null, sources:[], sourcePages:{}, cause:'Herzversagen' },
+  buri:  { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
 
   // Weitere Ereignisse
   events: [
     { type:'OCCU', value:'Kaufmann', date:'', place:'', lati:null, long:null,
-      sources:[], note:'', addr:'', eventType:'' }
+      sources:[], sourcePages:{}, note:'', addr:'', eventType:'' }
+    // sourcePages: {sid: page} — Seitenangaben zu Quellenreferenzen (3 PAGE)
     // addr: Adresse (2 ADDR), nur bei RESI relevant; note: akkumuliert bei mehreren 2 NOTE
   ],
 
@@ -340,7 +341,7 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
 | Stammbaum (Sanduhr) | 2120–2320 | `getParentIds()`, `getChildIds()`, `showTree()`, `mkCard()`, `line()`, `lineHalf()` |
 | Detail-Ansichten | 2320–2560 | `showDetail()`, `showFamilyDetail()`, `showSourceDetail()` |
 | Render-Helfer | 2560–2660 | `factRow()`, `srcNum()`, `sourceTagsHtml()`, `relRow()` |
-| Quellen-Widget | 2660–2720 | `initSrcWidget()`, `renderSrcTags()`, `renderSrcPicker()`, `toggleSrc()`, `removeSrc()` |
+| Quellen-Widget | 2660–2720 | `initSrcWidget()`, `renderSrcTags()`, `renderSrcPicker()`, `toggleSrc()`, `removeSrc()`, `updateSrcPage()` |
 | Formulare | 2720–2980 | `showPersonForm()`, `savePerson()`, `showFamilyForm()`, `saveFamily()`, `showEventForm()`, `saveEvent()`, `onEventTypeChange()`, `showSourceForm()`, `saveSource()` |
 | Utils | 2980–3010 | `esc()`, `showToast()`, `openModal()`, `closeModal()` |
 | IndexedDB | 1540–1560 | `_getIDB()`, `idbGet()`, `idbPut()`, `idbDel()` |
@@ -358,6 +359,7 @@ let currentSourceId  = null;
 let currentTab = 'persons';        // Aktiver Tab: 'persons'|'families'|'sources'|'places'
 let currentTreeId = null;          // Aktive Person in Sanduhr-Ansicht
 const srcState = {};               // Zustand des Quellen-Widgets: {prefix: Set}
+const srcPageState = {};           // Seitenangaben pro Quelle: {prefix: {sid: page}}
 let _dirHandle = null;             // FileSystemDirectoryHandle (Desktop-Speichern)
 let _idb = null;                   // IndexedDB-Instanz (für _dirHandle-Persistenz)
 let _originalGedText = '';         // Original-GEDCOM beim Laden (für Backup)
@@ -500,7 +502,7 @@ exportGEDCOM()
 |---|---|---|
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Still ignoriert wenn voll |
 | _STAT geht verloren | Writer kennt den Tag nicht | Bewusst akzeptiert |
-| QUAY, PAGE an Quellen gehen verloren | Vereinfacht | Bewusst akzeptiert |
+| QUAY an Quellen geht verloren | Vereinfacht | Bewusst akzeptiert |
 | NOTE @ref@ → Inline-NOTE | Records werden aufgelöst | Bewusst akzeptiert |
 | Fotos nicht ladbar | Windows-Pfade aus Legacy | Phase 5 geplant |
 | Keine Sortierung nach Datum | Datum ist Freitext | Offen |

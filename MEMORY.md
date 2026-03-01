@@ -14,7 +14,7 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand: Phase 7 + GEDCOM-Nachbesserungen ✅ (März 2026)
+## Aktueller Stand: Version 1.0 ✅ (März 2026)
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
 ---
@@ -30,7 +30,7 @@ Alle wichtigen Felder überleben Parse→Write→Parse:
 - 2 SOUR unter NAME → `p.nameSources[]`
 - SOUR direkt auf INDI → `p.topSources[]`
 
-Bewusst akzeptierte Verluste: _STAT, QUAY, PAGE, NOTE-Records
+Bewusst akzeptierte Verluste: _STAT, QUAY, NOTE-Records
 
 ## GEDCOM-Nachbesserungen (März 2026)
 
@@ -56,6 +56,16 @@ Bewusst akzeptierte Verluste: _STAT, QUAY, PAGE, NOTE-Records
 ### Quellen-Formular erweitert
 - Felder: ABBR (Kurzname), TITL, AUTH, DATE, PUBL (Verlag), REPO, TEXT (Textarea)
 - `showSourceDetail()`: zeigt alle Felder, `lastChanged` in ID-Zeile
+
+### PAGE / Seitenangaben bei Quellenreferenzen (v1.0)
+- `ev.sourcePages = { '@S1@': '47', ... }` — Parallel-Map zu `ev.sources[]`
+- Gilt für birth / chr / death / buri und alle `events[]`
+- Parser: `lastSourVal` trackt letzte SOUR-ID; `3 PAGE` unter `2 SOUR` → `sourcePages[lastSourVal]`
+- `initSrcWidget(prefix, ids, pageMap)`: 3. Parameter übergibt Seiten-Map
+- `srcPageState[prefix]` parallel zu `srcState[prefix]`; `updateSrcPage(prefix, sid, val)` als Setter
+- `renderSrcTags()`: zeigt `<input class="src-page-input" placeholder="Seite…">` neben Quellen-Tag (nur bei prefix==='ef')
+- `saveEvent()`: speichert `sourcePages: { ...(srcPageState['ef'] || {}) }`
+- Writer `eventBlock()`: `${lv+2} PAGE` nach `${lv+1} SOUR`; reguläre events: `3 PAGE` nach `2 SOUR`
 
 ---
 
@@ -193,6 +203,7 @@ let currentSourceId = null;
 let currentTab = 'persons';
 let currentTreeId = null;
 const srcState = {};
+const srcPageState = {};       // {prefix: {sid: page}} — Seitenangaben pro Quelle
 let _dirHandle = null;
 let _idb = null;
 let _originalGedText = '';
@@ -216,9 +227,9 @@ let _skipHistoryPush = false; // Anti-Doppel-Push-Flag
 
 ## Nächste Schritte (ROADMAP)
 - Phase 5: Fotos — Option B (Upload, Base64, max 800px JPEG)
-- Phase 6: Filter nach Jahrgang/Ort, Duplikate
+- Phase 6: Filter nach Jahrgang/Ort/Quelle, Duplikate
 - Phase 8: Stammbaum-Erweiterungen (Zoom, mehrere Ehepartner)
-- Phase 9: Undo/Redo, Service Worker
+- Phase 9: Undo/Redo, Service Worker, QUAY
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch

@@ -39,7 +39,8 @@
 | `LONG` | 4 | `events[].long` | E7.33 → 7.33, W → negativ |
 | `NOTE` | 2 | `events[].note` | Mehrere NOTEs akkumuliert mit `\n` |
 | `ADDR` | 2 | `events[].addr` | Adresse (nur RESI relevant), `3 CONT` für Zeilen |
-| `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt |
+| `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt; `3 PAGE` darunter → `sourcePages[sid]` |
+| `PAGE` | 3 | `events[].sourcePages[sid]` / `birth.sourcePages[sid]` etc. | Seitenangabe unter SOUR, editierbar im Ereignis-Formular |
 | `SOUR` | 1 | `topSources[]` | SOUR direkt unter INDI (Level 1) |
 | `NOTE` | 1 | `noteText` / `noteRefs[]` | Inline-Text oder @Ref@ |
 | `CONC`/`CONT` | 2 | `noteText` (angehängt) | Mehrzeilige Notizen |
@@ -88,19 +89,20 @@ Werden beim Parsen in `notes`-Map gespeichert und beim Anzeigen über `noteRefs`
 Der Parser verwendet **flaches Kontext-Tracking** (kein Stack):
 
 ```javascript
-let lv1tag = '';    // aktueller Level-1-Tag (BIRT, DEAT, EVEN, ...)
-let lv2tag = '';    // aktueller Level-2-Tag
-let lv3tag = '';    // aktueller Level-3-Tag
-let evIdx  = -1;    // Index in cur.events (-1 wenn kein Event aktiv)
-let inMap  = false; // sind wir in einem MAP-Block?
-let mapParent = ''; // welcher lv1tag gehört zur aktuellen MAP?
+let lv1tag = '';      // aktueller Level-1-Tag (BIRT, DEAT, EVEN, ...)
+let lv2tag = '';      // aktueller Level-2-Tag
+let lv3tag = '';      // aktueller Level-3-Tag
+let evIdx  = -1;      // Index in cur.events (-1 wenn kein Event aktiv)
+let inMap  = false;   // sind wir in einem MAP-Block?
+let mapParent = '';   // welcher lv1tag gehört zur aktuellen MAP?
+let lastSourVal = ''; // letzte gesehene 2 SOUR @id@ (für 3 PAGE Zuordnung)
 ```
 
 Bei jeder Zeile:
 - `lv===0`: neues Haupt-Record (INDI / FAM / SOUR / NOTE / TRLR)
-- `lv===1`: alle Kontext-Vars zurücksetzen, neuen lv1tag setzen
-- `lv===2`: lv2tag setzen, inMap=false (außer tag==='MAP')
-- `lv===3`: wenn tag==='MAP' → inMap=true, mapParent=lv1tag
+- `lv===1`: alle Kontext-Vars zurücksetzen, neuen lv1tag setzen, `lastSourVal=''`
+- `lv===2`: lv2tag setzen, inMap=false (außer tag==='MAP'); bei tag==='SOUR': `lastSourVal=val`
+- `lv===3`: wenn tag==='MAP' → inMap=true, mapParent=lv1tag; bei lv2tag==='SOUR' && tag==='PAGE' → `sourcePages[lastSourVal]=val`
 
 ### Geo-Koordinaten Parsing
 ```javascript
@@ -155,14 +157,16 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 1 BIRT / 1 CHR / 1 DEAT / 1 BURI
   2 DATE / 2 PLAC
   3 MAP / 4 LATI / 4 LONG         ← wenn Koordinaten vorhanden
-  2 SOUR @Sxx@                    ← birth.sources[]
   2 CAUS [cause]                  ← nur bei DEAT
+  2 SOUR @Sxx@                    ← birth.sources[]
+  3 PAGE [Seite]                  ← wenn birth.sourcePages[@Sxx@] gesetzt
 1 [OCCU|RESI|EDUC|EMIG|IMMI|NATU|EVEN|GRAD|ADOP|MILI] [value]
   2 TYPE / 2 DATE / 2 PLAC
   3 MAP / 4 LATI / 4 LONG
-  2 SOUR @Sxx@
   2 NOTE [text] / 3 CONT [...]
   2 ADDR [text] / 3 CONT [...]    ← nur wenn ev.addr gesetzt
+  2 SOUR @Sxx@                    ← ev.sources[]
+  3 PAGE [Seite]                  ← wenn ev.sourcePages[@Sxx@] gesetzt
 1 NOTE [noteText] / 2 CONT [...]
 1 SOUR @Sxx@                      ← topSources[]
 1 FAMC @Fxx@ / 2 _FREL / 2 _MREL
@@ -189,7 +193,6 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 |---|---|
 | `_STAT` | Nie geparst (Legacy: Never Married etc.) |
 | `QUAY` | Qualitätsbewertung — vereinfacht |
-| `PAGE` | Seitenangabe bei Quell-Referenz — vereinfacht |
 | `NOTE`-Records (`0 @Nxx@ NOTE`) | Werden nicht neu ausgegeben |
 | `2 SOUR` unter `1 RELI` | RELI ist noch ein String, kein Objekt |
 | `EMAIL`, `WWW`, `RESN` | Nie geparst |

@@ -1,6 +1,6 @@
 # Roadmap
 
-## Aktueller Stand: Phase 7 (UX-Remake) abgeschlossen ✅ (März 2026)
+## Version 1.0 ✅ (März 2026)
 
 Testdatei: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
@@ -34,7 +34,7 @@ Alle wichtigen Felder überleben Parse→Write→Parse:
 
 Bewusst akzeptierte Verluste:
 - _STAT — nie geparst
-- QUAY, PAGE an Quell-Referenzen — vereinfacht
+- QUAY an Quell-Referenzen — vereinfacht
 - NOTE-Records als @ref@ → werden zu Inline-NOTE
 - 2 SOUR unter 1 RELI — 1 Vorkommen, kein UI-Effekt
 
@@ -42,6 +42,11 @@ Bewusst akzeptierte Verluste:
 - **SOUR/CHAN**: Änderungsdatum von Quellen-Records wird geparst, gespeichert und beim Export zurückgeschrieben. `saveSource()` setzt `lastChanged` automatisch auf heutiges Datum (GEDCOM-Format).
 - **Multiple NOTEs unter Events**: Mehrere `2 NOTE`-Tags unter einem Ereignis werden jetzt akkumuliert (statt überschrieben), mit `\n` verbunden, beim Export als `CONT` ausgegeben.
 - **RESI/ADDR**: Adress-Subtag (`2 ADDR`) unter Wohnort-Ereignissen wird in `ev.addr` gespeichert, im Ereignis-Formular editierbar (nur bei Typ RESI sichtbar) und beim Export als `2 ADDR / 3 CONT` ausgegeben.
+
+### Phase 2.7: PAGE / Seitenangaben ✅ (März 2026)
+- **Seitenangaben bei Quellenreferenzen**: `3 PAGE`-Tag unter `2 SOUR` wird geparst, in `ev.sourcePages[sid]` gespeichert, im Ereignis-Formular neben dem Quellen-Tag editierbar und beim Export als `3 PAGE` zurückgeschrieben.
+- Gilt für alle Ereignistypen: BIRT / CHR / DEAT / BURI sowie alle regulären events[].
+- Roundtrip-stabil: Parse → Bearbeiten → Write → Re-Parse verlustfrei.
 
 ### Phase 3a: UI-Cleanups ✅ (März 2026)
 - BIRT/CHR/DEAT/BURI in Detailansicht anklickbar (gleiches Formular wie andere Events)
@@ -169,7 +174,7 @@ if (p.photoBase64) {
 - [ ] Tastatur-Shortcuts für Desktop
 - [ ] Import: Konfliktauflösung beim Importieren (wenn neuere GEDCOM-Version vorliegt)
 - [ ] Merge zweier GEDCOM-Dateien
-- [ ] Quellenreferenzen mit PAGE/QUAY zurückschreiben
+- [ ] QUAY (Qualitätsbewertung) für Quellenreferenzen
 
 ---
 
@@ -185,7 +190,7 @@ if (p.photoBase64) {
 | Problem | Ursache | Workaround |
 |---|---|---|
 | Fotos nicht ladbar | Windows-Pfade aus Legacy (C:\Users\...) | Dateiname wird angezeigt |
-| Quellenreferenzen partiell | SOUR mit PAGE/QUAY vereinfacht | Originalreferenz geht verloren |
+| QUAY an Quellreferenzen | Qualitätsbewertung vereinfacht | Bewusst akzeptiert |
 
 ### Klein
 | Problem | Status |

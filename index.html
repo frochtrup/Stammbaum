@@ -468,6 +468,12 @@ body {
   font-size: 0.78rem; color: var(--gold); cursor: default;
   font-family: 'Source Serif 4', serif;
 }
+.src-page-input {
+  width: 64px; font-size: 0.7rem; font-family: 'Source Serif 4', serif;
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 5px; color: var(--text-dim);
+}
+.src-page-input::placeholder { color: var(--text-muted); }
 .src-tag-x {
   background: none; border: none; color: var(--text-muted);
   cursor: pointer; font-size: 0.9rem; padding: 0; line-height: 1;
@@ -1031,6 +1037,9 @@ body {
     <div class="sheet-handle"></div>
     <div class="sheet-title">Hilfe &amp; Anleitung</div>
     <div class="sheet-body">
+      <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-bottom:14px;letter-spacing:0.04em">
+        Stammbaum PWA · Version 1.0 · März 2026
+      </div>
       <div style="font-size:0.85rem;color:var(--text-dim);line-height:1.7">
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">GEDCOM-Datei öffnen</strong><br>
         Tippen Sie auf „GEDCOM-Datei öffnen" auf dem Startbildschirm. Auf dem iPhone navigieren Sie im Dateipicker zu iCloud Drive → Genealogie → Ihre .ged-Datei.</p>
@@ -1095,6 +1104,7 @@ function parseGEDCOM(text) {
   let evIdx  = -1;   // current event index in cur.events
   let inMap  = false; // are we inside a MAP block?
   let mapParent = ''; // which lv1 tag owns current MAP (BIRT/DEAT/etc.)
+  let lastSourVal = ''; // last seen 2 SOUR @id@ value (for 3 PAGE lookup)
 
   for (let raw of lines) {
     const line = raw.trim();
@@ -1113,10 +1123,10 @@ function parseGEDCOM(text) {
         cur = {
           id: tag, name:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:'', place:'', lati:null, long:null, sources:[] },
-          death:{ date:'', place:'', lati:null, long:null, sources:[], cause:'' },
-          chr:{ date:'', place:'', lati:null, long:null, sources:[] },
-          buri:{ date:'', place:'', lati:null, long:null, sources:[] },
+          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, cause:'' },
+          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
           events:[], famc:[], fams:[],
           noteRefs:[], noteText:'',
           media:[], titl:'', reli:'', lastChanged:'',
@@ -1138,8 +1148,8 @@ function parseGEDCOM(text) {
     if (!cur) continue;
 
     // Track context tags
-    if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; }
-    if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; }
+    if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; }
+    if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag === 'SOUR') lastSourVal = val; }
     if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } }
 
     // ── INDIVIDUAL ──
@@ -1163,7 +1173,7 @@ function parseGEDCOM(text) {
         else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); }
         else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[] });
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{} });
           evIdx = cur.events.length - 1;
         }
       }
@@ -1235,6 +1245,17 @@ function parseGEDCOM(text) {
         // Event note continuation
         if (evIdx >= 0 && lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
           cur.events[evIdx].note += (tag==='CONT'?'\n':'') + val;
+        // 3 PAGE under 2 SOUR — Seitenangabe für Quellenreferenz
+        if (lv2tag === 'SOUR' && tag === 'PAGE' && lastSourVal.startsWith('@')) {
+          if      (lv1tag === 'BIRT') { if (!cur.birth.sourcePages) cur.birth.sourcePages={}; cur.birth.sourcePages[lastSourVal] = val; }
+          else if (lv1tag === 'DEAT') { if (!cur.death.sourcePages) cur.death.sourcePages={}; cur.death.sourcePages[lastSourVal] = val; }
+          else if (lv1tag === 'CHR')  { if (!cur.chr.sourcePages)   cur.chr.sourcePages={};   cur.chr.sourcePages[lastSourVal]   = val; }
+          else if (lv1tag === 'BURI') { if (!cur.buri.sourcePages)  cur.buri.sourcePages={};  cur.buri.sourcePages[lastSourVal]  = val; }
+          else if (evIdx >= 0 && cur.events[evIdx]) {
+            if (!cur.events[evIdx].sourcePages) cur.events[evIdx].sourcePages = {};
+            cur.events[evIdx].sourcePages[lastSourVal] = val;
+          }
+        }
         // Collect source references at level 3
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
@@ -1379,7 +1400,10 @@ function writeGEDCOM() {
       lines.push(`${lv+1} PLAC ${obj.place}`);
       geoLines(obj, lv+2);
     }
-    if (obj.sources) for (const s of obj.sources) lines.push(`${lv+1} SOUR ${s}`);
+    if (obj.sources) for (const s of obj.sources) {
+      lines.push(`${lv+1} SOUR ${s}`);
+      if (obj.sourcePages && obj.sourcePages[s]) lines.push(`${lv+2} PAGE ${obj.sourcePages[s]}`);
+    }
   }
 
   for (const p of Object.values(db.individuals)) {
@@ -1420,7 +1444,10 @@ function writeGEDCOM() {
         lines.push(`2 ADDR ${al[0]}`);
         for (let i = 1; i < al.length; i++) lines.push(`3 CONT ${al[i]}`);
       }
-      if (ev.sources) for (const s of ev.sources) lines.push(`2 SOUR ${s}`);
+      if (ev.sources) for (const s of ev.sources) {
+        lines.push(`2 SOUR ${s}`);
+        if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
+      }
     }
 
     if (p.noteText) {
@@ -2739,10 +2766,17 @@ function relRow(person, role) {
 //  srcState[prefix] = Set of source IDs currently selected
 // ─────────────────────────────────────
 const srcState = {};
+const srcPageState = {};  // {prefix: {sid: page}} — Seitenangaben pro Quelle
 
-function initSrcWidget(prefix, selectedIds) {
+function updateSrcPage(prefix, sid, value) {
+  if (!srcPageState[prefix]) srcPageState[prefix] = {};
+  srcPageState[prefix][sid] = value;
+}
+
+function initSrcWidget(prefix, selectedIds, pageMap) {
   const ids = selectedIds instanceof Set ? [...selectedIds] : (Array.isArray(selectedIds) ? selectedIds : []);
   srcState[prefix] = new Set(ids);
+  srcPageState[prefix] = pageMap ? { ...pageMap } : {};
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
   document.getElementById(prefix + '-src-picker').classList.remove('open');
@@ -2755,11 +2789,18 @@ function renderSrcTags(prefix) {
     container.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>';
     return;
   }
+  const pages = srcPageState[prefix] || {};
   container.innerHTML = [...selected].map(sid => {
     const s = db.sources[sid];
     const label = s ? (s.abbr || s.title || sid) : sid;
+    const pageVal = pages[sid] || '';
+    const pageField = prefix === 'ef'
+      ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
+           oninput="updateSrcPage('${prefix}','${sid.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',this.value)">`
+      : '';
     return `<span class="src-tag">
-      ${esc(label.length > 30 ? label.slice(0,28)+'…' : label)}
+      ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
+      ${pageField}
       <button type="button" onclick="removeSrc('${prefix}','${sid}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
     </span>`;
   }).join('');
@@ -3046,7 +3087,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-date').value  = obj.date  || '';
     document.getElementById('ef-place').value = obj.place || '';
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
-    initSrcWidget('ef', obj.sources || []);
+    initSrcWidget('ef', obj.sources || [], obj.sourcePages || {});
     document.querySelector('#modalEvent .sheet-title').textContent = _SPECIAL_LBL[evIdx] + ' bearbeiten';
     document.getElementById('saveEventBtn').textContent = 'Speichern';
   } else {
@@ -3058,7 +3099,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-place').value = ev?.place || '';
     document.getElementById('ef-cause').value = '';
     document.getElementById('ef-addr').value  = ev?.addr  || '';
-    initSrcWidget('ef', ev?.sources || []);
+    initSrcWidget('ef', ev?.sources || [], ev?.sourcePages || {});
     document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
@@ -3075,9 +3116,10 @@ function saveEvent() {
   if (type in _SPECIAL_OBJ) {
     const key = _SPECIAL_OBJ[type];
     p[key] = { ...(p[key] || {}),
-      date:    document.getElementById('ef-date').value.trim(),
-      place:   document.getElementById('ef-place').value.trim(),
-      sources: [...(srcState['ef'] || [])]
+      date:        document.getElementById('ef-date').value.trim(),
+      place:       document.getElementById('ef-place').value.trim(),
+      sources:     [...(srcState['ef'] || [])],
+      sourcePages: { ...(srcPageState['ef'] || {}) }
     };
     if (type === 'DEAT') p[key].cause = document.getElementById('ef-cause').value.trim();
   } else {
@@ -3090,7 +3132,8 @@ function saveEvent() {
       place:     document.getElementById('ef-place').value.trim(),
       addr:      document.getElementById('ef-addr').value.trim(),
       lati: null, long: null, eventType: '', note: '',
-      sources:   [...(srcState['ef'] || [])]
+      sources:     [...(srcState['ef'] || [])],
+      sourcePages: { ...(srcPageState['ef'] || {}) }
     };
     if (evIdx !== null && p.events[evIdx]) {
       ev.lati      = p.events[evIdx].lati;
