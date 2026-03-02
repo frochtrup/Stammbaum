@@ -109,7 +109,7 @@ let _pendingRepoLink = null;
 - HGAP=10, VGAP=44, MGAP=20, SLOT=106, PAD=20, ROW=108
 
 ## Nächste Schritte
-- **Offen (hohe Priorität):** Direktes Speichern auf dem Mac ohne manuelles Verschieben der Download-Datei. Bisherige Versuche (showDirectoryPicker, showSaveFilePicker + createWritable) scheitern auf macOS + iCloud Drive mit NotAllowedError / 0 KB. Details in ROADMAP.md.
+- **Offen (hohe Priorität):** Direktes Speichern auf dem Mac. Idee: `showOpenFilePicker()` statt `showSaveFilePicker()` — der Nutzer öffnet die Datei selbst, Browser erteilt Schreibrecht auf genau diese Datei → `createWritable()` sollte funktionieren. Beim Öffnen Blob-Backup in Download-Ordner anlegen. Details + Begründung in ROADMAP.md.
 - Phase 5: Fotos (Base64, max 800px JPEG)
 - Phase 6: Filter nach Jahrgang/Ort/Quelle, Duplikate
 - Phase 8: Zoom, mehrere Ehepartner im Baum

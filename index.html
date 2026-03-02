@@ -699,7 +699,7 @@ body {
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
-      <button class="topbar-btn" onclick="exportGEDCOM()" title="Speichern">☁️</button>
+      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁️</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
@@ -761,7 +761,7 @@ body {
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title" id="treeTopTitle"></span>
-      <button class="topbar-btn" onclick="exportGEDCOM()" title="Speichern">☁️</button>
+      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁️</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
@@ -1188,26 +1188,23 @@ body {
 <div class="modal-overlay" id="modalMenu">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Menü</div>
+    <div class="sheet-title">Datei</div>
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openFileOrDir()">
-          📂 &nbsp; Andere Datei laden
+          📂 &nbsp; Öffnen…
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
-          ☁️ &nbsp; Als GEDCOM speichern
+        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
+          💾 &nbsp; Speichern
         </button>
         <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
-          🗄 &nbsp; <span>Original-Backup herunterladen</span>
-        </button>
-        <button id="dirMenuBtn" class="btn" style="display:none;background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openDirectoryAndLoad()">
-          📁 &nbsp; <span id="dirMenuLabel">Ordner verbinden (Direkt-Speichern)</span>
+          🗄 &nbsp; <span>Original herunterladen</span>
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
-          🗂 &nbsp; Demo-Daten laden
+          🗂 &nbsp; Demo-Daten öffnen
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
-          🗑 &nbsp; Datei schließen / neu beginnen
+          ✕ &nbsp; Schließen
         </button>
         <button class="btn btn-cancel" onclick="closeModal('modalMenu')">Abbrechen</button>
       </div>
@@ -1257,7 +1254,8 @@ let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, reposito
 let changed = false;
 let _placesCache = null;  // Cache für collectPlaces(); wird in markChanged() geleert
 let _originalGedText = null;   // In-memory backup des zuletzt geladenen Originals
-let _dirHandle = null;         // FileSystemDirectoryHandle (Desktop-Speichern)
+let _fileHandle = null;        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
+let _canDirectSave = false;    // true wenn createWritable() auf _fileHandle funktioniert
 let currentPersonId = null;
 let currentFamilyId = null;
 let currentSourceId = null;
@@ -1782,86 +1780,106 @@ function idbDel(key) {
 }
 
 // ─────────────────────────────────────
-//  FILE SYSTEM ACCESS (Desktop-Speichern)
+//  FILE SYSTEM ACCESS (Chrome Desktop)
+//  Strategie: showOpenFilePicker({ mode:'readwrite' }) beim Laden →
+//             FileSystemFileHandle in IDB speichern →
+//             createWritable() beim Speichern.
+//  Funktioniert auf lokalen Laufwerken + iCloud Drive (Chrome).
+//  Safari Mac/iOS unterstützt showOpenFilePicker nicht → <a download>.
 // ─────────────────────────────────────
-function updateDirMenuBtn() {
-  const btn   = document.getElementById('dirMenuBtn');
-  const label = document.getElementById('dirMenuLabel');
-  if (!btn) return;
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS || !('showDirectoryPicker' in window)) { btn.style.display = 'none'; return; }
-  btn.style.display = '';
-  label.textContent = _dirHandle ? ('Verbunden: ' + _dirHandle.name) : 'Ordner verbinden (Direkt-Speichern)';
+
+// Direktes Speichern möglich? Ändert Save-Button-Tooltip
+function updateSaveIndicator() {
+  document.querySelectorAll('[data-save-btn]').forEach(btn => {
+    btn.title = _canDirectSave
+      ? 'Direkt speichern (Datei: ' + (localStorage.getItem('stammbaum_filename') || '') + ')'
+      : 'Als Download speichern';
+  });
 }
 
-async function restoreDirHandle() {
-  if (!('showDirectoryPicker' in window)) return;
+// Prüft ob createWritable() für diesen Handle tatsächlich funktioniert.
+// Ruft createWritable() auf und bricht sofort ab (kein Schreiben).
+async function testCanWrite(fh) {
+  let w = null;
   try {
-    const h = await idbGet('dirHandle');
-    if (!h) return;
-    const perm = await h.queryPermission({ mode: 'readwrite' });
-    if (perm === 'granted') { _dirHandle = h; updateDirMenuBtn(); }
-  } catch(e) {}
+    w = await fh.createWritable();
+    await w.abort();
+    return true;
+  } catch(e) {
+    if (w) { try { await w.abort(); } catch(_) {} }
+    return false;
+  }
 }
 
-// Verzeichnis öffnen, .ged-Datei laden, dirHandle für Speichern merken
-async function openDirectoryAndLoad() {
+// Datei öffnen via showOpenFilePicker.
+// Write-Permission wird danach per requestPermission angefragt.
+async function openFilePicker() {
   try {
-    const dir = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
-    const gedFiles = [];
-    for await (const [name, handle] of dir.entries()) {
-      if (handle.kind === 'file' && name.toLowerCase().endsWith('.ged') && !name.startsWith('.'))
-        gedFiles.push({ name, handle });
-    }
-    if (!gedFiles.length) { showToast('⚠ Keine .ged Datei im Ordner'); return; }
-    gedFiles.sort((a, b) => a.name.localeCompare(b.name, 'de'));
-    const { name, handle } = gedFiles[0];
-    _dirHandle = dir;
-    await idbPut('dirHandle', dir);
-    updateDirMenuBtn();
-    const text = await (await handle.getFile()).text();
-    _processLoadedText(text, name);
-    const extra = gedFiles.length > 1 ? ` (${gedFiles.length} .ged Dateien im Ordner)` : '';
-    showToast('✓ ' + name + ' geladen' + extra);
+    const [fh] = await window.showOpenFilePicker({
+      types: [{ description: 'GEDCOM-Datei', accept: { 'text/plain': ['.ged', '.GED'] } }],
+      multiple: false
+    });
+    _fileHandle = fh;
+    // Schreiberlaubnis anfragen (klappt auf Chrome; Safari: fällt auf read zurück)
+    try {
+      const perm = await fh.requestPermission({ mode: 'readwrite' });
+      _canDirectSave = perm === 'granted' ? await testCanWrite(fh) : false;
+    } catch(e) { _canDirectSave = false; }
+    await idbPut('fileHandle', fh);
+    updateSaveIndicator();
+    const file = await fh.getFile();
+    _processLoadedText(await file.text(), file.name);
+    const saveInfo = _canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
+    showToast('✓ ' + file.name + ' geladen' + saveInfo);
   } catch(e) {
     if (e.name !== 'AbortError') showToast('⚠ Fehler beim Öffnen: ' + e.message);
   }
 }
 
-// Backup in backup/-Unterordner schreiben, Hauptdatei überschreiben
-async function saveWithDirHandle(content, filename) {
+// Stellt _fileHandle aus IDB wieder her (nach Seitenreload).
+async function restoreFileHandle() {
+  if (!('showOpenFilePicker' in window)) return;
   try {
-    let perm = await _dirHandle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'prompt') perm = await _dirHandle.requestPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') {
-      _dirHandle = null; await idbDel('dirHandle'); updateDirMenuBtn(); return false;
+    const fh = await idbGet('fileHandle');
+    if (!fh) return;
+    const perm = await fh.queryPermission({ mode: 'readwrite' });
+    if (perm === 'granted') {
+      _fileHandle = fh;
+      _canDirectSave = await testCanWrite(fh);
+      updateSaveIndicator();
     }
-    const basename = filename.replace(/\.ged$/i, '');
-    const now = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    const backupName = `${basename}_${ts}.ged`;
+  } catch(e) {}
+}
 
-    // 1. backup/-Unterordner anlegen und Backup schreiben
-    const backupDir    = await _dirHandle.getDirectoryHandle('backup', { create: true });
-    const backupHandle = await backupDir.getFileHandle(backupName, { create: true });
-    const backupW      = await backupHandle.createWritable();
-    await backupW.write(_originalGedText || content);
-    await backupW.close();
-
-    // 2. Hauptdatei überschreiben
-    const mainHandle = await _dirHandle.getFileHandle(filename, { create: true });
-    const mainW      = await mainHandle.createWritable();
-    await mainW.write(content);
-    await mainW.close();
-
+// Direkt in die geöffnete Datei schreiben.
+// Bei NotAllowedError (iCloud-Lock): Toast mit Retry-Hinweis, kein Auto-Fallback.
+async function saveToFileHandle(content) {
+  let w = null;
+  try {
+    let perm = await _fileHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'prompt') perm = await _fileHandle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      _fileHandle = null; _canDirectSave = false;
+      idbDel('fileHandle').catch(() => {});
+      updateSaveIndicator();
+      return false;
+    }
+    w = await _fileHandle.createWritable();
+    await w.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
+    await w.close(); w = null;
     changed = false; updateChangedIndicator();
     _originalGedText = content;
     try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
-    showToast('✓ Gespeichert · Backup: backup/' + backupName);
+    showToast('✓ Direkt gespeichert');
     return true;
   } catch(e) {
-    console.error('saveWithDirHandle:', e.name, e.message);
+    if (w) { try { await w.abort(); } catch(_) {} }
+    if (e.name === 'NotAllowedError') {
+      // Datei möglicherweise durch Cloud-Sync gesperrt → Retry anbieten
+      showToast('⚠ Datei gesperrt (Cloud-Sync?) – nochmals versuchen');
+    } else {
+      console.error('saveToFileHandle:', e.name, e.message);
+    }
     return false;
   }
 }
@@ -1873,20 +1891,17 @@ function _downloadBlob(content, filename) {
   a.href = url; a.download = filename; a.style.display = 'none';
   document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-  changed = false; updateChangedIndicator();
-  try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
-  showToast('✓ Datei heruntergeladen');
 }
 
 // ─────────────────────────────────────
-//  EXPORT / DOWNLOAD
+//  EXPORT / SPEICHERN
 // ─────────────────────────────────────
 async function exportGEDCOM() {
   const content  = writeGEDCOM();
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-  // iOS: Share Sheet (Hauptdatei + Zeitstempel-Backup)
+  // iOS Safari: Share Sheet (Hauptdatei + Zeitstempel-Backup)
   if (isIOS && navigator.canShare) {
     const basename   = filename.replace(/\.ged$/i, '');
     const now        = new Date();
@@ -1903,60 +1918,57 @@ async function exportGEDCOM() {
     }
   }
 
-  // Desktop: dirHandle → backup/ anlegen + Hauptdatei überschreiben
-  if (!_dirHandle) {
+  // Chrome Desktop: Direkt speichern via gespeichertem File Handle
+  if (!_fileHandle) {
     try {
-      const stored = await idbGet('dirHandle');
-      if (stored && await stored.queryPermission({ mode: 'readwrite' }) === 'granted') {
-        _dirHandle = stored; updateDirMenuBtn();
+      const stored = await idbGet('fileHandle');
+      if (stored) {
+        const perm = await stored.queryPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          _fileHandle = stored;
+          _canDirectSave = await testCanWrite(stored);
+          updateSaveIndicator();
+        }
       }
     } catch(e) {}
   }
-  if (_dirHandle && await saveWithDirHandle(content, filename)) return;
 
-  // showSaveFilePicker: Dialog startet im verbundenen Ordner (funktioniert auf lokalen Laufwerken)
-  if ('showSaveFilePicker' in window) {
-    let writable = null;
-    try {
-      const opts = {
-        suggestedName: filename,
-        types: [{ description: 'GEDCOM-Datei', accept: { 'text/plain': ['.ged'] } }]
-      };
-      if (_dirHandle) opts.startIn = _dirHandle;
-      const fh = await window.showSaveFilePicker(opts);
-      writable = await fh.createWritable();
-      await writable.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
-      await writable.close();
-      writable = null;
-      changed = false; updateChangedIndicator();
-      _originalGedText = content;
-      try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
-      showToast('✓ Gespeichert');
-      return;
-    } catch(e) {
-      if (writable) { try { await writable.abort(); } catch(_) {} }
-      if (e.name === 'AbortError') return;
-      // NotAllowedError = iCloud Drive blockiert createWritable → stumm fallen lassen
-      if (e.name !== 'NotAllowedError') console.error('showSaveFilePicker:', e.name, e.message);
-    }
+  if (_fileHandle && _canDirectSave) {
+    const ok = await saveToFileHandle(content);
+    if (ok) return;
+    // NotAllowedError (Cloud-Sync-Lock): Nutzer soll es nochmals versuchen,
+    // KEIN automatischer Fallback auf Download (würde verwirren).
+    if (_canDirectSave) return; // Toast wurde bereits gezeigt
   }
 
-  // Download-Fallback: Backup (Original) + aktualisierte Hauptdatei
+  // Fallback 1: showOpenFilePicker war nicht verfügbar oder handle fehlt →
+  // Datei öffnen lassen, dann direkt speichern
+  if (!_fileHandle && 'showOpenFilePicker' in window) {
+    showToast('Bitte Datei öffnen um direktes Speichern zu aktivieren');
+  }
+
+  // Fallback 2: Download (Safari Mac, Firefox, kein File Handle)
   const basename = filename.replace(/\.ged$/i, '');
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+  // Backup (Original) nur wenn Inhalt geändert
   if (_originalGedText && _originalGedText !== content) {
     _downloadBlob(_originalGedText, `${basename}_${ts}.ged`);
   }
   _downloadBlob(content, filename);
+  changed = false; updateChangedIndicator();
+  try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
+  showToast('✓ ' + filename + ' heruntergeladen');
 }
 
 // ─────────────────────────────────────
 //  FILE LOADING
 // ─────────────────────────────────────
 document.getElementById('uploadBox').addEventListener('click', () => {
-  document.getElementById('fileInput').click();
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (!isIOS && 'showOpenFilePicker' in window) { openFilePicker(); }
+  else { document.getElementById('fileInput').click(); }
 });
 document.getElementById('fileInput').addEventListener('change', e => {
   if (e.target.files[0]) readFile(e.target.files[0]);
@@ -1982,14 +1994,14 @@ function confirmNewFile() {
   changed = false;
   updateChangedIndicator();
   _originalGedText = null;
-  _dirHandle = null;
-  idbDel('dirHandle').catch(() => {});
+  _fileHandle = null; _canDirectSave = false;
+  idbDel('fileHandle').catch(() => {});
   try {
     localStorage.removeItem('stammbaum_ged'); localStorage.removeItem('stammbaum_filename');
     localStorage.removeItem('stammbaum_ged_backup'); localStorage.removeItem('stammbaum_backup_filename'); localStorage.removeItem('stammbaum_backup_date');
   } catch(e) {}
   updateBackupBtn();
-  updateDirMenuBtn();
+  updateSaveIndicator();
   showView('v-landing');
 }
 
@@ -2022,7 +2034,9 @@ function readFile(file) {
 }
 
 function openFileOrDir() {
-  document.getElementById('fileInput2').click();
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (!isIOS && 'showOpenFilePicker' in window) { openFilePicker(); }
+  else { document.getElementById('fileInput2').click(); }
 }
 
 function loadDemo() {
@@ -2049,7 +2063,7 @@ function tryAutoLoad() {
   } catch(e) { /* no storage or parse error */ }
   return false;
 }
-window.addEventListener('load', () => { tryAutoLoad(); restoreDirHandle(); updateDirMenuBtn(); });
+window.addEventListener('load', () => { tryAutoLoad(); restoreFileHandle(); updateSaveIndicator(); });
 
 function updateBackupBtn() {
   const btn = document.getElementById('backupMenuBtn');

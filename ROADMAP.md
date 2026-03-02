@@ -229,6 +229,46 @@ Das GEDCOM direkt am Ursprungsort speichern, ohne dass der Nutzer die Datei nach
 - [ ] Safari-Test: Verhält sich Safari auf Mac anders als Chrome bei iCloud Drive?
 - [ ] Nutzer-Workflow: Chrome-Download-Ordner auf iCloud Drive zeigen lassen
 
+**Idee A: showOpenFilePicker() + createWritable() + Backup als Download**
+
+Der Nutzer öffnet die Datei über `showOpenFilePicker()` → Browser erteilt Schreibrecht auf genau *diese* Datei (Nutzer hat sie explizit ausgewählt). `createWritable()` sollte funktionieren — im Gegensatz zu `showSaveFilePicker()` / `showDirectoryPicker()`, bei denen der Browser *neue* Handles anlegt und iCloud Drive die Schreibrechte verweigert. Backup landet im Download-Ordner (kein Ordner-Zugriff nötig).
+
+```
+Laden:  showOpenFilePicker() → fileHandle → IDB
+Backup: fileHandle.getFile() → <a download> MeineDaten_backup_YYYY-MM-DD.ged (Downloads)
+Speichern: fileHandle.createWritable() → write → close  |  Fallback: <a download>
+```
+
+**Idee B: showDirectoryPicker() + backup/-Unterordner (bevorzugt)**
+
+Der Nutzer wählt einmalig das *Verzeichnis* (statt der Datei). Die App liest die GEDCOM-Datei selbst aus dem Verzeichnis, legt beim Speichern einen `backup/`-Unterordner an und schreibt das Backup dorthin. Ein Dialog, voller Zugriff, Backup bleibt neben der Originaldatei.
+
+```
+Laden (einmalig):
+  showDirectoryPicker() → dirHandle → IDB
+  dirHandle.getFileHandle('MeineDaten.ged') → getFile() → text lesen → parseGEDCOM()
+
+Speichern:
+  1. dirHandle.getDirectoryHandle('backup', {create:true}) → backupDir
+  2. backupDir.getFileHandle('MeineDaten_YYYY-MM-DD_NNN.ged', {create:true}) → backupHandle
+  3. backupHandle.createWritable() → write(originalText) → close()
+  4. dirHandle.getFileHandle('MeineDaten.ged') → createWritable() → write(newContent) → close()
+
+Reload / nächste Session:
+  dirHandle aus IDB → requestPermission({mode:'readwrite'}) → weiter
+```
+
+**Warum ist das besser als der bisherige showDirectoryPicker()-Versuch?**
+Bisher wurde `showDirectoryPicker()` zum Speichern aufgerufen, nachdem die Datei bereits per `<input>` geladen war. Der neue Ansatz: der dirHandle wird *beim Laden* geholt — zu dem Zeitpunkt, zu dem der Nutzer aktiv mit der Datei interagiert. Die Hypothese: die Schreibrechte sind zu diesem Zeitpunkt stabiler und bleiben für die Session erhalten.
+
+**Offene Frage:** Funktioniert `createWritable()` auf einem `FileSystemFileHandle` aus `showDirectoryPicker()` auf iCloud Drive? Das war bisher der Fehler-Punkt. Muss getestet werden.
+
+- [ ] Implementieren: Idee B als primären Pfad, Idee A als Fallback, `<a download>` als letzter Fallback
+- [ ] `uploadBox` click → `showDirectoryPicker()` (Desktop) / `<input>` (iOS/Fallback)
+- [ ] Dateiname aus dem Verzeichnis wählen lassen falls mehrere `.ged` vorhanden
+- [ ] `exportGEDCOM()`: backup/ → Original überschreiben → Fallback <a download>
+- [ ] `tryAutoLoad()`: dirHandle aus IDB + `requestPermission()` beim Start
+
 ---
 
 ## Phase 9: Technische Verbesserungen (offen)
