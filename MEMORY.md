@@ -7,7 +7,8 @@
 - **Pfad:** `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
 
 ## Dateien
-- `index.html` — gesamte App (~4000 Zeilen, alle CSS/HTML/JS in einer Datei)
+- `index.html` — gesamte App (v1.2, Phase 1 abgeschlossen, ~4300 Zeilen)
+- `index_v2.html` — Entwicklungsdatei für Phase 2 / Version 2.0 (Kopie von index.html, Version 2.0-dev)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
 - `ARCHITECTURE.md` — ADRs, Datenmodell, JS-Sektionen, CSS-Design-System, Sanduhr-Algorithmus
 - `GEDCOM.md` — Parser/Writer-Referenz, alle unterstützten Tags
@@ -15,8 +16,8 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand: Version 1.2 ✅ — zuletzt aktualisiert: 2026-03-02
-Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
+## Aktueller Stand: Version 1.2 ✅ — zuletzt aktualisiert: 2026-03-03
+Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
 ---
 
@@ -37,11 +38,15 @@ Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 - Quellen-Tab: "Archive"-Sektion mit `renderRepoList()` nach Source-Liste
 - Navigation: `_beforeDetailNavigate` + `goBack()` unterstützen `type:'repo'`
 
-### Speichern/Export (Desktop)
-- File System Access API entfernt (unzuverlässig auf macOS + iCloud Drive)
-- `exportGEDCOM()` immer via `<a download>` — Browser-Download-Ordner
-- iOS: Share Sheet bleibt unverändert
-- `updateDirMenuBtn()` ist jetzt No-Op
+### Speichern/Export neu (Desktop)
+- `showOpenFilePicker()` → `requestPermission({mode:'readwrite'})` → `testCanWrite()` → `_fileHandle` + `_canDirectSave`
+- Chrome Mac: direktes Speichern via `_fileHandle.createWritable()` (kein Download-Dialog)
+- Safari/Firefox Mac: `<a download>` → Browser-Download-Ordner
+- iOS: Share Sheet unverändert (Hauptdatei + Zeitstempel-Backup)
+- Bei `<a download>`: Zeitstempel-Backup des Originals + aktuelle Version (zwei Downloads)
+- `updateSaveIndicator()`: Save-Buttons zeigen Tooltip mit aktivem Modus + Dateiname
+- `restoreFileHandle()`: stellt `_fileHandle` aus IndexedDB nach Page-Reload wieder her
+- `testCanWrite(fh)`: prüft Schreibfähigkeit via `createWritable()` + sofortiges `abort()` (keine Dateiänderung)
 
 ---
 
@@ -87,7 +92,8 @@ let currentPersonId = null; let currentFamilyId = null; let currentSourceId = nu
 let currentRepoId = null;
 let currentTab = 'persons'; let currentTreeId = null;
 const srcState = {}; const srcPageState = {};
-let _dirHandle = null; let _idb = null; let _originalGedText = '';
+let _originalGedText = null; let _idb = null;
+let _fileHandle = null; let _canDirectSave = false;
 const _navHistory = []; let _skipHistoryPush = false;
 // v1.1 Beziehungs-Picker:
 let _relMode = ''; let _relAnchorId = ''; let _pendingRelation = null;
@@ -100,7 +106,8 @@ let _pendingRepoLink = null;
 ## Architektur-Schlüsselentscheidungen
 - Single-File HTML (ADR-001) · Vanilla JS (ADR-002) · Globales `db` (ADR-003)
 - localStorage cacht GEDCOM-Text (ADR-004) · iOS `accept="*/*"` (ADR-005)
-- Desktop-Export: `<a download>` statt File System Access API (iCloud Drive inkompatibel) (ADR-007)
+- Desktop Chrome: `showOpenFilePicker()` + `requestPermission({mode:'readwrite'})` → direktes Speichern (ADR-007)
+- Desktop Safari/Firefox: `<a download>` Fallback (ADR-007)
 - BIRT/CHR/DEAT/BURI als Sonder-Objekte via `_SPECIAL_OBJ` (ADR-008)
 - Globale Bottom-Nav außerhalb Views, z-index 400 (ADR-009)
 
@@ -108,12 +115,12 @@ let _pendingRepoLink = null;
 - Regulär: W=96, H=64 · Zentrum: CW=160, CH=80
 - HGAP=10, VGAP=44, MGAP=20, SLOT=106, PAD=20, ROW=108
 
-## Nächste Schritte
-- **Offen (hohe Priorität):** Direktes Speichern auf dem Mac. Idee: `showOpenFilePicker()` statt `showSaveFilePicker()` — der Nutzer öffnet die Datei selbst, Browser erteilt Schreibrecht auf genau diese Datei → `createWritable()` sollte funktionieren. Beim Öffnen Blob-Backup in Download-Ordner anlegen. Details + Begründung in ROADMAP.md.
-- Phase 5: Fotos (Base64, max 800px JPEG)
-- Phase 6: Filter nach Jahrgang/Ort/Quelle, Duplikate
-- Phase 8: Zoom, mehrere Ehepartner im Baum
-- Phase 9: Undo/Redo, Service Worker, QUAY
+## Nächste Schritte (Phase 2 / Version 2.0)
+- Architektur-Redesign: Komponentenbasiertes Rendering, sauberes State-Management
+- OneDrive-Integration: Microsoft Graph API (PKCE OAuth)
+- UI: Responsives Layout Desktop, Dunkelmodus
+- Features: Fotos, erweiterte Suche/Filter, Undo/Redo, Service Worker
+- Entwicklungsdatei: `index_v2.html`
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch · Kommunikation: kurz und direkt · Keine Emojis

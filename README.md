@@ -20,7 +20,8 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (~4000 Zeilen, alles in einer Datei)
+├── index.html          ← gesamte App (v1.2, Phase 1 abgeschlossen)
+├── index_v2.html       ← Entwicklungsdatei Phase 2 (v2.0-dev)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
@@ -43,13 +44,24 @@ stammbaum/
 ### Laden & Speichern
 | Feature | Details |
 |---|---|
-| GEDCOM öffnen | Datei-Picker, `accept="*/*"` (iOS-kompatibel) |
+| GEDCOM öffnen (Chrome Mac) | `showOpenFilePicker()` → Schreiberlaubnis wird beim Öffnen angefragt |
+| GEDCOM öffnen (Safari/iOS) | `<input type="file">`, `accept="*/*"` (iOS-kompatibel) |
 | Auto-Load | Letzte Datei in `localStorage` gecacht → automatisch beim Start |
-| Desktop Speichern | `<a download>` → Datei landet im Browser-Download-Ordner |
-| iOS Speichern | `navigator.share()` → zwei Dateien: Hauptdatei + Zeitstempel-Backup |
+| Direktes Speichern (Chrome Mac) | `fileHandle.createWritable()` → schreibt direkt in die geöffnete Datei |
+| Download-Fallback (Safari Mac, Firefox) | `<a download>` → Datei im Browser-Download-Ordner |
+| Backup automatisch | Bei Download-Fallback: Zeitstempel-Backup des Originals zusätzlich heruntergeladen |
+| iOS Speichern | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
 | Demo-Modus | Beispiel-Daten ohne eigene Datei |
 
-> **Hinweis Mac:** Gespeicherte Datei liegt im Browser-Download-Ordner und muss ggf. manuell an den Originalort (iCloud Drive) verschoben werden. Direktes Zurückschreiben ist noch nicht zuverlässig gelöst.
+**Chrome Mac — direktes Speichern:**
+1. Upload-Box klicken → Dateidialog öffnet sich
+2. `.ged`-Datei auswählen → Browser fragt Schreiberlaubnis → bestätigen
+3. Toast: „✓ Datei geladen · Direktes Speichern aktiv"
+4. Speichern-Button (💾) → schreibt direkt in die Originaldatei
+
+**Safari Mac — Download-Workflow:**
+1. Datei laden → `<a download>` beim Speichern → landet in `~/Downloads`
+2. Optionaler Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive setzen
 
 ### Sanduhr-Ansicht (Stammbaum)
 - Grafische Familienansicht: Großeltern → Eltern → Person + Ehepartner → Kinder
@@ -108,9 +120,9 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  index.html                                  │
+│  index.html (v1.2 — Phase 1 abgeschlossen)   │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~4000 Zeilen · ~130 Funktionen · ~210 KB    │
+│  ~4200 Zeilen · ~140 Funktionen · ~215 KB    │
 │                                              │
 │  Globaler State: let db = {                  │
 │    individuals, families, sources,           │
@@ -119,12 +131,12 @@ stammbaum/
 │                                              │
 │  Persistenz:                                 │
 │  - localStorage (GEDCOM-Text, Auto-Load)     │
-│  - IndexedDB (Datei-Handle, Reserve)         │
+│  - IndexedDB (FileSystemFileHandle)          │
 └──────────────────────────────────────────────┘
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **1 Diff in 2796 Personen** (MeineDaten_ancestris.ged)
-**Version 1.2** — März 2026
+**Version 1.2** — März 2026 — Phase 1 abgeschlossen
 
 ---
 
@@ -152,12 +164,16 @@ iPhone Safari → Stammbaum App
      oder: Datei laden → iCloud Drive → MeineDaten.ged
 
 Änderungen speichern (iOS):
-  └─ ☁ Speichern → Share Sheet → In Dateien sichern → iCloud Drive/Genealogie
+  └─ 💾 Speichern → Share Sheet → In Dateien sichern → iCloud Drive/Genealogie
      (zwei Dateien: Hauptdatei + Zeitstempel-Backup)
 
-Änderungen speichern (Mac):
-  └─ ☁ Speichern → lädt MeineDaten.ged in Download-Ordner
-     → Datei manuell nach iCloud Drive/Genealogie verschieben
+Änderungen speichern (Mac, Chrome — direktes Speichern):
+  └─ Datei über Upload-Box öffnen → Schreiberlaubnis bestätigen
+     → 💾 Speichern → direkt in Originaldatei
+
+Änderungen speichern (Mac, Safari — Download):
+  └─ 💾 Speichern → MeineDaten.ged im Download-Ordner
+     → Tipp: Safari-Download-Ordner auf iCloud Drive/Genealogie setzen
 
 Ancestris (Mac):
   └─ Datei → Import → GEDCOM → MeineDaten.ged übernehmen
@@ -172,17 +188,17 @@ python3 -m http.server 8080
 # → http://localhost:8080
 ```
 
-Oder direkt `index.html` im Browser öffnen.
+Dev-Server via `.claude/launch.json` konfiguriert.
 
 ---
 
 ## Getestete Umgebungen
 
-| Plattform | Browser | Status |
-|---|---|---|
-| iPhone (iOS 17+) | Safari | Vollständig |
-| iPhone (iOS 17+) | Chrome | Share Sheet nicht unterstützt |
-| Mac | Safari | Vollständig |
-| Mac | Chrome | Vollständig |
-| Mac | Firefox | Vollständig |
-| Android | Chrome | Apple Maps Links funktionieren nicht |
+| Plattform | Browser | Laden | Speichern |
+|---|---|---|---|
+| iPhone (iOS 17+) | Safari | ✅ | ✅ Share Sheet |
+| iPhone (iOS 17+) | Chrome | ✅ | ⚠️ Share Sheet nicht unterstützt |
+| Mac | Safari | ✅ | ⚠️ Download (direktes Speichern nicht möglich) |
+| Mac | Chrome | ✅ | ✅ Direktes Speichern |
+| Mac | Firefox | ✅ | ⚠️ Download |
+| Android | Chrome | ✅ | ⚠️ Apple Maps Links funktionieren nicht |

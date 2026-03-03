@@ -112,20 +112,25 @@ Der Parser behandelt MAP auf Level 3 **und** Level 2.
 
 ---
 
-### ADR-007: Desktop-Export via `<a download>` (aktuell)
-**Entscheidung (v1.2):** Desktop-Export immer via Blob + `<a download>` — Datei landet im Browser-Download-Ordner.
+### ADR-007: Desktop-Speichern via `showOpenFilePicker` + `createWritable` (v1.2 final)
+**Entscheidung:** Beim Öffnen einer Datei auf Chrome Desktop wird `showOpenFilePicker()` verwendet und sofort Schreiberlaubnis per `requestPermission({ mode: 'readwrite' })` angefragt. Der `FileSystemFileHandle` wird in IndexedDB gespeichert.
 
-**Grund:** `showDirectoryPicker()` + `createWritable()` schlug auf macOS + iCloud Drive wiederholt fehl (`NotAllowedError`, 0 KB-Dateien). Die File System Access API ist auf iCloud Drive nicht zuverlässig.
-
-**Konsequenz:** Nutzer muss die heruntergeladene Datei ggf. manuell an den richtigen Speicherort verschieben. Direktes Zurückschreiben in die Quelldatei ist noch nicht gelöst (offenes Todo).
-
-```javascript
-// exportGEDCOM() auf Desktop:
-const a = document.createElement('a');
-a.href = URL.createObjectURL(blob);
-a.download = filename;   // Original-Dateiname
-a.click();
+**Speichern-Flow:**
 ```
+Chrome Mac:
+  openFilePicker() → showOpenFilePicker() → requestPermission(readwrite)
+  exportGEDCOM()  → fileHandle.createWritable() → write → close
+  Fallback (Cloud-Lock): Toast "Nochmals versuchen"
+
+Safari Mac / Firefox:
+  <input type="file"> → readFile() → kein fileHandle
+  exportGEDCOM() → _downloadBlob() → <a download> → ~/Downloads
+  + Timestamped-Backup wenn Inhalt geändert
+```
+
+**Wichtig:** `showDirectoryPicker()` + `createWritable()` wurde in v1.2 getestet und schlug auf macOS + iCloud Drive fehl (`NotAllowedError`). `showOpenFilePicker()` mit explizit angefragter Schreiberlaubnis funktioniert jedoch (Chrome). `mode: 'readwrite'` als Option von `showOpenFilePicker()` ist nicht standardisiert und wurde entfernt.
+
+**Safari:** `showOpenFilePicker` nicht unterstützt → `<input type="file">` → `_downloadBlob()`.
 
 **iOS:** Unverändert — Share Sheet mit Hauptdatei + Zeitstempel-Backup.
 
@@ -389,7 +394,8 @@ let currentTab = 'persons';        // Aktiver Tab: 'persons'|'families'|'sources
 let currentTreeId = null;          // Aktive Person in Sanduhr-Ansicht
 const srcState = {};               // Zustand des Quellen-Widgets: {prefix: Set}
 const srcPageState = {};           // Seitenangaben pro Quelle: {prefix: {sid: page}}
-let _dirHandle = null;             // (ungenutzt seit v1.2 — File System Access API entfernt)
+let _fileHandle = null;            // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
+let _canDirectSave = false;        // true wenn createWritable() auf _fileHandle funktioniert
 let _idb = null;                   // IndexedDB-Instanz
 let _originalGedText = '';         // Original-GEDCOM beim Laden (für Backup)
 const _navHistory = [];            // Navigations-Stack für goBack() — {type, id|name}
@@ -511,23 +517,36 @@ Ebene +1:         [K0] [K1] [K2] [K3]        ← max. 4 Kinder/Zeile, mehrzeilig
 
 ---
 
-## Speichern/Backup-Architektur (v1.2)
+## Speichern/Backup-Architektur (v1.2 final)
 
 ```
 exportGEDCOM()
     │
-    ├── iOS: navigator.canShare
-    │   └── navigator.share({ files: [main, backup] })
-    │       ├── MeineDaten.ged
-    │       └── MeineDaten_YYYY-MM-DD_HHmmss.ged
+    ├── iOS: navigator.canShare → navigator.share({ files: [main, backup] })
+    │         MeineDaten.ged + MeineDaten_YYYY-MM-DD_HHmmss.ged
     │
-    └── Desktop: <a download>
-        └── MeineDaten.ged → Browser-Download-Ordner
+    ├── Chrome Mac: _fileHandle + _canDirectSave = true
+    │   └── saveToFileHandle() → createWritable() → write → close
+    │       Bei NotAllowedError (Cloud-Lock): Toast "Nochmals versuchen"
+    │
+    └── Safari Mac / Firefox / kein fileHandle:
+        ├── _downloadBlob(originalText, MeineDaten_YYYY-MM_HHmm.ged)  ← Backup
+        └── _downloadBlob(content, MeineDaten.ged)                    ← Aktuelle Version
 ```
 
-**Bekannte Einschränkung:** Direktes Zurückschreiben in die Quelldatei auf dem Mac
-nicht gelöst (File System Access API + iCloud Drive = `NotAllowedError`).
-Nutzer muss Datei nach dem Download ggf. manuell verschieben.
+**Lade-Flow (Chrome Mac):**
+```
+openFilePicker()
+    └── showOpenFilePicker()
+        ├── requestPermission({ mode: 'readwrite' })
+        ├── testCanWrite(fh) → createWritable() → abort() → true/false
+        ├── _canDirectSave = true/false
+        └── idbPut('fileHandle', fh)  ← für nächste Session
+
+restoreFileHandle() (bei Seitenreload)
+    └── idbGet('fileHandle')
+        └── queryPermission() === 'granted' → _fileHandle restauriert
+```
 
 ---
 

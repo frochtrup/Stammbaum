@@ -1,6 +1,41 @@
 # Roadmap
 
-## Version 1.2 ✅ (März 2026)
+---
+
+## Version 2.0 (in Planung — Phase 2)
+
+Ziel: vollständiges Redesign der App-Architektur und UI für bessere Wartbarkeit, Performance und Erweiterbarkeit.
+
+### Schwerpunkte
+
+#### Architektur
+- [ ] Komponentenbasiertes Rendering (kein monolithisches `innerHTML`)
+- [ ] Klares State-Management (Store-Muster statt globaler Variablen)
+- [ ] Modulare JS-Struktur (auch als Single-File umsetzbar, aber sauber aufgeteilt)
+- [ ] Virtuelles Scrollen für große Listen (>1000 Personen)
+
+#### Speichern / Cloud
+- [ ] OneDrive-Integration via Microsoft Graph API (PKCE OAuth, kein Server)
+- [ ] Direktes Speichern auf Mac: `showOpenFilePicker()` + `createWritable()` (bereits in v1.2 gelöst — in v2.0 weiterentwickeln)
+- [ ] iCloud Drive bleibt über `<a download>` unterstützt
+
+#### UI/UX
+- [ ] Responsives Layout (Desktop-Zweispalten-Ansicht)
+- [ ] Dunkelmodus
+- [ ] Drag-and-drop im Baum (Personen verschieben)
+- [ ] Erweiterter Stammbaum (Vorfahren-Modus, Mehrfach-Ehen)
+
+#### Features
+- [ ] Fotos (Phase 5 → in v2.0 integrieren)
+- [ ] Erweiterte Suche & Filter (Phase 6)
+- [ ] Undo/Redo
+- [ ] Service Worker / Offline
+
+**Entwicklungsdatei:** `index_v2.html`
+
+---
+
+## Version 1.2 ✅ (März 2026 — Phase 1 abgeschlossen)
 
 ### REPO-Feature: Archive/Repositories
 - `db.repositories` — neues Dictionary für GEDCOM `0 @Rxx@ REPO`-Records
@@ -14,11 +49,14 @@
 - Quellen-Tab: "Archive"-Sektion mit `renderRepoList()`
 - Navigation vollständig: History-Stack, `goBack()`, `showEditSheet()` unterstützen REPO
 
-### Speichern/Export überarbeitet (Desktop)
-- File System Access API entfernt — auf macOS + iCloud Drive unzuverlässig
-- Desktop-Export jetzt immer via `<a download>` → Browser-Download-Ordner
-- iOS: Share Sheet unverändert (Hauptdatei + Backup)
-- **Offen:** Direktes Speichern auf den Mac (ohne Browser-Download) nicht gelöst
+### Speichern/Export neu (Desktop)
+- `showOpenFilePicker()` → `requestPermission({mode:'readwrite'})` → `testCanWrite()` → direktes Speichern auf Chrome Mac ✅
+- `_fileHandle` + `_canDirectSave` ersetzen alten `_dirHandle`-Ansatz
+- File System Access API (showSaveFilePicker, showDirectoryPicker) vollständig entfernt — auf iCloud Drive unzuverlässig
+- Safari/Firefox Mac: `<a download>` → Browser-Download-Ordner
+- iOS: Share Sheet unverändert (Hauptdatei + Zeitstempel-Backup)
+- Bei `<a download>`: Zeitstempel-Backup des Originals + aktuelle Version als zwei Downloads
+- `updateSaveIndicator()`: Save-Buttons zeigen aktiven Modus als Tooltip
 
 ---
 
@@ -57,7 +95,7 @@ Testdatei: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
 ---
 
-## Abgeschlossene Phasen
+## Abgeschlossene Phasen (Phase 1)
 
 ### Phase 1: Grundfunktionen ✅
 - GEDCOM laden, parsen, anzeigen
@@ -105,11 +143,11 @@ Bewusst akzeptierte Verluste:
 - Geburt/Tod-Felder aus Personen-Formular entfernt (nur noch über Ereignis-Formular)
 - Orts-Detailansicht: Ort umbenennen (ersetzt in allen INDI + FAM)
 
-### Phase 3b: Speichern/Backup ✅ (März 2026, überarbeitet v1.2)
-- Desktop: `<a download>` → Browser-Download-Ordner mit Original-Dateiname
-  - File System Access API entfernt (iCloud Drive: `NotAllowedError`, 0 KB-Dateien)
-- iOS: Zwei Dateien im Share Sheet (Hauptdatei + Zeitstempel-Backup)
-- **Offen: Direktes Speichern auf dem Mac** — Datei soll ohne manuelles Verschieben direkt am Ursprungsort gespeichert werden (iCloud Drive-Kompatibilität ungeklärt)
+### Phase 3b: Speichern/Backup ✅ (März 2026, abgeschlossen v1.2)
+- Desktop Chrome: `showOpenFilePicker()` → `requestPermission({mode:'readwrite'})` → `createWritable()` → direktes Speichern in Originaldatei
+- Desktop Safari/Firefox: `<a download>` → Browser-Download-Ordner
+- iOS: Share Sheet (Hauptdatei + Zeitstempel-Backup)
+- Bei Download: Zeitstempel-Backup des Originals wird automatisch mitgeliefert
 
 ### Phase 4: Sanduhr-Ansicht ✅ (März 2026)
 Grafische Familienansicht als scrollbarer Baum.
@@ -169,11 +207,13 @@ Kinder (1+ Zeilen)  →  max. 4 pro Zeile, mehrzeilig bei >4
 
 ---
 
-## Phase 5: Fotos (offen)
+## Offene Features (für Phase 2 / Version 2.0)
+
+### Fotos (ex Phase 5)
 
 Personen haben in Ancestris Fotos verknüpft. Die Pfade stehen im GEDCOM, aber die Dateien liegen auf dem Mac.
 
-### Empfohlene Umsetzung: Option B (Upload im Formular)
+**Empfohlene Umsetzung: Option B (Upload im Formular)**
 
 ```javascript
 // Im Person-Formular: Foto-Picker
@@ -194,9 +234,7 @@ if (p.photoBase64) {
 
 **Option C (später):** ZIP-Export: GEDCOM + Fotos als echte Bilddateien (erfordert JSZip oder Compression Streams API).
 
----
-
-## Phase 6: Erweiterte Suche & Filter (offen)
+### Erweiterte Suche & Filter (ex Phase 6)
 
 - [ ] Filtern nach Geburtsjahrgang (z.B. 1850–1900)
 - [ ] Filtern nach Ort (alle Personen aus Ort X) — direkt aus Orts-Detail erreichbar
@@ -204,74 +242,14 @@ if (p.photoBase64) {
 - [ ] Duplikate finden (gleicher Name + ähnliche Daten)
 - [ ] Sortierung in Listen (nach Name / Geburtsjahr)
 
----
-
-## Phase 8: Stammbaum-Erweiterungen (offen)
+### Stammbaum-Erweiterungen (ex Phase 8)
 
 - [ ] Zoom (Pinch-to-Zoom auf Mobile)
 - [ ] Mehrere Ehepartner darstellen (aktuell: nur erster Ehepartner)
 - [ ] Vorfahren-Modus: reiner Vorfahren-Baum (mehr als 2 Ebenen hoch)
 - [ ] Navigation in Geschwister möglich (Klick auf Halbgeschwister → Baum zentriert)
 
----
-
-## Direktes Speichern auf dem Mac (offen, hohe Priorität)
-
-Das GEDCOM direkt am Ursprungsort speichern, ohne dass der Nutzer die Datei nach dem Download verschieben muss.
-
-**Bisherige Versuche:**
-- `showDirectoryPicker()` + `createWritable()` → `NotAllowedError` / 0 KB auf iCloud Drive
-- `showSaveFilePicker()` + `createWritable()` → gleicher Fehler
-
-**Mögliche Ansätze:**
-- [ ] `showSaveFilePicker()` mit `startIn: 'documents'` — erfordert erneutes Testen
-- [ ] Native App-Shell (Electron/Tauri) — kein Browser, direktes Dateisystem
-- [ ] Safari-Test: Verhält sich Safari auf Mac anders als Chrome bei iCloud Drive?
-- [ ] Nutzer-Workflow: Chrome-Download-Ordner auf iCloud Drive zeigen lassen
-
-**Idee A: showOpenFilePicker() + createWritable() + Backup als Download**
-
-Der Nutzer öffnet die Datei über `showOpenFilePicker()` → Browser erteilt Schreibrecht auf genau *diese* Datei (Nutzer hat sie explizit ausgewählt). `createWritable()` sollte funktionieren — im Gegensatz zu `showSaveFilePicker()` / `showDirectoryPicker()`, bei denen der Browser *neue* Handles anlegt und iCloud Drive die Schreibrechte verweigert. Backup landet im Download-Ordner (kein Ordner-Zugriff nötig).
-
-```
-Laden:  showOpenFilePicker() → fileHandle → IDB
-Backup: fileHandle.getFile() → <a download> MeineDaten_backup_YYYY-MM-DD.ged (Downloads)
-Speichern: fileHandle.createWritable() → write → close  |  Fallback: <a download>
-```
-
-**Idee B: showDirectoryPicker() + backup/-Unterordner (bevorzugt)**
-
-Der Nutzer wählt einmalig das *Verzeichnis* (statt der Datei). Die App liest die GEDCOM-Datei selbst aus dem Verzeichnis, legt beim Speichern einen `backup/`-Unterordner an und schreibt das Backup dorthin. Ein Dialog, voller Zugriff, Backup bleibt neben der Originaldatei.
-
-```
-Laden (einmalig):
-  showDirectoryPicker() → dirHandle → IDB
-  dirHandle.getFileHandle('MeineDaten.ged') → getFile() → text lesen → parseGEDCOM()
-
-Speichern:
-  1. dirHandle.getDirectoryHandle('backup', {create:true}) → backupDir
-  2. backupDir.getFileHandle('MeineDaten_YYYY-MM-DD_NNN.ged', {create:true}) → backupHandle
-  3. backupHandle.createWritable() → write(originalText) → close()
-  4. dirHandle.getFileHandle('MeineDaten.ged') → createWritable() → write(newContent) → close()
-
-Reload / nächste Session:
-  dirHandle aus IDB → requestPermission({mode:'readwrite'}) → weiter
-```
-
-**Warum ist das besser als der bisherige showDirectoryPicker()-Versuch?**
-Bisher wurde `showDirectoryPicker()` zum Speichern aufgerufen, nachdem die Datei bereits per `<input>` geladen war. Der neue Ansatz: der dirHandle wird *beim Laden* geholt — zu dem Zeitpunkt, zu dem der Nutzer aktiv mit der Datei interagiert. Die Hypothese: die Schreibrechte sind zu diesem Zeitpunkt stabiler und bleiben für die Session erhalten.
-
-**Offene Frage:** Funktioniert `createWritable()` auf einem `FileSystemFileHandle` aus `showDirectoryPicker()` auf iCloud Drive? Das war bisher der Fehler-Punkt. Muss getestet werden.
-
-- [ ] Implementieren: Idee B als primären Pfad, Idee A als Fallback, `<a download>` als letzter Fallback
-- [ ] `uploadBox` click → `showDirectoryPicker()` (Desktop) / `<input>` (iOS/Fallback)
-- [ ] Dateiname aus dem Verzeichnis wählen lassen falls mehrere `.ged` vorhanden
-- [ ] `exportGEDCOM()`: backup/ → Original überschreiben → Fallback <a download>
-- [ ] `tryAutoLoad()`: dirHandle aus IDB + `requestPermission()` beim Start
-
----
-
-## Phase 9: Technische Verbesserungen (offen)
+### Technische Verbesserungen (ex Phase 9)
 
 - [ ] Undo/Redo (letzte 10 Änderungen)
 - [ ] Offline-Modus / Service Worker (App funktioniert ohne Internet)
@@ -280,6 +258,12 @@ Bisher wurde `showDirectoryPicker()` zum Speichern aufgerufen, nachdem die Datei
 - [ ] Import: Konfliktauflösung beim Importieren (wenn neuere GEDCOM-Version vorliegt)
 - [ ] Merge zweier GEDCOM-Dateien
 - [ ] QUAY (Qualitätsbewertung) für Quellenreferenzen
+
+### OneDrive-Integration
+
+- [ ] Microsoft Graph API (PKCE OAuth, kein Server nötig)
+- [ ] Gleiche `_fileHandle`-Architektur wie für lokale iCloud-Dateien
+- [ ] Voraussetzung: lokal synchronisierte OneDrive-Dateien funktionieren bereits mit bestehendem `showOpenFilePicker()`-Ansatz
 
 ---
 
@@ -308,14 +292,14 @@ Bisher wurde `showDirectoryPicker()` zum Speichern aufgerufen, nachdem die Datei
 
 ## Getestete Umgebungen
 
-| Plattform | Browser | Status |
-|---|---|---|
-| iPhone (iOS 17+) | Safari | ✅ Vollständig |
-| iPhone (iOS 17+) | Chrome | ⚠️ Share Sheet nicht unterstützt |
-| Mac | Safari | ✅ |
-| Mac | Chrome | ✅ |
-| Mac | Firefox | ✅ |
-| Android | Chrome | ⚠️ Apple Maps Links funktionieren nicht |
+| Plattform | Browser | Laden | Speichern |
+|---|---|---|---|
+| iPhone (iOS 17+) | Safari | ✅ | ✅ Share Sheet |
+| iPhone (iOS 17+) | Chrome | ✅ | ⚠️ Share Sheet nicht unterstützt |
+| Mac | Safari | ✅ | ⚠️ Download (kein direktes Speichern) |
+| Mac | Chrome | ✅ | ✅ Direktes Speichern |
+| Mac | Firefox | ✅ | ⚠️ Download |
+| Android | Chrome | ✅ | ⚠️ Apple Maps Links funktionieren nicht |
 
 ---
 
@@ -325,6 +309,7 @@ Bisher wurde `showDirectoryPicker()` zum Speichern aufgerufen, nachdem die Datei
 Personen:     2796
 Familien:      873
 Quellen:       114
+Archive:        11
 Orte:         3473 (eindeutige Ortsnamen)
 Mit Geo:      1989 Personen haben Geburtsgeo-Koordinaten
 Medien-Refs:   146
