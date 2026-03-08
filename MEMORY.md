@@ -138,6 +138,7 @@ const _placeModes = {};  // { placeId: 'free'|'parts' }
 | 7 E1 | Roundtrip-Test erweitert (Sprint 5/6-Tags), stabil | ✅ |
 | 7 E2 | Ancestris-Import-Test | manuell offen |
 | 8 | UI/UX-Fixes (B1–B14, Sprint A/B/C) | ✅ |
+| 9 | URL-Parameter `?datei=`: Dateiname in Topbar (`updateTopbarTitle`, `#topbarFileName`) | ✅ |
 
 ## Neue Hilfsfunktionen (index.html v2.0)
 ```javascript
@@ -167,6 +168,10 @@ function togglePlaceMode(placeId)                           // wechseln free↔p
 
 // Familien-Formular Kinder-Display (UI/UX-Sprint):
 function _refreshChildDisplay()                             // ff-children-display mit Klarnamen befüllen
+
+// URL-Parameter + Topbar (Sprint 9):
+function updateTopbarTitle(filename)                        // #topbarFileName span: ' · Dateiname' setzen
+// window.load: URLSearchParams('datei') → updateTopbarTitle; _processLoadedText + tryAutoLoad überschreiben
 ```
 
 ## Code-Review + Architektur-Fixes (2026-03-08)

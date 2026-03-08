@@ -52,6 +52,7 @@ stammbaum/
 | Backup automatisch | Bei Download-Fallback: Zeitstempel-Backup des Originals zusätzlich heruntergeladen |
 | iOS Speichern | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
 | Demo-Modus | Beispiel-Daten ohne eigene Datei |
+| URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged`; nützlich für Lesezeichen und PWA-Shortcuts |
 
 **Chrome Mac — direktes Speichern:**
 1. Upload-Box klicken → Dateidialog öffnet sich

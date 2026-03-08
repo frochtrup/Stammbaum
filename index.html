@@ -709,7 +709,7 @@ body {
 <div id="v-main" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <span class="topbar-title">⚘ Stammbaum <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
+      <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
       <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
@@ -2240,6 +2240,10 @@ function updateSaveIndicator() {
     else btn.classList.remove('direct-save');
   });
 }
+function updateTopbarTitle(filename) {
+  const el = document.getElementById('topbarFileName');
+  if (el) el.textContent = filename ? ' · ' + filename : '';
+}
 
 // Prüft ob createWritable() für diesen Handle tatsächlich funktioniert.
 // Ruft createWritable() auf und bricht sofort ab (kein Schreiben).
@@ -2471,6 +2475,7 @@ function _processLoadedText(text, filename) {
   if (backupOk) _originalGedText = null; // RAM freigeben, _getOriginalText() liest aus localStorage
   if (!gedOk) showToast('⚠ Browser-Cache voll – kein Auto-Reload nach Neustart');
   updateBackupBtn();
+  updateTopbarTitle(filename);
   showStartView();
 }
 
@@ -2512,13 +2517,19 @@ function tryAutoLoad() {
       _originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
       updateBackupBtn();
+      updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
       return true;
     }
   } catch(e) { /* no storage or parse error */ }
   return false;
 }
-window.addEventListener('load', () => { tryAutoLoad(); restoreFileHandle(); updateSaveIndicator(); });
+window.addEventListener('load', () => {
+  const urlFile = new URLSearchParams(location.search).get('datei');
+  if (urlFile) updateTopbarTitle(urlFile);
+  tryAutoLoad(); // überschreibt ggf. mit echtem Dateinamen aus localStorage
+  restoreFileHandle(); updateSaveIndicator();
+});
 
 function updateBackupBtn() {
   const btn = document.getElementById('backupMenuBtn');

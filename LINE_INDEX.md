@@ -110,6 +110,16 @@ Stand: nach UI/UX-Fixes Sprint (2026-03-08). Bei grösseren Edits bitte aktualis
 | `function showEventForm(personId, evIdx)` | 4468 |
 | `function saveEvent()` | 4509 |
 
+## UI — Topbar / Startup
+| Symbol | Zeile |
+|---|---|
+| `<span id="topbarFileName">` (Listen-Topbar, v-main) | 712 |
+| `function updateSaveIndicator()` | 2234 |
+| `function updateTopbarTitle(filename)` | 2243 |
+| `function _processLoadedText(text, filename)` | ~2460 |
+| `function tryAutoLoad()` | ~2510 |
+| `window.addEventListener('load', …)` — URL-Param `?datei=` | ~2527 |
+
 ## UI — Source-Widget (`srcWidgetState`)
 | Funktion | Zeile |
 |---|---|
@@ -177,3 +187,4 @@ Stand: nach UI/UX-Fixes Sprint (2026-03-08). Bei grösseren Edits bitte aktualis
 | Sprint 7 | E1 Roundtrip-Test erweitert (Sprint 5/6-Tags), ✓ STABIL | ✅ |
 | Sprint 7 E2 | Ancestris-Import-Test | ⬜ manuell |
 | Sprint 8 | UI/UX-Fixes (B1–B15): Ghost-Karten, IDs ausblenden, ORT-Toggle-Label, Kinder-Display, Typ-Label, AUFBEWAHRUNGSORT, Cloud-Icon | ✅ |
+| Sprint 9 | URL-Parameter `?datei=`: Dateiname in Topbar anzeigen (`updateTopbarTitle`, `#topbarFileName`) | ✅ |
