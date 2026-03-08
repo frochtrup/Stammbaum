@@ -1,3 +1,7 @@
+<!-- Stammbaum PWA — Version 2.0 — März 2026
+     Phase 2 abgeschlossen (Sprints 1–8: GEDCOM-Roundtrip, UI/UX-Fixes)
+     Archiv v1.2: index_v1.2.html
+-->
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -65,6 +69,7 @@ body {
   font-family: 'Playfair Display', serif;
   font-size: 1.05rem; color: var(--gold);
   letter-spacing: 0.06em; flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .topbar-btn {
   background: none; border: none;
@@ -78,6 +83,12 @@ body {
 .topbar-btn:active { background: var(--surface2); }
 .topbar-btn.back { color: var(--text-dim); }
 .topbar-btn.primary { color: var(--gold-lt); font-weight: 600; }
+.topbar-btn[data-save-btn].direct-save { color: var(--gold-lt); }
+#ef-type:disabled {
+  -webkit-appearance: none; appearance: none;
+  background: transparent; border: 1px solid transparent;
+  color: var(--text); cursor: default; opacity: 1;
+}
 
 /* ═══════════════════════════════════════
    VIEWS
@@ -117,7 +128,7 @@ body {
   background: var(--surface3);
 }
 .tree-card-empty {
-  opacity: 0.18; cursor: default;
+  opacity: 0.40; cursor: default;
   border-style: dashed;
   align-items: center; justify-content: center;
 }
@@ -287,7 +298,7 @@ body {
 /* ═══════════════════════════════════════
    PERSON LIST
 ═══════════════════════════════════════ */
-#personList { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+#personList, #familyList, #sourceList, #placeList, #repoList { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 
 .alpha-sep {
   padding: 4px 14px;
@@ -357,7 +368,7 @@ body {
   margin-bottom: 12px;
 }
 .section-title {
-  font-size: 0.68rem; text-transform: uppercase;
+  font-size: 0.75rem; text-transform: uppercase;
   letter-spacing: 0.16em; color: var(--gold-dim);
   font-family: 'Source Serif 4', serif; font-weight: 400;
 }
@@ -699,7 +710,7 @@ body {
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
-      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁️</button>
+      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
@@ -761,7 +772,7 @@ body {
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title" id="treeTopTitle"></span>
-      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁️</button>
+      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
@@ -852,6 +863,18 @@ body {
         <label class="form-label">Notiz</label>
         <input class="form-input" id="pf-note" placeholder="Weitere Informationen…">
       </div>
+      <div class="form-group">
+        <label class="form-label">Beschränkung (RESN)</label>
+        <input class="form-input" id="pf-resn" placeholder="confidential / locked / privacy">
+      </div>
+      <div class="form-group">
+        <label class="form-label">E-Mail</label>
+        <input class="form-input" id="pf-email" type="email" placeholder="name@beispiel.de">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Website (WWW)</label>
+        <input class="form-input" id="pf-www" type="url" placeholder="https://…">
+      </div>
       <div class="src-widget" id="pf-src-widget">
         <label class="form-label">Quellen</label>
         <div class="src-tags" id="pf-src-tags"></div>
@@ -889,19 +912,66 @@ body {
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Heiratsdatum</label>
-          <input class="form-input" id="ff-mdate" placeholder="10 JUN 1920">
+          <select class="form-select" id="ff-mdate-qual"
+              style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+            <option value="">exakt</option>
+            <option value="ABT">ca. (ABT)</option>
+            <option value="CAL">berechnet (CAL)</option>
+            <option value="EST">geschätzt (EST)</option>
+            <option value="BEF">vor (BEF)</option>
+            <option value="AFT">nach (AFT)</option>
+          </select>
+          <div style="display:flex;gap:4px">
+            <input class="form-input" id="ff-mdate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+            <input class="form-input" id="ff-mdate-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+            <input class="form-input" id="ff-mdate-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Heiratsort</label>
-          <div class="place-input-wrap">
-            <input class="form-input" id="ff-mplace" placeholder="München" autocomplete="off">
-            <div class="place-dropdown" id="ff-mplace-dd"></div>
+          <label class="form-label">Heiratsort <button type="button" id="ff-mplace-toggle" onclick="togglePlaceMode('ff-mplace')" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
+          <div id="ff-mplace-free">
+            <div class="place-input-wrap">
+              <input class="form-input" id="ff-mplace" placeholder="München" autocomplete="off">
+              <div class="place-dropdown" id="ff-mplace-dd"></div>
+            </div>
           </div>
+          <div id="ff-mplace-parts" style="display:none"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Verlobungsdatum</label>
+          <select class="form-select" id="ff-edate-qual"
+              style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+            <option value="">exakt</option>
+            <option value="ABT">ca. (ABT)</option>
+            <option value="CAL">berechnet (CAL)</option>
+            <option value="EST">geschätzt (EST)</option>
+            <option value="BEF">vor (BEF)</option>
+            <option value="AFT">nach (AFT)</option>
+          </select>
+          <div style="display:flex;gap:4px">
+            <input class="form-input" id="ff-edate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+            <input class="form-input" id="ff-edate-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+            <input class="form-input" id="ff-edate-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Verlobungsort <button type="button" id="ff-eplace-toggle" onclick="togglePlaceMode('ff-eplace')" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
+          <div id="ff-eplace-free">
+            <input class="form-input" id="ff-eplace" placeholder="München" autocomplete="off">
+          </div>
+          <div id="ff-eplace-parts" style="display:none"></div>
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Kinder (IDs, kommagetrennt)</label>
-        <input class="form-input" id="ff-children" placeholder="@I003@, @I004@">
+        <label class="form-label">Kinder</label>
+        <div id="ff-children-display"
+             style="min-height:38px;padding:6px 0;font-size:0.9rem;
+                    color:var(--text-muted);font-style:italic">
+          Keine Kinder
+        </div>
+        <input type="hidden" id="ff-children">
       </div>
       <div class="src-widget" id="ff-src-widget">
         <label class="form-label">Quellen (Heirat)</label>
@@ -953,7 +1023,9 @@ body {
         <label class="form-label">Aufbewahrungsort (Archiv)</label>
         <div style="display:flex;gap:8px;align-items:center">
           <div id="sf-repo-display"
-               style="flex:1;min-width:0;font-size:0.9rem;padding:8px 0;
+               style="flex:1;min-width:0;font-size:0.9rem;padding:8px 12px;
+                      border:1px solid var(--border);border-radius:var(--radius-sm);
+                      background:var(--surface2);
                       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
                       color:var(--text-muted)">–</div>
           <button class="btn" id="sf-repo-clear"
@@ -1006,12 +1078,20 @@ body {
           <option value="EMIG">Auswanderung</option>
           <option value="IMMI">Einwanderung</option>
           <option value="NATU">Einbürgerung</option>
+          <option value="GRAD">Abschluss</option>
+          <option value="ADOP">Adoption</option>
+          <option value="MILI">Militärdienst</option>
+          <option value="FACT">Tatsache (FACT)</option>
           <option value="EVEN">Sonstiges</option>
         </select>
       </div>
       <div class="form-group" id="ef-val-group">
         <label class="form-label">Wert / Beschreibung</label>
         <input class="form-input" id="ef-val" placeholder="z.B. Schreiner">
+      </div>
+      <div class="form-group" id="ef-etype-group" style="display:none">
+        <label class="form-label">TYPE (Klassifikation)</label>
+        <input class="form-input" id="ef-etype" placeholder="z.B. Staatsangehörigkeit">
       </div>
       <div class="form-group" id="ef-cause-group" style="display:none">
         <label class="form-label">Todesursache</label>
@@ -1024,14 +1104,40 @@ body {
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Datum</label>
-          <input class="form-input" id="ef-date" placeholder="1910">
+          <select class="form-select" id="ef-date-qual"
+              onchange="onDateQualChange(this,'ef-date2')"
+              style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+            <option value="">exakt</option>
+            <option value="ABT">ca. (ABT)</option>
+            <option value="CAL">berechnet (CAL)</option>
+            <option value="EST">geschätzt (EST)</option>
+            <option value="BEF">vor (BEF)</option>
+            <option value="AFT">nach (AFT)</option>
+            <option value="BET">zwischen (BET…AND)</option>
+          </select>
+          <div style="display:flex;gap:4px">
+            <input class="form-input" id="ef-date-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+            <input class="form-input" id="ef-date-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+            <input class="form-input" id="ef-date-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          </div>
+          <div id="ef-date2-group" style="display:none;margin-top:6px">
+            <div style="font-size:0.73rem;color:var(--text-dim,#9a8060);margin-bottom:3px">bis</div>
+            <div style="display:flex;gap:4px">
+              <input class="form-input" id="ef-date2-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+              <input class="form-input" id="ef-date2-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+              <input class="form-input" id="ef-date2-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+            </div>
+          </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Ort</label>
-          <div class="place-input-wrap">
-            <input class="form-input" id="ef-place" placeholder="München" autocomplete="off">
-            <div class="place-dropdown" id="ef-place-dd"></div>
+          <label class="form-label">Ort <button type="button" id="ef-place-toggle" onclick="togglePlaceMode('ef-place')" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
+          <div id="ef-place-free">
+            <div class="place-input-wrap">
+              <input class="form-input" id="ef-place" placeholder="München" autocomplete="off">
+              <div class="place-dropdown" id="ef-place-dd"></div>
+            </div>
           </div>
+          <div id="ef-place-parts" style="display:none"></div>
         </div>
       </div>
       <div class="src-widget" id="ef-src-widget">
@@ -1204,7 +1310,13 @@ body {
           🗂 &nbsp; Demo-Daten öffnen
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
-          ✕ &nbsp; Schließen
+          ✕ &nbsp; Datei schließen
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openModal('modalHelp')">
+          ❓ &nbsp; Hilfe &amp; Anleitung
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
+          🔁 &nbsp; Roundtrip-Test
         </button>
         <button class="btn btn-cancel" onclick="closeModal('modalMenu')">Abbrechen</button>
       </div>
@@ -1220,7 +1332,7 @@ body {
     <div class="sheet-title">Hilfe &amp; Anleitung</div>
     <div class="sheet-body">
       <div style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-bottom:14px;letter-spacing:0.04em">
-        Stammbaum PWA · Version 1.2 · März 2026
+        Stammbaum PWA · Version 2.0 · Phase 2
       </div>
       <div style="font-size:0.85rem;color:var(--text-dim);line-height:1.7">
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">GEDCOM-Datei öffnen</strong><br>
@@ -1238,6 +1350,20 @@ body {
       </div>
       <div class="btn-row" style="margin-top:20px">
         <button class="btn btn-cancel" onclick="closeModal('modalHelp')">Schließen</button>
+        <button class="btn btn-save" onclick="closeModal('modalHelp');runRoundtripTest()" style="background:var(--bg-card);color:var(--gold);border:1px solid var(--gold-dim)">Roundtrip-Test</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRoundtrip">
+  <div class="sheet" style="max-height:90vh">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Roundtrip-Test</div>
+    <div class="sheet-body">
+      <pre id="roundtrip-output" style="font-size:0.72rem;line-height:1.5;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;overflow-y:auto;max-height:60vh;background:var(--bg-card);padding:10px;border-radius:8px;margin-bottom:14px">Kein Ergebnis</pre>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalRoundtrip')">Schließen</button>
       </div>
     </div>
   </div>
@@ -1252,10 +1378,10 @@ body {
 // ─────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────
-let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {} };
+let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '' };
 let changed = false;
 let _placesCache = null;  // Cache für collectPlaces(); wird in markChanged() geleert
-let _originalGedText = null;   // In-memory backup des zuletzt geladenen Originals
+let _originalGedText = null;   // Fallback wenn localStorage-Backup fehlschlägt; sonst null
 let _fileHandle = null;        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
 let _canDirectSave = false;    // true wenn createWritable() auf _fileHandle funktioniert
 let currentPersonId = null;
@@ -1267,7 +1393,6 @@ let idCounter = 1000;
 // ─── Navigations-History ────────────────
 // Ermöglicht "Zurück" durch verschachtelte Detail-Ansichten
 const _navHistory = [];       // Stack von {type, id|name}
-let _skipHistoryPush = false; // gesetzt während goBack() navigiert
 
 // ─── Beziehungs-Picker ──────────────────
 let _relMode     = '';    // 'spouse' | 'child' | 'parent'
@@ -1276,6 +1401,13 @@ let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonFor
 let currentRepoId    = null;
 let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
 
+// Liefert den Original-GEDCOM-Text (erste geladene Version).
+// Bevorzugt localStorage-Backup (persistiert über Reload); _originalGedText als RAM-Fallback
+// wenn localStorage beim Laden voll war.
+function _getOriginalText() {
+  return localStorage.getItem('stammbaum_ged_backup') || _originalGedText || null;
+}
+
 function nextId(prefix) {
   idCounter++;
   return `@${prefix}${idCounter}@`;
@@ -1283,10 +1415,21 @@ function nextId(prefix) {
 
 // Globale Label-Map für GEDCOM-Ereignis-Typen (DRY: wird in showDetail + showPlaceDetail genutzt)
 const EVENT_LABELS = {
+  // Spezial-Schlüssel (intern)
   Geburt:'Geburt', Tod:'Tod', Taufe:'Taufe', Beerdigung:'Beerdigung', Heirat:'Heirat',
-  OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion',
-  EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung',
-  EVEN:'Ereignis', GRAD:'Abschluss', ADOP:'Adoption', TITL:'Titel'
+  // GEDCOM INDI-Ereignisse
+  OCCU:'Beruf',          RESI:'Wohnort',        EDUC:'Bildung',
+  RELI:'Religion',       EMIG:'Auswanderung',   IMMI:'Einwanderung',
+  NATU:'Einbürgerung',   GRAD:'Abschluss',      ADOP:'Adoption',
+  MILI:'Militärdienst',  FACT:'Tatsache',       EVEN:'Ereignis',
+  TITL:'Titel',          CENS:'Volkszählung',   CONF:'Konfirmation',
+  FCOM:'Erstkommunion',  ORDN:'Ordination',     RETI:'Pensionierung',
+  PROP:'Eigentum',       WILL:'Testament',      PROB:'Testamentseröffnung',
+  DSCR:'Beschreibung',   IDNO:'ID-Nummer',      SSN:'Sozialversicherungs-Nr.',
+  // GEDCOM FAM-Ereignisse (können in events-Array landen)
+  ENGA:'Verlobung',      DIV:'Scheidung',       DIVF:'Scheidungsantrag',
+  MARR:'Heirat',         BIRT:'Geburt',         DEAT:'Tod',
+  CHR:'Taufe',           BURI:'Beerdigung',
 };
 
 // ─────────────────────────────────────
@@ -1295,6 +1438,10 @@ const EVENT_LABELS = {
 function parseGEDCOM(text) {
   text = text.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/);
+
+  // Pre-scan: extract PLAC.FORM from HEAD (unique: "1 PLAC\n2 FORM ...")
+  let placForm = 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat';
+  { const mPF = text.match(/^1 PLAC\s*[\r\n]+\s*2 FORM (.+)$/m); if (mPF) placForm = mPF[1].trim(); }
 
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
   let cur = null, curType = null;
@@ -1306,6 +1453,7 @@ function parseGEDCOM(text) {
   let inMap  = false; // are we inside a MAP block?
   let mapParent = ''; // which lv1 tag owns current MAP (BIRT/DEAT/etc.)
   let lastSourVal = ''; // last seen 2 SOUR @id@ value (for 3 PAGE lookup)
+  let _curNoteIsInline = false; // true when 1 NOTE was inline (not a @ref@)
 
   for (let raw of lines) {
     const line = raw.trim();
@@ -1324,27 +1472,28 @@ function parseGEDCOM(text) {
         cur = {
           id: tag, name:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
-          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, cause:'' },
-          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
-          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{} },
+          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, cause:'' },
+          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{} },
+          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{} },
           events:[], famc:[], fams:[],
-          noteRefs:[], noteText:'',
-          media:[], titl:'', reli:'', lastChanged:'',
+          noteRefs:[], noteText:'', noteTextInline:'',
+          media:[], titl:'', reli:'', resn:'', email:'', www:'', lastChanged:'', lastChangedTime:'',
           nameSources:[], sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null}, engag:{}, noteText:'', sourceRefs: new Set() };
+        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[] };
+        cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
-      } else if (tag.startsWith('@') && val.trim() === 'NOTE') {
-        cur = { id:tag, text:'' };
+      } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
+        const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
+        cur = { id:tag, text: _noteinit };
         notes[tag] = cur; curType = 'NOTE';
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
-        cur = { id:tag, name:'', addr:'', phon:'', www:'', email:'', lastChanged:'' };
+        cur = { id:tag, name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'' };
         repositories[tag] = cur; curType = 'REPO';
       } else { curType = null; cur = null; }
       continue;
@@ -1352,7 +1501,7 @@ function parseGEDCOM(text) {
     if (!cur) continue;
 
     // Track context tags
-    if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; }
+    if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; _curNoteIsInline = false; }
     if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag === 'SOUR') lastSourVal = val; }
     if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } }
 
@@ -1372,12 +1521,18 @@ function parseGEDCOM(text) {
         else if (tag === 'RELI') cur.reli = val;
         else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'' });
         else if (tag === 'FAMS') cur.fams.push(val);
-        else if (tag === 'NOTE') { if (!val.startsWith('@')) cur.noteText += val; else cur.noteRefs.push(val); }
+        else if (tag === 'NOTE') {
+          if (!val.startsWith('@')) { cur.noteText += val; cur.noteTextInline += val; _curNoteIsInline = true; }
+          else { cur.noteRefs.push(val); _curNoteIsInline = false; }
+        }
         else if (tag === '_UID') cur.uid = val;
         else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); }
         else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
-        else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{} });
+        else if (tag === 'RESN')  cur.resn  = val;
+        else if (tag === 'EMAIL') cur.email = val;
+        else if (tag === 'WWW')   cur.www   = val;
+        else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI'].includes(tag)) {
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{} });
           evIdx = cur.events.length - 1;
         }
       }
@@ -1460,8 +1615,21 @@ function parseGEDCOM(text) {
             cur.events[evIdx].sourcePages[lastSourVal] = val;
           }
         }
+        // 3 QUAY under 2 SOUR — Qualitätsbewertung der Quellenreferenz (0–3)
+        if (lv2tag === 'SOUR' && tag === 'QUAY' && lastSourVal.startsWith('@')) {
+          if      (lv1tag === 'BIRT') { if (!cur.birth.sourceQUAY) cur.birth.sourceQUAY={}; cur.birth.sourceQUAY[lastSourVal] = val; }
+          else if (lv1tag === 'DEAT') { if (!cur.death.sourceQUAY) cur.death.sourceQUAY={}; cur.death.sourceQUAY[lastSourVal] = val; }
+          else if (lv1tag === 'CHR')  { if (!cur.chr.sourceQUAY)   cur.chr.sourceQUAY={};   cur.chr.sourceQUAY[lastSourVal]   = val; }
+          else if (lv1tag === 'BURI') { if (!cur.buri.sourceQUAY)  cur.buri.sourceQUAY={};  cur.buri.sourceQUAY[lastSourVal]  = val; }
+          else if (evIdx >= 0 && cur.events[evIdx]) {
+            if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
+            cur.events[evIdx].sourceQUAY[lastSourVal] = val;
+          }
+        }
         // Collect source references at level 3
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        // CHAN.DATE.TIME (level 3)
+        if (lv1tag === 'CHAN' && tag === 'TIME') cur.lastChangedTime = val;
       }
 
       else if (lv === 4) {
@@ -1482,8 +1650,11 @@ function parseGEDCOM(text) {
       }
 
       // CONC/CONT for inline notes at any level
-      if (lv1tag === 'NOTE' && lv > 1 && (tag==='CONC'||tag==='CONT'))
-        cur.noteText += (tag==='CONT'?'\n':'') + val;
+      if (lv1tag === 'NOTE' && lv > 1 && (tag==='CONC'||tag==='CONT')) {
+        const _nadd = (tag==='CONT'?'\n':'') + val;
+        cur.noteText += _nadd;
+        if (_curNoteIsInline) cur.noteTextInline += _nadd;
+      }
     }
 
     // ── FAMILY ──
@@ -1492,7 +1663,10 @@ function parseGEDCOM(text) {
         if (tag==='HUSB') cur.husb = val;
         else if (tag==='WIFE') cur.wife = val;
         else if (tag==='CHIL') cur.children.push(val);
-        else if (tag==='NOTE') { if (!val.startsWith('@')) cur.noteText = val; }
+        else if (tag==='NOTE') {
+          if (!val.startsWith('@')) cur.noteText = val;
+          else cur.noteRefs.push(val);
+        }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
       else if (lv === 2) {
@@ -1507,9 +1681,12 @@ function parseGEDCOM(text) {
         }
         if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT')) cur.noteText += (tag==='CONT'?'\n':'') + val;
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
+        if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
       }
       else if (lv === 3) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        if (lv2tag==='DATE' && lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
       }
       else if (lv === 4 && inMap && mapParent === 'MARR') {
         const coord = parseGeoCoord(val);
@@ -1539,6 +1716,9 @@ function parseGEDCOM(text) {
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='REPO' && tag==='CALN') cur.repoCallNum = val;
       }
+      else if (lv === 3) {
+        if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+      }
     }
 
     // ── NOTE record ──
@@ -1558,6 +1738,8 @@ function parseGEDCOM(text) {
       } else if (lv === 2) {
         if (lv1tag==='ADDR' && tag==='CONT') cur.addr += '\n' + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
+      } else if (lv === 3) {
+        if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
       }
     }
   }
@@ -1569,7 +1751,7 @@ function parseGEDCOM(text) {
     }
   }
 
-  return { individuals, families, sources, notes, repositories };
+  return { individuals, families, sources, notes, repositories, placForm };
 }
 
 
@@ -1584,21 +1766,266 @@ function parseGeoCoord(val) {
 }
 
 // ─────────────────────────────────────
+//  GEDCOM DATUM / CONT HELFER
+// ─────────────────────────────────────
+const _GED_MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+function gedcomDate(d) {
+  return `${d.getDate()} ${_GED_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+function gedcomTime(d) {
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+// Normiert Monatsabkürzungen auf Großschreibung: "Aug 1977" → "AUG 1977"
+function normGedDate(s) {
+  if (!s) return s;
+  return s.replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/gi, m => m.toUpperCase());
+}
+
+// ─────────────────────────────────────
+//  DATUM-HILFSFUNKTIONEN (Sprint 6a)
+// ─────────────────────────────────────
+const _MONTH_NUM = { JAN:1,FEB:2,MAR:3,APR:4,MAY:5,JUN:6,JUL:7,AUG:8,SEP:9,OCT:10,NOV:11,DEC:12 };
+
+// Gemeinsamer Parser: GEDCOM-Datumsteil → {d, m, y} (alle Strings)
+function _parseDatePart(s) {
+  const u = (s || '').trim().toUpperCase();
+  const dMY = u.match(/^(\d{1,2})\s+([A-Z]{3})\s+(\d{4})$/);
+  if (dMY) return { d: dMY[1], m: dMY[2], y: dMY[3] };
+  const mY = u.match(/^([A-Z]{3})\s+(\d{4})$/);
+  if (mY)  return { d: '', m: mY[1], y: mY[2] };
+  const yO = u.match(/^(\d{1,4})$/);
+  if (yO)  return { d: '', m: '', y: yO[1] };
+  return { d: '', m: '', y: u };
+}
+
+// Einzelnes GEDCOM-Segment → ISO-String: '10 JUN 1870' → '1870-06-10'
+function gedDatePartToISO(s) {
+  if (!s) return '';
+  const { d, m, y } = _parseDatePart(s);
+  if (!y) return '';
+  if (m) {
+    const mn = _MONTH_NUM[m];
+    if (!mn) return y;
+    return d ? `${y}-${String(mn).padStart(2,'0')}-${String(+d).padStart(2,'0')}` : `${y}-${String(mn).padStart(2,'0')}`;
+  }
+  return y;
+}
+
+// GEDCOM-Datumsstring → { qual, date1, date2 }
+function parseGedDate(raw) {
+  if (!raw) return { qual:'', date1:'', date2:'' };
+  const s = raw.trim().toUpperCase();
+  const bet = s.match(/^BET\s+(.+?)\s+AND\s+(.+)$/);
+  if (bet) return { qual:'BET', date1:bet[1].trim(), date2:bet[2].trim() };
+  for (const q of ['ABT','CAL','EST','BEF','AFT']) {
+    if (s.startsWith(q + ' ')) return { qual:q, date1:normGedDate(raw.slice(q.length+1).trim()), date2:'' };
+  }
+  return { qual:'', date1:normGedDate(raw.trim()), date2:'' };
+}
+
+// Teile → GEDCOM-Datumsstring
+function buildGedDate(qual, date1, date2) {
+  const d1 = normGedDate((date1||'').trim());
+  if (!d1) return '';
+  if (qual === 'BET') { const d2 = normGedDate((date2||'').trim()); return d2 ? `BET ${d1} AND ${d2}` : d1; }
+  return qual ? `${qual} ${d1}` : d1;
+}
+
+// GEDCOM-Datum → ISO-Normform für Sortierung/Anzeige
+function normDateToISO(raw) {
+  if (!raw) return '';
+  const { qual, date1, date2 } = parseGedDate(raw);
+  const iso1 = gedDatePartToISO(date1);
+  if (!iso1) return raw;
+  const pre = { ABT:'~', CAL:'~', EST:'~', BEF:'<', AFT:'>' }[qual] ?? '';
+  return pre + iso1 + (date2 ? '/' + (gedDatePartToISO(date2)||date2) : '');
+}
+
+// Formular-Felder befüllen
+function fillDateFields(qualId, dateBaseId, date2BaseId, raw) {
+  const { qual, date1, date2 } = parseGedDate(raw);
+  document.getElementById(qualId).value = qual;
+  writeDatePartToFields(dateBaseId, date1);
+  if (date2BaseId) {
+    writeDatePartToFields(date2BaseId, date2);
+    const grp = document.getElementById(date2BaseId + '-group');
+    if (grp) grp.style.display = qual === 'BET' ? '' : 'none';
+  }
+}
+
+// Qualifier-Dropdown: zweites Datumfeld ein-/ausblenden
+function onDateQualChange(selectEl, date2Id) {
+  if (!date2Id) return;
+  const grp = document.getElementById(date2Id + '-group');
+  if (grp) grp.style.display = selectEl.value === 'BET' ? '' : 'none';
+}
+
+// ── 3-Felder-Datum-Hilfsfunktionen ──────────────────────────────────────────
+// Normalisiert Monatseingabe (Zahl, Deutsch, Englisch) → GEDCOM-Abkürzung
+function normMonth(s) {
+  if (!s) return '';
+  const k = s.trim().toLowerCase();
+  const map = {
+    '1':'JAN','01':'JAN','2':'FEB','02':'FEB','3':'MAR','03':'MAR',
+    '4':'APR','04':'APR','5':'MAY','05':'MAY','6':'JUN','06':'JUN',
+    '7':'JUL','07':'JUL','8':'AUG','08':'AUG','9':'SEP','09':'SEP',
+    '10':'OCT','11':'NOV','12':'DEC',
+    'jan':'JAN','januar':'JAN','january':'JAN',
+    'feb':'FEB','februar':'FEB','february':'FEB',
+    'mar':'MAR','mär':'MAR','märz':'MAR','march':'MAR',
+    'apr':'APR','april':'APR',
+    'mai':'MAY','may':'MAY',
+    'jun':'JUN','juni':'JUN','june':'JUN',
+    'jul':'JUL','juli':'JUL','july':'JUL',
+    'aug':'AUG','august':'AUG',
+    'sep':'SEP','september':'SEP',
+    'okt':'OCT','oktober':'OCT','oct':'OCT','october':'OCT',
+    'nov':'NOV','november':'NOV',
+    'dez':'DEC','dezember':'DEC','dec':'DEC','december':'DEC',
+  };
+  const abb = s.trim().toUpperCase().slice(0, 3);
+  return map[k] || (_GED_MONTHS.includes(abb) ? abb : '');
+}
+
+// Schreibt geparsten Datumsteil in drei Felder (baseId + '-d'/'-m'/'-y')
+function writeDatePartToFields(baseId, dateStr) {
+  const { d, m, y } = _parseDatePart(dateStr);
+  const dEl = document.getElementById(baseId + '-d');
+  const mEl = document.getElementById(baseId + '-m');
+  const yEl = document.getElementById(baseId + '-y');
+  if (dEl) dEl.value = d;
+  if (mEl) mEl.value = m;
+  if (yEl) yEl.value = y;
+}
+
+// Liest drei Felder und baut GEDCOM-Datumsteil (ohne Qualifier)
+function readDatePartFromFields(baseId) {
+  const d = (document.getElementById(baseId + '-d')?.value || '').trim();
+  const mRaw = (document.getElementById(baseId + '-m')?.value || '').trim();
+  const m = mRaw ? normMonth(mRaw) : '';
+  const y = (document.getElementById(baseId + '-y')?.value || '').trim();
+  if (!y) return '';
+  if (m && d) return `${+d} ${m} ${y}`;
+  if (m) return `${m} ${y}`;
+  return y;
+}
+
+// Wrapper: liest Qualifier + zwei Datumsbasen → buildGedDate
+function buildGedDateFromFields(qualId, dateBaseId, date2BaseId) {
+  return buildGedDate(
+    document.getElementById(qualId)?.value || '',
+    readDatePartFromFields(dateBaseId),
+    date2BaseId ? readDatePartFromFields(date2BaseId) : ''
+  );
+}
+
+// ── PLAC-Modus-Hilfsfunktionen (Sprint 6b) ──────────────────────────────────
+const _placeModes = {};  // { placeId: 'free'|'parts' }
+
+function getPlacLabels() {
+  const raw = db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat';
+  return raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
+}
+
+function buildPlacePartsHtml(placeId) {
+  return getPlacLabels().map((lbl, i) =>
+    `<input class="form-input" id="${placeId}-p${i}" placeholder="${lbl}" style="margin-bottom:3px">`
+  ).join('');
+}
+
+function fillPlaceParts(placeId, raw) {
+  const parts = (raw || '').split(/\s*,\s*/);
+  getPlacLabels().forEach((_, i) => {
+    const el = document.getElementById(`${placeId}-p${i}`);
+    if (el) el.value = parts[i] || '';
+  });
+}
+
+function joinPlaceParts(placeId) {
+  const parts = getPlacLabels().map((_, i) => {
+    const el = document.getElementById(`${placeId}-p${i}`);
+    return el ? el.value.trim() : '';
+  });
+  while (parts.length && !parts[parts.length - 1]) parts.pop();
+  return parts.join(', ');
+}
+
+function getPlaceFromForm(placeId) {
+  if ((_placeModes[placeId] || 'free') === 'parts') return joinPlaceParts(placeId);
+  return (document.getElementById(placeId)?.value || '').trim();
+}
+
+function initPlaceMode(placeId) {
+  const freeEl    = document.getElementById(`${placeId}-free`);
+  const partsEl   = document.getElementById(`${placeId}-parts`);
+  const toggleBtn = document.getElementById(`${placeId}-toggle`);
+  if (freeEl)    freeEl.style.display  = '';
+  if (partsEl)   { partsEl.style.display = 'none'; partsEl.innerHTML = ''; }
+  if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
+  _placeModes[placeId] = 'free';
+}
+
+function togglePlaceMode(placeId) {
+  const freeEl    = document.getElementById(`${placeId}-free`);
+  const partsEl   = document.getElementById(`${placeId}-parts`);
+  const toggleBtn = document.getElementById(`${placeId}-toggle`);
+  if ((_placeModes[placeId] || 'free') === 'free') {
+    const rawVal = (document.getElementById(placeId)?.value || '').trim();
+    partsEl.innerHTML = buildPlacePartsHtml(placeId);
+    fillPlaceParts(placeId, rawVal);
+    freeEl.style.display  = 'none';
+    partsEl.style.display = '';
+    if (toggleBtn) toggleBtn.textContent = '⊠ Freitext';
+    _placeModes[placeId] = 'parts';
+  } else {
+    const rawVal = joinPlaceParts(placeId);
+    freeEl.style.display  = '';
+    partsEl.style.display = 'none';
+    if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
+    const inp = document.getElementById(placeId);
+    if (inp) inp.value = rawVal;
+    _placeModes[placeId] = 'free';
+  }
+}
+
+// Schreibt Text als GEDCOM-Zeile mit CONT-Fortsetzung (Zeilenumbrüche + max. 248 Zeichen)
+function pushCont(lines, lv, tag, text) {
+  const MAX = 248;
+  const segs = [];
+  for (const nl of (text || '').split('\n')) {
+    let s = nl;
+    if (s.length === 0) { segs.push(''); continue; }
+    while (s.length > 0) { segs.push(s.slice(0, MAX)); s = s.slice(MAX); }
+  }
+  if (!segs.length) segs.push('');
+  lines.push(`${lv} ${tag} ${segs[0]}`);
+  for (let i = 1; i < segs.length; i++) lines.push(`${lv+1} CONT ${segs[i]}`);
+}
+
+// ─────────────────────────────────────
 //  GEDCOM WRITER  (v2 – vollständig)
 // ─────────────────────────────────────
 function writeGEDCOM() {
   const lines = [];
   const d = new Date();
-  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  const fname = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
 
+  // ── HEAD (HEAD-001: vollständig, Ancestris-kompatibel) ──
   lines.push('0 HEAD');
   lines.push('1 SOUR Stammbaum-App');
-  lines.push('2 VERS 1.1');
+  lines.push('2 VERS 2.0');
+  lines.push('2 NAME Stammbaum PWA');
+  lines.push('1 DEST ANY');
+  lines.push(`1 DATE ${gedcomDate(d)}`);
+  lines.push(`2 TIME ${gedcomTime(d)}`);
   lines.push('1 GEDC');
   lines.push('2 VERS 5.5.1');
+  lines.push('2 FORM LINEAGE-LINKED');
   lines.push('1 CHAR UTF-8');
-  lines.push(`1 DATE ${dateStr}`);
+  lines.push(`1 FILE ${fname}`);
+  lines.push('1 PLAC');
+  lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
 
   function geoLines(obj, indent) {
     if (obj && obj.lati !== null && obj.long !== null) {
@@ -1613,7 +2040,7 @@ function writeGEDCOM() {
   function eventBlock(tag, obj, lv) {
     if (!obj || (!obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length))) return;
     lines.push(`${lv} ${tag}`);
-    if (obj.date)  lines.push(`${lv+1} DATE ${obj.date}`);
+    if (obj.date)  lines.push(`${lv+1} DATE ${normGedDate(obj.date)}`);
     if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
     if (obj.place) {
       lines.push(`${lv+1} PLAC ${obj.place}`);
@@ -1622,6 +2049,7 @@ function writeGEDCOM() {
     if (obj.sources) for (const s of obj.sources) {
       lines.push(`${lv+1} SOUR ${s}`);
       if (obj.sourcePages && obj.sourcePages[s]) lines.push(`${lv+2} PAGE ${obj.sourcePages[s]}`);
+      if (obj.sourceQUAY && obj.sourceQUAY[s])   lines.push(`${lv+2} QUAY ${obj.sourceQUAY[s]}`);
     }
   }
 
@@ -1637,6 +2065,9 @@ function writeGEDCOM() {
     for (const s of (p.nameSources || [])) lines.push(`2 SOUR ${s}`);
     if (p.titl)    lines.push(`1 TITL ${p.titl}`);
     if (p.reli)    lines.push(`1 RELI ${p.reli}`);
+    if (p.resn)    lines.push(`1 RESN ${p.resn}`);
+    if (p.email)   lines.push(`1 EMAIL ${p.email}`);
+    if (p.www)     lines.push(`1 WWW ${p.www}`);
     if (p.sex && p.sex !== 'U') lines.push(`1 SEX ${p.sex}`);
     for (const s of (p.topSources || [])) lines.push(`1 SOUR ${s}`);
 
@@ -1648,32 +2079,22 @@ function writeGEDCOM() {
     for (const ev of p.events) {
       lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
       if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
-      if (ev.date)  lines.push(`2 DATE ${ev.date}`);
+      if (ev.date)  lines.push(`2 DATE ${normGedDate(ev.date)}`);
       if (ev.place) {
         lines.push(`2 PLAC ${ev.place}`);
         geoLines(ev, 3);
       }
-      if (ev.note) {
-        const nl = ev.note.split('\n');
-        lines.push(`2 NOTE ${nl[0]}`);
-        for (let i = 1; i < nl.length; i++) lines.push(`3 CONT ${nl[i]}`);
-      }
-      if (ev.addr && ev.type === 'RESI') {
-        const al = ev.addr.split('\n');
-        lines.push(`2 ADDR ${al[0]}`);
-        for (let i = 1; i < al.length; i++) lines.push(`3 CONT ${al[i]}`);
-      }
+      if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
+      if (ev.addr && ev.type === 'RESI') pushCont(lines, 2, 'ADDR', ev.addr);
       if (ev.sources) for (const s of ev.sources) {
         lines.push(`2 SOUR ${s}`);
         if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
+        if (ev.sourceQUAY && ev.sourceQUAY[s])   lines.push(`3 QUAY ${ev.sourceQUAY[s]}`);
       }
     }
 
-    if (p.noteText) {
-      const noteLines = p.noteText.split('\n');
-      lines.push(`1 NOTE ${noteLines[0]}`);
-      for (let i = 1; i < noteLines.length; i++) lines.push(`2 CONT ${noteLines[i]}`);
-    }
+    for (const ref of (p.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
+    if (p.noteTextInline) pushCont(lines, 1, 'NOTE', p.noteTextInline);
 
     for (const fref of p.famc) {
       const famId = typeof fref === 'string' ? fref : fref.famId;
@@ -1684,13 +2105,19 @@ function writeGEDCOM() {
     for (const f of p.fams) lines.push(`1 FAMS ${f}`);
     for (const m of p.media) {
       lines.push(`1 OBJE`);
-      if (m.file)  lines.push(`2 FILE ${m.file}`);
+      if (m.file) {
+        lines.push(`2 FILE ${m.file}`);
+        const ext = (m.file.split('.').pop() || '').toUpperCase();
+        const form = { JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext;
+        if (form) lines.push(`3 FORM ${form}`);
+      }
       if (m.title) lines.push(`3 TITL ${m.title}`);
     }
     if (p.uid) lines.push(`1 _UID ${p.uid}`);
     if (p.lastChanged) {
       lines.push(`1 CHAN`);
       lines.push(`2 DATE ${p.lastChanged}`);
+      if (p.lastChangedTime) lines.push(`3 TIME ${p.lastChangedTime}`);
     }
   }
 
@@ -1702,14 +2129,16 @@ function writeGEDCOM() {
     eventBlock('MARR', f.marr, 1);
     if (f.engag && (f.engag.date || f.engag.place)) {
       lines.push(`1 ENGA`);
-      if (f.engag.date)  lines.push(`2 DATE ${f.engag.date}`);
+      if (f.engag.date)  lines.push(`2 DATE ${normGedDate(f.engag.date)}`);
       if (f.engag.place) lines.push(`2 PLAC ${f.engag.place}`);
       if (f.engag.sources) for (const s of f.engag.sources) lines.push(`2 SOUR ${s}`);
     }
-    if (f.noteText) {
-      const noteLines = f.noteText.split('\n');
-      lines.push(`1 NOTE ${noteLines[0]}`);
-      for (let i = 1; i < noteLines.length; i++) lines.push(`2 CONT ${noteLines[i]}`);
+    for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
+    if (f.noteText) pushCont(lines, 1, 'NOTE', f.noteText);
+    if (f.lastChanged) {
+      lines.push(`1 CHAN`);
+      lines.push(`2 DATE ${f.lastChanged}`);
+      if (f.lastChangedTime) lines.push(`3 TIME ${f.lastChangedTime}`);
     }
   }
 
@@ -1728,6 +2157,7 @@ function writeGEDCOM() {
     if (s.lastChanged) {
       lines.push(`1 CHAN`);
       lines.push(`2 DATE ${s.lastChanged}`);
+      if (s.lastChangedTime) lines.push(`3 TIME ${s.lastChangedTime}`);
     }
   }
 
@@ -1742,7 +2172,17 @@ function writeGEDCOM() {
     if (r.phon)  lines.push(`1 PHON ${r.phon}`);
     if (r.www)   lines.push(`1 WWW ${r.www}`);
     if (r.email) lines.push(`1 EMAIL ${r.email}`);
-    if (r.lastChanged) { lines.push(`1 CHAN`); lines.push(`2 DATE ${r.lastChanged}`); }
+    if (r.lastChanged) {
+      lines.push(`1 CHAN`);
+      lines.push(`2 DATE ${r.lastChanged}`);
+      if (r.lastChangedTime) lines.push(`3 TIME ${r.lastChangedTime}`);
+    }
+  }
+
+  for (const n of Object.values(db.notes || {})) {
+    const nls = (n.text || '').split('\n');
+    lines.push(`0 ${n.id} NOTE ${nls[0]}`);
+    for (let i = 1; i < nls.length; i++) lines.push(`1 CONT ${nls[i]}`);
   }
 
   lines.push('0 TRLR');
@@ -1796,6 +2236,8 @@ function updateSaveIndicator() {
     btn.title = _canDirectSave
       ? 'Direkt speichern (Datei: ' + (localStorage.getItem('stammbaum_filename') || '') + ')'
       : 'Als Download speichern';
+    if (_canDirectSave) btn.classList.add('direct-save');
+    else btn.classList.remove('direct-save');
   });
 }
 
@@ -1870,7 +2312,6 @@ async function saveToFileHandle(content) {
     await w.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
     await w.close(); w = null;
     changed = false; updateChangedIndicator();
-    _originalGedText = content;
     try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
     showToast('✓ Direkt gespeichert');
     return true;
@@ -1881,6 +2322,7 @@ async function saveToFileHandle(content) {
       showToast('⚠ Datei gesperrt (Cloud-Sync?) – nochmals versuchen');
     } else {
       console.error('saveToFileHandle:', e.name, e.message);
+      showToast('⚠ Fehler beim Speichern: ' + (e.message || e.name));
     }
     return false;
   }
@@ -1955,8 +2397,9 @@ async function exportGEDCOM() {
   const pad = n => String(n).padStart(2, '0');
   const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
   // Backup (Original) nur wenn Inhalt geändert
-  if (_originalGedText && _originalGedText !== content) {
-    _downloadBlob(_originalGedText, `${basename}_${ts}.ged`);
+  const _origForExport = _getOriginalText();
+  if (_origForExport && _origForExport !== content) {
+    _downloadBlob(_origForExport, `${basename}_${ts}.ged`);
   }
   _downloadBlob(content, filename);
   changed = false; updateChangedIndicator();
@@ -1992,7 +2435,7 @@ function confirmNewFile() {
   if (changed) {
     if (!confirm('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
   }
-  db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces() };
+  db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), repositories: {}, notes: {}, placForm: '' };
   changed = false;
   updateChangedIndicator();
   _originalGedText = null;
@@ -2011,13 +2454,22 @@ function confirmNewFile() {
 function _processLoadedText(text, filename) {
   db = parseGEDCOM(text);
   db.extraPlaces = loadExtraPlaces();
-  _originalGedText = text;
-  const tryLS = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
-  tryLS('stammbaum_ged',             text);
+  // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
+  { let maxUsed = 0;
+    const allIds = [...Object.keys(db.individuals), ...Object.keys(db.families),
+                    ...Object.keys(db.sources), ...Object.keys(db.repositories), ...Object.keys(db.notes)];
+    for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
+    if (maxUsed >= idCounter) idCounter = maxUsed;
+  }
+  _originalGedText = text;  // Fallback; wird genullt wenn localStorage-Backup gelingt
+  const tryLS = (k, v) => { try { localStorage.setItem(k, v); return true; } catch(e) { return false; } };
+  const gedOk    = tryLS('stammbaum_ged',             text);
   tryLS('stammbaum_filename',        filename);
-  tryLS('stammbaum_ged_backup',      text);
+  const backupOk = tryLS('stammbaum_ged_backup',      text);
   tryLS('stammbaum_backup_filename', filename);
   tryLS('stammbaum_backup_date',     new Date().toLocaleDateString('de-DE'));
+  if (backupOk) _originalGedText = null; // RAM freigeben, _getOriginalText() liest aus localStorage
+  if (!gedOk) showToast('⚠ Browser-Cache voll – kein Auto-Reload nach Neustart');
   updateBackupBtn();
   showStartView();
 }
@@ -2030,7 +2482,7 @@ function readFile(file) {
     try {
       _processLoadedText(e.target.result, file.name);
       showToast('✓ ' + file.name + ' geladen');
-    } catch(err) { showToast('⚠ Fehler beim Laden'); }
+    } catch(err) { console.error('readFile:', err); showToast('⚠ Fehler beim Laden'); }
   };
   reader.readAsText(file, 'UTF-8');
 }
@@ -2045,6 +2497,7 @@ function loadDemo() {
   const demo = `0 HEAD\n1 SOUR Demo\n1 GEDC\n2 VERS 5.5.1\n1 CHAR UTF-8\n0 @I001@ INDI\n1 NAME Johann /Müller/\n1 SEX M\n1 BIRT\n2 DATE 12 MAR 1845\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 3 NOV 1912\n2 PLAC München, Bayern\n1 OCCU Bäckermeister\n1 FAMS @F001@\n0 @I002@ INDI\n1 NAME Maria /Huber/\n1 SEX F\n1 BIRT\n2 DATE 5 JUN 1850\n2 PLAC Augsburg, Bayern\n1 DEAT\n2 DATE 20 FEB 1930\n2 PLAC München, Bayern\n1 FAMS @F001@\n0 @I003@ INDI\n1 NAME Heinrich /Müller/\n1 SEX M\n1 BIRT\n2 DATE 8 JAN 1872\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 15 APR 1940\n2 PLAC München, Bayern\n1 OCCU Kaufmann\n1 FAMC @F001@\n1 FAMS @F002@\n0 @I004@ INDI\n1 NAME Anna /Schmidt/\n1 SEX F\n1 BIRT\n2 DATE 22 SEP 1875\n2 PLAC Nürnberg, Bayern\n1 FAMS @F002@\n0 @I005@ INDI\n1 NAME Karl /Müller/\n1 SEX M\n1 BIRT\n2 DATE 14 JUL 1900\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @I006@ INDI\n1 NAME Elisabeth /Müller/\n1 SEX F\n1 BIRT\n2 DATE 3 MAR 1903\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @S001@ SOUR\n1 TITL Kirchenbuch München St. Peter\n1 AUTH Stadtarchiv München\n1 DATE 1845-1912\n0 @F001@ FAM\n1 HUSB @I001@\n1 WIFE @I002@\n1 CHIL @I003@\n1 MARR\n2 DATE 10 JUN 1870\n2 PLAC München, Bayern\n0 @F002@ FAM\n1 HUSB @I003@\n1 WIFE @I004@\n1 CHIL @I005@\n1 CHIL @I006@\n1 MARR\n2 DATE 5 APR 1898\n2 PLAC München, Bayern\n0 TRLR`;
   db = parseGEDCOM(demo);
   db.extraPlaces = loadExtraPlaces();
+  _originalGedText = demo;
   showStartView(); showToast('✓ Demo geladen');
 }
 
@@ -2072,7 +2525,7 @@ function updateBackupBtn() {
   if (!btn) return;
   const fname = localStorage.getItem('stammbaum_backup_filename') || '';
   const date  = localStorage.getItem('stammbaum_backup_date') || '';
-  const hasBackup = !!(_originalGedText || localStorage.getItem('stammbaum_ged_backup'));
+  const hasBackup = !!_getOriginalText();
   btn.style.opacity = hasBackup ? '1' : '0.4';
   btn.querySelector('span').textContent = hasBackup
     ? `Original-Backup herunterladen${date ? ' (' + date + ')' : ''}`
@@ -2080,7 +2533,7 @@ function updateBackupBtn() {
 }
 
 function downloadBackup() {
-  const backup = _originalGedText || localStorage.getItem('stammbaum_ged_backup');
+  const backup = _getOriginalText();
   if (!backup) { showToast('⚠ Kein Backup vorhanden'); return; }
   const fname = localStorage.getItem('stammbaum_backup_filename') || 'stammbaum.ged';
   const backupName = fname.replace(/\.ged$/i, '') + '_original.ged';
@@ -2150,7 +2603,6 @@ function showMain() {
 // Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/
 // showPlaceDetail stehen.
 function _beforeDetailNavigate() {
-  if (_skipHistoryPush) return; // Rückwärts-Navigation, nichts pushen
   if (document.getElementById('v-detail').classList.contains('active')) {
     // Detail → Detail: aktuellen Zustand in History sichern
     if      (currentPersonId) _navHistory.push({ type: 'person', id: currentPersonId });
@@ -2175,15 +2627,13 @@ function _beforeDetailNavigate() {
 function goBack() {
   const prev = _navHistory.pop();
   if (!prev) { showMain(); return; }
-  _skipHistoryPush = true;
-  if      (prev.type === 'person') showDetail(prev.id);
-  else if (prev.type === 'family') showFamilyDetail(prev.id);
-  else if (prev.type === 'source') showSourceDetail(prev.id);
-  else if (prev.type === 'repo')   showRepoDetail(prev.id);
-  else if (prev.type === 'place')  showPlaceDetail(prev.name);
+  if      (prev.type === 'person') showDetail(prev.id, false);
+  else if (prev.type === 'family') showFamilyDetail(prev.id, false);
+  else if (prev.type === 'source') showSourceDetail(prev.id, false);
+  else if (prev.type === 'repo')   showRepoDetail(prev.id, false);
+  else if (prev.type === 'place')  showPlaceDetail(prev.name, false);
   else if (prev.type === 'tree')   showTree(prev.id);
   else showMain();
-  _skipHistoryPush = false;
 }
 
 // Kleinste numerische Personen-ID
@@ -2216,6 +2666,7 @@ function switchTab(tab) {
 }
 
 function renderTab() {
+  if (!document.getElementById('v-main').classList.contains('active')) return;
   if (currentTab === 'persons') renderPersonList(Object.values(db.individuals));
   else if (currentTab === 'families') renderFamilyList();
   else if (currentTab === 'sources') { renderSourceList(); renderRepoList(); }
@@ -2679,11 +3130,11 @@ function unlinkMember(famId, personId) {
   else if (currentPersonId) showDetail(currentPersonId);
 }
 
-function showPlaceDetail(placeName) {
+function showPlaceDetail(placeName, pushHistory = true) {
   const places = collectPlaces();
   const place = places.get(placeName);
   if (!place) return;
-  _beforeDetailNavigate();
+  if (pushHistory) _beforeDetailNavigate();
   currentPersonId = null; currentFamilyId = null; currentSourceId = null; currentRepoId = null;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
@@ -2980,10 +3431,10 @@ function showTree(personId) {
 // ─────────────────────────────────────
 //  DETAIL: PERSON
 // ─────────────────────────────────────
-function showDetail(id) {
+function showDetail(id, pushHistory = true) {
   const p = db.individuals[id];
   if (!p) return;
-  _beforeDetailNavigate();
+  if (pushHistory) _beforeDetailNavigate();
   currentPersonId = id;
   currentFamilyId = null;
   currentSourceId = null;
@@ -3003,7 +3454,7 @@ function showDetail(id) {
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar ${sc}">${ic}</div>
     <div class="detail-name">${esc(fullName || id)}</div>
-    <div class="detail-id">${id}${p.lastChanged ? ' · geändert ' + p.lastChanged : ''}</div>
+    <div class="detail-id">${p.lastChanged ? 'Geändert ' + p.lastChanged : ''}</div>
   </div>`;
 
   // Life data
@@ -3045,6 +3496,9 @@ function showDetail(id) {
 
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);
+  if (p.resn)  html += factRow('Beschränkung', p.resn);
+  if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" style="color:var(--gold)">${esc(p.email)}</a></span></div>`;
+  if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${esc(p.www)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(p.www)}</a></span></div>`;
 
   if (!p.birth.date && !p.death.date && !p.events.length && !p.chr.date && !p.buri.date)
     html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Lebensdaten eingetragen</div>`;
@@ -3127,10 +3581,10 @@ function showDetail(id) {
   showView('v-detail');
 }
 
-function showFamilyDetail(id) {
+function showFamilyDetail(id, pushHistory = true) {
   const f = db.families[id];
   if (!f) return;
-  _beforeDetailNavigate();
+  if (pushHistory) _beforeDetailNavigate();
   currentFamilyId = id;
   currentPersonId = null;
   currentSourceId = null;
@@ -3150,7 +3604,6 @@ function showFamilyDetail(id) {
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
     <div class="detail-name">${esc(title)}</div>
-    <div class="detail-id">${id}</div>
   </div>`;
 
   if (f.marr.date || f.marr.place) {
@@ -3162,6 +3615,12 @@ function showFamilyDetail(id) {
         ? `<a href="https://maps.apple.com/?ll=${f.marr.lati},${f.marr.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
       html += factRow('Ort', f.marr.place, geoBtn, marrSrc);
     }
+    html += `</div>`;
+  }
+  if (f.engag?.date || f.engag?.place) {
+    html += `<div class="section fade-up"><div class="section-title">Verlobung</div>`;
+    if (f.engag.date)  html += factRow('Datum', f.engag.date);
+    if (f.engag.place) html += factRow('Ort',   f.engag.place);
     html += `</div>`;
   }
 
@@ -3182,10 +3641,10 @@ function showFamilyDetail(id) {
   showView('v-detail');
 }
 
-function showSourceDetail(id) {
+function showSourceDetail(id, pushHistory = true) {
   const s = db.sources[id];
   if (!s) return;
-  _beforeDetailNavigate();
+  if (pushHistory) _beforeDetailNavigate();
   currentSourceId = id;
   currentPersonId = null;
   currentFamilyId = null;
@@ -3203,7 +3662,7 @@ function showSourceDetail(id) {
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">📖</div>
     <div class="detail-name">${esc(s.abbr || s.title || id)}</div>
-    <div class="detail-id">${id} · ${refPersons.length + refFamilies.length} Referenzen${s.lastChanged ? ' · geändert ' + s.lastChanged : ''}</div>
+    <div class="detail-id">${refPersons.length + refFamilies.length} Referenzen${s.lastChanged ? ' · geändert ' + s.lastChanged : ''}</div>
   </div>`;
 
   // Source details
@@ -3296,6 +3755,121 @@ function sourceTagsHtml(sourceIds) {
   }).filter(Boolean).join('');
 }
 
+function runRoundtripTest() {
+  const _origText = _getOriginalText();
+  if (!_origText) { showToast('⚠ Keine GEDCOM-Datei geladen'); return; }
+  const out = document.getElementById('roundtrip-output');
+  out.textContent = 'Läuft…';
+  openModal('modalRoundtrip');
+
+  setTimeout(() => {
+    try {
+      const t0 = performance.now();
+
+      // Pass 1: parse original
+      const saved = db;
+      const db1 = parseGEDCOM(_origText);
+      // Write pass 1
+      db = db1;
+      const out1 = writeGEDCOM();
+      // Pass 2: parse out1, write out2
+      const db2 = parseGEDCOM(out1);
+      db = db2;
+      const out2 = writeGEDCOM();
+      // Restore
+      db = saved;
+
+      const t1 = performance.now();
+      const stable = out1 === out2;
+
+      // Line counts
+      const origLines = _origText.split('\n').length;
+      const outLines  = out1.split('\n').length;
+
+      // Record counts from db1
+      const nIndi = Object.keys(db1.individuals).length;
+      const nFam  = Object.keys(db1.families).length;
+      const nSour = Object.keys(db1.sources).length;
+      const nNote = Object.keys(db1.notes || {}).length;
+      const nRepo = Object.keys(db1.repositories || {}).length;
+
+      // Tag delta helper
+      const count = (text, re) => (text.match(re) || []).length;
+
+      const tags = [
+        // Quellenqualität + Seiten
+        { lbl:'3 QUAY',       re:/^\s*3 QUAY\b/mg },
+        { lbl:'3 PAGE',       re:/^\s*3 PAGE\b/mg },
+        // NOTE + REPO Records
+        { lbl:'0 NOTE rec.',  re:/^0 @[^@]+@ NOTE\b/mg },
+        { lbl:'1 REPO (src)', re:/^\s*1 REPO\b/mg },
+        { lbl:'0 REPO rec.',  re:/^0 @[^@]+@ REPO\b/mg },
+        // Events Sprint 5
+        { lbl:'1 FACT',       re:/^\s*1 FACT\b/mg },
+        { lbl:'1 MILI',       re:/^\s*1 MILI\b/mg },
+        { lbl:'2 TYPE',       re:/^\s*2 TYPE\b/mg },
+        { lbl:'1 ENGA',       re:/^\s*1 ENGA\b/mg },
+        { lbl:'2 CAUS',       re:/^\s*2 CAUS\b/mg },
+        // Person-Felder Sprint 5
+        { lbl:'1 RESN',       re:/^\s*1 RESN\b/mg },
+        { lbl:'1 EMAIL',      re:/^\s*1 EMAIL\b/mg },
+        { lbl:'1 WWW',        re:/^\s*1 WWW\b/mg },
+        // Datum-Qualifier Sprint 6a
+        { lbl:'DATE ABT',     re:/\bDATE ABT\b/mg },
+        { lbl:'DATE BEF',     re:/\bDATE BEF\b/mg },
+        { lbl:'DATE AFT',     re:/\bDATE AFT\b/mg },
+        { lbl:'DATE BET',     re:/\bDATE BET\b/mg },
+        { lbl:'DATE CAL',     re:/\bDATE CAL\b/mg },
+        { lbl:'DATE EST',     re:/\bDATE EST\b/mg },
+        // PLAC.FORM Sprint 6b — additive: Writer fügt es immer ein
+        { lbl:'PLAC.FORM',    re:/^2 FORM\s+\S.*,/mg, additive:true },
+        // CHAN.TIME
+        { lbl:'3 TIME',       re:/^\s*3 TIME\b/mg },
+        // Bekannte Verluste
+        { lbl:'_STAT',        re:/_STAT\b/mg },
+      ];
+
+      const rows = tags.map(t => {
+        const orig = count(_origText, t.re);
+        const got  = count(out1, t.re);
+        const diff = got - orig;
+        const mark = diff === 0 ? '✓'
+          : (diff > 0 && t.additive) ? `+${diff}*`
+          : diff > 0 ? `+${diff}` : `${diff}`;
+        return `  ${t.lbl.padEnd(15)} orig=${String(orig).padStart(4)}  out=${String(got).padStart(4)}  ${mark}`;
+      });
+      const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
+
+      // Stability diff (first 5 differing lines)
+      let diffSnippet = '';
+      if (!stable) {
+        const l1 = out1.split('\n'), l2 = out2.split('\n');
+        const diffs = [];
+        const len = Math.max(l1.length, l2.length);
+        for (let i = 0; i < len && diffs.length < 5; i++) {
+          if (l1[i] !== l2[i]) diffs.push(`  Zeile ${i+1}:\n    out1: ${l1[i] || '<fehlt>'}\n    out2: ${l2[i] || '<fehlt>'}`);
+        }
+        diffSnippet = '\n\nErste Unterschiede (out1 vs out2):\n' + diffs.join('\n');
+      }
+
+      out.textContent =
+        `Roundtrip-Test  (${Math.round(t1-t0)} ms)\n` +
+        `${'─'.repeat(42)}\n` +
+        `Zeilen:  orig=${origLines}  out=${outLines}\n` +
+        `Personen: ${nIndi}  Familien: ${nFam}  Quellen: ${nSour}\n` +
+        `Notizen: ${nNote}  Archive: ${nRepo}\n\n` +
+        `Stabilität (out1 === out2): ${stable ? '✓ STABIL' : '✗ INSTABIL'}\n\n` +
+        `Tag-Statistik:\n` + rows.join('\n') +
+        (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
+        diffSnippet;
+
+    } catch (e) {
+      try { db = saved; } catch(_) {}
+      out.textContent = 'Fehler: ' + e.message + '\n' + e.stack;
+    }
+  }, 30);
+}
+
 function relRow(person, role, unlinkFamId) {
   const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
   const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
@@ -3317,20 +3891,27 @@ function relRow(person, role, unlinkFamId) {
 
 // ─────────────────────────────────────
 //  SOURCE WIDGET
-//  srcState[prefix] = Set of source IDs currently selected
+//  srcWidgetState[prefix] = { ids: Set, pages: {sid:page}, quay: {sid:quay} }
 // ─────────────────────────────────────
-const srcState = {};
-const srcPageState = {};  // {prefix: {sid: page}} — Seitenangaben pro Quelle
+const srcWidgetState = {};  // {prefix: {ids: Set, pages: {sid: page}, quay: {sid: quay}}}
 
 function updateSrcPage(prefix, sid, value) {
-  if (!srcPageState[prefix]) srcPageState[prefix] = {};
-  srcPageState[prefix][sid] = value;
+  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
+  srcWidgetState[prefix].pages[sid] = value;
 }
 
-function initSrcWidget(prefix, selectedIds, pageMap) {
+function updateSrcQuay(prefix, sid, value) {
+  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
+  srcWidgetState[prefix].quay[sid] = value;
+}
+
+function initSrcWidget(prefix, selectedIds, pageMap, quayMap) {
   const ids = selectedIds instanceof Set ? [...selectedIds] : (Array.isArray(selectedIds) ? selectedIds : []);
-  srcState[prefix] = new Set(ids);
-  srcPageState[prefix] = pageMap ? { ...pageMap } : {};
+  srcWidgetState[prefix] = {
+    ids:   new Set(ids),
+    pages: pageMap ? { ...pageMap } : {},
+    quay:  quayMap ? { ...quayMap } : {}
+  };
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
   document.getElementById(prefix + '-src-picker').classList.remove('open');
@@ -3338,23 +3919,36 @@ function initSrcWidget(prefix, selectedIds, pageMap) {
 
 function renderSrcTags(prefix) {
   const container = document.getElementById(prefix + '-src-tags');
-  const selected = srcState[prefix] || new Set();
+  const selected = srcWidgetState[prefix]?.ids || new Set();
   if (!selected.size) {
     container.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>';
     return;
   }
-  const pages = srcPageState[prefix] || {};
+  const pages = srcWidgetState[prefix]?.pages || {};
+  const quays = srcWidgetState[prefix]?.quay  || {};
   container.innerHTML = [...selected].map(sid => {
     const s = db.sources[sid];
     const label = s ? (s.abbr || s.title || sid) : sid;
     const pageVal = pages[sid] || '';
+    const quayVal = String(quays[sid] ?? '');
+    const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
     const pageField = prefix === 'ef'
       ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
-           oninput="updateSrcPage('${prefix}','${sid.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',this.value)">`
+           oninput="updateSrcPage('${prefix}','${sidEsc}',this.value)">`
+      : '';
+    const quayField = prefix === 'ef'
+      ? `<select class="src-quay-select" onchange="updateSrcQuay('${prefix}','${sidEsc}',this.value)"
+           style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
+           <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
+           <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
+           <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
+           <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
+           <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
+         </select>`
       : '';
     return `<span class="src-tag">
       ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
-      ${pageField}
+      ${pageField}${quayField}
       <button type="button" onclick="removeSrc('${prefix}','${sid}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
     </span>`;
   }).join('');
@@ -3362,7 +3956,7 @@ function renderSrcTags(prefix) {
 
 function renderSrcPicker(prefix) {
   const list = document.getElementById(prefix + '-src-list');
-  const selected = srcState[prefix] || new Set();
+  const selected = srcWidgetState[prefix]?.ids || new Set();
   const srcs = Object.values(db.sources).sort((a,b) => (a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'));
   if (!srcs.length) {
     list.innerHTML = '<div class="src-picker-empty">Noch keine Quellen vorhanden</div>';
@@ -3384,14 +3978,15 @@ function toggleSrcPicker(prefix) {
 }
 
 function toggleSrc(prefix, sid) {
-  const set = srcState[prefix] || (srcState[prefix] = new Set());
+  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
+  const set = srcWidgetState[prefix].ids;
   if (set.has(sid)) set.delete(sid); else set.add(sid);
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
 }
 
 function removeSrc(prefix, sid) {
-  if (srcState[prefix]) srcState[prefix].delete(sid);
+  srcWidgetState[prefix]?.ids.delete(sid);
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
 }
@@ -3414,8 +4009,11 @@ function showPersonForm(id) {
   document.getElementById('pf-given').value = p?.given || '';
   document.getElementById('pf-surname').value = p?.surname || '';
   document.getElementById('pf-sex').value = p?.sex || 'U';
-  document.getElementById('pf-occu').value = p?.events?.find(e => e.type === 'OCCU')?.value || '';
-  document.getElementById('pf-note').value = p?.noteText || '';
+  document.getElementById('pf-occu').value  = p?.events?.find(e => e.type === 'OCCU')?.value || '';
+  document.getElementById('pf-note').value  = p?.noteTextInline ?? p?.noteText ?? '';
+  document.getElementById('pf-resn').value  = p?.resn  || '';
+  document.getElementById('pf-email').value = p?.email || '';
+  document.getElementById('pf-www').value   = p?.www   || '';
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
   initSrcWidget('pf', p?.sourceRefs || []);
   openModal('modalPerson');
@@ -3426,8 +4024,11 @@ function savePerson() {
   const given = document.getElementById('pf-given').value.trim();
   const surname = document.getElementById('pf-surname').value.trim();
   const sex = document.getElementById('pf-sex').value;
-  const occu = document.getElementById('pf-occu').value.trim();
-  const note = document.getElementById('pf-note').value.trim();
+  const occu  = document.getElementById('pf-occu').value.trim();
+  const note  = document.getElementById('pf-note').value.trim();
+  const resn  = document.getElementById('pf-resn').value.trim();
+  const email = document.getElementById('pf-email').value.trim();
+  const www   = document.getElementById('pf-www').value.trim();
 
   if (!given && !surname) { showToast('⚠ Bitte Namen eingeben'); return; }
 
@@ -3445,15 +4046,27 @@ function savePerson() {
     chr:   existing.chr   || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
     buri:  existing.buri  || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
     events,
-    noteText: note,
+    noteTextInline: note,
     noteRefs: existing.noteRefs || [],
+    noteText: (() => {
+      // Merge inline text + resolved refs for display
+      let t = note;
+      for (const ref of (existing.noteRefs || [])) {
+        if (db.notes && db.notes[ref]) t += (t ? '\n' : '') + db.notes[ref].text;
+      }
+      return t;
+    })(),
     famc: existing.famc || [],
     fams: existing.fams || [],
     media: existing.media || [],
-    titl: existing.titl || '',
-    reli: existing.reli || '',
-    lastChanged: existing.lastChanged || '',
-    sourceRefs: srcState['pf'] || new Set()
+    titl:  existing.titl  || '',
+    reli:  existing.reli  || '',
+    resn,
+    email,
+    www,
+    lastChanged: gedcomDate(new Date()),
+    lastChangedTime: gedcomTime(new Date()),
+    sourceRefs: srcWidgetState['pf']?.ids || new Set()
   };
 
   closeModal('modalPerson');
@@ -3492,6 +4105,24 @@ function deletePerson() {
 // ─────────────────────────────────────
 //  FORMS: FAMILY
 // ─────────────────────────────────────
+function _refreshChildDisplay() {
+  const ids = (document.getElementById('ff-children').value || '')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const dispEl = document.getElementById('ff-children-display');
+  if (!dispEl) return;
+  if (ids.length) {
+    dispEl.style.fontStyle = 'normal';
+    dispEl.style.color = 'var(--text)';
+    dispEl.innerHTML = ids
+      .map(cid => `<div class="rel-name" style="padding:2px 0">${esc(db.individuals[cid]?.name || cid)}</div>`)
+      .join('');
+  } else {
+    dispEl.style.fontStyle = 'italic';
+    dispEl.style.color = 'var(--text-muted)';
+    dispEl.textContent = 'Keine Kinder';
+  }
+}
+
 function showFamilyForm(id, ctx) {
   closeModal('modalAdd');
   const f = id ? db.families[id] : null;
@@ -3508,9 +4139,15 @@ function showFamilyForm(id, ctx) {
 
   document.getElementById('ff-husb').value = f?.husb || '';
   document.getElementById('ff-wife').value = f?.wife || '';
-  document.getElementById('ff-mdate').value = f?.marr?.date || '';
-  document.getElementById('ff-mplace').value = f?.marr?.place || '';
-  document.getElementById('ff-children').value = f?.children?.join(', ') || '';
+  fillDateFields('ff-mdate-qual', 'ff-mdate', null, f?.marr?.date  || '');
+  initPlaceMode('ff-mplace');
+  document.getElementById('ff-mplace').value = f?.marr?.place  || '';
+  fillDateFields('ff-edate-qual', 'ff-edate', null, f?.engag?.date || '');
+  initPlaceMode('ff-eplace');
+  document.getElementById('ff-eplace').value = f?.engag?.place || '';
+  const childIds = f?.children || [];
+  document.getElementById('ff-children').value = childIds.join(', ');
+  _refreshChildDisplay();
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
 
@@ -3523,6 +4160,7 @@ function showFamilyForm(id, ctx) {
         .split(',').map(s => s.trim()).filter(Boolean);
       if (!cur.includes(ctx.addChild)) cur.push(ctx.addChild);
       document.getElementById('ff-children').value = cur.join(', ');
+      _refreshChildDisplay();
     }
   }
 
@@ -3534,8 +4172,10 @@ function saveFamily() {
   const husb = document.getElementById('ff-husb').value || null;
   const wife = document.getElementById('ff-wife').value || null;
   if (!husb && !wife) { showToast('⚠ Mindestens ein Elternteil erforderlich'); return; }
-  const mdate = document.getElementById('ff-mdate').value.trim();
-  const mplace = document.getElementById('ff-mplace').value.trim();
+  const mdate  = buildGedDateFromFields('ff-mdate-qual', 'ff-mdate', null);
+  const mplace = getPlaceFromForm('ff-mplace');
+  const edate  = buildGedDateFromFields('ff-edate-qual', 'ff-edate', null);
+  const eplace = getPlaceFromForm('ff-eplace');
   const childrenRaw = document.getElementById('ff-children').value;
   const children = childrenRaw.split(',').map(s => s.trim()).filter(Boolean);
 
@@ -3543,9 +4183,12 @@ function saveFamily() {
   db.families[id] = {
     ...existingFam,
     id, husb, wife, children,
-    marr: { ...(existingFam.marr||{}), date: mdate, place: mplace, sources: [...(srcState['ff'] || [])] },
+    marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,  sources: [...(srcWidgetState['ff']?.ids || [])] },
+    engag: { ...(existingFam.engag||{}), date: edate,  place: eplace },
     noteText: existingFam.noteText || '',
-    sourceRefs: srcState['ff'] || new Set()
+    sourceRefs: srcWidgetState['ff']?.ids || new Set(),
+    lastChanged: gedcomDate(new Date()),
+    lastChangedTime: gedcomTime(new Date())
   };
 
   // Update FAMS/FAMC references
@@ -3613,9 +4256,7 @@ function saveSource() {
   const abbr  = document.getElementById('sf-abbr').value.trim();
   const title = document.getElementById('sf-title').value.trim();
   if (!abbr && !title) { showToast('⚠ Kurzname oder Titel erforderlich'); return; }
-  const now = new Date();
-  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-  const gedDate = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  const _now = new Date();
   db.sources[id] = {
     id,
     abbr,
@@ -3626,7 +4267,8 @@ function saveSource() {
     repo:        document.getElementById('sf-repo').value.trim(),
     repoCallNum: document.getElementById('sf-caln').value.trim(),
     text:        document.getElementById('sf-text').value.trim(),
-    lastChanged: gedDate
+    lastChanged:     gedcomDate(_now),
+    lastChangedTime: gedcomTime(_now)
   };
   closeModal('modalSource');
   markChanged(); updateStats();
@@ -3715,9 +4357,9 @@ function repoPickerCreateNew() {
   showRepoForm(null);
 }
 
-function showRepoDetail(id) {
+function showRepoDetail(id, pushHistory = true) {
   const r = db.repositories[id]; if (!r) return;
-  _beforeDetailNavigate();
+  if (pushHistory) _beforeDetailNavigate();
   currentRepoId = id; currentPersonId = null; currentFamilyId = null; currentSourceId = null;
   document.getElementById('detailTopTitle').textContent = 'Archiv';
   document.getElementById('editBtn').style.display = '';
@@ -3728,7 +4370,7 @@ function showRepoDetail(id) {
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">🏛</div>
     <div class="detail-name">${esc(r.name || id)}</div>
-    <div class="detail-id">${id}${r.lastChanged ? ' · geändert ' + r.lastChanged : ''}</div>
+    <div class="detail-id">${r.lastChanged ? 'Geändert ' + r.lastChanged : ''}</div>
   </div>
   <div class="section fade-up"><div class="section-title">Details</div>`;
   if (r.addr)  html += factRow('Adresse', r.addr.replace(/\n/g, ', '));
@@ -3771,15 +4413,15 @@ function saveRepo() {
   const id = document.getElementById('rf-id').value || nextId('R');
   const name = document.getElementById('rf-name').value.trim();
   if (!name) { showToast('⚠ Name erforderlich'); return; }
-  const now = new Date();
-  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const _now = new Date();
   db.repositories[id] = {
     id, name,
     addr:  document.getElementById('rf-addr').value.trim(),
     phon:  document.getElementById('rf-phon').value.trim(),
     www:   document.getElementById('rf-www').value.trim(),
     email: document.getElementById('rf-email').value.trim(),
-    lastChanged: `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`
+    lastChanged:     gedcomDate(_now),
+    lastChangedTime: gedcomTime(_now)
   };
   closeModal('modalRepo');
   markChanged();
@@ -3818,6 +4460,7 @@ const _SPECIAL_LBL = { BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung'
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
+  document.getElementById('ef-etype-group').style.display = (t === 'FACT' || t === 'MILI') ? '' : 'none';
   document.getElementById('ef-cause-group').style.display = (t === 'DEAT')       ? ''     : 'none';
   document.getElementById('ef-addr-group').style.display  = (t === 'RESI')       ? ''     : 'none';
 }
@@ -3833,14 +4476,16 @@ function showEventForm(personId, evIdx) {
   document.getElementById('ef-pid').value    = personId;
   document.getElementById('ef-evidx').value  = isExisting ? evIdx : '';
 
+  initPlaceMode('ef-place');
   if (isSpecial) {
     const obj = p[_SPECIAL_OBJ[evIdx]] || {};
     typeEl.value = evIdx; typeEl.disabled = true;
     document.getElementById('ef-val').value   = '';
-    document.getElementById('ef-date').value  = obj.date  || '';
+    document.getElementById('ef-etype').value = '';
+    fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', obj.date || '');
     document.getElementById('ef-place').value = obj.place || '';
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
-    initSrcWidget('ef', obj.sources || [], obj.sourcePages || {});
+    initSrcWidget('ef', obj.sources || [], obj.sourcePages || {}, obj.sourceQUAY || {});
     document.querySelector('#modalEvent .sheet-title').textContent = _SPECIAL_LBL[evIdx] + ' bearbeiten';
     document.getElementById('saveEventBtn').textContent = 'Speichern';
   } else {
@@ -3848,11 +4493,12 @@ function showEventForm(personId, evIdx) {
     typeEl.disabled = false;
     typeEl.value = ev?.type || 'OCCU';
     document.getElementById('ef-val').value   = ev?.value || '';
-    document.getElementById('ef-date').value  = ev?.date  || '';
+    document.getElementById('ef-etype').value = ev?.eventType || '';
+    fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', ev?.date || '');
     document.getElementById('ef-place').value = ev?.place || '';
     document.getElementById('ef-cause').value = '';
     document.getElementById('ef-addr').value  = ev?.addr  || '';
-    initSrcWidget('ef', ev?.sources || [], ev?.sourcePages || {});
+    initSrcWidget('ef', ev?.sources || [], ev?.sourcePages || {}, ev?.sourceQUAY || {});
     document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
@@ -3869,10 +4515,11 @@ function saveEvent() {
   if (type in _SPECIAL_OBJ) {
     const key = _SPECIAL_OBJ[type];
     p[key] = { ...(p[key] || {}),
-      date:        document.getElementById('ef-date').value.trim(),
-      place:       document.getElementById('ef-place').value.trim(),
-      sources:     [...(srcState['ef'] || [])],
-      sourcePages: { ...(srcPageState['ef'] || {}) }
+      date:        buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
+      place:       getPlaceFromForm('ef-place'),
+      sources:     [...(srcWidgetState['ef']?.ids   || [])],
+      sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
+      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) }
     };
     if (type === 'DEAT') p[key].cause = document.getElementById('ef-cause').value.trim();
   } else {
@@ -3880,13 +4527,17 @@ function saveEvent() {
     const evIdx    = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
     const ev = {
       type,
-      value:     document.getElementById('ef-val').value.trim(),
-      date:      document.getElementById('ef-date').value.trim(),
-      place:     document.getElementById('ef-place').value.trim(),
-      addr:      document.getElementById('ef-addr').value.trim(),
-      lati: null, long: null, eventType: '', note: '',
-      sources:     [...(srcState['ef'] || [])],
-      sourcePages: { ...(srcPageState['ef'] || {}) }
+      value:      document.getElementById('ef-val').value.trim(),
+      date:       buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
+      place:      getPlaceFromForm('ef-place'),
+      addr:       document.getElementById('ef-addr').value.trim(),
+      eventType:  '',
+      note:       '',
+      lati:       null,
+      long:       null,
+      sources:    [...(srcWidgetState['ef']?.ids   || [])],
+      sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
+      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) }
     };
     if (evIdx !== null && p.events[evIdx]) {
       ev.lati      = p.events[evIdx].lati;
@@ -3897,6 +4548,8 @@ function saveEvent() {
     } else {
       p.events.push(ev);
     }
+    // TYPE-Feld aus Formular für FACT/MILI übernehmen
+    if (type === 'FACT' || type === 'MILI') ev.eventType = document.getElementById('ef-etype').value.trim();
   }
 
   closeModal('modalEvent');
@@ -3913,6 +4566,9 @@ function openModal(id) {
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
+  // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
+  if (id === 'modalPerson') _pendingRelation = null;
+  if (id === 'modalRepo')   _pendingRepoLink  = null;
 }
 // Close on backdrop click
 document.querySelectorAll('.modal-overlay').forEach(m => {

@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 1.2
+# Stammbaum PWA — Version 2.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -20,8 +20,8 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (v1.2, Phase 1 abgeschlossen)
-├── index_v2.html       ← Entwicklungsdatei Phase 2 (v2.0-dev)
+├── index.html          ← gesamte App (v2.0, Phase 2 abgeschlossen)
+├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
@@ -101,9 +101,9 @@ stammbaum/
 ### Bearbeiten
 | Was | Felder |
 |---|---|
-| Person | Name (Vor-/Nachname, Präfix, Suffix), Geschlecht, Titel, Religion, Notiz |
-| Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/…), Datum, Ort, Adresse (bei RESI), Todesursache (bei DEAT), Quellen + Seitenangabe |
-| Familie | Eltern (Dropdown), Heirat (Datum, Ort), Kinder hinzufügen/entfernen, Quellen |
+| Person | Name (Vor-/Nachname, Präfix, Suffix), Geschlecht, Titel, Religion, Notiz, RESN, E-Mail, Website |
+| Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/EVEN/FACT/MILI/…), Datum (Qualifier + Tag/Monat/Jahr), Ort (Freitext oder 6-Felder), Adresse (bei RESI), Todesursache (bei DEAT), Quellen + Seitenangabe + Qualität (QUAY) |
+| Familie | Eltern (Dropdown), Heirat + Verlobung (Datum, Ort), Kinder hinzufügen/entfernen, Quellen |
 | Quelle | Titel, Kurzname, Autor, Datum, Verlag, Archiv (aus REPO-Liste), Signatur (CALN), Notiz |
 | Archiv | Name, Adresse, Telefon, Website, E-Mail |
 | Ort | Name umbenennen (wirkt sich auf alle Personen und Familien aus) |
@@ -112,7 +112,11 @@ stammbaum/
 
 **Archive / Repositories** (v1.2): GEDCOM `0 @Rxx@ REPO`-Records vollständig unterstützt — Picker im Quellen-Formular, Detailansicht mit verlinkten Quellen, CALN (Signatur).
 
-**Quellen-Widget**: einheitlich in allen Formularen — Tags mit ✕, aufklappbare Picker-Liste; im Ereignis-Formular zusätzlich editierbares Seitenfeld (PAGE) pro Quelle.
+**Quellen-Widget**: einheitlich in allen Formularen — Tags mit ✕, aufklappbare Picker-Liste; im Ereignis-Formular zusätzlich editierbares Seitenfeld (PAGE) und Qualitäts-Dropdown (QUAY 0–3) pro Quelle.
+
+**Strukturiertes Datum** (v2.0): Qualifier-Dropdown (exakt / ca. / vor / nach / zwischen) + 3-Felder-Eingabe (Tag / Monat / Jahr). Monat akzeptiert Zahlen und deutsch/englische Namen.
+
+**Strukturierter Ort** (v2.0): Toggle zwischen Freitext und 6-Felder-Eingabe (Dorf / Stadt / PLZ / Landkreis / Bundesland / Staat) entsprechend dem PLAC.FORM aus dem GEDCOM-Header.
 
 ---
 
@@ -120,13 +124,13 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  index.html (v1.2 — Phase 1 abgeschlossen)   │
+│  index.html (v2.0 — Phase 2 abgeschlossen)   │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~4200 Zeilen · ~140 Funktionen · ~215 KB    │
+│  ~4700 Zeilen · ~150 Funktionen · ~250 KB    │
 │                                              │
 │  Globaler State: let db = {                  │
 │    individuals, families, sources,           │
-│    repositories, extraPlaces                 │
+│    repositories, extraPlaces, notes          │
 │  }                                           │
 │                                              │
 │  Persistenz:                                 │
@@ -136,7 +140,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **1 Diff in 2796 Personen** (MeineDaten_ancestris.ged)
-**Version 1.2** — März 2026 — Phase 1 abgeschlossen
+**Version 2.0** — März 2026 — Phase 2 abgeschlossen
 
 ---
 

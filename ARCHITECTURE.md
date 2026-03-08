@@ -8,14 +8,14 @@
 │                                                      │
 │  <style>         <body>            <script>          │
 │  CSS             HTML-Struktur     Vanilla JS        │
-│  ~600 Zeilen     ~500 Zeilen       ~2000 Zeilen      │
+│  ~700 Zeilen     ~600 Zeilen       ~3400 Zeilen      │
 │                                                      │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe aktuell:** ~4000 Zeilen · ~130 Funktionen · ~210 KB
+**Größe aktuell:** ~4700 Zeilen · ~150 Funktionen · ~250 KB
 
 ---
 
@@ -31,7 +31,7 @@
 - Zielgruppe (Hobby-Genealoge) versteht ein einzelnes File
 
 **Konsequenzen:**
-- Datei wächst mit neuen Features (~3600 Z. jetzt)
+- Datei wächst mit neuen Features (~4700 Z. jetzt, nähert sich der 5000-Zeilen-Grenze)
 - Ab ~5000 Zeilen sollte Aufteilung in CSS/JS-Dateien erwogen werden
 - Kein Hot-Reload, kein TypeScript, kein Linting
 
@@ -60,7 +60,9 @@ let db = {
   individuals:  { '@I1@': { ...Person }, '@I2@': { ... } },
   families:     { '@F1@': { ...Familie } },
   sources:      { '@S1@': { ...Quelle } },
-  repositories: { '@R1@': { ...Archiv } },  // v1.2
+  repositories: { '@R1@': { ...Archiv } },   // v1.2
+  notes:        { '@N1@': { id, text } },     // v2.0-dev: NOTE-Records
+  placForm:     'Dorf, Stadt, PLZ, ...',      // v2.0-dev: HEAD PLAC FORM
 };
 let changed = false;  // Änderungs-Flag
 ```
@@ -173,6 +175,39 @@ Nachher: v-landing → [v-main | v-tree] ↔ v-detail
 
 ---
 
+### ADR-010: PLAC-Toggle (v2.0-dev)
+**Entscheidung:** Orts-Eingabe wechselt zwischen Freitext und strukturierten PLAC.FORM-Feldern. Kein automatisches Parsen bestehender Orte — nur neu eingegebene Orte nutzen die Struktur.
+
+**Pattern:**
+```javascript
+const _placeModes = {};  // { placeId: 'free'|'parts' }
+// Initialisierung in showEventForm/showFamilyForm:
+initPlaceMode('ef-place');
+// Toggle-Button ruft auf:
+togglePlaceMode('ef-place');
+// Beim Speichern:
+getPlaceFromForm('ef-place');  // liest je nach Modus Freitext oder joinPlaceParts()
+```
+
+**Warum:** PLAC.FORM-Felder aus HEAD (`db.placForm`) definieren bis zu 6 Labels (z.B. „Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat"). Neue Orte können so strukturiert eingegeben werden, bestehende Freitext-Orte bleiben kompatibel.
+
+---
+
+### ADR-011: 3-Felder-Datum (v2.0-dev)
+**Entscheidung:** Datumseingabe als 3 separate Felder (Tag / Monat / Jahr) + Qualifier-Dropdown statt einem Freitext-Feld.
+
+**Pattern:**
+```javascript
+// Lesen: readDatePartFromFields('ef-date') → '12 MAR 1845'
+// Schreiben: writeDatePartToFields('ef-date', '12 MAR 1845')
+// Normierung: normMonth('März') → 'MAR'; normMonth('3') → 'MAR'
+// Aufbau: buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2') → 'BET 1880 AND 1890'
+```
+
+**Warum:** Freitext führt zu inkonsistenten Formaten. 3 Felder ermöglichen strukturierte Eingabe bei gleichzeitiger Rückwärtskompatibilität (Raw-String im Modell bleibt unverändert).
+
+---
+
 ## HTML-Seitenstruktur
 
 ```
@@ -249,6 +284,9 @@ v-detail           (BottomNav versteckt)
 - Kommt man von `v-detail` (Detail→Detail) → aktuellen State in History
 - Kommt man von `v-main` → History löschen (frischer Einstieg)
 - `goBack()` popt den Stack; leer → `showMain()`
+- Alle show-Funktionen haben `pushHistory = true` als Default-Parameter (ersetzt `_skipHistoryPush`-Flag)
+  - `showDetail(id, pushHistory = true)`, `showFamilyDetail(id, pushHistory = true)`, etc.
+  - `goBack()` ruft mit `pushHistory = false` auf → kein History-Eintrag beim Zurücknavigieren
 
 ### Bottom-Nav Highlight
 `setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places' }`
@@ -273,6 +311,9 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
   titl:        'Graf',
   reli:        'evangelisch',
   uid:         'ABC123',                 // _UID (Ancestris)
+  resn:        '',                       // RESN (v2.0-dev)
+  email:       '',                       // EMAIL (v2.0-dev)
+  www:         '',                       // WWW (v2.0-dev)
 
   // Hauptereignisse (Sonder-Objekte, nicht in events[])
   birth: { date:'8 JAN 1872', place:'München', lati:48.1, long:11.5, sources:['@S1@'], sourcePages:{'@S1@':'47'} },
@@ -283,9 +324,11 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
   // Weitere Ereignisse
   events: [
     { type:'OCCU', value:'Kaufmann', date:'', place:'', lati:null, long:null,
-      sources:[], sourcePages:{}, note:'', addr:'', eventType:'' }
+      sources:[], sourcePages:{}, sourceQUAY:{}, note:'', addr:'', eventType:'' }
     // sourcePages: {sid: page} — Seitenangaben zu Quellenreferenzen (3 PAGE)
+    // sourceQUAY:  {sid: '0'–'3'} — Quellenqualität (3 QUAY) — v2.0-dev
     // addr: Adresse (2 ADDR), nur bei RESI relevant; note: akkumuliert bei mehreren 2 NOTE
+    // eventType: TYPE-Klassifikation (bei EVEN, FACT, MILI)
   ],
 
   // Quellen
@@ -383,7 +426,7 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
 ## Globale Variablen
 
 ```javascript
-let db = { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{} };  // Hauptdaten
+let db = { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{}, notes:{}, placForm:'' };  // Hauptdaten
 let changed = false;               // Ungespeicherte Änderungen?
 let _placesCache = null;           // Cache für collectPlaces(); geleert in markChanged()
 let currentPersonId  = null;       // Aktive Detailansicht
@@ -392,20 +435,21 @@ let currentSourceId  = null;
 let currentRepoId    = null;       // v1.2: aktive Archiv-Detailansicht
 let currentTab = 'persons';        // Aktiver Tab: 'persons'|'families'|'sources'|'places'
 let currentTreeId = null;          // Aktive Person in Sanduhr-Ansicht
-const srcState = {};               // Zustand des Quellen-Widgets: {prefix: Set}
-const srcPageState = {};           // Seitenangaben pro Quelle: {prefix: {sid: page}}
+const srcWidgetState = {};         // Quellen-Widget-Zustand: {prefix: {ids:Set, pages:{}, quay:{}}}
+                                   // Architektur-Fix: ersetzt srcState + srcPageState + srcQuayState
 let _fileHandle = null;            // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
 let _canDirectSave = false;        // true wenn createWritable() auf _fileHandle funktioniert
 let _idb = null;                   // IndexedDB-Instanz
-let _originalGedText = '';         // Original-GEDCOM beim Laden (für Backup)
+let _originalGedText = null;       // RAM-Fallback für erstes GEDCOM; bevorzugt: localStorage('stammbaum_ged_backup')
+function _getOriginalText()        // lazy loader: localStorage-Backup || _originalGedText
 const _navHistory = [];            // Navigations-Stack für goBack() — {type, id|name}
-let _skipHistoryPush = false;      // gesetzt während goBack() navigiert
+                                   // _skipHistoryPush entfernt → pushHistory-Parameter auf show-Funktionen
 // Beziehungs-Picker (v1.1)
 let _relMode     = '';             // 'spouse'|'child'|'parent'
 let _relAnchorId = '';             // personId (spouse/parent) oder famId (child)
-let _pendingRelation = null;       // {mode, anchorId} — gesetzt vor showPersonForm()
+let _pendingRelation = null;       // {mode, anchorId} — gesetzt vor showPersonForm(); closeModal() räumt auf
 // REPO-Feature (v1.2)
-let _pendingRepoLink = null;       // {sourceId} — gesetzt vor showRepoForm(null) aus Quellen-Formular
+let _pendingRepoLink = null;       // {sourceId} — gesetzt vor showRepoForm(null); closeModal() räumt auf
 ```
 
 ---
@@ -554,10 +598,10 @@ restoreFileHandle() (bei Seitenreload)
 
 | Problem | Ursache | Status |
 |---|---|---|
-| localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Still ignoriert wenn voll |
+| localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
 | _STAT geht verloren | Writer kennt den Tag nicht | Bewusst akzeptiert |
-| QUAY an Quellen geht verloren | Vereinfacht | Bewusst akzeptiert |
-| NOTE @ref@ → Inline-NOTE | Records werden aufgelöst | Bewusst akzeptiert |
 | Fotos nicht ladbar | Windows-Pfade aus Legacy | Phase 5 geplant |
-| Keine Sortierung nach Datum | Datum ist Freitext | Offen |
+| Keine Sortierung nach Datum | Datum ist Raw-String | Offen |
 | Sanduhr zeigt nur ersten Ehepartner | Mehrfach-Ehen noch nicht unterstützt | Offen |
+| String-Rendering (XSS) | `innerHTML` + `esc()` ohne echten Sanitizer | Phase 3: Komponentenbasiertes Rendering |
+| ~11 globale Variablen | Schlechte Testbarkeit, versteckte Abhängigkeiten | Phase 3: Store-Muster |

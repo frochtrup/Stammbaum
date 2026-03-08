@@ -4,34 +4,88 @@
 
 ## Version 2.0 (in Planung — Phase 2)
 
-Ziel: vollständiges Redesign der App-Architektur und UI für bessere Wartbarkeit, Performance und Erweiterbarkeit.
+Detaillierter Implementierungsplan: `GEDCOM_V2_PLAN.md`
 
-### Schwerpunkte
+### Schwerpunkt 1: Verlustfreier Ancestris-Roundtrip (höchste Priorität)
 
-#### Architektur
-- [ ] Komponentenbasiertes Rendering (kein monolithisches `innerHTML`)
-- [ ] Klares State-Management (Store-Muster statt globaler Variablen)
-- [ ] Modulare JS-Struktur (auch als Single-File umsetzbar, aber sauber aufgeteilt)
+Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta und ohne Ancestris-Warnungen.
+
+**Sprint 1 — Writer-Fixes (Phase A, kein Risiko)** ✅
+- [x] A1: `HEAD` vollständig: DEST=ANY, FILE=, TIME=, PLAC.FORM, GEDC.FORM=LINEAGE-LINKED
+- [x] A2: `CHAN.TIME` schreiben (HH:MM:SS) bei allen save-Funktionen
+- [x] A3: `NOTE CONT`-Splitting bei 248 Zeichen
+- [x] A4: `OBJE FORM` aus Dateiendung schreiben
+- [x] A5: `DATE` Monats-Normalisierung beim Schreiben (AUG statt Aug)
+
+**Sprint 2 — Parser-Erweiterungen (Phase B, einfach)** ✅
+- [x] B3: `FACT+TYPE` + `MILI` parsen → events[]
+- [x] B4: `RESN`, `EMAIL`, `WWW` auf INDI: Parser + Writer + Display
+- [x] B5: `CHAN.TIME` parsen → `lastChangedTime`
+- [x] Display: EVENT_LABELS FACT/MILI, Event-Dropdown FACT/MILI/GRAD/ADOP
+
+**Sprint 3 — NOTE-Records Roundtrip** ✅
+- [x] B1: `0 @Nxx@ NOTE` Records parsen (inkl. Text auf gleicher Zeile) + schreiben vor TRLR
+- [x] `1 NOTE @Nxx@`-Referenzen bleiben Referenzen (noteRefs / noteTextInline getrennt)
+- [x] FAM noteRefs ergänzt; `savePerson()` noteTextInline-Fix
+
+**Sprint 4 — QUAY Quellenqualität** ✅
+- [x] B2: `sourceQUAY: {}` Dict parallel zu `sourcePages{}` (konservatives Modell, kein Breaking Change)
+- [x] `3 QUAY` parsen für BIRT/DEAT/CHR/BURI + alle events[]
+- [x] `3 QUAY` schreiben in eventBlock() + events-Loop
+- [x] `saveEvent()` erhält sourceQUAY beim Bearbeiten
+
+**Sprint 5 — UI-Ergänzungen** ✅
+- [x] D1: Event-Formular: FACT+TYPE (inkl. TYPE-Freitext-Feld)
+- [x] D2: Quellen-Widget: QUAY-Dropdown (0–3) pro Quellenreferenz
+- [x] D6: Familien-Formular: ENGA (Verlobung) editierbar
+- [x] D5: Personen-Formular: RESN, EMAIL, WWW
+
+**Sprint 6 — Strukturiertes Datum + PLAC.FORM** ✅
+- [x] C1+D3: Datums-UI: Qualifier-Dropdown (exakt/ca./vor/nach/zwischen) + 3-Felder-Eingabe (Tag / Monat / Jahr); `normMonth()` normiert Zahlen und deutsch/englischen Text zu GEDCOM-Standard
+- [x] C2+D4: PLAC.FORM aus HEAD parsen (`db.placForm`) + Orts-Toggle Freitext ↔ 6-Felder-Eingabe
+
+**Sprint 7 — Qualitätssicherung** ✅
+- [x] E1: Roundtrip-Test im Browser: erweitert mit Sprint 5+6-Tags (FACT, MILI, ENGA, QUAY, RESN, EMAIL, WWW, DATE-Qualifier, PLAC.FORM); `additive`-Flag für Tags die Writer immer schreibt; stabil
+- [ ] E2: Ancestris-Import-Test → manuell (Ziel: 0 Warnungen) ← **offen nach Code-Review/Architektur-Review (2026-03-08)**
+
+**Sprint 8 — UI/UX-Fixes** ✅
+- [x] B2: Ghost-Karten opacity 0.18 → 0.40
+- [x] B4: Ereignistyp bei BIRT/CHR/DEAT/BURI als Plain-Text (kein Dropdown-Pfeil)
+- [x] B5: ORT-Toggle zeigt "⊞ Felder" / "⊠ Freitext"
+- [x] B7: AUFBEWAHRUNGSORT als Pseudo-Input mit Rahmen
+- [x] B3: GEDCOM-IDs (@Ixx@, @Fxx@, @Sxx@, @Rxx@) in Detail-Ansichten ausgeblendet
+- [x] B6: Menü "Datei schließen" statt "Schließen"
+- [x] B11: Version "2.0" (kein "-dev") im Hilfe-Modal
+- [x] B9: FAB-Padding für alle Listen (Familien, Quellen, Orte, Archive)
+- [x] B13: Section-Header 0.68rem → 0.75rem
+- [x] B12: Topbar-Titel mit text-overflow ellipsis
+- [x] B14: ☁-Icon goldfarben wenn direktes Speichern aktiv
+- [x] B1: Familie-Formular: Kinder zeigen Klarnamen statt @Ixx@-IDs
+
+---
+
+### Schwerpunkt 2: Architektur & Wartbarkeit
+
+- [ ] Komponentenbasiertes Rendering (kein monolithisches `innerHTML`) ← bekanntes XSS-Risiko + Performance
+- [ ] Klares State-Management (Store-Muster statt ~11 globaler Variablen)
 - [ ] Virtuelles Scrollen für große Listen (>1000 Personen)
 
-#### Speichern / Cloud
+### Schwerpunkt 3: Speichern / Cloud
+
 - [ ] OneDrive-Integration via Microsoft Graph API (PKCE OAuth, kein Server)
-- [ ] Direktes Speichern auf Mac: `showOpenFilePicker()` + `createWritable()` (bereits in v1.2 gelöst — in v2.0 weiterentwickeln)
-- [ ] iCloud Drive bleibt über `<a download>` unterstützt
+- [ ] iCloud Drive: bestehende `showOpenFilePicker`-Architektur bleibt
 
-#### UI/UX
-- [ ] Responsives Layout (Desktop-Zweispalten-Ansicht)
-- [ ] Dunkelmodus
-- [ ] Drag-and-drop im Baum (Personen verschieben)
-- [ ] Erweiterter Stammbaum (Vorfahren-Modus, Mehrfach-Ehen)
+### Schwerpunkt 4: UI/UX Redesign
 
-#### Features
-- [ ] Fotos (Phase 5 → in v2.0 integrieren)
-- [ ] Erweiterte Suche & Filter (Phase 6)
+- [ ] Responsives Layout (Desktop-Zweispalten-Ansicht) ← B8 offen (Phase 3)
+- [ ] Erweiterter Stammbaum (Vorfahren-Modus, Mehrfach-Ehen sichtbar)
+- [ ] Fotos (Base64 + Resize auf max. 800px JPEG)
+- [ ] Erweiterte Suche & Filter (Jahrgang, Ort, Quelle, Duplikate)
 - [ ] Undo/Redo
 - [ ] Service Worker / Offline
+- [ ] Familien-Avatar CSS-Symbol statt OS-Emoji ← B15 offen (Phase 3)
 
-**Entwicklungsdatei:** `index_v2.html`
+**Datei:** `index.html`
 
 ---
 
@@ -272,20 +326,18 @@ if (p.photoBase64) {
 ### Kritisch
 | Problem | Ursache | Workaround |
 |---|---|---|
-| localStorage-Limit | MeineDaten.ged ≈ 5 MB, localStorage ≈ 5–10 MB | Wird still ignoriert wenn voll |
+| localStorage-Limit | MeineDaten.ged ≈ 5 MB, localStorage ≈ 5–10 MB | Toast-Warnung wenn voll (Code-Review-Fix 4) |
 | GEDCOM-Roundtrip verliert Tags | Writer kennt nicht alle Tags | _STAT etc. gehen verloren |
 
 ### Mittel
 | Problem | Ursache | Workaround |
 |---|---|---|
 | Fotos nicht ladbar | Windows-Pfade aus Legacy (C:\Users\...) | Dateiname wird angezeigt |
-| QUAY an Quellreferenzen | Qualitätsbewertung vereinfacht | Bewusst akzeptiert |
 
 ### Klein
 | Problem | Status |
 |---|---|
-| Datumsformat nicht normiert | Freitext, keine Sortierung nach Datum möglich |
-| ENGA (Verlobung) wird geparst aber nicht editierbar | Niedrige Priorität |
+| Sortierung nach Datum | Datum ist Raw-String; chronologische Sortierung noch offen |
 | Sanduhr zeigt nur ersten Ehepartner | Mehrfach-Ehen noch nicht unterstützt |
 
 ---

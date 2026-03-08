@@ -31,7 +31,8 @@
 | `GRAD` | 1 | `events[]` type='GRAD' | Abschluss |
 | `ADOP` | 1 | `events[]` type='ADOP' | Adoption |
 | `MILI` | 1 | `events[]` type='MILI' | Militärdienst |
-| `TYPE` | 2 | `events[].eventType` | Unter EVEN: „Schule", „Hochschule" etc. |
+| `FACT` | 1 | `events[]` type='FACT' | Fakt/Merkmal mit TYPE-Klassifikation |
+| `TYPE` | 2 | `events[].eventType` | Unter EVEN/FACT: Klassifikationstext |
 | `DATE` | 2 | `events[].date` | Freitext, Legacy-Format |
 | `PLAC` | 2 | `events[].place` | Ortsname |
 | `MAP` | 3 | *(Kontext)* | Legacy: Level 3 (Standard: Level 2) |
@@ -41,9 +42,13 @@
 | `ADDR` | 2 | `events[].addr` | Adresse (nur RESI relevant), `3 CONT` für Zeilen |
 | `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt; `3 PAGE` darunter → `sourcePages[sid]` |
 | `PAGE` | 3 | `events[].sourcePages[sid]` / `birth.sourcePages[sid]` etc. | Seitenangabe unter SOUR, editierbar im Ereignis-Formular |
+| `QUAY` | 3 | `events[].sourceQUAY[sid]` / `birth.sourceQUAY[sid]` etc. | Quellenqualität 0–3 unter SOUR, editierbar im Quellen-Widget |
 | `SOUR` | 1 | `topSources[]` | SOUR direkt unter INDI (Level 1) |
 | `NOTE` | 1 | `noteText` / `noteRefs[]` | Inline-Text oder @Ref@ |
 | `CONC`/`CONT` | 2 | `noteText` (angehängt) | Mehrzeilige Notizen |
+| `RESN` | 1 | `resn` | Beschränkung (confidential / locked / privacy) |
+| `EMAIL` | 1 | `email` | E-Mail-Adresse der Person |
+| `WWW` | 1 | `www` | Website-URL der Person |
 | `OBJE` | 1 | `media[].{file,title}` | Foto-Referenz |
 | `FILE` | 2 | `media[].file` | Pfad (oft Windows-Pfad aus Legacy) |
 | `TITL` | 3 | `media[].title` | Unter OBJE/FILE |
@@ -61,7 +66,7 @@
 | `WIFE` | 1 | `wife` | ID der Person |
 | `CHIL` | 1 | `children[]` | IDs der Kinder |
 | `MARR` | 1 | `marr.{date,place,lati,long,sources}` | Heirat |
-| `ENGA` | 1 | `engag.{date,place}` | Verlobung (geparst + geschrieben, kein Edit) |
+| `ENGA` | 1 | `engag.{date,place}` | Verlobung (geparst + geschrieben + editierbar im Familien-Formular) |
 | `NOTE` | 1 | `noteText` | Inline-Text mit CONT-Unterstützung |
 | `SOUR` | 1–3 | `sourceRefs` (Set) + `marr.sources[]` | |
 
@@ -216,23 +221,27 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 | Tag | Grund |
 |---|---|
 | `_STAT` | Nie geparst (Legacy: Never Married etc.) |
-| `QUAY` | Qualitätsbewertung — vereinfacht |
-| `NOTE`-Records (`0 @Nxx@ NOTE`) | Werden nicht neu ausgegeben |
 | `2 SOUR` unter `1 RELI` | RELI ist noch ein String, kein Objekt |
-| `EMAIL`, `WWW`, `RESN` | Nie geparst |
 
 ---
 
 ## Datums-Format
-GEDCOM-Datumsangaben werden als **Freitext** gespeichert und nicht normiert:
-- `12 MAR 1890` — Standardformat
-- `ABT 1875` — ungefähr (About)
-- `BEF 1900` — vor (Before)
-- `AFT 1850` — nach (After)
-- `1973 To 1977` — Zeitraum (Legacy-Format)
-- `Aug 1977 To Jul 1984` — Zeitraum mit Monaten
+GEDCOM-Datumsangaben werden intern als **Raw-String** gespeichert und beim Export unverändert ausgegeben (nach Groß/Klein-Normierung).
 
-Für die Volltextsuche funktioniert das gut (Jahreszahlen sind enthalten). Für Sortierung nach Datum wäre Normierung nötig (nicht implementiert).
+**Unterstützte GEDCOM-Qualifier:**
+| Qualifier | Bedeutung | Beispiel |
+|---|---|---|
+| *(keiner)* | Exaktes Datum | `12 MAR 1890` |
+| `ABT` | ungefähr (About) | `ABT 1875` |
+| `CAL` | errechnet (Calculated) | `CAL 1875` |
+| `EST` | geschätzt (Estimated) | `EST 1875` |
+| `BEF` | vor (Before) | `BEF 1900` |
+| `AFT` | nach (After) | `AFT 1850` |
+| `BET … AND …` | zwischen (Between) | `BET 1880 AND 1890` |
+
+**Eingabe in `index.html`:** Strukturierte 3-Felder-Eingabe (Tag / Monat / Jahr) mit Qualifier-Dropdown. Der Monats-Eingabe akzeptiert Zahlen (1–12) sowie deutsch und englisch geschriebene Monatsnamen und normiert diese zu GEDCOM-Abkürzungen (JAN–DEC). `normMonth()` übernimmt diese Konvertierung.
+
+Für die Volltextsuche funktioniert Raw-Format gut (Jahreszahlen sind enthalten). Chronologische Sortierung der Listen ist noch nicht implementiert.
 
 ---
 
