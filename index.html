@@ -1479,11 +1479,12 @@ function parseGEDCOM(text) {
           events:[], famc:[], fams:[],
           noteRefs:[], noteText:'', noteTextInline:'',
           media:[], titl:'', reli:'', resn:'', email:'', www:'', lastChanged:'', lastChangedTime:'',
-          nameSources:[], sourceRefs: new Set()
+          nameSources:[], nameSourcePages:{}, nameSourceQUAY:{},
+          topSourcePages:{}, topSourceQUAY:{}, sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{}}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1526,7 +1527,7 @@ function parseGEDCOM(text) {
           else { cur.noteRefs.push(val); _curNoteIsInline = false; }
         }
         else if (tag === '_UID') cur.uid = val;
-        else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); }
+        else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); lastSourVal = val; }
         else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
         else if (tag === 'RESN')  cur.resn  = val;
         else if (tag === 'EMAIL') cur.email = val;
@@ -1591,6 +1592,11 @@ function parseGEDCOM(text) {
         }
         // Last changed
         if (lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
+        // topSources PAGE/QUAY (1 SOUR @Sxx@ → 2 PAGE / 2 QUAY)
+        if (lv1tag === 'SOUR' && lastSourVal) {
+          if (tag === 'PAGE') cur.topSourcePages[lastSourVal] = val;
+          if (tag === 'QUAY') cur.topSourceQUAY[lastSourVal] = val;
+        }
         // Collect source references at level 2
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
@@ -1610,6 +1616,7 @@ function parseGEDCOM(text) {
           else if (lv1tag === 'DEAT') { if (!cur.death.sourcePages) cur.death.sourcePages={}; cur.death.sourcePages[lastSourVal] = val; }
           else if (lv1tag === 'CHR')  { if (!cur.chr.sourcePages)   cur.chr.sourcePages={};   cur.chr.sourcePages[lastSourVal]   = val; }
           else if (lv1tag === 'BURI') { if (!cur.buri.sourcePages)  cur.buri.sourcePages={};  cur.buri.sourcePages[lastSourVal]  = val; }
+          else if (lv1tag === 'NAME') cur.nameSourcePages[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourcePages) cur.events[evIdx].sourcePages = {};
             cur.events[evIdx].sourcePages[lastSourVal] = val;
@@ -1621,6 +1628,7 @@ function parseGEDCOM(text) {
           else if (lv1tag === 'DEAT') { if (!cur.death.sourceQUAY) cur.death.sourceQUAY={}; cur.death.sourceQUAY[lastSourVal] = val; }
           else if (lv1tag === 'CHR')  { if (!cur.chr.sourceQUAY)   cur.chr.sourceQUAY={};   cur.chr.sourceQUAY[lastSourVal]   = val; }
           else if (lv1tag === 'BURI') { if (!cur.buri.sourceQUAY)  cur.buri.sourceQUAY={};  cur.buri.sourceQUAY[lastSourVal]  = val; }
+          else if (lv1tag === 'NAME') cur.nameSourceQUAY[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
             cur.events[evIdx].sourceQUAY[lastSourVal] = val;
@@ -1687,6 +1695,10 @@ function parseGEDCOM(text) {
       else if (lv === 3) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         if (lv2tag==='DATE' && lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+        if (lv1tag==='MARR' && lv2tag==='SOUR' && lastSourVal) {
+          if (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
+          if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
+        }
       }
       else if (lv === 4 && inMap && mapParent === 'MARR') {
         const coord = parseGeoCoord(val);
@@ -2062,14 +2074,22 @@ function writeGEDCOM() {
     if (p.surname) lines.push(`2 SURN ${p.surname}`);
     if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
     if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
-    for (const s of (p.nameSources || [])) lines.push(`2 SOUR ${s}`);
+    for (const s of (p.nameSources || [])) {
+      lines.push(`2 SOUR ${s}`);
+      if (p.nameSourcePages?.[s]) lines.push(`3 PAGE ${p.nameSourcePages[s]}`);
+      if (p.nameSourceQUAY?.[s])  lines.push(`3 QUAY ${p.nameSourceQUAY[s]}`);
+    }
     if (p.titl)    lines.push(`1 TITL ${p.titl}`);
     if (p.reli)    lines.push(`1 RELI ${p.reli}`);
     if (p.resn)    lines.push(`1 RESN ${p.resn}`);
     if (p.email)   lines.push(`1 EMAIL ${p.email}`);
     if (p.www)     lines.push(`1 WWW ${p.www}`);
     if (p.sex && p.sex !== 'U') lines.push(`1 SEX ${p.sex}`);
-    for (const s of (p.topSources || [])) lines.push(`1 SOUR ${s}`);
+    for (const s of (p.topSources || [])) {
+      lines.push(`1 SOUR ${s}`);
+      if (p.topSourcePages?.[s]) lines.push(`2 PAGE ${p.topSourcePages[s]}`);
+      if (p.topSourceQUAY?.[s])  lines.push(`2 QUAY ${p.topSourceQUAY[s]}`);
+    }
 
     eventBlock('BIRT', p.birth, 1);
     eventBlock('CHR',  p.chr,   1);
