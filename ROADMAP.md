@@ -46,7 +46,7 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 **Sprint 7 — Qualitätssicherung** ✅
 - [x] E1: Roundtrip-Test im Browser: erweitert mit Sprint 5+6-Tags (FACT, MILI, ENGA, QUAY, RESN, EMAIL, WWW, DATE-Qualifier, PLAC.FORM); `additive`-Flag für Tags die Writer immer schreibt; stabil
-- [ ] E2: Ancestris-Import-Test → manuell (Ziel: 0 Warnungen) ← **offen nach Code-Review/Architektur-Review (2026-03-08)**
+- [x] E2: Ancestris-Import-Test (2026-03-21) — Ergebnis: `3 QUAY`/`3 PAGE` -5 (von -159), Zeilen-Delta -708 (von -1016), stabil ✅
 
 **Sprint 8 — UI/UX-Fixes** ✅
 - [x] B2: Ghost-Karten opacity 0.18 → 0.40
@@ -177,9 +177,9 @@ Alle wichtigen Felder überleben Parse→Write→Parse:
 
 Bewusst akzeptierte Verluste:
 - _STAT — nie geparst
-- QUAY an Quell-Referenzen — vereinfacht
 - NOTE-Records als @ref@ → werden zu Inline-NOTE
 - 2 SOUR unter 1 RELI — 1 Vorkommen, kein UI-Effekt
+- QUAY/PAGE unter TITL/RELI (lv1-Felder, kein Event-Kontext) — 5 Einträge
 
 ### Phase 2.6: GEDCOM-Nachbesserungen ✅ (März 2026)
 - **SOUR/CHAN**: Änderungsdatum von Quellen-Records wird geparst, gespeichert und beim Export zurückgeschrieben. `saveSource()` setzt `lastChanged` automatisch auf heutiges Datum (GEDCOM-Format).

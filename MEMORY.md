@@ -16,10 +16,10 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-08
-- `index.html` v2.0 ✅ stabil (Phase 2 abgeschlossen, Sprints 1–8)
+## Aktueller Stand — zuletzt aktualisiert: 2026-03-21
+- `index.html` v2.0 ✅ stabil (Sprints 1–9)
 - `index_v1.2.html` — Archiv v1.2 (Phase 1)
-- E2 Ancestris-Import-Test: manuell offen
+- E2 Ancestris-Import-Test: ✅ abgeschlossen — 3 QUAY/PAGE: -5 (von -159), Zeilen-Delta -708 (von -1016), stabil
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 

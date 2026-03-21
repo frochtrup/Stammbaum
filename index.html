@@ -861,7 +861,7 @@ body {
       </div>
       <div class="form-group">
         <label class="form-label">Notiz</label>
-        <input class="form-input" id="pf-note" placeholder="Weitere Informationen…">
+        <textarea class="form-input" id="pf-note" rows="3" placeholder="Weitere Informationen…" style="resize:vertical;box-sizing:border-box"></textarea>
       </div>
       <div class="form-group">
         <label class="form-label">Beschränkung (RESN)</label>
@@ -2001,18 +2001,23 @@ function togglePlaceMode(placeId) {
   }
 }
 
-// Schreibt Text als GEDCOM-Zeile mit CONT-Fortsetzung (Zeilenumbrüche + max. 248 Zeichen)
+// Schreibt Text als GEDCOM-Zeile: CONT für Zeilenumbrüche, CONC für Zeichenlimit-Splits
 function pushCont(lines, lv, tag, text) {
   const MAX = 248;
-  const segs = [];
-  for (const nl of (text || '').split('\n')) {
-    let s = nl;
-    if (s.length === 0) { segs.push(''); continue; }
-    while (s.length > 0) { segs.push(s.slice(0, MAX)); s = s.slice(MAX); }
+  const rawLines = (text || '').split('\n');
+  for (let li = 0; li < rawLines.length; li++) {
+    let s = rawLines[li];
+    let firstChunk = true;
+    do {
+      const chunk = s.slice(0, MAX);
+      s = s.slice(MAX);
+      if (li === 0 && firstChunk) lines.push(`${lv} ${tag} ${chunk}`);
+      else if (firstChunk)        lines.push(`${lv+1} CONT ${chunk}`);
+      else                        lines.push(`${lv+1} CONC ${chunk}`);
+      firstChunk = false;
+    } while (s.length > 0);
   }
-  if (!segs.length) segs.push('');
-  lines.push(`${lv} ${tag} ${segs[0]}`);
-  for (let i = 1; i < segs.length; i++) lines.push(`${lv+1} CONT ${segs[i]}`);
+  if (!rawLines.length) lines.push(`${lv} ${tag} `);
 }
 
 // ─────────────────────────────────────
@@ -2200,9 +2205,21 @@ function writeGEDCOM() {
   }
 
   for (const n of Object.values(db.notes || {})) {
-    const nls = (n.text || '').split('\n');
-    lines.push(`0 ${n.id} NOTE ${nls[0]}`);
-    for (let i = 1; i < nls.length; i++) lines.push(`1 CONT ${nls[i]}`);
+    const MAX = 248;
+    const rawLines = (n.text || '').split('\n');
+    for (let li = 0; li < rawLines.length; li++) {
+      let s = rawLines[li];
+      let firstChunk = true;
+      do {
+        const chunk = s.slice(0, MAX);
+        s = s.slice(MAX);
+        if (li === 0 && firstChunk) lines.push(`0 ${n.id} NOTE ${chunk}`);
+        else if (firstChunk)        lines.push(`1 CONT ${chunk}`);
+        else                        lines.push(`1 CONC ${chunk}`);
+        firstChunk = false;
+      } while (s.length > 0);
+    }
+    if (!rawLines.length) lines.push(`0 ${n.id} NOTE `);
   }
 
   lines.push('0 TRLR');
