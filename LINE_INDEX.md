@@ -1,6 +1,6 @@
 # index.html — Zeilen-Index
 
-Stand: Sprint 13 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
+Stand: Sprint 13 abgeschlossen (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 
 ## Globale Variablen / Konstanten
 | Symbol | Zeile |
@@ -200,3 +200,4 @@ Stand: Sprint 13 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 | 10 | MARR/NAME/topSrc PAGE+QUAY; CONC-Fix; _FREL/_MREL lv3-4 | ✅ |
 | 11 | Verbatim Passthrough (ADR-012); DEAT.value; CONC val-fix; Auto-Diff | ✅ |
 | 12 | `frelSeen`/`mrelSeen` (leere _FREL/_MREL); `extraRecords` SUBM-Passthrough; INDI.famc frelSour; MARR.addr | ✅ |
+| 13 | Alle OBJE-Kontexte: `nameSourceExtra`, `sourceExtra`, `frelSourExtra`, FAMC `sourIds`/`sourExtra`, `marr.sourceExtra`; OBJE-Diagnose | ✅ |

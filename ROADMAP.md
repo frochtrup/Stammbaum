@@ -91,17 +91,23 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 - [x] `MARR.addr`: `2 ADDR` unter `1 MARR` in FAM gespeichert + zurückgeschrieben
 - [x] Zeilen-Delta: ~-134 → **-126**; `_FREL`/`_MREL`/`3 SOUR (FAM)`/`4 PAGE`/`4 QUAY` alle ✓; STABIL
 
-**Sprint 13 — OBJE unter MARR (FAM)** ✅
-- [x] `2 OBJE`-Blöcke unter `1 MARR` in FAM-Records werden jetzt gespeichert und roundgetripped
-- [x] Parser: `_ptTarget`-Variable leitet Passthrough-Capture auf `cur.marr._extra[]` um (statt `cur._passthrough[]`)
-- [x] FAM lv=2 MARR-Handler: unbekannte Tags (z.B. OBJE) → `cur.marr._extra.push(...)` + `_ptDepth=2` + `_ptTarget=cur.marr._extra`
-- [x] Writer: `f.marr._extra` nach `eventBlock('MARR')` + ADDR ausgegeben
-- [x] 7 OBJE-Blöcke × 7 Tags (OBJE, FILE, FORM, TYPE, _SCBK, _PRIM, SOUR) ≈ 49 Zeilen wiederhergestellt
+**Sprint 13 — OBJE vollständig: alle OBJE-Kontexte wiederhergestellt** ✅
+- [x] `marr._extra`: unbekannte lv=2-Tags unter `1 MARR` (FAM) via `_ptTarget`-Redirect
+- [x] `nameSourceExtra{}`: `3 OBJE` unter `2 SOUR` unter `1 NAME` (INDI)
+- [x] `birth/death/chr/buri.sourceExtra{}`: `3 OBJE` unter `2 SOUR` unter vital events
+- [x] `birth/death/chr/buri._extra[]`: `2 OBJE` direkt unter `1 BIRT/DEAT/CHR/BURI`
+- [x] `topSourceExtra{}`: `2 OBJE` unter `1 SOUR @id@` (INDI top-level)
+- [x] `ev._extra[]` + `ev.sourceExtra{}`: events[] (OCCU/RESI/etc.)
+- [x] `frelSourExtra[]` / `mrelSourExtra[]`: `4 OBJE` unter `3 SOUR` unter `2 _FREL/_MREL` in INDI FAMC + FAM childRelations
+- [x] `fref.sourIds[]` / `fref.sourExtra{}`: `3 OBJE` unter `2 SOUR` direkt unter `1 FAMC` (INDI)
+- [x] `marr.sourceExtra{}`: `3 OBJE` unter `2 SOUR` unter `1 MARR` (FAM)
+- [x] OBJE-Diagnose im Roundtrip-Test (zeigt fehlende OBJE-Zeilen mit Kontext)
+- [x] Delta: **-126 → -84**; OBJE-Diagnose leer (alle OBJE-Zeilen wiederhergestellt); STABIL
 
 **Bewusst akzeptierte Verluste (Stand Sprint 13):**
 - DATE -106 / CONC -70 / CONT -7: Normalisierung/Resplitting (Daten erhalten, Format geändert)
-- SOUR -3, PAGE -4: Aus verbleibenden unbekannten Kontexten und HEAD
-- VERS/NAME/CORP/DEST/SUBM/ADDR je -1 bis -2: HEAD-Rewrite-Verluste (by design)
+- SOUR -10, PAGE -4, ADDR -2, FILE -1: Aus verbleibenden unbekannten Kontexten und HEAD
+- VERS/NAME/CORP/DEST/SUBM je -1: HEAD-Rewrite-Verluste (by design)
 - `3 PAGE (all)` / `3 QUAY (all)` je -1: Einzelner PAGE/QUAY unter unbekanntem Kontext
 
 ---

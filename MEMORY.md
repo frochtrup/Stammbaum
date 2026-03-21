@@ -19,7 +19,7 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-03-21
 - `index.html` v2.0 ✅ stabil (Sprints 1–13)
 - `index_v1.2.html` — Archiv v1.2 (Phase 1)
-- Roundtrip-Test (Sprint 13): `2 OBJE` unter `1 MARR` (FAM) wiederhergestellt (~49 Zeilen); delta erwartet ~-77
+- Roundtrip-Test (Sprint 13): alle OBJE-Kontexte wiederhergestellt; delta **-84**; OBJE-Diagnose leer
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
@@ -81,7 +81,7 @@ Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
 ## Roundtrip-Status
 
-**index.html v2.0 (Sprint 13):** Delta -126 → ~-77 erwartet (7 OBJE-Blöcke × ~7 Tags unter MARR zurückgewonnen). Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR; `_ptTarget` leitet Capture auf `marr._extra[]` um. `frelSeen`/`mrelSeen`-Flags für leere `_FREL`/`_MREL`. Akzeptierte Verluste: DATE/CONC/CONT (Normalisierung), HEAD-Rewrite. Details: ARCHITECTURE.md ADR-012.
+**index.html v2.0 (Sprint 13):** Delta -126 → **-84**; OBJE-Diagnose leer (alle OBJE-Zeilen wiederhergestellt); STABIL. Fixes: `nameSourceExtra{}`, `birth/death/chr/buri.sourceExtra{}`, `topSourceExtra{}`, `ev.sourceExtra{}` + `ev._extra[]`, `birth/death/chr/buri._extra[]`, `marr._extra[]`, `frelSourExtra[]`/`mrelSourExtra[]` (INDI FAMC + FAM childRelations), FAMC `sourIds[]`/`sourExtra{}`, FAM `marr.sourceExtra{}`. Verbatim Passthrough (ADR-012): `_ptDepth`/`_ptTarget`. Akzeptierte Verluste: DATE/CONC/CONT (Normalisierung), HEAD-Rewrite, SOUR/PAGE/ADDR (unbekannte Kontexte). Details: ARCHITECTURE.md ADR-012.
 
 ---
 
@@ -142,7 +142,7 @@ const _placeModes = {};  // { placeId: 'free'|'parts' }
 | 10 | MARR/NAME/topSrc PAGE+QUAY; pushCont CONC-Fix; pf-note textarea; _FREL/_MREL lv3-4 SOUR/PAGE/QUAY | ✅ |
 | 11 | Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]`; INDI/FAM/SOUR; DEAT.value; CONC val-fix; Auto-Diff | ✅ |
 | 12 | `frelSeen`/`mrelSeen` (leere _FREL/_MREL); `extraRecords[]` SUBM-Passthrough; INDI famc `frelSour`-Fix; MARR.addr | ✅ |
-| 13 | `2 OBJE` unter `1 MARR` (FAM): `_ptTarget` + `marr._extra[]` Passthrough | ✅ |
+| 13 | Alle OBJE-Kontexte: `nameSourceExtra`, `sourceExtra`, `frelSourExtra`, FAMC `sourIds`/`sourExtra`, `marr.sourceExtra`; OBJE-Diagnose | ✅ |
 
 ## Neue Hilfsfunktionen (index.html v2.0)
 ```javascript
