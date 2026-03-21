@@ -1472,10 +1472,10 @@ function parseGEDCOM(text) {
         cur = {
           id: tag, name:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{} },
-          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, cause:'' },
-          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{} },
-          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{} },
+          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, value:'' },
+          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, cause:'', value:'' },
+          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, value:'' },
+          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, value:'' },
           events:[], famc:[], fams:[],
           noteRefs:[], noteText:'', noteTextInline:'',
           media:[], titl:'', reli:'', resn:'', email:'', www:'', lastChanged:'', lastChangedTime:'',
@@ -1532,6 +1532,10 @@ function parseGEDCOM(text) {
         else if (tag === 'RESN')  cur.resn  = val;
         else if (tag === 'EMAIL') cur.email = val;
         else if (tag === 'WWW')   cur.www   = val;
+        else if (tag === 'BIRT') { cur.birth.value = val; }
+        else if (tag === 'CHR')  { cur.chr.value   = val; }
+        else if (tag === 'DEAT') { cur.death.value = val; }
+        else if (tag === 'BURI') { cur.buri.value  = val; }
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI'].includes(tag)) {
           cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{} });
           evIdx = cur.events.length - 1;
@@ -2097,8 +2101,8 @@ function writeGEDCOM() {
   }
 
   function eventBlock(tag, obj, lv) {
-    if (!obj || (!obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length))) return;
-    lines.push(`${lv} ${tag}`);
+    if (!obj || (!obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length))) return;
+    lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
     if (obj.date)  lines.push(`${lv+1} DATE ${normGedDate(obj.date)}`);
     if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
     if (obj.place) {
