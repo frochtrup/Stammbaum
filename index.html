@@ -1486,10 +1486,10 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{}}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:''}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
@@ -1719,7 +1719,8 @@ function parseGEDCOM(text) {
           else cur.noteRefs.push(val);
         }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
-        else if (tag==='MARR' || tag==='ENGA' || tag==='CHAN') { /* context-only */ }
+        else if (tag==='MARR') { cur.marr.value = val; }
+        else if (tag==='ENGA' || tag==='CHAN') { /* context-only */ }
         else {
           // Unknown FAM lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -1794,14 +1795,16 @@ function parseGEDCOM(text) {
         else if (tag==='PUBL') cur.publ   = val;
         else if (tag==='REPO') { cur.repo = val; cur.repoCallNum = ''; }
         else if (tag==='TEXT') cur.text   = val;
-        else if (tag==='OBJE') cur.media.push({ file:'', title:'' });
+        else if (tag==='CHAN') { /* context-only */ }
+        else {
+          // Unknown lv1 tag (incl. OBJE, DATA, etc.) → verbatim passthrough
+          cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
+          _ptDepth = 1;
+        }
       }
       else if (lv === 2) {
         if (lv1tag==='TITL' && (tag==='CONC'||tag==='CONT')) cur.title += (tag==='CONT'?'\n':'') + val;
-        if (lv1tag==='OBJE' && cur.media.length) {
-          if (tag==='FILE') cur.media[cur.media.length-1].file  = val;
-          if (tag==='TITL') cur.media[cur.media.length-1].title = val;
-        }
+        if (lv1tag==='TEXT' && (tag==='CONC'||tag==='CONT')) cur.text  += (tag==='CONT'?'\n':'') + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='REPO' && tag==='CALN') cur.repoCallNum = val;
       }
@@ -2294,12 +2297,23 @@ function writeGEDCOM() {
     lines.push(`1 REPO ${s.repo}`);
     if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
   }
-    if (s.text)   lines.push(`1 TEXT ${s.text}`);
+    if (s.text)   { pushCont(lines, 1, 'TEXT', s.text); }
+    for (const m of (s.media || [])) {
+      lines.push(`1 OBJE`);
+      if (m.file) {
+        lines.push(`2 FILE ${m.file}`);
+        const ext = (m.file.split('.').pop() || '').toUpperCase();
+        const form = { JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext;
+        if (form) lines.push(`3 FORM ${form}`);
+      }
+      if (m.title) lines.push(`3 TITL ${m.title}`);
+    }
     if (s.lastChanged) {
       lines.push(`1 CHAN`);
       lines.push(`2 DATE ${s.lastChanged}`);
       if (s.lastChangedTime) lines.push(`3 TIME ${s.lastChangedTime}`);
     }
+    for (const l of (s._passthrough || [])) lines.push(l);
   }
 
   for (const r of Object.values(db.repositories)) {
