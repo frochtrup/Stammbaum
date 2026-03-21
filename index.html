@@ -1484,7 +1484,7 @@ function parseGEDCOM(text) {
           noteRefs:[], noteText:'', noteTextInline:'',
           media:[], titl:'', reli:'', resn:'', email:'', www:'', lastChanged:'', lastChangedTime:'',
           nameSources:[], nameSourcePages:{}, nameSourceQUAY:{}, nameSourceExtra:{},
-          topSourcePages:{}, topSourceQUAY:{}, sourceRefs: new Set()
+          topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
@@ -1637,10 +1637,15 @@ function parseGEDCOM(text) {
         }
         // Last changed
         if (lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
-        // topSources PAGE/QUAY (1 SOUR @Sxx@ → 2 PAGE / 2 QUAY)
+        // topSources PAGE/QUAY/extra (1 SOUR @Sxx@ → 2 PAGE / 2 QUAY / 2 OBJE …)
         if (lv1tag === 'SOUR' && lastSourVal) {
-          if (tag === 'PAGE') cur.topSourcePages[lastSourVal] = val;
-          if (tag === 'QUAY') cur.topSourceQUAY[lastSourVal] = val;
+          if      (tag === 'PAGE') cur.topSourcePages[lastSourVal] = val;
+          else if (tag === 'QUAY') cur.topSourceQUAY[lastSourVal] = val;
+          else if (tag !== 'SOUR') {
+            if (!cur.topSourceExtra[lastSourVal]) cur.topSourceExtra[lastSourVal] = [];
+            cur.topSourceExtra[lastSourVal].push('2 ' + tag + (val ? ' ' + val : ''));
+            _ptDepth = 2; _ptTarget = cur.topSourceExtra[lastSourVal];
+          }
         }
         // Collect source references at level 2
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
@@ -2213,6 +2218,7 @@ function writeGEDCOM() {
       lines.push(`1 SOUR ${s}`);
       if (p.topSourcePages?.[s]) lines.push(`2 PAGE ${p.topSourcePages[s]}`);
       if (p.topSourceQUAY?.[s])  lines.push(`2 QUAY ${p.topSourceQUAY[s]}`);
+      if (p.topSourceExtra?.[s]) for (const l of p.topSourceExtra[s]) lines.push(l);
     }
 
     eventBlock('BIRT', p.birth, 1);
