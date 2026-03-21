@@ -4129,6 +4129,22 @@ function runRoundtripTest() {
         ? '  (keine)'
         : _topMissing.map(([t,n]) => `  ${t.padEnd(14)} -${n}`).join('\n');
 
+      // Diagnose: Sammle bis zu 5 vollständige fehlende Zeilen für OBJE (mit 2 Zeilen Kontext)
+      const _objeDiag = [];
+      { const _outC2 = new Map(); for (const l of _outArr) _outC2.set(l, (_outC2.get(l)||0)+1);
+        const _allLines = _origText.split(/\r?\n/);
+        for (let i = 0; i < _allLines.length && _objeDiag.length < 5; i++) {
+          const lt = _allLines[i].trim();
+          if (!/OBJE/.test(lt)) continue;
+          const rem = _outC2.get(lt) || 0;
+          if (rem > 0) { _outC2.set(lt, rem-1); continue; }
+          const prev = _allLines[i-1]?.trim() || '';
+          const next = _allLines[i+1]?.trim() || '';
+          _objeDiag.push(`  [${i+1}] prev: ${prev}\n       MISS: ${lt}\n       next: ${next}`);
+        }
+      }
+      const _objeDiagReport = _objeDiag.length ? '\n\nOBJE-Diagnose (fehlende Zeilen):\n' + _objeDiag.join('\n') : '';
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -4153,6 +4169,7 @@ function runRoundtripTest() {
         `Tag-Statistik:\n` + rows.join('\n') +
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
+        _objeDiagReport +
         diffSnippet;
 
     } catch (e) {
