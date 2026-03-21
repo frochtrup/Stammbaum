@@ -2563,6 +2563,7 @@ async function saveToFileHandle(content) {
     await w.close(); w = null;
     changed = false; updateChangedIndicator();
     try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
+    idbPut('stammbaum_ged', content).catch(() => {});
     showToast('✓ Direkt gespeichert');
     return true;
   } catch(e) {
@@ -2654,6 +2655,7 @@ async function exportGEDCOM() {
   _downloadBlob(content, filename);
   changed = false; updateChangedIndicator();
   try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
+  idbPut('stammbaum_ged', content).catch(() => {});
   showToast('✓ ' + filename + ' heruntergeladen');
 }
 
@@ -2691,6 +2693,9 @@ function confirmNewFile() {
   _originalGedText = null;
   _fileHandle = null; _canDirectSave = false;
   idbDel('fileHandle').catch(() => {});
+  idbDel('stammbaum_ged').catch(() => {});
+  idbDel('stammbaum_ged_backup').catch(() => {});
+  idbDel('stammbaum_filename').catch(() => {});
   try {
     localStorage.removeItem('stammbaum_ged'); localStorage.removeItem('stammbaum_filename');
     localStorage.removeItem('stammbaum_ged_backup'); localStorage.removeItem('stammbaum_backup_filename'); localStorage.removeItem('stammbaum_backup_date');
@@ -2711,15 +2716,17 @@ function _processLoadedText(text, filename) {
     for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
     if (maxUsed >= idCounter) idCounter = maxUsed;
   }
-  _originalGedText = text;  // Fallback; wird genullt wenn localStorage-Backup gelingt
-  const tryLS = (k, v) => { try { localStorage.setItem(k, v); return true; } catch(e) { return false; } };
-  const gedOk    = tryLS('stammbaum_ged',             text);
-  tryLS('stammbaum_filename',        filename);
-  const backupOk = tryLS('stammbaum_ged_backup',      text);
-  tryLS('stammbaum_backup_filename', filename);
-  tryLS('stammbaum_backup_date',     new Date().toLocaleDateString('de-DE'));
-  if (backupOk) _originalGedText = null; // RAM freigeben, _getOriginalText() liest aus localStorage
-  if (!gedOk) showToast('⚠ Browser-Cache voll – kein Auto-Reload nach Neustart');
+  _originalGedText = text;  // immer in RAM; IDB für Persistenz
+  // IDB: primäre Persistenz (kein Größenlimit)
+  idbPut('stammbaum_ged', text).catch(() => {});
+  idbPut('stammbaum_ged_backup', text).catch(() => {});
+  idbPut('stammbaum_filename', filename).catch(() => {});
+  // localStorage: Fallback (kein Toast bei Fehler)
+  try { localStorage.setItem('stammbaum_ged', text); } catch(e) {}
+  try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
+  try { localStorage.setItem('stammbaum_ged_backup', text); } catch(e) {}
+  try { localStorage.setItem('stammbaum_backup_filename', filename); } catch(e) {}
+  try { localStorage.setItem('stammbaum_backup_date', new Date().toLocaleDateString('de-DE')); } catch(e) {}
   updateBackupBtn();
   updateTopbarTitle(filename);
   showStartView();
@@ -2752,8 +2759,24 @@ function loadDemo() {
   showStartView(); showToast('✓ Demo geladen');
 }
 
-// Auto-load last file from localStorage on startup
-function tryAutoLoad() {
+// Auto-load last file from IDB (primary) or localStorage (fallback/migration)
+async function tryAutoLoad() {
+  // IDB zuerst (kein Größenlimit)
+  try {
+    const saved = await idbGet('stammbaum_ged');
+    if (saved && saved.length > 10) {
+      const fname = (await idbGet('stammbaum_filename')) || localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
+      db = parseGEDCOM(saved);
+      db.extraPlaces = loadExtraPlaces();
+      _originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
+      showStartView();
+      updateBackupBtn();
+      updateTopbarTitle(fname);
+      showToast('✓ ' + fname + ' automatisch geladen');
+      return true;
+    }
+  } catch(e) { /* IDB nicht verfügbar */ }
+  // Fallback: localStorage (Migration für bestehende Nutzer)
   try {
     const saved = localStorage.getItem('stammbaum_ged');
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
@@ -2765,15 +2788,19 @@ function tryAutoLoad() {
       updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
+      // Nach IDB migrieren
+      idbPut('stammbaum_ged', saved).catch(() => {});
+      idbPut('stammbaum_ged_backup', _originalGedText).catch(() => {});
+      idbPut('stammbaum_filename', fname).catch(() => {});
       return true;
     }
-  } catch(e) { /* no storage or parse error */ }
+  } catch(e) { /* kein Storage */ }
   return false;
 }
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
   const urlFile = new URLSearchParams(location.search).get('datei');
   if (urlFile) updateTopbarTitle(urlFile);
-  tryAutoLoad(); // überschreibt ggf. mit echtem Dateinamen aus localStorage
+  await tryAutoLoad();
   restoreFileHandle(); updateSaveIndicator();
 });
 
@@ -3013,6 +3040,15 @@ function renderFamilyList(fams) {
   const el = document.getElementById('familyList');
   if (!fams) fams = Object.values(db.families);
   if (!fams.length) { el.innerHTML = '<div class="empty">Keine Familien gefunden</div>'; return; }
+  fams = [...fams].sort((a, b) => {
+    const na = a.husb ? (db.individuals[a.husb]?.surname || db.individuals[a.husb]?.name || '') : '';
+    const nb = b.husb ? (db.individuals[b.husb]?.surname || db.individuals[b.husb]?.name || '') : '';
+    const c = na.localeCompare(nb, 'de');
+    if (c !== 0) return c;
+    const ya = parseInt((a.marr.date || '').match(/\d{4}/)?.[0] || '9999');
+    const yb = parseInt((b.marr.date || '').match(/\d{4}/)?.[0] || '9999');
+    return ya - yb;
+  });
 
   let html = '';
   for (const f of fams) {

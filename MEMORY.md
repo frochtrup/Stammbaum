@@ -16,11 +16,10 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-21
-- `index.html` v2.0 ✅ **Phase 2 abgeschlossen** (Sprints 1–13)
-- `index_v1.2.html` — Archiv v1.2 (Phase 1)
-- Roundtrip-Test (Sprint 13): alle OBJE-Kontexte wiederhergestellt; delta **-84**; OBJE-Diagnose leer; STABIL
-- Phase 3 (v3.0) geplant: Architektur-Redesign, OneDrive-Integration, UI-Redesign
+## Aktueller Stand — zuletzt aktualisiert: 2026-03-22
+- `index.html` v2.0 → **Phase 3 gestartet** (Sprint P3-1 abgeschlossen)
+- Sprint P3-1 ✅ IndexedDB-Migration + Familien-Sortierung (2026-03-22)
+- Phase 3 Sprint-Plan: P3-1 IndexedDB ✅ · P3-2 Fotos · P3-3 Suche/Filter · P3-4 Service Worker · P3-5 Baum-UI · P3-6 Undo · P3-7 Desktop-Layout · P3-8 OneDrive
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 

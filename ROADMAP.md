@@ -118,7 +118,22 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 ---
 
-## Version 3.0 (Phase 3 — geplant)
+## Version 3.0 (Phase 3 — in Arbeit, März 2026)
+
+**Sprint-Plan:** P3-1 IndexedDB · P3-2 Fotos · P3-3 Suche/Filter · P3-4 Service Worker · P3-5 Baum-UI · P3-6 Undo · P3-7 Desktop-Layout · P3-8 OneDrive
+
+---
+
+**Sprint P3-1 — IndexedDB-Migration + Sortierung** ✅ (2026-03-22)
+- [x] GEDCOM-Text (5 MB) von localStorage → IndexedDB (`stammbaum_ged`, `stammbaum_ged_backup`, `stammbaum_filename`)
+- [x] `_processLoadedText()`: IDB-Writes + localStorage als stiller Fallback (kein Toast mehr bei Cache-Fehler)
+- [x] `tryAutoLoad()`: async, IDB first → localStorage-Fallback mit automatischer Migration
+- [x] `saveToFileHandle()` + Download-Pfad: auch IDB aktualisieren
+- [x] `confirmNewFile()`: auch IDB-Keys löschen
+- [x] `_originalGedText` immer in RAM (kein Nullen mehr nach Backup)
+- [x] Familien-Liste: alphabetisch nach Vater-Nachname, dann nach Heiratsjahr sortiert
+
+---
 
 ### Schwerpunkt 1: Architektur & Wartbarkeit
 
