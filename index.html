@@ -1499,12 +1499,15 @@ function parseGEDCOM(text) {
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
         cur = { id:tag, name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'' };
         repositories[tag] = cur; curType = 'REPO';
-      } else {
-        // Unknown lv=0 record (e.g. SUBM) — store verbatim for roundtrip
+      } else if (tag.startsWith('@')) {
+        // Unknown @ID@ lv=0 record (e.g. SUBM) — store verbatim for roundtrip
         const recLine = '0 ' + tag + (val ? ' ' + val : '');
         cur = { _lines: [recLine] };
         _extraRecords.push(cur);
         curType = '_extra';
+      } else {
+        // HEAD, TRLR etc. — not tracked (HEAD rebuilt by writer, TRLR is sentinel)
+        curType = null; cur = null;
       }
       continue;
     }
