@@ -1553,7 +1553,7 @@ function parseGEDCOM(text) {
         else if (tag === 'SEX')  cur.sex  = val;
         else if (tag === 'TITL') cur.titl = val;
         else if (tag === 'RELI') cur.reli = val;
-        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'', frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
+        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') {
           if (!val.startsWith('@')) { cur.noteText += val; cur.noteTextInline += val; _curNoteIsInline = true; }
@@ -1626,8 +1626,8 @@ function parseGEDCOM(text) {
         // Family relationship
         if (lv1tag === 'FAMC' && cur.famc.length) {
           const fref = cur.famc[cur.famc.length-1];
-          if (tag==='_FREL') fref.frel = val;
-          if (tag==='_MREL') fref.mrel = val;
+          if (tag==='_FREL') { fref.frel = val; fref.frelSeen = true; }
+          if (tag==='_MREL') { fref.mrel = val; fref.mrelSeen = true; }
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
@@ -1760,10 +1760,10 @@ function parseGEDCOM(text) {
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
         if (lv1tag==='CHIL' && cur._lastChil) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
           const cref = cur.childRelations[cur._lastChil];
-          if (tag==='_FREL') cref.frel = val;
-          if (tag==='_MREL') cref.mrel = val;
+          if (tag==='_FREL') { cref.frel = val; cref.frelSeen = true; }
+          if (tag==='_MREL') { cref.mrel = val; cref.mrelSeen = true; }
         }
       }
       else if (lv === 3) {
@@ -1774,7 +1774,7 @@ function parseGEDCOM(text) {
           if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='SOUR') {
             if (lv2tag==='_FREL') cref.frelSour = val;
@@ -2223,7 +2223,7 @@ function writeGEDCOM() {
       const famId = typeof fref === 'string' ? fref : fref.famId;
       lines.push(`1 FAMC ${famId}`);
       if (typeof fref === 'object') {
-        if (fref.frel) {
+        if (fref.frelSeen) {
           lines.push(`2 _FREL ${fref.frel}`);
           if (fref.frelSour) {
             lines.push(`3 SOUR ${fref.frelSour}`);
@@ -2231,7 +2231,7 @@ function writeGEDCOM() {
             if (fref.frelQUAY) lines.push(`4 QUAY ${fref.frelQUAY}`);
           }
         }
-        if (fref.mrel) {
+        if (fref.mrelSeen) {
           lines.push(`2 _MREL ${fref.mrel}`);
           if (fref.mrelSour) {
             lines.push(`3 SOUR ${fref.mrelSour}`);
@@ -2269,7 +2269,7 @@ function writeGEDCOM() {
       lines.push(`1 CHIL ${c}`);
       const cref = f.childRelations?.[c];
       if (cref) {
-        if (cref.frel) {
+        if (cref.frelSeen) {
           lines.push(`2 _FREL ${cref.frel}`);
           if (cref.frelSour) {
             lines.push(`3 SOUR ${cref.frelSour}`);
@@ -2277,7 +2277,7 @@ function writeGEDCOM() {
             if (cref.frelQUAY) lines.push(`4 QUAY ${cref.frelQUAY}`);
           }
         }
-        if (cref.mrel) {
+        if (cref.mrelSeen) {
           lines.push(`2 _MREL ${cref.mrel}`);
           if (cref.mrelSour) {
             lines.push(`3 SOUR ${cref.mrelSour}`);
@@ -3972,21 +3972,6 @@ function runRoundtripTest() {
       const saved = db;
       const db1 = parseGEDCOM(_origText);
 
-      // ── Diagnostik: fehlende _FREL/_MREL nach Parsing ──
-      const _diagLines = [];
-      for (const [fid, f] of Object.entries(db1.families || {})) {
-        for (const c of (f.children || [])) {
-          const cref = f.childRelations?.[c];
-          if (cref && (!cref.frel || !cref.mrel)) _diagLines.push(`FAM ${fid} CHIL ${c}: frel='${cref.frel}' mrel='${cref.mrel}'`);
-        }
-      }
-      for (const [iid, p] of Object.entries(db1.individuals || {})) {
-        for (const fr of (p.famc || [])) {
-          if ((fr.frel || fr.mrel) && !fr.frelSour && !fr.mrelSour) _diagLines.push(`INDI ${iid} FAMC ${fr.famId}: frel='${fr.frel}' frelSour='${fr.frelSour}'`);
-          if (!fr.frel && !fr.mrel) {} // skip — no _FREL at all is normal
-        }
-      }
-
       // Write pass 1
       db = db1;
       const out1 = writeGEDCOM();
@@ -4132,7 +4117,6 @@ function runRoundtripTest() {
         `Tag-Statistik:\n` + rows.join('\n') +
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
-        (_diagLines.length ? '\n\nDiagnostik _FREL/_MREL:\n' + _diagLines.join('\n') : '') +
         diffSnippet;
 
     } catch (e) {
