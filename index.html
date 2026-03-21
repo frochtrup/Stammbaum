@@ -1456,6 +1456,7 @@ function parseGEDCOM(text) {
   let lastSourVal = ''; // last seen 2 SOUR @id@ value (for 3 PAGE lookup)
   let _curNoteIsInline = false; // true when 1 NOTE was inline (not a @ref@)
   let _ptDepth = 0;  // verbatim-passthrough depth (0 = off)
+  let _ptTarget = null; // redirect capture target (null = cur._passthrough)
 
   for (let raw of lines) {
     const line = raw.trim();
@@ -1487,7 +1488,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:'',seen:false,addr:''}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1524,10 +1525,11 @@ function parseGEDCOM(text) {
     // ── Verbatim Passthrough ──
     if (_ptDepth > 0) {
       if (lv > _ptDepth) {
-        if (cur && cur._passthrough) cur._passthrough.push(lv + ' ' + tag + (val ? ' ' + val : ''));
+        const _ptArr = _ptTarget || (cur && cur._passthrough);
+        if (_ptArr) _ptArr.push(lv + ' ' + tag + (val ? ' ' + val : ''));
         continue;
       } else {
-        _ptDepth = 0; // lv <= _ptDepth: exit passthrough, process line normally
+        _ptDepth = 0; _ptTarget = null; // lv <= _ptDepth: exit passthrough, process line normally
       }
     }
 
@@ -1747,9 +1749,10 @@ function parseGEDCOM(text) {
       else if (lv === 2) {
         if (lv1tag==='MARR') {
           if (tag==='DATE') cur.marr.date=val;
-          if (tag==='PLAC') cur.marr.place=val;
-          if (tag==='ADDR') cur.marr.addr=val;
-          if (tag==='SOUR' && val.startsWith('@')) { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='PLAC') cur.marr.place=val;
+          else if (tag==='ADDR') cur.marr.addr=val;
+          else if (tag==='SOUR' && val.startsWith('@')) { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); cur.sourceRefs.add(val); }
+          else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.marr._extra; }
         }
         if (lv1tag==='ENGA') {
           if (tag==='DATE') cur.engag.date = val;
@@ -2289,6 +2292,7 @@ function writeGEDCOM() {
     }
     eventBlock('MARR', f.marr, 1);
     if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
+    for (const l of (f.marr._extra || [])) lines.push(l);
     if (f.engag && (f.engag.date || f.engag.place)) {
       lines.push(`1 ENGA`);
       if (f.engag.date)  lines.push(`2 DATE ${normGedDate(f.engag.date)}`);

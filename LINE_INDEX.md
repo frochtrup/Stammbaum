@@ -1,6 +1,6 @@
 # index.html — Zeilen-Index
 
-Stand: Sprint 12 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
+Stand: Sprint 13 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 
 ## Globale Variablen / Konstanten
 | Symbol | Zeile |
@@ -18,6 +18,7 @@ Stand: Sprint 12 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 | `function parseGEDCOM(text)` | 1438 |
 | `const _extraRecords = []` (Sprint 12: unbekannte lv=0 Records) | 1447 |
 | `let _ptDepth = 0` | 1458 |
+| `let _ptTarget = null` | 1459 |
 | Level-0 Dispatch (INDI / FAM / SOUR / NOTE / REPO / **_extra**) | ~1469–1513 |
 | **INDI init** (incl. `nameRaw:''`) | 1474 |
 | `birth:{…}` / `chr:{…}` / `death:{…}` / `buri:{…}` | 1477–1482 |
@@ -36,7 +37,7 @@ Stand: Sprint 12 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 | INDI lv=4 (MAP LATI/LONG, _FREL/_MREL PAGE/QUAY) | ~1688–1714 |
 | `// ── FAMILY ──` | 1728 |
 | FAM lv=1 (HUSB, WIFE, CHIL, NOTE, SOUR, MARR.seen, ENGA, CHAN) | 1730–1746 |
-| FAM lv=2 (MARR/ENGA/NOTE/CHAN/CHIL `frelSeen`/`mrelSeen`) | 1747–1768 |
+| FAM lv=2 (MARR/ENGA/NOTE/CHAN/CHIL `frelSeen`/`mrelSeen`; MARR else→`_extra`) | 1747–1770 |
 | FAM lv=3 (MARR SOUR PAGE/QUAY, CHIL `frelSour`/`mrelSour`) | 1769–1784 |
 | FAM lv=4 (MAP MARR LATI/LONG, CHIL _FREL/_MREL PAGE/QUAY) | 1785–1806 |
 | `// ── SOURCE ──` | 1806 |
@@ -89,7 +90,7 @@ Stand: Sprint 12 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 | INDI media loop + passthrough | ~2244–2260 |
 | **FAM Writer loop** | 2264 |
 | FAM CHIL + childRelations (`frelSeen`/`mrelSeen` guard) | 2268–2288 |
-| FAM MARR via `eventBlock` + ADDR | 2290–2291 |
+| FAM MARR via `eventBlock` + ADDR + `marr._extra` | 2290–2295 |
 | FAM passthrough | ~2304 |
 | **SOUR Writer loop** | 2308 |
 | SOUR passthrough | ~2334 |

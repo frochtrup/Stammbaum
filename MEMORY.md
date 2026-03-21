@@ -17,9 +17,9 @@
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
 ## Aktueller Stand — zuletzt aktualisiert: 2026-03-21
-- `index.html` v2.0 ✅ stabil (Sprints 1–12)
+- `index.html` v2.0 ✅ stabil (Sprints 1–13)
 - `index_v1.2.html` — Archiv v1.2 (Phase 1)
-- Roundtrip-Test (Sprint 12): delta=-126, STABIL; `_FREL`/`_MREL`/`3 SOUR (FAM)`/`4 PAGE`/`4 QUAY` alle ✓
+- Roundtrip-Test (Sprint 13): `2 OBJE` unter `1 MARR` (FAM) wiederhergestellt (~49 Zeilen); delta erwartet ~-77
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
@@ -81,7 +81,7 @@ Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
 ## Roundtrip-Status
 
-**index.html v2.0 (Sprint 12):** Delta -126 (Testdaten 191P/59F), STABIL. Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR; `_extraRecords[]` für unbekannte `0 @ID@ TYPE` Records (SUBM). `frelSeen`/`mrelSeen`-Flags für leere `_FREL`/`_MREL`-Werte. Akzeptierte Verluste: DATE/CONC/CONT (Normalisierung), OBJE unter MARR (nicht gespeichert), HEAD-Rewrite. Details: ARCHITECTURE.md ADR-012.
+**index.html v2.0 (Sprint 13):** Delta -126 → ~-77 erwartet (7 OBJE-Blöcke × ~7 Tags unter MARR zurückgewonnen). Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR; `_ptTarget` leitet Capture auf `marr._extra[]` um. `frelSeen`/`mrelSeen`-Flags für leere `_FREL`/`_MREL`. Akzeptierte Verluste: DATE/CONC/CONT (Normalisierung), HEAD-Rewrite. Details: ARCHITECTURE.md ADR-012.
 
 ---
 
@@ -142,6 +142,7 @@ const _placeModes = {};  // { placeId: 'free'|'parts' }
 | 10 | MARR/NAME/topSrc PAGE+QUAY; pushCont CONC-Fix; pf-note textarea; _FREL/_MREL lv3-4 SOUR/PAGE/QUAY | ✅ |
 | 11 | Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]`; INDI/FAM/SOUR; DEAT.value; CONC val-fix; Auto-Diff | ✅ |
 | 12 | `frelSeen`/`mrelSeen` (leere _FREL/_MREL); `extraRecords[]` SUBM-Passthrough; INDI famc `frelSour`-Fix; MARR.addr | ✅ |
+| 13 | `2 OBJE` unter `1 MARR` (FAM): `_ptTarget` + `marr._extra[]` Passthrough | ✅ |
 
 ## Neue Hilfsfunktionen (index.html v2.0)
 ```javascript

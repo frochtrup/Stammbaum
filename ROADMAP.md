@@ -89,12 +89,18 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 - [x] INDI lv=3: `frelSour`/`mrelSour` korrekt gesetzt (dead-code-Fix: war in lv=2-Block, jetzt in lv=3)
 - [x] `_extraRecords[]` Passthrough für unbekannte `0 @ID@ TYPE`-Records (SUBM u.ä.): verbatim vor TRLR ausgegeben; HEAD + TRLR explizit ausgenommen (keine `@`-ID)
 - [x] `MARR.addr`: `2 ADDR` unter `1 MARR` in FAM gespeichert + zurückgeschrieben
-- [x] Zeilen-Delta: ~-134 → **-126** (Testdaten: 191 Personen, 59 Familien); `_FREL`/`_MREL`/`3 SOUR (FAM)`/`4 PAGE`/`4 QUAY` alle ✓; STABIL
+- [x] Zeilen-Delta: ~-134 → **-126**; `_FREL`/`_MREL`/`3 SOUR (FAM)`/`4 PAGE`/`4 QUAY` alle ✓; STABIL
 
-**Bewusst akzeptierte Verluste (Stand Sprint 12):**
+**Sprint 13 — OBJE unter MARR (FAM)** ✅
+- [x] `2 OBJE`-Blöcke unter `1 MARR` in FAM-Records werden jetzt gespeichert und roundgetripped
+- [x] Parser: `_ptTarget`-Variable leitet Passthrough-Capture auf `cur.marr._extra[]` um (statt `cur._passthrough[]`)
+- [x] FAM lv=2 MARR-Handler: unbekannte Tags (z.B. OBJE) → `cur.marr._extra.push(...)` + `_ptDepth=2` + `_ptTarget=cur.marr._extra`
+- [x] Writer: `f.marr._extra` nach `eventBlock('MARR')` + ADDR ausgegeben
+- [x] 7 OBJE-Blöcke × 7 Tags (OBJE, FILE, FORM, TYPE, _SCBK, _PRIM, SOUR) ≈ 49 Zeilen wiederhergestellt
+
+**Bewusst akzeptierte Verluste (Stand Sprint 13):**
 - DATE -106 / CONC -70 / CONT -7: Normalisierung/Resplitting (Daten erhalten, Format geändert)
-- OBJE/FILE/FORM/TYPE/_SCBK/_PRIM je -7: `2 OBJE` unter `1 MARR` in FAM (nicht gespeichert)
-- SOUR -10, PAGE -4: Aus OBJE-Kontexten und HEAD
+- SOUR -3, PAGE -4: Aus verbleibenden unbekannten Kontexten und HEAD
 - VERS/NAME/CORP/DEST/SUBM/ADDR je -1 bis -2: HEAD-Rewrite-Verluste (by design)
 - `3 PAGE (all)` / `3 QUAY (all)` je -1: Einzelner PAGE/QUAY unter unbekanntem Kontext
 
