@@ -3971,6 +3971,22 @@ function runRoundtripTest() {
       // Pass 1: parse original
       const saved = db;
       const db1 = parseGEDCOM(_origText);
+
+      // ── Diagnostik: fehlende _FREL/_MREL nach Parsing ──
+      const _diagLines = [];
+      for (const [fid, f] of Object.entries(db1.families || {})) {
+        for (const c of (f.children || [])) {
+          const cref = f.childRelations?.[c];
+          if (cref && (!cref.frel || !cref.mrel)) _diagLines.push(`FAM ${fid} CHIL ${c}: frel='${cref.frel}' mrel='${cref.mrel}'`);
+        }
+      }
+      for (const [iid, p] of Object.entries(db1.individuals || {})) {
+        for (const fr of (p.famc || [])) {
+          if ((fr.frel || fr.mrel) && !fr.frelSour && !fr.mrelSour) _diagLines.push(`INDI ${iid} FAMC ${fr.famId}: frel='${fr.frel}' frelSour='${fr.frelSour}'`);
+          if (!fr.frel && !fr.mrel) {} // skip — no _FREL at all is normal
+        }
+      }
+
       // Write pass 1
       db = db1;
       const out1 = writeGEDCOM();
@@ -4116,6 +4132,7 @@ function runRoundtripTest() {
         `Tag-Statistik:\n` + rows.join('\n') +
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
+        (_diagLines.length ? '\n\nDiagnostik _FREL/_MREL:\n' + _diagLines.join('\n') : '') +
         diffSnippet;
 
     } catch (e) {
