@@ -1483,7 +1483,7 @@ function parseGEDCOM(text) {
           events:[], famc:[], fams:[],
           noteRefs:[], noteText:'', noteTextInline:'',
           media:[], titl:'', reli:'', resn:'', email:'', www:'', lastChanged:'', lastChangedTime:'',
-          nameSources:[], nameSourcePages:{}, nameSourceQUAY:{},
+          nameSources:[], nameSourcePages:{}, nameSourceQUAY:{}, nameSourceExtra:{},
           topSourcePages:{}, topSourceQUAY:{}, sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
@@ -1678,6 +1678,13 @@ function parseGEDCOM(text) {
             if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
             cur.events[evIdx].sourceQUAY[lastSourVal] = val;
           }
+        }
+        // 3 OBJE (und andere unbekannte lv=3 Tags) unter 2 SOUR unter 1 NAME → nameSourceExtra
+        if (lv2tag === 'SOUR' && lv1tag === 'NAME' && lastSourVal.startsWith('@') &&
+            tag !== 'PAGE' && tag !== 'QUAY' && tag !== 'SOUR' && tag !== 'TIME') {
+          if (!cur.nameSourceExtra[lastSourVal]) cur.nameSourceExtra[lastSourVal] = [];
+          cur.nameSourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : ''));
+          _ptDepth = 3; _ptTarget = cur.nameSourceExtra[lastSourVal];
         }
         // 3 SOUR unter 2 _FREL/_MREL (in 1 FAMC Kontext)
         if (lv1tag === 'FAMC' && cur.famc.length && tag === 'SOUR') {
@@ -2184,6 +2191,7 @@ function writeGEDCOM() {
       lines.push(`2 SOUR ${s}`);
       if (p.nameSourcePages?.[s]) lines.push(`3 PAGE ${p.nameSourcePages[s]}`);
       if (p.nameSourceQUAY?.[s])  lines.push(`3 QUAY ${p.nameSourceQUAY[s]}`);
+      if (p.nameSourceExtra?.[s]) for (const l of p.nameSourceExtra[s]) lines.push(l);
     }
     if (p.titl)    lines.push(`1 TITL ${p.titl}`);
     if (p.reli)    lines.push(`1 RELI ${p.reli}`);
