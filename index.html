@@ -1555,7 +1555,7 @@ function parseGEDCOM(text) {
         else if (tag === 'SEX')  cur.sex  = val;
         else if (tag === 'TITL') cur.titl = val;
         else if (tag === 'RELI') cur.reli = val;
-        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
+        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') {
           if (!val.startsWith('@')) { cur.noteText += val; cur.noteTextInline += val; _curNoteIsInline = true; }
@@ -1635,6 +1635,7 @@ function parseGEDCOM(text) {
           const fref = cur.famc[cur.famc.length-1];
           if (tag==='_FREL') { fref.frel = val; fref.frelSeen = true; }
           if (tag==='_MREL') { fref.mrel = val; fref.mrelSeen = true; }
+          if (tag==='SOUR' && val.startsWith('@')) { fref.sourIds.push(val); cur.sourceRefs.add(val); }
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
@@ -1672,6 +1673,7 @@ function parseGEDCOM(text) {
           else if (lv1tag === 'CHR')  { if (!cur.chr.sourcePages)   cur.chr.sourcePages={};   cur.chr.sourcePages[lastSourVal]   = val; }
           else if (lv1tag === 'BURI') { if (!cur.buri.sourcePages)  cur.buri.sourcePages={};  cur.buri.sourcePages[lastSourVal]  = val; }
           else if (lv1tag === 'NAME') cur.nameSourcePages[lastSourVal] = val;
+          else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourPages[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourcePages) cur.events[evIdx].sourcePages = {};
             cur.events[evIdx].sourcePages[lastSourVal] = val;
@@ -1684,6 +1686,7 @@ function parseGEDCOM(text) {
           else if (lv1tag === 'CHR')  { if (!cur.chr.sourceQUAY)   cur.chr.sourceQUAY={};   cur.chr.sourceQUAY[lastSourVal]   = val; }
           else if (lv1tag === 'BURI') { if (!cur.buri.sourceQUAY)  cur.buri.sourceQUAY={};  cur.buri.sourceQUAY[lastSourVal]  = val; }
           else if (lv1tag === 'NAME') cur.nameSourceQUAY[lastSourVal] = val;
+          else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourQUAY[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
             cur.events[evIdx].sourceQUAY[lastSourVal] = val;
@@ -1698,6 +1701,7 @@ function parseGEDCOM(text) {
           else if (lv1tag === 'DEAT') _seDict = cur.death.sourceExtra;
           else if (lv1tag === 'CHR')  _seDict = cur.chr.sourceExtra;
           else if (lv1tag === 'BURI') _seDict = cur.buri.sourceExtra;
+          else if (lv1tag === 'FAMC' && cur.famc.length) _seDict = cur.famc[cur.famc.length-1].sourExtra;
           else if (evIdx >= 0 && cur.events[evIdx]) _seDict = cur.events[evIdx].sourceExtra;
           if (_seDict !== null) {
             if (!_seDict[lastSourVal]) _seDict[lastSourVal] = [];
@@ -1732,15 +1736,17 @@ function parseGEDCOM(text) {
         }
         // Collect source references at level 4
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
-        // 4 PAGE/QUAY unter 3 SOUR unter _FREL/_MREL
+        // 4 PAGE/QUAY/extra unter 3 SOUR unter _FREL/_MREL
         if (lv1tag === 'FAMC' && lv3tag === 'SOUR' && cur.famc.length) {
           const fref = cur.famc[cur.famc.length-1];
           if (lv2tag === '_FREL') {
-            if (tag === 'PAGE') fref.frelPage = val;
-            if (tag === 'QUAY') fref.frelQUAY = val;
+            if      (tag === 'PAGE') fref.frelPage = val;
+            else if (tag === 'QUAY') fref.frelQUAY = val;
+            else { fref.frelSourExtra.push('4 ' + tag + (val ? ' ' + val : '')); _ptDepth = 4; _ptTarget = fref.frelSourExtra; }
           } else if (lv2tag === '_MREL') {
-            if (tag === 'PAGE') fref.mrelPage = val;
-            if (tag === 'QUAY') fref.mrelQUAY = val;
+            if      (tag === 'PAGE') fref.mrelPage = val;
+            else if (tag === 'QUAY') fref.mrelQUAY = val;
+            else { fref.mrelSourExtra.push('4 ' + tag + (val ? ' ' + val : '')); _ptDepth = 4; _ptTarget = fref.mrelSourExtra; }
           }
         }
       }
@@ -1789,7 +1795,7 @@ function parseGEDCOM(text) {
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
         if (lv1tag==='CHIL' && cur._lastChil) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[]};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='_FREL') { cref.frel = val; cref.frelSeen = true; }
           if (tag==='_MREL') { cref.mrel = val; cref.mrelSeen = true; }
@@ -1803,7 +1809,7 @@ function parseGEDCOM(text) {
           if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[]};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='SOUR') {
             if (lv2tag==='_FREL') cref.frelSour = val;
@@ -1816,11 +1822,13 @@ function parseGEDCOM(text) {
           const cref = cur.childRelations[cur._lastChil];
           if (cref) {
             if (lv2tag==='_FREL') {
-              if (tag==='PAGE') cref.frelPage = val;
-              if (tag==='QUAY') cref.frelQUAY = val;
+              if      (tag==='PAGE') cref.frelPage = val;
+              else if (tag==='QUAY') cref.frelQUAY = val;
+              else { if (!cref.frelSourExtra) cref.frelSourExtra = []; cref.frelSourExtra.push('4 ' + tag + (val ? ' ' + val : '')); _ptDepth = 4; _ptTarget = cref.frelSourExtra; }
             } else {
-              if (tag==='PAGE') cref.mrelPage = val;
-              if (tag==='QUAY') cref.mrelQUAY = val;
+              if      (tag==='PAGE') cref.mrelPage = val;
+              else if (tag==='QUAY') cref.mrelQUAY = val;
+              else { if (!cref.mrelSourExtra) cref.mrelSourExtra = []; cref.mrelSourExtra.push('4 ' + tag + (val ? ' ' + val : '')); _ptDepth = 4; _ptTarget = cref.mrelSourExtra; }
             }
           }
         }
@@ -2264,6 +2272,7 @@ function writeGEDCOM() {
             lines.push(`3 SOUR ${fref.frelSour}`);
             if (fref.frelPage) lines.push(`4 PAGE ${fref.frelPage}`);
             if (fref.frelQUAY) lines.push(`4 QUAY ${fref.frelQUAY}`);
+            if (fref.frelSourExtra && fref.frelSourExtra.length) for (const l of fref.frelSourExtra) lines.push(l);
           }
         }
         if (fref.mrelSeen) {
@@ -2272,7 +2281,14 @@ function writeGEDCOM() {
             lines.push(`3 SOUR ${fref.mrelSour}`);
             if (fref.mrelPage) lines.push(`4 PAGE ${fref.mrelPage}`);
             if (fref.mrelQUAY) lines.push(`4 QUAY ${fref.mrelQUAY}`);
+            if (fref.mrelSourExtra && fref.mrelSourExtra.length) for (const l of fref.mrelSourExtra) lines.push(l);
           }
+        }
+        for (const s of (fref.sourIds || [])) {
+          lines.push(`2 SOUR ${s}`);
+          if (fref.sourPages && fref.sourPages[s]) lines.push(`3 PAGE ${fref.sourPages[s]}`);
+          if (fref.sourQUAY  && fref.sourQUAY[s])  lines.push(`3 QUAY ${fref.sourQUAY[s]}`);
+          if (fref.sourExtra && fref.sourExtra[s]) for (const l of fref.sourExtra[s]) lines.push(l);
         }
       }
     }
@@ -2310,6 +2326,7 @@ function writeGEDCOM() {
             lines.push(`3 SOUR ${cref.frelSour}`);
             if (cref.frelPage) lines.push(`4 PAGE ${cref.frelPage}`);
             if (cref.frelQUAY) lines.push(`4 QUAY ${cref.frelQUAY}`);
+            if (cref.frelSourExtra && cref.frelSourExtra.length) for (const l of cref.frelSourExtra) lines.push(l);
           }
         }
         if (cref.mrelSeen) {
@@ -2318,6 +2335,7 @@ function writeGEDCOM() {
             lines.push(`3 SOUR ${cref.mrelSour}`);
             if (cref.mrelPage) lines.push(`4 PAGE ${cref.mrelPage}`);
             if (cref.mrelQUAY) lines.push(`4 QUAY ${cref.mrelQUAY}`);
+            if (cref.mrelSourExtra && cref.mrelSourExtra.length) for (const l of cref.mrelSourExtra) lines.push(l);
           }
         }
       }
