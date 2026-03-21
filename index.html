@@ -3969,6 +3969,14 @@ function runRoundtripTest() {
         { lbl:'2 TYPE (all)', re:/^\s*2 TYPE\b/mg },
         { lbl:'1 RESI',       re:/^\s*1 RESI\b/mg },
         { lbl:'1 OCCU',       re:/^\s*1 OCCU\b/mg },
+        { lbl:'2 GIVN',       re:/^\s*2 GIVN\b/mg },
+        { lbl:'2 SURN',       re:/^\s*2 SURN\b/mg },
+        { lbl:'2 PLAC',       re:/^\s*2 PLAC\b/mg },
+        { lbl:'2 DATE',       re:/^\s*2 DATE\b/mg },
+        { lbl:'1 BIRT',       re:/^\s*1 BIRT\b/mg },
+        { lbl:'1 DEAT',       re:/^\s*1 DEAT\b/mg },
+        { lbl:'2 SOUR (all)', re:/^\s*2 SOUR\b/mg },
+        { lbl:'1 SOUR (INDI)',re:/^\s*1 SOUR\b/mg },
       ];
 
       const rows = tags.map(t => {
