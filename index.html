@@ -1488,7 +1488,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1805,8 +1805,9 @@ function parseGEDCOM(text) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         if (lv2tag==='DATE' && lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
         if (lv1tag==='MARR' && lv2tag==='SOUR' && lastSourVal) {
-          if (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
-          if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
+          if      (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
+          else if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
+          else { if (!cur.marr.sourceExtra[lastSourVal]) cur.marr.sourceExtra[lastSourVal] = []; cur.marr.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.marr.sourceExtra[lastSourVal]; }
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
           if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[]};
