@@ -1486,7 +1486,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:''}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:'',seen:false}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1719,7 +1719,7 @@ function parseGEDCOM(text) {
           else cur.noteRefs.push(val);
         }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
-        else if (tag==='MARR') { cur.marr.value = val; }
+        else if (tag==='MARR') { cur.marr.seen = true; cur.marr.value = val; }
         else if (tag==='ENGA' || tag==='CHAN') { /* context-only */ }
         else {
           // Unknown FAM lv1 tag → verbatim passthrough
@@ -2135,7 +2135,7 @@ function writeGEDCOM() {
   }
 
   function eventBlock(tag, obj, lv) {
-    if (!obj || (!obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length))) return;
+    if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length))) return;
     lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
     if (obj.date)  lines.push(`${lv+1} DATE ${normGedDate(obj.date)}`);
     if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
