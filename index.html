@@ -3960,6 +3960,15 @@ function runRoundtripTest() {
         { lbl:'3 SOUR (FAM)', re:/^\s*3 SOUR\b/mg },
         { lbl:'4 PAGE',       re:/^\s*4 PAGE\b/mg },
         { lbl:'4 QUAY',       re:/^\s*4 QUAY\b/mg },
+        // MAP/Geo
+        { lbl:'3 MAP',        re:/^\s*3 MAP\b/mg },
+        { lbl:'4 LATI',       re:/^\s*4 LATI\b/mg },
+        { lbl:'4 LONG',       re:/^\s*4 LONG\b/mg },
+        // Sonstige
+        { lbl:'1 NAME',       re:/^\s*1 NAME\b/mg },
+        { lbl:'2 TYPE (all)', re:/^\s*2 TYPE\b/mg },
+        { lbl:'1 RESI',       re:/^\s*1 RESI\b/mg },
+        { lbl:'1 OCCU',       re:/^\s*1 OCCU\b/mg },
       ];
 
       const rows = tags.map(t => {
