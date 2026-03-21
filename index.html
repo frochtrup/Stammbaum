@@ -1378,7 +1378,7 @@ body {
 // ─────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────
-let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '' };
+let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [] };
 let changed = false;
 let _placesCache = null;  // Cache für collectPlaces(); wird in markChanged() geleert
 let _originalGedText = null;   // Fallback wenn localStorage-Backup fehlschlägt; sonst null
@@ -1444,6 +1444,7 @@ function parseGEDCOM(text) {
   { const mPF = text.match(/^1 PLAC\s*[\r\n]+\s*2 FORM (.+)$/m); if (mPF) placForm = mPF[1].trim(); }
 
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
+  const _extraRecords = [];  // verbatim passthrough for unknown lv=0 records (SUBM etc.)
   let cur = null, curType = null;
   // Simple flat context tracking
   let lv1tag = '';   // current level-1 tag
@@ -1498,10 +1499,19 @@ function parseGEDCOM(text) {
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
         cur = { id:tag, name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'' };
         repositories[tag] = cur; curType = 'REPO';
-      } else { curType = null; cur = null; }
+      } else {
+        // Unknown lv=0 record (e.g. SUBM) — store verbatim for roundtrip
+        const recLine = '0 ' + tag + (val ? ' ' + val : '');
+        cur = { _lines: [recLine] };
+        _extraRecords.push(cur);
+        curType = '_extra';
+      }
       continue;
     }
     if (!cur) continue;
+
+    // Unknown lv=0 record sub-lines — collect verbatim
+    if (curType === '_extra') { cur._lines.push(lv + ' ' + tag + (val ? ' ' + val : '')); continue; }
 
     // Track context tags
     if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; _curNoteIsInline = false; }
@@ -1615,9 +1625,6 @@ function parseGEDCOM(text) {
           const fref = cur.famc[cur.famc.length-1];
           if (tag==='_FREL') fref.frel = val;
           if (tag==='_MREL') fref.mrel = val;
-          // 3 SOUR unter _FREL/_MREL
-          if (lv === 3 && tag === 'SOUR' && lv2tag === '_FREL') fref.frelSour = val;
-          if (lv === 3 && tag === 'SOUR' && lv2tag === '_MREL') fref.mrelSour = val;
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
@@ -1666,6 +1673,12 @@ function parseGEDCOM(text) {
             if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
             cur.events[evIdx].sourceQUAY[lastSourVal] = val;
           }
+        }
+        // 3 SOUR unter 2 _FREL/_MREL (in 1 FAMC Kontext)
+        if (lv1tag === 'FAMC' && cur.famc.length && tag === 'SOUR') {
+          const fref = cur.famc[cur.famc.length-1];
+          if (lv2tag === '_FREL') fref.frelSour = val;
+          else if (lv2tag === '_MREL') fref.mrelSour = val;
         }
         // Collect source references at level 3
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
@@ -1845,7 +1858,7 @@ function parseGEDCOM(text) {
     }
   }
 
-  return { individuals, families, sources, notes, repositories, placForm };
+  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords };
 }
 
 
@@ -2353,6 +2366,11 @@ function writeGEDCOM() {
       } while (s.length > 0);
     }
     if (!rawLines.length) lines.push(`0 ${n.id} NOTE `);
+  }
+
+  // Unknown lv=0 records (SUBM etc.) — verbatim passthrough
+  for (const rec of (db.extraRecords || [])) {
+    for (const l of rec._lines) lines.push(l);
   }
 
   lines.push('0 TRLR');
