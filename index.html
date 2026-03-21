@@ -1484,7 +1484,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, husb:null, wife:null, children:[], marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{}}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{}}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1684,7 +1684,7 @@ function parseGEDCOM(text) {
       if (lv === 1) {
         if (tag==='HUSB') cur.husb = val;
         else if (tag==='WIFE') cur.wife = val;
-        else if (tag==='CHIL') cur.children.push(val);
+        else if (tag==='CHIL') { cur.children.push(val); cur._lastChil = val; }
         else if (tag==='NOTE') {
           if (!val.startsWith('@')) cur.noteText = val;
           else cur.noteRefs.push(val);
@@ -1705,6 +1705,12 @@ function parseGEDCOM(text) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+        if (lv1tag==='CHIL' && cur._lastChil) {
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
+          const cref = cur.childRelations[cur._lastChil];
+          if (tag==='_FREL') cref.frel = val;
+          if (tag==='_MREL') cref.mrel = val;
+        }
       }
       else if (lv === 3) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
@@ -1713,8 +1719,30 @@ function parseGEDCOM(text) {
           if (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
           if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
         }
+        if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSour:'',frelPage:'',frelQUAY:'',mrelSour:'',mrelPage:'',mrelQUAY:''};
+          const cref = cur.childRelations[cur._lastChil];
+          if (tag==='SOUR') {
+            if (lv2tag==='_FREL') cref.frelSour = val;
+            if (lv2tag==='_MREL') cref.mrelSour = val;
+          }
+        }
       }
-      else if (lv === 4 && inMap && mapParent === 'MARR') {
+      else if (lv === 4) {
+        if (lv1tag==='CHIL' && cur._lastChil && lv3tag==='SOUR' && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
+          const cref = cur.childRelations[cur._lastChil];
+          if (cref) {
+            if (lv2tag==='_FREL') {
+              if (tag==='PAGE') cref.frelPage = val;
+              if (tag==='QUAY') cref.frelQUAY = val;
+            } else {
+              if (tag==='PAGE') cref.mrelPage = val;
+              if (tag==='QUAY') cref.mrelQUAY = val;
+            }
+          }
+        }
+      }
+      if (lv === 4 && inMap && mapParent === 'MARR') {
         const coord = parseGeoCoord(val);
         if (tag==='LATI') cur.marr.lati = coord;
         if (tag==='LONG') cur.marr.long = coord;
@@ -2180,7 +2208,28 @@ function writeGEDCOM() {
     lines.push(`0 ${f.id} FAM`);
     if (f.husb) lines.push(`1 HUSB ${f.husb}`);
     if (f.wife) lines.push(`1 WIFE ${f.wife}`);
-    for (const c of f.children) lines.push(`1 CHIL ${c}`);
+    for (const c of f.children) {
+      lines.push(`1 CHIL ${c}`);
+      const cref = f.childRelations?.[c];
+      if (cref) {
+        if (cref.frel) {
+          lines.push(`2 _FREL ${cref.frel}`);
+          if (cref.frelSour) {
+            lines.push(`3 SOUR ${cref.frelSour}`);
+            if (cref.frelPage) lines.push(`4 PAGE ${cref.frelPage}`);
+            if (cref.frelQUAY) lines.push(`4 QUAY ${cref.frelQUAY}`);
+          }
+        }
+        if (cref.mrel) {
+          lines.push(`2 _MREL ${cref.mrel}`);
+          if (cref.mrelSour) {
+            lines.push(`3 SOUR ${cref.mrelSour}`);
+            if (cref.mrelPage) lines.push(`4 PAGE ${cref.mrelPage}`);
+            if (cref.mrelQUAY) lines.push(`4 QUAY ${cref.mrelQUAY}`);
+          }
+        }
+      }
+    }
     eventBlock('MARR', f.marr, 1);
     if (f.engag && (f.engag.date || f.engag.place)) {
       lines.push(`1 ENGA`);
