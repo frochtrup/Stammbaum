@@ -4164,24 +4164,6 @@ function runRoundtripTest() {
       }
       const _objeDiagReport = _objeDiag.length ? '\n\nOBJE-Diagnose (fehlende Zeilen):\n' + _objeDiag.join('\n') : '';
 
-      // Diagnose: Zeige fehlende @ID@-Zeilen (level-0 records) mit Kontext + passendem output
-      const _idDiag = [];
-      { const _outC3 = new Map(); for (const l of _outArr) _outC3.set(l, (_outC3.get(l)||0)+1);
-        const _allLines2 = _origText.split(/\r?\n/);
-        for (let i = 0; i < _allLines2.length && _idDiag.length < 8; i++) {
-          const lt = _allLines2[i].trim();
-          if (!/^0 @/.test(lt)) continue;
-          const rem = _outC3.get(lt) || 0;
-          if (rem > 0) { _outC3.set(lt, rem-1); continue; }
-          // Missing: find what output has for same @ID@
-          const idMatch = lt.match(/^0 (@\S+@)/);
-          const searchId = idMatch?.[1] || '';
-          const outLine = searchId ? (_outArr.find(l => l.startsWith('0 ' + searchId)) || '(not found in output)') : '?';
-          _idDiag.push(`  orig[${i+1}]: ${lt}\n  out:        ${outLine}`);
-        }
-      }
-      const _idDiagReport = _idDiag.length ? '\n\n@ID@-Diagnose (fehlende lv=0 Zeilen):\n' + _idDiag.join('\n') : '';
-
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -4207,7 +4189,6 @@ function runRoundtripTest() {
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
         _objeDiagReport +
-        _idDiagReport +
         diffSnippet;
 
     } catch (e) {

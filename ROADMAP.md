@@ -2,11 +2,11 @@
 
 ---
 
-## Version 2.0 (in Planung — Phase 2)
+## Version 2.0 ✅ (März 2026 — Phase 2 abgeschlossen)
 
-Detaillierter Implementierungsplan: `GEDCOM_V2_PLAN.md`
+Detaillierter Implementierungsplan: `GEDCOM_V2_PLAN.md` (Archiv)
 
-### Schwerpunkt 1: Verlustfreier Ancestris-Roundtrip (höchste Priorität)
+### Schwerpunkt 1: Verlustfreier Ancestris-Roundtrip ✅
 
 Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta und ohne Ancestris-Warnungen.
 
@@ -106,34 +106,42 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 **Bewusst akzeptierte Verluste (Stand Sprint 13):**
 - DATE -106 / CONC -70 / CONT -7: Normalisierung/Resplitting (Daten erhalten, Format geändert)
-- SOUR -10, PAGE -4, ADDR -2, FILE -1: Aus verbleibenden unbekannten Kontexten und HEAD
+- `@Nxx@` -8: NOTE-Records mit leerem lv=0-Header + CONC-Fortsetzung → Writer merged auf lv=0-Zeile (kein Datenverlust, gleiche Ursache wie CONC -70)
+- SOUR -10, PAGE -4, ADDR -2, FILE -1: HEAD-Rewrite + unbekannte Kontexte
 - VERS/NAME/CORP/DEST/SUBM je -1: HEAD-Rewrite-Verluste (by design)
-- `3 PAGE (all)` / `3 QUAY (all)` je -1: Einzelner PAGE/QUAY unter unbekanntem Kontext
+
+**Phase 2 Abschluss-Status (März 2026):**
+- Zeilen-Delta: -708 → **-84** (akzeptierte Normalisierungsverluste: DATE/CONC/CONT)
+- OBJE-Diagnose: leer — alle OBJE-Strukturen vollständig roundtrip-fähig
+- Roundtrip: STABIL (out1 === out2)
+- Datei: `index.html` v2.0 (~4700 Zeilen, ~150 Funktionen)
 
 ---
 
-### Schwerpunkt 2: Architektur & Wartbarkeit
+## Version 3.0 (Phase 3 — geplant)
+
+### Schwerpunkt 1: Architektur & Wartbarkeit
 
 - [ ] Komponentenbasiertes Rendering (kein monolithisches `innerHTML`) ← bekanntes XSS-Risiko + Performance
 - [ ] Klares State-Management (Store-Muster statt ~11 globaler Variablen)
 - [ ] Virtuelles Scrollen für große Listen (>1000 Personen)
 
-### Schwerpunkt 3: Speichern / Cloud
+### Schwerpunkt 2: Speichern / Cloud
 
 - [ ] OneDrive-Integration via Microsoft Graph API (PKCE OAuth, kein Server)
 - [ ] iCloud Drive: bestehende `showOpenFilePicker`-Architektur bleibt
 
-### Schwerpunkt 4: UI/UX Redesign
+### Schwerpunkt 3: UI/UX Redesign
 
-- [ ] Responsives Layout (Desktop-Zweispalten-Ansicht) ← B8 offen (Phase 3)
+- [ ] Responsives Layout (Desktop-Zweispalten-Ansicht)
 - [ ] Erweiterter Stammbaum (Vorfahren-Modus, Mehrfach-Ehen sichtbar)
 - [ ] Fotos (Base64 + Resize auf max. 800px JPEG)
 - [ ] Erweiterte Suche & Filter (Jahrgang, Ort, Quelle, Duplikate)
 - [ ] Undo/Redo
 - [ ] Service Worker / Offline
-- [ ] Familien-Avatar CSS-Symbol statt OS-Emoji ← B15 offen (Phase 3)
+- [ ] Familien-Avatar CSS-Symbol statt OS-Emoji
 
-**Datei:** `index.html`
+**Datei:** `index.html` (weiterentwickelt von v2.0)
 
 ---
 

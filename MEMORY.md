@@ -17,9 +17,10 @@
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
 ## Aktueller Stand — zuletzt aktualisiert: 2026-03-21
-- `index.html` v2.0 ✅ stabil (Sprints 1–13)
+- `index.html` v2.0 ✅ **Phase 2 abgeschlossen** (Sprints 1–13)
 - `index_v1.2.html` — Archiv v1.2 (Phase 1)
-- Roundtrip-Test (Sprint 13): alle OBJE-Kontexte wiederhergestellt; delta **-84**; OBJE-Diagnose leer
+- Roundtrip-Test (Sprint 13): alle OBJE-Kontexte wiederhergestellt; delta **-84**; OBJE-Diagnose leer; STABIL
+- Phase 3 (v3.0) geplant: Architektur-Redesign, OneDrive-Integration, UI-Redesign
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
@@ -241,13 +242,11 @@ function updateTopbarTitle(filename)                        // #topbarFileName s
 
 ---
 
-## Nächste Schritte (nach UI/UX-Sprint)
-- E2 Ancestris-Import-Test: manuell mit MeineDaten_ancestris.ged
-- Danach Phase 3 (Version 2.0 final):
-  - Architektur-Redesign: Komponentenbasiertes Rendering
-  - OneDrive-Integration: Microsoft Graph API (PKCE OAuth)
-  - UI: Responsives Layout Desktop, Dunkelmodus
-  - Features: Fotos, erweiterte Suche/Filter, Undo/Redo, Service Worker
+## Phase 3 — Version 3.0 (geplant)
+- Architektur: Komponentenbasiertes Rendering, Store-Muster, virtuelles Scrollen
+- Cloud: OneDrive-Integration via Microsoft Graph API (PKCE OAuth, kein Server)
+- UI: Responsives Desktop-Layout, erweiterter Stammbaum (Vorfahren-Modus)
+- Features: Fotos, erweiterte Suche/Filter, Undo/Redo, Service Worker / Offline
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch · Kommunikation: kurz und direkt · Keine Emojis
