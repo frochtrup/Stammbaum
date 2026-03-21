@@ -1454,6 +1454,7 @@ function parseGEDCOM(text) {
   let mapParent = ''; // which lv1 tag owns current MAP (BIRT/DEAT/etc.)
   let lastSourVal = ''; // last seen 2 SOUR @id@ value (for 3 PAGE lookup)
   let _curNoteIsInline = false; // true when 1 NOTE was inline (not a @ref@)
+  let _ptDepth = 0;  // verbatim-passthrough depth (0 = off)
 
   for (let raw of lines) {
     const line = raw.trim();
@@ -1467,10 +1468,11 @@ function parseGEDCOM(text) {
     // ── Level 0 ──
     if (lv === 0) {
       lv1tag = lv2tag = lv3tag = '';
-      evIdx = -1; inMap = false; mapParent = '';
+      evIdx = -1; inMap = false; mapParent = ''; _ptDepth = 0;
       if (tag.startsWith('@') && val.trim() === 'INDI') {
         cur = {
-          id: tag, name:'', surname:'', given:'', prefix:'', suffix:'',
+          id: tag, _passthrough: [], _nameParsed: false,
+          name:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
           birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, value:'' },
           death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, cause:'', value:'' },
@@ -1484,7 +1486,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{}}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{}}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1506,16 +1508,33 @@ function parseGEDCOM(text) {
     if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag === 'SOUR') lastSourVal = val; }
     if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } if (tag === 'SOUR') lastSourVal = val; }
 
+    // ── Verbatim Passthrough ──
+    if (_ptDepth > 0) {
+      if (lv > _ptDepth) {
+        if (cur && cur._passthrough) cur._passthrough.push(lv + ' ' + tag + (val ? ' ' + val : ''));
+        continue;
+      } else {
+        _ptDepth = 0; // lv <= _ptDepth: exit passthrough, process line normally
+      }
+    }
+
     // ── INDIVIDUAL ──
     if (curType === 'INDI') {
 
       if (lv === 1) {
         evIdx = -1;
         if (tag === 'NAME') {
-          const sn = val.match(/\/([^\/]*)\//) || [];
-          cur.surname = sn[1] ? sn[1].trim() : '';
-          cur.given   = val.replace(/\/[^\/]*\//, '').trim();
-          cur.name    = (cur.given + (cur.surname ? ' ' + cur.surname : '')).trim() || val.replace(/\//g,'').trim();
+          if (cur._nameParsed) {
+            // Extra NAME entry → verbatim passthrough
+            cur._passthrough.push('1 NAME' + (val ? ' ' + val : ''));
+            _ptDepth = 1;
+          } else {
+            cur._nameParsed = true;
+            const sn = val.match(/\/([^\/]*)\//) || [];
+            cur.surname = sn[1] ? sn[1].trim() : '';
+            cur.given   = val.replace(/\/[^\/]*\//, '').trim();
+            cur.name    = (cur.given + (cur.surname ? ' ' + cur.surname : '')).trim() || val.replace(/\//g,'').trim();
+          }
         }
         else if (tag === 'SEX')  cur.sex  = val;
         else if (tag === 'TITL') cur.titl = val;
@@ -1539,6 +1558,12 @@ function parseGEDCOM(text) {
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI'].includes(tag)) {
           cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{} });
           evIdx = cur.events.length - 1;
+        }
+        else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
+        else {
+          // Unknown lv1 tag → verbatim passthrough
+          cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
+          _ptDepth = 1;
         }
       }
 
@@ -1694,6 +1719,12 @@ function parseGEDCOM(text) {
           else cur.noteRefs.push(val);
         }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        else if (tag==='MARR' || tag==='ENGA' || tag==='CHAN') { /* context-only */ }
+        else {
+          // Unknown FAM lv1 tag → verbatim passthrough
+          cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
+          _ptDepth = 1;
+        }
       }
       else if (lv === 2) {
         if (lv1tag==='MARR') {
@@ -2206,6 +2237,7 @@ function writeGEDCOM() {
       lines.push(`2 DATE ${p.lastChanged}`);
       if (p.lastChangedTime) lines.push(`3 TIME ${p.lastChangedTime}`);
     }
+    for (const l of (p._passthrough || [])) lines.push(l);
   }
 
   for (const f of Object.values(db.families)) {
@@ -2248,6 +2280,7 @@ function writeGEDCOM() {
       lines.push(`2 DATE ${f.lastChanged}`);
       if (f.lastChangedTime) lines.push(`3 TIME ${f.lastChangedTime}`);
     }
+    for (const l of (f._passthrough || [])) lines.push(l);
   }
 
   for (const s of Object.values(db.sources)) {
@@ -4001,6 +4034,26 @@ function runRoundtripTest() {
           : diff > 0 ? `+${diff}` : `${diff}`;
         return `  ${t.lbl.padEnd(15)} orig=${String(orig).padStart(4)}  out=${String(got).padStart(4)}  ${mark}`;
       });
+
+      // Auto-Diff: group all missing original lines by tag type
+      const _origArr = _origText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const _outArr  = out1.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const _outCounts = new Map();
+      for (const l of _outArr) _outCounts.set(l, (_outCounts.get(l) || 0) + 1);
+      const _missingTags = {};
+      for (const l of _origArr) {
+        const rem = _outCounts.get(l) || 0;
+        if (rem > 0) { _outCounts.set(l, rem - 1); }
+        else {
+          const t = l.match(/^\d+ (\S+)/)?.[1] || '?';
+          _missingTags[t] = (_missingTags[t] || 0) + 1;
+        }
+      }
+      const _topMissing = Object.entries(_missingTags).sort((a,b) => b[1]-a[1]).slice(0, 20);
+      const _diffReport = _topMissing.length === 0
+        ? '  (keine)'
+        : _topMissing.map(([t,n]) => `  ${t.padEnd(14)} -${n}`).join('\n');
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -4024,6 +4077,7 @@ function runRoundtripTest() {
         `Stabilität (out1 === out2): ${stable ? '✓ STABIL' : '✗ INSTABIL'}\n\n` +
         `Tag-Statistik:\n` + rows.join('\n') +
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
+        '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
         diffSnippet;
 
     } catch (e) {
