@@ -17,9 +17,9 @@
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
 ## Aktueller Stand — zuletzt aktualisiert: 2026-03-21
-- `index.html` v2.0 ✅ stabil (Sprints 1–11)
+- `index.html` v2.0 ✅ stabil (Sprints 1–12)
 - `index_v1.2.html` — Archiv v1.2 (Phase 1)
-- E2 Ancestris-Import-Test: ✅ nach Sprint 11 — Zeilen-Delta ~-100 (von -708); 3 QUAY/PAGE: -5
+- Roundtrip-Test (Sprint 12): delta=-126, STABIL; `_FREL`/`_MREL`/`3 SOUR (FAM)`/`4 PAGE`/`4 QUAY` alle ✓
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
@@ -81,13 +81,13 @@ Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
 ## Roundtrip-Status
 
-**index.html v2.0 (Sprint 11):** Verbatim Passthrough (ADR-012) — unbekannte GEDCOM-Tags werden verbatim in `_passthrough[]` gespeichert und zurückgeschrieben. Zeilen-Delta: -708 → ~-100. Verbleibende Verluste: DATE-Normalisierung, CONC-Resplitting (Daten erhalten), `_STAT`, `2 SOUR` unter `RELI`, 3 `_FREL`/`_MREL`-Einträge. Details: ARCHITECTURE.md ADR-012.
+**index.html v2.0 (Sprint 12):** Delta -126 (Testdaten 191P/59F), STABIL. Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR; `_extraRecords[]` für unbekannte `0 @ID@ TYPE` Records (SUBM). `frelSeen`/`mrelSeen`-Flags für leere `_FREL`/`_MREL`-Werte. Akzeptierte Verluste: DATE/CONC/CONT (Normalisierung), OBJE unter MARR (nicht gespeichert), HEAD-Rewrite. Details: ARCHITECTURE.md ADR-012.
 
 ---
 
 ## Globale Variablen (index.html v2.0 — komplett)
 ```javascript
-let db = { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{}, notes:{}, placForm:'' };
+let db = { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{}, notes:{}, placForm:'', extraRecords:[] };
 //         ^v2: notes={} für NOTE-Records; placForm='' für HEAD PLAC FORM
 let changed = false;
 let _placesCache = null;
@@ -141,6 +141,7 @@ const _placeModes = {};  // { placeId: 'free'|'parts' }
 | 9 | URL-Parameter `?datei=`: Dateiname in Topbar (`updateTopbarTitle`, `#topbarFileName`) | ✅ |
 | 10 | MARR/NAME/topSrc PAGE+QUAY; pushCont CONC-Fix; pf-note textarea; _FREL/_MREL lv3-4 SOUR/PAGE/QUAY | ✅ |
 | 11 | Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]`; INDI/FAM/SOUR; DEAT.value; CONC val-fix; Auto-Diff | ✅ |
+| 12 | `frelSeen`/`mrelSeen` (leere _FREL/_MREL); `extraRecords[]` SUBM-Passthrough; INDI famc `frelSour`-Fix; MARR.addr | ✅ |
 
 ## Neue Hilfsfunktionen (index.html v2.0)
 ```javascript

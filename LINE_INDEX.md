@@ -1,6 +1,6 @@
 # index.html — Zeilen-Index
 
-Stand: Sprint 11 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
+Stand: Sprint 12 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 
 ## Globale Variablen / Konstanten
 | Symbol | Zeile |
@@ -16,31 +16,33 @@ Stand: Sprint 11 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 | Sektion | Zeile |
 |---|---|
 | `function parseGEDCOM(text)` | 1438 |
-| Level-0 Dispatch (INDI / FAM / SOUR / NOTE / REPO) | ~1468–1503 |
-| **INDI init** `cur = { id:tag, _passthrough:[], _nameParsed:false, …` | 1474 |
+| `const _extraRecords = []` (Sprint 12: unbekannte lv=0 Records) | 1447 |
+| `let _ptDepth = 0` | 1458 |
+| Level-0 Dispatch (INDI / FAM / SOUR / NOTE / REPO / **_extra**) | ~1469–1513 |
+| **INDI init** (incl. `nameRaw:''`) | 1474 |
 | `birth:{…}` / `chr:{…}` / `death:{…}` / `buri:{…}` | 1477–1482 |
-| `events:[], famc:[], fams:[]` | ~1483–1486 |
-| **FAM init** `cur = { id:tag, _passthrough:[], …` | 1489 |
-| **SOUR init** `cur = { id:tag, _passthrough:[], …` | 1492 |
-| **NOTE init** | 1497 |
-| **REPO init** | 1499 |
-| Context-Tracking (`lv1tag`, `lv2tag`, `lv3tag`, `inMap`, …) | 1507–1509 |
-| **Verbatim Passthrough check** (`_ptDepth`) | 1511–1519 |
-| `// ── INDIVIDUAL ──` | 1521 |
-| INDI lv=1 (`if (lv === 1)`) | 1524–1568 |
-| INDI lv=2 | 1570–1634 |
-| INDI lv=3 (PAGE, QUAY, CHAN.TIME, _FREL/_MREL SOUR …) | 1636–1673 |
-| INDI lv=4 (MAP LATI/LONG, _FREL/_MREL PAGE/QUAY …) | 1675–1709 |
-| `// ── FAMILY ──` | 1711 |
-| FAM lv=1 (HUSB, WIFE, CHIL, NOTE, SOUR, MARR, ENGA, CHAN) | 1713–1729 |
-| FAM lv=2 (MARR DATE/PLAC/SOUR, ENGA DATE/PLAC, NOTE CONC …) | 1730–1787 |
-| `// ── SOURCE ──` | 1788 |
-| SOUR lv=1 (TITL, ABBR, AUTH, DATE, PUBL, REPO, TEXT, CHAN, else→passthrough) | 1790–1803 |
-| SOUR lv=2 / lv=3 | 1805–1813 |
-| `// ── NOTE record ──` | 1816 |
-| `// ── REPO record ──` | 1822 |
-| Resolve NOTE references (post-parse) | ~1840–1860 |
-| `return { individuals, families, … }` | ~1862 |
+| `famc push` (incl. `frelSeen:false, mrelSeen:false`) | 1556 |
+| **FAM init** (incl. `marr.seen:false, marr.addr:''`) | 1490 |
+| **SOUR init** | 1493 |
+| **NOTE init** | 1496 |
+| **REPO init** | 1500 |
+| `_extra` handler (sub-lines verbatim) | 1515 |
+| Context-Tracking (`lv1tag`, `lv2tag`, `lv3tag`, `inMap`, …) | 1517–1519 |
+| **Verbatim Passthrough check** (`_ptDepth`) | 1522–1530 |
+| `// ── INDIVIDUAL ──` | 1534 |
+| INDI lv=1 (`if (lv === 1)`) | ~1537–1582 |
+| INDI lv=2 (inkl. FAMC `frelSeen`/`mrelSeen`) | ~1584–1635 |
+| INDI lv=3 (PAGE, QUAY, CHAN.TIME, FAMC `frelSour`/`mrelSour`) | ~1637–1686 |
+| INDI lv=4 (MAP LATI/LONG, _FREL/_MREL PAGE/QUAY) | ~1688–1714 |
+| `// ── FAMILY ──` | 1728 |
+| FAM lv=1 (HUSB, WIFE, CHIL, NOTE, SOUR, MARR.seen, ENGA, CHAN) | 1730–1746 |
+| FAM lv=2 (MARR/ENGA/NOTE/CHAN/CHIL `frelSeen`/`mrelSeen`) | 1747–1768 |
+| FAM lv=3 (MARR SOUR PAGE/QUAY, CHIL `frelSour`/`mrelSour`) | 1769–1784 |
+| FAM lv=4 (MAP MARR LATI/LONG, CHIL _FREL/_MREL PAGE/QUAY) | 1785–1806 |
+| `// ── SOURCE ──` | 1806 |
+| `// ── NOTE record ──` / `// ── REPO record ──` | ~1826 / ~1840 |
+| Resolve NOTE references (post-parse) | ~1858–1864 |
+| `return { individuals, families, …, extraRecords }` | 1864 |
 
 ## Datum-Hilfsfunktionen
 | Funktion | Zeile |
@@ -74,23 +76,27 @@ Stand: Sprint 11 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 ## GEDCOM Writer (`writeGEDCOM`)
 | Sektion | Zeile |
 |---|---|
-| `function writeGEDCOM()` | 2106 |
-| HEAD block | 2111–2125 |
-| `function eventBlock(tag, obj, lv)` | 2137 |
-| eventBlock: SOUR+PAGE+QUAY output | ~2145–2149 |
-| **INDI Writer loop** `for (const p of …)` | 2153 |
-| INDI NAME + GIVN/SURN/NPFX/NSFX | 2156–2166 |
-| INDI events loop (BIRT/CHR/DEAT/BURI, events[]) | 2179–2199 |
-| INDI media loop + passthrough | 2227–2243 |
-| **FAM Writer loop** | 2246 |
-| FAM MARR via `eventBlock('MARR', f.marr, 1)` | 2272 |
-| FAM ENGA block | 2273–2277 |
-| FAM passthrough | 2286 |
-| **SOUR Writer loop** | 2289 |
-| SOUR passthrough | 2316 |
-| **REPO Writer loop** | ~2320 |
-| **NOTE Records loop** (vor TRLR) | ~2338 |
-| `lines.push('0 TRLR')` | ~2344 |
+| `function writeGEDCOM()` | 2124 |
+| HEAD block | ~2129–2143 |
+| `function eventBlock(tag, obj, lv)` | 2155 |
+| eventBlock: `obj.seen` guard (marr, engag) | 2157 |
+| eventBlock: SOUR+PAGE+QUAY output | ~2163–2167 |
+| **INDI Writer loop** `for (const p of …)` | 2171 |
+| INDI NAME (nameRaw fallback) | 2175 |
+| INDI GIVN/SURN/NPFX/NSFX | ~2177–2184 |
+| INDI events loop (BIRT/CHR/DEAT/BURI, events[]) | ~2197–2217 |
+| INDI famc loop (`frelSeen`/`mrelSeen` guard) | 2222–2242 |
+| INDI media loop + passthrough | ~2244–2260 |
+| **FAM Writer loop** | 2264 |
+| FAM CHIL + childRelations (`frelSeen`/`mrelSeen` guard) | 2268–2288 |
+| FAM MARR via `eventBlock` + ADDR | 2290–2291 |
+| FAM passthrough | ~2304 |
+| **SOUR Writer loop** | 2308 |
+| SOUR passthrough | ~2334 |
+| **REPO Writer loop** | ~2338 |
+| **NOTE Records loop** (vor TRLR) | ~2356 |
+| **extraRecords loop** (Sprint 12: SUBM u.a.) | 2375 |
+| `lines.push('0 TRLR')` | 2379 |
 
 ## UI — Detail-Ansicht
 | Funktion | Zeile |
@@ -192,3 +198,4 @@ Stand: Sprint 11 (2026-03-21). Bei grösseren Edits bitte aktualisieren.
 | 9 | URL-Parameter `?datei=`: Dateiname in Topbar | ✅ |
 | 10 | MARR/NAME/topSrc PAGE+QUAY; CONC-Fix; _FREL/_MREL lv3-4 | ✅ |
 | 11 | Verbatim Passthrough (ADR-012); DEAT.value; CONC val-fix; Auto-Diff | ✅ |
+| 12 | `frelSeen`/`mrelSeen` (leere _FREL/_MREL); `extraRecords` SUBM-Passthrough; INDI.famc frelSour; MARR.addr | ✅ |

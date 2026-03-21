@@ -84,6 +84,20 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 - [x] Auto-Diff im Roundtrip-Test: Multiset-Vergleich Original↔Output, top-20 fehlende Tags nach Häufigkeit
 - [x] Zeilen-Delta MeineDaten_ancestris.ged: -708 → -436 → -290 → -226 → -179 → ~-100 (nach INDI OBJE passthrough)
 
+**Sprint 12 — Roundtrip-Bugs: frelSeen + extraRecords** ✅
+- [x] `frelSeen`/`mrelSeen` Flags auf `famc[]` (INDI) und `childRelations{}` (FAM): `2 _FREL`/`2 _MREL` ohne Wert (`val=''`) werden jetzt korrekt roundgetripped — falsy-String-Bug analog zu `marr.seen`
+- [x] INDI lv=3: `frelSour`/`mrelSour` korrekt gesetzt (dead-code-Fix: war in lv=2-Block, jetzt in lv=3)
+- [x] `_extraRecords[]` Passthrough für unbekannte `0 @ID@ TYPE`-Records (SUBM u.ä.): verbatim vor TRLR ausgegeben; HEAD + TRLR explizit ausgenommen (keine `@`-ID)
+- [x] `MARR.addr`: `2 ADDR` unter `1 MARR` in FAM gespeichert + zurückgeschrieben
+- [x] Zeilen-Delta: ~-134 → **-126** (Testdaten: 191 Personen, 59 Familien); `_FREL`/`_MREL`/`3 SOUR (FAM)`/`4 PAGE`/`4 QUAY` alle ✓; STABIL
+
+**Bewusst akzeptierte Verluste (Stand Sprint 12):**
+- DATE -106 / CONC -70 / CONT -7: Normalisierung/Resplitting (Daten erhalten, Format geändert)
+- OBJE/FILE/FORM/TYPE/_SCBK/_PRIM je -7: `2 OBJE` unter `1 MARR` in FAM (nicht gespeichert)
+- SOUR -10, PAGE -4: Aus OBJE-Kontexten und HEAD
+- VERS/NAME/CORP/DEST/SUBM/ADDR je -1 bis -2: HEAD-Rewrite-Verluste (by design)
+- `3 PAGE (all)` / `3 QUAY (all)` je -1: Einzelner PAGE/QUAY unter unbekanntem Kontext
+
 ---
 
 ### Schwerpunkt 2: Architektur & Wartbarkeit
