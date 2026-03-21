@@ -1547,7 +1547,7 @@ function parseGEDCOM(text) {
         }
         else if (tag === '_UID') cur.uid = val;
         else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); lastSourVal = val; }
-        else if (tag === 'OBJE') cur.media.push({ file:'', title:'' });
+        // OBJE → fällt in else-Passthrough unten (vollständiger Block wird verbatim bewahrt)
         else if (tag === 'RESN')  cur.resn  = val;
         else if (tag === 'EMAIL') cur.email = val;
         else if (tag === 'WWW')   cur.www   = val;
