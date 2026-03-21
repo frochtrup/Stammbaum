@@ -193,6 +193,65 @@ getPlaceFromForm('ef-place');  // liest je nach Modus Freitext oder joinPlacePar
 
 ---
 
+### ADR-012: Verbatim Passthrough für unbekannte GEDCOM-Tags (Sprint 11)
+**Entscheidung:** Anstatt unbekannte GEDCOM-Tags bei Parse→Write zu verlieren, werden sie verbatim in einem `_passthrough[]`-Array auf dem Record gespeichert und am Ende des Records wieder ausgegeben.
+
+**Mechanismus:**
+```javascript
+// Parser-State
+let _ptDepth = 0;   // > 0: alle tieferen Ebenen gehen in passthrough
+
+// Prüfung vor jeder Zeile (nach Context-Tracking, vor Tag-Handling)
+if (_ptDepth > 0) {
+  if (lv > _ptDepth) {
+    cur._passthrough.push(lv + ' ' + tag + (val ? ' ' + val : ''));
+    continue;  // nicht weiter verarbeiten
+  } else {
+    _ptDepth = 0;  // verlassen (lv <= _ptDepth)
+  }
+}
+
+// In INDI/FAM/SOUR lv=1 else-Zweig:
+else {
+  cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
+  _ptDepth = 1;
+}
+
+// Writer (am Ende des Records):
+for (const l of (record._passthrough || [])) lines.push(l);
+```
+
+**Sonderfälle:**
+- `_nameParsed`: erster `1 NAME`-Block → strukturiert; weitere NAME-Blöcke (z.B. Geburtsname) → passthrough
+- INDI OBJE: vollständig in passthrough (FILE, FORM, _SCBK, _PRIM, TYPE — keine strukturierte media[]-Verarbeitung)
+- SOUR OBJE/DATA/etc.: alle nicht explizit behandelten lv1-Tags → passthrough
+- FAM: MARR.value gespeichert (für `1 MARR Y`); unbekannte lv1-Tags → passthrough
+
+**Val-Fix (CONC-Stabilität):**
+```javascript
+// Vorher (verursachte Instabilität bei führenden Leerzeichen in CONC-Werten):
+const val = (m[3] || '').trim();
+// Nachher:
+const val = (m[3] || '').replace(/^ /, '').trimEnd();  // genau 1 Leerzeichen (GEDCOM-Delimiter)
+```
+
+**Auto-Diff im Roundtrip-Test:**
+Multiset-Vergleich (Original vs. out1): zählt fehlende Zeilen, gruppiert nach Tag-Typ, zeigt top-20.
+Unterscheidet echte Verluste von Normalisierungs-Artefakten (DATE-Format, CONC-Resplitting).
+
+**Ergebnis (MeineDaten_ancestris.ged, 2796 Personen):**
+| Stand | Zeilen-Delta |
+|---|---|
+| Sprint 10 Ausgangslage | -708 |
+| + DEAT.value fix (`1 DEAT Y`) | -290 |
+| + Verbatim Passthrough INDI/FAM | -226 |
+| + SOUR Passthrough + CONC Val-Fix | -179 |
+| + INDI OBJE → Passthrough | ~-100 |
+
+Verbleibende ~-100 Zeilen: DATE-Normalisierung + CONC-Resplitting (Daten erhalten, Format normiert).
+
+---
+
 ### ADR-011: 3-Felder-Datum (v2.0-dev)
 **Entscheidung:** Datumseingabe als 3 separate Felder (Tag / Monat / Jahr) + Qualifier-Dropdown statt einem Freitext-Feld.
 

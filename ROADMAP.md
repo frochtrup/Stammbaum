@@ -63,6 +63,27 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 - [x] B14: ☁-Icon goldfarben wenn direktes Speichern aktiv
 - [x] B1: Familie-Formular: Kinder zeigen Klarnamen statt @Ixx@-IDs
 
+**Sprint 9 — URL-Parameter + Topbar-Titel** ✅
+- [x] `?datei=` URL-Parameter: Dateiname wird in Topbar angezeigt (`updateTopbarTitle`, `#topbarFileName`)
+- [x] `_processLoadedText` + `tryAutoLoad` setzen Topbar-Titel nach Datei-Load
+
+**Sprint 10 — MARR/NAME/topSrc PAGE+QUAY; CONC-Fix; _FREL/_MREL** ✅
+- [x] `3 PAGE` + `3 QUAY` für `MARR`, `1 NAME`-Quellen, `topSources` (direkte INDI-Quellen)
+- [x] `pushCont` CONC-Fix: keine leeren CONC-Zeilen mehr; stabile CONC-Splits
+- [x] `pf-note` als `<textarea>` (mehrzeilige Notizen)
+- [x] `_FREL`/`_MREL` mit lv3–4 `SOUR`/`PAGE`/`QUAY` (Eltern-Kind-Beziehungstypen)
+
+**Sprint 11 — Verbatim Passthrough + Roundtrip-Verbesserungen** ✅
+- [x] Systematische Lösung für alle unbekannten GEDCOM-Tags: `_ptDepth` + `_passthrough[]` auf INDI/FAM/SOUR
+- [x] Parser: unbekannte lv1-Tags + deren gesamte Substruktur landen in `_passthrough[]`; Writer schreibt sie verbatim am Record-Ende zurück
+- [x] `_nameParsed`: doppelte `1 NAME`-Einträge (z.B. Geburtsname nach Heirat) → zweite NAME-Blöcke gehen in passthrough statt verloren
+- [x] INDI OBJE: vollständig in passthrough (inkl. FILE, FORM, _SCBK, _PRIM, TYPE — kein Datenverlust mehr)
+- [x] FAM: `MARR.value` gespeichert (für `1 MARR Y` — "gestorben, keine Details"); unbekannte FAM-lv1-Tags → passthrough
+- [x] SOUR: OBJE/DATA und alle unbekannten lv1-Tags → passthrough; TEXT mit CONT/CONC korrekt mehrzeilig
+- [x] Val-Fix: `(m[3]||'').trim()` → `.replace(/^ /, '').trimEnd()` — verhindert Instabilität bei CONC-Zeilen mit führenden Leerzeichen
+- [x] Auto-Diff im Roundtrip-Test: Multiset-Vergleich Original↔Output, top-20 fehlende Tags nach Häufigkeit
+- [x] Zeilen-Delta MeineDaten_ancestris.ged: -708 → -436 → -290 → -226 → -179 → ~-100 (nach INDI OBJE passthrough)
+
 ---
 
 ### Schwerpunkt 2: Architektur & Wartbarkeit
@@ -176,12 +197,13 @@ Alle wichtigen Felder überleben Parse→Write→Parse:
 - _UID (Ancestris/Legacy), CAUS (Sterbeursache)
 - 2 NOTE unter Events, 2 SOUR unter NAME, SOUR direkt auf INDI
 
-Bewusst akzeptierte Verluste (nach E2/E3):
+Bewusst akzeptierte Verluste (nach Sprint 11):
 - `_STAT` — nie geparst (Legacy: Never Married etc.)
 - NOTE-Records: `@ref@` → Inline-NOTE (Record-Struktur geht verloren)
 - `2 SOUR` unter `1 RELI` — 1 Vorkommen, kein UI-Effekt
 - `3 QUAY`/`3 PAGE` unter `TITL`/`RELI` — 5 Einträge, kein Event-Kontext
-- `3 OBJE` unter `2 SOUR` (Quellenreferenz) — ~52 Blöcke, lv5/6-Substruktur (FILE/FORM/TYPE), lokale OneDrive-Pfade, hoher Fix-Aufwand
+- `_FREL`/`_MREL` lv3-4: 3 Kinder mit nicht-birth-Beziehungstypen (Parser-Bug, selten)
+- Restliche Delta ~-100: hauptsächlich DATE-Normalisierung + CONC-Resplitting (Daten nicht verloren, nur Format normalisiert)
 
 ### Phase 2.6: GEDCOM-Nachbesserungen ✅ (März 2026)
 - **SOUR/CHAN**: Änderungsdatum von Quellen-Records wird geparst, gespeichert und beim Export zurückgeschrieben. `saveSource()` setzt `lastChanged` automatisch auf heutiges Datum (GEDCOM-Format).

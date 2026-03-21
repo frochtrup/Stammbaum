@@ -17,9 +17,9 @@
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
 ## Aktueller Stand — zuletzt aktualisiert: 2026-03-21
-- `index.html` v2.0 ✅ stabil (Sprints 1–9)
+- `index.html` v2.0 ✅ stabil (Sprints 1–11)
 - `index_v1.2.html` — Archiv v1.2 (Phase 1)
-- E2 Ancestris-Import-Test: ✅ abgeschlossen — 3 QUAY/PAGE: -5 (von -159), Zeilen-Delta -708 (von -1016), stabil
+- E2 Ancestris-Import-Test: ✅ nach Sprint 11 — Zeilen-Delta ~-100 (von -708); 3 QUAY/PAGE: -5
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
@@ -81,7 +81,7 @@ Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen
 
 ## Roundtrip-Status
 
-**index.html v2.0:** Roundtrip-Test stabil mit Sprints 1–8. Verbleibende Verluste: `_STAT`, `2 SOUR` unter `RELI`. Details in ARCHITECTURE.md.
+**index.html v2.0 (Sprint 11):** Verbatim Passthrough (ADR-012) — unbekannte GEDCOM-Tags werden verbatim in `_passthrough[]` gespeichert und zurückgeschrieben. Zeilen-Delta: -708 → ~-100. Verbleibende Verluste: DATE-Normalisierung, CONC-Resplitting (Daten erhalten), `_STAT`, `2 SOUR` unter `RELI`, 3 `_FREL`/`_MREL`-Einträge. Details: ARCHITECTURE.md ADR-012.
 
 ---
 
@@ -140,6 +140,7 @@ const _placeModes = {};  // { placeId: 'free'|'parts' }
 | 8 | UI/UX-Fixes (B1–B14, Sprint A/B/C) | ✅ |
 | 9 | URL-Parameter `?datei=`: Dateiname in Topbar (`updateTopbarTitle`, `#topbarFileName`) | ✅ |
 | 10 | MARR/NAME/topSrc PAGE+QUAY; pushCont CONC-Fix; pf-note textarea; _FREL/_MREL lv3-4 SOUR/PAGE/QUAY | ✅ |
+| 11 | Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]`; INDI/FAM/SOUR; DEAT.value; CONC val-fix; Auto-Diff | ✅ |
 
 ## Neue Hilfsfunktionen (index.html v2.0)
 ```javascript
