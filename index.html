@@ -1572,7 +1572,7 @@ function parseGEDCOM(text) {
         else if (tag === 'DEAT') { cur.death.value = val; }
         else if (tag === 'BURI') { cur.buri.value  = val; }
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{} });
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[] });
           evIdx = cur.events.length - 1;
         }
         else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
@@ -1617,13 +1617,14 @@ function parseGEDCOM(text) {
         // Other events
         else if (evIdx >= 0 && cur.events[evIdx]) {
           const ev = cur.events[evIdx];
-          if (tag==='DATE')  ev.date = val;
-          if (tag==='PLAC')  ev.place = val;
-          if (tag==='TYPE')  ev.eventType = val;
-          if (tag==='NOTE')  ev.note += (ev.note ? '\n' : '') + val;
-          if (tag==='ADDR')  ev.addr = (ev.addr ? ev.addr + '\n' : '') + val;
-          if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
-          if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
+          if      (tag==='DATE')  ev.date = val;
+          else if (tag==='PLAC')  ev.place = val;
+          else if (tag==='TYPE')  ev.eventType = val;
+          else if (tag==='NOTE')  ev.note += (ev.note ? '\n' : '') + val;
+          else if (tag==='ADDR')  ev.addr = (ev.addr ? ev.addr + '\n' : '') + val;
+          else if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
+          else if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
+          else { ev._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = ev._extra; }
         }
         // Family relationship
         if (lv1tag === 'FAMC' && cur.famc.length) {
@@ -2242,6 +2243,7 @@ function writeGEDCOM() {
         if (ev.sourceQUAY && ev.sourceQUAY[s])   lines.push(`3 QUAY ${ev.sourceQUAY[s]}`);
         if (ev.sourceExtra && ev.sourceExtra[s]) for (const l of ev.sourceExtra[s]) lines.push(l);
       }
+      if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
     }
 
     for (const ref of (p.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
