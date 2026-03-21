@@ -1476,10 +1476,10 @@ function parseGEDCOM(text) {
           id: tag, _passthrough: [], _nameParsed: false,
           name:'', nameRaw:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, value:'' },
-          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, cause:'', value:'' },
-          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, value:'' },
-          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, value:'' },
+          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'' },
+          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], cause:'', value:'' },
+          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'' },
+          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'' },
           events:[], famc:[], fams:[],
           noteRefs:[], noteText:'', noteTextInline:'',
           media:[], titl:'', reli:'', resn:'', email:'', www:'', lastChanged:'', lastChangedTime:'',
@@ -1594,25 +1594,29 @@ function parseGEDCOM(text) {
         }
         // Vital events
         else if (lv1tag === 'BIRT') {
-          if (tag==='DATE') cur.birth.date=val;
-          if (tag==='PLAC') cur.birth.place=val;
-          if (tag==='SOUR' && val.startsWith('@')) { cur.birth.sources.push(val); cur.sourceRefs.add(val); }
+          if      (tag==='DATE') cur.birth.date=val;
+          else if (tag==='PLAC') cur.birth.place=val;
+          else if (tag==='SOUR' && val.startsWith('@')) { cur.birth.sources.push(val); cur.sourceRefs.add(val); }
+          else { cur.birth._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.birth._extra; }
         }
         else if (lv1tag === 'DEAT') {
-          if (tag==='DATE') cur.death.date=val;
-          if (tag==='PLAC') cur.death.place=val;
-          if (tag==='CAUS') cur.death.cause=val;
-          if (tag==='SOUR' && val.startsWith('@')) { cur.death.sources.push(val); cur.sourceRefs.add(val); }
+          if      (tag==='DATE') cur.death.date=val;
+          else if (tag==='PLAC') cur.death.place=val;
+          else if (tag==='CAUS') cur.death.cause=val;
+          else if (tag==='SOUR' && val.startsWith('@')) { cur.death.sources.push(val); cur.sourceRefs.add(val); }
+          else { cur.death._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.death._extra; }
         }
         else if (lv1tag === 'CHR') {
-          if (tag==='DATE') cur.chr.date=val;
-          if (tag==='PLAC') cur.chr.place=val;
-          if (tag==='SOUR' && val.startsWith('@')) { cur.chr.sources.push(val); cur.sourceRefs.add(val); }
+          if      (tag==='DATE') cur.chr.date=val;
+          else if (tag==='PLAC') cur.chr.place=val;
+          else if (tag==='SOUR' && val.startsWith('@')) { cur.chr.sources.push(val); cur.sourceRefs.add(val); }
+          else { cur.chr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.chr._extra; }
         }
         else if (lv1tag === 'BURI') {
-          if (tag==='DATE') cur.buri.date=val;
-          if (tag==='PLAC') cur.buri.place=val;
-          if (tag==='SOUR' && val.startsWith('@')) { cur.buri.sources.push(val); cur.sourceRefs.add(val); }
+          if      (tag==='DATE') cur.buri.date=val;
+          else if (tag==='PLAC') cur.buri.place=val;
+          else if (tag==='SOUR' && val.startsWith('@')) { cur.buri.sources.push(val); cur.sourceRefs.add(val); }
+          else { cur.buri._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.buri._extra; }
         }
         // Other events
         else if (evIdx >= 0 && cur.events[evIdx]) {
@@ -2192,6 +2196,7 @@ function writeGEDCOM() {
       if (obj.sourceQUAY && obj.sourceQUAY[s])   lines.push(`${lv+2} QUAY ${obj.sourceQUAY[s]}`);
       if (obj.sourceExtra && obj.sourceExtra[s]) for (const l of obj.sourceExtra[s]) lines.push(l);
     }
+    if (obj._extra && obj._extra.length) for (const l of obj._extra) lines.push(l);
   }
 
   for (const p of Object.values(db.individuals)) {
