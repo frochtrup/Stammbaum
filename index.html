@@ -1504,7 +1504,7 @@ function parseGEDCOM(text) {
     // Track context tags
     if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; _curNoteIsInline = false; }
     if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag === 'SOUR') lastSourVal = val; }
-    if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } }
+    if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } if (tag === 'SOUR') lastSourVal = val; }
 
     // ── INDIVIDUAL ──
     if (curType === 'INDI') {
@@ -1520,7 +1520,7 @@ function parseGEDCOM(text) {
         else if (tag === 'SEX')  cur.sex  = val;
         else if (tag === 'TITL') cur.titl = val;
         else if (tag === 'RELI') cur.reli = val;
-        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'' });
+        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'', frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') {
           if (!val.startsWith('@')) { cur.noteText += val; cur.noteTextInline += val; _curNoteIsInline = true; }
@@ -1585,6 +1585,9 @@ function parseGEDCOM(text) {
           const fref = cur.famc[cur.famc.length-1];
           if (tag==='_FREL') fref.frel = val;
           if (tag==='_MREL') fref.mrel = val;
+          // 3 SOUR unter _FREL/_MREL
+          if (lv === 3 && tag === 'SOUR' && lv2tag === '_FREL') fref.frelSour = val;
+          if (lv === 3 && tag === 'SOUR' && lv2tag === '_MREL') fref.mrelSour = val;
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
@@ -1655,6 +1658,17 @@ function parseGEDCOM(text) {
         }
         // Collect source references at level 4
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        // 4 PAGE/QUAY unter 3 SOUR unter _FREL/_MREL
+        if (lv1tag === 'FAMC' && lv3tag === 'SOUR' && cur.famc.length) {
+          const fref = cur.famc[cur.famc.length-1];
+          if (lv2tag === '_FREL') {
+            if (tag === 'PAGE') fref.frelPage = val;
+            if (tag === 'QUAY') fref.frelQUAY = val;
+          } else if (lv2tag === '_MREL') {
+            if (tag === 'PAGE') fref.mrelPage = val;
+            if (tag === 'QUAY') fref.mrelQUAY = val;
+          }
+        }
       }
 
       // CONC/CONT for inline notes at any level
@@ -2124,8 +2138,24 @@ function writeGEDCOM() {
     for (const fref of p.famc) {
       const famId = typeof fref === 'string' ? fref : fref.famId;
       lines.push(`1 FAMC ${famId}`);
-      if (typeof fref === 'object' && fref.frel) lines.push(`2 _FREL ${fref.frel}`);
-      if (typeof fref === 'object' && fref.mrel) lines.push(`2 _MREL ${fref.mrel}`);
+      if (typeof fref === 'object') {
+        if (fref.frel) {
+          lines.push(`2 _FREL ${fref.frel}`);
+          if (fref.frelSour) {
+            lines.push(`3 SOUR ${fref.frelSour}`);
+            if (fref.frelPage) lines.push(`4 PAGE ${fref.frelPage}`);
+            if (fref.frelQUAY) lines.push(`4 QUAY ${fref.frelQUAY}`);
+          }
+        }
+        if (fref.mrel) {
+          lines.push(`2 _MREL ${fref.mrel}`);
+          if (fref.mrelSour) {
+            lines.push(`3 SOUR ${fref.mrelSour}`);
+            if (fref.mrelPage) lines.push(`4 PAGE ${fref.mrelPage}`);
+            if (fref.mrelQUAY) lines.push(`4 QUAY ${fref.mrelQUAY}`);
+          }
+        }
+      }
     }
     for (const f of p.fams) lines.push(`1 FAMS ${f}`);
     for (const m of p.media) {
@@ -4251,7 +4281,7 @@ function saveFamily() {
   for (const cid of children) {
     if (db.individuals[cid]) {
       if (!db.individuals[cid].famc.some(f => famcId(f) === id))
-        db.individuals[cid].famc.push({ famId: id, frel: '', mrel: '' });
+        db.individuals[cid].famc.push({ famId: id, frel: '', mrel: '', frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
     }
   }
 
