@@ -136,9 +136,10 @@ const _placeModes = {};  // { placeId: 'free'|'parts' }
 | 6a | C1+D3 Strukturiertes Datum: Qualifier + 3-Felder-Eingabe | ✅ |
 | 6b | C2+D4 PLAC.FORM aus HEAD + Orts-Toggle Freitext ↔ 6-Felder | ✅ |
 | 7 E1 | Roundtrip-Test erweitert (Sprint 5/6-Tags), stabil | ✅ |
-| 7 E2 | Ancestris-Import-Test | manuell offen |
+| 7 E2 | Ancestris-Import-Test (2026-03-21): QUAY/PAGE -5 (von -159), Zeilen -708 (von -1016) | ✅ |
 | 8 | UI/UX-Fixes (B1–B14, Sprint A/B/C) | ✅ |
 | 9 | URL-Parameter `?datei=`: Dateiname in Topbar (`updateTopbarTitle`, `#topbarFileName`) | ✅ |
+| 10 | MARR/NAME/topSrc PAGE+QUAY; pushCont CONC-Fix; pf-note textarea; _FREL/_MREL lv3-4 SOUR/PAGE/QUAY | ✅ |
 
 ## Neue Hilfsfunktionen (index.html v2.0)
 ```javascript

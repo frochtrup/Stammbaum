@@ -3954,6 +3954,12 @@ function runRoundtripTest() {
         { lbl:'3 TIME',       re:/^\s*3 TIME\b/mg },
         // Bekannte Verluste
         { lbl:'_STAT',        re:/_STAT\b/mg },
+        // CHIL _FREL/_MREL Diagnose
+        { lbl:'2 _FREL',      re:/^\s*2 _FREL\b/mg },
+        { lbl:'2 _MREL',      re:/^\s*2 _MREL\b/mg },
+        { lbl:'3 SOUR (FAM)', re:/^\s*3 SOUR\b/mg },
+        { lbl:'4 PAGE',       re:/^\s*4 PAGE\b/mg },
+        { lbl:'4 QUAY',       re:/^\s*4 QUAY\b/mg },
       ];
 
       const rows = tags.map(t => {

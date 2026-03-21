@@ -47,6 +47,7 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 **Sprint 7 — Qualitätssicherung** ✅
 - [x] E1: Roundtrip-Test im Browser: erweitert mit Sprint 5+6-Tags (FACT, MILI, ENGA, QUAY, RESN, EMAIL, WWW, DATE-Qualifier, PLAC.FORM); `additive`-Flag für Tags die Writer immer schreibt; stabil
 - [x] E2: Ancestris-Import-Test (2026-03-21) — Ergebnis: `3 QUAY`/`3 PAGE` -5 (von -159), Zeilen-Delta -708 (von -1016), stabil ✅
+- [x] E3: `_FREL`/`_MREL` Quellenreferenzen (2026-03-21) — `3 SOUR`/`4 PAGE`/`4 QUAY` unter Eltern-Kind-Beziehungstypen; ~1263+1059+1049 Tags; Zeilen-Delta -708 → ~0 erwartet ✅
 
 **Sprint 8 — UI/UX-Fixes** ✅
 - [x] B2: Ghost-Karten opacity 0.18 → 0.40
@@ -175,11 +176,12 @@ Alle wichtigen Felder überleben Parse→Write→Parse:
 - _UID (Ancestris/Legacy), CAUS (Sterbeursache)
 - 2 NOTE unter Events, 2 SOUR unter NAME, SOUR direkt auf INDI
 
-Bewusst akzeptierte Verluste:
-- _STAT — nie geparst
-- NOTE-Records als @ref@ → werden zu Inline-NOTE
-- 2 SOUR unter 1 RELI — 1 Vorkommen, kein UI-Effekt
-- QUAY/PAGE unter TITL/RELI (lv1-Felder, kein Event-Kontext) — 5 Einträge
+Bewusst akzeptierte Verluste (nach E2/E3):
+- `_STAT` — nie geparst (Legacy: Never Married etc.)
+- NOTE-Records: `@ref@` → Inline-NOTE (Record-Struktur geht verloren)
+- `2 SOUR` unter `1 RELI` — 1 Vorkommen, kein UI-Effekt
+- `3 QUAY`/`3 PAGE` unter `TITL`/`RELI` — 5 Einträge, kein Event-Kontext
+- `3 OBJE` unter `2 SOUR` (Quellenreferenz) — ~52 Blöcke, lv5/6-Substruktur (FILE/FORM/TYPE), lokale OneDrive-Pfade, hoher Fix-Aufwand
 
 ### Phase 2.6: GEDCOM-Nachbesserungen ✅ (März 2026)
 - **SOUR/CHAN**: Änderungsdatum von Quellen-Records wird geparst, gespeichert und beim Export zurückgeschrieben. `saveSource()` setzt `lastChanged` automatisch auf heutiges Datum (GEDCOM-Format).

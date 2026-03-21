@@ -43,7 +43,9 @@
 | `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt; `3 PAGE` darunter → `sourcePages[sid]` |
 | `PAGE` | 3 | `events[].sourcePages[sid]` / `birth.sourcePages[sid]` etc. | Seitenangabe unter SOUR, editierbar im Ereignis-Formular |
 | `QUAY` | 3 | `events[].sourceQUAY[sid]` / `birth.sourceQUAY[sid]` etc. | Quellenqualität 0–3 unter SOUR, editierbar im Quellen-Widget |
-| `SOUR` | 1 | `topSources[]` | SOUR direkt unter INDI (Level 1) |
+| `SOUR` | 1 | `topSources[]` + `topSourcePages{}` + `topSourceQUAY{}` | SOUR direkt unter INDI (Level 1) |
+| `PAGE` | 2 | `topSourcePages[sid]` | Seitenangabe unter INDI-Level SOUR |
+| `QUAY` | 2 | `topSourceQUAY[sid]` | Quellenqualität unter INDI-Level SOUR |
 | `NOTE` | 1 | `noteText` / `noteRefs[]` | Inline-Text oder @Ref@ |
 | `CONC`/`CONT` | 2 | `noteText` (angehängt) | Mehrzeilige Notizen |
 | `RESN` | 1 | `resn` | Beschränkung (confidential / locked / privacy) |
@@ -52,9 +54,15 @@
 | `OBJE` | 1 | `media[].{file,title}` | Foto-Referenz |
 | `FILE` | 2 | `media[].file` | Pfad (oft Windows-Pfad aus Legacy) |
 | `TITL` | 3 | `media[].title` | Unter OBJE/FILE |
-| `FAMC` | 1 | `famc[].{famId,frel,mrel}` | Kind-in-Familie |
-| `_FREL` | 2 | `famc[].frel` | Vater-Beziehungstyp (Legacy) |
-| `_MREL` | 2 | `famc[].mrel` | Mutter-Beziehungstyp (Legacy) |
+| `FAMC` | 1 | `famc[].{famId,frel,mrel,frelSour,frelPage,frelQUAY,mrelSour,mrelPage,mrelQUAY}` | Kind-in-Familie |
+| `_FREL` | 2 | `famc[].frel` | Vater-Beziehungstyp (Leiblich / Adoptiert etc.) |
+| `SOUR` | 3 | `famc[].frelSour` | Quelle für Vater-Beziehung (`@@Sxx@@` Ancestris-Syntax) |
+| `PAGE` | 4 | `famc[].frelPage` | Seitenangabe zur Quelle (z.B. `Reg.Nr. 1 1855`) |
+| `QUAY` | 4 | `famc[].frelQUAY` | Quellenqualität 0–3 |
+| `_MREL` | 2 | `famc[].mrel` | Mutter-Beziehungstyp (Leiblich / Adoptiert etc.) |
+| `SOUR` | 3 | `famc[].mrelSour` | Quelle für Mutter-Beziehung |
+| `PAGE` | 4 | `famc[].mrelPage` | Seitenangabe |
+| `QUAY` | 4 | `famc[].mrelQUAY` | Quellenqualität 0–3 |
 | `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
 | `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum |
 
@@ -69,6 +77,8 @@
 | `ENGA` | 1 | `engag.{date,place}` | Verlobung (geparst + geschrieben + editierbar im Familien-Formular) |
 | `NOTE` | 1 | `noteText` | Inline-Text mit CONT-Unterstützung |
 | `SOUR` | 1–3 | `sourceRefs` (Set) + `marr.sources[]` | |
+| `PAGE` | 3 | `marr.sourcePages[sid]` | Seitenangabe unter MARR SOUR |
+| `QUAY` | 3 | `marr.sourceQUAY[sid]` | Quellenqualität unter MARR SOUR |
 
 ### SOUR (Quelle)
 
@@ -113,7 +123,8 @@ let lv3tag = '';      // aktueller Level-3-Tag
 let evIdx  = -1;      // Index in cur.events (-1 wenn kein Event aktiv)
 let inMap  = false;   // sind wir in einem MAP-Block?
 let mapParent = '';   // welcher lv1tag gehört zur aktuellen MAP?
-let lastSourVal = ''; // letzte gesehene 2 SOUR @id@ (für 3 PAGE Zuordnung)
+let lastSourVal = ''; // letzte SOUR @id@ — wird bei lv2 UND lv3 SOUR gesetzt
+                      // → ermöglicht PAGE/QUAY auf lv3 (Events) und lv4 (_FREL/_MREL)
 ```
 
 Bei jeder Zeile:
@@ -187,14 +198,27 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
   3 PAGE [Seite]                  ← wenn ev.sourcePages[@Sxx@] gesetzt
 1 NOTE [noteText] / 2 CONT [...]
 1 SOUR @Sxx@                      ← topSources[]
-1 FAMC @Fxx@ / 2 _FREL / 2 _MREL
+  2 PAGE [Seite]                  ← topSourcePages[sid]
+  2 QUAY [0-3]                    ← topSourceQUAY[sid]
+1 FAMC @Fxx@
+  2 _FREL [Leiblich|Adoptiert]
+    3 SOUR @@Sxx@@                ← frelSour (Ancestris @@-Syntax)
+      4 PAGE [Seite]              ← frelPage
+      4 QUAY [0-3]               ← frelQUAY
+  2 _MREL [Leiblich|Adoptiert]
+    3 SOUR @@Sxx@@               ← mrelSour
+      4 PAGE [Seite]             ← mrelPage
+      4 QUAY [0-3]              ← mrelQUAY
 1 FAMS @Fxx@
 1 OBJE / 2 FILE [path] / 3 TITL [title]
 1 CHAN / 2 DATE [lastChanged]
 
 0 @Fxx@ FAM
 1 HUSB @Ixx@ / 1 WIFE @Ixx@ / 1 CHIL @Ixx@
-1 MARR / 2 DATE / 2 PLAC / 3 MAP / 2 SOUR @Sxx@
+1 MARR / 2 DATE / 2 PLAC / 3 MAP
+  2 SOUR @Sxx@                    ← marr.sources[]
+    3 PAGE [Seite]                ← marr.sourcePages[sid]
+    3 QUAY [0-3]                  ← marr.sourceQUAY[sid]
 1 ENGA / 2 DATE / 2 PLAC
 1 NOTE [noteText] / 2 CONT [...]
 1 SOUR @Sxx@                      ← sourceRefs (ohne marr-Quellen)
@@ -217,11 +241,22 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 0 TRLR
 ```
 
+### Kontext-Tracking (Parser)
+| Level | Variable | Bedeutung |
+|---|---|---|
+| lv1 | `lv1tag` | Aktueller Level-1-Tag, `lastSourVal=''` zurücksetzen |
+| lv2 | `lv2tag` | Aktueller Level-2-Tag; bei `SOUR`: `lastSourVal=val` |
+| lv3 | `lv3tag` | Aktueller Level-3-Tag; bei `SOUR`: `lastSourVal=val` (für lv4 PAGE/QUAY) |
+| lv4 | *(kein eigenes Tag)* | Liest `lv1tag`/`lv2tag`/`lv3tag` zur Kontextbestimmung |
+
 ### Was NICHT geschrieben wird (bekannte Verluste)
-| Tag | Grund |
-|---|---|
-| `_STAT` | Nie geparst (Legacy: Never Married etc.) |
-| `2 SOUR` unter `1 RELI` | RELI ist noch ein String, kein Objekt |
+| Tag | Grund | Relevanz |
+|---|---|---|
+| `_STAT` | Nie geparst (Legacy: Never Married etc.) | Gering |
+| `2 SOUR` unter `1 RELI` | RELI ist String, kein Event-Objekt | 1 Vorkommen |
+| `3 QUAY`/`3 PAGE` unter `1 TITL`/`1 RELI` | Kein Event-Kontext für diese lv1-Felder | 5 Vorkommen |
+| `3 OBJE` unter `2 SOUR` (Quellenreferenz) | Medienverweis an Quellenreferenz, lv5/6 Substruktur | ~52 OBJE-Blöcke × 5 Zeilen |
+| `1 DATA` in SOUR-Records | Ancestris-Block mit `2 AGNC` (Institution) | Selten (1 Vorkommen) |
 
 ---
 
