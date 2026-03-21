@@ -1472,7 +1472,7 @@ function parseGEDCOM(text) {
       if (tag.startsWith('@') && val.trim() === 'INDI') {
         cur = {
           id: tag, _passthrough: [], _nameParsed: false,
-          name:'', surname:'', given:'', prefix:'', suffix:'',
+          name:'', nameRaw:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
           birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, value:'' },
           death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, cause:'', value:'' },
@@ -1486,7 +1486,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:'',seen:false}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},value:'',seen:false,addr:''}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1530,6 +1530,7 @@ function parseGEDCOM(text) {
             _ptDepth = 1;
           } else {
             cur._nameParsed = true;
+            cur.nameRaw = val;
             const sn = val.match(/\/([^\/]*)\//) || [];
             cur.surname = sn[1] ? sn[1].trim() : '';
             cur.given   = val.replace(/\/[^\/]*\//, '').trim();
@@ -1731,6 +1732,7 @@ function parseGEDCOM(text) {
         if (lv1tag==='MARR') {
           if (tag==='DATE') cur.marr.date=val;
           if (tag==='PLAC') cur.marr.place=val;
+          if (tag==='ADDR') cur.marr.addr=val;
           if (tag==='SOUR' && val.startsWith('@')) { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); cur.sourceRefs.add(val); }
         }
         if (lv1tag==='ENGA') {
@@ -2154,7 +2156,7 @@ function writeGEDCOM() {
     lines.push(`0 ${p.id} INDI`);
     // Name with sub-tags
     const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
-    lines.push(`1 NAME ${nameStr.trim()}`);
+    lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
     if (p.given)   lines.push(`2 GIVN ${p.given}`);
     if (p.surname) lines.push(`2 SURN ${p.surname}`);
     if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
@@ -2270,6 +2272,7 @@ function writeGEDCOM() {
       }
     }
     eventBlock('MARR', f.marr, 1);
+    if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
     if (f.engag && (f.engag.date || f.engag.place)) {
       lines.push(`1 ENGA`);
       if (f.engag.date)  lines.push(`2 DATE ${normGedDate(f.engag.date)}`);
@@ -4271,6 +4274,7 @@ function savePerson() {
     ...existing,
     id, given, surname,
     name: (given + (surname ? ' ' + surname : '')).trim(),
+    nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
     birth: existing.birth || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
     death: existing.death || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, cause:'' },
