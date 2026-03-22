@@ -787,6 +787,7 @@ body {
 <div id="v-tree" class="view">
   <div class="topbar">
     <div class="topbar-inner">
+      <button class="topbar-btn back" id="treeBtnBack" style="display:none" onclick="treeNavBack()">←</button>
       <span class="topbar-title" id="treeTopTitle"></span>
       <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁</button>
       <button class="topbar-btn" onclick="openModal('modalMenu')" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
@@ -1441,6 +1442,8 @@ let currentRepoId    = null;
 let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
 let _pendingPhotoBase64 = undefined; // undefined=keine Änderung, null=löschen, string=neues Foto (Sprint P3-2)
 let _treeScale = 1;                  // Zoom-Faktor Sanduhr-Ansicht (Sprint P3-5)
+let _treeHistory    = [];            // Navigations-History im Baumbaum
+let _treeHistoryPos = -1;
 
 // Liefert den Original-GEDCOM-Text (erste geladene Version).
 // Bevorzugt localStorage-Backup (persistiert über Reload); _originalGedText als RAM-Fallback
@@ -2806,11 +2809,12 @@ function confirmNewFile() {
   } catch(e) {}
   updateBackupBtn();
   updateSaveIndicator();
-  // Suchfelder und Jahresfilter zurücksetzen
+  // Suchfelder, Jahresfilter und Baum-History zurücksetzen
   const si = document.getElementById('searchInput');     if (si) si.value = '';
   const yf = document.getElementById('yearFrom');        if (yf) yf.value = '';
   const yt = document.getElementById('yearTo');          if (yt) yt.value = '';
   const cb = document.getElementById('yearFilterClear'); if (cb) cb.style.display = 'none';
+  _treeHistory = []; _treeHistoryPos = -1; _updateTreeBackBtn();
   showView('v-landing');
 }
 
@@ -3720,17 +3724,37 @@ function getChildIds(pid) {
 
 let currentTreeId = null;
 
-function showTree(personId) {
+function _updateTreeBackBtn() {
+  const btn = document.getElementById('treeBtnBack');
+  if (btn) btn.style.display = _treeHistoryPos > 0 ? '' : 'none';
+}
+
+function treeNavBack() {
+  if (_treeHistoryPos <= 0) return;
+  _treeHistoryPos--;
+  showTree(_treeHistory[_treeHistoryPos], false);
+}
+
+function showTree(personId, addToHistory = true) {
   const p = db.individuals[personId];
   if (!p) return;
   currentPersonId = personId;
   currentTreeId   = personId;
+
+  // ── Navigations-History ──
+  if (addToHistory) {
+    _treeHistory = _treeHistory.slice(0, _treeHistoryPos + 1);
+    if (_treeHistory[_treeHistory.length - 1] !== personId) _treeHistory.push(personId);
+    _treeHistoryPos = _treeHistory.length - 1;
+  }
+  _updateTreeBackBtn();
   setBnavActive('tree');
 
-  const CW = 160, CH = 80;      // Zentrum-Karte
-  const W  = 96,  H  = 64;      // reguläre Karte
+  const CW = 160, CH = 80;
+  const W  = 96,  H  = 64;
   const HGAP = 10, VGAP = 44;
-  const MGAP = 20;               // Lücke Person ↔ Ehepartner
+  const MGAP = 20;
+  const SIB_GAP = 14;   // Abstand Geschwister-Gruppe ↔ Zentrumsperson
   const SLOT = W + HGAP;
   const PAD  = 20;
   const ROW  = H + VGAP;
@@ -3742,43 +3766,42 @@ function showTree(personId) {
   const par_m = par0.mother ? getParentIds(par0.mother) : { father: null, mother: null };
   const anc2  = [par_f.father, par_f.mother, par_m.father, par_m.mother];
 
-  // ── Erster Ehepartner aus fams (mit Familien-ID) ──
-  let spouseFamId = null;
-  const spouseId = (() => {
-    for (const famId of (p.fams || [])) {
-      const fam = db.families[famId];
-      if (!fam) continue;
-      if (fam.husb && fam.husb !== personId) { spouseFamId = famId; return fam.husb; }
-      if (fam.wife && fam.wife !== personId) { spouseFamId = famId; return fam.wife; }
-    }
-    return null;
-  })();
+  // ── Geschwister (aus erster Elternfamilie) ──
+  const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
+  const sibFamId  = sibFamRef ? (typeof sibFamRef === 'string' ? sibFamRef : sibFamRef.famId) : null;
+  const siblings  = sibFamId
+    ? (db.families[sibFamId]?.children || []).filter(id => id !== personId)
+    : [];
+  const nSibs = siblings.length;
 
-  // ── Kinder: Hauptfamilie vs. Halbgeschwister ──
-  // Hauptfamilie = Familie mit dargestelltem Ehepartner;
-  // fehlt ein Partner, gilt die erste fams-Einheit als Hauptfamilie.
-  if (!spouseFamId && p.fams && p.fams.length > 0) spouseFamId = p.fams[0];
-  const mainChildren = spouseFamId ? (db.families[spouseFamId]?.children || []) : [];
-  const halfChildren = (p.fams || [])
-    .filter(fid => fid !== spouseFamId)
-    .flatMap(fid => db.families[fid]?.children || []);
-  const children = [...mainChildren, ...halfChildren];
-  const halfSiblingSet = new Set(halfChildren);
+  // ── Alle Ehen / Familien ──
+  const allFamilies = (p.fams || []).map(famId => {
+    const fam = db.families[famId];
+    if (!fam) return null;
+    const spId = (fam.husb && fam.husb !== personId) ? fam.husb
+               : (fam.wife && fam.wife !== personId) ? fam.wife
+               : null;
+    return { famId, spId, kids: fam.children || [] };
+  }).filter(Boolean);
 
-  const MAX_CHILD_COLS = 4;
+  // ── Kinder (alle Familien, ohne Duplikate) ──
+  const mainKids = allFamilies.length > 0 ? new Set(allFamilies[0].kids) : new Set();
+  const seen = new Set();
+  const allKids = allFamilies.flatMap(f => f.kids)
+    .filter(id => seen.has(id) ? false : (seen.add(id), true));
+  const halfKidSet = new Set(allKids.filter(id => !mainKids.has(id)));
+  const MAX_CHILD_COLS = 5;
   const childRows = [];
-  for (let i = 0; i < children.length; i += MAX_CHILD_COLS) {
-    childRows.push(children.slice(i, i + MAX_CHILD_COLS));
-  }
+  for (let i = 0; i < allKids.length; i += MAX_CHILD_COLS) childRows.push(allKids.slice(i, i + MAX_CHILD_COLS));
 
   // ── Layout-Breite ──
-  // Alle Ebenen (Großeltern, Person, Kinder) werden auf die ausgewählte Person zentriert.
-  const ancW    = 4 * SLOT;
-  const coupleW = spouseId ? CW + MGAP + W : CW;
+  const sibsW   = nSibs > 0 ? nSibs * SLOT + SIB_GAP : 0;
+  const ancSpan = 4 * SLOT;
+  // personCX: Mitte der Zentrumskarte; muss Geschwister links und Vorfahren zentriert aufnehmen
+  const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
+  const rightEdge = personCX + CW / 2 + (allFamilies.length > 0 ? MGAP + allFamilies.length * SLOT : 0) + PAD;
   const childMaxCols = childRows.length > 0 ? Math.max(...childRows.map(r => r.length)) : 0;
-  const childW  = childMaxCols * SLOT;
-  const totalW  = Math.max(ancW, childW, coupleW) + PAD * 2;
-  const cx      = totalW / 2;   // Layout-Zentrum (= Mitte Personen-Karte)
+  const totalW = Math.max(personCX + ancSpan / 2 + PAD, rightEdge, personCX + childMaxCols * SLOT / 2 + PAD);
 
   // ── Y-Positionen ──
   const baseY = PAD + 2 * ROW;
@@ -3788,57 +3811,58 @@ function showTree(personId) {
   }
   const totalH = ry(1) + Math.max(childRows.length, 1) * ROW - VGAP + PAD;
 
-  // ── X-Positionen Vorfahren (4 GP-Slots, zentriert bei cx) ──
-  function gpCX(i)  { return cx - 2 * SLOT + (i + 0.5) * SLOT; }
+  // ── X: Vorfahren (zentriert auf personCX) ──
+  const ancLeft = personCX - ancSpan / 2;
+  function gpCX(i)  { return ancLeft + (i + 0.5) * SLOT; }
   function gpX(i)   { return gpCX(i) - W / 2; }
   function parCX(i) { return (gpCX(i * 2) + gpCX(i * 2 + 1)) / 2; }
   function parX(i)  { return parCX(i) - W / 2; }
 
-  // ── Person immer bei cx, Ehepartner rechts ──
-  const personCX = cx;
-  const personX  = cx - CW / 2;
-  const spouseX  = cx + CW / 2 + MGAP;
-  const spouseCX = spouseX + W / 2;
+  // ── X: Zentrumsperson ──
+  const personX = personCX - CW / 2;
 
-  // Kind-Zeilen auf Person zentriert (wie Großeltern-Ebene) — kein asymmetrischer Offset
-  const familyCX = personCX;
-  function childRowCX(row, i) {
-    return familyCX - (row.length * SLOT) / 2 + (i + 0.5) * SLOT;
-  }
-  function childRowX(row, i) { return childRowCX(row, i) - W / 2; }
+  // ── X: Geschwister (links, i=0 ist nächste zu Zentrum) ──
+  function sibX(i)  { return personX - SIB_GAP - (i + 1) * W - i * HGAP; }
+  function sibCX(i) { return sibX(i) + W / 2; }
+
+  // ── X: Ehepartner (rechts, i=0 ist erste Ehe) ──
+  function spouseX(i)  { return personX + CW + MGAP + i * SLOT; }
+  function spouseCX(i) { return spouseX(i) + W / 2; }
+
+  // ── X: Kinder (zentriert auf personCX) ──
+  function childRowCX(row, i) { return personCX - (row.length * SLOT) / 2 + (i + 0.5) * SLOT; }
+  function childRowX(row, i)  { return childRowCX(row, i) - W / 2; }
 
   // ── DOM aufbauen ──
   document.getElementById('treeTopTitle').textContent = p.name || personId;
-
   const wrap = document.getElementById('treeWrap');
   wrap.style.width  = totalW + 'px';
   wrap.style.height = totalH + 'px';
   wrap.querySelectorAll('.tree-card').forEach(el => el.remove());
-
   const svg = document.getElementById('treeSvg');
   svg.setAttribute('width',   totalW);
   svg.setAttribute('height',  totalH);
   svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
   svg.innerHTML = '';
 
-  function line(x1, y1, x2, y2) {
-    const mid = (y1 + y2) / 2;
-    const el  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    el.setAttribute('d', `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`);
-    el.setAttribute('stroke', 'var(--border)');
+  function svgLine(x1, y1, x2, y2, stroke = 'var(--border)', dash = null) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    el.setAttribute('x1', x1); el.setAttribute('y1', y1);
+    el.setAttribute('x2', x2); el.setAttribute('y2', y2);
+    el.setAttribute('stroke', stroke);
     el.setAttribute('stroke-width', '1.5');
-    el.setAttribute('fill', 'none');
+    if (dash) el.setAttribute('stroke-dasharray', dash);
     svg.appendChild(el);
   }
 
-  function lineHalf(x1, y1, x2, y2) {
+  function line(x1, y1, x2, y2, color = 'var(--border)', dash = null) {
     const mid = (y1 + y2) / 2;
     const el  = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     el.setAttribute('d', `M${x1},${y1} C${x1},${mid} ${x2},${mid} ${x2},${y2}`);
-    el.setAttribute('stroke', 'var(--gold-dim)');
+    el.setAttribute('stroke', color);
     el.setAttribute('stroke-width', '1.5');
-    el.setAttribute('stroke-dasharray', '4 3');
     el.setAttribute('fill', 'none');
+    if (dash) el.setAttribute('stroke-dasharray', dash);
     svg.appendChild(el);
   }
 
@@ -3855,7 +3879,7 @@ function showTree(personId) {
       wrap.appendChild(div);
       return;
     }
-    const q    = db.individuals[id];
+    const q = db.individuals[id];
     if (!q) return;
     const icon = q.sex === 'M' ? '♂' : q.sex === 'F' ? '♀' : '◇';
     const nm   = q.name || id;
@@ -3867,7 +3891,7 @@ function showTree(personId) {
       `<div class="tree-sex">${icon}</div>` +
       `<div class="tree-name">${esc(nm)}</div>` +
       (yr ? `<div class="tree-yr">${yr}</div>` : '') +
-      (isHalf    ? `<div class="tree-half-badge">½</div>` : '') +
+      (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${q.fams.length}</div>` : '');
     div.onclick = isCenter ? () => showDetail(id) : () => showTree(id);
     wrap.appendChild(div);
@@ -3876,49 +3900,60 @@ function showTree(personId) {
   // ── Großeltern + Linien zu Eltern ──
   anc2.forEach((id, i) => {
     mkCard(id, gpX(i), ry(-2), false);
-    line(gpCX(i), ry(-2) + H, parCX(Math.floor(i / 2)), ry(-1));
+    if (id) line(gpCX(i), ry(-2) + H, parCX(Math.floor(i / 2)), ry(-1));
   });
 
-  // ── Eltern + Linien zu Person ──
-  anc1.forEach((id, i) => {
-    mkCard(id, parX(i), ry(-1), false);
-    line(parCX(i), ry(-1) + H, personCX + (i === 0 ? -CW * 0.18 : CW * 0.18), ry(0));
-  });
+  // ── Eltern ──
+  anc1.forEach((id, i) => mkCard(id, parX(i), ry(-1), false));
 
-  // ── Zentrum ──
-  mkCard(personId, personX, ry(0), true);
-
-  // ── Ehepartner + gestrichelte Verbindungslinie ──
-  if (spouseId) {
-    mkCard(spouseId, spouseX, ry(0) + (CH - H) / 2, false);
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    el.setAttribute('x1', personX + CW);
-    el.setAttribute('y1', ry(0) + CH / 2);
-    el.setAttribute('x2', spouseX);
-    el.setAttribute('y2', ry(0) + CH / 2);
-    el.setAttribute('stroke', 'var(--gold)');
-    el.setAttribute('stroke-width', '1.5');
-    el.setAttribute('stroke-dasharray', '5 3');
-    svg.appendChild(el);
+  // ── Eltern → Kinder (mit oder ohne Geschwister) ──
+  if (nSibs > 0) {
+    // Horizontaler Verbindungsbalken von linkstem Geschwister bis Zentrumsperson
+    const barY    = ry(-1) + H + Math.round(VGAP * 0.38);
+    const barLeft = sibCX(nSibs - 1);  // weitest links
+    const midX    = (barLeft + personCX) / 2;
+    svgLine(barLeft, barY, personCX, barY);
+    if (anc1[0]) line(parCX(0), ry(-1) + H, midX, barY);
+    if (anc1[1]) line(parCX(1), ry(-1) + H, midX, barY);
+    // Vertikale Drops zu Geschwistern
+    siblings.forEach((_, i) => svgLine(sibCX(i), barY, sibCX(i), ry(0) + (CH - H) / 2));
+    // Vertikaler Drop zur Zentrumsperson
+    svgLine(personCX, barY, personCX, ry(0));
+  } else {
+    if (anc1[0]) line(parCX(0), ry(-1) + H, personCX - CW * 0.18, ry(0));
+    if (anc1[1]) line(parCX(1), ry(-1) + H, personCX + CW * 0.18, ry(0));
   }
 
-  // ── Kinder + Linien (mehrere Zeilen möglich) ──
+  // ── Geschwister ──
+  siblings.forEach((sid, i) => mkCard(sid, sibX(i), ry(0) + (CH - H) / 2, false));
+
+  // ── Zentrumsperson ──
+  mkCard(personId, personX, ry(0), true);
+
+  // ── Alle Ehepartner ──
+  allFamilies.forEach((fam, i) => {
+    if (!fam.spId) return;
+    mkCard(fam.spId, spouseX(i), ry(0) + (CH - H) / 2, false);
+    svgLine(personX + CW, ry(0) + CH / 2, spouseX(i), ry(0) + H / 2, 'var(--gold)', '5 3');
+  });
+
+  // ── Kinder + Linien ──
   childRows.forEach((row, rowIdx) => {
     const rowY = ry(1) + rowIdx * ROW;
     row.forEach((id, i) => {
-      const cxI   = childRowCX(row, i);
-      const isHalf = halfSiblingSet.has(id);
+      const cxi    = childRowCX(row, i);
+      const isHalf = halfKidSet.has(id);
       mkCard(id, childRowX(row, i), rowY, false, isHalf);
-      if (isHalf) lineHalf(familyCX, ry(0) + CH, cxI, rowY);
-      else        line(familyCX, ry(0) + CH, cxI, rowY);
+      line(personCX, ry(0) + CH, cxi, rowY, isHalf ? 'var(--gold-dim)' : 'var(--border)', isHalf ? '4 3' : null);
     });
   });
 
   showView('v-tree');
+  // Auto-Zentrierung: Zentrumsperson ~1/3 von oben
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
-    sc.scrollLeft = Math.max(0, cx - sc.clientWidth / 2);
-    sc.scrollTop  = Math.max(0, ry(-2) - PAD);
+    sc.scrollLeft = Math.max(0, personCX - sc.clientWidth / 2);
+    sc.scrollTop  = Math.max(0, ry(0) - Math.round(sc.clientHeight * 0.35));
   }, 60);
 }
 
@@ -5175,6 +5210,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   const sc = document.getElementById('treeScroll');
   const wrap = document.getElementById('treeWrap');
   let startDist = 0, startScale = 1;
+  let swipeStartX = 0, swipeStartY = 0;
 
   function pinchDist(e) {
     const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -5186,6 +5222,9 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
     if (e.touches.length === 2) {
       startDist  = pinchDist(e);
       startScale = _treeScale;
+    } else if (e.touches.length === 1) {
+      swipeStartX = e.touches[0].clientX;
+      swipeStartY = e.touches[0].clientY;
     }
   }, { passive: true });
 
@@ -5197,12 +5236,22 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
     wrap.style.transform = `scale(${scale})`;
   }, { passive: false });
 
-  // Doppeltipp: Zoom zurücksetzen
+  // Doppeltipp: Zoom zurücksetzen; Wisch rechts: zurück
   let lastTap = 0;
   sc.addEventListener('touchend', e => {
     if (e.touches.length !== 0) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const dx = endX - swipeStartX;
+    const dy = endY - swipeStartY;
+    // Wisch rechts = zurück (mindestens 70px, überwiegend horizontal)
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx > 0) treeNavBack();
+      return;
+    }
+    // Doppeltipp = Zoom reset
     const now = Date.now();
-    if (now - lastTap < 300) {
+    if (now - lastTap < 300 && Math.abs(dx) < 20 && Math.abs(dy) < 20) {
       _treeScale = 1;
       wrap.style.transform = 'scale(1)';
     }
@@ -5243,6 +5292,11 @@ document.addEventListener('keydown', e => {
     e.preventDefault();
     revertToSaved();
     return;
+  }
+
+  // Pfeil links: im Baum zurücknavigieren
+  if (e.key === 'ArrowLeft' && !mod && document.getElementById('v-tree').classList.contains('active')) {
+    treeNavBack();
   }
 });
 
