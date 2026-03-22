@@ -3792,7 +3792,12 @@ function showTree(personId, addToHistory = true) {
   }).filter(Boolean);
 
   // ── Kinder (alle Familien, ohne Duplikate) ──
-  const mainKids = allFamilies.length > 0 ? new Set(allFamilies[0].kids) : new Set();
+  // mainKids = Kinder der aktiven Ehe (solid); alle anderen = gestrichelt
+  const spouseFamsEarly = allFamilies.filter(f => f.spId);
+  const activeSpIdxEarly = (_activeSpouseMap[personId] || 0) % Math.max(1, spouseFamsEarly.length);
+  const activeFam = spouseFamsEarly.length > 0 ? spouseFamsEarly[activeSpIdxEarly]
+                  : allFamilies[0] || null;
+  const mainKids = activeFam ? new Set(activeFam.kids) : new Set();
   const seen = new Set();
   const allKids = allFamilies.flatMap(f => f.kids)
     .filter(id => seen.has(id) ? false : (seen.add(id), true));
@@ -3961,8 +3966,8 @@ function showTree(personId, addToHistory = true) {
   // ── Ehepartner: Kartenstapel rechts ──
   // Aktiver Ehepartner (Index aus _activeSpouseMap) liegt oben und ist voll lesbar.
   // Andere Karten zeigen nur einen PEEK-Streifen; Klick macht diese zur aktiven.
-  const spouseFams  = allFamilies.filter(f => f.spId);
-  const activeSpIdx = (_activeSpouseMap[personId] || 0) % Math.max(1, spouseFams.length);
+  const spouseFams  = spouseFamsEarly;
+  const activeSpIdx = activeSpIdxEarly;
   const orderedSp   = spouseFams.length > 0
     ? [spouseFams[activeSpIdx], ...spouseFams.filter((_, i) => i !== activeSpIdx)]
     : [];
