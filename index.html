@@ -1358,6 +1358,16 @@ body {
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); importPhotos()">
           📥 &nbsp; Fotos importieren
         </button>
+        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <button id="odConnectBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); odToggle()">
+          ☁ &nbsp; OneDrive verbinden
+        </button>
+        <button id="odOpenBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odOpenFilePicker()">
+          📂 &nbsp; Aus OneDrive öffnen
+        </button>
+        <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="odSaveFile()">
+          💾 &nbsp; In OneDrive speichern
+        </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test
         </button>
@@ -1366,6 +1376,20 @@ body {
     </div>
   </div>
 </div>
+<!-- OneDrive Datei-Auswahl -->
+<div class="modal-overlay" id="modalOneDrive">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">OneDrive — .ged Dateien</div>
+    <div class="sheet-body">
+      <div id="odFileList" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-cancel" onclick="closeModal('modalOneDrive')">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="fileInput2" accept="*/*" style="display:none">
 <input type="file" id="photoImportInput" accept=".json,application/json" style="display:none"
   onchange="_handlePhotoImport(this.files[0]).finally(()=>this.value='')">
@@ -5430,6 +5454,181 @@ function initPlaceAutocomplete(inputId, ddId) {
 initPlaceAutocomplete('ef-place',  'ef-place-dd');
 initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
+
+// ─────────────────────────────────────
+//  ONEDRIVE INTEGRATION (P3-8)
+// ─────────────────────────────────────
+const OD_CLIENT_ID = '688c9052-89c3-4d66-8ee0-c601e089336e';
+const OD_SCOPES    = 'Files.ReadWrite offline_access User.Read';
+const OD_AUTH_EP   = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+const OD_TOKEN_EP  = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
+
+function _odRedirectUri() { return location.origin + location.pathname; }
+function _odIsConnected()  { return !!localStorage.getItem('od_access_token'); }
+
+function _odUpdateUI() {
+  const conn = _odIsConnected();
+  const cb = document.getElementById('odConnectBtn');
+  const ob = document.getElementById('odOpenBtn');
+  const sb = document.getElementById('odSaveBtn');
+  if (cb) cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
+  if (ob) ob.style.display = conn ? '' : 'none';
+  if (sb) sb.style.display = conn ? '' : 'none';
+}
+
+function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
+
+function odLogout() {
+  ['od_access_token','od_refresh_token','od_token_expiry','od_file_id','od_file_name']
+    .forEach(k => localStorage.removeItem(k));
+  _odUpdateUI();
+  showToast('OneDrive getrennt');
+}
+
+async function odLogin() {
+  const verifier  = _odCodeVerifier();
+  const challenge = await _odCodeChallenge(verifier);
+  sessionStorage.setItem('od_verifier', verifier);
+  const p = new URLSearchParams({
+    client_id: OD_CLIENT_ID, response_type: 'code',
+    redirect_uri: _odRedirectUri(), scope: OD_SCOPES,
+    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query'
+  });
+  location.href = OD_AUTH_EP + '?' + p;
+}
+
+function _odCodeVerifier() {
+  const a = new Uint8Array(64); crypto.getRandomValues(a);
+  return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function _odCodeChallenge(v) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return btoa(String.fromCharCode(...new Uint8Array(d))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function odHandleCallback() {
+  const p     = new URLSearchParams(location.search);
+  const code  = p.get('code');
+  const error = p.get('error');
+  history.replaceState({}, '', location.pathname);
+  if (error || !code) { if (error) showToast('OneDrive: ' + (p.get('error_description') || error)); return; }
+  const verifier = sessionStorage.getItem('od_verifier');
+  sessionStorage.removeItem('od_verifier');
+  if (!verifier) { showToast('OneDrive: Sitzung abgelaufen'); return; }
+  try {
+    const body = new URLSearchParams({
+      client_id: OD_CLIENT_ID, grant_type: 'authorization_code',
+      code, redirect_uri: _odRedirectUri(), code_verifier: verifier
+    });
+    const res  = await fetch(OD_TOKEN_EP, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem('od_access_token', data.access_token);
+      localStorage.setItem('od_refresh_token', data.refresh_token || '');
+      localStorage.setItem('od_token_expiry',  Date.now() + (data.expires_in - 60) * 1000);
+      _odUpdateUI();
+      showToast('✓ OneDrive verbunden');
+    } else {
+      showToast('OneDrive: ' + (data.error_description || 'Anmeldung fehlgeschlagen'));
+    }
+  } catch(e) { showToast('OneDrive: Netzwerkfehler'); }
+}
+
+async function _odGetToken() {
+  const expiry = parseInt(localStorage.getItem('od_token_expiry') || '0');
+  if (Date.now() < expiry) return localStorage.getItem('od_access_token');
+  const rt = localStorage.getItem('od_refresh_token');
+  if (!rt) { odLogin(); return null; }
+  try {
+    const body = new URLSearchParams({
+      client_id: OD_CLIENT_ID, grant_type: 'refresh_token',
+      refresh_token: rt, scope: OD_SCOPES, redirect_uri: _odRedirectUri()
+    });
+    const res  = await fetch(OD_TOKEN_EP, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
+    const data = await res.json();
+    if (data.access_token) {
+      localStorage.setItem('od_access_token', data.access_token);
+      if (data.refresh_token) localStorage.setItem('od_refresh_token', data.refresh_token);
+      localStorage.setItem('od_token_expiry', Date.now() + (data.expires_in - 60) * 1000);
+      return data.access_token;
+    }
+  } catch(e) {}
+  odLogin(); return null;
+}
+
+async function odOpenFilePicker() {
+  const token = await _odGetToken(); if (!token) return;
+  showToast('Suche .ged-Dateien…');
+  try {
+    const res  = await fetch(`${OD_GRAPH}/me/drive/root/search(q='.ged')?select=id,name,lastModifiedDateTime,size&top=30`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const files = (data.value || []).filter(f => f.name.toLowerCase().endsWith('.ged'));
+    if (!files.length) { showToast('Keine .ged-Dateien in OneDrive gefunden'); return; }
+    const list = document.getElementById('odFileList');
+    if (list) {
+      list.innerHTML = files.map(f => {
+        const date = new Date(f.lastModifiedDateTime).toLocaleDateString('de-DE');
+        const kb   = Math.round((f.size || 0) / 1024);
+        return `<div class="list-item" style="cursor:pointer"
+          data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
+          onclick="odLoadFile(this.dataset.odid, this.dataset.odname)">
+          <div style="font-weight:600;font-size:0.9rem">${esc(f.name)}</div>
+          <div style="font-size:0.78rem;color:var(--text-dim)">${date} · ${kb} KB</div>
+        </div>`;
+      }).join('');
+    }
+    openModal('modalOneDrive');
+  } catch(e) { showToast('OneDrive: ' + e.message); }
+}
+
+async function odLoadFile(itemId, fileName) {
+  closeModal('modalOneDrive');
+  const token = await _odGetToken(); if (!token) return;
+  showToast('Lade ' + fileName + '…');
+  try {
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}/content`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    localStorage.setItem('od_file_id',   itemId);
+    localStorage.setItem('od_file_name', fileName);
+    _processLoadedText(await res.text(), fileName);
+    showToast('✓ ' + fileName + ' geladen');
+  } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
+}
+
+async function odSaveFile() {
+  const token    = await _odGetToken(); if (!token) return;
+  const text     = writeGEDCOM();
+  const fileId   = localStorage.getItem('od_file_id');
+  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  showToast('Speichere in OneDrive…');
+  try {
+    const url = fileId
+      ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
+      : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain;charset=utf-8' },
+      body:   text
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const saved = await res.json();
+    if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
+    changed = false; updateChangedIndicator();
+    showToast('✓ In OneDrive gespeichert');
+  } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + e.message); }
+}
+
+// OneDrive OAuth-Callback nach Redirect abfangen
+if (location.search.includes('code=') || location.search.includes('error=')) {
+  odHandleCallback();
+}
+_odUpdateUI();
 </script>
 </body>
 </html>
