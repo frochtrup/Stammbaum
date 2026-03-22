@@ -108,7 +108,7 @@ body {
   height: calc(100dvh - 52px - 57px - env(safe-area-inset-bottom, 0px));
   background: var(--bg);
 }
-.tree-wrap { position: relative; }
+.tree-wrap { position: relative; transform-origin: top center; transition: transform 0.05s linear; }
 .tree-svg  { position: absolute; top: 0; left: 0; pointer-events: none; }
 
 .tree-card {
@@ -1337,6 +1337,9 @@ body {
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
           🗂 &nbsp; Demo-Daten öffnen
         </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); revertToSaved()">
+          ↩ &nbsp; Änderungen verwerfen
+        </button>
         <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
           ✕ &nbsp; Datei schließen
         </button>
@@ -1437,6 +1440,7 @@ let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonFor
 let currentRepoId    = null;
 let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
 let _pendingPhotoBase64 = undefined; // undefined=keine Änderung, null=löschen, string=neues Foto (Sprint P3-2)
+let _treeScale = 1;                  // Zoom-Faktor Sanduhr-Ansicht (Sprint P3-5)
 
 // Liefert den Original-GEDCOM-Text (erste geladene Version).
 // Bevorzugt localStorage-Backup (persistiert über Reload); _originalGedText als RAM-Fallback
@@ -2770,6 +2774,19 @@ document.getElementById('fileInput2').addEventListener('change', e => {
   if (e.target.files[0]) readFile(e.target.files[0]);
 });
 
+function revertToSaved() {
+  const orig = _getOriginalText();
+  if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
+  if (!confirm('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
+  db = parseGEDCOM(orig);
+  changed = false;
+  _placesCache = null;
+  updateChangedIndicator();
+  updateStats();
+  renderTab();
+  showToast('✓ Zurückgesetzt');
+}
+
 function confirmNewFile() {
   if (changed) {
     if (!confirm('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
@@ -3845,11 +3862,13 @@ function showTree(personId) {
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
+    const multiMarr = isCenter && q.fams && q.fams.length > 1;
     div.innerHTML =
       `<div class="tree-sex">${icon}</div>` +
       `<div class="tree-name">${esc(nm)}</div>` +
       (yr ? `<div class="tree-yr">${yr}</div>` : '') +
-      (isHalf ? `<div class="tree-half-badge">½</div>` : '');
+      (isHalf    ? `<div class="tree-half-badge">½</div>` : '') +
+      (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${q.fams.length}</div>` : '');
     div.onclick = isCenter ? () => showDetail(id) : () => showTree(id);
     wrap.appendChild(div);
   }
@@ -5149,11 +5168,82 @@ function closeModal(id) {
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
 });
-// Close on Escape key — closeModal() aufrufen damit Pending-State zurückgesetzt wird
+// ─────────────────────────────────────
+//  PINCH-ZOOM (Baum-Ansicht, Sprint P3-5)
+// ─────────────────────────────────────
+(function initPinchZoom() {
+  const sc = document.getElementById('treeScroll');
+  const wrap = document.getElementById('treeWrap');
+  let startDist = 0, startScale = 1;
+
+  function pinchDist(e) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  sc.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      startDist  = pinchDist(e);
+      startScale = _treeScale;
+    }
+  }, { passive: true });
+
+  sc.addEventListener('touchmove', e => {
+    if (e.touches.length !== 2) return;
+    e.preventDefault();
+    const scale = Math.min(2, Math.max(0.4, startScale * pinchDist(e) / startDist));
+    _treeScale = scale;
+    wrap.style.transform = `scale(${scale})`;
+  }, { passive: false });
+
+  // Doppeltipp: Zoom zurücksetzen
+  let lastTap = 0;
+  sc.addEventListener('touchend', e => {
+    if (e.touches.length !== 0) return;
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      _treeScale = 1;
+      wrap.style.transform = 'scale(1)';
+    }
+    lastTap = now;
+  }, { passive: true });
+
+  // Desktop: Mausrad + Ctrl/Cmd
+  sc.addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    _treeScale = Math.min(2, Math.max(0.4, _treeScale * delta));
+    wrap.style.transform = `scale(${_treeScale})`;
+  }, { passive: false });
+})();
+
+// Keyboard-Shortcuts
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  const open = document.querySelector('.modal-overlay.open');
-  if (open) closeModal(open.id);
+  const mod = e.metaKey || e.ctrlKey;
+
+  // Escape: offenes Modal schließen
+  if (e.key === 'Escape') {
+    const open = document.querySelector('.modal-overlay.open');
+    if (open) closeModal(open.id);
+    return;
+  }
+
+  // Cmd/Ctrl+S: Speichern
+  if (mod && e.key === 's') {
+    e.preventDefault();
+    exportGEDCOM();
+    return;
+  }
+
+  // Cmd/Ctrl+Z: Änderungen verwerfen (nur wenn keine Modals offen)
+  if (mod && e.key === 'z') {
+    if (document.querySelector('.modal-overlay.open')) return;
+    e.preventDefault();
+    revertToSaved();
+    return;
+  }
 });
 
 // ─────────────────────────────────────

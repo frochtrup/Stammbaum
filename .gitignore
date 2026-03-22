@@ -1,0 +1,13 @@
+# Persönliche Daten
+MeineDaten_ancestris.ged
+*.ged
+
+# Lokale Entwicklungsumgebung
+.claude/
+
+# Archiv / Planung
+GEDCOM_V2_PLAN.md
+ancestris_parser_writer_roadmap_FULL.yaml
+ancestris_parser_writer_unit_tests.yaml
+index_v1.2.html
+GEDCOM551.pdf
