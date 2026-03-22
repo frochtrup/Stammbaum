@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stammbaum">
+<meta name="theme-color" content="#c8a84a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
 <title>Stammbaum</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <style>
@@ -2143,7 +2146,7 @@ function initPlaceMode(placeId) {
   const partsEl   = document.getElementById(`${placeId}-parts`);
   const toggleBtn = document.getElementById(`${placeId}-toggle`);
   if (freeEl)    freeEl.style.display  = '';
-  if (partsEl)   { partsEl.style.display = 'none'; partsEl.innerHTML = ''; }
+  if (partsEl)   partsEl.style.display = 'none';
   if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
   _placeModes[placeId] = 'free';
 }
@@ -2603,7 +2606,7 @@ async function openFilePicker() {
       const perm = await fh.requestPermission({ mode: 'readwrite' });
       _canDirectSave = perm === 'granted' ? await testCanWrite(fh) : false;
     } catch(e) { _canDirectSave = false; }
-    await idbPut('fileHandle', fh);
+    await idbPut('fileHandle', fh).catch(() => {});
     updateSaveIndicator();
     const file = await fh.getFile();
     _processLoadedText(await file.text(), file.name);
@@ -2786,6 +2789,11 @@ function confirmNewFile() {
   } catch(e) {}
   updateBackupBtn();
   updateSaveIndicator();
+  // Suchfelder und Jahresfilter zurücksetzen
+  const si = document.getElementById('searchInput');     if (si) si.value = '';
+  const yf = document.getElementById('yearFrom');        if (yf) yf.value = '';
+  const yt = document.getElementById('yearTo');          if (yt) yt.value = '';
+  const cb = document.getElementById('yearFilterClear'); if (cb) cb.style.display = 'none';
   showView('v-landing');
 }
 
@@ -2886,6 +2894,11 @@ window.addEventListener('load', async () => {
   if (urlFile) updateTopbarTitle(urlFile);
   await tryAutoLoad();
   restoreFileHandle(); updateSaveIndicator();
+
+  // Service Worker registrieren (P3-4)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
 });
 
 function updateBackupBtn() {
@@ -2965,8 +2978,8 @@ async function _handlePhotoImport(file) {
     let count = 0;
     for (const [id, b64] of Object.entries(photoMap)) {
       if (typeof b64 === 'string' && b64.startsWith('data:image/')) {
-        await idbPut('photo_' + id, b64);
-        count++;
+        const ok = await idbPut('photo_' + id, b64).then(() => true).catch(() => false);
+        if (ok) count++;
       }
     }
     showToast('✓ ' + count + ' Fotos importiert');
@@ -3093,7 +3106,7 @@ function switchTab(tab) {
 
 function renderTab() {
   if (!document.getElementById('v-main').classList.contains('active')) return;
-  if (currentTab === 'persons') renderPersonList(Object.values(db.individuals));
+  if (currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
   else if (currentTab === 'families') renderFamilyList();
   else if (currentTab === 'sources') { renderSourceList(); renderRepoList(); }
   else if (currentTab === 'places') renderPlaceList();
@@ -3147,7 +3160,7 @@ function applyPersonFilter() {
   const to   = parseInt(document.getElementById('yearTo')?.value)   || null;
   const clearBtn = document.getElementById('yearFilterClear');
   if (clearBtn) clearBtn.style.display = (from || to) ? '' : 'none';
-  filterPersons(q, from, to);
+  _applyPersonFilterDebounced(q, from, to);
 }
 
 function clearYearFilter() {
@@ -3221,8 +3234,8 @@ function renderFamilyList(fams) {
 
   let html = '';
   for (const f of fams) {
-    const husb = f.husb ? db.individuals[f.husb] : null;
-    const wife = f.wife ? db.individuals[f.wife] : null;
+    const husb = (f.husb && db.individuals[f.husb]) || null;
+    const wife = (f.wife && db.individuals[f.wife]) || null;
     const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
     let meta = '';
     if (f.marr.date) meta += '⚭ ' + f.marr.date;
@@ -3245,8 +3258,8 @@ function filterFamilies(q) {
   const all = Object.values(db.families);
   if (!lower) { renderFamilyList(all); return; }
   renderFamilyList(all.filter(f => {
-    const husb = f.husb ? db.individuals[f.husb] : null;
-    const wife = f.wife ? db.individuals[f.wife] : null;
+    const husb = (f.husb && db.individuals[f.husb]) || null;
+    const wife = (f.wife && db.individuals[f.wife]) || null;
     if (husb && (husb.name||'').toLowerCase().includes(lower)) return true;
     if (wife && (wife.name||'').toLowerCase().includes(lower)) return true;
     if ((f.marr.date||'').toLowerCase().includes(lower)) return true;
@@ -3429,7 +3442,7 @@ function saveNewPlace() {
   const long = parseFloat(document.getElementById('np-long').value) || null;
   db.extraPlaces[name] = { name, lati, long };
   saveExtraPlaces();
-  _placesCache = null;
+  _placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
   closeModal('modalNewPlace');
   showToast('✓ Ort hinzugefügt');
   renderTab();
@@ -3439,7 +3452,7 @@ function deleteExtraPlace(name) {
   if (!confirm('Ort wirklich entfernen?')) return;
   delete db.extraPlaces[name];
   saveExtraPlaces();
-  _placesCache = null;
+  _placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
   goBack();
   showToast('✓ Ort entfernt');
   renderTab();
@@ -4543,7 +4556,7 @@ function showEditSheet() {
   else if (currentSourceId) showSourceForm(currentSourceId);
 }
 
-async function showPersonForm(id) {
+function showPersonForm(id) {
   closeModal('modalAdd');
   const p = id ? db.individuals[id] : null;
   document.getElementById('personFormTitle').textContent = p ? 'Person bearbeiten' : 'Neue Person';
@@ -4559,14 +4572,14 @@ async function showPersonForm(id) {
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
   initSrcWidget('pf', p?.sourceRefs || []);
   _pendingPhotoBase64 = undefined;
+  showPersonPhotoPreview(null); // Vorschau leeren bis IDB-Load fertig
   openModal('modalPerson');
-  // Foto aus IDB laden (async, nach Modal-Öffnen)
-  if (id) {
-    const b64 = await idbGet('photo_' + id).catch(() => null);
-    showPersonPhotoPreview(b64 || null);
-  } else {
-    showPersonPhotoPreview(null);
-  }
+  // Foto async nachladen — keine async-Funktion nötig, Fire-and-forget
+  if (id) _loadPersonPhoto(id);
+}
+
+function _loadPersonPhoto(id) {
+  idbGet('photo_' + id).then(b64 => showPersonPhotoPreview(b64 || null)).catch(() => {});
 }
 
 function savePerson() {
@@ -5129,18 +5142,18 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
-  if (id === 'modalPerson') _pendingRelation = null;
+  if (id === 'modalPerson') { _pendingRelation = null; _pendingPhotoBase64 = undefined; }
   if (id === 'modalRepo')   _pendingRepoLink  = null;
 }
-// Close on backdrop click
+// Close on backdrop click — closeModal() aufrufen damit Pending-State zurückgesetzt wird
 document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
 });
-// Close on Escape key
+// Close on Escape key — closeModal() aufrufen damit Pending-State zurückgesetzt wird
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   const open = document.querySelector('.modal-overlay.open');
-  if (open) open.classList.remove('open');
+  if (open) closeModal(open.id);
 });
 
 // ─────────────────────────────────────
@@ -5162,7 +5175,7 @@ function debounce(fn, ms) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
-const filterPersonsDebounced  = debounce(filterPersons,  200);
+const _applyPersonFilterDebounced = debounce((q, from, to) => filterPersons(q, from, to), 200);
 const filterFamiliesDebounced = debounce(filterFamilies, 200);
 const filterSourcesDebounced  = debounce(filterSources,  200);
 const filterPlacesDebounced   = debounce(filterPlaces,   200);
