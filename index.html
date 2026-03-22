@@ -3754,7 +3754,9 @@ function showTree(personId, addToHistory = true) {
   const W  = 96,  H  = 64;
   const HGAP = 10, VGAP = 44;
   const MGAP = 20;
-  const SIB_GAP = 14;   // Abstand Geschwister-Gruppe ↔ Zentrumsperson
+  const SIB_GAP  = 14;  // Abstand Geschwister-Spalte ↔ Zentrumsperson
+  const SIB_VGAP = 8;   // Vertikaler Abstand zwischen gestapelten Geschwistern
+  const SP_VGAP  = 8;   // Vertikaler Abstand zwischen gestapelten Ehepartnern
   const SLOT = W + HGAP;
   const PAD  = 20;
   const ROW  = H + VGAP;
@@ -3790,26 +3792,35 @@ function showTree(personId, addToHistory = true) {
   const allKids = allFamilies.flatMap(f => f.kids)
     .filter(id => seen.has(id) ? false : (seen.add(id), true));
   const halfKidSet = new Set(allKids.filter(id => !mainKids.has(id)));
-  const MAX_CHILD_COLS = 5;
+  const MAX_CHILD_COLS = 4;
   const childRows = [];
   for (let i = 0; i < allKids.length; i += MAX_CHILD_COLS) childRows.push(allKids.slice(i, i + MAX_CHILD_COLS));
 
   // ── Layout-Breite ──
-  const sibsW   = nSibs > 0 ? nSibs * SLOT + SIB_GAP : 0;
+  // Geschwister: eine Spalte links (W + SIB_GAP), egal wie viele
+  // Ehepartner:  eine Spalte rechts (MGAP + W), egal wie viele
+  const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
+  const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
   const ancSpan = 4 * SLOT;
-  // personCX: Mitte der Zentrumskarte; muss Geschwister links und Vorfahren zentriert aufnehmen
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
-  const rightEdge = personCX + CW / 2 + (allFamilies.length > 0 ? MGAP + allFamilies.length * SLOT : 0) + PAD;
+  const rightEdge = personCX + CW / 2 + spousesW + PAD;
   const childMaxCols = childRows.length > 0 ? Math.max(...childRows.map(r => r.length)) : 0;
   const totalW = Math.max(personCX + ancSpan / 2 + PAD, rightEdge, personCX + childMaxCols * SLOT / 2 + PAD);
 
-  // ── Y-Positionen ──
+  // ── Y-Positionen: Zeile 0 (Zentrum) ──
   const baseY = PAD + 2 * ROW;
-  function ry(lv) {
-    if (lv <= 0) return baseY + lv * ROW;
-    return baseY + CH + VGAP + (lv - 1) * ROW;
-  }
-  const totalH = ry(1) + Math.max(childRows.length, 1) * ROW - VGAP + PAD;
+  function ry(lv) { return lv <= 0 ? baseY + lv * ROW : baseY + CH + VGAP + (lv - 1) * ROW; }
+
+  // Höhe der gestapelten Geschwister und Ehepartner
+  const sibColH  = nSibs > 0 ? nSibs * H + (nSibs - 1) * SIB_VGAP : 0;
+  const spColH   = allFamilies.filter(f => f.spId).length;
+  const spColPx  = spColH > 0 ? spColH * H + (spColH - 1) * SP_VGAP : 0;
+  // Unterkante der Zeile 0 (Maximum aus Center, Geschwister, Ehepartner)
+  const row0Bottom = Math.max(ry(0) + CH, ry(0) + sibColH, ry(0) + (CH - H) / 2 + spColPx);
+  const childStartY = row0Bottom + VGAP;
+  const totalH = childRows.length > 0
+    ? childStartY + childRows.length * ROW - VGAP + PAD
+    : row0Bottom + PAD;
 
   // ── X: Vorfahren (zentriert auf personCX) ──
   const ancLeft = personCX - ancSpan / 2;
@@ -3818,16 +3829,19 @@ function showTree(personId, addToHistory = true) {
   function parCX(i) { return (gpCX(i * 2) + gpCX(i * 2 + 1)) / 2; }
   function parX(i)  { return parCX(i) - W / 2; }
 
-  // ── X: Zentrumsperson ──
+  // ── X/Y: Zentrumsperson ──
   const personX = personCX - CW / 2;
 
-  // ── X: Geschwister (links, i=0 ist nächste zu Zentrum) ──
-  function sibX(i)  { return personX - SIB_GAP - (i + 1) * W - i * HGAP; }
-  function sibCX(i) { return sibX(i) + W / 2; }
+  // ── X/Y: Geschwister (eine Spalte links, vertikal gestapelt) ──
+  const sibColX  = personX - SIB_GAP - W;
+  const sibColCX = sibColX + W / 2;
+  function sibY(i)    { return ry(0) + i * (H + SIB_VGAP); }
+  function sibMidY(i) { return sibY(i) + H / 2; }
 
-  // ── X: Ehepartner (rechts, i=0 ist erste Ehe) ──
-  function spouseX(i)  { return personX + CW + MGAP + i * SLOT; }
-  function spouseCX(i) { return spouseX(i) + W / 2; }
+  // ── X/Y: Ehepartner (eine Spalte rechts, vertikal gestapelt) ──
+  const spColX  = personX + CW + MGAP;
+  const spColCX = spColX + W / 2;
+  function spouseY(i) { return ry(0) + (CH - H) / 2 + i * (H + SP_VGAP); }
 
   // ── X: Kinder (zentriert auf personCX) ──
   function childRowCX(row, i) { return personCX - (row.length * SLOT) / 2 + (i + 0.5) * SLOT; }
@@ -3906,45 +3920,46 @@ function showTree(personId, addToHistory = true) {
   // ── Eltern ──
   anc1.forEach((id, i) => mkCard(id, parX(i), ry(-1), false));
 
-  // ── Eltern → Kinder (mit oder ohne Geschwister) ──
+  // ── Eltern → Kinder: Bezier-Fächer von einem Verzweigungspunkt ──
   if (nSibs > 0) {
-    // Horizontaler Verbindungsbalken von linkstem Geschwister bis Zentrumsperson
-    const barY    = ry(-1) + H + Math.round(VGAP * 0.38);
-    const barLeft = sibCX(nSibs - 1);  // weitest links
-    const midX    = (barLeft + personCX) / 2;
-    svgLine(barLeft, barY, personCX, barY);
-    if (anc1[0]) line(parCX(0), ry(-1) + H, midX, barY);
-    if (anc1[1]) line(parCX(1), ry(-1) + H, midX, barY);
-    // Vertikale Drops zu Geschwistern
-    siblings.forEach((_, i) => svgLine(sibCX(i), barY, sibCX(i), ry(0) + (CH - H) / 2));
-    // Vertikaler Drop zur Zentrumsperson
-    svgLine(personCX, barY, personCX, ry(0));
+    // Verzweigungspunkt zwischen Geschwister-Spalte und Zentrumsperson
+    const juncX = sibColX + W + SIB_GAP / 2;
+    const juncY = ry(-1) + H + Math.round(VGAP * 0.38);
+    if (anc1[0]) line(parCX(0), ry(-1) + H, juncX, juncY);
+    if (anc1[1]) line(parCX(1), ry(-1) + H, juncX, juncY);
+    // Verzweigungspunkt → Zentrumsperson
+    line(juncX, juncY, personCX, ry(0));
+    // Verzweigungspunkt → jedes Geschwister (Mitte der gestapelten Karte)
+    siblings.forEach((_, i) => line(juncX, juncY, sibColCX, sibMidY(i)));
   } else {
     if (anc1[0]) line(parCX(0), ry(-1) + H, personCX - CW * 0.18, ry(0));
     if (anc1[1]) line(parCX(1), ry(-1) + H, personCX + CW * 0.18, ry(0));
   }
 
-  // ── Geschwister ──
-  siblings.forEach((sid, i) => mkCard(sid, sibX(i), ry(0) + (CH - H) / 2, false));
+  // ── Geschwister (vertikal gestapelt links) ──
+  siblings.forEach((sid, i) => mkCard(sid, sibColX, sibY(i), false));
 
   // ── Zentrumsperson ──
   mkCard(personId, personX, ry(0), true);
 
-  // ── Alle Ehepartner ──
-  allFamilies.forEach((fam, i) => {
+  // ── Ehepartner (vertikal gestapelt rechts) + Ehe-Linien ──
+  let spIdx = 0;
+  allFamilies.forEach(fam => {
     if (!fam.spId) return;
-    mkCard(fam.spId, spouseX(i), ry(0) + (CH - H) / 2, false);
-    svgLine(personX + CW, ry(0) + CH / 2, spouseX(i), ry(0) + H / 2, 'var(--gold)', '5 3');
+    const sy = spouseY(spIdx);
+    mkCard(fam.spId, spColX, sy, false);
+    svgLine(personX + CW, ry(0) + CH / 2, spColX, sy + H / 2, 'var(--gold)', '5 3');
+    spIdx++;
   });
 
-  // ── Kinder + Linien ──
+  // ── Kinder + Linien (childStartY statt ry(1)) ──
   childRows.forEach((row, rowIdx) => {
-    const rowY = ry(1) + rowIdx * ROW;
+    const rowY = childStartY + rowIdx * ROW;
     row.forEach((id, i) => {
       const cxi    = childRowCX(row, i);
       const isHalf = halfKidSet.has(id);
       mkCard(id, childRowX(row, i), rowY, false, isHalf);
-      line(personCX, ry(0) + CH, cxi, rowY, isHalf ? 'var(--gold-dim)' : 'var(--border)', isHalf ? '4 3' : null);
+      line(personCX, row0Bottom, cxi, rowY, isHalf ? 'var(--gold-dim)' : 'var(--border)', isHalf ? '4 3' : null);
     });
   });
 
