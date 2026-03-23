@@ -5759,9 +5759,16 @@ async function _odFolderBack() {
 async function odImportPhotosFromFolder(folderId, folderName) {
   closeModal('modalOneDrive');
   const token = await _odGetToken(); if (!token) return;
+
+  // Diagnose 1: OBJE-Referenzen
   const objeMap = _extractObjeFilemap();
-  if (objeMap.size === 0) { showToast('Keine OBJE-Referenzen im GEDCOM gefunden'); return; }
-  showToast(`Lade Dateiliste aus "${folderName}"…`);
+  console.log('[OD-Foto] OBJE-Map:', objeMap.size, 'Einträge', [...objeMap.entries()].slice(0,5));
+  if (objeMap.size === 0) {
+    showToast('Keine OBJE-Referenzen im GEDCOM — _originalGedText: ' + (!!_originalGedText));
+    return;
+  }
+  showToast(`${objeMap.size} OBJE-Refs gefunden, lade Ordner…`);
+
   try {
     const res  = await fetch(`${OD_GRAPH}/me/drive/items/${folderId}/children?select=id,name&top=500`,
       { headers: { Authorization: 'Bearer ' + token } });
@@ -5769,6 +5776,12 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     if (data.error) throw new Error(data.error.message);
     const odFiles = {};
     for (const f of (data.value || [])) odFiles[f.name.toLowerCase()] = f.id;
+
+    // Diagnose 2: Ordnerinhalt
+    console.log('[OD-Foto] Ordner-Dateien:', Object.keys(odFiles).slice(0,10));
+    console.log('[OD-Foto] Gesuchte Dateinamen:', [...objeMap.values()].slice(0,5));
+    showToast(`Ordner: ${Object.keys(odFiles).length} Dateien, suche Treffer…`);
+
     let loaded = 0, missing = 0;
     for (const [personId, filename] of objeMap) {
       const fileId = odFiles[filename.toLowerCase()];
@@ -5786,9 +5799,9 @@ async function odImportPhotosFromFolder(folderId, folderName) {
           const el = document.getElementById('det-photo-' + personId);
           if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
         }
-      } catch(e) { missing++; }
+      } catch(e) { console.warn('[OD-Foto] Fehler bei', filename, e); missing++; }
     }
-    showToast(`✓ ${loaded} Fotos geladen${missing ? ` · ${missing} nicht gefunden` : ''}`);
+    showToast(`✓ ${loaded} Fotos geladen · ${missing} nicht gefunden`);
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
