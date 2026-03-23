@@ -1544,7 +1544,7 @@ function parseGEDCOM(text) {
     if (!m) continue;
     const lv  = parseInt(m[1]);
     const tag = m[2].trim();
-    const val = (m[3] || '').replace(/^ /, '').trimEnd(); // remove exactly 1 leading space (GEDCOM delimiter); preserve intentional leading whitespace in CONC/CONT values
+    const val = (m[3] || '').replace(/^ /, '').replace(/\r$/, ''); // remove 1 leading space (GEDCOM delimiter) + Windows CR; trimEnd() würde CONC/CONT-Splits verschieben
 
     // ── Level 0 ──
     if (lv === 0) {
