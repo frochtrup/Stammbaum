@@ -1538,13 +1538,15 @@ function parseGEDCOM(text) {
   let _ptTarget = null; // redirect capture target (null = cur._passthrough)
 
   for (let raw of lines) {
-    const line = raw.trim();
-    if (!line) continue;
+    // raw.trim() würde trailing Spaces aus CONT/CONC-Werten entfernen → CONC-Split-Verschiebung
+    // Nur \r am Ende entfernen (Windows CRLF), führende Spaces gibt es in GEDCOM nicht
+    const line = raw.replace(/\r$/, '');
+    if (!line.trim()) continue;
     const m = line.match(/^(\d+)\s+(\S+)(.*)?$/);
     if (!m) continue;
     const lv  = parseInt(m[1]);
     const tag = m[2].trim();
-    const val = (m[3] || '').replace(/^ /, '').replace(/\r$/, ''); // remove 1 leading space (GEDCOM delimiter) + Windows CR; trimEnd() würde CONC/CONT-Splits verschieben
+    const val = (m[3] || '').replace(/^ /, ''); // remove 1 leading space (GEDCOM delimiter)
 
     // ── Level 0 ──
     if (lv === 0) {
