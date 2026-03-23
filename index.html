@@ -3037,7 +3037,7 @@ async function _handlePhotoImport(file) {
     // Detailansicht aktualisieren falls offen
     if (currentPersonId && photoMap[currentPersonId]) {
       const el = document.getElementById('det-photo-' + currentPersonId);
-      if (el) el.innerHTML = `<img src="${photoMap[currentPersonId]}" alt="Foto" style="width:100%;max-height:260px;object-fit:cover;border-radius:10px">`;
+      if (el) { el.style.display = ''; el.innerHTML = `<img src="${photoMap[currentPersonId]}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
     }
   } catch (e) {
     showToast('Fehler beim Importieren: ' + e.message);
@@ -4054,7 +4054,7 @@ function showDetail(id, pushHistory = true) {
   const fullName = [p.prefix, p.name].filter(Boolean).join(' ');
 
   let html = `<div class="detail-hero fade-up">
-    <div id="det-photo-${id}"><div class="detail-avatar ${sc}">${ic}</div></div>
+    <div id="det-photo-${id}" style="display:none"></div>
     <div class="detail-hero-text">
       <div class="detail-name">${esc(fullName || id)} <span style="font-size:1rem;color:var(${sc === 'm' ? '--blue' : sc === 'f' ? '--pink' : '--gold-dim'})">${ic}</span></div>
       <div class="detail-id">${p.lastChanged ? 'Geändert ' + p.lastChanged : ''}</div>
@@ -4188,7 +4188,7 @@ function showDetail(id, pushHistory = true) {
   idbGet('photo_' + id).then(b64 => {
     if (!b64) return;
     const el = document.getElementById('det-photo-' + id);
-    if (el) el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`;
+    if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
   }).catch(() => {});
 }
 
