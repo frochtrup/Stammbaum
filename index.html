@@ -5673,14 +5673,14 @@ function _extractObjeFilemap() {
     const m = raw.match(/^(\d+)\s+(?:(@[^@]+@)\s+)?(\S+)(?:\s+(.*))?$/);
     if (!m) continue;
     const level = +m[1];
-    const xref  = m[2] ? m[2].slice(1,-1) : null;
+    const xref  = m[2] || null;   // '@I001@' — @ behalten, entspricht db.individuals-Keys
     const tag   = m[3];
     const val   = (m[4] || '').trim();
     if (level === 0) { recId = xref; recType = tag; inInlineObje = false; }
     if (recType === 'INDI') {
       if (level === 1 && tag === 'OBJE') {
         if (val.startsWith('@') && val.endsWith('@')) {
-          if (!personObje[recId]) personObje[recId] = { type:'ref', ref: val.slice(1,-1) };
+          if (!personObje[recId]) personObje[recId] = { type:'ref', ref: val };  // '@O001@' behalten
         } else { inInlineObje = true; }
       }
       if (level === 2 && tag === 'FILE' && inInlineObje) {
