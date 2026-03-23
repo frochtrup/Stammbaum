@@ -1473,6 +1473,8 @@ let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonFor
 let currentRepoId    = null;
 let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
 let _pendingPhotoBase64 = undefined; // undefined=keine Änderung, null=löschen, string=neues Foto (Sprint P3-2)
+const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto (kein OBJE im Original-GEDCOM)
+const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde (OBJE aus Passthrough entfernen)
 let _treeScale = 1;                  // Zoom-Faktor Sanduhr-Ansicht (Sprint P3-5)
 let _treeHistory    = [];            // Navigations-History im Baumbaum
 let _treeHistoryPos = -1;
@@ -2381,13 +2383,31 @@ function writeGEDCOM() {
       }
       if (m.title) lines.push(`3 TITL ${m.title}`);
     }
+    // Manuell hinzugefügtes Foto ohne ursprünglichen OBJE-Eintrag → FILE-Referenz erzeugen
+    if (_newPhotoIds.has(p.id)) {
+      lines.push(`1 OBJE`);
+      lines.push(`2 FILE photos/${p.id}.jpg`);
+      lines.push(`3 FORM JPEG`);
+    }
     if (p.uid) lines.push(`1 _UID ${p.uid}`);
     if (p.lastChanged) {
       lines.push(`1 CHAN`);
       lines.push(`2 DATE ${p.lastChanged}`);
       if (p.lastChangedTime) lines.push(`3 TIME ${p.lastChangedTime}`);
     }
-    for (const l of (p._passthrough || [])) lines.push(l);
+    // Passthrough: gelöschte Fotos → OBJE-Block entfernen
+    const _pt = p._passthrough || [];
+    if (_deletedPhotoIds.has(p.id)) {
+      let skip = false;
+      for (const l of _pt) {
+        if (/^1 OBJE/.test(l)) { skip = true; continue; }
+        if (skip && /^[2-9] /.test(l)) continue;
+        skip = false;
+        lines.push(l);
+      }
+    } else {
+      for (const l of _pt) lines.push(l);
+    }
   }
 
   for (const f of Object.values(db.families)) {
@@ -2863,6 +2883,7 @@ function _processLoadedText(text, filename) {
     if (maxUsed >= idCounter) idCounter = maxUsed;
   }
   _originalGedText = text;  // immer in RAM; IDB für Persistenz
+  _newPhotoIds.clear(); _deletedPhotoIds.clear();
   // IDB: primäre Persistenz (kein Größenlimit)
   idbPut('stammbaum_ged', text).catch(() => {});
   idbPut('stammbaum_ged_backup', text).catch(() => {});
@@ -4767,10 +4788,16 @@ function savePerson() {
 
   // Foto in IDB schreiben/löschen (Sprint P3-2)
   if (_pendingPhotoBase64 !== undefined) {
+    const pObj = db.individuals[id];
+    const hasObjeInPt = (pObj?._passthrough || []).some(l => /^1 OBJE/.test(l));
     if (_pendingPhotoBase64 === null) {
       idbDel('photo_' + id).catch(() => {});
+      _newPhotoIds.delete(id);
+      if (hasObjeInPt) _deletedPhotoIds.add(id);
     } else {
       idbPut('photo_' + id, _pendingPhotoBase64).catch(() => {});
+      if (!hasObjeInPt) _newPhotoIds.add(id);   // kein OBJE im Original → Writer muss einen erzeugen
+      _deletedPhotoIds.delete(id);
     }
     _pendingPhotoBase64 = undefined;
   }
