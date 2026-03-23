@@ -5464,7 +5464,10 @@ const OD_AUTH_EP   = 'https://login.microsoftonline.com/common/oauth2/v2.0/autho
 const OD_TOKEN_EP  = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
 
-function _odRedirectUri() { return location.origin + location.pathname; }
+function _odRedirectUri() {
+  // /Stammbaum/index.html → /Stammbaum/  (muss mit registrierter URI übereinstimmen)
+  return location.origin + location.pathname.replace(/[^/]*$/, '');
+}
 function _odIsConnected()  { return !!localStorage.getItem('od_access_token'); }
 
 function _odUpdateUI() {
