@@ -1874,10 +1874,11 @@ function parseGEDCOM(text) {
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
         if (lv1tag==='CHIL' && cur._lastChil) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[]};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{}};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='_FREL') { cref.frel = val; cref.frelSeen = true; }
           if (tag==='_MREL') { cref.mrel = val; cref.mrelSeen = true; }
+          if (tag==='SOUR' && val.startsWith('@')) { cref.sourIds.push(val); cur.sourceRefs.add(val); }
         }
       }
       else if (lv === 3) {
@@ -1889,12 +1890,19 @@ function parseGEDCOM(text) {
           else { if (!cur.marr.sourceExtra[lastSourVal]) cur.marr.sourceExtra[lastSourVal] = []; cur.marr.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.marr.sourceExtra[lastSourVal]; }
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[]};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{}};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='SOUR') {
             if (lv2tag==='_FREL') cref.frelSour = val;
             if (lv2tag==='_MREL') cref.mrelSour = val;
           }
+        }
+        if (lv1tag==='CHIL' && cur._lastChil && lv2tag==='SOUR' && lastSourVal.startsWith('@')) {
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{}};
+          const cref = cur.childRelations[cur._lastChil];
+          if      (tag==='PAGE') cref.sourPages[lastSourVal] = val;
+          else if (tag==='QUAY') cref.sourQUAY[lastSourVal] = val;
+          else { if (!cref.sourExtra[lastSourVal]) cref.sourExtra[lastSourVal] = []; cref.sourExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cref.sourExtra[lastSourVal]; }
         }
       }
       else if (lv === 4) {
@@ -2418,6 +2426,14 @@ function writeGEDCOM() {
       lines.push(`1 CHIL ${c}`);
       const cref = f.childRelations?.[c];
       if (cref) {
+        if (cref.sourIds && cref.sourIds.length) {
+          for (const sid of cref.sourIds) {
+            lines.push(`2 SOUR ${sid}`);
+            if (cref.sourPages && cref.sourPages[sid]) lines.push(`3 PAGE ${cref.sourPages[sid]}`);
+            if (cref.sourQUAY && cref.sourQUAY[sid])  lines.push(`3 QUAY ${cref.sourQUAY[sid]}`);
+            if (cref.sourExtra && cref.sourExtra[sid]) for (const l of cref.sourExtra[sid]) lines.push(l);
+          }
+        }
         if (cref.frelSeen) {
           lines.push(`2 _FREL ${cref.frel}`);
           if (cref.frelSour) {
