@@ -1368,6 +1368,9 @@ body {
         <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="odSaveFile()">
           💾 &nbsp; In OneDrive speichern
         </button>
+        <button id="odPhotoBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odImportPhotos()">
+          🖼 &nbsp; Fotos aus OneDrive laden
+        </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test
         </button>
@@ -5475,9 +5478,11 @@ function _odUpdateUI() {
   const cb = document.getElementById('odConnectBtn');
   const ob = document.getElementById('odOpenBtn');
   const sb = document.getElementById('odSaveBtn');
+  const pb = document.getElementById('odPhotoBtn');
   if (cb) cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
   if (ob) ob.style.display = conn ? '' : 'none';
   if (sb) sb.style.display = conn ? '' : 'none';
+  if (pb) pb.style.display = conn ? '' : 'none';
 }
 
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
@@ -5625,6 +5630,139 @@ async function odSaveFile() {
     changed = false; updateChangedIndicator();
     showToast('✓ In OneDrive gespeichert');
   } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + e.message); }
+}
+
+// ── OneDrive Foto-Import ──────────────────────────────────────────────────
+
+// GEDCOM nach OBJE FILE-Referenzen parsen → Map: personId → Dateiname (Basename)
+function _extractObjeFilemap() {
+  const text = _originalGedText;
+  if (!text) return new Map();
+  const lines      = text.split(/\r?\n/);
+  const objeFiles  = {};   // objeId → filepath
+  const personObje = {};   // personId → {type, ref?, file?}
+  let recId = null, recType = null, inInlineObje = false;
+  for (const raw of lines) {
+    const m = raw.match(/^(\d+)\s+(?:(@[^@]+@)\s+)?(\S+)(?:\s+(.*))?$/);
+    if (!m) continue;
+    const level = +m[1];
+    const xref  = m[2] ? m[2].slice(1,-1) : null;
+    const tag   = m[3];
+    const val   = (m[4] || '').trim();
+    if (level === 0) { recId = xref; recType = tag; inInlineObje = false; }
+    if (recType === 'INDI') {
+      if (level === 1 && tag === 'OBJE') {
+        if (val.startsWith('@') && val.endsWith('@')) {
+          if (!personObje[recId]) personObje[recId] = { type:'ref', ref: val.slice(1,-1) };
+        } else { inInlineObje = true; }
+      }
+      if (level === 2 && tag === 'FILE' && inInlineObje) {
+        if (!personObje[recId]) personObje[recId] = { type:'inline', file: val };
+        inInlineObje = false;
+      }
+      if (level < 2 && tag !== 'OBJE') inInlineObje = false;
+    }
+    if (recType === 'OBJE' && recId && level === 1 && tag === 'FILE') {
+      objeFiles[recId] = val;
+    }
+  }
+  const result = new Map();
+  for (const [pid, info] of Object.entries(personObje)) {
+    const fp = info.type === 'inline' ? info.file : objeFiles[info.ref];
+    if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) result.set(pid, bn); }
+  }
+  return result;
+}
+
+// Ordner-Browser State
+let _odFolderStack = [];
+
+async function odImportPhotos() {
+  if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odFolderStack = [];
+  await _odShowFolder('root', 'OneDrive');
+}
+
+async function _odShowFolder(folderId, folderName) {
+  const token = await _odGetToken(); if (!token) return;
+  const url = folderId === 'root'
+    ? `${OD_GRAPH}/me/drive/root/children?select=id,name,folder&top=200`
+    : `${OD_GRAPH}/me/drive/items/${folderId}/children?select=id,name,folder&top=200`;
+  showToast('Lade Ordner…');
+  try {
+    const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const folders = (data.value || []).filter(f => f.folder);
+    const title   = document.querySelector('#modalOneDrive .sheet-title');
+    if (title) title.textContent = 'Fotos importieren';
+    const list = document.getElementById('odFileList');
+    if (!list) return;
+    const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
+    let html = `<div style="font-size:0.75rem;color:var(--text-dim);padding-bottom:8px">${esc(breadcrumb)}</div>`;
+    if (_odFolderStack.length > 0) {
+      html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odFolderBack()">← Zurück</div>`;
+    }
+    if (folderId !== 'root') {
+      html += `<div class="list-item" style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)"
+        data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
+        onclick="odImportPhotosFromFolder(this.dataset.odid,this.dataset.odname)">
+        📥 Fotos aus diesem Ordner laden</div>`;
+    }
+    html += folders.length === 0
+      ? `<div style="color:var(--text-dim);font-size:0.85rem;padding:8px">Keine Unterordner</div>`
+      : folders.map(f => `<div class="list-item" style="cursor:pointer"
+          data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
+          data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}"
+          onclick="_odEnterFolder(this)">📁 &nbsp;${esc(f.name)}</div>`).join('');
+    list.innerHTML = html;
+    openModal('modalOneDrive');
+  } catch(e) { showToast('OneDrive: ' + e.message); }
+}
+
+function _odEnterFolder(el) {
+  _odFolderStack.push({ id: el.dataset.parentid, name: el.dataset.parentname });
+  _odShowFolder(el.dataset.odid, el.dataset.odname);
+}
+async function _odFolderBack() {
+  const p = _odFolderStack.pop();
+  if (p) await _odShowFolder(p.id, p.name);
+}
+
+async function odImportPhotosFromFolder(folderId, folderName) {
+  closeModal('modalOneDrive');
+  const token = await _odGetToken(); if (!token) return;
+  const objeMap = _extractObjeFilemap();
+  if (objeMap.size === 0) { showToast('Keine OBJE-Referenzen im GEDCOM gefunden'); return; }
+  showToast(`Lade Dateiliste aus "${folderName}"…`);
+  try {
+    const res  = await fetch(`${OD_GRAPH}/me/drive/items/${folderId}/children?select=id,name&top=500`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const odFiles = {};
+    for (const f of (data.value || [])) odFiles[f.name.toLowerCase()] = f.id;
+    let loaded = 0, missing = 0;
+    for (const [personId, filename] of objeMap) {
+      const fileId = odFiles[filename.toLowerCase()];
+      if (!fileId) { missing++; continue; }
+      try {
+        const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
+          { headers: { Authorization: 'Bearer ' + token } });
+        if (!imgRes.ok) { missing++; continue; }
+        const blob = await imgRes.blob();
+        const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+        const b64  = await resizeImageToBase64(file, 800, 0.82);
+        await idbPut('photo_' + personId, b64);
+        loaded++;
+        if (currentPersonId === personId) {
+          const el = document.getElementById('det-photo-' + personId);
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
+        }
+      } catch(e) { missing++; }
+    }
+    showToast(`✓ ${loaded} Fotos geladen${missing ? ` · ${missing} nicht gefunden` : ''}`);
+  } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
 // OneDrive OAuth-Callback nach Redirect abfangen
