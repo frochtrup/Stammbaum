@@ -1793,8 +1793,13 @@ function parseGEDCOM(text) {
         // 3 SOUR unter 2 _FREL/_MREL (in 1 FAMC Kontext)
         if (lv1tag === 'FAMC' && cur.famc.length && tag === 'SOUR') {
           const fref = cur.famc[cur.famc.length-1];
-          if (lv2tag === '_FREL') fref.frelSour = val;
-          else if (lv2tag === '_MREL') fref.mrelSour = val;
+          if (lv2tag === '_FREL') {
+            if (!fref.frelSour) fref.frelSour = val;
+            else { if (!fref.frelSourExtra) fref.frelSourExtra = []; fref.frelSourExtra.push('3 SOUR ' + val); }
+          } else if (lv2tag === '_MREL') {
+            if (!fref.mrelSour) fref.mrelSour = val;
+            else { if (!fref.mrelSourExtra) fref.mrelSourExtra = []; fref.mrelSourExtra.push('3 SOUR ' + val); }
+          }
         }
         // Collect source references at level 3
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
@@ -1895,8 +1900,14 @@ function parseGEDCOM(text) {
           if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{}};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='SOUR') {
-            if (lv2tag==='_FREL') cref.frelSour = val;
-            if (lv2tag==='_MREL') cref.mrelSour = val;
+            if (lv2tag==='_FREL') {
+              if (!cref.frelSour) cref.frelSour = val;
+              else { if (!cref.frelSourExtra) cref.frelSourExtra=[]; cref.frelSourExtra.push('3 SOUR '+val); }
+            }
+            if (lv2tag==='_MREL') {
+              if (!cref.mrelSour) cref.mrelSour = val;
+              else { if (!cref.mrelSourExtra) cref.mrelSourExtra=[]; cref.mrelSourExtra.push('3 SOUR '+val); }
+            }
           }
         }
         if (lv1tag==='CHIL' && cur._lastChil && lv2tag==='SOUR' && lastSourVal.startsWith('@')) {
@@ -4606,6 +4617,19 @@ function runRoundtripTest() {
       }
       const _escReport = _esc.length ? '\n\n@@ Escape-Diagnose:\n' + _esc.join('\n') : '';
 
+      // DEBUG: frelSourExtra für F41/I86
+      let _dbgFrel = '';
+      { const _f41 = db1.families['@F41@'];
+        if (_f41) {
+          const _cr = _f41.childRelations?.['@I86@'];
+          _dbgFrel = '\n\nDEBUG F41/I86 childRelations:\n' +
+            '  frelSour=' + JSON.stringify(_cr?.frelSour) + '\n' +
+            '  frelSourExtra=' + JSON.stringify(_cr?.frelSourExtra) + '\n' +
+            '  mrelSour=' + JSON.stringify(_cr?.mrelSour) + '\n' +
+            '  mrelSourExtra=' + JSON.stringify(_cr?.mrelSourExtra);
+        } else { _dbgFrel = '\n\nDEBUG: @F41@ nicht gefunden'; }
+      }
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -4633,6 +4657,7 @@ function runRoundtripTest() {
         _objeDiagReport +
         _sourNoteDiagReport +
         _escReport +
+        _dbgFrel +
         diffSnippet;
 
     } catch (e) {
