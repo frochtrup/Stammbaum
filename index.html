@@ -3046,11 +3046,12 @@ window.addEventListener('load', async () => {
 });
 
 // Desktop-Layout: bei Fensterverkleinerung unter 900px zurückschalten (P3-7)
-window.addEventListener('resize', () => {
-  if (window.innerWidth < 900) {
-    document.body.classList.remove('desktop-mode', 'has-detail');
-  }
-});
+window.addEventListener('resize', debounce(() => {
+  const activeView = document.querySelector('.view.active');
+  if (!activeView || activeView.id === 'v-landing') return;
+  // Layout bei Fenster-Resize neu berechnen (Breakpoint 900px)
+  showView(activeView.id);
+}, 150));
 
 function updateBackupBtn() {
   const btn = document.getElementById('backupMenuBtn');
@@ -5702,7 +5703,7 @@ function initPlaceAutocomplete(inputId, ddId) {
   const dd    = document.getElementById(ddId);
   if (!input || !dd) return;
 
-  input.addEventListener('input', () => {
+  const _searchPlaces = debounce(() => {
     const q = input.value.toLowerCase().trim();
     dd.innerHTML = '';
     if (!q) { dd.style.display = 'none'; return; }
@@ -5728,6 +5729,12 @@ function initPlaceAutocomplete(inputId, ddId) {
       dd.appendChild(item);
     });
     dd.style.display = 'block';
+  }, 150);
+
+  input.addEventListener('input', () => {
+    // Dropdown sofort leeren bei leerem Feld, sonst debounced suchen
+    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    _searchPlaces();
   });
 
   input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
