@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 2.0
+# Stammbaum PWA — Version 3.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -20,7 +20,7 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (v2.0/Phase3, P3-1..P3-3 aktiv, ~5000 Zeilen)
+├── index.html          ← gesamte App (v3.0, P3-1..P3-8, ~5900 Zeilen)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
@@ -46,13 +46,16 @@ stammbaum/
 |---|---|
 | GEDCOM öffnen (Chrome Mac) | `showOpenFilePicker()` → Schreiberlaubnis wird beim Öffnen angefragt |
 | GEDCOM öffnen (Safari/iOS) | `<input type="file">`, `accept="*/*"` (iOS-kompatibel) |
-| Auto-Load | Letzte Datei in `localStorage` gecacht → automatisch beim Start |
+| Auto-Load | Letzte Datei in IndexedDB gecacht → automatisch beim Start |
 | Direktes Speichern (Chrome Mac) | `fileHandle.createWritable()` → schreibt direkt in die geöffnete Datei |
 | Download-Fallback (Safari Mac, Firefox) | `<a download>` → Datei im Browser-Download-Ordner |
 | Backup automatisch | Bei Download-Fallback: Zeitstempel-Backup des Originals zusätzlich heruntergeladen |
 | iOS Speichern | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
+| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern |
 | Demo-Modus | Beispiel-Daten ohne eigene Datei |
 | URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged`; nützlich für Lesezeichen und PWA-Shortcuts |
+| **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
+| **Keyboard-Shortcuts** | `Cmd/Ctrl+S` = Speichern · `Cmd/Ctrl+Z` = Änderungen verwerfen · `Escape` = Modal schließen · `←` = Baum zurück |
 
 **Chrome Mac — direktes Speichern:**
 1. Upload-Box klicken → Dateidialog öffnet sich
@@ -65,11 +68,13 @@ stammbaum/
 2. Optionaler Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive setzen
 
 ### Sanduhr-Ansicht (Stammbaum)
-- Grafische Familienansicht: Großeltern → Eltern → Person + Ehepartner → Kinder
+- Grafische Familienansicht: Großeltern (2 Ebenen) → Eltern → Person + Ehepartner → Kinder
 - Klick auf jede Karte → neu zentrieren; Klick auf Zentrum → Detailansicht
 - Zurück aus Detailansicht führt direkt zum Baum zurück
+- **Mehrfach-Ehen**: `⚭N`-Badge auf Zentrum-Karte wenn >1 Ehe; alle Ehen navigierbar
 - Halbgeschwister (aus anderen Ehen) mit gestricheltem Rahmen + `½`-Badge markiert
 - Kinder mehrzeilig bei mehr als 4 (max. 4 pro Zeile)
+- **Pinch-Zoom**: Touch-Geste skaliert den Baum (0.4×–2.0×)
 - Startansicht nach Datei-Load: Person mit kleinster ID
 
 ### Personen-Tab
@@ -127,9 +132,9 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  index.html (v2.0/Phase3 — P3-1..P3-3)       │
+│  index.html (v3.0 — P3-1..P3-8)             │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~5000 Zeilen · ~160 Funktionen · ~280 KB    │
+│  ~5900 Zeilen · ~184 Funktionen · ~360 KB    │
 │                                              │
 │  Globaler State: let db = {                  │
 │    individuals, families, sources,           │
@@ -141,11 +146,14 @@ stammbaum/
 │  - localStorage stiller Fallback             │
 │  - FileSystemFileHandle (Chrome direktes     │
 │    Speichern)                                │
+│  - Microsoft Graph API (OneDrive)            │
+│                                              │
+│  Offline: sw.js + manifest.json              │
 └──────────────────────────────────────────────┘
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · null INDI/FAM-Datenverluste** (nur HEAD-Normalisierung)
-**Version 2.0/Phase 3** — März 2026 — P3-1 IndexedDB ✅ · P3-2 Fotos ✅ · P3-3 Suche/Filter ✅
+**Version 3.0** — März 2026 — P3-1 ✅ P3-2 ✅ P3-3 ✅ P3-4 ✅ P3-5 ✅ P3-6 ✅ P3-7 (offen) P3-8 ✅
 
 ---
 
@@ -190,7 +198,7 @@ Ancestris (Mac):
   └─ Datei → Import → GEDCOM → MeineDaten.ged übernehmen
 ```
 
-### Geplant (P3-8) — über OneDrive
+### OneDrive-Workflow (P3-8) ✅
 
 OneDrive vereinfacht den Rundlauf erheblich: Ancestris exportiert direkt in OneDrive, die App liest und schreibt dieselbe Datei via Microsoft Graph API — kein manuelles Übertragen mehr.
 
@@ -199,16 +207,18 @@ Ancestris (Mac)
   └─ Datei → Export → GEDCOM → OneDrive/Genealogie/MeineDaten.ged
 
 Stammbaum App (Browser, beliebiges Gerät)
-  └─ OneDrive-Login (PKCE OAuth, einmalig)
-     → Datei direkt aus OneDrive laden
-     → 💾 Speichern → direkt zurück nach OneDrive
+  └─ Menü → ☁ OneDrive verbinden (PKCE OAuth, einmalig)
+     → Menü → 📂 Aus OneDrive öffnen → .ged-Datei wählen
+     → 💾 Speichern / Menü → 💾 In OneDrive speichern
 
 Ancestris (Mac):
   └─ Datei automatisch aktualisiert (OneDrive-Sync)
      → kein manueller Import nötig
 ```
 
-**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · gleiche `_fileHandle`-Architektur wie lokale Dateien · Sprint P3-8
+**Voraussetzung (einmalig):** Azure App Registration mit `Files.ReadWrite`-Permission und Redirect-URI `https://[username].github.io/stammbaum/` (kostenlos, ~5 Min. im Azure Portal).
+
+**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `localStorage` · Ordner-Browser für Foto-Import
 
 ---
 

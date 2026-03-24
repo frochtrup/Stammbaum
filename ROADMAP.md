@@ -134,7 +134,7 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 ## Version 3.0 (Phase 3 — in Arbeit, März 2026)
 
-**Sprint-Plan:** P3-1 ✅ IndexedDB · P3-2 ✅ Fotos · P3-3 ✅ Suche/Filter · P3-4 Service Worker · P3-5 Baum-UI · P3-6 Undo · P3-7 Desktop-Layout · P3-8 OneDrive
+**Sprint-Plan:** P3-1 ✅ IndexedDB · P3-2 ✅ Fotos · P3-3 ✅ Suche/Filter · P3-4 ✅ Service Worker · P3-5 ✅ Baum-UI · P3-6 ✅ Undo · P3-7 Desktop-Layout · P3-8 ✅ OneDrive
 
 ---
 
@@ -165,6 +165,61 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 - [x] Geburtsjahr-Bereichsfilter (von/bis) im Personen-Tab
 - [x] ✕-Clear-Button für Von/Bis-Felder
 - [x] Filter kombinierbar mit Volltext-Suche
+
+---
+
+**Sprint P3-4 — Service Worker / Offline + PWA-Manifest** ✅
+- [x] `manifest.json`: Name, Icons, `display: standalone`, `start_url`
+- [x] `sw.js`: Cache-First-Strategie für `index.html` — App läuft vollständig offline
+- [x] Service-Worker-Registrierung in `index.html` (`navigator.serviceWorker.register('./sw.js')`)
+
+---
+
+**Sprint P3-5 — Stammbaum-Erweiterungen** ✅
+- [x] **Vorfahren-Ansicht**: 2 Ebenen Großeltern beidseitig im Sanduhr-Baum
+- [x] **Mehrfach-Ehen**: `⚭N`-Badge auf Zentrum-Karte wenn Person >1 Ehe; alle Ehe-Familien navigierbar
+- [x] **Halbgeschwister**: gestrichelter Rahmen + `½`-Badge für Kinder aus anderen Ehen
+- [x] **Pinch-Zoom**: Touch-Geste auf Baum-Ansicht (Scale 0.4–2.0) via `initPinchZoom()`
+- [x] Kinder mehrzeilig bei >4 (max. 4 pro Zeile)
+
+---
+
+**Sprint P3-6 — Undo / Revert + Keyboard-Shortcuts** ✅
+- [x] `revertToSaved()`: verwirft alle Änderungen, lädt GEDCOM-Text aus `_originalGedText` neu
+- [x] Menü-Eintrag „Änderungen verwerfen" → `revertToSaved()`
+- [x] **Keyboard-Shortcuts**: `Cmd/Ctrl+S` = Speichern · `Cmd/Ctrl+Z` = Änderungen verwerfen · `Escape` = Modal schließen · `←` = Baum zurück
+
+---
+
+**Sprint P3-8 — OneDrive-Integration** ✅
+- [x] **PKCE OAuth**: Code-Verifier/Challenge, Redirect zu Microsoft Login, Token-Exchange gegen Graph API — kein Server nötig
+- [x] Token in `localStorage` (`od_access_token`, `od_refresh_token`, Expiry-Check)
+- [x] **GEDCOM aus OneDrive öffnen**: `GET /me/drive/root/search` für `.ged`-Dateien → Picker-Modal
+- [x] **GEDCOM in OneDrive speichern**: `PUT /me/drive/items/{id}/content` → direkt in bestehende Datei
+- [x] **Foto-Import aus OneDrive**: Ordner-Browser (`_odShowFolder`), Auswahl → Base64 → IDB
+- [x] Menü: „☁ OneDrive verbinden/trennen" · „📂 Aus OneDrive öffnen" · „💾 In OneDrive speichern" · „🖼 Fotos aus OneDrive laden"
+- [x] `_odUpdateUI()`: Buttons ausblenden wenn nicht verbunden; verbundener Status persistent
+
+---
+
+**Sprint P3-7 — Responsives Desktop-Layout** (offen)
+- [ ] `@media (min-width: 900px)`: Zweispalten-Layout (Liste links, Detail rechts)
+- [ ] Kein Tab-Wechsel mehr nötig auf Desktop
+- [ ] Baum-Ansicht profitiert von mehr Breite (mehr Karten-Ebenen sichtbar)
+
+---
+
+**Roundtrip-Nachbesserungen (2026-03-24 — nach P3-1..P3-3)** ✅
+- [x] **CONC-Stabilität**: `raw.trim()` → `raw.replace(/\r$/, '')` — `trim()` entfernte trailing Spaces aus CONT/CONC-Werten und verschob CONC-Split-Grenzen; `trimEnd()` allein reichte nicht aus (das Problem war `raw.trim()` auf die ganze Zeile in der Parser-Loop)
+- [x] **`1 RELI` als Event**: RELI war als einfaches String-Feld (`cur.reli = val`) gespeichert; TYPE/DATE/SOUR-Kinder wurden stillschweigend verworfen (lv=2 mit `evIdx=-1`). Fix: RELI in events[]-Liste aufgenommen wie OCCU/RESI/etc.
+- [x] **FAM CHIL `2 SOUR`**: `2 SOUR` direkt unter `1 CHIL` (FAM-Record) wurde nicht geparst. Fix: `sourIds[]`, `sourPages{}`, `sourQUAY{}`, `sourExtra{}` in `childRelations[childId]`; Parser lv=2 + lv=3; Writer gibt sie vor `_FREL`/`_MREL` aus
+- [x] **Mehrere `3 SOUR` unter `2 _FREL`/`2 _MREL`**: zweiter `3 SOUR`-Wert überschrieb ersten. Fix: erster bleibt in `frelSour`/`mrelSour`, weitere gehen in `frelSourExtra[]`/`mrelSourExtra[]` — gilt für FAM childRelations (lv=3) und INDI FAMC (lv=3)
+
+**Ergebnis (Ergänzungsdatei, 64 Personen / 22 Familien):**
+- Zeilen-Delta: **-7** (ausschließlich HEAD-Normalisierung)
+- Alle Tag-Counts ✓ inkl. `3 SOUR (FAM)` 75/75 · `2 SOUR (all)` 225/225
+- `1 NOTE (INDI) -1` = HEAD `1 NOTE` im Regex mitgezählt (kein echter INDI-Datenverlust)
+- Roundtrip: **STABIL · null INDI/FAM-Datenverluste**
 
 ---
 
