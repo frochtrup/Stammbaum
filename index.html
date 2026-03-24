@@ -1635,7 +1635,7 @@ function parseGEDCOM(text) {
         }
         else if (tag === 'SEX')  cur.sex  = val;
         else if (tag === 'TITL') cur.titl = val;
-        else if (tag === 'RELI') cur.reli = val;
+        // RELI nicht mehr als einfaches Feld, sondern als Event (kann DATE/SOUR/TYPE-Kinder haben)
         else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') {
@@ -1652,7 +1652,7 @@ function parseGEDCOM(text) {
         else if (tag === 'CHR')  { cur.chr.value   = val; }
         else if (tag === 'DEAT') { cur.death.value = val; }
         else if (tag === 'BURI') { cur.buri.value  = val; }
-        else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI'].includes(tag)) {
+        else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI'].includes(tag)) {
           cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[] });
           evIdx = cur.events.length - 1;
         }
