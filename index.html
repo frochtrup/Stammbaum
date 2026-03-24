@@ -686,6 +686,59 @@ body {
   to   { opacity:1; transform:translateY(0); }
 }
 .fade-up { animation: fadeUp 0.3s ease both; }
+
+/* ═══════════════════════════════════════
+   DESKTOP-LAYOUT ≥ 900px (P3-7)
+═══════════════════════════════════════ */
+@media (min-width: 900px) {
+  body.desktop-mode #v-main {
+    display: block !important;
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: 360px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    z-index: 1;
+  }
+  body.desktop-mode #v-detail {
+    display: block !important;
+    position: fixed;
+    left: 360px; right: 0; top: 0; bottom: 0;
+    overflow-y: auto;
+    padding-bottom: 24px !important;
+  }
+  body.desktop-mode #v-tree {
+    position: fixed;
+    left: 360px; right: 0; top: 0; bottom: 0;
+  }
+  body.desktop-mode .tree-scroll {
+    height: calc(100dvh - 52px);
+  }
+  body.desktop-mode .bottom-nav {
+    width: 360px;
+  }
+  body.desktop-mode .fab {
+    right: auto;
+    left: 284px;
+  }
+  body.desktop-mode #v-detail .back { display: none !important; }
+  /* Placeholder: sichtbar wenn kein Eintrag gewählt */
+  #desktopPlaceholder { display: none; }
+  body.desktop-mode #desktopPlaceholder { display: flex; }
+  body.desktop-mode.has-detail #desktopPlaceholder { display: none; }
+}
+#desktopPlaceholder {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100dvh - 52px);
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+}
+#desktopPlaceholder .ph-icon { font-size: 3rem; opacity: 0.3; }
 </style>
 </head>
 <body>
@@ -784,6 +837,10 @@ body {
       <button class="topbar-btn" id="treeBtn" style="display:none;font-size:1rem" title="Sanduhr-Ansicht">⧖</button>
       <button class="topbar-btn primary" onclick="showEditSheet()" id="editBtn">Bearbeiten</button>
     </div>
+  </div>
+  <div id="desktopPlaceholder">
+    <div class="ph-icon">⚘</div>
+    <div>Eintrag in der Liste auswählen</div>
   </div>
   <div id="detailContent"></div>
 </div>
@@ -1473,6 +1530,7 @@ let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonFor
 let currentRepoId    = null;
 let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
 let _pendingPhotoBase64 = undefined; // undefined=keine Änderung, null=löschen, string=neues Foto (Sprint P3-2)
+let _detailActive = false;           // true wenn v-detail echten Inhalt zeigt (P3-7)
 const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto (kein OBJE im Original-GEDCOM)
 const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde (OBJE aus Passthrough entfernen)
 let _treeScale = 1;                  // Zoom-Faktor Sanduhr-Ansicht (Sprint P3-5)
@@ -3005,6 +3063,13 @@ window.addEventListener('load', async () => {
   }
 });
 
+// Desktop-Layout: bei Fensterverkleinerung unter 900px zurückschalten (P3-7)
+window.addEventListener('resize', () => {
+  if (window.innerWidth < 900) {
+    document.body.classList.remove('desktop-mode', 'has-detail');
+  }
+});
+
 function updateBackupBtn() {
   const btn = document.getElementById('backupMenuBtn');
   if (!btn) return;
@@ -3101,14 +3166,26 @@ async function _handlePhotoImport(file) {
 //  NAVIGATION
 // ─────────────────────────────────────
 function showView(id) {
+  const desktop = window.innerWidth >= 900 && id !== 'v-landing';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
-  // Bottom-Nav: sichtbar in v-main und v-tree, ausgeblendet in v-landing und v-detail
-  const showNav = (id === 'v-main' || id === 'v-tree');
-  document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
-  // FAB: sichtbar in v-main (alle Tabs inkl. Orte)
-  document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
+
+  if (desktop) {
+    document.getElementById('v-main').classList.add('active');
+    document.getElementById('bottomNav').style.display = 'flex';
+    document.getElementById('fabBtn').style.display = '';
+    _detailActive = (id === 'v-detail');
+    document.body.classList.add('desktop-mode');
+    document.body.classList.toggle('has-detail', id === 'v-detail');
+    if (id === 'v-detail') document.getElementById('v-detail').scrollTop = 0;
+  } else {
+    document.body.classList.remove('desktop-mode', 'has-detail');
+    _detailActive = (id === 'v-detail');
+    const showNav = (id === 'v-main' || id === 'v-tree');
+    document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
+    document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
+  }
 }
 
 // Bottom-Nav: aktiven Button hervorheben
@@ -3146,7 +3223,7 @@ function showMain() {
 // Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/
 // showPlaceDetail stehen.
 function _beforeDetailNavigate() {
-  if (document.getElementById('v-detail').classList.contains('active')) {
+  if (_detailActive) {
     // Detail → Detail: aktuellen Zustand in History sichern
     if      (currentPersonId) _navHistory.push({ type: 'person', id: currentPersonId });
     else if (currentFamilyId) _navHistory.push({ type: 'family', id: currentFamilyId });
