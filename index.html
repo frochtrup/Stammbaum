@@ -4617,19 +4617,6 @@ function runRoundtripTest() {
       }
       const _escReport = _esc.length ? '\n\n@@ Escape-Diagnose:\n' + _esc.join('\n') : '';
 
-      // DEBUG: frelSourExtra für F41/I86
-      let _dbgFrel = '';
-      { const _f41 = db1.families['@F41@'];
-        if (_f41) {
-          const _cr = _f41.childRelations?.['@I86@'];
-          _dbgFrel = '\n\nDEBUG F41/I86 childRelations:\n' +
-            '  frelSour=' + JSON.stringify(_cr?.frelSour) + '\n' +
-            '  frelSourExtra=' + JSON.stringify(_cr?.frelSourExtra) + '\n' +
-            '  mrelSour=' + JSON.stringify(_cr?.mrelSour) + '\n' +
-            '  mrelSourExtra=' + JSON.stringify(_cr?.mrelSourExtra);
-        } else { _dbgFrel = '\n\nDEBUG: @F41@ nicht gefunden'; }
-      }
-
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -4657,7 +4644,6 @@ function runRoundtripTest() {
         _objeDiagReport +
         _sourNoteDiagReport +
         _escReport +
-        _dbgFrel +
         diffSnippet;
 
     } catch (e) {
