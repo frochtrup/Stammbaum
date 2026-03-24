@@ -4560,6 +4560,26 @@ function runRoundtripTest() {
       }
       const _objeDiagReport = _objeDiag.length ? '\n\nOBJE-Diagnose (fehlende Zeilen):\n' + _objeDiag.join('\n') : '';
 
+      // Diagnose: fehlende SOUR/NOTE-Zeilen mit je 3 Zeilen Kontext
+      const _sourNoteDiag = [];
+      { const _outC3 = new Map(); for (const l of _outArr) _outC3.set(l, (_outC3.get(l)||0)+1);
+        const _allLines3 = _origText.split(/\r?\n/);
+        // Aktueller Record-Header
+        let _curRec = '';
+        for (let i = 0; i < _allLines3.length && _sourNoteDiag.length < 8; i++) {
+          const lt = _allLines3[i].trim();
+          if (/^0 /.test(lt)) _curRec = lt;
+          if (!/(^\d+ SOUR\b|^\d+ NOTE\b)/.test(lt)) continue;
+          const rem = _outC3.get(lt) || 0;
+          if (rem > 0) { _outC3.set(lt, rem-1); continue; }
+          const ctx = [];
+          for (let j = Math.max(0,i-2); j <= Math.min(_allLines3.length-1,i+2); j++)
+            ctx.push(`    ${j===i?'►':' '} [${j+1}] ${_allLines3[j].trim()}`);
+          _sourNoteDiag.push(`  Rec: ${_curRec}\n${ctx.join('\n')}`);
+        }
+      }
+      const _sourNoteDiagReport = _sourNoteDiag.length ? '\n\nSOUR/NOTE-Verlust-Diagnose:\n' + _sourNoteDiag.join('\n\n') : '';
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -4585,6 +4605,7 @@ function runRoundtripTest() {
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
         _objeDiagReport +
+        _sourNoteDiagReport +
         diffSnippet;
 
     } catch (e) {
