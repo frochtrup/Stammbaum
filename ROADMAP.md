@@ -118,9 +118,23 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 ---
 
+**Roundtrip-Nachbesserungen (2026-03-24 — nach P3-1..P3-3)** ✅
+- [x] **CONC-Stabilität**: `raw.trim()` → `raw.replace(/\r$/, '')` — `trim()` entfernte trailing Spaces aus CONT/CONC-Werten und verschob CONC-Split-Grenzen; `trimEnd()` allein reichte nicht aus (das Problem war `raw.trim()` auf die ganze Zeile in der Parser-Loop)
+- [x] **`1 RELI` als Event**: RELI war als einfaches String-Feld (`cur.reli = val`) gespeichert; TYPE/DATE/SOUR-Kinder wurden stillschweigend verworfen (lv=2 mit `evIdx=-1`). Fix: RELI in events[]-Liste aufgenommen wie OCCU/RESI/etc.
+- [x] **FAM CHIL `2 SOUR`**: `2 SOUR` direkt unter `1 CHIL` (FAM-Record) wurde nicht geparst. Fix: `sourIds[]`, `sourPages{}`, `sourQUAY{}`, `sourExtra{}` in `childRelations[childId]`; Parser lv=2 + lv=3; Writer gibt sie vor `_FREL`/`_MREL` aus
+- [x] **Mehrere `3 SOUR` unter `2 _FREL`/`2 _MREL`**: zweiter `3 SOUR`-Wert überschrieb ersten. Fix: erster bleibt in `frelSour`/`mrelSour`, weitere gehen in `frelSourExtra[]`/`mrelSourExtra[]` — gilt für FAM childRelations (lv=3) und INDI FAMC (lv=3)
+
+**Ergebnis (Ergänzungsdatei, 64 Personen / 22 Familien):**
+- Zeilen-Delta: **-7** (ausschließlich HEAD-Normalisierung)
+- Alle Tag-Counts ✓ inkl. `3 SOUR (FAM)` 75/75 · `2 SOUR (all)` 225/225
+- `1 NOTE (INDI) -1` = HEAD `1 NOTE` im Regex mitgezählt (kein echter INDI-Datenverlust)
+- Roundtrip: **STABIL · null INDI/FAM-Datenverluste**
+
+---
+
 ## Version 3.0 (Phase 3 — in Arbeit, März 2026)
 
-**Sprint-Plan:** P3-1 IndexedDB · P3-2 Fotos · P3-3 Suche/Filter · P3-4 Service Worker · P3-5 Baum-UI · P3-6 Undo · P3-7 Desktop-Layout · P3-8 OneDrive
+**Sprint-Plan:** P3-1 ✅ IndexedDB · P3-2 ✅ Fotos · P3-3 ✅ Suche/Filter · P3-4 Service Worker · P3-5 Baum-UI · P3-6 Undo · P3-7 Desktop-Layout · P3-8 OneDrive
 
 ---
 
@@ -132,6 +146,25 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 - [x] `confirmNewFile()`: auch IDB-Keys löschen
 - [x] `_originalGedText` immer in RAM (kein Nullen mehr nach Backup)
 - [x] Familien-Liste: alphabetisch nach Vater-Nachname, dann nach Heiratsjahr sortiert
+
+---
+
+**Sprint P3-2 — Fotos** ✅ (2026-03-22)
+- [x] Upload im Personen-Formular (`<input type="file" accept="image/*">`)
+- [x] Resize auf max 800px längste Seite, JPEG Quality 0.8 via Canvas
+- [x] IDB-Storage: Key `photo_<personId>` (getrennt vom GEDCOM-Text-Store)
+- [x] Detailansicht: 80×96px rechteckiges Foto links neben Name (CSS object-fit: cover)
+- [x] `_pendingPhotoBase64`: `undefined` = keine Änderung, `null` = löschen, `string` = neues Foto
+- [x] Sidecar-JSON Export (`stammbaum_photos.json`) + Import
+- [x] Foto wird nicht in GEDCOM geschrieben (App-internes Feld)
+
+---
+
+**Sprint P3-3 — Suche/Filter** ✅ (2026-03-22)
+- [x] Volltext-Suche war bereits für alle Tabs vorhanden
+- [x] Geburtsjahr-Bereichsfilter (von/bis) im Personen-Tab
+- [x] ✕-Clear-Button für Von/Bis-Felder
+- [x] Filter kombinierbar mit Volltext-Suche
 
 ---
 

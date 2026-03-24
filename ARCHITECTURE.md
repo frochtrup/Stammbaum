@@ -15,7 +15,7 @@
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe aktuell:** ~4700 Zeilen · ~150 Funktionen · ~250 KB
+**Größe aktuell:** ~5000 Zeilen · ~160 Funktionen · ~280 KB
 
 ---
 
@@ -67,23 +67,25 @@ let db = {
 let changed = false;  // Änderungs-Flag
 ```
 
-**Konsequenz:** Kein Undo/Redo. Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus localStorage).
+**Konsequenz:** Kein Undo/Redo. Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus IDB).
 
 ---
 
-### ADR-004: localStorage für Auto-Load
-**Entscheidung:** Nach dem Laden wird der rohe GEDCOM-Text in localStorage gecacht.
+### ADR-004: IndexedDB für Auto-Load (ab Sprint P3-1)
+**Entscheidung:** Der GEDCOM-Text wird primär in IndexedDB gecacht (`stammbaum_ged`, `stammbaum_ged_backup`, `stammbaum_filename`). localStorage ist stiller Fallback.
 
 ```javascript
-localStorage.setItem('stammbaum_ged', gedcomText);
-// Beim App-Start:
-const saved = localStorage.getItem('stammbaum_ged');
-if (saved) { db = parseGEDCOM(saved); showStartView(); }
+// IDB-Keys: 'stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename'
+// Fotos: 'photo_<personId>'
+// FileHandle: 'fileHandle'
+
+// tryAutoLoad(): IDB first → localStorage-Fallback + automatische Migration
+// _processLoadedText(): schreibt in IDB + localStorage (stiller Fallback)
 ```
 
-**Wichtig:** Es wird der GEDCOM-Text gecacht, **nicht** das `db`-Objekt. Grund: `Set`-Objekte (`sourceRefs`) lassen sich nicht mit `JSON.stringify` serialisieren.
+**Warum IDB:** localStorage-Limit ~5–10 MB; MeineDaten.ged ≈ 5 MB war grenzwertig. IDB unterstützt beliebige Dateigrößen und auch Binary (FileHandle, Fotos).
 
-**Limit:** localStorage ≈ 5–10 MB. MeineDaten.ged ≈ 5 MB — grenzwertig. Bei Fehler wird still ignoriert.
+**Wichtig:** Es wird der GEDCOM-Text gecacht, **nicht** das `db`-Objekt. Grund: `Set`-Objekte (`sourceRefs`) lassen sich nicht mit `JSON.stringify` serialisieren.
 
 ---
 
@@ -229,10 +231,34 @@ for (const l of (record._passthrough || [])) lines.push(l);
 
 **Val-Fix (CONC-Stabilität):**
 ```javascript
-// Vorher (verursachte Instabilität bei führenden Leerzeichen in CONC-Werten):
-const val = (m[3] || '').trim();
+// Vorher (verursachte Instabilität — raw.trim() entfernt trailing Spaces aus CONT/CONC-Werten):
+const line = raw.trim();
 // Nachher:
+const line = raw.replace(/\r$/, '');  // nur CR entfernen (Windows CRLF), leading spaces nie in GEDCOM
+if (!line.trim()) continue;           // Leerzeilen überspringen
 const val = (m[3] || '').replace(/^ /, '').trimEnd();  // genau 1 Leerzeichen (GEDCOM-Delimiter)
+```
+
+**RELI als Event (Roundtrip-Fix 2026-03-24):**
+`1 RELI` wurde als einfaches String-Feld (`cur.reli = val`) gespeichert. Ancestris schreibt unter `1 RELI` auch `2 DATE`, `2 TYPE`, `2 SOUR` — diese wurden bei `evIdx=-1` stillschweigend verworfen. Fix: RELI ist jetzt in `events[]` wie OCCU/RESI/etc.
+
+**FAM CHIL `2 SOUR` (Roundtrip-Fix 2026-03-24):**
+```javascript
+// childRelations[childId] enthält jetzt auch:
+{ ..., sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} }
+// Parser: lv=2 (direkte SOUR unter CHIL) + lv=3 (PAGE/QUAY/Extra unter dieser SOUR)
+// Writer: sourIds[] werden vor _FREL/_MREL ausgegeben
+```
+
+**Mehrere SOUR unter _FREL/_MREL (Roundtrip-Fix 2026-03-24):**
+```javascript
+// Ancestris schreibt manchmal zwei 3 SOUR unter einem 2 _FREL:
+// 2 _FREL Leiblich
+// 3 SOUR @@S9@@   ← erster → frelSour
+// 3 SOUR @@S4@@   ← zweiter → frelSourExtra[]
+if (!cref.frelSour) cref.frelSour = val;
+else { cref.frelSourExtra = cref.frelSourExtra || []; cref.frelSourExtra.push('3 SOUR ' + val); }
+// Gilt für FAM childRelations (lv=3) und INDI FAMC (lv=3)
 ```
 
 **Auto-Diff im Roundtrip-Test:**
@@ -247,8 +273,11 @@ Unterscheidet echte Verluste von Normalisierungs-Artefakten (DATE-Format, CONC-R
 | + Verbatim Passthrough INDI/FAM | -226 |
 | + SOUR Passthrough + CONC Val-Fix | -179 |
 | + INDI OBJE → Passthrough | ~-100 |
+| Sprint 12: frelSeen/mrelSeen, extraRecords | -126 |
+| Sprint 13: alle OBJE-Kontexte | -84 |
+| Roundtrip-Fix (2026-03-24): RELI/CHIL-SOUR/frelSourExtra/raw.replace | **~0** |
 
-Verbleibende ~-100 Zeilen: DATE-Normalisierung + CONC-Resplitting (Daten erhalten, Format normiert).
+Verbleibende Verluste: ausschließlich HEAD-Rewrite (CONC/CONT/SOUR/VERS/NAME/CORP/ADDR/DATE/TIME/SUBM/FILE/NOTE/TEXT) — by design.
 
 ---
 

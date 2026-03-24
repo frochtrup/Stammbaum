@@ -20,7 +20,7 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (v2.0, Phase 2 abgeschlossen)
+├── index.html          ← gesamte App (v2.0/Phase3, P3-1..P3-3 aktiv, ~5000 Zeilen)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
@@ -75,6 +75,8 @@ stammbaum/
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
 - **Suche** über: Name, Titel, alle Ereignisse (Typ, Wert, Datum, Ort), Notizen, Religion
+- **Geburtsjahr-Filter**: Von/Bis-Felder mit ✕-Clear-Button
+- **Foto**: Upload im Personen-Formular, Anzeige (80×96px) links neben Name in Detailansicht
 - **Detail**: Geburt, Taufe, Tod (inkl. Todesursache), Beerdigung, alle weiteren Ereignisse
 - **Quellen-Badges** `§N` direkt in der Ereigniszeile → klickbar zur Quellen-Detailansicht
 - **📍** Geo-Links öffnen Apple Maps bei Ereignissen mit Koordinaten
@@ -125,9 +127,9 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  index.html (v2.0 — Phase 2 abgeschlossen)   │
+│  index.html (v2.0/Phase3 — P3-1..P3-3)       │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~4700 Zeilen · ~150 Funktionen · ~250 KB    │
+│  ~5000 Zeilen · ~160 Funktionen · ~280 KB    │
 │                                              │
 │  Globaler State: let db = {                  │
 │    individuals, families, sources,           │
@@ -135,13 +137,15 @@ stammbaum/
 │  }                                           │
 │                                              │
 │  Persistenz:                                 │
-│  - localStorage (GEDCOM-Text, Auto-Load)     │
-│  - IndexedDB (FileSystemFileHandle)          │
+│  - IndexedDB primär (GEDCOM-Text, Fotos)     │
+│  - localStorage stiller Fallback             │
+│  - FileSystemFileHandle (Chrome direktes     │
+│    Speichern)                                │
 └──────────────────────────────────────────────┘
 ```
 
-**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **1 Diff in 2796 Personen** (MeineDaten_ancestris.ged)
-**Version 2.0** — März 2026 — Phase 2 abgeschlossen
+**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · null INDI/FAM-Datenverluste** (nur HEAD-Normalisierung)
+**Version 2.0/Phase 3** — März 2026 — P3-1 IndexedDB ✅ · P3-2 Fotos ✅ · P3-3 Suche/Filter ✅
 
 ---
 
