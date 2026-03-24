@@ -4587,6 +4587,25 @@ function runRoundtripTest() {
       }
       const _sourNoteDiagReport = _sourNoteDiag.length ? '\n\nSOUR/NOTE-Verlust-Diagnose:\n' + _sourNoteDiag.join('\n\n') : '';
 
+      // Spezifische Debug-Ausgabe für @@-Escapes in SOUR
+      const _esc = [];
+      { const _reEsc = /^\d+ SOUR @@/mg;
+        const _origEscLines = (_origText.match(_reEsc) || []);
+        const _outEscLines  = (out1.match(_reEsc) || []);
+        if (_origEscLines.length !== _outEscLines.length)
+          _esc.push(`  @@ SOUR-Escapes: orig=${_origEscLines.length}  out=${_outEscLines.length}`);
+        // Kontext der @@-SOUR Zeilen im Output
+        const _origCtxs = []; const _out1lines = _origText.split(/\r?\n/);
+        for (let i=0; i<_out1lines.length; i++) {
+          if (/^\d+ SOUR @@/.test(_out1lines[i].trim())) {
+            _origCtxs.push(`  [${i+1}]  prev:${_out1lines[i-1]?.trim()}  line:${_out1lines[i].trim()}  next:${_out1lines[i+1]?.trim()}`);
+          }
+        }
+        if (_origCtxs.length && _origEscLines.length !== _outEscLines.length)
+          _esc.push('  Orig-Kontexte:\n' + _origCtxs.join('\n'));
+      }
+      const _escReport = _esc.length ? '\n\n@@ Escape-Diagnose:\n' + _esc.join('\n') : '';
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -4613,6 +4632,7 @@ function runRoundtripTest() {
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
         _objeDiagReport +
         _sourNoteDiagReport +
+        _escReport +
         diffSnippet;
 
     } catch (e) {
