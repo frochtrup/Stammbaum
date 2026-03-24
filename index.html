@@ -4560,22 +4560,29 @@ function runRoundtripTest() {
       }
       const _objeDiagReport = _objeDiag.length ? '\n\nOBJE-Diagnose (fehlende Zeilen):\n' + _objeDiag.join('\n') : '';
 
-      // Diagnose: fehlende SOUR/NOTE-Zeilen mit je 3 Zeilen Kontext
+      // Diagnose: fehlende SOUR/NOTE-Zeilen — zeige ganzen Record-Kontext (alle lv>0 Zeilen)
       const _sourNoteDiag = [];
       { const _outC3 = new Map(); for (const l of _outArr) _outC3.set(l, (_outC3.get(l)||0)+1);
         const _allLines3 = _origText.split(/\r?\n/);
-        // Aktueller Record-Header
-        let _curRec = '';
-        for (let i = 0; i < _allLines3.length && _sourNoteDiag.length < 8; i++) {
+        // Record-Grenzen vorab bestimmen
+        const _recStarts = []; let _recStart0 = 0;
+        for (let i = 0; i < _allLines3.length; i++) {
+          if (/^\s*0 /.test(_allLines3[i])) { _recStarts.push(i); _recStart0 = i; }
+        }
+        let _curRecStart = 0;
+        for (let i = 0; i < _allLines3.length && _sourNoteDiag.length < 6; i++) {
           const lt = _allLines3[i].trim();
-          if (/^0 /.test(lt)) _curRec = lt;
+          if (/^0 /.test(lt)) _curRecStart = i;
           if (!/(^\d+ SOUR\b|^\d+ NOTE\b)/.test(lt)) continue;
           const rem = _outC3.get(lt) || 0;
           if (rem > 0) { _outC3.set(lt, rem-1); continue; }
+          // fehlende Zeile — zeige Record-Header + alle Zeilen bis zur fehlenden
           const ctx = [];
-          for (let j = Math.max(0,i-2); j <= Math.min(_allLines3.length-1,i+2); j++)
-            ctx.push(`    ${j===i?'►':' '} [${j+1}] ${_allLines3[j].trim()}`);
-          _sourNoteDiag.push(`  Rec: ${_curRec}\n${ctx.join('\n')}`);
+          const recEnd = Math.min(_allLines3.length-1, i+3);
+          for (let j = _curRecStart; j <= recEnd; j++)
+            ctx.push(`    ${j===i?'►':' '} ${_allLines3[j].trim()}`);
+          if (recEnd < i+1) ctx.push('    ...');
+          _sourNoteDiag.push(ctx.join('\n'));
         }
       }
       const _sourNoteDiagReport = _sourNoteDiag.length ? '\n\nSOUR/NOTE-Verlust-Diagnose:\n' + _sourNoteDiag.join('\n\n') : '';
