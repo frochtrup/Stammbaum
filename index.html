@@ -2774,7 +2774,7 @@ async function saveToFileHandle(content) {
     await w.close(); w = null;
     changed = false; updateChangedIndicator();
     try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
-    idbPut('stammbaum_ged', content).catch(() => {});
+    idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
     showToast('✓ Direkt gespeichert');
     return true;
   } catch(e) {
@@ -2871,7 +2871,7 @@ async function exportGEDCOM() {
   _downloadBlob(content, filename);
   changed = false; updateChangedIndicator();
   try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
-  idbPut('stammbaum_ged', content).catch(() => {});
+  idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   showToast('✓ ' + filename + ' heruntergeladen');
 }
 
@@ -2954,9 +2954,11 @@ function _processLoadedText(text, filename) {
   _originalGedText = text;  // immer in RAM; IDB für Persistenz
   _newPhotoIds.clear(); _deletedPhotoIds.clear();
   // IDB: primäre Persistenz (kein Größenlimit)
-  idbPut('stammbaum_ged', text).catch(() => {});
-  idbPut('stammbaum_ged_backup', text).catch(() => {});
-  idbPut('stammbaum_filename', filename).catch(() => {});
+  Promise.all([
+    idbPut('stammbaum_ged', text),
+    idbPut('stammbaum_ged_backup', text),
+    idbPut('stammbaum_filename', filename)
+  ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
   // localStorage: Fallback (kein Toast bei Fehler)
   try { localStorage.setItem('stammbaum_ged', text); } catch(e) {}
   try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
@@ -3042,6 +3044,13 @@ window.addEventListener('load', async () => {
   // Service Worker registrieren (P3-4)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+});
+
+// Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
+window.addEventListener('storage', e => {
+  if (e.key === 'stammbaum_ged' && e.newValue && Object.keys(db.individuals || {}).length) {
+    showToast('⚠ Datei wurde in einem anderen Tab geändert');
   }
 });
 
