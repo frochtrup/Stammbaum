@@ -136,14 +136,16 @@ body {
   border-style: dashed;
   align-items: center; justify-content: center;
 }
-.tree-sex  { font-size: 0.65rem; color: var(--text-muted); line-height: 1; }
+.tree-sex  { display: none; }
+.tree-card[data-sex="M"] { border-left: 3px solid #5b9bd5; }
+.tree-card[data-sex="F"] { border-left: 3px solid #c27b8a; }
 .tree-name {
   font-size: 0.7rem; color: var(--text);
   overflow: hidden; line-height: 1.2;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .tree-card-center .tree-name { font-size: 0.82rem; color: var(--gold-lt); font-weight: 600; }
-.tree-yr   { font-size: 0.62rem; color: var(--text-dim); line-height: 1; }
+.tree-yr   { font-size: 0.68rem; color: var(--text-dim); line-height: 1; }
 .tree-card-half {
   border-style: dashed;
   border-color: var(--gold-dim);
@@ -824,6 +826,15 @@ body {
     <div id="placeList"></div>
   </div>
 
+  <div id="tab-search" style="display:none">
+    <div class="search-wrap">
+      <input class="search-input" type="search" id="searchGlobal" placeholder="Personen, Familien, Quellen, Orte…" oninput="runGlobalSearch(this.value)">
+    </div>
+    <div id="globalSearchResults">
+      <div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Suchbegriff eingeben…</div>
+    </div>
+  </div>
+
   <button class="fab" id="fabBtn" onclick="showAddSheet()" title="Neu hinzufügen">＋</button>
 </div>
 
@@ -872,7 +883,7 @@ body {
     <span class="bnav-lbl">Baum</span>
   </button>
   <button class="bnav-btn" id="bnav-persons" onclick="bnavTab('persons')">
-    <span class="bnav-icon">♻</span>
+    <span class="bnav-icon">👤</span>
     <span class="bnav-lbl">Personen</span>
   </button>
   <button class="bnav-btn" id="bnav-families" onclick="bnavTab('families')">
@@ -880,12 +891,16 @@ body {
     <span class="bnav-lbl">Familien</span>
   </button>
   <button class="bnav-btn" id="bnav-sources" onclick="bnavTab('sources')">
-    <span class="bnav-icon">§</span>
+    <span class="bnav-icon">📖</span>
     <span class="bnav-lbl">Quellen</span>
   </button>
   <button class="bnav-btn" id="bnav-places" onclick="bnavTab('places')">
     <span class="bnav-icon">📍</span>
     <span class="bnav-lbl">Orte</span>
+  </button>
+  <button class="bnav-btn" id="bnav-search" onclick="bnavSearch()">
+    <span class="bnav-icon">🔍</span>
+    <span class="bnav-lbl">Suche</span>
   </button>
 </nav>
 
@@ -3212,6 +3227,113 @@ function bnavTab(name) {
   switchTab(name);
 }
 
+// Bottom-Nav: Globale Suche
+function bnavSearch() {
+  setBnavActive('search');
+  showView('v-main');
+  switchTab('search');
+  setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
+}
+
+// Globale Suche über Personen, Familien, Quellen, Orte
+function runGlobalSearch(q) {
+  const out = document.getElementById('globalSearchResults');
+  if (!out) return;
+  const lower = (q || '').toLowerCase().trim();
+  if (!lower) {
+    out.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Suchbegriff eingeben…</div>';
+    return;
+  }
+
+  let html = '';
+
+  // ── Personen ──
+  const persons = Object.values(db.individuals).filter(p =>
+    (p.name||'').toLowerCase().includes(lower) ||
+    (p.given||'').toLowerCase().includes(lower) ||
+    (p.surname||'').toLowerCase().includes(lower) ||
+    (p.birth?.place||'').toLowerCase().includes(lower) ||
+    (p.death?.place||'').toLowerCase().includes(lower) ||
+    (p.birth?.date||'').toLowerCase().includes(lower) ||
+    (p.death?.date||'').toLowerCase().includes(lower)
+  ).slice(0, 20);
+  if (persons.length) {
+    html += `<div class="alpha-sep">Personen (${persons.length})</div>`;
+    for (const p of persons) {
+      const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
+      const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
+      let meta = '';
+      if (p.birth?.date) meta += '* ' + p.birth.date;
+      if (p.birth?.place) meta += (meta ? ', ' : '') + p.birth.place;
+      if (p.death?.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+      html += `<div class="person-row" onclick="showDetail('${p.id}')">
+        <div class="p-avatar ${sc}">${ic}</div>
+        <div class="p-info"><div class="p-name">${esc(p.name||p.id)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>
+        <span class="p-arrow">›</span></div>`;
+    }
+  }
+
+  // ── Familien ──
+  const families = Object.values(db.families).filter(f => {
+    const h = db.individuals[f.husb];
+    const w = db.individuals[f.wife];
+    return (h?.name||'').toLowerCase().includes(lower) ||
+           (w?.name||'').toLowerCase().includes(lower) ||
+           (f.marr?.place||'').toLowerCase().includes(lower) ||
+           (f.marr?.date||'').toLowerCase().includes(lower);
+  }).slice(0, 12);
+  if (families.length) {
+    html += `<div class="alpha-sep">Familien (${families.length})</div>`;
+    for (const f of families) {
+      const h = db.individuals[f.husb];
+      const w = db.individuals[f.wife];
+      const label = [h?.name, w?.name].filter(Boolean).join(' ⚭ ') || f.id;
+      let meta = '';
+      if (f.marr?.date) meta += f.marr.date;
+      if (f.marr?.place) meta += (meta ? ', ' : '') + f.marr.place;
+      html += `<div class="person-row" onclick="showFamilyDetail('${f.id}')">
+        <div class="p-avatar" style="font-size:0.95rem">⚭</div>
+        <div class="p-info"><div class="p-name">${esc(label)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>
+        <span class="p-arrow">›</span></div>`;
+    }
+  }
+
+  // ── Quellen ──
+  const sources = Object.values(db.sources).filter(s =>
+    (s.title||'').toLowerCase().includes(lower) ||
+    (s.auth||'').toLowerCase().includes(lower) ||
+    (s.publ||'').toLowerCase().includes(lower)
+  ).slice(0, 10);
+  if (sources.length) {
+    html += `<div class="alpha-sep">Quellen (${sources.length})</div>`;
+    for (const s of sources) {
+      html += `<div class="person-row" onclick="showSourceDetail('${s.id}')">
+        <div class="p-avatar" style="font-size:0.95rem">📖</div>
+        <div class="p-info"><div class="p-name">${esc(s.title||s.id)}</div><div class="p-meta">${esc(s.auth||'')}</div></div>
+        <span class="p-arrow">›</span></div>`;
+    }
+  }
+
+  // ── Orte ──
+  const places = Object.keys(db.extraPlaces || {}).filter(name =>
+    name.toLowerCase().includes(lower)
+  ).slice(0, 8);
+  if (places.length) {
+    html += `<div class="alpha-sep">Orte (${places.length})</div>`;
+    for (const name of places) {
+      html += `<div class="person-row" onclick="showPlaceDetail('${esc(name)}')">
+        <div class="p-avatar" style="font-size:0.95rem">📍</div>
+        <div class="p-info"><div class="p-name">${esc(name)}</div><div class="p-meta">&nbsp;</div></div>
+        <span class="p-arrow">›</span></div>`;
+    }
+  }
+
+  if (!html) {
+    html = `<div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Keine Treffer für „${esc(q)}"</div>`;
+  }
+  out.innerHTML = html;
+}
+
 function showMain() {
   _navHistory.length = 0; // Liste = frischer Start, History löschen
   setBnavActive(currentTab || 'persons');
@@ -3282,7 +3404,8 @@ function switchTab(tab) {
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
   document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
-  document.getElementById('fabBtn').style.display = '';
+  document.getElementById('tab-search').style.display = tab === 'search' ? 'block' : 'none';
+  document.getElementById('fabBtn').style.display = tab === 'search' ? 'none' : '';
   renderTab();
 }
 
@@ -3292,6 +3415,7 @@ function renderTab() {
   else if (currentTab === 'families') renderFamilyList();
   else if (currentTab === 'sources') { renderSourceList(); renderRepoList(); }
   else if (currentTab === 'places') renderPlaceList();
+  else if (currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
 }
 
 function updateStats() {
@@ -3896,6 +4020,21 @@ function treeNavBack() {
   showTree(_treeHistory[_treeHistoryPos], false);
 }
 
+// Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
+function _treeShortName(p, isCenter) {
+  const nm = p.name || p.id || '';
+  const limit = isCenter ? 26 : 18;
+  if (nm.length <= limit) return nm;
+  const given = p.given || '';
+  const surn  = p.surname || '';
+  if (given && surn) {
+    const inits = given.trim().split(/\s+/).map(w => w.charAt(0) + '.').join(' ');
+    const short = inits + ' ' + surn;
+    if (short.length < nm.length) return short;
+  }
+  return nm;
+}
+
 function showTree(personId, addToHistory = true) {
   const p = db.individuals[personId];
   if (!p) return;
@@ -4061,14 +4200,13 @@ function showTree(personId, addToHistory = true) {
     }
     const q = db.individuals[id];
     if (!q) return;
-    const icon = q.sex === 'M' ? '♂' : q.sex === 'F' ? '♀' : '◇';
-    const nm   = q.name || id;
+    div.dataset.sex = q.sex || 'U';
+    const nm = _treeShortName(q, isCenter);
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
     const multiMarr = isCenter && q.fams && q.fams.length > 1;
     div.innerHTML =
-      `<div class="tree-sex">${icon}</div>` +
       `<div class="tree-name">${esc(nm)}</div>` +
       (yr ? `<div class="tree-yr">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
