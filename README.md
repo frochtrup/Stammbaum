@@ -164,12 +164,14 @@ Update: `index.html` ersetzen → nach ~1 Minute aktiv.
 
 ## Workflow: iPhone ↔ Ancestris (Mac)
 
+### Aktuell — über iCloud Drive
+
 ```
 Ancestris (Mac)
   └─ Datei → Export → GEDCOM → iCloud Drive/Genealogie/MeineDaten.ged
 
 iPhone Safari → Stammbaum App
-  └─ Automatisch aus localStorage (nach erstem Laden)
+  └─ Automatisch aus IndexedDB (nach erstem Laden)
      oder: Datei laden → iCloud Drive → MeineDaten.ged
 
 Änderungen speichern (iOS):
@@ -187,6 +189,26 @@ iPhone Safari → Stammbaum App
 Ancestris (Mac):
   └─ Datei → Import → GEDCOM → MeineDaten.ged übernehmen
 ```
+
+### Geplant (P3-8) — über OneDrive
+
+OneDrive vereinfacht den Rundlauf erheblich: Ancestris exportiert direkt in OneDrive, die App liest und schreibt dieselbe Datei via Microsoft Graph API — kein manuelles Übertragen mehr.
+
+```
+Ancestris (Mac)
+  └─ Datei → Export → GEDCOM → OneDrive/Genealogie/MeineDaten.ged
+
+Stammbaum App (Browser, beliebiges Gerät)
+  └─ OneDrive-Login (PKCE OAuth, einmalig)
+     → Datei direkt aus OneDrive laden
+     → 💾 Speichern → direkt zurück nach OneDrive
+
+Ancestris (Mac):
+  └─ Datei automatisch aktualisiert (OneDrive-Sync)
+     → kein manueller Import nötig
+```
+
+**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · gleiche `_fileHandle`-Architektur wie lokale Dateien · Sprint P3-8
 
 ---
 
