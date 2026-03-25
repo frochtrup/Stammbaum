@@ -2,8 +2,11 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v1';
-const PRECACHE = ['./index.html', './manifest.json', './icon.svg'];
+const CACHE_NAME = 'stammbaum-v2';
+const PRECACHE = [
+  './index.html', './manifest.json', './icon.svg',
+  './gedcom.js', './storage.js', './ui-views.js', './ui-forms.js'
+];
 
 // Install: Dateien vorab cachen
 self.addEventListener('install', event => {
