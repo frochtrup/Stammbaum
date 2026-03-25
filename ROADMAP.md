@@ -118,6 +118,29 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 ---
 
+**UI/UX-Review + Code-Qualität (2026-03-24)** ✅
+
+*UI/UX-Verbesserungen:*
+- [x] **Baum-Karten Geschlecht via Randfarbe**: `border-left: 3px solid` (blau=M, rosa=F) statt Geschlechtssymbol-Zeile → mehr Platz für Name und Jahr
+- [x] **`_treeShortName()`**: lange Namen im Baum werden zu Initialen gekürzt (`Johann Wilhelm Müller` → `J. W. Müller`); Grenze 18 Zeichen (regulär) / 26 (Zentrum)
+- [x] **`tree-yr` Schriftgrösse**: 0.62rem → 0.68rem (besser lesbar)
+- [x] **Bottom-Nav Icons**: `♻` → `👤` (Personen), `§` → `📖` (Quellen)
+- [x] **Globaler Such-Tab** (`🔍 Suche`): 6. Bottom-Nav Button, sucht in Echtzeit über Personen, Familien, Quellen und Orte mit gruppierten Ergebnissen
+
+*Bug-Fixes:*
+- [x] **`#desktopPlaceholder` auf Mobile**: `display:none` fehlte als Basisregel — Placeholder füllte auf kleinen Viewports die gesamte Detail-Ansicht (`height: 100dvh`) und verdeckte den Inhalt
+- [x] **XSS in Photo-Import**: `photoMap[id]` wurde ohne Re-Validierung per `innerHTML` ins DOM geschrieben; Fix: `data:image/`-Prüfung + `createElement('img')` statt `innerHTML`
+- [x] **Race Condition iOS-Share**: `changed = false` wurde im `.then()` gesetzt auch wenn Nutzer während offenem Share-Dialog Änderungen machte; Fix: `writeGEDCOM() === content` Vergleich
+- [x] **Place-Autocomplete**: `collectPlaces()` wurde bei jedem Keystroke aufgerufen (bis zu 30K Iterationen); Fix: 150ms Debounce
+- [x] **Desktop-Resize bidirektional**: Resize-Listener stellte `desktop-mode` beim Vergrössern nicht wieder her; Fix: `showView()` mit Debounce bei Resize
+
+*Code-Qualität:*
+- [x] **Dead Code entfernt**: `.tree-sex` (CSS), `.icloud-hint` (CSS), `.export-bar`/`.export-btn` (CSS), `normDateToISO()` (JS-Funktion) — alle unbenutzt
+- [x] **IDB-Fehler sichtbar**: `idbPut().catch(() => {})` zeigt jetzt Toast statt still zu scheitern (Datenverlust-Risiko)
+- [x] **Multi-Tab-Erkennung**: `window.addEventListener('storage', ...)` warnt wenn anderer Tab die Datei ändert
+
+---
+
 **Roundtrip-Nachbesserungen (2026-03-24 — nach P3-1..P3-3)** ✅
 - [x] **CONC-Stabilität**: `raw.trim()` → `raw.replace(/\r$/, '')` — `trim()` entfernte trailing Spaces aus CONT/CONC-Werten und verschob CONC-Split-Grenzen; `trimEnd()` allein reichte nicht aus (das Problem war `raw.trim()` auf die ganze Zeile in der Parser-Loop)
 - [x] **`1 RELI` als Event**: RELI war als einfaches String-Feld (`cur.reli = val`) gespeichert; TYPE/DATE/SOUR-Kinder wurden stillschweigend verworfen (lv=2 mit `evIdx=-1`). Fix: RELI in events[]-Liste aufgenommen wie OCCU/RESI/etc.
@@ -134,7 +157,7 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 ## Version 3.0 (Phase 3 — in Arbeit, März 2026)
 
-**Sprint-Plan:** P3-1 ✅ IndexedDB · P3-2 ✅ Fotos · P3-3 ✅ Suche/Filter · P3-4 ✅ Service Worker · P3-5 ✅ Baum-UI · P3-6 ✅ Undo · P3-7 Desktop-Layout · P3-8 ✅ OneDrive
+**Sprint-Plan:** P3-1 ✅ IndexedDB · P3-2 ✅ Fotos · P3-3 ✅ Suche/Filter · P3-4 ✅ Service Worker · P3-5 ✅ Baum-UI · P3-6 ✅ Undo · P3-7 ✅ Desktop-Layout · P3-8 ✅ OneDrive
 
 ---
 
@@ -202,47 +225,39 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 ---
 
-**Sprint P3-7 — Responsives Desktop-Layout** (offen)
-- [ ] `@media (min-width: 900px)`: Zweispalten-Layout (Liste links, Detail rechts)
-- [ ] Kein Tab-Wechsel mehr nötig auf Desktop
-- [ ] Baum-Ansicht profitiert von mehr Breite (mehr Karten-Ebenen sichtbar)
-
----
-
-**Roundtrip-Nachbesserungen (2026-03-24 — nach P3-1..P3-3)** ✅
-- [x] **CONC-Stabilität**: `raw.trim()` → `raw.replace(/\r$/, '')` — `trim()` entfernte trailing Spaces aus CONT/CONC-Werten und verschob CONC-Split-Grenzen; `trimEnd()` allein reichte nicht aus (das Problem war `raw.trim()` auf die ganze Zeile in der Parser-Loop)
-- [x] **`1 RELI` als Event**: RELI war als einfaches String-Feld (`cur.reli = val`) gespeichert; TYPE/DATE/SOUR-Kinder wurden stillschweigend verworfen (lv=2 mit `evIdx=-1`). Fix: RELI in events[]-Liste aufgenommen wie OCCU/RESI/etc.
-- [x] **FAM CHIL `2 SOUR`**: `2 SOUR` direkt unter `1 CHIL` (FAM-Record) wurde nicht geparst. Fix: `sourIds[]`, `sourPages{}`, `sourQUAY{}`, `sourExtra{}` in `childRelations[childId]`; Parser lv=2 + lv=3; Writer gibt sie vor `_FREL`/`_MREL` aus
-- [x] **Mehrere `3 SOUR` unter `2 _FREL`/`2 _MREL`**: zweiter `3 SOUR`-Wert überschrieb ersten. Fix: erster bleibt in `frelSour`/`mrelSour`, weitere gehen in `frelSourExtra[]`/`mrelSourExtra[]` — gilt für FAM childRelations (lv=3) und INDI FAMC (lv=3)
-
-**Ergebnis (Ergänzungsdatei, 64 Personen / 22 Familien):**
-- Zeilen-Delta: **-7** (ausschließlich HEAD-Normalisierung)
-- Alle Tag-Counts ✓ inkl. `3 SOUR (FAM)` 75/75 · `2 SOUR (all)` 225/225
-- `1 NOTE (INDI) -1` = HEAD `1 NOTE` im Regex mitgezählt (kein echter INDI-Datenverlust)
-- Roundtrip: **STABIL · null INDI/FAM-Datenverluste**
+**Sprint P3-7 — Responsives Desktop-Layout** ✅ (2026-03-24)
+- [x] `@media (min-width: 900px)`: Zweispalten-Layout (Liste links 360px, Detail/Baum rechts)
+- [x] `body.desktop-mode` via JS gesetzt wenn `window.innerWidth >= 900`
+- [x] Baum-Ansicht rechts: volle Breite ab 900px
+- [x] Bottom-Nav auf 360px begrenzt (linke Spalte), FAB-Position angepasst
+- [x] Desktop-Placeholder: "Eintrag in der Liste auswählen" wenn kein Detail aktiv
+- [x] `has-detail`-Klasse für Placeholder-Ausblendung
 
 ---
 
 ### Schwerpunkt 1: Architektur & Wartbarkeit
 
-- [ ] Komponentenbasiertes Rendering (kein monolithisches `innerHTML`) ← bekanntes XSS-Risiko + Performance
-- [ ] Klares State-Management (Store-Muster statt ~11 globaler Variablen)
+- [ ] Komponentenbasiertes Rendering — Performance bei >1000 Personen
+- [ ] Klares State-Management (Store-Muster statt ~27 globaler Variablen)
 - [ ] Virtuelles Scrollen für große Listen (>1000 Personen)
+- [ ] Single-File aufteilen: `parser.js`, `writer.js`, `storage.js` als ES-Module (ab ~7000 Zeilen sinnvoll)
 
 ### Schwerpunkt 2: Speichern / Cloud
 
-- [ ] OneDrive-Integration via Microsoft Graph API (PKCE OAuth, kein Server)
-- [ ] iCloud Drive: bestehende `showOpenFilePicker`-Architektur bleibt
+- [x] OneDrive-Integration via Microsoft Graph API (PKCE OAuth, kein Server) ← P3-8
+- [x] iCloud Drive: `showOpenFilePicker`-Architektur ← v1.2
 
 ### Schwerpunkt 3: UI/UX Redesign
 
-- [ ] Responsives Layout (Desktop-Zweispalten-Ansicht)
-- [ ] Erweiterter Stammbaum (Vorfahren-Modus, Mehrfach-Ehen sichtbar)
-- [ ] Fotos (Base64 + Resize auf max. 800px JPEG)
-- [ ] Erweiterte Suche & Filter (Jahrgang, Ort, Quelle, Duplikate)
-- [ ] Undo/Redo
-- [ ] Service Worker / Offline
+- [x] Responsives Layout (Desktop-Zweispalten-Ansicht) ← P3-7
+- [x] Erweiterter Stammbaum (Vorfahren-Modus, Mehrfach-Ehen sichtbar) ← P3-5
+- [x] Fotos (Base64 + Resize auf max. 800px JPEG) ← P3-2
+- [x] Erweiterte Suche & Filter (Jahrgang, Ort, Quelle) ← P3-3 + Suche-Tab
+- [x] Undo/Revert ← P3-6
+- [x] Service Worker / Offline ← P3-4
 - [ ] Familien-Avatar CSS-Symbol statt OS-Emoji
+- [ ] Vollbild-Baum-Modus (ohne Listenansicht)
+- [ ] Duplikat-Erkennung in Suche
 
 **Datei:** `index.html` (weiterentwickelt von v2.0)
 
