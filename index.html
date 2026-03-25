@@ -6235,44 +6235,49 @@ async function odSaveFile() {
 
 // ── OneDrive Foto-Import ──────────────────────────────────────────────────
 
-// GEDCOM nach OBJE FILE-Referenzen parsen → Map: personId → Dateiname (Basename)
+// GEDCOM nach OBJE FILE-Referenzen parsen
+// Returns { persons: Map<personId,basename>, families: Map<famId,basename> }
 function _extractObjeFilemap() {
   const text = _originalGedText;
-  if (!text) return new Map();
-  const lines      = text.split(/\r?\n/);
-  const objeFiles  = {};   // objeId → filepath
-  const personObje = {};   // personId → {type, ref?, file?}
+  if (!text) return { persons: new Map(), families: new Map() };
+  const lines     = text.split(/\r?\n/);
+  const objeFiles = {};   // objeId → filepath (lv=0 OBJE-Records)
+  const personObje = {};  // personId → {type,ref?,file?}
+  const famObje    = {};  // famId    → {type,ref?,file?}
   let recId = null, recType = null, inInlineObje = false;
   for (const raw of lines) {
     const m = raw.match(/^(\d+)\s+(?:(@[^@]+@)\s+)?(\S+)(?:\s+(.*))?$/);
     if (!m) continue;
     const level = +m[1];
-    const xref  = m[2] || null;   // '@I001@' — @ behalten, entspricht db.individuals-Keys
+    const xref  = m[2] || null;
     const tag   = m[3];
     const val   = (m[4] || '').trim();
     if (level === 0) { recId = xref; recType = tag; inInlineObje = false; }
-    if (recType === 'INDI') {
-      if (level === 1 && tag === 'OBJE') {
-        if (val.startsWith('@') && val.endsWith('@')) {
-          if (!personObje[recId]) personObje[recId] = { type:'ref', ref: val };  // '@O001@' behalten
-        } else { inInlineObje = true; }
-      }
-      if (level === 2 && tag === 'FILE' && inInlineObje) {
-        if (!personObje[recId]) personObje[recId] = { type:'inline', file: val };
-        inInlineObje = false;
-      }
-      if (level < 2 && tag !== 'OBJE') inInlineObje = false;
+    if ((recType === 'INDI' || recType === 'FAM') && level === 1 && tag === 'OBJE') {
+      if (val.startsWith('@') && val.endsWith('@')) {
+        const store = recType === 'INDI' ? personObje : famObje;
+        if (!store[recId]) store[recId] = { type:'ref', ref: val };
+      } else { inInlineObje = true; }
     }
+    if ((recType === 'INDI' || recType === 'FAM') && level === 2 && tag === 'FILE' && inInlineObje) {
+      const store = recType === 'INDI' ? personObje : famObje;
+      if (!store[recId]) store[recId] = { type:'inline', file: val };
+      inInlineObje = false;
+    }
+    if ((recType === 'INDI' || recType === 'FAM') && level < 2 && tag !== 'OBJE') inInlineObje = false;
     if (recType === 'OBJE' && recId && level === 1 && tag === 'FILE') {
       objeFiles[recId] = val;
     }
   }
-  const result = new Map();
-  for (const [pid, info] of Object.entries(personObje)) {
-    const fp = info.type === 'inline' ? info.file : objeFiles[info.ref];
-    if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) result.set(pid, bn); }
-  }
-  return result;
+  const _toMap = (store) => {
+    const m = new Map();
+    for (const [id, info] of Object.entries(store)) {
+      const fp = info.type === 'inline' ? info.file : objeFiles[info.ref];
+      if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) m.set(id, bn); }
+    }
+    return m;
+  };
+  return { persons: _toMap(personObje), families: _toMap(famObje) };
 }
 
 // Ordner-Browser State
@@ -6334,8 +6339,8 @@ async function odImportPhotosFromFolder(folderId, folderName) {
   closeModal('modalOneDrive');
   const token = await _odGetToken(); if (!token) return;
 
-  const objeMap = _extractObjeFilemap();
-  if (objeMap.size === 0) { showToast('Keine OBJE-Referenzen im GEDCOM gefunden'); return; }
+  const { persons: personMap, families: famMap } = _extractObjeFilemap();
+  if (personMap.size === 0 && famMap.size === 0) { showToast('Keine OBJE-Referenzen im GEDCOM gefunden'); return; }
   showToast(`Lade Dateiliste aus "${folderName}"…`);
 
   try {
@@ -6347,7 +6352,9 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     for (const f of (data.value || [])) odFiles[f.name.toLowerCase()] = f.id;
 
     let loaded = 0, missing = 0;
-    for (const [personId, filename] of objeMap) {
+
+    // Personen-Fotos
+    for (const [personId, filename] of personMap) {
       const fileId = odFiles[filename.toLowerCase()];
       if (!fileId) { missing++; continue; }
       try {
@@ -6365,6 +6372,27 @@ async function odImportPhotosFromFolder(folderId, folderName) {
         }
       } catch(e) { missing++; }
     }
+
+    // Familien-Fotos
+    for (const [famId, filename] of famMap) {
+      const fileId = odFiles[filename.toLowerCase()];
+      if (!fileId) { missing++; continue; }
+      try {
+        const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
+          { headers: { Authorization: 'Bearer ' + token } });
+        if (!imgRes.ok) { missing++; continue; }
+        const blob = await imgRes.blob();
+        const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+        const b64  = await resizeImageToBase64(file, 800, 0.82);
+        await idbPut('photo_fam_' + famId, b64);
+        loaded++;
+        if (currentFamilyId === famId) {
+          const el = document.getElementById('det-fam-photo-' + famId);
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
+        }
+      } catch(e) { missing++; }
+    }
+
     showToast(`✓ ${loaded} Fotos geladen · ${missing} nicht gefunden`);
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
