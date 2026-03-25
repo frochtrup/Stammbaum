@@ -5020,8 +5020,14 @@ function showFamilyDetail(id, pushHistory = true) {
   html += `</div>`;
 
   // Media section: inline entries from media[] + reference entries from passthrough
+  // Also scan marr._extra for OBJE refs (Ancestris puts "2 OBJE @ref@" inside MARR block)
+  const _marrObjeRefs = (f.marr?._extra || []).filter(l => /^2 OBJE @/.test(l))
+                          .map(l => '1 ' + l.slice(2));
   const famMedia = (f.media || []).filter(m => m.file || m.title);
-  const famPtObje = (f._passthrough || []).filter(l => /^1 OBJE @/.test(l));
+  const famPtObje = [
+    ...(f._passthrough || []).filter(l => /^1 OBJE @/.test(l)),
+    ..._marrObjeRefs
+  ];
   if (famMedia.length || famPtObje.length) {
     const _objeMap = _buildObjeRefMap();
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
