@@ -1940,7 +1940,14 @@ function parseGEDCOM(text) {
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         else if (tag==='MARR') { cur.marr.seen = true; cur.marr.value = val; }
         else if (tag==='ENGA' || tag==='CHAN') { /* context-only */ }
-        else if (tag==='OBJE') { cur.media.push({ file:'', title:'', form:'', _extra:[] }); }
+        else if (tag==='OBJE') {
+          if (val && val.startsWith('@')) {
+            // Referenz auf externen OBJE-Record → verbatim passthrough
+            cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
+          } else {
+            cur.media.push({ file:'', title:'', form:'', _extra:[] });
+          }
+        }
         else {
           // Unknown FAM lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -2045,7 +2052,14 @@ function parseGEDCOM(text) {
         else if (tag==='REPO') { cur.repo = val; cur.repoCallNum = ''; }
         else if (tag==='TEXT') cur.text   = val;
         else if (tag==='CHAN') { /* context-only */ }
-        else if (tag==='OBJE') { cur.media.push({ file:'', title:'', form:'', _extra:[] }); }
+        else if (tag==='OBJE') {
+          if (val && val.startsWith('@')) {
+            // Referenz auf externen OBJE-Record → verbatim passthrough
+            cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
+          } else {
+            cur.media.push({ file:'', title:'', form:'', _extra:[] });
+          }
+        }
         else {
           // Unknown lv1 tag (incl. DATA, etc.) → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -2754,6 +2768,24 @@ function showPersonPhotoPreview(b64) {
 function clearPersonPhoto() {
   _pendingPhotoBase64 = null;
   showPersonPhotoPreview(null);
+}
+
+// Baut eine Map @Oxx@ → {file, title} aus db.extraRecords (lv=0 OBJE-Records)
+function _buildObjeRefMap() {
+  const map = {};
+  for (const rec of (db.extraRecords || [])) {
+    if (!rec._lines || !rec._lines.length) continue;
+    const hm = rec._lines[0].match(/^0 (@[^@]+@) OBJE$/);
+    if (!hm) continue;
+    const objId = hm[1];
+    let file = '', title = '';
+    for (let i = 1; i < rec._lines.length; i++) {
+      const lm = rec._lines[i].match(/^1 (FILE|TITL) (.+)$/);
+      if (lm) { if (lm[1] === 'FILE') file = lm[2]; else title = lm[2]; }
+    }
+    map[objId] = { file, title };
+  }
+  return map;
 }
 
 // ─── Shared media helpers (FAM + SOUR) ───
@@ -4675,14 +4707,23 @@ function showFamilyDetail(id, pushHistory = true) {
   }
   html += `</div>`;
 
-  // Media section
-  const famMedia = f.media || [];
-  if (famMedia.length) {
+  // Media section: inline entries from media[] + reference entries from passthrough
+  const famMedia = (f.media || []).filter(m => m.file || m.title);
+  const famPtObje = (f._passthrough || []).filter(l => /^1 OBJE @/.test(l));
+  if (famMedia.length || famPtObje.length) {
+    const _objeMap = _buildObjeRefMap();
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
     for (const m of famMedia) {
-      if (!m.file && !m.title) continue;
       html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
         <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+    }
+    for (const l of famPtObje) {
+      const ref = l.replace(/^1 OBJE\s+/, '').trim();
+      const obj = _objeMap[ref];
+      const label = obj ? (obj.title || obj.file || ref) : ref;
+      const sub   = obj && obj.title && obj.file ? obj.file : '';
+      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
+        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
     }
     html += `</div>`;
   }
@@ -4792,14 +4833,23 @@ function showSourceDetail(id, pushHistory = true) {
     html += `<div class="section fade-up"><div class="empty" style="padding:16px 0">Keine Referenzen gefunden</div></div>`;
   }
 
-  // Media section
-  const srcMedia = s.media || [];
-  if (srcMedia.length) {
+  // Media section: inline entries from media[] + reference entries from passthrough
+  const srcMedia = (s.media || []).filter(m => m.file || m.title);
+  const srcPtObje = (s._passthrough || []).filter(l => /^1 OBJE @/.test(l));
+  if (srcMedia.length || srcPtObje.length) {
+    const _objeMap = _buildObjeRefMap();
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
     for (const m of srcMedia) {
-      if (!m.file && !m.title) continue;
       html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
         <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+    }
+    for (const l of srcPtObje) {
+      const ref = l.replace(/^1 OBJE\s+/, '').trim();
+      const obj = _objeMap[ref];
+      const label = obj ? (obj.title || obj.file || ref) : ref;
+      const sub   = obj && obj.title && obj.file ? obj.file : '';
+      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
+        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
     }
     html += `</div>`;
   }
