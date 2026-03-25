@@ -221,11 +221,14 @@ function parseGEDCOM(text) {
       else if (lv === 2) {
         // Name parts
         if (lv1tag === 'NAME') {
-          if (tag === 'GIVN') { cur.given = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
-          if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
-          if (tag === 'NPFX') cur.prefix = val;
-          if (tag === 'NSFX') cur.suffix = val;
-          if (tag === 'SOUR' && val.startsWith('@')) { cur.nameSources.push(val); cur.sourceRefs.add(val); }
+          if      (tag === 'GIVN') { cur.given = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
+          else if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
+          else if (tag === 'NPFX') cur.prefix = val;
+          else if (tag === 'NSFX') cur.suffix = val;
+          else if (tag === 'SOUR' && val.startsWith('@')) { cur.nameSources.push(val); cur.sourceRefs.add(val); }
+          else if (tag === 'CONC') cur.nameRaw += val;
+          else if (tag === 'CONT') cur.nameRaw += '\n' + val;
+          else { cur._passthrough.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; }
         }
         // Vital events
         else if (lv1tag === 'BIRT') {
@@ -544,8 +547,11 @@ function parseGEDCOM(text) {
           else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
           else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
-        if (lv1tag==='TITL' && (tag==='CONC'||tag==='CONT')) cur.title += (tag==='CONT'?'\n':'') + val;
-        if (lv1tag==='TEXT' && (tag==='CONC'||tag==='CONT')) cur.text  += (tag==='CONT'?'\n':'') + val;
+        if ((tag==='CONC'||tag==='CONT') && lv1tag==='TITL') cur.title  += (tag==='CONT'?'\n':'') + val;
+        if ((tag==='CONC'||tag==='CONT') && lv1tag==='TEXT') cur.text   += (tag==='CONT'?'\n':'') + val;
+        if ((tag==='CONC'||tag==='CONT') && lv1tag==='AUTH') cur.author += (tag==='CONT'?'\n':'') + val;
+        if ((tag==='CONC'||tag==='CONT') && lv1tag==='PUBL') cur.publ   += (tag==='CONT'?'\n':'') + val;
+        if ((tag==='CONC'||tag==='CONT') && lv1tag==='ABBR') cur.abbr   += (tag==='CONT'?'\n':'') + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='REPO' && tag==='CALN') cur.repoCallNum = val;
       }
@@ -1084,10 +1090,10 @@ function writeGEDCOM() {
   for (const s of Object.values(db.sources)) {
     lines.push(`0 ${s.id} SOUR`);
     if (s.abbr)   lines.push(`1 ABBR ${s.abbr}`);
-    if (s.title)  lines.push(`1 TITL ${s.title}`);
-    if (s.author) lines.push(`1 AUTH ${s.author}`);
+    if (s.title)  pushCont(lines, 1, 'TITL', s.title);
+    if (s.author) pushCont(lines, 1, 'AUTH', s.author);
     if (s.date)   lines.push(`1 DATE ${s.date}`);
-    if (s.publ)   lines.push(`1 PUBL ${s.publ}`);
+    if (s.publ)   pushCont(lines, 1, 'PUBL', s.publ);
     if (s.repo) {
     lines.push(`1 REPO ${s.repo}`);
     if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
