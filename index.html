@@ -3188,11 +3188,323 @@ function openFileOrDir() {
 }
 
 function loadDemo() {
-  const demo = `0 HEAD\n1 SOUR Demo\n1 GEDC\n2 VERS 5.5.1\n1 CHAR UTF-8\n0 @I001@ INDI\n1 NAME Johann /Müller/\n1 SEX M\n1 BIRT\n2 DATE 12 MAR 1845\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 3 NOV 1912\n2 PLAC München, Bayern\n1 OCCU Bäckermeister\n1 FAMS @F001@\n0 @I002@ INDI\n1 NAME Maria /Huber/\n1 SEX F\n1 BIRT\n2 DATE 5 JUN 1850\n2 PLAC Augsburg, Bayern\n1 DEAT\n2 DATE 20 FEB 1930\n2 PLAC München, Bayern\n1 FAMS @F001@\n0 @I003@ INDI\n1 NAME Heinrich /Müller/\n1 SEX M\n1 BIRT\n2 DATE 8 JAN 1872\n2 PLAC München, Bayern\n1 DEAT\n2 DATE 15 APR 1940\n2 PLAC München, Bayern\n1 OCCU Kaufmann\n1 FAMC @F001@\n1 FAMS @F002@\n0 @I004@ INDI\n1 NAME Anna /Schmidt/\n1 SEX F\n1 BIRT\n2 DATE 22 SEP 1875\n2 PLAC Nürnberg, Bayern\n1 FAMS @F002@\n0 @I005@ INDI\n1 NAME Karl /Müller/\n1 SEX M\n1 BIRT\n2 DATE 14 JUL 1900\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @I006@ INDI\n1 NAME Elisabeth /Müller/\n1 SEX F\n1 BIRT\n2 DATE 3 MAR 1903\n2 PLAC München, Bayern\n1 FAMC @F002@\n0 @S001@ SOUR\n1 TITL Kirchenbuch München St. Peter\n1 AUTH Stadtarchiv München\n1 DATE 1845-1912\n0 @F001@ FAM\n1 HUSB @I001@\n1 WIFE @I002@\n1 CHIL @I003@\n1 MARR\n2 DATE 10 JUN 1870\n2 PLAC München, Bayern\n0 @F002@ FAM\n1 HUSB @I003@\n1 WIFE @I004@\n1 CHIL @I005@\n1 CHIL @I006@\n1 MARR\n2 DATE 5 APR 1898\n2 PLAC München, Bayern\n0 TRLR`;
+  const demo = [
+    '0 HEAD',
+    '1 SOUR Demo Stammbaum',
+    '1 GEDC',
+    '2 VERS 5.5.1',
+    '1 CHAR UTF-8',
+    '1 PLAC',
+    '2 FORM Ort, Kreis, Land',
+    // ── Archiv ──
+    '0 @R001@ REPO',
+    '1 NAME Stadtarchiv München',
+    '1 ADDR Winzererstraße 68\n2 CONT 80797 München',
+    '1 WWW https://www.muenchen.de/stadtarchiv',
+    // ── Quellen ──
+    '0 @S001@ SOUR',
+    '1 TITL Kirchenbuch München St. Peter 1845–1912',
+    '1 ABBR KB München St. Peter',
+    '1 AUTH Pfarramt St. Peter München',
+    '1 REPO @R001@',
+    '2 CALN KBM-1845-I',
+    '1 OBJE @O003@',
+    '0 @S002@ SOUR',
+    '1 TITL Heiratsurkunde Standesamt München Nr. 142/1870',
+    '1 ABBR StA München 1870',
+    '1 AUTH Standesamt München',
+    '1 REPO @R001@',
+    '2 CALN SAM-1870-H-142',
+    '0 @S003@ SOUR',
+    '1 TITL Verlustliste Deutsches Heer, Verdun 1916',
+    '1 ABBR Verlustliste 1916',
+    '1 AUTH Kriegsarchiv München',
+    // ── OBJE-Records (Mediendateien) ──
+    '0 @O001@ OBJE',
+    '1 FILE Fotos/Hochzeit_Johann_Maria_1870.jpg',
+    '1 TITL Hochzeitsfoto Johann & Maria Müller, Juni 1870',
+    '1 FORM JPEG',
+    '0 @O002@ OBJE',
+    '1 FILE Fotos/Portrait_Heinrich_Müller_1920.jpg',
+    '1 TITL Portrait Heinrich Müller, ca. 1920',
+    '1 FORM JPEG',
+    '0 @O003@ OBJE',
+    '1 FILE Scans/KB_Muenchen_1845_Taufe_Johann.jpg',
+    '1 TITL Kirchenbuch-Eintrag Taufe Johann Müller 12. März 1845',
+    '1 FORM JPEG',
+    '0 @O004@ OBJE',
+    '1 FILE Fotos/Hochzeit_Sophie_Ernst_1921.jpg',
+    '1 TITL Hochzeitsfoto Sophie Müller & Ernst Fischer, 1921',
+    '1 FORM JPEG',
+    // ── Personen ──
+    '0 @I001@ INDI',
+    '1 NAME Johann /Müller/',
+    '1 GIVN Johann',
+    '1 SURN Müller',
+    '1 SEX M',
+    '1 BIRT',
+    '2 DATE 12 MAR 1845',
+    '2 PLAC München, München, Bayern',
+    '2 SOUR @S001@',
+    '3 PAGE Taufbuch 1845, S. 12',
+    '3 QUAY 3',
+    '1 DEAT',
+    '2 DATE 3 NOV 1912',
+    '2 PLAC München, München, Bayern',
+    '1 BURI',
+    '2 DATE 6 NOV 1912',
+    '2 PLAC Ostfriedhof, München, Bayern',
+    '1 OCCU Bäckermeister',
+    '1 NOTE Johann Müller eröffnete 1873 eine eigene Bäckerei in der Sendlinger Straße. Nach dem Tod seiner ersten Frau heiratete er 1890 erneut.',
+    '1 FAMS @F001@',
+    '1 FAMS @F002@',
+    '1 OBJE @O002@',
+    '0 @I002@ INDI',
+    '1 NAME Maria /Huber/',
+    '1 GIVN Maria',
+    '1 SURN Huber',
+    '1 SEX F',
+    '1 BIRT',
+    '2 DATE 5 JUN 1850',
+    '2 PLAC Augsburg, Augsburg, Bayern',
+    '1 DEAT',
+    '2 DATE 14 AUG 1888',
+    '2 PLAC München, München, Bayern',
+    '1 NOTE Maria starb mit 38 Jahren an Typhus und hinterließ einen Sohn.',
+    '1 FAMS @F001@',
+    '0 @I003@ INDI',
+    '1 NAME Elisabeth /Bauer/',
+    '1 GIVN Elisabeth',
+    '1 SURN Bauer',
+    '1 SEX F',
+    '1 BIRT',
+    '2 DATE 22 JAN 1855',
+    '2 PLAC Landsberg, Landsberg, Bayern',
+    '1 DEAT',
+    '2 DATE 11 FEB 1935',
+    '2 PLAC München, München, Bayern',
+    '1 FAMS @F002@',
+    '0 @I004@ INDI',
+    '1 NAME Heinrich /Müller/',
+    '1 GIVN Heinrich',
+    '1 SURN Müller',
+    '1 SEX M',
+    '1 BIRT',
+    '2 DATE 8 JAN 1872',
+    '2 PLAC München, München, Bayern',
+    '2 SOUR @S001@',
+    '3 PAGE Taufbuch 1872, S. 47',
+    '3 QUAY 3',
+    '1 DEAT',
+    '2 DATE 15 APR 1940',
+    '2 PLAC München, München, Bayern',
+    '1 OCCU Kaufmann',
+    '1 RESI',
+    '2 DATE ABT 1905',
+    '2 PLAC Schwabing, München, Bayern',
+    '1 FAMC @F001@',
+    '1 FAMS @F003@',
+    '1 OBJE @O002@',
+    '0 @I005@ INDI',
+    '1 NAME Anna /Schmidt/',
+    '1 GIVN Anna',
+    '1 SURN Schmidt',
+    '1 SEX F',
+    '1 BIRT',
+    '2 DATE 22 SEP 1875',
+    '2 PLAC Nürnberg, Nürnberg, Bayern',
+    '1 DEAT',
+    '2 DATE 8 MAR 1960',
+    '2 PLAC München, München, Bayern',
+    '1 FAMS @F003@',
+    '0 @I006@ INDI',
+    '1 NAME Karl /Müller/',
+    '1 GIVN Karl',
+    '1 SURN Müller',
+    '1 SEX M',
+    '1 BIRT',
+    '2 DATE 14 JUL 1900',
+    '2 PLAC München, München, Bayern',
+    '1 DEAT',
+    '2 DATE 2 SEP 1944',
+    '2 PLAC Stalingrad, Wolgograd, Russland',
+    '1 OCCU Schreiner',
+    '1 FAMC @F003@',
+    '1 FAMS @F006@',
+    '0 @I007@ INDI',
+    '1 NAME Sophie /Müller/',
+    '1 GIVN Sophie',
+    '1 SURN Müller',
+    '1 SEX F',
+    '1 BIRT',
+    '2 DATE 3 MAR 1903',
+    '2 PLAC München, München, Bayern',
+    '1 DEAT',
+    '2 DATE 27 DEC 1985',
+    '2 PLAC München, München, Bayern',
+    '1 NOTE Sophie heiratete zweimal: Ludwig Wagner fiel 1916 bei Verdun, woraufhin sie 1921 Ernst Fischer heiratete.',
+    '1 FAMC @F003@',
+    '1 FAMS @F004@',
+    '1 FAMS @F005@',
+    '0 @I008@ INDI',
+    '1 NAME Max /Müller/',
+    '1 GIVN Max',
+    '1 SURN Müller',
+    '1 SEX M',
+    '1 BIRT',
+    '2 DATE 30 APR 1891',
+    '2 PLAC München, München, Bayern',
+    '1 DEAT',
+    '2 DATE 19 JUL 1950',
+    '2 PLAC München, München, Bayern',
+    '1 FAMC @F002@',
+    '0 @I009@ INDI',
+    '1 NAME Ludwig /Wagner/',
+    '1 GIVN Ludwig',
+    '1 SURN Wagner',
+    '1 SEX M',
+    '1 BIRT',
+    '2 DATE 7 MAY 1892',
+    '2 PLAC Würzburg, Würzburg, Bayern',
+    '1 DEAT',
+    '2 DATE 12 JUN 1916',
+    '2 PLAC Verdun, Meuse, Frankreich',
+    '2 SOUR @S003@',
+    '3 QUAY 2',
+    '1 NOTE Gefallen im Ersten Weltkrieg bei Verdun. Kriegsgräberstätte Verdun, Block 5, Grab 212.',
+    '1 FAMS @F004@',
+    '0 @I010@ INDI',
+    '1 NAME Ernst /Fischer/',
+    '1 GIVN Ernst',
+    '1 SURN Fischer',
+    '1 SEX M',
+    '1 BIRT',
+    '2 DATE 15 OCT 1890',
+    '2 PLAC München, München, Bayern',
+    '1 DEAT',
+    '2 DATE 3 JAN 1960',
+    '2 PLAC München, München, Bayern',
+    '1 OCCU Lehrer',
+    '1 FAMS @F005@',
+    '0 @I011@ INDI',
+    '1 NAME Rosa /Fischer/',
+    '1 GIVN Rosa',
+    '1 SURN Fischer',
+    '1 SEX F',
+    '1 BIRT',
+    '2 DATE 9 JAN 1925',
+    '2 PLAC München, München, Bayern',
+    '1 FAMC @F005@',
+    '0 @I012@ INDI',
+    '1 NAME Margarete /Schuster/',
+    '1 GIVN Margarete',
+    '1 SURN Schuster',
+    '1 SEX F',
+    '1 BIRT',
+    '2 DATE 18 JUN 1898',
+    '2 PLAC Regensburg, Regensburg, Bayern',
+    '1 FAMS @F006@',
+    // ── Familien ──
+    '0 @F001@ FAM',
+    '1 HUSB @I001@',
+    '1 WIFE @I002@',
+    '1 CHIL @I004@',
+    '1 MARR',
+    '2 DATE 10 JUN 1870',
+    '2 PLAC München, München, Bayern',
+    '2 SOUR @S002@',
+    '3 QUAY 3',
+    '1 OBJE @O001@',
+    '0 @F002@ FAM',
+    '1 HUSB @I001@',
+    '1 WIFE @I003@',
+    '1 CHIL @I008@',
+    '1 MARR',
+    '2 DATE 15 MAR 1890',
+    '2 PLAC München, München, Bayern',
+    '1 NOTE Zweite Ehe von Johann Müller, zwei Jahre nach dem Tod seiner ersten Frau Maria.',
+    '0 @F003@ FAM',
+    '1 HUSB @I004@',
+    '1 WIFE @I005@',
+    '1 CHIL @I006@',
+    '1 CHIL @I007@',
+    '1 MARR',
+    '2 DATE 5 APR 1898',
+    '2 PLAC München, München, Bayern',
+    '0 @F004@ FAM',
+    '1 HUSB @I009@',
+    '1 WIFE @I007@',
+    '1 MARR',
+    '2 DATE 22 AUG 1914',
+    '2 PLAC München, München, Bayern',
+    '1 NOTE Kriegsheirat kurz vor Ludwigs Einberufung. Er fiel 1916, die Ehe blieb kinderlos.',
+    '0 @F005@ FAM',
+    '1 HUSB @I010@',
+    '1 WIFE @I007@',
+    '1 CHIL @I011@',
+    '1 ENGA',
+    '2 DATE 25 DEC 1920',
+    '1 MARR',
+    '2 DATE 14 FEB 1921',
+    '2 PLAC München, München, Bayern',
+    '1 OBJE @O004@',
+    '0 @F006@ FAM',
+    '1 HUSB @I006@',
+    '1 WIFE @I012@',
+    '1 MARR',
+    '2 DATE 12 SEP 1923',
+    '2 PLAC München, München, Bayern',
+    '0 TRLR'
+  ].join('\n');
+
   db = parseGEDCOM(demo);
   db.extraPlaces = loadExtraPlaces();
   _originalGedText = demo;
-  showStartView(); showToast('✓ Demo geladen');
+  showStartView();
+  showToast('✓ Demo geladen');
+
+  // Platzhalter-Fotos per Canvas in IDB schreiben (sofort sichtbar)
+  _loadDemoPhotos();
+}
+
+function _loadDemoPhotos() {
+  function _mkPhoto(text, bg, fg = '#fff') {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 320; c.height = 400;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, 320, 400);
+      // leichtes Verlauf-Overlay
+      const g = ctx.createLinearGradient(0, 0, 0, 400);
+      g.addColorStop(0, 'rgba(255,255,255,0.15)');
+      g.addColorStop(1, 'rgba(0,0,0,0.25)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 320, 400);
+      // Initiale/Symbol
+      ctx.fillStyle = fg;
+      ctx.font = 'bold 140px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 160, 185);
+      // kleiner Untertitel-Balken
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(0, 330, 320, 70);
+      return c.toDataURL('image/jpeg', 0.82);
+    } catch(e) { return null; }
+  }
+  const photos = [
+    ['photo_@I001@',     'J',  '#5b3a20'],  // Johann — braun
+    ['photo_@I004@',     'H',  '#1e3a5f'],  // Heinrich — dunkelblau
+    ['photo_@I007@',     'S',  '#5b2a4a'],  // Sophie — violett
+    ['photo_@I009@',     'L',  '#2e4a2e'],  // Ludwig — dunkelgrün (Uniform)
+    ['photo_fam_@F001@', '♥',  '#7a3020'],  // Familie F001 — Hochzeitsrot
+    ['photo_fam_@F005@', '♥',  '#3a5070'],  // Familie F005 — Stahlblau
+  ];
+  for (const [key, letter, color] of photos) {
+    const b64 = _mkPhoto(letter, color);
+    if (b64) idbPut(key, b64).catch(() => {});
+  }
 }
 
 // Auto-load last file from IDB (primary) or localStorage (fallback/migration)
