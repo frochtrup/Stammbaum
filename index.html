@@ -1058,6 +1058,24 @@ body {
           <div class="src-picker-list" id="ff-src-list"></div>
         </div>
       </div>
+      <div class="form-group">
+        <label class="form-label">Foto / Medien</label>
+        <div id="ff-photo-preview"></div>
+        <input type="file" id="ff-photo-input" accept="image/*" style="display:none"
+          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingFamPhotoB64=b64;_showMediaPhotoPreview('ff',b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+            onclick="document.getElementById('ff-photo-input').click()">Foto wählen</button>
+          <button type="button" id="ff-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
+            onclick="_pendingFamPhotoB64=null;_showMediaPhotoPreview('ff',null)">Foto entfernen</button>
+        </div>
+        <div id="ff-media-list" style="margin-top:8px"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input class="form-input" id="ff-media-add-file" placeholder="Dateiname / Pfad (z.B. foto.jpg)" style="flex:1">
+          <button type="button" class="btn" style="padding:8px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);white-space:nowrap"
+            onclick="_addMediaEntry('ff')">＋</button>
+        </div>
+      </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalFamily')">Abbrechen</button>
         <button class="btn btn-save" onclick="saveFamily()">Speichern</button>
@@ -1121,6 +1139,24 @@ body {
       <div class="form-group">
         <label class="form-label">Notiz / Beschreibung</label>
         <textarea class="form-input" id="sf-text" rows="3" placeholder="Weitere Details…" style="resize:vertical;box-sizing:border-box"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Foto / Medien</label>
+        <div id="sf-photo-preview"></div>
+        <input type="file" id="sf-photo-input" accept="image/*" style="display:none"
+          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingSrcPhotoB64=b64;_showMediaPhotoPreview('sf',b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+            onclick="document.getElementById('sf-photo-input').click()">Foto wählen</button>
+          <button type="button" id="sf-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
+            onclick="_pendingSrcPhotoB64=null;_showMediaPhotoPreview('sf',null)">Foto entfernen</button>
+        </div>
+        <div id="sf-media-list" style="margin-top:8px"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input class="form-input" id="sf-media-add-file" placeholder="Dateiname / Pfad (z.B. dokument.pdf)" style="flex:1">
+          <button type="button" class="btn" style="padding:8px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);white-space:nowrap"
+            onclick="_addMediaEntry('sf')">＋</button>
+        </div>
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalSource')">Abbrechen</button>
@@ -1516,6 +1552,8 @@ let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonFor
 let currentRepoId    = null;
 let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
 let _pendingPhotoBase64 = undefined; // undefined=keine Änderung, null=löschen, string=neues Foto (Sprint P3-2)
+let _pendingFamPhotoB64 = undefined; // analog für Familie
+let _pendingSrcPhotoB64 = undefined; // analog für Quelle
 let _detailActive = false;           // true wenn v-detail echten Inhalt zeigt (P3-7)
 const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto (kein OBJE im Original-GEDCOM)
 const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde (OBJE aus Passthrough entfernen)
@@ -1613,7 +1651,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -1902,6 +1940,7 @@ function parseGEDCOM(text) {
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         else if (tag==='MARR') { cur.marr.seen = true; cur.marr.value = val; }
         else if (tag==='ENGA' || tag==='CHAN') { /* context-only */ }
+        else if (tag==='OBJE') { cur.media.push({ file:'', title:'', form:'', _extra:[] }); }
         else {
           // Unknown FAM lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -1920,6 +1959,11 @@ function parseGEDCOM(text) {
           if (tag==='DATE') cur.engag.date = val;
           if (tag==='PLAC') cur.engag.place = val;
         }
+        if (lv1tag==='OBJE' && cur.media.length) {
+          if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
+          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
+        }
         if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT')) cur.noteText += (tag==='CONT'?'\n':'') + val;
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
@@ -1934,6 +1978,11 @@ function parseGEDCOM(text) {
       }
       else if (lv === 3) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        if (lv1tag==='OBJE' && lv2tag==='FILE' && cur.media.length) {
+          if (tag==='FORM')      cur.media[cur.media.length-1].form  = val;
+          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          else { cur.media[cur.media.length-1]._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
+        }
         if (lv2tag==='DATE' && lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
         if (lv1tag==='MARR' && lv2tag==='SOUR' && lastSourVal) {
           if      (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
@@ -1996,19 +2045,30 @@ function parseGEDCOM(text) {
         else if (tag==='REPO') { cur.repo = val; cur.repoCallNum = ''; }
         else if (tag==='TEXT') cur.text   = val;
         else if (tag==='CHAN') { /* context-only */ }
+        else if (tag==='OBJE') { cur.media.push({ file:'', title:'', form:'', _extra:[] }); }
         else {
-          // Unknown lv1 tag (incl. OBJE, DATA, etc.) → verbatim passthrough
+          // Unknown lv1 tag (incl. DATA, etc.) → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
           _ptDepth = 1;
         }
       }
       else if (lv === 2) {
+        if (lv1tag==='OBJE' && cur.media.length) {
+          if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
+          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
+        }
         if (lv1tag==='TITL' && (tag==='CONC'||tag==='CONT')) cur.title += (tag==='CONT'?'\n':'') + val;
         if (lv1tag==='TEXT' && (tag==='CONC'||tag==='CONT')) cur.text  += (tag==='CONT'?'\n':'') + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='REPO' && tag==='CALN') cur.repoCallNum = val;
       }
       else if (lv === 3) {
+        if (lv1tag==='OBJE' && lv2tag==='FILE' && cur.media.length) {
+          if (tag==='FORM')      cur.media[cur.media.length-1].form  = val;
+          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          else { cur.media[cur.media.length-1]._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
+        }
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
       }
     }
@@ -2513,6 +2573,20 @@ function writeGEDCOM() {
     }
     for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
     if (f.noteText) pushCont(lines, 1, 'NOTE', f.noteText);
+    for (const m of (f.media || [])) {
+      if (!m.file && !m.title) continue;
+      lines.push(`1 OBJE`);
+      if (m.file) {
+        lines.push(`2 FILE ${m.file}`);
+        const ext = (m.file.split('.').pop() || '').toUpperCase();
+        const form = m.form || ({ JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext);
+        if (form) lines.push(`3 FORM ${form}`);
+        if (m.title) lines.push(`3 TITL ${m.title}`);
+      } else if (m.title) {
+        lines.push(`2 TITL ${m.title}`);
+      }
+      for (const l of (m._extra || [])) lines.push(l);
+    }
     if (f.lastChanged) {
       lines.push(`1 CHAN`);
       lines.push(`2 DATE ${f.lastChanged}`);
@@ -2534,14 +2608,18 @@ function writeGEDCOM() {
   }
     if (s.text)   { pushCont(lines, 1, 'TEXT', s.text); }
     for (const m of (s.media || [])) {
+      if (!m.file && !m.title) continue;
       lines.push(`1 OBJE`);
       if (m.file) {
         lines.push(`2 FILE ${m.file}`);
         const ext = (m.file.split('.').pop() || '').toUpperCase();
-        const form = { JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext;
+        const form = m.form || ({ JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext);
         if (form) lines.push(`3 FORM ${form}`);
+        if (m.title) lines.push(`3 TITL ${m.title}`);
+      } else if (m.title) {
+        lines.push(`2 TITL ${m.title}`);
       }
-      if (m.title) lines.push(`3 TITL ${m.title}`);
+      for (const l of (m._extra || [])) lines.push(l);
     }
     if (s.lastChanged) {
       lines.push(`1 CHAN`);
@@ -2676,6 +2754,94 @@ function showPersonPhotoPreview(b64) {
 function clearPersonPhoto() {
   _pendingPhotoBase64 = null;
   showPersonPhotoPreview(null);
+}
+
+// ─── Shared media helpers (FAM + SOUR) ───
+function _showMediaPhotoPreview(prefix, b64) {
+  const prev = document.getElementById(prefix + '-photo-preview');
+  const del  = document.getElementById(prefix + '-photo-del');
+  if (!prev) return;
+  if (b64) {
+    prev.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = b64; img.alt = 'Foto';
+    img.style.cssText = 'max-width:100%;max-height:200px;border-radius:8px;display:block;margin-bottom:6px';
+    prev.appendChild(img);
+    if (del) del.style.display = '';
+  } else {
+    prev.innerHTML = '';
+    if (del) del.style.display = 'none';
+  }
+}
+
+// Render editable media list into #<prefix>-media-list
+function _renderMediaList(prefix, mediaArr) {
+  const container = document.getElementById(prefix + '-media-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!mediaArr || !mediaArr.length) return;
+  for (let i = 0; i < mediaArr.length; i++) {
+    const m = mediaArr[i];
+    if (!m.file && !m.title) continue;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)';
+    row.dataset.idx = i;
+    const label = document.createElement('span');
+    label.style.cssText = 'flex:1;font-size:0.82rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+    label.textContent = (m.title || m.file) + (m.title && m.file ? ' (' + m.file + ')' : '');
+    label.title = (m.title ? m.title + '\n' : '') + (m.file || '');
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'padding:2px 8px;font-size:0.9rem;flex-shrink:0';
+    del.onclick = () => { row.remove(); };
+    row.appendChild(label);
+    row.appendChild(del);
+    container.appendChild(row);
+  }
+}
+
+// Read media list from rendered DOM (keeping unmodified _extra/_form)
+function _readMediaList(prefix, existingMedia) {
+  const container = document.getElementById(prefix + '-media-list');
+  if (!container) return existingMedia;
+  const result = [];
+  for (const row of container.children) {
+    if (row.dataset.idx !== undefined) {
+      const idx = parseInt(row.dataset.idx, 10);
+      if (!isNaN(idx) && existingMedia[idx]) result.push(existingMedia[idx]);
+    } else if (row.dataset.new) {
+      result.push({ file: row.dataset.file || '', title: '', form: '', _extra: [] });
+    }
+  }
+  return result;
+}
+
+function _addMediaEntry(prefix) {
+  const fileInput = document.getElementById(prefix + '-media-add-file');
+  const file = (fileInput?.value || '').trim();
+  if (!file) { showToast('Bitte Dateinamen eingeben'); return; }
+  const container = document.getElementById(prefix + '-media-list');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)';
+  row.dataset.new = '1';
+  row.dataset.file = file;
+  const label = document.createElement('span');
+  label.style.cssText = 'flex:1;font-size:0.82rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+  label.textContent = file;
+  label.title = file;
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.textContent = '×';
+  del.className = 'btn btn-danger';
+  del.style.cssText = 'padding:2px 8px;font-size:0.9rem;flex-shrink:0';
+  del.onclick = () => { row.remove(); };
+  row.appendChild(label);
+  row.appendChild(del);
+  container.appendChild(row);
+  if (fileInput) fileInput.value = '';
 }
 
 // ─────────────────────────────────────
@@ -4473,6 +4639,7 @@ function showFamilyDetail(id, pushHistory = true) {
   if (_famTreeTarget) document.getElementById('treeBtn').onclick = () => showTree(_famTreeTarget);
 
   let html = `<div class="detail-hero fade-up">
+    <div id="det-fam-photo-${id}" style="display:none"></div>
     <div class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
     <div class="detail-name">${esc(title)}</div>
   </div>`;
@@ -4508,8 +4675,34 @@ function showFamilyDetail(id, pushHistory = true) {
   }
   html += `</div>`;
 
+  // Media section
+  const famMedia = f.media || [];
+  if (famMedia.length) {
+    html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
+    for (const m of famMedia) {
+      if (!m.file && !m.title) continue;
+      html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
+        <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+    }
+    html += `</div>`;
+  }
+
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
+
+  // Foto async aus IDB nachladen
+  idbGet('photo_fam_' + id).then(b64 => {
+    if (!b64) return;
+    const el = document.getElementById('det-fam-photo-' + id);
+    if (el) {
+      el.style.display = '';
+      el.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = b64; img.alt = 'Foto';
+      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0';
+      el.appendChild(img);
+    }
+  }).catch(() => {});
 }
 
 function showSourceDetail(id, pushHistory = true) {
@@ -4531,6 +4724,7 @@ function showSourceDetail(id, pushHistory = true) {
   const refFamilies = Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(id));
 
   let html = `<div class="detail-hero fade-up">
+    <div id="det-src-photo-${id}" style="display:none"></div>
     <div class="detail-avatar" style="font-size:1.8rem">📖</div>
     <div class="detail-name">${esc(s.abbr || s.title || id)}</div>
     <div class="detail-id">${refPersons.length + refFamilies.length} Referenzen${s.lastChanged ? ' · geändert ' + s.lastChanged : ''}</div>
@@ -4598,8 +4792,34 @@ function showSourceDetail(id, pushHistory = true) {
     html += `<div class="section fade-up"><div class="empty" style="padding:16px 0">Keine Referenzen gefunden</div></div>`;
   }
 
+  // Media section
+  const srcMedia = s.media || [];
+  if (srcMedia.length) {
+    html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
+    for (const m of srcMedia) {
+      if (!m.file && !m.title) continue;
+      html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
+        <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+    }
+    html += `</div>`;
+  }
+
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
+
+  // Foto async aus IDB nachladen
+  idbGet('photo_src_' + id).then(b64 => {
+    if (!b64) return;
+    const el = document.getElementById('det-src-photo-' + id);
+    if (el) {
+      el.style.display = '';
+      el.innerHTML = '';
+      const img = document.createElement('img');
+      img.src = b64; img.alt = 'Foto';
+      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0';
+      el.appendChild(img);
+    }
+  }).catch(() => {});
 }
 
 function factRow(label, value, rawSuffix, srcIds) {
@@ -5147,6 +5367,13 @@ function showFamilyForm(id, ctx) {
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
 
+  // Media / Foto
+  _pendingFamPhotoB64 = undefined;
+  _showMediaPhotoPreview('ff', null);
+  _renderMediaList('ff', f?.media || []);
+  document.getElementById('ff-media-add-file').value = '';
+  if (id) idbGet('photo_fam_' + id).then(b64 => _showMediaPhotoPreview('ff', b64 || null)).catch(() => {});
+
   // Vorausfüllung aus Beziehungs-Picker-Kontext
   if (ctx) {
     if (ctx.husb !== undefined) document.getElementById('ff-husb').value = ctx.husb || '';
@@ -5182,10 +5409,18 @@ function saveFamily() {
     marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,  sources: [...(srcWidgetState['ff']?.ids || [])] },
     engag: { ...(existingFam.engag||{}), date: edate,  place: eplace },
     noteText: existingFam.noteText || '',
+    media: _readMediaList('ff', existingFam.media || []),
     sourceRefs: srcWidgetState['ff']?.ids || new Set(),
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date())
   };
+
+  // Foto in IDB schreiben/löschen
+  if (_pendingFamPhotoB64 !== undefined) {
+    if (_pendingFamPhotoB64 === null) idbDel('photo_fam_' + id).catch(() => {});
+    else idbPut('photo_fam_' + id, _pendingFamPhotoB64).catch(() => {});
+    _pendingFamPhotoB64 = undefined;
+  }
 
   // Update FAMS/FAMC references
   // famc entries are objects {famId, frel, mrel}, fams entries are strings
@@ -5243,6 +5478,14 @@ function showSourceForm(id) {
   document.getElementById('sf-text').value  = s?.text         || '';
   sfRepoUpdateDisplay();
   document.getElementById('deleteSourceBtn').style.display = s ? 'block' : 'none';
+
+  // Media / Foto
+  _pendingSrcPhotoB64 = undefined;
+  _showMediaPhotoPreview('sf', null);
+  _renderMediaList('sf', s?.media || []);
+  document.getElementById('sf-media-add-file').value = '';
+  if (id) idbGet('photo_src_' + id).then(b64 => _showMediaPhotoPreview('sf', b64 || null)).catch(() => {});
+
   openModal('modalSource');
 }
 
@@ -5254,6 +5497,7 @@ function saveSource() {
   if (!abbr && !title) { showToast('⚠ Kurzname oder Titel erforderlich'); return; }
   const _now = new Date();
   db.sources[id] = {
+    ...existing,
     id,
     abbr,
     title,
@@ -5263,9 +5507,17 @@ function saveSource() {
     repo:        document.getElementById('sf-repo').value.trim(),
     repoCallNum: document.getElementById('sf-caln').value.trim(),
     text:        document.getElementById('sf-text').value.trim(),
+    media:       _readMediaList('sf', existing.media || []),
     lastChanged:     gedcomDate(_now),
     lastChangedTime: gedcomTime(_now)
   };
+
+  // Foto in IDB schreiben/löschen
+  if (_pendingSrcPhotoB64 !== undefined) {
+    if (_pendingSrcPhotoB64 === null) idbDel('photo_src_' + id).catch(() => {});
+    else idbPut('photo_src_' + id, _pendingSrcPhotoB64).catch(() => {});
+    _pendingSrcPhotoB64 = undefined;
+  }
   closeModal('modalSource');
   markChanged(); updateStats();
   renderTab();
@@ -5564,6 +5816,8 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
   if (id === 'modalPerson') { _pendingRelation = null; _pendingPhotoBase64 = undefined; }
+  if (id === 'modalFamily') _pendingFamPhotoB64 = undefined;
+  if (id === 'modalSource') _pendingSrcPhotoB64 = undefined;
   if (id === 'modalRepo')   _pendingRepoLink  = null;
 }
 // Close on backdrop click — closeModal() aufrufen damit Pending-State zurückgesetzt wird
