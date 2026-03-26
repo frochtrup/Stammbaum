@@ -35,10 +35,10 @@ let _treeHistoryPos = -1;
 const _activeSpouseMap = {};         // personId → aktiver Ehepartner-Index im Stapel
 
 // Liefert den Original-GEDCOM-Text (erste geladene Version).
-// Bevorzugt localStorage-Backup (persistiert über Reload); _originalGedText als RAM-Fallback
-// wenn localStorage beim Laden voll war.
+// Bevorzugt _originalGedText (RAM, immer aktuell für aktive Session);
+// localStorage-Backup als Fallback nach Reload (wenn RAM verloren, aber Storage erhalten).
 function _getOriginalText() {
-  return localStorage.getItem('stammbaum_ged_backup') || _originalGedText || null;
+  return _originalGedText || localStorage.getItem('stammbaum_ged_backup') || null;
 }
 
 function nextId(prefix) {
