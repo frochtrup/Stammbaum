@@ -1215,15 +1215,23 @@ function showDetail(id, pushHistory = true) {
     </div>`;
   }
 
-  // Media
-  if (p.media && p.media.length) {
-    html += `<div class="section fade-up"><div class="section-title">Medien (${p.media.length})</div>`;
-    for (const m of p.media) {
-      const fname = m.file ? m.file.split(/[\\/]/).pop() : '–';
-      html += `<div class="fact-row">
-        <span class="fact-lbl">📷</span>
-        <span class="fact-val" style="font-size:0.82rem">${esc(m.title || fname)}</span>
-      </div>`;
+  // Media section: inline entries from media[] + reference entries from passthrough
+  const indiMedia = (p.media || []).filter(m => m.file || m.title);
+  const indiPtObje = (p._passthrough || []).filter(l => /^1 OBJE @/.test(l));
+  if (indiMedia.length || indiPtObje.length) {
+    const _objeMap = _buildObjeRefMap();
+    html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
+    for (const m of indiMedia) {
+      html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
+        <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+    }
+    for (const l of indiPtObje) {
+      const ref = l.replace(/^1 OBJE\s+/, '').trim();
+      const obj = _objeMap[ref];
+      const label = obj ? (obj.title || obj.file || ref) : ref;
+      const sub   = obj && obj.title && obj.file ? obj.file : '';
+      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
+        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
     }
     html += `</div>`;
   }
