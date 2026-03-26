@@ -1368,7 +1368,7 @@ function showFamilyDetail(id, pushHistory = true) {
   // Also scan marr._extra for OBJE refs (Ancestris puts "2 OBJE @ref@" inside MARR block)
   const _marrObjeRefs = (f.marr?._extra || []).filter(l => /^2 OBJE @/.test(l))
                           .map(l => '1 ' + l.slice(2));
-  const famMedia = (f.media || []).filter(m => m.file || m.title);
+  const famMedia = f.media || [];
   const famPtObje = [
     ...(f._passthrough || []).filter(l => /^1 OBJE @/.test(l)),
     ..._marrObjeRefs
@@ -1377,8 +1377,9 @@ function showFamilyDetail(id, pushHistory = true) {
     const _objeMap = _buildObjeRefMap();
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
     for (const m of famMedia) {
+      const display = m.title || m.file || m.form || '–';
       html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+        <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
     }
     for (const l of famPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
