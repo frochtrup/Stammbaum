@@ -123,7 +123,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteText:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -409,8 +409,8 @@ function parseGEDCOM(text) {
         else if (tag==='WIFE') cur.wife = val;
         else if (tag==='CHIL') { cur.children.push(val); cur._lastChil = val; }
         else if (tag==='NOTE') {
-          if (!val.startsWith('@')) cur.noteText = val;
-          else cur.noteRefs.push(val);
+          if (!val.startsWith('@')) { cur.noteText = val; cur.noteTextInline = val; _curNoteIsInline = true; }
+          else { cur.noteRefs.push(val); _curNoteIsInline = false; }
         }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         else if (tag==='MARR') { cur.marr.seen = true; cur.marr.value = val; }
@@ -1069,7 +1069,7 @@ function writeGEDCOM() {
       if (f.engag.sources) for (const s of f.engag.sources) lines.push(`2 SOUR ${s}`);
     }
     for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
-    if (f.noteText) pushCont(lines, 1, 'NOTE', f.noteText);
+    if (f.noteTextInline) pushCont(lines, 1, 'NOTE', f.noteTextInline);
     for (const m of (f.media || [])) {
       if (!m.file && !m.title) continue;
       lines.push(`1 OBJE`);

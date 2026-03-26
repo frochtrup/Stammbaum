@@ -501,11 +501,14 @@ function showPersonForm(id) {
   document.getElementById('pf-given').value = p?.given || '';
   document.getElementById('pf-surname').value = p?.surname || '';
   document.getElementById('pf-sex').value = p?.sex || 'U';
-  document.getElementById('pf-occu').value  = p?.events?.find(e => e.type === 'OCCU')?.value || '';
-  document.getElementById('pf-note').value  = p?.noteTextInline ?? p?.noteText ?? '';
-  document.getElementById('pf-resn').value  = p?.resn  || '';
-  document.getElementById('pf-email').value = p?.email || '';
-  document.getElementById('pf-www').value   = p?.www   || '';
+  document.getElementById('pf-suffix').value = p?.suffix || '';
+  document.getElementById('pf-occu').value   = p?.events?.find(e => e.type === 'OCCU')?.value || '';
+  document.getElementById('pf-titl').value   = p?.titl  || '';
+  document.getElementById('pf-reli').value   = p?.reli  || '';
+  document.getElementById('pf-note').value   = p?.noteTextInline ?? p?.noteText ?? '';
+  document.getElementById('pf-resn').value   = p?.resn  || '';
+  document.getElementById('pf-email').value  = p?.email || '';
+  document.getElementById('pf-www').value    = p?.www   || '';
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
   initSrcWidget('pf', p?.sourceRefs || []);
   _pendingPhotoBase64 = undefined;
@@ -524,11 +527,14 @@ function savePerson() {
   const given = document.getElementById('pf-given').value.trim();
   const surname = document.getElementById('pf-surname').value.trim();
   const sex = document.getElementById('pf-sex').value;
-  const occu  = document.getElementById('pf-occu').value.trim();
-  const note  = document.getElementById('pf-note').value.trim();
-  const resn  = document.getElementById('pf-resn').value.trim();
-  const email = document.getElementById('pf-email').value.trim();
-  const www   = document.getElementById('pf-www').value.trim();
+  const suffix = document.getElementById('pf-suffix').value.trim();
+  const occu   = document.getElementById('pf-occu').value.trim();
+  const titl   = document.getElementById('pf-titl').value.trim();
+  const reli   = document.getElementById('pf-reli').value.trim();
+  const note   = document.getElementById('pf-note').value.trim();
+  const resn   = document.getElementById('pf-resn').value.trim();
+  const email  = document.getElementById('pf-email').value.trim();
+  const www    = document.getElementById('pf-www').value.trim();
 
   if (!given && !surname) { showToast('⚠ Bitte Namen eingeben'); return; }
 
@@ -560,8 +566,9 @@ function savePerson() {
     famc: existing.famc || [],
     fams: existing.fams || [],
     media: existing.media || [],
-    titl:  existing.titl  || '',
-    reli:  existing.reli  || '',
+    suffix,
+    titl,
+    reli,
     resn,
     email,
     www,
@@ -666,6 +673,7 @@ function showFamilyForm(id, ctx) {
   const childIds = f?.children || [];
   document.getElementById('ff-children').value = childIds.join(', ');
   _refreshChildDisplay();
+  document.getElementById('ff-note').value = f?.noteTextInline ?? f?.noteText ?? '';
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
 
@@ -704,13 +712,21 @@ function saveFamily() {
   const childrenRaw = document.getElementById('ff-children').value;
   const children = childrenRaw.split(',').map(s => s.trim()).filter(Boolean);
 
+  const note = document.getElementById('ff-note').value.trim();
   const existingFam = db.families[id] || {};
   db.families[id] = {
     ...existingFam,
     id, husb, wife, children,
     marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,  sources: [...(srcWidgetState['ff']?.ids || [])] },
     engag: { ...(existingFam.engag||{}), date: edate,  place: eplace },
-    noteText: existingFam.noteText || '',
+    noteTextInline: note,
+    noteText: (() => {
+      let t = note;
+      for (const ref of (existingFam.noteRefs || [])) {
+        if (db.notes && db.notes[ref]) t += (t ? '\n' : '') + db.notes[ref].text;
+      }
+      return t;
+    })(),
     media: _readMediaList('ff', existingFam.media || []),
     sourceRefs: srcWidgetState['ff']?.ids || new Set(),
     lastChanged: gedcomDate(new Date()),

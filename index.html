@@ -921,8 +921,20 @@ body {
         </select>
       </div>
       <div class="form-group">
+        <label class="form-label">Namenszusatz (NSFX)</label>
+        <input class="form-input" id="pf-suffix" placeholder="jr., sen., III.">
+      </div>
+      <div class="form-group">
         <label class="form-label">Beruf</label>
         <input class="form-input" id="pf-occu" placeholder="Bäckermeister">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Titel (TITL)</label>
+        <input class="form-input" id="pf-titl" placeholder="Dr., Prof., …">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Religion (RELI)</label>
+        <input class="form-input" id="pf-reli" placeholder="kath., evang., …">
       </div>
       <div class="form-group">
         <label class="form-label">Notiz</label>
@@ -1049,6 +1061,10 @@ body {
           Keine Kinder
         </div>
         <input type="hidden" id="ff-children">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz</label>
+        <textarea class="form-input" id="ff-note" rows="3" placeholder="Weitere Informationen…" style="resize:vertical;box-sizing:border-box"></textarea>
       </div>
       <div class="src-widget" id="ff-src-widget">
         <label class="form-label">Quellen (Heirat)</label>

@@ -1150,7 +1150,7 @@ function showDetail(id, pushHistory = true) {
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
 
-  const fullName = [p.prefix, p.name].filter(Boolean).join(' ');
+  const fullName = [p.prefix, p.name, p.suffix].filter(Boolean).join(' ');
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-photo-${id}" style="display:none"></div>
@@ -1317,7 +1317,7 @@ function showFamilyDetail(id, pushHistory = true) {
     <div class="detail-name">${esc(title)}</div>
   </div>`;
 
-  if (f.marr.date || f.marr.place) {
+  if (f.marr.date || f.marr.place || f.marr.addr) {
     html += `<div class="section fade-up"><div class="section-title">Heirat</div>`;
     const marrSrc = (f.marr.sources?.length) ? f.marr.sources : (f.sourceRefs?.length ? [...f.sourceRefs] : null);
     if (f.marr.date) html += factRow('Datum', f.marr.date, '', f.marr.place ? null : marrSrc);
@@ -1326,6 +1326,7 @@ function showFamilyDetail(id, pushHistory = true) {
         ? `<a href="https://maps.apple.com/?ll=${f.marr.lati},${f.marr.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
       html += factRow('Ort', f.marr.place, geoBtn, marrSrc);
     }
+    if (f.marr.addr) html += factRow('Adresse', f.marr.addr);
     html += `</div>`;
   }
   if (f.engag?.date || f.engag?.place) {
@@ -1347,6 +1348,12 @@ function showFamilyDetail(id, pushHistory = true) {
     if (child) html += relRow(child, 'Kind', id);
   }
   html += `</div>`;
+
+  if (f.noteText) {
+    html += `<div class="section fade-up"><div class="section-title">Notizen</div>
+      <div style="font-size:0.88rem;color:var(--text-dim);line-height:1.6;white-space:pre-wrap">${esc(f.noteText)}</div>
+    </div>`;
+  }
 
   // Media section: inline entries from media[] + reference entries from passthrough
   // Also scan marr._extra for OBJE refs (Ancestris puts "2 OBJE @ref@" inside MARR block)
