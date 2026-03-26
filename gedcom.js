@@ -263,7 +263,7 @@ function parseGEDCOM(text) {
           else if (tag==='PLAC')  ev.place = val;
           else if (tag==='TYPE')  ev.eventType = val;
           else if (tag==='NOTE')  ev.note += (ev.note ? '\n' : '') + val;
-          else if (tag==='ADDR')  ev.addr = (ev.addr ? ev.addr + '\n' : '') + val;
+          else if (tag==='ADDR') { ev.addr = (ev.addr ? ev.addr + '\n' : '') + val; if (!ev.addrExtra) ev.addrExtra=[]; _ptDepth=2; _ptTarget=ev.addrExtra; }
           else if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
           else if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
           else { ev._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = ev._extra; }
@@ -352,10 +352,10 @@ function parseGEDCOM(text) {
           const fref = cur.famc[cur.famc.length-1];
           if (lv2tag === '_FREL') {
             if (!fref.frelSour) fref.frelSour = val;
-            else { if (!fref.frelSourExtra) fref.frelSourExtra = []; fref.frelSourExtra.push('3 SOUR ' + val); }
+            else { if (!fref.frelSourExtra) fref.frelSourExtra = []; fref.frelSourExtra.push('3 SOUR ' + val); _ptDepth=3; _ptTarget=fref.frelSourExtra; }
           } else if (lv2tag === '_MREL') {
             if (!fref.mrelSour) fref.mrelSour = val;
-            else { if (!fref.mrelSourExtra) fref.mrelSourExtra = []; fref.mrelSourExtra.push('3 SOUR ' + val); }
+            else { if (!fref.mrelSourExtra) fref.mrelSourExtra = []; fref.mrelSourExtra.push('3 SOUR ' + val); _ptDepth=3; _ptTarget=fref.mrelSourExtra; }
           }
         }
         // Collect source references at level 3
@@ -420,7 +420,7 @@ function parseGEDCOM(text) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:'', _extra:[] });
+            cur.media.push({ file:'', title:'', form:'', titleIsLv2:false, _extra:[] });
           }
         }
         else {
@@ -443,7 +443,7 @@ function parseGEDCOM(text) {
         }
         if (lv1tag==='OBJE' && cur.media.length) {
           if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
-          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; cur.media[cur.media.length-1].titleIsLv2 = true; }
           else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
         if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT')) cur.noteText += (tag==='CONT'?'\n':'') + val;
@@ -461,8 +461,8 @@ function parseGEDCOM(text) {
       else if (lv === 3) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         if (lv1tag==='OBJE' && lv2tag==='FILE' && cur.media.length) {
-          if (tag==='FORM')      cur.media[cur.media.length-1].form  = val;
-          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          if (tag==='FORM')      { cur.media[cur.media.length-1].form  = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
+          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
           else { cur.media[cur.media.length-1]._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
         if (lv2tag==='DATE' && lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
@@ -477,11 +477,11 @@ function parseGEDCOM(text) {
           if (tag==='SOUR') {
             if (lv2tag==='_FREL') {
               if (!cref.frelSour) cref.frelSour = val;
-              else { if (!cref.frelSourExtra) cref.frelSourExtra=[]; cref.frelSourExtra.push('3 SOUR '+val); }
+              else { if (!cref.frelSourExtra) cref.frelSourExtra=[]; cref.frelSourExtra.push('3 SOUR '+val); _ptDepth=3; _ptTarget=cref.frelSourExtra; }
             }
             if (lv2tag==='_MREL') {
               if (!cref.mrelSour) cref.mrelSour = val;
-              else { if (!cref.mrelSourExtra) cref.mrelSourExtra=[]; cref.mrelSourExtra.push('3 SOUR '+val); }
+              else { if (!cref.mrelSourExtra) cref.mrelSourExtra=[]; cref.mrelSourExtra.push('3 SOUR '+val); _ptDepth=3; _ptTarget=cref.mrelSourExtra; }
             }
           }
         }
@@ -532,7 +532,7 @@ function parseGEDCOM(text) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:'', _extra:[] });
+            cur.media.push({ file:'', title:'', form:'', titleIsLv2:false, _extra:[] });
           }
         }
         else {
@@ -544,7 +544,7 @@ function parseGEDCOM(text) {
       else if (lv === 2) {
         if (lv1tag==='OBJE' && cur.media.length) {
           if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
-          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; cur.media[cur.media.length-1].titleIsLv2 = true; }
           else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='TITL') cur.title  += (tag==='CONT'?'\n':'') + val;
@@ -557,8 +557,8 @@ function parseGEDCOM(text) {
       }
       else if (lv === 3) {
         if (lv1tag==='OBJE' && lv2tag==='FILE' && cur.media.length) {
-          if (tag==='FORM')      cur.media[cur.media.length-1].form  = val;
-          else if (tag==='TITL') cur.media[cur.media.length-1].title = val;
+          if (tag==='FORM')      { cur.media[cur.media.length-1].form  = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
+          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
           else { cur.media[cur.media.length-1]._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
@@ -575,7 +575,7 @@ function parseGEDCOM(text) {
     if (curType === 'REPO') {
       if (lv === 1) {
         if (tag==='NAME')       cur.name  = val;
-        else if (tag==='ADDR')  cur.addr  = val;
+        else if (tag==='ADDR') { cur.addr = val; if (!cur.addrExtra) cur.addrExtra=[]; _ptDepth=1; _ptTarget=cur.addrExtra; }
         else if (tag==='PHON')  cur.phon  = val;
         else if (tag==='WWW')   cur.www   = val;
         else if (tag==='EMAIL') cur.email = val;
@@ -878,7 +878,7 @@ function writeGEDCOM() {
   }
 
   function eventBlock(tag, obj, lv) {
-    if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length))) return;
+    if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length) && !(obj._extra && obj._extra.length))) return;
     lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
     if (obj.date)  lines.push(`${lv+1} DATE ${normGedDate(obj.date)}`);
     if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
@@ -910,12 +910,17 @@ function writeGEDCOM() {
       if (p.nameSourceQUAY?.[s])  lines.push(`3 QUAY ${p.nameSourceQUAY[s]}`);
       if (p.nameSourceExtra?.[s]) for (const l of p.nameSourceExtra[s]) lines.push(l);
     }
+    // NAME-context passthrough (2-level items at start of _passthrough, e.g. 2 NICK)
+    const _pt = p._passthrough || [];
+    let _ptNameEnd = 0;
+    while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
+    for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
     if (p.titl)    lines.push(`1 TITL ${p.titl}`);
     if (p.reli)    lines.push(`1 RELI ${p.reli}`);
     if (p.resn)    lines.push(`1 RESN ${p.resn}`);
     if (p.email)   lines.push(`1 EMAIL ${p.email}`);
     if (p.www)     lines.push(`1 WWW ${p.www}`);
-    if (p.sex && p.sex !== 'U') lines.push(`1 SEX ${p.sex}`);
+    if (p.sex) lines.push(`1 SEX ${p.sex}`);
     for (const s of (p.topSources || [])) {
       lines.push(`1 SOUR ${s}`);
       if (p.topSourcePages?.[s]) lines.push(`2 PAGE ${p.topSourcePages[s]}`);
@@ -937,7 +942,7 @@ function writeGEDCOM() {
         geoLines(ev, 3);
       }
       if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
-      if (ev.addr && ev.type === 'RESI') pushCont(lines, 2, 'ADDR', ev.addr);
+      if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
       if (ev.sources) for (const s of ev.sources) {
         lines.push(`2 SOUR ${s}`);
         if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
@@ -955,7 +960,7 @@ function writeGEDCOM() {
       lines.push(`1 FAMC ${famId}`);
       if (typeof fref === 'object') {
         if (fref.frelSeen) {
-          lines.push(`2 _FREL ${fref.frel}`);
+          lines.push(`2 _FREL${fref.frel ? ' ' + fref.frel : ''}`);
           if (fref.frelSour) {
             lines.push(`3 SOUR ${fref.frelSour}`);
             if (fref.frelPage) lines.push(`4 PAGE ${fref.frelPage}`);
@@ -964,7 +969,7 @@ function writeGEDCOM() {
           }
         }
         if (fref.mrelSeen) {
-          lines.push(`2 _MREL ${fref.mrel}`);
+          lines.push(`2 _MREL${fref.mrel ? ' ' + fref.mrel : ''}`);
           if (fref.mrelSour) {
             lines.push(`3 SOUR ${fref.mrelSour}`);
             if (fref.mrelPage) lines.push(`4 PAGE ${fref.mrelPage}`);
@@ -1004,17 +1009,18 @@ function writeGEDCOM() {
       if (p.lastChangedTime) lines.push(`3 TIME ${p.lastChangedTime}`);
     }
     // Passthrough: gelöschte Fotos → OBJE-Block entfernen
-    const _pt = p._passthrough || [];
+    // (_pt and _ptNameEnd already declared above; write remaining items starting at _ptNameEnd)
     if (_deletedPhotoIds.has(p.id)) {
       let skip = false;
-      for (const l of _pt) {
+      for (let i = _ptNameEnd; i < _pt.length; i++) {
+        const l = _pt[i];
         if (/^1 OBJE/.test(l)) { skip = true; continue; }
         if (skip && /^[2-9] /.test(l)) continue;
         skip = false;
         lines.push(l);
       }
     } else {
-      for (const l of _pt) lines.push(l);
+      for (let i = _ptNameEnd; i < _pt.length; i++) lines.push(_pt[i]);
     }
   }
 
@@ -1035,7 +1041,7 @@ function writeGEDCOM() {
           }
         }
         if (cref.frelSeen) {
-          lines.push(`2 _FREL ${cref.frel}`);
+          lines.push(`2 _FREL${cref.frel ? ' ' + cref.frel : ''}`);
           if (cref.frelSour) {
             lines.push(`3 SOUR ${cref.frelSour}`);
             if (cref.frelPage) lines.push(`4 PAGE ${cref.frelPage}`);
@@ -1044,7 +1050,7 @@ function writeGEDCOM() {
           }
         }
         if (cref.mrelSeen) {
-          lines.push(`2 _MREL ${cref.mrel}`);
+          lines.push(`2 _MREL${cref.mrel ? ' ' + cref.mrel : ''}`);
           if (cref.mrelSour) {
             lines.push(`3 SOUR ${cref.mrelSour}`);
             if (cref.mrelPage) lines.push(`4 PAGE ${cref.mrelPage}`);
@@ -1056,7 +1062,6 @@ function writeGEDCOM() {
     }
     eventBlock('MARR', f.marr, 1);
     if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
-    for (const l of (f.marr._extra || [])) lines.push(l);
     if (f.engag && (f.engag.date || f.engag.place)) {
       lines.push(`1 ENGA`);
       if (f.engag.date)  lines.push(`2 DATE ${normGedDate(f.engag.date)}`);
@@ -1068,13 +1073,14 @@ function writeGEDCOM() {
     for (const m of (f.media || [])) {
       if (!m.file && !m.title) continue;
       lines.push(`1 OBJE`);
+      if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
       if (m.file) {
         lines.push(`2 FILE ${m.file}`);
         const ext = (m.file.split('.').pop() || '').toUpperCase();
         const form = m.form || ({ JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext);
         if (form) lines.push(`3 FORM ${form}`);
-        if (m.title) lines.push(`3 TITL ${m.title}`);
-      } else if (m.title) {
+        if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
+      } else if (m.title && !m.titleIsLv2) {
         lines.push(`2 TITL ${m.title}`);
       }
       for (const l of (m._extra || [])) lines.push(l);
@@ -1102,13 +1108,14 @@ function writeGEDCOM() {
     for (const m of (s.media || [])) {
       if (!m.file && !m.title) continue;
       lines.push(`1 OBJE`);
+      if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
       if (m.file) {
         lines.push(`2 FILE ${m.file}`);
         const ext = (m.file.split('.').pop() || '').toUpperCase();
         const form = m.form || ({ JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext);
         if (form) lines.push(`3 FORM ${form}`);
-        if (m.title) lines.push(`3 TITL ${m.title}`);
-      } else if (m.title) {
+        if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
+      } else if (m.title && !m.titleIsLv2) {
         lines.push(`2 TITL ${m.title}`);
       }
       for (const l of (m._extra || [])) lines.push(l);
@@ -1124,10 +1131,11 @@ function writeGEDCOM() {
   for (const r of Object.values(db.repositories)) {
     lines.push(`0 ${r.id} REPO`);
     if (r.name) lines.push(`1 NAME ${r.name}`);
-    if (r.addr) {
-      const al = r.addr.split('\n');
-      lines.push(`1 ADDR ${al[0]}`);
+    if (r.addr || (r.addrExtra && r.addrExtra.length)) {
+      const al = r.addr ? r.addr.split('\n') : [];
+      lines.push(`1 ADDR${al[0] ? ' ' + al[0] : ''}`);
       for (let i = 1; i < al.length; i++) lines.push(`2 CONT ${al[i]}`);
+      if (r.addrExtra && r.addrExtra.length) for (const l of r.addrExtra) lines.push(l);
     }
     if (r.phon)  lines.push(`1 PHON ${r.phon}`);
     if (r.www)   lines.push(`1 WWW ${r.www}`);
