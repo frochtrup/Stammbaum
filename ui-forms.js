@@ -624,26 +624,11 @@ function deletePerson() {
 // ─────────────────────────────────────
 //  FORMS: FAMILY
 // ─────────────────────────────────────
-function _refreshChildDisplay() {
-  const ids = (document.getElementById('ff-children').value || '')
-    .split(',').map(s => s.trim()).filter(Boolean);
-  const dispEl = document.getElementById('ff-children-display');
-  if (!dispEl) return;
-  if (ids.length) {
-    dispEl.style.fontStyle = 'normal';
-    dispEl.style.color = 'var(--text)';
-    dispEl.innerHTML = ids
-      .map(cid => `<div class="rel-name" style="padding:2px 0">${esc(db.individuals[cid]?.name || cid)}</div>`)
-      .join('');
-  } else {
-    dispEl.style.fontStyle = 'italic';
-    dispEl.style.color = 'var(--text-muted)';
-    dispEl.textContent = 'Keine Kinder';
-  }
-}
+let _pendingAddChild = null;
 
 function showFamilyForm(id, ctx) {
   closeModal('modalAdd');
+  _pendingAddChild = null;
   const f = id ? db.families[id] : null;
   document.getElementById('familyFormTitle').textContent = f ? 'Familie bearbeiten' : 'Neue Familie';
   document.getElementById('ff-id').value = id || '';
@@ -664,9 +649,6 @@ function showFamilyForm(id, ctx) {
   fillDateFields('ff-edate-qual', 'ff-edate', null, f?.engag?.date || '');
   initPlaceMode('ff-eplace');
   document.getElementById('ff-eplace').value = f?.engag?.place || '';
-  const childIds = f?.children || [];
-  document.getElementById('ff-children').value = childIds.join(', ');
-  _refreshChildDisplay();
   document.getElementById('ff-note').value = f?.noteTextInline ?? f?.noteText ?? '';
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
@@ -683,11 +665,7 @@ function showFamilyForm(id, ctx) {
     if (ctx.husb !== undefined) document.getElementById('ff-husb').value = ctx.husb || '';
     if (ctx.wife !== undefined) document.getElementById('ff-wife').value = ctx.wife || '';
     if (ctx.addChild) {
-      const cur = (document.getElementById('ff-children').value || '')
-        .split(',').map(s => s.trim()).filter(Boolean);
-      if (!cur.includes(ctx.addChild)) cur.push(ctx.addChild);
-      document.getElementById('ff-children').value = cur.join(', ');
-      _refreshChildDisplay();
+      _pendingAddChild = ctx.addChild;
     }
   }
 
@@ -703,11 +681,11 @@ function saveFamily() {
   const mplace = getPlaceFromForm('ff-mplace');
   const edate  = buildGedDateFromFields('ff-edate-qual', 'ff-edate', null);
   const eplace = getPlaceFromForm('ff-eplace');
-  const childrenRaw = document.getElementById('ff-children').value;
-  const children = childrenRaw.split(',').map(s => s.trim()).filter(Boolean);
-
   const note = document.getElementById('ff-note').value.trim();
   const existingFam = db.families[id] || {};
+  const children = [...(existingFam.children || [])];
+  if (_pendingAddChild && !children.includes(_pendingAddChild)) children.push(_pendingAddChild);
+  _pendingAddChild = null;
   db.families[id] = {
     ...existingFam,
     id, husb, wife, children,
