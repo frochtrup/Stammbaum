@@ -1,4 +1,14 @@
 // ─────────────────────────────────────
+//  LIGHTBOX
+// ─────────────────────────────────────
+function showLightbox(src) {
+  const lb = document.getElementById('modalLightbox');
+  if (!lb) return;
+  document.getElementById('lightboxImg').src = src;
+  lb.style.display = 'flex';
+}
+
+// ─────────────────────────────────────
 //  NAVIGATION
 // ─────────────────────────────────────
 function showView(id) {
@@ -1296,7 +1306,7 @@ function showDetail(id, pushHistory = true) {
   idbGet('photo_' + id).then(b64 => {
     if (!b64) return;
     const el = document.getElementById('det-photo-' + id);
-    if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
+    if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
   }).catch(() => {});
 }
 
@@ -1416,7 +1426,8 @@ function showFamilyDetail(id, pushHistory = true) {
       el.innerHTML = '';
       const img = document.createElement('img');
       img.src = b64; img.alt = 'Foto';
-      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0';
+      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
+      img.onclick = () => showLightbox(img.src);
       el.appendChild(img);
       const av = document.getElementById('det-fam-avatar-' + id);
       if (av) av.style.display = 'none';
