@@ -982,13 +982,24 @@ function showTree(personId, addToHistory = true) {
   svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
   svg.innerHTML = '';
 
-  function svgLine(x1, y1, x2, y2, stroke = 'var(--border)', dash = null) {
+  function svgLine(x1, y1, x2, y2, stroke = 'var(--border)', dash = null, onClick = null) {
+    if (onClick) {
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      hit.setAttribute('x1', x1); hit.setAttribute('y1', y1);
+      hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
+      hit.setAttribute('stroke', 'transparent');
+      hit.setAttribute('stroke-width', '14');
+      hit.style.cursor = 'pointer';
+      hit.addEventListener('click', onClick);
+      svg.appendChild(hit);
+    }
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     el.setAttribute('x1', x1); el.setAttribute('y1', y1);
     el.setAttribute('x2', x2); el.setAttribute('y2', y2);
     el.setAttribute('stroke', stroke);
     el.setAttribute('stroke-width', '1.5');
     if (dash) el.setAttribute('stroke-dasharray', dash);
+    if (onClick) el.style.cursor = 'pointer';
     svg.appendChild(el);
   }
 
@@ -1045,20 +1056,18 @@ function showTree(personId, addToHistory = true) {
   // ── Eltern ──
   anc1.forEach((id, i) => mkCard(id, parX(i), ry(-1), false));
 
-  // ── Eltern → Kinder: Bezier-Fächer von einem Verzweigungspunkt ──
-  if (nSibs > 0) {
-    // Verzweigungspunkt zwischen Geschwister-Spalte und Zentrumsperson
-    const juncX = sibColX + W + SIB_GAP / 2;
-    const juncY = ry(-1) + H + Math.round(VGAP * 0.38);
+  // ── Eltern → Kinder: symmetrischer Verzweigungspunkt bei personCX ──
+  if (anc1[0] || anc1[1] || nSibs > 0) {
+    const juncX = personCX;
+    const juncY = ry(-1) + H + Math.round(VGAP * 0.4);
     if (anc1[0]) line(parCX(0), ry(-1) + H, juncX, juncY);
     if (anc1[1]) line(parCX(1), ry(-1) + H, juncX, juncY);
-    // Verzweigungspunkt → Zentrumsperson
     line(juncX, juncY, personCX, ry(0));
-    // Verzweigungspunkt → jedes Geschwister (Mitte der gestapelten Karte)
-    siblings.forEach((_, i) => line(juncX, juncY, sibColCX, sibMidY(i)));
-  } else {
-    if (anc1[0]) line(parCX(0), ry(-1) + H, personCX - CW * 0.18, ry(0));
-    if (anc1[1]) line(parCX(1), ry(-1) + H, personCX + CW * 0.18, ry(0));
+    if (nSibs > 0) {
+      // T-Strich: horizontal zum Geschwisterstapel, dann vertikal durch den Stapel
+      svgLine(juncX, juncY, sibColCX, juncY);
+      svgLine(sibColCX, juncY, sibColCX, sibMidY(nSibs - 1));
+    }
   }
 
   // ── Geschwister: Kartenstapel links ──
@@ -1095,7 +1104,7 @@ function showTree(personId, addToHistory = true) {
       : () => { _activeSpouseMap[personId] = origIdx; showTree(personId, false); };
     mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick);
     if (isActive) {
-      svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3');
+      svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3', () => showFamilyDetail(fam.famId));
     }
   });
 
