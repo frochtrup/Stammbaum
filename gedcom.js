@@ -210,6 +210,13 @@ function parseGEDCOM(text) {
           cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[] });
           evIdx = cur.events.length - 1;
         }
+        else if (tag === 'OBJE') {
+          if (val && val.startsWith('@')) {
+            cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
+          } else {
+            cur.media.push({ file:'', title:'', form:'', titleIsLv2:false, _extra:[] });
+          }
+        }
         else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
         else {
           // Unknown lv1 tag → verbatim passthrough
@@ -277,7 +284,9 @@ function parseGEDCOM(text) {
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
-          if (tag==='FILE') cur.media[cur.media.length-1].file = val;
+          if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
+          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; cur.media[cur.media.length-1].titleIsLv2 = true; }
+          else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
         // Last changed
         if (lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
@@ -301,6 +310,8 @@ function parseGEDCOM(text) {
           cur.media[cur.media.length-1].title = val;
         if (lv1tag === 'OBJE' && tag === 'TITL' && cur.media.length)
           cur.media[cur.media.length-1].title = val;
+        if (lv1tag === 'OBJE' && lv2tag === 'FILE' && tag === 'FORM' && cur.media.length)
+          cur.media[cur.media.length-1].form = val;
         // Event note continuation
         if (evIdx >= 0 && lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
           cur.events[evIdx].note += (tag==='CONT'?'\n':'') + val;
