@@ -1025,12 +1025,12 @@ function showTree(personId, addToHistory = true) {
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
-    const multiMarr = isCenter && q.fams && q.fams.length > 1;
+    const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =
       `<div class="tree-name">${esc(nm)}</div>` +
       (yr ? `<div class="tree-yr">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
-      (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${q.fams.length}</div>` : '') +
+      (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
     div.onclick = onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id));
     wrap.appendChild(div);
@@ -1216,14 +1216,15 @@ function showDetail(id, pushHistory = true) {
   }
 
   // Media section: inline entries from media[] + reference entries from passthrough
-  const indiMedia = (p.media || []).filter(m => m.file || m.title);
+  const indiMedia = p.media || [];
   const indiPtObje = (p._passthrough || []).filter(l => /^1 OBJE @/.test(l));
   if (indiMedia.length || indiPtObje.length) {
     const _objeMap = _buildObjeRefMap();
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
     for (const m of indiMedia) {
+      const display = m.title || m.file || m.form || '–';
       html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+        <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
     }
     for (const l of indiPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
