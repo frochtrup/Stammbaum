@@ -990,6 +990,7 @@ function showTree(personId, addToHistory = true) {
       hit.setAttribute('stroke', 'transparent');
       hit.setAttribute('stroke-width', '14');
       hit.style.cursor = 'pointer';
+      hit.style.pointerEvents = 'all';
       hit.addEventListener('click', onClick);
       svg.appendChild(hit);
     }
