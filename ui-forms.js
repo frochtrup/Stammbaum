@@ -1646,7 +1646,7 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     const odFiles = {};
     for (const f of (data.value || [])) odFiles[f.name.toLowerCase()] = f.id;
 
-    let loaded = 0, missing = 0;
+    let loaded = 0, missing = 0, bmpFailed = 0;
 
     // Personen-Fotos
     for (const [personId, filename] of personMap) {
@@ -1665,7 +1665,7 @@ async function odImportPhotosFromFolder(folderId, folderName) {
           const el = document.getElementById('det-photo-' + personId);
           if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
         }
-      } catch(e) { missing++; }
+      } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
     }
 
     // Familien-Fotos
@@ -1685,10 +1685,13 @@ async function odImportPhotosFromFolder(folderId, folderName) {
           const el = document.getElementById('det-fam-photo-' + famId);
           if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
         }
-      } catch(e) { missing++; }
+      } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
     }
 
-    showToast(`✓ ${loaded} Fotos geladen · ${missing} nicht gefunden`);
+    let msg = `✓ ${loaded} Fotos geladen`;
+    if (missing)    msg += ` · ${missing} nicht gefunden`;
+    if (bmpFailed)  msg += ` · ${bmpFailed} BMP nicht unterstützt`;
+    showToast(msg);
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
