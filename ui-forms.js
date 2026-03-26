@@ -1483,8 +1483,22 @@ function _extractObjeFilemap() {
   const lines     = text.split(/\r?\n/);
   const objeFiles = {};   // objeId → filepath (lv=0 OBJE-Records)
   const personObje = {};  // personId → {type,ref?,file?}
-  const famObje    = {};  // famId    → {type,ref?,file?}
-  let recId = null, recType = null, inInlineObje = false;
+  const famObje    = {};  // famId    → [{file,prim}]  (all candidates, pick _PRIM Y or first)
+  let recId = null, recType = null;
+  let inInlineObje = false;   // INDI: 1 OBJE inline
+  let inMarr = false;          // FAM:  inside 1 MARR block
+  let inMarrObje = false;      // FAM:  inside 2 OBJE under MARR
+  let marrObjeFile = '';       // current 2 OBJE FILE
+  let marrObjePrim = false;    // current 2 OBJE _PRIM Y
+
+  const _commitMarrObje = () => {
+    if (inMarrObje && marrObjeFile && recId) {
+      if (!famObje[recId]) famObje[recId] = [];
+      famObje[recId].push({ file: marrObjeFile, prim: marrObjePrim });
+    }
+    inMarrObje = false; marrObjeFile = ''; marrObjePrim = false;
+  };
+
   for (const raw of lines) {
     const m = raw.match(/^(\d+)\s+(?:(@[^@]+@)\s+)?(\S+)(?:\s+(.*))?$/);
     if (!m) continue;
@@ -1492,32 +1506,73 @@ function _extractObjeFilemap() {
     const xref  = m[2] || null;
     const tag   = m[3];
     const val   = (m[4] || '').trim();
-    if (level === 0) { recId = xref; recType = tag; inInlineObje = false; }
-    if ((recType === 'INDI' || recType === 'FAM') && level === 1 && tag === 'OBJE') {
+
+    if (level === 0) {
+      _commitMarrObje();
+      recId = xref; recType = tag;
+      inInlineObje = false; inMarr = false; inMarrObje = false;
+    }
+
+    // INDI: 1 OBJE (inline or ref)
+    if (recType === 'INDI' && level === 1 && tag === 'OBJE') {
       if (val.startsWith('@') && val.endsWith('@')) {
-        const store = recType === 'INDI' ? personObje : famObje;
-        if (!store[recId]) store[recId] = { type:'ref', ref: val };
+        if (!personObje[recId]) personObje[recId] = { type:'ref', ref: val };
       } else { inInlineObje = true; }
     }
-    if ((recType === 'INDI' || recType === 'FAM') && level === 2 && tag === 'FILE' && inInlineObje) {
-      const store = recType === 'INDI' ? personObje : famObje;
-      if (!store[recId]) store[recId] = { type:'inline', file: val };
+    if (recType === 'INDI' && level === 2 && tag === 'FILE' && inInlineObje) {
+      if (!personObje[recId]) personObje[recId] = { type:'inline', file: val };
       inInlineObje = false;
     }
-    if ((recType === 'INDI' || recType === 'FAM') && level < 2 && tag !== 'OBJE') inInlineObje = false;
+    if (recType === 'INDI' && level < 2 && tag !== 'OBJE') inInlineObje = false;
+
+    // FAM: track 1 MARR context
+    if (recType === 'FAM' && level === 1) {
+      _commitMarrObje();
+      inMarr = (tag === 'MARR');
+    }
+    // FAM: 1 OBJE at top level (ref or inline)
+    if (recType === 'FAM' && level === 1 && tag === 'OBJE') {
+      if (val.startsWith('@') && val.endsWith('@')) {
+        if (!famObje[recId]) famObje[recId] = [];
+        const fp = objeFiles[val]; // might be set later; store ref for post-processing
+        famObje[recId].push({ file: fp || '', ref: val, prim: false });
+      }
+    }
+    // FAM: 2 OBJE inside MARR
+    if (recType === 'FAM' && inMarr && level === 2 && tag === 'OBJE') {
+      _commitMarrObje();
+      inMarrObje = true;
+    }
+    if (recType === 'FAM' && inMarrObje && level === 3) {
+      if (tag === 'FILE')  marrObjeFile = val;
+      if (tag === '_PRIM' && val.toUpperCase() === 'Y') marrObjePrim = true;
+    }
+    if (recType === 'FAM' && inMarrObje && level === 2 && tag !== 'OBJE') _commitMarrObje();
+
+    // lv=0 OBJE record FILE
     if (recType === 'OBJE' && recId && level === 1 && tag === 'FILE') {
       objeFiles[recId] = val;
     }
   }
-  const _toMap = (store) => {
-    const m = new Map();
+  _commitMarrObje();
+
+  const _toMap = (store, isFam) => {
+    const map = new Map();
     for (const [id, info] of Object.entries(store)) {
-      const fp = info.type === 'inline' ? info.file : objeFiles[info.ref];
-      if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) m.set(id, bn); }
+      if (isFam) {
+        // Pick _PRIM Y entry, fallback to first
+        const prim = info.find(e => e.prim) || info[0];
+        if (!prim) continue;
+        const fp = prim.file || (prim.ref ? objeFiles[prim.ref] : '');
+        if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) map.set(id, bn); }
+      } else {
+        const fp = info.type === 'inline' ? info.file : objeFiles[info.ref];
+        if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) map.set(id, bn); }
+      }
     }
-    return m;
+    return map;
   };
-  return { persons: _toMap(personObje), families: _toMap(famObje) };
+  return { persons: _toMap(personObje, false), families: _toMap(famObje, true) };
 }
 
 // Ordner-Browser State
