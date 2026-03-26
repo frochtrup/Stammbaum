@@ -916,7 +916,6 @@ function writeGEDCOM() {
     while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
     for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
     if (p.titl)    lines.push(`1 TITL ${p.titl}`);
-    if (p.reli)    lines.push(`1 RELI ${p.reli}`);
     if (p.resn)    lines.push(`1 RESN ${p.resn}`);
     if (p.email)   lines.push(`1 EMAIL ${p.email}`);
     if (p.www)     lines.push(`1 WWW ${p.www}`);
