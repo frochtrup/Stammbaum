@@ -1364,19 +1364,29 @@ function showFamilyDetail(id, pushHistory = true) {
     </div>`;
   }
 
-  // Media section: inline entries from media[] + reference entries from passthrough
-  // Also scan marr._extra for OBJE refs (Ancestris puts "2 OBJE @ref@" inside MARR block)
-  const _marrObjeRefs = (f.marr?._extra || []).filter(l => /^2 OBJE @/.test(l))
-                          .map(l => '1 ' + l.slice(2));
+  // Media section: inline FAM media[], inline 2 OBJE blocks in marr._extra, ref OBJE in _passthrough
   const famMedia = f.media || [];
-  const famPtObje = [
-    ...(f._passthrough || []).filter(l => /^1 OBJE @/.test(l)),
-    ..._marrObjeRefs
-  ];
-  if (famMedia.length || famPtObje.length) {
-    const _objeMap = _buildObjeRefMap();
+  const _objeMap = _buildObjeRefMap();
+  // Parse inline + ref OBJE blocks from marr._extra (Ancestris: 2 OBJE with 3 FILE / 3 TITL)
+  const marrObjeEntries = [];
+  let _moe = null;
+  for (const l of (f.marr?._extra || [])) {
+    if (l === '2 OBJE') {
+      _moe = { file: '', title: '', form: '' }; marrObjeEntries.push(_moe);
+    } else if (/^2 OBJE @/.test(l)) {
+      const ref = l.slice(7).trim();
+      const obj = _objeMap[ref];
+      marrObjeEntries.push({ file: obj?.file || '', title: obj?.title || ref, form: '' });
+      _moe = null;
+    } else if (_moe && l.startsWith('3 FILE ')) { _moe.file  = l.slice(7); }
+    else if (_moe && l.startsWith('3 TITL ')) { _moe.title = l.slice(7); }
+    else if (_moe && l.startsWith('3 FORM ')) { _moe.form  = l.slice(7); }
+    else if (l.startsWith('2 '))              { _moe = null; }
+  }
+  const famPtObje = (f._passthrough || []).filter(l => /^1 OBJE @/.test(l));
+  if (famMedia.length || marrObjeEntries.length || famPtObje.length) {
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
-    for (const m of famMedia) {
+    for (const m of [...famMedia, ...marrObjeEntries]) {
       const display = m.title || m.file || m.form || '–';
       html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
         <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
