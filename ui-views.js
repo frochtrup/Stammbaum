@@ -982,25 +982,13 @@ function showTree(personId, addToHistory = true) {
   svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
   svg.innerHTML = '';
 
-  function svgLine(x1, y1, x2, y2, stroke = 'var(--border)', dash = null, onClick = null) {
-    if (onClick) {
-      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      hit.setAttribute('x1', x1); hit.setAttribute('y1', y1);
-      hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
-      hit.setAttribute('stroke', 'transparent');
-      hit.setAttribute('stroke-width', '14');
-      hit.style.cursor = 'pointer';
-      hit.style.pointerEvents = 'all';
-      hit.addEventListener('click', onClick);
-      svg.appendChild(hit);
-    }
+  function svgLine(x1, y1, x2, y2, stroke = 'var(--border)', dash = null) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     el.setAttribute('x1', x1); el.setAttribute('y1', y1);
     el.setAttribute('x2', x2); el.setAttribute('y2', y2);
     el.setAttribute('stroke', stroke);
     el.setAttribute('stroke-width', '1.5');
     if (dash) el.setAttribute('stroke-dasharray', dash);
-    if (onClick) el.style.cursor = 'pointer';
     svg.appendChild(el);
   }
 
@@ -1105,7 +1093,16 @@ function showTree(personId, addToHistory = true) {
       : () => { _activeSpouseMap[personId] = origIdx; showTree(personId, false); };
     mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick);
     if (isActive) {
-      svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3', () => showFamilyDetail(fam.famId));
+      svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3');
+      // Klickbares div-Element auf der Ehe-Linie (SVG hat pointer-events:none)
+      const lineY = ry(0) + CH / 2;
+      const midX  = (personX + CW + spColX) / 2;
+      const btn   = document.createElement('div');
+      btn.style.cssText = `position:absolute;left:${Math.round(personX + CW)}px;top:${Math.round(lineY - 12)}px;width:${Math.round(spColX - personX - CW)}px;height:24px;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center`;
+      btn.title = 'Familie öffnen';
+      btn.innerHTML = `<span style="background:var(--surface2);border:1px solid var(--gold-dim);border-radius:8px;padding:1px 5px;font-size:0.7rem;color:var(--gold-dim);pointer-events:none">⚭</span>`;
+      btn.addEventListener('click', () => showFamilyDetail(fam.famId));
+      wrap.appendChild(btn);
     }
   });
 
