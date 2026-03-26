@@ -1322,8 +1322,10 @@ function showFamilyDetail(id, pushHistory = true) {
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-fam-photo-${id}" style="display:none"></div>
-    <div class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
-    <div class="detail-name">${esc(title)}</div>
+    <div id="det-fam-avatar-${id}" class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
+    <div class="detail-hero-text">
+      <div class="detail-name">${esc(title)}</div>
+    </div>
   </div>`;
 
   if (f.marr.date || f.marr.place || f.marr.addr) {
@@ -1416,6 +1418,8 @@ function showFamilyDetail(id, pushHistory = true) {
       img.src = b64; img.alt = 'Foto';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0';
       el.appendChild(img);
+      const av = document.getElementById('det-fam-avatar-' + id);
+      if (av) av.style.display = 'none';
     }
   }).catch(() => {});
 }
