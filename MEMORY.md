@@ -7,7 +7,9 @@
 - **Pfad:** `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
 
 ## Dateien
-- `index.html` — gesamte App (v2.0/Phase3, Sprints 1–13 + P3-1..P3-3 + Roundtrip-Fix, ~5000 Zeilen)
+- `index.html` — gesamte App (v3.0, Sprints 1–13 + P3-1..P3-8, ~6050 Zeilen)
+- `sw.js` — Service Worker (Cache-First, offline)
+- `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
 - `ARCHITECTURE.md` — ADRs (inkl. ADR-012 Verbatim Passthrough), Datenmodell, JS-Sektionen
@@ -18,43 +20,50 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-24
-- `index.html` v2.0 → **Phase 3 läuft** (P3-1 ✅ P3-2 ✅ P3-3 ✅)
-- Sprint P3-1 ✅ IndexedDB-Migration + Familien-Sortierung
-- Sprint P3-2 ✅ Fotos: Upload, Resize (max 800px JPEG), IDB-Storage (`photo_<id>`), Detailansicht (80×96px rechteckig, links neben Name), Export/Import Sidecar-JSON (`stammbaum_photos.json`)
-- Sprint P3-3 ✅ Suche/Filter: Volltext war bereits vorhanden; neu: Geburtsjahr-Bereichsfilter (von/bis) mit ✕-Clear-Button im Personen-Tab
-- Roundtrip-Fix ✅ Alle INDI/FAM-Datenverluste behoben (nach Sprints P3-1..P3-3)
-- Phase 3 Sprint-Plan: P3-1 ✅ · P3-2 ✅ · P3-3 ✅ · P3-4 SW · P3-5 Baum-UI · P3-6 Undo · P3-7 Desktop · P3-8 OneDrive
+## Aktueller Stand — zuletzt aktualisiert: 2026-03-26
+- `index.html` v3.0 · ~6050 Zeilen · ~185 Funktionen
+- Phase 3 Sprint-Plan: P3-1 ✅ · P3-2 ✅ · P3-3 ✅ · P3-4 ✅ · P3-5 ✅ · P3-6 ✅ · P3-7 ✅ · P3-8 ✅
+- `gedcom.js` — ausgelagerter Parser/Writer (Refactor 2026-03-25/26)
+- Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-7` (nur HEAD-Rewrite akzeptiert)
+- Git: commits b692f23 (Roundtrip-Fixes) + 7536e67 (_getOriginalText Priority) auf origin/main
+
+**Session 2026-03-25 — UI/UX + Code-Qualität:**
+- Baum: Geschlecht via `border-left` (blau=M, rosa=F) statt Symbol; `_treeShortName()` kürzt Namen zu Initialen
+- `tree-yr` 0.62rem → 0.68rem; Icons ♻→👤, §→📖
+- Globaler Such-Tab (`🔍`) als 6. Bottom-Nav Button; sucht über alle Entitätstypen
+- Fix: `#desktopPlaceholder` fehlte `display:none` Basisregel → verdeckte Detail auf Mobile
+- Fix: XSS in Photo-Import (`innerHTML` → DOM-API + Re-Validierung)
+- Fix: Race Condition iOS-Share (`writeGEDCOM() === content` vor `changed=false`)
+- Fix: Place-Autocomplete debounced (150ms); Desktop-Resize bidirektional
+- Fix: IDB-Fehler zeigen Toast statt stumm zu scheitern
+- Fix: Multi-Tab-Warnung via `window.storage`-Event
+- Dead Code entfernt: `.tree-sex`, `.icloud-hint`, `.export-bar/.export-btn`, `normDateToISO()`
+
+**Session 2026-03-26 — Roundtrip-Fixes + Bug-Fix:**
+- Fix: `ev.addrExtra[]` + REPO `r.addrExtra[]` für ADDR-Sub-Tags (CITY, POST, _STYLE, _MAP, _LATI, _LONG)
+- Fix: `frelSourExtra[]`/`mrelSourExtra[]` + `_ptDepth=3` für mehrfache SOURs unter _FREL/_MREL
+- Fix: `_ptNameEnd`-Index — NICK/NAME-Kontext-Passthrough direkt nach NAME-Block (nicht nach CHAN)
+- Fix: `_FREL`/`_MREL` ohne trailing space wenn `val=''`
+- Fix: `_getOriginalText()` — `_originalGedText || localStorage` (RAM vor localStorage — wichtig für >5MB Dateien)
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
 ---
 
-## Roundtrip-Status (aktuell — nach Roundtrip-Fix 2026-03-24)
+## Roundtrip-Status (final — 2026-03-26)
 
-**STABIL · Null INDI/FAM-Datenverluste · nur HEAD-Rewrite-Normalisierung**
+Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR + `_extraRecords[]` für unbekannte lv=0 Records + `_ptTarget` für Capture-Redirect + `_ptNameEnd` für NAME-Kontext-Trennung.
+Delta-Verlauf: -708 → -290 → -226 → -179 → ~-100 → -126 (Sprint 12) → **-84** (Sprint 13) → ~-12 (2026-03-24) → **-7** → **roundtrip_stable=true** (2026-03-26).
+Letzte Fixes (gedcom.js, commit b692f23): ADDR-Sub-Tags via `addrExtra`+`_ptDepth`, mehrfache SOURs unter `_FREL/_MREL` via `frelSourExtra/mrelSourExtra`+`_ptDepth=3`, `2 NICK` NAME-Kontext-Passthrough via `_ptNameEnd`.
+Akzeptierte Verluste (net_delta=7): HEAD-Rewrite (Ancestris-Meta → App), `3 MAP` doppelt unter `2 PLAC` (erster verloren), bare `1 CHAN`, `1 REFN`/`1 _VALID` Edge-Cases.
 
-Testdatei (Ergänzungsdatei, 64 Personen / 22 Familien):
-- `out=2036` vs `orig=2043` (Delta -7: ausschließlich HEAD-Normalisierung)
-- Auto-Diff: CONC -14, CONT -11, SOUR/VERS/NAME/CORP/ADDR/DATE/TIME/SUBM/FILE/NOTE/TEXT je -1 → alle im HEAD-Block
+**Passthrough-Mechanismen (9 Stück — Details in ARCHITECTURE.md ADR-012):**
+`_passthrough[]` · `ev._extra[]` · `addrExtra[]` · `frelSourExtra[]`/`mrelSourExtra[]` · `sourceExtra{}` · `topSourceExtra{}` · `media._extra[]` · `childRelations.sourExtra{}` · `extraRecords[]`
 
-Tag-Statistik alles ✓: `3 SOUR (FAM)` 75/75 · `2 SOUR (all)` 225/225 · `2 _FREL` 37/37 · `2 _MREL` 37/37 · `3 MAP` 60/60 etc.
-
-### Fixes im Roundtrip-Fix-Sprint (2026-03-24):
-1. **CONC-Stabilitäts-Fix**: `raw.trim()` → `raw.replace(/\r$/, '')` — `trim()` entfernte trailing Spaces aus CONC-Werten und verschob die Split-Grenze; `trimEnd()` allein war nicht ausreichend (das Problem war `raw.trim()` auf die ganze Zeile)
-2. **`1 RELI` als Event**: RELI war als einfaches String-Feld gespeichert; Kinder (TYPE, DATE, SOUR) wurden stillschweigend verworfen. Fix: RELI in die events[]-Liste aufgenommen; Writer behält `if (p.reli)` für Rückwärtskompatibilität mit bestehenden IDB-Daten
-3. **FAM CHIL `2 SOUR`**: `2 SOUR` direkt unter `1 CHIL` (FAM) wurde nicht geparst. Fix: `sourIds[]`, `sourPages{}`, `sourQUAY{}`, `sourExtra{}` in `childRelations[id]`; Parser lv=2 + lv=3; Writer vor `_FREL`/`_MREL`
-4. **Mehrere `3 SOUR` unter `2 _FREL`/`2 _MREL`**: zweiter `3 SOUR` überschrieb ersten. Fix: `if (!cref.frelSour) cref.frelSour = val; else frelSourExtra.push(...)` — gilt für FAM childRelations (lv=3) und INDI FAMC (lv=3)
-
-### Verbatim Passthrough (ADR-012):
-`_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR + `_extraRecords[]` für unbekannte lv=0 Records + `_ptTarget` für Capture-Redirect.
-
-### Akzeptierte Verluste (HEAD-Rewrite by design):
-HEAD wird vollständig neu geschrieben: GEDC, VERS, FORM, SOUR ANCESTRIS, VERS, NAME, CORP, ADDR, DEST, DATE, TIME, SUBM, FILE, CHAR, PLAC/FORM, NOTE → alle HEAD-internen Tags gehen verloren/werden normalisiert.
-CONC/CONT: Normalisierung (Daten erhalten, nur Split-Grenzen geändert).
-
-### Roundtrip-Verlauf (MeineDaten_ancestris.ged, 2796 Personen):
--708 → -290 → -226 → -179 → ~-100 → -126 (S12) → -84 (S13) → **~0** (nur HEAD)
+**Passthrough-Optimierungspotenzial (kein Datenverlust, aber im UI nicht editierbar):**
+- CENS, CONF, FCOM, ORDN, RETI, PROP, WILL, PROB → in EVENT_LABELS aber nicht als events[] strukturiert
+- DIV, DIVF → FAM-Events fehlen im Parser
+- Mehrere inline INDI-Notes → werden konkateniert statt als Array
 
 ---
 
@@ -67,10 +76,13 @@ CONC/CONT: Normalisierung (Daten erhalten, nur Split-Grenzen geändert).
 - PLAC-Toggle: `_placeModes[placeId]` = 'free'|'parts' (ADR-010)
 - 3-Felder-Datum: `normMonth()`, `writeDatePartToFields()`, `readDatePartFromFields()` (ADR-011)
 - Verbatim Passthrough: `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR (ADR-012)
+- **Geschlecht im Baum**: `data-sex="M/F/U"` Attribut + CSS `border-left` Farbe (kein Symbol mehr)
+- **Bottom-Nav**: 6 Tabs (Baum ⧖ · Personen 👤 · Familien ⚭ · Quellen 📖 · Orte 📍 · Suche 🔍)
 
 ## Sanduhr-Karten-Dimensionen
 - Regulär: W=96, H=64 · Zentrum: CW=160, CH=80
 - HGAP=10, VGAP=44, MGAP=20, SLOT=106, PAD=20, ROW=108
+- Namen: `_treeShortName(p, isCenter)` — Limit 18 (regulär) / 26 (Zentrum) Zeichen, dann Initialen
 
 ## index.html — Sprint-Status (v2.0)
 | Sprint | Inhalt | Status |
@@ -89,12 +101,8 @@ CONC/CONT: Normalisierung (Daten erhalten, nur Split-Grenzen geändert).
 | 11 | Verbatim Passthrough (ADR-012); DEAT.value; CONC val-fix; Auto-Diff | ✅ |
 | 12 | `frelSeen`/`mrelSeen`; `extraRecords[]` SUBM; INDI famc `frelSour`-Fix; MARR.addr | ✅ |
 | 13 | Alle OBJE-Kontexte: `nameSourceExtra`, `sourceExtra`, `frelSourExtra`, FAMC `sourIds`/`sourExtra`, `marr.sourceExtra`; OBJE-Diagnose | ✅ |
-| P3-1 | IndexedDB-Migration + Familien-Sortierung | ✅ |
-| P3-2 | Fotos: Base64, max 800px JPEG, IDB, Sidecar-JSON | ✅ |
-| P3-3 | Suche/Filter: Volltext + Geburtsjahr-Bereichsfilter | ✅ |
-| RT-Fix | CONC raw.replace, RELI→Event, CHIL sourIds, frelSourExtra | ✅ |
 
-## Globale Variablen (index.html v2.0 — komplett)
+## Globale Variablen (index.html v3.0 — komplett)
 ```javascript
 let db = { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{}, notes:{}, placForm:'', extraRecords:[] };
 let changed = false;
@@ -119,38 +127,7 @@ let _ptTarget = null; // redirect capture target (null = cur._passthrough)
 let _pendingPhotoBase64 = undefined; // undefined=keine Änderung, null=löschen, string=neues Foto
 ```
 
-## Datenmodell — kritische Felder (Roundtrip-relevant)
-
-### INDI
-```javascript
-{
-  famc: [{ famId, frel, mrel, frelSeen, mrelSeen,
-           frelSour, frelPage, frelQUAY, frelSourExtra:[],
-           mrelSour, mrelPage, mrelQUAY, mrelSourExtra:[],
-           sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} }],
-  events: [{ type, value, date, place, ..., sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[] }],
-  // RELI ist in events[] (nicht mehr als p.reli-String!)
-  birth/death/chr/buri: { ..., sourceExtra:{}, _extra:[] },
-  nameSourceExtra:{}, topSourceExtra:{},
-  _passthrough:[]
-}
-```
-
-### FAM
-```javascript
-{
-  childRelations: { '@Ixx@': {
-    frel, mrel, frelSeen, mrelSeen,
-    frelSour, frelPage, frelQUAY, frelSourExtra:[],
-    mrelSour, mrelPage, mrelQUAY, mrelSourExtra:[],
-    sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{}  // 2 SOUR direkt unter 1 CHIL
-  }},
-  marr: { ..., sourceExtra:{}, _extra:[] },
-  _passthrough:[]
-}
-```
-
-## Neue Hilfsfunktionen (index.html v2.0)
+## Neue Hilfsfunktionen (index.html v3.0)
 ```javascript
 // 3-Felder-Datum (Sprint 6a):
 function normMonth(s)                                       // 'März'/'3'/'MAR' → 'MAR'
@@ -173,17 +150,30 @@ function updateTopbarTitle(filename)                        // #topbarFileName: 
 
 // Roundtrip Auto-Diff (Sprint 11):
 // In runRoundtripTest(): Multiset-Vergleich orig↔out1, top-20 fehlende Tags
+
+// Baum-Namen (2026-03-25):
+function _treeShortName(p, isCenter)                        // lange Namen → Initialen (J. W. Müller)
+
+// Globale Suche (2026-03-25):
+function bnavSearch()                                       // 6. Bottom-Nav Tab
+function runGlobalSearch(q)                                 // Personen+Familien+Quellen+Orte
 ```
 
-## Phase 3 Sprint-Plan (v3.0, in Arbeit)
+## Phase 3 Sprint-Plan (v3.0)
 - P3-1 ✅ IndexedDB + Familien-Sortierung
 - P3-2 ✅ Fotos (Base64, max 800px JPEG, IDB-Storage, Sidecar-JSON Export/Import)
 - P3-3 ✅ Suche/Filter (Volltext alle Tabs + Geburtsjahr-Bereichsfilter)
-- P3-4 Service Worker / Offline + PWA-Manifest
-- P3-5 Stammbaum-Erweiterungen (Mehrfach-Ehen, Halbgeschwister-Nav, Pinch-Zoom)
-- P3-6 Undo/Redo (vereinfacht: Revert-to-Saved) + Keyboard-Shortcuts
-- P3-7 Responsives Desktop-Layout (Zweispalten)
-- P3-8 OneDrive-Integration (PKCE OAuth, Graph API)
+- P3-4 ✅ Service Worker (`sw.js`) + `manifest.json` → offline-fähig
+- P3-5 ✅ Baum: Vorfahren (2 Ebenen), Mehrfach-Ehen, Halbgeschwister, Pinch-Zoom
+- P3-6 ✅ Revert-to-Saved + Keyboard-Shortcuts (Cmd+S/Z/Escape/←)
+- P3-7 ✅ Responsives Desktop-Layout (Zweispalten ab 900px)
+- P3-8 ✅ OneDrive-Integration (PKCE OAuth, Graph API, Foto-Import)
+
+## Offene Architektur-Schulden (aus Review 2026-03-25)
+- State-Management: ~27 globale Variablen, keine Schichtentrennung
+- Single-File ab ~7000 Zeilen aufteilen (parser.js, writer.js, storage.js als ES-Module)
+- Virtuelles Scrollen für Listen >1000 Einträge
+- Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch · Kommunikation: kurz und direkt · Keine Emojis
