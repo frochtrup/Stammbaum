@@ -502,9 +502,7 @@ function showPersonForm(id) {
   document.getElementById('pf-surname').value = p?.surname || '';
   document.getElementById('pf-sex').value = p?.sex || 'U';
   document.getElementById('pf-suffix').value = p?.suffix || '';
-  document.getElementById('pf-occu').value   = p?.events?.find(e => e.type === 'OCCU')?.value || '';
   document.getElementById('pf-titl').value   = p?.titl  || '';
-  document.getElementById('pf-reli').value   = p?.events?.find(e => e.type === 'RELI')?.value || p?.reli || '';
   document.getElementById('pf-note').value   = p?.noteTextInline ?? p?.noteText ?? '';
   document.getElementById('pf-resn').value   = p?.resn  || '';
   document.getElementById('pf-email').value  = p?.email || '';
@@ -528,9 +526,7 @@ function savePerson() {
   const surname = document.getElementById('pf-surname').value.trim();
   const sex = document.getElementById('pf-sex').value;
   const suffix = document.getElementById('pf-suffix').value.trim();
-  const occu   = document.getElementById('pf-occu').value.trim();
   const titl   = document.getElementById('pf-titl').value.trim();
-  const reli   = document.getElementById('pf-reli').value.trim();
   const note   = document.getElementById('pf-note').value.trim();
   const resn   = document.getElementById('pf-resn').value.trim();
   const email  = document.getElementById('pf-email').value.trim();
@@ -539,9 +535,7 @@ function savePerson() {
   if (!given && !surname) { showToast('⚠ Bitte Namen eingeben'); return; }
 
   const existing = db.individuals[id] || {};
-  const events = existing.events ? existing.events.filter(e => e.type !== 'OCCU' && e.type !== 'RELI') : [];
-  if (occu) events.unshift({ type: 'OCCU', value: occu, date: '', place: '', lati:null, long:null, eventType:'' });
-  if (reli) events.push({ type: 'RELI', value: reli, date: '', place: '', lati:null, long:null, eventType:'' });
+  const events = existing.events ? [...existing.events] : [];
 
   db.individuals[id] = {
     ...existing,
