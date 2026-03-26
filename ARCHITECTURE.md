@@ -275,9 +275,54 @@ Unterscheidet echte Verluste von Normalisierungs-Artefakten (DATE-Format, CONC-R
 | + INDI OBJE → Passthrough | ~-100 |
 | Sprint 12: frelSeen/mrelSeen, extraRecords | -126 |
 | Sprint 13: alle OBJE-Kontexte | -84 |
-| Roundtrip-Fix (2026-03-24): RELI/CHIL-SOUR/frelSourExtra/raw.replace | **~0** |
+| Roundtrip-Fix 2026-03-24: RELI/CHIL-SOUR/frelSourExtra | ~-12 |
+| Roundtrip-Fix 2026-03-26: addrExtra, NICK-Position, _FREL-Space | **-7** |
 
-Verbleibende Verluste: ausschließlich HEAD-Rewrite (CONC/CONT/SOUR/VERS/NAME/CORP/ADDR/DATE/TIME/SUBM/FILE/NOTE/TEXT) — by design.
+`roundtrip_stable: true` · Verbleibende -7 Zeilen: ausschließlich HEAD-Rewrite (SOUR Ancestris-Meta → App, VERS, NAME, CORP, ADDR, DATE, TIME, SUBM, FILE, NOTE) — by design.
+
+---
+
+### Passthrough-Mechanismen — Vollständige Analyse (2026-03-26)
+
+9 distinkte Mechanismen sichern GEDCOM-Daten die der Parser nicht strukturiert verarbeitet:
+
+| # | Feld | Kontext | Was landet drin |
+|---|------|---------|-----------------|
+| 1 | `db.extraRecords[]._lines[]` | lv=0 Records | SUBM und andere `@ID@`-Records komplett verbatim |
+| 2 | `cur._passthrough[]` | INDI / FAM / SOUR | Unbekannte lv=1 Tags + Sub-Trees; NAME-Kontext lv≥2 (NICK etc.) |
+| 3 | `ev._extra[]` / `marr._extra[]` / `birth._extra[]` etc. | Event-Kontexte | Unbekannte lv=2 Tags in Events (alle Ereignisse) |
+| 4 | `ev.addrExtra[]` / `r.addrExtra[]` | ADDR-Kontext | Sub-Tags von ADDR: CITY, POST, CONT, _STYLE, _MAP, _LATI, _LONG |
+| 5 | `frelSourExtra[]` / `mrelSourExtra[]` | FAMC + FAM CHIL | 2.+ SOUR unter _FREL/_MREL + deren 4-Level-Kinder (PAGE/QUAY/extra) |
+| 6 | `sourceExtra{}` | SOUR-Refs in Events | Unbekannte lv=3 Tags unter `2 SOUR @ID@` in Event-Kontext |
+| 7 | `topSourceExtra{}` | INDI lv=1 SOUR | Unbekannte lv=2 Tags unter `1 SOUR @ID@` direkt auf INDI |
+| 8 | `media._extra[]` | OBJE (inline) | Unbekannte Tags unter OBJE/FILE-Block |
+| 9 | `childRelations.sourExtra{}` | FAM CHIL SOUR | Unbekannte lv=3 unter `2 SOUR` in CHIL-Kontext |
+
+**Was landet in `_passthrough` (Mechanismus 2):**
+- INDI unbekannte lv=1: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`, `DSCR`, `IDNO`, `SSN` — in `EVENT_LABELS` definiert aber **nicht** in der Events-Erkennungs-Liste → Passthrough statt Event-Objekt
+- INDI: Extra-NAME-Blöcke (2. Name, Alias, Geburtsname)
+- INDI: `1 OBJE @ref@`-Referenzen (externe Medien-Records)
+- FAM: `DIV`, `DIVF` — in EVENT_LABELS aber nicht als FAM-Events geparst
+- SOUR: `1 DATA` (GEDCOM 5.5 Standard), `1 NOTE`, `1 REFN`
+
+**`_ptTarget`-Mechanismus:**
+Spezialisierte Arrays (4–9) nutzen `_ptTarget` als Redirect damit Daten kontextspezifisch landen statt im globalen `_passthrough`. `_ptDepth` steuert die Tiefe: `lv > _ptDepth` → capture; `lv <= _ptDepth` → Passthrough beenden.
+
+**`_ptNameEnd`-Index (Name-Kontext):**
+```javascript
+// NAME-Kontext lv≥2 Passthrough-Items (z.B. 2 NICK) stehen am Array-Anfang
+let _ptNameEnd = 0;
+while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
+// → direkt nach NAME-Block ausgeben (nicht am Record-Ende nach CHAN!)
+for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
+// Record-End-Passthrough: _ptNameEnd..end
+for (let i = _ptNameEnd; i < _pt.length; i++) lines.push(_pt[i]);
+```
+
+**Optimierungspotenzial (nicht kritisch, kein Datenverlust):**
+- `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` → könnten als Events strukturiert werden (bereits in EVENT_LABELS) → Bearbeitbarkeit im UI
+- `DIV`, `DIVF` → könnten als FAM-Events strukturiert werden
+- Mehrfache inline INDI-Notes (mehrere `1 NOTE` ohne @ref@) → werden konkateniert statt als Array gespeichert → beim Re-Write ein `1 NOTE` statt zwei
 
 ---
 

@@ -142,16 +142,24 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 ---
 
 **Roundtrip-Nachbesserungen (2026-03-24 — nach P3-1..P3-3)** ✅
-- [x] **CONC-Stabilität**: `raw.trim()` → `raw.replace(/\r$/, '')` — `trim()` entfernte trailing Spaces aus CONT/CONC-Werten und verschob CONC-Split-Grenzen; `trimEnd()` allein reichte nicht aus (das Problem war `raw.trim()` auf die ganze Zeile in der Parser-Loop)
-- [x] **`1 RELI` als Event**: RELI war als einfaches String-Feld (`cur.reli = val`) gespeichert; TYPE/DATE/SOUR-Kinder wurden stillschweigend verworfen (lv=2 mit `evIdx=-1`). Fix: RELI in events[]-Liste aufgenommen wie OCCU/RESI/etc.
-- [x] **FAM CHIL `2 SOUR`**: `2 SOUR` direkt unter `1 CHIL` (FAM-Record) wurde nicht geparst. Fix: `sourIds[]`, `sourPages{}`, `sourQUAY{}`, `sourExtra{}` in `childRelations[childId]`; Parser lv=2 + lv=3; Writer gibt sie vor `_FREL`/`_MREL` aus
-- [x] **Mehrere `3 SOUR` unter `2 _FREL`/`2 _MREL`**: zweiter `3 SOUR`-Wert überschrieb ersten. Fix: erster bleibt in `frelSour`/`mrelSour`, weitere gehen in `frelSourExtra[]`/`mrelSourExtra[]` — gilt für FAM childRelations (lv=3) und INDI FAMC (lv=3)
+- [x] **CONC-Stabilität**: `raw.trim()` → `raw.replace(/\r$/, '')` — `trim()` entfernte trailing Spaces aus CONT/CONC-Werten und verschob CONC-Split-Grenzen
+- [x] **`1 RELI` als Event**: RELI war als einfaches String-Feld gespeichert; TYPE/DATE/SOUR-Kinder wurden bei `evIdx=-1` stillschweigend verworfen. Fix: RELI in events[]
+- [x] **FAM CHIL `2 SOUR`**: `2 SOUR` direkt unter `1 CHIL` nicht geparst. Fix: `sourIds[]`, `sourPages{}`, `sourQUAY{}`, `sourExtra{}` in `childRelations[childId]`
+- [x] **Mehrere `3 SOUR` unter `2 _FREL`/`2 _MREL`**: zweiter SOUR überschrieb ersten. Fix: `frelSourExtra[]`/`mrelSourExtra[]` für FAM childRelations + INDI FAMC
 
-**Ergebnis (Ergänzungsdatei, 64 Personen / 22 Familien):**
-- Zeilen-Delta: **-7** (ausschließlich HEAD-Normalisierung)
-- Alle Tag-Counts ✓ inkl. `3 SOUR (FAM)` 75/75 · `2 SOUR (all)` 225/225
-- `1 NOTE (INDI) -1` = HEAD `1 NOTE` im Regex mitgezählt (kein echter INDI-Datenverlust)
-- Roundtrip: **STABIL · null INDI/FAM-Datenverluste**
+**Roundtrip-Nachbesserungen (2026-03-26 — Commit b692f23)** ✅
+- [x] **ADDR Sub-Tags in Events**: `3 CITY`, `3 POST`, `3 CONT`, `3 _STYLE`, `3 MAP`, `4 _LATI`, `4 _LONG` unter `2 ADDR` in INDI-Events gingen verloren. Fix: `ev.addrExtra[]` + `_ptDepth=2`; gilt auch für REPO (`r.addrExtra[]` + `_ptDepth=1`)
+- [x] **Mehrfache SOUR unter `_FREL`/`_MREL`**: 2.+ `3 SOUR` + deren `4 PAGE`/`4 QUAY` via `frelSourExtra[]`/`mrelSourExtra[]` + `_ptDepth=3` (INDI FAMC + FAM CHIL)
+- [x] **`2 NICK` Name-Kontext-Position**: NICK-Zeilen lagen in `_passthrough[]` und wurden am Record-Ende nach `1 CHAN` geschrieben → bei Re-Parse unter CHAN-Kontext still verworfen. Fix: `_ptNameEnd`-Index trennt NAME-Kontext-Passthrough (lv≥2 am Array-Anfang) von Record-End-Passthrough; NICK wird direkt nach NAME-Block ausgegeben
+- [x] **`_FREL`/`_MREL` ohne trailing space**: `2 _FREL ` (mit Space) wenn `val=''` → Writer korrigiert zu `2 _FREL`
+
+**Bug-Fix (2026-03-26 — Commit 7536e67)** ✅
+- [x] **`_getOriginalText()` Priorität**: localStorage hat ~5MB Limit; große GED-Dateien (>5MB) konnten nicht gecacht werden. Alte Reihenfolge `localStorage || _originalGedText` gab bei großen Dateien die veraltete kleine Datei zurück → Roundtrip-Test testete falsche Datei. Fix: `_originalGedText || localStorage` (RAM hat immer Vorrang in aktiver Session)
+
+**Finales Ergebnis Roundtrip (MeineDaten_ancestris.ged, 2796 Personen / 873 Familien):**
+- Zeilen-Delta: **-7** (ausschließlich HEAD-Rewrite: SOUR Ancestris, VERS, NAME, CORP, ADDR, DATE, TIME, SUBM, FILE, NOTE)
+- `roundtrip_stable: true` (out1 === out2)
+- Alle INDI/FAM/SOUR/REPO-Inhalte vollständig roundtrip-fähig
 
 ---
 

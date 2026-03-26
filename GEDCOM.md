@@ -39,7 +39,7 @@
 | `LATI` | 4 | `events[].lati` | N52.15 → 52.15, S → negativ |
 | `LONG` | 4 | `events[].long` | E7.33 → 7.33, W → negativ |
 | `NOTE` | 2 | `events[].note` | Mehrere NOTEs akkumuliert mit `\n` |
-| `ADDR` | 2 | `events[].addr` | Adresse (nur RESI relevant), `3 CONT` für Zeilen |
+| `ADDR` | 2 | `events[].addr` + `events[].addrExtra[]` | Adresse; Sub-Tags (CITY, POST, CONT, _STYLE, _MAP, _LATI, _LONG) via `addrExtra[]` + `_ptDepth=2` |
 | `SOUR` | 1–4 | `sourceRefs` (Set) + pro Ereignis `sources[]` | Alle Ebenen gesammelt; `3 PAGE` darunter → `sourcePages[sid]` |
 | `PAGE` | 3 | `events[].sourcePages[sid]` / `birth.sourcePages[sid]` etc. | Seitenangabe unter SOUR, editierbar im Ereignis-Formular |
 | `QUAY` | 3 | `events[].sourceQUAY[sid]` / `birth.sourceQUAY[sid]` etc. | Quellenqualität 0–3 unter SOUR, editierbar im Quellen-Widget |
@@ -54,15 +54,16 @@
 | `OBJE` | 1 | `media[].{file,title}` | Foto-Referenz |
 | `FILE` | 2 | `media[].file` | Pfad (oft Windows-Pfad aus Legacy) |
 | `TITL` | 3 | `media[].title` | Unter OBJE/FILE |
-| `FAMC` | 1 | `famc[].{famId,frel,mrel,frelSour,frelPage,frelQUAY,mrelSour,mrelPage,mrelQUAY}` | Kind-in-Familie |
-| `_FREL` | 2 | `famc[].frel` | Vater-Beziehungstyp (Leiblich / Adoptiert etc.) |
-| `SOUR` | 3 | `famc[].frelSour` | Quelle für Vater-Beziehung (`@@Sxx@@` Ancestris-Syntax) |
-| `PAGE` | 4 | `famc[].frelPage` | Seitenangabe zur Quelle (z.B. `Reg.Nr. 1 1855`) |
-| `QUAY` | 4 | `famc[].frelQUAY` | Quellenqualität 0–3 |
-| `_MREL` | 2 | `famc[].mrel` | Mutter-Beziehungstyp (Leiblich / Adoptiert etc.) |
-| `SOUR` | 3 | `famc[].mrelSour` | Quelle für Mutter-Beziehung |
-| `PAGE` | 4 | `famc[].mrelPage` | Seitenangabe |
-| `QUAY` | 4 | `famc[].mrelQUAY` | Quellenqualität 0–3 |
+| `FAMC` | 1 | `famc[].{famId,frel,mrel,frelSeen,mrelSeen,frelSour,frelPage,frelQUAY,frelSourExtra[],mrelSour,mrelPage,mrelQUAY,mrelSourExtra[],sourIds[],sourPages{},sourQUAY{},sourExtra{}}` | Kind-in-Familie |
+| `_FREL` | 2 | `famc[].frel` + `famc[].frelSeen` | Vater-Beziehungstyp (Leiblich / Adoptiert etc.); `frelSeen=true` auch wenn `val=''` |
+| `SOUR` | 3 | `famc[].frelSour` (erster) + `famc[].frelSourExtra[]` (weitere) | Quellen für Vater-Beziehung; mehrfache SOURs via `frelSourExtra[]` + `_ptDepth=3` |
+| `PAGE` | 4 | `famc[].frelPage` | Seitenangabe (erster SOUR) |
+| `QUAY` | 4 | `famc[].frelQUAY` | Quellenqualität 0–3 (erster SOUR) |
+| `_MREL` | 2 | `famc[].mrel` + `famc[].mrelSeen` | Mutter-Beziehungstyp; `mrelSeen=true` auch wenn `val=''` |
+| `SOUR` | 3 | `famc[].mrelSour` + `famc[].mrelSourExtra[]` | Quellen für Mutter-Beziehung; mehrfache SOURs via `mrelSourExtra[]` |
+| `PAGE` | 4 | `famc[].mrelPage` | Seitenangabe (erster SOUR) |
+| `QUAY` | 4 | `famc[].mrelQUAY` | Quellenqualität 0–3 (erster SOUR) |
+| `SOUR` | 2 | `famc[].sourIds[]` + `famc[].sourPages{}` + `famc[].sourQUAY{}` + `famc[].sourExtra{}` | SOUR direkt unter FAMC (nicht unter _FREL/_MREL) |
 | `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
 | `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum |
 
@@ -99,8 +100,8 @@
 | Tag | Level | Feld in `db.repositories` | |
 |---|---|---|---|
 | `NAME` | 1 | `name` | Vollständiger Name des Archivs |
-| `ADDR` | 1 | `addr` | Adresse (mehrzeilig via `2 CONT`) |
-| `CONT` | 2 | `addr` (angehängt) | Folgezeilen der Adresse |
+| `ADDR` | 1 | `addr` + `addrExtra[]` | Adresse (Hauptzeile); Sub-Tags (CITY, POST, CONT, _STYLE, _MAP, _LATI, _LONG) via `addrExtra[]` + `_ptDepth=1` |
+| `CONT` | 2 | `addr` (angehängt) | Folgezeilen der Adresse (direkte CONT, nicht via addrExtra) |
 | `PHON` | 1 | `phon` | Telefonnummer |
 | `WWW` | 1 | `www` | Website-URL |
 | `EMAIL` | 1 | `email` | E-Mail-Adresse |
@@ -249,14 +250,32 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 | lv3 | `lv3tag` | Aktueller Level-3-Tag; bei `SOUR`: `lastSourVal=val` (für lv4 PAGE/QUAY) |
 | lv4 | *(kein eigenes Tag)* | Liest `lv1tag`/`lv2tag`/`lv3tag` zur Kontextbestimmung |
 
-### Was NICHT geschrieben wird (bekannte Verluste)
-| Tag | Grund | Relevanz |
+### Was NICHT geschrieben wird (bekannte Verluste / Passthrough-Lücken)
+
+**Akzeptierte Verluste (HEAD-Rewrite — by design):**
+| Was | Grund |
+|---|---|
+| `1 SOUR ANCESTRIS` + Sub-Tags | HEAD wird von App neu geschrieben (`1 SOUR Stammbaum-App`) |
+| `1 SUBM @S0@`, `1 FILE`, HEAD `1 NOTE` | HEAD-Rewrite |
+
+**Via Passthrough erhalten (kein Datenverlust, aber nicht editierbar im UI):**
+| Tag-Kontext | Passthrough-Feld | Optimierungspotenzial |
 |---|---|---|
-| `_STAT` | Nie geparst (Legacy: Never Married etc.) | Gering |
-| `2 SOUR` unter `1 RELI` | RELI ist String, kein Event-Objekt | 1 Vorkommen |
-| `3 QUAY`/`3 PAGE` unter `1 TITL`/`1 RELI` | Kein Event-Kontext für diese lv1-Felder | 5 Vorkommen |
-| `3 OBJE` unter `2 SOUR` (Quellenreferenz) | Medienverweis an Quellenreferenz, lv5/6 Substruktur | ~52 OBJE-Blöcke × 5 Zeilen |
-| `1 DATA` in SOUR-Records | Ancestris-Block mit `2 AGNC` (Institution) | Selten (1 Vorkommen) |
+| `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`, `DSCR`, `IDNO`, `SSN` als INDI-Events | `_passthrough[]` | In EVENT_LABELS definiert → könnten als `events[]` strukturiert werden |
+| `DIV`, `DIVF` als FAM-Events | FAM `_passthrough[]` | In EVENT_LABELS definiert → könnten als FAM-Events strukturiert werden |
+| `2 NICK` und andere NAME-Sub-Tags | `_passthrough[]` (via `_ptNameEnd` korrekt nach NAME-Block) | — |
+| `1 DATA` in SOUR-Records (GEDCOM 5.5 `2 AGNC`, `2 EVEN`) | SOUR `_passthrough[]` | Selten |
+| Mehrere `1 NAME`-Blöcke (Geburtsname, Alias) | INDI `_passthrough[]` | 2. Name editierbar machen |
+
+**Bekannte Einzelverluste (Edge Cases in MeineDaten_ancestris.ged):**
+| Was | Anzahl | Ursache |
+|---|---|---|
+| Doppeltes `3 MAP` unter einer `2 PLAC` | 1 | Erstes MAP-Block verloren — zweiter überschreibt |
+| Bare `1 CHAN` ohne `2 DATE` | 1 | Writer schreibt CHAN nur mit DATE |
+| `1 REFN`, `1 _VALID` | je 1 | Unbekannte lv=1-Tags die _ptDepth nicht korrekt auslösen |
+
+**Mehrfache inline INDI-Notes:**
+Mehrere `1 NOTE`-Zeilen ohne @ref@ auf einer Person werden beim Parsen konkateniert (`noteTextInline += val`) und als ein `1 NOTE`-Block ausgegeben → Count -1 pro zusätzliche inline Note. Kein Datenverlust, aber Struktur verändert.
 
 ---
 
