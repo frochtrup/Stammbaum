@@ -233,6 +233,31 @@ Ziel: `parse → edit → write → ancestris-import` ohne strukturelles Delta u
 
 ---
 
+**Post-P3-8 — Medien, Fotos, UI-Fixes** ✅ (2026-03-27)
+
+*Fotos & Medienanzeige:*
+- [x] **Lightbox**: Fotos klickbar → `#modalLightbox` Vollbild-Overlay; „Als Hauptfoto setzen"-Button
+- [x] **Mehrere Fotos pro Person/Familie**: Medien-Abschnitt zeigt alle Einträge als klickbare Zeilen; IDB-Keys `photo_<id>_0`, `photo_<id>_1`, …; bevorzugtes Foto als Profilfoto wählbar
+- [x] **Lazy Migration**: Beim ersten Öffnen einer Detailansicht wird `photo_<id>` nach `photo_<id>_0` kopiert (Rückwärtskompatibilität für ältere Imports)
+- [x] **Dynamisches OneDrive-Foto-Laden**: kein vollständiger Base64-Download mehr; `od_filemap` (IDB) speichert nur `fileId`/`filename`; `_odGetPhotoUrl()` lädt on-demand + Token-Auto-Refresh; Session-Cache über `_odPhotoCache`
+- [x] **Standard-Ordner**: letzter Foto-Ordner in `od_default_folder` (IDB) gespeichert; nächste Import-Session startet dort automatisch
+- [x] **BMP-Support**: `createImageBitmap` als Primary, `<img>`-Tag als Fallback; klare Fehlermeldung bei BMP auf iOS
+
+*Medien bearbeiten (in Detailansichten):*
+- [x] **Person**: Medien-Abschnitt immer sichtbar; „+ Hinzufügen" → `#modalAddMedia` (Titel + Dateiname, OneDrive-Picker wenn verbunden); × pro Eintrag → `deletePersonMedia()`
+- [x] **Familie**: Medien-Abschnitt immer sichtbar; „+ Hinzufügen" → neuer Eintrag in `f.marr._extra`; × pro Eintrag → `deleteFamilyMarrMedia()` / `deleteFamilyMedia()`
+- [x] **Quelle**: Medien-Abschnitt immer sichtbar; „+ Hinzufügen" → neuer Eintrag in `s.media[]`; × pro Eintrag → `deleteSourceMedia()`
+- [x] **OneDrive-Picker-Modus**: `_odPickMode=true` → Ordner-Browser zeigt auch Dateien; Klick auf Datei → zurück zu `#modalAddMedia` mit vorausgefülltem Dateinamen + fileId; `_odCancelOrClose()` für korrekte Back-Navigation
+
+*Bug-Fixes:*
+- [x] **⚭-Badge im Baum bei Single-Person**: `spId` berechnete jeden Familienmitglied als Ehepartner (unabhängig ob die angezeigte Person wirklich husb/wife ist). Fix: explizite Prüfung `personId === fam.husb`
+- [x] **⚭-Linie bleibt beim Wechsel Single→Ehepaar**: Löschen der alten Baumkarten entfernte nur `.tree-card`, nicht das `.tree-marr-btn`-Element. Fix: class `tree-marr-btn` + erweiterter Cleanup-Selektor
+- [x] **Familien-Hero-Foto** ersetzt 👨‍👩‍👧-Avatar (wie Personenfoto den Avatar ersetzt)
+- [x] **INDI OBJE geparst**: ging komplett in `_passthrough` statt `p.media[]` — korrektes Parsing wiederhergestellt
+- [x] **Medieneinträge zeigten immer dasselbe Foto**: fehlende Lazy-Migration (`photo_<id>` → `photo_<id>_0`) führte dazu dass alle Einträge den Hero-Fallback nutzten
+
+---
+
 **Sprint P3-7 — Responsives Desktop-Layout** ✅ (2026-03-24)
 - [x] `@media (min-width: 900px)`: Zweispalten-Layout (Liste links 360px, Detail/Baum rechts)
 - [x] `body.desktop-mode` via JS gesetzt wenn `window.innerWidth >= 900`

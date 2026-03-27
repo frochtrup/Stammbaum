@@ -20,7 +20,13 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← gesamte App (v3.0, P3-1..P3-8, ~5900 Zeilen)
+├── index.html          ← App-Shell (v3.0, HTML + CSS, ~700 Zeilen)
+├── gedcom.js           ← GEDCOM-Parser + Writer
+├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
+├── ui-views.js         ← Baum, Detailansichten, Listenrendering
+├── ui-forms.js         ← Formulare, OneDrive-Integration, Medien
+├── sw.js               ← Service Worker (offline, Cache v22)
+├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
@@ -36,10 +42,11 @@ stammbaum/
 ### Navigation
 | Feature | Details |
 |---|---|
-| Globale Bottom-Nav | 5 Tabs: ⧖ Baum · ♻ Personen · ⚭ Familien · § Quellen · 📍 Orte |
+| Globale Bottom-Nav | 6 Tabs: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · 🔍 Suche |
 | Baum als Standardansicht | Nach Datei-Load wird der Sanduhr-Baum gezeigt |
 | History-Navigation | Zurück-Button merkt Herkunft: Detail→Detail→Baum navigiert korrekt zurück |
 | Menü überall erreichbar | ☰ Menü-Button in Baum- und Listenansicht |
+| Globale Suche | 🔍-Tab durchsucht gleichzeitig Personen, Familien, Quellen und Orte mit gruppierten Ergebnissen |
 
 ### Laden & Speichern
 | Feature | Details |
@@ -51,7 +58,7 @@ stammbaum/
 | Download-Fallback (Safari Mac, Firefox) | `<a download>` → Datei im Browser-Download-Ordner |
 | Backup automatisch | Bei Download-Fallback: Zeitstempel-Backup des Originals zusätzlich heruntergeladen |
 | iOS Speichern | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
-| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern |
+| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern; Foto-Ordner einrichten → dynamisches Laden ohne Base64-Upload |
 | Demo-Modus | Beispiel-Daten ohne eigene Datei |
 | URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged`; nützlich für Lesezeichen und PWA-Shortcuts |
 | **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
@@ -81,7 +88,9 @@ stammbaum/
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
 - **Suche** über: Name, Titel, alle Ereignisse (Typ, Wert, Datum, Ort), Notizen, Religion
 - **Geburtsjahr-Filter**: Von/Bis-Felder mit ✕-Clear-Button
-- **Foto**: Upload im Personen-Formular, Anzeige (80×96px) links neben Name in Detailansicht
+- **Foto**: Upload im Personen-Formular, Anzeige (80×96px) links neben Name in Detailansicht; Klick öffnet Lightbox
+- **Mehrere Fotos**: Medien-Abschnitt mit allen Fotos klickbar; „Als Hauptfoto setzen" in Lightbox
+- **Medien bearbeiten**: + Hinzufügen (Titel + Dateiname, optional aus OneDrive) · × Entfernen — direkt in der Detailansicht
 - **Detail**: Geburt, Taufe, Tod (inkl. Todesursache), Beerdigung, alle weiteren Ereignisse
 - **Quellen-Badges** `§N` direkt in der Ereigniszeile → klickbar zur Quellen-Detailansicht
 - **📍** Geo-Links öffnen Apple Maps bei Ereignissen mit Koordinaten
@@ -91,12 +100,14 @@ stammbaum/
 - **Suche** nach Name, Heiratsdatum, Heiratsort
 - Liste: Elternpaar, Heiratsdatum, Kinderanzahl
 - Detail: Heirat (Datum, Ort, Geo-Link, Quellen), Mitglieder anklickbar
+- **Medien bearbeiten**: + Hinzufügen · × Entfernen — direkt in der Familiendetailansicht
 - ⧖-Button öffnet Sanduhr zentriert auf den Ehemann
 
 ### Quellen-Tab
 - **Suche** nach Titel, Kurzname, Autor
 - Liste: Kurzname (ABBR), Autor, Datum, Anzahl Referenzen, 🏛-Badge bei verknüpftem Archiv
 - Detail: alle Metadaten + alle referenzierenden Personen und Familien
+- **Medien bearbeiten**: + Hinzufügen · × Entfernen — direkt in der Quellendetailansicht
 - **Archive-Sektion**: alle REPO-Records mit Quellen-Zähler; Sprungbutton „🏛 Archive"
 
 ### Orte-Tab
@@ -132,9 +143,15 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  index.html (v3.0 — P3-1..P3-8)             │
+│  Stammbaum PWA v3.0                          │
 │  Vanilla JS · Kein Framework · Kein Build    │
-│  ~5900 Zeilen · ~184 Funktionen · ~360 KB    │
+│                                              │
+│  index.html   — App-Shell, CSS               │
+│  gedcom.js    — Parser + Writer              │
+│  storage.js   — IDB, Dateiverwaltung         │
+│  ui-views.js  — Baum, Detail, Listen         │
+│  ui-forms.js  — Formulare, OneDrive, Medien  │
+│  sw.js        — Service Worker (offline)     │
 │                                              │
 │  Globaler State: let db = {                  │
 │    individuals, families, sources,           │
@@ -153,7 +170,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · null INDI/FAM-Datenverluste** (nur HEAD-Normalisierung)
-**Version 3.0** — März 2026 — P3-1 ✅ P3-2 ✅ P3-3 ✅ P3-4 ✅ P3-5 ✅ P3-6 ✅ P3-7 (offen) P3-8 ✅
+**Version 3.0** — März 2026 — P3-1 ✅ P3-2 ✅ P3-3 ✅ P3-4 ✅ P3-5 ✅ P3-6 ✅ P3-7 ✅ P3-8 ✅
 
 ---
 
@@ -218,7 +235,7 @@ Ancestris (Mac):
 
 **Voraussetzung (einmalig):** Azure App Registration mit `Files.ReadWrite`-Permission und Redirect-URI `https://[username].github.io/stammbaum/` (kostenlos, ~5 Min. im Azure Portal).
 
-**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `localStorage` · Ordner-Browser für Foto-Import
+**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `localStorage` · Ordner-Browser für Foto-Import · Dynamisches Foto-Laden (`od_filemap` in IDB, kein vollständiger Download) · Session-Cache für Blob-URLs
 
 ---
 

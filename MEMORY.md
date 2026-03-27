@@ -1,14 +1,18 @@
 # Stammbaum PWA — Projekt-Memory
 
 ## Projekt-Überblick
-- **Was:** Genealogie-Editor als Single-File PWA (`index.html`)
+- **Was:** Genealogie-Editor als PWA (Multi-File: index.html + JS-Module)
 - **Ziel:** iPhone/iPad + Desktop, GEDCOM 5.5.1, kein Server, kein Build-Step
 - **Stack:** Vanilla JS, kein Framework, kein npm
 - **Pfad:** `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
 
 ## Dateien
-- `index.html` — gesamte App (v3.0, Sprints 1–13 + P3-1..P3-8, ~6050 Zeilen)
-- `sw.js` — Service Worker (Cache-First, offline)
+- `index.html` — App-Shell: HTML-Struktur + CSS + Script-Tags (v3.0)
+- `gedcom.js` — GEDCOM-Parser + Writer (ausgelagert 2026-03-25/26)
+- `storage.js` — IndexedDB, Dateiverwaltung, Auto-Load
+- `ui-views.js` — Baum, Detailansichten, Listenrendering
+- `ui-forms.js` — Formulare, OneDrive-Integration, Medien-Bearbeitung
+- `sw.js` — Service Worker (Network-first, offline, Cache v22)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -16,16 +20,14 @@
 - `GEDCOM.md` — Parser/Writer-Referenz, alle unterstützten Tags
 - `ROADMAP.md` — Phasen-Übersicht, offene Features, bekannte Probleme
 - `GEDCOM_V2_PLAN.md` — historisches Planungsdokument (Archiv)
-- `LINE_INDEX.md` — Zeilen-Index für index.html
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-26
-- `index.html` v3.0 · ~6050 Zeilen · ~185 Funktionen
+## Aktueller Stand — zuletzt aktualisiert: 2026-03-27
 - Phase 3 Sprint-Plan: P3-1 ✅ · P3-2 ✅ · P3-3 ✅ · P3-4 ✅ · P3-5 ✅ · P3-6 ✅ · P3-7 ✅ · P3-8 ✅
 - `gedcom.js` — ausgelagerter Parser/Writer (Refactor 2026-03-25/26)
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-7` (nur HEAD-Rewrite akzeptiert)
-- Git: commits b692f23 (Roundtrip-Fixes) + 7536e67 (_getOriginalText Priority) auf origin/main
+- Git: letzter Commit 3bad594 (Medien hinzufügen/löschen) auf origin/main
 
 **Session 2026-03-25 — UI/UX + Code-Qualität:**
 - Baum: Geschlecht via `border-left` (blau=M, rosa=F) statt Symbol; `_treeShortName()` kürzt Namen zu Initialen
@@ -45,6 +47,31 @@
 - Fix: `_ptNameEnd`-Index — NICK/NAME-Kontext-Passthrough direkt nach NAME-Block (nicht nach CHAN)
 - Fix: `_FREL`/`_MREL` ohne trailing space wenn `val=''`
 - Fix: `_getOriginalText()` — `_originalGedText || localStorage` (RAM vor localStorage — wichtig für >5MB Dateien)
+
+**Session 2026-03-26 (2) — Medien + UI-Fixes:**
+- OCCU + RELI aus Personenformular entfernt (nur noch als Events)
+- Kinder-Abschnitt aus Familienformular entfernt (wird in Familienansicht verwaltet)
+- Medienanzeige (media[]) in Personen- und Familiendetail ergänzt
+- Fix: Baum ⚭-Badge nur bei echtem Ehepartner (`personId === fam.husb/wife`)
+- Fix: ⚭-Linie bleibt nach Navigation → class `tree-marr-btn` + erweiterter Cleanup-Selektor
+- Fix: INDI OBJE ging komplett in `_passthrough` statt `p.media[]`
+- Fix: Familien-Medien: `2 OBJE` unter `1 MARR` in `marr._extra`
+- Fix: `_extractObjeFilemap()` erkennt `2 OBJE` unter `1 MARR`
+- Fix: Familien-Hero-Foto ersetzt 👨‍👩‍👧-Avatar
+- BMP-Support: `createImageBitmap` als Primary, `<img>`-Tag als Fallback
+- **Lightbox**: Fotos klickbar → `#modalLightbox` Vollbild-Overlay; `showLightbox()` + `_lightboxSetHero()`
+- Mehrere Fotos: `openMediaPhoto()`, IDB-Keys `photo_<id>_N`; Lazy-Migration `photo_<id>` → `photo_<id>_0`
+- Dynamisches OneDrive-Foto-Laden: `od_filemap` (IDB) mit fileIds; `_odGetPhotoUrl()`; `_odPhotoCache`; Standard-Ordner in `od_default_folder` (IDB); ⚡-Button entfernt
+
+**Session 2026-03-27 — Medien hinzufügen/löschen:**
+- Medien-Abschnitt in Person/Familie/Quelle immer sichtbar (+ Hinzufügen-Button + × pro Eintrag)
+- `#modalAddMedia`: Titel + Dateiname; OneDrive-Picker-Button (nur wenn verbunden)
+- `openAddMediaDialog()`, `confirmAddMedia()` — Person: `p.media[]`; Familie: `f.marr._extra`; Quelle: `s.media[]`
+- `deletePersonMedia()`, `deleteFamilyMarrMedia()`, `deleteFamilyMedia()`, `deleteSourceMedia()`
+- `_removeFamMarrObjeAt()` — entfernt i-ten OBJE-Block aus `f.marr._extra`
+- `_removeMediaFromFilemap()`, `_clearIdbPhotoKeys()`, `_addMediaToFilemap()`
+- OneDrive-Picker-Modus: `_odPickMode=true` → Ordner-Browser zeigt auch Dateien; `_odPickSelectFile()`, `_odPickCancel()`, `_odCancelOrClose()`
+- sw.js → v22
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 

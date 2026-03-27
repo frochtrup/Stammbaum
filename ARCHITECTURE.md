@@ -4,18 +4,21 @@
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│                    index.html                        │
-│                                                      │
-│  <style>         <body>            <script>          │
-│  CSS             HTML-Struktur     Vanilla JS        │
-│  ~700 Zeilen     ~600 Zeilen       ~3400 Zeilen      │
-│                                                      │
+│               Stammbaum PWA v3.0                     │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
+│                                                      │
+│  index.html    — App-Shell (HTML + CSS, ~700 Z.)     │
+│  gedcom.js     — GEDCOM-Parser + Writer              │
+│  storage.js    — IndexedDB, Dateiverwaltung          │
+│  ui-views.js   — Baum, Detail, Listenrendering       │
+│  ui-forms.js   — Formulare, OneDrive, Medien         │
+│  sw.js         — Service Worker (Cache v22)          │
+│  manifest.json — PWA-Manifest                        │
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe aktuell:** ~5000 Zeilen · ~160 Funktionen · ~280 KB
+**Größe gesamt:** ~7 Dateien · ~185 Funktionen · ~500 KB
 
 ---
 
