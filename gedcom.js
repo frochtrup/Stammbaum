@@ -206,7 +206,8 @@ function parseGEDCOM(text) {
         else if (tag === 'CHR')  { cur.chr.value   = val; }
         else if (tag === 'DEAT') { cur.death.value = val; }
         else if (tag === 'BURI') { cur.buri.value  = val; }
-        else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI'].includes(tag)) {
+        else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
+                  'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB'].includes(tag)) {
           cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[] });
           evIdx = cur.events.length - 1;
         }
