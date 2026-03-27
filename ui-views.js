@@ -1345,6 +1345,8 @@ function showDetail(id, pushHistory = true) {
     if (!b64) return;
     const el = document.getElementById('det-photo-' + id);
     if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+    // Lazy migration: ältere Imports haben nur photo_${id}, aber Medieneinträge brauchen photo_${id}_0
+    idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', b64).catch(() => {}); }).catch(() => {});
   }).catch(() => {});
 }
 
@@ -1480,6 +1482,8 @@ function showFamilyDetail(id, pushHistory = true) {
       const av = document.getElementById('det-fam-avatar-' + id);
       if (av) av.style.display = 'none';
     }
+    // Lazy migration: ältere Imports haben nur photo_fam_${id}, aber Medieneinträge brauchen photo_fam_${id}_0
+    idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', b64).catch(() => {}); }).catch(() => {});
   }).catch(() => {});
 }
 
