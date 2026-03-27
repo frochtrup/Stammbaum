@@ -1017,7 +1017,7 @@ function showTree(personId, addToHistory = true) {
   const wrap = document.getElementById('treeWrap');
   wrap.style.width  = totalW + 'px';
   wrap.style.height = totalH + 'px';
-  wrap.querySelectorAll('.tree-card').forEach(el => el.remove());
+  wrap.querySelectorAll('.tree-card, .tree-marr-btn').forEach(el => el.remove());
   const svg = document.getElementById('treeSvg');
   svg.setAttribute('width',   totalW);
   svg.setAttribute('height',  totalH);
@@ -1140,6 +1140,7 @@ function showTree(personId, addToHistory = true) {
       const lineY = ry(0) + CH / 2;
       const midX  = (personX + CW + spColX) / 2;
       const btn   = document.createElement('div');
+      btn.className = 'tree-marr-btn';
       btn.style.cssText = `position:absolute;left:${Math.round(personX + CW)}px;top:${Math.round(lineY - 12)}px;width:${Math.round(spColX - personX - CW)}px;height:24px;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center`;
       btn.title = 'Familie öffnen';
       btn.innerHTML = `<span style="background:var(--surface2);border:1px solid var(--gold-dim);border-radius:8px;padding:1px 5px;font-size:0.7rem;color:var(--gold-dim);pointer-events:none">⚭</span>`;
