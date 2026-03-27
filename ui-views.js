@@ -1,11 +1,43 @@
 // ─────────────────────────────────────
 //  LIGHTBOX
 // ─────────────────────────────────────
-function showLightbox(src) {
+let _lbHeroKey = null, _lbHeroElemId = null, _lbAvatarElemId = null;
+
+function showLightbox(src, heroKey, heroElemId, avatarElemId, idbKey) {
   const lb = document.getElementById('modalLightbox');
   if (!lb) return;
   document.getElementById('lightboxImg').src = src;
+  _lbHeroKey     = heroKey     || null;
+  _lbHeroElemId  = heroElemId  || null;
+  _lbAvatarElemId = avatarElemId || null;
+  const btn = document.getElementById('lightboxSetHero');
+  btn.style.display = (heroKey && idbKey && idbKey !== heroKey) ? '' : 'none';
   lb.style.display = 'flex';
+}
+
+async function openMediaPhoto(idbKey, heroKey, heroElemId, avatarElemId) {
+  let b64 = await idbGet(idbKey).catch(() => null);
+  let usedFallback = false;
+  if (!b64) { b64 = await idbGet(heroKey).catch(() => null); usedFallback = true; }
+  if (!b64) { showToast('Kein Foto vorhanden'); return; }
+  showLightbox(b64, heroKey, heroElemId, avatarElemId, usedFallback ? heroKey : idbKey);
+}
+
+async function _lightboxSetHero() {
+  if (!_lbHeroKey) return;
+  const src = document.getElementById('lightboxImg').src;
+  await idbPut(_lbHeroKey, src).catch(() => {});
+  const el = document.getElementById(_lbHeroElemId);
+  if (el) {
+    el.style.display = '';
+    el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`;
+  }
+  if (_lbAvatarElemId) {
+    const av = document.getElementById(_lbAvatarElemId);
+    if (av) av.style.display = 'none';
+  }
+  document.getElementById('lightboxSetHero').style.display = 'none';
+  showToast('Hauptfoto gesetzt');
 }
 
 // ─────────────────────────────────────
@@ -1231,9 +1263,14 @@ function showDetail(id, pushHistory = true) {
   if (indiMedia.length || indiPtObje.length) {
     const _objeMap = _buildObjeRefMap();
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
-    for (const m of indiMedia) {
+    for (let i = 0; i < indiMedia.length; i++) {
+      const m = indiMedia[i];
       const display = m.title || m.file || m.form || '–';
-      html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
+      const idbKey  = 'photo_' + id + '_' + i;
+      const heroKey = 'photo_' + id;
+      html += `<div class="fact-row" style="cursor:pointer"
+        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}',null)">
+        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
         <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
     }
     for (const l of indiPtObje) {
@@ -1398,7 +1435,17 @@ function showFamilyDetail(id, pushHistory = true) {
   const famPtObje = (f._passthrough || []).filter(l => /^1 OBJE @/.test(l));
   if (famMedia.length || marrObjeEntries.length || famPtObje.length) {
     html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
-    for (const m of [...famMedia, ...marrObjeEntries]) {
+    for (let i = 0; i < marrObjeEntries.length; i++) {
+      const m = marrObjeEntries[i];
+      const display = m.title || m.file || m.form || '–';
+      const idbKey  = 'photo_fam_' + id + '_' + i;
+      const heroKey = 'photo_fam_' + id;
+      html += `<div class="fact-row" style="cursor:pointer"
+        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
+        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
+        <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+    }
+    for (const m of famMedia) {
       const display = m.title || m.file || m.form || '–';
       html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
         <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;

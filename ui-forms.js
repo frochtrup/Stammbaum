@@ -1482,8 +1482,8 @@ function _extractObjeFilemap() {
   if (!text) return { persons: new Map(), families: new Map() };
   const lines     = text.split(/\r?\n/);
   const objeFiles = {};   // objeId → filepath (lv=0 OBJE-Records)
-  const personObje = {};  // personId → {type,ref?,file?}
-  const famObje    = {};  // famId    → [{file,prim}]  (all candidates, pick _PRIM Y or first)
+  const personObje = {};  // personId → [{file:string, prim:bool}]  (inline only, GEDCOM order)
+  const famObje    = {};  // famId    → [{file,ref?,prim}]  (MARR OBJEs, GEDCOM order)
   let recId = null, recType = null;
   let inInlineObje = false;   // INDI: 1 OBJE inline
   let inMarr = false;          // FAM:  inside 1 MARR block
@@ -1513,17 +1513,22 @@ function _extractObjeFilemap() {
       inInlineObje = false; inMarr = false; inMarrObje = false;
     }
 
-    // INDI: 1 OBJE (inline or ref)
+    // INDI: 1 OBJE (inline only — refs go to passthrough, not to media[])
     if (recType === 'INDI' && level === 1 && tag === 'OBJE') {
-      if (val.startsWith('@') && val.endsWith('@')) {
-        if (!personObje[recId]) personObje[recId] = { type:'ref', ref: val };
-      } else { inInlineObje = true; }
+      inInlineObje = !(val.startsWith('@') && val.endsWith('@'));
+      if (inInlineObje) {
+        if (!personObje[recId]) personObje[recId] = [];
+        personObje[recId].push({ file: '', prim: false });
+      }
     }
-    if (recType === 'INDI' && level === 2 && tag === 'FILE' && inInlineObje) {
-      if (!personObje[recId]) personObje[recId] = { type:'inline', file: val };
-      inInlineObje = false;
+    if (recType === 'INDI' && level === 2 && inInlineObje) {
+      const arr = personObje[recId];
+      if (arr?.length) {
+        if (tag === 'FILE') arr[arr.length - 1].file = val;
+        if (tag === '_PRIM' && val.toUpperCase() === 'Y') arr[arr.length - 1].prim = true;
+      }
     }
-    if (recType === 'INDI' && level < 2 && tag !== 'OBJE') inInlineObje = false;
+    if (recType === 'INDI' && level === 1 && tag !== 'OBJE') inInlineObje = false;
 
     // FAM: track 1 MARR context
     if (recType === 'FAM' && level === 1) {
@@ -1556,19 +1561,17 @@ function _extractObjeFilemap() {
   }
   _commitMarrObje();
 
+  // Returns Map<id, {files: string[], primIdx: number}> for both persons and families
   const _toMap = (store, isFam) => {
     const map = new Map();
-    for (const [id, info] of Object.entries(store)) {
-      if (isFam) {
-        // Pick _PRIM Y entry, fallback to first
-        const prim = info.find(e => e.prim) || info[0];
-        if (!prim) continue;
-        const fp = prim.file || (prim.ref ? objeFiles[prim.ref] : '');
-        if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) map.set(id, bn); }
-      } else {
-        const fp = info.type === 'inline' ? info.file : objeFiles[info.ref];
-        if (fp) { const bn = fp.split(/[/\\]/).pop(); if (bn) map.set(id, bn); }
-      }
+    for (const [id, entries] of Object.entries(store)) {
+      if (!entries?.length) continue;
+      const primIdx = entries.findIndex(e => e.prim);
+      const files = entries.map(e => {
+        const fp = e.file || (e.ref ? objeFiles[e.ref] : '');
+        return fp ? fp.split(/[/\\]/).pop() : null;
+      }).filter(Boolean);
+      if (files.length) map.set(id, { files, primIdx: primIdx >= 0 ? primIdx : 0 });
     }
     return map;
   };
@@ -1648,44 +1651,62 @@ async function odImportPhotosFromFolder(folderId, folderName) {
 
     let loaded = 0, missing = 0, bmpFailed = 0;
 
-    // Personen-Fotos
-    for (const [personId, filename] of personMap) {
-      const fileId = odFiles[filename.toLowerCase()];
-      if (!fileId) { missing++; continue; }
-      try {
-        const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
-          { headers: { Authorization: 'Bearer ' + token } });
-        if (!imgRes.ok) { missing++; continue; }
-        const blob = await imgRes.blob();
-        const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-        const b64  = await resizeImageToBase64(file, 800, 0.82);
-        await idbPut('photo_' + personId, b64);
-        loaded++;
-        if (currentPersonId === personId) {
+    // Personen-Fotos (alle Einträge pro Person, indiziert)
+    for (const [personId, { files, primIdx }] of personMap) {
+      let personLoaded = 0;
+      for (let i = 0; i < files.length; i++) {
+        const filename = files[i];
+        const fileId = odFiles[filename.toLowerCase()];
+        if (!fileId) { missing++; continue; }
+        try {
+          const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
+            { headers: { Authorization: 'Bearer ' + token } });
+          if (!imgRes.ok) { missing++; continue; }
+          const blob = await imgRes.blob();
+          const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+          const b64  = await resizeImageToBase64(file, 800, 0.82);
+          await idbPut('photo_' + personId + '_' + i, b64);
+          if (i === primIdx) await idbPut('photo_' + personId, b64);
+          loaded++; personLoaded++;
+        } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
+      }
+      if (personLoaded > 0 && currentPersonId === personId) {
+        const b64 = await idbGet('photo_' + personId).catch(() => null);
+        if (b64) {
           const el = document.getElementById('det-photo-' + personId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
         }
-      } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
+      }
     }
 
-    // Familien-Fotos
-    for (const [famId, filename] of famMap) {
-      const fileId = odFiles[filename.toLowerCase()];
-      if (!fileId) { missing++; continue; }
-      try {
-        const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
-          { headers: { Authorization: 'Bearer ' + token } });
-        if (!imgRes.ok) { missing++; continue; }
-        const blob = await imgRes.blob();
-        const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-        const b64  = await resizeImageToBase64(file, 800, 0.82);
-        await idbPut('photo_fam_' + famId, b64);
-        loaded++;
-        if (currentFamilyId === famId) {
+    // Familien-Fotos (alle Einträge pro Familie, indiziert)
+    for (const [famId, { files, primIdx }] of famMap) {
+      let famLoaded = 0;
+      for (let i = 0; i < files.length; i++) {
+        const filename = files[i];
+        const fileId = odFiles[filename.toLowerCase()];
+        if (!fileId) { missing++; continue; }
+        try {
+          const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
+            { headers: { Authorization: 'Bearer ' + token } });
+          if (!imgRes.ok) { missing++; continue; }
+          const blob = await imgRes.blob();
+          const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
+          const b64  = await resizeImageToBase64(file, 800, 0.82);
+          await idbPut('photo_fam_' + famId + '_' + i, b64);
+          if (i === primIdx) await idbPut('photo_fam_' + famId, b64);
+          loaded++; famLoaded++;
+        } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
+      }
+      if (famLoaded > 0 && currentFamilyId === famId) {
+        const b64 = await idbGet('photo_fam_' + famId).catch(() => null);
+        if (b64) {
           const el = document.getElementById('det-fam-photo-' + famId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0">`; }
+          const av = document.getElementById('det-fam-avatar-' + famId);
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+          if (av) av.style.display = 'none';
         }
-      } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
+      }
     }
 
     let msg = `✓ ${loaded} Fotos geladen`;

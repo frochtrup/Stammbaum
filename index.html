@@ -1521,8 +1521,9 @@ body {
 
 <div class="toast" id="toast"></div>
 
-<div id="modalLightbox" onclick="document.getElementById('modalLightbox').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;cursor:pointer;align-items:center;justify-content:center">
-  <img id="lightboxImg" alt="Foto" style="max-width:92vw;max-height:88vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 32px rgba(0,0,0,0.6)">
+<div id="modalLightbox" onclick="document.getElementById('modalLightbox').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+  <img id="lightboxImg" alt="Foto" style="max-width:92vw;max-height:80vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 32px rgba(0,0,0,0.6)">
+  <button id="lightboxSetHero" onclick="event.stopPropagation();_lightboxSetHero()" style="display:none;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:8px 22px;font-size:0.92rem;font-weight:600;cursor:pointer">Als Hauptfoto setzen</button>
 </div>
 
 <!-- ══════════════════════════════════════
