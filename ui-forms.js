@@ -86,14 +86,22 @@ function showSourceDetail(id, pushHistory = true) {
   }
 
   // Media section: inline entries from media[] + reference entries from passthrough
-  const srcMedia = (s.media || []).filter(m => m.file || m.title);
+  const srcMedia = s.media || [];
   const srcPtObje = (s._passthrough || []).filter(l => /^1 OBJE @/.test(l));
-  if (srcMedia.length || srcPtObje.length) {
+  {
     const _objeMap = _buildObjeRefMap();
-    html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
-    for (const m of srcMedia) {
-      html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Medien</div>
+        <button class="section-add" onclick="openAddMediaDialog('source','${id}')">+ Hinzufügen</button>
+      </div>`;
+    for (let i = 0; i < srcMedia.length; i++) {
+      const m = srcMedia[i];
+      if (!m.file && !m.title) continue;
+      html += `<div class="fact-row" style="display:flex;align-items:center;gap:4px">
+        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
+        <span class="fact-val" style="word-break:break-all;flex:1">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
+        <button class="unlink-btn" onclick="deleteSourceMedia('${id}',${i})" title="Entfernen">×</button></div>`;
     }
     for (const l of srcPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
@@ -103,6 +111,7 @@ function showSourceDetail(id, pushHistory = true) {
       html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
         <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
     }
+    if (!srcMedia.filter(m => m.file || m.title).length && !srcPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
   }
 
@@ -1638,28 +1647,36 @@ async function _odShowFolder(folderId, folderName) {
     const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
-    const folders = (data.value || []).filter(f => f.folder);
+    const items   = data.value || [];
+    const folders = items.filter(f => f.folder);
+    const files   = _odPickMode ? items.filter(f => !f.folder) : [];
     const title   = document.querySelector('#modalOneDrive .sheet-title');
-    if (title) title.textContent = 'Fotos importieren';
+    if (title) title.textContent = _odPickMode ? 'Datei auswählen' : 'Fotos importieren';
     const list = document.getElementById('odFileList');
     if (!list) return;
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
     let html = `<div style="font-size:0.75rem;color:var(--text-dim);padding-bottom:8px">${esc(breadcrumb)}</div>`;
     if (_odFolderStack.length > 0) {
       html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odFolderBack()">← Zurück</div>`;
+    } else if (_odPickMode) {
+      html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odPickCancel()">← Abbrechen</div>`;
     }
-    if (folderId !== 'root') {
+    if (!_odPickMode && folderId !== 'root') {
       html += `<div class="list-item" style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)"
         data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
         onclick="odImportPhotosFromFolder(this.dataset.odid,this.dataset.odname)">
         📥 Fotos aus diesem Ordner laden</div>`;
     }
-    html += folders.length === 0
-      ? `<div style="color:var(--text-dim);font-size:0.85rem;padding:8px">Keine Unterordner</div>`
-      : folders.map(f => `<div class="list-item" style="cursor:pointer"
+    if (folders.length === 0 && files.length === 0) {
+      html += `<div style="color:var(--text-dim);font-size:0.85rem;padding:8px">Keine Einträge</div>`;
+    } else {
+      html += folders.map(f => `<div class="list-item" style="cursor:pointer"
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}"
           onclick="_odEnterFolder(this)">📁 &nbsp;${esc(f.name)}</div>`).join('');
+      html += files.map(f => `<div class="list-item" style="cursor:pointer"
+          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
+    }
     list.innerHTML = html;
     openModal('modalOneDrive');
   } catch(e) { showToast('OneDrive: ' + e.message); }
@@ -1741,6 +1758,179 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     showToast(msg);
     _odUpdateUI();
   } catch(e) { showToast('OneDrive: ' + e.message); }
+}
+
+// ─── Medien hinzufügen / löschen ─────────────────────────────────────────
+let _addMediaType     = null; // 'person' | 'family' | 'source'
+let _addMediaId       = null;
+let _addMediaOdFileId = null;
+let _odPickMode       = false;
+
+function openAddMediaDialog(type, entityId) {
+  _addMediaType     = type;
+  _addMediaId       = entityId;
+  _addMediaOdFileId = null;
+  document.getElementById('am-title').value = '';
+  document.getElementById('am-file').value  = '';
+  document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
+  openModal('modalAddMedia');
+}
+
+function confirmAddMedia() {
+  const title = document.getElementById('am-title').value.trim();
+  const file  = document.getElementById('am-file').value.trim();
+  if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
+  const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
+  const entry = { form, file, title };
+
+  if (_addMediaType === 'person') {
+    const p = db.individuals[_addMediaId];
+    if (!p) return;
+    if (!p.media) p.media = [];
+    const idx = p.media.length;
+    p.media.push(entry);
+    if (_addMediaOdFileId) _addMediaToFilemap('persons', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
+    changed = true;
+    closeModal('modalAddMedia');
+    showDetail(_addMediaId, false);
+  } else if (_addMediaType === 'family') {
+    const f = db.families[_addMediaId];
+    if (!f) return;
+    if (!f.marr._extra) f.marr._extra = [];
+    const idx = _countFamMarrObje(f);
+    f.marr._extra.push('2 OBJE');
+    if (title) f.marr._extra.push('3 TITL ' + title);
+    if (file)  f.marr._extra.push('3 FILE ' + file);
+    if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
+    changed = true;
+    closeModal('modalAddMedia');
+    showFamilyDetail(_addMediaId, false);
+  } else if (_addMediaType === 'source') {
+    const s = db.sources[_addMediaId];
+    if (!s) return;
+    if (!s.media) s.media = [];
+    s.media.push(entry);
+    changed = true;
+    closeModal('modalAddMedia');
+    showSourceDetail(_addMediaId, false);
+  }
+}
+
+function _countFamMarrObje(f) {
+  let n = 0;
+  for (const l of (f.marr?._extra || [])) { if (l === '2 OBJE' || /^2 OBJE @/.test(l)) n++; }
+  return n;
+}
+
+async function _addMediaToFilemap(storeKey, id, entry) {
+  try {
+    const fm = await idbGet('od_filemap').catch(() => null) || { persons: {}, families: {} };
+    if (!fm[storeKey]) fm[storeKey] = {};
+    if (!fm[storeKey][id]) fm[storeKey][id] = [];
+    fm[storeKey][id].push(entry);
+    await idbPut('od_filemap', fm).catch(() => {});
+    const pfx = storeKey === 'families' ? 'photo_fam_' + id : 'photo_' + id;
+    Object.keys(_odPhotoCache).filter(k => k.startsWith(pfx)).forEach(k => delete _odPhotoCache[k]);
+  } catch {}
+}
+
+async function deletePersonMedia(personId, idx) {
+  const p = db.individuals[personId];
+  if (!p?.media) return;
+  const oldLen = p.media.length;
+  p.media.splice(idx, 1);
+  await _removeMediaFromFilemap('persons', personId, idx);
+  await _clearIdbPhotoKeys('photo_' + personId, oldLen);
+  changed = true;
+  showDetail(personId, false);
+}
+
+async function deleteFamilyMarrMedia(famId, idx) {
+  const f = db.families[famId];
+  if (!f) return;
+  const oldCount = _countFamMarrObje(f);
+  _removeFamMarrObjeAt(f, idx);
+  await _removeMediaFromFilemap('families', famId, idx);
+  await _clearIdbPhotoKeys('photo_fam_' + famId, oldCount);
+  changed = true;
+  showFamilyDetail(famId, false);
+}
+
+async function deleteFamilyMedia(famId, idx) {
+  const f = db.families[famId];
+  if (!f?.media) return;
+  f.media.splice(idx, 1);
+  changed = true;
+  showFamilyDetail(famId, false);
+}
+
+async function deleteSourceMedia(srcId, idx) {
+  const s = db.sources[srcId];
+  if (!s?.media) return;
+  s.media.splice(idx, 1);
+  changed = true;
+  showSourceDetail(srcId, false);
+}
+
+function _removeFamMarrObjeAt(f, targetIdx) {
+  const extra = f.marr?._extra;
+  if (!extra) return;
+  let objeIdx = -1, startLine = -1;
+  for (let i = 0; i < extra.length; i++) {
+    if (extra[i] === '2 OBJE' || /^2 OBJE @/.test(extra[i])) {
+      if (++objeIdx === targetIdx) { startLine = i; break; }
+    }
+  }
+  if (startLine === -1) return;
+  let endLine = startLine + 1;
+  while (endLine < extra.length && extra[endLine].startsWith('3 ')) endLine++;
+  extra.splice(startLine, endLine - startLine);
+}
+
+async function _removeMediaFromFilemap(storeKey, id, idx) {
+  try {
+    const fm = await idbGet('od_filemap').catch(() => null);
+    if (!fm) return;
+    const entries = fm[storeKey]?.[id];
+    if (entries && entries.length > idx) {
+      entries.splice(idx, 1);
+      if (!entries.length) delete fm[storeKey][id];
+      await idbPut('od_filemap', fm).catch(() => {});
+    }
+  } catch {}
+  const pfx = storeKey === 'families' ? 'photo_fam_' + id : 'photo_' + id;
+  Object.keys(_odPhotoCache).filter(k => k.startsWith(pfx)).forEach(k => delete _odPhotoCache[k]);
+}
+
+async function _clearIdbPhotoKeys(prefix, upTo) {
+  for (let i = 0; i <= upTo; i++) idbDel(prefix + '_' + i).catch(() => {});
+}
+
+async function odPickFileForMedia() {
+  if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odPickMode = true;
+  _odFolderStack = [];
+  closeModal('modalAddMedia');
+  await _odShowFolder('root', 'OneDrive');
+}
+
+function _odPickSelectFile(fileId, filename) {
+  _addMediaOdFileId = fileId;
+  document.getElementById('am-file').value = filename;
+  _odPickMode = false;
+  closeModal('modalOneDrive');
+  openModal('modalAddMedia');
+}
+
+function _odPickCancel() {
+  _odPickMode = false;
+  closeModal('modalOneDrive');
+  openModal('modalAddMedia');
+}
+
+function _odCancelOrClose() {
+  if (_odPickMode) { _odPickMode = false; closeModal('modalOneDrive'); openModal('modalAddMedia'); }
+  else closeModal('modalOneDrive');
 }
 
 // OneDrive OAuth-Callback nach Redirect abfangen

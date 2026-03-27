@@ -1465,7 +1465,31 @@ body {
     <div class="sheet-body">
       <div id="odFileList" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
       <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-cancel" onclick="closeModal('modalOneDrive')">Abbrechen</button>
+        <button class="btn btn-cancel" onclick="_odCancelOrClose()">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Medium hinzufügen -->
+<div class="modal-overlay" id="modalAddMedia">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Medium hinzufügen</div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label class="form-label">Titel (optional)</label>
+        <input class="form-input" id="am-title" placeholder="Titel / Beschreibung">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dateiname</label>
+        <input class="form-input" id="am-file" placeholder="z.B. foto.jpg">
+      </div>
+      <div id="am-od-row" style="display:none;margin-bottom:12px">
+        <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForMedia()">Aus OneDrive auswählen</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalAddMedia')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="confirmAddMedia()">Hinzufügen</button>
       </div>
     </div>
   </div>

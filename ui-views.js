@@ -1266,18 +1266,23 @@ function showDetail(id, pushHistory = true) {
   // Media section: inline entries from media[] + reference entries from passthrough
   const indiMedia = p.media || [];
   const indiPtObje = (p._passthrough || []).filter(l => /^1 OBJE @/.test(l));
-  if (indiMedia.length || indiPtObje.length) {
+  {
     const _objeMap = _buildObjeRefMap();
-    html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Medien</div>
+        <button class="section-add" onclick="openAddMediaDialog('person','${id}')">+ Hinzufügen</button>
+      </div>`;
     for (let i = 0; i < indiMedia.length; i++) {
       const m = indiMedia[i];
       const display = m.title || m.file || m.form || '–';
       const idbKey  = 'photo_' + id + '_' + i;
       const heroKey = 'photo_' + id;
-      html += `<div class="fact-row" style="cursor:pointer"
+      html += `<div class="fact-row" style="cursor:pointer;display:flex;align-items:center;gap:4px"
         onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}',null)">
         <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
+        <button class="unlink-btn" onclick="event.stopPropagation();deletePersonMedia('${id}',${i})" title="Entfernen">×</button></div>`;
     }
     for (const l of indiPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
@@ -1287,6 +1292,7 @@ function showDetail(id, pushHistory = true) {
       html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
         <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
     }
+    if (!indiMedia.length && !indiPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
   }
 
@@ -1443,22 +1449,30 @@ function showFamilyDetail(id, pushHistory = true) {
     else if (l.startsWith('2 '))              { _moe = null; }
   }
   const famPtObje = (f._passthrough || []).filter(l => /^1 OBJE @/.test(l));
-  if (famMedia.length || marrObjeEntries.length || famPtObje.length) {
-    html += `<div class="section fade-up"><div class="section-title">Medien</div>`;
+  {
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Medien</div>
+        <button class="section-add" onclick="openAddMediaDialog('family','${id}')">+ Hinzufügen</button>
+      </div>`;
     for (let i = 0; i < marrObjeEntries.length; i++) {
       const m = marrObjeEntries[i];
       const display = m.title || m.file || m.form || '–';
       const idbKey  = 'photo_fam_' + id + '_' + i;
       const heroKey = 'photo_fam_' + id;
-      html += `<div class="fact-row" style="cursor:pointer"
+      html += `<div class="fact-row" style="cursor:pointer;display:flex;align-items:center;gap:4px"
         onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
         <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
+        <button class="unlink-btn" onclick="event.stopPropagation();deleteFamilyMarrMedia('${id}',${i})" title="Entfernen">×</button></div>`;
     }
-    for (const m of famMedia) {
+    for (let i = 0; i < famMedia.length; i++) {
+      const m = famMedia[i];
       const display = m.title || m.file || m.form || '–';
-      html += `<div class="fact-row"><span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span></div>`;
+      html += `<div class="fact-row" style="display:flex;align-items:center;gap:4px">
+        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
+        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
+        <button class="unlink-btn" onclick="deleteFamilyMedia('${id}',${i})" title="Entfernen">×</button></div>`;
     }
     for (const l of famPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
@@ -1468,6 +1482,7 @@ function showFamilyDetail(id, pushHistory = true) {
       html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
         <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
     }
+    if (!marrObjeEntries.length && !famMedia.length && !famPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
   }
 
