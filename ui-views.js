@@ -941,8 +941,8 @@ function showTree(personId, addToHistory = true) {
   const allFamilies = (p.fams || []).map(famId => {
     const fam = db.families[famId];
     if (!fam) return null;
-    const spId = (fam.husb && fam.husb !== personId) ? fam.husb
-               : (fam.wife && fam.wife !== personId) ? fam.wife
+    const spId = personId === fam.husb ? (fam.wife || null)
+               : personId === fam.wife ? (fam.husb || null)
                : null;
     return { famId, spId, kids: fam.children || [] };
   }).filter(Boolean);
