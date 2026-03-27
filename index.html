@@ -1447,7 +1447,10 @@ body {
           💾 &nbsp; In OneDrive speichern
         </button>
         <button id="odPhotoBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odImportPhotos()">
-          🖼 &nbsp; Fotos aus OneDrive laden
+          🖼 &nbsp; Foto-Ordner auswählen…
+        </button>
+        <button id="odQuickImportBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odImportFromDefaultFolder()">
+          ⚡ &nbsp; Fotos verknüpfen
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test

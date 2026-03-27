@@ -16,11 +16,16 @@ function showLightbox(src, heroKey, heroElemId, avatarElemId, idbKey) {
 }
 
 async function openMediaPhoto(idbKey, heroKey, heroElemId, avatarElemId) {
-  let b64 = await idbGet(idbKey).catch(() => null);
+  let src = await idbGet(idbKey).catch(() => null)
+         || await _odGetPhotoUrl(idbKey).catch(() => null);
   let usedFallback = false;
-  if (!b64) { b64 = await idbGet(heroKey).catch(() => null); usedFallback = true; }
-  if (!b64) { showToast('Kein Foto vorhanden'); return; }
-  showLightbox(b64, heroKey, heroElemId, avatarElemId, usedFallback ? heroKey : idbKey);
+  if (!src) {
+    src = await idbGet(heroKey).catch(() => null)
+       || await _odGetPhotoUrl(heroKey).catch(() => null);
+    usedFallback = true;
+  }
+  if (!src) { showToast('Kein Foto vorhanden'); return; }
+  showLightbox(src, heroKey, heroElemId, avatarElemId, usedFallback ? heroKey : idbKey);
 }
 
 async function _lightboxSetHero() {
@@ -1341,13 +1346,15 @@ function showDetail(id, pushHistory = true) {
   showView('v-detail');
 
   // Foto async aus IDB nachladen (Sprint P3-2)
-  idbGet('photo_' + id).then(b64 => {
-    if (!b64) return;
+  (async () => {
+    const src = await idbGet('photo_' + id).catch(() => null)
+             || await _odGetPhotoUrl('photo_' + id).catch(() => null);
+    if (!src) return;
     const el = document.getElementById('det-photo-' + id);
-    if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
-    // Lazy migration: ältere Imports haben nur photo_${id}, aber Medieneinträge brauchen photo_${id}_0
-    idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', b64).catch(() => {}); }).catch(() => {});
-  }).catch(() => {});
+    if (el) { el.style.display = ''; el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+    // Lazy migration (nur für IDB-base64, nicht blob: URLs)
+    if (!src.startsWith('blob:')) idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', src).catch(() => {}); }).catch(() => {});
+  })();
 }
 
 function showFamilyDetail(id, pushHistory = true) {
@@ -1468,22 +1475,22 @@ function showFamilyDetail(id, pushHistory = true) {
   showView('v-detail');
 
   // Foto async aus IDB nachladen
-  idbGet('photo_fam_' + id).then(b64 => {
-    if (!b64) return;
+  (async () => {
+    const src = await idbGet('photo_fam_' + id).catch(() => null)
+             || await _odGetPhotoUrl('photo_fam_' + id).catch(() => null);
+    if (!src) return;
     const el = document.getElementById('det-fam-photo-' + id);
     if (el) {
-      el.style.display = '';
-      el.innerHTML = '';
+      el.style.display = ''; el.innerHTML = '';
       const img = document.createElement('img');
-      img.src = b64; img.alt = 'Foto';
+      img.src = src; img.alt = 'Foto';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
       img.onclick = () => showLightbox(img.src);
       el.appendChild(img);
       const av = document.getElementById('det-fam-avatar-' + id);
       if (av) av.style.display = 'none';
     }
-    // Lazy migration: ältere Imports haben nur photo_fam_${id}, aber Medieneinträge brauchen photo_fam_${id}_0
-    idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', b64).catch(() => {}); }).catch(() => {});
-  }).catch(() => {});
+    if (!src.startsWith('blob:')) idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', src).catch(() => {}); }).catch(() => {});
+  })();
 }
 

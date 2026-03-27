@@ -1308,22 +1308,71 @@ const OD_AUTH_EP   = 'https://login.microsoftonline.com/common/oauth2/v2.0/autho
 const OD_TOKEN_EP  = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
 
+// Session-Cache für dynamisch geladene Fotos (blob: URLs, nicht persistent)
+const _odPhotoCache = {};
+
+// IDB-Key parsen → { isFam, id, idx, isHero }
+function _parsePhotoKey(idbKey) {
+  const isFam = idbKey.startsWith('photo_fam_');
+  const s = idbKey.slice(isFam ? 'photo_fam_'.length : 'photo_'.length);
+  const m = s.match(/^(.+)_(\d+)$/);
+  return { isFam, id: m ? m[1] : s, idx: m ? +m[2] : 0, isHero: !m };
+}
+
+// Foto dynamisch aus OneDrive laden (Session-Cache → fileId-Map → fetch)
+async function _odGetPhotoUrl(idbKey) {
+  if (!_odIsConnected()) return null;
+  if (_odPhotoCache[idbKey]) return _odPhotoCache[idbKey];
+  const p = _parsePhotoKey(idbKey);
+  const filemap = await idbGet('od_filemap').catch(() => null);
+  const store   = p.isFam ? filemap?.families : filemap?.persons;
+  const entries = store?.[p.id];
+  if (!entries?.length) return null;
+  const entry = p.isHero ? (entries.find(e => e.prim) || entries[0]) : (entries[p.idx] || null);
+  if (!entry?.fileId) return null;
+  const token = await _odGetToken().catch(() => null);
+  if (!token) return null;
+  try {
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${entry.fileId}/content`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return null;
+    const url = URL.createObjectURL(await res.blob());
+    _odPhotoCache[idbKey] = url;
+    return url;
+  } catch { return null; }
+}
+
+// Quick-Import aus gespeichertem Standard-Ordner (kein Navigations-Dialog)
+async function odImportFromDefaultFolder() {
+  const folder = await idbGet('od_default_folder').catch(() => null);
+  if (!folder) { showToast('Kein Standard-Ordner gesetzt — bitte Ordner auswählen'); odImportPhotos(); return; }
+  await odImportPhotosFromFolder(folder.folderId, folder.folderName);
+}
+
 function _odRedirectUri() {
   // /Stammbaum/index.html → /Stammbaum/  (muss mit registrierter URI übereinstimmen)
   return location.origin + location.pathname.replace(/[^/]*$/, '');
 }
 function _odIsConnected()  { return !!localStorage.getItem('od_access_token'); }
 
-function _odUpdateUI() {
+async function _odUpdateUI() {
   const conn = _odIsConnected();
   const cb = document.getElementById('odConnectBtn');
   const ob = document.getElementById('odOpenBtn');
   const sb = document.getElementById('odSaveBtn');
   const pb = document.getElementById('odPhotoBtn');
+  const qb = document.getElementById('odQuickImportBtn');
   if (cb) cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
   if (ob) ob.style.display = conn ? '' : 'none';
   if (sb) sb.style.display = conn ? '' : 'none';
   if (pb) pb.style.display = conn ? '' : 'none';
+  if (qb) {
+    if (conn) {
+      const folder = await idbGet('od_default_folder').catch(() => null);
+      qb.style.display = folder ? '' : 'none';
+      if (folder) qb.innerHTML = `⚡ &nbsp; Fotos verknüpfen &nbsp;<span style="font-size:0.8rem;opacity:0.7">${esc(folder.folderName)}</span>`;
+    } else { qb.style.display = 'none'; }
+  }
 }
 
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
@@ -1639,7 +1688,7 @@ async function odImportPhotosFromFolder(folderId, folderName) {
 
   const { persons: personMap, families: famMap } = _extractObjeFilemap();
   if (personMap.size === 0 && famMap.size === 0) { showToast('Keine OBJE-Referenzen im GEDCOM gefunden'); return; }
-  showToast(`Lade Dateiliste aus "${folderName}"…`);
+  showToast(`Verknüpfe Fotos aus "${folderName}"…`);
 
   try {
     const res  = await fetch(`${OD_GRAPH}/me/drive/items/${folderId}/children?select=id,name&top=500`,
@@ -1649,70 +1698,56 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     const odFiles = {};
     for (const f of (data.value || [])) odFiles[f.name.toLowerCase()] = f.id;
 
-    let loaded = 0, missing = 0, bmpFailed = 0;
+    let linked = 0, missing = 0;
+    const filemap = { persons: {}, families: {} };
 
-    // Personen-Fotos (alle Einträge pro Person, indiziert)
     for (const [personId, { files, primIdx }] of personMap) {
-      let personLoaded = 0;
+      const entries = [];
       for (let i = 0; i < files.length; i++) {
-        const filename = files[i];
-        const fileId = odFiles[filename.toLowerCase()];
-        if (!fileId) { missing++; continue; }
-        try {
-          const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
-            { headers: { Authorization: 'Bearer ' + token } });
-          if (!imgRes.ok) { missing++; continue; }
-          const blob = await imgRes.blob();
-          const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-          const b64  = await resizeImageToBase64(file, 800, 0.82);
-          await idbPut('photo_' + personId + '_' + i, b64);
-          if (i === primIdx) await idbPut('photo_' + personId, b64);
-          loaded++; personLoaded++;
-        } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
+        const fileId = odFiles[files[i].toLowerCase()];
+        if (fileId) { entries.push({ fileId, filename: files[i], prim: i === primIdx }); linked++; }
+        else missing++;
       }
-      if (personLoaded > 0 && currentPersonId === personId) {
-        const b64 = await idbGet('photo_' + personId).catch(() => null);
-        if (b64) {
-          const el = document.getElementById('det-photo-' + personId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
-        }
-      }
+      if (entries.length) filemap.persons[personId] = entries;
     }
 
-    // Familien-Fotos (alle Einträge pro Familie, indiziert)
     for (const [famId, { files, primIdx }] of famMap) {
-      let famLoaded = 0;
+      const entries = [];
       for (let i = 0; i < files.length; i++) {
-        const filename = files[i];
-        const fileId = odFiles[filename.toLowerCase()];
-        if (!fileId) { missing++; continue; }
-        try {
-          const imgRes = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
-            { headers: { Authorization: 'Bearer ' + token } });
-          if (!imgRes.ok) { missing++; continue; }
-          const blob = await imgRes.blob();
-          const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-          const b64  = await resizeImageToBase64(file, 800, 0.82);
-          await idbPut('photo_fam_' + famId + '_' + i, b64);
-          if (i === primIdx) await idbPut('photo_fam_' + famId, b64);
-          loaded++; famLoaded++;
-        } catch(e) { /\.bmp$/i.test(filename) ? bmpFailed++ : missing++; }
+        const fileId = odFiles[files[i].toLowerCase()];
+        if (fileId) { entries.push({ fileId, filename: files[i], prim: i === primIdx }); linked++; }
+        else missing++;
       }
-      if (famLoaded > 0 && currentFamilyId === famId) {
-        const b64 = await idbGet('photo_fam_' + famId).catch(() => null);
-        if (b64) {
-          const el = document.getElementById('det-fam-photo-' + famId);
-          const av = document.getElementById('det-fam-avatar-' + famId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${b64}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
-          if (av) av.style.display = 'none';
-        }
+      if (entries.length) filemap.families[famId] = entries;
+    }
+
+    await idbPut('od_filemap', filemap).catch(() => {});
+    await idbPut('od_default_folder', { folderId, folderName }).catch(() => {});
+    // Session-Cache leeren (neu verknüpfte Fotos sollen frisch geladen werden)
+    Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
+
+    // Aktuelle Ansicht sofort aktualisieren
+    if (currentPersonId) {
+      const url = await _odGetPhotoUrl('photo_' + currentPersonId).catch(() => null);
+      if (url) {
+        const el = document.getElementById('det-photo-' + currentPersonId);
+        if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+      }
+    }
+    if (currentFamilyId) {
+      const url = await _odGetPhotoUrl('photo_fam_' + currentFamilyId).catch(() => null);
+      if (url) {
+        const el = document.getElementById('det-fam-photo-' + currentFamilyId);
+        const av = document.getElementById('det-fam-avatar-' + currentFamilyId);
+        if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+        if (av) av.style.display = 'none';
       }
     }
 
-    let msg = `✓ ${loaded} Fotos geladen`;
-    if (missing)    msg += ` · ${missing} nicht gefunden`;
-    if (bmpFailed)  msg += ` · ${bmpFailed} BMP nicht unterstützt`;
+    let msg = `✓ ${linked} Fotos verknüpft`;
+    if (missing) msg += ` · ${missing} nicht gefunden`;
     showToast(msg);
+    _odUpdateUI();
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
