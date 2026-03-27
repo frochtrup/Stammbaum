@@ -1355,24 +1355,16 @@ function _odRedirectUri() {
 }
 function _odIsConnected()  { return !!localStorage.getItem('od_access_token'); }
 
-async function _odUpdateUI() {
+function _odUpdateUI() {
   const conn = _odIsConnected();
   const cb = document.getElementById('odConnectBtn');
   const ob = document.getElementById('odOpenBtn');
   const sb = document.getElementById('odSaveBtn');
   const pb = document.getElementById('odPhotoBtn');
-  const qb = document.getElementById('odQuickImportBtn');
   if (cb) cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
   if (ob) ob.style.display = conn ? '' : 'none';
   if (sb) sb.style.display = conn ? '' : 'none';
   if (pb) pb.style.display = conn ? '' : 'none';
-  if (qb) {
-    if (conn) {
-      const folder = await idbGet('od_default_folder').catch(() => null);
-      qb.style.display = folder ? '' : 'none';
-      if (folder) qb.innerHTML = `⚡ &nbsp; Fotos verknüpfen &nbsp;<span style="font-size:0.8rem;opacity:0.7">${esc(folder.folderName)}</span>`;
-    } else { qb.style.display = 'none'; }
-  }
 }
 
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
