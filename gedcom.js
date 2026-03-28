@@ -123,10 +123,10 @@ function parseGEDCOM(text) {
           id: tag, _passthrough: [], _nameParsed: false,
           name:'', nameRaw:'', surname:'', given:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'' },
-          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], cause:'', value:'' },
-          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'' },
-          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'' },
+          birth:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'', seen:false },
+          death:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], cause:'', value:'', seen:false },
+          chr:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'', seen:false },
+          buri:{ date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'', seen:false },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'',
           extraNames:[],
@@ -143,7 +143,7 @@ function parseGEDCOM(text) {
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
-        cur = { id:tag, text: _noteinit };
+        cur = { id:tag, text: _noteinit, _passthrough: [] };
         notes[tag] = cur; curType = 'NOTE';
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
         cur = { id:tag, name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'' };
@@ -226,10 +226,10 @@ function parseGEDCOM(text) {
         else if (tag === 'RESN')  cur.resn  = val;
         else if (tag === 'EMAIL') cur.email = val;
         else if (tag === 'WWW')   cur.www   = val;
-        else if (tag === 'BIRT') { cur.birth.value = val; }
-        else if (tag === 'CHR')  { cur.chr.value   = val; }
-        else if (tag === 'DEAT') { cur.death.value = val; }
-        else if (tag === 'BURI') { cur.buri.value  = val; }
+        else if (tag === 'BIRT') { cur.birth.value = val; cur.birth.seen = true; }
+        else if (tag === 'CHR')  { cur.chr.value   = val; cur.chr.seen   = true; }
+        else if (tag === 'DEAT') { cur.death.value = val; cur.death.seen = true; }
+        else if (tag === 'BURI') { cur.buri.value  = val; cur.buri.seen  = true; }
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
                   'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB'].includes(tag)) {
           cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, media:[], _extra:[] });
@@ -652,6 +652,7 @@ function parseGEDCOM(text) {
     if (curType === 'NOTE') {
       if (tag==='CONC') cur.text += val;
       else if (tag==='CONT') cur.text += '\n' + val;
+      else cur._passthrough.push(lv + ' ' + tag + (val ? ' ' + val : ''));
     }
 
     // ── REPO record ──
@@ -984,8 +985,8 @@ function writeGEDCOM() {
     lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
     if (obj.date)  lines.push(`${lv+1} DATE ${normGedDate(obj.date)}`);
     if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
-    if (obj.place) {
-      lines.push(`${lv+1} PLAC ${obj.place}`);
+    if (obj.place || obj.lati !== null) {
+      if (obj.place) lines.push(`${lv+1} PLAC ${obj.place}`);
       geoLines(obj, lv+2);
     }
     if (obj.sources) for (const s of obj.sources) {
@@ -1054,8 +1055,8 @@ function writeGEDCOM() {
       lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
       if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
       if (ev.date)  lines.push(`2 DATE ${normGedDate(ev.date)}`);
-      if (ev.place) {
-        lines.push(`2 PLAC ${ev.place}`);
+      if (ev.place || ev.lati !== null) {
+        if (ev.place) lines.push(`2 PLAC ${ev.place}`);
         geoLines(ev, 3);
       }
       if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
@@ -1293,6 +1294,7 @@ function writeGEDCOM() {
       } while (s.length > 0);
     }
     if (!rawLines.length) lines.push(`0 ${n.id} NOTE `);
+    for (const l of (n._passthrough || [])) lines.push(l);
   }
 
   // Unknown lv=0 records (SUBM etc.) — verbatim passthrough
