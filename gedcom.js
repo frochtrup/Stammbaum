@@ -136,7 +136,7 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,addr:'',_extra:[]}, engag:{}, noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,addr:'',_extra:[]}, engag:{date:'',place:'',lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceExtra:{},value:'',seen:false,_extra:[]}, noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', media:[], lastChanged:'', lastChangedTime:'' };
@@ -497,7 +497,8 @@ function parseGEDCOM(text) {
         }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         else if (tag==='MARR') { cur.marr.seen = true; cur.marr.value = val; }
-        else if (tag==='ENGA' || tag==='CHAN') { /* context-only */ }
+        else if (tag==='ENGA') { cur.engag.seen = true; cur.engag.value = val; }
+        else if (tag==='CHAN') { /* context-only */ }
         else if (tag==='OBJE') {
           if (val && val.startsWith('@')) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
@@ -521,8 +522,10 @@ function parseGEDCOM(text) {
           else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.marr._extra; }
         }
         if (lv1tag==='ENGA') {
-          if (tag==='DATE') cur.engag.date = val;
-          if (tag==='PLAC') cur.engag.place = val;
+          if      (tag==='DATE') cur.engag.date = val;
+          else if (tag==='PLAC') cur.engag.place = val;
+          else if (tag==='SOUR' && val.startsWith('@')) { cur.engag.sources.push(val); cur.sourceRefs.add(val); }
+          else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.engag._extra; }
         }
         if (lv1tag==='OBJE' && cur.media.length) {
           if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
@@ -553,6 +556,11 @@ function parseGEDCOM(text) {
           if      (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
           else if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
           else { if (!cur.marr.sourceExtra[lastSourVal]) cur.marr.sourceExtra[lastSourVal] = []; cur.marr.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.marr.sourceExtra[lastSourVal]; }
+        }
+        if (lv1tag==='ENGA' && lv2tag==='SOUR' && lastSourVal) {
+          if      (tag==='PAGE') cur.engag.sourcePages[lastSourVal] = val;
+          else if (tag==='QUAY') cur.engag.sourceQUAY[lastSourVal] = val;
+          else { if (!cur.engag.sourceExtra[lastSourVal]) cur.engag.sourceExtra[lastSourVal] = []; cur.engag.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.engag.sourceExtra[lastSourVal]; }
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
           if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{}};
@@ -592,10 +600,11 @@ function parseGEDCOM(text) {
           }
         }
       }
-      if (lv === 4 && inMap && mapParent === 'MARR') {
+      if (lv === 4 && inMap && (mapParent === 'MARR' || mapParent === 'ENGA')) {
         const coord = parseGeoCoord(val);
-        if (tag==='LATI') cur.marr.lati = coord;
-        if (tag==='LONG') cur.marr.long = coord;
+        const evObj = mapParent === 'ENGA' ? cur.engag : cur.marr;
+        if (tag==='LATI') evObj.lati = coord;
+        if (tag==='LONG') evObj.long = coord;
       }
     }
 
@@ -1193,12 +1202,7 @@ function writeGEDCOM() {
     }
     eventBlock('MARR', f.marr, 1);
     if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
-    if (f.engag && (f.engag.date || f.engag.place)) {
-      lines.push(`1 ENGA`);
-      if (f.engag.date)  lines.push(`2 DATE ${normGedDate(f.engag.date)}`);
-      if (f.engag.place) lines.push(`2 PLAC ${f.engag.place}`);
-      if (f.engag.sources) for (const s of f.engag.sources) lines.push(`2 SOUR ${s}`);
-    }
+    eventBlock('ENGA', f.engag, 1);
     for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
     for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
     for (const m of (f.media || [])) {
