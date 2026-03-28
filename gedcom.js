@@ -200,7 +200,7 @@ function parseGEDCOM(text) {
             const sn2 = (val||'').match(/\/([^\/]*)\//) || [];
             const surn2 = sn2[1] ? sn2[1].trim() : '';
             const giv2  = (val||'').replace(/\/[^\/]*\//, '').trim();
-            cur.extraNames.push({ nameRaw:val||'', given:giv2, surname:surn2, prefix:'', suffix:'', type:'', sources:[], sourcePages:{}, sourceQUAY:{}, _extra:[] });
+            cur.extraNames.push({ nameRaw:val||'', given:giv2, surname:surn2, prefix:'', suffix:'', type:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[] });
             _curExtraNameIdx = cur.extraNames.length - 1;
           } else {
             cur._nameParsed = true;
@@ -372,7 +372,11 @@ function parseGEDCOM(text) {
           else if (lv1tag === 'DEAT') { if (!cur.death.sourcePages) cur.death.sourcePages={}; cur.death.sourcePages[lastSourVal] = val; }
           else if (lv1tag === 'CHR')  { if (!cur.chr.sourcePages)   cur.chr.sourcePages={};   cur.chr.sourcePages[lastSourVal]   = val; }
           else if (lv1tag === 'BURI') { if (!cur.buri.sourcePages)  cur.buri.sourcePages={};  cur.buri.sourcePages[lastSourVal]  = val; }
-          else if (lv1tag === 'NAME') cur.nameSourcePages[lastSourVal] = val;
+          else if (lv1tag === 'NAME') {
+            if (_curExtraNameIdx >= 0 && cur.extraNames[_curExtraNameIdx])
+              cur.extraNames[_curExtraNameIdx].sourcePages[lastSourVal] = val;
+            else cur.nameSourcePages[lastSourVal] = val;
+          }
           else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourPages[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourcePages) cur.events[evIdx].sourcePages = {};
@@ -385,7 +389,11 @@ function parseGEDCOM(text) {
           else if (lv1tag === 'DEAT') { if (!cur.death.sourceQUAY) cur.death.sourceQUAY={}; cur.death.sourceQUAY[lastSourVal] = val; }
           else if (lv1tag === 'CHR')  { if (!cur.chr.sourceQUAY)   cur.chr.sourceQUAY={};   cur.chr.sourceQUAY[lastSourVal]   = val; }
           else if (lv1tag === 'BURI') { if (!cur.buri.sourceQUAY)  cur.buri.sourceQUAY={};  cur.buri.sourceQUAY[lastSourVal]  = val; }
-          else if (lv1tag === 'NAME') cur.nameSourceQUAY[lastSourVal] = val;
+          else if (lv1tag === 'NAME') {
+            if (_curExtraNameIdx >= 0 && cur.extraNames[_curExtraNameIdx])
+              cur.extraNames[_curExtraNameIdx].sourceQUAY[lastSourVal] = val;
+            else cur.nameSourceQUAY[lastSourVal] = val;
+          }
           else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourQUAY[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
@@ -396,7 +404,11 @@ function parseGEDCOM(text) {
         if (lv2tag === 'SOUR' && lastSourVal.startsWith('@') &&
             tag !== 'PAGE' && tag !== 'QUAY' && tag !== 'SOUR' && tag !== 'TIME') {
           let _seDict = null;
-          if      (lv1tag === 'NAME') _seDict = cur.nameSourceExtra;
+          if      (lv1tag === 'NAME') {
+            if (_curExtraNameIdx >= 0 && cur.extraNames[_curExtraNameIdx])
+              _seDict = cur.extraNames[_curExtraNameIdx].sourceExtra || (cur.extraNames[_curExtraNameIdx].sourceExtra = {});
+            else _seDict = cur.nameSourceExtra;
+          }
           else if (lv1tag === 'BIRT') _seDict = cur.birth.sourceExtra;
           else if (lv1tag === 'DEAT') _seDict = cur.death.sourceExtra;
           else if (lv1tag === 'CHR')  _seDict = cur.chr.sourceExtra;
@@ -1017,6 +1029,7 @@ function writeGEDCOM() {
         lines.push(`2 SOUR ${s}`);
         if (en.sourcePages?.[s]) lines.push(`3 PAGE ${en.sourcePages[s]}`);
         if (en.sourceQUAY?.[s])  lines.push(`3 QUAY ${en.sourceQUAY[s]}`);
+        if (en.sourceExtra?.[s]) for (const l of en.sourceExtra[s]) lines.push(l);
       }
       for (const l of (en._extra || [])) lines.push(l);
     }
