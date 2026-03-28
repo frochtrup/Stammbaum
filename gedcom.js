@@ -65,6 +65,16 @@ const EVENT_LABELS = {
   CHR:'Taufe',           BURI:'Beerdigung',
 };
 
+// Label-Map für GEDCOM NAME TYPE-Werte
+const NAME_TYPE_LABELS = {
+  birth:     'Geburtsname',
+  maiden:    'Mädchenname',
+  married:   'Ehename',
+  aka:       'Auch bekannt als',
+  immigrant: 'Einwanderer-Name',
+  nickname:  'Spitzname',
+};
+
 // ─────────────────────────────────────
 //  GEDCOM PARSER  (v3 – geo fixed)
 // ─────────────────────────────────────

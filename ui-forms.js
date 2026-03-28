@@ -551,7 +551,14 @@ function _renderPfExtraNames() {
     };
     row.appendChild(mkInput('Vorname', en.given || '', 'given'));
     row.appendChild(mkInput('Nachname', en.surname || '', 'surname'));
-    row.appendChild(mkInput('Typ (birth, maiden…)', en.type || '', 'type'));
+    const sel = document.createElement('select');
+    sel.className = 'form-select';
+    sel.style.cssText = 'flex:2;min-width:100px';
+    [['', '— Typ wählen —'], ['birth','Geburtsname'], ['maiden','Mädchenname'],
+     ['married','Ehename'], ['aka','Auch bekannt als'], ['immigrant','Einwanderer-Name'], ['nickname','Spitzname']]
+      .forEach(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; if (en.type === v) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener('change', () => { _pfExtraNames[idx].type = sel.value; });
+    row.appendChild(sel);
     const del = document.createElement('button');
     del.type = 'button';
     del.textContent = '×';
