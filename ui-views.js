@@ -1247,6 +1247,11 @@ function showDetail(id, pushHistory = true) {
 
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);
+  for (const en of (p.extraNames || [])) {
+    const enLabel = en.type || 'Weiterer Name';
+    const enVal = [en.prefix, en.nameRaw || [en.given, en.surname ? '/'+en.surname+'/' : ''].filter(Boolean).join(' '), en.suffix].filter(Boolean).join(' ');
+    if (enVal) html += factRow(enLabel, enVal);
+  }
   if (p.resn)  html += factRow('Beschränkung', p.resn);
   if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" style="color:var(--gold)">${esc(p.email)}</a></span></div>`;
   if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${esc(p.www)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(p.www)}</a></span></div>`;

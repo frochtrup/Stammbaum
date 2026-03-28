@@ -512,7 +512,7 @@ function showPersonForm(id) {
   document.getElementById('pf-sex').value = p?.sex || 'U';
   document.getElementById('pf-suffix').value = p?.suffix || '';
   document.getElementById('pf-titl').value   = p?.titl  || '';
-  document.getElementById('pf-note').value   = p?.noteTextInline ?? p?.noteText ?? '';
+  document.getElementById('pf-note').value   = p?.noteTexts?.length ? p.noteTexts.join('\n') : (p?.noteTextInline ?? p?.noteText ?? '');
   document.getElementById('pf-resn').value   = p?.resn  || '';
   document.getElementById('pf-email').value  = p?.email || '';
   document.getElementById('pf-www').value    = p?.www   || '';
@@ -557,10 +557,10 @@ function savePerson() {
     chr:   existing.chr   || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
     buri:  existing.buri  || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
     events,
+    noteTexts: note ? [note] : [],
     noteTextInline: note,
     noteRefs: existing.noteRefs || [],
     noteText: (() => {
-      // Merge inline text + resolved refs for display
       let t = note;
       for (const ref of (existing.noteRefs || [])) {
         if (db.notes && db.notes[ref]) t += (t ? '\n' : '') + db.notes[ref].text;
@@ -658,7 +658,7 @@ function showFamilyForm(id, ctx) {
   fillDateFields('ff-edate-qual', 'ff-edate', null, f?.engag?.date || '');
   initPlaceMode('ff-eplace');
   document.getElementById('ff-eplace').value = f?.engag?.place || '';
-  document.getElementById('ff-note').value = f?.noteTextInline ?? f?.noteText ?? '';
+  document.getElementById('ff-note').value = f?.noteTexts?.length ? f.noteTexts.join('\n') : (f?.noteTextInline ?? f?.noteText ?? '');
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
 
@@ -700,6 +700,7 @@ function saveFamily() {
     id, husb, wife, children,
     marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,  sources: [...(srcWidgetState['ff']?.ids || [])] },
     engag: { ...(existingFam.engag||{}), date: edate,  place: eplace },
+    noteTexts: note ? [note] : [],
     noteTextInline: note,
     noteText: (() => {
       let t = note;
