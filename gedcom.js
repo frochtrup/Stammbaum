@@ -1,7 +1,7 @@
 // ─────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────
-let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [] };
+let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] };
 let changed = false;
 let _placesCache = null;  // Cache für collectPlaces(); wird in markChanged() geleert
 let _originalGedText = null;   // Fallback wenn localStorage-Backup fehlschlägt; sonst null
@@ -88,6 +88,7 @@ function parseGEDCOM(text) {
 
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
   const _extraRecords = [];  // verbatim passthrough for unknown lv=0 records (SUBM etc.)
+  const _headLines = [];     // HEAD verbatim (restored in writer for roundtrip fidelity)
   let cur = null, curType = null;
   // Simple flat context tracking
   let lv1tag = '';   // current level-1 tag
@@ -153,8 +154,14 @@ function parseGEDCOM(text) {
         cur = { _lines: [recLine] };
         _extraRecords.push(cur);
         curType = '_extra';
+      } else if (tag === 'HEAD') {
+        // HEAD verbatim — stored in _headLines for roundtrip fidelity
+        _headLines.length = 0;
+        _headLines.push('0 HEAD');
+        cur = { _lines: _headLines };
+        curType = 'HEAD';
       } else {
-        // HEAD, TRLR etc. — not tracked (HEAD rebuilt by writer, TRLR is sentinel)
+        // TRLR etc. — sentinel, skip
         curType = null; cur = null;
       }
       continue;
@@ -163,6 +170,8 @@ function parseGEDCOM(text) {
 
     // Unknown lv=0 record sub-lines — collect verbatim
     if (curType === '_extra') { cur._lines.push(lv + ' ' + tag + (val ? ' ' + val : '')); continue; }
+    // HEAD sub-lines — collect verbatim
+    if (curType === 'HEAD') { _headLines.push(lv + ' ' + tag + (val ? ' ' + val : '')); continue; }
 
     // Track context tags
     if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; _curNoteIsInline = false; _curExtraNameIdx = -1; }
@@ -666,7 +675,7 @@ function parseGEDCOM(text) {
     }
   }
 
-  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords };
+  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines };
 }
 
 
@@ -922,21 +931,31 @@ function writeGEDCOM() {
   const d = new Date();
   const fname = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
 
-  // ── HEAD (HEAD-001: vollständig, Ancestris-kompatibel) ──
-  lines.push('0 HEAD');
-  lines.push('1 SOUR Stammbaum-App');
-  lines.push('2 VERS 2.0');
-  lines.push('2 NAME Stammbaum PWA');
-  lines.push('1 DEST ANY');
-  lines.push(`1 DATE ${gedcomDate(d)}`);
-  lines.push(`2 TIME ${gedcomTime(d)}`);
-  lines.push('1 GEDC');
-  lines.push('2 VERS 5.5.1');
-  lines.push('2 FORM LINEAGE-LINKED');
-  lines.push('1 CHAR UTF-8');
-  lines.push(`1 FILE ${fname}`);
-  lines.push('1 PLAC');
-  lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
+  // ── HEAD ──
+  if (db.headLines && db.headLines.length > 0) {
+    // Verbatim HEAD aus Original (roundtrip-stabil), DATE/TIME auf aktuell aktualisiert
+    for (const l of db.headLines) {
+      if (/^1 DATE /.test(l))      { lines.push(`1 DATE ${gedcomDate(d)}`); continue; }
+      if (/^2 TIME /.test(l))      { lines.push(`2 TIME ${gedcomTime(d)}`); continue; }
+      lines.push(l);
+    }
+  } else {
+    // Fallback: minimaler HEAD (kein Original geladen)
+    lines.push('0 HEAD');
+    lines.push('1 SOUR Stammbaum-App');
+    lines.push('2 VERS 2.0');
+    lines.push('2 NAME Stammbaum PWA');
+    lines.push('1 DEST ANY');
+    lines.push(`1 DATE ${gedcomDate(d)}`);
+    lines.push(`2 TIME ${gedcomTime(d)}`);
+    lines.push('1 GEDC');
+    lines.push('2 VERS 5.5.1');
+    lines.push('2 FORM LINEAGE-LINKED');
+    lines.push('1 CHAR UTF-8');
+    lines.push(`1 FILE ${fname}`);
+    lines.push('1 PLAC');
+    lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
+  }
 
   function geoLines(obj, indent) {
     if (obj && obj.lati !== null && obj.long !== null) {
