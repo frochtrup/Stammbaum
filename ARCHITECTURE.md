@@ -4,39 +4,40 @@
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│               Stammbaum PWA v3.0                     │
+│          Stammbaum PWA v4.0-dev (Branch v4-dev)      │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
-│  index.html    — App-Shell (HTML + CSS, ~700 Z.)     │
+│  index.html    — App-Shell (HTML + CSS)              │
 │  gedcom.js     — GEDCOM-Parser + Writer              │
 │  storage.js    — IndexedDB, Dateiverwaltung          │
 │  ui-views.js   — Baum, Detail, Listenrendering       │
 │  ui-forms.js   — Formulare, OneDrive, Medien         │
-│  sw.js         — Service Worker (Cache v22)          │
+│  sw.js         — Service Worker (Cache v33)          │
 │  manifest.json — PWA-Manifest                        │
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~7 Dateien · ~185 Funktionen · ~500 KB
+**Größe gesamt:** ~7 Dateien · ~200 Funktionen · ~600 KB
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
-### ADR-001: Single-File HTML
-**Entscheidung:** Alle CSS, HTML und JavaScript in einer einzigen `index.html`.
+### ADR-001: Multi-File (HTML-Shell + JS-Module)
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in 4 Modulen: `gedcom.js`, `storage.js`, `ui-views.js`, `ui-forms.js`.
+
+**Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt.
 
 **Warum:**
-- Deployment = eine Datei auf GitHub Pages laden, fertig
-- Kein npm, kein Webpack, kein Build-Prozess
-- Claude kann die Datei direkt mit `str_replace` bearbeiten
-- Zielgruppe (Hobby-Genealoge) versteht ein einzelnes File
+- Einzelne Dateien bleiben editierbar ohne vollständigen Download/Upload
+- Klare Trennung: Parser (gedcom.js) / Storage (storage.js) / Rendering (ui-views.js) / Formulare (ui-forms.js)
+- Kein npm, kein Webpack, kein Build-Prozess — globale Funktionen zwischen Dateien
 
 **Konsequenzen:**
-- Datei wächst mit neuen Features (~4700 Z. jetzt, nähert sich der 5000-Zeilen-Grenze)
-- Ab ~5000 Zeilen sollte Aufteilung in CSS/JS-Dateien erwogen werden
+- Kein echtes Modul-System (kein `import/export`) — alle Funktionen global
 - Kein Hot-Reload, kein TypeScript, kein Linting
+- `<script src="...">` Reihenfolge muss Abhängigkeiten respektieren
 
 ---
 
@@ -280,8 +281,10 @@ Unterscheidet echte Verluste von Normalisierungs-Artefakten (DATE-Format, CONC-R
 | Sprint 13: alle OBJE-Kontexte | -84 |
 | Roundtrip-Fix 2026-03-24: RELI/CHIL-SOUR/frelSourExtra | ~-12 |
 | Roundtrip-Fix 2026-03-26: addrExtra, NICK-Position, _FREL-Space | **-7** |
+| v4-dev 2026-03-28: HEAD verbatim `_headLines[]`, ENGA vollständig, leere Events `seen`-Flag, NOTE-Record Sub-Tags, MAP ohne PLAC, BIRT/CHR/DEAT/BURI lv3 SOUR routing | **-7** |
+| v4-dev 2026-03-28: ENGA MAP-Koordinaten, leere DATE/PLAC (`null`-Init), DATE/PLAC-Diagnose | **≈0** |
 
-`roundtrip_stable: true` · Verbleibende -7 Zeilen: ausschließlich HEAD-Rewrite (SOUR Ancestris-Meta → App, VERS, NAME, CORP, ADDR, DATE, TIME, SUBM, FILE, NOTE) — by design.
+`roundtrip_stable: true` · Verbleibende Verluste: CONC/CONT/PAGE (Neuformatierung, kein Datenverlust) + HEAD-Rewrite (by design).
 
 ---
 
@@ -375,10 +378,11 @@ body
 │
 ├── #bottomNav          Globale Bottom-Navigation (außerhalb Views)
 │   ├── #bnav-tree      ⧖ Baum
-│   ├── #bnav-persons   ♻ Personen
+│   ├── #bnav-persons   👤 Personen
 │   ├── #bnav-families  ⚭ Familien
-│   ├── #bnav-sources   § Quellen
-│   └── #bnav-places    📍 Orte
+│   ├── #bnav-sources   📖 Quellen
+│   ├── #bnav-places    📍 Orte
+│   └── #bnav-search    🔍 Suche
 │
 ├── Modals (Bottom Sheets)
 │   ├── #modalAdd       + Neu (Auswahl: Person / Familie / Quelle)
@@ -425,7 +429,7 @@ v-detail           (BottomNav versteckt)
   - `goBack()` ruft mit `pushHistory = false` auf → kein History-Eintrag beim Zurücknavigieren
 
 ### Bottom-Nav Highlight
-`setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places' }`
+`setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places', 'search' }`
 Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
 
 ---
@@ -452,14 +456,15 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
   www:         '',                       // WWW (v2.0-dev)
 
   // Hauptereignisse (Sonder-Objekte, nicht in events[])
-  birth: { date:'8 JAN 1872', place:'München', lati:48.1, long:11.5, sources:['@S1@'], sourcePages:{'@S1@':'47'} },
-  chr:   { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
-  death: { date:'15 APR 1940', place:'München', lati:null, long:null, sources:[], sourcePages:{}, cause:'Herzversagen' },
-  buri:  { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+  // date/place: null = Tag nicht vorhanden; '' = Tag vorhanden aber leer; 'Wert' = Wert
+  birth: { date:'8 JAN 1872', place:'München', lati:48.1, long:11.5, sources:['@S1@'], sourcePages:{'@S1@':'47'}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'', seen:true },
+  chr:   { date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'', seen:false },
+  death: { date:'15 APR 1940', place:'München', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], cause:'Herzversagen', value:'', seen:true },
+  buri:  { date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'', seen:false },
 
   // Weitere Ereignisse
   events: [
-    { type:'OCCU', value:'Kaufmann', date:'', place:'', lati:null, long:null,
+    { type:'OCCU', value:'Kaufmann', date:null, place:null, lati:null, long:null,
       sources:[], sourcePages:{}, sourceQUAY:{}, note:'', addr:'', eventType:'' }
     // sourcePages: {sid: page} — Seitenangaben zu Quellenreferenzen (3 PAGE)
     // sourceQUAY:  {sid: '0'–'3'} — Quellenqualität (3 QUAY) — v2.0-dev
@@ -495,8 +500,8 @@ Wird aufgerufen in: `showTree()`, `showMain()`, `bnavTree()`, `bnavTab()`
   husb:     '@I003@',
   wife:     '@I004@',
   children: ['@I005@', '@I006@'],
-  marr:   { date:'5 APR 1898', place:'München', lati:null, long:null, sources:[] },
-  engag:  { date:'', place:'' },
+  marr:   { date:'5 APR 1898', place:'München', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, value:'', seen:true, addr:'', _extra:[] },
+  engag:  { date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, value:'', seen:false, _extra:[] },
   noteText: '',
   sourceRefs: Set(),
 }

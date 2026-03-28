@@ -11,7 +11,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 3.0 | `main` | Live — stabil |
 | 4.0 | `v4-dev` | In Entwicklung |
 
-**Roundtrip:** `stable=true`, `net_delta=-7` (nur HEAD-Rewrite, akzeptiert)
+**Roundtrip:** `stable=true`, `net_delta≈0` (alle inhaltlichen Verluste behoben; CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
 **Testdaten:** MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 
 ---
@@ -23,11 +23,12 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 Ziel: Möglichst viele Tags aus `_passthrough[]` herausnehmen — strukturiert speichern, editieren, schreiben.
 
 **Kandidaten (nach Häufigkeit in MeineDaten_ancestris.ged):**
+- [x] HEAD-Rewrite: vollständiger Erhalt aller HEAD-Felder via `_headLines[]` ✅ (2026-03-28)
+- [x] ENGA vollständig: Parser + Writer + alle Felder ✅ (2026-03-28)
 - [ ] FAM-Events: `DIV`, `DIVF` — Parser + Writer + Formularfeld
 - [ ] INDI-Events: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` — in `events[]` strukturieren
 - [ ] Mehrere inline INDI-Notes: Array statt Konkatenation
 - [ ] Zweite `1 NAME`-Einträge (Geburtsname etc.) — strukturiert statt passthrough
-- [ ] HEAD-Rewrite: vollständiger Erhalt aller HEAD-Felder (SOUR, VERS, CORP, ADDR, SUBM etc.)
 
 ### Schwerpunkt 2: Desktop UI/UX
 

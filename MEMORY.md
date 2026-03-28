@@ -12,7 +12,7 @@
 - `storage.js` — IndexedDB, Dateiverwaltung, Auto-Load
 - `ui-views.js` — Baum, Detailansichten, Listenrendering
 - `ui-forms.js` — Formulare, OneDrive-Integration, Medien-Bearbeitung
-- `sw.js` — Service Worker (Network-first, offline, Cache v22)
+- `sw.js` — Service Worker (Network-first, offline, Cache v33)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -23,11 +23,11 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-27
-- Phase 3 Sprint-Plan: P3-1 ✅ · P3-2 ✅ · P3-3 ✅ · P3-4 ✅ · P3-5 ✅ · P3-6 ✅ · P3-7 ✅ · P3-8 ✅
-- `gedcom.js` — ausgelagerter Parser/Writer (Refactor 2026-03-25/26)
-- Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-7` (nur HEAD-Rewrite akzeptiert)
-- Git: letzter Commit 3bad594 (Medien hinzufügen/löschen) auf origin/main
+## Aktueller Stand — zuletzt aktualisiert: 2026-03-28
+- Phase 3 abgeschlossen: P3-1 ✅ · P3-2 ✅ · P3-3 ✅ · P3-4 ✅ · P3-5 ✅ · P3-6 ✅ · P3-7 ✅ · P3-8 ✅
+- **Version 4 in Entwicklung: Branch `v4-dev`** — `main` bleibt v3 (live)
+- Roundtrip-Status: `roundtrip_stable=true`, `net_delta≈0` (alle inhaltlichen Verluste behoben)
+- Git: letzter Commit 5075eac (leere DATE/PLAC null-Fix, sw v33) auf v4-dev
 
 **Session 2026-03-25 — UI/UX + Code-Qualität:**
 - Baum: Geschlecht via `border-left` (blau=M, rosa=F) statt Symbol; `_treeShortName()` kürzt Namen zu Initialen
@@ -72,6 +72,22 @@
 - `_removeMediaFromFilemap()`, `_clearIdbPhotoKeys()`, `_addMediaToFilemap()`
 - OneDrive-Picker-Modus: `_odPickMode=true` → Ordner-Browser zeigt auch Dateien; `_odPickSelectFile()`, `_odPickCancel()`, `_odCancelOrClose()`
 - sw.js → v22
+
+**Session 2026-03-28 — Roundtrip-Fixes (v4-dev, Teil 1):**
+- Fix: HEAD verbatim in `_headLines[]` bewahrt; DATE/TIME werden aktuell geschrieben
+- Fix: extraNames (2. NAME-Eintrag) `3 PAGE`/`3 QUAY` — `_curExtraNameIdx` routing
+- Fix: BIRT/CHR/DEAT/BURI leere Events — `seen:false/true` Flag
+- Fix: NOTE-Record Sub-Tags (CHAN, REFN, _VALID) → `_passthrough[]`
+- Fix: MAP ohne PLAC — `eventBlock` + `events[]`-Writer prüfen `obj.lati !== null`
+- Fix: ENGA vollständig — `engag`-Objekt mit allen Feldern; Parser lv=1/2/3/4; Writer via `eventBlock`
+- sw.js v29 → v30
+
+**Session 2026-03-28 — Roundtrip-Fixes (v4-dev, Teil 2):**
+- Fix: ENGA MAP-Koordinaten (`mapParent === 'ENGA'` in lv=4-Handler + `geoLines()` im Writer)
+- Fix: Leere DATE/PLAC-Werte — `date`/`place` initialisiert mit `null` statt `''` in allen Event-Objekten; Writer prüft `!== null`, schreibt `2 DATE` ohne trailing space bei Leerstring → behebt 7× INDI/BIRT/DATE + 7× INDI/BIRT/PLAC
+- Fix: DATE/PLAC-Diagnose im Roundtrip-Test auf Auto-Diff-Mechanismus umgestellt
+- sw.js v30 → v31 → v32 → v33
+- Roundtrip-Delta: **≈0** (alle inhaltlichen Verluste behoben)
 
 Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
 

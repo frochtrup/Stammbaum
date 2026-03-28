@@ -5,6 +5,27 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 4.0 🚧 (Branch `v4-dev`, ab 2026-03-27)
+
+Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, v4-Infrastruktur.
+
+### Session 2026-03-28 — Roundtrip-Fixes (Teil 1)
+- **HEAD verbatim**: `_headLines[]` bewahrt alle HEAD-Zeilen; nur `DATE`/`TIME` werden aktuell geschrieben
+- **extraNames lv3-Routing**: `3 PAGE`/`3 QUAY` unter zweitem NAME-Eintrag via `_curExtraNameIdx`
+- **BIRT/CHR/DEAT/BURI leere Events**: `seen:true/false`-Flag — leerer `1 BIRT`-Block ohne sub-tags bleibt erhalten
+- **NOTE-Record Sub-Tags**: `CHAN`, `REFN`, `_VALID` unter `0 @Nxx@ NOTE` → `_passthrough[]` statt silent drop
+- **MAP ohne PLAC**: `eventBlock` + `events[]`-Writer prüfen `obj.lati !== null` unabhängig von `obj.place`
+- **ENGA vollständig**: `engag`-Objekt mit allen Feldern (date, place, lati, long, sources, sourcePages, sourceQUAY, sourceExtra, value, seen, _extra); Parser lv=1/2/3/4; Writer via `eventBlock('ENGA', ...)`
+
+### Session 2026-03-28 — Roundtrip-Fixes (Teil 2)
+- **ENGA MAP-Koordinaten**: `mapParent === 'ENGA'` in lv=4-Handler; `geoLines()` in `eventBlock('ENGA', ...)`
+- **Leere DATE/PLAC-Werte**: `date`/`place` in allen Event-Objekten (birth/death/chr/buri/marr/engag/events[]) initialisiert mit `null` statt `''`; Parser setzt Wert direkt (auch `''` bei leerem Tag); Writer prüft `!== null` und schreibt `2 DATE` ohne trailing space wenn leer — behebt 7× INDI/BIRT/DATE und 7× INDI/BIRT/PLAC Roundtrip-Verluste
+- **DATE/PLAC-Diagnose**: Roundtrip-Test zeigt Kontext (Record-Typ + lv=1-Tag) für fehlende `2 DATE`/`2 PLAC`-Zeilen; Diagnose verwendet denselben Multiset-Mechanismus wie Auto-Diff
+
+**Roundtrip-Ergebnis nach diesen Sessions:** `≈0` (alle inhaltlichen Verluste behoben; verbleibend: CONC/CONT-Neuformatierung + HEAD-Rewrite — by design)
+
+---
+
 ## Version 3.0 ✅ (März 2026 — Phase 3 abgeschlossen)
 
 **Sprint-Plan:** P3-1 ✅ IndexedDB · P3-2 ✅ Fotos · P3-3 ✅ Suche/Filter · P3-4 ✅ Service Worker · P3-5 ✅ Baum-UI · P3-6 ✅ Undo · P3-7 ✅ Desktop-Layout · P3-8 ✅ OneDrive
@@ -205,10 +226,12 @@ Schwerpunkt: Verlustfreier Ancestris-Roundtrip. Zeilen-Delta: -708 → **-7** (n
 - `_getOriginalText()`: `_originalGedText || localStorage` (RAM vor localStorage — wichtig für >5MB)
 - Delta: **-84 → -7** → `roundtrip_stable=true`
 
-**Bewusst akzeptierte Verluste (final):**
+**Bewusst akzeptierte Verluste (Stand v3.0, vor v4-dev-Fixes):**
 - DATE -106 / CONC -70 / CONT -7: Normalisierung/Resplitting (Daten erhalten, Format geändert)
 - `@Nxx@` -8: NOTE-Records mit leerem lv=0-Header + CONC-Fortsetzung
 - SOUR -10, PAGE -4, ADDR -2, FILE -1, VERS/NAME/CORP/DEST/SUBM je -1: HEAD-Rewrite (by design)
+
+→ In v4-dev wurden weitere Verluste behoben; aktueller Stand: CHANGELOG v4 oben.
 
 ---
 
