@@ -1121,9 +1121,16 @@ function addEfMedia() {
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
-  document.getElementById('ef-etype-group').style.display = (t === 'FACT' || t === 'MILI') ? '' : 'none';
-  document.getElementById('ef-cause-group').style.display = (t === 'DEAT')       ? ''     : 'none';
-  document.getElementById('ef-addr-group').style.display  = (t === 'RESI')       ? ''     : 'none';
+  const showEtype = (t === 'FACT' || t === 'MILI' || t === 'EVEN');
+  document.getElementById('ef-etype-group').style.display = showEtype ? '' : 'none';
+  if (showEtype) {
+    const lbl = document.querySelector('#ef-etype-group .form-label');
+    const inp = document.getElementById('ef-etype');
+    if (t === 'EVEN') { lbl.textContent = 'Bezeichnung'; inp.placeholder = 'z.B. Militärdienst, Einlieferung …'; }
+    else { lbl.textContent = 'TYPE (Klassifikation)'; inp.placeholder = 'z.B. Staatsangehörigkeit'; }
+  }
+  document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
+  document.getElementById('ef-addr-group').style.display  = (t === 'RESI') ? '' : 'none';
 }
 
 function showEventForm(personId, evIdx) {
