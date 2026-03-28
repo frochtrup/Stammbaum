@@ -502,6 +502,8 @@ function showEditSheet() {
   else if (currentSourceId) showSourceForm(currentSourceId);
 }
 
+let _pfExtraNames = [];
+
 function showPersonForm(id) {
   closeModal('modalAdd');
   const p = id ? db.individuals[id] : null;
@@ -516,6 +518,8 @@ function showPersonForm(id) {
   document.getElementById('pf-resn').value   = p?.resn  || '';
   document.getElementById('pf-email').value  = p?.email || '';
   document.getElementById('pf-www').value    = p?.www   || '';
+  _pfExtraNames = (p?.extraNames || []).map(en => ({...en}));
+  _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
   initSrcWidget('pf', p?.sourceRefs || []);
   _pendingPhotoBase64 = undefined;
@@ -527,6 +531,45 @@ function showPersonForm(id) {
 
 function _loadPersonPhoto(id) {
   idbGet('photo_' + id).then(b64 => showPersonPhotoPreview(b64 || null)).catch(() => {});
+}
+
+function _renderPfExtraNames() {
+  const list = document.getElementById('pf-extranames-list');
+  if (!list) return;
+  list.innerHTML = '';
+  _pfExtraNames.forEach((en, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap';
+    const mkInput = (ph, val, field) => {
+      const el = document.createElement('input');
+      el.className = 'form-input';
+      el.style.cssText = 'flex:2;min-width:70px';
+      el.placeholder = ph;
+      el.value = val;
+      el.addEventListener('input', () => { _pfExtraNames[idx][field] = el.value; });
+      return el;
+    };
+    row.appendChild(mkInput('Vorname', en.given || '', 'given'));
+    row.appendChild(mkInput('Nachname', en.surname || '', 'surname'));
+    row.appendChild(mkInput('Typ (birth, maiden…)', en.type || '', 'type'));
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.style.cssText = 'padding:4px 10px;background:var(--danger,#c0392b);color:#fff;border:none;border-radius:6px;cursor:pointer;flex-shrink:0';
+    del.addEventListener('click', () => removePfExtraName(idx));
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+function addPfExtraName() {
+  _pfExtraNames.push({ nameRaw:'', given:'', surname:'', prefix:'', suffix:'', type:'', sources:[], sourcePages:{}, sourceQUAY:{}, _extra:[] });
+  _renderPfExtraNames();
+}
+
+function removePfExtraName(idx) {
+  _pfExtraNames.splice(idx, 1);
+  _renderPfExtraNames();
 }
 
 function savePerson() {
@@ -545,6 +588,12 @@ function savePerson() {
 
   const existing = db.individuals[id] || {};
   const events = existing.events ? [...existing.events] : [];
+  const extraNames = _pfExtraNames
+    .filter(en => en.given || en.surname)
+    .map(en => ({
+      ...en,
+      nameRaw: [en.given, en.surname ? '/' + en.surname + '/' : ''].filter(Boolean).join(' ')
+    }));
 
   db.individuals[id] = {
     ...existing,
@@ -570,6 +619,7 @@ function savePerson() {
     famc: existing.famc || [],
     fams: existing.fams || [],
     media: existing.media || [],
+    extraNames,
     suffix,
     titl,
     resn,
