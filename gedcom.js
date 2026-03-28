@@ -762,9 +762,11 @@ function gedDatePartToISO(s) {
 function parseGedDate(raw) {
   if (!raw) return { qual:'', date1:'', date2:'' };
   const s = raw.trim().toUpperCase();
-  const bet = s.match(/^BET\s+(.+?)\s+AND\s+(.+)$/);
+  const bet = s.match(/^BET\s+(.+?)\s+AND\s+(.+)$/i);
   if (bet) return { qual:'BET', date1:bet[1].trim(), date2:bet[2].trim() };
-  for (const q of ['ABT','CAL','EST','BEF','AFT']) {
+  const fromTo = s.match(/^FROM\s+(.+?)\s+TO\s+(.+)$/i);
+  if (fromTo) return { qual:'FROM', date1:fromTo[1].trim(), date2:fromTo[2].trim() };
+  for (const q of ['ABT','CAL','EST','BEF','AFT','FROM','TO']) {
     if (s.startsWith(q + ' ')) return { qual:q, date1:normGedDate(raw.slice(q.length+1).trim()), date2:'' };
   }
   return { qual:'', date1:normGedDate(raw.trim()), date2:'' };
@@ -774,20 +776,34 @@ function parseGedDate(raw) {
 function buildGedDate(qual, date1, date2) {
   const d1 = normGedDate((date1||'').trim());
   if (!d1) return '';
-  if (qual === 'BET') { const d2 = normGedDate((date2||'').trim()); return d2 ? `BET ${d1} AND ${d2}` : d1; }
+  if (qual === 'BET')  { const d2 = normGedDate((date2||'').trim()); return d2 ? `BET ${d1} AND ${d2}` : d1; }
+  if (qual === 'FROM') { const d2 = normGedDate((date2||'').trim()); return d2 ? `FROM ${d1} TO ${d2}` : `FROM ${d1}`; }
   return qual ? `${qual} ${d1}` : d1;
+}
+
+// GEDCOM-Datumsstring → numerischer Sortierschlüssel YYYYMMDD (0 = unbekannt)
+function gedDateSortKey(dateStr) {
+  if (!dateStr) return 0;
+  const { date1 } = parseGedDate(dateStr);
+  const iso = gedDatePartToISO(date1 || dateStr);
+  if (!iso) return 0;
+  const p = iso.split('-');
+  return (parseInt(p[0])||0) * 10000 + (parseInt(p[1])||0) * 100 + (parseInt(p[2])||0);
 }
 
 
 // Formular-Felder befüllen
 function fillDateFields(qualId, dateBaseId, date2BaseId, raw) {
   const { qual, date1, date2 } = parseGedDate(raw);
-  document.getElementById(qualId).value = qual;
+  // Qualifier nur setzen wenn Option vorhanden (FROM/TO nicht in allen Dropdowns)
+  const sel = document.getElementById(qualId);
+  if (sel && [...sel.options].some(o => o.value === qual)) sel.value = qual;
+  else if (sel) sel.value = '';
   writeDatePartToFields(dateBaseId, date1);
   if (date2BaseId) {
     writeDatePartToFields(date2BaseId, date2);
     const grp = document.getElementById(date2BaseId + '-group');
-    if (grp) grp.style.display = qual === 'BET' ? '' : 'none';
+    if (grp) grp.style.display = (qual === 'BET' || qual === 'FROM') ? '' : 'none';
   }
 }
 
@@ -795,7 +811,7 @@ function fillDateFields(qualId, dateBaseId, date2BaseId, raw) {
 function onDateQualChange(selectEl, date2Id) {
   if (!date2Id) return;
   const grp = document.getElementById(date2Id + '-group');
-  if (grp) grp.style.display = selectEl.value === 'BET' ? '' : 'none';
+  if (grp) grp.style.display = (selectEl.value === 'BET' || selectEl.value === 'FROM') ? '' : 'none';
 }
 
 // ── 3-Felder-Datum-Hilfsfunktionen ──────────────────────────────────────────

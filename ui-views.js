@@ -298,17 +298,36 @@ function markChanged() { changed = true; _placesCache = null; updateChangedIndic
 // ─────────────────────────────────────
 //  PERSON LIST
 // ─────────────────────────────────────
+let _personSort = 'name'; // 'name' | 'date'
+
+function togglePersonSort() {
+  _personSort = _personSort === 'name' ? 'date' : 'name';
+  const btn = document.getElementById('personSortBtn');
+  if (btn) btn.textContent = _personSort === 'date' ? '⇅ Geb.' : '⇅ Name';
+  applyPersonFilter();
+}
+
 function renderPersonList(persons) {
-  const sorted = [...persons].sort((a, b) =>
-    (a.surname || a.given || a.name || '').localeCompare(b.surname || b.given || b.name || '', 'de')
-  );
+  const sorted = [...persons].sort((a, b) => {
+    if (_personSort === 'date') {
+      const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
+      if (ka !== kb) return (ka || 99999999) - (kb || 99999999);
+    }
+    return (a.surname || a.given || a.name || '').localeCompare(b.surname || b.given || b.name || '', 'de');
+  });
   const list = document.getElementById('personList');
   if (!sorted.length) { list.innerHTML = '<div class="empty">Noch keine Personen</div>'; return; }
 
-  let html = '', lastLetter = '';
+  let html = '', lastSep = '';
   for (const p of sorted) {
-    const fl = (p.surname || p.given || p.name || '?')[0].toUpperCase();
-    if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
+    let sep;
+    if (_personSort === 'date') {
+      const key = gedDateSortKey(p.birth.date);
+      sep = key ? Math.floor(Math.floor(key / 10000) / 10) + '0er' : '?';
+    } else {
+      sep = (p.surname || p.given || p.name || '?')[0].toUpperCase();
+    }
+    if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
     const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
     const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
     let meta = '';
@@ -349,10 +368,10 @@ function filterPersons(q, yearFrom, yearTo) {
   const all = Object.values(db.individuals);
 
   const filtered = all.filter(p => {
-    // Jahresfilter (Geburtsjahr)
+    // Jahresfilter (Geburtsjahr) — nutzt gedDateSortKey für korrekte FROM/TO/BET-Auflösung
     if (yearFrom || yearTo) {
-      const m = (p.birth.date || '').match(/\d{4}/);
-      const yr = m ? parseInt(m[0]) : null;
+      const key = gedDateSortKey(p.birth.date);
+      const yr = key ? Math.floor(key / 10000) : null;
       if (!yr) return false;
       if (yearFrom && yr < yearFrom) return false;
       if (yearTo   && yr > yearTo)   return false;
@@ -400,8 +419,8 @@ function renderFamilyList(fams) {
     const nb = b.husb ? (db.individuals[b.husb]?.surname || db.individuals[b.husb]?.name || '') : '';
     const c = na.localeCompare(nb, 'de');
     if (c !== 0) return c;
-    const ya = parseInt((a.marr.date || '').match(/\d{4}/)?.[0] || '9999');
-    const yb = parseInt((b.marr.date || '').match(/\d{4}/)?.[0] || '9999');
+    const ya = gedDateSortKey(a.marr.date) || 99999999;
+    const yb = gedDateSortKey(b.marr.date) || 99999999;
     return ya - yb;
   });
 

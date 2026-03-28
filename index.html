@@ -765,6 +765,7 @@ body {
         style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
         oninput="applyPersonFilter()">
       <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" onclick="clearYearFilter()" title="Jahresfilter zurücksetzen">✕</button>
+      <button type="button" id="personSortBtn" onclick="togglePersonSort()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
     </div>
     <div id="personList"></div>
   </div>
@@ -1006,6 +1007,7 @@ body {
             <option value="EST">geschätzt (EST)</option>
             <option value="BEF">vor (BEF)</option>
             <option value="AFT">nach (AFT)</option>
+            <option value="FROM">von (FROM)</option>
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ff-mdate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
@@ -1035,6 +1037,7 @@ body {
             <option value="EST">geschätzt (EST)</option>
             <option value="BEF">vor (BEF)</option>
             <option value="AFT">nach (AFT)</option>
+            <option value="FROM">von (FROM)</option>
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ff-edate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
@@ -1241,6 +1244,7 @@ body {
             <option value="BEF">vor (BEF)</option>
             <option value="AFT">nach (AFT)</option>
             <option value="BET">zwischen (BET…AND)</option>
+            <option value="FROM">von/bis (FROM…TO)</option>
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ef-date-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
