@@ -432,6 +432,16 @@ function parseGEDCOM(text) {
         }
         // Collect source references at level 4
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        // Person OBJE: lv=4 Sub-Tags (z.B. 4 TYPE PHOTO unter 3 FORM)
+        if (lv1tag === 'OBJE' && cur.media.length) {
+          cur.media[cur.media.length-1]._extra.push('4 ' + tag + (val ? ' ' + val : ''));
+        }
+        // Event OBJE: 4 FORM unter 3 FILE (lv=4 da OBJE bei lv=2)
+        if (lv2tag === 'OBJE' && evIdx >= 0 && cur.events[evIdx]?.media?.length > 0) {
+          const _em4 = cur.events[evIdx].media[cur.events[evIdx].media.length - 1];
+          if (lv3tag === 'FILE' && tag === 'FORM') _em4.form = val;
+          else _em4._extra.push('4 ' + tag + (val ? ' ' + val : ''));
+        }
         // 4 PAGE/QUAY/extra unter 3 SOUR unter _FREL/_MREL
         if (lv1tag === 'FAMC' && lv3tag === 'SOUR' && cur.famc.length) {
           const fref = cur.famc[cur.famc.length-1];
@@ -1026,9 +1036,11 @@ function writeGEDCOM() {
       }
       for (const m of (ev.media || [])) {
         lines.push('2 OBJE');
-        if (m.file)  lines.push(`3 FILE ${m.file}`);
         if (m.title) lines.push(`3 TITL ${m.title}`);
-        if (m.form)  lines.push(`3 FORM ${m.form}`);
+        if (m.file) {
+          lines.push(`3 FILE ${m.file}`);
+          if (m.form) lines.push(`4 FORM ${m.form}`);
+        }
         for (const l of (m._extra || [])) lines.push(l);
       }
       if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
@@ -1070,13 +1082,17 @@ function writeGEDCOM() {
     for (const f of p.fams) lines.push(`1 FAMS ${f}`);
     for (const m of p.media) {
       lines.push(`1 OBJE`);
+      if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
       if (m.file) {
         lines.push(`2 FILE ${m.file}`);
-        const ext = (m.file.split('.').pop() || '').toUpperCase();
-        const form = { JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext;
+        const form = m.form || (() => {
+          const ext = (m.file.split('.').pop() || '').toUpperCase();
+          return { JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext;
+        })();
         if (form) lines.push(`3 FORM ${form}`);
       }
-      if (m.title) lines.push(`3 TITL ${m.title}`);
+      if (!m.titleIsLv2 && m.title) lines.push(`3 TITL ${m.title}`);
+      for (const l of (m._extra || [])) lines.push(l);
     }
     // Manuell hinzugefügtes Foto ohne ursprünglichen OBJE-Eintrag → FILE-Referenz erzeugen
     if (_newPhotoIds.has(p.id)) {
