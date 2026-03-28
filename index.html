@@ -1181,42 +1181,44 @@ body {
     <div class="sheet-body">
       <input type="hidden" id="ef-pid">
       <input type="hidden" id="ef-evidx">
-      <div class="form-group">
-        <label class="form-label">Ereignistyp</label>
-        <select class="form-select" id="ef-type" onchange="onEventTypeChange()">
-          <option value="BIRT">Geburt</option>
-          <option value="CHR">Taufe</option>
-          <option value="DEAT">Tod</option>
-          <option value="BURI">Beerdigung</option>
-          <option value="OCCU">Beruf</option>
-          <option value="RESI">Wohnort</option>
-          <option value="EDUC">Bildung</option>
-          <option value="RELI">Religion</option>
-          <option value="EMIG">Auswanderung</option>
-          <option value="IMMI">Einwanderung</option>
-          <option value="NATU">Einbürgerung</option>
-          <option value="GRAD">Abschluss</option>
-          <option value="ADOP">Adoption</option>
-          <option value="MILI">Militärdienst</option>
-          <option value="FACT">Tatsache (FACT)</option>
-          <option value="CENS">Volkszählung</option>
-          <option value="CONF">Konfirmation</option>
-          <option value="FCOM">Erstkommunion</option>
-          <option value="ORDN">Ordination</option>
-          <option value="RETI">Pensionierung</option>
-          <option value="PROP">Eigentum</option>
-          <option value="WILL">Testament</option>
-          <option value="PROB">Testamentseröffnung</option>
-          <option value="EVEN">Sonstiges</option>
-        </select>
+      <div style="display:flex; gap:8px; align-items:flex-end">
+        <div class="form-group" style="flex:1; min-width:0">
+          <label class="form-label">Ereignistyp</label>
+          <select class="form-select" id="ef-type" onchange="onEventTypeChange()">
+            <option value="BIRT">Geburt</option>
+            <option value="CHR">Taufe</option>
+            <option value="DEAT">Tod</option>
+            <option value="BURI">Beerdigung</option>
+            <option value="OCCU">Beruf</option>
+            <option value="RESI">Wohnort</option>
+            <option value="EDUC">Bildung</option>
+            <option value="RELI">Religion</option>
+            <option value="EMIG">Auswanderung</option>
+            <option value="IMMI">Einwanderung</option>
+            <option value="NATU">Einbürgerung</option>
+            <option value="GRAD">Abschluss</option>
+            <option value="ADOP">Adoption</option>
+            <option value="MILI">Militärdienst</option>
+            <option value="FACT">Tatsache (FACT)</option>
+            <option value="CENS">Volkszählung</option>
+            <option value="CONF">Konfirmation</option>
+            <option value="FCOM">Erstkommunion</option>
+            <option value="ORDN">Ordination</option>
+            <option value="RETI">Pensionierung</option>
+            <option value="PROP">Eigentum</option>
+            <option value="WILL">Testament</option>
+            <option value="PROB">Testamentseröffnung</option>
+            <option value="EVEN">Sonstiges</option>
+          </select>
+        </div>
+        <div class="form-group" id="ef-etype-group" style="display:none; flex:1; min-width:0">
+          <label class="form-label" id="ef-etype-lbl">TYPE (Klassifikation)</label>
+          <input class="form-input" id="ef-etype" placeholder="z.B. Staatsangehörigkeit">
+        </div>
       </div>
       <div class="form-group" id="ef-val-group">
         <label class="form-label">Wert / Beschreibung</label>
         <input class="form-input" id="ef-val" placeholder="z.B. Schreiner">
-      </div>
-      <div class="form-group" id="ef-etype-group" style="display:none">
-        <label class="form-label">TYPE (Klassifikation)</label>
-        <input class="form-input" id="ef-etype" placeholder="z.B. Staatsangehörigkeit">
       </div>
       <div class="form-group" id="ef-cause-group" style="display:none">
         <label class="form-label">Todesursache</label>
