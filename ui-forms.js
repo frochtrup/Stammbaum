@@ -336,6 +336,32 @@ function runRoundtripTest() {
       }
       const _sourNoteDiagReport = _sourNoteDiag.length ? '\n\nSOUR/NOTE-Verlust-Diagnose:\n' + _sourNoteDiag.join('\n\n') : '';
 
+      // Diagnose: fehlende 2 DATE / 2 PLAC — zeige lv=0 Record-Typ + lv=1 Parent
+      const _datePlacDiag = [];
+      { const _outC4 = new Map(); for (const l of _outArr) _outC4.set(l, (_outC4.get(l)||0)+1);
+        const _allLines4 = _origText.split(/\r?\n/);
+        let _recHdr4 = '', _lv1tag4 = '';
+        const _ctx4 = new Map(); // "RecType/lv1tag" → count
+        for (let i = 0; i < _allLines4.length; i++) {
+          const lt = _allLines4[i].trim();
+          if (/^0 /.test(lt)) { _recHdr4 = lt; _lv1tag4 = ''; }
+          else if (/^1 /.test(lt)) { _lv1tag4 = lt.match(/^1 (\S+)/)?.[1] || ''; }
+          if (!/^2 (DATE|PLAC) /.test(lt)) continue;
+          const rem = _outC4.get(lt) || 0;
+          if (rem > 0) { _outC4.set(lt, rem-1); continue; }
+          const tag2 = lt.match(/^2 (\S+)/)?.[1];
+          const key = `${_recHdr4.replace(/^0 @\S+@ /, '')}/${_lv1tag4}/${tag2}`;
+          _ctx4.set(key, (_ctx4.get(key)||0) + 1);
+          if (_datePlacDiag.length < 10)
+            _datePlacDiag.push(`  [L${i+1}] ${_recHdr4} → 1 ${_lv1tag4} → ${lt}`);
+        }
+        if (_ctx4.size) {
+          _datePlacDiag.unshift('  Kontext-Zusammenfassung:');
+          for (const [k,n] of _ctx4) _datePlacDiag.splice(1, 0, `    ${k}: ${n}×`);
+        }
+      }
+      const _datePlacReport = _datePlacDiag.length ? '\n\nFehlende 2 DATE/PLAC — Kontext:\n' + _datePlacDiag.join('\n') : '';
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -360,6 +386,7 @@ function runRoundtripTest() {
         `Tag-Statistik:\n` + rows.join('\n') +
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
+        _datePlacReport +
         _objeDiagReport +
         _sourNoteDiagReport +
         diffSnippet;
