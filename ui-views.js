@@ -1245,9 +1245,10 @@ function showDetail(id, pushHistory = true) {
     const geoBtn = (ev.lati !== null && ev.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
     const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+    const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
     html += `<div class="fact-row" data-pid="${id}" data-ev="${idx}" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer">
       <span class="fact-lbl">${esc(label)}</span>
-      <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}</span>
+      <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}${mediaBadge}</span>
     </div>`;
   });
 

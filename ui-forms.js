@@ -1062,6 +1062,40 @@ function deleteRepo() {
 const _SPECIAL_OBJ = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
 const _SPECIAL_LBL = { BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung' };
 
+let _efMedia = [];
+
+function _renderEfMedia() {
+  const list = document.getElementById('ef-media-list');
+  if (!list) return;
+  list.innerHTML = '';
+  _efMedia.forEach((m, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center;flex-wrap:wrap';
+    const mkInput = (ph, val, field) => {
+      const el = document.createElement('input');
+      el.className = 'form-input';
+      el.style.cssText = 'flex:3;min-width:80px';
+      el.placeholder = ph;
+      el.value = val;
+      el.addEventListener('input', () => { _efMedia[idx][field] = el.value; });
+      return el;
+    };
+    row.appendChild(mkInput('Dateiname', m.file || '', 'file'));
+    row.appendChild(mkInput('Titel', m.title || '', 'title'));
+    const del = document.createElement('button');
+    del.type = 'button'; del.textContent = '×';
+    del.style.cssText = 'padding:4px 10px;background:var(--danger,#c0392b);color:#fff;border:none;border-radius:6px;cursor:pointer;flex-shrink:0';
+    del.addEventListener('click', () => { _efMedia.splice(idx, 1); _renderEfMedia(); });
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+function addEfMedia() {
+  _efMedia.push({ file:'', title:'', form:'', _extra:[] });
+  _renderEfMedia();
+}
+
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
@@ -1082,6 +1116,8 @@ function showEventForm(personId, evIdx) {
   document.getElementById('ef-evidx').value  = isExisting ? evIdx : '';
 
   initPlaceMode('ef-place');
+  _efMedia = [];
+  _renderEfMedia();
   if (isSpecial) {
     const obj = p[_SPECIAL_OBJ[evIdx]] || {};
     typeEl.value = evIdx; typeEl.disabled = true;
@@ -1104,6 +1140,8 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-cause').value = '';
     document.getElementById('ef-addr').value  = ev?.addr  || '';
     initSrcWidget('ef', ev?.sources || [], ev?.sourcePages || {}, ev?.sourceQUAY || {});
+    _efMedia = (ev?.media || []).map(m => ({...m}));
+    _renderEfMedia();
     document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
@@ -1142,7 +1180,8 @@ function saveEvent() {
       long:       null,
       sources:    [...(srcWidgetState['ef']?.ids   || [])],
       sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
-      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) }
+      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) },
+      media:      _efMedia.filter(m => m.file || m.title).map(m => ({...m}))
     };
     if (evIdx !== null && p.events[evIdx]) {
       ev.lati      = p.events[evIdx].lati;

@@ -223,7 +223,7 @@ function parseGEDCOM(text) {
         else if (tag === 'BURI') { cur.buri.value  = val; }
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
                   'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[] });
+          cur.events.push({ type:tag, value:val, date:'', place:'', lati:null, long:null, eventType:'', note:'', addr:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, media:[], _extra:[] });
           evIdx = cur.events.length - 1;
         }
         else if (tag === 'OBJE') {
@@ -303,6 +303,10 @@ function parseGEDCOM(text) {
           else if (tag==='ADDR') { ev.addr = (ev.addr ? ev.addr + '\n' : '') + val; if (!ev.addrExtra) ev.addrExtra=[]; _ptDepth=2; _ptTarget=ev.addrExtra; }
           else if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
           else if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='OBJE') {
+            if (val && val.startsWith('@')) { ev._extra.push('2 OBJE ' + val); _ptDepth = 2; _ptTarget = ev._extra; }
+            else ev.media.push({ file:'', title:'', form:'', _extra:[] });
+          }
           else { ev._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = ev._extra; }
         }
         // Family relationship
@@ -342,6 +346,14 @@ function parseGEDCOM(text) {
           cur.media[cur.media.length-1].title = val;
         if (lv1tag === 'OBJE' && lv2tag === 'FILE' && tag === 'FORM' && cur.media.length)
           cur.media[cur.media.length-1].form = val;
+        // Event media (2 OBJE → 3 FILE/TITL/FORM)
+        if (lv2tag === 'OBJE' && evIdx >= 0 && cur.events[evIdx]?.media?.length > 0) {
+          const em = cur.events[evIdx].media[cur.events[evIdx].media.length - 1];
+          if      (tag === 'FILE') em.file  = val;
+          else if (tag === 'TITL') em.title = val;
+          else if (tag === 'FORM') em.form  = val;
+          else { em._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = em._extra; }
+        }
         // Event note continuation
         if (evIdx >= 0 && lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
           cur.events[evIdx].note += (tag==='CONT'?'\n':'') + val;
@@ -1011,6 +1023,13 @@ function writeGEDCOM() {
         if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
         if (ev.sourceQUAY && ev.sourceQUAY[s])   lines.push(`3 QUAY ${ev.sourceQUAY[s]}`);
         if (ev.sourceExtra && ev.sourceExtra[s]) for (const l of ev.sourceExtra[s]) lines.push(l);
+      }
+      for (const m of (ev.media || [])) {
+        lines.push('2 OBJE');
+        if (m.file)  lines.push(`3 FILE ${m.file}`);
+        if (m.title) lines.push(`3 TITL ${m.title}`);
+        if (m.form)  lines.push(`3 FORM ${m.form}`);
+        for (const l of (m._extra || [])) lines.push(l);
       }
       if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
     }
