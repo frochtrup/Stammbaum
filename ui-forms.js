@@ -280,12 +280,24 @@ function runRoundtripTest() {
       const _outCounts = new Map();
       for (const l of _outArr) _outCounts.set(l, (_outCounts.get(l) || 0) + 1);
       const _missingTags = {};
+      // Context tracking for DATE/PLAC diagnosis
+      let _dpRecType = '', _dpLv1 = '';
+      const _dpCtx = {};   // "RecType/lv1tag/tag" → count
+      const _dpSamples = []; // up to 8 sample lines
       for (const l of _origArr) {
+        const lv = parseInt(l);
+        if (lv === 0) { _dpRecType = l.replace(/^0 @\S+@ /, '').replace(/^0 /, '').split(' ')[0]; _dpLv1 = ''; }
+        else if (lv === 1) { _dpLv1 = l.match(/^1 (\S+)/)?.[1] || ''; }
         const rem = _outCounts.get(l) || 0;
         if (rem > 0) { _outCounts.set(l, rem - 1); }
         else {
           const t = l.match(/^\d+ (\S+)/)?.[1] || '?';
           _missingTags[t] = (_missingTags[t] || 0) + 1;
+          if ((t === 'DATE' || t === 'PLAC') && lv === 2) {
+            const key = `${_dpRecType}/${_dpLv1}/${t}`;
+            _dpCtx[key] = (_dpCtx[key] || 0) + 1;
+            if (_dpSamples.length < 8) _dpSamples.push(`  ${_dpRecType}/1 ${_dpLv1} → ${l}`);
+          }
         }
       }
       const _topMissing = Object.entries(_missingTags).sort((a,b) => b[1]-a[1]).slice(0, 20);
@@ -336,31 +348,14 @@ function runRoundtripTest() {
       }
       const _sourNoteDiagReport = _sourNoteDiag.length ? '\n\nSOUR/NOTE-Verlust-Diagnose:\n' + _sourNoteDiag.join('\n\n') : '';
 
-      // Diagnose: fehlende 2 DATE / 2 PLAC — zeige lv=0 Record-Typ + lv=1 Parent
-      const _datePlacDiag = [];
-      { const _outC4 = new Map(); for (const l of _outArr) _outC4.set(l, (_outC4.get(l)||0)+1);
-        const _allLines4 = _origText.split(/\r?\n/);
-        let _recHdr4 = '', _lv1tag4 = '';
-        const _ctx4 = new Map(); // "RecType/lv1tag" → count
-        for (let i = 0; i < _allLines4.length; i++) {
-          const lt = _allLines4[i].trim();
-          if (/^0 /.test(lt)) { _recHdr4 = lt; _lv1tag4 = ''; }
-          else if (/^1 /.test(lt)) { _lv1tag4 = lt.match(/^1 (\S+)/)?.[1] || ''; }
-          if (!/^2 (DATE|PLAC) /.test(lt)) continue;
-          const rem = _outC4.get(lt) || 0;
-          if (rem > 0) { _outC4.set(lt, rem-1); continue; }
-          const tag2 = lt.match(/^2 (\S+)/)?.[1];
-          const key = `${_recHdr4.replace(/^0 @\S+@ /, '')}/${_lv1tag4}/${tag2}`;
-          _ctx4.set(key, (_ctx4.get(key)||0) + 1);
-          if (_datePlacDiag.length < 10)
-            _datePlacDiag.push(`  [L${i+1}] ${_recHdr4} → 1 ${_lv1tag4} → ${lt}`);
-        }
-        if (_ctx4.size) {
-          _datePlacDiag.unshift('  Kontext-Zusammenfassung:');
-          for (const [k,n] of _ctx4) _datePlacDiag.splice(1, 0, `    ${k}: ${n}×`);
-        }
+      // Diagnose: fehlende 2 DATE / 2 PLAC — Kontext (aus Auto-Diff-Loop)
+      let _datePlacReport = '';
+      if (Object.keys(_dpCtx).length) {
+        const _dpLines = ['  Kontext-Zusammenfassung:'];
+        for (const [k,n] of Object.entries(_dpCtx).sort()) _dpLines.push(`    ${k}: ${n}×`);
+        if (_dpSamples.length) { _dpLines.push('  Beispiele:'); _dpLines.push(..._dpSamples); }
+        _datePlacReport = '\n\nFehlende 2 DATE/PLAC — Kontext:\n' + _dpLines.join('\n');
       }
-      const _datePlacReport = _datePlacDiag.length ? '\n\nFehlende 2 DATE/PLAC — Kontext:\n' + _datePlacDiag.join('\n') : '';
 
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
