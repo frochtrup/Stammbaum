@@ -281,26 +281,26 @@ function parseGEDCOM(text) {
         else if (lv1tag === 'BIRT') {
           if      (tag==='DATE') cur.birth.date=val;
           else if (tag==='PLAC') cur.birth.place=val;
-          else if (tag==='SOUR' && val.startsWith('@')) { cur.birth.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { cur.birth.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.birth._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.birth._extra; }
         }
         else if (lv1tag === 'DEAT') {
           if      (tag==='DATE') cur.death.date=val;
           else if (tag==='PLAC') cur.death.place=val;
           else if (tag==='CAUS') cur.death.cause=val;
-          else if (tag==='SOUR' && val.startsWith('@')) { cur.death.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { cur.death.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.death._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.death._extra; }
         }
         else if (lv1tag === 'CHR') {
           if      (tag==='DATE') cur.chr.date=val;
           else if (tag==='PLAC') cur.chr.place=val;
-          else if (tag==='SOUR' && val.startsWith('@')) { cur.chr.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { cur.chr.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.chr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.chr._extra; }
         }
         else if (lv1tag === 'BURI') {
           if      (tag==='DATE') cur.buri.date=val;
           else if (tag==='PLAC') cur.buri.place=val;
-          else if (tag==='SOUR' && val.startsWith('@')) { cur.buri.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { cur.buri.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.buri._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.buri._extra; }
         }
         // Other events
@@ -312,7 +312,7 @@ function parseGEDCOM(text) {
           else if (tag==='NOTE')  ev.note += (ev.note ? '\n' : '') + val;
           else if (tag==='ADDR') { ev.addr = (ev.addr ? ev.addr + '\n' : '') + val; if (!ev.addrExtra) ev.addrExtra=[]; _ptDepth=2; _ptTarget=ev.addrExtra; }
           else if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
-          else if (tag==='SOUR' && val.startsWith('@')) { ev.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { ev.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='OBJE') {
             if (val && val.startsWith('@')) { ev._extra.push('2 OBJE ' + val); _ptDepth = 2; _ptTarget = ev._extra; }
             else ev.media.push({ file:'', title:'', form:'', _extra:[] });
@@ -519,13 +519,13 @@ function parseGEDCOM(text) {
           if (tag==='DATE') cur.marr.date=val;
           else if (tag==='PLAC') cur.marr.place=val;
           else if (tag==='ADDR') cur.marr.addr=val;
-          else if (tag==='SOUR' && val.startsWith('@')) { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.marr._extra; }
         }
         if (lv1tag==='ENGA') {
           if      (tag==='DATE') cur.engag.date = val;
           else if (tag==='PLAC') cur.engag.place = val;
-          else if (tag==='SOUR' && val.startsWith('@')) { cur.engag.sources.push(val); cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { cur.engag.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.engag._extra; }
         }
         if (lv1tag==='OBJE' && cur.media.length) {
@@ -556,12 +556,12 @@ function parseGEDCOM(text) {
         if (lv1tag==='MARR' && lv2tag==='SOUR' && lastSourVal) {
           if      (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
           else if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
-          else { if (!cur.marr.sourceExtra[lastSourVal]) cur.marr.sourceExtra[lastSourVal] = []; cur.marr.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.marr.sourceExtra[lastSourVal]; }
+          else if (tag !== 'SOUR') { if (!cur.marr.sourceExtra[lastSourVal]) cur.marr.sourceExtra[lastSourVal] = []; cur.marr.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.marr.sourceExtra[lastSourVal]; }
         }
         if (lv1tag==='ENGA' && lv2tag==='SOUR' && lastSourVal) {
           if      (tag==='PAGE') cur.engag.sourcePages[lastSourVal] = val;
           else if (tag==='QUAY') cur.engag.sourceQUAY[lastSourVal] = val;
-          else { if (!cur.engag.sourceExtra[lastSourVal]) cur.engag.sourceExtra[lastSourVal] = []; cur.engag.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.engag.sourceExtra[lastSourVal]; }
+          else if (tag !== 'SOUR') { if (!cur.engag.sourceExtra[lastSourVal]) cur.engag.sourceExtra[lastSourVal] = []; cur.engag.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.engag.sourceExtra[lastSourVal]; }
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
           if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{}};
