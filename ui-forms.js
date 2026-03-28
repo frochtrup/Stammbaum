@@ -357,6 +357,112 @@ function runRoundtripTest() {
         _datePlacReport = '\n\nFehlende 2 DATE/PLAC — Kontext:\n' + _dpLines.join('\n');
       }
 
+      // ── Passthrough-Inhalt ──────────────────────────────────────────
+      // Aggregiert Tag-Frequenzen aus allen Passthrough-Feldern in db1
+      function _ptAgg(lines, agg) {
+        for (const l of (lines||[])) {
+          const m = l.match(/^\d+\s+(\S+)/);
+          if (m) agg[m[1]] = (agg[m[1]] || 0) + 1;
+        }
+      }
+      function _ptFmt(agg, total) {
+        if (!total) return '  (leer)';
+        return '  ' + Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,15)
+          .map(([t,n]) => `${t} ${n}×`).join('  ·  ');
+      }
+      const _ptSecs = [];
+      // 1. INDI._passthrough
+      { let recs=0, lines=0; const agg={};
+        for (const p of Object.values(db1.individuals)) {
+          if (p._passthrough?.length) { recs++; lines+=p._passthrough.length; _ptAgg(p._passthrough,agg); }
+        }
+        if (lines) _ptSecs.push(`INDI._passthrough    ${recs} Pers. · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 2. INDI vital._extra (birth/death/chr/buri)
+      { let recs=0, lines=0; const agg={};
+        for (const p of Object.values(db1.individuals)) {
+          for (const k of ['birth','death','chr','buri']) {
+            const ex = p[k]?._extra;
+            if (ex?.length) { recs++; lines+=ex.length; _ptAgg(ex,agg); }
+          }
+        }
+        if (lines) _ptSecs.push(`INDI.vital._extra    ${recs} Objs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 3. INDI.events._extra
+      { let recs=0, lines=0; const agg={};
+        for (const p of Object.values(db1.individuals)) {
+          for (const ev of (p.events||[])) {
+            if (ev._extra?.length) { recs++; lines+=ev._extra.length; _ptAgg(ev._extra,agg); }
+          }
+        }
+        if (lines) _ptSecs.push(`INDI.events._extra   ${recs} Events · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 4. INDI sourceExtra (topSourceExtra + vital + events)
+      { let entries=0, lines=0; const agg={};
+        for (const p of Object.values(db1.individuals)) {
+          for (const arr of Object.values(p.topSourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+          for (const k of ['birth','death','chr','buri']) {
+            for (const arr of Object.values(p[k]?.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+          }
+          for (const ev of (p.events||[])) {
+            for (const arr of Object.values(ev.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+          }
+        }
+        if (lines) _ptSecs.push(`INDI.sourceExtra     ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 5. FAM._passthrough
+      { let recs=0, lines=0; const agg={};
+        for (const f of Object.values(db1.families)) {
+          if (f._passthrough?.length) { recs++; lines+=f._passthrough.length; _ptAgg(f._passthrough,agg); }
+        }
+        if (lines) _ptSecs.push(`FAM._passthrough     ${recs} FAMs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 6. FAM marr/engag._extra + sourceExtra
+      { let recs=0, lines=0; const agg={};
+        for (const f of Object.values(db1.families)) {
+          if (f.marr?._extra?.length)  { recs++; lines+=f.marr._extra.length;  _ptAgg(f.marr._extra,agg); }
+          if (f.engag?._extra?.length) { lines+=f.engag._extra.length; _ptAgg(f.engag._extra,agg); }
+          for (const arr of Object.values(f.marr?.sourceExtra||{}))  { lines+=arr.length; _ptAgg(arr,agg); }
+          for (const arr of Object.values(f.engag?.sourceExtra||{})) { lines+=arr.length; _ptAgg(arr,agg); }
+        }
+        if (lines) _ptSecs.push(`FAM.marr/engag._extra ${recs} FAMs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 7. FAM childRelations frelSourExtra/mrelSourExtra/sourExtra
+      { let entries=0, lines=0; const agg={};
+        for (const f of Object.values(db1.families)) {
+          for (const cr of Object.values(f.childRelations||{})) {
+            if (cr.frelSourExtra?.length) { entries++; lines+=cr.frelSourExtra.length; _ptAgg(cr.frelSourExtra,agg); }
+            if (cr.mrelSourExtra?.length) { entries++; lines+=cr.mrelSourExtra.length; _ptAgg(cr.mrelSourExtra,agg); }
+            for (const arr of Object.values(cr.sourExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+          }
+        }
+        if (lines) _ptSecs.push(`FAM.childRel.extra   ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 8. SOUR._passthrough
+      { let recs=0, lines=0; const agg={};
+        for (const s of Object.values(db1.sources)) {
+          if (s._passthrough?.length) { recs++; lines+=s._passthrough.length; _ptAgg(s._passthrough,agg); }
+        }
+        if (lines) _ptSecs.push(`SOUR._passthrough    ${recs} SOURs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 9. NOTE._passthrough
+      { let recs=0, lines=0; const agg={};
+        for (const n of Object.values(db1.notes||{})) {
+          if (n._passthrough?.length) { recs++; lines+=n._passthrough.length; _ptAgg(n._passthrough,agg); }
+        }
+        if (lines) _ptSecs.push(`NOTE._passthrough    ${recs} NOTEs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+      }
+      // 10. extraRecords
+      { const er = db1.extraRecords||[];
+        if (er.length) {
+          const hdrs = er.slice(0,10).map(r => '  ' + (r._lines?.[0]||'?')).join('\n');
+          _ptSecs.push(`extraRecords         ${er.length} Records\n${hdrs}`);
+        }
+      }
+      const _ptReport = _ptSecs.length
+        ? '\n\n' + '─'.repeat(42) + '\nPassthrough-Inhalt (db1):\n' + _ptSecs.join('\n\n')
+        : '\n\nPassthrough-Inhalt: (leer)';
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -384,6 +490,7 @@ function runRoundtripTest() {
         _datePlacReport +
         _objeDiagReport +
         _sourNoteDiagReport +
+        _ptReport +
         diffSnippet;
 
     } catch (e) {
