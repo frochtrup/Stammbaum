@@ -121,7 +121,7 @@ function parseGEDCOM(text) {
       if (tag.startsWith('@') && val.trim() === 'INDI') {
         cur = {
           id: tag, _passthrough: [], _nameParsed: false,
-          name:'', nameRaw:'', surname:'', given:'', prefix:'', suffix:'',
+          name:'', nameRaw:'', surname:'', given:'', nick:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
           birth:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], value:'', seen:false },
           death:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, _extra:[], cause:'', value:'', seen:false },
@@ -268,6 +268,7 @@ function parseGEDCOM(text) {
           } else {
             if      (tag === 'GIVN') { cur.given = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
             else if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
+            else if (tag === 'NICK') cur.nick = val;
             else if (tag === 'NPFX') cur.prefix = val;
             else if (tag === 'NSFX') cur.suffix = val;
             else if (tag === 'SOUR' && val.startsWith('@')) { cur.nameSources.push(val); cur.sourceRefs.add(val); }
@@ -1030,6 +1031,7 @@ function writeGEDCOM() {
     lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
     if (p.given)   lines.push(`2 GIVN ${p.given}`);
     if (p.surname) lines.push(`2 SURN ${p.surname}`);
+    if (p.nick)    lines.push(`2 NICK ${p.nick}`);
     if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
     if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
     for (const s of (p.nameSources || [])) {

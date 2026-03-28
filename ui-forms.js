@@ -641,6 +641,7 @@ function showPersonForm(id) {
   document.getElementById('pf-given').value = p?.given || '';
   document.getElementById('pf-surname').value = p?.surname || '';
   document.getElementById('pf-sex').value = p?.sex || 'U';
+  document.getElementById('pf-nick').value = p?.nick || '';
   document.getElementById('pf-suffix').value = p?.suffix || '';
   document.getElementById('pf-titl').value   = p?.titl  || '';
   document.getElementById('pf-note').value   = p?.noteTexts?.length ? p.noteTexts.join('\n') : (p?.noteTextInline ?? p?.noteText ?? '');
@@ -713,6 +714,7 @@ function savePerson() {
   const given = document.getElementById('pf-given').value.trim();
   const surname = document.getElementById('pf-surname').value.trim();
   const sex = document.getElementById('pf-sex').value;
+  const nick   = document.getElementById('pf-nick').value.trim();
   const suffix = document.getElementById('pf-suffix').value.trim();
   const titl   = document.getElementById('pf-titl').value.trim();
   const note   = document.getElementById('pf-note').value.trim();
@@ -733,7 +735,7 @@ function savePerson() {
 
   db.individuals[id] = {
     ...existing,
-    id, given, surname,
+    id, given, surname, nick,
     name: (given + (surname ? ' ' + surname : '')).trim(),
     nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
