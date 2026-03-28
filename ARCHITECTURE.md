@@ -13,7 +13,7 @@
 │  storage.js    — IndexedDB, Dateiverwaltung          │
 │  ui-views.js   — Baum, Detail, Listenrendering       │
 │  ui-forms.js   — Formulare, OneDrive, Medien         │
-│  sw.js         — Service Worker (Cache v33)          │
+│  sw.js         — Service Worker (Cache v38)          │
 │  manifest.json — PWA-Manifest                        │
 └──────────────────────────────────────────────────────┘
 ```

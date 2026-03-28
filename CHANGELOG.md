@@ -9,6 +9,14 @@ Aktuelle Planung: `ROADMAP.md`
 
 Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, v4-Infrastruktur.
 
+### Session 2026-03-28 — v4-dev UX + Diagnose (sw v34–v38)
+- **EVEN TYPE-Feld** (sw v34): `onEventTypeChange()` zeigt `ef-etype-group` für `EVEN`-Events mit Bezeichnung-Label + Placeholder; fehlte vorher für sonstige Events
+- **Inline-Layout Ereignistyp + Bezeichnung** (sw v35): Beide Felder in einer Flex-Zeile im Event-Formular
+- **FROM/TO-Datum** (sw v36): `parseGedDate()` erkennt `FROM ... TO ...` und einzelne `FROM`/`TO`-Qualifier; `buildGedDate()` schreibt korrekt; `gedDateSortKey()` neue Hilfsfunktion
+- **Datum-Sortierung Personenliste** (sw v36): Toggle-Button „⇅ Name / ⇅ Geb." in Personenliste; `_personSort` global; Jahrzehnt-Trenner bei Datum-Sortierung; Familienliste verwendet `gedDateSortKey()`
+- **viewport-fit=cover** (sw v37): `<meta name="viewport" ... viewport-fit=cover>` — behebt verschobene Darstellung der Topbar auf iOS PWA mit `black-translucent` Status-Bar
+- **Roundtrip: Passthrough-Ausgabe** (sw v38): `_ptAgg()` / `_ptFmt()` aggregieren Tag-Frequenzen; 10 Sektionen (INDI._passthrough, vital._extra, events._extra, sourceExtra, FAM._passthrough, marr/engag._extra, childRel.extra, SOUR._passthrough, NOTE._passthrough, extraRecords) werden im Roundtrip-Test ausgegeben
+
 ### Session 2026-03-28 — Roundtrip-Fixes (Teil 1)
 - **HEAD verbatim**: `_headLines[]` bewahrt alle HEAD-Zeilen; nur `DATE`/`TIME` werden aktuell geschrieben
 - **extraNames lv3-Routing**: `3 PAGE`/`3 QUAY` unter zweitem NAME-Eintrag via `_curExtraNameIdx`

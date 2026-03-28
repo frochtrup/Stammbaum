@@ -12,7 +12,7 @@
 - `storage.js` — IndexedDB, Dateiverwaltung, Auto-Load
 - `ui-views.js` — Baum, Detailansichten, Listenrendering
 - `ui-forms.js` — Formulare, OneDrive-Integration, Medien-Bearbeitung
-- `sw.js` — Service Worker (Network-first, offline, Cache v33)
+- `sw.js` — Service Worker (Network-first, offline, Cache v38)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -23,11 +23,19 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-28
+## Aktueller Stand — zuletzt aktualisiert: 2026-03-28 (Session 3)
 - Phase 3 abgeschlossen: P3-1 ✅ · P3-2 ✅ · P3-3 ✅ · P3-4 ✅ · P3-5 ✅ · P3-6 ✅ · P3-7 ✅ · P3-8 ✅
 - **Version 4 in Entwicklung: Branch `v4-dev`** — `main` bleibt v3 (live)
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta≈0` (alle inhaltlichen Verluste behoben)
-- Git: letzter Commit 5075eac (leere DATE/PLAC null-Fix, sw v33) auf v4-dev
+- Git: letzter Commit 3e3d573 (Passthrough-Ausgabe im Roundtrip-Test, sw v38) auf v4-dev
+
+**Session 2026-03-28 (Session 3) — UX-Fixes + Diagnose (sw v34–v38):**
+- Fix: EVEN TYPE/Bezeichnung-Feld (sw v34) — `onEventTypeChange()` zeigt Bezeichnung-Eingabe für EVEN
+- UI: Ereignistyp + Bezeichnung in einer Flex-Zeile im Event-Formular (sw v35)
+- Feat: FROM/TO-Datum in Parser + Builder; `gedDateSortKey()` neue Funktion (sw v36)
+- Feat: Personenliste sortierbar nach Geburtsdatum (Toggle „⇅ Name / ⇅ Geb.") mit Jahrzehnt-Trennern (sw v36)
+- Fix: viewport-fit=cover in meta-viewport — Topbar auf iOS PWA nicht mehr verschoben (sw v37)
+- Feat: Roundtrip-Test gibt alle Passthrough-Inhalte aus: 10 Sektionen, Tag-Frequenzen aggregiert via `_ptAgg()` / `_ptFmt()` (sw v38)
 
 **Session 2026-03-25 — UI/UX + Code-Qualität:**
 - Baum: Geschlecht via `border-left` (blau=M, rosa=F) statt Symbol; `_treeShortName()` kürzt Namen zu Initialen
