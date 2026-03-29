@@ -1682,16 +1682,60 @@ function _odIsConnected()  { return !!localStorage.getItem('od_access_token'); }
 
 function _odUpdateUI() {
   const conn = _odIsConnected();
-  const cb = document.getElementById('odConnectBtn');
-  const ob = document.getElementById('odOpenBtn');
-  const sb = document.getElementById('odSaveBtn');
-  const pb = document.getElementById('odPhotoBtn');
-  const db2 = document.getElementById('odDocBtn');
-  if (cb) cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
-  if (ob) ob.style.display = conn ? '' : 'none';
-  if (sb) sb.style.display = conn ? '' : 'none';
-  if (pb) pb.style.display = conn ? '' : 'none';
-  if (db2) db2.style.display = conn ? '' : 'none';
+  const cb  = document.getElementById('odConnectBtn');
+  const ob  = document.getElementById('odOpenBtn');
+  const sb  = document.getElementById('odSaveBtn');
+  const stb = document.getElementById('odSettingsBtn');
+  if (cb)  cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
+  if (ob)  ob.style.display  = conn ? '' : 'none';
+  if (sb)  sb.style.display  = conn ? '' : 'none';
+  if (stb) stb.style.display = conn ? '' : 'none';
+}
+
+async function openSettings() {
+  openModal('modalSettings');
+  // Foto-Ordner
+  const photoFolder = await idbGet('od_default_folder').catch(() => null);
+  const nameEl  = document.getElementById('set-photo-name');
+  const clearEl = document.getElementById('set-photo-clear');
+  const cntEl   = document.getElementById('set-photo-count');
+  if (nameEl) nameEl.textContent = photoFolder?.folderName || 'nicht konfiguriert';
+  if (clearEl) clearEl.style.display = photoFolder ? '' : 'none';
+  if (cntEl) {
+    const filemap = await idbGet('od_filemap').catch(() => null);
+    const pCount = Object.keys(filemap?.persons || {}).length;
+    const fCount = Object.keys(filemap?.families || {}).length;
+    cntEl.textContent = (pCount || fCount) ? `${pCount} Personen · ${fCount} Familien verknüpft` : '';
+  }
+  // Dokumente-Ordner
+  const docFolder  = await idbGet('od_doc_folder').catch(() => null);
+  const dNameEl  = document.getElementById('set-doc-name');
+  const dClearEl = document.getElementById('set-doc-clear');
+  const dCntEl   = document.getElementById('set-doc-count');
+  if (dNameEl) dNameEl.textContent = docFolder?.folderName || 'nicht konfiguriert';
+  if (dClearEl) dClearEl.style.display = docFolder ? '' : 'none';
+  if (dCntEl) {
+    const docMap = await idbGet('od_doc_filemap').catch(() => null);
+    const n = docMap ? Object.keys(docMap).length : 0;
+    dCntEl.textContent = n ? `${n} Dateien indiziert` : '';
+  }
+}
+
+async function odClearPhotoFolder() {
+  await idbDel('od_default_folder').catch(() => {});
+  await idbDel('od_filemap').catch(() => {});
+  Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
+  changed = true;
+  showToast('Foto-Ordner zurückgesetzt');
+  openSettings();
+}
+
+async function odClearDocFolder() {
+  await idbDel('od_doc_folder').catch(() => {});
+  await idbDel('od_doc_filemap').catch(() => {});
+  Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
+  showToast('Dokumente-Ordner zurückgesetzt');
+  openSettings();
 }
 
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }

@@ -1483,11 +1483,8 @@ body {
         <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="odSaveFile()">
           💾 &nbsp; In OneDrive speichern
         </button>
-        <button id="odPhotoBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odImportPhotos()">
-          🖼 &nbsp; Foto-Ordner einrichten / aktualisieren
-        </button>
-        <button id="odDocBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odSetupDocFolder()">
-          📂 &nbsp; Dokumente-Ordner einrichten
+        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); openSettings()">
+          ⚙ &nbsp; OneDrive-Einstellungen
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test
@@ -1497,6 +1494,42 @@ body {
     </div>
   </div>
 </div>
+<!-- Einstellungen -->
+<div class="modal-overlay" id="modalSettings">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Einstellungen</div>
+    <div class="sheet-body">
+      <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">OneDrive-Ordner</div>
+
+      <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">
+        <!-- Foto-Ordner -->
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border-color)">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Foto-Ordner</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="set-photo-name" style="flex:1;font-size:0.9rem;color:var(--text)">—</div>
+            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" onclick="closeModal('modalSettings');odImportPhotos()">Ändern</button>
+            <button id="set-photo-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" onclick="odClearPhotoFolder()" title="Zurücksetzen">×</button>
+          </div>
+          <div id="set-photo-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
+        </div>
+        <!-- Dokumente-Ordner -->
+        <div style="padding:12px 14px">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Dokumente-Ordner</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="set-doc-name" style="flex:1;font-size:0.9rem;color:var(--text)">—</div>
+            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" onclick="closeModal('modalSettings');odSetupDocFolder()">Ändern</button>
+            <button id="set-doc-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" onclick="odClearDocFolder()" title="Zurücksetzen">×</button>
+          </div>
+          <div id="set-doc-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalSettings')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- OneDrive Datei-Auswahl -->
 <div class="modal-overlay" id="modalOneDrive">
   <div class="sheet">
