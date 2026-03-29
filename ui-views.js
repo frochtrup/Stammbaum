@@ -11,58 +11,11 @@ function _initTreeKeys() {
     if (!document.getElementById('v-tree')?.classList.contains('active')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
     const t = _treeNavTargets;
-    if (e.key === 'ArrowUp')    { e.preventDefault(); const id = e.shiftKey ? t.up2 : t.up;    if (id) showTree(id); }
+    if (e.key === 'ArrowUp')    { e.preventDefault(); const id = e.shiftKey ? t.up2 : t.up; if (id) showTree(id); }
     if (e.key === 'ArrowDown')  { e.preventDefault(); if (t.down)  showTree(t.down); }
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); if (t.left)  showTree(t.left); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); treeNavBack(); }
     if (e.key === 'ArrowRight') { e.preventDefault(); if (t.right) showTree(t.right); }
   });
-}
-
-// ─────────────────────────────────────
-//  BAUM: SIDEBAR (Desktop)
-// ─────────────────────────────────────
-function _updateTreeSidebar(p, personId, par0, spouseFams, activeSpIdx) {
-  const sb = document.getElementById('treeSidebarContent');
-  if (!sb) return;
-
-  const fmt = (ev) => {
-    if (!ev) return '';
-    const parts = [ev.date, ev.plac].filter(Boolean);
-    return parts.join(' · ');
-  };
-
-  const birthStr = fmt(p.birth || p.chr);
-  const deathStr = fmt(p.death || p.buri);
-  const occ = (p.events || []).find(e => e.tag === 'OCCU');
-
-  const fatherName = par0.father ? (db.individuals[par0.father]?.name || par0.father) : null;
-  const motherName = par0.mother ? (db.individuals[par0.mother]?.name || par0.mother) : null;
-
-  const activeSp = spouseFams[activeSpIdx];
-  const spName   = activeSp?.spId ? (db.individuals[activeSp.spId]?.name || activeSp.spId) : null;
-
-  const sexColor = p.sex === 'M' ? 'var(--blue)' : p.sex === 'F' ? 'var(--pink)' : 'var(--gold-dim)';
-
-  let html = `<div class="tsb-name" style="border-left: 3px solid ${sexColor}">${esc(p.name || personId)}</div>`;
-  if (p.prefix || p.suffix) html += `<div class="tsb-sub">${esc([p.prefix, p.suffix].filter(Boolean).join(' '))}</div>`;
-  if (birthStr) html += `<div class="tsb-fact"><span class="tsb-label">*</span>${esc(birthStr)}</div>`;
-  if (deathStr) html += `<div class="tsb-fact"><span class="tsb-label">†</span>${esc(deathStr)}</div>`;
-  if (occ)      html += `<div class="tsb-fact"><span class="tsb-label">Beruf</span>${esc(occ.desc || '')}</div>`;
-
-  if (fatherName || motherName) {
-    html += `<div class="tsb-section">Eltern</div>`;
-    if (fatherName) html += `<div class="tsb-link" onclick="showTree('${esc(par0.father)}')">&#9794; ${esc(fatherName)}</div>`;
-    if (motherName) html += `<div class="tsb-link" onclick="showTree('${esc(par0.mother)}')">&#9792; ${esc(motherName)}</div>`;
-  }
-
-  if (spName) {
-    html += `<div class="tsb-section">Partner</div>`;
-    html += `<div class="tsb-link" onclick="showTree('${esc(activeSp.spId)}')">⚭ ${esc(spName)}</div>`;
-  }
-
-  html += `<button class="tsb-detail-btn" onclick="showDetail('${esc(personId)}')">Detail öffnen →</button>`;
-
-  sb.innerHTML = html;
 }
 
 // ─────────────────────────────────────
@@ -1341,14 +1294,12 @@ function showTree(personId, addToHistory = true) {
     up:    par0.father || null,
     up2:   par0.mother || null,
     down:  allKids[0]  || null,
-    left:  siblings[0] || null,
     right: spouseFams[activeSpIdx]?.spId || null,
   };
 
   showView('v-tree');
   _initTreeDrag();
   _initTreeKeys();
-  _updateTreeSidebar(p, personId, par0, spouseFams, activeSpIdx);
   // Auto-Zentrierung: Zentrumsperson horizontal + vertikal ~1/3 von oben
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
