@@ -1,6 +1,6 @@
 Fehler
-Datumsfehler bearbeiten: Parser erkennt from... to ... teilweise nicht
-Datum sortierbar
-Ereignis Sonstige mit Type im Editor
 2 Page gibt es 2 mal
 
+Quellenliste mit badges wenn link vorhanden
+event medienlinks analog zu pictures and documents
+documents and fotos verzeichnisse als config datei
