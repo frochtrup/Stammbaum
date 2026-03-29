@@ -1,4 +1,61 @@
 // ─────────────────────────────────────
+//  BAUM: DRAG-TO-PAN + VOLLBILD
+// ─────────────────────────────────────
+let _treeDragInit = false;
+let _treeDragging = false;
+
+function _initTreeDrag() {
+  if (_treeDragInit) return;
+  _treeDragInit = true;
+  const sc = document.getElementById('treeScroll');
+  if (!sc) return;
+  let drag = null;
+
+  sc.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop };
+    _treeDragging = false;
+    sc.style.userSelect = 'none';
+  }, { passive: true });
+
+  window.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (!_treeDragging && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+    _treeDragging = true;
+    sc.scrollLeft = drag.sl - dx;
+    sc.scrollTop  = drag.st - dy;
+    sc.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!drag) return;
+    drag = null;
+    sc.style.cursor = '';
+    sc.style.userSelect = '';
+    if (_treeDragging) {
+      // Suppress the following click event (fired after mouseup)
+      setTimeout(() => { _treeDragging = false; }, 0);
+    }
+  });
+
+  // Block click events that follow a drag
+  sc.addEventListener('click', e => {
+    if (_treeDragging) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+}
+
+function toggleTreeFullscreen() {
+  const isFs = document.body.classList.toggle('tree-fullscreen');
+  const btn = document.getElementById('treeFsBtn');
+  if (btn) {
+    btn.textContent = isFs ? '⤡' : '⤢';
+    btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
+  }
+}
+
+// ─────────────────────────────────────
 //  LIGHTBOX
 // ─────────────────────────────────────
 let _lbHeroKey = null, _lbHeroElemId = null, _lbAvatarElemId = null;
@@ -1188,6 +1245,7 @@ function showTree(personId, addToHistory = true) {
   });
 
   showView('v-tree');
+  _initTreeDrag();
   // Auto-Zentrierung: Zentrumsperson horizontal + vertikal ~1/3 von oben
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
