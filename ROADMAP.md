@@ -11,25 +11,33 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 3.0 | `main` | Live — stabil |
 | 4.0 | `v4-dev` | In Entwicklung |
 
-**Roundtrip:** `stable=true`, `net_delta≈0` (alle inhaltlichen Verluste behoben; CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
-**Testdaten:** MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
-**Aktuelle sw-Version:** v49 / Cache: `stammbaum-v49`
+**Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
+**Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
+**Aktuelle sw-Version:** v53 / Cache: `stammbaum-v53`
 
 ---
 
 ## Version 4.0 (Branch `v4-dev`, ab 2026-03-27)
 
-### Schwerpunkt 1: Passthrough-Reduktion
+### Schwerpunkt 1: Passthrough-Reduktion ✅ ABGESCHLOSSEN (2026-03-29)
 
-Ziel: Möglichst viele Tags aus `_passthrough[]` herausnehmen — strukturiert speichern, editieren, schreiben.
+Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Neuformatierung).
 
-**Kandidaten (nach Häufigkeit in MeineDaten_ancestris.ged):**
-- [x] HEAD-Rewrite: vollständiger Erhalt aller HEAD-Felder via `_headLines[]` ✅ (2026-03-28)
-- [x] ENGA vollständig: Parser + Writer + alle Felder ✅ (2026-03-28)
-- [ ] FAM-Events: `DIV`, `DIVF` — Parser + Writer + Formularfeld
-- [ ] INDI-Events: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` — in `events[]` strukturieren
-- [ ] Mehrere inline INDI-Notes: Array statt Konkatenation
-- [ ] Zweite `1 NAME`-Einträge (Geburtsname etc.) — strukturiert statt passthrough
+- [x] HEAD-Rewrite: vollständiger Erhalt aller HEAD-Felder via `_headLines[]` ✅
+- [x] ENGA vollständig: Parser + Writer + alle Felder ✅
+- [x] sourceMedia{}: OBJE unter SOUR-Zitierungen strukturiert ✅
+- [x] Medien-Verwaltung: Einheitliches Karten-Layout, Edit-Modal, async Thumbnails ✅ (sw v50–v52)
+
+**Akzeptiertes Rest-Delta** (kein Datenverlust, nur Formatnormalisierung):
+- CONC/CONT -35/-26: Langen Text neu umbrechen
+- PAGE -22, TIME -1, DATE -1: Normalisierung
+- Passthrough-Reste: childRel.extra (44 Eintr.), SOUR._passthrough (2), NOTE._passthrough (1), extraRecords (2)
+
+**Offen (niedrige Priorität, kein Datenverlust):**
+- FAM-Events: `DIV`, `DIVF` — noch in passthrough
+- INDI-Events: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`
+- Mehrere inline INDI-Notes: konkateniert statt Array
+- Zweite `1 NAME`-Einträge (Geburtsname etc.)
 
 ### Schwerpunkt 2: Desktop UI/UX
 
@@ -44,6 +52,8 @@ Ziel: Möglichst viele Tags aus `_passthrough[]` herausnehmen — strukturiert s
 - [x] Quellen-Detailansicht: Mediendateien aus GEDCOM-Pfaden anzeigen — statische Icons + async OneDrive-Laden ✅ (sw v48)
 - [x] OneDrive Dokumente-Ordner: Scan → Dateiname-Matching → auto-Vorschau ohne manuelles Verknüpfen ✅ (sw v49)
 - [x] sourceMedia{}: OBJE unter SOUR-Zitierungen strukturiert — kein Datenverlust im Roundtrip ✅ (sw v45)
+- [x] Einheitliches Medien-UI: Karten-Layout, Edit-Modal + Thumbnail in allen Ansichten ✅ (sw v50–v52)
+- [x] OneDrive-Einstellungen: Ordner-Anzeige, Ändern, Zurücksetzen ✅ (sw v53)
 - [ ] Quellenansicht: verknüpfte Personen/Familien auflisten (Rückverweise)
 - [ ] Quellen-Schnellerstellung auf iPhone: Kamera-Button → Foto machen → als Medienobjekt einbinden (`capture="camera"`)
 - [ ] Quellen-Vorlage: Häufig genutzte Quellentypen (Kirchenbuch, Standesamt, Volkszählung) als Vorlagen
@@ -83,12 +93,10 @@ Ziel: Möglichst viele Tags aus `_passthrough[]` herausnehmen — strukturiert s
 ## Datei-Statistiken (MeineDaten_ancestris.ged)
 
 ```
-Personen:      2796
-Familien:       873
-Quellen:        114
-Archive:         11
-Orte:          3473 (eindeutige Ortsnamen)
-Medien-Refs:    146
-Notiz-Records:  186
-Dateigröße:    ~5 MB
+Personen:      2811
+Familien:       880
+Quellen:        130
+Archive:           4
+Notizen:         195
+Dateigröße:    ~5 MB  (83152 Zeilen)
 ```
