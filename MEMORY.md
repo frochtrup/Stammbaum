@@ -12,7 +12,7 @@
 - `storage.js` — IndexedDB, Dateiverwaltung, Auto-Load
 - `ui-views.js` — Baum, Detailansichten, Listenrendering
 - `ui-forms.js` — Formulare, OneDrive-Integration, Medien-Bearbeitung
-- `sw.js` — Service Worker (Network-first, offline, Cache v49)
+- `sw.js` — Service Worker (Network-first, offline, Cache v58)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -25,55 +25,64 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-29 (Session 4)
-- Phase 3 abgeschlossen: P3-1 ✅ · P3-2 ✅ · P3-3 ✅ · P3-4 ✅ · P3-5 ✅ · P3-6 ✅ · P3-7 ✅ · P3-8 ✅
+## Aktueller Stand — zuletzt aktualisiert: 2026-03-29 (Session 6)
+- **Schwerpunkt 1 (Passthrough-Reduktion) abgeschlossen** ✅
+- **Schwerpunkt 2 (Desktop UI/UX) abgeschlossen** ✅
 - **Version 4 in Entwicklung: Branch `v4-dev`** — `main` bleibt v3 (live)
-- Roundtrip-Status: `roundtrip_stable=true`, `net_delta≈0`
-- **Aktuelle sw-Version: v49** / Cache: `stammbaum-v49`
-- Git: Branch `v4-dev`; letzter Commit: bcb4175 (Passthrough-Reduktion FAM EVEN/_STAT/SOUR _DATE/NOTE CHAN, sw v42)
+- Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
+- **Aktuelle sw-Version: v58** / Cache: `stammbaum-v58`
+- Git: Branch `v4-dev`; letzter Commit: eac986b
+
+**Session 2026-03-29 (Session 6) — Desktop UI/UX Baum (sw v56–v58):**
+- Feat: Drag-to-Pan — Maus-Drag scrollt `#treeScroll` (5px-Threshold, Click-Unterdrückung)
+- Feat: Vollbild-Modus — Button `⤢` in Topbar, `body.tree-fullscreen` blendet Sidebar aus
+- Feat: 4 Vorfahren-Ebenen — anc1–anc4 (Eltern/Großeltern/Urgroßeltern/Ururgroßeltern)
+- ancSpan dynamisch (4/8/16 Slots); baseY angepasst; Ebenen -3/-4 überspringen leere Slots
+- Vertikale Zentrierung: `marginTop` zentriert Baum wenn kleiner als Viewport
+- Feat: Tastaturnavigation — ↑ Vater / Shift+↑ Mutter / ↓ Kind / → Partner / ← History-Back
+- Feat: Pfeil-Legende unten rechts im Baum (nur desktop-mode)
+- Fix: `←` via `treeNavBack()` (History-basiert); `_prevTreeId` vor Überschreibung gesichert
+
+**Session 2026-03-29 (Session 5) — Medien-UI + Einstellungen (sw v50–v55):**
+- Fix: Familien-Media-Abschnitt leer: Parser speichert OBJE unter MARR in `f.marr.media[]` (Feld `titl`), nicht in `_extra` — alle marr-Media-Funktionen korrigiert
+- Feat: Einheitliches Medien-Karten-Layout (Icon/Thumbnail + Titel) in Person-, Familien-, Quellenansicht
+- Feat: Edit-Modal für Medien: Titelleiste mit Thumbnail, Vorschau, Titel/Dateiname-Felder, OD-Picker, Löschen+Speichern
+- Feat: Async Thumbnail-Loading für Person- und Familien-Medien-Items
+- Feat: Quellenansicht: erstes Bild-Medium befüllt Header (det-src-photo), Avatar wird ausgeblendet
+- Feat: OneDrive-Einstellungen-Modal: zeigt konfig. Ordner mit Namen + Anzahl, Ändern + Zurücksetzen
+- Feat: Medien-Badge (📎) in Quellenliste ohne Zähler (sw v54–v55)
+- `_asyncLoadMediaThumb(thumbId, idbKey)` shared helper; `openSourceMediaView(srcId, idx)`
+- `_odEditPickMode` für OD-Picker aus Edit-Modal
 
 **Session 2026-03-29 (Session 4) — sourceMedia{} + Quellenmanagement UI (sw v45–v49):**
-- Feat: `sourceMedia{}` / `sourMedia{}` — OBJE-Blöcke unter SOUR-Zitierungen strukturiert geparst + geschrieben (sw v45) → 10. Passthrough-Mechanismus
-- Fix: OBJE mit `@ref@` bleibt in `sourceExtra{}` verbatim (`!val.startsWith('@')`-Guard) (sw v46)
-- Fix: `sourMedia:{}` fehlte in 3 `childRelations`-Init-Stellen (sw v46)
-- Feat: Quellen-Detailansicht zeigt Medien mit statischen Icons (🖼/📄/📎) sofort; async Upgrade zu Thumbnail/Link via OneDrive (sw v47–v48)
-- Feat: `_odGetSourceFileUrl(srcId, idx)` — sucht fileId in od_filemap, Fallback: Basename-Matching gegen od_doc_filemap (sw v47–v48)
-- Feat: Dokumente-Ordner einrichten: `odSetupDocFolder()` + `odScanDocFolder()` → `od_doc_filemap` in IDB (sw v49)
-- Laufendes Problem: Topbar-Layout (App nach oben verschoben) — noch nicht behoben
+- Feat: `sourceMedia{}` / `sourMedia{}` — OBJE-Blöcke unter SOUR-Zitierungen strukturiert
+- Feat: Quellen-Detailansicht mit Icons (🖼/📄/📎) + async OneDrive-Thumbnails
+- Feat: `_odGetSourceFileUrl(srcId, idx)` + `odSetupDocFolder()` + `odScanDocFolder()` → `od_doc_filemap`
 
-**Session 2026-03-28 (Session 3) — UX-Fixes + Diagnose (sw v34–v38) + Roundtrip-Fixes (sw v29–v33):**
-- FROM/TO-Datum Parser + Builder; `gedDateSortKey()`; Personenliste sortierbar nach Geburtsdatum
-- viewport-fit=cover — Topbar auf iOS PWA korrekt
-- Roundtrip: `_ptAgg()` / `_ptFmt()` für Passthrough-Diagnose
-- HEAD verbatim `_headLines[]`; ENGA vollständig; `seen`-Flag für leere Events; NOTE-Record Sub-Tags
-- Leere DATE/PLAC: `null`-Init statt `''`; Writer prüft `!== null`
-
-**Session 2026-03-27 — Medien hinzufügen/löschen (sw v22):**
-- `openAddMediaDialog()`, `confirmAddMedia()`, `deletePersonMedia()`, `deleteSourceMedia()`
-- `_odPickMode` + `_odCancelOrClose()`
-
-**Session 2026-03-26 (2) — Medien + UI-Fixes:**
-- Lightbox, mehrere Fotos, dynamisches OneDrive-Foto-Laden, `od_filemap`
-
-**Session 2026-03-26 (1) — Roundtrip-Fixes:**
-- `addrExtra[]`, `frelSourExtra[]`/`mrelSourExtra[]`, `_ptNameEnd`-Index → `roundtrip_stable=true`
-
-Testdaten: MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive (82505 Zeilen)
+Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 
 ---
 
-## Roundtrip-Status (2026-03-29)
+## Roundtrip-Status (2026-03-29, Session 5)
 
-Verbatim Passthrough (ADR-012): `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR + `_extraRecords[]` + `_ptTarget` + `_ptNameEnd`.
-Delta-Verlauf: -708 → -126 (Sprint 12) → -84 (Sprint 13) → -7 (2026-03-26) → **≈0** (2026-03-28).
+`roundtrip_stable=true`, `net_delta=-4` — alle tag-counts ✓, STABIL.
+Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je -1 für _TIME/DATE/TIME/QUAY/TEXT.
 
-**Passthrough-Mechanismen (10 Stück — Details in ARCHITECTURE.md ADR-012):**
-`_passthrough[]` · `ev._extra[]` · `addrExtra[]` · `frelSourExtra[]`/`mrelSourExtra[]` · `sourceExtra{}` · `topSourceExtra{}` · `media._extra[]` · `childRelations.sourExtra{}` · `extraRecords[]` · **`sourceMedia{}`/`sourMedia{}`** (v4-dev)
+**Passthrough-Mechanismen (10 Stück):**
+`_passthrough[]` · `ev._extra[]` · `addrExtra[]` · `frelSourExtra[]`/`mrelSourExtra[]` · `sourceExtra{}` · `topSourceExtra{}` · `media._extra[]` · `childRelations.sourExtra{}` · `extraRecords[]` · `sourceMedia{}`/`sourMedia{}`
 
-**Passthrough-Optimierungspotenzial (kein Datenverlust, aber nicht editierbar):**
-- DIV, DIVF → FAM-Events fehlen im Parser
+**Passthrough-Reste (akzeptiert, kein Datenverlust):**
+- `INDI.sourceExtra`: 2 Eintr. (EVEN, OBJE)
+- `FAM.marr._extra`: 1 Z. (EVEN)
+- `FAM.childRel.extra`: 44 Eintr. (SOUR/QUAY/PAGE/OBJE…)
+- `SOUR._passthrough`: 2 SOURs (REFN, NOTE, CONT)
+- `NOTE._passthrough`: 1 NOTE (REFN, _VALID)
+- `extraRecords`: 2 (SUBM, OBJE)
+
+**Nicht editierbar (niedrige Prio):**
+- DIV, DIVF → FAM-Events in passthrough
 - CENS, CONF, FCOM, ORDN, RETI, PROP, WILL, PROB → nicht als events[] strukturiert
-- Mehrere inline INDI-Notes → konkateniert statt als Array
+- Mehrere inline INDI-Notes → konkateniert
 
 ---
 
@@ -89,23 +98,32 @@ Delta-Verlauf: -708 → -126 (Sprint 12) → -84 (Sprint 13) → -7 (2026-03-26)
 - **Geschlecht im Baum**: `data-sex="M/F/U"` Attribut + CSS `border-left` Farbe
 - **sourceMedia{}**: OBJE unter SOUR-Zitierungen strukturiert (v4-dev sw v45)
 - **OneDrive Dokumente-Ordner**: `od_doc_filemap` — Dateiname-Mapping für auto-Vorschau (sw v49)
+- **Familien-OBJE**: `f.marr.media[]` mit Feld `titl` (nicht `title`) — NICHT in `f.marr._extra`
+- **Baum Tastatur**: `_treeNavTargets{}` pro `showTree()`-Aufruf; `_initTreeKeys()` einmalig
+- **Baum History**: `_treeHistory[]` + `_treeHistoryPos`; `←` ruft `treeNavBack()` auf
+
+## IDB-Schlüssel (OneDrive-Ordner)
+- `od_default_folder`: `{ folderId, folderName }` — Foto-Ordner
+- `od_doc_folder`: `{ folderId, folderName }` — Dokumente-Ordner
+- `od_filemap`: `{ persons:{}, families:{}, sources:{} }` — fileId-Mappings
+- `od_doc_filemap`: `{ filename.toLowerCase(): fileId }` — Dokumente-Index
 
 ## Sanduhr-Karten-Dimensionen
 - Regulär: W=96, H=64 · Zentrum: CW=160, CH=80
 - HGAP=10, VGAP=44, MGAP=20, SLOT=106, PAD=20, ROW=108
 - Namen: `_treeShortName(p, isCenter)` — Limit 18 (regulär) / 26 (Zentrum) Zeichen, dann Initialen
+- Vorfahren: 4 Ebenen (anc1–anc4), ancSpan dynamisch (4/8/16 Slots)
 
-## Version 4 — Ziele (Branch `v4-dev`)
-1. **Passthrough-Reduktion**: DIV/DIVF, CENS/CONF/FCOM/ORDN/RETI/PROP/WILL/PROB, mehrere INDI-Notes, zweite NAME-Einträge
-2. **Desktop UI/UX**: grössere Bäume (3–4 Generationen), Vollbild-Baum, Panning via Drag, Tastaturnavigation
-3. **Quellenmanagement**: ✅ Medien aus `../documents` über OneDrive anzeigen; offen: Rückverweise, Kamera-Button, Vorlagen, Medien-Browser
+## Version 4 — Schwerpunkte (Branch `v4-dev`)
+1. **Passthrough-Reduktion**: ✅ Abgeschlossen — alle tag-counts ✓
+2. **Desktop UI/UX**: ✅ Abgeschlossen — 4 Vorfahren-Ebenen, Vollbild, Drag-to-Pan, Tastaturnavigation, Pfeil-Legende
+3. **Quellenmanagement**: ✅ Medien-UI + Thumbnails + Einstellungen; offen: Rückverweise, Kamera-Button, Vorlagen
 4. **Mobile iPhone**: Schnell-Formular neue Quellen, Swipe-Gesten
 
 ## Offene Architektur-Schulden
 - State-Management: ~27 globale Variablen, keine Schichtentrennung
 - Virtuelles Scrollen für Listen >1000 Einträge
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo)
-- Topbar-Layout-Bug: App nach oben verschoben (offen seit sw v49)
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch · Kommunikation: kurz und direkt · Keine Emojis

@@ -7,7 +7,33 @@ Aktuelle Planung: `ROADMAP.md`
 
 ## Version 4.0 🚧 (Branch `v4-dev`, ab 2026-03-27)
 
-Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, v4-Infrastruktur.
+Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX.
+
+### Session 2026-03-29 — Desktop UI/UX: Baum-Verbesserungen (sw v56–v58)
+
+*Drag-to-Pan + Vollbild-Modus (sw v56):*
+- **Drag-to-Pan**: `mousedown`/`mousemove`/`mouseup` auf `#treeScroll`; 5px-Threshold verhindert versehentliches Aktivieren; Click-Event nach Drag unterdrückt
+- **Vollbild-Modus**: Button `⤢` in Baum-Topbar (nur desktop-mode); `body.tree-fullscreen` → `#v-tree { left:0 }`, Sidebar + Bottom-Nav ausgeblendet; Toggle zu `⤡`
+
+*4 Vorfahren-Ebenen (sw v57):*
+- **anc1–anc4**: Eltern, Großeltern, Urgroßeltern, Ururgroßeltern (bis zu 16 Karten)
+- `ancSpan` dynamisch: 4/8/16 Slots je nach belegter Tiefe — keine unnötige Breite bei wenig Vorfahren
+- `baseY` passt sich an: `ancLevels * ROW` Platz nach oben
+- Ebenen -3/-4: leere Slots werden übersprungen (kein "?" für fehlende Vorfahren)
+- Vertikale Zentrierung: `marginTop` zentriert Baum wenn kleiner als Viewport
+
+*Tastaturnavigation + Pfeil-Legende (sw v58):*
+- **Pfeiltasten**: ↑ Vater · Shift+↑ Mutter · ↓ erstes Kind · → aktiver Partner · ← History-Back
+- `_treeNavTargets{}` wird bei jedem `showTree()` aktualisiert
+- `_initTreeKeys()` einmalig: Listener nur wenn `v-tree` aktiv + kein Eingabefeld fokussiert
+- **Pfeil-Legende**: kompakte Box unten rechts im Baum (nur desktop-mode), `position:absolute`
+- Legende zeigt alle 5 Tasten mit Bezeichnung
+
+*Aktuelle sw-Version: v58 / Cache: stammbaum-v58*
+
+---
+
+### Session 2026-03-29 — Medien-UI + Einstellungen (sw v50–v55)
 
 ### Session 2026-03-29 — sourceMedia{} + Quellenmanagement UI (sw v45–v49)
 

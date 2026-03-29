@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v53 / Cache: `stammbaum-v53`
+**Aktuelle sw-Version:** v58 / Cache: `stammbaum-v58`
 
 ---
 
@@ -39,13 +39,13 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 - Mehrere inline INDI-Notes: konkateniert statt Array
 - Zweite `1 NAME`-Einträge (Geburtsname etc.)
 
-### Schwerpunkt 2: Desktop UI/UX
+### Schwerpunkt 2: Desktop UI/UX ✅ ABGESCHLOSSEN (2026-03-29)
 
-- [ ] Grössere Bäume: mehr Generationen (3–4 Ebenen Vorfahren, mehr Nachkommen)
-- [ ] Vollbild-Baum-Modus (ohne Listenspalte links)
-- [ ] Baum-Navigation: Panning via Drag (nicht nur Pinch-Zoom)
-- [ ] Tastaturnavigation im Baum (Pfeiltasten)
-- [ ] Desktop-Sidebar: Kontextinfos zur gewählten Person (Ereignisse, Quellen)
+- [x] Grössere Bäume: 4 Vorfahren-Ebenen (Eltern, Großeltern, Urgroßeltern, Ururgroßeltern) ✅ (sw v57)
+- [x] Vollbild-Baum-Modus (ohne Listenspalte links) ✅ (sw v56)
+- [x] Baum-Navigation: Drag-to-Pan via Maus ✅ (sw v56)
+- [x] Tastaturnavigation im Baum (↑ Vater, ⇧↑ Mutter, ↓ Kind, → Partner, ← Zurück) ✅ (sw v58)
+- [x] Pfeil-Legende unten rechts im Baum ✅ (sw v58)
 
 ### Schwerpunkt 3: Quellenmanagement
 
