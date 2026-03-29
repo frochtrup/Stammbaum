@@ -98,7 +98,8 @@ function showSourceDetail(id, pushHistory = true) {
     for (let i = 0; i < srcMedia.length; i++) {
       const m = srcMedia[i];
       if (!m.file && !m.title) continue;
-      html += `<div class="fact-row" style="display:flex;align-items:center;gap:4px">
+      html += `<div class="fact-row" style="display:flex;align-items:center;gap:6px">
+        <div id="src-media-thumb-${i}" style="flex-shrink:0"></div>
         <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
         <span class="fact-val" style="word-break:break-all;flex:1">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
         <button class="unlink-btn" onclick="deleteSourceMedia('${id}',${i})" title="Entfernen">×</button></div>`;
@@ -117,6 +118,31 @@ function showSourceDetail(id, pushHistory = true) {
 
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
+
+  // Quellenmedien async aus OneDrive laden (Thumbnails / Öffnen-Links)
+  for (let i = 0; i < srcMedia.length; i++) {
+    const m = srcMedia[i];
+    if (!m.file && !m.title) continue;
+    _odGetSourceFileUrl(id, i).then(url => {
+      if (!url) return;
+      const el = document.getElementById('src-media-thumb-' + i);
+      if (!el) return;
+      const ext = (m.file || '').split('.').pop().toLowerCase();
+      if (['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(ext)) {
+        const img = document.createElement('img');
+        img.src = url; img.alt = m.title || m.file || '';
+        img.style.cssText = 'height:48px;width:auto;max-width:72px;border-radius:4px;object-fit:cover;cursor:pointer;flex-shrink:0';
+        img.onclick = () => showLightbox(url);
+        el.appendChild(img);
+      } else {
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.title = m.title || m.file || '';
+        a.style.cssText = 'font-size:1.3rem;text-decoration:none;flex-shrink:0';
+        a.textContent = ext === 'pdf' ? '📄' : '🔗';
+        el.appendChild(a);
+      }
+    }).catch(() => {});
+  }
 
   // Foto async aus IDB nachladen
   idbGet('photo_src_' + id).then(b64 => {
@@ -1586,6 +1612,26 @@ async function _odGetPhotoUrl(idbKey) {
   } catch { return null; }
 }
 
+// OneDrive-URL für Quellenmedien laden (Session-Cache → filemap → fetch)
+async function _odGetSourceFileUrl(srcId, idx) {
+  if (!_odIsConnected()) return null;
+  const cacheKey = 'src_' + srcId + '_' + idx;
+  if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
+  const filemap = await idbGet('od_filemap').catch(() => null);
+  const entries = filemap?.sources?.[srcId];
+  if (!entries?.length || !entries[idx]?.fileId) return null;
+  const token = await _odGetToken().catch(() => null);
+  if (!token) return null;
+  try {
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${entries[idx].fileId}/content`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return null;
+    const url = URL.createObjectURL(await res.blob());
+    _odPhotoCache[cacheKey] = url;
+    return url;
+  } catch { return null; }
+}
+
 // Quick-Import aus gespeichertem Standard-Ordner (kein Navigations-Dialog)
 async function odImportFromDefaultFolder() {
   const folder = await idbGet('od_default_folder').catch(() => null);
@@ -2044,7 +2090,9 @@ function confirmAddMedia() {
     const s = db.sources[_addMediaId];
     if (!s) return;
     if (!s.media) s.media = [];
+    const _smIdx = s.media.length;
     s.media.push(entry);
+    if (_addMediaOdFileId) _addMediaToFilemap('sources', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: _smIdx === 0 });
     changed = true;
     closeModal('modalAddMedia');
     showSourceDetail(_addMediaId, false);
@@ -2059,7 +2107,7 @@ function _countFamMarrObje(f) {
 
 async function _addMediaToFilemap(storeKey, id, entry) {
   try {
-    const fm = await idbGet('od_filemap').catch(() => null) || { persons: {}, families: {} };
+    const fm = await idbGet('od_filemap').catch(() => null) || { persons: {}, families: {}, sources: {} };
     if (!fm[storeKey]) fm[storeKey] = {};
     if (!fm[storeKey][id]) fm[storeKey][id] = [];
     fm[storeKey][id].push(entry);
@@ -2103,6 +2151,7 @@ async function deleteSourceMedia(srcId, idx) {
   const s = db.sources[srcId];
   if (!s?.media) return;
   s.media.splice(idx, 1);
+  await _removeMediaFromFilemap('sources', srcId, idx);
   changed = true;
   showSourceDetail(srcId, false);
 }
@@ -2133,7 +2182,7 @@ async function _removeMediaFromFilemap(storeKey, id, idx) {
       await idbPut('od_filemap', fm).catch(() => {});
     }
   } catch {}
-  const pfx = storeKey === 'families' ? 'photo_fam_' + id : 'photo_' + id;
+  const pfx = storeKey === 'families' ? 'photo_fam_' + id : storeKey === 'sources' ? 'src_' + id + '_' : 'photo_' + id;
   Object.keys(_odPhotoCache).filter(k => k.startsWith(pfx)).forEach(k => delete _odPhotoCache[k]);
 }
 
