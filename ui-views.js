@@ -1006,12 +1006,13 @@ function showTree(personId, addToHistory = true) {
   const PAD  = 20;
   const ROW  = H + VGAP;
 
-  // ── Vorfahren (2 Ebenen) ──
-  const par0  = getParentIds(personId);
-  const anc1  = [par0.father, par0.mother];
-  const par_f = par0.father ? getParentIds(par0.father) : { father: null, mother: null };
-  const par_m = par0.mother ? getParentIds(par0.mother) : { father: null, mother: null };
-  const anc2  = [par_f.father, par_f.mother, par_m.father, par_m.mother];
+  // ── Vorfahren (4 Ebenen) ──
+  function _gp(id) { return id ? getParentIds(id) : { father: null, mother: null }; }
+  const par0 = getParentIds(personId);
+  const anc1 = [par0.father, par0.mother];                                         // 2
+  const anc2 = anc1.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 4
+  const anc3 = anc2.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 8
+  const anc4 = anc3.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 16
 
   // ── Geschwister (aus erster Elternfamilie) ──
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
@@ -1051,14 +1052,19 @@ function showTree(personId, addToHistory = true) {
   // Ehepartner:  eine Spalte rechts (MGAP + W), egal wie viele
   const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
   const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
-  const ancSpan = 4 * SLOT;
+  // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene
+  const hasAnc4 = anc4.some(Boolean);
+  const hasAnc3 = anc3.some(Boolean);
+  const ancSlots = hasAnc4 ? 16 : hasAnc3 ? 8 : 4;
+  const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
   const childMaxCols = childRows.length > 0 ? Math.max(...childRows.map(r => r.length)) : 0;
   const totalW = Math.max(personCX + ancSpan / 2 + PAD, rightEdge, personCX + childMaxCols * SLOT / 2 + PAD);
 
   // ── Y-Positionen: Zeile 0 (Zentrum) ──
-  const baseY = PAD + 2 * ROW;
+  const ancLevels = hasAnc4 ? 4 : hasAnc3 ? 3 : 2;
+  const baseY = PAD + ancLevels * ROW;
   function ry(lv) { return lv <= 0 ? baseY + lv * ROW : baseY + CH + VGAP + (lv - 1) * ROW; }
 
   // Höhe der Kartenstapel (Peek-Überlappung: je +PEEK px pro weitere Karte)
@@ -1073,11 +1079,16 @@ function showTree(personId, addToHistory = true) {
     : row0Bottom + PAD;
 
   // ── X: Vorfahren (zentriert auf personCX) ──
+  // l4 = UrUrGroßeltern (16), l3 = UrGroßeltern (8), l2 = Großeltern (4), l1 = Eltern (2)
   const ancLeft = personCX - ancSpan / 2;
-  function gpCX(i)  { return ancLeft + (i + 0.5) * SLOT; }
-  function gpX(i)   { return gpCX(i) - W / 2; }
-  function parCX(i) { return (gpCX(i * 2) + gpCX(i * 2 + 1)) / 2; }
-  function parX(i)  { return parCX(i) - W / 2; }
+  function l4CX(i) { return ancLeft + (i + 0.5) * SLOT; }
+  function l4X(i)  { return l4CX(i) - W / 2; }
+  function l3CX(i) { return (l4CX(i * 2) + l4CX(i * 2 + 1)) / 2; }
+  function l3X(i)  { return l3CX(i) - W / 2; }
+  function l2CX(i) { return (l3CX(i * 2) + l3CX(i * 2 + 1)) / 2; }
+  function l2X(i)  { return l2CX(i) - W / 2; }
+  function l1CX(i) { return (l2CX(i * 2) + l2CX(i * 2 + 1)) / 2; }
+  function l1X(i)  { return l1CX(i) - W / 2; }
 
   // ── X/Y: Zentrumsperson ──
   const personX = personCX - CW / 2;
@@ -1162,21 +1173,35 @@ function showTree(personId, addToHistory = true) {
     wrap.appendChild(div);
   }
 
+  // ── UrUrGroßeltern (Ebene -4, nur wenn Daten vorhanden) ──
+  anc4.forEach((id, i) => {
+    if (!id) return;
+    mkCard(id, l4X(i), ry(-4), false);
+    if (anc3[Math.floor(i / 2)]) line(l4CX(i), ry(-4) + H, l3CX(Math.floor(i / 2)), ry(-3));
+  });
+
+  // ── UrGroßeltern (Ebene -3, nur wenn Daten vorhanden) ──
+  anc3.forEach((id, i) => {
+    if (!id) return;
+    mkCard(id, l3X(i), ry(-3), false);
+    if (anc2[Math.floor(i / 2)]) line(l3CX(i), ry(-3) + H, l2CX(Math.floor(i / 2)), ry(-2));
+  });
+
   // ── Großeltern + Linien zu Eltern ──
   anc2.forEach((id, i) => {
-    mkCard(id, gpX(i), ry(-2), false);
-    if (id) line(gpCX(i), ry(-2) + H, parCX(Math.floor(i / 2)), ry(-1));
+    mkCard(id, l2X(i), ry(-2), false);
+    if (id) line(l2CX(i), ry(-2) + H, l1CX(Math.floor(i / 2)), ry(-1));
   });
 
   // ── Eltern ──
-  anc1.forEach((id, i) => mkCard(id, parX(i), ry(-1), false));
+  anc1.forEach((id, i) => mkCard(id, l1X(i), ry(-1), false));
 
   // ── Eltern → Kinder: symmetrischer Verzweigungspunkt bei personCX ──
   if (anc1[0] || anc1[1] || nSibs > 0) {
     const juncX = personCX;
     const juncY = ry(-1) + H + Math.round(VGAP * 0.4);
-    if (anc1[0]) line(parCX(0), ry(-1) + H, juncX, juncY);
-    if (anc1[1]) line(parCX(1), ry(-1) + H, juncX, juncY);
+    if (anc1[0]) line(l1CX(0), ry(-1) + H, juncX, juncY);
+    if (anc1[1]) line(l1CX(1), ry(-1) + H, juncX, juncY);
     line(juncX, juncY, personCX, ry(0));
     if (nSibs > 0) {
       // T-Strich: horizontal zum Geschwisterstapel, dann vertikal durch den Stapel
