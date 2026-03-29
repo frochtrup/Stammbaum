@@ -1630,18 +1630,36 @@ async function _odGetPhotoUrl(idbKey) {
   } catch { return null; }
 }
 
-// OneDrive-URL für Quellenmedien laden (Session-Cache → filemap → fetch)
+// OneDrive-URL für Quellenmedien laden
+// Priorität: 1) manueller filemap-Eintrag (od_filemap.sources)
+//             2) Dateiname aus GEDCOM-Pfad in od_doc_filemap (Dokumente-Ordner)
 async function _odGetSourceFileUrl(srcId, idx) {
   if (!_odIsConnected()) return null;
   const cacheKey = 'src_' + srcId + '_' + idx;
   if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
+
+  // 1. Manuell verknüpft
+  let fileId = null;
   const filemap = await idbGet('od_filemap').catch(() => null);
-  const entries = filemap?.sources?.[srcId];
-  if (!entries?.length || !entries[idx]?.fileId) return null;
+  fileId = filemap?.sources?.[srcId]?.[idx]?.fileId || null;
+
+  // 2. Fallback: Dateiname aus GEDCOM-Pfad gegen Dokumente-Ordner abgleichen
+  if (!fileId) {
+    const mfile = db.sources?.[srcId]?.media?.[idx]?.file;
+    if (mfile) {
+      const basename = mfile.replace(/\\/g, '/').split('/').pop().toLowerCase();
+      if (basename) {
+        const docMap = await idbGet('od_doc_filemap').catch(() => null);
+        fileId = docMap?.[basename] || null;
+      }
+    }
+  }
+
+  if (!fileId) return null;
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
   try {
-    const res = await fetch(`${OD_GRAPH}/me/drive/items/${entries[idx].fileId}/content`,
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
       { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) return null;
     const url = URL.createObjectURL(await res.blob());
@@ -1669,10 +1687,12 @@ function _odUpdateUI() {
   const ob = document.getElementById('odOpenBtn');
   const sb = document.getElementById('odSaveBtn');
   const pb = document.getElementById('odPhotoBtn');
+  const db2 = document.getElementById('odDocBtn');
   if (cb) cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
   if (ob) ob.style.display = conn ? '' : 'none';
   if (sb) sb.style.display = conn ? '' : 'none';
   if (pb) pb.style.display = conn ? '' : 'none';
+  if (db2) db2.style.display = conn ? '' : 'none';
 }
 
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
@@ -1950,7 +1970,7 @@ async function _odShowFolder(folderId, folderName) {
     const folders = items.filter(f => f.folder);
     const files   = _odPickMode ? items.filter(f => !f.folder) : [];
     const title   = document.querySelector('#modalOneDrive .sheet-title');
-    if (title) title.textContent = _odPickMode ? 'Datei auswählen' : 'Fotos importieren';
+    if (title) title.textContent = _odPickMode ? 'Datei auswählen' : _odDocScanMode ? 'Dokumente-Ordner wählen' : 'Fotos importieren';
     const list = document.getElementById('odFileList');
     if (!list) return;
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
@@ -1961,10 +1981,17 @@ async function _odShowFolder(folderId, folderName) {
       html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odPickCancel()">← Abbrechen</div>`;
     }
     if (!_odPickMode && folderId !== 'root') {
-      html += `<div class="list-item" style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)"
-        data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
-        onclick="odImportPhotosFromFolder(this.dataset.odid,this.dataset.odname)">
-        📥 Fotos aus diesem Ordner laden</div>`;
+      if (_odDocScanMode) {
+        html += `<div class="list-item" style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)"
+          data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
+          onclick="odScanDocFolder(this.dataset.odid,this.dataset.odname)">
+          📂 Diesen Ordner als Dokumente-Ordner nutzen</div>`;
+      } else {
+        html += `<div class="list-item" style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)"
+          data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
+          onclick="odImportPhotosFromFolder(this.dataset.odid,this.dataset.odname)">
+          📥 Fotos aus diesem Ordner laden</div>`;
+      }
     }
     if (folders.length === 0 && files.length === 0) {
       html += `<div style="color:var(--text-dim);font-size:0.85rem;padding:8px">Keine Einträge</div>`;
@@ -2059,11 +2086,44 @@ async function odImportPhotosFromFolder(folderId, folderName) {
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
+// Dokumente-Ordner scannen (Dateiname → fileId, für Quellenmedien aus GEDCOM-Pfad)
+async function odSetupDocFolder() {
+  if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odDocScanMode = true;
+  _odPickMode    = false;
+  _odFolderStack = [];
+  await _odShowFolder('root', 'OneDrive');
+}
+
+async function odScanDocFolder(folderId, folderName) {
+  closeModal('modalOneDrive');
+  _odDocScanMode = false;
+  const token = await _odGetToken(); if (!token) return;
+  showToast(`Scanne "${folderName}"…`);
+  try {
+    const res  = await fetch(`${OD_GRAPH}/me/drive/items/${folderId}/children?select=id,name,folder&top=500`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const docMap = {};
+    for (const f of (data.value || [])) {
+      if (!f.folder) docMap[f.name.toLowerCase()] = f.id;
+    }
+    await idbPut('od_doc_filemap', docMap).catch(() => {});
+    await idbPut('od_doc_folder', { folderId, folderName }).catch(() => {});
+    // Session-Cache für Quellenmedien leeren
+    Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
+    if (currentSourceId) showSourceDetail(currentSourceId, false);
+    showToast(`✓ ${Object.keys(docMap).length} Dateien indiziert — "${folderName}"`);
+  } catch(e) { showToast('OneDrive: ' + e.message); }
+}
+
 // ─── Medien hinzufügen / löschen ─────────────────────────────────────────
 let _addMediaType     = null; // 'person' | 'family' | 'source'
 let _addMediaId       = null;
 let _addMediaOdFileId = null;
 let _odPickMode       = false;
+let _odDocScanMode    = false; // true wenn Dokumente-Ordner gewählt wird
 
 function openAddMediaDialog(type, entityId) {
   _addMediaType     = type;
@@ -2232,7 +2292,7 @@ function _odPickCancel() {
 
 function _odCancelOrClose() {
   if (_odPickMode) { _odPickMode = false; closeModal('modalOneDrive'); openModal('modalAddMedia'); }
-  else closeModal('modalOneDrive');
+  else { _odDocScanMode = false; closeModal('modalOneDrive'); }
 }
 
 // OneDrive OAuth-Callback nach Redirect abfangen
