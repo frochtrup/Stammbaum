@@ -3,6 +3,7 @@
 // ─────────────────────────────────────
 let _treeNavTargets = {};
 let _treeKeyInit = false;
+let _treePrevId = null;
 
 function _initTreeKeys() {
   if (_treeKeyInit) return;
@@ -13,7 +14,7 @@ function _initTreeKeys() {
     const t = _treeNavTargets;
     if (e.key === 'ArrowUp')    { e.preventDefault(); const id = e.shiftKey ? t.up2 : t.up; if (id) showTree(id); }
     if (e.key === 'ArrowDown')  { e.preventDefault(); if (t.down)  showTree(t.down); }
-    if (e.key === 'ArrowLeft')  { e.preventDefault(); treeNavBack(); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); if (_treePrevId) showTree(_treePrevId); else treeNavBack(); }
     if (e.key === 'ArrowRight') { e.preventDefault(); if (t.right) showTree(t.right); }
   });
 }
@@ -1004,11 +1005,13 @@ function _treeShortName(p, isCenter) {
 function showTree(personId, addToHistory = true) {
   const p = db.individuals[personId];
   if (!p) return;
+  const _prevTreeId = currentTreeId;
   currentPersonId = personId;
   currentTreeId   = personId;
 
   // ── Navigations-History ──
   if (addToHistory) {
+    if (_prevTreeId && _prevTreeId !== personId) _treePrevId = _prevTreeId;
     _treeHistory = _treeHistory.slice(0, _treeHistoryPos + 1);
     if (_treeHistory[_treeHistory.length - 1] !== personId) _treeHistory.push(personId);
     _treeHistoryPos = _treeHistory.length - 1;
