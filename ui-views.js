@@ -1274,11 +1274,14 @@ function showTree(personId, addToHistory = true) {
   // Auto-Zentrierung: Zentrumsperson horizontal + vertikal ~1/3 von oben
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
-    // Horizontale Zentrierung: wenn Baum schmaler als Viewport → mittig via marginLeft
-    const leftPad = Math.max(0, Math.floor((sc.clientWidth - totalW) / 2));
+    // Horizontale Zentrierung
+    const leftPad = Math.max(0, Math.floor((sc.clientWidth  - totalW) / 2));
+    // Vertikale Zentrierung: Baum mittig im Viewport, sonst Zentrumsperson bei 40% von oben
+    const topPad  = Math.max(0, Math.floor((sc.clientHeight - totalH) / 2));
     wrap.style.marginLeft = leftPad + 'px';
-    sc.scrollLeft = Math.max(0, leftPad + personCX - sc.clientWidth / 2);
-    sc.scrollTop  = Math.max(0, ry(0) - Math.round(sc.clientHeight * 0.35));
+    wrap.style.marginTop  = topPad  + 'px';
+    sc.scrollLeft = Math.max(0, leftPad + personCX - sc.clientWidth  / 2);
+    sc.scrollTop  = Math.max(0, topPad  + ry(0)   - Math.round(sc.clientHeight * 0.4));
   }, 60);
 }
 
