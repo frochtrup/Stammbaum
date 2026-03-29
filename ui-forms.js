@@ -98,19 +98,34 @@ function showSourceDetail(id, pushHistory = true) {
     for (let i = 0; i < srcMedia.length; i++) {
       const m = srcMedia[i];
       if (!m.file && !m.title) continue;
-      html += `<div class="fact-row" style="display:flex;align-items:center;gap:6px">
-        <div id="src-media-thumb-${i}" style="flex-shrink:0"></div>
-        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all;flex:1">${esc(m.title || m.file)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
-        <button class="unlink-btn" onclick="deleteSourceMedia('${id}',${i})" title="Entfernen">×</button></div>`;
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div id="src-media-thumb-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(m.title || m.file)}</div>
+          ${m.title && m.file ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(m.file)}</div>` : ''}
+          ${m.form ? `<div style="color:var(--text-muted);font-size:0.78rem">${esc(m.form)}</div>` : ''}
+        </div>
+        <button class="unlink-btn" onclick="deleteSourceMedia('${id}',${i})" title="Entfernen">×</button>
+      </div>`;
     }
     for (const l of srcPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
       const obj = _objeMap[ref];
       const label = obj ? (obj.title || obj.file || ref) : ref;
       const sub   = obj && obj.title && obj.file ? obj.file : '';
-      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
-        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
+      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
+      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+        </div>
+      </div>`;
     }
     if (!srcMedia.filter(m => m.file || m.title).length && !srcPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
@@ -119,7 +134,7 @@ function showSourceDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Quellenmedien async aus OneDrive laden (Thumbnails / Öffnen-Links)
+  // Quellenmedien async aus OneDrive laden — Thumbnail ersetzen / Icon verlinken
   for (let i = 0; i < srcMedia.length; i++) {
     const m = srcMedia[i];
     if (!m.file && !m.title) continue;
@@ -129,16 +144,19 @@ function showSourceDetail(id, pushHistory = true) {
       if (!el) return;
       const ext = (m.file || '').split('.').pop().toLowerCase();
       if (['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(ext)) {
+        el.innerHTML = '';
         const img = document.createElement('img');
         img.src = url; img.alt = m.title || m.file || '';
-        img.style.cssText = 'height:48px;width:auto;max-width:72px;border-radius:4px;object-fit:cover;cursor:pointer;flex-shrink:0';
+        img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;cursor:pointer;display:block';
         img.onclick = () => showLightbox(url);
         el.appendChild(img);
       } else {
+        // Vorhandenes Icon-Emoji in klickbaren Link verwandeln
         const a = document.createElement('a');
         a.href = url; a.target = '_blank'; a.title = m.title || m.file || '';
-        a.style.cssText = 'font-size:1.3rem;text-decoration:none;flex-shrink:0';
-        a.textContent = ext === 'pdf' ? '📄' : '🔗';
+        a.style.cssText = 'font-size:1.6rem;text-decoration:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px';
+        a.textContent = el.textContent;
+        el.innerHTML = '';
         el.appendChild(a);
       }
     }).catch(() => {});
