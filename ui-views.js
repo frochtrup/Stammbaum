@@ -1301,22 +1301,38 @@ function showDetail(id, pushHistory = true) {
       </div>`;
     for (let i = 0; i < indiMedia.length; i++) {
       const m = indiMedia[i];
-      const display = m.title || m.file || m.form || '–';
+      const display = m.title || m.file || '–';
+      const sub = m.title && m.file ? m.file : '';
       const idbKey  = 'photo_' + id + '_' + i;
       const heroKey = 'photo_' + id;
-      html += `<div class="fact-row" style="cursor:pointer;display:flex;align-items:center;gap:4px"
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
         onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}',null)">
-        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
-        <button class="unlink-btn" onclick="event.stopPropagation();deletePersonMedia('${id}',${i})" title="Entfernen">×</button></div>`;
+        <div id="media-thumb-indi-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('person','${id}',${i})" title="Bearbeiten">✎</button>
+      </div>`;
     }
     for (const l of indiPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
       const obj = _objeMap[ref];
       const label = obj ? (obj.title || obj.file || ref) : ref;
       const sub   = obj && obj.title && obj.file ? obj.file : '';
-      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
-        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
+      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
+      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+        </div>
+      </div>`;
     }
     if (!indiMedia.length && !indiPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
@@ -1387,6 +1403,10 @@ function showDetail(id, pushHistory = true) {
     // Lazy migration (nur für IDB-base64, nicht blob: URLs)
     if (!src.startsWith('blob:')) idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
+  // Media-Thumbnails async laden
+  for (let _mi = 0; _mi < indiMedia.length; _mi++) {
+    _asyncLoadMediaThumb('media-thumb-indi-' + id + '-' + _mi, 'photo_' + id + '_' + _mi);
+  }
 }
 
 function showFamilyDetail(id, pushHistory = true) {
@@ -1483,30 +1503,57 @@ function showFamilyDetail(id, pushHistory = true) {
       </div>`;
     for (let i = 0; i < marrObjeEntries.length; i++) {
       const m = marrObjeEntries[i];
-      const display = m.title || m.file || m.form || '–';
+      const display = m.title || m.file || '–';
+      const sub = m.title && m.file ? m.file : '';
       const idbKey  = 'photo_fam_' + id + '_' + i;
       const heroKey = 'photo_fam_' + id;
-      html += `<div class="fact-row" style="cursor:pointer;display:flex;align-items:center;gap:4px"
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
         onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
-        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
-        <button class="unlink-btn" onclick="event.stopPropagation();deleteFamilyMarrMedia('${id}',${i})" title="Entfernen">×</button></div>`;
+        <div id="media-thumb-fam-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('family','${id}',${i})" title="Bearbeiten">✎</button>
+      </div>`;
     }
     for (let i = 0; i < famMedia.length; i++) {
       const m = famMedia[i];
-      const display = m.title || m.file || m.form || '–';
-      html += `<div class="fact-row" style="display:flex;align-items:center;gap:4px">
-        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
-        <button class="unlink-btn" onclick="deleteFamilyMedia('${id}',${i})" title="Entfernen">×</button></div>`;
+      const display = m.title || m.file || '–';
+      const sub = m.title && m.file ? m.file : '';
+      const idbKey  = 'photo_fam_media_' + id + '_' + i;
+      const heroKey = 'photo_fam_' + id;
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
+        <div id="media-thumb-fam-media-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('family_media','${id}',${i})" title="Bearbeiten">✎</button>
+      </div>`;
     }
     for (const l of famPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
       const obj = _objeMap[ref];
       const label = obj ? (obj.title || obj.file || ref) : ref;
       const sub   = obj && obj.title && obj.file ? obj.file : '';
-      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
-        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
+      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
+      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+        </div>
+      </div>`;
     }
     if (!marrObjeEntries.length && !famMedia.length && !famPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
@@ -1533,5 +1580,12 @@ function showFamilyDetail(id, pushHistory = true) {
     }
     if (!src.startsWith('blob:')) idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
+  // Media-Thumbnails async laden
+  for (let _mi = 0; _mi < marrObjeEntries.length; _mi++) {
+    _asyncLoadMediaThumb('media-thumb-fam-' + id + '-' + _mi, 'photo_fam_' + id + '_' + _mi);
+  }
+  for (let _mi = 0; _mi < famMedia.length; _mi++) {
+    _asyncLoadMediaThumb('media-thumb-fam-media-' + id + '-' + _mi, 'photo_fam_media_' + id + '_' + _mi);
+  }
 }
 

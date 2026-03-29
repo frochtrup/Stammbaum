@@ -101,14 +101,15 @@ function showSourceDetail(id, pushHistory = true) {
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+        onclick="openSourceMediaView('${id}',${i})">
         <div id="src-media-thumb-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(m.title || m.file)}</div>
           ${m.title && m.file ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(m.file)}</div>` : ''}
           ${m.form ? `<div style="color:var(--text-muted);font-size:0.78rem">${esc(m.form)}</div>` : ''}
         </div>
-        <button class="unlink-btn" onclick="deleteSourceMedia('${id}',${i})" title="Entfernen">×</button>
+        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('source','${id}',${i})" title="Bearbeiten">✎</button>
       </div>`;
     }
     for (const l of srcPtObje) {
@@ -147,18 +148,10 @@ function showSourceDetail(id, pushHistory = true) {
         el.innerHTML = '';
         const img = document.createElement('img');
         img.src = url; img.alt = m.title || m.file || '';
-        img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;cursor:pointer;display:block';
-        img.onclick = () => showLightbox(url);
+        img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
         el.appendChild(img);
-      } else {
-        // Vorhandenes Icon-Emoji in klickbaren Link verwandeln
-        const a = document.createElement('a');
-        a.href = url; a.target = '_blank'; a.title = m.title || m.file || '';
-        a.style.cssText = 'font-size:1.6rem;text-decoration:none;display:flex;align-items:center;justify-content:center;width:44px;height:44px';
-        a.textContent = el.textContent;
-        el.innerHTML = '';
-        el.appendChild(a);
       }
+      // URL im Cache speichern — openSourceMediaView nutzt _odPhotoCache
     }).catch(() => {});
   }
 
@@ -2123,7 +2116,202 @@ let _addMediaType     = null; // 'person' | 'family' | 'source'
 let _addMediaId       = null;
 let _addMediaOdFileId = null;
 let _odPickMode       = false;
+let _odEditPickMode   = false; // true wenn OD-Picker aus Edit-Modal geöffnet
 let _odDocScanMode    = false; // true wenn Dokumente-Ordner gewählt wird
+
+// ─── Medium bearbeiten ────────────────────────────────────────────────────────
+let _editMediaType     = null; // 'person' | 'family' | 'family_media' | 'source'
+let _editMediaId       = null;
+let _editMediaIdx      = null;
+let _editMediaOdFileId = null;
+
+function openEditMediaDialog(type, entityId, idx) {
+  _editMediaType     = type;
+  _editMediaId       = entityId;
+  _editMediaIdx      = idx;
+  _editMediaOdFileId = null;
+
+  let m;
+  if      (type === 'person')       m = db.individuals[entityId]?.media?.[idx];
+  else if (type === 'family')       m = _getFamMarrObjeEntries(db.families[entityId])[idx];
+  else if (type === 'family_media') m = db.families[entityId]?.media?.[idx];
+  else if (type === 'source')       m = db.sources[entityId]?.media?.[idx];
+  if (!m) return;
+
+  document.getElementById('em-title').value = m.title || '';
+  document.getElementById('em-file').value  = m.file  || '';
+  document.getElementById('em-od-row').style.display = _odIsConnected() ? '' : 'none';
+
+  const ext = (m.file || '').split('.').pop().toLowerCase();
+  const isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(ext);
+  const icon = isImg ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+  const thumbBar = document.getElementById('em-thumb-bar');
+  const preview  = document.getElementById('em-preview');
+  thumbBar.textContent = icon;
+  preview.innerHTML = `<div style="font-size:3rem">${icon}</div>`;
+
+  openModal('modalEditMedia');
+
+  // Vorschau async laden
+  if (type === 'source') {
+    _odGetSourceFileUrl(entityId, idx).then(url => {
+      if (!url) return;
+      if (isImg) { _setEditMediaPreview(url); }
+      else {
+        if (preview) preview.innerHTML = `<a href="${url}" target="_blank" style="font-size:3rem;text-decoration:none">${icon}</a>`;
+      }
+    }).catch(() => {});
+  } else {
+    const idbKey = type === 'family'
+      ? 'photo_fam_' + entityId + '_' + idx
+      : type === 'family_media'
+      ? 'photo_fam_media_' + entityId + '_' + idx
+      : 'photo_' + entityId + '_' + idx;
+    idbGet(idbKey).then(src => {
+      if (src && isImg) { _setEditMediaPreview(src); return; }
+      _odGetPhotoUrl(idbKey).then(url => { if (url && isImg) _setEditMediaPreview(url); }).catch(() => {});
+    }).catch(() => {});
+  }
+}
+
+function _setEditMediaPreview(src) {
+  const preview  = document.getElementById('em-preview');
+  const thumbBar = document.getElementById('em-thumb-bar');
+  if (!preview) return;
+  preview.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = src;
+  img.style.cssText = 'max-width:100%;max-height:200px;object-fit:contain;border-radius:8px;cursor:pointer';
+  img.onclick = () => showLightbox(src);
+  preview.appendChild(img);
+  if (thumbBar) {
+    thumbBar.innerHTML = '';
+    const tImg = document.createElement('img');
+    tImg.src = src;
+    tImg.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:5px;display:block';
+    thumbBar.appendChild(tImg);
+  }
+}
+
+function _getFamMarrObjeEntries(f) {
+  const _objeMap = _buildObjeRefMap();
+  const entries = [];
+  let cur = null;
+  for (const l of (f?.marr?._extra || [])) {
+    if (l === '2 OBJE') { cur = { file:'', title:'', form:'' }; entries.push(cur); }
+    else if (/^2 OBJE @/.test(l)) {
+      const ref = l.slice(7).trim();
+      const obj = _objeMap[ref];
+      entries.push({ file: obj?.file || '', title: obj?.title || ref, form: '' });
+      cur = null;
+    } else if (cur && l.startsWith('3 FILE ')) { cur.file  = l.slice(7); }
+    else if (cur && l.startsWith('3 TITL ')) { cur.title = l.slice(7); }
+    else if (cur && l.startsWith('3 FORM ')) { cur.form  = l.slice(7); }
+    else if (l.startsWith('2 '))              { cur = null; }
+  }
+  return entries;
+}
+
+function _updateFamMarrObjeAt(f, targetIdx, { title, file, form }) {
+  const extra = f.marr?._extra;
+  if (!extra) return;
+  let objeIdx = -1, startLine = -1;
+  for (let i = 0; i < extra.length; i++) {
+    if (extra[i] === '2 OBJE' || /^2 OBJE @/.test(extra[i])) {
+      if (++objeIdx === targetIdx) { startLine = i; break; }
+    }
+  }
+  if (startLine === -1) return;
+  let endLine = startLine + 1;
+  while (endLine < extra.length && extra[endLine].startsWith('3 ')) endLine++;
+  const newLines = ['2 OBJE'];
+  if (title) newLines.push('3 TITL ' + title);
+  if (file)  newLines.push('3 FILE ' + file);
+  if (form)  newLines.push('3 FORM ' + form);
+  extra.splice(startLine, endLine - startLine, ...newLines);
+}
+
+async function openSourceMediaView(srcId, idx) {
+  const s = db.sources?.[srcId];
+  if (!s) return;
+  const m = s.media?.[idx];
+  if (!m) return;
+  const ext = (m.file || '').split('.').pop().toLowerCase();
+  const isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(ext);
+  const url = await _odGetSourceFileUrl(srcId, idx).catch(() => null);
+  if (!url) { showToast('Kein Vorschau verfügbar'); return; }
+  if (isImg) showLightbox(url);
+  else window.open(url, '_blank');
+}
+
+function confirmEditMedia() {
+  const title = document.getElementById('em-title').value.trim();
+  const file  = document.getElementById('em-file').value.trim();
+  if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
+  const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
+
+  if (_editMediaType === 'person') {
+    const p = db.individuals[_editMediaId];
+    if (!p?.media) return;
+    p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title };
+    if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    changed = true;
+    closeModal('modalEditMedia');
+    showDetail(_editMediaId, false);
+  } else if (_editMediaType === 'family') {
+    const f = db.families[_editMediaId];
+    if (!f) return;
+    _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title });
+    if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    changed = true;
+    closeModal('modalEditMedia');
+    showFamilyDetail(_editMediaId, false);
+  } else if (_editMediaType === 'family_media') {
+    const f = db.families[_editMediaId];
+    if (!f?.media) return;
+    f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title };
+    changed = true;
+    closeModal('modalEditMedia');
+    showFamilyDetail(_editMediaId, false);
+  } else if (_editMediaType === 'source') {
+    const s = db.sources[_editMediaId];
+    if (!s?.media) return;
+    s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title };
+    if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    changed = true;
+    closeModal('modalEditMedia');
+    showSourceDetail(_editMediaId, false);
+  }
+}
+
+function confirmDeleteMedia() {
+  closeModal('modalEditMedia');
+  if      (_editMediaType === 'person')       deletePersonMedia(_editMediaId, _editMediaIdx);
+  else if (_editMediaType === 'family')       deleteFamilyMarrMedia(_editMediaId, _editMediaIdx);
+  else if (_editMediaType === 'family_media') deleteFamilyMedia(_editMediaId, _editMediaIdx);
+  else if (_editMediaType === 'source')       deleteSourceMedia(_editMediaId, _editMediaIdx);
+}
+
+async function _asyncLoadMediaThumb(thumbId, idbKey) {
+  const src = await idbGet(idbKey).catch(() => null)
+           || await _odGetPhotoUrl(idbKey).catch(() => null);
+  if (!src) return;
+  const el = document.getElementById(thumbId);
+  if (!el) return;
+  el.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = src;
+  img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
+  el.appendChild(img);
+}
+
+function odPickFileForEditMedia() {
+  if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odEditPickMode = true;
+  _odFolderStack = [];
+  closeModal('modalEditMedia');
+  _odShowFolder('root', 'OneDrive');
+}
 
 function openAddMediaDialog(type, entityId) {
   _addMediaType     = type;
@@ -2277,21 +2465,29 @@ async function odPickFileForMedia() {
 }
 
 function _odPickSelectFile(fileId, filename) {
-  _addMediaOdFileId = fileId;
-  document.getElementById('am-file').value = filename;
-  _odPickMode = false;
-  closeModal('modalOneDrive');
-  openModal('modalAddMedia');
+  if (_odEditPickMode) {
+    _editMediaOdFileId = fileId;
+    document.getElementById('em-file').value = filename;
+    _odEditPickMode = false;
+    closeModal('modalOneDrive');
+    openModal('modalEditMedia');
+  } else {
+    _addMediaOdFileId = fileId;
+    document.getElementById('am-file').value = filename;
+    _odPickMode = false;
+    closeModal('modalOneDrive');
+    openModal('modalAddMedia');
+  }
 }
 
 function _odPickCancel() {
-  _odPickMode = false;
-  closeModal('modalOneDrive');
-  openModal('modalAddMedia');
+  if (_odEditPickMode) { _odEditPickMode = false; closeModal('modalOneDrive'); openModal('modalEditMedia'); }
+  else { _odPickMode = false; closeModal('modalOneDrive'); openModal('modalAddMedia'); }
 }
 
 function _odCancelOrClose() {
-  if (_odPickMode) { _odPickMode = false; closeModal('modalOneDrive'); openModal('modalAddMedia'); }
+  if (_odPickMode)     { _odPickMode = false;     closeModal('modalOneDrive'); openModal('modalAddMedia'); }
+  else if (_odEditPickMode) { _odEditPickMode = false; closeModal('modalOneDrive'); openModal('modalEditMedia'); }
   else { _odDocScanMode = false; closeModal('modalOneDrive'); }
 }
 

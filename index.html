@@ -417,6 +417,13 @@ body {
   justify-content: center; transition: all 0.15s; line-height: 1;
 }
 .unlink-btn:active { border-color: #c0392b; color: #c0392b; }
+.edit-media-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  border-radius: 50%; width: 28px; height: 28px; font-size: 1rem;
+  cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; transition: all 0.15s; line-height: 1;
+}
+.edit-media-btn:active { border-color: var(--gold); color: var(--gold); }
 
 /* ═══════════════════════════════════════
    BOTTOM FAB
@@ -1523,6 +1530,36 @@ body {
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalAddMedia')">Abbrechen</button>
         <button class="btn btn-primary" onclick="confirmAddMedia()">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Medium bearbeiten -->
+<div class="modal-overlay" id="modalEditMedia">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="display:flex;align-items:center;gap:10px">
+      <div id="em-thumb-bar" style="flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color);overflow:hidden"></div>
+      <span>Medium bearbeiten</span>
+    </div>
+    <div class="sheet-body">
+      <div id="em-preview" style="margin-bottom:12px;min-height:80px;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-color);padding:8px"></div>
+      <div class="form-group">
+        <label class="form-label">Titel</label>
+        <input class="form-input" id="em-title" placeholder="Titel / Beschreibung">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dateiname</label>
+        <input class="form-input" id="em-file" placeholder="z.B. foto.jpg">
+      </div>
+      <div id="em-od-row" style="display:none;margin-bottom:12px">
+        <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForEditMedia()">Aus OneDrive auswählen</button>
+      </div>
+      <div class="btn-row" style="gap:8px">
+        <button class="btn btn-cancel" onclick="closeModal('modalEditMedia')">Abbrechen</button>
+        <button class="btn" style="background:var(--danger,#c0392b);color:#fff;flex:1" onclick="confirmDeleteMedia()">Löschen</button>
+        <button class="btn btn-primary" onclick="confirmEditMedia()">Speichern</button>
       </div>
     </div>
   </div>
