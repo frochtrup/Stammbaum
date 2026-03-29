@@ -2152,15 +2152,19 @@ function openEditMediaDialog(type, entityId, idx) {
 
   openModal('modalEditMedia');
 
-  // Vorschau async laden
+  // Vorschau laden — für source: bereits geladenes Thumbnail aus DOM wiederverwenden
   if (type === 'source') {
-    _odGetSourceFileUrl(entityId, idx).then(url => {
-      if (!url) return;
-      if (isImg) { _setEditMediaPreview(url); }
-      else {
-        if (preview) preview.innerHTML = `<a href="${url}" target="_blank" style="font-size:3rem;text-decoration:none">${icon}</a>`;
-      }
-    }).catch(() => {});
+    const existingThumb = document.getElementById('src-media-thumb-' + idx);
+    const existingImg = existingThumb?.querySelector('img');
+    if (existingImg?.src) {
+      _setEditMediaPreview(existingImg.src);
+    } else {
+      _odGetSourceFileUrl(entityId, idx).then(url => {
+        if (!url) return;
+        if (isImg) { _setEditMediaPreview(url); }
+        else { if (preview) preview.innerHTML = `<a href="${url}" target="_blank" style="font-size:3rem;text-decoration:none">${icon}</a>`; }
+      }).catch(() => {});
+    }
   } else {
     const idbKey = type === 'family'
       ? 'photo_fam_' + entityId + '_' + idx
@@ -2194,41 +2198,14 @@ function _setEditMediaPreview(src) {
 }
 
 function _getFamMarrObjeEntries(f) {
-  const _objeMap = _buildObjeRefMap();
-  const entries = [];
-  let cur = null;
-  for (const l of (f?.marr?._extra || [])) {
-    if (l === '2 OBJE') { cur = { file:'', title:'', form:'' }; entries.push(cur); }
-    else if (/^2 OBJE @/.test(l)) {
-      const ref = l.slice(7).trim();
-      const obj = _objeMap[ref];
-      entries.push({ file: obj?.file || '', title: obj?.title || ref, form: '' });
-      cur = null;
-    } else if (cur && l.startsWith('3 FILE ')) { cur.file  = l.slice(7); }
-    else if (cur && l.startsWith('3 TITL ')) { cur.title = l.slice(7); }
-    else if (cur && l.startsWith('3 FORM ')) { cur.form  = l.slice(7); }
-    else if (l.startsWith('2 '))              { cur = null; }
-  }
-  return entries;
+  // f.marr.media[] enthält inline OBJE-Blöcke unter MARR; Feld ist titl (nicht title)
+  return (f?.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '' }));
 }
 
 function _updateFamMarrObjeAt(f, targetIdx, { title, file, form }) {
-  const extra = f.marr?._extra;
-  if (!extra) return;
-  let objeIdx = -1, startLine = -1;
-  for (let i = 0; i < extra.length; i++) {
-    if (extra[i] === '2 OBJE' || /^2 OBJE @/.test(extra[i])) {
-      if (++objeIdx === targetIdx) { startLine = i; break; }
-    }
-  }
-  if (startLine === -1) return;
-  let endLine = startLine + 1;
-  while (endLine < extra.length && extra[endLine].startsWith('3 ')) endLine++;
-  const newLines = ['2 OBJE'];
-  if (title) newLines.push('3 TITL ' + title);
-  if (file)  newLines.push('3 FILE ' + file);
-  if (form)  newLines.push('3 FORM ' + form);
-  extra.splice(startLine, endLine - startLine, ...newLines);
+  const media = f.marr?.media;
+  if (!media || targetIdx >= media.length) return;
+  media[targetIdx] = { ...media[targetIdx], titl: title, file, form };
 }
 
 async function openSourceMediaView(srcId, idx) {
@@ -2343,11 +2320,9 @@ function confirmAddMedia() {
   } else if (_addMediaType === 'family') {
     const f = db.families[_addMediaId];
     if (!f) return;
-    if (!f.marr._extra) f.marr._extra = [];
-    const idx = _countFamMarrObje(f);
-    f.marr._extra.push('2 OBJE');
-    if (title) f.marr._extra.push('3 TITL ' + title);
-    if (file)  f.marr._extra.push('3 FILE ' + file);
+    if (!f.marr.media) f.marr.media = [];
+    const idx = f.marr.media.length;
+    f.marr.media.push({ file, titl: title, form, note:'', date:'', scbk:'', prim:'', _extra:[] });
     if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
     changed = true;
     closeModal('modalAddMedia');
@@ -2366,9 +2341,7 @@ function confirmAddMedia() {
 }
 
 function _countFamMarrObje(f) {
-  let n = 0;
-  for (const l of (f.marr?._extra || [])) { if (l === '2 OBJE' || /^2 OBJE @/.test(l)) n++; }
-  return n;
+  return (f.marr?.media || []).length;
 }
 
 async function _addMediaToFilemap(storeKey, id, entry) {
@@ -2396,9 +2369,9 @@ async function deletePersonMedia(personId, idx) {
 
 async function deleteFamilyMarrMedia(famId, idx) {
   const f = db.families[famId];
-  if (!f) return;
-  const oldCount = _countFamMarrObje(f);
-  _removeFamMarrObjeAt(f, idx);
+  if (!f?.marr?.media) return;
+  const oldCount = f.marr.media.length;
+  f.marr.media.splice(idx, 1);
   await _removeMediaFromFilemap('families', famId, idx);
   await _clearIdbPhotoKeys('photo_fam_' + famId, oldCount);
   changed = true;
@@ -2423,18 +2396,8 @@ async function deleteSourceMedia(srcId, idx) {
 }
 
 function _removeFamMarrObjeAt(f, targetIdx) {
-  const extra = f.marr?._extra;
-  if (!extra) return;
-  let objeIdx = -1, startLine = -1;
-  for (let i = 0; i < extra.length; i++) {
-    if (extra[i] === '2 OBJE' || /^2 OBJE @/.test(extra[i])) {
-      if (++objeIdx === targetIdx) { startLine = i; break; }
-    }
-  }
-  if (startLine === -1) return;
-  let endLine = startLine + 1;
-  while (endLine < extra.length && extra[endLine].startsWith('3 ')) endLine++;
-  extra.splice(startLine, endLine - startLine);
+  // Legacy: war für _extra-basierte Speicherung; jetzt über f.marr.media.splice()
+  if (f?.marr?.media) f.marr.media.splice(targetIdx, 1);
 }
 
 async function _removeMediaFromFilemap(storeKey, id, idx) {

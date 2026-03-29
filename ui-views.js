@@ -1475,25 +1475,11 @@ function showFamilyDetail(id, pushHistory = true) {
     </div>`;
   }
 
-  // Media section: inline FAM media[], inline 2 OBJE blocks in marr._extra, ref OBJE in _passthrough
+  // Media section: marr.media[] (2 OBJE unter MARR), f.media[] (1 OBJE auf FAM-Ebene), ref OBJE in _passthrough
   const famMedia = f.media || [];
   const _objeMap = _buildObjeRefMap();
-  // Parse inline + ref OBJE blocks from marr._extra (Ancestris: 2 OBJE with 3 FILE / 3 TITL)
-  const marrObjeEntries = [];
-  let _moe = null;
-  for (const l of (f.marr?._extra || [])) {
-    if (l === '2 OBJE') {
-      _moe = { file: '', title: '', form: '' }; marrObjeEntries.push(_moe);
-    } else if (/^2 OBJE @/.test(l)) {
-      const ref = l.slice(7).trim();
-      const obj = _objeMap[ref];
-      marrObjeEntries.push({ file: obj?.file || '', title: obj?.title || ref, form: '' });
-      _moe = null;
-    } else if (_moe && l.startsWith('3 FILE ')) { _moe.file  = l.slice(7); }
-    else if (_moe && l.startsWith('3 TITL ')) { _moe.title = l.slice(7); }
-    else if (_moe && l.startsWith('3 FORM ')) { _moe.form  = l.slice(7); }
-    else if (l.startsWith('2 '))              { _moe = null; }
-  }
+  // f.marr.media[] enthält inline OBJE-Blöcke unter MARR; titl-Feld (nicht title)
+  const marrObjeEntries = (f.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '' }));
   const famPtObje = (f._passthrough || []).filter(l => /^1 OBJE @/.test(l));
   {
     html += `<div class="section fade-up">
