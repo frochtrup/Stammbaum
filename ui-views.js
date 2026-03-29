@@ -474,8 +474,11 @@ function renderSourceList(srcs) {
                    + Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
     const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && db.repositories[s.repo];
     const repoBadge = hasRepo ? `<span class="repo-badge" style="cursor:pointer" onclick="event.stopPropagation();showRepoDetail('${s.repo}')">🏛</span>` : '';
+    const mediaCount = (s.media || []).filter(m => m.file || m.title).length
+                     + (s._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+    const mediaBadge = mediaCount ? `<span style="display:inline-flex;align-items:center;gap:2px;font-size:0.72rem;color:var(--text-muted);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;margin-left:5px;vertical-align:middle">📎 ${mediaCount}</span>` : '';
     html += `<div class="source-card" data-sid="${s.id}" onclick="showSourceDetail(this.dataset.sid)">
-      <div class="source-title">${esc(s.abbr || s.title || s.id)}${repoBadge}</div>
+      <div class="source-title">${esc(s.abbr || s.title || s.id)}${repoBadge}${mediaBadge}</div>
       <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}${refCount ? ` · ${refCount} Ref.` : ''}</div>
     </div>`;
   }
