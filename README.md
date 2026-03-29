@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 3.0
+# Stammbaum PWA — Version 4.0-dev (Branch v4-dev)
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -25,11 +25,13 @@ stammbaum/
 ├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
 ├── ui-views.js         ← Baum, Detailansichten, Listenrendering
 ├── ui-forms.js         ← Formulare, OneDrive-Integration, Medien
-├── sw.js               ← Service Worker (offline, Cache v22)
+├── sw.js               ← Service Worker (offline, Cache v49)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
-├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
+├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
+├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
+├── UI-DESIGN.md        ← HTML-Struktur, Navigation, CSS Design-System, Sanduhr-Layout
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
 ├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
 └── MEMORY.md           ← Projekt-Memory für KI-Kontext
@@ -58,7 +60,7 @@ stammbaum/
 | Download-Fallback (Safari Mac, Firefox) | `<a download>` → Datei im Browser-Download-Ordner |
 | Backup automatisch | Bei Download-Fallback: Zeitstempel-Backup des Originals zusätzlich heruntergeladen |
 | iOS Speichern | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
-| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern; Foto-Ordner einrichten → dynamisches Laden ohne Base64-Upload |
+| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern; Foto-Ordner + Dokumente-Ordner einrichten → dynamisches Laden ohne Base64-Upload |
 | Demo-Modus | Beispiel-Daten ohne eigene Datei |
 | URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged`; nützlich für Lesezeichen und PWA-Shortcuts |
 | **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
@@ -169,8 +171,8 @@ stammbaum/
 └──────────────────────────────────────────────┘
 ```
 
-**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · null INDI/FAM-Datenverluste** (nur HEAD-Normalisierung)
-**Version 3.0** — März 2026 — P3-1 ✅ P3-2 ✅ P3-3 ✅ P3-4 ✅ P3-5 ✅ P3-6 ✅ P3-7 ✅ P3-8 ✅
+**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta≈0** (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
+**Version 4.0-dev** — März 2026 — Branch `v4-dev` · sw v49 · `main` = v3.0 stabil
 
 ---
 

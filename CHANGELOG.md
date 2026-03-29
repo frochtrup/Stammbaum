@@ -7,7 +7,39 @@ Aktuelle Planung: `ROADMAP.md`
 
 ## Version 4.0 🚧 (Branch `v4-dev`, ab 2026-03-27)
 
-Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, v4-Infrastruktur.
+Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, v4-Infrastruktur.
+
+### Session 2026-03-29 — sourceMedia{} + Quellenmanagement UI (sw v45–v49)
+
+*sourceMedia{} — OBJE unter SOUR-Zitierungen strukturiert (sw v45):*
+- **Neues Feld `sourceMedia{}`** auf allen Event-Objekten (birth/chr/death/buri, events[], marr, engag, FAM events[], childRelations.sourMedia{})
+- OBJE-Blöcke ohne `@ref@` unter `2 SOUR @ID@` werden strukturiert geparst: `{ file, scbk (_SCBK), prim (_PRIM), titl, note, _extra[] }`
+- `_smEntry`-Variable trackt den aktuellen OBJE-Block im Parser; Reset bei lv=1/2/3
+- `_ptDepth=4` auf FILE: FORM/TYPE (lv=5/6) verbatim in `_smEntry._extra[]`
+- Writer: `eventBlock()` + alle SOUR-Loop-Writer schreiben sourceMedia[] verbatim zurück
+- `nameSourceMedia{}` auf INDI für NAME>SOUR OBJE-Blöcke
+
+*Bug-Fixes (sw v46):*
+- OBJE mit `@ref@` (z.B. `3 OBJE @M00001@`) bleibt korrekt in `sourceExtra{}` verbatim — `!val.startsWith('@')`-Guard auf alle OBJE-Branches
+- `sourMedia:{}` fehlte in 3 childRelations-Init-Stellen (lv=2 bei CHIL, lv=3 bei _FREL/_MREL, lv=3 SOUR) → TypeError behoben
+
+*Quellenmanagement UI — statische Icons + async OneDrive-Laden (sw v47–v48):*
+- Quellen-Detailansicht: Medien-Abschnitt zeigt statische Icons (🖼/📄/📎) sofort beim Rendern
+- Async: `_odGetSourceFileUrl(srcId, idx)` ersetzt Icon durch Thumbnail (Bild) oder klickbaren Link (Dokument) sobald OneDrive-URL verfügbar
+- `deleteSourceMedia()` + filemap-Cleanup für sources-Einträge
+- `confirmAddMedia()` speichert OneDrive-fileId in `od_filemap.sources`
+
+*OneDrive Dokumente-Ordner (sw v49):*
+- **Neues Feature**: Dokumente-Ordner in OneDrive einrichten → alle Dateinamen werden indiziert
+- `odSetupDocFolder()` öffnet Ordner-Browser im neuen `_odDocScanMode`
+- `odScanDocFolder(folderId, folderName)` scannt Ordner → `od_doc_filemap` in IDB (`{filename.lower: fileId}`)
+- `_odGetSourceFileUrl()` nutzt Fallback: wenn kein manueller fileId → Dateiname aus GEDCOM-Pfad (`m.file`) gegen `od_doc_filemap` matchen (Basename, case-insensitiv)
+- Neuer Menü-Button „📂 Dokumente-Ordner einrichten" (nur sichtbar wenn OneDrive verbunden)
+- `od_doc_folder` IDB-Key speichert gescannten Ordner für Anzeige
+
+*Aktuelle sw-Version: v49 / Cache: stammbaum-v49*
+
+---
 
 ### Session 2026-03-28 — v4-dev UX + Diagnose (sw v34–v38)
 - **EVEN TYPE-Feld** (sw v34): `onEventTypeChange()` zeigt `ef-etype-group` für `EVEN`-Events mit Bezeichnung-Label + Placeholder; fehlte vorher für sonstige Events

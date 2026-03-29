@@ -13,6 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (alle inhaltlichen Verluste behoben; CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
 **Testdaten:** MeineDaten_ancestris.ged — 2796 Personen, 873 Familien, 114 Quellen, 11 Archive
+**Aktuelle sw-Version:** v49 / Cache: `stammbaum-v49`
 
 ---
 
@@ -40,7 +41,9 @@ Ziel: Möglichst viele Tags aus `_passthrough[]` herausnehmen — strukturiert s
 
 ### Schwerpunkt 3: Quellenmanagement
 
-- [ ] Quellen-Detailansicht: Mediendateien aus `../documents`-Ordner anzeigen (OneDrive-Integration)
+- [x] Quellen-Detailansicht: Mediendateien aus GEDCOM-Pfaden anzeigen — statische Icons + async OneDrive-Laden ✅ (sw v48)
+- [x] OneDrive Dokumente-Ordner: Scan → Dateiname-Matching → auto-Vorschau ohne manuelles Verknüpfen ✅ (sw v49)
+- [x] sourceMedia{}: OBJE unter SOUR-Zitierungen strukturiert — kein Datenverlust im Roundtrip ✅ (sw v45)
 - [ ] Quellenansicht: verknüpfte Personen/Familien auflisten (Rückverweise)
 - [ ] Quellen-Schnellerstellung auf iPhone: Kamera-Button → Foto machen → als Medienobjekt einbinden (`capture="camera"`)
 - [ ] Quellen-Vorlage: Häufig genutzte Quellentypen (Kirchenbuch, Standesamt, Volkszählung) als Vorlagen
