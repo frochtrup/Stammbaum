@@ -18,9 +18,11 @@ function showSourceDetail(id, pushHistory = true) {
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-src-photo-${id}" style="display:none"></div>
-    <div class="detail-avatar" style="font-size:1.8rem">📖</div>
-    <div class="detail-name">${esc(s.abbr || s.title || id)}</div>
-    <div class="detail-id">${refPersons.length + refFamilies.length} Referenzen${s.lastChanged ? ' · geändert ' + s.lastChanged : ''}</div>
+    <div id="det-src-avatar-${id}" class="detail-avatar" style="font-size:1.8rem">📖</div>
+    <div class="detail-hero-text">
+      <div class="detail-name">${esc(s.abbr || s.title || id)}</div>
+      <div class="detail-id">${refPersons.length + refFamilies.length} Referenzen${s.lastChanged ? ' · geändert ' + s.lastChanged : ''}</div>
+    </div>
   </div>`;
 
   // Source details
@@ -135,39 +137,43 @@ function showSourceDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Quellenmedien async aus OneDrive laden — Thumbnail ersetzen / Icon verlinken
+  // Quellenmedien async aus OneDrive laden — Thumbnail ersetzen + Header befüllen
+  let _srcHeroSet = false;
   for (let i = 0; i < srcMedia.length; i++) {
     const m = srcMedia[i];
     if (!m.file && !m.title) continue;
+    const _captureI = i;
     _odGetSourceFileUrl(id, i).then(url => {
       if (!url) return;
-      const el = document.getElementById('src-media-thumb-' + i);
+      const el = document.getElementById('src-media-thumb-' + _captureI);
       if (!el) return;
       const ext = (m.file || '').split('.').pop().toLowerCase();
-      if (['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(ext)) {
+      const isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(ext);
+      if (isImg) {
         el.innerHTML = '';
         const img = document.createElement('img');
         img.src = url; img.alt = m.title || m.file || '';
         img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
         el.appendChild(img);
+        // Erstes Bild als Header-Vorschau setzen
+        if (!_srcHeroSet) {
+          _srcHeroSet = true;
+          const heroEl = document.getElementById('det-src-photo-' + id);
+          const avatarEl = document.getElementById('det-src-avatar-' + id);
+          if (heroEl) {
+            heroEl.style.display = '';
+            heroEl.innerHTML = '';
+            const hImg = document.createElement('img');
+            hImg.src = url; hImg.alt = m.title || m.file || '';
+            hImg.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
+            hImg.onclick = () => showLightbox(url);
+            heroEl.appendChild(hImg);
+            if (avatarEl) avatarEl.style.display = 'none';
+          }
+        }
       }
-      // URL im Cache speichern — openSourceMediaView nutzt _odPhotoCache
     }).catch(() => {});
   }
-
-  // Foto async aus IDB nachladen
-  idbGet('photo_src_' + id).then(b64 => {
-    if (!b64) return;
-    const el = document.getElementById('det-src-photo-' + id);
-    if (el) {
-      el.style.display = '';
-      el.innerHTML = '';
-      const img = document.createElement('img');
-      img.src = b64; img.alt = 'Foto';
-      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0';
-      el.appendChild(img);
-    }
-  }).catch(() => {});
 }
 
 function factRow(label, value, rawSuffix, srcIds) {
