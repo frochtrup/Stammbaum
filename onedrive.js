@@ -56,7 +56,7 @@ async function _odGetSourceFileUrl(srcId, idx) {
 
   // 2. Fallback: Dateiname aus GEDCOM-Pfad gegen Dokumente-Ordner abgleichen
   if (!fileId) {
-    const mfile = db.sources?.[srcId]?.media?.[idx]?.file;
+    const mfile = AppState.db.sources?.[srcId]?.media?.[idx]?.file;
     if (mfile) {
       const basename = mfile.replace(/\\/g, '/').split('/').pop().toLowerCase();
       if (basename) {
@@ -137,7 +137,7 @@ async function odClearPhotoFolder() {
   await idbDel('od_default_folder').catch(() => {});
   await idbDel('od_filemap').catch(() => {});
   Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
-  changed = true;
+  AppState.changed = true;
   showToast('Foto-Ordner zurückgesetzt');
   openSettings();
 }
@@ -292,7 +292,7 @@ async function odSaveFile() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const saved = await res.json();
     if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
-    changed = false; updateChangedIndicator();
+    AppState.changed = false; updateChangedIndicator();
     showToast('✓ In OneDrive gespeichert');
   } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + e.message); }
 }
@@ -302,7 +302,7 @@ async function odSaveFile() {
 // GEDCOM nach OBJE FILE-Referenzen parsen
 // Returns { persons: Map<personId,basename>, families: Map<famId,basename> }
 function _extractObjeFilemap() {
-  const text = _originalGedText;
+  const text = AppState._originalGedText;
   if (!text) return { persons: new Map(), families: new Map() };
   const lines     = text.split(/\r?\n/);
   const objeFiles = {};   // objeId → filepath (lv=0 OBJE-Records)
@@ -517,18 +517,18 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
 
     // Aktuelle Ansicht sofort aktualisieren
-    if (currentPersonId) {
-      const url = await _odGetPhotoUrl('photo_' + currentPersonId).catch(() => null);
+    if (AppState.currentPersonId) {
+      const url = await _odGetPhotoUrl('photo_' + AppState.currentPersonId).catch(() => null);
       if (url) {
-        const el = document.getElementById('det-photo-' + currentPersonId);
+        const el = document.getElementById('det-photo-' + AppState.currentPersonId);
         if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
       }
     }
-    if (currentFamilyId) {
-      const url = await _odGetPhotoUrl('photo_fam_' + currentFamilyId).catch(() => null);
+    if (AppState.currentFamilyId) {
+      const url = await _odGetPhotoUrl('photo_fam_' + AppState.currentFamilyId).catch(() => null);
       if (url) {
-        const el = document.getElementById('det-fam-photo-' + currentFamilyId);
-        const av = document.getElementById('det-fam-avatar-' + currentFamilyId);
+        const el = document.getElementById('det-fam-photo-' + AppState.currentFamilyId);
+        const av = document.getElementById('det-fam-avatar-' + AppState.currentFamilyId);
         if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
         if (av) av.style.display = 'none';
       }
@@ -568,7 +568,7 @@ async function odScanDocFolder(folderId, folderName) {
     await idbPut('od_doc_folder', { folderId, folderName }).catch(() => {});
     // Session-Cache für Quellenmedien leeren
     Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
-    if (currentSourceId) showSourceDetail(currentSourceId, false);
+    if (AppState.currentSourceId) showSourceDetail(AppState.currentSourceId, false);
     showToast(`✓ ${Object.keys(docMap).length} Dateien indiziert — "${folderName}"`);
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }

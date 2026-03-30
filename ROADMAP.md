@@ -80,7 +80,7 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 
 ---
 
-### Schwerpunkt 5: State-Management-Refactoring — PLAN
+### Schwerpunkt 5: State-Management-Refactoring ✅ ABGESCHLOSSEN
 
 **Ziel:** 22 cross-file Globals in `gedcom.js` in benannte Namespace-Objekte gruppieren. Kein neues Framework, kein Build-Step, Vanilla JS.
 
@@ -143,7 +143,7 @@ Sobald alle Aufrufer migriert: `let db = AppState.db` etc. aus gedcom.js entfern
 
 ## Offene Architektur-Schulden
 
-- State-Management: Plan → Schwerpunkt 5 (s.o.)
+- State-Management: ✅ Abgeschlossen — AppState/UIState + vollständige Migration aller Dateien
 - Virtuelles Scrollen für Listen >1000 Einträge
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
 - Familien-Avatar: CSS-Symbol statt OS-Emoji

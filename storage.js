@@ -80,10 +80,10 @@ function _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve) {
   reader.readAsDataURL(file);
 }
 
-// Baut eine Map @Oxx@ → {file, title} aus db.extraRecords (lv=0 OBJE-Records)
+// Baut eine Map @Oxx@ → {file, title} aus AppState.db.extraRecords (lv=0 OBJE-Records)
 function _buildObjeRefMap() {
   const map = {};
-  for (const rec of (db.extraRecords || [])) {
+  for (const rec of (AppState.db.extraRecords || [])) {
     if (!rec._lines || !rec._lines.length) continue;
     const hm = rec._lines[0].match(/^0 (@[^@]+@) OBJE$/);
     if (!hm) continue;
@@ -180,10 +180,10 @@ function _addMediaEntry(prefix) {
 // Direktes Speichern möglich? Ändert Save-Button-Tooltip
 function updateSaveIndicator() {
   document.querySelectorAll('[data-save-btn]').forEach(btn => {
-    btn.title = _canDirectSave
+    btn.title = AppState._canDirectSave
       ? 'Direkt speichern (Datei: ' + (localStorage.getItem('stammbaum_filename') || '') + ')'
       : 'Als Download speichern';
-    if (_canDirectSave) btn.classList.add('direct-save');
+    if (AppState._canDirectSave) btn.classList.add('direct-save');
     else btn.classList.remove('direct-save');
   });
 }
@@ -214,24 +214,24 @@ async function openFilePicker() {
       types: [{ description: 'GEDCOM-Datei', accept: { 'text/plain': ['.ged', '.GED'] } }],
       multiple: false
     });
-    _fileHandle = fh;
+    AppState._fileHandle = fh;
     // Schreiberlaubnis anfragen (klappt auf Chrome; Safari: fällt auf read zurück)
     try {
       const perm = await fh.requestPermission({ mode: 'readwrite' });
-      _canDirectSave = perm === 'granted' ? await testCanWrite(fh) : false;
-    } catch(e) { _canDirectSave = false; }
+      AppState._canDirectSave = perm === 'granted' ? await testCanWrite(fh) : false;
+    } catch(e) { AppState._canDirectSave = false; }
     await idbPut('fileHandle', fh).catch(() => {});
     updateSaveIndicator();
     const file = await fh.getFile();
     _processLoadedText(await file.text(), file.name);
-    const saveInfo = _canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
+    const saveInfo = AppState._canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
     showToast('✓ ' + file.name + ' geladen' + saveInfo);
   } catch(e) {
     if (e.name !== 'AbortError') showToast('⚠ Fehler beim Öffnen: ' + e.message);
   }
 }
 
-// Stellt _fileHandle aus IDB wieder her (nach Seitenreload).
+// Stellt AppState._fileHandle aus IDB wieder her (nach Seitenreload).
 async function restoreFileHandle() {
   if (!('showOpenFilePicker' in window)) return;
   try {
@@ -239,8 +239,8 @@ async function restoreFileHandle() {
     if (!fh) return;
     const perm = await fh.queryPermission({ mode: 'readwrite' });
     if (perm === 'granted') {
-      _fileHandle = fh;
-      _canDirectSave = await testCanWrite(fh);
+      AppState._fileHandle = fh;
+      AppState._canDirectSave = await testCanWrite(fh);
       updateSaveIndicator();
     }
   } catch(e) {}
@@ -251,18 +251,18 @@ async function restoreFileHandle() {
 async function saveToFileHandle(content) {
   let w = null;
   try {
-    let perm = await _fileHandle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'prompt') perm = await _fileHandle.requestPermission({ mode: 'readwrite' });
+    let perm = await AppState._fileHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'prompt') perm = await AppState._fileHandle.requestPermission({ mode: 'readwrite' });
     if (perm !== 'granted') {
-      _fileHandle = null; _canDirectSave = false;
+      AppState._fileHandle = null; AppState._canDirectSave = false;
       idbDel('fileHandle').catch(() => {});
       updateSaveIndicator();
       return false;
     }
-    w = await _fileHandle.createWritable();
+    w = await AppState._fileHandle.createWritable();
     await w.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
     await w.close(); w = null;
-    changed = false; updateChangedIndicator();
+    AppState.changed = false; updateChangedIndicator();
     try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
     idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
     showToast('✓ Direkt gespeichert');
@@ -311,7 +311,7 @@ async function exportGEDCOM() {
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
           // des Share-Dialogs gemacht wurden (Race-Condition-Schutz)
-          if (writeGEDCOM() === content) { changed = false; updateChangedIndicator(); }
+          if (writeGEDCOM() === content) { AppState.changed = false; updateChangedIndicator(); }
           showToast('✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
@@ -320,31 +320,31 @@ async function exportGEDCOM() {
   }
 
   // Chrome Desktop: Direkt speichern via gespeichertem File Handle
-  if (!_fileHandle) {
+  if (!AppState._fileHandle) {
     try {
       const stored = await idbGet('fileHandle');
       if (stored) {
         const perm = await stored.queryPermission({ mode: 'readwrite' });
         if (perm === 'granted') {
-          _fileHandle = stored;
-          _canDirectSave = await testCanWrite(stored);
+          AppState._fileHandle = stored;
+          AppState._canDirectSave = await testCanWrite(stored);
           updateSaveIndicator();
         }
       }
     } catch(e) {}
   }
 
-  if (_fileHandle && _canDirectSave) {
+  if (AppState._fileHandle && AppState._canDirectSave) {
     const ok = await saveToFileHandle(content);
     if (ok) return;
     // NotAllowedError (Cloud-Sync-Lock): Nutzer soll es nochmals versuchen,
     // KEIN automatischer Fallback auf Download (würde verwirren).
-    if (_canDirectSave) return; // Toast wurde bereits gezeigt
+    if (AppState._canDirectSave) return; // Toast wurde bereits gezeigt
   }
 
   // Fallback 1: showOpenFilePicker war nicht verfügbar oder handle fehlt →
   // Datei öffnen lassen, dann direkt speichern
-  if (!_fileHandle && 'showOpenFilePicker' in window) {
+  if (!AppState._fileHandle && 'showOpenFilePicker' in window) {
     showToast('Bitte Datei öffnen um direktes Speichern zu aktivieren');
   }
 
@@ -359,7 +359,7 @@ async function exportGEDCOM() {
     _downloadBlob(_origForExport, `${basename}_${ts}.ged`);
   }
   _downloadBlob(content, filename);
-  changed = false; updateChangedIndicator();
+  AppState.changed = false; updateChangedIndicator();
   try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
   idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   showToast('✓ ' + filename + ' heruntergeladen');
@@ -393,9 +393,9 @@ function revertToSaved() {
   const orig = _getOriginalText();
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
   if (!confirm('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
-  db = parseGEDCOM(orig);
-  changed = false;
-  _placesCache = null;
+  AppState.db = parseGEDCOM(orig);
+  AppState.changed = false;
+  UIState._placesCache = null;
   updateChangedIndicator();
   updateStats();
   renderTab();
@@ -403,14 +403,14 @@ function revertToSaved() {
 }
 
 function confirmNewFile() {
-  if (changed) {
+  if (AppState.changed) {
     if (!confirm('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
   }
-  db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), repositories: {}, notes: {}, placForm: '' };
-  changed = false;
+  AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), repositories: {}, notes: {}, placForm: '' };
+  AppState.changed = false;
   updateChangedIndicator();
-  _originalGedText = null;
-  _fileHandle = null; _canDirectSave = false;
+  AppState._originalGedText = null;
+  AppState._fileHandle = null; AppState._canDirectSave = false;
   idbDel('fileHandle').catch(() => {});
   idbDel('stammbaum_ged').catch(() => {});
   idbDel('stammbaum_ged_backup').catch(() => {});
@@ -426,22 +426,22 @@ function confirmNewFile() {
   const yf = document.getElementById('yearFrom');        if (yf) yf.value = '';
   const yt = document.getElementById('yearTo');          if (yt) yt.value = '';
   const cb = document.getElementById('yearFilterClear'); if (cb) cb.style.display = 'none';
-  _treeHistory = []; _treeHistoryPos = -1; _updateTreeBackBtn();
+  UIState._treeHistory = []; UIState._treeHistoryPos = -1; _updateTreeBackBtn();
   showView('v-landing');
 }
 
 // Gemeinsame Lade-Logik für openDirectoryAndLoad() und readFile()
 function _processLoadedText(text, filename) {
-  db = parseGEDCOM(text);
-  db.extraPlaces = loadExtraPlaces();
+  AppState.db = parseGEDCOM(text);
+  AppState.db.extraPlaces = loadExtraPlaces();
   // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
   { let maxUsed = 0;
-    const allIds = [...Object.keys(db.individuals), ...Object.keys(db.families),
-                    ...Object.keys(db.sources), ...Object.keys(db.repositories), ...Object.keys(db.notes)];
+    const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
+                    ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
     for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
-    if (maxUsed >= idCounter) idCounter = maxUsed;
+    if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
   }
-  _originalGedText = text;  // immer in RAM; IDB für Persistenz
+  AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
   _newPhotoIds.clear(); _deletedPhotoIds.clear();
   // IDB: primäre Persistenz (kein Größenlimit)
   Promise.all([
@@ -484,9 +484,9 @@ async function loadDemo() {
     const res = await fetch('./demo.ged');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
-    db = parseGEDCOM(text);
-    db.extraPlaces = loadExtraPlaces();
-    _originalGedText = text;
+    AppState.db = parseGEDCOM(text);
+    AppState.db.extraPlaces = loadExtraPlaces();
+    AppState._originalGedText = text;
     showStartView();
     showToast('✓ Demo geladen');
     _loadDemoPhotos();
@@ -543,9 +543,9 @@ async function tryAutoLoad() {
     const saved = await idbGet('stammbaum_ged');
     if (saved && saved.length > 10) {
       const fname = (await idbGet('stammbaum_filename')) || localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
-      db = parseGEDCOM(saved);
-      db.extraPlaces = loadExtraPlaces();
-      _originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
+      AppState.db = parseGEDCOM(saved);
+      AppState.db.extraPlaces = loadExtraPlaces();
+      AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
       showStartView();
       updateBackupBtn();
       updateTopbarTitle(fname);
@@ -558,16 +558,16 @@ async function tryAutoLoad() {
     const saved = localStorage.getItem('stammbaum_ged');
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
     if (saved && saved.length > 10) {
-      db = parseGEDCOM(saved);
-      db.extraPlaces = loadExtraPlaces();
-      _originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
+      AppState.db = parseGEDCOM(saved);
+      AppState.db.extraPlaces = loadExtraPlaces();
+      AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
       updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
       // Nach IDB migrieren
       idbPut('stammbaum_ged', saved).catch(() => {});
-      idbPut('stammbaum_ged_backup', _originalGedText).catch(() => {});
+      idbPut('stammbaum_ged_backup', AppState._originalGedText).catch(() => {});
       idbPut('stammbaum_filename', fname).catch(() => {});
       return true;
     }
@@ -588,7 +588,7 @@ window.addEventListener('load', async () => {
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
 window.addEventListener('storage', e => {
-  if (e.key === 'stammbaum_ged' && e.newValue && Object.keys(db.individuals || {}).length) {
+  if (e.key === 'stammbaum_ged' && e.newValue && Object.keys(AppState.db.individuals || {}).length) {
     showToast('⚠ Datei wurde in einem anderen Tab geändert');
   }
 });
@@ -641,7 +641,7 @@ function downloadBackup() {
 // ─────────────────────────────────────
 async function exportPhotos() {
   const photoMap = {};
-  for (const id of Object.keys(db.individuals)) {
+  for (const id of Object.keys(AppState.db.individuals)) {
     const b64 = await idbGet('photo_' + id).catch(() => null);
     if (b64) photoMap[id] = b64;
   }
@@ -684,11 +684,11 @@ async function _handlePhotoImport(file) {
     }
     showToast('✓ ' + count + ' Fotos importiert');
     // Detailansicht aktualisieren falls offen
-    if (currentPersonId && photoMap[currentPersonId]) {
-      const b64 = photoMap[currentPersonId];
+    if (AppState.currentPersonId && photoMap[AppState.currentPersonId]) {
+      const b64 = photoMap[AppState.currentPersonId];
       // Re-Validierung: nur echte data-URIs erlauben (verhindert XSS via innerHTML)
       if (typeof b64 === 'string' && b64.startsWith('data:image/')) {
-        const el = document.getElementById('det-photo-' + currentPersonId);
+        const el = document.getElementById('det-photo-' + AppState.currentPersonId);
         if (el) {
           el.style.display = '';
           el.innerHTML = '';

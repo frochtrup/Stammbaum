@@ -321,7 +321,7 @@ restoreFileHandle() (bei Seitenreload)
 | DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | Backlog |
 | Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
-| State-Management | 22 cross-file Globals in gedcom.js ungekapselt | Plan: `AppState`/`UIState` Namespaces → ROADMAP.md Schwerpunkt 5 |
+| ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
 | Virtuelles Scrollen | Listen >1000 Einträge langsam | v5 geplant |
 | `ui-views.js` gross (1839 Z.) | Baum + Detail + Listen + Listenrendering gemischt | Backlog |

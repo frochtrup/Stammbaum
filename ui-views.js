@@ -4,7 +4,7 @@
 let _probandId = null;  // null = Fallback auf kleinste ID
 
 function getProbandId() {
-  return (_probandId && db.individuals[_probandId]) ? _probandId : smallestPersonId();
+  return (_probandId && AppState.db.individuals[_probandId]) ? _probandId : smallestPersonId();
 }
 
 // ─────────────────────────────────────
@@ -80,7 +80,7 @@ function _initTreeDrag() {
   window.addEventListener('resize', () => {
     clearTimeout(_treeResizeTimer);
     _treeResizeTimer = setTimeout(() => {
-      const id = _treeHistory[_treeHistoryPos];
+      const id = UIState._treeHistory[UIState.UIState._treeHistoryPos];
       if (!id) return;
       if (!document.getElementById('v-tree')?.classList.contains('active')) return;
       showTree(id, false);
@@ -192,13 +192,13 @@ function showView(id) {
     document.getElementById('v-main').classList.add('active');
     document.getElementById('bottomNav').style.display = 'flex';
     document.getElementById('fabBtn').style.display = '';
-    _detailActive = (id === 'v-detail');
+    AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
     if (id === 'v-detail') document.getElementById('v-detail').scrollTop = 0;
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
-    _detailActive = (id === 'v-detail');
+    AppState._detailActive = (id === 'v-detail');
     const showNav = (id === 'v-main' || id === 'v-tree');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
@@ -222,7 +222,7 @@ function bnavTree() {
 
 // Bottom-Nav: Listen-Tabs
 function bnavTab(name) {
-  currentTab = name;
+  AppState.currentTab = name;
   setBnavActive(name);
   showView('v-main');
   switchTab(name);
@@ -255,7 +255,7 @@ function runGlobalSearch(q) {
   let html = '';
 
   // ── Personen ──
-  const persons = Object.values(db.individuals).filter(p =>
+  const persons = Object.values(AppState.db.individuals).filter(p =>
     (p.name||'').toLowerCase().includes(lower) ||
     (p.given||'').toLowerCase().includes(lower) ||
     (p.surname||'').toLowerCase().includes(lower) ||
@@ -281,9 +281,9 @@ function runGlobalSearch(q) {
   }
 
   // ── Familien ──
-  const families = Object.values(db.families).filter(f => {
-    const h = db.individuals[f.husb];
-    const w = db.individuals[f.wife];
+  const families = Object.values(AppState.db.families).filter(f => {
+    const h = AppState.db.individuals[f.husb];
+    const w = AppState.db.individuals[f.wife];
     return (h?.name||'').toLowerCase().includes(lower) ||
            (w?.name||'').toLowerCase().includes(lower) ||
            (f.marr?.place||'').toLowerCase().includes(lower) ||
@@ -292,8 +292,8 @@ function runGlobalSearch(q) {
   if (families.length) {
     html += `<div class="alpha-sep">Familien (${families.length})</div>`;
     for (const f of families) {
-      const h = db.individuals[f.husb];
-      const w = db.individuals[f.wife];
+      const h = AppState.db.individuals[f.husb];
+      const w = AppState.db.individuals[f.wife];
       const label = [h?.name, w?.name].filter(Boolean).join(' ⚭ ') || f.id;
       let meta = '';
       if (f.marr?.date) meta += f.marr.date;
@@ -306,7 +306,7 @@ function runGlobalSearch(q) {
   }
 
   // ── Quellen ──
-  const sources = Object.values(db.sources).filter(s =>
+  const sources = Object.values(AppState.db.sources).filter(s =>
     (s.title||'').toLowerCase().includes(lower) ||
     (s.auth||'').toLowerCase().includes(lower) ||
     (s.publ||'').toLowerCase().includes(lower)
@@ -322,7 +322,7 @@ function runGlobalSearch(q) {
   }
 
   // ── Orte ──
-  const places = Object.keys(db.extraPlaces || {}).filter(name =>
+  const places = Object.keys(AppState.db.extraPlaces || {}).filter(name =>
     name.toLowerCase().includes(lower)
   ).slice(0, 8);
   if (places.length) {
@@ -343,7 +343,7 @@ function runGlobalSearch(q) {
 
 function showMain() {
   _navHistory.length = 0; // Liste = frischer Start, History löschen
-  setBnavActive(currentTab || 'persons');
+  setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
   updateStats();
   renderTab();
@@ -353,12 +353,12 @@ function showMain() {
 // Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/
 // showPlaceDetail stehen.
 function _beforeDetailNavigate() {
-  if (_detailActive) {
+  if (AppState._detailActive) {
     // Detail → Detail: aktuellen Zustand in History sichern
-    if      (currentPersonId) _navHistory.push({ type: 'person', id: currentPersonId });
-    else if (currentFamilyId) _navHistory.push({ type: 'family', id: currentFamilyId });
-    else if (currentSourceId) _navHistory.push({ type: 'source', id: currentSourceId });
-    else if (currentRepoId)   _navHistory.push({ type: 'repo',   id: currentRepoId });
+    if      (AppState.currentPersonId) _navHistory.push({ type: 'person', id: AppState.currentPersonId });
+    else if (AppState.currentFamilyId) _navHistory.push({ type: 'family', id: AppState.currentFamilyId });
+    else if (AppState.currentSourceId) _navHistory.push({ type: 'source', id: AppState.currentSourceId });
+    else if (AppState.currentRepoId)   _navHistory.push({ type: 'repo',   id: AppState.currentRepoId });
     // Place: Name liegt nicht in einer ID-Variable – über detailTopTitle rekonstruieren
     else {
       const title = document.getElementById('detailTopTitle')?.textContent;
@@ -388,7 +388,7 @@ function goBack() {
 
 // Kleinste numerische Personen-ID
 function smallestPersonId() {
-  const ids = Object.keys(db.individuals || {});
+  const ids = Object.keys(AppState.db.individuals || {});
   if (!ids.length) return null;
   return ids.sort((a, b) => {
     const na = parseInt(a.replace(/\D/g, '')) || 0;
@@ -399,16 +399,16 @@ function smallestPersonId() {
 
 // Startansicht nach Datei-Load: Tree des Probanden (oder kleinste ID)
 async function showStartView() {
-  currentTab = 'persons';
+  AppState.currentTab = 'persons';
   showMain();
   const saved = await idbGet('proband_id').catch(() => null);
-  _probandId = (saved && db.individuals[saved]) ? saved : null;
+  _probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
   const startId = getProbandId();
   if (startId) showTree(startId);
 }
 
 function switchTab(tab) {
-  currentTab = tab;
+  AppState.currentTab = tab;
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
@@ -420,11 +420,11 @@ function switchTab(tab) {
 
 function renderTab() {
   if (!document.getElementById('v-main').classList.contains('active')) return;
-  if (currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
-  else if (currentTab === 'families') renderFamilyList();
-  else if (currentTab === 'sources') { renderSourceList(); renderRepoList(); }
-  else if (currentTab === 'places') renderPlaceList();
-  else if (currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
+  if (AppState.currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
+  else if (AppState.currentTab === 'families') renderFamilyList();
+  else if (AppState.currentTab === 'sources') { renderSourceList(); renderRepoList(); }
+  else if (AppState.currentTab === 'places') renderPlaceList();
+  else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
 }
 
 function updateStats() {
@@ -432,10 +432,10 @@ function updateStats() {
 }
 
 function updateChangedIndicator() {
-  document.getElementById('changedIndicator').style.display = changed ? 'inline-block' : 'none';
+  document.getElementById('changedIndicator').style.display = AppState.changed ?'inline-block' : 'none';
 }
 
-function markChanged() { changed = true; _placesCache = null; updateChangedIndicator(); }
+function markChanged() { AppState.changed = true; UIState._placesCache = null; updateChangedIndicator(); }
 
 // ─────────────────────────────────────
 //  PERSON LIST
@@ -507,7 +507,7 @@ function clearYearFilter() {
 
 function filterPersons(q, yearFrom, yearTo) {
   const lower = q.toLowerCase().trim();
-  const all = Object.values(db.individuals);
+  const all = Object.values(AppState.db.individuals);
 
   const filtered = all.filter(p => {
     // Jahresfilter (Geburtsjahr) — nutzt gedDateSortKey für korrekte FROM/TO/BET-Auflösung
@@ -554,11 +554,11 @@ function filterPersons(q, yearFrom, yearTo) {
 // ─────────────────────────────────────
 function renderFamilyList(fams) {
   const el = document.getElementById('familyList');
-  if (!fams) fams = Object.values(db.families);
+  if (!fams) fams = Object.values(AppState.db.families);
   if (!fams.length) { el.innerHTML = '<div class="empty">Keine Familien gefunden</div>'; return; }
   fams = [...fams].sort((a, b) => {
-    const na = a.husb ? (db.individuals[a.husb]?.surname || db.individuals[a.husb]?.name || '') : '';
-    const nb = b.husb ? (db.individuals[b.husb]?.surname || db.individuals[b.husb]?.name || '') : '';
+    const na = a.husb ? (AppState.db.individuals[a.husb]?.surname || AppState.db.individuals[a.husb]?.name || '') : '';
+    const nb = b.husb ? (AppState.db.individuals[b.husb]?.surname || AppState.db.individuals[b.husb]?.name || '') : '';
     const c = na.localeCompare(nb, 'de');
     if (c !== 0) return c;
     const ya = gedDateSortKey(a.marr.date) || 99999999;
@@ -568,8 +568,8 @@ function renderFamilyList(fams) {
 
   let html = '';
   for (const f of fams) {
-    const husb = (f.husb && db.individuals[f.husb]) || null;
-    const wife = (f.wife && db.individuals[f.wife]) || null;
+    const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
+    const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
     const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
     let meta = '';
     if (f.marr.date) meta += '⚭ ' + f.marr.date;
@@ -589,11 +589,11 @@ function renderFamilyList(fams) {
 
 function filterFamilies(q) {
   const lower = q.toLowerCase().trim();
-  const all = Object.values(db.families);
+  const all = Object.values(AppState.db.families);
   if (!lower) { renderFamilyList(all); return; }
   renderFamilyList(all.filter(f => {
-    const husb = (f.husb && db.individuals[f.husb]) || null;
-    const wife = (f.wife && db.individuals[f.wife]) || null;
+    const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
+    const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
     if (husb && (husb.name||'').toLowerCase().includes(lower)) return true;
     if (wife && (wife.name||'').toLowerCase().includes(lower)) return true;
     if ((f.marr.date||'').toLowerCase().includes(lower)) return true;
@@ -607,14 +607,14 @@ function filterFamilies(q) {
 // ─────────────────────────────────────
 function renderSourceList(srcs) {
   const el = document.getElementById('sourceList');
-  if (!srcs) srcs = Object.values(db.sources);
+  if (!srcs) srcs = Object.values(AppState.db.sources);
   if (!srcs.length) { el.innerHTML = '<div class="empty">Keine Quellen gefunden</div>'; return; }
 
   let html = '';
   for (const s of srcs) {
-    const refCount = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
-                   + Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
-    const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && db.repositories[s.repo];
+    const refCount = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
+                   + Object.values(AppState.db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
+    const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo];
     const repoBadge = hasRepo ? `<span class="repo-badge" style="cursor:pointer" onclick="event.stopPropagation();showRepoDetail('${s.repo}')">🏛</span>` : '';
     const mediaCount = (s.media || []).filter(m => m.file || m.title).length
                      + (s._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
@@ -629,7 +629,7 @@ function renderSourceList(srcs) {
 
 function filterSources(q) {
   const lower = q.toLowerCase().trim();
-  const all = Object.values(db.sources);
+  const all = Object.values(AppState.db.sources);
   if (!lower) { renderSourceList(all); return; }
   renderSourceList(all.filter(s =>
     (s.title||'').toLowerCase().includes(lower) ||
@@ -641,14 +641,14 @@ function filterSources(q) {
 function renderRepoList() {
   const section = document.getElementById('repoSection');
   const el      = document.getElementById('repoList');
-  const repos   = Object.values(db.repositories || {});
+  const repos   = Object.values(AppState.db.repositories || {});
   const jumpBtn = document.getElementById('repoJumpBtn');
   if (!repos.length) { section.style.display = 'none'; if (jumpBtn) jumpBtn.style.display = 'none'; return; }
   section.style.display = '';
   if (jumpBtn) jumpBtn.style.display = '';
   const sorted = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   el.innerHTML = sorted.map(r => {
-    const srcCount = Object.values(db.sources).filter(s => s.repo === r.id).length;
+    const srcCount = Object.values(AppState.db.sources).filter(s => s.repo === r.id).length;
     return `<div class="source-card" onclick="showRepoDetail('${r.id}')">
       <div class="source-title">${esc(r.name || r.id)}</div>
       <div class="source-meta">${r.addr ? esc(r.addr.split('\n')[0]) : '&nbsp;'}${srcCount ? ' · ' + srcCount + ' Quel.' : ''}</div>
@@ -660,7 +660,7 @@ function renderRepoList() {
 //  PLACE LIST
 // ─────────────────────────────────────
 function collectPlaces() {
-  if (_placesCache) return _placesCache;
+  if (UIState._placesCache) return UIState._placesCache;
   const places = new Map();
 
   function addPlace(placeName, personId, eventType, lati, long) {
@@ -674,23 +674,23 @@ function collectPlaces() {
     if (pl.lati === null && lati !== null && lati !== undefined) { pl.lati = lati; pl.long = long; }
   }
 
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     addPlace(p.birth.place, p.id, 'Geburt', p.birth.lati, p.birth.long);
     addPlace(p.death.place, p.id, 'Tod', p.death.lati, p.death.long);
     addPlace(p.chr.place,   p.id, 'Taufe', null, null);
     addPlace(p.buri.place,  p.id, 'Beerdigung', p.buri.lati, p.buri.long);
     for (const ev of p.events) addPlace(ev.place, p.id, ev.eventType || ev.type, ev.lati, ev.long);
   }
-  for (const f of Object.values(db.families)) {
+  for (const f of Object.values(AppState.db.families)) {
     addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long);
     addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long);
   }
   // Manuell hinzugefügte Orte (extraPlaces) einmischen — nur wenn noch nicht vorhanden
-  for (const ep of Object.values(db.extraPlaces)) {
+  for (const ep of Object.values(AppState.db.extraPlaces)) {
     if (!places.has(ep.name))
       places.set(ep.name, { name: ep.name, personIds: new Set(), eventTypes: new Set(), lati: ep.lati ?? null, long: ep.long ?? null });
   }
-  _placesCache = places;
+  UIState._placesCache = places;
   return places;
 }
 
@@ -742,21 +742,21 @@ function savePlace() {
   if (!newName) { showToast('⚠ Ortsname darf nicht leer sein'); return; }
   closeModal('modalPlace');
   if (newName === oldName) return;
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     if (p.birth.place  === oldName) p.birth.place  = newName;
     if (p.chr.place    === oldName) p.chr.place    = newName;
     if (p.death.place  === oldName) p.death.place  = newName;
     if (p.buri.place   === oldName) p.buri.place   = newName;
     for (const ev of p.events) if (ev.place === oldName) ev.place = newName;
   }
-  for (const f of Object.values(db.families)) {
+  for (const f of Object.values(AppState.db.families)) {
     if (f.marr.place        === oldName) f.marr.place        = newName;
     if (f.engag?.place      === oldName) f.engag.place       = newName;
   }
   // extraPlaces mitumbenennen
-  if (db.extraPlaces[oldName]) {
-    db.extraPlaces[newName] = { ...db.extraPlaces[oldName], name: newName };
-    delete db.extraPlaces[oldName];
+  if (AppState.db.extraPlaces[oldName]) {
+    AppState.db.extraPlaces[newName] = { ...AppState.db.extraPlaces[oldName], name: newName };
+    delete AppState.db.extraPlaces[oldName];
     saveExtraPlaces();
   }
   markChanged();
@@ -777,9 +777,9 @@ function saveNewPlace() {
   if (collectPlaces().has(name)) { showToast('⚠ Ort bereits vorhanden'); return; }
   const lati = parseFloat(document.getElementById('np-lati').value) || null;
   const long = parseFloat(document.getElementById('np-long').value) || null;
-  db.extraPlaces[name] = { name, lati, long };
+  AppState.db.extraPlaces[name] = { name, lati, long };
   saveExtraPlaces();
-  _placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
+  UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
   closeModal('modalNewPlace');
   showToast('✓ Ort hinzugefügt');
   renderTab();
@@ -787,9 +787,9 @@ function saveNewPlace() {
 
 function deleteExtraPlace(name) {
   if (!confirm('Ort wirklich entfernen?')) return;
-  delete db.extraPlaces[name];
+  delete AppState.db.extraPlaces[name];
   saveExtraPlaces();
-  _placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
+  UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
   goBack();
   showToast('✓ Ort entfernt');
   renderTab();
@@ -800,7 +800,7 @@ function deleteExtraPlace(name) {
 // ─────────────────────────────────────────────────────────────────
 
 function showAddSpouseFlow(personId) {
-  _relMode = 'spouse'; _relAnchorId = personId;
+  UIState._relMode = 'spouse'; UIState._relAnchorId = personId;
   document.getElementById('relPickerTitle').textContent = 'Ehepartner verknüpfen';
   document.getElementById('relPickerSearch').value = '';
   renderRelPicker('');
@@ -808,7 +808,7 @@ function showAddSpouseFlow(personId) {
 }
 
 function showAddChildFlow(famId) {
-  _relMode = 'child'; _relAnchorId = famId;
+  UIState._relMode = 'child'; UIState._relAnchorId = famId;
   document.getElementById('relPickerTitle').textContent = 'Kind hinzufügen';
   document.getElementById('relPickerSearch').value = '';
   renderRelPicker('');
@@ -816,7 +816,7 @@ function showAddChildFlow(famId) {
 }
 
 function showAddParentFlow(personId) {
-  _relMode = 'parent'; _relAnchorId = personId;
+  UIState._relMode = 'parent'; UIState._relAnchorId = personId;
   document.getElementById('relPickerTitle').textContent = 'Elternteil verknüpfen';
   document.getElementById('relPickerSearch').value = '';
   renderRelPicker('');
@@ -826,24 +826,24 @@ function showAddParentFlow(personId) {
 function renderRelPicker(q) {
   const list = document.getElementById('relPickerList');
   const famcIdOf = c => typeof c === 'string' ? c : c.famId;
-  let persons = Object.values(db.individuals);
+  let persons = Object.values(AppState.db.individuals);
 
-  if (_relMode === 'spouse') {
-    const p = db.individuals[_relAnchorId];
-    const excl = new Set([_relAnchorId,
+  if (UIState._relMode === 'spouse') {
+    const p = AppState.db.individuals[UIState._relAnchorId];
+    const excl = new Set([UIState._relAnchorId,
       ...(p?.fams || []).flatMap(fid => {
-        const f = db.families[fid]; return f ? [f.husb, f.wife] : [];
+        const f = AppState.db.families[fid]; return f ? [f.husb, f.wife] : [];
       }).filter(Boolean)
     ]);
     persons = persons.filter(x => !excl.has(x.id));
-  } else if (_relMode === 'child') {
-    const f = db.families[_relAnchorId];
+  } else if (UIState._relMode === 'child') {
+    const f = AppState.db.families[UIState._relAnchorId];
     if (f) {
       const excl = new Set([...(f.children || []), f.husb, f.wife].filter(Boolean));
       persons = persons.filter(x => !excl.has(x.id));
     }
-  } else if (_relMode === 'parent') {
-    persons = persons.filter(x => x.id !== _relAnchorId);
+  } else if (UIState._relMode === 'parent') {
+    persons = persons.filter(x => x.id !== UIState._relAnchorId);
   }
 
   if (q) {
@@ -874,20 +874,20 @@ function renderRelPicker(q) {
 
 function relPickerSelect(selectedId) {
   closeModal('modalRelPicker');
-  openRelFamilyForm(_relAnchorId, selectedId, _relMode);
+  openRelFamilyForm(UIState._relAnchorId, selectedId, UIState._relMode);
 }
 
 function relPickerCreateNew() {
   closeModal('modalRelPicker');
-  _pendingRelation = { mode: _relMode, anchorId: _relAnchorId };
+  UIState._pendingRelation = { mode: UIState._relMode, anchorId: UIState._relAnchorId };
   showPersonForm(null);
 }
 
 function openRelFamilyForm(anchorId, partnerId, mode) {
   const famcIdOf = c => typeof c === 'string' ? c : c.famId;
   if (mode === 'spouse') {
-    const p = db.individuals[anchorId];
-    const q = db.individuals[partnerId];
+    const p = AppState.db.individuals[anchorId];
+    const q = AppState.db.individuals[partnerId];
     let husb = anchorId, wife = partnerId;
     if (p?.sex === 'F' || q?.sex === 'M') { husb = partnerId; wife = anchorId; }
     showFamilyForm(null, { husb, wife });
@@ -896,13 +896,13 @@ function openRelFamilyForm(anchorId, partnerId, mode) {
     showFamilyForm(anchorId, { addChild: partnerId });
 
   } else if (mode === 'parent') {
-    const p   = db.individuals[anchorId];
-    const par = db.individuals[partnerId];
+    const p   = AppState.db.individuals[anchorId];
+    const par = AppState.db.individuals[partnerId];
     // Freien Slot in vorhandener Elternfamilie suchen
     let targetFamId = null;
     for (const fc of (p?.famc || [])) {
       const fid = famcIdOf(fc);
-      const f = db.families[fid];
+      const f = AppState.db.families[fid];
       if (!f) continue;
       if (!f.husb && par?.sex !== 'F') { targetFamId = fid; break; }
       if (!f.wife && par?.sex === 'F') { targetFamId = fid; break; }
@@ -920,8 +920,8 @@ function openRelFamilyForm(anchorId, partnerId, mode) {
 
 function unlinkMember(famId, personId) {
   if (!confirm('Verbindung wirklich trennen?')) return;
-  const f = db.families[famId];
-  const p = db.individuals[personId];
+  const f = AppState.db.families[famId];
+  const p = AppState.db.individuals[personId];
   if (!f || !p) return;
   const famcIdOf = c => typeof c === 'string' ? c : c.famId;
 
@@ -938,8 +938,8 @@ function unlinkMember(famId, personId) {
 
   markChanged(); updateStats(); renderTab();
   showToast('✓ Verbindung getrennt');
-  if (currentFamilyId === famId) showFamilyDetail(famId);
-  else if (currentPersonId) showDetail(currentPersonId);
+  if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
+  else if (AppState.currentPersonId) showDetail(AppState.currentPersonId);
 }
 
 function showPlaceDetail(placeName, pushHistory = true) {
@@ -947,7 +947,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   const place = places.get(placeName);
   if (!place) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentPersonId = null; currentFamilyId = null; currentSourceId = null; currentRepoId = null;
+  AppState.currentPersonId = null; AppState.currentFamilyId = null; AppState.currentSourceId = null; AppState.currentRepoId = null;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showPlaceForm(placeName);
@@ -960,7 +960,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   </div>`;
 
   // Lösch-Button für manuell hinzugefügte Orte ohne verknüpfte Personen
-  if (place.personIds.size === 0 && db.extraPlaces[placeName]) {
+  if (place.personIds.size === 0 && AppState.db.extraPlaces[placeName]) {
     html += `<div style="padding:4px 0 12px">
       <button class="btn btn-danger" style="width:100%"
         data-pname="${placeName.replace(/"/g,'&quot;')}"
@@ -983,7 +983,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
   // Build detailed list: person + which event connects them to this place
   const entries = [];
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     if (p.birth.place && p.birth.place.trim() === placeName)
       entries.push({ person: p, role: 'Geburt' + (p.birth.date ? ' · ' + p.birth.date : '') });
     if (p.death.place && p.death.place.trim() === placeName)
@@ -997,11 +997,11 @@ function showPlaceDetail(placeName, pushHistory = true) {
         entries.push({ person: p, role: (ev.eventType || EVENT_LABELS[ev.type] || ev.type) + (ev.date ? ' · ' + ev.date : '') });
     }
   }
-  for (const f of Object.values(db.families)) {
+  for (const f of Object.values(AppState.db.families)) {
     if (f.marr.place && f.marr.place.trim() === placeName) {
       for (const pid of [f.husb, f.wife]) {
         if (!pid) continue;
-        const p = db.individuals[pid];
+        const p = AppState.db.individuals[pid];
         if (p) entries.push({ person: p, role: 'Heirat' + (f.marr.date ? ' · ' + f.marr.date : '') });
       }
     }
@@ -1024,31 +1024,31 @@ function showPlaceDetail(placeName, pushHistory = true) {
 //  STAMMBAUM-ANSICHT (SANDUHR)
 // ─────────────────────────────────────
 function getParentIds(pid) {
-  const p = db.individuals[pid];
+  const p = AppState.db.individuals[pid];
   if (!p?.famc?.length) return { father: null, mother: null };
   const ref   = p.famc[0];
   const famId = typeof ref === 'string' ? ref : ref.famId;
-  const fam   = db.families[famId];
+  const fam   = AppState.db.families[famId];
   return { father: fam?.husb || null, mother: fam?.wife || null };
 }
 
 function getChildIds(pid) {
-  const p = db.individuals[pid];
+  const p = AppState.db.individuals[pid];
   if (!p) return [];
-  return (p.fams || []).flatMap(famId => db.families[famId]?.children || []);
+  return (p.fams || []).flatMap(famId => AppState.db.families[famId]?.children || []);
 }
 
 let currentTreeId = null;
 
 function _updateTreeBackBtn() {
   const btn = document.getElementById('treeBtnBack');
-  if (btn) btn.style.display = _treeHistoryPos > 0 ? '' : 'none';
+  if (btn) btn.style.display = UIState.UIState._treeHistoryPos > 0 ? '' : 'none';
 }
 
 function treeNavBack() {
-  if (_treeHistoryPos <= 0) return;
-  _treeHistoryPos--;
-  showTree(_treeHistory[_treeHistoryPos], false);
+  if (UIState.UIState._treeHistoryPos <= 0) return;
+  UIState.UIState._treeHistoryPos--;
+  showTree(UIState._treeHistory[UIState.UIState._treeHistoryPos], false);
 }
 
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
@@ -1067,16 +1067,16 @@ function _treeShortName(p, isCenter) {
 }
 
 function showTree(personId, addToHistory = true) {
-  const p = db.individuals[personId];
+  const p = AppState.db.individuals[personId];
   if (!p) return;
-  currentPersonId = personId;
+  AppState.currentPersonId = personId;
   currentTreeId   = personId;
 
   // ── Navigations-History ──
   if (addToHistory) {
-    _treeHistory = _treeHistory.slice(0, _treeHistoryPos + 1);
-    if (_treeHistory[_treeHistory.length - 1] !== personId) _treeHistory.push(personId);
-    _treeHistoryPos = _treeHistory.length - 1;
+    UIState._treeHistory = UIState._treeHistory.slice(0, UIState.UIState._treeHistoryPos + 1);
+    if (UIState._treeHistory[UIState._treeHistory.length - 1] !== personId) UIState._treeHistory.push(personId);
+    UIState.UIState._treeHistoryPos = UIState._treeHistory.length - 1;
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
@@ -1102,7 +1102,7 @@ function showTree(personId, addToHistory = true) {
   const kekuleMap = {};
   {
     const _kWalk = (id, k, depth) => {
-      if (!id || depth > 8 || !db.individuals[id] || kekuleMap[id]) return;
+      if (!id || depth > 8 || !AppState.db.individuals[id] || kekuleMap[id]) return;
       kekuleMap[id] = k;
       const { father, mother } = getParentIds(id);
       _kWalk(father, k * 2,     depth + 1);
@@ -1127,13 +1127,13 @@ function showTree(personId, addToHistory = true) {
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
   const sibFamId  = sibFamRef ? (typeof sibFamRef === 'string' ? sibFamRef : sibFamRef.famId) : null;
   const siblings  = sibFamId
-    ? (db.families[sibFamId]?.children || []).filter(id => id !== personId)
+    ? (AppState.db.families[sibFamId]?.children || []).filter(id => id !== personId)
     : [];
   const nSibs = siblings.length;
 
   // ── Alle Ehen / Familien ──
   const allFamilies = (p.fams || []).map(famId => {
-    const fam = db.families[famId];
+    const fam = AppState.db.families[famId];
     if (!fam) return null;
     const spId = personId === fam.husb ? (fam.wife || null)
                : personId === fam.wife ? (fam.husb || null)
@@ -1281,7 +1281,7 @@ function showTree(personId, addToHistory = true) {
       wrap.appendChild(div);
       return;
     }
-    const q = db.individuals[id];
+    const q = AppState.db.individuals[id];
     if (!q) return;
     div.dataset.sex = q.sex || 'U';
     const nm = _treeShortName(q, isCenter);
@@ -1441,13 +1441,13 @@ function showTree(personId, addToHistory = true) {
 //  DETAIL: PERSON
 // ─────────────────────────────────────
 function showDetail(id, pushHistory = true) {
-  const p = db.individuals[id];
+  const p = AppState.db.individuals[id];
   if (!p) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentPersonId = id;
-  currentFamilyId = null;
-  currentSourceId = null;
-  currentRepoId   = null;
+  AppState.currentPersonId = id;
+  AppState.currentFamilyId = null;
+  AppState.currentSourceId = null;
+  AppState.currentRepoId   = null;
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
@@ -1605,7 +1605,7 @@ function showDetail(id, pushHistory = true) {
       <button class="section-add" data-pid="${id}" onclick="showAddSpouseFlow(this.dataset.pid)">+ Ehepartner</button>
     </div>`;
   for (const famId of p.fams) {
-    const fam = db.families[famId];
+    const fam = AppState.db.families[famId];
     if (!fam) continue;
     const marriageLabel = fam.marr.date ? fam.marr.date : famId;
     html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
@@ -1613,10 +1613,10 @@ function showDetail(id, pushHistory = true) {
       <span class="row-arrow">›</span>
     </div>`;
     const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
-    const partner = partnerId ? db.individuals[partnerId] : null;
+    const partner = partnerId ? AppState.db.individuals[partnerId] : null;
     if (partner) html += relRow(partner, 'Ehepartner' + (fam.marr.date ? ' · ' + fam.marr.date : ''), famId);
     for (const cid of fam.children) {
-      const child = db.individuals[cid];
+      const child = AppState.db.individuals[cid];
       if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''), famId);
     }
     html += `<div style="display:flex;justify-content:flex-end;padding:2px 0 8px">
@@ -1633,7 +1633,7 @@ function showDetail(id, pushHistory = true) {
     </div>`;
   for (const fref of p.famc) {
     const famId = typeof fref === 'string' ? fref : fref.famId;
-    const fam = db.families[famId];
+    const fam = AppState.db.families[famId];
     if (!fam) continue;
     html += `<div class="family-nav-row" style="display:flex;align-items:center;gap:6px">
       <span class="fnr-label" style="flex:1;cursor:pointer" onclick="showFamilyDetail('${famId}')"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
@@ -1644,7 +1644,7 @@ function showDetail(id, pushHistory = true) {
     </div>`;
     for (const pid of [fam.husb, fam.wife]) {
       if (!pid) continue;
-      const parent = db.individuals[pid];
+      const parent = AppState.db.individuals[pid];
       if (parent) html += relRow(parent, parent.sex === 'M' ? 'Vater' : parent.sex === 'F' ? 'Mutter' : 'Elternteil');
     }
   }
@@ -1671,16 +1671,16 @@ function showDetail(id, pushHistory = true) {
 }
 
 function showFamilyDetail(id, pushHistory = true) {
-  const f = db.families[id];
+  const f = AppState.db.families[id];
   if (!f) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentFamilyId = id;
-  currentPersonId = null;
-  currentSourceId = null;
-  currentRepoId   = null;
+  AppState.currentFamilyId = id;
+  AppState.currentPersonId = null;
+  AppState.currentSourceId = null;
+  AppState.currentRepoId   = null;
 
-  const husb = f.husb ? db.individuals[f.husb] : null;
-  const wife = f.wife ? db.individuals[f.wife] : null;
+  const husb = f.husb ? AppState.db.individuals[f.husb] : null;
+  const wife = f.wife ? AppState.db.individuals[f.wife] : null;
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || id;
 
   document.getElementById('detailTopTitle').textContent = 'Familie';
@@ -1725,7 +1725,7 @@ function showFamilyDetail(id, pushHistory = true) {
   if (husb) html += relRow(husb, 'Ehemann / Vater', id);
   if (wife) html += relRow(wife, 'Ehefrau / Mutter', id);
   for (const cid of f.children) {
-    const child = db.individuals[cid];
+    const child = AppState.db.individuals[cid];
     if (child) html += relRow(child, 'Kind', id);
   }
   html += `</div>`;

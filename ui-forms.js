@@ -2,10 +2,10 @@ function showSourceDetail(id, pushHistory = true) {
   const s = getSource(id);
   if (!s) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentSourceId = id;
-  currentPersonId = null;
-  currentFamilyId = null;
-  currentRepoId   = null;
+  AppState.currentSourceId = id;
+  AppState.currentPersonId = null;
+  AppState.currentFamilyId = null;
+  AppState.currentRepoId   = null;
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
@@ -13,8 +13,8 @@ function showSourceDetail(id, pushHistory = true) {
   document.getElementById('treeBtn').style.display = 'none';
 
   // Collect all persons and families referencing this source
-  const refPersons = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));
-  const refFamilies = Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(id));
+  const refPersons = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));
+  const refFamilies = Object.values(AppState.db.families).filter(f => f.sourceRefs && f.sourceRefs.has(id));
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-src-photo-${id}" style="display:none"></div>
@@ -33,8 +33,8 @@ function showSourceDetail(id, pushHistory = true) {
   if (s.date)   html += factRow('Datum', s.date);
   if (s.publ)   html += factRow('Verlag', s.publ);
   if (s.repo) {
-    if (s.repo.match(/^@[^@]+@$/) && db.repositories[s.repo]) {
-      const r = db.repositories[s.repo];
+    if (s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo]) {
+      const r = AppState.db.repositories[s.repo];
       const callNum = s.repoCallNum ? ` · Signatur: ${esc(s.repoCallNum)}` : '';
       html += `<div class="fact-row"><span class="fact-lbl">Aufbewahrung</span>
         <span class="fact-val"><span class="btn-link"
@@ -67,8 +67,8 @@ function showSourceDetail(id, pushHistory = true) {
     html += `<div class="section fade-up">
       <div class="section-title">Familien (${refFamilies.length})</div>`;
     for (const f of refFamilies) {
-      const husb = f.husb ? db.individuals[f.husb] : null;
-      const wife = f.wife ? db.individuals[f.wife] : null;
+      const husb = f.husb ? AppState.db.individuals[f.husb] : null;
+      const wife = f.wife ? AppState.db.individuals[f.wife] : null;
       const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
       const meta = f.marr.date ? '⚭ ' + f.marr.date : '';
       html += `<div class="rel-row" onclick="showFamilyDetail('${f.id}')">
@@ -196,7 +196,7 @@ function sourceTagsHtml(sourceIds) {
   const ids = sourceIds instanceof Set ? [...sourceIds] : (Array.isArray(sourceIds) ? sourceIds : []);
   if (!ids.length) return '';
   return ids.map(sid => {
-    const s = db.sources[sid];
+    const s = AppState.db.sources[sid];
     if (!s) return '';
     const tooltip = esc((s.abbr || s.title || sid).substring(0, 60));
     return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showSourceDetail(this.dataset.sid)" title="${tooltip}">§${srcNum(sid)}</span>`;
@@ -215,18 +215,18 @@ function runRoundtripTest() {
       const t0 = performance.now();
 
       // Pass 1: parse original
-      const saved = db;
+      const saved = AppState.db;
       const db1 = parseGEDCOM(_origText);
 
       // Write pass 1
-      db = db1;
+      AppState.db = db1;
       const out1 = writeGEDCOM();
       // Pass 2: parse out1, write out2
       const db2 = parseGEDCOM(out1);
-      db = db2;
+      AppState.db = db2;
       const out2 = writeGEDCOM();
       // Restore
-      db = saved;
+      AppState.db = saved;
 
       const t1 = performance.now();
       const stable = out1 === out2;
@@ -540,7 +540,7 @@ function runRoundtripTest() {
         diffSnippet;
 
     } catch (e) {
-      try { db = saved; } catch(_) {}
+      try { AppState.db = saved; } catch(_) {}
       out.textContent = 'Fehler: ' + e.message + '\n' + e.stack;
     }
   }, 30);
@@ -603,7 +603,7 @@ function renderSrcTags(prefix) {
   const pages = srcWidgetState[prefix]?.pages || {};
   const quays = srcWidgetState[prefix]?.quay  || {};
   container.innerHTML = [...selected].map(sid => {
-    const s = db.sources[sid];
+    const s = AppState.db.sources[sid];
     const label = s ? (s.abbr || s.title || sid) : sid;
     const pageVal = pages[sid] || '';
     const quayVal = String(quays[sid] ?? '');
@@ -633,7 +633,7 @@ function renderSrcTags(prefix) {
 function renderSrcPicker(prefix) {
   const list = document.getElementById(prefix + '-src-list');
   const selected = srcWidgetState[prefix]?.ids || new Set();
-  const srcs = Object.values(db.sources).sort((a,b) => (a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'));
+  const srcs = Object.values(AppState.db.sources).sort((a,b) => (a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'));
   if (!srcs.length) {
     list.innerHTML = '<div class="src-picker-empty">Noch keine Quellen vorhanden</div>';
     return;
@@ -672,9 +672,9 @@ function removeSrc(prefix, sid) {
 // ─────────────────────────────────────
 function showAddSheet() { openModal('modalAdd'); }
 function showEditSheet() {
-  if (currentPersonId) showPersonForm(currentPersonId);
-  else if (currentFamilyId) showFamilyForm(currentFamilyId);
-  else if (currentSourceId) showSourceForm(currentSourceId);
+  if (AppState.currentPersonId) showPersonForm(AppState.currentPersonId);
+  else if (AppState.currentFamilyId) showFamilyForm(AppState.currentFamilyId);
+  else if (AppState.currentSourceId) showSourceForm(AppState.currentSourceId);
 }
 
 let _pfExtraNames = [];
@@ -771,7 +771,7 @@ function savePerson() {
       nameRaw: [en.given, en.surname ? '/' + en.surname + '/' : ''].filter(Boolean).join(' ')
     }));
 
-  db.individuals[id] = {
+  AppState.db.individuals[id] = {
     ...existing,
     id, given, surname, nick,
     name: (given + (surname ? ' ' + surname : '')).trim(),
@@ -788,7 +788,7 @@ function savePerson() {
     noteText: (() => {
       let t = note;
       for (const ref of (existing.noteRefs || [])) {
-        if (db.notes && db.notes[ref]) t += (t ? '\n' : '') + db.notes[ref].text;
+        if (AppState.db.notes && AppState.db.notes[ref]) t += (t ? '\n' : '') + AppState.db.notes[ref].text;
       }
       return t;
     })(),
@@ -812,15 +812,15 @@ function savePerson() {
   updateStats();
   renderTab();
 
-  if (_pendingRelation) {
-    const rel = _pendingRelation;
-    _pendingRelation = null;
+  if (UIState._pendingRelation) {
+    const rel = UIState._pendingRelation;
+    UIState._pendingRelation = null;
     showToast('✓ Person erstellt');
     setTimeout(() => openRelFamilyForm(rel.anchorId, id, rel.mode), 80);
     return;
   }
   showToast('✓ Person gespeichert');
-  if (currentPersonId === id) showDetail(id);
+  if (AppState.currentPersonId === id) showDetail(id);
 }
 
 function deletePerson() {
@@ -830,14 +830,14 @@ function deletePerson() {
   if (!confirm(`${_pd.name || id} wirklich löschen?`)) return;
 
   // Remove from families
-  for (const f of Object.values(db.families)) {
+  for (const f of Object.values(AppState.db.families)) {
     setFamily(f.id, {
       husb:     f.husb === id ? null : f.husb,
       wife:     f.wife === id ? null : f.wife,
       children: f.children.filter(c => c !== id)
     });
   }
-  delete db.individuals[id];
+  delete AppState.db.individuals[id];
   closeModal('modalPerson');
   markChanged(); updateStats();
   showMain(); showToast('✓ Person gelöscht');
@@ -856,7 +856,7 @@ function showFamilyForm(id, ctx) {
   document.getElementById('ff-id').value = id || '';
 
   // Populate person selects
-  const persons = Object.values(db.individuals).sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
+  const persons = Object.values(AppState.db.individuals).sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   const optionsAll = '<option value="">– keine –</option>' + persons.map(p =>
     `<option value="${p.id}">${esc(p.name || p.id)}</option>`
   ).join('');
@@ -904,7 +904,7 @@ function saveFamily() {
   const children = [...(existingFam.children || [])];
   if (_pendingAddChild && !children.includes(_pendingAddChild)) children.push(_pendingAddChild);
   _pendingAddChild = null;
-  db.families[id] = {
+  AppState.db.families[id] = {
     ...existingFam,
     id, husb, wife, children,
     marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,  sources: [...(srcWidgetState['ff']?.ids || [])] },
@@ -914,7 +914,7 @@ function saveFamily() {
     noteText: (() => {
       let t = note;
       for (const ref of (existingFam.noteRefs || [])) {
-        if (db.notes && db.notes[ref]) t += (t ? '\n' : '') + db.notes[ref].text;
+        if (AppState.db.notes && AppState.db.notes[ref]) t += (t ? '\n' : '') + AppState.db.notes[ref].text;
       }
       return t;
     })(),
@@ -927,7 +927,7 @@ function saveFamily() {
   // Update FAMS/FAMC references
   // famc entries are objects {famId, frel, mrel}, fams entries are strings
   const famcId = f => (typeof f === 'string' ? f : f.famId);
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     p.fams = p.fams.filter(f => f !== id);
     p.famc = p.famc.filter(f => famcId(f) !== id);
   }
@@ -943,7 +943,7 @@ function saveFamily() {
   markChanged(); updateStats();
   renderTab();
   showToast('✓ Familie gespeichert');
-  if (currentFamilyId === id) showFamilyDetail(id);
+  if (AppState.currentFamilyId === id) showFamilyDetail(id);
 }
 
 function deleteFamily() {
@@ -951,13 +951,13 @@ function deleteFamily() {
   if (!id) return;
   if (!confirm('Familie wirklich löschen?')) return;
   const famcId2 = f => (typeof f === 'string' ? f : f.famId);
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     setPerson(p.id, {
       fams: p.fams.filter(f => f !== id),
       famc: p.famc.filter(f => famcId2(f) !== id)
     });
   }
-  delete db.families[id];
+  delete AppState.db.families[id];
   closeModal('modalFamily');
   markChanged(); updateStats();
   showMain(); showToast('✓ Familie gelöscht');
@@ -1019,7 +1019,7 @@ function saveSource() {
   const title = document.getElementById('sf-title').value.trim();
   if (!abbr && !title) { showToast('⚠ Kurzname oder Titel erforderlich'); return; }
   const _now = new Date();
-  db.sources[id] = {
+  AppState.db.sources[id] = {
     ...existing,
     id,
     abbr,
@@ -1039,14 +1039,14 @@ function saveSource() {
   markChanged(); updateStats();
   renderTab();
   showToast('✓ Quelle gespeichert');
-  if (currentSourceId === id) showSourceDetail(id);
+  if (AppState.currentSourceId === id) showSourceDetail(id);
 }
 
 function deleteSource() {
   const id = document.getElementById('sf-id').value;
   if (!id) return;
   if (!confirm('Quelle wirklich löschen?')) return;
-  delete db.sources[id];
+  delete AppState.db.sources[id];
   closeModal('modalSource');
   markChanged(); updateStats();
   showMain(); showToast('✓ Quelle gelöscht');
@@ -1062,7 +1062,7 @@ function sfRepoUpdateDisplay() {
   const clearBtn = document.getElementById('sf-repo-clear');
   const calnGrp  = document.getElementById('sf-caln-group');
   if (repoId.match(/^@[^@]+@$/)) {
-    const r = db.repositories[repoId];
+    const r = AppState.db.repositories[repoId];
     display.textContent    = r ? (r.name || repoId) : repoId;
     display.style.color    = 'var(--gold)';
     clearBtn.style.display = '';
@@ -1092,7 +1092,7 @@ function openRepoPicker() {
 
 function renderRepoPicker(q) {
   const list = document.getElementById('repoPickerList');
-  let repos = Object.values(db.repositories);
+  let repos = Object.values(AppState.db.repositories);
   if (q) { const lq = q.toLowerCase(); repos = repos.filter(r => (r.name||r.id).toLowerCase().includes(lq)); }
   repos = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   list.innerHTML = '';
@@ -1118,20 +1118,20 @@ function repoPickerSelect(repoId) {
 }
 function repoPickerCreateNew() {
   closeModal('modalRepoPicker');
-  _pendingRepoLink = { sourceId: document.getElementById('sf-id').value };
+  UIState._pendingRepoLink = { sourceId: document.getElementById('sf-id').value };
   showRepoForm(null);
 }
 
 function showRepoDetail(id, pushHistory = true) {
   const r = getRepo(id); if (!r) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentRepoId = id; currentPersonId = null; currentFamilyId = null; currentSourceId = null;
+  AppState.currentRepoId = id; AppState.currentPersonId = null; AppState.currentFamilyId = null; AppState.currentSourceId = null;
   document.getElementById('detailTopTitle').textContent = 'Archiv';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showRepoForm(id);
   document.getElementById('treeBtn').style.display = 'none';
 
-  const linkedSources = Object.values(db.sources).filter(s => s.repo === id);
+  const linkedSources = Object.values(AppState.db.sources).filter(s => s.repo === id);
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem">🏛</div>
     <div class="detail-name">${esc(r.name || id)}</div>
@@ -1179,7 +1179,7 @@ function saveRepo() {
   const name = document.getElementById('rf-name').value.trim();
   if (!name) { showToast('⚠ Name erforderlich'); return; }
   const _now = new Date();
-  db.repositories[id] = {
+  AppState.db.repositories[id] = {
     id, name,
     addr:  document.getElementById('rf-addr').value.trim(),
     phon:  document.getElementById('rf-phon').value.trim(),
@@ -1191,25 +1191,25 @@ function saveRepo() {
   closeModal('modalRepo');
   markChanged();
   showToast('✓ Archiv gespeichert');
-  if (_pendingRepoLink) {
-    _pendingRepoLink = null;
+  if (UIState._pendingRepoLink) {
+    UIState._pendingRepoLink = null;
     document.getElementById('sf-repo').value = id;
     sfRepoUpdateDisplay();
     openModal('modalSource');
-  } else if (currentRepoId === id) {
+  } else if (AppState.currentRepoId === id) {
     showRepoDetail(id);
   }
 }
 
 function deleteRepo() {
   const id = document.getElementById('rf-id').value; if (!id) return;
-  const linked = Object.values(db.sources).filter(s => s.repo === id);
+  const linked = Object.values(AppState.db.sources).filter(s => s.repo === id);
   const msg = linked.length
     ? `Archiv löschen? ${linked.length} Quelle(n) verlieren die Archiv-Verknüpfung.`
     : 'Archiv wirklich löschen?';
   if (!confirm(msg)) return;
   for (const s of linked) { setSource(s.id, { repo: '', repoCallNum: '' }); }
-  delete db.repositories[id];
+  delete AppState.db.repositories[id];
   closeModal('modalRepo');
   markChanged();
   showMain();
@@ -1274,7 +1274,7 @@ function onEventTypeChange() {
 function showEventForm(personId, evIdx) {
   // data-Attribute liefern immer Strings — numerische Indizes zurückkonvertieren
   if (typeof evIdx === 'string' && evIdx !== '' && !(evIdx in _SPECIAL_OBJ) && !isNaN(evIdx)) evIdx = +evIdx;
-  const p = db.individuals[personId];
+  const p = AppState.db.individuals[personId];
   const isSpecial  = typeof evIdx === 'string' && evIdx in _SPECIAL_OBJ;
   const isExisting = typeof evIdx === 'number';
   const typeEl = document.getElementById('ef-type');
@@ -1318,7 +1318,7 @@ function showEventForm(personId, evIdx) {
 
 function saveEvent() {
   const pid = document.getElementById('ef-pid').value;
-  const p = db.individuals[pid];
+  const p = AppState.db.individuals[pid];
   if (!p) return;
   const type = document.getElementById('ef-type').value;
 
@@ -1366,7 +1366,7 @@ function saveEvent() {
   closeModal('modalEvent');
   markChanged(); updateStats();
   showToast('✓ Ereignis gespeichert');
-  if (currentPersonId === pid) showDetail(pid);
+  if (AppState.currentPersonId === pid) showDetail(pid);
 }
 
 // ─────────────────────────────────────
@@ -1378,8 +1378,8 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
-  if (id === 'modalPerson') _pendingRelation = null;
-  if (id === 'modalRepo')   _pendingRepoLink  = null;
+  if (id === 'modalPerson') UIState._pendingRelation = null;
+  if (id === 'modalRepo')   UIState._pendingRepoLink  = null;
 }
 // Close on backdrop click — closeModal() aufrufen damit Pending-State zurückgesetzt wird
 document.querySelectorAll('.modal-overlay').forEach(m => {
@@ -1403,7 +1403,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   sc.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
       startDist  = pinchDist(e);
-      startScale = _treeScale;
+      startScale = UIState._treeScale;
     } else if (e.touches.length === 1) {
       swipeStartX = e.touches[0].clientX;
       swipeStartY = e.touches[0].clientY;
@@ -1414,7 +1414,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
     if (e.touches.length !== 2) return;
     e.preventDefault();
     const scale = Math.min(2, Math.max(0.4, startScale * pinchDist(e) / startDist));
-    _treeScale = scale;
+    UIState._treeScale = scale;
     wrap.style.transform = `scale(${scale})`;
   }, { passive: false });
 
@@ -1434,7 +1434,7 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
     // Doppeltipp = Zoom reset
     const now = Date.now();
     if (now - lastTap < 300 && Math.abs(dx) < 20 && Math.abs(dy) < 20) {
-      _treeScale = 1;
+      UIState._treeScale = 1;
       wrap.style.transform = 'scale(1)';
     }
     lastTap = now;
@@ -1445,8 +1445,8 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
     if (!e.ctrlKey && !e.metaKey) return;
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    _treeScale = Math.min(2, Math.max(0.4, _treeScale * delta));
-    wrap.style.transform = `scale(${_treeScale})`;
+    UIState._treeScale = Math.min(2, Math.max(0.4, UIState._treeScale * delta));
+    wrap.style.transform = `scale(${UIState._treeScale})`;
   }, { passive: false });
 })();
 
@@ -1494,7 +1494,7 @@ function loadExtraPlaces() {
   } catch(e) { return {}; }
 }
 function saveExtraPlaces() {
-  try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(db.extraPlaces))); } catch(e) {}
+  try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
 }
 
 function debounce(fn, ms) {

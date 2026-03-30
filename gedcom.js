@@ -1,46 +1,73 @@
 // ─────────────────────────────────────
-//  STATE
+//  STATE — AppState / UIState
 // ─────────────────────────────────────
-let db = { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] };
-let changed = false;
-let _placesCache = null;  // Cache für collectPlaces(); wird in markChanged() geleert
-let _originalGedText = null;   // Fallback wenn localStorage-Backup fehlschlägt; sonst null
-let _fileHandle = null;        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
-let _canDirectSave = false;    // true wenn createWritable() auf _fileHandle funktioniert
-let currentPersonId = null;
-let currentFamilyId = null;
-let currentSourceId = null;
-let currentTab = 'persons';
-let idCounter = 1000;
+// Alle cross-file let-Variablen sind in zwei Namespace-Objekten organisiert.
+// Backward-compat-Shims (unten) leiten bare Variablennamen zu den Namespaces um,
+// sodass bestehende Aufrufer ohne Änderung weiter funktionieren.
 
-// ─── Navigations-History ────────────────
-// Ermöglicht "Zurück" durch verschachtelte Detail-Ansichten
-const _navHistory = [];       // Stack von {type, id|name}
+const AppState = {
+  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] },
+  changed:          false,
+  idCounter:        1000,
+  currentPersonId:  null,
+  currentFamilyId:  null,
+  currentSourceId:  null,
+  currentRepoId:    null,
+  currentTab:       'persons',
+  _detailActive:    false,       // true wenn v-detail echten Inhalt zeigt
+  _fileHandle:      null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
+  _canDirectSave:   false,       // true wenn createWritable() auf _fileHandle funktioniert
+  _originalGedText: null,        // Fallback wenn localStorage-Backup fehlschlägt; sonst null
+};
 
-// ─── Beziehungs-Picker ──────────────────
-let _relMode     = '';    // 'spouse' | 'child' | 'parent'
-let _relAnchorId = '';    // personId (spouse/parent) oder famId (child)
-let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonForm()
-let currentRepoId    = null;
-let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
-let _detailActive = false;           // true wenn v-detail echten Inhalt zeigt (P3-7)
-const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto (kein OBJE im Original-GEDCOM)
-const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde (OBJE aus Passthrough entfernen)
-let _treeScale = 1;                  // Zoom-Faktor Sanduhr-Ansicht (Sprint P3-5)
-let _treeHistory    = [];            // Navigations-History im Baumbaum
-let _treeHistoryPos = -1;
-const _activeSpouseMap = {};         // personId → aktiver Ehepartner-Index im Stapel
+const UIState = {
+  _treeScale:       1,           // Zoom-Faktor Sanduhr-Ansicht
+  _treeHistory:     [],          // Navigations-History im Baum
+  _treeHistoryPos:  -1,
+  _relMode:         '',          // 'spouse' | 'child' | 'parent'
+  _relAnchorId:     '',          // personId (spouse/parent) oder famId (child)
+  _pendingRelation: null,        // { mode, anchorId } — gesetzt vor showPersonForm()
+  _pendingRepoLink: null,        // { sourceId } — gesetzt vor showRepoForm(null)
+  _placesCache:     null,        // Cache für collectPlaces(); wird in markChanged() geleert
+};
+
+// Backward-compat-Shims: bare Variablennamen leiten zu AppState / UIState um.
+// Entfernen sobald alle Aufrufer auf AppState.x / UIState.x umgestellt sind.
+(function _installStateShims() {
+  const _map = [
+    [AppState, ['db','changed','idCounter','currentPersonId','currentFamilyId',
+                'currentSourceId','currentRepoId','currentTab','_detailActive',
+                '_fileHandle','_canDirectSave','_originalGedText']],
+    [UIState,  ['_treeScale','_treeHistory','_treeHistoryPos',
+                '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache']],
+  ];
+  for (const [ns, keys] of _map) {
+    for (const k of keys) {
+      Object.defineProperty(window, k, {
+        get()  { return ns[k]; },
+        set(v) { ns[k] = v; },
+        configurable: true,
+      });
+    }
+  }
+})();
+
+// ─── Konstante Globals (const — kein Shim nötig) ────────────────────────────
+const _navHistory      = [];    // Navigations-History für Detail-Ansichten
+const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto
+const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde
+const _activeSpouseMap = {};    // personId → aktiver Ehepartner-Index
 
 // Liefert den Original-GEDCOM-Text (erste geladene Version).
 // Bevorzugt _originalGedText (RAM, immer aktuell für aktive Session);
 // localStorage-Backup als Fallback nach Reload (wenn RAM verloren, aber Storage erhalten).
 function _getOriginalText() {
-  return _originalGedText || localStorage.getItem('stammbaum_ged_backup') || null;
+  return AppState._originalGedText || localStorage.getItem('stammbaum_ged_backup') || null;
 }
 
 function nextId(prefix) {
-  idCounter++;
-  return `@${prefix}${idCounter}@`;
+  AppState.idCounter++;
+  return `@${prefix}${AppState.idCounter}@`;
 }
 
 // Globale Label-Map für GEDCOM-Ereignis-Typen (DRY: wird in showDetail + showPlaceDetail genutzt)
@@ -75,17 +102,17 @@ const NAME_TYPE_LABELS = {
 // ── Getters / Mutations-Helpers ────────────────────────────────────────────
 // Zentraler Einstiegspunkt — ein Ort für künftige Validierung, Undo oder Struktur-Änderungen.
 // Getters geben null zurück statt undefined, sodass Aufrufer einheitlich auf null prüfen können.
-function getPerson(id)  { return db.individuals[id]  ?? null; }
-function getFamily(id)  { return db.families[id]     ?? null; }
-function getSource(id)  { return db.sources[id]      ?? null; }
-function getRepo(id)    { return db.repositories[id] ?? null; }
+function getPerson(id)  { return AppState.db.individuals[id]  ?? null; }
+function getFamily(id)  { return AppState.db.families[id]     ?? null; }
+function getSource(id)  { return AppState.db.sources[id]      ?? null; }
+function getRepo(id)    { return AppState.db.repositories[id] ?? null; }
 
 // Setters — Object.assign-Patch auf bestehende Top-Level-Felder.
 // Für verschachtelte Array-Mutations (media[idx], fams.push etc.) weiter direkt verwenden.
-function setPerson(id, patch) { const p = db.individuals[id]; if (p) Object.assign(p, patch); }
-function setFamily(id, patch) { const f = db.families[id];   if (f) Object.assign(f, patch); }
-function setSource(id, patch) { const s = db.sources[id];    if (s) Object.assign(s, patch); }
-function setRepo(id, patch)   { const r = db.repositories[id]; if (r) Object.assign(r, patch); }
+function setPerson(id, patch) { const p = AppState.db.individuals[id]; if (p) Object.assign(p, patch); }
+function setFamily(id, patch) { const f = AppState.db.families[id];   if (f) Object.assign(f, patch); }
+function setSource(id, patch) { const s = AppState.db.sources[id];    if (s) Object.assign(s, patch); }
+function setRepo(id, patch)   { const r = AppState.db.repositories[id]; if (r) Object.assign(r, patch); }
 
 // ─────────────────────────────────────
 //  GEDCOM DATUM / CONT HELFER
@@ -253,7 +280,7 @@ function buildGedDateFromFields(qualId, dateBaseId, date2BaseId) {
 const _placeModes = {};  // { placeId: 'free'|'parts' }
 
 function getPlacLabels() {
-  const raw = db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat';
+  const raw = AppState.db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat';
   return raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
 }
 
