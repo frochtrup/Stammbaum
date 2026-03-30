@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v58 / Cache: `stammbaum-v58`
+**Aktuelle sw-Version:** v59 / Cache: `stammbaum-v59`
 
 ---
 
@@ -47,17 +47,17 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 - [x] Tastaturnavigation im Baum (↑ Vater, ⇧↑ Mutter, ↓ Kind, → Partner, ← Zurück) ✅ (sw v58)
 - [x] Pfeil-Legende unten rechts im Baum ✅ (sw v58)
 
-### Schwerpunkt 3: Quellenmanagement
+### Schwerpunkt 3: Quellenmanagement ✅ ABGESCHLOSSEN (2026-03-29)
 
 - [x] Quellen-Detailansicht: Mediendateien aus GEDCOM-Pfaden anzeigen — statische Icons + async OneDrive-Laden ✅ (sw v48)
 - [x] OneDrive Dokumente-Ordner: Scan → Dateiname-Matching → auto-Vorschau ohne manuelles Verknüpfen ✅ (sw v49)
 - [x] sourceMedia{}: OBJE unter SOUR-Zitierungen strukturiert — kein Datenverlust im Roundtrip ✅ (sw v45)
 - [x] Einheitliches Medien-UI: Karten-Layout, Edit-Modal + Thumbnail in allen Ansichten ✅ (sw v50–v52)
 - [x] OneDrive-Einstellungen: Ordner-Anzeige, Ändern, Zurücksetzen ✅ (sw v53)
-- [ ] Quellenansicht: verknüpfte Personen/Familien auflisten (Rückverweise)
-- [ ] Quellen-Schnellerstellung auf iPhone: Kamera-Button → Foto machen → als Medienobjekt einbinden (`capture="camera"`)
-- [ ] Quellen-Vorlage: Häufig genutzte Quellentypen (Kirchenbuch, Standesamt, Volkszählung) als Vorlagen
-- [ ] Medien-Browser: alle Mediendateien aller Quellen in einer Übersicht
+- [x] Quellenansicht: verknüpfte Personen/Familien auflisten (Rückverweise) ✅ (war schon implementiert via `sourceRefs`)
+- [x] Kamera-Button in „Medium hinzufügen": `capture="environment"` + Galerie-Option + IDB-Speicherung (base64) ✅ (sw v59)
+- [x] Quellen-Vorlage: Kirchenbuch / Standesamt / Volkszählung / Familienstammbuch / Zeitungsartikel → Pre-Fill beim Anlegen ✅ (sw v59)
+- [x] Medien-Browser: alle Mediendateien aller Quellen in einer Übersicht (📎-Button im Quellen-Tab) ✅ (sw v59)
 
 ### Schwerpunkt 4: Mobile UX (iPhone)
 

@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX.
 
+### Session 2026-03-29 — Schwerpunkt 3 Abschluss: Kamera, Vorlagen, Medien-Browser (sw v59)
+
+- **Kamera-Button** in „Medium hinzufügen": `capture="environment"` + „Aus Galerie"-Button; Bild wird als base64 in IDB (`photo_src_{id}_{i}`, `photo_{id}_{i}`, `photo_fam_{id}_{i}`) gespeichert; Dateiname automatisch aus Timestamp generiert; `showSourceDetail()` prüft IDB vor OneDrive
+- **Quellen-Vorlagen**: 5 Vorlagen-Buttons (Kirchenbuch / Standesamt / Volkszählung / Familienstammbuch / Zeitungsartikel) erscheinen beim Anlegen neuer Quellen (`showSourceForm(null)`); `_applySourceTemplate()` befüllt ABBR + Titel + Autor + Notiz
+- **Medien-Browser**: 📎-Button im Quellen-Tab → Modal mit allen Quellen-Medien, gruppiert nach Quelle; async Thumbnails aus IDB + OneDrive; Klick → `showSourceDetail()`
+- **Fix**: `deleteSourceMedia()` löscht nun auch IDB-Key `photo_src_{id}_{i}`
+
+*Aktuelle sw-Version: v59 / Cache: stammbaum-v59*
+
+---
+
 ### Session 2026-03-29 — Desktop UI/UX: Baum-Verbesserungen (sw v56–v58)
 
 *Drag-to-Pan + Vollbild-Modus (sw v56):*
