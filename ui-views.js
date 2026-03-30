@@ -559,6 +559,15 @@ function _updatePersonListCurrent(id) {
   if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
 }
 
+function _updateFamilyListCurrent(id) {
+  const list = document.getElementById('familyList');
+  if (!list) return;
+  list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+  if (!id) return;
+  const cur = list.querySelector(`[data-fid="${id}"]`);
+  if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+}
+
 function applyPersonFilter() {
   const q = (document.getElementById('searchInput')?.value) || '';
   const from = parseInt(document.getElementById('yearFrom')?.value) || null;
@@ -1528,6 +1537,7 @@ function showDetail(id, pushHistory = true) {
   AppState.currentFamilyId = null;
   AppState.currentSourceId = null;
   AppState.currentRepoId   = null;
+  if (document.body.classList.contains('desktop-mode')) { _updatePersonListCurrent(id); _updateFamilyListCurrent(null); }
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
@@ -1764,6 +1774,7 @@ function showFamilyDetail(id, pushHistory = true) {
   AppState.currentPersonId = null;
   AppState.currentSourceId = null;
   AppState.currentRepoId   = null;
+  if (document.body.classList.contains('desktop-mode')) { _updateFamilyListCurrent(id); _updatePersonListCurrent(null); }
 
   const husb = f.husb ? AppState.db.individuals[f.husb] : null;
   const wife = f.wife ? AppState.db.individuals[f.wife] : null;
