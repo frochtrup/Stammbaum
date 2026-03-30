@@ -80,7 +80,7 @@ function _initTreeDrag() {
   window.addEventListener('resize', () => {
     clearTimeout(_treeResizeTimer);
     _treeResizeTimer = setTimeout(() => {
-      const id = UIState._treeHistory[UIState.UIState._treeHistoryPos];
+      const id = UIState._treeHistory[UIState._treeHistoryPos];
       if (!id) return;
       if (!document.getElementById('v-tree')?.classList.contains('active')) return;
       showTree(id, false);
@@ -1049,13 +1049,13 @@ let currentTreeId = null;
 
 function _updateTreeBackBtn() {
   const btn = document.getElementById('treeBtnBack');
-  if (btn) btn.style.display = UIState.UIState._treeHistoryPos > 0 ? '' : 'none';
+  if (btn) btn.style.display = UIState._treeHistoryPos > 0 ? '' : 'none';
 }
 
 function treeNavBack() {
-  if (UIState.UIState._treeHistoryPos <= 0) return;
-  UIState.UIState._treeHistoryPos--;
-  showTree(UIState._treeHistory[UIState.UIState._treeHistoryPos], false);
+  if (UIState._treeHistoryPos <= 0) return;
+  UIState._treeHistoryPos--;
+  showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
 }
 
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
@@ -1081,9 +1081,9 @@ function showTree(personId, addToHistory = true) {
 
   // ── Navigations-History ──
   if (addToHistory) {
-    UIState._treeHistory = UIState._treeHistory.slice(0, UIState.UIState._treeHistoryPos + 1);
+    UIState._treeHistory = UIState._treeHistory.slice(0, UIState._treeHistoryPos + 1);
     if (UIState._treeHistory[UIState._treeHistory.length - 1] !== personId) UIState._treeHistory.push(personId);
-    UIState.UIState._treeHistoryPos = UIState._treeHistory.length - 1;
+    UIState._treeHistoryPos = UIState._treeHistory.length - 1;
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
