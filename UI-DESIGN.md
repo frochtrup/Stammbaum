@@ -202,26 +202,52 @@ body.desktop-mode:
 ## Sanduhr-Ansicht: Layout-Algorithmus
 
 ```
-Ebene -2:  [GP0] [GP1]         [GP2] [GP3]   ← 4 Großeltern-Slots (immer sichtbar)
-Ebene -1:    [Vater]             [Mutter]     ← 2 Eltern, je über 2 Großeltern
-Ebene  0:      [Person★]  ⟿  [Ehepartner]   ← Zentrum gold, Ehepartner rechts
-Ebene +1:         [K0] [K1] [K2] [K3]        ← max. 4 Kinder/Zeile, mehrzeilig
-           [K4] [K5] ...                      ← Folgezeilen bei >4 Kindern
+Ebene -4:  [UUG0]..[UUG15]                  ← bis zu 16 Ururgroßeltern-Slots (Desktop/Querformat)
+Ebene -3:  [UG0]..[UG7]                     ← bis zu 8 Urgroßeltern-Slots
+Ebene -2:  [GP0] [GP1]   [GP2] [GP3]        ← 4 Großeltern-Slots
+Ebene -1:    [Vater]       [Mutter]          ← 2 Eltern, je über 2 Großeltern
+Ebene  0:      [Person★]  ⟿  [Ehepartner]  ← Zentrum gold, Ehepartner rechts
+Ebene +1:         [K0] [K1] [K2] [K3]       ← max. 4 Kinder/Zeile, mehrzeilig
+           [K4] [K5] ...                     ← Folgezeilen bei >4 Kindern
 ```
+
+**Portrait-Modus** (`isPortrait = window.innerWidth < window.innerHeight`):
+- Nur Ebenen -2 und -1 (Eltern + Großeltern)
+- `hasAnc3 = false`, `hasAnc4 = false` — keine Ururgroßeltern im Hochformat
+- Resize-Listener (debounced 250ms): Baum wird bei Orientierungswechsel neu gezeichnet
 
 **Konstanten:**
 - Reguläre Karte: W=96px, H=64px
 - Zentrum-Karte: CW=160px, CH=80px
 - HGAP=10, VGAP=44, MGAP=20 (Person↔Ehepartner), SLOT=106, PAD=20
+- `ancSpan` dynamisch: 4/8/16 Slots je nach belegter Tiefe (keine Leerbreite)
+- `baseY` = `ancLevels × ROW` — Platz nach oben je nach aktiven Ebenen
 
-**Layout-Breite** = max(4×SLOT, max-Kinder-Zeile×SLOT, Person+MGAP+W) + 2×PAD
+**Layout-Breite** = max(ancSpan×SLOT, max-Kinder-Zeile×SLOT, Person+MGAP+W) + 2×PAD
 
 **Namen:** `_treeShortName(p, isCenter)` — Limit 18 (regulär) / 26 (Zentrum) Zeichen, dann Initialen
+
+**Kekule/Ahnentafel-Nummern** (v4-dev sw v68):
+- Proband = 1, Vater = 2, Mutter = 3, Vatersvater = 4, Vatermutter = 5 …
+- Anzeige auf jeder Vorfahren-Karte (fett, gold-dim)
 
 **Interaktion:**
 - Klick auf reguläre Karte → `showTree(id)` (neu zentrieren)
 - Klick auf Zentrum-Karte → `showDetail(id)` → Zurück führt wieder zum Baum
 - ⧖-Button in Detailansicht und Familienansicht → öffnet Tree
+- **Drag-to-Pan** (Desktop): `mousedown/mousemove/mouseup` auf `#treeScroll`; 5px-Threshold verhindert versehentliches Aktivieren; Click-Event nach Drag unterdrückt
+- **Vollbild-Modus**: `⤢`-Button in Topbar; `body.tree-fullscreen` blendet Sidebar aus; Toggle zu `⤡`
+- **Tastaturnavigation** (Desktop):
+  - `↑` → Vater · `Shift+↑` → Mutter · `↓` → erstes Kind · `→` → aktiver Partner · `←` → History-Back
+  - `_treeNavTargets{}` wird bei jedem `showTree()` aktualisiert
+  - `_initTreeKeys()` einmalig: Listener nur wenn `v-tree` aktiv + kein Eingabefeld fokussiert
+- **Pfeil-Legende**: kompakte Box unten rechts (nur `desktop-mode`), alle 5 Tasten mit Bezeichnung
+- **Auto-Fit-Zoom** (Desktop sw v67): Baum passt sich beim ersten Laden an Fenstergröße an
+
+**History-Navigation:**
+- `_treeHistory[]` + `_treeHistoryPos` — Stack für ← im Baum
+- `treeNavBack()` popt Stack; `←`-Taste ruft `treeNavBack()` auf
+- `_prevTreeId` sichert letzte Tree-ID vor Überschreibung
 
 **Halbgeschwister:**
 - Kinder der aktuellen Ehe = Hauptfamilien-Kinder (normale Karte)
@@ -230,4 +256,4 @@ Ebene +1:         [K0] [K1] [K2] [K3]        ← max. 4 Kinder/Zeile, mehrzeilig
 
 **Mehrfach-Ehen:**
 - `⚭N`-Badge auf Zentrum-Karte wenn Person >1 Ehe hat
-- Alle Ehe-Familien navigierbar; aktive Familie hervorgehoben
+- Alle Ehe-Familien navigierbar; aktive Familie in `_activeSpouseMap` gespeichert

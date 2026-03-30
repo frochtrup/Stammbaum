@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v59 / Cache: `stammbaum-v59`
+**Aktuelle sw-Version:** v69 / Cache: `stammbaum-v69`
 
 ---
 
@@ -59,11 +59,24 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 - [x] Quellen-Vorlage: Kirchenbuch / Standesamt / Volkszählung / Familienstammbuch / Zeitungsartikel → Pre-Fill beim Anlegen ✅ (sw v59)
 - [x] Medien-Browser: alle Mediendateien aller Quellen in einer Übersicht (📎-Button im Quellen-Tab) ✅ (sw v59)
 
-### Schwerpunkt 4: Mobile UX (iPhone)
+### Schwerpunkt 4: Mobile UX (iPhone) — teilweise abgeschlossen
 
+- [x] Portrait-Modus: 2 Vorfahren-Ebenen im Hochformat, Querformat = 4 Ebenen ✅ (sw v60)
+- [x] Baum Portrait kompakt (360px), Pinch-to-Zoom im Querformat ✅ (sw v62)
+- [x] Proband konfigurierbar (nicht mehr automatisch kleinste ID); Button in Topbar ✅ (sw v68)
+- [x] Kekule/Ahnentafel-Nummern im Baum ✅ (sw v68–v69)
+- [x] Foto-Upload aus Formularen entfernt — nur noch über Medien-Abschnitt ✅ (sw v60)
 - [ ] Schnell-Formular für neue Quellen (minimale Pflichtfelder, Rest später ergänzen)
 - [ ] Swipe-Gesten: zurück/vorwärts in Detailansichten
 - [ ] Offline-Sync-Indikator: zeigt ausstehende Änderungen die noch nicht in OneDrive gespeichert sind
+
+### Offene Features (backlog)
+
+- [ ] Medienlinks in Events analog zu Quellen-Ansicht (Bilder + Dokumente je Event klickbar)
+- [ ] Medienlinks überall editierbar (Person, Familie, Event, Quelle — einheitliches Verhalten)
+- [ ] Konfigurierbare Foto/Dokumente-Verzeichnisse ohne OneDrive (lokale Pfade)
+- [ ] Quellenliste: Badge wenn externe Mediendatei verknüpft vorhanden
+- [ ] Bug: `2 PAGE` erscheint doppelt in bestimmten Konstellationen — prüfen
 
 ---
 

@@ -292,12 +292,21 @@ let _pendingRelation = null;       // {mode, anchorId}
 // REPO (v1.2)
 let _pendingRepoLink = null;       // {sourceId}
 
+// Baum-Navigation (v4-dev)
+let _treeHistory    = [];          // [{id}] — History-Stack für ← im Baum
+let _treeHistoryPos = -1;          // aktueller Index im History-Stack
+let _treeNavTargets = {};          // {up, upShift, down, right} — pro showTree() aktualisiert
+let _prevTreeId     = null;        // letzte Tree-ID vor Überschreiben (für ← History)
+let _activeSpouseMap = {};         // {personId: famId} — aktuell angezeigte Ehe-Familie pro Person
+let _probandId      = null;        // konfigurierbarer Proband (null = kleinste ID)
+
 // OneDrive
 let _odFolderStack = [];           // Breadcrumb-Stack im Ordner-Browser
 let _odPickMode = false;           // true: Datei wählen (nicht Ordner)
 let _odDocScanMode = false;        // true: Dokumente-Ordner wählen
 let _odPhotoCache = {};            // Session-Cache: idbKey → Blob-URL
 let _addMediaOdFileId = null;      // fileId bei OneDrive-Picker-Auswahl
+let _odEditPickMode = false;       // true: OD-Picker aus Edit-Media-Modal
 
 // IDB-Keys
 // 'stammbaum_ged'          — GEDCOM-Text (primär)
@@ -305,9 +314,11 @@ let _addMediaOdFileId = null;      // fileId bei OneDrive-Picker-Auswahl
 // 'stammbaum_filename'     — Dateiname
 // 'fileHandle'             — FileSystemFileHandle (Chrome)
 // 'photo_<id>_N'           — Person-Fotos (Base64 JPEG)
-// 'photo_fam_<id>_N'       — Familien-Fotos
+// 'photo_fam_<id>_N'       — Familien-Fotos (Base64 JPEG)
+// 'photo_src_<id>_N'       — Quellen-Fotos via Kamera/Galerie (Base64 JPEG) (v4-dev sw v59)
 // 'od_filemap'             — {persons:{}, families:{}, sources:{}} — manuell verknüpfte OneDrive-Files
 // 'od_doc_filemap'         — {filename.lower: fileId} — Dokumente-Ordner-Scan
 // 'od_doc_folder'          — {folderId, folderName} — gescannter Dokumente-Ordner
 // 'od_default_folder'      — {folderId, folderName} — letzter Foto-Ordner
+// 'proband_id'             — konfigurierter Proband (null = kleinste ID) (v4-dev sw v68)
 ```

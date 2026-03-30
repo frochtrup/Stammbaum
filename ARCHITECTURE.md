@@ -18,12 +18,12 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  storage.js    — IndexedDB, Dateiverwaltung          │
 │  ui-views.js   — Baum, Detail, Listenrendering       │
 │  ui-forms.js   — Formulare, OneDrive, Medien         │
-│  sw.js         — Service Worker (Cache v49)          │
+│  sw.js         — Service Worker (Cache v69)          │
 │  manifest.json — PWA-Manifest                        │
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~7 Dateien · ~250 Funktionen · ~700 KB
+**Größe gesamt:** ~7 Dateien · ~180 Funktionen · ~8700 Zeilen
 
 ---
 
@@ -311,11 +311,12 @@ restoreFileHandle() (bei Seitenreload)
 
 | Problem | Ursache | Status |
 |---|---|---|
-| DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | v4-dev geplant |
-| CENS/CONF/FCOM/ORDN etc. nicht editierbar | Fehlen in events[]-Erkennung | v4-dev geplant |
-| Zweite NAME-Einträge nicht editierbar | In _passthrough | v4-dev geplant |
-| Mehrere inline INDI-Notes | Konkateniert statt Array | v4-dev geplant |
+| DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | Backlog |
+| CENS/CONF/FCOM/ORDN etc. nicht editierbar | Fehlen in events[]-Erkennung | Backlog |
+| Zweite NAME-Einträge nicht editierbar | In _passthrough | Backlog |
+| Mehrere inline INDI-Notes | Konkateniert statt Array | Backlog |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
-| State-Management | ~27 globale Variablen, keine Schichtentrennung | Architektur-Schuld |
+| State-Management | ~27+ globale Variablen, keine Schichtentrennung | Architektur-Schuld |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
 | Virtuelles Scrollen | Listen >1000 Einträge langsam | v5 geplant |
+| `ui-forms.js` zu gross (2570 Z.) | OneDrive + Medien + Formulare gemischt | Splitting empfohlen: `onedrive.js`, `ui-media.js` |

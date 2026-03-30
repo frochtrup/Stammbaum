@@ -20,12 +20,12 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← App-Shell (v3.0, HTML + CSS, ~700 Zeilen)
-├── gedcom.js           ← GEDCOM-Parser + Writer
-├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
-├── ui-views.js         ← Baum, Detailansichten, Listenrendering
-├── ui-forms.js         ← Formulare, OneDrive-Integration, Medien
-├── sw.js               ← Service Worker (offline, Cache v49)
+├── index.html          ← App-Shell (HTML + CSS, ~1700 Zeilen)
+├── gedcom.js           ← GEDCOM-Parser + Writer + Datum/Ort-Utilities (~1535 Zeilen)
+├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load (~970 Zeilen)
+├── ui-views.js         ← Baum, Detailansichten, Listenrendering (~1840 Zeilen)
+├── ui-forms.js         ← Formulare, OneDrive-Integration, Medien (~2570 Zeilen)
+├── sw.js               ← Service Worker (offline, Cache v69)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
@@ -34,6 +34,7 @@ stammbaum/
 ├── UI-DESIGN.md        ← HTML-Struktur, Navigation, CSS Design-System, Sanduhr-Layout
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
 ├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
+├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v4.0-dev
 └── MEMORY.md           ← Projekt-Memory für KI-Kontext
 ```
 
@@ -77,14 +78,20 @@ stammbaum/
 2. Optionaler Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive setzen
 
 ### Sanduhr-Ansicht (Stammbaum)
-- Grafische Familienansicht: Großeltern (2 Ebenen) → Eltern → Person + Ehepartner → Kinder
+- Grafische Familienansicht: bis zu 4 Vorfahren-Ebenen (Eltern/Großeltern/Urgroßeltern/Ururgroßeltern) → Person + Ehepartner → Kinder
+- Portrait-Modus: 2 Vorfahren-Ebenen; Querformat/Desktop: bis zu 4 Ebenen
 - Klick auf jede Karte → neu zentrieren; Klick auf Zentrum → Detailansicht
 - Zurück aus Detailansicht führt direkt zum Baum zurück
 - **Mehrfach-Ehen**: `⚭N`-Badge auf Zentrum-Karte wenn >1 Ehe; alle Ehen navigierbar
 - Halbgeschwister (aus anderen Ehen) mit gestricheltem Rahmen + `½`-Badge markiert
 - Kinder mehrzeilig bei mehr als 4 (max. 4 pro Zeile)
+- **Kekule-Nummern**: Ahnentafel-Nummern auf allen Vorfahren-Karten (1=Proband, 2=Vater, 3=Mutter …)
+- **Konfigurierbarer Proband**: Startperson des Baums wählbar (Button in Topbar)
 - **Pinch-Zoom**: Touch-Geste skaliert den Baum (0.4×–2.0×)
-- Startansicht nach Datei-Load: Person mit kleinster ID
+- **Drag-to-Pan**: Maus-Drag scrollt den Baum (Desktop)
+- **Vollbild-Modus**: ⤢-Button blendet Sidebar aus (Desktop)
+- **Tastaturnavigation**: ↑ Vater · Shift+↑ Mutter · ↓ Kind · → Partner · ← Zurück (Desktop)
+- **Desktop Auto-Fit-Zoom**: Baum passt sich beim ersten Laden an die Fenstergröße an
 
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
@@ -172,7 +179,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta≈0** (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
-**Version 4.0-dev** — März 2026 — Branch `v4-dev` · sw v49 · `main` = v3.0 stabil
+**Version 4.0-dev** — März 2026 — Branch `v4-dev` · sw v69 · `main` = v3.0 stabil
 
 ---
 

@@ -7,7 +7,35 @@ Aktuelle Planung: `ROADMAP.md`
 
 ## Version 4.0 🚧 (Branch `v4-dev`, ab 2026-03-27)
 
-Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX.
+Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX, Mobile.
+
+---
+
+### Session 2026-03-30 — Proband + Kekule-Nummern (sw v68–v69)
+
+- **Konfigurierbarer Proband**: Startperson des Baums konfigurierbar (nicht mehr automatisch kleinste ID); Button in Baum-Topbar; Einstellung wird gespeichert
+- **Kekule-Nummern im Baum**: Kekule/Ahnentafel-Nummerierung der Vorfahren-Karten (1=Proband, 2=Vater, 3=Mutter, 4–7=Großeltern …); fett dargestellt
+- **Fix** (sw v69): Proband-Button ausgefüllt wenn aktiv + Kekule-Zahlen fett im korrekten Font
+- **Fix** (sw v66): Titelleisten-Foto fehlte bei Personen/Familien mit mehreren Fotos (korrekter IDB-Key-Zugriff)
+- **Fix** (sw v67): ☁-Symbol aus Baum-Topbar entfernt; Desktop Auto-Fit-Zoom beim ersten Laden
+
+*Aktuelle sw-Version: v69 / Cache: stammbaum-v69*
+
+---
+
+### Session 2026-03-30 — Portrait-Baum + Button-Konsistenz (sw v60–v64)
+
+- **Portrait-Baum**: im Hochformat (Smartphone) nur 2 Vorfahren-Ebenen (Eltern + Großeltern); im Querformat/Desktop bis zu 4 Ebenen; `isPortrait = window.innerWidth < window.innerHeight`
+- **Baum Portrait kompakt** (sw v62): Minimal-Layout 360px; Pinch-to-Zoom auch im Querformat aktiviert
+- **Baum-Vorfahrenpositionierung Fix** (sw v63): Korrekte X/Y-Berechnung für Vorfahren; Namens-/Datumsdarstellung verbessert
+- **Proband-Button in Topbar + Suche** (sw v64): Quick-Access-Button in Baum-Topbar; Suche zugänglich
+- Resize-Listener (debounced 250ms) in `_initTreeDrag()` — Baum bei Orientierungswechsel neu gezeichnet
+- **Refactor**: Foto-Upload aus Personen-/Familien-/Quellen-Bearbeiten-Formularen entfernt (sw v60) — Fotos ausschließlich über Medien-Abschnitt in Detailansichten
+- **UI**: Medien-„Hinzufügen"-Buttons nutzen `src-add-btn` (dashed pill) statt `btn` mit inline-Styles
+
+*Aktuelle sw-Version: v64 / Cache: stammbaum-v64*
+
+---
 
 ### Session 2026-03-29 — Schwerpunkt 3 Abschluss: Kamera, Vorlagen, Medien-Browser (sw v59)
 
@@ -369,3 +397,5 @@ Grundfunktionen: GEDCOM laden, parsen, anzeigen. Personen-, Familien-, Quellen-L
 ## Passthrough-Mechanismen (Stand v3.0 — Details in ARCHITECTURE.md ADR-012)
 
 9 Stück: `_passthrough[]` · `ev._extra[]` · `addrExtra[]` · `frelSourExtra[]`/`mrelSourExtra[]` · `sourceExtra{}` · `topSourceExtra{}` · `media._extra[]` · `childRelations.sourExtra{}` · `extraRecords[]`
+
+*(In v4-dev: 10. Mechanismus `sourceMedia{}`/`sourMedia{}` ergänzt — siehe ARCHITECTURE.md)*
