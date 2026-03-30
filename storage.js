@@ -80,28 +80,10 @@ function _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve) {
   reader.readAsDataURL(file);
 }
 
-function showPersonPhotoPreview(b64) {
-  const prev = document.getElementById('pf-photo-preview');
-  const delBtn = document.getElementById('pf-photo-del');
-  if (!prev) return;
-  if (b64) {
-    prev.innerHTML = `<img src="${b64}" alt="Foto" style="max-width:100%;max-height:200px;border-radius:8px;display:block;margin-bottom:6px">`;
-    if (delBtn) delBtn.style.display = '';
-  } else {
-    prev.innerHTML = '';
-    if (delBtn) delBtn.style.display = 'none';
-  }
-}
-
-function clearPersonPhoto() {
-  _pendingPhotoBase64 = null;
-  showPersonPhotoPreview(null);
-}
-
-// Baut eine Map @Oxx@ → {file, title} aus db.extraRecords (lv=0 OBJE-Records)
+// Baut eine Map @Oxx@ → {file, title} aus AppState.db.extraRecords (lv=0 OBJE-Records)
 function _buildObjeRefMap() {
   const map = {};
-  for (const rec of (db.extraRecords || [])) {
+  for (const rec of (AppState.db.extraRecords || [])) {
     if (!rec._lines || !rec._lines.length) continue;
     const hm = rec._lines[0].match(/^0 (@[^@]+@) OBJE$/);
     if (!hm) continue;
@@ -114,24 +96,6 @@ function _buildObjeRefMap() {
     map[objId] = { file, title };
   }
   return map;
-}
-
-// ─── Shared media helpers (FAM + SOUR) ───
-function _showMediaPhotoPreview(prefix, b64) {
-  const prev = document.getElementById(prefix + '-photo-preview');
-  const del  = document.getElementById(prefix + '-photo-del');
-  if (!prev) return;
-  if (b64) {
-    prev.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = b64; img.alt = 'Foto';
-    img.style.cssText = 'max-width:100%;max-height:200px;border-radius:8px;display:block;margin-bottom:6px';
-    prev.appendChild(img);
-    if (del) del.style.display = '';
-  } else {
-    prev.innerHTML = '';
-    if (del) del.style.display = 'none';
-  }
 }
 
 // Render editable media list into #<prefix>-media-list
@@ -216,10 +180,10 @@ function _addMediaEntry(prefix) {
 // Direktes Speichern möglich? Ändert Save-Button-Tooltip
 function updateSaveIndicator() {
   document.querySelectorAll('[data-save-btn]').forEach(btn => {
-    btn.title = _canDirectSave
+    btn.title = AppState._canDirectSave
       ? 'Direkt speichern (Datei: ' + (localStorage.getItem('stammbaum_filename') || '') + ')'
       : 'Als Download speichern';
-    if (_canDirectSave) btn.classList.add('direct-save');
+    if (AppState._canDirectSave) btn.classList.add('direct-save');
     else btn.classList.remove('direct-save');
   });
 }
@@ -250,24 +214,24 @@ async function openFilePicker() {
       types: [{ description: 'GEDCOM-Datei', accept: { 'text/plain': ['.ged', '.GED'] } }],
       multiple: false
     });
-    _fileHandle = fh;
+    AppState._fileHandle = fh;
     // Schreiberlaubnis anfragen (klappt auf Chrome; Safari: fällt auf read zurück)
     try {
       const perm = await fh.requestPermission({ mode: 'readwrite' });
-      _canDirectSave = perm === 'granted' ? await testCanWrite(fh) : false;
-    } catch(e) { _canDirectSave = false; }
+      AppState._canDirectSave = perm === 'granted' ? await testCanWrite(fh) : false;
+    } catch(e) { AppState._canDirectSave = false; }
     await idbPut('fileHandle', fh).catch(() => {});
     updateSaveIndicator();
     const file = await fh.getFile();
     _processLoadedText(await file.text(), file.name);
-    const saveInfo = _canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
+    const saveInfo = AppState._canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
     showToast('✓ ' + file.name + ' geladen' + saveInfo);
   } catch(e) {
     if (e.name !== 'AbortError') showToast('⚠ Fehler beim Öffnen: ' + e.message);
   }
 }
 
-// Stellt _fileHandle aus IDB wieder her (nach Seitenreload).
+// Stellt AppState._fileHandle aus IDB wieder her (nach Seitenreload).
 async function restoreFileHandle() {
   if (!('showOpenFilePicker' in window)) return;
   try {
@@ -275,8 +239,8 @@ async function restoreFileHandle() {
     if (!fh) return;
     const perm = await fh.queryPermission({ mode: 'readwrite' });
     if (perm === 'granted') {
-      _fileHandle = fh;
-      _canDirectSave = await testCanWrite(fh);
+      AppState._fileHandle = fh;
+      AppState._canDirectSave = await testCanWrite(fh);
       updateSaveIndicator();
     }
   } catch(e) {}
@@ -287,18 +251,18 @@ async function restoreFileHandle() {
 async function saveToFileHandle(content) {
   let w = null;
   try {
-    let perm = await _fileHandle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'prompt') perm = await _fileHandle.requestPermission({ mode: 'readwrite' });
+    let perm = await AppState._fileHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'prompt') perm = await AppState._fileHandle.requestPermission({ mode: 'readwrite' });
     if (perm !== 'granted') {
-      _fileHandle = null; _canDirectSave = false;
+      AppState._fileHandle = null; AppState._canDirectSave = false;
       idbDel('fileHandle').catch(() => {});
       updateSaveIndicator();
       return false;
     }
-    w = await _fileHandle.createWritable();
+    w = await AppState._fileHandle.createWritable();
     await w.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
     await w.close(); w = null;
-    changed = false; updateChangedIndicator();
+    AppState.changed = false; updateChangedIndicator();
     try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
     idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
     showToast('✓ Direkt gespeichert');
@@ -347,7 +311,7 @@ async function exportGEDCOM() {
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
           // des Share-Dialogs gemacht wurden (Race-Condition-Schutz)
-          if (writeGEDCOM() === content) { changed = false; updateChangedIndicator(); }
+          if (writeGEDCOM() === content) { AppState.changed = false; updateChangedIndicator(); }
           showToast('✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
@@ -356,31 +320,31 @@ async function exportGEDCOM() {
   }
 
   // Chrome Desktop: Direkt speichern via gespeichertem File Handle
-  if (!_fileHandle) {
+  if (!AppState._fileHandle) {
     try {
       const stored = await idbGet('fileHandle');
       if (stored) {
         const perm = await stored.queryPermission({ mode: 'readwrite' });
         if (perm === 'granted') {
-          _fileHandle = stored;
-          _canDirectSave = await testCanWrite(stored);
+          AppState._fileHandle = stored;
+          AppState._canDirectSave = await testCanWrite(stored);
           updateSaveIndicator();
         }
       }
     } catch(e) {}
   }
 
-  if (_fileHandle && _canDirectSave) {
+  if (AppState._fileHandle && AppState._canDirectSave) {
     const ok = await saveToFileHandle(content);
     if (ok) return;
     // NotAllowedError (Cloud-Sync-Lock): Nutzer soll es nochmals versuchen,
     // KEIN automatischer Fallback auf Download (würde verwirren).
-    if (_canDirectSave) return; // Toast wurde bereits gezeigt
+    if (AppState._canDirectSave) return; // Toast wurde bereits gezeigt
   }
 
   // Fallback 1: showOpenFilePicker war nicht verfügbar oder handle fehlt →
   // Datei öffnen lassen, dann direkt speichern
-  if (!_fileHandle && 'showOpenFilePicker' in window) {
+  if (!AppState._fileHandle && 'showOpenFilePicker' in window) {
     showToast('Bitte Datei öffnen um direktes Speichern zu aktivieren');
   }
 
@@ -395,7 +359,7 @@ async function exportGEDCOM() {
     _downloadBlob(_origForExport, `${basename}_${ts}.ged`);
   }
   _downloadBlob(content, filename);
-  changed = false; updateChangedIndicator();
+  AppState.changed = false; updateChangedIndicator();
   try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
   idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   showToast('✓ ' + filename + ' heruntergeladen');
@@ -429,9 +393,9 @@ function revertToSaved() {
   const orig = _getOriginalText();
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
   if (!confirm('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
-  db = parseGEDCOM(orig);
-  changed = false;
-  _placesCache = null;
+  AppState.db = parseGEDCOM(orig);
+  AppState.changed = false;
+  UIState._placesCache = null;
   updateChangedIndicator();
   updateStats();
   renderTab();
@@ -439,14 +403,14 @@ function revertToSaved() {
 }
 
 function confirmNewFile() {
-  if (changed) {
+  if (AppState.changed) {
     if (!confirm('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
   }
-  db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), repositories: {}, notes: {}, placForm: '' };
-  changed = false;
+  AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), repositories: {}, notes: {}, placForm: '' };
+  AppState.changed = false;
   updateChangedIndicator();
-  _originalGedText = null;
-  _fileHandle = null; _canDirectSave = false;
+  AppState._originalGedText = null;
+  AppState._fileHandle = null; AppState._canDirectSave = false;
   idbDel('fileHandle').catch(() => {});
   idbDel('stammbaum_ged').catch(() => {});
   idbDel('stammbaum_ged_backup').catch(() => {});
@@ -462,22 +426,22 @@ function confirmNewFile() {
   const yf = document.getElementById('yearFrom');        if (yf) yf.value = '';
   const yt = document.getElementById('yearTo');          if (yt) yt.value = '';
   const cb = document.getElementById('yearFilterClear'); if (cb) cb.style.display = 'none';
-  _treeHistory = []; _treeHistoryPos = -1; _updateTreeBackBtn();
+  UIState._treeHistory = []; UIState._treeHistoryPos = -1; _updateTreeBackBtn();
   showView('v-landing');
 }
 
 // Gemeinsame Lade-Logik für openDirectoryAndLoad() und readFile()
 function _processLoadedText(text, filename) {
-  db = parseGEDCOM(text);
-  db.extraPlaces = loadExtraPlaces();
+  AppState.db = parseGEDCOM(text);
+  AppState.db.extraPlaces = loadExtraPlaces();
   // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
   { let maxUsed = 0;
-    const allIds = [...Object.keys(db.individuals), ...Object.keys(db.families),
-                    ...Object.keys(db.sources), ...Object.keys(db.repositories), ...Object.keys(db.notes)];
+    const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
+                    ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
     for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
-    if (maxUsed >= idCounter) idCounter = maxUsed;
+    if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
   }
-  _originalGedText = text;  // immer in RAM; IDB für Persistenz
+  AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
   _newPhotoIds.clear(); _deletedPhotoIds.clear();
   // IDB: primäre Persistenz (kein Größenlimit)
   Promise.all([
@@ -515,285 +479,22 @@ function openFileOrDir() {
   else { document.getElementById('fileInput2').click(); }
 }
 
-function loadDemo() {
-  const demo = [
-    '0 HEAD',
-    '1 SOUR Demo Stammbaum',
-    '1 GEDC',
-    '2 VERS 5.5.1',
-    '1 CHAR UTF-8',
-    '1 PLAC',
-    '2 FORM Ort, Kreis, Land',
-    // ── Archiv ──
-    '0 @R001@ REPO',
-    '1 NAME Stadtarchiv München',
-    '1 ADDR Winzererstraße 68\n2 CONT 80797 München',
-    '1 WWW https://www.muenchen.de/stadtarchiv',
-    // ── Quellen ──
-    '0 @S001@ SOUR',
-    '1 TITL Kirchenbuch München St. Peter 1845–1912',
-    '1 ABBR KB München St. Peter',
-    '1 AUTH Pfarramt St. Peter München',
-    '1 REPO @R001@',
-    '2 CALN KBM-1845-I',
-    '1 OBJE @O003@',
-    '0 @S002@ SOUR',
-    '1 TITL Heiratsurkunde Standesamt München Nr. 142/1870',
-    '1 ABBR StA München 1870',
-    '1 AUTH Standesamt München',
-    '1 REPO @R001@',
-    '2 CALN SAM-1870-H-142',
-    '0 @S003@ SOUR',
-    '1 TITL Verlustliste Deutsches Heer, Verdun 1916',
-    '1 ABBR Verlustliste 1916',
-    '1 AUTH Kriegsarchiv München',
-    // ── OBJE-Records (Mediendateien) ──
-    '0 @O001@ OBJE',
-    '1 FILE Fotos/Hochzeit_Johann_Maria_1870.jpg',
-    '1 TITL Hochzeitsfoto Johann & Maria Müller, Juni 1870',
-    '1 FORM JPEG',
-    '0 @O002@ OBJE',
-    '1 FILE Fotos/Portrait_Heinrich_Müller_1920.jpg',
-    '1 TITL Portrait Heinrich Müller, ca. 1920',
-    '1 FORM JPEG',
-    '0 @O003@ OBJE',
-    '1 FILE Scans/KB_Muenchen_1845_Taufe_Johann.jpg',
-    '1 TITL Kirchenbuch-Eintrag Taufe Johann Müller 12. März 1845',
-    '1 FORM JPEG',
-    '0 @O004@ OBJE',
-    '1 FILE Fotos/Hochzeit_Sophie_Ernst_1921.jpg',
-    '1 TITL Hochzeitsfoto Sophie Müller & Ernst Fischer, 1921',
-    '1 FORM JPEG',
-    // ── Personen ──
-    '0 @I001@ INDI',
-    '1 NAME Johann /Müller/',
-    '1 GIVN Johann',
-    '1 SURN Müller',
-    '1 SEX M',
-    '1 BIRT',
-    '2 DATE 12 MAR 1845',
-    '2 PLAC München, München, Bayern',
-    '2 SOUR @S001@',
-    '3 PAGE Taufbuch 1845, S. 12',
-    '3 QUAY 3',
-    '1 DEAT',
-    '2 DATE 3 NOV 1912',
-    '2 PLAC München, München, Bayern',
-    '1 BURI',
-    '2 DATE 6 NOV 1912',
-    '2 PLAC Ostfriedhof, München, Bayern',
-    '1 OCCU Bäckermeister',
-    '1 NOTE Johann Müller eröffnete 1873 eine eigene Bäckerei in der Sendlinger Straße. Nach dem Tod seiner ersten Frau heiratete er 1890 erneut.',
-    '1 FAMS @F001@',
-    '1 FAMS @F002@',
-    '1 OBJE @O002@',
-    '0 @I002@ INDI',
-    '1 NAME Maria /Huber/',
-    '1 GIVN Maria',
-    '1 SURN Huber',
-    '1 SEX F',
-    '1 BIRT',
-    '2 DATE 5 JUN 1850',
-    '2 PLAC Augsburg, Augsburg, Bayern',
-    '1 DEAT',
-    '2 DATE 14 AUG 1888',
-    '2 PLAC München, München, Bayern',
-    '1 NOTE Maria starb mit 38 Jahren an Typhus und hinterließ einen Sohn.',
-    '1 FAMS @F001@',
-    '0 @I003@ INDI',
-    '1 NAME Elisabeth /Bauer/',
-    '1 GIVN Elisabeth',
-    '1 SURN Bauer',
-    '1 SEX F',
-    '1 BIRT',
-    '2 DATE 22 JAN 1855',
-    '2 PLAC Landsberg, Landsberg, Bayern',
-    '1 DEAT',
-    '2 DATE 11 FEB 1935',
-    '2 PLAC München, München, Bayern',
-    '1 FAMS @F002@',
-    '0 @I004@ INDI',
-    '1 NAME Heinrich /Müller/',
-    '1 GIVN Heinrich',
-    '1 SURN Müller',
-    '1 SEX M',
-    '1 BIRT',
-    '2 DATE 8 JAN 1872',
-    '2 PLAC München, München, Bayern',
-    '2 SOUR @S001@',
-    '3 PAGE Taufbuch 1872, S. 47',
-    '3 QUAY 3',
-    '1 DEAT',
-    '2 DATE 15 APR 1940',
-    '2 PLAC München, München, Bayern',
-    '1 OCCU Kaufmann',
-    '1 RESI',
-    '2 DATE ABT 1905',
-    '2 PLAC Schwabing, München, Bayern',
-    '1 FAMC @F001@',
-    '1 FAMS @F003@',
-    '1 OBJE @O002@',
-    '0 @I005@ INDI',
-    '1 NAME Anna /Schmidt/',
-    '1 GIVN Anna',
-    '1 SURN Schmidt',
-    '1 SEX F',
-    '1 BIRT',
-    '2 DATE 22 SEP 1875',
-    '2 PLAC Nürnberg, Nürnberg, Bayern',
-    '1 DEAT',
-    '2 DATE 8 MAR 1960',
-    '2 PLAC München, München, Bayern',
-    '1 FAMS @F003@',
-    '0 @I006@ INDI',
-    '1 NAME Karl /Müller/',
-    '1 GIVN Karl',
-    '1 SURN Müller',
-    '1 SEX M',
-    '1 BIRT',
-    '2 DATE 14 JUL 1900',
-    '2 PLAC München, München, Bayern',
-    '1 DEAT',
-    '2 DATE 2 SEP 1944',
-    '2 PLAC Stalingrad, Wolgograd, Russland',
-    '1 OCCU Schreiner',
-    '1 FAMC @F003@',
-    '1 FAMS @F006@',
-    '0 @I007@ INDI',
-    '1 NAME Sophie /Müller/',
-    '1 GIVN Sophie',
-    '1 SURN Müller',
-    '1 SEX F',
-    '1 BIRT',
-    '2 DATE 3 MAR 1903',
-    '2 PLAC München, München, Bayern',
-    '1 DEAT',
-    '2 DATE 27 DEC 1985',
-    '2 PLAC München, München, Bayern',
-    '1 NOTE Sophie heiratete zweimal: Ludwig Wagner fiel 1916 bei Verdun, woraufhin sie 1921 Ernst Fischer heiratete.',
-    '1 FAMC @F003@',
-    '1 FAMS @F004@',
-    '1 FAMS @F005@',
-    '0 @I008@ INDI',
-    '1 NAME Max /Müller/',
-    '1 GIVN Max',
-    '1 SURN Müller',
-    '1 SEX M',
-    '1 BIRT',
-    '2 DATE 30 APR 1891',
-    '2 PLAC München, München, Bayern',
-    '1 DEAT',
-    '2 DATE 19 JUL 1950',
-    '2 PLAC München, München, Bayern',
-    '1 FAMC @F002@',
-    '0 @I009@ INDI',
-    '1 NAME Ludwig /Wagner/',
-    '1 GIVN Ludwig',
-    '1 SURN Wagner',
-    '1 SEX M',
-    '1 BIRT',
-    '2 DATE 7 MAY 1892',
-    '2 PLAC Würzburg, Würzburg, Bayern',
-    '1 DEAT',
-    '2 DATE 12 JUN 1916',
-    '2 PLAC Verdun, Meuse, Frankreich',
-    '2 SOUR @S003@',
-    '3 QUAY 2',
-    '1 NOTE Gefallen im Ersten Weltkrieg bei Verdun. Kriegsgräberstätte Verdun, Block 5, Grab 212.',
-    '1 FAMS @F004@',
-    '0 @I010@ INDI',
-    '1 NAME Ernst /Fischer/',
-    '1 GIVN Ernst',
-    '1 SURN Fischer',
-    '1 SEX M',
-    '1 BIRT',
-    '2 DATE 15 OCT 1890',
-    '2 PLAC München, München, Bayern',
-    '1 DEAT',
-    '2 DATE 3 JAN 1960',
-    '2 PLAC München, München, Bayern',
-    '1 OCCU Lehrer',
-    '1 FAMS @F005@',
-    '0 @I011@ INDI',
-    '1 NAME Rosa /Fischer/',
-    '1 GIVN Rosa',
-    '1 SURN Fischer',
-    '1 SEX F',
-    '1 BIRT',
-    '2 DATE 9 JAN 1925',
-    '2 PLAC München, München, Bayern',
-    '1 FAMC @F005@',
-    '0 @I012@ INDI',
-    '1 NAME Margarete /Schuster/',
-    '1 GIVN Margarete',
-    '1 SURN Schuster',
-    '1 SEX F',
-    '1 BIRT',
-    '2 DATE 18 JUN 1898',
-    '2 PLAC Regensburg, Regensburg, Bayern',
-    '1 FAMS @F006@',
-    // ── Familien ──
-    '0 @F001@ FAM',
-    '1 HUSB @I001@',
-    '1 WIFE @I002@',
-    '1 CHIL @I004@',
-    '1 MARR',
-    '2 DATE 10 JUN 1870',
-    '2 PLAC München, München, Bayern',
-    '2 SOUR @S002@',
-    '3 QUAY 3',
-    '1 OBJE @O001@',
-    '0 @F002@ FAM',
-    '1 HUSB @I001@',
-    '1 WIFE @I003@',
-    '1 CHIL @I008@',
-    '1 MARR',
-    '2 DATE 15 MAR 1890',
-    '2 PLAC München, München, Bayern',
-    '1 NOTE Zweite Ehe von Johann Müller, zwei Jahre nach dem Tod seiner ersten Frau Maria.',
-    '0 @F003@ FAM',
-    '1 HUSB @I004@',
-    '1 WIFE @I005@',
-    '1 CHIL @I006@',
-    '1 CHIL @I007@',
-    '1 MARR',
-    '2 DATE 5 APR 1898',
-    '2 PLAC München, München, Bayern',
-    '0 @F004@ FAM',
-    '1 HUSB @I009@',
-    '1 WIFE @I007@',
-    '1 MARR',
-    '2 DATE 22 AUG 1914',
-    '2 PLAC München, München, Bayern',
-    '1 NOTE Kriegsheirat kurz vor Ludwigs Einberufung. Er fiel 1916, die Ehe blieb kinderlos.',
-    '0 @F005@ FAM',
-    '1 HUSB @I010@',
-    '1 WIFE @I007@',
-    '1 CHIL @I011@',
-    '1 ENGA',
-    '2 DATE 25 DEC 1920',
-    '1 MARR',
-    '2 DATE 14 FEB 1921',
-    '2 PLAC München, München, Bayern',
-    '1 OBJE @O004@',
-    '0 @F006@ FAM',
-    '1 HUSB @I006@',
-    '1 WIFE @I012@',
-    '1 MARR',
-    '2 DATE 12 SEP 1923',
-    '2 PLAC München, München, Bayern',
-    '0 TRLR'
-  ].join('\n');
-
-  db = parseGEDCOM(demo);
-  db.extraPlaces = loadExtraPlaces();
-  _originalGedText = demo;
-  showStartView();
-  showToast('✓ Demo geladen');
-
-  // Platzhalter-Fotos per Canvas in IDB schreiben (sofort sichtbar)
-  _loadDemoPhotos();
+async function loadDemo() {
+  try {
+    const res = await fetch('./demo.ged');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    AppState.db = parseGEDCOM(text);
+    AppState.db.extraPlaces = loadExtraPlaces();
+    AppState._originalGedText = text;
+    showStartView();
+    showToast('✓ Demo geladen');
+    _loadDemoPhotos();
+  } catch(e) {
+    showToast('Demo konnte nicht geladen werden: ' + e.message);
+  }
 }
+
 
 function _loadDemoPhotos() {
   function _mkPhoto(text, bg, fg = '#fff') {
@@ -842,9 +543,9 @@ async function tryAutoLoad() {
     const saved = await idbGet('stammbaum_ged');
     if (saved && saved.length > 10) {
       const fname = (await idbGet('stammbaum_filename')) || localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
-      db = parseGEDCOM(saved);
-      db.extraPlaces = loadExtraPlaces();
-      _originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
+      AppState.db = parseGEDCOM(saved);
+      AppState.db.extraPlaces = loadExtraPlaces();
+      AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
       showStartView();
       updateBackupBtn();
       updateTopbarTitle(fname);
@@ -857,16 +558,16 @@ async function tryAutoLoad() {
     const saved = localStorage.getItem('stammbaum_ged');
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
     if (saved && saved.length > 10) {
-      db = parseGEDCOM(saved);
-      db.extraPlaces = loadExtraPlaces();
-      _originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
+      AppState.db = parseGEDCOM(saved);
+      AppState.db.extraPlaces = loadExtraPlaces();
+      AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
       updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
       // Nach IDB migrieren
       idbPut('stammbaum_ged', saved).catch(() => {});
-      idbPut('stammbaum_ged_backup', _originalGedText).catch(() => {});
+      idbPut('stammbaum_ged_backup', AppState._originalGedText).catch(() => {});
       idbPut('stammbaum_filename', fname).catch(() => {});
       return true;
     }
@@ -887,7 +588,7 @@ window.addEventListener('load', async () => {
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
 window.addEventListener('storage', e => {
-  if (e.key === 'stammbaum_ged' && e.newValue && Object.keys(db.individuals || {}).length) {
+  if (e.key === 'stammbaum_ged' && e.newValue && Object.keys(AppState.db.individuals || {}).length) {
     showToast('⚠ Datei wurde in einem anderen Tab geändert');
   }
 });
@@ -940,7 +641,7 @@ function downloadBackup() {
 // ─────────────────────────────────────
 async function exportPhotos() {
   const photoMap = {};
-  for (const id of Object.keys(db.individuals)) {
+  for (const id of Object.keys(AppState.db.individuals)) {
     const b64 = await idbGet('photo_' + id).catch(() => null);
     if (b64) photoMap[id] = b64;
   }
@@ -983,11 +684,11 @@ async function _handlePhotoImport(file) {
     }
     showToast('✓ ' + count + ' Fotos importiert');
     // Detailansicht aktualisieren falls offen
-    if (currentPersonId && photoMap[currentPersonId]) {
-      const b64 = photoMap[currentPersonId];
+    if (AppState.currentPersonId && photoMap[AppState.currentPersonId]) {
+      const b64 = photoMap[AppState.currentPersonId];
       // Re-Validierung: nur echte data-URIs erlauben (verhindert XSS via innerHTML)
       if (typeof b64 === 'string' && b64.startsWith('data:image/')) {
-        const el = document.getElementById('det-photo-' + currentPersonId);
+        const el = document.getElementById('det-photo-' + AppState.currentPersonId);
         if (el) {
           el.style.display = '';
           el.innerHTML = '';

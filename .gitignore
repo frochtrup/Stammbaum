@@ -1,6 +1,7 @@
 # Persönliche Daten
 MeineDaten_ancestris.ged
 *.ged
+!demo.ged
 
 # Lokale Entwicklungsumgebung
 .claude/

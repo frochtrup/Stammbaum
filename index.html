@@ -6,7 +6,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stammbaum">
@@ -87,6 +87,7 @@ body {
 .topbar-btn.back { color: var(--text-dim); }
 .topbar-btn.primary { color: var(--gold-lt); font-weight: 600; }
 .topbar-btn[data-save-btn].direct-save { color: var(--gold-lt); }
+.topbar-btn.proband-active { background: var(--gold); color: var(--bg); font-weight: 700; }
 #ef-type:disabled {
   -webkit-appearance: none; appearance: none;
   background: transparent; border: 1px solid transparent;
@@ -162,7 +163,35 @@ body {
   opacity: 0.5;
   border-style: dashed;
 }
+/* Tastatur-Legende */
+#treeKeyLegend {
+  display: none;
+  position: absolute; bottom: 12px; right: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  z-index: 10;
+  opacity: 0.7;
+}
+.tkl-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.tkl-row:last-child { margin-bottom: 0; }
+.tkl-key {
+  font-size: 0.65rem; color: var(--gold-dim);
+  min-width: 26px; text-align: center;
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: 1px 3px; background: var(--surface);
+}
+.tkl-lbl { font-size: 0.65rem; color: var(--text-dim); }
 .tree-card-peek:active { opacity: 0.8; }
+.tree-kekule-badge {
+  position: absolute;
+  top: 2px; left: 4px;
+  font-size: 0.6rem; color: var(--gold);
+  font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
 
 /* ═══════════════════════════════════════
    LANDING
@@ -326,11 +355,9 @@ body {
 .p-name {
   font-family: 'Playfair Display', serif;
   font-size: 0.98rem; color: var(--text);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .p-meta {
   font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .p-arrow { color: var(--text-muted); font-size: 0.85rem; }
 
@@ -417,6 +444,13 @@ body {
   justify-content: center; transition: all 0.15s; line-height: 1;
 }
 .unlink-btn:active { border-color: #c0392b; color: #c0392b; }
+.edit-media-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  border-radius: 50%; width: 28px; height: 28px; font-size: 1rem;
+  cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; transition: all 0.15s; line-height: 1;
+}
+.edit-media-btn:active { border-color: var(--gold); color: var(--gold); }
 
 /* ═══════════════════════════════════════
    BOTTOM FAB
@@ -686,6 +720,11 @@ body {
   body.desktop-mode .tree-scroll {
     height: calc(100dvh - 52px);
   }
+  body.desktop-mode #treeFsBtn { display: inline-flex !important; }
+  body.desktop-mode.tree-fullscreen #v-tree { left: 0; }
+  body.desktop-mode.tree-fullscreen #v-main { display: none !important; }
+  body.desktop-mode.tree-fullscreen .bottom-nav { display: none !important; }
+  body.desktop-mode #treeKeyLegend { display: block; }
   body.desktop-mode .bottom-nav {
     width: 360px;
   }
@@ -746,7 +785,7 @@ body {
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
-      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁</button>
+      <button class="topbar-btn" onclick="bnavSearch()" title="Suche">🔍</button>
       <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
@@ -765,6 +804,7 @@ body {
         style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
         oninput="applyPersonFilter()">
       <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" onclick="clearYearFilter()" title="Jahresfilter zurücksetzen">✕</button>
+      <button type="button" id="personSortBtn" onclick="togglePersonSort()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
     </div>
     <div id="personList"></div>
   </div>
@@ -780,6 +820,7 @@ body {
     <div class="search-wrap" style="display:flex;gap:8px;align-items:center">
       <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSourcesDebounced(this.value)" style="flex:1;width:auto">
       <button id="repoJumpBtn" class="btn" style="display:none;flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" onclick="document.getElementById('repoSection').scrollIntoView({behavior:'smooth'})">🏛 Archive</button>
+      <button class="btn" style="flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" onclick="showMediaBrowser()" title="Alle Medien anzeigen">📎</button>
     </div>
     <div id="sourceList"></div>
     <div id="repoSection" style="margin-top:8px;display:none">
@@ -816,6 +857,7 @@ body {
     <div class="topbar-inner">
       <button class="topbar-btn back" onclick="goBack()">← Zurück</button>
       <span class="topbar-title" id="detailTopTitle"></span>
+      <button class="topbar-btn" id="probandBtn" style="display:none" title="Als Proband setzen">⌂</button>
       <button class="topbar-btn" id="treeBtn" style="display:none;font-size:1rem" title="Sanduhr-Ansicht">⧖</button>
       <button class="topbar-btn primary" onclick="showEditSheet()" id="editBtn">Bearbeiten</button>
     </div>
@@ -833,14 +875,23 @@ body {
     <div class="topbar-inner">
       <button class="topbar-btn back" id="treeBtnBack" style="display:none" onclick="treeNavBack()">←</button>
       <span class="topbar-title" id="treeTopTitle"></span>
-      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁</button>
+      <button class="topbar-btn" id="treeFsBtn" onclick="toggleTreeFullscreen()" title="Vollbild" style="display:none">⤢</button>
       <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
   <div class="tree-scroll" id="treeScroll">
-    <div class="tree-wrap" id="treeWrap">
-      <svg class="tree-svg" id="treeSvg"></svg>
+    <div id="treeScaleWrap" style="position:relative;display:inline-block">
+      <div class="tree-wrap" id="treeWrap">
+        <svg class="tree-svg" id="treeSvg"></svg>
+      </div>
     </div>
+  </div>
+  <div id="treeKeyLegend">
+    <div class="tkl-row"><span class="tkl-key">↑</span><span class="tkl-lbl">Vater</span></div>
+    <div class="tkl-row"><span class="tkl-key">⇧↑</span><span class="tkl-lbl">Mutter</span></div>
+    <div class="tkl-row"><span class="tkl-key">↓</span><span class="tkl-lbl">Kind</span></div>
+    <div class="tkl-row"><span class="tkl-key">→</span><span class="tkl-lbl">Partner</span></div>
+    <div class="tkl-row"><span class="tkl-key">←</span><span class="tkl-lbl">Zurück</span></div>
   </div>
 </div>
 
@@ -868,9 +919,9 @@ body {
     <span class="bnav-icon">📍</span>
     <span class="bnav-lbl">Orte</span>
   </button>
-  <button class="bnav-btn" id="bnav-search" onclick="bnavSearch()">
-    <span class="bnav-icon">🔍</span>
-    <span class="bnav-lbl">Suche</span>
+  <button class="bnav-btn" id="bnav-home" onclick="bnavHome()">
+    <span class="bnav-icon">⌂</span>
+    <span class="bnav-lbl">Proband</span>
   </button>
 </nav>
 
@@ -920,13 +971,24 @@ body {
           <option value="F">Weiblich</option>
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Namenszusatz (NSFX)</label>
-        <input class="form-input" id="pf-suffix" placeholder="jr., sen., III.">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Spitzname (NICK)</label>
+          <input class="form-input" id="pf-nick" placeholder="z.B. Hannes">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Namenszusatz (NSFX)</label>
+          <input class="form-input" id="pf-suffix" placeholder="jr., sen., III.">
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Titel (TITL)</label>
         <input class="form-input" id="pf-titl" placeholder="Dr., Prof., …">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weitere Namen</label>
+        <div id="pf-extranames-list"></div>
+        <button type="button" class="btn" style="padding:6px 12px;margin-top:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="addPfExtraName()">+ Weiteren Namen</button>
       </div>
       <div class="form-group">
         <label class="form-label">Notiz</label>
@@ -950,18 +1012,6 @@ body {
         <button type="button" class="src-add-btn" onclick="toggleSrcPicker('pf')">＋ Quelle hinzufügen</button>
         <div class="src-picker" id="pf-src-picker">
           <div class="src-picker-list" id="pf-src-list"></div>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Foto</label>
-        <div id="pf-photo-preview"></div>
-        <input type="file" id="pf-photo-input" accept="image/*" style="display:none"
-          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingPhotoBase64=b64;showPersonPhotoPreview(b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-            onclick="document.getElementById('pf-photo-input').click()">Foto wählen</button>
-          <button type="button" id="pf-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
-            onclick="clearPersonPhoto()">Foto entfernen</button>
         </div>
       </div>
       <div class="btn-row">
@@ -1001,6 +1051,7 @@ body {
             <option value="EST">geschätzt (EST)</option>
             <option value="BEF">vor (BEF)</option>
             <option value="AFT">nach (AFT)</option>
+            <option value="FROM">von (FROM)</option>
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ff-mdate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
@@ -1030,6 +1081,7 @@ body {
             <option value="EST">geschätzt (EST)</option>
             <option value="BEF">vor (BEF)</option>
             <option value="AFT">nach (AFT)</option>
+            <option value="FROM">von (FROM)</option>
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ff-edate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
@@ -1058,21 +1110,11 @@ body {
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Foto / Medien</label>
-        <div id="ff-photo-preview"></div>
-        <input type="file" id="ff-photo-input" accept="image/*" style="display:none"
-          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingFamPhotoB64=b64;_showMediaPhotoPreview('ff',b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-            onclick="document.getElementById('ff-photo-input').click()">Foto wählen</button>
-          <button type="button" id="ff-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
-            onclick="_pendingFamPhotoB64=null;_showMediaPhotoPreview('ff',null)">Foto entfernen</button>
-        </div>
-        <div id="ff-media-list" style="margin-top:8px"></div>
+        <label class="form-label">Medien</label>
+        <div id="ff-media-list"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="ff-media-add-file" placeholder="Dateiname / Pfad (z.B. foto.jpg)" style="flex:1">
-          <button type="button" class="btn" style="padding:8px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);white-space:nowrap"
-            onclick="_addMediaEntry('ff')">＋</button>
+          <button type="button" class="src-add-btn" onclick="_addMediaEntry('ff')">＋ Hinzufügen</button>
         </div>
       </div>
       <div class="btn-row">
@@ -1093,6 +1135,16 @@ body {
     <div class="sheet-title" id="sourceFormTitle">Quelle bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="sf-id">
+      <div id="sf-template-row" style="display:none;margin-bottom:14px">
+        <div class="form-label" style="margin-bottom:6px">Vorlage wählen</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('kirchenbuch')">Kirchenbuch</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('standesamt')">Standesamt</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('volkszaehlung')">Volkszählung</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('familienbuch')">Familienstammbuch</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('zeitung')">Zeitungsartikel</button>
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">Kurzname (ABBR)</label>
         <input class="form-input" id="sf-abbr" placeholder="KB München St. Peter">
@@ -1140,21 +1192,11 @@ body {
         <textarea class="form-input" id="sf-text" rows="3" placeholder="Weitere Details…" style="resize:vertical;box-sizing:border-box"></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Foto / Medien</label>
-        <div id="sf-photo-preview"></div>
-        <input type="file" id="sf-photo-input" accept="image/*" style="display:none"
-          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingSrcPhotoB64=b64;_showMediaPhotoPreview('sf',b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-            onclick="document.getElementById('sf-photo-input').click()">Foto wählen</button>
-          <button type="button" id="sf-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
-            onclick="_pendingSrcPhotoB64=null;_showMediaPhotoPreview('sf',null)">Foto entfernen</button>
-        </div>
-        <div id="sf-media-list" style="margin-top:8px"></div>
+        <label class="form-label">Medien</label>
+        <div id="sf-media-list"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="sf-media-add-file" placeholder="Dateiname / Pfad (z.B. dokument.pdf)" style="flex:1">
-          <button type="button" class="btn" style="padding:8px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);white-space:nowrap"
-            onclick="_addMediaEntry('sf')">＋</button>
+          <button type="button" class="src-add-btn" onclick="_addMediaEntry('sf')">＋ Hinzufügen</button>
         </div>
       </div>
       <div class="btn-row">
@@ -1176,34 +1218,44 @@ body {
     <div class="sheet-body">
       <input type="hidden" id="ef-pid">
       <input type="hidden" id="ef-evidx">
-      <div class="form-group">
-        <label class="form-label">Ereignistyp</label>
-        <select class="form-select" id="ef-type" onchange="onEventTypeChange()">
-          <option value="BIRT">Geburt</option>
-          <option value="CHR">Taufe</option>
-          <option value="DEAT">Tod</option>
-          <option value="BURI">Beerdigung</option>
-          <option value="OCCU">Beruf</option>
-          <option value="RESI">Wohnort</option>
-          <option value="EDUC">Bildung</option>
-          <option value="RELI">Religion</option>
-          <option value="EMIG">Auswanderung</option>
-          <option value="IMMI">Einwanderung</option>
-          <option value="NATU">Einbürgerung</option>
-          <option value="GRAD">Abschluss</option>
-          <option value="ADOP">Adoption</option>
-          <option value="MILI">Militärdienst</option>
-          <option value="FACT">Tatsache (FACT)</option>
-          <option value="EVEN">Sonstiges</option>
-        </select>
+      <div style="display:flex; gap:8px; align-items:flex-end">
+        <div class="form-group" style="flex:1; min-width:0">
+          <label class="form-label">Ereignistyp</label>
+          <select class="form-select" id="ef-type" onchange="onEventTypeChange()">
+            <option value="BIRT">Geburt</option>
+            <option value="CHR">Taufe</option>
+            <option value="DEAT">Tod</option>
+            <option value="BURI">Beerdigung</option>
+            <option value="OCCU">Beruf</option>
+            <option value="RESI">Wohnort</option>
+            <option value="EDUC">Bildung</option>
+            <option value="RELI">Religion</option>
+            <option value="EMIG">Auswanderung</option>
+            <option value="IMMI">Einwanderung</option>
+            <option value="NATU">Einbürgerung</option>
+            <option value="GRAD">Abschluss</option>
+            <option value="ADOP">Adoption</option>
+            <option value="MILI">Militärdienst</option>
+            <option value="FACT">Tatsache (FACT)</option>
+            <option value="CENS">Volkszählung</option>
+            <option value="CONF">Konfirmation</option>
+            <option value="FCOM">Erstkommunion</option>
+            <option value="ORDN">Ordination</option>
+            <option value="RETI">Pensionierung</option>
+            <option value="PROP">Eigentum</option>
+            <option value="WILL">Testament</option>
+            <option value="PROB">Testamentseröffnung</option>
+            <option value="EVEN">Sonstiges</option>
+          </select>
+        </div>
+        <div class="form-group" id="ef-etype-group" style="display:none; flex:1; min-width:0">
+          <label class="form-label" id="ef-etype-lbl">TYPE (Klassifikation)</label>
+          <input class="form-input" id="ef-etype" placeholder="z.B. Staatsangehörigkeit">
+        </div>
       </div>
       <div class="form-group" id="ef-val-group">
         <label class="form-label">Wert / Beschreibung</label>
         <input class="form-input" id="ef-val" placeholder="z.B. Schreiner">
-      </div>
-      <div class="form-group" id="ef-etype-group" style="display:none">
-        <label class="form-label">TYPE (Klassifikation)</label>
-        <input class="form-input" id="ef-etype" placeholder="z.B. Staatsangehörigkeit">
       </div>
       <div class="form-group" id="ef-cause-group" style="display:none">
         <label class="form-label">Todesursache</label>
@@ -1226,6 +1278,7 @@ body {
             <option value="BEF">vor (BEF)</option>
             <option value="AFT">nach (AFT)</option>
             <option value="BET">zwischen (BET…AND)</option>
+            <option value="FROM">von/bis (FROM…TO)</option>
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ef-date-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
@@ -1259,6 +1312,11 @@ body {
         <div class="src-picker" id="ef-src-picker">
           <div class="src-picker-list" id="ef-src-list"></div>
         </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Medien</label>
+        <div id="ef-media-list"></div>
+        <button type="button" class="src-add-btn" style="margin-top:6px" onclick="addEfMedia()">＋ Medium hinzufügen</button>
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalEvent')">Abbrechen</button>
@@ -1446,8 +1504,8 @@ body {
         <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="odSaveFile()">
           💾 &nbsp; In OneDrive speichern
         </button>
-        <button id="odPhotoBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odImportPhotos()">
-          🖼 &nbsp; Foto-Ordner einrichten / aktualisieren
+        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); openSettings()">
+          ⚙ &nbsp; OneDrive-Einstellungen
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test
@@ -1457,6 +1515,42 @@ body {
     </div>
   </div>
 </div>
+<!-- Einstellungen -->
+<div class="modal-overlay" id="modalSettings">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Einstellungen</div>
+    <div class="sheet-body">
+      <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">OneDrive-Ordner</div>
+
+      <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">
+        <!-- Foto-Ordner -->
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border-color)">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Foto-Ordner</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="set-photo-name" style="flex:1;font-size:0.9rem;color:var(--text)">—</div>
+            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" onclick="closeModal('modalSettings');odImportPhotos()">Ändern</button>
+            <button id="set-photo-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" onclick="odClearPhotoFolder()" title="Zurücksetzen">×</button>
+          </div>
+          <div id="set-photo-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
+        </div>
+        <!-- Dokumente-Ordner -->
+        <div style="padding:12px 14px">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Dokumente-Ordner</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="set-doc-name" style="flex:1;font-size:0.9rem;color:var(--text)">—</div>
+            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" onclick="closeModal('modalSettings');odSetupDocFolder()">Ändern</button>
+            <button id="set-doc-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" onclick="odClearDocFolder()" title="Zurücksetzen">×</button>
+          </div>
+          <div id="set-doc-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
+        </div>
+      </div>
+
+      <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalSettings')">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- OneDrive Datei-Auswahl -->
 <div class="modal-overlay" id="modalOneDrive">
   <div class="sheet">
@@ -1484,12 +1578,65 @@ body {
         <label class="form-label">Dateiname</label>
         <input class="form-input" id="am-file" placeholder="z.B. foto.jpg">
       </div>
+      <div id="am-cam-preview" style="display:none;margin-bottom:10px;text-align:center">
+        <img id="am-cam-img" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--border)">
+      </div>
+      <input type="file" accept="image/*" capture="environment" id="am-cam-input" style="display:none"
+        onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_addMediaCamB64=b64;document.getElementById('am-cam-img').src=b64;document.getElementById('am-cam-preview').style.display='';if(!document.getElementById('am-file').value){const ts=new Date();document.getElementById('am-file').value='foto_'+ts.getFullYear()+String(ts.getMonth()+1).padStart(2,'0')+String(ts.getDate()).padStart(2,'0')+'.jpg';}}catch(e){showToast('Fehler: '+e.message);}this.value='';})()">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+          onclick="document.getElementById('am-cam-input').click()">Foto aufnehmen</button>
+        <button class="btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+          onclick="document.getElementById('am-cam-input').removeAttribute('capture');document.getElementById('am-cam-input').click();setTimeout(()=>document.getElementById('am-cam-input').setAttribute('capture','environment'),500)">Aus Galerie</button>
+      </div>
       <div id="am-od-row" style="display:none;margin-bottom:12px">
         <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForMedia()">Aus OneDrive auswählen</button>
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalAddMedia')">Abbrechen</button>
         <button class="btn btn-primary" onclick="confirmAddMedia()">Hinzufügen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Medien-Browser -->
+<div class="modal-overlay" id="modalMediaBrowser">
+  <div class="sheet" style="max-height:88vh;display:flex;flex-direction:column">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Medien-Browser</div>
+    <div class="sheet-body" style="flex:1;overflow-y:auto;padding-bottom:16px" id="media-browser-content"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
+      <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalMediaBrowser')">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Medium bearbeiten -->
+<div class="modal-overlay" id="modalEditMedia">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="display:flex;align-items:center;gap:10px">
+      <div id="em-thumb-bar" style="flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color);overflow:hidden"></div>
+      <span>Medium bearbeiten</span>
+    </div>
+    <div class="sheet-body">
+      <div id="em-preview" style="margin-bottom:12px;min-height:80px;display:flex;align-items:center;justify-content:center;background:var(--bg-card);border-radius:8px;border:1px solid var(--border-color);padding:8px"></div>
+      <div class="form-group">
+        <label class="form-label">Titel</label>
+        <input class="form-input" id="em-title" placeholder="Titel / Beschreibung">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Dateiname</label>
+        <input class="form-input" id="em-file" placeholder="z.B. foto.jpg">
+      </div>
+      <div id="em-od-row" style="display:none;margin-bottom:12px">
+        <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForEditMedia()">Aus OneDrive auswählen</button>
+      </div>
+      <div class="btn-row" style="gap:8px">
+        <button class="btn btn-cancel" onclick="closeModal('modalEditMedia')">Abbrechen</button>
+        <button class="btn" style="background:var(--danger,#c0392b);color:#fff;flex:1" onclick="confirmDeleteMedia()">Löschen</button>
+        <button class="btn btn-primary" onclick="confirmEditMedia()">Speichern</button>
       </div>
     </div>
   </div>
@@ -1558,8 +1705,12 @@ body {
      JAVASCRIPT
 ══════════════════════════════════════ -->
 <script src="gedcom.js"></script>
+<script src="gedcom-parser.js"></script>
+<script src="gedcom-writer.js"></script>
 <script src="storage.js"></script>
 <script src="ui-views.js"></script>
 <script src="ui-forms.js"></script>
+<script src="ui-media.js"></script>
+<script src="onedrive.js"></script>
 </body>
 </html>

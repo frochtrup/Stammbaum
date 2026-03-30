@@ -1,4 +1,138 @@
 // ─────────────────────────────────────
+//  PROBAND
+// ─────────────────────────────────────
+let _probandId = null;  // null = Fallback auf kleinste ID
+
+function getProbandId() {
+  return (_probandId && AppState.db.individuals[_probandId]) ? _probandId : smallestPersonId();
+}
+
+// ─────────────────────────────────────
+//  BAUM: TASTATURNAVIGATION
+// ─────────────────────────────────────
+let _treeNavTargets = {};
+let _treeKeyInit = false;
+let _treeZoomScale = 1;
+
+function _initTreeKeys() {
+  if (_treeKeyInit) return;
+  _treeKeyInit = true;
+  document.addEventListener('keydown', e => {
+    if (!document.getElementById('v-tree')?.classList.contains('active')) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+    const t = _treeNavTargets;
+    if (e.key === 'ArrowUp')    { e.preventDefault(); const id = e.shiftKey ? t.up2 : t.up; if (id) showTree(id); }
+    if (e.key === 'ArrowDown')  { e.preventDefault(); if (t.down)  showTree(t.down); }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); treeNavBack(); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (t.right) showTree(t.right); }
+  });
+}
+
+// ─────────────────────────────────────
+//  BAUM: DRAG-TO-PAN + VOLLBILD
+// ─────────────────────────────────────
+let _treeDragInit = false;
+let _treeDragging = false;
+
+function _initTreeDrag() {
+  if (_treeDragInit) return;
+  _treeDragInit = true;
+  const sc = document.getElementById('treeScroll');
+  if (!sc) return;
+  let drag = null;
+
+  sc.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY, sl: sc.scrollLeft, st: sc.scrollTop };
+    _treeDragging = false;
+    sc.style.userSelect = 'none';
+  }, { passive: true });
+
+  window.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    const dy = e.clientY - drag.y;
+    if (!_treeDragging && Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+    _treeDragging = true;
+    sc.scrollLeft = drag.sl - dx;
+    sc.scrollTop  = drag.st - dy;
+    sc.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!drag) return;
+    drag = null;
+    sc.style.cursor = '';
+    sc.style.userSelect = '';
+    if (_treeDragging) {
+      // Suppress the following click event (fired after mouseup)
+      setTimeout(() => { _treeDragging = false; }, 0);
+    }
+  });
+
+  // Block click events that follow a drag
+  sc.addEventListener('click', e => {
+    if (_treeDragging) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+
+  // Baum bei Orientierungswechsel (Hochformat ↔ Querformat) neu zeichnen
+  let _treeResizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_treeResizeTimer);
+    _treeResizeTimer = setTimeout(() => {
+      const id = UIState._treeHistory[UIState._treeHistoryPos];
+      if (!id) return;
+      if (!document.getElementById('v-tree')?.classList.contains('active')) return;
+      showTree(id, false);
+    }, 250);
+  });
+
+  // Pinch-to-Zoom (Touch, 2 Finger)
+  let _pinchStartDist = 0, _pinchStartScale = 1;
+  sc.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      _pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      _pinchStartScale = _treeZoomScale;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  sc.addEventListener('touchmove', e => {
+    if (e.touches.length !== 2 || !_pinchStartDist) return;
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    _treeZoomScale = Math.min(3, Math.max(0.3, _pinchStartScale * dist / _pinchStartDist));
+    const wrap = document.getElementById('treeWrap');
+    const scaleWrap = document.getElementById('treeScaleWrap');
+    if (wrap) {
+      wrap.style.transform = `scale(${_treeZoomScale})`;
+      wrap.style.transformOrigin = '0 0';
+    }
+    if (scaleWrap && wrap) {
+      scaleWrap.style.width  = Math.round(parseFloat(wrap.style.width)  * _treeZoomScale) + 'px';
+      scaleWrap.style.height = Math.round(parseFloat(wrap.style.height) * _treeZoomScale) + 'px';
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  sc.addEventListener('touchend', e => { if (e.touches.length < 2) _pinchStartDist = 0; });
+}
+
+function toggleTreeFullscreen() {
+  const isFs = document.body.classList.toggle('tree-fullscreen');
+  const btn = document.getElementById('treeFsBtn');
+  if (btn) {
+    btn.textContent = isFs ? '⤡' : '⤢';
+    btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
+  }
+}
+
+// ─────────────────────────────────────
 //  LIGHTBOX
 // ─────────────────────────────────────
 let _lbHeroKey = null, _lbHeroElemId = null, _lbAvatarElemId = null;
@@ -58,13 +192,13 @@ function showView(id) {
     document.getElementById('v-main').classList.add('active');
     document.getElementById('bottomNav').style.display = 'flex';
     document.getElementById('fabBtn').style.display = '';
-    _detailActive = (id === 'v-detail');
+    AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
     if (id === 'v-detail') document.getElementById('v-detail').scrollTop = 0;
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
-    _detailActive = (id === 'v-detail');
+    AppState._detailActive = (id === 'v-detail');
     const showNav = (id === 'v-main' || id === 'v-tree');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
@@ -88,7 +222,7 @@ function bnavTree() {
 
 // Bottom-Nav: Listen-Tabs
 function bnavTab(name) {
-  currentTab = name;
+  AppState.currentTab = name;
   setBnavActive(name);
   showView('v-main');
   switchTab(name);
@@ -100,6 +234,12 @@ function bnavSearch() {
   showView('v-main');
   switchTab('search');
   setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
+}
+
+// Bottom-Nav: Proband
+function bnavHome() {
+  const id = getProbandId();
+  if (id) { setBnavActive('home'); showTree(id); }
 }
 
 // Globale Suche über Personen, Familien, Quellen, Orte
@@ -115,7 +255,7 @@ function runGlobalSearch(q) {
   let html = '';
 
   // ── Personen ──
-  const persons = Object.values(db.individuals).filter(p =>
+  const persons = Object.values(AppState.db.individuals).filter(p =>
     (p.name||'').toLowerCase().includes(lower) ||
     (p.given||'').toLowerCase().includes(lower) ||
     (p.surname||'').toLowerCase().includes(lower) ||
@@ -141,9 +281,9 @@ function runGlobalSearch(q) {
   }
 
   // ── Familien ──
-  const families = Object.values(db.families).filter(f => {
-    const h = db.individuals[f.husb];
-    const w = db.individuals[f.wife];
+  const families = Object.values(AppState.db.families).filter(f => {
+    const h = AppState.db.individuals[f.husb];
+    const w = AppState.db.individuals[f.wife];
     return (h?.name||'').toLowerCase().includes(lower) ||
            (w?.name||'').toLowerCase().includes(lower) ||
            (f.marr?.place||'').toLowerCase().includes(lower) ||
@@ -152,8 +292,8 @@ function runGlobalSearch(q) {
   if (families.length) {
     html += `<div class="alpha-sep">Familien (${families.length})</div>`;
     for (const f of families) {
-      const h = db.individuals[f.husb];
-      const w = db.individuals[f.wife];
+      const h = AppState.db.individuals[f.husb];
+      const w = AppState.db.individuals[f.wife];
       const label = [h?.name, w?.name].filter(Boolean).join(' ⚭ ') || f.id;
       let meta = '';
       if (f.marr?.date) meta += f.marr.date;
@@ -166,7 +306,7 @@ function runGlobalSearch(q) {
   }
 
   // ── Quellen ──
-  const sources = Object.values(db.sources).filter(s =>
+  const sources = Object.values(AppState.db.sources).filter(s =>
     (s.title||'').toLowerCase().includes(lower) ||
     (s.auth||'').toLowerCase().includes(lower) ||
     (s.publ||'').toLowerCase().includes(lower)
@@ -182,7 +322,7 @@ function runGlobalSearch(q) {
   }
 
   // ── Orte ──
-  const places = Object.keys(db.extraPlaces || {}).filter(name =>
+  const places = Object.keys(AppState.db.extraPlaces || {}).filter(name =>
     name.toLowerCase().includes(lower)
   ).slice(0, 8);
   if (places.length) {
@@ -203,7 +343,7 @@ function runGlobalSearch(q) {
 
 function showMain() {
   _navHistory.length = 0; // Liste = frischer Start, History löschen
-  setBnavActive(currentTab || 'persons');
+  setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
   updateStats();
   renderTab();
@@ -213,12 +353,12 @@ function showMain() {
 // Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/
 // showPlaceDetail stehen.
 function _beforeDetailNavigate() {
-  if (_detailActive) {
+  if (AppState._detailActive) {
     // Detail → Detail: aktuellen Zustand in History sichern
-    if      (currentPersonId) _navHistory.push({ type: 'person', id: currentPersonId });
-    else if (currentFamilyId) _navHistory.push({ type: 'family', id: currentFamilyId });
-    else if (currentSourceId) _navHistory.push({ type: 'source', id: currentSourceId });
-    else if (currentRepoId)   _navHistory.push({ type: 'repo',   id: currentRepoId });
+    if      (AppState.currentPersonId) _navHistory.push({ type: 'person', id: AppState.currentPersonId });
+    else if (AppState.currentFamilyId) _navHistory.push({ type: 'family', id: AppState.currentFamilyId });
+    else if (AppState.currentSourceId) _navHistory.push({ type: 'source', id: AppState.currentSourceId });
+    else if (AppState.currentRepoId)   _navHistory.push({ type: 'repo',   id: AppState.currentRepoId });
     // Place: Name liegt nicht in einer ID-Variable – über detailTopTitle rekonstruieren
     else {
       const title = document.getElementById('detailTopTitle')?.textContent;
@@ -248,7 +388,7 @@ function goBack() {
 
 // Kleinste numerische Personen-ID
 function smallestPersonId() {
-  const ids = Object.keys(db.individuals || {});
+  const ids = Object.keys(AppState.db.individuals || {});
   if (!ids.length) return null;
   return ids.sort((a, b) => {
     const na = parseInt(a.replace(/\D/g, '')) || 0;
@@ -257,16 +397,18 @@ function smallestPersonId() {
   })[0];
 }
 
-// Startansicht nach Datei-Load: Tree der Person mit kleinster ID
-function showStartView() {
-  currentTab = 'persons';
+// Startansicht nach Datei-Load: Tree des Probanden (oder kleinste ID)
+async function showStartView() {
+  AppState.currentTab = 'persons';
   showMain();
-  const startId = smallestPersonId();
+  const saved = await idbGet('proband_id').catch(() => null);
+  _probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
+  const startId = getProbandId();
   if (startId) showTree(startId);
 }
 
 function switchTab(tab) {
-  currentTab = tab;
+  AppState.currentTab = tab;
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
@@ -278,11 +420,11 @@ function switchTab(tab) {
 
 function renderTab() {
   if (!document.getElementById('v-main').classList.contains('active')) return;
-  if (currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
-  else if (currentTab === 'families') renderFamilyList();
-  else if (currentTab === 'sources') { renderSourceList(); renderRepoList(); }
-  else if (currentTab === 'places') renderPlaceList();
-  else if (currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
+  if (AppState.currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
+  else if (AppState.currentTab === 'families') renderFamilyList();
+  else if (AppState.currentTab === 'sources') { renderSourceList(); renderRepoList(); }
+  else if (AppState.currentTab === 'places') renderPlaceList();
+  else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
 }
 
 function updateStats() {
@@ -290,35 +432,57 @@ function updateStats() {
 }
 
 function updateChangedIndicator() {
-  document.getElementById('changedIndicator').style.display = changed ? 'inline-block' : 'none';
+  document.getElementById('changedIndicator').style.display = AppState.changed ?'inline-block' : 'none';
 }
 
-function markChanged() { changed = true; _placesCache = null; updateChangedIndicator(); }
+function markChanged() { AppState.changed = true; UIState._placesCache = null; updateChangedIndicator(); }
 
 // ─────────────────────────────────────
 //  PERSON LIST
 // ─────────────────────────────────────
+let _personSort = 'name'; // 'name' | 'date'
+
+function togglePersonSort() {
+  _personSort = _personSort === 'name' ? 'date' : 'name';
+  const btn = document.getElementById('personSortBtn');
+  if (btn) btn.textContent = _personSort === 'date' ? '⇅ Geb.' : '⇅ Name';
+  applyPersonFilter();
+}
+
 function renderPersonList(persons) {
-  const sorted = [...persons].sort((a, b) =>
-    (a.surname || a.given || a.name || '').localeCompare(b.surname || b.given || b.name || '', 'de')
-  );
+  const sorted = [...persons].sort((a, b) => {
+    if (_personSort === 'date') {
+      const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
+      if (ka !== kb) return (ka || 99999999) - (kb || 99999999);
+    }
+    return (a.surname || a.given || a.name || '').localeCompare(b.surname || b.given || b.name || '', 'de');
+  });
   const list = document.getElementById('personList');
   if (!sorted.length) { list.innerHTML = '<div class="empty">Noch keine Personen</div>'; return; }
 
-  let html = '', lastLetter = '';
+  let html = '', lastSep = '';
   for (const p of sorted) {
-    const fl = (p.surname || p.given || p.name || '?')[0].toUpperCase();
-    if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
+    let sep;
+    if (_personSort === 'date') {
+      const key = gedDateSortKey(p.birth.date);
+      sep = key ? Math.floor(Math.floor(key / 10000) / 10) + '0er' : '?';
+    } else {
+      sep = (p.surname || p.given || p.name || '?')[0].toUpperCase();
+    }
+    if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
     const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
     const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
     let meta = '';
     if (p.birth.date) meta += '* ' + p.birth.date;
     if (p.birth.place) meta += (meta ? ', ' : '') + p.birth.place;
     if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+    const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
+                      + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+    const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
     html += `<div class="person-row" onclick="showDetail('${p.id}')">
       <div class="p-avatar ${sc}">${ic}</div>
       <div class="p-info">
-        <div class="p-name">${esc(p.name || p.id)}</div>
+        <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -346,13 +510,13 @@ function clearYearFilter() {
 
 function filterPersons(q, yearFrom, yearTo) {
   const lower = q.toLowerCase().trim();
-  const all = Object.values(db.individuals);
+  const all = Object.values(AppState.db.individuals);
 
   const filtered = all.filter(p => {
-    // Jahresfilter (Geburtsjahr)
+    // Jahresfilter (Geburtsjahr) — nutzt gedDateSortKey für korrekte FROM/TO/BET-Auflösung
     if (yearFrom || yearTo) {
-      const m = (p.birth.date || '').match(/\d{4}/);
-      const yr = m ? parseInt(m[0]) : null;
+      const key = gedDateSortKey(p.birth.date);
+      const yr = key ? Math.floor(key / 10000) : null;
       if (!yr) return false;
       if (yearFrom && yr < yearFrom) return false;
       if (yearTo   && yr > yearTo)   return false;
@@ -393,31 +557,35 @@ function filterPersons(q, yearFrom, yearTo) {
 // ─────────────────────────────────────
 function renderFamilyList(fams) {
   const el = document.getElementById('familyList');
-  if (!fams) fams = Object.values(db.families);
+  if (!fams) fams = Object.values(AppState.db.families);
   if (!fams.length) { el.innerHTML = '<div class="empty">Keine Familien gefunden</div>'; return; }
   fams = [...fams].sort((a, b) => {
-    const na = a.husb ? (db.individuals[a.husb]?.surname || db.individuals[a.husb]?.name || '') : '';
-    const nb = b.husb ? (db.individuals[b.husb]?.surname || db.individuals[b.husb]?.name || '') : '';
+    const na = a.husb ? (AppState.db.individuals[a.husb]?.surname || AppState.db.individuals[a.husb]?.name || '') : '';
+    const nb = b.husb ? (AppState.db.individuals[b.husb]?.surname || AppState.db.individuals[b.husb]?.name || '') : '';
     const c = na.localeCompare(nb, 'de');
     if (c !== 0) return c;
-    const ya = parseInt((a.marr.date || '').match(/\d{4}/)?.[0] || '9999');
-    const yb = parseInt((b.marr.date || '').match(/\d{4}/)?.[0] || '9999');
+    const ya = gedDateSortKey(a.marr.date) || 99999999;
+    const yb = gedDateSortKey(b.marr.date) || 99999999;
     return ya - yb;
   });
 
   let html = '';
   for (const f of fams) {
-    const husb = (f.husb && db.individuals[f.husb]) || null;
-    const wife = (f.wife && db.individuals[f.wife]) || null;
+    const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
+    const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
     const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
     let meta = '';
     if (f.marr.date) meta += '⚭ ' + f.marr.date;
     if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
     if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
+    const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
+                      + (f.marr?.media || []).filter(m => m.file || m.titl).length
+                      + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+    const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
     html += `<div class="person-row" data-fid="${f.id}" onclick="showFamilyDetail(this.dataset.fid)">
       <div class="p-avatar">👨‍👩‍👧</div>
       <div class="p-info">
-        <div class="p-name">${esc(title)}</div>
+        <div class="p-name">${esc(title)}${fMediaBadge}</div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -428,11 +596,11 @@ function renderFamilyList(fams) {
 
 function filterFamilies(q) {
   const lower = q.toLowerCase().trim();
-  const all = Object.values(db.families);
+  const all = Object.values(AppState.db.families);
   if (!lower) { renderFamilyList(all); return; }
   renderFamilyList(all.filter(f => {
-    const husb = (f.husb && db.individuals[f.husb]) || null;
-    const wife = (f.wife && db.individuals[f.wife]) || null;
+    const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
+    const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
     if (husb && (husb.name||'').toLowerCase().includes(lower)) return true;
     if (wife && (wife.name||'').toLowerCase().includes(lower)) return true;
     if ((f.marr.date||'').toLowerCase().includes(lower)) return true;
@@ -446,17 +614,20 @@ function filterFamilies(q) {
 // ─────────────────────────────────────
 function renderSourceList(srcs) {
   const el = document.getElementById('sourceList');
-  if (!srcs) srcs = Object.values(db.sources);
+  if (!srcs) srcs = Object.values(AppState.db.sources);
   if (!srcs.length) { el.innerHTML = '<div class="empty">Keine Quellen gefunden</div>'; return; }
 
   let html = '';
   for (const s of srcs) {
-    const refCount = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
-                   + Object.values(db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
-    const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && db.repositories[s.repo];
+    const refCount = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
+                   + Object.values(AppState.db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
+    const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo];
     const repoBadge = hasRepo ? `<span class="repo-badge" style="cursor:pointer" onclick="event.stopPropagation();showRepoDetail('${s.repo}')">🏛</span>` : '';
+    const mediaCount = (s.media || []).filter(m => m.file || m.title).length
+                     + (s._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+    const mediaBadge = mediaCount ? `<span style="font-size:0.8rem;margin-left:5px;vertical-align:middle;opacity:0.7">📎</span>` : '';
     html += `<div class="source-card" data-sid="${s.id}" onclick="showSourceDetail(this.dataset.sid)">
-      <div class="source-title">${esc(s.abbr || s.title || s.id)}${repoBadge}</div>
+      <div class="source-title">${esc(s.abbr || s.title || s.id)}${repoBadge}${mediaBadge}</div>
       <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}${refCount ? ` · ${refCount} Ref.` : ''}</div>
     </div>`;
   }
@@ -465,7 +636,7 @@ function renderSourceList(srcs) {
 
 function filterSources(q) {
   const lower = q.toLowerCase().trim();
-  const all = Object.values(db.sources);
+  const all = Object.values(AppState.db.sources);
   if (!lower) { renderSourceList(all); return; }
   renderSourceList(all.filter(s =>
     (s.title||'').toLowerCase().includes(lower) ||
@@ -477,14 +648,14 @@ function filterSources(q) {
 function renderRepoList() {
   const section = document.getElementById('repoSection');
   const el      = document.getElementById('repoList');
-  const repos   = Object.values(db.repositories || {});
+  const repos   = Object.values(AppState.db.repositories || {});
   const jumpBtn = document.getElementById('repoJumpBtn');
   if (!repos.length) { section.style.display = 'none'; if (jumpBtn) jumpBtn.style.display = 'none'; return; }
   section.style.display = '';
   if (jumpBtn) jumpBtn.style.display = '';
   const sorted = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   el.innerHTML = sorted.map(r => {
-    const srcCount = Object.values(db.sources).filter(s => s.repo === r.id).length;
+    const srcCount = Object.values(AppState.db.sources).filter(s => s.repo === r.id).length;
     return `<div class="source-card" onclick="showRepoDetail('${r.id}')">
       <div class="source-title">${esc(r.name || r.id)}</div>
       <div class="source-meta">${r.addr ? esc(r.addr.split('\n')[0]) : '&nbsp;'}${srcCount ? ' · ' + srcCount + ' Quel.' : ''}</div>
@@ -496,7 +667,7 @@ function renderRepoList() {
 //  PLACE LIST
 // ─────────────────────────────────────
 function collectPlaces() {
-  if (_placesCache) return _placesCache;
+  if (UIState._placesCache) return UIState._placesCache;
   const places = new Map();
 
   function addPlace(placeName, personId, eventType, lati, long) {
@@ -510,23 +681,23 @@ function collectPlaces() {
     if (pl.lati === null && lati !== null && lati !== undefined) { pl.lati = lati; pl.long = long; }
   }
 
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     addPlace(p.birth.place, p.id, 'Geburt', p.birth.lati, p.birth.long);
     addPlace(p.death.place, p.id, 'Tod', p.death.lati, p.death.long);
     addPlace(p.chr.place,   p.id, 'Taufe', null, null);
     addPlace(p.buri.place,  p.id, 'Beerdigung', p.buri.lati, p.buri.long);
     for (const ev of p.events) addPlace(ev.place, p.id, ev.eventType || ev.type, ev.lati, ev.long);
   }
-  for (const f of Object.values(db.families)) {
+  for (const f of Object.values(AppState.db.families)) {
     addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long);
     addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long);
   }
   // Manuell hinzugefügte Orte (extraPlaces) einmischen — nur wenn noch nicht vorhanden
-  for (const ep of Object.values(db.extraPlaces)) {
+  for (const ep of Object.values(AppState.db.extraPlaces)) {
     if (!places.has(ep.name))
       places.set(ep.name, { name: ep.name, personIds: new Set(), eventTypes: new Set(), lati: ep.lati ?? null, long: ep.long ?? null });
   }
-  _placesCache = places;
+  UIState._placesCache = places;
   return places;
 }
 
@@ -578,21 +749,21 @@ function savePlace() {
   if (!newName) { showToast('⚠ Ortsname darf nicht leer sein'); return; }
   closeModal('modalPlace');
   if (newName === oldName) return;
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     if (p.birth.place  === oldName) p.birth.place  = newName;
     if (p.chr.place    === oldName) p.chr.place    = newName;
     if (p.death.place  === oldName) p.death.place  = newName;
     if (p.buri.place   === oldName) p.buri.place   = newName;
     for (const ev of p.events) if (ev.place === oldName) ev.place = newName;
   }
-  for (const f of Object.values(db.families)) {
+  for (const f of Object.values(AppState.db.families)) {
     if (f.marr.place        === oldName) f.marr.place        = newName;
     if (f.engag?.place      === oldName) f.engag.place       = newName;
   }
   // extraPlaces mitumbenennen
-  if (db.extraPlaces[oldName]) {
-    db.extraPlaces[newName] = { ...db.extraPlaces[oldName], name: newName };
-    delete db.extraPlaces[oldName];
+  if (AppState.db.extraPlaces[oldName]) {
+    AppState.db.extraPlaces[newName] = { ...AppState.db.extraPlaces[oldName], name: newName };
+    delete AppState.db.extraPlaces[oldName];
     saveExtraPlaces();
   }
   markChanged();
@@ -613,9 +784,9 @@ function saveNewPlace() {
   if (collectPlaces().has(name)) { showToast('⚠ Ort bereits vorhanden'); return; }
   const lati = parseFloat(document.getElementById('np-lati').value) || null;
   const long = parseFloat(document.getElementById('np-long').value) || null;
-  db.extraPlaces[name] = { name, lati, long };
+  AppState.db.extraPlaces[name] = { name, lati, long };
   saveExtraPlaces();
-  _placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
+  UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
   closeModal('modalNewPlace');
   showToast('✓ Ort hinzugefügt');
   renderTab();
@@ -623,9 +794,9 @@ function saveNewPlace() {
 
 function deleteExtraPlace(name) {
   if (!confirm('Ort wirklich entfernen?')) return;
-  delete db.extraPlaces[name];
+  delete AppState.db.extraPlaces[name];
   saveExtraPlaces();
-  _placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
+  UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
   goBack();
   showToast('✓ Ort entfernt');
   renderTab();
@@ -636,7 +807,7 @@ function deleteExtraPlace(name) {
 // ─────────────────────────────────────────────────────────────────
 
 function showAddSpouseFlow(personId) {
-  _relMode = 'spouse'; _relAnchorId = personId;
+  UIState._relMode = 'spouse'; UIState._relAnchorId = personId;
   document.getElementById('relPickerTitle').textContent = 'Ehepartner verknüpfen';
   document.getElementById('relPickerSearch').value = '';
   renderRelPicker('');
@@ -644,7 +815,7 @@ function showAddSpouseFlow(personId) {
 }
 
 function showAddChildFlow(famId) {
-  _relMode = 'child'; _relAnchorId = famId;
+  UIState._relMode = 'child'; UIState._relAnchorId = famId;
   document.getElementById('relPickerTitle').textContent = 'Kind hinzufügen';
   document.getElementById('relPickerSearch').value = '';
   renderRelPicker('');
@@ -652,7 +823,7 @@ function showAddChildFlow(famId) {
 }
 
 function showAddParentFlow(personId) {
-  _relMode = 'parent'; _relAnchorId = personId;
+  UIState._relMode = 'parent'; UIState._relAnchorId = personId;
   document.getElementById('relPickerTitle').textContent = 'Elternteil verknüpfen';
   document.getElementById('relPickerSearch').value = '';
   renderRelPicker('');
@@ -662,24 +833,24 @@ function showAddParentFlow(personId) {
 function renderRelPicker(q) {
   const list = document.getElementById('relPickerList');
   const famcIdOf = c => typeof c === 'string' ? c : c.famId;
-  let persons = Object.values(db.individuals);
+  let persons = Object.values(AppState.db.individuals);
 
-  if (_relMode === 'spouse') {
-    const p = db.individuals[_relAnchorId];
-    const excl = new Set([_relAnchorId,
+  if (UIState._relMode === 'spouse') {
+    const p = AppState.db.individuals[UIState._relAnchorId];
+    const excl = new Set([UIState._relAnchorId,
       ...(p?.fams || []).flatMap(fid => {
-        const f = db.families[fid]; return f ? [f.husb, f.wife] : [];
+        const f = AppState.db.families[fid]; return f ? [f.husb, f.wife] : [];
       }).filter(Boolean)
     ]);
     persons = persons.filter(x => !excl.has(x.id));
-  } else if (_relMode === 'child') {
-    const f = db.families[_relAnchorId];
+  } else if (UIState._relMode === 'child') {
+    const f = AppState.db.families[UIState._relAnchorId];
     if (f) {
       const excl = new Set([...(f.children || []), f.husb, f.wife].filter(Boolean));
       persons = persons.filter(x => !excl.has(x.id));
     }
-  } else if (_relMode === 'parent') {
-    persons = persons.filter(x => x.id !== _relAnchorId);
+  } else if (UIState._relMode === 'parent') {
+    persons = persons.filter(x => x.id !== UIState._relAnchorId);
   }
 
   if (q) {
@@ -710,20 +881,20 @@ function renderRelPicker(q) {
 
 function relPickerSelect(selectedId) {
   closeModal('modalRelPicker');
-  openRelFamilyForm(_relAnchorId, selectedId, _relMode);
+  openRelFamilyForm(UIState._relAnchorId, selectedId, UIState._relMode);
 }
 
 function relPickerCreateNew() {
   closeModal('modalRelPicker');
-  _pendingRelation = { mode: _relMode, anchorId: _relAnchorId };
+  UIState._pendingRelation = { mode: UIState._relMode, anchorId: UIState._relAnchorId };
   showPersonForm(null);
 }
 
 function openRelFamilyForm(anchorId, partnerId, mode) {
   const famcIdOf = c => typeof c === 'string' ? c : c.famId;
   if (mode === 'spouse') {
-    const p = db.individuals[anchorId];
-    const q = db.individuals[partnerId];
+    const p = AppState.db.individuals[anchorId];
+    const q = AppState.db.individuals[partnerId];
     let husb = anchorId, wife = partnerId;
     if (p?.sex === 'F' || q?.sex === 'M') { husb = partnerId; wife = anchorId; }
     showFamilyForm(null, { husb, wife });
@@ -732,13 +903,13 @@ function openRelFamilyForm(anchorId, partnerId, mode) {
     showFamilyForm(anchorId, { addChild: partnerId });
 
   } else if (mode === 'parent') {
-    const p   = db.individuals[anchorId];
-    const par = db.individuals[partnerId];
+    const p   = AppState.db.individuals[anchorId];
+    const par = AppState.db.individuals[partnerId];
     // Freien Slot in vorhandener Elternfamilie suchen
     let targetFamId = null;
     for (const fc of (p?.famc || [])) {
       const fid = famcIdOf(fc);
-      const f = db.families[fid];
+      const f = AppState.db.families[fid];
       if (!f) continue;
       if (!f.husb && par?.sex !== 'F') { targetFamId = fid; break; }
       if (!f.wife && par?.sex === 'F') { targetFamId = fid; break; }
@@ -756,8 +927,8 @@ function openRelFamilyForm(anchorId, partnerId, mode) {
 
 function unlinkMember(famId, personId) {
   if (!confirm('Verbindung wirklich trennen?')) return;
-  const f = db.families[famId];
-  const p = db.individuals[personId];
+  const f = AppState.db.families[famId];
+  const p = AppState.db.individuals[personId];
   if (!f || !p) return;
   const famcIdOf = c => typeof c === 'string' ? c : c.famId;
 
@@ -774,8 +945,8 @@ function unlinkMember(famId, personId) {
 
   markChanged(); updateStats(); renderTab();
   showToast('✓ Verbindung getrennt');
-  if (currentFamilyId === famId) showFamilyDetail(famId);
-  else if (currentPersonId) showDetail(currentPersonId);
+  if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
+  else if (AppState.currentPersonId) showDetail(AppState.currentPersonId);
 }
 
 function showPlaceDetail(placeName, pushHistory = true) {
@@ -783,7 +954,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   const place = places.get(placeName);
   if (!place) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentPersonId = null; currentFamilyId = null; currentSourceId = null; currentRepoId = null;
+  AppState.currentPersonId = null; AppState.currentFamilyId = null; AppState.currentSourceId = null; AppState.currentRepoId = null;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showPlaceForm(placeName);
@@ -796,7 +967,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   </div>`;
 
   // Lösch-Button für manuell hinzugefügte Orte ohne verknüpfte Personen
-  if (place.personIds.size === 0 && db.extraPlaces[placeName]) {
+  if (place.personIds.size === 0 && AppState.db.extraPlaces[placeName]) {
     html += `<div style="padding:4px 0 12px">
       <button class="btn btn-danger" style="width:100%"
         data-pname="${placeName.replace(/"/g,'&quot;')}"
@@ -819,7 +990,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
   // Build detailed list: person + which event connects them to this place
   const entries = [];
-  for (const p of Object.values(db.individuals)) {
+  for (const p of Object.values(AppState.db.individuals)) {
     if (p.birth.place && p.birth.place.trim() === placeName)
       entries.push({ person: p, role: 'Geburt' + (p.birth.date ? ' · ' + p.birth.date : '') });
     if (p.death.place && p.death.place.trim() === placeName)
@@ -833,11 +1004,11 @@ function showPlaceDetail(placeName, pushHistory = true) {
         entries.push({ person: p, role: (ev.eventType || EVENT_LABELS[ev.type] || ev.type) + (ev.date ? ' · ' + ev.date : '') });
     }
   }
-  for (const f of Object.values(db.families)) {
+  for (const f of Object.values(AppState.db.families)) {
     if (f.marr.place && f.marr.place.trim() === placeName) {
       for (const pid of [f.husb, f.wife]) {
         if (!pid) continue;
-        const p = db.individuals[pid];
+        const p = AppState.db.individuals[pid];
         if (p) entries.push({ person: p, role: 'Heirat' + (f.marr.date ? ' · ' + f.marr.date : '') });
       }
     }
@@ -860,31 +1031,31 @@ function showPlaceDetail(placeName, pushHistory = true) {
 //  STAMMBAUM-ANSICHT (SANDUHR)
 // ─────────────────────────────────────
 function getParentIds(pid) {
-  const p = db.individuals[pid];
+  const p = AppState.db.individuals[pid];
   if (!p?.famc?.length) return { father: null, mother: null };
   const ref   = p.famc[0];
   const famId = typeof ref === 'string' ? ref : ref.famId;
-  const fam   = db.families[famId];
+  const fam   = AppState.db.families[famId];
   return { father: fam?.husb || null, mother: fam?.wife || null };
 }
 
 function getChildIds(pid) {
-  const p = db.individuals[pid];
+  const p = AppState.db.individuals[pid];
   if (!p) return [];
-  return (p.fams || []).flatMap(famId => db.families[famId]?.children || []);
+  return (p.fams || []).flatMap(famId => AppState.db.families[famId]?.children || []);
 }
 
 let currentTreeId = null;
 
 function _updateTreeBackBtn() {
   const btn = document.getElementById('treeBtnBack');
-  if (btn) btn.style.display = _treeHistoryPos > 0 ? '' : 'none';
+  if (btn) btn.style.display = UIState._treeHistoryPos > 0 ? '' : 'none';
 }
 
 function treeNavBack() {
-  if (_treeHistoryPos <= 0) return;
-  _treeHistoryPos--;
-  showTree(_treeHistory[_treeHistoryPos], false);
+  if (UIState._treeHistoryPos <= 0) return;
+  UIState._treeHistoryPos--;
+  showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
 }
 
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
@@ -903,48 +1074,73 @@ function _treeShortName(p, isCenter) {
 }
 
 function showTree(personId, addToHistory = true) {
-  const p = db.individuals[personId];
+  const p = AppState.db.individuals[personId];
   if (!p) return;
-  currentPersonId = personId;
+  AppState.currentPersonId = personId;
   currentTreeId   = personId;
 
   // ── Navigations-History ──
   if (addToHistory) {
-    _treeHistory = _treeHistory.slice(0, _treeHistoryPos + 1);
-    if (_treeHistory[_treeHistory.length - 1] !== personId) _treeHistory.push(personId);
-    _treeHistoryPos = _treeHistory.length - 1;
+    UIState._treeHistory = UIState._treeHistory.slice(0, UIState._treeHistoryPos + 1);
+    if (UIState._treeHistory[UIState._treeHistory.length - 1] !== personId) UIState._treeHistory.push(personId);
+    UIState._treeHistoryPos = UIState._treeHistory.length - 1;
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
 
-  const CW = 160, CH = 80;
-  const W  = 96,  H  = 64;
-  const HGAP = 10, VGAP = 44;
-  const MGAP = 20;
-  const SIB_GAP = 14;  // Abstand Geschwister-Spalte ↔ Zentrumsperson
-  const PEEK    = 12;  // Sichtbarer Streifen gestapelter Kacheln
-  const SLOT = W + HGAP;
-  const PAD  = 20;
+  // ── Orientierung + Dimensionen ──
+  const isPortrait = window.innerWidth < window.innerHeight;
+  if (isPortrait) _treeZoomScale = 1; // Portrait: kein Zoom, kompaktes Layout
+
+  const W   = isPortrait ? 80  : 96;
+  const H   = isPortrait ? 54  : 64;
+  const CW  = isPortrait ? 124 : 160;
+  const CH  = isPortrait ? 72  : 80;
+  const HGAP    = isPortrait ? 8  : 10;
+  const VGAP    = isPortrait ? 34 : 44;
+  const MGAP    = isPortrait ? 16 : 20;
+  const SIB_GAP = isPortrait ? 12 : 14;
+  const PEEK    = isPortrait ? 10 : 12;
+  const SLOT = W + HGAP;   // Portrait: 88 → 4 slots = 352px + 2×14 PAD = 380px
+  const PAD  = isPortrait ? 14 : 20;
   const ROW  = H + VGAP;
 
-  // ── Vorfahren (2 Ebenen) ──
-  const par0  = getParentIds(personId);
-  const anc1  = [par0.father, par0.mother];
-  const par_f = par0.father ? getParentIds(par0.father) : { father: null, mother: null };
-  const par_m = par0.mother ? getParentIds(par0.mother) : { father: null, mother: null };
-  const anc2  = [par_f.father, par_f.mother, par_m.father, par_m.mother];
+  // ── Kekule-Nummern (relativ zum Probanden; Proband=1, Vater=2, Mutter=3, …) ──
+  const kekuleMap = {};
+  {
+    const _kWalk = (id, k, depth) => {
+      if (!id || depth > 8 || !AppState.db.individuals[id] || kekuleMap[id]) return;
+      kekuleMap[id] = k;
+      const { father, mother } = getParentIds(id);
+      _kWalk(father, k * 2,     depth + 1);
+      _kWalk(mother, k * 2 + 1, depth + 1);
+    };
+    _kWalk(getProbandId(), 1, 0);
+  }
+  const kbadge = id => {
+    const k = id && kekuleMap[id];
+    return k ? `<div class="tree-kekule-badge">${k}</div>` : '';
+  };
+
+  // ── Vorfahren (4 Ebenen; Hochformat: max. 2 Ebenen) ──
+  function _gp(id) { return id ? getParentIds(id) : { father: null, mother: null }; }
+  const par0 = getParentIds(personId);
+  const anc1 = [par0.father, par0.mother];                                         // 2
+  const anc2 = anc1.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 4
+  const anc3 = anc2.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 8
+  const anc4 = anc3.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 16
 
   // ── Geschwister (aus erster Elternfamilie) ──
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
   const sibFamId  = sibFamRef ? (typeof sibFamRef === 'string' ? sibFamRef : sibFamRef.famId) : null;
   const siblings  = sibFamId
-    ? (db.families[sibFamId]?.children || []).filter(id => id !== personId)
+    ? (AppState.db.families[sibFamId]?.children || []).filter(id => id !== personId)
     : [];
   const nSibs = siblings.length;
 
   // ── Alle Ehen / Familien ──
   const allFamilies = (p.fams || []).map(famId => {
-    const fam = db.families[famId];
+    const fam = AppState.db.families[famId];
     if (!fam) return null;
     const spId = personId === fam.husb ? (fam.wife || null)
                : personId === fam.wife ? (fam.husb || null)
@@ -972,14 +1168,19 @@ function showTree(personId, addToHistory = true) {
   // Ehepartner:  eine Spalte rechts (MGAP + W), egal wie viele
   const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
   const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
-  const ancSpan = 4 * SLOT;
+  // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene; Hochformat max. 2 Ebenen
+  const hasAnc4 = !isPortrait && anc4.some(Boolean);
+  const hasAnc3 = !isPortrait && anc3.some(Boolean);
+  const ancSlots = hasAnc4 ? 16 : hasAnc3 ? 8 : 4;
+  const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
   const childMaxCols = childRows.length > 0 ? Math.max(...childRows.map(r => r.length)) : 0;
   const totalW = Math.max(personCX + ancSpan / 2 + PAD, rightEdge, personCX + childMaxCols * SLOT / 2 + PAD);
 
   // ── Y-Positionen: Zeile 0 (Zentrum) ──
-  const baseY = PAD + 2 * ROW;
+  const ancLevels = hasAnc4 ? 4 : hasAnc3 ? 3 : 2;
+  const baseY = PAD + ancLevels * ROW;
   function ry(lv) { return lv <= 0 ? baseY + lv * ROW : baseY + CH + VGAP + (lv - 1) * ROW; }
 
   // Höhe der Kartenstapel (Peek-Überlappung: je +PEEK px pro weitere Karte)
@@ -994,11 +1195,24 @@ function showTree(personId, addToHistory = true) {
     : row0Bottom + PAD;
 
   // ── X: Vorfahren (zentriert auf personCX) ──
+  // l4 = Basis (ancSlots Slots), l3/l2/l1 = Mittelwert-Hierarchie aufwärts
   const ancLeft = personCX - ancSpan / 2;
-  function gpCX(i)  { return ancLeft + (i + 0.5) * SLOT; }
-  function gpX(i)   { return gpCX(i) - W / 2; }
-  function parCX(i) { return (gpCX(i * 2) + gpCX(i * 2 + 1)) / 2; }
-  function parX(i)  { return parCX(i) - W / 2; }
+  function l4CX(i) { return ancLeft + (i + 0.5) * SLOT; }
+  function l4X(i)  { return l4CX(i) - W / 2; }
+  function l3CX(i) { return (l4CX(i * 2) + l4CX(i * 2 + 1)) / 2; }
+  function l3X(i)  { return l3CX(i) - W / 2; }
+  function l2CX(i) { return (l3CX(i * 2) + l3CX(i * 2 + 1)) / 2; }
+  function l2X(i)  { return l2CX(i) - W / 2; }
+  function l1CX(i) { return (l2CX(i * 2) + l2CX(i * 2 + 1)) / 2; }
+  function l1X(i)  { return l1CX(i) - W / 2; }
+
+  // Tiefe-adaptierte Positions-Auswahl: bei weniger Ebenen höhere l-Funktionen nutzen
+  // Tiefe 1=Eltern, 2=Großeltern, 3=UrGroßeltern, 4=UrUrGroßeltern
+  const _off = 4 - ancLevels;
+  const _aXFns  = [l1X,  l2X,  l3X,  l4X ];
+  const _aCXFns = [l1CX, l2CX, l3CX, l4CX];
+  function aXFn (d) { return _aXFns [d - 1 + _off]; }
+  function aCXFn(d) { return _aCXFns[d - 1 + _off]; }
 
   // ── X/Y: Zentrumsperson ──
   const personX = personCX - CW / 2;
@@ -1020,8 +1234,15 @@ function showTree(personId, addToHistory = true) {
   // ── DOM aufbauen ──
   document.getElementById('treeTopTitle').textContent = p.name || personId;
   const wrap = document.getElementById('treeWrap');
+  const scaleWrap = document.getElementById('treeScaleWrap');
   wrap.style.width  = totalW + 'px';
   wrap.style.height = totalH + 'px';
+  wrap.style.transform = _treeZoomScale !== 1 ? `scale(${_treeZoomScale})` : '';
+  wrap.style.transformOrigin = '0 0';
+  if (scaleWrap) {
+    scaleWrap.style.width  = Math.round(totalW * _treeZoomScale) + 'px';
+    scaleWrap.style.height = Math.round(totalH * _treeZoomScale) + 'px';
+  }
   wrap.querySelectorAll('.tree-card, .tree-marr-btn').forEach(el => el.remove());
   const svg = document.getElementById('treeSvg');
   svg.setAttribute('width',   totalW);
@@ -1059,13 +1280,15 @@ function showTree(personId, addToHistory = true) {
     div.style.left = Math.round(x) + 'px';
     div.style.top  = Math.round(y) + 'px';
     if (zidx !== null) div.style.zIndex = zidx;
+    div.style.width  = (isCenter ? CW : W) + 'px';
+    div.style.height = (isCenter ? CH : H) + 'px';
     if (!id) {
       div.classList.add('tree-card-empty');
       div.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem">?</span>';
       wrap.appendChild(div);
       return;
     }
-    const q = db.individuals[id];
+    const q = AppState.db.individuals[id];
     if (!q) return;
     div.dataset.sex = q.sex || 'U';
     const nm = _treeShortName(q, isCenter);
@@ -1075,7 +1298,7 @@ function showTree(personId, addToHistory = true) {
     const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =
       `<div class="tree-name">${esc(nm)}</div>` +
-      (yr ? `<div class="tree-yr">${yr}</div>` : '') +
+      (yr ? `<div class="tree-yr" style="${isPortrait ? 'font-size:0.58rem;white-space:nowrap' : ''}">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
@@ -1083,21 +1306,35 @@ function showTree(personId, addToHistory = true) {
     wrap.appendChild(div);
   }
 
+  // ── UrUrGroßeltern (Ebene -4, nur Querformat/Desktop) ──
+  if (hasAnc4) anc4.forEach((id, i) => {
+    if (!id) return;
+    mkCard(id, l4X(i), ry(-4), false, false, null, false, null, kbadge(id));
+    if (anc3[Math.floor(i / 2)]) line(l4CX(i), ry(-4) + H, l3CX(Math.floor(i / 2)), ry(-3));
+  });
+
+  // ── UrGroßeltern (Ebene -3, nur Querformat/Desktop) ──
+  if (hasAnc3) anc3.forEach((id, i) => {
+    if (!id) return;
+    mkCard(id, aXFn(3)(i), ry(-3), false, false, null, false, null, kbadge(id));
+    if (anc2[Math.floor(i / 2)]) line(aCXFn(3)(i), ry(-3) + H, aCXFn(2)(Math.floor(i / 2)), ry(-2));
+  });
+
   // ── Großeltern + Linien zu Eltern ──
   anc2.forEach((id, i) => {
-    mkCard(id, gpX(i), ry(-2), false);
-    if (id) line(gpCX(i), ry(-2) + H, parCX(Math.floor(i / 2)), ry(-1));
+    mkCard(id, aXFn(2)(i), ry(-2), false, false, null, false, null, kbadge(id));
+    if (id) line(aCXFn(2)(i), ry(-2) + H, aCXFn(1)(Math.floor(i / 2)), ry(-1));
   });
 
   // ── Eltern ──
-  anc1.forEach((id, i) => mkCard(id, parX(i), ry(-1), false));
+  anc1.forEach((id, i) => mkCard(id, aXFn(1)(i), ry(-1), false, false, null, false, null, kbadge(id)));
 
   // ── Eltern → Kinder: symmetrischer Verzweigungspunkt bei personCX ──
   if (anc1[0] || anc1[1] || nSibs > 0) {
     const juncX = personCX;
     const juncY = ry(-1) + H + Math.round(VGAP * 0.4);
-    if (anc1[0]) line(parCX(0), ry(-1) + H, juncX, juncY);
-    if (anc1[1]) line(parCX(1), ry(-1) + H, juncX, juncY);
+    if (anc1[0]) line(aCXFn(1)(0), ry(-1) + H, juncX, juncY);
+    if (anc1[1]) line(aCXFn(1)(1), ry(-1) + H, juncX, juncY);
     line(juncX, juncY, personCX, ry(0));
     if (nSibs > 0) {
       // T-Strich: horizontal zum Geschwisterstapel, dann vertikal durch den Stapel
@@ -1115,11 +1352,11 @@ function showTree(personId, addToHistory = true) {
     const badge = (i === 0 && nSibs > 1)
       ? `<div class="tree-half-badge" style="bottom:auto;top:3px;right:4px;color:var(--gold)">${nSibs}</div>`
       : '';
-    mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge);
+    mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge + kbadge(sid));
   });
 
   // ── Zentrumsperson ──
-  mkCard(personId, personX, ry(0), true);
+  mkCard(personId, personX, ry(0), true, false, null, false, null, kbadge(personId));
 
   // ── Ehepartner: Kartenstapel rechts ──
   // Aktiver Ehepartner (Index aus _activeSpouseMap) liegt oben und ist voll lesbar.
@@ -1138,7 +1375,7 @@ function showTree(personId, addToHistory = true) {
     const onClick = isActive
       ? () => showTree(fam.spId)
       : () => { _activeSpouseMap[personId] = origIdx; showTree(personId, false); };
-    mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick);
+    mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick, kbadge(fam.spId));
     if (isActive) {
       svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3');
       // Klickbares div-Element auf der Ehe-Linie (SVG hat pointer-events:none)
@@ -1160,20 +1397,50 @@ function showTree(personId, addToHistory = true) {
     row.forEach((id, i) => {
       const cxi    = childRowCX(row, i);
       const isHalf = halfKidSet.has(id);
-      mkCard(id, childRowX(row, i), rowY, false, isHalf);
+      mkCard(id, childRowX(row, i), rowY, false, isHalf, null, false, null, kbadge(id));
       line(personCX, row0Bottom, cxi, rowY, isHalf ? 'var(--gold-dim)' : 'var(--border)', isHalf ? '4 3' : null);
     });
   });
 
+  // ── Tastatur-Navigationsziele speichern ──
+  _treeNavTargets = {
+    up:    par0.father || null,
+    up2:   par0.mother || null,
+    down:  allKids[0]  || null,
+    right: spouseFams[activeSpIdx]?.spId || null,
+  };
+
   showView('v-tree');
+  _initTreeDrag();
+  _initTreeKeys();
   // Auto-Zentrierung: Zentrumsperson horizontal + vertikal ~1/3 von oben
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
-    // Horizontale Zentrierung: wenn Baum schmaler als Viewport → mittig via marginLeft
-    const leftPad = Math.max(0, Math.floor((sc.clientWidth - totalW) / 2));
-    wrap.style.marginLeft = leftPad + 'px';
-    sc.scrollLeft = Math.max(0, leftPad + personCX - sc.clientWidth / 2);
-    sc.scrollTop  = Math.max(0, ry(0) - Math.round(sc.clientHeight * 0.35));
+    // Desktop: Auto-Fit wenn Baum breiter oder höher als Viewport
+    if (!isPortrait) {
+      const fitW = sc.clientWidth  / totalW;
+      const fitH = sc.clientHeight / totalH;
+      const fit  = Math.min(1, fitW, fitH);
+      if (fit < _treeZoomScale || (_treeZoomScale === 1 && fit < 1)) {
+        _treeZoomScale = Math.round(fit * 100) / 100;
+        wrap.style.transform = `scale(${_treeZoomScale})`;
+        wrap.style.transformOrigin = '0 0';
+        if (scaleWrap) {
+          scaleWrap.style.width  = Math.round(totalW * _treeZoomScale) + 'px';
+          scaleWrap.style.height = Math.round(totalH * _treeZoomScale) + 'px';
+        }
+      }
+    }
+    const scaledW = totalW * _treeZoomScale;
+    const scaledH = totalH * _treeZoomScale;
+    const leftPad = Math.max(0, Math.floor((sc.clientWidth  - scaledW) / 2));
+    const topPad  = Math.max(0, Math.floor((sc.clientHeight - scaledH) / 2));
+    const posEl = scaleWrap || wrap;
+    posEl.style.marginLeft = leftPad + 'px';
+    posEl.style.marginTop  = topPad  + 'px';
+    if (scaleWrap) { wrap.style.marginLeft = ''; wrap.style.marginTop = ''; }
+    sc.scrollLeft = Math.max(0, leftPad + personCX * _treeZoomScale - sc.clientWidth  / 2);
+    sc.scrollTop  = Math.max(0, topPad  + ry(0) * _treeZoomScale   - Math.round(sc.clientHeight * 0.4));
   }, 60);
 }
 
@@ -1181,19 +1448,38 @@ function showTree(personId, addToHistory = true) {
 //  DETAIL: PERSON
 // ─────────────────────────────────────
 function showDetail(id, pushHistory = true) {
-  const p = db.individuals[id];
+  const p = AppState.db.individuals[id];
   if (!p) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentPersonId = id;
-  currentFamilyId = null;
-  currentSourceId = null;
-  currentRepoId   = null;
+  AppState.currentPersonId = id;
+  AppState.currentFamilyId = null;
+  AppState.currentSourceId = null;
+  AppState.currentRepoId   = null;
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
   document.getElementById('editBtn').onclick = () => showPersonForm(id);
   document.getElementById('treeBtn').style.display = '';
   document.getElementById('treeBtn').onclick = () => showTree(id);
+  const pb = document.getElementById('probandBtn');
+  if (pb) {
+    pb.style.display = '';
+    const isProband = getProbandId() === id;
+    pb.classList.toggle('proband-active', isProband);
+    pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+    pb.onclick = () => {
+      if (getProbandId() === id) {
+        _probandId = null;
+        idbPut('proband_id', null).catch(() => {});
+        showToast('Proband zurückgesetzt (kleinste ID)');
+      } else {
+        _probandId = id;
+        idbPut('proband_id', id).catch(() => {});
+        showToast('Proband: ' + (p.name || id));
+      }
+      showDetail(id, false);
+    };
+  }
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
@@ -1202,6 +1488,7 @@ function showDetail(id, pushHistory = true) {
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-photo-${id}" style="display:none"></div>
+    <div id="det-avatar-${id}" class="detail-avatar ${sc}">${ic}</div>
     <div class="detail-hero-text">
       <div class="detail-name">${esc(fullName || id)} <span style="font-size:1rem;color:var(${sc === 'm' ? '--blue' : sc === 'f' ? '--pink' : '--gold-dim'})">${ic}</span></div>
       <div class="detail-id">${p.lastChanged ? 'Geändert ' + p.lastChanged : ''}</div>
@@ -1214,6 +1501,12 @@ function showDetail(id, pushHistory = true) {
       <div class="section-title">Lebensdaten</div>
       <button class="section-add" data-pid="${id}" onclick="showEventForm(this.dataset.pid)">+ Ereignis</button>
     </div>`;
+
+  for (const en of (p.extraNames || [])) {
+    const enLabel = en.type ? (NAME_TYPE_LABELS[en.type] || en.type) : 'Weiterer Name';
+    const enVal = [en.prefix, en.nameRaw || [en.given, en.surname ? '/'+en.surname+'/' : ''].filter(Boolean).join(' '), en.suffix].filter(Boolean).join(' ');
+    if (enVal) html += factRow(enLabel, enVal);
+  }
 
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
@@ -1239,9 +1532,10 @@ function showDetail(id, pushHistory = true) {
     const geoBtn = (ev.lati !== null && ev.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
     const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+    const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
     html += `<div class="fact-row" data-pid="${id}" data-ev="${idx}" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer">
       <span class="fact-lbl">${esc(label)}</span>
-      <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}</span>
+      <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}${mediaBadge}</span>
     </div>`;
   });
 
@@ -1275,22 +1569,38 @@ function showDetail(id, pushHistory = true) {
       </div>`;
     for (let i = 0; i < indiMedia.length; i++) {
       const m = indiMedia[i];
-      const display = m.title || m.file || m.form || '–';
+      const display = m.title || m.file || '–';
+      const sub = m.title && m.file ? m.file : '';
       const idbKey  = 'photo_' + id + '_' + i;
       const heroKey = 'photo_' + id;
-      html += `<div class="fact-row" style="cursor:pointer;display:flex;align-items:center;gap:4px"
-        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}',null)">
-        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
-        <button class="unlink-btn" onclick="event.stopPropagation();deletePersonMedia('${id}',${i})" title="Entfernen">×</button></div>`;
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}','det-avatar-${id}')">
+        <div id="media-thumb-indi-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('person','${id}',${i})" title="Bearbeiten">✎</button>
+      </div>`;
     }
     for (const l of indiPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
       const obj = _objeMap[ref];
       const label = obj ? (obj.title || obj.file || ref) : ref;
       const sub   = obj && obj.title && obj.file ? obj.file : '';
-      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
-        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
+      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
+      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+        </div>
+      </div>`;
     }
     if (!indiMedia.length && !indiPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
@@ -1303,7 +1613,7 @@ function showDetail(id, pushHistory = true) {
       <button class="section-add" data-pid="${id}" onclick="showAddSpouseFlow(this.dataset.pid)">+ Ehepartner</button>
     </div>`;
   for (const famId of p.fams) {
-    const fam = db.families[famId];
+    const fam = AppState.db.families[famId];
     if (!fam) continue;
     const marriageLabel = fam.marr.date ? fam.marr.date : famId;
     html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
@@ -1311,10 +1621,10 @@ function showDetail(id, pushHistory = true) {
       <span class="row-arrow">›</span>
     </div>`;
     const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
-    const partner = partnerId ? db.individuals[partnerId] : null;
+    const partner = partnerId ? AppState.db.individuals[partnerId] : null;
     if (partner) html += relRow(partner, 'Ehepartner' + (fam.marr.date ? ' · ' + fam.marr.date : ''), famId);
     for (const cid of fam.children) {
-      const child = db.individuals[cid];
+      const child = AppState.db.individuals[cid];
       if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''), famId);
     }
     html += `<div style="display:flex;justify-content:flex-end;padding:2px 0 8px">
@@ -1331,7 +1641,7 @@ function showDetail(id, pushHistory = true) {
     </div>`;
   for (const fref of p.famc) {
     const famId = typeof fref === 'string' ? fref : fref.famId;
-    const fam = db.families[famId];
+    const fam = AppState.db.families[famId];
     if (!fam) continue;
     html += `<div class="family-nav-row" style="display:flex;align-items:center;gap:6px">
       <span class="fnr-label" style="flex:1;cursor:pointer" onclick="showFamilyDetail('${famId}')"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
@@ -1342,7 +1652,7 @@ function showDetail(id, pushHistory = true) {
     </div>`;
     for (const pid of [fam.husb, fam.wife]) {
       if (!pid) continue;
-      const parent = db.individuals[pid];
+      const parent = AppState.db.individuals[pid];
       if (parent) html += relRow(parent, parent.sex === 'M' ? 'Vater' : parent.sex === 'F' ? 'Mutter' : 'Elternteil');
     }
   }
@@ -1354,26 +1664,36 @@ function showDetail(id, pushHistory = true) {
   // Foto async aus IDB nachladen (Sprint P3-2)
   (async () => {
     const src = await idbGet('photo_' + id).catch(() => null)
+             || await idbGet('photo_' + id + '_0').catch(() => null)
              || await _odGetPhotoUrl('photo_' + id).catch(() => null);
     if (!src) return;
     const el = document.getElementById('det-photo-' + id);
-    if (el) { el.style.display = ''; el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+    if (el) {
+      el.style.display = '';
+      el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`;
+      const av = document.getElementById('det-avatar-' + id);
+      if (av) av.style.display = 'none';
+    }
     // Lazy migration (nur für IDB-base64, nicht blob: URLs)
     if (!src.startsWith('blob:')) idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
+  // Media-Thumbnails async laden
+  for (let _mi = 0; _mi < indiMedia.length; _mi++) {
+    _asyncLoadMediaThumb('media-thumb-indi-' + id + '-' + _mi, 'photo_' + id + '_' + _mi);
+  }
 }
 
 function showFamilyDetail(id, pushHistory = true) {
-  const f = db.families[id];
+  const f = AppState.db.families[id];
   if (!f) return;
   if (pushHistory) _beforeDetailNavigate();
-  currentFamilyId = id;
-  currentPersonId = null;
-  currentSourceId = null;
-  currentRepoId   = null;
+  AppState.currentFamilyId = id;
+  AppState.currentPersonId = null;
+  AppState.currentSourceId = null;
+  AppState.currentRepoId   = null;
 
-  const husb = f.husb ? db.individuals[f.husb] : null;
-  const wife = f.wife ? db.individuals[f.wife] : null;
+  const husb = f.husb ? AppState.db.individuals[f.husb] : null;
+  const wife = f.wife ? AppState.db.individuals[f.wife] : null;
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || id;
 
   document.getElementById('detailTopTitle').textContent = 'Familie';
@@ -1418,7 +1738,7 @@ function showFamilyDetail(id, pushHistory = true) {
   if (husb) html += relRow(husb, 'Ehemann / Vater', id);
   if (wife) html += relRow(wife, 'Ehefrau / Mutter', id);
   for (const cid of f.children) {
-    const child = db.individuals[cid];
+    const child = AppState.db.individuals[cid];
     if (child) html += relRow(child, 'Kind', id);
   }
   html += `</div>`;
@@ -1429,25 +1749,11 @@ function showFamilyDetail(id, pushHistory = true) {
     </div>`;
   }
 
-  // Media section: inline FAM media[], inline 2 OBJE blocks in marr._extra, ref OBJE in _passthrough
+  // Media section: marr.media[] (2 OBJE unter MARR), f.media[] (1 OBJE auf FAM-Ebene), ref OBJE in _passthrough
   const famMedia = f.media || [];
   const _objeMap = _buildObjeRefMap();
-  // Parse inline + ref OBJE blocks from marr._extra (Ancestris: 2 OBJE with 3 FILE / 3 TITL)
-  const marrObjeEntries = [];
-  let _moe = null;
-  for (const l of (f.marr?._extra || [])) {
-    if (l === '2 OBJE') {
-      _moe = { file: '', title: '', form: '' }; marrObjeEntries.push(_moe);
-    } else if (/^2 OBJE @/.test(l)) {
-      const ref = l.slice(7).trim();
-      const obj = _objeMap[ref];
-      marrObjeEntries.push({ file: obj?.file || '', title: obj?.title || ref, form: '' });
-      _moe = null;
-    } else if (_moe && l.startsWith('3 FILE ')) { _moe.file  = l.slice(7); }
-    else if (_moe && l.startsWith('3 TITL ')) { _moe.title = l.slice(7); }
-    else if (_moe && l.startsWith('3 FORM ')) { _moe.form  = l.slice(7); }
-    else if (l.startsWith('2 '))              { _moe = null; }
-  }
+  // f.marr.media[] enthält inline OBJE-Blöcke unter MARR; titl-Feld (nicht title)
+  const marrObjeEntries = (f.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '' }));
   const famPtObje = (f._passthrough || []).filter(l => /^1 OBJE @/.test(l));
   {
     html += `<div class="section fade-up">
@@ -1457,30 +1763,57 @@ function showFamilyDetail(id, pushHistory = true) {
       </div>`;
     for (let i = 0; i < marrObjeEntries.length; i++) {
       const m = marrObjeEntries[i];
-      const display = m.title || m.file || m.form || '–';
+      const display = m.title || m.file || '–';
+      const sub = m.title && m.file ? m.file : '';
       const idbKey  = 'photo_fam_' + id + '_' + i;
       const heroKey = 'photo_fam_' + id;
-      html += `<div class="fact-row" style="cursor:pointer;display:flex;align-items:center;gap:4px"
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
         onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
-        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
-        <button class="unlink-btn" onclick="event.stopPropagation();deleteFamilyMarrMedia('${id}',${i})" title="Entfernen">×</button></div>`;
+        <div id="media-thumb-fam-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('family','${id}',${i})" title="Bearbeiten">✎</button>
+      </div>`;
     }
     for (let i = 0; i < famMedia.length; i++) {
       const m = famMedia[i];
-      const display = m.title || m.file || m.form || '–';
-      html += `<div class="fact-row" style="display:flex;align-items:center;gap:4px">
-        <span class="fact-lbl">${esc(m.form || 'Datei')}</span>
-        <span class="fact-val" style="word-break:break-all;flex:1">${esc(display)}${m.title && m.file ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(m.file)}</span>` : ''}</span>
-        <button class="unlink-btn" onclick="deleteFamilyMedia('${id}',${i})" title="Entfernen">×</button></div>`;
+      const display = m.title || m.file || '–';
+      const sub = m.title && m.file ? m.file : '';
+      const idbKey  = 'photo_fam_media_' + id + '_' + i;
+      const heroKey = 'photo_fam_' + id;
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
+        <div id="media-thumb-fam-media-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('family_media','${id}',${i})" title="Bearbeiten">✎</button>
+      </div>`;
     }
     for (const l of famPtObje) {
       const ref = l.replace(/^1 OBJE\s+/, '').trim();
       const obj = _objeMap[ref];
       const label = obj ? (obj.title || obj.file || ref) : ref;
       const sub   = obj && obj.title && obj.file ? obj.file : '';
-      html += `<div class="fact-row"><span class="fact-lbl">Medienverweis</span>
-        <span class="fact-val" style="word-break:break-all">${esc(label)}${sub ? `<br><span style="color:var(--text-muted);font-size:0.8rem">${esc(sub)}</span>` : ''}</span></div>`;
+      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
+      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
+        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
+        <div style="flex:1;min-width:0">
+          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
+          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+        </div>
+      </div>`;
     }
     if (!marrObjeEntries.length && !famMedia.length && !famPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
     html += `</div>`;
@@ -1492,6 +1825,7 @@ function showFamilyDetail(id, pushHistory = true) {
   // Foto async aus IDB nachladen
   (async () => {
     const src = await idbGet('photo_fam_' + id).catch(() => null)
+             || await idbGet('photo_fam_' + id + '_0').catch(() => null)
              || await _odGetPhotoUrl('photo_fam_' + id).catch(() => null);
     if (!src) return;
     const el = document.getElementById('det-fam-photo-' + id);
@@ -1507,5 +1841,12 @@ function showFamilyDetail(id, pushHistory = true) {
     }
     if (!src.startsWith('blob:')) idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
+  // Media-Thumbnails async laden
+  for (let _mi = 0; _mi < marrObjeEntries.length; _mi++) {
+    _asyncLoadMediaThumb('media-thumb-fam-' + id + '-' + _mi, 'photo_fam_' + id + '_' + _mi);
+  }
+  for (let _mi = 0; _mi < famMedia.length; _mi++) {
+    _asyncLoadMediaThumb('media-thumb-fam-media-' + id + '-' + _mi, 'photo_fam_media_' + id + '_' + _mi);
+  }
 }
 

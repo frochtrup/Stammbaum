@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 3.0
+# Stammbaum PWA — Version 4.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -20,18 +20,26 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← App-Shell (v3.0, HTML + CSS, ~700 Zeilen)
-├── gedcom.js           ← GEDCOM-Parser + Writer
+├── index.html          ← App-Shell (HTML + CSS)
+├── gedcom.js           ← Globals, AppState/UIState, Labels, Datum/Ort-Helfer, Getter/Setter
+├── gedcom-parser.js    ← parseGEDCOM(), parseGeoCoord()
+├── gedcom-writer.js    ← writeGEDCOM(), pushCont()
 ├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
 ├── ui-views.js         ← Baum, Detailansichten, Listenrendering
-├── ui-forms.js         ← Formulare, OneDrive-Integration, Medien
-├── sw.js               ← Service Worker (offline, Cache v22)
+├── ui-forms.js         ← Formulare Person/Familie/Quelle/Archiv/Event
+├── ui-media.js         ← Medien Add/Edit/Delete/Browser
+├── onedrive.js         ← OAuth PKCE, Foto-Import, Ordner-Browser, Filemap
+├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
+├── sw.js               ← Service Worker (offline, Cache v75)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
-├── ARCHITECTURE.md     ← ADRs, Datenmodell, JS-Sektionen, CSS-Design-System
+├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
+├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
+├── UI-DESIGN.md        ← HTML-Struktur, Navigation, CSS Design-System, Sanduhr-Layout
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
-├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
+├── ROADMAP.md          ← Phasen-Übersicht, bekannte Probleme
+├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v4.0
 └── MEMORY.md           ← Projekt-Memory für KI-Kontext
 ```
 
@@ -58,7 +66,7 @@ stammbaum/
 | Download-Fallback (Safari Mac, Firefox) | `<a download>` → Datei im Browser-Download-Ordner |
 | Backup automatisch | Bei Download-Fallback: Zeitstempel-Backup des Originals zusätzlich heruntergeladen |
 | iOS Speichern | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
-| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern; Foto-Ordner einrichten → dynamisches Laden ohne Base64-Upload |
+| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern; Foto-Ordner + Dokumente-Ordner einrichten → dynamisches Laden ohne Base64-Upload |
 | Demo-Modus | Beispiel-Daten ohne eigene Datei |
 | URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged`; nützlich für Lesezeichen und PWA-Shortcuts |
 | **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
@@ -75,14 +83,20 @@ stammbaum/
 2. Optionaler Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive setzen
 
 ### Sanduhr-Ansicht (Stammbaum)
-- Grafische Familienansicht: Großeltern (2 Ebenen) → Eltern → Person + Ehepartner → Kinder
+- Grafische Familienansicht: bis zu 4 Vorfahren-Ebenen (Eltern/Großeltern/Urgroßeltern/Ururgroßeltern) → Person + Ehepartner → Kinder
+- Portrait-Modus: 2 Vorfahren-Ebenen; Querformat/Desktop: bis zu 4 Ebenen
 - Klick auf jede Karte → neu zentrieren; Klick auf Zentrum → Detailansicht
 - Zurück aus Detailansicht führt direkt zum Baum zurück
 - **Mehrfach-Ehen**: `⚭N`-Badge auf Zentrum-Karte wenn >1 Ehe; alle Ehen navigierbar
 - Halbgeschwister (aus anderen Ehen) mit gestricheltem Rahmen + `½`-Badge markiert
 - Kinder mehrzeilig bei mehr als 4 (max. 4 pro Zeile)
+- **Kekule-Nummern**: Ahnentafel-Nummern auf allen Vorfahren-Karten (1=Proband, 2=Vater, 3=Mutter …)
+- **Konfigurierbarer Proband**: Startperson des Baums wählbar (Button in Topbar)
 - **Pinch-Zoom**: Touch-Geste skaliert den Baum (0.4×–2.0×)
-- Startansicht nach Datei-Load: Person mit kleinster ID
+- **Drag-to-Pan**: Maus-Drag scrollt den Baum (Desktop)
+- **Vollbild-Modus**: ⤢-Button blendet Sidebar aus (Desktop)
+- **Tastaturnavigation**: ↑ Vater · Shift+↑ Mutter · ↓ Kind · → Partner · ← Zurück (Desktop)
+- **Desktop Auto-Fit-Zoom**: Baum passt sich beim ersten Laden an die Fenstergröße an
 
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
@@ -143,20 +157,22 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Stammbaum PWA v3.0                          │
+│  Stammbaum PWA v4.0                          │
 │  Vanilla JS · Kein Framework · Kein Build    │
 │                                              │
-│  index.html   — App-Shell, CSS               │
-│  gedcom.js    — Parser + Writer              │
-│  storage.js   — IDB, Dateiverwaltung         │
-│  ui-views.js  — Baum, Detail, Listen         │
-│  ui-forms.js  — Formulare, OneDrive, Medien  │
-│  sw.js        — Service Worker (offline)     │
+│  index.html        — App-Shell, CSS          │
+│  gedcom.js         — State, Labels, Helfer   │
+│  gedcom-parser.js  — parseGEDCOM()           │
+│  gedcom-writer.js  — writeGEDCOM()           │
+│  storage.js        — IDB, Dateiverwaltung    │
+│  ui-views.js       — Baum, Detail, Listen    │
+│  ui-forms.js       — Formulare               │
+│  ui-media.js       — Medien                  │
+│  onedrive.js       — OAuth, Fotos, Filemap   │
+│  sw.js             — Service Worker (offline)│
 │                                              │
-│  Globaler State: let db = {                  │
-│    individuals, families, sources,           │
-│    repositories, extraPlaces, notes          │
-│  }                                           │
+│  State: AppState { db, changed, currentId…} │
+│         UIState  { _treeHistory, _relMode…} │
 │                                              │
 │  Persistenz:                                 │
 │  - IndexedDB primär (GEDCOM-Text, Fotos)     │
@@ -169,8 +185,8 @@ stammbaum/
 └──────────────────────────────────────────────┘
 ```
 
-**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · null INDI/FAM-Datenverluste** (nur HEAD-Normalisierung)
-**Version 3.0** — März 2026 — P3-1 ✅ P3-2 ✅ P3-3 ✅ P3-4 ✅ P3-5 ✅ P3-6 ✅ P3-7 ✅ P3-8 ✅
+**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta≈0** (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
+**Version 4.0** — März 2026 — Branch `main` · sw v75
 
 ---
 
