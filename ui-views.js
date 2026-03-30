@@ -1035,9 +1035,9 @@ function treeNavBack() {
 }
 
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
-function _treeShortName(p, isCenter, portraitMode) {
+function _treeShortName(p, isCenter) {
   const nm = p.name || p.id || '';
-  const limit = isCenter ? (portraitMode ? 16 : 26) : (portraitMode ? 11 : 18);
+  const limit = isCenter ? 26 : 18;
   if (nm.length <= limit) return nm;
   const given = p.given || '';
   const surn  = p.surname || '';
@@ -1154,7 +1154,7 @@ function showTree(personId, addToHistory = true) {
     : row0Bottom + PAD;
 
   // ── X: Vorfahren (zentriert auf personCX) ──
-  // l4 = UrUrGroßeltern (16), l3 = UrGroßeltern (8), l2 = Großeltern (4), l1 = Eltern (2)
+  // l4 = Basis (ancSlots Slots), l3/l2/l1 = Mittelwert-Hierarchie aufwärts
   const ancLeft = personCX - ancSpan / 2;
   function l4CX(i) { return ancLeft + (i + 0.5) * SLOT; }
   function l4X(i)  { return l4CX(i) - W / 2; }
@@ -1164,6 +1164,14 @@ function showTree(personId, addToHistory = true) {
   function l2X(i)  { return l2CX(i) - W / 2; }
   function l1CX(i) { return (l2CX(i * 2) + l2CX(i * 2 + 1)) / 2; }
   function l1X(i)  { return l1CX(i) - W / 2; }
+
+  // Tiefe-adaptierte Positions-Auswahl: bei weniger Ebenen höhere l-Funktionen nutzen
+  // Tiefe 1=Eltern, 2=Großeltern, 3=UrGroßeltern, 4=UrUrGroßeltern
+  const _off = 4 - ancLevels;
+  const _aXFns  = [l1X,  l2X,  l3X,  l4X ];
+  const _aCXFns = [l1CX, l2CX, l3CX, l4CX];
+  function aXFn (d) { return _aXFns [d - 1 + _off]; }
+  function aCXFn(d) { return _aCXFns[d - 1 + _off]; }
 
   // ── X/Y: Zentrumsperson ──
   const personX = personCX - CW / 2;
@@ -1242,14 +1250,14 @@ function showTree(personId, addToHistory = true) {
     const q = db.individuals[id];
     if (!q) return;
     div.dataset.sex = q.sex || 'U';
-    const nm = _treeShortName(q, isCenter, isPortrait);
+    const nm = _treeShortName(q, isCenter);
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
     const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =
       `<div class="tree-name">${esc(nm)}</div>` +
-      (yr ? `<div class="tree-yr">${yr}</div>` : '') +
+      (yr ? `<div class="tree-yr" style="${isPortrait ? 'font-size:0.58rem;white-space:nowrap' : ''}">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
@@ -1267,25 +1275,25 @@ function showTree(personId, addToHistory = true) {
   // ── UrGroßeltern (Ebene -3, nur Querformat/Desktop) ──
   if (hasAnc3) anc3.forEach((id, i) => {
     if (!id) return;
-    mkCard(id, l3X(i), ry(-3), false);
-    if (anc2[Math.floor(i / 2)]) line(l3CX(i), ry(-3) + H, l2CX(Math.floor(i / 2)), ry(-2));
+    mkCard(id, aXFn(3)(i), ry(-3), false);
+    if (anc2[Math.floor(i / 2)]) line(aCXFn(3)(i), ry(-3) + H, aCXFn(2)(Math.floor(i / 2)), ry(-2));
   });
 
   // ── Großeltern + Linien zu Eltern ──
   anc2.forEach((id, i) => {
-    mkCard(id, l2X(i), ry(-2), false);
-    if (id) line(l2CX(i), ry(-2) + H, l1CX(Math.floor(i / 2)), ry(-1));
+    mkCard(id, aXFn(2)(i), ry(-2), false);
+    if (id) line(aCXFn(2)(i), ry(-2) + H, aCXFn(1)(Math.floor(i / 2)), ry(-1));
   });
 
   // ── Eltern ──
-  anc1.forEach((id, i) => mkCard(id, l1X(i), ry(-1), false));
+  anc1.forEach((id, i) => mkCard(id, aXFn(1)(i), ry(-1), false));
 
   // ── Eltern → Kinder: symmetrischer Verzweigungspunkt bei personCX ──
   if (anc1[0] || anc1[1] || nSibs > 0) {
     const juncX = personCX;
     const juncY = ry(-1) + H + Math.round(VGAP * 0.4);
-    if (anc1[0]) line(l1CX(0), ry(-1) + H, juncX, juncY);
-    if (anc1[1]) line(l1CX(1), ry(-1) + H, juncX, juncY);
+    if (anc1[0]) line(aCXFn(1)(0), ry(-1) + H, juncX, juncY);
+    if (anc1[1]) line(aCXFn(1)(1), ry(-1) + H, juncX, juncY);
     line(juncX, juncY, personCX, ry(0));
     if (nSibs > 0) {
       // T-Strich: horizontal zum Geschwisterstapel, dann vertikal durch den Stapel
