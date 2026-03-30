@@ -206,9 +206,10 @@ _ptDepth = 1;
 ```
 
 **Was landet in `_passthrough` (INDI):**
-- Unbekannte lv=1-Tags: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`, `DSCR`, `IDNO`, `SSN`
+- Unbekannte lv=1-Tags: `DSCR`, `IDNO`, `SSN`
 - Extra-NAME-Blöcke (2. Name, Alias, Geburtsname) — wenn `_nameParsed` bereits gesetzt
 - `1 OBJE @ref@`-Referenzen (externe Medien-Records)
+- *(Nicht mehr in passthrough: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` — seit v4-dev als `events[]` strukturiert)*
 
 **Was landet in `_passthrough` (FAM):** `DIV`, `DIVF`, andere unbekannte lv=1-Tags
 
@@ -256,9 +257,9 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 ```
 
 **Optimierungspotenzial (kein Datenverlust, aber im UI nicht editierbar):**
-- `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` → in EVENT_LABELS, aber nicht als events[] strukturiert
 - `DIV`, `DIVF` → FAM-Events fehlen im Parser (in `_passthrough`)
 - Mehrfache inline INDI-Notes → werden konkateniert statt als Array
+- *(Erledigt: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` → seit v4-dev als events[] strukturiert)*
 
 ---
 
@@ -317,7 +318,6 @@ restoreFileHandle() (bei Seitenreload)
 | Problem | Ursache | Status |
 |---|---|---|
 | DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | Backlog |
-| CENS/CONF/FCOM/ORDN etc. nicht editierbar | Fehlen in events[]-Erkennung | Backlog |
 | Zweite NAME-Einträge nicht editierbar | In _passthrough | Backlog |
 | Mehrere inline INDI-Notes | Konkateniert statt Array | Backlog |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
