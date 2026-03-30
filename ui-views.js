@@ -476,10 +476,13 @@ function renderPersonList(persons) {
     if (p.birth.date) meta += '* ' + p.birth.date;
     if (p.birth.place) meta += (meta ? ', ' : '') + p.birth.place;
     if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+    const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
+                      + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+    const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
     html += `<div class="person-row" onclick="showDetail('${p.id}')">
       <div class="p-avatar ${sc}">${ic}</div>
       <div class="p-info">
-        <div class="p-name">${esc(p.name || p.id)}</div>
+        <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -575,10 +578,14 @@ function renderFamilyList(fams) {
     if (f.marr.date) meta += '⚭ ' + f.marr.date;
     if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
     if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
+    const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
+                      + (f.marr?.media || []).filter(m => m.file || m.titl).length
+                      + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+    const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
     html += `<div class="person-row" data-fid="${f.id}" onclick="showFamilyDetail(this.dataset.fid)">
       <div class="p-avatar">👨‍👩‍👧</div>
       <div class="p-info">
-        <div class="p-name">${esc(title)}</div>
+        <div class="p-name">${esc(title)}${fMediaBadge}</div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -1481,6 +1488,7 @@ function showDetail(id, pushHistory = true) {
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-photo-${id}" style="display:none"></div>
+    <div id="det-avatar-${id}" class="detail-avatar ${sc}">${ic}</div>
     <div class="detail-hero-text">
       <div class="detail-name">${esc(fullName || id)} <span style="font-size:1rem;color:var(${sc === 'm' ? '--blue' : sc === 'f' ? '--pink' : '--gold-dim'})">${ic}</span></div>
       <div class="detail-id">${p.lastChanged ? 'Geändert ' + p.lastChanged : ''}</div>
@@ -1569,7 +1577,7 @@ function showDetail(id, pushHistory = true) {
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}',null)">
+        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}','det-avatar-${id}')">
         <div id="media-thumb-indi-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
@@ -1660,7 +1668,12 @@ function showDetail(id, pushHistory = true) {
              || await _odGetPhotoUrl('photo_' + id).catch(() => null);
     if (!src) return;
     const el = document.getElementById('det-photo-' + id);
-    if (el) { el.style.display = ''; el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+    if (el) {
+      el.style.display = '';
+      el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`;
+      const av = document.getElementById('det-avatar-' + id);
+      if (av) av.style.display = 'none';
+    }
     // Lazy migration (nur für IDB-base64, nicht blob: URLs)
     if (!src.startsWith('blob:')) idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();

@@ -181,7 +181,7 @@ function openAddMediaDialog(type, entityId) {
   openModal('modalAddMedia');
 }
 
-function confirmAddMedia() {
+async function confirmAddMedia() {
   const title = document.getElementById('am-title').value.trim();
   const file  = document.getElementById('am-file').value.trim();
   if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
@@ -195,7 +195,7 @@ function confirmAddMedia() {
     const idx = p.media.length;
     p.media.push(entry);
     if (_addMediaOdFileId) _addMediaToFilemap('persons', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
-    if (_addMediaCamB64) { idbPut('photo_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaCamB64) { await idbPut('photo_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showDetail(_addMediaId, false);
@@ -206,7 +206,7 @@ function confirmAddMedia() {
     const idx = f.marr.media.length;
     f.marr.media.push({ file, titl: title, form, note:'', date:'', scbk:'', prim:'', _extra:[] });
     if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
-    if (_addMediaCamB64) { idbPut('photo_fam_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaCamB64) { await idbPut('photo_fam_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showFamilyDetail(_addMediaId, false);
@@ -217,7 +217,7 @@ function confirmAddMedia() {
     const _smIdx = s.media.length;
     s.media.push(entry);
     if (_addMediaOdFileId) _addMediaToFilemap('sources', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: _smIdx === 0 });
-    if (_addMediaCamB64) { idbPut('photo_src_' + _addMediaId + '_' + _smIdx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaCamB64) { await idbPut('photo_src_' + _addMediaId + '_' + _smIdx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showSourceDetail(_addMediaId, false);
