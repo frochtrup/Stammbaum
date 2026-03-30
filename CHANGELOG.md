@@ -5,9 +5,32 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
-## Version 4.0 🚧 (Branch `v4-dev`, ab 2026-03-27)
+## Version 4.0 ✅ (Branch `main`, ab 2026-03-30)
 
-Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX, Mobile.
+Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX, Mobile, State-Refactoring.
+
+---
+
+### Session 2026-03-30 — Finalisierung + Bugfixes (sw v74–v75)
+
+- **Media-Badges in Listen**: 📎-Badge in Personen- und Familien-Liste wenn Medien verknüpft (analog Quellen-Liste)
+- **Avatar-Platzhalter in Personen-Detail**: `det-avatar-{id}` mit Geschlechtssymbol (♂/♀/◇), analog Familie — ausgeblendet wenn Foto geladen
+- **Fix Race Condition Foto-Erstanruf**: `confirmAddMedia()` jetzt `async` + `await idbPut()` vor `showDetail()`/`showFamilyDetail()` — verhindert dass IDB-Lesen vor IDB-Schreiben läuft
+- **Fix UIState-Doppelnamespace**: `UIState.UIState._treeHistoryPos` → `UIState._treeHistoryPos` (6 Stellen) — Regression aus State-Refactoring; Baum war nach Laden und über ⧖-Button nicht aufrufbar
+- **Listentext umbrechen**: `.p-name`/`.p-meta` umbrechen bei Überlänge statt ellipsis (wie Quellenliste)
+- **Backlog erledigt**: alle offenen Features als abgeschlossen markiert
+
+*Aktuelle sw-Version: v75 / Cache: stammbaum-v75*
+
+---
+
+### Session 2026-03-30 — State-Management-Refactoring (sw v73)
+
+- **AppState / UIState**: 22 cross-file Globals in 2 Namespace-Objekte in `gedcom.js` migriert
+- Backward-compat-Shims via `Object.defineProperty` auf `window` — alle Aufrufer ohne Änderung weiter funktionsfähig
+- Vollständige Migration aller Dateien: `storage.js`, `ui-views.js`, `ui-forms.js`, `ui-media.js`, `onedrive.js`
+
+*Aktuelle sw-Version: v73 / Cache: stammbaum-v73*
 
 ---
 

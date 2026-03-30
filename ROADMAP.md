@@ -8,8 +8,8 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 | Version | Branch | Status |
 |---|---|---|
-| 3.0 | `main` | Live — stabil |
-| 4.0 | `v4-dev` | In Entwicklung |
+| 3.0 | (archiviert) | Abgelöst durch v4.0 |
+| 4.0 | `main` | Live — stabil |
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
@@ -17,7 +17,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 ---
 
-## Version 4.0 (Branch `v4-dev`, ab 2026-03-27)
+## Version 4.0 ✅ ABGESCHLOSSEN (Branch `main`, ab 2026-03-30)
 
 ### Schwerpunkt 1: Passthrough-Reduktion ✅ ABGESCHLOSSEN (2026-03-29)
 

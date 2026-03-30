@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 4.0-dev (Branch v4-dev)
+# Stammbaum PWA — Version 4.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -20,12 +20,17 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← App-Shell (HTML + CSS, ~1700 Zeilen)
-├── gedcom.js           ← GEDCOM-Parser + Writer + Datum/Ort-Utilities (~1535 Zeilen)
-├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load (~970 Zeilen)
-├── ui-views.js         ← Baum, Detailansichten, Listenrendering (~1840 Zeilen)
-├── ui-forms.js         ← Formulare, OneDrive-Integration, Medien (~2570 Zeilen)
-├── sw.js               ← Service Worker (offline, Cache v69)
+├── index.html          ← App-Shell (HTML + CSS)
+├── gedcom.js           ← Globals, AppState/UIState, Labels, Datum/Ort-Helfer, Getter/Setter
+├── gedcom-parser.js    ← parseGEDCOM(), parseGeoCoord()
+├── gedcom-writer.js    ← writeGEDCOM(), pushCont()
+├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
+├── ui-views.js         ← Baum, Detailansichten, Listenrendering
+├── ui-forms.js         ← Formulare Person/Familie/Quelle/Archiv/Event
+├── ui-media.js         ← Medien Add/Edit/Delete/Browser
+├── onedrive.js         ← OAuth PKCE, Foto-Import, Ordner-Browser, Filemap
+├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
+├── sw.js               ← Service Worker (offline, Cache v75)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
@@ -33,8 +38,8 @@ stammbaum/
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
 ├── UI-DESIGN.md        ← HTML-Struktur, Navigation, CSS Design-System, Sanduhr-Layout
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
-├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
-├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v4.0-dev
+├── ROADMAP.md          ← Phasen-Übersicht, bekannte Probleme
+├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v4.0
 └── MEMORY.md           ← Projekt-Memory für KI-Kontext
 ```
 
@@ -152,20 +157,22 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Stammbaum PWA v3.0                          │
+│  Stammbaum PWA v4.0                          │
 │  Vanilla JS · Kein Framework · Kein Build    │
 │                                              │
-│  index.html   — App-Shell, CSS               │
-│  gedcom.js    — Parser + Writer              │
-│  storage.js   — IDB, Dateiverwaltung         │
-│  ui-views.js  — Baum, Detail, Listen         │
-│  ui-forms.js  — Formulare, OneDrive, Medien  │
-│  sw.js        — Service Worker (offline)     │
+│  index.html        — App-Shell, CSS          │
+│  gedcom.js         — State, Labels, Helfer   │
+│  gedcom-parser.js  — parseGEDCOM()           │
+│  gedcom-writer.js  — writeGEDCOM()           │
+│  storage.js        — IDB, Dateiverwaltung    │
+│  ui-views.js       — Baum, Detail, Listen    │
+│  ui-forms.js       — Formulare               │
+│  ui-media.js       — Medien                  │
+│  onedrive.js       — OAuth, Fotos, Filemap   │
+│  sw.js             — Service Worker (offline)│
 │                                              │
-│  Globaler State: let db = {                  │
-│    individuals, families, sources,           │
-│    repositories, extraPlaces, notes          │
-│  }                                           │
+│  State: AppState { db, changed, currentId…} │
+│         UIState  { _treeHistory, _relMode…} │
 │                                              │
 │  Persistenz:                                 │
 │  - IndexedDB primär (GEDCOM-Text, Fotos)     │
@@ -179,7 +186,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta≈0** (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
-**Version 4.0-dev** — März 2026 — Branch `v4-dev` · sw v69 · `main` = v3.0 stabil
+**Version 4.0** — März 2026 — Branch `main` · sw v75
 
 ---
 
