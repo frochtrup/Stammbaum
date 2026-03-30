@@ -324,5 +324,4 @@ restoreFileHandle() (bei Seitenreload)
 | State-Management | ~27+ globale Variablen, keine Schichtentrennung | Architektur-Schuld |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
 | Virtuelles Scrollen | Listen >1000 Einträge langsam | v5 geplant |
-| `gedcom.js` zu gross (1535 Z.) | Parser + Writer + Helfer gemischt | Behoben: `gedcom-parser.js` (745 Z.) + `gedcom-writer.js` (485 Z.) + `gedcom.js` (305 Z.) |
-| `ui-forms.js` zu gross (2567 Z.) | OneDrive + Medien + Formulare gemischt | Behoben: `onedrive.js` (658 Z.) + `ui-media.js` (344 Z.) + `ui-forms.js` (1568 Z.) |
+| `ui-views.js` gross (1839 Z.) | Baum + Detail + Listen + Listenrendering gemischt | Backlog |
