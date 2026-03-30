@@ -183,6 +183,13 @@ body {
 }
 .tkl-lbl { font-size: 0.65rem; color: var(--text-dim); }
 .tree-card-peek:active { opacity: 0.8; }
+.tree-kekule-badge {
+  position: absolute;
+  top: 2px; left: 4px;
+  font-size: 0.55rem; color: var(--gold-dim);
+  line-height: 1; font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
 
 /* ═══════════════════════════════════════
    LANDING
@@ -850,6 +857,7 @@ body {
     <div class="topbar-inner">
       <button class="topbar-btn back" onclick="goBack()">← Zurück</button>
       <span class="topbar-title" id="detailTopTitle"></span>
+      <button class="topbar-btn" id="probandBtn" style="display:none" title="Als Proband setzen">⌂</button>
       <button class="topbar-btn" id="treeBtn" style="display:none;font-size:1rem" title="Sanduhr-Ansicht">⧖</button>
       <button class="topbar-btn primary" onclick="showEditSheet()" id="editBtn">Bearbeiten</button>
     </div>

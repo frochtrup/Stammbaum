@@ -1,4 +1,13 @@
 // ─────────────────────────────────────
+//  PROBAND
+// ─────────────────────────────────────
+let _probandId = null;  // null = Fallback auf kleinste ID
+
+function getProbandId() {
+  return (_probandId && db.individuals[_probandId]) ? _probandId : smallestPersonId();
+}
+
+// ─────────────────────────────────────
 //  BAUM: TASTATURNAVIGATION
 // ─────────────────────────────────────
 let _treeNavTargets = {};
@@ -227,9 +236,9 @@ function bnavSearch() {
   setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
 }
 
-// Bottom-Nav: Proband (kleinste ID)
+// Bottom-Nav: Proband
 function bnavHome() {
-  const id = smallestPersonId();
+  const id = getProbandId();
   if (id) { setBnavActive('home'); showTree(id); }
 }
 
@@ -388,11 +397,13 @@ function smallestPersonId() {
   })[0];
 }
 
-// Startansicht nach Datei-Load: Tree der Person mit kleinster ID
-function showStartView() {
+// Startansicht nach Datei-Load: Tree des Probanden (oder kleinste ID)
+async function showStartView() {
   currentTab = 'persons';
   showMain();
-  const startId = smallestPersonId();
+  const saved = await idbGet('proband_id').catch(() => null);
+  _probandId = (saved && db.individuals[saved]) ? saved : null;
+  const startId = getProbandId();
   if (startId) showTree(startId);
 }
 
@@ -1087,6 +1098,23 @@ function showTree(personId, addToHistory = true) {
   const PAD  = isPortrait ? 14 : 20;
   const ROW  = H + VGAP;
 
+  // ── Kekule-Nummern (relativ zum Probanden; Proband=1, Vater=2, Mutter=3, …) ──
+  const kekuleMap = {};
+  {
+    const _kWalk = (id, k, depth) => {
+      if (!id || depth > 8 || !db.individuals[id] || kekuleMap[id]) return;
+      kekuleMap[id] = k;
+      const { father, mother } = getParentIds(id);
+      _kWalk(father, k * 2,     depth + 1);
+      _kWalk(mother, k * 2 + 1, depth + 1);
+    };
+    _kWalk(getProbandId(), 1, 0);
+  }
+  const kbadge = id => {
+    const k = id && kekuleMap[id];
+    return k ? `<div class="tree-kekule-badge">${k}</div>` : '';
+  };
+
   // ── Vorfahren (4 Ebenen; Hochformat: max. 2 Ebenen) ──
   function _gp(id) { return id ? getParentIds(id) : { father: null, mother: null }; }
   const par0 = getParentIds(personId);
@@ -1274,25 +1302,25 @@ function showTree(personId, addToHistory = true) {
   // ── UrUrGroßeltern (Ebene -4, nur Querformat/Desktop) ──
   if (hasAnc4) anc4.forEach((id, i) => {
     if (!id) return;
-    mkCard(id, l4X(i), ry(-4), false);
+    mkCard(id, l4X(i), ry(-4), false, false, null, false, null, kbadge(id));
     if (anc3[Math.floor(i / 2)]) line(l4CX(i), ry(-4) + H, l3CX(Math.floor(i / 2)), ry(-3));
   });
 
   // ── UrGroßeltern (Ebene -3, nur Querformat/Desktop) ──
   if (hasAnc3) anc3.forEach((id, i) => {
     if (!id) return;
-    mkCard(id, aXFn(3)(i), ry(-3), false);
+    mkCard(id, aXFn(3)(i), ry(-3), false, false, null, false, null, kbadge(id));
     if (anc2[Math.floor(i / 2)]) line(aCXFn(3)(i), ry(-3) + H, aCXFn(2)(Math.floor(i / 2)), ry(-2));
   });
 
   // ── Großeltern + Linien zu Eltern ──
   anc2.forEach((id, i) => {
-    mkCard(id, aXFn(2)(i), ry(-2), false);
+    mkCard(id, aXFn(2)(i), ry(-2), false, false, null, false, null, kbadge(id));
     if (id) line(aCXFn(2)(i), ry(-2) + H, aCXFn(1)(Math.floor(i / 2)), ry(-1));
   });
 
   // ── Eltern ──
-  anc1.forEach((id, i) => mkCard(id, aXFn(1)(i), ry(-1), false));
+  anc1.forEach((id, i) => mkCard(id, aXFn(1)(i), ry(-1), false, false, null, false, null, kbadge(id)));
 
   // ── Eltern → Kinder: symmetrischer Verzweigungspunkt bei personCX ──
   if (anc1[0] || anc1[1] || nSibs > 0) {
@@ -1317,11 +1345,11 @@ function showTree(personId, addToHistory = true) {
     const badge = (i === 0 && nSibs > 1)
       ? `<div class="tree-half-badge" style="bottom:auto;top:3px;right:4px;color:var(--gold)">${nSibs}</div>`
       : '';
-    mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge);
+    mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge + kbadge(sid));
   });
 
   // ── Zentrumsperson ──
-  mkCard(personId, personX, ry(0), true);
+  mkCard(personId, personX, ry(0), true, false, null, false, null, kbadge(personId));
 
   // ── Ehepartner: Kartenstapel rechts ──
   // Aktiver Ehepartner (Index aus _activeSpouseMap) liegt oben und ist voll lesbar.
@@ -1340,7 +1368,7 @@ function showTree(personId, addToHistory = true) {
     const onClick = isActive
       ? () => showTree(fam.spId)
       : () => { _activeSpouseMap[personId] = origIdx; showTree(personId, false); };
-    mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick);
+    mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick, kbadge(fam.spId));
     if (isActive) {
       svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3');
       // Klickbares div-Element auf der Ehe-Linie (SVG hat pointer-events:none)
@@ -1362,7 +1390,7 @@ function showTree(personId, addToHistory = true) {
     row.forEach((id, i) => {
       const cxi    = childRowCX(row, i);
       const isHalf = halfKidSet.has(id);
-      mkCard(id, childRowX(row, i), rowY, false, isHalf);
+      mkCard(id, childRowX(row, i), rowY, false, isHalf, null, false, null, kbadge(id));
       line(personCX, row0Bottom, cxi, rowY, isHalf ? 'var(--gold-dim)' : 'var(--border)', isHalf ? '4 3' : null);
     });
   });
@@ -1426,6 +1454,25 @@ function showDetail(id, pushHistory = true) {
   document.getElementById('editBtn').onclick = () => showPersonForm(id);
   document.getElementById('treeBtn').style.display = '';
   document.getElementById('treeBtn').onclick = () => showTree(id);
+  const pb = document.getElementById('probandBtn');
+  if (pb) {
+    pb.style.display = '';
+    const isProband = getProbandId() === id;
+    pb.style.color = isProband ? 'var(--gold)' : '';
+    pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+    pb.onclick = () => {
+      if (getProbandId() === id) {
+        _probandId = null;
+        idbPut('proband_id', null).catch(() => {});
+        showToast('Proband zurückgesetzt (kleinste ID)');
+      } else {
+        _probandId = id;
+        idbPut('proband_id', id).catch(() => {});
+        showToast('Proband: ' + (p.name || id));
+      }
+      showDetail(id, false);
+    };
+  }
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
