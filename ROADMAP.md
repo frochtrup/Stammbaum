@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v75 / Cache: `stammbaum-v75`
+**Aktuelle sw-Version:** v80 / Cache: `stammbaum-v80`
 
 ---
 
@@ -68,6 +68,7 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 - [x] Foto-Upload aus Formularen entfernt — nur noch über Medien-Abschnitt ✅ (sw v60)
 - [x] Schnell-Formular für neue Quellen: nur ABBR + Titel sichtbar, Optional-Felder per Toggle erweiterbar ✅ (sw v76)
 - [x] Swipe-Gesten: Swipe-Right = Zurück in allen Detailansichten, mit visueller Rückmeldung ✅ (sw v76)
+- [x] Desktop: Listenmarkierung folgt Baumnavigation sofort; Suchfeld sticky ✅ (sw v78–v80)
 - [ ] Offline-Sync-Indikator: zeigt ausstehende Änderungen die noch nicht in OneDrive gespeichert sind
 
 ### Offene Features (backlog) ✅ ABGESCHLOSSEN (2026-03-30)
