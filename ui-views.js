@@ -1458,7 +1458,7 @@ function showDetail(id, pushHistory = true) {
   if (pb) {
     pb.style.display = '';
     const isProband = getProbandId() === id;
-    pb.style.color = isProband ? 'var(--gold)' : '';
+    pb.classList.toggle('proband-active', isProband);
     pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
     pb.onclick = () => {
       if (getProbandId() === id) {

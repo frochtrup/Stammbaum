@@ -87,6 +87,7 @@ body {
 .topbar-btn.back { color: var(--text-dim); }
 .topbar-btn.primary { color: var(--gold-lt); font-weight: 600; }
 .topbar-btn[data-save-btn].direct-save { color: var(--gold-lt); }
+.topbar-btn.proband-active { background: var(--gold); color: var(--bg); font-weight: 700; }
 #ef-type:disabled {
   -webkit-appearance: none; appearance: none;
   background: transparent; border: 1px solid transparent;
@@ -186,8 +187,9 @@ body {
 .tree-kekule-badge {
   position: absolute;
   top: 2px; left: 4px;
-  font-size: 0.55rem; color: var(--gold-dim);
-  line-height: 1; font-variant-numeric: tabular-nums;
+  font-size: 0.6rem; color: var(--gold);
+  font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 
