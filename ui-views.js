@@ -3,6 +3,7 @@
 // ─────────────────────────────────────
 let _treeNavTargets = {};
 let _treeKeyInit = false;
+let _treeZoomScale = 1;
 
 function _initTreeKeys() {
   if (_treeKeyInit) return;
@@ -76,6 +77,41 @@ function _initTreeDrag() {
       showTree(id, false);
     }, 250);
   });
+
+  // Pinch-to-Zoom (Touch, 2 Finger)
+  let _pinchStartDist = 0, _pinchStartScale = 1;
+  sc.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      _pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      _pinchStartScale = _treeZoomScale;
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  sc.addEventListener('touchmove', e => {
+    if (e.touches.length !== 2 || !_pinchStartDist) return;
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    _treeZoomScale = Math.min(3, Math.max(0.3, _pinchStartScale * dist / _pinchStartDist));
+    const wrap = document.getElementById('treeWrap');
+    const scaleWrap = document.getElementById('treeScaleWrap');
+    if (wrap) {
+      wrap.style.transform = `scale(${_treeZoomScale})`;
+      wrap.style.transformOrigin = '0 0';
+    }
+    if (scaleWrap && wrap) {
+      scaleWrap.style.width  = Math.round(parseFloat(wrap.style.width)  * _treeZoomScale) + 'px';
+      scaleWrap.style.height = Math.round(parseFloat(wrap.style.height) * _treeZoomScale) + 'px';
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  sc.addEventListener('touchend', e => { if (e.touches.length < 2) _pinchStartDist = 0; });
 }
 
 function toggleTreeFullscreen() {
@@ -999,9 +1035,9 @@ function treeNavBack() {
 }
 
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
-function _treeShortName(p, isCenter) {
+function _treeShortName(p, isCenter, portraitMode) {
   const nm = p.name || p.id || '';
-  const limit = isCenter ? 26 : 18;
+  const limit = isCenter ? (portraitMode ? 16 : 26) : (portraitMode ? 11 : 18);
   if (nm.length <= limit) return nm;
   const given = p.given || '';
   const surn  = p.surname || '';
@@ -1028,18 +1064,24 @@ function showTree(personId, addToHistory = true) {
   _updateTreeBackBtn();
   setBnavActive('tree');
 
-  const CW = 160, CH = 80;
-  const W  = 96,  H  = 64;
-  const HGAP = 10, VGAP = 44;
-  const MGAP = 20;
-  const SIB_GAP = 14;  // Abstand Geschwister-Spalte ↔ Zentrumsperson
-  const PEEK    = 12;  // Sichtbarer Streifen gestapelter Kacheln
+  // ── Orientierung + Dimensionen ──
+  const isPortrait = window.innerWidth < window.innerHeight;
+  if (isPortrait) _treeZoomScale = 1; // Portrait: kein Zoom, kompaktes Layout
+
+  const W   = isPortrait ? 74  : 96;
+  const H   = isPortrait ? 52  : 64;
+  const CW  = isPortrait ? 116 : 160;
+  const CH  = isPortrait ? 68  : 80;
+  const HGAP    = isPortrait ? 8  : 10;
+  const VGAP    = isPortrait ? 34 : 44;
+  const MGAP    = isPortrait ? 14 : 20;
+  const SIB_GAP = isPortrait ? 10 : 14;
+  const PEEK    = isPortrait ? 10 : 12;
   const SLOT = W + HGAP;
-  const PAD  = 20;
+  const PAD  = isPortrait ? 16 : 20;
   const ROW  = H + VGAP;
 
   // ── Vorfahren (4 Ebenen; Hochformat: max. 2 Ebenen) ──
-  const isPortrait = window.innerWidth < window.innerHeight;
   function _gp(id) { return id ? getParentIds(id) : { father: null, mother: null }; }
   const par0 = getParentIds(personId);
   const anc1 = [par0.father, par0.mother];                                         // 2
@@ -1143,8 +1185,15 @@ function showTree(personId, addToHistory = true) {
   // ── DOM aufbauen ──
   document.getElementById('treeTopTitle').textContent = p.name || personId;
   const wrap = document.getElementById('treeWrap');
+  const scaleWrap = document.getElementById('treeScaleWrap');
   wrap.style.width  = totalW + 'px';
   wrap.style.height = totalH + 'px';
+  wrap.style.transform = _treeZoomScale !== 1 ? `scale(${_treeZoomScale})` : '';
+  wrap.style.transformOrigin = '0 0';
+  if (scaleWrap) {
+    scaleWrap.style.width  = Math.round(totalW * _treeZoomScale) + 'px';
+    scaleWrap.style.height = Math.round(totalH * _treeZoomScale) + 'px';
+  }
   wrap.querySelectorAll('.tree-card, .tree-marr-btn').forEach(el => el.remove());
   const svg = document.getElementById('treeSvg');
   svg.setAttribute('width',   totalW);
@@ -1182,6 +1231,8 @@ function showTree(personId, addToHistory = true) {
     div.style.left = Math.round(x) + 'px';
     div.style.top  = Math.round(y) + 'px';
     if (zidx !== null) div.style.zIndex = zidx;
+    div.style.width  = (isCenter ? CW : W) + 'px';
+    div.style.height = (isCenter ? CH : H) + 'px';
     if (!id) {
       div.classList.add('tree-card-empty');
       div.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem">?</span>';
@@ -1191,7 +1242,7 @@ function showTree(personId, addToHistory = true) {
     const q = db.individuals[id];
     if (!q) return;
     div.dataset.sex = q.sex || 'U';
-    const nm = _treeShortName(q, isCenter);
+    const nm = _treeShortName(q, isCenter, isPortrait);
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
@@ -1316,14 +1367,16 @@ function showTree(personId, addToHistory = true) {
   // Auto-Zentrierung: Zentrumsperson horizontal + vertikal ~1/3 von oben
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
-    // Horizontale Zentrierung
-    const leftPad = Math.max(0, Math.floor((sc.clientWidth  - totalW) / 2));
-    // Vertikale Zentrierung: Baum mittig im Viewport, sonst Zentrumsperson bei 40% von oben
-    const topPad  = Math.max(0, Math.floor((sc.clientHeight - totalH) / 2));
-    wrap.style.marginLeft = leftPad + 'px';
-    wrap.style.marginTop  = topPad  + 'px';
-    sc.scrollLeft = Math.max(0, leftPad + personCX - sc.clientWidth  / 2);
-    sc.scrollTop  = Math.max(0, topPad  + ry(0)   - Math.round(sc.clientHeight * 0.4));
+    const scaledW = totalW * _treeZoomScale;
+    const scaledH = totalH * _treeZoomScale;
+    const leftPad = Math.max(0, Math.floor((sc.clientWidth  - scaledW) / 2));
+    const topPad  = Math.max(0, Math.floor((sc.clientHeight - scaledH) / 2));
+    const posEl = scaleWrap || wrap;
+    posEl.style.marginLeft = leftPad + 'px';
+    posEl.style.marginTop  = topPad  + 'px';
+    if (scaleWrap) { wrap.style.marginLeft = ''; wrap.style.marginTop = ''; }
+    sc.scrollLeft = Math.max(0, leftPad + personCX * _treeZoomScale - sc.clientWidth  / 2);
+    sc.scrollTop  = Math.max(0, topPad  + ry(0) * _treeZoomScale   - Math.round(sc.clientHeight * 0.4));
   }, 60);
 }
 
