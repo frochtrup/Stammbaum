@@ -18,6 +18,7 @@ function _initTreeKeys() {
   if (_treeKeyInit) return;
   _treeKeyInit = true;
   document.addEventListener('keydown', e => {
+    if (e.repeat) return;  // key auto-repeat ignorieren
     if (!document.getElementById('v-tree')?.classList.contains('active')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
     const t = _treeNavTargets;
@@ -236,11 +237,17 @@ async function _lightboxSetHero() {
 // ─────────────────────────────────────
 //  NAVIGATION
 // ─────────────────────────────────────
+function _updateTopbarH() {
+  const tb = document.querySelector('#v-main .topbar');
+  if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+}
+
 function showView(id) {
   const desktop = window.innerWidth >= 900 && id !== 'v-landing';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  if (id === 'v-main') _updateTopbarH();
 
   if (desktop) {
     document.getElementById('v-main').classList.add('active');
@@ -549,7 +556,7 @@ function renderPersonList(persons) {
     if (cur) {
       cur.classList.add('current');
       const container = document.getElementById('v-main') || list.closest('.view');
-      _scrollListToCurrent(container, cur);
+      requestAnimationFrame(() => _scrollListToCurrent(container, cur));
     }
   }
 }
@@ -690,7 +697,7 @@ function renderFamilyList(fams) {
     if (cur) {
       cur.classList.add('current');
       const container = document.getElementById('v-main') || el.closest('.view');
-      _scrollListToCurrent(container, cur);
+      requestAnimationFrame(() => _scrollListToCurrent(container, cur));
     }
   }
 }
