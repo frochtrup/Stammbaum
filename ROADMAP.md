@@ -10,10 +10,11 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 |---|---|---|
 | 3.0 | (archiviert) | Abgelöst durch v4.0 |
 | 4.0 | `main` | Live — stabil |
+| 5.0 | `v5-dev` (geplant) | In Planung |
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v80 / Cache: `stammbaum-v80`
+**Aktuelle sw-Version:** v82 / Cache: `stammbaum-v82`
 
 ---
 
@@ -142,21 +143,23 @@ Sobald alle Aufrufer migriert: `let db = AppState.db` etc. aus gedcom.js entfern
 
 ---
 
-## Schwerpunkt 6: Weitere Darstellungen (Backlog)
+## Version 5.0 (Branch `v5-dev`, geplant)
+
+### Schwerpunkt 1: Weitere Darstellungen
 
 Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf Desktop und iPhone Querformat.
 
-### Fächer-/Halbkreisdiagramm (Fan Chart)
-- Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
-- Gut geeignet für Desktop (breiter Viewport) und iPhone Querformat
-- Rendering: SVG, polar coordinates; Segmente klickbar → showTree(id) oder showDetail(id)
-- Konfigurierbar: 3–6 Generationen, Vollkreis oder Halbkreis
-- Integration: eigener Tab-Button oder Toggle im Baum-View
+#### Fächer-/Halbkreisdiagramm (Fan Chart)
+- [ ] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
+- [ ] Gut geeignet für Desktop (breiter Viewport) und iPhone Querformat
+- [ ] Rendering: SVG, polar coordinates; Segmente klickbar → showTree(id) oder showDetail(id)
+- [ ] Konfigurierbar: 3–6 Generationen, Vollkreis oder Halbkreis
+- [ ] Integration: eigener Tab-Button oder Toggle im Baum-View
 
-### Weitere mögliche Darstellungen (niedrigere Prio)
-- Nachkommen-Baum (top-down): Probanden oben, Kinder/Enkel nach unten
-- Zeitleiste: Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
-- Karten-Ansicht: Geburts-/Sterbeorte auf Landkarte (leaflet.js oder Apple Maps Link-Cluster)
+#### Weitere mögliche Darstellungen (niedrigere Prio)
+- [ ] Nachkommen-Baum (top-down): Probanden oben, Kinder/Enkel nach unten
+- [ ] Zeitleiste: Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
+- [ ] Karten-Ansicht: Geburts-/Sterbeorte auf Landkarte (leaflet.js oder Apple Maps Link-Cluster)
 
 ---
 
