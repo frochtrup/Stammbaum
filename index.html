@@ -364,7 +364,7 @@ body {
 /* ═══════════════════════════════════════
    DETAIL VIEW
 ═══════════════════════════════════════ */
-#v-detail { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+#v-detail { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); will-change: transform; }
 #v-detail.active { display: block; }
 
 .detail-hero {
@@ -1153,6 +1153,7 @@ body {
         <label class="form-label">Titel</label>
         <input class="form-input" id="sf-title" placeholder="Kirchenbuch München St. Peter 1850–1900">
       </div>
+      <div id="sf-optional-fields">
       <div class="form-group">
         <label class="form-label">Autor / Institution</label>
         <input class="form-input" id="sf-auth" placeholder="Pfarramt St. Peter">
@@ -1199,6 +1200,10 @@ body {
           <button type="button" class="src-add-btn" onclick="_addMediaEntry('sf')">＋ Hinzufügen</button>
         </div>
       </div>
+      </div><!-- /sf-optional-fields -->
+      <button type="button" id="sf-more-btn" class="btn"
+              style="width:100%;margin-bottom:12px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);font-size:0.9rem"
+              onclick="sfToggleMore()">Weitere Felder ▼</button>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalSource')">Abbrechen</button>
         <button class="btn btn-save" onclick="saveSource()">Speichern</button>

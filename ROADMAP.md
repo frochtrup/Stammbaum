@@ -66,8 +66,8 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 - [x] Proband konfigurierbar (nicht mehr automatisch kleinste ID); Button in Topbar ✅ (sw v68)
 - [x] Kekule/Ahnentafel-Nummern im Baum ✅ (sw v68–v69)
 - [x] Foto-Upload aus Formularen entfernt — nur noch über Medien-Abschnitt ✅ (sw v60)
-- [ ] Schnell-Formular für neue Quellen (minimale Pflichtfelder, Rest später ergänzen)
-- [ ] Swipe-Gesten: zurück/vorwärts in Detailansichten
+- [x] Schnell-Formular für neue Quellen: nur ABBR + Titel sichtbar, Optional-Felder per Toggle erweiterbar ✅ (sw v76)
+- [x] Swipe-Gesten: Swipe-Right = Zurück in allen Detailansichten, mit visueller Rückmeldung ✅ (sw v76)
 - [ ] Offline-Sync-Indikator: zeigt ausstehende Änderungen die noch nicht in OneDrive gespeichert sind
 
 ### Offene Features (backlog) ✅ ABGESCHLOSSEN (2026-03-30)

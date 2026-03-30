@@ -123,6 +123,60 @@ function _initTreeDrag() {
   sc.addEventListener('touchend', e => { if (e.touches.length < 2) _pinchStartDist = 0; });
 }
 
+// ─────────────────────────────────────
+//  DETAIL-ANSICHT: SWIPE-GESTEN
+// ─────────────────────────────────────
+let _swipeInit = false;
+
+function _initDetailSwipe() {
+  if (_swipeInit) return;
+  _swipeInit = true;
+  const view = document.getElementById('v-detail');
+  if (!view) return;
+
+  let startX = 0, startY = 0, startTime = 0;
+  let tracking = false;
+
+  view.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { tracking = false; return; }
+    // Kein Swipe wenn Modal offen ist
+    if (document.querySelector('.modal-overlay.open')) { tracking = false; return; }
+    startX    = e.touches[0].clientX;
+    startY    = e.touches[0].clientY;
+    startTime = Date.now();
+    tracking  = true;
+    view.style.transition = 'none';
+  }, { passive: true });
+
+  view.addEventListener('touchmove', e => {
+    if (!tracking || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // Nur horizontale Swipes verfolgen (kein Konflikt mit vertikalem Scrollen)
+    if (Math.abs(dy) > Math.abs(dx) * 0.8 && Math.abs(dx) < 20) { tracking = false; return; }
+    // Nur Swipe-Right (zurück) mit visuellem Feedback
+    if (dx > 0) {
+      view.style.transform = `translateX(${Math.min(dx * 0.5, 80)}px)`;
+    }
+  }, { passive: true });
+
+  view.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const dx       = e.changedTouches[0].clientX - startX;
+    const dy       = e.changedTouches[0].clientY - startY;
+    const elapsed  = Date.now() - startTime;
+    const isSwipeRight = dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.2 && elapsed < 400;
+
+    view.style.transition = 'transform 0.2s ease';
+    view.style.transform  = '';
+    // Transition nach Animation aufräumen
+    view.addEventListener('transitionend', () => { view.style.transition = ''; }, { once: true });
+
+    if (isSwipeRight) goBack();
+  }, { passive: true });
+}
+
 function toggleTreeFullscreen() {
   const isFs = document.body.classList.toggle('tree-fullscreen');
   const btn = document.getElementById('treeFsBtn');
@@ -195,10 +249,11 @@ function showView(id) {
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') document.getElementById('v-detail').scrollTop = 0;
+    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
+    if (id === 'v-detail') _initDetailSwipe();
     const showNav = (id === 'v-main' || id === 'v-tree');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';

@@ -992,8 +992,9 @@ function _applySourceTemplate(type) {
 function showSourceForm(id) {
   closeModal('modalAdd');
   const s = id ? getSource(id) : null;
+  const isNew = !s;
   document.getElementById('sourceFormTitle').textContent = s ? 'Quelle bearbeiten' : 'Neue Quelle';
-  document.getElementById('sf-template-row').style.display = s ? 'none' : '';
+  document.getElementById('sf-template-row').style.display = isNew ? '' : 'none';
   document.getElementById('sf-id').value    = id || '';
   document.getElementById('sf-abbr').value  = s?.abbr   || '';
   document.getElementById('sf-title').value = s?.title  || '';
@@ -1009,7 +1010,27 @@ function showSourceForm(id) {
   _renderMediaList('sf', s?.media || []);
   document.getElementById('sf-media-add-file').value = '';
 
+  // Schnell-Formular: bei neuer Quelle Optional-Felder verstecken
+  const opt = document.getElementById('sf-optional-fields');
+  const moreBtn = document.getElementById('sf-more-btn');
+  if (isNew) {
+    opt.style.display = 'none';
+    moreBtn.style.display = '';
+    moreBtn.textContent = 'Weitere Felder ▼';
+  } else {
+    opt.style.display = '';
+    moreBtn.style.display = 'none';
+  }
+
   openModal('modalSource');
+}
+
+function sfToggleMore() {
+  const opt = document.getElementById('sf-optional-fields');
+  const btn = document.getElementById('sf-more-btn');
+  const open = opt.style.display !== 'none';
+  opt.style.display = open ? 'none' : '';
+  btn.textContent = open ? 'Weitere Felder ▼' : 'Weniger Felder ▲';
 }
 
 function saveSource() {
