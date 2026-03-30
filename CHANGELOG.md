@@ -11,17 +11,20 @@ Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop
 
 ---
 
-### Session 2026-03-30 — Refactoring: Datei-Splitting (sw v70–v72)
+### Session 2026-03-30 — Refactoring: Datei-Splitting + demo.ged (sw v70–v73)
 
 - **`onedrive.js`** (658 Z.) aus `ui-forms.js` extrahiert: OAuth-PKCE-Flow, Token-Refresh, GED-Datei-Picker, Foto-Import, Ordner-Browser, Einstellungen, Filemap-Helpers
 - **`ui-media.js`** (344 Z.) aus `ui-forms.js` extrahiert: `openEditMediaDialog`, `openAddMediaDialog`, `showMediaBrowser`, `delete*Media`, `_asyncLoadMediaThumb`
 - **`gedcom-parser.js`** (745 Z.) aus `gedcom.js` extrahiert: `parseGEDCOM()`, `parseGeoCoord()`
 - **`gedcom-writer.js`** (485 Z.) aus `gedcom.js` extrahiert: `writeGEDCOM()`, `pushCont()`
-- `gedcom.js` behält: Globals/`db`, Labels, Datum- und PLAC-Helfer (305 Z.)
+- `gedcom.js` behält: Globals/`db`, Labels, Datum- und PLAC-Helfer (305 Z.) — neu: 8 Getter/Setter-Helfer (`getPerson/getFamily/getSource/getRepo`, `setPerson/setFamily/setSource/setRepo`)
 - `ui-forms.js` schrumpft von 2567 auf 1568 Zeilen (reine Formulare)
-- `sw.js` Precache aktualisiert (v70 → v72)
+- **`demo.ged`** (263 Z.) extrahiert aus `storage.js`: GEDCOM-Datei mit 12 Personen, 6 Familien, 3 Quellen, 4 Medien; `loadDemo()` lädt via `fetch('./demo.ged')` statt hardcodiertem JS-Array
+- `storage.js` schrumpft von 970 auf 707 Zeilen
+- `sw.js` Precache aktualisiert (v70 → v73), `demo.ged` eingeschlossen
+- `.gitignore`: `!demo.ged` Ausnahme für `*.ged`-Regel
 
-*Aktuelle sw-Version: v72 / Cache: stammbaum-v72*
+*Aktuelle sw-Version: v73 / Cache: stammbaum-v73*
 
 ---
 

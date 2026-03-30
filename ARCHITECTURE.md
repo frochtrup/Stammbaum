@@ -22,12 +22,13 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  ui-forms.js       — Formulare (Person/Fam/Src/Repo) │
 │  ui-media.js       — Medien Add/Edit/Delete/Browser  │
 │  onedrive.js       — OAuth, Foto-Import, Filemap     │
-│  sw.js             — Service Worker (Cache v72)      │
+│  sw.js             — Service Worker (Cache v73)      │
 │  manifest.json     — PWA-Manifest                    │
+│  demo.ged          — Demo-GEDCOM (12 Pers., 6 Fam.)  │
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~10 JS-Dateien · ~180 Funktionen · ~8700 Zeilen
+**Größe gesamt:** ~10 JS-Dateien · ~180 Funktionen · ~8500 Zeilen
 
 ---
 
