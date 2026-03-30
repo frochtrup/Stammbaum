@@ -227,7 +227,7 @@ function bnavSearch() {
   setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
 }
 
-/ Bottom-Nav: Proband (kleinste ID)
+// Bottom-Nav: Proband (kleinste ID)
 function bnavHome() {
   const id = smallestPersonId();
   if (id) { setBnavActive('home'); showTree(id); }
