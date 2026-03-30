@@ -10,10 +10,11 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 |---|---|---|
 | 3.0 | (archiviert) | Abgelöst durch v4.0 |
 | 4.0 | `main` | Live — stabil |
+| 5.0 | `v5-dev` (geplant) | In Planung |
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v75 / Cache: `stammbaum-v75`
+**Aktuelle sw-Version:** v82 / Cache: `stammbaum-v82`
 
 ---
 
@@ -66,8 +67,9 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 - [x] Proband konfigurierbar (nicht mehr automatisch kleinste ID); Button in Topbar ✅ (sw v68)
 - [x] Kekule/Ahnentafel-Nummern im Baum ✅ (sw v68–v69)
 - [x] Foto-Upload aus Formularen entfernt — nur noch über Medien-Abschnitt ✅ (sw v60)
-- [ ] Schnell-Formular für neue Quellen (minimale Pflichtfelder, Rest später ergänzen)
-- [ ] Swipe-Gesten: zurück/vorwärts in Detailansichten
+- [x] Schnell-Formular für neue Quellen: nur ABBR + Titel sichtbar, Optional-Felder per Toggle erweiterbar ✅ (sw v76)
+- [x] Swipe-Gesten: Swipe-Right = Zurück in allen Detailansichten, mit visueller Rückmeldung ✅ (sw v76)
+- [x] Desktop: Listenmarkierung folgt Baumnavigation sofort; Suchfeld sticky ✅ (sw v78–v80)
 - [ ] Offline-Sync-Indikator: zeigt ausstehende Änderungen die noch nicht in OneDrive gespeichert sind
 
 ### Offene Features (backlog) ✅ ABGESCHLOSSEN (2026-03-30)
@@ -138,6 +140,26 @@ Sobald alle Aufrufer migriert: `let db = AppState.db` etc. aus gedcom.js entfern
 
 **Risiko:** gering — Aliase überbrücken alte API während Migration.
 **Abhängigkeiten:** keine (kein neues Framework, kein Build-Step).
+
+---
+
+## Version 5.0 (Branch `v5-dev`, geplant)
+
+### Schwerpunkt 1: Weitere Darstellungen
+
+Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf Desktop und iPhone Querformat.
+
+#### Fächer-/Halbkreisdiagramm (Fan Chart)
+- [ ] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
+- [ ] Gut geeignet für Desktop (breiter Viewport) und iPhone Querformat
+- [ ] Rendering: SVG, polar coordinates; Segmente klickbar → showTree(id) oder showDetail(id)
+- [ ] Konfigurierbar: 3–6 Generationen, Vollkreis oder Halbkreis
+- [ ] Integration: eigener Tab-Button oder Toggle im Baum-View
+
+#### Weitere mögliche Darstellungen (niedrigere Prio)
+- [ ] Nachkommen-Baum (top-down): Probanden oben, Kinder/Enkel nach unten
+- [ ] Zeitleiste: Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
+- [ ] Karten-Ansicht: Geburts-/Sterbeorte auf Landkarte (leaflet.js oder Apple Maps Link-Cluster)
 
 ---
 

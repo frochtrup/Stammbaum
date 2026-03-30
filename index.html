@@ -343,6 +343,8 @@ body {
   cursor: pointer; transition: background 0.12s;
 }
 .person-row:active { background: var(--surface2); }
+.person-row.current { background: var(--surface2); box-shadow: inset 3px 0 0 var(--gold); }
+.list-search-header { position: sticky; top: var(--topbar-h, 52px); z-index: 100; background: var(--bg); }
 .p-avatar {
   width: 44px; height: 44px; border-radius: 50%;
   background: var(--surface2); border: 1px solid var(--border);
@@ -364,7 +366,7 @@ body {
 /* ═══════════════════════════════════════
    DETAIL VIEW
 ═══════════════════════════════════════ */
-#v-detail { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+#v-detail { padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px)); will-change: transform; }
 #v-detail.active { display: block; }
 
 .detail-hero {
@@ -791,36 +793,42 @@ body {
   </div>
 
   <div id="tab-persons">
-    <div class="search-wrap">
-      <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" oninput="applyPersonFilter()">
-    </div>
-    <div class="search-wrap" style="display:flex;gap:6px;align-items:center;padding-top:0;margin-top:-4px">
-      <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">Geb.-Jahr</span>
-      <input type="number" id="yearFrom" placeholder="von" min="1" max="2100"
-        style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
-        oninput="applyPersonFilter()">
-      <span style="color:var(--text-muted)">–</span>
-      <input type="number" id="yearTo" placeholder="bis" min="1" max="2100"
-        style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
-        oninput="applyPersonFilter()">
-      <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" onclick="clearYearFilter()" title="Jahresfilter zurücksetzen">✕</button>
-      <button type="button" id="personSortBtn" onclick="togglePersonSort()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
+    <div class="list-search-header">
+      <div class="search-wrap">
+        <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" oninput="applyPersonFilter()">
+      </div>
+      <div class="search-wrap" style="display:flex;gap:6px;align-items:center;padding-top:0;margin-top:-4px">
+        <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">Geb.-Jahr</span>
+        <input type="number" id="yearFrom" placeholder="von" min="1" max="2100"
+          style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
+          oninput="applyPersonFilter()">
+        <span style="color:var(--text-muted)">–</span>
+        <input type="number" id="yearTo" placeholder="bis" min="1" max="2100"
+          style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
+          oninput="applyPersonFilter()">
+        <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" onclick="clearYearFilter()" title="Jahresfilter zurücksetzen">✕</button>
+        <button type="button" id="personSortBtn" onclick="togglePersonSort()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
+      </div>
     </div>
     <div id="personList"></div>
   </div>
 
   <div id="tab-families" style="display:none">
-    <div class="search-wrap">
-      <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)">
+    <div class="list-search-header">
+      <div class="search-wrap">
+        <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)">
+      </div>
     </div>
     <div id="familyList"></div>
   </div>
 
   <div id="tab-sources" style="display:none">
+    <div class="list-search-header">
     <div class="search-wrap" style="display:flex;gap:8px;align-items:center">
       <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSourcesDebounced(this.value)" style="flex:1;width:auto">
       <button id="repoJumpBtn" class="btn" style="display:none;flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" onclick="document.getElementById('repoSection').scrollIntoView({behavior:'smooth'})">🏛 Archive</button>
       <button class="btn" style="flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" onclick="showMediaBrowser()" title="Alle Medien anzeigen">📎</button>
+    </div>
     </div>
     <div id="sourceList"></div>
     <div id="repoSection" style="margin-top:8px;display:none">
@@ -973,17 +981,23 @@ body {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Spitzname (NICK)</label>
-          <input class="form-input" id="pf-nick" placeholder="z.B. Hannes">
+          <label class="form-label">Namenspräfix (NPFX)</label>
+          <input class="form-input" id="pf-prefix" placeholder="Dr., Prof., …">
         </div>
         <div class="form-group">
           <label class="form-label">Namenszusatz (NSFX)</label>
           <input class="form-input" id="pf-suffix" placeholder="jr., sen., III.">
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Titel (TITL)</label>
-        <input class="form-input" id="pf-titl" placeholder="Dr., Prof., …">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Spitzname (NICK)</label>
+          <input class="form-input" id="pf-nick" placeholder="z.B. Hannes">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Titel (TITL)</label>
+          <input class="form-input" id="pf-titl" placeholder="Graf, Freiherr, …">
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">Weitere Namen</label>
@@ -1153,6 +1167,7 @@ body {
         <label class="form-label">Titel</label>
         <input class="form-input" id="sf-title" placeholder="Kirchenbuch München St. Peter 1850–1900">
       </div>
+      <div id="sf-optional-fields">
       <div class="form-group">
         <label class="form-label">Autor / Institution</label>
         <input class="form-input" id="sf-auth" placeholder="Pfarramt St. Peter">
@@ -1199,6 +1214,10 @@ body {
           <button type="button" class="src-add-btn" onclick="_addMediaEntry('sf')">＋ Hinzufügen</button>
         </div>
       </div>
+      </div><!-- /sf-optional-fields -->
+      <button type="button" id="sf-more-btn" class="btn"
+              style="width:100%;margin-bottom:12px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);font-size:0.9rem"
+              onclick="sfToggleMore()">Weitere Felder ▼</button>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalSource')">Abbrechen</button>
         <button class="btn btn-save" onclick="saveSource()">Speichern</button>

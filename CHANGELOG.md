@@ -11,6 +11,19 @@ Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop
 
 ---
 
+### Session 2026-03-30 — Desktop-Sync, Schnell-Formular, Swipe (sw v76–v80)
+
+- **Schnell-Formular neue Quellen**: neue Quelle zeigt nur ABBR + Titel; Toggle „Weitere Felder ▼" expandiert AUTH/Datum/Verlag/Archiv/Notiz/Medien; beim Bearbeiten immer alle Felder (`sfToggleMore()`, `sf-optional-fields`)
+- **Swipe-Right = Zurück**: `_initDetailSwipe()` in allen Detailansichten (`v-detail`); Threshold 60px/400ms horizontal; visuelles TranslateX-Feedback + 0.2s Transition; kein Konflikt mit Scroll/Modals
+- **Aktive Person/Familie in Liste hervorheben**: `.person-row.current` mit `box-shadow: inset 3px 0 0 var(--gold)`; `data-pid`/`data-fid` auf allen Rows; nach Render zentriert via `_scrollListToCurrent()`
+- **Desktop: Listenmarkierung folgt Baumnavigation sofort**: `showTree()` ruft `_updatePersonListCurrent()` auf; `showDetail()` + `showFamilyDetail()` rufen `_updatePersonListCurrent`/`_updateFamilyListCurrent` auf
+- **Desktop: Suchfeld sticky**: `.list-search-header` mit `position:sticky; top:52px` — Such-/Filterfelder bleiben beim Scrollen sichtbar (Personen, Familien, Quellen)
+- **Fix scrollIntoView in fixed Container**: `_scrollListToCurrent()` via manuelles `scrollTop`-Delta statt `scrollIntoView` — zuverlässig in `position:fixed; overflow-y:auto` (`#v-main`)
+
+*Aktuelle sw-Version: v80 / Cache: stammbaum-v80*
+
+---
+
 ### Session 2026-03-30 — Finalisierung + Bugfixes (sw v74–v75)
 
 - **Media-Badges in Listen**: 📎-Badge in Personen- und Familien-Liste wenn Medien verknüpft (analog Quellen-Liste)

@@ -18,6 +18,7 @@ function _initTreeKeys() {
   if (_treeKeyInit) return;
   _treeKeyInit = true;
   document.addEventListener('keydown', e => {
+    if (e.repeat) return;  // key auto-repeat ignorieren
     if (!document.getElementById('v-tree')?.classList.contains('active')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
     const t = _treeNavTargets;
@@ -123,6 +124,60 @@ function _initTreeDrag() {
   sc.addEventListener('touchend', e => { if (e.touches.length < 2) _pinchStartDist = 0; });
 }
 
+// ─────────────────────────────────────
+//  DETAIL-ANSICHT: SWIPE-GESTEN
+// ─────────────────────────────────────
+let _swipeInit = false;
+
+function _initDetailSwipe() {
+  if (_swipeInit) return;
+  _swipeInit = true;
+  const view = document.getElementById('v-detail');
+  if (!view) return;
+
+  let startX = 0, startY = 0, startTime = 0;
+  let tracking = false;
+
+  view.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) { tracking = false; return; }
+    // Kein Swipe wenn Modal offen ist
+    if (document.querySelector('.modal-overlay.open')) { tracking = false; return; }
+    startX    = e.touches[0].clientX;
+    startY    = e.touches[0].clientY;
+    startTime = Date.now();
+    tracking  = true;
+    view.style.transition = 'none';
+  }, { passive: true });
+
+  view.addEventListener('touchmove', e => {
+    if (!tracking || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+    // Nur horizontale Swipes verfolgen (kein Konflikt mit vertikalem Scrollen)
+    if (Math.abs(dy) > Math.abs(dx) * 0.8 && Math.abs(dx) < 20) { tracking = false; return; }
+    // Nur Swipe-Right (zurück) mit visuellem Feedback
+    if (dx > 0) {
+      view.style.transform = `translateX(${Math.min(dx * 0.5, 80)}px)`;
+    }
+  }, { passive: true });
+
+  view.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const dx       = e.changedTouches[0].clientX - startX;
+    const dy       = e.changedTouches[0].clientY - startY;
+    const elapsed  = Date.now() - startTime;
+    const isSwipeRight = dx > 60 && Math.abs(dx) > Math.abs(dy) * 1.2 && elapsed < 400;
+
+    view.style.transition = 'transform 0.2s ease';
+    view.style.transform  = '';
+    // Transition nach Animation aufräumen
+    view.addEventListener('transitionend', () => { view.style.transition = ''; }, { once: true });
+
+    if (isSwipeRight) goBack();
+  }, { passive: true });
+}
+
 function toggleTreeFullscreen() {
   const isFs = document.body.classList.toggle('tree-fullscreen');
   const btn = document.getElementById('treeFsBtn');
@@ -182,11 +237,17 @@ async function _lightboxSetHero() {
 // ─────────────────────────────────────
 //  NAVIGATION
 // ─────────────────────────────────────
+function _updateTopbarH() {
+  const tb = document.querySelector('#v-main .topbar');
+  if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+}
+
 function showView(id) {
   const desktop = window.innerWidth >= 900 && id !== 'v-landing';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  if (id === 'v-main') _updateTopbarH();
 
   if (desktop) {
     document.getElementById('v-main').classList.add('active');
@@ -195,10 +256,11 @@ function showView(id) {
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') document.getElementById('v-detail').scrollTop = 0;
+    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
+    if (id === 'v-detail') _initDetailSwipe();
     const showNav = (id === 'v-main' || id === 'v-tree');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
@@ -479,7 +541,7 @@ function renderPersonList(persons) {
     const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                       + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
     const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="person-row" onclick="showDetail('${p.id}')">
+    html += `<div class="person-row" data-pid="${p.id}" onclick="showDetail('${p.id}')">
       <div class="p-avatar ${sc}">${ic}</div>
       <div class="p-info">
         <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
@@ -489,6 +551,44 @@ function renderPersonList(persons) {
     </div>`;
   }
   list.innerHTML = html;
+  if (AppState.currentPersonId) {
+    const cur = list.querySelector(`[data-pid="${AppState.currentPersonId}"]`);
+    if (cur) {
+      cur.classList.add('current');
+      const container = document.getElementById('v-main') || list.closest('.view');
+      requestAnimationFrame(() => _scrollListToCurrent(container, cur));
+    }
+  }
+}
+
+function _scrollListToCurrent(container, cur) {
+  if (!container || !cur) return;
+  const cRect = container.getBoundingClientRect();
+  const eRect = cur.getBoundingClientRect();
+  const offset = eRect.top - cRect.top - (cRect.height / 2) + (eRect.height / 2);
+  container.scrollTop += offset;
+}
+
+function _updatePersonListCurrent(id) {
+  const list = document.getElementById('personList');
+  if (!list) return;
+  list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+  if (!id) return;
+  const cur = list.querySelector(`[data-pid="${id}"]`);
+  if (!cur) return;
+  cur.classList.add('current');
+  _scrollListToCurrent(document.getElementById('v-main'), cur);
+}
+
+function _updateFamilyListCurrent(id) {
+  const list = document.getElementById('familyList');
+  if (!list) return;
+  list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+  if (!id) return;
+  const cur = list.querySelector(`[data-fid="${id}"]`);
+  if (!cur) return;
+  cur.classList.add('current');
+  _scrollListToCurrent(document.getElementById('v-main'), cur);
 }
 
 function applyPersonFilter() {
@@ -592,6 +692,14 @@ function renderFamilyList(fams) {
     </div>`;
   }
   el.innerHTML = html;
+  if (AppState.currentFamilyId) {
+    const cur = el.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
+    if (cur) {
+      cur.classList.add('current');
+      const container = document.getElementById('v-main') || el.closest('.view');
+      requestAnimationFrame(() => _scrollListToCurrent(container, cur));
+    }
+  }
 }
 
 function filterFamilies(q) {
@@ -1087,6 +1195,7 @@ function showTree(personId, addToHistory = true) {
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
+  if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(personId);
 
   // ── Orientierung + Dimensionen ──
   const isPortrait = window.innerWidth < window.innerHeight;
@@ -1455,6 +1564,7 @@ function showDetail(id, pushHistory = true) {
   AppState.currentFamilyId = null;
   AppState.currentSourceId = null;
   AppState.currentRepoId   = null;
+  if (document.body.classList.contains('desktop-mode')) { _updatePersonListCurrent(id); _updateFamilyListCurrent(null); }
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
@@ -1691,6 +1801,7 @@ function showFamilyDetail(id, pushHistory = true) {
   AppState.currentPersonId = null;
   AppState.currentSourceId = null;
   AppState.currentRepoId   = null;
+  if (document.body.classList.contains('desktop-mode')) { _updateFamilyListCurrent(id); _updatePersonListCurrent(null); }
 
   const husb = f.husb ? AppState.db.individuals[f.husb] : null;
   const wife = f.wife ? AppState.db.individuals[f.wife] : null;
