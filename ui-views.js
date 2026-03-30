@@ -534,7 +534,7 @@ function renderPersonList(persons) {
     const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                       + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
     const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="person-row" onclick="showDetail('${p.id}')">
+    html += `<div class="person-row" data-pid="${p.id}" onclick="showDetail('${p.id}')">
       <div class="p-avatar ${sc}">${ic}</div>
       <div class="p-info">
         <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
@@ -544,6 +544,10 @@ function renderPersonList(persons) {
     </div>`;
   }
   list.innerHTML = html;
+  if (AppState.currentPersonId) {
+    const cur = list.querySelector(`[data-pid="${AppState.currentPersonId}"]`);
+    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+  }
 }
 
 function applyPersonFilter() {
@@ -647,6 +651,10 @@ function renderFamilyList(fams) {
     </div>`;
   }
   el.innerHTML = html;
+  if (AppState.currentFamilyId) {
+    const cur = el.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
+    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+  }
 }
 
 function filterFamilies(q) {
