@@ -778,7 +778,7 @@ body {
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
-      <button class="topbar-btn" data-save-btn onclick="exportGEDCOM()" title="Speichern">☁</button>
+      <button class="topbar-btn" onclick="bnavSearch()" title="Suche">🔍</button>
       <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
@@ -912,9 +912,9 @@ body {
     <span class="bnav-icon">📍</span>
     <span class="bnav-lbl">Orte</span>
   </button>
-  <button class="bnav-btn" id="bnav-search" onclick="bnavSearch()">
-    <span class="bnav-icon">🔍</span>
-    <span class="bnav-lbl">Suche</span>
+  <button class="bnav-btn" id="bnav-home" onclick="bnavHome()">
+    <span class="bnav-icon">⌂</span>
+    <span class="bnav-lbl">Proband</span>
   </button>
 </nav>
 

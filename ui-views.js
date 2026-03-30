@@ -227,6 +227,12 @@ function bnavSearch() {
   setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
 }
 
+/ Bottom-Nav: Proband (kleinste ID)
+function bnavHome() {
+  const id = smallestPersonId();
+  if (id) { setBnavActive('home'); showTree(id); }
+}
+
 // Globale Suche über Personen, Familien, Quellen, Orte
 function runGlobalSearch(q) {
   const out = document.getElementById('globalSearchResults');
@@ -1068,17 +1074,17 @@ function showTree(personId, addToHistory = true) {
   const isPortrait = window.innerWidth < window.innerHeight;
   if (isPortrait) _treeZoomScale = 1; // Portrait: kein Zoom, kompaktes Layout
 
-  const W   = isPortrait ? 74  : 96;
-  const H   = isPortrait ? 52  : 64;
-  const CW  = isPortrait ? 116 : 160;
-  const CH  = isPortrait ? 68  : 80;
+  const W   = isPortrait ? 80  : 96;
+  const H   = isPortrait ? 54  : 64;
+  const CW  = isPortrait ? 124 : 160;
+  const CH  = isPortrait ? 72  : 80;
   const HGAP    = isPortrait ? 8  : 10;
   const VGAP    = isPortrait ? 34 : 44;
-  const MGAP    = isPortrait ? 14 : 20;
-  const SIB_GAP = isPortrait ? 10 : 14;
+  const MGAP    = isPortrait ? 16 : 20;
+  const SIB_GAP = isPortrait ? 12 : 14;
   const PEEK    = isPortrait ? 10 : 12;
-  const SLOT = W + HGAP;
-  const PAD  = isPortrait ? 16 : 20;
+  const SLOT = W + HGAP;   // Portrait: 88 → 4 slots = 352px + 2×14 PAD = 380px
+  const PAD  = isPortrait ? 14 : 20;
   const ROW  = H + VGAP;
 
   // ── Vorfahren (4 Ebenen; Hochformat: max. 2 Ebenen) ──
