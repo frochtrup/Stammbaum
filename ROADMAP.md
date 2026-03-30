@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v69 / Cache: `stammbaum-v69`
+**Aktuelle sw-Version:** v75 / Cache: `stammbaum-v75`
 
 ---
 
@@ -70,13 +70,13 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 - [ ] Swipe-Gesten: zurück/vorwärts in Detailansichten
 - [ ] Offline-Sync-Indikator: zeigt ausstehende Änderungen die noch nicht in OneDrive gespeichert sind
 
-### Offene Features (backlog)
+### Offene Features (backlog) ✅ ABGESCHLOSSEN (2026-03-30)
 
-- [ ] Medienlinks in Events analog zu Quellen-Ansicht (Bilder + Dokumente je Event klickbar)
-- [ ] Medienlinks überall editierbar (Person, Familie, Event, Quelle — einheitliches Verhalten)
-- [ ] Konfigurierbare Foto/Dokumente-Verzeichnisse ohne OneDrive (lokale Pfade)
-- [ ] Quellenliste: Badge wenn externe Mediendatei verknüpft vorhanden
-- [ ] Bug: `2 PAGE` erscheint doppelt in bestimmten Konstellationen — prüfen
+- [x] Medienlinks in Events analog zu Quellen-Ansicht (Bilder + Dokumente je Event klickbar) ✅
+- [x] Medienlinks überall editierbar (Person, Familie, Event, Quelle — einheitliches Verhalten) ✅
+- [x] Konfigurierbare Foto/Dokumente-Verzeichnisse ohne OneDrive (lokale Pfade) ✅
+- [x] Quellenliste: Badge wenn externe Mediendatei verknüpft vorhanden ✅
+- [x] Bug: `2 PAGE` erscheint doppelt in bestimmten Konstellationen — prüfen ✅
 
 ---
 
