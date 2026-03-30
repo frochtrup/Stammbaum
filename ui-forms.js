@@ -698,15 +698,7 @@ function showPersonForm(id) {
   _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
   initSrcWidget('pf', p?.sourceRefs || []);
-  _pendingPhotoBase64 = undefined;
-  showPersonPhotoPreview(null); // Vorschau leeren bis IDB-Load fertig
   openModal('modalPerson');
-  // Foto async nachladen — keine async-Funktion nötig, Fire-and-forget
-  if (id) _loadPersonPhoto(id);
-}
-
-function _loadPersonPhoto(id) {
-  idbGet('photo_' + id).then(b64 => showPersonPhotoPreview(b64 || null)).catch(() => {});
 }
 
 function _renderPfExtraNames() {
@@ -816,22 +808,6 @@ function savePerson() {
 
   closeModal('modalPerson');
 
-  // Foto in IDB schreiben/löschen (Sprint P3-2)
-  if (_pendingPhotoBase64 !== undefined) {
-    const pObj = db.individuals[id];
-    const hasObjeInPt = (pObj?._passthrough || []).some(l => /^1 OBJE/.test(l));
-    if (_pendingPhotoBase64 === null) {
-      idbDel('photo_' + id).catch(() => {});
-      _newPhotoIds.delete(id);
-      if (hasObjeInPt) _deletedPhotoIds.add(id);
-    } else {
-      idbPut('photo_' + id, _pendingPhotoBase64).catch(() => {});
-      if (!hasObjeInPt) _newPhotoIds.add(id);   // kein OBJE im Original → Writer muss einen erzeugen
-      _deletedPhotoIds.delete(id);
-    }
-    _pendingPhotoBase64 = undefined;
-  }
-
   markChanged();
   updateStats();
   renderTab();
@@ -896,12 +872,8 @@ function showFamilyForm(id, ctx) {
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
 
-  // Media / Foto
-  _pendingFamPhotoB64 = undefined;
-  _showMediaPhotoPreview('ff', null);
   _renderMediaList('ff', f?.media || []);
   document.getElementById('ff-media-add-file').value = '';
-  if (id) idbGet('photo_fam_' + id).then(b64 => _showMediaPhotoPreview('ff', b64 || null)).catch(() => {});
 
   // Vorausfüllung aus Beziehungs-Picker-Kontext
   if (ctx) {
@@ -948,13 +920,6 @@ function saveFamily() {
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date())
   };
-
-  // Foto in IDB schreiben/löschen
-  if (_pendingFamPhotoB64 !== undefined) {
-    if (_pendingFamPhotoB64 === null) idbDel('photo_fam_' + id).catch(() => {});
-    else idbPut('photo_fam_' + id, _pendingFamPhotoB64).catch(() => {});
-    _pendingFamPhotoB64 = undefined;
-  }
 
   // Update FAMS/FAMC references
   // famc entries are objects {famId, frel, mrel}, fams entries are strings
@@ -1037,12 +1002,8 @@ function showSourceForm(id) {
   sfRepoUpdateDisplay();
   document.getElementById('deleteSourceBtn').style.display = s ? 'block' : 'none';
 
-  // Media / Foto
-  _pendingSrcPhotoB64 = undefined;
-  _showMediaPhotoPreview('sf', null);
   _renderMediaList('sf', s?.media || []);
   document.getElementById('sf-media-add-file').value = '';
-  if (id) idbGet('photo_src_' + id).then(b64 => _showMediaPhotoPreview('sf', b64 || null)).catch(() => {});
 
   openModal('modalSource');
 }
@@ -1070,12 +1031,6 @@ function saveSource() {
     lastChangedTime: gedcomTime(_now)
   };
 
-  // Foto in IDB schreiben/löschen
-  if (_pendingSrcPhotoB64 !== undefined) {
-    if (_pendingSrcPhotoB64 === null) idbDel('photo_src_' + id).catch(() => {});
-    else idbPut('photo_src_' + id, _pendingSrcPhotoB64).catch(() => {});
-    _pendingSrcPhotoB64 = undefined;
-  }
   closeModal('modalSource');
   markChanged(); updateStats();
   renderTab();
@@ -1419,9 +1374,7 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
-  if (id === 'modalPerson') { _pendingRelation = null; _pendingPhotoBase64 = undefined; }
-  if (id === 'modalFamily') _pendingFamPhotoB64 = undefined;
-  if (id === 'modalSource') _pendingSrcPhotoB64 = undefined;
+  if (id === 'modalPerson') _pendingRelation = null;
   if (id === 'modalRepo')   _pendingRepoLink  = null;
 }
 // Close on backdrop click — closeModal() aufrufen damit Pending-State zurückgesetzt wird

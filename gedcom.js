@@ -23,9 +23,6 @@ let _relAnchorId = '';    // personId (spouse/parent) oder famId (child)
 let _pendingRelation = null; // { mode, anchorId } — gesetzt vor showPersonForm()
 let currentRepoId    = null;
 let _pendingRepoLink = null; // { sourceId } — gesetzt vor showRepoForm(null)
-let _pendingPhotoBase64 = undefined; // undefined=keine Änderung, null=löschen, string=neues Foto (Sprint P3-2)
-let _pendingFamPhotoB64 = undefined; // analog für Familie
-let _pendingSrcPhotoB64 = undefined; // analog für Quelle
 let _detailActive = false;           // true wenn v-detail echten Inhalt zeigt (P3-7)
 const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto (kein OBJE im Original-GEDCOM)
 const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde (OBJE aus Passthrough entfernen)

@@ -80,24 +80,6 @@ function _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve) {
   reader.readAsDataURL(file);
 }
 
-function showPersonPhotoPreview(b64) {
-  const prev = document.getElementById('pf-photo-preview');
-  const delBtn = document.getElementById('pf-photo-del');
-  if (!prev) return;
-  if (b64) {
-    prev.innerHTML = `<img src="${b64}" alt="Foto" style="max-width:100%;max-height:200px;border-radius:8px;display:block;margin-bottom:6px">`;
-    if (delBtn) delBtn.style.display = '';
-  } else {
-    prev.innerHTML = '';
-    if (delBtn) delBtn.style.display = 'none';
-  }
-}
-
-function clearPersonPhoto() {
-  _pendingPhotoBase64 = null;
-  showPersonPhotoPreview(null);
-}
-
 // Baut eine Map @Oxx@ → {file, title} aus db.extraRecords (lv=0 OBJE-Records)
 function _buildObjeRefMap() {
   const map = {};
@@ -114,24 +96,6 @@ function _buildObjeRefMap() {
     map[objId] = { file, title };
   }
   return map;
-}
-
-// ─── Shared media helpers (FAM + SOUR) ───
-function _showMediaPhotoPreview(prefix, b64) {
-  const prev = document.getElementById(prefix + '-photo-preview');
-  const del  = document.getElementById(prefix + '-photo-del');
-  if (!prev) return;
-  if (b64) {
-    prev.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = b64; img.alt = 'Foto';
-    img.style.cssText = 'max-width:100%;max-height:200px;border-radius:8px;display:block;margin-bottom:6px';
-    prev.appendChild(img);
-    if (del) del.style.display = '';
-  } else {
-    prev.innerHTML = '';
-    if (del) del.style.display = 'none';
-  }
 }
 
 // Render editable media list into #<prefix>-media-list

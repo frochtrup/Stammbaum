@@ -1005,18 +1005,6 @@ body {
           <div class="src-picker-list" id="pf-src-list"></div>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Foto</label>
-        <div id="pf-photo-preview"></div>
-        <input type="file" id="pf-photo-input" accept="image/*" style="display:none"
-          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingPhotoBase64=b64;showPersonPhotoPreview(b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-            onclick="document.getElementById('pf-photo-input').click()">Foto wählen</button>
-          <button type="button" id="pf-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
-            onclick="clearPersonPhoto()">Foto entfernen</button>
-        </div>
-      </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalPerson')">Abbrechen</button>
         <button class="btn btn-save" onclick="savePerson()">Speichern</button>
@@ -1113,17 +1101,8 @@ body {
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Foto / Medien</label>
-        <div id="ff-photo-preview"></div>
-        <input type="file" id="ff-photo-input" accept="image/*" style="display:none"
-          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingFamPhotoB64=b64;_showMediaPhotoPreview('ff',b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-            onclick="document.getElementById('ff-photo-input').click()">Foto wählen</button>
-          <button type="button" id="ff-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
-            onclick="_pendingFamPhotoB64=null;_showMediaPhotoPreview('ff',null)">Foto entfernen</button>
-        </div>
-        <div id="ff-media-list" style="margin-top:8px"></div>
+        <label class="form-label">Medien</label>
+        <div id="ff-media-list"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="ff-media-add-file" placeholder="Dateiname / Pfad (z.B. foto.jpg)" style="flex:1">
           <button type="button" class="src-add-btn" onclick="_addMediaEntry('ff')">＋ Hinzufügen</button>
@@ -1204,17 +1183,8 @@ body {
         <textarea class="form-input" id="sf-text" rows="3" placeholder="Weitere Details…" style="resize:vertical;box-sizing:border-box"></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">Foto / Medien</label>
-        <div id="sf-photo-preview"></div>
-        <input type="file" id="sf-photo-input" accept="image/*" style="display:none"
-          onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_pendingSrcPhotoB64=b64;_showMediaPhotoPreview('sf',b64);}catch(e){showToast('Fehler beim Laden: '+e.message);}this.value='';})()">
-        <div style="display:flex;gap:8px;margin-top:4px">
-          <button type="button" class="btn" style="flex:1;padding:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-            onclick="document.getElementById('sf-photo-input').click()">Foto wählen</button>
-          <button type="button" id="sf-photo-del" class="btn btn-danger" style="flex:1;padding:8px;display:none"
-            onclick="_pendingSrcPhotoB64=null;_showMediaPhotoPreview('sf',null)">Foto entfernen</button>
-        </div>
-        <div id="sf-media-list" style="margin-top:8px"></div>
+        <label class="form-label">Medien</label>
+        <div id="sf-media-list"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="sf-media-add-file" placeholder="Dateiname / Pfad (z.B. dokument.pdf)" style="flex:1">
           <button type="button" class="src-add-btn" onclick="_addMediaEntry('sf')">＋ Hinzufügen</button>
