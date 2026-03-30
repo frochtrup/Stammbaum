@@ -1126,8 +1126,7 @@ body {
         <div id="ff-media-list" style="margin-top:8px"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="ff-media-add-file" placeholder="Dateiname / Pfad (z.B. foto.jpg)" style="flex:1">
-          <button type="button" class="btn" style="padding:8px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);white-space:nowrap"
-            onclick="_addMediaEntry('ff')">＋</button>
+          <button type="button" class="src-add-btn" onclick="_addMediaEntry('ff')">＋ Hinzufügen</button>
         </div>
       </div>
       <div class="btn-row">
@@ -1218,8 +1217,7 @@ body {
         <div id="sf-media-list" style="margin-top:8px"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="sf-media-add-file" placeholder="Dateiname / Pfad (z.B. dokument.pdf)" style="flex:1">
-          <button type="button" class="btn" style="padding:8px 10px;background:var(--surface2);color:var(--text);border:1px solid var(--border);white-space:nowrap"
-            onclick="_addMediaEntry('sf')">＋</button>
+          <button type="button" class="src-add-btn" onclick="_addMediaEntry('sf')">＋ Hinzufügen</button>
         </div>
       </div>
       <div class="btn-row">
@@ -1339,7 +1337,7 @@ body {
       <div class="form-group">
         <label class="form-label">Medien</label>
         <div id="ef-media-list"></div>
-        <button type="button" class="btn" style="padding:6px 12px;margin-top:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="addEfMedia()">+ Medium</button>
+        <button type="button" class="src-add-btn" style="margin-top:6px" onclick="addEfMedia()">＋ Medium hinzufügen</button>
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalEvent')">Abbrechen</button>

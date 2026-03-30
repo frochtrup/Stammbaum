@@ -64,6 +64,18 @@ function _initTreeDrag() {
   sc.addEventListener('click', e => {
     if (_treeDragging) { e.stopPropagation(); e.preventDefault(); }
   }, true);
+
+  // Baum bei Orientierungswechsel (Hochformat ↔ Querformat) neu zeichnen
+  let _treeResizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(_treeResizeTimer);
+    _treeResizeTimer = setTimeout(() => {
+      const id = _treeHistory[_treeHistoryPos];
+      if (!id) return;
+      if (!document.getElementById('v-tree')?.classList.contains('active')) return;
+      showTree(id, false);
+    }, 250);
+  });
 }
 
 function toggleTreeFullscreen() {
@@ -1026,7 +1038,8 @@ function showTree(personId, addToHistory = true) {
   const PAD  = 20;
   const ROW  = H + VGAP;
 
-  // ── Vorfahren (4 Ebenen) ──
+  // ── Vorfahren (4 Ebenen; Hochformat: max. 2 Ebenen) ──
+  const isPortrait = window.innerWidth < window.innerHeight;
   function _gp(id) { return id ? getParentIds(id) : { father: null, mother: null }; }
   const par0 = getParentIds(personId);
   const anc1 = [par0.father, par0.mother];                                         // 2
@@ -1072,9 +1085,9 @@ function showTree(personId, addToHistory = true) {
   // Ehepartner:  eine Spalte rechts (MGAP + W), egal wie viele
   const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
   const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
-  // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene
-  const hasAnc4 = anc4.some(Boolean);
-  const hasAnc3 = anc3.some(Boolean);
+  // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene; Hochformat max. 2 Ebenen
+  const hasAnc4 = !isPortrait && anc4.some(Boolean);
+  const hasAnc3 = !isPortrait && anc3.some(Boolean);
   const ancSlots = hasAnc4 ? 16 : hasAnc3 ? 8 : 4;
   const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
@@ -1193,15 +1206,15 @@ function showTree(personId, addToHistory = true) {
     wrap.appendChild(div);
   }
 
-  // ── UrUrGroßeltern (Ebene -4, nur wenn Daten vorhanden) ──
-  anc4.forEach((id, i) => {
+  // ── UrUrGroßeltern (Ebene -4, nur Querformat/Desktop) ──
+  if (hasAnc4) anc4.forEach((id, i) => {
     if (!id) return;
     mkCard(id, l4X(i), ry(-4), false);
     if (anc3[Math.floor(i / 2)]) line(l4CX(i), ry(-4) + H, l3CX(Math.floor(i / 2)), ry(-3));
   });
 
-  // ── UrGroßeltern (Ebene -3, nur wenn Daten vorhanden) ──
-  anc3.forEach((id, i) => {
+  // ── UrGroßeltern (Ebene -3, nur Querformat/Desktop) ──
+  if (hasAnc3) anc3.forEach((id, i) => {
     if (!id) return;
     mkCard(id, l3X(i), ry(-3), false);
     if (anc2[Math.floor(i / 2)]) line(l3CX(i), ry(-3) + H, l2CX(Math.floor(i / 2)), ry(-2));
