@@ -546,8 +546,20 @@ function renderPersonList(persons) {
   list.innerHTML = html;
   if (AppState.currentPersonId) {
     const cur = list.querySelector(`[data-pid="${AppState.currentPersonId}"]`);
-    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'center' }); }
+    if (cur) {
+      cur.classList.add('current');
+      const container = document.getElementById('v-main') || list.closest('.view');
+      _scrollListToCurrent(container, cur);
+    }
   }
+}
+
+function _scrollListToCurrent(container, cur) {
+  if (!container || !cur) return;
+  const cRect = container.getBoundingClientRect();
+  const eRect = cur.getBoundingClientRect();
+  const offset = eRect.top - cRect.top - (cRect.height / 2) + (eRect.height / 2);
+  container.scrollTop += offset;
 }
 
 function _updatePersonListCurrent(id) {
@@ -556,7 +568,9 @@ function _updatePersonListCurrent(id) {
   list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
   if (!id) return;
   const cur = list.querySelector(`[data-pid="${id}"]`);
-  if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+  if (!cur) return;
+  cur.classList.add('current');
+  _scrollListToCurrent(document.getElementById('v-main'), cur);
 }
 
 function _updateFamilyListCurrent(id) {
@@ -565,7 +579,9 @@ function _updateFamilyListCurrent(id) {
   list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
   if (!id) return;
   const cur = list.querySelector(`[data-fid="${id}"]`);
-  if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+  if (!cur) return;
+  cur.classList.add('current');
+  _scrollListToCurrent(document.getElementById('v-main'), cur);
 }
 
 function applyPersonFilter() {
@@ -671,7 +687,11 @@ function renderFamilyList(fams) {
   el.innerHTML = html;
   if (AppState.currentFamilyId) {
     const cur = el.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
-    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'center' }); }
+    if (cur) {
+      cur.classList.add('current');
+      const container = document.getElementById('v-main') || el.closest('.view');
+      _scrollListToCurrent(container, cur);
+    }
   }
 }
 
