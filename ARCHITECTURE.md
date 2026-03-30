@@ -13,24 +13,28 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
-│  index.html    — App-Shell (HTML + CSS)              │
-│  gedcom.js     — GEDCOM-Parser + Writer              │
-│  storage.js    — IndexedDB, Dateiverwaltung          │
-│  ui-views.js   — Baum, Detail, Listenrendering       │
-│  ui-forms.js   — Formulare, OneDrive, Medien         │
-│  sw.js         — Service Worker (Cache v69)          │
-│  manifest.json — PWA-Manifest                        │
+│  index.html        — App-Shell (HTML + CSS)          │
+│  gedcom.js         — Globals, Labels, Datum/PLAC     │
+│  gedcom-parser.js  — parseGEDCOM()                   │
+│  gedcom-writer.js  — writeGEDCOM(), pushCont()       │
+│  storage.js        — IndexedDB, Dateiverwaltung      │
+│  ui-views.js       — Baum, Detail, Listenrendering   │
+│  ui-forms.js       — Formulare (Person/Fam/Src/Repo) │
+│  ui-media.js       — Medien Add/Edit/Delete/Browser  │
+│  onedrive.js       — OAuth, Foto-Import, Filemap     │
+│  sw.js             — Service Worker (Cache v72)      │
+│  manifest.json     — PWA-Manifest                    │
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~7 Dateien · ~180 Funktionen · ~8700 Zeilen
+**Größe gesamt:** ~10 JS-Dateien · ~180 Funktionen · ~8700 Zeilen
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
 ### ADR-001: Multi-File (HTML-Shell + JS-Module)
-**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in 4 Modulen: `gedcom.js`, `storage.js`, `ui-views.js`, `ui-forms.js`.
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-forms.js`, `ui-media.js`, `onedrive.js`.
 
 **Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt.
 
@@ -319,4 +323,5 @@ restoreFileHandle() (bei Seitenreload)
 | State-Management | ~27+ globale Variablen, keine Schichtentrennung | Architektur-Schuld |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
 | Virtuelles Scrollen | Listen >1000 Einträge langsam | v5 geplant |
-| `ui-forms.js` zu gross (2570 Z.) | OneDrive + Medien + Formulare gemischt | Splitting empfohlen: `onedrive.js`, `ui-media.js` |
+| `gedcom.js` zu gross (1535 Z.) | Parser + Writer + Helfer gemischt | Behoben: `gedcom-parser.js` (745 Z.) + `gedcom-writer.js` (485 Z.) + `gedcom.js` (305 Z.) |
+| `ui-forms.js` zu gross (2567 Z.) | OneDrive + Medien + Formulare gemischt | Behoben: `onedrive.js` (658 Z.) + `ui-media.js` (344 Z.) + `ui-forms.js` (1568 Z.) |

@@ -11,6 +11,20 @@ Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop
 
 ---
 
+### Session 2026-03-30 — Refactoring: Datei-Splitting (sw v70–v72)
+
+- **`onedrive.js`** (658 Z.) aus `ui-forms.js` extrahiert: OAuth-PKCE-Flow, Token-Refresh, GED-Datei-Picker, Foto-Import, Ordner-Browser, Einstellungen, Filemap-Helpers
+- **`ui-media.js`** (344 Z.) aus `ui-forms.js` extrahiert: `openEditMediaDialog`, `openAddMediaDialog`, `showMediaBrowser`, `delete*Media`, `_asyncLoadMediaThumb`
+- **`gedcom-parser.js`** (745 Z.) aus `gedcom.js` extrahiert: `parseGEDCOM()`, `parseGeoCoord()`
+- **`gedcom-writer.js`** (485 Z.) aus `gedcom.js` extrahiert: `writeGEDCOM()`, `pushCont()`
+- `gedcom.js` behält: Globals/`db`, Labels, Datum- und PLAC-Helfer (305 Z.)
+- `ui-forms.js` schrumpft von 2567 auf 1568 Zeilen (reine Formulare)
+- `sw.js` Precache aktualisiert (v70 → v72)
+
+*Aktuelle sw-Version: v72 / Cache: stammbaum-v72*
+
+---
+
 ### Session 2026-03-30 — Proband + Kekule-Nummern (sw v68–v69)
 
 - **Konfigurierbarer Proband**: Startperson des Baums konfigurierbar (nicht mehr automatisch kleinste ID); Button in Baum-Topbar; Einstellung wird gespeichert
