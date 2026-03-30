@@ -687,8 +687,9 @@ function showPersonForm(id) {
   document.getElementById('pf-given').value = p?.given || '';
   document.getElementById('pf-surname').value = p?.surname || '';
   document.getElementById('pf-sex').value = p?.sex || 'U';
-  document.getElementById('pf-nick').value = p?.nick || '';
+  document.getElementById('pf-prefix').value = p?.prefix || '';
   document.getElementById('pf-suffix').value = p?.suffix || '';
+  document.getElementById('pf-nick').value = p?.nick || '';
   document.getElementById('pf-titl').value   = p?.titl  || '';
   document.getElementById('pf-note').value   = p?.noteTexts?.length ? p.noteTexts.join('\n') : (p?.noteTextInline ?? p?.noteText ?? '');
   document.getElementById('pf-resn').value   = p?.resn  || '';
@@ -752,6 +753,7 @@ function savePerson() {
   const given = document.getElementById('pf-given').value.trim();
   const surname = document.getElementById('pf-surname').value.trim();
   const sex = document.getElementById('pf-sex').value;
+  const prefix = document.getElementById('pf-prefix').value.trim();
   const nick   = document.getElementById('pf-nick').value.trim();
   const suffix = document.getElementById('pf-suffix').value.trim();
   const titl   = document.getElementById('pf-titl').value.trim();
@@ -773,7 +775,7 @@ function savePerson() {
 
   AppState.db.individuals[id] = {
     ...existing,
-    id, given, surname, nick,
+    id, given, surname, prefix, nick,
     name: (given + (surname ? ' ' + surname : '')).trim(),
     nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
