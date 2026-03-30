@@ -17,10 +17,10 @@ function openEditMediaDialog(type, entityId, idx) {
   _editMediaOdFileId = null;
 
   let m;
-  if      (type === 'person')       m = db.individuals[entityId]?.media?.[idx];
-  else if (type === 'family')       m = _getFamMarrObjeEntries(db.families[entityId])[idx];
-  else if (type === 'family_media') m = db.families[entityId]?.media?.[idx];
-  else if (type === 'source')       m = db.sources[entityId]?.media?.[idx];
+  if      (type === 'person')       m = getPerson(entityId)?.media?.[idx];
+  else if (type === 'family')       m = _getFamMarrObjeEntries(getFamily(entityId))[idx];
+  else if (type === 'family_media') m = getFamily(entityId)?.media?.[idx];
+  else if (type === 'source')       m = getSource(entityId)?.media?.[idx];
   if (!m) return;
 
   document.getElementById('em-title').value = m.title || '';
@@ -94,7 +94,7 @@ function _updateFamMarrObjeAt(f, targetIdx, { title, file, form }) {
 }
 
 async function openSourceMediaView(srcId, idx) {
-  const s = db.sources?.[srcId];
+  const s = getSource(srcId);
   if (!s) return;
   const m = s.media?.[idx];
   if (!m) return;
@@ -113,7 +113,7 @@ function confirmEditMedia() {
   const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
 
   if (_editMediaType === 'person') {
-    const p = db.individuals[_editMediaId];
+    const p = getPerson(_editMediaId);
     if (!p?.media) return;
     p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title };
     if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
@@ -121,7 +121,7 @@ function confirmEditMedia() {
     closeModal('modalEditMedia');
     showDetail(_editMediaId, false);
   } else if (_editMediaType === 'family') {
-    const f = db.families[_editMediaId];
+    const f = getFamily(_editMediaId);
     if (!f) return;
     _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title });
     if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
@@ -129,14 +129,14 @@ function confirmEditMedia() {
     closeModal('modalEditMedia');
     showFamilyDetail(_editMediaId, false);
   } else if (_editMediaType === 'family_media') {
-    const f = db.families[_editMediaId];
+    const f = getFamily(_editMediaId);
     if (!f?.media) return;
     f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title };
     changed = true;
     closeModal('modalEditMedia');
     showFamilyDetail(_editMediaId, false);
   } else if (_editMediaType === 'source') {
-    const s = db.sources[_editMediaId];
+    const s = getSource(_editMediaId);
     if (!s?.media) return;
     s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title };
     if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
@@ -189,7 +189,7 @@ function confirmAddMedia() {
   const entry = { form, file, title };
 
   if (_addMediaType === 'person') {
-    const p = db.individuals[_addMediaId];
+    const p = getPerson(_addMediaId);
     if (!p) return;
     if (!p.media) p.media = [];
     const idx = p.media.length;
@@ -200,7 +200,7 @@ function confirmAddMedia() {
     closeModal('modalAddMedia');
     showDetail(_addMediaId, false);
   } else if (_addMediaType === 'family') {
-    const f = db.families[_addMediaId];
+    const f = getFamily(_addMediaId);
     if (!f) return;
     if (!f.marr.media) f.marr.media = [];
     const idx = f.marr.media.length;
@@ -211,7 +211,7 @@ function confirmAddMedia() {
     closeModal('modalAddMedia');
     showFamilyDetail(_addMediaId, false);
   } else if (_addMediaType === 'source') {
-    const s = db.sources[_addMediaId];
+    const s = getSource(_addMediaId);
     if (!s) return;
     if (!s.media) s.media = [];
     const _smIdx = s.media.length;
@@ -230,7 +230,7 @@ function _countFamMarrObje(f) {
 
 
 async function deletePersonMedia(personId, idx) {
-  const p = db.individuals[personId];
+  const p = getPerson(personId);
   if (!p?.media) return;
   const oldLen = p.media.length;
   p.media.splice(idx, 1);
@@ -241,7 +241,7 @@ async function deletePersonMedia(personId, idx) {
 }
 
 async function deleteFamilyMarrMedia(famId, idx) {
-  const f = db.families[famId];
+  const f = getFamily(famId);
   if (!f?.marr?.media) return;
   const oldCount = f.marr.media.length;
   f.marr.media.splice(idx, 1);
@@ -252,7 +252,7 @@ async function deleteFamilyMarrMedia(famId, idx) {
 }
 
 async function deleteFamilyMedia(famId, idx) {
-  const f = db.families[famId];
+  const f = getFamily(famId);
   if (!f?.media) return;
   f.media.splice(idx, 1);
   changed = true;
@@ -260,7 +260,7 @@ async function deleteFamilyMedia(famId, idx) {
 }
 
 async function deleteSourceMedia(srcId, idx) {
-  const s = db.sources[srcId];
+  const s = getSource(srcId);
   if (!s?.media) return;
   idbDel('photo_src_' + srcId + '_' + idx).catch(() => {});
   s.media.splice(idx, 1);

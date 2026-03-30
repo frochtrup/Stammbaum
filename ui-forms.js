@@ -1,5 +1,5 @@
 function showSourceDetail(id, pushHistory = true) {
-  const s = db.sources[id];
+  const s = getSource(id);
   if (!s) return;
   if (pushHistory) _beforeDetailNavigate();
   currentSourceId = id;
@@ -681,7 +681,7 @@ let _pfExtraNames = [];
 
 function showPersonForm(id) {
   closeModal('modalAdd');
-  const p = id ? db.individuals[id] : null;
+  const p = id ? getPerson(id) : null;
   document.getElementById('personFormTitle').textContent = p ? 'Person bearbeiten' : 'Neue Person';
   document.getElementById('pf-id').value = id || '';
   document.getElementById('pf-given').value = p?.given || '';
@@ -762,7 +762,7 @@ function savePerson() {
 
   if (!given && !surname) { showToast('⚠ Bitte Namen eingeben'); return; }
 
-  const existing = db.individuals[id] || {};
+  const existing = getPerson(id) || {};
   const events = existing.events ? [...existing.events] : [];
   const extraNames = _pfExtraNames
     .filter(en => en.given || en.surname)
@@ -825,14 +825,17 @@ function savePerson() {
 
 function deletePerson() {
   const id = document.getElementById('pf-id').value;
-  if (!id || !db.individuals[id]) return;
-  if (!confirm(`${db.individuals[id].name || id} wirklich löschen?`)) return;
+  const _pd = getPerson(id);
+  if (!id || !_pd) return;
+  if (!confirm(`${_pd.name || id} wirklich löschen?`)) return;
 
   // Remove from families
   for (const f of Object.values(db.families)) {
-    if (f.husb === id) f.husb = null;
-    if (f.wife === id) f.wife = null;
-    f.children = f.children.filter(c => c !== id);
+    setFamily(f.id, {
+      husb:     f.husb === id ? null : f.husb,
+      wife:     f.wife === id ? null : f.wife,
+      children: f.children.filter(c => c !== id)
+    });
   }
   delete db.individuals[id];
   closeModal('modalPerson');
@@ -848,7 +851,7 @@ let _pendingAddChild = null;
 function showFamilyForm(id, ctx) {
   closeModal('modalAdd');
   _pendingAddChild = null;
-  const f = id ? db.families[id] : null;
+  const f = id ? getFamily(id) : null;
   document.getElementById('familyFormTitle').textContent = f ? 'Familie bearbeiten' : 'Neue Familie';
   document.getElementById('ff-id').value = id || '';
 
@@ -897,7 +900,7 @@ function saveFamily() {
   const edate  = buildGedDateFromFields('ff-edate-qual', 'ff-edate', null);
   const eplace = getPlaceFromForm('ff-eplace');
   const note = document.getElementById('ff-note').value.trim();
-  const existingFam = db.families[id] || {};
+  const existingFam = getFamily(id) || {};
   const children = [...(existingFam.children || [])];
   if (_pendingAddChild && !children.includes(_pendingAddChild)) children.push(_pendingAddChild);
   _pendingAddChild = null;
@@ -928,13 +931,12 @@ function saveFamily() {
     p.fams = p.fams.filter(f => f !== id);
     p.famc = p.famc.filter(f => famcId(f) !== id);
   }
-  if (husb && db.individuals[husb]) { if (!db.individuals[husb].fams.includes(id)) db.individuals[husb].fams.push(id); }
-  if (wife && db.individuals[wife]) { if (!db.individuals[wife].fams.includes(id)) db.individuals[wife].fams.push(id); }
+  const hPerson = getPerson(husb); if (hPerson && !hPerson.fams.includes(id)) hPerson.fams.push(id);
+  const wPerson = getPerson(wife); if (wPerson && !wPerson.fams.includes(id)) wPerson.fams.push(id);
   for (const cid of children) {
-    if (db.individuals[cid]) {
-      if (!db.individuals[cid].famc.some(f => famcId(f) === id))
-        db.individuals[cid].famc.push({ famId: id, frel: '', mrel: '', frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
-    }
+    const cPerson = getPerson(cid);
+    if (cPerson && !cPerson.famc.some(f => famcId(f) === id))
+      cPerson.famc.push({ famId: id, frel: '', mrel: '', frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
   }
 
   closeModal('modalFamily');
@@ -950,8 +952,10 @@ function deleteFamily() {
   if (!confirm('Familie wirklich löschen?')) return;
   const famcId2 = f => (typeof f === 'string' ? f : f.famId);
   for (const p of Object.values(db.individuals)) {
-    p.fams = p.fams.filter(f => f !== id);
-    p.famc = p.famc.filter(f => famcId2(f) !== id);
+    setPerson(p.id, {
+      fams: p.fams.filter(f => f !== id),
+      famc: p.famc.filter(f => famcId2(f) !== id)
+    });
   }
   delete db.families[id];
   closeModal('modalFamily');
@@ -987,7 +991,7 @@ function _applySourceTemplate(type) {
 
 function showSourceForm(id) {
   closeModal('modalAdd');
-  const s = id ? db.sources[id] : null;
+  const s = id ? getSource(id) : null;
   document.getElementById('sourceFormTitle').textContent = s ? 'Quelle bearbeiten' : 'Neue Quelle';
   document.getElementById('sf-template-row').style.display = s ? 'none' : '';
   document.getElementById('sf-id').value    = id || '';
@@ -1010,7 +1014,7 @@ function showSourceForm(id) {
 
 function saveSource() {
   const id = document.getElementById('sf-id').value || nextId('S');
-  const existing = db.sources[id] || {};
+  const existing = getSource(id) || {};
   const abbr  = document.getElementById('sf-abbr').value.trim();
   const title = document.getElementById('sf-title').value.trim();
   if (!abbr && !title) { showToast('⚠ Kurzname oder Titel erforderlich'); return; }
@@ -1119,7 +1123,7 @@ function repoPickerCreateNew() {
 }
 
 function showRepoDetail(id, pushHistory = true) {
-  const r = db.repositories[id]; if (!r) return;
+  const r = getRepo(id); if (!r) return;
   if (pushHistory) _beforeDetailNavigate();
   currentRepoId = id; currentPersonId = null; currentFamilyId = null; currentSourceId = null;
   document.getElementById('detailTopTitle').textContent = 'Archiv';
@@ -1158,7 +1162,7 @@ function showRepoDetail(id, pushHistory = true) {
 }
 
 function showRepoForm(id) {
-  const r = id ? db.repositories[id] : null;
+  const r = id ? getRepo(id) : null;
   document.getElementById('repoFormTitle').textContent = r ? 'Archiv bearbeiten' : 'Neues Archiv';
   document.getElementById('rf-id').value    = id    || '';
   document.getElementById('rf-name').value  = r?.name  || '';
@@ -1204,7 +1208,7 @@ function deleteRepo() {
     ? `Archiv löschen? ${linked.length} Quelle(n) verlieren die Archiv-Verknüpfung.`
     : 'Archiv wirklich löschen?';
   if (!confirm(msg)) return;
-  for (const s of linked) { s.repo = ''; s.repoCallNum = ''; }
+  for (const s of linked) { setSource(s.id, { repo: '', repoCallNum: '' }); }
   delete db.repositories[id];
   closeModal('modalRepo');
   markChanged();

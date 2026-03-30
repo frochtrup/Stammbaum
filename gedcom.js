@@ -72,6 +72,21 @@ const NAME_TYPE_LABELS = {
   nickname:  'Spitzname',
 };
 
+// ── Getters / Mutations-Helpers ────────────────────────────────────────────
+// Zentraler Einstiegspunkt — ein Ort für künftige Validierung, Undo oder Struktur-Änderungen.
+// Getters geben null zurück statt undefined, sodass Aufrufer einheitlich auf null prüfen können.
+function getPerson(id)  { return db.individuals[id]  ?? null; }
+function getFamily(id)  { return db.families[id]     ?? null; }
+function getSource(id)  { return db.sources[id]      ?? null; }
+function getRepo(id)    { return db.repositories[id] ?? null; }
+
+// Setters — Object.assign-Patch auf bestehende Top-Level-Felder.
+// Für verschachtelte Array-Mutations (media[idx], fams.push etc.) weiter direkt verwenden.
+function setPerson(id, patch) { const p = db.individuals[id]; if (p) Object.assign(p, patch); }
+function setFamily(id, patch) { const f = db.families[id];   if (f) Object.assign(f, patch); }
+function setSource(id, patch) { const s = db.sources[id];    if (s) Object.assign(s, patch); }
+function setRepo(id, patch)   { const r = db.repositories[id]; if (r) Object.assign(r, patch); }
+
 // ─────────────────────────────────────
 //  GEDCOM DATUM / CONT HELFER
 // ─────────────────────────────────────
