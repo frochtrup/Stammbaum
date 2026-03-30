@@ -1594,6 +1594,7 @@ function showDetail(id, pushHistory = true) {
   // Foto async aus IDB nachladen (Sprint P3-2)
   (async () => {
     const src = await idbGet('photo_' + id).catch(() => null)
+             || await idbGet('photo_' + id + '_0').catch(() => null)
              || await _odGetPhotoUrl('photo_' + id).catch(() => null);
     if (!src) return;
     const el = document.getElementById('det-photo-' + id);
@@ -1749,6 +1750,7 @@ function showFamilyDetail(id, pushHistory = true) {
   // Foto async aus IDB nachladen
   (async () => {
     const src = await idbGet('photo_fam_' + id).catch(() => null)
+             || await idbGet('photo_fam_' + id + '_0').catch(() => null)
              || await _odGetPhotoUrl('photo_fam_' + id).catch(() => null);
     if (!src) return;
     const el = document.getElementById('det-fam-photo-' + id);
