@@ -9,8 +9,8 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | Version | Branch | Status |
 |---|---|---|
 | 3.0 | (archiviert) | Abgelöst durch v4.0 |
-| 4.0 | `main` | Live — stabil |
-| 5.0 | `v5-dev` (geplant) | In Planung |
+| 4.0 | `main` | Live — stabil (2026-03-30) |
+| 5.0 | `v5-dev` | In Entwicklung |
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
@@ -143,23 +143,63 @@ Sobald alle Aufrufer migriert: `let db = AppState.db` etc. aus gedcom.js entfern
 
 ---
 
-## Version 5.0 (Branch `v5-dev`, geplant)
+## Version 5.0 (Branch `v5-dev`, ab 2026-03-30)
 
 ### Schwerpunkt 1: Weitere Darstellungen
 
 Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf Desktop und iPhone Querformat.
 
-#### Fächer-/Halbkreisdiagramm (Fan Chart)
+#### Fan Chart (Fächer-/Halbkreisdiagramm) — Priorität 1
 - [ ] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
-- [ ] Gut geeignet für Desktop (breiter Viewport) und iPhone Querformat
 - [ ] Rendering: SVG, polar coordinates; Segmente klickbar → showTree(id) oder showDetail(id)
 - [ ] Konfigurierbar: 3–6 Generationen, Vollkreis oder Halbkreis
-- [ ] Integration: eigener Tab-Button oder Toggle im Baum-View
+- [ ] Desktop + iPhone Querformat; Toggle-Button im Baum-View (⊙ oder Fächer-Icon)
+- [ ] Neue Datei `ui-fanchart.js`
 
-#### Weitere mögliche Darstellungen (niedrigere Prio)
-- [ ] Nachkommen-Baum (top-down): Probanden oben, Kinder/Enkel nach unten
-- [ ] Zeitleiste: Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
-- [ ] Karten-Ansicht: Geburts-/Sterbeorte auf Landkarte (leaflet.js oder Apple Maps Link-Cluster)
+#### Zeitleiste — Priorität 2
+- [ ] Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
+- [ ] Gefiltert nach aktueller Person + direkte Vorfahren/Nachkommen
+- [ ] Neue Datei `ui-timeline.js`
+
+#### Nachkommen-Baum — Priorität 3
+- [ ] Probanden oben, Kinder/Enkel nach unten (top-down SVG)
+
+#### Karten-Ansicht — Priorität 4
+- [ ] Geburts-/Sterbeorte auf Landkarte (Apple Maps Link-Cluster oder leaflet.js)
+
+---
+
+### Schwerpunkt 2: Performance + UX
+
+#### Virtuelles Scrollen — Priorität 1
+- [ ] Listen >500 Einträge: nur sichtbare Zeilen + Puffer im DOM rendern
+- [ ] Betrifft: Personen-Liste (2811 Eintr.), Familien-Liste (880 Eintr.)
+- [ ] Kein Framework; einfacher scroll-event-basierter Ansatz
+
+#### Statistik-Dashboard — Priorität 2
+- [ ] Neues Modal oder eigener Tab: Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte
+- [ ] Karten-Grid (Personen, Familien, Quellen, Medien, fehlende Daten %)
+
+#### Offline-Sync-Indikator — Priorität 3
+- [ ] Badge/Banner wenn `AppState.changed=true` und noch nicht gespeichert
+- [ ] Besonders wichtig auf iPhone wo direktes Speichern nicht immer möglich
+
+---
+
+### Schwerpunkt 3: Datenqualität
+
+#### Erweiterte Events (restliche Passthrough-Reste) — Priorität 1
+- [ ] FAM-Events: `DIV`, `DIVF` — strukturiert statt passthrough
+- [ ] INDI-Events: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`
+- [ ] Formularfelder + Parser + Writer
+
+#### Duplikat-Erkennung — Priorität 2
+- [ ] Personen mit gleichem Name + Geburtsjahr (±2): Hinweis + Vergleichs-Ansicht
+- [ ] Kein automatisches Merge — nur Anzeige + manuelle Entscheidung
+
+#### Volltextsuche — Priorität 3
+- [ ] Suche über Ereignis-Orte, Quellen-Titel, Notizen (nicht nur Name)
+- [ ] Erweiterung des bestehenden Suchfelds in Personen-/Quellen-Liste
 
 ---
 
