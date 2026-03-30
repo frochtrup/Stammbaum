@@ -207,9 +207,9 @@ _ptDepth = 1;
 
 **Was landet in `_passthrough` (INDI):**
 - Unbekannte lv=1-Tags: `DSCR`, `IDNO`, `SSN`
-- Extra-NAME-Blöcke (2. Name, Alias, Geburtsname) — wenn `_nameParsed` bereits gesetzt
 - `1 OBJE @ref@`-Referenzen (externe Medien-Records)
 - *(Nicht mehr in passthrough: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` — seit v4-dev als `events[]` strukturiert)*
+- *(Nicht mehr in passthrough: Extra-NAME-Blöcke — seit v4-dev strukturiert in `extraNames[]`, vollständig editierbar via ui-forms.js)*
 
 **Was landet in `_passthrough` (FAM):** `DIV`, `DIVF`, andere unbekannte lv=1-Tags
 
@@ -258,8 +258,9 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 
 **Optimierungspotenzial (kein Datenverlust, aber im UI nicht editierbar):**
 - `DIV`, `DIVF` → FAM-Events fehlen im Parser (in `_passthrough`)
-- Mehrfache inline INDI-Notes → werden konkateniert statt als Array
+- Mehrfache inline INDI-Notes → Roundtrip stabil (`noteTexts[]`-Array); beim Editieren im Formular zu einer Note zusammengeführt
 - *(Erledigt: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` → seit v4-dev als events[] strukturiert)*
+- *(Erledigt: Extra-NAME-Blöcke → seit v4-dev `extraNames[]`, vollständig editierbar)*
 
 ---
 
@@ -318,8 +319,7 @@ restoreFileHandle() (bei Seitenreload)
 | Problem | Ursache | Status |
 |---|---|---|
 | DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | Backlog |
-| Zweite NAME-Einträge nicht editierbar | In _passthrough | Backlog |
-| Mehrere inline INDI-Notes | Konkateniert statt Array | Backlog |
+| Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
 | State-Management | ~27+ globale Variablen, keine Schichtentrennung | Architektur-Schuld |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
