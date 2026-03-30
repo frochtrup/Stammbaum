@@ -1381,6 +1381,21 @@ function showTree(personId, addToHistory = true) {
   // Auto-Zentrierung: Zentrumsperson horizontal + vertikal ~1/3 von oben
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
+    // Desktop: Auto-Fit wenn Baum breiter oder höher als Viewport
+    if (!isPortrait) {
+      const fitW = sc.clientWidth  / totalW;
+      const fitH = sc.clientHeight / totalH;
+      const fit  = Math.min(1, fitW, fitH);
+      if (fit < _treeZoomScale || (_treeZoomScale === 1 && fit < 1)) {
+        _treeZoomScale = Math.round(fit * 100) / 100;
+        wrap.style.transform = `scale(${_treeZoomScale})`;
+        wrap.style.transformOrigin = '0 0';
+        if (scaleWrap) {
+          scaleWrap.style.width  = Math.round(totalW * _treeZoomScale) + 'px';
+          scaleWrap.style.height = Math.round(totalH * _treeZoomScale) + 'px';
+        }
+      }
+    }
     const scaledW = totalW * _treeZoomScale;
     const scaledH = totalH * _treeZoomScale;
     const leftPad = Math.max(0, Math.floor((sc.clientWidth  - scaledW) / 2));
