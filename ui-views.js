@@ -546,7 +546,7 @@ function renderPersonList(persons) {
   list.innerHTML = html;
   if (AppState.currentPersonId) {
     const cur = list.querySelector(`[data-pid="${AppState.currentPersonId}"]`);
-    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'center' }); }
   }
 }
 
@@ -653,7 +653,7 @@ function renderFamilyList(fams) {
   el.innerHTML = html;
   if (AppState.currentFamilyId) {
     const cur = el.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
-    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+    if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'center' }); }
   }
 }
 
