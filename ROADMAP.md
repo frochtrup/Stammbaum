@@ -80,9 +80,70 @@ Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Ne
 
 ---
 
+### Schwerpunkt 5: State-Management-Refactoring — PLAN
+
+**Ziel:** 22 cross-file Globals in `gedcom.js` in benannte Namespace-Objekte gruppieren. Kein neues Framework, kein Build-Step, Vanilla JS.
+
+**Ist-Zustand:** 22 Variablen in gedcom.js direkt als `let` deklariert, von allen Dateien ungekapselt gelesen/geschrieben.
+
+**Soll-Zustand:** 2 Namespace-Objekte + schrittweise Migration der Aufrufer.
+
+#### Schritt 1 — Namespaces in `gedcom.js` einführen
+
+```javascript
+const AppState = {
+  db: null, changed: false, idCounter: 1,
+  currentPersonId: null, currentFamilyId: null,
+  currentSourceId: null, currentRepoId: null,
+  currentTab: 'persons', _detailActive: false,
+  _fileHandle: null, _canDirectSave: false, _originalGedText: ''
+};
+
+const UIState = {
+  _treeScale: 1, _treeHistory: [], _treeHistoryPos: -1,
+  _relMode: null, _relAnchorId: null,
+  _pendingRelation: null, _pendingRepoLink: null,
+  _newPhotoIds: new Set(), _deletedPhotoIds: new Set(),
+  _placesCache: null
+};
+```
+
+Backward-compat-Aliase direkt danach (übergangsweise):
+
+```javascript
+// Aliase für schrittweise Migration — werden Datei für Datei entfernt
+let db = AppState.db;  // usw.
+```
+
+#### Schritt 2 — Aufrufer migrieren (Datei für Datei)
+
+| Datei | Cross-file Zugriffe | Aufwand |
+|---|---|---|
+| `storage.js` | db, changed, idCounter, currentPersonId/FamilyId/SourceId/RepoId, currentTab, _detailActive, _fileHandle, _canDirectSave, _originalGedText, _treeHistory, _treeHistoryPos, _treeScale, _relMode, _relAnchorId, _pendingRelation, _pendingRepoLink, _newPhotoIds, _deletedPhotoIds, _placesCache | hoch |
+| `ui-views.js` | db, changed, currentPersonId, _treeHistory, _treeHistoryPos, _treeScale | mittel |
+| `ui-forms.js` | db, changed, currentPersonId, currentFamilyId, currentSourceId, currentRepoId, _newPhotoIds, _deletedPhotoIds | mittel |
+| `ui-media.js` | db, changed, currentPersonId, currentFamilyId, currentSourceId, _newPhotoIds, _deletedPhotoIds | gering |
+| `onedrive.js` | changed, _fileHandle, _canDirectSave | gering |
+
+#### Schritt 3 — Aliase entfernen
+
+Sobald alle Aufrufer migriert: `let db = AppState.db` etc. aus gedcom.js entfernen.
+
+**Optionaler Schritt 4 — Setter mit Nebeneffekten** (spätere Phase)
+
+```javascript
+// Statt: changed = true; _placesCache = null;
+// AppState.setChanged(true) → setzt Flag + leert Cache + triggert UI-Update
+```
+
+**Risiko:** gering — Aliase überbrücken alte API während Migration.
+**Abhängigkeiten:** keine (kein neues Framework, kein Build-Step).
+
+---
+
 ## Offene Architektur-Schulden
 
-- State-Management: ~27 globale Variablen, keine Schichtentrennung
+- State-Management: Plan → Schwerpunkt 5 (s.o.)
 - Virtuelles Scrollen für Listen >1000 Einträge
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
