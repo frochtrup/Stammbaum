@@ -550,6 +550,15 @@ function renderPersonList(persons) {
   }
 }
 
+function _updatePersonListCurrent(id) {
+  const list = document.getElementById('personList');
+  if (!list) return;
+  list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+  if (!id) return;
+  const cur = list.querySelector(`[data-pid="${id}"]`);
+  if (cur) { cur.classList.add('current'); cur.scrollIntoView({ block: 'nearest' }); }
+}
+
 function applyPersonFilter() {
   const q = (document.getElementById('searchInput')?.value) || '';
   const from = parseInt(document.getElementById('yearFrom')?.value) || null;
@@ -1150,6 +1159,7 @@ function showTree(personId, addToHistory = true) {
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
+  if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(personId);
 
   // ── Orientierung + Dimensionen ──
   const isPortrait = window.innerWidth < window.innerHeight;
