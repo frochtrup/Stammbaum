@@ -174,6 +174,39 @@ body {
   z-index: 10;
   opacity: 0.7;
 }
+
+/* ── Fan Chart ──────────────────────────── */
+#fcContainer {
+  display: none;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  overflow: auto;
+  min-height: calc(100dvh - 52px - 56px);
+}
+body.fc-mode #fcContainer          { display: flex; }
+body.fc-mode #treeScaleWrap        { display: none !important; }
+body.fc-mode #treeKeyLegend        { display: none !important; }
+body.fc-mode #treeFsBtn            { display: none !important; }
+body.desktop-mode.fc-mode #fcContainer { min-height: 0; height: 100%; }
+
+#fcGenBtns {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+body.fc-mode #fcGenBtns { display: flex; }
+
+.fc-gen-btn {
+  padding: 4px 8px !important;
+  font-size: 0.78rem !important;
+  min-width: 26px;
+}
+.fc-gen-btn.active {
+  color: var(--gold) !important;
+  border-color: var(--gold-dim) !important;
+}
 .tkl-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 .tkl-row:last-child { margin-bottom: 0; }
 .tkl-key {
@@ -883,6 +916,13 @@ body {
     <div class="topbar-inner">
       <button class="topbar-btn back" id="treeBtnBack" style="display:none" onclick="treeNavBack()">←</button>
       <span class="topbar-title" id="treeTopTitle"></span>
+      <span id="fcGenBtns">
+        <button class="topbar-btn fc-gen-btn" data-gen="3" onclick="setFcGens(3)">3</button>
+        <button class="topbar-btn fc-gen-btn" data-gen="4" onclick="setFcGens(4)">4</button>
+        <button class="topbar-btn fc-gen-btn active" data-gen="5" onclick="setFcGens(5)">5</button>
+        <button class="topbar-btn fc-gen-btn" data-gen="6" onclick="setFcGens(6)">6</button>
+      </span>
+      <button class="topbar-btn" id="treeFcToggle" onclick="toggleFanChart()" title="Fächer-Diagramm" style="display:none">◑</button>
       <button class="topbar-btn" id="treeFsBtn" onclick="toggleTreeFullscreen()" title="Vollbild" style="display:none">⤢</button>
       <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
@@ -892,6 +932,9 @@ body {
       <div class="tree-wrap" id="treeWrap">
         <svg class="tree-svg" id="treeSvg"></svg>
       </div>
+    </div>
+    <div id="fcContainer">
+      <svg id="fcSvg" style="overflow:visible;display:block"></svg>
     </div>
   </div>
   <div id="treeKeyLegend">
@@ -1728,6 +1771,7 @@ body {
 <script src="gedcom-writer.js"></script>
 <script src="storage.js"></script>
 <script src="ui-views.js"></script>
+<script src="ui-fanchart.js"></script>
 <script src="ui-forms.js"></script>
 <script src="ui-media.js"></script>
 <script src="onedrive.js"></script>

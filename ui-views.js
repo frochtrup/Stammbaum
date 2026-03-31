@@ -428,9 +428,10 @@ function _beforeDetailNavigate() {
     }
   } else {
     _navHistory.length = 0;
-    // Baum → Detail: Tree-Eintrag pushen damit Zurück zum Baum führt
+    // Baum → Detail: bei fc-mode Fan Chart merken, sonst Sanduhr
     if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
-      _navHistory.push({ type: 'tree', id: currentTreeId });
+      const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
+      _navHistory.push({ type: _type, id: currentTreeId });
     }
   }
 }
@@ -444,7 +445,8 @@ function goBack() {
   else if (prev.type === 'source') showSourceDetail(prev.id, false);
   else if (prev.type === 'repo')   showRepoDetail(prev.id, false);
   else if (prev.type === 'place')  showPlaceDetail(prev.name, false);
-  else if (prev.type === 'tree')   showTree(prev.id);
+  else if (prev.type === 'tree')     showTree(prev.id);
+  else if (prev.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(prev.id); }
   else showMain();
 }
 
@@ -1195,6 +1197,10 @@ function showTree(personId, addToHistory = true) {
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
+  // Fan Chart deaktivieren + Toggle-Button einblenden
+  document.body.classList.remove('fc-mode');
+  const _fcTb = document.getElementById('treeFcToggle');
+  if (_fcTb) { _fcTb.style.display = ''; _fcTb.textContent = '◑'; _fcTb.title = 'Fächer-Diagramm'; }
   if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(personId);
 
   // ── Orientierung + Dimensionen ──
