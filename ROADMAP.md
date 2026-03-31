@@ -208,6 +208,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 ### Schwerpunkt 4: Sonstiges
 
 #### Fehler allgemein - Priorität 1
+- [ ] Fan Button wird nicht angezeigt
 - [ ] bei Medien einfügen den vollständigen Pfad abspeichern
 - [ ] bei Medien einfügen mit dem in der Konfiguration definierten Dateipfad starten
 - [ ] neues Sonstiges Ereignis speichert den Typ nicht
@@ -223,7 +224,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ---
 
-### Schwerpunkt 6 - OCR
+### Schwerpunkt 5 - OCR
 - [ ] OCR.md
 
 ## Offene Architektur-Schulden
