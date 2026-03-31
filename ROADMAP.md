@@ -191,6 +191,8 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 #### Erweiterte Events (restliche Passthrough-Reste) — Priorität 1
 - [ ] FAM-Events: `DIV`, `DIVF` — strukturiert statt passthrough
 - [ ] INDI-Events: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`
+- [ ] Familienrelationen
+- [ ] Mediendatei mit @Mx@
 - [ ] Formularfelder + Parser + Writer
 
 #### Duplikat-Erkennung — Priorität 2
@@ -202,6 +204,27 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [ ] Erweiterung des bestehenden Suchfelds in Personen-/Quellen-Liste
 
 ---
+
+### Schwerpunkt 4: Sonstiges
+
+#### Fehler allgemein - Priorität 1
+- [ ] bei Medien einfügen den vollständigen Pfad abspeichern
+- [ ] bei Medien einfügen mit dem in der Konfiguration definierten Dateipfad starten
+- [ ] neues Sonstiges Ereignis speichert den Typ nicht
+- [ ] ermögliche das Löschen von Ereignissen 
+
+#### Fehler Mobile - Priorität 1
+- [ ] Querformat mit Liste: In der Liste ist die Suchzeile nicht direkt an der Topbar angeschlossen (Gap)
+- [ ] Personen Detail: Foto Anzeige (nach Verknüpfung eines neuen Bildes) ist nicht mehr mit em ursprünglichen link verbunden
+- [ ] 
+
+#### Fehler Desktop - Priorität 1
+- [ ] Pfeil links in der Desktopversion weiterhin nicht eindeutig eins zurück, meist zwei zurück
+
+---
+
+### Schwerpunkt 6 - OCR
+- [ ] OCR.md
 
 ## Offene Architektur-Schulden
 
