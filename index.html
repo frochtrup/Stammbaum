@@ -1673,7 +1673,7 @@ body.fc-mode #fcGenBtns { display: flex; }
         <img id="am-cam-img" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--border)">
       </div>
       <input type="file" accept="image/*" capture="environment" id="am-cam-input" style="display:none"
-        onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_addMediaCamB64=b64;document.getElementById('am-cam-img').src=b64;document.getElementById('am-cam-preview').style.display='';if(!document.getElementById('am-file').value){const ts=new Date();document.getElementById('am-file').value='foto_'+ts.getFullYear()+String(ts.getMonth()+1).padStart(2,'0')+String(ts.getDate()).padStart(2,'0')+'.jpg';}}catch(e){showToast('Fehler: '+e.message);}this.value='';})()">
+        onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_onCamCapture(b64);}catch(e){showToast('Fehler: '+e.message);}this.value='';})()">
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
           onclick="document.getElementById('am-cam-input').click()">Foto aufnehmen</button>

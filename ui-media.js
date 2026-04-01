@@ -168,6 +168,21 @@ async function _asyncLoadMediaThumb(thumbId, idbKey) {
 }
 
 
+function _onCamCapture(b64) {
+  // Verzeichnis-Anteil aus am-file erhalten, generierten Dateinamen anhängen
+  const cur  = document.getElementById('am-file').value;
+  const sep  = cur.lastIndexOf('/');
+  const base = sep >= 0 ? cur.substring(0, sep + 1) : '';
+  const ts   = new Date();
+  const name = 'foto_' + ts.getFullYear()
+    + String(ts.getMonth() + 1).padStart(2, '0')
+    + String(ts.getDate()).padStart(2, '0') + '.jpg';
+  document.getElementById('am-file').value = base + name;
+  _addMediaCamB64 = b64;
+  document.getElementById('am-cam-img').src = b64;
+  document.getElementById('am-cam-preview').style.display = '';
+}
+
 async function openAddMediaDialog(type, entityId) {
   _addMediaType     = type;
   _addMediaId       = entityId;
