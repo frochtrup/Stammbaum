@@ -464,8 +464,9 @@ async function _odShowFolder(folderId, folderName) {
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}"
           onclick="_odEnterFolder(this)">📁 &nbsp;${esc(f.name)}</div>`).join('');
+      const folderPath = [..._odFolderStack.map(f => f.name), folderName].join('/');
       html += files.map(f => `<div class="list-item" style="cursor:pointer"
-          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
+          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}','${esc(folderPath + '/' + f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
     }
     list.innerHTML = html;
     openModal('modalOneDrive');
@@ -586,12 +587,15 @@ let _odPickMode       = false;
 let _odEditPickMode   = false; // true wenn OD-Picker aus Edit-Modal geöffnet
 let _odDocScanMode    = false; // true wenn Dokumente-Ordner gewählt wird
 
-function odPickFileForEditMedia() {
+async function odPickFileForEditMedia() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
   _odEditPickMode = true;
   _odFolderStack = [];
   closeModal('modalEditMedia');
-  _odShowFolder('root', 'OneDrive');
+  const folderKey = (_editMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
+  const folder = await idbGet(folderKey).catch(() => null);
+  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  else await _odShowFolder('root', 'OneDrive');
 }
 
 async function _addMediaToFilemap(storeKey, id, entry) {
@@ -630,19 +634,23 @@ async function odPickFileForMedia() {
   _odPickMode = true;
   _odFolderStack = [];
   closeModal('modalAddMedia');
-  await _odShowFolder('root', 'OneDrive');
+  const folderKey = (_addMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
+  const folder = await idbGet(folderKey).catch(() => null);
+  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  else await _odShowFolder('root', 'OneDrive');
 }
 
-function _odPickSelectFile(fileId, filename) {
+function _odPickSelectFile(fileId, filename, fullPath) {
+  const path = fullPath || filename;
   if (_odEditPickMode) {
     _editMediaOdFileId = fileId;
-    document.getElementById('em-file').value = filename;
+    document.getElementById('em-file').value = path;
     _odEditPickMode = false;
     closeModal('modalOneDrive');
     openModal('modalEditMedia');
   } else {
     _addMediaOdFileId = fileId;
-    document.getElementById('am-file').value = filename;
+    document.getElementById('am-file').value = path;
     _odPickMode = false;
     closeModal('modalOneDrive');
     openModal('modalAddMedia');
