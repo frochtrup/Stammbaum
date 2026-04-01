@@ -88,6 +88,7 @@ function _initTreeDrag() {
   // Baum bei Orientierungswechsel (Hochformat ↔ Querformat) neu zeichnen
   let _treeResizeTimer = null;
   window.addEventListener('resize', () => {
+    _updateTopbarH();
     clearTimeout(_treeResizeTimer);
     _treeResizeTimer = setTimeout(() => {
       const id = UIState._treeHistory[UIState._treeHistoryPos];
@@ -455,7 +456,7 @@ function goBack() {
   else if (prev.type === 'source') showSourceDetail(prev.id, false);
   else if (prev.type === 'repo')   showRepoDetail(prev.id, false);
   else if (prev.type === 'place')  showPlaceDetail(prev.name, false);
-  else if (prev.type === 'tree')     showTree(prev.id);
+  else if (prev.type === 'tree')     showTree(prev.id, false);
   else if (prev.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(prev.id); }
   else showMain();
 }
