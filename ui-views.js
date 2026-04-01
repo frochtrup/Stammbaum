@@ -19,6 +19,7 @@ function setTreeGens(n) {
   _treeGenCount = Math.max(2, Math.min(6, n));
   document.querySelectorAll('[data-tgen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
+  _treeZoomScale = 1; // Reset damit Auto-Fit neu kalkuliert
   if (AppState.currentPersonId) showTree(AppState.currentPersonId, false);
 }
 
