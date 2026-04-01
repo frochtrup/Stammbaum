@@ -1578,8 +1578,8 @@ body.fc-mode #fcGenBtns { display: flex; }
         <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="odSaveFile()">
           💾 &nbsp; In OneDrive speichern
         </button>
-        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); openSettings()">
-          ⚙ &nbsp; OneDrive-Einstellungen
+        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="closeModal('modalMenu'); openSettings()">
+          ⚙ &nbsp; Einstellungen
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test
@@ -1595,6 +1595,7 @@ body.fc-mode #fcGenBtns { display: flex; }
     <div class="sheet-handle"></div>
     <div class="sheet-title">Einstellungen</div>
     <div class="sheet-body">
+      <div id="set-od-section">
       <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">OneDrive-Ordner</div>
 
       <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">
@@ -1619,6 +1620,8 @@ body.fc-mode #fcGenBtns { display: flex; }
           <div id="set-doc-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
         </div>
       </div>
+
+      </div><!-- /set-od-section -->
 
       <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:16px">Lokale Pfade</div>
       <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">

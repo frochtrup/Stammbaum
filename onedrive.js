@@ -101,11 +101,13 @@ function _odUpdateUI() {
   if (cb)  cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
   if (ob)  ob.style.display  = conn ? '' : 'none';
   if (sb)  sb.style.display  = conn ? '' : 'none';
-  if (stb) stb.style.display = conn ? '' : 'none';
+  // Settings-Button immer sichtbar (enthält auch lokale Pfade)
 }
 
 async function openSettings() {
   openModal('modalSettings');
+  const odSection = document.getElementById('set-od-section');
+  if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
   // Foto-Ordner
   const photoFolder = await idbGet('od_default_folder').catch(() => null);
   const nameEl  = document.getElementById('set-photo-name');
