@@ -133,13 +133,44 @@ async function openSettings() {
     const n = docMap ? Object.keys(docMap).length : 0;
     dCntEl.textContent = n ? `${n} Dateien indiziert` : '';
   }
-  // Lokale Pfade
-  const photoBase = await idbGet('cfg_photo_base').catch(() => null);
-  const docBase   = await idbGet('cfg_doc_base').catch(() => null);
+  // Lokale Pfade — wenn leer: aus GEDCOM-Medien auto-erkennen
+  let photoBase = await idbGet('cfg_photo_base').catch(() => null);
+  let docBase   = await idbGet('cfg_doc_base').catch(() => null);
+  if (!photoBase && AppState.db) {
+    photoBase = _detectMediaBase('photo') || '';
+    if (photoBase) await idbPut('cfg_photo_base', photoBase).catch(() => {});
+  }
+  if (!docBase && AppState.db) {
+    docBase = _detectMediaBase('doc') || '';
+    if (docBase) await idbPut('cfg_doc_base', docBase).catch(() => {});
+  }
   const pbEl = document.getElementById('set-photo-base');
   const dbEl = document.getElementById('set-doc-base');
   if (pbEl) pbEl.value = photoBase || '';
   if (dbEl) dbEl.value = docBase   || '';
+}
+
+function _detectMediaBase(type) {
+  if (!AppState.db) return '';
+  const paths = [];
+  if (type === 'photo') {
+    for (const p of Object.values(AppState.db.individuals || {}))
+      for (const m of (p.media || [])) if (m.file) paths.push(m.file);
+    for (const f of Object.values(AppState.db.families || {}))
+      for (const m of (f.media || [])) if (m.file) paths.push(m.file);
+  } else {
+    for (const s of Object.values(AppState.db.sources || {}))
+      for (const m of (s.media || [])) if (m.file) paths.push(m.file);
+  }
+  // Nur Pfade mit Verzeichnis-Trenner
+  const dirs = paths
+    .filter(f => f.includes('/'))
+    .map(f => f.substring(0, f.lastIndexOf('/') + 1));
+  if (!dirs.length) return '';
+  // Häufigstes Verzeichnis als Basispfad
+  const counts = {};
+  for (const d of dirs) counts[d] = (counts[d] || 0) + 1;
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 }
 
 async function odClearPhotoFolder() {
