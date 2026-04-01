@@ -1336,6 +1336,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
   onEventTypeChange();
+  document.getElementById('deleteEventBtn').style.display = isExisting ? '' : 'none';
   openModal('modalEvent');
 }
 
@@ -1383,12 +1384,26 @@ function saveEvent() {
       p.events.push(ev);
     }
     // TYPE-Feld aus Formular für FACT/MILI übernehmen
-    if (type === 'FACT' || type === 'MILI') ev.eventType = document.getElementById('ef-etype').value.trim();
+    if (type === 'FACT' || type === 'MILI' || type === 'EVEN') ev.eventType = document.getElementById('ef-etype').value.trim();
   }
 
   closeModal('modalEvent');
   markChanged(); updateStats();
   showToast('✓ Ereignis gespeichert');
+  if (AppState.currentPersonId === pid) showDetail(pid);
+}
+
+function deleteEvent() {
+  const pid = document.getElementById('ef-pid').value;
+  const evIdxRaw = document.getElementById('ef-evidx').value;
+  if (!evIdxRaw) return;
+  const evIdx = parseInt(evIdxRaw);
+  const p = AppState.db.individuals[pid];
+  if (!p?.events) return;
+  p.events.splice(evIdx, 1);
+  closeModal('modalEvent');
+  markChanged(); updateStats();
+  showToast('Ereignis gelöscht');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
 

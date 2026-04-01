@@ -131,6 +131,13 @@ async function openSettings() {
     const n = docMap ? Object.keys(docMap).length : 0;
     dCntEl.textContent = n ? `${n} Dateien indiziert` : '';
   }
+  // Lokale Pfade
+  const photoBase = await idbGet('cfg_photo_base').catch(() => null);
+  const docBase   = await idbGet('cfg_doc_base').catch(() => null);
+  const pbEl = document.getElementById('set-photo-base');
+  const dbEl = document.getElementById('set-doc-base');
+  if (pbEl) pbEl.value = photoBase || '';
+  if (dbEl) dbEl.value = docBase   || '';
 }
 
 async function odClearPhotoFolder() {

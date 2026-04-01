@@ -1393,6 +1393,7 @@ body.fc-mode #fcGenBtns { display: flex; }
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalEvent')">Abbrechen</button>
+        <button class="btn" id="deleteEventBtn" style="display:none;background:var(--danger,#c0392b);color:#fff" onclick="deleteEvent()">Löschen</button>
         <button class="btn btn-save" id="saveEventBtn" onclick="saveEvent()">Hinzufügen</button>
       </div>
     </div>
@@ -1616,6 +1617,20 @@ body.fc-mode #fcGenBtns { display: flex; }
             <button id="set-doc-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" onclick="odClearDocFolder()" title="Zurücksetzen">×</button>
           </div>
           <div id="set-doc-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
+        </div>
+      </div>
+
+      <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:16px">Lokale Pfade</div>
+      <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border-color)">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Foto-Basispfad</div>
+          <input class="form-input" id="set-photo-base" placeholder="z.B. /Genealogie/Fotos/"
+            oninput="idbPut('cfg_photo_base',this.value).catch(()=>{})">
+        </div>
+        <div style="padding:12px 14px">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Dokument-Basispfad</div>
+          <input class="form-input" id="set-doc-base" placeholder="z.B. /Genealogie/Dokumente/"
+            oninput="idbPut('cfg_doc_base',this.value).catch(()=>{})">
         </div>
       </div>
 
