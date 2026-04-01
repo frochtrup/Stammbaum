@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v82 / Cache: `stammbaum-v82`
+**Aktuelle sw-Version:** v84 / Cache: `stammbaum-v84`
 
 ---
 
@@ -149,12 +149,17 @@ Sobald alle Aufrufer migriert: `let db = AppState.db` etc. aus gedcom.js entfern
 
 Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf Desktop und iPhone Querformat.
 
-#### Fan Chart (Fächer-/Halbkreisdiagramm) — Priorität 1
-- [ ] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
-- [ ] Rendering: SVG, polar coordinates; Segmente klickbar → showTree(id) oder showDetail(id)
-- [ ] Konfigurierbar: 3–6 Generationen, Vollkreis oder Halbkreis
-- [ ] Desktop + iPhone Querformat; Toggle-Button im Baum-View (⊙ oder Fächer-Icon)
-- [ ] Neue Datei `ui-fanchart.js`
+#### Fan Chart (Fächer-/Halbkreisdiagramm) — ✅ ABGESCHLOSSEN (sw v83–v84)
+- [x] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
+- [x] Rendering: SVG, polar coordinates; Segmente klickbar → showFanChart(id) oder showDetail(id)
+- [x] Konfigurierbar: 3–6 Generationen; Buttons in Topbar
+- [x] Toggle-Button `◑` im Baum-View; Desktop + Mobile
+- [x] Neue Datei `ui-fanchart.js`
+
+#### Generationen-Buttons im Sanduhr-Baum — ✅ ABGESCHLOSSEN (sw v84)
+- [x] Buttons 2/3/4/5/6 in Topbar (nur bei tree-active); Standard 5
+- [x] Dynamische Positionsfunktionen für bis zu 5 Ahnen-Ebenen (32 Slots)
+- [x] Portrait bleibt auf max. 2 Ebenen begrenzt
 
 #### Zeitleiste — Priorität 2
 - [ ] Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
@@ -208,7 +213,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 ### Schwerpunkt 4: Sonstiges
 
 #### Fehler allgemein - Priorität 1
-- [ ] Fan Button wird nicht angezeigt
+- [x] Fan Button wird nicht angezeigt ✅ (sw v84)
 - [ ] bei 'Medien einfügen' den vollständigen Pfad abspeichern
 - [ ] bei 'Medien einfügen' mit dem in der Konfiguration definierten Dateipfad starten
 - [ ] neues Sonstiges Ereignis speichert den Typ nicht
