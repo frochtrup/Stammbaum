@@ -209,15 +209,14 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 #### Fehler allgemein - Priorität 1
 - [ ] Fan Button wird nicht angezeigt
-- [ ] bei Medien einfügen den vollständigen Pfad abspeichern
-- [ ] bei Medien einfügen mit dem in der Konfiguration definierten Dateipfad starten
+- [ ] bei 'Medien einfügen' den vollständigen Pfad abspeichern
+- [ ] bei 'Medien einfügen' mit dem in der Konfiguration definierten Dateipfad starten
 - [ ] neues Sonstiges Ereignis speichert den Typ nicht
 - [ ] ermögliche das Löschen von Ereignissen 
 
 #### Fehler Mobile - Priorität 1
 - [ ] Querformat mit Liste: In der Liste ist die Suchzeile nicht direkt an der Topbar angeschlossen (Gap)
-- [ ] Personen Detail: Foto Anzeige (nach Verknüpfung eines neuen Bildes) ist nicht mehr mit em ursprünglichen link verbunden
-- [ ] 
+- [ ] Personen Detail: Foto Anzeige (nach Verknüpfung eines neuen Bildes) ist nicht mehr mit dem ursprünglichen link verbunden
 
 #### Fehler Desktop - Priorität 1
 - [ ] Pfeil links in der Desktopversion weiterhin nicht eindeutig eins zurück, meist zwei zurück
