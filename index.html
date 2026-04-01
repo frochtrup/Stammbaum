@@ -189,13 +189,17 @@ body.fc-mode #fcContainer          { display: flex; }
 body.fc-mode #treeScaleWrap        { display: none !important; }
 body.fc-mode #treeKeyLegend        { display: none !important; }
 body.fc-mode #treeFsBtn            { display: none !important; }
+#treeFcToggle                      { display: none; }
+body.tree-active #treeFcToggle     { display: inline-flex; }
+body.fc-mode #treeFcToggle         { display: inline-flex; }
 body.desktop-mode.fc-mode #fcContainer { min-height: 0; height: 100%; }
 
-#fcGenBtns {
+#treeGenBtns, #fcGenBtns {
   display: none;
   align-items: center;
   gap: 2px;
 }
+body.tree-active:not(.fc-mode) #treeGenBtns { display: flex; }
 body.fc-mode #fcGenBtns { display: flex; }
 
 .fc-gen-btn {
@@ -916,13 +920,18 @@ body.fc-mode #fcGenBtns { display: flex; }
     <div class="topbar-inner">
       <button class="topbar-btn back" id="treeBtnBack" style="display:none" onclick="treeNavBack()">←</button>
       <span class="topbar-title" id="treeTopTitle"></span>
+      <span id="treeGenBtns">
+        <button class="topbar-btn fc-gen-btn" data-tgen="2" onclick="setTreeGens(2)">2</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="3" onclick="setTreeGens(3)">3</button>
+        <button class="topbar-btn fc-gen-btn active" data-tgen="4" onclick="setTreeGens(4)">4</button>
+      </span>
       <span id="fcGenBtns">
         <button class="topbar-btn fc-gen-btn" data-gen="3" onclick="setFcGens(3)">3</button>
         <button class="topbar-btn fc-gen-btn" data-gen="4" onclick="setFcGens(4)">4</button>
         <button class="topbar-btn fc-gen-btn active" data-gen="5" onclick="setFcGens(5)">5</button>
         <button class="topbar-btn fc-gen-btn" data-gen="6" onclick="setFcGens(6)">6</button>
       </span>
-      <button class="topbar-btn" id="treeFcToggle" onclick="toggleFanChart()" title="Fächer-Diagramm" style="display:none">◑</button>
+      <button class="topbar-btn" id="treeFcToggle" onclick="toggleFanChart()" title="Fächer-Diagramm">◑</button>
       <button class="topbar-btn" id="treeFsBtn" onclick="toggleTreeFullscreen()" title="Vollbild" style="display:none">⤢</button>
       <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>

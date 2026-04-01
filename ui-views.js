@@ -13,6 +13,14 @@ function getProbandId() {
 let _treeNavTargets = {};
 let _treeKeyInit = false;
 let _treeZoomScale = 1;
+let _treeGenCount = 4;  // Generationen gesamt inkl. Proband (2=nur Eltern, 3=+Großeltern, 4=+Urgroßeltern+)
+
+function setTreeGens(n) {
+  _treeGenCount = Math.max(2, Math.min(4, n));
+  document.querySelectorAll('[data-tgen]').forEach(b =>
+    b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
+  if (AppState.currentPersonId) showTree(AppState.currentPersonId, false);
+}
 
 function _initTreeKeys() {
   if (_treeKeyInit) return;
@@ -405,6 +413,7 @@ function runGlobalSearch(q) {
 
 function showMain() {
   _navHistory.length = 0; // Liste = frischer Start, History löschen
+  document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
   updateStats();
@@ -1197,10 +1206,13 @@ function showTree(personId, addToHistory = true) {
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
-  // Fan Chart deaktivieren + Toggle-Button einblenden
+  // Zoom-Scale sanieren (kann durch frühen Aufruf auf 0 gesetzt worden sein)
+  if (_treeZoomScale <= 0) _treeZoomScale = 1;
+  // Fan Chart deaktivieren + Toggle-Button + Gen-Buttons einblenden
   document.body.classList.remove('fc-mode');
+  document.body.classList.add('tree-active');
   const _fcTb = document.getElementById('treeFcToggle');
-  if (_fcTb) { _fcTb.style.display = ''; _fcTb.textContent = '◑'; _fcTb.title = 'Fächer-Diagramm'; }
+  if (_fcTb) { _fcTb.style.display = 'inline-flex'; _fcTb.textContent = '◑'; _fcTb.title = 'Fächer-Diagramm'; }
   if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(personId);
 
   // ── Orientierung + Dimensionen ──
@@ -1284,9 +1296,14 @@ function showTree(personId, addToHistory = true) {
   const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
   const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
   // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene; Hochformat max. 2 Ebenen
-  const hasAnc4 = !isPortrait && anc4.some(Boolean);
-  const hasAnc3 = !isPortrait && anc3.some(Boolean);
-  const ancSlots = hasAnc4 ? 16 : hasAnc3 ? 8 : 4;
+  // _treeGenCount = Generationen gesamt inkl. Proband:
+  //   2 = nur Eltern (1 Ahnen-Ebene), 3 = +Großeltern (2 Ebenen),
+  //   4 = +Urgroßeltern (3 Ebenen), 5 = +Ururgroßeltern (4 Ebenen)
+  const _maxAnc = isPortrait ? 2 : _treeGenCount - 1;  // max. Ahnen-Ebenen
+  const hasAnc4 = _maxAnc >= 4 && anc4.some(Boolean);
+  const hasAnc3 = _maxAnc >= 3 && anc3.some(Boolean);
+  const ancLevels = hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
+  const ancSlots  = hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
   const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
@@ -1294,7 +1311,6 @@ function showTree(personId, addToHistory = true) {
   const totalW = Math.max(personCX + ancSpan / 2 + PAD, rightEdge, personCX + childMaxCols * SLOT / 2 + PAD);
 
   // ── Y-Positionen: Zeile 0 (Zentrum) ──
-  const ancLevels = hasAnc4 ? 4 : hasAnc3 ? 3 : 2;
   const baseY = PAD + ancLevels * ROW;
   function ry(lv) { return lv <= 0 ? baseY + lv * ROW : baseY + CH + VGAP + (lv - 1) * ROW; }
 
@@ -1435,8 +1451,8 @@ function showTree(personId, addToHistory = true) {
     if (anc2[Math.floor(i / 2)]) line(aCXFn(3)(i), ry(-3) + H, aCXFn(2)(Math.floor(i / 2)), ry(-2));
   });
 
-  // ── Großeltern + Linien zu Eltern ──
-  anc2.forEach((id, i) => {
+  // ── Großeltern + Linien zu Eltern (ab Gen 3) ──
+  if (ancLevels >= 2) anc2.forEach((id, i) => {
     mkCard(id, aXFn(2)(i), ry(-2), false, false, null, false, null, kbadge(id));
     if (id) line(aCXFn(2)(i), ry(-2) + H, aCXFn(1)(Math.floor(i / 2)), ry(-1));
   });
@@ -1532,11 +1548,13 @@ function showTree(personId, addToHistory = true) {
   setTimeout(() => {
     const sc = document.getElementById('treeScroll');
     // Desktop: Auto-Fit wenn Baum breiter oder höher als Viewport
-    if (!isPortrait) {
+    // Guard: Scroll-Container muss messbare Dimensionen haben
+    if (_treeZoomScale <= 0) _treeZoomScale = 1;
+    if (!isPortrait && sc.clientWidth > 0 && sc.clientHeight > 0) {
       const fitW = sc.clientWidth  / totalW;
       const fitH = sc.clientHeight / totalH;
       const fit  = Math.min(1, fitW, fitH);
-      if (fit < _treeZoomScale || (_treeZoomScale === 1 && fit < 1)) {
+      if (fit > 0 && (fit < _treeZoomScale || (_treeZoomScale === 1 && fit < 1))) {
         _treeZoomScale = Math.round(fit * 100) / 100;
         wrap.style.transform = `scale(${_treeZoomScale})`;
         wrap.style.transformOrigin = '0 0';
