@@ -13,10 +13,10 @@ function getProbandId() {
 let _treeNavTargets = {};
 let _treeKeyInit = false;
 let _treeZoomScale = 1;
-let _treeGenCount = 4;  // Generationen gesamt inkl. Proband (2=nur Eltern, 3=+Großeltern, 4=+Urgroßeltern+)
+let _treeGenCount = 5;  // Generationen gesamt inkl. Proband: 2=Eltern, 3=+Gr., 4=+UrGr., 5=+Ur²Gr.(Standard), 6=+Ur³Gr.
 
 function setTreeGens(n) {
-  _treeGenCount = Math.max(2, Math.min(4, n));
+  _treeGenCount = Math.max(2, Math.min(6, n));
   document.querySelectorAll('[data-tgen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
   if (AppState.currentPersonId) showTree(AppState.currentPersonId, false);
@@ -1256,6 +1256,7 @@ function showTree(personId, addToHistory = true) {
   const anc2 = anc1.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 4
   const anc3 = anc2.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 8
   const anc4 = anc3.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 16
+  const anc5 = anc4.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 32
 
   // ── Geschwister (aus erster Elternfamilie) ──
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
@@ -1299,11 +1300,12 @@ function showTree(personId, addToHistory = true) {
   // _treeGenCount = Generationen gesamt inkl. Proband:
   //   2 = nur Eltern (1 Ahnen-Ebene), 3 = +Großeltern (2 Ebenen),
   //   4 = +Urgroßeltern (3 Ebenen), 5 = +Ururgroßeltern (4 Ebenen)
-  const _maxAnc = isPortrait ? 2 : _treeGenCount - 1;  // max. Ahnen-Ebenen
+  const _maxAnc = isPortrait ? 2 : _treeGenCount - 1;  // max. Ahnen-Ebenen (1..5)
+  const hasAnc5 = _maxAnc >= 5 && anc5.some(Boolean);
   const hasAnc4 = _maxAnc >= 4 && anc4.some(Boolean);
   const hasAnc3 = _maxAnc >= 3 && anc3.some(Boolean);
-  const ancLevels = hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
-  const ancSlots  = hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
+  const ancLevels = hasAnc5 ? 5 : hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
+  const ancSlots  = hasAnc5 ? 32 : hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
   const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
@@ -1325,25 +1327,18 @@ function showTree(personId, addToHistory = true) {
     ? childStartY + childRows.length * ROW - VGAP + PAD
     : row0Bottom + PAD;
 
-  // ── X: Vorfahren (zentriert auf personCX) ──
-  // l4 = Basis (ancSlots Slots), l3/l2/l1 = Mittelwert-Hierarchie aufwärts
+  // ── X: Vorfahren — dynamische Positionsfunktionen für beliebig viele Ebenen ──
+  // _lCX[0] = deepste Ebene (ancSlots Slots), _lCX[k] = k Ebenen höher (ancSlots/2^k Slots)
   const ancLeft = personCX - ancSpan / 2;
-  function l4CX(i) { return ancLeft + (i + 0.5) * SLOT; }
-  function l4X(i)  { return l4CX(i) - W / 2; }
-  function l3CX(i) { return (l4CX(i * 2) + l4CX(i * 2 + 1)) / 2; }
-  function l3X(i)  { return l3CX(i) - W / 2; }
-  function l2CX(i) { return (l3CX(i * 2) + l3CX(i * 2 + 1)) / 2; }
-  function l2X(i)  { return l2CX(i) - W / 2; }
-  function l1CX(i) { return (l2CX(i * 2) + l2CX(i * 2 + 1)) / 2; }
-  function l1X(i)  { return l1CX(i) - W / 2; }
-
-  // Tiefe-adaptierte Positions-Auswahl: bei weniger Ebenen höhere l-Funktionen nutzen
-  // Tiefe 1=Eltern, 2=Großeltern, 3=UrGroßeltern, 4=UrUrGroßeltern
-  const _off = 4 - ancLevels;
-  const _aXFns  = [l1X,  l2X,  l3X,  l4X ];
-  const _aCXFns = [l1CX, l2CX, l3CX, l4CX];
-  function aXFn (d) { return _aXFns [d - 1 + _off]; }
-  function aCXFn(d) { return _aCXFns[d - 1 + _off]; }
+  const _lCX = [];
+  _lCX[0] = i => ancLeft + (i + 0.5) * SLOT;
+  for (let _k = 1; _k < ancLevels; _k++) {
+    const _prev = _lCX[_k - 1];
+    _lCX[_k] = i => (_prev(i * 2) + _prev(i * 2 + 1)) / 2;
+  }
+  // aXFn(d): linke Kante für Tiefe d (1=Eltern, ancLevels=tiefste Ebene)
+  function aXFn (d) { return i => _lCX[ancLevels - d](i) - W / 2; }
+  function aCXFn(d) { return _lCX[ancLevels - d]; }
 
   // ── X/Y: Zentrumsperson ──
   const personX = personCX - CW / 2;
@@ -1437,25 +1432,15 @@ function showTree(personId, addToHistory = true) {
     wrap.appendChild(div);
   }
 
-  // ── UrUrGroßeltern (Ebene -4, nur Querformat/Desktop) ──
-  if (hasAnc4) anc4.forEach((id, i) => {
-    if (!id) return;
-    mkCard(id, l4X(i), ry(-4), false, false, null, false, null, kbadge(id));
-    if (anc3[Math.floor(i / 2)]) line(l4CX(i), ry(-4) + H, l3CX(Math.floor(i / 2)), ry(-3));
-  });
-
-  // ── UrGroßeltern (Ebene -3, nur Querformat/Desktop) ──
-  if (hasAnc3) anc3.forEach((id, i) => {
-    if (!id) return;
-    mkCard(id, aXFn(3)(i), ry(-3), false, false, null, false, null, kbadge(id));
-    if (anc2[Math.floor(i / 2)]) line(aCXFn(3)(i), ry(-3) + H, aCXFn(2)(Math.floor(i / 2)), ry(-2));
-  });
-
-  // ── Großeltern + Linien zu Eltern (ab Gen 3) ──
-  if (ancLevels >= 2) anc2.forEach((id, i) => {
-    mkCard(id, aXFn(2)(i), ry(-2), false, false, null, false, null, kbadge(id));
-    if (id) line(aCXFn(2)(i), ry(-2) + H, aCXFn(1)(Math.floor(i / 2)), ry(-1));
-  });
+  // ── Ahnen-Ebenen ancLevels..2 (generisch für 2–5 Ebenen) ──
+  const _ancArrays = [null, anc1, anc2, anc3, anc4, anc5];
+  for (let _d = ancLevels; _d >= 2; _d--) {
+    _ancArrays[_d].forEach((id, i) => {
+      if (!id && _d >= 3) return;  // tiefe Ebenen: leere Slots überspringen
+      mkCard(id, aXFn(_d)(i), ry(-_d), false, false, null, false, null, kbadge(id));
+      if (id) line(aCXFn(_d)(i), ry(-_d) + H, aCXFn(_d - 1)(Math.floor(i / 2)), ry(-(_d - 1)));
+    });
+  }
 
   // ── Eltern ──
   anc1.forEach((id, i) => mkCard(id, aXFn(1)(i), ry(-1), false, false, null, false, null, kbadge(id)));
