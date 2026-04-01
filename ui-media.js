@@ -116,7 +116,7 @@ function confirmEditMedia() {
     const p = getPerson(_editMediaId);
     if (!p?.media) return;
     p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title };
-    if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showDetail(_editMediaId, false);
@@ -124,7 +124,7 @@ function confirmEditMedia() {
     const f = getFamily(_editMediaId);
     if (!f) return;
     _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title });
-    if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showFamilyDetail(_editMediaId, false);
@@ -139,7 +139,7 @@ function confirmEditMedia() {
     const s = getSource(_editMediaId);
     if (!s?.media) return;
     s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title };
-    if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showSourceDetail(_editMediaId, false);
@@ -212,7 +212,7 @@ async function confirmAddMedia() {
     if (!p.media) p.media = [];
     const idx = p.media.length;
     p.media.push(entry);
-    if (_addMediaOdFileId) _addMediaToFilemap('persons', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
+    if (_addMediaOdFileId) _addMediaToFilemap('persons', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 }, idx);
     if (_addMediaCamB64) { await idbPut('photo_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
@@ -223,7 +223,7 @@ async function confirmAddMedia() {
     if (!f.marr.media) f.marr.media = [];
     const idx = f.marr.media.length;
     f.marr.media.push({ file, titl: title, form, note:'', date:'', scbk:'', prim:'', _extra:[] });
-    if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
+    if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 }, idx);
     if (_addMediaCamB64) { await idbPut('photo_fam_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
@@ -234,7 +234,7 @@ async function confirmAddMedia() {
     if (!s.media) s.media = [];
     const _smIdx = s.media.length;
     s.media.push(entry);
-    if (_addMediaOdFileId) _addMediaToFilemap('sources', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: _smIdx === 0 });
+    if (_addMediaOdFileId) _addMediaToFilemap('sources', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: _smIdx === 0 }, _smIdx);
     if (_addMediaCamB64) { await idbPut('photo_src_' + _addMediaId + '_' + _smIdx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');

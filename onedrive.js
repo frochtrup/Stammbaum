@@ -634,12 +634,18 @@ async function odPickFileForEditMedia() {
   else await _odShowFolder('root', 'OneDrive');
 }
 
-async function _addMediaToFilemap(storeKey, id, entry) {
+async function _addMediaToFilemap(storeKey, id, entry, atIdx) {
   try {
     const fm = await idbGet('od_filemap').catch(() => null) || { persons: {}, families: {}, sources: {} };
     if (!fm[storeKey]) fm[storeKey] = {};
     if (!fm[storeKey][id]) fm[storeKey][id] = [];
-    fm[storeKey][id].push(entry);
+    if (atIdx !== undefined) {
+      // An korrektem Index speichern, ggf. mit null auffüllen
+      while (fm[storeKey][id].length <= atIdx) fm[storeKey][id].push(null);
+      fm[storeKey][id][atIdx] = entry;
+    } else {
+      fm[storeKey][id].push(entry);
+    }
     await idbPut('od_filemap', fm).catch(() => {});
     const pfx = storeKey === 'families' ? 'photo_fam_' + id : 'photo_' + id;
     Object.keys(_odPhotoCache).filter(k => k.startsWith(pfx)).forEach(k => delete _odPhotoCache[k]);
