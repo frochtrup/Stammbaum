@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v85 / Cache: `stammbaum-v85`
+**Aktuelle sw-Version:** v94 / Cache: `stammbaum-v94`
 
 ---
 
@@ -93,12 +93,20 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [x] neues Sonstiges Ereignis speichert den Typ nicht ✅ (sw v85)
 - [x] ermögliche das Löschen von Ereignissen ✅ (sw v85)
 
-#### Fehler Mobile - Priorität 1
-- [ ] Querformat mit Liste: In der Liste ist die Suchzeile nicht direkt an der Topbar angeschlossen (Gap)
-- [ ] Personen Detail: Foto Anzeige (nach Verknüpfung eines neuen Bildes) ist nicht mehr mit dem ursprünglichen link verbunden
+#### Fehler Mobile — ✅ ABGESCHLOSSEN (sw v91–v92)
+- [x] Querformat mit Liste: Suchzeile Gap zur Topbar ✅ (sw v92)
+- [x] Personen Detail: Foto Anzeige nach Verknüpfung neues Bild ✅ (sw v91)
 
-#### Fehler Desktop - Priorität 1
-- [ ] Pfeil links in der Desktopversion weiterhin nicht eindeutig eins zurück, meist zwei zurück
+#### Fehler Desktop — ✅ ABGESCHLOSSEN (sw v92–v93)
+- [x] Pfeil links: ein Tastendruck → zwei Schritte zurück ✅ (sw v92–v93)
+
+#### Refactoring: ui-views.js Split — ✅ ABGESCHLOSSEN (sw v94)
+- [x] `ui-views.js` (1963 Z.) aufgeteilt in 5 Module:
+  - `ui-views.js` (279 Z.) — gemeinsame Hilfsfunktionen
+  - `ui-views-person.js` (392 Z.) — Personen-Detailansicht
+  - `ui-views-family.js` (382 Z.) — Familien-Detailansicht
+  - `ui-views-source.js` (273 Z.) — Quellen-Detailansicht
+  - `ui-views-tree.js` (651 Z.) — Sanduhr-Baum + Fan Chart
 
 ---
 

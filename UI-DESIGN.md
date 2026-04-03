@@ -88,6 +88,14 @@ v-detail           (BottomNav versteckt)
 - Alle show-Funktionen haben `pushHistory = true` als Default-Parameter
   - `goBack()` ruft mit `pushHistory = false` → kein neuer History-Eintrag
 
+### Swipe-Right (Zurück, Mobile)
+`_initDetailSwipe()` — einmalig registriert (Flag `_swipeInit`), aufgerufen beim Wechsel auf `v-detail`.
+- **Trigger:** 1 Finger-Touch auf `#v-detail`; kein Modal offen
+- **Erkennung:** `dx > 60px` + `|dx| > |dy| × 1.2` (horizontal dominiert) + `elapsed < 400ms`
+- **Visuelles Feedback:** `translateX(dx)` während des Swipe; `transition: transform 0.2s` beim Loslassen
+- **Aktion:** `goBack()` — identisch mit ← Zurück-Button
+- **Kein Konflikt** mit vertikalem Scrollen (dy-Check) und Modals (früher Abbruch)
+
 ### Bottom-Nav Highlight
 `setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places', 'search' }`
 
@@ -235,6 +243,11 @@ Ebene +1:         [K0] [K1] [K2] [K3]       ← max. 4 Kinder/Zeile, mehrzeilig
 - Klick auf reguläre Karte → `showTree(id)` (neu zentrieren)
 - Klick auf Zentrum-Karte → `showDetail(id)` → Zurück führt wieder zum Baum
 - ⧖-Button in Detailansicht und Familienansicht → öffnet Tree
+- **Pinch-to-Zoom** (Mobile): `touchstart/touchmove/touchend` auf `#treeScroll` mit 2 Fingern
+  - Startwert: `_pinchStartDist` (Euklidischer Abstand der 2 Touch-Punkte) + `_pinchStartScale`
+  - `_treeZoomScale = clamp(0.3, 3, _pinchStartScale × dist / _pinchStartDist)`
+  - Anwendung: `#treeWrap { transform: scale(_treeZoomScale) }` + `#treeScaleWrap` Größe angepasst
+  - Bereich: 0.3× (Übersicht) bis 3× (Detail)
 - **Drag-to-Pan** (Desktop): `mousedown/mousemove/mouseup` auf `#treeScroll`; 5px-Threshold verhindert versehentliches Aktivieren; Click-Event nach Drag unterdrückt
 - **Vollbild-Modus**: `⤢`-Button in Topbar; `body.tree-fullscreen` blendet Sidebar aus; Toggle zu `⤡`
 - **Tastaturnavigation** (Desktop):

@@ -7,12 +7,22 @@
 - **Pfad:** `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
 
 ## Dateien
-- `index.html` — App-Shell: HTML-Struktur + CSS + Script-Tags (v4-dev)
-- `gedcom.js` — GEDCOM-Parser + Writer
+- `index.html` — App-Shell: HTML-Struktur + CSS + Script-Tags
+- `gedcom.js` — AppState/UIState Namespaces, Labels, Datum- und PLAC-Helfer, 8 Getter/Setter-Helfer
+- `gedcom-parser.js` — `parseGEDCOM()`, `parseGeoCoord()`
+- `gedcom-writer.js` — `writeGEDCOM()`, `pushCont()`
+- `demo.ged` — Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 - `storage.js` — IndexedDB, Dateiverwaltung, Auto-Load
-- `ui-views.js` — Baum, Detailansichten, Listenrendering
-- `ui-forms.js` — Formulare, OneDrive-Integration, Medien-Bearbeitung
-- `sw.js` — Service Worker (Network-first, offline, Cache v58)
+- `ui-views.js` — gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
+- `ui-views-person.js` — Personen-Detailansicht
+- `ui-views-family.js` — Familien-Detailansicht
+- `ui-views-source.js` — Quellen-Detailansicht
+- `ui-views-tree.js` — Sanduhr-Baum + Fan Chart + Tastaturnavigation
+- `ui-forms.js` — Formulare Person/Familie/Quelle/Archiv/Event
+- `ui-media.js` — Medien Add/Edit/Delete/Browser
+- `ui-fanchart.js` — Fan Chart (SVG)
+- `onedrive.js` — OAuth, Foto-Import, Ordner-Browser, Filemap
+- `sw.js` — Service Worker (Network-first, offline, Cache v94)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -21,49 +31,38 @@
 - `UI-DESIGN.md` — HTML-Seitenstruktur, Navigationsmodell, CSS Design-System, Sanduhr-Layout
 - `GEDCOM.md` — Parser/Writer-Referenz, alle unterstützten Tags
 - `ROADMAP.md` — Phasen-Übersicht, offene Features, bekannte Probleme
-- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v4.0-dev
+- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v5.0-dev
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-03-29 (Session 6)
-- **Schwerpunkt 1 (Passthrough-Reduktion) abgeschlossen** ✅
-- **Schwerpunkt 2 (Desktop UI/UX) abgeschlossen** ✅
-- **Version 4 in Entwicklung: Branch `v4-dev`** — `main` bleibt v3 (live)
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-03
+
+**Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
+**Version 5.0 in Entwicklung — Branch `v5-dev`**
+
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
-- **Aktuelle sw-Version: v58** / Cache: `stammbaum-v58`
-- Git: Branch `v4-dev`; letzter Commit: eac986b
+- **Aktuelle sw-Version: v94** / Cache: `stammbaum-v94`
+- Git: Branch `v5-dev`; letzter Commit: 98b6429
 
-**Session 2026-03-29 (Session 6) — Desktop UI/UX Baum (sw v56–v58):**
-- Feat: Drag-to-Pan — Maus-Drag scrollt `#treeScroll` (5px-Threshold, Click-Unterdrückung)
-- Feat: Vollbild-Modus — Button `⤢` in Topbar, `body.tree-fullscreen` blendet Sidebar aus
-- Feat: 4 Vorfahren-Ebenen — anc1–anc4 (Eltern/Großeltern/Urgroßeltern/Ururgroßeltern)
-- ancSpan dynamisch (4/8/16 Slots); baseY angepasst; Ebenen -3/-4 überspringen leere Slots
-- Vertikale Zentrierung: `marginTop` zentriert Baum wenn kleiner als Viewport
-- Feat: Tastaturnavigation — ↑ Vater / Shift+↑ Mutter / ↓ Kind / → Partner / ← History-Back
-- Feat: Pfeil-Legende unten rechts im Baum (nur desktop-mode)
-- Fix: `←` via `treeNavBack()` (History-basiert); `_prevTreeId` vor Überschreibung gesichert
+**Session 2026-04-03 — Refactoring: ui-views.js → 5 Module (sw v92–v94):**
+- Refactor: `ui-views.js` aufgeteilt in 5 Module (ui-views-person/family/source/tree.js)
+- Fix Bug 7: doppelter `treeNavBack()` — überflüssiger ArrowLeft-Handler in `ui-forms.js` entfernt (sw v93)
+- Fix Bug 7: `goBack()` legt keinen doppelten History-Eintrag an (sw v92)
+- Fix Bug 5: Suchzeile schließt nahtlos an Topbar an (resize-Handler `_updateTopbarH()` sofort)
 
-**Session 2026-03-29 (Session 5) — Medien-UI + Einstellungen (sw v50–v55):**
-- Fix: Familien-Media-Abschnitt leer: Parser speichert OBJE unter MARR in `f.marr.media[]` (Feld `titl`), nicht in `_extra` — alle marr-Media-Funktionen korrigiert
-- Feat: Einheitliches Medien-Karten-Layout (Icon/Thumbnail + Titel) in Person-, Familien-, Quellenansicht
-- Feat: Edit-Modal für Medien: Titelleiste mit Thumbnail, Vorschau, Titel/Dateiname-Felder, OD-Picker, Löschen+Speichern
-- Feat: Async Thumbnail-Loading für Person- und Familien-Medien-Items
-- Feat: Quellenansicht: erstes Bild-Medium befüllt Header (det-src-photo), Avatar wird ausgeblendet
-- Feat: OneDrive-Einstellungen-Modal: zeigt konfig. Ordner mit Namen + Anzahl, Ändern + Zurücksetzen
-- Feat: Medien-Badge (📎) in Quellenliste ohne Zähler (sw v54–v55)
-- `_asyncLoadMediaThumb(thumbId, idbKey)` shared helper; `openSourceMediaView(srcId, idx)`
-- `_odEditPickMode` für OD-Picker aus Edit-Modal
-
-**Session 2026-03-29 (Session 4) — sourceMedia{} + Quellenmanagement UI (sw v45–v49):**
-- Feat: `sourceMedia{}` / `sourMedia{}` — OBJE-Blöcke unter SOUR-Zitierungen strukturiert
-- Feat: Quellen-Detailansicht mit Icons (🖼/📄/📎) + async OneDrive-Thumbnails
-- Feat: `_odGetSourceFileUrl(srcId, idx)` + `odSetupDocFolder()` + `odScanDocFolder()` → `od_doc_filemap`
+**Session 2026-03-31 — OneDrive + Filemap-Fixes (sw v86–v91):**
+- Fix: Filemap-Index-Sync — Foto wird nach OneDrive-Auswahl korrekt geladen (sw v91)
+- Fix: OneDrive-Picker gibt absoluten Pfad zurück (sw v90)
+- Fix: Medien-Basispfad auto-erkannt aus GEDCOM-Importen (sw v89)
+- Fix: Kamera/Galerie übernimmt Basispfad + vollständiger Pfad für alle Medien
+- Fix: OneDrive-Picker startet in konfiguriertem Ordner
+- Fix: Einstellungen immer zugänglich; Medien-Basispfad Pre-fill korrekt; Baum Auto-Fit (sw v86)
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 
 ---
 
-## Roundtrip-Status (2026-03-29, Session 5)
+## Roundtrip-Status (stabil seit v4)
 
 `roundtrip_stable=true`, `net_delta=-4` — alle tag-counts ✓, STABIL.
 Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je -1 für _TIME/DATE/TIME/QUAY/TEXT.
@@ -79,7 +78,7 @@ Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je 
 - `NOTE._passthrough`: 1 NOTE (REFN, _VALID)
 - `extraRecords`: 2 (SUBM, OBJE)
 
-**Nicht editierbar (niedrige Prio):**
+**Nicht editierbar (v5-Kandidaten):**
 - DIV, DIVF → FAM-Events in passthrough
 - CENS, CONF, FCOM, ORDN, RETI, PROP, WILL, PROB → nicht als events[] strukturiert
 - Mehrere inline INDI-Notes → konkateniert
@@ -87,7 +86,7 @@ Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je 
 ---
 
 ## Architektur-Schlüsselentscheidungen
-- Multi-File HTML (ADR-001) · Vanilla JS (ADR-002) · Globales `db` (ADR-003)
+- Multi-File HTML (ADR-001) · Vanilla JS (ADR-002) · Globales `db` via AppState (ADR-003)
 - **IndexedDB** cacht GEDCOM-Text primär; localStorage stiller Fallback (ADR-004) · iOS `accept="*/*"` (ADR-005)
 - Desktop Chrome: `showOpenFilePicker()` + `requestPermission({mode:'readwrite'})` (ADR-007)
 - BIRT/CHR/DEAT/BURI als Sonder-Objekte via `_SPECIAL_OBJ` (ADR-008)
@@ -101,6 +100,7 @@ Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je 
 - **Familien-OBJE**: `f.marr.media[]` mit Feld `titl` (nicht `title`) — NICHT in `f.marr._extra`
 - **Baum Tastatur**: `_treeNavTargets{}` pro `showTree()`-Aufruf; `_initTreeKeys()` einmalig
 - **Baum History**: `_treeHistory[]` + `_treeHistoryPos`; `←` ruft `treeNavBack()` auf
+- **State-Management**: `AppState` (db, currentPersonId, changed…) + `UIState` (_treeScale, _treeHistory…) in gedcom.js
 
 ## IDB-Schlüssel (OneDrive-Ordner)
 - `od_default_folder`: `{ folderId, folderName }` — Foto-Ordner
@@ -114,16 +114,33 @@ Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je 
 - Namen: `_treeShortName(p, isCenter)` — Limit 18 (regulär) / 26 (Zentrum) Zeichen, dann Initialen
 - Vorfahren: 4 Ebenen (anc1–anc4), ancSpan dynamisch (4/8/16 Slots)
 
-## Version 4 — Schwerpunkte (Branch `v4-dev`)
-1. **Passthrough-Reduktion**: ✅ Abgeschlossen — alle tag-counts ✓
-2. **Desktop UI/UX**: ✅ Abgeschlossen — 4 Vorfahren-Ebenen, Vollbild, Drag-to-Pan, Tastaturnavigation, Pfeil-Legende
-3. **Quellenmanagement**: ✅ Medien-UI + Thumbnails + Einstellungen; offen: Rückverweise, Kamera-Button, Vorlagen
-4. **Mobile iPhone**: Schnell-Formular neue Quellen, Swipe-Gesten
+## Version 5 — Schwerpunkte (Branch `v5-dev`)
+
+**Schwerpunkt 1: Weitere Darstellungen**
+1. Fan Chart (SVG, polar coords) — `ui-fanchart.js` ✅ sw v83–v84
+   - Toggle `◑` in Topbar, Gen-Buttons 3–6, klickbare Segmente
+   - Farben: Blau/Rosa/Grau nach Geschlecht, außen dunkler
+2. Generationen-Buttons im Sanduhr-Baum ✅ sw v84
+   - Buttons 2–6 in Topbar, dynamische Positionsfunktionen (_lCX[]), ancLevels 1–5
+   - Standard 5; Portrait bleibt max. 2
+3. Zeitleiste — neue Datei `ui-timeline.js` (offen)
+4. Nachkommen-Baum (top-down SVG) (offen)
+5. Karten-Ansicht (Apple Maps Links / leaflet.js) (offen)
+
+**Schwerpunkt 2: Performance + UX**
+1. Virtuelles Scrollen (Listen >500 Eintr., scroll-event-basiert, kein Framework)
+2. Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
+3. Offline-Sync-Indikator (Badge wenn AppState.changed=true und ungespeichert)
+
+**Schwerpunkt 3: Datenqualität**
+1. Erweiterte Events (DIV, DIVF, CENS, CONF, ORDN etc. aus passthrough)
+2. Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige kein Auto-Merge)
+3. Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
 
 ## Offene Architektur-Schulden
-- State-Management: ~27 globale Variablen, keine Schichtentrennung
-- Virtuelles Scrollen für Listen >1000 Einträge
+- Virtuelles Scrollen für Listen >1000 Einträge (v5 Schwerpunkt 2)
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo)
+- Familien-Avatar: CSS-Symbol statt OS-Emoji
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch · Kommunikation: kurz und direkt · Keine Emojis

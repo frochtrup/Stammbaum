@@ -9,35 +9,40 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          Stammbaum PWA v4.0-dev (Branch v4-dev)      │
+│          Stammbaum PWA v5.0 (Branch v5-dev)          │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
-│  index.html        — App-Shell (HTML + CSS)          │
-│  gedcom.js         — Globals, Labels, Datum/PLAC     │
-│  gedcom-parser.js  — parseGEDCOM()                   │
-│  gedcom-writer.js  — writeGEDCOM(), pushCont()       │
-│  storage.js        — IndexedDB, Dateiverwaltung      │
-│  ui-views.js       — Baum, Detail, Listenrendering   │
-│  ui-forms.js       — Formulare (Person/Fam/Src/Repo) │
-│  ui-media.js       — Medien Add/Edit/Delete/Browser  │
-│  onedrive.js       — OAuth, Foto-Import, Filemap     │
-│  sw.js             — Service Worker (Cache v73)      │
-│  manifest.json     — PWA-Manifest                    │
-│  demo.ged          — Demo-GEDCOM (12 Pers., 6 Fam.)  │
+│  index.html           — App-Shell (HTML + CSS)       │
+│  gedcom.js            — AppState/UIState, Labels     │
+│  gedcom-parser.js     — parseGEDCOM()                │
+│  gedcom-writer.js     — writeGEDCOM(), pushCont()    │
+│  storage.js           — IndexedDB, Dateiverwaltung   │
+│  ui-views.js          — gemeinsame Hilfsfunktionen   │
+│  ui-views-person.js   — Personen-Detailansicht       │
+│  ui-views-family.js   — Familien-Detailansicht       │
+│  ui-views-source.js   — Quellen-Detailansicht        │
+│  ui-views-tree.js     — Sanduhr-Baum + Fan Chart     │
+│  ui-forms.js          — Formulare (Person/Fam/Src)   │
+│  ui-media.js          — Medien Add/Edit/Delete       │
+│  ui-fanchart.js       — Fan Chart (SVG)              │
+│  onedrive.js          — OAuth, Foto-Import, Filemap  │
+│  sw.js                — Service Worker (Cache v94)   │
+│  manifest.json        — PWA-Manifest                 │
+│  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~10 JS-Dateien · ~180 Funktionen · ~8500 Zeilen
+**Größe gesamt:** ~14 JS-Dateien · ~200 Funktionen · ~9500 Zeilen
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
 ### ADR-001: Multi-File (HTML-Shell + JS-Module)
-**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-forms.js`, `ui-media.js`, `onedrive.js`.
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-tree.js`, `ui-forms.js`, `ui-media.js`, `ui-fanchart.js`, `onedrive.js`.
 
-**Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt.
+**Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt. `ui-views.js` wurde in v5-dev (sw v94) in 5 Module aufgeteilt.
 
 **Warum:**
 - Einzelne Dateien bleiben editierbar ohne vollständigen Download/Upload
@@ -64,10 +69,12 @@ markChanged(); updateStats(); renderTab();
 
 ---
 
-### ADR-003: Globales `db`-Objekt als State
-**Entscheidung:** Ein globales `let db` als einzige Wahrheitsquelle. Details: `DATAMODEL.md`.
+### ADR-003: AppState/UIState als State-Namespaces (ab v4.0)
+**Entscheidung:** 22 cross-file Globals in 2 Namespace-Objekte in `gedcom.js` migriert. `AppState` hält persistente Werte (`db`, `currentPersonId`, `changed`, `_fileHandle` …), `UIState` hält UI-Zustand (`_treeScale`, `_treeHistory`, `_fanGenCount` …). Backward-compat-Shims via `Object.defineProperty` auf `window`.
 
-**Konsequenz:** Kein Undo/Redo. Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus IDB).
+**Vorgänger:** Ein globales `let db` + ~22 lose Globals.
+
+**Konsequenz:** Kein Undo/Redo. Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus IDB). Details: `DATAMODEL.md`.
 
 ---
 
@@ -321,7 +328,7 @@ restoreFileHandle() (bei Seitenreload)
 | DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | Backlog |
 | Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
-| ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen |
+| ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen (v4.0) |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
 | Virtuelles Scrollen | Listen >1000 Einträge langsam | v5 geplant |
-| `ui-views.js` gross (1839 Z.) | Baum + Detail + Listen + Listenrendering gemischt | Backlog |
+| ~~`ui-views.js` gross~~ | → 5 Module aufgeteilt (sw v94) | Abgeschlossen (v5-dev) |

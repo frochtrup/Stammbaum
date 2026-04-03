@@ -5,6 +5,64 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 5.0 (Branch `v5-dev`, ab 2026-03-30)
+
+---
+
+### Session 2026-04-03 — Refactoring: ui-views.js Split (sw v94)
+
+- **`ui-views.js`** (1963 Z.) aufgeteilt in 5 Module:
+  - `ui-views.js` (279 Z.) — gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
+  - `ui-views-person.js` (392 Z.) — Personen-Detailansicht (`showDetail`, Avatar, Events, Medien)
+  - `ui-views-family.js` (382 Z.) — Familien-Detailansicht (`showFamilyDetail`, Kinder, Medien)
+  - `ui-views-source.js` (273 Z.) — Quellen-Detailansicht (`showSourceDetail`, Medien, Rückverweise)
+  - `ui-views-tree.js` (651 Z.) — Sanduhr-Baum + Fan Chart (`showTree`, `showFanChart`, Tastaturnavigation)
+- `index.html`: Script-Tags um 4 neue Module erweitert
+
+*Aktuelle sw-Version: v94 / Cache: stammbaum-v94*
+
+---
+
+### Session 2026-04-03 — Bug 7 Fix: doppelter treeNavBack() (sw v93)
+
+- **Fix Bug 7**: Doppelter `keydown`-Handler in `ui-forms.js` rief `treeNavBack()` beim ArrowLeft-Druck ein zweites Mal auf — überflüssiger ArrowLeft-Zweig in `ui-forms.js` entfernt
+
+*Aktuelle sw-Version: v93 / Cache: stammbaum-v93*
+
+---
+
+### Session 2026-04-01 — Bug 5 + Bug 7 Fix: Topbar + History (sw v92)
+
+- **Fix Bug 7**: `goBack()` legt keinen neuen History-Eintrag mehr an — `showTree(prev.id, false)` verhindert Doppeleintrag beim Zurück-Navigieren
+- **Fix Bug 5**: `resize`-Handler ruft `_updateTopbarH()` sofort auf — Suchzeile schließt nahtlos an Topbar im Querformat an
+
+*Aktuelle sw-Version: v92 / Cache: stammbaum-v92*
+
+---
+
+### Session 2026-03-31 — OneDrive + Filemap-Fixes (sw v89–v91)
+
+- **Fix (sw v91)**: Filemap-Index-Sync — Foto wird nach OneDrive-Auswahl korrekt geladen; Race-Condition beim IDB-Schreiben/Lesen behoben
+- **Fix (sw v90)**: OneDrive-Picker gibt absoluten Pfad zurück (nicht relativen)
+- **Fix (sw v89)**: Medien-Basispfad wird automatisch aus GEDCOM-Importen erkannt
+- **Fix**: Kamera/Galerie übernimmt konfigurierten Basispfad; vollständiger Pfad für alle Medien gespeichert
+- **Fix**: OneDrive-Picker startet in konfiguriertem Ordner; vollständiger Pfad wird übergeben
+
+*Aktuelle sw-Version: v91 / Cache: stammbaum-v91*
+
+---
+
+### Session 2026-03-31 — Einstellungen + Baum Auto-Fit (sw v86)
+
+- **Fix**: Einstellungen immer zugänglich (auch wenn kein GEDCOM geladen)
+- **Fix**: Medien-Basispfad Pre-fill korrekt vorbelegt
+- **Fix**: Baum Auto-Fit bei Generationenwechsel springt nicht mehr
+- Cache-Update: `sw.js` Precache für Settings-Änderungen aktualisiert
+
+*Aktuelle sw-Version: v86 / Cache: stammbaum-v86*
+
+---
+
 ## Version 4.0 ✅ (Branch `main`, ab 2026-03-30)
 
 Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX, Mobile, State-Refactoring.
