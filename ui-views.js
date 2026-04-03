@@ -277,3 +277,49 @@ function updateChangedIndicator() {
 }
 
 function markChanged() { AppState.changed = true; UIState._placesCache = null; updateChangedIndicator(); }
+
+// ─────────────────────────────────────
+//  SHARED VIEW HELPERS
+// ─────────────────────────────────────
+function factRow(label, value, rawSuffix, srcIds) {
+  const badges = srcIds ? sourceTagsHtml(srcIds) : '';
+  return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}${badges}</span></div>`;
+}
+
+// Extrahiert die Quellennummer aus einer GEDCOM-ID (@S042@ → 42)
+function srcNum(sid) {
+  const m = sid.match(/\d+/);
+  return m ? parseInt(m[0], 10) : sid;
+}
+
+// Kompakte Quellen-Badges: §42 — inline in fact-val einbettbar
+function sourceTagsHtml(sourceIds) {
+  if (!sourceIds) return '';
+  const ids = sourceIds instanceof Set ? [...sourceIds] : (Array.isArray(sourceIds) ? sourceIds : []);
+  if (!ids.length) return '';
+  return ids.map(sid => {
+    const s = AppState.db.sources[sid];
+    if (!s) return '';
+    const tooltip = esc((s.abbr || s.title || sid).substring(0, 60));
+    return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showSourceDetail(this.dataset.sid)" title="${tooltip}">§${srcNum(sid)}</span>`;
+  }).filter(Boolean).join('');
+}
+
+function relRow(person, role, unlinkFamId) {
+  const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
+  const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
+  const unlinkBtn = unlinkFamId
+    ? `<button class="unlink-btn" data-fid="${unlinkFamId}" data-pid="${person.id}"
+         onclick="event.stopPropagation(); unlinkMember(this.dataset.fid, this.dataset.pid)"
+         title="Verbindung trennen">×</button>`
+    : '';
+  return `<div class="rel-row" data-pid="${person.id}" onclick="showDetail(this.dataset.pid)">
+    <div class="rel-avatar ${sc}">${ic}</div>
+    <div class="rel-info">
+      <div class="rel-name">${esc(person.name || person.id)}</div>
+      <div class="rel-role">${esc(role)}</div>
+    </div>
+    ${unlinkBtn}
+    <span class="p-arrow">›</span>
+  </div>`;
+}
