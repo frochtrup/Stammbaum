@@ -1514,10 +1514,6 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Pfeil links: im Baum zurücknavigieren
-  if (e.key === 'ArrowLeft' && !mod && document.getElementById('v-tree').classList.contains('active')) {
-    treeNavBack();
-  }
 });
 
 // ─────────────────────────────────────
