@@ -140,6 +140,32 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ---
 
+---
+
+### Schwerpunkt 6: Code-Qualität & Sicherheit (aus Review 2026-04-05)
+
+#### Sicherheit — Priorität 1
+
+- [ ] **OAuth-Token von `localStorage` → `sessionStorage`** — Token sind aktuell im DevTools lesbar und bei XSS abgreifbar; betrifft OneDrive-Vollzugriff (onedrive.js, storage.js)
+- [ ] **Service Worker: Netzwerk-Timeout einbauen** — Network-first ohne Fallback-Timeout lässt App bei hängendem Netz unbegrenzt warten; Fix: 4s-Timeout → Cache-Fallback (sw.js)
+- [ ] **`demo.ged` aus Produktions-Cache entfernen** — wird bei jedem Nutzer unnötig mitgeladen (sw.js)
+
+#### Performance — Priorität 2
+
+- [ ] **`touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen** — feuert aktuell 100+/s direkt auf DOM-Properties, Frame-Drops auf älteren iPhones (ui-views-tree.js)
+- [ ] **Globale Suche indexieren** — O(n×m) auf alle Personen/Felder ohne Cache; spürbar ab ~1000 Personen; Debounce + vorberechneter Index (ui-views.js)
+- [ ] **Media-Count cachen** — Logik wird bei jedem Render neu berechnet, statt einmalig pro Datensatz (ui-views-person/family/source.js)
+
+#### Refactoring — Priorität 3
+
+- [ ] **Inline Event-Handler durch Event-Delegation ersetzen** — `oninput="updateSrcPage(...)"` u.ä. sind XSS-anfällig bei unvollständigem Escaping und erzeugen Memory-Leaks bei Modal-Reopen (ui-forms.js, viele ui-*.js)
+- [ ] **Gemeinsame `renderListItem()`-Funktion** — Media-Count, Sortierung und List-Rendering in ui-views-person/family/source.js deduplizieren (3× identische Logik)
+- [ ] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=3 für die meisten Tags) (gedcom-parser.js)
+- [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
+- [ ] **`catch { return null }` durch echtes Error-Handling ersetzen** — maskiert alle OneDrive-API-Fehler, erschwert Debugging (onedrive.js)
+
+---
+
 ## Offene Architektur-Schulden
 
 - Virtuelles Scrollen für Listen >1000 Einträge
@@ -147,6 +173,9 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 - Duplikat-Erkennung in Suche
 - DIV/DIVF/ENG: Formularfelder für Datum/Ort (Parser/Writer done)
+- OAuth-Token in `localStorage` (Sicherheitsrisiko — Priorität 1 in Schwerpunkt 6)
+- Inline Event-Handler in HTML-Strings (XSS-Potential + Memory-Leaks)
+- GEDCOM-Parser ohne Fehler-Sammler (ungültige Dateien werden silent ignoriert)
 
 ---
 
