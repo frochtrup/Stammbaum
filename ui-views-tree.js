@@ -380,11 +380,11 @@ function showTree(personId, addToHistory = true) {
   // Ehepartner:  eine Spalte rechts (MGAP + W), egal wie viele
   const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
   const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
-  // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene; Hochformat max. 2 Ebenen
+  // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene
   // _treeGenCount = Generationen gesamt inkl. Proband:
   //   2 = nur Eltern (1 Ahnen-Ebene), 3 = +Großeltern (2 Ebenen),
   //   4 = +Urgroßeltern (3 Ebenen), 5 = +Ururgroßeltern (4 Ebenen)
-  const _maxAnc = isPortrait ? 2 : _treeGenCount - 1;  // max. Ahnen-Ebenen (1..5)
+  const _maxAnc = _treeGenCount - 1;  // max. Ahnen-Ebenen (1..5); Hochformat scrollt horizontal
   const hasAnc5 = _maxAnc >= 5 && anc5.some(Boolean);
   const hasAnc4 = _maxAnc >= 4 && anc4.some(Boolean);
   const hasAnc3 = _maxAnc >= 3 && anc3.some(Boolean);
