@@ -452,11 +452,11 @@ async function odLoadFile(itemId, fileName) {
 
 async function odSaveFile() {
   const token    = await _odGetToken(); if (!token) return;
-  const text     = writeGEDCOM();
   const fileId   = localStorage.getItem('od_file_id');
   const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
   showToast('Speichere in OneDrive…');
   try {
+    const text = writeGEDCOM();
     const url = fileId
       ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
       : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
