@@ -17,6 +17,15 @@ function pushCont(lines, lv, tag, text) {
   if (!rawLines.length) lines.push(`${lv} ${tag} `);
 }
 
+// Mappt _FREL/_MREL-Werte (auch deutsch) auf GEDCOM-5.5.1-PEDI-Enum
+function _toPedi(v) {
+  const m = { birth:'birth', leiblich:'birth', biologisch:'birth', natürlich:'birth',
+               adopted:'adopted', adoptiert:'adopted', adoption:'adopted',
+               foster:'foster', pflegekind:'foster', pflege:'foster',
+               sealing:'sealing' };
+  return m[(v||'').toLowerCase()] || 'birth';
+}
+
 // ─────────────────────────────────────
 //  GEDCOM WRITER  (v2 – vollständig)
 // ─────────────────────────────────────
@@ -221,28 +230,42 @@ function writeGEDCOM() {
       const famId = typeof fref === 'string' ? fref : fref.famId;
       lines.push(`1 FAMC ${famId}`);
       if (typeof fref === 'object') {
-        if (fref.frelSeen) {
-          lines.push(`2 _FREL${fref.frel ? ' ' + fref.frel : ''}`);
-          if (fref.frelSour) {
-            lines.push(`3 SOUR ${fref.frelSour}`);
-            if (fref.frelPage) lines.push(`4 PAGE ${fref.frelPage}`);
-            if (fref.frelQUAY) lines.push(`4 QUAY ${fref.frelQUAY}`);
-            if (fref.frelSourExtra && fref.frelSourExtra.length) for (const l of fref.frelSourExtra) lines.push(l);
+        if (fref.frelSeen || fref.mrelSeen || fref.pedi) {
+          const fv = fref.frel || fref.pedi || '';
+          const mv = fref.mrel || fref.pedi || '';
+          const fp = _toPedi(fv);
+          const mp = _toPedi(mv);
+          if (fp === mp) {
+            lines.push(`2 PEDI ${fp}`);
+          } else {
+            // Vater/Mutter-Verhältnis verschieden — _FREL/_MREL als Erweiterung beibehalten
+            lines.push(`2 _FREL ${fv}`);
+            lines.push(`2 _MREL ${mv}`);
           }
         }
-        if (fref.mrelSeen) {
-          lines.push(`2 _MREL${fref.mrel ? ' ' + fref.mrel : ''}`);
-          if (fref.mrelSour) {
-            lines.push(`3 SOUR ${fref.mrelSour}`);
-            if (fref.mrelPage) lines.push(`4 PAGE ${fref.mrelPage}`);
-            if (fref.mrelQUAY) lines.push(`4 QUAY ${fref.mrelQUAY}`);
-            if (fref.mrelSourExtra && fref.mrelSourExtra.length) for (const l of fref.mrelSourExtra) lines.push(l);
+        // Alle Quellen dedupl. sammeln: sourIds + frelSour + mrelSour
+        const _allSours = [...(fref.sourIds || [])];
+        const _sourPages = Object.assign({}, fref.sourPages);
+        const _sourQUAY  = Object.assign({}, fref.sourQUAY);
+        for (const [xSour, xPage, xQuay] of [
+          [fref.frelSour, fref.frelPage, fref.frelQUAY],
+          [fref.mrelSour, fref.mrelPage, fref.mrelQUAY]
+        ]) {
+          if (xSour && !_allSours.includes(xSour)) {
+            _allSours.push(xSour);
+            if (xPage) _sourPages[xSour] = xPage;
+            if (xQuay) _sourQUAY[xSour]  = xQuay;
           }
         }
-        for (const s of (fref.sourIds || [])) {
+        // Zusätzliche SOUR-IDs aus frelSourExtra / mrelSourExtra extrahieren
+        for (const extra of [...(fref.frelSourExtra||[]), ...(fref.mrelSourExtra||[])]) {
+          const m = extra.match(/^\d+ SOUR (@\S+@)/);
+          if (m && !_allSours.includes(m[1])) _allSours.push(m[1]);
+        }
+        for (const s of _allSours) {
           lines.push(`2 SOUR ${s}`);
-          if (fref.sourPages && fref.sourPages[s]) lines.push(`3 PAGE ${fref.sourPages[s]}`);
-          if (fref.sourQUAY  && fref.sourQUAY[s])  lines.push(`3 QUAY ${fref.sourQUAY[s]}`);
+          if (_sourPages[s]) lines.push(`3 PAGE ${_sourPages[s]}`);
+          if (_sourQUAY[s])  lines.push(`3 QUAY ${_sourQUAY[s]}`);
           if (fref.sourExtra && fref.sourExtra[s]) for (const l of fref.sourExtra[s]) lines.push(l);
         }
       }
@@ -297,43 +320,7 @@ function writeGEDCOM() {
     if (f.wife) lines.push(`1 WIFE ${f.wife}`);
     for (const c of f.children) {
       lines.push(`1 CHIL ${c}`);
-      const cref = f.childRelations?.[c];
-      if (cref) {
-        if (cref.sourIds && cref.sourIds.length) {
-          for (const sid of cref.sourIds) {
-            lines.push(`2 SOUR ${sid}`);
-            if (cref.sourPages && cref.sourPages[sid]) lines.push(`3 PAGE ${cref.sourPages[sid]}`);
-            if (cref.sourQUAY && cref.sourQUAY[sid])  lines.push(`3 QUAY ${cref.sourQUAY[sid]}`);
-            if (cref.sourExtra && cref.sourExtra[sid]) for (const l of cref.sourExtra[sid]) lines.push(l);
-            if (cref.sourMedia && cref.sourMedia[sid]) for (const m of cref.sourMedia[sid]) {
-              lines.push(`3 OBJE`);
-              if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-              if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-              if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-              if (m.titl) lines.push(`4 TITL ${m.titl}`);
-              if (m.note) lines.push(`4 NOTE ${m.note}`);
-            }
-          }
-        }
-        if (cref.frelSeen) {
-          lines.push(`2 _FREL${cref.frel ? ' ' + cref.frel : ''}`);
-          if (cref.frelSour) {
-            lines.push(`3 SOUR ${cref.frelSour}`);
-            if (cref.frelPage) lines.push(`4 PAGE ${cref.frelPage}`);
-            if (cref.frelQUAY) lines.push(`4 QUAY ${cref.frelQUAY}`);
-            if (cref.frelSourExtra && cref.frelSourExtra.length) for (const l of cref.frelSourExtra) lines.push(l);
-          }
-        }
-        if (cref.mrelSeen) {
-          lines.push(`2 _MREL${cref.mrel ? ' ' + cref.mrel : ''}`);
-          if (cref.mrelSour) {
-            lines.push(`3 SOUR ${cref.mrelSour}`);
-            if (cref.mrelPage) lines.push(`4 PAGE ${cref.mrelPage}`);
-            if (cref.mrelQUAY) lines.push(`4 QUAY ${cref.mrelQUAY}`);
-            if (cref.mrelSourExtra && cref.mrelSourExtra.length) for (const l of cref.mrelSourExtra) lines.push(l);
-          }
-        }
-      }
+      // Verhältnistyp und Quellen werden gem. GEDCOM 5.5.1 auf INDI-Seite (FAMC/PEDI) geführt.
     }
     eventBlock('MARR', f.marr, 1);
     if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);

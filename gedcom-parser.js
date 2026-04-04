@@ -138,7 +138,7 @@ function parseGEDCOM(text) {
         else if (tag === 'SEX')  cur.sex  = val;
         else if (tag === 'TITL') cur.titl = val;
         // RELI nicht mehr als einfaches Feld, sondern als Event (kann DATE/SOUR/TYPE-Kinder haben)
-        else if (tag === 'FAMC') cur.famc.push({ famId:val, frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
+        else if (tag === 'FAMC') cur.famc.push({ famId:val, pedi:'', frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') {
           if (!val.startsWith('@')) { cur.noteTexts.push(val); _curNoteIsInline = true; }
@@ -253,6 +253,7 @@ function parseGEDCOM(text) {
         // Family relationship
         if (lv1tag === 'FAMC' && cur.famc.length) {
           const fref = cur.famc[cur.famc.length-1];
+          if (tag==='PEDI') { fref.pedi = val; if (!fref.frelSeen) { fref.frel = val; fref.frelSeen = true; } if (!fref.mrelSeen) { fref.mrel = val; fref.mrelSeen = true; } }
           if (tag==='_FREL') { fref.frel = val; fref.frelSeen = true; }
           if (tag==='_MREL') { fref.mrel = val; fref.mrelSeen = true; }
           if (tag==='SOUR' && val.startsWith('@')) { fref.sourIds.push(val); cur.sourceRefs.add(val); }
@@ -709,6 +710,37 @@ function parseGEDCOM(text) {
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
       } else if (lv === 3) {
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+      }
+    }
+  }
+
+  // Merge FAM-side childRelations into INDI-side famc
+  // Ancestris writes _FREL/_MREL/SOUR on both sides; if only FAM-side has data, copy to INDI-side.
+  for (const [famId, fam] of Object.entries(families)) {
+    for (const [childId, cref] of Object.entries(fam.childRelations)) {
+      const person = individuals[childId];
+      if (!person) continue;
+      const famcEntry = person.famc.find(f => f.famId === famId);
+      if (!famcEntry) continue;
+      if (famcEntry.frelSeen || famcEntry.mrelSeen || famcEntry.sourIds.length) continue;
+      // INDI-side empty — copy from FAM-side
+      if (cref.frelSeen) { famcEntry.frel = cref.frel; famcEntry.frelSeen = true; }
+      if (cref.mrelSeen) { famcEntry.mrel = cref.mrel; famcEntry.mrelSeen = true; }
+      for (const s of (cref.sourIds || [])) {
+        if (!famcEntry.sourIds.includes(s)) famcEntry.sourIds.push(s);
+        if (cref.sourPages[s]) famcEntry.sourPages[s] = cref.sourPages[s];
+        if (cref.sourQUAY[s])  famcEntry.sourQUAY[s]  = cref.sourQUAY[s];
+        if (cref.sourExtra[s]) famcEntry.sourExtra[s]  = cref.sourExtra[s];
+      }
+      if (cref.frelSour && !famcEntry.sourIds.includes(cref.frelSour)) {
+        famcEntry.sourIds.push(cref.frelSour);
+        if (cref.frelPage) famcEntry.sourPages[cref.frelSour] = cref.frelPage;
+        if (cref.frelQUAY) famcEntry.sourQUAY[cref.frelSour]  = cref.frelQUAY;
+      }
+      if (cref.mrelSour && cref.mrelSour !== cref.frelSour && !famcEntry.sourIds.includes(cref.mrelSour)) {
+        famcEntry.sourIds.push(cref.mrelSour);
+        if (cref.mrelPage) famcEntry.sourPages[cref.mrelSour] = cref.mrelPage;
+        if (cref.mrelQUAY) famcEntry.sourQUAY[cref.mrelSour]  = cref.mrelQUAY;
       }
     }
   }

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Idempotenz-Test — GEDCOM Parser/Writer</title>
+<style>
+  body { font-family: monospace; font-size: 13px; margin: 20px; background: #1a1a1a; color: #ddd; }
+  h1 { color: #fff; font-size: 16px; }
+  h2 { color: #aaa; font-size: 13px; margin-top: 20px; border-top: 1px solid #333; padding-top: 8px; }
+  button { background: #2a6; color: #fff; border: none; padding: 8px 18px; cursor: pointer; border-radius: 3px; font-size: 13px; }
+  button:hover { background: #3b7; }
+  input[type=file] { color: #ccc; }
+  .ok  { color: #4e4; }
+  .err { color: #f55; }
+  .warn { color: #fa4; }
+  .info { color: #8bf; }
+  pre { background: #111; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 400px; font-size: 11px; line-height: 1.4; }
+  .section { margin-top: 16px; }
+  table { border-collapse: collapse; }
+  td, th { border: 1px solid #444; padding: 4px 10px; text-align: left; }
+  th { background: #222; color: #aaa; }
+  td:first-child { color: #8bf; }
+  #drop { border: 2px dashed #444; padding: 20px; margin-bottom: 16px; text-align: center; color: #777; border-radius: 4px; }
+  #drop.over { border-color: #2a6; color: #4e4; }
+</style>
+</head>
+<body>
+<h1>Idempotenz-Test — GEDCOM Parser/Writer</h1>
+<p style="color:#777">
+  Strategie B: <code>parse → write → text1 → parse → write → text2</code>.
+  Test besteht wenn <code>text1 === text2</code> (Writer ist idempotent auf eigenem Output).
+</p>
+
+<div id="drop">GEDCOM-Datei hier ablegen oder</div>
+<input type="file" id="fileInput" accept=".ged,.txt,.gedcom">
+<button onclick="runTest()">Test starten</button>
+
+<div id="output"></div>
+
+<script src="gedcom.js"></script>
+<script src="gedcom-parser.js"></script>
+<script src="gedcom-writer.js"></script>
+<script>
+// ── Drag & Drop ──
+const drop = document.getElementById('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f) { document.getElementById('fileInput').files; _runFile(f); }
+});
+
+async function runTest() {
+  const fi = document.getElementById('fileInput');
+  if (!fi.files.length) { alert('Bitte zuerst eine GEDCOM-Datei wählen.'); return; }
+  _runFile(fi.files[0]);
+}
+
+async function _runFile(file) {
+  const out = document.getElementById('output');
+  out.innerHTML = '<p class="info">Lade Datei …</p>';
+  try {
+  let text0;
+  try {
+    text0 = await file.text();
+  } catch(readErr) {
+    out.innerHTML = `<p class="err">Datei konnte nicht gelesen werden: ${_esc(String(readErr))}<br>
+      Hinweis: Dateien auf Cloud-Laufwerken (iDrive, iCloud, OneDrive) müssen zuerst
+      lokal heruntergeladen sein. Bitte Datei in einen lokalen Ordner kopieren und von dort laden.</p>`;
+    return;
+  }
+  out.innerHTML = '<p class="info">Datei geladen. Parse Pass 1 …</p>';
+
+  // ── Pass 1: parse original ──
+  const t0 = performance.now();
+  const db1 = parseGEDCOM(text0);
+  const tParse1 = (performance.now() - t0).toFixed(0);
+
+  // Migrationsstatistik aus Pass 1 sammeln
+  const stats = _collectStats(db1);
+  out.innerHTML = `<p class="info">Parse 1 fertig (${tParse1} ms, ${Object.keys(db1.individuals).length} Pers.). Write Pass 1 …</p>`;
+
+  // ── Pass 1 write ──
+  const t1 = performance.now();
+  const text1 = _writeWith(db1);
+  const tWrite1 = (performance.now() - t1).toFixed(0);
+
+  out.innerHTML = `<p class="info">Write 1 fertig (${tWrite1} ms). Parse Pass 2 …</p>`;
+
+  // ── Pass 2: parse text1 ──
+  const t2 = performance.now();
+  const db2 = parseGEDCOM(text1);
+  const tParse2 = (performance.now() - t2).toFixed(0);
+
+  out.innerHTML = `<p class="info">Parse 2 fertig (${tParse2} ms). Write Pass 2 …</p>`;
+
+  // ── Pass 2 write ──
+  const t3 = performance.now();
+  const text2 = _writeWith(db2);
+  const tWrite2 = (performance.now() - t3).toFixed(0);
+
+  // ── Vergleich ──
+  const lines1 = text1.split('\n');
+  const lines2 = text2.split('\n');
+  const diffs = _diffLines(lines1, lines2);
+
+  // ── Report ──
+  let html = '';
+
+  // Timing
+  html += `<h2>Timing</h2><table>
+    <tr><th>Schritt</th><th>ms</th></tr>
+    <tr><td>parse (Original)</td><td>${tParse1} ms</td></tr>
+    <tr><td>write (Pass 1)</td><td>${tWrite1} ms</td></tr>
+    <tr><td>parse (Pass 1 Output)</td><td>${tParse2} ms</td></tr>
+    <tr><td>write (Pass 2)</td><td>${tWrite2} ms</td></tr>
+  </table>`;
+
+  // Ergebnis
+  const passed = diffs.length === 0;
+  html += `<h2>Ergebnis</h2>`;
+  html += passed
+    ? `<p class="ok">BESTANDEN — text1 === text2 (${lines1.length} Zeilen, vollständig idempotent)</p>`
+    : `<p class="err">FEHLGESCHLAGEN — ${diffs.length} abweichende Zeilen</p>`;
+
+  // Migrationsreport
+  html += `<h2>Migrationsreport (Pass 1 — Original → Standard)</h2>`;
+  html += `<table>
+    <tr><th>Metrik</th><th>Anzahl</th></tr>
+    <tr><td>Personen gesamt</td><td>${stats.persons}</td></tr>
+    <tr><td>FAMC-Verknüpfungen gesamt</td><td>${stats.famcTotal}</td></tr>
+    <tr><td>→ PEDI geschrieben (frel==mrel)</td><td>${stats.pediWritten}</td></tr>
+    <tr><td>→ _FREL/_MREL beibehalten (frel≠mrel)</td><td>${stats.splitRel}</td></tr>
+    <tr><td>→ ohne Verhältnisangabe</td><td>${stats.noRel}</td></tr>
+    <tr><td>PEDI-Werte (normiert)</td><td>${_mapEntries(stats.pediValues)}</td></tr>
+    <tr><td>Quellen unter FAMC</td><td>${stats.sourCount}</td></tr>
+    <tr><td>frel≠mrel Fälle (Details)</td><td>${stats.splitCases.length ? stats.splitCases.slice(0,5).join(', ') + (stats.splitCases.length>5?' …':'') : '–'}</td></tr>
+    <tr><td>childRelations FAM-Seite (gesamt)</td><td>${stats.childRelTotal}</td></tr>
+    <tr><td>→ davon in INDI-Seite gemergt</td><td>${stats.childRelMerged}</td></tr>
+  </table>`;
+
+  // Text1 Zeilen zählen
+  const pediCount1  = lines1.filter(l => /^\s*2 PEDI /.test(l)).length;
+  const frelCount1  = lines1.filter(l => /^\s*2 _FREL/.test(l)).length;
+  const mrelCount1  = lines1.filter(l => /^\s*2 _MREL/.test(l)).length;
+  const sourFamc1   = _countSourUnderFamc(lines1);
+  html += `<h2>Pass 1 Output — Tag-Zählung</h2><table>
+    <tr><th>Tag</th><th>Anzahl in text1</th></tr>
+    <tr><td>2 PEDI</td><td>${pediCount1}</td></tr>
+    <tr><td>2 _FREL</td><td>${frelCount1}</td></tr>
+    <tr><td>2 _MREL</td><td>${mrelCount1}</td></tr>
+    <tr><td>2 SOUR unter FAMC</td><td>${sourFamc1}</td></tr>
+  </table>`;
+
+  // Diff anzeigen wenn fehlgeschlagen
+  if (!passed) {
+    html += `<h2>Diff (max. 50 Abweichungen)</h2><pre>`;
+    for (const d of diffs.slice(0, 50)) {
+      if (d.type === 'del') html += `<span style="color:#f55">- [${d.ln}] ${_esc(d.a)}</span>\n`;
+      if (d.type === 'add') html += `<span style="color:#4e4">+ [${d.ln}] ${_esc(d.b)}</span>\n`;
+      if (d.type === 'mod') {
+        html += `<span style="color:#f55">- [${d.ln}] ${_esc(d.a)}</span>\n`;
+        html += `<span style="color:#4e4">+ [${d.ln}] ${_esc(d.b)}</span>\n`;
+      }
+    }
+    html += '</pre>';
+  }
+
+  out.innerHTML = html;
+  } catch(err) {
+    out.innerHTML = `<p class="err">Fehler: ${_esc(String(err))}</p><pre class="err">${_esc(err.stack||'')}</pre>`;
+  }
+}
+
+// ── Hilfsfunktionen ──
+
+function _writeWith(parsedDb) {
+  const prev = AppState.db;
+  AppState.db = parsedDb;
+  let result;
+  try { result = writeGEDCOM(); }
+  finally { AppState.db = prev; }
+  return result;
+}
+
+function _collectStats(db) {
+  const stats = {
+    persons: 0, famcTotal: 0, pediWritten: 0, splitRel: 0, noRel: 0,
+    pediValues: {}, sourCount: 0, splitCases: [],
+    childRelTotal: 0, childRelMerged: 0
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    stats.persons++;
+    for (const fref of (p.famc || [])) {
+      if (typeof fref === 'string') { stats.famcTotal++; stats.noRel++; continue; }
+      stats.famcTotal++;
+      if (fref.frelSeen || fref.mrelSeen || fref.pedi) {
+        const fv = fref.frel || fref.pedi || '';
+        const mv = fref.mrel || fref.pedi || '';
+        const fp = _toPedi(fv); const mp = _toPedi(mv);
+        if (fp === mp) {
+          stats.pediWritten++;
+          stats.pediValues[fp] = (stats.pediValues[fp] || 0) + 1;
+        } else {
+          stats.splitRel++;
+          stats.splitCases.push(`${p.id}: ${fv}/${mv}`);
+        }
+      } else {
+        stats.noRel++;
+      }
+      stats.sourCount += (fref.sourIds || []).length;
+      if (fref.frelSour && !(fref.sourIds||[]).includes(fref.frelSour)) stats.sourCount++;
+      if (fref.mrelSour && fref.mrelSour !== fref.frelSour && !(fref.sourIds||[]).includes(fref.mrelSour)) stats.sourCount++;
+    }
+  }
+  for (const f of Object.values(db.families || {})) {
+    for (const [childId, cref] of Object.entries(f.childRelations || {})) {
+      stats.childRelTotal++;
+      const p = (db.individuals || {})[childId];
+      if (!p) continue;
+      const fe = (p.famc || []).find(x => (x.famId||x) === f.id);
+      if (fe && typeof fe === 'object' && !fe.frelSeen && !fe.mrelSeen && !fe.sourIds?.length) {
+        if (cref.frelSeen || cref.mrelSeen || cref.sourIds?.length) stats.childRelMerged++;
+      }
+    }
+  }
+  return stats;
+}
+
+function _mapEntries(obj) {
+  return Object.entries(obj).map(([k,v]) => `${k}×${v}`).join(', ') || '–';
+}
+
+function _countSourUnderFamc(lines) {
+  let count = 0, inFamc = false;
+  for (const l of lines) {
+    const lv = parseInt(l);
+    if (/^\d+ FAMC /.test(l)) { inFamc = true; continue; }
+    if (inFamc) {
+      if (lv === 1) { inFamc = false; continue; }
+      if (/^2 SOUR /.test(l)) count++;
+    }
+  }
+  return count;
+}
+
+function _diffLines(a, b) {
+  const diffs = [];
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    if (i >= a.length) diffs.push({ type:'add', ln:i+1, a:'', b:b[i] });
+    else if (i >= b.length) diffs.push({ type:'del', ln:i+1, a:a[i], b:'' });
+    else if (a[i] !== b[i]) diffs.push({ type:'mod', ln:i+1, a:a[i], b:b[i] });
+  }
+  return diffs;
+}
+
+function _esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// _toPedi muss hier auch verfügbar sein (ist in gedcom-writer.js definiert)
+// Falls writeGEDCOM() nicht verfügbar, Hinweis anzeigen.
+window.addEventListener('error', e => {
+  document.getElementById('output').innerHTML =
+    `<p class="err">JS-Fehler: ${e.message} (${e.filename}:${e.lineno})</p>`;
+});
+window.addEventListener('unhandledrejection', e => {
+  document.getElementById('output').innerHTML =
+    `<p class="err">Unhandled Promise: ${_esc(String(e.reason))}</p>`;
+});
+</script>
+</body>
+</html>
