@@ -28,6 +28,22 @@ async function _odGetMediaUrlByPath(filePath) {
   } catch { return null; }
 }
 
+// Ordner-Pfad per folderId aus OneDrive-API nachladen (für alte IDB-Einträge ohne folderPath)
+async function _odResolveFolderPath(folderId, folderName) {
+  const token = await _odGetToken().catch(() => null);
+  if (!token) return folderName; // Fallback: nur Name
+  try {
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${folderId}?$select=id,name,parentReference`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return folderName;
+    const item = await res.json();
+    const pRef  = item.parentReference?.path || '';
+    const match = pRef.match(/\/drive\/root:\/(.*)/);
+    const parentPath = match ? decodeURIComponent(match[1]) : '';
+    return parentPath ? parentPath + '/' + item.name : item.name;
+  } catch { return folderName; }
+}
+
 // Medien-Datei per relativem Pfad auf OneDrive hochladen (PUT)
 // Gibt { path, fileId } zurück — path = tatsächlicher relativer Pfad laut API-Antwort
 async function _odUploadMediaFile(b64DataUrl, targetPath) {

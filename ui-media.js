@@ -254,11 +254,19 @@ async function openAddMediaDialog(type, entityId) {
   document.getElementById('am-cam-input').setAttribute('capture', 'environment');
   document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
   document.getElementById('am-file').value = '';
-  // Standard-Ordner-Pfad für Kamera-Dateinamen laden
+  openModal('modalAddMedia'); // Modal sofort öffnen
+  // Standard-Ordner-Pfad async laden — bei alten Einträgen (vor sw v100, kein folderPath) per API
   const folderKey = (type === 'source') ? 'od_doc_folder' : 'od_default_folder';
   const folder = await idbGet(folderKey).catch(() => null);
-  _addMediaDefaultFolderPath = folder?.folderPath || '';
-  openModal('modalAddMedia');
+  if (folder?.folderPath) {
+    _addMediaDefaultFolderPath = folder.folderPath;
+  } else if (folder?.folderId && _odIsConnected()) {
+    const path = await _odResolveFolderPath(folder.folderId, folder.folderName).catch(() => '');
+    if (path) {
+      _addMediaDefaultFolderPath = path;
+      idbPut(folderKey, { ...folder, folderPath: path }).catch(() => {}); // für nächstes Mal
+    }
+  }
 }
 
 async function confirmAddMedia() {

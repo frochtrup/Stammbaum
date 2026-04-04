@@ -9,6 +9,20 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Kamera-Pfad: folderPath-Fallback per API (sw v102)
+
+- **sw v102** `fix`: Kamera-Foto landet im konfigurierten Ordner auch bei alten IDB-Einträgen
+  - `onedrive.js`: `_odResolveFolderPath(folderId, folderName)` — fragt OneDrive-API nach
+    vollständigem relativem Pfad (`parentReference.path`) und gibt ihn zurück
+  - `ui-media.js`: `openAddMediaDialog` — öffnet Modal sofort; wenn `folderPath` fehlt
+    (IDB-Eintrag vor sw v100), wird er per API nachgeladen und in IDB persistiert
+  - Ursache war: `od_default_folder` enthielt vor sw v100 nur `{folderId, folderName}`,
+    kein `folderPath` → Fotos landeten im OneDrive-Root
+
+*Aktuelle sw-Version: v102 / Cache: stammbaum-v102*
+
+---
+
 ### Session 2026-04-04 — Thumbnails + Hauptbild-Funktion (sw v101)
 
 - **sw v101** `fix/feat`: Thumbnails + Hauptbild-Reihung
