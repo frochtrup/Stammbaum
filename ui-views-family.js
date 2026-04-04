@@ -274,8 +274,6 @@ function showFamilyDetail(id, pushHistory = true) {
     const _fe = (child.famc || []).find(x => (typeof x === 'string' ? x : x.famId) === id);
     const _curPedi = (typeof _fe === 'object') ? (_toPedi(_fe.pedi || _fe.frel || '')) : '';
     const _pSel = v => v === _curPedi ? ' selected' : '';
-    const _sourCount = (typeof _fe === 'object') ? (_fe.sourIds?.length || 0) : 0;
-    const _sourBadge = _sourCount ? ` <span style="font-size:0.72rem;color:var(--gold)">${_sourCount} Q</span>` : '';
     const _pediSelect = `<select
         data-fid="${id}" data-cid="${cid}"
         onchange="event.stopPropagation();savePedi(this.dataset.fid,this.dataset.cid,this.value)"
@@ -286,17 +284,26 @@ function showFamilyDetail(id, pushHistory = true) {
       <option value="adopted"${_pSel('adopted')}>adoptiert</option>
       <option value="foster"${_pSel('foster')}>Pflegekind</option>
       <option value="sealing"${_pSel('sealing')}>Sealing</option>
-    </select>
-    <button onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
-      title="Quellen zum Verhältnis"
-      style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:var(--text-dim);padding:0 2px">📎${_sourBadge}</button>`;
+    </select>`;
+    const _sourIds = (typeof _fe === 'object') ? (_fe.sourIds || []) : [];
+    const _sourTags = _sourIds.map(sid => {
+      const s = AppState.db.sources[sid];
+      const lbl = s ? (s.abbr || (s.title||'').slice(0,18) || sid.replace(/@/g,'')) : sid.replace(/@/g,'');
+      return `<span class="src-tag" style="font-size:0.7rem;padding:2px 8px;cursor:pointer"
+        onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
+        title="${esc(s?.title||sid)}">${esc(lbl)}</span>`;
+    }).join('');
+    const _sourWidget = _sourTags ||
+      `<button onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
+        title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
+        border-radius:12px;padding:1px 7px;font-size:0.7rem;color:var(--text-muted);cursor:pointer">+ Q</button>`;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
     const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';
     html += `<div class="rel-row" data-pid="${child.id}" onclick="showDetail(this.dataset.pid)">
       <div class="rel-avatar ${sc}">${ic}</div>
       <div class="rel-info">
         <div class="rel-name">${esc(child.name || child.id)}</div>
-        <div class="rel-role" style="display:flex;align-items:center;gap:4px">Kind${_pediSelect}</div>
+        <div class="rel-role" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">Kind${_pediSelect}${_sourWidget}</div>
       </div>
       <button class="unlink-btn" data-fid="${id}" data-pid="${child.id}"
         onclick="event.stopPropagation();unlinkMember(this.dataset.fid,this.dataset.pid)"
