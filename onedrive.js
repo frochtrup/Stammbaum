@@ -451,7 +451,9 @@ async function odLoadFile(itemId, fileName) {
 }
 
 async function odSaveFile() {
-  const token    = await _odGetToken(); if (!token) return;
+  showToast('Verbinde mit OneDrive…');
+  const token = await _odGetToken();
+  if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
   const fileId   = localStorage.getItem('od_file_id');
   const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
   showToast('Speichere in OneDrive…');
