@@ -1623,21 +1623,7 @@ body.fc-mode #fcGenBtns { display: flex; }
 
       </div><!-- /set-od-section -->
 
-      <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;margin-top:16px">Lokale Pfade</div>
-      <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">
-        <div style="padding:12px 14px;border-bottom:1px solid var(--border-color)">
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Foto-Basispfad</div>
-          <input class="form-input" id="set-photo-base" placeholder="z.B. /Genealogie/Fotos/"
-            oninput="idbPut('cfg_photo_base',this.value).catch(()=>{})">
-        </div>
-        <div style="padding:12px 14px">
-          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Dokument-Basispfad</div>
-          <input class="form-input" id="set-doc-base" placeholder="z.B. /Genealogie/Dokumente/"
-            oninput="idbPut('cfg_doc_base',this.value).catch(()=>{})">
-        </div>
-      </div>
-
-      <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalSettings')">Schließen</button>
+<button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalSettings')">Schließen</button>
     </div>
   </div>
 </div>

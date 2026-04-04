@@ -234,17 +234,18 @@ async function openAddMediaDialog(type, entityId) {
   document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
   document.getElementById('am-file').value = '';
   openModal('modalAddMedia'); // Modal sofort öffnen
-  // Standard-Ordner-Pfad async laden — bei alten Einträgen (vor sw v100, kein folderPath) per API
-  const folderKey = (type === 'source') ? 'od_doc_folder' : 'od_default_folder';
-  const folder = await idbGet(folderKey).catch(() => null);
-  if (folder?.folderPath) {
-    _addMediaDefaultFolderPath = folder.folderPath;
-  } else if (folder?.folderId && _odIsConnected()) {
-    const path = await _odResolveFolderPath(folder.folderId, folder.folderName).catch(() => '');
-    if (path) {
-      _addMediaDefaultFolderPath = path;
-      idbPut(folderKey, { ...folder, folderPath: path }).catch(() => {}); // für nächstes Mal
-    }
+  // Relativen Ordner-Pfad laden (relativ zu od_base_path)
+  const isSourceType = (type === 'source');
+  const folder = await idbGet(isSourceType ? 'od_docs_folder' : 'od_photo_folder').catch(() => null)
+              || await idbGet(isSourceType ? 'od_doc_folder' : 'od_default_folder').catch(() => null); // legacy
+  if (folder?.relPath !== undefined) {
+    _addMediaDefaultFolderPath = folder.relPath;
+  } else if (folder?.folderPath) {
+    // Legacy: relativen Pfad aus altem Format berechnen
+    const basePath = await idbGet('od_base_path').catch(() => null) || '';
+    _addMediaDefaultFolderPath = basePath && folder.folderPath.startsWith(basePath + '/')
+      ? folder.folderPath.slice(basePath.length + 1)
+      : folder.folderPath;
   }
 }
 

@@ -10,18 +10,69 @@ const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
 // Session-Cache für dynamisch geladene Fotos (blob: URLs, nicht persistent)
 const _odPhotoCache = {};
 
-// Medien-Datei direkt per relativem OneDrive-Pfad laden — ein Pfad, eine Datei
-// Gibt Data-URL (base64) zurück — zuverlässig in <img> auf allen Plattformen inkl. iOS Safari
-// (Blob-URLs können auf iOS Safari intern verworfen werden → broken image / onerror)
-async function _odGetMediaUrlByPath(filePath) {
-  if (!filePath || !_odIsConnected()) return null;
-  const cacheKey = 'path:' + filePath;
+// Basis-Pfad-Cache (voller OneDrive-Pfad zum GED-Ordner)
+let _odCurrentBasePath = null; // null = nicht geladen; '' = kein Basis-Pfad
+
+async function _odGetBasePath() {
+  if (_odCurrentBasePath !== null) return _odCurrentBasePath;
+  _odCurrentBasePath = await idbGet('od_base_path').catch(() => null) ?? '';
+  return _odCurrentBasePath;
+}
+
+// Relativen Pfad aus vollem OneDrive-Pfad berechnen (Basis-Präfix abschneiden)
+function _odToRelPath(fullPath, basePath) {
+  if (!basePath) return fullPath;
+  if (fullPath === basePath) return '';
+  if (fullPath.startsWith(basePath + '/')) return fullPath.slice(basePath.length + 1);
+  return fullPath; // außerhalb der Basis: vollen Pfad behalten
+}
+
+// Migration: od_default_folder → od_photo_folder + od_base_path (einmalig, lazy)
+async function _odMigrateIfNeeded() {
+  if (await idbGet('od_photo_folder').catch(() => null)) {
+    _odCurrentBasePath = await idbGet('od_base_path').catch(() => null) ?? '';
+    return; // bereits migriert
+  }
+  const oldPhoto = await idbGet('od_default_folder').catch(() => null);
+  if (!oldPhoto?.folderPath) return;
+  const parts = oldPhoto.folderPath.split('/');
+  const basePath = parts.length >= 2 ? parts.slice(0, -1).join('/') : '';
+  const relPath  = parts.length >= 2 ? parts[parts.length - 1] : oldPhoto.folderPath;
+  await idbPut('od_base_path', basePath).catch(() => {});
+  _odCurrentBasePath = basePath;
+  await idbPut('od_photo_folder', { id: oldPhoto.folderId, name: oldPhoto.folderName, relPath }).catch(() => {});
+  const oldDoc = await idbGet('od_doc_folder').catch(() => null);
+  if (oldDoc?.folderPath) {
+    const docRel = _odToRelPath(oldDoc.folderPath, basePath);
+    await idbPut('od_docs_folder', { id: oldDoc.folderId, name: oldDoc.folderName, relPath: docRel }).catch(() => {});
+  }
+  if (basePath && AppState.db) _odStripBaseFromPaths(basePath);
+}
+
+// m.file-Werte um Basis-Präfix bereinigen
+function _odStripBaseFromPaths(basePath) {
+  if (!basePath || !AppState.db) return;
+  const pfx = basePath + '/';
+  let changed = false;
+  const strip = arr => arr?.forEach(m => { if (m.file?.startsWith(pfx)) { m.file = m.file.slice(pfx.length); changed = true; } });
+  Object.values(AppState.db.individuals || {}).forEach(p => strip(p.media));
+  Object.values(AppState.db.families || {}).forEach(f => { strip(f.marr?.media); strip(f.media); });
+  Object.values(AppState.db.sources || {}).forEach(s => strip(s.media));
+  if (changed) AppState.changed = true;
+}
+
+// Mediendatei per relativem Pfad laden — relPath relativ zu od_base_path
+// Gibt Data-URL (base64) zurück
+async function _odGetMediaUrlByPath(relPath) {
+  if (!relPath || !_odIsConnected()) return null;
+  const cacheKey = 'path:' + relPath;
   if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
+  const basePath = await _odGetBasePath();
+  const fullPath = basePath ? basePath + '/' + relPath : relPath;
   const _fetchDataUrl = async (path) => {
     const enc = path.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
-    // Metadaten holen → pre-auth downloadUrl (kein CORS-Problem mit CDN-Redirect)
     const metaRes = await fetch(
       `${OD_GRAPH}/me/drive/root:/${enc}?$select=@microsoft.graph.downloadUrl`,
       { headers: { Authorization: 'Bearer ' + token } });
@@ -40,15 +91,15 @@ async function _odGetMediaUrlByPath(filePath) {
     });
   };
   try {
-    let dataUrl = await _fetchDataUrl(filePath);
-    if (!dataUrl && filePath.includes('\\')) {
-      // Fallback: nur für Windows-Pfade aus GEDCOM-Dateien anderer Software (Trennzeichen \)
-      // Nicht für OneDrive-Pfade mit / — sonst zeigt ein absichtlich falscher Pfad trotzdem das Bild
-      const basename = filePath.split('\\').pop();
-      const folder = await idbGet('od_default_folder').catch(() => null);
-      if (folder?.folderPath) {
-        dataUrl = await _fetchDataUrl(folder.folderPath + '/' + basename);
-      }
+    let dataUrl = await _fetchDataUrl(fullPath);
+    if (!dataUrl && relPath.includes('\\')) {
+      // Fallback: Windows-Pfade aus GEDCOM-Dateien anderer Software (Trennzeichen \)
+      const photoFolder = await idbGet('od_photo_folder').catch(() => null);
+      const basename = relPath.split('\\').pop();
+      const photoRel = photoFolder?.relPath || '';
+      const fallbackRel = photoRel ? photoRel + '/' + basename : basename;
+      const fallbackFull = basePath ? basePath + '/' + fallbackRel : fallbackRel;
+      dataUrl = await _fetchDataUrl(fallbackFull);
     }
     if (!dataUrl) return null;
     _odPhotoCache[cacheKey] = dataUrl;
@@ -56,28 +107,15 @@ async function _odGetMediaUrlByPath(filePath) {
   } catch { return null; }
 }
 
-// Ordner-Pfad per folderId aus OneDrive-API nachladen (für alte IDB-Einträge ohne folderPath)
-async function _odResolveFolderPath(folderId, folderName) {
-  const token = await _odGetToken().catch(() => null);
-  if (!token) return folderName; // Fallback: nur Name
-  try {
-    const res = await fetch(`${OD_GRAPH}/me/drive/items/${folderId}?$select=id,name,parentReference`,
-      { headers: { Authorization: 'Bearer ' + token } });
-    if (!res.ok) return folderName;
-    const item = await res.json();
-    const pRef  = item.parentReference?.path || '';
-    const match = pRef.match(/\/drive\/root:\/(.*)/);
-    const parentPath = match ? decodeURIComponent(match[1]) : '';
-    return parentPath ? parentPath + '/' + item.name : item.name;
-  } catch { return folderName; }
-}
 
-// Medien-Datei per relativem Pfad auf OneDrive hochladen (PUT)
-// Gibt { path, fileId } zurück — path = tatsächlicher relativer Pfad laut API-Antwort
-async function _odUploadMediaFile(b64DataUrl, targetPath) {
-  if (!b64DataUrl || !targetPath || !_odIsConnected()) return null;
+// Mediendatei per relativem Pfad auf OneDrive hochladen (PUT)
+// relPath: relativ zu od_base_path — wird als Ergebnis zurückgegeben
+async function _odUploadMediaFile(b64DataUrl, relPath) {
+  if (!b64DataUrl || !relPath || !_odIsConnected()) return null;
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
+  const basePath = await _odGetBasePath();
+  const fullPath = basePath ? basePath + '/' + relPath : relPath;
   try {
     const [header, data] = b64DataUrl.split(',');
     const mime = (header.match(/:(.*?);/) || [])[1] || 'image/jpeg';
@@ -85,16 +123,12 @@ async function _odUploadMediaFile(b64DataUrl, targetPath) {
     const bytes = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
     const blob = new Blob([bytes], { type: mime });
-    const encoded = targetPath.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
+    const encoded = fullPath.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
     const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
       { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': mime }, body: blob });
     if (!res.ok) return null;
     const item = await res.json();
-    const pRef  = item.parentReference?.path || '';
-    const match = pRef.match(/\/drive\/root:\/(.*)/);
-    const folderRelPath = match ? decodeURIComponent(match[1]) : '';
-    const actualPath = folderRelPath ? folderRelPath + '/' + item.name : item.name;
-    return { path: actualPath, fileId: item.id };
+    return { path: relPath, fileId: item.id };
   } catch { return null; }
 }
 
@@ -192,9 +226,10 @@ async function _odGetSourceFileUrl(srcId, idx) {
 
 // Quick-Import aus gespeichertem Standard-Ordner (kein Navigations-Dialog)
 async function odImportFromDefaultFolder() {
-  const folder = await idbGet('od_default_folder').catch(() => null);
+  const folder = await idbGet('od_photo_folder').catch(() => null)
+              || await idbGet('od_default_folder').catch(() => null);
   if (!folder) { showToast('Kein Standard-Ordner gesetzt — bitte Ordner auswählen'); odImportPhotos(); return; }
-  await odImportPhotosFromFolder(folder.folderId, folder.folderName);
+  await odImportPhotosFromFolder(folder.id || folder.folderId, folder.name || folder.folderName);
 }
 
 function _odRedirectUri() {
@@ -216,77 +251,44 @@ function _odUpdateUI() {
 }
 
 async function openSettings() {
+  await _odMigrateIfNeeded();
   openModal('modalSettings');
   const odSection = document.getElementById('set-od-section');
   if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
+  const basePath = await _odGetBasePath();
   // Foto-Ordner
-  const photoFolder = await idbGet('od_default_folder').catch(() => null);
+  const photoFolder = await idbGet('od_photo_folder').catch(() => null);
   const nameEl  = document.getElementById('set-photo-name');
   const clearEl = document.getElementById('set-photo-clear');
   const cntEl   = document.getElementById('set-photo-count');
-  if (nameEl) nameEl.textContent = photoFolder?.folderName || 'nicht konfiguriert';
+  if (nameEl) nameEl.textContent = photoFolder
+    ? (basePath ? basePath + '/' : '') + (photoFolder.relPath ?? photoFolder.name ?? '')
+    : 'nicht konfiguriert';
   if (clearEl) clearEl.style.display = photoFolder ? '' : 'none';
   if (cntEl) {
-    const filemap = await idbGet('od_filemap').catch(() => null);
-    const pCount = Object.keys(filemap?.persons || {}).length;
-    const fCount = Object.keys(filemap?.families || {}).length;
-    cntEl.textContent = (pCount || fCount) ? `${pCount} Personen · ${fCount} Familien verknüpft` : '';
+    let pCount = 0, fCount = 0;
+    Object.values(AppState.db?.individuals || {}).forEach(p => { if (p.media?.length) pCount++; });
+    Object.values(AppState.db?.families || {}).forEach(f => { if (f.marr?.media?.length || f.media?.length) fCount++; });
+    cntEl.textContent = (pCount || fCount) ? `${pCount} Personen · ${fCount} Familien mit Medien` : '';
   }
   // Dokumente-Ordner
-  const docFolder  = await idbGet('od_doc_folder').catch(() => null);
+  const docFolder = await idbGet('od_docs_folder').catch(() => null);
   const dNameEl  = document.getElementById('set-doc-name');
   const dClearEl = document.getElementById('set-doc-clear');
   const dCntEl   = document.getElementById('set-doc-count');
-  if (dNameEl) dNameEl.textContent = docFolder?.folderName || 'nicht konfiguriert';
+  if (dNameEl) dNameEl.textContent = docFolder
+    ? (basePath ? basePath + '/' : '') + (docFolder.relPath ?? docFolder.name ?? '')
+    : 'nicht konfiguriert';
   if (dClearEl) dClearEl.style.display = docFolder ? '' : 'none';
-  if (dCntEl) {
-    const docMap = await idbGet('od_doc_filemap').catch(() => null);
-    const n = docMap ? Object.keys(docMap).length : 0;
-    dCntEl.textContent = n ? `${n} Dateien indiziert` : '';
-  }
-  // Lokale Pfade — wenn leer: aus GEDCOM-Medien auto-erkennen
-  let photoBase = await idbGet('cfg_photo_base').catch(() => null);
-  let docBase   = await idbGet('cfg_doc_base').catch(() => null);
-  if (!photoBase && AppState.db) {
-    photoBase = _detectMediaBase('photo') || '';
-    if (photoBase) await idbPut('cfg_photo_base', photoBase).catch(() => {});
-  }
-  if (!docBase && AppState.db) {
-    docBase = _detectMediaBase('doc') || '';
-    if (docBase) await idbPut('cfg_doc_base', docBase).catch(() => {});
-  }
-  const pbEl = document.getElementById('set-photo-base');
-  const dbEl = document.getElementById('set-doc-base');
-  if (pbEl) pbEl.value = photoBase || '';
-  if (dbEl) dbEl.value = docBase   || '';
-}
-
-function _detectMediaBase(type) {
-  if (!AppState.db) return '';
-  const paths = [];
-  if (type === 'photo') {
-    for (const p of Object.values(AppState.db.individuals || {}))
-      for (const m of (p.media || [])) if (m.file) paths.push(m.file);
-    for (const f of Object.values(AppState.db.families || {}))
-      for (const m of (f.media || [])) if (m.file) paths.push(m.file);
-  } else {
-    for (const s of Object.values(AppState.db.sources || {}))
-      for (const m of (s.media || [])) if (m.file) paths.push(m.file);
-  }
-  // Nur Pfade mit Verzeichnis-Trenner
-  const dirs = paths
-    .filter(f => f.includes('/'))
-    .map(f => f.substring(0, f.lastIndexOf('/') + 1));
-  if (!dirs.length) return '';
-  // Häufigstes Verzeichnis als Basispfad
-  const counts = {};
-  for (const d of dirs) counts[d] = (counts[d] || 0) + 1;
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  if (dCntEl) dCntEl.textContent = '';
 }
 
 async function odClearPhotoFolder() {
+  await idbDel('od_photo_folder').catch(() => {});
+  await idbDel('od_base_path').catch(() => {});
   await idbDel('od_default_folder').catch(() => {});
   await idbDel('od_filemap').catch(() => {});
+  _odCurrentBasePath = null;
   Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
   AppState.changed = true;
   showToast('Foto-Ordner zurückgesetzt');
@@ -294,6 +296,7 @@ async function odClearPhotoFolder() {
 }
 
 async function odClearDocFolder() {
+  await idbDel('od_docs_folder').catch(() => {});
   await idbDel('od_doc_folder').catch(() => {});
   await idbDel('od_doc_filemap').catch(() => {});
   Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
@@ -559,8 +562,11 @@ let _odFolderStack = [];
 async function odImportPhotos() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
   _odFolderStack = [];
-  const folder = await idbGet('od_default_folder').catch(() => null);
-  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  await _odGetBasePath(); // Basis-Pfad vorladen
+  const folder = await idbGet('od_photo_folder').catch(() => null)
+              || await idbGet('od_default_folder').catch(() => null);
+  const folderId = folder?.id || folder?.folderId;
+  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
 
@@ -612,10 +618,11 @@ async function _odShowFolder(folderId, folderName) {
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}"
           onclick="_odEnterFolder(this)">📁 &nbsp;${esc(f.name)}</div>`).join('');
-      const folderPath = [..._odFolderStack.map(f => f.name), folderName]
+      const _fullFolderPath = [..._odFolderStack.map(f => f.name), folderName]
         .filter(n => n !== 'OneDrive').join('/');
+      const _relFolderPath = _odToRelPath(_fullFolderPath, _odCurrentBasePath || '');
       html += files.map(f => `<div class="list-item" style="cursor:pointer"
-          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}','${esc(folderPath ? folderPath + '/' + f.name : f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
+          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}','${esc(_relFolderPath ? _relFolderPath + '/' + f.name : f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
     }
     list.innerHTML = html;
     openModal('modalOneDrive');
@@ -688,30 +695,48 @@ async function odImportPhotosFromFolder(folderId, folderName) {
       if (entries.length) filemap.families[famId] = entries;
     }
 
-    // Vollständigen relativen Ordner-Pfad (ab OneDrive-Root) speichern
-    const folderPath = [..._odFolderStack.map(f => f.name), folderName]
+    // Ordner-Pfade berechnen
+    const fullFolderPath = [..._odFolderStack.map(f => f.name), folderName]
       .filter(n => n !== 'OneDrive').join('/');
-    await idbPut('od_filemap', filemap).catch(() => {});
-    await idbPut('od_default_folder', { folderId, folderName, folderPath }).catch(() => {});
 
-    // m.file auf tatsächlichen OneDrive-Pfad aktualisieren — Single Source of Truth
-    if (folderPath) {
-      for (const p of Object.values(AppState.db?.individuals || {})) {
-        for (const m of (p.media || [])) {
-          if (!m.file) continue;
-          const bn = m.file.split(/[/\\]/).pop().toLowerCase();
-          if (odFiles[bn]) m.file = folderPath + '/' + m.file.split(/[/\\]/).pop();
-        }
-      }
-      for (const f of Object.values(AppState.db?.families || {})) {
-        for (const m of (f.media || [])) {
-          if (!m.file) continue;
-          const bn = m.file.split(/[/\\]/).pop().toLowerCase();
-          if (odFiles[bn]) m.file = folderPath + '/' + m.file.split(/[/\\]/).pop();
-        }
-      }
-      AppState.changed = true;
+    // Basis-Pfad: auto-erkennen wenn nicht konfiguriert (Parent des gewählten Ordners)
+    let basePath = await _odGetBasePath();
+    if (!basePath && fullFolderPath.includes('/')) {
+      basePath = fullFolderPath.split('/').slice(0, -1).join('/');
+      await idbPut('od_base_path', basePath).catch(() => {});
+      _odCurrentBasePath = basePath;
     }
+    const photoRelPath = _odToRelPath(fullFolderPath, basePath);
+
+    // Neue Schlüssel speichern
+    await idbPut('od_photo_folder', { id: folderId, name: folderName, relPath: photoRelPath }).catch(() => {});
+    await idbPut('od_default_folder', { folderId, folderName, folderPath: fullFolderPath }).catch(() => {}); // legacy
+    await idbPut('od_filemap', filemap).catch(() => {}); // legacy (für Quellenmedien-Fallback)
+
+    // m.file auf relativen Pfad aktualisieren (relativ zu od_base_path)
+    for (const p of Object.values(AppState.db?.individuals || {})) {
+      for (const m of (p.media || [])) {
+        if (!m.file) continue;
+        const bn = m.file.split(/[/\\]/).pop().toLowerCase();
+        if (odFiles[bn]) m.file = photoRelPath ? photoRelPath + '/' + m.file.split(/[/\\]/).pop()
+                                               : m.file.split(/[/\\]/).pop();
+      }
+    }
+    for (const f of Object.values(AppState.db?.families || {})) {
+      for (const m of (f.marr?.media || [])) {
+        if (!m.file) continue;
+        const bn = m.file.split(/[/\\]/).pop().toLowerCase();
+        if (odFiles[bn]) m.file = photoRelPath ? photoRelPath + '/' + m.file.split(/[/\\]/).pop()
+                                               : m.file.split(/[/\\]/).pop();
+      }
+      for (const m of (f.media || [])) {
+        if (!m.file) continue;
+        const bn = m.file.split(/[/\\]/).pop().toLowerCase();
+        if (odFiles[bn]) m.file = photoRelPath ? photoRelPath + '/' + m.file.split(/[/\\]/).pop()
+                                               : m.file.split(/[/\\]/).pop();
+      }
+    }
+    AppState.changed = true;
 
     // Session-Cache leeren (neu verknüpfte Fotos sollen frisch geladen werden)
     Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
@@ -757,8 +782,11 @@ async function odSetupDocFolder() {
   _odDocScanMode = true;
   _odPickMode    = false;
   _odFolderStack = [];
-  const folder = await idbGet('od_doc_folder').catch(() => null);
-  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  await _odGetBasePath(); // Basis-Pfad vorladen
+  const folder = await idbGet('od_docs_folder').catch(() => null)
+              || await idbGet('od_doc_folder').catch(() => null);
+  const folderId = folder?.id || folder?.folderId;
+  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
 
@@ -776,10 +804,12 @@ async function odScanDocFolder(folderId, folderName) {
     for (const f of (data.value || [])) {
       if (!f.folder) docMap[f.name.toLowerCase()] = f.id;
     }
-    const docFolderPath = [..._odFolderStack.map(f => f.name), folderName]
+    const docFullPath = [..._odFolderStack.map(f => f.name), folderName]
       .filter(n => n !== 'OneDrive').join('/');
-    await idbPut('od_doc_filemap', docMap).catch(() => {});
-    await idbPut('od_doc_folder', { folderId, folderName, folderPath: docFolderPath }).catch(() => {});
+    const docRelPath = _odToRelPath(docFullPath, _odCurrentBasePath || await _odGetBasePath());
+    await idbPut('od_docs_folder', { id: folderId, name: folderName, relPath: docRelPath }).catch(() => {});
+    await idbPut('od_doc_folder', { folderId, folderName, folderPath: docFullPath }).catch(() => {}); // legacy
+    await idbPut('od_doc_filemap', docMap).catch(() => {}); // legacy
     // Session-Cache für Quellenmedien leeren
     Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
     if (AppState.currentSourceId) showSourceDetail(AppState.currentSourceId, false);
@@ -798,30 +828,22 @@ async function odPickFileForEditMedia() {
   _odEditPickMode = true;
   _odFolderStack = [];
   closeModal('modalEditMedia');
-  const folderKey = (_editMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
-  const folder = await idbGet(folderKey).catch(() => null);
-  _odPickStartedFromSubfolder = !!folder?.folderId;
-  _odPickStartFolderId        = folder?.folderId || '';
-  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  await _odGetBasePath(); // Basis-Pfad vorladen
+  const isSource = (_editMediaType === 'source');
+  const folder = await idbGet(isSource ? 'od_docs_folder' : 'od_photo_folder').catch(() => null)
+              || await idbGet(isSource ? 'od_doc_folder' : 'od_default_folder').catch(() => null);
+  const folderId = folder?.id || folder?.folderId;
+  _odPickStartedFromSubfolder = !!folderId;
+  _odPickStartFolderId = folderId || '';
+  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
 
 async function _addMediaToFilemap(storeKey, id, entry, atIdx) {
-  try {
-    const fm = await idbGet('od_filemap').catch(() => null) || { persons: {}, families: {}, sources: {} };
-    if (!fm[storeKey]) fm[storeKey] = {};
-    if (!fm[storeKey][id]) fm[storeKey][id] = [];
-    if (atIdx !== undefined) {
-      // An korrektem Index speichern, ggf. mit null auffüllen
-      while (fm[storeKey][id].length <= atIdx) fm[storeKey][id].push(null);
-      fm[storeKey][id][atIdx] = entry;
-    } else {
-      fm[storeKey][id].push(entry);
-    }
-    await idbPut('od_filemap', fm).catch(() => {});
-    const pfx = storeKey === 'families' ? 'photo_fam_' + id : 'photo_' + id;
-    Object.keys(_odPhotoCache).filter(k => k.startsWith(pfx)).forEach(k => delete _odPhotoCache[k]);
-  } catch {}
+  // od_filemap wird nicht mehr für neue Medien gepflegt (Laden erfolgt per Pfad)
+  // Session-Cache leeren damit nächstes Laden den neuen Pfad nutzt
+  const pfx = storeKey === 'families' ? 'photo_fam_' + id : 'photo_' + id;
+  Object.keys(_odPhotoCache).filter(k => k.startsWith(pfx) || k.startsWith('path:')).forEach(k => delete _odPhotoCache[k]);
 }
 
 async function _removeMediaFromFilemap(storeKey, id, idx) {
@@ -848,11 +870,14 @@ async function odPickFileForMedia() {
   _odPickMode = true;
   _odFolderStack = [];
   closeModal('modalAddMedia');
-  const folderKey = (_addMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
-  const folder = await idbGet(folderKey).catch(() => null);
-  _odPickStartedFromSubfolder = !!folder?.folderId;
-  _odPickStartFolderId        = folder?.folderId || '';
-  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  await _odGetBasePath(); // Basis-Pfad vorladen
+  const isSource = (_addMediaType === 'source');
+  const folder = await idbGet(isSource ? 'od_docs_folder' : 'od_photo_folder').catch(() => null)
+              || await idbGet(isSource ? 'od_doc_folder' : 'od_default_folder').catch(() => null);
+  const folderId = folder?.id || folder?.folderId;
+  _odPickStartedFromSubfolder = !!folderId;
+  _odPickStartFolderId = folderId || '';
+  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
 
