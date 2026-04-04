@@ -463,17 +463,21 @@ async function _odShowFolder(folderId, folderName) {
     if (data.error) throw new Error(data.error.message);
     const items   = data.value || [];
     const folders = items.filter(f => f.folder);
-    const files   = _odPickMode ? items.filter(f => !f.folder) : [];
+    const _isPickMode = _odPickMode || _odEditPickMode;
+    const files   = _isPickMode ? items.filter(f => !f.folder) : [];
     const title   = document.querySelector('#modalOneDrive .sheet-title');
-    if (title) title.textContent = _odPickMode ? 'Datei auswählen' : _odDocScanMode ? 'Dokumente-Ordner wählen' : 'Fotos importieren';
+    if (title) title.textContent = _isPickMode ? 'Datei auswählen' : _odDocScanMode ? 'Dokumente-Ordner wählen' : 'Fotos importieren';
     const list = document.getElementById('odFileList');
     if (!list) return;
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
     let html = `<div style="font-size:0.75rem;color:var(--text-dim);padding-bottom:8px">${esc(breadcrumb)}</div>`;
     if (_odFolderStack.length > 0) {
       html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odFolderBack()">← Zurück</div>`;
-    } else if (_odPickMode) {
+    } else if (_isPickMode) {
       html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odPickCancel()">← Abbrechen</div>`;
+      if (_odPickStartedFromSubfolder) {
+        html += `<div class="list-item" style="cursor:pointer;color:var(--text-dim);font-size:0.85rem" onclick="_odShowAllFolders()">↑ Alle OneDrive-Ordner</div>`;
+      }
     }
     if (!_odPickMode && folderId !== 'root') {
       if (_odDocScanMode) {
@@ -511,6 +515,11 @@ function _odEnterFolder(el) {
 async function _odFolderBack() {
   const p = _odFolderStack.pop();
   if (p) await _odShowFolder(p.id, p.name);
+}
+async function _odShowAllFolders() {
+  _odPickStartedFromSubfolder = false;
+  _odFolderStack = [];
+  await _odShowFolder('root', 'OneDrive');
 }
 
 async function odImportPhotosFromFolder(folderId, folderName) {
@@ -614,9 +623,10 @@ async function odScanDocFolder(folderId, folderName) {
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
-let _odPickMode       = false;
-let _odEditPickMode   = false; // true wenn OD-Picker aus Edit-Modal geöffnet
-let _odDocScanMode    = false; // true wenn Dokumente-Ordner gewählt wird
+let _odPickMode               = false;
+let _odEditPickMode           = false; // true wenn OD-Picker aus Edit-Modal geöffnet
+let _odDocScanMode            = false; // true wenn Dokumente-Ordner gewählt wird
+let _odPickStartedFromSubfolder = false; // true wenn Picker aus konfiguriertem Unterordner gestartet
 
 async function odPickFileForEditMedia() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
@@ -625,6 +635,7 @@ async function odPickFileForEditMedia() {
   closeModal('modalEditMedia');
   const folderKey = (_editMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
   const folder = await idbGet(folderKey).catch(() => null);
+  _odPickStartedFromSubfolder = !!folder?.folderId;
   if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
@@ -673,6 +684,7 @@ async function odPickFileForMedia() {
   closeModal('modalAddMedia');
   const folderKey = (_addMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
   const folder = await idbGet(folderKey).catch(() => null);
+  _odPickStartedFromSubfolder = !!folder?.folderId;
   if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
