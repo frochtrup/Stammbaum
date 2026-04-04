@@ -375,7 +375,7 @@ function showMediaBrowser() {
         const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
         const thumbId = 'mb-thumb-' + sid + '-' + idx;
         html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
-          onclick="closeModal('modalMediaBrowser');showSourceDetail('${sid}')">
+          data-action="browserShowSource" data-sid="${sid}">
           <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>

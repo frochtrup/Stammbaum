@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-05 — Inline Event-Handler Schulden (sw v137)
+
+- **sw v137** `refactor`: Schwerpunkt 6 Prio 3 — Inline Event-Handler in HTML-Strings entfernt
+  - 62 inline `onclick`/`oninput`/`onchange` aus Template-Literalen in 8 JS-Dateien entfernt
+  - `ui-views.js`: globale Event-Delegation ergänzt — `data-action` (click), `data-change` (change), `data-input` (input)
+  - `_CLICK_MAP` mit 28 Aktionen; `closest('[data-action]')` eliminiert StopPropagation-Bedarf natürlich
+  - `data-action="stop"` für `<select>` in klickbaren Zeilen (verhindert versehentliche Navigation)
+  - `data-action="stop"` auf Geo-Links (`<a target="_blank">`) in klickbaren Ereignis-Zeilen
+
+---
+
 ### Session 2026-04-05 — Sicherheits-Fixes Schwerpunkt 6 Prio 1 (sw v136)
 
 - **sw v136** `fix`: Schwerpunkt 6 Prio 1 — Sicherheit

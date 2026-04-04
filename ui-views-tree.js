@@ -225,7 +225,7 @@ async function _lightboxSetHero() {
   const el = document.getElementById(_lbHeroElemId);
   if (el) {
     el.style.display = '';
-    el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`;
+    el.innerHTML = `<img src="${src}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`;
   }
   if (_lbAvatarElemId) {
     const av = document.getElementById(_lbAvatarElemId);

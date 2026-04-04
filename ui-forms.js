@@ -44,10 +44,10 @@ function renderSrcTags(prefix) {
     const _hasMeta = prefix === 'ef' || prefix === 'cr';
     const pageField = _hasMeta
       ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
-           oninput="updateSrcPage('${prefix}','${sidEsc}',this.value)">`
+           data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`
       : '';
     const quayField = _hasMeta
-      ? `<select class="src-quay-select" onchange="updateSrcQuay('${prefix}','${sidEsc}',this.value)"
+      ? `<select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-sid="${sidEsc}"
            style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
            <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
            <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
@@ -59,7 +59,7 @@ function renderSrcTags(prefix) {
     return `<span class="src-tag">
       ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
       ${pageField}${quayField}
-      <button type="button" onclick="removeSrc('${prefix}','${sid}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
+      <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-sid="${sid}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
     </span>`;
   }).join('');
 }
@@ -75,7 +75,7 @@ function renderSrcPicker(prefix) {
   list.innerHTML = srcs.map(s => {
     const label = s.abbr || s.title || s.id;
     const isSel = selected.has(s.id);
-    return `<div class="src-picker-item ${isSel ? 'selected' : ''}" onclick="toggleSrc('${prefix}','${s.id}')">
+    return `<div class="src-picker-item ${isSel ? 'selected' : ''}" data-action="toggleSrc" data-prefix="${prefix}" data-sid="${s.id}">
       ${isSel ? '✓ ' : ''}${esc(label)}
     </div>`;
   }).join('');
@@ -605,7 +605,7 @@ function showRepoDetail(id, pushHistory = true) {
   if (linkedSources.length) {
     html += `<div class="section fade-up"><div class="section-title">Quellen (${linkedSources.length})</div>`;
     for (const s of linkedSources.sort((a,b)=>(a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'))) {
-      html += `<div class="source-card" onclick="showSourceDetail('${s.id}')">
+      html += `<div class="source-card" data-action="showSourceDetail" data-sid="${s.id}">
         <div class="source-title">${esc(s.abbr || s.title || s.id)}</div>
         <div class="source-meta">${s.repoCallNum ? 'Signatur: ' + esc(s.repoCallNum) : '&nbsp;'}</div>
       </div>`;

@@ -108,7 +108,7 @@ function runGlobalSearch(q) {
       if (p.birth?.date) meta += '* ' + p.birth.date;
       if (p.birth?.place) meta += (meta ? ', ' : '') + p.birth.place;
       if (p.death?.date) meta += (meta ? '  † ' : '† ') + p.death.date;
-      html += `<div class="person-row" onclick="showDetail('${p.id}')">
+      html += `<div class="person-row" data-action="showDetail" data-id="${p.id}">
         <div class="p-avatar ${sc}">${ic}</div>
         <div class="p-info"><div class="p-name">${esc(p.name||p.id)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>
         <span class="p-arrow">›</span></div>`;
@@ -133,7 +133,7 @@ function runGlobalSearch(q) {
       let meta = '';
       if (f.marr?.date) meta += f.marr.date;
       if (f.marr?.place) meta += (meta ? ', ' : '') + f.marr.place;
-      html += `<div class="person-row" onclick="showFamilyDetail('${f.id}')">
+      html += `<div class="person-row" data-action="showFamilyDetail" data-id="${f.id}">
         <div class="p-avatar" style="font-size:0.95rem">⚭</div>
         <div class="p-info"><div class="p-name">${esc(label)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>
         <span class="p-arrow">›</span></div>`;
@@ -149,7 +149,7 @@ function runGlobalSearch(q) {
   if (sources.length) {
     html += `<div class="alpha-sep">Quellen (${sources.length})</div>`;
     for (const s of sources) {
-      html += `<div class="person-row" onclick="showSourceDetail('${s.id}')">
+      html += `<div class="person-row" data-action="showSourceDetail" data-sid="${s.id}">
         <div class="p-avatar" style="font-size:0.95rem">📖</div>
         <div class="p-info"><div class="p-name">${esc(s.title||s.id)}</div><div class="p-meta">${esc(s.auth||'')}</div></div>
         <span class="p-arrow">›</span></div>`;
@@ -163,7 +163,7 @@ function runGlobalSearch(q) {
   if (places.length) {
     html += `<div class="alpha-sep">Orte (${places.length})</div>`;
     for (const name of places) {
-      html += `<div class="person-row" onclick="showPlaceDetail('${esc(name)}')">
+      html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(name)}">
         <div class="p-avatar" style="font-size:0.95rem">📍</div>
         <div class="p-info"><div class="p-name">${esc(name)}</div><div class="p-meta">&nbsp;</div></div>
         <span class="p-arrow">›</span></div>`;
@@ -301,7 +301,7 @@ function sourceTagsHtml(sourceIds) {
     const s = AppState.db.sources[sid];
     if (!s) return '';
     const tooltip = esc((s.title || s.abbr || sid).substring(0, 60));
-    return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showSourceDetail(this.dataset.sid)" title="${tooltip}">§${srcNum(sid)}</span>`;
+    return `<span class="src-badge" data-action="showSourceDetail" data-sid="${sid}" title="${tooltip}">§${srcNum(sid)}</span>`;
   }).filter(Boolean).join('');
 }
 
@@ -309,11 +309,10 @@ function relRow(person, role, unlinkFamId) {
   const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
   const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
   const unlinkBtn = unlinkFamId
-    ? `<button class="unlink-btn" data-fid="${unlinkFamId}" data-pid="${person.id}"
-         onclick="event.stopPropagation(); unlinkMember(this.dataset.fid, this.dataset.pid)"
+    ? `<button class="unlink-btn" data-action="unlinkMember" data-fid="${unlinkFamId}" data-pid="${person.id}"
          title="Verbindung trennen">×</button>`
     : '';
-  return `<div class="rel-row" data-pid="${person.id}" onclick="showDetail(this.dataset.pid)">
+  return `<div class="rel-row" data-action="showDetail" data-pid="${person.id}">
     <div class="rel-avatar ${sc}">${ic}</div>
     <div class="rel-info">
       <div class="rel-name">${esc(person.name || person.id)}</div>
@@ -323,3 +322,65 @@ function relRow(person, role, unlinkFamId) {
     <span class="p-arrow">›</span>
   </div>`;
 }
+
+// ─────────────────────────────────────
+//  EVENT DELEGATION
+//  Ersetzt alle inline onclick/oninput/onchange in HTML-Strings.
+//  data-action  → click
+//  data-change  → change
+//  data-input   → input
+//  data-action="stop" → stopPropagation ohne Aktion (z.B. <select> in klickbarer Zeile)
+// ─────────────────────────────────────
+const _CLICK_MAP = {
+  showDetail:           el => showDetail(el.dataset.pid  || el.dataset.id),
+  showFamilyDetail:     el => showFamilyDetail(el.dataset.fid  || el.dataset.id),
+  showSourceDetail:     el => showSourceDetail(el.dataset.sid  || el.dataset.id),
+  showRepoDetail:       el => showRepoDetail(el.dataset.id),
+  showPlaceDetail:      el => showPlaceDetail(el.dataset.name),
+  deleteExtraPlace:     el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
+  unlinkMember:         el => unlinkMember(el.dataset.fid, el.dataset.pid),
+  showEventForm:        el => showEventForm(el.dataset.pid, el.dataset.ev),
+  showAddSpouseFlow:    el => showAddSpouseFlow(el.dataset.pid),
+  showAddChildFlow:     el => showAddChildFlow(el.dataset.fid),
+  showAddParentFlow:    el => showAddParentFlow(el.dataset.pid),
+  openAddMediaDialog:   el => openAddMediaDialog(el.dataset.ctx, el.dataset.id),
+  openMediaPhoto:       el => openMediaPhoto(el.dataset.mediaFile, el.dataset.hero, el.dataset.avatar),
+  openEditMediaDialog:  el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
+  openSourceMediaView:  el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
+  showChildRelDialog:   el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
+  removeSrc:            el => removeSrc(el.dataset.prefix, el.dataset.sid),
+  toggleSrc:            el => toggleSrc(el.dataset.prefix, el.dataset.sid),
+  odLoadFile:           el => odLoadFile(el.dataset.odid, el.dataset.odname),
+  odFolderBack:         ()  => _odFolderBack(),
+  odPickCancel:         ()  => _odPickCancel(),
+  odShowAllFolders:     ()  => _odShowAllFolders(),
+  odScanDocFolder:      el => odScanDocFolder(el.dataset.odid, el.dataset.odname),
+  odImportPhotos:       el => odImportPhotosFromFolder(el.dataset.odid, el.dataset.odname),
+  odEnterFolder:        el => _odEnterFolder(el),
+  odPickSelectFile:     el => _odPickSelectFile(el.dataset.odid, el.dataset.odname, el.dataset.path),
+  browserShowSource:    el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
+  showLightbox:         el => showLightbox(el.src || el.dataset.src),
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.dataset.action;
+  if (action === 'stop') { e.stopPropagation(); return; }
+  const fn = _CLICK_MAP[action];
+  if (fn) fn(el, e);
+});
+
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-change]');
+  if (!el) return;
+  const action = el.dataset.change;
+  if (action === 'savePedi')      savePedi(el.dataset.fid, el.dataset.cid, el.value);
+  else if (action === 'updateSrcQuay') updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
+});
+
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-input]');
+  if (!el) return;
+  if (el.dataset.input === 'updateSrcPage') updateSrcPage(el.dataset.prefix, el.dataset.sid, el.value);
+});

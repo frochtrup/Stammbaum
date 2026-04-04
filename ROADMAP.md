@@ -158,7 +158,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 #### Refactoring — Priorität 3
 
-- [ ] **Inline Event-Handler durch Event-Delegation ersetzen** — `oninput="updateSrcPage(...)"` u.ä. sind XSS-anfällig bei unvollständigem Escaping und erzeugen Memory-Leaks bei Modal-Reopen (ui-forms.js, viele ui-*.js)
+- [x] **Inline Event-Handler durch Event-Delegation ersetzen** — `oninput="updateSrcPage(...)"` u.ä. sind XSS-anfällig bei unvollständigem Escaping und erzeugen Memory-Leaks bei Modal-Reopen (ui-forms.js, viele ui-*.js)
 - [ ] **Gemeinsame `renderListItem()`-Funktion** — Media-Count, Sortierung und List-Rendering in ui-views-person/family/source.js deduplizieren (3× identische Logik)
 - [ ] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=3 für die meisten Tags) (gedcom-parser.js)
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
@@ -174,7 +174,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - Duplikat-Erkennung in Suche
 - DIV/DIVF/ENG: Formularfelder für Datum/Ort (Parser/Writer done)
 - ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
-- Inline Event-Handler in HTML-Strings (XSS-Potential + Memory-Leaks)
+- ~~Inline Event-Handler in HTML-Strings~~ → behoben sw v137: globale Event-Delegation
 - GEDCOM-Parser ohne Fehler-Sammler (ungültige Dateien werden silent ignoriert)
 
 ---

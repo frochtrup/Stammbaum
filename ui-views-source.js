@@ -40,8 +40,7 @@ function showSourceDetail(id, pushHistory = true) {
       const r = AppState.db.repositories[s.repo];
       const callNum = s.repoCallNum ? ` · Signatur: ${esc(s.repoCallNum)}` : '';
       html += `<div class="fact-row"><span class="fact-lbl">Aufbewahrung</span>
-        <span class="fact-val"><span class="btn-link"
-          onclick="showRepoDetail('${s.repo}')">${esc(r.name || s.repo)}</span>${callNum}</span></div>`;
+        <span class="fact-val"><span class="btn-link" data-action="showRepoDetail" data-id="${s.repo}" style="cursor:pointer">${esc(r.name || s.repo)}</span>${callNum}</span></div>`;
     } else {
       html += factRow('Aufbewahrung', s.repo);
     }
@@ -74,7 +73,7 @@ function showSourceDetail(id, pushHistory = true) {
       const wife = f.wife ? AppState.db.individuals[f.wife] : null;
       const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
       const meta = f.marr.date ? '⚭ ' + f.marr.date : '';
-      html += `<div class="rel-row" onclick="showFamilyDetail('${f.id}')">
+      html += `<div class="rel-row" data-action="showFamilyDetail" data-id="${f.id}">
         <div class="rel-avatar" style="font-size:0.9rem">👨‍👩‍👧</div>
         <div class="rel-info">
           <div class="rel-name">${esc(title)}</div>
@@ -98,7 +97,7 @@ function showSourceDetail(id, pushHistory = true) {
     html += `<div class="section fade-up">
       <div class="section-head">
         <div class="section-title">Medien</div>
-        <button class="section-add" onclick="openAddMediaDialog('source','${id}')">+ Hinzufügen</button>
+        <button class="section-add" data-action="openAddMediaDialog" data-ctx="source" data-id="${id}">+ Hinzufügen</button>
       </div>`;
     for (let i = 0; i < srcMedia.length; i++) {
       const m = srcMedia[i];
@@ -107,14 +106,14 @@ function showSourceDetail(id, pushHistory = true) {
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        onclick="openSourceMediaView('${id}',${i})">
+        data-action="openSourceMediaView" data-sid="${id}" data-idx="${i}">
         <div id="src-media-thumb-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(m.title || m.file)}</div>
           ${m.title && m.file ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(m.file)}</div>` : ''}
           ${m.form ? `<div style="color:var(--text-muted);font-size:0.78rem">${esc(m.form)}</div>` : ''}
         </div>
-        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('source','${id}',${i})" title="Bearbeiten">✎</button>
+        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="source" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
     }
     for (const l of srcPtObje) {
@@ -215,11 +214,11 @@ function renderSourceList(srcs) {
     const refCount = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
                    + Object.values(AppState.db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
     const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo];
-    const repoBadge = hasRepo ? `<span class="repo-badge" style="cursor:pointer" onclick="event.stopPropagation();showRepoDetail('${s.repo}')">🏛</span>` : '';
+    const repoBadge = hasRepo ? `<span class="repo-badge" data-action="showRepoDetail" data-id="${s.repo}" style="cursor:pointer">🏛</span>` : '';
     const mediaCount = (s.media || []).filter(m => m.file || m.title).length
                      + (s._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
     const mediaBadge = mediaCount ? `<span style="font-size:0.8rem;margin-left:5px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="source-card" data-sid="${s.id}" onclick="showSourceDetail(this.dataset.sid)">
+    html += `<div class="source-card" data-action="showSourceDetail" data-sid="${s.id}">
       <div class="source-title">${esc(s.abbr || s.title || s.id)}${repoBadge}${mediaBadge}</div>
       <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}${refCount ? ` · ${refCount} Ref.` : ''}</div>
     </div>`;
@@ -249,7 +248,7 @@ function renderRepoList() {
   const sorted = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   el.innerHTML = sorted.map(r => {
     const srcCount = Object.values(AppState.db.sources).filter(s => s.repo === r.id).length;
-    return `<div class="source-card" onclick="showRepoDetail('${r.id}')">
+    return `<div class="source-card" data-action="showRepoDetail" data-id="${r.id}">
       <div class="source-title">${esc(r.name || r.id)}</div>
       <div class="source-meta">${r.addr ? esc(r.addr.split('\n')[0]) : '&nbsp;'}${srcCount ? ' · ' + srcCount + ' Quel.' : ''}</div>
     </div>`;
@@ -311,7 +310,7 @@ function renderPlaceList(sorted) {
     const count = place.personIds.size;
     const hasGeo = place.lati !== null;
     const geoIcon = hasGeo ? '📍' : '·';
-    html += `<div class="person-row" onclick="showPlaceDetail('${esc(place.name)}')">
+    html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.name)}">
       <div class="p-avatar" style="font-size:1.1rem">${geoIcon}</div>
       <div class="p-info">
         <div class="p-name">${esc(place.name)}</div>
@@ -419,8 +418,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   if (place.personIds.size === 0 && AppState.db.extraPlaces[placeName]) {
     html += `<div style="padding:4px 0 12px">
       <button class="btn btn-danger" style="width:100%"
-        data-pname="${placeName.replace(/"/g,'&quot;')}"
-        onclick="deleteExtraPlace(this.dataset.pname)">Ort entfernen</button>
+        data-action="deleteExtraPlace" data-pname="${placeName.replace(/"/g,'&quot;')}">Ort entfernen</button>
     </div>`;
   }
 

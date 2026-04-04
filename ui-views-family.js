@@ -28,7 +28,7 @@ function renderFamilyList(fams) {
                       + (f.marr?.media || []).filter(m => m.file || m.titl).length
                       + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
     const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="person-row" data-fid="${f.id}" onclick="showFamilyDetail(this.dataset.fid)">
+    html += `<div class="person-row" data-action="showFamilyDetail" data-fid="${f.id}">
       <div class="p-avatar">👨‍👩‍👧</div>
       <div class="p-info">
         <div class="p-name">${esc(title)}${fMediaBadge}</div>
@@ -279,7 +279,7 @@ function showFamilyDetail(id, pushHistory = true) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Mitglieder</div>
-      <button class="section-add" data-fid="${id}" onclick="showAddChildFlow(this.dataset.fid)">+ Kind</button>
+      <button class="section-add" data-action="showAddChildFlow" data-fid="${id}">+ Kind</button>
     </div>`;
   if (husb) html += relRow(husb, 'Ehemann / Vater', id);
   if (wife) html += relRow(wife, 'Ehefrau / Mutter', id);
@@ -290,9 +290,7 @@ function showFamilyDetail(id, pushHistory = true) {
     const _curPedi = (typeof _fe === 'object') ? (_toPedi(_fe.pedi || _fe.frel || '')) : '';
     const _pSel = v => v === _curPedi ? ' selected' : '';
     const _pediSelect = `<select
-        data-fid="${id}" data-cid="${cid}"
-        onchange="event.stopPropagation();savePedi(this.dataset.fid,this.dataset.cid,this.value)"
-        onclick="event.stopPropagation()"
+        data-action="stop" data-change="savePedi" data-fid="${id}" data-cid="${cid}"
         style="font-size:0.8rem;border:none;background:transparent;color:var(--text-dim);cursor:pointer;max-width:90px">
       <option value=""${_pSel('')}>– Verhältnis</option>
       <option value="birth"${_pSel('birth')}>leiblich</option>
@@ -301,7 +299,7 @@ function showFamilyDetail(id, pushHistory = true) {
       <option value="sealing"${_pSel('sealing')}>Sealing</option>
     </select>`;
     const _sourIds = (typeof _fe === 'object') ? (_fe.sourIds || []) : [];
-    const _addQBtn = `<button onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
+    const _addQBtn = `<button data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
         title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
         border-radius:12px;padding:1px 7px;font-size:0.7rem;color:var(--text-muted);cursor:pointer">+ Q</button>`;
     const _sourWidget = _sourIds.length
@@ -309,19 +307,18 @@ function showFamilyDetail(id, pushHistory = true) {
           const s = AppState.db.sources[sid];
           const tooltip = s ? esc((s.title || s.abbr || sid).substring(0, 60)) : esc(sid);
           const num = (sid.match(/\d+/) || [sid])[0];
-          return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')" title="${tooltip}">§${num}</span>`;
+          return `<span class="src-badge" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}" data-sid="${sid}" title="${tooltip}">§${num}</span>`;
         }).join('') + _addQBtn
       : _addQBtn;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
     const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';
-    html += `<div class="rel-row" data-pid="${child.id}" onclick="showDetail(this.dataset.pid)">
+    html += `<div class="rel-row" data-action="showDetail" data-pid="${child.id}">
       <div class="rel-avatar ${sc}">${ic}</div>
       <div class="rel-info">
         <div class="rel-name">${esc(child.name || child.id)}</div>
         <div class="rel-role" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">Kind${_pediSelect}${_sourWidget}</div>
       </div>
-      <button class="unlink-btn" data-fid="${id}" data-pid="${child.id}"
-        onclick="event.stopPropagation();unlinkMember(this.dataset.fid,this.dataset.pid)"
+      <button class="unlink-btn" data-action="unlinkMember" data-fid="${id}" data-pid="${child.id}"
         title="Verbindung trennen">×</button>
       <span class="p-arrow">›</span>
     </div>`;
@@ -344,7 +341,7 @@ function showFamilyDetail(id, pushHistory = true) {
     html += `<div class="section fade-up">
       <div class="section-head">
         <div class="section-title">Medien</div>
-        <button class="section-add" onclick="openAddMediaDialog('family','${id}')">+ Hinzufügen</button>
+        <button class="section-add" data-action="openAddMediaDialog" data-ctx="family" data-id="${id}">+ Hinzufügen</button>
       </div>`;
     for (let i = 0; i < marrObjeEntries.length; i++) {
       const m = marrObjeEntries[i];
@@ -354,14 +351,13 @@ function showFamilyDetail(id, pushHistory = true) {
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        data-media-file="${esc(m.file || '')}"
-        onclick="openMediaPhoto(this.dataset.mediaFile,'det-fam-photo-${id}','det-fam-avatar-${id}')">
+        data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-fam-photo-${id}" data-avatar="det-fam-avatar-${id}">
         <div id="media-thumb-fam-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
           ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
         </div>
-        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('family','${id}',${i})" title="Bearbeiten">✎</button>
+        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="family" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
     }
     for (let i = 0; i < famMedia.length; i++) {
@@ -372,14 +368,13 @@ function showFamilyDetail(id, pushHistory = true) {
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        data-media-file="${esc(m.file || '')}"
-        onclick="openMediaPhoto(this.dataset.mediaFile,'det-fam-photo-${id}','det-fam-avatar-${id}')">
+        data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-fam-photo-${id}" data-avatar="det-fam-avatar-${id}">
         <div id="media-thumb-fam-media-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
           ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
         </div>
-        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('family_media','${id}',${i})" title="Bearbeiten">✎</button>
+        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="family_media" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
     }
     for (const l of famPtObje) {

@@ -410,8 +410,7 @@ async function odOpenFilePicker() {
         const date = new Date(f.lastModifiedDateTime).toLocaleDateString('de-DE');
         const kb   = Math.round((f.size || 0) / 1024);
         return `<div class="list-item" style="cursor:pointer"
-          data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
-          onclick="odLoadFile(this.dataset.odid, this.dataset.odname)">
+          data-action="odLoadFile" data-odid="${esc(f.id)}" data-odname="${esc(f.name)}">
           <div style="font-weight:600;font-size:0.9rem">${esc(f.name)}</div>
           <div style="font-size:0.78rem;color:var(--text-dim)">${date} · ${kb} KB</div>
         </div>`;
@@ -623,38 +622,36 @@ async function _odShowFolder(folderId, folderName) {
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
     let html = `<div style="font-size:0.75rem;color:var(--text-dim);padding-bottom:8px">${esc(breadcrumb)}</div>`;
     if (_odFolderStack.length > 0) {
-      html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odFolderBack()">← Zurück</div>`;
+      html += `<div class="list-item" data-action="odFolderBack" style="cursor:pointer;color:var(--gold)">← Zurück</div>`;
     } else if (_isPickMode) {
-      html += `<div class="list-item" style="cursor:pointer;color:var(--gold)" onclick="_odPickCancel()">← Abbrechen</div>`;
+      html += `<div class="list-item" data-action="odPickCancel" style="cursor:pointer;color:var(--gold)">← Abbrechen</div>`;
       if (_odPickStartedFromSubfolder) {
-        html += `<div class="list-item" style="cursor:pointer;color:var(--text-dim);font-size:0.85rem" onclick="_odShowAllFolders()">↑ Übergeordneter Ordner</div>`;
+        html += `<div class="list-item" data-action="odShowAllFolders" style="cursor:pointer;color:var(--text-dim);font-size:0.85rem">↑ Übergeordneter Ordner</div>`;
       }
     }
     if (!_odPickMode && folderId !== 'root') {
       if (_odDocScanMode) {
-        html += `<div class="list-item" style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)"
-          data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
-          onclick="odScanDocFolder(this.dataset.odid,this.dataset.odname)">
+        html += `<div class="list-item" data-action="odScanDocFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
+          style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)">
           📂 Diesen Ordner als Dokumente-Ordner nutzen</div>`;
       } else {
-        html += `<div class="list-item" style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)"
-          data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
-          onclick="odImportPhotosFromFolder(this.dataset.odid,this.dataset.odname)">
+        html += `<div class="list-item" data-action="odImportPhotos" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
+          style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)">
           📥 Fotos aus diesem Ordner laden</div>`;
       }
     }
     if (folders.length === 0 && files.length === 0) {
       html += `<div style="color:var(--text-dim);font-size:0.85rem;padding:8px">Keine Einträge</div>`;
     } else {
-      html += folders.map(f => `<div class="list-item" style="cursor:pointer"
+      html += folders.map(f => `<div class="list-item" data-action="odEnterFolder" style="cursor:pointer"
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
-          data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}"
-          onclick="_odEnterFolder(this)">📁 &nbsp;${esc(f.name)}</div>`).join('');
+          data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}">📁 &nbsp;${esc(f.name)}</div>`).join('');
       const _fullFolderPath = [..._odFolderStack.map(f => f.name), folderName]
         .filter(n => n !== 'OneDrive').join('/');
       const _relFolderPath = _odToRelPath(_fullFolderPath, _odCurrentBasePath || '');
-      html += files.map(f => `<div class="list-item" style="cursor:pointer"
-          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}','${esc(_relFolderPath ? _relFolderPath + '/' + f.name : f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
+      html += files.map(f => `<div class="list-item" data-action="odPickSelectFile" style="cursor:pointer"
+          data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
+          data-path="${esc(_relFolderPath ? _relFolderPath + '/' + f.name : f.name)}">📄 &nbsp;${esc(f.name)}</div>`).join('');
     }
     list.innerHTML = html;
     openModal('modalOneDrive');
@@ -782,7 +779,7 @@ async function odImportPhotosFromFolder(folderId, folderName) {
           if (!url) return;
           const el = document.getElementById('det-photo-' + AppState.currentPersonId);
           const av = document.getElementById('det-avatar-' + AppState.currentPersonId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`; }
           if (av) av.style.display = 'none';
         }).catch(() => {});
       }
@@ -795,7 +792,7 @@ async function odImportPhotosFromFolder(folderId, folderName) {
           if (!url) return;
           const el = document.getElementById('det-fam-photo-' + AppState.currentFamilyId);
           const av = document.getElementById('det-fam-avatar-' + AppState.currentFamilyId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`; }
           if (av) av.style.display = 'none';
         }).catch(() => {});
       }

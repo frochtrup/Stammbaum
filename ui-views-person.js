@@ -40,7 +40,7 @@ function renderPersonList(persons) {
     const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                       + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
     const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="person-row" data-pid="${p.id}" onclick="showDetail('${p.id}')">
+    html += `<div class="person-row" data-action="showDetail" data-pid="${p.id}">
       <div class="p-avatar ${sc}">${ic}</div>
       <div class="p-info">
         <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
@@ -207,7 +207,7 @@ function showDetail(id, pushHistory = true) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
-      <button class="section-add" data-pid="${id}" onclick="showEventForm(this.dataset.pid)">+ Ereignis</button>
+      <button class="section-add" data-action="showEventForm" data-pid="${id}">+ Ereignis</button>
     </div>`;
 
   for (const en of (p.extraNames || [])) {
@@ -218,21 +218,21 @@ function showDetail(id, pushHistory = true) {
 
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
-      ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-pid="${id}" data-ev="BIRT" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources)}</span></div>`;
+      ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BIRT" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources)}</span></div>`;
   }
   if (p.chr.date || p.chr.place) {
-    html += `<div class="fact-row" data-pid="${id}" data-ev="CHR" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources)}</span></div>`;
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="CHR" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources)}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = (p.death.lati !== null && p.death.lati !== undefined)
-      ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-pid="${id}" data-ev="DEAT" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources)}</span></div>`;
+      ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="DEAT" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources)}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = (p.buri.lati !== null && p.buri.lati !== undefined)
-      ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-pid="${id}" data-ev="BURI" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources)}</span></div>`;
+      ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources)}</span></div>`;
   }
 
   p.events.forEach((ev, idx) => {
@@ -241,7 +241,7 @@ function showDetail(id, pushHistory = true) {
       ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
     const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
     const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
-    html += `<div class="fact-row" data-pid="${id}" data-ev="${idx}" onclick="showEventForm(this.dataset.pid,this.dataset.ev)" style="cursor:pointer">
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
       <span class="fact-lbl">${esc(label)}</span>
       <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}${mediaBadge}</span>
     </div>`;
@@ -273,7 +273,7 @@ function showDetail(id, pushHistory = true) {
     html += `<div class="section fade-up">
       <div class="section-head">
         <div class="section-title">Medien</div>
-        <button class="section-add" onclick="openAddMediaDialog('person','${id}')">+ Hinzufügen</button>
+        <button class="section-add" data-action="openAddMediaDialog" data-ctx="person" data-id="${id}">+ Hinzufügen</button>
       </div>`;
     for (let i = 0; i < indiMedia.length; i++) {
       const m = indiMedia[i];
@@ -283,14 +283,13 @@ function showDetail(id, pushHistory = true) {
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        data-media-file="${esc(m.file || '')}"
-        onclick="openMediaPhoto(this.dataset.mediaFile,'det-photo-${id}','det-avatar-${id}')">
+        data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-photo-${id}" data-avatar="det-avatar-${id}">
         <div id="media-thumb-indi-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
           ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
         </div>
-        <button class="edit-media-btn" onclick="event.stopPropagation();openEditMediaDialog('person','${id}',${i})" title="Bearbeiten">✎</button>
+        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="person" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
     }
     for (const l of indiPtObje) {
@@ -317,13 +316,13 @@ function showDetail(id, pushHistory = true) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Ehepartner &amp; Kinder</div>
-      <button class="section-add" data-pid="${id}" onclick="showAddSpouseFlow(this.dataset.pid)">+ Ehepartner</button>
+      <button class="section-add" data-action="showAddSpouseFlow" data-pid="${id}">+ Ehepartner</button>
     </div>`;
   for (const famId of p.fams) {
     const fam = AppState.db.families[famId];
     if (!fam) continue;
     const marriageLabel = fam.marr.date ? fam.marr.date : famId;
-    html += `<div class="family-nav-row" onclick="showFamilyDetail('${famId}')">
+    html += `<div class="family-nav-row" data-action="showFamilyDetail" data-id="${famId}">
       <span class="fnr-label"><span class="fnr-icon">⚭</span> Familie · ${esc(marriageLabel)}</span>
       <span class="row-arrow">›</span>
     </div>`;
@@ -335,7 +334,7 @@ function showDetail(id, pushHistory = true) {
       if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''), famId);
     }
     html += `<div style="display:flex;justify-content:flex-end;padding:2px 0 8px">
-      <button class="section-add" data-fid="${famId}" onclick="showAddChildFlow(this.dataset.fid)">+ Kind</button>
+      <button class="section-add" data-action="showAddChildFlow" data-fid="${famId}">+ Kind</button>
     </div>`;
   }
   html += `</div>`;
@@ -344,18 +343,17 @@ function showDetail(id, pushHistory = true) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Eltern</div>
-      <button class="section-add" data-pid="${id}" onclick="showAddParentFlow(this.dataset.pid)">+ Elternteil</button>
+      <button class="section-add" data-action="showAddParentFlow" data-pid="${id}">+ Elternteil</button>
     </div>`;
   for (const fref of p.famc) {
     const famId = typeof fref === 'string' ? fref : fref.famId;
     const fam = AppState.db.families[famId];
     if (!fam) continue;
     html += `<div class="family-nav-row" style="display:flex;align-items:center;gap:6px">
-      <span class="fnr-label" style="flex:1;cursor:pointer" onclick="showFamilyDetail('${famId}')"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
-      <button class="unlink-btn" data-fid="${famId}" data-pid="${id}"
-        onclick="unlinkMember(this.dataset.fid, this.dataset.pid)"
+      <span class="fnr-label" data-action="showFamilyDetail" data-id="${famId}" style="flex:1;cursor:pointer"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
+      <button class="unlink-btn" data-action="unlinkMember" data-fid="${famId}" data-pid="${id}"
         title="Aus Herkunftsfamilie austragen">×</button>
-      <span class="row-arrow" style="cursor:pointer" onclick="showFamilyDetail('${famId}')">›</span>
+      <span class="row-arrow" data-action="showFamilyDetail" data-id="${famId}" style="cursor:pointer">›</span>
     </div>`;
     for (const pid of [fam.husb, fam.wife]) {
       if (!pid) continue;
