@@ -94,8 +94,22 @@ let changed = false;  // Ungespeicherte Änderungen?
   media: [{ file:'C:\\Fotos\\test.jpg', title:'Portrait', _extra:[] }],
 
   // Familien
-  famc: [{ famId:'@F1@', frel:'birth', mrel:'birth',
-           frelSour:'@S1@', frelSourExtra:[], mrelSour:'', mrelSourExtra:[] }],
+  famc: [{
+    famId:       '@F1@',
+    pedi:        'birth',        // GEDCOM 5.5.1 PEDI-Wert: birth|adopted|foster|sealing|''
+    frel:        'birth',        // Verhältnis zum Vater (intern; aus PEDI oder _FREL)
+    mrel:        'birth',        // Verhältnis zur Mutter (intern; aus PEDI oder _MREL)
+    frelSeen:    true,           // _FREL war im Original vorhanden
+    mrelSeen:    true,           // _MREL war im Original vorhanden
+    // Quellen direkt unter FAMC (GEDCOM 5.5.1-konform):
+    sourIds:     ['@S1@'],       // Quell-IDs (2 SOUR unter FAMC)
+    sourPages:   {'@S1@':'S.3'}, // PAGE-Angaben je Quelle
+    sourQUAY:    {'@S1@':'2'},   // QUAY-Werte je Quelle
+    sourExtra:   {},             // verbatim Extras je Quelle
+    // Legacy (Ancestris _FREL/_MREL-Format — nur beim Lesen alter Dateien):
+    frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[],
+    mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[]
+  }],
   fams: ['@F2@'],                        // Elternteil in Familie
 
   // Metadaten
@@ -138,12 +152,14 @@ let changed = false;  // Ungespeicherte Änderungen?
     }
   ],
 
-  // Kinder-Beziehungstypen
+  // Kinder-Beziehungstypen (FAM-Seite — nur beim Lesen; Writer schreibt nur noch auf INDI-Seite)
+  // Beim Parse-Post-Processing wird FAM-Seite in INDI-Seite (famc) gemergt wenn INDI-Seite leer.
   childRelations: {
     '@I005@': {
       frel:'birth', mrel:'birth',
-      frelSour:'', frelSeen:false, frelSourExtra:[],
-      mrelSour:'', mrelSeen:false, mrelSourExtra:[],
+      frelSeen:false, mrelSeen:false,
+      frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[],
+      mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[],
       sourIds:[], sourPages:{}, sourQUAY:{},
       sourExtra:{},   // verbatim lv=3 unter 2 SOUR in CHIL-Kontext
       sourMedia:{}    // OBJE-Struktur unter 2 SOUR in CHIL-Kontext

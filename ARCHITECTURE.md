@@ -255,7 +255,7 @@ const val = (m[3] || '').replace(/^ /, '').trimEnd();  // genau 1 GEDCOM-Delimit
 | 2 | `cur._passthrough[]` | INDI / FAM / SOUR | Unbekannte lv=1 Tags + Sub-Trees; NAME-Kontext lv≥2 (NICK etc.) |
 | 3 | `ev._extra[]` / `marr._extra[]` / `birth._extra[]` etc. | Event-Kontexte | Unbekannte lv=2 Tags in Events |
 | 4 | `ev.addrExtra[]` / `r.addrExtra[]` | ADDR-Kontext | Sub-Tags von ADDR: CITY, POST, CONT, _STYLE, _MAP, _LATI, _LONG |
-| 5 | `frelSourExtra[]` / `mrelSourExtra[]` | FAMC + FAM CHIL | 2.+ SOUR unter _FREL/_MREL + deren 4-Level-Kinder |
+| 5 | `frelSourExtra[]` / `mrelSourExtra[]` | FAMC + FAM CHIL | 2.+ SOUR unter _FREL/_MREL + deren 4-Level-Kinder (**Legacy** — Ancestris-Format; beim Schreiben in sourIds aufgelöst, ADR-014) |
 | 6 | `sourceExtra{}` | SOUR-Refs in Events | Verbatim lv=3 Tags unter `2 SOUR @ID@` in Event-Kontext (außer PAGE/QUAY/NOTE/OBJE) |
 | 7 | `topSourceExtra{}` | INDI lv=1 SOUR | Unbekannte lv=2 Tags unter `1 SOUR @ID@` direkt auf INDI |
 | 8 | `media._extra[]` | OBJE (inline) | Unbekannte Tags unter OBJE/FILE-Block |
@@ -377,6 +377,50 @@ fullPath (API-Aufruf) = od_base_path + '/' + m.file
 - `cfg_photo_base` / `cfg_doc_base` — Basispfad-Konfigurationsfelder (entfernt in sw v110)
 
 **Migration (sw v110):** `_odMigrateIfNeeded()` — einmalig beim ersten `openSettings()`-Aufruf; konvertiert alte IDB-Struktur; `_odStripBaseFromPaths()` bereinigt m.file-Werte.
+
+---
+
+### ADR-014: PEDI statt _FREL/_MREL für Eltern-Kind-Verhältnis (sw v121)
+**Entscheidung:** Eltern-Kind-Verhältnistyp wird als GEDCOM 5.5.1-Standard `PEDI` unter `FAMC` geschrieben statt als Ancestris-Extension `_FREL`/`_MREL`.
+
+**Motivation:** Ancestris-Kompatibilität nicht mehr erforderlich; Standard-Kompatibilität mit FamilySearch, GRAMPS, Ancestry etc. wichtiger.
+
+**GEDCOM 5.5.1-Ziel-Format:**
+```
+1 FAMC @Fxx@
+2 PEDI birth            ← Standard-Enum: birth | adopted | foster | sealing
+2 SOUR @Sxx@            ← Quelle direkt unter FAMC (Standard-konform)
+3 PAGE S.42
+3 QUAY 2
+```
+
+**Wert-Mapping `_toPedi(v)` in `gedcom-writer.js`:**
+| Eingang (beliebig) | PEDI-Output |
+|---|---|
+| birth, leiblich, biologisch, natürlich | birth |
+| adopted, adoptiert, adoption | adopted |
+| foster, pflegekind, pflege | foster |
+| sealing | sealing |
+| unbekannt / leer / anderes | birth (Default) |
+
+**Parser-Verhalten (Backward-Compat):**
+- Liest `PEDI` → setzt `fref.pedi`, `fref.frel`, `fref.mrel`
+- Liest `_FREL`/`_MREL` weiterhin (für alte Dateien) — hat Vorrang vor PEDI
+- Post-Processing-Merge: FAM-side `childRelations` → INDI-side `famc` wenn INDI-Seite leer
+
+**Writer-Verhalten:**
+- `frel == mrel` (Normalfall): schreibt `2 PEDI <wert>`
+- `frel ≠ mrel` (seltener Sonderfall): schreibt `_FREL`/`_MREL` (kein Datenverlust)
+- Quellen aus `sourIds`+`frelSour`+`mrelSour` dedupl. als `2 SOUR` direkt unter FAMC
+- `CHIL`-Block im FAM-Record ohne Sub-Tags (Verhältnis nur auf INDI-Seite)
+
+**Test-Strategie:** Idempotenz-Test (`test_idempotency.html`) — Strategie B:
+```
+Original → parse() → write() → text1 → parse() → write() → text2
+                                                   ↓
+                                             text1 === text2 ?
+```
+Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output.
 
 ---
 

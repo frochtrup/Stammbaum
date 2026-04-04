@@ -9,6 +9,29 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — PEDI-Migration + Eltern-Kind-Quellen (sw v121–v124)
+
+- **sw v121** `feat`: PEDI statt `_FREL`/`_MREL` — GEDCOM 5.5.1 Standard für Eltern-Kind-Verhältnis
+  - `gedcom-parser.js`: `PEDI` unter `FAMC` einlesen; `pedi`-Feld in FAMC-Objekt; Post-Processing-Merge FAM→INDI (`childRelations` in `famc` kopieren wenn INDI-Seite leer)
+  - `gedcom-writer.js`: `_toPedi()` Mapping (deutsch/englisch → `birth|adopted|foster|sealing`); FAMC schreibt `2 PEDI` statt `2 _FREL`/`2 _MREL`; bei frel≠mrel Fallback auf `_FREL`/`_MREL`; Quellen als `2 SOUR` direkt unter FAMC (GEDCOM 5.5.1-konform); CHIL-Block ohne Sub-Tags
+  - `test_idempotency.html`: Idempotenz-Test (Strategie B: parse→write→parse→write, vergleiche text1==text2) mit Migrationsreport
+  - Ergebnis auf 2811 Personen: BESTANDEN; 622×PEDI birth, 0×_FREL/_MREL, 0 Datenverlust
+
+- **sw v122** `feat`: UI für PEDI — Dropdown in Familien-Ansicht, Label in Personen-Ansicht
+  - `ui-views-family.js`: Kinder-Block zeigt inline `<select>` für PEDI (leiblich/adoptiert/Pflegekind/Sealing); `savePedi()` schreibt direkt in `famc`-Eintrag
+  - `ui-views-person.js`: Eltern-Rolle zeigt Suffix ` · adoptiert` / ` · Pflegekind` / ` · Sealing` wenn PEDI nicht `birth`
+  - `ui-forms.js`: `famc.push()` mit vollständigem Objekt (pedi, frelSeen, mrelSeen, sourIds etc.)
+
+- **sw v123** `feat`: Quellen für Kind-Verhältnis (FAMC) — Dialog mit PEDI + Quellenangabe
+  - `index.html`: `#modalChildRel` mit PEDI-Dropdown und Quellen-Widget (src-tags/picker/PAGE/QUAY)
+  - `ui-views-family.js`: `showChildRelDialog()` / `saveChildRelDialog()`; 📎-Button neben PEDI-Dropdown (öffnet Modal)
+  - `ui-forms.js`: PAGE/QUAY-Felder im `src-Widget` auch für Prefix `cr` (Kind-Verhältnis)
+
+- **sw v124** `fix`: Quell-Tags statt Büroklammer bei Kind-Verhältnis
+  - `ui-views-family.js`: zeigt `src-tag`-Pillen (gold) für zugewiesene Quellen; ohne Quellen: gestrichelter `+ Q`-Button; 📎 ist Medien-Konvention und wird hier nicht verwendet
+
+---
+
 ### Session 2026-04-04 — OneDrive-Pfad-Architektur: od_base_path (sw v107–v112)
 
 - **sw v107** `fix`: OneDrive-Medien via `@microsoft.graph.downloadUrl` laden

@@ -55,6 +55,7 @@ body
 │   ├── #modalRelPicker     Beziehungs-Picker: Person suchen/wählen oder neu erstellen (v1.1)
 │   ├── #modalRepo          Archiv bearbeiten/erstellen (v1.2)
 │   ├── #modalRepoPicker    Archiv-Picker im Quellen-Formular (v1.2)
+│   ├── #modalChildRel      Kind-Verhältnis bearbeiten (PEDI-Dropdown + Quellen-Widget)
 │   ├── #modalOneDrive      OneDrive-Ordner-Browser (Fotos importieren / Datei wählen / Ordner wählen)
 │   ├── #modalLightbox      Vollbild-Foto-Overlay + „Als Hauptfoto setzen"-Button
 │   ├── #modalMenu          ☰ Menü (Speichern, Backup, neue Datei, OneDrive-Aktionen)
@@ -196,6 +197,26 @@ body.desktop-mode:
 | `.tree-yr` | Geburts-/Sterbejahr in Tree-Karte (0.68rem) |
 | `.landing-tagline` | Tagline auf Landing-Screen |
 | `.btn-link` | Textlink-Button (Hilfe-Link auf Landing-Screen) |
+
+### Badge- und Symbol-Konventionen
+
+Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
+
+| Symbol / Klasse | Bedeutung | Kontext |
+|---|---|---|
+| `📎` | Medien-Anhang vorhanden (OBJE, Foto, Dokument) | Personen-/Familien-Liste, Detail-Hero |
+| `.src-tag` (gold pill) | Quellen-Zitat zugewiesen — zeigt `s.abbr` oder `s.title.slice(0,18)` | Kindbeziehungs-Zeile, Events mit Quellen |
+| `+ Q` (gestrichelt) | Quellen-Zitat hinzufügen — CTA wenn noch keine Quelle zugewiesen | Kindbeziehungs-Zeile, Events ohne Quellen |
+| `.src-badge` (`§N`) | Kompakter Quellen-Verweis inline in fact-row; N = fortlaufende Nr. im Dialog | fact-row rechts |
+| `½` (`.tree-half-badge`) | Halbgeschwister — Kind gehört zu anderer Ehe des Zentrum-Elternteils | Baum-Karte (bottom-right) |
+| `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Baum |
+| `◑` | Fan-Chart-Umschalter in Topbar | Baum-Topbar |
+
+**Regeln:**
+- `📎` steht **ausschließlich** für Medien/OBJE — nie für Quellen
+- Quellen werden immer als `.src-tag`-Pills (im Dialog) oder `.src-badge` `§N` (inline) dargestellt
+- `+ Q` erscheint nur wenn wirklich 0 Quellen zugewiesen sind; verschwindet nach erstem Hinzufügen
+- `.src-tag` ist klickbar und öffnet den zugehörigen Quellen-Dialog (z.B. `showChildRelDialog`)
 
 ### Geschlecht im Baum
 ```css
