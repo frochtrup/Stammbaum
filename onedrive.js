@@ -256,14 +256,15 @@ async function openSettings() {
   const odSection = document.getElementById('set-od-section');
   if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
   const basePath = await _odGetBasePath();
+  const baseEl = document.getElementById('set-base-path');
+  if (baseEl) baseEl.textContent = basePath || '—';
   // Foto-Ordner
   const photoFolder = await idbGet('od_photo_folder').catch(() => null);
   const nameEl  = document.getElementById('set-photo-name');
   const clearEl = document.getElementById('set-photo-clear');
   const cntEl   = document.getElementById('set-photo-count');
   if (nameEl) nameEl.textContent = photoFolder
-    ? (basePath ? basePath + '/' : '') + (photoFolder.relPath ?? photoFolder.name ?? '')
-    : 'nicht konfiguriert';
+    ? (photoFolder.relPath || photoFolder.name || '.') : 'nicht konfiguriert';
   if (clearEl) clearEl.style.display = photoFolder ? '' : 'none';
   if (cntEl) {
     let pCount = 0, fCount = 0;
@@ -277,8 +278,7 @@ async function openSettings() {
   const dClearEl = document.getElementById('set-doc-clear');
   const dCntEl   = document.getElementById('set-doc-count');
   if (dNameEl) dNameEl.textContent = docFolder
-    ? (basePath ? basePath + '/' : '') + (docFolder.relPath ?? docFolder.name ?? '')
-    : 'nicht konfiguriert';
+    ? (docFolder.relPath || docFolder.name || '.') : 'nicht konfiguriert';
   if (dClearEl) dClearEl.style.display = docFolder ? '' : 'none';
   if (dCntEl) dCntEl.textContent = '';
 }
