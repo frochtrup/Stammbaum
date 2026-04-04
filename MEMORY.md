@@ -21,8 +21,8 @@
 - `ui-forms.js` — Formulare Person/Familie/Quelle/Archiv/Event
 - `ui-media.js` — Medien Add/Edit/Delete/Browser
 - `ui-fanchart.js` — Fan Chart (SVG)
-- `onedrive.js` — OAuth, Foto-Import, Ordner-Browser, Filemap
-- `sw.js` — Service Worker (Network-first, offline, Cache v94)
+- `onedrive.js` — OAuth, Foto-Import, Ordner-Browser, path-basiertes Medien-Laden
+- `sw.js` — Service Worker (Network-first, offline, Cache v99)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -35,28 +35,32 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-03
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-04
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 in Entwicklung — Branch `v5-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
-- **Aktuelle sw-Version: v94** / Cache: `stammbaum-v94`
-- Git: Branch `v5-dev`; letzter Commit: 98b6429
+- **Aktuelle sw-Version: v99** / Cache: `stammbaum-v99`
+- Git: Branch `v5-dev`; letzter Commit: eabf3b3
 
-**Session 2026-04-03 — Refactoring: ui-views.js → 5 Module (sw v92–v94):**
-- Refactor: `ui-views.js` aufgeteilt in 5 Module (ui-views-person/family/source/tree.js)
-- Fix Bug 7: doppelter `treeNavBack()` — überflüssiger ArrowLeft-Handler in `ui-forms.js` entfernt (sw v93)
-- Fix Bug 7: `goBack()` legt keinen doppelten History-Eintrag an (sw v92)
-- Fix Bug 5: Suchzeile schließt nahtlos an Topbar an (resize-Handler `_updateTopbarH()` sofort)
+**Session 2026-04-04 — Medien-Handling Überarbeitung (sw v96–v99):**
+- Relativer OneDrive-Pfad: `_odPickSelectFile` speichert `fullPath` direkt (kein `cfg_photo_base`-Prefix)
+- `m.file` ist Single Source of Truth — `od_filemap` nur noch Legacy-Fallback (sw v99)
+- `_odGetMediaUrlByPath(path)` — path-based OneDrive API (`/drive/root:/{path}:/content`)
+- Bevorzugtes Medium (`_PRIM Y`) in Titelleiste Person/Familie/Quelle
+- Edit-Dialog zieht Basispfad ab → zeigt + speichert relativen Pfad
+- Bug fix: `_odEditPickMode` zeigte keine Dateien (sw v97)
+- `↑ Übergeordneter Ordner`-Button im Picker via `parentReference`-API
+
+**Session 2026-04-03 — Refactoring: ui-views.js → 5 Module + ui-forms.js (sw v92–v95):**
+- Refactor: `ui-views.js` aufgeteilt in 5 Module (ui-views-person/family/source/tree.js) — sw v94
+- `showSourceDetail()` aus `ui-forms.js` in `ui-views-source.js` ausgelagert — sw v95
+- Fix Bug 7: doppelter `treeNavBack()` — sw v93; `goBack()` kein doppelter History-Eintrag — sw v92
+- Fix Bug 5: Suchzeile schließt nahtlos an Topbar an — sw v92
 
 **Session 2026-03-31 — OneDrive + Filemap-Fixes (sw v86–v91):**
-- Fix: Filemap-Index-Sync — Foto wird nach OneDrive-Auswahl korrekt geladen (sw v91)
-- Fix: OneDrive-Picker gibt absoluten Pfad zurück (sw v90)
-- Fix: Medien-Basispfad auto-erkannt aus GEDCOM-Importen (sw v89)
-- Fix: Kamera/Galerie übernimmt Basispfad + vollständiger Pfad für alle Medien
-- Fix: OneDrive-Picker startet in konfiguriertem Ordner
-- Fix: Einstellungen immer zugänglich; Medien-Basispfad Pre-fill korrekt; Baum Auto-Fit (sw v86)
+- Fix: Filemap-Index-Sync; OneDrive-Picker gibt vollständigen Pfad zurück; Basispfad auto-erkannt
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 
@@ -96,17 +100,21 @@ Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je 
 - Verbatim Passthrough: `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR (ADR-012)
 - **Geschlecht im Baum**: `data-sex="M/F/U"` Attribut + CSS `border-left` Farbe
 - **sourceMedia{}**: OBJE unter SOUR-Zitierungen strukturiert (v4-dev sw v45)
-- **OneDrive Dokumente-Ordner**: `od_doc_filemap` — Dateiname-Mapping für auto-Vorschau (sw v49)
+- **Medien-Pfad als Wahrheitsquelle**: `m.file` = relativer OneDrive-Pfad; Laden via `_odGetMediaUrlByPath(path)` (ADR-013, sw v99)
+- **`od_filemap` DEPRECATED** (sw v99): war Index→fileId-Mapping; nur noch Legacy-Fallback; `od_doc_filemap` ebenfalls deprecated
+- **Bevorzugtes Medium**: `m.prim` / `_PRIM Y` → Hero in Detailansicht; Fallback auf erstes Medium (sw v96)
+- **OneDrive Picker**: startet aus `od_default_folder`; `↑ Übergeordneter Ordner` via `parentReference`-API (sw v98)
 - **Familien-OBJE**: `f.marr.media[]` mit Feld `titl` (nicht `title`) — NICHT in `f.marr._extra`
 - **Baum Tastatur**: `_treeNavTargets{}` pro `showTree()`-Aufruf; `_initTreeKeys()` einmalig
 - **Baum History**: `_treeHistory[]` + `_treeHistoryPos`; `←` ruft `treeNavBack()` auf
 - **State-Management**: `AppState` (db, currentPersonId, changed…) + `UIState` (_treeScale, _treeHistory…) in gedcom.js
 
 ## IDB-Schlüssel (OneDrive-Ordner)
-- `od_default_folder`: `{ folderId, folderName }` — Foto-Ordner
+- `od_default_folder`: `{ folderId, folderName }` — Foto-Ordner (Picker-Startpunkt)
 - `od_doc_folder`: `{ folderId, folderName }` — Dokumente-Ordner
-- `od_filemap`: `{ persons:{}, families:{}, sources:{} }` — fileId-Mappings
-- `od_doc_filemap`: `{ filename.toLowerCase(): fileId }` — Dokumente-Index
+- `od_filemap`: `{ persons:{}, families:{}, sources:{} }` — **DEPRECATED** (sw v99): fileId-Index-Mapping; nur Legacy-Fallback
+- `od_doc_filemap`: `{ filename.toLowerCase(): fileId }` — **DEPRECATED** (sw v99): Basename→fileId; ersetzt durch path-based API
+- `cfg_photo_base`, `cfg_doc_base` — Basispfad-Konfiguration (für auto-Erkennung + Edit-Dialog-Normalisierung)
 
 ## Sanduhr-Karten-Dimensionen
 - Regulär: W=96, H=64 · Zentrum: CW=160, CH=80

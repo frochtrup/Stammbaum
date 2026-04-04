@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v94 / Cache: `stammbaum-v94`
+**Aktuelle sw-Version:** v99 / Cache: `stammbaum-v99`
 
 ---
 
@@ -100,13 +100,18 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 #### Fehler Desktop — ✅ ABGESCHLOSSEN (sw v92–v93)
 - [x] Pfeil links: ein Tastendruck → zwei Schritte zurück ✅ (sw v92–v93)
 
-#### Refactoring: ui-views.js Split — ✅ ABGESCHLOSSEN (sw v94)
-- [x] `ui-views.js` (1963 Z.) aufgeteilt in 5 Module:
-  - `ui-views.js` (279 Z.) — gemeinsame Hilfsfunktionen
-  - `ui-views-person.js` (392 Z.) — Personen-Detailansicht
-  - `ui-views-family.js` (382 Z.) — Familien-Detailansicht
-  - `ui-views-source.js` (273 Z.) — Quellen-Detailansicht
-  - `ui-views-tree.js` (651 Z.) — Sanduhr-Baum + Fan Chart
+#### Refactoring: ui-views.js Split — ✅ ABGESCHLOSSEN (sw v94–v95)
+- [x] `ui-views.js` (1963 Z.) aufgeteilt in 5 Module (sw v94)
+- [x] `showSourceDetail()` aus `ui-forms.js` in `ui-views-source.js` ausgelagert (sw v95)
+
+#### Medien-Handling Überarbeitung — ✅ ABGESCHLOSSEN (sw v96–v99)
+- [x] Relative OneDrive-Pfade: `_odPickSelectFile` speichert `fullPath` direkt (sw v96)
+- [x] Bevorzugtes Medium (`_PRIM Y`) in Titelleiste Person/Familie/Quelle (sw v96)
+- [x] Edit-Dialog zieht `cfg_photo_base` ab → relativer Pfad angezeigt + gespeichert (sw v97)
+- [x] Bug fix: `_odEditPickMode` zeigte keine Dateien (sw v97)
+- [x] `↑ Übergeordneter Ordner`-Button im Picker (sw v97–v98)
+- [x] `_odGetMediaUrlByPath(path)` — path-based OneDrive API, ein Pfad = eine Datei (sw v99)
+- [x] `od_filemap` nur noch Legacy-Fallback; Pfad in `m.file` ist Single Source of Truth (sw v99)
 
 ---
 

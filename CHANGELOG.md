@@ -9,6 +9,52 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Medien-Handling Überarbeitung (sw v96–v99)
+
+**Relativer OneDrive-Pfad als einzige Wahrheitsquelle**
+
+- **sw v96** `feat`: Medien — relative OneDrive-Pfade + bevorzugtes Medium in Titelleiste
+  - `onedrive.js`: `_odPickSelectFile` speichert `fullPath` direkt (kein `cfg_photo_base`-Prefix mehr)
+  - `_odPickBasePath` / `_odPickRootName` und deren IDB-Reads entfernt
+  - `ui-media.js`: `openAddMediaDialog` startet mit leerem Dateifeld
+  - `ui-views-person.js`: Hero lädt bevorzugtes Medium (`_PRIM Y`) oder erstes (`_primIdx`)
+  - `ui-views-family.js`: Hero lädt bevorzugtes Medium aus `marr.media`, Fallback `f.media`
+  - `ui-views-source.js`: `_srcPrimIdx` berechnet, Ladereihenfolge prim-first, Hero nur für prim
+
+- **sw v97** `fix`: Edit-Dialog + Picker alle Ordner
+  - `ui-media.js`: `openEditMediaDialog` zieht `cfg_photo_base/cfg_doc_base` asynchron ab →
+    bestehende absolute Pfade werden beim Bearbeiten als relativer Pfad angezeigt und gespeichert
+  - `onedrive.js`: Bug fix — `_odEditPickMode` zeigte keine Dateien (nur `_odPickMode` wurde geprüft);
+    beide Modi zeigen jetzt Dateiliste + korrekten Titel
+  - `onedrive.js`: `↑ Übergeordneter Ordner`-Button wenn Picker aus Standard-Ordner gestartet wurde
+
+- **sw v98** `fix`: Übergeordneter Ordner statt root
+  - `_odPickStartFolderId` speichert Start-Ordner; `_odShowAllFolders()` fragt
+    `parentReference` per API → navigiert zu übergeordnetem Ordner (bleibt relativ)
+
+- **sw v99** `refactor`: Pfad als einzige Wahrheitsquelle — kein Filemap für Anzeige
+  - `onedrive.js`: `_odGetMediaUrlByPath(path)` — lädt Datei direkt per OneDrive path-based API
+    (`GET /drive/root:/{path}:/content`), kein Index-Mapping nötig
+  - `onedrive.js`: `_odGetSourceFileUrl` — Priorität 1) Pfad direkt, 2) Legacy `od_filemap`
+  - `ui-media.js`: `_asyncLoadMediaThumb(thumbId, idbKey, filePath)` — Pfad primär, filemap Legacy
+  - `ui-media.js`: Edit-Dialog-Vorschau ebenfalls pfadbasiert
+  - `ui-views-person.js` + `ui-views-family.js`: Hero + Thumbnails übergeben `m.file`
+  - **Ergebnis**: Anzeigbild = geklicktes Bild = GEDCOM-Pfad — ein Pfad, eine Datei
+  - `od_filemap` bleibt nur noch als Legacy-Fallback (Altdaten mit gespeicherten fileIds)
+
+*Aktuelle sw-Version: v99 / Cache: stammbaum-v99*
+
+---
+
+### Session 2026-04-03 — Refactoring: ui-forms.js aufgeteilt (sw v95)
+
+- **`showSourceDetail()`** aus `ui-forms.js` in `ui-views-source.js` ausgelagert
+- Debug-Code bereinigt
+
+*Aktuelle sw-Version: v95 / Cache: stammbaum-v95*
+
+---
+
 ### Session 2026-04-03 — Refactoring: ui-views.js Split (sw v94)
 
 - **`ui-views.js`** (1963 Z.) aufgeteilt in 5 Module:
