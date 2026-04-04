@@ -83,11 +83,14 @@ markChanged(); updateStats(); renderTab();
 
 ```
 IDB-Keys: 'stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename'
-          'photo_<id>_N'               ← Medien-Cache (blob base64)
-          'od_filemap'                 ← LEGACY: Index→fileId-Mapping (sw v99 deprecated)
-          'od_doc_filemap'             ← LEGACY: Basename→fileId für Dokumente-Ordner
-          'od_doc_folder', 'od_default_folder'
-          'cfg_photo_base', 'cfg_doc_base'  ← Basispfad-Konfiguration (nur noch Anzeige/Erkennung)
+          'img:<filePath>'             ← Medien-Cache (base64 Data-URL), pfad-basiert (sw v105)
+          'od_base_path'              ← absoluter OneDrive-Pfad des GED-Ordners (sw v110/v111)
+          'od_photo_folder'           ← { id, name, relPath } — Foto-Ordner relativ zu od_base_path (sw v110)
+          'od_docs_folder'            ← { id, name, relPath } — Dok-Ordner relativ zu od_base_path (sw v110)
+          'od_default_folder'         ← LEGACY: { folderId, folderName, folderPath } — Foto-Ordner (sw v99)
+          'od_doc_folder'             ← LEGACY: { folderId, folderName, folderPath } — Dok-Ordner
+          'od_filemap'                ← LEGACY: Index→fileId-Mapping (sw v99 deprecated)
+          'od_doc_filemap'            ← LEGACY: Basename→fileId für Dokumente-Ordner (deprecated)
 ```
 
 **Warum IDB:** localStorage-Limit ~5–10 MB; MeineDaten.ged ≈ 5 MB war grenzwertig.
@@ -327,30 +330,53 @@ restoreFileHandle() (bei Seitenreload)
 
 ---
 
-### ADR-013: Pfad-basiertes Medien-Laden — ein Pfad, eine Datei (sw v99)
-**Entscheidung:** `m.file` (der GEDCOM `FILE`-Tag-Wert) ist die einzige Wahrheitsquelle für Medien. OneDrive-Dateien werden direkt per relativem Pfad über die Graph-API geladen — kein separates fileId-Mapping nötig.
+### ADR-013: Pfad-basiertes Medien-Laden + od_base_path-Architektur (sw v99 → v110/v111)
+**Entscheidung:** `m.file` ist die einzige Wahrheitsquelle für Medien. Werte in `m.file` sind **relative Pfade** bezogen auf `od_base_path` (dem OneDrive-Ordner der GED-Datei).
 
-**Ladekette:**
+**Pfad-Konzept:**
 ```
-1. IDB-Cache ('photo_<id>_N')          ← schnellster Zugriff, persistent
-2. _odGetMediaUrlByPath(m.file)        ← OneDrive path-based API
-     GET /me/drive/root:/{path}:/content
-3. _odGetPhotoUrl(idbKey)              ← Legacy: od_filemap Index→fileId (Altdaten)
+od_base_path          = absoluter OneDrive-Pfad des GED-Datei-Ordners
+                        (auto-abgeleitet via parentReference.path beim Laden — sw v111)
+                        z.B. "Privat/Genealogie"
+
+m.file (GEDCOM FILE)  = relativer Pfad ab od_base_path
+                        z.B. "Pictures/Hans_1890.jpg"
+
+fullPath (API-Aufruf) = od_base_path + '/' + m.file
+                        z.B. "Privat/Genealogie/Pictures/Hans_1890.jpg"
 ```
 
-**Pfad-Format:** Relativer Pfad ab OneDrive-Root, z.B. `Stammbaum/Fotos/Hans_1890.jpg`.
-Beim Picker-Aufruf wird `fullPath` (aus `_odFolderStack` + Dateiname) direkt in `m.file` geschrieben.
+**Laden (2-Schritt via @microsoft.graph.downloadUrl — sw v107):**
+```
+1. _odGetMediaUrlByPath(relPath)
+   a. Metadaten: GET /me/drive/root:/{fullPath}?$select=@microsoft.graph.downloadUrl
+   b. Fetch downloadUrl (kein Auth-Header — CDN-URL, kein CORS-Problem)
+   c. FileReader → base64 Data-URL → IDB-Cache ('img:' + relPath) + Session-Cache
+2. IDB-Cache ('img:' + relPath)          ← persistent (sw v105: pfad-basierte Keys)
+3. Legacy: od_filemap Index→fileId       ← nur für Altdaten
+```
 
-**Konsequenzen:**
-- Anzeigbild = geklicktes Bild = GEDCOM-Pfad — keine Divergenz möglich
-- `od_filemap` (`{ persons:{}, families:{}, sources:{} }`) ist **deprecated** (sw v99) — wird nur noch als Legacy-Fallback für ältere Datensätze ausgewertet
-- `od_doc_filemap` (Basename→fileId) ebenfalls **deprecated** — direkter Pfadzugriff ersetzt Basename-Abgleich
-- Cleanup (`od_filemap` entfernen) als spätere Aufgabe geplant
+**Picker-Navigation (sw v110):**
+- Startet aus `od_photo_folder` / `od_docs_folder` (relPath relativ zu od_base_path)
+- `↑ Übergeordneter Ordner`: via `parentReference`-API; kann über od_base_path hinaus navigieren
+- Gewählter Pfad → `relPath = _odToRelPath(fullPath, od_base_path)` → in `m.file` geschrieben
 
-**Picker-Navigation:**
-- Startet aus konfiguriertem Standard-Ordner (`od_default_folder`)
-- `↑ Übergeordneter Ordner`: navigiert via `parentReference`-API zum übergeordneten Ordner
-- Bleibt damit innerhalb der relativen Pfadstruktur (kein Sprung zu OneDrive-Root)
+**Kamera-Upload:**
+- `_addMediaDefaultFolderPath` = `od_photo_folder.relPath` (relativ)
+- Upload-Ziel: `od_base_path + '/' + relPath + '/' + filename`
+- `m.file` = `relPath + '/' + filename` (relativ, konsistent mit Picker)
+
+**IDB-Schlüssel (OneDrive, aktuell):**
+- `od_base_path` — absoluter Pfad (String), auto-gesetzt beim GED-Laden
+- `od_photo_folder` — `{ id, name, relPath }` — Foto-Ordner
+- `od_docs_folder` — `{ id, name, relPath }` — Dokumente-Ordner
+
+**Deprecated:**
+- `od_default_folder` / `od_doc_folder` — alte Struktur mit `folderPath` (absolut)
+- `od_filemap` / `od_doc_filemap` — fileId-Index-Mapping
+- `cfg_photo_base` / `cfg_doc_base` — Basispfad-Konfigurationsfelder (entfernt in sw v110)
+
+**Migration (sw v110):** `_odMigrateIfNeeded()` — einmalig beim ersten `openSettings()`-Aufruf; konvertiert alte IDB-Struktur; `_odStripBaseFromPaths()` bereinigt m.file-Werte.
 
 ---
 

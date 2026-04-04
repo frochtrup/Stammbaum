@@ -9,6 +9,50 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — OneDrive-Pfad-Architektur: od_base_path (sw v107–v112)
+
+- **sw v107** `fix`: OneDrive-Medien via `@microsoft.graph.downloadUrl` laden
+  - **Ursache**: `/content`-Redirect (302 → CDN) schlägt mit CORS-Fehler fehl wenn Auth-Header
+    mitgesendet wird; CDN-URL erfordert keinen Auth-Header
+  - `_odGetMediaUrlByPath`: 2-Schritt: Metadaten-GET → `@microsoft.graph.downloadUrl` → Fetch ohne Auth
+  - `_odGetPhotoUrl` (Legacy) + `_odGetSourceFileUrl`: gleicher Fix
+
+- **sw v108** `fix`: Picker-Pfad ohne 'OneDrive'-Prefix + Fallback nur für Windows-Pfade
+  - `_odShowFolder`: `folderPath` filtert `'OneDrive'` konsistent (wie `odImportPhotosFromFolder`)
+    — verhindert `OneDrive/Pictures/foto.jpg` beim Navigieren vom Root aus
+  - `_odGetMediaUrlByPath`: Basename-Fallback nur noch bei `\\`-Pfaden (Windows-GEDCOM)
+    — falscher Pfad im Edit-Dialog zeigt nicht mehr das alte Bild
+
+- **sw v109** `fix`: Ordner-Picker startet bei konfiguriertem Ordner + `parentName`-Fix
+  - `odImportPhotos` / `odSetupDocFolder`: starten beim konfigurierten Ordner (nicht OneDrive-Root)
+  - `_odShowAllFolders`: `parentName` via `/drive/root:`-Regex — verhindert `'root:'` im Pfad
+
+- **sw v110** `refactor`: Pfad-basierte Medien-Architektur — `od_base_path` als einzige absolute Referenz
+  - **Neues Konzept**: `od_base_path` = OneDrive-Pfad des GED-Ordners (absolut, Graph-API-Format)
+  - Alle `m.file`-Werte relativ zu `od_base_path`; Laden: `fullPath = basePath + '/' + relPath`
+  - `od_photo_folder` / `od_docs_folder` ersetzen `od_default_folder` / `od_doc_folder`; speichern `relPath`
+  - `_odGetBasePath()` — lazy-load aus IDB mit Modul-Cache
+  - `_odToRelPath(fullPath, basePath)` — subtrahiert Basispfad
+  - `_odMigrateIfNeeded()` — einmalige Migration: alter `od_default_folder` → neue Struktur + `od_base_path`
+  - `_odStripBaseFromPaths(basePath)` — bereinigt `m.file`-Werte in bestehenden GEDCOM-Daten
+  - `_odUploadMediaFile`: gibt `relPath` zurück (Eingabe, nicht API-Antwort) — keine Pfad-Drift
+  - `odImportPhotosFromFolder`: aktualisiert `f.marr.media` (vorher übersehen) + setzt `od_base_path`
+  - `_addMediaToFilemap`: schreibt nicht mehr in `od_filemap`; nur Session-Cache-Invalidierung
+  - `index.html`: "Lokale Pfade"-Sektion entfernt
+
+- **sw v111** `feat`: `od_base_path` automatisch aus GED-Datei-Ordner ableiten
+  - `odLoadFile`: nach Laden der GED-Datei → `parentReference.path` via Graph-API → `od_base_path`
+  - Kein manuelles Setup mehr nötig; `od_base_path` wird beim ersten Öffnen einer GED-Datei gesetzt
+
+- **sw v112** `fix`: Einstellungen — Startpfad separat, Ordner als relativer Pfad
+  - `index.html`: neues "Startpfad (GED-Ordner)"-Feld (`set-base-path`) über Foto/Dok-Ordner
+  - `openSettings`: befüllt `set-base-path` mit `od_base_path`; Foto/Dok-Ordner zeigen nur `relPath`
+  - Verhindert irreführende doppelte Anzeige (z.B. `Privat/Pictures` als Foto-Ordner statt `Pictures`)
+
+*Aktuelle sw-Version: v112 / Cache: stammbaum-v112*
+
+---
+
 ### Session 2026-04-04 — Medien-Pfad-Mismatch-Fix (sw v106)
 
 - **sw v106** `fix`: Medien-Anzeige repariert — GEDCOM-Pfade ≠ OneDrive-Pfade

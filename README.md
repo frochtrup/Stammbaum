@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 4.0
+# Stammbaum PWA — Version 5.0-dev
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -25,10 +25,14 @@ stammbaum/
 ├── gedcom-parser.js    ← parseGEDCOM(), parseGeoCoord()
 ├── gedcom-writer.js    ← writeGEDCOM(), pushCont()
 ├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
-├── ui-views.js         ← Baum, Detailansichten, Listenrendering
+├── ui-views.js         ← gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
+├── ui-views-person.js  ← Personen-Detailansicht
+├── ui-views-family.js  ← Familien-Detailansicht
+├── ui-views-source.js  ← Quellen-Detailansicht
+├── ui-views-tree.js    ← Sanduhr-Baum + Fan Chart + Tastaturnavigation
 ├── ui-forms.js         ← Formulare Person/Familie/Quelle/Archiv/Event
 ├── ui-media.js         ← Medien Add/Edit/Delete/Browser
-├── onedrive.js         ← OAuth PKCE, Foto-Import, Ordner-Browser, Filemap
+├── onedrive.js         ← OAuth PKCE, Foto-Import, Ordner-Browser, od_base_path-Architektur
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── sw.js               ← Service Worker (offline, Cache v75)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
@@ -165,10 +169,10 @@ stammbaum/
 │  gedcom-parser.js  — parseGEDCOM()           │
 │  gedcom-writer.js  — writeGEDCOM()           │
 │  storage.js        — IDB, Dateiverwaltung    │
-│  ui-views.js       — Baum, Detail, Listen    │
+│  ui-views*.js      — Baum, Detail, Listen    │
 │  ui-forms.js       — Formulare               │
 │  ui-media.js       — Medien                  │
-│  onedrive.js       — OAuth, Fotos, Filemap   │
+│  onedrive.js       — OAuth, Fotos, od_base_path│
 │  sw.js             — Service Worker (offline)│
 │                                              │
 │  State: AppState { db, changed, currentId…} │
@@ -186,7 +190,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta≈0** (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
-**Version 4.0** — März 2026 — Branch `main` · sw v75
+**Version 5.0-dev** — April 2026 — Branch `v5-dev` · sw v112
 
 ---
 
@@ -251,7 +255,7 @@ Ancestris (Mac):
 
 **Voraussetzung (einmalig):** Azure App Registration mit `Files.ReadWrite`-Permission und Redirect-URI `https://[username].github.io/stammbaum/` (kostenlos, ~5 Min. im Azure Portal).
 
-**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `localStorage` · Ordner-Browser für Foto-Import · Dynamisches Foto-Laden (`od_filemap` in IDB, kein vollständiger Download) · Session-Cache für Blob-URLs
+**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `localStorage` · `od_base_path` = GED-Datei-Ordner (auto-abgeleitet) · alle Medienpfade relativ dazu · `@microsoft.graph.downloadUrl` für CORS-freien Foto-Fetch · Session-Cache (Data-URLs, iOS-kompatibel)
 
 ---
 

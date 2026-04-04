@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v106 / Cache: `stammbaum-v106`
+**Aktuelle sw-Version:** v112 / Cache: `stammbaum-v112`
 
 ---
 
@@ -115,6 +115,17 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [x] Kamera-Fotos werden per PUT-API direkt in konfigurierten OneDrive-Ordner hochgeladen (sw v100)
 - [x] `odScanDocFolder` speichert `folderPath` in `od_doc_folder` (sw v100)
 - [x] `_onCamCapture` verwendet `od_default_folder.folderPath` als Ordner-Prefix (sw v100)
+
+#### OneDrive-Pfad-Architektur: od_base_path — ✅ ABGESCHLOSSEN (sw v107–v112)
+- [x] `@microsoft.graph.downloadUrl` statt `/content`-Redirect (CORS-Fix) (sw v107)
+- [x] Picker-Pfad filtert `'OneDrive'`-Prefix konsistent (sw v108)
+- [x] Basename-Fallback nur noch bei `\\`-Pfaden (Windows-GEDCOM) (sw v108)
+- [x] Ordner-Picker startet bei konfiguriertem Ordner (nicht Root) (sw v109)
+- [x] `od_base_path` = einzige absolute Referenz; alle `m.file` relativ dazu (sw v110)
+- [x] `od_photo_folder` / `od_docs_folder` mit `relPath`-Feld (sw v110)
+- [x] Auto-Migration `od_default_folder` → neue Struktur (sw v110)
+- [x] `od_base_path` automatisch aus GED-Datei `parentReference.path` ableiten (sw v111)
+- [x] Einstellungen: Startpfad separat anzeigen; Ordner als relativer Pfad (sw v112)
 
 ---
 
