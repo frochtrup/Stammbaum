@@ -1601,8 +1601,13 @@ body.fc-mode #fcGenBtns { display: flex; }
       <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">
         <!-- Startpfad -->
         <div style="padding:10px 14px;border-bottom:1px solid var(--border-color);background:var(--surface2)">
-          <div style="font-size:0.75rem;color:var(--text-muted)">Startpfad (GED-Ordner)</div>
-          <div id="set-base-path" style="font-size:0.85rem;color:var(--text-dim);margin-top:2px">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">Startpfad (GED-Ordner)</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input id="set-base-path" type="text" placeholder="z.B. Privat/Ahnen/Stammbaum"
+              style="flex:1;font-size:0.85rem;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text)"
+              oninput="odSetBasePath(this.value.trim())">
+          </div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">Relativer OneDrive-Pfad des GED-Ordners</div>
         </div>
         <!-- Foto-Ordner -->
         <div style="padding:12px 14px;border-bottom:1px solid var(--border-color)">

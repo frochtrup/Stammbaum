@@ -257,7 +257,7 @@ async function openSettings() {
   if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
   const basePath = await _odGetBasePath();
   const baseEl = document.getElementById('set-base-path');
-  if (baseEl) baseEl.textContent = basePath || '—';
+  if (baseEl) baseEl.value = basePath || '';
   // Foto-Ordner
   const photoFolder = await idbGet('od_photo_folder').catch(() => null);
   const nameEl  = document.getElementById('set-photo-name');
@@ -281,6 +281,13 @@ async function openSettings() {
     ? (docFolder.relPath || docFolder.name || '.') : 'nicht konfiguriert';
   if (dClearEl) dClearEl.style.display = docFolder ? '' : 'none';
   if (dCntEl) dCntEl.textContent = '';
+}
+
+async function odSetBasePath(val) {
+  const bp = val.replace(/\/+$/, ''); // trailing slash entfernen
+  await idbPut('od_base_path', bp).catch(() => {});
+  _odCurrentBasePath = bp;
+  Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
 }
 
 async function odClearPhotoFolder() {
@@ -425,27 +432,24 @@ async function odLoadFile(itemId, fileName) {
     localStorage.setItem('od_file_name', fileName);
     _processLoadedText(await res.text(), fileName);
     // Startpfad (od_base_path) aus dem Ordner der GED-Datei ableiten
+    // Nur setzen wenn noch kein Wert vorhanden (manueller Wert hat Vorrang)
     try {
-      const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}?$select=id,name,parentReference`, {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      if (metaRes.ok) {
-        const meta = await metaRes.json();
-        const rawPath = meta.parentReference?.path || '';
-        const match   = rawPath.match(/\/drive\/root:\/(.*)/);
-        const basePath = match ? decodeURIComponent(match[1]) : '';
-        console.log('[od_base_path] itemId:', itemId);
-        console.log('[od_base_path] parentReference:', JSON.stringify(meta.parentReference));
-        console.log('[od_base_path] rawPath:', rawPath);
-        console.log('[od_base_path] match:', match);
-        console.log('[od_base_path] basePath →', basePath);
-        showToast('Basispfad: ' + (basePath || '(leer)'));
-        await idbPut('od_base_path', basePath).catch(() => {});
-        _odCurrentBasePath = basePath;
-      } else {
-        console.warn('[od_base_path] meta fetch fehlgeschlagen:', metaRes.status, await metaRes.text());
+      const existing = await idbGet('od_base_path').catch(() => null);
+      if (existing === null || existing === undefined) {
+        const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}`, {
+          headers: { Authorization: 'Bearer ' + token }
+        });
+        if (metaRes.ok) {
+          const meta = await metaRes.json();
+          const rawPath = meta.parentReference?.path || '';
+          const match   = rawPath.match(/\/drive\/root:\/(.*)/);
+          const basePath = match ? decodeURIComponent(match[1]) : '';
+          await idbPut('od_base_path', basePath).catch(() => {});
+          _odCurrentBasePath = basePath;
+          if (basePath) _odStripBaseFromPaths(basePath);
+        }
       }
-    } catch(e) { console.error('[od_base_path] Fehler:', e); }
+    } catch {}
     showToast('✓ ' + fileName + ' geladen');
   } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
 }
