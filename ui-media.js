@@ -28,15 +28,6 @@ function openEditMediaDialog(type, entityId, idx) {
   document.getElementById('em-file').value  = m.file  || '';
   document.getElementById('em-prim-check').checked = !!(m.prim && m.prim !== '');
   document.getElementById('em-od-row').style.display = _odIsConnected() ? '' : 'none';
-  // Basispfad-Prefix entfernen → relativer Pfad im Eingabefeld
-  (async () => {
-    const baseKey = (type === 'source') ? 'cfg_doc_base' : 'cfg_photo_base';
-    const basePath = await idbGet(baseKey).catch(() => null) || '';
-    const curFile = m.file || '';
-    if (basePath && curFile.startsWith(basePath)) {
-      document.getElementById('em-file').value = curFile.slice(basePath.length);
-    }
-  })();
 
   const ext = (m.file || '').split('.').pop().toLowerCase();
   const isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(ext);

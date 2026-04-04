@@ -19,18 +19,32 @@ async function _odGetMediaUrlByPath(filePath) {
   if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
-  try {
-    const encoded = filePath.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
-    const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
+  const _fetchDataUrl = async (path) => {
+    const enc = path.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
+    const r = await fetch(`${OD_GRAPH}/me/drive/root:/${enc}:/content`,
       { headers: { Authorization: 'Bearer ' + token } });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    const dataUrl = await new Promise((resolve, reject) => {
+    if (!r.ok) return null;
+    const blob = await r.blob();
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = e => resolve(e.target.result);
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+  };
+  try {
+    let dataUrl = await _fetchDataUrl(filePath);
+    if (!dataUrl) {
+      // Fallback: Dateiname im Standard-Fotoordner suchen (GEDCOM-Pfad ≠ OneDrive-Pfad)
+      const basename = filePath.split(/[/\\]/).pop();
+      if (basename !== filePath) {
+        const folder = await idbGet('od_default_folder').catch(() => null);
+        if (folder?.folderPath) {
+          dataUrl = await _fetchDataUrl(folder.folderPath + '/' + basename);
+        }
+      }
+    }
+    if (!dataUrl) return null;
     _odPhotoCache[cacheKey] = dataUrl;
     return dataUrl;
   } catch { return null; }
@@ -659,24 +673,54 @@ async function odImportPhotosFromFolder(folderId, folderName) {
       .filter(n => n !== 'OneDrive').join('/');
     await idbPut('od_filemap', filemap).catch(() => {});
     await idbPut('od_default_folder', { folderId, folderName, folderPath }).catch(() => {});
+
+    // m.file auf tatsächlichen OneDrive-Pfad aktualisieren — Single Source of Truth
+    if (folderPath) {
+      for (const p of Object.values(AppState.db?.individuals || {})) {
+        for (const m of (p.media || [])) {
+          if (!m.file) continue;
+          const bn = m.file.split(/[/\\]/).pop().toLowerCase();
+          if (odFiles[bn]) m.file = folderPath + '/' + m.file.split(/[/\\]/).pop();
+        }
+      }
+      for (const f of Object.values(AppState.db?.families || {})) {
+        for (const m of (f.media || [])) {
+          if (!m.file) continue;
+          const bn = m.file.split(/[/\\]/).pop().toLowerCase();
+          if (odFiles[bn]) m.file = folderPath + '/' + m.file.split(/[/\\]/).pop();
+        }
+      }
+      AppState.changed = true;
+    }
+
     // Session-Cache leeren (neu verknüpfte Fotos sollen frisch geladen werden)
     Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
 
     // Aktuelle Ansicht sofort aktualisieren
     if (AppState.currentPersonId) {
-      const url = await _odGetPhotoUrl('photo_' + AppState.currentPersonId).catch(() => null);
-      if (url) {
-        const el = document.getElementById('det-photo-' + AppState.currentPersonId);
-        if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+      const p = getPerson(AppState.currentPersonId);
+      const primMedia = p?.media?.find(m => m.prim) || p?.media?.[0];
+      if (primMedia?.file) {
+        _odGetMediaUrlByPath(primMedia.file).then(url => {
+          if (!url) return;
+          const el = document.getElementById('det-photo-' + AppState.currentPersonId);
+          const av = document.getElementById('det-avatar-' + AppState.currentPersonId);
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+          if (av) av.style.display = 'none';
+        }).catch(() => {});
       }
     }
     if (AppState.currentFamilyId) {
-      const url = await _odGetPhotoUrl('photo_fam_' + AppState.currentFamilyId).catch(() => null);
-      if (url) {
-        const el = document.getElementById('det-fam-photo-' + AppState.currentFamilyId);
-        const av = document.getElementById('det-fam-avatar-' + AppState.currentFamilyId);
-        if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
-        if (av) av.style.display = 'none';
+      const f = getFamily(AppState.currentFamilyId);
+      const primMedia = f?.media?.find(m => m.prim) || f?.media?.[0];
+      if (primMedia?.file) {
+        _odGetMediaUrlByPath(primMedia.file).then(url => {
+          if (!url) return;
+          const el = document.getElementById('det-fam-photo-' + AppState.currentFamilyId);
+          const av = document.getElementById('det-fam-avatar-' + AppState.currentFamilyId);
+          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`; }
+          if (av) av.style.display = 'none';
+        }).catch(() => {});
       }
     }
 

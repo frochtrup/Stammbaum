@@ -9,6 +9,24 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Medien-Pfad-Mismatch-Fix (sw v106)
+
+- **sw v106** `fix`: Medien-Anzeige repariert — GEDCOM-Pfade ≠ OneDrive-Pfade
+  - **Ursache**: GEDCOM FILE-Tags enthalten lokale Pfade (z.B. `Fotos/foto.jpg`) statt
+    OneDrive-Pfade (`Pictures/foto.jpg`); `_odGetMediaUrlByPath` lieferte 404 → keine Bilder
+  - `onedrive.js`: `_odGetMediaUrlByPath` — Basename-Fallback: wenn Pfad nicht gefunden,
+    Dateiname im `od_default_folder.folderPath` suchen
+  - `onedrive.js`: `odImportPhotosFromFolder` — schreibt nach Verknüpfung `m.file` mit
+    tatsächlichem OneDrive-Pfad (`folderPath + '/' + basename`) zurück; `AppState.changed = true`
+  - `onedrive.js`: `odImportPhotosFromFolder` — Ansicht-Refresh nutzt `_odGetMediaUrlByPath`
+    statt deprecated `_odGetPhotoUrl`
+  - `ui-media.js`: `openEditMediaDialog` — `cfg_photo_base`-Stripping entfernt; `m.file`
+    wird ungekürzt im Eingabefeld angezeigt und gespeichert
+
+*Aktuelle sw-Version: v106 / Cache: stammbaum-v106*
+
+---
+
 ### Session 2026-04-04 — Media-Handling Grundsanierung: pfad-basierte IDB-Keys (sw v105)
 
 - **sw v105** `refactor`: IDB-Keys für Medien komplett auf Pfad-Basis umgestellt
