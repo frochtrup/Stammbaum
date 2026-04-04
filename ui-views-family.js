@@ -286,17 +286,17 @@ function showFamilyDetail(id, pushHistory = true) {
       <option value="sealing"${_pSel('sealing')}>Sealing</option>
     </select>`;
     const _sourIds = (typeof _fe === 'object') ? (_fe.sourIds || []) : [];
-    const _sourTags = _sourIds.map(sid => {
-      const s = AppState.db.sources[sid];
-      if (!s) return '';
-      const tooltip = esc((s.abbr || s.title || sid).substring(0, 60));
-      const num = (sid.match(/\d+/) || [sid])[0];
-      return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')" title="${tooltip}">§${num}</span>`;
-    }).filter(Boolean).join('');
-    const _sourWidget = _sourTags ||
-      `<button onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
+    const _addQBtn = `<button onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
         title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
         border-radius:12px;padding:1px 7px;font-size:0.7rem;color:var(--text-muted);cursor:pointer">+ Q</button>`;
+    const _sourWidget = _sourIds.length
+      ? _sourIds.map(sid => {
+          const s = AppState.db.sources[sid];
+          const tooltip = s ? esc((s.abbr || s.title || sid).substring(0, 60)) : esc(sid);
+          const num = (sid.match(/\d+/) || [sid])[0];
+          return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')" title="${tooltip}">§${num}</span>`;
+        }).join('') + _addQBtn
+      : _addQBtn;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
     const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';
     html += `<div class="rel-row" data-pid="${child.id}" onclick="showDetail(this.dataset.pid)">
