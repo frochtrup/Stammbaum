@@ -454,7 +454,6 @@ function showChildRelDialog(famId, childId) {
   const sourIds  = (fe && typeof fe === 'object') ? (fe.sourIds  || []) : [];
   const sourPages = (fe && typeof fe === 'object') ? (fe.sourPages || {}) : {};
   const sourQUAY  = (fe && typeof fe === 'object') ? (fe.sourQUAY  || {}) : {};
-  console.log('[CR-DEBUG] sourIds:', sourIds, 'lookup:', sourIds.map(s => [s, !!AppState.db.sources[s]]));
   initSrcWidget('cr', sourIds, sourPages, sourQUAY);
   openModal('modalChildRel');
 }

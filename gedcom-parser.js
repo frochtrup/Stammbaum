@@ -256,7 +256,7 @@ function parseGEDCOM(text) {
           if (tag==='PEDI') { fref.pedi = val; if (!fref.frelSeen) { fref.frel = val; fref.frelSeen = true; } if (!fref.mrelSeen) { fref.mrel = val; fref.mrelSeen = true; } }
           if (tag==='_FREL') { fref.frel = val; fref.frelSeen = true; }
           if (tag==='_MREL') { fref.mrel = val; fref.mrelSeen = true; }
-          if (tag==='SOUR' && val.startsWith('@')) { fref.sourIds.push(val); cur.sourceRefs.add(val); }
+          if (tag==='SOUR' && val.startsWith('@')) { const _ns = val.replace(/^@@/,'@').replace(/@@$/,'@'); fref.sourIds.push(_ns); cur.sourceRefs.add(_ns); }
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
@@ -722,25 +722,32 @@ function parseGEDCOM(text) {
       if (!person) continue;
       const famcEntry = person.famc.find(f => f.famId === famId);
       if (!famcEntry) continue;
-      if (famcEntry.frelSeen || famcEntry.mrelSeen || famcEntry.sourIds.length) continue;
-      // INDI-side empty — copy from FAM-side
-      if (cref.frelSeen) { famcEntry.frel = cref.frel; famcEntry.frelSeen = true; }
-      if (cref.mrelSeen) { famcEntry.mrel = cref.mrel; famcEntry.mrelSeen = true; }
-      for (const s of (cref.sourIds || [])) {
-        if (!famcEntry.sourIds.includes(s)) famcEntry.sourIds.push(s);
-        if (cref.sourPages[s]) famcEntry.sourPages[s] = cref.sourPages[s];
-        if (cref.sourQUAY[s])  famcEntry.sourQUAY[s]  = cref.sourQUAY[s];
-        if (cref.sourExtra[s]) famcEntry.sourExtra[s]  = cref.sourExtra[s];
+      // frel/mrel: nur kopieren wenn INDI-Seite noch leer
+      if (!famcEntry.frelSeen && !famcEntry.mrelSeen) {
+        if (cref.frelSeen) { famcEntry.frel = cref.frel; famcEntry.frelSeen = true; }
+        if (cref.mrelSeen) { famcEntry.mrel = cref.mrel; famcEntry.mrelSeen = true; }
       }
-      if (cref.frelSour && !famcEntry.sourIds.includes(cref.frelSour)) {
-        famcEntry.sourIds.push(cref.frelSour);
-        if (cref.frelPage) famcEntry.sourPages[cref.frelSour] = cref.frelPage;
-        if (cref.frelQUAY) famcEntry.sourQUAY[cref.frelSour]  = cref.frelQUAY;
-      }
-      if (cref.mrelSour && cref.mrelSour !== cref.frelSour && !famcEntry.sourIds.includes(cref.mrelSour)) {
-        famcEntry.sourIds.push(cref.mrelSour);
-        if (cref.mrelPage) famcEntry.sourPages[cref.mrelSour] = cref.mrelPage;
-        if (cref.mrelQUAY) famcEntry.sourQUAY[cref.mrelSour]  = cref.mrelQUAY;
+      // Quellen: immer kopieren wenn INDI-Seite noch keine hat (unabhängig von frelSeen)
+      if (!famcEntry.sourIds.length) {
+        const _normSid = s => s ? s.replace(/^@@/, '@').replace(/@@$/, '@').trim() : s;
+        for (const s of (cref.sourIds || [])) {
+          const ns = _normSid(s);
+          if (!famcEntry.sourIds.includes(ns)) famcEntry.sourIds.push(ns);
+          if (cref.sourPages[s]) famcEntry.sourPages[ns] = cref.sourPages[s];
+          if (cref.sourQUAY[s])  famcEntry.sourQUAY[ns]  = cref.sourQUAY[s];
+          if (cref.sourExtra[s]) famcEntry.sourExtra[ns]  = cref.sourExtra[s];
+        }
+        const _addSour = (raw, page, quay) => {
+          if (!raw) return;
+          const ns = _normSid(raw);
+          if (!famcEntry.sourIds.includes(ns)) {
+            famcEntry.sourIds.push(ns);
+            if (page) famcEntry.sourPages[ns] = page;
+            if (quay) famcEntry.sourQUAY[ns]  = quay;
+          }
+        };
+        _addSour(cref.frelSour, cref.frelPage, cref.frelQUAY);
+        if (cref.mrelSour !== cref.frelSour) _addSour(cref.mrelSour, cref.mrelPage, cref.mrelQUAY);
       }
     }
   }
