@@ -559,7 +559,9 @@ let _odFolderStack = [];
 async function odImportPhotos() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
   _odFolderStack = [];
-  await _odShowFolder('root', 'OneDrive');
+  const folder = await idbGet('od_default_folder').catch(() => null);
+  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  else await _odShowFolder('root', 'OneDrive');
 }
 
 async function _odShowFolder(folderId, folderName) {
@@ -638,7 +640,8 @@ async function _odShowAllFolders() {
     const data = await res.json();
     const parentId   = data.parentReference?.id;
     const parentPath = data.parentReference?.path || '';
-    const parentName = parentPath.split('/').filter(Boolean).pop() || 'OneDrive';
+    const parentMatch = parentPath.match(/\/drive\/root:\/(.*)/);
+    const parentName  = (parentMatch ? parentMatch[1].split('/').filter(Boolean).pop() : null) || 'OneDrive';
     _odPickStartedFromSubfolder = false;
     _odFolderStack = [];
     if (parentId) await _odShowFolder(parentId, parentName);
@@ -754,7 +757,9 @@ async function odSetupDocFolder() {
   _odDocScanMode = true;
   _odPickMode    = false;
   _odFolderStack = [];
-  await _odShowFolder('root', 'OneDrive');
+  const folder = await idbGet('od_doc_folder').catch(() => null);
+  if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
+  else await _odShowFolder('root', 'OneDrive');
 }
 
 async function odScanDocFolder(folderId, folderName) {
