@@ -292,7 +292,7 @@ function showFamilyDetail(id, pushHistory = true) {
     const _sourWidget = _sourIds.length
       ? _sourIds.map(sid => {
           const s = AppState.db.sources[sid];
-          const tooltip = s ? esc((s.abbr || s.title || sid).substring(0, 60)) : esc(sid);
+          const tooltip = s ? esc((s.title || s.abbr || sid).substring(0, 60)) : esc(sid);
           const num = (sid.match(/\d+/) || [sid])[0];
           return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')" title="${tooltip}">§${num}</span>`;
         }).join('') + _addQBtn

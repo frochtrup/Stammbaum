@@ -300,7 +300,7 @@ function sourceTagsHtml(sourceIds) {
   return ids.map(sid => {
     const s = AppState.db.sources[sid];
     if (!s) return '';
-    const tooltip = esc((s.abbr || s.title || sid).substring(0, 60));
+    const tooltip = esc((s.title || s.abbr || sid).substring(0, 60));
     return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showSourceDetail(this.dataset.sid)" title="${tooltip}">§${srcNum(sid)}</span>`;
   }).filter(Boolean).join('');
 }
