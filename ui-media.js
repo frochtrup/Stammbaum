@@ -67,7 +67,13 @@ function openEditMediaDialog(type, entityId, idx) {
       : 'photo_' + entityId + '_' + idx;
     idbGet(idbKey).then(src => {
       if (src && isImg) { _setEditMediaPreview(src); return; }
-      _odGetPhotoUrl(idbKey).then(url => { if (url && isImg) _setEditMediaPreview(url); }).catch(() => {});
+      // Pfad-basiert laden (primär), dann Legacy-Fallback
+      _odGetMediaUrlByPath(m.file).then(url => {
+        if (url && isImg) { _setEditMediaPreview(url); return; }
+        _odGetPhotoUrl(idbKey).then(u => { if (u && isImg) _setEditMediaPreview(u); }).catch(() => {});
+      }).catch(() => {
+        _odGetPhotoUrl(idbKey).then(u => { if (u && isImg) _setEditMediaPreview(u); }).catch(() => {});
+      });
     }).catch(() => {});
   }
 }
@@ -163,9 +169,10 @@ function confirmDeleteMedia() {
   else if (_editMediaType === 'source')       deleteSourceMedia(_editMediaId, _editMediaIdx);
 }
 
-async function _asyncLoadMediaThumb(thumbId, idbKey) {
+async function _asyncLoadMediaThumb(thumbId, idbKey, filePath) {
   const src = await idbGet(idbKey).catch(() => null)
-           || await _odGetPhotoUrl(idbKey).catch(() => null);
+           || await _odGetMediaUrlByPath(filePath).catch(() => null)
+           || await _odGetPhotoUrl(idbKey).catch(() => null); // Legacy-Fallback
   if (!src) return;
   const el = document.getElementById(thumbId);
   if (!el) return;

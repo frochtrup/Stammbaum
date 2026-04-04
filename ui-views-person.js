@@ -369,14 +369,16 @@ function showDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Foto async — bevorzugtes Medium (prim) oder erstes
+  // Foto async — bevorzugtes Medium (prim) oder erstes; Pfad ist Wahrheitsquelle
   (async () => {
     const _media = p.media || [];
     const _primIdx = Math.max(0, _media.findIndex(m => m.prim && m.prim !== ''));
-    const _idbKey = 'photo_' + id + '_' + _primIdx;
+    const _idbKey  = 'photo_' + id + '_' + _primIdx;
+    const _filePath = _media[_primIdx]?.file;
     const src = await idbGet(_idbKey).catch(() => null)
              || (_primIdx === 0 ? await idbGet('photo_' + id).catch(() => null) : null)
-             || await _odGetPhotoUrl(_idbKey).catch(() => null);
+             || await _odGetMediaUrlByPath(_filePath).catch(() => null)
+             || await _odGetPhotoUrl(_idbKey).catch(() => null); // Legacy
     if (!src) return;
     const el = document.getElementById('det-photo-' + id);
     if (el) {
@@ -387,8 +389,8 @@ function showDetail(id, pushHistory = true) {
     }
     if (!src.startsWith('blob:') && _primIdx === 0) idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
-  // Media-Thumbnails async laden
+  // Media-Thumbnails async laden — Pfad als primäre Quelle
   for (let _mi = 0; _mi < indiMedia.length; _mi++) {
-    _asyncLoadMediaThumb('media-thumb-indi-' + id + '-' + _mi, 'photo_' + id + '_' + _mi);
+    _asyncLoadMediaThumb('media-thumb-indi-' + id + '-' + _mi, 'photo_' + id + '_' + _mi, indiMedia[_mi].file);
   }
 }

@@ -353,19 +353,23 @@ function showFamilyDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Foto async — bevorzugtes Medium (prim) oder erstes
+  // Foto async — bevorzugtes Medium (prim) oder erstes; Pfad ist Wahrheitsquelle
   (async () => {
     const _marrMedia = f.marr?.media || [];
     const _famMedia  = f.media || [];
     const _primMarrIdx = Math.max(0, _marrMedia.findIndex(m => m.prim && m.prim !== ''));
-    const _idbKey = 'photo_fam_' + id + '_' + _primMarrIdx;
+    const _idbKey    = 'photo_fam_' + id + '_' + _primMarrIdx;
+    const _filePath  = _marrMedia[_primMarrIdx]?.file;
     let src = await idbGet(_idbKey).catch(() => null)
            || (_primMarrIdx === 0 ? await idbGet('photo_fam_' + id).catch(() => null) : null)
-           || await _odGetPhotoUrl(_idbKey).catch(() => null);
+           || await _odGetMediaUrlByPath(_filePath).catch(() => null)
+           || await _odGetPhotoUrl(_idbKey).catch(() => null); // Legacy
     if (!src && _famMedia.length > 0) {
-      const _primFamIdx = Math.max(0, _famMedia.findIndex(m => m.prim && m.prim !== ''));
+      const _primFamIdx  = Math.max(0, _famMedia.findIndex(m => m.prim && m.prim !== ''));
+      const _famFilePath = _famMedia[_primFamIdx]?.file;
       src = await idbGet('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null)
-         || await _odGetPhotoUrl('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null);
+         || await _odGetMediaUrlByPath(_famFilePath).catch(() => null)
+         || await _odGetPhotoUrl('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null); // Legacy
     }
     if (!src) return;
     const el = document.getElementById('det-fam-photo-' + id);
@@ -381,11 +385,11 @@ function showFamilyDetail(id, pushHistory = true) {
     }
     if (!src.startsWith('blob:') && _primMarrIdx === 0) idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
-  // Media-Thumbnails async laden
+  // Media-Thumbnails async laden — Pfad als primäre Quelle
   for (let _mi = 0; _mi < marrObjeEntries.length; _mi++) {
-    _asyncLoadMediaThumb('media-thumb-fam-' + id + '-' + _mi, 'photo_fam_' + id + '_' + _mi);
+    _asyncLoadMediaThumb('media-thumb-fam-' + id + '-' + _mi, 'photo_fam_' + id + '_' + _mi, marrObjeEntries[_mi]?.file);
   }
   for (let _mi = 0; _mi < famMedia.length; _mi++) {
-    _asyncLoadMediaThumb('media-thumb-fam-media-' + id + '-' + _mi, 'photo_fam_media_' + id + '_' + _mi);
+    _asyncLoadMediaThumb('media-thumb-fam-media-' + id + '-' + _mi, 'photo_fam_media_' + id + '_' + _mi, famMedia[_mi]?.file);
   }
 }

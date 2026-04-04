@@ -10,6 +10,24 @@ const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
 // Session-Cache für dynamisch geladene Fotos (blob: URLs, nicht persistent)
 const _odPhotoCache = {};
 
+// Medien-Datei direkt per relativem OneDrive-Pfad laden — ein Pfad, eine Datei
+async function _odGetMediaUrlByPath(filePath) {
+  if (!filePath || !_odIsConnected()) return null;
+  const cacheKey = 'path:' + filePath;
+  if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
+  const token = await _odGetToken().catch(() => null);
+  if (!token) return null;
+  try {
+    const encoded = filePath.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
+    const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return null;
+    const url = URL.createObjectURL(await res.blob());
+    _odPhotoCache[cacheKey] = url;
+    return url;
+  } catch { return null; }
+}
+
 // IDB-Key parsen → { isFam, id, idx, isHero }
 function _parsePhotoKey(idbKey) {
   const isFam = idbKey.startsWith('photo_fam_');
@@ -42,35 +60,36 @@ async function _odGetPhotoUrl(idbKey) {
 }
 
 // OneDrive-URL für Quellenmedien laden
-// Priorität: 1) manueller filemap-Eintrag (od_filemap.sources)
-//             2) Dateiname aus GEDCOM-Pfad in od_doc_filemap (Dokumente-Ordner)
+// Priorität: 1) GEDCOM-Pfad direkt (m.file via _odGetMediaUrlByPath)
+//             2) Manueller filemap-Eintrag (od_filemap.sources) — Legacy
+//             3) Basename-Abgleich gegen od_doc_filemap — Legacy
 async function _odGetSourceFileUrl(srcId, idx) {
   if (!_odIsConnected()) return null;
   const cacheKey = 'src_' + srcId + '_' + idx;
   if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
 
-  // 1. Manuell verknüpft
-  let fileId = null;
-  const filemap = await idbGet('od_filemap').catch(() => null);
-  fileId = filemap?.sources?.[srcId]?.[idx]?.fileId || null;
-
-  // 2. Fallback: Dateiname aus GEDCOM-Pfad gegen Dokumente-Ordner abgleichen
-  if (!fileId) {
-    const mfile = AppState.db.sources?.[srcId]?.media?.[idx]?.file;
-    if (mfile) {
-      const basename = mfile.replace(/\\/g, '/').split('/').pop().toLowerCase();
-      if (basename) {
-        const docMap = await idbGet('od_doc_filemap').catch(() => null);
-        fileId = docMap?.[basename] || null;
-      }
-    }
+  // 1. Direkt per Pfad (bevorzugt — kein separates Mapping nötig)
+  const mfile = AppState.db.sources?.[srcId]?.media?.[idx]?.file;
+  if (mfile) {
+    const url = await _odGetMediaUrlByPath(mfile).catch(() => null);
+    if (url) { _odPhotoCache[cacheKey] = url; return url; }
   }
 
-  if (!fileId) return null;
+  // 2. Legacy: manuell verknüpfte fileId
+  const filemap = await idbGet('od_filemap').catch(() => null);
+  const fileId  = filemap?.sources?.[srcId]?.[idx]?.fileId
+               || (() => {
+                    if (!mfile) return null;
+                    const basename = mfile.replace(/\\/g, '/').split('/').pop().toLowerCase();
+                    return idbGet('od_doc_filemap').then(m => m?.[basename] || null).catch(() => null);
+                  })();
+  const resolvedId = fileId instanceof Promise ? await fileId : fileId;
+  if (!resolvedId) return null;
+
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
   try {
-    const res = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`,
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${resolvedId}/content`,
       { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) return null;
     const url = URL.createObjectURL(await res.blob());
