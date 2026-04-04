@@ -434,10 +434,18 @@ async function odLoadFile(itemId, fileName) {
         const rawPath = meta.parentReference?.path || '';
         const match   = rawPath.match(/\/drive\/root:\/(.*)/);
         const basePath = match ? decodeURIComponent(match[1]) : '';
+        console.log('[od_base_path] itemId:', itemId);
+        console.log('[od_base_path] parentReference:', JSON.stringify(meta.parentReference));
+        console.log('[od_base_path] rawPath:', rawPath);
+        console.log('[od_base_path] match:', match);
+        console.log('[od_base_path] basePath →', basePath);
+        showToast('Basispfad: ' + (basePath || '(leer)'));
         await idbPut('od_base_path', basePath).catch(() => {});
         _odCurrentBasePath = basePath;
+      } else {
+        console.warn('[od_base_path] meta fetch fehlgeschlagen:', metaRes.status, await metaRes.text());
       }
-    } catch {}
+    } catch(e) { console.error('[od_base_path] Fehler:', e); }
     showToast('✓ ' + fileName + ' geladen');
   } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
 }
