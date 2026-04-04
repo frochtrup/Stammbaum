@@ -424,6 +424,20 @@ async function odLoadFile(itemId, fileName) {
     localStorage.setItem('od_file_id',   itemId);
     localStorage.setItem('od_file_name', fileName);
     _processLoadedText(await res.text(), fileName);
+    // Startpfad (od_base_path) aus dem Ordner der GED-Datei ableiten
+    try {
+      const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}?$select=parentReference`, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        const rawPath = meta.parentReference?.path || '';
+        const match   = rawPath.match(/\/drive\/root:\/(.*)/);
+        const basePath = match ? match[1] : '';
+        await idbPut('od_base_path', basePath).catch(() => {});
+        _odCurrentBasePath = basePath;
+      }
+    } catch {}
     showToast('✓ ' + fileName + ' geladen');
   } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
 }
