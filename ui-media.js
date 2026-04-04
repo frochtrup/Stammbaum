@@ -26,6 +26,7 @@ function openEditMediaDialog(type, entityId, idx) {
 
   document.getElementById('em-title').value = m.title || '';
   document.getElementById('em-file').value  = m.file  || '';
+  document.getElementById('em-prim-check').checked = !!(m.prim && m.prim !== '');
   document.getElementById('em-od-row').style.display = _odIsConnected() ? '' : 'none';
   // Basispfad-Prefix entfernen → relativer Pfad im Eingabefeld
   (async () => {
@@ -122,9 +123,33 @@ async function openSourceMediaView(srcId, idx) {
   else window.open(url, '_blank');
 }
 
+// Hilfsfunktion: Medium-Array normalisieren — prim nur auf idx, dieses nach vorne schieben
+// Gibt true zurück wenn verschoben wurde (IDB-Cache muss invalidiert werden)
+function _applyPrimAndReorder(arr, idx, setPrim) {
+  if (!arr || idx < 0 || idx >= arr.length) return false;
+  // prim auf allen Einträgen aktualisieren
+  arr.forEach((m, i) => { m.prim = (setPrim && i === idx) ? 'Y' : ''; });
+  if (!setPrim || idx === 0) return false; // kein Verschieben nötig
+  // Medium an erste Stelle verschieben
+  const [item] = arr.splice(idx, 1);
+  arr.unshift(item);
+  return true; // verschoben → IDB-Cache ist veraltet
+}
+
+// IDB-Thumb-Cache für Entity invalidieren (nach Reorder, da IDB-Keys index-basiert)
+async function _invalidateThumbCache(prefix) {
+  try {
+    // IDB-Keys nach Muster löschen geht nicht direkt, daher Session-Cache in onedrive.js leeren
+    if (typeof _odPhotoCache !== 'undefined') {
+      Object.keys(_odPhotoCache).filter(k => k.startsWith(prefix) || k.startsWith('path:')).forEach(k => delete _odPhotoCache[k]);
+    }
+  } catch {}
+}
+
 function confirmEditMedia() {
-  const title = document.getElementById('em-title').value.trim();
-  const file  = document.getElementById('em-file').value.trim();
+  const title   = document.getElementById('em-title').value.trim();
+  const file    = document.getElementById('em-file').value.trim();
+  const setPrim = document.getElementById('em-prim-check').checked;
   if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
   const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
 
@@ -132,6 +157,8 @@ function confirmEditMedia() {
     const p = getPerson(_editMediaId);
     if (!p?.media) return;
     p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title };
+    const moved = _applyPrimAndReorder(p.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
@@ -140,6 +167,8 @@ function confirmEditMedia() {
     const f = getFamily(_editMediaId);
     if (!f) return;
     _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title });
+    const moved = _applyPrimAndReorder(f.marr?.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_fam_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
@@ -148,6 +177,8 @@ function confirmEditMedia() {
     const f = getFamily(_editMediaId);
     if (!f?.media) return;
     f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title };
+    const moved = _applyPrimAndReorder(f.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_fam_media_' + _editMediaId);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showFamilyDetail(_editMediaId, false);
@@ -155,6 +186,8 @@ function confirmEditMedia() {
     const s = getSource(_editMediaId);
     if (!s?.media) return;
     s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title };
+    const moved = _applyPrimAndReorder(s.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_src_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
@@ -177,10 +210,12 @@ async function _asyncLoadMediaThumb(thumbId, idbKey, filePath) {
   if (!src) return;
   const el = document.getElementById(thumbId);
   if (!el) return;
-  el.innerHTML = '';
+  const originalContent = el.innerHTML; // Icon-Fallback bei Ladefehler
   const img = document.createElement('img');
   img.src = src;
   img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
+  img.onerror = () => { el.innerHTML = originalContent; };
+  el.innerHTML = '';
   el.appendChild(img);
 }
 

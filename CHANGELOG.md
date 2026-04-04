@@ -9,6 +9,22 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Thumbnails + Hauptbild-Funktion (sw v101)
+
+- **sw v101** `fix/feat`: Thumbnails + Hauptbild-Reihung
+  - `ui-media.js`: `_asyncLoadMediaThumb` — `onerror`-Handler stellt Original-Icon wieder her
+    wenn Bild nicht geladen werden kann (kein broken-image-Symbol mehr auf Mobile)
+  - `index.html`: "Als Hauptbild"-Checkbox im Edit-Medium-Dialog
+  - `ui-media.js`: `_applyPrimAndReorder()` — setzt `prim='Y'` auf gewähltem Eintrag,
+    löscht `prim` auf allen anderen, verschiebt Eintrag an Index 0
+  - `ui-media.js`: `_invalidateThumbCache()` — leert Session-Cache bei Reorder damit
+    Thumbnails mit korrekten Positionen neu geladen werden
+  - `ui-media.js`: `openEditMediaDialog` — Checkbox zeigt aktuellen prim-Status
+
+*Aktuelle sw-Version: v101 / Cache: stammbaum-v101*
+
+---
+
 ### Session 2026-04-04 — Kamera-Upload nach OneDrive (sw v100)
 
 **Kamera-Fotos landen direkt im konfigurierten OneDrive-Ordner**

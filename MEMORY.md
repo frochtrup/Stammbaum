@@ -41,8 +41,13 @@
 **Version 5.0 in Entwicklung — Branch `v5-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
-- **Aktuelle sw-Version: v100** / Cache: `stammbaum-v100`
+- **Aktuelle sw-Version: v101** / Cache: `stammbaum-v101`
 - Git: Branch `v5-dev`; letzter Commit: eabf3b3
+
+**Session 2026-04-04 — Thumbnails + Hauptbild (sw v101):**
+- `_asyncLoadMediaThumb`: `onerror` stellt Icon wieder her → kein broken-image-Symbol
+- Edit-Dialog: "Als Hauptbild"-Checkbox; `_applyPrimAndReorder()` verschiebt an Index 0, löscht prim bei anderen
+- Session-Cache wird bei Reorder invalidiert
 
 **Session 2026-04-04 — Kamera-Upload nach OneDrive (sw v100):**
 - `_odUploadMediaFile(b64, targetPath)` — PUT per path-based API, gibt tatsächlichen Pfad zurück

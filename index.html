@@ -1724,6 +1724,10 @@ body.fc-mode #fcGenBtns { display: flex; }
       <div id="em-od-row" style="display:none;margin-bottom:12px">
         <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForEditMedia()">Aus OneDrive auswählen</button>
       </div>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;border-bottom:1px solid var(--border-color);margin-bottom:12px">
+        <input type="checkbox" id="em-prim-check" style="width:18px;height:18px;flex-shrink:0">
+        <span style="font-size:0.9rem">Als Hauptbild (wird an erste Stelle der Liste verschoben)</span>
+      </label>
       <div class="btn-row" style="gap:8px">
         <button class="btn btn-cancel" onclick="closeModal('modalEditMedia')">Abbrechen</button>
         <button class="btn" style="background:var(--danger,#c0392b);color:#fff;flex:1" onclick="confirmDeleteMedia()">Löschen</button>
