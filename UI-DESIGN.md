@@ -205,18 +205,19 @@ Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
 | Symbol / Klasse | Bedeutung | Kontext |
 |---|---|---|
 | `📎` | Medien-Anhang vorhanden (OBJE, Foto, Dokument) | Personen-/Familien-Liste, Detail-Hero |
-| `.src-tag` (gold pill) | Quellen-Zitat zugewiesen — zeigt `s.abbr` oder `s.title.slice(0,18)` | Kindbeziehungs-Zeile, Events mit Quellen |
+| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID; Tooltip = `s.abbr \|\| s.title` | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
 | `+ Q` (gestrichelt) | Quellen-Zitat hinzufügen — CTA wenn noch keine Quelle zugewiesen | Kindbeziehungs-Zeile, Events ohne Quellen |
-| `.src-badge` (`§N`) | Kompakter Quellen-Verweis inline in fact-row; N = fortlaufende Nr. im Dialog | fact-row rechts |
 | `½` (`.tree-half-badge`) | Halbgeschwister — Kind gehört zu anderer Ehe des Zentrum-Elternteils | Baum-Karte (bottom-right) |
 | `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Baum |
 | `◑` | Fan-Chart-Umschalter in Topbar | Baum-Topbar |
 
 **Regeln:**
 - `📎` steht **ausschließlich** für Medien/OBJE — nie für Quellen
-- Quellen werden immer als `.src-tag`-Pills (im Dialog) oder `.src-badge` `§N` (inline) dargestellt
+- Quellen werden **überall einheitlich** als `.src-badge` `§N` dargestellt — in fact-rows, Kindbeziehungs-Zeilen und allen anderen Kontexten
+- Tooltip auf `.src-badge` zeigt immer den Quellentitel (`s.abbr || s.title`, max. 60 Zeichen), nicht die GEDCOM-ID
+- Click auf `.src-badge` öffnet je nach Kontext `showSourceDetail(sid)` (fact-row) oder den zugehörigen Dialog (z.B. `showChildRelDialog`)
 - `+ Q` erscheint nur wenn wirklich 0 Quellen zugewiesen sind; verschwindet nach erstem Hinzufügen
-- `.src-tag` ist klickbar und öffnet den zugehörigen Quellen-Dialog (z.B. `showChildRelDialog`)
+- `.src-tag` wird **nicht** verwendet — war ein veraltetes Zwischenformat, abgelöst durch `.src-badge`
 
 ### Geschlecht im Baum
 ```css
