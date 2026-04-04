@@ -9,6 +9,22 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Blob-URLs → Data-URLs (iOS Safari Fix) (sw v104)
+
+- **sw v104** `fix`: Alle OneDrive-Foto-URLs als Data-URL (base64) statt Blob-URL
+  - **Ursache**: iOS Safari kann Blob-URLs (`URL.createObjectURL`) in `<img>`-Elementen
+    nicht zuverlässig laden — der Browser kann den Blob intern verwerfen (GC), was
+    `onerror` auslöst und → Avatar statt Foto zeigt
+  - `_odGetMediaUrlByPath`: Blob → `FileReader.readAsDataURL()` → base64 Data-URL;
+    `_odPhotoCache` cached Data-URL (Session, kein Netzwerk-Re-Fetch in selber Session)
+  - `_odGetPhotoUrl` (Legacy): gleicher Fix
+  - `_odGetSourceFileUrl` (Legacy-Pfad): gleicher Fix
+  - Data-URLs sind selbsttragend, immer ladbar, plattformunabhängig
+
+*Aktuelle sw-Version: v104 / Cache: stammbaum-v104*
+
+---
+
 ### Session 2026-04-04 — Medienladen: Pfad-zuerst statt IDB-zuerst (sw v103)
 
 - **sw v103** `refactor`: Bild-Loading-Reihenfolge überarbeitet

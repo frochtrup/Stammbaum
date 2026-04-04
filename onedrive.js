@@ -11,6 +11,8 @@ const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
 const _odPhotoCache = {};
 
 // Medien-Datei direkt per relativem OneDrive-Pfad laden — ein Pfad, eine Datei
+// Gibt Data-URL (base64) zurück — zuverlässig in <img> auf allen Plattformen inkl. iOS Safari
+// (Blob-URLs können auf iOS Safari intern verworfen werden → broken image / onerror)
 async function _odGetMediaUrlByPath(filePath) {
   if (!filePath || !_odIsConnected()) return null;
   const cacheKey = 'path:' + filePath;
@@ -22,9 +24,15 @@ async function _odGetMediaUrlByPath(filePath) {
     const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
       { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) return null;
-    const url = URL.createObjectURL(await res.blob());
-    _odPhotoCache[cacheKey] = url;
-    return url;
+    const blob = await res.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    _odPhotoCache[cacheKey] = dataUrl;
+    return dataUrl;
   } catch { return null; }
 }
 
@@ -95,9 +103,15 @@ async function _odGetPhotoUrl(idbKey) {
     const res = await fetch(`${OD_GRAPH}/me/drive/items/${entry.fileId}/content`,
       { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) return null;
-    const url = URL.createObjectURL(await res.blob());
-    _odPhotoCache[idbKey] = url;
-    return url;
+    const blob = await res.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    _odPhotoCache[idbKey] = dataUrl;
+    return dataUrl;
   } catch { return null; }
 }
 
@@ -134,9 +148,15 @@ async function _odGetSourceFileUrl(srcId, idx) {
     const res = await fetch(`${OD_GRAPH}/me/drive/items/${resolvedId}/content`,
       { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) return null;
-    const url = URL.createObjectURL(await res.blob());
-    _odPhotoCache[cacheKey] = url;
-    return url;
+    const blob = await res.blob();
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    _odPhotoCache[cacheKey] = dataUrl;
+    return dataUrl;
   } catch { return null; }
 }
 
