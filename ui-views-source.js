@@ -189,11 +189,13 @@ function showSourceDetail(id, pushHistory = true) {
     const _ci = i;
     _odGetSourceFileUrl(id, _ci).then(url => {
       if (url) { _applySrcMediaUrl(_ci, url); return; }
-      idbGet('photo_src_' + id + '_' + _ci).then(b64 => {
+      const _srcFile = srcMedia[_ci]?.file;
+      if (_srcFile) idbGet('img:' + _srcFile).then(b64 => {
         if (b64) _applySrcMediaUrl(_ci, b64);
       }).catch(() => {});
     }).catch(() => {
-      idbGet('photo_src_' + id + '_' + _ci).then(b64 => {
+      const _srcFile = srcMedia[_ci]?.file;
+      if (_srcFile) idbGet('img:' + _srcFile).then(b64 => {
         if (b64) _applySrcMediaUrl(_ci, b64);
       }).catch(() => {});
     });

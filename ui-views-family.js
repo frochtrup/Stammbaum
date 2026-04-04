@@ -296,13 +296,12 @@ function showFamilyDetail(id, pushHistory = true) {
       const m = marrObjeEntries[i];
       const display = m.title || m.file || '–';
       const sub = m.title && m.file ? m.file : '';
-      const idbKey  = 'photo_fam_' + id + '_' + i;
-      const heroKey = 'photo_fam_' + id;
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
+        data-media-file="${esc(m.file || '')}"
+        onclick="openMediaPhoto(this.dataset.mediaFile,'det-fam-photo-${id}','det-fam-avatar-${id}')">
         <div id="media-thumb-fam-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
@@ -315,13 +314,12 @@ function showFamilyDetail(id, pushHistory = true) {
       const m = famMedia[i];
       const display = m.title || m.file || '–';
       const sub = m.title && m.file ? m.file : '';
-      const idbKey  = 'photo_fam_media_' + id + '_' + i;
-      const heroKey = 'photo_fam_' + id;
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-fam-photo-${id}','det-fam-avatar-${id}')">
+        data-media-file="${esc(m.file || '')}"
+        onclick="openMediaPhoto(this.dataset.mediaFile,'det-fam-photo-${id}','det-fam-avatar-${id}')">
         <div id="media-thumb-fam-media-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
@@ -353,23 +351,19 @@ function showFamilyDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Foto async — Pfad (m.file) zuerst laden; IDB nur als Fallback (Offline/Kamera)
+  // Foto async — Pfad (m.file) direkt; IDB path-basiert als Offline-Fallback
   (async () => {
     const _marrMedia = f.marr?.media || [];
     const _famMedia  = f.media || [];
     const _primMarrIdx = Math.max(0, _marrMedia.findIndex(m => m.prim && m.prim !== ''));
-    const _idbKey    = 'photo_fam_' + id + '_' + _primMarrIdx;
     const _filePath  = _marrMedia[_primMarrIdx]?.file;
     let src = (_filePath ? await _odGetMediaUrlByPath(_filePath).catch(() => null) : null)
-           || await idbGet(_idbKey).catch(() => null)
-           || (_primMarrIdx === 0 ? await idbGet('photo_fam_' + id).catch(() => null) : null)
-           || await _odGetPhotoUrl(_idbKey).catch(() => null); // Legacy
+           || (_filePath ? await idbGet('img:' + _filePath).catch(() => null) : null);
     if (!src && _famMedia.length > 0) {
       const _primFamIdx  = Math.max(0, _famMedia.findIndex(m => m.prim && m.prim !== ''));
       const _famFilePath = _famMedia[_primFamIdx]?.file;
       src = (_famFilePath ? await _odGetMediaUrlByPath(_famFilePath).catch(() => null) : null)
-         || await idbGet('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null)
-         || await _odGetPhotoUrl('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null); // Legacy
+         || (_famFilePath ? await idbGet('img:' + _famFilePath).catch(() => null) : null);
     }
     if (!src) return;
     const el = document.getElementById('det-fam-photo-' + id);
@@ -379,17 +373,17 @@ function showFamilyDetail(id, pushHistory = true) {
       const img = document.createElement('img');
       img.src = src; img.alt = 'Foto';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-      img.onclick = () => showLightbox(img.src);
+      img.onclick = () => showLightbox(img.src, null, 'det-fam-photo-' + id, 'det-fam-avatar-' + id, null);
       img.onerror = () => { el.style.display = 'none'; if (av) av.style.display = ''; };
       el.appendChild(img);
       if (av) av.style.display = 'none';
     }
   })();
-  // Media-Thumbnails async laden — Pfad als primäre Quelle
+  // Media-Thumbnails async laden — pfad-basiert
   for (let _mi = 0; _mi < marrObjeEntries.length; _mi++) {
-    _asyncLoadMediaThumb('media-thumb-fam-' + id + '-' + _mi, 'photo_fam_' + id + '_' + _mi, marrObjeEntries[_mi]?.file);
+    _asyncLoadMediaThumb('media-thumb-fam-' + id + '-' + _mi, marrObjeEntries[_mi]?.file);
   }
   for (let _mi = 0; _mi < famMedia.length; _mi++) {
-    _asyncLoadMediaThumb('media-thumb-fam-media-' + id + '-' + _mi, 'photo_fam_media_' + id + '_' + _mi, famMedia[_mi]?.file);
+    _asyncLoadMediaThumb('media-thumb-fam-media-' + id + '-' + _mi, famMedia[_mi]?.file);
   }
 }

@@ -9,6 +9,26 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Media-Handling Grundsanierung: pfad-basierte IDB-Keys (sw v105)
+
+- **sw v105** `refactor`: IDB-Keys für Medien komplett auf Pfad-Basis umgestellt
+  - **Ursache**: Index-basierte Keys (photo_id_0, photo_fam_id_1 etc.) werden nach
+    Reorder der Medienliste (Hauptbild → Index 0) ungültig → alle Thumbnails zeigen
+    falsche Bilder; Hero korreliert nicht mit Medienliste
+  - **Neues Format**: `'img:' + filePath` — unabhängig von Array-Reihenfolge
+  - `ui-media.js`: `_asyncLoadMediaThumb(thumbId, filePath)` — idbKey-Parameter entfernt
+  - `ui-media.js`: Kamera-Fotos in `confirmAddMedia` mit `'img:' + file` gespeichert
+  - `ui-media.js`: Edit-Dialog-Preview direkt über Pfad; MediaBrowser-Thumbnails pfad-basiert
+  - `ui-media.js`: `deletePersonMedia`, `deleteFamilyMarrMedia` — kein bulk-IDB-Clear mehr nötig
+  - `ui-views-person.js`: Hero ohne index-basierte IDB-Keys; onclick mit data-media-file Attribut
+  - `ui-views-family.js`: analog Person
+  - `ui-views-source.js`: IDB-Fallback pfad-basiert
+  - `ui-views-tree.js`: `openMediaPhoto(filePath, heroElemId, avatarElemId)` — neue Signatur
+
+*Aktuelle sw-Version: v105 / Cache: stammbaum-v105*
+
+---
+
 ### Session 2026-04-04 — Blob-URLs → Data-URLs (iOS Safari Fix) (sw v104)
 
 - **sw v104** `fix`: Alle OneDrive-Foto-URLs als Data-URL (base64) statt Blob-URL

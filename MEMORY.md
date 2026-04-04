@@ -22,7 +22,7 @@
 - `ui-media.js` — Medien Add/Edit/Delete/Browser
 - `ui-fanchart.js` — Fan Chart (SVG)
 - `onedrive.js` — OAuth, Foto-Import, Ordner-Browser, path-basiertes Medien-Laden
-- `sw.js` — Service Worker (Network-first, offline, Cache v99)
+- `sw.js` — Service Worker (Network-first, offline, Cache v105)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -41,8 +41,16 @@
 **Version 5.0 in Entwicklung — Branch `v5-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
-- **Aktuelle sw-Version: v104** / Cache: `stammbaum-v104`
+- **Aktuelle sw-Version: v105** / Cache: `stammbaum-v105`
 - Git: Branch `v5-dev`; letzter Commit: eabf3b3
+
+**Session 2026-04-04 — Media-Handling Grundsanierung: pfad-basierte IDB-Keys (sw v105):**
+- IDB-Keys für Medien komplett auf `'img:' + filePath` umgestellt — index-basierte Keys entfernt
+- `_asyncLoadMediaThumb(thumbId, filePath)` — idbKey-Parameter entfernt
+- Kamera-Fotos in `confirmAddMedia` mit `'img:' + file` gespeichert
+- Hero-Loading (Person/Familie) ohne index-basierte IDB-Keys
+- `openMediaPhoto(filePath, heroElemId, avatarElemId)` — neue Signatur
+- `deletePersonMedia`, `deleteFamilyMarrMedia` — kein bulk-IDB-Clear mehr nötig
 
 **Session 2026-04-04 — Thumbnails + Hauptbild (sw v101):**
 - `_asyncLoadMediaThumb`: `onerror` stellt Icon wieder her → kein broken-image-Symbol
@@ -113,6 +121,7 @@ Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je 
 - **Geschlecht im Baum**: `data-sex="M/F/U"` Attribut + CSS `border-left` Farbe
 - **sourceMedia{}**: OBJE unter SOUR-Zitierungen strukturiert (v4-dev sw v45)
 - **Medien-Pfad als Wahrheitsquelle**: `m.file` = relativer OneDrive-Pfad; Laden via `_odGetMediaUrlByPath(path)` (ADR-013, sw v99)
+- **IDB-Keys pfad-basiert**: `'img:' + filePath` (sw v105) — index-basierte Keys (`photo_id_0` etc.) deprecated
 - **`od_filemap` DEPRECATED** (sw v99): war Index→fileId-Mapping; nur noch Legacy-Fallback; `od_doc_filemap` ebenfalls deprecated
 - **Bevorzugtes Medium**: `m.prim` / `_PRIM Y` → Hero in Detailansicht; Fallback auf erstes Medium (sw v96)
 - **OneDrive Picker**: startet aus `od_default_folder`; `↑ Übergeordneter Ordner` via `parentReference`-API (sw v98)

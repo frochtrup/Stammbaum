@@ -205,17 +205,12 @@ function showLightbox(src, heroKey, heroElemId, avatarElemId, idbKey) {
   lb.style.display = 'flex';
 }
 
-async function openMediaPhoto(idbKey, heroKey, heroElemId, avatarElemId) {
-  let src = await idbGet(idbKey).catch(() => null)
-         || await _odGetPhotoUrl(idbKey).catch(() => null);
-  let usedFallback = false;
-  if (!src) {
-    src = await idbGet(heroKey).catch(() => null)
-       || await _odGetPhotoUrl(heroKey).catch(() => null);
-    usedFallback = true;
-  }
-  if (!src) { showToast('Kein Foto vorhanden'); return; }
-  showLightbox(src, heroKey, heroElemId, avatarElemId, usedFallback ? heroKey : idbKey);
+async function openMediaPhoto(filePath, heroElemId, avatarElemId) {
+  if (!filePath) { showToast('Kein Foto vorhanden'); return; }
+  const src = await _odGetMediaUrlByPath(filePath).catch(() => null)
+           || await idbGet('img:' + filePath).catch(() => null);
+  if (!src) { showToast('Foto nicht ladbar'); return; }
+  showLightbox(src, null, heroElemId, avatarElemId, null);
 }
 
 async function _lightboxSetHero() {

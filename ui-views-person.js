@@ -279,13 +279,12 @@ function showDetail(id, pushHistory = true) {
       const m = indiMedia[i];
       const display = m.title || m.file || '–';
       const sub = m.title && m.file ? m.file : '';
-      const idbKey  = 'photo_' + id + '_' + i;
-      const heroKey = 'photo_' + id;
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
-        onclick="openMediaPhoto('${idbKey}','${heroKey}','det-photo-${id}','det-avatar-${id}')">
+        data-media-file="${esc(m.file || '')}"
+        onclick="openMediaPhoto(this.dataset.mediaFile,'det-photo-${id}','det-avatar-${id}')">
         <div id="media-thumb-indi-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
         <div style="flex:1;min-width:0">
           <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
@@ -369,16 +368,13 @@ function showDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Foto async — Pfad (m.file) zuerst laden; IDB nur als Fallback (Offline/Kamera)
+  // Foto async — Pfad (m.file) direkt; IDB path-basiert als Offline-Fallback
   (async () => {
     const _media = p.media || [];
     const _primIdx = Math.max(0, _media.findIndex(m => m.prim && m.prim !== ''));
-    const _idbKey  = 'photo_' + id + '_' + _primIdx;
     const _filePath = _media[_primIdx]?.file;
     const src = (_filePath ? await _odGetMediaUrlByPath(_filePath).catch(() => null) : null)
-             || await idbGet(_idbKey).catch(() => null)
-             || (_primIdx === 0 ? await idbGet('photo_' + id).catch(() => null) : null)
-             || await _odGetPhotoUrl(_idbKey).catch(() => null); // Legacy
+             || (_filePath ? await idbGet('img:' + _filePath).catch(() => null) : null);
     if (!src) return;
     const el = document.getElementById('det-photo-' + id);
     const av = document.getElementById('det-avatar-' + id);
@@ -389,14 +385,14 @@ function showDetail(id, pushHistory = true) {
       heroImg.src = src;
       heroImg.alt = 'Foto';
       heroImg.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-      heroImg.onclick = () => showLightbox(heroImg.src);
+      heroImg.onclick = () => showLightbox(heroImg.src, null, 'det-photo-' + id, 'det-avatar-' + id, null);
       heroImg.onerror = () => { el.style.display = 'none'; if (av) av.style.display = ''; };
       el.appendChild(heroImg);
       if (av) av.style.display = 'none';
     }
   })();
-  // Media-Thumbnails async laden — Pfad als primäre Quelle
+  // Media-Thumbnails async laden — pfad-basiert
   for (let _mi = 0; _mi < indiMedia.length; _mi++) {
-    _asyncLoadMediaThumb('media-thumb-indi-' + id + '-' + _mi, 'photo_' + id + '_' + _mi, indiMedia[_mi].file);
+    _asyncLoadMediaThumb('media-thumb-indi-' + id + '-' + _mi, indiMedia[_mi].file);
   }
 }

@@ -62,21 +62,12 @@ function openEditMediaDialog(type, entityId, idx) {
       }).catch(() => {});
     }
   } else {
-    const idbKey = type === 'family'
-      ? 'photo_fam_' + entityId + '_' + idx
-      : type === 'family_media'
-      ? 'photo_fam_media_' + entityId + '_' + idx
-      : 'photo_' + entityId + '_' + idx;
-    idbGet(idbKey).then(src => {
-      if (src && isImg) { _setEditMediaPreview(src); return; }
-      // Pfad-basiert laden (primär), dann Legacy-Fallback
+    if (isImg) {
       _odGetMediaUrlByPath(m.file).then(url => {
-        if (url && isImg) { _setEditMediaPreview(url); return; }
-        _odGetPhotoUrl(idbKey).then(u => { if (u && isImg) _setEditMediaPreview(u); }).catch(() => {});
-      }).catch(() => {
-        _odGetPhotoUrl(idbKey).then(u => { if (u && isImg) _setEditMediaPreview(u); }).catch(() => {});
-      });
-    }).catch(() => {});
+        if (url) { _setEditMediaPreview(url); return; }
+        if (m.file) idbGet('img:' + m.file).then(src => { if (src) _setEditMediaPreview(src); }).catch(() => {});
+      }).catch(() => {});
+    }
   }
 }
 
@@ -136,14 +127,11 @@ function _applyPrimAndReorder(arr, idx, setPrim) {
   return true; // verschoben → IDB-Cache ist veraltet
 }
 
-// IDB-Thumb-Cache für Entity invalidieren (nach Reorder, da IDB-Keys index-basiert)
-async function _invalidateThumbCache(prefix) {
-  try {
-    // IDB-Keys nach Muster löschen geht nicht direkt, daher Session-Cache in onedrive.js leeren
-    if (typeof _odPhotoCache !== 'undefined') {
-      Object.keys(_odPhotoCache).filter(k => k.startsWith(prefix) || k.startsWith('path:')).forEach(k => delete _odPhotoCache[k]);
-    }
-  } catch {}
+// Session-Cache für geänderte Entity leeren (pfad-basierte Keys bleiben korrekt)
+function _invalidateThumbCache(entityPrefix) {
+  if (typeof _odPhotoCache !== 'undefined') {
+    Object.keys(_odPhotoCache).filter(k => k.startsWith('path:')).forEach(k => delete _odPhotoCache[k]);
+  }
 }
 
 function confirmEditMedia() {
@@ -203,21 +191,14 @@ function confirmDeleteMedia() {
   else if (_editMediaType === 'source')       deleteSourceMedia(_editMediaId, _editMediaIdx);
 }
 
-async function _asyncLoadMediaThumb(thumbId, idbKey, filePath) {
-  // m.file (filePath) ist Wahrheitsquelle → direkt laden (Session-Cache verhindert Doppel-Fetch)
-  // IDB nur als Fallback: Kamera-Fotos ohne OneDrive-Upload, oder Offline
-  let src = null;
-  if (filePath) {
-    src = await _odGetMediaUrlByPath(filePath).catch(() => null);
-  }
-  if (!src) {
-    src = await idbGet(idbKey).catch(() => null)
-       || await _odGetPhotoUrl(idbKey).catch(() => null); // Legacy
-  }
-  if (!src) return;
+async function _asyncLoadMediaThumb(thumbId, filePath) {
+  if (!filePath) return;
   const el = document.getElementById(thumbId);
   if (!el) return;
-  const originalContent = el.innerHTML; // Icon-Fallback bei Ladefehler
+  const originalContent = el.innerHTML;
+  const src = await _odGetMediaUrlByPath(filePath).catch(() => null)
+           || await idbGet('img:' + filePath).catch(() => null);
+  if (!src) return;
   const img = document.createElement('img');
   img.src = src;
   img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
@@ -302,7 +283,7 @@ async function confirmAddMedia() {
     const idx = p.media.length;
     p.media.push(entry);
     if (_addMediaOdFileId) _addMediaToFilemap('persons', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 }, idx);
-    if (_addMediaCamB64) { await idbPut('photo_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaCamB64) { if (file) await idbPut('img:' + file, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showDetail(_addMediaId, false);
@@ -313,7 +294,7 @@ async function confirmAddMedia() {
     const idx = f.marr.media.length;
     f.marr.media.push({ file, titl: title, form, note:'', date:'', scbk:'', prim:'', _extra:[] });
     if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 }, idx);
-    if (_addMediaCamB64) { await idbPut('photo_fam_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaCamB64) { if (file) await idbPut('img:' + file, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showFamilyDetail(_addMediaId, false);
@@ -324,7 +305,7 @@ async function confirmAddMedia() {
     const _smIdx = s.media.length;
     s.media.push(entry);
     if (_addMediaOdFileId) _addMediaToFilemap('sources', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: _smIdx === 0 }, _smIdx);
-    if (_addMediaCamB64) { await idbPut('photo_src_' + _addMediaId + '_' + _smIdx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaCamB64) { if (file) await idbPut('img:' + file, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showSourceDetail(_addMediaId, false);
@@ -339,10 +320,8 @@ function _countFamMarrObje(f) {
 async function deletePersonMedia(personId, idx) {
   const p = getPerson(personId);
   if (!p?.media) return;
-  const oldLen = p.media.length;
   p.media.splice(idx, 1);
   await _removeMediaFromFilemap('persons', personId, idx);
-  await _clearIdbPhotoKeys('photo_' + personId, oldLen);
   AppState.changed = true;
   showDetail(personId, false);
 }
@@ -350,10 +329,8 @@ async function deletePersonMedia(personId, idx) {
 async function deleteFamilyMarrMedia(famId, idx) {
   const f = getFamily(famId);
   if (!f?.marr?.media) return;
-  const oldCount = f.marr.media.length;
   f.marr.media.splice(idx, 1);
   await _removeMediaFromFilemap('families', famId, idx);
-  await _clearIdbPhotoKeys('photo_fam_' + famId, oldCount);
   AppState.changed = true;
   showFamilyDetail(famId, false);
 }
@@ -369,7 +346,6 @@ async function deleteFamilyMedia(famId, idx) {
 async function deleteSourceMedia(srcId, idx) {
   const s = getSource(srcId);
   if (!s?.media) return;
-  idbDel('photo_src_' + srcId + '_' + idx).catch(() => {});
   s.media.splice(idx, 1);
   await _removeMediaFromFilemap('sources', srcId, idx);
   AppState.changed = true;
@@ -422,25 +398,11 @@ function showMediaBrowser() {
   document.getElementById('media-browser-content').innerHTML = html;
   openModal('modalMediaBrowser');
 
-  // Async Thumbnails
+  // Async Thumbnails — pfad-basiert
   for (const { srcId, idx, m } of items) {
     const _ext = (m.file || '').split('.').pop().toLowerCase();
     if (!['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext)) continue;
-    const thumbId = 'mb-thumb-' + srcId + '-' + idx;
-    const _ci = idx; const _sid = srcId;
-    idbGet('photo_src_' + _sid + '_' + _ci).then(b64 => {
-      if (b64) { _asyncLoadMediaThumb(thumbId, 'photo_src_' + _sid + '_' + _ci); return; }
-      _odGetSourceFileUrl(_sid, _ci).then(url => {
-        if (!url) return;
-        const el = document.getElementById(thumbId);
-        if (!el) return;
-        el.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = url;
-        img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
-        el.appendChild(img);
-      }).catch(() => {});
-    }).catch(() => {});
+    _asyncLoadMediaThumb('mb-thumb-' + srcId + '-' + idx, m.file);
   }
 }
 
