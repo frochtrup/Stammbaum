@@ -256,8 +256,23 @@ function showFamilyDetail(id, pushHistory = true) {
   }
   if (f.engag?.date || f.engag?.place) {
     html += `<div class="section fade-up"><div class="section-title">Verlobung</div>`;
-    if (f.engag.date)  html += factRow('Datum', f.engag.date);
-    if (f.engag.place) html += factRow('Ort',   f.engag.place);
+    const engSrc = f.engag.sources?.length ? f.engag.sources : null;
+    if (f.engag.date)  html += factRow('Datum', f.engag.date,  '', engSrc);
+    if (f.engag.place) html += factRow('Ort',   f.engag.place, '', engSrc);
+    html += `</div>`;
+  }
+  if (f.div?.date || f.div?.place || f.div?.seen) {
+    html += `<div class="section fade-up"><div class="section-title">Scheidung</div>`;
+    const divSrc = f.div.sources?.length ? f.div.sources : null;
+    if (f.div.date)  html += factRow('Datum', f.div.date,  '', divSrc);
+    if (f.div.place) html += factRow('Ort',   f.div.place, '', divSrc);
+    html += `</div>`;
+  }
+  if (f.divf?.date || f.divf?.place || f.divf?.seen) {
+    html += `<div class="section fade-up"><div class="section-title">Scheidungsantrag</div>`;
+    const divfSrc = f.divf.sources?.length ? f.divf.sources : null;
+    if (f.divf.date)  html += factRow('Datum', f.divf.date,  '', divfSrc);
+    if (f.divf.place) html += factRow('Ort',   f.divf.place, '', divfSrc);
     html += `</div>`;
   }
 

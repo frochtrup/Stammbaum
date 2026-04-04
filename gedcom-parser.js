@@ -60,7 +60,8 @@ function parseGEDCOM(text) {
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{date:null,place:null,lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceNote:{},sourceExtra:{},sourceMedia:{},value:'',seen:false,addr:'',note:'',noteRefs:[],_extra:[],media:[]}, engag:{date:null,place:null,lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceNote:{},sourceExtra:{},sourceMedia:{},value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]}, events:[], _stat:null, noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
+        const _famEv = () => ({date:null,place:null,lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceNote:{},sourceExtra:{},sourceMedia:{},value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', agnc:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
@@ -450,8 +451,11 @@ function parseGEDCOM(text) {
           else { cur.noteRefs.push(val); _curNoteIsInline = false; }
         }
         else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
-        else if (tag==='MARR') { cur.marr.seen = true; cur.marr.value = val; }
+        else if (tag==='MARR') { cur.marr.seen  = true; cur.marr.value  = val; }
         else if (tag==='ENGA') { cur.engag.seen = true; cur.engag.value = val; }
+        else if (tag==='ENG')  { cur.engag.seen = true; cur.engag.value = val; } // ENG = ENGA-Alias
+        else if (tag==='DIV')  { cur.div.seen   = true; cur.div.value   = val; }
+        else if (tag==='DIVF') { cur.divf.seen  = true; cur.divf.value  = val; }
         else if (tag==='CHAN') { /* context-only */ }
         else if (tag==='EVEN') { cur.events.push({ type:'EVEN', value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[] }); evIdx = cur.events.length-1; }
         else if (tag==='_STAT') { cur._stat = val; }
@@ -479,13 +483,29 @@ function parseGEDCOM(text) {
           else if (tag==='OBJE') { cur.marr.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.marr._extra; }
         }
-        if (lv1tag==='ENGA') {
+        if (lv1tag==='ENGA' || lv1tag==='ENG') {
           if      (tag==='DATE') cur.engag.date = val;
           else if (tag==='PLAC') cur.engag.place = val;
           else if (tag==='SOUR') { cur.engag.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.engag.noteRefs.push(val); else { cur.engag.note = val; _ptDepth=2; _ptTarget=cur.engag._extra; } }
           else if (tag==='OBJE') { cur.engag.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.engag._extra; }
+        }
+        if (lv1tag==='DIV') {
+          if      (tag==='DATE') cur.div.date = val;
+          else if (tag==='PLAC') cur.div.place = val;
+          else if (tag==='SOUR') { cur.div.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.div.noteRefs.push(val); else { cur.div.note = val; _ptDepth=2; _ptTarget=cur.div._extra; } }
+          else if (tag==='OBJE') { cur.div.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+          else { cur.div._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.div._extra; }
+        }
+        if (lv1tag==='DIVF') {
+          if      (tag==='DATE') cur.divf.date = val;
+          else if (tag==='PLAC') cur.divf.place = val;
+          else if (tag==='SOUR') { cur.divf.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.divf.noteRefs.push(val); else { cur.divf.note = val; _ptDepth=2; _ptTarget=cur.divf._extra; } }
+          else if (tag==='OBJE') { cur.divf.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+          else { cur.divf._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.divf._extra; }
         }
         if (lv1tag==='EVEN' && evIdx >= 0 && cur.events[evIdx]) {
           const ev = cur.events[evIdx];
@@ -528,12 +548,26 @@ function parseGEDCOM(text) {
           else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.marr.sourceMedia[lastSourVal]) cur.marr.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.marr.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
           else if (tag !== 'SOUR') { if (!cur.marr.sourceExtra[lastSourVal]) cur.marr.sourceExtra[lastSourVal] = []; cur.marr.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.marr.sourceExtra[lastSourVal]; }
         }
-        if (lv1tag==='ENGA' && lv2tag==='SOUR' && lastSourVal) {
+        if ((lv1tag==='ENGA'||lv1tag==='ENG') && lv2tag==='SOUR' && lastSourVal) {
           if      (tag==='PAGE') cur.engag.sourcePages[lastSourVal] = val;
           else if (tag==='QUAY') cur.engag.sourceQUAY[lastSourVal] = val;
           else if (tag==='NOTE') { cur.engag.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(cur.engag.sourceExtra[lastSourVal]||(cur.engag.sourceExtra[lastSourVal]=[])); }
           else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.engag.sourceMedia[lastSourVal]) cur.engag.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.engag.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
           else if (tag !== 'SOUR') { if (!cur.engag.sourceExtra[lastSourVal]) cur.engag.sourceExtra[lastSourVal] = []; cur.engag.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.engag.sourceExtra[lastSourVal]; }
+        }
+        if (lv1tag==='DIV' && lv2tag==='SOUR' && lastSourVal) {
+          if      (tag==='PAGE') cur.div.sourcePages[lastSourVal] = val;
+          else if (tag==='QUAY') cur.div.sourceQUAY[lastSourVal] = val;
+          else if (tag==='NOTE') { cur.div.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(cur.div.sourceExtra[lastSourVal]||(cur.div.sourceExtra[lastSourVal]=[])); }
+          else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.div.sourceMedia[lastSourVal]) cur.div.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.div.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
+          else if (tag !== 'SOUR') { if (!cur.div.sourceExtra[lastSourVal]) cur.div.sourceExtra[lastSourVal] = []; cur.div.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.div.sourceExtra[lastSourVal]; }
+        }
+        if (lv1tag==='DIVF' && lv2tag==='SOUR' && lastSourVal) {
+          if      (tag==='PAGE') cur.divf.sourcePages[lastSourVal] = val;
+          else if (tag==='QUAY') cur.divf.sourceQUAY[lastSourVal] = val;
+          else if (tag==='NOTE') { cur.divf.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(cur.divf.sourceExtra[lastSourVal]||(cur.divf.sourceExtra[lastSourVal]=[])); }
+          else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.divf.sourceMedia[lastSourVal]) cur.divf.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.divf.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
+          else if (tag !== 'SOUR') { if (!cur.divf.sourceExtra[lastSourVal]) cur.divf.sourceExtra[lastSourVal] = []; cur.divf.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.divf.sourceExtra[lastSourVal]; }
         }
         if (lv1tag==='MARR' && lv2tag==='OBJE' && cur.marr.media.length) {
           const _om = cur.marr.media[cur.marr.media.length-1];
@@ -545,8 +579,28 @@ function parseGEDCOM(text) {
           else if (tag==='_PRIM') _om.prim = val;
           else { _om._extra.push('3 '+tag+(val?' '+val:'')); _ptDepth=3; _ptTarget=_om._extra; }
         }
-        if (lv1tag==='ENGA' && lv2tag==='OBJE' && cur.engag.media.length) {
+        if ((lv1tag==='ENGA'||lv1tag==='ENG') && lv2tag==='OBJE' && cur.engag.media.length) {
           const _om = cur.engag.media[cur.engag.media.length-1];
+          if      (tag==='FILE')  _om.file = val;
+          else if (tag==='TITL')  _om.titl = val;
+          else if (tag==='NOTE')  _om.note = val;
+          else if (tag==='_DATE') _om.date = val;
+          else if (tag==='_SCBK') _om.scbk = val;
+          else if (tag==='_PRIM') _om.prim = val;
+          else { _om._extra.push('3 '+tag+(val?' '+val:'')); _ptDepth=3; _ptTarget=_om._extra; }
+        }
+        if (lv1tag==='DIV' && lv2tag==='OBJE' && cur.div.media.length) {
+          const _om = cur.div.media[cur.div.media.length-1];
+          if      (tag==='FILE')  _om.file = val;
+          else if (tag==='TITL')  _om.titl = val;
+          else if (tag==='NOTE')  _om.note = val;
+          else if (tag==='_DATE') _om.date = val;
+          else if (tag==='_SCBK') _om.scbk = val;
+          else if (tag==='_PRIM') _om.prim = val;
+          else { _om._extra.push('3 '+tag+(val?' '+val:'')); _ptDepth=3; _ptTarget=_om._extra; }
+        }
+        if (lv1tag==='DIVF' && lv2tag==='OBJE' && cur.divf.media.length) {
+          const _om = cur.divf.media[cur.divf.media.length-1];
           if      (tag==='FILE')  _om.file = val;
           else if (tag==='TITL')  _om.titl = val;
           else if (tag==='NOTE')  _om.note = val;
@@ -618,13 +672,13 @@ function parseGEDCOM(text) {
           }
         }
       }
-      if (lv === 4 && inMap && (mapParent === 'MARR' || mapParent === 'ENGA' || mapParent === 'EVEN')) {
+      if (lv === 4 && inMap && (mapParent === 'MARR' || mapParent === 'ENGA' || mapParent === 'ENG' || mapParent === 'DIV' || mapParent === 'DIVF' || mapParent === 'EVEN')) {
         const coord = parseGeoCoord(val);
         if (mapParent === 'EVEN' && evIdx >= 0 && cur.events[evIdx]) {
           if (tag==='LATI') cur.events[evIdx].lati = coord;
           if (tag==='LONG') cur.events[evIdx].long = coord;
         } else {
-          const evObj = mapParent === 'ENGA' ? cur.engag : cur.marr;
+          const evObj = (mapParent==='ENGA'||mapParent==='ENG') ? cur.engag : mapParent==='DIV' ? cur.div : mapParent==='DIVF' ? cur.divf : cur.marr;
           if (tag==='LATI') evObj.lati = coord;
           if (tag==='LONG') evObj.long = coord;
         }

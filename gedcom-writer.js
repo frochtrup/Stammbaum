@@ -325,6 +325,8 @@ function writeGEDCOM() {
     eventBlock('MARR', f.marr, 1);
     if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
     eventBlock('ENGA', f.engag, 1);
+    eventBlock('DIV',  f.div,   1);
+    eventBlock('DIVF', f.divf,  1);
     for (const ev of (f.events || [])) {
       lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
       if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
@@ -374,7 +376,10 @@ function writeGEDCOM() {
       lines.push(`2 DATE ${f.lastChanged}`);
       if (f.lastChangedTime) lines.push(`3 TIME ${f.lastChangedTime}`);
     }
-    for (const l of (f._passthrough || [])) lines.push(l);
+    for (const l of (f._passthrough || [])) {
+      if (/^1 (DIV|DIVF|ENG)\b/.test(l)) continue; // jetzt strukturiert
+      lines.push(l);
+    }
   }
 
   for (const s of Object.values(db.sources)) {
