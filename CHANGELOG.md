@@ -9,6 +9,28 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Kamera-Upload nach OneDrive (sw v100)
+
+**Kamera-Fotos landen direkt im konfigurierten OneDrive-Ordner**
+
+- **sw v100** `feat`: Kamera-Foto-Upload nach OneDrive
+  - `onedrive.js`: `_odUploadMediaFile(b64DataUrl, targetPath)` — PUT per path-based API,
+    gibt `{ path, fileId }` zurück mit tatsächlichem Pfad aus API-Antwort
+  - `onedrive.js`: `odScanDocFolder` speichert jetzt ebenfalls `folderPath` in `od_doc_folder`
+    (analog zu `odImportPhotosFromFolder`)
+  - `ui-media.js`: `_addMediaDefaultFolderPath` — Modul-Variable für Ordner-Pfad
+  - `ui-media.js`: `openAddMediaDialog` lädt `od_default_folder.folderPath` (bzw. `od_doc_folder`
+    für Quellen) aus IDB → vorbelegt `_addMediaDefaultFolderPath`
+  - `ui-media.js`: `_onCamCapture` verwendet `_addMediaDefaultFolderPath` als Ordner-Prefix;
+    Dateiname jetzt mit Uhrzeit (`foto_YYYYMMDD_HHMMSS.jpg`) für Eindeutigkeit
+  - `ui-media.js`: `confirmAddMedia` — wenn Kamera-Foto + OneDrive verbunden + Dateifeld gefüllt:
+    Upload via `_odUploadMediaFile`; tatsächlicher API-Pfad ersetzt Eingabefeld-Wert;
+    IDB-Cache wird trotzdem gesetzt (lokale Kopie)
+
+*Aktuelle sw-Version: v100 / Cache: stammbaum-v100*
+
+---
+
 ### Session 2026-04-04 — Medien-Handling Überarbeitung (sw v96–v99)
 
 **Relativer OneDrive-Pfad als einzige Wahrheitsquelle**

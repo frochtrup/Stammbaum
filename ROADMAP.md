@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v99 / Cache: `stammbaum-v99`
+**Aktuelle sw-Version:** v100 / Cache: `stammbaum-v100`
 
 ---
 
@@ -112,6 +112,9 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [x] `↑ Übergeordneter Ordner`-Button im Picker (sw v97–v98)
 - [x] `_odGetMediaUrlByPath(path)` — path-based OneDrive API, ein Pfad = eine Datei (sw v99)
 - [x] `od_filemap` nur noch Legacy-Fallback; Pfad in `m.file` ist Single Source of Truth (sw v99)
+- [x] Kamera-Fotos werden per PUT-API direkt in konfigurierten OneDrive-Ordner hochgeladen (sw v100)
+- [x] `odScanDocFolder` speichert `folderPath` in `od_doc_folder` (sw v100)
+- [x] `_onCamCapture` verwendet `od_default_folder.folderPath` als Ordner-Prefix (sw v100)
 
 ---
 

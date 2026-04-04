@@ -1,8 +1,9 @@
 // ─── Medien hinzufügen / löschen ─────────────────────────────────────────
-let _addMediaType     = null; // 'person' | 'family' | 'source'
-let _addMediaId       = null;
-let _addMediaOdFileId = null;
-let _addMediaCamB64   = null; // base64 aus Kamera-Aufnahme
+let _addMediaType            = null; // 'person' | 'family' | 'source'
+let _addMediaId              = null;
+let _addMediaOdFileId        = null;
+let _addMediaCamB64          = null; // base64 aus Kamera-Aufnahme
+let _addMediaDefaultFolderPath = '';  // relativer OneDrive-Ordner-Pfad (für Kamera-Dateinamen)
 
 // ─── Medium bearbeiten ────────────────────────────────────────────────────────
 let _editMediaType     = null; // 'person' | 'family' | 'family_media' | 'source'
@@ -185,14 +186,22 @@ async function _asyncLoadMediaThumb(thumbId, idbKey, filePath) {
 
 
 function _onCamCapture(b64) {
-  // Verzeichnis-Anteil aus am-file erhalten, generierten Dateinamen anhängen
-  const cur  = document.getElementById('am-file').value;
-  const sep  = cur.lastIndexOf('/');
-  const base = sep >= 0 ? cur.substring(0, sep + 1) : '';
   const ts   = new Date();
   const name = 'foto_' + ts.getFullYear()
     + String(ts.getMonth() + 1).padStart(2, '0')
-    + String(ts.getDate()).padStart(2, '0') + '.jpg';
+    + String(ts.getDate()).padStart(2, '0') + '_'
+    + String(ts.getHours()).padStart(2, '0')
+    + String(ts.getMinutes()).padStart(2, '0')
+    + String(ts.getSeconds()).padStart(2, '0') + '.jpg';
+  // Ordner-Pfad: _addMediaDefaultFolderPath (aus IDB) oder Verzeichnis-Anteil aus am-file
+  const cur = document.getElementById('am-file').value;
+  let base = _addMediaDefaultFolderPath;
+  if (!base) {
+    const sep = cur.lastIndexOf('/');
+    base = sep >= 0 ? cur.substring(0, sep + 1) : '';
+  } else if (!base.endsWith('/')) {
+    base += '/';
+  }
   document.getElementById('am-file').value = base + name;
   _addMediaCamB64 = b64;
   document.getElementById('am-cam-img').src = b64;
@@ -204,18 +213,35 @@ async function openAddMediaDialog(type, entityId) {
   _addMediaId       = entityId;
   _addMediaOdFileId = null;
   _addMediaCamB64   = null;
+  _addMediaDefaultFolderPath = '';
   document.getElementById('am-title').value = '';
   document.getElementById('am-cam-preview').style.display = 'none';
   document.getElementById('am-cam-input').setAttribute('capture', 'environment');
   document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
   document.getElementById('am-file').value = '';
+  // Standard-Ordner-Pfad für Kamera-Dateinamen laden
+  const folderKey = (type === 'source') ? 'od_doc_folder' : 'od_default_folder';
+  const folder = await idbGet(folderKey).catch(() => null);
+  _addMediaDefaultFolderPath = folder?.folderPath || '';
   openModal('modalAddMedia');
 }
 
 async function confirmAddMedia() {
   const title = document.getElementById('am-title').value.trim();
-  const file  = document.getElementById('am-file').value.trim();
+  let   file  = document.getElementById('am-file').value.trim();
   if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
+
+  // Kamera-Foto nach OneDrive hochladen — Pfad aus Eingabefeld als Ziel
+  if (_addMediaCamB64 && file && _odIsConnected()) {
+    showToast('Lade Foto hoch…');
+    const result = await _odUploadMediaFile(_addMediaCamB64, file).catch(() => null);
+    if (result?.path) {
+      file = result.path; // tatsächlicher Pfad laut API-Antwort
+      document.getElementById('am-file').value = file;
+    }
+    // Lokaler IDB-Cache (wird später via idbKey gesetzt)
+  }
+
   const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
   const entry = { form, file, title };
 

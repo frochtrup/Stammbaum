@@ -41,8 +41,15 @@
 **Version 5.0 in Entwicklung — Branch `v5-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
-- **Aktuelle sw-Version: v99** / Cache: `stammbaum-v99`
+- **Aktuelle sw-Version: v100** / Cache: `stammbaum-v100`
 - Git: Branch `v5-dev`; letzter Commit: eabf3b3
+
+**Session 2026-04-04 — Kamera-Upload nach OneDrive (sw v100):**
+- `_odUploadMediaFile(b64, targetPath)` — PUT per path-based API, gibt tatsächlichen Pfad zurück
+- `odScanDocFolder` speichert jetzt `folderPath` in `od_doc_folder` (analog Foto-Ordner)
+- `openAddMediaDialog` lädt `folderPath` aus IDB → `_addMediaDefaultFolderPath`
+- `_onCamCapture` verwendet `_addMediaDefaultFolderPath` als Ordner; Dateiname mit Uhrzeit
+- `confirmAddMedia` lädt Kamera-Foto hoch, übernimmt tatsächlichen API-Pfad ins `m.file`
 
 **Session 2026-04-04 — Medien-Handling Überarbeitung (sw v96–v99):**
 - Relativer OneDrive-Pfad: `_odPickSelectFile` speichert `fullPath` direkt (kein `cfg_photo_base`-Prefix)
