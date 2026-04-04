@@ -204,9 +204,16 @@ function confirmDeleteMedia() {
 }
 
 async function _asyncLoadMediaThumb(thumbId, idbKey, filePath) {
-  const src = await idbGet(idbKey).catch(() => null)
-           || await _odGetMediaUrlByPath(filePath).catch(() => null)
-           || await _odGetPhotoUrl(idbKey).catch(() => null); // Legacy-Fallback
+  // m.file (filePath) ist Wahrheitsquelle → direkt laden (Session-Cache verhindert Doppel-Fetch)
+  // IDB nur als Fallback: Kamera-Fotos ohne OneDrive-Upload, oder Offline
+  let src = null;
+  if (filePath) {
+    src = await _odGetMediaUrlByPath(filePath).catch(() => null);
+  }
+  if (!src) {
+    src = await idbGet(idbKey).catch(() => null)
+       || await _odGetPhotoUrl(idbKey).catch(() => null); // Legacy
+  }
   if (!src) return;
   const el = document.getElementById(thumbId);
   if (!el) return;

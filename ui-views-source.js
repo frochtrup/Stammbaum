@@ -156,10 +156,12 @@ function showSourceDetail(id, pushHistory = true) {
     if (!isImg) return;
     const el = document.getElementById('src-media-thumb-' + idx);
     if (el) {
+      const originalContent = el.innerHTML;
       el.innerHTML = '';
       const img = document.createElement('img');
       img.src = url; img.alt = m.title || m.file || '';
       img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
+      img.onerror = () => { el.innerHTML = originalContent; };
       el.appendChild(img);
     }
     if (!_srcHeroSet && (idx === _srcPrimIdx)) {
@@ -179,15 +181,22 @@ function showSourceDetail(id, pushHistory = true) {
     }
   }
   // Ladereihenfolge: prim zuerst, dann Rest
+  // Pfad (m.file via _odGetSourceFileUrl) zuerst; IDB nur als Fallback (Offline/Kamera)
   const _srcLoadOrder = srcMedia.map((_, i) => i)
     .filter(i => srcMedia[i].file || srcMedia[i].title)
     .sort((a, b) => (a === _srcPrimIdx ? -1 : b === _srcPrimIdx ? 1 : a - b));
   for (const i of _srcLoadOrder) {
     const _ci = i;
-    idbGet('photo_src_' + id + '_' + _ci).then(b64 => {
-      if (b64) { _applySrcMediaUrl(_ci, b64); return; }
-      _odGetSourceFileUrl(id, _ci).then(url => { if (url) _applySrcMediaUrl(_ci, url); }).catch(() => {});
-    }).catch(() => {});
+    _odGetSourceFileUrl(id, _ci).then(url => {
+      if (url) { _applySrcMediaUrl(_ci, url); return; }
+      idbGet('photo_src_' + id + '_' + _ci).then(b64 => {
+        if (b64) _applySrcMediaUrl(_ci, b64);
+      }).catch(() => {});
+    }).catch(() => {
+      idbGet('photo_src_' + id + '_' + _ci).then(b64 => {
+        if (b64) _applySrcMediaUrl(_ci, b64);
+      }).catch(() => {});
+    });
   }
 }
 

@@ -9,6 +9,26 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-04 — Medienladen: Pfad-zuerst statt IDB-zuerst (sw v103)
+
+- **sw v103** `refactor`: Bild-Loading-Reihenfolge überarbeitet
+  - **Bisher**: IDB → OneDrive-Pfad → Legacy-Filemap
+    Problem: IDB ist für OneDrive-Fotos fast immer leer → unnötiger Cache-Miss;
+    veraltete IDB-Einträge (nach Reorder) zeigten falsches Bild
+  - **Jetzt**: OneDrive-Pfad (m.file) → IDB → Legacy-Filemap
+    `_odPhotoCache` (Session-Cache) verhindert Doppel-Fetches innerhalb einer Session
+  - `ui-media.js`: `_asyncLoadMediaThumb` — `_odGetMediaUrlByPath(filePath)` zuerst
+  - `ui-views-person.js`: Hero-Loading — `_odGetMediaUrlByPath(_filePath)` zuerst;
+    Hero-`<img>` jetzt DOM-basiert mit `onerror` (Avatar wiederherstellen bei Fehler)
+  - `ui-views-family.js`: Hero-Loading — analog Person; `onerror` hinzugefügt
+  - `ui-views-source.js`: Thumbnails — `_odGetSourceFileUrl` zuerst (pfadbasiert),
+    IDB als Fallback; `onerror` in `_applySrcMediaUrl` hinzugefügt
+  - Alle Hero-Images: stale IDB-Writes (`idbPut` nach Load) entfernt — Pfad ist Wahrheitsquelle
+
+*Aktuelle sw-Version: v103 / Cache: stammbaum-v103*
+
+---
+
 ### Session 2026-04-04 — Kamera-Pfad: folderPath-Fallback per API (sw v102)
 
 - **sw v102** `fix`: Kamera-Foto landet im konfigurierten Ordner auch bei alten IDB-Einträgen

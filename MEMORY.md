@@ -41,7 +41,7 @@
 **Version 5.0 in Entwicklung — Branch `v5-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
-- **Aktuelle sw-Version: v102** / Cache: `stammbaum-v102`
+- **Aktuelle sw-Version: v103** / Cache: `stammbaum-v103`
 - Git: Branch `v5-dev`; letzter Commit: eabf3b3
 
 **Session 2026-04-04 — Thumbnails + Hauptbild (sw v101):**

@@ -369,25 +369,31 @@ function showDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Foto async — bevorzugtes Medium (prim) oder erstes; Pfad ist Wahrheitsquelle
+  // Foto async — Pfad (m.file) zuerst laden; IDB nur als Fallback (Offline/Kamera)
   (async () => {
     const _media = p.media || [];
     const _primIdx = Math.max(0, _media.findIndex(m => m.prim && m.prim !== ''));
     const _idbKey  = 'photo_' + id + '_' + _primIdx;
     const _filePath = _media[_primIdx]?.file;
-    const src = await idbGet(_idbKey).catch(() => null)
+    const src = (_filePath ? await _odGetMediaUrlByPath(_filePath).catch(() => null) : null)
+             || await idbGet(_idbKey).catch(() => null)
              || (_primIdx === 0 ? await idbGet('photo_' + id).catch(() => null) : null)
-             || await _odGetMediaUrlByPath(_filePath).catch(() => null)
              || await _odGetPhotoUrl(_idbKey).catch(() => null); // Legacy
     if (!src) return;
     const el = document.getElementById('det-photo-' + id);
+    const av = document.getElementById('det-avatar-' + id);
     if (el) {
       el.style.display = '';
-      el.innerHTML = `<img src="${src}" alt="Foto" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer" onclick="showLightbox(this.src)">`;
-      const av = document.getElementById('det-avatar-' + id);
+      el.innerHTML = '';
+      const heroImg = document.createElement('img');
+      heroImg.src = src;
+      heroImg.alt = 'Foto';
+      heroImg.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
+      heroImg.onclick = () => showLightbox(heroImg.src);
+      heroImg.onerror = () => { el.style.display = 'none'; if (av) av.style.display = ''; };
+      el.appendChild(heroImg);
       if (av) av.style.display = 'none';
     }
-    if (!src.startsWith('blob:') && _primIdx === 0) idbGet('photo_' + id + '_0').then(v => { if (!v) idbPut('photo_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
   // Media-Thumbnails async laden — Pfad als primäre Quelle
   for (let _mi = 0; _mi < indiMedia.length; _mi++) {

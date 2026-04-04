@@ -353,37 +353,37 @@ function showFamilyDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Foto async — bevorzugtes Medium (prim) oder erstes; Pfad ist Wahrheitsquelle
+  // Foto async — Pfad (m.file) zuerst laden; IDB nur als Fallback (Offline/Kamera)
   (async () => {
     const _marrMedia = f.marr?.media || [];
     const _famMedia  = f.media || [];
     const _primMarrIdx = Math.max(0, _marrMedia.findIndex(m => m.prim && m.prim !== ''));
     const _idbKey    = 'photo_fam_' + id + '_' + _primMarrIdx;
     const _filePath  = _marrMedia[_primMarrIdx]?.file;
-    let src = await idbGet(_idbKey).catch(() => null)
+    let src = (_filePath ? await _odGetMediaUrlByPath(_filePath).catch(() => null) : null)
+           || await idbGet(_idbKey).catch(() => null)
            || (_primMarrIdx === 0 ? await idbGet('photo_fam_' + id).catch(() => null) : null)
-           || await _odGetMediaUrlByPath(_filePath).catch(() => null)
            || await _odGetPhotoUrl(_idbKey).catch(() => null); // Legacy
     if (!src && _famMedia.length > 0) {
       const _primFamIdx  = Math.max(0, _famMedia.findIndex(m => m.prim && m.prim !== ''));
       const _famFilePath = _famMedia[_primFamIdx]?.file;
-      src = await idbGet('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null)
-         || await _odGetMediaUrlByPath(_famFilePath).catch(() => null)
+      src = (_famFilePath ? await _odGetMediaUrlByPath(_famFilePath).catch(() => null) : null)
+         || await idbGet('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null)
          || await _odGetPhotoUrl('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null); // Legacy
     }
     if (!src) return;
     const el = document.getElementById('det-fam-photo-' + id);
+    const av = document.getElementById('det-fam-avatar-' + id);
     if (el) {
       el.style.display = ''; el.innerHTML = '';
       const img = document.createElement('img');
       img.src = src; img.alt = 'Foto';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
       img.onclick = () => showLightbox(img.src);
+      img.onerror = () => { el.style.display = 'none'; if (av) av.style.display = ''; };
       el.appendChild(img);
-      const av = document.getElementById('det-fam-avatar-' + id);
       if (av) av.style.display = 'none';
     }
-    if (!src.startsWith('blob:') && _primMarrIdx === 0) idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
   // Media-Thumbnails async laden — Pfad als primäre Quelle
   for (let _mi = 0; _mi < marrObjeEntries.length; _mi++) {
