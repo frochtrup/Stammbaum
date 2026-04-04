@@ -41,11 +41,12 @@ function renderSrcTags(prefix) {
     const pageVal = pages[sid] || '';
     const quayVal = String(quays[sid] ?? '');
     const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    const pageField = prefix === 'ef'
+    const _hasMeta = prefix === 'ef' || prefix === 'cr';
+    const pageField = _hasMeta
       ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
            oninput="updateSrcPage('${prefix}','${sidEsc}',this.value)">`
       : '';
-    const quayField = prefix === 'ef'
+    const quayField = _hasMeta
       ? `<select class="src-quay-select" onchange="updateSrcQuay('${prefix}','${sidEsc}',this.value)"
            style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
            <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>

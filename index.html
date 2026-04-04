@@ -1787,6 +1787,43 @@ body.fc-mode #fcGenBtns { display: flex; }
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="modalChildRel">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Kind-Verhältnis</div>
+    <div class="sheet-body">
+      <input type="hidden" id="cr-famId">
+      <input type="hidden" id="cr-childId">
+      <div class="form-group">
+        <label class="form-label">Kind</label>
+        <div id="cr-child-name" style="font-weight:600;padding:4px 0 8px"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Verhältnis (PEDI)</label>
+        <select class="form-select" id="cr-pedi">
+          <option value="">– nicht angegeben</option>
+          <option value="birth">leiblich (birth)</option>
+          <option value="adopted">adoptiert (adopted)</option>
+          <option value="foster">Pflegekind (foster)</option>
+          <option value="sealing">Sealing</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quellen</label>
+        <div class="src-tags" id="cr-src-tags"></div>
+        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('cr')">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="cr-src-picker">
+          <div class="src-picker-list" id="cr-src-list"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalChildRel')">Abbrechen</button>
+        <button class="btn btn-save" onclick="saveChildRelDialog()">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="modalLightbox" onclick="document.getElementById('modalLightbox').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:14px">
   <img id="lightboxImg" alt="Foto" style="max-width:92vw;max-height:80vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 32px rgba(0,0,0,0.6)">
   <button id="lightboxSetHero" onclick="event.stopPropagation();_lightboxSetHero()" style="display:none;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:8px 22px;font-size:0.92rem;font-weight:600;cursor:pointer">Als Hauptfoto setzen</button>

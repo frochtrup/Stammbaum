@@ -274,6 +274,8 @@ function showFamilyDetail(id, pushHistory = true) {
     const _fe = (child.famc || []).find(x => (typeof x === 'string' ? x : x.famId) === id);
     const _curPedi = (typeof _fe === 'object') ? (_toPedi(_fe.pedi || _fe.frel || '')) : '';
     const _pSel = v => v === _curPedi ? ' selected' : '';
+    const _sourCount = (typeof _fe === 'object') ? (_fe.sourIds?.length || 0) : 0;
+    const _sourBadge = _sourCount ? ` <span style="font-size:0.72rem;color:var(--gold)">${_sourCount} Q</span>` : '';
     const _pediSelect = `<select
         data-fid="${id}" data-cid="${cid}"
         onchange="event.stopPropagation();savePedi(this.dataset.fid,this.dataset.cid,this.value)"
@@ -284,7 +286,10 @@ function showFamilyDetail(id, pushHistory = true) {
       <option value="adopted"${_pSel('adopted')}>adoptiert</option>
       <option value="foster"${_pSel('foster')}>Pflegekind</option>
       <option value="sealing"${_pSel('sealing')}>Sealing</option>
-    </select>`;
+    </select>
+    <button onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
+      title="Quellen zum Verhältnis"
+      style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:var(--text-dim);padding:0 2px">📎${_sourBadge}</button>`;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
     const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';
     html += `<div class="rel-row" data-pid="${child.id}" onclick="showDetail(this.dataset.pid)">
@@ -427,4 +432,43 @@ function savePedi(famId, childId, value) {
   fe.frelSeen = !!value;
   fe.mrelSeen = !!value;
   markChanged();
+}
+
+// Öffnet den Kind-Verhältnis-Dialog (PEDI + Quellen)
+function showChildRelDialog(famId, childId) {
+  const p = getPerson(childId);
+  if (!p) return;
+  const fe = p.famc.find(x => (typeof x === 'string' ? x : x.famId) === famId);
+  document.getElementById('cr-famId').value   = famId;
+  document.getElementById('cr-childId').value = childId;
+  document.getElementById('cr-child-name').textContent = p.name || childId;
+  const curPedi = (fe && typeof fe === 'object') ? (fe.pedi || _toPedi(fe.frel || '')) : '';
+  document.getElementById('cr-pedi').value = curPedi;
+  const sourIds  = (fe && typeof fe === 'object') ? (fe.sourIds  || []) : [];
+  const sourPages = (fe && typeof fe === 'object') ? (fe.sourPages || {}) : {};
+  const sourQUAY  = (fe && typeof fe === 'object') ? (fe.sourQUAY  || {}) : {};
+  initSrcWidget('cr', sourIds, sourPages, sourQUAY);
+  openModal('modalChildRel');
+}
+
+// Speichert PEDI + Quellen aus dem Dialog
+function saveChildRelDialog() {
+  const famId   = document.getElementById('cr-famId').value;
+  const childId = document.getElementById('cr-childId').value;
+  const pediVal = document.getElementById('cr-pedi').value;
+  const p = getPerson(childId);
+  if (!p) { closeModal('modalChildRel'); return; }
+  const fe = p.famc.find(x => (typeof x === 'string' ? x : x.famId) === famId);
+  if (!fe || typeof fe === 'string') { closeModal('modalChildRel'); return; }
+  fe.pedi      = pediVal;
+  fe.frel      = pediVal;
+  fe.mrel      = pediVal;
+  fe.frelSeen  = !!pediVal;
+  fe.mrelSeen  = !!pediVal;
+  fe.sourIds   = [...(srcWidgetState['cr']?.ids || [])];
+  fe.sourPages = { ...(srcWidgetState['cr']?.pages || {}) };
+  fe.sourQUAY  = { ...(srcWidgetState['cr']?.quay  || {}) };
+  markChanged();
+  closeModal('modalChildRel');
+  showFamilyDetail(famId);
 }
