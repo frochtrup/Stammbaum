@@ -964,10 +964,6 @@ function saveExtraPlaces() {
   try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
 }
 
-function debounce(fn, ms) {
-  let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
 const _applyPersonFilterDebounced = debounce((q, from, to) => filterPersons(q, from, to), 200);
 const filterFamiliesDebounced = debounce(filterFamilies, 200);
 const filterSourcesDebounced  = debounce(filterSources,  200);
