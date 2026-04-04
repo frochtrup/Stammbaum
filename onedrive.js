@@ -41,14 +41,13 @@ async function _odGetMediaUrlByPath(filePath) {
   };
   try {
     let dataUrl = await _fetchDataUrl(filePath);
-    if (!dataUrl) {
-      // Fallback: Dateiname im Standard-Fotoordner suchen (GEDCOM-Pfad ≠ OneDrive-Pfad)
-      const basename = filePath.split(/[/\\]/).pop();
-      if (basename !== filePath) {
-        const folder = await idbGet('od_default_folder').catch(() => null);
-        if (folder?.folderPath) {
-          dataUrl = await _fetchDataUrl(folder.folderPath + '/' + basename);
-        }
+    if (!dataUrl && filePath.includes('\\')) {
+      // Fallback: nur für Windows-Pfade aus GEDCOM-Dateien anderer Software (Trennzeichen \)
+      // Nicht für OneDrive-Pfade mit / — sonst zeigt ein absichtlich falscher Pfad trotzdem das Bild
+      const basename = filePath.split('\\').pop();
+      const folder = await idbGet('od_default_folder').catch(() => null);
+      if (folder?.folderPath) {
+        dataUrl = await _fetchDataUrl(folder.folderPath + '/' + basename);
       }
     }
     if (!dataUrl) return null;
@@ -611,9 +610,10 @@ async function _odShowFolder(folderId, folderName) {
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}"
           onclick="_odEnterFolder(this)">📁 &nbsp;${esc(f.name)}</div>`).join('');
-      const folderPath = [..._odFolderStack.map(f => f.name), folderName].join('/');
+      const folderPath = [..._odFolderStack.map(f => f.name), folderName]
+        .filter(n => n !== 'OneDrive').join('/');
       html += files.map(f => `<div class="list-item" style="cursor:pointer"
-          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}','${esc(folderPath + '/' + f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
+          onclick="_odPickSelectFile('${esc(f.id)}','${esc(f.name)}','${esc(folderPath ? folderPath + '/' + f.name : f.name)}')">📄 &nbsp;${esc(f.name)}</div>`).join('');
     }
     list.innerHTML = html;
     openModal('modalOneDrive');
