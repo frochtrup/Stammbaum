@@ -360,7 +360,12 @@ function showDetail(id, pushHistory = true) {
     for (const pid of [fam.husb, fam.wife]) {
       if (!pid) continue;
       const parent = AppState.db.individuals[pid];
-      if (parent) html += relRow(parent, parent.sex === 'M' ? 'Vater' : parent.sex === 'F' ? 'Mutter' : 'Elternteil');
+      if (!parent) continue;
+      const _pediType = (typeof fref === 'object' && (fref.pedi || fref.frel)) ? _toPedi(fref.pedi || fref.frel) : '';
+      const _pediLabels = { adopted:'adoptiert', foster:'Pflegekind', sealing:'Sealing' };
+      const _pediSuffix = (_pediLabels[_pediType] ? ' · ' + _pediLabels[_pediType] : '');
+      const _role = (parent.sex === 'M' ? 'Vater' : parent.sex === 'F' ? 'Mutter' : 'Elternteil') + _pediSuffix;
+      html += relRow(parent, _role);
     }
   }
   html += `</div>`;

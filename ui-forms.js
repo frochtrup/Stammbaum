@@ -371,7 +371,7 @@ function saveFamily() {
   for (const cid of children) {
     const cPerson = getPerson(cid);
     if (cPerson && !cPerson.famc.some(f => famcId(f) === id))
-      cPerson.famc.push({ famId: id, frel: '', mrel: '', frelSour:'', frelPage:'', frelQUAY:'', mrelSour:'', mrelPage:'', mrelQUAY:'' });
+      cPerson.famc.push({ famId: id, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
   }
 
   closeModal('modalFamily');

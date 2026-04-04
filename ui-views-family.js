@@ -270,7 +270,34 @@ function showFamilyDetail(id, pushHistory = true) {
   if (wife) html += relRow(wife, 'Ehefrau / Mutter', id);
   for (const cid of f.children) {
     const child = AppState.db.individuals[cid];
-    if (child) html += relRow(child, 'Kind', id);
+    if (!child) continue;
+    const _fe = (child.famc || []).find(x => (typeof x === 'string' ? x : x.famId) === id);
+    const _curPedi = (typeof _fe === 'object') ? (_toPedi(_fe.pedi || _fe.frel || '')) : '';
+    const _pSel = v => v === _curPedi ? ' selected' : '';
+    const _pediSelect = `<select
+        data-fid="${id}" data-cid="${cid}"
+        onchange="event.stopPropagation();savePedi(this.dataset.fid,this.dataset.cid,this.value)"
+        onclick="event.stopPropagation()"
+        style="font-size:0.8rem;border:none;background:transparent;color:var(--text-dim);cursor:pointer;max-width:90px">
+      <option value=""${_pSel('')}>– Verhältnis</option>
+      <option value="birth"${_pSel('birth')}>leiblich</option>
+      <option value="adopted"${_pSel('adopted')}>adoptiert</option>
+      <option value="foster"${_pSel('foster')}>Pflegekind</option>
+      <option value="sealing"${_pSel('sealing')}>Sealing</option>
+    </select>`;
+    const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
+    const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';
+    html += `<div class="rel-row" data-pid="${child.id}" onclick="showDetail(this.dataset.pid)">
+      <div class="rel-avatar ${sc}">${ic}</div>
+      <div class="rel-info">
+        <div class="rel-name">${esc(child.name || child.id)}</div>
+        <div class="rel-role" style="display:flex;align-items:center;gap:4px">Kind${_pediSelect}</div>
+      </div>
+      <button class="unlink-btn" data-fid="${id}" data-pid="${child.id}"
+        onclick="event.stopPropagation();unlinkMember(this.dataset.fid,this.dataset.pid)"
+        title="Verbindung trennen">×</button>
+      <span class="p-arrow">›</span>
+    </div>`;
   }
   html += `</div>`;
 
@@ -386,4 +413,18 @@ function showFamilyDetail(id, pushHistory = true) {
   for (let _mi = 0; _mi < famMedia.length; _mi++) {
     _asyncLoadMediaThumb('media-thumb-fam-media-' + id + '-' + _mi, famMedia[_mi]?.file);
   }
+}
+
+// Setzt PEDI-Wert auf der INDI-Seite (famc-Eintrag) und speichert
+function savePedi(famId, childId, value) {
+  const p = getPerson(childId);
+  if (!p) return;
+  const fe = p.famc.find(x => (typeof x === 'string' ? x : x.famId) === famId);
+  if (!fe || typeof fe === 'string') return;
+  fe.pedi     = value;
+  fe.frel     = value;
+  fe.mrel     = value;
+  fe.frelSeen = !!value;
+  fe.mrelSeen = !!value;
+  markChanged();
 }
