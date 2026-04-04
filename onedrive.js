@@ -471,7 +471,8 @@ async function odSaveFile() {
     const saved = await res.json();
     if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
     AppState.changed = false; updateChangedIndicator();
-    showToast('✓ In OneDrive gespeichert');
+    const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || '');
+    showToast('✓ In OneDrive gespeichert: ' + _loc);
   } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + e.message); }
 }
 
