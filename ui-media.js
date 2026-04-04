@@ -192,10 +192,7 @@ async function openAddMediaDialog(type, entityId) {
   document.getElementById('am-cam-preview').style.display = 'none';
   document.getElementById('am-cam-input').setAttribute('capture', 'environment');
   document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
-  // Basispfad vorbelegen
-  const baseKey = (type === 'source') ? 'cfg_doc_base' : 'cfg_photo_base';
-  const basePath = await idbGet(baseKey).catch(() => null) || '';
-  document.getElementById('am-file').value = basePath;
+  document.getElementById('am-file').value = '';
   openModal('modalAddMedia');
 }
 

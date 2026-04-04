@@ -141,7 +141,14 @@ function showSourceDetail(id, pushHistory = true) {
   showView('v-detail');
 
   // Quellenmedien async laden — IDB zuerst (Kamera-Aufnahmen), dann OneDrive
+  // Bevorzugtes Medium (prim) oder erstes für Hero
   let _srcHeroSet = false;
+  const _srcPrimIdx = (() => {
+    const withFile = srcMedia.map((m, i) => ({m, i})).filter(({m}) => m.file || m.title);
+    if (!withFile.length) return -1;
+    const prim = withFile.find(({m}) => m.prim && m.prim !== '');
+    return prim ? prim.i : withFile[0].i;
+  })();
   function _applySrcMediaUrl(idx, url) {
     const m = srcMedia[idx];
     const ext = (m.file || '').split('.').pop().toLowerCase();
@@ -155,7 +162,7 @@ function showSourceDetail(id, pushHistory = true) {
       img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
       el.appendChild(img);
     }
-    if (!_srcHeroSet) {
+    if (!_srcHeroSet && (idx === _srcPrimIdx)) {
       _srcHeroSet = true;
       const heroEl = document.getElementById('det-src-photo-' + id);
       const avatarEl = document.getElementById('det-src-avatar-' + id);
@@ -171,9 +178,11 @@ function showSourceDetail(id, pushHistory = true) {
       }
     }
   }
-  for (let i = 0; i < srcMedia.length; i++) {
-    const m = srcMedia[i];
-    if (!m.file && !m.title) continue;
+  // Ladereihenfolge: prim zuerst, dann Rest
+  const _srcLoadOrder = srcMedia.map((_, i) => i)
+    .filter(i => srcMedia[i].file || srcMedia[i].title)
+    .sort((a, b) => (a === _srcPrimIdx ? -1 : b === _srcPrimIdx ? 1 : a - b));
+  for (const i of _srcLoadOrder) {
     const _ci = i;
     idbGet('photo_src_' + id + '_' + _ci).then(b64 => {
       if (b64) { _applySrcMediaUrl(_ci, b64); return; }

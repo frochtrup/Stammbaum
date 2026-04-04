@@ -353,11 +353,20 @@ function showFamilyDetail(id, pushHistory = true) {
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
-  // Foto async aus IDB nachladen
+  // Foto async — bevorzugtes Medium (prim) oder erstes
   (async () => {
-    const src = await idbGet('photo_fam_' + id).catch(() => null)
-             || await idbGet('photo_fam_' + id + '_0').catch(() => null)
-             || await _odGetPhotoUrl('photo_fam_' + id).catch(() => null);
+    const _marrMedia = f.marr?.media || [];
+    const _famMedia  = f.media || [];
+    const _primMarrIdx = Math.max(0, _marrMedia.findIndex(m => m.prim && m.prim !== ''));
+    const _idbKey = 'photo_fam_' + id + '_' + _primMarrIdx;
+    let src = await idbGet(_idbKey).catch(() => null)
+           || (_primMarrIdx === 0 ? await idbGet('photo_fam_' + id).catch(() => null) : null)
+           || await _odGetPhotoUrl(_idbKey).catch(() => null);
+    if (!src && _famMedia.length > 0) {
+      const _primFamIdx = Math.max(0, _famMedia.findIndex(m => m.prim && m.prim !== ''));
+      src = await idbGet('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null)
+         || await _odGetPhotoUrl('photo_fam_media_' + id + '_' + _primFamIdx).catch(() => null);
+    }
     if (!src) return;
     const el = document.getElementById('det-fam-photo-' + id);
     if (el) {
@@ -370,7 +379,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const av = document.getElementById('det-fam-avatar-' + id);
       if (av) av.style.display = 'none';
     }
-    if (!src.startsWith('blob:')) idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', src).catch(() => {}); }).catch(() => {});
+    if (!src.startsWith('blob:') && _primMarrIdx === 0) idbGet('photo_fam_' + id + '_0').then(v => { if (!v) idbPut('photo_fam_' + id + '_0', src).catch(() => {}); }).catch(() => {});
   })();
   // Media-Thumbnails async laden
   for (let _mi = 0; _mi < marrObjeEntries.length; _mi++) {

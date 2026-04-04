@@ -617,8 +617,6 @@ async function odScanDocFolder(folderId, folderName) {
 let _odPickMode       = false;
 let _odEditPickMode   = false; // true wenn OD-Picker aus Edit-Modal geöffnet
 let _odDocScanMode    = false; // true wenn Dokumente-Ordner gewählt wird
-let _odPickBasePath   = '';    // konfigurierter absoluter Basispfad der aktuellen Pick-Session
-let _odPickRootName   = '';    // Name des Start-Ordners (zum Herausrechnen aus fullPath)
 
 async function odPickFileForEditMedia() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
@@ -626,10 +624,7 @@ async function odPickFileForEditMedia() {
   _odFolderStack = [];
   closeModal('modalEditMedia');
   const folderKey = (_editMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
-  const cfgKey    = (_editMediaType === 'source') ? 'cfg_doc_base'  : 'cfg_photo_base';
   const folder = await idbGet(folderKey).catch(() => null);
-  _odPickBasePath = await idbGet(cfgKey).catch(() => null) || '';
-  _odPickRootName = folder?.folderName || '';
   if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
@@ -677,26 +672,14 @@ async function odPickFileForMedia() {
   _odFolderStack = [];
   closeModal('modalAddMedia');
   const folderKey = (_addMediaType === 'source') ? 'od_doc_folder' : 'od_default_folder';
-  const cfgKey    = (_addMediaType === 'source') ? 'cfg_doc_base'  : 'cfg_photo_base';
   const folder = await idbGet(folderKey).catch(() => null);
-  _odPickBasePath = await idbGet(cfgKey).catch(() => null) || '';
-  _odPickRootName = folder?.folderName || '';
   if (folder?.folderId) await _odShowFolder(folder.folderId, folder.folderName);
   else await _odShowFolder('root', 'OneDrive');
 }
 
 function _odPickSelectFile(fileId, filename, fullPath) {
-  // Absoluten Pfad berechnen: Basispfad + relativer Anteil innerhalb des Start-Ordners
-  let path = filename;
-  if (_odPickBasePath) {
-    const prefix = _odPickRootName ? _odPickRootName + '/' : '';
-    const relative = (fullPath || filename).startsWith(prefix)
-      ? (fullPath || filename).slice(prefix.length)
-      : filename;
-    path = _odPickBasePath + relative;
-  } else {
-    path = fullPath || filename;
-  }
+  // Relativer OneDrive-Pfad (kein lokaler Basispfad-Prefix)
+  const path = fullPath || filename;
   if (_odEditPickMode) {
     _editMediaOdFileId = fileId;
     document.getElementById('em-file').value = path;
