@@ -456,24 +456,29 @@ async function odSaveFile() {
   if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
   const fileId   = localStorage.getItem('od_file_id');
   const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
-  showToast('Speichere in OneDrive…');
+  let text;
+  try { text = writeGEDCOM(); } catch(e) { showToast('Fehler beim Schreiben: ' + e.message); return; }
+  showToast('Speichere in OneDrive… (' + Math.round(text.length/1024) + ' KB)');
   try {
-    const text = writeGEDCOM();
     const url = fileId
       ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
       : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
+    const ctrl = new AbortController();
+    const _to = setTimeout(() => ctrl.abort(), 30000);
     const res = await fetch(url, {
       method: 'PUT',
       headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain;charset=utf-8' },
-      body:   text
+      body: text,
+      signal: ctrl.signal
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const saved = await res.json();
+    clearTimeout(_to);
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
+    const saved = await res.json().catch(() => ({}));
     if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
     AppState.changed = false; updateChangedIndicator();
-    const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || '');
+    const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
     showToast('✓ In OneDrive gespeichert: ' + _loc);
-  } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + e.message); }
+  } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + (e.name === 'AbortError' ? 'Timeout (30s)' : e.message)); }
 }
 
 // ── OneDrive Foto-Import ──────────────────────────────────────────────────
