@@ -11,9 +11,9 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0 | `main` | Abgeschlossen (2026-03-30) — Details: CHANGELOG.md |
 | 5.0 | `v5-dev` | In Entwicklung |
 
-**Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
+**Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v112 / Cache: `stammbaum-v112`
+**Aktuelle sw-Version:** v135 / Cache: `stammbaum-v135`
 
 ---
 
@@ -68,11 +68,9 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 ### Schwerpunkt 3: Datenqualität
 
 #### Erweiterte Events (restliche Passthrough-Reste) — Priorität 1
-- [ ] FAM-Events: `DIV`, `DIVF` — strukturiert statt passthrough
-- [ ] INDI-Events: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`
-- [ ] Familienrelationen
-- [ ] Mediendatei mit @Mx@
-- [ ] Formularfelder + Parser + Writer
+- [x] FAM-Events: `DIV`, `DIVF`, `ENG`/`ENGA` — strukturiert statt passthrough ✅ (sw v134–v135)
+- [ ] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — Parser/Writer done, UI fehlt
+- [ ] INDI-Events: selten genutzte Tags die noch in passthrough landen (z.B. `DSCR`, `IDNO`)
 
 #### Duplikat-Erkennung — Priorität 2
 - [ ] Personen mit gleichem Name + Geburtsjahr (±2): Hinweis + Vergleichs-Ansicht
@@ -107,30 +105,38 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 #### Medien-Handling Überarbeitung — ✅ ABGESCHLOSSEN (sw v96–v99)
 - [x] Relative OneDrive-Pfade: `_odPickSelectFile` speichert `fullPath` direkt (sw v96)
 - [x] Bevorzugtes Medium (`_PRIM Y`) in Titelleiste Person/Familie/Quelle (sw v96)
-- [x] Edit-Dialog zieht `cfg_photo_base` ab → relativer Pfad angezeigt + gespeichert (sw v97)
 - [x] Bug fix: `_odEditPickMode` zeigte keine Dateien (sw v97)
 - [x] `↑ Übergeordneter Ordner`-Button im Picker (sw v97–v98)
 - [x] `_odGetMediaUrlByPath(path)` — path-based OneDrive API, ein Pfad = eine Datei (sw v99)
 - [x] `od_filemap` nur noch Legacy-Fallback; Pfad in `m.file` ist Single Source of Truth (sw v99)
 - [x] Kamera-Fotos werden per PUT-API direkt in konfigurierten OneDrive-Ordner hochgeladen (sw v100)
-- [x] `odScanDocFolder` speichert `folderPath` in `od_doc_folder` (sw v100)
-- [x] `_onCamCapture` verwendet `od_default_folder.folderPath` als Ordner-Prefix (sw v100)
 
 #### OneDrive-Pfad-Architektur: od_base_path — ✅ ABGESCHLOSSEN (sw v107–v112)
 - [x] `@microsoft.graph.downloadUrl` statt `/content`-Redirect (CORS-Fix) (sw v107)
 - [x] Picker-Pfad filtert `'OneDrive'`-Prefix konsistent (sw v108)
-- [x] Basename-Fallback nur noch bei `\\`-Pfaden (Windows-GEDCOM) (sw v108)
 - [x] Ordner-Picker startet bei konfiguriertem Ordner (nicht Root) (sw v109)
 - [x] `od_base_path` = einzige absolute Referenz; alle `m.file` relativ dazu (sw v110)
 - [x] `od_photo_folder` / `od_docs_folder` mit `relPath`-Feld (sw v110)
-- [x] Auto-Migration `od_default_folder` → neue Struktur (sw v110)
 - [x] `od_base_path` automatisch aus GED-Datei `parentReference.path` ableiten (sw v111)
 - [x] Einstellungen: Startpfad separat anzeigen; Ordner als relativer Pfad (sw v112)
 
+#### PEDI + Eltern-Kind-Quellen — ✅ ABGESCHLOSSEN (sw v121–v124)
+- [x] PEDI statt `_FREL`/`_MREL` — GEDCOM 5.5.1 Standard (sw v121)
+- [x] UI: inline PEDI-Dropdown in Familien-Ansicht + Suffix in Personen-Ansicht (sw v122)
+- [x] `#modalChildRel` — PEDI + Quellenangabe pro Kind-Verhältnis (sw v123)
+- [x] `.src-badge §N`-Stil für Kind-Verhältnis-Quellen (sw v124–v126)
+
+#### Quellen-Badges + OneDrive-Fix + DIV/DIVF strukturiert — ✅ ABGESCHLOSSEN (sw v125–v135)
+- [x] `.src-badge §N` einheitlich für alle Kontexte; Tooltip = `s.title || s.abbr` (sw v125–v127)
+- [x] `@@S2@@` doppelte @-Bug in Source-IDs behoben (sw v128–v129)
+- [x] OneDrive-Speichern: robuste Fehlerbehandlung, 30s Timeout, Pfad im Toast (sw v130–v133)
+- [x] DIV / DIVF / ENG strukturiert in Parser + Writer + Anzeige (sw v134)
+- [x] ENGA im Passthrough-Filter; Menü OneDrive-first; Roundtrip explizit (sw v135)
+
 ---
 
-### Schwerpunkt 5 - OCR
-- [ ] OCR.md
+### Schwerpunkt 5 — OCR
+- [ ] Konzept in `OCR.md`
 
 ---
 
@@ -140,6 +146,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 - Duplikat-Erkennung in Suche
+- DIV/DIVF/ENG: Formularfelder für Datum/Ort (Parser/Writer done)
 
 ---
 
@@ -147,12 +154,12 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 | Plattform | Browser | Laden | Speichern |
 |---|---|---|---|
-| iPhone (iOS 17+) | Safari | ✅ | ✅ Share Sheet |
-| iPhone (iOS 17+) | Chrome | ✅ | ⚠️ Share Sheet nicht unterstützt |
-| Mac | Safari | ✅ | ⚠️ Download (kein direktes Speichern) |
-| Mac | Chrome | ✅ | ✅ Direktes Speichern |
-| Mac | Firefox | ✅ | ⚠️ Download |
-| Android | Chrome | ✅ | ⚠️ Apple Maps Links funktionieren nicht |
+| iPhone (iOS 17+) | Safari | ✅ | ✅ OneDrive (primär) / Share Sheet (lokal) |
+| iPhone (iOS 17+) | Chrome | ✅ | ✅ OneDrive (primär) |
+| Mac | Safari | ✅ | ✅ OneDrive (primär) / Download (lokal) |
+| Mac | Chrome | ✅ | ✅ OneDrive (primär) / Direktes Speichern (lokal) |
+| Mac | Firefox | ✅ | ✅ OneDrive (primär) / Download (lokal) |
+| Android | Chrome | ✅ | ✅ OneDrive (primär) |
 
 ---
 
