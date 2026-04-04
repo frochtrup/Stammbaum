@@ -377,7 +377,7 @@ function writeGEDCOM() {
       if (f.lastChangedTime) lines.push(`3 TIME ${f.lastChangedTime}`);
     }
     for (const l of (f._passthrough || [])) {
-      if (/^1 (DIV|DIVF|ENG)\b/.test(l)) continue; // jetzt strukturiert
+      if (/^1 (DIV|DIVF|ENG|ENGA)\b/.test(l)) continue; // jetzt strukturiert
       lines.push(l);
     }
   }

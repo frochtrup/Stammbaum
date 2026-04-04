@@ -225,7 +225,7 @@ _ptDepth = 1;
 - *(Nicht mehr in passthrough: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` — seit v4-dev als `events[]` strukturiert)*
 - *(Nicht mehr in passthrough: Extra-NAME-Blöcke — seit v4-dev strukturiert in `extraNames[]`, vollständig editierbar via ui-forms.js)*
 
-**Was landet in `_passthrough` (FAM):** `DIV`, `DIVF`, andere unbekannte lv=1-Tags
+**Was landet in `_passthrough` (FAM):** Unbekannte lv=1-Tags *(DIV/DIVF/ENG/ENGA sind seit sw v134 strukturiert — nicht mehr in passthrough)*
 
 **Was landet in `_passthrough` (SOUR):** `1 DATA`, `1 NOTE`, `1 REFN`
 
@@ -271,8 +271,8 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 ```
 
 **Optimierungspotenzial (kein Datenverlust, aber im UI nicht editierbar):**
-- `DIV`, `DIVF` → FAM-Events fehlen im Parser (in `_passthrough`)
 - Mehrfache inline INDI-Notes → Roundtrip stabil (`noteTexts[]`-Array); beim Editieren im Formular zu einer Note zusammengeführt
+- *(Erledigt: `DIV`, `DIVF`, `ENG`/`ENGA` → seit sw v134 als strukturierte FAM-Events)*
 - *(Erledigt: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` → seit v4-dev als events[] strukturiert)*
 - *(Erledigt: Extra-NAME-Blöcke → seit v4-dev `extraNames[]`, vollständig editierbar)*
 
@@ -290,6 +290,7 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 | Roundtrip-Fix 2026-03-26: addrExtra, NICK-Position, _FREL-Space | **-7** |
 | v4-dev 2026-03-28: HEAD `_headLines[]`, ENGA vollständig, leere Events `seen`-Flag, NOTE-Record Sub-Tags, MAP ohne PLAC | **-7** |
 | v4-dev 2026-03-28: ENGA MAP, leere DATE/PLAC `null`-Init | **≈0** |
+| v5-dev 2026-04-05: DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter fix (sw v135) | **≈0** |
 
 `roundtrip_stable: true` · Verbleibende Verluste: CONC/CONT-Neuformatierung + HEAD-Rewrite (by design).
 

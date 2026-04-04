@@ -9,6 +9,41 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-05 — Quellen-Badges, OneDrive-Fix, DIV/DIVF/ENG strukturiert (sw v125–v135)
+
+- **sw v125–v126** `feat`: Quellen-Badges für Kind-Verhältnis — `.src-badge §N`-Stil (wie Events)
+  - `ui-views-family.js`: `.src-tag`-Pillen durch `.src-badge` ersetzt; `§N`-Text; Tooltip = `s.title || s.abbr`
+  - `+ Q` nur wenn 0 Quellen (`_sourIds.length` statt Boolean-Kurzschluss)
+  - Mehrere Quellen: alle als eigene Badges (nicht zusammengefasst)
+
+- **sw v127** `fix`: Tooltip in `sourceTagsHtml()` zeigte `abbr` statt `title`
+  - `ui-views.js`: Priorität korrigiert auf `s.title || s.abbr`
+
+- **sw v128–v129** `fix`: `@@S2@@` — doppelte `@` in Source-IDs brachen Lookup
+  - `gedcom-parser.js`: Normalisierung `.replace(/^@@/,'@').replace(/@@$/,'@')` beim Einlesen
+  - Post-Processing: `sourIds`-Kopie von FAM→INDI jetzt unabhängig von `frelSeen` (war durch Ancestris `_FREL` immer geblockt)
+
+- **sw v130–v133** `fix`: OneDrive-Speichern — Robustheit
+  - `onedrive.js`: `showToast('Verbinde…')` vor Token-Check (kein stilles Versagen mehr)
+  - `writeGEDCOM()` in eigenem try/catch mit eigenem Error-Toast
+  - 30s AbortController-Timeout auf fetch + `res.json().catch(()=>({}))` gegen Hang bei Non-JSON-Response
+  - Erfolgs-Toast zeigt vollständigen Speicherpfad in OneDrive
+
+- **sw v134** `feat`: DIV / DIVF / ENG strukturiert in Parser + Writer + Anzeige
+  - `gedcom-parser.js`: `_famEv()`-Hilfsfunktion; DIV/DIVF/ENG auf Level 1–4 vollständig geparst (DATE/PLAC/SOUR/NOTE/OBJE/MAP); ENG = Alias für ENGA
+  - `gedcom-writer.js`: `eventBlock('DIV', f.div, 1)` + `eventBlock('DIVF', f.divf, 1)`; Passthrough-Filter für DIV/DIVF/ENG (verhindert Doppelausgabe)
+  - `ui-views-family.js`: Anzeige-Abschnitte für Scheidung + Scheidungsantrag mit Quellen-Badges
+
+- **sw v135** `fix`: ENGA im Passthrough-Filter ergänzt
+  - `gedcom-writer.js`: Filter `/^1 (DIV|DIVF|ENG|ENGA)\b/` — verhindert Doppelausgabe von ENGA-Blöcken
+  - Klarstellung: ENGA = GEDCOM 5.5.1 Standard; ENG = nicht-standard Alias (wird beim Speichern zu ENGA normalisiert)
+
+- **Roundtrip-Test**: Passthrough-Sektionen zeigen jetzt explizite Beispielzeilen (`► 1 TAG wert`) zusätzlich zur Tag-Frequenz-Übersicht
+- **Menü**: OneDrive-Aktionen an erste Position; lokale Dateioperationen als sekundäre Gruppe; Fotos-Import/Export aus Menü entfernt (über Einstellungen)
+- **README**: OneDrive-Workflow als Primär-Workflow dokumentiert; lokaler Workflow als Fallback
+
+---
+
 ### Session 2026-04-04 — PEDI-Migration + Eltern-Kind-Quellen (sw v121–v124)
 
 - **sw v121** `feat`: PEDI statt `_FREL`/`_MREL` — GEDCOM 5.5.1 Standard für Eltern-Kind-Verhältnis

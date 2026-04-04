@@ -53,6 +53,8 @@ function runRoundtripTest() {
         { lbl:'1 MILI',       re:/^\s*1 MILI\b/mg },
         { lbl:'2 TYPE',       re:/^\s*2 TYPE\b/mg },
         { lbl:'1 ENGA',       re:/^\s*1 ENGA\b/mg },
+        { lbl:'1 DIV',        re:/^\s*1 DIV\b/mg },
+        { lbl:'1 DIVF',       re:/^\s*1 DIVF\b/mg },
         { lbl:'2 CAUS',       re:/^\s*2 CAUS\b/mg },
         // Person-Felder Sprint 5
         { lbl:'1 RESN',       re:/^\s*1 RESN\b/mg },
@@ -199,7 +201,6 @@ function runRoundtripTest() {
       }
 
       // ── Passthrough-Inhalt ──────────────────────────────────────────
-      // Aggregiert Tag-Frequenzen aus allen Passthrough-Feldern in db1
       function _ptAgg(lines, agg) {
         for (const l of (lines||[])) {
           const m = l.match(/^\d+\s+(\S+)/);
@@ -211,92 +212,133 @@ function runRoundtripTest() {
         return '  ' + Object.entries(agg).sort((a,b)=>b[1]-a[1]).slice(0,15)
           .map(([t,n]) => `${t} ${n}×`).join('  ·  ');
       }
-      const _ptSecs = [];
-      // 1. INDI._passthrough
-      { let recs=0, lines=0; const agg={};
-        for (const p of Object.values(db1.individuals)) {
-          if (p._passthrough?.length) { recs++; lines+=p._passthrough.length; _ptAgg(p._passthrough,agg); }
+      // Sammelt echte Passthrough-Zeilen als Beispiele (max. limit Stück)
+      function _ptCollect(lineArrays, limit) {
+        const out = [];
+        for (const arr of lineArrays) {
+          for (const l of (arr || [])) {
+            if (out.length >= limit) return out;
+            out.push('  ► ' + l.trim());
+          }
         }
-        if (lines) _ptSecs.push(`INDI._passthrough    ${recs} Pers. · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+        return out;
+      }
+
+      const _ptSecs = [];
+
+      // 1. INDI._passthrough
+      { let recs=0, lines=0; const agg={}; const allPt=[];
+        for (const p of Object.values(db1.individuals)) {
+          if (p._passthrough?.length) { recs++; lines+=p._passthrough.length; _ptAgg(p._passthrough,agg); allPt.push(p._passthrough); }
+        }
+        if (lines) {
+          const s = _ptCollect(allPt, 6);
+          _ptSecs.push(`INDI._passthrough    ${recs} Pers. · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
+        }
       }
       // 2. INDI vital._extra (birth/death/chr/buri)
-      { let recs=0, lines=0; const agg={};
+      { let recs=0, lines=0; const agg={}; const allPt=[];
         for (const p of Object.values(db1.individuals)) {
           for (const k of ['birth','death','chr','buri']) {
             const ex = p[k]?._extra;
-            if (ex?.length) { recs++; lines+=ex.length; _ptAgg(ex,agg); }
+            if (ex?.length) { recs++; lines+=ex.length; _ptAgg(ex,agg); allPt.push(ex); }
           }
         }
-        if (lines) _ptSecs.push(`INDI.vital._extra    ${recs} Objs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+        if (lines) {
+          const s = _ptCollect(allPt, 4);
+          _ptSecs.push(`INDI.vital._extra    ${recs} Objs · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
+        }
       }
       // 3. INDI.events._extra
-      { let recs=0, lines=0; const agg={};
+      { let recs=0, lines=0; const agg={}; const allPt=[];
         for (const p of Object.values(db1.individuals)) {
           for (const ev of (p.events||[])) {
-            if (ev._extra?.length) { recs++; lines+=ev._extra.length; _ptAgg(ev._extra,agg); }
+            if (ev._extra?.length) { recs++; lines+=ev._extra.length; _ptAgg(ev._extra,agg); allPt.push(ev._extra); }
           }
         }
-        if (lines) _ptSecs.push(`INDI.events._extra   ${recs} Events · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+        if (lines) {
+          const s = _ptCollect(allPt, 4);
+          _ptSecs.push(`INDI.events._extra   ${recs} Events · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
+        }
       }
       // 4. INDI sourceExtra (topSourceExtra + vital + events)
-      { let entries=0, lines=0; const agg={};
+      { let entries=0, lines=0; const agg={}; const allPt=[];
         for (const p of Object.values(db1.individuals)) {
-          for (const arr of Object.values(p.topSourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+          for (const arr of Object.values(p.topSourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
           for (const k of ['birth','death','chr','buri']) {
-            for (const arr of Object.values(p[k]?.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+            for (const arr of Object.values(p[k]?.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
           }
           for (const ev of (p.events||[])) {
-            for (const arr of Object.values(ev.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+            for (const arr of Object.values(ev.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
           }
         }
-        if (lines) _ptSecs.push(`INDI.sourceExtra     ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+        if (lines) {
+          const s = _ptCollect(allPt, 4);
+          _ptSecs.push(`INDI.sourceExtra     ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
+        }
       }
       // 5. FAM._passthrough
-      { let recs=0, lines=0; const agg={};
+      { let recs=0, lines=0; const agg={}; const allPt=[];
         for (const f of Object.values(db1.families)) {
-          if (f._passthrough?.length) { recs++; lines+=f._passthrough.length; _ptAgg(f._passthrough,agg); }
+          if (f._passthrough?.length) { recs++; lines+=f._passthrough.length; _ptAgg(f._passthrough,agg); allPt.push(f._passthrough); }
         }
-        if (lines) _ptSecs.push(`FAM._passthrough     ${recs} FAMs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
-      }
-      // 6. FAM marr/engag._extra + sourceExtra
-      { let recs=0, lines=0; const agg={};
-        for (const f of Object.values(db1.families)) {
-          if (f.marr?._extra?.length)  { recs++; lines+=f.marr._extra.length;  _ptAgg(f.marr._extra,agg); }
-          if (f.engag?._extra?.length) { lines+=f.engag._extra.length; _ptAgg(f.engag._extra,agg); }
-          for (const arr of Object.values(f.marr?.sourceExtra||{}))  { lines+=arr.length; _ptAgg(arr,agg); }
-          for (const arr of Object.values(f.engag?.sourceExtra||{})) { lines+=arr.length; _ptAgg(arr,agg); }
+        if (lines) {
+          const s = _ptCollect(allPt, 6);
+          _ptSecs.push(`FAM._passthrough     ${recs} FAMs · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
         }
-        if (lines) _ptSecs.push(`FAM.marr/engag._extra ${recs} FAMs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
       }
-      // 7. FAM childRelations frelSourExtra/mrelSourExtra/sourExtra
-      { let entries=0, lines=0; const agg={};
+      // 6. FAM marr/engag/div/divf._extra + sourceExtra
+      { let recs=0, lines=0; const agg={}; const allPt=[];
         for (const f of Object.values(db1.families)) {
-          for (const cr of Object.values(f.childRelations||{})) {
-            if (cr.frelSourExtra?.length) { entries++; lines+=cr.frelSourExtra.length; _ptAgg(cr.frelSourExtra,agg); }
-            if (cr.mrelSourExtra?.length) { entries++; lines+=cr.mrelSourExtra.length; _ptAgg(cr.mrelSourExtra,agg); }
-            for (const arr of Object.values(cr.sourExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); } }
+          for (const evKey of ['marr','engag','div','divf']) {
+            const ev = f[evKey];
+            if (ev?._extra?.length) { recs++; lines+=ev._extra.length; _ptAgg(ev._extra,agg); allPt.push(ev._extra); }
+            for (const arr of Object.values(ev?.sourceExtra||{})) { if (arr.length) { lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
           }
         }
-        if (lines) _ptSecs.push(`FAM.childRel.extra   ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+        if (lines) {
+          const s = _ptCollect(allPt, 4);
+          _ptSecs.push(`FAM.ev._extra+srcEx  ${recs} FAMs · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
+        }
+      }
+      // 7. FAM childRelations frelSourExtra/mrelSourExtra/sourExtra
+      { let entries=0, lines=0; const agg={}; const allPt=[];
+        for (const f of Object.values(db1.families)) {
+          for (const cr of Object.values(f.childRelations||{})) {
+            if (cr.frelSourExtra?.length) { entries++; lines+=cr.frelSourExtra.length; _ptAgg(cr.frelSourExtra,agg); allPt.push(cr.frelSourExtra); }
+            if (cr.mrelSourExtra?.length) { entries++; lines+=cr.mrelSourExtra.length; _ptAgg(cr.mrelSourExtra,agg); allPt.push(cr.mrelSourExtra); }
+            for (const arr of Object.values(cr.sourExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
+          }
+        }
+        if (lines) {
+          const s = _ptCollect(allPt, 6);
+          _ptSecs.push(`FAM.childRel.extra   ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
+        }
       }
       // 8. SOUR._passthrough
-      { let recs=0, lines=0; const agg={};
+      { let recs=0, lines=0; const agg={}; const allPt=[];
         for (const s of Object.values(db1.sources)) {
-          if (s._passthrough?.length) { recs++; lines+=s._passthrough.length; _ptAgg(s._passthrough,agg); }
+          if (s._passthrough?.length) { recs++; lines+=s._passthrough.length; _ptAgg(s._passthrough,agg); allPt.push(s._passthrough); }
         }
-        if (lines) _ptSecs.push(`SOUR._passthrough    ${recs} SOURs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+        if (lines) {
+          const samp = _ptCollect(allPt, 6);
+          _ptSecs.push(`SOUR._passthrough    ${recs} SOURs · ${lines} Z.\n${_ptFmt(agg,lines)}${samp.length?'\n'+samp.join('\n'):''}`);
+        }
       }
       // 9. NOTE._passthrough
-      { let recs=0, lines=0; const agg={};
+      { let recs=0, lines=0; const agg={}; const allPt=[];
         for (const n of Object.values(db1.notes||{})) {
-          if (n._passthrough?.length) { recs++; lines+=n._passthrough.length; _ptAgg(n._passthrough,agg); }
+          if (n._passthrough?.length) { recs++; lines+=n._passthrough.length; _ptAgg(n._passthrough,agg); allPt.push(n._passthrough); }
         }
-        if (lines) _ptSecs.push(`NOTE._passthrough    ${recs} NOTEs · ${lines} Z.\n${_ptFmt(agg,lines)}`);
+        if (lines) {
+          const samp = _ptCollect(allPt, 4);
+          _ptSecs.push(`NOTE._passthrough    ${recs} NOTEs · ${lines} Z.\n${_ptFmt(agg,lines)}${samp.length?'\n'+samp.join('\n'):''}`);
+        }
       }
       // 10. extraRecords
       { const er = db1.extraRecords||[];
         if (er.length) {
-          const hdrs = er.slice(0,10).map(r => '  ' + (r._lines?.[0]||'?')).join('\n');
+          const hdrs = er.slice(0,10).map(r => '  ► ' + (r._lines?.[0]||'?')).join('\n');
           _ptSecs.push(`extraRecords         ${er.length} Records\n${hdrs}`);
         }
       }

@@ -1538,37 +1538,10 @@ body.fc-mode #fcGenBtns { display: flex; }
 <div class="modal-overlay" id="modalMenu">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Datei</div>
+    <div class="sheet-title">Menü</div>
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openFileOrDir()">
-          📂 &nbsp; Öffnen…
-        </button>
-        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
-          💾 &nbsp; Speichern
-        </button>
-        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
-          🗄 &nbsp; <span>Original herunterladen</span>
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
-          🗂 &nbsp; Demo-Daten öffnen
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); revertToSaved()">
-          ↩ &nbsp; Änderungen verwerfen
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
-          ✕ &nbsp; Datei schließen
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openModal('modalHelp')">
-          ❓ &nbsp; Hilfe &amp; Anleitung
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportPhotos()">
-          🖼 &nbsp; Fotos exportieren
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); importPhotos()">
-          📥 &nbsp; Fotos importieren
-        </button>
-        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <!-- OneDrive (primär) -->
         <button id="odConnectBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); odToggle()">
           ☁ &nbsp; OneDrive verbinden
         </button>
@@ -1580,6 +1553,31 @@ body.fc-mode #fcGenBtns { display: flex; }
         </button>
         <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="closeModal('modalMenu'); openSettings()">
           ⚙ &nbsp; Einstellungen
+        </button>
+        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <!-- Lokal (sekundär) -->
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openFileOrDir()">
+          📂 &nbsp; Öffnen… (lokal)
+        </button>
+        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
+          💾 &nbsp; Speichern (lokal)
+        </button>
+        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
+          🗄 &nbsp; <span>Original herunterladen</span>
+        </button>
+        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <!-- Sonstiges -->
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); revertToSaved()">
+          ↩ &nbsp; Änderungen verwerfen
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
+          🗂 &nbsp; Demo-Daten öffnen
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
+          ✕ &nbsp; Datei schließen
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openModal('modalHelp')">
+          ❓ &nbsp; Hilfe &amp; Anleitung
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test
