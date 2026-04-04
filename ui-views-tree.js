@@ -4,10 +4,15 @@
 let _treeNavTargets = {};
 let _treeKeyInit = false;
 let _treeZoomScale = 1;
-let _treeGenCount = 5;  // Generationen gesamt inkl. Proband: 2=Eltern, 3=+Gr., 4=+UrGr., 5=+Ur²Gr.(Standard), 6=+Ur³Gr.
+let _treeGenCount    = 5;  // aktiver Wert (wird je nach Orientierung gesetzt)
+let _treeGenPortrait = 3;  // letzter Portrait-Wert  (Standard: 3 = +Großeltern)
+let _treeGenLandscape= 5;  // letzter Landscape-Wert (Standard: 5 = +Ur²Gr.)
 
 function setTreeGens(n) {
   _treeGenCount = Math.max(2, Math.min(6, n));
+  const ip = window.innerWidth < window.innerHeight;
+  if (ip) _treeGenPortrait  = _treeGenCount;
+  else    _treeGenLandscape = _treeGenCount;
   document.querySelectorAll('[data-tgen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
   _treeZoomScale = 1; // Reset damit Auto-Fit neu kalkuliert
@@ -302,6 +307,13 @@ function showTree(personId, addToHistory = true) {
   // ── Orientierung + Dimensionen ──
   const isPortrait = window.innerWidth < window.innerHeight;
   if (isPortrait) _treeZoomScale = 1; // Portrait: kein Zoom, kompaktes Layout
+  // Orientierungsabhängigen Default anwenden (Portrait=3, Landscape=5)
+  const _orientGen = isPortrait ? _treeGenPortrait : _treeGenLandscape;
+  if (_orientGen !== _treeGenCount) {
+    _treeGenCount = _orientGen;
+    document.querySelectorAll('[data-tgen]').forEach(b =>
+      b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
+  }
 
   const W   = isPortrait ? 80  : 96;
   const H   = isPortrait ? 54  : 64;
