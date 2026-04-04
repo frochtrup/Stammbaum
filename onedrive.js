@@ -236,7 +236,7 @@ function _odRedirectUri() {
   // /Stammbaum/index.html → /Stammbaum/  (muss mit registrierter URI übereinstimmen)
   return location.origin + location.pathname.replace(/[^/]*$/, '');
 }
-function _odIsConnected()  { return !!localStorage.getItem('od_access_token'); }
+function _odIsConnected()  { return !!sessionStorage.getItem('od_access_token'); }
 
 function _odUpdateUI() {
   const conn = _odIsConnected();
@@ -314,7 +314,9 @@ async function odClearDocFolder() {
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
 
 function odLogout() {
-  ['od_access_token','od_refresh_token','od_token_expiry','od_file_id','od_file_name']
+  ['od_access_token','od_refresh_token','od_token_expiry']
+    .forEach(k => sessionStorage.removeItem(k));
+  ['od_file_id','od_file_name']
     .forEach(k => localStorage.removeItem(k));
   _odUpdateUI();
   showToast('OneDrive getrennt');
@@ -358,9 +360,9 @@ async function odHandleCallback() {
     const res  = await fetch(OD_TOKEN_EP, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
     const data = await res.json();
     if (data.access_token) {
-      localStorage.setItem('od_access_token', data.access_token);
-      localStorage.setItem('od_refresh_token', data.refresh_token || '');
-      localStorage.setItem('od_token_expiry',  Date.now() + (data.expires_in - 60) * 1000);
+      sessionStorage.setItem('od_access_token', data.access_token);
+      sessionStorage.setItem('od_refresh_token', data.refresh_token || '');
+      sessionStorage.setItem('od_token_expiry',  Date.now() + (data.expires_in - 60) * 1000);
       _odUpdateUI();
       showToast('✓ OneDrive verbunden');
     } else {
@@ -370,9 +372,9 @@ async function odHandleCallback() {
 }
 
 async function _odGetToken() {
-  const expiry = parseInt(localStorage.getItem('od_token_expiry') || '0');
-  if (Date.now() < expiry) return localStorage.getItem('od_access_token');
-  const rt = localStorage.getItem('od_refresh_token');
+  const expiry = parseInt(sessionStorage.getItem('od_token_expiry') || '0');
+  if (Date.now() < expiry) return sessionStorage.getItem('od_access_token');
+  const rt = sessionStorage.getItem('od_refresh_token');
   if (!rt) { odLogin(); return null; }
   try {
     const body = new URLSearchParams({
@@ -382,9 +384,9 @@ async function _odGetToken() {
     const res  = await fetch(OD_TOKEN_EP, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body });
     const data = await res.json();
     if (data.access_token) {
-      localStorage.setItem('od_access_token', data.access_token);
-      if (data.refresh_token) localStorage.setItem('od_refresh_token', data.refresh_token);
-      localStorage.setItem('od_token_expiry', Date.now() + (data.expires_in - 60) * 1000);
+      sessionStorage.setItem('od_access_token', data.access_token);
+      if (data.refresh_token) sessionStorage.setItem('od_refresh_token', data.refresh_token);
+      sessionStorage.setItem('od_token_expiry', Date.now() + (data.expires_in - 60) * 1000);
       return data.access_token;
     }
   } catch(e) {}

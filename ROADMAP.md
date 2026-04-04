@@ -146,9 +146,9 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 #### Sicherheit — Priorität 1
 
-- [ ] **OAuth-Token von `localStorage` → `sessionStorage`** — Token sind aktuell im DevTools lesbar und bei XSS abgreifbar; betrifft OneDrive-Vollzugriff (onedrive.js, storage.js)
-- [ ] **Service Worker: Netzwerk-Timeout einbauen** — Network-first ohne Fallback-Timeout lässt App bei hängendem Netz unbegrenzt warten; Fix: 4s-Timeout → Cache-Fallback (sw.js)
-- [ ] **`demo.ged` aus Produktions-Cache entfernen** — wird bei jedem Nutzer unnötig mitgeladen (sw.js)
+- [x] **OAuth-Token von `localStorage` → `sessionStorage`** — Token sind aktuell im DevTools lesbar und bei XSS abgreifbar; betrifft OneDrive-Vollzugriff (onedrive.js, storage.js)
+- [x] **Service Worker: Netzwerk-Timeout einbauen** — Network-first ohne Fallback-Timeout lässt App bei hängendem Netz unbegrenzt warten; Fix: 4s-Timeout → Cache-Fallback (sw.js)
+- [x] **`demo.ged` aus Produktions-Cache entfernen** — wird bei jedem Nutzer unnötig mitgeladen (sw.js)
 
 #### Performance — Priorität 2
 
@@ -173,7 +173,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 - Duplikat-Erkennung in Suche
 - DIV/DIVF/ENG: Formularfelder für Datum/Ort (Parser/Writer done)
-- OAuth-Token in `localStorage` (Sicherheitsrisiko — Priorität 1 in Schwerpunkt 6)
+- ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
 - Inline Event-Handler in HTML-Strings (XSS-Potential + Memory-Leaks)
 - GEDCOM-Parser ohne Fehler-Sammler (ungültige Dateien werden silent ignoriert)
 

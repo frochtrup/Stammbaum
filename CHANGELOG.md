@@ -9,6 +9,16 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-05 — Sicherheits-Fixes Schwerpunkt 6 Prio 1 (sw v136)
+
+- **sw v136** `fix`: Schwerpunkt 6 Prio 1 — Sicherheit
+  - `onedrive.js`: OAuth-Token (`od_access_token`, `od_refresh_token`, `od_token_expiry`) von `localStorage` → `sessionStorage` — nicht mehr über Tab-Schließen persistent, DevTools-Exposition und XSS-Angriffsfläche reduziert
+  - `onedrive.js`: `odLogout()` löscht Token-Keys aus `sessionStorage`, `od_file_id`/`od_file_name` weiterhin aus `localStorage`
+  - `sw.js`: Netzwerk-Timeout 4s eingebaut — bei hängendem Netz wird nach 4s auf Cache-Fallback umgeschaltet (statt unbegrenzt zu warten)
+  - `sw.js`: `demo.ged` aus `PRECACHE` entfernt — wird nicht mehr bei jedem Nutzer mitgeladen
+
+---
+
 ### Session 2026-04-05 — Quellen-Badges, OneDrive-Fix, DIV/DIVF/ENG strukturiert (sw v125–v135)
 
 - **sw v125–v126** `feat`: Quellen-Badges für Kind-Verhältnis — `.src-badge §N`-Stil (wie Events)
