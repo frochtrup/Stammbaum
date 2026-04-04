@@ -21,8 +21,15 @@ async function _odGetMediaUrlByPath(filePath) {
   if (!token) return null;
   const _fetchDataUrl = async (path) => {
     const enc = path.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
-    const r = await fetch(`${OD_GRAPH}/me/drive/root:/${enc}:/content`,
+    // Metadaten holen → pre-auth downloadUrl (kein CORS-Problem mit CDN-Redirect)
+    const metaRes = await fetch(
+      `${OD_GRAPH}/me/drive/root:/${enc}?$select=@microsoft.graph.downloadUrl`,
       { headers: { Authorization: 'Bearer ' + token } });
+    if (!metaRes.ok) return null;
+    const meta = await metaRes.json();
+    const dlUrl = meta['@microsoft.graph.downloadUrl'];
+    if (!dlUrl) return null;
+    const r = await fetch(dlUrl);
     if (!r.ok) return null;
     const blob = await r.blob();
     return new Promise((resolve, reject) => {
@@ -114,8 +121,13 @@ async function _odGetPhotoUrl(idbKey) {
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
   try {
-    const res = await fetch(`${OD_GRAPH}/me/drive/items/${entry.fileId}/content`,
+    const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${entry.fileId}?$select=@microsoft.graph.downloadUrl`,
       { headers: { Authorization: 'Bearer ' + token } });
+    if (!metaRes.ok) return null;
+    const meta = await metaRes.json();
+    const dlUrl = meta['@microsoft.graph.downloadUrl'];
+    if (!dlUrl) return null;
+    const res = await fetch(dlUrl);
     if (!res.ok) return null;
     const blob = await res.blob();
     const dataUrl = await new Promise((resolve, reject) => {
@@ -159,8 +171,13 @@ async function _odGetSourceFileUrl(srcId, idx) {
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
   try {
-    const res = await fetch(`${OD_GRAPH}/me/drive/items/${resolvedId}/content`,
+    const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${resolvedId}?$select=@microsoft.graph.downloadUrl`,
       { headers: { Authorization: 'Bearer ' + token } });
+    if (!metaRes.ok) return null;
+    const meta = await metaRes.json();
+    const dlUrl = meta['@microsoft.graph.downloadUrl'];
+    if (!dlUrl) return null;
+    const res = await fetch(dlUrl);
     if (!res.ok) return null;
     const blob = await res.blob();
     const dataUrl = await new Promise((resolve, reject) => {
