@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v120';
+const CACHE_NAME = 'stammbaum-v125';
 const PRECACHE = [
   './index.html', './manifest.json', './icon.svg',
   './gedcom.js', './gedcom-parser.js', './gedcom-writer.js',

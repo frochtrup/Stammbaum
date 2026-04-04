@@ -288,11 +288,11 @@ function showFamilyDetail(id, pushHistory = true) {
     const _sourIds = (typeof _fe === 'object') ? (_fe.sourIds || []) : [];
     const _sourTags = _sourIds.map(sid => {
       const s = AppState.db.sources[sid];
-      const lbl = s ? (s.abbr || (s.title||'').slice(0,18) || sid.replace(/@/g,'')) : sid.replace(/@/g,'');
-      return `<span class="src-tag" style="font-size:0.7rem;padding:2px 8px;cursor:pointer"
-        onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
-        title="${esc(s?.title||sid)}">${esc(lbl)}</span>`;
-    }).join('');
+      if (!s) return '';
+      const tooltip = esc((s.abbr || s.title || sid).substring(0, 60));
+      const num = (sid.match(/\d+/) || [sid])[0];
+      return `<span class="src-badge" data-sid="${sid}" onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')" title="${tooltip}">§${num}</span>`;
+    }).filter(Boolean).join('');
     const _sourWidget = _sourTags ||
       `<button onclick="event.stopPropagation();showChildRelDialog('${id}','${cid}')"
         title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
