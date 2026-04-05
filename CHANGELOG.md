@@ -9,6 +9,73 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-05 — Performance + UX (sw v143–v146)
+
+- **sw v143** `feat`: Medienbrowser in Personen- + Familien-Liste
+  - `ui-media.js`: `showPersonMediaBrowser()` — Medien gruppiert nach Person, sortiert Nachname→Vorname A-Z
+  - `ui-media.js`: `showFamilyMediaBrowser()` — Medien gruppiert nach Familie
+  - `showMediaBrowser()` zeigt nun Titel `Medien-Browser · Quellen` (analog)
+  - `index.html`: 📎-Button in Personen-Tab und Familien-Tab Suchzeile
+  - Personen-Liste: primäre Sortierung Nachname A-Z, sekundär Vorname A-Z
+
+- **sw v144** `feat`: Scroll-Positions-Restore beim Zurücknavigieren
+  - Beim Wechsel von Liste → Detail wird Scroll-Position in `UIState._savedListScroll` gespeichert
+  - `showMain()`: nach `renderTab()` wird gespeicherte Position via `setTimeout(0)` wiederhergestellt
+  - Funktioniert für mobiles Window-Scroll (`window.scrollY`) und Desktop-Container (`#v-main.scrollTop`)
+  - Kein Konflikt mit `_scrollListToCurrent` (rAF vs. setTimeout — setTimeout läuft danach)
+
+- **sw v145** `feat`: Virtuelles Scrollen für Personen- und Familien-Liste
+  - Listen >500 Einträge: nur sichtbare Zeilen + 600px Puffer (`_VS_BUF`) im DOM
+  - Spacer-div-Ansatz: `[top-spacer][mid-content][bot-spacer]` — kein Framework
+  - Constants: `_VS_ROW=69` (Zeile), `_VS_SEP=23` (Trenner), `_VS_MIN=500` (Schwellwert)
+  - `_vsRender(listEl, st)`: Binary-Search für sichtbaren Bereich, O(log n)
+  - `_vsSetup(listEl, st, items, renderFn)` / `_vsTeardown(st)`: Setup/Teardown per Scroll-Event
+  - `_vsScrollEl()`: erkennt Desktop-Container (`#v-main`) vs. Mobile (Window)
+  - VS-State: `_vsP` (Personen) + `_vsF` (Familien) in `ui-views-person.js`
+  - `offsetParent`-Check: VS überspringt versteckte Tabs (display:none)
+
+- **sw v146** `fix`: Desktop-Sync — Baum/Fan-Chart → Listen-Highlight
+  - Problem: auf Desktop sind Baum und Liste nebeneinander sichtbar; nach Einführung von VS wurde `.current` nicht gesetzt wenn die Person außerhalb des gerenderten Fensters war
+  - `_vsScrollAndHighlight(st, listEl, idx, dataAttr, id)`: scrollt synchron zu Item, erzwingt VS-Re-Render, setzt dann `.current`
+  - `sc.scrollTop = target` ist synchronous → `_vsRender` liest sofort die neue Position
+  - Fix in `_updatePersonListCurrent()` und `_updateFamilyListCurrent()`
+
+---
+
+### Session 2026-04-05 — Modul-Splits + Roundtrip-Fix (sw v138–v142)
+
+- **sw v138** `refactor`: GEDCOM-Parser — Error-Sammler + Level-Validierung
+  - `gedcom-parser.js`: optionaler zweiter Parameter `_errors[]` für `parseGEDCOM()`
+  - Zeilen mit `lv > 4` werden in `_errors[]` protokolliert (ungültig laut GEDCOM 5.5.1)
+  - Passthrough-Mechanismus läuft weiterhin für `lv > 4`-Zeilen (kein `continue`)
+
+- **sw v139** `fix`: OneDrive — echtes Error-Handling statt `catch { return null }`
+  - `onedrive.js`: alle catch-Blöcke loggen jetzt den tatsächlichen Fehler per `console.error`
+  - Kein stilles Verschlucken von API-Fehlern mehr; erleichtert Debugging erheblich
+
+- **sw v140** `refactor`: `onedrive.js` (946 Z.) → 3 Module aufgeteilt
+  - `onedrive-auth.js` (113 Z.): OAuth2 PKCE — `odLogin()`, `odLogout()`, `odHandleCallback()`, `_odGetToken()`, `_odUpdateUI()`, Konstanten `OD_CLIENT_ID`/`OD_SCOPES`/`OD_AUTH_EP`/`OD_TOKEN_EP`/`OD_GRAPH`; Init-Block am Ende
+  - `onedrive-import.js` (465 Z.): Foto-Import-Wizard + Ordner-Browser — `odImportPhotos()`, `_odShowFolder()`, `_odEnterFolder()`, `_odFolderBack()`, `odImportPhotosFromFolder()`, `odSetupDocFolder()`, `odPickFileForMedia()`, `_odPickSelectFile()`, `_extractObjeFilemap()`
+  - `onedrive.js` (374 Z.): Media-URL, Upload, File-I/O, Pfad-Helfer, Settings — `_odGetMediaUrlByPath()`, `_odUploadMediaFile()`, `odSaveFile()`, `odLoadFile()`, `odOpenFilePicker()`, `openSettings()`, `_odGetBasePath()`, `_odToRelPath()`
+  - `sw.js` + `index.html`: PRECACHE und `<script>`-Tags um die zwei neuen Dateien erweitert
+  - `odSaveFile()` ruft jetzt `writeGEDCOM(true)` (mit HEAD-Datum-Update)
+
+- **sw v141** `refactor`: `ui-forms.js` (1036 Z.) → 3 Module aufgeteilt
+  - `ui-forms-event.js` (167 Z.): Event-Formular — `showEventForm()`, `saveEvent()`, `deleteEvent()`, `onEventTypeChange()`, `_efMedia`, `_renderEfMedia()`, `addEfMedia()`; `_SPECIAL_OBJ`/`_SPECIAL_LBL`-Konstanten
+  - `ui-forms-repo.js` (167 Z.): Archiv-Formular + Picker + Detail — `showRepoForm()`, `saveRepo()`, `deleteRepo()`, `showRepoDetail()`, `openRepoPicker()`, `renderRepoPicker()`, `repoPickerSelect()`, `sfRepoUpdateDisplay()`, `sfRepoClear()`
+  - `ui-forms.js` (707 Z.): Person/Familie/Quelle + Source-Widget + Modal-Helfer + Keyboard-Shortcuts + Utils (`esc`, `showToast`, Place-Autocomplete)
+  - `sw.js` + `index.html`: PRECACHE und `<script>`-Tags um die zwei neuen Dateien erweitert
+
+- **sw v142** `fix`: Roundtrip — Parser lv>4 passthrough + Writer idempotenz
+  - **Parser-Fix**: `lv > 4`-Block hatte `continue` → Passthrough-Mechanismus wurde übersprungen → `5 TYPE photo` u.ä. wurden komplett verworfen (sw v138-Regression; `TYPE -67`, `FORM -52` im Roundtrip-Test)
+  - **Fix**: `continue` entfernt; Zeile wird weiterhin als Fehler geloggt, aber der `_ptDepth`-Block auf Zeilen 124–132 fängt sie nun korrekt ab
+  - **Writer-Fix**: `writeGEDCOM()` ersetzte HEAD `1 DATE`/`2 TIME` immer → jede Ausgabe hatte anderen Timestamp → Roundtrip instabil (out1 ≠ out2)
+  - `gedcom-writer.js`: neuer Parameter `writeGEDCOM(updateHeadDate = false)` — HEAD wird nur aktualisiert wenn `true`; sonst verbatim ausgegeben
+  - `storage.js`: `exportGEDCOM()` und iOS Share-Pfad rufen `writeGEDCOM(true)`; Test-/Debug-Aufrufe `writeGEDCOM()` (idempotent)
+  - **Ergebnis**: Roundtrip `net_delta=0`, stabil — alle 50+ Tag-Checks bestanden; erstmals auch TIME-stabil (out1 === out2)
+
+---
+
 ### Session 2026-04-05 — Inline Event-Handler Schulden (sw v137)
 
 - **sw v137** `refactor`: Schwerpunkt 6 Prio 3 — Inline Event-Handler in HTML-Strings entfernt

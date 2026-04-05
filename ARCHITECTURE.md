@@ -24,25 +24,29 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  ui-views-source.js   — Quellen-Detailansicht        │
 │  ui-views-tree.js     — Sanduhr-Baum + Fan Chart     │
 │  ui-forms.js          — Formulare (Person/Fam/Src)   │
+│  ui-forms-event.js    — Event-Formular               │
+│  ui-forms-repo.js     — Archiv-Formular + Picker     │
 │  ui-media.js          — Medien Add/Edit/Delete       │
 │  ui-fanchart.js       — Fan Chart (SVG)              │
-│  onedrive.js          — OAuth, Foto-Import, path-API │
-│  sw.js                — Service Worker (Cache v99)   │
+│  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
+│  onedrive-import.js   — Foto-Import, Ordner-Browser  │
+│  onedrive.js          — Media-URL, Upload, File-I/O  │
+│  sw.js                — Service Worker (Cache v146)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~14 JS-Dateien · ~200 Funktionen · ~9500 Zeilen
+**Größe gesamt:** ~19 JS-Dateien · ~200 Funktionen · ~10500 Zeilen
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
 ### ADR-001: Multi-File (HTML-Shell + JS-Module)
-**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-tree.js`, `ui-forms.js`, `ui-media.js`, `ui-fanchart.js`, `onedrive.js`.
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-tree.js`, `ui-forms.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-media.js`, `ui-fanchart.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`.
 
-**Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt. `ui-views.js` wurde in v5-dev (sw v94) in 5 Module aufgeteilt.
+**Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt. `ui-views.js` wurde in v5-dev (sw v94) in 5 Module aufgeteilt. `onedrive.js` (946 Z.) in 3 Module (sw v140), `ui-forms.js` (1036 Z.) in 3 Module (sw v141).
 
 **Warum:**
 - Einzelne Dateien bleiben editierbar ohne vollständigen Download/Upload
@@ -219,6 +223,8 @@ _ptDepth = 1;
 // _ptTarget ermöglicht Redirect in ev._extra[], marr._extra[], sourceExtra{} etc.
 ```
 
+**Wichtig — lv > 4 (sw v138/v142):** Zeilen mit Level > 4 werden als Fehler in `_errors[]` protokolliert, aber der Passthrough-Block läuft trotzdem. `continue` darf hier NICHT stehen — sonst werden z.B. `5 TYPE photo` (unter `4 FORM` unter `3 OBJE` in event→SOUR→OBJE→FILE) komplett verworfen. Dies war eine Regression in sw v138 die in sw v142 behoben wurde.
+
 **Was landet in `_passthrough` (INDI):**
 - Unbekannte lv=1-Tags: `DSCR`, `IDNO`, `SSN`
 - `1 OBJE @ref@`-Referenzen (externe Medien-Records)
@@ -291,8 +297,9 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 | v4-dev 2026-03-28: HEAD `_headLines[]`, ENGA vollständig, leere Events `seen`-Flag, NOTE-Record Sub-Tags, MAP ohne PLAC | **-7** |
 | v4-dev 2026-03-28: ENGA MAP, leere DATE/PLAC `null`-Init | **≈0** |
 | v5-dev 2026-04-05: DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter fix (sw v135) | **≈0** |
+| v5-dev 2026-04-05: Parser lv>4 passthrough fix + writer `updateHeadDate=false` (sw v142) | **0** |
 
-`roundtrip_stable: true` · Verbleibende Verluste: CONC/CONT-Neuformatierung + HEAD-Rewrite (by design).
+`roundtrip_stable: true` · `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
 
 ---
 
@@ -434,5 +441,7 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
 | ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen (v4.0) |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
-| Virtuelles Scrollen | Listen >1000 Einträge langsam | v5 geplant |
+| ~~Virtuelles Scrollen~~ | → sw v145: Spacer-div-Ansatz, O(log n) Binary-Search | Abgeschlossen (v5-dev) |
 | ~~`ui-views.js` gross~~ | → 5 Module aufgeteilt (sw v94) | Abgeschlossen (v5-dev) |
+| ~~`onedrive.js` 946 Z.~~ | → 3 Module aufgeteilt (sw v140) | Abgeschlossen (v5-dev) |
+| ~~`ui-forms.js` 1036 Z.~~ | → 3 Module aufgeteilt (sw v141) | Abgeschlossen (v5-dev) |

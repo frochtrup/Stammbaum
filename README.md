@@ -39,11 +39,15 @@ stammbaum/
 ├── ui-views-family.js  ← Familien-Detailansicht
 ├── ui-views-source.js  ← Quellen-Detailansicht
 ├── ui-views-tree.js    ← Sanduhr-Baum + Fan Chart + Tastaturnavigation
-├── ui-forms.js         ← Formulare Person/Familie/Quelle/Archiv/Event
+├── ui-forms.js         ← Formulare Person/Familie/Quelle + Source-Widget + Utils
+├── ui-forms-event.js   ← Event-Formular (showEventForm, saveEvent, deleteEvent)
+├── ui-forms-repo.js    ← Archiv-Formular + Picker + Detail-Ansicht
 ├── ui-media.js         ← Medien Add/Edit/Delete/Browser
-├── onedrive.js         ← OAuth PKCE, Foto-Import, Ordner-Browser, od_base_path-Architektur
+├── onedrive-auth.js    ← OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
+├── onedrive-import.js  ← Foto-Import-Wizard, Ordner-Browser, Pick-Modus
+├── onedrive.js         ← Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
-├── sw.js               ← Service Worker (offline, Cache v75)
+├── sw.js               ← Service Worker (offline, Cache v146)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
@@ -170,9 +174,9 @@ stammbaum/
 │  gedcom-writer.js  — writeGEDCOM()           │
 │  storage.js        — IDB, Dateiverwaltung    │
 │  ui-views*.js      — Baum, Detail, Listen    │
-│  ui-forms.js       — Formulare               │
+│  ui-forms*.js      — Formulare (3 Module)    │
 │  ui-media.js       — Medien                  │
-│  onedrive.js       — OAuth, Fotos, od_base_path│
+│  onedrive*.js      — OAuth, Fotos (3 Module) │
 │  sw.js             — Service Worker (offline)│
 │                                              │
 │  State: AppState { db, changed, currentId…} │
@@ -189,8 +193,8 @@ stammbaum/
 └──────────────────────────────────────────────┘
 ```
 
-**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta≈0** (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
-**Version 5.0-dev** — April 2026 — Branch `v5-dev` · sw v135
+**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
+**Version 5.0-dev** — April 2026 — Branch `v5-dev` · sw v146
 
 ---
 
@@ -230,7 +234,7 @@ Ancestris (Mac):
 
 **Voraussetzung (einmalig):** Azure App Registration mit `Files.ReadWrite`-Permission und Redirect-URI `https://[username].github.io/stammbaum/` (kostenlos, ~5 Min. im Azure Portal).
 
-**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `localStorage` · `od_base_path` = GED-Datei-Ordner (auto-abgeleitet) · alle Medienpfade relativ dazu · `@microsoft.graph.downloadUrl` für CORS-freien Foto-Fetch · Session-Cache (Data-URLs, iOS-kompatibel)
+**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `sessionStorage` (nicht persistent nach Tab-Schließen) · `od_base_path` = GED-Datei-Ordner (auto-abgeleitet) · alle Medienpfade relativ dazu · `@microsoft.graph.downloadUrl` für CORS-freien Foto-Fetch · Session-Cache (Data-URLs, iOS-kompatibel)
 
 ### Lokaler Workflow (Fallback)
 

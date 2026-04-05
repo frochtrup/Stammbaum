@@ -26,7 +26,7 @@
 - `onedrive-auth.js` — OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
 - `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus, `_extractObjeFilemap()`
 - `onedrive.js` — Media-URL (`_odGetMediaUrlByPath`), Upload, File-I/O (Open/Save), Pfad-Helfer, Settings
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v140)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v146)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -39,14 +39,14 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-04
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-05
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 in Entwicklung — Branch `v5-dev`**
 
-- Roundtrip-Status: `roundtrip_stable=true`, `net_delta=-4` (nur Normalisierung, alle tag-counts ✓)
-- **Aktuelle sw-Version: v112** / Cache: `stammbaum-v112`
-- Git: Branch `v5-dev`; letzter Commit: b4f10a1
+- Roundtrip-Status: `roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1===out2)
+- **Aktuelle sw-Version: v146** / Cache: `stammbaum-v146`
+- Git: Branch `v5-dev`; letzter Commit: 9e9d9ba
 
 **Session 2026-04-04 — OneDrive-Pfad-Architektur: od_base_path (sw v107–v112):**
 - sw v107: `@microsoft.graph.downloadUrl` statt `/content`-Redirect — CORS-Fix
@@ -66,8 +66,7 @@ Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen
 
 ## Roundtrip-Status (stabil seit v4)
 
-`roundtrip_stable=true`, `net_delta=-4` — alle tag-counts ✓, STABIL.
-Delta: nur CONC/CONT-Neuformatierung (-35/-26) + PAGE-Normalisierung (-22) + je -1 für _TIME/DATE/TIME/QUAY/TEXT.
+`roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
 
 **Passthrough-Mechanismen (10 Stück):**
 `_passthrough[]` · `ev._extra[]` · `addrExtra[]` · `frelSourExtra[]`/`mrelSourExtra[]` · `sourceExtra{}` · `topSourceExtra{}` · `media._extra[]` · `childRelations.sourExtra{}` · `extraRecords[]` · `sourceMedia{}`/`sourMedia{}`
