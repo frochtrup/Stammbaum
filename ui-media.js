@@ -345,6 +345,8 @@ async function deleteSourceMedia(srcId, idx) {
 }
 
 function showMediaBrowser() {
+  const titleEl = document.getElementById('media-browser-title');
+  if (titleEl) titleEl.textContent = 'Medien-Browser · Quellen';
   const allSrcs = Object.values(AppState.db.sources || {});
   const items = []; // { srcId, srcTitle, idx, m }
   for (const s of allSrcs) {
@@ -395,6 +397,138 @@ function showMediaBrowser() {
     const _ext = (m.file || '').split('.').pop().toLowerCase();
     if (!['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext)) continue;
     _asyncLoadMediaThumb('mb-thumb-' + srcId + '-' + idx, m.file);
+  }
+}
+
+function showPersonMediaBrowser() {
+  const titleEl = document.getElementById('media-browser-title');
+  if (titleEl) titleEl.textContent = 'Medien-Browser · Personen';
+
+  const sorted = Object.values(AppState.db.individuals || {})
+    .sort((a, b) => {
+      const c = (a.surname || '').localeCompare(b.surname || '', 'de');
+      if (c !== 0) return c;
+      return (a.given || '').localeCompare(b.given || '', 'de');
+    });
+
+  const items = []; // { pid, pName, idx, m }
+  for (const p of sorted) {
+    for (let i = 0; i < (p.media || []).length; i++) {
+      const m = p.media[i];
+      if (!m.file && !m.title) continue;
+      items.push({ pid: p.id, pName: p.name || p.id, idx: i, m });
+    }
+  }
+
+  let html = '';
+  if (!items.length) {
+    html = '<div style="color:var(--text-muted);font-style:italic;padding:24px 0;text-align:center;font-size:0.88rem">Keine Medien gefunden</div>';
+  } else {
+    html += `<div style="font-size:0.78rem;color:var(--text-muted);padding:0 0 10px 0">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
+    const byPerson = {};
+    const pidOrder = [];
+    for (const item of items) {
+      if (!byPerson[item.pid]) { byPerson[item.pid] = []; pidOrder.push(item.pid); }
+      byPerson[item.pid].push(item);
+    }
+    for (const pid of pidOrder) {
+      const group = byPerson[pid];
+      html += `<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:10px 0 4px 0;border-top:1px solid var(--border)">${esc(group[0].pName)}</div>`;
+      for (const { pid: p_id, idx, m } of group) {
+        const _ext = (m.file || '').split('.').pop().toLowerCase();
+        const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+        const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+        const thumbId = 'mb-p-' + p_id.replace(/@/g, '') + '-' + idx;
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
+          data-action="browserShowPerson" data-pid="${p_id}">
+          <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
+            ${m.title && m.file ? `<div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all">${esc(m.file)}</div>` : ''}
+          </div>
+          <span class="p-arrow">›</span>
+        </div>`;
+      }
+    }
+  }
+
+  document.getElementById('media-browser-content').innerHTML = html;
+  openModal('modalMediaBrowser');
+
+  for (const { pid, idx, m } of items) {
+    const _ext = (m.file || '').split('.').pop().toLowerCase();
+    if (!['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext)) continue;
+    _asyncLoadMediaThumb('mb-p-' + pid.replace(/@/g, '') + '-' + idx, m.file);
+  }
+}
+
+function showFamilyMediaBrowser() {
+  const titleEl = document.getElementById('media-browser-title');
+  if (titleEl) titleEl.textContent = 'Medien-Browser · Familien';
+
+  const sorted = Object.values(AppState.db.families || {})
+    .sort((a, b) => {
+      const na = a.husb ? (AppState.db.individuals[a.husb]?.surname || AppState.db.individuals[a.husb]?.name || '') : '';
+      const nb = b.husb ? (AppState.db.individuals[b.husb]?.surname || AppState.db.individuals[b.husb]?.name || '') : '';
+      return na.localeCompare(nb, 'de');
+    });
+
+  const items = []; // { fid, fTitle, idx, m }
+  for (const f of sorted) {
+    const husb = f.husb ? AppState.db.individuals[f.husb] : null;
+    const wife = f.wife ? AppState.db.individuals[f.wife] : null;
+    const fTitle = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+    for (let i = 0; i < (f.media || []).length; i++) {
+      const m = f.media[i];
+      if (!m.file && !m.title) continue;
+      items.push({ fid: f.id, fTitle, idx: i, m });
+    }
+    for (let i = 0; i < (f.marr?.media || []).length; i++) {
+      const m = f.marr.media[i];
+      if (!m.file && !m.titl) continue;
+      items.push({ fid: f.id, fTitle, idx: i, m: { ...m, title: m.titl || m.title } });
+    }
+  }
+
+  let html = '';
+  if (!items.length) {
+    html = '<div style="color:var(--text-muted);font-style:italic;padding:24px 0;text-align:center;font-size:0.88rem">Keine Medien gefunden</div>';
+  } else {
+    html += `<div style="font-size:0.78rem;color:var(--text-muted);padding:0 0 10px 0">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
+    const byFamily = {};
+    const fidOrder = [];
+    for (const item of items) {
+      if (!byFamily[item.fid]) { byFamily[item.fid] = []; fidOrder.push(item.fid); }
+      byFamily[item.fid].push(item);
+    }
+    for (const fid of fidOrder) {
+      const group = byFamily[fid];
+      html += `<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:10px 0 4px 0;border-top:1px solid var(--border)">${esc(group[0].fTitle)}</div>`;
+      for (const { fid: f_id, idx, m } of group) {
+        const _ext = (m.file || '').split('.').pop().toLowerCase();
+        const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+        const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+        const thumbId = 'mb-f-' + f_id.replace(/@/g, '') + '-' + idx;
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
+          data-action="browserShowFamily" data-fid="${f_id}">
+          <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
+            ${m.title && m.file ? `<div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all">${esc(m.file)}</div>` : ''}
+          </div>
+          <span class="p-arrow">›</span>
+        </div>`;
+      }
+    }
+  }
+
+  document.getElementById('media-browser-content').innerHTML = html;
+  openModal('modalMediaBrowser');
+
+  for (const { fid, idx, m } of items) {
+    const _ext = (m.file || '').split('.').pop().toLowerCase();
+    if (!['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext)) continue;
+    _asyncLoadMediaThumb('mb-f-' + fid.replace(/@/g, '') + '-' + idx, m.file);
   }
 }
 

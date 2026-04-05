@@ -845,6 +845,7 @@ body.fc-mode #fcGenBtns { display: flex; }
           oninput="applyPersonFilter()">
         <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" onclick="clearYearFilter()" title="Jahresfilter zurücksetzen">✕</button>
         <button type="button" id="personSortBtn" onclick="togglePersonSort()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
+        <button type="button" onclick="showPersonMediaBrowser()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="personList"></div>
@@ -852,8 +853,9 @@ body.fc-mode #fcGenBtns { display: flex; }
 
   <div id="tab-families" style="display:none">
     <div class="list-search-header">
-      <div class="search-wrap">
-        <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)">
+      <div class="search-wrap" style="display:flex;gap:6px;align-items:center">
+        <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)" style="flex:1;width:auto">
+        <button type="button" onclick="showFamilyMediaBrowser()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="familyList"></div>
@@ -1689,7 +1691,7 @@ body.fc-mode #fcGenBtns { display: flex; }
 <div class="modal-overlay" id="modalMediaBrowser">
   <div class="sheet" style="max-height:88vh;display:flex;flex-direction:column">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Medien-Browser</div>
+    <div class="sheet-title" id="media-browser-title">Medien-Browser</div>
     <div class="sheet-body" style="flex:1;overflow-y:auto;padding-bottom:16px" id="media-browser-content"></div>
     <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
       <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalMediaBrowser')">Schließen</button>

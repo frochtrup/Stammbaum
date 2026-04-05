@@ -359,6 +359,8 @@ const _CLICK_MAP = {
   odEnterFolder:        el => _odEnterFolder(el),
   odPickSelectFile:     el => _odPickSelectFile(el.dataset.odid, el.dataset.odname, el.dataset.path),
   browserShowSource:    el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
+  browserShowPerson:    el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
+  browserShowFamily:    el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
   showLightbox:         el => showLightbox(el.src || el.dataset.src),
 };
 

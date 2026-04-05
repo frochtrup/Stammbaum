@@ -16,7 +16,9 @@ function renderPersonList(persons) {
       const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
       if (ka !== kb) return (ka || 99999999) - (kb || 99999999);
     }
-    return (a.surname || a.given || a.name || '').localeCompare(b.surname || b.given || b.name || '', 'de');
+    const c = (a.surname || '').localeCompare(b.surname || '', 'de');
+    if (c !== 0) return c;
+    return (a.given || '').localeCompare(b.given || '', 'de');
   });
   const list = document.getElementById('personList');
   if (!sorted.length) { list.innerHTML = '<div class="empty">Noch keine Personen</div>'; return; }
