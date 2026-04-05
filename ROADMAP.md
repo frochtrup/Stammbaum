@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v142 / Cache: `stammbaum-v142`
+**Aktuelle sw-Version:** v150 / Cache: `stammbaum-v150`
 
 ---
 
@@ -72,9 +72,9 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [x] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — "Ereignisse"-Sektion in Familiendetail, Verlobung aus Haupt-Edit in Ereignisliste verschoben ✅ (sw v147)
 - [x] INDI-Events: `DSCR`, `IDNO`, `SSN` — strukturiert statt passthrough ✅ (sw v148)
 
-#### Ereignisliste Personendetail — Priorität 1
-- [ ] Gleiche Ereignistypen als Block gruppiert darstellen (alle OCCU zusammen, alle RESI zusammen etc.)
-- [ ] Innerhalb jedes Blocks: Ereignisse nach Datum sortiert (undatierte ans Ende)
+#### Ereignisliste Personendetail — ✅ ABGESCHLOSSEN (sw v150)
+- [x] Gleiche Ereignistypen als Block gruppiert darstellen (alle OCCU zusammen, alle RESI zusammen etc.)
+- [x] Innerhalb jedes Blocks: Ereignisse nach Datum sortiert (undatierte ans Ende)
 
 #### Duplikat-Erkennung — Priorität 2
 - [ ] Personen mit gleichem Name + Geburtsjahr (±2): Hinweis + Vergleichs-Ansicht
@@ -97,8 +97,9 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ### Schwerpunkt 5: Sonstiges
 
-#### Offene Fehler
-- [ ] Bug: Neue Quellenzuordnung bei einem Familienereignis erscheint nicht in der Referenzliste der Quelle (Quellendetail → "Verwendet in") - nach Speichern/Laden wird es richtig angezeigt.
+#### Offene Fehler — ✅ ABGESCHLOSSEN (sw v149–v150)
+- [x] Bug: Neue Quellenzuordnung bei FAM-/INDI-Ereignis erschien nicht sofort in Quellendetail „Verwendet in" — behoben durch `_rebuildPersonSourceRefs()` / `_rebuildFamilySourceRefs()` nach jedem Event-Save/Delete (sw v149)
+- [x] Bug: `saveFamily()` setzte `sourceRefs` nur aus Hochzeits-Quellen → Verlobung/Scheidung-Quellen fehlten in Referenzliste — behoben sw v149
 
 #### Fehler allgemein — ✅ ABGESCHLOSSEN (sw v85)
 - [x] Fan Button wird nicht angezeigt ✅ (sw v84)
@@ -194,6 +195,8 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
 - ~~Inline Event-Handler in HTML-Strings~~ → behoben sw v137: globale Event-Delegation
 - ~~GEDCOM-Parser ohne Fehler-Sammler~~ → behoben sw v138: `parseErrors[]` + Level-Validierung
+- ~~`sourceRefs` nach Event-Save nicht aktualisiert~~ → behoben sw v149: rebuild-Funktionen nach save/delete
+- ~~Ereignisliste unsortiert/ungruppiert~~ → behoben sw v150: Typ-Gruppen + Datum-Sortierung
 
 ---
 
