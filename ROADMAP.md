@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v138 / Cache: `stammbaum-v138`
+**Aktuelle sw-Version:** v139 / Cache: `stammbaum-v139`
 
 ---
 
@@ -162,7 +162,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [ ] **Gemeinsame `renderListItem()`-Funktion** — Media-Count, Sortierung und List-Rendering in ui-views-person/family/source.js deduplizieren (3× identische Logik)
 - [x] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=4) (gedcom-parser.js) ✅ (sw v138)
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
-- [ ] **`catch { return null }` durch echtes Error-Handling ersetzen** — maskiert alle OneDrive-API-Fehler, erschwert Debugging (onedrive.js)
+- [x] **`catch { return null }` durch echtes Error-Handling ersetzen** — maskiert alle OneDrive-API-Fehler, erschwert Debugging (onedrive.js) ✅ (sw v139)
 
 ---
 

@@ -104,7 +104,7 @@ async function _odGetMediaUrlByPath(relPath) {
     if (!dataUrl) return null;
     _odPhotoCache[cacheKey] = dataUrl;
     return dataUrl;
-  } catch { return null; }
+  } catch(e) { console.warn('[OD] Mediendatei laden:', relPath, e); return null; }
 }
 
 
@@ -126,10 +126,10 @@ async function _odUploadMediaFile(b64DataUrl, relPath) {
     const encoded = fullPath.replace(/\\/g, '/').split('/').map(s => encodeURIComponent(s)).join('/');
     const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
       { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': mime }, body: blob });
-    if (!res.ok) return null;
+    if (!res.ok) { console.warn('[OD] Upload fehlgeschlagen:', relPath, 'HTTP', res.status); return null; }
     const item = await res.json();
     return { path: relPath, fileId: item.id };
-  } catch { return null; }
+  } catch(e) { console.warn('[OD] Upload:', relPath, e); return null; }
 }
 
 // IDB-Key parsen → { isFam, id, idx, isHero }
@@ -171,7 +171,7 @@ async function _odGetPhotoUrl(idbKey) {
     });
     _odPhotoCache[idbKey] = dataUrl;
     return dataUrl;
-  } catch { return null; }
+  } catch(e) { console.warn('[OD] Foto laden:', idbKey, e); return null; }
 }
 
 // OneDrive-URL für Quellenmedien laden
@@ -221,7 +221,7 @@ async function _odGetSourceFileUrl(srcId, idx) {
     });
     _odPhotoCache[cacheKey] = dataUrl;
     return dataUrl;
-  } catch { return null; }
+  } catch(e) { console.warn('[OD] Quellenmedium laden:', srcId, idx, e); return null; }
 }
 
 // Quick-Import aus gespeichertem Standard-Ordner (kein Navigations-Dialog)
@@ -389,7 +389,7 @@ async function _odGetToken() {
       sessionStorage.setItem('od_token_expiry', Date.now() + (data.expires_in - 60) * 1000);
       return data.access_token;
     }
-  } catch(e) {}
+  } catch(e) { console.warn('[OD] Token-Refresh:', e); }
   odLogin(); return null;
 }
 
@@ -446,7 +446,7 @@ async function odLoadFile(itemId, fileName) {
         _odCurrentBasePath = basePath;
         if (basePath) _odStripBaseFromPaths(basePath);
       }
-    } catch {}
+    } catch(e) { console.warn('[OD] Basis-Pfad ermitteln:', e); }
     showToast('✓ ' + fileName + ' geladen');
   } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
 }
@@ -682,7 +682,7 @@ async function _odShowAllFolders() {
     _odFolderStack = [];
     if (parentId) await _odShowFolder(parentId, parentName);
     else await _odShowFolder('root', 'OneDrive');
-  } catch { await _odShowFolder('root', 'OneDrive'); }
+  } catch(e) { console.warn('[OD] Parent-Ordner laden:', e); await _odShowFolder('root', 'OneDrive'); }
 }
 
 async function odImportPhotosFromFolder(folderId, folderName) {
@@ -885,7 +885,7 @@ async function _removeMediaFromFilemap(storeKey, id, idx) {
       if (!entries.length) delete fm[storeKey][id];
       await idbPut('od_filemap', fm).catch(() => {});
     }
-  } catch {}
+  } catch(e) { console.warn('[OD] Filemap-Update:', e); }
   const pfx = storeKey === 'families' ? 'photo_fam_' + id : storeKey === 'sources' ? 'src_' + id + '_' : 'photo_' + id;
   Object.keys(_odPhotoCache).filter(k => k.startsWith(pfx)).forEach(k => delete _odPhotoCache[k]);
 }
