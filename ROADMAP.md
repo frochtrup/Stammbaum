@@ -175,7 +175,6 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 - [ ] **`touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen** — feuert aktuell 100+/s direkt auf DOM-Properties, Frame-Drops auf älteren iPhones (ui-views-tree.js)
 - [ ] **Globale Suche indexieren** — O(n×m) auf alle Personen/Felder ohne Cache; spürbar ab ~1000 Personen; Debounce + vorberechneter Index (ui-views.js)
-- [ ] **Media-Count cachen** — Logik wird bei jedem Render neu berechnet, statt einmalig pro Datensatz (ui-views-person/family/source.js)
 
 #### Refactoring — Priorität 3
 
