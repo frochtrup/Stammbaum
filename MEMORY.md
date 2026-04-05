@@ -18,11 +18,15 @@
 - `ui-views-family.js` — Familien-Detailansicht
 - `ui-views-source.js` — Quellen-Detailansicht
 - `ui-views-tree.js` — Sanduhr-Baum + Fan Chart + Tastaturnavigation
-- `ui-forms.js` — Formulare Person/Familie/Quelle/Archiv/Event
+- `ui-forms.js` — Formulare Person/Familie/Quelle + Source Widget + Modal/Keyboard/Utils
+- `ui-forms-repo.js` — Archiv-Formular, Picker, Detail-Ansicht
+- `ui-forms-event.js` — Event-Formular (`_SPECIAL_OBJ`, `_efMedia`, `showEventForm`, `saveEvent`)
 - `ui-media.js` — Medien Add/Edit/Delete/Browser
 - `ui-fanchart.js` — Fan Chart (SVG)
-- `onedrive.js` — OAuth, Foto-Import, Ordner-Browser, path-basiertes Medien-Laden
-- `sw.js` — Service Worker (Network-first, offline, Cache v112)
+- `onedrive-auth.js` — OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
+- `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus, `_extractObjeFilemap()`
+- `onedrive.js` — Media-URL (`_odGetMediaUrlByPath`), Upload, File-I/O (Open/Save), Pfad-Helfer, Settings
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v140)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac

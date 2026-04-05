@@ -29,17 +29,18 @@ function _toPedi(v) {
 // ─────────────────────────────────────
 //  GEDCOM WRITER  (v2 – vollständig)
 // ─────────────────────────────────────
-function writeGEDCOM() {
+function writeGEDCOM(updateHeadDate = false) {
   const lines = [];
   const d = new Date();
   const fname = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
 
   // ── HEAD ──
   if (db.headLines && db.headLines.length > 0) {
-    // Verbatim HEAD aus Original (roundtrip-stabil), DATE/TIME auf aktuell aktualisiert
+    // Verbatim HEAD aus Original; DATE/TIME nur bei updateHeadDate=true aktualisieren
+    // (false = Roundtrip-idempotent; true = beim echten Speichern)
     for (const l of db.headLines) {
-      if (/^1 DATE /.test(l))      { lines.push(`1 DATE ${gedcomDate(d)}`); continue; }
-      if (/^2 TIME /.test(l))      { lines.push(`2 TIME ${gedcomTime(d)}`); continue; }
+      if (updateHeadDate && /^1 DATE /.test(l)) { lines.push(`1 DATE ${gedcomDate(d)}`); continue; }
+      if (updateHeadDate && /^2 TIME /.test(l)) { lines.push(`2 TIME ${gedcomTime(d)}`); continue; }
       lines.push(l);
     }
   } else {

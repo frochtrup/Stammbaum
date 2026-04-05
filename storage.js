@@ -293,7 +293,7 @@ function _downloadBlob(content, filename) {
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
 async function exportGEDCOM() {
-  const content  = writeGEDCOM();
+  const content  = writeGEDCOM(true);
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -311,7 +311,7 @@ async function exportGEDCOM() {
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
           // des Share-Dialogs gemacht wurden (Race-Condition-Schutz)
-          if (writeGEDCOM() === content) { AppState.changed = false; updateChangedIndicator(); }
+          if (writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
           showToast('✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });

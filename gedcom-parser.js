@@ -48,7 +48,8 @@ function parseGEDCOM(text, parseErrors) {
     // ── Level-Validierung ──
     if (lv > 4) {
       _errors.push({ line: lineNo, lv, tag, val, raw: line, msg: `Level ${lv} überschreitet das Maximum (4)` });
-      continue; // parser hat keine Behandlung für lv > 4
+      // kein continue: Passthrough-Mechanismus (weiter unten) fängt Zeilen ab
+      // die noch in einem _ptDepth-Block sind (z.B. 5 TYPE unter 4 FORM unter 3 OBJE)
     }
     if (prevLv >= 0 && lv > prevLv + 1) {
       _errors.push({ line: lineNo, lv, tag, val, raw: line, msg: `Level-Sprung von ${prevLv} auf ${lv} (erwartet max. ${prevLv + 1})` });
