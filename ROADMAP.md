@@ -34,6 +34,11 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 - [ ] `touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen
 - [ ] Globale Suche indexieren (Debounce + vorberechneter Index)
 
+### Fehler
+
+- [ ] das geblockte sortieren der Ereignisse im Personen Detail hat nicht komplett funktioniert, wenn sonstige events mehrere Typern haben, werden diese nicht einzeln geblockt
+- [ ] 
+
 ### Neue Schwerpunkte
 
 *(werden in der nächsten Session definiert)*
