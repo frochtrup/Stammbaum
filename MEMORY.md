@@ -42,23 +42,12 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-04-05
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
-**Version 5.0 in Entwicklung — Branch `v5-dev`**
+**Version 5.0 abgeschlossen — auf `main` gemergt (2026-04-05)**
+**Version 6.0 in Entwicklung — Branch `v6-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1===out2)
-- **Aktuelle sw-Version: v146** / Cache: `stammbaum-v146`
-- Git: Branch `v5-dev`; letzter Commit: 9e9d9ba
-
-**Session 2026-04-04 — OneDrive-Pfad-Architektur: od_base_path (sw v107–v112):**
-- sw v107: `@microsoft.graph.downloadUrl` statt `/content`-Redirect — CORS-Fix
-- sw v108: Picker-Pfad filtert 'OneDrive'-Prefix; Basename-Fallback nur für Windows-Pfade (`\\`)
-- sw v109: Ordner-Picker startet bei konfiguriertem Ordner; `parentName`-Regex-Fix
-- sw v110: `od_base_path` = absoluter OneDrive-Pfad des GED-Ordners; `m.file` relativ dazu;
-  `od_photo_folder`/`od_docs_folder` mit `relPath`-Feld; Auto-Migration; `cfg_photo_base`/`cfg_doc_base` entfernt
-- sw v111: `od_base_path` automatisch aus `parentReference.path` beim GED-Laden ableiten
-- sw v112: Einstellungen zeigen Startpfad separat; Foto/Dok-Ordner nur relativer Pfad
-
-**Session 2026-04-04 — Media-Handling Grundsanierung: pfad-basierte IDB-Keys (sw v103–v106):**
-- IDB-Keys auf `'img:' + filePath`; Medienladen pfad-zuerst; Data-URLs (iOS-Fix); Mismatch-Fix
+- **Aktuelle sw-Version: v152** / Cache: `stammbaum-v152`
+- Git: Branch `v6-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 
@@ -79,8 +68,7 @@ Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen
 - `NOTE._passthrough`: 1 NOTE (REFN, _VALID)
 - `extraRecords`: 2 (SUBM, OBJE)
 
-**Nicht editierbar (v5-Kandidaten):**
-- DIV, DIVF → FAM-Events in passthrough
+**Nicht editierbar (v6-Kandidaten):**
 - CENS, CONF, FCOM, ORDN, RETI, PROP, WILL, PROB → nicht als events[] strukturiert
 - Mehrere inline INDI-Notes → konkateniert
 
@@ -123,31 +111,16 @@ Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen
 - Namen: `_treeShortName(p, isCenter)` — Limit 18 (regulär) / 26 (Zentrum) Zeichen, dann Initialen
 - Vorfahren: 4 Ebenen (anc1–anc4), ancSpan dynamisch (4/8/16 Slots)
 
-## Version 5 — Schwerpunkte (Branch `v5-dev`)
+## Version 6 — Schwerpunkte (Branch `v6-dev`)
 
-**Schwerpunkt 1: Weitere Darstellungen**
-1. Fan Chart (SVG, polar coords) — `ui-fanchart.js` ✅ sw v83–v84
-   - Toggle `◑` in Topbar, Gen-Buttons 3–6, klickbare Segmente
-   - Farben: Blau/Rosa/Grau nach Geschlecht, außen dunkler
-2. Generationen-Buttons im Sanduhr-Baum ✅ sw v84
-   - Buttons 2–6 in Topbar, dynamische Positionsfunktionen (_lCX[]), ancLevels 1–5
-   - Standard 5; Portrait bleibt max. 2
-3. Zeitleiste — neue Datei `ui-timeline.js` (offen)
-4. Nachkommen-Baum (top-down SVG) (offen)
-5. Karten-Ansicht (Apple Maps Links / leaflet.js) (offen)
+Offene Punkte aus v5 + neue Schwerpunkte — Planung in nächster Session.
 
-**Schwerpunkt 2: Performance + UX**
-1. Virtuelles Scrollen (Listen >500 Eintr., scroll-event-basiert, kein Framework)
-2. Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
-3. Offline-Sync-Indikator (Badge wenn AppState.changed=true und ungespeichert)
-
-**Schwerpunkt 3: Datenqualität**
-1. Erweiterte Events (DIV, DIVF, CENS, CONF, ORDN etc. aus passthrough)
-2. Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige kein Auto-Merge)
-3. Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
+**Offen aus v5:**
+- Zeitleiste (`ui-timeline.js`), Nachkommen-Baum, Karten-Ansicht
+- Statistik-Dashboard, Duplikat-Erkennung, Volltextsuche
+- `writeGEDCOM()` aufteilen, touchmove-Throttling, Suche indexieren
 
 ## Offene Architektur-Schulden
-- Virtuelles Scrollen für Listen >1000 Einträge (v5 Schwerpunkt 2)
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo)
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 

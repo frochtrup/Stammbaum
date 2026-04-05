@@ -9,7 +9,8 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | Version | Branch | Status |
 |---|---|---|
 | 4.0 | `main` | Abgeschlossen (2026-03-30) — Details: CHANGELOG.md |
-| 5.0 | `v5-dev` | In Entwicklung |
+| 5.0 | `main` | Abgeschlossen (2026-04-05) — Details: CHANGELOG.md |
+| 6.0 | `v6-dev` | In Entwicklung |
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
@@ -17,7 +18,29 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 ---
 
-## Version 5.0 (Branch `v5-dev`, ab 2026-03-30)
+## Version 6.0 (Branch `v6-dev`, ab 2026-04-05)
+
+*Planung in Arbeit — offene Punkte aus v5 + neue Schwerpunkte*
+
+### Offen aus v5
+
+- [ ] Zeitleiste (`ui-timeline.js`) — Personen/Ereignisse auf horizontaler Zeitachse
+- [ ] Nachkommen-Baum (top-down SVG)
+- [ ] Karten-Ansicht (Apple Maps Link-Cluster oder leaflet.js)
+- [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
+- [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
+- [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
+- [ ] `writeGEDCOM()` in Subfunktionen aufteilen (477-Zeilen-Monolith)
+- [ ] `touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen
+- [ ] Globale Suche indexieren (Debounce + vorberechneter Index)
+
+### Neue Schwerpunkte
+
+*(werden in der nächsten Session definiert)*
+
+---
+
+## Version 5.0 (Branch `v5-dev`, 2026-03-30 — 2026-04-05) — ABGESCHLOSSEN
 
 ### Schwerpunkt 1: Weitere Darstellungen
 

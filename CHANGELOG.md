@@ -5,7 +5,35 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
-## Version 5.0 (Branch `v5-dev`, ab 2026-03-30)
+## Version 5.0 (Branch `v5-dev`, 2026-03-30 — 2026-04-05) — ABGESCHLOSSEN
+
+---
+
+### Session 2026-04-05 — OneDrive-Startsequenz + Offline-Sync-Indikator (sw v149–v152)
+
+- **sw v149** `fix`: sourceRefs nach Event-Save/Delete rebuilden
+  - `ui-forms-event.js`: `saveEvent()` + `deleteEvent()` rufen nach Änderung `_rebuildPersonSourceRefs()` bzw. `_rebuildFamilySourceRefs()` auf
+  - `ui-forms.js`: `saveFamily()` berücksichtigt jetzt alle FAM-Events (ENG/DIV/DIVF) für `sourceRefs` — nicht nur Hochzeits-Quellen
+  - Behoben: Neue Quellenzuordnung erschien nicht sofort in Quellendetail „Verwendet in"
+
+- **sw v150** `feat`: Ereignisliste Personendetail — Gruppierung + Sortierung
+  - `ui-views-person.js`: Gleiche Ereignistypen werden als Block zusammengefasst (alle OCCU, alle RESI etc.)
+  - Innerhalb jedes Blocks: chronologisch sortiert; undatierte Ereignisse ans Ende
+  - Reihenfolge der Gruppen folgt der Typen-Reihenfolge im Ursprungsarray
+
+- **sw v151** `feat`: OneDrive-Startsequenz
+  - `onedrive.js`: Auswahl-Dialog bei Neustart (kein Session-Token): "☁ Von OneDrive laden" vs. "📱 Lokal"
+  - Gleiche Session (Token in sessionStorage): direkt von OneDrive laden — kein veralteter IDB-Stand
+  - `od_autoload_pending`: nach OAuth-Redirect wird Datei automatisch geladen
+  - Timeout 8s + stiller Fallback auf IDB bei Fehler oder Offline
+  - `_odRefreshTokenSilent()` — Token-Refresh ohne OAuth-Redirect (kein ungewolltes Login)
+  - `window._odCallbackPromise` — `window.load`-Handler wartet auf laufenden OAuth-Callback
+
+- **sw v152** `feat`: Offline-Sync-Indikator
+  - `index.html`: Floating Pill `#sync-indicator` über Bottom-Nav — "● Nicht gespeichert" + Speichern-Button
+  - Button adaptiv: ☁ Speichern (OneDrive) · ↑ Teilen (iPhone/Share Sheet) · ↓ Speichern (Desktop)
+  - `ui-views.js`: `updateChangedIndicator()` — erscheint/verschwindet synchron mit `AppState.changed`
+  - Global in allen Views sichtbar; keine Schaltflächenanpassung nötig
 
 ---
 
