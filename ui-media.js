@@ -1,8 +1,9 @@
 // ─── Medien hinzufügen / löschen ─────────────────────────────────────────
-let _addMediaType     = null; // 'person' | 'family' | 'source'
-let _addMediaId       = null;
-let _addMediaOdFileId = null;
-let _addMediaCamB64   = null; // base64 aus Kamera-Aufnahme
+let _addMediaType            = null; // 'person' | 'family' | 'source'
+let _addMediaId              = null;
+let _addMediaOdFileId        = null;
+let _addMediaCamB64          = null; // base64 aus Kamera-Aufnahme
+let _addMediaDefaultFolderPath = '';  // relativer OneDrive-Ordner-Pfad (für Kamera-Dateinamen)
 
 // ─── Medium bearbeiten ────────────────────────────────────────────────────────
 let _editMediaType     = null; // 'person' | 'family' | 'family_media' | 'source'
@@ -25,6 +26,7 @@ function openEditMediaDialog(type, entityId, idx) {
 
   document.getElementById('em-title').value = m.title || '';
   document.getElementById('em-file').value  = m.file  || '';
+  document.getElementById('em-prim-check').checked = !!(m.prim && m.prim !== '');
   document.getElementById('em-od-row').style.display = _odIsConnected() ? '' : 'none';
 
   const ext = (m.file || '').split('.').pop().toLowerCase();
@@ -51,15 +53,12 @@ function openEditMediaDialog(type, entityId, idx) {
       }).catch(() => {});
     }
   } else {
-    const idbKey = type === 'family'
-      ? 'photo_fam_' + entityId + '_' + idx
-      : type === 'family_media'
-      ? 'photo_fam_media_' + entityId + '_' + idx
-      : 'photo_' + entityId + '_' + idx;
-    idbGet(idbKey).then(src => {
-      if (src && isImg) { _setEditMediaPreview(src); return; }
-      _odGetPhotoUrl(idbKey).then(url => { if (url && isImg) _setEditMediaPreview(url); }).catch(() => {});
-    }).catch(() => {});
+    if (isImg) {
+      _odGetMediaUrlByPath(m.file).then(url => {
+        if (url) { _setEditMediaPreview(url); return; }
+        if (m.file) idbGet('img:' + m.file).then(src => { if (src) _setEditMediaPreview(src); }).catch(() => {});
+      }).catch(() => {});
+    }
   }
 }
 
@@ -106,9 +105,30 @@ async function openSourceMediaView(srcId, idx) {
   else window.open(url, '_blank');
 }
 
+// Hilfsfunktion: Medium-Array normalisieren — prim nur auf idx, dieses nach vorne schieben
+// Gibt true zurück wenn verschoben wurde (IDB-Cache muss invalidiert werden)
+function _applyPrimAndReorder(arr, idx, setPrim) {
+  if (!arr || idx < 0 || idx >= arr.length) return false;
+  // prim auf allen Einträgen aktualisieren
+  arr.forEach((m, i) => { m.prim = (setPrim && i === idx) ? 'Y' : ''; });
+  if (!setPrim || idx === 0) return false; // kein Verschieben nötig
+  // Medium an erste Stelle verschieben
+  const [item] = arr.splice(idx, 1);
+  arr.unshift(item);
+  return true; // verschoben → IDB-Cache ist veraltet
+}
+
+// Session-Cache für geänderte Entity leeren (pfad-basierte Keys bleiben korrekt)
+function _invalidateThumbCache(entityPrefix) {
+  if (typeof _odPhotoCache !== 'undefined') {
+    Object.keys(_odPhotoCache).filter(k => k.startsWith('path:')).forEach(k => delete _odPhotoCache[k]);
+  }
+}
+
 function confirmEditMedia() {
-  const title = document.getElementById('em-title').value.trim();
-  const file  = document.getElementById('em-file').value.trim();
+  const title   = document.getElementById('em-title').value.trim();
+  const file    = document.getElementById('em-file').value.trim();
+  const setPrim = document.getElementById('em-prim-check').checked;
   if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
   const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
 
@@ -116,7 +136,9 @@ function confirmEditMedia() {
     const p = getPerson(_editMediaId);
     if (!p?.media) return;
     p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title };
-    if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    const moved = _applyPrimAndReorder(p.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_' + _editMediaId);
+    if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showDetail(_editMediaId, false);
@@ -124,7 +146,9 @@ function confirmEditMedia() {
     const f = getFamily(_editMediaId);
     if (!f) return;
     _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title });
-    if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    const moved = _applyPrimAndReorder(f.marr?.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_fam_' + _editMediaId);
+    if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showFamilyDetail(_editMediaId, false);
@@ -132,6 +156,8 @@ function confirmEditMedia() {
     const f = getFamily(_editMediaId);
     if (!f?.media) return;
     f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title };
+    const moved = _applyPrimAndReorder(f.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_fam_media_' + _editMediaId);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showFamilyDetail(_editMediaId, false);
@@ -139,7 +165,9 @@ function confirmEditMedia() {
     const s = getSource(_editMediaId);
     if (!s?.media) return;
     s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title };
-    if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 });
+    const moved = _applyPrimAndReorder(s.media, _editMediaIdx, setPrim);
+    if (moved) _invalidateThumbCache('photo_src_' + _editMediaId);
+    if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
     AppState.changed = true;
     closeModal('modalEditMedia');
     showSourceDetail(_editMediaId, false);
@@ -154,37 +182,89 @@ function confirmDeleteMedia() {
   else if (_editMediaType === 'source')       deleteSourceMedia(_editMediaId, _editMediaIdx);
 }
 
-async function _asyncLoadMediaThumb(thumbId, idbKey) {
-  const src = await idbGet(idbKey).catch(() => null)
-           || await _odGetPhotoUrl(idbKey).catch(() => null);
-  if (!src) return;
+async function _asyncLoadMediaThumb(thumbId, filePath) {
+  if (!filePath) return;
   const el = document.getElementById(thumbId);
   if (!el) return;
-  el.innerHTML = '';
+  const originalContent = el.innerHTML;
+  const src = await _odGetMediaUrlByPath(filePath).catch(() => null)
+           || await idbGet('img:' + filePath).catch(() => null);
+  if (!src) return;
   const img = document.createElement('img');
   img.src = src;
   img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
+  img.onerror = () => { el.innerHTML = originalContent; };
+  el.innerHTML = '';
   el.appendChild(img);
 }
 
 
-function openAddMediaDialog(type, entityId) {
+function _onCamCapture(b64) {
+  const ts   = new Date();
+  const name = 'foto_' + ts.getFullYear()
+    + String(ts.getMonth() + 1).padStart(2, '0')
+    + String(ts.getDate()).padStart(2, '0') + '_'
+    + String(ts.getHours()).padStart(2, '0')
+    + String(ts.getMinutes()).padStart(2, '0')
+    + String(ts.getSeconds()).padStart(2, '0') + '.jpg';
+  // Ordner-Pfad: _addMediaDefaultFolderPath (aus IDB) oder Verzeichnis-Anteil aus am-file
+  const cur = document.getElementById('am-file').value;
+  let base = _addMediaDefaultFolderPath;
+  if (!base) {
+    const sep = cur.lastIndexOf('/');
+    base = sep >= 0 ? cur.substring(0, sep + 1) : '';
+  } else if (!base.endsWith('/')) {
+    base += '/';
+  }
+  document.getElementById('am-file').value = base + name;
+  _addMediaCamB64 = b64;
+  document.getElementById('am-cam-img').src = b64;
+  document.getElementById('am-cam-preview').style.display = '';
+}
+
+async function openAddMediaDialog(type, entityId) {
   _addMediaType     = type;
   _addMediaId       = entityId;
   _addMediaOdFileId = null;
   _addMediaCamB64   = null;
+  _addMediaDefaultFolderPath = '';
   document.getElementById('am-title').value = '';
-  document.getElementById('am-file').value  = '';
   document.getElementById('am-cam-preview').style.display = 'none';
   document.getElementById('am-cam-input').setAttribute('capture', 'environment');
   document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
-  openModal('modalAddMedia');
+  document.getElementById('am-file').value = '';
+  openModal('modalAddMedia'); // Modal sofort öffnen
+  // Relativen Ordner-Pfad laden (relativ zu od_base_path)
+  const isSourceType = (type === 'source');
+  const folder = await idbGet(isSourceType ? 'od_docs_folder' : 'od_photo_folder').catch(() => null)
+              || await idbGet(isSourceType ? 'od_doc_folder' : 'od_default_folder').catch(() => null); // legacy
+  if (folder?.relPath !== undefined) {
+    _addMediaDefaultFolderPath = folder.relPath;
+  } else if (folder?.folderPath) {
+    // Legacy: relativen Pfad aus altem Format berechnen
+    const basePath = await idbGet('od_base_path').catch(() => null) || '';
+    _addMediaDefaultFolderPath = basePath && folder.folderPath.startsWith(basePath + '/')
+      ? folder.folderPath.slice(basePath.length + 1)
+      : folder.folderPath;
+  }
 }
 
 async function confirmAddMedia() {
   const title = document.getElementById('am-title').value.trim();
-  const file  = document.getElementById('am-file').value.trim();
+  let   file  = document.getElementById('am-file').value.trim();
   if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
+
+  // Kamera-Foto nach OneDrive hochladen — Pfad aus Eingabefeld als Ziel
+  if (_addMediaCamB64 && file && _odIsConnected()) {
+    showToast('Lade Foto hoch…');
+    const result = await _odUploadMediaFile(_addMediaCamB64, file).catch(() => null);
+    if (result?.path) {
+      file = result.path; // tatsächlicher Pfad laut API-Antwort
+      document.getElementById('am-file').value = file;
+    }
+    // Lokaler IDB-Cache (wird später via idbKey gesetzt)
+  }
+
   const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
   const entry = { form, file, title };
 
@@ -194,8 +274,8 @@ async function confirmAddMedia() {
     if (!p.media) p.media = [];
     const idx = p.media.length;
     p.media.push(entry);
-    if (_addMediaOdFileId) _addMediaToFilemap('persons', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
-    if (_addMediaCamB64) { await idbPut('photo_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaOdFileId) _addMediaToFilemap('persons', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 }, idx);
+    if (_addMediaCamB64) { if (file) await idbPut('img:' + file, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showDetail(_addMediaId, false);
@@ -205,8 +285,8 @@ async function confirmAddMedia() {
     if (!f.marr.media) f.marr.media = [];
     const idx = f.marr.media.length;
     f.marr.media.push({ file, titl: title, form, note:'', date:'', scbk:'', prim:'', _extra:[] });
-    if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 });
-    if (_addMediaCamB64) { await idbPut('photo_fam_' + _addMediaId + '_' + idx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaOdFileId) _addMediaToFilemap('families', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: idx === 0 }, idx);
+    if (_addMediaCamB64) { if (file) await idbPut('img:' + file, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showFamilyDetail(_addMediaId, false);
@@ -216,8 +296,8 @@ async function confirmAddMedia() {
     if (!s.media) s.media = [];
     const _smIdx = s.media.length;
     s.media.push(entry);
-    if (_addMediaOdFileId) _addMediaToFilemap('sources', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: _smIdx === 0 });
-    if (_addMediaCamB64) { await idbPut('photo_src_' + _addMediaId + '_' + _smIdx, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
+    if (_addMediaOdFileId) _addMediaToFilemap('sources', _addMediaId, { fileId: _addMediaOdFileId, filename: file, prim: _smIdx === 0 }, _smIdx);
+    if (_addMediaCamB64) { if (file) await idbPut('img:' + file, _addMediaCamB64).catch(() => {}); _addMediaCamB64 = null; }
     AppState.changed = true;
     closeModal('modalAddMedia');
     showSourceDetail(_addMediaId, false);
@@ -232,10 +312,8 @@ function _countFamMarrObje(f) {
 async function deletePersonMedia(personId, idx) {
   const p = getPerson(personId);
   if (!p?.media) return;
-  const oldLen = p.media.length;
   p.media.splice(idx, 1);
   await _removeMediaFromFilemap('persons', personId, idx);
-  await _clearIdbPhotoKeys('photo_' + personId, oldLen);
   AppState.changed = true;
   showDetail(personId, false);
 }
@@ -243,10 +321,8 @@ async function deletePersonMedia(personId, idx) {
 async function deleteFamilyMarrMedia(famId, idx) {
   const f = getFamily(famId);
   if (!f?.marr?.media) return;
-  const oldCount = f.marr.media.length;
   f.marr.media.splice(idx, 1);
   await _removeMediaFromFilemap('families', famId, idx);
-  await _clearIdbPhotoKeys('photo_fam_' + famId, oldCount);
   AppState.changed = true;
   showFamilyDetail(famId, false);
 }
@@ -262,7 +338,6 @@ async function deleteFamilyMedia(famId, idx) {
 async function deleteSourceMedia(srcId, idx) {
   const s = getSource(srcId);
   if (!s?.media) return;
-  idbDel('photo_src_' + srcId + '_' + idx).catch(() => {});
   s.media.splice(idx, 1);
   await _removeMediaFromFilemap('sources', srcId, idx);
   AppState.changed = true;
@@ -270,6 +345,8 @@ async function deleteSourceMedia(srcId, idx) {
 }
 
 function showMediaBrowser() {
+  const titleEl = document.getElementById('media-browser-title');
+  if (titleEl) titleEl.textContent = 'Medien-Browser · Quellen';
   const allSrcs = Object.values(AppState.db.sources || {});
   const items = []; // { srcId, srcTitle, idx, m }
   for (const s of allSrcs) {
@@ -300,7 +377,7 @@ function showMediaBrowser() {
         const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
         const thumbId = 'mb-thumb-' + sid + '-' + idx;
         html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
-          onclick="closeModal('modalMediaBrowser');showSourceDetail('${sid}')">
+          data-action="browserShowSource" data-sid="${sid}">
           <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
           <div style="flex:1;min-width:0">
             <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
@@ -315,25 +392,143 @@ function showMediaBrowser() {
   document.getElementById('media-browser-content').innerHTML = html;
   openModal('modalMediaBrowser');
 
-  // Async Thumbnails
+  // Async Thumbnails — pfad-basiert
   for (const { srcId, idx, m } of items) {
     const _ext = (m.file || '').split('.').pop().toLowerCase();
     if (!['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext)) continue;
-    const thumbId = 'mb-thumb-' + srcId + '-' + idx;
-    const _ci = idx; const _sid = srcId;
-    idbGet('photo_src_' + _sid + '_' + _ci).then(b64 => {
-      if (b64) { _asyncLoadMediaThumb(thumbId, 'photo_src_' + _sid + '_' + _ci); return; }
-      _odGetSourceFileUrl(_sid, _ci).then(url => {
-        if (!url) return;
-        const el = document.getElementById(thumbId);
-        if (!el) return;
-        el.innerHTML = '';
-        const img = document.createElement('img');
-        img.src = url;
-        img.style.cssText = 'width:44px;height:44px;object-fit:cover;border-radius:6px;display:block';
-        el.appendChild(img);
-      }).catch(() => {});
-    }).catch(() => {});
+    _asyncLoadMediaThumb('mb-thumb-' + srcId + '-' + idx, m.file);
+  }
+}
+
+function showPersonMediaBrowser() {
+  const titleEl = document.getElementById('media-browser-title');
+  if (titleEl) titleEl.textContent = 'Medien-Browser · Personen';
+
+  const sorted = Object.values(AppState.db.individuals || {})
+    .sort((a, b) => {
+      const c = (a.surname || '').localeCompare(b.surname || '', 'de');
+      if (c !== 0) return c;
+      return (a.given || '').localeCompare(b.given || '', 'de');
+    });
+
+  const items = []; // { pid, pName, idx, m }
+  for (const p of sorted) {
+    for (let i = 0; i < (p.media || []).length; i++) {
+      const m = p.media[i];
+      if (!m.file && !m.title) continue;
+      items.push({ pid: p.id, pName: p.name || p.id, idx: i, m });
+    }
+  }
+
+  let html = '';
+  if (!items.length) {
+    html = '<div style="color:var(--text-muted);font-style:italic;padding:24px 0;text-align:center;font-size:0.88rem">Keine Medien gefunden</div>';
+  } else {
+    html += `<div style="font-size:0.78rem;color:var(--text-muted);padding:0 0 10px 0">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
+    const byPerson = {};
+    const pidOrder = [];
+    for (const item of items) {
+      if (!byPerson[item.pid]) { byPerson[item.pid] = []; pidOrder.push(item.pid); }
+      byPerson[item.pid].push(item);
+    }
+    for (const pid of pidOrder) {
+      const group = byPerson[pid];
+      html += `<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:10px 0 4px 0;border-top:1px solid var(--border)">${esc(group[0].pName)}</div>`;
+      for (const { pid: p_id, idx, m } of group) {
+        const _ext = (m.file || '').split('.').pop().toLowerCase();
+        const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+        const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+        const thumbId = 'mb-p-' + p_id.replace(/@/g, '') + '-' + idx;
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
+          data-action="browserShowPerson" data-pid="${p_id}">
+          <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
+            ${m.title && m.file ? `<div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all">${esc(m.file)}</div>` : ''}
+          </div>
+          <span class="p-arrow">›</span>
+        </div>`;
+      }
+    }
+  }
+
+  document.getElementById('media-browser-content').innerHTML = html;
+  openModal('modalMediaBrowser');
+
+  for (const { pid, idx, m } of items) {
+    const _ext = (m.file || '').split('.').pop().toLowerCase();
+    if (!['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext)) continue;
+    _asyncLoadMediaThumb('mb-p-' + pid.replace(/@/g, '') + '-' + idx, m.file);
+  }
+}
+
+function showFamilyMediaBrowser() {
+  const titleEl = document.getElementById('media-browser-title');
+  if (titleEl) titleEl.textContent = 'Medien-Browser · Familien';
+
+  const sorted = Object.values(AppState.db.families || {})
+    .sort((a, b) => {
+      const na = a.husb ? (AppState.db.individuals[a.husb]?.surname || AppState.db.individuals[a.husb]?.name || '') : '';
+      const nb = b.husb ? (AppState.db.individuals[b.husb]?.surname || AppState.db.individuals[b.husb]?.name || '') : '';
+      return na.localeCompare(nb, 'de');
+    });
+
+  const items = []; // { fid, fTitle, idx, m }
+  for (const f of sorted) {
+    const husb = f.husb ? AppState.db.individuals[f.husb] : null;
+    const wife = f.wife ? AppState.db.individuals[f.wife] : null;
+    const fTitle = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+    for (let i = 0; i < (f.media || []).length; i++) {
+      const m = f.media[i];
+      if (!m.file && !m.title) continue;
+      items.push({ fid: f.id, fTitle, idx: i, m });
+    }
+    for (let i = 0; i < (f.marr?.media || []).length; i++) {
+      const m = f.marr.media[i];
+      if (!m.file && !m.titl) continue;
+      items.push({ fid: f.id, fTitle, idx: i, m: { ...m, title: m.titl || m.title } });
+    }
+  }
+
+  let html = '';
+  if (!items.length) {
+    html = '<div style="color:var(--text-muted);font-style:italic;padding:24px 0;text-align:center;font-size:0.88rem">Keine Medien gefunden</div>';
+  } else {
+    html += `<div style="font-size:0.78rem;color:var(--text-muted);padding:0 0 10px 0">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
+    const byFamily = {};
+    const fidOrder = [];
+    for (const item of items) {
+      if (!byFamily[item.fid]) { byFamily[item.fid] = []; fidOrder.push(item.fid); }
+      byFamily[item.fid].push(item);
+    }
+    for (const fid of fidOrder) {
+      const group = byFamily[fid];
+      html += `<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:10px 0 4px 0;border-top:1px solid var(--border)">${esc(group[0].fTitle)}</div>`;
+      for (const { fid: f_id, idx, m } of group) {
+        const _ext = (m.file || '').split('.').pop().toLowerCase();
+        const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+        const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+        const thumbId = 'mb-f-' + f_id.replace(/@/g, '') + '-' + idx;
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
+          data-action="browserShowFamily" data-fid="${f_id}">
+          <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
+            ${m.title && m.file ? `<div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all">${esc(m.file)}</div>` : ''}
+          </div>
+          <span class="p-arrow">›</span>
+        </div>`;
+      }
+    }
+  }
+
+  document.getElementById('media-browser-content').innerHTML = html;
+  openModal('modalMediaBrowser');
+
+  for (const { fid, idx, m } of items) {
+    const _ext = (m.file || '').split('.').pop().toLowerCase();
+    if (!['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext)) continue;
+    _asyncLoadMediaThumb('mb-f-' + fid.replace(/@/g, '') + '-' + idx, m.file);
   }
 }
 

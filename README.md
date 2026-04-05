@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 4.0
+# Stammbaum PWA — Version 5.0-dev
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -7,11 +7,20 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ## Schnellstart
 
+**Mit OneDrive (empfohlen):**
 ```
 1. index.html auf GitHub Pages hochladen
 2. https://[username].github.io/stammbaum in Safari öffnen
 3. Teilen → „Zum Home-Bildschirm"
-4. GEDCOM aus iCloud Drive laden
+4. Menü → ☁ OneDrive verbinden → GEDCOM aus OneDrive laden
+5. 💾 Speichern → schreibt direkt in OneDrive zurück
+```
+
+**Ohne OneDrive (lokal):**
+```
+1. index.html auf GitHub Pages hochladen
+2. App im Browser öffnen
+3. Menü → Öffnen… (lokal) → .ged-Datei wählen
 ```
 
 ---
@@ -25,12 +34,20 @@ stammbaum/
 ├── gedcom-parser.js    ← parseGEDCOM(), parseGeoCoord()
 ├── gedcom-writer.js    ← writeGEDCOM(), pushCont()
 ├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
-├── ui-views.js         ← Baum, Detailansichten, Listenrendering
-├── ui-forms.js         ← Formulare Person/Familie/Quelle/Archiv/Event
+├── ui-views.js         ← gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
+├── ui-views-person.js  ← Personen-Detailansicht
+├── ui-views-family.js  ← Familien-Detailansicht
+├── ui-views-source.js  ← Quellen-Detailansicht
+├── ui-views-tree.js    ← Sanduhr-Baum + Fan Chart + Tastaturnavigation
+├── ui-forms.js         ← Formulare Person/Familie/Quelle + Source-Widget + Utils
+├── ui-forms-event.js   ← Event-Formular (showEventForm, saveEvent, deleteEvent)
+├── ui-forms-repo.js    ← Archiv-Formular + Picker + Detail-Ansicht
 ├── ui-media.js         ← Medien Add/Edit/Delete/Browser
-├── onedrive.js         ← OAuth PKCE, Foto-Import, Ordner-Browser, Filemap
+├── onedrive-auth.js    ← OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
+├── onedrive-import.js  ← Foto-Import-Wizard, Ordner-Browser, Pick-Modus
+├── onedrive.js         ← Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
-├── sw.js               ← Service Worker (offline, Cache v75)
+├── sw.js               ← Service Worker (offline, Cache v146)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
@@ -59,28 +76,19 @@ stammbaum/
 ### Laden & Speichern
 | Feature | Details |
 |---|---|
-| GEDCOM öffnen (Chrome Mac) | `showOpenFilePicker()` → Schreiberlaubnis wird beim Öffnen angefragt |
-| GEDCOM öffnen (Safari/iOS) | `<input type="file">`, `accept="*/*"` (iOS-kompatibel) |
+| **OneDrive öffnen** | Menü → ☁ OneDrive verbinden (PKCE OAuth, einmalig) → 📂 Aus OneDrive öffnen |
+| **OneDrive speichern** | 💾 In OneDrive speichern → schreibt direkt in die OneDrive-Datei (Toast mit Pfad) |
+| **Foto-Ordner** | Einstellungen → Foto-Ordner einrichten → Fotos dynamisch aus OneDrive geladen |
+| **Dokumente-Ordner** | Einstellungen → Dokumente-Ordner einrichten |
 | Auto-Load | Letzte Datei in IndexedDB gecacht → automatisch beim Start |
+| GEDCOM öffnen (lokal) | Menü → Öffnen… (lokal) → `showOpenFilePicker()` (Chrome) oder `<input type="file">` |
 | Direktes Speichern (Chrome Mac) | `fileHandle.createWritable()` → schreibt direkt in die geöffnete Datei |
-| Download-Fallback (Safari Mac, Firefox) | `<a download>` → Datei im Browser-Download-Ordner |
-| Backup automatisch | Bei Download-Fallback: Zeitstempel-Backup des Originals zusätzlich heruntergeladen |
-| iOS Speichern | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
-| **OneDrive** | PKCE OAuth (kein Server) → `.ged`-Dateien direkt aus OneDrive öffnen und speichern; Foto-Ordner + Dokumente-Ordner einrichten → dynamisches Laden ohne Base64-Upload |
-| Demo-Modus | Beispiel-Daten ohne eigene Datei |
-| URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged`; nützlich für Lesezeichen und PWA-Shortcuts |
+| Download-Fallback (Safari/Firefox) | `<a download>` → Datei im Browser-Download-Ordner + Zeitstempel-Backup |
+| iOS Speichern (lokal) | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
+| Demo-Modus | Menü → Demo-Daten öffnen |
+| URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged` |
 | **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
 | **Keyboard-Shortcuts** | `Cmd/Ctrl+S` = Speichern · `Cmd/Ctrl+Z` = Änderungen verwerfen · `Escape` = Modal schließen · `←` = Baum zurück |
-
-**Chrome Mac — direktes Speichern:**
-1. Upload-Box klicken → Dateidialog öffnet sich
-2. `.ged`-Datei auswählen → Browser fragt Schreiberlaubnis → bestätigen
-3. Toast: „✓ Datei geladen · Direktes Speichern aktiv"
-4. Speichern-Button (💾) → schreibt direkt in die Originaldatei
-
-**Safari Mac — Download-Workflow:**
-1. Datei laden → `<a download>` beim Speichern → landet in `~/Downloads`
-2. Optionaler Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive setzen
 
 ### Sanduhr-Ansicht (Stammbaum)
 - Grafische Familienansicht: bis zu 4 Vorfahren-Ebenen (Eltern/Großeltern/Urgroßeltern/Ururgroßeltern) → Person + Ehepartner → Kinder
@@ -165,10 +173,10 @@ stammbaum/
 │  gedcom-parser.js  — parseGEDCOM()           │
 │  gedcom-writer.js  — writeGEDCOM()           │
 │  storage.js        — IDB, Dateiverwaltung    │
-│  ui-views.js       — Baum, Detail, Listen    │
-│  ui-forms.js       — Formulare               │
+│  ui-views*.js      — Baum, Detail, Listen    │
+│  ui-forms*.js      — Formulare (3 Module)    │
 │  ui-media.js       — Medien                  │
-│  onedrive.js       — OAuth, Fotos, Filemap   │
+│  onedrive*.js      — OAuth, Fotos (3 Module) │
 │  sw.js             — Service Worker (offline)│
 │                                              │
 │  State: AppState { db, changed, currentId…} │
@@ -185,8 +193,8 @@ stammbaum/
 └──────────────────────────────────────────────┘
 ```
 
-**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta≈0** (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert)
-**Version 4.0** — März 2026 — Branch `main` · sw v75
+**GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
+**Version 5.0-dev** — April 2026 — Branch `v5-dev` · sw v146
 
 ---
 
@@ -203,37 +211,11 @@ Update: `index.html` ersetzen → nach ~1 Minute aktiv.
 
 ---
 
-## Workflow: iPhone ↔ Ancestris (Mac)
+## Workflow: Stammbaum App ↔ Ancestris (Mac)
 
-### Aktuell — über iCloud Drive
+### OneDrive-Workflow (Standard)
 
-```
-Ancestris (Mac)
-  └─ Datei → Export → GEDCOM → iCloud Drive/Genealogie/MeineDaten.ged
-
-iPhone Safari → Stammbaum App
-  └─ Automatisch aus IndexedDB (nach erstem Laden)
-     oder: Datei laden → iCloud Drive → MeineDaten.ged
-
-Änderungen speichern (iOS):
-  └─ 💾 Speichern → Share Sheet → In Dateien sichern → iCloud Drive/Genealogie
-     (zwei Dateien: Hauptdatei + Zeitstempel-Backup)
-
-Änderungen speichern (Mac, Chrome — direktes Speichern):
-  └─ Datei über Upload-Box öffnen → Schreiberlaubnis bestätigen
-     → 💾 Speichern → direkt in Originaldatei
-
-Änderungen speichern (Mac, Safari — Download):
-  └─ 💾 Speichern → MeineDaten.ged im Download-Ordner
-     → Tipp: Safari-Download-Ordner auf iCloud Drive/Genealogie setzen
-
-Ancestris (Mac):
-  └─ Datei → Import → GEDCOM → MeineDaten.ged übernehmen
-```
-
-### OneDrive-Workflow (P3-8) ✅
-
-OneDrive vereinfacht den Rundlauf erheblich: Ancestris exportiert direkt in OneDrive, die App liest und schreibt dieselbe Datei via Microsoft Graph API — kein manuelles Übertragen mehr.
+OneDrive ist der primäre Workflow: Ancestris exportiert direkt in OneDrive, die App liest und schreibt dieselbe Datei via Microsoft Graph API — kein manuelles Übertragen mehr.
 
 ```
 Ancestris (Mac)
@@ -242,7 +224,8 @@ Ancestris (Mac)
 Stammbaum App (Browser, beliebiges Gerät)
   └─ Menü → ☁ OneDrive verbinden (PKCE OAuth, einmalig)
      → Menü → 📂 Aus OneDrive öffnen → .ged-Datei wählen
-     → 💾 Speichern / Menü → 💾 In OneDrive speichern
+     → Bearbeiten …
+     → Menü → 💾 In OneDrive speichern
 
 Ancestris (Mac):
   └─ Datei automatisch aktualisiert (OneDrive-Sync)
@@ -251,7 +234,30 @@ Ancestris (Mac):
 
 **Voraussetzung (einmalig):** Azure App Registration mit `Files.ReadWrite`-Permission und Redirect-URI `https://[username].github.io/stammbaum/` (kostenlos, ~5 Min. im Azure Portal).
 
-**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `localStorage` · Ordner-Browser für Foto-Import · Dynamisches Foto-Laden (`od_filemap` in IDB, kein vollständiger Download) · Session-Cache für Blob-URLs
+**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `sessionStorage` (nicht persistent nach Tab-Schließen) · `od_base_path` = GED-Datei-Ordner (auto-abgeleitet) · alle Medienpfade relativ dazu · `@microsoft.graph.downloadUrl` für CORS-freien Foto-Fetch · Session-Cache (Data-URLs, iOS-kompatibel)
+
+### Lokaler Workflow (Fallback)
+
+```
+Ancestris (Mac)
+  └─ Datei → Export → GEDCOM → iCloud Drive/Genealogie/MeineDaten.ged
+
+Stammbaum App
+  └─ Menü → Öffnen… (lokal) → .ged-Datei wählen
+     → Bearbeiten …
+
+Änderungen speichern (iOS):
+  └─ 💾 Speichern → Share Sheet → In Dateien sichern → iCloud Drive/Genealogie
+
+Änderungen speichern (Mac, Chrome):
+  └─ 💾 Speichern → direkt in Originaldatei (Schreiberlaubnis beim Öffnen erteilt)
+
+Änderungen speichern (Mac, Safari):
+  └─ 💾 Speichern → Download-Ordner (+ Zeitstempel-Backup)
+
+Ancestris (Mac):
+  └─ Datei → Import → GEDCOM → MeineDaten.ged übernehmen
+```
 
 ---
 

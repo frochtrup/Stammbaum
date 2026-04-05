@@ -174,6 +174,43 @@ body {
   z-index: 10;
   opacity: 0.7;
 }
+
+/* ── Fan Chart ──────────────────────────── */
+#fcContainer {
+  display: none;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  overflow: auto;
+  min-height: calc(100dvh - 52px - 56px);
+}
+body.fc-mode #fcContainer          { display: flex; }
+body.fc-mode #treeScaleWrap        { display: none !important; }
+body.fc-mode #treeKeyLegend        { display: none !important; }
+body.fc-mode #treeFsBtn            { display: none !important; }
+#treeFcToggle                      { display: none; }
+body.tree-active #treeFcToggle     { display: inline-flex; }
+body.fc-mode #treeFcToggle         { display: inline-flex; }
+body.desktop-mode.fc-mode #fcContainer { min-height: 0; height: 100%; }
+
+#treeGenBtns, #fcGenBtns {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+body.tree-active:not(.fc-mode) #treeGenBtns { display: flex; }
+body.fc-mode #fcGenBtns { display: flex; }
+
+.fc-gen-btn {
+  padding: 4px 8px !important;
+  font-size: 0.78rem !important;
+  min-width: 26px;
+}
+.fc-gen-btn.active {
+  color: var(--gold) !important;
+  border-color: var(--gold-dim) !important;
+}
 .tkl-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
 .tkl-row:last-child { margin-bottom: 0; }
 .tkl-key {
@@ -658,6 +695,27 @@ body {
   border-radius: 50%; background: var(--gold);
   margin-left: 6px; vertical-align: middle;
 }
+#syncBanner {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 68px);
+  left: 50%; transform: translateX(-50%);
+  z-index: 395;
+  background: rgba(150, 95, 10, 0.96);
+  color: #fff;
+  border-radius: 20px;
+  padding: 7px 8px 7px 14px;
+  font-size: 0.82rem; font-weight: 500;
+  display: none; align-items: center; gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+#syncBanner .sync-save-btn {
+  background: rgba(255,255,255,0.22);
+  color: #fff; border: none; border-radius: 12px;
+  padding: 4px 11px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
 
 /* ═══════════════════════════════════════
    FAMILY LINK ROW (in Detail-Ansicht)
@@ -808,6 +866,7 @@ body {
           oninput="applyPersonFilter()">
         <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" onclick="clearYearFilter()" title="Jahresfilter zurücksetzen">✕</button>
         <button type="button" id="personSortBtn" onclick="togglePersonSort()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
+        <button type="button" onclick="showPersonMediaBrowser()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="personList"></div>
@@ -815,8 +874,9 @@ body {
 
   <div id="tab-families" style="display:none">
     <div class="list-search-header">
-      <div class="search-wrap">
-        <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)">
+      <div class="search-wrap" style="display:flex;gap:6px;align-items:center">
+        <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)" style="flex:1;width:auto">
+        <button type="button" onclick="showFamilyMediaBrowser()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="familyList"></div>
@@ -883,6 +943,20 @@ body {
     <div class="topbar-inner">
       <button class="topbar-btn back" id="treeBtnBack" style="display:none" onclick="treeNavBack()">←</button>
       <span class="topbar-title" id="treeTopTitle"></span>
+      <span id="treeGenBtns">
+        <button class="topbar-btn fc-gen-btn" data-tgen="2" onclick="setTreeGens(2)">2</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="3" onclick="setTreeGens(3)">3</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="4" onclick="setTreeGens(4)">4</button>
+        <button class="topbar-btn fc-gen-btn active" data-tgen="5" onclick="setTreeGens(5)">5</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="6" onclick="setTreeGens(6)">6</button>
+      </span>
+      <span id="fcGenBtns">
+        <button class="topbar-btn fc-gen-btn" data-gen="3" onclick="setFcGens(3)">3</button>
+        <button class="topbar-btn fc-gen-btn" data-gen="4" onclick="setFcGens(4)">4</button>
+        <button class="topbar-btn fc-gen-btn active" data-gen="5" onclick="setFcGens(5)">5</button>
+        <button class="topbar-btn fc-gen-btn" data-gen="6" onclick="setFcGens(6)">6</button>
+      </span>
+      <button class="topbar-btn" id="treeFcToggle" onclick="toggleFanChart()" title="Fächer-Diagramm">◑</button>
       <button class="topbar-btn" id="treeFsBtn" onclick="toggleTreeFullscreen()" title="Vollbild" style="display:none">⤢</button>
       <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
@@ -892,6 +966,9 @@ body {
       <div class="tree-wrap" id="treeWrap">
         <svg class="tree-svg" id="treeSvg"></svg>
       </div>
+    </div>
+    <div id="fcContainer">
+      <svg id="fcSvg" style="overflow:visible;display:block"></svg>
     </div>
   </div>
   <div id="treeKeyLegend">
@@ -1084,33 +1161,7 @@ body {
           <div id="ff-mplace-parts" style="display:none"></div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Verlobungsdatum</label>
-          <select class="form-select" id="ff-edate-qual"
-              style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
-            <option value="">exakt</option>
-            <option value="ABT">ca. (ABT)</option>
-            <option value="CAL">berechnet (CAL)</option>
-            <option value="EST">geschätzt (EST)</option>
-            <option value="BEF">vor (BEF)</option>
-            <option value="AFT">nach (AFT)</option>
-            <option value="FROM">von (FROM)</option>
-          </select>
-          <div style="display:flex;gap:4px">
-            <input class="form-input" id="ff-edate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-            <input class="form-input" id="ff-edate-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
-            <input class="form-input" id="ff-edate-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Verlobungsort <button type="button" id="ff-eplace-toggle" onclick="togglePlaceMode('ff-eplace')" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
-          <div id="ff-eplace-free">
-            <input class="form-input" id="ff-eplace" placeholder="München" autocomplete="off">
-          </div>
-          <div id="ff-eplace-parts" style="display:none"></div>
-        </div>
-      </div>
+
       <div class="form-group">
         <label class="form-label">Notiz</label>
         <textarea class="form-input" id="ff-note" rows="3" placeholder="Weitere Informationen…" style="resize:vertical;box-sizing:border-box"></textarea>
@@ -1137,6 +1188,55 @@ body {
       </div>
       <div style="margin-top:10px">
         <button class="btn btn-danger" id="deleteFamilyBtn" onclick="deleteFamily()" style="width:100%">Familie löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Family Event form (ENGA / DIV / DIVF) -->
+<div class="modal-overlay" id="modalFamEvent">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="famEventFormTitle">Ereignis bearbeiten</div>
+    <div class="sheet-body">
+      <input type="hidden" id="fev-fid">
+      <input type="hidden" id="fev-key">
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <select class="form-select" id="fev-date-qual"
+            style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+          <option value="">exakt</option>
+          <option value="ABT">ca. (ABT)</option>
+          <option value="CAL">berechnet (CAL)</option>
+          <option value="EST">geschätzt (EST)</option>
+          <option value="BEF">vor (BEF)</option>
+          <option value="AFT">nach (AFT)</option>
+          <option value="FROM">von (FROM)</option>
+        </select>
+        <div style="display:flex;gap:4px">
+          <input class="form-input" id="fev-date-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          <input class="form-input" id="fev-date-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+          <input class="form-input" id="fev-date-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ort</label>
+        <input class="form-input" id="fev-place" placeholder="München" autocomplete="off">
+      </div>
+      <div class="src-widget" id="fev-src-widget">
+        <label class="form-label">Quellen</label>
+        <div class="src-tags" id="fev-src-tags"></div>
+        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('fev')">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="fev-src-picker">
+          <div class="src-picker-list" id="fev-src-list"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalFamEvent')">Abbrechen</button>
+        <button class="btn btn-save" id="saveFamEventBtn" onclick="saveFamEvent()">Speichern</button>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-danger" id="deleteFamEventBtn" onclick="deleteFamEvent()" style="width:100%">Ereignis löschen</button>
       </div>
     </div>
   </div>
@@ -1264,6 +1364,9 @@ body {
             <option value="PROP">Eigentum</option>
             <option value="WILL">Testament</option>
             <option value="PROB">Testamentseröffnung</option>
+            <option value="DSCR">Erscheinungsbild</option>
+            <option value="IDNO">Kennziffer (IDNO)</option>
+            <option value="SSN">Sozialversicherungs-Nr.</option>
             <option value="EVEN">Sonstiges</option>
           </select>
         </div>
@@ -1339,6 +1442,7 @@ body {
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalEvent')">Abbrechen</button>
+        <button class="btn" id="deleteEventBtn" style="display:none;background:var(--danger,#c0392b);color:#fff" onclick="deleteEvent()">Löschen</button>
         <button class="btn btn-save" id="saveEventBtn" onclick="saveEvent()">Hinzufügen</button>
       </div>
     </div>
@@ -1483,37 +1587,10 @@ body {
 <div class="modal-overlay" id="modalMenu">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Datei</div>
+    <div class="sheet-title">Menü</div>
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openFileOrDir()">
-          📂 &nbsp; Öffnen…
-        </button>
-        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
-          💾 &nbsp; Speichern
-        </button>
-        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
-          🗄 &nbsp; <span>Original herunterladen</span>
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
-          🗂 &nbsp; Demo-Daten öffnen
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); revertToSaved()">
-          ↩ &nbsp; Änderungen verwerfen
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
-          ✕ &nbsp; Datei schließen
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openModal('modalHelp')">
-          ❓ &nbsp; Hilfe &amp; Anleitung
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportPhotos()">
-          🖼 &nbsp; Fotos exportieren
-        </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); importPhotos()">
-          📥 &nbsp; Fotos importieren
-        </button>
-        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <!-- OneDrive (primär) -->
         <button id="odConnectBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); odToggle()">
           ☁ &nbsp; OneDrive verbinden
         </button>
@@ -1523,8 +1600,33 @@ body {
         <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="odSaveFile()">
           💾 &nbsp; In OneDrive speichern
         </button>
-        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); openSettings()">
-          ⚙ &nbsp; OneDrive-Einstellungen
+        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="closeModal('modalMenu'); openSettings()">
+          ⚙ &nbsp; Einstellungen
+        </button>
+        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <!-- Lokal (sekundär) -->
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openFileOrDir()">
+          📂 &nbsp; Öffnen… (lokal)
+        </button>
+        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
+          💾 &nbsp; Speichern (lokal)
+        </button>
+        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
+          🗄 &nbsp; <span>Original herunterladen</span>
+        </button>
+        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <!-- Sonstiges -->
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); revertToSaved()">
+          ↩ &nbsp; Änderungen verwerfen
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
+          🗂 &nbsp; Demo-Daten öffnen
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
+          ✕ &nbsp; Datei schließen
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openModal('modalHelp')">
+          ❓ &nbsp; Hilfe &amp; Anleitung
         </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
           🔁 &nbsp; Roundtrip-Test
@@ -1540,9 +1642,20 @@ body {
     <div class="sheet-handle"></div>
     <div class="sheet-title">Einstellungen</div>
     <div class="sheet-body">
+      <div id="set-od-section">
       <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">OneDrive-Ordner</div>
 
       <div style="background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);overflow:hidden;margin-bottom:16px">
+        <!-- Startpfad -->
+        <div style="padding:10px 14px;border-bottom:1px solid var(--border-color);background:var(--surface2)">
+          <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">Startpfad (GED-Ordner)</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input id="set-base-path" type="text" placeholder="z.B. Privat/Ahnen/Stammbaum"
+              style="flex:1;font-size:0.85rem;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text)"
+              oninput="odSetBasePath(this.value.trim())">
+          </div>
+          <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">Relativer OneDrive-Pfad des GED-Ordners</div>
+        </div>
         <!-- Foto-Ordner -->
         <div style="padding:12px 14px;border-bottom:1px solid var(--border-color)">
           <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Foto-Ordner</div>
@@ -1565,7 +1678,9 @@ body {
         </div>
       </div>
 
-      <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalSettings')">Schließen</button>
+      </div><!-- /set-od-section -->
+
+<button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalSettings')">Schließen</button>
     </div>
   </div>
 </div>
@@ -1601,7 +1716,7 @@ body {
         <img id="am-cam-img" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--border)">
       </div>
       <input type="file" accept="image/*" capture="environment" id="am-cam-input" style="display:none"
-        onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_addMediaCamB64=b64;document.getElementById('am-cam-img').src=b64;document.getElementById('am-cam-preview').style.display='';if(!document.getElementById('am-file').value){const ts=new Date();document.getElementById('am-file').value='foto_'+ts.getFullYear()+String(ts.getMonth()+1).padStart(2,'0')+String(ts.getDate()).padStart(2,'0')+'.jpg';}}catch(e){showToast('Fehler: '+e.message);}this.value='';})()">
+        onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_onCamCapture(b64);}catch(e){showToast('Fehler: '+e.message);}this.value='';})()">
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
           onclick="document.getElementById('am-cam-input').click()">Foto aufnehmen</button>
@@ -1623,7 +1738,7 @@ body {
 <div class="modal-overlay" id="modalMediaBrowser">
   <div class="sheet" style="max-height:88vh;display:flex;flex-direction:column">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Medien-Browser</div>
+    <div class="sheet-title" id="media-browser-title">Medien-Browser</div>
     <div class="sheet-body" style="flex:1;overflow-y:auto;padding-bottom:16px" id="media-browser-content"></div>
     <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
       <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalMediaBrowser')">Schließen</button>
@@ -1652,6 +1767,10 @@ body {
       <div id="em-od-row" style="display:none;margin-bottom:12px">
         <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForEditMedia()">Aus OneDrive auswählen</button>
       </div>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;border-bottom:1px solid var(--border-color);margin-bottom:12px">
+        <input type="checkbox" id="em-prim-check" style="width:18px;height:18px;flex-shrink:0">
+        <span style="font-size:0.9rem">Als Hauptbild (wird an erste Stelle der Liste verschoben)</span>
+      </label>
       <div class="btn-row" style="gap:8px">
         <button class="btn btn-cancel" onclick="closeModal('modalEditMedia')">Abbrechen</button>
         <button class="btn" style="background:var(--danger,#c0392b);color:#fff;flex:1" onclick="confirmDeleteMedia()">Löschen</button>
@@ -1715,6 +1834,66 @@ body {
 
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="modalChildRel">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Kind-Verhältnis</div>
+    <div class="sheet-body">
+      <input type="hidden" id="cr-famId">
+      <input type="hidden" id="cr-childId">
+      <div class="form-group">
+        <label class="form-label">Kind</label>
+        <div id="cr-child-name" style="font-weight:600;padding:4px 0 8px"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Verhältnis (PEDI)</label>
+        <select class="form-select" id="cr-pedi">
+          <option value="">– nicht angegeben</option>
+          <option value="birth">leiblich (birth)</option>
+          <option value="adopted">adoptiert (adopted)</option>
+          <option value="foster">Pflegekind (foster)</option>
+          <option value="sealing">Sealing</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quellen</label>
+        <div class="src-tags" id="cr-src-tags"></div>
+        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('cr')">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="cr-src-picker">
+          <div class="src-picker-list" id="cr-src-list"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalChildRel')">Abbrechen</button>
+        <button class="btn btn-save" onclick="saveChildRelDialog()">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="syncBanner">
+  <span>● Nicht gespeichert</span>
+  <button class="sync-save-btn" id="syncBannerBtn" onclick="_syncBannerSave()">Speichern</button>
+</div>
+
+<div class="modal-overlay" id="modalStartupChoice">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Stammbaum laden</div>
+    <div class="sheet-body">
+      <div id="_startupChoiceName" style="text-align:center;padding:4px 0 18px;color:var(--text-dim);font-size:0.9rem"></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="_startupChoiceOneDrive()">
+          ☁ &nbsp; Von OneDrive laden
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="_startupChoiceLocal()">
+          📱 &nbsp; Lokal gespeicherte Version
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="modalLightbox" onclick="document.getElementById('modalLightbox').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:14px">
   <img id="lightboxImg" alt="Foto" style="max-width:92vw;max-height:80vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 32px rgba(0,0,0,0.6)">
   <button id="lightboxSetHero" onclick="event.stopPropagation();_lightboxSetHero()" style="display:none;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:8px 22px;font-size:0.92rem;font-weight:600;cursor:pointer">Als Hauptfoto setzen</button>
@@ -1728,8 +1907,18 @@ body {
 <script src="gedcom-writer.js"></script>
 <script src="storage.js"></script>
 <script src="ui-views.js"></script>
+<script src="ui-views-tree.js"></script>
+<script src="ui-views-person.js"></script>
+<script src="ui-views-family.js"></script>
+<script src="ui-views-source.js"></script>
+<script src="ui-fanchart.js"></script>
 <script src="ui-forms.js"></script>
+<script src="ui-forms-repo.js"></script>
+<script src="ui-forms-event.js"></script>
+<script src="ui-debug.js"></script>
 <script src="ui-media.js"></script>
+<script src="onedrive-auth.js"></script>
+<script src="onedrive-import.js"></script>
 <script src="onedrive.js"></script>
 </body>
 </html>

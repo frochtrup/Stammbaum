@@ -9,35 +9,44 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          Stammbaum PWA v4.0-dev (Branch v4-dev)      │
+│          Stammbaum PWA v5.0 (Branch v5-dev)          │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
-│  index.html        — App-Shell (HTML + CSS)          │
-│  gedcom.js         — Globals, Labels, Datum/PLAC     │
-│  gedcom-parser.js  — parseGEDCOM()                   │
-│  gedcom-writer.js  — writeGEDCOM(), pushCont()       │
-│  storage.js        — IndexedDB, Dateiverwaltung      │
-│  ui-views.js       — Baum, Detail, Listenrendering   │
-│  ui-forms.js       — Formulare (Person/Fam/Src/Repo) │
-│  ui-media.js       — Medien Add/Edit/Delete/Browser  │
-│  onedrive.js       — OAuth, Foto-Import, Filemap     │
-│  sw.js             — Service Worker (Cache v73)      │
-│  manifest.json     — PWA-Manifest                    │
-│  demo.ged          — Demo-GEDCOM (12 Pers., 6 Fam.)  │
+│  index.html           — App-Shell (HTML + CSS)       │
+│  gedcom.js            — AppState/UIState, Labels     │
+│  gedcom-parser.js     — parseGEDCOM()                │
+│  gedcom-writer.js     — writeGEDCOM(), pushCont()    │
+│  storage.js           — IndexedDB, Dateiverwaltung   │
+│  ui-views.js          — gemeinsame Hilfsfunktionen   │
+│  ui-views-person.js   — Personen-Detailansicht       │
+│  ui-views-family.js   — Familien-Detailansicht       │
+│  ui-views-source.js   — Quellen-Detailansicht        │
+│  ui-views-tree.js     — Sanduhr-Baum + Fan Chart     │
+│  ui-forms.js          — Formulare (Person/Fam/Src)   │
+│  ui-forms-event.js    — Event-Formular               │
+│  ui-forms-repo.js     — Archiv-Formular + Picker     │
+│  ui-media.js          — Medien Add/Edit/Delete       │
+│  ui-fanchart.js       — Fan Chart (SVG)              │
+│  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
+│  onedrive-import.js   — Foto-Import, Ordner-Browser  │
+│  onedrive.js          — Media-URL, Upload, File-I/O  │
+│  sw.js                — Service Worker (Cache v146)  │
+│  manifest.json        — PWA-Manifest                 │
+│  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~10 JS-Dateien · ~180 Funktionen · ~8500 Zeilen
+**Größe gesamt:** ~19 JS-Dateien · ~200 Funktionen · ~10500 Zeilen
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
 ### ADR-001: Multi-File (HTML-Shell + JS-Module)
-**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-forms.js`, `ui-media.js`, `onedrive.js`.
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-tree.js`, `ui-forms.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-media.js`, `ui-fanchart.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`.
 
-**Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt.
+**Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt. `ui-views.js` wurde in v5-dev (sw v94) in 5 Module aufgeteilt. `onedrive.js` (946 Z.) in 3 Module (sw v140), `ui-forms.js` (1036 Z.) in 3 Module (sw v141).
 
 **Warum:**
 - Einzelne Dateien bleiben editierbar ohne vollständigen Download/Upload
@@ -64,10 +73,12 @@ markChanged(); updateStats(); renderTab();
 
 ---
 
-### ADR-003: Globales `db`-Objekt als State
-**Entscheidung:** Ein globales `let db` als einzige Wahrheitsquelle. Details: `DATAMODEL.md`.
+### ADR-003: AppState/UIState als State-Namespaces (ab v4.0)
+**Entscheidung:** 22 cross-file Globals in 2 Namespace-Objekte in `gedcom.js` migriert. `AppState` hält persistente Werte (`db`, `currentPersonId`, `changed`, `_fileHandle` …), `UIState` hält UI-Zustand (`_treeScale`, `_treeHistory`, `_fanGenCount` …). Backward-compat-Shims via `Object.defineProperty` auf `window`.
 
-**Konsequenz:** Kein Undo/Redo. Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus IDB).
+**Vorgänger:** Ein globales `let db` + ~22 lose Globals.
+
+**Konsequenz:** Kein Undo/Redo. Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus IDB). Details: `DATAMODEL.md`.
 
 ---
 
@@ -76,7 +87,14 @@ markChanged(); updateStats(); renderTab();
 
 ```
 IDB-Keys: 'stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename'
-          'photo_<id>_N', 'od_filemap', 'od_doc_filemap', 'od_doc_folder'
+          'img:<filePath>'             ← Medien-Cache (base64 Data-URL), pfad-basiert (sw v105)
+          'od_base_path'              ← absoluter OneDrive-Pfad des GED-Ordners (sw v110/v111)
+          'od_photo_folder'           ← { id, name, relPath } — Foto-Ordner relativ zu od_base_path (sw v110)
+          'od_docs_folder'            ← { id, name, relPath } — Dok-Ordner relativ zu od_base_path (sw v110)
+          'od_default_folder'         ← LEGACY: { folderId, folderName, folderPath } — Foto-Ordner (sw v99)
+          'od_doc_folder'             ← LEGACY: { folderId, folderName, folderPath } — Dok-Ordner
+          'od_filemap'                ← LEGACY: Index→fileId-Mapping (sw v99 deprecated)
+          'od_doc_filemap'            ← LEGACY: Basename→fileId für Dokumente-Ordner (deprecated)
 ```
 
 **Warum IDB:** localStorage-Limit ~5–10 MB; MeineDaten.ged ≈ 5 MB war grenzwertig.
@@ -205,13 +223,15 @@ _ptDepth = 1;
 // _ptTarget ermöglicht Redirect in ev._extra[], marr._extra[], sourceExtra{} etc.
 ```
 
+**Wichtig — lv > 4 (sw v138/v142):** Zeilen mit Level > 4 werden als Fehler in `_errors[]` protokolliert, aber der Passthrough-Block läuft trotzdem. `continue` darf hier NICHT stehen — sonst werden z.B. `5 TYPE photo` (unter `4 FORM` unter `3 OBJE` in event→SOUR→OBJE→FILE) komplett verworfen. Dies war eine Regression in sw v138 die in sw v142 behoben wurde.
+
 **Was landet in `_passthrough` (INDI):**
-- Unbekannte lv=1-Tags: `DSCR`, `IDNO`, `SSN`
 - `1 OBJE @ref@`-Referenzen (externe Medien-Records)
+- *(Nicht mehr in passthrough: `DSCR`, `IDNO`, `SSN` — seit sw v148 als `events[]` strukturiert)*
 - *(Nicht mehr in passthrough: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` — seit v4-dev als `events[]` strukturiert)*
 - *(Nicht mehr in passthrough: Extra-NAME-Blöcke — seit v4-dev strukturiert in `extraNames[]`, vollständig editierbar via ui-forms.js)*
 
-**Was landet in `_passthrough` (FAM):** `DIV`, `DIVF`, andere unbekannte lv=1-Tags
+**Was landet in `_passthrough` (FAM):** Unbekannte lv=1-Tags *(DIV/DIVF/ENG/ENGA sind seit sw v134 strukturiert — nicht mehr in passthrough)*
 
 **Was landet in `_passthrough` (SOUR):** `1 DATA`, `1 NOTE`, `1 REFN`
 
@@ -241,7 +261,7 @@ const val = (m[3] || '').replace(/^ /, '').trimEnd();  // genau 1 GEDCOM-Delimit
 | 2 | `cur._passthrough[]` | INDI / FAM / SOUR | Unbekannte lv=1 Tags + Sub-Trees; NAME-Kontext lv≥2 (NICK etc.) |
 | 3 | `ev._extra[]` / `marr._extra[]` / `birth._extra[]` etc. | Event-Kontexte | Unbekannte lv=2 Tags in Events |
 | 4 | `ev.addrExtra[]` / `r.addrExtra[]` | ADDR-Kontext | Sub-Tags von ADDR: CITY, POST, CONT, _STYLE, _MAP, _LATI, _LONG |
-| 5 | `frelSourExtra[]` / `mrelSourExtra[]` | FAMC + FAM CHIL | 2.+ SOUR unter _FREL/_MREL + deren 4-Level-Kinder |
+| 5 | `frelSourExtra[]` / `mrelSourExtra[]` | FAMC + FAM CHIL | 2.+ SOUR unter _FREL/_MREL + deren 4-Level-Kinder (**Legacy** — Ancestris-Format; beim Schreiben in sourIds aufgelöst, ADR-014) |
 | 6 | `sourceExtra{}` | SOUR-Refs in Events | Verbatim lv=3 Tags unter `2 SOUR @ID@` in Event-Kontext (außer PAGE/QUAY/NOTE/OBJE) |
 | 7 | `topSourceExtra{}` | INDI lv=1 SOUR | Unbekannte lv=2 Tags unter `1 SOUR @ID@` direkt auf INDI |
 | 8 | `media._extra[]` | OBJE (inline) | Unbekannte Tags unter OBJE/FILE-Block |
@@ -257,8 +277,9 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 ```
 
 **Optimierungspotenzial (kein Datenverlust, aber im UI nicht editierbar):**
-- `DIV`, `DIVF` → FAM-Events fehlen im Parser (in `_passthrough`)
 - Mehrfache inline INDI-Notes → Roundtrip stabil (`noteTexts[]`-Array); beim Editieren im Formular zu einer Note zusammengeführt
+- *(Erledigt: `DIV`, `DIVF`, `ENG`/`ENGA` → seit sw v134 als strukturierte FAM-Events)*
+- *(Erledigt: `DSCR`, `IDNO`, `SSN` → seit sw v148 als events[] strukturiert)*
 - *(Erledigt: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` → seit v4-dev als events[] strukturiert)*
 - *(Erledigt: Extra-NAME-Blöcke → seit v4-dev `extraNames[]`, vollständig editierbar)*
 
@@ -276,8 +297,11 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 | Roundtrip-Fix 2026-03-26: addrExtra, NICK-Position, _FREL-Space | **-7** |
 | v4-dev 2026-03-28: HEAD `_headLines[]`, ENGA vollständig, leere Events `seen`-Flag, NOTE-Record Sub-Tags, MAP ohne PLAC | **-7** |
 | v4-dev 2026-03-28: ENGA MAP, leere DATE/PLAC `null`-Init | **≈0** |
+| v5-dev 2026-04-05: DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter fix (sw v135) | **≈0** |
+| v5-dev 2026-04-05: Parser lv>4 passthrough fix + writer `updateHeadDate=false` (sw v142) | **0** |
+| v5-dev 2026-04-05: `DSCR`/`IDNO`/`SSN` aus passthrough → `events[]` (sw v148) | **0** |
 
-`roundtrip_stable: true` · Verbleibende Verluste: CONC/CONT-Neuformatierung + HEAD-Rewrite (by design).
+`roundtrip_stable: true` · `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
 
 ---
 
@@ -314,14 +338,112 @@ restoreFileHandle() (bei Seitenreload)
 
 ---
 
+---
+
+### ADR-013: Pfad-basiertes Medien-Laden + od_base_path-Architektur (sw v99 → v110/v111)
+**Entscheidung:** `m.file` ist die einzige Wahrheitsquelle für Medien. Werte in `m.file` sind **relative Pfade** bezogen auf `od_base_path` (dem OneDrive-Ordner der GED-Datei).
+
+**Pfad-Konzept:**
+```
+od_base_path          = absoluter OneDrive-Pfad des GED-Datei-Ordners
+                        (auto-abgeleitet via parentReference.path beim Laden — sw v111)
+                        z.B. "Privat/Genealogie"
+
+m.file (GEDCOM FILE)  = relativer Pfad ab od_base_path
+                        z.B. "Pictures/Hans_1890.jpg"
+
+fullPath (API-Aufruf) = od_base_path + '/' + m.file
+                        z.B. "Privat/Genealogie/Pictures/Hans_1890.jpg"
+```
+
+**Laden (2-Schritt via @microsoft.graph.downloadUrl — sw v107):**
+```
+1. _odGetMediaUrlByPath(relPath)
+   a. Metadaten: GET /me/drive/root:/{fullPath}?$select=@microsoft.graph.downloadUrl
+   b. Fetch downloadUrl (kein Auth-Header — CDN-URL, kein CORS-Problem)
+   c. FileReader → base64 Data-URL → IDB-Cache ('img:' + relPath) + Session-Cache
+2. IDB-Cache ('img:' + relPath)          ← persistent (sw v105: pfad-basierte Keys)
+3. Legacy: od_filemap Index→fileId       ← nur für Altdaten
+```
+
+**Picker-Navigation (sw v110):**
+- Startet aus `od_photo_folder` / `od_docs_folder` (relPath relativ zu od_base_path)
+- `↑ Übergeordneter Ordner`: via `parentReference`-API; kann über od_base_path hinaus navigieren
+- Gewählter Pfad → `relPath = _odToRelPath(fullPath, od_base_path)` → in `m.file` geschrieben
+
+**Kamera-Upload:**
+- `_addMediaDefaultFolderPath` = `od_photo_folder.relPath` (relativ)
+- Upload-Ziel: `od_base_path + '/' + relPath + '/' + filename`
+- `m.file` = `relPath + '/' + filename` (relativ, konsistent mit Picker)
+
+**IDB-Schlüssel (OneDrive, aktuell):**
+- `od_base_path` — absoluter Pfad (String), auto-gesetzt beim GED-Laden
+- `od_photo_folder` — `{ id, name, relPath }` — Foto-Ordner
+- `od_docs_folder` — `{ id, name, relPath }` — Dokumente-Ordner
+
+**Deprecated:**
+- `od_default_folder` / `od_doc_folder` — alte Struktur mit `folderPath` (absolut)
+- `od_filemap` / `od_doc_filemap` — fileId-Index-Mapping
+- `cfg_photo_base` / `cfg_doc_base` — Basispfad-Konfigurationsfelder (entfernt in sw v110)
+
+**Migration (sw v110):** `_odMigrateIfNeeded()` — einmalig beim ersten `openSettings()`-Aufruf; konvertiert alte IDB-Struktur; `_odStripBaseFromPaths()` bereinigt m.file-Werte.
+
+---
+
+### ADR-014: PEDI statt _FREL/_MREL für Eltern-Kind-Verhältnis (sw v121)
+**Entscheidung:** Eltern-Kind-Verhältnistyp wird als GEDCOM 5.5.1-Standard `PEDI` unter `FAMC` geschrieben statt als Ancestris-Extension `_FREL`/`_MREL`.
+
+**Motivation:** Ancestris-Kompatibilität nicht mehr erforderlich; Standard-Kompatibilität mit FamilySearch, GRAMPS, Ancestry etc. wichtiger.
+
+**GEDCOM 5.5.1-Ziel-Format:**
+```
+1 FAMC @Fxx@
+2 PEDI birth            ← Standard-Enum: birth | adopted | foster | sealing
+2 SOUR @Sxx@            ← Quelle direkt unter FAMC (Standard-konform)
+3 PAGE S.42
+3 QUAY 2
+```
+
+**Wert-Mapping `_toPedi(v)` in `gedcom-writer.js`:**
+| Eingang (beliebig) | PEDI-Output |
+|---|---|
+| birth, leiblich, biologisch, natürlich | birth |
+| adopted, adoptiert, adoption | adopted |
+| foster, pflegekind, pflege | foster |
+| sealing | sealing |
+| unbekannt / leer / anderes | birth (Default) |
+
+**Parser-Verhalten (Backward-Compat):**
+- Liest `PEDI` → setzt `fref.pedi`, `fref.frel`, `fref.mrel`
+- Liest `_FREL`/`_MREL` weiterhin (für alte Dateien) — hat Vorrang vor PEDI
+- Post-Processing-Merge: FAM-side `childRelations` → INDI-side `famc` wenn INDI-Seite leer
+
+**Writer-Verhalten:**
+- `frel == mrel` (Normalfall): schreibt `2 PEDI <wert>`
+- `frel ≠ mrel` (seltener Sonderfall): schreibt `_FREL`/`_MREL` (kein Datenverlust)
+- Quellen aus `sourIds`+`frelSour`+`mrelSour` dedupl. als `2 SOUR` direkt unter FAMC
+- `CHIL`-Block im FAM-Record ohne Sub-Tags (Verhältnis nur auf INDI-Seite)
+
+**Test-Strategie:** Idempotenz-Test (`test_idempotency.html`) — Strategie B:
+```
+Original → parse() → write() → text1 → parse() → write() → text2
+                                                   ↓
+                                             text1 === text2 ?
+```
+Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output.
+
+---
+
 ## Bekannte Einschränkungen
 
 | Problem | Ursache | Status |
 |---|---|---|
-| DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | Backlog |
+| ~~DIV/DIVF nicht editierbar~~ | → sw v134/v147: als FAM-Events strukturiert + Formularfelder | Abgeschlossen (v5-dev) |
 | Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
-| ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen |
+| ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen (v4.0) |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
-| Virtuelles Scrollen | Listen >1000 Einträge langsam | v5 geplant |
-| `ui-views.js` gross (1839 Z.) | Baum + Detail + Listen + Listenrendering gemischt | Backlog |
+| ~~Virtuelles Scrollen~~ | → sw v145: Spacer-div-Ansatz, O(log n) Binary-Search | Abgeschlossen (v5-dev) |
+| ~~`ui-views.js` gross~~ | → 5 Module aufgeteilt (sw v94) | Abgeschlossen (v5-dev) |
+| ~~`onedrive.js` 946 Z.~~ | → 3 Module aufgeteilt (sw v140) | Abgeschlossen (v5-dev) |
+| ~~`ui-forms.js` 1036 Z.~~ | → 3 Module aufgeteilt (sw v141) | Abgeschlossen (v5-dev) |

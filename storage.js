@@ -293,7 +293,7 @@ function _downloadBlob(content, filename) {
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
 async function exportGEDCOM() {
-  const content  = writeGEDCOM();
+  const content  = writeGEDCOM(true);
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -311,7 +311,7 @@ async function exportGEDCOM() {
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
           // des Share-Dialogs gemacht wurden (Race-Condition-Schutz)
-          if (writeGEDCOM() === content) { AppState.changed = false; updateChangedIndicator(); }
+          if (writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
           showToast('✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
@@ -433,6 +433,10 @@ function confirmNewFile() {
 // Gemeinsame Lade-Logik für openDirectoryAndLoad() und readFile()
 function _processLoadedText(text, filename) {
   AppState.db = parseGEDCOM(text);
+  if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
+    console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+  }
   AppState.db.extraPlaces = loadExtraPlaces();
   // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
   { let maxUsed = 0;
@@ -574,13 +578,53 @@ async function tryAutoLoad() {
   } catch(e) { /* kein Storage */ }
   return false;
 }
+// Startup-Dialog: Auswahl lokale Version vs. OneDrive
+function _showStartupChoice() {
+  const fname = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  document.getElementById('_startupChoiceName').textContent = fname;
+  openModal('modalStartupChoice');
+}
+function _startupChoiceLocal() {
+  closeModal('modalStartupChoice');
+  tryAutoLoad();
+}
+async function _startupChoiceOneDrive() {
+  closeModal('modalStartupChoice');
+  // Kein Token in Session → OAuth-Redirect; nach Rückkehr auto-load
+  sessionStorage.setItem('od_autoload_pending', '1');
+  odLogin();
+}
+
 window.addEventListener('load', async () => {
   const urlFile = new URLSearchParams(location.search).get('datei');
   if (urlFile) updateTopbarTitle(urlFile);
-  await tryAutoLoad();
+
+  // Warten falls OAuth-Callback noch läuft (Rückkehr von Login-Redirect)
+  if (window._odCallbackPromise) await window._odCallbackPromise;
+
+  const hasOdFile  = localStorage.getItem('od_file_id');
+  const hasSession = sessionStorage.getItem('od_refresh_token');
+  const pendingLoad = sessionStorage.getItem('od_autoload_pending');
+
+  if (pendingLoad && hasSession) {
+    // Rückkehr von OAuth mit Auto-Load-Wunsch
+    sessionStorage.removeItem('od_autoload_pending');
+    const loaded = await odAutoLoadFromOneDrive();
+    if (!loaded) { showToast('⚠ OneDrive nicht erreichbar — lokale Version geladen'); await tryAutoLoad(); }
+  } else if (hasOdFile && hasSession) {
+    // Gleiche Session → direkt von OneDrive laden (kein veralteten Stand zeigen)
+    const loaded = await odAutoLoadFromOneDrive();
+    if (!loaded) await tryAutoLoad();
+  } else if (hasOdFile) {
+    // Neustart: bekannte OD-Datei, aber kein Token → Auswahl-Dialog
+    _showStartupChoice();
+  } else {
+    await tryAutoLoad();
+  }
+
   restoreFileHandle(); updateSaveIndicator();
 
-  // Service Worker registrieren (P3-4)
+  // Service Worker registrieren
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }

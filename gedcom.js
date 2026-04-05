@@ -345,3 +345,38 @@ function togglePlaceMode(placeId) {
   }
 }
 
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// ─────────────────────────────────────
+//  sourceRefs-Rebuild (nach Event-Saves)
+// ─────────────────────────────────────
+function _rebuildPersonSourceRefs(p) {
+  if (!p) return;
+  const refs = new Set();
+  const add = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
+  add(p.topSources);
+  add(p.nameSources);
+  add(p.birth?.sources);
+  add(p.death?.sources);
+  add(p.chr?.sources);
+  add(p.buri?.sources);
+  (p.events || []).forEach(ev => add(ev.sources));
+  (p.famc  || []).forEach(fc => add(fc.sourIds));
+  p.sourceRefs = refs;
+}
+
+function _rebuildFamilySourceRefs(f) {
+  if (!f) return;
+  const refs = new Set();
+  const add = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
+  add(f.marr?.sources);
+  add(f.engag?.sources);
+  add(f.div?.sources);
+  add(f.divf?.sources);
+  (f.events || []).forEach(ev => add(ev.sources));
+  f.sourceRefs = refs;
+}

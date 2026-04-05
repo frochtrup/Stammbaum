@@ -5,6 +5,466 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 5.0 (Branch `v5-dev`, 2026-03-30 — 2026-04-05) — ABGESCHLOSSEN
+
+---
+
+### Session 2026-04-05 — OneDrive-Startsequenz + Offline-Sync-Indikator (sw v149–v152)
+
+- **sw v149** `fix`: sourceRefs nach Event-Save/Delete rebuilden
+  - `ui-forms-event.js`: `saveEvent()` + `deleteEvent()` rufen nach Änderung `_rebuildPersonSourceRefs()` bzw. `_rebuildFamilySourceRefs()` auf
+  - `ui-forms.js`: `saveFamily()` berücksichtigt jetzt alle FAM-Events (ENG/DIV/DIVF) für `sourceRefs` — nicht nur Hochzeits-Quellen
+  - Behoben: Neue Quellenzuordnung erschien nicht sofort in Quellendetail „Verwendet in"
+
+- **sw v150** `feat`: Ereignisliste Personendetail — Gruppierung + Sortierung
+  - `ui-views-person.js`: Gleiche Ereignistypen werden als Block zusammengefasst (alle OCCU, alle RESI etc.)
+  - Innerhalb jedes Blocks: chronologisch sortiert; undatierte Ereignisse ans Ende
+  - Reihenfolge der Gruppen folgt der Typen-Reihenfolge im Ursprungsarray
+
+- **sw v151** `feat`: OneDrive-Startsequenz
+  - `onedrive.js`: Auswahl-Dialog bei Neustart (kein Session-Token): "☁ Von OneDrive laden" vs. "📱 Lokal"
+  - Gleiche Session (Token in sessionStorage): direkt von OneDrive laden — kein veralteter IDB-Stand
+  - `od_autoload_pending`: nach OAuth-Redirect wird Datei automatisch geladen
+  - Timeout 8s + stiller Fallback auf IDB bei Fehler oder Offline
+  - `_odRefreshTokenSilent()` — Token-Refresh ohne OAuth-Redirect (kein ungewolltes Login)
+  - `window._odCallbackPromise` — `window.load`-Handler wartet auf laufenden OAuth-Callback
+
+- **sw v152** `feat`: Offline-Sync-Indikator
+  - `index.html`: Floating Pill `#sync-indicator` über Bottom-Nav — "● Nicht gespeichert" + Speichern-Button
+  - Button adaptiv: ☁ Speichern (OneDrive) · ↑ Teilen (iPhone/Share Sheet) · ↓ Speichern (Desktop)
+  - `ui-views.js`: `updateChangedIndicator()` — erscheint/verschwindet synchron mit `AppState.changed`
+  - Global in allen Views sichtbar; keine Schaltflächenanpassung nötig
+
+---
+
+### Session 2026-04-05 — INDI-Events erweitert (sw v147–v148)
+
+- **sw v147** `feat`: FAM-Ereignisse — Verlobung/Scheidung/Scheidungsantrag in Detailansicht editierbar
+  - *(Details in vorherigem Commit)*
+
+- **sw v148** `feat`: INDI-Events `DSCR`, `IDNO`, `SSN` — strukturiert statt passthrough
+  - `gedcom-parser.js`: drei Tags zur events[]-Liste hinzugefügt → landen nicht mehr in `_passthrough`
+  - `index.html`: drei neue Optionen im Ereignistyp-Dropdown (vor "Sonstiges")
+  - Roundtrip bleibt `net_delta=0` — Writer behandelt alle events[] generisch
+
+---
+
+### Session 2026-04-05 — Performance + UX (sw v143–v146)
+
+- **sw v143** `feat`: Medienbrowser in Personen- + Familien-Liste
+  - `ui-media.js`: `showPersonMediaBrowser()` — Medien gruppiert nach Person, sortiert Nachname→Vorname A-Z
+  - `ui-media.js`: `showFamilyMediaBrowser()` — Medien gruppiert nach Familie
+  - `showMediaBrowser()` zeigt nun Titel `Medien-Browser · Quellen` (analog)
+  - `index.html`: 📎-Button in Personen-Tab und Familien-Tab Suchzeile
+  - Personen-Liste: primäre Sortierung Nachname A-Z, sekundär Vorname A-Z
+
+- **sw v144** `feat`: Scroll-Positions-Restore beim Zurücknavigieren
+  - Beim Wechsel von Liste → Detail wird Scroll-Position in `UIState._savedListScroll` gespeichert
+  - `showMain()`: nach `renderTab()` wird gespeicherte Position via `setTimeout(0)` wiederhergestellt
+  - Funktioniert für mobiles Window-Scroll (`window.scrollY`) und Desktop-Container (`#v-main.scrollTop`)
+  - Kein Konflikt mit `_scrollListToCurrent` (rAF vs. setTimeout — setTimeout läuft danach)
+
+- **sw v145** `feat`: Virtuelles Scrollen für Personen- und Familien-Liste
+  - Listen >500 Einträge: nur sichtbare Zeilen + 600px Puffer (`_VS_BUF`) im DOM
+  - Spacer-div-Ansatz: `[top-spacer][mid-content][bot-spacer]` — kein Framework
+  - Constants: `_VS_ROW=69` (Zeile), `_VS_SEP=23` (Trenner), `_VS_MIN=500` (Schwellwert)
+  - `_vsRender(listEl, st)`: Binary-Search für sichtbaren Bereich, O(log n)
+  - `_vsSetup(listEl, st, items, renderFn)` / `_vsTeardown(st)`: Setup/Teardown per Scroll-Event
+  - `_vsScrollEl()`: erkennt Desktop-Container (`#v-main`) vs. Mobile (Window)
+  - VS-State: `_vsP` (Personen) + `_vsF` (Familien) in `ui-views-person.js`
+  - `offsetParent`-Check: VS überspringt versteckte Tabs (display:none)
+
+- **sw v146** `fix`: Desktop-Sync — Baum/Fan-Chart → Listen-Highlight
+  - Problem: auf Desktop sind Baum und Liste nebeneinander sichtbar; nach Einführung von VS wurde `.current` nicht gesetzt wenn die Person außerhalb des gerenderten Fensters war
+  - `_vsScrollAndHighlight(st, listEl, idx, dataAttr, id)`: scrollt synchron zu Item, erzwingt VS-Re-Render, setzt dann `.current`
+  - `sc.scrollTop = target` ist synchronous → `_vsRender` liest sofort die neue Position
+  - Fix in `_updatePersonListCurrent()` und `_updateFamilyListCurrent()`
+
+---
+
+### Session 2026-04-05 — Modul-Splits + Roundtrip-Fix (sw v138–v142)
+
+- **sw v138** `refactor`: GEDCOM-Parser — Error-Sammler + Level-Validierung
+  - `gedcom-parser.js`: optionaler zweiter Parameter `_errors[]` für `parseGEDCOM()`
+  - Zeilen mit `lv > 4` werden in `_errors[]` protokolliert (ungültig laut GEDCOM 5.5.1)
+  - Passthrough-Mechanismus läuft weiterhin für `lv > 4`-Zeilen (kein `continue`)
+
+- **sw v139** `fix`: OneDrive — echtes Error-Handling statt `catch { return null }`
+  - `onedrive.js`: alle catch-Blöcke loggen jetzt den tatsächlichen Fehler per `console.error`
+  - Kein stilles Verschlucken von API-Fehlern mehr; erleichtert Debugging erheblich
+
+- **sw v140** `refactor`: `onedrive.js` (946 Z.) → 3 Module aufgeteilt
+  - `onedrive-auth.js` (113 Z.): OAuth2 PKCE — `odLogin()`, `odLogout()`, `odHandleCallback()`, `_odGetToken()`, `_odUpdateUI()`, Konstanten `OD_CLIENT_ID`/`OD_SCOPES`/`OD_AUTH_EP`/`OD_TOKEN_EP`/`OD_GRAPH`; Init-Block am Ende
+  - `onedrive-import.js` (465 Z.): Foto-Import-Wizard + Ordner-Browser — `odImportPhotos()`, `_odShowFolder()`, `_odEnterFolder()`, `_odFolderBack()`, `odImportPhotosFromFolder()`, `odSetupDocFolder()`, `odPickFileForMedia()`, `_odPickSelectFile()`, `_extractObjeFilemap()`
+  - `onedrive.js` (374 Z.): Media-URL, Upload, File-I/O, Pfad-Helfer, Settings — `_odGetMediaUrlByPath()`, `_odUploadMediaFile()`, `odSaveFile()`, `odLoadFile()`, `odOpenFilePicker()`, `openSettings()`, `_odGetBasePath()`, `_odToRelPath()`
+  - `sw.js` + `index.html`: PRECACHE und `<script>`-Tags um die zwei neuen Dateien erweitert
+  - `odSaveFile()` ruft jetzt `writeGEDCOM(true)` (mit HEAD-Datum-Update)
+
+- **sw v141** `refactor`: `ui-forms.js` (1036 Z.) → 3 Module aufgeteilt
+  - `ui-forms-event.js` (167 Z.): Event-Formular — `showEventForm()`, `saveEvent()`, `deleteEvent()`, `onEventTypeChange()`, `_efMedia`, `_renderEfMedia()`, `addEfMedia()`; `_SPECIAL_OBJ`/`_SPECIAL_LBL`-Konstanten
+  - `ui-forms-repo.js` (167 Z.): Archiv-Formular + Picker + Detail — `showRepoForm()`, `saveRepo()`, `deleteRepo()`, `showRepoDetail()`, `openRepoPicker()`, `renderRepoPicker()`, `repoPickerSelect()`, `sfRepoUpdateDisplay()`, `sfRepoClear()`
+  - `ui-forms.js` (707 Z.): Person/Familie/Quelle + Source-Widget + Modal-Helfer + Keyboard-Shortcuts + Utils (`esc`, `showToast`, Place-Autocomplete)
+  - `sw.js` + `index.html`: PRECACHE und `<script>`-Tags um die zwei neuen Dateien erweitert
+
+- **sw v142** `fix`: Roundtrip — Parser lv>4 passthrough + Writer idempotenz
+  - **Parser-Fix**: `lv > 4`-Block hatte `continue` → Passthrough-Mechanismus wurde übersprungen → `5 TYPE photo` u.ä. wurden komplett verworfen (sw v138-Regression; `TYPE -67`, `FORM -52` im Roundtrip-Test)
+  - **Fix**: `continue` entfernt; Zeile wird weiterhin als Fehler geloggt, aber der `_ptDepth`-Block auf Zeilen 124–132 fängt sie nun korrekt ab
+  - **Writer-Fix**: `writeGEDCOM()` ersetzte HEAD `1 DATE`/`2 TIME` immer → jede Ausgabe hatte anderen Timestamp → Roundtrip instabil (out1 ≠ out2)
+  - `gedcom-writer.js`: neuer Parameter `writeGEDCOM(updateHeadDate = false)` — HEAD wird nur aktualisiert wenn `true`; sonst verbatim ausgegeben
+  - `storage.js`: `exportGEDCOM()` und iOS Share-Pfad rufen `writeGEDCOM(true)`; Test-/Debug-Aufrufe `writeGEDCOM()` (idempotent)
+  - **Ergebnis**: Roundtrip `net_delta=0`, stabil — alle 50+ Tag-Checks bestanden; erstmals auch TIME-stabil (out1 === out2)
+
+---
+
+### Session 2026-04-05 — Inline Event-Handler Schulden (sw v137)
+
+- **sw v137** `refactor`: Schwerpunkt 6 Prio 3 — Inline Event-Handler in HTML-Strings entfernt
+  - 62 inline `onclick`/`oninput`/`onchange` aus Template-Literalen in 8 JS-Dateien entfernt
+  - `ui-views.js`: globale Event-Delegation ergänzt — `data-action` (click), `data-change` (change), `data-input` (input)
+  - `_CLICK_MAP` mit 28 Aktionen; `closest('[data-action]')` eliminiert StopPropagation-Bedarf natürlich
+  - `data-action="stop"` für `<select>` in klickbaren Zeilen (verhindert versehentliche Navigation)
+  - `data-action="stop"` auf Geo-Links (`<a target="_blank">`) in klickbaren Ereignis-Zeilen
+
+---
+
+### Session 2026-04-05 — Sicherheits-Fixes Schwerpunkt 6 Prio 1 (sw v136)
+
+- **sw v136** `fix`: Schwerpunkt 6 Prio 1 — Sicherheit
+  - `onedrive.js`: OAuth-Token (`od_access_token`, `od_refresh_token`, `od_token_expiry`) von `localStorage` → `sessionStorage` — nicht mehr über Tab-Schließen persistent, DevTools-Exposition und XSS-Angriffsfläche reduziert
+  - `onedrive.js`: `odLogout()` löscht Token-Keys aus `sessionStorage`, `od_file_id`/`od_file_name` weiterhin aus `localStorage`
+  - `sw.js`: Netzwerk-Timeout 4s eingebaut — bei hängendem Netz wird nach 4s auf Cache-Fallback umgeschaltet (statt unbegrenzt zu warten)
+  - `sw.js`: `demo.ged` aus `PRECACHE` entfernt — wird nicht mehr bei jedem Nutzer mitgeladen
+
+---
+
+### Session 2026-04-05 — Quellen-Badges, OneDrive-Fix, DIV/DIVF/ENG strukturiert (sw v125–v135)
+
+- **sw v125–v126** `feat`: Quellen-Badges für Kind-Verhältnis — `.src-badge §N`-Stil (wie Events)
+  - `ui-views-family.js`: `.src-tag`-Pillen durch `.src-badge` ersetzt; `§N`-Text; Tooltip = `s.title || s.abbr`
+  - `+ Q` nur wenn 0 Quellen (`_sourIds.length` statt Boolean-Kurzschluss)
+  - Mehrere Quellen: alle als eigene Badges (nicht zusammengefasst)
+
+- **sw v127** `fix`: Tooltip in `sourceTagsHtml()` zeigte `abbr` statt `title`
+  - `ui-views.js`: Priorität korrigiert auf `s.title || s.abbr`
+
+- **sw v128–v129** `fix`: `@@S2@@` — doppelte `@` in Source-IDs brachen Lookup
+  - `gedcom-parser.js`: Normalisierung `.replace(/^@@/,'@').replace(/@@$/,'@')` beim Einlesen
+  - Post-Processing: `sourIds`-Kopie von FAM→INDI jetzt unabhängig von `frelSeen` (war durch Ancestris `_FREL` immer geblockt)
+
+- **sw v130–v133** `fix`: OneDrive-Speichern — Robustheit
+  - `onedrive.js`: `showToast('Verbinde…')` vor Token-Check (kein stilles Versagen mehr)
+  - `writeGEDCOM()` in eigenem try/catch mit eigenem Error-Toast
+  - 30s AbortController-Timeout auf fetch + `res.json().catch(()=>({}))` gegen Hang bei Non-JSON-Response
+  - Erfolgs-Toast zeigt vollständigen Speicherpfad in OneDrive
+
+- **sw v134** `feat`: DIV / DIVF / ENG strukturiert in Parser + Writer + Anzeige
+  - `gedcom-parser.js`: `_famEv()`-Hilfsfunktion; DIV/DIVF/ENG auf Level 1–4 vollständig geparst (DATE/PLAC/SOUR/NOTE/OBJE/MAP); ENG = Alias für ENGA
+  - `gedcom-writer.js`: `eventBlock('DIV', f.div, 1)` + `eventBlock('DIVF', f.divf, 1)`; Passthrough-Filter für DIV/DIVF/ENG (verhindert Doppelausgabe)
+  - `ui-views-family.js`: Anzeige-Abschnitte für Scheidung + Scheidungsantrag mit Quellen-Badges
+
+- **sw v135** `fix`: ENGA im Passthrough-Filter ergänzt
+  - `gedcom-writer.js`: Filter `/^1 (DIV|DIVF|ENG|ENGA)\b/` — verhindert Doppelausgabe von ENGA-Blöcken
+  - Klarstellung: ENGA = GEDCOM 5.5.1 Standard; ENG = nicht-standard Alias (wird beim Speichern zu ENGA normalisiert)
+
+- **Roundtrip-Test**: Passthrough-Sektionen zeigen jetzt explizite Beispielzeilen (`► 1 TAG wert`) zusätzlich zur Tag-Frequenz-Übersicht
+- **Menü**: OneDrive-Aktionen an erste Position; lokale Dateioperationen als sekundäre Gruppe; Fotos-Import/Export aus Menü entfernt (über Einstellungen)
+- **README**: OneDrive-Workflow als Primär-Workflow dokumentiert; lokaler Workflow als Fallback
+
+---
+
+### Session 2026-04-04 — PEDI-Migration + Eltern-Kind-Quellen (sw v121–v124)
+
+- **sw v121** `feat`: PEDI statt `_FREL`/`_MREL` — GEDCOM 5.5.1 Standard für Eltern-Kind-Verhältnis
+  - `gedcom-parser.js`: `PEDI` unter `FAMC` einlesen; `pedi`-Feld in FAMC-Objekt; Post-Processing-Merge FAM→INDI (`childRelations` in `famc` kopieren wenn INDI-Seite leer)
+  - `gedcom-writer.js`: `_toPedi()` Mapping (deutsch/englisch → `birth|adopted|foster|sealing`); FAMC schreibt `2 PEDI` statt `2 _FREL`/`2 _MREL`; bei frel≠mrel Fallback auf `_FREL`/`_MREL`; Quellen als `2 SOUR` direkt unter FAMC (GEDCOM 5.5.1-konform); CHIL-Block ohne Sub-Tags
+  - `test_idempotency.html`: Idempotenz-Test (Strategie B: parse→write→parse→write, vergleiche text1==text2) mit Migrationsreport
+  - Ergebnis auf 2811 Personen: BESTANDEN; 622×PEDI birth, 0×_FREL/_MREL, 0 Datenverlust
+
+- **sw v122** `feat`: UI für PEDI — Dropdown in Familien-Ansicht, Label in Personen-Ansicht
+  - `ui-views-family.js`: Kinder-Block zeigt inline `<select>` für PEDI (leiblich/adoptiert/Pflegekind/Sealing); `savePedi()` schreibt direkt in `famc`-Eintrag
+  - `ui-views-person.js`: Eltern-Rolle zeigt Suffix ` · adoptiert` / ` · Pflegekind` / ` · Sealing` wenn PEDI nicht `birth`
+  - `ui-forms.js`: `famc.push()` mit vollständigem Objekt (pedi, frelSeen, mrelSeen, sourIds etc.)
+
+- **sw v123** `feat`: Quellen für Kind-Verhältnis (FAMC) — Dialog mit PEDI + Quellenangabe
+  - `index.html`: `#modalChildRel` mit PEDI-Dropdown und Quellen-Widget (src-tags/picker/PAGE/QUAY)
+  - `ui-views-family.js`: `showChildRelDialog()` / `saveChildRelDialog()`; 📎-Button neben PEDI-Dropdown (öffnet Modal)
+  - `ui-forms.js`: PAGE/QUAY-Felder im `src-Widget` auch für Prefix `cr` (Kind-Verhältnis)
+
+- **sw v124** `fix`: Quell-Tags statt Büroklammer bei Kind-Verhältnis
+  - `ui-views-family.js`: zeigt `src-tag`-Pillen (gold) für zugewiesene Quellen; ohne Quellen: gestrichelter `+ Q`-Button; 📎 ist Medien-Konvention und wird hier nicht verwendet
+
+---
+
+### Session 2026-04-04 — OneDrive-Pfad-Architektur: od_base_path (sw v107–v112)
+
+- **sw v107** `fix`: OneDrive-Medien via `@microsoft.graph.downloadUrl` laden
+  - **Ursache**: `/content`-Redirect (302 → CDN) schlägt mit CORS-Fehler fehl wenn Auth-Header
+    mitgesendet wird; CDN-URL erfordert keinen Auth-Header
+  - `_odGetMediaUrlByPath`: 2-Schritt: Metadaten-GET → `@microsoft.graph.downloadUrl` → Fetch ohne Auth
+  - `_odGetPhotoUrl` (Legacy) + `_odGetSourceFileUrl`: gleicher Fix
+
+- **sw v108** `fix`: Picker-Pfad ohne 'OneDrive'-Prefix + Fallback nur für Windows-Pfade
+  - `_odShowFolder`: `folderPath` filtert `'OneDrive'` konsistent (wie `odImportPhotosFromFolder`)
+    — verhindert `OneDrive/Pictures/foto.jpg` beim Navigieren vom Root aus
+  - `_odGetMediaUrlByPath`: Basename-Fallback nur noch bei `\\`-Pfaden (Windows-GEDCOM)
+    — falscher Pfad im Edit-Dialog zeigt nicht mehr das alte Bild
+
+- **sw v109** `fix`: Ordner-Picker startet bei konfiguriertem Ordner + `parentName`-Fix
+  - `odImportPhotos` / `odSetupDocFolder`: starten beim konfigurierten Ordner (nicht OneDrive-Root)
+  - `_odShowAllFolders`: `parentName` via `/drive/root:`-Regex — verhindert `'root:'` im Pfad
+
+- **sw v110** `refactor`: Pfad-basierte Medien-Architektur — `od_base_path` als einzige absolute Referenz
+  - **Neues Konzept**: `od_base_path` = OneDrive-Pfad des GED-Ordners (absolut, Graph-API-Format)
+  - Alle `m.file`-Werte relativ zu `od_base_path`; Laden: `fullPath = basePath + '/' + relPath`
+  - `od_photo_folder` / `od_docs_folder` ersetzen `od_default_folder` / `od_doc_folder`; speichern `relPath`
+  - `_odGetBasePath()` — lazy-load aus IDB mit Modul-Cache
+  - `_odToRelPath(fullPath, basePath)` — subtrahiert Basispfad
+  - `_odMigrateIfNeeded()` — einmalige Migration: alter `od_default_folder` → neue Struktur + `od_base_path`
+  - `_odStripBaseFromPaths(basePath)` — bereinigt `m.file`-Werte in bestehenden GEDCOM-Daten
+  - `_odUploadMediaFile`: gibt `relPath` zurück (Eingabe, nicht API-Antwort) — keine Pfad-Drift
+  - `odImportPhotosFromFolder`: aktualisiert `f.marr.media` (vorher übersehen) + setzt `od_base_path`
+  - `_addMediaToFilemap`: schreibt nicht mehr in `od_filemap`; nur Session-Cache-Invalidierung
+  - `index.html`: "Lokale Pfade"-Sektion entfernt
+
+- **sw v111** `feat`: `od_base_path` automatisch aus GED-Datei-Ordner ableiten
+  - `odLoadFile`: nach Laden der GED-Datei → `parentReference.path` via Graph-API → `od_base_path`
+  - Kein manuelles Setup mehr nötig; `od_base_path` wird beim ersten Öffnen einer GED-Datei gesetzt
+
+- **sw v112** `fix`: Einstellungen — Startpfad separat, Ordner als relativer Pfad
+  - `index.html`: neues "Startpfad (GED-Ordner)"-Feld (`set-base-path`) über Foto/Dok-Ordner
+  - `openSettings`: befüllt `set-base-path` mit `od_base_path`; Foto/Dok-Ordner zeigen nur `relPath`
+  - Verhindert irreführende doppelte Anzeige (z.B. `Privat/Pictures` als Foto-Ordner statt `Pictures`)
+
+*Aktuelle sw-Version: v112 / Cache: stammbaum-v112*
+
+---
+
+### Session 2026-04-04 — Medien-Pfad-Mismatch-Fix (sw v106)
+
+- **sw v106** `fix`: Medien-Anzeige repariert — GEDCOM-Pfade ≠ OneDrive-Pfade
+  - **Ursache**: GEDCOM FILE-Tags enthalten lokale Pfade (z.B. `Fotos/foto.jpg`) statt
+    OneDrive-Pfade (`Pictures/foto.jpg`); `_odGetMediaUrlByPath` lieferte 404 → keine Bilder
+  - `onedrive.js`: `_odGetMediaUrlByPath` — Basename-Fallback: wenn Pfad nicht gefunden,
+    Dateiname im `od_default_folder.folderPath` suchen
+  - `onedrive.js`: `odImportPhotosFromFolder` — schreibt nach Verknüpfung `m.file` mit
+    tatsächlichem OneDrive-Pfad (`folderPath + '/' + basename`) zurück; `AppState.changed = true`
+  - `onedrive.js`: `odImportPhotosFromFolder` — Ansicht-Refresh nutzt `_odGetMediaUrlByPath`
+    statt deprecated `_odGetPhotoUrl`
+  - `ui-media.js`: `openEditMediaDialog` — `cfg_photo_base`-Stripping entfernt; `m.file`
+    wird ungekürzt im Eingabefeld angezeigt und gespeichert
+
+*Aktuelle sw-Version: v106 / Cache: stammbaum-v106*
+
+---
+
+### Session 2026-04-04 — Media-Handling Grundsanierung: pfad-basierte IDB-Keys (sw v105)
+
+- **sw v105** `refactor`: IDB-Keys für Medien komplett auf Pfad-Basis umgestellt
+  - **Ursache**: Index-basierte Keys (photo_id_0, photo_fam_id_1 etc.) werden nach
+    Reorder der Medienliste (Hauptbild → Index 0) ungültig → alle Thumbnails zeigen
+    falsche Bilder; Hero korreliert nicht mit Medienliste
+  - **Neues Format**: `'img:' + filePath` — unabhängig von Array-Reihenfolge
+  - `ui-media.js`: `_asyncLoadMediaThumb(thumbId, filePath)` — idbKey-Parameter entfernt
+  - `ui-media.js`: Kamera-Fotos in `confirmAddMedia` mit `'img:' + file` gespeichert
+  - `ui-media.js`: Edit-Dialog-Preview direkt über Pfad; MediaBrowser-Thumbnails pfad-basiert
+  - `ui-media.js`: `deletePersonMedia`, `deleteFamilyMarrMedia` — kein bulk-IDB-Clear mehr nötig
+  - `ui-views-person.js`: Hero ohne index-basierte IDB-Keys; onclick mit data-media-file Attribut
+  - `ui-views-family.js`: analog Person
+  - `ui-views-source.js`: IDB-Fallback pfad-basiert
+  - `ui-views-tree.js`: `openMediaPhoto(filePath, heroElemId, avatarElemId)` — neue Signatur
+
+*Aktuelle sw-Version: v105 / Cache: stammbaum-v105*
+
+---
+
+### Session 2026-04-04 — Blob-URLs → Data-URLs (iOS Safari Fix) (sw v104)
+
+- **sw v104** `fix`: Alle OneDrive-Foto-URLs als Data-URL (base64) statt Blob-URL
+  - **Ursache**: iOS Safari kann Blob-URLs (`URL.createObjectURL`) in `<img>`-Elementen
+    nicht zuverlässig laden — der Browser kann den Blob intern verwerfen (GC), was
+    `onerror` auslöst und → Avatar statt Foto zeigt
+  - `_odGetMediaUrlByPath`: Blob → `FileReader.readAsDataURL()` → base64 Data-URL;
+    `_odPhotoCache` cached Data-URL (Session, kein Netzwerk-Re-Fetch in selber Session)
+  - `_odGetPhotoUrl` (Legacy): gleicher Fix
+  - `_odGetSourceFileUrl` (Legacy-Pfad): gleicher Fix
+  - Data-URLs sind selbsttragend, immer ladbar, plattformunabhängig
+
+*Aktuelle sw-Version: v104 / Cache: stammbaum-v104*
+
+---
+
+### Session 2026-04-04 — Medienladen: Pfad-zuerst statt IDB-zuerst (sw v103)
+
+- **sw v103** `refactor`: Bild-Loading-Reihenfolge überarbeitet
+  - **Bisher**: IDB → OneDrive-Pfad → Legacy-Filemap
+    Problem: IDB ist für OneDrive-Fotos fast immer leer → unnötiger Cache-Miss;
+    veraltete IDB-Einträge (nach Reorder) zeigten falsches Bild
+  - **Jetzt**: OneDrive-Pfad (m.file) → IDB → Legacy-Filemap
+    `_odPhotoCache` (Session-Cache) verhindert Doppel-Fetches innerhalb einer Session
+  - `ui-media.js`: `_asyncLoadMediaThumb` — `_odGetMediaUrlByPath(filePath)` zuerst
+  - `ui-views-person.js`: Hero-Loading — `_odGetMediaUrlByPath(_filePath)` zuerst;
+    Hero-`<img>` jetzt DOM-basiert mit `onerror` (Avatar wiederherstellen bei Fehler)
+  - `ui-views-family.js`: Hero-Loading — analog Person; `onerror` hinzugefügt
+  - `ui-views-source.js`: Thumbnails — `_odGetSourceFileUrl` zuerst (pfadbasiert),
+    IDB als Fallback; `onerror` in `_applySrcMediaUrl` hinzugefügt
+  - Alle Hero-Images: stale IDB-Writes (`idbPut` nach Load) entfernt — Pfad ist Wahrheitsquelle
+
+*Aktuelle sw-Version: v103 / Cache: stammbaum-v103*
+
+---
+
+### Session 2026-04-04 — Kamera-Pfad: folderPath-Fallback per API (sw v102)
+
+- **sw v102** `fix`: Kamera-Foto landet im konfigurierten Ordner auch bei alten IDB-Einträgen
+  - `onedrive.js`: `_odResolveFolderPath(folderId, folderName)` — fragt OneDrive-API nach
+    vollständigem relativem Pfad (`parentReference.path`) und gibt ihn zurück
+  - `ui-media.js`: `openAddMediaDialog` — öffnet Modal sofort; wenn `folderPath` fehlt
+    (IDB-Eintrag vor sw v100), wird er per API nachgeladen und in IDB persistiert
+  - Ursache war: `od_default_folder` enthielt vor sw v100 nur `{folderId, folderName}`,
+    kein `folderPath` → Fotos landeten im OneDrive-Root
+
+*Aktuelle sw-Version: v102 / Cache: stammbaum-v102*
+
+---
+
+### Session 2026-04-04 — Thumbnails + Hauptbild-Funktion (sw v101)
+
+- **sw v101** `fix/feat`: Thumbnails + Hauptbild-Reihung
+  - `ui-media.js`: `_asyncLoadMediaThumb` — `onerror`-Handler stellt Original-Icon wieder her
+    wenn Bild nicht geladen werden kann (kein broken-image-Symbol mehr auf Mobile)
+  - `index.html`: "Als Hauptbild"-Checkbox im Edit-Medium-Dialog
+  - `ui-media.js`: `_applyPrimAndReorder()` — setzt `prim='Y'` auf gewähltem Eintrag,
+    löscht `prim` auf allen anderen, verschiebt Eintrag an Index 0
+  - `ui-media.js`: `_invalidateThumbCache()` — leert Session-Cache bei Reorder damit
+    Thumbnails mit korrekten Positionen neu geladen werden
+  - `ui-media.js`: `openEditMediaDialog` — Checkbox zeigt aktuellen prim-Status
+
+*Aktuelle sw-Version: v101 / Cache: stammbaum-v101*
+
+---
+
+### Session 2026-04-04 — Kamera-Upload nach OneDrive (sw v100)
+
+**Kamera-Fotos landen direkt im konfigurierten OneDrive-Ordner**
+
+- **sw v100** `feat`: Kamera-Foto-Upload nach OneDrive
+  - `onedrive.js`: `_odUploadMediaFile(b64DataUrl, targetPath)` — PUT per path-based API,
+    gibt `{ path, fileId }` zurück mit tatsächlichem Pfad aus API-Antwort
+  - `onedrive.js`: `odScanDocFolder` speichert jetzt ebenfalls `folderPath` in `od_doc_folder`
+    (analog zu `odImportPhotosFromFolder`)
+  - `ui-media.js`: `_addMediaDefaultFolderPath` — Modul-Variable für Ordner-Pfad
+  - `ui-media.js`: `openAddMediaDialog` lädt `od_default_folder.folderPath` (bzw. `od_doc_folder`
+    für Quellen) aus IDB → vorbelegt `_addMediaDefaultFolderPath`
+  - `ui-media.js`: `_onCamCapture` verwendet `_addMediaDefaultFolderPath` als Ordner-Prefix;
+    Dateiname jetzt mit Uhrzeit (`foto_YYYYMMDD_HHMMSS.jpg`) für Eindeutigkeit
+  - `ui-media.js`: `confirmAddMedia` — wenn Kamera-Foto + OneDrive verbunden + Dateifeld gefüllt:
+    Upload via `_odUploadMediaFile`; tatsächlicher API-Pfad ersetzt Eingabefeld-Wert;
+    IDB-Cache wird trotzdem gesetzt (lokale Kopie)
+
+*Aktuelle sw-Version: v100 / Cache: stammbaum-v100*
+
+---
+
+### Session 2026-04-04 — Medien-Handling Überarbeitung (sw v96–v99)
+
+**Relativer OneDrive-Pfad als einzige Wahrheitsquelle**
+
+- **sw v96** `feat`: Medien — relative OneDrive-Pfade + bevorzugtes Medium in Titelleiste
+  - `onedrive.js`: `_odPickSelectFile` speichert `fullPath` direkt (kein `cfg_photo_base`-Prefix mehr)
+  - `_odPickBasePath` / `_odPickRootName` und deren IDB-Reads entfernt
+  - `ui-media.js`: `openAddMediaDialog` startet mit leerem Dateifeld
+  - `ui-views-person.js`: Hero lädt bevorzugtes Medium (`_PRIM Y`) oder erstes (`_primIdx`)
+  - `ui-views-family.js`: Hero lädt bevorzugtes Medium aus `marr.media`, Fallback `f.media`
+  - `ui-views-source.js`: `_srcPrimIdx` berechnet, Ladereihenfolge prim-first, Hero nur für prim
+
+- **sw v97** `fix`: Edit-Dialog + Picker alle Ordner
+  - `ui-media.js`: `openEditMediaDialog` zieht `cfg_photo_base/cfg_doc_base` asynchron ab →
+    bestehende absolute Pfade werden beim Bearbeiten als relativer Pfad angezeigt und gespeichert
+  - `onedrive.js`: Bug fix — `_odEditPickMode` zeigte keine Dateien (nur `_odPickMode` wurde geprüft);
+    beide Modi zeigen jetzt Dateiliste + korrekten Titel
+  - `onedrive.js`: `↑ Übergeordneter Ordner`-Button wenn Picker aus Standard-Ordner gestartet wurde
+
+- **sw v98** `fix`: Übergeordneter Ordner statt root
+  - `_odPickStartFolderId` speichert Start-Ordner; `_odShowAllFolders()` fragt
+    `parentReference` per API → navigiert zu übergeordnetem Ordner (bleibt relativ)
+
+- **sw v99** `refactor`: Pfad als einzige Wahrheitsquelle — kein Filemap für Anzeige
+  - `onedrive.js`: `_odGetMediaUrlByPath(path)` — lädt Datei direkt per OneDrive path-based API
+    (`GET /drive/root:/{path}:/content`), kein Index-Mapping nötig
+  - `onedrive.js`: `_odGetSourceFileUrl` — Priorität 1) Pfad direkt, 2) Legacy `od_filemap`
+  - `ui-media.js`: `_asyncLoadMediaThumb(thumbId, idbKey, filePath)` — Pfad primär, filemap Legacy
+  - `ui-media.js`: Edit-Dialog-Vorschau ebenfalls pfadbasiert
+  - `ui-views-person.js` + `ui-views-family.js`: Hero + Thumbnails übergeben `m.file`
+  - **Ergebnis**: Anzeigbild = geklicktes Bild = GEDCOM-Pfad — ein Pfad, eine Datei
+  - `od_filemap` bleibt nur noch als Legacy-Fallback (Altdaten mit gespeicherten fileIds)
+
+*Aktuelle sw-Version: v99 / Cache: stammbaum-v99*
+
+---
+
+### Session 2026-04-03 — Refactoring: ui-forms.js aufgeteilt (sw v95)
+
+- **`showSourceDetail()`** aus `ui-forms.js` in `ui-views-source.js` ausgelagert
+- Debug-Code bereinigt
+
+*Aktuelle sw-Version: v95 / Cache: stammbaum-v95*
+
+---
+
+### Session 2026-04-03 — Refactoring: ui-views.js Split (sw v94)
+
+- **`ui-views.js`** (1963 Z.) aufgeteilt in 5 Module:
+  - `ui-views.js` (279 Z.) — gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
+  - `ui-views-person.js` (392 Z.) — Personen-Detailansicht (`showDetail`, Avatar, Events, Medien)
+  - `ui-views-family.js` (382 Z.) — Familien-Detailansicht (`showFamilyDetail`, Kinder, Medien)
+  - `ui-views-source.js` (273 Z.) — Quellen-Detailansicht (`showSourceDetail`, Medien, Rückverweise)
+  - `ui-views-tree.js` (651 Z.) — Sanduhr-Baum + Fan Chart (`showTree`, `showFanChart`, Tastaturnavigation)
+- `index.html`: Script-Tags um 4 neue Module erweitert
+
+*Aktuelle sw-Version: v94 / Cache: stammbaum-v94*
+
+---
+
+### Session 2026-04-03 — Bug 7 Fix: doppelter treeNavBack() (sw v93)
+
+- **Fix Bug 7**: Doppelter `keydown`-Handler in `ui-forms.js` rief `treeNavBack()` beim ArrowLeft-Druck ein zweites Mal auf — überflüssiger ArrowLeft-Zweig in `ui-forms.js` entfernt
+
+*Aktuelle sw-Version: v93 / Cache: stammbaum-v93*
+
+---
+
+### Session 2026-04-01 — Bug 5 + Bug 7 Fix: Topbar + History (sw v92)
+
+- **Fix Bug 7**: `goBack()` legt keinen neuen History-Eintrag mehr an — `showTree(prev.id, false)` verhindert Doppeleintrag beim Zurück-Navigieren
+- **Fix Bug 5**: `resize`-Handler ruft `_updateTopbarH()` sofort auf — Suchzeile schließt nahtlos an Topbar im Querformat an
+
+*Aktuelle sw-Version: v92 / Cache: stammbaum-v92*
+
+---
+
+### Session 2026-03-31 — OneDrive + Filemap-Fixes (sw v89–v91)
+
+- **Fix (sw v91)**: Filemap-Index-Sync — Foto wird nach OneDrive-Auswahl korrekt geladen; Race-Condition beim IDB-Schreiben/Lesen behoben
+- **Fix (sw v90)**: OneDrive-Picker gibt absoluten Pfad zurück (nicht relativen)
+- **Fix (sw v89)**: Medien-Basispfad wird automatisch aus GEDCOM-Importen erkannt
+- **Fix**: Kamera/Galerie übernimmt konfigurierten Basispfad; vollständiger Pfad für alle Medien gespeichert
+- **Fix**: OneDrive-Picker startet in konfiguriertem Ordner; vollständiger Pfad wird übergeben
+
+*Aktuelle sw-Version: v91 / Cache: stammbaum-v91*
+
+---
+
+### Session 2026-03-31 — Einstellungen + Baum Auto-Fit (sw v86)
+
+- **Fix**: Einstellungen immer zugänglich (auch wenn kein GEDCOM geladen)
+- **Fix**: Medien-Basispfad Pre-fill korrekt vorbelegt
+- **Fix**: Baum Auto-Fit bei Generationenwechsel springt nicht mehr
+- Cache-Update: `sw.js` Precache für Settings-Änderungen aktualisiert
+
+*Aktuelle sw-Version: v86 / Cache: stammbaum-v86*
+
+---
+
 ## Version 4.0 ✅ (Branch `main`, ab 2026-03-30)
 
 Schwerpunkt: Roundtrip-Vollständigkeit, ENGA-Ausbau, Quellenmanagement, Desktop UI/UX, Mobile, State-Refactoring.

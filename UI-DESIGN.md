@@ -55,6 +55,7 @@ body
 │   ├── #modalRelPicker     Beziehungs-Picker: Person suchen/wählen oder neu erstellen (v1.1)
 │   ├── #modalRepo          Archiv bearbeiten/erstellen (v1.2)
 │   ├── #modalRepoPicker    Archiv-Picker im Quellen-Formular (v1.2)
+│   ├── #modalChildRel      Kind-Verhältnis bearbeiten (PEDI-Dropdown + Quellen-Widget)
 │   ├── #modalOneDrive      OneDrive-Ordner-Browser (Fotos importieren / Datei wählen / Ordner wählen)
 │   ├── #modalLightbox      Vollbild-Foto-Overlay + „Als Hauptfoto setzen"-Button
 │   ├── #modalMenu          ☰ Menü (Speichern, Backup, neue Datei, OneDrive-Aktionen)
@@ -87,6 +88,14 @@ v-detail           (BottomNav versteckt)
 - `goBack()` popt den Stack; leer → `showMain()`
 - Alle show-Funktionen haben `pushHistory = true` als Default-Parameter
   - `goBack()` ruft mit `pushHistory = false` → kein neuer History-Eintrag
+
+### Swipe-Right (Zurück, Mobile)
+`_initDetailSwipe()` — einmalig registriert (Flag `_swipeInit`), aufgerufen beim Wechsel auf `v-detail`.
+- **Trigger:** 1 Finger-Touch auf `#v-detail`; kein Modal offen
+- **Erkennung:** `dx > 60px` + `|dx| > |dy| × 1.2` (horizontal dominiert) + `elapsed < 400ms`
+- **Visuelles Feedback:** `translateX(dx)` während des Swipe; `transition: transform 0.2s` beim Loslassen
+- **Aktion:** `goBack()` — identisch mit ← Zurück-Button
+- **Kein Konflikt** mit vertikalem Scrollen (dy-Check) und Modals (früher Abbruch)
 
 ### Bottom-Nav Highlight
 `setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places', 'search' }`
@@ -189,6 +198,27 @@ body.desktop-mode:
 | `.landing-tagline` | Tagline auf Landing-Screen |
 | `.btn-link` | Textlink-Button (Hilfe-Link auf Landing-Screen) |
 
+### Badge- und Symbol-Konventionen
+
+Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
+
+| Symbol / Klasse | Bedeutung | Kontext |
+|---|---|---|
+| `📎` | Medien-Anhang vorhanden (OBJE, Foto, Dokument) | Personen-/Familien-Liste, Detail-Hero |
+| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID; Tooltip = `s.abbr \|\| s.title` | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
+| `+ Q` (gestrichelt) | Quellen-Zitat hinzufügen — CTA wenn noch keine Quelle zugewiesen | Kindbeziehungs-Zeile, Events ohne Quellen |
+| `½` (`.tree-half-badge`) | Halbgeschwister — Kind gehört zu anderer Ehe des Zentrum-Elternteils | Baum-Karte (bottom-right) |
+| `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Baum |
+| `◑` | Fan-Chart-Umschalter in Topbar | Baum-Topbar |
+
+**Regeln:**
+- `📎` steht **ausschließlich** für Medien/OBJE — nie für Quellen
+- Quellen werden **überall einheitlich** als `.src-badge` `§N` dargestellt — in fact-rows, Kindbeziehungs-Zeilen und allen anderen Kontexten
+- Tooltip auf `.src-badge` zeigt immer den Quellentitel (`s.abbr || s.title`, max. 60 Zeichen), nicht die GEDCOM-ID
+- Click auf `.src-badge` öffnet je nach Kontext `showSourceDetail(sid)` (fact-row) oder den zugehörigen Dialog (z.B. `showChildRelDialog`)
+- `+ Q` erscheint nur wenn wirklich 0 Quellen zugewiesen sind; verschwindet nach erstem Hinzufügen
+- `.src-tag` wird **nicht** verwendet — war ein veraltetes Zwischenformat, abgelöst durch `.src-badge`
+
 ### Geschlecht im Baum
 ```css
 /* data-sex Attribut auf .tree-card → border-left Farbe */
@@ -235,6 +265,11 @@ Ebene +1:         [K0] [K1] [K2] [K3]       ← max. 4 Kinder/Zeile, mehrzeilig
 - Klick auf reguläre Karte → `showTree(id)` (neu zentrieren)
 - Klick auf Zentrum-Karte → `showDetail(id)` → Zurück führt wieder zum Baum
 - ⧖-Button in Detailansicht und Familienansicht → öffnet Tree
+- **Pinch-to-Zoom** (Mobile): `touchstart/touchmove/touchend` auf `#treeScroll` mit 2 Fingern
+  - Startwert: `_pinchStartDist` (Euklidischer Abstand der 2 Touch-Punkte) + `_pinchStartScale`
+  - `_treeZoomScale = clamp(0.3, 3, _pinchStartScale × dist / _pinchStartDist)`
+  - Anwendung: `#treeWrap { transform: scale(_treeZoomScale) }` + `#treeScaleWrap` Größe angepasst
+  - Bereich: 0.3× (Übersicht) bis 3× (Detail)
 - **Drag-to-Pan** (Desktop): `mousedown/mousemove/mouseup` auf `#treeScroll`; 5px-Threshold verhindert versehentliches Aktivieren; Click-Event nach Drag unterdrückt
 - **Vollbild-Modus**: `⤢`-Button in Topbar; `body.tree-fullscreen` blendet Sidebar aus; Toggle zu `⤡`
 - **Tastaturnavigation** (Desktop):

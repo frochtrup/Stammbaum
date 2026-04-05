@@ -8,168 +8,220 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 | Version | Branch | Status |
 |---|---|---|
-| 3.0 | (archiviert) | Abgelöst durch v4.0 |
-| 4.0 | `main` | Live — stabil |
-| 5.0 | `v5-dev` (geplant) | In Planung |
+| 4.0 | `main` | Abgeschlossen (2026-03-30) — Details: CHANGELOG.md |
+| 5.0 | `main` | Abgeschlossen (2026-04-05) — Details: CHANGELOG.md |
+| 6.0 | `v6-dev` | In Entwicklung |
 
-**Roundtrip:** `stable=true`, `net_delta=-4` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
+**Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v82 / Cache: `stammbaum-v82`
+**Aktuelle sw-Version:** v152 / Cache: `stammbaum-v152`
 
 ---
 
-## Version 4.0 ✅ ABGESCHLOSSEN (Branch `main`, ab 2026-03-30)
+## Version 6.0 (Branch `v6-dev`, ab 2026-04-05)
 
-### Schwerpunkt 1: Passthrough-Reduktion ✅ ABGESCHLOSSEN (2026-03-29)
+*Planung in Arbeit — offene Punkte aus v5 + neue Schwerpunkte*
 
-Ziel erreicht: Alle tag-counts im Roundtrip-Test ✓, delta=-4 (nur CONC/CONT-Neuformatierung).
+### Offen aus v5
 
-- [x] HEAD-Rewrite: vollständiger Erhalt aller HEAD-Felder via `_headLines[]` ✅
-- [x] ENGA vollständig: Parser + Writer + alle Felder ✅
-- [x] sourceMedia{}: OBJE unter SOUR-Zitierungen strukturiert ✅
-- [x] Medien-Verwaltung: Einheitliches Karten-Layout, Edit-Modal, async Thumbnails ✅ (sw v50–v52)
+- [ ] Zeitleiste (`ui-timeline.js`) — Personen/Ereignisse auf horizontaler Zeitachse
+- [ ] Nachkommen-Baum (top-down SVG)
+- [ ] Karten-Ansicht (Apple Maps Link-Cluster oder leaflet.js)
+- [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
+- [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
+- [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
+- [ ] `writeGEDCOM()` in Subfunktionen aufteilen (477-Zeilen-Monolith)
+- [ ] `touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen
+- [ ] Globale Suche indexieren (Debounce + vorberechneter Index)
 
-**Akzeptiertes Rest-Delta** (kein Datenverlust, nur Formatnormalisierung):
-- CONC/CONT -35/-26: Langen Text neu umbrechen
-- PAGE -22, TIME -1, DATE -1: Normalisierung
-- Passthrough-Reste: childRel.extra (44 Eintr.), SOUR._passthrough (2), NOTE._passthrough (1), extraRecords (2)
+### Neue Schwerpunkte
 
-**Offen (niedrige Priorität, kein Datenverlust):**
-- FAM-Events: `DIV`, `DIVF` — noch in passthrough
-- INDI-Events: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`
-- Mehrere inline INDI-Notes: konkateniert statt Array
-- Zweite `1 NAME`-Einträge (Geburtsname etc.)
-
-### Schwerpunkt 2: Desktop UI/UX ✅ ABGESCHLOSSEN (2026-03-29)
-
-- [x] Grössere Bäume: 4 Vorfahren-Ebenen (Eltern, Großeltern, Urgroßeltern, Ururgroßeltern) ✅ (sw v57)
-- [x] Vollbild-Baum-Modus (ohne Listenspalte links) ✅ (sw v56)
-- [x] Baum-Navigation: Drag-to-Pan via Maus ✅ (sw v56)
-- [x] Tastaturnavigation im Baum (↑ Vater, ⇧↑ Mutter, ↓ Kind, → Partner, ← Zurück) ✅ (sw v58)
-- [x] Pfeil-Legende unten rechts im Baum ✅ (sw v58)
-
-### Schwerpunkt 3: Quellenmanagement ✅ ABGESCHLOSSEN (2026-03-29)
-
-- [x] Quellen-Detailansicht: Mediendateien aus GEDCOM-Pfaden anzeigen — statische Icons + async OneDrive-Laden ✅ (sw v48)
-- [x] OneDrive Dokumente-Ordner: Scan → Dateiname-Matching → auto-Vorschau ohne manuelles Verknüpfen ✅ (sw v49)
-- [x] sourceMedia{}: OBJE unter SOUR-Zitierungen strukturiert — kein Datenverlust im Roundtrip ✅ (sw v45)
-- [x] Einheitliches Medien-UI: Karten-Layout, Edit-Modal + Thumbnail in allen Ansichten ✅ (sw v50–v52)
-- [x] OneDrive-Einstellungen: Ordner-Anzeige, Ändern, Zurücksetzen ✅ (sw v53)
-- [x] Quellenansicht: verknüpfte Personen/Familien auflisten (Rückverweise) ✅ (war schon implementiert via `sourceRefs`)
-- [x] Kamera-Button in „Medium hinzufügen": `capture="environment"` + Galerie-Option + IDB-Speicherung (base64) ✅ (sw v59)
-- [x] Quellen-Vorlage: Kirchenbuch / Standesamt / Volkszählung / Familienstammbuch / Zeitungsartikel → Pre-Fill beim Anlegen ✅ (sw v59)
-- [x] Medien-Browser: alle Mediendateien aller Quellen in einer Übersicht (📎-Button im Quellen-Tab) ✅ (sw v59)
-
-### Schwerpunkt 4: Mobile UX (iPhone) — teilweise abgeschlossen
-
-- [x] Portrait-Modus: 2 Vorfahren-Ebenen im Hochformat, Querformat = 4 Ebenen ✅ (sw v60)
-- [x] Baum Portrait kompakt (360px), Pinch-to-Zoom im Querformat ✅ (sw v62)
-- [x] Proband konfigurierbar (nicht mehr automatisch kleinste ID); Button in Topbar ✅ (sw v68)
-- [x] Kekule/Ahnentafel-Nummern im Baum ✅ (sw v68–v69)
-- [x] Foto-Upload aus Formularen entfernt — nur noch über Medien-Abschnitt ✅ (sw v60)
-- [x] Schnell-Formular für neue Quellen: nur ABBR + Titel sichtbar, Optional-Felder per Toggle erweiterbar ✅ (sw v76)
-- [x] Swipe-Gesten: Swipe-Right = Zurück in allen Detailansichten, mit visueller Rückmeldung ✅ (sw v76)
-- [x] Desktop: Listenmarkierung folgt Baumnavigation sofort; Suchfeld sticky ✅ (sw v78–v80)
-- [ ] Offline-Sync-Indikator: zeigt ausstehende Änderungen die noch nicht in OneDrive gespeichert sind
-
-### Offene Features (backlog) ✅ ABGESCHLOSSEN (2026-03-30)
-
-- [x] Medienlinks in Events analog zu Quellen-Ansicht (Bilder + Dokumente je Event klickbar) ✅
-- [x] Medienlinks überall editierbar (Person, Familie, Event, Quelle — einheitliches Verhalten) ✅
-- [x] Konfigurierbare Foto/Dokumente-Verzeichnisse ohne OneDrive (lokale Pfade) ✅
-- [x] Quellenliste: Badge wenn externe Mediendatei verknüpft vorhanden ✅
-- [x] Bug: `2 PAGE` erscheint doppelt in bestimmten Konstellationen — prüfen ✅
+*(werden in der nächsten Session definiert)*
 
 ---
 
-### Schwerpunkt 5: State-Management-Refactoring ✅ ABGESCHLOSSEN
-
-**Ziel:** 22 cross-file Globals in `gedcom.js` in benannte Namespace-Objekte gruppieren. Kein neues Framework, kein Build-Step, Vanilla JS.
-
-**Ist-Zustand:** 22 Variablen in gedcom.js direkt als `let` deklariert, von allen Dateien ungekapselt gelesen/geschrieben.
-
-**Soll-Zustand:** 2 Namespace-Objekte + schrittweise Migration der Aufrufer.
-
-#### Schritt 1 — Namespaces in `gedcom.js` einführen
-
-```javascript
-const AppState = {
-  db: null, changed: false, idCounter: 1,
-  currentPersonId: null, currentFamilyId: null,
-  currentSourceId: null, currentRepoId: null,
-  currentTab: 'persons', _detailActive: false,
-  _fileHandle: null, _canDirectSave: false, _originalGedText: ''
-};
-
-const UIState = {
-  _treeScale: 1, _treeHistory: [], _treeHistoryPos: -1,
-  _relMode: null, _relAnchorId: null,
-  _pendingRelation: null, _pendingRepoLink: null,
-  _newPhotoIds: new Set(), _deletedPhotoIds: new Set(),
-  _placesCache: null
-};
-```
-
-Backward-compat-Aliase direkt danach (übergangsweise):
-
-```javascript
-// Aliase für schrittweise Migration — werden Datei für Datei entfernt
-let db = AppState.db;  // usw.
-```
-
-#### Schritt 2 — Aufrufer migrieren (Datei für Datei)
-
-| Datei | Cross-file Zugriffe | Aufwand |
-|---|---|---|
-| `storage.js` | db, changed, idCounter, currentPersonId/FamilyId/SourceId/RepoId, currentTab, _detailActive, _fileHandle, _canDirectSave, _originalGedText, _treeHistory, _treeHistoryPos, _treeScale, _relMode, _relAnchorId, _pendingRelation, _pendingRepoLink, _newPhotoIds, _deletedPhotoIds, _placesCache | hoch |
-| `ui-views.js` | db, changed, currentPersonId, _treeHistory, _treeHistoryPos, _treeScale | mittel |
-| `ui-forms.js` | db, changed, currentPersonId, currentFamilyId, currentSourceId, currentRepoId, _newPhotoIds, _deletedPhotoIds | mittel |
-| `ui-media.js` | db, changed, currentPersonId, currentFamilyId, currentSourceId, _newPhotoIds, _deletedPhotoIds | gering |
-| `onedrive.js` | changed, _fileHandle, _canDirectSave | gering |
-
-#### Schritt 3 — Aliase entfernen
-
-Sobald alle Aufrufer migriert: `let db = AppState.db` etc. aus gedcom.js entfernen.
-
-**Optionaler Schritt 4 — Setter mit Nebeneffekten** (spätere Phase)
-
-```javascript
-// Statt: changed = true; _placesCache = null;
-// AppState.setChanged(true) → setzt Flag + leert Cache + triggert UI-Update
-```
-
-**Risiko:** gering — Aliase überbrücken alte API während Migration.
-**Abhängigkeiten:** keine (kein neues Framework, kein Build-Step).
-
----
-
-## Version 5.0 (Branch `v5-dev`, geplant)
+## Version 5.0 (Branch `v5-dev`, 2026-03-30 — 2026-04-05) — ABGESCHLOSSEN
 
 ### Schwerpunkt 1: Weitere Darstellungen
 
 Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf Desktop und iPhone Querformat.
 
-#### Fächer-/Halbkreisdiagramm (Fan Chart)
-- [ ] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
-- [ ] Gut geeignet für Desktop (breiter Viewport) und iPhone Querformat
-- [ ] Rendering: SVG, polar coordinates; Segmente klickbar → showTree(id) oder showDetail(id)
-- [ ] Konfigurierbar: 3–6 Generationen, Vollkreis oder Halbkreis
-- [ ] Integration: eigener Tab-Button oder Toggle im Baum-View
+#### Fan Chart (Fächer-/Halbkreisdiagramm) — ✅ ABGESCHLOSSEN (sw v83–v84)
+- [x] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
+- [x] Rendering: SVG, polar coordinates; Segmente klickbar → showFanChart(id) oder showDetail(id)
+- [x] Konfigurierbar: 3–6 Generationen; Buttons in Topbar
+- [x] Toggle-Button `◑` im Baum-View; Desktop + Mobile
+- [x] Neue Datei `ui-fanchart.js`
 
-#### Weitere mögliche Darstellungen (niedrigere Prio)
-- [ ] Nachkommen-Baum (top-down): Probanden oben, Kinder/Enkel nach unten
-- [ ] Zeitleiste: Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
-- [ ] Karten-Ansicht: Geburts-/Sterbeorte auf Landkarte (leaflet.js oder Apple Maps Link-Cluster)
+#### Generationen-Buttons im Sanduhr-Baum — ✅ ABGESCHLOSSEN (sw v84)
+- [x] Buttons 2/3/4/5/6 in Topbar (nur bei tree-active); Standard 5
+- [x] Dynamische Positionsfunktionen für bis zu 5 Ahnen-Ebenen (32 Slots)
+- [x] Portrait bleibt auf max. 2 Ebenen begrenzt
+
+#### Zeitleiste — Priorität 2
+- [ ] Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
+- [ ] Gefiltert nach aktueller Person + direkte Vorfahren/Nachkommen
+- [ ] Neue Datei `ui-timeline.js`
+
+#### Nachkommen-Baum — Priorität 3
+- [ ] Probanden oben, Kinder/Enkel nach unten (top-down SVG)
+
+#### Karten-Ansicht — Priorität 4
+- [ ] Geburts-/Sterbeorte auf Landkarte (Apple Maps Link-Cluster oder leaflet.js)
+
+---
+
+### Schwerpunkt 2: Performance + UX
+
+#### Virtuelles Scrollen ✅ sw v145
+- [x] Listen >500 Einträge: nur sichtbare Zeilen + Puffer im DOM rendern
+- [x] Betrifft: Personen-Liste (2811 Eintr.), Familien-Liste (880 Eintr.)
+- [x] Kein Framework; Spacer-div-Ansatz, Binary-Search O(log n)
+
+#### Statistik-Dashboard — Priorität 2
+- [ ] Neues Modal oder eigener Tab: Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte
+- [ ] Karten-Grid (Personen, Familien, Quellen, Medien, fehlende Daten %)
+
+#### Offline-Sync-Indikator — ✅ ABGESCHLOSSEN (sw v152)
+- [x] Floating Pill über Bottom-Nav: "● Nicht gespeichert" + Speichern-Button
+- [x] Button adaptiv: ☁ Speichern (OD) · ↑ Teilen (iPhone) · ↓ Speichern (Desktop)
+- [x] Global in allen Views sichtbar; erscheint/verschwindet via `updateChangedIndicator()`
+
+---
+
+### Schwerpunkt 3: Datenqualität
+
+#### Erweiterte Events (restliche Passthrough-Reste) — Priorität 1
+- [x] FAM-Events: `DIV`, `DIVF`, `ENG`/`ENGA` — strukturiert statt passthrough ✅ (sw v134–v135)
+- [x] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — "Ereignisse"-Sektion in Familiendetail, Verlobung aus Haupt-Edit in Ereignisliste verschoben ✅ (sw v147)
+- [x] INDI-Events: `DSCR`, `IDNO`, `SSN` — strukturiert statt passthrough ✅ (sw v148)
+
+#### Ereignisliste Personendetail — ✅ ABGESCHLOSSEN (sw v150)
+- [x] Gleiche Ereignistypen als Block gruppiert darstellen (alle OCCU zusammen, alle RESI zusammen etc.)
+- [x] Innerhalb jedes Blocks: Ereignisse nach Datum sortiert (undatierte ans Ende)
+
+#### Duplikat-Erkennung — Priorität 2
+- [ ] Personen mit gleichem Name + Geburtsjahr (±2): Hinweis + Vergleichs-Ansicht
+- [ ] Kein automatisches Merge — nur Anzeige + manuelle Entscheidung
+
+#### Volltextsuche — Priorität 3
+- [ ] Suche über Ereignis-Orte, Quellen-Titel, Notizen (nicht nur Name)
+- [ ] Erweiterung des bestehenden Suchfelds in Personen-/Quellen-Liste
+
+---
+
+### Schwerpunkt 4: OneDrive-Integration
+
+#### Startsequenz — ✅ ABGESCHLOSSEN (sw v151)
+- [x] Auswahl-Dialog bei Neustart (kein Session-Token): "☁ Von OneDrive laden" vs. "📱 Lokal"
+- [x] Gleiche Session (Token in sessionStorage): direkt von OneDrive laden, kein alter IDB-Stand
+- [x] OAuth-Return mit `od_autoload_pending`: nach Login automatisch Datei laden
+- [x] Timeout 8s + stiller Fallback auf IDB bei Fehler/Offline
+- [x] `_odRefreshTokenSilent()` — Token-Refresh ohne OAuth-Redirect (kein ungewolltes Login)
+- [x] `window._odCallbackPromise` — `window.load` wartet auf laufenden OAuth-Callback
+
+---
+
+### Schwerpunkt 5: Sonstiges
+
+#### Offene Fehler — ✅ ABGESCHLOSSEN (sw v149–v150)
+- [x] Bug: Neue Quellenzuordnung bei FAM-/INDI-Ereignis erschien nicht sofort in Quellendetail „Verwendet in" — behoben durch `_rebuildPersonSourceRefs()` / `_rebuildFamilySourceRefs()` nach jedem Event-Save/Delete (sw v149)
+- [x] Bug: `saveFamily()` setzte `sourceRefs` nur aus Hochzeits-Quellen → Verlobung/Scheidung-Quellen fehlten in Referenzliste — behoben sw v149
+
+#### Fehler allgemein — ✅ ABGESCHLOSSEN (sw v85)
+- [x] Fan Button wird nicht angezeigt ✅ (sw v84)
+- [x] bei 'Medien einfügen' den vollständigen Pfad abspeichern ✅ (sw v85)
+- [x] bei 'Medien einfügen' mit dem in der Konfiguration definierten Dateipfad starten ✅ (sw v85)
+- [x] neues Sonstiges Ereignis speichert den Typ nicht ✅ (sw v85)
+- [x] ermögliche das Löschen von Ereignissen ✅ (sw v85)
+
+#### Fehler Mobile — ✅ ABGESCHLOSSEN (sw v91–v92)
+- [x] Querformat mit Liste: Suchzeile Gap zur Topbar ✅ (sw v92)
+- [x] Personen Detail: Foto Anzeige nach Verknüpfung neues Bild ✅ (sw v91)
+
+#### Fehler Desktop — ✅ ABGESCHLOSSEN (sw v92–v93)
+- [x] Pfeil links: ein Tastendruck → zwei Schritte zurück ✅ (sw v92–v93)
+
+#### Refactoring: ui-views.js Split — ✅ ABGESCHLOSSEN (sw v94–v95)
+- [x] `ui-views.js` (1963 Z.) aufgeteilt in 5 Module (sw v94)
+- [x] `showSourceDetail()` aus `ui-forms.js` in `ui-views-source.js` ausgelagert (sw v95)
+
+#### Medien-Handling Überarbeitung — ✅ ABGESCHLOSSEN (sw v96–v99)
+- [x] Relative OneDrive-Pfade: `_odPickSelectFile` speichert `fullPath` direkt (sw v96)
+- [x] Bevorzugtes Medium (`_PRIM Y`) in Titelleiste Person/Familie/Quelle (sw v96)
+- [x] Bug fix: `_odEditPickMode` zeigte keine Dateien (sw v97)
+- [x] `↑ Übergeordneter Ordner`-Button im Picker (sw v97–v98)
+- [x] `_odGetMediaUrlByPath(path)` — path-based OneDrive API, ein Pfad = eine Datei (sw v99)
+- [x] `od_filemap` nur noch Legacy-Fallback; Pfad in `m.file` ist Single Source of Truth (sw v99)
+- [x] Kamera-Fotos werden per PUT-API direkt in konfigurierten OneDrive-Ordner hochgeladen (sw v100)
+
+#### OneDrive-Pfad-Architektur: od_base_path — ✅ ABGESCHLOSSEN (sw v107–v112)
+- [x] `@microsoft.graph.downloadUrl` statt `/content`-Redirect (CORS-Fix) (sw v107)
+- [x] Picker-Pfad filtert `'OneDrive'`-Prefix konsistent (sw v108)
+- [x] Ordner-Picker startet bei konfiguriertem Ordner (nicht Root) (sw v109)
+- [x] `od_base_path` = einzige absolute Referenz; alle `m.file` relativ dazu (sw v110)
+- [x] `od_photo_folder` / `od_docs_folder` mit `relPath`-Feld (sw v110)
+- [x] `od_base_path` automatisch aus GED-Datei `parentReference.path` ableiten (sw v111)
+- [x] Einstellungen: Startpfad separat anzeigen; Ordner als relativer Pfad (sw v112)
+
+#### PEDI + Eltern-Kind-Quellen — ✅ ABGESCHLOSSEN (sw v121–v124)
+- [x] PEDI statt `_FREL`/`_MREL` — GEDCOM 5.5.1 Standard (sw v121)
+- [x] UI: inline PEDI-Dropdown in Familien-Ansicht + Suffix in Personen-Ansicht (sw v122)
+- [x] `#modalChildRel` — PEDI + Quellenangabe pro Kind-Verhältnis (sw v123)
+- [x] `.src-badge §N`-Stil für Kind-Verhältnis-Quellen (sw v124–v126)
+
+#### Quellen-Badges + OneDrive-Fix + DIV/DIVF strukturiert — ✅ ABGESCHLOSSEN (sw v125–v135)
+- [x] `.src-badge §N` einheitlich für alle Kontexte; Tooltip = `s.title || s.abbr` (sw v125–v127)
+- [x] `@@S2@@` doppelte @-Bug in Source-IDs behoben (sw v128–v129)
+- [x] OneDrive-Speichern: robuste Fehlerbehandlung, 30s Timeout, Pfad im Toast (sw v130–v133)
+- [x] DIV / DIVF / ENG strukturiert in Parser + Writer + Anzeige (sw v134)
+- [x] ENGA im Passthrough-Filter; Menü OneDrive-first; Roundtrip explizit (sw v135)
+
+---
+
+### Schwerpunkt 5 — OCR
+- [ ] Konzept in `OCR.md`
+
+---
+
+---
+
+### Schwerpunkt 6: Code-Qualität & Sicherheit (aus Review 2026-04-05)
+
+#### Sicherheit — Priorität 1
+
+- [x] **OAuth-Token von `localStorage` → `sessionStorage`** — Token sind aktuell im DevTools lesbar und bei XSS abgreifbar; betrifft OneDrive-Vollzugriff (onedrive.js, storage.js)
+- [x] **Service Worker: Netzwerk-Timeout einbauen** — Network-first ohne Fallback-Timeout lässt App bei hängendem Netz unbegrenzt warten; Fix: 4s-Timeout → Cache-Fallback (sw.js)
+- [x] **`demo.ged` aus Produktions-Cache entfernen** — wird bei jedem Nutzer unnötig mitgeladen (sw.js)
+
+#### Performance — Priorität 2
+
+- [ ] **`touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen** — feuert aktuell 100+/s direkt auf DOM-Properties, Frame-Drops auf älteren iPhones (ui-views-tree.js)
+- [ ] **Globale Suche indexieren** — O(n×m) auf alle Personen/Felder ohne Cache; spürbar ab ~1000 Personen; Debounce + vorberechneter Index (ui-views.js)
+
+#### Refactoring — Priorität 3
+
+- [x] **Inline Event-Handler durch Event-Delegation ersetzen** — `oninput="updateSrcPage(...)"` u.ä. sind XSS-anfällig bei unvollständigem Escaping und erzeugen Memory-Leaks bei Modal-Reopen (ui-forms.js, viele ui-*.js)
+- [x] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=4) (gedcom-parser.js) ✅ (sw v138)
+- [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
+- [x] **`catch { return null }` durch echtes Error-Handling ersetzen** — maskiert alle OneDrive-API-Fehler, erschwert Debugging (onedrive.js) ✅ (sw v139)
+- [x] **`onedrive.js` in 3 Module aufteilen** — 946-Zeilen-Monolith; `onedrive-auth.js` (OAuth-Flow, Token), `onedrive-import.js` (Foto-Import-Wizard, Ordner-Browser), `onedrive.js` (Media-URL, File-I/O, Pfad-Helfer, Settings) ✅ (sw v140)
+- [x] **`ui-forms.js` in 3 Module aufteilen** — 1036 Zeilen; `ui-forms-event.js` (Event-Formular ~170 Z.), `ui-forms-repo.js` (Archiv/Picker/Detail ~163 Z.), `ui-forms.js` (Person/Familie/Quelle + Utilities ~706 Z.) ✅ (sw v141)
 
 ---
 
 ## Offene Architektur-Schulden
 
-- State-Management: ✅ Abgeschlossen — AppState/UIState + vollständige Migration aller Dateien
-- Virtuelles Scrollen für Listen >1000 Einträge
+- ~~Virtuelles Scrollen für Listen >500 Einträge~~ → behoben sw v145: Spacer-div, Binary-Search, Desktop-Sync-Fix sw v146
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 - Duplikat-Erkennung in Suche
+- ~~DIV/DIVF/ENG: Formularfelder für Datum/Ort~~ → behoben sw v147: "Ereignisse"-Sektion in Familiendetail
+- ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
+- ~~Inline Event-Handler in HTML-Strings~~ → behoben sw v137: globale Event-Delegation
+- ~~GEDCOM-Parser ohne Fehler-Sammler~~ → behoben sw v138: `parseErrors[]` + Level-Validierung
+- ~~`sourceRefs` nach Event-Save nicht aktualisiert~~ → behoben sw v149: rebuild-Funktionen nach save/delete
+- ~~Ereignisliste unsortiert/ungruppiert~~ → behoben sw v150: Typ-Gruppen + Datum-Sortierung
 
 ---
 
@@ -177,12 +229,12 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 | Plattform | Browser | Laden | Speichern |
 |---|---|---|---|
-| iPhone (iOS 17+) | Safari | ✅ | ✅ Share Sheet |
-| iPhone (iOS 17+) | Chrome | ✅ | ⚠️ Share Sheet nicht unterstützt |
-| Mac | Safari | ✅ | ⚠️ Download (kein direktes Speichern) |
-| Mac | Chrome | ✅ | ✅ Direktes Speichern |
-| Mac | Firefox | ✅ | ⚠️ Download |
-| Android | Chrome | ✅ | ⚠️ Apple Maps Links funktionieren nicht |
+| iPhone (iOS 17+) | Safari | ✅ | ✅ OneDrive (primär) / Share Sheet (lokal) |
+| iPhone (iOS 17+) | Chrome | ✅ | ✅ OneDrive (primär) |
+| Mac | Safari | ✅ | ✅ OneDrive (primär) / Download (lokal) |
+| Mac | Chrome | ✅ | ✅ OneDrive (primär) / Direktes Speichern (lokal) |
+| Mac | Firefox | ✅ | ✅ OneDrive (primär) / Download (lokal) |
+| Android | Chrome | ✅ | ✅ OneDrive (primär) |
 
 ---
 
