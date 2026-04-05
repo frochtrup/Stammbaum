@@ -70,7 +70,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 #### Erweiterte Events (restliche Passthrough-Reste) — Priorität 1
 - [x] FAM-Events: `DIV`, `DIVF`, `ENG`/`ENGA` — strukturiert statt passthrough ✅ (sw v134–v135)
 - [x] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — "Ereignisse"-Sektion in Familiendetail, Verlobung aus Haupt-Edit in Ereignisliste verschoben ✅ (sw v147)
-- [ ] INDI-Events: selten genutzte Tags die noch in passthrough landen (z.B. `DSCR`, `IDNO`)
+- [x] INDI-Events: `DSCR`, `IDNO`, `SSN` — strukturiert statt passthrough ✅ (sw v148)
 
 #### Duplikat-Erkennung — Priorität 2
 - [ ] Personen mit gleichem Name + Geburtsjahr (±2): Hinweis + Vergleichs-Ansicht

@@ -174,7 +174,8 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag === 'DEAT') { cur.death.value = val; cur.death.seen = true; }
         else if (tag === 'BURI') { cur.buri.value  = val; cur.buri.seen  = true; }
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
-                  'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB'].includes(tag)) {
+                  'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB',
+                  'DSCR','IDNO','SSN'].includes(tag)) {
           cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', addr:'', phon:[], email:[], sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, media:[], _extra:[] });
           evIdx = cur.events.length - 1;
         }

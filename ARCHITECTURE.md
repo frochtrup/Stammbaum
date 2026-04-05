@@ -226,8 +226,8 @@ _ptDepth = 1;
 **Wichtig — lv > 4 (sw v138/v142):** Zeilen mit Level > 4 werden als Fehler in `_errors[]` protokolliert, aber der Passthrough-Block läuft trotzdem. `continue` darf hier NICHT stehen — sonst werden z.B. `5 TYPE photo` (unter `4 FORM` unter `3 OBJE` in event→SOUR→OBJE→FILE) komplett verworfen. Dies war eine Regression in sw v138 die in sw v142 behoben wurde.
 
 **Was landet in `_passthrough` (INDI):**
-- Unbekannte lv=1-Tags: `DSCR`, `IDNO`, `SSN`
 - `1 OBJE @ref@`-Referenzen (externe Medien-Records)
+- *(Nicht mehr in passthrough: `DSCR`, `IDNO`, `SSN` — seit sw v148 als `events[]` strukturiert)*
 - *(Nicht mehr in passthrough: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` — seit v4-dev als `events[]` strukturiert)*
 - *(Nicht mehr in passthrough: Extra-NAME-Blöcke — seit v4-dev strukturiert in `extraNames[]`, vollständig editierbar via ui-forms.js)*
 
@@ -279,6 +279,7 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 **Optimierungspotenzial (kein Datenverlust, aber im UI nicht editierbar):**
 - Mehrfache inline INDI-Notes → Roundtrip stabil (`noteTexts[]`-Array); beim Editieren im Formular zu einer Note zusammengeführt
 - *(Erledigt: `DIV`, `DIVF`, `ENG`/`ENGA` → seit sw v134 als strukturierte FAM-Events)*
+- *(Erledigt: `DSCR`, `IDNO`, `SSN` → seit sw v148 als events[] strukturiert)*
 - *(Erledigt: `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB` → seit v4-dev als events[] strukturiert)*
 - *(Erledigt: Extra-NAME-Blöcke → seit v4-dev `extraNames[]`, vollständig editierbar)*
 
@@ -298,6 +299,7 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 | v4-dev 2026-03-28: ENGA MAP, leere DATE/PLAC `null`-Init | **≈0** |
 | v5-dev 2026-04-05: DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter fix (sw v135) | **≈0** |
 | v5-dev 2026-04-05: Parser lv>4 passthrough fix + writer `updateHeadDate=false` (sw v142) | **0** |
+| v5-dev 2026-04-05: `DSCR`/`IDNO`/`SSN` aus passthrough → `events[]` (sw v148) | **0** |
 
 `roundtrip_stable: true` · `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
 
@@ -436,7 +438,7 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 
 | Problem | Ursache | Status |
 |---|---|---|
-| DIV/DIVF nicht editierbar | FAM-Events fehlen im Parser (in _passthrough) | Backlog |
+| ~~DIV/DIVF nicht editierbar~~ | → sw v134/v147: als FAM-Events strukturiert + Formularfelder | Abgeschlossen (v5-dev) |
 | Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
 | ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen (v4.0) |

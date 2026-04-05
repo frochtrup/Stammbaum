@@ -9,6 +9,18 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-05 — INDI-Events erweitert (sw v147–v148)
+
+- **sw v147** `feat`: FAM-Ereignisse — Verlobung/Scheidung/Scheidungsantrag in Detailansicht editierbar
+  - *(Details in vorherigem Commit)*
+
+- **sw v148** `feat`: INDI-Events `DSCR`, `IDNO`, `SSN` — strukturiert statt passthrough
+  - `gedcom-parser.js`: drei Tags zur events[]-Liste hinzugefügt → landen nicht mehr in `_passthrough`
+  - `index.html`: drei neue Optionen im Ereignistyp-Dropdown (vor "Sonstiges")
+  - Roundtrip bleibt `net_delta=0` — Writer behandelt alle events[] generisch
+
+---
+
 ### Session 2026-04-05 — Performance + UX (sw v143–v146)
 
 - **sw v143** `feat`: Medienbrowser in Personen- + Familien-Liste

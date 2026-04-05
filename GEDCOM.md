@@ -261,9 +261,7 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 **Via Passthrough erhalten (kein Datenverlust, aber nicht editierbar im UI):**
 | Tag-Kontext | Passthrough-Feld | Optimierungspotenzial |
 |---|---|---|
-| `CENS`, `CONF`, `FCOM`, `ORDN`, `RETI`, `PROP`, `WILL`, `PROB`, `DSCR`, `IDNO`, `SSN` als INDI-Events | `_passthrough[]` | In EVENT_LABELS definiert → könnten als `events[]` strukturiert werden |
-| `DIV`, `DIVF` als FAM-Events | FAM `_passthrough[]` | In EVENT_LABELS definiert → könnten als FAM-Events strukturiert werden |
-| `2 NICK` und andere NAME-Sub-Tags | `_passthrough[]` (via `_ptNameEnd` korrekt nach NAME-Block) | — |
+| `2 NICK` und andere NAME-Sub-Tags außer GIVN/SURN/NPFX/NSFX | `_passthrough[]` (via `_ptNameEnd` korrekt nach NAME-Block) | — |
 | `1 DATA` in SOUR-Records (GEDCOM 5.5 `2 AGNC`, `2 EVEN`) | SOUR `_passthrough[]` | Selten |
 | Mehrere `1 NAME`-Blöcke (Geburtsname, Alias) | INDI `_passthrough[]` | 2. Name editierbar machen |
 
