@@ -50,10 +50,10 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ### Schwerpunkt 2: Performance + UX
 
-#### Virtuelles Scrollen — Priorität 1
-- [ ] Listen >500 Einträge: nur sichtbare Zeilen + Puffer im DOM rendern
-- [ ] Betrifft: Personen-Liste (2811 Eintr.), Familien-Liste (880 Eintr.)
-- [ ] Kein Framework; einfacher scroll-event-basierter Ansatz
+#### Virtuelles Scrollen ✅ sw v145
+- [x] Listen >500 Einträge: nur sichtbare Zeilen + Puffer im DOM rendern
+- [x] Betrifft: Personen-Liste (2811 Eintr.), Familien-Liste (880 Eintr.)
+- [x] Kein Framework; Spacer-div-Ansatz, Binary-Search O(log n)
 
 #### Statistik-Dashboard — Priorität 2
 - [ ] Neues Modal oder eigener Tab: Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte
@@ -170,7 +170,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ## Offene Architektur-Schulden
 
-- Virtuelles Scrollen für Listen >1000 Einträge
+- ~~Virtuelles Scrollen für Listen >500 Einträge~~ → behoben sw v145: Spacer-div, Binary-Search, Desktop-Sync-Fix sw v146
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 - Duplikat-Erkennung in Suche
