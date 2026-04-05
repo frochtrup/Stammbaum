@@ -86,7 +86,16 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ---
 
-### Schwerpunkt 4: Sonstiges
+### Schwerpunkt 4: OneDrive-Integration
+
+#### Startsequenz — Priorität 1
+- [ ] Beim App-Start automatisch OneDrive verbinden (Token-Refresh im Hintergrund)
+- [ ] Bei Erfolg: letzte Datei neu von OneDrive laden (statt aus IndexedDB)
+- [ ] Bei Timeout / offline: stillschweigend auf lokalen IDB-Stand fallen (wie bisher)
+
+---
+
+### Schwerpunkt 5: Sonstiges
 
 #### Fehler allgemein — ✅ ABGESCHLOSSEN (sw v85)
 - [x] Fan Button wird nicht angezeigt ✅ (sw v84)
