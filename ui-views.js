@@ -176,13 +176,33 @@ function runGlobalSearch(q) {
   out.innerHTML = html;
 }
 
+function _getListScroll() {
+  return window.innerWidth >= 900
+    ? (document.getElementById('v-main')?.scrollTop || 0)
+    : window.scrollY;
+}
+function _setListScroll(pos) {
+  if (window.innerWidth >= 900) {
+    const el = document.getElementById('v-main');
+    if (el) el.scrollTop = pos;
+  } else {
+    window.scrollTo(0, pos);
+  }
+}
+
 function showMain() {
+  const saved = UIState._savedListScroll;
+  UIState._savedListScroll = null;
   _navHistory.length = 0; // Liste = frischer Start, History löschen
   document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
   updateStats();
   renderTab();
+  if (saved && saved.tab === AppState.currentTab) {
+    // setTimeout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
+    setTimeout(() => _setListScroll(saved.pos), 0);
+  }
 }
 
 // ─── History-Navigation ───────────────────────────────────────────
@@ -206,6 +226,9 @@ function _beforeDetailNavigate() {
     if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
       const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
       _navHistory.push({ type: _type, id: currentTreeId });
+    } else {
+      // Liste → Detail: Scroll-Position für Rückkehr sichern
+      UIState._savedListScroll = { tab: AppState.currentTab, pos: _getListScroll() };
     }
   }
 }
