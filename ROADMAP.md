@@ -98,7 +98,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 ### Schwerpunkt 5: Sonstiges
 
 #### Offene Fehler
-- [ ] Bug: Neue Quellenzuordnung bei einem Familienereignis erscheint nicht in der Referenzliste der Quelle (Quellendetail → "Verwendet in")
+- [ ] Bug: Neue Quellenzuordnung bei einem Familienereignis erscheint nicht in der Referenzliste der Quelle (Quellendetail → "Verwendet in") - nach Speichern/Laden wird es richtig angezeigt.
 
 #### Fehler allgemein — ✅ ABGESCHLOSSEN (sw v85)
 - [x] Fan Button wird nicht angezeigt ✅ (sw v84)
