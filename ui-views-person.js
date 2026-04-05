@@ -133,21 +133,41 @@ function _scrollListToCurrent(container, cur) {
   container.scrollTop += offset;
 }
 
+// VS: Item in sichtbaren Bereich scrollen + re-rendern + current-Klasse setzen
+function _vsScrollAndHighlight(st, listEl, idx, dataAttr, id) {
+  const sc    = st.sc;
+  const iOff  = st.offsets[idx];
+  const viewH = sc ? sc.clientHeight : window.innerHeight;
+  const scCur = sc ? sc.scrollTop : window.scrollY;
+  const lr    = listEl.getBoundingClientRect();
+  const sr    = sc ? sc.getBoundingClientRect().top : 0;
+  const lstAbs = scCur + lr.top - sr;
+  const rel   = scCur - lstAbs;
+
+  // Wenn Item nicht sichtbar → Liste scrollen, um es zu zentrieren
+  if (iOff < rel || iOff + _VS_ROW > rel + viewH) {
+    const target = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
+    if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
+  }
+  // VS sofort neu rendern (Desktop: sc.scrollTop ist synchron, mobile: bestes Effort)
+  st.r = null;
+  _vsRender(listEl, st);
+  const cur = st.mid?.querySelector(`[${dataAttr}="${id}"]`);
+  if (cur) cur.classList.add('current');
+}
+
 function _updatePersonListCurrent(id) {
   if (_vsP.active) {
-    // HTML-Strings im Items-Array aktualisieren
     _vsP.items.forEach(it => {
       if (!it.id) return;
       const isCur = it.id === id, wasCur = it.s.includes(' current"');
       if (isCur && !wasCur) it.s = it.s.replace('"person-row"', '"person-row current"');
       else if (!isCur && wasCur) it.s = it.s.replace('"person-row current"', '"person-row"');
     });
-    // DOM im sichtbaren Bereich aktualisieren
-    if (_vsP.mid) {
-      _vsP.mid.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
-      const cur = _vsP.mid.querySelector(`[data-pid="${id}"]`);
-      if (cur) { cur.classList.add('current'); _scrollListToCurrent(_vsP.sc || document.getElementById('v-main'), cur); }
-    }
+    if (_vsP.mid) _vsP.mid.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+    if (!id) return;
+    const idx = _vsP.items.findIndex(it => it.id === id);
+    if (idx >= 0) _vsScrollAndHighlight(_vsP, document.getElementById('personList'), idx, 'data-pid', id);
     return;
   }
   const list = document.getElementById('personList');
@@ -172,11 +192,10 @@ function _updateFamilyListCurrent(id) {
       if (isCur && !wasCur) it.s = it.s.replace('"person-row"', '"person-row current"');
       else if (!isCur && wasCur) it.s = it.s.replace('"person-row current"', '"person-row"');
     });
-    if (_vsF.mid) {
-      _vsF.mid.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
-      const cur = _vsF.mid.querySelector(`[data-fid="${id}"]`);
-      if (cur) { cur.classList.add('current'); _scrollListToCurrent(_vsF.sc || document.getElementById('v-main'), cur); }
-    }
+    if (_vsF.mid) _vsF.mid.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+    if (!id) return;
+    const idx = _vsF.items.findIndex(it => it.id === id);
+    if (idx >= 0) _vsScrollAndHighlight(_vsF, document.getElementById('familyList'), idx, 'data-fid', id);
     return;
   }
   const list = document.getElementById('familyList');
