@@ -353,17 +353,36 @@ function showDetail(id, pushHistory = true) {
     html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources)}</span></div>`;
   }
 
+  // Group events by type (preserve first-seen order), sort within group by date
+  const _evDateKey = d => {
+    if (!d) return '99999999';
+    const mo = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
+    const yr = (d.match(/\b(\d{4})\b/) || [])[1] || '9999';
+    const mStr = (d.match(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/) || [])[1];
+    const dyStr = (d.match(/\b(\d{1,2})\b(?=\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))/) || [])[1];
+    return yr + (mStr ? mo[mStr] : '00') + (dyStr ? dyStr.padStart(2,'0') : '00');
+  };
+  const _evGroups = new Map();
   p.events.forEach((ev, idx) => {
-    const label = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
-    const geoBtn = (ev.lati !== null && ev.lati !== undefined)
-      ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
-    const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
-      <span class="fact-lbl">${esc(label)}</span>
-      <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}${mediaBadge}</span>
-    </div>`;
+    const key = ev.type || '';
+    if (!_evGroups.has(key)) _evGroups.set(key, []);
+    _evGroups.get(key).push({ev, idx});
   });
+  for (const items of _evGroups.values())
+    items.sort((a, b) => _evDateKey(a.ev.date).localeCompare(_evDateKey(b.ev.date)));
+  for (const items of _evGroups.values()) {
+    for (const {ev, idx} of items) {
+      const label = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
+      const geoBtn = (ev.lati !== null && ev.lati !== undefined)
+        ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+      const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+      const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
+      html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
+        <span class="fact-lbl">${esc(label)}</span>
+        <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}${mediaBadge}</span>
+      </div>`;
+    }
+  }
 
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);

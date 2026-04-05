@@ -352,10 +352,11 @@ function saveFamily() {
       return t;
     })(),
     media: _readMediaList('ff', existingFam.media || []),
-    sourceRefs: srcWidgetState['ff']?.ids || new Set(),
+    sourceRefs: new Set(),
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date())
   };
+  _rebuildFamilySourceRefs(AppState.db.families[id]);
 
   // Update FAMS/FAMC references
   // famc entries are objects {famId, frel, mrel}, fams entries are strings

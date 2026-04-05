@@ -146,6 +146,7 @@ function saveEvent() {
     if (type === 'FACT' || type === 'MILI' || type === 'EVEN') ev.eventType = document.getElementById('ef-etype').value.trim();
   }
 
+  _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged(); updateStats();
   showToast('✓ Ereignis gespeichert');
@@ -160,6 +161,7 @@ function deleteEvent() {
   const p = AppState.db.individuals[pid];
   if (!p?.events) return;
   p.events.splice(evIdx, 1);
+  _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged(); updateStats();
   showToast('Ereignis gelöscht');
@@ -202,6 +204,7 @@ function saveFamEvent() {
     sourcePages: { ...(srcWidgetState['fev']?.pages || {}) },
     sourceQUAY:  { ...(srcWidgetState['fev']?.quay  || {}) }
   };
+  _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged(); updateStats();
   showToast('✓ Ereignis gespeichert');
@@ -214,6 +217,7 @@ function deleteFamEvent() {
   const f = AppState.db.families[famId];
   if (!f) return;
   f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, sources: [], sourcePages: {}, sourceQUAY: {} };
+  _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged(); updateStats();
   showToast('Ereignis gelöscht');
