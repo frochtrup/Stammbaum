@@ -72,6 +72,10 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [x] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — "Ereignisse"-Sektion in Familiendetail, Verlobung aus Haupt-Edit in Ereignisliste verschoben ✅ (sw v147)
 - [x] INDI-Events: `DSCR`, `IDNO`, `SSN` — strukturiert statt passthrough ✅ (sw v148)
 
+#### Ereignisliste Personendetail — Priorität 1
+- [ ] Gleiche Ereignistypen als Block gruppiert darstellen (alle OCCU zusammen, alle RESI zusammen etc.)
+- [ ] Innerhalb jedes Blocks: Ereignisse nach Datum sortiert (undatierte ans Ende)
+
 #### Duplikat-Erkennung — Priorität 2
 - [ ] Personen mit gleichem Name + Geburtsjahr (±2): Hinweis + Vergleichs-Ansicht
 - [ ] Kein automatisches Merge — nur Anzeige + manuelle Entscheidung
