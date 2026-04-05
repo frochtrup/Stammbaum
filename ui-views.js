@@ -190,6 +190,69 @@ function _setListScroll(pos) {
   }
 }
 
+// ─── Virtual Scroll ────────────────────────────────────────────────
+const _VS_BUF  = 600;  // px pre-render buffer above/below viewport
+const _VS_ROW  = 69;   // person/family row height (measured)
+const _VS_SEP  = 23;   // alpha-sep height (measured)
+const _VS_MIN  = 500;  // item threshold to activate
+
+function _vsScrollEl() {
+  return window.innerWidth >= 900 ? document.getElementById('v-main') : null;
+}
+
+function _vsRender(listEl, st) {
+  if (!st.active || !listEl.offsetParent) return;
+  const sc     = st.sc;
+  const scTop  = sc ? sc.scrollTop : window.scrollY;
+  const viewH  = sc ? sc.clientHeight : window.innerHeight;
+  const lr     = listEl.getBoundingClientRect();
+  const sr     = sc ? sc.getBoundingClientRect().top : 0;
+  const lstAbs = scTop + lr.top - sr;   // absolute list-top in scroll coords
+  const rel    = scTop - lstAbs;        // px of list scrolled above viewport top
+  const vs     = rel - _VS_BUF;
+  const ve     = rel + viewH + _VS_BUF;
+
+  const { offsets, items } = st;
+  let lo = 0, hi = items.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (offsets[mid] <= vs) lo = mid; else hi = mid - 1;
+  }
+  const first = lo;
+  let last = first;
+  while (last < items.length - 1 && offsets[last + 1] < ve) last++;
+
+  if (st.r && st.r[0] === first && st.r[1] === last) return;
+
+  let s = '';
+  for (let i = first; i <= last; i++) s += items[i].s;
+  st.top.style.height = offsets[first] + 'px';
+  st.bot.style.height = Math.max(0, st.total - offsets[last] - items[last].px) + 'px';
+  st.mid.innerHTML = s;
+  st.r = [first, last];
+}
+
+function _vsSetup(listEl, st) {
+  _vsTeardown(st);
+  st.sc = _vsScrollEl();
+  st.r  = null;
+  st.active = true;
+  listEl.innerHTML = '';
+  st.top = document.createElement('div');
+  st.mid = document.createElement('div');
+  st.bot = document.createElement('div');
+  listEl.append(st.top, st.mid, st.bot);
+  _vsRender(listEl, st);
+  st.fn = () => _vsRender(listEl, st);
+  (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
+}
+
+function _vsTeardown(st) {
+  if (!st.active) return;
+  if (st.fn) { (st.sc || window).removeEventListener('scroll', st.fn); st.fn = null; }
+  st.active = false;
+}
+
 function showMain() {
   const saved = UIState._savedListScroll;
   UIState._savedListScroll = null;

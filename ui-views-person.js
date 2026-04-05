@@ -3,11 +3,35 @@
 // ─────────────────────────────────────
 let _personSort = 'name'; // 'name' | 'date'
 
+// Virtual scroll state (persons)
+const _vsP = { active: false, items: [], offsets: [], total: 0,
+               r: null, top: null, mid: null, bot: null, fn: null, sc: null };
+
 function togglePersonSort() {
   _personSort = _personSort === 'name' ? 'date' : 'name';
   const btn = document.getElementById('personSortBtn');
   if (btn) btn.textContent = _personSort === 'date' ? '⇅ Geb.' : '⇅ Name';
   applyPersonFilter();
+}
+
+function _personRowHtml(p, isCurrent) {
+  const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
+  const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
+  let meta = '';
+  if (p.birth.date) meta += '* ' + p.birth.date;
+  if (p.birth.place) meta += (meta ? ', ' : '') + p.birth.place;
+  if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+  const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
+                    + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+  const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
+  return `<div class="person-row${isCurrent ? ' current' : ''}" data-action="showDetail" data-pid="${p.id}">
+      <div class="p-avatar ${sc}">${ic}</div>
+      <div class="p-info">
+        <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
+        <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
+      </div>
+      <span class="p-arrow">›</span>
+    </div>`;
 }
 
 function renderPersonList(persons) {
@@ -20,10 +44,46 @@ function renderPersonList(persons) {
     if (c !== 0) return c;
     return (a.given || '').localeCompare(b.given || '', 'de');
   });
-  const list = document.getElementById('personList');
-  if (!sorted.length) { list.innerHTML = '<div class="empty">Noch keine Personen</div>'; return; }
+  const listEl = document.getElementById('personList');
+  if (!sorted.length) {
+    _vsTeardown(_vsP);
+    listEl.innerHTML = '<div class="empty">Noch keine Personen</div>';
+    return;
+  }
 
-  let html = '', lastSep = '';
+  if (sorted.length <= _VS_MIN) {
+    // ── Normales Rendering (kleine Liste) ──
+    _vsTeardown(_vsP);
+    let html = '', lastSep = '';
+    for (const p of sorted) {
+      let sep;
+      if (_personSort === 'date') {
+        const key = gedDateSortKey(p.birth.date);
+        sep = key ? Math.floor(Math.floor(key / 10000) / 10) + '0er' : '?';
+      } else {
+        sep = (p.surname || p.given || p.name || '?')[0].toUpperCase();
+      }
+      if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
+      html += _personRowHtml(p, false);
+    }
+    listEl.innerHTML = html;
+    if (AppState.currentPersonId) {
+      const cur = listEl.querySelector(`[data-pid="${AppState.currentPersonId}"]`);
+      if (cur) {
+        cur.classList.add('current');
+        const container = document.getElementById('v-main') || listEl.closest('.view');
+        requestAnimationFrame(() => _scrollListToCurrent(container, cur));
+      }
+    }
+    return;
+  }
+
+  // ── Virtuelles Rendering (große Liste) ──
+  _vsP.items   = [];
+  _vsP.offsets = [];
+  let offset = 0, lastSep = '';
+  const curId = AppState.currentPersonId;
+
   for (const p of sorted) {
     let sep;
     if (_personSort === 'date') {
@@ -32,32 +92,35 @@ function renderPersonList(persons) {
     } else {
       sep = (p.surname || p.given || p.name || '?')[0].toUpperCase();
     }
-    if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
-    const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
-    const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
-    let meta = '';
-    if (p.birth.date) meta += '* ' + p.birth.date;
-    if (p.birth.place) meta += (meta ? ', ' : '') + p.birth.place;
-    if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
-    const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
-                      + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
-    const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="person-row" data-action="showDetail" data-pid="${p.id}">
-      <div class="p-avatar ${sc}">${ic}</div>
-      <div class="p-info">
-        <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
-        <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
-      </div>
-      <span class="p-arrow">›</span>
-    </div>`;
+    if (sep !== lastSep) {
+      _vsP.items.push({ px: _VS_SEP, s: `<div class="alpha-sep">${sep}</div>` });
+      _vsP.offsets.push(offset);
+      offset += _VS_SEP;
+      lastSep = sep;
+    }
+    _vsP.items.push({ px: _VS_ROW, s: _personRowHtml(p, p.id === curId), id: p.id });
+    _vsP.offsets.push(offset);
+    offset += _VS_ROW;
   }
-  list.innerHTML = html;
-  if (AppState.currentPersonId) {
-    const cur = list.querySelector(`[data-pid="${AppState.currentPersonId}"]`);
-    if (cur) {
-      cur.classList.add('current');
-      const container = document.getElementById('v-main') || list.closest('.view');
-      requestAnimationFrame(() => _scrollListToCurrent(container, cur));
+  _vsP.total = offset;
+
+  _vsSetup(listEl, _vsP);
+
+  // Zum aktuellen Eintrag scrollen
+  if (curId) {
+    const idx = _vsP.items.findIndex(it => it.id === curId);
+    if (idx >= 0) {
+      requestAnimationFrame(() => {
+        const sc  = _vsP.sc;
+        const iOff = _vsP.offsets[idx];
+        const viewH = sc ? sc.clientHeight : window.innerHeight;
+        const scTop = sc ? sc.scrollTop : window.scrollY;
+        const lr  = listEl.getBoundingClientRect();
+        const sr  = sc ? sc.getBoundingClientRect().top : 0;
+        const lstAbs = scTop + lr.top - sr;
+        const target = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
+        if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
+      });
     }
   }
 }
@@ -71,6 +134,22 @@ function _scrollListToCurrent(container, cur) {
 }
 
 function _updatePersonListCurrent(id) {
+  if (_vsP.active) {
+    // HTML-Strings im Items-Array aktualisieren
+    _vsP.items.forEach(it => {
+      if (!it.id) return;
+      const isCur = it.id === id, wasCur = it.s.includes(' current"');
+      if (isCur && !wasCur) it.s = it.s.replace('"person-row"', '"person-row current"');
+      else if (!isCur && wasCur) it.s = it.s.replace('"person-row current"', '"person-row"');
+    });
+    // DOM im sichtbaren Bereich aktualisieren
+    if (_vsP.mid) {
+      _vsP.mid.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+      const cur = _vsP.mid.querySelector(`[data-pid="${id}"]`);
+      if (cur) { cur.classList.add('current'); _scrollListToCurrent(_vsP.sc || document.getElementById('v-main'), cur); }
+    }
+    return;
+  }
   const list = document.getElementById('personList');
   if (!list) return;
   list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
@@ -81,7 +160,25 @@ function _updatePersonListCurrent(id) {
   _scrollListToCurrent(document.getElementById('v-main'), cur);
 }
 
+// Virtual scroll state (families) — deklariert hier, da _updateFamilyListCurrent hier steht
+const _vsF = { active: false, items: [], offsets: [], total: 0,
+               r: null, top: null, mid: null, bot: null, fn: null, sc: null };
+
 function _updateFamilyListCurrent(id) {
+  if (_vsF.active) {
+    _vsF.items.forEach(it => {
+      if (!it.id) return;
+      const isCur = it.id === id, wasCur = it.s.includes(' current"');
+      if (isCur && !wasCur) it.s = it.s.replace('"person-row"', '"person-row current"');
+      else if (!isCur && wasCur) it.s = it.s.replace('"person-row current"', '"person-row"');
+    });
+    if (_vsF.mid) {
+      _vsF.mid.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));
+      const cur = _vsF.mid.querySelector(`[data-fid="${id}"]`);
+      if (cur) { cur.classList.add('current'); _scrollListToCurrent(_vsF.sc || document.getElementById('v-main'), cur); }
+    }
+    return;
+  }
   const list = document.getElementById('familyList');
   if (!list) return;
   list.querySelectorAll('.person-row.current').forEach(el => el.classList.remove('current'));

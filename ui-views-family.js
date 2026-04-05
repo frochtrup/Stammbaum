@@ -1,34 +1,24 @@
 // ─────────────────────────────────────
 //  FAMILY LIST
 // ─────────────────────────────────────
-function renderFamilyList(fams) {
-  const el = document.getElementById('familyList');
-  if (!fams) fams = Object.values(AppState.db.families);
-  if (!fams.length) { el.innerHTML = '<div class="empty">Keine Familien gefunden</div>'; return; }
-  fams = [...fams].sort((a, b) => {
-    const na = a.husb ? (AppState.db.individuals[a.husb]?.surname || AppState.db.individuals[a.husb]?.name || '') : '';
-    const nb = b.husb ? (AppState.db.individuals[b.husb]?.surname || AppState.db.individuals[b.husb]?.name || '') : '';
-    const c = na.localeCompare(nb, 'de');
-    if (c !== 0) return c;
-    const ya = gedDateSortKey(a.marr.date) || 99999999;
-    const yb = gedDateSortKey(b.marr.date) || 99999999;
-    return ya - yb;
-  });
+function _famSortKey(a) {
+  const na = a.husb ? (AppState.db.individuals[a.husb]?.surname || AppState.db.individuals[a.husb]?.name || '') : '';
+  return na;
+}
 
-  let html = '';
-  for (const f of fams) {
-    const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
-    const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
-    const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
-    let meta = '';
-    if (f.marr.date) meta += '⚭ ' + f.marr.date;
-    if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
-    if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
-    const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
-                      + (f.marr?.media || []).filter(m => m.file || m.titl).length
-                      + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
-    const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="person-row" data-action="showFamilyDetail" data-fid="${f.id}">
+function _famRowHtml(f, isCurrent) {
+  const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
+  const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
+  const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+  let meta = '';
+  if (f.marr.date) meta += '⚭ ' + f.marr.date;
+  if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
+  if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
+  const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
+                    + (f.marr?.media || []).filter(m => m.file || m.titl).length
+                    + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
+  const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
+  return `<div class="person-row${isCurrent ? ' current' : ''}" data-action="showFamilyDetail" data-fid="${f.id}">
       <div class="p-avatar">👨‍👩‍👧</div>
       <div class="p-info">
         <div class="p-name">${esc(title)}${fMediaBadge}</div>
@@ -36,14 +26,68 @@ function renderFamilyList(fams) {
       </div>
       <span class="p-arrow">›</span>
     </div>`;
+}
+
+function renderFamilyList(fams) {
+  const listEl = document.getElementById('familyList');
+  if (!fams) fams = Object.values(AppState.db.families);
+  if (!fams.length) {
+    _vsTeardown(_vsF);
+    listEl.innerHTML = '<div class="empty">Keine Familien gefunden</div>';
+    return;
   }
-  el.innerHTML = html;
-  if (AppState.currentFamilyId) {
-    const cur = el.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
-    if (cur) {
-      cur.classList.add('current');
-      const container = document.getElementById('v-main') || el.closest('.view');
-      requestAnimationFrame(() => _scrollListToCurrent(container, cur));
+  fams = [...fams].sort((a, b) => {
+    const c = _famSortKey(a).localeCompare(_famSortKey(b), 'de');
+    if (c !== 0) return c;
+    return (gedDateSortKey(a.marr.date) || 99999999) - (gedDateSortKey(b.marr.date) || 99999999);
+  });
+
+  if (fams.length <= _VS_MIN) {
+    // ── Normales Rendering ──
+    _vsTeardown(_vsF);
+    let html = '';
+    for (const f of fams) html += _famRowHtml(f, false);
+    listEl.innerHTML = html;
+    if (AppState.currentFamilyId) {
+      const cur = listEl.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
+      if (cur) {
+        cur.classList.add('current');
+        const container = document.getElementById('v-main') || listEl.closest('.view');
+        requestAnimationFrame(() => _scrollListToCurrent(container, cur));
+      }
+    }
+    return;
+  }
+
+  // ── Virtuelles Rendering ──
+  _vsF.items   = [];
+  _vsF.offsets = [];
+  let offset = 0;
+  const curId = AppState.currentFamilyId;
+
+  for (const f of fams) {
+    _vsF.items.push({ px: _VS_ROW, s: _famRowHtml(f, f.id === curId), id: f.id });
+    _vsF.offsets.push(offset);
+    offset += _VS_ROW;
+  }
+  _vsF.total = offset;
+
+  _vsSetup(listEl, _vsF);
+
+  if (curId) {
+    const idx = _vsF.items.findIndex(it => it.id === curId);
+    if (idx >= 0) {
+      requestAnimationFrame(() => {
+        const sc    = _vsF.sc;
+        const iOff  = _vsF.offsets[idx];
+        const viewH = sc ? sc.clientHeight : window.innerHeight;
+        const scTop = sc ? sc.scrollTop : window.scrollY;
+        const lr    = listEl.getBoundingClientRect();
+        const sr    = sc ? sc.getBoundingClientRect().top : 0;
+        const lstAbs = scTop + lr.top - sr;
+        const target = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
+        if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
+      });
     }
   }
 }
