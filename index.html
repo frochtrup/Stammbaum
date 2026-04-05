@@ -695,6 +695,27 @@ body.fc-mode #fcGenBtns { display: flex; }
   border-radius: 50%; background: var(--gold);
   margin-left: 6px; vertical-align: middle;
 }
+#syncBanner {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 68px);
+  left: 50%; transform: translateX(-50%);
+  z-index: 395;
+  background: rgba(150, 95, 10, 0.96);
+  color: #fff;
+  border-radius: 20px;
+  padding: 7px 8px 7px 14px;
+  font-size: 0.82rem; font-weight: 500;
+  display: none; align-items: center; gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+#syncBanner .sync-save-btn {
+  background: rgba(255,255,255,0.22);
+  color: #fff; border: none; border-radius: 12px;
+  padding: 4px 11px; font-size: 0.8rem; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
 
 /* ═══════════════════════════════════════
    FAMILY LINK ROW (in Detail-Ansicht)
@@ -1845,6 +1866,29 @@ body.fc-mode #fcGenBtns { display: flex; }
       <div class="btn-row">
         <button class="btn btn-cancel" onclick="closeModal('modalChildRel')">Abbrechen</button>
         <button class="btn btn-save" onclick="saveChildRelDialog()">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="syncBanner">
+  <span>● Nicht gespeichert</span>
+  <button class="sync-save-btn" id="syncBannerBtn" onclick="_syncBannerSave()">Speichern</button>
+</div>
+
+<div class="modal-overlay" id="modalStartupChoice">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Stammbaum laden</div>
+    <div class="sheet-body">
+      <div id="_startupChoiceName" style="text-align:center;padding:4px 0 18px;color:var(--text-dim);font-size:0.9rem"></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="_startupChoiceOneDrive()">
+          ☁ &nbsp; Von OneDrive laden
+        </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="_startupChoiceLocal()">
+          📱 &nbsp; Lokal gespeicherte Version
+        </button>
       </div>
     </div>
   </div>

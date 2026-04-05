@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v150 / Cache: `stammbaum-v150`
+**Aktuelle sw-Version:** v152 / Cache: `stammbaum-v152`
 
 ---
 
@@ -59,9 +59,10 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - [ ] Neues Modal oder eigener Tab: Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte
 - [ ] Karten-Grid (Personen, Familien, Quellen, Medien, fehlende Daten %)
 
-#### Offline-Sync-Indikator — Priorität 3
-- [ ] Badge/Banner wenn `AppState.changed=true` und noch nicht gespeichert
-- [ ] Besonders wichtig auf iPhone wo direktes Speichern nicht immer möglich
+#### Offline-Sync-Indikator — ✅ ABGESCHLOSSEN (sw v152)
+- [x] Floating Pill über Bottom-Nav: "● Nicht gespeichert" + Speichern-Button
+- [x] Button adaptiv: ☁ Speichern (OD) · ↑ Teilen (iPhone) · ↓ Speichern (Desktop)
+- [x] Global in allen Views sichtbar; erscheint/verschwindet via `updateChangedIndicator()`
 
 ---
 
@@ -88,10 +89,13 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ### Schwerpunkt 4: OneDrive-Integration
 
-#### Startsequenz — Priorität 1
-- [ ] Beim App-Start automatisch OneDrive verbinden (Token-Refresh im Hintergrund)
-- [ ] Bei Erfolg: letzte Datei neu von OneDrive laden (statt aus IndexedDB)
-- [ ] Bei Timeout / offline: stillschweigend auf lokalen IDB-Stand fallen (wie bisher)
+#### Startsequenz — ✅ ABGESCHLOSSEN (sw v151)
+- [x] Auswahl-Dialog bei Neustart (kein Session-Token): "☁ Von OneDrive laden" vs. "📱 Lokal"
+- [x] Gleiche Session (Token in sessionStorage): direkt von OneDrive laden, kein alter IDB-Stand
+- [x] OAuth-Return mit `od_autoload_pending`: nach Login automatisch Datei laden
+- [x] Timeout 8s + stiller Fallback auf IDB bei Fehler/Offline
+- [x] `_odRefreshTokenSilent()` — Token-Refresh ohne OAuth-Redirect (kein ungewolltes Login)
+- [x] `window._odCallbackPromise` — `window.load` wartet auf laufenden OAuth-Callback
 
 ---
 

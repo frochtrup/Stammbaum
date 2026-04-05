@@ -106,8 +106,35 @@ async function _odGetToken() {
   odLogin(); return null;
 }
 
+// Stiller Token-Refresh — kein OAuth-Redirect bei Fehler (für Auto-Connect beim Start)
+async function _odRefreshTokenSilent() {
+  const expiry = parseInt(sessionStorage.getItem('od_token_expiry') || '0');
+  if (Date.now() < expiry) return sessionStorage.getItem('od_access_token');
+  const rt = sessionStorage.getItem('od_refresh_token');
+  if (!rt) return null;
+  try {
+    const ctrl = new AbortController();
+    const _to  = setTimeout(() => ctrl.abort(), 5000);
+    const body = new URLSearchParams({
+      client_id: OD_CLIENT_ID, grant_type: 'refresh_token',
+      refresh_token: rt, scope: OD_SCOPES, redirect_uri: _odRedirectUri()
+    });
+    const res  = await fetch(OD_TOKEN_EP, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body, signal: ctrl.signal });
+    clearTimeout(_to);
+    const data = await res.json();
+    if (data.access_token) {
+      sessionStorage.setItem('od_access_token', data.access_token);
+      if (data.refresh_token) sessionStorage.setItem('od_refresh_token', data.refresh_token);
+      sessionStorage.setItem('od_token_expiry', Date.now() + (data.expires_in - 60) * 1000);
+      return data.access_token;
+    }
+  } catch(e) { /* still — kein Log für normalen Offline-Fall */ }
+  return null;
+}
+
 // OneDrive OAuth-Callback nach Redirect abfangen
+window._odCallbackPromise = null;
 if (location.search.includes('code=') || location.search.includes('error=')) {
-  odHandleCallback();
+  window._odCallbackPromise = odHandleCallback();
 }
 _odUpdateUI();

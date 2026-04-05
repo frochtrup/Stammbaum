@@ -359,7 +359,26 @@ function updateStats() {
 }
 
 function updateChangedIndicator() {
-  document.getElementById('changedIndicator').style.display = AppState.changed ? 'inline-block' : 'none';
+  const show = AppState.changed;
+  document.getElementById('changedIndicator').style.display = show ? 'inline-block' : 'none';
+  const banner = document.getElementById('syncBanner');
+  if (!banner) return;
+  if (show) {
+    const btn = document.getElementById('syncBannerBtn');
+    const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && localStorage.getItem('od_file_id');
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (canOD)       { btn.textContent = '☁ Speichern'; }
+    else if (isIOS)  { btn.textContent = '↑ Teilen'; }
+    else             { btn.textContent = '↓ Speichern'; }
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function _syncBannerSave() {
+  const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && localStorage.getItem('od_file_id');
+  if (canOD) odSaveFile(); else exportGEDCOM();
 }
 
 function markChanged() { AppState.changed = true; UIState._placesCache = null; updateChangedIndicator(); }

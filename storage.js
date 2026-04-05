@@ -578,13 +578,53 @@ async function tryAutoLoad() {
   } catch(e) { /* kein Storage */ }
   return false;
 }
+// Startup-Dialog: Auswahl lokale Version vs. OneDrive
+function _showStartupChoice() {
+  const fname = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  document.getElementById('_startupChoiceName').textContent = fname;
+  openModal('modalStartupChoice');
+}
+function _startupChoiceLocal() {
+  closeModal('modalStartupChoice');
+  tryAutoLoad();
+}
+async function _startupChoiceOneDrive() {
+  closeModal('modalStartupChoice');
+  // Kein Token in Session → OAuth-Redirect; nach Rückkehr auto-load
+  sessionStorage.setItem('od_autoload_pending', '1');
+  odLogin();
+}
+
 window.addEventListener('load', async () => {
   const urlFile = new URLSearchParams(location.search).get('datei');
   if (urlFile) updateTopbarTitle(urlFile);
-  await tryAutoLoad();
+
+  // Warten falls OAuth-Callback noch läuft (Rückkehr von Login-Redirect)
+  if (window._odCallbackPromise) await window._odCallbackPromise;
+
+  const hasOdFile  = localStorage.getItem('od_file_id');
+  const hasSession = sessionStorage.getItem('od_refresh_token');
+  const pendingLoad = sessionStorage.getItem('od_autoload_pending');
+
+  if (pendingLoad && hasSession) {
+    // Rückkehr von OAuth mit Auto-Load-Wunsch
+    sessionStorage.removeItem('od_autoload_pending');
+    const loaded = await odAutoLoadFromOneDrive();
+    if (!loaded) { showToast('⚠ OneDrive nicht erreichbar — lokale Version geladen'); await tryAutoLoad(); }
+  } else if (hasOdFile && hasSession) {
+    // Gleiche Session → direkt von OneDrive laden (kein veralteten Stand zeigen)
+    const loaded = await odAutoLoadFromOneDrive();
+    if (!loaded) await tryAutoLoad();
+  } else if (hasOdFile) {
+    // Neustart: bekannte OD-Datei, aber kein Token → Auswahl-Dialog
+    _showStartupChoice();
+  } else {
+    await tryAutoLoad();
+  }
+
   restoreFileHandle(); updateSaveIndicator();
 
-  // Service Worker registrieren (P3-4)
+  // Service Worker registrieren
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }

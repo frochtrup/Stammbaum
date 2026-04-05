@@ -372,3 +372,28 @@ async function odSaveFile() {
     showToast('✓ In OneDrive gespeichert: ' + _loc);
   } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + (e.name === 'AbortError' ? 'Timeout (30s)' : e.message)); }
 }
+
+// Auto-Load beim App-Start: lädt letzte bekannte Datei von OneDrive (kein Redirect bei Fehler)
+async function odAutoLoadFromOneDrive() {
+  const fileId   = localStorage.getItem('od_file_id');
+  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  if (!fileId) return false;
+  const token = await _odRefreshTokenSilent();
+  if (!token) return false;
+  const ctrl = new AbortController();
+  const _to  = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}/content`, {
+      headers: { Authorization: 'Bearer ' + token }, signal: ctrl.signal
+    });
+    clearTimeout(_to);
+    if (!res.ok) return false;
+    _processLoadedText(await res.text(), fileName);
+    _odUpdateUI();
+    showToast('☁ ' + fileName + ' von OneDrive geladen');
+    return true;
+  } catch(e) {
+    clearTimeout(_to);
+    return false;
+  }
+}
