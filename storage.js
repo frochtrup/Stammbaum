@@ -433,6 +433,10 @@ function confirmNewFile() {
 // Gemeinsame Lade-Logik für openDirectoryAndLoad() und readFile()
 function _processLoadedText(text, filename) {
   AppState.db = parseGEDCOM(text);
+  if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
+    console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+  }
   AppState.db.extraPlaces = loadExtraPlaces();
   // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
   { let maxUsed = 0;

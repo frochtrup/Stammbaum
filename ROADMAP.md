@@ -13,7 +13,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v135 / Cache: `stammbaum-v135`
+**Aktuelle sw-Version:** v138 / Cache: `stammbaum-v138`
 
 ---
 
@@ -160,7 +160,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 - [x] **Inline Event-Handler durch Event-Delegation ersetzen** — `oninput="updateSrcPage(...)"` u.ä. sind XSS-anfällig bei unvollständigem Escaping und erzeugen Memory-Leaks bei Modal-Reopen (ui-forms.js, viele ui-*.js)
 - [ ] **Gemeinsame `renderListItem()`-Funktion** — Media-Count, Sortierung und List-Rendering in ui-views-person/family/source.js deduplizieren (3× identische Logik)
-- [ ] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=3 für die meisten Tags) (gedcom-parser.js)
+- [x] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=4) (gedcom-parser.js) ✅ (sw v138)
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
 - [ ] **`catch { return null }` durch echtes Error-Handling ersetzen** — maskiert alle OneDrive-API-Fehler, erschwert Debugging (onedrive.js)
 
@@ -175,7 +175,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - DIV/DIVF/ENG: Formularfelder für Datum/Ort (Parser/Writer done)
 - ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
 - ~~Inline Event-Handler in HTML-Strings~~ → behoben sw v137: globale Event-Delegation
-- GEDCOM-Parser ohne Fehler-Sammler (ungültige Dateien werden silent ignoriert)
+- ~~GEDCOM-Parser ohne Fehler-Sammler~~ → behoben sw v138: `parseErrors[]` + Level-Validierung
 
 ---
 

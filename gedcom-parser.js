@@ -1,7 +1,7 @@
 // ─────────────────────────────────────
-//  GEDCOM PARSER  (v3 – geo fixed)
+//  GEDCOM PARSER  (v4 – error collector)
 // ─────────────────────────────────────
-function parseGEDCOM(text) {
+function parseGEDCOM(text, parseErrors) {
   text = text.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/);
 
@@ -12,6 +12,9 @@ function parseGEDCOM(text) {
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
   const _extraRecords = [];  // verbatim passthrough for unknown lv=0 records (SUBM etc.)
   const _headLines = [];     // HEAD verbatim (restored in writer for roundtrip fidelity)
+  const _errors = parseErrors || []; // error collector (malformed lines, invalid levels)
+  let lineNo = 0;  // 1-based line counter
+  let prevLv = -1; // last valid level (for jump detection)
   let cur = null, curType = null;
   // Simple flat context tracking
   let lv1tag = '';   // current level-1 tag
@@ -28,15 +31,29 @@ function parseGEDCOM(text) {
   let _smEntry = null;  // structured sourceMedia entry being parsed (OBJE under SOUR citation)
 
   for (let raw of lines) {
+    lineNo++;
     // raw.trim() würde trailing Spaces aus CONT/CONC-Werten entfernen → CONC-Split-Verschiebung
     // Nur \r am Ende entfernen (Windows CRLF), führende Spaces gibt es in GEDCOM nicht
     const line = raw.replace(/\r$/, '');
     if (!line.trim()) continue;
     const m = line.match(/^(\d+)\s+(\S+)(.*)?$/);
-    if (!m) continue;
+    if (!m) {
+      _errors.push({ line: lineNo, raw: line, msg: 'Ungültiges GEDCOM-Format (kein Level/Tag erkannt)' });
+      continue;
+    }
     const lv  = parseInt(m[1]);
     const tag = m[2].trim();
     const val = (m[3] || '').replace(/^ /, ''); // remove 1 leading space (GEDCOM delimiter)
+
+    // ── Level-Validierung ──
+    if (lv > 4) {
+      _errors.push({ line: lineNo, lv, tag, val, raw: line, msg: `Level ${lv} überschreitet das Maximum (4)` });
+      continue; // parser hat keine Behandlung für lv > 4
+    }
+    if (prevLv >= 0 && lv > prevLv + 1) {
+      _errors.push({ line: lineNo, lv, tag, val, raw: line, msg: `Level-Sprung von ${prevLv} auf ${lv} (erwartet max. ${prevLv + 1})` });
+    }
+    prevLv = lv;
 
     // ── Level 0 ──
     if (lv === 0) {
@@ -822,7 +839,7 @@ function parseGEDCOM(text) {
     }
   }
 
-  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines };
+  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors };
 }
 
 
