@@ -69,7 +69,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 #### Erweiterte Events (restliche Passthrough-Reste) — Priorität 1
 - [x] FAM-Events: `DIV`, `DIVF`, `ENG`/`ENGA` — strukturiert statt passthrough ✅ (sw v134–v135)
-- [ ] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — Parser/Writer done, UI fehlt; analog Ereignisse im Personen-Detail: Verlobung aus Haupt-Edit-Fenster in normale Ereignisliste verschieben
+- [x] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — "Ereignisse"-Sektion in Familiendetail, Verlobung aus Haupt-Edit in Ereignisliste verschoben ✅ (sw v147)
 - [ ] INDI-Events: selten genutzte Tags die noch in passthrough landen (z.B. `DSCR`, `IDNO`)
 
 #### Duplikat-Erkennung — Priorität 2
@@ -174,7 +174,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 - Duplikat-Erkennung in Suche
-- DIV/DIVF/ENG: Formularfelder für Datum/Ort (Parser/Writer done); Verlobung aus Haupt-Edit in Ereignisliste
+- ~~DIV/DIVF/ENG: Formularfelder für Datum/Ort~~ → behoben sw v147: "Ereignisse"-Sektion in Familiendetail
 - ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
 - ~~Inline Event-Handler in HTML-Strings~~ → behoben sw v137: globale Event-Delegation
 - ~~GEDCOM-Parser ohne Fehler-Sammler~~ → behoben sw v138: `parseErrors[]` + Level-Validierung

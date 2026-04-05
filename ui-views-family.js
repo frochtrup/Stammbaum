@@ -298,25 +298,35 @@ function showFamilyDetail(id, pushHistory = true) {
     if (f.marr.addr) html += factRow('Adresse', f.marr.addr);
     html += `</div>`;
   }
-  if (f.engag?.date || f.engag?.place) {
-    html += `<div class="section fade-up"><div class="section-title">Verlobung</div>`;
-    const engSrc = f.engag.sources?.length ? f.engag.sources : null;
-    if (f.engag.date)  html += factRow('Datum', f.engag.date,  '', engSrc);
-    if (f.engag.place) html += factRow('Ort',   f.engag.place, '', engSrc);
-    html += `</div>`;
-  }
-  if (f.div?.date || f.div?.place || f.div?.seen) {
-    html += `<div class="section fade-up"><div class="section-title">Scheidung</div>`;
-    const divSrc = f.div.sources?.length ? f.div.sources : null;
-    if (f.div.date)  html += factRow('Datum', f.div.date,  '', divSrc);
-    if (f.div.place) html += factRow('Ort',   f.div.place, '', divSrc);
-    html += `</div>`;
-  }
-  if (f.divf?.date || f.divf?.place || f.divf?.seen) {
-    html += `<div class="section fade-up"><div class="section-title">Scheidungsantrag</div>`;
-    const divfSrc = f.divf.sources?.length ? f.divf.sources : null;
-    if (f.divf.date)  html += factRow('Datum', f.divf.date,  '', divfSrc);
-    if (f.divf.place) html += factRow('Ort',   f.divf.place, '', divfSrc);
+  {
+    const _famEvDefs = [
+      { key:'engag', label:'Verlobung' },
+      { key:'div',   label:'Scheidung' },
+      { key:'divf',  label:'Scheidungsantrag' }
+    ];
+    const _existing = _famEvDefs.filter(e => f[e.key]?.date || f[e.key]?.place || f[e.key]?.seen);
+    const _missing  = _famEvDefs.filter(e => !f[e.key]?.date && !f[e.key]?.place && !f[e.key]?.seen);
+    const _addBtns  = _missing.map(e =>
+      `<button class="section-add" data-action="showFamEventForm" data-fid="${id}" data-evkey="${e.key}">+ ${e.label}</button>`
+    ).join('');
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Ereignisse</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap">${_addBtns}</div>
+      </div>`;
+    for (const { key, label } of _famEvDefs) {
+      const ev = f[key];
+      if (!ev?.date && !ev?.place && !ev?.seen) continue;
+      const src   = ev.sources?.length ? ev.sources : null;
+      const parts = [ev.date, ev.place].filter(Boolean).join(', ');
+      html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">
+        <span class="fact-lbl">${label}</span>
+        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(src || [])}</span>
+      </div>`;
+    }
+    if (_existing.length === 0) {
+      html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Ereignisse eingetragen</div>`;
+    }
     html += `</div>`;
   }
 

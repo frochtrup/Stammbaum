@@ -1140,33 +1140,7 @@ body.fc-mode #fcGenBtns { display: flex; }
           <div id="ff-mplace-parts" style="display:none"></div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Verlobungsdatum</label>
-          <select class="form-select" id="ff-edate-qual"
-              style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
-            <option value="">exakt</option>
-            <option value="ABT">ca. (ABT)</option>
-            <option value="CAL">berechnet (CAL)</option>
-            <option value="EST">geschätzt (EST)</option>
-            <option value="BEF">vor (BEF)</option>
-            <option value="AFT">nach (AFT)</option>
-            <option value="FROM">von (FROM)</option>
-          </select>
-          <div style="display:flex;gap:4px">
-            <input class="form-input" id="ff-edate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-            <input class="form-input" id="ff-edate-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
-            <input class="form-input" id="ff-edate-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Verlobungsort <button type="button" id="ff-eplace-toggle" onclick="togglePlaceMode('ff-eplace')" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
-          <div id="ff-eplace-free">
-            <input class="form-input" id="ff-eplace" placeholder="München" autocomplete="off">
-          </div>
-          <div id="ff-eplace-parts" style="display:none"></div>
-        </div>
-      </div>
+
       <div class="form-group">
         <label class="form-label">Notiz</label>
         <textarea class="form-input" id="ff-note" rows="3" placeholder="Weitere Informationen…" style="resize:vertical;box-sizing:border-box"></textarea>
@@ -1193,6 +1167,55 @@ body.fc-mode #fcGenBtns { display: flex; }
       </div>
       <div style="margin-top:10px">
         <button class="btn btn-danger" id="deleteFamilyBtn" onclick="deleteFamily()" style="width:100%">Familie löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Family Event form (ENGA / DIV / DIVF) -->
+<div class="modal-overlay" id="modalFamEvent">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="famEventFormTitle">Ereignis bearbeiten</div>
+    <div class="sheet-body">
+      <input type="hidden" id="fev-fid">
+      <input type="hidden" id="fev-key">
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <select class="form-select" id="fev-date-qual"
+            style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+          <option value="">exakt</option>
+          <option value="ABT">ca. (ABT)</option>
+          <option value="CAL">berechnet (CAL)</option>
+          <option value="EST">geschätzt (EST)</option>
+          <option value="BEF">vor (BEF)</option>
+          <option value="AFT">nach (AFT)</option>
+          <option value="FROM">von (FROM)</option>
+        </select>
+        <div style="display:flex;gap:4px">
+          <input class="form-input" id="fev-date-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          <input class="form-input" id="fev-date-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+          <input class="form-input" id="fev-date-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ort</label>
+        <input class="form-input" id="fev-place" placeholder="München" autocomplete="off">
+      </div>
+      <div class="src-widget" id="fev-src-widget">
+        <label class="form-label">Quellen</label>
+        <div class="src-tags" id="fev-src-tags"></div>
+        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('fev')">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="fev-src-picker">
+          <div class="src-picker-list" id="fev-src-list"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" onclick="closeModal('modalFamEvent')">Abbrechen</button>
+        <button class="btn btn-save" id="saveFamEventBtn" onclick="saveFamEvent()">Speichern</button>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-danger" id="deleteFamEventBtn" onclick="deleteFamEvent()" style="width:100%">Ereignis löschen</button>
       </div>
     </div>
   </div>

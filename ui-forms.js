@@ -304,9 +304,6 @@ function showFamilyForm(id, ctx) {
   fillDateFields('ff-mdate-qual', 'ff-mdate', null, f?.marr?.date  || '');
   initPlaceMode('ff-mplace');
   document.getElementById('ff-mplace').value = f?.marr?.place  || '';
-  fillDateFields('ff-edate-qual', 'ff-edate', null, f?.engag?.date || '');
-  initPlaceMode('ff-eplace');
-  document.getElementById('ff-eplace').value = f?.engag?.place || '';
   document.getElementById('ff-note').value = f?.noteTexts?.length ? f.noteTexts.join('\n') : (f?.noteTextInline ?? f?.noteText ?? '');
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
@@ -333,8 +330,6 @@ function saveFamily() {
   if (!husb && !wife) { showToast('⚠ Mindestens ein Elternteil erforderlich'); return; }
   const mdate  = buildGedDateFromFields('ff-mdate-qual', 'ff-mdate', null);
   const mplace = getPlaceFromForm('ff-mplace');
-  const edate  = buildGedDateFromFields('ff-edate-qual', 'ff-edate', null);
-  const eplace = getPlaceFromForm('ff-eplace');
   const note = document.getElementById('ff-note').value.trim();
   const existingFam = getFamily(id) || {};
   const children = [...(existingFam.children || [])];
@@ -344,7 +339,9 @@ function saveFamily() {
     ...existingFam,
     id, husb, wife, children,
     marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,  sources: [...(srcWidgetState['ff']?.ids || [])] },
-    engag: { ...(existingFam.engag||{}), date: edate,  place: eplace },
+    engag: existingFam.engag || {},
+    div:   existingFam.div   || {},
+    divf:  existingFam.divf  || {},
     noteTexts: note ? [note] : [],
     noteTextInline: note,
     noteText: (() => {

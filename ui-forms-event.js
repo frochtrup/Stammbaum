@@ -165,3 +165,57 @@ function deleteEvent() {
   showToast('Ereignis gelöscht');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
+
+// ─────────────────────────────────────
+//  FORMS: FAMILY EVENTS (ENGA / DIV / DIVF)
+// ─────────────────────────────────────
+const _FAM_EV_LABELS = { engag:'Verlobung', div:'Scheidung', divf:'Scheidungsantrag' };
+
+function showFamEventForm(famId, evKey) {
+  const f = AppState.db.families[famId];
+  if (!f) return;
+  const ev = f[evKey] || {};
+  const isExisting = !!(ev.date || ev.place || ev.seen);
+  document.getElementById('fev-fid').value = famId;
+  document.getElementById('fev-key').value = evKey;
+  document.getElementById('famEventFormTitle').textContent = (_FAM_EV_LABELS[evKey] || evKey) + ' bearbeiten';
+  fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
+  document.getElementById('fev-place').value = ev.place || '';
+  initSrcWidget('fev', ev.sources || [], ev.sourcePages || {}, ev.sourceQUAY || {});
+  document.getElementById('deleteFamEventBtn').style.display = isExisting ? '' : 'none';
+  openModal('modalFamEvent');
+}
+
+function saveFamEvent() {
+  const famId = document.getElementById('fev-fid').value;
+  const evKey = document.getElementById('fev-key').value;
+  const f = AppState.db.families[famId];
+  if (!f) return;
+  const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
+  const place = document.getElementById('fev-place').value.trim();
+  f[evKey] = {
+    ...(f[evKey] || {}),
+    date,
+    place,
+    seen:        !!(date || place),
+    sources:     [...(srcWidgetState['fev']?.ids   || [])],
+    sourcePages: { ...(srcWidgetState['fev']?.pages || {}) },
+    sourceQUAY:  { ...(srcWidgetState['fev']?.quay  || {}) }
+  };
+  closeModal('modalFamEvent');
+  markChanged(); updateStats();
+  showToast('✓ Ereignis gespeichert');
+  if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
+}
+
+function deleteFamEvent() {
+  const famId = document.getElementById('fev-fid').value;
+  const evKey = document.getElementById('fev-key').value;
+  const f = AppState.db.families[famId];
+  if (!f) return;
+  f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, sources: [], sourcePages: {}, sourceQUAY: {} };
+  closeModal('modalFamEvent');
+  markChanged(); updateStats();
+  showToast('Ereignis gelöscht');
+  if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
+}
