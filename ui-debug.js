@@ -466,6 +466,44 @@ function runRoundtripTest() {
         (_sonst.length ? `\n\n* = nicht in Tag-Statistik (${_sonst.length} sonstige):  ` +
           _sonst.map(([k]) => k).join('  ') : '');
 
+      // ── EVEN + TYPE Auswertung ─────────────────────────────────
+      function _collectEvenTypes(text) {
+        const result = new Map(); // type → count
+        const lines = text.split(/\r?\n/);
+        let inEven = false, lv1 = -1;
+        for (const raw of lines) {
+          const m = raw.match(/^(\d+)\s+(\S+)(.*)/);
+          if (!m) continue;
+          const lv = parseInt(m[1]), tag = m[2], val = m[3].trim();
+          if (lv === 0) { inEven = false; lv1 = -1; continue; }
+          if (lv === 1) { inEven = tag === 'EVEN'; lv1 = lv; continue; }
+          if (inEven && lv === 2 && tag === 'TYPE') {
+            const key = val || '(leer)';
+            result.set(key, (result.get(key) || 0) + 1);
+          }
+          if (lv === 1) inEven = false;
+        }
+        return result;
+      }
+      const _evenOrig = _collectEvenTypes(_origText);
+      const _evenOut  = _collectEvenTypes(out1);
+      const _evenAllTypes = new Set([..._evenOrig.keys(), ..._evenOut.keys()]);
+      let _evenReport = '';
+      if (_evenAllTypes.size) {
+        const _evenRows = [..._evenAllTypes].sort().map(t => {
+          const o = _evenOrig.get(t) || 0, g = _evenOut.get(t) || 0;
+          const diff = g - o;
+          const mark = diff === 0 ? '✓' : diff > 0 ? `+${diff}` : `${diff}`;
+          return `  ${t.padEnd(28)} orig=${String(o).padStart(3)}  out=${String(g).padStart(3)}  ${mark}`;
+        });
+        const _evenTotal_o = [..._evenOrig.values()].reduce((a,b)=>a+b,0);
+        const _evenTotal_g = [..._evenOut.values()].reduce((a,b)=>a+b,0);
+        const _totMark = _evenTotal_g === _evenTotal_o ? '✓' : `${_evenTotal_g-_evenTotal_o>0?'+':''}${_evenTotal_g-_evenTotal_o}`;
+        _evenReport = '\n\n' + '─'.repeat(42) + '\nEVEN-Typen (1 EVEN + 2 TYPE):\n' +
+          `  ${'(gesamt)'.padEnd(28)} orig=${String(_evenTotal_o).padStart(3)}  out=${String(_evenTotal_g).padStart(3)}  ${_totMark}\n` +
+          _evenRows.join('\n');
+      }
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -489,6 +527,7 @@ function runRoundtripTest() {
         `Stabilität (out1 === out2): ${stable ? '✓ STABIL' : '✗ INSTABIL'}\n\n` +
         `Tag-Statistik:\n` + rows.join('\n') +
         (hasAdditive ? '\n\n* additiv: Writer fügt diesen Tag immer ein' : '') +
+        _evenReport +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
         _datePlacReport +
         _objeDiagReport +
