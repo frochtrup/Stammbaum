@@ -17,7 +17,7 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  offline.html         — Offline-Fallback (SW v162)   │
 │  gedcom.js            — AppState/UIState, Labels     │
 │  gedcom-parser.js     — parseGEDCOM()                │
-│  gedcom-writer.js     — writeGEDCOM(), pushCont()    │
+│  gedcom-writer.js     — write*Record(), pushCont()   │
 │  storage.js           — IndexedDB, Dateiverwaltung   │
 │  ui-views.js          — gemeinsame Hilfsfunktionen   │
 │  ui-views-person.js   — Personen-Detailansicht       │
@@ -32,7 +32,7 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
 │  onedrive-import.js   — Foto-Import, Ordner-Browser  │
 │  onedrive.js          — Media-URL, Upload, File-I/O  │
-│  sw.js                — Service Worker (Cache v162)  │
+│  sw.js                — Service Worker (Cache v167)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
@@ -448,3 +448,4 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 | ~~`ui-views.js` gross~~ | → 5 Module aufgeteilt (sw v94) | Abgeschlossen (v5-dev) |
 | ~~`onedrive.js` 946 Z.~~ | → 3 Module aufgeteilt (sw v140) | Abgeschlossen (v5-dev) |
 | ~~`ui-forms.js` 1036 Z.~~ | → 3 Module aufgeteilt (sw v141) | Abgeschlossen (v5-dev) |
+| ~~`writeGEDCOM()` 477 Z.~~ | → `write*Record()`-Subfunktionen + `writeSourCitations`/`writeCHAN`/`_mediaFormStr` (sw v167) | Abgeschlossen (v6-dev) |

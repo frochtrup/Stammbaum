@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v166 / Cache: `stammbaum-v166`
+**Aktuelle sw-Version:** v167 / Cache: `stammbaum-v167`
 
 ---
 
@@ -26,7 +26,7 @@ Priorisierung der offenen Schulden (2026-04-06):
 ```
 P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)       ✅ sw v163
 P2a Datenqualität       →  Ereignis-TYPE für alle Event-Typen editierbar        ✅ sw v164
-P2 Maintainability      →  parseGEDCOM + writeGEDCOM aufteilen; storage.js aufgeteilt ✅ sw v166
+P2 Maintainability      →  ~~parseGEDCOM aufteilen~~ (verworfen) · writeGEDCOM aufgeteilt ✅ sw v167 · storage.js aufgeteilt ✅ sw v166
 P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen
 P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper
 P5 UX-Schulden          →  INDI-Notes-Editierproblem, Cmd+Z (eigener Sprint)
@@ -54,7 +54,7 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 ### P2 — Maintainability (Aufwand steigt mit jeder Erweiterung)
 
 - [~] **`parseGEDCOM()` aufteilen** — ❌ verworfen: Parser ist eine Single-Pass-State-Machine mit tiefem Shared State (`_ptDepth`, `_ptTarget`, `evIdx`, `lastSourVal` …). Sub-Funktionen würden den Lesefluss verschlechtern (ctx-Objekt nötig, Sprünge zwischen Funktionen). Code ist roundtrip-stabil und durch Section-Kommentare (`// ── INDI ──`) navigierbar — Aufwand ohne operativen Nutzen.
-- [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
+- [x] **`writeGEDCOM()` in Subfunktionen aufteilen** — `writeINDIRecord`, `writeFAMRecord`, `writeSOURRecord`, `writeREPORecord`, `writeNOTERecord`; `writeSourCitations` / `writeCHAN` / `_mediaFormStr` als Hilfsfunktionen; `geoLines` + `eventBlock` aus Inner-Functions herausgehoben; FAM-events-Duplikation behoben ✅ sw v167
 - [x] **`storage.js` aufteilen** — `storage-file.js` (IDB-Primitives + File System Access API + Export/Save + File Loading, ~305 Z.) + `storage.js` (Demo/Backup/Init/Foto-Export, ~345 Z.) ✅ sw v166
 
 ---
@@ -265,7 +265,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 - [x] **Inline Event-Handler durch Event-Delegation ersetzen** — `oninput="updateSrcPage(...)"` u.ä. sind XSS-anfällig bei unvollständigem Escaping und erzeugen Memory-Leaks bei Modal-Reopen (ui-forms.js, viele ui-*.js)
 - [x] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=4) (gedcom-parser.js) ✅ (sw v138)
-- [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
+- [x] **`writeGEDCOM()` in Subfunktionen aufteilen** — `writeINDIRecord`, `writeFAMRecord`, `writeSOURRecord`, `writeREPORecord`, `writeNOTERecord`; `writeSourCitations` / `writeCHAN` / `_mediaFormStr` als Hilfsfunktionen; `geoLines` + `eventBlock` aus Inner-Functions herausgehoben; FAM-events-Duplikation behoben ✅ sw v167
 - [x] **`catch { return null }` durch echtes Error-Handling ersetzen** — maskiert alle OneDrive-API-Fehler, erschwert Debugging (onedrive.js) ✅ (sw v139)
 - [x] **`onedrive.js` in 3 Module aufteilen** — 946-Zeilen-Monolith; `onedrive-auth.js` (OAuth-Flow, Token), `onedrive-import.js` (Foto-Import-Wizard, Ordner-Browser), `onedrive.js` (Media-URL, File-I/O, Pfad-Helfer, Settings) ✅ (sw v140)
 - [x] **`ui-forms.js` in 3 Module aufteilen** — 1036 Zeilen; `ui-forms-event.js` (Event-Formular ~170 Z.), `ui-forms-repo.js` (Archiv/Picker/Detail ~163 Z.), `ui-forms.js` (Person/Familie/Quelle + Utilities ~706 Z.) ✅ (sw v141)
@@ -278,7 +278,7 @@ Priorisierte Liste — Details und Kontext in v6.0-Abschnitt oben.
 
 **Offen (priorisiert):**
 - ~~**P1** `onclick=`-Handler-Migration~~ → sw v163 ✓
-- **P2** ~~`parseGEDCOM()` aufteilen~~ → verworfen (Single-Pass-State-Machine, kein Nutzen) · `writeGEDCOM()` aufteilen (477 Z.) · ~~`storage.js` aufteilen~~ → sw v166 ✓
+- ~~**P2**~~ ~~`parseGEDCOM()` aufteilen~~ → verworfen · ~~`writeGEDCOM()` aufteilen~~ → sw v167 ✓ · ~~`storage.js` aufteilen~~ → sw v166 ✓
 - **P3** Globale Suche indexieren (O(n×m)) · `touchmove` throttlen · Virtual Scroll profilen
 - **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper extrahieren
 - **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo (eigener Sprint)

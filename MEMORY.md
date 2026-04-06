@@ -10,7 +10,7 @@
 - `index.html` — App-Shell: HTML-Struktur + CSS + Script-Tags
 - `gedcom.js` — AppState/UIState Namespaces, Labels, Datum- und PLAC-Helfer, 8 Getter/Setter-Helfer
 - `gedcom-parser.js` — `parseGEDCOM()`, `parseGeoCoord()`
-- `gedcom-writer.js` — `writeGEDCOM()`, `pushCont()`
+- `gedcom-writer.js` — `writeGEDCOM()`, `pushCont()`, `write*Record()`, `writeSourCitations()`, `writeCHAN()`, `eventBlock()`, `geoLines()`
 - `demo.ged` — Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 - `storage-file.js` — IDB-Primitives (`idbGet/Put/Del`), File System Access API, `exportGEDCOM`, File Loading (DOM-Events, `_processLoadedText`, `readFile`)
 - `storage.js` — Demo/Backup/Foto-Export-Import, Auto-Load, Startup (`load`-Event), `revertToSaved`, `confirmNewFile`
@@ -27,7 +27,7 @@
 - `onedrive-auth.js` — OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
 - `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus, `_extractObjeFilemap()`
 - `onedrive.js` — Media-URL (`_odGetMediaUrlByPath`), Upload, File-I/O (Open/Save), Pfad-Helfer, Settings
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v146)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v167)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -40,14 +40,14 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-05
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-06
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 abgeschlossen — auf `main` gemergt (2026-04-05)**
 **Version 6.0 in Entwicklung — Branch `v6-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1===out2)
-- **Aktuelle sw-Version: v166** / Cache: `stammbaum-v166`
+- **Aktuelle sw-Version: v167** / Cache: `stammbaum-v167`
 - Git: Branch `v6-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)

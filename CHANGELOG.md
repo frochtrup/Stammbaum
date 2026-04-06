@@ -9,6 +9,19 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-06 — writeGEDCOM() aufgeteilt (sw v167)
+
+- **sw v167** `refactor`: `writeGEDCOM()` (477 Z.) in Subfunktionen aufgeteilt
+  - `gedcom-writer.js`: neue Top-Level-Funktionen `writeINDIRecord`, `writeFAMRecord`, `writeSOURRecord`, `writeREPORecord`, `writeNOTERecord` — je ein Writer pro Record-Typ
+  - `writeSourCitations(lines, sourLv, obj)` — SOUR+PAGE+QUAY+NOTE+_extra+OBJE war 4× dupliziert
+  - `writeCHAN(lines, obj, lv=1)` — CHAN+DATE+TIME war 4× dupliziert
+  - `_mediaFormStr(m)` — FORM-Ableitung aus Dateiendung war 3× dupliziert
+  - `geoLines` + `eventBlock` aus Inner-Functions herausgehoben (benötigen nun `lines` als Parameter)
+  - **Bugfix:** FAM-events-Schleife duplizierte den SOUR-Zitierblock manuell statt `writeSourCitations` zu nutzen
+  - `writeGEDCOM()` ist jetzt ~35 Z. (HEAD + 5 Record-Schleifen + TRLR)
+
+---
+
 ### Session 2026-04-06 — SW Offline-Fallback + Security-Review (sw v162)
 
 - **sw v162** `feat`: Service Worker Offline-Fallback
