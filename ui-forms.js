@@ -515,6 +515,29 @@ function deleteSource() {
 // ─────────────────────────────────────
 function openModal(id) {
   document.getElementById(id).classList.add('open');
+  if (id === 'modalMenu') _updateMenuVersionInfo();
+}
+
+async function _updateMenuVersionInfo() {
+  const swEl    = document.getElementById('menuSwVersion');
+  const stateEl = document.getElementById('menuSwState');
+  if (!swEl) return;
+  let swName = 'kein Cache';
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    const sw = keys.find(k => k.startsWith('stammbaum-'));
+    if (sw) swName = sw.replace('stammbaum-', 'sw ');
+  }
+  let state = '–';
+  if ('serviceWorker' in navigator) {
+    const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+    if (reg) {
+      const w = reg.active || reg.installing || reg.waiting;
+      state = reg.active ? 'aktiv' : reg.waiting ? 'wartet (neu laden)' : reg.installing ? 'installiert...' : '–';
+    } else { state = 'nicht registriert'; }
+  }
+  swEl.textContent    = 'SW: ' + swName;
+  stateEl.textContent = 'Status: ' + state;
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');

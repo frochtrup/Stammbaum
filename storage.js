@@ -629,15 +629,19 @@ window.addEventListener('load', async () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
-  // DEV: aktiven SW-Cache anzeigen — nach dem geladen-Toast (2800ms sichtbar + Puffer)
-  setTimeout(() => {
-    if ('caches' in window) {
-      caches.keys().then(keys => {
-        const sw = keys.find(k => k.startsWith('stammbaum-'));
-        showToast('DEV ' + (sw ? sw.replace('stammbaum-', 'sw ') : 'kein SW-Cache'));
-      });
-    }
-  }, 3400);
+  // DEV: aktiven SW-Cache anzeigen (nach geladen-Toast)
+  const _showSwToast = () => {
+    if (!('caches' in window)) return;
+    caches.keys().then(keys => {
+      const sw = keys.find(k => k.startsWith('stammbaum-'));
+      showToast('DEV ' + (sw ? sw.replace('stammbaum-', 'sw ') : 'kein SW-Cache'));
+    });
+  };
+  setTimeout(_showSwToast, 3400);
+  // Auch bei SW-Wechsel (nach Reload mit neuem Cache)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => setTimeout(_showSwToast, 500));
+  }
 });
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
