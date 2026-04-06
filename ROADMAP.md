@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v161 / Cache: `stammbaum-v161`
+**Aktuelle sw-Version:** v162 / Cache: `stammbaum-v162`
 
 ---
 
@@ -60,8 +60,8 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 ### Schwerpunkt 4: Code-Qualität (Tier 3)
 
 - [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` aus Person/Familie/Quelle-Views (~15% Duplikation)
-- [ ] **`onclick=`-Handler vollständig auf `data-action`-Delegation migrieren** — aktuell gemischt; `unsafe-inline` in CSP danach entfernbar
-- [ ] **Service Worker Offline-Fallback** — bei leerem Cache + Netz-Timeout: `offline.html` statt weißem Screen
+- [ ] **`onclick=`-Handler vollständig auf `data-action`-Delegation migrieren** — 95 inline `onclick=` in `index.html`; `unsafe-inline` in `script-src` danach entfernbar. Risikobewertung: niedriges Risiko für aktuelle Einzelpersonen-PWA ohne Fremddaten-Sharing — **Pflicht vor** jedem Feature das Fremddaten importiert (z.B. GED-Import aus unbekannter Quelle per URL) oder Daten teilt (Sharing-Links, kollaboratives Editing).
+- [x] **Service Worker Offline-Fallback** — `offline.html` + PRECACHE; `destination === 'document'`-Check verhindert falschen Fallback für Sub-Ressourcen (sw v162)
 
 ---
 
@@ -268,6 +268,8 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 - ~~GEDCOM-Parser ohne Fehler-Sammler~~ → behoben sw v138: `parseErrors[]` + Level-Validierung
 - ~~`sourceRefs` nach Event-Save nicht aktualisiert~~ → behoben sw v149: rebuild-Funktionen nach save/delete
 - ~~Ereignisliste unsortiert/ungruppiert~~ → behoben sw v150: Typ-Gruppen + Datum-Sortierung
+- ~~Service Worker: weißer Screen bei leerem Cache + Netz-Timeout~~ → behoben sw v162: `offline.html` Fallback
+- `onclick=`-Handler-Migration — **Pflicht vor** GED-Import aus unbekannter Quelle / Sharing-Features
 
 ---
 

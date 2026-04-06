@@ -5,6 +5,21 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 6.0 (Branch `v6-dev`, ab 2026-04-05) — IN ENTWICKLUNG
+
+---
+
+### Session 2026-04-06 — SW Offline-Fallback + Security-Review (sw v162)
+
+- **sw v162** `feat`: Service Worker Offline-Fallback
+  - `sw.js`: `offline.html` in PRECACHE aufgenommen; Cache-Version → v162
+  - `sw.js`: catch-Handler prüft `event.request.destination === 'document'` — nur Navigation-Requests erhalten `offline.html` als Fallback; Sub-Ressourcen (JS, CSS, Bilder) geben `undefined` zurück (korrekt)
+  - `offline.html`: neue self-contained Offline-Seite (inline styles, kein ext. CSS/JS, kein Script); passt zum App-Design; "Erneut versuchen"-Link auf `./`
+  - Vorher: leererer Cache + Netz-Timeout → weißer Screen; jetzt: on-brand Fehlermeldung
+  - Security-Review `onclick=`-Handler: 95 inline `onclick=` in `index.html` blockieren `unsafe-inline`-Entfernung aus CSP; Risiko niedrig für aktuelle Nutzung — dokumentiert als **Pflicht-TODO vor** GED-Import aus unbekannter Quelle / Sharing-Features (ROADMAP.md)
+
+---
+
 ## Version 5.0 (Branch `v5-dev`, 2026-03-30 — 2026-04-05) — ABGESCHLOSSEN
 
 ---

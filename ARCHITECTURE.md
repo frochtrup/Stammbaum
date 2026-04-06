@@ -9,11 +9,12 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          Stammbaum PWA v5.0 (Branch v5-dev)          │
+│          Stammbaum PWA v6.0 (Branch v6-dev)          │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
 │  index.html           — App-Shell (HTML + CSS)       │
+│  offline.html         — Offline-Fallback (SW v162)   │
 │  gedcom.js            — AppState/UIState, Labels     │
 │  gedcom-parser.js     — parseGEDCOM()                │
 │  gedcom-writer.js     — writeGEDCOM(), pushCont()    │
@@ -31,7 +32,7 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
 │  onedrive-import.js   — Foto-Import, Ordner-Browser  │
 │  onedrive.js          — Media-URL, Upload, File-I/O  │
-│  sw.js                — Service Worker (Cache v146)  │
+│  sw.js                — Service Worker (Cache v162)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘

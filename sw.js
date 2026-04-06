@@ -2,9 +2,9 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v161';
+const CACHE_NAME = 'stammbaum-v162';
 const PRECACHE = [
-  './index.html', './styles.css', './manifest.json', './icon.svg',
+  './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
   './gedcom.js', './gedcom-parser.js', './gedcom-writer.js',
   './storage.js',
   './ui-views.js', './ui-views-tree.js', './ui-views-person.js', './ui-views-family.js', './ui-views-source.js',
@@ -58,6 +58,9 @@ self.addEventListener('fetch', event => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(event.request).then(r => {
+        if (r) return r;
+        if (event.request.destination === 'document') return caches.match('./offline.html');
+      }))
   );
 });
