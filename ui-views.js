@@ -492,3 +492,24 @@ document.addEventListener('input', e => {
   if (!el) return;
   if (el.dataset.input === 'updateSrcPage') updateSrcPage(el.dataset.prefix, el.dataset.sid, el.value);
 });
+
+// ─────────────────────────────────────
+//  OBJE-REFERENZ-HELPER
+//  Baut Map @Oxx@ → {file, title} aus AppState.db.extraRecords
+// ─────────────────────────────────────
+function _buildObjeRefMap() {
+  const map = {};
+  for (const rec of (AppState.db.extraRecords || [])) {
+    if (!rec._lines || !rec._lines.length) continue;
+    const hm = rec._lines[0].match(/^0 (@[^@]+@) OBJE$/);
+    if (!hm) continue;
+    const objId = hm[1];
+    let file = '', title = '';
+    for (let i = 1; i < rec._lines.length; i++) {
+      const lm = rec._lines[i].match(/^1 (FILE|TITL) (.+)$/);
+      if (lm) { if (lm[1] === 'FILE') file = lm[2]; else title = lm[2]; }
+    }
+    map[objId] = { file, title };
+  }
+  return map;
+}

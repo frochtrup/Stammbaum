@@ -42,7 +42,7 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 ### Schwerpunkt 2: Architektur-Schulden (Tier 2)
 
 - [ ] **`parseGEDCOM()` aufteilen** — 750-Zeilen-Monolith in `gedcom-parser.js`; Ziel: INDI/FAM/EVENT als Sub-Parser je < 200 Z.
-- [ ] **`storage.js` aufteilen** — 751 Z., zu viele Concerns: `storage-file.js` (File I/O) + `storage-idb.js` (IndexedDB) + bestehende `storage.js` (Demo/Backup/Init)
+- [ ] **`storage.js` aufteilen** — noch 639 Z., zu viele Concerns: `storage-file.js` (File I/O) + `storage-idb.js` (IndexedDB) + bestehende `storage.js` (Demo/Backup/Init); fehlplatzierte UI-Helpers (138 Z.) bereits verschoben: `resizeImageToBase64`/`_tryViaImg` → `ui-media.js`, `_buildObjeRefMap` → `ui-views.js`, `_renderMediaList`/`_readMediaList`/`_addMediaEntry` → `ui-forms.js`
 - [x] **CSS aus `index.html` auslagern** — ~800 Z. Inline-CSS → `styles.css` ✅ (sw v161)
 - [ ] **`_navHistory` + `_probandId` in `UIState` konsolidieren** — aktuell lose Globals in ui-views.js
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)

@@ -280,6 +280,77 @@ function deletePerson() {
 }
 
 // ─────────────────────────────────────
+//  MEDIA LIST HELPERS (Formular-Medienlisten)
+// ─────────────────────────────────────
+function _renderMediaList(prefix, mediaArr) {
+  const container = document.getElementById(prefix + '-media-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!mediaArr || !mediaArr.length) return;
+  for (let i = 0; i < mediaArr.length; i++) {
+    const m = mediaArr[i];
+    if (!m.file && !m.title) continue;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)';
+    row.dataset.idx = i;
+    const label = document.createElement('span');
+    label.style.cssText = 'flex:1;font-size:0.82rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+    label.textContent = (m.title || m.file) + (m.title && m.file ? ' (' + m.file + ')' : '');
+    label.title = (m.title ? m.title + '\n' : '') + (m.file || '');
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'padding:2px 8px;font-size:0.9rem;flex-shrink:0';
+    del.onclick = () => { row.remove(); };
+    row.appendChild(label);
+    row.appendChild(del);
+    container.appendChild(row);
+  }
+}
+
+function _readMediaList(prefix, existingMedia) {
+  const container = document.getElementById(prefix + '-media-list');
+  if (!container) return existingMedia;
+  const result = [];
+  for (const row of container.children) {
+    if (row.dataset.idx !== undefined) {
+      const idx = parseInt(row.dataset.idx, 10);
+      if (!isNaN(idx) && existingMedia[idx]) result.push(existingMedia[idx]);
+    } else if (row.dataset.new) {
+      result.push({ file: row.dataset.file || '', title: '', form: '', _extra: [] });
+    }
+  }
+  return result;
+}
+
+function _addMediaEntry(prefix) {
+  const fileInput = document.getElementById(prefix + '-media-add-file');
+  const file = (fileInput?.value || '').trim();
+  if (!file) { showToast('Bitte Dateinamen eingeben'); return; }
+  const container = document.getElementById(prefix + '-media-list');
+  if (!container) return;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)';
+  row.dataset.new = '1';
+  row.dataset.file = file;
+  const label = document.createElement('span');
+  label.style.cssText = 'flex:1;font-size:0.82rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0';
+  label.textContent = file;
+  label.title = file;
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.textContent = '×';
+  del.className = 'btn btn-danger';
+  del.style.cssText = 'padding:2px 8px;font-size:0.9rem;flex-shrink:0';
+  del.onclick = () => { row.remove(); };
+  row.appendChild(label);
+  row.appendChild(del);
+  container.appendChild(row);
+  if (fileInput) fileInput.value = '';
+}
+
+// ─────────────────────────────────────
 //  FORMS: FAMILY
 // ─────────────────────────────────────
 let _pendingAddChild = null;

@@ -1,3 +1,49 @@
+// ─────────────────────────────────────
+//  FOTO RESIZE HELPERS
+// ─────────────────────────────────────
+function resizeImageToBase64(file, maxPx = 800, quality = 0.82) {
+  const _drawAndResolve = (source, resolve, reject) => {
+    let w = source.width || source.naturalWidth;
+    let h = source.height || source.naturalHeight;
+    if (!w || !h) { reject(new Error('Bildgrösse unbekannt')); return; }
+    if (w > maxPx || h > maxPx) {
+      if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+      else        { w = Math.round(w * maxPx / h); h = maxPx; }
+    }
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(source, 0, 0, w, h);
+    if (source.close) source.close(); // ImageBitmap cleanup
+    const b64 = cv.toDataURL('image/jpeg', quality);
+    if (b64.length > 400000) showToast('Foto ist gross (' + Math.round(b64.length / 1024) + ' KB) – ggf. Qualität reduzieren');
+    resolve(b64);
+  };
+
+  return new Promise((resolve, reject) => {
+    if (typeof createImageBitmap === 'function') {
+      createImageBitmap(file).then(bmp => {
+        _drawAndResolve(bmp, resolve, reject);
+      }).catch(() => {
+        _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve);
+      });
+    } else {
+      _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve);
+    }
+  });
+}
+
+function _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve) {
+  const reader = new FileReader();
+  reader.onerror = reject;
+  reader.onload = e => {
+    const img = new Image();
+    img.onerror = reject;
+    img.onload = () => _drawAndResolve(img, resolve, reject);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 // ─── Medien hinzufügen / löschen ─────────────────────────────────────────
 let _addMediaType            = null; // 'person' | 'family' | 'source'
 let _addMediaId              = null;
