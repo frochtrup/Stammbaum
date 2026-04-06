@@ -41,70 +41,123 @@ function runRoundtripTest() {
       const count = (text, re) => (text.match(re) || []).length;
 
       const tags = [
-        // Quellenqualität + Seiten
-        { lbl:'3 QUAY',       re:/^\s*3 QUAY\b/mg },
-        { lbl:'3 PAGE',       re:/^\s*3 PAGE\b/mg },
-        // NOTE + REPO Records
+        // ── Records ────────────────────────────────────────────────
+        { lbl:'0 INDI rec.',  re:/^0 @[^@]+@ INDI\b/mg },
+        { lbl:'0 FAM rec.',   re:/^0 @[^@]+@ FAM\b/mg },
+        { lbl:'0 SOUR rec.',  re:/^0 @[^@]+@ SOUR\b/mg },
         { lbl:'0 NOTE rec.',  re:/^0 @[^@]+@ NOTE\b/mg },
-        { lbl:'1 REPO (src)', re:/^\s*1 REPO\b/mg },
         { lbl:'0 REPO rec.',  re:/^0 @[^@]+@ REPO\b/mg },
-        // Events Sprint 5
+        { lbl:'0 OBJE rec.',  re:/^0 @[^@]+@ OBJE\b/mg },
+        // ── Personen-Vitalereignisse ────────────────────────────────
+        { lbl:'1 BIRT',       re:/^\s*1 BIRT\b/mg },
+        { lbl:'1 CHR',        re:/^\s*1 CHR\b/mg },
+        { lbl:'1 DEAT',       re:/^\s*1 DEAT\b/mg },
+        { lbl:'1 BURI',       re:/^\s*1 BURI\b/mg },
+        // ── Personen-Ereignisse ─────────────────────────────────────
+        { lbl:'1 OCCU',       re:/^\s*1 OCCU\b/mg },
+        { lbl:'1 RESI',       re:/^\s*1 RESI\b/mg },
         { lbl:'1 FACT',       re:/^\s*1 FACT\b/mg },
         { lbl:'1 MILI',       re:/^\s*1 MILI\b/mg },
-        { lbl:'2 TYPE',       re:/^\s*2 TYPE\b/mg },
-        { lbl:'1 ENGA',       re:/^\s*1 ENGA\b/mg },
+        { lbl:'1 CENS',       re:/^\s*1 CENS\b/mg },
+        { lbl:'1 EVEN',       re:/^\s*1 EVEN\b/mg },
+        { lbl:'1 EMIG',       re:/^\s*1 EMIG\b/mg },
+        { lbl:'1 IMMI',       re:/^\s*1 IMMI\b/mg },
+        { lbl:'1 NATU',       re:/^\s*1 NATU\b/mg },
+        { lbl:'1 GRAD',       re:/^\s*1 GRAD\b/mg },
+        { lbl:'1 ADOP',       re:/^\s*1 ADOP\b/mg },
+        { lbl:'1 CONF',       re:/^\s*1 CONF\b/mg },
+        { lbl:'1 FCOM',       re:/^\s*1 FCOM\b/mg },
+        { lbl:'1 ORDN',       re:/^\s*1 ORDN\b/mg },
+        { lbl:'1 RETI',       re:/^\s*1 RETI\b/mg },
+        { lbl:'1 PROP',       re:/^\s*1 PROP\b/mg },
+        { lbl:'1 WILL',       re:/^\s*1 WILL\b/mg },
+        { lbl:'1 PROB',       re:/^\s*1 PROB\b/mg },
+        { lbl:'1 EDUC',       re:/^\s*1 EDUC\b/mg },
+        { lbl:'1 RELI',       re:/^\s*1 RELI\b/mg },
+        { lbl:'1 TITL',       re:/^\s*1 TITL\b/mg },
+        { lbl:'1 DSCR',       re:/^\s*1 DSCR\b/mg },
+        { lbl:'1 IDNO',       re:/^\s*1 IDNO\b/mg },
+        { lbl:'1 SSN',        re:/^\s*1 SSN\b/mg },
+        // ── Familien-Ereignisse ────────────────────────────────────
+        { lbl:'1 MARR',       re:/^\s*1 MARR\b/mg },
         { lbl:'1 DIV',        re:/^\s*1 DIV\b/mg },
         { lbl:'1 DIVF',       re:/^\s*1 DIVF\b/mg },
-        { lbl:'2 CAUS',       re:/^\s*2 CAUS\b/mg },
-        // Person-Felder Sprint 5
+        { lbl:'1 ENGA',       re:/^\s*1 ENGA\b/mg },
+        // ── Personen-Felder ─────────────────────────────────────────
+        { lbl:'1 NAME',       re:/^\s*1 NAME\b/mg },
+        { lbl:'1 SEX',        re:/^\s*1 SEX\b/mg },
         { lbl:'1 RESN',       re:/^\s*1 RESN\b/mg },
         { lbl:'1 EMAIL',      re:/^\s*1 EMAIL\b/mg },
         { lbl:'1 WWW',        re:/^\s*1 WWW\b/mg },
-        // Datum-Qualifier Sprint 6a
+        { lbl:'1 _UID',       re:/^\s*1 _UID\b/mg },
+        { lbl:'1 _STAT',      re:/^\s*1 _STAT\b/mg },
+        // ── Namen-Unterfelder ──────────────────────────────────────
+        { lbl:'2 GIVN',       re:/^\s*2 GIVN\b/mg },
+        { lbl:'2 SURN',       re:/^\s*2 SURN\b/mg },
+        { lbl:'2 NICK',       re:/^\s*2 NICK\b/mg },
+        { lbl:'2 NPFX',       re:/^\s*2 NPFX\b/mg },
+        { lbl:'2 NSFX',       re:/^\s*2 NSFX\b/mg },
+        { lbl:'2 TYPE',       re:/^\s*2 TYPE\b/mg },
+        // ── Familien-Struktur ──────────────────────────────────────
+        { lbl:'1 HUSB',       re:/^\s*1 HUSB\b/mg },
+        { lbl:'1 WIFE',       re:/^\s*1 WIFE\b/mg },
+        { lbl:'1 CHIL',       re:/^\s*1 CHIL\b/mg },
+        { lbl:'1 FAMS',       re:/^\s*1 FAMS\b/mg },
+        { lbl:'1 FAMC',       re:/^\s*1 FAMC\b/mg },
+        { lbl:'2 PEDI',       re:/^\s*2 PEDI\b/mg },
+        { lbl:'2 _FREL',      re:/^\s*2 _FREL\b/mg },
+        { lbl:'2 _MREL',      re:/^\s*2 _MREL\b/mg },
+        // ── Ereignis-Unterfelder ───────────────────────────────────
+        { lbl:'2 DATE',       re:/^\s*2 DATE\b/mg },
+        { lbl:'2 PLAC',       re:/^\s*2 PLAC\b/mg },
+        { lbl:'2 CAUS',       re:/^\s*2 CAUS\b/mg },
+        { lbl:'2 ADDR',       re:/^\s*2 ADDR\b/mg },
+        { lbl:'2 PHON',       re:/^\s*2 PHON\b/mg },
+        { lbl:'2 EMAIL',      re:/^\s*2 EMAIL\b/mg },
+        // ── Datum-Qualifier ────────────────────────────────────────
         { lbl:'DATE ABT',     re:/\bDATE ABT\b/mg },
         { lbl:'DATE BEF',     re:/\bDATE BEF\b/mg },
         { lbl:'DATE AFT',     re:/\bDATE AFT\b/mg },
         { lbl:'DATE BET',     re:/\bDATE BET\b/mg },
         { lbl:'DATE CAL',     re:/\bDATE CAL\b/mg },
         { lbl:'DATE EST',     re:/\bDATE EST\b/mg },
-        // PLAC.FORM Sprint 6b — additive: Writer fügt es immer ein
-        { lbl:'PLAC.FORM',    re:/^2 FORM\s+\S.*,/mg, additive:true },
-        // CHAN.TIME
-        { lbl:'3 TIME',       re:/^\s*3 TIME\b/mg },
-        // Bekannte Verluste
-        { lbl:'_STAT',        re:/_STAT\b/mg },
-        // CHIL _FREL/_MREL Diagnose
-        { lbl:'2 _FREL',      re:/^\s*2 _FREL\b/mg },
-        { lbl:'2 _MREL',      re:/^\s*2 _MREL\b/mg },
-        { lbl:'3 SOUR (FAM)', re:/^\s*3 SOUR\b/mg },
-        { lbl:'4 PAGE',       re:/^\s*4 PAGE\b/mg },
-        { lbl:'4 QUAY',       re:/^\s*4 QUAY\b/mg },
-        // MAP/Geo
+        // ── Geo ────────────────────────────────────────────────────
         { lbl:'3 MAP',        re:/^\s*3 MAP\b/mg },
         { lbl:'4 LATI',       re:/^\s*4 LATI\b/mg },
         { lbl:'4 LONG',       re:/^\s*4 LONG\b/mg },
-        // Sonstige
-        { lbl:'1 NAME',       re:/^\s*1 NAME\b/mg },
-        { lbl:'2 TYPE (all)', re:/^\s*2 TYPE\b/mg },
-        { lbl:'1 RESI',       re:/^\s*1 RESI\b/mg },
-        { lbl:'1 OCCU',       re:/^\s*1 OCCU\b/mg },
-        { lbl:'2 GIVN',       re:/^\s*2 GIVN\b/mg },
-        { lbl:'2 SURN',       re:/^\s*2 SURN\b/mg },
-        { lbl:'2 PLAC',       re:/^\s*2 PLAC\b/mg },
-        { lbl:'2 DATE',       re:/^\s*2 DATE\b/mg },
-        { lbl:'1 BIRT',       re:/^\s*1 BIRT\b/mg },
-        { lbl:'1 CHR',        re:/^\s*1 CHR\b/mg },
-        { lbl:'1 DEAT',       re:/^\s*1 DEAT\b/mg },
-        { lbl:'1 BURI',       re:/^\s*1 BURI\b/mg },
-        { lbl:'1 FAMS',       re:/^\s*1 FAMS\b/mg },
-        { lbl:'1 FAMC',       re:/^\s*1 FAMC\b/mg },
-        { lbl:'1 SEX',        re:/^\s*1 SEX\b/mg },
-        { lbl:'1 NOTE (INDI)',re:/^\s*1 NOTE\b/mg },
+        // ── PLAC.FORM ─────────────────────────────────────────────
+        { lbl:'PLAC.FORM',    re:/^2 FORM\s+\S.*,/mg, additive:true },
+        // ── Notizen ────────────────────────────────────────────────
+        { lbl:'1 NOTE',       re:/^\s*1 NOTE\b/mg },
         { lbl:'2 NOTE',       re:/^\s*2 NOTE\b/mg },
-        { lbl:'2 SOUR (all)', re:/^\s*2 SOUR\b/mg },
-        { lbl:'3 PAGE (all)', re:/^\s*3 PAGE\b/mg },
-        { lbl:'3 QUAY (all)', re:/^\s*3 QUAY\b/mg },
-        { lbl:'1 SOUR (INDI)',re:/^\s*1 SOUR\b/mg },
+        { lbl:'3 NOTE',       re:/^\s*3 NOTE\b/mg },
+        // ── Medien ────────────────────────────────────────────────
+        { lbl:'1 OBJE',       re:/^\s*1 OBJE\b/mg },
+        { lbl:'2 OBJE',       re:/^\s*2 OBJE\b/mg },
+        { lbl:'2 FILE',       re:/^\s*2 FILE\b/mg },
+        { lbl:'2 TITL',       re:/^\s*2 TITL\b/mg },
+        { lbl:'2 _PRIM',      re:/^\s*2 _PRIM\b/mg },
+        { lbl:'2 _SCBK',      re:/^\s*2 _SCBK\b/mg },
+        // ── Quellen ───────────────────────────────────────────────
+        { lbl:'1 SOUR',       re:/^\s*1 SOUR\b/mg },
+        { lbl:'2 SOUR',       re:/^\s*2 SOUR\b/mg },
+        { lbl:'3 SOUR',       re:/^\s*3 SOUR\b/mg },
+        { lbl:'3 PAGE',       re:/^\s*3 PAGE\b/mg },
+        { lbl:'3 QUAY',       re:/^\s*3 QUAY\b/mg },
+        { lbl:'4 PAGE',       re:/^\s*4 PAGE\b/mg },
+        { lbl:'4 QUAY',       re:/^\s*4 QUAY\b/mg },
+        { lbl:'1 ABBR',       re:/^\s*1 ABBR\b/mg },
+        { lbl:'1 AUTH',       re:/^\s*1 AUTH\b/mg },
+        { lbl:'1 PUBL',       re:/^\s*1 PUBL\b/mg },
+        { lbl:'1 TEXT',       re:/^\s*1 TEXT\b/mg },
+        { lbl:'2 DATA',       re:/^\s*2 DATA\b/mg },
+        { lbl:'2 AGNC',       re:/^\s*2 AGNC\b/mg },
+        // ── Archive ───────────────────────────────────────────────
+        { lbl:'1 REPO',       re:/^\s*1 REPO\b/mg },
+        { lbl:'2 CALN',       re:/^\s*2 CALN\b/mg },
+        // ── CHAN ──────────────────────────────────────────────────
+        { lbl:'1 CHAN',       re:/^\s*1 CHAN\b/mg },
+        { lbl:'3 TIME',       re:/^\s*3 TIME\b/mg },
       ];
 
       const rows = tags.map(t => {
@@ -346,6 +399,73 @@ function runRoundtripTest() {
         ? '\n\n' + '─'.repeat(42) + '\nPassthrough-Inhalt (db1):\n' + _ptSecs.join('\n\n')
         : '\n\nPassthrough-Inhalt: (leer)';
 
+      // ── Alle genutzten GEDCOM-Tags (Beschreibung) ──────────────
+      const _TAG_DESC = {
+        HEAD:'Datei-Kopf', TRLR:'Dateiende', SUBM:'Einsender', SUBN:'Einreichung',
+        INDI:'Person', FAM:'Familie', SOUR:'Quellreferenz/-Record', REPO:'Archiv', NOTE:'Notiz', OBJE:'Medienobjekt',
+        NAME:'Name', GIVN:'Vorname', SURN:'Nachname', NICK:'Spitzname', NPFX:'Namenspräfix', NSFX:'Namenssuffix',
+        SEX:'Geschlecht', BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung',
+        MARR:'Heirat', DIV:'Scheidung', DIVF:'Scheidungsantrag', ENGA:'Verlobung', EVEN:'Ereignis (generisch)',
+        OCCU:'Beruf', RESI:'Wohnort', EDUC:'Bildung', RELI:'Religion', CENS:'Volkszählung',
+        EMIG:'Auswanderung', IMMI:'Einwanderung', NATU:'Einbürgerung', GRAD:'Abschluss',
+        ADOP:'Adoption', CONF:'Konfirmation', FCOM:'Erstkommunion', ORDN:'Ordination',
+        RETI:'Pensionierung', PROP:'Eigentum', WILL:'Testament', PROB:'Testamentseröffnung',
+        TITL:'Titel', DSCR:'Beschreibung', IDNO:'ID-Nummer', SSN:'Sozialversicherungsnr.',
+        FACT:'Tatsache', MILI:'Militärdienst',
+        FAMS:'Familie als Ehegatte', FAMC:'Familie als Kind', HUSB:'Ehemann', WIFE:'Ehefrau', CHIL:'Kind',
+        PEDI:'Abstammungsart', _FREL:'Vater-Abstammung (custom)', _MREL:'Mutter-Abstammung (custom)',
+        DATE:'Datum', PLAC:'Ort', CAUS:'Todesursache', ADDR:'Adresse', PHON:'Telefon',
+        EMAIL:'E-Mail', WWW:'Webseite', MAP:'Kartenkoordinaten', LATI:'Breite', LONG:'Länge',
+        FILE:'Datei', FORM:'Format', TYPE:'Typ', _PRIM:'Primärmedium (custom)', _SCBK:'Fotoalbum (custom)',
+        AUTH:'Autor', PUBL:'Publikation', TEXT:'Quelltext', ABBR:'Quellenabkürzung',
+        DATA:'Datenblock', AGNC:'Agentur/Organisation', CALN:'Archivsignatur',
+        PAGE:'Quellenseite', QUAY:'Quellenqualität (0–3)',
+        REPO:'Archiv/Repository', CHAN:'Änderungsdatum', TIME:'Uhrzeit', RESN:'Zugriffsbeschränkung',
+        CONT:'Zeilenfortsetzung', CONC:'Zeilenkettung',
+        GEDC:'GEDCOM-Versionsdaten', VERS:'Versionsnummer', CHAR:'Zeichensatz',
+        LANG:'Sprache', COPR:'Copyright', DEST:'Zielsystem',
+        _UID:'Eindeutige ID (custom)', _STAT:'Status (custom)', _DATE:'Datum (custom)',
+        REFN:'Referenznummer', RIN:'Record-ID', AFN:'Ahnenforschungs-Nr.',
+        ALIA:'Alias', ASSO:'Assoziation', RELA:'Beziehung',
+        BAPL:'Taufe (LDS)', CONL:'Konfirmation (LDS)', ENDL:'Begabung (LDS)', SLGC:'Siegelung Kind (LDS)', SLGS:'Siegelung Ehegatte (LDS)',
+        STAT:'Status', TEMP:'Tempel', ORDI:'Ordination',
+        _VALID:'Gültigkeitsstatus (custom)', _PLACE:'Ort (custom)', _AKA:'Alias (custom)',
+        BLOB:'Binärdaten (veraltet)',
+      };
+      // Alle Tag-Vorkommen im Original nach "LEVEL TAG" gruppieren
+      const _allTagCounts = new Map();
+      for (const l of _origArr) {
+        const m = l.match(/^(\d+)\s+([A-Z_][A-Z0-9_]*)/);
+        if (!m) continue;
+        const key = `${m[1]} ${m[2]}`;
+        _allTagCounts.set(key, (_allTagCounts.get(key) || 0) + 1);
+      }
+      // Welche Level+Tag-Kombis werden durch tags[] abgedeckt?
+      const _coveredKeys = new Set();
+      for (const [key] of _allTagCounts) {
+        const synth = key + ' dummy'; // simulate a line to test against regexes
+        for (const t of tags) {
+          if (t.lbl.startsWith('DATE ') || t.lbl === 'PLAC.FORM') continue; // Sonderform
+          const lvTag = t.lbl.replace(/\s*\(.*\)/, '').trim(); // "1 BIRT" etc.
+          if (key === lvTag) { _coveredKeys.add(key); break; }
+        }
+      }
+      const _tagRows = [..._allTagCounts.entries()]
+        .sort((a, b) => {
+          const la = parseInt(a[0]), lb = parseInt(b[0]);
+          return la !== lb ? la - lb : a[0].localeCompare(b[0]);
+        });
+      const _sonst = _tagRows.filter(([k]) => !_coveredKeys.has(k));
+      const _allTagReport = '\n\n' + '─'.repeat(42) + '\nAlle GEDCOM-Tags im Original (' + _allTagCounts.size + ' Kombinationen):\n' +
+        _tagRows.map(([k, n]) => {
+          const tagName = k.split(' ')[1];
+          const desc = _TAG_DESC[tagName] || '—';
+          const mark = _coveredKeys.has(k) ? ' ' : '*';
+          return `${mark} ${k.padEnd(12)} ${String(n).padStart(6)}×  ${desc}`;
+        }).join('\n') +
+        (_sonst.length ? `\n\n* = nicht in Tag-Statistik (${_sonst.length} sonstige):  ` +
+          _sonst.map(([k]) => k).join('  ') : '');
+
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);
 
       // Stability diff (first 5 differing lines)
@@ -374,6 +494,7 @@ function runRoundtripTest() {
         _objeDiagReport +
         _sourNoteDiagReport +
         _ptReport +
+        _allTagReport +
         diffSnippet;
 
     } catch (e) {
