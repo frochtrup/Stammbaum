@@ -82,7 +82,7 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 
 ### Bekannte Fehler
 
-- [ ] Ereignis-Gruppierung in Personendetail unvollständig: "Sonstige Ereignisse" mit mehreren Typen werden nicht einzeln geblockt, sondern zusammengefasst (ui-views-person.js)
+- [x] Ereignis-Gruppierung in Personendetail: EVEN-Ereignisse mit unterschiedlichem `eventType` wurden unter einem Block zusammengefasst — behoben: Gruppierungsschlüssel `type:eventType` (ui-views-person.js)
 
 ---
 

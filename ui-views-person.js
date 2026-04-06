@@ -364,7 +364,7 @@ function showDetail(id, pushHistory = true) {
   };
   const _evGroups = new Map();
   p.events.forEach((ev, idx) => {
-    const key = ev.type || '';
+    const key = ev.eventType ? `${ev.type || ''}:${ev.eventType}` : (ev.type || '');
     if (!_evGroups.has(key)) _evGroups.set(key, []);
     _evGroups.get(key).push({ev, idx});
   });
