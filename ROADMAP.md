@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v164 / Cache: `stammbaum-v164`
+**Aktuelle sw-Version:** v166 / Cache: `stammbaum-v166`
 
 ---
 
@@ -26,7 +26,7 @@ Priorisierung der offenen Schulden (2026-04-06):
 ```
 P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)       ✅ sw v163
 P2a Datenqualität       →  Ereignis-TYPE für alle Event-Typen editierbar        ✅ sw v164
-P2 Maintainability      →  parseGEDCOM + writeGEDCOM + storage.js aufteilen
+P2 Maintainability      →  parseGEDCOM + writeGEDCOM aufteilen; storage.js aufgeteilt ✅ sw v166
 P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen
 P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper
 P5 UX-Schulden          →  INDI-Notes-Editierproblem, Cmd+Z (eigener Sprint)
@@ -55,7 +55,7 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 
 - [ ] **`parseGEDCOM()` aufteilen** — 750-Zeilen-Monolith in `gedcom-parser.js`; Ziel: INDI/FAM/EVENT als Sub-Parser je < 200 Z.
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
-- [ ] **`storage.js` aufteilen** — noch 639 Z., zu viele Concerns: `storage-file.js` (File I/O) + `storage-idb.js` (IndexedDB) + bestehende `storage.js` (Demo/Backup/Init); fehlplatzierte UI-Helpers (138 Z.) bereits verschoben
+- [x] **`storage.js` aufteilen** — `storage-file.js` (IDB-Primitives + File System Access API + Export/Save + File Loading, ~305 Z.) + `storage.js` (Demo/Backup/Init/Foto-Export, ~345 Z.) ✅ sw v166
 
 ---
 
@@ -278,7 +278,7 @@ Priorisierte Liste — Details und Kontext in v6.0-Abschnitt oben.
 
 **Offen (priorisiert):**
 - ~~**P1** `onclick=`-Handler-Migration~~ → sw v163 ✓
-- **P2** `parseGEDCOM()` aufteilen (750 Z.) · `writeGEDCOM()` aufteilen (477 Z.) · `storage.js` aufteilen (639 Z.)
+- **P2** `parseGEDCOM()` aufteilen (750 Z.) · `writeGEDCOM()` aufteilen (477 Z.) · ~~`storage.js` aufteilen~~ → sw v166 ✓
 - **P3** Globale Suche indexieren (O(n×m)) · `touchmove` throttlen · Virtual Scroll profilen
 - **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper extrahieren
 - **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo (eigener Sprint)

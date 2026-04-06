@@ -12,7 +12,8 @@
 - `gedcom-parser.js` — `parseGEDCOM()`, `parseGeoCoord()`
 - `gedcom-writer.js` — `writeGEDCOM()`, `pushCont()`
 - `demo.ged` — Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
-- `storage.js` — IndexedDB, Dateiverwaltung, Auto-Load
+- `storage-file.js` — IDB-Primitives (`idbGet/Put/Del`), File System Access API, `exportGEDCOM`, File Loading (DOM-Events, `_processLoadedText`, `readFile`)
+- `storage.js` — Demo/Backup/Foto-Export-Import, Auto-Load, Startup (`load`-Event), `revertToSaved`, `confirmNewFile`
 - `ui-views.js` — gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
 - `ui-views-person.js` — Personen-Detailansicht
 - `ui-views-family.js` — Familien-Detailansicht
@@ -46,7 +47,7 @@
 **Version 6.0 in Entwicklung — Branch `v6-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1===out2)
-- **Aktuelle sw-Version: v163** / Cache: `stammbaum-v163`
+- **Aktuelle sw-Version: v166** / Cache: `stammbaum-v166`
 - Git: Branch `v6-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
