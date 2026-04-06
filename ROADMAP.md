@@ -22,50 +22,66 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: B+ (Security A–, Architektur B, Performance B–, Code-Qualität B, PWA B). Gesamtbewertung: solide Basis, gezielter Abbau technischer Schulden.
 
----
-
-### Schwerpunkt 1: Sicherheit & Aufräumen (Tier 1)
-
-#### Aufräumen — ✅ ABGESCHLOSSEN (sw v153)
-- [x] `index_v1.2.html` (4011 Z.) und `test_idempotency.html` gelöscht — kein Produktivcode
-
-#### Content Security Policy — ✅ ABGESCHLOSSEN (sw v153)
-- [x] `<meta http-equiv="Content-Security-Policy">` in `index.html` — `default-src 'self'`, `connect-src` auf OneDrive-Endpunkte begrenzt, `object-src 'none'`, `frame-ancestors 'none'`
-- [x] `script-src 'unsafe-inline'` notwendig wegen bestehender `onclick=`-Handler (Einschränkung dokumentiert; vollständige Beseitigung ist Tier-2-Ziel)
-
-#### Memory-Leak: Photo-Cache — ✅ ABGESCHLOSSEN (sw v153)
-- [x] `_odPhotoCache` von unbegrenztem `{}` auf LRU-Cache (Max 30 Einträge) umgestellt — verhindert unkontrollierten RAM-Anstieg bei vielen geladenen Fotos
-- [x] `clear()` und `clearByPrefix()` Methoden für bestehende Aufrufe in `odSetBasePath()` / `odClearPhotoFolder()` / `odClearDocFolder()`
+Priorisierung der offenen Schulden (2026-04-06):
+```
+P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)
+P2 Maintainability      →  parseGEDCOM + writeGEDCOM + storage.js aufteilen
+P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen
+P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper
+P5 UX-Schulden          →  INDI-Notes-Editierproblem, Cmd+Z (eigener Sprint)
+P6 Neue Features        →  erst nach P1+P2 beginnen
+```
 
 ---
 
-### Schwerpunkt 2: Architektur-Schulden (Tier 2)
+### Schwerpunkt 1: Sicherheit & Aufräumen — ✅ ABGESCHLOSSEN
+
+- [x] **Aufräumen** — `index_v1.2.html` (4011 Z.) und `test_idempotency.html` gelöscht (sw v153)
+- [x] **Content Security Policy** — `default-src 'self'`, `connect-src` auf OneDrive-Endpunkte begrenzt, `object-src 'none'`, `frame-ancestors 'none'` (sw v153); `script-src 'unsafe-inline'` temporär notwendig → P1-Ziel
+- [x] **Memory-Leak: Photo-Cache** — `_odPhotoCache` auf LRU-Cache (Max 30 Einträge) umgestellt; `clear()` + `clearByPrefix()` (sw v153)
+- [x] **Service Worker Offline-Fallback** — `offline.html` + PRECACHE; `destination === 'document'`-Check (sw v162)
+- [x] **CSS aus `index.html` auslagern** — ~800 Z. Inline-CSS → `styles.css` (sw v161)
+
+---
+
+### P1 — Sicherheits-Blocker (vor neuem Feature zwingend)
+
+- [ ] **`onclick=`-Handler vollständig auf `data-action`-Delegation migrieren** — 95 inline `onclick=` in `index.html`; `unsafe-inline` in `script-src` danach entfernbar (ui-forms.js, ui-*.js). Solange `unsafe-inline` gesetzt ist, ist die CSP formal vorhanden aber inhaltlich leer. **Pflicht vor** GED-Import aus unbekannter Quelle, Sharing-Links oder kollaborativem Editing.
+
+---
+
+### P2 — Maintainability (Aufwand steigt mit jeder Erweiterung)
 
 - [ ] **`parseGEDCOM()` aufteilen** — 750-Zeilen-Monolith in `gedcom-parser.js`; Ziel: INDI/FAM/EVENT als Sub-Parser je < 200 Z.
-- [ ] **`storage.js` aufteilen** — noch 639 Z., zu viele Concerns: `storage-file.js` (File I/O) + `storage-idb.js` (IndexedDB) + bestehende `storage.js` (Demo/Backup/Init); fehlplatzierte UI-Helpers (138 Z.) bereits verschoben: `resizeImageToBase64`/`_tryViaImg` → `ui-media.js`, `_buildObjeRefMap` → `ui-views.js`, `_renderMediaList`/`_readMediaList`/`_addMediaEntry` → `ui-forms.js`
-- [x] **CSS aus `index.html` auslagern** — ~800 Z. Inline-CSS → `styles.css` ✅ (sw v161)
-- [ ] **`_navHistory` + `_probandId` in `UIState` konsolidieren** — aktuell lose Globals in ui-views.js
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
+- [ ] **`storage.js` aufteilen** — noch 639 Z., zu viele Concerns: `storage-file.js` (File I/O) + `storage-idb.js` (IndexedDB) + bestehende `storage.js` (Demo/Backup/Init); fehlplatzierte UI-Helpers (138 Z.) bereits verschoben
 
 ---
 
-### Schwerpunkt 3: Performance (Tier 2)
+### P3 — Performance
 
+- [ ] **Globale Suche indexieren** — O(n×m) bei 2800+ Personen ~80ms pro Tastendruck ohne Debounce; Debounce + vorberechneter Index (ui-views.js)
 - [ ] **`touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen** — feuert aktuell 100+/s direkt auf DOM-Properties, Frame-Drops auf älteren iPhones (ui-views-tree.js)
-- [ ] **Globale Suche indexieren** — O(n×m) ohne Cache; Debounce + vorberechneter Index (ui-views.js)
-- [ ] **Virtual Scroll bei 1000+ Einträgen profilen** — aktueller Threshold 500; Spacer-Logik auf Korrektheit bei 2800+ Personen verifizieren
+- [ ] **Virtual Scroll bei 2800+ Einträgen profilen** — Spacer-Logik auf Korrektheit verifizieren; Threshold 500 ggf. anpassen
 
 ---
 
-### Schwerpunkt 4: Code-Qualität (Tier 3)
+### P4 — Release-Hygiene & Code-Qualität
 
-- [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` aus Person/Familie/Quelle-Views (~15% Duplikation)
-- [ ] **`onclick=`-Handler vollständig auf `data-action`-Delegation migrieren** — 95 inline `onclick=` in `index.html`; `unsafe-inline` in `script-src` danach entfernbar. Risikobewertung: niedriges Risiko für aktuelle Einzelpersonen-PWA ohne Fremddaten-Sharing — **Pflicht vor** jedem Feature das Fremddaten importiert (z.B. GED-Import aus unbekannter Quelle per URL) oder Daten teilt (Sharing-Links, kollaboratives Editing).
-- [x] **Service Worker Offline-Fallback** — `offline.html` + PRECACHE; `destination === 'document'`-Check verhindert falschen Fallback für Sub-Ressourcen (sw v162)
+- [ ] **DEV-Diagnose im Menü entfernen** — OD-Token-Details (`OD: ...`, `Token: ...`) und SW-Version-Toast (`DEV sw vXXX`) vor Abschluss v6 entfernen (`index.html` menuVersionInfo-Block kürzen, `storage.js` DEV-Blöcke löschen)
+- [ ] **`_navHistory` + `_probandId` in `UIState` konsolidieren** — aktuell lose Globals in ui-views.js, inkonsistent mit ADR-003
+- [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` aus Person/Familie/Quelle-Views (~15% Duplikation); sinnvoll vor ersten neuen Views
 
 ---
 
-### Schwerpunkt 5: Neue Features (offen aus v5)
+### P5 — UX-Schulden (hoher Aufwand, klarer Nutzen)
+
+- [ ] **Mehrere inline INDI-Notes: Editierproblem** — beim Speichern werden mehrere Notes zu einer zusammengeführt (Roundtrip ohne Edit stabil; Edit-Pfad verlustbehaftet); betrifft auch Duplikat-Erkennung
+- [ ] **Cmd+Z = granulares Undo** — aktuell "Revert to Saved"; History-Stack auf `AppState` erforderlich; eigener Sprint
+
+---
+
+### P6 — Neue Features (erst nach P1+P2)
 
 - [ ] Zeitleiste (`ui-timeline.js`) — Personen/Ereignisse auf horizontaler Zeitachse
 - [ ] Nachkommen-Baum (top-down SVG)
@@ -73,10 +89,6 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 - [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
 - [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
 - [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
-
-### Vor Release v6 entfernen
-
-- [ ] **DEV-Diagnose im Menü entfernen** — OD-Token-Details (`OD: ...`, `Token: ...`) und SW-Version-Toast (`DEV sw vXXX`) vor Abschluss v6 entfernen (`index.html` menuVersionInfo-Block kürzen, `storage.js` DEV-Blöcke löschen)
 
 ---
 
@@ -258,18 +270,25 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ## Offene Architektur-Schulden
 
-- ~~Virtuelles Scrollen für Listen >500 Einträge~~ → behoben sw v145: Spacer-div, Binary-Search, Desktop-Sync-Fix sw v146
-- Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
+Priorisierte Liste — Details und Kontext in v6.0-Abschnitt oben.
+
+**Offen (priorisiert):**
+- **P1** `onclick=`-Handler-Migration — CSP `unsafe-inline` entfernbar; Pflicht vor GED-Import/Sharing
+- **P2** `parseGEDCOM()` aufteilen (750 Z.) · `writeGEDCOM()` aufteilen (477 Z.) · `storage.js` aufteilen (639 Z.)
+- **P3** Globale Suche indexieren (O(n×m)) · `touchmove` throttlen · Virtual Scroll profilen
+- **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper extrahieren
+- **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo (eigener Sprint)
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
-- Duplikat-Erkennung in Suche
-- ~~DIV/DIVF/ENG: Formularfelder für Datum/Ort~~ → behoben sw v147: "Ereignisse"-Sektion in Familiendetail
-- ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
-- ~~Inline Event-Handler in HTML-Strings~~ → behoben sw v137: globale Event-Delegation
-- ~~GEDCOM-Parser ohne Fehler-Sammler~~ → behoben sw v138: `parseErrors[]` + Level-Validierung
-- ~~`sourceRefs` nach Event-Save nicht aktualisiert~~ → behoben sw v149: rebuild-Funktionen nach save/delete
-- ~~Ereignisliste unsortiert/ungruppiert~~ → behoben sw v150: Typ-Gruppen + Datum-Sortierung
-- ~~Service Worker: weißer Screen bei leerem Cache + Netz-Timeout~~ → behoben sw v162: `offline.html` Fallback
-- `onclick=`-Handler-Migration — **Pflicht vor** GED-Import aus unbekannter Quelle / Sharing-Features
+
+**Behoben:**
+- ~~Virtuelles Scrollen für Listen >500 Einträge~~ → sw v145/v146
+- ~~DIV/DIVF/ENG: Formularfelder für Datum/Ort~~ → sw v147
+- ~~OAuth-Token in `localStorage`~~ → sw v136
+- ~~Inline Event-Handler in HTML-Strings~~ → sw v137
+- ~~GEDCOM-Parser ohne Fehler-Sammler~~ → sw v138
+- ~~`sourceRefs` nach Event-Save nicht aktualisiert~~ → sw v149
+- ~~Ereignisliste unsortiert/ungruppiert~~ → sw v150
+- ~~Service Worker: weißer Screen bei leerem Cache + Netz-Timeout~~ → sw v162
 
 ---
 
