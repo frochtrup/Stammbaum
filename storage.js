@@ -618,6 +618,11 @@ window.addEventListener('load', async () => {
   } else if (hasOdFile) {
     // Neustart: bekannte OD-Datei, aber kein Token → Auswahl-Dialog
     _showStartupChoice();
+  } else if (hasSession) {
+    // Session-Token vorhanden, aber od_file_id fehlt (z.B. nach Cache-Leeren)
+    // → Datei-Picker anbieten statt still auf IDB zurückfallen
+    await tryAutoLoad();
+    showToast('☁ OneDrive verbunden — bitte Datei öffnen (Menü → Aus OneDrive öffnen)');
   } else {
     await tryAutoLoad();
   }
