@@ -502,6 +502,27 @@ function runRoundtripTest() {
         _evenReport = '\n\n' + '─'.repeat(42) + '\nEVEN-Typen (1 EVEN + 2 TYPE):\n' +
           `  ${'(gesamt)'.padEnd(28)} orig=${String(_evenTotal_o).padStart(3)}  out=${String(_evenTotal_g).padStart(3)}  ${_totMark}\n` +
           _evenRows.join('\n');
+
+        // ── EVEN-Details: wer hat was ─────────────────────────────
+        const _evenDetails = [];
+        for (const p of Object.values(AppState.db.individuals)) {
+          for (const ev of (p.events || [])) {
+            if (ev.type !== 'EVEN') continue;
+            const name = [p.givn, p.surn].filter(Boolean).join(' ') || p.id;
+            const parts = [ev.eventType || '(kein TYPE)', ev.date, ev.place, ev.value].filter(Boolean).join(', ');
+            _evenDetails.push(`  ${p.id.padEnd(8)} ${name.padEnd(30)} ${parts}`);
+          }
+        }
+        for (const f of Object.values(AppState.db.families)) {
+          for (const ev of (f.events || [])) {
+            if (ev.type !== 'EVEN') continue;
+            const parts = [ev.eventType || '(kein TYPE)', ev.date, ev.place, ev.value].filter(Boolean).join(', ');
+            _evenDetails.push(`  ${f.id.padEnd(8)} ${'(Familie)'.padEnd(30)} ${parts}`);
+          }
+        }
+        if (_evenDetails.length) {
+          _evenReport += '\n\nEVEN-Details:\n' + _evenDetails.join('\n');
+        }
       }
 
       const hasAdditive = tags.some((t,i) => t.additive && count(_origText, t.re) === 0);

@@ -372,7 +372,10 @@ function showDetail(id, pushHistory = true) {
     items.sort((a, b) => _evDateKey(a.ev.date).localeCompare(_evDateKey(b.ev.date)));
   for (const items of _evGroups.values()) {
     for (const {ev, idx} of items) {
-      const label = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
+      const _evBase = EVENT_LABELS[ev.type] || ev.type;
+      const label = (ev.eventType && (ev.type === 'EVEN' || ev.type === 'FACT'))
+        ? ev.eventType
+        : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
       const geoBtn = (ev.lati !== null && ev.lati !== undefined)
         ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
       const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');

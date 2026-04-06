@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v163 / Cache: `stammbaum-v163`
+**Aktuelle sw-Version:** v164 / Cache: `stammbaum-v164`
 
 ---
 
@@ -25,6 +25,7 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 Priorisierung der offenen Schulden (2026-04-06):
 ```
 P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)       ✅ sw v163
+P2a Datenqualität       →  Ereignis-TYPE für alle Event-Typen editierbar        ✅ sw v164
 P2 Maintainability      →  parseGEDCOM + writeGEDCOM + storage.js aufteilen
 P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen
 P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper
@@ -95,9 +96,9 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 ### Bekannte Fehler / kleine Erweiterungen
 
 - [x] Ereignis-Gruppierung in Personendetail: EVEN-Ereignisse mit unterschiedlichem `eventType` wurden unter einem Block zusammengefasst — behoben: Gruppierungsschlüssel `type:eventType` (ui-views-person.js)
-- [ ] Ereignisse können einen TYPE als Detailierung haben, speicher und editierbar machern
-- [ ] Beschäftigung als OCCU inkl Arbeitgeber, dazu AGNC modellieren
-- [ ] für EVEN tags hätte ich gerene details im roundtrip, um sie ggf. ersetzen zu können
+- [x] Ereignis-TYPE nur für FACT/MILI/EVEN editierbar — jetzt für alle Event-Typen; Label-Darstellung `"Beruf: Staatsangehörigkeit"` für nicht-EVEN/FACT; EVEN-Details im Roundtrip-Report (sw v164)
+- [x] EVEN-Details im Roundtrip-Report: ID, Name, TYPE, Datum, Ort pro EVEN-Eintrag (sw v164)
+- [ ] Beschäftigung als OCCU inkl. Arbeitgeber — AGNC modellieren
 
 ---
 

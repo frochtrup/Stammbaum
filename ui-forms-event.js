@@ -41,13 +41,13 @@ function addEfMedia() {
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
-  const showEtype = (t === 'FACT' || t === 'MILI' || t === 'EVEN');
+  const showEtype = !(t in _SPECIAL_OBJ);
   document.getElementById('ef-etype-group').style.display = showEtype ? '' : 'none';
   if (showEtype) {
     const lbl = document.querySelector('#ef-etype-group .form-label');
     const inp = document.getElementById('ef-etype');
     if (t === 'EVEN') { lbl.textContent = 'Bezeichnung'; inp.placeholder = 'z.B. Militärdienst, Einlieferung …'; }
-    else { lbl.textContent = 'TYPE (Klassifikation)'; inp.placeholder = 'z.B. Staatsangehörigkeit'; }
+    else { lbl.textContent = 'TYPE'; inp.placeholder = 'z.B. Detailierung (optional)'; }
   }
   document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
   document.getElementById('ef-addr-group').style.display  = (t === 'RESI') ? '' : 'none';
@@ -124,7 +124,7 @@ function saveEvent() {
       date:       buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
       place:      getPlaceFromForm('ef-place'),
       addr:       document.getElementById('ef-addr').value.trim(),
-      eventType:  '',
+      eventType:  document.getElementById('ef-etype').value.trim(),
       note:       '',
       lati:       null,
       long:       null,
@@ -134,16 +134,13 @@ function saveEvent() {
       media:      _efMedia.filter(m => m.file || m.title).map(m => ({...m}))
     };
     if (evIdx !== null && p.events[evIdx]) {
-      ev.lati      = p.events[evIdx].lati;
-      ev.long      = p.events[evIdx].long;
-      ev.eventType = p.events[evIdx].eventType || '';
-      ev.note      = p.events[evIdx].note      || '';
+      ev.lati = p.events[evIdx].lati;
+      ev.long = p.events[evIdx].long;
+      ev.note = p.events[evIdx].note || '';
       p.events[evIdx] = ev;
     } else {
       p.events.push(ev);
     }
-    // TYPE-Feld aus Formular für FACT/MILI übernehmen
-    if (type === 'FACT' || type === 'MILI' || type === 'EVEN') ev.eventType = document.getElementById('ef-etype').value.trim();
   }
 
   _rebuildPersonSourceRefs(p);
