@@ -629,7 +629,7 @@ window.addEventListener('load', async () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
-  // DEV: aktiven SW-Cache anzeigen — entfernen vor Release
+  // DEV: aktiven SW-Cache anzeigen — nach dem geladen-Toast (2800ms sichtbar + Puffer)
   setTimeout(() => {
     if ('caches' in window) {
       caches.keys().then(keys => {
@@ -637,7 +637,7 @@ window.addEventListener('load', async () => {
         showToast('DEV ' + (sw ? sw.replace('stammbaum-', 'sw ') : 'kein SW-Cache'));
       });
     }
-  }, 800);
+  }, 3400);
 });
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
