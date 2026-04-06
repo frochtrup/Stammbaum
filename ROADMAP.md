@@ -108,6 +108,7 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
       3 POST <PLZ>
       2 NOTE <Notiz> (Optional: Anmerkungen zum Wohnsitz)
 - [ ] links in quellen klickbar (ggf in wwww)
+- [ ] LON/LAT editierbar 
 
 
 ---
