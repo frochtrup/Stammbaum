@@ -353,7 +353,8 @@ function showDetail(id, pushHistory = true) {
     html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources)}</span></div>`;
   }
 
-  // Group events by type (preserve first-seen order), sort within group by date
+  // Group events: first by ev.type (first-seen order), then by ev.eventType within each type,
+  // sort within each subgroup by date (undated last).
   const _evDateKey = d => {
     if (!d) return '99999999';
     const mo = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
@@ -362,30 +363,38 @@ function showDetail(id, pushHistory = true) {
     const dyStr = (d.match(/\b(\d{1,2})\b(?=\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))/) || [])[1];
     return yr + (mStr ? mo[mStr] : '00') + (dyStr ? dyStr.padStart(2,'0') : '00');
   };
+  const _evTypeOrder = [];
+  const _evTypeSet = new Set();
+  // type → Map(eventType → [{ev,idx}])
   const _evGroups = new Map();
   p.events.forEach((ev, idx) => {
-    const key = ev.eventType ? `${ev.type || ''}:${ev.eventType}` : (ev.type || '');
-    if (!_evGroups.has(key)) _evGroups.set(key, []);
-    _evGroups.get(key).push({ev, idx});
+    if (!_evTypeSet.has(ev.type)) { _evTypeOrder.push(ev.type); _evTypeSet.add(ev.type); }
+    if (!_evGroups.has(ev.type)) _evGroups.set(ev.type, new Map());
+    const subKey = ev.eventType || '';
+    const subMap = _evGroups.get(ev.type);
+    if (!subMap.has(subKey)) subMap.set(subKey, []);
+    subMap.get(subKey).push({ev, idx});
   });
-  for (const items of _evGroups.values())
-    items.sort((a, b) => _evDateKey(a.ev.date).localeCompare(_evDateKey(b.ev.date)));
-  for (const items of _evGroups.values()) {
-    for (const {ev, idx} of items) {
-      const _evBase = EVENT_LABELS[ev.type] || ev.type;
-      const label = (ev.eventType && (ev.type === 'EVEN' || ev.type === 'FACT'))
-        ? ev.eventType
-        : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
-      const geoBtn = (ev.lati !== null && ev.lati !== undefined)
-        ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-      const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
-      const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
-      html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
-        <span class="fact-lbl">${esc(label)}</span>
-        <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}${mediaBadge}</span>
-      </div>`;
+  for (const subMap of _evGroups.values())
+    for (const items of subMap.values())
+      items.sort((a, b) => _evDateKey(a.ev.date).localeCompare(_evDateKey(b.ev.date)));
+  for (const type of _evTypeOrder)
+    for (const items of _evGroups.get(type).values()) {
+      for (const {ev, idx} of items) {
+        const _evBase = EVENT_LABELS[ev.type] || ev.type;
+        const label = (ev.eventType && (ev.type === 'EVEN' || ev.type === 'FACT'))
+          ? ev.eventType
+          : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
+        const geoBtn = (ev.lati !== null && ev.lati !== undefined)
+          ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+        const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+        const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
+        html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
+          <span class="fact-lbl">${esc(label)}</span>
+          <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [])}${mediaBadge}</span>
+        </div>`;
+      }
     }
-  }
 
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);
