@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v152 / Cache: `stammbaum-v152`
+**Aktuelle sw-Version:** v161 / Cache: `stammbaum-v161`
 
 ---
 
@@ -43,7 +43,7 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 
 - [ ] **`parseGEDCOM()` aufteilen** — 750-Zeilen-Monolith in `gedcom-parser.js`; Ziel: INDI/FAM/EVENT als Sub-Parser je < 200 Z.
 - [ ] **`storage.js` aufteilen** — 751 Z., zu viele Concerns: `storage-file.js` (File I/O) + `storage-idb.js` (IndexedDB) + bestehende `storage.js` (Demo/Backup/Init)
-- [ ] **CSS aus `index.html` auslagern** — ~800 Z. Inline-CSS → `styles.css`
+- [x] **CSS aus `index.html` auslagern** — ~800 Z. Inline-CSS → `styles.css` ✅ (sw v161)
 - [ ] **`_navHistory` + `_probandId` in `UIState` konsolidieren** — aktuell lose Globals in ui-views.js
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
 
