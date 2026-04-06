@@ -98,7 +98,17 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 - [x] Ereignis-Gruppierung in Personendetail: EVEN-Ereignisse mit unterschiedlichem `eventType` wurden unter einem Block zusammengefasst — behoben: Gruppierungsschlüssel `type:eventType` (ui-views-person.js)
 - [x] Ereignis-TYPE nur für FACT/MILI/EVEN editierbar — jetzt für alle Event-Typen; Label-Darstellung `"Beruf: Staatsangehörigkeit"` für nicht-EVEN/FACT; EVEN-Details im Roundtrip-Report (sw v164)
 - [x] EVEN-Details im Roundtrip-Report: ID, Name, TYPE, Datum, Ort pro EVEN-Eintrag (sw v164)
-- [ ] Beschäftigung als OCCU inkl. Arbeitgeber — AGNC modellieren
+- [ ] RESI als
+      1 RESI (Ereignis: Wohnsitz), 
+      2 DATE <Datum> (Zeitraum, z.B. 1920-1930)
+      2 PLAC <Ort> (Ortsname, z.B. Berlin, Deutschland)
+      2 ADDR <Adresse> (Optional: Postalische Adresse)
+      3 ADR1 <Zeile1>
+      3 CITY <Stadt>
+      3 POST <PLZ>
+      2 NOTE <Notiz> (Optional: Anmerkungen zum Wohnsitz)
+- [ ] links in quellen klickbar (ggf in wwww)
+
 
 ---
 
