@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v162 / Cache: `stammbaum-v162`
+**Aktuelle sw-Version:** v163 / Cache: `stammbaum-v163`
 
 ---
 
@@ -24,7 +24,7 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 
 Priorisierung der offenen Schulden (2026-04-06):
 ```
-P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)
+P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)       ✅ sw v163
 P2 Maintainability      →  parseGEDCOM + writeGEDCOM + storage.js aufteilen
 P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen
 P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper
@@ -37,16 +37,16 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 ### Schwerpunkt 1: Sicherheit & Aufräumen — ✅ ABGESCHLOSSEN
 
 - [x] **Aufräumen** — `index_v1.2.html` (4011 Z.) und `test_idempotency.html` gelöscht (sw v153)
-- [x] **Content Security Policy** — `default-src 'self'`, `connect-src` auf OneDrive-Endpunkte begrenzt, `object-src 'none'`, `frame-ancestors 'none'` (sw v153); `script-src 'unsafe-inline'` temporär notwendig → P1-Ziel
+- [x] **Content Security Policy** — `default-src 'self'`, `connect-src` auf OneDrive-Endpunkte begrenzt, `object-src 'none'`, `frame-ancestors 'none'` (sw v153); `script-src 'unsafe-inline'` entfernt → sw v163
 - [x] **Memory-Leak: Photo-Cache** — `_odPhotoCache` auf LRU-Cache (Max 30 Einträge) umgestellt; `clear()` + `clearByPrefix()` (sw v153)
 - [x] **Service Worker Offline-Fallback** — `offline.html` + PRECACHE; `destination === 'document'`-Check (sw v162)
 - [x] **CSS aus `index.html` auslagern** — ~800 Z. Inline-CSS → `styles.css` (sw v161)
 
 ---
 
-### P1 — Sicherheits-Blocker (vor neuem Feature zwingend)
+### P1 — Sicherheits-Blocker — ✅ ABGESCHLOSSEN (sw v163)
 
-- [ ] **`onclick=`-Handler vollständig auf `data-action`-Delegation migrieren** — 95 inline `onclick=` in `index.html`; `unsafe-inline` in `script-src` danach entfernbar (ui-forms.js, ui-*.js). Solange `unsafe-inline` gesetzt ist, ist die CSP formal vorhanden aber inhaltlich leer. **Pflicht vor** GED-Import aus unbekannter Quelle, Sharing-Links oder kollaborativem Editing.
+- [x] **Alle inline Handler auf `data-action`-Delegation migriert** — 121 `onclick=`, 10 `oninput=`, 4 `onblur=`, 4 `onchange=` in `index.html` vollständig entfernt; `unsafe-inline` aus `script-src` entfernt; CSP jetzt wirksam. `_CLICK_MAP` um 70 neue Aktionen erweitert, `data-change`/`data-input`/`data-blur`-Delegation ausgebaut (ui-views.js, sw v163).
 
 ---
 
@@ -273,7 +273,7 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 Priorisierte Liste — Details und Kontext in v6.0-Abschnitt oben.
 
 **Offen (priorisiert):**
-- **P1** `onclick=`-Handler-Migration — CSP `unsafe-inline` entfernbar; Pflicht vor GED-Import/Sharing
+- ~~**P1** `onclick=`-Handler-Migration~~ → sw v163 ✓
 - **P2** `parseGEDCOM()` aufteilen (750 Z.) · `writeGEDCOM()` aufteilen (477 Z.) · `storage.js` aufteilen (639 Z.)
 - **P3** Globale Suche indexieren (O(n×m)) · `touchmove` throttlen · Virtual Scroll profilen
 - **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper extrahieren

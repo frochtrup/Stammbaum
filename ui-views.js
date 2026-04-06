@@ -437,37 +437,126 @@ function relRow(person, role, unlinkFamId) {
 //  data-action="stop" → stopPropagation ohne Aktion (z.B. <select> in klickbarer Zeile)
 // ─────────────────────────────────────
 const _CLICK_MAP = {
-  showDetail:           el => showDetail(el.dataset.pid  || el.dataset.id),
-  showFamilyDetail:     el => showFamilyDetail(el.dataset.fid  || el.dataset.id),
-  showSourceDetail:     el => showSourceDetail(el.dataset.sid  || el.dataset.id),
-  showRepoDetail:       el => showRepoDetail(el.dataset.id),
-  showPlaceDetail:      el => showPlaceDetail(el.dataset.name),
-  deleteExtraPlace:     el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
-  unlinkMember:         el => unlinkMember(el.dataset.fid, el.dataset.pid),
-  showEventForm:        el => showEventForm(el.dataset.pid, el.dataset.ev),
-  showFamEventForm:     el => showFamEventForm(el.dataset.fid, el.dataset.evkey),
-  showAddSpouseFlow:    el => showAddSpouseFlow(el.dataset.pid),
-  showAddChildFlow:     el => showAddChildFlow(el.dataset.fid),
-  showAddParentFlow:    el => showAddParentFlow(el.dataset.pid),
-  openAddMediaDialog:   el => openAddMediaDialog(el.dataset.ctx, el.dataset.id),
-  openMediaPhoto:       el => openMediaPhoto(el.dataset.mediaFile, el.dataset.hero, el.dataset.avatar),
-  openEditMediaDialog:  el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
-  openSourceMediaView:  el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
-  showChildRelDialog:   el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
-  removeSrc:            el => removeSrc(el.dataset.prefix, el.dataset.sid),
-  toggleSrc:            el => toggleSrc(el.dataset.prefix, el.dataset.sid),
-  odLoadFile:           el => odLoadFile(el.dataset.odid, el.dataset.odname),
-  odFolderBack:         ()  => _odFolderBack(),
-  odPickCancel:         ()  => _odPickCancel(),
-  odShowAllFolders:     ()  => _odShowAllFolders(),
-  odScanDocFolder:      el => odScanDocFolder(el.dataset.odid, el.dataset.odname),
-  odImportPhotos:       el => odImportPhotosFromFolder(el.dataset.odid, el.dataset.odname),
-  odEnterFolder:        el => _odEnterFolder(el),
-  odPickSelectFile:     el => _odPickSelectFile(el.dataset.odid, el.dataset.odname, el.dataset.path),
-  browserShowSource:    el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
-  browserShowPerson:    el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
-  browserShowFamily:    el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
-  showLightbox:         el => showLightbox(el.src || el.dataset.src),
+  // Dynamisch generierte Einträge (bereits vorhanden)
+  showDetail:              el => showDetail(el.dataset.pid  || el.dataset.id),
+  showFamilyDetail:        el => showFamilyDetail(el.dataset.fid  || el.dataset.id),
+  showSourceDetail:        el => showSourceDetail(el.dataset.sid  || el.dataset.id),
+  showRepoDetail:          el => showRepoDetail(el.dataset.id),
+  showPlaceDetail:         el => showPlaceDetail(el.dataset.name),
+  deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
+  unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
+  showEventForm:           el => showEventForm(el.dataset.pid, el.dataset.ev),
+  showFamEventForm:        el => showFamEventForm(el.dataset.fid, el.dataset.evkey),
+  showAddSpouseFlow:       el => showAddSpouseFlow(el.dataset.pid),
+  showAddChildFlow:        el => showAddChildFlow(el.dataset.fid),
+  showAddParentFlow:       el => showAddParentFlow(el.dataset.pid),
+  openAddMediaDialog:      el => openAddMediaDialog(el.dataset.ctx, el.dataset.id),
+  openMediaPhoto:          el => openMediaPhoto(el.dataset.mediaFile, el.dataset.hero, el.dataset.avatar),
+  openEditMediaDialog:     el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
+  openSourceMediaView:     el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
+  showChildRelDialog:      el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
+  removeSrc:               el => removeSrc(el.dataset.prefix, el.dataset.sid),
+  toggleSrc:               el => toggleSrc(el.dataset.prefix, el.dataset.sid),
+  odLoadFile:              el => odLoadFile(el.dataset.odid, el.dataset.odname),
+  odFolderBack:            ()  => _odFolderBack(),
+  odPickCancel:            ()  => _odPickCancel(),
+  odShowAllFolders:        ()  => _odShowAllFolders(),
+  odScanDocFolder:         el => odScanDocFolder(el.dataset.odid, el.dataset.odname),
+  odImportPhotos:          el => odImportPhotosFromFolder(el.dataset.odid, el.dataset.odname),
+  odEnterFolder:           el => _odEnterFolder(el),
+  odPickSelectFile:        el => _odPickSelectFile(el.dataset.odid, el.dataset.odname, el.dataset.path),
+  browserShowSource:       el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
+  browserShowPerson:       el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
+  browserShowFamily:       el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
+  showLightbox:            el => showLightbox(el.src || el.dataset.src),
+  // Statische index.html-Handler (P1-Migration)
+  loadDemo:                ()  => loadDemo(),
+  openModal:               el => openModal(el.dataset.modal),
+  closeModal:              el => closeModal(el.dataset.modal),
+  bnavSearch:              ()  => bnavSearch(),
+  openMenuModal:           ()  => { openModal('modalMenu'); _odUpdateUI(); },
+  clearYearFilter:         ()  => clearYearFilter(),
+  togglePersonSort:        ()  => togglePersonSort(),
+  showPersonMediaBrowser:  ()  => showPersonMediaBrowser(),
+  showFamilyMediaBrowser:  ()  => showFamilyMediaBrowser(),
+  scrollToRepo:            ()  => document.getElementById('repoSection').scrollIntoView({behavior:'smooth'}),
+  showMediaBrowser:        ()  => showMediaBrowser(),
+  showAddSheet:            ()  => showAddSheet(),
+  goBack:                  ()  => goBack(),
+  showEditSheet:           ()  => showEditSheet(),
+  treeNavBack:             ()  => treeNavBack(),
+  setTreeGens:             el => setTreeGens(+el.dataset.tgen),
+  setFcGens:               el => setFcGens(+el.dataset.gen),
+  toggleFanChart:          ()  => toggleFanChart(),
+  toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
+  bnavTree:                ()  => bnavTree(),
+  bnavTab:                 el => bnavTab(el.dataset.tab),
+  bnavHome:                ()  => bnavHome(),
+  addPerson:               ()  => { closeModal('modalAdd'); showPersonForm(null); },
+  addFamily:               ()  => { closeModal('modalAdd'); showFamilyForm(null); },
+  addSource:               ()  => { closeModal('modalAdd'); showSourceForm(null); },
+  addPlace:                ()  => { closeModal('modalAdd'); showNewPlaceForm(); },
+  addPfExtraName:          ()  => addPfExtraName(),
+  toggleSrcPicker:         el => toggleSrcPicker(el.dataset.prefix),
+  savePerson:              ()  => savePerson(),
+  deletePerson:            ()  => deletePerson(),
+  togglePlaceMode:         el => togglePlaceMode(el.dataset.placeid),
+  addMediaEntry:           el => _addMediaEntry(el.dataset.prefix),
+  saveFamily:              ()  => saveFamily(),
+  deleteFamily:            ()  => deleteFamily(),
+  saveFamEvent:            ()  => saveFamEvent(),
+  deleteFamEvent:          ()  => deleteFamEvent(),
+  applySourceTemplate:     el => _applySourceTemplate(el.dataset.tpl),
+  sfRepoClear:             ()  => sfRepoClear(),
+  openRepoPicker:          ()  => openRepoPicker(),
+  sfToggleMore:            ()  => sfToggleMore(),
+  saveSource:              ()  => saveSource(),
+  deleteSource:            ()  => deleteSource(),
+  addEfMedia:              ()  => addEfMedia(),
+  saveEvent:               ()  => saveEvent(),
+  deleteEvent:             ()  => deleteEvent(),
+  savePlace:               ()  => savePlace(),
+  saveNewPlace:            ()  => saveNewPlace(),
+  relPickerCreateNew:      ()  => relPickerCreateNew(),
+  saveRepo:                ()  => saveRepo(),
+  deleteRepo:              ()  => deleteRepo(),
+  repoPickerCreateNew:     ()  => repoPickerCreateNew(),
+  menuOdToggle:            ()  => { closeModal('modalMenu'); odToggle(); },
+  menuOdOpen:              ()  => { closeModal('modalMenu'); odOpenFilePicker(); },
+  odSaveFile:              ()  => odSaveFile(),
+  menuSettings:            ()  => { closeModal('modalMenu'); openSettings(); },
+  menuOpenFile:            ()  => { closeModal('modalMenu'); openFileOrDir(); },
+  menuExport:              ()  => { closeModal('modalMenu'); exportGEDCOM(); },
+  menuBackup:              ()  => { closeModal('modalMenu'); downloadBackup(); },
+  menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
+  menuLoadDemo:            ()  => { closeModal('modalMenu'); loadDemo(); },
+  menuNewFile:             ()  => { closeModal('modalMenu'); confirmNewFile(); },
+  menuHelp:                ()  => { closeModal('modalMenu'); openModal('modalHelp'); },
+  menuRoundtrip:           ()  => { closeModal('modalMenu'); runRoundtripTest(); },
+  settingsChangePhoto:     ()  => { closeModal('modalSettings'); odImportPhotos(); },
+  odClearPhotoFolder:      ()  => odClearPhotoFolder(),
+  settingsChangeDoc:       ()  => { closeModal('modalSettings'); odSetupDocFolder(); },
+  odClearDocFolder:        ()  => odClearDocFolder(),
+  odCancelOrClose:         ()  => _odCancelOrClose(),
+  camCapture:              ()  => document.getElementById('am-cam-input').click(),
+  camGallery:              ()  => {
+    const inp = document.getElementById('am-cam-input');
+    inp.removeAttribute('capture');
+    inp.click();
+    setTimeout(() => inp.setAttribute('capture', 'environment'), 500);
+  },
+  odPickFileForMedia:      ()  => odPickFileForMedia(),
+  confirmAddMedia:         ()  => confirmAddMedia(),
+  odPickFileForEditMedia:  ()  => odPickFileForEditMedia(),
+  confirmDeleteMedia:      ()  => confirmDeleteMedia(),
+  confirmEditMedia:        ()  => confirmEditMedia(),
+  helpRoundtrip:           ()  => { closeModal('modalHelp'); runRoundtripTest(); },
+  saveChildRelDialog:      ()  => saveChildRelDialog(),
+  syncBannerSave:          ()  => _syncBannerSave(),
+  startupChoiceOneDrive:   ()  => _startupChoiceOneDrive(),
+  startupChoiceLocal:      ()  => _startupChoiceLocal(),
+  closeLightbox:           ()  => { document.getElementById('modalLightbox').style.display = 'none'; },
+  lightboxSetHero:         (el, e) => { e.stopPropagation(); _lightboxSetHero(); },
 };
 
 document.addEventListener('click', e => {
@@ -483,15 +572,47 @@ document.addEventListener('change', e => {
   const el = e.target.closest('[data-change]');
   if (!el) return;
   const action = el.dataset.change;
-  if (action === 'savePedi')      savePedi(el.dataset.fid, el.dataset.cid, el.value);
-  else if (action === 'updateSrcQuay') updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
+  if      (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
+  else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
+  else if (action === 'onEventTypeChange') onEventTypeChange();
+  else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
+  else if (action === 'amCamChange') {
+    (async () => {
+      const f = el.files[0];
+      if (!f) return;
+      try { const b64 = await resizeImageToBase64(f); _onCamCapture(b64); }
+      catch(err) { showToast('Fehler: ' + err.message); }
+      el.value = '';
+    })();
+  }
+  else if (action === 'photoImportChange') {
+    _handlePhotoImport(el.files[0]).finally(() => { el.value = ''; });
+  }
 });
 
 document.addEventListener('input', e => {
   const el = e.target.closest('[data-input]');
   if (!el) return;
-  if (el.dataset.input === 'updateSrcPage') updateSrcPage(el.dataset.prefix, el.dataset.sid, el.value);
+  const action = el.dataset.input;
+  if      (action === 'updateSrcPage')   updateSrcPage(el.dataset.prefix, el.dataset.sid, el.value);
+  else if (action === 'applyPersonFilter') applyPersonFilter();
+  else if (action === 'filterFamilies')  filterFamiliesDebounced(el.value);
+  else if (action === 'filterSources')   filterSourcesDebounced(el.value);
+  else if (action === 'filterPlaces')    filterPlacesDebounced(el.value);
+  else if (action === 'runGlobalSearch') runGlobalSearch(el.value);
+  else if (action === 'renderRelPicker') renderRelPicker(el.value);
+  else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
+  else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
 });
+
+document.addEventListener('blur', e => {
+  const el = e.target.closest('[data-blur]');
+  if (!el) return;
+  if (el.dataset.blur === 'normMonth') {
+    const v = normMonth(el.value);
+    if (v && el.value) el.value = v;
+  }
+}, true);
 
 // ─────────────────────────────────────
 //  OBJE-REFERENZ-HELPER

@@ -46,7 +46,7 @@
 **Version 6.0 in Entwicklung — Branch `v6-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1===out2)
-- **Aktuelle sw-Version: v152** / Cache: `stammbaum-v152`
+- **Aktuelle sw-Version: v163** / Cache: `stammbaum-v163`
 - Git: Branch `v6-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)

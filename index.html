@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stammbaum">
 <meta name="theme-color" content="#c8a84a">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Stammbaum</title>
@@ -39,8 +39,8 @@
 
   <p class="landing-tagline">Vollständig im Browser · Keine Installation · Keine Cloud</p>
 
-  <button class="btn-ghost" onclick="loadDemo()">Demo laden</button>
-  <button class="btn-link" onclick="openModal('modalHelp')">Hilfe &amp; Anleitung ›</button>
+  <button class="btn-ghost" data-action="loadDemo">Demo laden</button>
+  <button class="btn-link" data-action="openModal" data-modal="modalHelp">Hilfe &amp; Anleitung ›</button>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -50,28 +50,28 @@
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
-      <button class="topbar-btn" onclick="bnavSearch()" title="Suche">🔍</button>
-      <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
+      <button class="topbar-btn" data-action="bnavSearch" title="Suche">🔍</button>
+      <button class="topbar-btn" data-action="openMenuModal" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
 
   <div id="tab-persons">
     <div class="list-search-header">
       <div class="search-wrap">
-        <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" oninput="applyPersonFilter()">
+        <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" data-input="applyPersonFilter">
       </div>
       <div class="search-wrap" style="display:flex;gap:6px;align-items:center;padding-top:0;margin-top:-4px">
         <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap">Geb.-Jahr</span>
         <input type="number" id="yearFrom" placeholder="von" min="1" max="2100"
           style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
-          oninput="applyPersonFilter()">
+          data-input="applyPersonFilter">
         <span style="color:var(--text-muted)">–</span>
         <input type="number" id="yearTo" placeholder="bis" min="1" max="2100"
           style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
-          oninput="applyPersonFilter()">
-        <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" onclick="clearYearFilter()" title="Jahresfilter zurücksetzen">✕</button>
-        <button type="button" id="personSortBtn" onclick="togglePersonSort()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
-        <button type="button" onclick="showPersonMediaBrowser()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
+          data-input="applyPersonFilter">
+        <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" data-action="clearYearFilter" title="Jahresfilter zurücksetzen">✕</button>
+        <button type="button" id="personSortBtn" data-action="togglePersonSort" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
+        <button type="button" data-action="showPersonMediaBrowser" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="personList"></div>
@@ -80,8 +80,8 @@
   <div id="tab-families" style="display:none">
     <div class="list-search-header">
       <div class="search-wrap" style="display:flex;gap:6px;align-items:center">
-        <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" oninput="filterFamiliesDebounced(this.value)" style="flex:1;width:auto">
-        <button type="button" onclick="showFamilyMediaBrowser()" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
+        <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" data-input="filterFamilies" style="flex:1;width:auto">
+        <button type="button" data-action="showFamilyMediaBrowser" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="familyList"></div>
@@ -90,9 +90,9 @@
   <div id="tab-sources" style="display:none">
     <div class="list-search-header">
     <div class="search-wrap" style="display:flex;gap:8px;align-items:center">
-      <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" oninput="filterSourcesDebounced(this.value)" style="flex:1;width:auto">
-      <button id="repoJumpBtn" class="btn" style="display:none;flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" onclick="document.getElementById('repoSection').scrollIntoView({behavior:'smooth'})">🏛 Archive</button>
-      <button class="btn" style="flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" onclick="showMediaBrowser()" title="Alle Medien anzeigen">📎</button>
+      <input class="search-input" type="search" id="searchSources" placeholder="Titel, Autor…" data-input="filterSources" style="flex:1;width:auto">
+      <button id="repoJumpBtn" class="btn" style="display:none;flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" data-action="scrollToRepo">🏛 Archive</button>
+      <button class="btn" style="flex:none;padding:6px 10px;font-size:0.8rem;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);white-space:nowrap;border-radius:8px" data-action="showMediaBrowser" title="Alle Medien anzeigen">📎</button>
     </div>
     </div>
     <div id="sourceList"></div>
@@ -105,21 +105,21 @@
 
   <div id="tab-places" style="display:none">
     <div class="search-wrap">
-      <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" oninput="filterPlacesDebounced(this.value)">
+      <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
     </div>
     <div id="placeList"></div>
   </div>
 
   <div id="tab-search" style="display:none">
     <div class="search-wrap">
-      <input class="search-input" type="search" id="searchGlobal" placeholder="Personen, Familien, Quellen, Orte…" oninput="runGlobalSearch(this.value)">
+      <input class="search-input" type="search" id="searchGlobal" placeholder="Personen, Familien, Quellen, Orte…" data-input="runGlobalSearch">
     </div>
     <div id="globalSearchResults">
       <div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Suchbegriff eingeben…</div>
     </div>
   </div>
 
-  <button class="fab" id="fabBtn" onclick="showAddSheet()" title="Neu hinzufügen">＋</button>
+  <button class="fab" id="fabBtn" data-action="showAddSheet" title="Neu hinzufügen">＋</button>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -128,11 +128,11 @@
 <div id="v-detail" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <button class="topbar-btn back" onclick="goBack()">← Zurück</button>
+      <button class="topbar-btn back" data-action="goBack">← Zurück</button>
       <span class="topbar-title" id="detailTopTitle"></span>
       <button class="topbar-btn" id="probandBtn" style="display:none" title="Als Proband setzen">⌂</button>
       <button class="topbar-btn" id="treeBtn" style="display:none;font-size:1rem" title="Sanduhr-Ansicht">⧖</button>
-      <button class="topbar-btn primary" onclick="showEditSheet()" id="editBtn">Bearbeiten</button>
+      <button class="topbar-btn primary" data-action="showEditSheet" id="editBtn">Bearbeiten</button>
     </div>
   </div>
   <div id="desktopPlaceholder">
@@ -146,24 +146,24 @@
 <div id="v-tree" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <button class="topbar-btn back" id="treeBtnBack" style="display:none" onclick="treeNavBack()">←</button>
+      <button class="topbar-btn back" id="treeBtnBack" style="display:none" data-action="treeNavBack">←</button>
       <span class="topbar-title" id="treeTopTitle"></span>
       <span id="treeGenBtns">
-        <button class="topbar-btn fc-gen-btn" data-tgen="2" onclick="setTreeGens(2)">2</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="3" onclick="setTreeGens(3)">3</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="4" onclick="setTreeGens(4)">4</button>
-        <button class="topbar-btn fc-gen-btn active" data-tgen="5" onclick="setTreeGens(5)">5</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="6" onclick="setTreeGens(6)">6</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="2" data-action="setTreeGens">2</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="3" data-action="setTreeGens">3</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="4" data-action="setTreeGens">4</button>
+        <button class="topbar-btn fc-gen-btn active" data-tgen="5" data-action="setTreeGens">5</button>
+        <button class="topbar-btn fc-gen-btn" data-tgen="6" data-action="setTreeGens">6</button>
       </span>
       <span id="fcGenBtns">
-        <button class="topbar-btn fc-gen-btn" data-gen="3" onclick="setFcGens(3)">3</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="4" onclick="setFcGens(4)">4</button>
-        <button class="topbar-btn fc-gen-btn active" data-gen="5" onclick="setFcGens(5)">5</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="6" onclick="setFcGens(6)">6</button>
+        <button class="topbar-btn fc-gen-btn" data-gen="3" data-action="setFcGens">3</button>
+        <button class="topbar-btn fc-gen-btn" data-gen="4" data-action="setFcGens">4</button>
+        <button class="topbar-btn fc-gen-btn active" data-gen="5" data-action="setFcGens">5</button>
+        <button class="topbar-btn fc-gen-btn" data-gen="6" data-action="setFcGens">6</button>
       </span>
-      <button class="topbar-btn" id="treeFcToggle" onclick="toggleFanChart()" title="Fächer-Diagramm">◑</button>
-      <button class="topbar-btn" id="treeFsBtn" onclick="toggleTreeFullscreen()" title="Vollbild" style="display:none">⤢</button>
-      <button class="topbar-btn" onclick="openModal('modalMenu');_odUpdateUI()" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
+      <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm">◑</button>
+      <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" style="display:none">⤢</button>
+      <button class="topbar-btn" data-action="openMenuModal" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
   <div class="tree-scroll" id="treeScroll">
@@ -189,27 +189,27 @@
      GLOBALE BOTTOM NAVIGATION
 ══════════════════════════════════════ -->
 <nav class="bottom-nav" id="bottomNav" style="display:none">
-  <button class="bnav-btn" id="bnav-tree" onclick="bnavTree()">
+  <button class="bnav-btn" id="bnav-tree" data-action="bnavTree">
     <span class="bnav-icon">⧖</span>
     <span class="bnav-lbl">Baum</span>
   </button>
-  <button class="bnav-btn" id="bnav-persons" onclick="bnavTab('persons')">
+  <button class="bnav-btn" id="bnav-persons" data-action="bnavTab" data-tab="persons">
     <span class="bnav-icon">👤</span>
     <span class="bnav-lbl">Personen</span>
   </button>
-  <button class="bnav-btn" id="bnav-families" onclick="bnavTab('families')">
+  <button class="bnav-btn" id="bnav-families" data-action="bnavTab" data-tab="families">
     <span class="bnav-icon">⚭</span>
     <span class="bnav-lbl">Familien</span>
   </button>
-  <button class="bnav-btn" id="bnav-sources" onclick="bnavTab('sources')">
+  <button class="bnav-btn" id="bnav-sources" data-action="bnavTab" data-tab="sources">
     <span class="bnav-icon">📖</span>
     <span class="bnav-lbl">Quellen</span>
   </button>
-  <button class="bnav-btn" id="bnav-places" onclick="bnavTab('places')">
+  <button class="bnav-btn" id="bnav-places" data-action="bnavTab" data-tab="places">
     <span class="bnav-icon">📍</span>
     <span class="bnav-lbl">Orte</span>
   </button>
-  <button class="bnav-btn" id="bnav-home" onclick="bnavHome()">
+  <button class="bnav-btn" id="bnav-home" data-action="bnavHome">
     <span class="bnav-icon">⌂</span>
     <span class="bnav-lbl">Proband</span>
   </button>
@@ -226,11 +226,11 @@
     <div class="sheet-title">Neu hinzufügen</div>
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
-        <button class="btn btn-save" onclick="closeModal('modalAdd'); showPersonForm(null)">👤 Neue Person</button>
-        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showFamilyForm(null)">👨‍👩‍👧 Neue Familie</button>
-        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showSourceForm(null)">📖 Neue Quelle</button>
-        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" onclick="closeModal('modalAdd'); showNewPlaceForm()">📍 Neuer Ort</button>
-        <button class="btn btn-cancel" onclick="closeModal('modalAdd')">Abbrechen</button>
+        <button class="btn btn-save" data-action="addPerson">👤 Neue Person</button>
+        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" data-action="addFamily">👨‍👩‍👧 Neue Familie</button>
+        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" data-action="addSource">📖 Neue Quelle</button>
+        <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" data-action="addPlace">📍 Neuer Ort</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAdd">Abbrechen</button>
       </div>
     </div>
   </div>
@@ -284,7 +284,7 @@
       <div class="form-group">
         <label class="form-label">Weitere Namen</label>
         <div id="pf-extranames-list"></div>
-        <button type="button" class="btn" style="padding:6px 12px;margin-top:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="addPfExtraName()">+ Weiteren Namen</button>
+        <button type="button" class="btn" style="padding:6px 12px;margin-top:6px;background:var(--surface2);color:var(--text);border:1px solid var(--border)" data-action="addPfExtraName">+ Weiteren Namen</button>
       </div>
       <div class="form-group">
         <label class="form-label">Notiz</label>
@@ -305,17 +305,17 @@
       <div class="src-widget" id="pf-src-widget">
         <label class="form-label">Quellen</label>
         <div class="src-tags" id="pf-src-tags"></div>
-        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('pf')">＋ Quelle hinzufügen</button>
+        <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="pf">＋ Quelle hinzufügen</button>
         <div class="src-picker" id="pf-src-picker">
           <div class="src-picker-list" id="pf-src-list"></div>
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalPerson')">Abbrechen</button>
-        <button class="btn btn-save" onclick="savePerson()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalPerson">Abbrechen</button>
+        <button class="btn btn-save" data-action="savePerson">Speichern</button>
       </div>
       <div style="margin-top:10px">
-        <button class="btn btn-danger" id="deletePersonBtn" onclick="deletePerson()" style="width:100%">Person löschen</button>
+        <button class="btn btn-danger" id="deletePersonBtn" data-action="deletePerson" style="width:100%">Person löschen</button>
       </div>
     </div>
   </div>
@@ -351,12 +351,12 @@
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ff-mdate-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-            <input class="form-input" id="ff-mdate-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+            <input class="form-input" id="ff-mdate-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
             <input class="form-input" id="ff-mdate-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Heiratsort <button type="button" id="ff-mplace-toggle" onclick="togglePlaceMode('ff-mplace')" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
+          <label class="form-label">Heiratsort <button type="button" id="ff-mplace-toggle" data-action="togglePlaceMode" data-placeid="ff-mplace" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
           <div id="ff-mplace-free">
             <div class="place-input-wrap">
               <input class="form-input" id="ff-mplace" placeholder="München" autocomplete="off">
@@ -374,7 +374,7 @@
       <div class="src-widget" id="ff-src-widget">
         <label class="form-label">Quellen (Heirat)</label>
         <div class="src-tags" id="ff-src-tags"></div>
-        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('ff')">＋ Quelle hinzufügen</button>
+        <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="ff">＋ Quelle hinzufügen</button>
         <div class="src-picker" id="ff-src-picker">
           <div class="src-picker-list" id="ff-src-list"></div>
         </div>
@@ -384,15 +384,15 @@
         <div id="ff-media-list"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="ff-media-add-file" placeholder="Dateiname / Pfad (z.B. foto.jpg)" style="flex:1">
-          <button type="button" class="src-add-btn" onclick="_addMediaEntry('ff')">＋ Hinzufügen</button>
+          <button type="button" class="src-add-btn" data-action="addMediaEntry" data-prefix="ff">＋ Hinzufügen</button>
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalFamily')">Abbrechen</button>
-        <button class="btn btn-save" onclick="saveFamily()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalFamily">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveFamily">Speichern</button>
       </div>
       <div style="margin-top:10px">
-        <button class="btn btn-danger" id="deleteFamilyBtn" onclick="deleteFamily()" style="width:100%">Familie löschen</button>
+        <button class="btn btn-danger" id="deleteFamilyBtn" data-action="deleteFamily" style="width:100%">Familie löschen</button>
       </div>
     </div>
   </div>
@@ -420,7 +420,7 @@
         </select>
         <div style="display:flex;gap:4px">
           <input class="form-input" id="fev-date-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-          <input class="form-input" id="fev-date-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+          <input class="form-input" id="fev-date-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
           <input class="form-input" id="fev-date-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
@@ -431,17 +431,17 @@
       <div class="src-widget" id="fev-src-widget">
         <label class="form-label">Quellen</label>
         <div class="src-tags" id="fev-src-tags"></div>
-        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('fev')">＋ Quelle hinzufügen</button>
+        <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="fev">＋ Quelle hinzufügen</button>
         <div class="src-picker" id="fev-src-picker">
           <div class="src-picker-list" id="fev-src-list"></div>
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalFamEvent')">Abbrechen</button>
-        <button class="btn btn-save" id="saveFamEventBtn" onclick="saveFamEvent()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalFamEvent">Abbrechen</button>
+        <button class="btn btn-save" id="saveFamEventBtn" data-action="saveFamEvent">Speichern</button>
       </div>
       <div style="margin-top:10px">
-        <button class="btn btn-danger" id="deleteFamEventBtn" onclick="deleteFamEvent()" style="width:100%">Ereignis löschen</button>
+        <button class="btn btn-danger" id="deleteFamEventBtn" data-action="deleteFamEvent" style="width:100%">Ereignis löschen</button>
       </div>
     </div>
   </div>
@@ -457,11 +457,11 @@
       <div id="sf-template-row" style="display:none;margin-bottom:14px">
         <div class="form-label" style="margin-bottom:6px">Vorlage wählen</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('kirchenbuch')">Kirchenbuch</button>
-          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('standesamt')">Standesamt</button>
-          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('volkszaehlung')">Volkszählung</button>
-          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('familienbuch')">Familienstammbuch</button>
-          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="_applySourceTemplate('zeitung')">Zeitungsartikel</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" data-action="applySourceTemplate" data-tpl="kirchenbuch">Kirchenbuch</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" data-action="applySourceTemplate" data-tpl="standesamt">Standesamt</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" data-action="applySourceTemplate" data-tpl="volkszaehlung">Volkszählung</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" data-action="applySourceTemplate" data-tpl="familienbuch">Familienstammbuch</button>
+          <button type="button" class="btn" style="padding:5px 10px;font-size:0.82rem;background:var(--surface2);color:var(--text);border:1px solid var(--border)" data-action="applySourceTemplate" data-tpl="zeitung">Zeitungsartikel</button>
         </div>
       </div>
       <div class="form-group">
@@ -497,9 +497,9 @@
           <button class="btn" id="sf-repo-clear"
                   style="padding:6px 10px;font-size:0.85rem;display:none;
                          background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)"
-                  onclick="sfRepoClear()">×</button>
+                  data-action="sfRepoClear">×</button>
           <button class="btn" style="padding:6px 10px;font-size:0.85rem"
-                  onclick="openRepoPicker()">Wählen</button>
+                  data-action="openRepoPicker">Wählen</button>
         </div>
         <input type="hidden" id="sf-repo">
       </div>
@@ -516,19 +516,19 @@
         <div id="sf-media-list"></div>
         <div style="display:flex;gap:6px;margin-top:6px">
           <input class="form-input" id="sf-media-add-file" placeholder="Dateiname / Pfad (z.B. dokument.pdf)" style="flex:1">
-          <button type="button" class="src-add-btn" onclick="_addMediaEntry('sf')">＋ Hinzufügen</button>
+          <button type="button" class="src-add-btn" data-action="addMediaEntry" data-prefix="sf">＋ Hinzufügen</button>
         </div>
       </div>
       </div><!-- /sf-optional-fields -->
       <button type="button" id="sf-more-btn" class="btn"
               style="width:100%;margin-bottom:12px;background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);font-size:0.9rem"
-              onclick="sfToggleMore()">Weitere Felder ▼</button>
+              data-action="sfToggleMore">Weitere Felder ▼</button>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalSource')">Abbrechen</button>
-        <button class="btn btn-save" onclick="saveSource()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalSource">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveSource">Speichern</button>
       </div>
       <div style="margin-top:10px">
-        <button class="btn btn-danger" id="deleteSourceBtn" onclick="deleteSource()" style="width:100%">Quelle löschen</button>
+        <button class="btn btn-danger" id="deleteSourceBtn" data-action="deleteSource" style="width:100%">Quelle löschen</button>
       </div>
     </div>
   </div>
@@ -545,7 +545,7 @@
       <div style="display:flex; gap:8px; align-items:flex-end">
         <div class="form-group" style="flex:1; min-width:0">
           <label class="form-label">Ereignistyp</label>
-          <select class="form-select" id="ef-type" onchange="onEventTypeChange()">
+          <select class="form-select" id="ef-type" data-change="onEventTypeChange">
             <option value="BIRT">Geburt</option>
             <option value="CHR">Taufe</option>
             <option value="DEAT">Tod</option>
@@ -596,7 +596,7 @@
         <div class="form-group">
           <label class="form-label">Datum</label>
           <select class="form-select" id="ef-date-qual"
-              onchange="onDateQualChange(this,'ef-date2')"
+              data-change="onDateQualChange" data-target="ef-date2"
               style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
             <option value="">exakt</option>
             <option value="ABT">ca. (ABT)</option>
@@ -609,20 +609,20 @@
           </select>
           <div style="display:flex;gap:4px">
             <input class="form-input" id="ef-date-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-            <input class="form-input" id="ef-date-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+            <input class="form-input" id="ef-date-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
             <input class="form-input" id="ef-date-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
           </div>
           <div id="ef-date2-group" style="display:none;margin-top:6px">
             <div style="font-size:0.73rem;color:var(--text-dim,#9a8060);margin-bottom:3px">bis</div>
             <div style="display:flex;gap:4px">
               <input class="form-input" id="ef-date2-d" type="text" placeholder="TT" style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
-              <input class="form-input" id="ef-date2-m" placeholder="Monat" autocomplete="off" onblur="const v=normMonth(this.value);if(v&&this.value)this.value=v">
+              <input class="form-input" id="ef-date2-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
               <input class="form-input" id="ef-date2-y" type="text" placeholder="JJJJ" style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
             </div>
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Ort <button type="button" id="ef-place-toggle" onclick="togglePlaceMode('ef-place')" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
+          <label class="form-label">Ort <button type="button" id="ef-place-toggle" data-action="togglePlaceMode" data-placeid="ef-place" style="font-size:0.7rem;padding:1px 6px;border:1px solid var(--border,#3a3020);border-radius:4px;background:none;color:var(--text-dim,#9a8060);cursor:pointer;margin-left:6px;vertical-align:middle">⊞</button></label>
           <div id="ef-place-free">
             <div class="place-input-wrap">
               <input class="form-input" id="ef-place" placeholder="München" autocomplete="off">
@@ -635,7 +635,7 @@
       <div class="src-widget" id="ef-src-widget">
         <label class="form-label">Quellen</label>
         <div class="src-tags" id="ef-src-tags"></div>
-        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('ef')">＋ Quelle hinzufügen</button>
+        <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="ef">＋ Quelle hinzufügen</button>
         <div class="src-picker" id="ef-src-picker">
           <div class="src-picker-list" id="ef-src-list"></div>
         </div>
@@ -643,12 +643,12 @@
       <div class="form-group">
         <label class="form-label">Medien</label>
         <div id="ef-media-list"></div>
-        <button type="button" class="src-add-btn" style="margin-top:6px" onclick="addEfMedia()">＋ Medium hinzufügen</button>
+        <button type="button" class="src-add-btn" style="margin-top:6px" data-action="addEfMedia">＋ Medium hinzufügen</button>
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalEvent')">Abbrechen</button>
-        <button class="btn" id="deleteEventBtn" style="display:none;background:var(--danger,#c0392b);color:#fff" onclick="deleteEvent()">Löschen</button>
-        <button class="btn btn-save" id="saveEventBtn" onclick="saveEvent()">Hinzufügen</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalEvent">Abbrechen</button>
+        <button class="btn" id="deleteEventBtn" style="display:none;background:var(--danger,#c0392b);color:#fff" data-action="deleteEvent">Löschen</button>
+        <button class="btn btn-save" id="saveEventBtn" data-action="saveEvent">Hinzufügen</button>
       </div>
     </div>
   </div>
@@ -666,8 +666,8 @@
         <input class="form-input" id="pl-name">
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalPlace')">Abbrechen</button>
-        <button class="btn btn-save" onclick="savePlace()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalPlace">Abbrechen</button>
+        <button class="btn btn-save" data-action="savePlace">Speichern</button>
       </div>
     </div>
   </div>
@@ -697,8 +697,8 @@
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalNewPlace')">Abbrechen</button>
-        <button class="btn btn-save" onclick="saveNewPlace()">Hinzufügen</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalNewPlace">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveNewPlace">Hinzufügen</button>
       </div>
     </div>
   </div>
@@ -712,14 +712,14 @@
     <div class="sheet-body">
       <input class="form-input" id="relPickerSearch"
              placeholder="Name suchen…" autocomplete="off"
-             oninput="renderRelPicker(this.value)">
+             data-input="renderRelPicker">
       <div id="relPickerList"
            style="max-height:280px;overflow-y:auto;margin-top:8px"></div>
       <div class="btn-row" style="margin-top:12px;flex-direction:column;gap:8px">
-        <button class="btn btn-save" onclick="relPickerCreateNew()">
+        <button class="btn btn-save" data-action="relPickerCreateNew">
           ＋ Neue Person erstellen
         </button>
-        <button class="btn btn-cancel" onclick="closeModal('modalRelPicker')">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalRelPicker">
           Abbrechen
         </button>
       </div>
@@ -757,11 +757,11 @@
         <input class="form-input" id="rf-email" placeholder="archiv@…">
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalRepo')">Abbrechen</button>
-        <button class="btn btn-save" onclick="saveRepo()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalRepo">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveRepo">Speichern</button>
       </div>
       <div style="margin-top:10px">
-        <button class="btn btn-danger" id="deleteRepoBtn" onclick="deleteRepo()" style="width:100%">
+        <button class="btn btn-danger" id="deleteRepoBtn" data-action="deleteRepo" style="width:100%">
           Archiv löschen
         </button>
       </div>
@@ -777,12 +777,12 @@
     <div class="sheet-body">
       <input class="form-input" id="repoPickerSearch"
              placeholder="Archiv suchen…" autocomplete="off"
-             oninput="renderRepoPicker(this.value)">
+             data-input="renderRepoPicker">
       <div id="repoPickerList"
            style="max-height:280px;overflow-y:auto;margin-top:8px"></div>
       <div class="btn-row" style="margin-top:12px;flex-direction:column;gap:8px">
-        <button class="btn btn-save" onclick="repoPickerCreateNew()">＋ Neues Archiv erstellen</button>
-        <button class="btn btn-cancel" onclick="closeModal('modalRepoPicker')">Abbrechen</button>
+        <button class="btn btn-save" data-action="repoPickerCreateNew">＋ Neues Archiv erstellen</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalRepoPicker">Abbrechen</button>
       </div>
     </div>
   </div>
@@ -796,47 +796,47 @@
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
         <!-- OneDrive (primär) -->
-        <button id="odConnectBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); odToggle()">
+        <button id="odConnectBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuOdToggle">
           ☁ &nbsp; OneDrive verbinden
         </button>
-        <button id="odOpenBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="closeModal('modalMenu'); odOpenFilePicker()">
+        <button id="odOpenBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" data-action="menuOdOpen">
           📂 &nbsp; Aus OneDrive öffnen
         </button>
-        <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" onclick="odSaveFile()">
+        <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" data-action="odSaveFile">
           💾 &nbsp; In OneDrive speichern
         </button>
-        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="closeModal('modalMenu'); openSettings()">
+        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" data-action="menuSettings">
           ⚙ &nbsp; Einstellungen
         </button>
         <div style="border-top:1px solid var(--border);margin:2px 0"></div>
         <!-- Lokal (sekundär) -->
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openFileOrDir()">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuOpenFile">
           📂 &nbsp; Öffnen… (lokal)
         </button>
-        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); exportGEDCOM()">
+        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuExport">
           💾 &nbsp; Speichern (lokal)
         </button>
-        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); downloadBackup()">
+        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuBackup">
           🗄 &nbsp; <span>Original herunterladen</span>
         </button>
         <div style="border-top:1px solid var(--border);margin:2px 0"></div>
         <!-- Sonstiges -->
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); revertToSaved()">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuRevert">
           ↩ &nbsp; Änderungen verwerfen
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); loadDemo()">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuLoadDemo">
           🗂 &nbsp; Demo-Daten öffnen
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); confirmNewFile()">
+        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuNewFile">
           ✕ &nbsp; Datei schließen
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); openModal('modalHelp')">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuHelp">
           ❓ &nbsp; Hilfe &amp; Anleitung
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" onclick="closeModal('modalMenu'); runRoundtripTest()">
+        <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" data-action="menuRoundtrip">
           🔁 &nbsp; Roundtrip-Test
         </button>
-        <button class="btn btn-cancel" onclick="closeModal('modalMenu')">Abbrechen</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalMenu">Abbrechen</button>
       </div>
       <div id="menuVersionInfo" style="margin-top:14px;padding:10px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);font-size:0.75rem;color:var(--text-muted);line-height:1.7">
         <span id="menuSwVersion">SW: –</span><br>
@@ -863,7 +863,7 @@
           <div style="display:flex;align-items:center;gap:8px">
             <input id="set-base-path" type="text" placeholder="z.B. Privat/Ahnen/Stammbaum"
               style="flex:1;font-size:0.85rem;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text)"
-              oninput="odSetBasePath(this.value.trim())">
+              data-input="odSetBasePath">
           </div>
           <div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px">Relativer OneDrive-Pfad des GED-Ordners</div>
         </div>
@@ -872,8 +872,8 @@
           <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Foto-Ordner</div>
           <div style="display:flex;align-items:center;gap:8px">
             <div id="set-photo-name" style="flex:1;font-size:0.9rem;color:var(--text)">—</div>
-            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" onclick="closeModal('modalSettings');odImportPhotos()">Ändern</button>
-            <button id="set-photo-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" onclick="odClearPhotoFolder()" title="Zurücksetzen">×</button>
+            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" data-action="settingsChangePhoto">Ändern</button>
+            <button id="set-photo-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" data-action="odClearPhotoFolder" title="Zurücksetzen">×</button>
           </div>
           <div id="set-photo-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
         </div>
@@ -882,8 +882,8 @@
           <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:4px">Dokumente-Ordner</div>
           <div style="display:flex;align-items:center;gap:8px">
             <div id="set-doc-name" style="flex:1;font-size:0.9rem;color:var(--text)">—</div>
-            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" onclick="closeModal('modalSettings');odSetupDocFolder()">Ändern</button>
-            <button id="set-doc-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" onclick="odClearDocFolder()" title="Zurücksetzen">×</button>
+            <button class="btn" style="padding:5px 12px;font-size:0.8rem;background:var(--gold);color:var(--bg)" data-action="settingsChangeDoc">Ändern</button>
+            <button id="set-doc-clear" class="btn" style="padding:5px 10px;font-size:0.8rem;background:none;border:1px solid var(--border);color:var(--text-muted);display:none" data-action="odClearDocFolder" title="Zurücksetzen">×</button>
           </div>
           <div id="set-doc-count" style="font-size:0.75rem;color:var(--text-muted);margin-top:3px"></div>
         </div>
@@ -891,7 +891,7 @@
 
       </div><!-- /set-od-section -->
 
-<button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalSettings')">Schließen</button>
+<button class="btn btn-cancel" style="width:100%" data-action="closeModal" data-modal="modalSettings">Schließen</button>
     </div>
   </div>
 </div>
@@ -904,7 +904,7 @@
     <div class="sheet-body">
       <div id="odFileList" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
       <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-cancel" onclick="_odCancelOrClose()">Abbrechen</button>
+        <button class="btn btn-cancel" data-action="odCancelOrClose">Abbrechen</button>
       </div>
     </div>
   </div>
@@ -927,19 +927,19 @@
         <img id="am-cam-img" style="max-width:100%;max-height:140px;border-radius:8px;border:1px solid var(--border)">
       </div>
       <input type="file" accept="image/*" capture="environment" id="am-cam-input" style="display:none"
-        onchange="(async()=>{const f=this.files[0];if(!f)return;try{const b64=await resizeImageToBase64(f);_onCamCapture(b64);}catch(e){showToast('Fehler: '+e.message);}this.value='';})()">
+        data-change="amCamChange">
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <button class="btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-          onclick="document.getElementById('am-cam-input').click()">Foto aufnehmen</button>
+          data-action="camCapture">Foto aufnehmen</button>
         <button class="btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
-          onclick="document.getElementById('am-cam-input').removeAttribute('capture');document.getElementById('am-cam-input').click();setTimeout(()=>document.getElementById('am-cam-input').setAttribute('capture','environment'),500)">Aus Galerie</button>
+          data-action="camGallery">Aus Galerie</button>
       </div>
       <div id="am-od-row" style="display:none;margin-bottom:12px">
-        <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForMedia()">Aus OneDrive auswählen</button>
+        <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" data-action="odPickFileForMedia">Aus OneDrive auswählen</button>
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalAddMedia')">Abbrechen</button>
-        <button class="btn btn-primary" onclick="confirmAddMedia()">Hinzufügen</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAddMedia">Abbrechen</button>
+        <button class="btn btn-primary" data-action="confirmAddMedia">Hinzufügen</button>
       </div>
     </div>
   </div>
@@ -952,7 +952,7 @@
     <div class="sheet-title" id="media-browser-title">Medien-Browser</div>
     <div class="sheet-body" style="flex:1;overflow-y:auto;padding-bottom:16px" id="media-browser-content"></div>
     <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
-      <button class="btn btn-cancel" style="width:100%" onclick="closeModal('modalMediaBrowser')">Schließen</button>
+      <button class="btn btn-cancel" style="width:100%" data-action="closeModal" data-modal="modalMediaBrowser">Schließen</button>
     </div>
   </div>
 </div>
@@ -976,16 +976,16 @@
         <input class="form-input" id="em-file" placeholder="z.B. foto.jpg">
       </div>
       <div id="em-od-row" style="display:none;margin-bottom:12px">
-        <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" onclick="odPickFileForEditMedia()">Aus OneDrive auswählen</button>
+        <button class="btn" style="width:100%;background:var(--gold);color:var(--bg)" data-action="odPickFileForEditMedia">Aus OneDrive auswählen</button>
       </div>
       <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;border-bottom:1px solid var(--border-color);margin-bottom:12px">
         <input type="checkbox" id="em-prim-check" style="width:18px;height:18px;flex-shrink:0">
         <span style="font-size:0.9rem">Als Hauptbild (wird an erste Stelle der Liste verschoben)</span>
       </label>
       <div class="btn-row" style="gap:8px">
-        <button class="btn btn-cancel" onclick="closeModal('modalEditMedia')">Abbrechen</button>
-        <button class="btn" style="background:var(--danger,#c0392b);color:#fff;flex:1" onclick="confirmDeleteMedia()">Löschen</button>
-        <button class="btn btn-primary" onclick="confirmEditMedia()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalEditMedia">Abbrechen</button>
+        <button class="btn" style="background:var(--danger,#c0392b);color:#fff;flex:1" data-action="confirmDeleteMedia">Löschen</button>
+        <button class="btn btn-primary" data-action="confirmEditMedia">Speichern</button>
       </div>
     </div>
   </div>
@@ -993,7 +993,7 @@
 
 <input type="file" id="fileInput2" accept="*/*" style="display:none">
 <input type="file" id="photoImportInput" accept=".json,application/json" style="display:none"
-  onchange="_handlePhotoImport(this.files[0]).finally(()=>this.value='')">
+  data-change="photoImportChange">
 
 <!-- Hilfe-Modal -->
 <div class="modal-overlay" id="modalHelp">
@@ -1023,8 +1023,8 @@
         Alle Daten bleiben auf Ihrem Gerät. GEDCOM-Daten und Fotos werden nicht an Server übertragen. OneDrive-Zugriff erfolgt direkt zwischen Ihrem Browser und Microsoft — nur wenn Sie sich explizit verbinden.</p>
       </div>
       <div class="btn-row" style="margin-top:20px">
-        <button class="btn btn-cancel" onclick="closeModal('modalHelp')">Schließen</button>
-        <button class="btn btn-save" onclick="closeModal('modalHelp');runRoundtripTest()" style="background:var(--bg-card);color:var(--gold);border:1px solid var(--gold-dim)">Roundtrip-Test</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalHelp">Schließen</button>
+        <button class="btn btn-save" data-action="helpRoundtrip" style="background:var(--bg-card);color:var(--gold);border:1px solid var(--gold-dim)">Roundtrip-Test</button>
       </div>
     </div>
   </div>
@@ -1037,7 +1037,7 @@
     <div class="sheet-body">
       <pre id="roundtrip-output" style="font-size:0.72rem;line-height:1.5;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;overflow-y:auto;max-height:60vh;background:var(--bg-card);padding:10px;border-radius:8px;margin-bottom:14px">Kein Ergebnis</pre>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalRoundtrip')">Schließen</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalRoundtrip">Schließen</button>
       </div>
     </div>
   </div>
@@ -1069,14 +1069,14 @@
       <div class="form-group">
         <label class="form-label">Quellen</label>
         <div class="src-tags" id="cr-src-tags"></div>
-        <button type="button" class="src-add-btn" onclick="toggleSrcPicker('cr')">＋ Quelle hinzufügen</button>
+        <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="cr">＋ Quelle hinzufügen</button>
         <div class="src-picker" id="cr-src-picker">
           <div class="src-picker-list" id="cr-src-list"></div>
         </div>
       </div>
       <div class="btn-row">
-        <button class="btn btn-cancel" onclick="closeModal('modalChildRel')">Abbrechen</button>
-        <button class="btn btn-save" onclick="saveChildRelDialog()">Speichern</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalChildRel">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveChildRelDialog">Speichern</button>
       </div>
     </div>
   </div>
@@ -1084,7 +1084,7 @@
 
 <div id="syncBanner">
   <span>● Nicht gespeichert</span>
-  <button class="sync-save-btn" id="syncBannerBtn" onclick="_syncBannerSave()">Speichern</button>
+  <button class="sync-save-btn" id="syncBannerBtn" data-action="syncBannerSave">Speichern</button>
 </div>
 
 <div class="modal-overlay" id="modalStartupChoice">
@@ -1094,10 +1094,10 @@
     <div class="sheet-body">
       <div id="_startupChoiceName" style="text-align:center;padding:4px 0 18px;color:var(--text-dim);font-size:0.9rem"></div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="_startupChoiceOneDrive()">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" data-action="startupChoiceOneDrive">
           ☁ &nbsp; Von OneDrive laden
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" onclick="_startupChoiceLocal()">
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" data-action="startupChoiceLocal">
           📱 &nbsp; Lokal gespeicherte Version
         </button>
       </div>
@@ -1105,9 +1105,9 @@
   </div>
 </div>
 
-<div id="modalLightbox" onclick="document.getElementById('modalLightbox').style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+<div id="modalLightbox" data-action="closeLightbox" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:1000;cursor:pointer;align-items:center;justify-content:center;flex-direction:column;gap:14px">
   <img id="lightboxImg" alt="Foto" style="max-width:92vw;max-height:80vh;border-radius:8px;object-fit:contain;box-shadow:0 4px 32px rgba(0,0,0,0.6)">
-  <button id="lightboxSetHero" onclick="event.stopPropagation();_lightboxSetHero()" style="display:none;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:8px 22px;font-size:0.92rem;font-weight:600;cursor:pointer">Als Hauptfoto setzen</button>
+  <button id="lightboxSetHero" data-action="lightboxSetHero" style="display:none;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:8px 22px;font-size:0.92rem;font-weight:600;cursor:pointer">Als Hauptfoto setzen</button>
 </div>
 
 <!-- ══════════════════════════════════════
