@@ -614,7 +614,7 @@ window.addEventListener('load', async () => {
   } else if (hasOdFile && hasSession) {
     // Gleiche Session → direkt von OneDrive laden (kein veralteten Stand zeigen)
     const loaded = await odAutoLoadFromOneDrive();
-    if (!loaded) await tryAutoLoad();
+    if (!loaded) { showToast('⚠ OneDrive nicht erreichbar — lokale Version geladen'); await tryAutoLoad(); }
   } else if (hasOdFile) {
     // Neustart: bekannte OD-Datei, aber kein Token → Auswahl-Dialog
     _showStartupChoice();
@@ -630,16 +630,14 @@ window.addEventListener('load', async () => {
   }
 
   // DEV: aktiven SW-Cache anzeigen — entfernen vor Release
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-    setTimeout(() => {
-      if ('caches' in window) {
-        caches.keys().then(keys => {
-          const sw = keys.find(k => k.startsWith('stammbaum-'));
-          showToast('DEV ' + (sw ? sw.replace('stammbaum-', 'sw ') : 'kein SW-Cache'));
-        });
-      }
-    }, 800);
-  }
+  setTimeout(() => {
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        const sw = keys.find(k => k.startsWith('stammbaum-'));
+        showToast('DEV ' + (sw ? sw.replace('stammbaum-', 'sw ') : 'kein SW-Cache'));
+      });
+    }
+  }, 800);
 });
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
