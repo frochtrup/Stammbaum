@@ -628,6 +628,18 @@ window.addEventListener('load', async () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
+
+  // DEV: aktiven SW-Cache anzeigen — entfernen vor Release
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    setTimeout(() => {
+      if ('caches' in window) {
+        caches.keys().then(keys => {
+          const sw = keys.find(k => k.startsWith('stammbaum-'));
+          showToast('DEV ' + (sw ? sw.replace('stammbaum-', 'sw ') : 'kein SW-Cache'));
+        });
+      }
+    }, 800);
+  }
 });
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert
