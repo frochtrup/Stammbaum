@@ -74,6 +74,12 @@ Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: 
 - [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
 - [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
 
+### Vor Release v6 entfernen
+
+- [ ] **DEV-Diagnose im Menü entfernen** — OD-Token-Details (`OD: ...`, `Token: ...`) und SW-Version-Toast (`DEV sw vXXX`) vor Abschluss v6 entfernen (`index.html` menuVersionInfo-Block kürzen, `storage.js` DEV-Blöcke löschen)
+
+---
+
 ### Bekannte Fehler
 
 - [ ] Ereignis-Gruppierung in Personendetail unvollständig: "Sonstige Ereignisse" mit mehreren Typen werden nicht einzeln geblockt, sondern zusammengefasst (ui-views-person.js)
