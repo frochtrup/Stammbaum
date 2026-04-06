@@ -53,7 +53,7 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 
 ### P2 — Maintainability (Aufwand steigt mit jeder Erweiterung)
 
-- [ ] **`parseGEDCOM()` aufteilen** — 750-Zeilen-Monolith in `gedcom-parser.js`; Ziel: INDI/FAM/EVENT als Sub-Parser je < 200 Z.
+- [~] **`parseGEDCOM()` aufteilen** — ❌ verworfen: Parser ist eine Single-Pass-State-Machine mit tiefem Shared State (`_ptDepth`, `_ptTarget`, `evIdx`, `lastSourVal` …). Sub-Funktionen würden den Lesefluss verschlechtern (ctx-Objekt nötig, Sprünge zwischen Funktionen). Code ist roundtrip-stabil und durch Section-Kommentare (`// ── INDI ──`) navigierbar — Aufwand ohne operativen Nutzen.
 - [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
 - [x] **`storage.js` aufteilen** — `storage-file.js` (IDB-Primitives + File System Access API + Export/Save + File Loading, ~305 Z.) + `storage.js` (Demo/Backup/Init/Foto-Export, ~345 Z.) ✅ sw v166
 
@@ -278,7 +278,7 @@ Priorisierte Liste — Details und Kontext in v6.0-Abschnitt oben.
 
 **Offen (priorisiert):**
 - ~~**P1** `onclick=`-Handler-Migration~~ → sw v163 ✓
-- **P2** `parseGEDCOM()` aufteilen (750 Z.) · `writeGEDCOM()` aufteilen (477 Z.) · ~~`storage.js` aufteilen~~ → sw v166 ✓
+- **P2** ~~`parseGEDCOM()` aufteilen~~ → verworfen (Single-Pass-State-Machine, kein Nutzen) · `writeGEDCOM()` aufteilen (477 Z.) · ~~`storage.js` aufteilen~~ → sw v166 ✓
 - **P3** Globale Suche indexieren (O(n×m)) · `touchmove` throttlen · Virtual Scroll profilen
 - **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper extrahieren
 - **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo (eigener Sprint)
