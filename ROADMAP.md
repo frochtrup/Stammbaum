@@ -92,11 +92,12 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 
 ---
 
-### Bekannte Fehler
+### Bekannte Fehler / kleine Erweiterungen
 
 - [x] Ereignis-Gruppierung in Personendetail: EVEN-Ereignisse mit unterschiedlichem `eventType` wurden unter einem Block zusammengefasst — behoben: Gruppierungsschlüssel `type:eventType` (ui-views-person.js)
 - [ ] Ereignisse können einen TYPE als Detailierung haben, speicher und editierbar machern
 - [ ] Beschäftigung als OCCU inkl Arbeitgeber, dazu AGNC modellieren
+- [ ] für EVEN tags hätte ich gerene details im roundtrip, um sie ggf. ersetzen zu können
 
 ---
 
