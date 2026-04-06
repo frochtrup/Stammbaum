@@ -4,7 +4,18 @@
 // ─────────────────────────────────────
 
 // Session-Cache für dynamisch geladene Fotos (blob: URLs, nicht persistent)
-const _odPhotoCache = {};
+// LRU mit Max 30 Einträgen — verhindert unkontrollierten RAM-Anstieg bei vielen Fotos
+const _odPhotoCache = (() => {
+  const MAX = 30;
+  const map = new Map();
+  return {
+    get(k)    { if (!map.has(k)) return undefined; const v = map.get(k); map.delete(k); map.set(k, v); return v; },
+    set(k, v) { if (map.has(k)) map.delete(k); else if (map.size >= MAX) map.delete(map.keys().next().value); map.set(k, v); },
+    has(k)    { return map.has(k); },
+    clear()   { map.clear(); },
+    clearByPrefix(pfx) { for (const k of [...map.keys()]) { if (k.startsWith(pfx)) map.delete(k); } },
+  };
+})();
 
 // Basis-Pfad-Cache (voller OneDrive-Pfad zum GED-Ordner)
 let _odCurrentBasePath = null; // null = nicht geladen; '' = kein Basis-Pfad
@@ -62,7 +73,7 @@ function _odStripBaseFromPaths(basePath) {
 async function _odGetMediaUrlByPath(relPath) {
   if (!relPath || !_odIsConnected()) return null;
   const cacheKey = 'path:' + relPath;
-  if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
+  if (_odPhotoCache.has(cacheKey)) return _odPhotoCache.get(cacheKey);
   const token = await _odGetToken().catch(() => null);
   if (!token) return null;
   const basePath = await _odGetBasePath();
@@ -98,7 +109,7 @@ async function _odGetMediaUrlByPath(relPath) {
       dataUrl = await _fetchDataUrl(fallbackFull);
     }
     if (!dataUrl) return null;
-    _odPhotoCache[cacheKey] = dataUrl;
+    _odPhotoCache.set(cacheKey, dataUrl);
     return dataUrl;
   } catch(e) { console.warn('[OD] Mediendatei laden:', relPath, e); return null; }
 }
@@ -138,7 +149,7 @@ function _parsePhotoKey(idbKey) {
 // Foto dynamisch aus OneDrive laden (Session-Cache → fileId-Map → fetch)
 async function _odGetPhotoUrl(idbKey) {
   if (!_odIsConnected()) return null;
-  if (_odPhotoCache[idbKey]) return _odPhotoCache[idbKey];
+  if (_odPhotoCache.has(idbKey)) return _odPhotoCache.get(idbKey);
   const p = _parsePhotoKey(idbKey);
   const filemap = await idbGet('od_filemap').catch(() => null);
   const store   = p.isFam ? filemap?.families : filemap?.persons;
@@ -164,7 +175,7 @@ async function _odGetPhotoUrl(idbKey) {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-    _odPhotoCache[idbKey] = dataUrl;
+    _odPhotoCache.set(idbKey, dataUrl);
     return dataUrl;
   } catch(e) { console.warn('[OD] Foto laden:', idbKey, e); return null; }
 }
@@ -176,13 +187,13 @@ async function _odGetPhotoUrl(idbKey) {
 async function _odGetSourceFileUrl(srcId, idx) {
   if (!_odIsConnected()) return null;
   const cacheKey = 'src_' + srcId + '_' + idx;
-  if (_odPhotoCache[cacheKey]) return _odPhotoCache[cacheKey];
+  if (_odPhotoCache.has(cacheKey)) return _odPhotoCache.get(cacheKey);
 
   // 1. Direkt per Pfad (bevorzugt — kein separates Mapping nötig)
   const mfile = AppState.db.sources?.[srcId]?.media?.[idx]?.file;
   if (mfile) {
     const url = await _odGetMediaUrlByPath(mfile).catch(() => null);
-    if (url) { _odPhotoCache[cacheKey] = url; return url; }
+    if (url) { _odPhotoCache.set(cacheKey, url); return url; }
   }
 
   // 2. Legacy: manuell verknüpfte fileId
@@ -214,7 +225,7 @@ async function _odGetSourceFileUrl(srcId, idx) {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-    _odPhotoCache[cacheKey] = dataUrl;
+    _odPhotoCache.set(cacheKey, dataUrl);
     return dataUrl;
   } catch(e) { console.warn('[OD] Quellenmedium laden:', srcId, idx, e); return null; }
 }
@@ -258,7 +269,7 @@ async function odSetBasePath(val) {
   const bp = val.replace(/\/+$/, ''); // trailing slash entfernen
   await idbPut('od_base_path', bp).catch(() => {});
   _odCurrentBasePath = bp;
-  Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
+  _odPhotoCache.clear();
 }
 
 async function odClearPhotoFolder() {
@@ -267,7 +278,7 @@ async function odClearPhotoFolder() {
   await idbDel('od_default_folder').catch(() => {});
   await idbDel('od_filemap').catch(() => {});
   _odCurrentBasePath = null;
-  Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
+  _odPhotoCache.clear();
   AppState.changed = true;
   showToast('Foto-Ordner zurückgesetzt');
   openSettings();
@@ -277,7 +288,7 @@ async function odClearDocFolder() {
   await idbDel('od_docs_folder').catch(() => {});
   await idbDel('od_doc_folder').catch(() => {});
   await idbDel('od_doc_filemap').catch(() => {});
-  Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
+  _odPhotoCache.clearByPrefix('src_');
   showToast('Dokumente-Ordner zurückgesetzt');
   openSettings();
 }

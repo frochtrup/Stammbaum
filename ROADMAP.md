@@ -20,9 +20,52 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 ## Version 6.0 (Branch `v6-dev`, ab 2026-04-05)
 
-*Planung in Arbeit — offene Punkte aus v5 + neue Schwerpunkte*
+Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: B+ (Security A–, Architektur B, Performance B–, Code-Qualität B, PWA B). Gesamtbewertung: solide Basis, gezielter Abbau technischer Schulden.
 
-### Offen aus v5
+---
+
+### Schwerpunkt 1: Sicherheit & Aufräumen (Tier 1)
+
+#### Aufräumen — ✅ ABGESCHLOSSEN (sw v153)
+- [x] `index_v1.2.html` (4011 Z.) und `test_idempotency.html` gelöscht — kein Produktivcode
+
+#### Content Security Policy — ✅ ABGESCHLOSSEN (sw v153)
+- [x] `<meta http-equiv="Content-Security-Policy">` in `index.html` — `default-src 'self'`, `connect-src` auf OneDrive-Endpunkte begrenzt, `object-src 'none'`, `frame-ancestors 'none'`
+- [x] `script-src 'unsafe-inline'` notwendig wegen bestehender `onclick=`-Handler (Einschränkung dokumentiert; vollständige Beseitigung ist Tier-2-Ziel)
+
+#### Memory-Leak: Photo-Cache — ✅ ABGESCHLOSSEN (sw v153)
+- [x] `_odPhotoCache` von unbegrenztem `{}` auf LRU-Cache (Max 30 Einträge) umgestellt — verhindert unkontrollierten RAM-Anstieg bei vielen geladenen Fotos
+- [x] `clear()` und `clearByPrefix()` Methoden für bestehende Aufrufe in `odSetBasePath()` / `odClearPhotoFolder()` / `odClearDocFolder()`
+
+---
+
+### Schwerpunkt 2: Architektur-Schulden (Tier 2)
+
+- [ ] **`parseGEDCOM()` aufteilen** — 750-Zeilen-Monolith in `gedcom-parser.js`; Ziel: INDI/FAM/EVENT als Sub-Parser je < 200 Z.
+- [ ] **`storage.js` aufteilen** — 751 Z., zu viele Concerns: `storage-file.js` (File I/O) + `storage-idb.js` (IndexedDB) + bestehende `storage.js` (Demo/Backup/Init)
+- [ ] **CSS aus `index.html` auslagern** — ~800 Z. Inline-CSS → `styles.css`
+- [ ] **`_navHistory` + `_probandId` in `UIState` konsolidieren** — aktuell lose Globals in ui-views.js
+- [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
+
+---
+
+### Schwerpunkt 3: Performance (Tier 2)
+
+- [ ] **`touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen** — feuert aktuell 100+/s direkt auf DOM-Properties, Frame-Drops auf älteren iPhones (ui-views-tree.js)
+- [ ] **Globale Suche indexieren** — O(n×m) ohne Cache; Debounce + vorberechneter Index (ui-views.js)
+- [ ] **Virtual Scroll bei 1000+ Einträgen profilen** — aktueller Threshold 500; Spacer-Logik auf Korrektheit bei 2800+ Personen verifizieren
+
+---
+
+### Schwerpunkt 4: Code-Qualität (Tier 3)
+
+- [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` aus Person/Familie/Quelle-Views (~15% Duplikation)
+- [ ] **`onclick=`-Handler vollständig auf `data-action`-Delegation migrieren** — aktuell gemischt; `unsafe-inline` in CSP danach entfernbar
+- [ ] **Service Worker Offline-Fallback** — bei leerem Cache + Netz-Timeout: `offline.html` statt weißem Screen
+
+---
+
+### Schwerpunkt 5: Neue Features (offen aus v5)
 
 - [ ] Zeitleiste (`ui-timeline.js`) — Personen/Ereignisse auf horizontaler Zeitachse
 - [ ] Nachkommen-Baum (top-down SVG)
@@ -30,18 +73,10 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 - [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
 - [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
 - [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
-- [ ] `writeGEDCOM()` in Subfunktionen aufteilen (477-Zeilen-Monolith)
-- [ ] `touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen
-- [ ] Globale Suche indexieren (Debounce + vorberechneter Index)
 
-### Fehler
+### Bekannte Fehler
 
-- [ ] das geblockte sortieren der Ereignisse im Personen Detail hat nicht komplett funktioniert, wenn sonstige events mehrere Typern haben, werden diese nicht einzeln geblockt
-- [ ] 
-
-### Neue Schwerpunkte
-
-*(werden in der nächsten Session definiert)*
+- [ ] Ereignis-Gruppierung in Personendetail unvollständig: "Sonstige Ereignisse" mit mehreren Typen werden nicht einzeln geblockt, sondern zusammengefasst (ui-views-person.js)
 
 ---
 
