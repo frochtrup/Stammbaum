@@ -521,23 +521,35 @@ function openModal(id) {
 async function _updateMenuVersionInfo() {
   const swEl    = document.getElementById('menuSwVersion');
   const stateEl = document.getElementById('menuSwState');
+  const odEl    = document.getElementById('menuOdState');
+  const tokEl   = document.getElementById('menuOdToken');
   if (!swEl) return;
+
+  // SW-Cache
   let swName = 'kein Cache';
   if ('caches' in window) {
     const keys = await caches.keys();
     const sw = keys.find(k => k.startsWith('stammbaum-'));
     if (sw) swName = sw.replace('stammbaum-', 'sw ');
   }
+  swEl.textContent = 'SW: ' + swName;
+
+  // SW-Status
   let state = '–';
   if ('serviceWorker' in navigator) {
     const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
-    if (reg) {
-      const w = reg.active || reg.installing || reg.waiting;
-      state = reg.active ? 'aktiv' : reg.waiting ? 'wartet (neu laden)' : reg.installing ? 'installiert...' : '–';
-    } else { state = 'nicht registriert'; }
+    state = reg ? (reg.active ? 'aktiv' : reg.waiting ? 'wartet (neu laden)' : reg.installing ? 'installiert...' : '–') : 'nicht registriert';
   }
-  swEl.textContent    = 'SW: ' + swName;
   stateEl.textContent = 'Status: ' + state;
+
+  // OneDrive-Verbindung
+  const hasOdFile  = localStorage.getItem('od_file_id');
+  const hasRefresh = !!sessionStorage.getItem('od_refresh_token');
+  const hasAccess  = !!sessionStorage.getItem('od_access_token');
+  const expiry     = parseInt(sessionStorage.getItem('od_token_expiry') || '0');
+  const expiresIn  = Math.round((expiry - Date.now()) / 1000);
+  if (odEl) odEl.textContent = 'OD: ' + (hasOdFile ? 'Datei bekannt' : 'keine Datei') + ' · RT:' + (hasRefresh ? 'ja' : 'nein') + ' · AT:' + (hasAccess ? 'ja' : 'nein');
+  if (tokEl) tokEl.textContent = 'Token: ' + (hasAccess ? 'gültig noch ' + expiresIn + 's' : hasRefresh ? 'abgelaufen (RT da)' : 'kein Token');
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
