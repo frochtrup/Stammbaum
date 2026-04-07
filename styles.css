@@ -671,8 +671,15 @@ body.fc-mode #fcGenBtns { display: flex; }
 /* QUAY-Qualitätsstufen */
 .src-badge--q3 { color: #52a878; border-color: #52a878; }   /* direkt/primär */
 .src-badge--q2 { color: #5b9bd4; border-color: #5b9bd4; }   /* plausibel */
-.src-badge--q1 { color: #d49a5b; border-color: #d49a5b; }   /* fragwürdig */
+.src-badge--q1 { color: #e07830; border-color: #e07830; }   /* fragwürdig */
 .src-badge--q0 { color: #c07878; border-color: #c07878; }   /* unbelegt */
+/* Quellenangabe (PAGE/QUAY) in Referenz-Zeilen der Quellendarstellung */
+.src-ref-meta {
+  color: var(--gold-dim);
+  font-size: 0.75rem;
+  font-family: 'Source Serif 4', serif;
+  letter-spacing: 0.02em;
+}
 
 /* ═══════════════════════════════════════
    CHANGED INDICATOR

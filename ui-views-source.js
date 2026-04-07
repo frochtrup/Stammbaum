@@ -56,12 +56,20 @@ function showSourceDetail(id, pushHistory = true) {
     html += `<div class="section fade-up">
       <div class="section-title">Personen (${refPersons.length})</div>`;
     for (const p of sorted) {
-      let meta = '';
-      if (p.birth.date) meta += '* ' + p.birth.date;
-      if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+      let bio = '';
+      if (p.birth.date) bio += '* ' + p.birth.date;
+      if (p.death.date) bio += (bio ? '  † ' : '† ') + p.death.date;
       const srcMeta = _collectSourceMeta(p, id);
-      if (srcMeta) meta += (meta ? ' · ' : '') + srcMeta;
-      html += relRow(p, meta || '–');
+      const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
+      const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
+      html += `<div class="rel-row" data-action="showDetail" data-pid="${p.id}">
+        <div class="rel-avatar ${sc}">${ic}</div>
+        <div class="rel-info">
+          <div class="rel-name">${esc(p.name || p.id)}</div>
+          <div class="rel-role">${esc(bio) || '–'}${srcMeta ? `<span class="src-ref-meta"> · ${esc(srcMeta)}</span>` : ''}</div>
+        </div>
+        <span class="p-arrow">›</span>
+      </div>`;
     }
     html += `</div>`;
   }
@@ -74,14 +82,13 @@ function showSourceDetail(id, pushHistory = true) {
       const husb = f.husb ? AppState.db.individuals[f.husb] : null;
       const wife = f.wife ? AppState.db.individuals[f.wife] : null;
       const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
-      let meta = f.marr.date ? '⚭ ' + f.marr.date : '';
+      const bio = f.marr.date ? '⚭ ' + f.marr.date : '';
       const srcMeta = _collectSourceMeta(f, id);
-      if (srcMeta) meta += (meta ? ' · ' : '') + srcMeta;
       html += `<div class="rel-row" data-action="showFamilyDetail" data-id="${f.id}">
         <div class="rel-avatar" style="font-size:0.9rem">👨‍👩‍👧</div>
         <div class="rel-info">
           <div class="rel-name">${esc(title)}</div>
-          <div class="rel-role">${esc(meta) || '–'}</div>
+          <div class="rel-role">${esc(bio) || '–'}${srcMeta ? `<span class="src-ref-meta"> · ${esc(srcMeta)}</span>` : ''}</div>
         </div>
         <span class="p-arrow">›</span>
       </div>`;
