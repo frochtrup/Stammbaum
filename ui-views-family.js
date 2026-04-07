@@ -340,17 +340,13 @@ function showFamilyDetail(id, pushHistory = true) {
     if (!child) continue;
     const _fe = (child.famc || []).find(x => (typeof x === 'string' ? x : x.famId) === id);
     const _curPedi = (typeof _fe === 'object') ? (_toPedi(_fe.pedi || _fe.frel || '')) : '';
-    const _pSel = v => v === _curPedi ? ' selected' : '';
-    const _pediSelect = `<select
-        data-action="stop" data-change="savePedi" data-fid="${id}" data-cid="${cid}"
-        style="font-size:0.8rem;border:none;background:transparent;color:var(--text-dim);cursor:pointer;max-width:90px">
-      <option value=""${_pSel('')}>– Verhältnis</option>
-      <option value="birth"${_pSel('birth')}>leiblich</option>
-      <option value="adopted"${_pSel('adopted')}>adoptiert</option>
-      <option value="foster"${_pSel('foster')}>Pflegekind</option>
-      <option value="sealing"${_pSel('sealing')}>Sealing</option>
-    </select>`;
+    const _pediLabels = { birth: 'leiblich', adopted: 'adoptiert', foster: 'Pflegekind', sealing: 'Sealing' };
+    const _pediLabel = _curPedi ? (_pediLabels[_curPedi] || _curPedi) : '– Verhältnis';
+    const _pediSpan = `<span data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
+        style="font-size:0.78rem;color:var(--text-dim);cursor:pointer;border-bottom:1px dashed var(--border);padding-bottom:1px"
+        >${_pediLabel}</span>`;
     const _sourIds = (typeof _fe === 'object') ? (_fe.sourIds || []) : [];
+    const _sourQUAY = (typeof _fe === 'object') ? (_fe.sourQUAY || {}) : {};
     const _addQBtn = `<button data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
         title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
         border-radius:12px;padding:1px 7px;font-size:0.7rem;color:var(--text-muted);cursor:pointer">+ Q</button>`;
@@ -359,7 +355,9 @@ function showFamilyDetail(id, pushHistory = true) {
           const s = AppState.db.sources[sid];
           const tooltip = s ? esc((s.title || s.abbr || sid).substring(0, 60)) : esc(sid);
           const num = (sid.match(/\d+/) || [sid])[0];
-          return `<span class="src-badge" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}" data-sid="${sid}" title="${tooltip}">§${num}</span>`;
+          const quay = _sourQUAY[sid];
+          const qClass = (quay !== undefined && quay !== '') ? ` src-badge--q${quay}` : '';
+          return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${sid}" title="${tooltip}">§${num}</span>`;
         }).join('') + _addQBtn
       : _addQBtn;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
@@ -368,7 +366,7 @@ function showFamilyDetail(id, pushHistory = true) {
       <div class="rel-avatar ${sc}">${ic}</div>
       <div class="rel-info">
         <div class="rel-name">${esc(child.name || child.id)}</div>
-        <div class="rel-role" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">Kind${_pediSelect}${_sourWidget}</div>
+        <div class="rel-role" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">Kind · ${_pediSpan}${_sourWidget}</div>
       </div>
       <button class="unlink-btn" data-action="unlinkMember" data-fid="${id}" data-pid="${child.id}"
         title="Verbindung trennen">×</button>
