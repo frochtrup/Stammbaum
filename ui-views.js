@@ -430,8 +430,8 @@ function markChanged() { AppState.changed = true; UIState._placesCache = null; u
 // ─────────────────────────────────────
 //  SHARED VIEW HELPERS
 // ─────────────────────────────────────
-function factRow(label, value, rawSuffix, srcIds) {
-  const badges = srcIds ? sourceTagsHtml(srcIds) : '';
+function factRow(label, value, rawSuffix, srcIds, pageMap, quayMap) {
+  const badges = srcIds ? sourceTagsHtml(srcIds, pageMap, quayMap) : '';
   return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}${badges}</span></div>`;
 }
 
@@ -441,16 +441,28 @@ function srcNum(sid) {
   return m ? parseInt(m[0], 10) : sid;
 }
 
-// Kompakte Quellen-Badges: §42 — inline in fact-val einbettbar
-function sourceTagsHtml(sourceIds) {
+// Kompakte Quellen-Badges: §42 (optional farbig nach QUAY + Seitenangabe)
+// pageMap: {sid: page}, quayMap: {sid: quay}
+const _QUAY_LABELS = { '0':'unbelegt', '1':'fragwürdig', '2':'plausibel', '3':'direkt' };
+function sourceTagsHtml(sourceIds, pageMap, quayMap) {
   if (!sourceIds) return '';
   const ids = sourceIds instanceof Set ? [...sourceIds] : (Array.isArray(sourceIds) ? sourceIds : []);
   if (!ids.length) return '';
+  const pages = pageMap || {};
+  const quays = quayMap || {};
   return ids.map(sid => {
     const s = AppState.db.sources[sid];
     if (!s) return '';
-    const tooltip = esc((s.title || s.abbr || sid).substring(0, 60));
-    return `<span class="src-badge" data-action="showSourceDetail" data-sid="${sid}" title="${tooltip}">§${srcNum(sid)}</span>`;
+    const page  = pages[sid] != null ? String(pages[sid]) : '';
+    const quay  = quays[sid] != null ? String(quays[sid]) : '';
+    const qClass = quay !== '' ? ` src-badge--q${quay}` : '';
+    const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
+    const tipParts = [
+      (s.title || s.abbr || sid).substring(0, 50),
+      page ? `S.\u202f${page}` : '',
+      quay !== '' ? `Q${quay}\u202f–\u202f${_QUAY_LABELS[quay] || quay}` : ''
+    ].filter(Boolean);
+    return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(sid)}${pageSuffix}</span>`;
   }).filter(Boolean).join('');
 }
 

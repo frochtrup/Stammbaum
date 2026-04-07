@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-07 — QUAY-Farbindikator auf Quellen-Badges (sw v169)
+
+- **sw v169** `feat`: Farbliche QUAY-Qualitätsstufen auf `.src-badge`
+  - `sourceTagsHtml(ids, pageMap, quayMap)` — zwei optionale Parameter ergänzt
+  - CSS: `.src-badge--q0/q1/q2/q3` — Rot/Orange/Blau/Grün je nach Qualität
+  - Badge zeigt Seitenangabe als Suffix wenn ≤5 Zeichen (z.B. `§42·15`)
+  - Tooltip: `"Stammrolle Bayern · S. 15 · Q2 – plausibel"`
+  - `factRow()` um `pageMap`/`quayMap` erweitert (rückwärtskompatibel)
+  - `ui-views-person.js`: alle 5 `sourceTagsHtml()`-Aufrufe übergeben jetzt page/quay-Maps (BIRT/CHR/DEAT/BURI/Events)
+  - `ui-views-family.js`: Heirat + Familien-Events mit page/quay-Maps
+
 ### Session 2026-04-07 — UX-Verbesserungen (sw v168)
 
 - **sw v168** `feat`: 4 kleine Erweiterungen aus Roadmap

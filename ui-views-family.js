@@ -289,11 +289,11 @@ function showFamilyDetail(id, pushHistory = true) {
   if (f.marr.date || f.marr.place || f.marr.addr) {
     html += `<div class="section fade-up"><div class="section-title">Heirat</div>`;
     const marrSrc = (f.marr.sources?.length) ? f.marr.sources : (f.sourceRefs?.length ? [...f.sourceRefs] : null);
-    if (f.marr.date) html += factRow('Datum', f.marr.date, '', f.marr.place ? null : marrSrc);
+    if (f.marr.date) html += factRow('Datum', f.marr.date, '', f.marr.place ? null : marrSrc, f.marr.place ? null : f.marr.sourcePages, f.marr.place ? null : f.marr.sourceQUAY);
     if (f.marr.place) {
       const geoBtn = (f.marr.lati !== null && f.marr.lati !== undefined)
         ? `<a href="https://maps.apple.com/?ll=${f.marr.lati},${f.marr.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-      html += factRow('Ort', f.marr.place, geoBtn, marrSrc);
+      html += factRow('Ort', f.marr.place, geoBtn, marrSrc, f.marr.sourcePages, f.marr.sourceQUAY);
     }
     if (f.marr.addr) html += factRow('Adresse', f.marr.addr);
     html += `</div>`;
@@ -321,7 +321,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const parts = [ev.date, ev.place].filter(Boolean).join(', ');
       html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">
         <span class="fact-lbl">${label}</span>
-        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(src || [])}</span>
+        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(src || [], ev.sourcePages, ev.sourceQUAY)}</span>
       </div>`;
     }
     if (_existing.length === 0) {
