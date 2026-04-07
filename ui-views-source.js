@@ -218,6 +218,7 @@ function showSourceDetail(id, pushHistory = true) {
 function renderSourceList(srcs) {
   const el = document.getElementById('sourceList');
   if (!srcs) srcs = Object.values(AppState.db.sources);
+  srcs = [...srcs].sort((a, b) => (a.abbr || a.title || a.id).localeCompare(b.abbr || b.title || b.id, 'de'));
   if (!srcs.length) { el.innerHTML = '<div class="empty">Keine Quellen gefunden</div>'; return; }
 
   let html = '';
