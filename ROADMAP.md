@@ -98,14 +98,7 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 - [x] Ereignis-Gruppierung in Personendetail: EVEN-Ereignisse mit unterschiedlichem `eventType` wurden unter einem Block zusammengefasst — behoben: Gruppierungsschlüssel `type:eventType` (ui-views-person.js)
 - [x] Ereignis-TYPE nur für FACT/MILI/EVEN editierbar — jetzt für alle Event-Typen; Label-Darstellung `"Beruf: Staatsangehörigkeit"` für nicht-EVEN/FACT; EVEN-Details im Roundtrip-Report (sw v164)
 - [x] EVEN-Details im Roundtrip-Report: ID, Name, TYPE, Datum, Ort pro EVEN-Eintrag (sw v164)
-- [ ] RESI als
-      1 RESI
-      2 DATE <Datum> (Zeitraum, z.B. 1920-1930)
-      2 PLAC <Ort> (Ortsname, z.B. Berlin, Deutschland)
-      2 ADDR <Adresse> (Optional: Postalische Adresse)
-      3 CITY <Stadt>
-      3 POST <PLZ>
-      2 NOTE <Notiz> (Optional: Anmerkungen zum Wohnsitz)
+- [x] RESI mit ADDR/DATE/PLAC: Parser + Formular korrekt; Anzeige in Personendetail (addr vor date/place) (sw v178)
 - [x] http links in quellenangaben klickbar — `linkifyUrls()` in `ui-views.js`, genutzt in Quellendetail (sw v168)
 - [x] LON/LAT editierbar — Koordinaten-Felder im Event-Formular für alle Event-Typen incl. BIRT/DEAT/CHR/BURI (sw v168)
 - [x] bei einem quellenbezug sollten auch die Angaben zu seiten und ein qualitätsindentikator eingeführt werden — PAGE + QUAY jetzt auch im Personen-Hauptformular (`pf`) und Familien-Event-Formular (`fev`) (sw v168)
