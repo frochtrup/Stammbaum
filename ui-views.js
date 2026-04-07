@@ -501,6 +501,7 @@ const _CLICK_MAP = {
   showPlaceDetail:         el => showPlaceDetail(el.dataset.name),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
   unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
+  showPersonForm:          el => showPersonForm(el.dataset.pid),
   showEventForm:           el => showEventForm(el.dataset.pid, el.dataset.ev),
   showFamEventForm:        el => showFamEventForm(el.dataset.fid, el.dataset.evkey),
   showAddSpouseFlow:       el => showAddSpouseFlow(el.dataset.pid),

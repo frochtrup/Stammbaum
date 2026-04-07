@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-07 — Familie-Formular PAGE+QUAY + ExtraNames klickbar (sw v170)
+
+- **sw v170** `feat`:
+  - **Familie-Formular**: Quellen-Widget (`ff`) zeigt jetzt PAGE + QUAY; `initSrcWidget('ff', ...)` erhält `marr.sourcePages`/`marr.sourceQUAY`; `saveFamily()` speichert beide Felder; `_hasMeta` um `'ff'` erweitert
+  - **ExtraNames in Personendetail**: zusätzliche Namensangaben sind jetzt klickbar (`data-action="showPersonForm"`) und öffnen das Personen-Bearbeitungs-Formular; Quellen-Badges mit QUAY-Farbe werden angezeigt; `showPersonForm` in `_CLICK_MAP` ergänzt
+
 ### Session 2026-04-07 — QUAY-Farbindikator auf Quellen-Badges (sw v169)
 
 - **sw v169** `feat`: Farbliche QUAY-Qualitätsstufen auf `.src-badge`

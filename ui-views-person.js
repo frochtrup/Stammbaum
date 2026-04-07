@@ -331,7 +331,10 @@ function showDetail(id, pushHistory = true) {
   for (const en of (p.extraNames || [])) {
     const enLabel = en.type ? (NAME_TYPE_LABELS[en.type] || en.type) : 'Weiterer Name';
     const enVal = [en.prefix, en.nameRaw || [en.given, en.surname ? '/'+en.surname+'/' : ''].filter(Boolean).join(' '), en.suffix].filter(Boolean).join(' ');
-    if (enVal) html += factRow(enLabel, enVal);
+    if (enVal) html += `<div class="fact-row" style="cursor:pointer" data-action="showPersonForm" data-pid="${id}">
+      <span class="fact-lbl">${esc(enLabel)}</span>
+      <span class="fact-val">${esc(enVal)}${sourceTagsHtml(en.sources || [], en.sourcePages, en.sourceQUAY)}</span>
+    </div>`;
   }
 
   if (p.birth.date || p.birth.place) {

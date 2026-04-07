@@ -41,7 +41,7 @@ function renderSrcTags(prefix) {
     const pageVal = pages[sid] || '';
     const quayVal = String(quays[sid] ?? '');
     const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    const _hasMeta = prefix === 'ef' || prefix === 'cr' || prefix === 'pf' || prefix === 'fev';
+    const _hasMeta = prefix === 'ef' || prefix === 'cr' || prefix === 'pf' || prefix === 'fev' || prefix === 'ff';
     const pageField = _hasMeta
       ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
            data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`
@@ -380,7 +380,7 @@ function showFamilyForm(id, ctx) {
   document.getElementById('ff-mplace').value = f?.marr?.place  || '';
   document.getElementById('ff-note').value = f?.noteTexts?.length ? f.noteTexts.join('\n') : (f?.noteTextInline ?? f?.noteText ?? '');
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
-  initSrcWidget('ff', f?.marr?.sources || f?.sourceRefs || []);
+  initSrcWidget('ff', f?.marr?.sources || [], f?.marr?.sourcePages || {}, f?.marr?.sourceQUAY || {});
 
   _renderMediaList('ff', f?.media || []);
   document.getElementById('ff-media-add-file').value = '';
@@ -412,7 +412,11 @@ function saveFamily() {
   AppState.db.families[id] = {
     ...existingFam,
     id, husb, wife, children,
-    marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,  sources: [...(srcWidgetState['ff']?.ids || [])] },
+    marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,
+      sources:     [...(srcWidgetState['ff']?.ids   || [])],
+      sourcePages: { ...(srcWidgetState['ff']?.pages || {}) },
+      sourceQUAY:  { ...(srcWidgetState['ff']?.quay  || {}) }
+    },
     engag: existingFam.engag || {},
     div:   existingFam.div   || {},
     divf:  existingFam.divf  || {},
