@@ -9,6 +9,14 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-07 — Bugfix Safari-Syntax + CHR-Koordinaten (sw v176)
+
+- **sw v176** `fix`: Syntax-Fehler in `savePlace()` behoben
+  - `ui-views-source.js:368–369`: `??` und `||` ohne Klammern → Safari-SyntaxError → gesamtes Script geladen nicht → kaskadierend `filterSources` undefined → `toastTimer`-TDZ-Fehler in `showToast`
+  - Fix: `parseFloat(latiRaw) || null` in eigene Klammern gefasst
+  - Nebenfix: CHR-Koordinaten in `collectPlaces()` ergänzt (`p.chr.lati/long` statt `null, null`)
+  - Nebenfix: `extraPlaces`-Koordinaten haben jetzt Vorrang vor GEDCOM-Werten (überschreiben bestehenden Eintrag wenn `ep.lati != null`)
+
 ### Session 2026-04-07 — Koordinaten im Ort-Formular editierbar (sw v175)
 
 - **sw v175** `feat`: Ort-Bearbeitungs-Formular (`modalPlace`) um Koordinaten-Felder erweitert

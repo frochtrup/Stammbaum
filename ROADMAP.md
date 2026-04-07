@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v175 / Cache: `stammbaum-v175`
+**Aktuelle sw-Version:** v176 / Cache: `stammbaum-v176`
 
 ---
 

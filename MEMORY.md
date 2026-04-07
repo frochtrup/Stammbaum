@@ -27,7 +27,7 @@
 - `onedrive-auth.js` — OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
 - `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus, `_extractObjeFilemap()`
 - `onedrive.js` — Media-URL (`_odGetMediaUrlByPath`), Upload, File-I/O (Open/Save), Pfad-Helfer, Settings
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v167)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v176)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -40,14 +40,14 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-06
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-07
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 abgeschlossen — auf `main` gemergt (2026-04-05)**
 **Version 6.0 in Entwicklung — Branch `v6-dev`**
 
 - Roundtrip-Status: `roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1===out2)
-- **Aktuelle sw-Version: v167** / Cache: `stammbaum-v167`
+- **Aktuelle sw-Version: v176** / Cache: `stammbaum-v176`
 - Git: Branch `v6-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
