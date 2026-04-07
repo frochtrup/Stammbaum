@@ -288,7 +288,7 @@ function collectPlaces() {
   for (const p of Object.values(AppState.db.individuals)) {
     addPlace(p.birth.place, p.id, 'Geburt', p.birth.lati, p.birth.long);
     addPlace(p.death.place, p.id, 'Tod', p.death.lati, p.death.long);
-    addPlace(p.chr.place,   p.id, 'Taufe', null, null);
+    addPlace(p.chr.place,   p.id, 'Taufe', p.chr.lati, p.chr.long);
     addPlace(p.buri.place,  p.id, 'Beerdigung', p.buri.lati, p.buri.long);
     for (const ev of p.events) addPlace(ev.place, p.id, ev.eventType || ev.type, ev.lati, ev.long);
   }
@@ -296,10 +296,15 @@ function collectPlaces() {
     addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long);
     addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long);
   }
-  // Manuell hinzugefügte Orte (extraPlaces) einmischen — nur wenn noch nicht vorhanden
+  // Manuell gesetzte Koordinaten (extraPlaces) einmischen — haben Vorrang vor GEDCOM-Werten
   for (const ep of Object.values(AppState.db.extraPlaces)) {
-    if (!places.has(ep.name))
+    if (!places.has(ep.name)) {
       places.set(ep.name, { name: ep.name, personIds: new Set(), eventTypes: new Set(), lati: ep.lati ?? null, long: ep.long ?? null });
+    } else if (ep.lati !== null && ep.lati !== undefined) {
+      const pl = places.get(ep.name);
+      pl.lati = ep.lati;
+      pl.long = ep.long;
+    }
   }
   UIState._placesCache = places;
   return places;
@@ -360,8 +365,8 @@ function savePlace() {
   if (!newName) { showToast('⚠ Ortsname darf nicht leer sein'); return; }
   const latiRaw = document.getElementById('pl-lati').value.trim();
   const longRaw = document.getElementById('pl-long').value.trim();
-  const lati = latiRaw ? (parseGeoCoord(latiRaw) ?? parseFloat(latiRaw) || null) : null;
-  const long = longRaw ? (parseGeoCoord(longRaw) ?? parseFloat(longRaw) || null) : null;
+  const lati = latiRaw ? (parseGeoCoord(latiRaw) ?? (parseFloat(latiRaw) || null)) : null;
+  const long = longRaw ? (parseGeoCoord(longRaw) ?? (parseFloat(longRaw) || null)) : null;
   closeModal('modalPlace');
 
   // Ortsnamen in allen Einträgen umbenennen
