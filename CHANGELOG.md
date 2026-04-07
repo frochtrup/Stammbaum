@@ -9,6 +9,14 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-07 — LON/LAT als Ortsattribut (sw v174)
+
+- **sw v174** `refactor`: Koordinaten gehören zum Ort, nicht zum Ereignis
+  - `index.html`: `ef-geo-group` (ef-lati/ef-long) aus Event-Formular entfernt
+  - `ui-forms-event.js`: `_fillGeoFields()` entfernt; beim Speichern werden lati/long über `collectPlaces()` aus dem Ortsregister nachgeschlagen (Fallback: Parser-Wert bleibt erhalten)
+  - `gedcom-writer.js`: `geoLines()` schlägt zuerst in `AppState.db.extraPlaces[placeName]` nach, Fallback auf `obj.lati/obj.long` (Roundtrip-Stabilität); PLAC-Bedingung vereinfacht (kein separater `|| obj.lati !== null`-Zweig mehr)
+  - **Effekt**: Koordinaten an einem Ort einmal pflegen (Ort-Detailansicht → Bearbeiten) → wirkt automatisch auf alle Ereignisse an diesem Ort
+
 ### Session 2026-04-07 — Familie-Formular PAGE+QUAY + ExtraNames klickbar (sw v170)
 
 - **sw v170** `feat`:

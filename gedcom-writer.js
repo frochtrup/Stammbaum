@@ -61,12 +61,22 @@ function writeCHAN(lines, obj, lv = 1) {
   if (obj.lastChangedTime) lines.push(`${lv+2} TIME ${obj.lastChangedTime}`);
 }
 
-// Schreibt MAP/LATI/LONG-Block
+// Schreibt MAP/LATI/LONG-Block — Koordinaten aus Ortsregister (extraPlaces),
+// Fallback auf obj.lati/obj.long (Parser-Werte aus ursprünglichem GEDCOM)
 function geoLines(lines, obj, indent) {
-  if (obj && obj.lati !== null && obj.long !== null) {
+  let lati = null, long = null;
+  const placeName = obj?.place;
+  if (placeName && AppState.db?.extraPlaces?.[placeName]) {
+    const ep = AppState.db.extraPlaces[placeName];
+    if (ep.lati != null) { lati = ep.lati; long = ep.long; }
+  }
+  if (lati === null && obj && obj.lati !== null && obj.lati !== undefined) {
+    lati = obj.lati; long = obj.long;
+  }
+  if (lati !== null && long !== null) {
     lines.push(`${indent} MAP`);
-    const latStr = (obj.lati >= 0 ? 'N' : 'S') + Math.abs(obj.lati);
-    const lonStr = (obj.long >= 0 ? 'E' : 'W') + Math.abs(obj.long);
+    const latStr = (lati >= 0 ? 'N' : 'S') + Math.abs(lati);
+    const lonStr = (long >= 0 ? 'E' : 'W') + Math.abs(long);
     lines.push(`${indent+1} LATI ${latStr}`);
     lines.push(`${indent+1} LONG ${lonStr}`);
   }
@@ -78,8 +88,8 @@ function eventBlock(lines, tag, obj, lv) {
   lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
   if (obj.date !== null && obj.date !== undefined)  lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
   if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
-  if (obj.place !== null && obj.place !== undefined || obj.lati !== null) {
-    if (obj.place !== null && obj.place !== undefined) lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
+  if (obj.place !== null && obj.place !== undefined) {
+    lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
     geoLines(lines, obj, lv+2);
   }
   if (obj.note) pushCont(lines, lv+1, 'NOTE', obj.note);
@@ -169,8 +179,8 @@ function writeINDIRecord(lines, p) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
     if (ev.date !== null && ev.date !== undefined)  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
-    if (ev.place !== null && ev.place !== undefined || ev.lati !== null) {
-      if (ev.place !== null && ev.place !== undefined) lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
+    if (ev.place !== null && ev.place !== undefined) {
+      lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
       geoLines(lines, ev, 3);
     }
     if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
@@ -295,8 +305,8 @@ function writeFAMRecord(lines, f) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
     if (ev.date !== null && ev.date !== undefined) lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
-    if (ev.place !== null && ev.place !== undefined || ev.lati !== null) {
-      if (ev.place !== null && ev.place !== undefined) lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
+    if (ev.place !== null && ev.place !== undefined) {
+      lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
       geoLines(lines, ev, 3);
     }
     if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);

@@ -38,13 +38,6 @@ function addEfMedia() {
   _renderEfMedia();
 }
 
-function _fillGeoFields(lati, long) {
-  const toLat = v => v == null ? '' : (v >= 0 ? 'N' : 'S') + Math.abs(v).toFixed(6);
-  const toLon = v => v == null ? '' : (v >= 0 ? 'E' : 'W') + Math.abs(v).toFixed(6);
-  document.getElementById('ef-lati').value = toLat(lati);
-  document.getElementById('ef-long').value = toLon(long);
-}
-
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
@@ -82,7 +75,6 @@ function showEventForm(personId, evIdx) {
     fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', obj.date || '');
     document.getElementById('ef-place').value = obj.place || '';
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
-    _fillGeoFields(obj.lati, obj.long);
     initSrcWidget('ef', obj.sources || [], obj.sourcePages || {}, obj.sourceQUAY || {});
     document.querySelector('#modalEvent .sheet-title').textContent = _SPECIAL_LBL[evIdx] + ' bearbeiten';
     document.getElementById('saveEventBtn').textContent = 'Speichern';
@@ -96,7 +88,6 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-place').value = ev?.place || '';
     document.getElementById('ef-cause').value = '';
     document.getElementById('ef-addr').value  = ev?.addr  || '';
-    _fillGeoFields(ev?.lati, ev?.long);
     initSrcWidget('ef', ev?.sources || [], ev?.sourcePages || {}, ev?.sourceQUAY || {});
     _efMedia = (ev?.media || []).map(m => ({...m}));
     _renderEfMedia();
@@ -114,16 +105,20 @@ function saveEvent() {
   if (!p) return;
   const type = document.getElementById('ef-type').value;
 
-  const _readGeoLati = () => parseGeoCoord(document.getElementById('ef-lati').value.trim()) ?? null;
-  const _readGeoLong = () => parseGeoCoord(document.getElementById('ef-long').value.trim()) ?? null;
+  // Koordinaten aus Ortsregister — lati/long sind Attribut des Ortes, nicht des Ereignisses
+  const _geoFromPlace = placeName => {
+    if (!placeName) return { lati: null, long: null };
+    const pl = collectPlaces().get(placeName.trim());
+    return { lati: pl?.lati ?? null, long: pl?.long ?? null };
+  };
 
   if (type in _SPECIAL_OBJ) {
     const key = _SPECIAL_OBJ[type];
+    const place = getPlaceFromForm('ef-place');
     p[key] = { ...(p[key] || {}),
       date:        buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
-      place:       getPlaceFromForm('ef-place'),
-      lati:        _readGeoLati(),
-      long:        _readGeoLong(),
+      place,
+      ..._geoFromPlace(place),
       sources:     [...(srcWidgetState['ef']?.ids   || [])],
       sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
       sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) }
@@ -132,16 +127,16 @@ function saveEvent() {
   } else {
     const evIdxRaw = document.getElementById('ef-evidx').value;
     const evIdx    = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
+    const place    = getPlaceFromForm('ef-place');
     const ev = {
       type,
       value:      document.getElementById('ef-val').value.trim(),
       date:       buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
-      place:      getPlaceFromForm('ef-place'),
+      place,
       addr:       document.getElementById('ef-addr').value.trim(),
       eventType:  document.getElementById('ef-etype').value.trim(),
       note:       evIdx !== null ? (p.events[evIdx]?.note || '') : '',
-      lati:       _readGeoLati(),
-      long:       _readGeoLong(),
+      ..._geoFromPlace(place),
       sources:    [...(srcWidgetState['ef']?.ids   || [])],
       sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
       sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) },
