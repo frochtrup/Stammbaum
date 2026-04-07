@@ -177,41 +177,119 @@ function deleteEvent() {
 }
 
 // ─────────────────────────────────────
-//  FORMS: FAMILY EVENTS (ENGA / DIV / DIVF)
+//  FORMS: FAMILY EVENTS (MARR / ENGA / DIV / DIVF / EVEN)
 // ─────────────────────────────────────
-const _FAM_EV_LABELS = { engag:'Verlobung', div:'Scheidung', divf:'Scheidungsantrag' };
+const _FAM_EV_LABELS = { marr:'Heirat', engag:'Verlobung', div:'Scheidung', divf:'Scheidungsantrag' };
+// Mapping: interner Schlüssel → GEDCOM-Tag und umgekehrt
+const _FAM_TYPE_MAP  = { marr:'MARR', engag:'ENGA', div:'DIV', divf:'DIVF' };
+const _FAM_KEY_MAP   = { MARR:'marr', ENGA:'engag', DIV:'div', DIVF:'divf' };
 
-function showFamEventForm(famId, evKey) {
+function onFamEventTypeChange() {
+  const t = document.getElementById('fev-type').value;
+  document.getElementById('fev-etype-group').style.display = (t === 'EVEN') ? '' : 'none';
+}
+
+function showFamEventForm(famId, evKey, evIdxRaw) {
   const f = AppState.db.families[famId];
   if (!f) return;
-  const ev = f[evKey] || {};
-  const isExisting = !!(ev.date || ev.place || ev.seen);
-  document.getElementById('fev-fid').value = famId;
-  document.getElementById('fev-key').value = evKey;
-  document.getElementById('famEventFormTitle').textContent = (_FAM_EV_LABELS[evKey] || evKey) + ' bearbeiten';
-  fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
-  document.getElementById('fev-place').value = ev.place || '';
-  initSrcWidget('fev', ev.sources || [], ev.sourcePages || {}, ev.sourceQUAY || {});
-  document.getElementById('deleteFamEventBtn').style.display = isExisting ? '' : 'none';
+  document.getElementById('fev-fid').value   = famId;
+  document.getElementById('fev-key').value   = evKey   || '';
+  document.getElementById('fev-evidx').value = evIdxRaw != null ? evIdxRaw : '';
+  const typeEl = document.getElementById('fev-type');
+
+  if (!evKey) {
+    // Neues Ereignis — Typ wählbar
+    typeEl.value    = 'MARR';
+    typeEl.disabled = false;
+    document.getElementById('fev-etype').value = '';
+    fillDateFields('fev-date-qual', 'fev-date', null, '');
+    document.getElementById('fev-place').value = '';
+    initSrcWidget('fev', [], {}, {});
+    document.getElementById('famEventFormTitle').textContent = 'Ereignis hinzufügen';
+    document.getElementById('saveFamEventBtn').textContent   = 'Hinzufügen';
+    document.getElementById('deleteFamEventBtn').style.display = 'none';
+  } else if (evKey === 'ev') {
+    // Generisches Ereignis aus f.events[]
+    const evIdx = parseInt(evIdxRaw);
+    const ev = (f.events || [])[evIdx] || {};
+    typeEl.value    = ev.type || 'EVEN';
+    typeEl.disabled = false;
+    document.getElementById('fev-etype').value = ev.eventType || '';
+    fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
+    document.getElementById('fev-place').value = ev.place || '';
+    initSrcWidget('fev', ev.sources || [], ev.sourcePages || {}, ev.sourceQUAY || {});
+    document.getElementById('famEventFormTitle').textContent = 'Ereignis bearbeiten';
+    document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
+    document.getElementById('deleteFamEventBtn').style.display = '';
+  } else {
+    // Bestehendes Sonderereignis (marr / engag / div / divf) — Typ gesperrt
+    const ev = f[evKey] || {};
+    typeEl.value    = _FAM_TYPE_MAP[evKey] || evKey.toUpperCase();
+    typeEl.disabled = true;
+    document.getElementById('fev-etype').value = '';
+    fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
+    document.getElementById('fev-place').value = ev.place || '';
+    initSrcWidget('fev', ev.sources || [], ev.sourcePages || {}, ev.sourceQUAY || {});
+    document.getElementById('famEventFormTitle').textContent = (_FAM_EV_LABELS[evKey] || evKey) + ' bearbeiten';
+    document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
+    document.getElementById('deleteFamEventBtn').style.display = (ev.date || ev.place || ev.seen) ? '' : 'none';
+  }
+  onFamEventTypeChange();
   openModal('modalFamEvent');
 }
 
 function saveFamEvent() {
-  const famId = document.getElementById('fev-fid').value;
-  const evKey = document.getElementById('fev-key').value;
+  const famId    = document.getElementById('fev-fid').value;
+  const evKey    = document.getElementById('fev-key').value;
+  const evIdxRaw = document.getElementById('fev-evidx').value;
   const f = AppState.db.families[famId];
   if (!f) return;
+  const type  = document.getElementById('fev-type').value;
   const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
   const place = document.getElementById('fev-place').value.trim();
-  f[evKey] = {
-    ...(f[evKey] || {}),
-    date,
-    place,
-    seen:        !!(date || place),
-    sources:     [...(srcWidgetState['fev']?.ids   || [])],
-    sourcePages: { ...(srcWidgetState['fev']?.pages || {}) },
-    sourceQUAY:  { ...(srcWidgetState['fev']?.quay  || {}) }
-  };
+  const etype = document.getElementById('fev-etype').value.trim();
+  const sources     = [...(srcWidgetState['fev']?.ids   || [])];
+  const sourcePages = { ...(srcWidgetState['fev']?.pages || {}) };
+  const sourceQUAY  = { ...(srcWidgetState['fev']?.quay  || {}) };
+
+  if (evKey === 'ev') {
+    // Generisches Ereignis bearbeiten
+    const evIdx = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
+    const ev = {
+      ...((evIdx !== null ? (f.events || [])[evIdx] : null) || {}),
+      type, eventType: etype, value: '',
+      date, place, sources, sourcePages, sourceQUAY
+    };
+    if (evIdx !== null && (f.events || [])[evIdx]) {
+      f.events[evIdx] = ev;
+    } else {
+      f.events = f.events || [];
+      f.events.push(ev);
+    }
+  } else if (!evKey) {
+    // Neues Ereignis anlegen
+    const targetKey = _FAM_KEY_MAP[type];
+    if (targetKey) {
+      f[targetKey] = {
+        ...(f[targetKey] || {}),
+        date, place, seen: !!(date || place), sources, sourcePages, sourceQUAY
+      };
+    } else {
+      // Generisches Ereignis (EVEN) → f.events[]
+      f.events = f.events || [];
+      f.events.push({
+        type, eventType: etype, value: '', date, place,
+        sources, sourcePages, sourceQUAY,
+        note: '', lati: null, long: null, _extra: []
+      });
+    }
+  } else {
+    // Bestehendes Sonderereignis
+    f[evKey] = {
+      ...(f[evKey] || {}),
+      date, place, seen: !!(date || place), sources, sourcePages, sourceQUAY
+    };
+  }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged(); updateStats();
@@ -220,11 +298,17 @@ function saveFamEvent() {
 }
 
 function deleteFamEvent() {
-  const famId = document.getElementById('fev-fid').value;
-  const evKey = document.getElementById('fev-key').value;
+  const famId    = document.getElementById('fev-fid').value;
+  const evKey    = document.getElementById('fev-key').value;
+  const evIdxRaw = document.getElementById('fev-evidx').value;
   const f = AppState.db.families[famId];
   if (!f) return;
-  f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, sources: [], sourcePages: {}, sourceQUAY: {} };
+  if (evKey === 'ev') {
+    const evIdx = parseInt(evIdxRaw);
+    if (!isNaN(evIdx)) f.events.splice(evIdx, 1);
+  } else {
+    f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, sources: [], sourcePages: {}, sourceQUAY: {} };
+  }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged(); updateStats();

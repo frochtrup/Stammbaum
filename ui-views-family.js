@@ -286,45 +286,43 @@ function showFamilyDetail(id, pushHistory = true) {
     </div>
   </div>`;
 
-  if (f.marr.date || f.marr.place || f.marr.addr) {
-    html += `<div class="section fade-up"><div class="section-title">Heirat</div>`;
-    const marrSrc = (f.marr.sources?.length) ? f.marr.sources : (f.sourceRefs?.length ? [...f.sourceRefs] : null);
-    if (f.marr.date) html += factRow('Datum', f.marr.date, '', f.marr.place ? null : marrSrc, f.marr.place ? null : f.marr.sourcePages, f.marr.place ? null : f.marr.sourceQUAY);
-    if (f.marr.place) {
-      const geoBtn = (f.marr.lati !== null && f.marr.lati !== undefined)
-        ? `<a href="https://maps.apple.com/?ll=${f.marr.lati},${f.marr.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-      html += factRow('Ort', f.marr.place, geoBtn, marrSrc, f.marr.sourcePages, f.marr.sourceQUAY);
-    }
-    if (f.marr.addr) html += factRow('Adresse', f.marr.addr);
-    html += `</div>`;
-  }
   {
+    // Einheitliche Ereignisse-Section (analog Lebensdaten bei Personen)
     const _famEvDefs = [
+      { key:'marr',  label:'Heirat' },
       { key:'engag', label:'Verlobung' },
       { key:'div',   label:'Scheidung' },
       { key:'divf',  label:'Scheidungsantrag' }
     ];
-    const _existing = _famEvDefs.filter(e => f[e.key]?.date || f[e.key]?.place || f[e.key]?.seen);
-    const _missing  = _famEvDefs.filter(e => !f[e.key]?.date && !f[e.key]?.place && !f[e.key]?.seen);
-    const _addBtns  = _missing.map(e =>
-      `<button class="section-add" data-action="showFamEventForm" data-fid="${id}" data-evkey="${e.key}">+ ${e.label}</button>`
-    ).join('');
     html += `<div class="section fade-up">
       <div class="section-head">
         <div class="section-title">Ereignisse</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap">${_addBtns}</div>
+        <button class="section-add" data-action="showFamEventForm" data-fid="${id}">+ Ereignis</button>
       </div>`;
+    let _hasAnyEv = false;
     for (const { key, label } of _famEvDefs) {
       const ev = f[key];
       if (!ev?.date && !ev?.place && !ev?.seen) continue;
-      const src   = ev.sources?.length ? ev.sources : null;
+      _hasAnyEv = true;
+      const geoBtn = (ev.lati !== null && ev.lati !== undefined)
+        ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
       const parts = [ev.date, ev.place].filter(Boolean).join(', ');
       html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">
         <span class="fact-lbl">${label}</span>
-        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(src || [], ev.sourcePages, ev.sourceQUAY)}</span>
+        <span class="fact-val">${esc(parts || '–')}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}</span>
       </div>`;
     }
-    if (_existing.length === 0) {
+    for (let _ei = 0; _ei < (f.events || []).length; _ei++) {
+      const ev = f.events[_ei];
+      _hasAnyEv = true;
+      const label = (ev.eventType && ev.type === 'EVEN') ? ev.eventType : (EVENT_LABELS[ev.type] || ev.type);
+      const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+      html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}" style="cursor:pointer">
+        <span class="fact-lbl">${esc(label)}</span>
+        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}</span>
+      </div>`;
+    }
+    if (!_hasAnyEv) {
       html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Ereignisse eingetragen</div>`;
     }
     html += `</div>`;

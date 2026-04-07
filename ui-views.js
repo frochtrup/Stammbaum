@@ -503,7 +503,7 @@ const _CLICK_MAP = {
   unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
   showPersonForm:          el => showPersonForm(el.dataset.pid),
   showEventForm:           el => showEventForm(el.dataset.pid, el.dataset.ev),
-  showFamEventForm:        el => showFamEventForm(el.dataset.fid, el.dataset.evkey),
+  showFamEventForm:        el => showFamEventForm(el.dataset.fid, el.dataset.evkey, el.dataset.evidx),
   showAddSpouseFlow:       el => showAddSpouseFlow(el.dataset.pid),
   showAddChildFlow:        el => showAddChildFlow(el.dataset.fid),
   showAddParentFlow:       el => showAddParentFlow(el.dataset.pid),
@@ -631,7 +631,8 @@ document.addEventListener('change', e => {
   const action = el.dataset.change;
   if      (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
   else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
-  else if (action === 'onEventTypeChange') onEventTypeChange();
+  else if (action === 'onEventTypeChange')    onEventTypeChange();
+  else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
   else if (action === 'amCamChange') {
     (async () => {

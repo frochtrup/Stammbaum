@@ -398,7 +398,7 @@
   </div>
 </div>
 
-<!-- Family Event form (ENGA / DIV / DIVF) -->
+<!-- Family Event form (MARR / ENGA / DIV / DIVF / EVEN) -->
 <div class="modal-overlay" id="modalFamEvent">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -406,6 +406,23 @@
     <div class="sheet-body">
       <input type="hidden" id="fev-fid">
       <input type="hidden" id="fev-key">
+      <input type="hidden" id="fev-evidx">
+      <div style="display:flex; gap:8px; align-items:flex-end">
+        <div class="form-group" style="flex:1; min-width:0">
+          <label class="form-label">Ereignistyp</label>
+          <select class="form-select" id="fev-type" data-change="onFamEventTypeChange">
+            <option value="MARR">Heirat</option>
+            <option value="ENGA">Verlobung</option>
+            <option value="DIV">Scheidung</option>
+            <option value="DIVF">Scheidungsantrag</option>
+            <option value="EVEN">Sonstiges</option>
+          </select>
+        </div>
+        <div class="form-group" id="fev-etype-group" style="display:none; flex:1; min-width:0">
+          <label class="form-label">Bezeichnung</label>
+          <input class="form-input" id="fev-etype" placeholder="z.B. Trennung">
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">Datum</label>
         <select class="form-select" id="fev-date-qual"
