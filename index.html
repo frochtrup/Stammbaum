@@ -671,16 +671,24 @@
   </div>
 </div>
 
-<!-- Place rename form -->
+<!-- Place edit form -->
 <div class="modal-overlay" id="modalPlace">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Ort umbenennen</div>
+    <div class="sheet-title">Ort bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="pl-old">
       <div class="form-group">
         <label class="form-label">Ortsname</label>
         <input class="form-input" id="pl-name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Koordinaten (optional)</label>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="pl-lati" placeholder="z.B. 48.1374" style="flex:1">
+          <input class="form-input" id="pl-long" placeholder="z.B. 11.5755" style="flex:1">
+        </div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Dezimalgrad (z.B. 48.1374, 11.5755) oder GEDCOM-Format (N48.1374, E11.5755)</div>
       </div>
       <div class="btn-row">
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalPlace">Abbrechen</button>

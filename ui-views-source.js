@@ -344,6 +344,13 @@ function filterPlaces(q) {
 function showPlaceForm(placeName) {
   document.getElementById('pl-old').value  = placeName;
   document.getElementById('pl-name').value = placeName;
+  // Bestehende Koordinaten laden — aus extraPlaces oder aus collectPlaces-Cache
+  const ep = AppState.db.extraPlaces[placeName];
+  const pl = collectPlaces().get(placeName);
+  const lati = ep?.lati ?? pl?.lati ?? null;
+  const long = ep?.long ?? pl?.long ?? null;
+  document.getElementById('pl-lati').value = lati != null ? String(lati) : '';
+  document.getElementById('pl-long').value = long != null ? String(long) : '';
   openModal('modalPlace');
 }
 
@@ -351,27 +358,37 @@ function savePlace() {
   const oldName = document.getElementById('pl-old').value;
   const newName = document.getElementById('pl-name').value.trim();
   if (!newName) { showToast('⚠ Ortsname darf nicht leer sein'); return; }
+  const latiRaw = document.getElementById('pl-lati').value.trim();
+  const longRaw = document.getElementById('pl-long').value.trim();
+  const lati = latiRaw ? (parseGeoCoord(latiRaw) ?? parseFloat(latiRaw) || null) : null;
+  const long = longRaw ? (parseGeoCoord(longRaw) ?? parseFloat(longRaw) || null) : null;
   closeModal('modalPlace');
-  if (newName === oldName) return;
-  for (const p of Object.values(AppState.db.individuals)) {
-    if (p.birth.place  === oldName) p.birth.place  = newName;
-    if (p.chr.place    === oldName) p.chr.place    = newName;
-    if (p.death.place  === oldName) p.death.place  = newName;
-    if (p.buri.place   === oldName) p.buri.place   = newName;
-    for (const ev of p.events) if (ev.place === oldName) ev.place = newName;
+
+  // Ortsnamen in allen Einträgen umbenennen
+  if (newName !== oldName) {
+    for (const p of Object.values(AppState.db.individuals)) {
+      if (p.birth.place  === oldName) p.birth.place  = newName;
+      if (p.chr.place    === oldName) p.chr.place    = newName;
+      if (p.death.place  === oldName) p.death.place  = newName;
+      if (p.buri.place   === oldName) p.buri.place   = newName;
+      for (const ev of p.events) if (ev.place === oldName) ev.place = newName;
+    }
+    for (const f of Object.values(AppState.db.families)) {
+      if (f.marr.place   === oldName) f.marr.place   = newName;
+      if (f.engag?.place === oldName) f.engag.place  = newName;
+    }
   }
-  for (const f of Object.values(AppState.db.families)) {
-    if (f.marr.place        === oldName) f.marr.place        = newName;
-    if (f.engag?.place      === oldName) f.engag.place       = newName;
-  }
-  // extraPlaces mitumbenennen
-  if (AppState.db.extraPlaces[oldName]) {
-    AppState.db.extraPlaces[newName] = { ...AppState.db.extraPlaces[oldName], name: newName };
-    delete AppState.db.extraPlaces[oldName];
-    saveExtraPlaces();
-  }
+
+  // Koordinaten in extraPlaces speichern (Eintrag anlegen wenn noch nicht vorhanden)
+  const existing = AppState.db.extraPlaces[oldName] || {};
+  const updated = { ...existing, name: newName, lati, long };
+  if (newName !== oldName) delete AppState.db.extraPlaces[oldName];
+  AppState.db.extraPlaces[newName] = updated;
+  saveExtraPlaces();
+
+  UIState._placesCache = null;
   markChanged();
-  showToast('✓ Ort umbenannt');
+  showToast('✓ Ort gespeichert');
   showPlaceDetail(newName);
 }
 

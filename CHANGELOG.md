@@ -9,6 +9,13 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-07 — Koordinaten im Ort-Formular editierbar (sw v175)
+
+- **sw v175** `feat`: Ort-Bearbeitungs-Formular (`modalPlace`) um Koordinaten-Felder erweitert
+  - `index.html`: `pl-lati`/`pl-long` als Dezimalgrad oder GEDCOM-Format (N48.1374/E11.5755)
+  - `showPlaceForm()`: bestehende Koordinaten aus `extraPlaces` oder `collectPlaces`-Cache vorbefüllen
+  - `savePlace()`: `parseGeoCoord()` + `parseFloat()` als Fallback; Koordinaten immer in `extraPlaces` schreiben (Eintrag wird ggf. neu angelegt); `_placesCache` invalidiert
+
 ### Session 2026-04-07 — LON/LAT als Ortsattribut (sw v174)
 
 - **sw v174** `refactor`: Koordinaten gehören zum Ort, nicht zum Ereignis
