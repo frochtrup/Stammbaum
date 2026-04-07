@@ -99,19 +99,17 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 - [x] Ereignis-TYPE nur für FACT/MILI/EVEN editierbar — jetzt für alle Event-Typen; Label-Darstellung `"Beruf: Staatsangehörigkeit"` für nicht-EVEN/FACT; EVEN-Details im Roundtrip-Report (sw v164)
 - [x] EVEN-Details im Roundtrip-Report: ID, Name, TYPE, Datum, Ort pro EVEN-Eintrag (sw v164)
 - [ ] RESI als
-      1 RESI (Ereignis: Wohnsitz), 
+      1 RESI
       2 DATE <Datum> (Zeitraum, z.B. 1920-1930)
       2 PLAC <Ort> (Ortsname, z.B. Berlin, Deutschland)
       2 ADDR <Adresse> (Optional: Postalische Adresse)
-      3 ADR1 <Zeile1>
       3 CITY <Stadt>
       3 POST <PLZ>
       2 NOTE <Notiz> (Optional: Anmerkungen zum Wohnsitz)
-- [ ] links in quellen klickbar (ggf in wwww)
+- [ ] http links in quellenangaben klickbar
 - [ ] LON/LAT editierbar
-- [ ] quellendetail inkl seiten und qualität bei ereignissen
-- [ ] 
-
+- [ ] bei einem quellenbezug sollten auch die Angaben zu seiten und ein qualitätsindentikator eingeführt werden
+- [ ] in der Quellendetailansicht werden alle referenzierende Personen und Familien aufgeführt - ergänze jeweils die Angaben zu PAGE und QUAY
 
 ---
 
