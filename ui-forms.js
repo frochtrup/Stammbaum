@@ -41,7 +41,7 @@ function renderSrcTags(prefix) {
     const pageVal = pages[sid] || '';
     const quayVal = String(quays[sid] ?? '');
     const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    const _hasMeta = prefix === 'ef' || prefix === 'cr';
+    const _hasMeta = prefix === 'ef' || prefix === 'cr' || prefix === 'pf' || prefix === 'fev';
     const pageField = _hasMeta
       ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
            data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`
@@ -132,7 +132,7 @@ function showPersonForm(id) {
   _pfExtraNames = (p?.extraNames || []).map(en => ({...en}));
   _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
-  initSrcWidget('pf', p?.sourceRefs || []);
+  initSrcWidget('pf', p?.topSources || [], p?.topSourcePages || {}, p?.topSourceQUAY || {});
   openModal('modalPerson');
 }
 
@@ -239,6 +239,9 @@ function savePerson() {
     www,
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date()),
+    topSources:     [...(srcWidgetState['pf']?.ids   || [])],
+    topSourcePages: { ...(srcWidgetState['pf']?.pages || {}) },
+    topSourceQUAY:  { ...(srcWidgetState['pf']?.quay  || {}) },
     sourceRefs: srcWidgetState['pf']?.ids || new Set()
   };
 

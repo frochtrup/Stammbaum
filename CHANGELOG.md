@@ -9,6 +9,14 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-07 — UX-Verbesserungen (sw v168)
+
+- **sw v168** `feat`: 4 kleine Erweiterungen aus Roadmap
+  - **HTTP-Links klickbar**: `linkifyUrls()` in `ui-views.js`; Quellen-Notiz im Quellendetail rendert URLs als anklickbare `<a>`-Tags
+  - **LON/LAT editierbar**: Koordinaten-Felder (`ef-lati`/`ef-long`) im Event-Formular für alle Typen inkl. BIRT/CHR/DEAT/BURI; Helfer `_fillGeoFields()`; `parseGeoCoord()` beim Speichern; GEDCOM-Format `N49.123456` / `E12.567890`
+  - **PAGE + QUAY im Personen-Formular**: `renderSrcTags()` zeigt PAGE/QUAY-Felder jetzt auch für Prefix `pf` (Person) und `fev` (Familien-Event); `showPersonForm()` initialisiert Widget mit `topSources`/`topSourcePages`/`topSourceQUAY`; `savePerson()` speichert diese Felder
+  - **Quellendetail mit PAGE/QUAY**: `_collectSourceMeta(entity, sid)` durchsucht alle Events, topSources, BIRT/DEAT/CHR/BURI und FAM-Events; Ergebnis (z.B. `S.42 Q2`) erscheint in der Referenzliste des Quellendetails bei Personen und Familien
+
 ### Session 2026-04-06 — writeGEDCOM() aufgeteilt (sw v167)
 
 - **sw v167** `refactor`: `writeGEDCOM()` (477 Z.) in Subfunktionen aufgeteilt

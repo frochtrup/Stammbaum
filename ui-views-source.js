@@ -45,7 +45,7 @@ function showSourceDetail(id, pushHistory = true) {
       html += factRow('Aufbewahrung', s.repo);
     }
   }
-  if (s.text)   html += `<div class="fact-row"><span class="fact-lbl">Notiz</span><span class="fact-val" style="white-space:pre-wrap;line-height:1.5">${esc(s.text)}</span></div>`;
+  if (s.text)   html += `<div class="fact-row"><span class="fact-lbl">Notiz</span><span class="fact-val" style="white-space:pre-wrap;line-height:1.5">${linkifyUrls(s.text)}</span></div>`;
   if (!s.abbr && !s.title && !s.author && !s.date && !s.publ && !s.repo && !s.text)
     html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
   html += `</div>`;
@@ -59,6 +59,8 @@ function showSourceDetail(id, pushHistory = true) {
       let meta = '';
       if (p.birth.date) meta += '* ' + p.birth.date;
       if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
+      const srcMeta = _collectSourceMeta(p, id);
+      if (srcMeta) meta += (meta ? ' · ' : '') + srcMeta;
       html += relRow(p, meta || '–');
     }
     html += `</div>`;
@@ -72,7 +74,9 @@ function showSourceDetail(id, pushHistory = true) {
       const husb = f.husb ? AppState.db.individuals[f.husb] : null;
       const wife = f.wife ? AppState.db.individuals[f.wife] : null;
       const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
-      const meta = f.marr.date ? '⚭ ' + f.marr.date : '';
+      let meta = f.marr.date ? '⚭ ' + f.marr.date : '';
+      const srcMeta = _collectSourceMeta(f, id);
+      if (srcMeta) meta += (meta ? ' · ' : '') + srcMeta;
       html += `<div class="rel-row" data-action="showFamilyDetail" data-id="${f.id}">
         <div class="rel-avatar" style="font-size:0.9rem">👨‍👩‍👧</div>
         <div class="rel-info">

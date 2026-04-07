@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v167 / Cache: `stammbaum-v167`
+**Aktuelle sw-Version:** v168 / Cache: `stammbaum-v168`
 
 ---
 
@@ -106,10 +106,10 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
       3 CITY <Stadt>
       3 POST <PLZ>
       2 NOTE <Notiz> (Optional: Anmerkungen zum Wohnsitz)
-- [ ] http links in quellenangaben klickbar
-- [ ] LON/LAT editierbar
-- [ ] bei einem quellenbezug sollten auch die Angaben zu seiten und ein qualitätsindentikator eingeführt werden
-- [ ] in der Quellendetailansicht werden alle referenzierende Personen und Familien aufgeführt - ergänze jeweils die Angaben zu PAGE und QUAY
+- [x] http links in quellenangaben klickbar — `linkifyUrls()` in `ui-views.js`, genutzt in Quellendetail (sw v168)
+- [x] LON/LAT editierbar — Koordinaten-Felder im Event-Formular für alle Event-Typen incl. BIRT/DEAT/CHR/BURI (sw v168)
+- [x] bei einem quellenbezug sollten auch die Angaben zu seiten und ein qualitätsindentikator eingeführt werden — PAGE + QUAY jetzt auch im Personen-Hauptformular (`pf`) und Familien-Event-Formular (`fev`) (sw v168)
+- [x] in der Quellendetailansicht werden alle referenzierende Personen und Familien aufgeführt - ergänze jeweils die Angaben zu PAGE und QUAY — `_collectSourceMeta()` durchsucht alle Events/topSources (sw v168)
 
 ---
 

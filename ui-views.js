@@ -47,6 +47,50 @@ function setBnavActive(name) {
   if (btn) btn.classList.add('active');
 }
 
+// Sammelt PAGE/QUAY-Angaben einer Person oder Familie für eine bestimmte Quelle
+function _collectSourceMeta(entity, sid) {
+  const pairs = new Map(); // pageVal → quayVal (first found per page wins)
+  function check(obj) {
+    if (!obj || !(obj.sources || []).includes(sid)) return;
+    const page = (obj.sourcePages || {})[sid] || '';
+    const quay = (obj.sourceQUAY  || {})[sid];
+    const key = page || '\x00'; // leerstring als eigenständiger Key
+    if (!pairs.has(key)) pairs.set(key, quay);
+  }
+  if (entity.birth !== undefined) {
+    // topSources (INDI-Level)
+    if ((entity.topSources || []).includes(sid)) {
+      const page = (entity.topSourcePages || {})[sid] || '';
+      const quay = (entity.topSourceQUAY  || {})[sid];
+      const key = page || '\x00';
+      if (!pairs.has(key)) pairs.set(key, quay);
+    }
+    check(entity.birth); check(entity.death); check(entity.chr); check(entity.buri);
+    for (const ev of (entity.events || [])) check(ev);
+    for (const en of (entity.extraNames || [])) check(en);
+  }
+  if (entity.marr !== undefined) {
+    check(entity.marr); check(entity.engag); check(entity.div); check(entity.divf);
+  }
+  if (!pairs.size) return '';
+  return [...pairs.entries()].map(([page, quay]) => {
+    const parts = [];
+    if (page && page !== '\x00') parts.push('S.' + page);
+    if (quay !== undefined && quay !== '') parts.push('Q' + quay);
+    return parts.join('\u202f') || '–';
+  }).join(', ');
+}
+
+// Wandelt http(s)-URLs in anklickbare Links um; escapet den Rest
+function linkifyUrls(text) {
+  if (!text) return '';
+  return text.split(/(https?:\/\/[^\s<>"]+)/g).map((part, i) =>
+    i % 2 === 1
+      ? `<a href="${esc(part)}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline;word-break:break-all">${esc(part)}</a>`
+      : esc(part)
+  ).join('');
+}
+
 // Bottom-Nav: Baum-Tab
 function bnavTree() {
   setBnavActive('tree');
