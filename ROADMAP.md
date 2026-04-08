@@ -89,8 +89,15 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 - [ ] Karten-Ansicht (Apple Maps Link-Cluster oder leaflet.js)
 - [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
 - [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
-- [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
+- [x] Volltextsuche — Personen-/Familien-/Quellenliste + globale Suche: Ereignis-Orte, eventType, Notizen, Quellen-Text durchsucht; Parität zwischen allen drei Sucheinstiegen hergestellt (sw v184–v186)
 - [ ] Rufname — Definition und Anzeige des Rufnamens (GEDCOM: `NICK` oder `_RUFNAME`); Anzeige in Detailansicht, Karten im Baum und Suchergebnissen
+- [ ] **Notizen-Überarbeitung (gesamthaft)** — Aktuell zu wenige Eingabe- und Bearbeitungsmöglichkeiten; Analyse und Überarbeitung erforderlich:
+  - Welche Entitäten haben Notizen? (Person, Familie, Quelle, Ereignis, Archiv)
+  - Wo können Notizen derzeit eingegeben/bearbeitet werden?
+  - Mehrere Notizen pro Person (inline + Referenz-Notizen) — Editierproblem (P5)
+  - Notizen an Ereignissen editierbar machen
+  - Notizen an Quell-Zitierungen (SOUR.NOTE) editierbar machen
+  - Anzeige von Notizen vereinheitlichen (Detailansicht Person/Familie/Quelle)
 
 ---
 
