@@ -364,3 +364,7 @@ function deleteFamEvent() {
   showToast('Ereignis gelöscht');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }
+
+// Autocomplete für Event-TYPE-Felder — hier initialisieren, da _initEtypeAutocomplete hier definiert ist
+_initEtypeAutocomplete('ef-etype',  'ef-etype-dd',  () => document.getElementById('ef-type')?.value  || '');
+_initEtypeAutocomplete('fev-etype', 'fev-etype-dd', () => document.getElementById('fev-type')?.value || '');

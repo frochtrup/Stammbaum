@@ -821,9 +821,6 @@ initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd');
 initPlaceAutocomplete('fev-place', 'fev-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
 
-// Autocomplete für Event-TYPE-Felder (tag-spezifisch)
-_initEtypeAutocomplete('ef-etype',  'ef-etype-dd',  () => document.getElementById('ef-type')?.value  || '');
-_initEtypeAutocomplete('fev-etype', 'fev-etype-dd', () => document.getElementById('fev-type')?.value || '');
 
 // ─────────────────────────────────────
 //  EXTRA NAME FORM
