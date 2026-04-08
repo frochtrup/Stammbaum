@@ -858,16 +858,16 @@ function saveExtraName() {
   if (!p) return;
   const { ids, pages, quay } = srcWidgetState['enf'] || { ids: new Set(), pages: {}, quay: {} };
 
+  const prefix = document.getElementById('enf-prefix').value.trim();
+  const suffix = document.getElementById('enf-suffix').value.trim();
   const entry = {
     ...(enIdx >= 0 ? p.extraNames[enIdx] : { sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[] }),
-    given, surname,
-    prefix:  document.getElementById('enf-prefix').value.trim(),
-    suffix:  document.getElementById('enf-suffix').value.trim(),
+    given, surname, prefix, suffix,
     type:    document.getElementById('enf-type').value,
     sources:     [...ids],
     sourcePages: Object.fromEntries(Object.entries(pages).filter(([k]) => ids.has(k))),
     sourceQUAY:  Object.fromEntries(Object.entries(quay).filter(([k]) => ids.has(k))),
-    nameRaw: [given, surname ? '/' + surname + '/' : ''].filter(Boolean).join(' '),
+    nameRaw: [prefix, given, surname ? '/' + surname + '/' : '', suffix].filter(Boolean).join(' '),
   };
 
   if (!p.extraNames) p.extraNames = [];

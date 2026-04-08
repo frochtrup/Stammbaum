@@ -330,7 +330,9 @@ function showDetail(id, pushHistory = true) {
 
   (p.extraNames || []).forEach((en, enIdx) => {
     const enLabel = en.type ? (NAME_TYPE_LABELS[en.type] || en.type) : 'Weiterer Name';
-    const enVal = [en.prefix, en.nameRaw || [en.given, en.surname ? '/'+en.surname+'/' : ''].filter(Boolean).join(' '), en.suffix].filter(Boolean).join(' ');
+    const enVal = en.nameRaw
+      ? en.nameRaw.replace(/\/([^\/]*)\//g, '$1').trim()
+      : [en.prefix, en.given, en.surname, en.suffix].filter(Boolean).join(' ');
     if (enVal) html += `<div class="fact-row" style="cursor:pointer" data-action="showExtraNameForm" data-pid="${id}" data-enidx="${enIdx}">
       <span class="fact-lbl">${esc(enLabel)}</span>
       <span class="fact-val">${esc(enVal)}${sourceTagsHtml(en.sources || [], en.sourcePages, en.sourceQUAY)}</span>
