@@ -192,6 +192,7 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
   document.getElementById('fev-evidx').value = evIdxRaw != null ? evIdxRaw : '';
   const typeEl = document.getElementById('fev-type');
 
+  initPlaceMode('fev-place');
   if (!evKey) {
     // Neues Ereignis — Typ wählbar
     typeEl.value    = 'MARR';
@@ -241,7 +242,7 @@ function saveFamEvent() {
   if (!f) return;
   const type  = document.getElementById('fev-type').value;
   const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
-  const place = document.getElementById('fev-place').value.trim();
+  const place = getPlaceFromForm('fev-place');
   const etype = document.getElementById('fev-etype').value.trim();
   const sources     = [...(srcWidgetState['fev']?.ids   || [])];
   const sourcePages = { ...(srcWidgetState['fev']?.pages || {}) };

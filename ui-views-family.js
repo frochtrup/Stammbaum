@@ -345,20 +345,14 @@ function showFamilyDetail(id, pushHistory = true) {
     const _pediSpan = `<span data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
         style="font-size:0.78rem;color:var(--text-dim);cursor:pointer;border-bottom:1px dashed var(--border);padding-bottom:1px"
         >${_pediLabel}</span>`;
-    const _sourIds = (typeof _fe === 'object') ? (_fe.sourIds || []) : [];
-    const _sourQUAY = (typeof _fe === 'object') ? (_fe.sourQUAY || {}) : {};
+    const _sourIds   = (typeof _fe === 'object') ? (_fe.sourIds   || []) : [];
+    const _sourPages = (typeof _fe === 'object') ? (_fe.sourPages || {}) : {};
+    const _sourQUAY  = (typeof _fe === 'object') ? (_fe.sourQUAY  || {}) : {};
     const _addQBtn = `<button data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
         title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
         border-radius:12px;padding:1px 7px;font-size:0.7rem;color:var(--text-muted);cursor:pointer">+ Q</button>`;
     const _sourWidget = _sourIds.length
-      ? _sourIds.map(sid => {
-          const s = AppState.db.sources[sid];
-          const tooltip = s ? esc((s.title || s.abbr || sid).substring(0, 60)) : esc(sid);
-          const num = (sid.match(/\d+/) || [sid])[0];
-          const quay = _sourQUAY[sid];
-          const qClass = (quay !== undefined && quay !== '') ? ` src-badge--q${quay}` : '';
-          return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${sid}" title="${tooltip}">§${num}</span>`;
-        }).join('') + _addQBtn
+      ? sourceTagsHtml(_sourIds, _sourPages, _sourQUAY) + _addQBtn
       : _addQBtn;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
     const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';

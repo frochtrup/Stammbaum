@@ -439,7 +439,11 @@ function saveFamily() {
   // Update FAMS/FAMC references
   // famc entries are objects {famId, frel, mrel}, fams entries are strings
   const famcId = f => (typeof f === 'string' ? f : f.famId);
+  // Bestehende famc-Einträge dieser Familie sichern, bevor sie entfernt werden
+  const savedFamc = {};
   for (const p of Object.values(AppState.db.individuals)) {
+    const existing = p.famc.find(f => famcId(f) === id);
+    if (existing) savedFamc[p.id] = existing;
     p.fams = p.fams.filter(f => f !== id);
     p.famc = p.famc.filter(f => famcId(f) !== id);
   }
@@ -448,7 +452,7 @@ function saveFamily() {
   for (const cid of children) {
     const cPerson = getPerson(cid);
     if (cPerson && !cPerson.famc.some(f => famcId(f) === id))
-      cPerson.famc.push({ famId: id, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
+      cPerson.famc.push(savedFamc[cid] || { famId: id, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
   }
 
   closeModal('modalFamily');
@@ -814,5 +818,6 @@ function initPlaceAutocomplete(inputId, ddId) {
 // Autocomplete für alle Ortsfelder einmalig initialisieren
 initPlaceAutocomplete('ef-place',  'ef-place-dd');
 initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd');
+initPlaceAutocomplete('fev-place', 'fev-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
 
