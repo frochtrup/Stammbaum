@@ -90,6 +90,7 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 - [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
 - [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
 - [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
+- [ ] Rufname — Definition und Anzeige des Rufnamens (GEDCOM: `NICK` oder `_RUFNAME`); Anzeige in Detailansicht, Karten im Baum und Suchergebnissen
 
 ---
 

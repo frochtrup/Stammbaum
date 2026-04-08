@@ -821,3 +821,72 @@ initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd');
 initPlaceAutocomplete('fev-place', 'fev-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
 
+// ─────────────────────────────────────
+//  EXTRA NAME FORM
+// ─────────────────────────────────────
+
+function showExtraNameForm(pid, enIdx) {
+  const p = getPerson(pid);
+  const en = (enIdx !== null && enIdx >= 0) ? (p?.extraNames?.[enIdx] || null) : null;
+  const isNew = (en === null);
+
+  document.getElementById('enf-pid').value    = pid;
+  document.getElementById('enf-enidx').value  = isNew ? '' : String(enIdx);
+  document.getElementById('enf-given').value   = en?.given   || '';
+  document.getElementById('enf-surname').value = en?.surname || '';
+  document.getElementById('enf-prefix').value  = en?.prefix  || '';
+  document.getElementById('enf-suffix').value  = en?.suffix  || '';
+  document.getElementById('enf-type').value    = en?.type    || '';
+
+  const typeLabel = en?.type ? (NAME_TYPE_LABELS[en.type] || en.type) : 'Weiterer Name';
+  document.getElementById('extraNameFormTitle').textContent = isNew ? 'Weiterer Name hinzufügen' : typeLabel + ' bearbeiten';
+  document.getElementById('deleteExtraNameBtn').style.display = isNew ? 'none' : 'block';
+
+  initSrcWidget('enf', en?.sources || [], en?.sourcePages || {}, en?.sourceQUAY || {});
+  openModal('modalExtraName');
+}
+
+function saveExtraName() {
+  const pid    = document.getElementById('enf-pid').value;
+  const enIdxS = document.getElementById('enf-enidx').value;
+  const enIdx  = enIdxS === '' ? -1 : parseInt(enIdxS, 10);
+  const given   = document.getElementById('enf-given').value.trim();
+  const surname = document.getElementById('enf-surname').value.trim();
+  if (!given && !surname) { showToast('Bitte Namen eingeben'); return; }
+
+  const p = getPerson(pid);
+  if (!p) return;
+  const { ids, pages, quay } = srcWidgetState['enf'] || { ids: new Set(), pages: {}, quay: {} };
+
+  const entry = {
+    ...(enIdx >= 0 ? p.extraNames[enIdx] : { sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[] }),
+    given, surname,
+    prefix:  document.getElementById('enf-prefix').value.trim(),
+    suffix:  document.getElementById('enf-suffix').value.trim(),
+    type:    document.getElementById('enf-type').value,
+    sources:     [...ids],
+    sourcePages: Object.fromEntries(Object.entries(pages).filter(([k]) => ids.has(k))),
+    sourceQUAY:  Object.fromEntries(Object.entries(quay).filter(([k]) => ids.has(k))),
+    nameRaw: [given, surname ? '/' + surname + '/' : ''].filter(Boolean).join(' '),
+  };
+
+  if (!p.extraNames) p.extraNames = [];
+  if (enIdx >= 0) p.extraNames[enIdx] = entry;
+  else p.extraNames.push(entry);
+
+  markChanged();
+  closeModal('modalExtraName');
+  showDetail(pid);
+}
+
+function deleteExtraName() {
+  const pid   = document.getElementById('enf-pid').value;
+  const enIdx = parseInt(document.getElementById('enf-enidx').value, 10);
+  const p = getPerson(pid);
+  if (!p || isNaN(enIdx)) return;
+  p.extraNames.splice(enIdx, 1);
+  markChanged();
+  closeModal('modalExtraName');
+  showDetail(pid);
+}
+

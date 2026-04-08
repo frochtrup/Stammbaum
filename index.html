@@ -321,6 +321,63 @@
   </div>
 </div>
 
+<!-- Extra Name form -->
+<div class="modal-overlay" id="modalExtraName">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="extraNameFormTitle">Weiterer Name</div>
+    <div class="sheet-body">
+      <input type="hidden" id="enf-pid">
+      <input type="hidden" id="enf-enidx">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Vorname</label>
+          <input class="form-input" id="enf-given" placeholder="Vorname">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nachname</label>
+          <input class="form-input" id="enf-surname" placeholder="Nachname">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Namenspräfix</label>
+          <input class="form-input" id="enf-prefix" placeholder="Dr., …">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Namenszusatz</label>
+          <input class="form-input" id="enf-suffix" placeholder="jr., …">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Typ</label>
+        <select class="form-select" id="enf-type">
+          <option value="">— Typ wählen —</option>
+          <option value="birth">Geburtsname</option>
+          <option value="maiden">Mädchenname</option>
+          <option value="married">Ehename</option>
+          <option value="aka">Auch bekannt als</option>
+          <option value="immigrant">Einwanderer-Name</option>
+          <option value="nickname">Spitzname</option>
+        </select>
+      </div>
+      <div class="src-widget" id="enf-src-widget">
+        <label class="form-label">Quellen</label>
+        <div class="src-tags" id="enf-src-tags"></div>
+        <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="enf">＋ Quelle hinzufügen</button>
+        <div class="src-picker" id="enf-src-picker">
+          <div class="src-picker-list" id="enf-src-list"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalExtraName">Abbrechen</button>
+        <button class="btn" id="deleteExtraNameBtn" style="display:none;background:var(--danger,#c0392b);color:#fff" data-action="deleteExtraName">Löschen</button>
+        <button class="btn btn-save" data-action="saveExtraName">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Family form -->
 <div class="modal-overlay" id="modalFamily">
   <div class="sheet">

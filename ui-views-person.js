@@ -328,14 +328,14 @@ function showDetail(id, pushHistory = true) {
       <button class="section-add" data-action="showEventForm" data-pid="${id}">+ Ereignis</button>
     </div>`;
 
-  for (const en of (p.extraNames || [])) {
+  (p.extraNames || []).forEach((en, enIdx) => {
     const enLabel = en.type ? (NAME_TYPE_LABELS[en.type] || en.type) : 'Weiterer Name';
     const enVal = [en.prefix, en.nameRaw || [en.given, en.surname ? '/'+en.surname+'/' : ''].filter(Boolean).join(' '), en.suffix].filter(Boolean).join(' ');
-    if (enVal) html += `<div class="fact-row" style="cursor:pointer" data-action="showPersonForm" data-pid="${id}">
+    if (enVal) html += `<div class="fact-row" style="cursor:pointer" data-action="showExtraNameForm" data-pid="${id}" data-enidx="${enIdx}">
       <span class="fact-lbl">${esc(enLabel)}</span>
       <span class="fact-val">${esc(enVal)}${sourceTagsHtml(en.sources || [], en.sourcePages, en.sourceQUAY)}</span>
     </div>`;
-  }
+  });
 
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
