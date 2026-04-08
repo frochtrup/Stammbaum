@@ -134,15 +134,25 @@ function runGlobalSearch(q) {
   let html = '';
 
   // ── Personen ──
-  const persons = Object.values(AppState.db.individuals).filter(p =>
-    (p.name||'').toLowerCase().includes(lower) ||
-    (p.given||'').toLowerCase().includes(lower) ||
-    (p.surname||'').toLowerCase().includes(lower) ||
-    (p.birth?.place||'').toLowerCase().includes(lower) ||
-    (p.death?.place||'').toLowerCase().includes(lower) ||
-    (p.birth?.date||'').toLowerCase().includes(lower) ||
-    (p.death?.date||'').toLowerCase().includes(lower)
-  ).slice(0, 20);
+  const persons = Object.values(AppState.db.individuals).filter(p => {
+    if ((p.name||'').toLowerCase().includes(lower)) return true;
+    if ((p.given||'').toLowerCase().includes(lower)) return true;
+    if ((p.surname||'').toLowerCase().includes(lower)) return true;
+    if ((p.birth?.place||'').toLowerCase().includes(lower)) return true;
+    if ((p.death?.place||'').toLowerCase().includes(lower)) return true;
+    if ((p.birth?.date||'').toLowerCase().includes(lower)) return true;
+    if ((p.death?.date||'').toLowerCase().includes(lower)) return true;
+    if ((p.chr?.place||'').toLowerCase().includes(lower)) return true;
+    if ((p.buri?.place||'').toLowerCase().includes(lower)) return true;
+    if ((p.noteText||'').toLowerCase().includes(lower)) return true;
+    for (const ev of (p.events || [])) {
+      if ((ev.value||'').toLowerCase().includes(lower)) return true;
+      if ((ev.place||'').toLowerCase().includes(lower)) return true;
+      if ((ev.date||'').toLowerCase().includes(lower)) return true;
+      if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
+    }
+    return false;
+  }).slice(0, 20);
   if (persons.length) {
     html += `<div class="alpha-sep">Personen (${persons.length})</div>`;
     for (const p of persons) {
