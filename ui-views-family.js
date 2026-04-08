@@ -101,8 +101,19 @@ function filterFamilies(q) {
     const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
     if (husb && (husb.name||'').toLowerCase().includes(lower)) return true;
     if (wife && (wife.name||'').toLowerCase().includes(lower)) return true;
-    if ((f.marr.date||'').toLowerCase().includes(lower)) return true;
-    if ((f.marr.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.div?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.div?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.engag?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.engag?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.noteText||'').toLowerCase().includes(lower)) return true;
+    for (const ev of (f.events || [])) {
+      if ((ev.value||'').toLowerCase().includes(lower)) return true;
+      if ((ev.place||'').toLowerCase().includes(lower)) return true;
+      if ((ev.date||'').toLowerCase().includes(lower)) return true;
+      if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
+    }
     return false;
   }));
 }
