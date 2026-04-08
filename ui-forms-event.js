@@ -38,22 +38,23 @@ function addEfMedia() {
   _renderEfMedia();
 }
 
-function _updateEventTypeDatalist() {
-  const types = AppState.db.eventTypes || [];
-  ['ef-etype-list', 'fev-etype-list'].forEach(id => {
-    const dl = document.getElementById(id);
-    if (!dl) return;
-    dl.innerHTML = types.map(t => `<option value="${esc(t)}">`).join('');
-  });
+function _updateEventTypeDatalist(tag, listId) {
+  if (!tag || !listId) return;
+  const map = AppState.db.eventTypesByTag || {};
+  const types = map[tag] || [];
+  const dl = document.getElementById(listId);
+  if (dl) dl.innerHTML = types.map(t => `<option value="${esc(t)}">`).join('');
 }
 
-function _registerEventType(val) {
-  if (!val) return;
-  if (!AppState.db.eventTypes) AppState.db.eventTypes = [];
-  if (!AppState.db.eventTypes.includes(val)) {
-    AppState.db.eventTypes.push(val);
-    AppState.db.eventTypes.sort((a, b) => a.localeCompare(b));
-    _updateEventTypeDatalist();
+function _registerEventType(tag, val) {
+  if (!tag || !val) return;
+  if (!AppState.db.eventTypesByTag) AppState.db.eventTypesByTag = {};
+  const arr = AppState.db.eventTypesByTag[tag] || (AppState.db.eventTypesByTag[tag] = []);
+  if (!arr.includes(val)) {
+    arr.push(val);
+    arr.sort((a, b) => a.localeCompare(b));
+    _updateEventTypeDatalist(tag, 'ef-etype-list');
+    _updateEventTypeDatalist(tag, 'fev-etype-list');
   }
 }
 
@@ -70,6 +71,7 @@ function onEventTypeChange() {
   }
   document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
   document.getElementById('ef-addr-group').style.display  = (t === 'RESI') ? '' : 'none';
+  _updateEventTypeDatalist(t, 'ef-etype-list');
 }
 
 function showEventForm(personId, evIdx) {
@@ -113,8 +115,7 @@ function showEventForm(personId, evIdx) {
     document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
-  onEventTypeChange();
-  _updateEventTypeDatalist();
+  onEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
   document.getElementById('deleteEventBtn').style.display = isExisting ? '' : 'none';
   openModal('modalEvent');
 }
@@ -154,7 +155,7 @@ function saveEvent() {
       date:       buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
       place,
       addr:       document.getElementById('ef-addr').value.trim(),
-      eventType:  (t => { _registerEventType(t); return t; })(document.getElementById('ef-etype').value.trim()),
+      eventType:  (t => { _registerEventType(type, t); return t; })(document.getElementById('ef-etype').value.trim()),
       note:       evIdx !== null ? (p.events[evIdx]?.note || '') : '',
       ..._geoFromPlace(place),
       sources:    [...(srcWidgetState['ef']?.ids   || [])],
@@ -202,6 +203,7 @@ const _FAM_KEY_MAP   = { MARR:'marr', ENGA:'engag', DIV:'div', DIVF:'divf' };
 function onFamEventTypeChange() {
   const t = document.getElementById('fev-type').value;
   document.getElementById('fev-etype-group').style.display = (t === 'EVEN') ? '' : 'none';
+  _updateEventTypeDatalist(t, 'fev-etype-list');
 }
 
 function showFamEventForm(famId, evKey, evIdxRaw) {
@@ -250,8 +252,7 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
     document.getElementById('deleteFamEventBtn').style.display = (ev.date || ev.place || ev.seen) ? '' : 'none';
   }
-  onFamEventTypeChange();
-  _updateEventTypeDatalist();
+  onFamEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
   openModal('modalFamEvent');
 }
 
@@ -265,7 +266,7 @@ function saveFamEvent() {
   const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
   const place = getPlaceFromForm('fev-place');
   const etype = document.getElementById('fev-etype').value.trim();
-  _registerEventType(etype);
+  _registerEventType(type, etype);
   const sources     = [...(srcWidgetState['fev']?.ids   || [])];
   const sourcePages = { ...(srcWidgetState['fev']?.pages || {}) };
   const sourceQUAY  = { ...(srcWidgetState['fev']?.quay  || {}) };

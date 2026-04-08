@@ -841,15 +841,16 @@ function parseGEDCOM(text, parseErrors) {
     }
   }
 
-  // Collect distinct eventType values from all INDI and FAM events
-  const _etSet = new Set();
+  // Collect distinct eventType values per event tag from all INDI and FAM events
+  const _etMap = {};
+  const _etAdd = (tag, val) => { if (!val) return; if (!_etMap[tag]) _etMap[tag] = new Set(); _etMap[tag].add(val); };
   for (const p of Object.values(individuals))
-    for (const ev of (p.events || [])) if (ev.eventType) _etSet.add(ev.eventType);
+    for (const ev of (p.events || [])) _etAdd(ev.type, ev.eventType);
   for (const f of Object.values(families))
-    for (const ev of (f.events || [])) if (ev.eventType) _etSet.add(ev.eventType);
-  const eventTypes = [..._etSet].sort((a, b) => a.localeCompare(b));
+    for (const ev of (f.events || [])) _etAdd(ev.type, ev.eventType);
+  const eventTypesByTag = Object.fromEntries(Object.entries(_etMap).map(([k, s]) => [k, [...s].sort((a, b) => a.localeCompare(b))]));
 
-  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors, eventTypes };
+  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors, eventTypesByTag };
 }
 
 
