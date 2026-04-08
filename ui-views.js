@@ -173,10 +173,22 @@ function runGlobalSearch(q) {
   const families = Object.values(AppState.db.families).filter(f => {
     const h = AppState.db.individuals[f.husb];
     const w = AppState.db.individuals[f.wife];
-    return (h?.name||'').toLowerCase().includes(lower) ||
-           (w?.name||'').toLowerCase().includes(lower) ||
-           (f.marr?.place||'').toLowerCase().includes(lower) ||
-           (f.marr?.date||'').toLowerCase().includes(lower);
+    if ((h?.name||'').toLowerCase().includes(lower)) return true;
+    if ((w?.name||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.div?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.div?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.engag?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.engag?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.noteText||'').toLowerCase().includes(lower)) return true;
+    for (const ev of (f.events || [])) {
+      if ((ev.value||'').toLowerCase().includes(lower)) return true;
+      if ((ev.place||'').toLowerCase().includes(lower)) return true;
+      if ((ev.date||'').toLowerCase().includes(lower)) return true;
+      if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
+    }
+    return false;
   }).slice(0, 12);
   if (families.length) {
     html += `<div class="alpha-sep">Familien (${families.length})</div>`;
