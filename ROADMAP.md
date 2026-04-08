@@ -22,14 +22,16 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: B+ (Security A–, Architektur B, Performance B–, Code-Qualität B, PWA B). Gesamtbewertung: solide Basis, gezielter Abbau technischer Schulden.
 
-Priorisierung der offenen Schulden (2026-04-06):
+Erweitertes Architektur- und UX-Konsistenz-Review durchgeführt 2026-04-08 — Schwerpunkte: Event-Handler-Konsolidierung, Code-Duplikation, Magic Strings, Feedback-Mechanismen, Formular-Inkonsistenz, fehlende Debounces.
+
+Priorisierung der offenen Schulden (Stand 2026-04-08):
 ```
 P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)       ✅ sw v163
 P2a Datenqualität       →  Ereignis-TYPE für alle Event-Typen editierbar        ✅ sw v164
 P2 Maintainability      →  ~~parseGEDCOM aufteilen~~ (verworfen) · writeGEDCOM aufgeteilt ✅ sw v167 · storage.js aufgeteilt ✅ sw v166
-P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen
-P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper
-P5 UX-Schulden          →  INDI-Notes-Editierproblem, Cmd+Z (eigener Sprint)
+P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen, fehlende Debounces
+P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper, Magic-String-Konstanten, Autocomplete-Abstraktion
+P5 UX-Schulden          →  INDI-Notes-Editierproblem, Cmd+Z, Toast-Typen, confirm()-Ersatz, Formular-Konsistenz
 P6 Neue Features        →  erst nach P1+P2 beginnen
 ```
 
@@ -61,8 +63,10 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 
 ### P3 — Performance
 
-- [ ] **Globale Suche indexieren** — O(n×m) bei 2800+ Personen ~80ms pro Tastendruck ohne Debounce; Debounce + vorberechneter Index (ui-views.js)
+- [ ] **Globale Suche indexieren** — O(n×m) bei 2800+ Personen ~80ms pro Tastendruck ohne Debounce; Debounce + vorberechneter Index (ui-views.js `runGlobalSearch`)
+- [ ] **`applyPersonFilter()` Debounce einbauen** — aktuell kein Debounce, während `filterFamiliesDebounced` ihn hat; inkonsistent (ui-views.js:676–689)
 - [ ] **`touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen** — feuert aktuell 100+/s direkt auf DOM-Properties, Frame-Drops auf älteren iPhones (ui-views-tree.js)
+- [ ] **Virtual Scroll für Quellen-Liste** — Source-Liste rendert aktuell alle Einträge ohne VS; ab ~500 Quellen spürbar; analog zu Person-/Familienliste implementieren (ui-views-source.js)
 - [ ] **Virtual Scroll bei 2800+ Einträgen profilen** — Spacer-Logik auf Korrektheit verifizieren; Threshold 500 ggf. anpassen
 
 ---
@@ -70,8 +74,12 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 ### P4 — Release-Hygiene & Code-Qualität
 
 - [ ] **DEV-Diagnose im Menü entfernen** — OD-Token-Details (`OD: ...`, `Token: ...`) und SW-Version-Toast (`DEV sw vXXX`) vor Abschluss v6 entfernen (`index.html` menuVersionInfo-Block kürzen, `storage.js` DEV-Blöcke löschen)
-- [ ] **`_navHistory` + `_probandId` in `UIState` konsolidieren** — aktuell lose Globals in ui-views.js, inkonsistent mit ADR-003
+- [ ] **`_navHistory` + `_probandId` in `UIState` konsolidieren** — aktuell lose Globals in ui-views.js, inkonsistent mit ADR-003; gleichzeitig Tree-History (`UIState._treeHistory`) und Detail-History (`_navHistory`) auf einheitliches System bringen
 - [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` aus Person/Familie/Quelle-Views (~15% Duplikation); sinnvoll vor ersten neuen Views
+- [ ] **Konstanten für Magic Strings** — 50+ Modal-IDs und Element-IDs als String-Literale verteilt (`'modalPerson'`, `'detailContent'`, `'modalEvent'` …); Konstanten-Objekte `MODALS{}` und `EL{}` einführen; verhindert Tipp-Fehler und erleichtert Umbenennungen
+- [ ] **Generische `initAutocomplete()`-Funktion** — `_initEtypeAutocomplete()` (ui-forms-event.js:41–77) und `initPlaceAutocomplete()` (ui-forms.js:775–816) sind strukturell identisch; eine generische Funktion `initAutocomplete(inputId, ddId, fetchFn)` reduziert ~60 Zeilen Duplikat
+- [ ] **Media-Rendering-Helfer vereinheitlichen** — `_renderEfMedia()` (ui-forms-event.js), `_renderMediaList()` (ui-forms.js) und inline Rendering in Person-/Familien-Views leisten dasselbe (Array → Rows + Delete-Buttons); auf eine gemeinsame Funktion konsolidieren
+- [ ] **JS-seitige `onclick=`-Handler entfernen** — P1 hat `index.html` bereinigt; es verbleiben direkte `el.onclick = ...`-Zuweisungen im JS-Code (z.B. ui-forms-event.js:30, ui-forms.js:353); vollständig auf `data-action`-Delegation migrieren
 
 ---
 
@@ -79,6 +87,10 @@ P6 Neue Features        →  erst nach P1+P2 beginnen
 
 - [ ] **Mehrere inline INDI-Notes: Editierproblem** — beim Speichern werden mehrere Notes zu einer zusammengeführt (Roundtrip ohne Edit stabil; Edit-Pfad verlustbehaftet); betrifft auch Duplikat-Erkennung
 - [ ] **Cmd+Z = granulares Undo** — aktuell "Revert to Saved"; History-Stack auf `AppState` erforderlich; eigener Sprint
+- [ ] **`showToast()` nach Typ differenzieren** — aktuell wird `showToast()` undifferenziert für Erfolg (`✓ Person gespeichert`) und Fehler (`⚠ Mindestens ein Elternteil`) genutzt; `showToast(msg, type)` mit `type ∈ {success, warning, error}` + entsprechendes CSS-Styling (verschiedene Hintergrundfarben); verbessert Wahrnehmbarkeit kritischer Meldungen erheblich
+- [ ] **`confirm()` durch eigenes Modal ersetzen** — nativer Browser-Dialog für Lösch-Bestätigungen (aktuell 6+ Stellen); nicht gestylebar, auf iOS in bestimmten Kontexten blockiert; eigene `confirmModal(msg)` → Promise-Rückgabe; einheitliche Optik mit restlicher UI
+- [ ] **Formular-Stile vereinheitlichen (Progressive Disclosure)** — jedes Formular hat eigene Logik für optionale Felder: Person versteckt sie standardmäßig, Source nutzt Toggle-Buttons, Event nutzt `onEventTypeChange()`; einheitliches Pattern definieren und umsetzen
+- [ ] **Fehler-Handling standardisieren** — 181 try/catch-Blöcke, aber nur 13 console.error-Aufrufe; viele silent fails (`.catch(() => {})`); zentrale `handleError(e, context, userMsg)` Funktion einführen; besonders kritisch in storage.js und onedrive.js wo Datenverlust droht
 
 ---
 
@@ -289,18 +301,18 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 Priorisierte Liste — Details und Kontext in v6.0-Abschnitt oben.
 
 **Offen (priorisiert):**
-- ~~**P1** `onclick=`-Handler-Migration~~ → sw v163 ✓
+- ~~**P1** `onclick=`-Handler-Migration (HTML)~~ → sw v163 ✓
 - ~~**P2**~~ ~~`parseGEDCOM()` aufteilen~~ → verworfen · ~~`writeGEDCOM()` aufteilen~~ → sw v167 ✓ · ~~`storage.js` aufteilen~~ → sw v166 ✓
-- **P3** Globale Suche indexieren (O(n×m)) · `touchmove` throttlen · Virtual Scroll profilen
-- **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper extrahieren
-- **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo (eigener Sprint)
+- **P3** Globale Suche indexieren (O(n×m)) · `applyPersonFilter()` Debounce · `touchmove` throttlen · Virtual Scroll profilen · Source-Liste VS
+- **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · einheitliches History-System (Tree+Detail) · Rendering-Helper extrahieren · Magic-String-Konstanten · `initAutocomplete()` + Media-Render-Helfer · verbleibende JS-seitige `onclick=`-Reste
+- **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo · `showToast(type)` · `confirm()` → eigenes Modal · Formular Progressive Disclosure · `handleError()` zentralisieren
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 
 **Behoben:**
 - ~~Virtuelles Scrollen für Listen >500 Einträge~~ → sw v145/v146
 - ~~DIV/DIVF/ENG: Formularfelder für Datum/Ort~~ → sw v147
 - ~~OAuth-Token in `localStorage`~~ → sw v136
-- ~~Inline Event-Handler in HTML-Strings~~ → sw v137
+- ~~Inline Event-Handler in HTML-Strings (`index.html`)~~ → sw v137, sw v163
 - ~~GEDCOM-Parser ohne Fehler-Sammler~~ → sw v138
 - ~~`sourceRefs` nach Event-Save nicht aktualisiert~~ → sw v149
 - ~~Ereignisliste unsortiert/ungruppiert~~ → sw v150
