@@ -841,7 +841,15 @@ function parseGEDCOM(text, parseErrors) {
     }
   }
 
-  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors };
+  // Collect distinct eventType values from all INDI and FAM events
+  const _etSet = new Set();
+  for (const p of Object.values(individuals))
+    for (const ev of (p.events || [])) if (ev.eventType) _etSet.add(ev.eventType);
+  for (const f of Object.values(families))
+    for (const ev of (f.events || [])) if (ev.eventType) _etSet.add(ev.eventType);
+  const eventTypes = [..._etSet].sort((a, b) => a.localeCompare(b));
+
+  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors, eventTypes };
 }
 
 

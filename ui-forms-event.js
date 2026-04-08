@@ -38,6 +38,25 @@ function addEfMedia() {
   _renderEfMedia();
 }
 
+function _updateEventTypeDatalist() {
+  const types = AppState.db.eventTypes || [];
+  ['ef-etype-list', 'fev-etype-list'].forEach(id => {
+    const dl = document.getElementById(id);
+    if (!dl) return;
+    dl.innerHTML = types.map(t => `<option value="${esc(t)}">`).join('');
+  });
+}
+
+function _registerEventType(val) {
+  if (!val) return;
+  if (!AppState.db.eventTypes) AppState.db.eventTypes = [];
+  if (!AppState.db.eventTypes.includes(val)) {
+    AppState.db.eventTypes.push(val);
+    AppState.db.eventTypes.sort((a, b) => a.localeCompare(b));
+    _updateEventTypeDatalist();
+  }
+}
+
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
@@ -95,6 +114,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
   onEventTypeChange();
+  _updateEventTypeDatalist();
   document.getElementById('deleteEventBtn').style.display = isExisting ? '' : 'none';
   openModal('modalEvent');
 }
@@ -134,7 +154,7 @@ function saveEvent() {
       date:       buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
       place,
       addr:       document.getElementById('ef-addr').value.trim(),
-      eventType:  document.getElementById('ef-etype').value.trim(),
+      eventType:  (t => { _registerEventType(t); return t; })(document.getElementById('ef-etype').value.trim()),
       note:       evIdx !== null ? (p.events[evIdx]?.note || '') : '',
       ..._geoFromPlace(place),
       sources:    [...(srcWidgetState['ef']?.ids   || [])],
@@ -231,6 +251,7 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     document.getElementById('deleteFamEventBtn').style.display = (ev.date || ev.place || ev.seen) ? '' : 'none';
   }
   onFamEventTypeChange();
+  _updateEventTypeDatalist();
   openModal('modalFamEvent');
 }
 
@@ -244,6 +265,7 @@ function saveFamEvent() {
   const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
   const place = getPlaceFromForm('fev-place');
   const etype = document.getElementById('fev-etype').value.trim();
+  _registerEventType(etype);
   const sources     = [...(srcWidgetState['fev']?.ids   || [])];
   const sourcePages = { ...(srcWidgetState['fev']?.pages || {}) };
   const sourceQUAY  = { ...(srcWidgetState['fev']?.quay  || {}) };
