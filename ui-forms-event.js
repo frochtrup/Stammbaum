@@ -38,12 +38,41 @@ function addEfMedia() {
   _renderEfMedia();
 }
 
-function _updateEventTypeDatalist(tag, listId) {
-  if (!tag || !listId) return;
-  const map = AppState.db.eventTypesByTag || {};
-  const types = map[tag] || [];
-  const dl = document.getElementById(listId);
-  if (dl) dl.innerHTML = types.map(t => `<option value="${esc(t)}">`).join('');
+function _showEtypeDropdown(inputId, ddId, tag) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+  const map   = AppState.db.eventTypesByTag || {};
+  const all   = map[tag] || [];
+  const q     = input.value.toLowerCase();
+  const matches = q
+    ? all.filter(t => t.toLowerCase().includes(q))
+    : all;
+  if (!matches.length) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+  dd.innerHTML = '';
+  matches.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'place-dropdown-item';
+    item.textContent = name;
+    item.addEventListener('mousedown', () => { input.value = name; dd.innerHTML = ''; dd.style.display = 'none'; });
+    dd.appendChild(item);
+  });
+  dd.style.display = 'block';
+}
+
+function _updateEventTypeDatalist(tag, inputId, ddId) {
+  // Called on tag change: show full list, or hide if empty
+  const dd = document.getElementById(ddId);
+  if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
+}
+
+function _initEtypeAutocomplete(inputId, ddId, getTag) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+  input.addEventListener('input',  () => _showEtypeDropdown(inputId, ddId, getTag()));
+  input.addEventListener('focus',  () => _showEtypeDropdown(inputId, ddId, getTag()));
+  input.addEventListener('blur',   () => setTimeout(() => { dd.style.display = 'none'; }, 150));
 }
 
 function _registerEventType(tag, val) {
@@ -53,8 +82,6 @@ function _registerEventType(tag, val) {
   if (!arr.includes(val)) {
     arr.push(val);
     arr.sort((a, b) => a.localeCompare(b));
-    _updateEventTypeDatalist(tag, 'ef-etype-list');
-    _updateEventTypeDatalist(tag, 'fev-etype-list');
   }
 }
 
@@ -71,7 +98,9 @@ function onEventTypeChange() {
   }
   document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
   document.getElementById('ef-addr-group').style.display  = (t === 'RESI') ? '' : 'none';
-  _updateEventTypeDatalist(t, 'ef-etype-list');
+  // Reset dropdown on type change; content rebuilt on focus/input
+  const dd = document.getElementById('ef-etype-dd');
+  if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
 }
 
 function showEventForm(personId, evIdx) {
@@ -203,7 +232,8 @@ const _FAM_KEY_MAP   = { MARR:'marr', ENGA:'engag', DIV:'div', DIVF:'divf' };
 function onFamEventTypeChange() {
   const t = document.getElementById('fev-type').value;
   document.getElementById('fev-etype-group').style.display = (t === 'EVEN') ? '' : 'none';
-  _updateEventTypeDatalist(t, 'fev-etype-list');
+  const dd = document.getElementById('fev-etype-dd');
+  if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
 }
 
 function showFamEventForm(famId, evKey, evIdxRaw) {
