@@ -10,29 +10,152 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 |---|---|---|
 | 4.0 | `main` | Abgeschlossen (2026-03-30) — Details: CHANGELOG.md |
 | 5.0 | `main` | Abgeschlossen (2026-04-05) — Details: CHANGELOG.md |
-| 6.0 | `v6-dev` | In Entwicklung |
+| 6.0 | `v6-dev` | Abgeschlossen (2026-04-10) — Details: CHANGELOG.md |
+| 7.0 | `v7-dev` | In Entwicklung |
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v176 / Cache: `stammbaum-v176`
+**Aktuelle sw-Version:** v189 / Cache: `stammbaum-v189`
 
 ---
 
-## Version 6.0 (Branch `v6-dev`, ab 2026-04-05)
+## Version 7.0 (Branch `v7-dev`, ab 2026-04-10)
+
+### Strategische Ausrichtung: GRAMPS-Integration als iOS-Companion
+
+**Kernprinzip:** GEDCOM bleibt vollständig erhalten — alle bestehenden Lade-, Edier- und Schreib-Funktionen für GEDCOM 5.5.1 bleiben unverändert. GRAMPS-Unterstützung ist eine *Erweiterung*, kein Ersatz.
+
+**Warum GRAMPS XML statt GEDCOM als Austauschformat:**
+GEDCOM-Export aus GRAMPS verliert systematisch: Ortshierarchien (GRAMPS top-level Ortsobjekte → flacher PLAC-Text), Tags/Kategorien, komplexe Beziehungstypen, Medienbeschreibungen, interne Handles. GRAMPS XML (.gramps, gzip) ist verlustfrei und öffentlich spezifiziert (grampsxml.dtd).
+
+**Workflow-Ziel:**
+```
+GRAMPS (Desktop) ←→ GRAMPS XML (.gramps) ←→ PWA (iOS/iPad Companion)
+GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
+```
+
+---
+
+### Architektur-Review-Befund (2026-04-10)
+
+Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament solide, GRAMPS-Tags fragmentiert).
+
+**Was bereits funktioniert:**
+- `_UID` + `_STAT`: Parser + Writer roundtrip-stabil (Z.166/190 Parser, Z.272/273 Writer)
+- Event TYPE beliebig editierbar (sw v164) — GRAMPS Fact Types funktionieren
+- 10 Passthrough-Mechanismen — kein Datenverlust bei unbekannten Tags
+- OneDrive `od_base_path`-Architektur kompatibel mit GRAMPS-Cloud-Workflow
+
+**Bekannte Lücken (Priorität für v7):**
+- `_GRAMPS_ID`: landet in `_passthrough[]`, nicht strukturiert → beim GRAMPS-Re-Import neue Referenzen
+- `_ASSO`: verbatim passthrough, kein UI, kein TYPE-Handling
+- NAME-Context-Duplikation: GIVN/SURN/NICK doppelt (strukturiert + passthrough) — vor GRAMPS-Roundtrip prüfen
+- Mehrfach-Notizen: `p.noteTexts[]` im Parser, Writer/Formulare nur `p.noteText` (singular)
+- Keine GRAMPS-Erkennung im Import-Dialog (kein `detectGRAMPS()`)
+- AppState fehlen: `db.placeObjects{}`, `db.tags{}`, `db._grampsHandles{}`
+
+---
+
+### Phase 1 — GRAMPS-GEDCOM-Kompatibilität (sofort)
+
+Ziel: Beim Laden einer GRAMPS-exportierten GED keine Daten verlieren und sinnvolle Hinweise geben.
+
+- [ ] **`detectGRAMPS(gedText)`** — Heuristik: `HEAD SOUR GRAMPS` + `_GRAMPS_ID`-Vorkommen; Flag `AppState.db._grampsMaster = true`; gespeichert in IDB
+- [ ] **Import-Hinweis** — nicht-blockierender Toast bei GRAMPS-Erkennung: "GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen"
+- [ ] **`_GRAMPS_ID` strukturieren** — Parser: `p.grampId = val` (INDI) / `f.grampId` (FAM) / `s.grampId` (SOUR); Writer: an korrekter Position zurückschreiben → GRAMPS kann IDs wiederfinden
+- [ ] **NAME-Duplikation prüfen + fixen** — verifizieren ob GIVN/SURN/NICK doppelt ausgegeben wird; ggf. Passthrough-Filter für NAME-Subfelder wenn bereits strukturiert vorhanden
+- [ ] **`_ASSO` dokumentieren** — ARCHITECTURE.md: _ASSO read-only / nur passthrough (kein UI, kein TYPE); keine neue Funktionalität, nur Klarheit
+
+---
+
+### Phase 2 — GRAMPS XML Import (read-only)
+
+Ziel: `.gramps`-Dateien nativ laden, vollständiger Datenerhalt.
+
+**Neue Datei: `gramps-parser.js`**
+- [ ] gzip decompress via `DecompressionStream('gzip')` (nativ im Browser)
+- [ ] XML parse via `DOMParser` — auf iPhone: Memory-Check bei >5MB XML; ggf. chunked via `ReadableStream`
+- [ ] GRAMPS-Version aus `<database>` Header lesen → Warnung bei unbekannter Version
+- [ ] Mapping GRAMPS XML → AppState:
+
+| GRAMPS XML | AppState |
+|---|---|
+| `<person handle>` | `db.persons{}` |
+| `<family handle>` | `db.families{}` |
+| `<event handle>` | `ev` in person/family |
+| `<place handle>` | `db.placeObjects{}` (neu) |
+| `<citation>` | Zitat-Objekt |
+| `<source>` | `db.sources{}` |
+| `<object>` (media) | `media[]` |
+| `<tag>` | `db.tags{}` (neu) |
+| `<repository>` | `db.repos{}` |
+| alle handles | `db._grampsHandles{}` (neu) |
+
+**AppState-Erweiterungen:**
+- [ ] `db.placeObjects{}` — Ortshierarchie (Land > Region > Ort); PLAC-Text als Fallback für GEDCOM-Export
+- [ ] `db.tags{}` — GRAMPS Kategorien/Farben; read-only Anzeige als Badge in Listen/Detail
+- [ ] `db._grampsHandles{}` — Handle-zu-ID-Mapping für verlustfreien Round-trip
+- [ ] `db._sourceFormat` — `'gedcom'` | `'gramps'` — steuert Writer-Auswahl
+
+**UI-Anpassungen:**
+- [ ] Datei-Öffnen-Dialog: `.ged` und `.gramps` akzeptieren
+- [ ] GRAMPS-Badge in Topbar wenn `db._sourceFormat === 'gramps'`
+- [ ] Orts-Detail: Hierarchie anzeigen wenn `db.placeObjects` vorhanden
+- [ ] Tags als farbige Badges in Personen-/Familienliste (read-only)
+
+---
+
+### Phase 3 — GRAMPS XML Export (Round-trip)
+
+Ziel: Geänderte Daten verlustfrei zurück in GRAMPS.
+
+**Neue Datei: `gramps-writer.js`**
+- [ ] AppState → GRAMPS XML (`<database>` Struktur)
+- [ ] Handle-Rekonstruktion aus `db._grampsHandles{}` — Original-Handles erhalten
+- [ ] Neue Handles für in PWA angelegte Personen/Familien generieren (UUID-Format)
+- [ ] GRAMPS-Version im Header: aktuelle Version aus Import beibehalten
+- [ ] Orts-Hierarchie erhalten (nicht auf PLAC-Text reduzieren)
+- [ ] Tags erhalten (auch wenn nicht editierbar)
+
+**Konflikt-Strategie (keine automatische Merge-Logik):**
+- PWA-Änderungen werden als vollständiger Ersatz exportiert
+- GRAMPS-seitige Änderungen seit letztem Import: Nutzer ist verantwortlich
+- Hinweis beim Export: "Zuletzt geladen: [Datum/Zeit]"
+
+---
+
+### Phase 4 — iOS-Companion-Optimierungen
+
+- [ ] **Quick-Add** — neue schlanke View `ui-quick-add.js`: Vorname + Nachname + Geburtsjahr + optionale Familie; kein volles Formular; ~4h Aufwand
+- [ ] **Foto-direkt-zu-Person** — iOS-Kamera → direkt an Person hängen ohne Umweg über Media-Browser
+- [ ] **GRAMPS-Tag-Editor** — Tags hinzufügen/entfernen (read-only in Phase 2, editierbar hier)
+- [ ] **Orts-Hierarchie-Editor** — einfaches Formular für Ortsangaben mit Hierarchie-Unterstützung
+
+---
+
+### Offene P3–P5 Schulden aus v6 (weiterhin offen)
+
+- [ ] **P3** Globale Suche indexieren · `applyPersonFilter()` Debounce · `touchmove` throttlen · Virtual Scroll profilen · Source-Liste VS
+- [ ] **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper · Magic-String-Konstanten · `initAutocomplete()` · Media-Render-Helfer · JS-seitige `onclick=`-Reste
+- [ ] **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo · `showToast(type)` · `confirm()` → Modal · Formular Progressive Disclosure · `handleError()` zentralisieren
+
+---
+
+## Version 6.0 (Branch `v6-dev`, 2026-04-05 — 2026-04-10) — ABGESCHLOSSEN
 
 Code-, Architektur- und Sicherheits-Review durchgeführt 2026-04-06 — Befund: B+ (Security A–, Architektur B, Performance B–, Code-Qualität B, PWA B). Gesamtbewertung: solide Basis, gezielter Abbau technischer Schulden.
 
 Erweitertes Architektur- und UX-Konsistenz-Review durchgeführt 2026-04-08 — Schwerpunkte: Event-Handler-Konsolidierung, Code-Duplikation, Magic Strings, Feedback-Mechanismen, Formular-Inkonsistenz, fehlende Debounces.
 
-Priorisierung der offenen Schulden (Stand 2026-04-08):
+Priorisierung der Schulden (Stand 2026-04-10):
 ```
 P1 Sicherheits-Blocker  →  onclick= Migration (CSP vollständig wirksam)       ✅ sw v163
 P2a Datenqualität       →  Ereignis-TYPE für alle Event-Typen editierbar        ✅ sw v164
 P2 Maintainability      →  ~~parseGEDCOM aufteilen~~ (verworfen) · writeGEDCOM aufgeteilt ✅ sw v167 · storage.js aufgeteilt ✅ sw v166
-P3 Performance          →  Suche indexieren, touchmove throttlen, VS profilen, fehlende Debounces
-P4 Release-Hygiene      →  DEV-Diagnose, _navHistory, Rendering-Helper, Magic-String-Konstanten, Autocomplete-Abstraktion
-P5 UX-Schulden          →  INDI-Notes-Editierproblem, Cmd+Z, Toast-Typen, confirm()-Ersatz, Formular-Konsistenz
-P6 Neue Features        →  erst nach P1+P2 beginnen
+P3 Performance          →  offen → v7
+P4 Release-Hygiene      →  offen → v7
+P5 UX-Schulden          →  offen → v7
+P6 Neue Features        →  offen → v7 (GRAMPS-Integration)
 ```
 
 ---
