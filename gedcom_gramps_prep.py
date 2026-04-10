@@ -6,6 +6,8 @@ Bereitet eine GEDCOM-Datei (Ancestris-Export) für den GRAMPS-Import vor.
 Korrekturen:
   1. FORM-Tag: von Ebene n+2 (unter FILE) auf Ebene n+1 (unter OBJE), vor FILE
   2. DATE TO <datum> ohne FROM -> DATE BEF <datum>
+  3. ADDR unter Events -> NOTE (verhindert Duplikat-Orte in GRAMPS)
+     ADDR unter REPO/SUBM bleibt unverändert.
 
 Original bleibt unverändert. Ausgabe: <name>_gramps_ready.ged
 """
@@ -15,13 +17,7 @@ import sys
 from pathlib import Path
 
 
-# ── Hilfsfunktionen ──────────────────────────────────────────────────────────
-
-def gedcom_level(line: str):
-    """Gibt die GEDCOM-Ebene einer Zeile zurück, oder None."""
-    m = re.match(r'^(\d+) ', line)
-    return int(m.group(1)) if m else None
-
+# ── Korrektur 1: FORM-Position ───────────────────────────────────────────────
 
 def fix_form_position(lines):
     """
@@ -68,6 +64,8 @@ def fix_form_position(lines):
     return result, fixes
 
 
+# ── Korrektur 2: DATE TO ohne FROM ──────────────────────────────────────────
+
 def fix_date_to_without_from(lines):
     """
     Korrigiert 'DATE TO <datum>' (ohne FROM) -> 'DATE BEF <datum>'.
@@ -77,7 +75,6 @@ def fix_date_to_without_from(lines):
     """
     result = []
     fixes = 0
-
     pattern = re.compile(r'^(\d+ DATE) TO (.+)$')
 
     for line in lines:
@@ -94,11 +91,82 @@ def fix_date_to_without_from(lines):
     return result, fixes
 
 
+# ── Korrektur 3: ADDR unter Events -> NOTE ───────────────────────────────────
+
+# ADDR-Subfelder, deren Werte in die NOTE übernommen werden
+_ADDR_SUB_TAGS = {'ADR1', 'ADR2', 'ADR3', 'CITY', 'STAE', 'POST', 'CTRY'}
+
+
+def fix_addr_to_note(lines):
+    """
+    Wandelt ADDR-Tags unter Events (Ebene >= 2) in NOTE-Tags um.
+    Verhindert damit doppelte Ortseinträge in GRAMPS.
+
+    Ancestris schreibt:
+        2 ADDR Landsberger Str. 507     <- GRAMPS erzeugt Duplikat-Ort
+        3 CITY München
+        3 POST 80804
+
+    Wird zu:
+        2 NOTE Adresse: Landsberger Str. 507, München, 80804
+
+    ADDR unter REPO/SUBM (Ebene 1) bleibt unverändert —
+    GRAMPS importiert diese korrekt.
+    """
+    result = []
+    i = 0
+    n = len(lines)
+    fixes = 0
+
+    while i < n:
+        line = lines[i].rstrip('\r\n')
+
+        m_addr = re.match(r'^(\d+) ADDR\b(.*)', line)
+        if m_addr:
+            addr_level = int(m_addr.group(1))
+            addr_text  = m_addr.group(2).strip()
+
+            # Nur Events-ADDR konvertieren (Ebene >= 2).
+            # Ebene 1 = direkt unter REPO/SUBM -> unverändert lassen.
+            if addr_level >= 2:
+                note_parts = [addr_text] if addr_text else []
+
+                # Alle Kind-Zeilen konsumieren (egal welcher Tag)
+                j = i + 1
+                while j < n:
+                    sub = lines[j].rstrip('\r\n')
+                    m_sub = re.match(r'^(\d+) (\w+)(.*)', sub)
+                    if not m_sub:
+                        j += 1
+                        continue
+                    sub_level = int(m_sub.group(1))
+                    if sub_level <= addr_level:
+                        break                           # Subtree von ADDR beendet
+                    sub_tag = m_sub.group(2)
+                    sub_val = m_sub.group(3).strip()
+                    if sub_tag in _ADDR_SUB_TAGS and sub_val:
+                        note_parts.append(sub_val)
+                    j += 1
+
+                note_text = ', '.join(note_parts)
+                note_line = f'{addr_level} NOTE Adresse: {note_text}' if note_text \
+                            else f'{addr_level} NOTE Adresse'
+                result.append(note_line + '\n')
+                print(f'  ADDR-Fix: "{line}" -> "{note_line}"')
+                i = j
+                fixes += 1
+                continue
+
+        result.append(line + '\n')
+        i += 1
+
+    return result, fixes
+
+
 # ── Hauptprogramm ────────────────────────────────────────────────────────────
 
 def main():
     if len(sys.argv) < 2:
-        # Standard-Eingabedatei wenn kein Argument angegeben
         input_path = Path(__file__).parent / 'Unsere Familie.ged'
     else:
         input_path = Path(sys.argv[1])
@@ -113,14 +181,12 @@ def main():
     print(f'Ausgabe:  {output_path.name}')
     print()
 
-    # Einlesen
     with open(input_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
     print(f'Zeilen gelesen: {len(lines)}')
     print()
 
-    # Korrekturen anwenden
     print('── Korrektur 1: FORM-Position ──────────────────')
     lines, form_fixes = fix_form_position(lines)
     print(f'  {form_fixes} FORM-Tags korrigiert (von Ebene n+2 auf n+1, vor FILE)')
@@ -131,12 +197,17 @@ def main():
     print(f'  {date_fixes} DATE-Einträge korrigiert (TO -> BEF)')
     print()
 
-    # Schreiben
+    print('── Korrektur 3: ADDR -> NOTE ───────────────────')
+    lines, addr_fixes = fix_addr_to_note(lines)
+    print(f'  {addr_fixes} ADDR-Tags in NOTE umgewandelt')
+    print()
+
     with open(output_path, 'w', encoding='utf-8') as f:
         f.writelines(lines)
 
+    total = form_fixes + date_fixes + addr_fixes
     print('── Ergebnis ────────────────────────────────────')
-    print(f'  Gesamt-Korrekturen: {form_fixes + date_fixes}')
+    print(f'  Gesamt-Korrekturen: {total}')
     print(f'  Geschrieben:        {output_path}')
     print()
     print('Hinweise für den GRAMPS-Import:')
