@@ -72,17 +72,17 @@ function parseGEDCOM(text, parseErrors) {
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'',
           extraNames:[],
-          media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, lastChanged:'', lastChangedTime:'',
+          media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
           nameSources:[], nameSourcePages:{}, nameSourceQUAY:{}, nameSourceNote:{}, nameSourceExtra:{}, nameSourceMedia:{},
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceNote:{},sourceExtra:{},sourceMedia:{},value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', agnc:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
@@ -164,6 +164,7 @@ function parseGEDCOM(text, parseErrors) {
           else { cur.noteRefs.push(val); _curNoteIsInline = false; }
         }
         else if (tag === '_UID') cur.uid = val;
+        else if (tag === '_GRAMPS_ID') cur.grampId = val;
         else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); lastSourVal = val; }
         // OBJE → fällt in else-Passthrough unten (vollständiger Block wird verbatim bewahrt)
         else if (tag === 'RESN')  cur.resn  = val;
@@ -478,6 +479,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag==='CHAN') { /* context-only */ }
         else if (tag==='EVEN') { cur.events.push({ type:'EVEN', value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[] }); evIdx = cur.events.length-1; }
         else if (tag==='_STAT') { cur._stat = val; }
+        else if (tag==='_GRAMPS_ID') { cur.grampId = val; }
         else if (tag==='OBJE') {
           if (val && val.startsWith('@')) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
@@ -717,6 +719,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag==='CHAN') { /* context-only */ }
         else if (tag==='DATA') { /* context-only — sub-tags handled at lv=2 */ }
         else if (tag==='_DATE') { cur._date = val; }
+        else if (tag==='_GRAMPS_ID') { cur.grampId = val; }
         else if (tag==='OBJE') {
           if (val && val.startsWith('@')) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
@@ -862,5 +865,22 @@ function parseGeoCoord(val) {
   if (!m) return parseFloat(val) || null;
   const sign = (m[1].toUpperCase() === 'S' || m[1].toUpperCase() === 'W') ? -1 : 1;
   return sign * parseFloat(m[2]);
+}
+
+// ─────────────────────────────────────
+//  GRAMPS-ERKENNUNG
+// ─────────────────────────────────────
+// Erkennt ob ein GEDCOM-Text ein GRAMPS-Export ist.
+// Heuristiken (OR-verknüpft):
+//   1. HEAD → 1 SOUR GRAMPS
+//   2. Vorkommen von _GRAMPS_ID-Tags (GRAMPS schreibt diese in INDI/FAM/SOUR)
+// Gibt { isGramps: bool, sourceName: string } zurück.
+function detectGRAMPS(text) {
+  if (!text) return { isGramps: false, sourceName: '' };
+  const sourceMatch = text.match(/^1 SOUR\s+(\S+)/m);
+  const sourceName = sourceMatch ? sourceMatch[1] : '';
+  const isGramps = /^1 SOUR\s+GRAMPS\b/im.test(text) ||
+                   /^\d+ _GRAMPS_ID\b/m.test(text);
+  return { isGramps, sourceName };
 }
 

@@ -269,7 +269,8 @@ function writeINDIRecord(lines, p) {
     lines.push(`3 FORM JPEG`);
   }
 
-  if (p.uid) lines.push(`1 _UID ${p.uid}`);
+  if (p.uid)      lines.push(`1 _UID ${p.uid}`);
+  if (p.grampId)  lines.push(`1 _GRAMPS_ID ${p.grampId}`);
   if (p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
   writeCHAN(lines, p, 1);
 
@@ -314,6 +315,7 @@ function writeFAMRecord(lines, f) {
     if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
   }
 
+  if (f.grampId)  lines.push(`1 _GRAMPS_ID ${f.grampId}`);
   if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
   for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
   for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
@@ -373,7 +375,8 @@ function writeSOURRecord(lines, s) {
     }
     for (const l of (m._extra || [])) lines.push(l);
   }
-  if (s._date) lines.push(`1 _DATE ${s._date}`);
+  if (s._date)   lines.push(`1 _DATE ${s._date}`);
+  if (s.grampId) lines.push(`1 _GRAMPS_ID ${s.grampId}`);
   writeCHAN(lines, s, 1);
   for (const l of (s._passthrough || [])) lines.push(l);
 }

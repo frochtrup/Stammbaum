@@ -258,6 +258,12 @@ function _processLoadedText(text, filename) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
     showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
   }
+  // GRAMPS-Export erkennen und Hinweis anzeigen
+  const _gd = detectGRAMPS(text);
+  AppState.db._grampsMaster = _gd.isGramps;
+  if (_gd.isGramps) {
+    setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
+  }
   AppState.db.extraPlaces = loadExtraPlaces();
   // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
   { let maxUsed = 0;
