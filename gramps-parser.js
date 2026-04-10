@@ -632,7 +632,7 @@ async function parseGRAMPS(file) {
   for (const p of Object.values(individuals)) {
     for (const fh of p._childofH || []) {
       const fId = famHandleToId[fh];
-      if (fId) p.famc.push({ fam: fId, pedi: '', note: '', sourIds: [], sourNotes: [], sourExtra: {} });
+      if (fId) p.famc.push({ famId: fId, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour: '', frelPage: '', frelQUAY: '', frelSourExtra: [], mrelSour: '', mrelPage: '', mrelQUAY: '', mrelSourExtra: [], sourIds: [], sourPages: {}, sourQUAY: {}, sourExtra: {} });
     }
     for (const fh of p._parentinH || []) {
       const fId = famHandleToId[fh];
