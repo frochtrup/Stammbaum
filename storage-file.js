@@ -73,7 +73,10 @@ async function testCanWrite(fh) {
 async function openFilePicker() {
   try {
     const [fh] = await window.showOpenFilePicker({
-      types: [{ description: 'GEDCOM-Datei', accept: { 'text/plain': ['.ged', '.GED'] } }],
+      types: [
+        { description: 'GEDCOM-Datei', accept: { 'text/plain': ['.ged', '.GED'] } },
+        { description: 'GRAMPS-Datei', accept: { 'application/octet-stream': ['.gramps'] } },
+      ],
       multiple: false
     });
     AppState._fileHandle = fh;
@@ -85,9 +88,16 @@ async function openFilePicker() {
     await idbPut('fileHandle', fh).catch(() => {});
     updateSaveIndicator();
     const file = await fh.getFile();
-    _processLoadedText(await file.text(), file.name);
-    const saveInfo = AppState._canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
-    showToast('✓ ' + file.name + ' geladen' + saveInfo);
+    if (file.name.toLowerCase().endsWith('.gramps')) {
+      // GRAMPS: async path, no direct-save
+      AppState._fileHandle = null; AppState._canDirectSave = false;
+      updateSaveIndicator();
+      await _loadGRAMPS(file);
+    } else {
+      _processLoadedText(await file.text(), file.name);
+      const saveInfo = AppState._canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
+      showToast('✓ ' + file.name + ' geladen' + saveInfo);
+    }
   } catch(e) {
     if (e.name !== 'AbortError') showToast('⚠ Fehler beim Öffnen: ' + e.message);
   }
@@ -294,6 +304,12 @@ function _processLoadedText(text, filename) {
 // Öffnen per <input> (iOS / Drag & Drop / Fallback)
 function readFile(file) {
   if (file.size > 50 * 1024 * 1024) { showToast('⚠ Datei zu groß (max. 50 MB)'); return; }
+  // GRAMPS XML (.gramps) — async path
+  if (file.name.toLowerCase().endsWith('.gramps')) {
+    _loadGRAMPS(file);
+    return;
+  }
+  // GEDCOM — synchronous FileReader path
   const reader = new FileReader();
   reader.onload = e => {
     try {
@@ -302,6 +318,36 @@ function readFile(file) {
     } catch(err) { console.error('readFile:', err); showToast('⚠ Fehler beim Laden'); }
   };
   reader.readAsText(file, 'UTF-8');
+}
+
+// GRAMPS XML Import: parseGRAMPS() → AppState.db
+async function _loadGRAMPS(file) {
+  showToast('GRAMPS-Datei wird geladen …');
+  try {
+    const db = await parseGRAMPS(file);
+    AppState.db = db;
+    AppState.db.extraPlaces = loadExtraPlaces();
+    // Calibrate idCounter to avoid collisions
+    if (db._idCounterMax >= AppState.idCounter) AppState.idCounter = db._idCounterMax + 1;
+    AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
+    AppState._fileHandle      = null;
+    AppState._canDirectSave   = false;
+    _newPhotoIds.clear();
+    _deletedPhotoIds.clear();
+    // Persist filename in localStorage for display
+    const filename = file.name;
+    try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
+    updateSaveIndicator();
+    updateBackupBtn();
+    updateTopbarTitle(filename);
+    showStartView();
+    const n = Object.keys(db.individuals).length;
+    const f = Object.keys(db.families).length;
+    showToast(`✓ ${filename} geladen — ${n} Personen, ${f} Familien (GRAMPS, read-only)`);
+  } catch(err) {
+    console.error('_loadGRAMPS:', err);
+    showToast('⚠ GRAMPS-Datei konnte nicht geladen werden: ' + err.message);
+  }
 }
 
 function openFileOrDir() {
