@@ -1,0 +1,656 @@
+// ─────────────────────────────────────
+//  GRAMPS XML WRITER  (Phase 3 — round-trip export)
+//  writeGRAMPS(db) → Promise<Blob>  (.gramps = gzip-compressed XML)
+//  Erzeugt eine valide GRAMPS XML 1.7.2 Datei aus dem AppState db-Objekt.
+// ─────────────────────────────────────
+
+// AppState GEDCOM tag → GRAMPS event type string
+const _GED_TO_GRAMPS = {
+  BIRT:'Birth',    DEAT:'Death',    CHR:'Christening', BURI:'Burial',
+  MARR:'Marriage', ENGA:'Engagement', DIV:'Divorce',   DIVF:'Divorce Filing',
+  OCCU:'Occupation', RESI:'Residence', EDUC:'Education', RELI:'Religion',
+  EMIG:'Emigration', IMMI:'Immigration', NATU:'Naturalization',
+  GRAD:'Graduation', ADOP:'Adoption',   MILI:'Military Service',
+  PROP:'Property',   WILL:'Will',       PROB:'Probate',
+  CENS:'Census',     CONF:'Confirmation', FCOM:'First Communion',
+  ORDN:'Ordination', RETI:'Retirement',  ANUL:'Annulment',
+  EVEN: null, // EVEN → value contains "TypeName: desc"
+};
+
+// GEDCOM QUAY (0–3) → GRAMPS confidence (0–4)
+const _QUAY_TO_CONF = [0, 2, 3, 4];
+
+// XML attribute/text escape
+function _esc(s) {
+  return (s == null ? '' : String(s))
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// GEDCOM date part (e.g. "16 FEB 1967") → ISO string "1967-02-16"
+function _gedPartToISO(s) {
+  if (!s) return '';
+  const MON = { JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',
+                JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12' };
+  const u = s.trim().toUpperCase();
+  const dMY = u.match(/^(\d{1,2})\s+([A-Z]{3})\s+(\d{4})$/);
+  if (dMY && MON[dMY[2]]) return `${dMY[3]}-${MON[dMY[2]]}-${String(+dMY[1]).padStart(2,'0')}`;
+  const mY = u.match(/^([A-Z]{3})\s+(\d{4})$/);
+  if (mY && MON[mY[1]]) return `${mY[2]}-${MON[mY[1]]}`;
+  if (/^\d{1,4}$/.test(u)) return u;
+  return s; // unknown format → verbatim in datestr
+}
+
+// GEDCOM date string → GRAMPS date XML element string
+function _gedToGrampsDateXML(ged) {
+  if (!ged) return '';
+  const s = ged.trim();
+
+  // FROM X TO Y → datespan
+  const fromTo = s.match(/^FROM\s+(.+?)\s+TO\s+(.+)$/i);
+  if (fromTo) {
+    const a = _esc(_gedPartToISO(fromTo[1].trim()));
+    const b = _esc(_gedPartToISO(fromTo[2].trim()));
+    return `<datespan start="${a}" stop="${b}"/>`;
+  }
+  // BET X AND Y → daterange
+  const bet = s.match(/^BET\s+(.+?)\s+AND\s+(.+)$/i);
+  if (bet) {
+    const a = _esc(_gedPartToISO(bet[1].trim()));
+    const b = _esc(_gedPartToISO(bet[2].trim()));
+    return `<daterange start="${a}" stop="${b}"/>`;
+  }
+  // Qualifiers → dateval with type
+  const QUALS = { BEF:'before', AFT:'after', ABT:'about', EST:'estimated', CAL:'calculated', FROM:'from', TO:'after' };
+  for (const [q, type] of Object.entries(QUALS)) {
+    if (s.toUpperCase().startsWith(q + ' ')) {
+      const rest = s.slice(q.length + 1).trim();
+      const iso  = _gedPartToISO(rest);
+      if (!iso) return '';
+      // check if ISO looks reliable; if not, use datestr
+      if (/^\d{4}(-\d{2}(-\d{2})?)?$/.test(iso)) {
+        return `<dateval val="${_esc(iso)}" type="${type}"/>`;
+      }
+      return `<datestr val="${_esc(rest)}"/>`;
+    }
+  }
+  // Plain date
+  const iso = _gedPartToISO(s);
+  if (/^\d{4}(-\d{2}(-\d{2})?)?$/.test(iso)) return `<dateval val="${_esc(iso)}"/>`;
+  if (/^\d{4}$/.test(s)) return `<dateval val="${_esc(s)}"/>`;
+  return `<datestr val="${_esc(s)}"/>`;
+}
+
+// Decimal lat/long → GRAMPS "N52.15" / "E7.33" format
+function _decToGrampsCoord(lat, long) {
+  const la = parseFloat(lat), lo = parseFloat(long);
+  if (isNaN(la) || isNaN(lo)) return null;
+  return {
+    lat:  (la >= 0 ? 'N' : 'S') + Math.abs(la),
+    long: (lo >= 0 ? 'E' : 'W') + Math.abs(lo),
+  };
+}
+
+// Media path: reverse of _grampsMediaPath in parser
+function _toGrampsSrc(file) {
+  if (!file) return '';
+  // Add ../OneDrive/ prefix if the path looks like a relative OneDrive path
+  if (!file.startsWith('/') && !file.startsWith('.') && !file.startsWith('http')) {
+    return '../OneDrive/' + file;
+  }
+  return file;
+}
+
+// ─────────────────────────────────────
+//  MAIN WRITER
+// ─────────────────────────────────────
+async function writeGRAMPS(db) {
+  if (!db || !db.individuals) throw new Error('Kein db vorhanden');
+
+  // ── Counter + handle generation ──────────────────────────────────────────
+  let _hctr = 0;
+  const _h = prefix => `_pwa${prefix}${String(++_hctr).padStart(8, '0')}`;
+
+  // ── Inverse handle map: @ID@ → original grampsHandle ─────────────────────
+  const idToHandle = {};
+  for (const [handle, id] of Object.entries(db._grampsHandles || {})) {
+    idToHandle[id] = handle;
+  }
+  const _entityHandle = (id, prefix) => idToHandle[id] || _h(prefix);
+
+  // ── Deduplicating collectors ──────────────────────────────────────────────
+  let evCtr=0, plCtr=0, citCtr=0, noteCtr=0, objCtr=0;
+  const evRecs   = [];        // in order
+  const plRecs   = {};        // placeStr → rec
+  const citRecs  = {};        // key → rec
+  const noteRecs = {};        // text → rec (for inline event notes)
+  const objRecs  = {};        // file → rec
+
+  const _plHandle = (plStr, lat, long) => {
+    if (!plStr) return null;
+    if (!plRecs[plStr]) {
+      plRecs[plStr] = { handle: _h('pl'), id: `P${String(plCtr++).padStart(4,'0')}`, title: plStr, lat, long };
+    }
+    return plRecs[plStr].handle;
+  };
+
+  const _citHandle = (srcId, page, quay) => {
+    const srcH = idToHandle[srcId];
+    if (!srcH) return null;
+    const key = `${srcH}|${page||''}|${quay||0}`;
+    if (!citRecs[key]) {
+      citRecs[key] = {
+        handle: _h('ci'),
+        id: `C${String(citCtr++).padStart(4,'0')}`,
+        sourceHandle: srcH,
+        confidence: _QUAY_TO_CONF[Math.min(3, Math.max(0, +quay || 0))],
+        page: page || ''
+      };
+    }
+    return citRecs[key].handle;
+  };
+
+  const _noteHandle = (text, type) => {
+    if (!text) return null;
+    if (!noteRecs[text]) {
+      noteRecs[text] = { handle: _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: type||'General' };
+    }
+    return noteRecs[text].handle;
+  };
+
+  const _objHandle = (file, titl, mime) => {
+    if (!file) return null;
+    if (!objRecs[file]) {
+      objRecs[file] = { handle: _h('ob'), id: `O${String(objCtr++).padStart(4,'0')}`, src: _toGrampsSrc(file), mime: mime||'image/jpeg', desc: titl||'' };
+    }
+    return objRecs[file].handle;
+  };
+
+  // ── Collect event from event-like object, return {handle, role} or null ───
+  const _collectEv = (grampsType, evObj, role) => {
+    if (!evObj?.seen && !evObj?.date && !evObj?.place && !(evObj?.sources?.length)) return null;
+    const handle   = _h('ev');
+    const id       = `E${String(evCtr++).padStart(4,'0')}`;
+    const plHandle = _plHandle(evObj.place || null, evObj.lati, evObj.long);
+    const citHandles = (evObj.sources || [])
+      .map(srcId => _citHandle(srcId, evObj.sourcePages?.[srcId], evObj.sourceQUAY?.[srcId] ?? 0))
+      .filter(Boolean);
+    const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
+    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', citHandles, noteHandle });
+    return { handle, role: role||'Primary' };
+  };
+
+  // ── Resolve EVEN-type events (value = "TypeName: description") ────────────
+  const _resolveEvenType = (ev) => {
+    const val = ev.value || '';
+    const colon = val.indexOf(':');
+    if (colon > 0) return { type: val.slice(0, colon).trim(), desc: val.slice(colon+1).trim() };
+    return { type: val || 'Event', desc: '' };
+  };
+
+  // ── Process persons ───────────────────────────────────────────────────────
+  const personEvRefs  = {};  // @ID@ → [{handle, role}]
+  const personObjRefs = {};  // @ID@ → [objHandle]
+  const personCitRefs = {};  // @ID@ → [citHandle]  (top-level)
+  const personNoteRefs= {};  // @ID@ → [noteHandle]
+
+  for (const [pId, p] of Object.entries(db.individuals)) {
+    const refs = [];
+
+    // Structured events
+    if (p.birth?.seen || p.birth?.date)
+      { const r = _collectEv('Birth', p.birth, 'Primary'); if (r) refs.push(r); }
+    if (p.chr?.seen || p.chr?.date)
+      { const r = _collectEv('Christening', p.chr, 'Primary'); if (r) refs.push(r); }
+    if (p.death?.seen || p.death?.date)
+      { const r = _collectEv('Death', p.death, 'Primary'); if (r) refs.push(r); }
+    if (p.buri?.seen || p.buri?.date)
+      { const r = _collectEv('Burial', p.buri, 'Primary'); if (r) refs.push(r); }
+
+    // Other events
+    for (const ev of p.events || []) {
+      if (!ev?.type) continue;
+      const mapped = _GED_TO_GRAMPS[ev.type];
+      let grampsType, desc;
+      if (mapped === null) {
+        const resolved = _resolveEvenType(ev);
+        grampsType = resolved.type;
+        desc = resolved.desc;
+      } else {
+        grampsType = mapped || ev.type;
+        desc = ev.value || '';
+      }
+      const r = _collectEv(grampsType, { ...ev, seen: true, value: desc }, 'Primary');
+      if (r) refs.push(r);
+    }
+
+    personEvRefs[pId]   = refs;
+    personObjRefs[pId]  = (p.media||[]).map(m => _objHandle(m.file, m.titl, m.mime)).filter(Boolean);
+    personCitRefs[pId]  = (p.topSources||[]).map(s => _citHandle(s, p.topSourcePages?.[s], p.topSourceQUAY?.[s]??0)).filter(Boolean);
+
+    // Person notes (from noteTexts or db.notes)
+    const pNotes = [];
+    for (const nId of p.noteRefs || []) {
+      const noteObj = db.notes?.[nId];
+      const text = noteObj?.text || '';
+      if (text) {
+        const nh = noteObj?._grampsHandle || _noteHandle(text, 'General');
+        // Ensure noteRecs has an entry
+        if (!Object.values(noteRecs).find(r => r.handle === (noteObj?._grampsHandle || ''))) {
+          if (!noteRecs[text]) {
+            noteRecs[text] = { handle: noteObj?._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: 'General' };
+          }
+        }
+        pNotes.push(noteRecs[text]?.handle || nh);
+      }
+    }
+    // Also inline note text if no refs
+    if (!p.noteRefs?.length && p.noteText) {
+      pNotes.push(_noteHandle(p.noteText, 'General'));
+    }
+    personNoteRefs[pId] = [...new Set(pNotes)].filter(Boolean);
+  }
+
+  // ── Process families ──────────────────────────────────────────────────────
+  const famEvRefs   = {};  // @ID@ → [{handle, role}]
+  const famNoteRefs = {};  // @ID@ → [noteHandle]
+
+  for (const [fId, f] of Object.entries(db.families)) {
+    const refs = [];
+
+    if (f.marr?.seen || f.marr?.date)
+      { const r = _collectEv('Marriage', f.marr, 'Family'); if (r) refs.push(r); }
+    if (f.engag?.seen || f.engag?.date)
+      { const r = _collectEv('Engagement', f.engag, 'Family'); if (r) refs.push(r); }
+    if (f.div?.seen || f.div?.date)
+      { const r = _collectEv('Divorce', f.div, 'Family'); if (r) refs.push(r); }
+    if (f.divf?.seen || f.divf?.date)
+      { const r = _collectEv('Divorce Filing', f.divf, 'Family'); if (r) refs.push(r); }
+    for (const ev of f.events || []) {
+      if (!ev?.type) continue;
+      const mapped = _GED_TO_GRAMPS[ev.type];
+      let grampsType = mapped === null ? _resolveEvenType(ev).type : (mapped || ev.type);
+      const r = _collectEv(grampsType, { ...ev, seen: true }, 'Family');
+      if (r) refs.push(r);
+    }
+
+    famEvRefs[fId] = refs;
+
+    const fNotes = [];
+    for (const nId of f.noteRefs || []) {
+      const noteObj = db.notes?.[nId];
+      const text = noteObj?.text || '';
+      if (text) {
+        if (!noteRecs[text]) {
+          noteRecs[text] = { handle: noteObj?._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: 'General' };
+        }
+        fNotes.push(noteRecs[text].handle);
+      }
+    }
+    if (!f.noteRefs?.length && f.noteText) fNotes.push(_noteHandle(f.noteText, 'General'));
+    famNoteRefs[fId] = [...new Set(fNotes)].filter(Boolean);
+  }
+
+  // ── Collect source media objects ──────────────────────────────────────────
+  for (const s of Object.values(db.sources)) {
+    for (const m of s.media || []) _objHandle(m.file, m.titl, m.mime);
+  }
+
+  // ── Build XML ──────────────────────────────────────────────────────────────
+  const L = []; // output lines
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+  L.push('<?xml version="1.0" encoding="UTF-8"?>');
+  L.push('<!DOCTYPE database PUBLIC "-//Gramps//DTD Gramps XML 1.7.2//EN"');
+  L.push('"http://gramps-project.org/xml/1.7.2/grampsxml.dtd">');
+  L.push('<database xmlns="http://gramps-project.org/xml/1.7.2/">');
+  L.push('  <header>');
+  L.push(`    <created date="${today}" version="6.0.6"/>`);
+  L.push('  </header>');
+
+  // ── Events ──────────────────────────────────────────────────────────────
+  if (evRecs.length) {
+    L.push('  <events>');
+    for (const ev of evRecs) {
+      L.push(`    <event handle="${_esc(ev.handle)}" id="${_esc(ev.id)}">`);
+      L.push(`      <type>${_esc(ev.type)}</type>`);
+      const dateXML = _gedToGrampsDateXML(ev.date);
+      if (dateXML) L.push(`      ${dateXML}`);
+      if (ev.plHandle) L.push(`      <place hlink="${_esc(ev.plHandle)}"/>`);
+      if (ev.desc)    L.push(`      <description>${_esc(ev.desc)}</description>`);
+      if (ev.cause)   L.push(`      <attribute type="Cause" value="${_esc(ev.cause)}"/>`);
+      if (ev.noteHandle) L.push(`      <noteref hlink="${_esc(ev.noteHandle)}"/>`);
+      for (const ch of ev.citHandles) L.push(`      <citationref hlink="${_esc(ch)}"/>`);
+      L.push('    </event>');
+    }
+    L.push('  </events>');
+  }
+
+  // ── People ────────────────────────────────────────────────────────────────
+  L.push('  <people>');
+  for (const [pId, p] of Object.entries(db.individuals)) {
+    const handle = _entityHandle(pId, 'pe');
+    const gid    = pId.replace(/^@|@$/g, '');
+    L.push(`    <person handle="${_esc(handle)}" id="${_esc(gid)}">`);
+
+    // Gender
+    const genderMap = { M:'Male', F:'Female', U:'Unknown' };
+    L.push(`      <gender>${genderMap[p.sex] || 'Unknown'}</gender>`);
+
+    // Primary name
+    const given   = p.given   || '';
+    const surname = p.surname || '';
+    const nick    = p.nick    || '';
+    const prefix  = p.prefix  || '';
+    const suffix  = p.suffix  || '';
+    L.push('      <name type="Birth Name">');
+    if (given)   L.push(`        <first>${_esc(given)}</first>`);
+    if (surname) L.push(`        <surname>${_esc(surname)}</surname>`);
+    if (nick)    L.push(`        <nick>${_esc(nick)}</nick>`);
+    if (prefix)  L.push(`        <title>${_esc(prefix)}</title>`);
+    if (suffix)  L.push(`        <suffix>${_esc(suffix)}</suffix>`);
+    // Name sources
+    for (const srcId of p.nameSources||[]) {
+      const ch = _citHandle(srcId, p.nameSourcePages?.[srcId], p.nameSourceQUAY?.[srcId]??0);
+      if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
+    }
+    L.push('      </name>');
+
+    // Extra names
+    for (const en of p.extraNames||[]) {
+      const nameTypeMap = { birth:'Birth Name', aka:'Also Known As', married:'Married Name', nickname:'Nickname', immigrant:'Immigrant' };
+      const type = nameTypeMap[en.type] || (en.type || 'Also Known As');
+      L.push(`      <name alt="1" type="${_esc(type)}">`);
+      if (en.given)   L.push(`        <first>${_esc(en.given)}</first>`);
+      if (en.surname) L.push(`        <surname>${_esc(en.surname)}</surname>`);
+      if (en.nick)    L.push(`        <nick>${_esc(en.nick)}</nick>`);
+      L.push('      </name>');
+    }
+
+    // Event refs
+    for (const ref of personEvRefs[pId]||[]) {
+      L.push(`      <eventref hlink="${_esc(ref.handle)}" role="${_esc(ref.role)}"/>`);
+    }
+
+    // Object refs (media)
+    for (const oh of personObjRefs[pId]||[]) {
+      L.push(`      <objref hlink="${_esc(oh)}"/>`);
+    }
+
+    // Attributes
+    if (p.uid)   L.push(`      <attribute type="_UID" value="${_esc(p.uid)}"/>`);
+    if (p._stat) L.push(`      <attribute type="_STAT" value="${_esc(p._stat)}"/>`);
+    if (p.resn)  L.push(`      <attribute type="RESN" value="${_esc(p.resn)}"/>`);
+    if (p.email) L.push(`      <attribute type="E-MAIL" value="${_esc(p.email)}"/>`);
+
+    // Family links
+    for (const fc of p.famc||[]) {
+      const famId  = typeof fc === 'string' ? fc : fc.famId;
+      const famH   = _entityHandle(famId, 'fa');
+      L.push(`      <childof hlink="${_esc(famH)}"/>`);
+    }
+    for (const famId of p.fams||[]) {
+      const famH = _entityHandle(famId, 'fa');
+      L.push(`      <parentin hlink="${_esc(famH)}"/>`);
+    }
+
+    // Note refs
+    for (const nh of personNoteRefs[pId]||[]) {
+      L.push(`      <noteref hlink="${_esc(nh)}"/>`);
+    }
+
+    // Top citation refs
+    for (const ch of personCitRefs[pId]||[]) {
+      L.push(`      <citationref hlink="${_esc(ch)}"/>`);
+    }
+
+    L.push('    </person>');
+  }
+  L.push('  </people>');
+
+  // ── Families ──────────────────────────────────────────────────────────────
+  L.push('  <families>');
+  for (const [fId, f] of Object.entries(db.families)) {
+    const handle = _entityHandle(fId, 'fa');
+    const gid    = fId.replace(/^@|@$/g, '');
+    L.push(`    <family handle="${_esc(handle)}" id="${_esc(gid)}">`);
+
+    // Relationship type
+    const rel = f.marr?.seen ? 'Married' : 'Unknown';
+    L.push(`      <rel type="${rel}"/>`);
+
+    if (f.husb) L.push(`      <father hlink="${_esc(_entityHandle(f.husb,'pe'))}"/>`);
+    if (f.wife) L.push(`      <mother hlink="${_esc(_entityHandle(f.wife,'pe'))}"/>`);
+
+    for (const ref of famEvRefs[fId]||[]) {
+      L.push(`      <eventref hlink="${_esc(ref.handle)}" role="${_esc(ref.role)}"/>`);
+    }
+
+    for (const chId of f.children||[]) {
+      L.push(`      <childref hlink="${_esc(_entityHandle(chId,'pe'))}"/>`);
+    }
+
+    for (const nh of famNoteRefs[fId]||[]) {
+      L.push(`      <noteref hlink="${_esc(nh)}"/>`);
+    }
+
+    L.push('    </family>');
+  }
+  L.push('  </families>');
+
+  // ── Citations ─────────────────────────────────────────────────────────────
+  const citArr = Object.values(citRecs);
+  if (citArr.length) {
+    L.push('  <citations>');
+    for (const cit of citArr) {
+      L.push(`    <citation handle="${_esc(cit.handle)}" id="${_esc(cit.id)}">`);
+      if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
+      L.push(`      <confidence>${cit.confidence}</confidence>`);
+      L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
+      L.push('    </citation>');
+    }
+    L.push('  </citations>');
+  }
+
+  // ── Sources ───────────────────────────────────────────────────────────────
+  L.push('  <sources>');
+  for (const [sId, s] of Object.entries(db.sources)) {
+    const handle = _entityHandle(sId, 'so');
+    const gid    = sId.replace(/^@|@$/g, '');
+    L.push(`    <source handle="${_esc(handle)}" id="${_esc(gid)}">`);
+    if (s.title)  L.push(`      <stitle>${_esc(s.title)}</stitle>`);
+    if (s.author) L.push(`      <sauthor>${_esc(s.author)}</sauthor>`);
+    if (s.publ)   L.push(`      <spubinfo>${_esc(s.publ)}</spubinfo>`);
+    if (s.abbr)   L.push(`      <sabbrev>${_esc(s.abbr)}</sabbrev>`);
+    if (s.text) {
+      const nh = _noteHandle(s.text, 'Source Note');
+      L.push(`      <noteref hlink="${_esc(nh)}"/>`);
+    }
+    if (s.repo) {
+      const repoH = _entityHandle(s.repo, 're');
+      L.push(`      <reporef hlink="${_esc(repoH)}" medium="Book"/>`);
+    }
+    // Source media
+    for (const m of s.media||[]) {
+      const oh = _objHandle(m.file, m.titl, m.mime);
+      if (oh) L.push(`      <objref hlink="${_esc(oh)}"/>`);
+    }
+    L.push('    </source>');
+  }
+  L.push('  </sources>');
+
+  // ── Places ────────────────────────────────────────────────────────────────
+  const plArr = Object.values(plRecs);
+  if (plArr.length) {
+    L.push('  <places>');
+    for (const pl of plArr) {
+      L.push(`    <placeobj handle="${_esc(pl.handle)}" id="${_esc(pl.id)}" type="Unknown">`);
+      L.push(`      <ptitle>${_esc(pl.title)}</ptitle>`);
+      // Use first comma-separated segment as primary name
+      const primaryName = pl.title.split(',')[0].trim();
+      L.push(`      <pname value="${_esc(primaryName)}"/>`);
+      // Coordinates if available (lati/long stored on first event that referenced this place)
+      if (pl.lat != null && pl.long != null) {
+        const coord = _decToGrampsCoord(pl.lat, pl.long);
+        if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
+      }
+      L.push('    </placeobj>');
+    }
+    L.push('  </places>');
+  }
+
+  // ── Objects (media) ───────────────────────────────────────────────────────
+  const objArr = Object.values(objRecs);
+  if (objArr.length) {
+    L.push('  <objects>');
+    for (const obj of objArr) {
+      L.push(`    <object handle="${_esc(obj.handle)}" id="${_esc(obj.id)}">`);
+      L.push(`      <file src="${_esc(obj.src)}" mime="${_esc(obj.mime)}" description="${_esc(obj.desc)}"/>`);
+      L.push('    </object>');
+    }
+    L.push('  </objects>');
+  }
+
+  // ── Repositories ──────────────────────────────────────────────────────────
+  const repoEntries = Object.entries(db.repositories || {});
+  if (repoEntries.length) {
+    L.push('  <repositories>');
+    for (const [rId, r] of repoEntries) {
+      const handle = _entityHandle(rId, 're');
+      const gid    = rId.replace(/^@|@$/g, '');
+      L.push(`    <repository handle="${_esc(handle)}" id="${_esc(gid)}">`);
+      L.push(`      <rname>${_esc(r.name)}</rname>`);
+      L.push('      <type>Library</type>');
+      if (r.addr) {
+        L.push('      <address>');
+        L.push(`        <street>${_esc(r.addr)}</street>`);
+        L.push('      </address>');
+      }
+      if (r.www) L.push(`      <url href="${_esc(r.www)}" type="Web Home"/>`);
+      L.push('    </repository>');
+    }
+    L.push('  </repositories>');
+  }
+
+  // ── Notes ─────────────────────────────────────────────────────────────────
+  const noteArr = Object.values(noteRecs);
+  if (noteArr.length) {
+    L.push('  <notes>');
+    for (const note of noteArr) {
+      L.push(`    <note handle="${_esc(note.handle)}" id="${_esc(note.id)}" type="${_esc(note.type)}">`);
+      L.push(`      <text>${_esc(note.text)}</text>`);
+      L.push('    </note>');
+    }
+    L.push('  </notes>');
+  }
+
+  L.push('</database>');
+
+  // ── Compress to gzip ──────────────────────────────────────────────────────
+  const xmlText = L.join('\n');
+  const encoded = new TextEncoder().encode(xmlText);
+
+  const cs     = new CompressionStream('gzip');
+  const writer = cs.writable.getWriter();
+  writer.write(encoded);
+  writer.close();
+
+  const reader = cs.readable.getReader();
+  const chunks = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value); total += value.length;
+  }
+  const merged = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { merged.set(c, off); off += c.length; }
+
+  return new Blob([merged], { type: 'application/octet-stream' });
+}
+
+// ─────────────────────────────────────
+//  ROUNDTRIP TEST (browser console)
+//  Aufruf: await _grampsRoundtripTest()
+// ─────────────────────────────────────
+async function _grampsRoundtripTest() {
+  const db1 = AppState.db;
+  if (db1?._sourceFormat !== 'gramps') {
+    console.warn('Kein GRAMPS db geladen — lade zuerst eine .gramps Datei');
+    return null;
+  }
+
+  console.log('=== GRAMPS Roundtrip Test ===');
+  console.log(`DB1: ${Object.keys(db1.individuals).length} Personen, ` +
+              `${Object.keys(db1.families).length} Familien, ` +
+              `${Object.keys(db1.sources).length} Quellen`);
+
+  // Write
+  let blob;
+  try {
+    blob = await writeGRAMPS(db1);
+    console.log(`Geschrieben: ${(blob.size/1024).toFixed(1)} KB gzip`);
+  } catch(e) {
+    console.error('writeGRAMPS fehlgeschlagen:', e);
+    return null;
+  }
+
+  // Re-parse
+  let db2;
+  try {
+    const file = new File([blob], 'roundtrip.gramps', { type: 'application/octet-stream' });
+    db2 = await parseGRAMPS(file);
+  } catch(e) {
+    console.error('parseGRAMPS (re-read) fehlgeschlagen:', e);
+    return null;
+  }
+
+  console.log(`DB2: ${Object.keys(db2.individuals).length} Personen, ` +
+              `${Object.keys(db2.families).length} Familien, ` +
+              `${Object.keys(db2.sources).length} Quellen`);
+
+  // Compare
+  const n1 = Object.keys(db1.individuals).length;
+  const n2 = Object.keys(db2.individuals).length;
+  const f1 = Object.keys(db1.families).length;
+  const f2 = Object.keys(db2.families).length;
+  const s1 = Object.keys(db1.sources).length;
+  const s2 = Object.keys(db2.sources).length;
+
+  const ok = (label, a, b) => {
+    const pass = a === b;
+    console.log(`  ${pass ? '✓' : '✗'} ${label}: ${a} → ${b}${pass ? '' : ' DELTA=' + (b-a)}`);
+    return pass;
+  };
+
+  const results = [
+    ok('Personen', n1, n2),
+    ok('Familien', f1, f2),
+    ok('Quellen',  s1, s2),
+  ];
+
+  // Spot-check: first person
+  const pid1 = Object.keys(db1.individuals)[0];
+  const p1   = db1.individuals[pid1];
+  const p2   = db2.individuals[pid1];
+  if (p2) {
+    console.log('  Stichprobe Person 1:');
+    const chk = (k, a, b) => {
+      const pass = (a||'') === (b||'');
+      console.log(`    ${pass ? '✓' : '✗'} ${k}: "${a||''}" → "${b||''}"`);
+      return pass;
+    };
+    chk('given',   p1.given,      p2.given);
+    chk('surname', p1.surname,    p2.surname);
+    chk('sex',     p1.sex,        p2.sex);
+    chk('birth.date', p1.birth?.date, p2.birth?.date);
+    chk('famc[0]', p1.famc?.[0]?.famId, p2.famc?.[0]?.famId);
+  } else {
+    console.warn('  Person 1 nicht in DB2 gefunden');
+  }
+
+  const allOk = results.every(Boolean);
+  console.log(`\nErgebnis: ${allOk ? '✓ ROUNDTRIP OK' : '✗ DELTA vorhanden'}`);
+  return { db1, db2, blob };
+}

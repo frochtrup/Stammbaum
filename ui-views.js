@@ -609,6 +609,7 @@ const _CLICK_MAP = {
   menuSettings:            ()  => { closeModal('modalMenu'); openSettings(); },
   menuOpenFile:            ()  => { closeModal('modalMenu'); openFileOrDir(); },
   menuExport:              ()  => { closeModal('modalMenu'); exportGEDCOM(); },
+  menuGrampsExport:        ()  => { closeModal('modalMenu'); exportGRAMPS(); },
   menuBackup:              ()  => { closeModal('modalMenu'); downloadBackup(); },
   menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuLoadDemo:            ()  => { closeModal('modalMenu'); loadDemo(); },
