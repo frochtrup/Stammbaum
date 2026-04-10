@@ -9,36 +9,38 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          Stammbaum PWA v6.0 (Branch v6-dev)          │
+│          Stammbaum PWA v7.0 (Branch v7-dev)          │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
-│  index.html           — App-Shell (HTML + CSS)       │
-│  offline.html         — Offline-Fallback (SW v162)   │
+│  index.html           — App-Shell (HTML)             │
+│  styles.css           — alle App-Styles              │
+│  offline.html         — Offline-Fallback             │
 │  gedcom.js            — AppState/UIState, Labels     │
 │  gedcom-parser.js     — parseGEDCOM()                │
 │  gedcom-writer.js     — write*Record(), pushCont()   │
-│  storage.js           — IndexedDB, Dateiverwaltung   │
+│  storage.js           — Demo, Backup, Init           │
+│  storage-file.js      — IDB, File System Access API  │
 │  ui-views.js          — gemeinsame Hilfsfunktionen   │
 │  ui-views-person.js   — Personen-Detailansicht       │
 │  ui-views-family.js   — Familien-Detailansicht       │
 │  ui-views-source.js   — Quellen-Detailansicht        │
-│  ui-views-tree.js     — Sanduhr-Baum + Fan Chart     │
+│  ui-views-tree.js     — Sanduhr-Baum                 │
+│  ui-fanchart.js       — Fan Chart (SVG)              │
 │  ui-forms.js          — Formulare (Person/Fam/Src)   │
 │  ui-forms-event.js    — Event-Formular               │
 │  ui-forms-repo.js     — Archiv-Formular + Picker     │
 │  ui-media.js          — Medien Add/Edit/Delete       │
-│  ui-fanchart.js       — Fan Chart (SVG)              │
 │  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
 │  onedrive-import.js   — Foto-Import, Ordner-Browser  │
 │  onedrive.js          — Media-URL, Upload, File-I/O  │
-│  sw.js                — Service Worker (Cache v167)  │
+│  sw.js                — Service Worker (Cache v189)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~19 JS-Dateien · ~200 Funktionen · ~10500 Zeilen
+**Größe gesamt:** ~20 JS-Dateien · ~200 Funktionen · ~11000 Zeilen
 
 ---
 
@@ -116,8 +118,8 @@ navigator.share({ files: [mainFile, backupFile], title: filename });
 
 ---
 
-### ADR-006: Geo-Koordinaten nur lesen
-**Entscheidung:** Koordinaten werden gelesen und als Apple Maps Links angezeigt, aber nicht editierbar.
+### ADR-006: Geo-Koordinaten — lesen + über Orte-Tab editieren
+**Entscheidung (v7.0):** Koordinaten gehören zum Ort, nicht zum Ereignis. Koordinaten werden über den Orte-Tab bearbeitet (Ort-Detail → Bearbeiten) und wirken automatisch auf alle Ereignisse an diesem Ort. Beim Schreiben: `geoLines()` schlägt zuerst in `AppState.db.extraPlaces[placeName]` nach, Fallback auf `obj.lati/obj.long`.
 
 **Legacy-spezifisches Format:**
 ```gedcom
@@ -286,21 +288,20 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 
 ---
 
-## Roundtrip-Delta-Verlauf (MeineDaten_ancestris.ged, 2796 Personen)
+## Roundtrip-Delta-Verlauf (MeineDaten_ancestris.ged, 2811 Personen)
 
 | Stand | Delta |
 |---|---|
-| Sprint 10 Ausgangslage | -708 |
+| Ausgangslage (Sprint 10) | -708 |
 | + Verbatim Passthrough INDI/FAM | -226 |
-| Sprint 12: frelSeen/mrelSeen, extraRecords | -126 |
-| Sprint 13: alle OBJE-Kontexte | -84 |
-| Roundtrip-Fix 2026-03-24 | ~-12 |
-| Roundtrip-Fix 2026-03-26: addrExtra, NICK-Position, _FREL-Space | **-7** |
-| v4-dev 2026-03-28: HEAD `_headLines[]`, ENGA vollständig, leere Events `seen`-Flag, NOTE-Record Sub-Tags, MAP ohne PLAC | **-7** |
-| v4-dev 2026-03-28: ENGA MAP, leere DATE/PLAC `null`-Init | **≈0** |
-| v5-dev 2026-04-05: DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter fix (sw v135) | **≈0** |
-| v5-dev 2026-04-05: Parser lv>4 passthrough fix + writer `updateHeadDate=false` (sw v142) | **0** |
-| v5-dev 2026-04-05: `DSCR`/`IDNO`/`SSN` aus passthrough → `events[]` (sw v148) | **0** |
+| frelSeen/mrelSeen, extraRecords | -126 |
+| alle OBJE-Kontexte | -84 |
+| addrExtra, NICK-Position, _FREL-Space | **-7** |
+| HEAD `_headLines[]`, ENGA vollständig, `seen`-Flag, MAP ohne PLAC | **≈0** |
+| DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter (sw v135) | **≈0** |
+| Parser lv>4 fix + `updateHeadDate=false` (sw v142) | **0** |
+| `DSCR`/`IDNO`/`SSN` → `events[]` (sw v148) | **0** |
+| writeGEDCOM() in Subfunktionen, FAM-events-Duplikation behoben (sw v167) | **0** |
 
 `roundtrip_stable: true` · `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
 
@@ -439,13 +440,8 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 
 | Problem | Ursache | Status |
 |---|---|---|
-| ~~DIV/DIVF nicht editierbar~~ | → sw v134/v147: als FAM-Events strukturiert + Formularfelder | Abgeschlossen (v5-dev) |
-| Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
+| Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog (v7) |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
-| ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen (v4.0) |
-| Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
-| ~~Virtuelles Scrollen~~ | → sw v145: Spacer-div-Ansatz, O(log n) Binary-Search | Abgeschlossen (v5-dev) |
-| ~~`ui-views.js` gross~~ | → 5 Module aufgeteilt (sw v94) | Abgeschlossen (v5-dev) |
-| ~~`onedrive.js` 946 Z.~~ | → 3 Module aufgeteilt (sw v140) | Abgeschlossen (v5-dev) |
-| ~~`ui-forms.js` 1036 Z.~~ | → 3 Module aufgeteilt (sw v141) | Abgeschlossen (v5-dev) |
-| ~~`writeGEDCOM()` 477 Z.~~ | → `write*Record()`-Subfunktionen + `writeSourCitations`/`writeCHAN`/`_mediaFormStr` (sw v167) | Abgeschlossen (v6-dev) |
+| Cmd+Z = "Revert to Saved" | Kein granulares Undo — History-Stack fehlt | Backlog (v7) |
+| `_GRAMPS_ID` nicht strukturiert | Landet in `_passthrough[]` → GRAMPS-Re-Import verliert ID-Zuordnung | v7 Phase 1 |
+| `_ASSO` (Assoziationen) nur passthrough | Kein UI, kein TYPE-Handling | v7 Phase 2 |

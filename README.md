@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 5.0-dev
+# Stammbaum PWA — Version 7.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -29,16 +29,19 @@ Läuft vollständig im Browser — keine Installation, kein App Store, kein Serv
 
 ```
 stammbaum/
-├── index.html          ← App-Shell (HTML + CSS)
-├── gedcom.js           ← Globals, AppState/UIState, Labels, Datum/Ort-Helfer, Getter/Setter
+├── index.html          ← App-Shell (HTML-Struktur + Script-Tags)
+├── styles.css          ← alle App-Styles
+├── gedcom.js           ← AppState/UIState, Labels, Datum/Ort-Helfer, Getter/Setter
 ├── gedcom-parser.js    ← parseGEDCOM(), parseGeoCoord()
-├── gedcom-writer.js    ← writeGEDCOM(), pushCont()
-├── storage.js          ← IndexedDB, Dateiverwaltung, Auto-Load
-├── ui-views.js         ← gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
-├── ui-views-person.js  ← Personen-Detailansicht
-├── ui-views-family.js  ← Familien-Detailansicht
-├── ui-views-source.js  ← Quellen-Detailansicht
-├── ui-views-tree.js    ← Sanduhr-Baum + Fan Chart + Tastaturnavigation
+├── gedcom-writer.js    ← write*Record(), pushCont()
+├── storage.js          ← IndexedDB, Demo, Backup, Foto-Export, Init
+├── storage-file.js     ← IDB-Primitives, File System Access API, Export/Save
+├── ui-views.js         ← gemeinsame Hilfsfunktionen (Labels, Topbar, Event-Delegation)
+├── ui-views-person.js  ← Personen-Detailansicht + Liste
+├── ui-views-family.js  ← Familien-Detailansicht + Liste
+├── ui-views-source.js  ← Quellen-Detailansicht + Liste
+├── ui-views-tree.js    ← Sanduhr-Baum + Tastaturnavigation
+├── ui-fanchart.js      ← Fan Chart (SVG, konzentrische Halbkreis-Segmente)
 ├── ui-forms.js         ← Formulare Person/Familie/Quelle + Source-Widget + Utils
 ├── ui-forms-event.js   ← Event-Formular (showEventForm, saveEvent, deleteEvent)
 ├── ui-forms-repo.js    ← Archiv-Formular + Picker + Detail-Ansicht
@@ -47,16 +50,16 @@ stammbaum/
 ├── onedrive-import.js  ← Foto-Import-Wizard, Ordner-Browser, Pick-Modus
 ├── onedrive.js         ← Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
-├── sw.js               ← Service Worker (offline, Cache v146)
+├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v189)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
-├── index_v1.2.html     ← Archiv: Version 1.2 (Phase 1)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
 ├── UI-DESIGN.md        ← HTML-Struktur, Navigation, CSS Design-System, Sanduhr-Layout
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
-├── ROADMAP.md          ← Phasen-Übersicht, bekannte Probleme
-├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v4.0
+├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
+├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v7.0
 └── MEMORY.md           ← Projekt-Memory für KI-Kontext
 ```
 
@@ -86,7 +89,6 @@ stammbaum/
 | Download-Fallback (Safari/Firefox) | `<a download>` → Datei im Browser-Download-Ordner + Zeitstempel-Backup |
 | iOS Speichern (lokal) | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
 | Demo-Modus | Menü → Demo-Daten öffnen |
-| URL-Parameter `?datei=` | Dateiname in der Topbar anzeigen — z.B. `index.html?datei=MeineDaten.ged` |
 | **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
 | **Keyboard-Shortcuts** | `Cmd/Ctrl+S` = Speichern · `Cmd/Ctrl+Z` = Änderungen verwerfen · `Escape` = Modal schließen · `←` = Baum zurück |
 
@@ -100,21 +102,22 @@ stammbaum/
 - Kinder mehrzeilig bei mehr als 4 (max. 4 pro Zeile)
 - **Kekule-Nummern**: Ahnentafel-Nummern auf allen Vorfahren-Karten (1=Proband, 2=Vater, 3=Mutter …)
 - **Konfigurierbarer Proband**: Startperson des Baums wählbar (Button in Topbar)
-- **Pinch-Zoom**: Touch-Geste skaliert den Baum (0.4×–2.0×)
+- **Pinch-Zoom**: Touch-Geste skaliert den Baum (0.3×–3.0×)
 - **Drag-to-Pan**: Maus-Drag scrollt den Baum (Desktop)
 - **Vollbild-Modus**: ⤢-Button blendet Sidebar aus (Desktop)
 - **Tastaturnavigation**: ↑ Vater · Shift+↑ Mutter · ↓ Kind · → Partner · ← Zurück (Desktop)
 - **Desktop Auto-Fit-Zoom**: Baum passt sich beim ersten Laden an die Fenstergröße an
+- **Fan Chart**: ◑-Button in Topbar — konzentrische Halbkreis-Segmente (3–6 Generationen)
 
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
 - **Suche** über: Name, Titel, alle Ereignisse (Typ, Wert, Datum, Ort), Notizen, Religion
 - **Geburtsjahr-Filter**: Von/Bis-Felder mit ✕-Clear-Button
-- **Foto**: Upload im Personen-Formular, Anzeige (80×96px) links neben Name in Detailansicht; Klick öffnet Lightbox
+- **Foto**: Upload im Personen-Formular, Anzeige links neben Name in Detailansicht; Klick öffnet Lightbox
 - **Mehrere Fotos**: Medien-Abschnitt mit allen Fotos klickbar; „Als Hauptfoto setzen" in Lightbox
-- **Medien bearbeiten**: + Hinzufügen (Titel + Dateiname, optional aus OneDrive) · × Entfernen — direkt in der Detailansicht
+- **Medien bearbeiten**: + Hinzufügen (Titel + Dateiname, optional aus OneDrive) · × Entfernen
 - **Detail**: Geburt, Taufe, Tod (inkl. Todesursache), Beerdigung, alle weiteren Ereignisse
-- **Quellen-Badges** `§N` direkt in der Ereigniszeile → klickbar zur Quellen-Detailansicht
+- **Quellen-Badges** `§N` direkt in der Ereigniszeile → klickbar zur Quellen-Detailansicht; QUAY-Farbindikator (Rot/Orange/Blau/Grün)
 - **📍** Geo-Links öffnen Apple Maps bei Ereignissen mit Koordinaten
 - **Familie-Links**: direkte Navigationszeilen zu Ehe-Familie und Herkunftsfamilie
 
@@ -122,14 +125,14 @@ stammbaum/
 - **Suche** nach Name, Heiratsdatum, Heiratsort
 - Liste: Elternpaar, Heiratsdatum, Kinderanzahl
 - Detail: Heirat (Datum, Ort, Geo-Link, Quellen), Mitglieder anklickbar
-- **Medien bearbeiten**: + Hinzufügen · × Entfernen — direkt in der Familiendetailansicht
+- **Medien bearbeiten**: + Hinzufügen · × Entfernen
 - ⧖-Button öffnet Sanduhr zentriert auf den Ehemann
 
 ### Quellen-Tab
 - **Suche** nach Titel, Kurzname, Autor
 - Liste: Kurzname (ABBR), Autor, Datum, Anzahl Referenzen, 🏛-Badge bei verknüpftem Archiv
-- Detail: alle Metadaten + alle referenzierenden Personen und Familien
-- **Medien bearbeiten**: + Hinzufügen · × Entfernen — direkt in der Quellendetailansicht
+- Detail: alle Metadaten + alle referenzierenden Personen und Familien (inkl. PAGE/QUAY je Verwendung)
+- **Medien bearbeiten**: + Hinzufügen · × Entfernen
 - **Archive-Sektion**: alle REPO-Records mit Quellen-Zähler; Sprungbutton „🏛 Archive"
 
 ### Orte-Tab
@@ -137,27 +140,27 @@ stammbaum/
 - Automatisch aus allen Ereignissen gesammelt (Geburt, Taufe, Tod, Beerdigung, weitere)
 - Alphabetisch mit 📍 bei vorhandenen Koordinaten
 - Detail: Apple Maps Link + alle Personen dieses Ortes
-- **Ort umbenennen**: Bearbeiten-Button → benennt in allen Personen und Familien um
+- **Ort bearbeiten**: Name umbenennen (wirkt auf alle Personen/Familien) + Koordinaten editieren (Dezimalgrad oder GEDCOM-Format)
 
 ### Bearbeiten
 | Was | Felder |
 |---|---|
-| Person | Name (Vor-/Nachname, Präfix, Suffix), Geschlecht, Titel, Religion, Notiz, RESN, E-Mail, Website |
+| Person | Name (Vor-/Nachname, Präfix, Suffix, Rufname), Geschlecht, Titel, Notiz, RESN, E-Mail, Website |
 | Ereignis | Typ (BIRT/CHR/DEAT/BURI/OCCU/RESI/EVEN/FACT/MILI/…), Datum (Qualifier + Tag/Monat/Jahr), Ort (Freitext oder 6-Felder), Adresse (bei RESI), Todesursache (bei DEAT), Quellen + Seitenangabe + Qualität (QUAY) |
-| Familie | Eltern (Dropdown), Heirat + Verlobung (Datum, Ort), Kinder hinzufügen/entfernen, Quellen |
+| Familie | Eltern (Dropdown), Heirat + Verlobung (Datum, Ort), Kinder hinzufügen/entfernen, Quellen + PAGE/QUAY |
 | Quelle | Titel, Kurzname, Autor, Datum, Verlag, Archiv (aus REPO-Liste), Signatur (CALN), Notiz |
 | Archiv | Name, Adresse, Telefon, Website, E-Mail |
-| Ort | Name umbenennen (wirkt sich auf alle Personen und Familien aus) |
+| Ort | Name umbenennen + Koordinaten (wirkt sich auf alle Personen und Familien aus) |
 
-**Beziehungen modellieren** (v1.1): `+ Ehepartner`, `+ Kind`, `+ Elternteil` direkt in den Detailansichten — bestehende Person wählen oder neue erstellen → Familien-Formular öffnet vorausgefüllt.
+**Beziehungen modellieren**: `+ Ehepartner`, `+ Kind`, `+ Elternteil` direkt in den Detailansichten — bestehende Person wählen oder neue erstellen → Familien-Formular öffnet vorausgefüllt.
 
-**Archive / Repositories** (v1.2): GEDCOM `0 @Rxx@ REPO`-Records vollständig unterstützt — Picker im Quellen-Formular, Detailansicht mit verlinkten Quellen, CALN (Signatur).
+**Archive / Repositories**: GEDCOM `0 @Rxx@ REPO`-Records vollständig unterstützt — Picker im Quellen-Formular, Detailansicht mit verlinkten Quellen, CALN (Signatur).
 
 **Quellen-Widget**: einheitlich in allen Formularen — Tags mit ✕, aufklappbare Picker-Liste; im Ereignis-Formular zusätzlich editierbares Seitenfeld (PAGE) und Qualitäts-Dropdown (QUAY 0–3) pro Quelle.
 
-**Strukturiertes Datum** (v2.0): Qualifier-Dropdown (exakt / ca. / vor / nach / zwischen) + 3-Felder-Eingabe (Tag / Monat / Jahr). Monat akzeptiert Zahlen und deutsch/englische Namen.
+**Strukturiertes Datum**: Qualifier-Dropdown (exakt / ca. / vor / nach / zwischen) + 3-Felder-Eingabe (Tag / Monat / Jahr). Monat akzeptiert Zahlen und deutsch/englische Namen.
 
-**Strukturierter Ort** (v2.0): Toggle zwischen Freitext und 6-Felder-Eingabe (Dorf / Stadt / PLZ / Landkreis / Bundesland / Staat) entsprechend dem PLAC.FORM aus dem GEDCOM-Header.
+**Strukturierter Ort**: Toggle zwischen Freitext und 6-Felder-Eingabe (Dorf / Stadt / PLZ / Landkreis / Bundesland / Staat) entsprechend dem PLAC.FORM aus dem GEDCOM-Header.
 
 ---
 
@@ -165,16 +168,18 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Stammbaum PWA v4.0                          │
+│  Stammbaum PWA v7.0                          │
 │  Vanilla JS · Kein Framework · Kein Build    │
 │                                              │
-│  index.html        — App-Shell, CSS          │
+│  index.html        — App-Shell               │
+│  styles.css        — alle Styles             │
 │  gedcom.js         — State, Labels, Helfer   │
 │  gedcom-parser.js  — parseGEDCOM()           │
-│  gedcom-writer.js  — writeGEDCOM()           │
-│  storage.js        — IDB, Dateiverwaltung    │
+│  gedcom-writer.js  — write*Record()          │
+│  storage*.js       — IDB, Dateiverwaltung    │
 │  ui-views*.js      — Baum, Detail, Listen    │
 │  ui-forms*.js      — Formulare (3 Module)    │
+│  ui-fanchart.js    — Fan Chart (SVG)         │
 │  ui-media.js       — Medien                  │
 │  onedrive*.js      — OAuth, Fotos (3 Module) │
 │  sw.js             — Service Worker (offline)│
@@ -194,7 +199,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
-**Version 5.0-dev** — April 2026 — Branch `v5-dev` · sw v146
+**Version 7.0** — April 2026 — Branch `v7-dev` · sw v189
 
 ---
 
@@ -202,23 +207,23 @@ stammbaum/
 
 ```
 1. github.com → neues Repository „stammbaum" (public)
-2. index.html hochladen (Upload files)
+2. Alle Dateien hochladen
 3. Settings → Pages → Branch: main → Save
 4. URL: https://[username].github.io/stammbaum
 ```
 
-Update: `index.html` ersetzen → nach ~1 Minute aktiv.
+Update: Geänderte Dateien ersetzen → nach ~1 Minute aktiv.
 
 ---
 
-## Workflow: Stammbaum App ↔ Ancestris (Mac)
+## Workflow: GEDCOM-Dateien
 
 ### OneDrive-Workflow (Standard)
 
-OneDrive ist der primäre Workflow: Ancestris exportiert direkt in OneDrive, die App liest und schreibt dieselbe Datei via Microsoft Graph API — kein manuelles Übertragen mehr.
+OneDrive ist der primäre Workflow: GEDCOM-Datei direkt in OneDrive ablegen, die App liest und schreibt dieselbe Datei via Microsoft Graph API.
 
 ```
-Ancestris (Mac)
+Desktop-Programm (GRAMPS, Ancestris, …)
   └─ Datei → Export → GEDCOM → OneDrive/Genealogie/MeineDaten.ged
 
 Stammbaum App (Browser, beliebiges Gerät)
@@ -227,36 +232,31 @@ Stammbaum App (Browser, beliebiges Gerät)
      → Bearbeiten …
      → Menü → 💾 In OneDrive speichern
 
-Ancestris (Mac):
+Desktop-Programm:
   └─ Datei automatisch aktualisiert (OneDrive-Sync)
-     → kein manueller Import nötig
 ```
 
 **Voraussetzung (einmalig):** Azure App Registration mit `Files.ReadWrite`-Permission und Redirect-URI `https://[username].github.io/stammbaum/` (kostenlos, ~5 Min. im Azure Portal).
 
-**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `sessionStorage` (nicht persistent nach Tab-Schließen) · `od_base_path` = GED-Datei-Ordner (auto-abgeleitet) · alle Medienpfade relativ dazu · `@microsoft.graph.downloadUrl` für CORS-freien Foto-Fetch · Session-Cache (Data-URLs, iOS-kompatibel)
+**Technisch:** Microsoft Graph API · PKCE OAuth (kein Server nötig) · Token in `sessionStorage` · `od_base_path` = GED-Datei-Ordner (auto-abgeleitet) · alle Medienpfade relativ dazu · `@microsoft.graph.downloadUrl` für CORS-freien Foto-Fetch
 
 ### Lokaler Workflow (Fallback)
 
 ```
-Ancestris (Mac)
+Desktop-Programm
   └─ Datei → Export → GEDCOM → iCloud Drive/Genealogie/MeineDaten.ged
 
 Stammbaum App
-  └─ Menü → Öffnen… (lokal) → .ged-Datei wählen
-     → Bearbeiten …
+  └─ Menü → Öffnen… (lokal) → .ged-Datei wählen → Bearbeiten …
 
 Änderungen speichern (iOS):
   └─ 💾 Speichern → Share Sheet → In Dateien sichern → iCloud Drive/Genealogie
 
 Änderungen speichern (Mac, Chrome):
-  └─ 💾 Speichern → direkt in Originaldatei (Schreiberlaubnis beim Öffnen erteilt)
+  └─ 💾 Speichern → direkt in Originaldatei
 
 Änderungen speichern (Mac, Safari):
   └─ 💾 Speichern → Download-Ordner (+ Zeitstempel-Backup)
-
-Ancestris (Mac):
-  └─ Datei → Import → GEDCOM → MeineDaten.ged übernehmen
 ```
 
 ---
@@ -276,9 +276,9 @@ Dev-Server via `.claude/launch.json` konfiguriert.
 
 | Plattform | Browser | Laden | Speichern |
 |---|---|---|---|
-| iPhone (iOS 17+) | Safari | ✅ | ✅ Share Sheet |
-| iPhone (iOS 17+) | Chrome | ✅ | ⚠️ Share Sheet nicht unterstützt |
-| Mac | Safari | ✅ | ⚠️ Download (direktes Speichern nicht möglich) |
-| Mac | Chrome | ✅ | ✅ Direktes Speichern |
-| Mac | Firefox | ✅ | ⚠️ Download |
-| Android | Chrome | ✅ | ⚠️ Apple Maps Links funktionieren nicht |
+| iPhone (iOS 17+) | Safari | ✅ | ✅ OneDrive (primär) / Share Sheet (lokal) |
+| iPhone (iOS 17+) | Chrome | ✅ | ✅ OneDrive (primär) |
+| Mac | Safari | ✅ | ✅ OneDrive (primär) / Download (lokal) |
+| Mac | Chrome | ✅ | ✅ OneDrive (primär) / Direktes Speichern (lokal) |
+| Mac | Firefox | ✅ | ✅ OneDrive (primär) / Download (lokal) |
+| Android | Chrome | ✅ | ✅ OneDrive (primär) |

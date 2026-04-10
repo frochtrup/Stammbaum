@@ -36,7 +36,7 @@ let changed = false;  // Ungespeicherte Änderungen?
   nick:        'Heini',                  // NICK (v4-dev)
   sex:         'M',                      // M | F | U
   titl:        'Graf',
-  reli:        'evangelisch',            // als events[] strukturiert (seit v4-dev)
+  reli:        'evangelisch',            // RELI als String (zusätzlich auch als events[] möglich)
   uid:         'ABC123',                 // _UID (Ancestris)
   resn:        '',                       // RESN (v2.0-dev)
   email:       '',                       // EMAIL (v2.0-dev)
@@ -244,97 +244,90 @@ birth.sourceMedia['@S4@'] = [
 
 ## JavaScript-Sektionen
 
-Alle Dateien laden global, kein import/export. Reihenfolge: `gedcom.js` → `storage.js` → `ui-views.js` → `ui-forms.js`
+Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → `storage-file.js` → `storage.js` → `ui-views.js` → `ui-views-person.js` → … → `ui-forms.js` → …
 
 | Sektion | Datei | Hauptfunktionen |
 |---|---|---|
-| State & IDs | gedcom.js | `nextId(prefix)` |
-| GEDCOM Parser | gedcom.js | `parseGEDCOM(text)`, `parseGeoCoord(val)`, `parseGedDate()` |
-| GEDCOM Writer | gedcom.js | `writeGEDCOM()`, `eventBlock()`, `geoLines()` |
-| IndexedDB | storage.js | `_getIDB()`, `idbGet()`, `idbPut()`, `idbDel()` |
-| Export / Speichern | storage.js | `exportGEDCOM()`, `saveToFileHandle()`, `readFile()`, `loadDemo()`, `tryAutoLoad()` |
-| Navigation | ui-views.js | `showView()`, `showMain()`, `showTree()`, `goBack()`, `setBnavActive()` |
-| Personen-Liste | ui-views.js | `renderPersonList()`, `filterPersons()` |
-| Familien-Liste | ui-views.js | `renderFamilyList()`, `filterFamilies()` |
-| Quellen-Liste | ui-views.js | `renderSourceList()`, `filterSources()`, `renderRepoList()` |
+| State & IDs | gedcom.js | `nextId(prefix)`, AppState/UIState |
+| GEDCOM Parser | gedcom-parser.js | `parseGEDCOM(text)`, `parseGeoCoord(val)`, `parseGedDate()` |
+| GEDCOM Writer | gedcom-writer.js | `writeGEDCOM()`, `writeINDIRecord()`, `writeFAMRecord()`, `eventBlock()`, `geoLines()` |
+| IndexedDB + File I/O | storage-file.js | `_getIDB()`, `idbGet()`, `idbPut()`, `idbDel()`, `exportGEDCOM()`, `saveToFileHandle()`, `readFile()` |
+| Demo / Backup / Init | storage.js | `loadDemo()`, `tryAutoLoad()`, `fotoExport()` |
+| Navigation + Event-Delegation | ui-views.js | `showView()`, `showMain()`, `showTree()`, `goBack()`, `setBnavActive()`, `_CLICK_MAP` |
+| Personen-Liste + Detail | ui-views-person.js | `renderPersonList()`, `filterPersons()`, `showDetail()` |
+| Familien-Liste + Detail | ui-views-family.js | `renderFamilyList()`, `filterFamilies()`, `showFamilyDetail()` |
+| Quellen-Liste + Detail + Archiv | ui-views-source.js | `renderSourceList()`, `filterSources()`, `showSourceDetail()`, `showRepoDetail()` |
+| Stammbaum | ui-views-tree.js | `showTree()`, `mkCard()`, `line()`, `_treeShortName()`, `treeNavBack()` |
+| Fan Chart | ui-fanchart.js | `showFanChart()` |
 | Orte-System | ui-views.js | `collectPlaces()`, `renderPlaceList()`, `showPlaceDetail()`, `savePlace()` |
-| Stammbaum | ui-views.js | `showTree()`, `mkCard()`, `line()`, `lineHalf()`, `_treeShortName()` |
-| Detail-Ansichten | ui-views.js | `showDetail()`, `showFamilyDetail()`, `showSourceDetail()` |
-| Beziehungs-Picker | ui-views.js | `showAddSpouseFlow()`, `unlinkMember()`, `openRelFamilyForm()` |
-| Archiv-CRUD | ui-views.js | `showRepoDetail()`, `showRepoForm()`, `saveRepo()` |
 | Render-Helfer | ui-views.js | `factRow()`, `srcNum()`, `sourceTagsHtml()`, `relRow()` |
+| Formulare Person/Familie/Quelle | ui-forms.js | `showPersonForm()`, `savePerson()`, `showFamilyForm()`, `saveFamily()`, `showSourceForm()`, `saveSource()` |
 | Quellen-Widget | ui-forms.js | `initSrcWidget()`, `renderSrcTags()`, `toggleSrc()`, `updateSrcPage()` |
-| Formulare | ui-forms.js | `showPersonForm()`, `savePerson()`, `showFamilyForm()`, `saveFamily()`, `showEventForm()`, `saveEvent()`, `showSourceForm()`, `saveSource()` |
-| OneDrive | ui-forms.js | `_odConnect()`, `_odShowFolder()`, `_odGetPhotoUrl()`, `_odGetSourceFileUrl()`, `odScanDocFolder()`, `odSetupDocFolder()` |
-| Medien | ui-forms.js | `openAddMediaDialog()`, `confirmAddMedia()`, `deletePersonMedia()`, `deleteSourceMedia()` |
+| Event-Formular | ui-forms-event.js | `showEventForm()`, `saveEvent()`, `deleteEvent()` |
+| Archiv-Formular + Picker | ui-forms-repo.js | `showRepoForm()`, `saveRepo()`, `showRepoPicker()` |
+| Medien | ui-media.js | `openAddMediaDialog()`, `confirmAddMedia()`, `deletePersonMedia()` |
+| OneDrive Auth | onedrive-auth.js | `_odConnect()`, `_odLogout()`, `_odRefreshTokenSilent()` |
+| OneDrive Import | onedrive-import.js | `_odShowFolder()`, `_odPickSelectFile()` |
+| OneDrive File I/O | onedrive.js | `_odGetMediaUrlByPath()`, `_odSaveFile()`, `openSettings()` |
 | Utils | ui-forms.js | `esc()`, `showToast()`, `openModal()`, `closeModal()` |
 
 ---
 
-## Globale Variablen
+## State-Management
+
+Alle persistenten Werte in `AppState` (gedcom.js), UI-Zustand in `UIState` (gedcom.js). Keine losen Globals mehr. Backward-compat-Shims via `Object.defineProperty` auf `window`.
 
 ```javascript
-// Hauptdaten
-let db = { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{}, notes:{}, placForm:'' };
-let changed = false;               // Ungespeicherte Änderungen?
-let _placesCache = null;           // Cache für collectPlaces(); geleert in markChanged()
+AppState = {
+  db: { individuals:{}, families:{}, sources:{}, extraPlaces:{}, repositories:{}, notes:{}, placForm:'', extraRecords:[], headLines:[] },
+  changed: false,
+  idCounter: 1000,
+  currentPersonId: null,
+  currentFamilyId: null,
+  currentSourceId: null,
+  currentRepoId:   null,
+  currentTab:      'persons',
+  _fileHandle:     null,       // FileSystemFileHandle (Chrome Desktop)
+  _canDirectSave:  false,
+}
 
-// Navigation
-let currentPersonId  = null;
-let currentFamilyId  = null;
-let currentSourceId  = null;
-let currentRepoId    = null;
-let currentTab = 'persons';        // 'persons'|'families'|'sources'|'places'|'search'
-let currentTreeId = null;
-const _navHistory = [];            // {type, id|name} — Stack für goBack()
+UIState = {
+  _treeScale:      1.0,        // Zoom-Faktor Sanduhr
+  _treeHistory:    [],         // [{id}] — History-Stack für ← im Baum
+  _treeHistoryPos: -1,
+  _treeNavTargets: {},         // {up, upShift, down, right}
+  _activeSpouseMap:{},         // {personId: famId}
+  _probandId:      null,       // konfigurierbarer Proband
+  _fanGenCount:    5,          // Generationen im Fan Chart
+  _relMode:        '',         // 'spouse'|'child'|'parent'
+  _relAnchorId:    '',
+  _navHistory:     [],         // {type, id|name} — Stack für goBack()
+  _placeModes:     {},         // {placeId: 'free'|'parts'}
+  _personSort:     'name',     // 'name'|'birth'
+}
+```
 
-// Persistenz
-let _fileHandle = null;            // FileSystemFileHandle (Chrome Desktop)
-let _canDirectSave = false;        // true wenn createWritable() funktioniert
-let _idb = null;                   // IndexedDB-Instanz
-let _originalGedText = null;       // RAM-Cache des ursprünglichen GEDCOM-Texts
-// _getOriginalText(): lazy loader → _originalGedText || localStorage('stammbaum_ged_backup')
+## IDB-Keys
 
-// UI-State
-const srcWidgetState = {};         // {prefix: {ids:Set, pages:{}, quay:{}}}
-let _personSort = 'name';          // 'name' | 'birth'
-let _placeModes = {};              // {placeId: 'free'|'parts'}
+```
+// GEDCOM
+'stammbaum_ged'          — GEDCOM-Text (primär)
+'stammbaum_ged_backup'   — Original-Text für Revert
+'stammbaum_filename'     — Dateiname
+'fileHandle'             — FileSystemFileHandle (Chrome)
+'proband_id'             — konfigurierter Proband
 
-// Beziehungs-Picker (v1.1)
-let _relMode     = '';             // 'spouse'|'child'|'parent'
-let _relAnchorId = '';
-let _pendingRelation = null;       // {mode, anchorId}
+// Medien (pfad-basiert seit sw v105)
+'img:<relPath>'          — Foto-Cache (base64 Data-URL), relativer Pfad ab od_base_path
 
-// REPO (v1.2)
-let _pendingRepoLink = null;       // {sourceId}
+// OneDrive (aktuell)
+'od_base_path'           — absoluter OneDrive-Pfad des GED-Ordners (auto-gesetzt beim Laden)
+'od_photo_folder'        — { id, name, relPath } — Foto-Ordner relativ zu od_base_path
+'od_docs_folder'         — { id, name, relPath } — Dok-Ordner relativ zu od_base_path
 
-// Baum-Navigation (v4-dev)
-let _treeHistory    = [];          // [{id}] — History-Stack für ← im Baum
-let _treeHistoryPos = -1;          // aktueller Index im History-Stack
-let _treeNavTargets = {};          // {up, upShift, down, right} — pro showTree() aktualisiert
-let _prevTreeId     = null;        // letzte Tree-ID vor Überschreiben (für ← History)
-let _activeSpouseMap = {};         // {personId: famId} — aktuell angezeigte Ehe-Familie pro Person
-let _probandId      = null;        // konfigurierbarer Proband (null = kleinste ID)
-
-// OneDrive
-let _odFolderStack = [];           // Breadcrumb-Stack im Ordner-Browser
-let _odPickMode = false;           // true: Datei wählen (nicht Ordner)
-let _odDocScanMode = false;        // true: Dokumente-Ordner wählen
-let _odPhotoCache = {};            // Session-Cache: idbKey → Blob-URL
-let _addMediaOdFileId = null;      // fileId bei OneDrive-Picker-Auswahl
-let _odEditPickMode = false;       // true: OD-Picker aus Edit-Media-Modal
-
-// IDB-Keys
-// 'stammbaum_ged'          — GEDCOM-Text (primär)
-// 'stammbaum_ged_backup'   — Original-Text für Revert
-// 'stammbaum_filename'     — Dateiname
-// 'fileHandle'             — FileSystemFileHandle (Chrome)
-// 'photo_<id>_N'           — Person-Fotos (Base64 JPEG)
-// 'photo_fam_<id>_N'       — Familien-Fotos (Base64 JPEG)
-// 'photo_src_<id>_N'       — Quellen-Fotos via Kamera/Galerie (Base64 JPEG) (v4-dev sw v59)
-// 'od_filemap'             — {persons:{}, families:{}, sources:{}} — manuell verknüpfte OneDrive-Files
-// 'od_doc_filemap'         — {filename.lower: fileId} — Dokumente-Ordner-Scan
-// 'od_doc_folder'          — {folderId, folderName} — gescannter Dokumente-Ordner
-// 'od_default_folder'      — {folderId, folderName} — letzter Foto-Ordner
-// 'proband_id'             — konfigurierter Proband (null = kleinste ID) (v4-dev sw v68)
+// LEGACY / DEPRECATED (nur Migration via _odMigrateIfNeeded())
+'od_default_folder'      — alte Struktur { folderId, folderName, folderPath }
+'od_doc_folder'          — alte Struktur
+'od_filemap'             — fileId-Index-Mapping (deprecated seit sw v99)
+'od_doc_filemap'         — Basename→fileId für Dokumente-Ordner (deprecated)
 ```

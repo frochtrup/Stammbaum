@@ -5,7 +5,7 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
-## Version 6.0 (Branch `v6-dev`, ab 2026-04-05) — IN ENTWICKLUNG
+## Version 6.0 (Branch `v6-dev`, 2026-04-05 — 2026-04-10) — ABGESCHLOSSEN
 
 ---
 
