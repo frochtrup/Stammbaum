@@ -5,6 +5,69 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 7.0 (Branch `v7-dev`, ab 2026-04-10) — IN ENTWICKLUNG
+
+---
+
+### Session 2026-04-11 — Phase 3: GRAMPS XML Writer + Roundtrip (sw v193–v197)
+
+- **sw v193** `feat(Phase 3)`: `gramps-writer.js` — verlustfreier GRAMPS XML Export
+  - `writeGRAMPS(db)` → gzip-komprimierter `.gramps` Blob (CompressionStream)
+  - Handle-Rekonstruktion aus `db._grampsHandles` — Original-Handles erhalten
+  - Neue Handles für PWA-Entitäten: `_pwa{prefix}{counter}` Format
+  - Events als Top-Level-Objekte; dedupl. Citations, Places, Notes, Objects per Collector
+  - GEDCOM→GRAMPS Datum: `_gedToGrampsDateXML()` für alle Formate (dateval/datespan/daterange/datestr)
+  - GEDCOM→GRAMPS Eventtyp: `_GED_TO_GRAMPS`-Map; EVEN-Werte via `TypeName: description`
+  - `_grampsRoundtripTest()` — Basis-Roundtrip (Counts + Person-Stichprobe)
+  - `exportGRAMPS()` in `storage-file.js` — iOS Share-Sheet / Desktop-Download
+  - Menü-Button "Als GRAMPS exportieren" (nur sichtbar wenn `_sourceFormat === 'gramps'`)
+  - SW PRECACHE: `gramps-writer.js` ergänzt
+- **sw v194** `test`: `_grampsDeepTest()` — 55534 Checks über alle Personen/Familien/Quellen
+  - Alle Namen (given/surname/nick/prefix/suffix/extraNames), Daten, Orte
+  - Attribute (_UID/_STAT), Medien-Pfade, GRAMPS Handles (Stichprobe 20)
+- **sw v195** `feat`: GRAMPS Orts-Hierarchie vollständig erhalten
+  - Parser: `placeHandleToId` + `db.placeObjects{}` (id, title, type, pnames[], lat/long, parentId)
+  - Alle Place-Handles in `_grampsHandles` für Round-trip
+  - `placeId` auf allen Events (structured + array, INDI + FAM)
+  - Writer: `db.placeObjects` direkt schreiben (ptitle, pname[], coord, placeref-Hierarchie)
+  - Fallback auf flache String-Orte für GEDCOM-Quellen
+  - Fix: `_grampsHandles` Deklaration vor Places-Schleife verschoben (sw v196)
+- **sw v197** `feat`: childref Attribute + vollständiger GRAMPS-Attribute-Roundtrip
+  - Parser: `childref` frel/mrel → `f.childRelations[childId]`
+  - Parser: Person `_grampsAttrs[]` (alle `<attribute>` außer _UID/_STAT/RESN/E-MAIL)
+  - Parser: Familie `_grampsAttrs[]` (alle `<attribute>`)
+  - Parser: Events `_grampsAttrs[]` (alle `<attribute>` außer Cause) — structured + array, INDI + FAM
+  - Writer: childref mit `frel`/`mrel` aus `f.childRelations`
+  - Writer: `_grampsAttrs` auf Events, Personen, Familien
+  - Deep Test erweitert: 59896 Checks, 0 Fehler ✓
+
+**Roundtrip-Ergebnis:** 2894 Personen, 910 Familien, 138 Quellen, 139 Orte — alle Checks ✓
+
+---
+
+### Session 2026-04-11 — Phase 2: GRAMPS XML Import (sw v190–v192)
+
+- **sw v190** `feat(Phase 1)`: GRAMPS-GEDCOM-Kompatibilität
+  - `detectGRAMPS(gedText)` in `storage-file.js` — Heuristik via `HEAD SOUR GRAMPS` + `_GRAMPS_ID`
+  - `grampId`-Felder auf Person/Familie/Quelle strukturiert
+  - `db._grampsMaster = true` Flag
+- **sw v191** `feat(Phase 2)`: `gramps-parser.js` — nativer GRAMPS XML Import
+  - `parseGRAMPS(file)` async → db (identische Shape wie parseGEDCOM)
+  - gzip via `DecompressionStream('gzip')` + DOMParser
+  - `_byTag(root, tag)` — namespace-sicherer Element-Lookup (getElementsByTagNameNS + Fallback)
+  - Zwei-Pass-Parsing: Handle-Maps → vollständige Objekte
+  - Event-Mapping: 25+ englische + deutsche GRAMPS-Typen → GEDCOM Tags
+  - Citation-Indirektion: confidence (0–4) → QUAY (0–3)
+  - Orts-Auflösung via placeMap (ptitle + Koordinaten)
+  - storage-file.js: `_loadGRAMPS()`, `.gramps` in `showOpenFilePicker` types
+  - index.html: `<script src="gramps-parser.js">` ergänzt
+- **sw v192** `fix`: famc-Schlüssel `fam` → `famId` (Elternverknüpfungen im Baum)
+  - `ui-views-tree.js` liest `ref.famId`, Parser hatte `fam: fId` → Baum zeigte keine Eltern
+  - Fix: vollständige GEDCOM-kompatible famc-Shape mit `famId: fId`
+  - SW-Bump erzwungen um gecachtes gramps-parser.js zu ersetzen
+
+---
+
 ## Version 6.0 (Branch `v6-dev`, 2026-04-05 — 2026-04-10) — ABGESCHLOSSEN
 
 ---

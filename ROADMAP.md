@@ -13,9 +13,10 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 6.0 | `v6-dev` | Abgeschlossen (2026-04-10) — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
-**Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v189 / Cache: `stammbaum-v189`
+**Roundtrip GEDCOM:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
+**Roundtrip GRAMPS:** `deep_test=true`, 59896 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
+**Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive / Unsere Familie.gramps — 2894 Personen
+**Aktuelle sw-Version:** v197 / Cache: `stammbaum-v197`
 
 ---
 
@@ -56,71 +57,47 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 
 ---
 
-### Phase 1 — GRAMPS-GEDCOM-Kompatibilität (sofort)
+### Phase 1 — GRAMPS-GEDCOM-Kompatibilität ✅ ABGESCHLOSSEN (sw v190)
 
-Ziel: Beim Laden einer GRAMPS-exportierten GED keine Daten verlieren und sinnvolle Hinweise geben.
-
-- [ ] **`detectGRAMPS(gedText)`** — Heuristik: `HEAD SOUR GRAMPS` + `_GRAMPS_ID`-Vorkommen; Flag `AppState.db._grampsMaster = true`; gespeichert in IDB
-- [ ] **Import-Hinweis** — nicht-blockierender Toast bei GRAMPS-Erkennung: "GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen"
-- [ ] **`_GRAMPS_ID` strukturieren** — Parser: `p.grampId = val` (INDI) / `f.grampId` (FAM) / `s.grampId` (SOUR); Writer: an korrekter Position zurückschreiben → GRAMPS kann IDs wiederfinden
-- [ ] **NAME-Duplikation prüfen + fixen** — verifizieren ob GIVN/SURN/NICK doppelt ausgegeben wird; ggf. Passthrough-Filter für NAME-Subfelder wenn bereits strukturiert vorhanden
-- [ ] **`_ASSO` dokumentieren** — ARCHITECTURE.md: _ASSO read-only / nur passthrough (kein UI, kein TYPE); keine neue Funktionalität, nur Klarheit
+- [x] **`detectGRAMPS(gedText)`** — Heuristik via `HEAD SOUR GRAMPS` + `_GRAMPS_ID`; Flag `db._grampsMaster`
+- [x] **`_GRAMPS_ID` strukturieren** — `p.grampId` / `f.grampId` / `s.grampId`
+- [ ] **Import-Hinweis** — offen (niedrige Priorität)
+- [ ] **NAME-Duplikation** — offen
+- [ ] **`_ASSO` dokumentieren** — offen
 
 ---
 
-### Phase 2 — GRAMPS XML Import (read-only)
+### Phase 2 — GRAMPS XML Import (read-only) ✅ ABGESCHLOSSEN (sw v191–v196)
 
-Ziel: `.gramps`-Dateien nativ laden, vollständiger Datenerhalt.
-
-**Neue Datei: `gramps-parser.js`**
-- [ ] gzip decompress via `DecompressionStream('gzip')` (nativ im Browser)
-- [ ] XML parse via `DOMParser` — auf iPhone: Memory-Check bei >5MB XML; ggf. chunked via `ReadableStream`
-- [ ] GRAMPS-Version aus `<database>` Header lesen → Warnung bei unbekannter Version
-- [ ] Mapping GRAMPS XML → AppState:
-
-| GRAMPS XML | AppState |
-|---|---|
-| `<person handle>` | `db.persons{}` |
-| `<family handle>` | `db.families{}` |
-| `<event handle>` | `ev` in person/family |
-| `<place handle>` | `db.placeObjects{}` (neu) |
-| `<citation>` | Zitat-Objekt |
-| `<source>` | `db.sources{}` |
-| `<object>` (media) | `media[]` |
-| `<tag>` | `db.tags{}` (neu) |
-| `<repository>` | `db.repos{}` |
-| alle handles | `db._grampsHandles{}` (neu) |
-
-**AppState-Erweiterungen:**
-- [ ] `db.placeObjects{}` — Ortshierarchie (Land > Region > Ort); PLAC-Text als Fallback für GEDCOM-Export
-- [ ] `db.tags{}` — GRAMPS Kategorien/Farben; read-only Anzeige als Badge in Listen/Detail
-- [ ] `db._grampsHandles{}` — Handle-zu-ID-Mapping für verlustfreien Round-trip
-- [ ] `db._sourceFormat` — `'gedcom'` | `'gramps'` — steuert Writer-Auswahl
-
-**UI-Anpassungen:**
-- [ ] Datei-Öffnen-Dialog: `.ged` und `.gramps` akzeptieren
-- [ ] GRAMPS-Badge in Topbar wenn `db._sourceFormat === 'gramps'`
-- [ ] Orts-Detail: Hierarchie anzeigen wenn `db.placeObjects` vorhanden
-- [ ] Tags als farbige Badges in Personen-/Familienliste (read-only)
+**`gramps-parser.js`** (668 Zeilen)
+- [x] gzip via `DecompressionStream('gzip')` + DOMParser
+- [x] Namespace-sicherer Lookup via `_byTag()` (getElementsByTagNameNS + Fallback)
+- [x] Zwei-Pass-Parsing: Handle-Maps → vollständige Objekte
+- [x] `db.placeObjects{}` — Ortshierarchie (type, pnames[], parentId, coord)
+- [x] `db._grampsHandles{}` — Handle-zu-ID-Mapping
+- [x] `db._sourceFormat = 'gramps'`, `db._grampsMaster = true`
+- [x] Datei-Öffnen-Dialog: `.gramps` akzeptiert
+- [x] famc `famId`-Fix (sw v192) — Elternverknüpfungen im Baum
+- [ ] `db.tags{}` — offen (Phase 4)
+- [ ] GRAMPS-Badge in Topbar — offen
+- [ ] Orts-Hierarchie-Anzeige in UI — offen
 
 ---
 
-### Phase 3 — GRAMPS XML Export (Round-trip)
+### Phase 3 — GRAMPS XML Export (Round-trip) ✅ ABGESCHLOSSEN (sw v193–v197)
 
-Ziel: Geänderte Daten verlustfrei zurück in GRAMPS.
-
-**Neue Datei: `gramps-writer.js`**
-- [ ] AppState → GRAMPS XML (`<database>` Struktur)
-- [ ] Handle-Rekonstruktion aus `db._grampsHandles{}` — Original-Handles erhalten
-- [ ] Neue Handles für in PWA angelegte Personen/Familien generieren (UUID-Format)
-- [ ] GRAMPS-Version im Header: aktuelle Version aus Import beibehalten
-- [ ] Orts-Hierarchie erhalten (nicht auf PLAC-Text reduzieren)
-- [ ] Tags erhalten (auch wenn nicht editierbar)
-
-**Konflikt-Strategie (keine automatische Merge-Logik):**
-- PWA-Änderungen werden als vollständiger Ersatz exportiert
-- GRAMPS-seitige Änderungen seit letztem Import: Nutzer ist verantwortlich
-- Hinweis beim Export: "Zuletzt geladen: [Datum/Zeit]"
+**`gramps-writer.js`** (~700 Zeilen)
+- [x] `writeGRAMPS(db)` → gzip Blob (CompressionStream)
+- [x] Handle-Rekonstruktion aus `db._grampsHandles{}` — Original-Handles erhalten
+- [x] Neue Handles für PWA-Entitäten: `_pwa{prefix}{counter}`
+- [x] Orts-Hierarchie: `db.placeObjects` direkt mit `placeref`, `type`, `pname[]`
+- [x] childref `frel`/`mrel` aus `f.childRelations`
+- [x] Person/Familie/Event `_grampsAttrs[]` — alle GRAMPS-Attribute vollständig
+- [x] `exportGRAMPS()` in storage-file.js — iOS Share / Desktop-Download
+- [x] `_grampsRoundtripTest()` — Basis-Test (Counts + Stichprobe)
+- [x] `_grampsDeepTest()` — 59896 Checks ✓ (alle Felder, Orte, Attribute, Handles)
+- [ ] Tags erhalten — offen (Phase 4)
+- [ ] Export-Hinweis "Zuletzt geladen: Datum" — offen
 
 ---
 

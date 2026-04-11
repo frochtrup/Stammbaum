@@ -27,7 +27,9 @@
 - `onedrive-auth.js` — OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
 - `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus, `_extractObjeFilemap()`
 - `onedrive.js` — Media-URL (`_odGetMediaUrlByPath`), Upload, File-I/O (Open/Save), Pfad-Helfer, Settings
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v176)
+- `gramps-parser.js` — `parseGRAMPS(file)` async → db (Phase 2, read-only GRAMPS XML import)
+- `gramps-writer.js` — `writeGRAMPS(db)` → gzip Blob, `_grampsRoundtripTest()`, `_grampsDeepTest()` (Phase 3)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v197)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -40,17 +42,22 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-07
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-11
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 abgeschlossen — auf `main` gemergt (2026-04-05)**
-**Version 6.0 in Entwicklung — Branch `v6-dev`**
+**Version 6.0 abgeschlossen — Branch `v6-dev` (2026-04-10)**
+**Version 7.0 in Entwicklung — Branch `v7-dev`**
 
-- Roundtrip-Status: `roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1===out2)
-- **Aktuelle sw-Version: v176** / Cache: `stammbaum-v176`
-- Git: Branch `v6-dev`
+- **Phase 1 abgeschlossen (sw v190):** detectGRAMPS(), grampId-Felder, _grampsMaster-Flag
+- **Phase 2 abgeschlossen (sw v191–v196):** gramps-parser.js — nativer GRAMPS XML Import
+- **Phase 3 abgeschlossen (sw v193–v197):** gramps-writer.js — verlustfreier Roundtrip
+  - 59896 Deep-Test-Checks ✓ — Personen, Familien, Quellen, Orte, Attribute, childref, Handles
+- **Aktuelle sw-Version: v197** / Cache: `stammbaum-v197`
+- Git: Branch `v7-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
+Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 
 ---
 
