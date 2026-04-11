@@ -267,28 +267,68 @@ async function parseGRAMPS(file) {
     noteMap[h]   = textEl ? textEl.textContent.trim() : '';
   }
 
-  // Places: handle → {title, lat, long}
-  const placeMap = {};
+  // Places: handle → {title, lat, long}  (for event resolution)
+  const placeMap        = {};
+  const placeHandleToId = {};
+  const _placeObjsTemp  = {};  // id → place data (parentHandle resolved below)
+
+  const _parseDeg = s => {
+    if (!s) return null;
+    const dir = s[0].toUpperCase();
+    const val = parseFloat(s.slice(1));
+    if (isNaN(val)) return null;
+    return (dir === 'S' || dir === 'W') ? -val : val;
+  };
+
   for (const pl of _byTag(doc, 'placeobj')) {
-    const h      = pl.getAttribute('handle');
+    const h   = pl.getAttribute('handle');
     if (!h) continue;
+    const gid = pl.getAttribute('id') || '';
+    const pId = '@' + gid + '@';
+    placeHandleToId[h] = pId;
+    _grampsHandles[h]  = pId;
+
     const ptitle = _child(pl, 'ptitle');
-    const pname  = _byTag(pl, 'pname')[0] || null;
-    const name   = pname ? (pname.getAttribute('value') || '') : '';
-    const coord  = _byTag(pl, 'coord')[0] || null;
+    const type   = pl.getAttribute('type') || 'Unknown';
+
+    // All pname elements (primary + alternates, with optional lang)
+    const pnames = [];
+    for (const pn of _byTag(pl, 'pname')) {
+      const val = pn.getAttribute('value') || '';
+      if (val) pnames.push({ value: val, lang: pn.getAttribute('lang') || '' });
+    }
+
+    // Coordinates
+    const coord = _byTag(pl, 'coord')[0] || null;
     let lat = null, long = null;
     if (coord) {
-      const parseDeg = s => {
-        if (!s) return null;
-        const dir = s[0].toUpperCase();
-        const val = parseFloat(s.slice(1));
-        if (isNaN(val)) return null;
-        return (dir === 'S' || dir === 'W') ? -val : val;
-      };
-      lat  = parseDeg(coord.getAttribute('lat')  || '');
-      long = parseDeg(coord.getAttribute('long') || '');
+      lat  = _parseDeg(coord.getAttribute('lat')  || '');
+      long = _parseDeg(coord.getAttribute('long') || '');
     }
-    placeMap[h] = { title: ptitle || name, lat, long };
+
+    // Parent place ref (hierarchy)
+    const placerefEl    = _byTag(pl, 'placeref')[0] || null;
+    const _parentHandle = placerefEl ? placerefEl.getAttribute('hlink') : null;
+
+    const primaryTitle = ptitle || (pnames[0]?.value || '');
+    placeMap[h] = { title: primaryTitle, lat, long };  // backward compat for event resolution
+
+    _placeObjsTemp[pId] = {
+      id: pId, _grampsHandle: h,
+      title: primaryTitle, type, pnames, lat, long,
+      _parentHandle
+    };
+  }
+
+  // Resolve parent handles → IDs (second pass after all places are known)
+  const placeObjects = {};
+  for (const [pId, pl] of Object.entries(_placeObjsTemp)) {
+    placeObjects[pId] = {
+      id: pl.id, _grampsHandle: pl._grampsHandle,
+      title: pl.title, type: pl.type, pnames: pl.pnames,
+      lat: pl.lat, long: pl.long,
+      parentId: pl._parentHandle ? (placeHandleToId[pl._parentHandle] || null) : null,
+    };
   }
 
   // ─── Build db ────────────────────────────────────────────────────────────
@@ -471,6 +511,7 @@ async function parseGRAMPS(file) {
       const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
       const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
       const plTitle = pl ? (pl.title || null) : null;
+      const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
       const lat     = pl && pl.lat  != null ? String(pl.lat)  : null;
       const lng     = pl && pl.long != null ? String(pl.long) : null;
 
@@ -478,12 +519,13 @@ async function parseGRAMPS(file) {
       if (sp === 'birth' || sp === 'chr' || sp === 'buri' || sp === 'death') {
         const tgt = p[sp === 'birth' ? 'birth' : sp === 'death' ? 'death' : sp === 'chr' ? 'chr' : 'buri'];
         if (!tgt.seen) {
-          tgt.seen  = true;
-          tgt.date  = ev.date  || null;
-          tgt.place = plTitle;
-          tgt.lati  = lat;
-          tgt.long  = lng;
-          tgt.note  = evNote;
+          tgt.seen    = true;
+          tgt.date    = ev.date  || null;
+          tgt.place   = plTitle;
+          tgt.placeId = plId;
+          tgt.lati    = lat;
+          tgt.long    = lng;
+          tgt.note    = evNote;
           if (sp === 'death' && ev.cause) tgt.cause = ev.cause;
           for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
         }
@@ -495,7 +537,7 @@ async function parseGRAMPS(file) {
         const evObj = {
           type:  mapped.tag,
           date:  ev.date  || null,
-          place: plTitle,
+          place: plTitle, placeId: plId,
           lati:  lat, long: lng,
           value: evValue,
           note:  evNote,
@@ -582,6 +624,7 @@ async function parseGRAMPS(file) {
       const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
       const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
       const plTitle = pl ? (pl.title || null) : null;
+      const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
       const lat     = pl && pl.lat  != null ? String(pl.lat)  : null;
       const lng     = pl && pl.long != null ? String(pl.long) : null;
 
@@ -589,16 +632,17 @@ async function parseGRAMPS(file) {
       const tgt = sp === 'marr'  ? f.marr  : sp === 'engag' ? f.engag
                 : sp === 'div'   ? f.div   : sp === 'divf'  ? f.divf : null;
       if (tgt && !tgt.seen) {
-        tgt.seen  = true;
-        tgt.date  = ev.date  || null;
-        tgt.place = plTitle;
-        tgt.lati  = lat;
-        tgt.long  = lng;
-        tgt.note  = evNote;
+        tgt.seen    = true;
+        tgt.date    = ev.date  || null;
+        tgt.place   = plTitle;
+        tgt.placeId = plId;
+        tgt.lati    = lat;
+        tgt.long    = lng;
+        tgt.note    = evNote;
         for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
       } else if (!tgt) {
         const evObj = {
-          type: mapped.tag, date: ev.date || null, place: plTitle,
+          type: mapped.tag, date: ev.date || null, place: plTitle, placeId: plId,
           lati: lat, long: lng,
           value: mapped.tag === 'EVEN' ? ev.type : (ev.desc || ''),
           note: evNote, noteRefs: [],
@@ -658,6 +702,7 @@ async function parseGRAMPS(file) {
 
   return {
     individuals, families, sources, notes, repositories,
+    placeObjects,
     extraPlaces: {}, placForm: '',
     extraRecords: [], headLines: [],
     _sourceFormat: 'gramps',

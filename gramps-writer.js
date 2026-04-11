@@ -167,10 +167,13 @@ async function writeGRAMPS(db) {
 
   // ── Collect event from event-like object, return {handle, role} or null ───
   const _collectEv = (grampsType, evObj, role) => {
-    if (!evObj?.seen && !evObj?.date && !evObj?.place && !(evObj?.sources?.length)) return null;
+    if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !(evObj?.sources?.length)) return null;
     const handle   = _h('ev');
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
-    const plHandle = _plHandle(evObj.place || null, evObj.lati, evObj.long);
+    // Use original place ID if available (GRAMPS source with placeObjects), else string-based
+    const plHandle = (db.placeObjects && evObj.placeId)
+      ? _entityHandle(evObj.placeId, 'pl')
+      : _plHandle(evObj.place || null, evObj.lati, evObj.long);
     const citHandles = (evObj.sources || [])
       .map(srcId => _citHandle(srcId, evObj.sourcePages?.[srcId], evObj.sourceQUAY?.[srcId] ?? 0))
       .filter(Boolean);
@@ -480,23 +483,48 @@ async function writeGRAMPS(db) {
   L.push('  </sources>');
 
   // ── Places ────────────────────────────────────────────────────────────────
-  const plArr = Object.values(plRecs);
-  if (plArr.length) {
+  if (db.placeObjects && Object.keys(db.placeObjects).length) {
+    // GRAMPS source: write full place objects with hierarchy + alternate names
     L.push('  <places>');
-    for (const pl of plArr) {
-      L.push(`    <placeobj handle="${_esc(pl.handle)}" id="${_esc(pl.id)}" type="Unknown">`);
-      L.push(`      <ptitle>${_esc(pl.title)}</ptitle>`);
-      // Use first comma-separated segment as primary name
-      const primaryName = pl.title.split(',')[0].trim();
-      L.push(`      <pname value="${_esc(primaryName)}"/>`);
-      // Coordinates if available (lati/long stored on first event that referenced this place)
+    for (const [pId, pl] of Object.entries(db.placeObjects)) {
+      const handle = _entityHandle(pId, 'pl');
+      const gid    = pId.replace(/^@|@$/g, '');
+      L.push(`    <placeobj handle="${_esc(handle)}" id="${_esc(gid)}" type="${_esc(pl.type||'Unknown')}">`);
+      if (pl.title) L.push(`      <ptitle>${_esc(pl.title)}</ptitle>`);
+      for (const pn of pl.pnames || []) {
+        let attrs = ` value="${_esc(pn.value)}"`;
+        if (pn.lang) attrs += ` lang="${_esc(pn.lang)}"`;
+        L.push(`      <pname${attrs}/>`);
+      }
       if (pl.lat != null && pl.long != null) {
         const coord = _decToGrampsCoord(pl.lat, pl.long);
         if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
       }
+      if (pl.parentId) {
+        const parentH = _entityHandle(pl.parentId, 'pl');
+        L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
+      }
       L.push('    </placeobj>');
     }
     L.push('  </places>');
+  } else {
+    // GEDCOM source or no placeObjects: flat places from collected event strings
+    const plArr = Object.values(plRecs);
+    if (plArr.length) {
+      L.push('  <places>');
+      for (const pl of plArr) {
+        L.push(`    <placeobj handle="${_esc(pl.handle)}" id="${_esc(pl.id)}" type="Unknown">`);
+        L.push(`      <ptitle>${_esc(pl.title)}</ptitle>`);
+        const primaryName = pl.title.split(',')[0].trim();
+        L.push(`      <pname value="${_esc(primaryName)}"/>`);
+        if (pl.lat != null && pl.long != null) {
+          const coord = _decToGrampsCoord(pl.lat, pl.long);
+          if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
+        }
+        L.push('    </placeobj>');
+      }
+      L.push('  </places>');
+    }
   }
 
   // ── Objects (media) ───────────────────────────────────────────────────────
@@ -672,7 +700,24 @@ async function _grampsDeepTest() {
   }
   console.log(`  Quellen: ${Object.keys(db1.sources).length} geprüft, ${sFail} mit Delta`);
 
-  // ── 5. Orte: alle unique place-Strings ─────────────────────────────────────
+  // ── 5. placeObjects: Hierarchie, Typen, Alternate Names ────────────────────
+  const po1 = db1.placeObjects || {}, po2 = db2.placeObjects || {};
+  let poFail = 0;
+  chkN('placeObjects.count', Object.keys(po1).length, Object.keys(po2).length);
+  for (const [pId, pl1] of Object.entries(po1)) {
+    const pl2 = po2[pId];
+    if (!pl2) { fail++; failures.push(`Place ${pId} fehlt`); poFail++; continue; }
+    const ok = [
+      chk(`${pId}.title`,    pl1.title,    pl2.title),
+      chk(`${pId}.type`,     pl1.type,     pl2.type),
+      chk(`${pId}.parentId`, pl1.parentId, pl2.parentId),
+      chkN(`${pId}.pnames`,  pl1.pnames?.length||0, pl2.pnames?.length||0),
+    ];
+    if (!ok.every(Boolean)) poFail++;
+  }
+  console.log(`  Orts-Objekte: ${Object.keys(po1).length} geprüft, ${poFail} mit Delta`);
+
+  // ── 6. Orte: alle unique place-Strings ─────────────────────────────────────
   const collectPlaces = db => {
     const s = new Set();
     for (const p of Object.values(db.individuals)) {
