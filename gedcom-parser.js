@@ -46,10 +46,11 @@ function parseGEDCOM(text, parseErrors) {
     const val = (m[3] || '').replace(/^ /, ''); // remove 1 leading space (GEDCOM delimiter)
 
     // ── Level-Validierung ──
-    if (lv > 4) {
+    if (lv > 4 && _ptDepth === 0) {
+      // Nur als Fehler loggen wenn NICHT bereits in einem Passthrough-Block —
+      // lv5/6 unter z.B. 4 FILE (sourceMedia OBJE) sind gültige Sub-Tags die
+      // der _ptDepth-Block weiter unten korrekt abfängt.
       _errors.push({ line: lineNo, lv, tag, val, raw: line, msg: `Level ${lv} überschreitet das Maximum (4)` });
-      // kein continue: Passthrough-Mechanismus (weiter unten) fängt Zeilen ab
-      // die noch in einem _ptDepth-Block sind (z.B. 5 TYPE unter 4 FORM unter 3 OBJE)
     }
     if (prevLv >= 0 && lv > prevLv + 1) {
       _errors.push({ line: lineNo, lv, tag, val, raw: line, msg: `Level-Sprung von ${prevLv} auf ${lv} (erwartet max. ${prevLv + 1})` });
