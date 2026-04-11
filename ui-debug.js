@@ -171,8 +171,10 @@ function runRoundtripTest() {
       });
 
       // Auto-Diff: group all missing original lines by tag type
-      const _origArr = _origText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      const _outArr  = out1.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      // _norm: trim + collapse double-@ (GRAMPS GEDCOM exports @@Sxxx@@ → parser normalizes to @Sxxx@)
+      const _norm = l => l.trim().replace(/@@/g, '@');
+      const _origArr = _origText.split(/\r?\n/).map(_norm).filter(Boolean);
+      const _outArr  = out1.split(/\r?\n/).map(_norm).filter(Boolean);
       const _outCounts = new Map();
       for (const l of _outArr) _outCounts.set(l, (_outCounts.get(l) || 0) + 1);
       const _missingTags = {};
@@ -206,12 +208,12 @@ function runRoundtripTest() {
       { const _outC2 = new Map(); for (const l of _outArr) _outC2.set(l, (_outC2.get(l)||0)+1);
         const _allLines = _origText.split(/\r?\n/);
         for (let i = 0; i < _allLines.length && _objeDiag.length < 5; i++) {
-          const lt = _allLines[i].trim();
+          const lt = _norm(_allLines[i]);
           if (!/OBJE/.test(lt)) continue;
           const rem = _outC2.get(lt) || 0;
           if (rem > 0) { _outC2.set(lt, rem-1); continue; }
-          const prev = _allLines[i-1]?.trim() || '';
-          const next = _allLines[i+1]?.trim() || '';
+          const prev = _norm(_allLines[i-1] || '');
+          const next = _norm(_allLines[i+1] || '');
           _objeDiag.push(`  [${i+1}] prev: ${prev}\n       MISS: ${lt}\n       next: ${next}`);
         }
       }
@@ -221,14 +223,9 @@ function runRoundtripTest() {
       const _sourNoteDiag = [];
       { const _outC3 = new Map(); for (const l of _outArr) _outC3.set(l, (_outC3.get(l)||0)+1);
         const _allLines3 = _origText.split(/\r?\n/);
-        // Record-Grenzen vorab bestimmen
-        const _recStarts = []; let _recStart0 = 0;
-        for (let i = 0; i < _allLines3.length; i++) {
-          if (/^\s*0 /.test(_allLines3[i])) { _recStarts.push(i); _recStart0 = i; }
-        }
         let _curRecStart = 0;
         for (let i = 0; i < _allLines3.length && _sourNoteDiag.length < 6; i++) {
-          const lt = _allLines3[i].trim();
+          const lt = _norm(_allLines3[i]);
           if (/^0 /.test(lt)) _curRecStart = i;
           if (!/(^\d+ SOUR\b|^\d+ NOTE\b)/.test(lt)) continue;
           const rem = _outC3.get(lt) || 0;
@@ -237,7 +234,7 @@ function runRoundtripTest() {
           const ctx = [];
           const recEnd = Math.min(_allLines3.length-1, i+3);
           for (let j = _curRecStart; j <= recEnd; j++)
-            ctx.push(`    ${j===i?'►':' '} ${_allLines3[j].trim()}`);
+            ctx.push(`    ${j===i?'►':' '} ${_norm(_allLines3[j])}`);
           if (recEnd < i+1) ctx.push('    ...');
           _sourNoteDiag.push(ctx.join('\n'));
         }
