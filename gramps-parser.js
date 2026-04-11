@@ -376,8 +376,19 @@ async function parseGRAMPS(file) {
     const repoId    = repoRefEl ? (repoHandleToId[repoRefEl.getAttribute('hlink')] || null) : null;
     const noteTexts = _byTag(src, 'noteref')
       .map(n => noteMap[n.getAttribute('hlink')] || '').filter(Boolean);
+    const srcMedia = [];
+    for (const objRef of _byTag(src, 'objref')) {
+      const obj = objMap[objRef.getAttribute('hlink')];
+      if (obj) srcMedia.push({
+        file: _grampsMediaPath(obj.src),
+        titl: obj.desc || '',
+        mime: obj.mime || '',
+        prim: srcMedia.length === 0,
+        _grampsHandle: objRef.getAttribute('hlink')
+      });
+    }
     sources[sId] = {
-      id: sId, _passthrough: [], dataExtra: [], media: [],
+      id: sId, _passthrough: [], dataExtra: [], media: srcMedia,
       title:  _child(src, 'stitle'),
       author: _child(src, 'sauthor'),
       abbr:   _child(src, 'sabbrev'),

@@ -742,6 +742,7 @@ async function _grampsDeepTest() {
       chk(`${id}.author`, s1.author, s2.author),
       chk(`${id}.publ`,   s1.publ,   s2.publ),
       chk(`${id}.abbr`,   s1.abbr,   s2.abbr),
+      chkN(`${id}.media`, s1.media?.length||0, s2.media?.length||0),
     ];
     if (!ok.every(Boolean)) sFail++;
   }
