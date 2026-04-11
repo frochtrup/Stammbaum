@@ -51,9 +51,11 @@
 
 - **Phase 1 abgeschlossen (sw v190):** detectGRAMPS(), grampId-Felder, _grampsMaster-Flag
 - **Phase 2 abgeschlossen (sw v191–v196):** gramps-parser.js — nativer GRAMPS XML Import
-- **Phase 3 abgeschlossen (sw v193–v197):** gramps-writer.js — verlustfreier Roundtrip
-  - 59896 Deep-Test-Checks ✓ — Personen, Familien, Quellen, Orte, Attribute, childref, Handles
-- **Aktuelle sw-Version: v197** / Cache: `stammbaum-v197`
+- **Phase 3 abgeschlossen (sw v193–v204):** gramps-writer.js — verlustfreier Roundtrip + GRAMPS Desktop-kompatibel
+  - 60034 Deep-Test-Checks ✓ — Personen, Familien, Quellen, Orte, Attribute, childref, Handles, Source-Medien
+  - gender `M`/`F`/`U` (GRAMPS 6.x erwartet einbuchstabig, nicht `male`/`female`/`unknown`)
+  - GRAMPS Desktop Import bestätigt: gender korrekt, Medienlinks korrekt
+- **Aktuelle sw-Version: v204** / Cache: `stammbaum-v204`
 - Git: Branch `v7-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
