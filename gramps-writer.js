@@ -571,19 +571,72 @@ async function writeGRAMPS(db) {
     }
     L.push('  </places>');
   } else {
-    // GEDCOM source or no placeObjects: flat places from collected event strings
+    // GEDCOM source or no placeObjects: hierarchical places from placForm + event strings
     const plArr = Object.values(plRecs);
     if (plArr.length) {
+      // Map GEDCOM PLAC FORM level names → GRAMPS place types
+      const _formNameToType = (name) => {
+        const n = (name || '').toLowerCase().trim();
+        if (/^(staat|country)/.test(n))                     return 'Country';
+        if (/^(bundesland|state|province|provinz)/.test(n)) return 'State';
+        if (/^(region|bezirk)/.test(n))                     return 'Region';
+        if (/^(landkreis|kreis|county)/.test(n))            return 'County';
+        if (/^(stadt|city|ort|town)/.test(n))               return 'City';
+        if (/^(gemeinde|municipality|markt)/.test(n))       return 'Municipality';
+        if (/^(dorf|village|weiler|hamlet)/.test(n))        return 'Village';
+        if (/^(pfarrei|parish)/.test(n))                    return 'Parish';
+        return 'Unknown';
+      };
+      const formLevels = (db.placForm || '').split(',').map(s => s.trim()).filter(Boolean);
+
+      // Shared parent place objects: key="type:name" → {handle,id,type,title,_parentHandle}
+      const sharedPlaces = {};
+      let sharedCtr = 0;
+      const _getSharedPlace = (name, type) => {
+        const key = `${type}:${name}`;
+        if (!sharedPlaces[key]) {
+          sharedPlaces[key] = { handle: _h('pl'), id: `SP${String(sharedCtr++).padStart(4,'0')}`, type, title: name };
+        }
+        return sharedPlaces[key];
+      };
+
+      // Build hierarchy for each leaf place
+      for (const plRec of plArr) {
+        const parts = plRec.title.split(',').map(s => s.trim()).filter(Boolean);
+        const offset = formLevels.length - parts.length;
+        // Leaf type from right-aligned form position
+        plRec.type  = _formNameToType(formLevels[offset] || '');
+        plRec.pname = parts[0] || plRec.title;
+        // Build parent chain: parts[1..n-1] → shared place objects
+        let child = plRec;
+        for (let i = 1; i < parts.length; i++) {
+          const parentType = _formNameToType(formLevels[offset + i] || '');
+          const parentObj  = _getSharedPlace(parts[i], parentType);
+          child._parentHandle = parentObj.handle;
+          // Link this shared place to its own parent (next iteration)
+          child = parentObj;
+        }
+      }
+
       L.push('  <places>');
+      // Shared parent places first (so leaf placeref hrefs resolve)
+      for (const sp of Object.values(sharedPlaces)) {
+        L.push(`    <placeobj handle="${_esc(sp.handle)}" id="${_esc(sp.id)}" type="${_esc(sp.type)}">`);
+        L.push(`      <ptitle>${_esc(sp.title)}</ptitle>`);
+        L.push(`      <pname value="${_esc(sp.title)}"/>`);
+        if (sp._parentHandle) L.push(`      <placeref hlink="${_esc(sp._parentHandle)}"/>`);
+        L.push('    </placeobj>');
+      }
+      // Leaf places
       for (const pl of plArr) {
-        L.push(`    <placeobj handle="${_esc(pl.handle)}" id="${_esc(pl.id)}" type="Unknown">`);
+        L.push(`    <placeobj handle="${_esc(pl.handle)}" id="${_esc(pl.id)}" type="${_esc(pl.type || 'Unknown')}">`);
         L.push(`      <ptitle>${_esc(pl.title)}</ptitle>`);
-        const primaryName = pl.title.split(',')[0].trim();
-        L.push(`      <pname value="${_esc(primaryName)}"/>`);
+        L.push(`      <pname value="${_esc(pl.pname || pl.title.split(',')[0].trim())}"/>`);
         if (pl.lat != null && pl.long != null) {
           const coord = _decToGrampsCoord(pl.lat, pl.long);
           if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
         }
+        if (pl._parentHandle) L.push(`      <placeref hlink="${_esc(pl._parentHandle)}"/>`);
         L.push('    </placeobj>');
       }
       L.push('  </places>');
