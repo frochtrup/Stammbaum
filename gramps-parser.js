@@ -438,9 +438,9 @@ async function parseGRAMPS(file) {
     const pId = personHandleToId[h];
 
     // Gender
-    const genderStr = _child(person, 'gender');
-    const sex = genderStr === 'M' ? 'M' : genderStr === 'F' ? 'F'
-              : genderStr === 'Male' ? 'M' : genderStr === 'Female' ? 'F' : 'U';
+    const genderStr = (_child(person, 'gender') || '').toLowerCase();
+    const sex = (genderStr === 'm' || genderStr === 'male')   ? 'M' :
+                (genderStr === 'f' || genderStr === 'female') ? 'F' : 'U';
 
     // Primary name (first <name> without alt attribute)
     let given = '', surname = '', nick = '', prefix = '', suffix = '';

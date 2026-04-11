@@ -369,9 +369,9 @@ async function writeGRAMPS(db) {
       L.push('      </name>');
     }
 
-    // Gender (nach name*, vor eventref*)
-    const genderMap = { M:'Male', F:'Female', U:'Unknown' };
-    L.push(`      <gender>${genderMap[p.sex] || 'Unknown'}</gender>`);
+    // Gender — GRAMPS erwartet lowercase: male/female/unknown
+    const genderMap = { M:'male', F:'female', U:'unknown' };
+    L.push(`      <gender>${genderMap[p.sex] || 'unknown'}</gender>`);
 
     // Event refs
     for (const ref of personEvRefs[pId]||[]) {
@@ -607,6 +607,34 @@ async function writeGRAMPS(db) {
   for (const c of chunks) { merged.set(c, off); off += c.length; }
 
   return new Blob([merged], { type: 'application/octet-stream' });
+}
+
+// ─────────────────────────────────────
+//  XML DEBUG — erste Person + Familie als Plain-XML in Console
+//  Aufruf: await _grampsXMLDebug()
+// ─────────────────────────────────────
+async function _grampsXMLDebug() {
+  const db = AppState.db;
+  if (!db?._sourceFormat) { console.warn('Kein db geladen'); return; }
+  // Write uncompressed XML (reuse writer, extract text before compression)
+  const blob = await writeGRAMPS(db);
+  const buf  = await blob.arrayBuffer();
+  const ds   = new DecompressionStream('gzip');
+  const w    = ds.writable.getWriter();
+  w.write(new Uint8Array(buf)); w.close();
+  const reader = ds.readable.getReader();
+  const chunks = []; let total = 0;
+  for (;;) { const {done,value} = await reader.read(); if (done) break; chunks.push(value); total+=value.length; }
+  const merged = new Uint8Array(total); let off=0;
+  for (const c of chunks) { merged.set(c,off); off+=c.length; }
+  const xml = new TextDecoder().decode(merged);
+  // Log first person element
+  const m = xml.match(/<person[\s\S]*?<\/person>/);
+  if (m) console.log('=== Erste Person ===\n' + m[0]);
+  else   console.log('Keine <person> gefunden');
+  console.log('\n=== Gender-Werte (erste 5) ===');
+  const genders = [...xml.matchAll(/<gender>([^<]*)<\/gender>/g)].slice(0,5);
+  genders.forEach(g => console.log(' ', g[0]));
 }
 
 // ─────────────────────────────────────
