@@ -294,7 +294,18 @@ function writeFAMRecord(lines, f) {
   lines.push(`0 ${f.id} FAM`);
   if (f.husb) lines.push(`1 HUSB ${f.husb}`);
   if (f.wife) lines.push(`1 WIFE ${f.wife}`);
-  for (const c of f.children) lines.push(`1 CHIL ${c}`);
+  for (const c of f.children) {
+    lines.push(`1 CHIL ${c}`);
+    const _cr = f.childRelations?.[c];
+    if (_cr) {
+      for (const sId of (_cr.sourIds || [])) {
+        lines.push(`2 SOUR ${sId}`);
+        if (_cr.sourPages?.[sId]) lines.push(`3 PAGE ${_cr.sourPages[sId]}`);
+        if (_cr.sourQUAY?.[sId])  lines.push(`3 QUAY ${_cr.sourQUAY[sId]}`);
+        if (_cr.sourExtra?.[sId]) for (const l of _cr.sourExtra[sId]) lines.push(l);
+      }
+    }
+  }
 
   eventBlock(lines, 'MARR', f.marr, 1);
   if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
