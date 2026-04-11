@@ -342,7 +342,11 @@ async function writeGRAMPS(db) {
     const gid    = pId.replace(/^@|@$/g, '');
     L.push(`    <person handle="${_esc(handle)}" id="${_esc(gid)}">`);
 
-    // DTD-Reihenfolge: name*, gender, eventref*, objref*, attribute*, childof*, parentin*, noteref*, citationref*
+    // Original-Reihenfolge: gender, name*, eventref*, objref*, attribute*, childof*, parentin*, noteref*, citationref*
+
+    // Gender — GRAMPS erwartet M/F/U (nicht male/female/unknown!)
+    const genderMap = { M:'M', F:'F', U:'U' };
+    L.push(`      <gender>${genderMap[p.sex] || 'U'}</gender>`);
 
     // Primary name
     const given   = p.given   || '';
@@ -373,10 +377,6 @@ async function writeGRAMPS(db) {
       if (en.nick)    L.push(`        <nick>${_esc(en.nick)}</nick>`);
       L.push('      </name>');
     }
-
-    // Gender — GRAMPS erwartet lowercase: male/female/unknown
-    const genderMap = { M:'male', F:'female', U:'unknown' };
-    L.push(`      <gender>${genderMap[p.sex] || 'unknown'}</gender>`);
 
     // Event refs
     for (const ref of personEvRefs[pId]||[]) {
@@ -457,7 +457,21 @@ async function writeGRAMPS(db) {
   }
   L.push('  </families>');
 
-  // ── Sources (DTD-Reihenfolge: sources vor citations) ─────────────────────
+  // ── Citations (Original: vor sources, wie GRAMPS es ausgibt) ────────────────
+  const citArr = Object.values(citRecs);
+  if (citArr.length) {
+    L.push('  <citations>');
+    for (const cit of citArr) {
+      L.push(`    <citation handle="${_esc(cit.handle)}" id="${_esc(cit.id)}">`);
+      if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
+      L.push(`      <confidence>${cit.confidence}</confidence>`);
+      L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
+      L.push('    </citation>');
+    }
+    L.push('  </citations>');
+  }
+
+  // ── Sources ───────────────────────────────────────────────────────────────
   L.push('  <sources>');
   for (const [sId, s] of Object.entries(db.sources)) {
     const handle = _entityHandle(sId, 'so');
@@ -483,20 +497,6 @@ async function writeGRAMPS(db) {
     L.push('    </source>');
   }
   L.push('  </sources>');
-
-  // ── Citations (DTD-Reihenfolge: nach sources) ──────────────────────────────
-  const citArr = Object.values(citRecs);
-  if (citArr.length) {
-    L.push('  <citations>');
-    for (const cit of citArr) {
-      L.push(`    <citation handle="${_esc(cit.handle)}" id="${_esc(cit.id)}">`);
-      if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
-      L.push(`      <confidence>${cit.confidence}</confidence>`);
-      L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
-      L.push('    </citation>');
-    }
-    L.push('  </citations>');
-  }
 
   // ── Places ────────────────────────────────────────────────────────────────
   if (db.placeObjects && Object.keys(db.placeObjects).length) {
@@ -667,11 +667,11 @@ async function _grampsMinimalTest() {
   <people>
     <person handle="_testpe00000001" id="I0001">
       <name type="Birth Name"><first>Hans</first><surname>Müller</surname></name>
-      <gender>male</gender>
+      <gender>M</gender>
     </person>
     <person handle="_testpe00000002" id="I0002">
+      <gender>F</gender>
       <name type="Birth Name"><first>Maria</first><surname>Müller</surname></name>
-      <gender>female</gender>
     </person>
   </people>
   <families/>
