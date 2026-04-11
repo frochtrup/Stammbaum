@@ -9,6 +9,27 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-11 — Phase 3 Bugfixes: GRAMPS Export GRAMPS-kompatibel (sw v198–v204)
+
+- **sw v198** `fix`: DTD-Reihenfolge `name*` vor `gender` (kein Effekt — war nicht die Ursache)
+- **sw v199** `fix`: gender-Parser case-insensitive; Writer → `male/female/unknown` (falsch, s.u.)
+- **sw v200** `fix`: Source-Medien (`<objref>` auf `<source>`) werden jetzt geparst
+  - Parser: `srcMedia[]` aus `<objref>`-Elementen in `<source>` aufgebaut
+  - Deep Test: 60034 Checks (138 neue Source-Media-Checks) ✓
+- **sw v201** `fix`: NS/Version aus Originaldatei übernehmen (kein Effekt — Original war bereits 1.7.2)
+- **sw v202** `debug`: Gender-Statistik in `_grampsXMLDebug` (male/female/unknown Count)
+- **sw v203** `fix+debug`: `_grampsMinimalTest()` — 2-Personen Test-Datei; citations/sources Reihenfolge-Experiment
+- **sw v204** `fix`: **Eigentliche Gender-Ursache gefunden und behoben**
+  - Original-Datei analysiert: GRAMPS 6.x erwartet `M`/`F`/`U`, NICHT `male`/`female`/`unknown`
+  - Writer: `genderMap = { M:'M', F:'F', U:'U' }` statt `male/female/unknown`
+  - gender kommt VOR name (wie GRAMPS es selbst ausgibt)
+  - citations VOR sources (Original-Reihenfolge wiederhergestellt)
+  - Deep Test: 60034 Checks ✓
+
+**Phase 3 vollständig abgeschlossen (sw v204):** GRAMPS Export ist GRAMPS-Desktop-kompatibel
+
+---
+
 ### Session 2026-04-11 — Phase 3: GRAMPS XML Writer + Roundtrip (sw v193–v197)
 
 - **sw v193** `feat(Phase 3)`: `gramps-writer.js` — verlustfreier GRAMPS XML Export
