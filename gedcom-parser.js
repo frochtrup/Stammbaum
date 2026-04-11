@@ -355,24 +355,28 @@ function parseGEDCOM(text, parseErrors) {
             cur.events[evIdx].sourceQUAY[lastSourVal] = val;
           }
         }
-        // lv=3 Tags unter 2 SOUR: NOTE → sourceNote{}; Rest → sourceExtra{}
-        if (lv2tag === 'SOUR' && lastSourVal &&
-            tag !== 'PAGE' && tag !== 'QUAY' && tag !== 'SOUR' && tag !== 'TIME') {
+        // lv=3 Tags unter 2 SOUR: PAGE/QUAY → sourcePages/sourceQUAY{}; NOTE → sourceNote{}; Rest → sourceExtra{}
+        // Auch nach _ptDepth=3 (gesetzt durch NOTE) kommen PAGE/QUAY als Geschwister — daher hier explizit behandeln
+        if (lv2tag === 'SOUR' && lastSourVal && tag !== 'SOUR' && tag !== 'TIME') {
           let _seDict = null; let _snDict = null; let _smDict2 = null;
+          let _pagesDict = null; let _quayDict = null;
           if      (lv1tag === 'NAME') {
             if (_curExtraNameIdx >= 0 && cur.extraNames[_curExtraNameIdx]) {
               _seDict  = cur.extraNames[_curExtraNameIdx].sourceExtra  || (cur.extraNames[_curExtraNameIdx].sourceExtra  = {});
               _snDict  = cur.extraNames[_curExtraNameIdx].sourceNote   || (cur.extraNames[_curExtraNameIdx].sourceNote   = {});
               _smDict2 = cur.extraNames[_curExtraNameIdx].sourceMedia  || (cur.extraNames[_curExtraNameIdx].sourceMedia  = {});
-            } else { _seDict = cur.nameSourceExtra; _snDict = cur.nameSourceNote || (cur.nameSourceNote = {}); _smDict2 = cur.nameSourceMedia; }
+              _pagesDict = cur.extraNames[_curExtraNameIdx].sourcePages; _quayDict = cur.extraNames[_curExtraNameIdx].sourceQUAY;
+            } else { _seDict = cur.nameSourceExtra; _snDict = cur.nameSourceNote || (cur.nameSourceNote = {}); _smDict2 = cur.nameSourceMedia; _pagesDict = cur.nameSourcePages; _quayDict = cur.nameSourceQUAY; }
           }
-          else if (lv1tag === 'BIRT') { _seDict = cur.birth.sourceExtra; _snDict = cur.birth.sourceNote; _smDict2 = cur.birth.sourceMedia; }
-          else if (lv1tag === 'DEAT') { _seDict = cur.death.sourceExtra; _snDict = cur.death.sourceNote; _smDict2 = cur.death.sourceMedia; }
-          else if (lv1tag === 'CHR')  { _seDict = cur.chr.sourceExtra;   _snDict = cur.chr.sourceNote;   _smDict2 = cur.chr.sourceMedia; }
-          else if (lv1tag === 'BURI') { _seDict = cur.buri.sourceExtra;  _snDict = cur.buri.sourceNote;  _smDict2 = cur.buri.sourceMedia; }
-          else if (lv1tag === 'FAMC' && cur.famc.length) _seDict = cur.famc[cur.famc.length-1].sourExtra;
-          else if (evIdx >= 0 && cur.events[evIdx]) { _seDict = cur.events[evIdx].sourceExtra; _snDict = cur.events[evIdx].sourceNote; _smDict2 = cur.events[evIdx].sourceMedia; }
-          if (tag === 'NOTE' && _snDict !== null) {
+          else if (lv1tag === 'BIRT') { _seDict = cur.birth.sourceExtra; _snDict = cur.birth.sourceNote; _smDict2 = cur.birth.sourceMedia; _pagesDict = cur.birth.sourcePages || (cur.birth.sourcePages={}); _quayDict = cur.birth.sourceQUAY || (cur.birth.sourceQUAY={}); }
+          else if (lv1tag === 'DEAT') { _seDict = cur.death.sourceExtra; _snDict = cur.death.sourceNote; _smDict2 = cur.death.sourceMedia; _pagesDict = cur.death.sourcePages || (cur.death.sourcePages={}); _quayDict = cur.death.sourceQUAY || (cur.death.sourceQUAY={}); }
+          else if (lv1tag === 'CHR')  { _seDict = cur.chr.sourceExtra;   _snDict = cur.chr.sourceNote;   _smDict2 = cur.chr.sourceMedia;   _pagesDict = cur.chr.sourcePages   || (cur.chr.sourcePages={});   _quayDict = cur.chr.sourceQUAY   || (cur.chr.sourceQUAY={}); }
+          else if (lv1tag === 'BURI') { _seDict = cur.buri.sourceExtra;  _snDict = cur.buri.sourceNote;  _smDict2 = cur.buri.sourceMedia;  _pagesDict = cur.buri.sourcePages  || (cur.buri.sourcePages={});  _quayDict = cur.buri.sourceQUAY  || (cur.buri.sourceQUAY={}); }
+          else if (lv1tag === 'FAMC' && cur.famc.length) { const _fref = cur.famc[cur.famc.length-1]; _seDict = _fref.sourExtra; _pagesDict = _fref.sourPages; _quayDict = _fref.sourQUAY; }
+          else if (evIdx >= 0 && cur.events[evIdx]) { _seDict = cur.events[evIdx].sourceExtra; _snDict = cur.events[evIdx].sourceNote; _smDict2 = cur.events[evIdx].sourceMedia; _pagesDict = cur.events[evIdx].sourcePages || (cur.events[evIdx].sourcePages={}); _quayDict = cur.events[evIdx].sourceQUAY || (cur.events[evIdx].sourceQUAY={}); }
+          if      (tag === 'PAGE' && _pagesDict !== null) { _pagesDict[lastSourVal] = val; }
+          else if (tag === 'QUAY' && _quayDict  !== null) { _quayDict[lastSourVal]  = val; }
+          else if (tag === 'NOTE' && _snDict !== null) {
             _snDict[lastSourVal] = val || '';
             // CONT/CONC gehen in sourceExtra (damit sie korrekt nach NOTE ausgegeben werden)
             if (!_seDict) { /* no-op */ } else { _ptDepth = 3; _ptTarget = _seDict[lastSourVal] || (_seDict[lastSourVal] = []); }
