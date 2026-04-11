@@ -118,6 +118,14 @@ async function writeGRAMPS(db) {
   for (const [handle, id] of Object.entries(db._grampsHandles || {})) {
     idToHandle[id] = handle;
   }
+  // Pre-generate stable handles for entities without a GRAMPS handle (e.g. GEDCOM-loaded data).
+  // Must happen before any write/citation code so the same handle is used everywhere.
+  for (const id of Object.keys(db.individuals   || {})) { if (!idToHandle[id]) idToHandle[id] = _h('pe'); }
+  for (const id of Object.keys(db.families      || {})) { if (!idToHandle[id]) idToHandle[id] = _h('fa'); }
+  for (const id of Object.keys(db.sources       || {})) { if (!idToHandle[id]) idToHandle[id] = _h('so'); }
+  for (const id of Object.keys(db.repositories  || {})) { if (!idToHandle[id]) idToHandle[id] = _h('re'); }
+  for (const id of Object.keys(db.notes         || {})) { if (!idToHandle[id]) idToHandle[id] = _h('no'); }
+  for (const id of Object.keys(db.placeObjects  || {})) { if (!idToHandle[id]) idToHandle[id] = _h('pl'); }
   const _entityHandle = (id, prefix) => idToHandle[id] || _h(prefix);
 
   // ── Deduplicating collectors ──────────────────────────────────────────────
