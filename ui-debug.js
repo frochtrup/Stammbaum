@@ -286,6 +286,68 @@ function runRoundtripTest() {
           + (_pageQuayDiag.length ? '  Beispiele:\n' + _pageQuayDiag.join('\n') : '')
         : '';
 
+      // Diagnose: db1 vs db2 — direkt vergleichen wo Daten verloren gehen
+      // (db2 = writeGEDCOM(db1) re-parsed — prüft Writer + Parser auf Verlust)
+      const _db2LossLines = [];
+      { // MARR + FAM-Events: sourceQUAY/sourcePages
+        for (const [fid, f1] of Object.entries(db1.families)) {
+          const f2 = db2.families[fid];
+          if (!f2) continue;
+          for (const evKey of ['marr','engag','div','divf']) {
+            const e1 = f1[evKey], e2 = f2[evKey];
+            if (!e1 || !e2) continue;
+            for (const s of (e1.sources||[])) {
+              if (e1.sourceQUAY?.[s] && !e2.sourceQUAY?.[s])
+                _db2LossLines.push(`FAM ${fid} ${evKey}.sourceQUAY[${s}]=${e1.sourceQUAY[s]} → FEHLT in db2`);
+              if (e1.sourcePages?.[s] && !e2.sourcePages?.[s])
+                _db2LossLines.push(`FAM ${fid} ${evKey}.sourcePages[${s}]=${e1.sourcePages[s].slice(0,40)} → FEHLT in db2`);
+            }
+          }
+          // FAM events
+          for (let ei = 0; ei < (f1.events||[]).length; ei++) {
+            const e1 = f1.events[ei], e2 = (f2.events||[])[ei];
+            if (!e1 || !e2) continue;
+            for (const s of (e1.sources||[])) {
+              if (e1.sourceQUAY?.[s] && !e2.sourceQUAY?.[s])
+                _db2LossLines.push(`FAM ${fid} events[${ei}].sourceQUAY[${s}]=${e1.sourceQUAY[s]} → FEHLT in db2`);
+              if (e1.sourcePages?.[s] && !e2.sourcePages?.[s])
+                _db2LossLines.push(`FAM ${fid} events[${ei}].sourcePages[${s}] → FEHLT in db2`);
+            }
+          }
+        }
+        // INDI FAMC sourPages/sourQUAY
+        for (const [iid, p1] of Object.entries(db1.individuals)) {
+          const p2 = db2.individuals[iid];
+          if (!p2) continue;
+          for (let fi = 0; fi < (p1.famc||[]).length; fi++) {
+            const fc1 = p1.famc[fi], fc2 = (p2.famc||[])[fi];
+            if (!fc1 || !fc2) continue;
+            for (const s of (fc1.sourIds||[])) {
+              if (fc1.sourPages?.[s] && !fc2.sourPages?.[s])
+                _db2LossLines.push(`INDI ${iid} famc[${fi}].sourPages[${s}]=${fc1.sourPages[s].slice(0,40)} → FEHLT in db2`);
+              if (fc1.sourQUAY?.[s] && !fc2.sourQUAY?.[s])
+                _db2LossLines.push(`INDI ${iid} famc[${fi}].sourQUAY[${s}] → FEHLT in db2`);
+            }
+          }
+          // INDI vital events
+          for (const evKey of ['birth','death','chr','buri']) {
+            const e1 = p1[evKey], e2 = p2[evKey];
+            if (!e1 || !e2) continue;
+            for (const s of (e1.sources||[])) {
+              if (e1.sourceQUAY?.[s] && !e2.sourceQUAY?.[s])
+                _db2LossLines.push(`INDI ${iid} ${evKey}.sourceQUAY[${s}] → FEHLT in db2`);
+              if (e1.sourcePages?.[s] && !e2.sourcePages?.[s])
+                _db2LossLines.push(`INDI ${iid} ${evKey}.sourcePages[${s}] → FEHLT in db2`);
+            }
+          }
+        }
+      }
+      const _db2LossReport = _db2LossLines.length
+        ? '\n\n' + '─'.repeat(42) + '\ndb1→db2 Verlust-Diagnose (' + _db2LossLines.length + ' Einträge):\n'
+          + _db2LossLines.slice(0, 30).join('\n')
+          + (_db2LossLines.length > 30 ? `\n  ... (${_db2LossLines.length - 30} weitere)` : '')
+        : '\n\ndb1→db2 Verlust-Diagnose: (kein Verlust)';
+
       // ── Passthrough-Inhalt ──────────────────────────────────────────
       function _ptAgg(lines, agg) {
         for (const l of (lines||[])) {
@@ -585,6 +647,7 @@ function runRoundtripTest() {
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
         _datePlacReport +
         _pageQuayReport +
+        _db2LossReport +
         _objeDiagReport +
         _sourNoteDiagReport +
         _ptReport +
