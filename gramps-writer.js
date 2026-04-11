@@ -639,9 +639,16 @@ async function _grampsXMLDebug() {
   const m = xml.match(/<person[\s\S]*?<\/person>/);
   if (m) console.log('\n=== Erste Person ===\n' + m[0]);
   else   console.log('Keine <person> gefunden');
-  console.log('\n=== Gender-Werte (erste 5) ===');
-  const genders = [...xml.matchAll(/<gender>([^<]*)<\/gender>/g)].slice(0,5);
-  genders.forEach(g => console.log(' ', g[0]));
+  const allGenders = [...xml.matchAll(/<gender>([^<]*)<\/gender>/g)];
+  const gCount = {male:0, female:0, unknown:0};
+  allGenders.forEach(g => { const v = g[1].trim(); gCount[v] = (gCount[v]||0)+1; });
+  console.log(`\n=== Gender-Statistik: male=${gCount.male} female=${gCount.female} unknown=${gCount.unknown} gesamt=${allGenders.length} ===`);
+  const unknownPersons = [];
+  const pMatches = [...xml.matchAll(/<person handle="([^"]*)" id="([^"]*)">([\s\S]*?)<\/person>/g)];
+  for (const pm of pMatches.slice(0, 200)) {
+    if (pm[3].includes('<gender>unknown</gender>')) unknownPersons.push(pm[2]);
+  }
+  if (unknownPersons.length) console.log('Erste unknown-Personen:', unknownPersons.slice(0,10).join(', '));
 }
 
 // ─────────────────────────────────────
