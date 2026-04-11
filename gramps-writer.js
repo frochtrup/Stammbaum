@@ -337,9 +337,7 @@ async function writeGRAMPS(db) {
     const gid    = pId.replace(/^@|@$/g, '');
     L.push(`    <person handle="${_esc(handle)}" id="${_esc(gid)}">`);
 
-    // Gender
-    const genderMap = { M:'Male', F:'Female', U:'Unknown' };
-    L.push(`      <gender>${genderMap[p.sex] || 'Unknown'}</gender>`);
+    // DTD-Reihenfolge: name*, gender, eventref*, objref*, attribute*, childof*, parentin*, noteref*, citationref*
 
     // Primary name
     const given   = p.given   || '';
@@ -370,6 +368,10 @@ async function writeGRAMPS(db) {
       if (en.nick)    L.push(`        <nick>${_esc(en.nick)}</nick>`);
       L.push('      </name>');
     }
+
+    // Gender (nach name*, vor eventref*)
+    const genderMap = { M:'Male', F:'Female', U:'Unknown' };
+    L.push(`      <gender>${genderMap[p.sex] || 'Unknown'}</gender>`);
 
     // Event refs
     for (const ref of personEvRefs[pId]||[]) {
