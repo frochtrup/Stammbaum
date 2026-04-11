@@ -119,6 +119,8 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 - [ ] **GEDCOM → GRAMPS** — GEDCOM-Datei laden, als `.gramps` exportieren: Prüfen ob alle strukturierten Felder (Personen, Familien, Quellen, Ereignisse, Medien) korrekt übertragen werden; bekannte Gaps dokumentieren (Orte nur flach, keine `placeObjects`; keine Tags; keine Handles → neue `_pwa`-Handles)
 - [ ] **GRAMPS → GEDCOM** — `.gramps`-Datei laden, als `.ged` exportieren: Prüfen ob GRAMPS-spezifische Inhalte verlustfrei degradieren (Orts-Hierarchie → flacher PLAC-Text; Tags → `_TAG`-passthrough oder Drop; Witness-Events → ignoriert; `_grampsAttrs` → ggf. GEDCOM-Attribute); Gaps in GEDCOM.md dokumentieren
 - [ ] **Roundtrip-Test beider Pfade** — `_grampsRoundtripTest()` + GEDCOM-Roundtrip nach Cross-Konvertierung ausführen; Delta-Report erstellen
+- [ ] **ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)** — GEDCOM 5.5.1 hat `1 ASSO @ID@\n2 RELA Witness` / `2 ROLE Godparent`; viele Programme erzeugen diese; Parser: ASSO-Block → synthetisches `_grampsWitnessRefs`-Eintrag; Writer: `_grampsWitnessRefs` mit role ≠ Primary → `1 ASSO @ID@\n2 RELA {role}`; damit wäre Witness-Roundtrip GEDCOM↔GRAMPS vollständig; eigenständiger Sprint (~4h)
+- [ ] **OBJE ohne FORM stabilisieren** — Parser initialisiert `m.form = null`; Writer gibt FORM nur aus wenn `m.form !== null` (statt immer aus Dateiendung abzuleiten); verhindert FORM-Addition bei Programmen die FORM explizit weglassen; heute nach erstem Roundtrip-Pass stabil, aber erste-Pass-Diff bleibt
 
 #### 5.2 UI-Review: GRAMPS-Inhalte in Formularen
 

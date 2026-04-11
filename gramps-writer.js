@@ -221,10 +221,12 @@ async function writeGRAMPS(db) {
   };
 
   // ── Resolve EVEN-type events (value = "TypeName: description") ────────────
+  // Unterstützt auch GEDCOM-Cross-Pfad: ev.eventType als Fallback wenn ev.value leer
   const _resolveEvenType = (ev) => {
     const val = ev.value || '';
     const colon = val.indexOf(':');
     if (colon > 0) return { type: val.slice(0, colon).trim(), desc: val.slice(colon+1).trim() };
+    if (ev.eventType) return { type: ev.eventType, desc: val };
     return { type: val || 'Event', desc: '' };
   };
 
