@@ -239,8 +239,8 @@ async function exportGEDCOM() {
 
 // GRAMPS XML Export (.gramps = gzip) — immer Download/Share (kein File Handle)
 async function exportGRAMPS() {
-  if (AppState.db?._sourceFormat !== 'gramps') {
-    showToast('⚠ Keine GRAMPS-Datei geladen');
+  if (!AppState.db) {
+    showToast('⚠ Keine Datei geladen');
     return;
   }
   showToast('GRAMPS-Datei wird erstellt …');

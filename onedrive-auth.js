@@ -23,7 +23,7 @@ function _odUpdateUI() {
   if (sb)  sb.style.display  = conn ? '' : 'none';
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
   const gb = document.getElementById('grampsExportBtn');
-  if (gb)  gb.style.display = AppState.db?._sourceFormat === 'gramps' ? '' : 'none';
+  if (gb)  gb.style.display = AppState.db ? '' : 'none';
 }
 
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
