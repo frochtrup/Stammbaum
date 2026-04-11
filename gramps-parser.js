@@ -214,6 +214,7 @@ async function parseGRAMPS(file) {
   // ─── Build handle lookup maps ────────────────────────────────────────────
   // Note: _byTag returns ALL descendants with that localName, which is correct
   // for GRAMPS XML where same-tag nesting never occurs within a section.
+  const _grampsHandles = {}; // grampsHandle → @ID@  (declared early — used in places + all sections)
 
   // Events: handle → {type, date, placeHandle, desc, cause, noteRefs[], citRefs[]}
   const evMap = {};
@@ -333,7 +334,6 @@ async function parseGRAMPS(file) {
 
   // ─── Build db ────────────────────────────────────────────────────────────
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
-  const _grampsHandles = {}; // grampsHandle → @ID@
 
   // ─── Repositories ────────────────────────────────────────────────────────
   const repoHandleToId = {};
