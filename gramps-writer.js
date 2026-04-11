@@ -602,18 +602,26 @@ async function writeGRAMPS(db) {
 
       // Build hierarchy for each leaf place
       for (const plRec of plArr) {
-        const parts = plRec.title.split(',').map(s => s.trim()).filter(Boolean);
-        const offset = formLevels.length - parts.length;
-        // Leaf type from right-aligned form position
-        plRec.type  = _formNameToType(formLevels[offset] || '');
-        plRec.pname = parts[0] || plRec.title;
-        // Build parent chain: parts[1..n-1] → shared place objects
+        // Keep empty parts when count matches formLevels (direct positional alignment).
+        // Example: "Bardel, Bad Bentheim, , , Niedersachsen, Deutschland" with 6 formLevels
+        // → parts[0]=Bardel/Dorf, parts[1]=Bad Bentheim/Stadt, parts[4]=Niedersachsen/Bundesland …
+        // Without filter: parts.length===formLevels.length → offset=0 → correct types.
+        // With filter: 4 non-empty parts, offset=2 → Bardel misclassified as PLZ.
+        const rawParts = plRec.title.split(',').map(s => s.trim());
+        const useDirect = formLevels.length > 0 && rawParts.length === formLevels.length;
+        const parts  = useDirect ? rawParts : rawParts.filter(Boolean);
+        const offset = useDirect ? 0 : Math.max(0, formLevels.length - parts.length);
+        // Leaf: first non-empty part
+        const leafIdx = parts.findIndex(p => p);
+        plRec.type  = _formNameToType(formLevels[offset + (leafIdx >= 0 ? leafIdx : 0)] || '');
+        plRec.pname = (leafIdx >= 0 ? parts[leafIdx] : null) || plRec.title;
+        // Build parent chain: skip empty parts
         let child = plRec;
-        for (let i = 1; i < parts.length; i++) {
+        for (let i = (leafIdx >= 0 ? leafIdx : 0) + 1; i < parts.length; i++) {
+          if (!parts[i]) continue;
           const parentType = _formNameToType(formLevels[offset + i] || '');
           const parentObj  = _getSharedPlace(parts[i], parentType);
           child._parentHandle = parentObj.handle;
-          // Link this shared place to its own parent (next iteration)
           child = parentObj;
         }
       }
