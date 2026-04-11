@@ -571,6 +571,165 @@ async function writeGRAMPS(db) {
 }
 
 // ─────────────────────────────────────
+//  DEEP ROUNDTRIP TEST (browser console)
+//  Aufruf: await _grampsDeepTest()
+//  Prüft: alle Personen/Familien/Quellen im Detail, Orte, Extra-Namen,
+//         Attribute (_UID, _STAT), Medien, Handles, Zitierungen
+// ─────────────────────────────────────
+async function _grampsDeepTest() {
+  const db1 = AppState.db;
+  if (db1?._sourceFormat !== 'gramps') {
+    console.warn('Kein GRAMPS db geladen'); return null;
+  }
+
+  console.log('=== GRAMPS Deep Test — schreibe …');
+  const blob = await writeGRAMPS(db1);
+  console.log(`Geschrieben: ${(blob.size/1024).toFixed(1)} KB`);
+  const db2 = await parseGRAMPS(new File([blob], 'deep.gramps'));
+
+  let pass = 0, fail = 0;
+  const failures = [];
+
+  const chk = (label, a, b) => {
+    if ((a == null ? '' : String(a)) === (b == null ? '' : String(b))) { pass++; return true; }
+    fail++; failures.push(`${label}: "${a ?? ''}" ≠ "${b ?? ''}"`); return false;
+  };
+  const chkN = (label, a, b) => {
+    if (a === b) { pass++; return true; }
+    fail++; failures.push(`${label}: ${a} ≠ ${b}`); return false;
+  };
+
+  // ── 1. Alle Personen ────────────────────────────────────────────────────────
+  let pFail = 0;
+  for (const [id, p1] of Object.entries(db1.individuals)) {
+    const p2 = db2.individuals[id];
+    if (!p2) { fail++; failures.push(`Person ${id} fehlt`); pFail++; continue; }
+    const ok = [
+      chk(`${id}.given`,        p1.given,           p2.given),
+      chk(`${id}.surname`,      p1.surname,         p2.surname),
+      chk(`${id}.nick`,         p1.nick,            p2.nick),
+      chk(`${id}.prefix`,       p1.prefix,          p2.prefix),
+      chk(`${id}.suffix`,       p1.suffix,          p2.suffix),
+      chk(`${id}.sex`,          p1.sex,             p2.sex),
+      chk(`${id}.birth.date`,   p1.birth?.date,     p2.birth?.date),
+      chk(`${id}.birth.place`,  p1.birth?.place,    p2.birth?.place),
+      chk(`${id}.chr.date`,     p1.chr?.date,       p2.chr?.date),
+      chk(`${id}.death.date`,   p1.death?.date,     p2.death?.date),
+      chk(`${id}.death.place`,  p1.death?.place,    p2.death?.place),
+      chk(`${id}.buri.date`,    p1.buri?.date,      p2.buri?.date),
+      chk(`${id}.buri.place`,   p1.buri?.place,     p2.buri?.place),
+      chkN(`${id}.events.len`,  p1.events?.length||0, p2.events?.length||0),
+      chkN(`${id}.extraNames`,  p1.extraNames?.length||0, p2.extraNames?.length||0),
+      chkN(`${id}.media.len`,   p1.media?.length||0,  p2.media?.length||0),
+    ];
+    if (p1.uid)   chk(`${id}._UID`,  p1.uid,   p2.uid);
+    if (p1._stat) chk(`${id}._STAT`, p1._stat, p2._stat);
+    if (!ok.every(Boolean)) pFail++;
+  }
+  console.log(`  Personen: ${Object.keys(db1.individuals).length} geprüft, ${pFail} mit Delta`);
+
+  // ── 2. Extra-Namen (alle Felder) ────────────────────────────────────────────
+  for (const [id, p1] of Object.entries(db1.individuals)) {
+    const p2 = db2.individuals[id];
+    if (!p2) continue;
+    (p1.extraNames || []).forEach((en, i) => {
+      const en2 = p2.extraNames?.[i];
+      chk(`${id}.extraNames[${i}].given`,   en.given,   en2?.given);
+      chk(`${id}.extraNames[${i}].surname`, en.surname, en2?.surname);
+      chk(`${id}.extraNames[${i}].type`,    en.type,    en2?.type);
+    });
+  }
+
+  // ── 3. Familien ─────────────────────────────────────────────────────────────
+  let fFail = 0;
+  for (const [id, f1] of Object.entries(db1.families)) {
+    const f2 = db2.families[id];
+    if (!f2) { fail++; failures.push(`Familie ${id} fehlt`); fFail++; continue; }
+    const ok = [
+      chk(`${id}.husb`,       f1.husb,         f2.husb),
+      chk(`${id}.wife`,       f1.wife,         f2.wife),
+      chkN(`${id}.children`,  f1.children?.length||0, f2.children?.length||0),
+      chk(`${id}.marr.date`,  f1.marr?.date,   f2.marr?.date),
+      chk(`${id}.marr.place`, f1.marr?.place,  f2.marr?.place),
+      chk(`${id}.div.date`,   f1.div?.date,    f2.div?.date),
+    ];
+    if (!ok.every(Boolean)) fFail++;
+  }
+  console.log(`  Familien: ${Object.keys(db1.families).length} geprüft, ${fFail} mit Delta`);
+
+  // ── 4. Quellen ──────────────────────────────────────────────────────────────
+  let sFail = 0;
+  for (const [id, s1] of Object.entries(db1.sources)) {
+    const s2 = db2.sources[id];
+    if (!s2) { fail++; failures.push(`Quelle ${id} fehlt`); sFail++; continue; }
+    const ok = [
+      chk(`${id}.title`,  s1.title,  s2.title),
+      chk(`${id}.author`, s1.author, s2.author),
+      chk(`${id}.publ`,   s1.publ,   s2.publ),
+      chk(`${id}.abbr`,   s1.abbr,   s2.abbr),
+    ];
+    if (!ok.every(Boolean)) sFail++;
+  }
+  console.log(`  Quellen: ${Object.keys(db1.sources).length} geprüft, ${sFail} mit Delta`);
+
+  // ── 5. Orte: alle unique place-Strings ─────────────────────────────────────
+  const collectPlaces = db => {
+    const s = new Set();
+    for (const p of Object.values(db.individuals)) {
+      if (p.birth?.place)  s.add(p.birth.place);
+      if (p.chr?.place)    s.add(p.chr.place);
+      if (p.death?.place)  s.add(p.death.place);
+      if (p.buri?.place)   s.add(p.buri.place);
+      for (const ev of p.events||[]) if (ev.place) s.add(ev.place);
+    }
+    for (const f of Object.values(db.families)) {
+      if (f.marr?.place) s.add(f.marr.place);
+      for (const ev of f.events||[]) if (ev.place) s.add(ev.place);
+    }
+    s.delete(''); s.delete(undefined); s.delete(null);
+    return s;
+  };
+  const pl1 = collectPlaces(db1), pl2 = collectPlaces(db2);
+  let plFail = 0;
+  for (const pl of pl1) {
+    if (!pl2.has(pl)) { fail++; failures.push(`Ort fehlt: "${pl}"`); plFail++; } else pass++;
+  }
+  console.log(`  Orte: ${pl1.size} unique, ${plFail} fehlend`);
+
+  // ── 6. Medien-Pfade ─────────────────────────────────────────────────────────
+  let mFail = 0;
+  for (const [id, p1] of Object.entries(db1.individuals)) {
+    const p2 = db2.individuals[id];
+    if (!p1.media?.length || !p2) continue;
+    const f1 = p1.media.map(m => m.file).sort().join('|');
+    const f2 = (p2.media||[]).map(m => m.file).sort().join('|');
+    if (!chk(`${id}.media.files`, f1, f2)) mFail++;
+  }
+  console.log(`  Medien-Pfade: ${mFail} Personen mit Delta`);
+
+  // ── 7. GRAMPS Handles (Stichprobe 20) ──────────────────────────────────────
+  const h1 = db1._grampsHandles || {}, h2 = db2._grampsHandles || {};
+  const h2inv = {};
+  for (const [h, id] of Object.entries(h2)) h2inv[id] = h;
+  let hFail = 0, hChecked = 0;
+  for (const [handle, id] of Object.entries(h1)) {
+    if (hChecked++ >= 20) break;
+    if (!chk(`handle.${id}`, handle, h2inv[id])) hFail++;
+  }
+  console.log(`  Handles: ${hChecked} geprüft, ${hFail} mit Delta`);
+
+  // ── Zusammenfassung ─────────────────────────────────────────────────────────
+  console.log(`\nChecks gesamt: ${pass+fail}  ✓ ${pass}  ✗ ${fail}`);
+  if (failures.length) {
+    console.log(`\nFehler (max 30):`);
+    failures.slice(0, 30).forEach(f => console.log(' ✗', f));
+    if (failures.length > 30) console.log(`  … und ${failures.length-30} weitere`);
+  }
+  console.log(`\nErgebnis: ${fail===0 ? '✓ DEEP TEST OK' : `✗ ${fail} Fehler`}`);
+  return { pass, fail, failures, db1, db2 };
+}
+
+// ─────────────────────────────────────
 //  ROUNDTRIP TEST (browser console)
 //  Aufruf: await _grampsRoundtripTest()
 // ─────────────────────────────────────
