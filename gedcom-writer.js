@@ -304,6 +304,25 @@ function writeFAMRecord(lines, f) {
         if (_cr.sourQUAY?.[sId])  lines.push(`3 QUAY ${_cr.sourQUAY[sId]}`);
         if (_cr.sourExtra?.[sId]) for (const l of _cr.sourExtra[sId]) lines.push(l);
       }
+      // _FREL/_MREL mit verschachteltem SOUR (z.B. Ancestris-Format: 2 _FREL → 3 SOUR @@Sxx@@ → 4 PAGE/QUAY)
+      if (_cr.frelSeen) {
+        lines.push(`2 _FREL ${_cr.frel}`);
+        if (_cr.frelSour) {
+          lines.push(`3 SOUR ${_cr.frelSour}`);
+          if (_cr.frelPage) lines.push(`4 PAGE ${_cr.frelPage}`);
+          if (_cr.frelQUAY) lines.push(`4 QUAY ${_cr.frelQUAY}`);
+          for (const l of (_cr.frelSourExtra || [])) lines.push(l);
+        }
+      }
+      if (_cr.mrelSeen) {
+        lines.push(`2 _MREL ${_cr.mrel}`);
+        if (_cr.mrelSour) {
+          lines.push(`3 SOUR ${_cr.mrelSour}`);
+          if (_cr.mrelPage) lines.push(`4 PAGE ${_cr.mrelPage}`);
+          if (_cr.mrelQUAY) lines.push(`4 QUAY ${_cr.mrelQUAY}`);
+          for (const l of (_cr.mrelSourExtra || [])) lines.push(l);
+        }
+      }
     }
   }
 
