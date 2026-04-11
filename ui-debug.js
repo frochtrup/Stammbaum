@@ -250,6 +250,42 @@ function runRoundtripTest() {
         _datePlacReport = '\n\nFehlende 2 DATE/PLAC — Kontext:\n' + _dpLines.join('\n');
       }
 
+      // Diagnose: fehlende 3 PAGE / 3 QUAY — Kontext (woher kommen sie)
+      const _pageQuayDiag = [];
+      const _pageQuayCtx  = {};
+      { const _outC4 = new Map();
+        for (const l of _outArr) _outC4.set(l, (_outC4.get(l)||0)+1);
+        const _allLines4 = _origText.split(/\r?\n/);
+        let _pqRec = '', _pqLv1 = '', _pqLv2 = '';
+        for (let i = 0; i < _allLines4.length; i++) {
+          const lt = _norm(_allLines4[i]);
+          const lv = parseInt(lt);
+          if (isNaN(lv)) continue;
+          if (lv === 0) { _pqRec = lt.replace(/^0 @\S+@ /, '').replace(/^0 /, '').split(' ')[0]; _pqLv1 = ''; _pqLv2 = ''; }
+          else if (lv === 1) { _pqLv1 = lt.match(/^1 (\S+)/)?.[1] || ''; _pqLv2 = ''; }
+          else if (lv === 2) { _pqLv2 = lt.match(/^2 (\S+)/)?.[1] || ''; }
+          if (lv !== 3) continue;
+          const tag3 = lt.match(/^3 (\S+)/)?.[1];
+          if (tag3 !== 'PAGE' && tag3 !== 'QUAY') continue;
+          const rem = _outC4.get(lt) || 0;
+          if (rem > 0) { _outC4.set(lt, rem-1); continue; }
+          // fehlende Zeile — Kontext erfassen
+          const key = `${_pqRec}/1 ${_pqLv1}/2 ${_pqLv2}/${tag3}`;
+          _pageQuayCtx[key] = (_pageQuayCtx[key] || 0) + 1;
+          if (_pageQuayDiag.length < 10) {
+            const prev = _norm(_allLines4[i-1] || '');
+            const next = _norm(_allLines4[i+1] || '');
+            _pageQuayDiag.push(`  [${i+1}] ${_pqRec}/1 ${_pqLv1}/2 ${_pqLv2}\n       prev: ${prev}\n       MISS: ${lt}\n       next: ${next}`);
+          }
+        }
+      }
+      const _pqCtxLines = Object.entries(_pageQuayCtx).sort((a,b)=>b[1]-a[1]).map(([k,n]) => `    ${k}: ${n}×`);
+      const _pageQuayReport = (_pqCtxLines.length || _pageQuayDiag.length)
+        ? '\n\nFehlende 3 PAGE/QUAY — Kontext:\n'
+          + (_pqCtxLines.length ? '  Zusammenfassung:\n' + _pqCtxLines.join('\n') + '\n' : '')
+          + (_pageQuayDiag.length ? '  Beispiele:\n' + _pageQuayDiag.join('\n') : '')
+        : '';
+
       // ── Passthrough-Inhalt ──────────────────────────────────────────
       function _ptAgg(lines, agg) {
         for (const l of (lines||[])) {
@@ -548,6 +584,7 @@ function runRoundtripTest() {
         _evenReport +
         '\n\nAuto-Diff (fehlende Tags):\n' + _diffReport +
         _datePlacReport +
+        _pageQuayReport +
         _objeDiagReport +
         _sourNoteDiagReport +
         _ptReport +
