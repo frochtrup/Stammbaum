@@ -202,8 +202,11 @@ async function parseGRAMPS(file) {
   const errEl     = doc.querySelector('parsererror');
   if (errEl) throw new Error('GRAMPS-XML: ' + errEl.textContent.slice(0, 200));
 
-  // GRAMPS XML uses default namespace — use getElementsByTagNameNS with fallback
-  const _NS = 'http://gramps-project.org/xml/1.7.2/';
+  // GRAMPS XML uses default namespace — detect from file (may be 1.7.1 or 1.7.2)
+  const _NS = doc.documentElement.getAttribute('xmlns') || 'http://gramps-project.org/xml/1.7.2/';
+  // Derive DTD version string from namespace URL (e.g. "1.7.2" or "1.7.1")
+  const _grampsNS = _NS;
+  const _grampsNSVersion = (_NS.match(/\/xml\/([^/]+)\/$/) || [])[1] || '1.7.2';
   // Get all elements with a given local name (works regardless of namespace binding)
   const _byTag = (root, tag) => {
     const byNS = root.getElementsByTagNameNS(_NS, tag);
@@ -731,6 +734,10 @@ async function parseGRAMPS(file) {
     if (m) maxId = Math.max(maxId, +m[0]);
   }
 
+  // GRAMPS app version from <created version="...">
+  const _createdEl = _byTag(doc, 'created')[0];
+  const _grampsVersion = _createdEl ? (_createdEl.getAttribute('version') || '5.2.0') : '5.2.0';
+
   return {
     individuals, families, sources, notes, repositories,
     placeObjects,
@@ -739,6 +746,7 @@ async function parseGRAMPS(file) {
     _sourceFormat: 'gramps',
     _grampsMaster: true,
     _grampsHandles,
+    _grampsNS, _grampsNSVersion, _grampsVersion,
     _idCounterMax: maxId
   };
 }

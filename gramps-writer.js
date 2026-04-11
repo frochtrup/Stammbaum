@@ -303,12 +303,17 @@ async function writeGRAMPS(db) {
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
+  // Use namespace/version from original file (prevents GRAMPS "newer version" import errors)
+  const _ns      = db._grampsNS        || 'http://gramps-project.org/xml/1.7.2/';
+  const _nsVer   = db._grampsNSVersion || '1.7.2';
+  const _appVer  = db._grampsVersion   || '6.0.6';
+
   L.push('<?xml version="1.0" encoding="UTF-8"?>');
-  L.push('<!DOCTYPE database PUBLIC "-//Gramps//DTD Gramps XML 1.7.2//EN"');
-  L.push('"http://gramps-project.org/xml/1.7.2/grampsxml.dtd">');
-  L.push('<database xmlns="http://gramps-project.org/xml/1.7.2/">');
+  L.push(`<!DOCTYPE database PUBLIC "-//Gramps//DTD Gramps XML ${_nsVer}//EN"`);
+  L.push(`"http://gramps-project.org/xml/${_nsVer}/grampsxml.dtd">`);
+  L.push(`<database xmlns="${_ns}">`);
   L.push('  <header>');
-  L.push(`    <created date="${today}" version="6.0.6"/>`);
+  L.push(`    <created date="${today}" version="${_appVer}"/>`);
   L.push('  </header>');
 
   // ── Events ──────────────────────────────────────────────────────────────
@@ -628,9 +633,11 @@ async function _grampsXMLDebug() {
   const merged = new Uint8Array(total); let off=0;
   for (const c of chunks) { merged.set(c,off); off+=c.length; }
   const xml = new TextDecoder().decode(merged);
+  // Log XML header (first 300 chars)
+  console.log('=== XML Header ===\n' + xml.slice(0, 300));
   // Log first person element
   const m = xml.match(/<person[\s\S]*?<\/person>/);
-  if (m) console.log('=== Erste Person ===\n' + m[0]);
+  if (m) console.log('\n=== Erste Person ===\n' + m[0]);
   else   console.log('Keine <person> gefunden');
   console.log('\n=== Gender-Werte (erste 5) ===');
   const genders = [...xml.matchAll(/<gender>([^<]*)<\/gender>/g)].slice(0,5);
