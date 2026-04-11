@@ -457,21 +457,7 @@ async function writeGRAMPS(db) {
   }
   L.push('  </families>');
 
-  // ── Citations ─────────────────────────────────────────────────────────────
-  const citArr = Object.values(citRecs);
-  if (citArr.length) {
-    L.push('  <citations>');
-    for (const cit of citArr) {
-      L.push(`    <citation handle="${_esc(cit.handle)}" id="${_esc(cit.id)}">`);
-      if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
-      L.push(`      <confidence>${cit.confidence}</confidence>`);
-      L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
-      L.push('    </citation>');
-    }
-    L.push('  </citations>');
-  }
-
-  // ── Sources ───────────────────────────────────────────────────────────────
+  // ── Sources (DTD-Reihenfolge: sources vor citations) ─────────────────────
   L.push('  <sources>');
   for (const [sId, s] of Object.entries(db.sources)) {
     const handle = _entityHandle(sId, 'so');
@@ -497,6 +483,20 @@ async function writeGRAMPS(db) {
     L.push('    </source>');
   }
   L.push('  </sources>');
+
+  // ── Citations (DTD-Reihenfolge: nach sources) ──────────────────────────────
+  const citArr = Object.values(citRecs);
+  if (citArr.length) {
+    L.push('  <citations>');
+    for (const cit of citArr) {
+      L.push(`    <citation handle="${_esc(cit.handle)}" id="${_esc(cit.id)}">`);
+      if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
+      L.push(`      <confidence>${cit.confidence}</confidence>`);
+      L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
+      L.push('    </citation>');
+    }
+    L.push('  </citations>');
+  }
 
   // ── Places ────────────────────────────────────────────────────────────────
   if (db.placeObjects && Object.keys(db.placeObjects).length) {
@@ -649,6 +649,48 @@ async function _grampsXMLDebug() {
     if (pm[3].includes('<gender>unknown</gender>')) unknownPersons.push(pm[2]);
   }
   if (unknownPersons.length) console.log('Erste unknown-Personen:', unknownPersons.slice(0,10).join(', '));
+}
+
+// ─────────────────────────────────────
+//  MINIMAL TEST — 2-Personen .gramps zum Download (GRAMPS-Import-Diagnose)
+//  Aufruf: await _grampsMinimalTest()
+// ─────────────────────────────────────
+async function _grampsMinimalTest() {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE database PUBLIC "-//Gramps//DTD Gramps XML 1.7.2//EN"
+"http://gramps-project.org/xml/1.7.2/grampsxml.dtd">
+<database xmlns="http://gramps-project.org/xml/1.7.2/">
+  <header>
+    <created date="${new Date().toISOString().slice(0,10)}" version="6.0.6"/>
+  </header>
+  <events/>
+  <people>
+    <person handle="_testpe00000001" id="I0001">
+      <name type="Birth Name"><first>Hans</first><surname>Müller</surname></name>
+      <gender>male</gender>
+    </person>
+    <person handle="_testpe00000002" id="I0002">
+      <name type="Birth Name"><first>Maria</first><surname>Müller</surname></name>
+      <gender>female</gender>
+    </person>
+  </people>
+  <families/>
+  <sources/>
+</database>`;
+  const encoded = new TextEncoder().encode(xml);
+  const cs = new CompressionStream('gzip');
+  const w = cs.writable.getWriter(); w.write(encoded); w.close();
+  const reader = cs.readable.getReader();
+  const chunks = []; let total = 0;
+  for (;;) { const {done,value} = await reader.read(); if (done) break; chunks.push(value); total+=value.length; }
+  const merged = new Uint8Array(total); let off=0;
+  for (const c of chunks) { merged.set(c,off); off+=c.length; }
+  const blob = new Blob([merged], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='test_minimal.gramps';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+  console.log('test_minimal.gramps: Hans Müller (male), Maria Müller (female)');
 }
 
 // ─────────────────────────────────────
