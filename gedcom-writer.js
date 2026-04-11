@@ -220,29 +220,25 @@ function writeINDIRecord(lines, p) {
           lines.push(`2 _MREL ${mv}`);
         }
       }
-      // Alle Quellen dedupl. sammeln: sourIds + frelSour + mrelSour + sourPages/QUAY/Extra-Keys
-      const _allSours = Array.from(new Set([
+      // Alle echten SOUR-IDs dedupl. sammeln: sourIds + frelSour + mrelSour
+      const _allSours = [...new Set([
         ...(fref.sourIds || []),
-        ...Object.keys(fref.sourPages || {}),
-        ...Object.keys(fref.sourQUAY  || {}),
-        ...Object.keys(fref.sourExtra || {})
-      ].filter(Boolean)));
+        fref.frelSour,
+        fref.mrelSour,
+        ...[...(fref.frelSourExtra||[]), ...(fref.mrelSourExtra||[])]
+          .map(x => (x.match(/^\d+ SOUR (@\S+@)/) || [])[1])
+      ].filter(Boolean))];
       const _sourPages = Object.assign({}, fref.sourPages);
       const _sourQUAY  = Object.assign({}, fref.sourQUAY);
+      // frelPage/frelQUAY in _sourPages/_sourQUAY eintragen (immer, unabhängig von Deduplizierung)
       for (const [xSour, xPage, xQuay] of [
         [fref.frelSour, fref.frelPage, fref.frelQUAY],
         [fref.mrelSour, fref.mrelPage, fref.mrelQUAY]
       ]) {
-        if (xSour && !_allSours.includes(xSour)) {
-          _allSours.push(xSour);
+        if (xSour) {
           if (xPage) _sourPages[xSour] = xPage;
           if (xQuay) _sourQUAY[xSour]  = xQuay;
         }
-      }
-      // Zusätzliche SOUR-IDs aus frelSourExtra / mrelSourExtra extrahieren
-      for (const extra of [...(fref.frelSourExtra||[]), ...(fref.mrelSourExtra||[])]) {
-        const m = extra.match(/^\d+ SOUR (@\S+@)/);
-        if (m && !_allSours.includes(m[1])) _allSours.push(m[1]);
       }
       for (const s of _allSours) {
         lines.push(`2 SOUR ${s}`);
@@ -390,7 +386,7 @@ function writeSOURRecord(lines, s) {
     lines.push(`1 REPO ${s.repo}`);
     if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
   }
-  if (s.text !== undefined) pushCont(lines, 1, 'TEXT', s.text);
+  if (s._textSeen) pushCont(lines, 1, 'TEXT', s.text || '');
   if (s.agnc || (s.dataExtra && s.dataExtra.length)) {
     lines.push(`1 DATA`);
     if (s.agnc) lines.push(`2 AGNC ${s.agnc}`);

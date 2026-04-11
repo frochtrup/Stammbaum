@@ -83,7 +83,7 @@ function parseGEDCOM(text, parseErrors) {
         cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', _textSeen:false, agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
@@ -720,7 +720,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag==='DATE') cur.date   = val;
         else if (tag==='PUBL') cur.publ   = val;
         else if (tag==='REPO') { cur.repo = val; cur.repoCallNum = ''; }
-        else if (tag==='TEXT') cur.text   = val;
+        else if (tag==='TEXT') { cur.text = val; cur._textSeen = true; }
         else if (tag==='CHAN') { /* context-only */ }
         else if (tag==='DATA') { /* context-only — sub-tags handled at lv=2 */ }
         else if (tag==='_DATE') { cur._date = val; }
