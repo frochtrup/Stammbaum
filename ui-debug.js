@@ -256,14 +256,19 @@ function runRoundtripTest() {
       { const _outC4 = new Map();
         for (const l of _outArr) _outC4.set(l, (_outC4.get(l)||0)+1);
         const _allLines4 = _origText.split(/\r?\n/);
-        let _pqRec = '', _pqLv1 = '', _pqLv2 = '';
+        let _pqRec = '', _pqLv1 = '', _pqLv2 = '', _pqRecId = '', _pqLv2Val = '';
         for (let i = 0; i < _allLines4.length; i++) {
           const lt = _norm(_allLines4[i]);
           const lv = parseInt(lt);
           if (isNaN(lv)) continue;
-          if (lv === 0) { _pqRec = lt.replace(/^0 @\S+@ /, '').replace(/^0 /, '').split(' ')[0]; _pqLv1 = ''; _pqLv2 = ''; }
-          else if (lv === 1) { _pqLv1 = lt.match(/^1 (\S+)/)?.[1] || ''; _pqLv2 = ''; }
-          else if (lv === 2) { _pqLv2 = lt.match(/^2 (\S+)/)?.[1] || ''; }
+          if (lv === 0) {
+            const _m0 = lt.match(/^0 (@\S+@) (\S+)/);
+            _pqRec = _m0 ? _m0[2] : (lt.replace(/^0 /, '').split(' ')[0]);
+            _pqRecId = _m0 ? _m0[1] : '';
+            _pqLv1 = ''; _pqLv2 = ''; _pqLv2Val = '';
+          }
+          else if (lv === 1) { _pqLv1 = lt.match(/^1 (\S+)/)?.[1] || ''; _pqLv2 = ''; _pqLv2Val = ''; }
+          else if (lv === 2) { _pqLv2 = lt.match(/^2 (\S+)/)?.[1] || ''; _pqLv2Val = lt.replace(/^2 \S+\s*/, ''); }
           if (lv !== 3) continue;
           const tag3 = lt.match(/^3 (\S+)/)?.[1];
           if (tag3 !== 'PAGE' && tag3 !== 'QUAY') continue;
@@ -273,9 +278,28 @@ function runRoundtripTest() {
           const key = `${_pqRec}/1 ${_pqLv1}/2 ${_pqLv2}/${tag3}`;
           _pageQuayCtx[key] = (_pageQuayCtx[key] || 0) + 1;
           if (_pageQuayDiag.length < 10) {
+            // db1-Statuscheck: ist der Wert in db1 vorhanden?
+            let _db1s = '';
+            if (_pqRecId && _pqLv2 === 'SOUR') {
+              if (_pqRec === 'INDI' && _pqLv1 === 'FAMC') {
+                const _pr = db1.individuals[_pqRecId];
+                const _fc = _pr?.famc?.find(f => f.sourIds?.includes(_pqLv2Val));
+                if (_fc) {
+                  const _has = tag3 === 'PAGE' ? !!_fc.sourPages?.[_pqLv2Val] : !!_fc.sourQUAY?.[_pqLv2Val];
+                  _db1s = _has ? ' [db1:✓→writer-bug]' : ' [db1:✗→parser-bug]';
+                } else { _db1s = ` [db1:famc-not-found sourIds=${JSON.stringify(_pr?.famc?.map(f=>f.sourIds))}]`; }
+              } else if (_pqRec === 'FAM') {
+                const _fam = db1.families[_pqRecId];
+                const _ev = _pqLv1 === 'MARR' ? _fam?.marr : _pqLv1 === 'EVEN' ? _fam?.events?.find(e=>e.sources?.includes(_pqLv2Val)) : null;
+                if (_ev) {
+                  const _has = tag3 === 'PAGE' ? !!_ev.sourcePages?.[_pqLv2Val] : !!_ev.sourceQUAY?.[_pqLv2Val];
+                  _db1s = _has ? ' [db1:✓→writer-bug]' : ' [db1:✗→parser-bug]';
+                }
+              }
+            }
             const prev = _norm(_allLines4[i-1] || '');
             const next = _norm(_allLines4[i+1] || '');
-            _pageQuayDiag.push(`  [${i+1}] ${_pqRec}/1 ${_pqLv1}/2 ${_pqLv2}\n       prev: ${prev}\n       MISS: ${lt}\n       next: ${next}`);
+            _pageQuayDiag.push(`  [${i+1}] ${_pqRec}/1 ${_pqLv1}/2 ${_pqLv2}\n       prev: ${prev}\n       MISS: ${lt}${_db1s}\n       next: ${next}`);
           }
         }
       }

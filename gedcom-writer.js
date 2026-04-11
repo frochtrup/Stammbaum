@@ -220,8 +220,13 @@ function writeINDIRecord(lines, p) {
           lines.push(`2 _MREL ${mv}`);
         }
       }
-      // Alle Quellen dedupl. sammeln: sourIds + frelSour + mrelSour
-      const _allSours = [...(fref.sourIds || [])];
+      // Alle Quellen dedupl. sammeln: sourIds + frelSour + mrelSour + sourPages/QUAY/Extra-Keys
+      const _allSours = Array.from(new Set([
+        ...(fref.sourIds || []),
+        ...Object.keys(fref.sourPages || {}),
+        ...Object.keys(fref.sourQUAY  || {}),
+        ...Object.keys(fref.sourExtra || {})
+      ].filter(Boolean)));
       const _sourPages = Object.assign({}, fref.sourPages);
       const _sourQUAY  = Object.assign({}, fref.sourQUAY);
       for (const [xSour, xPage, xQuay] of [
@@ -385,7 +390,7 @@ function writeSOURRecord(lines, s) {
     lines.push(`1 REPO ${s.repo}`);
     if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
   }
-  if (s.text) pushCont(lines, 1, 'TEXT', s.text);
+  if (s.text !== undefined) pushCont(lines, 1, 'TEXT', s.text);
   if (s.agnc || (s.dataExtra && s.dataExtra.length)) {
     lines.push(`1 DATA`);
     if (s.agnc) lines.push(`2 AGNC ${s.agnc}`);
