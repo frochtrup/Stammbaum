@@ -178,7 +178,7 @@ async function writeGRAMPS(db) {
       .map(srcId => _citHandle(srcId, evObj.sourcePages?.[srcId], evObj.sourceQUAY?.[srcId] ?? 0))
       .filter(Boolean);
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
-    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', citHandles, noteHandle });
+    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: evObj._grampsAttrs||[], citHandles, noteHandle });
     return { handle, role: role||'Primary' };
   };
 
@@ -322,6 +322,7 @@ async function writeGRAMPS(db) {
       if (ev.plHandle) L.push(`      <place hlink="${_esc(ev.plHandle)}"/>`);
       if (ev.desc)    L.push(`      <description>${_esc(ev.desc)}</description>`);
       if (ev.cause)   L.push(`      <attribute type="Cause" value="${_esc(ev.cause)}"/>`);
+      for (const a of ev.attrs||[]) L.push(`      <attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
       if (ev.noteHandle) L.push(`      <noteref hlink="${_esc(ev.noteHandle)}"/>`);
       for (const ch of ev.citHandles) L.push(`      <citationref hlink="${_esc(ch)}"/>`);
       L.push('    </event>');
@@ -385,6 +386,7 @@ async function writeGRAMPS(db) {
     if (p._stat) L.push(`      <attribute type="_STAT" value="${_esc(p._stat)}"/>`);
     if (p.resn)  L.push(`      <attribute type="RESN" value="${_esc(p.resn)}"/>`);
     if (p.email) L.push(`      <attribute type="E-MAIL" value="${_esc(p.email)}"/>`);
+    for (const a of p._grampsAttrs||[]) L.push(`      <attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
 
     // Family links
     for (const fc of p.famc||[]) {
@@ -430,8 +432,15 @@ async function writeGRAMPS(db) {
     }
 
     for (const chId of f.children||[]) {
-      L.push(`      <childref hlink="${_esc(_entityHandle(chId,'pe'))}"/>`);
+      const rel = f.childRelations?.[chId];
+      let relAttrs = '';
+      if (rel?.frel || rel?.mrel) {
+        relAttrs = ` frel="${_esc(rel.frel||'Birth')}" mrel="${_esc(rel.mrel||'Birth')}"`;
+      }
+      L.push(`      <childref hlink="${_esc(_entityHandle(chId,'pe'))}"${relAttrs}/>`);
     }
+
+    for (const a of f._grampsAttrs||[]) L.push(`      <attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
 
     for (const nh of famNoteRefs[fId]||[]) {
       L.push(`      <noteref hlink="${_esc(nh)}"/>`);
@@ -646,9 +655,10 @@ async function _grampsDeepTest() {
       chk(`${id}.death.place`,  p1.death?.place,    p2.death?.place),
       chk(`${id}.buri.date`,    p1.buri?.date,      p2.buri?.date),
       chk(`${id}.buri.place`,   p1.buri?.place,     p2.buri?.place),
-      chkN(`${id}.events.len`,  p1.events?.length||0, p2.events?.length||0),
-      chkN(`${id}.extraNames`,  p1.extraNames?.length||0, p2.extraNames?.length||0),
-      chkN(`${id}.media.len`,   p1.media?.length||0,  p2.media?.length||0),
+      chkN(`${id}.events.len`,   p1.events?.length||0,       p2.events?.length||0),
+      chkN(`${id}.extraNames`,   p1.extraNames?.length||0,   p2.extraNames?.length||0),
+      chkN(`${id}.media.len`,    p1.media?.length||0,        p2.media?.length||0),
+      chkN(`${id}._grampsAttrs`, p1._grampsAttrs?.length||0, p2._grampsAttrs?.length||0),
     ];
     if (p1.uid)   chk(`${id}._UID`,  p1.uid,   p2.uid);
     if (p1._stat) chk(`${id}._STAT`, p1._stat, p2._stat);
@@ -674,13 +684,20 @@ async function _grampsDeepTest() {
     const f2 = db2.families[id];
     if (!f2) { fail++; failures.push(`Familie ${id} fehlt`); fFail++; continue; }
     const ok = [
-      chk(`${id}.husb`,       f1.husb,         f2.husb),
-      chk(`${id}.wife`,       f1.wife,         f2.wife),
-      chkN(`${id}.children`,  f1.children?.length||0, f2.children?.length||0),
-      chk(`${id}.marr.date`,  f1.marr?.date,   f2.marr?.date),
-      chk(`${id}.marr.place`, f1.marr?.place,  f2.marr?.place),
-      chk(`${id}.div.date`,   f1.div?.date,    f2.div?.date),
+      chk(`${id}.husb`,         f1.husb,              f2.husb),
+      chk(`${id}.wife`,         f1.wife,              f2.wife),
+      chkN(`${id}.children`,    f1.children?.length||0, f2.children?.length||0),
+      chk(`${id}.marr.date`,    f1.marr?.date,        f2.marr?.date),
+      chk(`${id}.marr.place`,   f1.marr?.place,       f2.marr?.place),
+      chk(`${id}.div.date`,     f1.div?.date,         f2.div?.date),
+      chkN(`${id}._grampsAttrs`,f1._grampsAttrs?.length||0, f2._grampsAttrs?.length||0),
     ];
+    // childref frel/mrel
+    for (const chId of f1.children||[]) {
+      const r1 = f1.childRelations?.[chId], r2 = f2.childRelations?.[chId];
+      if (r1?.frel) chk(`${id}.childRel.${chId}.frel`, r1.frel, r2?.frel);
+      if (r1?.mrel) chk(`${id}.childRel.${chId}.mrel`, r1.mrel, r2?.mrel);
+    }
     if (!ok.every(Boolean)) fFail++;
   }
   console.log(`  Familien: ${Object.keys(db1.families).length} geprüft, ${fFail} mit Delta`);

@@ -228,9 +228,12 @@ async function parseGRAMPS(file) {
     const placeHandle = plEl ? plEl.getAttribute('hlink') : null;
     const causeAttr   = _byTag(ev, 'attribute').find(a => a.getAttribute('type') === 'Cause');
     const cause       = causeAttr ? (causeAttr.getAttribute('value') || '') : '';
+    const attrs       = _byTag(ev, 'attribute')
+      .filter(a => a.getAttribute('type') !== 'Cause')
+      .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
     const noteRefs    = _byTag(ev, 'noteref').map(n => n.getAttribute('hlink'));
     const citRefs     = _byTag(ev, 'citationref').map(c => c.getAttribute('hlink'));
-    evMap[h] = { type, date, placeHandle, desc, cause, noteRefs, citRefs };
+    evMap[h] = { type, date, placeHandle, desc, cause, attrs, noteRefs, citRefs };
   }
 
   // Citations: handle → {sourceHandle, confidence, page}
@@ -494,10 +497,14 @@ async function parseGRAMPS(file) {
     };
 
     // Attributes
+    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL']);
     const uidA   = _attr(person, '_UID');   if (uidA)  p.uid   = uidA.getAttribute('value')  || '';
     const statA  = _attr(person, '_STAT');  if (statA) p._stat = statA.getAttribute('value') || null;
     const resnA  = _attr(person, 'RESN');   if (resnA) p.resn  = resnA.getAttribute('value') || '';
     const emailA = _attr(person, 'E-MAIL'); if (emailA)p.email = emailA.getAttribute('value')|| '';
+    p._grampsAttrs = _byTag(person, 'attribute')
+      .filter(a => !_HANDLED_P_ATTRS.has(a.getAttribute('type') || ''))
+      .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
 
     // Event refs
     for (const evRef of _byTag(person, 'eventref')) {
@@ -519,13 +526,14 @@ async function parseGRAMPS(file) {
       if (sp === 'birth' || sp === 'chr' || sp === 'buri' || sp === 'death') {
         const tgt = p[sp === 'birth' ? 'birth' : sp === 'death' ? 'death' : sp === 'chr' ? 'chr' : 'buri'];
         if (!tgt.seen) {
-          tgt.seen    = true;
-          tgt.date    = ev.date  || null;
-          tgt.place   = plTitle;
-          tgt.placeId = plId;
-          tgt.lati    = lat;
-          tgt.long    = lng;
-          tgt.note    = evNote;
+          tgt.seen         = true;
+          tgt.date         = ev.date  || null;
+          tgt.place        = plTitle;
+          tgt.placeId      = plId;
+          tgt.lati         = lat;
+          tgt.long         = lng;
+          tgt.note         = evNote;
+          tgt._grampsAttrs = ev.attrs || [];
           if (sp === 'death' && ev.cause) tgt.cause = ev.cause;
           for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
         }
@@ -543,7 +551,8 @@ async function parseGRAMPS(file) {
           note:  evNote,
           noteRefs: [],
           sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
-          sourceExtra: {}, sourceMedia: {}, _extra: []
+          sourceExtra: {}, sourceMedia: {}, _extra: [],
+          _grampsAttrs: ev.attrs || []
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         p.events.push(evObj);
@@ -598,14 +607,19 @@ async function parseGRAMPS(file) {
     const wife = motherEl ? (personHandleToId[motherEl.getAttribute('hlink')] || null) : null;
 
     const children = [];
+    const childRels = {};  // childId → {frel, mrel}
     for (const cr of _byTag(fam, 'childref')) {
       const ch = personHandleToId[cr.getAttribute('hlink')];
-      if (ch) children.push(ch);
+      if (!ch) continue;
+      children.push(ch);
+      const frel = cr.getAttribute('frel') || '';
+      const mrel = cr.getAttribute('mrel') || '';
+      if (frel || mrel) childRels[ch] = { frel, mrel };
     }
 
     const f = {
       id: fId, _passthrough: [],
-      husb, wife, children, childRelations: {}, _lastChil: null,
+      husb, wife, children, childRelations: childRels, _lastChil: null,
       marr: _emptyFamEv(), engag: _emptyFamEv(), div: _emptyFamEv(), divf: _emptyFamEv(),
       events: [],
       _stat: null, grampId: gid, _grampsHandle: h,
@@ -632,13 +646,14 @@ async function parseGRAMPS(file) {
       const tgt = sp === 'marr'  ? f.marr  : sp === 'engag' ? f.engag
                 : sp === 'div'   ? f.div   : sp === 'divf'  ? f.divf : null;
       if (tgt && !tgt.seen) {
-        tgt.seen    = true;
-        tgt.date    = ev.date  || null;
-        tgt.place   = plTitle;
-        tgt.placeId = plId;
-        tgt.lati    = lat;
-        tgt.long    = lng;
-        tgt.note    = evNote;
+        tgt.seen         = true;
+        tgt.date         = ev.date  || null;
+        tgt.place        = plTitle;
+        tgt.placeId      = plId;
+        tgt.lati         = lat;
+        tgt.long         = lng;
+        tgt.note         = evNote;
+        tgt._grampsAttrs = ev.attrs || [];
         for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
       } else if (!tgt) {
         const evObj = {
@@ -647,7 +662,8 @@ async function parseGRAMPS(file) {
           value: mapped.tag === 'EVEN' ? ev.type : (ev.desc || ''),
           note: evNote, noteRefs: [],
           sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
-          sourceExtra: {}, sourceMedia: {}, _extra: []
+          sourceExtra: {}, sourceMedia: {}, _extra: [],
+          _grampsAttrs: ev.attrs || []
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         f.events.push(evObj);
@@ -668,6 +684,10 @@ async function parseGRAMPS(file) {
       f.noteRefs.push(_noteId(nh));
     }
     f.noteText = f.noteTexts.join('\n\n');
+
+    // Extra attributes (all <attribute> on family)
+    f._grampsAttrs = _byTag(fam, 'attribute')
+      .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
 
     families[fId] = f;
   }
