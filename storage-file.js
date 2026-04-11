@@ -237,6 +237,48 @@ async function exportGEDCOM() {
   showToast('✓ ' + filename + ' heruntergeladen');
 }
 
+// GRAMPS XML Export (.gramps = gzip) — immer Download/Share (kein File Handle)
+async function exportGRAMPS() {
+  if (AppState.db?._sourceFormat !== 'gramps') {
+    showToast('⚠ Keine GRAMPS-Datei geladen');
+    return;
+  }
+  showToast('GRAMPS-Datei wird erstellt …');
+  let blob;
+  try {
+    blob = await writeGRAMPS(AppState.db);
+  } catch(e) {
+    console.error('exportGRAMPS:', e);
+    showToast('⚠ Fehler beim Erstellen: ' + e.message);
+    return;
+  }
+
+  const rawName = localStorage.getItem('stammbaum_filename') || 'stammbaum.gramps';
+  const filename = rawName.replace(/\.gramps$/i, '').replace(/\.ged$/i, '') + '.gramps';
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const exportName = filename.replace(/\.gramps$/, `_${ts}.gramps`);
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS && navigator.canShare) {
+    const file = new File([blob], exportName, { type: 'application/octet-stream' });
+    if (navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: exportName })
+        .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
+      return;
+    }
+  }
+
+  // Download
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = exportName; a.style.display = 'none';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+  showToast('✓ ' + exportName + ' heruntergeladen');
+}
+
 // ─────────────────────────────────────
 //  FILE LOADING
 // ─────────────────────────────────────
