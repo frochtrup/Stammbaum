@@ -59,8 +59,11 @@ function _gedToGrampsDateXML(ged) {
     const b = _esc(_gedPartToISO(bet[2].trim()));
     return `<daterange start="${a}" stop="${b}"/>`;
   }
+  // TO X → kein GRAMPS-Pendant (≠ after); verbatim als datestr
+  if (/^TO /i.test(s)) return `<datestr val="${_esc(s)}"/>`;
+
   // Qualifiers → dateval with type
-  const QUALS = { BEF:'before', AFT:'after', ABT:'about', EST:'estimated', CAL:'calculated', FROM:'from', TO:'after' };
+  const QUALS = { BEF:'before', AFT:'after', ABT:'about', EST:'estimated', CAL:'calculated', FROM:'from' };
   for (const [q, type] of Object.entries(QUALS)) {
     if (s.toUpperCase().startsWith(q + ' ')) {
       const rest = s.slice(q.length + 1).trim();
@@ -149,12 +152,27 @@ async function writeGRAMPS(db) {
     return citRecs[key].handle;
   };
 
+  // _noteHandle: für inline/synthetische Notes (kein GRAMPS-Handle bekannt).
+  // Key = 't:' + text (Namespace trennt von Handle-Keys).
   const _noteHandle = (text, type) => {
     if (!text) return null;
-    if (!noteRecs[text]) {
-      noteRecs[text] = { handle: _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: type||'General' };
+    const key = 't:' + text;
+    if (!noteRecs[key]) {
+      noteRecs[key] = { handle: _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: type||'General' };
     }
-    return noteRecs[text].handle;
+    return noteRecs[key].handle;
+  };
+
+  // _noteHandleFromObj: für Notes aus db.notes mit originalem _grampsHandle.
+  // Key = Handle (falls vorhanden) → verhindert Verschmelzung gleicher Texte verschiedener Notes.
+  const _noteHandleFromObj = (noteObj) => {
+    const text = noteObj?.text || '';
+    if (!text) return null;
+    const key = noteObj._grampsHandle ? noteObj._grampsHandle : ('t:' + text);
+    if (!noteRecs[key]) {
+      noteRecs[key] = { handle: noteObj._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: 'General' };
+    }
+    return noteRecs[key].handle;
   };
 
   const _objHandle = (file, titl, mime) => {
@@ -165,13 +183,33 @@ async function writeGRAMPS(db) {
     return objRecs[file].handle;
   };
 
+  // ── Emit <attribute> element (self-closing or block with citations/notes) ──
+  const _attrXML = (indent, a) => {
+    const hasSub = a.sources?.length || a.note;
+    if (!hasSub) {
+      L.push(`${indent}<attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
+      return;
+    }
+    L.push(`${indent}<attribute type="${_esc(a.type)}" value="${_esc(a.value)}">`);
+    for (const sId of a.sources || []) {
+      const ch = _citHandle(sId, a.sourcePages?.[sId], a.sourceQUAY?.[sId] ?? 0);
+      if (ch) L.push(`${indent}  <citationref hlink="${_esc(ch)}"/>`);
+    }
+    if (a.note) {
+      const nh = _noteHandle(a.note, 'Attribute Note');
+      if (nh) L.push(`${indent}  <noteref hlink="${_esc(nh)}"/>`);
+    }
+    L.push(`${indent}</attribute>`);
+  };
+
   // ── Collect event from event-like object, return {handle, role} or null ───
   const _collectEv = (grampsType, evObj, role) => {
     if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !(evObj?.sources?.length)) return null;
     const handle   = _h('ev');
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
     // Use original place ID if available (GRAMPS source with placeObjects), else string-based
-    const plHandle = (db.placeObjects && evObj.placeId)
+    // Guard: placeId nur verwenden wenn das placeObject auch existiert (defekte Dateien)
+    const plHandle = (db.placeObjects && evObj.placeId && db.placeObjects[evObj.placeId])
       ? _entityHandle(evObj.placeId, 'pl')
       : _plHandle(evObj.place || null, evObj.lati, evObj.long);
     const citHandles = (evObj.sources || [])
@@ -195,6 +233,7 @@ async function writeGRAMPS(db) {
   const personObjRefs = {};  // @ID@ → [objHandle]
   const personCitRefs = {};  // @ID@ → [citHandle]  (top-level)
   const personNoteRefs= {};  // @ID@ → [noteHandle]
+  const witnessEvMap  = {};  // origHlink → evHandle (shared witness events deduplication)
 
   for (const [pId, p] of Object.entries(db.individuals)) {
     const refs = [];
@@ -226,30 +265,32 @@ async function writeGRAMPS(db) {
       if (r) refs.push(r);
     }
 
+    // Witness / non-primary event refs (stored by parser in _grampsWitnessRefs)
+    for (const wr of p._grampsWitnessRefs || []) {
+      if (!witnessEvMap[wr._origHlink]) {
+        const r = _collectEv(wr.type, {
+          seen: true, date: wr.date, place: wr.place, placeId: wr.placeId,
+          lati: wr.lati ?? null, long: wr.long ?? null,
+          cause: wr.cause || '', note: wr.note, value: wr.desc,
+          sources: wr.sources, sourcePages: wr.sourcePages, sourceQUAY: wr.sourceQUAY,
+        }, wr.role);
+        if (r) witnessEvMap[wr._origHlink] = r.handle;
+      }
+      const wh = witnessEvMap[wr._origHlink];
+      if (wh) refs.push({ handle: wh, role: wr.role });
+    }
+
     personEvRefs[pId]   = refs;
     personObjRefs[pId]  = (p.media||[]).map(m => _objHandle(m.file, m.titl, m.mime)).filter(Boolean);
     personCitRefs[pId]  = (p.topSources||[]).map(s => _citHandle(s, p.topSourcePages?.[s], p.topSourceQUAY?.[s]??0)).filter(Boolean);
 
-    // Person notes (from noteTexts or db.notes)
+    // Person notes (Handle-first key → keine Verschmelzung gleicher Texte)
     const pNotes = [];
     for (const nId of p.noteRefs || []) {
-      const noteObj = db.notes?.[nId];
-      const text = noteObj?.text || '';
-      if (text) {
-        const nh = noteObj?._grampsHandle || _noteHandle(text, 'General');
-        // Ensure noteRecs has an entry
-        if (!Object.values(noteRecs).find(r => r.handle === (noteObj?._grampsHandle || ''))) {
-          if (!noteRecs[text]) {
-            noteRecs[text] = { handle: noteObj?._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: 'General' };
-          }
-        }
-        pNotes.push(noteRecs[text]?.handle || nh);
-      }
+      const nh = _noteHandleFromObj(db.notes?.[nId]);
+      if (nh) pNotes.push(nh);
     }
-    // Also inline note text if no refs
-    if (!p.noteRefs?.length && p.noteText) {
-      pNotes.push(_noteHandle(p.noteText, 'General'));
-    }
+    if (!p.noteRefs?.length && p.noteText) pNotes.push(_noteHandle(p.noteText, 'General'));
     personNoteRefs[pId] = [...new Set(pNotes)].filter(Boolean);
   }
 
@@ -280,14 +321,8 @@ async function writeGRAMPS(db) {
 
     const fNotes = [];
     for (const nId of f.noteRefs || []) {
-      const noteObj = db.notes?.[nId];
-      const text = noteObj?.text || '';
-      if (text) {
-        if (!noteRecs[text]) {
-          noteRecs[text] = { handle: noteObj?._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: 'General' };
-        }
-        fNotes.push(noteRecs[text].handle);
-      }
+      const nh = _noteHandleFromObj(db.notes?.[nId]);
+      if (nh) fNotes.push(nh);
     }
     if (!f.noteRefs?.length && f.noteText) fNotes.push(_noteHandle(f.noteText, 'General'));
     famNoteRefs[fId] = [...new Set(fNotes)].filter(Boolean);
@@ -327,7 +362,7 @@ async function writeGRAMPS(db) {
       if (ev.plHandle) L.push(`      <place hlink="${_esc(ev.plHandle)}"/>`);
       if (ev.desc)    L.push(`      <description>${_esc(ev.desc)}</description>`);
       if (ev.cause)   L.push(`      <attribute type="Cause" value="${_esc(ev.cause)}"/>`);
-      for (const a of ev.attrs||[]) L.push(`      <attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
+      for (const a of ev.attrs||[]) _attrXML('      ', a);
       if (ev.noteHandle) L.push(`      <noteref hlink="${_esc(ev.noteHandle)}"/>`);
       for (const ch of ev.citHandles) L.push(`      <citationref hlink="${_esc(ch)}"/>`);
       L.push('    </event>');
@@ -357,7 +392,9 @@ async function writeGRAMPS(db) {
     L.push('      <name type="Birth Name">');
     if (given)   L.push(`        <first>${_esc(given)}</first>`);
     if (surname) L.push(`        <surname>${_esc(surname)}</surname>`);
-    if (nick)    L.push(`        <nick>${_esc(nick)}</nick>`);
+    // <nick> nur ausgeben wenn ≠ _grampsCall (verhindert Doppel-Ausgabe wenn nick aus <call> abgeleitet)
+    if (nick && nick !== (p._grampsCall || '')) L.push(`        <nick>${_esc(nick)}</nick>`);
+    if (p._grampsCall) L.push(`        <call>${_esc(p._grampsCall)}</call>`);
     if (prefix)  L.push(`        <title>${_esc(prefix)}</title>`);
     if (suffix)  L.push(`        <suffix>${_esc(suffix)}</suffix>`);
     // Name sources
@@ -393,7 +430,7 @@ async function writeGRAMPS(db) {
     if (p._stat) L.push(`      <attribute type="_STAT" value="${_esc(p._stat)}"/>`);
     if (p.resn)  L.push(`      <attribute type="RESN" value="${_esc(p.resn)}"/>`);
     if (p.email) L.push(`      <attribute type="E-MAIL" value="${_esc(p.email)}"/>`);
-    for (const a of p._grampsAttrs||[]) L.push(`      <attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
+    for (const a of p._grampsAttrs||[]) _attrXML('      ', a);
 
     // Family links
     for (const fc of p.famc||[]) {
@@ -447,7 +484,7 @@ async function writeGRAMPS(db) {
       L.push(`      <childref hlink="${_esc(_entityHandle(chId,'pe'))}"${relAttrs}/>`);
     }
 
-    for (const a of f._grampsAttrs||[]) L.push(`      <attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
+    for (const a of f._grampsAttrs||[]) _attrXML('      ', a);
 
     for (const nh of famNoteRefs[fId]||[]) {
       L.push(`      <noteref hlink="${_esc(nh)}"/>`);

@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte — GRAMPS Desktop-Import bestätigt (gender, Medienlinks)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive / Unsere Familie.gramps — 2894 Personen
-**Aktuelle sw-Version:** v204 / Cache: `stammbaum-v204`
+**Aktuelle sw-Version:** v205 / Cache: `stammbaum-v205`
 
 ---
 
@@ -107,6 +107,34 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 - [ ] **Foto-direkt-zu-Person** — iOS-Kamera → direkt an Person hängen ohne Umweg über Media-Browser
 - [ ] **GRAMPS-Tag-Editor** — Tags hinzufügen/entfernen (read-only in Phase 2, editierbar hier)
 - [ ] **Orts-Hierarchie-Editor** — einfaches Formular für Ortsangaben mit Hierarchie-Unterstützung
+
+---
+
+### Phase 5 — UI-Review: GRAMPS-Inhalte editierbar + Cross-Parser-Betrieb
+
+**Ziel:** Alle Views und Formulare auf vollständige GRAMPS-Kompatibilität prüfen — sowohl beim Bearbeiten von GRAMPS-geladenen Inhalten als auch beim Cross-Betrieb (GEDCOM lesen → GRAMPS schreiben und umgekehrt).
+
+#### 5.1 Cross-Parser-Betrieb (Konvertierung)
+
+- [ ] **GEDCOM → GRAMPS** — GEDCOM-Datei laden, als `.gramps` exportieren: Prüfen ob alle strukturierten Felder (Personen, Familien, Quellen, Ereignisse, Medien) korrekt übertragen werden; bekannte Gaps dokumentieren (Orte nur flach, keine `placeObjects`; keine Tags; keine Handles → neue `_pwa`-Handles)
+- [ ] **GRAMPS → GEDCOM** — `.gramps`-Datei laden, als `.ged` exportieren: Prüfen ob GRAMPS-spezifische Inhalte verlustfrei degradieren (Orts-Hierarchie → flacher PLAC-Text; Tags → `_TAG`-passthrough oder Drop; Witness-Events → ignoriert; `_grampsAttrs` → ggf. GEDCOM-Attribute); Gaps in GEDCOM.md dokumentieren
+- [ ] **Roundtrip-Test beider Pfade** — `_grampsRoundtripTest()` + GEDCOM-Roundtrip nach Cross-Konvertierung ausführen; Delta-Report erstellen
+
+#### 5.2 UI-Review: GRAMPS-Inhalte in Formularen
+
+- [ ] **Personen-Formular** — `_grampsAttrs[]` anzeigen und editierbar machen (aktuell nur passthrough); Anzeige von `grampId`; `_grampsCall` (Rufname) im Formular sichtbar
+- [ ] **Ereignis-Formular** — `_grampsAttrs[]` pro Ereignis anzeigen/editieren; Witness-Rollen anzeigen (read-only reicht für v7); GRAMPS-spezifische Event-Typen (z.B. „Beschäftigung", „Militärdienst") im Type-Dropdown
+- [ ] **Familien-Formular** — `_grampsAttrs[]` auf Familien-Ebene anzeigen/editieren
+- [ ] **Orts-Picker** — bei GRAMPS-Daten `db.placeObjects{}` als strukturierten Picker anbieten (statt Freitext); Hierarchie-Anzeige (Stadt → Kreis → Land)
+- [ ] **Medien-Browser** — GRAMPS-Medienpfade (relativ zu `od_base_path`) korrekt auflösen; MIME-Typ-Anzeige; Beschreibungsfeld (`titl`) editierbar
+- [ ] **Quellen-Formular** — Source-Notes (aktuell nur Text) im Formular editierbar; Anzeige ob Quelle aus GRAMPS (`grampId` sichtbar)
+- [ ] **Notizen** — `db.notes{}` (GRAMPS-Notes mit Handle) in Detailansichten anzeigen; Editier-Pfad definieren (Erweiterung der Notizen-Überarbeitung aus P6)
+
+#### 5.3 GRAMPS-spezifische Anzeige-Elemente
+
+- [ ] **GRAMPS-Badge in Topbar** — wenn `db._grampsMaster === true`: Icon/Badge „GRAMPS" anzeigen; Export-Button zeigt `.gramps` als primäres Format
+- [ ] **Orts-Hierarchie in Event-Detailansicht** — bei `placeId` gesetzt: vollständigen Pfad (`Stadt > Kreis > Land`) aus `db.placeObjects{}` auflösen und anzeigen
+- [ ] **Tags anzeigen** — `db.tags{}` (Phase 4) in Personen-/Familien-Detailansicht als Badges; kein Editor nötig für v7
 
 ---
 

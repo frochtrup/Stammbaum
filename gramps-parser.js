@@ -428,7 +428,7 @@ async function parseGRAMPS(file) {
 
   // ─── Helper: build a note record from a handle if it has text ─────────────
   function _noteId(nh) {
-    const nId = '@GN' + nh.slice(-10).replace(/[^a-zA-Z0-9]/g, '') + '@';
+    const nId = nh;  // GRAMPS handle direkt als Key — verhindert Kollisionen bei nh.slice(-10)
     if (!notes[nId] && noteMap[nh] !== undefined) {
       notes[nId] = {
         id: nId, text: noteMap[nh] || '',
@@ -457,14 +457,15 @@ async function parseGRAMPS(file) {
                 (genderStr === 'f' || genderStr === 'female') ? 'F' : 'U';
 
     // Primary name (first <name> without alt attribute)
-    let given = '', surname = '', nick = '', prefix = '', suffix = '';
+    let given = '', surname = '', nick = '', prefix = '', suffix = '', _pCall = '';
     const nameSources = [], nameSourcePages = {}, nameSourceQUAY = {},
           nameSourceNote = {}, nameSourceExtra = {}, nameSourceMedia = {};
     const nameEl = _byTag(person, 'name').find(n => !n.getAttribute('alt')) || null;
     if (nameEl) {
       given   = _child(nameEl, 'first');
       surname = _child(nameEl, 'surname');
-      nick    = _child(nameEl, 'nick') || _child(nameEl, 'call');
+      _pCall  = _child(nameEl, 'call') || '';         // Rufname — eigenes Feld
+      nick    = _child(nameEl, 'nick') || _pCall;     // Spitzname, Fallback auf Rufname
       suffix  = _child(nameEl, 'suffix');
       const titleEl = _byTag(nameEl, 'title')[0] || null;
       if (titleEl) prefix = titleEl.textContent.trim();
@@ -491,7 +492,7 @@ async function parseGRAMPS(file) {
     // Build person object
     const p = {
       id: pId, _passthrough: [], _nameParsed: true,
-      name: nameRaw, nameRaw, surname, given, nick, prefix, suffix,
+      name: nameRaw, nameRaw, surname, given, nick, prefix, suffix, _grampsCall: _pCall,
       sex,
       uid: '',
       topSources: [], topSourcePages: {}, topSourceQUAY: {}, topSourceExtra: {},
@@ -518,13 +519,64 @@ async function parseGRAMPS(file) {
     const emailA = _attr(person, 'E-MAIL'); if (emailA)p.email = emailA.getAttribute('value')|| '';
     p._grampsAttrs = _byTag(person, 'attribute')
       .filter(a => !_HANDLED_P_ATTRS.has(a.getAttribute('type') || ''))
-      .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
+      .map(a => {
+        const aSrc = [], aSrcP = {}, aSrcQ = {};
+        for (const cr of _byTag(a, 'citationref')) {
+          const cit = citMap[cr.getAttribute('hlink')];
+          if (cit?.sourceHandle) {
+            const sId = srcHandleToId[cit.sourceHandle];
+            if (sId) {
+              aSrc.push(sId);
+              if (cit.page) aSrcP[sId] = cit.page;
+              aSrcQ[sId] = _confToQuay(cit.confidence);
+            }
+          }
+        }
+        const aNote = _byTag(a, 'noteref')
+          .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+        const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' };
+        if (aSrc.length) { obj.sources = aSrc; obj.sourcePages = aSrcP; obj.sourceQUAY = aSrcQ; }
+        if (aNote) obj.note = aNote;
+        return obj;
+      });
 
     // Event refs
     for (const evRef of _byTag(person, 'eventref')) {
       const evH  = evRef.getAttribute('hlink');
       const role = evRef.getAttribute('role') || 'Primary';
-      if (role !== 'Primary') continue; // skip non-primary roles (e.g. in shared events)
+      if (role !== 'Primary') {
+        // Witness / non-primary: store for roundtrip (not mapped to GEDCOM events)
+        const ev = evMap[evH];
+        if (ev) {
+          const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
+          const plTitle = pl?.title || null;
+          const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
+          const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
+          const wSrc = [], wSrcP = {}, wSrcQ = {};
+          for (const ch of ev.citRefs) {
+            const cit = citMap[ch];
+            if (cit?.sourceHandle) {
+              const sId = srcHandleToId[cit.sourceHandle];
+              if (sId) {
+                wSrc.push(sId);
+                if (cit.page) wSrcP[sId] = cit.page;
+                wSrcQ[sId] = _confToQuay(cit.confidence);
+              }
+            }
+          }
+          if (!p._grampsWitnessRefs) p._grampsWitnessRefs = [];
+          p._grampsWitnessRefs.push({
+            _origHlink: evH, role,
+            type: ev.type, date: ev.date || null,
+            place: plTitle, placeId: plId,
+            lati: pl?.lat ?? null, long: pl?.long ?? null,
+            cause: ev.cause || '',
+            note: evNote, desc: ev.desc || '',
+            sources: wSrc, sourcePages: wSrcP, sourceQUAY: wSrcQ,
+          });
+        }
+        continue;
+      }
       const ev = evMap[evH];
       if (!ev) continue;
 
@@ -699,9 +751,28 @@ async function parseGRAMPS(file) {
     }
     f.noteText = f.noteTexts.join('\n\n');
 
-    // Extra attributes (all <attribute> on family)
+    // Extra attributes (all <attribute> on family, with optional citations/notes)
     f._grampsAttrs = _byTag(fam, 'attribute')
-      .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
+      .map(a => {
+        const aSrc = [], aSrcP = {}, aSrcQ = {};
+        for (const cr of _byTag(a, 'citationref')) {
+          const cit = citMap[cr.getAttribute('hlink')];
+          if (cit?.sourceHandle) {
+            const sId = srcHandleToId[cit.sourceHandle];
+            if (sId) {
+              aSrc.push(sId);
+              if (cit.page) aSrcP[sId] = cit.page;
+              aSrcQ[sId] = _confToQuay(cit.confidence);
+            }
+          }
+        }
+        const aNote = _byTag(a, 'noteref')
+          .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+        const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' };
+        if (aSrc.length) { obj.sources = aSrc; obj.sourcePages = aSrcP; obj.sourceQUAY = aSrcQ; }
+        if (aNote) obj.note = aNote;
+        return obj;
+      });
 
     families[fId] = f;
   }
