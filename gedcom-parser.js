@@ -119,8 +119,8 @@ function parseGEDCOM(text, parseErrors) {
 
     // Track context tags
     if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; _curNoteIsInline = false; _curExtraNameIdx = -1; _smEntry = null; }
-    if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag === 'SOUR') lastSourVal = val; _smEntry = null; }
-    if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } if (tag === 'SOUR') lastSourVal = val; _smEntry = null; }
+    if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag === 'SOUR') lastSourVal = val.replace(/^@@/,'@').replace(/@@$/,'@'); _smEntry = null; }
+    if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } if (tag === 'SOUR') lastSourVal = val.replace(/^@@/,'@').replace(/@@$/,'@'); _smEntry = null; }
 
     // ── Verbatim Passthrough ──
     if (_ptDepth > 0) {
@@ -166,7 +166,7 @@ function parseGEDCOM(text, parseErrors) {
         }
         else if (tag === '_UID') cur.uid = val;
         else if (tag === '_GRAMPS_ID') cur.grampId = val;
-        else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); lastSourVal = val; }
+        else if (tag === 'SOUR' && val.startsWith('@')) { const _ns1 = val.replace(/^@@/,'@').replace(/@@$/,'@'); cur.topSources.push(_ns1); cur.sourceRefs.add(_ns1); lastSourVal = _ns1; }
         // OBJE → fällt in else-Passthrough unten (vollständiger Block wird verbatim bewahrt)
         else if (tag === 'RESN')  cur.resn  = val;
         else if (tag === 'EMAIL') cur.email = val;
