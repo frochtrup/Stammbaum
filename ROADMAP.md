@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v233 / Cache: `stammbaum-v233`
+**Aktuelle sw-Version:** v242 / Cache: `stammbaum-v242`
 
 ---
 
@@ -39,6 +39,7 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 2 | GRAMPS XML Import read-only — `gramps-parser.js`, `db.placeObjects{}`, `db._grampsHandles{}` | v191–v196 |
 | 3 | GRAMPS XML Export Round-trip — `gramps-writer.js`, 60034 Deep-Test-Checks ✓ | v193–v204 |
 | 3b | UI: Höfe-Ansicht, RESI-Adress-Autocomplete, Bewohner-Formular | v224–v228 |
+| 4a | UX: `compactPlace()` Ortsdaten-Darstellung; Notizen-Modal (Person/Familie/Quelle); noteRefs editierbar + löschbar | v236–v242 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
 
@@ -70,7 +71,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] **Orts-Picker** — `db.placeObjects{}` als strukturierten Picker (Hierarchie: Stadt → Kreis → Land)
 - [ ] **Medien-Browser** — GRAMPS-Pfade auflösen; MIME-Typ; `titl` editierbar
 - [ ] **Quellen-Formular** — Source-Notes editierbar; `grampId` sichtbar
-- [x] **Notizen** ✅ sw v234/v235 — Event-Notes editierbar (modalEvent/modalFamEvent); Person/Familie-Notes inline editierbar (Textarea, blur speichert); `db.notes{}` (noteRefs) read-only angezeigt
+- [x] **Notizen** ✅ sw v234/v235/v236–v242 — Event-Notes editierbar; Notizen-Modal (`modalNote`) für Person/Familie/Quelle; noteRefs editierbar + löschbar; `_pruneOrphanNotes()` entfernt verwaiste `db.notes`-Einträge; `compactPlace()` für Ortsdarstellung
 
 #### 5.3 Anzeige
 
@@ -80,7 +81,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ---
 
-## Offene Themen nach Priorität (Stand 2026-04-12)
+## Offene Themen nach Priorität (Stand 2026-04-14)
 
 ### P2 — Architektur-Verletzungen ✅ abgeschlossen (sw v231)
 
@@ -106,7 +107,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ### P5 — UX-Schulden
 
-- [x] **INDI-Notes Editierproblem** ✅ sw v235 — by design: mehrere noteTexts[] werden zu noteTexts[0] zusammengeführt; noteRefs bleiben erhalten
+- [x] **INDI-Notes Editierproblem** ✅ sw v235/v238–v242 — Notizen-Modal; noteRefs editierbar + löschbar; verwaiste Notes werden bereinigt
 - [ ] **Cmd+Z granulares Undo** — History-Stack auf AppState; eigener Sprint
 - [ ] **`showToast(type)`** — `type ∈ {success, warning, error}` + CSS-Differenzierung
 - [ ] **`confirm()` → Modal** — 6+ Stellen → `confirmModal(msg)` Promise
@@ -120,4 +121,4 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] Statistik-Dashboard
 - [ ] Duplikat-Erkennung (Name + Geburtsjahr ±2)
 - [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum
-- ~~Notizen-Überarbeitung (gesamthaft)~~ — erledigt via sw v234/v235
+- ~~Notizen-Überarbeitung (gesamthaft)~~ — erledigt via sw v234/v235/v238–v242
