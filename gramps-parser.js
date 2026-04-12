@@ -231,12 +231,14 @@ async function parseGRAMPS(file) {
     const placeHandle = plEl ? plEl.getAttribute('hlink') : null;
     const causeAttr   = _byTag(ev, 'attribute').find(a => a.getAttribute('type') === 'Cause');
     const cause       = causeAttr ? (causeAttr.getAttribute('value') || '') : '';
+    const addrAttrEl  = _byTag(ev, 'attribute').find(a => a.getAttribute('type') === 'Address');
+    const evAddr      = addrAttrEl ? (addrAttrEl.getAttribute('value') || '') : '';
     const attrs       = _byTag(ev, 'attribute')
-      .filter(a => a.getAttribute('type') !== 'Cause')
+      .filter(a => a.getAttribute('type') !== 'Cause' && a.getAttribute('type') !== 'Address')
       .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
     const noteRefs    = _byTag(ev, 'noteref').map(n => n.getAttribute('hlink'));
     const citRefs     = _byTag(ev, 'citationref').map(c => c.getAttribute('hlink'));
-    evMap[h] = { type, date, placeHandle, desc, cause, attrs, noteRefs, citRefs };
+    evMap[h] = { type, date, placeHandle, desc, cause, addr: evAddr, attrs, noteRefs, citRefs };
   }
 
   // Citations: handle → {sourceHandle, confidence, page}
@@ -615,6 +617,8 @@ async function parseGRAMPS(file) {
           lati:  lat, long: lng,
           value: evValue,
           note:  evNote,
+          addr:  ev.addr  || '',
+          phon: [], email: [],
           noteRefs: [],
           sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
           sourceExtra: {}, sourceMedia: {}, _extra: [],
@@ -623,6 +627,37 @@ async function parseGRAMPS(file) {
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         p.events.push(evObj);
       }
+    }
+
+    // Person <address> elements → RESI events
+    for (const addrEl of _byTag(person, 'address')) {
+      const street   = _child(addrEl, 'street');
+      const locality = _child(addrEl, 'locality');
+      const city     = _child(addrEl, 'city');
+      const county   = _child(addrEl, 'county');
+      const state    = _child(addrEl, 'state');
+      const country  = _child(addrEl, 'country');
+      const postal   = _child(addrEl, 'postal');
+      const phone    = _child(addrEl, 'phone');
+      const parts    = [street, locality, city, county, state, postal, country].filter(Boolean);
+      if (!parts.length && !phone) continue;
+      const addr = parts.join(', ');
+      // Date on <address> element (dateval, daterange, datespan, datestr)
+      let addrDate = null;
+      for (const ch of Array.from(addrEl.children || [])) {
+        const ln = ch.localName || ch.tagName || '';
+        if (ln.startsWith('date')) { addrDate = _parseDateEl(ch); break; }
+      }
+      p.events.push({
+        type: 'RESI', date: addrDate, place: null, placeId: null,
+        lati: null, long: null,
+        value: '', addr,
+        phon: phone ? [phone] : [], email: [],
+        note: '', noteRefs: [],
+        sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
+        sourceExtra: {}, sourceMedia: {}, _extra: [],
+        _grampsAttrs: []
+      });
     }
 
     // Media (objref)
@@ -726,7 +761,7 @@ async function parseGRAMPS(file) {
           type: mapped.tag, date: ev.date || null, place: plTitle, placeId: plId,
           lati: lat, long: lng,
           value: mapped.tag === 'EVEN' ? ev.type : (ev.desc || ''),
-          note: evNote, noteRefs: [],
+          note: evNote, addr: ev.addr || '', noteRefs: [],
           sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
           sourceExtra: {}, sourceMedia: {}, _extra: [],
           _grampsAttrs: ev.attrs || []

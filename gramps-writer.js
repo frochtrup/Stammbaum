@@ -212,7 +212,7 @@ async function writeGRAMPS(db) {
 
   // ── Collect event from event-like object, return {handle, role} or null ───
   const _collectEv = (grampsType, evObj, role) => {
-    if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !(evObj?.sources?.length)) return null;
+    if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !evObj?.addr && !(evObj?.sources?.length)) return null;
     const handle   = _h('ev');
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
     // Use original place ID if available (GRAMPS source with placeObjects), else string-based
@@ -224,7 +224,9 @@ async function writeGRAMPS(db) {
       .map(srcId => _citHandle(srcId, evObj.sourcePages?.[srcId], evObj.sourceQUAY?.[srcId] ?? 0))
       .filter(Boolean);
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
-    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: evObj._grampsAttrs||[], citHandles, noteHandle });
+    // addr → <attribute type="Address" value="..."/>  (prepend, before _grampsAttrs)
+    const addrAttr = evObj.addr ? [{ type: 'Address', value: evObj.addr }] : [];
+    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: [...addrAttr, ...(evObj._grampsAttrs||[])], citHandles, noteHandle });
     return { handle, role: role||'Primary' };
   };
 
