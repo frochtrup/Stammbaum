@@ -321,7 +321,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const parts = [ev.date, ev.place].filter(Boolean).join(', ');
       html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">
         <span class="fact-lbl">${label}</span>
-        <span class="fact-val">${esc(parts || '–')}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}</span>
+        <span class="fact-val">${esc(parts || '–')}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     for (let _ei = 0; _ei < (f.events || []).length; _ei++) {
@@ -331,7 +331,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
       html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}" style="cursor:pointer">
         <span class="fact-lbl">${esc(label)}</span>
-        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}</span>
+        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     if (!_hasAnyEv) {
