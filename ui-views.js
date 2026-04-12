@@ -743,11 +743,17 @@ document.addEventListener('blur', e => {
 // ─────────────────────────────────────
 //  NOTIZ-MODAL
 // ─────────────────────────────────────
-function _noteRefShareCount(ref) {
-  let n = 0;
-  for (const p of Object.values(AppState.db.individuals)) if ((p.noteRefs||[]).includes(ref)) n++;
-  for (const f of Object.values(AppState.db.families))    if ((f.noteRefs||[]).includes(ref)) n++;
-  return n;
+function _noteRefUsers(ref) {
+  const names = [];
+  for (const p of Object.values(AppState.db.individuals))
+    if ((p.noteRefs||[]).includes(ref)) names.push(p.name || p.id);
+  for (const f of Object.values(AppState.db.families)) {
+    if (!(f.noteRefs||[]).includes(ref)) continue;
+    const h = f.husb && AppState.db.individuals[f.husb];
+    const w = f.wife && AppState.db.individuals[f.wife];
+    names.push([h?.name, w?.name].filter(Boolean).join(' & ') || f.id);
+  }
+  return names;
 }
 
 function openNoteModal(type, id) {
@@ -776,11 +782,13 @@ function openNoteModal(type, id) {
 
   for (const ref of noteRefs) {
     const noteObj = AppState.db.notes?.[ref];
-    const shared  = _noteRefShareCount(ref);
-    const sharedHint = shared > 1
-      ? `<span style="color:var(--text-muted);font-size:0.75rem;margin-left:6px">· ${shared} Einträge teilen diese Notiz</span>` : '';
+    const users   = _noteRefUsers(ref);
+    const usersHtml = users.length
+      ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">${
+          users.map(n => esc(n)).join(' · ')}</div>` : '';
     html += `<div class="form-group" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
-      <div class="form-label">${esc(ref)}${sharedHint}</div>
+      <div class="form-label">${esc(ref)}</div>
+      ${usersHtml}
       <textarea data-notetype="ref" data-noteref="${esc(ref)}" class="form-input" rows="5"
         style="resize:vertical;box-sizing:border-box;width:100%;font-family:inherit"
         placeholder="Notiz eingeben…">${esc(noteObj?.text ?? '')}</textarea>
