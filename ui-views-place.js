@@ -61,7 +61,7 @@ function renderPlaceList(sorted) {
     html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.name)}">
       <div class="p-avatar" style="font-size:1.1rem">${geoIcon}</div>
       <div class="p-info">
-        <div class="p-name">${esc(place.name)}</div>
+        <div class="p-name">${esc(compactPlace(place.name))}</div>
         <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte verfügbar' : ''}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -178,7 +178,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem; border-color:var(--gold-dim)">📍</div>
-    <div class="detail-name">${esc(placeName)}</div>
+    <div class="detail-name">${esc(compactPlace(placeName))}</div>
     <div class="detail-id">${place.personIds.size} Person${place.personIds.size !== 1 ? 'en' : ''}</div>
   </div>`;
 

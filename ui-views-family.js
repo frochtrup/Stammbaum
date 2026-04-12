@@ -12,7 +12,7 @@ function _famRowHtml(f, isCurrent) {
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
   let meta = '';
   if (f.marr.date) meta += '⚭ ' + f.marr.date;
-  if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
+  if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + compactPlace(f.marr.place);
   if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
   const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
                     + (f.marr?.media || []).filter(m => m.file || m.titl).length
@@ -318,7 +318,7 @@ function showFamilyDetail(id, pushHistory = true) {
       _hasAnyEv = true;
       const geoBtn = (ev.lati !== null && ev.lati !== undefined)
         ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-      const parts = [ev.date, ev.place].filter(Boolean).join(', ');
+      const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
       html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">
         <span class="fact-lbl">${label}</span>
         <span class="fact-val">${esc(parts || '–')}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
@@ -328,7 +328,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const ev = f.events[_ei];
       _hasAnyEv = true;
       const label = (ev.eventType && ev.type === 'EVEN') ? ev.eventType : (EVENT_LABELS[ev.type] || ev.type);
-      const parts = [ev.value, ev.date, ev.place].filter(Boolean).join(', ');
+      const parts = [ev.value, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
       html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}" style="cursor:pointer">
         <span class="fact-lbl">${esc(label)}</span>
         <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>

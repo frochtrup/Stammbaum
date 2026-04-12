@@ -189,7 +189,7 @@ function runGlobalSearch(q) {
       const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
       let meta = '';
       if (p.birth?.date) meta += '* ' + p.birth.date;
-      if (p.birth?.place) meta += (meta ? ', ' : '') + p.birth.place;
+      if (p.birth?.place) meta += (meta ? ', ' : '') + compactPlace(p.birth.place);
       if (p.death?.date) meta += (meta ? '  † ' : '† ') + p.death.date;
       html += `<div class="person-row" data-action="showDetail" data-id="${p.id}">
         <div class="p-avatar ${sc}">${ic}</div>
@@ -227,7 +227,7 @@ function runGlobalSearch(q) {
       const label = [h?.name, w?.name].filter(Boolean).join(' ⚭ ') || f.id;
       let meta = '';
       if (f.marr?.date) meta += f.marr.date;
-      if (f.marr?.place) meta += (meta ? ', ' : '') + f.marr.place;
+      if (f.marr?.place) meta += (meta ? ', ' : '') + compactPlace(f.marr.place);
       html += `<div class="person-row" data-action="showFamilyDetail" data-id="${f.id}">
         <div class="p-avatar" style="font-size:0.95rem">⚭</div>
         <div class="p-info"><div class="p-name">${esc(label)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>

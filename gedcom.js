@@ -334,6 +334,12 @@ function joinPlaceParts(placeId) {
   return parts.join(', ');
 }
 
+// Compact-Darstellung: leere Hierarchieteile weglassen ("Ochtrup, , , NRW" → "Ochtrup, NRW")
+function compactPlace(place) {
+  if (!place) return '';
+  return place.split(',').map(s => s.trim()).filter(Boolean).join(', ');
+}
+
 function getPlaceFromForm(placeId) {
   if ((_placeModes[placeId] || 'free') === 'parts') return joinPlaceParts(placeId);
   return (document.getElementById(placeId)?.value || '').trim();

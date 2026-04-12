@@ -19,7 +19,7 @@ function _personRowHtml(p, isCurrent) {
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
   let meta = '';
   if (p.birth.date) meta += '* ' + p.birth.date;
-  if (p.birth.place) meta += (meta ? ', ' : '') + p.birth.place;
+  if (p.birth.place) meta += (meta ? ', ' : '') + compactPlace(p.birth.place);
   if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
   const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                     + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
@@ -323,20 +323,20 @@ function showDetail(id, pushHistory = true) {
   if (p.birth.date || p.birth.place) {
     const geoBtn = (p.birth.lati !== null && p.birth.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BIRT" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, p.birth.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources, p.birth.sourcePages, p.birth.sourceQUAY)}${p.birth.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.birth.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BIRT" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources, p.birth.sourcePages, p.birth.sourceQUAY)}${p.birth.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
   if (p.chr.date || p.chr.place) {
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="CHR" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, p.chr.place].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.chr.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="CHR" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.chr.note)}</span>` : ''}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = (p.death.lati !== null && p.death.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="DEAT" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, p.death.place, p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.death.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="DEAT" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = (p.buri.lati !== null && p.buri.lati !== undefined)
       ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, p.buri.place].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.buri.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
   // Group events: first by ev.type (first-seen order), then by ev.eventType within each type,
@@ -373,7 +373,7 @@ function showDetail(id, pushHistory = true) {
           : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
         const geoBtn = (ev.lati !== null && ev.lati !== undefined)
           ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-        const parts = [ev.value, ev.addr, ev.date, ev.place].filter(Boolean).join(', ');
+        const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
         const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
         html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
           <span class="fact-lbl">${esc(label)}</span>
