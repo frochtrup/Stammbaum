@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓ (inkl. PAGE/QUAY); CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte — GRAMPS Desktop-Import bestätigt (gender, Medienlinks)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive / Unsere Familie.gramps — 2894 Personen
-**Aktuelle sw-Version:** v220 / Cache: `stammbaum-v220`
+**Aktuelle sw-Version:** v228 / Cache: `stammbaum-v228`
 
 ---
 
@@ -98,6 +98,15 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 - [x] `_grampsDeepTest()` — 59896 Checks ✓ (alle Felder, Orte, Attribute, Handles)
 - [ ] Tags erhalten — offen (Phase 4)
 - [ ] Export-Hinweis "Zuletzt geladen: Datum" — offen
+
+---
+
+### Phase 3b — UI-Ergänzungen (Höfe + Adress-Autocomplete) ✅ ABGESCHLOSSEN (sw v224–v228)
+
+- [x] **RESI-Adress-Autocomplete** (sw v224) — `collectAddresses()` in `ui-forms-event.js`; Dropdown beim Adressfeld; bei Auswahl wird PLAC-Feld via `_addrToPlace()` auto-befüllt
+- [x] **Höfe-Ansicht** (sw v224–v225) — Toggle Orte|Höfe im Orte-Tab; `buildHofIndex()` gruppiert alle RESI-Ereignisse nach `ev.addr`; Hof-Liste mit Bewohner-Anzahl + Jahrbereich; Sticky-Suchfeld
+- [x] **Hof-Detail + Bewohner-Formular** (sw v227–v228) — `showHofDetail()` zeigt alle Bewohner; Inline-Formular: Person-Picker, vollständiges Datum (Qualifier + TT/Mon/JJJJ + BET-Bereich), Ort mit Autocomplete + Vorbelegung, Quelle/Seite/QUAY → erzeugt vollständiges RESI-Event bei Person
+- [x] **Architektur-Cleanup** (sw v224) — Place-Funktionen aus `ui-views-source.js` → `ui-views-place.js`; neue Datei `ui-views-hof.js`; Safari-Toggle-Fix (explizit `classList.add/remove`, `type="button"`)
 
 ---
 

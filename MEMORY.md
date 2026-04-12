@@ -18,7 +18,9 @@
 - `ui-views.js` — gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers, Event-Delegation)
 - `ui-views-person.js` — Personen-Detailansicht + Liste
 - `ui-views-family.js` — Familien-Detailansicht + Liste
-- `ui-views-source.js` — Quellen-Detailansicht + Liste
+- `ui-views-source.js` — Quellen-Detailansicht + Liste (nur noch Source/Repo-Funktionen)
+- `ui-views-place.js` — Orte-Ansicht: `collectPlaces()`, `renderPlaceList()`, `filterPlaces()`, `showPlaceDetail()` etc.
+- `ui-views-hof.js` — Höfe-Ansicht: `buildHofIndex()`, `renderHofList()`, `showHofDetail()`, Bewohner-Formular
 - `ui-views-tree.js` — Sanduhr-Baum + Tastaturnavigation
 - `ui-fanchart.js` — Fan Chart (SVG)
 - `ui-forms.js` — Formulare Person/Familie/Quelle + Source-Widget + Modal/Keyboard/Utils
@@ -30,7 +32,7 @@
 - `onedrive.js` — Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
 - `gramps-parser.js` — `parseGRAMPS(file)` async → db (Phase 2, read-only GRAMPS XML import)
 - `gramps-writer.js` — `writeGRAMPS(db)` → gzip Blob, `_grampsRoundtripTest()`, `_grampsDeepTest()` (Phase 3)
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v220)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v228)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -64,7 +66,11 @@
   - v212: GEDCOM Parser lv>4 Fehler-Log bei Passthrough-Block unterdrückt
   - v219: SOUR TEXT `_textSeen`-Flag; FAMC frelPage/frelQUAY Copy-Loop fix
   - v220: `lastSourVal` @@-Normalisierung (sourPages/sourQUAY-Keys = sourIds-Keys)
-- **Aktuelle sw-Version: v220** / Cache: `stammbaum-v220`
+- **RESI-Adress-Autocomplete (sw v224):** `collectAddresses()` in ui-forms-event.js; `initAddrAutocomplete()` + `_addrToPlace()` — bei Auswahl wird PLAC-Feld auto-befüllt
+- **Höfe-Ansicht (sw v224–v228):** Toggle Orte|Höfe im Orte-Tab; `ui-views-hof.js` + `ui-views-place.js` als neue Dateien; `buildHofIndex()` gruppiert RESI nach `ev.addr`; `showHofDetail()` zeigt alle Bewohner
+- **Bewohner-Formular (sw v227–v228):** Inline-Formular in Hof-Detail: Person-Picker, vollständiges Datum (Qualifier + TT/Mon/JJJJ + BET-Bereich), Ort (mit Autocomplete + Vorbelegung via `_addrToPlace`), Quelle/Seite/QUAY → erzeugt RESI-Event bei Person
+- **Architektur-Cleanup (sw v224):** Place-Funktionen aus `ui-views-source.js` ausgelagert nach `ui-views-place.js`; Hof-Funktionen in eigenem `ui-views-hof.js`
+- **Aktuelle sw-Version: v228** / Cache: `stammbaum-v228`
 - Git: Branch `v7-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
