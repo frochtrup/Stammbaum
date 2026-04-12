@@ -139,6 +139,14 @@ function _renderAddBewohnerForm(addr) {
     </div>
 
     <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Ort</label>
+      <div class="place-input-wrap">
+        <input class="form-input" id="hf-place" placeholder="München" autocomplete="off">
+        <div class="place-dropdown" id="hf-place-dd"></div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:10px">
       <label class="form-label">Quelle</label>
       <select class="form-select" id="hf-src" style="margin-bottom:4px">${_hofSourceOptions()}</select>
       <input class="form-input" id="hf-srcpage" placeholder="Seite / Nachweis" style="margin-bottom:4px">
@@ -151,13 +159,20 @@ function _renderAddBewohnerForm(addr) {
       </select>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button type="button" class="btn btn-primary" style="flex:1"
+    <div class="btn-row">
+      <button type="button" class="btn btn-save"
         data-action="saveHofBewohner" data-addr="${addrAttr}">Speichern</button>
-      <button type="button" class="btn" style="flex:1"
+      <button type="button" class="btn btn-cancel"
         data-action="cancelHofBewohner">Abbrechen</button>
     </div>
   </div>`;
+}
+
+function _initHofFormEvents() {
+  // Orts-Autocomplete (selbes Pattern wie initPlaceAutocomplete)
+  initPlaceAutocomplete('hf-place', 'hf-place-dd');
+  // Person-Suche
+  _initHofPersonSearch();
 }
 
 function _initHofPersonSearch() {
@@ -223,7 +238,7 @@ function showHofDetail(addr, pushHistory = true) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Bewohner</div>
-      <button type="button" class="section-add" data-action="showHofAddForm">+ Hinzufügen</button>
+      <button type="button" class="section-add" data-action="showHofAddForm" data-addr="${esc(addr)}">+ Hinzufügen</button>
     </div>`;
   for (const e of hof.entries) {
     const p = AppState.db.individuals[e.pid];
@@ -234,14 +249,20 @@ function showHofDetail(addr, pushHistory = true) {
   html += _renderAddBewohnerForm(addr);
 
   document.getElementById('detailContent').innerHTML = html;
-  _initHofPersonSearch();
+  _initHofFormEvents();
   showView('v-detail');
 }
 
-function showHofAddForm() {
+function showHofAddForm(addr) {
   const sec = document.getElementById('hf-add-section');
   if (!sec) return;
   sec.style.display = '';
+  // Ort vorbelegen
+  const placeEl = document.getElementById('hf-place');
+  if (placeEl && !placeEl.value && addr) {
+    const place = _addrToPlace(addr);
+    if (place) placeEl.value = place;
+  }
   document.getElementById('hf-psearch')?.focus();
   sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -254,6 +275,7 @@ function saveHofBewohner(addr) {
   if (!p) return;
 
   const date  = buildGedDateFromFields('hf-date-qual', 'hf-date', 'hf-date2');
+  const place = document.getElementById('hf-place')?.value?.trim() || '';
   const srcId = document.getElementById('hf-src')?.value || '';
   const page  = document.getElementById('hf-srcpage')?.value?.trim() || '';
   const quay  = document.getElementById('hf-quay')?.value || '';
@@ -263,7 +285,7 @@ function saveHofBewohner(addr) {
   const sourceQUAY  = srcId && quay ? { [srcId]: quay } : {};
 
   p.events.push({
-    type: 'RESI', value: '', date: date || null, place: '', lati: null, long: null,
+    type: 'RESI', value: '', date: date || null, place, lati: null, long: null,
     eventType: '', note: '', addr,
     phon: [], email: [],
     sources, sourcePages, sourceQUAY, sourceNote: {}, sourceExtra: {}, sourceMedia: {},
