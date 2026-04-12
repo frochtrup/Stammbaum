@@ -46,14 +46,14 @@ function renderPlaceList(sorted) {
   if (!sorted) {
     const places = collectPlaces();
     if (!places.size) { el.innerHTML = '<div class="empty">Keine Orte in den Daten gefunden</div>'; return; }
-    sorted = [...places.values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    sorted = [...places.values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
   }
   if (!sorted.length) { el.innerHTML = '<div class="empty">Keine Orte gefunden</div>'; return; }
 
   let html = '';
   let lastLetter = '';
   for (const place of sorted) {
-    const fl = place.name[0].toUpperCase();
+    const fl = (compactPlace(place.name) || place.name)[0].toUpperCase();
     if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
     const count = place.personIds.size;
     const hasGeo = place.lati !== null;
@@ -72,7 +72,7 @@ function renderPlaceList(sorted) {
 
 function filterPlaces(q) {
   const lower = q.toLowerCase().trim();
-  const all = [...collectPlaces().values()].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const all = [...collectPlaces().values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
   if (!lower) { renderPlaceList(all); return; }
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
 }
