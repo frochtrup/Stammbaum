@@ -8,6 +8,7 @@ function revertToSaved() {
   AppState.db = parseGEDCOM(orig);
   AppState.changed = false;
   UIState._placesCache = null;
+  UIState._hofCache = null;
   updateChangedIndicator();
   updateStats();
   renderTab();

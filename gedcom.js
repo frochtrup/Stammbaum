@@ -29,6 +29,8 @@ const UIState = {
   _pendingRelation: null,        // { mode, anchorId } — gesetzt vor showPersonForm()
   _pendingRepoLink: null,        // { sourceId } — gesetzt vor showRepoForm(null)
   _placesCache:     null,        // Cache für collectPlaces(); wird in markChanged() geleert
+  _hofCache:        null,        // Cache für buildHofIndex(); wird in markChanged() geleert
+  _placesSubTab:    'orte',      // 'orte' | 'hoefe'
 };
 
 // Backward-compat-Shims: bare Variablennamen leiten zu AppState / UIState um.
@@ -39,7 +41,8 @@ const UIState = {
                 'currentSourceId','currentRepoId','currentTab','_detailActive',
                 '_fileHandle','_canDirectSave','_originalGedText']],
     [UIState,  ['_treeScale','_treeHistory','_treeHistoryPos',
-                '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache']],
+                '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache',
+                '_hofCache','_placesSubTab']],
   ];
   for (const [ns, keys] of _map) {
     for (const k of keys) {

@@ -755,6 +755,7 @@ const _applyPersonFilterDebounced = debounce((q, from, to) => filterPersons(q, f
 const filterFamiliesDebounced = debounce(filterFamilies, 200);
 const filterSourcesDebounced  = debounce(filterSources,  200);
 const filterPlacesDebounced   = debounce(filterPlaces,   200);
+const filterHoefeDebounced    = debounce(filterHoefe,    200);
 
 function esc(str) {
   if (!str) return '';

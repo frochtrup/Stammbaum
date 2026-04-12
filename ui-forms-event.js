@@ -368,3 +368,59 @@ function deleteFamEvent() {
 // Autocomplete für Event-TYPE-Felder — hier initialisieren, da _initEtypeAutocomplete hier definiert ist
 _initEtypeAutocomplete('ef-etype',  'ef-etype-dd',  () => document.getElementById('ef-type')?.value  || '');
 _initEtypeAutocomplete('fev-etype', 'fev-etype-dd', () => document.getElementById('fev-type')?.value || '');
+
+// ─────────────────────────────────────
+//  ADRESS-AUTOCOMPLETE (RESI)
+// ─────────────────────────────────────
+function collectAddresses() {
+  const set = new Set();
+  Object.values(AppState.db.persons || {}).forEach(p => {
+    (p.events || []).forEach(ev => {
+      if (ev.tag === 'RESI' && ev.addr && ev.addr.trim()) set.add(ev.addr.trim());
+    });
+  });
+  return [...set].sort((a, b) => a.localeCompare(b, 'de'));
+}
+
+function initAddrAutocomplete() {
+  const input = document.getElementById('ef-addr');
+  const dd    = document.getElementById('ef-addr-dd');
+  if (!input || !dd) return;
+
+  const _search = debounce(() => {
+    const q = input.value.toLowerCase().trim();
+    dd.innerHTML = '';
+    if (!q) { dd.style.display = 'none'; return; }
+    const addrs = collectAddresses()
+      .filter(a => a.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aStart = a.toLowerCase().startsWith(q);
+        const bStart = b.toLowerCase().startsWith(q);
+        if (aStart !== bStart) return aStart ? -1 : 1;
+        return a.localeCompare(b, 'de');
+      })
+      .slice(0, 12);
+    if (!addrs.length) { dd.style.display = 'none'; return; }
+    addrs.forEach(addr => {
+      const item = document.createElement('div');
+      item.className = 'place-dropdown-item';
+      item.style.whiteSpace = 'pre-wrap';
+      item.textContent = addr;
+      item.addEventListener('mousedown', () => {
+        input.value = addr;
+        dd.innerHTML = ''; dd.style.display = 'none';
+      });
+      dd.appendChild(item);
+    });
+    dd.style.display = 'block';
+  }, 150);
+
+  input.addEventListener('input', () => {
+    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    _search();
+  });
+  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
+initAddrAutocomplete();

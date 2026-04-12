@@ -99,6 +99,16 @@ function bnavTree() {
   else { showView('v-main'); setBnavActive('persons'); }
 }
 
+function switchPlacesSubTab(sub) {
+  UIState._placesSubTab = sub;
+  document.getElementById('places-sub-orte').style.display  = sub === 'orte'  ? '' : 'none';
+  document.getElementById('places-sub-hoefe').style.display = sub === 'hoefe' ? '' : 'none';
+  document.getElementById('toggle-orte').classList.toggle('active',  sub === 'orte');
+  document.getElementById('toggle-hoefe').classList.toggle('active', sub === 'hoefe');
+  if (sub === 'hoefe') renderHofList();
+  else renderPlaceList();
+}
+
 // Bottom-Nav: Listen-Tabs
 function bnavTab(name) {
   AppState.currentTab = name;
@@ -416,7 +426,10 @@ function renderTab() {
   if (AppState.currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
   else if (AppState.currentTab === 'families') renderFamilyList();
   else if (AppState.currentTab === 'sources') { renderSourceList(); renderRepoList(); }
-  else if (AppState.currentTab === 'places') renderPlaceList();
+  else if (AppState.currentTab === 'places') {
+    if (UIState._placesSubTab === 'hoefe') renderHofList();
+    else renderPlaceList();
+  }
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
 }
 
@@ -447,7 +460,7 @@ function _syncBannerSave() {
   if (canOD) odSaveFile(); else exportGEDCOM();
 }
 
-function markChanged() { AppState.changed = true; UIState._placesCache = null; updateChangedIndicator(); }
+function markChanged() { AppState.changed = true; UIState._placesCache = null; UIState._hofCache = null; updateChangedIndicator(); }
 
 // ─────────────────────────────────────
 //  SHARED VIEW HELPERS
@@ -521,6 +534,8 @@ const _CLICK_MAP = {
   showSourceDetail:        el => showSourceDetail(el.dataset.sid  || el.dataset.id),
   showRepoDetail:          el => showRepoDetail(el.dataset.id),
   showPlaceDetail:         el => showPlaceDetail(el.dataset.name),
+  showHofDetail:           el => showHofDetail(el.dataset.addr),
+  switchPlacesSubTab:      el => switchPlacesSubTab(el.dataset.subtab),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
   unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
   showPersonForm:          el => showPersonForm(el.dataset.pid),
@@ -683,6 +698,7 @@ document.addEventListener('input', e => {
   else if (action === 'filterFamilies')  filterFamiliesDebounced(el.value);
   else if (action === 'filterSources')   filterSourcesDebounced(el.value);
   else if (action === 'filterPlaces')    filterPlacesDebounced(el.value);
+  else if (action === 'filterHoefe')     filterHoefeDebounced(el.value);
   else if (action === 'runGlobalSearch') runGlobalSearch(el.value);
   else if (action === 'renderRelPicker') renderRelPicker(el.value);
   else if (action === 'renderRepoPicker') renderRepoPicker(el.value);

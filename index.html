@@ -104,10 +104,22 @@
   </div>
 
   <div id="tab-places" style="display:none">
-    <div class="search-wrap">
-      <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
+    <div class="places-toggle-bar">
+      <button id="toggle-orte"  class="places-toggle-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
+      <button id="toggle-hoefe" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
     </div>
-    <div id="placeList"></div>
+    <div id="places-sub-orte">
+      <div class="search-wrap">
+        <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
+      </div>
+      <div id="placeList"></div>
+    </div>
+    <div id="places-sub-hoefe" style="display:none">
+      <div class="search-wrap">
+        <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
+      </div>
+      <div id="hofList"></div>
+    </div>
   </div>
 
   <div id="tab-search" style="display:none">
@@ -676,7 +688,10 @@
       </div>
       <div class="form-group" id="ef-addr-group" style="display:none">
         <label class="form-label">Adresse</label>
-        <textarea class="form-input" id="ef-addr" rows="2" placeholder="Hauptstraße 5&#10;80331 München" style="resize:vertical;box-sizing:border-box"></textarea>
+        <div class="place-input-wrap">
+          <textarea class="form-input" id="ef-addr" rows="2" placeholder="Hauptstraße 5&#10;80331 München" style="resize:vertical;box-sizing:border-box" autocomplete="off"></textarea>
+          <div class="place-dropdown" id="ef-addr-dd"></div>
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1222,6 +1237,8 @@
 <script src="ui-views-person.js"></script>
 <script src="ui-views-family.js"></script>
 <script src="ui-views-source.js"></script>
+<script src="ui-views-place.js"></script>
+<script src="ui-views-hof.js"></script>
 <script src="ui-fanchart.js"></script>
 <script src="ui-forms.js"></script>
 <script src="ui-forms-repo.js"></script>

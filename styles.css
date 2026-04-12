@@ -277,6 +277,22 @@ body.fc-mode #fcGenBtns { display: flex; }
 }
 .btn-link:active { color: var(--gold); }
 
+/* ── Places Sub-Tab Toggle ──────────────── */
+.places-toggle-bar {
+  display: flex; gap: 0; padding: 10px 16px 2px;
+}
+.places-toggle-btn {
+  flex: 1; padding: 7px 0; font-size: 0.85rem; font-weight: 600;
+  background: var(--surface2, #1e1a10); color: var(--text-dim, #9a8060);
+  border: 1px solid var(--border, #3a3020); cursor: pointer;
+}
+.places-toggle-btn:first-child { border-radius: 8px 0 0 8px; }
+.places-toggle-btn:last-child  { border-radius: 0 8px 8px 0; border-left: none; }
+.places-toggle-btn.active {
+  background: var(--gold-dim, #7a6030); color: var(--gold-lt, #f0c060);
+  border-color: var(--gold-dim, #7a6030);
+}
+
 /* ── Place Autocomplete ─────────────────── */
 .place-input-wrap { position: relative; }
 .place-dropdown {
