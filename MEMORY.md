@@ -24,15 +24,16 @@
 - `ui-views-tree.js` — Sanduhr-Baum + Tastaturnavigation
 - `ui-fanchart.js` — Fan Chart (SVG)
 - `ui-forms.js` — Formulare Person/Familie/Quelle + Source-Widget + Modal/Keyboard/Utils
-- `ui-forms-event.js` — Event-Formular (`_SPECIAL_OBJ`, `_efMedia`, `showEventForm`, `saveEvent`)
+- `ui-forms-event.js` — Event-Formular (`_SPECIAL_OBJ` (Alias auf `SPECIAL_EVENT_KEYS`), `_efMedia`, `showEventForm`, `saveEvent`)
 - `ui-forms-repo.js` — Archiv-Formular, Picker, Detail-Ansicht
 - `ui-media.js` — Medien Add/Edit/Delete/Browser
 - `onedrive-auth.js` — OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
 - `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus
 - `onedrive.js` — Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
 - `gramps-parser.js` — `parseGRAMPS(file)` async → db (Phase 2, read-only GRAMPS XML import)
-- `gramps-writer.js` — `writeGRAMPS(db)` → gzip Blob, `_grampsRoundtripTest()`, `_grampsDeepTest()` (Phase 3)
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v228)
+- `gramps-writer.js` — `writeGRAMPS(db)` → gzip Blob (Phase 3); Debug-Funktionen → `debug-gramps.js`
+- `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v242)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -45,7 +46,7 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-12
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-14
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 abgeschlossen — auf `main` gemergt (2026-04-05)**
@@ -70,7 +71,11 @@
 - **Höfe-Ansicht (sw v224–v228):** Toggle Orte|Höfe im Orte-Tab; `ui-views-hof.js` + `ui-views-place.js` als neue Dateien; `buildHofIndex()` gruppiert RESI nach `ev.addr`; `showHofDetail()` zeigt alle Bewohner
 - **Bewohner-Formular (sw v227–v228):** Inline-Formular in Hof-Detail: Person-Picker, vollständiges Datum (Qualifier + TT/Mon/JJJJ + BET-Bereich), Ort (mit Autocomplete + Vorbelegung via `_addrToPlace`), Quelle/Seite/QUAY → erzeugt RESI-Event bei Person
 - **Architektur-Cleanup (sw v224):** Place-Funktionen aus `ui-views-source.js` ausgelagert nach `ui-views-place.js`; Hof-Funktionen in eigenem `ui-views-hof.js`
-- **Aktuelle sw-Version: v228** / Cache: `stammbaum-v228`
+- **P4 Code-Qualität (sw v233):** DEV-Diagnose entfernt; Debug-Funktionen → `debug-gramps.js` (?debug=1); `noteTextInline` entfernt (Single source of truth: `noteText`); `_SPECIAL_LBL` entfernt → `EVENT_LABELS`; `_SPECIAL_OBJ` → Alias auf `SPECIAL_EVENT_KEYS` (gedcom.js)
+- **compactPlace() (sw v236):** `gedcom.js`; leere Komma-Segmente in Ortsstrings für Darstellung ausblenden (`", Ochtrup, , , NRW, "` → `"Ochtrup, NRW"`); Ortsliste sortiert nach kompaktem Namen; Formulare unverändert
+- **Notizen-Modal (sw v238–v242):** `modalNote` Bottom-Sheet; `openNoteModal(type, id)` / `saveNoteModal()` in `ui-views.js`; ersetzt Inline-Textarea-Ansatz; zeigt eigene Notiz + alle noteRefs editierbar; `_noteRefUsers(ref)` zeigt referenzierende Personen/Familien; "× Entfernen" löscht noteRef-Verknüpfung; `_pruneOrphanNotes()` löscht verwaiste db.notes-Einträge wenn letzte Referenz entfernt wird
+- **Quellen-Notizen (sw v237):** `showSourceDetail` zeigt Notizen-Sektion mit `openNoteModal('source', id)`; `s.text` als Notizfeld
+- **Aktuelle sw-Version: v242** / Cache: `stammbaum-v242`
 - Git: Branch `v7-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
@@ -106,7 +111,7 @@ Verbliebene Deltas (by design, kein Datenverlust):
 - Multi-File HTML (ADR-001) · Vanilla JS (ADR-002) · Globales `db` via AppState (ADR-003)
 - **IndexedDB** cacht GEDCOM-Text primär; localStorage stiller Fallback (ADR-004) · iOS `accept="*/*"` (ADR-005)
 - Desktop Chrome: `showOpenFilePicker()` + `requestPermission({mode:'readwrite'})` (ADR-007)
-- BIRT/CHR/DEAT/BURI als Sonder-Objekte via `_SPECIAL_OBJ` (ADR-008)
+- BIRT/CHR/DEAT/BURI als Sonder-Objekte via `SPECIAL_EVENT_KEYS` (gedcom.js); `_SPECIAL_OBJ` in ui-forms-event.js ist Alias darauf (ADR-008)
 - Globale Bottom-Nav außerhalb Views, z-index 400 (ADR-009) · 6 Tabs
 - PLAC-Toggle: `_placeModes[placeId]` = 'free'|'parts' (ADR-010)
 - 3-Felder-Datum: `normMonth()`, `writeDatePartToFields()`, `readDatePartFromFields()` (ADR-011)
@@ -164,8 +169,8 @@ Austauschformat mit GRAMPS: **GRAMPS XML** (.gramps, gzip + XML) — GEDCOM-Expo
 - Zeitleiste (`ui-timeline.js`), Nachkommen-Baum, Karten-Ansicht
 - Statistik-Dashboard, Duplikat-Erkennung
 - touchmove-Throttling, Suche indexieren, Source-Liste Virtual Scroll
-- DEV-Diagnose entfernen, Magic-String-Konstanten, initAutocomplete()
-- INDI-Notes Editierproblem, Cmd+Z granular, showToast(type), confirm() → Modal
+- initAutocomplete() generisch zusammenführen (P4.5)
+- Cmd+Z granular, showToast(type), confirm() → Modal
 
 ## Offene Architektur-Schulden
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo)
