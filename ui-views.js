@@ -743,55 +743,90 @@ document.addEventListener('blur', e => {
 // ─────────────────────────────────────
 //  NOTIZ-MODAL
 // ─────────────────────────────────────
+function _noteRefShareCount(ref) {
+  let n = 0;
+  for (const p of Object.values(AppState.db.individuals)) if ((p.noteRefs||[]).includes(ref)) n++;
+  for (const f of Object.values(AppState.db.families))    if ((f.noteRefs||[]).includes(ref)) n++;
+  return n;
+}
+
 function openNoteModal(type, id) {
-  let text = '';
+  let inlineText = '';
+  let noteRefs   = [];
   if (type === 'person') {
     const p = AppState.db.individuals[id];
-    text = p?.noteTexts?.join('\n') ?? '';
+    inlineText = p?.noteTexts?.join('\n') ?? '';
+    noteRefs   = p?.noteRefs || [];
   } else if (type === 'family') {
     const f = AppState.db.families[id];
-    text = f?.noteTexts?.join('\n') ?? '';
+    inlineText = f?.noteTexts?.join('\n') ?? '';
+    noteRefs   = f?.noteRefs || [];
   } else if (type === 'source') {
-    text = AppState.db.sources[id]?.text ?? '';
+    inlineText = AppState.db.sources[id]?.text ?? '';
   }
   document.getElementById('note-type').value = type;
   document.getElementById('note-id').value   = id;
-  document.getElementById('note-text').value = text;
+
+  let html = `<div class="form-group">
+    <div class="form-label">Eigene Notiz</div>
+    <textarea data-notetype="inline" class="form-input" rows="5"
+      style="resize:vertical;box-sizing:border-box;width:100%;font-family:inherit"
+      placeholder="Notiz eingeben…">${esc(inlineText)}</textarea>
+  </div>`;
+
+  for (const ref of noteRefs) {
+    const noteObj = AppState.db.notes?.[ref];
+    const shared  = _noteRefShareCount(ref);
+    const sharedHint = shared > 1
+      ? `<span style="color:var(--text-muted);font-size:0.75rem;margin-left:6px">· ${shared} Einträge teilen diese Notiz</span>` : '';
+    html += `<div class="form-group" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
+      <div class="form-label">${esc(ref)}${sharedHint}</div>
+      <textarea data-notetype="ref" data-noteref="${esc(ref)}" class="form-input" rows="5"
+        style="resize:vertical;box-sizing:border-box;width:100%;font-family:inherit"
+        placeholder="Notiz eingeben…">${esc(noteObj?.text ?? '')}</textarea>
+    </div>`;
+  }
+
+  document.getElementById('note-sections').innerHTML = html;
   openModal('modalNote');
-  setTimeout(() => document.getElementById('note-text').focus(), 80);
+  setTimeout(() => document.querySelector('#note-sections textarea')?.focus(), 80);
 }
 
 function saveNoteModal() {
   const type = document.getElementById('note-type').value;
   const id   = document.getElementById('note-id').value;
-  const note = document.getElementById('note-text').value.trim();
+
+  // Inline-Notiz lesen
+  const inlineTa = document.querySelector('#note-sections [data-notetype="inline"]');
+  const inlineVal = inlineTa ? inlineTa.value.trim() : '';
+
+  // noteRef-Notizen lesen + in db.notes schreiben
+  document.querySelectorAll('#note-sections [data-notetype="ref"]').forEach(ta => {
+    const ref = ta.dataset.noteref;
+    if (AppState.db.notes?.[ref]) AppState.db.notes[ref].text = ta.value.trim();
+  });
+
   if (type === 'person') {
     const p = AppState.db.individuals[id];
     if (!p) return;
-    p.noteTexts = note ? [note] : [];
-    p.noteText  = note;
+    p.noteTexts = inlineVal ? [inlineVal] : [];
+    p.noteText  = inlineVal;
     for (const ref of (p.noteRefs || []))
       if (AppState.db.notes?.[ref]) p.noteText += (p.noteText ? '\n' : '') + AppState.db.notes[ref].text;
-    markChanged();
-    closeModal('modalNote');
-    showDetail(id);
+    markChanged(); closeModal('modalNote'); showDetail(id);
   } else if (type === 'family') {
     const f = AppState.db.families[id];
     if (!f) return;
-    f.noteTexts = note ? [note] : [];
-    f.noteText  = note;
+    f.noteTexts = inlineVal ? [inlineVal] : [];
+    f.noteText  = inlineVal;
     for (const ref of (f.noteRefs || []))
       if (AppState.db.notes?.[ref]) f.noteText += (f.noteText ? '\n' : '') + AppState.db.notes[ref].text;
-    markChanged();
-    closeModal('modalNote');
-    showFamilyDetail(id);
+    markChanged(); closeModal('modalNote'); showFamilyDetail(id);
   } else if (type === 'source') {
     const s = AppState.db.sources[id];
     if (!s) return;
-    s.text = note;
-    markChanged();
-    closeModal('modalNote');
-    showSourceDetail(id);
+    s.text = inlineVal;
+    markChanged(); closeModal('modalNote'); showSourceDetail(id);
   }
 }
 
