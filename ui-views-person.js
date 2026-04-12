@@ -393,12 +393,20 @@ function showDetail(id, pushHistory = true) {
 
   html += `</div>`;
 
-  // Notes
-  if (p.noteText) {
-    html += `<div class="section fade-up"><div class="section-title">Notizen</div>
-      <div style="font-size:0.88rem;color:var(--text-dim);line-height:1.6;white-space:pre-wrap">${esc(p.noteText)}</div>
-    </div>`;
-  }
+  // Notes — inline editierbar
+  html += `<div class="section fade-up">
+    <div class="section-title">Notizen</div>
+    <textarea data-blur="savePersonNote" data-pid="${id}"
+      style="width:100%;box-sizing:border-box;background:transparent;border:1px solid transparent;border-radius:6px;
+             padding:4px 6px;font-size:0.88rem;color:var(--text-dim);line-height:1.6;resize:vertical;font-family:inherit;
+             min-height:60px;outline:none"
+      onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'"
+      placeholder="Notizen hinzufügen…">${esc(p.noteTexts?.join('\n') ?? '')}</textarea>${
+    (p.noteRefs?.length && p.noteRefs.some(r => AppState.db.notes?.[r]))
+      ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;white-space:pre-wrap">${
+          p.noteRefs.filter(r => AppState.db.notes?.[r]).map(r => esc(AppState.db.notes[r].text)).join('\n')
+        }</div>` : ''
+  }</div>`;
 
   // Media section: inline entries from media[] + reference entries from passthrough
   const indiMedia = p.media || [];

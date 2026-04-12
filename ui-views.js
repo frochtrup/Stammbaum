@@ -735,6 +735,24 @@ document.addEventListener('blur', e => {
   if (el.dataset.blur === 'normMonth') {
     const v = normMonth(el.value);
     if (v && el.value) el.value = v;
+  } else if (el.dataset.blur === 'savePersonNote') {
+    const p = AppState.db.individuals[el.dataset.pid];
+    if (!p) return;
+    const note = el.value.trim();
+    p.noteTexts = note ? [note] : [];
+    p.noteText  = note;
+    for (const ref of (p.noteRefs || []))
+      if (AppState.db.notes?.[ref]) p.noteText += (p.noteText ? '\n' : '') + AppState.db.notes[ref].text;
+    markChanged();
+  } else if (el.dataset.blur === 'saveFamilyNote') {
+    const f = AppState.db.families[el.dataset.fid];
+    if (!f) return;
+    const note = el.value.trim();
+    f.noteTexts = note ? [note] : [];
+    f.noteText  = note;
+    for (const ref of (f.noteRefs || []))
+      if (AppState.db.notes?.[ref]) f.noteText += (f.noteText ? '\n' : '') + AppState.db.notes[ref].text;
+    markChanged();
   }
 }, true);
 

@@ -381,11 +381,20 @@ function showFamilyDetail(id, pushHistory = true) {
   }
   html += `</div>`;
 
-  if (f.noteText) {
-    html += `<div class="section fade-up"><div class="section-title">Notizen</div>
-      <div style="font-size:0.88rem;color:var(--text-dim);line-height:1.6;white-space:pre-wrap">${esc(f.noteText)}</div>
-    </div>`;
-  }
+  // Notes — inline editierbar
+  html += `<div class="section fade-up">
+    <div class="section-title">Notizen</div>
+    <textarea data-blur="saveFamilyNote" data-fid="${id}"
+      style="width:100%;box-sizing:border-box;background:transparent;border:1px solid transparent;border-radius:6px;
+             padding:4px 6px;font-size:0.88rem;color:var(--text-dim);line-height:1.6;resize:vertical;font-family:inherit;
+             min-height:60px;outline:none"
+      onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'"
+      placeholder="Notizen hinzufügen…">${esc(f.noteTexts?.join('\n') ?? '')}</textarea>${
+    (f.noteRefs?.length && f.noteRefs.some(r => AppState.db.notes?.[r]))
+      ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;white-space:pre-wrap">${
+          f.noteRefs.filter(r => AppState.db.notes?.[r]).map(r => esc(AppState.db.notes[r].text)).join('\n')
+        }</div>` : ''
+  }</div>`;
 
   // Media section: marr.media[] (2 OBJE unter MARR), f.media[] (1 OBJE auf FAM-Ebene), ref OBJE in _passthrough
   const famMedia = f.media || [];
