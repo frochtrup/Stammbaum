@@ -70,7 +70,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] **Orts-Picker** — `db.placeObjects{}` als strukturierten Picker (Hierarchie: Stadt → Kreis → Land)
 - [ ] **Medien-Browser** — GRAMPS-Pfade auflösen; MIME-Typ; `titl` editierbar
 - [ ] **Quellen-Formular** — Source-Notes editierbar; `grampId` sichtbar
-- [ ] **Notizen** — `db.notes{}` in Detailansichten anzeigen; Editier-Pfad definieren
+- [x] **Notizen** ✅ sw v234/v235 — Event-Notes editierbar (modalEvent/modalFamEvent); Person/Familie-Notes inline editierbar (Textarea, blur speichert); `db.notes{}` (noteRefs) read-only angezeigt
 
 #### 5.3 Anzeige
 
@@ -106,7 +106,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ### P5 — UX-Schulden
 
-- [ ] **INDI-Notes Editierproblem** — mehrere Notes werden beim Speichern zusammengeführt
+- [x] **INDI-Notes Editierproblem** ✅ sw v235 — by design: mehrere noteTexts[] werden zu noteTexts[0] zusammengeführt; noteRefs bleiben erhalten
 - [ ] **Cmd+Z granulares Undo** — History-Stack auf AppState; eigener Sprint
 - [ ] **`showToast(type)`** — `type ∈ {success, warning, error}` + CSS-Differenzierung
 - [ ] **`confirm()` → Modal** — 6+ Stellen → `confirmModal(msg)` Promise
@@ -120,4 +120,4 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] Statistik-Dashboard
 - [ ] Duplikat-Erkennung (Name + Geburtsjahr ±2)
 - [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum
-- [ ] Notizen-Überarbeitung (gesamthaft)
+- ~~Notizen-Überarbeitung (gesamthaft)~~ — erledigt via sw v234/v235
