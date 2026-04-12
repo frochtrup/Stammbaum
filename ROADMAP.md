@@ -101,8 +101,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [x] **Debug-Funktionen auslagern** ✅ sw v233 — 4 Funktionen (~344 LOC) → `debug-gramps.js`, nur bei `?debug=1`; `_SPECIAL_OBJ` als Alias auf `SPECIAL_EVENT_KEYS`
 - [x] **Notes-Datenmodell konsolidieren** ✅ sw v233 — `noteTextInline` entfernt; `noteText = noteTexts.join + noteRefs` (Single source of truth)
 - [x] **Konstanten für Magic Strings** ✅ sw v233 — `_SPECIAL_LBL` entfernt → `EVENT_LABELS`; `_SPECIAL_OBJ` → `SPECIAL_EVENT_KEYS` in gedcom.js
-- [ ] **Generische `initAutocomplete()`** — `_initEtypeAutocomplete()` und `initPlaceAutocomplete()` zusammenführen (~60 Zeilen)
-- [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` (~15% Duplikation)
+- ~~Generische `initAutocomplete()`~~ — gestrichen (unterschiedliche Kontexte, Aufwand > Nutzen)
+- ~~Rendering-Helper extrahieren~~ — gestrichen (Duplikation minimal, mehr Coupling als Gewinn)
 
 ### P5 — UX-Schulden
 
