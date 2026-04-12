@@ -382,6 +382,20 @@ function collectAddresses() {
   return [...set].sort((a, b) => a.localeCompare(b, 'de'));
 }
 
+// Ermittelt den häufigsten Ort (PLAC) zu einer gegebenen Adresse
+function _addrToPlace(addr) {
+  const counts = {};
+  Object.values(AppState.db.individuals || {}).forEach(p => {
+    (p.events || []).forEach(ev => {
+      if (ev.type === 'RESI' && ev.addr && ev.addr.trim() === addr && ev.place && ev.place.trim())
+        counts[ev.place.trim()] = (counts[ev.place.trim()] || 0) + 1;
+    });
+  });
+  const entries = Object.entries(counts);
+  if (!entries.length) return '';
+  return entries.sort((a, b) => b[1] - a[1])[0][0];
+}
+
 function initAddrAutocomplete() {
   const input = document.getElementById('ef-addr');
   const dd    = document.getElementById('ef-addr-dd');
@@ -409,6 +423,12 @@ function initAddrAutocomplete() {
       item.addEventListener('mousedown', () => {
         input.value = addr;
         dd.innerHTML = ''; dd.style.display = 'none';
+        // PLAC auto-fill: häufigster Ort zu dieser Adresse
+        const place = _addrToPlace(addr);
+        if (place) {
+          const placeInput = document.getElementById('ef-place');
+          if (placeInput && !placeInput.value) placeInput.value = place;
+        }
       });
       dd.appendChild(item);
     });

@@ -75,6 +75,130 @@ function filterHoefe(q) {
   renderHofList(all.filter(h => h.addr.toLowerCase().includes(lower)));
 }
 
+function _hofMonthOptions() {
+  return `<option value="">Mon.</option>
+    <option value="JAN">Jan</option><option value="FEB">Feb</option>
+    <option value="MAR">Mär</option><option value="APR">Apr</option>
+    <option value="MAY">Mai</option><option value="JUN">Jun</option>
+    <option value="JUL">Jul</option><option value="AUG">Aug</option>
+    <option value="SEP">Sep</option><option value="OCT">Okt</option>
+    <option value="NOV">Nov</option><option value="DEC">Dez</option>`;
+}
+
+function _hofSourceOptions() {
+  const srcs = Object.values(AppState.db.sources || {})
+    .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de'));
+  return '<option value="">– keine –</option>' +
+    srcs.map(s => `<option value="${esc(s.id)}">${esc(s.abbr || s.title || s.id)}</option>`).join('');
+}
+
+function _renderAddBewohnerForm(addr) {
+  const addrAttr = addr.replace(/"/g, '&quot;');
+  return `
+  <div id="hf-add-section" class="section fade-up" style="display:none">
+    <div class="section-title">Bewohner hinzufügen</div>
+
+    <div class="form-group" style="position:relative;margin-bottom:10px">
+      <label class="form-label">Person</label>
+      <input class="form-input" id="hf-psearch" placeholder="Name suchen…" autocomplete="off">
+      <div class="place-dropdown" id="hf-person-dd"></div>
+      <input type="hidden" id="hf-pid">
+    </div>
+
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Datum</label>
+      <select class="form-select" id="hf-date-qual"
+          data-change="onDateQualChange" data-target="hf-date2"
+          style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+        <option value="">exakt</option>
+        <option value="ABT">ca. (ABT)</option>
+        <option value="CAL">berechnet (CAL)</option>
+        <option value="EST">geschätzt (EST)</option>
+        <option value="BEF">vor (BEF)</option>
+        <option value="AFT">nach (AFT)</option>
+        <option value="BET">zwischen (BET…AND)</option>
+        <option value="FROM">von/bis (FROM…TO)</option>
+      </select>
+      <div style="display:flex;gap:4px">
+        <input class="form-input" id="hf-date-d" type="text" placeholder="TT"
+          style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+        <input class="form-input" id="hf-date-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
+        <input class="form-input" id="hf-date-y" type="text" placeholder="JJJJ"
+          style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+      </div>
+      <div id="hf-date2-group" style="display:none;margin-top:6px">
+        <div style="font-size:0.73rem;color:var(--text-dim);margin-bottom:3px">bis</div>
+        <div style="display:flex;gap:4px">
+          <input class="form-input" id="hf-date2-d" type="text" placeholder="TT"
+            style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          <input class="form-input" id="hf-date2-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
+          <input class="form-input" id="hf-date2-y" type="text" placeholder="JJJJ"
+            style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:10px">
+      <label class="form-label">Quelle</label>
+      <select class="form-select" id="hf-src" style="margin-bottom:4px">${_hofSourceOptions()}</select>
+      <input class="form-input" id="hf-srcpage" placeholder="Seite / Nachweis" style="margin-bottom:4px">
+      <select class="form-select" id="hf-quay">
+        <option value="">Qualität…</option>
+        <option value="3">3 – Direkt / Original</option>
+        <option value="2">2 – Sekundärquelle</option>
+        <option value="1">1 – Fraglich</option>
+        <option value="0">0 – Unzuverlässig</option>
+      </select>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button type="button" class="btn btn-primary" style="flex:1"
+        data-action="saveHofBewohner" data-addr="${addrAttr}">Speichern</button>
+      <button type="button" class="btn" style="flex:1"
+        data-action="cancelHofBewohner">Abbrechen</button>
+    </div>
+  </div>`;
+}
+
+function _initHofPersonSearch() {
+  const input = document.getElementById('hf-psearch');
+  const dd    = document.getElementById('hf-person-dd');
+  const pidEl = document.getElementById('hf-pid');
+  if (!input || !dd || !pidEl) return;
+
+  const _search = debounce(() => {
+    const q = input.value.toLowerCase().trim();
+    dd.innerHTML = '';
+    if (!q) { dd.style.display = 'none'; return; }
+    const matches = Object.values(AppState.db.individuals)
+      .filter(p => (p.name || '').toLowerCase().includes(q))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'))
+      .slice(0, 12);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    matches.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'place-dropdown-item';
+      const birth = p.birth?.date ? ' *' + p.birth.date.match(/\d{4}/)?.[0] || '' : '';
+      item.textContent = (p.name || p.id) + birth;
+      item.addEventListener('mousedown', () => {
+        input.value = p.name || p.id;
+        pidEl.value = p.id;
+        dd.innerHTML = ''; dd.style.display = 'none';
+      });
+      dd.appendChild(item);
+    });
+    dd.style.display = 'block';
+  }, 150);
+
+  input.addEventListener('input', () => {
+    pidEl.value = '';
+    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    _search();
+  });
+  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
 function showHofDetail(addr, pushHistory = true) {
   const hoefe = buildHofIndex();
   const hof   = hoefe.get(addr);
@@ -97,13 +221,62 @@ function showHofDetail(addr, pushHistory = true) {
   </div>`;
 
   html += `<div class="section fade-up">
-    <div class="section-title">Bewohner</div>`;
+    <div class="section-head">
+      <div class="section-title">Bewohner</div>
+      <button type="button" class="section-add" data-action="showHofAddForm">+ Hinzufügen</button>
+    </div>`;
   for (const e of hof.entries) {
     const p = AppState.db.individuals[e.pid];
     if (p) html += relRow(p, e.date || '');
   }
   html += `</div>`;
 
+  html += _renderAddBewohnerForm(addr);
+
   document.getElementById('detailContent').innerHTML = html;
+  _initHofPersonSearch();
   showView('v-detail');
+}
+
+function showHofAddForm() {
+  const sec = document.getElementById('hf-add-section');
+  if (!sec) return;
+  sec.style.display = '';
+  document.getElementById('hf-psearch')?.focus();
+  sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function saveHofBewohner(addr) {
+  const pid   = document.getElementById('hf-pid')?.value?.trim();
+  const pname = document.getElementById('hf-psearch')?.value?.trim();
+  if (!pid) { showToast('⚠ Bitte zuerst eine Person auswählen'); return; }
+  const p = AppState.db.individuals[pid];
+  if (!p) return;
+
+  const date  = buildGedDateFromFields('hf-date-qual', 'hf-date', 'hf-date2');
+  const srcId = document.getElementById('hf-src')?.value || '';
+  const page  = document.getElementById('hf-srcpage')?.value?.trim() || '';
+  const quay  = document.getElementById('hf-quay')?.value || '';
+
+  const sources     = srcId ? [srcId] : [];
+  const sourcePages = srcId && page ? { [srcId]: page } : {};
+  const sourceQUAY  = srcId && quay ? { [srcId]: quay } : {};
+
+  p.events.push({
+    type: 'RESI', value: '', date: date || null, place: '', lati: null, long: null,
+    eventType: '', note: '', addr,
+    phon: [], email: [],
+    sources, sourcePages, sourceQUAY, sourceNote: {}, sourceExtra: {}, sourceMedia: {},
+    media: [], _extra: []
+  });
+
+  UIState._hofCache = null;
+  markChanged();
+  showToast('✓ RESI-Ereignis angelegt');
+  showHofDetail(addr, false);
+}
+
+function cancelHofBewohner() {
+  const sec = document.getElementById('hf-add-section');
+  if (sec) sec.style.display = 'none';
 }
