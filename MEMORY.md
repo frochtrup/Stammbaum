@@ -7,42 +7,43 @@
 - **Pfad:** `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
 
 ## Dateien
-- `index.html` — App-Shell: HTML-Struktur + CSS + Script-Tags
+- `index.html` — App-Shell: HTML-Struktur + Script-Tags (kein Inline-CSS mehr)
+- `offline.html` — Offline-Fallback (self-contained, kein ext. CSS/JS), präcacht in SW PRECACHE
+- `styles.css` — alle App-Styles (~795 Z., ausgelagert aus index.html)
 - `gedcom.js` — AppState/UIState Namespaces, Labels, Datum- und PLAC-Helfer, 8 Getter/Setter-Helfer
 - `gedcom-parser.js` — `parseGEDCOM()`, `parseGeoCoord()`
-- `gedcom-writer.js` — `writeGEDCOM()`, `pushCont()`, `write*Record()`, `writeSourCitations()`, `writeCHAN()`, `eventBlock()`, `geoLines()`
+- `gedcom-writer.js` — `writeGEDCOM()`, `pushCont()`
 - `demo.ged` — Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
-- `storage-file.js` — IDB-Primitives (`idbGet/Put/Del`), File System Access API, `exportGEDCOM`, File Loading (DOM-Events, `_processLoadedText`, `readFile`)
-- `storage.js` — Demo/Backup/Foto-Export-Import, Auto-Load, Startup (`load`-Event), `revertToSaved`, `confirmNewFile`
-- `ui-views.js` — gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers)
-- `ui-views-person.js` — Personen-Detailansicht
-- `ui-views-family.js` — Familien-Detailansicht
-- `ui-views-source.js` — Quellen-Detailansicht
-- `ui-views-tree.js` — Sanduhr-Baum + Fan Chart + Tastaturnavigation
-- `ui-forms.js` — Formulare Person/Familie/Quelle + Source Widget + Modal/Keyboard/Utils
-- `ui-forms-repo.js` — Archiv-Formular, Picker, Detail-Ansicht
-- `ui-forms-event.js` — Event-Formular (`_SPECIAL_OBJ`, `_efMedia`, `showEventForm`, `saveEvent`)
-- `ui-media.js` — Medien Add/Edit/Delete/Browser
+- `storage.js` — IndexedDB, Dateiverwaltung, Auto-Load
+- `ui-views.js` — gemeinsame Hilfsfunktionen (Labels, Topbar, Scroll-Helpers, Event-Delegation)
+- `ui-views-person.js` — Personen-Detailansicht + Liste
+- `ui-views-family.js` — Familien-Detailansicht + Liste
+- `ui-views-source.js` — Quellen-Detailansicht + Liste
+- `ui-views-tree.js` — Sanduhr-Baum + Tastaturnavigation
 - `ui-fanchart.js` — Fan Chart (SVG)
+- `ui-forms.js` — Formulare Person/Familie/Quelle + Source-Widget + Modal/Keyboard/Utils
+- `ui-forms-event.js` — Event-Formular (`_SPECIAL_OBJ`, `_efMedia`, `showEventForm`, `saveEvent`)
+- `ui-forms-repo.js` — Archiv-Formular, Picker, Detail-Ansicht
+- `ui-media.js` — Medien Add/Edit/Delete/Browser
 - `onedrive-auth.js` — OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
-- `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus, `_extractObjeFilemap()`
-- `onedrive.js` — Media-URL (`_odGetMediaUrlByPath`), Upload, File-I/O (Open/Save), Pfad-Helfer, Settings
+- `onedrive-import.js` — Foto-Import-Wizard, Ordner-Browser, Pick-Modus
+- `onedrive.js` — Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
 - `gramps-parser.js` — `parseGRAMPS(file)` async → db (Phase 2, read-only GRAMPS XML import)
 - `gramps-writer.js` — `writeGRAMPS(db)` → gzip Blob, `_grampsRoundtripTest()`, `_grampsDeepTest()` (Phase 3)
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v197)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v220)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
-- `ARCHITECTURE.md` — ADRs (ADR-001–012), Passthrough-Analyse, Roundtrip-Delta, Speichern-Architektur
+- `ARCHITECTURE.md` — ADRs (ADR-001–013), Passthrough-Analyse, Roundtrip-Delta, Speichern-Architektur
 - `DATAMODEL.md` — Datenstrukturen (Person/Familie/Quelle/Archiv), JS-Sektionen, globale Variablen
 - `UI-DESIGN.md` — HTML-Seitenstruktur, Navigationsmodell, CSS Design-System, Sanduhr-Layout
 - `GEDCOM.md` — Parser/Writer-Referenz, alle unterstützten Tags
 - `ROADMAP.md` — Phasen-Übersicht, offene Features, bekannte Probleme
-- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v5.0-dev
+- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v6.0-dev
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-11
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-12
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 abgeschlossen — auf `main` gemergt (2026-04-05)**
@@ -52,10 +53,18 @@
 - **Phase 1 abgeschlossen (sw v190):** detectGRAMPS(), grampId-Felder, _grampsMaster-Flag
 - **Phase 2 abgeschlossen (sw v191–v196):** gramps-parser.js — nativer GRAMPS XML Import
 - **Phase 3 abgeschlossen (sw v193–v204):** gramps-writer.js — verlustfreier Roundtrip + GRAMPS Desktop-kompatibel
-  - 60034 Deep-Test-Checks ✓ — Personen, Familien, Quellen, Orte, Attribute, childref, Handles, Source-Medien
+  - 60034 Deep-Test-Checks ✓ — Personen, Familien, Quellen, Orte, Attribute, childref frel/mrel, Handles, Source-Medien
   - gender `M`/`F`/`U` (GRAMPS 6.x erwartet einbuchstabig, nicht `male`/`female`/`unknown`)
   - GRAMPS Desktop Import bestätigt: gender korrekt, Medienlinks korrekt
-- **Aktuelle sw-Version: v204** / Cache: `stammbaum-v204`
+- **GEDCOM-Roundtrip-Fixes (sw v208–v220):**
+  - v208: GED→GRAMPS Orts-Hierarchie + Typ aus placForm
+  - v209: FAM CHIL-Quellenrefs schreiben
+  - v210: @@-Normalisierung false positives eliminiert
+  - v211: GRAMPS Ort-Leerteile bei direkter Positionszuordnung
+  - v212: GEDCOM Parser lv>4 Fehler-Log bei Passthrough-Block unterdrückt
+  - v219: SOUR TEXT `_textSeen`-Flag; FAMC frelPage/frelQUAY Copy-Loop fix
+  - v220: `lastSourVal` @@-Normalisierung (sourPages/sourQUAY-Keys = sourIds-Keys)
+- **Aktuelle sw-Version: v220** / Cache: `stammbaum-v220`
 - Git: Branch `v7-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
@@ -65,7 +74,10 @@ Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 1
 
 ## Roundtrip-Status (stabil seit v4)
 
-`roundtrip_stable=true`, `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
+`roundtrip_stable=true`, `net_delta=0` — alle tag-counts ✓, TIME-stabil (out1===out2).
+Verbliebene Deltas (by design, kein Datenverlust):
+- CONC/CONT-Neuformatierung: CONC -35, CONT -26, TEXT -1 — SOUR TEXT-Werte werden bei Parse zusammengeführt (CONC-Werte konkateniert), beim Schreiben mit pushCont neu gesplittet. Wenn Gesamtlänge < 248 Zeichen, kein CONC nötig → orig-Zeilen fehlen im out1, aber Inhalt identisch.
+- HEAD-Datum nur bei echtem Speichern (`updateHeadDate=true`).
 
 **Passthrough-Mechanismen (10 Stück):**
 `_passthrough[]` · `ev._extra[]` · `addrExtra[]` · `frelSourExtra[]`/`mrelSourExtra[]` · `sourceExtra{}` · `topSourceExtra{}` · `media._extra[]` · `childRelations.sourExtra{}` · `extraRecords[]` · `sourceMedia{}`/`sourMedia{}`
@@ -93,27 +105,26 @@ Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 1
 - PLAC-Toggle: `_placeModes[placeId]` = 'free'|'parts' (ADR-010)
 - 3-Felder-Datum: `normMonth()`, `writeDatePartToFields()`, `readDatePartFromFields()` (ADR-011)
 - Verbatim Passthrough: `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR (ADR-012)
+- **od_base_path-Architektur** (ADR-013, sw v110/v111): absoluter OneDrive-Pfad des GED-Ordners (auto via `parentReference.path`); `m.file` relativ dazu
 - **Geschlecht im Baum**: `data-sex="M/F/U"` Attribut + CSS `border-left` Farbe
 - **sourceMedia{}**: OBJE unter SOUR-Zitierungen strukturiert (v4-dev sw v45)
-- **od_base_path-Architektur** (ADR-013, sw v110/v111): `od_base_path` = absoluter OneDrive-Pfad des GED-Ordners (auto via `parentReference.path`); `m.file` = relativer Pfad; `fullPath = od_base_path + '/' + m.file` für API
-- **@microsoft.graph.downloadUrl** (sw v107): 2-Schritt-Fetch — kein CORS-Problem mit CDN-Redirect
-- **IDB-Keys pfad-basiert**: `'img:' + filePath` (sw v105) — index-basierte Keys (`photo_id_0` etc.) deprecated
-- **`od_filemap` DEPRECATED** (sw v99): war Index→fileId-Mapping; nur noch Legacy-Fallback; `od_doc_filemap` ebenfalls deprecated
-- **Bevorzugtes Medium**: `m.prim` / `_PRIM Y` → Hero in Detailansicht; Fallback auf erstes Medium (sw v96)
-- **OneDrive Picker**: startet aus `od_photo_folder.relPath`; `↑ Übergeordneter Ordner` via `parentReference`-API (sw v110)
+- **IDB-Keys pfad-basiert**: `'img:' + filePath` (sw v105) — index-basierte Keys deprecated
+- **`od_filemap` DEPRECATED** (sw v99): nur noch Legacy-Fallback
+- **Bevorzugtes Medium**: `m.prim` / `_PRIM Y` → Hero in Detailansicht (sw v96)
+- **Event-Delegation**: `_CLICK_MAP` (28 Aktionen), `data-action`/`data-change`/`data-input` (sw v137)
+- **Offline-Sync-Indikator**: `#sync-indicator` Floating Pill, `updateChangedIndicator()` (sw v152)
+- **OneDrive-Startsequenz**: Session-Token → direkt laden; kein Token → Auswahl-Dialog (sw v151)
 - **Familien-OBJE**: `f.marr.media[]` mit Feld `titl` (nicht `title`) — NICHT in `f.marr._extra`
 - **Baum Tastatur**: `_treeNavTargets{}` pro `showTree()`-Aufruf; `_initTreeKeys()` einmalig
 - **Baum History**: `_treeHistory[]` + `_treeHistoryPos`; `←` ruft `treeNavBack()` auf
 - **State-Management**: `AppState` (db, currentPersonId, changed…) + `UIState` (_treeScale, _treeHistory…) in gedcom.js
+- **Virtuelles Scrollen**: `_VS_ROW=69`, `_VS_BUF=600`, `_VS_MIN=500`, Binary-Search O(log n) (sw v145/v146)
 
 ## IDB-Schlüssel (OneDrive-Ordner)
 - `od_base_path`: String — absoluter OneDrive-Pfad des GED-Ordners (sw v110/v111, auto-abgeleitet)
 - `od_photo_folder`: `{ id, name, relPath }` — Foto-Ordner relativ zu od_base_path (sw v110)
 - `od_docs_folder`: `{ id, name, relPath }` — Dokumente-Ordner relativ zu od_base_path (sw v110)
-- `od_default_folder`: `{ folderId, folderName, folderPath }` — **LEGACY** (vor sw v110)
-- `od_doc_folder`: `{ folderId, folderName, folderPath }` — **LEGACY** (vor sw v110)
-- `od_filemap`: `{ persons:{}, families:{}, sources:{} }` — **DEPRECATED** (sw v99): fileId-Index-Mapping; nur Legacy-Fallback
-- `od_doc_filemap`: `{ filename: fileId }` — **DEPRECATED** (sw v99)
+- `od_default_folder`, `od_doc_folder`, `od_filemap`, `od_doc_filemap` — **LEGACY/DEPRECATED**
 
 ## Sanduhr-Karten-Dimensionen
 - Regulär: W=96, H=64 · Zentrum: CW=160, CH=80
@@ -121,18 +132,39 @@ Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 1
 - Namen: `_treeShortName(p, isCenter)` — Limit 18 (regulär) / 26 (Zentrum) Zeichen, dann Initialen
 - Vorfahren: 4 Ebenen (anc1–anc4), ancSpan dynamisch (4/8/16 Slots)
 
-## Version 6 — Schwerpunkte (Branch `v6-dev`)
+## Version 7 — Schwerpunkte (Branch `v7-dev`)
 
-Offene Punkte aus v5 + neue Schwerpunkte — Planung in nächster Session.
+**Strategische Ausrichtung: GRAMPS als Desktop-Master, PWA als iOS-Companion.**
+GEDCOM bleibt vollständig erhalten. GRAMPS-Unterstützung ist eine Erweiterung.
+Austauschformat mit GRAMPS: **GRAMPS XML** (.gramps, gzip + XML) — GEDCOM-Export verliert zu viel.
 
-**Offen aus v5:**
+**Neue Dateien geplant:**
+- `gramps-parser.js` — gzip decompress + DOMParser → AppState (Phase 2, read-only)
+- `gramps-writer.js` — AppState → GRAMPS XML (Phase 3, Round-trip)
+- `ui-quick-add.js` — schlankes Quick-Add-Formular für iOS (Phase 4)
+
+**Neue AppState-Strukturen geplant:**
+- `db.placeObjects{}` — Ortshierarchie (GRAMPS top-level Orte)
+- `db.tags{}` — GRAMPS Kategorien/Farben
+- `db._grampsHandles{}` — Handle-zu-ID-Mapping für Round-trip
+- `db._sourceFormat` — `'gedcom'` | `'gramps'`
+
+**Phase 1 (sofort):** detectGRAMPS() + Import-Toast + _GRAMPS_ID strukturieren + NAME-Duplikation prüfen
+**Phase 2:** gramps-parser.js (read-only Native Import)
+**Phase 3:** gramps-writer.js (Round-trip)
+**Phase 4:** Quick-Add UI, Foto-direkt-zu-Person, Tag-Editor
+
+**Offen aus v6 (P3–P5):**
 - Zeitleiste (`ui-timeline.js`), Nachkommen-Baum, Karten-Ansicht
-- Statistik-Dashboard, Duplikat-Erkennung, Volltextsuche
-- `writeGEDCOM()` aufteilen, touchmove-Throttling, Suche indexieren
+- Statistik-Dashboard, Duplikat-Erkennung
+- touchmove-Throttling, Suche indexieren, Source-Liste Virtual Scroll
+- DEV-Diagnose entfernen, Magic-String-Konstanten, initAutocomplete()
+- INDI-Notes Editierproblem, Cmd+Z granular, showToast(type), confirm() → Modal
 
 ## Offene Architektur-Schulden
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo)
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
+- NAME-Duplikation (GIVN/SURN/NICK strukturiert + passthrough): vor GRAMPS-Roundtrip verifizieren
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch · Kommunikation: kurz und direkt · Keine Emojis
