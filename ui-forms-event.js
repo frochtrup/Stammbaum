@@ -374,7 +374,7 @@ _initEtypeAutocomplete('fev-etype', 'fev-etype-dd', () => document.getElementByI
 // ─────────────────────────────────────
 function collectAddresses() {
   const set = new Set();
-  Object.values(AppState.db.persons || {}).forEach(p => {
+  Object.values(AppState.db.individuals || {}).forEach(p => {
     (p.events || []).forEach(ev => {
       if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) set.add(ev.addr.trim());
     });
