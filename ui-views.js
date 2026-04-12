@@ -753,6 +753,11 @@ document.addEventListener('blur', e => {
     for (const ref of (f.noteRefs || []))
       if (AppState.db.notes?.[ref]) f.noteText += (f.noteText ? '\n' : '') + AppState.db.notes[ref].text;
     markChanged();
+  } else if (el.dataset.blur === 'saveSourceNote') {
+    const s = AppState.db.sources[el.dataset.sid];
+    if (!s) return;
+    s.text = el.value.trim();
+    markChanged();
   }
 }, true);
 

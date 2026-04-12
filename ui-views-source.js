@@ -45,10 +45,18 @@ function showSourceDetail(id, pushHistory = true) {
       html += factRow('Aufbewahrung', s.repo);
     }
   }
-  if (s.text)   html += `<div class="fact-row"><span class="fact-lbl">Notiz</span><span class="fact-val" style="white-space:pre-wrap;line-height:1.5">${linkifyUrls(s.text)}</span></div>`;
-  if (!s.abbr && !s.title && !s.author && !s.date && !s.publ && !s.repo && !s.text)
-    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
   html += `</div>`;
+
+  // Notizen — inline editierbar
+  html += `<div class="section fade-up">
+    <div class="section-title">Notizen</div>
+    <textarea data-blur="saveSourceNote" data-sid="${id}"
+      style="width:100%;box-sizing:border-box;background:transparent;border:1px solid transparent;border-radius:6px;
+             padding:4px 6px;font-size:0.88rem;color:var(--text-dim);line-height:1.6;resize:vertical;font-family:inherit;
+             min-height:60px;outline:none"
+      onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'"
+      placeholder="Notizen hinzufügen…">${esc(s.text || '')}</textarea>
+  </div>`;
 
   // Referencing persons
   if (refPersons.length) {
