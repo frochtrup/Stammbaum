@@ -70,8 +70,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] **Familien-Formular** — `_grampsAttrs[]` auf Familien-Ebene
 - [ ] **Orts-Picker** — `db.placeObjects{}` als strukturierten Picker (Hierarchie: Stadt → Kreis → Land)
 - [ ] **Medien-Browser** — GRAMPS-Pfade auflösen; MIME-Typ; `titl` editierbar
-- [ ] **Quellen-Formular** — Source-Notes editierbar; `grampId` sichtbar
+- ~~**Quellen-Formular**~~ — Source-Notes editierbar ✅; `grampId` sichtbar — nicht benötigt, gestrichen
 - [x] **Notizen** ✅ sw v234/v235/v236–v242 — Event-Notes editierbar; Notizen-Modal (`modalNote`) für Person/Familie/Quelle; noteRefs editierbar + löschbar; `_pruneOrphanNotes()` entfernt verwaiste `db.notes`-Einträge; `compactPlace()` für Ortsdarstellung
+- [x] **Quellen-Notes editierbar** ✅ sw v237/v238 — `openNoteModal('source', id)`; `s.text` als Notizfeld
 
 #### 5.3 Anzeige
 
