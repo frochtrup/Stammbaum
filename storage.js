@@ -6,6 +6,10 @@ function revertToSaved() {
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
   if (!confirm('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
   AppState.db = parseGEDCOM(orig);
+  if (AppState.db.parseErrors?.length) {
+    console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+  }
   AppState.changed = false;
   UIState._placesCache = null;
   UIState._hofCache = null;
@@ -114,6 +118,10 @@ async function tryAutoLoad() {
     if (saved && saved.length > 10) {
       const fname = (await idbGet('stammbaum_filename')) || localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
       AppState.db = parseGEDCOM(saved);
+      if (AppState.db.parseErrors?.length) {
+        console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+      }
       AppState.db.extraPlaces = loadExtraPlaces();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
       showStartView();
@@ -129,6 +137,10 @@ async function tryAutoLoad() {
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
     if (saved && saved.length > 10) {
       AppState.db = parseGEDCOM(saved);
+      if (AppState.db.parseErrors?.length) {
+        console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+      }
       AppState.db.extraPlaces = loadExtraPlaces();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
@@ -208,19 +220,6 @@ window.addEventListener('load', async () => {
     console.warn('[CSP]', e.blockedURI, e.violatedDirective);
   });
 
-  // DEV: aktiven SW-Cache anzeigen (nach geladen-Toast)
-  const _showSwToast = () => {
-    if (!('caches' in window)) return;
-    caches.keys().then(keys => {
-      const sw = keys.find(k => k.startsWith('stammbaum-'));
-      showToast('DEV ' + (sw ? sw.replace('stammbaum-', 'sw ') : 'kein SW-Cache'));
-    });
-  };
-  setTimeout(_showSwToast, 3400);
-  // Auch bei SW-Wechsel (nach Reload mit neuem Cache)
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => setTimeout(_showSwToast, 500));
-  }
 });
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert

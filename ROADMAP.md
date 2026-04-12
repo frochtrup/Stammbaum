@@ -57,6 +57,33 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 
 ---
 
+### Code- und Architektur-Review (2026-04-12)
+
+Review aller 24 JS-Dateien (~11.000 Zeilen) — Befund: **8/10** (Fundament solide; gezielte Lücken in Fehler-Handling und Daten-Konsistenz).
+
+**Neu identifizierte kritische Lücken (nach Codecheck verifiziert):**
+- **`parseErrors[]` nicht in allen Ladepfaden angezeigt** ✅ behoben sw v229 — `_processLoadedText` zeigte bereits Toast, aber `tryAutoLoad()` (IDB + localStorage-Pfad) und `revertToSaved()` fehlten; gleiche Prüfung ergänzt
+- ~~**Geo-Koordinaten-Sync defekt**~~ — *Falsch-positiv*: Writer hat 2-stufigen Fallback (`extraPlaces` → `obj.lati/obj.long`); `markChanged()` invalidiert `_placesCache`; System korrekt
+- ~~**`photo_` vs. `img:` IDB-Key-Inkonsistenz**~~ — *Falsch-positiv*: Zwei verschiedene Systeme (`photo_@I001@` = Demo-Avatare; `img:path` = Media-Cache); keine Überschneidung
+- ~~**State-Pollution `_efMedia`/`_pfExtraNames`**~~ — *Falsch-positiv*: Beide werden in `showEventForm()` / `showPersonForm()` explizit zurückgesetzt
+- ~~**IDB-Quota nicht gefangen**~~ — *Falsch-positiv*: Hauptpfad `saveToFileHandle()` hat `.catch(() => showToast(...))` bereits
+- ~~**OneDrive 401 silent fail**~~ — *Falsch-positiv*: `_odGetToken()` ruft `odLogin()` auf → OAuth-Redirect (korrekt); stille Version nur für Auto-Connect beim Start
+
+**Neu identifizierte Architektur-Verletzungen (bestätigt):**
+- Form-State als lose Globals, nicht in `UIState` (ADR-003): `srcWidgetState`, `_pfExtraNames`, `_efMedia`, `_probandId`
+- Virtual Scroll (`_vsRender()`) nur für Personen-Liste; Familien/Quellen/Orte ohne VS
+- Notes-Datenmodell: `p.noteText`, `p.noteTexts[]`, `p.noteTextInline` — 3 Felder, eine Bedeutung
+- Doppelte Label-Tabellen: `EVENT_LABELS` (gedcom.js) und `_SPECIAL_LBL` (ui-forms-event.js) parallel
+
+**Bestätigt-stabile Bereiche:**
+- Passthrough-System (10 Mechanismen) — kein Datenverlust bei unbekannten Tags ✓
+- GRAMPS-Roundtrip (60034 Checks ✓) ✓
+- CSP + Event-Delegation vollständig wirksam (seit v6 P1) ✓
+- SW Network-first + Offline-Fallback ✓
+- Virtual Scroll Personen/Familien — korrekte Binary-Search-Implementierung ✓
+
+---
+
 ### Phase 1 — GRAMPS-GEDCOM-Kompatibilität ✅ ABGESCHLOSSEN (sw v190)
 
 - [x] **`detectGRAMPS(gedText)`** — Heuristik via `HEAD SOUR GRAMPS` + `_GRAMPS_ID`; Flag `db._grampsMaster`
@@ -150,11 +177,76 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 
 ---
 
-### Offene P3–P5 Schulden aus v6 (weiterhin offen)
+### Gesamtpriorisierung aller offenen Themen (Stand 2026-04-12)
 
-- [ ] **P3** Globale Suche indexieren · `applyPersonFilter()` Debounce · `touchmove` throttlen · Virtual Scroll profilen · Source-Liste VS
-- [ ] **P4** DEV-Diagnose entfernen · `_navHistory`/`_probandId` in UIState · Rendering-Helper · Magic-String-Konstanten · `initAutocomplete()` · Media-Render-Helfer · JS-seitige `onclick=`-Reste
-- [ ] **P5** INDI-Notes Editierproblem · Cmd+Z granulares Undo · `showToast(type)` · `confirm()` → Modal · Formular Progressive Disclosure · `handleError()` zentralisieren
+Integriert: Schulden aus v6 (P3–P5) + neue Befunde aus Code-Review 2026-04-12.
+
+---
+
+#### P1 — Datenverlust-Risiken
+
+- [x] **`parseErrors[]` in allen Ladepfaden anzeigen** ✅ sw v229 — `tryAutoLoad()` (IDB + localStorage) und `revertToSaved()` zeigen jetzt denselben Toast wie `_processLoadedText`; `DEV sw vXXX`-Toast entfernt
+- ~~**Geo-Koordinaten-Sync**~~ — *Falsch-positiv* nach Codecheck; System korrekt (Writer 2-stufiger Fallback, Cache wird in `markChanged()` invalidiert)
+- ~~**`photo_` → `img:` IDB-Key-Migration**~~ — *Falsch-positiv*; zwei unabhängige Systeme
+- ~~**State-Reset `_efMedia`/`_pfExtraNames`**~~ — *Falsch-positiv*; Reset in `showEventForm()`/`showPersonForm()` vorhanden
+- ~~**IDB-Quota-Ausnahme fangen**~~ — *Falsch-positiv*; Hauptpfad zeigt bereits Toast
+- ~~**OneDrive 401 behandeln**~~ — *Falsch-positiv*; `_odGetToken()` redirectet zu Login (korrekt)
+
+---
+
+#### P2 — Architektur-Verletzungen
+
+- [ ] **Form-State in UIState konsolidieren** — `srcWidgetState`, `_pfExtraNames`, `_efMedia`, `_probandId` als lose Globals; nach `UIState._formState{}` verschieben (ADR-003) (~3h)
+- [ ] **Virtual Scroll auf alle Listen** — `_vsRender()` nur Personen; Familien-/Quellen-/Orte-Liste unoptimiert ab 500+ Einträgen (~3h)
+- [ ] **JS-seitige `onclick=` entfernen** — P1 v6 hat index.html bereinigt; direkte `.onclick =`-Zuweisungen im JS verbleiben (ui-forms-event.js L30, ui-forms.js L353) → vollständig auf `data-action`-Delegation (~2h)
+- [ ] **`_navHistory` + `_probandId` in UIState** — loose Globals in ui-views.js, inkonsistent mit ADR-003; gleichzeitig Tree-History und Detail-History auf einheitliches System bringen (~3h)
+
+---
+
+#### P3 — Performance
+
+- [ ] **Globale Suche indexieren** — O(n×m) bei 2800+ Personen ~80ms/Tastendruck; Debounce + vorberechneter Index (`runGlobalSearch` in ui-views.js)
+- [ ] **`applyPersonFilter()` Debounce** — inkonsistent: `filterFamiliesDebounced` hat Debounce, `applyPersonFilter` nicht (ui-views.js L676–689)
+- [ ] **`touchmove` Pinch-Zoom throttlen** — 100+/s direkt auf DOM, Frame-Drops auf älteren iPhones (ui-views-tree.js) → `requestAnimationFrame`
+- [ ] **Virtual Scroll profilen** — Spacer-Logik verifizieren; Threshold 500 ggf. anpassen
+
+---
+
+#### P4 — Release-Hygiene & Code-Qualität
+
+- [ ] **DEV-Diagnose entfernen** — OD-Token-Details + SW-Version-Toast (`DEV sw vXXX`) aus Menü und storage.js
+- [ ] **Debug-Funktionen aus gramps-writer.js auslagern** — `_debug_minimal()`, `test_gramps()`, `test_deepQuery()`, `test_roundtrip()` (L728–1072, ~340 LOC) → separate `gramps-test.js`, nur per URL-Param `?debug=1` geladen
+- [ ] **Notes-Datenmodell konsolidieren** — `p.noteText`, `p.noteTexts[]`, `p.noteTextInline` — 3 Felder für dasselbe Konzept; Single source of truth definieren (gedcom-parser.js, gedcom-writer.js, ui-forms.js)
+- [ ] **Konstanten für Magic Strings** — `MODALS{}` + `EL{}` Konstanten; `EVENT_LABELS` (gedcom.js) und `_SPECIAL_LBL` (ui-forms-event.js) zusammenführen; 50+ verstreute String-Literale ersetzen
+- [ ] **Generische `initAutocomplete()`** — `_initEtypeAutocomplete()` (ui-forms-event.js L41–77) und `initPlaceAutocomplete()` (ui-forms.js L775–816) strukturell identisch; gemeinsame Funktion `initAutocomplete(inputId, ddId, fetchFn)` spart ~60 Zeilen
+- [ ] **Media-Rendering-Helfer** — `_renderEfMedia()`, `_renderMediaList()`, inline Rendering in Person-/Familien-Views konsolidieren
+- [ ] **PEDI vs. `_FREL`/`_MREL` Precedence im Code dokumentieren** — Vorrang im Parser kommentieren; Testfall für gemischten Input ergänzen
+- [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` aus Person/Familie/Quelle-Views (~15% Duplikation)
+
+---
+
+#### P5 — UX-Schulden
+
+- [ ] **INDI-Notes Editierproblem** — mehrere Notes werden beim Speichern zusammengeführt; Edit-Pfad verlustbehaftet
+- [ ] **Cmd+Z granulares Undo** — History-Stack auf AppState erforderlich; eigener Sprint
+- [ ] **`showToast(type)`** — `type ∈ {success, warning, error}` + CSS-Differenzierung; verbessert Wahrnehmbarkeit kritischer Meldungen
+- [ ] **`confirm()` → Modal** — 6+ Stellen; `confirmModal(msg)` → Promise; einheitliche Optik
+- [ ] **Formular Progressive Disclosure** — einheitliches Pattern für optionale Felder definieren (aktuell jedes Formular eigene Logik)
+- [ ] **`handleError()` zentralisieren** — 181 try/catch, 13 console.error, viele `.catch(() => {})` → zentrale `handleError(e, context, userMsg)` Funktion; besonders kritisch in storage.js + onedrive.js
+
+---
+
+#### P6 — Neue Features (erst nach P1+P2)
+
+- [ ] Zeitleiste (`ui-timeline.js`) — Personen/Ereignisse auf horizontaler Zeitachse
+- [ ] Nachkommen-Baum (top-down SVG)
+- [ ] Karten-Ansicht (Apple Maps Link-Cluster)
+- [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
+- [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
+- [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum-Karten
+- [ ] **Notizen-Überarbeitung (gesamthaft)** — welche Entitäten haben Notizen; Editier-Pfad für alle; Anzeige vereinheitlichen
+- [ ] ASSO/RELA/ROLE → Witness-Roundtrip GEDCOM↔GRAMPS (Phase 5.1, ~4h)
+- [ ] OBJE ohne FORM stabilisieren (Phase 5.1)
 
 ---
 
