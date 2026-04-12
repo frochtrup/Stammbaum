@@ -13,10 +13,10 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 6.0 | `v6-dev` | Abgeschlossen (2026-04-10) — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**Roundtrip GEDCOM:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
+**Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓ (inkl. PAGE/QUAY); CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte — GRAMPS Desktop-Import bestätigt (gender, Medienlinks)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive / Unsere Familie.gramps — 2894 Personen
-**Aktuelle sw-Version:** v205 / Cache: `stammbaum-v205`
+**Aktuelle sw-Version:** v220 / Cache: `stammbaum-v220`
 
 ---
 
