@@ -1,8 +1,8 @@
 // ─────────────────────────────────────
 //  FORMS: EVENT
 // ─────────────────────────────────────
-const _SPECIAL_OBJ = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
-const _SPECIAL_LBL = { BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung' };
+// _SPECIAL_OBJ → SPECIAL_EVENT_KEYS (gedcom.js); _SPECIAL_LBL → EVENT_LABELS (gedcom.js)
+const _SPECIAL_OBJ = SPECIAL_EVENT_KEYS;
 
 // _efMedia lebt in UIState._formState.efMedia (shimmiert als _efMedia)
 
@@ -126,7 +126,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-place').value = obj.place || '';
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
     initSrcWidget('ef', obj.sources || [], obj.sourcePages || {}, obj.sourceQUAY || {});
-    document.querySelector('#modalEvent .sheet-title').textContent = _SPECIAL_LBL[evIdx] + ' bearbeiten';
+    document.querySelector('#modalEvent .sheet-title').textContent = EVENT_LABELS[evIdx] + ' bearbeiten';
     document.getElementById('saveEventBtn').textContent = 'Speichern';
   } else {
     const ev = isExisting ? p.events[evIdx] : null;

@@ -71,7 +71,7 @@ function parseGEDCOM(text, parseErrors) {
           chr:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
           buri:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
           events:[], famc:[], fams:[],
-          noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'',
+          noteRefs:[], noteTexts:[], noteText:'',
           extraNames:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
           nameSources:[], nameSourcePages:{}, nameSourceQUAY:{}, nameSourceNote:{}, nameSourceExtra:{}, nameSourceMedia:{},
@@ -80,7 +80,7 @@ function parseGEDCOM(text, parseErrors) {
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceNote:{},sourceExtra:{},sourceMedia:{},value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', _textSeen:false, agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
@@ -833,17 +833,15 @@ function parseGEDCOM(text, parseErrors) {
     }
   }
 
-  // Resolve NOTE references + build noteText/noteTextInline from noteTexts[]
+  // Resolve NOTE references + build noteText from noteTexts[] + referenced notes
   for (const p of Object.values(individuals)) {
-    p.noteTextInline = p.noteTexts.join('\n');
-    p.noteText = p.noteTextInline;
+    p.noteText = p.noteTexts.join('\n');
     for (const ref of p.noteRefs) {
       if (ref && notes[ref]) p.noteText += (p.noteText ? '\n' : '') + notes[ref].text;
     }
   }
   for (const f of Object.values(families)) {
-    f.noteTextInline = f.noteTexts.join('\n');
-    f.noteText = f.noteTextInline;
+    f.noteText = f.noteTexts.join('\n');
     for (const ref of f.noteRefs) {
       if (ref && notes[ref]) f.noteText += (f.noteText ? '\n' : '') + notes[ref].text;
     }

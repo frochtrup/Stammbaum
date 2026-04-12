@@ -113,6 +113,9 @@ const EVENT_LABELS = {
   CHR:'Taufe',           BURI:'Beerdigung',
 };
 
+// GEDCOM-Typ → Person-Property-Name für die 4 Sonder-Ereignisse (BIRT/CHR/DEAT/BURI)
+const SPECIAL_EVENT_KEYS = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
+
 // Label-Map für GEDCOM NAME TYPE-Werte
 const NAME_TYPE_LABELS = {
   birth:     'Geburtsname',

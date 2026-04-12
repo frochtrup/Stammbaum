@@ -213,12 +213,6 @@ window.addEventListener('load', async () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
-  // DEV: CSP-Verstösse im Menü anzeigen
-  document.addEventListener('securitypolicyviolation', e => {
-    const el = document.getElementById('menuSwState');
-    if (el) el.textContent = 'CSP-Block: ' + (e.blockedURI || '?');
-    console.warn('[CSP]', e.blockedURI, e.violatedDirective);
-  });
 
 });
 

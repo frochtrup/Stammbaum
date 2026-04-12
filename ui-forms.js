@@ -127,7 +127,7 @@ function showPersonForm(id) {
   document.getElementById('pf-suffix').value = p?.suffix || '';
   document.getElementById('pf-nick').value = p?.nick || '';
   document.getElementById('pf-titl').value   = p?.titl  || '';
-  document.getElementById('pf-note').value   = p?.noteTexts?.length ? p.noteTexts.join('\n') : (p?.noteTextInline ?? p?.noteText ?? '');
+  document.getElementById('pf-note').value   = p?.noteTexts?.join('\n') ?? '';
   document.getElementById('pf-resn').value   = p?.resn  || '';
   document.getElementById('pf-email').value  = p?.email || '';
   document.getElementById('pf-www').value    = p?.www   || '';
@@ -221,7 +221,6 @@ function savePerson() {
     buri:  existing.buri  || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
     events,
     noteTexts: note ? [note] : [],
-    noteTextInline: note,
     noteRefs: existing.noteRefs || [],
     noteText: (() => {
       let t = note;
@@ -380,7 +379,7 @@ function showFamilyForm(id, ctx) {
   fillDateFields('ff-mdate-qual', 'ff-mdate', null, f?.marr?.date  || '');
   initPlaceMode('ff-mplace');
   document.getElementById('ff-mplace').value = f?.marr?.place  || '';
-  document.getElementById('ff-note').value = f?.noteTexts?.length ? f.noteTexts.join('\n') : (f?.noteTextInline ?? f?.noteText ?? '');
+  document.getElementById('ff-note').value = f?.noteTexts?.join('\n') ?? '';
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.sources || [], f?.marr?.sourcePages || {}, f?.marr?.sourceQUAY || {});
 
@@ -423,7 +422,6 @@ function saveFamily() {
     div:   existingFam.div   || {},
     divf:  existingFam.divf  || {},
     noteTexts: note ? [note] : [],
-    noteTextInline: note,
     noteText: (() => {
       let t = note;
       for (const ref of (existingFam.noteRefs || [])) {
@@ -599,41 +597,6 @@ function deleteSource() {
 // ─────────────────────────────────────
 function openModal(id) {
   document.getElementById(id).classList.add('open');
-  if (id === 'modalMenu') _updateMenuVersionInfo();
-}
-
-async function _updateMenuVersionInfo() {
-  const swEl    = document.getElementById('menuSwVersion');
-  const stateEl = document.getElementById('menuSwState');
-  const odEl    = document.getElementById('menuOdState');
-  const tokEl   = document.getElementById('menuOdToken');
-  if (!swEl) return;
-
-  // SW-Cache
-  let swName = 'kein Cache';
-  if ('caches' in window) {
-    const keys = await caches.keys();
-    const sw = keys.find(k => k.startsWith('stammbaum-'));
-    if (sw) swName = sw.replace('stammbaum-', 'sw ');
-  }
-  swEl.textContent = 'SW: ' + swName;
-
-  // SW-Status
-  let state = '–';
-  if ('serviceWorker' in navigator) {
-    const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
-    state = reg ? (reg.active ? 'aktiv' : reg.waiting ? 'wartet (neu laden)' : reg.installing ? 'installiert...' : '–') : 'nicht registriert';
-  }
-  stateEl.textContent = 'Status: ' + state;
-
-  // OneDrive-Verbindung
-  const hasOdFile  = localStorage.getItem('od_file_id');
-  const hasRefresh = !!sessionStorage.getItem('od_refresh_token');
-  const hasAccess  = !!sessionStorage.getItem('od_access_token');
-  const expiry     = parseInt(sessionStorage.getItem('od_token_expiry') || '0');
-  const expiresIn  = Math.round((expiry - Date.now()) / 1000);
-  if (odEl) odEl.textContent = 'OD: ' + (hasOdFile ? 'Datei bekannt' : 'keine Datei') + ' · RT:' + (hasRefresh ? 'ja' : 'nein') + ' · AT:' + (hasAccess ? 'ja' : 'nein');
-  if (tokEl) tokEl.textContent = 'Token: ' + (hasAccess ? 'gültig noch ' + expiresIn + 's' : hasRefresh ? 'abgelaufen (RT da)' : 'kein Token');
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');

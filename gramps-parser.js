@@ -505,7 +505,7 @@ async function parseGRAMPS(file) {
       buri:  _emptyEvI(),
       events: [],
       famc: [], fams: [],
-      noteRefs: [], noteTexts: [], noteText: '', noteTextInline: '',
+      noteRefs: [], noteTexts: [], noteText: '',
       extraNames,
       media: [], titl: '', reli: '', resn: '', email: '', www: '',
       _stat: null, grampId: gid, _grampsHandle: h,
@@ -724,7 +724,7 @@ async function parseGRAMPS(file) {
       marr: _emptyFamEv(), engag: _emptyFamEv(), div: _emptyFamEv(), divf: _emptyFamEv(),
       events: [],
       _stat: null, grampId: gid, _grampsHandle: h,
-      noteRefs: [], noteTexts: [], noteText: '', noteTextInline: '',
+      noteRefs: [], noteTexts: [], noteText: '',
       sourceRefs: new Set(),
       media: [],
       lastChanged: '', lastChangedTime: ''

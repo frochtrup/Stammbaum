@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v232 / Cache: `stammbaum-v232`
+**Aktuelle sw-Version:** v233 / Cache: `stammbaum-v233`
 
 ---
 
@@ -95,12 +95,12 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [x] **`applyPersonFilter()` Debounce** ✅ bereits vorhanden — `_applyPersonFilterDebounced` (200ms) in ui-forms.js
 - [x] **`touchmove` Pinch-Zoom throttlen** ✅ sw v232 — `requestAnimationFrame`-Guard in ui-views-tree.js
 
-### P4 — Code-Qualität
+### P4 — Code-Qualität ✅ abgeschlossen (sw v233)
 
-- [ ] **DEV-Diagnose entfernen** — OD-Token-Details + SW-Version-Toast aus Menü/storage.js
-- [ ] **Debug-Funktionen auslagern** — `_debug_minimal()`, `test_*()` (~340 LOC) → `gramps-test.js`, nur bei `?debug=1`
-- [ ] **Notes-Datenmodell konsolidieren** — `p.noteText` / `p.noteTexts[]` / `p.noteTextInline` → Single source of truth
-- [ ] **Konstanten für Magic Strings** — `EVENT_LABELS` + `_SPECIAL_LBL` zusammenführen; `MODALS{}` + `EL{}`
+- [x] **DEV-Diagnose entfernen** ✅ sw v233 — `_updateMenuVersionInfo()` (38 Z.) + CSP-Listener entfernt
+- [x] **Debug-Funktionen auslagern** ✅ sw v233 — 4 Funktionen (~344 LOC) → `debug-gramps.js`, nur bei `?debug=1`; `_SPECIAL_OBJ` als Alias auf `SPECIAL_EVENT_KEYS`
+- [x] **Notes-Datenmodell konsolidieren** ✅ sw v233 — `noteTextInline` entfernt; `noteText = noteTexts.join + noteRefs` (Single source of truth)
+- [x] **Konstanten für Magic Strings** ✅ sw v233 — `_SPECIAL_LBL` entfernt → `EVENT_LABELS`; `_SPECIAL_OBJ` → `SPECIAL_EVENT_KEYS` in gedcom.js
 - [ ] **Generische `initAutocomplete()`** — `_initEtypeAutocomplete()` und `initPlaceAutocomplete()` zusammenführen (~60 Zeilen)
 - [ ] **Rendering-Helper extrahieren** — `renderEventBlock()`, `renderSourceBadge()`, `renderMediaPhoto()` (~15% Duplikation)
 
