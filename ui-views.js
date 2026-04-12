@@ -804,6 +804,17 @@ function openNoteModal(type, id) {
   setTimeout(() => document.querySelector('#note-sections textarea')?.focus(), 80);
 }
 
+function _pruneOrphanNotes(removedRefs) {
+  if (!removedRefs.length || !AppState.db.notes) return;
+  const remainingSet = new Set();
+  for (const p of Object.values(AppState.db.individuals))
+    for (const r of (p.noteRefs || [])) remainingSet.add(r);
+  for (const f of Object.values(AppState.db.families))
+    for (const r of (f.noteRefs || [])) remainingSet.add(r);
+  for (const ref of removedRefs)
+    if (!remainingSet.has(ref)) delete AppState.db.notes[ref];
+}
+
 function saveNoteModal() {
   const type = document.getElementById('note-type').value;
   const id   = document.getElementById('note-id').value;
@@ -823,20 +834,24 @@ function saveNoteModal() {
   if (type === 'person') {
     const p = AppState.db.individuals[id];
     if (!p) return;
+    const removed = (p.noteRefs || []).filter(r => !remainingRefs.includes(r));
     p.noteRefs  = remainingRefs;
     p.noteTexts = inlineVal ? [inlineVal] : [];
     p.noteText  = inlineVal;
     for (const ref of remainingRefs)
       if (AppState.db.notes?.[ref]) p.noteText += (p.noteText ? '\n' : '') + AppState.db.notes[ref].text;
+    _pruneOrphanNotes(removed);
     markChanged(); closeModal('modalNote'); showDetail(id);
   } else if (type === 'family') {
     const f = AppState.db.families[id];
     if (!f) return;
+    const removed = (f.noteRefs || []).filter(r => !remainingRefs.includes(r));
     f.noteRefs  = remainingRefs;
     f.noteTexts = inlineVal ? [inlineVal] : [];
     f.noteText  = inlineVal;
     for (const ref of remainingRefs)
       if (AppState.db.notes?.[ref]) f.noteText += (f.noteText ? '\n' : '') + AppState.db.notes[ref].text;
+    _pruneOrphanNotes(removed);
     markChanged(); closeModal('modalNote'); showFamilyDetail(id);
   } else if (type === 'source') {
     const s = AppState.db.sources[id];
