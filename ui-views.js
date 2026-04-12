@@ -479,7 +479,7 @@ function _syncBannerSave() {
   if (canOD) odSaveFile(); else exportGEDCOM();
 }
 
-function markChanged() { AppState.changed = true; UIState._placesCache = null; UIState._hofCache = null; updateChangedIndicator(); }
+function markChanged() { AppState.changed = true; UIState._placesCache = null; UIState._hofCache = null; UIState._searchIndexDirty = true; updateChangedIndicator(); }
 
 // ─────────────────────────────────────
 //  SHARED VIEW HELPERS

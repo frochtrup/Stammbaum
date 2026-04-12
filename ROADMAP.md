@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v231 / Cache: `stammbaum-v231`
+**Aktuelle sw-Version:** v232 / Cache: `stammbaum-v232`
 
 ---
 
@@ -89,11 +89,11 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [x] **`_navHistory` + `_probandId` in UIState** ✅ sw v231 — beide in UIState, Shims in gedcom.js
 - [x] **Form-State in UIState** ✅ sw v231 — `srcWidgetState`/`_pfExtraNames`/`_efMedia` → `UIState._formState{}` (ADR-003)
 
-### P3 — Performance
+### P3 — Performance ✅ abgeschlossen (sw v232)
 
-- [ ] **Globale Suche indexieren** — O(n×m) bei 2800+ Personen ~80ms/Tastendruck; Debounce + vorberechneter Index
-- [ ] **`applyPersonFilter()` Debounce** — `filterFamiliesDebounced` hat Debounce, `applyPersonFilter` nicht
-- [ ] **`touchmove` Pinch-Zoom throttlen** — 100+/s auf DOM → `requestAnimationFrame` (ui-views-tree.js)
+- [x] **Globale Suche indexieren** ✅ sw v232 — `_buildSearchIndex()` + `p._searchStr`; O(n×m) → O(n); dirty-Flag in UIState, Reset in `markChanged()`
+- [x] **`applyPersonFilter()` Debounce** ✅ bereits vorhanden — `_applyPersonFilterDebounced` (200ms) in ui-forms.js
+- [x] **`touchmove` Pinch-Zoom throttlen** ✅ sw v232 — `requestAnimationFrame`-Guard in ui-views-tree.js
 
 ### P4 — Code-Qualität
 

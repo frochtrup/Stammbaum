@@ -95,7 +95,7 @@ function _initTreeDrag() {
   });
 
   // Pinch-to-Zoom (Touch, 2 Finger)
-  let _pinchStartDist = 0, _pinchStartScale = 1;
+  let _pinchStartDist = 0, _pinchStartScale = 1, _pinchRafPending = false;
   sc.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
       _pinchStartDist = Math.hypot(
@@ -114,15 +114,21 @@ function _initTreeDrag() {
       e.touches[0].clientY - e.touches[1].clientY
     );
     _treeZoomScale = Math.min(3, Math.max(0.3, _pinchStartScale * dist / _pinchStartDist));
-    const wrap = document.getElementById('treeWrap');
-    const scaleWrap = document.getElementById('treeScaleWrap');
-    if (wrap) {
-      wrap.style.transform = `scale(${_treeZoomScale})`;
-      wrap.style.transformOrigin = '0 0';
-    }
-    if (scaleWrap && wrap) {
-      scaleWrap.style.width  = Math.round(parseFloat(wrap.style.width)  * _treeZoomScale) + 'px';
-      scaleWrap.style.height = Math.round(parseFloat(wrap.style.height) * _treeZoomScale) + 'px';
+    if (!_pinchRafPending) {
+      _pinchRafPending = true;
+      requestAnimationFrame(() => {
+        const wrap = document.getElementById('treeWrap');
+        const scaleWrap = document.getElementById('treeScaleWrap');
+        if (wrap) {
+          wrap.style.transform = `scale(${_treeZoomScale})`;
+          wrap.style.transformOrigin = '0 0';
+        }
+        if (scaleWrap && wrap) {
+          scaleWrap.style.width  = Math.round(parseFloat(wrap.style.width)  * _treeZoomScale) + 'px';
+          scaleWrap.style.height = Math.round(parseFloat(wrap.style.height) * _treeZoomScale) + 'px';
+        }
+        _pinchRafPending = false;
+      });
     }
     e.preventDefault();
   }, { passive: false });

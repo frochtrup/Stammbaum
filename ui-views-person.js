@@ -225,9 +225,25 @@ function clearYearFilter() {
   applyPersonFilter();
 }
 
+function _buildSearchIndex() {
+  for (const p of Object.values(AppState.db.individuals)) {
+    p._searchStr = [
+      p.name, p.surname, p.given, p.prefix, p.titl,
+      p.birth.date, p.birth.place,
+      p.death.date, p.death.place,
+      p.chr.place,  p.buri.place,
+      p.reli,       p.noteText,
+      ...p.events.map(ev => [ev.value, ev.place, ev.date, ev.eventType].join(' ')),
+    ].filter(Boolean).join(' ').toLowerCase();
+  }
+  UIState._searchIndexDirty = false;
+}
+
 function filterPersons(q, yearFrom, yearTo) {
   const lower = q.toLowerCase().trim();
   const all = Object.values(AppState.db.individuals);
+
+  if (lower && UIState._searchIndexDirty) _buildSearchIndex();
 
   const filtered = all.filter(p => {
     // Jahresfilter (Geburtsjahr) — nutzt gedDateSortKey für korrekte FROM/TO/BET-Auflösung
@@ -239,31 +255,7 @@ function filterPersons(q, yearFrom, yearTo) {
       if (yearTo   && yr > yearTo)   return false;
     }
     if (!lower) return true;
-    // Name
-    if ((p.name||'').toLowerCase().includes(lower)) return true;
-    if ((p.surname||'').toLowerCase().includes(lower)) return true;
-    if ((p.given||'').toLowerCase().includes(lower)) return true;
-    if ((p.prefix||'').toLowerCase().includes(lower)) return true;
-    if ((p.titl||'').toLowerCase().includes(lower)) return true;
-    // Birth / death / burial / chr
-    if ((p.birth.date||'').toLowerCase().includes(lower)) return true;
-    if ((p.birth.place||'').toLowerCase().includes(lower)) return true;
-    if ((p.death.date||'').toLowerCase().includes(lower)) return true;
-    if ((p.death.place||'').toLowerCase().includes(lower)) return true;
-    if ((p.chr.place||'').toLowerCase().includes(lower)) return true;
-    if ((p.buri.place||'').toLowerCase().includes(lower)) return true;
-    // Events: value, place, date, eventType
-    for (const ev of p.events) {
-      if ((ev.value||'').toLowerCase().includes(lower)) return true;
-      if ((ev.place||'').toLowerCase().includes(lower)) return true;
-      if ((ev.date||'').toLowerCase().includes(lower)) return true;
-      if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
-    }
-    // Notes
-    if ((p.noteText||'').toLowerCase().includes(lower)) return true;
-    // Religion
-    if ((p.reli||'').toLowerCase().includes(lower)) return true;
-    return false;
+    return (p._searchStr || '').includes(lower);
   });
 
   renderPersonList(filtered);

@@ -29,8 +29,9 @@ const UIState = {
   _relAnchorId:     '',          // personId (spouse/parent) oder famId (child)
   _pendingRelation: null,        // { mode, anchorId } — gesetzt vor showPersonForm()
   _pendingRepoLink: null,        // { sourceId } — gesetzt vor showRepoForm(null)
-  _placesCache:     null,        // Cache für collectPlaces(); wird in markChanged() geleert
-  _hofCache:        null,        // Cache für buildHofIndex(); wird in markChanged() geleert
+  _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
+  _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
+  _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
   _placesSubTab:    'orte',      // 'orte' | 'hoefe'
   _navHistory:      [],          // Navigations-History für Detail-Ansichten
   _probandId:       null,        // null = Fallback auf kleinste ID
@@ -50,7 +51,7 @@ const UIState = {
                 '_fileHandle','_canDirectSave','_originalGedText']],
     [UIState,  ['_treeScale','_treeHistory','_treeHistoryPos',
                 '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache',
-                '_hofCache','_placesSubTab','_navHistory','_probandId']],
+                '_hofCache','_placesSubTab','_navHistory','_probandId','_searchIndexDirty']],
   ];
   for (const [ns, keys] of _map) {
     for (const k of keys) {
