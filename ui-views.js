@@ -786,8 +786,12 @@ function openNoteModal(type, id) {
     const usersHtml = users.length
       ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">${
           users.map(n => esc(n)).join(' · ')}</div>` : '';
-    html += `<div class="form-group" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
-      <div class="form-label">${esc(ref)}</div>
+    html += `<div class="form-group" data-ref-section="${esc(ref)}" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+        <div class="form-label" style="margin-bottom:0">${esc(ref)}</div>
+        <button type="button" onclick="this.closest('[data-ref-section]').remove()"
+          style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;padding:0 2px">× Entfernen</button>
+      </div>
       ${usersHtml}
       <textarea data-notetype="ref" data-noteref="${esc(ref)}" class="form-input" rows="5"
         style="resize:vertical;box-sizing:border-box;width:100%;font-family:inherit"
@@ -808,26 +812,30 @@ function saveNoteModal() {
   const inlineTa = document.querySelector('#note-sections [data-notetype="inline"]');
   const inlineVal = inlineTa ? inlineTa.value.trim() : '';
 
-  // noteRef-Notizen lesen + in db.notes schreiben
+  // verbleibende noteRefs + Texte lesen
+  const remainingRefs = [];
   document.querySelectorAll('#note-sections [data-notetype="ref"]').forEach(ta => {
     const ref = ta.dataset.noteref;
+    remainingRefs.push(ref);
     if (AppState.db.notes?.[ref]) AppState.db.notes[ref].text = ta.value.trim();
   });
 
   if (type === 'person') {
     const p = AppState.db.individuals[id];
     if (!p) return;
+    p.noteRefs  = remainingRefs;
     p.noteTexts = inlineVal ? [inlineVal] : [];
     p.noteText  = inlineVal;
-    for (const ref of (p.noteRefs || []))
+    for (const ref of remainingRefs)
       if (AppState.db.notes?.[ref]) p.noteText += (p.noteText ? '\n' : '') + AppState.db.notes[ref].text;
     markChanged(); closeModal('modalNote'); showDetail(id);
   } else if (type === 'family') {
     const f = AppState.db.families[id];
     if (!f) return;
+    f.noteRefs  = remainingRefs;
     f.noteTexts = inlineVal ? [inlineVal] : [];
     f.noteText  = inlineVal;
-    for (const ref of (f.noteRefs || []))
+    for (const ref of remainingRefs)
       if (AppState.db.notes?.[ref]) f.noteText += (f.noteText ? '\n' : '') + AppState.db.notes[ref].text;
     markChanged(); closeModal('modalNote'); showFamilyDetail(id);
   } else if (type === 'source') {
