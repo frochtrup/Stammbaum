@@ -1,7 +1,7 @@
 // ─────────────────────────────────────
 //  PROBAND
 // ─────────────────────────────────────
-let _probandId = null;  // null = Fallback auf kleinste ID
+// _probandId lebt in UIState._probandId (shimmiert als _probandId)
 
 function getProbandId() {
   return (_probandId && AppState.db.individuals[_probandId]) ? _probandId : smallestPersonId();

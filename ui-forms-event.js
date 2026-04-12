@@ -4,7 +4,7 @@
 const _SPECIAL_OBJ = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
 const _SPECIAL_LBL = { BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung' };
 
-let _efMedia = [];
+// _efMedia lebt in UIState._formState.efMedia (shimmiert als _efMedia)
 
 function _renderEfMedia() {
   const list = document.getElementById('ef-media-list');

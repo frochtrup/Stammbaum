@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v230 / Cache: `stammbaum-v230`
+**Aktuelle sw-Version:** v231 / Cache: `stammbaum-v231`
 
 ---
 
@@ -85,9 +85,10 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 ### P2 — Architektur-Verletzungen
 
 - [ ] **Form-State in UIState** — `srcWidgetState`, `_pfExtraNames`, `_efMedia`, `_probandId` → `UIState._formState{}` (ADR-003) (~3h)
-- [ ] **Virtual Scroll auf alle Listen** — Familien-Liste ohne VS (Quellen/Orte zu klein) (~2h)
+- [x] **Virtual Scroll auf alle Listen** ✅ — `_vsF` (Familien) + `_vsP` (Personen) implementiert; Quellen/Orte zu klein für VS
 - [x] **JS-seitige `onclick=` entfernen** ✅ sw v230 — 15 Zuweisungen ersetzt; treeBtn/probandBtn auf `data-action`+`dataset.id`; `showEditSheet()` um Repo+Place erweitert; `AppState.currentPlaceName` neu
-- [ ] **`_navHistory` + `_probandId` in UIState** — lose Globals → UIState; Tree-History und Detail-History vereinheitlichen (~3h) — *Vorbedingung für Phase 6*
+- [x] **`_navHistory` + `_probandId` in UIState** ✅ sw v231 — beide in UIState, Shims in gedcom.js
+- [x] **Form-State in UIState** ✅ sw v231 — `srcWidgetState`/`_pfExtraNames`/`_efMedia` → `UIState._formState{}` (ADR-003)
 
 ### P3 — Performance
 

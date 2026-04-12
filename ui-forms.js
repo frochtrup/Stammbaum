@@ -1,8 +1,8 @@
 // ─────────────────────────────────────
 //  SOURCE WIDGET
 //  srcWidgetState[prefix] = { ids: Set, pages: {sid:page}, quay: {sid:quay} }
+//  Gespeichert in UIState._formState.srcWidget (shimmiert als srcWidgetState)
 // ─────────────────────────────────────
-const srcWidgetState = {};  // {prefix: {ids: Set, pages: {sid: page}, quay: {sid: quay}}}
 
 function updateSrcPage(prefix, sid, value) {
   if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
@@ -113,7 +113,7 @@ function showEditSheet() {
   else if (AppState.currentPlaceName) showPlaceForm(AppState.currentPlaceName);
 }
 
-let _pfExtraNames = [];
+// _pfExtraNames lebt in UIState._formState.pfExtraNames (shimmiert als _pfExtraNames)
 
 function showPersonForm(id) {
   closeModal('modalAdd');

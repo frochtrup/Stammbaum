@@ -32,6 +32,13 @@ const UIState = {
   _placesCache:     null,        // Cache für collectPlaces(); wird in markChanged() geleert
   _hofCache:        null,        // Cache für buildHofIndex(); wird in markChanged() geleert
   _placesSubTab:    'orte',      // 'orte' | 'hoefe'
+  _navHistory:      [],          // Navigations-History für Detail-Ansichten
+  _probandId:       null,        // null = Fallback auf kleinste ID
+  _formState: {                  // transienter Formular-State (ADR-003)
+    srcWidget:    {},            // srcWidgetState[prefix] = { ids, pages, quay }
+    pfExtraNames: [],            // Zusatz-Namen im Personen-Formular
+    efMedia:      [],            // Medien im Event-Formular
+  },
 };
 
 // Backward-compat-Shims: bare Variablennamen leiten zu AppState / UIState um.
@@ -43,7 +50,7 @@ const UIState = {
                 '_fileHandle','_canDirectSave','_originalGedText']],
     [UIState,  ['_treeScale','_treeHistory','_treeHistoryPos',
                 '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache',
-                '_hofCache','_placesSubTab']],
+                '_hofCache','_placesSubTab','_navHistory','_probandId']],
   ];
   for (const [ns, keys] of _map) {
     for (const k of keys) {
@@ -54,10 +61,22 @@ const UIState = {
       });
     }
   }
+
+  // _formState-Shims: zeigen auf UIState._formState.* (kein direkter UIState-Key)
+  for (const [prop, subKey] of [
+    ['srcWidgetState', 'srcWidget'],
+    ['_pfExtraNames',  'pfExtraNames'],
+    ['_efMedia',       'efMedia'],
+  ]) {
+    Object.defineProperty(window, prop, {
+      get()  { return UIState._formState[subKey]; },
+      set(v) { UIState._formState[subKey] = v; },
+      configurable: true,
+    });
+  }
 })();
 
 // ─── Konstante Globals (const — kein Shim nötig) ────────────────────────────
-const _navHistory      = [];    // Navigations-History für Detail-Ansichten
 const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto
 const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde
 const _activeSpouseMap = {};    // personId → aktiver Ehepartner-Index
