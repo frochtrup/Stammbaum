@@ -61,9 +61,9 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 
 - [x] **`detectGRAMPS(gedText)`** — Heuristik via `HEAD SOUR GRAMPS` + `_GRAMPS_ID`; Flag `db._grampsMaster`
 - [x] **`_GRAMPS_ID` strukturieren** — `p.grampId` / `f.grampId` / `s.grampId`
-- [ ] **Import-Hinweis** — offen (niedrige Priorität)
-- [ ] **NAME-Duplikation** — offen
-- [ ] **`_ASSO` dokumentieren** — offen
+- ~~Import-Hinweis~~ — obsolet (Parser läuft stabil, kein expliziter Hinweis nötig)
+- ~~NAME-Duplikation~~ — → Offene Architektur-Schulden
+- ~~`_ASSO` dokumentieren~~ — → ARCHITECTURE.md (kein Sprint-Item)
 
 ---
 
@@ -78,9 +78,9 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 - [x] `db._sourceFormat = 'gramps'`, `db._grampsMaster = true`
 - [x] Datei-Öffnen-Dialog: `.gramps` akzeptiert
 - [x] famc `famId`-Fix (sw v192) — Elternverknüpfungen im Baum
-- [ ] `db.tags{}` — offen (Phase 4)
-- [ ] GRAMPS-Badge in Topbar — offen
-- [ ] Orts-Hierarchie-Anzeige in UI — offen
+- ~~`db.tags{}`~~ — → Phase 4
+- ~~GRAMPS-Badge in Topbar~~ — → Phase 5.3
+- ~~Orts-Hierarchie-Anzeige in UI~~ — → Phase 5.2/5.3
 
 ---
 
@@ -96,8 +96,8 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 - [x] `exportGRAMPS()` in storage-file.js — iOS Share / Desktop-Download
 - [x] `_grampsRoundtripTest()` — Basis-Test (Counts + Stichprobe)
 - [x] `_grampsDeepTest()` — 59896 Checks ✓ (alle Felder, Orte, Attribute, Handles)
-- [ ] Tags erhalten — offen (Phase 4)
-- [ ] Export-Hinweis "Zuletzt geladen: Datum" — offen
+- ~~Tags erhalten~~ — → Phase 4
+- [ ] **Export-Hinweis "Zuletzt geladen: Datum"** — → Phase 4
 
 ---
 
@@ -116,6 +116,7 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 - [ ] **Foto-direkt-zu-Person** — iOS-Kamera → direkt an Person hängen ohne Umweg über Media-Browser
 - [ ] **GRAMPS-Tag-Editor** — Tags hinzufügen/entfernen (read-only in Phase 2, editierbar hier)
 - [ ] **Orts-Hierarchie-Editor** — einfaches Formular für Ortsangaben mit Hierarchie-Unterstützung
+- [ ] **Export-Hinweis** — Topbar/Export-Dialog: "Zuletzt geladen: Datum" anzeigen
 
 ---
 
@@ -125,11 +126,11 @@ Vollständiges Review durchgeführt — Befund: **B+** (Roundtrip-Fundament soli
 
 #### 5.1 Cross-Parser-Betrieb (Konvertierung)
 
-- [ ] **GEDCOM → GRAMPS** — GEDCOM-Datei laden, als `.gramps` exportieren: Prüfen ob alle strukturierten Felder (Personen, Familien, Quellen, Ereignisse, Medien) korrekt übertragen werden; bekannte Gaps dokumentieren (Orte nur flach, keine `placeObjects`; keine Tags; keine Handles → neue `_pwa`-Handles)
-- [ ] **GRAMPS → GEDCOM** — `.gramps`-Datei laden, als `.ged` exportieren: Prüfen ob GRAMPS-spezifische Inhalte verlustfrei degradieren (Orts-Hierarchie → flacher PLAC-Text; Tags → `_TAG`-passthrough oder Drop; Witness-Events → ignoriert; `_grampsAttrs` → ggf. GEDCOM-Attribute); Gaps in GEDCOM.md dokumentieren
-- [ ] **Roundtrip-Test beider Pfade** — `_grampsRoundtripTest()` + GEDCOM-Roundtrip nach Cross-Konvertierung ausführen; Delta-Report erstellen
-- [ ] **ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)** — GEDCOM 5.5.1 hat `1 ASSO @ID@\n2 RELA Witness` / `2 ROLE Godparent`; viele Programme erzeugen diese; Parser: ASSO-Block → synthetisches `_grampsWitnessRefs`-Eintrag; Writer: `_grampsWitnessRefs` mit role ≠ Primary → `1 ASSO @ID@\n2 RELA {role}`; damit wäre Witness-Roundtrip GEDCOM↔GRAMPS vollständig; eigenständiger Sprint (~4h)
-- [ ] **OBJE ohne FORM stabilisieren** — Parser initialisiert `m.form = null`; Writer gibt FORM nur aus wenn `m.form !== null` (statt immer aus Dateiendung abzuleiten); verhindert FORM-Addition bei Programmen die FORM explizit weglassen; heute nach erstem Roundtrip-Pass stabil, aber erste-Pass-Diff bleibt
+- [x] **GEDCOM → GRAMPS** — funktioniert; Orts-Hierarchie-Fix (sw v208), weitere Fixes v209–v220; bekannte Gaps: Orte nur flach (keine `placeObjects`), keine Tags, neue `_pwa`-Handles
+- [x] **GRAMPS → GEDCOM** — funktioniert; Roundtrip-stable; GRAMPS-spezifisches degradiert verlustfrei (Orts-Hierarchie → PLAC-Text, `_grampsAttrs` → passthrough)
+- [x] **Roundtrip-Test beider Pfade** — `_grampsRoundtripTest()` + `_grampsDeepTest()` (60034 Checks ✓) stabil seit sw v204
+- [ ] **ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)** — ASSO-Block → `_grampsWitnessRefs`; Writer: role ≠ Primary → `1 ASSO @ID@\n2 RELA {role}`; eigenständiger Sprint (~4h)
+- [ ] **OBJE ohne FORM stabilisieren** — `m.form = null`; Writer nur ausgeben wenn nicht null; erste-Pass-Diff bleibt aktuell
 
 #### 5.2 UI-Review: GRAMPS-Inhalte in Formularen
 
