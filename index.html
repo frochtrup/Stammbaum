@@ -104,22 +104,20 @@
   </div>
 
   <div id="tab-places" style="display:none">
-    <div class="places-toggle-bar">
-      <button id="toggle-orte"  class="places-toggle-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
-      <button id="toggle-hoefe" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
-    </div>
-    <div id="places-sub-orte">
-      <div class="search-wrap">
+    <div class="list-search-header" style="padding:0">
+      <div class="places-toggle-bar">
+        <button type="button" id="toggle-orte"  class="places-toggle-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
+        <button type="button" id="toggle-hoefe" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
+      </div>
+      <div id="place-search-orte" class="search-wrap">
         <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
       </div>
-      <div id="placeList"></div>
-    </div>
-    <div id="places-sub-hoefe" style="display:none">
-      <div class="search-wrap">
+      <div id="place-search-hoefe" class="search-wrap" style="display:none">
         <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
       </div>
-      <div id="hofList"></div>
     </div>
+    <div id="placeList"></div>
+    <div id="hofList" style="display:none"></div>
   </div>
 
   <div id="tab-search" style="display:none">

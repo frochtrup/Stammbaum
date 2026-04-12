@@ -376,7 +376,7 @@ function collectAddresses() {
   const set = new Set();
   Object.values(AppState.db.persons || {}).forEach(p => {
     (p.events || []).forEach(ev => {
-      if (ev.tag === 'RESI' && ev.addr && ev.addr.trim()) set.add(ev.addr.trim());
+      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) set.add(ev.addr.trim());
     });
   });
   return [...set].sort((a, b) => a.localeCompare(b, 'de'));

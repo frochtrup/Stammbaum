@@ -15,7 +15,7 @@ function buildHofIndex() {
   const hoefe = new Map(); // addr → { addr, entries: [{pid, name, date, dateKey}] }
   for (const p of Object.values(AppState.db.individuals)) {
     for (const ev of (p.events || [])) {
-      if (ev.tag === 'RESI' && ev.addr && ev.addr.trim()) {
+      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
         const addr = ev.addr.trim();
         if (!hoefe.has(addr)) hoefe.set(addr, { addr, entries: [] });
         hoefe.get(addr).entries.push({

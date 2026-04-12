@@ -101,10 +101,14 @@ function bnavTree() {
 
 function switchPlacesSubTab(sub) {
   UIState._placesSubTab = sub;
-  document.getElementById('places-sub-orte').style.display  = sub === 'orte'  ? '' : 'none';
-  document.getElementById('places-sub-hoefe').style.display = sub === 'hoefe' ? '' : 'none';
-  document.getElementById('toggle-orte').classList.toggle('active',  sub === 'orte');
-  document.getElementById('toggle-hoefe').classList.toggle('active', sub === 'hoefe');
+  document.getElementById('placeList').style.display           = sub === 'orte'  ? '' : 'none';
+  document.getElementById('hofList').style.display             = sub === 'hoefe' ? '' : 'none';
+  document.getElementById('place-search-orte').style.display  = sub === 'orte'  ? '' : 'none';
+  document.getElementById('place-search-hoefe').style.display = sub === 'hoefe' ? '' : 'none';
+  const orteBtn  = document.getElementById('toggle-orte');
+  const hoefeBtn = document.getElementById('toggle-hoefe');
+  if (sub === 'orte')  { orteBtn.classList.add('active');  hoefeBtn.classList.remove('active'); }
+  else                 { hoefeBtn.classList.add('active'); orteBtn.classList.remove('active'); }
   if (sub === 'hoefe') renderHofList();
   else renderPlaceList();
 }
