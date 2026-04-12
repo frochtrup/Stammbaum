@@ -82,9 +82,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ## Offene Themen nach Priorität (Stand 2026-04-12)
 
-### P2 — Architektur-Verletzungen
+### P2 — Architektur-Verletzungen ✅ abgeschlossen (sw v231)
 
-- [ ] **Form-State in UIState** — `srcWidgetState`, `_pfExtraNames`, `_efMedia`, `_probandId` → `UIState._formState{}` (ADR-003) (~3h)
 - [x] **Virtual Scroll auf alle Listen** ✅ — `_vsF` (Familien) + `_vsP` (Personen) implementiert; Quellen/Orte zu klein für VS
 - [x] **JS-seitige `onclick=` entfernen** ✅ sw v230 — 15 Zuweisungen ersetzt; treeBtn/probandBtn auf `data-action`+`dataset.id`; `showEditSheet()` um Repo+Place erweitert; `AppState.currentPlaceName` neu
 - [x] **`_navHistory` + `_probandId` in UIState** ✅ sw v231 — beide in UIState, Shims in gedcom.js
