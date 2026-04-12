@@ -47,15 +47,17 @@ function showSourceDetail(id, pushHistory = true) {
   }
   html += `</div>`;
 
-  // Notizen — inline editierbar
+  // Notizen
   html += `<div class="section fade-up">
-    <div class="section-title">Notizen</div>
-    <textarea data-blur="saveSourceNote" data-sid="${id}"
-      style="width:100%;box-sizing:border-box;background:transparent;border:1px solid transparent;border-radius:6px;
-             padding:4px 6px;font-size:0.88rem;color:var(--text-dim);line-height:1.6;resize:vertical;font-family:inherit;
-             min-height:60px;outline:none"
-      onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'"
-      placeholder="Notizen hinzufügen…">${esc(s.text || '')}</textarea>
+    <div class="section-head">
+      <div class="section-title">Notizen</div>
+      <button class="section-add" data-action="openNoteModal" data-ntype="source" data-nid="${id}">✎ Bearbeiten</button>
+    </div>
+    <div data-action="openNoteModal" data-ntype="source" data-nid="${id}" style="cursor:pointer;min-height:32px;padding:4px 2px">
+      ${s.text
+        ? `<div style="white-space:pre-wrap;font-size:0.88rem;color:var(--text-dim);line-height:1.6">${linkifyUrls(s.text)}</div>`
+        : `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Notiz hinzufügen…</div>`}
+    </div>
   </div>`;
 
   // Referencing persons

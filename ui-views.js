@@ -673,6 +673,8 @@ const _CLICK_MAP = {
   confirmDeleteMedia:      ()  => confirmDeleteMedia(),
   confirmEditMedia:        ()  => confirmEditMedia(),
   helpRoundtrip:           ()  => { closeModal('modalHelp'); runRoundtripTest(); },
+  openNoteModal:           el  => openNoteModal(el.dataset.ntype, el.dataset.nid),
+  saveNoteModal:           ()  => saveNoteModal(),
   saveChildRelDialog:      ()  => saveChildRelDialog(),
   syncBannerSave:          ()  => _syncBannerSave(),
   startupChoiceOneDrive:   ()  => _startupChoiceOneDrive(),
@@ -735,31 +737,63 @@ document.addEventListener('blur', e => {
   if (el.dataset.blur === 'normMonth') {
     const v = normMonth(el.value);
     if (v && el.value) el.value = v;
-  } else if (el.dataset.blur === 'savePersonNote') {
-    const p = AppState.db.individuals[el.dataset.pid];
+  }
+}, true);
+
+// ─────────────────────────────────────
+//  NOTIZ-MODAL
+// ─────────────────────────────────────
+function openNoteModal(type, id) {
+  let text = '';
+  if (type === 'person') {
+    const p = AppState.db.individuals[id];
+    text = p?.noteTexts?.join('\n') ?? '';
+  } else if (type === 'family') {
+    const f = AppState.db.families[id];
+    text = f?.noteTexts?.join('\n') ?? '';
+  } else if (type === 'source') {
+    text = AppState.db.sources[id]?.text ?? '';
+  }
+  document.getElementById('note-type').value = type;
+  document.getElementById('note-id').value   = id;
+  document.getElementById('note-text').value = text;
+  openModal('modalNote');
+  setTimeout(() => document.getElementById('note-text').focus(), 80);
+}
+
+function saveNoteModal() {
+  const type = document.getElementById('note-type').value;
+  const id   = document.getElementById('note-id').value;
+  const note = document.getElementById('note-text').value.trim();
+  if (type === 'person') {
+    const p = AppState.db.individuals[id];
     if (!p) return;
-    const note = el.value.trim();
     p.noteTexts = note ? [note] : [];
     p.noteText  = note;
     for (const ref of (p.noteRefs || []))
       if (AppState.db.notes?.[ref]) p.noteText += (p.noteText ? '\n' : '') + AppState.db.notes[ref].text;
     markChanged();
-  } else if (el.dataset.blur === 'saveFamilyNote') {
-    const f = AppState.db.families[el.dataset.fid];
+    closeModal('modalNote');
+    showDetail(id);
+  } else if (type === 'family') {
+    const f = AppState.db.families[id];
     if (!f) return;
-    const note = el.value.trim();
     f.noteTexts = note ? [note] : [];
     f.noteText  = note;
     for (const ref of (f.noteRefs || []))
       if (AppState.db.notes?.[ref]) f.noteText += (f.noteText ? '\n' : '') + AppState.db.notes[ref].text;
     markChanged();
-  } else if (el.dataset.blur === 'saveSourceNote') {
-    const s = AppState.db.sources[el.dataset.sid];
+    closeModal('modalNote');
+    showFamilyDetail(id);
+  } else if (type === 'source') {
+    const s = AppState.db.sources[id];
     if (!s) return;
-    s.text = el.value.trim();
+    s.text = note;
     markChanged();
+    closeModal('modalNote');
+    showSourceDetail(id);
   }
-}, true);
+}
 
 // ─────────────────────────────────────
 //  OBJE-REFERENZ-HELPER

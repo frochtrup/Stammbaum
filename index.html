@@ -1228,6 +1228,25 @@
   <button id="lightboxSetHero" data-action="lightboxSetHero" style="display:none;background:var(--gold);color:var(--bg);border:none;border-radius:8px;padding:8px 22px;font-size:0.92rem;font-weight:600;cursor:pointer">Als Hauptfoto setzen</button>
 </div>
 
+<!-- ── Notiz-Modal ───────────────────────────────────── -->
+<div class="modal-overlay" id="modalNote">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Notiz bearbeiten</div>
+    <div class="sheet-body">
+      <input type="hidden" id="note-type">
+      <input type="hidden" id="note-id">
+      <textarea id="note-text" class="form-input" rows="7"
+        style="resize:vertical;box-sizing:border-box;width:100%;font-family:inherit"
+        placeholder="Notiz eingeben…"></textarea>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalNote">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveNoteModal">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->

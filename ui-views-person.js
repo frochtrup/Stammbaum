@@ -393,20 +393,22 @@ function showDetail(id, pushHistory = true) {
 
   html += `</div>`;
 
-  // Notes — inline editierbar
+  // Notizen
+  const _pNoteText = p.noteTexts?.join('\n') ?? '';
+  const _pNoteRefs = (p.noteRefs || []).filter(r => AppState.db.notes?.[r]);
   html += `<div class="section fade-up">
-    <div class="section-title">Notizen</div>
-    <textarea data-blur="savePersonNote" data-pid="${id}"
-      style="width:100%;box-sizing:border-box;background:transparent;border:1px solid transparent;border-radius:6px;
-             padding:4px 6px;font-size:0.88rem;color:var(--text-dim);line-height:1.6;resize:vertical;font-family:inherit;
-             min-height:60px;outline:none"
-      onfocus="this.style.borderColor='var(--border)'" onblur="this.style.borderColor='transparent'"
-      placeholder="Notizen hinzufügen…">${esc(p.noteTexts?.join('\n') ?? '')}</textarea>${
-    (p.noteRefs?.length && p.noteRefs.some(r => AppState.db.notes?.[r]))
-      ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;white-space:pre-wrap">${
-          p.noteRefs.filter(r => AppState.db.notes?.[r]).map(r => esc(AppState.db.notes[r].text)).join('\n')
-        }</div>` : ''
-  }</div>`;
+    <div class="section-head">
+      <div class="section-title">Notizen</div>
+      <button class="section-add" data-action="openNoteModal" data-ntype="person" data-nid="${id}">✎ Bearbeiten</button>
+    </div>
+    <div data-action="openNoteModal" data-ntype="person" data-nid="${id}" style="cursor:pointer;min-height:32px;padding:4px 2px">
+      ${_pNoteText
+        ? `<div style="white-space:pre-wrap;font-size:0.88rem;color:var(--text-dim);line-height:1.6">${esc(_pNoteText)}</div>`
+        : `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Notiz hinzufügen…</div>`}
+    </div>${_pNoteRefs.length
+      ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:6px;white-space:pre-wrap;border-top:1px solid var(--border-color);padding-top:6px">${
+          _pNoteRefs.map(r => esc(AppState.db.notes[r].text)).join('\n')}</div>` : ''}
+  </div>`;
 
   // Media section: inline entries from media[] + reference entries from passthrough
   const indiMedia = p.media || [];
