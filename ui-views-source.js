@@ -5,14 +5,14 @@ function showSourceDetail(id, pushHistory = true) {
   const s = getSource(id);
   if (!s) return;
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentSourceId = id;
-  AppState.currentPersonId = null;
-  AppState.currentFamilyId = null;
-  AppState.currentRepoId   = null;
+  AppState.currentSourceId  = id;
+  AppState.currentPersonId  = null;
+  AppState.currentFamilyId  = null;
+  AppState.currentRepoId    = null;
+  AppState.currentPlaceName = null;
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('editBtn').onclick = () => showSourceForm(id);
   document.getElementById('treeBtn').style.display = 'none';
 
   // Collect all persons and families referencing this source
@@ -184,7 +184,7 @@ function showSourceDetail(id, pushHistory = true) {
         const hImg = document.createElement('img');
         hImg.src = url; hImg.alt = m.title || m.file || '';
         hImg.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-        hImg.onclick = () => showLightbox(url);
+        hImg.addEventListener('click', () => showLightbox(url));
         heroEl.appendChild(hImg);
         if (avatarEl) avatarEl.style.display = 'none';
       }

@@ -276,35 +276,24 @@ function showDetail(id, pushHistory = true) {
   const p = AppState.db.individuals[id];
   if (!p) return;
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentPersonId = id;
-  AppState.currentFamilyId = null;
-  AppState.currentSourceId = null;
-  AppState.currentRepoId   = null;
+  AppState.currentPersonId  = id;
+  AppState.currentFamilyId  = null;
+  AppState.currentSourceId  = null;
+  AppState.currentRepoId    = null;
+  AppState.currentPlaceName = null;
   if (document.body.classList.contains('desktop-mode')) { _updatePersonListCurrent(id); _updateFamilyListCurrent(null); }
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('editBtn').onclick = () => showPersonForm(id);
   document.getElementById('treeBtn').style.display = '';
-  document.getElementById('treeBtn').onclick = () => showTree(id);
+  document.getElementById('treeBtn').dataset.id = id;
   const pb = document.getElementById('probandBtn');
   if (pb) {
     pb.style.display = '';
+    pb.dataset.id = id;
     const isProband = getProbandId() === id;
     pb.classList.toggle('proband-active', isProband);
     pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
-    pb.onclick = () => {
-      if (getProbandId() === id) {
-        _probandId = null;
-        idbPut('proband_id', null).catch(() => {});
-        showToast('Proband zurückgesetzt (kleinste ID)');
-      } else {
-        _probandId = id;
-        idbPut('proband_id', id).catch(() => {});
-        showToast('Proband: ' + (p.name || id));
-      }
-      showDetail(id, false);
-    };
   }
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
@@ -542,7 +531,7 @@ function showDetail(id, pushHistory = true) {
       heroImg.src = src;
       heroImg.alt = 'Foto';
       heroImg.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-      heroImg.onclick = () => showLightbox(heroImg.src, null, 'det-photo-' + id, 'det-avatar-' + id, null);
+      heroImg.addEventListener('click', () => showLightbox(heroImg.src, null, 'det-photo-' + id, 'det-avatar-' + id, null));
       heroImg.onerror = () => { el.style.display = 'none'; if (av) av.style.display = ''; };
       el.appendChild(heroImg);
       if (av) av.style.display = 'none';

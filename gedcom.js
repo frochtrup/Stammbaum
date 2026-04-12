@@ -13,6 +13,7 @@ const AppState = {
   currentFamilyId:  null,
   currentSourceId:  null,
   currentRepoId:    null,
+  currentPlaceName: null,
   currentTab:       'persons',
   _detailActive:    false,       // true wenn v-detail echten Inhalt zeigt
   _fileHandle:      null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
@@ -38,7 +39,7 @@ const UIState = {
 (function _installStateShims() {
   const _map = [
     [AppState, ['db','changed','idCounter','currentPersonId','currentFamilyId',
-                'currentSourceId','currentRepoId','currentTab','_detailActive',
+                'currentSourceId','currentRepoId','currentPlaceName','currentTab','_detailActive',
                 '_fileHandle','_canDirectSave','_originalGedText']],
     [UIState,  ['_treeScale','_treeHistory','_treeHistoryPos',
                 '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache',

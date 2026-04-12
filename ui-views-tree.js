@@ -524,7 +524,7 @@ function showTree(personId, addToHistory = true) {
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
-    div.onclick = onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id));
+    div.addEventListener('click', onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id)));
     wrap.appendChild(div);
   }
 

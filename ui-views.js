@@ -7,6 +7,21 @@ function getProbandId() {
   return (_probandId && AppState.db.individuals[_probandId]) ? _probandId : smallestPersonId();
 }
 
+function _toggleProband(id) {
+  const p = AppState.db.individuals[id];
+  if (!p) return;
+  if (getProbandId() === id) {
+    _probandId = null;
+    idbPut('proband_id', null).catch(() => {});
+    showToast('Proband zurückgesetzt (kleinste ID)');
+  } else {
+    _probandId = id;
+    idbPut('proband_id', id).catch(() => {});
+    showToast('Proband: ' + (p.name || id));
+  }
+  showDetail(id, false);
+}
+
 // ─────────────────────────────────────
 //  NAVIGATION
 // ─────────────────────────────────────
@@ -593,6 +608,8 @@ const _CLICK_MAP = {
   setFcGens:               el => setFcGens(+el.dataset.gen),
   toggleFanChart:          ()  => toggleFanChart(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
+  showTree:                el  => showTree(el.dataset.id),
+  toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),
   bnavTab:                 el => bnavTab(el.dataset.tab),
   bnavHome:                ()  => bnavHome(),

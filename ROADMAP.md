@@ -198,7 +198,7 @@ Integriert: Schulden aus v6 (P3–P5) + neue Befunde aus Code-Review 2026-04-12.
 
 - [ ] **Form-State in UIState konsolidieren** — `srcWidgetState`, `_pfExtraNames`, `_efMedia`, `_probandId` als lose Globals; nach `UIState._formState{}` verschieben (ADR-003) (~3h)
 - [ ] **Virtual Scroll auf alle Listen** — `_vsRender()` nur Personen; Familien-/Quellen-/Orte-Liste unoptimiert ab 500+ Einträgen (~3h)
-- [ ] **JS-seitige `onclick=` entfernen** — P1 v6 hat index.html bereinigt; direkte `.onclick =`-Zuweisungen im JS verbleiben (ui-forms-event.js L30, ui-forms.js L353) → vollständig auf `data-action`-Delegation (~2h)
+- [x] **JS-seitige `onclick=` entfernen** ✅ sw v230 — alle 15 `.onclick =`-Zuweisungen entfernt; treeBtn/probandBtn auf `data-action`+`dataset.id`-Delegation; editBtn-Zuweisungen redundant (showEditSheet liest AppState); `showEditSheet()` um Repo+Place erweitert; `_toggleProband()` extrahiert nach ui-views.js; `AppState.currentPlaceName` neu
 - [ ] **`_navHistory` + `_probandId` in UIState** — loose Globals in ui-views.js, inkonsistent mit ADR-003; gleichzeitig Tree-History und Detail-History auf einheitliches System bringen (~3h)
 
 ---

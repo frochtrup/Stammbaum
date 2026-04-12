@@ -116,7 +116,7 @@ function _setEditMediaPreview(src) {
   const img = document.createElement('img');
   img.src = src;
   img.style.cssText = 'max-width:100%;max-height:200px;object-fit:contain;border-radius:8px;cursor:pointer';
-  img.onclick = () => showLightbox(src);
+  img.addEventListener('click', () => showLightbox(src));
   preview.appendChild(img);
   if (thumbBar) {
     thumbBar.innerHTML = '';

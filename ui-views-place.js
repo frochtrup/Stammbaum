@@ -167,10 +167,13 @@ function showPlaceDetail(placeName, pushHistory = true) {
   const place = places.get(placeName);
   if (!place) return;
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentPersonId = null; AppState.currentFamilyId = null; AppState.currentSourceId = null; AppState.currentRepoId = null;
+  AppState.currentPersonId  = null;
+  AppState.currentFamilyId  = null;
+  AppState.currentSourceId  = null;
+  AppState.currentRepoId    = null;
+  AppState.currentPlaceName = placeName;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('editBtn').onclick = () => showPlaceForm(placeName);
   document.getElementById('treeBtn').style.display = 'none';
 
   let html = `<div class="detail-hero fade-up">

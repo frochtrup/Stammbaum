@@ -272,10 +272,11 @@ function showFamilyDetail(id, pushHistory = true) {
   const f = AppState.db.families[id];
   if (!f) return;
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentFamilyId = id;
-  AppState.currentPersonId = null;
-  AppState.currentSourceId = null;
-  AppState.currentRepoId   = null;
+  AppState.currentFamilyId  = id;
+  AppState.currentPersonId  = null;
+  AppState.currentSourceId  = null;
+  AppState.currentRepoId    = null;
+  AppState.currentPlaceName = null;
   if (document.body.classList.contains('desktop-mode')) { _updateFamilyListCurrent(id); _updatePersonListCurrent(null); }
 
   const husb = f.husb ? AppState.db.individuals[f.husb] : null;
@@ -284,10 +285,10 @@ function showFamilyDetail(id, pushHistory = true) {
 
   document.getElementById('detailTopTitle').textContent = 'Familie';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('editBtn').onclick = () => showFamilyForm(id);
   const _famTreeTarget = f.husb || f.wife || null;
-  document.getElementById('treeBtn').style.display = _famTreeTarget ? '' : 'none';
-  if (_famTreeTarget) document.getElementById('treeBtn').onclick = () => showTree(_famTreeTarget);
+  const tb = document.getElementById('treeBtn');
+  tb.style.display = _famTreeTarget ? '' : 'none';
+  if (_famTreeTarget) tb.dataset.id = _famTreeTarget;
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-fam-photo-${id}" style="display:none"></div>
@@ -477,7 +478,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const img = document.createElement('img');
       img.src = src; img.alt = 'Foto';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-      img.onclick = () => showLightbox(img.src, null, 'det-fam-photo-' + id, 'det-fam-avatar-' + id, null);
+      img.addEventListener('click', () => showLightbox(img.src, null, 'det-fam-photo-' + id, 'det-fam-avatar-' + id, null));
       img.onerror = () => { el.style.display = 'none'; if (av) av.style.display = ''; };
       el.appendChild(img);
       if (av) av.style.display = 'none';

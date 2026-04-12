@@ -109,6 +109,8 @@ function showEditSheet() {
   if (AppState.currentPersonId) showPersonForm(AppState.currentPersonId);
   else if (AppState.currentFamilyId) showFamilyForm(AppState.currentFamilyId);
   else if (AppState.currentSourceId) showSourceForm(AppState.currentSourceId);
+  else if (AppState.currentRepoId) showRepoForm(AppState.currentRepoId);
+  else if (AppState.currentPlaceName) showPlaceForm(AppState.currentPlaceName);
 }
 
 let _pfExtraNames = [];
@@ -305,7 +307,7 @@ function _renderMediaList(prefix, mediaArr) {
     del.textContent = '×';
     del.className = 'btn btn-danger';
     del.style.cssText = 'padding:2px 8px;font-size:0.9rem;flex-shrink:0';
-    del.onclick = () => { row.remove(); };
+    del.addEventListener('click', () => { row.remove(); });
     row.appendChild(label);
     row.appendChild(del);
     container.appendChild(row);
@@ -346,7 +348,7 @@ function _addMediaEntry(prefix) {
   del.textContent = '×';
   del.className = 'btn btn-danger';
   del.style.cssText = 'padding:2px 8px;font-size:0.9rem;flex-shrink:0';
-  del.onclick = () => { row.remove(); };
+  del.addEventListener('click', () => { row.remove(); });
   row.appendChild(label);
   row.appendChild(del);
   container.appendChild(row);

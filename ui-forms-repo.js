@@ -75,10 +75,13 @@ function repoPickerCreateNew() {
 function showRepoDetail(id, pushHistory = true) {
   const r = getRepo(id); if (!r) return;
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentRepoId = id; AppState.currentPersonId = null; AppState.currentFamilyId = null; AppState.currentSourceId = null;
+  AppState.currentRepoId    = id;
+  AppState.currentPersonId  = null;
+  AppState.currentFamilyId  = null;
+  AppState.currentSourceId  = null;
+  AppState.currentPlaceName = null;
   document.getElementById('detailTopTitle').textContent = 'Archiv';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('editBtn').onclick = () => showRepoForm(id);
   document.getElementById('treeBtn').style.display = 'none';
 
   const linkedSources = Object.values(AppState.db.sources).filter(s => s.repo === id);
