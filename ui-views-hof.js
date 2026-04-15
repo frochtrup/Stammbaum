@@ -352,45 +352,40 @@ function showHofDetail(addr, pushHistory = true) {
   document.getElementById('treeBtn').style.display = 'none';
 
   const addrDisplay = esc(addr).replace(/\n/g, '<br>');
-  const count = new Set(hof.entries.map(e => e.pid)).size;
+  const allEntries = [
+    ...(hof.entries     || []).map(e => ({ ...e, isProp: false })),
+    ...(hof.propEntries || []).map(e => ({ ...e, isProp: true  })),
+  ].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  const totalCount = new Set(allEntries.map(e => e.pid)).size;
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem;border-color:var(--gold-dim)">🏠</div>
     <div class="detail-name" style="white-space:pre-wrap">${addrDisplay}</div>
-    <div class="detail-id">${count} Person${count !== 1 ? 'en' : ''}</div>
+    <div class="detail-id">${totalCount} Person${totalCount !== 1 ? 'en' : ''}</div>
   </div>`;
 
   html += `<div class="section fade-up">
     <div class="section-head">
-      <div class="section-title">Bewohner</div>
-      <button type="button" class="section-add" data-action="showHofAddForm" data-addr="${esc(addr)}">+ Hinzufügen</button>
+      <div class="section-title">Bewohner &amp; Eigentum</div>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="section-add" data-action="showHofAddForm" data-addr="${esc(addr)}">+ Bewohner</button>
+        <button type="button" class="section-add" data-action="showHofPropForm" data-addr="${esc(addr)}">+ Eigentum</button>
+      </div>
     </div>`;
-  for (const e of hof.entries) {
+  for (const e of allEntries) {
     const p = AppState.db.individuals[e.pid];
-    if (p) html += relRow(p, e.date || '');
-  }
-  html += `</div>`;
-
-  html += _renderAddBewohnerForm(addr);
-
-  // PROP-Sektion (Eigentümer)
-  const propEntries = hof.propEntries || [];
-  html += `<div class="section fade-up">
-    <div class="section-head">
-      <div class="section-title">Eigentum</div>
-      <button type="button" class="section-add" data-action="showHofPropForm" data-addr="${esc(addr)}">+ Hinzufügen</button>
-    </div>`;
-  for (const e of propEntries) {
-    const ep = AppState.db.individuals[e.pid];
-    if (ep) {
+    if (!p) continue;
+    if (e.isProp) {
       const parts = ['Eigentum'];
       if (e.desc) parts.push(e.desc);
       if (e.date) parts.push(e.date);
-      html += _propRelRow(ep, parts.join(' · '));
+      html += _propRelRow(p, parts.join(' · '));
+    } else {
+      html += relRow(p, e.date || '');
     }
   }
-  if (!propEntries.length) {
-    html += `<div class="empty" style="padding:10px 0;font-size:0.85rem">Keine Eigentums-Ereignisse (PROP) mit dieser Adresse</div>`;
+  if (!allEntries.length) {
+    html += `<div class="empty" style="padding:10px 0;font-size:0.85rem">Keine Einträge</div>`;
   }
   html += `</div>`;
 
