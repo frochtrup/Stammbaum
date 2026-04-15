@@ -389,6 +389,7 @@ function showHofDetail(addr, pushHistory = true) {
   }
   html += `</div>`;
 
+  html += _renderAddBewohnerForm(addr);
   html += _renderAddPropForm(addr);
 
   document.getElementById('detailContent').innerHTML = html;
