@@ -116,17 +116,24 @@ function bnavTree() {
 
 function switchPlacesSubTab(sub) {
   UIState._placesSubTab = sub;
-  document.getElementById('placeList')?.style.setProperty('display', sub === 'orte'  ? '' : 'none');
-  document.getElementById('hofList')?.style.setProperty('display',   sub === 'hoefe' ? '' : 'none');
-  document.getElementById('mapContainer')?.style.setProperty('display', sub === 'karte' ? '' : 'none');
-  document.getElementById('place-search-orte')?.style.setProperty('display',  sub === 'orte'  ? '' : 'none');
+  const isDesktop = document.body.classList.contains('desktop-mode');
+  // Desktop: Orte-Liste bleibt im linken Panel als Navigation auch wenn Karte aktiv
+  const showOrteList   = sub === 'orte' || (sub === 'karte' && isDesktop);
+  document.getElementById('placeList')?.style.setProperty('display',          showOrteList ? '' : 'none');
+  document.getElementById('place-search-orte')?.style.setProperty('display',  showOrteList ? '' : 'none');
+  document.getElementById('hofList')?.style.setProperty('display',            sub === 'hoefe' ? '' : 'none');
   document.getElementById('place-search-hoefe')?.style.setProperty('display', sub === 'hoefe' ? '' : 'none');
+  document.getElementById('mapContainer')?.style.setProperty('display',       sub === 'karte' ? '' : 'none');
+  document.body.classList.toggle('places-karte', sub === 'karte');
   ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
     document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
   });
   if (sub === 'hoefe') renderHofList();
   else if (sub === 'orte') renderPlaceList();
-  else if (sub === 'karte' && typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
+  else if (sub === 'karte') {
+    if (isDesktop) renderPlaceList(); // linkes Panel: Orte-Navigation
+    if (typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
+  }
 }
 
 // Bottom-Nav: Listen-Tabs
@@ -432,6 +439,7 @@ async function showStartView() {
 // ─────────────────────────────────────
 function switchTab(tab) {
   AppState.currentTab = tab;
+  if (tab !== 'places') document.body.classList.remove('places-karte');
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
@@ -448,7 +456,12 @@ function renderTab() {
   else if (AppState.currentTab === 'sources') { renderSourceList(); renderRepoList(); }
   else if (AppState.currentTab === 'places') {
     if (UIState._placesSubTab === 'hoefe') renderHofList();
-    else if (UIState._placesSubTab === 'karte') initOrRefreshPlaceMap();
+    else if (UIState._placesSubTab === 'karte') {
+      document.body.classList.add('places-karte');
+      const isDesktop = document.body.classList.contains('desktop-mode');
+      if (isDesktop) renderPlaceList();
+      initOrRefreshPlaceMap();
+    }
     else renderPlaceList();
   }
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');

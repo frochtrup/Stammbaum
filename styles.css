@@ -926,6 +926,16 @@ body.desktop-mode #mapContainer {
   #desktopPlaceholder { display: none; }
   body.desktop-mode #desktopPlaceholder { display: flex; }
   body.desktop-mode.has-detail #desktopPlaceholder { display: none; }
+  /* Karte im rechten Panel */
+  body.desktop-mode.places-karte #mapContainer {
+    position: fixed !important;
+    left: 360px; right: 0; top: 0; bottom: 0;
+    height: auto !important;
+    z-index: 5;
+  }
+  body.desktop-mode.places-karte #desktopPlaceholder { display: none; }
+  body.desktop-mode #v-detail { background: var(--bg); }
+  body.desktop-mode.has-detail #v-detail { z-index: 10; }
 }
 #desktopPlaceholder {
   display: none;
