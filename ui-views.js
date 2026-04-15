@@ -36,6 +36,11 @@ function showView(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   if (id === 'v-main') _updateTopbarH();
+  // Karte ausblenden wenn nicht im Orte-Tab
+  if (id !== 'v-main' || AppState.currentTab !== 'places') {
+    document.body.classList.remove('places-karte');
+    document.getElementById('mapContainer')?.style.setProperty('display', 'none');
+  }
 
   if (desktop) {
     document.getElementById('v-main').classList.add('active');
