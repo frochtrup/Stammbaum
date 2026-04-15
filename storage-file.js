@@ -326,6 +326,7 @@ function _processLoadedText(text, filename) {
   }
   AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
   _newPhotoIds.clear(); _deletedPhotoIds.clear();
+  if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
   // IDB: primäre Persistenz (kein Größenlimit)
   Promise.all([
     idbPut('stammbaum_ged', text),
@@ -373,6 +374,7 @@ async function _loadGRAMPS(file) {
     if (db._idCounterMax >= AppState.idCounter) AppState.idCounter = db._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
     AppState._fileHandle      = null;
+    if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
     AppState._canDirectSave   = false;
     _newPhotoIds.clear();
     _deletedPhotoIds.clear();

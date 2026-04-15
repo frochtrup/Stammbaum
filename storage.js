@@ -13,6 +13,7 @@ function revertToSaved() {
   AppState.changed = false;
   UIState._placesCache = null;
   UIState._hofCache = null;
+  if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
   updateChangedIndicator();
   updateStats();
   renderTab();

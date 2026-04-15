@@ -116,17 +116,17 @@ function bnavTree() {
 
 function switchPlacesSubTab(sub) {
   UIState._placesSubTab = sub;
-  document.getElementById('placeList').style.display           = sub === 'orte'   ? '' : 'none';
-  document.getElementById('hofList').style.display             = sub === 'hoefe'  ? '' : 'none';
-  document.getElementById('mapContainer').style.display        = sub === 'karte'  ? '' : 'none';
-  document.getElementById('place-search-orte').style.display  = sub === 'orte'   ? '' : 'none';
-  document.getElementById('place-search-hoefe').style.display = sub === 'hoefe'  ? '' : 'none';
+  document.getElementById('placeList')?.style.setProperty('display', sub === 'orte'  ? '' : 'none');
+  document.getElementById('hofList')?.style.setProperty('display',   sub === 'hoefe' ? '' : 'none');
+  document.getElementById('mapContainer')?.style.setProperty('display', sub === 'karte' ? '' : 'none');
+  document.getElementById('place-search-orte')?.style.setProperty('display',  sub === 'orte'  ? '' : 'none');
+  document.getElementById('place-search-hoefe')?.style.setProperty('display', sub === 'hoefe' ? '' : 'none');
   ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
     document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
   });
   if (sub === 'hoefe') renderHofList();
   else if (sub === 'orte') renderPlaceList();
-  else if (sub === 'karte') initOrRefreshPlaceMap();
+  else if (sub === 'karte' && typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
 }
 
 // Bottom-Nav: Listen-Tabs
