@@ -316,7 +316,14 @@ function _personGeoEvents(p) {
 // ─────────────────────────────────────
 //  PERSON-PICKER MODAL
 // ─────────────────────────────────────
-function _initMapPersonPicker() { /* no-op — Modal ersetzt Inline-Dropdown */ }
+function _initMapPersonPicker() {
+  // Direkter Listener als Safari-Fallback (data-action-Delegation reicht nicht immer)
+  const btn = document.getElementById('map-person-btn');
+  if (btn && !btn._mapPickerBound) {
+    btn.addEventListener('click', () => openMapPersonPicker());
+    btn._mapPickerBound = true;
+  }
+}
 
 function openMapPersonPicker() {
   _renderMapPersonList('');
@@ -334,12 +341,13 @@ function _renderMapPersonList(filter) {
   const persons = Object.values(AppState.db.individuals)
     .filter(p => !q || (p.name || '').toLowerCase().includes(q));
 
-  // Sortierung: Geburtsjahr aufsteigend, dann Name
+  // Sortierung: Name alphabetisch, dann Geburtsjahr
   persons.sort((a, b) => {
+    const nc = (a.name || '').localeCompare(b.name || '', 'de');
+    if (nc !== 0) return nc;
     const ya = a.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '9999';
     const yb = b.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '9999';
-    if (ya !== yb) return ya.localeCompare(yb);
-    return (a.name || '').localeCompare(b.name || '', 'de');
+    return ya.localeCompare(yb);
   });
 
   const list = document.getElementById('mapPersonList');
