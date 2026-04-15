@@ -131,6 +131,7 @@ function switchPlacesSubTab(sub) {
   if (sub === 'hoefe') renderHofList();
   else if (sub === 'orte') renderPlaceList();
   else if (sub === 'karte') {
+    document.body.classList.remove('has-detail');
     if (isDesktop) renderPlaceList(); // linkes Panel: Orte-Navigation
     if (typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
   }

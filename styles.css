@@ -935,6 +935,7 @@ body.desktop-mode #mapContainer {
   }
   body.desktop-mode.places-karte #desktopPlaceholder { display: none; }
   body.desktop-mode #v-detail { background: var(--bg); }
+  body.desktop-mode.places-karte:not(.has-detail) #v-detail { display: none !important; }
   body.desktop-mode.has-detail #v-detail { z-index: 10; }
 }
 #desktopPlaceholder {
