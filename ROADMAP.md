@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v244 / Cache: `stammbaum-v244`
+**Aktuelle sw-Version:** v250 / Cache: `stammbaum-v250`
 
 ---
 
@@ -40,7 +40,7 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 3 | GRAMPS XML Export Round-trip — `gramps-writer.js`, 60034 Deep-Test-Checks ✓ | v193–v204 |
 | 3b | UI: Höfe-Ansicht, RESI-Adress-Autocomplete, Bewohner-Formular | v224–v228 |
 | 4a | UX: `compactPlace()` Ortsdaten-Darstellung; Notizen-Modal (Person/Familie/Quelle); noteRefs editierbar + löschbar | v236–v242 |
-| 4b | Kartenansicht: Leaflet 1.9.4 lokal; Modus "Alle Orte" + "Personenbiografie"; Exploration-Panel | v244 |
+| 4b | Kartenansicht: Leaflet 1.9.4 lokal; Modus "Alle Orte" + "Personenbiografie"; Exploration-Panel; Desktop rechtes Panel; Safari-Fix | v244–v250 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
 

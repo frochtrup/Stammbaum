@@ -9,6 +9,25 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-15 — Desktop-Kartenansicht + Safari-Fix (sw v245–v250)
+
+- **sw v245** `feat`: Kartenansicht im rechten Desktop-Panel
+  - `styles.css`: `body.desktop-mode.places-karte #mapContainer` → `position: fixed; left: 360px` (rechtes Panel)
+  - `ui-views.js`: `switchPlacesSubTab()` zeigt Orte-Liste links + Karte rechts auf Desktop
+  - `renderTab()`: stellt `places-karte`-Klasse bei Tab-Rückkehr wieder her
+- **sw v246** `fix`: `#v-detail` verdeckte Karte auf Desktop
+  - `switchPlacesSubTab('karte')`: `has-detail`-Klasse entfernen
+  - `body.desktop-mode.places-karte:not(.has-detail) #v-detail { display: none !important }`
+- **sw v247** `fix`: Safari zeigte keine Karte (weißer/brauner Hintergrund)
+  - Ursache: `100dvh` in Safari < 16 nicht unterstützt; `height: auto` auf fixed Element ohne Pixel-Höhe → `height: 100%` auf Kind ergibt 0px
+  - `100vh` statt `100dvh`; `position: absolute` auf `#map-leaflet` entfernt (brach Leaflet-Layout)
+  - Zweites `invalidateSize()` nach 300ms als Safari-Fallback
+- **sw v250** `fix`: **Eigentliche Safari-Ursache**: `#mapContainer` innerhalb `#v-main { overflow-y: auto }` — Safari clippt `position: fixed` Kinder von Scroll-Containern
+  - `index.html`: `#mapContainer` direkt in `<body>` verschoben (außerhalb `#v-main`)
+  - `styles.css`: `#mapContainer` immer `position: fixed` (nicht mehr `relative`); Mobile: `top = topbar+togglebar`, `bottom = bottomnav+safe-area`; Desktop: `top:0 bottom:0 left:360px right:0`
+
+---
+
 ### Session 2026-04-15 — Kartenansicht (sw v244)
 
 - **sw v244** `feat`: Kartenansicht — `ui-views-map.js` (neu), Leaflet 1.9.4 lokal
