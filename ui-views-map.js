@@ -344,10 +344,12 @@ function _renderMapPersonList(filter) {
   const persons = Object.values(AppState.db.individuals)
     .filter(p => !q || (p.name || '').toLowerCase().includes(q));
 
-  // Sortierung: Name alphabetisch, dann Geburtsjahr
+  // Sortierung: Nachname → Vorname → Geburtsjahr
   persons.sort((a, b) => {
-    const nc = (a.name || '').localeCompare(b.name || '', 'de');
-    if (nc !== 0) return nc;
+    const sna = (a.surname || '').localeCompare(b.surname || '', 'de');
+    if (sna !== 0) return sna;
+    const gna = (a.given || '').localeCompare(b.given || '', 'de');
+    if (gna !== 0) return gna;
     const ya = a.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '9999';
     const yb = b.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '9999';
     return ya.localeCompare(yb);
