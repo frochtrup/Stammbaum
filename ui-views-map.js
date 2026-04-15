@@ -214,10 +214,12 @@ function _showPersonEventsAtPlace(p, placeName, allEvs) {
       <span class="p-arrow">›</span>
     </div>`;
   for (const e of eventsHere) {
+    const meta = [e.date, e.addr ? _mesc(e.addr) : ''].filter(Boolean).join(' · ');
     html += `<div class="person-row" style="padding-left:52px;cursor:default">
       <div class="p-info">
         <div class="p-name" style="font-size:0.9rem">${_mesc(e.role)}</div>
-        ${e.date ? `<div class="p-meta">${_mesc(e.date)}</div>` : ''}
+        ${meta ? `<div class="p-meta">${meta}</div>` : ''}
+        ${e.note ? `<div class="p-meta" style="font-style:italic">${_mesc(e.note)}</div>` : ''}
       </div>
     </div>`;
   }
@@ -290,20 +292,21 @@ function _renderPersonModus(personId) {
 function _personGeoEvents(p) {
   const evs = [];
 
-  function addEv(place, lati, long, date, role) {
+  function addEv(place, lati, long, date, role, note, addr) {
     const lat = parseFloat(lati);
     const lng = parseFloat(long);
     if (!place || !lat || !lng || isNaN(lat) || isNaN(lng)) return;
-    evs.push({ place, lat, lng, date: date || '', role });
+    evs.push({ place, lat, lng, date: date || '', role, note: note || '', addr: addr || '' });
   }
 
-  addEv(p.birth.place, p.birth.lati, p.birth.long, p.birth.date, 'Geburt');
-  addEv(p.chr.place,   p.chr.lati,   p.chr.long,   p.chr.date,   'Taufe');
+  addEv(p.birth.place, p.birth.lati, p.birth.long, p.birth.date, 'Geburt',     p.birth.note);
+  addEv(p.chr.place,   p.chr.lati,   p.chr.long,   p.chr.date,   'Taufe',      p.chr.note);
   for (const ev of p.events)
     addEv(ev.place, ev.lati, ev.long, ev.date,
-          ev.eventType || EVENT_LABELS[ev.type] || ev.type || 'Ereignis');
-  addEv(p.death.place, p.death.lati, p.death.long, p.death.date, 'Tod');
-  addEv(p.buri.place,  p.buri.lati,  p.buri.long,  p.buri.date,  'Beerdigung');
+          ev.eventType || EVENT_LABELS[ev.type] || ev.type || 'Ereignis',
+          ev.note, ev.addr);
+  addEv(p.death.place, p.death.lati, p.death.long, p.death.date, 'Tod',        p.death.note);
+  addEv(p.buri.place,  p.buri.lati,  p.buri.long,  p.buri.date,  'Beerdigung', p.buri.note);
 
   evs.sort((a, b) => {
     const ya = a.date.match(/\b(\d{4})\b/)?.[1] || '9999';
