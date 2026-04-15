@@ -440,7 +440,10 @@ async function showStartView() {
 // ─────────────────────────────────────
 function switchTab(tab) {
   AppState.currentTab = tab;
-  if (tab !== 'places') document.body.classList.remove('places-karte');
+  if (tab !== 'places') {
+    document.body.classList.remove('places-karte');
+    document.getElementById('mapContainer')?.style.setProperty('display', 'none');
+  }
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
