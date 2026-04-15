@@ -28,6 +28,21 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-15 — Duplikat-Erkennung + Merge (sw v243)
+
+- **sw v243** `feat`: `ui-dedup.js` — Duplikat-Erkennung und Merge
+  - **Levenshtein-Scoring**: Name, Geburtsjahr, Geburtsort, Geschlecht → gewichteter Score (0–100)
+  - **Nachname-Bucketing** für Performance (nur gleiche/ähnliche Nachnamen vergleichen)
+  - **Schwellenwert-Slider** — konfigurierbarer Ähnlichkeitsschwellenwert
+  - **Ignorieren-Funktion** — Paare dauerhaft ignorieren (localStorage-persistent)
+  - **`_dedupMergePersons()`** — vollständige Merge-Strategie: prefer-nonempty, merge-arrays (events, sources, notes, media), concat-text
+  - **Merge-Modal** (`modalMerge`): Gegenüberstellung Gewinner/Verlierer; Felder einzeln swappbar; Eltern (`_dedupParents()`) + Partner (`_dedupPartners()`) als zusätzliche Vergleichszeilen
+  - **Scan-Modal** (`modalDedup`): Trefferanzahl, Paar-Liste, Direktlink zum Merge-Modal
+  - **Menü-Eintrag** "Duplikate suchen" in Hamburger-Menü
+  - 6 neue `_CLICK_MAP`-Actions: `menuDedup`, `dedupRunScan`, `dedupOpenMerge`, `dedupSwapWinner`, `dedupIgnorePair`, `dedupConfirmMerge`
+
+---
+
 ### Session 2026-04-15 — Kartenansicht (sw v244)
 
 - **sw v244** `feat`: Kartenansicht — `ui-views-map.js` (neu), Leaflet 1.9.4 lokal

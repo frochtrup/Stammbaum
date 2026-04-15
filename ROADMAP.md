@@ -40,7 +40,8 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 3 | GRAMPS XML Export Round-trip — `gramps-writer.js`, 60034 Deep-Test-Checks ✓ | v193–v204 |
 | 3b | UI: Höfe-Ansicht, RESI-Adress-Autocomplete, Bewohner-Formular | v224–v228 |
 | 4a | UX: `compactPlace()` Ortsdaten-Darstellung; Notizen-Modal (Person/Familie/Quelle); noteRefs editierbar + löschbar | v236–v242 |
-| 4b | Kartenansicht: Leaflet 1.9.4 lokal; Modus "Alle Orte" + "Personenbiografie"; Exploration-Panel; Desktop rechtes Panel; Safari-Fix | v244–v250 |
+| 4b | Duplikat-Erkennung + Merge: `ui-dedup.js`, Levenshtein-Scoring, Merge-Modal, Ignorieren-Funktion | v243 |
+| 4c | Kartenansicht: Leaflet 1.9.4 lokal; Modus "Alle Orte" + "Personenbiografie"; Exploration-Panel; Desktop rechtes Panel; Safari-Fix | v244–v250 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
 
