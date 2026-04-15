@@ -930,8 +930,13 @@ body.desktop-mode #mapContainer {
   body.desktop-mode.places-karte #mapContainer {
     position: fixed !important;
     left: 360px; right: 0; top: 0; bottom: 0;
-    height: auto !important;
+    height: 100dvh !important;
     z-index: 5;
+  }
+  body.desktop-mode.places-karte #map-leaflet {
+    position: absolute !important;
+    top: 0; right: 0; bottom: 0; left: 0;
+    height: auto !important; width: auto !important;
   }
   body.desktop-mode.places-karte #desktopPlaceholder { display: none; }
   body.desktop-mode #v-detail { background: var(--bg); }

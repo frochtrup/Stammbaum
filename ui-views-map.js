@@ -83,10 +83,13 @@ function _updateMapOfflineBanner() {
 function initOrRefreshPlaceMap() {
   _ensureMap();
   setTimeout(() => {
+    if (!_leafletMap) return;
     _leafletMap.invalidateSize();
     _initMapPersonPicker();
     _renderMap();
-  }, 60);
+    // Safari: nochmaliges invalidateSize nach vollständigem Layout
+    setTimeout(() => _leafletMap?.invalidateSize(), 300);
+  }, 100);
 }
 
 function _renderMap() {
