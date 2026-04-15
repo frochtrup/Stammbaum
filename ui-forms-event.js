@@ -97,7 +97,10 @@ function onEventTypeChange() {
     else { lbl.textContent = 'TYPE'; inp.placeholder = 'z.B. Detailierung (optional)'; }
   }
   document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
-  document.getElementById('ef-addr-group').style.display  = (t === 'RESI') ? '' : 'none';
+  const showAddr = (t === 'RESI' || t === 'PROP');
+  document.getElementById('ef-addr-group').style.display = showAddr ? '' : 'none';
+  const addrLabel = document.querySelector('#ef-addr-group .form-label');
+  if (addrLabel) addrLabel.textContent = (t === 'PROP') ? 'Adresse (optional)' : 'Adresse';
   // Reset dropdown on type change; content rebuilt on focus/input
   const dd = document.getElementById('ef-etype-dd');
   if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
@@ -383,7 +386,7 @@ function collectAddresses() {
   const set = new Set();
   Object.values(AppState.db.individuals || {}).forEach(p => {
     (p.events || []).forEach(ev => {
-      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) set.add(ev.addr.trim());
+      if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.addr.trim()) set.add(ev.addr.trim());
     });
   });
   return [...set].sort((a, b) => a.localeCompare(b, 'de'));
@@ -403,9 +406,9 @@ function _addrToPlace(addr) {
   return entries.sort((a, b) => b[1] - a[1])[0][0];
 }
 
-function initAddrAutocomplete() {
-  const input = document.getElementById('ef-addr');
-  const dd    = document.getElementById('ef-addr-dd');
+function _initAddrAutocompleteFor(inputId, ddId, placeInputId) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
   if (!input || !dd) return;
 
   const _search = debounce(() => {
@@ -432,8 +435,8 @@ function initAddrAutocomplete() {
         dd.innerHTML = ''; dd.style.display = 'none';
         // PLAC auto-fill: häufigster Ort zu dieser Adresse
         const place = _addrToPlace(addr);
-        if (place) {
-          const placeInput = document.getElementById('ef-place');
+        if (place && placeInputId) {
+          const placeInput = document.getElementById(placeInputId);
           if (placeInput && !placeInput.value) placeInput.value = place;
         }
       });
@@ -448,6 +451,10 @@ function initAddrAutocomplete() {
   });
   input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
   input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
+function initAddrAutocomplete() {
+  _initAddrAutocompleteFor('ef-addr', 'ef-addr-dd', 'ef-place');
 }
 
 initAddrAutocomplete();

@@ -584,6 +584,12 @@ body.desktop-mode.places-karte #mapContainer {
 }
 .rel-row:last-child { border-bottom: none; }
 .rel-row:active { opacity: 0.6; }
+.rel-row--prop {
+  background: rgba(200, 168, 74, 0.06);
+  border-left: 3px solid var(--gold-dim);
+  padding-left: 6px;
+}
+.rel-row--prop .rel-role { color: var(--gold-dim); }
 .rel-avatar {
   width: 34px; height: 34px; border-radius: 50%;
   background: var(--surface2); border: 1px solid var(--border);

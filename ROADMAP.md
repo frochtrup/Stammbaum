@@ -124,4 +124,5 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] Statistik-Dashboard
 - [x] **Duplikat-Erkennung + Merge** ✅ sw v243 — Levenshtein-Scoring; Nachname-Bucketing; Schwellenwert-Slider; Ignorieren-Funktion; Merge-Modal mit Eltern/Partner-Gegenüberstellung
 - [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum
+- [ ] **Eigentum in Hofhistorie** — PROP-Ereignisse sollen in der Hof-Detail-Ansicht als hervorgehobene Zeile erscheinen (neben RESI-Bewohnern). Im Ereignis-Formular für PROP: Adress-Auswahl analog zu RESI (`collectAddresses()`), aber kein Pflichtfeld — Eigentum kann auch Nicht-Wohneigentum sein (Acker, Mühle, Scheune …). Hof-Index (`buildHofIndex()`) entsprechend erweitern, um PROP-Einträge derselben Adresse zuzuordnen.
 - ~~Notizen-Überarbeitung (gesamthaft)~~ — erledigt via sw v234/v235/v238–v242
