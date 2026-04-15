@@ -951,6 +951,9 @@
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuHelp">
           ❓ &nbsp; Hilfe &amp; Anleitung
         </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuDedup">
+          &#128270; &nbsp; Duplikate erkennen
+        </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" data-action="menuRoundtrip">
           🔁 &nbsp; Roundtrip-Test
         </button>
@@ -1257,12 +1260,50 @@
 <script src="storage-file.js"></script>
 <script src="storage.js"></script>
 <script src="ui-views.js"></script>
+<!-- Duplikat-Erkennung Modal -->
+<div class="modal-overlay" id="modalDedup">
+  <div class="sheet" style="max-height:90vh;display:flex;flex-direction:column">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Duplikate erkennen</div>
+    <div class="sheet-body" style="flex:1;overflow-y:auto;padding-bottom:0">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <label style="font-size:0.8rem;color:var(--text-muted);white-space:nowrap">Schwellenwert: <strong id="dedup-threshold-val">65</strong></label>
+        <input type="range" id="dedup-threshold" min="50" max="90" value="65" style="flex:1"
+          oninput="dedupThresholdChange(this.value)">
+      </div>
+      <div id="dedup-status" style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px"></div>
+      <div id="dedup-list"></div>
+    </div>
+    <div style="padding:12px 20px env(safe-area-inset-bottom,12px);border-top:1px solid var(--border);display:flex;gap:8px">
+      <button class="btn btn-cancel" style="flex:1" data-action="closeModal" data-modal="modalDedup">Schließen</button>
+      <button class="btn" style="flex:1;background:var(--surface2);color:var(--text);border:1px solid var(--border)" data-action="dedupRunScan">Scan starten</button>
+    </div>
+  </div>
+</div>
+
+<!-- Merge-Bestätigung Modal -->
+<div class="modal-overlay" id="modalMerge">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Personen zusammenführen</div>
+    <div class="sheet-body">
+      <div id="merge-body"></div>
+      <div class="btn-row" style="margin-top:14px;flex-direction:column;gap:8px">
+        <button class="btn" style="background:var(--danger,#c0392b);color:#fff;border:none" data-action="dedupConfirmMerge">Zusammenführen</button>
+        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)" data-action="dedupIgnorePair">Ignorieren (kein Duplikat)</button>
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalMerge">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="ui-views-tree.js"></script>
 <script src="ui-views-person.js"></script>
 <script src="ui-views-family.js"></script>
 <script src="ui-views-source.js"></script>
 <script src="ui-views-place.js"></script>
 <script src="ui-views-hof.js"></script>
+<script src="ui-dedup.js"></script>
 <script src="ui-fanchart.js"></script>
 <script src="ui-forms.js"></script>
 <script src="ui-forms-repo.js"></script>
