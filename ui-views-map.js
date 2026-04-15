@@ -212,6 +212,7 @@ function _mapPersonYears(p) {
 function _renderPersonModus(personId) {
   _mapMarkerLayer.clearLayers();
   _mapLineLayer.clearLayers();
+  document.getElementById('map-explore-panel').style.display = 'none';
   if (!personId) return;
 
   const p = AppState.db.individuals[personId];
@@ -223,6 +224,7 @@ function _renderPersonModus(personId) {
     return;
   }
 
+  const idx     = _buildPlacePersonIndex();
   const bounds  = [];
   const latLngs = [];
 
@@ -238,17 +240,13 @@ function _renderPersonModus(personId) {
     });
 
     const marker = L.marker([ev.lat, ev.lng], { icon });
-    marker.bindPopup(
-      `<div class="map-bio-popup">
-        <div class="map-bio-num">${i + 1}</div>
-        <div>
-          <div class="map-bio-role">${_mesc(ev.role)}</div>
-          <div class="map-bio-place">${_mesc(compactPlace(ev.place))}</div>
-          ${ev.date ? `<div class="map-bio-date">${_mesc(ev.date)}</div>` : ''}
-        </div>
-      </div>`,
-      { maxWidth: 240, className: 'map-popup' }
+    // Tooltip beim Hover: eigenes Ereignis
+    marker.bindTooltip(
+      `<b>${i + 1}. ${_mesc(ev.role)}</b><br>${_mesc(compactPlace(ev.place))}${ev.date ? '<br>' + _mesc(ev.date) : ''}`,
+      { direction: 'top', offset: [0, -12] }
     );
+    // Klick: Exploration-Panel mit allen Personen an diesem Ort
+    marker.on('click', () => _showExplorationPanel(ev.place, idx[ev.place] || []));
     marker.addTo(_mapMarkerLayer);
   });
 
