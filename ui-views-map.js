@@ -306,7 +306,7 @@ function _personGeoEvents(p) {
     addEv(ev.place, ev.lati, ev.long, ev.date,
           ev.eventType || EVENT_LABELS[ev.type] || ev.type || 'Ereignis',
           ev.note, ev.addr,
-          ev.type === 'EVEN' ? (ev.value || '') : '');
+          ev.value || '');
   addEv(p.death.place, p.death.lati, p.death.long, p.death.date, 'Tod',        p.death.note);
   addEv(p.buri.place,  p.buri.lati,  p.buri.long,  p.buri.date,  'Beerdigung', p.buri.note);
 
