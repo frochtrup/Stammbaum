@@ -120,8 +120,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 - [ ] Zeitleiste (`ui-timeline.js`)
 - [ ] Nachkommen-Baum (top-down SVG)
-- [x] **Karten-Ansicht** ✅ sw v244 — Leaflet 1.9.4; Alle Orte als Pins + Exploration-Panel; Personenbiografie mit Stationen + Linie; Person-Picker; "Auf Karte" Button in Personen-Detail
+- [x] **Karten-Ansicht** ✅ sw v244–v250 — Leaflet 1.9.4; Alle Orte als Pins + Exploration-Panel; Personenbiografie mit Stationen + Linie; Person-Picker; Desktop rechtes Panel; Safari-Fix
 - [ ] Statistik-Dashboard
-- [ ] Duplikat-Erkennung (Name + Geburtsjahr ±2)
+- [x] **Duplikat-Erkennung + Merge** ✅ sw v243 — Levenshtein-Scoring; Nachname-Bucketing; Schwellenwert-Slider; Ignorieren-Funktion; Merge-Modal mit Eltern/Partner-Gegenüberstellung
 - [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum
 - ~~Notizen-Überarbeitung (gesamthaft)~~ — erledigt via sw v234/v235/v238–v242
