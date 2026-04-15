@@ -39,90 +39,116 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 2 | GRAMPS XML Import read-only — `gramps-parser.js`, `db.placeObjects{}`, `db._grampsHandles{}` | v191–v196 |
 | 3 | GRAMPS XML Export Round-trip — `gramps-writer.js`, 60034 Deep-Test-Checks ✓ | v193–v204 |
 | 3b | UI: Höfe-Ansicht, RESI-Adress-Autocomplete, Bewohner-Formular | v224–v228 |
-| 4a | UX: `compactPlace()` Ortsdaten-Darstellung; Notizen-Modal (Person/Familie/Quelle); noteRefs editierbar + löschbar | v236–v242 |
-| 4b | Duplikat-Erkennung + Merge: `ui-dedup.js`, Levenshtein-Scoring, Merge-Modal, Ignorieren-Funktion | v243 |
-| 4c | Kartenansicht: Leaflet 1.9.4 lokal; Modus "Alle Orte" + "Personenbiografie"; Exploration-Panel; Desktop rechtes Panel; Safari-Fix | v244–v250 |
+| 4a | UX: `compactPlace()`, Notizen-Modal, noteRefs editierbar + löschbar, `_pruneOrphanNotes()` | v236–v242 |
+| 4b | Duplikat-Erkennung + Merge: Levenshtein-Scoring, Merge-Modal, Ignorieren | v243 |
+| 4c | Kartenansicht: Leaflet lokal; Alle Orte + Personenbiografie; Desktop rechtes Panel; Safari-Fix | v244–v250 |
+| Cleanup | Virtual Scroll, onclick-Delegation, State-Konsolidierung, Suche indexiert, Debug ausgelagert | v230–v233 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
 
 ---
 
-### Phase 4 — iOS-Companion-Optimierungen
+## Offene Aufgaben nach Priorität
 
-- [ ] **Quick-Add** — `ui-quick-add.js`: Vorname + Nachname + Geburtsjahr + optionale Familie (~4h)
+### P0 — Sicherheit *(vor jedem Sharing- oder Fremd-Import-Feature)*
+
+| ID | Aufgabe | Aufwand |
+|---|---|---|
+| S1 | **XSS-Audit**: alle `innerHTML`-Assignments auf fehlende `esc()`-Aufrufe prüfen — `ui-views-person.js`, `ui-views-hof.js`, `ui-forms.js` u.a. | M |
+| S2 | **DOMPurify einbinden** als zweite Verteidigungslinie für GEDCOM-Fremddaten (1 Datei, kein Build-Step) | S |
+| S3 | **CSP `unsafe-inline` für Styles entfernen**: Inline-Styles in CSS-Klassen auslagern | L |
+
+---
+
+### P1 — Code-Qualität
+
+| ID | Aufgabe | Aufwand |
+|---|---|---|
+| Q1 | **`_hofDateKey()` + `_evDateKey()` zusammenführen** → eine Funktion in `gedcom.js` (`ui-views-hof.js:4`, `ui-views-person.js:349`) | XS |
+| Q2 | **`_renderMediaList()` + `_renderEfMedia()` zusammenführen** — eine Funktion mit CSS-Param (`ui-forms.js:289`, `ui-forms-event.js:9`) | S |
+| Q3 | **Backward-Compat-Shims entfernen**: `Object.defineProperty()`-Shims für `db`, `changed`, `currentPersonId` etc. in `gedcom.js` — AppState bereits konsistent genutzt | M |
+| Q4 | **Getter konsequent durchziehen**: `AppState.db.individuals[id]` → überall `getPerson(id)` / `getFamily(id)` | M |
+
+*Gestrichen: generische `initAutocomplete()` — unterschiedliche Kontexte, Aufwand > Nutzen (bewertet 2026-04-14)*
+
+---
+
+### P2 — Architektur
+
+| ID | Aufgabe | Aufwand |
+|---|---|---|
+| A1 | **`ui-views.js` aufteilen** (922 Z., 5 Verantwortlichkeiten): Navigation/Routing → `ui-router.js`, Modal-Manager → `ui-modal.js`, Note-Modal → `ui-views-note.js` | L |
+| A2 | **`_CLICK_MAP` nach Feature-Bereich strukturieren**: Sub-Maps `_CLICK_MAP_PERSON`, `_CLICK_MAP_FAMILY` etc., im Init zusammengeführt | M |
+| A3 | **Domain-Logik in `gedcom.js` verlagern**: `buildHofIndex()`, Duplikat-Scoring gehören nicht in UI-Dateien | M |
+| A4 | **`_formState` kapseln**: Transiente Formular-States nicht global in UIState, sondern an Formular-Lifecycle binden | M |
+
+---
+
+### P3 — Performance
+
+| ID | Aufgabe | Aufwand |
+|---|---|---|
+| P1 | **Virtual Scroll für Hof-Liste** — analog zur Personen/Familien-Liste | M |
+| P2 | **IDB Batch-Reads für Medien**: `getAll()` mit Index statt sequentielle Einzelabfragen | M |
+| P3 | **Suchergebnisse ranken** statt nach Position (`slice(0,20)`); Hinweis wenn >20 Treffer | S |
+| P4 | **`_rebuildPersonSourceRefs()` lazy**: nur bei tatsächlicher Source-Änderung, nicht bei jedem Save | S |
+
+---
+
+### P4 — UX-Schulden
+
+| ID | Aufgabe | Aufwand |
+|---|---|---|
+| U1 | **Fehlermeldungen nutzerfreundlich**: Parse-Fehler, IDB-Fehler als Klartext-Toast statt Konsolen-Pointer | S |
+| U2 | **Modal-Stack klären**: Escape-Verhalten bei mehreren offenen Modals (`#modal` + `#modalNote` + `#modalDedup`) | S |
+| U3 | **`confirm()` → Modal**: 6+ Stellen → `confirmModal(msg)` Promise; Lösch-UX vereinheitlichen | M |
+| U4 | **`showToast(type)`**: `type ∈ {success, warning, error}` + CSS-Differenzierung | S |
+| U5 | **Namens-Truncation im Baum**: 18 → 24 Zeichen für reguläre Karten | XS |
+| U6 | **`handleError()` zentralisieren**: try/catch → `handleError(e, context, userMsg)` | M |
+| U7 | **Advanced Search**: Filter nach Geburtsort / Zeitraum / Familie als ausklappbare Optionen | L |
+| U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
+
+---
+
+### P5 — GRAMPS Phase 4/5 (iOS-Companion + Editierbarkeit)
+
+#### Phase 4 — iOS-Companion-Optimierungen
+
+- [ ] **Quick-Add** — `ui-quick-add.js`: Vorname + Nachname + Geburtsjahr + optionale Familie
 - [ ] **Foto-direkt-zu-Person** — iOS-Kamera → direkt an Person ohne Umweg über Media-Browser
 - [ ] **GRAMPS-Tag-Editor** — Tags hinzufügen/entfernen (Phase 2 read-only, hier editierbar)
 - [ ] **Orts-Hierarchie-Editor** — Formular mit `db.placeObjects{}`-Unterstützung
 - [ ] **Export-Hinweis** — "Zuletzt geladen: Datum" in Topbar/Export-Dialog
 
----
+#### Phase 5.1 — Cross-Parser
 
-### Phase 5 — GRAMPS-Inhalte editierbar + Cross-Parser-Betrieb
-
-#### 5.1 Cross-Parser
-
-- [x] GEDCOM → GRAMPS / GRAMPS → GEDCOM — Roundtrip stabil (v204–v220)
-- [ ] **ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)** (~4h)
+- [ ] **ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)**
 - [ ] **OBJE ohne FORM stabilisieren** — `m.form = null`; Writer nur ausgeben wenn nicht null
 
-#### 5.2 Formulare
+#### Phase 5.2 — Formulare
 
 - [ ] **Personen-Formular** — `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar
 - [ ] **Ereignis-Formular** — `_grampsAttrs[]` pro Event; Witness-Rollen (read-only); GRAMPS Event-Typen im Dropdown
 - [ ] **Familien-Formular** — `_grampsAttrs[]` auf Familien-Ebene
 - [ ] **Orts-Picker** — `db.placeObjects{}` als strukturierten Picker (Hierarchie: Stadt → Kreis → Land)
 - [ ] **Medien-Browser** — GRAMPS-Pfade auflösen; MIME-Typ; `titl` editierbar
-- ~~**Quellen-Formular**~~ — Source-Notes editierbar ✅; `grampId` sichtbar — nicht benötigt, gestrichen
-- [x] **Notizen** ✅ sw v234/v235/v236–v242 — Event-Notes editierbar; Notizen-Modal (`modalNote`) für Person/Familie/Quelle; noteRefs editierbar + löschbar; `_pruneOrphanNotes()` entfernt verwaiste `db.notes`-Einträge; `compactPlace()` für Ortsdarstellung
-- [x] **Quellen-Notes editierbar** ✅ sw v237/v238 — `openNoteModal('source', id)`; `s.text` als Notizfeld
 
-#### 5.3 Anzeige
+#### Phase 5.3 — Anzeige
 
 - [ ] **GRAMPS-Badge in Topbar** — bei `db._grampsMaster`: Icon + `.gramps` als primäres Export-Format
 - [ ] **Orts-Hierarchie in Event-Detail** — vollständigen Pfad aus `db.placeObjects{}` auflösen
-- [ ] **Tags anzeigen** — `db.tags{}` in Personen-/Familien-Detail als Badges (kein Editor)
+- [ ] **Tags anzeigen** — `db.tags{}` in Personen-/Familien-Detail als Badges
 
 ---
 
-## Offene Themen nach Priorität (Stand 2026-04-14)
-
-### P2 — Architektur-Verletzungen ✅ abgeschlossen (sw v231)
-
-- [x] **Virtual Scroll auf alle Listen** ✅ — `_vsF` (Familien) + `_vsP` (Personen) implementiert; Quellen/Orte zu klein für VS
-- [x] **JS-seitige `onclick=` entfernen** ✅ sw v230 — 15 Zuweisungen ersetzt; treeBtn/probandBtn auf `data-action`+`dataset.id`; `showEditSheet()` um Repo+Place erweitert; `AppState.currentPlaceName` neu
-- [x] **`_navHistory` + `_probandId` in UIState** ✅ sw v231 — beide in UIState, Shims in gedcom.js
-- [x] **Form-State in UIState** ✅ sw v231 — `srcWidgetState`/`_pfExtraNames`/`_efMedia` → `UIState._formState{}` (ADR-003)
-
-### P3 — Performance ✅ abgeschlossen (sw v232)
-
-- [x] **Globale Suche indexieren** ✅ sw v232 — `_buildSearchIndex()` + `p._searchStr`; O(n×m) → O(n); dirty-Flag in UIState, Reset in `markChanged()`
-- [x] **`applyPersonFilter()` Debounce** ✅ bereits vorhanden — `_applyPersonFilterDebounced` (200ms) in ui-forms.js
-- [x] **`touchmove` Pinch-Zoom throttlen** ✅ sw v232 — `requestAnimationFrame`-Guard in ui-views-tree.js
-
-### P4 — Code-Qualität ✅ abgeschlossen (sw v233)
-
-- [x] **DEV-Diagnose entfernen** ✅ sw v233 — `_updateMenuVersionInfo()` (38 Z.) + CSP-Listener entfernt
-- [x] **Debug-Funktionen auslagern** ✅ sw v233 — 4 Funktionen (~344 LOC) → `debug-gramps.js`, nur bei `?debug=1`; `_SPECIAL_OBJ` als Alias auf `SPECIAL_EVENT_KEYS`
-- [x] **Notes-Datenmodell konsolidieren** ✅ sw v233 — `noteTextInline` entfernt; `noteText = noteTexts.join + noteRefs` (Single source of truth)
-- [x] **Konstanten für Magic Strings** ✅ sw v233 — `_SPECIAL_LBL` entfernt → `EVENT_LABELS`; `_SPECIAL_OBJ` → `SPECIAL_EVENT_KEYS` in gedcom.js
-- ~~Generische `initAutocomplete()`~~ — gestrichen (unterschiedliche Kontexte, Aufwand > Nutzen)
-- ~~Rendering-Helper extrahieren~~ — gestrichen (Duplikation minimal, mehr Coupling als Gewinn)
-
-### P5 — UX-Schulden
-
-- [x] **INDI-Notes Editierproblem** ✅ sw v235/v238–v242 — Notizen-Modal; noteRefs editierbar + löschbar; verwaiste Notes werden bereinigt
-- [ ] **Cmd+Z granulares Undo** — History-Stack auf AppState; eigener Sprint
-- [ ] **`showToast(type)`** — `type ∈ {success, warning, error}` + CSS-Differenzierung
-- [ ] **`confirm()` → Modal** — 6+ Stellen → `confirmModal(msg)` Promise
-- [ ] **`handleError()` zentralisieren** — 181 try/catch → `handleError(e, context, userMsg)`
-
-### P6 — Neue Features (erst nach P2)
+### P6 — Neue Features *(erst nach P0)*
 
 - [ ] Zeitleiste (`ui-timeline.js`)
 - [ ] Nachkommen-Baum (top-down SVG)
-- [x] **Karten-Ansicht** ✅ sw v244–v250 — Leaflet 1.9.4; Alle Orte als Pins + Exploration-Panel; Personenbiografie mit Stationen + Linie; Person-Picker; Desktop rechtes Panel; Safari-Fix
 - [ ] Statistik-Dashboard
-- [x] **Duplikat-Erkennung + Merge** ✅ sw v243 — Levenshtein-Scoring; Nachname-Bucketing; Schwellenwert-Slider; Ignorieren-Funktion; Merge-Modal mit Eltern/Partner-Gegenüberstellung
 - [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum
-- [ ] **Eigentum in Hofhistorie** — PROP-Ereignisse sollen in der Hof-Detail-Ansicht als hervorgehobene Zeile erscheinen (neben RESI-Bewohnern). Im Ereignis-Formular für PROP: Adress-Auswahl analog zu RESI (`collectAddresses()`), aber kein Pflichtfeld — Eigentum kann auch Nicht-Wohneigentum sein (Acker, Mühle, Scheune …). Hof-Index (`buildHofIndex()`) entsprechend erweitern, um PROP-Einträge derselben Adresse zuzuordnen.
-- ~~Notizen-Überarbeitung (gesamthaft)~~ — erledigt via sw v234/v235/v238–v242
+- [ ] **Eigentum in Hofhistorie** — PROP-Ereignisse in Hof-Detail als hervorgehobene Zeile; `buildHofIndex()` um PROP-Einträge erweitern; Ereignis-Formular für PROP: Adress-Auswahl analog zu RESI, kein Pflichtfeld (Acker, Mühle, Scheune …)
+
+---
+
+*Aufwand: XS (<1h) · S (1–2h) · M (halber Tag) · L (1–2 Tage) · XL (>2 Tage)*
