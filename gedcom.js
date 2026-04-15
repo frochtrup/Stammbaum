@@ -413,3 +413,13 @@ function _rebuildFamilySourceRefs(f) {
   (f.events || []).forEach(ev => add(ev.sources));
   f.sourceRefs = refs;
 }
+
+// Sortierkey für GEDCOM-Datumsstrings → 'YYYYMMDD' (undatiert → '99999999')
+function evDateKey(d) {
+  if (!d) return '99999999';
+  const mo = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
+  const yr    = (d.match(/\b(\d{4})\b/) || [])[1] || '9999';
+  const mStr  = (d.match(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/) || [])[1];
+  const dyStr = (d.match(/\b(\d{1,2})\b(?=\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))/) || [])[1];
+  return yr + (mStr ? mo[mStr] : '00') + (dyStr ? dyStr.padStart(2,'0') : '00');
+}

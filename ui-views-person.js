@@ -346,14 +346,6 @@ function showDetail(id, pushHistory = true) {
 
   // Group events: first by ev.type (first-seen order), then by ev.eventType within each type,
   // sort within each subgroup by date (undated last).
-  const _evDateKey = d => {
-    if (!d) return '99999999';
-    const mo = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
-    const yr = (d.match(/\b(\d{4})\b/) || [])[1] || '9999';
-    const mStr = (d.match(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/) || [])[1];
-    const dyStr = (d.match(/\b(\d{1,2})\b(?=\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))/) || [])[1];
-    return yr + (mStr ? mo[mStr] : '00') + (dyStr ? dyStr.padStart(2,'0') : '00');
-  };
   const _evTypeOrder = [];
   const _evTypeSet = new Set();
   // type → Map(eventType → [{ev,idx}])
@@ -368,7 +360,7 @@ function showDetail(id, pushHistory = true) {
   });
   for (const subMap of _evGroups.values())
     for (const items of subMap.values())
-      items.sort((a, b) => _evDateKey(a.ev.date).localeCompare(_evDateKey(b.ev.date)));
+      items.sort((a, b) => evDateKey(a.ev.date).localeCompare(evDateKey(b.ev.date)));
   for (const type of _evTypeOrder)
     for (const items of _evGroups.get(type).values()) {
       for (const {ev, idx} of items) {

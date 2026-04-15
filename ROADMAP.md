@@ -64,8 +64,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| Q1 | **`_hofDateKey()` + `_evDateKey()` zusammenführen** → eine Funktion in `gedcom.js` (`ui-views-hof.js:4`, `ui-views-person.js:349`) | XS |
-| Q2 | **`_renderMediaList()` + `_renderEfMedia()` zusammenführen** — eine Funktion mit CSS-Param (`ui-forms.js:289`, `ui-forms-event.js:9`) | S |
+| Q1 | ~~**`_hofDateKey()` + `_evDateKey()` zusammenführen**~~ ✅ sw v266 — `evDateKey(d)` in `gedcom.js`; lokale Kopien aus `ui-views-hof.js` und `ui-views-person.js` entfernt | XS |
+| Q2 | ~~**`_renderMediaList()` + `_renderEfMedia()` zusammenführen**~~ — gestrichen; grundlegend unterschiedlich: `_renderMediaList` = Read-only-Referenzliste mit `data-idx`; `_renderEfMedia` = Live-Editor mit zwei Eingabefeldern, mutiert `_efMedia[]` direkt | S |
 | Q3 | **Backward-Compat-Shims entfernen**: `Object.defineProperty()`-Shims für `db`, `changed`, `currentPersonId` etc. in `gedcom.js` — AppState bereits konsistent genutzt | M |
 | Q4 | **Getter konsequent durchziehen**: `AppState.db.individuals[id]` → überall `getPerson(id)` / `getFamily(id)` | M |
 
