@@ -199,6 +199,33 @@ function _showExplorationPanel(placeName, entries) {
   panel.style.display = '';
 }
 
+function _showPersonEventsAtPlace(p, placeName, allEvs) {
+  const panel = document.getElementById('map-explore-panel');
+  if (!panel) return;
+  const eventsHere = allEvs.filter(e => e.place === placeName);
+  const sex = p.sex || 'U';
+  let html = `<div class="map-panel-header">
+    <span class="map-panel-title">${_mesc(compactPlace(placeName))}</span>
+    <button class="map-panel-close" data-action="closeMapPanel">✕</button>
+  </div><div class="map-panel-list">
+    <div class="person-row map-panel-row" data-action="showDetail" data-pid="${p.id}">
+      <div class="p-avatar sex-${sex.toLowerCase()}">${sex === 'F' ? '♀' : sex === 'M' ? '♂' : '⚬'}</div>
+      <div class="p-info"><div class="p-name">${_mesc(p.name || '–')}</div></div>
+      <span class="p-arrow">›</span>
+    </div>`;
+  for (const e of eventsHere) {
+    html += `<div class="person-row" style="padding-left:52px;cursor:default">
+      <div class="p-info">
+        <div class="p-name" style="font-size:0.9rem">${_mesc(e.role)}</div>
+        ${e.date ? `<div class="p-meta">${_mesc(e.date)}</div>` : ''}
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+  panel.innerHTML = html;
+  panel.style.display = '';
+}
+
 function _mapPersonYears(p) {
   const by = p.birth?.date ? p.birth.date.match(/\b(\d{4})\b/)?.[1] : null;
   const dy = p.death?.date ? p.death.date.match(/\b(\d{4})\b/)?.[1] : null;
@@ -224,7 +251,6 @@ function _renderPersonModus(personId) {
     return;
   }
 
-  const idx     = _buildPlacePersonIndex();
   const bounds  = [];
   const latLngs = [];
 
@@ -240,13 +266,12 @@ function _renderPersonModus(personId) {
     });
 
     const marker = L.marker([ev.lat, ev.lng], { icon });
-    // Tooltip beim Hover: eigenes Ereignis
     marker.bindTooltip(
       `<b>${i + 1}. ${_mesc(ev.role)}</b><br>${_mesc(compactPlace(ev.place))}${ev.date ? '<br>' + _mesc(ev.date) : ''}`,
       { direction: 'top', offset: [0, -12] }
     );
-    // Klick: Exploration-Panel mit allen Personen an diesem Ort
-    marker.on('click', () => _showExplorationPanel(ev.place, idx[ev.place] || []));
+    // Klick: alle Ereignisse der ausgewählten Person an diesem Ort
+    marker.on('click', () => _showPersonEventsAtPlace(p, ev.place, evs));
     marker.addTo(_mapMarkerLayer);
   });
 
