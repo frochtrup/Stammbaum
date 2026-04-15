@@ -289,45 +289,63 @@ function _personGeoEvents(p) {
 }
 
 // ─────────────────────────────────────
-//  PERSON-PICKER
+//  PERSON-PICKER MODAL
 // ─────────────────────────────────────
-let _mapPickerInited = false;
+function _initMapPersonPicker() { /* no-op — Modal ersetzt Inline-Dropdown */ }
 
-function _initMapPersonPicker() {
-  if (_mapPickerInited) return;
-  _mapPickerInited = true;
+function openMapPersonPicker() {
+  _renderMapPersonList('');
+  document.getElementById('mapPersonSearch').value = '';
+  openModal('modalMapPerson');
+  setTimeout(() => document.getElementById('mapPersonSearch')?.focus(), 120);
+}
 
-  const inp  = document.getElementById('map-person-input');
-  const list = document.getElementById('map-person-dropdown');
-  if (!inp || !list) return;
+function filterMapPersonList() {
+  _renderMapPersonList(document.getElementById('mapPersonSearch')?.value || '');
+}
 
-  inp.addEventListener('input', () => {
-    const q = inp.value.toLowerCase().trim();
-    if (!q) { list.style.display = 'none'; return; }
-    const matches = Object.values(AppState.db.individuals)
-      .filter(p => (p.name || '').toLowerCase().includes(q))
-      .slice(0, 12);
-    if (!matches.length) { list.style.display = 'none'; return; }
-    list.innerHTML = matches.map(p =>
-      `<div class="place-dropdown-item" data-pid="${p.id}">${_mesc(p.name || p.id)}</div>`
-    ).join('');
-    list.style.display = '';
+function _renderMapPersonList(filter) {
+  const q = filter.toLowerCase().trim();
+  const persons = Object.values(AppState.db.individuals)
+    .filter(p => !q || (p.name || '').toLowerCase().includes(q));
+
+  // Sortierung: Geburtsjahr aufsteigend, dann Name
+  persons.sort((a, b) => {
+    const ya = a.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '9999';
+    const yb = b.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '9999';
+    if (ya !== yb) return ya.localeCompare(yb);
+    return (a.name || '').localeCompare(b.name || '', 'de');
   });
 
-  list.addEventListener('click', e => {
-    const row = e.target.closest('[data-pid]');
-    if (!row) return;
-    _mapPersonId = row.dataset.pid;
-    const p = AppState.db.individuals[_mapPersonId];
-    inp.value = p?.name || _mapPersonId;
-    list.style.display = 'none';
-    _renderPersonModus(_mapPersonId);
-  });
+  const list = document.getElementById('mapPersonList');
+  if (!list) return;
+  if (!persons.length) {
+    list.innerHTML = '<div class="empty" style="padding:16px">Keine Person gefunden</div>';
+    return;
+  }
+  list.innerHTML = persons.map(p => {
+    const sex  = p.sex || 'U';
+    const by   = p.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '';
+    const dy   = p.death?.date?.match(/\b(\d{4})\b/)?.[1] || '';
+    const years = by || dy ? `(${by || '?'}–${dy || ''})` : '';
+    return `<div class="person-row" style="cursor:pointer" data-action="selectMapPerson" data-pid="${p.id}">
+      <div class="p-avatar sex-${sex.toLowerCase()}">${sex === 'F' ? '♀' : sex === 'M' ? '♂' : '⚬'}</div>
+      <div class="p-info">
+        <div class="p-name">${_mesc(p.name || p.id)}</div>
+        ${years ? `<div class="p-meta">${years}</div>` : ''}
+      </div>
+      <span class="p-arrow">›</span>
+    </div>`;
+  }).join('');
+}
 
-  document.addEventListener('click', e => {
-    if (!inp.contains(e.target) && !list.contains(e.target))
-      list.style.display = 'none';
-  });
+function selectMapPerson(personId) {
+  _mapPersonId = personId;
+  const p = AppState.db.individuals[personId];
+  const btn = document.getElementById('map-person-btn');
+  if (btn) btn.textContent = p?.name || personId;
+  closeModal('modalMapPerson');
+  _renderPersonModus(_mapPersonId);
 }
 
 // ─────────────────────────────────────
@@ -339,9 +357,9 @@ function showPersonOnMap(personId) {
   bnavTab('places');
   switchPlacesSubTab('karte');
   setTimeout(() => {
-    const inp = document.getElementById('map-person-input');
     const p   = AppState.db.individuals[personId];
-    if (inp && p) inp.value = p.name || personId;
+    const btn = document.getElementById('map-person-btn');
+    if (btn && p) btn.textContent = p.name || personId;
     switchMapMode('person');
   }, 120);
 }

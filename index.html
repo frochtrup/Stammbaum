@@ -1318,6 +1318,20 @@
 <script src="onedrive-import.js"></script>
 <script src="onedrive.js"></script>
 
+<!-- Karten Person-Picker Modal -->
+<div class="modal-overlay" id="modalMapPerson">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Person wählen</div>
+    <div class="sheet-body" style="padding:0">
+      <div class="search-wrap" style="padding:8px 16px 4px">
+        <input class="search-input" id="mapPersonSearch" type="search" placeholder="Name suchen…" autocomplete="off" data-input="filterMapPersonList">
+      </div>
+      <div id="mapPersonList" style="overflow-y:auto;max-height:55vh;padding-bottom:16px"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Karten-Container: direkt in body (position:fixed, unabhängig von v-main overflow) -->
 <div id="mapContainer" style="display:none">
   <div id="map-controls">
@@ -1325,11 +1339,8 @@
       <button type="button" id="map-mode-orte"   class="map-mode-btn active" data-action="switchMapMode" data-mode="orte">Alle Orte</button>
       <button type="button" id="map-mode-person" class="map-mode-btn"        data-action="switchMapMode" data-mode="person">Person</button>
     </div>
-    <div id="map-person-picker" class="search-wrap" style="display:none; padding:6px 16px 4px;">
-      <div class="place-input-wrap">
-        <input id="map-person-input" class="search-input" type="search" placeholder="Person suchen…" autocomplete="off">
-        <div id="map-person-dropdown" class="place-dropdown"></div>
-      </div>
+    <div id="map-person-picker" style="display:none; padding:4px 16px 6px;">
+      <button id="map-person-btn" class="btn" style="width:100%;text-align:left;padding:7px 12px;font-size:0.9rem" data-action="openMapPersonPicker">Person wählen…</button>
     </div>
   </div>
   <div id="map-offline-banner" class="map-offline-banner" style="display:none">Kartenhintergrund nicht verfügbar (offline) — Pins sichtbar</div>

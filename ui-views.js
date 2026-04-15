@@ -585,6 +585,8 @@ const _CLICK_MAP = {
   switchMapMode:           el => switchMapMode(el.dataset.mode),
   closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
   showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
+  openMapPersonPicker:     ()  => openMapPersonPicker(),
+  selectMapPerson:         el => selectMapPerson(el.dataset.pid),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
   unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
   showPersonForm:          el => showPersonForm(el.dataset.pid),
@@ -759,6 +761,7 @@ document.addEventListener('input', e => {
   else if (action === 'filterPlaces')    filterPlacesDebounced(el.value);
   else if (action === 'filterHoefe')     filterHoefeDebounced(el.value);
   else if (action === 'runGlobalSearch') runGlobalSearch(el.value);
+  else if (action === 'filterMapPersonList') filterMapPersonList();
   else if (action === 'renderRelPicker') renderRelPicker(el.value);
   else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
   else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
