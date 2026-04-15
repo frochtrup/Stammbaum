@@ -9,6 +9,23 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-15 — Kartenansicht (sw v244)
+
+- **sw v244** `feat`: Kartenansicht — `ui-views-map.js` (neu), Leaflet 1.9.4 lokal
+  - **Toggle "Orte|Höfe|Karte"** im Orte-Tab — dritter Punkt in `switchPlacesSubTab()`
+  - **Modus "Alle Orte"**: CircleMarker für alle Orte mit Koordinaten; Größe nach Personenzahl (3 Stufen: 1–4 / 5–19 / 20+); Tooltip mit Name + Personenzahl
+  - **Exploration-Panel**: Klick auf Pin → Bottom-Sheet mit Personenliste (Name, Ereignistyp, Jahr); Klick auf Person → Personen-Detail
+  - **Modus "Personenbiografie"**: Person-Picker (Suche + Dropdown); alle Geo-Events als nummerierte Pins + gestrichelte Verbindungslinie chronologisch sortiert; Popup pro Pin mit Ereignisdetail
+  - **"📍 Karte"-Button** in Personen-Detailansicht (nur wenn Person Geo-Events hat) → öffnet direkt Biografie-Modus
+  - **`_buildPlacePersonIndex()`** — einmaliger Cache: Ort → `[{personId, role, date}]`; `invalidatePlacePersonIndex()` zum Zurücksetzen
+  - **Leaflet lokal**: `leaflet.js` + `leaflet.css` direkt im Projektordner (kein CDN, CSP-sicher)
+  - **Dark-Theme-Overrides**: Popups, Tooltips, Zoom-Controls, Attribution in App-Farbpalette
+  - **CSP erweitert**: `img-src` um `https://*.tile.openstreetmap.org`
+  - **Offline-Banner**: erscheint wenn `navigator.onLine === false`
+  - SW PRECACHE: `leaflet.js`, `leaflet.css`, `ui-views-map.js` ergänzt
+
+---
+
 ### Session 2026-04-11 — Phase 3 Bugfixes: GRAMPS Export GRAMPS-kompatibel (sw v198–v204)
 
 - **sw v198** `fix`: DTD-Reihenfolge `name*` vor `gender` (kein Effekt — war nicht die Ursache)

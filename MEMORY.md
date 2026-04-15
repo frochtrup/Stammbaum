@@ -33,7 +33,9 @@
 - `gramps-parser.js` — `parseGRAMPS(file)` async → db (Phase 2, read-only GRAMPS XML import)
 - `gramps-writer.js` — `writeGRAMPS(db)` → gzip Blob (Phase 3); Debug-Funktionen → `debug-gramps.js`
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v242)
+- `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
+- `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v244)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -46,7 +48,7 @@
 - `MEMORY.md` — dieses Dokument (auch unter `.claude/projects/.../memory/MEMORY.md`)
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-04-14
+## Aktueller Stand — zuletzt aktualisiert: 2026-04-15
 
 **Version 4.0 abgeschlossen — auf `main` gemergt (2026-03-30)**
 **Version 5.0 abgeschlossen — auf `main` gemergt (2026-04-05)**
@@ -75,7 +77,8 @@
 - **compactPlace() (sw v236):** `gedcom.js`; leere Komma-Segmente in Ortsstrings für Darstellung ausblenden (`", Ochtrup, , , NRW, "` → `"Ochtrup, NRW"`); Ortsliste sortiert nach kompaktem Namen; Formulare unverändert
 - **Notizen-Modal (sw v238–v242):** `modalNote` Bottom-Sheet; `openNoteModal(type, id)` / `saveNoteModal()` in `ui-views.js`; ersetzt Inline-Textarea-Ansatz; zeigt eigene Notiz + alle noteRefs editierbar; `_noteRefUsers(ref)` zeigt referenzierende Personen/Familien; "× Entfernen" löscht noteRef-Verknüpfung; `_pruneOrphanNotes()` löscht verwaiste db.notes-Einträge wenn letzte Referenz entfernt wird
 - **Quellen-Notizen (sw v237):** `showSourceDetail` zeigt Notizen-Sektion mit `openNoteModal('source', id)`; `s.text` als Notizfeld
-- **Aktuelle sw-Version: v242** / Cache: `stammbaum-v242`
+- **Kartenansicht (sw v244):** Leaflet 1.9.4 lokal; Toggle "Orte|Höfe|Karte" im Orte-Tab; `ui-views-map.js`; Modus 1 "Alle Orte" — CircleMarker nach Personenzahl + Exploration-Panel (Bottom-Sheet); Modus 2 "Personenbiografie" — nummerierte Stationen + Verbindungslinie; Person-Picker; "📍 Karte" Button in Personen-Detail; CSP um OSM-Tiles erweitert
+- **Aktuelle sw-Version: v244** / Cache: `stammbaum-v244`
 - Git: Branch `v7-dev`
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
@@ -122,7 +125,8 @@ Verbliebene Deltas (by design, kein Datenverlust):
 - **IDB-Keys pfad-basiert**: `'img:' + filePath` (sw v105) — index-basierte Keys deprecated
 - **`od_filemap` DEPRECATED** (sw v99): nur noch Legacy-Fallback
 - **Bevorzugtes Medium**: `m.prim` / `_PRIM Y` → Hero in Detailansicht (sw v96)
-- **Event-Delegation**: `_CLICK_MAP` (28 Aktionen), `data-action`/`data-change`/`data-input` (sw v137)
+- **Event-Delegation**: `_CLICK_MAP` (31 Aktionen), `data-action`/`data-change`/`data-input` (sw v137; +`switchMapMode`/`closeMapPanel`/`showPersonOnMap` sw v244)
+- **Kartenansicht**: `_placePersonIndex{}` (Ort→Personen-Cache), `invalidatePlacePersonIndex()` nach Datenänderung; Leaflet lokal; `#map-leaflet` als Leaflet-Ziel (nicht `#mapContainer`!)
 - **Offline-Sync-Indikator**: `#sync-indicator` Floating Pill, `updateChangedIndicator()` (sw v152)
 - **OneDrive-Startsequenz**: Session-Token → direkt laden; kein Token → Auswahl-Dialog (sw v151)
 - **Familien-OBJE**: `f.marr.media[]` mit Feld `titl` (nicht `title`) — NICHT in `f.marr._extra`
@@ -166,7 +170,7 @@ Austauschformat mit GRAMPS: **GRAMPS XML** (.gramps, gzip + XML) — GEDCOM-Expo
 **Phase 4:** Quick-Add UI, Foto-direkt-zu-Person, Tag-Editor
 
 **Offen aus v6 (P3–P5):**
-- Zeitleiste (`ui-timeline.js`), Nachkommen-Baum, Karten-Ansicht
+- Zeitleiste (`ui-timeline.js`), Nachkommen-Baum
 - Statistik-Dashboard, Duplikat-Erkennung
 - touchmove-Throttling, Suche indexieren, Source-Liste Virtual Scroll
 - initAutocomplete() generisch zusammenführen (P4.5)

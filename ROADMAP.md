@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v242 / Cache: `stammbaum-v242`
+**Aktuelle sw-Version:** v244 / Cache: `stammbaum-v244`
 
 ---
 
@@ -40,6 +40,7 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 3 | GRAMPS XML Export Round-trip — `gramps-writer.js`, 60034 Deep-Test-Checks ✓ | v193–v204 |
 | 3b | UI: Höfe-Ansicht, RESI-Adress-Autocomplete, Bewohner-Formular | v224–v228 |
 | 4a | UX: `compactPlace()` Ortsdaten-Darstellung; Notizen-Modal (Person/Familie/Quelle); noteRefs editierbar + löschbar | v236–v242 |
+| 4b | Kartenansicht: Leaflet 1.9.4 lokal; Modus "Alle Orte" + "Personenbiografie"; Exploration-Panel | v244 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
 
@@ -118,7 +119,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 - [ ] Zeitleiste (`ui-timeline.js`)
 - [ ] Nachkommen-Baum (top-down SVG)
-- [ ] Karten-Ansicht (Apple Maps Link-Cluster)
+- [x] **Karten-Ansicht** ✅ sw v244 — Leaflet 1.9.4; Alle Orte als Pins + Exploration-Panel; Personenbiografie mit Stationen + Linie; Person-Picker; "Auf Karte" Button in Personen-Detail
 - [ ] Statistik-Dashboard
 - [ ] Duplikat-Erkennung (Name + Geburtsjahr ±2)
 - [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum
