@@ -339,6 +339,36 @@ function dedupOpenMerge(el) {
   openModal('modalMerge');
 }
 
+// Elternnamen einer Person aus famc[] auflesen
+function _dedupParents(p) {
+  const lines = [];
+  for (const fc of (p.famc || [])) {
+    const f = AppState.db.families[fc.famId];
+    if (!f) continue;
+    const parts = [];
+    const husb = f.husb && AppState.db.individuals[f.husb];
+    const wife = f.wife && AppState.db.individuals[f.wife];
+    if (husb) parts.push(husb.name || husb.id);
+    if (wife) parts.push(wife.name || wife.id);
+    if (parts.length) lines.push(parts.join(' & '));
+  }
+  return lines.join('; ') || '';
+}
+
+// Partnernamen einer Person aus fams[] auflesen
+function _dedupPartners(p) {
+  const names = [];
+  for (const famId of (p.fams || [])) {
+    const f = AppState.db.families[famId];
+    if (!f) continue;
+    const otherId = f.husb === p.id ? f.wife : f.husb;
+    const other = otherId && AppState.db.individuals[otherId];
+    if (other) names.push(other.name || other.id);
+    else if (!otherId) names.push('(unbekannt)');
+  }
+  return names.join(', ') || '';
+}
+
 function _dedupRenderMergeBody(pair) {
   const el = document.getElementById('merge-body');
   if (!el) return;
@@ -368,6 +398,8 @@ function _dedupRenderMergeBody(pair) {
         ${_row('Geb. Datum', pA.birth?.date,                          pB.birth?.date)}
         ${_row('Geb. Ort',   compactPlace(pA.birth?.place || ''),     compactPlace(pB.birth?.place || ''))}
         ${_row('Tod Datum',  pA.death?.date,                          pB.death?.date)}
+        ${_row('Eltern',     _dedupParents(pA),                       _dedupParents(pB))}
+        ${_row('Partner',    _dedupPartners(pA),                      _dedupPartners(pB))}
         ${_row('ID',         pA.id,                                   pB.id)}
       </tbody>
     </table>
