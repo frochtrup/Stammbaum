@@ -120,23 +120,6 @@
     </div>
     <div id="placeList"></div>
     <div id="hofList" style="display:none"></div>
-    <div id="mapContainer" style="display:none; position:relative;">
-      <div id="map-controls">
-        <div class="map-mode-bar">
-          <button type="button" id="map-mode-orte"   class="map-mode-btn active" data-action="switchMapMode" data-mode="orte">Alle Orte</button>
-          <button type="button" id="map-mode-person" class="map-mode-btn"        data-action="switchMapMode" data-mode="person">Person</button>
-        </div>
-        <div id="map-person-picker" class="search-wrap" style="display:none; padding:6px 16px 4px;">
-          <div class="place-input-wrap">
-            <input id="map-person-input" class="search-input" type="search" placeholder="Person suchen…" autocomplete="off">
-            <div id="map-person-dropdown" class="place-dropdown"></div>
-          </div>
-        </div>
-      </div>
-      <div id="map-offline-banner" class="map-offline-banner" style="display:none">Kartenhintergrund nicht verfügbar (offline) — Pins sichtbar</div>
-      <div id="map-explore-panel" class="map-explore-panel" style="display:none"></div>
-      <div id="map-leaflet"></div>
-    </div>
   </div>
 
   <div id="tab-search" style="display:none">
@@ -1334,5 +1317,24 @@
 <script src="onedrive-auth.js"></script>
 <script src="onedrive-import.js"></script>
 <script src="onedrive.js"></script>
+
+<!-- Karten-Container: direkt in body (position:fixed, unabhängig von v-main overflow) -->
+<div id="mapContainer" style="display:none">
+  <div id="map-controls">
+    <div class="map-mode-bar">
+      <button type="button" id="map-mode-orte"   class="map-mode-btn active" data-action="switchMapMode" data-mode="orte">Alle Orte</button>
+      <button type="button" id="map-mode-person" class="map-mode-btn"        data-action="switchMapMode" data-mode="person">Person</button>
+    </div>
+    <div id="map-person-picker" class="search-wrap" style="display:none; padding:6px 16px 4px;">
+      <div class="place-input-wrap">
+        <input id="map-person-input" class="search-input" type="search" placeholder="Person suchen…" autocomplete="off">
+        <div id="map-person-dropdown" class="place-dropdown"></div>
+      </div>
+    </div>
+  </div>
+  <div id="map-offline-banner" class="map-offline-banner" style="display:none">Kartenhintergrund nicht verfügbar (offline) — Pins sichtbar</div>
+  <div id="map-explore-panel" class="map-explore-panel" style="display:none"></div>
+  <div id="map-leaflet"></div>
+</div>
 </body>
 </html>

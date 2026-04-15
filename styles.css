@@ -295,12 +295,17 @@ body.fc-mode #fcGenBtns { display: flex; }
 }
 
 /* ── Karten-Container ───────────────────── */
+/* Direkt in body (außerhalb v-main), immer position:fixed */
 #mapContainer {
-  position: relative;
-  height: calc(100dvh - var(--topbar-h, 52px) - 57px - 40px - env(safe-area-inset-bottom, 0px));
+  position: fixed;
+  /* Mobile: unterhalb Topbar + Toggle-Bar, oberhalb Bottom-Nav */
+  top: calc(var(--topbar-h, 52px) + 40px);
+  left: 0; right: 0;
+  bottom: calc(57px + env(safe-area-inset-bottom, 0px));
   overflow: hidden;
+  z-index: 5;
 }
-#map-leaflet { width: 100%; height: 100%; min-height: inherit; }
+#map-leaflet { width: 100%; height: 100%; }
 
 /* Leaflet Dark-Theme-Overrides */
 .leaflet-container {
@@ -407,9 +412,9 @@ body.fc-mode #fcGenBtns { display: flex; }
 .map-panel-list { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .map-panel-row  { cursor: pointer; }
 
-/* Desktop */
-body.desktop-mode #mapContainer {
-  height: calc(100dvh - var(--topbar-h, 52px) - 40px);
+/* Desktop (karte aktiv: rechtes Panel, volle Höhe) */
+body.desktop-mode.places-karte #mapContainer {
+  top: 0; bottom: 0; left: 360px; right: 0;
 }
 
 /* ── Place Autocomplete ─────────────────── */
@@ -926,13 +931,6 @@ body.desktop-mode #mapContainer {
   #desktopPlaceholder { display: none; }
   body.desktop-mode #desktopPlaceholder { display: flex; }
   body.desktop-mode.has-detail #desktopPlaceholder { display: none; }
-  /* Karte im rechten Panel */
-  body.desktop-mode.places-karte #mapContainer {
-    position: fixed !important;
-    left: 360px; right: 0; top: 0; bottom: 0;
-    height: 100vh !important;
-    z-index: 5;
-  }
   body.desktop-mode.places-karte #desktopPlaceholder { display: none; }
   body.desktop-mode #v-detail { background: var(--bg); }
   body.desktop-mode.places-karte:not(.has-detail) #v-detail { display: none !important; }
