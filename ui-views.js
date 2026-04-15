@@ -116,16 +116,17 @@ function bnavTree() {
 
 function switchPlacesSubTab(sub) {
   UIState._placesSubTab = sub;
-  document.getElementById('placeList').style.display           = sub === 'orte'  ? '' : 'none';
-  document.getElementById('hofList').style.display             = sub === 'hoefe' ? '' : 'none';
-  document.getElementById('place-search-orte').style.display  = sub === 'orte'  ? '' : 'none';
-  document.getElementById('place-search-hoefe').style.display = sub === 'hoefe' ? '' : 'none';
-  const orteBtn  = document.getElementById('toggle-orte');
-  const hoefeBtn = document.getElementById('toggle-hoefe');
-  if (sub === 'orte')  { orteBtn.classList.add('active');  hoefeBtn.classList.remove('active'); }
-  else                 { hoefeBtn.classList.add('active'); orteBtn.classList.remove('active'); }
+  document.getElementById('placeList').style.display           = sub === 'orte'   ? '' : 'none';
+  document.getElementById('hofList').style.display             = sub === 'hoefe'  ? '' : 'none';
+  document.getElementById('mapContainer').style.display        = sub === 'karte'  ? '' : 'none';
+  document.getElementById('place-search-orte').style.display  = sub === 'orte'   ? '' : 'none';
+  document.getElementById('place-search-hoefe').style.display = sub === 'hoefe'  ? '' : 'none';
+  ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
+    document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
+  });
   if (sub === 'hoefe') renderHofList();
-  else renderPlaceList();
+  else if (sub === 'orte') renderPlaceList();
+  else if (sub === 'karte') initOrRefreshPlaceMap();
 }
 
 // Bottom-Nav: Listen-Tabs
@@ -447,6 +448,7 @@ function renderTab() {
   else if (AppState.currentTab === 'sources') { renderSourceList(); renderRepoList(); }
   else if (AppState.currentTab === 'places') {
     if (UIState._placesSubTab === 'hoefe') renderHofList();
+    else if (UIState._placesSubTab === 'karte') initOrRefreshPlaceMap();
     else renderPlaceList();
   }
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
@@ -558,6 +560,9 @@ const _CLICK_MAP = {
   saveHofBewohner:         el => saveHofBewohner(el.dataset.addr),
   cancelHofBewohner:       ()  => cancelHofBewohner(),
   switchPlacesSubTab:      el => switchPlacesSubTab(el.dataset.subtab),
+  switchMapMode:           el => switchMapMode(el.dataset.mode),
+  closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
+  showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
   unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
   showPersonForm:          el => showPersonForm(el.dataset.pid),

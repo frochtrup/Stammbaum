@@ -303,10 +303,15 @@ function showDetail(id, pushHistory = true) {
   </div>`;
 
   // Life data
+  const _hasGeo = [p.birth, p.chr, p.death, p.buri, ...p.events]
+    .some(ev => ev && parseFloat(ev.lati) && parseFloat(ev.long));
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
-      <button class="section-add" data-action="showEventForm" data-pid="${id}">+ Ereignis</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${_hasGeo ? `<button class="section-add" data-action="showPersonOnMap" data-pid="${id}" style="color:var(--gold-dim)">📍 Karte</button>` : ''}
+        <button class="section-add" data-action="showEventForm" data-pid="${id}">+ Ereignis</button>
+      </div>
     </div>`;
 
   (p.extraNames || []).forEach((en, enIdx) => {

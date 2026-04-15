@@ -11,11 +11,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stammbaum">
 <meta name="theme-color" content="#c8a84a">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Stammbaum</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="leaflet.css">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -108,6 +109,7 @@
       <div class="places-toggle-bar">
         <button type="button" id="toggle-orte"  class="places-toggle-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
         <button type="button" id="toggle-hoefe" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
+        <button type="button" id="toggle-karte" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="karte">Karte</button>
       </div>
       <div id="place-search-orte" class="search-wrap">
         <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
@@ -118,6 +120,23 @@
     </div>
     <div id="placeList"></div>
     <div id="hofList" style="display:none"></div>
+    <div id="mapContainer" style="display:none; position:relative;">
+      <div id="map-controls">
+        <div class="map-mode-bar">
+          <button type="button" id="map-mode-orte"   class="map-mode-btn active" data-action="switchMapMode" data-mode="orte">Alle Orte</button>
+          <button type="button" id="map-mode-person" class="map-mode-btn"        data-action="switchMapMode" data-mode="person">Person</button>
+        </div>
+        <div id="map-person-picker" class="search-wrap" style="display:none; padding:6px 16px 4px;">
+          <div class="place-input-wrap">
+            <input id="map-person-input" class="search-input" type="search" placeholder="Person suchen…" autocomplete="off">
+            <div id="map-person-dropdown" class="place-dropdown"></div>
+          </div>
+        </div>
+      </div>
+      <div id="map-offline-banner" class="map-offline-banner" style="display:none">Kartenhintergrund nicht verfügbar (offline) — Pins sichtbar</div>
+      <div id="map-explore-panel" class="map-explore-panel" style="display:none"></div>
+      <div id="map-leaflet"></div>
+    </div>
   </div>
 
   <div id="tab-search" style="display:none">
@@ -1251,6 +1270,7 @@
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
+<script src="leaflet.js"></script>
 <script src="gedcom.js"></script>
 <script src="gedcom-parser.js"></script>
 <script src="gedcom-writer.js"></script>
@@ -1303,6 +1323,7 @@
 <script src="ui-views-source.js"></script>
 <script src="ui-views-place.js"></script>
 <script src="ui-views-hof.js"></script>
+<script src="ui-views-map.js"></script>
 <script src="ui-dedup.js"></script>
 <script src="ui-fanchart.js"></script>
 <script src="ui-forms.js"></script>
