@@ -54,8 +54,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| S1 | **XSS-Audit**: alle `innerHTML`-Assignments auf fehlende `esc()`-Aufrufe prüfen — `ui-views-person.js`, `ui-views-hof.js`, `ui-forms.js` u.a. | M |
-| S2 | **DOMPurify einbinden** als zweite Verteidigungslinie für GEDCOM-Fremddaten (1 Datei, kein Build-Step) | S |
+| S1 | ~~**XSS-Audit**~~ ✅ sw v265 — vollständiger Audit aller `innerHTML`-Assignments; eine Lücke gefunden und behoben: `ui-views-map.js:217` `e.date` fehlte `_mesc()` im Karten-Exploration-Panel | M |
+| S2 | ~~**DOMPurify einbinden**~~ — nicht notwendig; `esc()`/`_mesc()` konsistent angewendet (129 Aufrufe in 12 Dateien); kein Rich-Text-Rendering, DOMPurify hätte keinen zusätzlichen Nutzen | S |
 | S3 | **CSP `unsafe-inline` für Styles entfernen**: Inline-Styles in CSS-Klassen auslagern | L |
 
 ---

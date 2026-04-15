@@ -214,7 +214,7 @@ function _showPersonEventsAtPlace(p, placeName, allEvs) {
       <span class="p-arrow">›</span>
     </div>`;
   for (const e of eventsHere) {
-    const meta = [e.date, e.addr ? _mesc(e.addr) : ''].filter(Boolean).join(' · ');
+    const meta = [e.date ? _mesc(e.date) : '', e.addr ? _mesc(e.addr) : ''].filter(Boolean).join(' · ');
     html += `<div class="person-row" style="padding-left:52px;cursor:default">
       <div class="p-info">
         <div class="p-name" style="font-size:0.9rem">${_mesc(e.role)}</div>
