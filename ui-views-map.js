@@ -219,6 +219,7 @@ function _showPersonEventsAtPlace(p, placeName, allEvs) {
       <div class="p-info">
         <div class="p-name" style="font-size:0.9rem">${_mesc(e.role)}</div>
         ${meta ? `<div class="p-meta">${meta}</div>` : ''}
+        ${e.desc ? `<div class="p-meta">${_mesc(e.desc)}</div>` : ''}
         ${e.note ? `<div class="p-meta" style="font-style:italic">${_mesc(e.note)}</div>` : ''}
       </div>
     </div>`;
@@ -292,11 +293,11 @@ function _renderPersonModus(personId) {
 function _personGeoEvents(p) {
   const evs = [];
 
-  function addEv(place, lati, long, date, role, note, addr) {
+  function addEv(place, lati, long, date, role, note, addr, desc) {
     const lat = parseFloat(lati);
     const lng = parseFloat(long);
     if (!place || !lat || !lng || isNaN(lat) || isNaN(lng)) return;
-    evs.push({ place, lat, lng, date: date || '', role, note: note || '', addr: addr || '' });
+    evs.push({ place, lat, lng, date: date || '', role, note: note || '', addr: addr || '', desc: desc || '' });
   }
 
   addEv(p.birth.place, p.birth.lati, p.birth.long, p.birth.date, 'Geburt',     p.birth.note);
@@ -304,7 +305,8 @@ function _personGeoEvents(p) {
   for (const ev of p.events)
     addEv(ev.place, ev.lati, ev.long, ev.date,
           ev.eventType || EVENT_LABELS[ev.type] || ev.type || 'Ereignis',
-          ev.note, ev.addr);
+          ev.note, ev.addr,
+          ev.type === 'EVEN' ? (ev.value || '') : '');
   addEv(p.death.place, p.death.lati, p.death.long, p.death.date, 'Tod',        p.death.note);
   addEv(p.buri.place,  p.buri.lati,  p.buri.long,  p.buri.date,  'Beerdigung', p.buri.note);
 
