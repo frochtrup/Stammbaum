@@ -308,7 +308,7 @@ function _processLoadedText(text, filename) {
   AppState.db = parseGEDCOM(text);
   if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
   }
   // GRAMPS-Export erkennen und Hinweis anzeigen
   const _gd = detectGRAMPS(text);

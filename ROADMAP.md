@@ -56,7 +56,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | S1 | ~~**XSS-Audit**~~ ✅ sw v265 — vollständiger Audit aller `innerHTML`-Assignments; eine Lücke gefunden und behoben: `ui-views-map.js:217` `e.date` fehlte `_mesc()` im Karten-Exploration-Panel | M |
 | S2 | ~~**DOMPurify einbinden**~~ — nicht notwendig; `esc()`/`_mesc()` konsistent angewendet (129 Aufrufe in 12 Dateien); kein Rich-Text-Rendering, DOMPurify hätte keinen zusätzlichen Nutzen | S |
-| S3 | **CSP `unsafe-inline` für Styles entfernen**: Inline-Styles in CSS-Klassen auslagern | L |
+| S3 | ~~**CSP `unsafe-inline` für Styles entfernen**~~ — gestrichen; ~445 `style=`-Attribute (228 index.html + 217 JS), `element.style.*` in JS ist CSP-unberührt; Sicherheitsgewinn gering (kein JS-Execution via CSS); `script-src 'self'` ohne `unsafe-inline` ist bereits aktiv | L |
 
 ---
 
@@ -99,7 +99,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| U1 | **Fehlermeldungen nutzerfreundlich**: Parse-Fehler, IDB-Fehler als Klartext-Toast statt Konsolen-Pointer | S |
+| U1 | ~~**Fehlermeldungen nutzerfreundlich**~~ ✅ sw v267 — `— Details in der Konsole` in 4 Dateien → `— Datei wurde trotzdem vollständig geladen`; `e.message`-Toasts (OneDrive, Speichern, Öffnen) behalten — liefern nützlichen Kontext | S |
 | U2 | **Modal-Stack klären**: Escape-Verhalten bei mehreren offenen Modals (`#modal` + `#modalNote` + `#modalDedup`) | S |
 | U3 | **`confirm()` → Modal**: 6+ Stellen → `confirmModal(msg)` Promise; Lösch-UX vereinheitlichen | M |
 | U4 | **`showToast(type)`**: `type ∈ {success, warning, error}` + CSS-Differenzierung | S |

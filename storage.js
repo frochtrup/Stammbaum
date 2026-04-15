@@ -8,7 +8,7 @@ function revertToSaved() {
   AppState.db = parseGEDCOM(orig);
   if (AppState.db.parseErrors?.length) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
   }
   AppState.changed = false;
   UIState._placesCache = null;
@@ -121,7 +121,7 @@ async function tryAutoLoad() {
       AppState.db = parseGEDCOM(saved);
       if (AppState.db.parseErrors?.length) {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
       AppState.db.extraPlaces = loadExtraPlaces();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
@@ -140,7 +140,7 @@ async function tryAutoLoad() {
       AppState.db = parseGEDCOM(saved);
       if (AppState.db.parseErrors?.length) {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Details in der Konsole');
+        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
       AppState.db.extraPlaces = loadExtraPlaces();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
