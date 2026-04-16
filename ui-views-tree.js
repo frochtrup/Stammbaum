@@ -275,7 +275,7 @@ function treeNavBack() {
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
 function _treeShortName(p, isCenter) {
   const nm = p.name || p.id || '';
-  const limit = isCenter ? 26 : 18;
+  const limit = isCenter ? 26 : 22;
   if (nm.length <= limit) return nm;
   const given = p.given || '';
   const surn  = p.surname || '';

@@ -103,9 +103,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U2 | **Modal-Stack klären**: Escape-Verhalten bei mehreren offenen Modals (`#modal` + `#modalNote` + `#modalDedup`) | S |
 | U3 | **`confirm()` → Modal**: 6+ Stellen → `confirmModal(msg)` Promise; Lösch-UX vereinheitlichen | M |
 | U4 | **`showToast(type)`**: `type ∈ {success, warning, error}` + CSS-Differenzierung | S |
-| U5 | **Namens-Truncation im Baum**: 18 → 24 Zeichen für reguläre Karten | XS |
+| U5 | ~~**Namens-Truncation im Baum**~~ ✅ sw v269 — Limit 18 → 22 Zeichen (`.tree-name` hat `line-clamp:2` bei W=96px → ~26 Zeichen darstellbar; 22 als sicherer Wert) | XS |
 | U6 | **`handleError()` zentralisieren**: try/catch → `handleError(e, context, userMsg)` | M |
-| U7 | **Advanced Search**: Filter nach Geburtsort / Zeitraum / Familie als ausklappbare Optionen | L |
+| U7 | ~~**Advanced Search**~~ ✅ sw v269 — Ausklappbares Panel (⊞-Button): Geschlecht (M/F/U/alle) + Geburtsort-Freitext; `filterPersons()` um beide Kriterien erweitert; `toggleAdvFilter()` setzt Panel-Filter beim Schließen zurück; Familie-Filter bleibt offen (komplex, eigener Sprint) | L |
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
 
 ---

@@ -716,7 +716,7 @@ function saveExtraPlaces() {
   try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
 }
 
-const _applyPersonFilterDebounced = debounce((q, from, to) => filterPersons(q, from, to), 200);
+const _applyPersonFilterDebounced = debounce((q, from, to, sex, birthPlace) => filterPersons(q, from, to, sex, birthPlace), 200);
 const filterFamiliesDebounced = debounce(filterFamilies, 200);
 const filterSourcesDebounced  = debounce(filterSources,  200);
 const filterPlacesDebounced   = debounce(filterPlaces,   200);

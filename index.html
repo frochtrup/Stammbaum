@@ -72,7 +72,20 @@
           data-input="applyPersonFilter">
         <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" data-action="clearYearFilter" title="Jahresfilter zurücksetzen">✕</button>
         <button type="button" id="personSortBtn" data-action="togglePersonSort" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
+        <button type="button" id="advFilterToggle" data-action="toggleAdvFilter" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Erweiterte Filter">⊞</button>
         <button type="button" data-action="showPersonMediaBrowser" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
+      </div>
+      <div id="advFilterPanel" style="display:none" class="search-wrap adv-filter-panel">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <select id="sexFilter" data-input="applyPersonFilter" style="flex:0 0 auto;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem">
+            <option value="">Geschlecht: alle</option>
+            <option value="M">Männlich</option>
+            <option value="F">Weiblich</option>
+            <option value="U">Unbekannt</option>
+          </select>
+          <input type="search" id="birthPlaceFilter" placeholder="Geburtsort…" data-input="applyPersonFilter"
+            style="flex:1;min-width:100px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.85rem">
+        </div>
       </div>
     </div>
     <div id="personList"></div>

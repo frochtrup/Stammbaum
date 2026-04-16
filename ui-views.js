@@ -628,6 +628,7 @@ const _CLICK_MAP = {
   openMenuModal:           ()  => { openModal('modalMenu'); _odUpdateUI(); },
   clearYearFilter:         ()  => clearYearFilter(),
   togglePersonSort:        ()  => togglePersonSort(),
+  toggleAdvFilter:         ()  => toggleAdvFilter(),
   showPersonMediaBrowser:  ()  => showPersonMediaBrowser(),
   showFamilyMediaBrowser:  ()  => showFamilyMediaBrowser(),
   scrollToRepo:            ()  => document.getElementById('repoSection').scrollIntoView({behavior:'smooth'}),

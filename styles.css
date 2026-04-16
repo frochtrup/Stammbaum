@@ -504,6 +504,9 @@ body.desktop-mode.places-karte #mapContainer {
 .person-row:active { background: var(--surface2); }
 .person-row.current { background: var(--surface2); box-shadow: inset 3px 0 0 var(--gold); }
 .list-search-header { position: sticky; top: var(--topbar-h, 52px); z-index: 100; background: var(--bg); }
+.adv-filter-panel { border-top: 1px solid var(--border); padding-top: 6px; padding-bottom: 8px; }
+.adv-filter-panel input, .adv-filter-panel select { outline: none; }
+.adv-filter-panel input:focus, .adv-filter-panel select:focus { border-color: var(--gold-dim); }
 .p-avatar {
   width: 44px; height: 44px; border-radius: 50%;
   background: var(--surface2); border: 1px solid var(--border);

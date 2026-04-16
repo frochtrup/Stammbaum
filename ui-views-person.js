@@ -209,12 +209,14 @@ function _updateFamilyListCurrent(id) {
 }
 
 function applyPersonFilter() {
-  const q = (document.getElementById('searchInput')?.value) || '';
-  const from = parseInt(document.getElementById('yearFrom')?.value) || null;
-  const to   = parseInt(document.getElementById('yearTo')?.value)   || null;
-  const clearBtn = document.getElementById('yearFilterClear');
+  const q          = (document.getElementById('searchInput')?.value)      || '';
+  const from       = parseInt(document.getElementById('yearFrom')?.value)  || null;
+  const to         = parseInt(document.getElementById('yearTo')?.value)    || null;
+  const sex        = document.getElementById('sexFilter')?.value           || '';
+  const birthPlace = (document.getElementById('birthPlaceFilter')?.value)  || '';
+  const clearBtn   = document.getElementById('yearFilterClear');
   if (clearBtn) clearBtn.style.display = (from || to) ? '' : 'none';
-  _applyPersonFilterDebounced(q, from, to);
+  _applyPersonFilterDebounced(q, from, to, sex, birthPlace);
 }
 
 function clearYearFilter() {
@@ -223,6 +225,23 @@ function clearYearFilter() {
   if (f) f.value = '';
   if (t) t.value = '';
   applyPersonFilter();
+}
+
+function toggleAdvFilter() {
+  const panel  = document.getElementById('advFilterPanel');
+  const toggle = document.getElementById('advFilterToggle');
+  if (!panel) return;
+  const open = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  if (toggle) toggle.style.color = open ? 'var(--gold-dim)' : 'var(--text-dim)';
+  if (!open) {
+    // Panel geschlossen → Adv-Filter zurücksetzen
+    const sf = document.getElementById('sexFilter');
+    const bp = document.getElementById('birthPlaceFilter');
+    if (sf) sf.value = '';
+    if (bp) bp.value = '';
+    applyPersonFilter();
+  }
 }
 
 function _buildSearchIndex() {
@@ -239,20 +258,31 @@ function _buildSearchIndex() {
   UIState._searchIndexDirty = false;
 }
 
-function filterPersons(q, yearFrom, yearTo) {
-  const lower = q.toLowerCase().trim();
+function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
+  const lower      = q.toLowerCase().trim();
+  const lowerPlace = birthPlace.toLowerCase().trim();
   const all = Object.values(AppState.db.individuals);
 
   if (lower && UIState._searchIndexDirty) _buildSearchIndex();
 
   const filtered = all.filter(p => {
-    // Jahresfilter (Geburtsjahr) — nutzt gedDateSortKey für korrekte FROM/TO/BET-Auflösung
+    // Geschlechtsfilter
+    if (sex) {
+      if (sex === 'U') { if (p.sex && p.sex !== 'U') return false; }
+      else             { if ((p.sex || 'U') !== sex) return false; }
+    }
+    // Geburtsjahr-Bereich
     if (yearFrom || yearTo) {
       const key = gedDateSortKey(p.birth.date);
-      const yr = key ? Math.floor(key / 10000) : null;
+      const yr  = key ? Math.floor(key / 10000) : null;
       if (!yr) return false;
       if (yearFrom && yr < yearFrom) return false;
       if (yearTo   && yr > yearTo)   return false;
+    }
+    // Dedizierter Geburtsort (nur birth.place + chr.place)
+    if (lowerPlace) {
+      const bp = compactPlace(p.birth.place || p.chr.place || '').toLowerCase();
+      if (!bp.includes(lowerPlace)) return false;
     }
     if (!lower) return true;
     return (p._searchStr || '').includes(lower);
