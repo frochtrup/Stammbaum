@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v250 / Cache: `stammbaum-v250`
+**Aktuelle sw-Version:** v269 / Cache: `stammbaum-v269`
 
 ---
 
@@ -54,9 +54,12 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| S1 | ~~**XSS-Audit**~~ ✅ sw v265 — vollständiger Audit aller `innerHTML`-Assignments; eine Lücke gefunden und behoben: `ui-views-map.js:217` `e.date` fehlte `_mesc()` im Karten-Exploration-Panel | M |
-| S2 | ~~**DOMPurify einbinden**~~ — nicht notwendig; `esc()`/`_mesc()` konsistent angewendet (129 Aufrufe in 12 Dateien); kein Rich-Text-Rendering, DOMPurify hätte keinen zusätzlichen Nutzen | S |
-| S3 | ~~**CSP `unsafe-inline` für Styles entfernen**~~ — gestrichen; ~445 `style=`-Attribute (228 index.html + 217 JS), `element.style.*` in JS ist CSP-unberührt; Sicherheitsgewinn gering (kein JS-Execution via CSS); `script-src 'self'` ohne `unsafe-inline` ist bereits aktiv | L |
+| S1 | ~~**XSS-Audit**~~ ✅ sw v265 — vollständiger Audit aller `innerHTML`-Assignments; Lücke behoben: `ui-views-map.js:217` `e.date` fehlte `_mesc()` | M |
+| S2 | ~~**DOMPurify**~~ — gestrichen; `esc()`/`_mesc()` konsistent (129 Aufrufe in 12 Dateien); kein Rich-Text | S |
+| S3 | ~~**CSP `unsafe-inline` Styles**~~ — gestrichen; ~445 `style=`-Attribute; `element.style.*` CSP-unberührt; Sicherheitsgewinn gering | L |
+| S4 | **XSS `buildPlacePartsHtml()`** — `ui-views-place.js`: `partsEl.innerHTML = buildPlacePartsHtml(placeId)` ohne esc; `placeId` aus `_placeModes`-Key potenziell user-controlled → DOM-API oder esc-Wrapper | XS |
+| S5 | **GEDCOM aus localStorage entfernen** — `stammbaum_ged` + `stammbaum_ged_backup` liegen klartext in localStorage (`storage-file.js:138,339`); Fallback in `gedcom.js:70` + `storage.js:146` → IDB-only; localStorage-Fallback entfernen | S |
+| S6 | **Redirect-URI fest kodieren** — `onedrive-auth.js:10–12` konstruiert URI dynamisch aus `location.origin + location.pathname`; Phishing-Domain mit identischem Pfad würde OAuth-Callback akzeptieren → URI als Konstante analog zu `OD_CLIENT_ID` | XS |
 
 ---
 
@@ -64,10 +67,12 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| Q1 | ~~**`_hofDateKey()` + `_evDateKey()` zusammenführen**~~ ✅ sw v266 — `evDateKey(d)` in `gedcom.js`; lokale Kopien aus `ui-views-hof.js` und `ui-views-person.js` entfernt | XS |
-| Q2 | ~~**`_renderMediaList()` + `_renderEfMedia()` zusammenführen**~~ — gestrichen; grundlegend unterschiedlich: `_renderMediaList` = Read-only-Referenzliste mit `data-idx`; `_renderEfMedia` = Live-Editor mit zwei Eingabefeldern, mutiert `_efMedia[]` direkt | S |
-| Q3 | ~~**Backward-Compat-Shims entfernen**~~ ✅ sw v268 — AppState-Shims (13) vollständig entfernt (waren ungenutzt); `_navHistory`/`_probandId` → `UIState._navHistory`/`UIState._probandId` migriert (13 Stellen in ui-views.js); formState-Shims (`srcWidgetState`, `_pfExtraNames`, `_efMedia`) behalten — Lesbarkeit gerechtfertigt (50 Verwendungen, tief verschachtelte UIState-Pfade) | M |
-| Q4 | ~~**Getter konsequent durchziehen**~~ — gestrichen; 112 direkte Bracket-Zugriffe in 14 Dateien, viele Patterns nicht trivial ersetzbar (`(f.husb && AppState.db.individuals[f.husb]) || null`), kein funktionaler Unterschied, Risiko > Nutzen | M |
+| Q1 | ~~**`evDateKey()` zentralisieren**~~ ✅ sw v266 | XS |
+| Q2 | ~~**`_renderMediaList()` + `_renderEfMedia()` zusammenführen**~~ — gestrichen; unterschiedliche Kontexte | S |
+| Q3 | ~~**Backward-Compat-Shims bereinigen**~~ ✅ sw v268 | M |
+| Q4 | ~~**Getter konsequent durchziehen**~~ — gestrichen; Risiko > Nutzen | M |
+| Q5 | **`updateStats()` No-op entfernen** — Funktion ist leer (`ui-views.js:479`), wird an 12+ Stellen aufgerufen (ui-forms.js, ui-forms-event.js, ui-views-family.js, storage.js); komplette Bereinigung | XS |
+| Q6 | **`_buildSearchIndex()` sichtbar machen** — `ui-views-person.js:247` wird via `UIState._searchIndexDirty`-Flag aufgerufen, aber nur wenn `lower` truthy; Index wird bei leerem Suchfeld nie gebaut → erster Suchaufruf korrekt, aber `markChanged()` setzt Flag ohne Index-Reset; prüfen ob `dirty`-Pfad vollständig korrekt | S |
 
 *Gestrichen: generische `initAutocomplete()` — unterschiedliche Kontexte, Aufwand > Nutzen (bewertet 2026-04-14)*
 
@@ -99,14 +104,18 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| U1 | ~~**Fehlermeldungen nutzerfreundlich**~~ ✅ sw v267 — `— Details in der Konsole` in 4 Dateien → `— Datei wurde trotzdem vollständig geladen`; `e.message`-Toasts (OneDrive, Speichern, Öffnen) behalten — liefern nützlichen Kontext | S |
+| U1 | ~~**Fehlermeldungen nutzerfreundlich**~~ ✅ sw v267 | S |
 | U2 | **Modal-Stack klären**: Escape-Verhalten bei mehreren offenen Modals (`#modal` + `#modalNote` + `#modalDedup`) | S |
 | U3 | **`confirm()` → Modal**: 6+ Stellen → `confirmModal(msg)` Promise; Lösch-UX vereinheitlichen | M |
-| U4 | **`showToast(type)`**: `type ∈ {success, warning, error}` + CSS-Differenzierung | S |
-| U5 | ~~**Namens-Truncation im Baum**~~ ✅ sw v269 — Limit 18 → 22 Zeichen (`.tree-name` hat `line-clamp:2` bei W=96px → ~26 Zeichen darstellbar; 22 als sicherer Wert) | XS |
+| U4 | **`showToast(type)`**: `type ∈ {success, warning, error}` + CSS-Differenzierung (aktuell: Fehler und Erfolg visuell identisch) | S |
+| U5 | ~~**Namens-Truncation im Baum**~~ ✅ sw v269 | XS |
 | U6 | **`handleError()` zentralisieren**: try/catch → `handleError(e, context, userMsg)` | M |
-| U7 | ~~**Advanced Search**~~ ✅ sw v269 — Ausklappbares Panel (⊞-Button): Geschlecht (M/F/U/alle) + Geburtsort-Freitext; `filterPersons()` um beide Kriterien erweitert; `toggleAdvFilter()` setzt Panel-Filter beim Schließen zurück; Familie-Filter bleibt offen (komplex, eigener Sprint) | L |
+| U7 | ~~**Advanced Search**~~ ✅ sw v269 | L |
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
+| U9 | **Fokus-Management in Modals**: `openModal()` setzt keinen Fokus auf erstes Input — nach `showPersonForm()`, `showEventForm()` etc. explizit `focus()` setzen | S |
+| U10 | **Touch-Targets zu klein**: Source-Picker Toggle (`ui-forms.js`) ~18×18px; `× Entfernen`-Buttons in Modals ähnlich → min. 44×44px (WCAG 2.5.5) | S |
+| U11 | **ARIA-Attribute ergänzen**: Icon-Buttons ohne `aria-label` (`index.html`); Toggle-Buttons ohne `aria-expanded`; keine Landmark-Elemente (`<main>`, `<nav>`) | M |
+| U12 | **Dark Mode**: `prefers-color-scheme` Media Query in `styles.css` fehlt; `theme_color` in `manifest.json` fest | M |
 
 ---
 
