@@ -1,21 +1,21 @@
 // ─────────────────────────────────────
 //  PROBAND
 // ─────────────────────────────────────
-// _probandId lebt in UIState._probandId (shimmiert als _probandId)
+// UIState._probandId — Proband-ID (kein Shim mehr)
 
 function getProbandId() {
-  return (_probandId && AppState.db.individuals[_probandId]) ? _probandId : smallestPersonId();
+  return (UIState._probandId && AppState.db.individuals[UIState._probandId]) ? UIState._probandId : smallestPersonId();
 }
 
 function _toggleProband(id) {
   const p = AppState.db.individuals[id];
   if (!p) return;
   if (getProbandId() === id) {
-    _probandId = null;
+    UIState._probandId = null;
     idbPut('proband_id', null).catch(() => {});
     showToast('Proband zurückgesetzt (kleinste ID)');
   } else {
-    _probandId = id;
+    UIState._probandId = id;
     idbPut('proband_id', id).catch(() => {});
     showToast('Proband: ' + (p.name || id));
   }
@@ -365,7 +365,7 @@ function _vsTeardown(st) {
 function showMain() {
   const saved = UIState._savedListScroll;
   UIState._savedListScroll = null;
-  _navHistory.length = 0; // Liste = frischer Start, History löschen
+  UIState._navHistory.length = 0; // Liste = frischer Start, History löschen
   document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
@@ -383,21 +383,21 @@ function showMain() {
 function _beforeDetailNavigate() {
   if (AppState._detailActive) {
     // Detail → Detail: aktuellen Zustand in History sichern
-    if      (AppState.currentPersonId) _navHistory.push({ type: 'person', id: AppState.currentPersonId });
-    else if (AppState.currentFamilyId) _navHistory.push({ type: 'family', id: AppState.currentFamilyId });
-    else if (AppState.currentSourceId) _navHistory.push({ type: 'source', id: AppState.currentSourceId });
-    else if (AppState.currentRepoId)   _navHistory.push({ type: 'repo',   id: AppState.currentRepoId });
+    if      (AppState.currentPersonId) UIState._navHistory.push({ type: 'person', id: AppState.currentPersonId });
+    else if (AppState.currentFamilyId) UIState._navHistory.push({ type: 'family', id: AppState.currentFamilyId });
+    else if (AppState.currentSourceId) UIState._navHistory.push({ type: 'source', id: AppState.currentSourceId });
+    else if (AppState.currentRepoId)   UIState._navHistory.push({ type: 'repo',   id: AppState.currentRepoId });
     // Place: Name liegt nicht in einer ID-Variable – über detailTopTitle rekonstruieren
     else {
       const title = document.getElementById('detailTopTitle')?.textContent;
-      if (title && title !== '📍 Ort') _navHistory.push({ type: 'place', name: title });
+      if (title && title !== '📍 Ort') UIState._navHistory.push({ type: 'place', name: title });
     }
   } else {
-    _navHistory.length = 0;
+    UIState._navHistory.length = 0;
     // Baum → Detail: bei fc-mode Fan Chart merken, sonst Sanduhr
     if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
       const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
-      _navHistory.push({ type: _type, id: currentTreeId });
+      UIState._navHistory.push({ type: _type, id: currentTreeId });
     } else {
       // Liste → Detail: Scroll-Position für Rückkehr sichern
       UIState._savedListScroll = { tab: AppState.currentTab, pos: _getListScroll() };
@@ -407,7 +407,7 @@ function _beforeDetailNavigate() {
 
 // "← Zurück" – geht zur vorherigen Detail-Ansicht, zum Baum oder zur Liste
 function goBack() {
-  const prev = _navHistory.pop();
+  const prev = UIState._navHistory.pop();
   if (!prev) { showMain(); return; }
   if      (prev.type === 'person') showDetail(prev.id, false);
   else if (prev.type === 'family') showFamilyDetail(prev.id, false);
@@ -435,7 +435,7 @@ async function showStartView() {
   AppState.currentTab = 'persons';
   showMain();
   const saved = await idbGet('proband_id').catch(() => null);
-  _probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
+  UIState._probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
   const startId = getProbandId();
   if (startId) showTree(startId);
 }

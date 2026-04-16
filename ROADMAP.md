@@ -66,8 +66,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | Q1 | ~~**`_hofDateKey()` + `_evDateKey()` zusammenführen**~~ ✅ sw v266 — `evDateKey(d)` in `gedcom.js`; lokale Kopien aus `ui-views-hof.js` und `ui-views-person.js` entfernt | XS |
 | Q2 | ~~**`_renderMediaList()` + `_renderEfMedia()` zusammenführen**~~ — gestrichen; grundlegend unterschiedlich: `_renderMediaList` = Read-only-Referenzliste mit `data-idx`; `_renderEfMedia` = Live-Editor mit zwei Eingabefeldern, mutiert `_efMedia[]` direkt | S |
-| Q3 | **Backward-Compat-Shims entfernen**: `Object.defineProperty()`-Shims für `db`, `changed`, `currentPersonId` etc. in `gedcom.js` — AppState bereits konsistent genutzt | M |
-| Q4 | **Getter konsequent durchziehen**: `AppState.db.individuals[id]` → überall `getPerson(id)` / `getFamily(id)` | M |
+| Q3 | ~~**Backward-Compat-Shims entfernen**~~ ✅ sw v268 — AppState-Shims (13) vollständig entfernt (waren ungenutzt); `_navHistory`/`_probandId` → `UIState._navHistory`/`UIState._probandId` migriert (13 Stellen in ui-views.js); formState-Shims (`srcWidgetState`, `_pfExtraNames`, `_efMedia`) behalten — Lesbarkeit gerechtfertigt (50 Verwendungen, tief verschachtelte UIState-Pfade) | M |
+| Q4 | ~~**Getter konsequent durchziehen**~~ — gestrichen; 112 direkte Bracket-Zugriffe in 14 Dateien, viele Patterns nicht trivial ersetzbar (`(f.husb && AppState.db.individuals[f.husb]) || null`), kein funktionaler Unterschied, Risiko > Nutzen | M |
 
 *Gestrichen: generische `initAutocomplete()` — unterschiedliche Kontexte, Aufwand > Nutzen (bewertet 2026-04-14)*
 

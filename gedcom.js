@@ -42,28 +42,9 @@ const UIState = {
   },
 };
 
-// Backward-compat-Shims: bare Variablennamen leiten zu AppState / UIState um.
-// Entfernen sobald alle Aufrufer auf AppState.x / UIState.x umgestellt sind.
-(function _installStateShims() {
-  const _map = [
-    [AppState, ['db','changed','idCounter','currentPersonId','currentFamilyId',
-                'currentSourceId','currentRepoId','currentPlaceName','currentTab','_detailActive',
-                '_fileHandle','_canDirectSave','_originalGedText']],
-    [UIState,  ['_treeScale','_treeHistory','_treeHistoryPos',
-                '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache',
-                '_hofCache','_placesSubTab','_navHistory','_probandId','_searchIndexDirty']],
-  ];
-  for (const [ns, keys] of _map) {
-    for (const k of keys) {
-      Object.defineProperty(window, k, {
-        get()  { return ns[k]; },
-        set(v) { ns[k] = v; },
-        configurable: true,
-      });
-    }
-  }
-
-  // _formState-Shims: zeigen auf UIState._formState.* (kein direkter UIState-Key)
+// Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
+// srcWidgetState[p] ist lesbarer als UIState._formState.srcWidget[p] (34 Verwendungen in ui-forms.js).
+(function _installFormStateShims() {
   for (const [prop, subKey] of [
     ['srcWidgetState', 'srcWidget'],
     ['_pfExtraNames',  'pfExtraNames'],
