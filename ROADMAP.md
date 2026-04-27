@@ -131,6 +131,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | A2 | **`_CLICK_MAP` nach Feature-Bereich strukturieren**: Sub-Maps `_CLICK_MAP_PERSON`, `_CLICK_MAP_FAMILY` etc., im Init zusammengeführt | M |
 | A3 | ~~**Domain-Logik in `gedcom.js` verlagern**~~ ✅ 2026-04-27 — `buildHofIndex()`, `_dedupNormName`, `_dedupLevenshtein`, `_dedupYearFromGed`, `_dedupScorePair`, `findDuplicatePairs` nach `gedcom.js`; UI-Dateien referenzieren globale Funktionen | M |
 | A4 | **`_formState` kapseln**: Transiente Formular-States nicht global in UIState, sondern an Formular-Lifecycle binden | M |
+| A5 | **`db`-Shim eliminieren**: Aktuell leitet `window.db` per Shim auf `AppState.db` weiter (176 bare-Zugriffe in 14 Dateien). Nachhaltige Lösung: `AppState.db` nie neu zuweisen — stattdessen `setDb(newDb)` mit `Object.assign` auf stabiler Referenz; dann `const db = AppState.db` modul-level statt globalem Shim. Betroffene Stellen: ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
 
 ---
 
@@ -154,7 +155,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U3 | ~~**`confirm()` → Modal**~~ ✅ 2026-04-27 — `confirmModal(msg)` Promise; `modalConfirm` HTML+CSS (alertdialog); Escape/Backdrop/Cancel resolve(false); OK resolve(true); 8 Stellen in 5 Dateien async | M |
 | U4 | ~~**`showToast(type)`**~~ ✅ 2026-04-27 — Auto-Erkennung via Präfix (✓ → gold, ⚠ → orange); `.toast-success` + `.toast-warn` in styles.css | S |
 | U5 | ~~**Namens-Truncation im Baum**~~ ✅ sw v269 | XS |
-| U6 | **`handleError()` zentralisieren**: try/catch → `handleError(e, context, userMsg)` | M |
+| U6 | ~~**`handleError()` zentralisieren**~~ — nach Analyse abgelehnt: 14 catches sind bewusste Fallbacks, 15 showToast-Calls haben bereits individuelle Meldungen, kein DRY-Gewinn. Stattdessen: `console.error` in den 15 reinen showToast-Catches ergänzen (XS, inline beim nächsten Touchpoint) | ~~M~~ |
 | U7 | ~~**Advanced Search**~~ ✅ sw v269 | L |
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
 | U9 | ~~**Fokus-Management in Modals**~~ ✅ 2026-04-27 — `openModal()` fokussiert per `requestAnimationFrame` das erste sichtbare Input/Select/Textarea; wirkt für alle Modals | S |

@@ -42,6 +42,13 @@ const UIState = {
   },
 };
 
+// Backward-compat-Shim: bare `db` → AppState.db (wird in gedcom-writer.js + ui-*.js verwendet)
+Object.defineProperty(window, 'db', {
+  get()  { return AppState.db; },
+  set(v) { AppState.db = v; },
+  configurable: true,
+});
+
 // Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
 // srcWidgetState[p] ist lesbarer als UIState._formState.srcWidget[p] (34 Verwendungen in ui-forms.js).
 (function _installFormStateShims() {
