@@ -177,7 +177,14 @@ function runGlobalSearch(q) {
   let html = '';
 
   // ── Personen ──
-  const persons = Object.values(AppState.db.individuals).filter(p => {
+  const _rankP = p => {
+    const n = (p.name || '').toLowerCase();
+    if (n.startsWith(lower)) return 0;
+    if (n.includes(lower)) return 1;
+    if ((p.given||'').toLowerCase().startsWith(lower) || (p.surname||'').toLowerCase().startsWith(lower)) return 2;
+    return 3;
+  };
+  const _allPersons = Object.values(AppState.db.individuals).filter(p => {
     if ((p.name||'').toLowerCase().includes(lower)) return true;
     if ((p.given||'').toLowerCase().includes(lower)) return true;
     if ((p.surname||'').toLowerCase().includes(lower)) return true;
@@ -195,9 +202,11 @@ function runGlobalSearch(q) {
       if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
     }
     return false;
-  }).slice(0, 20);
+  }).sort((a, b) => _rankP(a) - _rankP(b));
+  const persons = _allPersons.slice(0, 20);
   if (persons.length) {
-    html += `<div class="alpha-sep">Personen (${persons.length})</div>`;
+    const _ph = _allPersons.length > 20 ? ` — ${_allPersons.length} gesamt` : '';
+    html += `<div class="alpha-sep">Personen (${persons.length}${_ph})</div>`;
     for (const p of persons) {
       const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
       const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
@@ -213,7 +222,7 @@ function runGlobalSearch(q) {
   }
 
   // ── Familien ──
-  const families = Object.values(AppState.db.families).filter(f => {
+  const _allFamilies = Object.values(AppState.db.families).filter(f => {
     const h = AppState.db.individuals[f.husb];
     const w = AppState.db.individuals[f.wife];
     if ((h?.name||'').toLowerCase().includes(lower)) return true;
@@ -232,9 +241,11 @@ function runGlobalSearch(q) {
       if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
     }
     return false;
-  }).slice(0, 12);
+  });
+  const families = _allFamilies.slice(0, 12);
   if (families.length) {
-    html += `<div class="alpha-sep">Familien (${families.length})</div>`;
+    const _fh = _allFamilies.length > 12 ? ` — ${_allFamilies.length} gesamt` : '';
+    html += `<div class="alpha-sep">Familien (${families.length}${_fh})</div>`;
     for (const f of families) {
       const h = AppState.db.individuals[f.husb];
       const w = AppState.db.individuals[f.wife];
@@ -250,13 +261,15 @@ function runGlobalSearch(q) {
   }
 
   // ── Quellen ──
-  const sources = Object.values(AppState.db.sources).filter(s =>
+  const _allSources = Object.values(AppState.db.sources).filter(s =>
     (s.title||'').toLowerCase().includes(lower) ||
     (s.auth||'').toLowerCase().includes(lower) ||
     (s.publ||'').toLowerCase().includes(lower)
-  ).slice(0, 10);
+  );
+  const sources = _allSources.slice(0, 10);
   if (sources.length) {
-    html += `<div class="alpha-sep">Quellen (${sources.length})</div>`;
+    const _sh = _allSources.length > 10 ? ` — ${_allSources.length} gesamt` : '';
+    html += `<div class="alpha-sep">Quellen (${sources.length}${_sh})</div>`;
     for (const s of sources) {
       html += `<div class="person-row" data-action="showSourceDetail" data-sid="${s.id}">
         <div class="p-avatar" style="font-size:0.95rem">📖</div>
@@ -266,11 +279,13 @@ function runGlobalSearch(q) {
   }
 
   // ── Orte ──
-  const places = Object.keys(AppState.db.extraPlaces || {}).filter(name =>
+  const _allPlaces = Object.keys(AppState.db.extraPlaces || {}).filter(name =>
     name.toLowerCase().includes(lower)
-  ).slice(0, 8);
+  );
+  const places = _allPlaces.slice(0, 8);
   if (places.length) {
-    html += `<div class="alpha-sep">Orte (${places.length})</div>`;
+    const _plh = _allPlaces.length > 8 ? ` — ${_allPlaces.length} gesamt` : '';
+    html += `<div class="alpha-sep">Orte (${places.length}${_plh})</div>`;
     for (const name of places) {
       html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(name)}">
         <div class="p-avatar" style="font-size:0.95rem">📍</div>

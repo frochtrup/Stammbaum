@@ -160,6 +160,16 @@ function saveEvent() {
   if (!p) return;
   const type = document.getElementById('ef-type').value;
 
+  // P4: Lazy rebuild — alte Quellen vor dem Überschreiben sichern
+  const _efEvIdxRaw = document.getElementById('ef-evidx').value;
+  const _efEvIdx    = _efEvIdxRaw !== '' ? parseInt(_efEvIdxRaw) : null;
+  const _oldEvSrc   = type in _SPECIAL_OBJ
+    ? (p[_SPECIAL_OBJ[type]]?.sources || [])
+    : (_efEvIdx !== null ? (p.events[_efEvIdx]?.sources || []) : []);
+  const _newSrcIds  = srcWidgetState['ef']?.ids || [];
+  const _srcChanged = _oldEvSrc.length !== _newSrcIds.length
+    || _oldEvSrc.some((s, i) => s !== _newSrcIds[i]);
+
   // Koordinaten aus Ortsregister — lati/long sind Attribut des Ortes, nicht des Ereignisses
   const _geoFromPlace = placeName => {
     if (!placeName) return { lati: null, long: null };
@@ -205,7 +215,7 @@ function saveEvent() {
     }
   }
 
-  _rebuildPersonSourceRefs(p);
+  if (_srcChanged) _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged();
   showToast('✓ Ereignis gespeichert');
@@ -219,8 +229,9 @@ function deleteEvent() {
   const evIdx = parseInt(evIdxRaw);
   const p = AppState.db.individuals[pid];
   if (!p?.events) return;
+  const _deletedHadSrc = (p.events[evIdx]?.sources?.length ?? 0) > 0;
   p.events.splice(evIdx, 1);
-  _rebuildPersonSourceRefs(p);
+  if (_deletedHadSrc) _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged();
   showToast('Ereignis gelöscht');

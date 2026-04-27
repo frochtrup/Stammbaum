@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v273 / Cache: `stammbaum-v273`
+**Aktuelle sw-Version:** v274 / Cache: `stammbaum-v274`
 **Qualitäts-Sprints 2026-04-27:** Top-10 vollständig abgeschlossen (S4–S6, U2–U4, U9–U11b, Q5–Q8, A3, U3) ✅
 
 ---
@@ -75,8 +75,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Rang | ID | Aufgabe | Kategorie | Aufwand | Begründung |
 |---|---|---|---|---|---|
 | 1 | U6 | `handleError()` zentralisieren: try/catch → `handleError(e, context, userMsg)` | Code/UX | M | Robustheit; konsistente Fehlermeldungen |
-| 2 | P3 | Suchergebnisse ranken statt `slice(0,20)`; Hinweis bei >20 Treffern | Performance | S | Sichtbar für Nutzer mit großen Datensätzen |
-| 3 | P4 | `_rebuildPersonSourceRefs()` lazy — nur bei Source-Änderung | Performance | S | Spart unnötige Arbeit bei jedem Save |
+| 2 | ~~P3~~ | ~~Suchergebnisse ranken statt `slice(0,20)`; Hinweis bei >20 Treffern~~ ✅ | Performance | S | |
+| 3 | ~~P4~~ | ~~`_rebuildPersonSourceRefs()` lazy — nur bei Source-Änderung~~ ✅ | Performance | S | |
 | 4 | A4 | `_formState` kapseln: transiente States an Formular-Lifecycle binden | Architektur | M | UIState global zu stark belastet |
 | 5 | A2 | `_CLICK_MAP` nach Feature-Bereich strukturieren (Sub-Maps) | Architektur | M | 700+ Zeilen Click-Handler schwer navigierbar |
 | 6 | P1 | Virtual Scroll für Hof-Liste (analog Personen/Familien) | Performance | M | Spürbar bei vielen RESI-Ereignissen |
@@ -140,8 +140,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | P1 | **Virtual Scroll für Hof-Liste** — analog zur Personen/Familien-Liste | M |
 | P2 | **IDB Batch-Reads für Medien**: `getAll()` mit Index statt sequentielle Einzelabfragen | M |
-| P3 | **Suchergebnisse ranken** statt nach Position (`slice(0,20)`); Hinweis wenn >20 Treffer | S |
-| P4 | **`_rebuildPersonSourceRefs()` lazy**: nur bei tatsächlicher Source-Änderung, nicht bei jedem Save | S |
+| P3 | ~~**Suchergebnisse ranken**~~ ✅ 2026-04-27 — `_rankP()` nach Name-Start > Name-enthält > Vorname/Nachname-Start > Rest; Hinweis „X gesamt" bei >Limit für alle 4 Kategorien | S |
+| P4 | ~~**`_rebuildPersonSourceRefs()` lazy**~~ ✅ 2026-04-27 — in `saveEvent`: Quellen-Snapshot vor Save, Rebuild nur bei Änderung; in `deleteEvent`: Rebuild nur wenn gelöschtes Event Quellen hatte | S |
 
 ---
 
