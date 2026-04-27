@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v279 / Cache: `stammbaum-v279`
+**Aktuelle sw-Version:** v280 / Cache: `stammbaum-v280`
 
 ---
 
@@ -42,6 +42,7 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 4a | UX: `compactPlace()`, Notizen-Modal, noteRefs editierbar + löschbar, `_pruneOrphanNotes()` | v236–v242 |
 | 4b | Duplikat-Erkennung + Merge: Levenshtein-Scoring, Merge-Modal, Ignorieren | v243 |
 | 4c | Kartenansicht: Leaflet lokal; Alle Orte + Personenbiografie; Desktop rechtes Panel; Safari-Fix | v244–v250 |
+| 4d | Hof-Koordinaten + Notizen: `db.hofObjects{}`, PLAC+MAP am RESI, Hof-Marker auf Karte, RESI-Stationen in Personenbiografie | v280 |
 | Cleanup | Virtual Scroll, onclick-Delegation, State-Konsolidierung, Suche indexiert, Debug ausgelagert | v230–v233 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
@@ -97,6 +98,28 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] **GRAMPS-Tag-Editor** — Tags hinzufügen/entfernen (Phase 2 read-only, hier editierbar)
 - [ ] **Orts-Hierarchie-Editor** — Formular mit `db.placeObjects{}`-Unterstützung
 - [ ] **Export-Hinweis** — "Zuletzt geladen: Datum" in Topbar/Export-Dialog
+
+#### Phase 4d — Hof-Koordinaten + Notizen *(in Arbeit)*
+
+**Datenmodell:** `db.hofObjects[addr] = { addr, lat, long, note }` — localStorage (`stammbaum_hofobjects`), lazy (nur wenn Koordinaten/Notiz vorhanden).
+
+**Serialisierung:**
+- GEDCOM: Koordinaten als `PLAC + MAP/LATI/LONG` an allen RESI/PROP-Events dieser Adresse (ADDR bleibt erhalten, andere Programme lesen beides)
+- GRAMPS: `placeobj` mit `type="Building"` + `coord lat/long` + `noteref` (Phase 5)
+
+**Ortsliste:** bleibt unverändert sauber — `hofObjects` ist von `extraPlaces` getrennt, Höfe erscheinen nicht in `collectPlaces()`.
+
+| Schritt | Datei | Status |
+|---|---|---|
+| `db.hofObjects{}` + `loadHofObjects/saveHofObjects` | `gedcom.js`, `ui-forms.js`, `storage.js` | ✅ v280 |
+| Koordinaten-Sektion + Formular in Hof-Detail | `ui-views-hof.js` | ✅ v280 |
+| Notiz-Typ `'hof'` in Notizen-Modal | `ui-views-note.js` | ✅ v280 |
+| Hof-Marker auf Karte + RESI-Stationen in Personenbiografie | `ui-views-map.js` | ✅ v280 |
+| GEDCOM-Writer: PLAC+MAP an RESI/PROP-Events | `gedcom-writer.js` | offen (Phase 5) |
+| GEDCOM-Parser: PLAC+MAP aus RESI-Events → hofObjects | `gedcom-parser.js` | offen (Phase 5) |
+| GRAMPS: placeobj type=Building | `gramps-parser.js`, `gramps-writer.js` | offen (Phase 5) |
+
+---
 
 #### Phase 5.1 — Cross-Parser
 

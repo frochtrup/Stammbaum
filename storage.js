@@ -7,6 +7,8 @@ async function revertToSaved() {
   if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
   showLoadingOverlay('Stand wird wiederhergestellt …');
   AppState.db = parseGEDCOM(orig);
+  AppState.db.extraPlaces = loadExtraPlaces();
+  AppState.db.hofObjects  = loadHofObjects();
   if (AppState.db.parseErrors?.length) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
     showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
@@ -25,7 +27,7 @@ async function confirmNewFile() {
   if (AppState.changed) {
     if (!await confirmModal('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
   }
-  AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), repositories: {}, notes: {}, placForm: '' };
+  AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), hofObjects: loadHofObjects(), repositories: {}, notes: {}, placForm: '' };
   AppState.changed = false;
   updateChangedIndicator();
   AppState._originalGedText = null;

@@ -150,6 +150,36 @@ function _renderOrteModus() {
     bounds.push([lat, lng]);
   }
 
+  // Höfe mit Koordinaten als eigene Marker-Ebene
+  for (const hm of Object.values(AppState.db.hofObjects || {})) {
+    const lat = parseFloat(hm.lat);
+    const lng = parseFloat(hm.long);
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) continue;
+
+    const hofIndex = buildHofIndex();
+    const hof      = hofIndex.get(hm.addr);
+    const count    = hof ? new Set(hof.entries.map(e => e.pid)).size : 0;
+
+    const marker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div style="width:10px;height:10px;background:#c8a84a;border:1.5px solid #1a140a;transform:rotate(45deg);opacity:0.9"></div>',
+        iconSize:   [10, 10],
+        iconAnchor: [5, 5],
+      }),
+    });
+
+    marker.on('click', () => {
+      if (hof) _showExplorationPanel(hm.addr, (hof.entries || []).map(e => ({ personId: e.pid, role: 'Wohnort', date: e.date })));
+    });
+    marker.bindTooltip(
+      `${_mesc(compactPlace(hm.addr))}${count ? ' · ' + count + ' Person' + (count !== 1 ? 'en' : '') : ''}`,
+      { direction: 'top', offset: [0, -6] }
+    );
+    marker.addTo(_mapMarkerLayer);
+    bounds.push([lat, lng]);
+  }
+
   if (!bounds.length) {
     showToast('Keine Orte mit Koordinaten vorhanden');
     return;
@@ -302,11 +332,18 @@ function _personGeoEvents(p) {
 
   addEv(p.birth.place, p.birth.lati, p.birth.long, p.birth.date, 'Geburt',     p.birth.note);
   addEv(p.chr.place,   p.chr.lati,   p.chr.long,   p.chr.date,   'Taufe',      p.chr.note);
-  for (const ev of p.events)
-    addEv(ev.place, ev.lati, ev.long, ev.date,
+  for (const ev of p.events) {
+    // RESI/PROP ohne Koordinaten: hofObjects als Fallback
+    let lati = ev.lati, long = ev.long;
+    if ((!lati || !long) && ev.addr) {
+      const hm = AppState.db.hofObjects?.[ev.addr.trim()];
+      if (hm?.lat && hm?.long) { lati = hm.lat; long = hm.long; }
+    }
+    addEv(ev.place || (lati ? ev.addr : null), lati, long, ev.date,
           ev.eventType || EVENT_LABELS[ev.type] || ev.type || 'Ereignis',
           ev.note, ev.addr,
           ev.value || '');
+  }
   addEv(p.death.place, p.death.lati, p.death.long, p.death.date, 'Tod',        p.death.note);
   addEv(p.buri.place,  p.buri.lati,  p.buri.long,  p.buri.date,  'Beerdigung', p.buri.note);
 

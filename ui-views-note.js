@@ -28,6 +28,8 @@ function openNoteModal(type, id) {
     noteRefs   = f?.noteRefs || [];
   } else if (type === 'source') {
     inlineText = AppState.db.sources[id]?.text ?? '';
+  } else if (type === 'hof') {
+    inlineText = AppState.db.hofObjects?.[id]?.note ?? '';
   }
   document.getElementById('note-type').value = type;
   document.getElementById('note-id').value   = id;
@@ -116,5 +118,11 @@ function saveNoteModal() {
     if (!s) return;
     s.text = inlineVal;
     markChanged(); closeModal('modalNote'); showSourceDetail(id);
+  } else if (type === 'hof') {
+    if (!AppState.db.hofObjects[id]) AppState.db.hofObjects[id] = { addr: id };
+    AppState.db.hofObjects[id].note = inlineVal;
+    if (!inlineVal && !AppState.db.hofObjects[id].lat) delete AppState.db.hofObjects[id];
+    saveHofObjects();
+    markChanged(); closeModal('modalNote'); showHofDetail(id, false);
   }
 }

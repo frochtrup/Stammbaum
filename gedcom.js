@@ -6,7 +6,7 @@
 // sodass bestehende Aufrufer ohne Änderung weiter funktionieren.
 
 const AppState = {
-  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] },
+  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] },
   changed:          false,
   idCounter:        1000,
   currentPersonId:  null,

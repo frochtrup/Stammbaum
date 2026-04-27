@@ -771,6 +771,17 @@ function saveExtraPlaces() {
   try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
 }
 
+// ── Hof-Objects Persistenz ──────────
+function loadHofObjects() {
+  try {
+    const r = localStorage.getItem('stammbaum_hofobjects');
+    return r ? JSON.parse(r) : {};
+  } catch(e) { return {}; }
+}
+function saveHofObjects() {
+  try { localStorage.setItem('stammbaum_hofobjects', JSON.stringify(AppState.db.hofObjects)); } catch(e) {}
+}
+
 const _applyPersonFilterDebounced = debounce((q, from, to, sex, birthPlace) => filterPersons(q, from, to, sex, birthPlace), 200);
 const filterFamiliesDebounced = debounce(filterFamilies, 200);
 const filterSourcesDebounced  = debounce(filterSources,  200);

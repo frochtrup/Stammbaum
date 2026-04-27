@@ -25,7 +25,9 @@ function renderHofList(sorted) {
     const minYr  = dates.length ? dates[0].slice(0,4)  : '';
     const maxYr  = dates.length ? dates[dates.length-1].slice(0,4) : '';
     const range  = minYr && maxYr && minYr !== maxYr ? `${minYr}–${maxYr}` : (minYr || '');
-    const addrLine = esc(hof.addr).replace(/\n/g, ' · ');
+    const hofMeta   = AppState.db.hofObjects?.[hof.addr];
+    const hasCoords = hofMeta?.lat && hofMeta?.long;
+    const addrLine  = (hasCoords ? '<span style="color:var(--gold);margin-right:4px">📍</span>' : '') + esc(hof.addr).replace(/\n/g, ' · ');
     const metaParts = [`${count} Person${count !== 1 ? 'en' : ''}`];
     if (propCount) metaParts.push(`${propCount} Eigentümer`);
     if (range) metaParts.push(range);
@@ -345,12 +347,120 @@ function showHofDetail(addr, pushHistory = true) {
   }
   html += `</div>`;
 
+  html += _renderHofCoordSection(addr);
+  html += _renderHofNoteSection(addr);
   html += _renderAddBewohnerForm(addr);
   html += _renderAddPropForm(addr);
 
   document.getElementById('detailContent').innerHTML = html;
   _initHofFormEvents();
   showView('v-detail');
+}
+
+// ── Koordinaten-Sektion ──────────────────────────────────────────────────────
+
+function _renderHofCoordSection(addr) {
+  const m    = AppState.db.hofObjects?.[addr];
+  const lat  = m?.lat ?? '';
+  const long = m?.long ?? '';
+  const addrAttr = addr.replace(/"/g, '&quot;');
+
+  let body = '';
+  if (lat && long) {
+    const mapsUrl = `https://maps.apple.com/?ll=${encodeURIComponent(lat)},${encodeURIComponent(long)}&q=${encodeURIComponent(compactPlace(addr))}`;
+    body = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:0.9rem;color:var(--text-main)">${esc(String(lat))}° N &nbsp; ${esc(String(long))}° E</span>
+      <a href="${mapsUrl}" target="_blank" style="font-size:0.82rem;color:var(--gold)">Karte öffnen</a>
+    </div>`;
+  } else {
+    body = `<div style="font-size:0.85rem;color:var(--text-dim)">Keine Koordinaten hinterlegt</div>`;
+  }
+
+  return `<div class="section fade-up" id="hof-coord-section">
+    <div class="section-head">
+      <div class="section-title">Koordinaten</div>
+      <button type="button" class="section-add" data-action="showHofCoordForm" data-addr="${addrAttr}">Bearbeiten</button>
+    </div>
+    ${body}
+    <div id="hof-coord-form" style="display:none;margin-top:10px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div style="flex:1">
+          <label class="form-label" style="font-size:0.78rem">Breite (Lat)</label>
+          <input class="form-input" id="hof-coord-lat" type="text" inputmode="decimal" placeholder="52.2073" value="${esc(String(lat))}">
+        </div>
+        <div style="flex:1">
+          <label class="form-label" style="font-size:0.78rem">Länge (Lon)</label>
+          <input class="form-input" id="hof-coord-lon" type="text" inputmode="decimal" placeholder="7.1845" value="${esc(String(long))}">
+        </div>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:8px">Dezimalgrad, z.B. 52.2073 / 7.1845</div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-save" data-action="saveHofCoord" data-addr="${addrAttr}">Speichern</button>
+        <button type="button" class="btn btn-cancel" data-action="cancelHofCoord">Abbrechen</button>
+        ${lat && long ? `<button type="button" class="btn" style="margin-left:auto;color:var(--red)" data-action="deleteHofCoord" data-addr="${addrAttr}">Löschen</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function showHofCoordForm(addr) {
+  const form = document.getElementById('hof-coord-form');
+  if (form) { form.style.display = ''; form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  document.getElementById('hof-coord-lat')?.focus();
+}
+
+function cancelHofCoord() {
+  const form = document.getElementById('hof-coord-form');
+  if (form) form.style.display = 'none';
+}
+
+function saveHofCoord(addr) {
+  const latRaw = document.getElementById('hof-coord-lat')?.value.trim().replace(',', '.');
+  const lonRaw = document.getElementById('hof-coord-lon')?.value.trim().replace(',', '.');
+  const lat = parseFloat(latRaw);
+  const lon = parseFloat(lonRaw);
+  if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    showToast('⚠ Ungültige Koordinaten (Breite -90–90, Länge -180–180)');
+    return;
+  }
+  if (!AppState.db.hofObjects[addr]) AppState.db.hofObjects[addr] = { addr };
+  AppState.db.hofObjects[addr].lat  = lat;
+  AppState.db.hofObjects[addr].long = lon;
+  saveHofObjects();
+  invalidatePlacePersonIndex?.();
+  markChanged();
+  showToast('✓ Koordinaten gespeichert');
+  showHofDetail(addr, false);
+}
+
+function deleteHofCoord(addr) {
+  const m = AppState.db.hofObjects[addr];
+  if (!m) return;
+  delete m.lat;
+  delete m.long;
+  if (!m.note) delete AppState.db.hofObjects[addr];
+  saveHofObjects();
+  invalidatePlacePersonIndex?.();
+  markChanged();
+  showHofDetail(addr, false);
+}
+
+// ── Notiz-Sektion ─────────────────────────────────────────────────────────────
+
+function _renderHofNoteSection(addr) {
+  const m    = AppState.db.hofObjects?.[addr];
+  const note = m?.note || '';
+  const addrAttr = addr.replace(/"/g, '&quot;');
+  const body = note
+    ? `<div style="font-size:0.88rem;color:var(--text-main);white-space:pre-wrap">${esc(note)}</div>`
+    : `<div style="font-size:0.85rem;color:var(--text-dim)">Keine Notiz hinterlegt</div>`;
+  return `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Notiz</div>
+      <button type="button" class="section-add" data-action="openHofNote" data-addr="${addrAttr}">Bearbeiten</button>
+    </div>
+    ${body}
+  </div>`;
 }
 
 function showHofAddForm(addr) {
