@@ -1348,6 +1348,17 @@
   </div>
 </div>
 
+<!-- Bestätigungs-Dialog -->
+<div class="modal-overlay modal-center" id="modalConfirm" role="alertdialog" aria-modal="true" aria-labelledby="modalConfirmMsg">
+  <div class="confirm-box">
+    <p id="modalConfirmMsg" class="confirm-msg"></p>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn-cancel" data-action="confirmModalCancel">Abbrechen</button>
+      <button type="button" class="btn btn-danger" data-action="confirmModalOk">Bestätigen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Karten-Container: direkt in body (position:fixed, unabhängig von v-main overflow) -->
 <div id="mapContainer" style="display:none">
   <div id="map-controls">

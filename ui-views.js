@@ -716,6 +716,8 @@ const _CLICK_MAP = {
   startupChoiceLocal:      ()  => _startupChoiceLocal(),
   closeLightbox:           ()  => { document.getElementById('modalLightbox').style.display = 'none'; },
   lightboxSetHero:         (el, e) => { e.stopPropagation(); _lightboxSetHero(); },
+  confirmModalOk:          ()  => { _confirmResolve?.(true); _confirmResolve = null; closeModal('modalConfirm'); },
+  confirmModalCancel:      ()  => closeModal('modalConfirm'),
 };
 
 document.addEventListener('click', e => {

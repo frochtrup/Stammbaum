@@ -262,11 +262,11 @@ function savePerson() {
   if (AppState.currentPersonId === id) showDetail(id);
 }
 
-function deletePerson() {
+async function deletePerson() {
   const id = document.getElementById('pf-id').value;
   const _pd = getPerson(id);
   if (!id || !_pd) return;
-  if (!confirm(`${_pd.name || id} wirklich löschen?`)) return;
+  if (!await confirmModal(`${_pd.name || id} wirklich löschen?`)) return;
 
   // Remove from families
   for (const f of Object.values(AppState.db.families)) {
@@ -461,10 +461,10 @@ function saveFamily() {
   if (AppState.currentFamilyId === id) showFamilyDetail(id);
 }
 
-function deleteFamily() {
+async function deleteFamily() {
   const id = document.getElementById('ff-id').value;
   if (!id) return;
-  if (!confirm('Familie wirklich löschen?')) return;
+  if (!await confirmModal('Familie wirklich löschen?')) return;
   const famcId2 = f => (typeof f === 'string' ? f : f.famId);
   for (const p of Object.values(AppState.db.individuals)) {
     setPerson(p.id, {
@@ -578,10 +578,10 @@ function saveSource() {
   if (AppState.currentSourceId === id) showSourceDetail(id);
 }
 
-function deleteSource() {
+async function deleteSource() {
   const id = document.getElementById('sf-id').value;
   if (!id) return;
-  if (!confirm('Quelle wirklich löschen?')) return;
+  if (!await confirmModal('Quelle wirklich löschen?')) return;
   delete AppState.db.sources[id];
   closeModal('modalSource');
   markChanged();
@@ -605,8 +605,25 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
-  if (id === 'modalPerson') UIState._pendingRelation = null;
-  if (id === 'modalRepo')   UIState._pendingRepoLink  = null;
+  if (id === 'modalPerson')  UIState._pendingRelation = null;
+  if (id === 'modalRepo')    UIState._pendingRepoLink  = null;
+  // confirmModal-Promise mit false auflösen (Escape / Backdrop / Cancel)
+  if (id === 'modalConfirm') { _confirmResolve?.(false); _confirmResolve = null; }
+}
+
+// ─────────────────────────────────────
+//  CONFIRM MODAL
+// ─────────────────────────────────────
+let _confirmResolve = null;
+
+// Ersatz für window.confirm() — gibt Promise<boolean> zurück.
+// Verwendung: if (!await confirmModal('Wirklich löschen?')) return;
+function confirmModal(msg) {
+  document.getElementById('modalConfirmMsg').textContent = msg;
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    openModal('modalConfirm');
+  });
 }
 // Close on backdrop click — closeModal() aufrufen damit Pending-State zurückgesetzt wird
 document.querySelectorAll('.modal-overlay').forEach(m => {

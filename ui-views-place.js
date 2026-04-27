@@ -149,8 +149,8 @@ function saveNewPlace() {
   renderTab();
 }
 
-function deleteExtraPlace(name) {
-  if (!confirm('Ort wirklich entfernen?')) return;
+async function deleteExtraPlace(name) {
+  if (!await confirmModal('Ort wirklich entfernen?')) return;
   delete AppState.db.extraPlaces[name];
   saveExtraPlaces();
   UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell

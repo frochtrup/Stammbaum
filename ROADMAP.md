@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v272 / Cache: `stammbaum-v272`
+**Aktuelle sw-Version:** v273 / Cache: `stammbaum-v273`
 **Qualitäts-Sprint 2026-04-27:** S4–S6 (XSS, localStorage, Redirect-URI), U9 (Modal-Fokus), U11 (Icon-Button aria-labels, aria-expanded) ✅
 **Qualitäts-Sprint 2 2026-04-27:** U11b (Landmarks), Q6 (verify), U10 (Touch-Targets 44px), A3 (Domain-Logik → gedcom.js) ✅
 
@@ -64,7 +64,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ~~6~~ | ~~U10~~ | ~~Touch-Targets ≥44px (WCAG 2.5.5)~~ ✅ 2026-04-27 — `.src-tag` min-height:44px; `.src-tag-x` align-self:stretch; `.src-add-btn` min-height:44px; `.src-picker-item` min-height:44px; `× Entfernen` → `.btn-remove-ref` | ~~UX/a11y~~ | ~~S~~ | |
 | ~~7~~ | ~~Q6~~ | ~~`_buildSearchIndex()` dirty-Pfad verifizieren~~ ✅ 2026-04-27 — kein Bug; `lower &&`-Guard sicher (leere Suche wertet `_searchStr` nie aus); Kommentar in `ui-views-person.js:266` | ~~Code~~ | ~~S~~ | |
 | ~~8~~ | ~~U11b~~ | ~~Landmark-Elemente `<main>`, `<nav role>` ergänzen~~ ✅ 2026-04-27 — `<div id="v-main">` → `<main>`; `<nav class="bottom-nav">` + `aria-label="Hauptnavigation"` | ~~a11y~~ | ~~S~~ | |
-| 9 | U3 | `confirm()` → `confirmModal()` Promise (6+ Stellen) | UX | M | PWA-Blocking; iOS-Dialog-Look inkonsistent |
+| ~~9~~ | ~~U3~~ | ~~`confirm()` → `confirmModal()` Promise (6+ Stellen)~~ ✅ 2026-04-27 — `confirmModal(msg)` Promise; `modalConfirm` HTML+CSS; Escape/Backdrop resolve(false); 8 Stellen async | ~~UX~~ | ~~M~~ | |
 | 10 | A3 | Domain-Logik (`buildHofIndex`, Dedup-Scoring) nach `gedcom.js` | Architektur | M | UI-Dateien haben Business-Logik; Testbarkeit |
 
 **Nicht in dieser Liste (eigene Sprints):**
@@ -134,7 +134,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | U1 | ~~**Fehlermeldungen nutzerfreundlich**~~ ✅ sw v267 | S |
 | U2 | ~~**Modal-Stack / Escape-Verhalten**~~ ✅ 2026-04-27 — `querySelectorAll` + letztes Element; schließt immer das oberste Modal | S |
-| U3 | **`confirm()` → Modal**: 6+ Stellen → `confirmModal(msg)` Promise; Lösch-UX vereinheitlichen | M |
+| U3 | ~~**`confirm()` → Modal**~~ ✅ 2026-04-27 — `confirmModal(msg)` Promise; `modalConfirm` HTML+CSS (alertdialog); Escape/Backdrop/Cancel resolve(false); OK resolve(true); 8 Stellen in 5 Dateien async | M |
 | U4 | ~~**`showToast(type)`**~~ ✅ 2026-04-27 — Auto-Erkennung via Präfix (✓ → gold, ⚠ → orange); `.toast-success` + `.toast-warn` in styles.css | S |
 | U5 | ~~**Namens-Truncation im Baum**~~ ✅ sw v269 | XS |
 | U6 | **`handleError()` zentralisieren**: try/catch → `handleError(e, context, userMsg)` | M |

@@ -241,8 +241,8 @@ function openRelFamilyForm(anchorId, partnerId, mode) {
   }
 }
 
-function unlinkMember(famId, personId) {
-  if (!confirm('Verbindung wirklich trennen?')) return;
+async function unlinkMember(famId, personId) {
+  if (!await confirmModal('Verbindung wirklich trennen?')) return;
   const f = AppState.db.families[famId];
   const p = AppState.db.individuals[personId];
   if (!f || !p) return;

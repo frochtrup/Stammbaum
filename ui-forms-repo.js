@@ -154,13 +154,13 @@ function saveRepo() {
   }
 }
 
-function deleteRepo() {
+async function deleteRepo() {
   const id = document.getElementById('rf-id').value; if (!id) return;
   const linked = Object.values(AppState.db.sources).filter(s => s.repo === id);
   const msg = linked.length
     ? `Archiv löschen? ${linked.length} Quelle(n) verlieren die Archiv-Verknüpfung.`
     : 'Archiv wirklich löschen?';
-  if (!confirm(msg)) return;
+  if (!await confirmModal(msg)) return;
   for (const s of linked) { setSource(s.id, { repo: '', repoCallNum: '' }); }
   delete AppState.db.repositories[id];
   closeModal('modalRepo');

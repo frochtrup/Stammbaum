@@ -1,10 +1,10 @@
 // ─────────────────────────────────────
 //  REVERT / NEW FILE
 // ─────────────────────────────────────
-function revertToSaved() {
+async function revertToSaved() {
   const orig = _getOriginalText();
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
-  if (!confirm('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
+  if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
   AppState.db = parseGEDCOM(orig);
   if (AppState.db.parseErrors?.length) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
@@ -19,9 +19,9 @@ function revertToSaved() {
   showToast('✓ Zurückgesetzt');
 }
 
-function confirmNewFile() {
+async function confirmNewFile() {
   if (AppState.changed) {
-    if (!confirm('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
+    if (!await confirmModal('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
   }
   AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), repositories: {}, notes: {}, placForm: '' };
   AppState.changed = false;

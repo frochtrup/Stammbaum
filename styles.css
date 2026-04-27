@@ -767,6 +767,22 @@ body.desktop-mode.places-karte #mapContainer {
 .btn-save { background: var(--gold); color: var(--bg); font-weight: 600; }
 .btn-danger { background: var(--red); color: #fff; }
 
+/* Zentriertes Modal (z.B. Bestätigungs-Dialog) */
+.modal-overlay.modal-center { align-items: center; justify-content: center; }
+.confirm-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px 20px 20px;
+  max-width: 320px; width: calc(100% - 48px);
+  animation: slideUp 0.2s ease;
+}
+.confirm-msg {
+  margin: 0 0 20px; line-height: 1.5;
+  color: var(--text); font-size: 0.95rem;
+}
+.confirm-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+
 
 /* ═══════════════════════════════════════
    TOAST
