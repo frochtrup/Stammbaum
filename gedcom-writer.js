@@ -61,22 +61,21 @@ function writeCHAN(lines, obj, lv = 1) {
   if (obj.lastChangedTime) lines.push(`${lv+2} TIME ${obj.lastChangedTime}`);
 }
 
-// Schreibt MAP/LATI/LONG-Block — Koordinaten aus Ortsregister (extraPlaces),
-// Fallback auf obj.lati/obj.long (Parser-Werte), dann hofObjects via obj.addr
+// Schreibt MAP/LATI/LONG-Block — Priorität: hofObjects > extraPlaces > obj.lati/obj.long
 function geoLines(lines, obj, indent) {
   let lati = null, long = null;
-  const placeName = obj?.place;
-  if (placeName && AppState.db?.extraPlaces?.[placeName]) {
-    const ep = AppState.db.extraPlaces[placeName];
-    if (ep.lati != null) { lati = ep.lati; long = ep.long; }
-  }
-  if (lati === null && obj && obj.lati !== null && obj.lati !== undefined) {
-    lati = obj.lati; long = obj.long;
-  }
-  if (lati === null && obj?.addr) {
+  // 1. Hof-Koordinaten (spezifischer als Ortsregister)
+  if (obj?.addr) {
     const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
     if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
   }
+  // 2. Ortsregister
+  if (lati === null && obj?.place && AppState.db?.extraPlaces?.[obj.place]) {
+    const ep = AppState.db.extraPlaces[obj.place];
+    if (ep.lati != null) { lati = ep.lati; long = ep.long; }
+  }
+  // 3. Explizite Event-Koordinaten (aus Parser)
+  if (lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
   if (lati !== null && long !== null) {
     lines.push(`${indent} MAP`);
     const latStr = (lati >= 0 ? 'N' : 'S') + Math.abs(lati);
