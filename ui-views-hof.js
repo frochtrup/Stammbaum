@@ -307,7 +307,11 @@ function showHofDetail(addr, pushHistory = true) {
   const allEntries = [
     ...(hof.entries     || []).map(e => ({ ...e, isProp: false })),
     ...(hof.propEntries || []).map(e => ({ ...e, isProp: true  })),
-  ].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  ].sort((a, b) => {
+    const d = a.dateKey.localeCompare(b.dateKey);
+    if (d !== 0) return d;
+    return (a.isProp ? 0 : 1) - (b.isProp ? 0 : 1);
+  });
   const totalCount = new Set(allEntries.map(e => e.pid)).size;
 
   let html = `<div class="detail-hero fade-up">
