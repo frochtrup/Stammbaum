@@ -52,7 +52,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | Rang | ID | Aufgabe | Kategorie | Aufwand |
 |---|---|---|---|---|
-| 1 | A1 | `ui-views.js` aufteilen (935 Z.): Navigation/Routing → `ui-router.js`, Modal-Manager → `ui-modal.js`, Note-Modal → `ui-views-note.js` | Architektur | L |
+| 1 | A5 | `db`-Shim eliminieren: `setDb()` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level | Architektur | L |
 | 2 | A5 | `db`-Shim eliminieren: `setDb()` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level | Architektur | L |
 | 3 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | UX | M |
 | 4 | U8 | Cmd+Z granulares Undo: History-Stack auf AppState | UX | XL |
@@ -65,7 +65,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| A1 | **`ui-views.js` aufteilen** (935 Z., 5 Verantwortlichkeiten): Navigation/Routing → `ui-router.js`, Modal-Manager → `ui-modal.js`, Note-Modal → `ui-views-note.js` | L |
+| A1 | ~~**`ui-views.js` aufteilen**~~ ✅ 2026-04-27 — `ui-views-note.js` (120 Z., Notiz-Modal) + `ui-views-search.js` (139 Z., `runGlobalSearch`) extrahiert; ui-views.js: 935 → 683 Z.; `ui-router.js` + `ui-modal.js` abgelehnt (Navigation global verwoben, Modal-Manager in ui-forms.js) | S |
 | A5 | **`db`-Shim eliminieren**: `window.db` leitet per Shim auf `AppState.db` weiter (176 bare-Zugriffe in 14 Dateien). Lösung: `setDb(newDb)` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level. Betroffene Stellen: ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
 
 ---
