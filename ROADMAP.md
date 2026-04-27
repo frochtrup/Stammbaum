@@ -128,9 +128,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Aufwand |
 |---|---|---|
 | A1 | **`ui-views.js` aufteilen** (922 Z., 5 Verantwortlichkeiten): Navigation/Routing → `ui-router.js`, Modal-Manager → `ui-modal.js`, Note-Modal → `ui-views-note.js` | L |
-| A2 | **`_CLICK_MAP` nach Feature-Bereich strukturieren**: Sub-Maps `_CLICK_MAP_PERSON`, `_CLICK_MAP_FAMILY` etc., im Init zusammengeführt | M |
+| A2 | ~~**`_CLICK_MAP` nach Feature-Bereich strukturieren**~~ — nach Analyse abgelehnt: 82/144 Einträge sind "Sonstiges" (Modal, Nav, OneDrive), kein sinnvoller Split möglich; Delegation zentralisiert in ui-views.js, kein Wartungsproblem | ~~M~~ |
 | A3 | ~~**Domain-Logik in `gedcom.js` verlagern**~~ ✅ 2026-04-27 — `buildHofIndex()`, `_dedupNormName`, `_dedupLevenshtein`, `_dedupYearFromGed`, `_dedupScorePair`, `findDuplicatePairs` nach `gedcom.js`; UI-Dateien referenzieren globale Funktionen | M |
-| A4 | **`_formState` kapseln**: Transiente Formular-States nicht global in UIState, sondern an Formular-Lifecycle binden | M |
+| A4 | ~~**`_formState` kapseln**~~ — nach Analyse abgelehnt: alle 3 Properties werden bei jedem `show*Form()` neu initialisiert (effektiver Reset); App ist single-modal, kein Memory-Leak-Risiko; FormState-Klasse wäre over-engineering für Vanilla JS | ~~M~~ |
 | A5 | **`db`-Shim eliminieren**: Aktuell leitet `window.db` per Shim auf `AppState.db` weiter (176 bare-Zugriffe in 14 Dateien). Nachhaltige Lösung: `AppState.db` nie neu zuweisen — stattdessen `setDb(newDb)` mit `Object.assign` auf stabiler Referenz; dann `const db = AppState.db` modul-level statt globalem Shim. Betroffene Stellen: ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
 
 ---
