@@ -880,6 +880,7 @@ function _derivedHofObjectsFromDb(db) {
       if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.lati != null && ev.long != null) {
         const addr = ev.addr.trim();
         if (!hof[addr]) hof[addr] = { addr, lat: ev.lati, long: ev.long };
+        if (!hof[addr].note && ev.note) hof[addr].note = ev.note;
       }
     }
   }

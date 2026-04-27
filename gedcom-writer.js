@@ -192,7 +192,8 @@ function writeINDIRecord(lines, p) {
       if (_hm?.lat != null) {
         lines.push(`2 PLAC ${ev.addr.replace(/\n/g, ', ')}`);
         geoLines(lines, { lati: _hm.lat, long: _hm.long }, 3);
-        if (_hm.note) pushCont(lines, 3, 'NOTE', _hm.note);
+        // Notiz auf lv=2 (parseable beim Roundtrip), nur wenn kein eigenes Event-NOTE
+        if (_hm.note && !ev.note) pushCont(lines, 2, 'NOTE', _hm.note);
       }
     }
     if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
