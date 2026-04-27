@@ -229,10 +229,15 @@ function renderSourceList(srcs) {
   const el = document.getElementById('sourceList');
   if (!srcs) srcs = Object.values(AppState.db.sources);
   srcs = [...srcs].sort((a, b) => (a.abbr || a.title || a.id).localeCompare(b.abbr || b.title || b.id, 'de'));
-  if (!srcs.length) { el.innerHTML = '<div class="empty">Keine Quellen gefunden</div>'; return; }
+  if (!srcs.length) {
+    el.innerHTML = '<div class="empty">Keine Quellen gefunden</div>';
+    _announceList('Keine Quellen');
+    return;
+  }
 
   let html = '';
-  for (const s of srcs) {
+  for (let i = 0; i < srcs.length; i++) {
+    const s = srcs[i];
     const refCount = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(s.id)).length
                    + Object.values(AppState.db.families).filter(f => f.sourceRefs && f.sourceRefs.has(s.id)).length;
     const hasRepo = s.repo && s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo];
@@ -240,12 +245,13 @@ function renderSourceList(srcs) {
     const mediaCount = (s.media || []).filter(m => m.file || m.title).length
                      + (s._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
     const mediaBadge = mediaCount ? `<span style="font-size:0.8rem;margin-left:5px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-    html += `<div class="source-card" data-action="showSourceDetail" data-sid="${s.id}">
+    html += `<div class="source-card" role="listitem" aria-setsize="${srcs.length}" aria-posinset="${i + 1}" data-action="showSourceDetail" data-sid="${s.id}">
       <div class="source-title">${esc(s.abbr || s.title || s.id)}${repoBadge}${mediaBadge}</div>
       <div class="source-meta">${esc([s.author, s.date].filter(Boolean).join(' · ')) || '&nbsp;'}${refCount ? ` · ${refCount} Ref.` : ''}</div>
     </div>`;
   }
   el.innerHTML = html;
+  _announceList(srcs.length + (srcs.length === 1 ? ' Quelle' : ' Quellen'));
 }
 
 function filterSources(q) {

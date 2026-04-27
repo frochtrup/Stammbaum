@@ -14,7 +14,7 @@ function togglePersonSort() {
   applyPersonFilter();
 }
 
-function _personRowHtml(p, isCurrent) {
+function _personRowHtml(p, isCurrent, pos, total) {
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
   let meta = '';
@@ -24,7 +24,8 @@ function _personRowHtml(p, isCurrent) {
   const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                     + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
   const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-  return `<div class="person-row${isCurrent ? ' current' : ''}" data-action="showDetail" data-pid="${p.id}">
+  const ariaPos = pos != null ? ` aria-setsize="${total}" aria-posinset="${pos}"` : '';
+  return `<div class="person-row${isCurrent ? ' current' : ''}" role="listitem"${ariaPos} data-action="showDetail" data-pid="${p.id}">
       <div class="p-avatar ${sc}">${ic}</div>
       <div class="p-info">
         <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
@@ -48,6 +49,7 @@ function renderPersonList(persons) {
   if (!sorted.length) {
     _vsTeardown(_vsP);
     listEl.innerHTML = '<div class="empty">Noch keine Personen</div>';
+    _announceList('Keine Personen');
     return;
   }
 
@@ -55,7 +57,8 @@ function renderPersonList(persons) {
     // ── Normales Rendering (kleine Liste) ──
     _vsTeardown(_vsP);
     let html = '', lastSep = '';
-    for (const p of sorted) {
+    for (let i = 0; i < sorted.length; i++) {
+      const p = sorted[i];
       let sep;
       if (_personSort === 'date') {
         const key = gedDateSortKey(p.birth.date);
@@ -64,9 +67,10 @@ function renderPersonList(persons) {
         sep = (p.surname || p.given || p.name || '?')[0].toUpperCase();
       }
       if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
-      html += _personRowHtml(p, false);
+      html += _personRowHtml(p, false, i + 1, sorted.length);
     }
     listEl.innerHTML = html;
+    _announceList(sorted.length + (sorted.length === 1 ? ' Person' : ' Personen'));
     if (AppState.currentPersonId) {
       const cur = listEl.querySelector(`[data-pid="${AppState.currentPersonId}"]`);
       if (cur) {
@@ -81,7 +85,7 @@ function renderPersonList(persons) {
   // ── Virtuelles Rendering (große Liste) ──
   _vsP.items   = [];
   _vsP.offsets = [];
-  let offset = 0, lastSep = '';
+  let offset = 0, lastSep = '', personPos = 0;
   const curId = AppState.currentPersonId;
 
   for (const p of sorted) {
@@ -98,13 +102,15 @@ function renderPersonList(persons) {
       offset += _VS_SEP;
       lastSep = sep;
     }
-    _vsP.items.push({ px: _VS_ROW, s: _personRowHtml(p, p.id === curId), id: p.id });
+    personPos++;
+    _vsP.items.push({ px: _VS_ROW, s: _personRowHtml(p, p.id === curId, personPos, sorted.length), id: p.id });
     _vsP.offsets.push(offset);
     offset += _VS_ROW;
   }
   _vsP.total = offset;
 
   _vsSetup(listEl, _vsP);
+  _announceList(sorted.length + (sorted.length === 1 ? ' Person' : ' Personen'));
 
   // Zum aktuellen Eintrag scrollen
   if (curId) {

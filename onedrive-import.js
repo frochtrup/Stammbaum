@@ -210,6 +210,44 @@ async function _odShowAllFolders() {
   } catch(e) { console.warn('[OD] Parent-Ordner laden:', e); await _odShowFolder('root', 'OneDrive'); }
 }
 
+function _updatePersonPhoto(id) {
+  const p = getPerson(id);
+  const prim = p?.media?.find(m => m.prim) || p?.media?.[0];
+  if (!prim?.file) return;
+  _odGetMediaUrlByPath(prim.file).then(url => {
+    if (!url) return;
+    const el = document.getElementById('det-photo-' + id);
+    const av = document.getElementById('det-avatar-' + id);
+    if (el) {
+      const img = document.createElement('img');
+      img.src = url; img.alt = 'Foto';
+      img.dataset.action = 'showLightbox';
+      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
+      el.style.display = ''; el.innerHTML = ''; el.appendChild(img);
+    }
+    if (av) av.style.display = 'none';
+  }).catch(() => {});
+}
+
+function _updateFamilyPhoto(id) {
+  const f = getFamily(id);
+  const prim = f?.media?.find(m => m.prim) || f?.media?.[0];
+  if (!prim?.file) return;
+  _odGetMediaUrlByPath(prim.file).then(url => {
+    if (!url) return;
+    const el = document.getElementById('det-fam-photo-' + id);
+    const av = document.getElementById('det-fam-avatar-' + id);
+    if (el) {
+      const img = document.createElement('img');
+      img.src = url; img.alt = 'Foto';
+      img.dataset.action = 'showLightbox';
+      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
+      el.style.display = ''; el.innerHTML = ''; el.appendChild(img);
+    }
+    if (av) av.style.display = 'none';
+  }).catch(() => {});
+}
+
 async function odImportPhotosFromFolder(folderId, folderName) {
   closeModal('modalOneDrive');
   const token = await _odGetToken(); if (!token) return;
@@ -296,32 +334,8 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
 
     // Aktuelle Ansicht sofort aktualisieren
-    if (AppState.currentPersonId) {
-      const p = getPerson(AppState.currentPersonId);
-      const primMedia = p?.media?.find(m => m.prim) || p?.media?.[0];
-      if (primMedia?.file) {
-        _odGetMediaUrlByPath(primMedia.file).then(url => {
-          if (!url) return;
-          const el = document.getElementById('det-photo-' + AppState.currentPersonId);
-          const av = document.getElementById('det-avatar-' + AppState.currentPersonId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`; }
-          if (av) av.style.display = 'none';
-        }).catch(() => {});
-      }
-    }
-    if (AppState.currentFamilyId) {
-      const f = getFamily(AppState.currentFamilyId);
-      const primMedia = f?.media?.find(m => m.prim) || f?.media?.[0];
-      if (primMedia?.file) {
-        _odGetMediaUrlByPath(primMedia.file).then(url => {
-          if (!url) return;
-          const el = document.getElementById('det-fam-photo-' + AppState.currentFamilyId);
-          const av = document.getElementById('det-fam-avatar-' + AppState.currentFamilyId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`; }
-          if (av) av.style.display = 'none';
-        }).catch(() => {});
-      }
-    }
+    if (AppState.currentPersonId) _updatePersonPhoto(AppState.currentPersonId);
+    if (AppState.currentFamilyId) _updateFamilyPhoto(AppState.currentFamilyId);
 
     let msg = `✓ ${linked} Fotos verknüpft`;
     if (missing) msg += ` · ${missing} nicht gefunden`;

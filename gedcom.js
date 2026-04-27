@@ -280,6 +280,18 @@ function readDatePartFromFields(baseId) {
   return y;
 }
 
+// Validiert drei Datumsfelder (baseId+'-d'/'-m'/'-y') — gibt Fehlerstring oder null zurück
+function validateDatePartFields(baseId) {
+  const d = (document.getElementById(baseId + '-d')?.value || '').trim();
+  const mRaw = (document.getElementById(baseId + '-m')?.value || '').trim();
+  const y = (document.getElementById(baseId + '-y')?.value || '').trim();
+  if (y && !/^\d{4}$/.test(y)) return 'Jahr muss 4-stellig sein (z.B. 1875)';
+  if (y && (+y < 1000 || +y > 2099)) return 'Jahr außerhalb 1000–2099';
+  if (d && (!/^\d{1,2}$/.test(d) || +d < 1 || +d > 31)) return 'Tag muss 1–31 sein';
+  if (mRaw && !normMonth(mRaw)) return 'Ungültiger Monat';
+  return null;
+}
+
 // Wrapper: liest Qualifier + zwei Datumsbasen → buildGedDate
 function buildGedDateFromFields(qualId, dateBaseId, date2BaseId) {
   return buildGedDate(

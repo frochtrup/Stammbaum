@@ -135,6 +135,10 @@ function showPersonForm(id) {
   _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
   initSrcWidget('pf', p?.topSources || [], p?.topSourcePages || {}, p?.topSourceQUAY || {});
+  const errEl = document.getElementById('pf-name-err');
+  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
+  document.getElementById('pf-given').style.borderColor = '';
+  document.getElementById('pf-surname').style.borderColor = '';
   openModal('modalPerson');
 }
 
@@ -198,7 +202,13 @@ function savePerson() {
   const email  = document.getElementById('pf-email').value.trim();
   const www    = document.getElementById('pf-www').value.trim();
 
-  if (!given && !surname) { showToast('⚠ Bitte Namen eingeben'); return; }
+  if (!given && !surname) {
+    const errEl = document.getElementById('pf-name-err');
+    if (errEl) { errEl.textContent = 'Bitte mindestens Vor- oder Nachname eingeben'; errEl.style.display = ''; }
+    document.getElementById('pf-given').style.borderColor = 'var(--danger, #c0392b)';
+    document.getElementById('pf-surname').style.borderColor = 'var(--danger, #c0392b)';
+    return;
+  }
 
   const existing = getPerson(id) || {};
   const events = existing.events ? [...existing.events] : [];

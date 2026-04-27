@@ -6,7 +6,7 @@ function _famSortKey(a) {
   return na;
 }
 
-function _famRowHtml(f, isCurrent) {
+function _famRowHtml(f, isCurrent, pos, total) {
   const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
   const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
@@ -18,7 +18,8 @@ function _famRowHtml(f, isCurrent) {
                     + (f.marr?.media || []).filter(m => m.file || m.titl).length
                     + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
   const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-  return `<div class="person-row${isCurrent ? ' current' : ''}" data-action="showFamilyDetail" data-fid="${f.id}">
+  const ariaPos = pos != null ? ` aria-setsize="${total}" aria-posinset="${pos}"` : '';
+  return `<div class="person-row${isCurrent ? ' current' : ''}" role="listitem"${ariaPos} data-action="showFamilyDetail" data-fid="${f.id}">
       <div class="p-avatar">👨‍👩‍👧</div>
       <div class="p-info">
         <div class="p-name">${esc(title)}${fMediaBadge}</div>
@@ -34,6 +35,7 @@ function renderFamilyList(fams) {
   if (!fams.length) {
     _vsTeardown(_vsF);
     listEl.innerHTML = '<div class="empty">Keine Familien gefunden</div>';
+    _announceList('Keine Familien');
     return;
   }
   fams = [...fams].sort((a, b) => {
@@ -46,8 +48,9 @@ function renderFamilyList(fams) {
     // ── Normales Rendering ──
     _vsTeardown(_vsF);
     let html = '';
-    for (const f of fams) html += _famRowHtml(f, false);
+    for (let i = 0; i < fams.length; i++) html += _famRowHtml(fams[i], false, i + 1, fams.length);
     listEl.innerHTML = html;
+    _announceList(fams.length + (fams.length === 1 ? ' Familie' : ' Familien'));
     if (AppState.currentFamilyId) {
       const cur = listEl.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
       if (cur) {
@@ -65,14 +68,16 @@ function renderFamilyList(fams) {
   let offset = 0;
   const curId = AppState.currentFamilyId;
 
-  for (const f of fams) {
-    _vsF.items.push({ px: _VS_ROW, s: _famRowHtml(f, f.id === curId), id: f.id });
+  for (let i = 0; i < fams.length; i++) {
+    const f = fams[i];
+    _vsF.items.push({ px: _VS_ROW, s: _famRowHtml(f, f.id === curId, i + 1, fams.length), id: f.id });
     _vsF.offsets.push(offset);
     offset += _VS_ROW;
   }
   _vsF.total = offset;
 
   _vsSetup(listEl, _vsF);
+  _announceList(fams.length + (fams.length === 1 ? ' Familie' : ' Familien'));
 
   if (curId) {
     const idx = _vsF.items.findIndex(it => it.id === curId);

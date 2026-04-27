@@ -180,6 +180,14 @@ function _setListScroll(pos) {
   }
 }
 
+// ─── ARIA-Announcement für Listenergebnisse ────────────────────────
+function _announceList(text) {
+  const el = document.getElementById('list-announce');
+  if (!el) return;
+  el.textContent = '';
+  requestAnimationFrame(() => { el.textContent = text; });
+}
+
 // ─── Virtual Scroll ────────────────────────────────────────────────
 const _VS_BUF  = 600;  // px pre-render buffer above/below viewport
 const _VS_ROW  = 69;   // person/family row height (measured)

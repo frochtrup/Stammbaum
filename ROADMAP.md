@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v275 / Cache: `stammbaum-v275`
+**Aktuelle sw-Version:** v279 / Cache: `stammbaum-v279`
 
 ---
 
@@ -53,10 +53,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Rang | ID | Aufgabe | Kategorie | Aufwand |
 |---|---|---|---|---|
 | 1 | A5 | `db`-Shim eliminieren: `setDb()` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level | Architektur | L |
-| 2 | Q9 | Input-Validierung `savePerson()`: Name nicht leer, Jahreszahl 4-stellig, Datum-Format vor Speichern prüfen | Code-Qualität | S |
-| 3 | A6 | `ui-forms.js` aufteilen: Modal-System + Focus-Trap → `ui-modal.js`; Toast/Overlay → `ui-utils.js` (aktuell 884 Z., 40 Funktionen) | Architektur | M |
-| 4 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | UX | M |
-| 5 | U8 | Cmd+Z granulares Undo: History-Stack auf AppState | UX | XL |
+| 2 | A6 | `ui-forms.js` aufteilen: Modal-System + Focus-Trap → `ui-modal.js`; Toast/Overlay → `ui-utils.js` (aktuell 884 Z., 40 Funktionen) | Architektur | M |
+| 3 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | UX | M |
+| 4 | U8 | Cmd+Z granulares Undo: History-Stack auf AppState | UX | XL |
 
 ---
 
@@ -66,8 +65,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Aufwand |
 |---|---|---|
-| Q9 | **Input-Validierung `savePerson()`**: Name nicht leer, Jahreszahl 4-stellig numerisch, ungültiges Datum-Format vor Speichern abweisen + Inline-Fehleranzeige. Aktuell landet alles ohne Prüfung in `db`. | S |
-| Q10 | **`onedrive-import.js` Foto-Injection Refaktor**: Zeilen 299–323 zweimal identisches `_odGetMediaUrlByPath` + `innerHTML`-Pattern für Person und Familie. Zu `_updatePersonPhoto(id)` / `_updateFamilyPhoto(id)` extrahieren; `createElement` statt `innerHTML`. | XS |
+| — | *P1 vollständig — siehe Archiv* | |
 
 ---
 
@@ -87,8 +85,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
 | U12 | **Dark Mode**: `prefers-color-scheme` Media Query in `styles.css` fehlt; `theme_color` in `manifest.json` fest | M |
-| U13 | **`aria-live` auf Listen**: `#personList`, `#familyList`, `#sourceList` bekommen `aria-live="polite" aria-atomic="false"` — Screen-Reader bekommt kein Feedback nach Filter/Suche | XS |
-| U14 | **Virtual Scroll ARIA**: Bei Listen >500 Items fehlen `aria-rowcount` (Gesamtzahl) und `aria-rowindex` (Position) auf den gerenderten Einträgen — Screen-Reader sieht nur die sichtbaren ~10 Items | S |
 
 ---
 
@@ -158,6 +154,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Q6 | `_buildSearchIndex()` dirty-Pfad prüfen | ✅ 2026-04-27 — kein Bug |
 | Q7 | `_getOriginalText()` localStorage-Fallback entfernen | ✅ 2026-04-27 |
 | Q8 | `tryAutoLoad()` Migration-Pfad markieren | ✅ 2026-04-27 |
+| Q9 | Input-Validierung `savePerson()` + `saveEvent()`: Name leer, Jahr 4-stellig, Tag 1–31, Monat gültig; Inline-Fehler via `.form-error`; `validateDatePartFields()` in `gedcom.js` | ✅ 2026-04-27 |
+| Q10 | `onedrive-import.js` Foto-Injection Refaktor: `_updatePersonPhoto()` / `_updateFamilyPhoto()`; `createElement` statt `innerHTML` | ✅ 2026-04-27 |
 | — | generische `initAutocomplete()` | gestrichen — unterschiedliche Kontexte |
 
 ### P2 — Architektur (Teilarchiv)
@@ -193,6 +191,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U10 | Touch-Targets ≥44px | ✅ 2026-04-27 |
 | U11 | Icon-Buttons `aria-label` + `aria-expanded` | ✅ 2026-04-27 |
 | U11b | Landmark-Elemente `<main>`, `<nav>` | ✅ 2026-04-27 |
+| U13 | `aria-live`-Announcement nach Filter/Suche: `#list-announce` (role=status, sr-only); `_announceList()` in allen drei Render-Fns | ✅ 2026-04-27 |
+| U14 | VS ARIA: `role="list"` auf Container; `role="listitem"` + `aria-setsize`/`aria-posinset` auf allen Zeilen (VS + small list + sourceList) | ✅ 2026-04-27 |
 | — | Lade-Spinner für GEDCOM/GRAMPS Parse + Import: `#loadingOverlay`, `rAF+setTimeout`-Pattern, `finally`-Blöcke | ✅ 2026-04-27 |
 
 ---

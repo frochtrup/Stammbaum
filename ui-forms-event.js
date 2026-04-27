@@ -151,6 +151,8 @@ function showEventForm(personId, evIdx) {
   }
   onEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
   document.getElementById('deleteEventBtn').style.display = isExisting ? '' : 'none';
+  const dateErrEl = document.getElementById('ef-date-err');
+  if (dateErrEl) { dateErrEl.textContent = ''; dateErrEl.style.display = 'none'; }
   openModal('modalEvent');
 }
 
@@ -169,6 +171,16 @@ function saveEvent() {
   const _newSrcIds  = srcWidgetState['ef']?.ids || [];
   const _srcChanged = _oldEvSrc.length !== _newSrcIds.length
     || _oldEvSrc.some((s, i) => s !== _newSrcIds[i]);
+
+  // Datum-Validierung
+  const qual = document.getElementById('ef-date-qual')?.value || '';
+  const _dateErr = validateDatePartFields('ef-date')
+    || (['BET','FROM'].includes(qual) ? validateDatePartFields('ef-date2') : null);
+  if (_dateErr) {
+    const errEl = document.getElementById('ef-date-err');
+    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = ''; }
+    return;
+  }
 
   // Koordinaten aus Ortsregister — lati/long sind Attribut des Ortes, nicht des Ereignisses
   const _geoFromPlace = placeName => {
