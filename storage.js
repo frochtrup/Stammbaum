@@ -15,7 +15,6 @@ function revertToSaved() {
   UIState._hofCache = null;
   if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
   updateChangedIndicator();
-  updateStats();
   renderTab();
   showToast('✓ Zurückgesetzt');
 }
@@ -132,7 +131,8 @@ async function tryAutoLoad() {
       return true;
     }
   } catch(e) { /* IDB nicht verfügbar */ }
-  // Fallback: localStorage (Migration für bestehende Nutzer)
+  // Fallback: localStorage (Migration für Nutzer vor S5/2026-04-27, kein IDB-Stand vorhanden)
+  // TODO: Migration entfernen Q3/2026, wenn kein Nutzer mehr pre-S5-Daten in localStorage hat.
   try {
     const saved = localStorage.getItem('stammbaum_ged');
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';

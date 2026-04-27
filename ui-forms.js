@@ -249,7 +249,6 @@ function savePerson() {
   closeModal('modalPerson');
 
   markChanged();
-  updateStats();
   renderTab();
 
   if (UIState._pendingRelation) {
@@ -279,7 +278,7 @@ function deletePerson() {
   }
   delete AppState.db.individuals[id];
   closeModal('modalPerson');
-  markChanged(); updateStats();
+  markChanged();
   showMain(); showToast('✓ Person gelöscht');
 }
 
@@ -456,7 +455,7 @@ function saveFamily() {
   }
 
   closeModal('modalFamily');
-  markChanged(); updateStats();
+  markChanged();
   renderTab();
   showToast('✓ Familie gespeichert');
   if (AppState.currentFamilyId === id) showFamilyDetail(id);
@@ -475,7 +474,7 @@ function deleteFamily() {
   }
   delete AppState.db.families[id];
   closeModal('modalFamily');
-  markChanged(); updateStats();
+  markChanged();
   showMain(); showToast('✓ Familie gelöscht');
 }
 
@@ -573,7 +572,7 @@ function saveSource() {
   };
 
   closeModal('modalSource');
-  markChanged(); updateStats();
+  markChanged();
   renderTab();
   showToast('✓ Quelle gespeichert');
   if (AppState.currentSourceId === id) showSourceDetail(id);
@@ -585,7 +584,7 @@ function deleteSource() {
   if (!confirm('Quelle wirklich löschen?')) return;
   delete AppState.db.sources[id];
   closeModal('modalSource');
-  markChanged(); updateStats();
+  markChanged();
   showMain(); showToast('✓ Quelle gelöscht');
 }
 
@@ -682,10 +681,10 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
 document.addEventListener('keydown', e => {
   const mod = e.metaKey || e.ctrlKey;
 
-  // Escape: offenes Modal schließen
+  // Escape: oberstes (zuletzt geöffnetes) Modal schließen
   if (e.key === 'Escape') {
-    const open = document.querySelector('.modal-overlay.open');
-    if (open) closeModal(open.id);
+    const all = document.querySelectorAll('.modal-overlay.open');
+    if (all.length) closeModal(all[all.length - 1].id);
     return;
   }
 
@@ -735,7 +734,11 @@ function esc(str) {
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
+  t.textContent = msg;
+  t.className = 'toast'; // Typ-Klassen zurücksetzen
+  if (msg.startsWith('✓'))  t.classList.add('toast-success');
+  else if (msg.startsWith('⚠')) t.classList.add('toast-warn');
+  t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }

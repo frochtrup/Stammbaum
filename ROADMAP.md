@@ -55,11 +55,11 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | Rang | ID | Aufgabe | Kategorie | Aufwand | Begründung |
 |---|---|---|---|---|---|
-| 1 | Q5 | `updateStats()` No-op entfernen — 12+ tote Aufrufe | Code | XS | Null-Risiko, sofort sauber |
-| 2 | Q7 | `_getOriginalText()` localStorage-Fallback entfernen | Code | XS | Dead Code seit S5; leicht irreführend |
-| 3 | Q8 | `tryAutoLoad()` Migration-Pfad mit TODO markieren | Code | XS | Explizit dokumentieren, wann entfernen |
-| 4 | U4 | `showToast(type)` — visuell Erfolg/Warnung/Fehler trennen | UX | S | Fehler und Erfolg sehen heute identisch aus |
-| 5 | U2 | Modal-Stack / Escape-Verhalten bei mehreren offenen Modals | UX | S | Escape schließt falsches Modal; Nutzerfehler |
+| ~~1~~ | ~~Q5~~ | ~~`updateStats()` No-op entfernen — 12+ tote Aufrufe~~ ✅ 2026-04-27 | Code | XS | |
+| ~~2~~ | ~~Q7~~ | ~~`_getOriginalText()` localStorage-Fallback entfernen~~ ✅ 2026-04-27 | Code | XS | |
+| ~~3~~ | ~~Q8~~ | ~~`tryAutoLoad()` Migration-Pfad mit TODO markieren~~ ✅ 2026-04-27 | Code | XS | |
+| ~~4~~ | ~~U4~~ | ~~`showToast(type)` — visuell Erfolg/Warnung/Fehler trennen~~ ✅ 2026-04-27 | UX | S | |
+| ~~5~~ | ~~U2~~ | ~~Modal-Stack / Escape schließt oberstes Modal~~ ✅ 2026-04-27 | UX | S | |
 | 6 | U10 | Touch-Targets ≥44px (WCAG 2.5.5) | UX/a11y | S | iOS-Nutzbarkeit; Source-Picker-Toggle betroffen |
 | 7 | Q6 | `_buildSearchIndex()` dirty-Pfad verifizieren | Code | S | Möglicher Index-Stale-Bug nach `markChanged()` |
 | 8 | U11b | Landmark-Elemente `<main>`, `<nav role>` ergänzen | a11y | S | Screenreader-Navigation; CSS-Impact gering |
@@ -96,10 +96,10 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Q2 | ~~**`_renderMediaList()` + `_renderEfMedia()` zusammenführen**~~ — gestrichen; unterschiedliche Kontexte | S |
 | Q3 | ~~**Backward-Compat-Shims bereinigen**~~ ✅ sw v268 | M |
 | Q4 | ~~**Getter konsequent durchziehen**~~ — gestrichen; Risiko > Nutzen | M |
-| Q5 | **`updateStats()` No-op entfernen** — Funktion ist leer (`ui-views.js:479`), wird an 12+ Stellen aufgerufen (ui-forms.js, ui-forms-event.js, ui-views-family.js, storage.js); komplette Bereinigung | XS |
+| Q5 | ~~**`updateStats()` No-op entfernen**~~ ✅ 2026-04-27 — Funktion + 14 Aufrufe in 5 Dateien entfernt | XS |
 | Q6 | **`_buildSearchIndex()` dirty-Pfad prüfen** — `ui-views-person.js:247` wird via `UIState._searchIndexDirty`-Flag aufgerufen, aber nur wenn `lower` truthy; Index wird bei leerem Suchfeld nie gebaut → erster Suchaufruf korrekt, aber `markChanged()` setzt Flag ohne Index-Reset; prüfen ob `dirty`-Pfad vollständig korrekt | S |
-| Q7 | **`_getOriginalText()` localStorage-Fallback entfernen** — `gedcom.js:70`: `localStorage.getItem('stammbaum_ged_backup')` ist seit S5 toter Code (wird nicht mehr geschrieben); nach Migration-Zeitraum (~3 Monate) entfernen; ersatzweise IDB-Read async | XS |
-| Q8 | **`tryAutoLoad()` Migration-Pfad entfernen** — `storage.js:136–157`: localStorage-Lesen für GEDCOM-Migration wird überflüssig sobald alle aktiven Nutzer mindestens einmal IDB-gespeichert haben; als `// TODO: Migration 2026-Q3 entfernen` markieren | XS |
+| Q7 | ~~**`_getOriginalText()` localStorage-Fallback entfernen**~~ ✅ 2026-04-27 — `gedcom.js:67`: Dead Code entfernt; Funktion liefert nur noch `AppState._originalGedText ?? null` | XS |
+| Q8 | ~~**`tryAutoLoad()` Migration-Pfad markieren**~~ ✅ 2026-04-27 — TODO-Kommentar mit Datum Q3/2026 in `storage.js:135` | XS |
 
 *Gestrichen: generische `initAutocomplete()` — unterschiedliche Kontexte, Aufwand > Nutzen (bewertet 2026-04-14)*
 
@@ -132,9 +132,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Aufwand |
 |---|---|---|
 | U1 | ~~**Fehlermeldungen nutzerfreundlich**~~ ✅ sw v267 | S |
-| U2 | **Modal-Stack klären**: Escape-Verhalten bei mehreren offenen Modals (`#modal` + `#modalNote` + `#modalDedup`) | S |
+| U2 | ~~**Modal-Stack / Escape-Verhalten**~~ ✅ 2026-04-27 — `querySelectorAll` + letztes Element; schließt immer das oberste Modal | S |
 | U3 | **`confirm()` → Modal**: 6+ Stellen → `confirmModal(msg)` Promise; Lösch-UX vereinheitlichen | M |
-| U4 | **`showToast(type)`**: `type ∈ {success, warning, error}` + CSS-Differenzierung (aktuell: Fehler und Erfolg visuell identisch) | S |
+| U4 | ~~**`showToast(type)`**~~ ✅ 2026-04-27 — Auto-Erkennung via Präfix (✓ → gold, ⚠ → orange); `.toast-success` + `.toast-warn` in styles.css | S |
 | U5 | ~~**Namens-Truncation im Baum**~~ ✅ sw v269 | XS |
 | U6 | **`handleError()` zentralisieren**: try/catch → `handleError(e, context, userMsg)` | M |
 | U7 | ~~**Advanced Search**~~ ✅ sw v269 | L |

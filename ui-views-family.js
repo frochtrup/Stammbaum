@@ -259,7 +259,7 @@ function unlinkMember(famId, personId) {
     p.famc = p.famc.filter(c => famcIdOf(c) !== famId);
   } else return; // nichts gefunden
 
-  markChanged(); updateStats(); renderTab();
+  markChanged(); renderTab();
   showToast('✓ Verbindung getrennt');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
   else if (AppState.currentPersonId) showDetail(AppState.currentPersonId);

@@ -207,7 +207,7 @@ function saveEvent() {
 
   _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -222,7 +222,7 @@ function deleteEvent() {
   p.events.splice(evIdx, 1);
   _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('Ereignis gelöscht');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -351,7 +351,7 @@ function saveFamEvent() {
   }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }
@@ -370,7 +370,7 @@ function deleteFamEvent() {
   }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('Ereignis gelöscht');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }

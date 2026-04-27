@@ -63,11 +63,9 @@ const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto
 const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde
 const _activeSpouseMap = {};    // personId → aktiver Ehepartner-Index
 
-// Liefert den Original-GEDCOM-Text (erste geladene Version).
-// Bevorzugt _originalGedText (RAM, immer aktuell für aktive Session);
-// localStorage-Backup als Fallback nach Reload (wenn RAM verloren, aber Storage erhalten).
+// Liefert den Original-GEDCOM-Text (erste geladene Version, aus RAM oder IDB via tryAutoLoad).
 function _getOriginalText() {
-  return AppState._originalGedText || localStorage.getItem('stammbaum_ged_backup') || null;
+  return AppState._originalGedText ?? null;
 }
 
 function nextId(prefix) {

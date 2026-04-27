@@ -769,6 +769,8 @@ body.desktop-mode.places-karte #mapContainer {
   z-index: 1000; white-space: nowrap; pointer-events: none;
 }
 .toast.show { opacity: 1; }
+.toast.toast-success { border-color: var(--gold); color: var(--gold-lt); }
+.toast.toast-warn    { border-color: #b06820; color: #d08830; }
 
 /* ═══════════════════════════════════════
    SOURCES VIEW

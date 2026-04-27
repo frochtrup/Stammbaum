@@ -369,7 +369,6 @@ function showMain() {
   document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
-  updateStats();
   renderTab();
   if (saved && saved.tab === AppState.currentTab) {
     // setTimeout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
@@ -476,9 +475,6 @@ function renderTab() {
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
 }
 
-function updateStats() {
-  // Stats-Leiste entfernt – Funktion bleibt als No-op erhalten
-}
 
 function updateChangedIndicator() {
   const show = AppState.changed;
