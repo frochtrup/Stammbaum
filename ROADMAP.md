@@ -42,7 +42,7 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 4a | UX: `compactPlace()`, Notizen-Modal, noteRefs editierbar + löschbar, `_pruneOrphanNotes()` | v236–v242 |
 | 4b | Duplikat-Erkennung + Merge: Levenshtein-Scoring, Merge-Modal, Ignorieren | v243 |
 | 4c | Kartenansicht: Leaflet lokal; Alle Orte + Personenbiografie; Desktop rechtes Panel; Safari-Fix | v244–v250 |
-| 4d | Hof-Koordinaten + Notizen: `db.hofObjects{}`, PLAC+MAP am RESI, Hof-Marker auf Karte, RESI-Stationen in Personenbiografie | v280 |
+| 4d | Hof-Koordinaten + Notizen: `db.hofObjects{}`, PLAC+MAP am RESI, Hof-Marker auf Karte, RESI-Stationen in Personenbiografie; Roundtrip-Fixes v282–v283 | v280–v283 |
 | Cleanup | Virtual Scroll, onclick-Delegation, State-Konsolidierung, Suche indexiert, Debug ausgelagert | v230–v233 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
@@ -99,7 +99,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] **Orts-Hierarchie-Editor** — Formular mit `db.placeObjects{}`-Unterstützung
 - [ ] **Export-Hinweis** — "Zuletzt geladen: Datum" in Topbar/Export-Dialog
 
-#### Phase 4d — Hof-Koordinaten + Notizen *(in Arbeit)*
+#### Phase 4d — Hof-Koordinaten + Notizen ✅ v283
 
 **Datenmodell:** `db.hofObjects[addr] = { addr, lat, long, note }` — localStorage (`stammbaum_hofobjects`), lazy (nur wenn Koordinaten/Notiz vorhanden).
 
@@ -118,6 +118,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | GEDCOM-Writer: PLAC+MAP an RESI/PROP-Events | `gedcom-writer.js` | ✅ v281 |
 | GEDCOM-Parser: PLAC+MAP aus RESI-Events → hofObjects | `gedcom-parser.js` | ✅ v281 |
 | GRAMPS: placeobj type=Building | `gramps-parser.js`, `gramps-writer.js` | ✅ v281 |
+| Fix: Hof-Notiz Roundtrip via OneDrive (lv=2 NOTE + ev.note in _derived) | `gedcom-writer.js`, `gedcom-parser.js` | ✅ v282 |
+| Fix: hofObjects Priorität vor extraPlaces in `geoLines()` | `gedcom-writer.js` | ✅ v283 |
 
 ---
 

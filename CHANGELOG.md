@@ -9,6 +9,68 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-27 — Phase 4d: Hof-Koordinaten + Notizen, Roundtrip-Fixes (sw v280–v283)
+
+- **sw v280** `feat`: Hof-Koordinaten + Notizen
+  - `db.hofObjects[addr] = { addr, lat, long, note }` — localStorage (`stammbaum_hofobjects`), lazy
+  - `loadHofObjects()` / `saveHofObjects()` in `ui-forms.js`
+  - `ui-views-hof.js`: Koordinaten-Sektion + Formular (`showHofCoordForm`, `saveHofCoord`, `deleteHofCoord`); 📍 Icon in Hof-Liste wenn Koordinaten vorhanden
+  - `ui-views-note.js`: `openNoteModal('hof', addr)` — liest/schreibt `hofObjects[addr].note`
+  - `ui-views-map.js`: Gold-Rautenmarker für Höfe in Ortsmodus; RESI/PROP-Stationen in Personenbiografie nutzen hofObjects als Koordinaten-Fallback
+  - `storage.js` / `storage-file.js`: `_derivedHofObjectsFromDb()` als Roundtrip-Fallback — stellt Koordinaten nach GEDCOM-Reload wieder her; Merge: `_derived` < `loadHofObjects()`
+  - `gedcom-writer.js`: RESI/PROP-Events ohne PLAC → `PLAC+MAP` aus hofObjects für Ancestris-Kompatibilität; `geoLines()`: hofObjects-Fallback ergänzt
+  - `gramps-parser.js`: Building/Farm/Neighborhood placeObjects → hofObjects abgeleitet
+  - `gramps-writer.js`: `hofAddrToHandle{}` — neue Hof-Placeobjs als `type="Building"` mit `<coord>`; `_collectEv` nutzt hofAddrToHandle
+- **sw v281** `feat`: Hof-Koordinaten GEDCOM + GRAMPS Roundtrip vollständig
+  - `gedcom-parser.js`: `_derivedHofObjectsFromDb()` exportiert (für storage.js / storage-file.js)
+  - `gedcom-writer.js`: PLAC+MAP an RESI/PROP-Events aus hofObjects; Hof-Notiz als `2 NOTE` (event-level, parseable)
+  - `gramps-writer.js`: Building-Placeobjs mit `<coord>` + `<noteref>`; `_collectEv` korrekt verknüpft
+- **sw v282** `fix`: Hof-Notiz Roundtrip via OneDrive/cross-device
+  - `gedcom-writer.js`: Hof-Notiz auf `2 NOTE` (statt `3 NOTE` unter PLAC — war parser-unsichtbar); nur wenn kein eigenes Event-NOTE (`!ev.note`)
+  - `gedcom-parser.js`: `_derivedHofObjectsFromDb()` erfasst jetzt auch `ev.note` — Notiz wird nach GEDCOM-Reload aus RESI-Events wiederhergestellt
+- **sw v283** `fix`: hofObjects-Koordinaten haben Vorrang vor extraPlaces in `geoLines()`
+  - Neue Priorität: hofObjects > extraPlaces > ev.lati/ev.long — verhindert, dass Ortsregister-Koordinaten spezifischere Hof-Koordinaten überschreiben
+
+---
+
+### Session 2026-04-27 — Qualitäts-Sprint P0–P4 (sw v265–v279)
+
+- **sw v265** `fix`: XSS in Karten-Exploration-Panel — `e.date` mit `_mesc()` escapen
+- **sw v266** `refactor`: `evDateKey()` nach `gedcom.js` zentralisiert (Q1)
+- **sw v267** `fix`: Parse-Fehler-Toast ohne Konsolen-Verweis (U1)
+- **sw v268** `refactor`: Backward-Compat-Shims bereinigt (Q3)
+- **sw v269** `feat`: Erweiterte Personensuche (U7) + Baum-Namens-Limit 18/26 Zeichen (U5)
+- **sw v270** `fix`: Qualitäts-Sprint 1 — S4 `buildPlacePartsHtml()` XSS-fix; S5 GEDCOM aus localStorage entfernt; S6 Redirect-URI fest kodiert
+- **sw v271** `refactor`: Qualitäts-Sprint 2 — Dead Code entfernt; `showToast(type)` visuell differenziert (U4); Modal-Stack / Escape-Verhalten (U2)
+- **sw v272** `refactor`: Qualitäts-Sprint 3 — `<main>`/`<nav>` Landmark-Elemente (U11b); Touch-Targets ≥44px (U10); Domain-Logik in `gedcom.js` (A3); `esc()` nach `gedcom.js` verschoben
+- **sw v273** `feat`: `confirm()` → `confirmModal()` Promise (U3); Hofliste — Eigentum vor Bewohner bei gleichem Datum
+- **sw v274** `feat`: Suchergebnisse ranken P3; `_rebuildPersonSourceRefs()` lazy P4
+- **sw v275** `fix`: `window.db`-Shim ergänzt; Q5/Q6/Q7/Q8 abgeschlossen; U6/A4 abgelehnt
+- **sw v276** `refactor`: A1 — `ui-views-note.js` (Notiz-Modal, 120 Z.) + `ui-views-search.js` (globale Suche, 139 Z.) aus `ui-views.js` extrahiert; `ui-views.js`: 935 → 683 Z.
+- **sw v277** `refactor+ux`: `esc()` zentralisiert in `gedcom.js`; Focus-Trap in Modals (`openModal`/`closeModal`, Tab-Zyklus, `aria-modal`, Fokus-Rückkehr) U9; Lade-Spinner für GEDCOM/GRAMPS Parse (`#loadingOverlay`, rAF+setTimeout) A3
+- **sw v279** `fix+a11y`: Q9 Input-Validierung `savePerson()`/`saveEvent()` (Name, Jahr 4-stellig, Tag 1–31, Monat); Q10 `onedrive-import.js` Foto-Injection Refaktor (`createElement`); U13 `aria-live` nach Filter/Suche; U14 VS ARIA `role=list/listitem` + `aria-setsize/posinset`; Icon-Buttons `aria-label`/`aria-expanded` (U11)
+
+---
+
+### Session 2026-04-16 — Kartenansicht-Ausbau + PROP in Hofhistorie (sw v251–v264)
+
+- **sw v251** `fix`: `#mapContainer` beim Tab-Wechsel explizit ausblenden
+- **sw v252** `fix`: Karte beim Wechsel zu Baum/anderen Views ausblenden
+- **sw v253** `feat`: Exploration-Panel in Biografie-Modus
+- **sw v254** `feat`: Person-Picker Modal in Karten-Biografie-Modus
+- **sw v255** `fix`: Exploration-Panel Biografie-Modus zeigt nur Ereignisse der gewählten Person
+- **sw v256** `fix`: Person-Picker Safari-Kompatibilität + Sort alphabetisch → Geburtsjahr
+- **sw v257** `feat`: Vollständige Ereignisbeschreibung im Exploration-Panel
+- **sw v258** `feat`: Person-Picker Sort Nachname → Vorname → Geburtsjahr
+- **sw v259** `feat`: EVEN-Beschreibung in Personenbiografie-Panel + Abbrechen-Button im Person-Picker
+- **sw v260** `fix`: `ev.value` für alle Ereignistypen im Karten-Biografiepanel
+- **sw v261** `feat`: PROP-Ereignisse in Hofhistorie + Adress-Autocomplete in Hof-Formular
+- **sw v262** `feat`: Bewohner + Eigentum in gemeinsamer Liste nach Datum sortiert
+- **sw v263** `fix`: `showHofPropForm` / `saveHofEigentum` / `cancelHofEigentum` in `_CLICK_MAP`
+- **sw v264** `fix`: `_renderAddBewohnerForm` fehlte in `showHofDetail`
+
+---
+
 ### Session 2026-04-15 — Desktop-Kartenansicht + Safari-Fix (sw v245–v250)
 
 - **sw v245** `feat`: Kartenansicht im rechten Desktop-Panel
