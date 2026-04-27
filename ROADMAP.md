@@ -17,6 +17,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
 **Aktuelle sw-Version:** v269 / Cache: `stammbaum-v269`
+**Qualitäts-Sprint 2026-04-27:** S4–S6 (XSS, localStorage, Redirect-URI), U9 (Modal-Fokus), U11 (Icon-Button aria-labels, aria-expanded) ✅
 
 ---
 
@@ -48,6 +49,30 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ---
 
+## Nächste Top-Prioritäten (Qualität)
+
+*Stand: 2026-04-27 — abgeleitet nach Abschluss des Sicherheits-Sprints (S4–S6, U9, U11)*
+
+| Rang | ID | Aufgabe | Kategorie | Aufwand | Begründung |
+|---|---|---|---|---|---|
+| 1 | Q5 | `updateStats()` No-op entfernen — 12+ tote Aufrufe | Code | XS | Null-Risiko, sofort sauber |
+| 2 | Q7 | `_getOriginalText()` localStorage-Fallback entfernen | Code | XS | Dead Code seit S5; leicht irreführend |
+| 3 | Q8 | `tryAutoLoad()` Migration-Pfad mit TODO markieren | Code | XS | Explizit dokumentieren, wann entfernen |
+| 4 | U4 | `showToast(type)` — visuell Erfolg/Warnung/Fehler trennen | UX | S | Fehler und Erfolg sehen heute identisch aus |
+| 5 | U2 | Modal-Stack / Escape-Verhalten bei mehreren offenen Modals | UX | S | Escape schließt falsches Modal; Nutzerfehler |
+| 6 | U10 | Touch-Targets ≥44px (WCAG 2.5.5) | UX/a11y | S | iOS-Nutzbarkeit; Source-Picker-Toggle betroffen |
+| 7 | Q6 | `_buildSearchIndex()` dirty-Pfad verifizieren | Code | S | Möglicher Index-Stale-Bug nach `markChanged()` |
+| 8 | U11b | Landmark-Elemente `<main>`, `<nav role>` ergänzen | a11y | S | Screenreader-Navigation; CSS-Impact gering |
+| 9 | U3 | `confirm()` → `confirmModal()` Promise (6+ Stellen) | UX | M | PWA-Blocking; iOS-Dialog-Look inkonsistent |
+| 10 | A3 | Domain-Logik (`buildHofIndex`, Dedup-Scoring) nach `gedcom.js` | Architektur | M | UI-Dateien haben Business-Logik; Testbarkeit |
+
+**Nicht in dieser Liste (eigene Sprints):**
+- A1 `ui-views.js` aufteilen (L) — erst nach A3
+- U8 Cmd+Z granulares Undo (XL) — eigenständiger Sprint
+- U12 Dark Mode (M) — eigenständiger Sprint
+
+---
+
 ## Offene Aufgaben nach Priorität
 
 ### P0 — Sicherheit *(vor jedem Sharing- oder Fremd-Import-Feature)*
@@ -57,9 +82,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | S1 | ~~**XSS-Audit**~~ ✅ sw v265 — vollständiger Audit aller `innerHTML`-Assignments; Lücke behoben: `ui-views-map.js:217` `e.date` fehlte `_mesc()` | M |
 | S2 | ~~**DOMPurify**~~ — gestrichen; `esc()`/`_mesc()` konsistent (129 Aufrufe in 12 Dateien); kein Rich-Text | S |
 | S3 | ~~**CSP `unsafe-inline` Styles**~~ — gestrichen; ~445 `style=`-Attribute; `element.style.*` CSP-unberührt; Sicherheitsgewinn gering | L |
-| S4 | **XSS `buildPlacePartsHtml()`** — `ui-views-place.js`: `partsEl.innerHTML = buildPlacePartsHtml(placeId)` ohne esc; `placeId` aus `_placeModes`-Key potenziell user-controlled → DOM-API oder esc-Wrapper | XS |
-| S5 | **GEDCOM aus localStorage entfernen** — `stammbaum_ged` + `stammbaum_ged_backup` liegen klartext in localStorage (`storage-file.js:138,339`); Fallback in `gedcom.js:70` + `storage.js:146` → IDB-only; localStorage-Fallback entfernen | S |
-| S6 | **Redirect-URI fest kodieren** — `onedrive-auth.js:10–12` konstruiert URI dynamisch aus `location.origin + location.pathname`; Phishing-Domain mit identischem Pfad würde OAuth-Callback akzeptieren → URI als Konstante analog zu `OD_CLIENT_ID` | XS |
+| S4 | ~~**XSS `buildPlacePartsHtml()`**~~ ✅ 2026-04-27 — `esc(lbl)` in `gedcom.js:297` | XS |
+| S5 | ~~**GEDCOM aus localStorage entfernen**~~ ✅ 2026-04-27 — Schreib-Stellen in `storage-file.js` entfernt; Migration-Reads in `storage.js` bleiben für Bestandsnutzer | S |
+| S6 | ~~**Redirect-URI fest kodieren**~~ ✅ 2026-04-27 — `onedrive-auth.js`: zwei feste URIs (GitHub Pages + localhost), dynamischer Fallback nur für unregistrierte Origins | XS |
 
 ---
 
@@ -72,7 +97,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Q3 | ~~**Backward-Compat-Shims bereinigen**~~ ✅ sw v268 | M |
 | Q4 | ~~**Getter konsequent durchziehen**~~ — gestrichen; Risiko > Nutzen | M |
 | Q5 | **`updateStats()` No-op entfernen** — Funktion ist leer (`ui-views.js:479`), wird an 12+ Stellen aufgerufen (ui-forms.js, ui-forms-event.js, ui-views-family.js, storage.js); komplette Bereinigung | XS |
-| Q6 | **`_buildSearchIndex()` sichtbar machen** — `ui-views-person.js:247` wird via `UIState._searchIndexDirty`-Flag aufgerufen, aber nur wenn `lower` truthy; Index wird bei leerem Suchfeld nie gebaut → erster Suchaufruf korrekt, aber `markChanged()` setzt Flag ohne Index-Reset; prüfen ob `dirty`-Pfad vollständig korrekt | S |
+| Q6 | **`_buildSearchIndex()` dirty-Pfad prüfen** — `ui-views-person.js:247` wird via `UIState._searchIndexDirty`-Flag aufgerufen, aber nur wenn `lower` truthy; Index wird bei leerem Suchfeld nie gebaut → erster Suchaufruf korrekt, aber `markChanged()` setzt Flag ohne Index-Reset; prüfen ob `dirty`-Pfad vollständig korrekt | S |
+| Q7 | **`_getOriginalText()` localStorage-Fallback entfernen** — `gedcom.js:70`: `localStorage.getItem('stammbaum_ged_backup')` ist seit S5 toter Code (wird nicht mehr geschrieben); nach Migration-Zeitraum (~3 Monate) entfernen; ersatzweise IDB-Read async | XS |
+| Q8 | **`tryAutoLoad()` Migration-Pfad entfernen** — `storage.js:136–157`: localStorage-Lesen für GEDCOM-Migration wird überflüssig sobald alle aktiven Nutzer mindestens einmal IDB-gespeichert haben; als `// TODO: Migration 2026-Q3 entfernen` markieren | XS |
 
 *Gestrichen: generische `initAutocomplete()` — unterschiedliche Kontexte, Aufwand > Nutzen (bewertet 2026-04-14)*
 
@@ -112,9 +139,10 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U6 | **`handleError()` zentralisieren**: try/catch → `handleError(e, context, userMsg)` | M |
 | U7 | ~~**Advanced Search**~~ ✅ sw v269 | L |
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
-| U9 | **Fokus-Management in Modals**: `openModal()` setzt keinen Fokus auf erstes Input — nach `showPersonForm()`, `showEventForm()` etc. explizit `focus()` setzen | S |
+| U9 | ~~**Fokus-Management in Modals**~~ ✅ 2026-04-27 — `openModal()` fokussiert per `requestAnimationFrame` das erste sichtbare Input/Select/Textarea; wirkt für alle Modals | S |
 | U10 | **Touch-Targets zu klein**: Source-Picker Toggle (`ui-forms.js`) ~18×18px; `× Entfernen`-Buttons in Modals ähnlich → min. 44×44px (WCAG 2.5.5) | S |
-| U11 | **ARIA-Attribute ergänzen**: Icon-Buttons ohne `aria-label` (`index.html`); Toggle-Buttons ohne `aria-expanded`; keine Landmark-Elemente (`<main>`, `<nav>`) | M |
+| U11 | ~~**Icon-Buttons `aria-label` + `aria-expanded`**~~ ✅ 2026-04-27 — Topbar, FAB, Filter-Buttons, Tree-View; `advFilterToggle` mit `aria-expanded` synchron zu `toggleAdvFilter()` | S |
+| U11b | **Landmark-Elemente ergänzen** — kein `<main>`, kein `<nav>` (Bottom-Nav ist `<nav>` ohne role); Screenreader-Navigation nicht möglich; `<div id="v-main">` → `<main>` | S |
 | U12 | **Dark Mode**: `prefers-color-scheme` Media Query in `styles.css` fehlt; `theme_color` in `manifest.json` fest | M |
 
 ---

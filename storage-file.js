@@ -135,7 +135,6 @@ async function saveToFileHandle(content) {
     await w.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
     await w.close(); w = null;
     AppState.changed = false; updateChangedIndicator();
-    try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
     idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
     showToast('✓ Direkt gespeichert');
     return true;
@@ -232,7 +231,6 @@ async function exportGEDCOM() {
   }
   _downloadBlob(content, filename);
   AppState.changed = false; updateChangedIndicator();
-  try { localStorage.setItem('stammbaum_ged', content); } catch(e) {}
   idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   showToast('✓ ' + filename + ' heruntergeladen');
 }
@@ -333,12 +331,6 @@ function _processLoadedText(text, filename) {
     idbPut('stammbaum_ged_backup', text),
     idbPut('stammbaum_filename', filename)
   ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
-  // localStorage: Fallback (kein Toast bei Fehler)
-  try { localStorage.setItem('stammbaum_ged', text); } catch(e) {}
-  try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
-  try { localStorage.setItem('stammbaum_ged_backup', text); } catch(e) {}
-  try { localStorage.setItem('stammbaum_backup_filename', filename); } catch(e) {}
-  try { localStorage.setItem('stammbaum_backup_date', new Date().toLocaleDateString('de-DE')); } catch(e) {}
   updateBackupBtn();
   updateTopbarTitle(filename);
   showStartView();

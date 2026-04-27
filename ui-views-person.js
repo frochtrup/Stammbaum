@@ -233,7 +233,7 @@ function toggleAdvFilter() {
   if (!panel) return;
   const open = panel.style.display === 'none';
   panel.style.display = open ? '' : 'none';
-  if (toggle) toggle.style.color = open ? 'var(--gold-dim)' : 'var(--text-dim)';
+  if (toggle) { toggle.style.color = open ? 'var(--gold-dim)' : 'var(--text-dim)'; toggle.setAttribute('aria-expanded', String(open)); }
   if (!open) {
     // Panel geschlossen → Adv-Filter zurücksetzen
     const sf = document.getElementById('sexFilter');

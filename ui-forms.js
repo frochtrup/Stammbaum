@@ -596,7 +596,12 @@ function deleteSource() {
 //  MODAL HELPERS
 // ─────────────────────────────────────
 function openModal(id) {
-  document.getElementById(id).classList.add('open');
+  const m = document.getElementById(id);
+  m.classList.add('open');
+  requestAnimationFrame(() => {
+    const first = m.querySelector('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    if (first) first.focus();
+  });
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');

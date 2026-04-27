@@ -294,7 +294,7 @@ function getPlacLabels() {
 
 function buildPlacePartsHtml(placeId) {
   return getPlacLabels().map((lbl, i) =>
-    `<input class="form-input" id="${placeId}-p${i}" placeholder="${lbl}" style="margin-bottom:3px">`
+    `<input class="form-input" id="${placeId}-p${i}" placeholder="${esc(lbl)}" style="margin-bottom:3px">`
   ).join('');
 }
 

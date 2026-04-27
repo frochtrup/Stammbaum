@@ -8,7 +8,9 @@ const OD_TOKEN_EP  = 'https://login.microsoftonline.com/common/oauth2/v2.0/token
 const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
 
 function _odRedirectUri() {
-  // /Stammbaum/index.html → /Stammbaum/  (muss mit registrierter URI übereinstimmen)
+  if (location.origin === 'https://frochtrup.github.io') return 'https://frochtrup.github.io/Stammbaum/';
+  if (location.origin === 'http://localhost:8080')       return 'http://localhost:8080/';
+  // Unbekannte Origin → dynamisch (wird von Microsoft abgelehnt wenn nicht registriert)
   return location.origin + location.pathname.replace(/[^/]*$/, '');
 }
 function _odIsConnected()  { return !!sessionStorage.getItem('od_access_token'); }

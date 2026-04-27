@@ -51,8 +51,8 @@
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
-      <button class="topbar-btn" data-action="bnavSearch" title="Suche">🔍</button>
-      <button class="topbar-btn" data-action="openMenuModal" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
+      <button class="topbar-btn" data-action="bnavSearch" title="Suche" aria-label="Suche">🔍</button>
+      <button class="topbar-btn" data-action="openMenuModal" title="Menü" aria-label="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
 
@@ -70,10 +70,10 @@
         <input type="number" id="yearTo" placeholder="bis" min="1" max="2100"
           style="flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.9rem"
           data-input="applyPersonFilter">
-        <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" data-action="clearYearFilter" title="Jahresfilter zurücksetzen">✕</button>
-        <button type="button" id="personSortBtn" data-action="togglePersonSort" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten">⇅ Name</button>
-        <button type="button" id="advFilterToggle" data-action="toggleAdvFilter" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Erweiterte Filter">⊞</button>
-        <button type="button" data-action="showPersonMediaBrowser" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
+        <button type="button" id="yearFilterClear" style="display:none;background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" data-action="clearYearFilter" title="Jahresfilter zurücksetzen" aria-label="Jahresfilter zurücksetzen">✕</button>
+        <button type="button" id="personSortBtn" data-action="togglePersonSort" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;white-space:nowrap;flex-shrink:0" title="Sortierung umschalten" aria-label="Sortierung umschalten">⇅ Name</button>
+        <button type="button" id="advFilterToggle" data-action="toggleAdvFilter" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.78rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Erweiterte Filter" aria-label="Erweiterte Filter" aria-expanded="false">⊞</button>
+        <button type="button" data-action="showPersonMediaBrowser" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen" aria-label="Alle Medien anzeigen">📎</button>
       </div>
       <div id="advFilterPanel" style="display:none" class="search-wrap adv-filter-panel">
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -95,7 +95,7 @@
     <div class="list-search-header">
       <div class="search-wrap" style="display:flex;gap:6px;align-items:center">
         <input class="search-input" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" data-input="filterFamilies" style="flex:1;width:auto">
-        <button type="button" data-action="showFamilyMediaBrowser" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen">📎</button>
+        <button type="button" data-action="showFamilyMediaBrowser" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-size:0.85rem;padding:4px 7px;cursor:pointer;flex-shrink:0" title="Alle Medien anzeigen" aria-label="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="familyList"></div>
@@ -144,7 +144,7 @@
     </div>
   </div>
 
-  <button class="fab" id="fabBtn" data-action="showAddSheet" title="Neu hinzufügen">＋</button>
+  <button class="fab" id="fabBtn" data-action="showAddSheet" title="Neu hinzufügen" aria-label="Neu hinzufügen">＋</button>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -155,8 +155,8 @@
     <div class="topbar-inner">
       <button class="topbar-btn back" data-action="goBack">← Zurück</button>
       <span class="topbar-title" id="detailTopTitle"></span>
-      <button class="topbar-btn" id="probandBtn" data-action="toggleProband" style="display:none" title="Als Proband setzen">⌂</button>
-      <button class="topbar-btn" id="treeBtn" data-action="showTree" style="display:none;font-size:1rem" title="Sanduhr-Ansicht">⧖</button>
+      <button class="topbar-btn" id="probandBtn" data-action="toggleProband" style="display:none" title="Als Proband setzen" aria-label="Als Proband setzen">⌂</button>
+      <button class="topbar-btn" id="treeBtn" data-action="showTree" style="display:none;font-size:1rem" title="Sanduhr-Ansicht" aria-label="Sanduhr-Ansicht">⧖</button>
       <button class="topbar-btn primary" data-action="showEditSheet" id="editBtn">Bearbeiten</button>
     </div>
   </div>
@@ -186,9 +186,9 @@
         <button class="topbar-btn fc-gen-btn active" data-gen="5" data-action="setFcGens">5</button>
         <button class="topbar-btn fc-gen-btn" data-gen="6" data-action="setFcGens">6</button>
       </span>
-      <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm">◑</button>
-      <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" style="display:none">⤢</button>
-      <button class="topbar-btn" data-action="openMenuModal" title="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
+      <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◑</button>
+      <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" aria-label="Vollbild" style="display:none">⤢</button>
+      <button class="topbar-btn" data-action="openMenuModal" title="Menü" aria-label="Menü" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
     </div>
   </div>
   <div class="tree-scroll" id="treeScroll">
