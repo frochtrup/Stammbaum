@@ -17,8 +17,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
 **Aktuelle sw-Version:** v273 / Cache: `stammbaum-v273`
-**Qualitäts-Sprint 2026-04-27:** S4–S6 (XSS, localStorage, Redirect-URI), U9 (Modal-Fokus), U11 (Icon-Button aria-labels, aria-expanded) ✅
-**Qualitäts-Sprint 2 2026-04-27:** U11b (Landmarks), Q6 (verify), U10 (Touch-Targets 44px), A3 (Domain-Logik → gedcom.js) ✅
+**Qualitäts-Sprints 2026-04-27:** Top-10 vollständig abgeschlossen (S4–S6, U2–U4, U9–U11b, Q5–Q8, A3, U3) ✅
 
 ---
 
@@ -50,27 +49,45 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ---
 
-## Nächste Top-Prioritäten (Qualität)
+## Abgeschlossene Top-10 (Qualitäts-Sprints 2026-04-27) ✅
 
-*Stand: 2026-04-27 — abgeleitet nach Abschluss des Sicherheits-Sprints (S4–S6, U9, U11)*
+*Vollständig erledigt — Details in den jeweiligen P1–P4-Abschnitten*
+
+| ID | Aufgabe | Status |
+|---|---|---|
+| Q5 | `updateStats()` No-op entfernen | ✅ |
+| Q7 | `_getOriginalText()` localStorage-Fallback | ✅ |
+| Q8 | `tryAutoLoad()` Migration-Pfad markieren | ✅ |
+| U4 | `showToast(type)` visuell differenzieren | ✅ |
+| U2 | Modal-Stack / Escape | ✅ |
+| U10 | Touch-Targets ≥44px | ✅ |
+| Q6 | `_buildSearchIndex()` dirty-Pfad verifizieren | ✅ |
+| U11b | Landmark-Elemente `<main>`, `<nav>` | ✅ |
+| U3 | `confirm()` → `confirmModal()` Promise | ✅ |
+| A3 | Domain-Logik → `gedcom.js` | ✅ |
+
+---
+
+## Nächste Top-Prioritäten
+
+*Stand: 2026-04-27 — nach Abschluss der Qualitäts-Sprints (Top-10 vollständig)*
 
 | Rang | ID | Aufgabe | Kategorie | Aufwand | Begründung |
 |---|---|---|---|---|---|
-| ~~1~~ | ~~Q5~~ | ~~`updateStats()` No-op entfernen — 12+ tote Aufrufe~~ ✅ 2026-04-27 | Code | XS | |
-| ~~2~~ | ~~Q7~~ | ~~`_getOriginalText()` localStorage-Fallback entfernen~~ ✅ 2026-04-27 | Code | XS | |
-| ~~3~~ | ~~Q8~~ | ~~`tryAutoLoad()` Migration-Pfad mit TODO markieren~~ ✅ 2026-04-27 | Code | XS | |
-| ~~4~~ | ~~U4~~ | ~~`showToast(type)` — visuell Erfolg/Warnung/Fehler trennen~~ ✅ 2026-04-27 | UX | S | |
-| ~~5~~ | ~~U2~~ | ~~Modal-Stack / Escape schließt oberstes Modal~~ ✅ 2026-04-27 | UX | S | |
-| ~~6~~ | ~~U10~~ | ~~Touch-Targets ≥44px (WCAG 2.5.5)~~ ✅ 2026-04-27 — `.src-tag` min-height:44px; `.src-tag-x` align-self:stretch; `.src-add-btn` min-height:44px; `.src-picker-item` min-height:44px; `× Entfernen` → `.btn-remove-ref` | ~~UX/a11y~~ | ~~S~~ | |
-| ~~7~~ | ~~Q6~~ | ~~`_buildSearchIndex()` dirty-Pfad verifizieren~~ ✅ 2026-04-27 — kein Bug; `lower &&`-Guard sicher (leere Suche wertet `_searchStr` nie aus); Kommentar in `ui-views-person.js:266` | ~~Code~~ | ~~S~~ | |
-| ~~8~~ | ~~U11b~~ | ~~Landmark-Elemente `<main>`, `<nav role>` ergänzen~~ ✅ 2026-04-27 — `<div id="v-main">` → `<main>`; `<nav class="bottom-nav">` + `aria-label="Hauptnavigation"` | ~~a11y~~ | ~~S~~ | |
-| ~~9~~ | ~~U3~~ | ~~`confirm()` → `confirmModal()` Promise (6+ Stellen)~~ ✅ 2026-04-27 — `confirmModal(msg)` Promise; `modalConfirm` HTML+CSS; Escape/Backdrop resolve(false); 8 Stellen async | ~~UX~~ | ~~M~~ | |
-| 10 | A3 | Domain-Logik (`buildHofIndex`, Dedup-Scoring) nach `gedcom.js` | Architektur | M | UI-Dateien haben Business-Logik; Testbarkeit |
+| 1 | U6 | `handleError()` zentralisieren: try/catch → `handleError(e, context, userMsg)` | Code/UX | M | Robustheit; konsistente Fehlermeldungen |
+| 2 | P3 | Suchergebnisse ranken statt `slice(0,20)`; Hinweis bei >20 Treffern | Performance | S | Sichtbar für Nutzer mit großen Datensätzen |
+| 3 | P4 | `_rebuildPersonSourceRefs()` lazy — nur bei Source-Änderung | Performance | S | Spart unnötige Arbeit bei jedem Save |
+| 4 | A4 | `_formState` kapseln: transiente States an Formular-Lifecycle binden | Architektur | M | UIState global zu stark belastet |
+| 5 | A2 | `_CLICK_MAP` nach Feature-Bereich strukturieren (Sub-Maps) | Architektur | M | 700+ Zeilen Click-Handler schwer navigierbar |
+| 6 | P1 | Virtual Scroll für Hof-Liste (analog Personen/Familien) | Performance | M | Spürbar bei vielen RESI-Ereignissen |
+| 7 | P2 | IDB Batch-Reads für Medien: `getAll()` statt Einzelabfragen | Performance | M | Ladezeit bei vielen Medien |
+| 8 | A1 | `ui-views.js` aufteilen (922 Z.): Router, Modal-Manager, Note-Modal | Architektur | L | Jetzt ungeblockt (A3 done) |
+| 9 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css` | UX | M | Eigenständiger Sprint |
+| 10 | U8 | Cmd+Z granulares Undo | UX | XL | Eigenständiger Sprint |
 
-**Nicht in dieser Liste (eigene Sprints):**
-- A1 `ui-views.js` aufteilen (L) — erst nach A3
-- U8 Cmd+Z granulares Undo (XL) — eigenständiger Sprint
-- U12 Dark Mode (M) — eigenständiger Sprint
+**Hinweis zu A1:** Setzt A3 voraus (erledigt). Empfehlung: erst nach A2/A4, da Split sonst mitten in laufender Refaktorierung.
+
+**Nicht priorisiert (P5/P6):** GRAMPS Phase 4/5, Zeitleiste, Nachkommen-Baum — eigene Feature-Sprints.
 
 ---
 
