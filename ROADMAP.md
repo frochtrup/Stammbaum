@@ -54,9 +54,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Rang | ID | Aufgabe | Kategorie | Aufwand |
 |---|---|---|---|---|
 | 1 | A5 | `db`-Shim eliminieren: `setDb()` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level | Architektur | L |
-| 2 | A6 | `ui-forms.js` aufteilen: Modal-System + Focus-Trap → `ui-modal.js`; Toast/Overlay → `ui-utils.js` (aktuell 884 Z., 40 Funktionen) | Architektur | M |
-| 3 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | UX | M |
-| 4 | U8 | Cmd+Z granulares Undo: History-Stack auf AppState | UX | XL |
+| 2 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | UX | M |
+| 3 | U8 | Cmd+Z granulares Undo: History-Stack auf AppState | UX | XL |
 
 ---
 
@@ -76,7 +75,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | A1 | ~~**`ui-views.js` aufteilen**~~ ✅ 2026-04-27 — `ui-views-note.js` (120 Z., Notiz-Modal) + `ui-views-search.js` (139 Z., `runGlobalSearch`) extrahiert; ui-views.js: 935 → 683 Z.; `ui-router.js` + `ui-modal.js` abgelehnt (Navigation global verwoben, Modal-Manager in ui-forms.js) | S |
 | A5 | **`db`-Shim eliminieren**: `window.db` leitet per Shim auf `AppState.db` weiter (176 bare-Zugriffe in 14 Dateien). Lösung: `setDb(newDb)` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level. Betroffene Stellen: ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
-| A6 | **`ui-forms.js` aufteilen**: 884 Z., 40 Funktionen, gemischte Verantwortung. Kandidaten: Modal-System + Focus-Trap → `ui-modal.js`; `showToast` + `showLoadingOverlay` → `ui-utils.js`. Abhängig von A5 (globaler Scope). | M |
+| A6 | ~~**`ui-forms.js` aufteilen**~~ abgelehnt 2026-04-27 — Splits zu granular (`ui-modal.js`: 4 Fns, `ui-utils.js`: 3 Fns/20 Z.); `openModal`/`closeModal` form-nah; kein Build-Step = jede Datei kostet Script-Tag + PRECACHE; Datei ist kohärent (Formulare + Hilfsfunktionen) | M |
 
 ---
 
@@ -190,6 +189,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | A2 | `_CLICK_MAP` nach Feature-Bereich strukturieren | abgelehnt — 82/144 Einträge "Sonstiges", kein sinnvoller Split |
 | A3 | Domain-Logik in `gedcom.js` verlagern | ✅ 2026-04-27 |
 | A4 | `_formState` kapseln | abgelehnt — `show*Form()` reinitialisiert bereits, single-modal, kein Leak |
+| A6 | `ui-forms.js` aufteilen | abgelehnt 2026-04-27 — Splits zu granular; `openModal`/`closeModal` form-nah; kein Build-Step = jede Datei kostet Script-Tag + PRECACHE |
 | — | `esc()` nach `gedcom.js` verschieben (globale Abhängigkeit sichtbar machen) | ✅ 2026-04-27 |
 
 ### P3 — Performance ✅ vollständig
