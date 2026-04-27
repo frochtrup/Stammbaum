@@ -53,13 +53,23 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Rang | ID | Aufgabe | Kategorie | Aufwand |
 |---|---|---|---|---|
 | 1 | A5 | `db`-Shim eliminieren: `setDb()` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level | Architektur | L |
-| 2 | A5 | `db`-Shim eliminieren: `setDb()` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level | Architektur | L |
-| 3 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | UX | M |
-| 4 | U8 | Cmd+Z granulares Undo: History-Stack auf AppState | UX | XL |
+| 2 | Q9 | Input-Validierung `savePerson()`: Name nicht leer, Jahreszahl 4-stellig, Datum-Format vor Speichern prüfen | Code-Qualität | S |
+| 3 | A6 | `ui-forms.js` aufteilen: Modal-System + Focus-Trap → `ui-modal.js`; Toast/Overlay → `ui-utils.js` (aktuell 884 Z., 40 Funktionen) | Architektur | M |
+| 4 | U12 | Dark Mode: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | UX | M |
+| 5 | U8 | Cmd+Z granulares Undo: History-Stack auf AppState | UX | XL |
 
 ---
 
 ## Offene Aufgaben
+
+### P1 — Code-Qualität
+
+| ID | Aufgabe | Aufwand |
+|---|---|---|
+| Q9 | **Input-Validierung `savePerson()`**: Name nicht leer, Jahreszahl 4-stellig numerisch, ungültiges Datum-Format vor Speichern abweisen + Inline-Fehleranzeige. Aktuell landet alles ohne Prüfung in `db`. | S |
+| Q10 | **`onedrive-import.js` Foto-Injection Refaktor**: Zeilen 299–323 zweimal identisches `_odGetMediaUrlByPath` + `innerHTML`-Pattern für Person und Familie. Zu `_updatePersonPhoto(id)` / `_updateFamilyPhoto(id)` extrahieren; `createElement` statt `innerHTML`. | XS |
+
+---
 
 ### P2 — Architektur
 
@@ -67,6 +77,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | A1 | ~~**`ui-views.js` aufteilen**~~ ✅ 2026-04-27 — `ui-views-note.js` (120 Z., Notiz-Modal) + `ui-views-search.js` (139 Z., `runGlobalSearch`) extrahiert; ui-views.js: 935 → 683 Z.; `ui-router.js` + `ui-modal.js` abgelehnt (Navigation global verwoben, Modal-Manager in ui-forms.js) | S |
 | A5 | **`db`-Shim eliminieren**: `window.db` leitet per Shim auf `AppState.db` weiter (176 bare-Zugriffe in 14 Dateien). Lösung: `setDb(newDb)` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level. Betroffene Stellen: ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
+| A6 | **`ui-forms.js` aufteilen**: 884 Z., 40 Funktionen, gemischte Verantwortung. Kandidaten: Modal-System + Focus-Trap → `ui-modal.js`; `showToast` + `showLoadingOverlay` → `ui-utils.js`. Abhängig von A5 (globaler Scope). | M |
 
 ---
 
@@ -76,6 +87,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
 | U12 | **Dark Mode**: `prefers-color-scheme` Media Query in `styles.css` fehlt; `theme_color` in `manifest.json` fest | M |
+| U13 | **`aria-live` auf Listen**: `#personList`, `#familyList`, `#sourceList` bekommen `aria-live="polite" aria-atomic="false"` — Screen-Reader bekommt kein Feedback nach Filter/Suche | XS |
+| U14 | **Virtual Scroll ARIA**: Bei Listen >500 Items fehlen `aria-rowcount` (Gesamtzahl) und `aria-rowindex` (Position) auf den gerenderten Einträgen — Screen-Reader sieht nur die sichtbaren ~10 Items | S |
 
 ---
 
@@ -133,7 +146,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | S5 | GEDCOM aus localStorage entfernen | ✅ 2026-04-27 |
 | S6 | Redirect-URI fest kodieren | ✅ 2026-04-27 |
 
-### P1 — Code-Qualität ✅ vollständig
+### P1 — Code-Qualität (Teilarchiv)
 
 | ID | Aufgabe | Ergebnis |
 |---|---|---|
@@ -154,6 +167,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | A2 | `_CLICK_MAP` nach Feature-Bereich strukturieren | abgelehnt — 82/144 Einträge "Sonstiges", kein sinnvoller Split |
 | A3 | Domain-Logik in `gedcom.js` verlagern | ✅ 2026-04-27 |
 | A4 | `_formState` kapseln | abgelehnt — `show*Form()` reinitialisiert bereits, single-modal, kein Leak |
+| — | `esc()` nach `gedcom.js` verschieben (globale Abhängigkeit sichtbar machen) | ✅ 2026-04-27 |
 
 ### P3 — Performance ✅ vollständig
 
@@ -175,10 +189,11 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U5 | Namens-Truncation im Baum | ✅ sw v269 |
 | U6 | `handleError()` zentralisieren | abgelehnt — 14 Catches bewusste Fallbacks, individuelle Meldungen ausreichend |
 | U7 | Advanced Search | ✅ sw v269 |
-| U9 | Fokus-Management in Modals | ✅ 2026-04-27 |
+| U9 | Focus-Trap in Modals (`openModal`/`closeModal`): Tab-Zyklus, `aria-modal`, Fokus-Rückkehr | ✅ 2026-04-27 |
 | U10 | Touch-Targets ≥44px | ✅ 2026-04-27 |
 | U11 | Icon-Buttons `aria-label` + `aria-expanded` | ✅ 2026-04-27 |
 | U11b | Landmark-Elemente `<main>`, `<nav>` | ✅ 2026-04-27 |
+| — | Lade-Spinner für GEDCOM/GRAMPS Parse + Import: `#loadingOverlay`, `rAF+setTimeout`-Pattern, `finally`-Blöcke | ✅ 2026-04-27 |
 
 ---
 

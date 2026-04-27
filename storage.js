@@ -5,6 +5,7 @@ async function revertToSaved() {
   const orig = _getOriginalText();
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
   if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
+  showLoadingOverlay('Stand wird wiederhergestellt …');
   AppState.db = parseGEDCOM(orig);
   if (AppState.db.parseErrors?.length) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
@@ -16,6 +17,7 @@ async function revertToSaved() {
   if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
   updateChangedIndicator();
   renderTab();
+  hideLoadingOverlay();
   showToast('✓ Zurückgesetzt');
 }
 
@@ -51,6 +53,7 @@ async function confirmNewFile() {
 //  DEMO
 // ─────────────────────────────────────
 async function loadDemo() {
+  showLoadingOverlay('Demo wird geladen …');
   try {
     const res = await fetch('./demo.ged');
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -63,6 +66,8 @@ async function loadDemo() {
     _loadDemoPhotos();
   } catch(e) {
     showToast('Demo konnte nicht geladen werden: ' + e.message);
+  } finally {
+    hideLoadingOverlay();
   }
 }
 

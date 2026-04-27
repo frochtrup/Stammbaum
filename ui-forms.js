@@ -594,16 +594,40 @@ async function deleteSource() {
 // ─────────────────────────────────────
 //  MODAL HELPERS
 // ─────────────────────────────────────
+const _FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+function _getFocusable(modal) {
+  return [...modal.querySelectorAll(_FOCUSABLE)].filter(el => el.offsetParent !== null);
+}
+let _trapHandler   = null;
+let _trapPrevFocus = null;
+
 function openModal(id) {
   const m = document.getElementById(id);
+  _trapPrevFocus = document.activeElement;
   m.classList.add('open');
+  if (!m.getAttribute('role')) m.setAttribute('role', 'dialog');
+  m.setAttribute('aria-modal', 'true');
   requestAnimationFrame(() => {
-    const first = m.querySelector('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
-    if (first) first.focus();
+    const items = _getFocusable(m);
+    if (items.length) items[0].focus();
+    if (_trapHandler) document.removeEventListener('keydown', _trapHandler);
+    _trapHandler = e => {
+      if (e.key !== 'Tab') return;
+      const its = _getFocusable(m);
+      if (!its.length) { e.preventDefault(); return; }
+      if (e.shiftKey) {
+        if (document.activeElement === its[0]) { e.preventDefault(); its[its.length - 1].focus(); }
+      } else {
+        if (document.activeElement === its[its.length - 1]) { e.preventDefault(); its[0].focus(); }
+      }
+    };
+    document.addEventListener('keydown', _trapHandler);
   });
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
+  if (_trapHandler) { document.removeEventListener('keydown', _trapHandler); _trapHandler = null; }
+  if (_trapPrevFocus?.focus) { _trapPrevFocus.focus(); _trapPrevFocus = null; }
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
   if (id === 'modalPerson')  UIState._pendingRelation = null;
   if (id === 'modalRepo')    UIState._pendingRepoLink  = null;
@@ -743,11 +767,6 @@ const filterSourcesDebounced  = debounce(filterSources,  200);
 const filterPlacesDebounced   = debounce(filterPlaces,   200);
 const filterHoefeDebounced    = debounce(filterHoefe,    200);
 
-function esc(str) {
-  if (!str) return '';
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -758,6 +777,13 @@ function showToast(msg) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+function showLoadingOverlay(msg) {
+  document.getElementById('loadingMsg').textContent = msg || 'Wird geladen …';
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoadingOverlay() {
+  document.getElementById('loadingOverlay').classList.remove('active');
 }
 
 // ─────────────────────────────────────

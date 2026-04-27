@@ -303,37 +303,48 @@ document.getElementById('fileInput2').addEventListener('change', e => {
 
 // Gemeinsame Lade-Logik für openFilePicker() und readFile()
 function _processLoadedText(text, filename) {
-  AppState.db = parseGEDCOM(text);
-  if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
-    console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
-  }
-  // GRAMPS-Export erkennen und Hinweis anzeigen
-  const _gd = detectGRAMPS(text);
-  AppState.db._grampsMaster = _gd.isGramps;
-  if (_gd.isGramps) {
-    setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
-  }
-  AppState.db.extraPlaces = loadExtraPlaces();
-  // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
-  { let maxUsed = 0;
-    const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
-                    ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
-    for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
-    if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
-  }
-  AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
-  _newPhotoIds.clear(); _deletedPhotoIds.clear();
-  if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
-  // IDB: primäre Persistenz (kein Größenlimit)
-  Promise.all([
-    idbPut('stammbaum_ged', text),
-    idbPut('stammbaum_ged_backup', text),
-    idbPut('stammbaum_filename', filename)
-  ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
-  updateBackupBtn();
-  updateTopbarTitle(filename);
-  showStartView();
+  showLoadingOverlay('GEDCOM wird eingelesen …');
+  requestAnimationFrame(() => setTimeout(() => {
+    try {
+      AppState.db = parseGEDCOM(text);
+      if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
+        console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+      }
+      // GRAMPS-Export erkennen und Hinweis anzeigen
+      const _gd = detectGRAMPS(text);
+      AppState.db._grampsMaster = _gd.isGramps;
+      if (_gd.isGramps) {
+        setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
+      }
+      AppState.db.extraPlaces = loadExtraPlaces();
+      // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
+      { let maxUsed = 0;
+        const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
+                        ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
+        for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
+        if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
+      }
+      AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
+      _newPhotoIds.clear(); _deletedPhotoIds.clear();
+      if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+      // IDB: primäre Persistenz (kein Größenlimit)
+      Promise.all([
+        idbPut('stammbaum_ged', text),
+        idbPut('stammbaum_ged_backup', text),
+        idbPut('stammbaum_filename', filename)
+      ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
+      updateBackupBtn();
+      updateTopbarTitle(filename);
+      showStartView();
+      showToast('✓ ' + filename + ' geladen');
+    } catch(err) {
+      console.error('_processLoadedText:', err);
+      showToast('⚠ Fehler beim Laden: ' + err.message);
+    } finally {
+      hideLoadingOverlay();
+    }
+  }, 0));
 }
 
 // Öffnen per <input> (iOS / Drag & Drop / Fallback)
@@ -349,15 +360,14 @@ function readFile(file) {
   reader.onload = e => {
     try {
       _processLoadedText(e.target.result, file.name);
-      showToast('✓ ' + file.name + ' geladen');
-    } catch(err) { console.error('readFile:', err); showToast('⚠ Fehler beim Laden'); }
+    } catch(err) { hideLoadingOverlay(); console.error('readFile:', err); showToast('⚠ Fehler beim Laden'); }
   };
   reader.readAsText(file, 'UTF-8');
 }
 
 // GRAMPS XML Import: parseGRAMPS() → AppState.db
 async function _loadGRAMPS(file) {
-  showToast('GRAMPS-Datei wird geladen …');
+  showLoadingOverlay('GRAMPS-Datei wird eingelesen …');
   try {
     const db = await parseGRAMPS(file);
     AppState.db = db;
@@ -383,6 +393,8 @@ async function _loadGRAMPS(file) {
   } catch(err) {
     console.error('_loadGRAMPS:', err);
     showToast('⚠ GRAMPS-Datei konnte nicht geladen werden: ' + err.message);
+  } finally {
+    hideLoadingOverlay();
   }
 }
 

@@ -580,3 +580,11 @@ function findDuplicatePairs(threshold) {
 
   return results.sort((a, b) => b.score - a.score);
 }
+
+// ─────────────────────────────────────
+//  HTML-UTILS
+// ─────────────────────────────────────
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
