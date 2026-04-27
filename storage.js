@@ -8,7 +8,7 @@ async function revertToSaved() {
   showLoadingOverlay('Stand wird wiederhergestellt …');
   AppState.db = parseGEDCOM(orig);
   AppState.db.extraPlaces = loadExtraPlaces();
-  AppState.db.hofObjects  = loadHofObjects();
+  AppState.db.hofObjects  = Object.assign({}, _derivedHofObjectsFromDb(AppState.db), loadHofObjects());
   if (AppState.db.parseErrors?.length) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
     showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');

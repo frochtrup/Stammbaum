@@ -340,6 +340,15 @@ async function parseGRAMPS(file) {
     };
   }
 
+  // hofObjects aus placeObjects ableiten (type=Building/Farm → Hof-Ansicht)
+  const _HOF_PLACE_TYPES = new Set(['Building', 'Farm', 'Neighborhood']);
+  const hofObjects = {};
+  for (const pl of Object.values(placeObjects)) {
+    if (_HOF_PLACE_TYPES.has(pl.type) && pl.lat != null && pl.long != null) {
+      hofObjects[pl.title] = { addr: pl.title, lat: pl.lat, long: pl.long };
+    }
+  }
+
   // ─── Build db ────────────────────────────────────────────────────────────
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
 
@@ -846,7 +855,7 @@ async function parseGRAMPS(file) {
 
   return {
     individuals, families, sources, notes, repositories,
-    placeObjects,
+    placeObjects, hofObjects,
     extraPlaces: {}, placForm: '',
     extraRecords: [], headLines: [],
     _sourceFormat: 'gramps',

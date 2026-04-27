@@ -318,7 +318,7 @@ function _processLoadedText(text, filename) {
         setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
       }
       AppState.db.extraPlaces = loadExtraPlaces();
-      AppState.db.hofObjects  = loadHofObjects();
+      AppState.db.hofObjects  = Object.assign({}, _derivedHofObjectsFromDb(AppState.db), loadHofObjects());
       // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
       { let maxUsed = 0;
         const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
@@ -373,7 +373,9 @@ async function _loadGRAMPS(file) {
     const db = await parseGRAMPS(file);
     AppState.db = db;
     AppState.db.extraPlaces = loadExtraPlaces();
-    AppState.db.hofObjects  = loadHofObjects();
+    // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
+    // localStorage-Einträge (user edits) überschreiben diese.
+    AppState.db.hofObjects  = Object.assign({}, db.hofObjects || {}, loadHofObjects());
     // Calibrate idCounter to avoid collisions
     if (db._idCounterMax >= AppState.idCounter) AppState.idCounter = db._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar

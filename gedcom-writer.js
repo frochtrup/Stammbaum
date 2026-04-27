@@ -62,7 +62,7 @@ function writeCHAN(lines, obj, lv = 1) {
 }
 
 // Schreibt MAP/LATI/LONG-Block — Koordinaten aus Ortsregister (extraPlaces),
-// Fallback auf obj.lati/obj.long (Parser-Werte aus ursprünglichem GEDCOM)
+// Fallback auf obj.lati/obj.long (Parser-Werte), dann hofObjects via obj.addr
 function geoLines(lines, obj, indent) {
   let lati = null, long = null;
   const placeName = obj?.place;
@@ -72,6 +72,10 @@ function geoLines(lines, obj, indent) {
   }
   if (lati === null && obj && obj.lati !== null && obj.lati !== undefined) {
     lati = obj.lati; long = obj.long;
+  }
+  if (lati === null && obj?.addr) {
+    const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
+    if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
   }
   if (lati !== null && long !== null) {
     lines.push(`${indent} MAP`);
@@ -182,6 +186,14 @@ function writeINDIRecord(lines, p) {
     if (ev.place !== null && ev.place !== undefined) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
       geoLines(lines, ev, 3);
+    } else if (ev.addr) {
+      // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
+      const _hm = AppState.db?.hofObjects?.[ev.addr.trim()];
+      if (_hm?.lat != null) {
+        lines.push(`2 PLAC ${ev.addr.replace(/\n/g, ', ')}`);
+        geoLines(lines, { lati: _hm.lat, long: _hm.long }, 3);
+        if (_hm.note) pushCont(lines, 3, 'NOTE', _hm.note);
+      }
     }
     if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
     if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }

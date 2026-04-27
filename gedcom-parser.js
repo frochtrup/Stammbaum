@@ -870,6 +870,22 @@ function parseGeoCoord(val) {
   return sign * parseFloat(m[2]);
 }
 
+// Leitet hofObjects aus RESI/PROP-Event-Koordinaten ab (Roundtrip-Fallback).
+// Wird nach parseGEDCOM() aufgerufen und mit loadHofObjects() gemergt —
+// localStorage-Einträge überschreiben GEDCOM-abgeleitete Werte.
+function _derivedHofObjectsFromDb(db) {
+  const hof = {};
+  for (const p of Object.values(db.individuals || {})) {
+    for (const ev of p.events || []) {
+      if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.lati != null && ev.long != null) {
+        const addr = ev.addr.trim();
+        if (!hof[addr]) hof[addr] = { addr, lat: ev.lati, long: ev.long };
+      }
+    }
+  }
+  return hof;
+}
+
 // ─────────────────────────────────────
 //  GRAMPS-ERKENNUNG
 // ─────────────────────────────────────

@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v280 / Cache: `stammbaum-v280`
+**Aktuelle sw-Version:** v281 / Cache: `stammbaum-v281`
 
 ---
 
@@ -115,9 +115,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Koordinaten-Sektion + Formular in Hof-Detail | `ui-views-hof.js` | ✅ v280 |
 | Notiz-Typ `'hof'` in Notizen-Modal | `ui-views-note.js` | ✅ v280 |
 | Hof-Marker auf Karte + RESI-Stationen in Personenbiografie | `ui-views-map.js` | ✅ v280 |
-| GEDCOM-Writer: PLAC+MAP an RESI/PROP-Events | `gedcom-writer.js` | offen (Phase 5) |
-| GEDCOM-Parser: PLAC+MAP aus RESI-Events → hofObjects | `gedcom-parser.js` | offen (Phase 5) |
-| GRAMPS: placeobj type=Building | `gramps-parser.js`, `gramps-writer.js` | offen (Phase 5) |
+| GEDCOM-Writer: PLAC+MAP an RESI/PROP-Events | `gedcom-writer.js` | ✅ v281 |
+| GEDCOM-Parser: PLAC+MAP aus RESI-Events → hofObjects | `gedcom-parser.js` | ✅ v281 |
+| GRAMPS: placeobj type=Building | `gramps-parser.js`, `gramps-writer.js` | ✅ v281 |
 
 ---
 

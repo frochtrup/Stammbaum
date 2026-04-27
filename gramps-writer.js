@@ -144,6 +144,26 @@ async function writeGRAMPS(db) {
     return plRecs[plStr].handle;
   };
 
+  // Hof-Adressen mit Koordinaten als Building-Placeobj vorregistrieren
+  // (GRAMPS-Quelle: passendes placeObject suchen; GEDCOM-Quelle: in plRecs eintragen)
+  const hofAddrToHandle = {};
+  for (const [addr, hm] of Object.entries(db.hofObjects || {})) {
+    if (hm.lat == null || hm.long == null) continue;
+    const trimmed = addr.trim();
+    let handle = null;
+    if (db.placeObjects) {
+      const matchPl = Object.values(db.placeObjects).find(pl => pl.title === trimmed);
+      if (matchPl) handle = _entityHandle(matchPl.id, 'pl');
+    }
+    if (!handle) {
+      if (!plRecs[trimmed]) {
+        plRecs[trimmed] = { handle: _h('pl'), id: `P${String(plCtr++).padStart(4,'0')}`, title: trimmed, lat: hm.lat, long: hm.long, isHof: true, hofNote: hm.note || '' };
+      }
+      handle = plRecs[trimmed].handle;
+    }
+    hofAddrToHandle[trimmed] = handle;
+  }
+
   const _citHandle = (srcId, page, quay) => {
     const srcH = idToHandle[srcId];
     if (!srcH) return null;
@@ -217,9 +237,12 @@ async function writeGRAMPS(db) {
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
     // Use original place ID if available (GRAMPS source with placeObjects), else string-based
     // Guard: placeId nur verwenden wenn das placeObject auch existiert (defekte Dateien)
+    // Fallback: hofObjects via addr (RESI/PROP ohne place aber mit Koordinaten)
     const plHandle = (db.placeObjects && evObj.placeId && db.placeObjects[evObj.placeId])
       ? _entityHandle(evObj.placeId, 'pl')
-      : _plHandle(evObj.place || null, evObj.lati, evObj.long);
+      : (evObj.addr && hofAddrToHandle[evObj.addr.trim()])
+        ? hofAddrToHandle[evObj.addr.trim()]
+        : _plHandle(evObj.place || null, evObj.lati, evObj.long);
     const citHandles = (evObj.sources || [])
       .map(srcId => _citHandle(srcId, evObj.sourcePages?.[srcId], evObj.sourceQUAY?.[srcId] ?? 0))
       .filter(Boolean);
@@ -571,6 +594,23 @@ async function writeGRAMPS(db) {
       }
       L.push('    </placeobj>');
     }
+    // Neue Hof-Einträge aus hofObjects die noch kein placeObject haben
+    for (const [addr, hm] of Object.entries(db.hofObjects || {})) {
+      if (hm.lat == null || hm.long == null) continue;
+      const trimmed = addr.trim();
+      const alreadyInPl = Object.values(db.placeObjects).some(pl => pl.title === trimmed);
+      if (alreadyInPl) continue;
+      const handle = hofAddrToHandle[trimmed];
+      if (!handle) continue;
+      const gid = 'HOF' + trimmed.replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+      L.push(`    <placeobj handle="${_esc(handle)}" id="${_esc(gid)}" type="Building">`);
+      L.push(`      <ptitle>${_esc(trimmed)}</ptitle>`);
+      L.push(`      <pname value="${_esc(trimmed)}"/>`);
+      const coord = _decToGrampsCoord(hm.lat, hm.long);
+      if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
+      if (hm.note) { const nh = _noteHandle(hm.note, 'Hof Note'); if (nh) L.push(`      <noteref hlink="${_esc(nh)}"/>`); }
+      L.push('    </placeobj>');
+    }
     L.push('  </places>');
   } else {
     // GEDCOM source or no placeObjects: hierarchical places from placForm + event strings
@@ -639,13 +679,14 @@ async function writeGRAMPS(db) {
       }
       // Leaf places
       for (const pl of plArr) {
-        L.push(`    <placeobj handle="${_esc(pl.handle)}" id="${_esc(pl.id)}" type="${_esc(pl.type || 'Unknown')}">`);
+        L.push(`    <placeobj handle="${_esc(pl.handle)}" id="${_esc(pl.id)}" type="${_esc(pl.isHof ? 'Building' : (pl.type || 'Unknown'))}">`);
         L.push(`      <ptitle>${_esc(pl.title)}</ptitle>`);
         L.push(`      <pname value="${_esc(pl.pname || pl.title.split(',')[0].trim())}"/>`);
         if (pl.lat != null && pl.long != null) {
           const coord = _decToGrampsCoord(pl.lat, pl.long);
           if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
         }
+        if (pl.isHof && pl.hofNote) { const nh = _noteHandle(pl.hofNote, 'Hof Note'); if (nh) L.push(`      <noteref hlink="${_esc(nh)}"/>`); }
         if (pl._parentHandle) L.push(`      <placeref hlink="${_esc(pl._parentHandle)}"/>`);
         L.push('    </placeobj>');
       }
