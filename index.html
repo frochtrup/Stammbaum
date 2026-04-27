@@ -47,7 +47,7 @@
 <!-- ══════════════════════════════════════
      MAIN VIEW (Tabs: Personen / Quellen)
 ══════════════════════════════════════ -->
-<div id="v-main" class="view">
+<main id="v-main" class="view">
   <div class="topbar">
     <div class="topbar-inner">
       <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" style="display:none" class="changed-dot"></span></span>
@@ -145,7 +145,7 @@
   </div>
 
   <button class="fab" id="fabBtn" data-action="showAddSheet" title="Neu hinzufügen" aria-label="Neu hinzufügen">＋</button>
-</div>
+</main>
 
 <!-- ══════════════════════════════════════
      DETAIL VIEW
@@ -213,7 +213,7 @@
 <!-- ══════════════════════════════════════
      GLOBALE BOTTOM NAVIGATION
 ══════════════════════════════════════ -->
-<nav class="bottom-nav" id="bottomNav" style="display:none">
+<nav class="bottom-nav" id="bottomNav" aria-label="Hauptnavigation" style="display:none">
   <button class="bnav-btn" id="bnav-tree" data-action="bnavTree">
     <span class="bnav-icon">⧖</span>
     <span class="bnav-lbl">Baum</span>

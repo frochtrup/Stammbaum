@@ -263,6 +263,10 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
   const lowerPlace = birthPlace.toLowerCase().trim();
   const all = Object.values(AppState.db.individuals);
 
+  // Guard `lower &&` ist korrekt: bei leerem lower gibt filterPersons() für jeden
+  // Eintrag `return true` (Zeile unten), bevor _searchStr ausgewertet wird.
+  // Stale-Index-Werte können also nie ein falsches Ergebnis liefern. Beim nächsten
+  // Suchaufruf mit non-empty lower greift der dirty-Pfad und baut korrekt neu.
   if (lower && UIState._searchIndexDirty) _buildSearchIndex();
 
   const filtered = all.filter(p => {

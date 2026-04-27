@@ -825,8 +825,7 @@ function openNoteModal(type, id) {
     html += `<div class="form-group" data-ref-section="${esc(ref)}" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
       <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
         <div class="form-label" style="margin-bottom:0">${esc(ref)}</div>
-        <button type="button" onclick="this.closest('[data-ref-section]').remove()"
-          style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;padding:0 2px">× Entfernen</button>
+        <button type="button" class="btn-remove-ref" onclick="this.closest('[data-ref-section]').remove()">× Entfernen</button>
       </div>
       ${usersHtml}
       <textarea data-notetype="ref" data-noteref="${esc(ref)}" class="form-input" rows="5"

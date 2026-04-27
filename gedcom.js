@@ -402,3 +402,174 @@ function evDateKey(d) {
   const dyStr = (d.match(/\b(\d{1,2})\b(?=\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))/) || [])[1];
   return yr + (mStr ? mo[mStr] : '00') + (dyStr ? dyStr.padStart(2,'0') : '00');
 }
+
+// ─────────────────────────────────────
+//  DOMAIN-LOGIK: HOF-INDEX
+// ─────────────────────────────────────
+
+// Aggregiert RESI- und PROP-Ereignisse nach Adresse → Map<addr, {addr, entries[], propEntries[]}>
+// Cache in UIState._hofCache; wird von markChanged() geleert.
+function buildHofIndex() {
+  if (UIState._hofCache) return UIState._hofCache;
+  const hoefe = new Map(); // addr → { addr, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
+  for (const p of Object.values(AppState.db.individuals)) {
+    for (const ev of (p.events || [])) {
+      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
+        const addr = ev.addr.trim();
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, entries: [], propEntries: [] });
+        const hof = hoefe.get(addr);
+        if (!hof.propEntries) hof.propEntries = [];
+        hof.entries.push({
+          pid:     p.id,
+          name:    p.name || p.id,
+          date:    ev.date || '',
+          dateKey: evDateKey(ev.date || ''),
+        });
+      }
+      if (ev.type === 'PROP' && ev.addr && ev.addr.trim()) {
+        const addr = ev.addr.trim();
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, entries: [], propEntries: [] });
+        const hof = hoefe.get(addr);
+        if (!hof.propEntries) hof.propEntries = [];
+        hof.propEntries.push({
+          pid:     p.id,
+          name:    p.name || p.id,
+          date:    ev.date || '',
+          dateKey: evDateKey(ev.date || ''),
+          desc:    ev.value || '',
+        });
+      }
+    }
+  }
+  for (const hof of hoefe.values()) {
+    hof.entries.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+    (hof.propEntries || []).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  }
+  UIState._hofCache = hoefe;
+  return hoefe;
+}
+
+// ─────────────────────────────────────
+//  DOMAIN-LOGIK: DUPLIKAT-SCORING
+// ─────────────────────────────────────
+
+// Normiert Namen für Ähnlichkeitsvergleich (Kleinbuchstaben, Umlaute, Whitespace)
+function _dedupNormName(str) {
+  if (!str) return '';
+  return str.toLowerCase().trim()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/\s+/g, ' ');
+}
+
+// Levenshtein-Ähnlichkeit 0..1 (1 = identisch)
+function _dedupLevenshtein(a, b) {
+  if (!a && !b) return 1;
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const la = a.length, lb = b.length;
+  if (Math.max(la, lb) === 0) return 1;
+  const dp = Array.from({ length: la + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= lb; j++) dp[0][j] = j;
+  for (let i = 1; i <= la; i++) {
+    for (let j = 1; j <= lb; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return 1 - dp[la][lb] / Math.max(la, lb);
+}
+
+// Extrahiert Geburtsjahr aus GEDCOM-Datumsstring
+function _dedupYearFromGed(dateStr) {
+  if (!dateStr) return null;
+  const { date1 } = parseGedDate(dateStr);
+  const iso = gedDatePartToISO(date1 || dateStr);
+  const y = parseInt((iso || '').split('-')[0]);
+  return isNaN(y) ? null : y;
+}
+
+// Berechnet Ähnlichkeits-Score zwischen zwei Personen (0..100)
+// Gibt { score, reasons[] } zurück
+function _dedupScorePair(pA, pB) {
+  const reasons = [];
+  let score = 0;
+
+  // Nachname (max 30)
+  const snA = _dedupNormName(pA.surname || '');
+  const snB = _dedupNormName(pB.surname || '');
+  if (snA && snB) {
+    const r = _dedupLevenshtein(snA, snB);
+    score += r * 30;
+    if (r >= 0.9) reasons.push('Nachname identisch');
+    else if (r >= 0.7) reasons.push('Nachname ähnlich');
+  }
+
+  // Vorname (max 25)
+  const gnA = _dedupNormName(pA.given || '');
+  const gnB = _dedupNormName(pB.given || '');
+  if (gnA && gnB) {
+    const r = _dedupLevenshtein(gnA, gnB);
+    score += r * 25;
+    if (r >= 0.9) reasons.push('Vorname identisch');
+    else if (r >= 0.7) reasons.push('Vorname ähnlich');
+  }
+
+  // Geschlecht (max 15, Malus -20)
+  if (pA.sex !== 'U' && pB.sex !== 'U') {
+    if (pA.sex === pB.sex) { score += 15; }
+    else { score -= 20; reasons.push('Geschlecht verschieden'); }
+  }
+
+  // Geburtsjahr (max 20)
+  const yA = _dedupYearFromGed(pA.birth?.date);
+  const yB = _dedupYearFromGed(pB.birth?.date);
+  if (yA && yB) {
+    const diff = Math.abs(yA - yB);
+    if      (diff === 0) { score += 20; reasons.push('Geburtsjahr identisch'); }
+    else if (diff <= 1)  { score += 15; reasons.push('Geburtsjahr ±1'); }
+    else if (diff <= 2)  { score +=  8; }
+    else if (diff <= 5)  { score +=  3; }
+  } else {
+    score += 5; // neutral wenn kein Datum bekannt
+  }
+
+  // Geburtsort (max 10)
+  const plA = compactPlace(pA.birth?.place || '').toLowerCase().slice(0, 40);
+  const plB = compactPlace(pB.birth?.place || '').toLowerCase().slice(0, 40);
+  if (plA && plB) {
+    const r = _dedupLevenshtein(plA, plB);
+    score += r * 10;
+    if (r >= 0.9) reasons.push('Geburtsort identisch');
+    else if (r >= 0.7) reasons.push('Geburtsort ähnlich');
+  }
+
+  return { score: Math.round(score), reasons };
+}
+
+// Paarweise Duplikatsuche mit Nachname-Bucketing (O(n·k²) statt O(n²))
+// Gibt sortierte Liste [{pA, pB, score, reasons}] zurück
+function findDuplicatePairs(threshold) {
+  threshold = threshold || 65;
+  const persons = Object.values(AppState.db.individuals);
+  const results = [];
+
+  const buckets = {};
+  for (const p of persons) {
+    const key = _dedupNormName(p.surname || p.name || '').slice(0, 3) || '___';
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(p);
+  }
+
+  for (const bucket of Object.values(buckets)) {
+    for (let i = 0; i < bucket.length - 1; i++) {
+      for (let j = i + 1; j < bucket.length; j++) {
+        const pA = bucket[i], pB = bucket[j];
+        const { score, reasons } = _dedupScorePair(pA, pB);
+        if (score >= threshold) results.push({ pA, pB, score, reasons });
+      }
+    }
+  }
+
+  return results.sort((a, b) => b.score - a.score);
+}

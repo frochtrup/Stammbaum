@@ -59,7 +59,7 @@ function renderSrcTags(prefix) {
     return `<span class="src-tag">
       ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
       ${pageField}${quayField}
-      <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-sid="${sid}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
+      <button type="button" class="src-tag-x" data-action="removeSrc" data-prefix="${prefix}" data-sid="${sid}" aria-label="Quelle entfernen">✕</button>
     </span>`;
   }).join('');
 }

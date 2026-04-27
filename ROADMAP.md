@@ -16,8 +16,9 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v269 / Cache: `stammbaum-v269`
+**Aktuelle sw-Version:** v272 / Cache: `stammbaum-v272`
 **Qualitäts-Sprint 2026-04-27:** S4–S6 (XSS, localStorage, Redirect-URI), U9 (Modal-Fokus), U11 (Icon-Button aria-labels, aria-expanded) ✅
+**Qualitäts-Sprint 2 2026-04-27:** U11b (Landmarks), Q6 (verify), U10 (Touch-Targets 44px), A3 (Domain-Logik → gedcom.js) ✅
 
 ---
 
@@ -60,9 +61,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ~~3~~ | ~~Q8~~ | ~~`tryAutoLoad()` Migration-Pfad mit TODO markieren~~ ✅ 2026-04-27 | Code | XS | |
 | ~~4~~ | ~~U4~~ | ~~`showToast(type)` — visuell Erfolg/Warnung/Fehler trennen~~ ✅ 2026-04-27 | UX | S | |
 | ~~5~~ | ~~U2~~ | ~~Modal-Stack / Escape schließt oberstes Modal~~ ✅ 2026-04-27 | UX | S | |
-| 6 | U10 | Touch-Targets ≥44px (WCAG 2.5.5) | UX/a11y | S | iOS-Nutzbarkeit; Source-Picker-Toggle betroffen |
-| 7 | Q6 | `_buildSearchIndex()` dirty-Pfad verifizieren | Code | S | Möglicher Index-Stale-Bug nach `markChanged()` |
-| 8 | U11b | Landmark-Elemente `<main>`, `<nav role>` ergänzen | a11y | S | Screenreader-Navigation; CSS-Impact gering |
+| ~~6~~ | ~~U10~~ | ~~Touch-Targets ≥44px (WCAG 2.5.5)~~ ✅ 2026-04-27 — `.src-tag` min-height:44px; `.src-tag-x` align-self:stretch; `.src-add-btn` min-height:44px; `.src-picker-item` min-height:44px; `× Entfernen` → `.btn-remove-ref` | ~~UX/a11y~~ | ~~S~~ | |
+| ~~7~~ | ~~Q6~~ | ~~`_buildSearchIndex()` dirty-Pfad verifizieren~~ ✅ 2026-04-27 — kein Bug; `lower &&`-Guard sicher (leere Suche wertet `_searchStr` nie aus); Kommentar in `ui-views-person.js:266` | ~~Code~~ | ~~S~~ | |
+| ~~8~~ | ~~U11b~~ | ~~Landmark-Elemente `<main>`, `<nav role>` ergänzen~~ ✅ 2026-04-27 — `<div id="v-main">` → `<main>`; `<nav class="bottom-nav">` + `aria-label="Hauptnavigation"` | ~~a11y~~ | ~~S~~ | |
 | 9 | U3 | `confirm()` → `confirmModal()` Promise (6+ Stellen) | UX | M | PWA-Blocking; iOS-Dialog-Look inkonsistent |
 | 10 | A3 | Domain-Logik (`buildHofIndex`, Dedup-Scoring) nach `gedcom.js` | Architektur | M | UI-Dateien haben Business-Logik; Testbarkeit |
 
@@ -97,7 +98,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | Q3 | ~~**Backward-Compat-Shims bereinigen**~~ ✅ sw v268 | M |
 | Q4 | ~~**Getter konsequent durchziehen**~~ — gestrichen; Risiko > Nutzen | M |
 | Q5 | ~~**`updateStats()` No-op entfernen**~~ ✅ 2026-04-27 — Funktion + 14 Aufrufe in 5 Dateien entfernt | XS |
-| Q6 | **`_buildSearchIndex()` dirty-Pfad prüfen** — `ui-views-person.js:247` wird via `UIState._searchIndexDirty`-Flag aufgerufen, aber nur wenn `lower` truthy; Index wird bei leerem Suchfeld nie gebaut → erster Suchaufruf korrekt, aber `markChanged()` setzt Flag ohne Index-Reset; prüfen ob `dirty`-Pfad vollständig korrekt | S |
+| Q6 | ~~**`_buildSearchIndex()` dirty-Pfad prüfen**~~ ✅ 2026-04-27 — kein Bug; `lower &&`-Guard sicher (leere Suche wertet `_searchStr` nie aus); Kommentar in `ui-views-person.js:266` | S |
 | Q7 | ~~**`_getOriginalText()` localStorage-Fallback entfernen**~~ ✅ 2026-04-27 — `gedcom.js:67`: Dead Code entfernt; Funktion liefert nur noch `AppState._originalGedText ?? null` | XS |
 | Q8 | ~~**`tryAutoLoad()` Migration-Pfad markieren**~~ ✅ 2026-04-27 — TODO-Kommentar mit Datum Q3/2026 in `storage.js:135` | XS |
 
@@ -111,7 +112,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | A1 | **`ui-views.js` aufteilen** (922 Z., 5 Verantwortlichkeiten): Navigation/Routing → `ui-router.js`, Modal-Manager → `ui-modal.js`, Note-Modal → `ui-views-note.js` | L |
 | A2 | **`_CLICK_MAP` nach Feature-Bereich strukturieren**: Sub-Maps `_CLICK_MAP_PERSON`, `_CLICK_MAP_FAMILY` etc., im Init zusammengeführt | M |
-| A3 | **Domain-Logik in `gedcom.js` verlagern**: `buildHofIndex()`, Duplikat-Scoring gehören nicht in UI-Dateien | M |
+| A3 | ~~**Domain-Logik in `gedcom.js` verlagern**~~ ✅ 2026-04-27 — `buildHofIndex()`, `_dedupNormName`, `_dedupLevenshtein`, `_dedupYearFromGed`, `_dedupScorePair`, `findDuplicatePairs` nach `gedcom.js`; UI-Dateien referenzieren globale Funktionen | M |
 | A4 | **`_formState` kapseln**: Transiente Formular-States nicht global in UIState, sondern an Formular-Lifecycle binden | M |
 
 ---
@@ -140,9 +141,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U7 | ~~**Advanced Search**~~ ✅ sw v269 | L |
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
 | U9 | ~~**Fokus-Management in Modals**~~ ✅ 2026-04-27 — `openModal()` fokussiert per `requestAnimationFrame` das erste sichtbare Input/Select/Textarea; wirkt für alle Modals | S |
-| U10 | **Touch-Targets zu klein**: Source-Picker Toggle (`ui-forms.js`) ~18×18px; `× Entfernen`-Buttons in Modals ähnlich → min. 44×44px (WCAG 2.5.5) | S |
+| U10 | ~~**Touch-Targets zu klein**~~ ✅ 2026-04-27 — `.src-tag` min-height:44px; `.src-tag-x` stretch+flex; `.src-add-btn`/`.src-picker-item` min-height:44px; `× Entfernen` → `.btn-remove-ref`; `ui-forms.js:62` Inline-Style → Klasse | S |
 | U11 | ~~**Icon-Buttons `aria-label` + `aria-expanded`**~~ ✅ 2026-04-27 — Topbar, FAB, Filter-Buttons, Tree-View; `advFilterToggle` mit `aria-expanded` synchron zu `toggleAdvFilter()` | S |
-| U11b | **Landmark-Elemente ergänzen** — kein `<main>`, kein `<nav>` (Bottom-Nav ist `<nav>` ohne role); Screenreader-Navigation nicht möglich; `<div id="v-main">` → `<main>` | S |
+| U11b | ~~**Landmark-Elemente ergänzen**~~ ✅ 2026-04-27 — `<div id="v-main">` → `<main>`; `<nav class="bottom-nav">` + `aria-label="Hauptnavigation"` | S |
 | U12 | **Dark Mode**: `prefers-color-scheme` Media Query in `styles.css` fehlt; `theme_color` in `manifest.json` fest | M |
 
 ---

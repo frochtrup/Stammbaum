@@ -1,47 +1,7 @@
 // ─────────────────────────────────────
 //  HOF-LISTE (RESI-Adressen)
 // ─────────────────────────────────────
-
-function buildHofIndex() {
-  if (UIState._hofCache) return UIState._hofCache;
-  const hoefe = new Map(); // addr → { addr, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
-  for (const p of Object.values(AppState.db.individuals)) {
-    for (const ev of (p.events || [])) {
-      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
-        const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, entries: [], propEntries: [] });
-        const hof = hoefe.get(addr);
-        if (!hof.propEntries) hof.propEntries = [];
-        hof.entries.push({
-          pid:     p.id,
-          name:    p.name || p.id,
-          date:    ev.date || '',
-          dateKey: evDateKey(ev.date || ''),
-        });
-      }
-      if (ev.type === 'PROP' && ev.addr && ev.addr.trim()) {
-        const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, entries: [], propEntries: [] });
-        const hof = hoefe.get(addr);
-        if (!hof.propEntries) hof.propEntries = [];
-        hof.propEntries.push({
-          pid:     p.id,
-          name:    p.name || p.id,
-          date:    ev.date || '',
-          dateKey: evDateKey(ev.date || ''),
-          desc:    ev.value || '',
-        });
-      }
-    }
-  }
-  // Einträge pro Hof chronologisch sortieren
-  for (const hof of hoefe.values()) {
-    hof.entries.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-    (hof.propEntries || []).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
-  }
-  UIState._hofCache = hoefe;
-  return hoefe;
-}
+// buildHofIndex() → gedcom.js (Domain-Logik)
 
 function renderHofList(sorted) {
   const el = document.getElementById('hofList');
