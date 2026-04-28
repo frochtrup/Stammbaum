@@ -351,7 +351,7 @@ function parseCoordInput(firstField, secondField) {
     let lon = parseFloat(m[3].replace(/,/g, '.'));
     if (m[2].toUpperCase() === 'S') lat = -lat;
     if (m[4].toUpperCase() === 'W') lon = -lon;
-    return { lat, lon };
+    return { lat: Math.abs(lat) <= 90 ? lat : NaN, lon: Math.abs(lon) <= 180 ? lon : NaN };
   }
   // Einzelfelder — GEDCOM-Format (N52.2073) oder Dezimalgrad
   const _one = v => {
@@ -360,7 +360,8 @@ function parseCoordInput(firstField, secondField) {
     if (g) return (g[1].toUpperCase() === 'S' ? -1 : 1) * parseFloat(g[2].replace(',', '.'));
     return parseFloat(t.replace(',', '.'));
   };
-  return { lat: _one(firstField), lon: _one(secondField) };
+  const lat = _one(firstField), lon = _one(secondField);
+  return { lat: Math.abs(lat) <= 90 ? lat : NaN, lon: Math.abs(lon) <= 180 ? lon : NaN };
 }
 
 function getPlaceFromForm(placeId) {

@@ -924,50 +924,50 @@
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
         <!-- OneDrive (primär) -->
-        <button id="odConnectBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuOdToggle">
+        <button id="odConnectBtn" class="btn menu-btn" data-action="menuOdToggle">
           ☁ &nbsp; OneDrive verbinden
         </button>
-        <button id="odOpenBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" data-action="menuOdOpen">
+        <button id="odOpenBtn" class="btn menu-btn" style="display:none" data-action="menuOdOpen">
           📂 &nbsp; Aus OneDrive öffnen
         </button>
-        <button id="odSaveBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;display:none" data-action="odSaveFile">
+        <button id="odSaveBtn" class="btn menu-btn" style="display:none" data-action="odSaveFile">
           💾 &nbsp; In OneDrive speichern
         </button>
-        <button id="odSettingsBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px" data-action="menuSettings">
+        <button id="odSettingsBtn" class="btn menu-btn" data-action="menuSettings">
           ⚙ &nbsp; Einstellungen
         </button>
         <div style="border-top:1px solid var(--border);margin:2px 0"></div>
         <!-- Lokal (sekundär) -->
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuOpenFile">
+        <button class="btn menu-btn" data-action="menuOpenFile">
           📂 &nbsp; Öffnen… (lokal)
         </button>
-        <button class="btn" data-save-btn style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuExport">
+        <button class="btn menu-btn" data-save-btn data-action="menuExport">
           💾 &nbsp; Speichern (lokal)
         </button>
-        <button id="grampsExportBtn" class="btn" style="display:none;background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuGrampsExport">
+        <button id="grampsExportBtn" class="btn menu-btn" style="display:none" data-action="menuGrampsExport">
           💾 &nbsp; Als GRAMPS exportieren
         </button>
-        <button id="backupMenuBtn" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuBackup">
+        <button id="backupMenuBtn" class="btn menu-btn" data-action="menuBackup">
           🗄 &nbsp; <span>Original herunterladen</span>
         </button>
         <div style="border-top:1px solid var(--border);margin:2px 0"></div>
         <!-- Sonstiges -->
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuRevert">
+        <button class="btn menu-btn" data-action="menuRevert">
           ↩ &nbsp; Änderungen verwerfen
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuLoadDemo">
+        <button class="btn menu-btn" data-action="menuLoadDemo">
           🗂 &nbsp; Demo-Daten öffnen
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuNewFile">
+        <button class="btn menu-btn" style="color:var(--text-muted)" data-action="menuNewFile">
           ✕ &nbsp; Datei schließen
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuHelp">
+        <button class="btn menu-btn" data-action="menuHelp">
           ❓ &nbsp; Hilfe &amp; Anleitung
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuDedup">
+        <button class="btn menu-btn" data-action="menuDedup">
           &#128270; &nbsp; Duplikate erkennen
         </button>
-        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuStats">
+        <button class="btn menu-btn" data-action="menuStats">
           📊 &nbsp; Statistik
         </button>
         <button hidden class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" data-action="menuRoundtrip" data-debug-only>
@@ -1151,7 +1151,15 @@
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Speichern — iPhone / iPad</strong><br>
         ☁️ öffnet das Share Sheet mit der aktualisierten Datei + Zeitstempel-Backup. Wählen Sie „In Dateien sichern" → iCloud Drive → Genealogie.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Navigation</strong><br>
-        6 Tabs in der unteren Leiste: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · 🔍 Suche. Die Suche durchsucht gleichzeitig alle Entitätstypen. Aus der Detailansicht gelangen Sie mit „← Zurück" wieder zur Liste.</p>
+        6 Tabs in der unteren Leiste: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · ⌂ Proband. Die 🔍 Suche ist in der Topbar und durchsucht gleichzeitig alle Entitätstypen. Aus der Detailansicht gelangen Sie mit „← Zurück" wieder zur Liste.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Baum (Sanduhr)</strong><br>
+        Der ⧖-Tab zeigt einen Sanduhr-Baum mit bis zu 4 Ahnen-Ebenen und 2 Nachkommen-Ebenen. Tippen auf eine Karte öffnet die Detailansicht oder wechselt den Probanden. Tastaturnavigation: Pfeiltasten wechseln zwischen Personen, Enter öffnet die Detailansicht.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Orte · Höfe · Karte</strong><br>
+        Im 📍-Tab wechseln Sie zwischen drei Ansichten: Ortsliste (alle PLAC-Einträge), Höfe (RESI-Adressen mit Koordinaten + Bewohnern) und Karte (Leaflet-Karte mit allen verorteten Orten und Personen). Hof-Koordinaten können direkt im Hof-Detail eingetragen werden.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Statistik</strong><br>
+        Im Menü ☰ → 📊 Statistik finden Sie eine Übersicht: Personen, Familien, Quellen, Vollständigkeitsgrad, Geburts- und Sterbedaten-Abdeckung.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Tastaturkürzel</strong><br>
+        Im Baum: Pfeiltasten navigieren, Enter öffnet Detail. Cmd+Z verwirft alle ungespeicherten Änderungen (entspricht „Änderungen verwerfen" im Menü).</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Fotos &amp; Medien</strong><br>
         In jeder Detailansicht (Person, Familie, Quelle) finden Sie einen Abschnitt „Medien". Über „+ Hinzufügen" fügen Sie neue Einträge hinzu — bei aktiver OneDrive-Verbindung können Sie direkt eine Datei im Ordner auswählen. Mit dem ×-Button entfernen Sie Einträge. Tippen auf einen Medieneintrag öffnet das Foto in der Vollbild-Lightbox; dort können Sie es über „Als Hauptfoto setzen" zum Profilfoto machen.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">OneDrive-Fotos</strong><br>

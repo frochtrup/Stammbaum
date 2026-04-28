@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v302 / Cache: `stammbaum-v302`
+**Aktuelle sw-Version:** v306 / Cache: `stammbaum-v306`
 
 ---
 
@@ -80,7 +80,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | A1 | ~~**`ui-views.js` aufteilen**~~ ✅ 2026-04-27 — `ui-views-note.js` (120 Z., Notiz-Modal) + `ui-views-search.js` (139 Z., `runGlobalSearch`) extrahiert; ui-views.js: 935 → 683 Z.; `ui-router.js` + `ui-modal.js` abgelehnt (Navigation global verwoben, Modal-Manager in ui-forms.js) | S |
 | A5 | **`db`-Shim eliminieren**: `window.db` leitet per Shim auf `AppState.db` weiter (176 bare-Zugriffe in 14 Dateien). Lösung: `setDb(newDb)` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level. Betroffene Stellen: ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
 | A6 | ~~**`ui-forms.js` aufteilen**~~ abgelehnt 2026-04-27 — Splits zu granular (`ui-modal.js`: 4 Fns, `ui-utils.js`: 3 Fns/20 Z.); `openModal`/`closeModal` form-nah; kein Build-Step = jede Datei kostet Script-Tag + PRECACHE; Datei ist kohärent (Formulare + Hilfsfunktionen) | M |
-| A7 | **Menü-Buttons CSS-Klasse**: `modalMenu` hat 12 Buttons mit identischem `style="background:var(--surface2);…"` Inline-Style. Neue Klasse `.menu-btn` in `styles.css`; reduziert `unsafe-inline` im CSP-Druck. | S |
+| A7 | ~~**Menü-Buttons CSS-Klasse**~~ ✅ 2026-04-29 — `.menu-btn` in `styles.css`; 12 Inline-Styles in `#modalMenu` ersetzt | S |
 
 ---
 
@@ -90,9 +90,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
 | U12 | **Dark Mode**: `prefers-color-scheme` Media Query in `styles.css` fehlt; `theme_color` in `manifest.json` fest | M |
-| U15 | **Hilfe-Modal Inhalt aktualisieren**: Statistik-Tab fehlt in Beschreibung; Baum-Tab (Sanduhr, Tastaturnavigation) nicht erklärt; Höfe + Karte im Orte-Tab nicht erwähnt; Tastaturkürzel (Cmd+Z, Pfeiltasten) fehlen | S |
+| U15 | ~~**Hilfe-Modal Inhalt aktualisieren**~~ ✅ 2026-04-29 — Tabs korrigiert (⌂ Proband statt 🔍 Suche); Abschnitte Baum/Orte+Höfe+Karte/Statistik/Tastaturkürzel ergänzt | S |
 | U16 | **Farbkodierung Baum Barrierefreiheit**: Geschlecht nur durch Farbe (blau/pink/gold) kodiert — keine Text-Alternative für Farb-Sehschwäche; `data-sex`-Attribut ist maschinenlesbar, aber nicht sichtbar | XS |
-| Q11 | **Koordinaten Bounds-Check**: `parseCoordInput()` in `gedcom.js` gibt `parseFloat()` ohne Bereichsprüfung zurück — Werte >90/180 oder <-90/-180 möglich; Leaflet stürzt bei ungültigen Koordinaten ab | XS |
+| Q11 | ~~**Koordinaten Bounds-Check**~~ ✅ 2026-04-29 — `parseCoordInput()`: `Math.abs(lat)<=90`/`Math.abs(lon)<=180` an beiden Return-Pfaden; Out-of-range → NaN | XS |
 
 ---
 
