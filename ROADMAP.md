@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v299 / Cache: `stammbaum-v299`
+**Aktuelle sw-Version:** v302 / Cache: `stammbaum-v302`
 
 ---
 
@@ -46,6 +46,7 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 4e | Hof-Eigentum: PROP-Ereignisse in Hofhistorie; `propEntries[]` in `buildHofIndex()`; `showHofPropForm`/`saveHofEigentum`; Bewohner+Eigentum chronologisch sortiert | v261–v265 |
 | 4f | UX/UI-Review: Touch-Targets, Leerzustände, Swipe-down, Event-Typ-Selektor, History-Picker, Unified Nav History, `showToast(type)`, `confirmModal(okLabel)` | v289–v297 |
 | 4g | Rufname: `_RUFNAME`-Tag GEDCOM-Roundtrip; Detailansicht Rufname+Spitzname; Baum unterstrichen | v298 |
+| 4h | Security/A11y-Review: `user-scalable=no` entfernt (WCAG 1.4.4); `esc()` + `'`; `ui-debug.js` + Roundtrip-Test `?debug=1`-only; `loadDemo()` `confirmModal()`; Hilfe-Version dynamisch | v300–v302 |
 | Cleanup | Virtual Scroll, onclick-Delegation, State-Konsolidierung, Suche indexiert, Debug ausgelagert | v230–v233 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
@@ -79,6 +80,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | A1 | ~~**`ui-views.js` aufteilen**~~ ✅ 2026-04-27 — `ui-views-note.js` (120 Z., Notiz-Modal) + `ui-views-search.js` (139 Z., `runGlobalSearch`) extrahiert; ui-views.js: 935 → 683 Z.; `ui-router.js` + `ui-modal.js` abgelehnt (Navigation global verwoben, Modal-Manager in ui-forms.js) | S |
 | A5 | **`db`-Shim eliminieren**: `window.db` leitet per Shim auf `AppState.db` weiter (176 bare-Zugriffe in 14 Dateien). Lösung: `setDb(newDb)` mit `Object.assign` auf stabiler Referenz; `const db = AppState.db` modul-level. Betroffene Stellen: ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
 | A6 | ~~**`ui-forms.js` aufteilen**~~ abgelehnt 2026-04-27 — Splits zu granular (`ui-modal.js`: 4 Fns, `ui-utils.js`: 3 Fns/20 Z.); `openModal`/`closeModal` form-nah; kein Build-Step = jede Datei kostet Script-Tag + PRECACHE; Datei ist kohärent (Formulare + Hilfsfunktionen) | M |
+| A7 | **Menü-Buttons CSS-Klasse**: `modalMenu` hat 12 Buttons mit identischem `style="background:var(--surface2);…"` Inline-Style. Neue Klasse `.menu-btn` in `styles.css`; reduziert `unsafe-inline` im CSP-Druck. | S |
 
 ---
 
@@ -88,6 +90,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|
 | U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState; eigener Sprint | XL |
 | U12 | **Dark Mode**: `prefers-color-scheme` Media Query in `styles.css` fehlt; `theme_color` in `manifest.json` fest | M |
+| U15 | **Hilfe-Modal Inhalt aktualisieren**: Statistik-Tab fehlt in Beschreibung; Baum-Tab (Sanduhr, Tastaturnavigation) nicht erklärt; Höfe + Karte im Orte-Tab nicht erwähnt; Tastaturkürzel (Cmd+Z, Pfeiltasten) fehlen | S |
+| U16 | **Farbkodierung Baum Barrierefreiheit**: Geschlecht nur durch Farbe (blau/pink/gold) kodiert — keine Text-Alternative für Farb-Sehschwäche; `data-sex`-Attribut ist maschinenlesbar, aber nicht sichtbar | XS |
+| Q11 | **Koordinaten Bounds-Check**: `parseCoordInput()` in `gedcom.js` gibt `parseFloat()` ohne Bereichsprüfung zurück — Werte >90/180 oder <-90/-180 möglich; Leaflet stürzt bei ungültigen Koordinaten ab | XS |
 
 ---
 
@@ -166,6 +171,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | S4 | XSS `buildPlacePartsHtml()` | ✅ 2026-04-27 |
 | S5 | GEDCOM aus localStorage entfernen | ✅ 2026-04-27 |
 | S6 | Redirect-URI fest kodieren | ✅ 2026-04-27 |
+| S7 | `user-scalable=no` entfernt (WCAG 1.4.4 — Zoom für alle Nutzer) | ✅ 2026-04-28 |
+| S8 | `esc()` Apostroph `'` → `&#39;` (vollständige HTML-Escapesequenz) | ✅ 2026-04-28 |
+| S9 | `ui-debug.js` + Roundtrip-Test-Buttons nur bei `?debug=1` | ✅ 2026-04-28 |
 
 ### P1 — Code-Qualität (Teilarchiv)
 
@@ -209,6 +217,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U1 | Fehlermeldungen nutzerfreundlich | ✅ sw v267 |
 | U2 | Modal-Stack / Escape-Verhalten | ✅ 2026-04-27 |
 | U3 | `confirm()` → `confirmModal()` Promise | ✅ 2026-04-27 |
+| U3b | `loadDemo()` mit `confirmModal()` bei ungespeicherten Änderungen | ✅ 2026-04-28 |
 | U4 | `showToast(type)` visuell differenzieren | ✅ 2026-04-27 |
 | U5 | Namens-Truncation im Baum | ✅ sw v269 |
 | U6 | `handleError()` zentralisieren | abgelehnt — 14 Catches bewusste Fallbacks, individuelle Meldungen ausreichend |

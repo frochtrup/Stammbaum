@@ -9,6 +9,31 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-04-28 — Architektur/Security/A11y-Review-Fixes (sw v300–v302)
+
+- **sw v300** `fix`: `user-scalable=no` aus Viewport entfernt (WCAG 1.4.4); `ui-debug.js` + Roundtrip-Test-Buttons nur bei `?debug=1` sichtbar (`data-debug-only`-Muster); Hilfe-Modal: Version dynamisch aus SW-Cache-Namen statt hardcodiert „3.0"; `ui-views.js`: `typeof`-Guard für `runRoundtripTest` in `_CLICK_MAP`
+- **sw v301** *(extern — PRECACHE-Aktualisierung)*
+- **sw v302** `fix`: `esc()` um `'` → `&#39;` erweitert (vollständige HTML-Escapesequenz); `loadDemo()` mit `confirmModal()` bei ungespeicherten Änderungen abgesichert; `storage-file.js` in ARCHITECTURE.md + MEMORY.md dokumentiert
+
+---
+
+### Session 2026-04-27 — UX/UI-Review, Statistik-Dashboard, Rufname (sw v284–v299)
+
+- **sw v284–v288** `fix/ux`: Hof-Koordinaten Nachbesserungen + UX-Review Vorbereitung
+- **sw v289–v297** `ux`: Phase 4f — UI/UX-Review
+  - Touch-Targets ≥44px konsequent, Leerzustände mit CTA
+  - Swipe-down Bottom-Sheet (touch-start/move/end auf `.sheet-handle`)
+  - Event-Formular: Typ-Selektor als horizontales Scroll-Menü
+  - Orte-Tab: Segment-Control als Pill (Orte | Höfe | Karte)
+  - History-Picker Dropdown: Split-Button (← direkt / ▾ Verlauf-Dropdown)
+  - Unified Navigation History: `_navHistory[]` in UIState; Baum + Detail teilen einen Stack; `treeNavBack()` delegiert an `goBack()`; `_treeHistory`/`_treeHistoryPos` entfernt
+  - `showToast(msg, type)`: type = success/error/warn/info; typabhängige Dauer; `.toast-error` rot; rückwärtskompatibel
+  - `confirmModal(okLabel)`: konfigurierbarer OK-Button-Text
+- **sw v298** `feat`: Phase 4g — Rufname (`_RUFNAME`-Tag / NICK) GEDCOM-Roundtrip; Detailansicht Rufname unterstrichen + Spitzname kursiv; Baum: Rufname unterstrichen; `btn-danger` CSS-Refaktor
+- **sw v299** `feat`: Statistik-Dashboard — `ui-views-stats.js`; 6. Tab; Kennzahlen, Altersverteilung, häufige Nachnamen, Ereignis-Abdeckung
+
+---
+
 ### Session 2026-04-27 — Phase 4d: Hof-Koordinaten + Notizen, Roundtrip-Fixes (sw v280–v283)
 
 - **sw v280** `feat`: Hof-Koordinaten + Notizen
