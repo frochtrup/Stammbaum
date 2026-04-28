@@ -262,20 +262,23 @@ function getChildIds(pid) {
 let currentTreeId = null;
 
 function _updateTreeBackBtn() {
-  const btn = document.getElementById('treeBtnBack');
-  if (btn) btn.style.display = UIState._treeHistoryPos > 0 ? '' : 'none';
+  const btn  = document.getElementById('treeBtnBack');
+  const hist = document.getElementById('treeHistBtn');
+  if (btn)  btn.style.display  = UIState._treeHistoryPos > 0 ? '' : 'none';
+  if (hist) hist.style.display = UIState._treeHistoryPos >= 2 ? '' : 'none';
 }
 
+// "←" — immer 1 Schritt direkt zurück im Baum
 function treeNavBack() {
   if (UIState._treeHistoryPos <= 0) return;
-  if (UIState._treeHistoryPos === 1) {
-    // Einzelschritt — direkt zurück
-    UIState._treeHistoryPos--;
-    showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
-    return;
-  }
-  // Mehrere Schritte → Picker: neueste Position zuerst
-  const btn = document.getElementById('treeBtnBack');
+  UIState._treeHistoryPos--;
+  showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
+}
+
+// "▾" — Picker mit vollständigem Baum-Verlauf
+function openTreeHistory() {
+  if (UIState._treeHistoryPos <= 0) return;
+  const btn = document.getElementById('treeHistBtn');
   const items = [];
   for (let i = UIState._treeHistoryPos - 1; i >= 0; i--) {
     const id = UIState._treeHistory[i];

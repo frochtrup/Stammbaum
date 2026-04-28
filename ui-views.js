@@ -49,7 +49,7 @@ function showView(id) {
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); }
+    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
@@ -386,22 +386,35 @@ function _beforeDetailNavigate() {
   }
 }
 
-// "← Zurück" – 1 Schritt: direkt zurück; ≥ 2 Schritte: Picker anzeigen
+// "← Zurück" — immer 1 Schritt direkt zurück
 function goBack() {
   const hist = UIState._navHistory;
   if (!hist.length) { showMain(); return; }
-  if (hist.length === 1) { _navToHistoryItem(hist.pop()); return; }
-  // Mehrere Einträge → Picker: neueste zuerst
-  const btn = document.querySelector('#v-detail .topbar-inner .back');
-  const pickerItems = [...hist].reverse().map((item, i) => ({
+  _navToHistoryItem(hist.pop());
+  _updateDetailHistBtn();
+}
+
+// "▾" — Picker mit vollständigem Verlauf
+function openDetailHistory() {
+  const hist = UIState._navHistory;
+  if (!hist.length) return;
+  const btn = document.getElementById('detailHistBtn');
+  const items = [...hist].reverse().map((item, i) => ({
     label: _historyItemLabel(item),
     data:  { item, actualIdx: hist.length - 1 - i }
   }));
-  _showHistoryPicker(btn, pickerItems, (idx, data) => {
-    if (idx < 0) { showMain(); return; }  // "Liste" geklickt
-    hist.splice(data.actualIdx);          // History bis zu diesem Punkt kürzen
+  _showHistoryPicker(btn, items, (idx, data) => {
+    if (idx < 0) { showMain(); return; }
+    hist.splice(data.actualIdx);
     _navToHistoryItem(data.item);
+    _updateDetailHistBtn();
   }, 'Liste');
+}
+
+// ▾-Button ein/ausblenden nach jeder Navigation
+function _updateDetailHistBtn() {
+  const btn = document.getElementById('detailHistBtn');
+  if (btn) btn.style.display = UIState._navHistory.length >= 2 ? '' : 'none';
 }
 
 // Kleinste numerische Personen-ID
@@ -622,6 +635,8 @@ const _CLICK_MAP = {
   showMediaBrowser:        ()  => showMediaBrowser(),
   showAddSheet:            ()  => showAddSheet(),
   goBack:                  ()  => goBack(),
+  openDetailHistory:       ()  => openDetailHistory(),
+  openTreeHistory:         ()  => openTreeHistory(),
   showEditSheet:           ()  => showEditSheet(),
   treeNavBack:             ()  => treeNavBack(),
   setTreeGens:             el => setTreeGens(+el.dataset.tgen),

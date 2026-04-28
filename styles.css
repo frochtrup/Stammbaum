@@ -67,6 +67,10 @@ body {
 }
 .topbar-btn:active { background: var(--surface2); }
 .topbar-btn.back { color: var(--text-dim); }
+.topbar-btn.back-hist {
+  color: var(--text-muted); padding: 6px 2px 6px 0;
+  font-size: 0.72rem; opacity: 0.8;
+}
 .topbar-btn.primary { color: var(--gold-lt); font-weight: 600; }
 .topbar-btn[data-save-btn].direct-save { color: var(--gold-lt); }
 .topbar-btn.proband-active { background: var(--gold); color: var(--bg); font-weight: 700; }
