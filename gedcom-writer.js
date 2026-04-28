@@ -131,7 +131,8 @@ function writeINDIRecord(lines, p) {
   lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
   if (p.given)   lines.push(`2 GIVN ${p.given}`);
   if (p.surname) lines.push(`2 SURN ${p.surname}`);
-  if (p.nick)    lines.push(`2 NICK ${p.nick}`);
+  if (p.nick)     lines.push(`2 NICK ${p.nick}`);
+  if (p._rufname) lines.push(`2 _RUFNAME ${p._rufname}`);
   if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
   if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
   writeSourCitations(lines, 2, {

@@ -342,12 +342,16 @@ function showDetail(id, pushHistory = true) {
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
 
   const fullName = [p.prefix, p.name, p.suffix].filter(Boolean).join(' ');
+  const rufname  = p._rufname || p._grampsCall || '';
+  const spitzname = (p.nick && p.nick !== rufname) ? p.nick : '';
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-photo-${id}" style="display:none"></div>
     <div id="det-avatar-${id}" class="detail-avatar ${sc}">${ic}</div>
     <div class="detail-hero-text">
       <div class="detail-name">${esc(fullName || id)} <span style="font-size:1rem;color:var(${sc === 'm' ? '--blue' : sc === 'f' ? '--pink' : '--gold-dim'})">${ic}</span></div>
+      ${rufname  ? `<div class="detail-rufname">Rufname: <u>${esc(rufname)}</u></div>` : ''}
+      ${spitzname ? `<div class="detail-rufname" style="font-style:italic">Spitzname: ${esc(spitzname)}</div>` : ''}
       <div class="detail-id">${p.lastChanged ? 'Geändert ' + p.lastChanged : ''}</div>
     </div>
   </div>`;

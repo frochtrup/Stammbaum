@@ -171,7 +171,8 @@ function _renderPfExtraNames() {
     const del = document.createElement('button');
     del.type = 'button';
     del.textContent = '×';
-    del.style.cssText = 'padding:4px 10px;background:var(--danger,#c0392b);color:#fff;border:none;border-radius:6px;cursor:pointer;flex-shrink:0';
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'padding:4px 10px;flex-shrink:0';
     del.addEventListener('click', () => removePfExtraName(idx));
     row.appendChild(del);
     list.appendChild(row);

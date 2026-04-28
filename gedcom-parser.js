@@ -64,7 +64,7 @@ function parseGEDCOM(text, parseErrors) {
       if (tag.startsWith('@') && val.trim() === 'INDI') {
         cur = {
           id: tag, _passthrough: [], _nameParsed: false,
-          name:'', nameRaw:'', surname:'', given:'', nick:'', prefix:'', suffix:'',
+          name:'', nameRaw:'', surname:'', given:'', nick:'', _rufname:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
           birth:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
           death:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], cause:'', value:'', seen:false, note:'' },
@@ -216,6 +216,7 @@ function parseGEDCOM(text, parseErrors) {
             if      (tag === 'GIVN') { cur.given = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
             else if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
             else if (tag === 'NICK') cur.nick = val;
+            else if (tag === '_RUFNAME') cur._rufname = val;
             else if (tag === 'NPFX') cur.prefix = val;
             else if (tag === 'NSFX') cur.suffix = val;
             else if (tag === 'SOUR' && val.startsWith('@')) { cur.nameSources.push(val); cur.sourceRefs.add(val); }

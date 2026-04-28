@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v287 / Cache: `stammbaum-v287`
+**Aktuelle sw-Version:** v298 / Cache: `stammbaum-v298`
 
 ---
 
@@ -42,7 +42,10 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 4a | UX: `compactPlace()`, Notizen-Modal, noteRefs editierbar + löschbar, `_pruneOrphanNotes()` | v236–v242 |
 | 4b | Duplikat-Erkennung + Merge: Levenshtein-Scoring, Merge-Modal, Ignorieren | v243 |
 | 4c | Kartenansicht: Leaflet lokal; Alle Orte + Personenbiografie; Desktop rechtes Panel; Safari-Fix | v244–v250 |
-| 4d | Hof-Koordinaten + Notizen: `db.hofObjects{}`, PLAC+MAP am RESI, Hof-Marker auf Karte, RESI-Stationen in Personenbiografie; Roundtrip-Fixes v282–v283 | v280–v283 |
+| 4d | Hof-Koordinaten + Notizen: `db.hofObjects{}`, PLAC+MAP am RESI, Hof-Marker auf Karte, RESI-Stationen in Personenbiografie; Roundtrip-Fixes v282–v283 | v280–v285 |
+| 4e | Hof-Eigentum: PROP-Ereignisse in Hofhistorie; `propEntries[]` in `buildHofIndex()`; `showHofPropForm`/`saveHofEigentum`; Bewohner+Eigentum chronologisch sortiert | v261–v265 |
+| 4f | UX/UI-Review: Touch-Targets, Leerzustände, Swipe-down, Event-Typ-Selektor, History-Picker, Unified Nav History, `showToast(type)`, `confirmModal(okLabel)` | v289–v297 |
+| 4g | Rufname: `_RUFNAME`-Tag GEDCOM-Roundtrip; Detailansicht Rufname+Spitzname; Baum unterstrichen | v298 |
 | Cleanup | Virtual Scroll, onclick-Delegation, State-Konsolidierung, Suche indexiert, Debug ausgelagert | v230–v233 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
@@ -148,8 +151,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] Zeitleiste (`ui-timeline.js`)
 - [ ] Nachkommen-Baum (top-down SVG)
 - [ ] Statistik-Dashboard
-- [ ] Rufname (NICK / `_RUFNAME`) in Detailansicht + Baum
-- [ ] **Eigentum in Hofhistorie** — PROP-Ereignisse in Hof-Detail als hervorgehobene Zeile; `buildHofIndex()` um PROP-Einträge erweitern; Ereignis-Formular für PROP: Adress-Auswahl analog zu RESI, kein Pflichtfeld (Acker, Mühle, Scheune …)
 
 ---
 

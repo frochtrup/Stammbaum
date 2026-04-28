@@ -306,6 +306,21 @@ function _treeShortName(p, isCenter) {
   return nm;
 }
 
+// Gibt HTML für den Kartennamen zurück — Rufname wird unterstrichen
+function _treeNameHtml(p, isCenter) {
+  const nm = _treeShortName(p, isCenter);
+  const rufname = p._rufname || p._grampsCall || '';
+  if (!rufname) return esc(nm);
+  // Rufname-Wort im Anzeigenamen suchen (Wortgrenze, case-insensitive)
+  const escaped = esc(rufname);
+  const re = new RegExp('(^|\\s)(' + rufname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(\\s|$)', 'i');
+  const match = nm.match(re);
+  if (!match) return esc(nm);
+  const idx = match.index + match[1].length;
+  const len = match[2].length;
+  return esc(nm.slice(0, idx)) + '<u>' + esc(nm.slice(idx, idx + len)) + '</u>' + esc(nm.slice(idx + len));
+}
+
 function showTree(personId, addToHistory = true) {
   const p = AppState.db.individuals[personId];
   if (!p) return;
@@ -537,13 +552,12 @@ function showTree(personId, addToHistory = true) {
     const q = AppState.db.individuals[id];
     if (!q) return;
     div.dataset.sex = q.sex || 'U';
-    const nm = _treeShortName(q, isCenter);
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
     const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =
-      `<div class="tree-name">${esc(nm)}</div>` +
+      `<div class="tree-name">${_treeNameHtml(q, isCenter)}</div>` +
       (yr ? `<div class="tree-yr" style="${isPortrait ? 'font-size:0.58rem;white-space:nowrap' : ''}">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${spouseFamsEarly.length}</div>` : '') +
