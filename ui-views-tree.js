@@ -87,7 +87,7 @@ function _initTreeDrag() {
     _updateTopbarH();
     clearTimeout(_treeResizeTimer);
     _treeResizeTimer = setTimeout(() => {
-      const id = UIState._treeHistory[UIState._treeHistoryPos];
+      const id = currentTreeId;
       if (!id) return;
       if (!document.getElementById('v-tree')?.classList.contains('active')) return;
       showTree(id, false);
@@ -264,31 +264,30 @@ let currentTreeId = null;
 function _updateTreeBackBtn() {
   const btn  = document.getElementById('treeBtnBack');
   const hist = document.getElementById('treeHistBtn');
-  if (btn)  btn.style.display  = UIState._treeHistoryPos > 0 ? '' : 'none';
-  if (hist) hist.style.display = UIState._treeHistoryPos >= 2 ? '' : 'none';
+  const n = UIState._navHistory.length;
+  if (btn)  btn.style.display  = n > 0 ? '' : 'none';
+  if (hist) hist.style.display = n >= 2 ? '' : 'none';
 }
 
-// "←" — immer 1 Schritt direkt zurück im Baum
+// "←" — immer 1 Schritt direkt zurück (unified history)
 function treeNavBack() {
-  if (UIState._treeHistoryPos <= 0) return;
-  UIState._treeHistoryPos--;
-  showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
+  goBack();
 }
 
-// "▾" — Picker mit vollständigem Baum-Verlauf
+// "▾" — Picker mit vollständigem Verlauf (unified history)
 function openTreeHistory() {
-  if (UIState._treeHistoryPos <= 0) return;
+  const hist = UIState._navHistory;
+  if (!hist.length) return;
   const btn = document.getElementById('treeHistBtn');
-  const items = [];
-  for (let i = UIState._treeHistoryPos - 1; i >= 0; i--) {
-    const id = UIState._treeHistory[i];
-    const p  = AppState.db.individuals[id];
-    items.push({ label: p ? (p.name || id) : id, data: { pos: i } });
-  }
+  const items = [...hist].reverse().map((item, i) => ({
+    label: _historyItemLabel(item),
+    data:  { actualIdx: hist.length - 1 - i, item }
+  }));
   _showHistoryPicker(btn, items, (idx, data) => {
     if (!data) return;
-    UIState._treeHistoryPos = data.pos;
-    showTree(UIState._treeHistory[data.pos], false);
+    hist.splice(data.actualIdx);
+    _navToHistoryItem(data.item);
+    _updateTreeBackBtn();
   }, null);
 }
 
@@ -314,10 +313,9 @@ function showTree(personId, addToHistory = true) {
   currentTreeId   = personId;
 
   // ── Navigations-History ──
-  if (addToHistory) {
-    UIState._treeHistory = UIState._treeHistory.slice(0, UIState._treeHistoryPos + 1);
-    if (UIState._treeHistory[UIState._treeHistory.length - 1] !== personId) UIState._treeHistory.push(personId);
-    UIState._treeHistoryPos = UIState._treeHistory.length - 1;
+  if (addToHistory && currentTreeId && currentTreeId !== personId) {
+    const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
+    UIState._navHistory.push({ type: _type, id: currentTreeId });
   }
   _updateTreeBackBtn();
   setBnavActive('tree');

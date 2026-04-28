@@ -23,8 +23,6 @@ const AppState = {
 
 const UIState = {
   _treeScale:       1,           // Zoom-Faktor Sanduhr-Ansicht
-  _treeHistory:     [],          // Navigations-History im Baum
-  _treeHistoryPos:  -1,
   _relMode:         '',          // 'spouse' | 'child' | 'parent'
   _relAnchorId:     '',          // personId (spouse/parent) oder famId (child)
   _pendingRelation: null,        // { mode, anchorId } — gesetzt vor showPersonForm()

@@ -47,7 +47,7 @@ async function confirmNewFile() {
   const yf = document.getElementById('yearFrom');        if (yf) yf.value = '';
   const yt = document.getElementById('yearTo');          if (yt) yt.value = '';
   const cb = document.getElementById('yearFilterClear'); if (cb) cb.style.display = 'none';
-  UIState._treeHistory = []; UIState._treeHistoryPos = -1; _updateTreeBackBtn();
+  UIState._navHistory = []; _updateTreeBackBtn();
   showView('v-landing');
 }
 

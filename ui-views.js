@@ -256,6 +256,8 @@ function showMain() {
   UIState._savedListScroll = null;
   UIState._navHistory.length = 0; // Liste = frischer Start, History löschen
   _closeHistoryPicker();
+  _updateDetailHistBtn();
+  if (typeof _updateTreeBackBtn === 'function') _updateTreeBackBtn();
   document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
@@ -373,16 +375,14 @@ function _beforeDetailNavigate() {
       const title = document.getElementById('detailTopTitle')?.textContent;
       if (title && title !== '📍 Ort') UIState._navHistory.push({ type: 'place', name: title });
     }
+  } else if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
+    // Baum → Detail: aktuellen Baum-Zustand in bestehende History einfügen (nicht löschen)
+    const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
+    UIState._navHistory.push({ type: _type, id: currentTreeId });
   } else {
+    // Liste → Detail: History neu starten + Scroll-Position sichern
     UIState._navHistory.length = 0;
-    // Baum → Detail: bei fc-mode Fan Chart merken, sonst Sanduhr
-    if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
-      const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
-      UIState._navHistory.push({ type: _type, id: currentTreeId });
-    } else {
-      // Liste → Detail: Scroll-Position für Rückkehr sichern
-      UIState._savedListScroll = { tab: AppState.currentTab, pos: _getListScroll() };
-    }
+    UIState._savedListScroll = { tab: AppState.currentTab, pos: _getListScroll() };
   }
 }
 
@@ -392,6 +392,7 @@ function goBack() {
   if (!hist.length) { showMain(); return; }
   _navToHistoryItem(hist.pop());
   _updateDetailHistBtn();
+  _updateTreeBackBtn();
 }
 
 // "▾" — Picker mit vollständigem Verlauf
@@ -408,6 +409,7 @@ function openDetailHistory() {
     hist.splice(data.actualIdx);
     _navToHistoryItem(data.item);
     _updateDetailHistBtn();
+    _updateTreeBackBtn();
   }, 'Liste');
 }
 
