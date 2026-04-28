@@ -852,15 +852,19 @@ const filterPlacesDebounced   = debounce(filterPlaces,   200);
 const filterHoefeDebounced    = debounce(filterHoefe,    200);
 
 let toastTimer;
-function showToast(msg) {
+// type: 'success' | 'error' | 'warn' | 'info' (default)
+// Rückwärtskompatibel: ✓-Präfix → success, ⚠-Präfix → warn
+function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast'; // Typ-Klassen zurücksetzen
-  if (msg.startsWith('✓'))  t.classList.add('toast-success');
-  else if (msg.startsWith('⚠')) t.classList.add('toast-warn');
+  t.className = 'toast';
+  const resolved = type
+    || (msg.startsWith('✓') ? 'success' : msg.startsWith('⚠') ? 'warn' : 'info');
+  if (resolved !== 'info') t.classList.add('toast-' + resolved);
   t.classList.add('show');
+  const dur = { success: 2500, warn: 4000, error: 5000, info: 2800 }[resolved] ?? 2800;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
 function showLoadingOverlay(msg) {
   document.getElementById('loadingMsg').textContent = msg || 'Wird geladen …';

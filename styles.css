@@ -832,6 +832,7 @@ body.desktop-mode.places-karte #mapContainer {
 .toast.show { opacity: 1; }
 .toast.toast-success { border-color: var(--gold); color: var(--gold-lt); }
 .toast.toast-warn    { border-color: #b06820; color: #d08830; }
+.toast.toast-error   { border-color: #8b2020; color: #d04040; background: #2a1010; }
 
 /* ═══════════════════════════════════════
    SOURCES VIEW
