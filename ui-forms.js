@@ -276,7 +276,7 @@ async function deletePerson() {
   const id = document.getElementById('pf-id').value;
   const _pd = getPerson(id);
   if (!id || !_pd) return;
-  if (!await confirmModal(`${_pd.name || id} wirklich löschen?`)) return;
+  if (!await confirmModal(`${_pd.name || id} wirklich löschen?`, 'Löschen')) return;
 
   // Remove from families
   for (const f of Object.values(AppState.db.families)) {
@@ -474,7 +474,7 @@ function saveFamily() {
 async function deleteFamily() {
   const id = document.getElementById('ff-id').value;
   if (!id) return;
-  if (!await confirmModal('Familie wirklich löschen?')) return;
+  if (!await confirmModal('Familie wirklich löschen?', 'Löschen')) return;
   const famcId2 = f => (typeof f === 'string' ? f : f.famId);
   for (const p of Object.values(AppState.db.individuals)) {
     setPerson(p.id, {
@@ -591,7 +591,7 @@ function saveSource() {
 async function deleteSource() {
   const id = document.getElementById('sf-id').value;
   if (!id) return;
-  if (!await confirmModal('Quelle wirklich löschen?')) return;
+  if (!await confirmModal('Quelle wirklich löschen?', 'Löschen')) return;
   delete AppState.db.sources[id];
   closeModal('modalSource');
   markChanged();
@@ -651,9 +651,11 @@ function closeModal(id) {
 let _confirmResolve = null;
 
 // Ersatz für window.confirm() — gibt Promise<boolean> zurück.
-// Verwendung: if (!await confirmModal('Wirklich löschen?')) return;
-function confirmModal(msg) {
+// Verwendung: if (!await confirmModal('Wirklich löschen?', 'Löschen')) return;
+function confirmModal(msg, okLabel) {
   document.getElementById('modalConfirmMsg').textContent = msg;
+  const okBtn = document.getElementById('modalConfirmOkBtn');
+  if (okBtn) okBtn.textContent = okLabel || 'Bestätigen';
   return new Promise(resolve => {
     _confirmResolve = resolve;
     openModal('modalConfirm');

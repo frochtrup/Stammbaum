@@ -20,7 +20,7 @@ function _famRowHtml(f, isCurrent, pos, total) {
   const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
   const ariaPos = pos != null ? ` aria-setsize="${total}" aria-posinset="${pos}"` : '';
   return `<div class="person-row${isCurrent ? ' current' : ''}" role="listitem"${ariaPos} data-action="showFamilyDetail" data-fid="${f.id}">
-      <div class="p-avatar">👨‍👩‍👧</div>
+      <div class="p-avatar fam">⬡</div>
       <div class="p-info">
         <div class="p-name">${esc(title)}${fMediaBadge}</div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
@@ -257,7 +257,7 @@ function openRelFamilyForm(anchorId, partnerId, mode) {
 }
 
 async function unlinkMember(famId, personId) {
-  if (!await confirmModal('Verbindung wirklich trennen?')) return;
+  if (!await confirmModal('Verbindung wirklich trennen?', 'Trennen')) return;
   const f = AppState.db.families[famId];
   const p = AppState.db.individuals[personId];
   if (!f || !p) return;
@@ -307,7 +307,7 @@ function showFamilyDetail(id, pushHistory = true) {
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-fam-photo-${id}" style="display:none"></div>
-    <div id="det-fam-avatar-${id}" class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
+    <div id="det-fam-avatar-${id}" class="detail-avatar fam">⬡</div>
     <div class="detail-hero-text">
       <div class="detail-name">${esc(title)}</div>
     </div>

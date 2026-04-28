@@ -530,8 +530,9 @@ body.desktop-mode.places-karte #mapContainer {
   display: flex; align-items: center; justify-content: center;
   font-size: 1.2rem; flex-shrink: 0; color: var(--text-muted);
 }
-.p-avatar.m { border-color: var(--blue-dim); color: var(--blue); }
-.p-avatar.f { border-color: var(--pink-dim); color: var(--pink); }
+.p-avatar.m   { border-color: var(--blue-dim); color: var(--blue); }
+.p-avatar.f   { border-color: var(--pink-dim); color: var(--pink); }
+.p-avatar.fam { border-color: var(--gold-dim); color: var(--gold-dim); }
 .p-info { flex: 1; min-width: 0; }
 .p-name {
   font-family: 'Playfair Display', serif;
@@ -560,8 +561,9 @@ body.desktop-mode.places-karte #mapContainer {
   display: flex; align-items: center; justify-content: center;
   font-size: 1.9rem; color: var(--gold-dim);
 }
-.detail-avatar.m { border-color: var(--blue); color: var(--blue); }
-.detail-avatar.f { border-color: var(--pink); color: var(--pink); }
+.detail-avatar.m   { border-color: var(--blue); color: var(--blue); }
+.detail-avatar.f   { border-color: var(--pink); color: var(--pink); }
+.detail-avatar.fam { border-color: var(--gold-dim); color: var(--gold-dim); }
 .detail-hero-text { text-align: left; }
 .detail-name {
   font-family: 'Playfair Display', serif;

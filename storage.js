@@ -4,7 +4,7 @@
 async function revertToSaved() {
   const orig = _getOriginalText();
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
-  if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?')) return;
+  if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?', 'Verwerfen')) return;
   showLoadingOverlay('Stand wird wiederhergestellt …');
   AppState.db = parseGEDCOM(orig);
   AppState.db.extraPlaces = loadExtraPlaces();
@@ -25,7 +25,7 @@ async function revertToSaved() {
 
 async function confirmNewFile() {
   if (AppState.changed) {
-    if (!await confirmModal('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?')) return;
+    if (!await confirmModal('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?', 'Fortfahren')) return;
   }
   AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), hofObjects: loadHofObjects(), repositories: {}, notes: {}, placForm: '' };
   AppState.changed = false;

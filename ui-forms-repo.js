@@ -160,7 +160,7 @@ async function deleteRepo() {
   const msg = linked.length
     ? `Archiv löschen? ${linked.length} Quelle(n) verlieren die Archiv-Verknüpfung.`
     : 'Archiv wirklich löschen?';
-  if (!await confirmModal(msg)) return;
+  if (!await confirmModal(msg, 'Löschen')) return;
   for (const s of linked) { setSource(s.id, { repo: '', repoCallNum: '' }); }
   delete AppState.db.repositories[id];
   closeModal('modalRepo');
