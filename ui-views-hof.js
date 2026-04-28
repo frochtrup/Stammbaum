@@ -413,37 +413,10 @@ function cancelHofCoord() {
   if (form) form.style.display = 'none';
 }
 
-// Parst Koordinaten-Eingabe — unterstützt:
-//   Apple Maps:  "52,22779° N, 7,17310° O"  (ganzer String ins Breitenfeld)
-//   Dezimalgrad: "52.2073" / "52,2073"
-//   GEDCOM:      "N52.2073"
-function _parseHofCoordInput(latRaw, lonRaw) {
-  const s = (latRaw || '').trim();
-  // Vollständiges Paar erkennen: <zahl>°<dir> <zahl>°<dir>
-  // O = Ost (Deutsch), E = East, W = West, N/S wie üblich
-  const m = /^([\d.,]+)\s*°?\s*([NSns])\s*[,;\s]+\s*([\d.,]+)\s*°?\s*([OoEeWw])/.exec(s);
-  if (m) {
-    let lat = parseFloat(m[1].replace(/,/g, '.'));
-    let lon = parseFloat(m[3].replace(/,/g, '.'));
-    if (m[2].toUpperCase() === 'S') lat = -lat;
-    if (m[4].toUpperCase() === 'W') lon = -lon;
-    // O (Ost) und E (East) → positiv, keine Änderung
-    return { lat, lon };
-  }
-  // Einzelfeld — GEDCOM-Format oder Dezimalgrad
-  const _one = v => {
-    const t = (v || '').trim();
-    const g = /^([NSns])\s*([\d.,]+)$/.exec(t);
-    if (g) return (g[1].toUpperCase() === 'S' ? -1 : 1) * parseFloat(g[2].replace(',', '.'));
-    return parseFloat(t.replace(',', '.'));
-  };
-  return { lat: _one(latRaw), lon: _one(lonRaw) };
-}
-
 function saveHofCoord(addr) {
   const latRaw = document.getElementById('hof-coord-lat')?.value || '';
   const lonRaw = document.getElementById('hof-coord-lon')?.value || '';
-  const { lat, lon } = _parseHofCoordInput(latRaw, lonRaw);
+  const { lat, lon } = parseCoordInput(latRaw, lonRaw);
   if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     showToast('⚠ Ungültige Koordinaten (Breite -90–90, Länge -180–180)');
     return;

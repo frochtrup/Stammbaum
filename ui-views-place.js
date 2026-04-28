@@ -96,8 +96,9 @@ function savePlace() {
   if (!newName) { showToast('⚠ Ortsname darf nicht leer sein'); return; }
   const latiRaw = document.getElementById('pl-lati').value.trim();
   const longRaw = document.getElementById('pl-long').value.trim();
-  const lati = latiRaw ? (parseGeoCoord(latiRaw) ?? (parseFloat(latiRaw) || null)) : null;
-  const long = longRaw ? (parseGeoCoord(longRaw) ?? (parseFloat(longRaw) || null)) : null;
+  const _pc = latiRaw ? parseCoordInput(latiRaw, longRaw) : { lat: NaN, lon: NaN };
+  const lati = isNaN(_pc.lat) ? null : _pc.lat;
+  const long = isNaN(_pc.lon) ? null : _pc.lon;
   closeModal('modalPlace');
 
   // Ortsnamen in allen Einträgen umbenennen
@@ -139,8 +140,9 @@ function saveNewPlace() {
   const name = document.getElementById('np-name').value.trim();
   if (!name) { showToast('⚠ Ortsname erforderlich'); return; }
   if (collectPlaces().has(name)) { showToast('⚠ Ort bereits vorhanden'); return; }
-  const lati = parseFloat(document.getElementById('np-lati').value) || null;
-  const long = parseFloat(document.getElementById('np-long').value) || null;
+  const _pc2 = parseCoordInput(document.getElementById('np-lati').value, document.getElementById('np-long').value);
+  const lati = isNaN(_pc2.lat) ? null : _pc2.lat;
+  const long = isNaN(_pc2.lon) ? null : _pc2.lon;
   AppState.db.extraPlaces[name] = { name, lati, long };
   saveExtraPlaces();
   UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell

@@ -338,6 +338,33 @@ function compactPlace(place) {
   return place.split(',').map(s => s.trim()).filter(Boolean).join(', ');
 }
 
+// Parst Koordinaten-Eingabe — unterstützt:
+//   Apple Maps (deutsch): "52,22779° N, 7,17310° O" → ganzer String ins erste Feld
+//   Dezimalgrad:          "52.2073" / "52,2073"
+//   GEDCOM:               "N52.2073"
+// Gibt { lat, lon } zurück (beide können NaN sein bei ungültiger Eingabe).
+function parseCoordInput(firstField, secondField) {
+  const s = (firstField || '').trim();
+  // Vollständiges Paar: <zahl>°<dir> <zahl>°<dir>
+  // O = Ost (DE), E = East, W = West, N/S wie üblich
+  const m = /^([\d.,]+)\s*°?\s*([NSns])\s*[,;\s]+\s*([\d.,]+)\s*°?\s*([OoEeWw])/.exec(s);
+  if (m) {
+    let lat = parseFloat(m[1].replace(/,/g, '.'));
+    let lon = parseFloat(m[3].replace(/,/g, '.'));
+    if (m[2].toUpperCase() === 'S') lat = -lat;
+    if (m[4].toUpperCase() === 'W') lon = -lon;
+    return { lat, lon };
+  }
+  // Einzelfelder — GEDCOM-Format (N52.2073) oder Dezimalgrad
+  const _one = v => {
+    const t = (v || '').trim();
+    const g = /^([NSns])\s*([\d.,]+)$/.exec(t);
+    if (g) return (g[1].toUpperCase() === 'S' ? -1 : 1) * parseFloat(g[2].replace(',', '.'));
+    return parseFloat(t.replace(',', '.'));
+  };
+  return { lat: _one(firstField), lon: _one(secondField) };
+}
+
 function getPlaceFromForm(placeId) {
   if ((_placeModes[placeId] || 'free') === 'parts') return joinPlaceParts(placeId);
   return (document.getElementById(placeId)?.value || '').trim();
