@@ -1021,7 +1021,7 @@ body.desktop-mode.places-karte #mapContainer {
     right: auto;
     left: 284px;
   }
-  body.desktop-mode #v-detail .back { display: none !important; }
+  /* back-button wird außerhalb des @media-Blocks per desktop-mode-Klasse gesteuert */
   /* Placeholder: sichtbar wenn kein Eintrag gewählt */
   #desktopPlaceholder { display: none; }
   body.desktop-mode #desktopPlaceholder { display: flex; }
@@ -1049,19 +1049,24 @@ body.desktop-mode.places-karte #mapContainer {
 /* ═══════════════════════════════════════
    DETAIL BREADCRUMB (Desktop)
 ═══════════════════════════════════════ */
+
+/* Zurück-Button nur auf Mobile; Breadcrumb übernimmt Navigation auf Desktop */
+body.desktop-mode #v-detail .back { display: none !important; }
+
 #detailBreadcrumb { display: none; }
 body.desktop-mode #detailBreadcrumb {
   display: flex; align-items: center;
-  padding: 0 12px 8px;
-  font-size: 0.72rem;
-  gap: 3px; overflow: hidden; white-space: nowrap;
-  flex-wrap: nowrap;
+  padding: 0 16px 8px;
+  font-size: 0.76rem;
+  gap: 4px; overflow: hidden; white-space: nowrap;
+  flex-wrap: nowrap; min-width: 0;
 }
 body.desktop-mode #detailBreadcrumb:empty { display: none; }
 .crumb {
   color: var(--text-muted); cursor: pointer;
   overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; max-width: 130px; flex-shrink: 1;
+  white-space: nowrap;
+  flex: 0 1 auto; min-width: 30px; /* natürliche Breite, erst dann kürzen */
   transition: color 0.12s;
   font-family: 'Source Serif 4', serif;
 }
@@ -1070,7 +1075,8 @@ body.desktop-mode #detailBreadcrumb:empty { display: none; }
 .crumb-current {
   color: var(--text-dim); cursor: default; font-style: italic;
   overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; max-width: 160px; flex-shrink: 1;
+  white-space: nowrap;
+  flex: 0 1 auto; min-width: 40px;
 }
 
 /* ═══════════════════════════════════════
