@@ -663,6 +663,69 @@ function confirmModal(msg) {
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
 });
+
+// ─────────────────────────────────────
+//  SWIPE-DOWN TO CLOSE (Bottom-Sheets)
+// ─────────────────────────────────────
+// Geste: Handle nach unten ziehen oder bei scrollTop=0 nach unten wischen →
+// Sheet schließt sich per Animation. Hoch-Wischen oder Scrollen bleibt unberührt.
+(function initSwipeToClose() {
+  let _sw = null; // { el, modalId, startY, startScrollTop, fromHandle, delta }
+
+  document.addEventListener('touchstart', e => {
+    const overlay = e.target.closest('.modal-overlay.open');
+    if (!overlay) return;
+    const sheet = overlay.querySelector('.sheet');
+    if (!sheet) return;
+    const fromHandle = !!e.target.closest('.sheet-handle');
+    _sw = {
+      el: sheet,
+      modalId: overlay.id,
+      startY: e.touches[0].clientY,
+      startScrollTop: sheet.scrollTop,
+      fromHandle,
+      delta: 0
+    };
+    sheet.style.transition = 'none';
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if (!_sw) return;
+    const dy = e.touches[0].clientY - _sw.startY;
+    // Hoch-Wischen oder Content nicht am Anfang → Geste abbrechen
+    if (dy < 0 || (!_sw.fromHandle && _sw.startScrollTop > 2)) {
+      _sw.el.style.transition = '';
+      _sw = null;
+      return;
+    }
+    _sw.delta = dy;
+    e.preventDefault(); // Scroll unterdrücken während Drag
+    // Widerstand: ab 60px langsamer werden
+    const damped = dy < 60 ? dy : 60 + (dy - 60) * 0.4;
+    _sw.el.style.transform = `translateY(${damped}px)`;
+  }, { passive: false });
+
+  document.addEventListener('touchend', () => {
+    if (!_sw) return;
+    const { el, modalId, delta } = _sw;
+    _sw = null;
+    const THRESHOLD = 90; // px — ab hier wird geschlossen
+    if (delta >= THRESHOLD) {
+      el.style.transition = 'transform 0.25s cubic-bezier(0.32,0.72,0,1)';
+      el.style.transform = 'translateY(100%)';
+      setTimeout(() => {
+        closeModal(modalId);
+        el.style.transform = '';
+        el.style.transition = '';
+      }, 240);
+    } else {
+      // Zurückschnappen
+      el.style.transition = 'transform 0.22s cubic-bezier(0.32,0.72,0,1)';
+      el.style.transform = '';
+      setTimeout(() => { el.style.transition = ''; }, 220);
+    }
+  }, { passive: true });
+})();
 // ─────────────────────────────────────
 //  PINCH-ZOOM (Baum-Ansicht, Sprint P3-5)
 // ─────────────────────────────────────

@@ -120,9 +120,11 @@
   <div id="tab-places" style="display:none">
     <div class="list-search-header" style="padding:0">
       <div class="places-toggle-bar">
-        <button type="button" id="toggle-orte"  class="places-toggle-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
-        <button type="button" id="toggle-hoefe" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
-        <button type="button" id="toggle-karte" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="karte">Karte</button>
+        <div class="places-seg">
+          <button type="button" id="toggle-orte"  class="places-toggle-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
+          <button type="button" id="toggle-hoefe" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
+          <button type="button" id="toggle-karte" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="karte">Karte</button>
+        </div>
       </div>
       <div id="place-search-orte" class="search-wrap">
         <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
@@ -159,6 +161,7 @@
       <button class="topbar-btn" id="treeBtn" data-action="showTree" style="display:none;font-size:1rem" title="Sanduhr-Ansicht" aria-label="Sanduhr-Ansicht">⧖</button>
       <button class="topbar-btn primary" data-action="showEditSheet" id="editBtn">Bearbeiten</button>
     </div>
+    <div id="detailBreadcrumb" class="detail-breadcrumb" aria-label="Navigationspfad"></div>
   </div>
   <div id="desktopPlaceholder">
     <div class="ph-icon">⚘</div>
@@ -490,23 +493,21 @@
       <input type="hidden" id="fev-fid">
       <input type="hidden" id="fev-key">
       <input type="hidden" id="fev-evidx">
-      <div style="display:flex; gap:8px; align-items:flex-end">
-        <div class="form-group" style="flex:1; min-width:0">
-          <label class="form-label">Ereignistyp</label>
-          <select class="form-select" id="fev-type" data-change="onFamEventTypeChange">
-            <option value="MARR">Heirat</option>
-            <option value="ENGA">Verlobung</option>
-            <option value="DIV">Scheidung</option>
-            <option value="DIVF">Scheidungsantrag</option>
-            <option value="EVEN">Sonstiges</option>
-          </select>
-        </div>
-        <div class="form-group" id="fev-etype-group" style="display:none; flex:1; min-width:0">
-          <label class="form-label">Bezeichnung</label>
-          <div class="place-input-wrap">
-            <input class="form-input" id="fev-etype" placeholder="z.B. Trennung" autocomplete="off">
-            <div class="place-dropdown" id="fev-etype-dd"></div>
-          </div>
+      <div class="form-group">
+        <label class="form-label">Ereignistyp</label>
+        <select class="form-select" id="fev-type" data-change="onFamEventTypeChange">
+          <option value="MARR">Heirat</option>
+          <option value="ENGA">Verlobung</option>
+          <option value="DIV">Scheidung</option>
+          <option value="DIVF">Scheidungsantrag</option>
+          <option value="EVEN">Sonstiges</option>
+        </select>
+      </div>
+      <div class="form-group" id="fev-etype-group" style="display:none">
+        <label class="form-label">Bezeichnung</label>
+        <div class="place-input-wrap">
+          <input class="form-input" id="fev-etype" placeholder="z.B. Trennung" autocomplete="off">
+          <div class="place-dropdown" id="fev-etype-dd"></div>
         </div>
       </div>
       <div class="form-group">
@@ -655,45 +656,43 @@
     <div class="sheet-body">
       <input type="hidden" id="ef-pid">
       <input type="hidden" id="ef-evidx">
-      <div style="display:flex; gap:8px; align-items:flex-end">
-        <div class="form-group" style="flex:1; min-width:0">
-          <label class="form-label">Ereignistyp</label>
-          <select class="form-select" id="ef-type" data-change="onEventTypeChange">
-            <option value="BIRT">Geburt</option>
-            <option value="CHR">Taufe</option>
-            <option value="DEAT">Tod</option>
-            <option value="BURI">Beerdigung</option>
-            <option value="OCCU">Beruf</option>
-            <option value="RESI">Wohnort</option>
-            <option value="EDUC">Bildung</option>
-            <option value="RELI">Religion</option>
-            <option value="EMIG">Auswanderung</option>
-            <option value="IMMI">Einwanderung</option>
-            <option value="NATU">Einbürgerung</option>
-            <option value="GRAD">Abschluss</option>
-            <option value="ADOP">Adoption</option>
-            <option value="MILI">Militärdienst</option>
-            <option value="FACT">Tatsache (FACT)</option>
-            <option value="CENS">Volkszählung</option>
-            <option value="CONF">Konfirmation</option>
-            <option value="FCOM">Erstkommunion</option>
-            <option value="ORDN">Ordination</option>
-            <option value="RETI">Pensionierung</option>
-            <option value="PROP">Eigentum</option>
-            <option value="WILL">Testament</option>
-            <option value="PROB">Testamentseröffnung</option>
-            <option value="DSCR">Erscheinungsbild</option>
-            <option value="IDNO">Kennziffer (IDNO)</option>
-            <option value="SSN">Sozialversicherungs-Nr.</option>
-            <option value="EVEN">Sonstiges</option>
-          </select>
-        </div>
-        <div class="form-group" id="ef-etype-group" style="display:none; flex:1; min-width:0">
-          <label class="form-label" id="ef-etype-lbl">TYPE (Klassifikation)</label>
-          <div class="place-input-wrap">
-            <input class="form-input" id="ef-etype" placeholder="z.B. Staatsangehörigkeit" autocomplete="off">
-            <div class="place-dropdown" id="ef-etype-dd"></div>
-          </div>
+      <div class="form-group">
+        <label class="form-label">Ereignistyp</label>
+        <select class="form-select" id="ef-type" data-change="onEventTypeChange">
+          <option value="BIRT">Geburt</option>
+          <option value="CHR">Taufe</option>
+          <option value="DEAT">Tod</option>
+          <option value="BURI">Beerdigung</option>
+          <option value="OCCU">Beruf</option>
+          <option value="RESI">Wohnort</option>
+          <option value="EDUC">Bildung</option>
+          <option value="RELI">Religion</option>
+          <option value="EMIG">Auswanderung</option>
+          <option value="IMMI">Einwanderung</option>
+          <option value="NATU">Einbürgerung</option>
+          <option value="GRAD">Abschluss</option>
+          <option value="ADOP">Adoption</option>
+          <option value="MILI">Militärdienst</option>
+          <option value="FACT">Tatsache (FACT)</option>
+          <option value="CENS">Volkszählung</option>
+          <option value="CONF">Konfirmation</option>
+          <option value="FCOM">Erstkommunion</option>
+          <option value="ORDN">Ordination</option>
+          <option value="RETI">Pensionierung</option>
+          <option value="PROP">Eigentum</option>
+          <option value="WILL">Testament</option>
+          <option value="PROB">Testamentseröffnung</option>
+          <option value="DSCR">Erscheinungsbild</option>
+          <option value="IDNO">Kennziffer (IDNO)</option>
+          <option value="SSN">Sozialversicherungs-Nr.</option>
+          <option value="EVEN">Sonstiges</option>
+        </select>
+      </div>
+      <div class="form-group" id="ef-etype-group" style="display:none">
+        <label class="form-label" id="ef-etype-lbl">Bezeichnung</label>
+        <div class="place-input-wrap">
+          <input class="form-input" id="ef-etype" placeholder="z.B. Staatsangehörigkeit" autocomplete="off">
+          <div class="place-dropdown" id="ef-etype-dd"></div>
         </div>
       </div>
       <div class="form-group" id="ef-val-group">

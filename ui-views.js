@@ -49,7 +49,7 @@ function showView(id) {
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); }
+    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); requestAnimationFrame(_updateBreadcrumb); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
@@ -255,6 +255,8 @@ function showMain() {
   const saved = UIState._savedListScroll;
   UIState._savedListScroll = null;
   UIState._navHistory.length = 0; // Liste = frischer Start, History löschen
+  const bc = document.getElementById('detailBreadcrumb');
+  if (bc) bc.innerHTML = '';
   document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
@@ -263,6 +265,67 @@ function showMain() {
     // setTimeout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
     setTimeout(() => _setListScroll(saved.pos), 0);
   }
+}
+
+// ─── Breadcrumb (Desktop) ─────────────────────────────────────────
+function _crumbLabel(item) {
+  if (item.type === 'person') {
+    const p = AppState.db.individuals[item.id];
+    if (!p) return item.id;
+    return p.surname ? p.surname + (p.given ? ', ' + p.given.split(' ')[0] : '') : (p.name || item.id);
+  }
+  if (item.type === 'family') {
+    const f = AppState.db.families[item.id];
+    if (!f) return item.id;
+    const h = f.husb && AppState.db.individuals[f.husb];
+    const w = f.wife && AppState.db.individuals[f.wife];
+    const parts = [h?.surname, w?.surname].filter(Boolean);
+    return parts.length ? parts.join(' & ') : (h?.name || w?.name || item.id);
+  }
+  if (item.type === 'source') {
+    const s = AppState.db.sources[item.id];
+    return s ? (s.abbr || s.title || item.id) : item.id;
+  }
+  if (item.type === 'repo') {
+    const r = AppState.db.repositories[item.id];
+    return r ? (r.name || item.id) : item.id;
+  }
+  if (item.type === 'place')    return item.name || 'Ort';
+  if (item.type === 'tree')     return 'Baum';
+  if (item.type === 'fanchart') return 'Fächer';
+  return '◂';
+}
+
+function _updateBreadcrumb() {
+  const el = document.getElementById('detailBreadcrumb');
+  if (!el) return;
+  const hist = UIState._navHistory;
+  if (!hist.length) { el.innerHTML = ''; return; }
+  const currentTitle = document.getElementById('detailTopTitle')?.textContent || '';
+  let html = '';
+  hist.forEach((item, i) => {
+    html += `<span class="crumb" data-crumb-idx="${i}">${esc(_crumbLabel(item))}</span>`;
+    html += '<span class="crumb-sep">›</span>';
+  });
+  html += `<span class="crumb-current">${esc(currentTitle)}</span>`;
+  el.innerHTML = html;
+  el.querySelectorAll('.crumb[data-crumb-idx]').forEach(crumb => {
+    crumb.addEventListener('click', () => _crumbNavigate(parseInt(crumb.dataset.crumbIdx)));
+  });
+}
+
+function _crumbNavigate(idx) {
+  const item = UIState._navHistory[idx];
+  if (!item) return;
+  // Bis zu diesem Punkt zurückschneiden (item selbst wird nach Navigation neu eingeordnet)
+  UIState._navHistory.splice(idx);
+  if      (item.type === 'person')   showDetail(item.id, false);
+  else if (item.type === 'family')   showFamilyDetail(item.id, false);
+  else if (item.type === 'source')   showSourceDetail(item.id, false);
+  else if (item.type === 'repo')     showRepoDetail(item.id, false);
+  else if (item.type === 'place')    showPlaceDetail(item.name, false);
+  else if (item.type === 'tree')     showTree(item.id, false);
+  else showMain();
 }
 
 // ─── History-Navigation ───────────────────────────────────────────

@@ -48,7 +48,17 @@ function renderPersonList(persons) {
   const listEl = document.getElementById('personList');
   if (!sorted.length) {
     _vsTeardown(_vsP);
-    listEl.innerHTML = '<div class="empty">Noch keine Personen</div>';
+    const totalPersons = Object.keys(AppState.db.individuals || {}).length;
+    if (totalPersons === 0) {
+      listEl.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">◇</div>
+        <div class="empty-state-title">Noch keine Personen</div>
+        <div class="empty-state-msg">Importieren Sie eine GEDCOM- oder GRAMPS-Datei, oder legen Sie die erste Person manuell an.</div>
+        <button class="empty-state-btn" onclick="showPersonForm(null)">Erste Person anlegen</button>
+      </div>`;
+    } else {
+      listEl.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';
+    }
     _announceList('Keine Personen');
     return;
   }

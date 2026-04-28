@@ -230,7 +230,17 @@ function renderSourceList(srcs) {
   if (!srcs) srcs = Object.values(AppState.db.sources);
   srcs = [...srcs].sort((a, b) => (a.abbr || a.title || a.id).localeCompare(b.abbr || b.title || b.id, 'de'));
   if (!srcs.length) {
-    el.innerHTML = '<div class="empty">Keine Quellen gefunden</div>';
+    const totalSrcs = Object.keys(AppState.db.sources || {}).length;
+    if (totalSrcs === 0) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">§</div>
+        <div class="empty-state-title">Noch keine Quellen</div>
+        <div class="empty-state-msg">Quellen dokumentieren Ihre Belege — Kirchenbücher, Standesamtsregister, Urkunden.</div>
+        <button class="empty-state-btn" onclick="showSourceForm(null)">Erste Quelle anlegen</button>
+      </div>`;
+    } else {
+      el.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';
+    }
     _announceList('Keine Quellen');
     return;
   }

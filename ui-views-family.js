@@ -34,7 +34,17 @@ function renderFamilyList(fams) {
   if (!fams) fams = Object.values(AppState.db.families);
   if (!fams.length) {
     _vsTeardown(_vsF);
-    listEl.innerHTML = '<div class="empty">Keine Familien gefunden</div>';
+    const totalFams = Object.keys(AppState.db.families || {}).length;
+    if (totalFams === 0) {
+      listEl.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">⊕</div>
+        <div class="empty-state-title">Noch keine Familien</div>
+        <div class="empty-state-msg">Familien entstehen durch Verknüpfung von Personen als Ehepaar oder Eltern-Kind-Beziehung.</div>
+        <button class="empty-state-btn" onclick="showFamilyForm(null)">Familie anlegen</button>
+      </div>`;
+    } else {
+      listEl.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';
+    }
     _announceList('Keine Familien');
     return;
   }

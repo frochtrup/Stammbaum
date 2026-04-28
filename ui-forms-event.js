@@ -91,10 +91,9 @@ function onEventTypeChange() {
   const showEtype = !(t in _SPECIAL_OBJ);
   document.getElementById('ef-etype-group').style.display = showEtype ? '' : 'none';
   if (showEtype) {
-    const lbl = document.querySelector('#ef-etype-group .form-label');
     const inp = document.getElementById('ef-etype');
-    if (t === 'EVEN') { lbl.textContent = 'Bezeichnung'; inp.placeholder = 'z.B. Militärdienst, Einlieferung …'; }
-    else { lbl.textContent = 'TYPE'; inp.placeholder = 'z.B. Detailierung (optional)'; }
+    if (t === 'EVEN') { inp.placeholder = 'z.B. Militärdienst, Einlieferung …'; }
+    else { inp.placeholder = 'Klassifikation (optional)'; }
   }
   document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
   const showAddr = (t === 'RESI' || t === 'PROP');
