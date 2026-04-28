@@ -61,21 +61,29 @@ function writeCHAN(lines, obj, lv = 1) {
   if (obj.lastChangedTime) lines.push(`${lv+2} TIME ${obj.lastChangedTime}`);
 }
 
-// Schreibt MAP/LATI/LONG-Block — Priorität: hofObjects > extraPlaces > obj.lati/obj.long
-function geoLines(lines, obj, indent) {
+// Schreibt MAP/LATI/LONG-Block.
+// useExtraPlaces=true  → für strukturierte Events (BIRT/DEAT/CHR/BURI/MARR):
+//   Priorität hofObjects > extraPlaces > obj.lati/obj.long
+// useExtraPlaces=false → für Array-Events (RESI/PROP/EVEN…):
+//   Nur hofObjects oder explizite ev.lati — NIEMALS extraPlaces,
+//   damit _derivedHofObjectsFromDb() keine Ortskoordinaten als Hofkoordinaten
+//   zurückliest.
+function geoLines(lines, obj, indent, useExtraPlaces = true) {
   let lati = null, long = null;
   // 1. Hof-Koordinaten (spezifischer als Ortsregister)
   if (obj?.addr) {
     const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
     if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
   }
-  // 2. Ortsregister
-  if (lati === null && obj?.place && AppState.db?.extraPlaces?.[obj.place]) {
+  // 2. Ortsregister (nur für strukturierte Events)
+  if (lati === null && useExtraPlaces && obj?.place && AppState.db?.extraPlaces?.[obj.place]) {
     const ep = AppState.db.extraPlaces[obj.place];
     if (ep.lati != null) { lati = ep.lati; long = ep.long; }
   }
-  // 3. Explizite Event-Koordinaten (aus Parser)
-  if (lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
+  // 3. Explizite Event-Koordinaten (aus Parser) — nur für strukturierte Events (BIRT/DEAT/…)
+  //    Für Array-Events (useExtraPlaces=false) NICHT: ev.lati könnte stale Ortskoordinaten
+  //    aus einem früheren Roundtrip enthalten, die dann fälschlich in hofObjects landen.
+  if (useExtraPlaces && lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
   if (lati !== null && long !== null) {
     lines.push(`${indent} MAP`);
     const latStr = (lati >= 0 ? 'N' : 'S') + Math.abs(lati);
@@ -184,7 +192,7 @@ function writeINDIRecord(lines, p) {
     if (ev.date !== null && ev.date !== undefined)  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
     if (ev.place !== null && ev.place !== undefined) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
-      geoLines(lines, ev, 3);
+      geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
     } else if (ev.addr) {
       // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
       const _hm = AppState.db?.hofObjects?.[ev.addr.trim()];
