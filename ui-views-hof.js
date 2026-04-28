@@ -322,6 +322,9 @@ function showHofDetail(addr, pushHistory = true) {
     <div class="detail-id">${totalCount} Person${totalCount !== 1 ? 'en' : ''}</div>
   </div>`;
 
+  html += _renderHofCoordSection(addr);
+  html += _renderHofNoteSection(addr);
+
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Bewohner &amp; Eigentum</div>
@@ -347,8 +350,6 @@ function showHofDetail(addr, pushHistory = true) {
   }
   html += `</div>`;
 
-  html += _renderHofCoordSection(addr);
-  html += _renderHofNoteSection(addr);
   html += _renderAddBewohnerForm(addr);
   html += _renderAddPropForm(addr);
 
