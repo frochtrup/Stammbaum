@@ -562,8 +562,12 @@ function showDetail(id, pushHistory = true) {
   }
   html += `</div>`;
 
+  // Aufgaben-Placeholder — wird async befüllt sobald IDB geladen
+  html += `<div id="tasks-section-placeholder-${id}" class="section fade-up"></div>`;
+
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
+  if (typeof _renderTasksSectionAsync === 'function') _renderTasksSectionAsync(id);
 
   // Foto async — Pfad (m.file) direkt; IDB path-basiert als Offline-Fallback
   (async () => {

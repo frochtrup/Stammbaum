@@ -295,6 +295,15 @@ function writeINDIRecord(lines, p) {
   if (p.uid)      lines.push(`1 _UID ${p.uid}`);
   if (p.grampId)  lines.push(`1 _GRAMPS_ID ${p.grampId}`);
   if (p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
+
+  for (const t of (p._tasks || [])) {
+    lines.push(`1 _TASK ${t.text || ''}`);
+    if (t.category) lines.push(`2 _CAT ${t.category}`);
+    lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+    if (t.created)  lines.push(`2 _DATE ${t.created}`);
+    if (t.id)       lines.push(`2 _ID ${t.id}`);
+  }
+
   writeCHAN(lines, p, 1);
 
   // Passthrough: gelöschte Fotos → OBJE-Block entfernen

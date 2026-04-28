@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v306 / Cache: `stammbaum-v306`
+**Aktuelle sw-Version:** v307 / Cache: `stammbaum-v307`
 
 ---
 
@@ -156,6 +156,36 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] Zeitleiste (`ui-timeline.js`)
 - [ ] Nachkommen-Baum (top-down SVG)
 - ~~Statistik-Dashboard~~ ✅ v299
+- ~~Forschungsaufgaben pro Person~~ ✅ v307 — `p._tasks[]`, GEDCOM `1 _TASK` + GRAMPS `<attribute type="_TASK">` Roundtrip, globale Liste nach Kategorie, Badge
+
+---
+
+### P7 — Analyse & Recherche-Tools
+
+#### Hoher Nutzen, überschaubarer Aufwand
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| F1 | **Sosa-Stradonitz-Nummerierung** | Kekule-Nummer pro Person berechnen (`getProbandId()` als Wurzel); Anzeige in Person-Detail + Sanduhr-Karte; nützlich für Druck + Kommunikation | S |
+| F2 | **Beziehungsrechner** | BFS-Graph über `f.husb/f.wife/f.chil`; "Wie ist A mit B verwandt?" → "3. Grad Cousin, 2× entfernt"; aufrufbar aus Person-Detail | M |
+| F3 | **Pedigree-Collapse-Erkennung** | Gemeinsame Vorfahren finden; Inzucht-Koeffizient berechnen; wichtig bei eng verwandten Dorfgemeinschaften; baut auf F2-BFS auf | M |
+| F4 | **Soundex / Namens-Fuzzy-Suche** | Soundex-Funktion für Nachnamen; historische Schreibvarianten (Decker/Deker/Döker); Erweiterung der bestehenden `_buildSearchIndex()`; opt-in Toggle in Suche | S |
+
+#### Mittlerer Nutzen, mittlerer Aufwand
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| F5 | **Lebende-Personen-Anonymisierung** | Beim GEDCOM/GRAMPS-Export: Personen ohne Sterbedatum und Geburtsjahr > ~1920 anonymisieren (Name → "Lebende Person", Daten entfernen); Option im Export-Dialog; DSGVO-relevant | M |
+| F6 | **Narrative-Export** | Fließtext-Biografie aus strukturierten Daten ("Franz Decker wurde 1823 in Köln geboren…"); Ausgabe als TXT/HTML; LLM-Erweiterung optional | L |
+| F7 | **Cluster-Ansicht (FAN-Club)** | Alle Personen die in denselben Orten/Quellen auftauchen wie Person X; methodisch wichtig für Forschungsumfeld; neue Sub-View ähnlich Höfe | L |
+
+#### Hoher Aufwand, strategisch
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| F8 | **Zeitleiste mit historischem Kontext** | Personen-Events neben historischen Ereignissen (1848, Kriege, Missernten); `ui-timeline.js`; historische Daten als lokales JSON | XL |
+| F9 | **Buchgenerator** | HTML/PDF-Export als lesbares Familienbuch; Ahnentafel + Nachkommen + Biografie + Fotos; häufigster Wunsch von Nicht-Tech-Nutzern | XL |
+| F10 | **OCR für Scan-Dokumente** | Urkunden-Bild laden → Text extrahieren; Offline schwierig (WASM-Tesseract möglich); via Claude-API oder ähnlichem LLM-Backend | XL |
 
 ---
 

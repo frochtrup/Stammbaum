@@ -523,11 +523,15 @@ async function parseGRAMPS(file) {
     };
 
     // Attributes
-    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL']);
+    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL','_TASK']);
     const uidA   = _attr(person, '_UID');   if (uidA)  p.uid   = uidA.getAttribute('value')  || '';
     const statA  = _attr(person, '_STAT');  if (statA) p._stat = statA.getAttribute('value') || null;
     const resnA  = _attr(person, 'RESN');   if (resnA) p.resn  = resnA.getAttribute('value') || '';
     const emailA = _attr(person, 'E-MAIL'); if (emailA)p.email = emailA.getAttribute('value')|| '';
+    p._tasks = _byTag(person, 'attribute')
+      .filter(a => a.getAttribute('type') === '_TASK')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(t => t && t.text);
     p._grampsAttrs = _byTag(person, 'attribute')
       .filter(a => !_HANDLED_P_ATTRS.has(a.getAttribute('type') || ''))
       .map(a => {

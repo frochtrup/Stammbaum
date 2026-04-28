@@ -466,6 +466,9 @@ async function writeGRAMPS(db) {
     if (p.resn)  L.push(`      <attribute type="RESN" value="${_esc(p.resn)}"/>`);
     if (p.email) L.push(`      <attribute type="E-MAIL" value="${_esc(p.email)}"/>`);
     for (const a of p._grampsAttrs||[]) _attrXML('      ', a);
+    for (const t of (p._tasks||[])) {
+      L.push(`      <attribute type="_TASK" value="${_esc(JSON.stringify(t))}"/>`);
+    }
 
     // Family links
     for (const fc of p.famc||[]) {

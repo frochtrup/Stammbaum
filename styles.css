@@ -1185,3 +1185,119 @@ body.desktop-mode.places-karte #mapContainer {
   font-size: 0.58rem; color: var(--text-muted); margin-top: 3px;
   white-space: nowrap; text-align: center;
 }
+
+/* ═══════════════════════════════════════
+   FORSCHUNGSAUFGABEN
+═══════════════════════════════════════ */
+
+/* Badge auf Personen-Tab */
+#tasks-badge {
+  display: none;
+  align-items: center; justify-content: center;
+  min-width: 16px; height: 16px;
+  padding: 0 4px;
+  background: var(--gold-dim);
+  color: var(--gold-lt);
+  font-size: 0.58rem; font-weight: 700; line-height: 1;
+  border-radius: 8px;
+  vertical-align: middle;
+  margin-left: 2px;
+  position: relative; top: -6px;
+}
+
+/* Personen/Aufgaben-Toggle im Personen-Tab */
+.persons-mode-bar {
+  display: flex; padding: 10px 16px 6px;
+  background: var(--bg);
+}
+.persons-mode-seg {
+  display: flex; flex: 1;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 3px; gap: 2px;
+}
+.persons-mode-btn {
+  flex: 1; padding: 7px 4px;
+  font-size: 0.82rem; font-weight: 600;
+  background: none; color: var(--text-muted);
+  border: none; cursor: pointer; border-radius: 8px;
+  font-family: 'Source Serif 4', serif;
+  transition: background 0.15s, color 0.15s;
+  min-height: 36px;
+}
+.persons-mode-btn.active {
+  background: var(--gold-dim); color: var(--gold-lt);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+}
+.persons-mode-btn:not(.active):active {
+  background: var(--surface3); color: var(--text-dim);
+}
+
+/* Filter-Leiste (Alle/Offen/Erledigt) */
+.tasks-filter-bar {
+  display: flex; gap: 6px; padding: 10px 16px 6px;
+}
+.tasks-filter-btn {
+  flex: 1; padding: 6px 4px;
+  font-size: 0.8rem; font-weight: 600;
+  background: var(--surface2); color: var(--text-muted);
+  border: 1px solid var(--border); cursor: pointer; border-radius: 8px;
+  font-family: 'Source Serif 4', serif;
+  min-height: 36px;
+}
+.tasks-filter-btn.active {
+  background: var(--gold-dim); color: var(--gold-lt);
+  border-color: var(--gold-dim);
+}
+
+/* Kategorie-Trenner */
+.tasks-cat-header {
+  padding: 6px 16px 3px;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text-muted);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+/* Personen-Trenner in globaler Liste */
+.tasks-person-header {
+  padding: 5px 16px;
+  font-size: 0.82rem; font-weight: 600; color: var(--text-dim);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+.tasks-person-header:active { color: var(--gold); }
+
+/* Einzelne Aufgabe */
+.task-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 8px 9px 4px;
+  border-bottom: 1px solid var(--border);
+  min-height: 44px;
+}
+.task-row-global { padding-left: 16px; }
+.task-done .task-text { text-decoration: line-through; color: var(--text-muted); }
+
+.task-check {
+  flex-shrink: 0;
+  background: none; border: none; cursor: pointer;
+  font-size: 1.15rem; color: var(--gold-dim);
+  padding: 4px; min-width: 32px; min-height: 32px;
+  display: flex; align-items: center; justify-content: center;
+}
+.task-check:active { color: var(--gold); }
+
+.task-text {
+  flex: 1; font-size: 0.88rem; color: var(--text-dim);
+  line-height: 1.4; word-break: break-word;
+}
+
+.task-del {
+  flex-shrink: 0;
+  background: none; border: none; cursor: pointer;
+  font-size: 1.1rem; color: var(--text-muted);
+  padding: 4px; min-width: 32px; min-height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+}
+.task-del:active { color: var(--red, #c0392b); background: var(--surface2); }

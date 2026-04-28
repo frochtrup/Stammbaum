@@ -29,6 +29,7 @@ function parseGEDCOM(text, parseErrors) {
   let _ptDepth = 0;  // verbatim-passthrough depth (0 = off)
   let _ptTarget = null; // redirect capture target (null = cur._passthrough)
   let _smEntry = null;  // structured sourceMedia entry being parsed (OBJE under SOUR citation)
+  let _curTask = null;  // task object being parsed (1 _TASK context)
 
   for (let raw of lines) {
     lineNo++;
@@ -72,7 +73,7 @@ function parseGEDCOM(text, parseErrors) {
           buri:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'',
-          extraNames:[],
+          extraNames:[], _tasks:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
           nameSources:[], nameSourcePages:{}, nameSourceQUAY:{}, nameSourceNote:{}, nameSourceExtra:{}, nameSourceMedia:{},
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
@@ -190,6 +191,10 @@ function parseGEDCOM(text, parseErrors) {
         }
         else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
         else if (tag === '_STAT') { cur._stat = val; }
+        else if (tag === '_TASK') {
+          _curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
+          cur._tasks.push(_curTask);
+        }
         else {
           // Unknown lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -198,8 +203,16 @@ function parseGEDCOM(text, parseErrors) {
       }
 
       else if (lv === 2) {
+        // Task subtags
+        if (lv1tag === '_TASK' && _curTask) {
+          if      (tag === '_CAT')  _curTask.category = val;
+          else if (tag === '_DONE') _curTask.done = val === '1';
+          else if (tag === '_DATE') _curTask.created = val;
+          else if (tag === '_ID')   _curTask.id = val;
+          // silently ignore unknown _TASK subtags
+        }
         // Name parts
-        if (lv1tag === 'NAME') {
+        else if (lv1tag === 'NAME') {
           if (_curExtraNameIdx >= 0) {
             // Sub-tags für 2nd+ NAME-Eintrag
             const en = cur.extraNames[_curExtraNameIdx];

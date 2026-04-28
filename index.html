@@ -57,6 +57,16 @@
   </div>
 
   <div id="tab-persons">
+    <div class="persons-mode-bar">
+      <div class="persons-mode-seg">
+        <button type="button" id="toggle-persons-mode" class="persons-mode-btn active"
+          data-action="switchPersonsMode" data-mode="persons">Personen</button>
+        <button type="button" id="toggle-tasks-mode" class="persons-mode-btn"
+          data-action="switchPersonsMode" data-mode="tasks">Aufgaben</button>
+      </div>
+    </div>
+    <div id="tasksList" style="display:none"></div>
+    <div id="persons-list-section">
     <div class="list-search-header">
       <div class="search-wrap">
         <input class="search-input" type="search" id="searchInput" placeholder="Name, Ort, Datum, Beruf…" data-input="applyPersonFilter">
@@ -89,6 +99,7 @@
       </div>
     </div>
     <div id="personList" role="list"></div>
+    </div><!-- /persons-list-section -->
   </div>
 
   <div id="tab-families" style="display:none">
@@ -223,7 +234,7 @@
     <span class="bnav-lbl">Baum</span>
   </button>
   <button class="bnav-btn" id="bnav-persons" data-action="bnavTab" data-tab="persons">
-    <span class="bnav-icon">👤</span>
+    <span class="bnav-icon">👤<span id="tasks-badge" style="display:none"></span></span>
     <span class="bnav-lbl">Personen</span>
   </button>
   <button class="bnav-btn" id="bnav-families" data-action="bnavTab" data-tab="families">
@@ -260,6 +271,27 @@
         <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" data-action="addSource">📖 Neue Quelle</button>
         <button class="btn btn-save" style="background:var(--surface2);color:var(--text-dim);border:1px solid var(--border)" data-action="addPlace">📍 Neuer Ort</button>
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAdd">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Aufgabe hinzufügen -->
+<div class="modal-overlay" id="modalAddTask">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Aufgabe hinzufügen</div>
+    <div class="sheet-body">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <input type="text" id="addTaskText" placeholder="Aufgabe beschreiben…"
+          style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.95rem;box-sizing:border-box">
+        <select id="addTaskCategory"
+          style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:0.95rem">
+        </select>
+        <div class="btn-row" style="gap:8px">
+          <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAddTask">Abbrechen</button>
+          <button class="btn btn-save" data-action="saveAddTask">Speichern</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1325,6 +1357,7 @@
 </div>
 
 <script src="ui-views-tree.js"></script>
+<script src="ui-views-tasks.js"></script>
 <script src="ui-views-person.js"></script>
 <script src="ui-views-family.js"></script>
 <script src="ui-views-source.js"></script>

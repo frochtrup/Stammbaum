@@ -449,6 +449,10 @@ function switchTab(tab) {
     document.body.classList.remove('places-karte');
     document.getElementById('mapContainer')?.style.setProperty('display', 'none');
   }
+  // Personen-Tab: immer in Personen-Modus zurücksetzen (nicht Tasks)
+  if (tab === 'persons' && typeof switchPersonsMode === 'function') {
+    switchPersonsMode('persons');
+  }
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
@@ -729,6 +733,12 @@ const _CLICK_MAP = {
   lightboxSetHero:         (el, e) => { e.stopPropagation(); _lightboxSetHero(); },
   confirmModalOk:          ()  => { _confirmResolve?.(true); _confirmResolve = null; closeModal('modalConfirm'); },
   confirmModalCancel:      ()  => closeModal('modalConfirm'),
+  switchPersonsMode:       el  => switchPersonsMode(el.dataset.mode),
+  switchTasksFilter:       el  => switchTasksFilter(el.dataset.filter),
+  showAddTaskForm:         el  => showAddTaskForm(el.dataset.pid),
+  saveAddTask:             ()  => _saveAddTask(),
+  toggleTask:              el  => _handleToggleTask(el),
+  deleteTask:              el  => _handleDeleteTask(el),
 };
 
 document.addEventListener('click', e => {
