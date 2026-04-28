@@ -80,10 +80,11 @@ function geoLines(lines, obj, indent, useExtraPlaces = true) {
     const ep = AppState.db.extraPlaces[obj.place];
     if (ep.lati != null) { lati = ep.lati; long = ep.long; }
   }
-  // 3. Explizite Event-Koordinaten (aus Parser) — nur für strukturierte Events (BIRT/DEAT/…)
-  //    Für Array-Events (useExtraPlaces=false) NICHT: ev.lati könnte stale Ortskoordinaten
-  //    aus einem früheren Roundtrip enthalten, die dann fälschlich in hofObjects landen.
-  if (useExtraPlaces && lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
+  // 3. Explizite Event-Koordinaten (aus Parser) — immer als letzter Fallback.
+  //    extraPlaces wird nur für strukturierte Events genutzt (Schritt 2), aber direkte
+  //    obj.lati-Werte werden für alle Event-Typen geschrieben, damit keine GEDCOM-
+  //    Koordinaten verloren gehen.
+  if (lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
   if (lati !== null && long !== null) {
     lines.push(`${indent} MAP`);
     const latStr = (lati >= 0 ? 'N' : 'S') + Math.abs(lati);
