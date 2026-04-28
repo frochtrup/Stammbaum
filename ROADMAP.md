@@ -176,16 +176,17 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | F5 | **Lebende-Personen-Anonymisierung** | Beim GEDCOM/GRAMPS-Export: Personen ohne Sterbedatum und Geburtsjahr > ~1920 anonymisieren (Name → "Lebende Person", Daten entfernen); Option im Export-Dialog; DSGVO-relevant | M |
-| F6 | **Narrative-Export** | Fließtext-Biografie aus strukturierten Daten ("Franz Decker wurde 1823 in Köln geboren…"); Ausgabe als TXT/HTML; LLM-Erweiterung optional | L |
-| F7 | **Cluster-Ansicht (FAN-Club)** | Alle Personen die in denselben Orten/Quellen auftauchen wie Person X; methodisch wichtig für Forschungsumfeld; neue Sub-View ähnlich Höfe | L |
+| F6 | **Strict-GEDCOM-Export** | Export-Option "Kompatibilitätsmodus": alle proprietären `_`-Tags entfernen (`_TASK`, `_RUFNAME`, `_GRAMPS_ID`, `_UID`, `_STAT`, `_FREL`, `_MREL`, `_PRIM`, `_SCBK` u.a.), Passthrough-Reste weglassen, `_TASK` optional als NOTE konvertieren; Ziel: maximale Interoperabilität mit Ancestry/FamilyTreeMaker/MacFamilyTree; sinnvoll kombiniert mit F5 im Export-Dialog | M |
+| F7 | **Narrative-Export** | Fließtext-Biografie aus strukturierten Daten ("Franz Decker wurde 1823 in Köln geboren…"); Ausgabe als TXT/HTML; LLM-Erweiterung optional | L |
+| F8 | **Cluster-Ansicht (FAN-Club)** | Alle Personen die in denselben Orten/Quellen auftauchen wie Person X; methodisch wichtig für Forschungsumfeld; neue Sub-View ähnlich Höfe | L |
 
 #### Hoher Aufwand, strategisch
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| F8 | **Zeitleiste mit historischem Kontext** | Personen-Events neben historischen Ereignissen (1848, Kriege, Missernten); `ui-timeline.js`; historische Daten als lokales JSON | XL |
-| F9 | **Buchgenerator** | HTML/PDF-Export als lesbares Familienbuch; Ahnentafel + Nachkommen + Biografie + Fotos; häufigster Wunsch von Nicht-Tech-Nutzern | XL |
-| F10 | **OCR für Scan-Dokumente** | Urkunden-Bild laden → Text extrahieren; Offline schwierig (WASM-Tesseract möglich); via Claude-API oder ähnlichem LLM-Backend | XL |
+| F9 | **Zeitleiste mit historischem Kontext** | Personen-Events neben historischen Ereignissen (1848, Kriege, Missernten); `ui-timeline.js`; historische Daten als lokales JSON | XL |
+| F10 | **Buchgenerator** | HTML/PDF-Export als lesbares Familienbuch; Ahnentafel + Nachkommen + Biografie + Fotos; häufigster Wunsch von Nicht-Tech-Nutzern | XL |
+| F11 | **OCR für Scan-Dokumente** | Urkunden-Bild laden → Text extrahieren; Offline schwierig (WASM-Tesseract möglich); via Claude-API oder ähnlichem LLM-Backend | XL |
 
 ---
 
