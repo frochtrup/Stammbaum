@@ -55,6 +55,9 @@ async function confirmNewFile() {
 //  DEMO
 // ─────────────────────────────────────
 async function loadDemo() {
+  if (AppState.changed) {
+    if (!await confirmModal('Demo laden verwirft alle ungespeicherten Änderungen.', 'Demo laden')) return;
+  }
   showLoadingOverlay('Demo wird geladen …');
   try {
     const res = await fetch('./demo.ged');
