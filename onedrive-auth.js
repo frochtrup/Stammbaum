@@ -29,17 +29,17 @@ function _odUpdateUI() {
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');
-  if (swVerEl) {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      caches.keys().then(keys => {
-        const name = keys.find(k => k.startsWith('stammbaum-')) || keys[0] || '–';
-        swVerEl.textContent   = 'SW: ' + name;
-        if (swStateEl) swStateEl.textContent = 'Status: aktiv';
-      });
-    } else {
-      swVerEl.textContent   = 'SW: nicht aktiv';
-      if (swStateEl) swStateEl.textContent = 'Status: –';
-    }
+  const helpVerEl = document.getElementById('helpSwVersion');
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    caches.keys().then(keys => {
+      const name = keys.find(k => k.startsWith('stammbaum-')) || keys[0] || '–';
+      if (swVerEl)   swVerEl.textContent   = 'SW: ' + name;
+      if (swStateEl) swStateEl.textContent = 'Status: aktiv';
+      if (helpVerEl) helpVerEl.textContent = 'Stammbaum PWA · ' + name;
+    });
+  } else {
+    if (swVerEl)   swVerEl.textContent   = 'SW: nicht aktiv';
+    if (swStateEl) swStateEl.textContent = 'Status: –';
   }
 }
 
