@@ -384,17 +384,15 @@ function _renderHofCoordSection(addr) {
     </div>
     ${body}
     <div id="hof-coord-form" style="display:none;margin-top:10px">
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <div style="flex:1">
-          <label class="form-label" style="font-size:0.78rem">Breite (Lat)</label>
-          <input class="form-input" id="hof-coord-lat" type="text" inputmode="decimal" placeholder="52.2073" value="${esc(String(lat))}">
-        </div>
-        <div style="flex:1">
-          <label class="form-label" style="font-size:0.78rem">Länge (Lon)</label>
-          <input class="form-input" id="hof-coord-lon" type="text" inputmode="decimal" placeholder="7.1845" value="${esc(String(long))}">
-        </div>
+      <div style="margin-bottom:8px">
+        <label class="form-label" style="font-size:0.78rem">Breite (Lat) — oder Apple Maps-Koordinaten hier einfügen</label>
+        <input class="form-input" id="hof-coord-lat" type="text" inputmode="decimal" placeholder='52,22779° N, 7,17310° O' value="${esc(String(lat))}">
       </div>
-      <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:8px">Dezimalgrad, z.B. 52.2073 / 7.1845</div>
+      <div style="margin-bottom:8px">
+        <label class="form-label" style="font-size:0.78rem">Länge (Lon)</label>
+        <input class="form-input" id="hof-coord-lon" type="text" inputmode="decimal" placeholder="7.1845" value="${esc(String(long))}">
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:8px">Dezimalgrad (52.2073 / 7.1845) oder Apple Maps-Format (52,22779° N, 7,17310° O) ins erste Feld einfügen</div>
       <div class="btn-row">
         <button type="button" class="btn btn-save" data-action="saveHofCoord" data-addr="${addrAttr}">Speichern</button>
         <button type="button" class="btn btn-cancel" data-action="cancelHofCoord">Abbrechen</button>
@@ -415,11 +413,37 @@ function cancelHofCoord() {
   if (form) form.style.display = 'none';
 }
 
+// Parst Koordinaten-Eingabe — unterstützt:
+//   Apple Maps:  "52,22779° N, 7,17310° O"  (ganzer String ins Breitenfeld)
+//   Dezimalgrad: "52.2073" / "52,2073"
+//   GEDCOM:      "N52.2073"
+function _parseHofCoordInput(latRaw, lonRaw) {
+  const s = (latRaw || '').trim();
+  // Vollständiges Paar erkennen: <zahl>°<dir> <zahl>°<dir>
+  // O = Ost (Deutsch), E = East, W = West, N/S wie üblich
+  const m = /^([\d.,]+)\s*°?\s*([NSns])\s*[,;\s]+\s*([\d.,]+)\s*°?\s*([OoEeWw])/.exec(s);
+  if (m) {
+    let lat = parseFloat(m[1].replace(/,/g, '.'));
+    let lon = parseFloat(m[3].replace(/,/g, '.'));
+    if (m[2].toUpperCase() === 'S') lat = -lat;
+    if (m[4].toUpperCase() === 'W') lon = -lon;
+    // O (Ost) und E (East) → positiv, keine Änderung
+    return { lat, lon };
+  }
+  // Einzelfeld — GEDCOM-Format oder Dezimalgrad
+  const _one = v => {
+    const t = (v || '').trim();
+    const g = /^([NSns])\s*([\d.,]+)$/.exec(t);
+    if (g) return (g[1].toUpperCase() === 'S' ? -1 : 1) * parseFloat(g[2].replace(',', '.'));
+    return parseFloat(t.replace(',', '.'));
+  };
+  return { lat: _one(latRaw), lon: _one(lonRaw) };
+}
+
 function saveHofCoord(addr) {
-  const latRaw = document.getElementById('hof-coord-lat')?.value.trim().replace(',', '.');
-  const lonRaw = document.getElementById('hof-coord-lon')?.value.trim().replace(',', '.');
-  const lat = parseFloat(latRaw);
-  const lon = parseFloat(lonRaw);
+  const latRaw = document.getElementById('hof-coord-lat')?.value || '';
+  const lonRaw = document.getElementById('hof-coord-lon')?.value || '';
+  const { lat, lon } = _parseHofCoordInput(latRaw, lonRaw);
   if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     showToast('⚠ Ungültige Koordinaten (Breite -90–90, Länge -180–180)');
     return;
