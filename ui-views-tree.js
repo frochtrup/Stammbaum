@@ -268,8 +268,25 @@ function _updateTreeBackBtn() {
 
 function treeNavBack() {
   if (UIState._treeHistoryPos <= 0) return;
-  UIState._treeHistoryPos--;
-  showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
+  if (UIState._treeHistoryPos === 1) {
+    // Einzelschritt — direkt zurück
+    UIState._treeHistoryPos--;
+    showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
+    return;
+  }
+  // Mehrere Schritte → Picker: neueste Position zuerst
+  const btn = document.getElementById('treeBtnBack');
+  const items = [];
+  for (let i = UIState._treeHistoryPos - 1; i >= 0; i--) {
+    const id = UIState._treeHistory[i];
+    const p  = AppState.db.individuals[id];
+    items.push({ label: p ? (p.name || id) : id, data: { pos: i } });
+  }
+  _showHistoryPicker(btn, items, (idx, data) => {
+    if (!data) return;
+    UIState._treeHistoryPos = data.pos;
+    showTree(UIState._treeHistory[data.pos], false);
+  }, null);
 }
 
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt

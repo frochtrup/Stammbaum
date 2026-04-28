@@ -1021,7 +1021,7 @@ body.desktop-mode.places-karte #mapContainer {
     right: auto;
     left: 284px;
   }
-  /* back-button wird außerhalb des @media-Blocks per desktop-mode-Klasse gesteuert */
+  /* back-button bleibt sichtbar — History-Picker übernimmt Navigation */
   /* Placeholder: sichtbar wenn kein Eintrag gewählt */
   #desktopPlaceholder { display: none; }
   body.desktop-mode #desktopPlaceholder { display: flex; }
@@ -1047,36 +1047,38 @@ body.desktop-mode.places-karte #mapContainer {
 
 
 /* ═══════════════════════════════════════
-   DETAIL BREADCRUMB (Desktop)
+   HISTORY PICKER (Back-Button Dropdown)
 ═══════════════════════════════════════ */
-
-/* Zurück-Button nur auf Mobile; Breadcrumb übernimmt Navigation auf Desktop */
-body.desktop-mode #v-detail .back { display: none !important; }
-
-#detailBreadcrumb { display: none; }
-body.desktop-mode #detailBreadcrumb {
-  display: flex; align-items: center;
-  padding: 0 16px 8px;
-  font-size: 0.76rem;
-  gap: 4px; overflow: hidden; white-space: nowrap;
-  flex-wrap: nowrap; min-width: 0;
+.history-picker-overlay {
+  position: fixed; inset: 0; z-index: 600;
 }
-body.desktop-mode #detailBreadcrumb:empty { display: none; }
-.crumb {
-  color: var(--text-muted); cursor: pointer;
-  overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 0 1 auto; min-width: 30px; /* natürliche Breite, erst dann kürzen */
-  transition: color 0.12s;
-  font-family: 'Source Serif 4', serif;
+.history-picker {
+  position: fixed; z-index: 601;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.55);
+  min-width: 200px; max-width: 320px;
+  overflow: hidden;
+  animation: fadeUp 0.14s ease both;
 }
-.crumb:hover { color: var(--gold-lt); }
-.crumb-sep { color: var(--border); flex-shrink: 0; }
-.crumb-current {
-  color: var(--text-dim); cursor: default; font-style: italic;
-  overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 0 1 auto; min-width: 40px;
+.history-picker-item {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--border);
+  color: var(--text); cursor: pointer;
+  font-size: 0.9rem; font-family: 'Source Serif 4', serif;
+  padding: 12px 16px;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.history-picker-item:last-child { border-bottom: none; }
+.history-picker-item:active,
+.history-picker-item:hover { background: var(--surface3); color: var(--gold-lt); }
+.history-picker-sep {
+  height: 1px; background: var(--border); margin: 0;
+}
+.history-picker-root {
+  color: var(--text-muted); font-size: 0.82rem; font-style: italic;
 }
 
 /* ═══════════════════════════════════════

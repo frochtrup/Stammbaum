@@ -49,7 +49,7 @@ function showView(id) {
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); requestAnimationFrame(_updateBreadcrumb); }
+    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
@@ -255,8 +255,7 @@ function showMain() {
   const saved = UIState._savedListScroll;
   UIState._savedListScroll = null;
   UIState._navHistory.length = 0; // Liste = frischer Start, History löschen
-  const bc = document.getElementById('detailBreadcrumb');
-  if (bc) bc.innerHTML = '';
+  _closeHistoryPicker();
   document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
@@ -267,8 +266,9 @@ function showMain() {
   }
 }
 
-// ─── Breadcrumb (Desktop) ─────────────────────────────────────────
-function _crumbLabel(item) {
+// ─── History-Picker (Back-Button Dropdown) ────────────────────────
+// Label für einen History-Eintrag
+function _historyItemLabel(item) {
   if (item.type === 'person') {
     const p = AppState.db.individuals[item.id];
     if (!p) return item.id;
@@ -282,49 +282,79 @@ function _crumbLabel(item) {
     const parts = [h?.surname, w?.surname].filter(Boolean);
     return parts.length ? parts.join(' & ') : (h?.name || w?.name || item.id);
   }
-  if (item.type === 'source') {
-    const s = AppState.db.sources[item.id];
-    return s ? (s.abbr || s.title || item.id) : item.id;
-  }
-  if (item.type === 'repo') {
-    const r = AppState.db.repositories[item.id];
-    return r ? (r.name || item.id) : item.id;
-  }
+  if (item.type === 'source')   { const s = AppState.db.sources[item.id];       return s ? (s.abbr || s.title || item.id) : item.id; }
+  if (item.type === 'repo')     { const r = AppState.db.repositories[item.id];  return r ? (r.name  || item.id) : item.id; }
   if (item.type === 'place')    return item.name || 'Ort';
   if (item.type === 'tree')     return 'Baum';
   if (item.type === 'fanchart') return 'Fächer';
   return '◂';
 }
 
-function _updateBreadcrumb() {
-  const el = document.getElementById('detailBreadcrumb');
-  if (!el) return;
-  const hist = UIState._navHistory;
-  if (!hist.length) { el.innerHTML = ''; return; }
-  const currentTitle = document.getElementById('detailTopTitle')?.textContent || '';
-  let html = '';
-  hist.forEach((item, i) => {
-    html += `<span class="crumb" data-crumb-idx="${i}">${esc(_crumbLabel(item))}</span>`;
-    html += '<span class="crumb-sep">›</span>';
+// Generischer Picker: items = [{label, data}], onSelect(idx, data) — idx=-1 → rootLabel geklickt
+function _showHistoryPicker(triggerEl, items, onSelect, rootLabel) {
+  _closeHistoryPicker();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'history-picker-overlay';
+  overlay.addEventListener('click', _closeHistoryPicker);
+
+  const picker = document.createElement('div');
+  picker.className = 'history-picker';
+  picker.addEventListener('click', e => e.stopPropagation());
+
+  items.forEach((item, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'history-picker-item';
+    btn.type = 'button';
+    btn.textContent = item.label;
+    btn.addEventListener('click', () => { _closeHistoryPicker(); onSelect(i, item.data); });
+    picker.appendChild(btn);
   });
-  html += `<span class="crumb-current">${esc(currentTitle)}</span>`;
-  el.innerHTML = html;
-  el.querySelectorAll('.crumb[data-crumb-idx]').forEach(crumb => {
-    crumb.addEventListener('click', () => _crumbNavigate(parseInt(crumb.dataset.crumbIdx)));
-  });
+
+  if (rootLabel) {
+    picker.appendChild(Object.assign(document.createElement('div'), { className: 'history-picker-sep' }));
+    const rootBtn = document.createElement('button');
+    rootBtn.className = 'history-picker-item history-picker-root';
+    rootBtn.type = 'button';
+    rootBtn.textContent = rootLabel;
+    rootBtn.addEventListener('click', () => { _closeHistoryPicker(); onSelect(-1, null); });
+    picker.appendChild(rootBtn);
+  }
+
+  overlay.appendChild(picker);
+  document.body.appendChild(overlay);
+
+  // Positionierung unterhalb des Trigger-Buttons
+  if (triggerEl) {
+    const r = triggerEl.getBoundingClientRect();
+    picker.style.top  = (r.bottom + 6) + 'px';
+    picker.style.left = r.left + 'px';
+    requestAnimationFrame(() => {
+      const pw = picker.offsetWidth;
+      const left = parseFloat(picker.style.left);
+      if (left + pw > window.innerWidth - 8)
+        picker.style.left = Math.max(8, window.innerWidth - pw - 8) + 'px';
+    });
+  }
+
+  // ESC schließt
+  const onKey = e => { if (e.key === 'Escape') { _closeHistoryPicker(); document.removeEventListener('keydown', onKey); } };
+  document.addEventListener('keydown', onKey);
 }
 
-function _crumbNavigate(idx) {
-  const item = UIState._navHistory[idx];
-  if (!item) return;
-  // Bis zu diesem Punkt zurückschneiden (item selbst wird nach Navigation neu eingeordnet)
-  UIState._navHistory.splice(idx);
+function _closeHistoryPicker() {
+  document.querySelector('.history-picker-overlay')?.remove();
+}
+
+// Navigation zu einem History-Eintrag (ohne History-Push)
+function _navToHistoryItem(item) {
   if      (item.type === 'person')   showDetail(item.id, false);
   else if (item.type === 'family')   showFamilyDetail(item.id, false);
   else if (item.type === 'source')   showSourceDetail(item.id, false);
   else if (item.type === 'repo')     showRepoDetail(item.id, false);
   else if (item.type === 'place')    showPlaceDetail(item.name, false);
   else if (item.type === 'tree')     showTree(item.id, false);
+  else if (item.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(item.id); }
   else showMain();
 }
 
@@ -356,18 +386,22 @@ function _beforeDetailNavigate() {
   }
 }
 
-// "← Zurück" – geht zur vorherigen Detail-Ansicht, zum Baum oder zur Liste
+// "← Zurück" – 1 Schritt: direkt zurück; ≥ 2 Schritte: Picker anzeigen
 function goBack() {
-  const prev = UIState._navHistory.pop();
-  if (!prev) { showMain(); return; }
-  if      (prev.type === 'person') showDetail(prev.id, false);
-  else if (prev.type === 'family') showFamilyDetail(prev.id, false);
-  else if (prev.type === 'source') showSourceDetail(prev.id, false);
-  else if (prev.type === 'repo')   showRepoDetail(prev.id, false);
-  else if (prev.type === 'place')  showPlaceDetail(prev.name, false);
-  else if (prev.type === 'tree')     showTree(prev.id, false);
-  else if (prev.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(prev.id); }
-  else showMain();
+  const hist = UIState._navHistory;
+  if (!hist.length) { showMain(); return; }
+  if (hist.length === 1) { _navToHistoryItem(hist.pop()); return; }
+  // Mehrere Einträge → Picker: neueste zuerst
+  const btn = document.querySelector('#v-detail .topbar-inner .back');
+  const pickerItems = [...hist].reverse().map((item, i) => ({
+    label: _historyItemLabel(item),
+    data:  { item, actualIdx: hist.length - 1 - i }
+  }));
+  _showHistoryPicker(btn, pickerItems, (idx, data) => {
+    if (idx < 0) { showMain(); return; }  // "Liste" geklickt
+    hist.splice(data.actualIdx);          // History bis zu diesem Punkt kürzen
+    _navToHistoryItem(data.item);
+  }, 'Liste');
 }
 
 // Kleinste numerische Personen-ID
