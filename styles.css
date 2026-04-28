@@ -1110,3 +1110,77 @@ body.desktop-mode.places-karte #mapContainer {
 }
 @keyframes _spin { to { transform: rotate(360deg); } }
 #loadingMsg { color: var(--text-dim); font-size: 0.9rem; }
+
+/* ── Statistik-Dashboard ────────────────────────────────────────── */
+#tab-stats { padding-bottom: 80px; }
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.stats-kachel {
+  background: var(--surface2); border-radius: 12px;
+  padding: 12px 8px; text-align: center;
+  border: 1px solid var(--border);
+}
+.stats-kachel-num {
+  font-size: 1.5rem; font-weight: 700; color: var(--gold-lt); line-height: 1.1;
+}
+.stats-kachel-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 3px; }
+
+.stats-gender-bar {
+  display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px;
+  margin-bottom: 8px;
+}
+.stats-gender-seg { min-width: 3px; border-radius: 4px; }
+.stats-gender-legend {
+  display: flex; gap: 16px; font-size: 0.8rem;
+}
+
+.stats-progress-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+}
+.stats-progress-lbl {
+  flex: 0 0 160px; font-size: 0.8rem; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stats-progress-track {
+  flex: 1; height: 8px; background: var(--surface2);
+  border-radius: 4px; overflow: hidden;
+}
+.stats-progress-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+.stats-progress-val { flex: 0 0 90px; font-size: 0.75rem; color: var(--text-dim); text-align: right; }
+
+.stats-bar-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.stats-bar-lbl {
+  flex: 0 0 130px; font-size: 0.8rem; color: var(--text-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stats-bar-track {
+  flex: 1; height: 10px; background: var(--surface2);
+  border-radius: 5px; overflow: hidden;
+}
+.stats-bar-fill { height: 100%; border-radius: 5px; }
+.stats-bar-cnt { flex: 0 0 28px; font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+
+.stats-timeline {
+  display: flex; align-items: flex-end; gap: 6px;
+  height: 104px; padding-bottom: 20px; position: relative; overflow-x: auto;
+}
+.stats-tl-item {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 1 0 36px; min-width: 36px;
+}
+.stats-tl-bar-wrap {
+  display: flex; align-items: flex-end; height: 80px;
+}
+.stats-tl-bar {
+  width: 22px; background: var(--gold-dim); border-radius: 4px 4px 0 0;
+  min-height: 3px; transition: height .3s;
+}
+.stats-tl-lbl {
+  font-size: 0.58rem; color: var(--text-muted); margin-top: 3px;
+  white-space: nowrap; text-align: center;
+}

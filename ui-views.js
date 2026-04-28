@@ -453,8 +453,9 @@ function switchTab(tab) {
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
   document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
+  document.getElementById('tab-stats').style.display = tab === 'stats' ? 'block' : 'none';
   document.getElementById('tab-search').style.display = tab === 'search' ? 'block' : 'none';
-  document.getElementById('fabBtn').style.display = tab === 'search' ? 'none' : '';
+  document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats') ? 'none' : '';
   renderTab();
 }
 
@@ -473,6 +474,7 @@ function renderTab() {
     }
     else renderPlaceList();
   }
+  else if (AppState.currentTab === 'stats') renderStatsTab();
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
 }
 
@@ -711,6 +713,7 @@ const _CLICK_MAP = {
   confirmEditMedia:        ()  => confirmEditMedia(),
   helpRoundtrip:           ()  => { closeModal('modalHelp'); runRoundtripTest(); },
   menuDedup:               ()  => { closeModal('modalMenu'); openDedupModal(); },
+  menuStats:               ()  => { closeModal('modalMenu'); bnavTab('stats'); },
   dedupRunScan:            ()  => dedupRunScan(),
   dedupOpenMerge:          el  => dedupOpenMerge(el),
   dedupSwapWinner:         ()  => dedupSwapWinner(),

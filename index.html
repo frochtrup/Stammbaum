@@ -137,6 +137,8 @@
     <div id="hofList" style="display:none"></div>
   </div>
 
+  <div id="tab-stats" style="display:none"></div>
+
   <div id="tab-search" style="display:none">
     <div class="search-wrap">
       <input class="search-input" type="search" id="searchGlobal" placeholder="Personen, Familien, Quellen, Orte…" data-input="runGlobalSearch">
@@ -965,6 +967,9 @@
         <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuDedup">
           &#128270; &nbsp; Duplikate erkennen
         </button>
+        <button class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);text-align:left;padding:14px 16px;" data-action="menuStats">
+          📊 &nbsp; Statistik
+        </button>
         <button class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" data-action="menuRoundtrip">
           🔁 &nbsp; Roundtrip-Test
         </button>
@@ -1318,6 +1323,7 @@
 <script src="ui-views-place.js"></script>
 <script src="ui-views-hof.js"></script>
 <script src="ui-views-map.js"></script>
+<script src="ui-views-stats.js"></script>
 <script src="ui-dedup.js"></script>
 <script src="ui-fanchart.js"></script>
 <script src="ui-forms.js"></script>
