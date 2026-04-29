@@ -3,6 +3,13 @@
 // ─────────────────────────────────────
 // buildHofIndex() → gedcom.js (Domain-Logik)
 
+// Ersten nicht-leeren Teil einer Ortsangabe extrahieren (ignoriert Hierarchie-Prefix)
+// ", Ochtrup" → "Ochtrup"  |  "Ochtrup, Steinfurt" → "Ochtrup"  |  "Ochtrup" → "Ochtrup"
+function _placeFirstPart(place) {
+  if (!place) return '';
+  return place.split(',').map(s => s.trim()).find(s => s.length > 0) || '';
+}
+
 // Adress-Sortierkey: Straße + numerische Hausnummer trennen
 function _addrSortKey(addr) {
   const line = (addr || '').split('\n')[0].trim();
@@ -12,8 +19,8 @@ function _addrSortKey(addr) {
 }
 
 function _hofSortFn(a, b) {
-  // 1. Ort
-  const pc = (a.place || '').localeCompare(b.place || '', 'de');
+  // 1. Ort — nur erster Teil der Hierarchie, damit ", Ochtrup" = "Ochtrup"
+  const pc = _placeFirstPart(a.place).localeCompare(_placeFirstPart(b.place), 'de');
   if (pc !== 0) return pc;
   // 2. Straße
   const sa = _addrSortKey(a.addr), sb = _addrSortKey(b.addr);
@@ -37,8 +44,8 @@ function renderHofList(sorted) {
   let html = '';
   let lastSep = '';
   for (const hof of sorted) {
-    // Alpha-Separator: erster Buchstabe des Orts (oder der Adresse wenn kein Ort)
-    const sepSrc = hof.place || hof.addr;
+    // Alpha-Separator: erster Buchstabe des normalisierten Orts (oder Adresse als Fallback)
+    const sepSrc = _placeFirstPart(hof.place) || hof.addr;
     const sep = sepSrc[0].toUpperCase();
     if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
 
