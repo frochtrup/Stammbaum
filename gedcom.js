@@ -456,14 +456,16 @@ function evDateKey(d) {
 // Cache in UIState._hofCache; wird von markChanged() geleert.
 function buildHofIndex() {
   if (UIState._hofCache) return UIState._hofCache;
-  const hoefe = new Map(); // addr → { addr, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
+  const hoefe = new Map(); // addr → { addr, place, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
   for (const p of Object.values(AppState.db.individuals)) {
     for (const ev of (p.events || [])) {
       if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
         const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, entries: [], propEntries: [] });
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
         const hof = hoefe.get(addr);
         if (!hof.propEntries) hof.propEntries = [];
+        // Ersten nicht-leeren Ort aus RESI-Events übernehmen
+        if (!hof.place && ev.place) hof.place = ev.place.trim();
         hof.entries.push({
           pid:     p.id,
           name:    p.name || p.id,
@@ -473,9 +475,10 @@ function buildHofIndex() {
       }
       if (ev.type === 'PROP' && ev.addr && ev.addr.trim()) {
         const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, entries: [], propEntries: [] });
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
         const hof = hoefe.get(addr);
         if (!hof.propEntries) hof.propEntries = [];
+        if (!hof.place && ev.place) hof.place = ev.place.trim();
         hof.propEntries.push({
           pid:     p.id,
           name:    p.name || p.id,

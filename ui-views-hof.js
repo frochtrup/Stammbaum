@@ -3,21 +3,45 @@
 // ─────────────────────────────────────
 // buildHofIndex() → gedcom.js (Domain-Logik)
 
+// Adress-Sortierkey: Straße + numerische Hausnummer trennen
+function _addrSortKey(addr) {
+  const line = (addr || '').split('\n')[0].trim();
+  const m = line.match(/^(.*?)\s+(\d+\S*)\s*$/);
+  if (m) return { street: m[1].trim(), nr: parseInt(m[2]) || 0, nrSuffix: m[2].replace(/^\d+/, '') };
+  return { street: line, nr: 0, nrSuffix: '' };
+}
+
+function _hofSortFn(a, b) {
+  // 1. Ort
+  const pc = (a.place || '').localeCompare(b.place || '', 'de');
+  if (pc !== 0) return pc;
+  // 2. Straße
+  const sa = _addrSortKey(a.addr), sb = _addrSortKey(b.addr);
+  const sc = sa.street.localeCompare(sb.street, 'de');
+  if (sc !== 0) return sc;
+  // 3. Hausnummer numerisch
+  if (sa.nr !== sb.nr) return sa.nr - sb.nr;
+  return sa.nrSuffix.localeCompare(sb.nrSuffix, 'de');
+}
+
 function renderHofList(sorted) {
   const el = document.getElementById('hofList');
   if (!el) return;
   if (!sorted) {
     const hoefe = buildHofIndex();
     if (!hoefe.size) { el.innerHTML = '<div class="empty">Keine Wohnadressen (RESI) in den Daten gefunden</div>'; return; }
-    sorted = [...hoefe.values()].sort((a, b) => a.addr.localeCompare(b.addr, 'de'));
+    sorted = [...hoefe.values()].sort(_hofSortFn);
   }
   if (!sorted.length) { el.innerHTML = '<div class="empty">Keine Höfe gefunden</div>'; return; }
 
   let html = '';
-  let lastLetter = '';
+  let lastSep = '';
   for (const hof of sorted) {
-    const fl = hof.addr[0].toUpperCase();
-    if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
+    // Alpha-Separator: erster Buchstabe des Orts (oder der Adresse wenn kein Ort)
+    const sepSrc = hof.place || hof.addr;
+    const sep = sepSrc[0].toUpperCase();
+    if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
+
     const count      = new Set(hof.entries.map(e => e.pid)).size;
     const propCount  = new Set((hof.propEntries || []).map(e => e.pid)).size;
     const allEntries = [...hof.entries, ...(hof.propEntries || [])];
@@ -28,7 +52,9 @@ function renderHofList(sorted) {
     const hofMeta   = AppState.db.hofObjects?.[hof.addr];
     const hasCoords = hofMeta?.lat && hofMeta?.long;
     const addrLine  = (hasCoords ? '<span style="color:var(--gold);margin-right:4px">📍</span>' : '') + esc(hof.addr).replace(/\n/g, ' · ');
-    const metaParts = [`${count} Person${count !== 1 ? 'en' : ''}`];
+    const metaParts = [];
+    if (hof.place) metaParts.push(esc(compactPlace(hof.place)));
+    metaParts.push(`${count} Person${count !== 1 ? 'en' : ''}`);
     if (propCount) metaParts.push(`${propCount} Eigentümer`);
     if (range) metaParts.push(range);
     html += `<div class="person-row" data-action="showHofDetail" data-addr="${esc(hof.addr)}">
@@ -45,9 +71,12 @@ function renderHofList(sorted) {
 
 function filterHoefe(q) {
   const lower = q.toLowerCase().trim();
-  const all = [...buildHofIndex().values()].sort((a, b) => a.addr.localeCompare(b.addr, 'de'));
+  const all = [...buildHofIndex().values()].sort(_hofSortFn);
   if (!lower) { renderHofList(all); return; }
-  renderHofList(all.filter(h => h.addr.toLowerCase().includes(lower)));
+  renderHofList(all.filter(h =>
+    h.addr.toLowerCase().includes(lower) ||
+    (h.place || '').toLowerCase().includes(lower)
+  ));
 }
 
 function _hofMonthOptions() {
