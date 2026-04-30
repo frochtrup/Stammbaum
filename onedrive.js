@@ -299,17 +299,35 @@ async function odOpenFilePicker() {
   const token = await _odGetToken(); if (!token) return;
   showToast('Suche GEDCOM-Dateien…');
   try {
+    const seen = new Set();
     const allFiles = [];
+    const addFile = f => { if (!seen.has(f.id)) { seen.add(f.id); allFiles.push(f); } };
+
+    // 1) Bekannten Ordner direkt auflisten (sofort aktuell, kein Index-Delay)
+    const basePath = await idbGet('od_base_path').catch(() => null);
+    if (basePath) {
+      const folderUrl = `${OD_GRAPH}/me/drive/root:/${encodeURIComponent(basePath)}:/children?select=id,name,lastModifiedDateTime,size&top=200`;
+      const folderRes = await fetch(folderUrl, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
+      if (folderRes?.ok) {
+        const folderData = await folderRes.json();
+        for (const f of (folderData.value || [])) {
+          if (f.name.toLowerCase().endsWith('.ged')) addFile(f);
+        }
+      }
+    }
+
+    // 2) Suchindex (findet Dateien in anderen Ordnern, hat aber Delay für neue Dateien)
     let url = `${OD_GRAPH}/me/drive/root/search(q='.ged')?select=id,name,lastModifiedDateTime,size&top=200`;
     while (url) {
       const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
       const data = await res.json();
       if (data.error) throw new Error(data.error.message);
       for (const f of (data.value || [])) {
-        if (f.name.toLowerCase().endsWith('.ged')) allFiles.push(f);
+        if (f.name.toLowerCase().endsWith('.ged')) addFile(f);
       }
       url = data['@odata.nextLink'] || null;
     }
+
     if (!allFiles.length) { showToast('Keine .ged-Dateien in OneDrive gefunden'); return; }
     allFiles.sort((a, b) => (b.lastModifiedDateTime || '').localeCompare(a.lastModifiedDateTime || ''));
     const list = document.getElementById('odFileList');
