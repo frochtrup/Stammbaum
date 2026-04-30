@@ -472,7 +472,8 @@ function deleteHofCoord(addr) {
   if (!m) return;
   delete m.lat;
   delete m.long;
-  if (!m.note) delete AppState.db.hofObjects[addr];
+  // Eintrag bewusst behalten (auch ohne Note): beim Reload überschreibt er
+  // _derivedHofObjectsFromDb(), sonst kommen die Koordinaten aus den Events zurück.
   saveHofObjects();
   invalidatePlacePersonIndex?.();
   markChanged();
