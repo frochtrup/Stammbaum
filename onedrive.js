@@ -304,9 +304,24 @@ async function odOpenFilePicker() {
     const addFile = f => { if (!seen.has(f.id)) { seen.add(f.id); allFiles.push(f); } };
 
     // 1) Bekannten Ordner direkt auflisten (sofort aktuell, kein Index-Delay)
-    const basePath = await idbGet('od_base_path').catch(() => null);
+    let basePath = await idbGet('od_base_path').catch(() => null);
+    // Fallback: Ordner der zuletzt geladenen Datei per od_file_id ermitteln
+    if (!basePath) {
+      const lastId = localStorage.getItem('od_file_id');
+      if (lastId) {
+        const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${lastId}?select=parentReference`, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
+        if (metaRes?.ok) {
+          const meta = await metaRes.json();
+          const raw = meta.parentReference?.path || '';
+          const m = raw.match(/\/drive\/root:\/(.*)/);
+          if (m) { basePath = decodeURIComponent(m[1]); await idbPut('od_base_path', basePath).catch(() => {}); _odCurrentBasePath = basePath; }
+        }
+      }
+    }
     if (basePath) {
-      const folderUrl = `${OD_GRAPH}/me/drive/root:/${encodeURIComponent(basePath)}:/children?select=id,name,lastModifiedDateTime,size&top=200`;
+      // Pfad-Segmente einzeln kodieren (nicht encodeURIComponent auf den ganzen Pfad!)
+      const encodedPath = basePath.split('/').map(encodeURIComponent).join('/');
+      const folderUrl = `${OD_GRAPH}/me/drive/root:/${encodedPath}:/children?select=id,name,lastModifiedDateTime,size&top=200`;
       const folderRes = await fetch(folderUrl, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
       if (folderRes?.ok) {
         const folderData = await folderRes.json();
