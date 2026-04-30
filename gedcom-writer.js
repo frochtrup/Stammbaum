@@ -192,19 +192,19 @@ function writeINDIRecord(lines, p) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
     if (ev.date !== null && ev.date !== undefined)  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+    const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
     if (ev.place !== null && ev.place !== undefined) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
       geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
     } else if (ev.addr) {
       // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
-      const _hm = AppState.db?.hofObjects?.[ev.addr.trim()];
-      if (_hm?.lat != null) {
+      if (_hofMeta?.lat != null) {
         lines.push(`2 PLAC ${ev.addr.replace(/\n/g, ', ')}`);
-        geoLines(lines, { lati: _hm.lat, long: _hm.long }, 3);
+        geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
       }
-      // Hof-Notiz schreiben — unabhängig von Koordinaten, nur wenn kein eigenes Event-NOTE
-      if (_hm?.note && !ev.note) pushCont(lines, 2, 'NOTE', _hm.note);
     }
+    // Hof-Notiz schreiben — unabhängig von PLAC/Koordinaten, nur wenn kein eigenes Event-NOTE
+    if (_hofMeta?.note && !ev.note) pushCont(lines, 2, 'NOTE', _hofMeta.note);
     if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
     if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
     for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
