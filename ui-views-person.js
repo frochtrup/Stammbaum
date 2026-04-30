@@ -323,7 +323,10 @@ function showDetail(id, pushHistory = true) {
   AppState.currentSourceId  = null;
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = null;
-  if (document.body.classList.contains('desktop-mode')) { _updatePersonListCurrent(id); _updateFamilyListCurrent(null); }
+  if (document.body.classList.contains('desktop-mode')) {
+    if (AppState.currentTab === 'persons') _updatePersonListCurrent(id); else _updatePersonListCurrent(null);
+    _updateFamilyListCurrent(null);
+  }
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';

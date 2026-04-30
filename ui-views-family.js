@@ -292,7 +292,10 @@ function showFamilyDetail(id, pushHistory = true) {
   AppState.currentSourceId  = null;
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = null;
-  if (document.body.classList.contains('desktop-mode')) { _updateFamilyListCurrent(id); _updatePersonListCurrent(null); }
+  if (document.body.classList.contains('desktop-mode')) {
+    if (AppState.currentTab === 'families') _updateFamilyListCurrent(id); else _updateFamilyListCurrent(null);
+    _updatePersonListCurrent(null);
+  }
 
   const husb = f.husb ? AppState.db.individuals[f.husb] : null;
   const wife = f.wife ? AppState.db.individuals[f.wife] : null;
