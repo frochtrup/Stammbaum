@@ -297,18 +297,24 @@ async function odClearDocFolder() {
 
 async function odOpenFilePicker() {
   const token = await _odGetToken(); if (!token) return;
-  showToast('Suche .ged-Dateien…');
+  showToast('Suche GEDCOM-Dateien…');
   try {
-    const res  = await fetch(`${OD_GRAPH}/me/drive/root/search(q='.ged')?select=id,name,lastModifiedDateTime,size&top=30`, {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const files = (data.value || []).filter(f => f.name.toLowerCase().endsWith('.ged'));
-    if (!files.length) { showToast('Keine .ged-Dateien in OneDrive gefunden'); return; }
+    const allFiles = [];
+    let url = `${OD_GRAPH}/me/drive/root/search(q='.ged')?select=id,name,lastModifiedDateTime,size&top=200`;
+    while (url) {
+      const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      for (const f of (data.value || [])) {
+        if (f.name.toLowerCase().endsWith('.ged')) allFiles.push(f);
+      }
+      url = data['@odata.nextLink'] || null;
+    }
+    if (!allFiles.length) { showToast('Keine .ged-Dateien in OneDrive gefunden'); return; }
+    allFiles.sort((a, b) => (b.lastModifiedDateTime || '').localeCompare(a.lastModifiedDateTime || ''));
     const list = document.getElementById('odFileList');
     if (list) {
-      list.innerHTML = files.map(f => {
+      list.innerHTML = allFiles.map(f => {
         const date = new Date(f.lastModifiedDateTime).toLocaleDateString('de-DE');
         const kb   = Math.round((f.size || 0) / 1024);
         return `<div class="list-item" style="cursor:pointer"
