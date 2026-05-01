@@ -2,6 +2,19 @@
 //  PERSON LIST
 // ─────────────────────────────────────
 let _personSort = 'name'; // 'name' | 'date'
+let _kekuleMap = {};
+
+function _buildKekuleMap() {
+  _kekuleMap = {};
+  const walk = (id, k, depth) => {
+    if (!id || depth > 8 || !AppState.db.individuals[id] || _kekuleMap[id]) return;
+    _kekuleMap[id] = k;
+    const { father, mother } = getParentIds(id);
+    walk(father, k * 2,     depth + 1);
+    walk(mother, k * 2 + 1, depth + 1);
+  };
+  walk(getProbandId(), 1, 0);
+}
 
 // Virtual scroll state (persons)
 const _vsP = { active: false, items: [], offsets: [], total: 0,
@@ -24,6 +37,8 @@ function _personRowHtml(p, isCurrent, pos, total) {
   const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                     + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
   const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
+  const kNum = _kekuleMap[p.id];
+  const kBadge = kNum ? `<span class="p-kekule">#${kNum}</span>` : '';
   const ariaPos = pos != null ? ` aria-setsize="${total}" aria-posinset="${pos}"` : '';
   return `<div class="person-row${isCurrent ? ' current' : ''}" role="listitem"${ariaPos} data-action="showDetail" data-pid="${p.id}">
       <div class="p-avatar ${sc}">${ic}</div>
@@ -31,11 +46,12 @@ function _personRowHtml(p, isCurrent, pos, total) {
         <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
       </div>
-      <span class="p-arrow">›</span>
+      ${kBadge}<span class="p-arrow">›</span>
     </div>`;
 }
 
 function renderPersonList(persons) {
+  _buildKekuleMap();
   const sorted = [...persons].sort((a, b) => {
     if (_personSort === 'date') {
       const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
