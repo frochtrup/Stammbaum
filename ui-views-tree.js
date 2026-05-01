@@ -445,7 +445,6 @@ function showTree(personId, addToHistory = true) {
   const hasAnc3 = _maxAnc >= 3 && anc3.some(Boolean);
   const ancLevels = hasAnc8 ? 8 : hasAnc7 ? 7 : hasAnc6 ? 6 : hasAnc5 ? 5 : hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
   const ancSlots  = hasAnc8 ? 256 : hasAnc7 ? 128 : hasAnc6 ? 64 : hasAnc5 ? 32 : hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
-  showToast(`Gen=${_treeGenCount} Ebenen=${ancLevels} | anc5:${anc5.filter(Boolean).length} anc6:${anc6.filter(Boolean).length} anc7:${anc7.filter(Boolean).length} anc8:${anc8.filter(Boolean).length}`, 'info');
   const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
