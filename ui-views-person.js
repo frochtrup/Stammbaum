@@ -402,6 +402,9 @@ function showDetail(id, pushHistory = true) {
     html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
+  // Hof-Notiz-Dedup: gleicher Text + gleiche Adresse → nur beim ersten Event zeigen
+  const _shownAddrNotes = new Set();
+
   // Group events: first by ev.type (first-seen order), then by ev.eventType within each type,
   // sort within each subgroup by date (undated last).
   const _evTypeOrder = [];
@@ -430,8 +433,9 @@ function showDetail(id, pushHistory = true) {
           ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
         const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
         const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
-        const _hofNoteForAddr = ev.addr ? AppState.db.hofObjects?.[ev.addr.trim()]?.note : null;
-        const _showEvNote = ev.note && ev.note !== _hofNoteForAddr;
+        const _noteKey = (ev.addr && ev.note) ? `${ev.addr.trim()}\x00${ev.note}` : null;
+        const _showEvNote = ev.note && (!_noteKey || !_shownAddrNotes.has(_noteKey));
+        if (_noteKey) _shownAddrNotes.add(_noteKey);
         html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
           <span class="fact-lbl">${esc(label)}</span>
           <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${mediaBadge}${_showEvNote ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
