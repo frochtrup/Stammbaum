@@ -204,13 +204,16 @@ function writeINDIRecord(lines, p) {
         geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
       }
     }
-    // Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse, nur wenn kein eigenes Event-NOTE
+    // Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse
+    // Auch ev.note === hofMeta.note deduplizieren (aus altem GEDCOM-Import)
     const _addrKey = ev.addr?.trim();
-    if (_hofMeta?.note && !ev.note && !_writtenHofNotes.has(_addrKey)) {
+    const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
+    if (_hofMeta?.note && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
       pushCont(lines, 2, 'NOTE', _hofMeta.note);
       _writtenHofNotes.add(_addrKey);
+    } else if (ev.note && !_evNoteIsHofNote) {
+      pushCont(lines, 2, 'NOTE', ev.note);
     }
-    if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
     if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
     for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
     for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
