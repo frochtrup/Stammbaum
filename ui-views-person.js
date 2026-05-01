@@ -461,6 +461,23 @@ function showDetail(id, pushHistory = true) {
 
   html += `</div>`;
 
+  // Assoziationen (alle außer Godparent — der steht bereits unter der Taufe-Zeile)
+  const _displayAssos = (p.associations || []).filter(a => a.rela !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
+  if (_displayAssos.length) {
+    const _assoByRela = {};
+    for (const a of _displayAssos) {
+      if (!_assoByRela[a.rela]) _assoByRela[a.rela] = [];
+      _assoByRela[a.rela].push(a);
+    }
+    html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Assoziationen</div></div><div class="section-body">`;
+    for (const [rela, assos] of Object.entries(_assoByRela)) {
+      const label = (typeof RELA_LABELS !== 'undefined' && RELA_LABELS[rela]) || rela;
+      const chips = assos.map(a => `<span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('');
+      html += `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val"><div class="event-godparents">${chips}</div></span></div>`;
+    }
+    html += `</div></div>`;
+  }
+
   // Notizen
   const _pNoteText = p.noteText || '';
   const _pHasRefs  = (p.noteRefs || []).some(r => AppState.db.notes?.[r]);

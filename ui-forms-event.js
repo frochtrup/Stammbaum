@@ -318,6 +318,8 @@ function saveEvent() {
     // Taufpaten: non-Godparent-Assoziationen behalten, Godparent-Einträge neu setzen
     if (type === 'CHR') {
       if (!p.associations) p.associations = [];
+      const _oldGpXrefs = new Set(p.associations.filter(a => a.rela === 'Godparent').map(a => a.xref));
+      const _newGpXrefs = new Set(_efGodparents || []);
       p.associations = [
         ...p.associations.filter(a => a.rela !== 'Godparent'),
         ...(_efGodparents || []).map(xref => ({
@@ -325,6 +327,21 @@ function saveEvent() {
           note: '', sources: [], sourcePages: {}, sourceQUAY: {}
         }))
       ];
+      // Reziproke Godchild-Einträge synchronisieren
+      for (const gpId of _oldGpXrefs) {
+        if (_newGpXrefs.has(gpId)) continue;
+        const gp = AppState.db.individuals[gpId];
+        if (gp) gp.associations = (gp.associations || []).filter(a => !(a.rela === 'Godchild' && a.xref === pid));
+      }
+      for (const gpId of _newGpXrefs) {
+        const gp = AppState.db.individuals[gpId];
+        if (!gp) continue;
+        if (!gp.associations) gp.associations = [];
+        if (!gp.associations.some(a => a.rela === 'Godchild' && a.xref === pid)) {
+          gp.associations.push({ xref: pid, _grampsHlink: null, rela: 'Godchild',
+            note: '', sources: [], sourcePages: {}, sourceQUAY: {} });
+        }
+      }
     }
   } else {
     const evIdxRaw = document.getElementById('ef-evidx').value;
