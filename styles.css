@@ -610,6 +610,7 @@ body.desktop-mode.places-karte #mapContainer {
   color: var(--gold-dim, #c8a84b); cursor: pointer; white-space: nowrap;
 }
 .asso-chip:hover { border-color: var(--gold-dim, #c8a84b); }
+.asso-chip--derived { border-style: dashed; opacity: 0.75; }
 
 .rel-row {
   display: flex; align-items: center; gap: 10px;

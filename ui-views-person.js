@@ -465,7 +465,7 @@ function showDetail(id, pushHistory = true) {
   // Patenkinder werden dynamisch berechnet: alle Personen, die diesen als 'Godparent' führen
   const _computedGodchildren = Object.entries(AppState.db.individuals)
     .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.rela === 'Godparent' && a.xref === id))
-    .map(([cid]) => ({ xref: cid, rela: 'Godchild' }));
+    .map(([cid]) => ({ xref: cid, rela: 'Godchild', _derived: true }));
   const _storedNonGp = (p.associations || []).filter(a => a.rela !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
   // Gespeicherte Godchild-Einträge deduplizieren (könnten schon via UI-Sync da sein)
   const _gcXrefs = new Set(_computedGodchildren.map(a => a.xref));
@@ -480,7 +480,7 @@ function showDetail(id, pushHistory = true) {
     html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Assoziationen</div></div><div class="section-body">`;
     for (const [rela, assos] of Object.entries(_assoByRela)) {
       const label = (typeof RELA_LABELS !== 'undefined' && RELA_LABELS[rela]) || rela;
-      const chips = assos.map(a => `<span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('');
+      const chips = assos.map(a => `<span class="asso-chip${a._derived ? ' asso-chip--derived' : ''}" data-action="showDetail" data-id="${a.xref}" title="${a._derived ? 'Abgeleitet (nicht im Datenmodell gespeichert)' : ''}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('');
       html += `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val"><div class="event-godparents">${chips}</div></span></div>`;
     }
     html += `</div></div>`;
