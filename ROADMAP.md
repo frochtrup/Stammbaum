@@ -132,7 +132,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 #### Phase 5.1 — Cross-Parser
 
-- [ ] **ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)**
+- ~~**ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)**~~ ✅ v323–v329
+  - `p.associations[]` (xref, `_grampsHlink`, rela, note, sources); GEDCOM `1 ASSO … 2 RELA` ↔ GRAMPS `<personref hlink rel>` vollständiger Roundtrip
+  - `_grampsWitnessRefs[]` → ASSO via `_witnessEvMap`; Taufpaten-UI im CHR-Formular; reziproke Godchild-Relation; abgeleitete Assoziationen visuell gekennzeichnet; Aufgaben editierbar
 - [ ] **OBJE ohne FORM stabilisieren** — `m.form = null`; Writer nur ausgeben wenn nicht null
 
 #### Phase 5.2 — Formulare
@@ -168,6 +170,44 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|---|
 | ~~F1~~ | ~~**Sosa-Stradonitz-Nummerierung**~~ | ✅ v330–v332 — Kekule-Map aus Probanden (Tiefe 8); Badges im Sanduhr-Baum + Fächer-Diagramm; `#N`-Badge in Personenliste; Baum/Fächer bis 9 Generationen | ~~S~~ |
 | F2 | **Beziehungsrechner** | BFS-Graph über `f.husb/f.wife/f.chil`; "Wie ist A mit B verwandt?" → "3. Grad Cousin, 2× entfernt"; aufrufbar aus Person-Detail | M |
+
+#### F2 — Beziehungsrechner: Detailplanung
+
+**Ziel:** "Wie ist Person A mit dem Probanden (oder einer beliebigen Person B) verwandt?" — Anzeige in Person-Detail als klickbare Zeile.
+
+**Algorithmus: Bidirektionale BFS**
+1. BFS von A aufwärts → alle Vorfahren von A mit Pfadlänge (Generation + Seite: `V`=Vater, `M`=Mutter)
+2. BFS von B aufwärts → alle Vorfahren von B mit Pfadlänge
+3. Schnittmenge → gemeinsamer Vorfahre mit kürzestem Gesamtpfad
+4. Aus Pfadlängen Verwandtschaftsgrad berechnen
+
+**Ausgabe-Formel:**
+- Direkte Linie aufwärts (A ist Vorfahre von B): „Urgroßvater (3 Gen.)"
+- Direkte Linie abwärts (A ist Nachkomme von B): „Urenkel (3 Gen.)"
+- Seitenlinie (gemeinsamer Vorfahre C):
+  - Geschwister: `gen_A=1, gen_B=1`
+  - Onkel/Tante: `gen_A=2, gen_B=1` (oder umgekehrt)
+  - Cousins n-ten Grads: `min(gen_A, gen_B) - 1` = Grad; `|gen_A - gen_B|` = „x× entfernt"
+  - Beispiel: `gen_A=3, gen_B=4` → 2. Grad Cousin, 1× entfernt
+
+**Lokalisierung (Deutsch):**
+```
+Elternteil / Kind / Geschwister
+Großelternteil / Enkel / Onkel/Tante / Neffe/Nichte
+Urgroßelternteil / Urenkel / Großonkel / Großneffe
+Cousin/Cousine 1. Grads / 2. Grads / … [n× entfernt]
+Nicht verwandt (kein gemeinsamer Vorfahre im Datensatz)
+```
+
+**UI:**
+- In `ui-views-person.js` `showDetail()`: neue Zeile „Verwandtschaft zum Probanden: _Cousin 2. Grads_" (klickbar → öffnet Pfad-Modal)
+- Pfad-Modal: listet den Verwandtschaftspfad als Kette „A → Vater → Großvater (gemeinsam) → … → B"
+- Funktion `calcRelationship(idA, idB)` → `{ label, degree, path[] }` in `gedcom.js` oder eigenem `ui-views-relation.js`
+
+**Grenzen / Hinweise:**
+- Performance: BFS bricht ab wenn kein gemeinsamer Vorfahre in Tiefe 12 gefunden (≈4096 Vorfahren pro Person)
+- Pedigree-Collapse: mehrere Pfade möglich → kürzesten nehmen, Hinweis „mehrere Pfade"
+- Nur verwandtschaftliche Verbindungen (biologisch/adoptiv via `famc`), keine ASSO-Beziehungen
 | F3 | **Pedigree-Collapse-Erkennung** | Gemeinsame Vorfahren finden; Inzucht-Koeffizient berechnen; wichtig bei eng verwandten Dorfgemeinschaften; baut auf F2-BFS auf | M |
 | F4 | **Soundex / Namens-Fuzzy-Suche** | Soundex-Funktion für Nachnamen; historische Schreibvarianten (Decker/Deker/Döker); Erweiterung der bestehenden `_buildSearchIndex()`; opt-in Toggle in Suche | S |
 
