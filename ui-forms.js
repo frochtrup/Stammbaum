@@ -257,16 +257,17 @@ function savePerson() {
     sourceRefs: srcWidgetState['pf']?.ids || new Set()
   };
 
+  // _pendingRelation vor closeModal sichern — closeModal löscht es sonst
+  const _pendingRel = UIState._pendingRelation;
+  UIState._pendingRelation = null;
   closeModal('modalPerson');
 
   markChanged();
   renderTab();
 
-  if (UIState._pendingRelation) {
-    const rel = UIState._pendingRelation;
-    UIState._pendingRelation = null;
+  if (_pendingRel) {
     showToast('✓ Person erstellt');
-    setTimeout(() => openRelFamilyForm(rel.anchorId, id, rel.mode), 80);
+    setTimeout(() => openRelFamilyForm(_pendingRel.anchorId, id, _pendingRel.mode), 80);
     return;
   }
   showToast('✓ Person gespeichert');
