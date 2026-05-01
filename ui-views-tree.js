@@ -9,7 +9,7 @@ let _treeGenPortrait = 3;  // letzter Portrait-Wert  (Standard: 3 = +Großeltern
 let _treeGenLandscape= 5;  // letzter Landscape-Wert (Standard: 5 = +Ur²Gr.)
 
 function setTreeGens(n) {
-  _treeGenCount = Math.max(2, Math.min(6, n));
+  _treeGenCount = Math.max(2, Math.min(9, n));
   const ip = window.innerWidth < window.innerHeight;
   if (ip) _treeGenPortrait  = _treeGenCount;
   else    _treeGenLandscape = _treeGenCount;
@@ -392,6 +392,9 @@ function showTree(personId, addToHistory = true) {
   const anc3 = anc2.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 8
   const anc4 = anc3.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 16
   const anc5 = anc4.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 32
+  const anc6 = anc5.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 64
+  const anc7 = anc6.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 128
+  const anc8 = anc7.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 256
 
   // ── Geschwister (aus erster Elternfamilie) ──
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
@@ -432,15 +435,16 @@ function showTree(personId, addToHistory = true) {
   const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
   const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
   // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene
-  // _treeGenCount = Generationen gesamt inkl. Proband:
-  //   2 = nur Eltern (1 Ahnen-Ebene), 3 = +Großeltern (2 Ebenen),
-  //   4 = +Urgroßeltern (3 Ebenen), 5 = +Ururgroßeltern (4 Ebenen)
-  const _maxAnc = _treeGenCount - 1;  // max. Ahnen-Ebenen (1..5); Hochformat scrollt horizontal
+  // _treeGenCount = Generationen gesamt inkl. Proband (2..9); scrollt horizontal
+  const _maxAnc = _treeGenCount - 1;  // max. Ahnen-Ebenen (1..8)
+  const hasAnc8 = _maxAnc >= 8 && anc8.some(Boolean);
+  const hasAnc7 = _maxAnc >= 7 && anc7.some(Boolean);
+  const hasAnc6 = _maxAnc >= 6 && anc6.some(Boolean);
   const hasAnc5 = _maxAnc >= 5 && anc5.some(Boolean);
   const hasAnc4 = _maxAnc >= 4 && anc4.some(Boolean);
   const hasAnc3 = _maxAnc >= 3 && anc3.some(Boolean);
-  const ancLevels = hasAnc5 ? 5 : hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
-  const ancSlots  = hasAnc5 ? 32 : hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
+  const ancLevels = hasAnc8 ? 8 : hasAnc7 ? 7 : hasAnc6 ? 6 : hasAnc5 ? 5 : hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
+  const ancSlots  = hasAnc8 ? 256 : hasAnc7 ? 128 : hasAnc6 ? 64 : hasAnc5 ? 32 : hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
   const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
@@ -567,7 +571,7 @@ function showTree(personId, addToHistory = true) {
   }
 
   // ── Ahnen-Ebenen ancLevels..2 (generisch für 2–5 Ebenen) ──
-  const _ancArrays = [null, anc1, anc2, anc3, anc4, anc5];
+  const _ancArrays = [null, anc1, anc2, anc3, anc4, anc5, anc6, anc7, anc8];
   for (let _d = ancLevels; _d >= 2; _d--) {
     _ancArrays[_d].forEach((id, i) => {
       if (!id && _d >= 3) return;  // tiefe Ebenen: leere Slots überspringen
