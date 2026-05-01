@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v307 / Cache: `stammbaum-v307`
+**Aktuelle sw-Version:** v332 / Cache: `stammbaum-v332`
 
 ---
 
@@ -166,7 +166,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| F1 | **Sosa-Stradonitz-Nummerierung** | Kekule-Nummer pro Person berechnen (`getProbandId()` als Wurzel); Anzeige in Person-Detail + Sanduhr-Karte; nützlich für Druck + Kommunikation | S |
+| ~~F1~~ | ~~**Sosa-Stradonitz-Nummerierung**~~ | ✅ v330–v332 — Kekule-Map aus Probanden (Tiefe 8); Badges im Sanduhr-Baum + Fächer-Diagramm; `#N`-Badge in Personenliste; Baum/Fächer bis 9 Generationen | ~~S~~ |
 | F2 | **Beziehungsrechner** | BFS-Graph über `f.husb/f.wife/f.chil`; "Wie ist A mit B verwandt?" → "3. Grad Cousin, 2× entfernt"; aufrufbar aus Person-Detail | M |
 | F3 | **Pedigree-Collapse-Erkennung** | Gemeinsame Vorfahren finden; Inzucht-Koeffizient berechnen; wichtig bei eng verwandten Dorfgemeinschaften; baut auf F2-BFS auf | M |
 | F4 | **Soundex / Namens-Fuzzy-Suche** | Soundex-Funktion für Nachnamen; historische Schreibvarianten (Decker/Deker/Döker); Erweiterung der bestehenden `_buildSearchIndex()`; opt-in Toggle in Suche | S |

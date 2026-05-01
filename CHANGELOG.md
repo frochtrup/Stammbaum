@@ -9,6 +9,27 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-01 — Kekule-Nummerierung + Generationstiefe (sw v330–v332)
+
+- **sw v330** `feat`: Sanduhr-Baum bis 9 Generationen — Buttons 7–9 ergänzt; `anc6/7/8`-Arrays; `hasAnc6/7/8`-Prüfungen; `ancSlots` bis 256; `setTreeGens` Limit 6→9
+- **sw v331** `feat`: Fächer-Diagramm bis 9 Generationen — `RADII` auf 10 Einträge (max. 728px); Buttons 7–9 in `#fcGenBtns`; `setFcGens` Limit 6→9
+- **sw v332** `feat`: Kekule-Nummern als Badges in der Personenliste — `_buildKekuleMap()` aus Probanden (Tiefe 8) per `_kWalk`; `#N`-Badge (`.p-kekule`) rechts in jeder Zeile für direkte Vorfahren; wird bei jedem `renderPersonList()` neu berechnet
+
+---
+
+### Session 2026-05-01 — ASSO/Taufpaten + Assoziationen-UI (sw v323–v329)
+
+- **sw v323–v325** `feat`: ASSO/RELA Roundtrip + Taufpaten-UI
+  - `p.associations[]` (xref, `_grampsHlink`, rela, note, sources…); GEDCOM `1 ASSO … 2 RELA` ↔ GRAMPS `<personref hlink rel>` vollständiger Roundtrip
+  - Phase F: `_grampsWitnessRefs[]` → ASSO via `_witnessEvMap`
+  - Taufpaten in CHR-Ereignisformular (Personen-Autocomplete, Chips mit ×); `.asso-chip`s in Personendetail; `RELA_LABELS{}` in gedcom.js; `_efGodparents` Shim
+- **sw v326** `feat`: Reziproke Godchild-Relation + ASSOZIATIONEN-Abschnitt in Personendetail
+- **sw v327** `fix`: Patenkinder dynamisch berechnen statt nur aus gespeicherten Einträgen
+- **sw v328** `feat`: Abgeleitete Assoziationen visuell kennzeichnen
+- **sw v329** `feat`: Aufgaben editierbar — bestehende Forschungsaufgaben können nachträglich bearbeitet werden
+
+---
+
 ### Session 2026-04-28 — Architektur/Security/A11y-Review-Fixes (sw v300–v302)
 
 - **sw v300** `fix`: `user-scalable=no` aus Viewport entfernt (WCAG 1.4.4); `ui-debug.js` + Roundtrip-Test-Buttons nur bei `?debug=1` sichtbar (`data-debug-only`-Muster); Hilfe-Modal: Version dynamisch aus SW-Cache-Namen statt hardcodiert „3.0"; `ui-views.js`: `typeof`-Guard für `runRoundtripTest` in `_CLICK_MAP`
