@@ -171,6 +171,8 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | F3 | **Pedigree-Collapse-Erkennung** | Gemeinsame Vorfahren finden; Inzucht-Koeffizient berechnen; wichtig bei eng verwandten Dorfgemeinschaften; baut auf F2-BFS auf | M |
 | F4 | **Soundex / Namens-Fuzzy-Suche** | Soundex-Funktion für Nachnamen; historische Schreibvarianten (Decker/Deker/Döker); Erweiterung der bestehenden `_buildSearchIndex()`; opt-in Toggle in Suche | S |
 
+| F4b | **Mehrfach-Zitierungen derselben Quelle** | Datenmodell von `sources[]+sourcePages{}` auf `citations:[{sid,page,quay}]` umstellen — erlaubt dieselbe Quelle mehrfach mit verschiedenen Seitenzahlen (z.B. Kirchenbuch S.5 + S.12); betrifft Parser, Writer, GRAMPS-Parser/Writer, SrcWidget und alle Formulare (~8 Dateien); Roundtrip nach Migration neu verifizieren | XL |
+
 #### Mittlerer Nutzen, mittlerer Aufwand
 
 | ID | Aufgabe | Details | Aufwand |
