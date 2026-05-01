@@ -516,7 +516,12 @@ function showDetail(id, pushHistory = true) {
       <div class="section-title">Ehepartner &amp; Kinder</div>
       <button class="section-add" data-action="showAddSpouseFlow" data-pid="${id}">+ Ehepartner</button>
     </div>`;
-  for (const famId of p.fams) {
+  const _sortedFams = [...p.fams].sort((a, b) => {
+    const da = AppState.db.families[a]?.marr?.date || '';
+    const db_ = AppState.db.families[b]?.marr?.date || '';
+    return evDateKey(da).localeCompare(evDateKey(db_));
+  });
+  for (const famId of _sortedFams) {
     const fam = AppState.db.families[famId];
     if (!fam) continue;
     const marriageLabel = fam.marr.date ? fam.marr.date : famId;
