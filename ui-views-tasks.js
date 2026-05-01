@@ -102,6 +102,8 @@ function _tasksSectionHtml(personId) {
           data-pid="${personId}" data-tid="${t.id}"
           aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
         <span class="task-text">${esc(t.text)}</span>
+        <button class="task-edit" data-action="editTask"
+          data-pid="${personId}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
         <button class="task-del" data-action="deleteTask"
           data-pid="${personId}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
       </div>`;
@@ -134,17 +136,36 @@ function _refreshTasksSection(personId) {
 // ─── Aufgabe hinzufügen — Modal ───────────────────────────────────────────────
 
 let _addTaskPersonId = null;
+let _editTaskId      = null; // null = Hinzufügen-Modus, sonst Task-ID
 
 function showAddTaskForm(personId) {
   _addTaskPersonId = personId;
+  _editTaskId = null;
   const sel = document.getElementById('addTaskCategory');
-  if (sel) {
-    sel.innerHTML = TASK_CATEGORIES
-      .map(c => `<option value="${c.key}">${esc(c.label)}</option>`)
-      .join('');
-  }
+  if (sel) sel.innerHTML = TASK_CATEGORIES.map(c => `<option value="${c.key}">${esc(c.label)}</option>`).join('');
   const inp = document.getElementById('addTaskText');
   if (inp) inp.value = '';
+  const title = document.querySelector('#modalAddTask .sheet-title');
+  if (title) title.textContent = 'Aufgabe hinzufügen';
+  openModal('modalAddTask');
+  setTimeout(() => inp?.focus(), 80);
+}
+
+function showEditTaskForm(personId, taskId) {
+  const tasks = _getPersonTasks(personId);
+  const t = tasks.find(t => t.id === taskId);
+  if (!t) return;
+  _addTaskPersonId = personId;
+  _editTaskId = taskId;
+  const sel = document.getElementById('addTaskCategory');
+  if (sel) {
+    sel.innerHTML = TASK_CATEGORIES.map(c => `<option value="${c.key}">${esc(c.label)}</option>`).join('');
+    sel.value = t.category;
+  }
+  const inp = document.getElementById('addTaskText');
+  if (inp) inp.value = t.text;
+  const title = document.querySelector('#modalAddTask .sheet-title');
+  if (title) title.textContent = 'Aufgabe bearbeiten';
   openModal('modalAddTask');
   setTimeout(() => inp?.focus(), 80);
 }
@@ -154,10 +175,19 @@ function _saveAddTask() {
   const cat  = document.getElementById('addTaskCategory')?.value || TASK_CATEGORIES[0].key;
   if (!text.trim()) { showToast('Bitte Aufgabe eingeben', 'warn'); return; }
   closeModal('modalAddTask');
-  _addTaskToDb(_addTaskPersonId, text, cat);
+  if (_editTaskId) {
+    // Bearbeiten: bestehende Aufgabe aktualisieren
+    const tasks = _getPersonTasks(_addTaskPersonId);
+    const t = tasks.find(t => t.id === _editTaskId);
+    if (t) { t.text = text.trim(); t.category = cat; markChanged(); }
+    _editTaskId = null;
+    showToast('Aufgabe aktualisiert', 'success');
+  } else {
+    _addTaskToDb(_addTaskPersonId, text, cat);
+    showToast('Aufgabe gespeichert', 'success');
+  }
   _refreshTasksSection(_addTaskPersonId);
   if (_personsMode === 'tasks') renderTasksView();
-  showToast('Aufgabe gespeichert', 'success');
 }
 
 // ─── Globale Aufgabenliste (in Personen-Tab) ──────────────────────────────────
@@ -246,6 +276,8 @@ function renderTasksView() {
           data-pid="${pid}" data-tid="${t.id}"
           aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
         <span class="task-text">${esc(t.text)}</span>
+        <button class="task-edit" data-action="editTask"
+          data-pid="${pid}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
         <button class="task-del" data-action="deleteTask"
           data-pid="${pid}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
       </div>`;
@@ -262,6 +294,11 @@ function _handleToggleTask(el) {
   _toggleTaskInDb(pid, tid);
   _refreshTasksSection(pid);
   if (_personsMode === 'tasks') renderTasksView();
+}
+
+function _handleEditTask(el) {
+  const { pid, tid } = el.dataset;
+  showEditTaskForm(pid, tid);
 }
 
 function _handleDeleteTask(el) {

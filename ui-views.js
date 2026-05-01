@@ -748,6 +748,7 @@ const _CLICK_MAP = {
   showAddTaskForm:         el  => showAddTaskForm(el.dataset.pid),
   saveAddTask:             ()  => _saveAddTask(),
   toggleTask:              el  => _handleToggleTask(el),
+  editTask:                el  => _handleEditTask(el),
   deleteTask:              el  => _handleDeleteTask(el),
 };
 

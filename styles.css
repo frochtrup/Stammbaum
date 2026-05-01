@@ -1302,6 +1302,15 @@ body.desktop-mode.places-karte #mapContainer {
   line-height: 1.4; word-break: break-word;
 }
 
+.task-edit {
+  flex-shrink: 0;
+  background: none; border: none; cursor: pointer;
+  font-size: 0.95rem; color: var(--text-muted);
+  padding: 4px; min-width: 32px; min-height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+}
+.task-edit:active { color: var(--gold-dim); background: var(--surface2); }
 .task-del {
   flex-shrink: 0;
   background: none; border: none; cursor: pointer;
