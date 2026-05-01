@@ -188,6 +188,7 @@ function writeINDIRecord(lines, p) {
   eventBlock(lines, 'DEAT', p.death, 1);
   eventBlock(lines, 'BURI', p.buri,  1);
 
+  const _writtenHofNotes = new Set();
   for (const ev of p.events) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
@@ -203,8 +204,12 @@ function writeINDIRecord(lines, p) {
         geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
       }
     }
-    // Hof-Notiz schreiben — unabhängig von PLAC/Koordinaten, nur wenn kein eigenes Event-NOTE
-    if (_hofMeta?.note && !ev.note) pushCont(lines, 2, 'NOTE', _hofMeta.note);
+    // Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse, nur wenn kein eigenes Event-NOTE
+    const _addrKey = ev.addr?.trim();
+    if (_hofMeta?.note && !ev.note && !_writtenHofNotes.has(_addrKey)) {
+      pushCont(lines, 2, 'NOTE', _hofMeta.note);
+      _writtenHofNotes.add(_addrKey);
+    }
     if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
     if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
     for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
