@@ -153,7 +153,56 @@ function showEventForm(personId, evIdx) {
   document.getElementById('deleteEventBtn').style.display = isExisting ? '' : 'none';
   const dateErrEl = document.getElementById('ef-date-err');
   if (dateErrEl) { dateErrEl.textContent = ''; dateErrEl.style.display = 'none'; }
+  const copyBtn = document.getElementById('saveAndCopyEventBtn');
+  if (copyBtn) copyBtn.style.display = isSpecial ? 'none' : '';
   openModal('modalEvent');
+}
+
+function _buildClipboardFromForm() {
+  return {
+    type:        document.getElementById('ef-type').value,
+    value:       document.getElementById('ef-val').value.trim(),
+    eventType:   document.getElementById('ef-etype').value.trim(),
+    date:        buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
+    place:       getPlaceFromForm('ef-place'),
+    addr:        document.getElementById('ef-addr').value.trim(),
+    note:        document.getElementById('ef-note').value.trim(),
+    sources:     [...(srcWidgetState['ef']?.ids   || [])],
+    sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
+    sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) },
+    media:       _efMedia.filter(m => m.file || m.title).map(m => ({...m})),
+  };
+}
+
+function saveAndCopyEvent() {
+  const qual = document.getElementById('ef-date-qual')?.value || '';
+  const _dateErr = validateDatePartFields('ef-date')
+    || (['BET','FROM'].includes(qual) ? validateDatePartFields('ef-date2') : null);
+  if (_dateErr) {
+    const errEl = document.getElementById('ef-date-err');
+    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = ''; }
+    return;
+  }
+  UIState._eventClipboard = _buildClipboardFromForm();
+  saveEvent();
+}
+
+function applyClipboardEventToPerson(pid) {
+  const cb = UIState._eventClipboard;
+  if (!cb) return;
+  const p = AppState.db.individuals[pid];
+  if (!p) return;
+  const ev = { ...cb,
+    sources:     [...cb.sources],
+    sourcePages: { ...cb.sourcePages },
+    sourceQUAY:  { ...cb.sourceQUAY },
+    media:       cb.media.map(m => ({...m})),
+  };
+  p.events.push(ev);
+  if (ev.sources.length) _rebuildPersonSourceRefs(p);
+  markChanged();
+  showToast('Ereignis übernommen');
+  if (AppState.currentPersonId === pid) showDetail(pid);
 }
 
 function saveEvent() {

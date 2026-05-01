@@ -367,6 +367,7 @@ function showDetail(id, pushHistory = true) {
       <div class="section-title">Lebensdaten</div>
       <div style="display:flex;gap:6px;align-items:center">
         ${_hasGeo ? `<button class="section-add" data-action="showPersonOnMap" data-pid="${id}" style="color:var(--gold-dim)">📍 Karte</button>` : ''}
+        ${UIState._eventClipboard ? `<button class="section-add" data-action="applyClipboardEvent" data-pid="${id}" style="color:var(--gold-dim)" title="${esc((EVENT_LABELS[UIState._eventClipboard.type]||UIState._eventClipboard.type) + (UIState._eventClipboard.addr||UIState._eventClipboard.place ? ': '+(UIState._eventClipboard.addr||UIState._eventClipboard.place) : ''))}">+ Übernehmen</button>` : ''}
         <button class="section-add" data-action="showEventForm" data-pid="${id}">+ Ereignis</button>
       </div>
     </div>`;
