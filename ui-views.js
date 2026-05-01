@@ -659,6 +659,7 @@ const _CLICK_MAP = {
   setFcGens:               el => setFcGens(+el.dataset.gen),
   toggleFanChart:          ()  => toggleFanChart(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
+  showRelPath:             el  => showRelPath(el.dataset.pid),
   showTree:                el  => showTree(el.dataset.id),
   toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),

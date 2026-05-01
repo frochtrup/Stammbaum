@@ -1,4 +1,73 @@
 // ─────────────────────────────────────
+//  BEZIEHUNGSRECHNER
+// ─────────────────────────────────────
+
+function _relLabel(distA, distB, sexA) {
+  const f = sexA === 'F';
+  if (distA === 0) {
+    if (distB === 1) return f ? 'Mutter' : 'Vater';
+    if (distB === 2) return f ? 'Großmutter' : 'Großvater';
+    if (distB === 3) return f ? 'Urgroßmutter' : 'Urgroßvater';
+    return 'Ur'.repeat(distB - 2) + (f ? 'großmutter' : 'großvater');
+  }
+  if (distB === 0) {
+    if (distA === 1) return f ? 'Tochter' : 'Sohn';
+    if (distA === 2) return f ? 'Enkelin' : 'Enkel';
+    if (distA === 3) return f ? 'Urenkelin' : 'Urenkel';
+    return 'Ur'.repeat(distA - 2) + (f ? 'enkelin' : 'enkel');
+  }
+  const m = Math.min(distA, distB), M = Math.max(distA, distB);
+  const isOlder = distA < distB;
+  if (m === 1) {
+    if (M === 1) return 'Geschwister';
+    const gen = M - 1;
+    if (isOlder) {
+      if (gen === 1) return f ? 'Tante' : 'Onkel';
+      if (gen === 2) return f ? 'Großtante' : 'Großonkel';
+      return 'Ur'.repeat(gen - 2) + (f ? 'großtante' : 'großonkel');
+    } else {
+      if (gen === 1) return f ? 'Nichte' : 'Neffe';
+      if (gen === 2) return f ? 'Großnichte' : 'Großneffe';
+      return 'Ur'.repeat(gen - 2) + (f ? 'großnichte' : 'großneffe');
+    }
+  }
+  const degree = m - 1, removed = M - m;
+  const base = f ? 'Cousine' : 'Cousin';
+  return removed ? `${base} ${degree}. Grads, ${removed}× entfernt` : `${base} ${degree}. Grads`;
+}
+
+function calcRelationship(idA, idB) {
+  if (!idA || !idB || idA === idB) return null;
+  const DEPTH = 12;
+  function bfsUp(startId) {
+    const vis = new Map();
+    const q = [[startId, 0, [startId]]];
+    while (q.length) {
+      const [id, dist, path] = q.shift();
+      if (vis.has(id)) continue;
+      vis.set(id, { dist, path });
+      if (dist >= DEPTH) continue;
+      const { father, mother } = getParentIds(id);
+      if (father && !vis.has(father)) q.push([father, dist + 1, [...path, father]]);
+      if (mother && !vis.has(mother)) q.push([mother, dist + 1, [...path, mother]]);
+    }
+    return vis;
+  }
+  const ancA = bfsUp(idA), ancB = bfsUp(idB);
+  let best = null;
+  for (const [id, infoA] of ancA) {
+    const infoB = ancB.get(id);
+    if (!infoB) continue;
+    const total = infoA.dist + infoB.dist;
+    if (!best || total < best.total) best = { id, distA: infoA.dist, distB: infoB.dist, total, pathA: infoA.path, pathB: infoB.path };
+  }
+  if (!best) return { label: 'Nicht verwandt', path: [] };
+  const path = [...best.pathA, ...best.pathB.slice(0, -1).reverse()];
+  const sexA = AppState.db.individuals[idA]?.sex || 'U';
+  return { label: _relLabel(best.distA, best.distB, sexA), distA: best.distA, distB: best.distB, path, commonId: best.id };
+}
+
+// ─────────────────────────────────────
 //  PERSON LIST
 // ─────────────────────────────────────
 let _personSort = 'name'; // 'name' | 'date'
@@ -502,6 +571,22 @@ function showDetail(id, pushHistory = true) {
     html += `</div></div>`;
   }
 
+  // Verwandtschaft zum Probanden
+  const _probandId = getProbandId();
+  if (_probandId && id !== _probandId) {
+    const _rel = calcRelationship(id, _probandId);
+    if (_rel && _rel.label !== 'Nicht verwandt') {
+      const _probandName = AppState.db.individuals[_probandId]?.name || 'Proband';
+      html += `<div class="section fade-up">
+        <div class="section-head"><div class="section-title">Verwandtschaft</div></div>
+        <div class="fact-row" style="cursor:pointer" data-action="showRelPath" data-pid="${id}">
+          <span class="fact-lbl">${esc(_probandName)}</span>
+          <span class="fact-val" style="font-style:italic">${esc(_rel.label)}<span class="p-arrow" style="margin-left:6px">›</span></span>
+        </div>
+      </div>`;
+    }
+  }
+
   // Notizen
   const _pNoteText = p.noteText || '';
   const _pHasRefs  = (p.noteRefs || []).some(r => AppState.db.notes?.[r]);
@@ -659,4 +744,40 @@ function showDetail(id, pushHistory = true) {
   for (let _mi = 0; _mi < indiMedia.length; _mi++) {
     _asyncLoadMediaThumb('media-thumb-indi-' + id + '-' + _mi, indiMedia[_mi].file);
   }
+}
+
+function showRelPath(id) {
+  const probandId = getProbandId();
+  if (!probandId || !id) return;
+  const rel = calcRelationship(id, probandId);
+  if (!rel) return;
+
+  const pA = AppState.db.individuals[id];
+  const pB = AppState.db.individuals[probandId];
+  document.getElementById('relPathTitle').textContent =
+    `${pA?.name || id} → ${pB?.name || probandId}`;
+
+  const body = document.getElementById('relPathBody');
+  if (!rel.path.length) {
+    body.innerHTML = `<div style="color:var(--text-muted);font-style:italic;padding:8px 0">Keine verwandtschaftliche Verbindung gefunden.</div>`;
+  } else {
+    const kNum = id => _kekuleMap[id] ? `<span class="p-kekule">#${_kekuleMap[id]}</span>` : '';
+    const rows = rel.path.map((pid, i) => {
+      const person = AppState.db.individuals[pid];
+      const name = person?.name || pid;
+      const isCommon = pid === rel.commonId;
+      const arrow = i < rel.path.length - 1 ? `<div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:2px 0">↓</div>` : '';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)${isCommon ? ';background:var(--surface2);border-radius:6px;padding:6px 8px' : ''}"
+        data-action="showDetail" data-id="${pid}" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)${isCommon ? ';background:var(--surface2);border-radius:6px;padding:6px 8px' : ''}">
+        ${isCommon ? `<span style="font-size:0.75rem;color:var(--gold-dim)">⬡</span>` : `<span style="font-size:0.75rem;color:var(--text-muted)">${i + 1}.</span>`}
+        <span style="flex:1;font-size:0.9rem${isCommon ? ';font-weight:600;color:var(--gold)' : ''}">${esc(name)}</span>
+        ${kNum(pid)}
+      </div>${arrow}`;
+    }).join('');
+    body.innerHTML = `<div style="margin-bottom:10px;font-size:1rem;font-weight:600;color:var(--gold)">${esc(rel.label)}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px">⬡ = gemeinsamer Vorfahre</div>
+      ${rows}`;
+  }
+
+  openModal('modalRelPath');
 }
