@@ -462,7 +462,15 @@ function showDetail(id, pushHistory = true) {
   html += `</div>`;
 
   // Assoziationen (alle außer Godparent — der steht bereits unter der Taufe-Zeile)
-  const _displayAssos = (p.associations || []).filter(a => a.rela !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
+  // Patenkinder werden dynamisch berechnet: alle Personen, die diesen als 'Godparent' führen
+  const _computedGodchildren = Object.entries(AppState.db.individuals)
+    .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.rela === 'Godparent' && a.xref === id))
+    .map(([cid]) => ({ xref: cid, rela: 'Godchild' }));
+  const _storedNonGp = (p.associations || []).filter(a => a.rela !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
+  // Gespeicherte Godchild-Einträge deduplizieren (könnten schon via UI-Sync da sein)
+  const _gcXrefs = new Set(_computedGodchildren.map(a => a.xref));
+  const _storedGc = _storedNonGp.filter(a => a.rela === 'Godchild' && !_gcXrefs.has(a.xref) && AppState.db.individuals[a.xref]);
+  const _displayAssos = [..._storedNonGp.filter(a => a.rela !== 'Godchild'), ..._storedGc, ..._computedGodchildren];
   if (_displayAssos.length) {
     const _assoByRela = {};
     for (const a of _displayAssos) {
