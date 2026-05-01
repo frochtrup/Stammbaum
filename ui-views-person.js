@@ -264,6 +264,8 @@ function _buildSearchIndex() {
   for (const p of Object.values(AppState.db.individuals)) {
     p._searchStr = [
       p.name, p.surname, p.given, p.prefix, p.titl,
+      p.nick, p.rufname,
+      ...(p.extraNames || []).map(en => [en.nameRaw, en.given, en.surname, en.prefix, en.suffix].filter(Boolean).join(' ')),
       p.birth.date, p.birth.place,
       p.death.date, p.death.place,
       p.chr.place,  p.buri.place,
