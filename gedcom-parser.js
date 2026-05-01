@@ -30,6 +30,7 @@ function parseGEDCOM(text, parseErrors) {
   let _ptTarget = null; // redirect capture target (null = cur._passthrough)
   let _smEntry = null;  // structured sourceMedia entry being parsed (OBJE under SOUR citation)
   let _curTask = null;  // task object being parsed (1 _TASK context)
+  let _curAsso = null;  // association being parsed (1 ASSO context)
 
   for (let raw of lines) {
     lineNo++;
@@ -73,7 +74,7 @@ function parseGEDCOM(text, parseErrors) {
           buri:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'',
-          extraNames:[], _tasks:[],
+          extraNames:[], _tasks:[], associations:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
           nameSources:[], nameSourcePages:{}, nameSourceQUAY:{}, nameSourceNote:{}, nameSourceExtra:{}, nameSourceMedia:{},
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
@@ -195,6 +196,10 @@ function parseGEDCOM(text, parseErrors) {
           _curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
           cur._tasks.push(_curTask);
         }
+        else if (tag === 'ASSO') {
+          _curAsso = { xref: val, rela: '', note: '', sources: [], sourcePages: {}, sourceQUAY: {} };
+          cur.associations.push(_curAsso);
+        }
         else {
           // Unknown lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -210,6 +215,15 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag === '_DATE') _curTask.created = val;
           else if (tag === '_ID')   _curTask.id = val;
           // silently ignore unknown _TASK subtags
+        }
+        // Association subtags
+        else if (lv1tag === 'ASSO' && _curAsso) {
+          if      (tag === 'RELA') _curAsso.rela = val;
+          else if (tag === 'NOTE') _curAsso.note = (val || '');
+          else if (tag === 'SOUR' && val.startsWith('@')) {
+            const _ns = val.replace(/^@@/,'@').replace(/@@$/,'@');
+            _curAsso.sources.push(_ns); cur.sourceRefs.add(_ns);
+          }
         }
         // Name parts
         else if (lv1tag === 'NAME') {
@@ -347,6 +361,7 @@ function parseGEDCOM(text, parseErrors) {
             else cur.nameSourcePages[lastSourVal] = val;
           }
           else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourPages[lastSourVal] = val;
+          else if (lv1tag === 'ASSO' && _curAsso) _curAsso.sourcePages[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourcePages) cur.events[evIdx].sourcePages = {};
             cur.events[evIdx].sourcePages[lastSourVal] = val;
@@ -364,6 +379,7 @@ function parseGEDCOM(text, parseErrors) {
             else cur.nameSourceQUAY[lastSourVal] = val;
           }
           else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourQUAY[lastSourVal] = val;
+          else if (lv1tag === 'ASSO' && _curAsso) _curAsso.sourceQUAY[lastSourVal] = val;
           else if (evIdx >= 0 && cur.events[evIdx]) {
             if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
             cur.events[evIdx].sourceQUAY[lastSourVal] = val;
@@ -387,6 +403,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (lv1tag === 'CHR')  { _seDict = cur.chr.sourceExtra;   _snDict = cur.chr.sourceNote;   _smDict2 = cur.chr.sourceMedia;   _pagesDict = cur.chr.sourcePages   || (cur.chr.sourcePages={});   _quayDict = cur.chr.sourceQUAY   || (cur.chr.sourceQUAY={}); }
           else if (lv1tag === 'BURI') { _seDict = cur.buri.sourceExtra;  _snDict = cur.buri.sourceNote;  _smDict2 = cur.buri.sourceMedia;  _pagesDict = cur.buri.sourcePages  || (cur.buri.sourcePages={});  _quayDict = cur.buri.sourceQUAY  || (cur.buri.sourceQUAY={}); }
           else if (lv1tag === 'FAMC' && cur.famc.length) { const _fref = cur.famc[cur.famc.length-1]; _seDict = _fref.sourExtra || (_fref.sourExtra={}); _snDict = _fref.sourNote || (_fref.sourNote={}); _smDict2 = _fref.sourMedia || (_fref.sourMedia={}); _pagesDict = _fref.sourPages || (_fref.sourPages={}); _quayDict = _fref.sourQUAY || (_fref.sourQUAY={}); }
+          else if (lv1tag === 'ASSO' && _curAsso) { _pagesDict = _curAsso.sourcePages; _quayDict = _curAsso.sourceQUAY; _seDict = _curAsso.sourceExtra || (_curAsso.sourceExtra = {}); _snDict = _curAsso.sourceNote || (_curAsso.sourceNote = {}); _smDict2 = null; }
           else if (evIdx >= 0 && cur.events[evIdx]) { const ev = cur.events[evIdx]; _seDict = ev.sourceExtra || (ev.sourceExtra={}); _snDict = ev.sourceNote || (ev.sourceNote={}); _smDict2 = ev.sourceMedia || (ev.sourceMedia={}); _pagesDict = ev.sourcePages || (ev.sourcePages={}); _quayDict = ev.sourceQUAY || (ev.sourceQUAY={}); }
           if      (tag === 'PAGE' && _pagesDict !== null) { _pagesDict[lastSourVal] = val; }
           else if (tag === 'QUAY' && _quayDict  !== null) { _quayDict[lastSourVal]  = val; }

@@ -101,9 +101,66 @@ function onEventTypeChange() {
   document.getElementById('ef-addr-group').style.display = showAddr ? '' : 'none';
   const addrLabel = document.querySelector('#ef-addr-group .form-label');
   if (addrLabel) addrLabel.textContent = (t === 'PROP') ? 'Adresse (optional)' : 'Adresse';
+  document.getElementById('ef-godparents-group').style.display = (t === 'CHR') ? '' : 'none';
   // Reset dropdown on type change; content rebuilt on focus/input
   const dd = document.getElementById('ef-etype-dd');
   if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
+}
+
+// ── Taufpaten-Picker ──────────────────────────────────────────────────────────
+
+function _renderEfGodparents() {
+  const list = document.getElementById('ef-godparents-list');
+  if (!list) return;
+  list.innerHTML = '';
+  (_efGodparents || []).forEach((xref, idx) => {
+    const p = AppState.db.individuals[xref];
+    const chip = document.createElement('span');
+    chip.className = 'asso-chip';
+    chip.innerHTML = esc(p?.name || xref);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.style.cssText = 'margin-left:5px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1rem;line-height:1;padding:0 1px';
+    del.addEventListener('click', () => { _efGodparents.splice(idx, 1); _renderEfGodparents(); });
+    chip.appendChild(del);
+    list.appendChild(chip);
+  });
+}
+
+function _initGodparentSearch() {
+  const input = document.getElementById('ef-godparent-search');
+  const dd    = document.getElementById('ef-godparent-dd');
+  if (!input || !dd) return;
+  const show = () => {
+    const q   = input.value.trim().toLowerCase();
+    if (!q) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    const pid = document.getElementById('ef-pid').value;
+    const persons = Object.values(AppState.db.individuals)
+      .filter(p => p.id !== pid && !(_efGodparents||[]).includes(p.id))
+      .filter(p => (p.name || p.id).toLowerCase().includes(q))
+      .sort((a, b) => (a.name||'').localeCompare(b.name||'', 'de'))
+      .slice(0, 20);
+    if (!persons.length) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    dd.innerHTML = '';
+    for (const p of persons) {
+      const meta = [p.birth?.date ? '* ' + p.birth.date : '', p.death?.date ? '† ' + p.death.date : ''].filter(Boolean).join('  ');
+      const item = document.createElement('div');
+      item.className = 'place-dropdown-item';
+      item.innerHTML = `<strong>${esc(p.name || p.id)}</strong>${meta ? `<span style="color:var(--text-muted);font-size:0.8em;margin-left:6px">${esc(meta)}</span>` : ''}`;
+      item.addEventListener('mousedown', () => {
+        _efGodparents.push(p.id);
+        _renderEfGodparents();
+        input.value = '';
+        dd.innerHTML = ''; dd.style.display = 'none';
+      });
+      dd.appendChild(item);
+    }
+    dd.style.display = 'block';
+  };
+  input.addEventListener('input', show);
+  input.addEventListener('focus', show);
+  input.addEventListener('blur',  () => setTimeout(() => { dd.innerHTML = ''; dd.style.display = 'none'; }, 160));
 }
 
 function showEventForm(personId, evIdx) {
@@ -130,6 +187,13 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
     document.getElementById('ef-note').value  = obj.note || '';
     initSrcWidget('ef', obj.sources || [], obj.sourcePages || {}, obj.sourceQUAY || {});
+    // Taufpaten laden
+    _efGodparents = evIdx === 'CHR'
+      ? (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref).map(a => a.xref)
+      : [];
+    _renderEfGodparents();
+    const gSearch = document.getElementById('ef-godparent-search');
+    if (gSearch) gSearch.value = '';
     document.querySelector('#modalEvent .sheet-title').textContent = EVENT_LABELS[evIdx] + ' bearbeiten';
     document.getElementById('saveEventBtn').textContent = 'Speichern';
   } else {
@@ -251,6 +315,17 @@ function saveEvent() {
       sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) }
     };
     if (type === 'DEAT') p[key].cause = document.getElementById('ef-cause').value.trim();
+    // Taufpaten: non-Godparent-Assoziationen behalten, Godparent-Einträge neu setzen
+    if (type === 'CHR') {
+      if (!p.associations) p.associations = [];
+      p.associations = [
+        ...p.associations.filter(a => a.rela !== 'Godparent'),
+        ...(_efGodparents || []).map(xref => ({
+          xref, _grampsHlink: null, rela: 'Godparent',
+          note: '', sources: [], sourcePages: {}, sourceQUAY: {}
+        }))
+      ];
+    }
   } else {
     const evIdxRaw = document.getElementById('ef-evidx').value;
     const evIdx    = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
@@ -450,6 +525,9 @@ function deleteFamEvent() {
 // Autocomplete für Event-TYPE-Felder — hier initialisieren, da _initEtypeAutocomplete hier definiert ist
 _initEtypeAutocomplete('ef-etype',  'ef-etype-dd',  () => document.getElementById('ef-type')?.value  || '');
 _initEtypeAutocomplete('fev-etype', 'fev-etype-dd', () => document.getElementById('fev-type')?.value || '');
+
+// Taufpaten-Suche — einmalig initialisieren
+_initGodparentSearch();
 
 // ─────────────────────────────────────
 //  ADRESS-AUTOCOMPLETE (RESI)

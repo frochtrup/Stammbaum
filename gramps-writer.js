@@ -470,6 +470,24 @@ async function writeGRAMPS(db) {
       L.push(`      <attribute type="_TASK" value="${_esc(JSON.stringify(t))}"/>`);
     }
 
+    // Person associations (GEDCOM ASSO ↔ GRAMPS <personref>)
+    for (const a of p.associations || []) {
+      const aH = a._grampsHlink || (a.xref ? _entityHandle(a.xref, 'pe') : null);
+      if (!aH) continue;
+      const aCitHandles = (a.sources || [])
+        .map(sId => _citHandle(sId, a.sourcePages?.[sId], a.sourceQUAY?.[sId] ?? 0))
+        .filter(Boolean);
+      const aNoteHandle = a.note ? _noteHandle(a.note, 'Association Note') : null;
+      if (aCitHandles.length || aNoteHandle) {
+        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.rela || '')}">`);
+        for (const ch of aCitHandles) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
+        if (aNoteHandle) L.push(`        <noteref hlink="${_esc(aNoteHandle)}"/>`);
+        L.push(`      </personref>`);
+      } else {
+        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.rela || '')}"/>`);
+      }
+    }
+
     // Family links
     for (const fc of p.famc||[]) {
       const famId  = typeof fc === 'string' ? fc : fc.famId;

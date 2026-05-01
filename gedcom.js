@@ -36,8 +36,9 @@ const UIState = {
   _eventClipboard: null,         // kopiertes Ereignis für Übernehmen-Funktion
   _formState: {                  // transienter Formular-State (ADR-003)
     srcWidget:    {},            // srcWidgetState[prefix] = { ids, pages, quay }
-    pfExtraNames: [],            // Zusatz-Namen im Personen-Formular
-    efMedia:      [],            // Medien im Event-Formular
+    pfExtraNames:   [],          // Zusatz-Namen im Personen-Formular
+    efMedia:        [],          // Medien im Event-Formular
+    efGodparents:   [],          // Taufpaten im CHR-Event-Formular (Xrefs)
   },
 };
 
@@ -53,8 +54,9 @@ Object.defineProperty(window, 'db', {
 (function _installFormStateShims() {
   for (const [prop, subKey] of [
     ['srcWidgetState', 'srcWidget'],
-    ['_pfExtraNames',  'pfExtraNames'],
-    ['_efMedia',       'efMedia'],
+    ['_pfExtraNames',   'pfExtraNames'],
+    ['_efMedia',        'efMedia'],
+    ['_efGodparents',   'efGodparents'],
   ]) {
     Object.defineProperty(window, prop, {
       get()  { return UIState._formState[subKey]; },
@@ -100,6 +102,19 @@ const EVENT_LABELS = {
 
 // GEDCOM-Typ → Person-Property-Name für die 4 Sonder-Ereignisse (BIRT/CHR/DEAT/BURI)
 const SPECIAL_EVENT_KEYS = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
+
+// Label-Map für ASSO RELA-Werte (GEDCOM) / rel-Attribut (GRAMPS <personref>)
+const RELA_LABELS = {
+  'Godparent':  'Taufpate/-mutter',
+  'Godchild':   'Patenkind',
+  'Witness':    'Zeuge/Zeugin',
+  'Friend':     'Freund/in',
+  'Neighbor':   'Nachbar/in',
+  'Associate':  'Bekannte(r)',
+  'Employer':   'Arbeitgeber',
+  'Employee':   'Arbeitnehmer',
+  'Landlord':   'Vermieter',
+};
 
 // Label-Map für GEDCOM NAME TYPE-Werte
 const NAME_TYPE_LABELS = {

@@ -123,6 +123,9 @@ function eventBlock(lines, tag, obj, lv) {
   if (obj._extra && obj._extra.length) for (const l of obj._extra) lines.push(l);
 }
 
+// Phase F: eventHandle → primary person ID (populated by writeGEDCOM for witness→ASSO bridge)
+let _witnessEvMap = {};
+
 // ─── INDI-Record ──────────────────────────────────────────────────────────────
 function writeINDIRecord(lines, p) {
   lines.push(`0 ${p.id} INDI`);
@@ -310,6 +313,26 @@ function writeINDIRecord(lines, p) {
     lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
     if (t.created)  lines.push(`2 _DATE ${t.created}`);
     if (t.id)       lines.push(`2 _ID ${t.id}`);
+  }
+
+  // ASSO: native associations (GEDCOM↔GRAMPS <personref> roundtrip)
+  for (const a of (p.associations || [])) {
+    if (!a.xref) continue;
+    lines.push(`1 ASSO ${a.xref}`);
+    if (a.rela) lines.push(`2 RELA ${a.rela}`);
+    if (a.note) pushCont(lines, 2, 'NOTE', a.note);
+    writeSourCitations(lines, 2, { sources: a.sources || [], sourcePages: a.sourcePages || {}, sourceQUAY: a.sourceQUAY || {}, sourceNote: a.sourceNote || {}, sourceExtra: a.sourceExtra || {}, sourceMedia: {} });
+  }
+
+  // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
+  for (const wr of (p._grampsWitnessRefs || [])) {
+    const primaryId = _witnessEvMap[wr._origHlink];
+    if (!primaryId) continue;
+    lines.push(`1 ASSO ${primaryId}`);
+    lines.push(`2 RELA ${wr.role || 'Witness'}`);
+    const evInfo = [wr.type, wr.date, wr.place].filter(Boolean).join(', ');
+    if (evInfo) lines.push(`2 NOTE GRAMPS event: ${evInfo}`);
+    writeSourCitations(lines, 2, { sources: wr.sources || [], sourcePages: wr.sourcePages || {}, sourceQUAY: wr.sourceQUAY || {}, sourceNote: {}, sourceExtra: {}, sourceMedia: {} });
   }
 
   writeCHAN(lines, p, 1);
@@ -521,6 +544,14 @@ function writeGEDCOM(updateHeadDate = false) {
     lines.push(`1 FILE ${fname}`);
     lines.push('1 PLAC');
     lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
+  }
+
+  // Phase F: build eventHandle → primaryPersonId for witness→ASSO bridge
+  _witnessEvMap = {};
+  for (const [pId, p] of Object.entries(db.individuals)) {
+    for (const ev of [p.birth, p.chr, p.death, p.buri, ...(p.events || [])]) {
+      if (ev?._grampsEvHlink) _witnessEvMap[ev._grampsEvHlink] = pId;
+    }
   }
 
   for (const p of Object.values(db.individuals))  writeINDIRecord(lines, p);

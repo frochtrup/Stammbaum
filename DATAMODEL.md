@@ -86,6 +86,23 @@ let changed = false;  // Ungespeicherte Änderungen?
   //                  sources[], sourcePages{}, sourceQUAY{},
   //                  sourceExtra{}, sourceMedia{}, _extra[] }
 
+  // Assoziationen (GEDCOM ASSO ↔ GRAMPS <personref>)
+  associations: [{
+    xref:         '@I002@',     // GEDCOM-Xref der verknüpften Person (null bei GRAMPS-only-Herkunft)
+    _grampsHlink: 'h1a2b3c',   // GRAMPS-Handle (null bei GEDCOM-Herkunft; für Roundtrip-Fidelity)
+    rela:         'Witness',    // RELA-Wert / GRAMPS rel-Attribut
+    note:         '',           // optionale Notiz (2 NOTE / GRAMPS noteref)
+    sources:      [],           // SOUR-Xrefs (2 SOUR)
+    sourcePages:  {},           // PAGE je Quelle
+    sourceQUAY:   {},           // QUAY je Quelle
+    sourceNote:   {},           // NOTE je Quelle (selten)
+    sourceExtra:  {},           // verbatim Extras je Quelle (selten)
+  }],
+  // _grampsWitnessRefs[] (nur GRAMPS-Import, kein GEDCOM-Äquivalent):
+  // Zeugen-Eventreferenzen (eventref role != Primary) — Phase-F-Brücke
+  // schreibt diese beim GEDCOM-Export als ASSO mit NOTE "GRAMPS event: ..."
+  // wenn die primäre Person des Events bekannt ist (_grampsEvHlink-Rücklookup).
+
   // Notizen
   noteText:  'Freitext-Notiz',
   noteRefs:  ['@N1@'],                  // Referenzen auf NOTE-Records

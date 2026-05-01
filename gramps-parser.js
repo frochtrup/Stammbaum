@@ -516,6 +516,7 @@ async function parseGRAMPS(file) {
       famc: [], fams: [],
       noteRefs: [], noteTexts: [], noteText: '',
       extraNames,
+      associations: [],
       media: [], titl: '', reli: '', resn: '', email: '', www: '',
       _stat: null, grampId: gid, _grampsHandle: h,
       lastChanged: '', lastChangedTime: '',
@@ -614,7 +615,8 @@ async function parseGRAMPS(file) {
           tgt.lati         = lat;
           tgt.long         = lng;
           tgt.note         = evNote;
-          tgt._grampsAttrs = ev.attrs || [];
+          tgt._grampsAttrs  = ev.attrs || [];
+          tgt._grampsEvHlink = evH;
           if (sp === 'death' && ev.cause) tgt.cause = ev.cause;
           for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
         }
@@ -635,7 +637,8 @@ async function parseGRAMPS(file) {
           noteRefs: [],
           sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
           sourceExtra: {}, sourceMedia: {}, _extra: [],
-          _grampsAttrs: ev.attrs || []
+          _grampsAttrs: ev.attrs || [],
+          _grampsEvHlink: evH
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         p.events.push(evObj);
@@ -700,6 +703,24 @@ async function parseGRAMPS(file) {
       p.noteRefs.push(_noteId(nh));
     }
     p.noteText = p.noteTexts.join('\n\n');
+
+    // Person associations (<personref> = GRAMPS native person-to-person link, maps to GEDCOM ASSO)
+    for (const pref of _byTag(person, 'personref')) {
+      const aHlink = pref.getAttribute('hlink') || '';
+      const aRel   = pref.getAttribute('rel')   || '';
+      const aXref  = personHandleToId[aHlink] || null;
+      const aSrc = [], aSrcP = {}, aSrcQ = {};
+      for (const cr of _byTag(pref, 'citationref')) {
+        const cit = citMap[cr.getAttribute('hlink')];
+        if (cit?.sourceHandle) {
+          const sId = srcHandleToId[cit.sourceHandle];
+          if (sId) { aSrc.push(sId); if (cit.page) aSrcP[sId] = cit.page; aSrcQ[sId] = _confToQuay(cit.confidence); }
+        }
+      }
+      const aNote = _byTag(pref, 'noteref')
+        .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+      p.associations.push({ xref: aXref, _grampsHlink: aHlink, rela: aRel, note: aNote, sources: aSrc, sourcePages: aSrcP, sourceQUAY: aSrcQ });
+    }
 
     // Family links (resolved in families pass)
     p._childofH  = _byTag(person, 'childof').map(e => e.getAttribute('hlink'));

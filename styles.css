@@ -602,6 +602,15 @@ body.desktop-mode.places-karte #mapContainer {
 .fact-lbl { color: var(--text-muted); min-width: 88px; flex-shrink: 0; font-style: italic; }
 .fact-val { color: var(--text); }
 
+.event-godparents { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 5px; }
+.asso-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--card-bg, #2a2010); border: 1px solid var(--border);
+  border-radius: 10px; padding: 2px 9px; font-size: 0.78rem;
+  color: var(--gold-dim, #c8a84b); cursor: pointer; white-space: nowrap;
+}
+.asso-chip:hover { border-color: var(--gold-dim, #c8a84b); }
+
 .rel-row {
   display: flex; align-items: center; gap: 10px;
   padding: 9px 0; border-bottom: 1px solid var(--border);
