@@ -365,7 +365,7 @@ function showFamilyDetail(id, pushHistory = true) {
     </div>`;
   if (husb) html += relRow(husb, 'Ehemann / Vater', id);
   if (wife) html += relRow(wife, 'Ehefrau / Mutter', id);
-  for (const cid of f.children) {
+  for (const cid of _sortedChildren(f.children)) {
     const child = AppState.db.individuals[cid];
     if (!child) continue;
     const _fe = (child.famc || []).find(x => (typeof x === 'string' ? x : x.famId) === id);

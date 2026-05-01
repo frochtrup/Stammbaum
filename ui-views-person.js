@@ -538,7 +538,7 @@ function showDetail(id, pushHistory = true) {
     const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
     const partner = partnerId ? AppState.db.individuals[partnerId] : null;
     if (partner) html += relRow(partner, 'Ehepartner' + (fam.marr.date ? ' · ' + fam.marr.date : ''), famId);
-    for (const cid of fam.children) {
+    for (const cid of _sortedChildren(fam.children)) {
       const child = AppState.db.individuals[cid];
       if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''), famId);
     }

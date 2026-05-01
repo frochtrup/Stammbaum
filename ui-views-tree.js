@@ -408,7 +408,7 @@ function showTree(personId, addToHistory = true) {
     const spId = personId === fam.husb ? (fam.wife || null)
                : personId === fam.wife ? (fam.husb || null)
                : null;
-    return { famId, spId, kids: fam.children || [] };
+    return { famId, spId, kids: _sortedChildren(fam.children) };
   }).filter(Boolean);
 
   // ── Kinder (alle Familien, ohne Duplikate) ──

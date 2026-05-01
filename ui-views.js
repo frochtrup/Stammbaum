@@ -573,6 +573,14 @@ function relRow(person, role, unlinkFamId) {
 //  data-input   → input
 //  data-action="stop" → stopPropagation ohne Aktion (z.B. <select> in klickbarer Zeile)
 // ─────────────────────────────────────
+function _sortedChildren(children) {
+  return [...(children || [])].sort((a, b) => {
+    const pa = AppState.db.individuals[a];
+    const pb = AppState.db.individuals[b];
+    return evDateKey(pa?.birth?.date || '').localeCompare(evDateKey(pb?.birth?.date || ''));
+  });
+}
+
 const _CLICK_MAP = {
   // Dynamisch generierte Einträge (bereits vorhanden)
   showDetail:              el => showDetail(el.dataset.pid  || el.dataset.id),
