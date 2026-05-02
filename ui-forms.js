@@ -41,21 +41,16 @@ function renderSrcTags(prefix) {
     const pageVal = pages[sid] || '';
     const quayVal = String(quays[sid] ?? '');
     const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    const _hasMeta = prefix === 'ef' || prefix === 'cr' || prefix === 'pf' || prefix === 'fev' || prefix === 'ff' || prefix === 'enf';
-    const pageField = _hasMeta
-      ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
-           data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`
-      : '';
-    const quayField = _hasMeta
-      ? `<select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-sid="${sidEsc}"
+    const pageField = `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
+           data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`;
+    const quayField = `<select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-sid="${sidEsc}"
            style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
            <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
            <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
            <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
            <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
            <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
-         </select>`
-      : '';
+         </select>`;
     return `<span class="src-tag">
       ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
       ${pageField}${quayField}
