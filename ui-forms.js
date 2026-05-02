@@ -41,7 +41,7 @@ function renderSrcTags(prefix) {
     const pageVal = pages[sid] || '';
     const quayVal = String(quays[sid] ?? '');
     const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    const _hasMeta = prefix === 'ef' || prefix === 'cr' || prefix === 'pf' || prefix === 'fev' || prefix === 'ff';
+    const _hasMeta = prefix === 'ef' || prefix === 'cr' || prefix === 'pf' || prefix === 'fev' || prefix === 'ff' || prefix === 'enf';
     const pageField = _hasMeta
       ? `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
            data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`
