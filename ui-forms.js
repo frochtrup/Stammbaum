@@ -30,12 +30,15 @@ function renderSrcTags(prefix) {
   const container = document.getElementById(prefix + '-src-tags');
   const selected = srcWidgetState[prefix]?.ids || new Set();
   if (!selected.size) {
-    container.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>';
+    const pasteBtn = UIState._citClipboard
+      ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
+      : '';
+    container.innerHTML = `<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>${pasteBtn}`;
     return;
   }
   const pages = srcWidgetState[prefix]?.pages || {};
   const quays = srcWidgetState[prefix]?.quay  || {};
-  container.innerHTML = [...selected].map(sid => {
+  const tags = [...selected].map(sid => {
     const s = AppState.db.sources[sid];
     const label = s ? (s.abbr || s.title || sid) : sid;
     const pageVal = pages[sid] || '';
@@ -57,6 +60,11 @@ function renderSrcTags(prefix) {
       <button type="button" class="src-tag-x" data-action="removeSrc" data-prefix="${prefix}" data-sid="${sid}" aria-label="Quelle entfernen">✕</button>
     </span>`;
   }).join('');
+  const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">Kopieren</button>`;
+  const pasteBtn = UIState._citClipboard
+    ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
+    : '';
+  container.innerHTML = tags + copyBtn + pasteBtn;
 }
 
 function renderSrcPicker(prefix) {
@@ -94,6 +102,35 @@ function removeSrc(prefix, sid) {
   srcWidgetState[prefix]?.ids.delete(sid);
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
+}
+
+function copyCitations(prefix) {
+  const w = srcWidgetState[prefix];
+  if (!w?.ids?.size) return;
+  UIState._citClipboard = {
+    sources: [...w.ids],
+    pages:   { ...w.pages },
+    quay:    { ...w.quay  }
+  };
+  const n = UIState._citClipboard.sources.length;
+  showToast(`${n} Quellenbezug${n !== 1 ? 'e' : ''} kopiert`, 'success');
+  // Alle offenen Widgets refreshen damit Einfügen-Button erscheint
+  for (const p of Object.keys(srcWidgetState)) renderSrcTags(p);
+}
+
+function pasteCitations(prefix) {
+  const clip = UIState._citClipboard;
+  if (!clip) return;
+  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
+  const w = srcWidgetState[prefix];
+  for (const sid of clip.sources) {
+    w.ids.add(sid);
+    if (!w.pages[sid] && clip.pages[sid]) w.pages[sid] = clip.pages[sid];
+    if ((w.quay[sid] == null || w.quay[sid] === '') && clip.quay[sid] != null) w.quay[sid] = clip.quay[sid];
+  }
+  renderSrcTags(prefix);
+  renderSrcPicker(prefix);
+  showToast(`${clip.sources.length} Quellenbezug${clip.sources.length !== 1 ? 'e' : ''} eingefügt`, 'info');
 }
 
 // ─────────────────────────────────────

@@ -773,6 +773,13 @@ body.desktop-mode.places-karte #mapContainer {
   padding: 0 10px; border-radius: 0 22px 22px 0;
 }
 .src-tag-x:active { color: var(--red); }
+.src-cit-btn {
+  display: inline-block; margin-top: 4px; margin-right: 4px;
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-muted);
+  cursor: pointer; font-size: 0.78rem; padding: 2px 8px;
+}
+.src-cit-btn:active { background: var(--surface2); color: var(--text); }
 .src-add-btn {
   display: inline-flex; align-items: center; gap: 4px;
   background: none; border: 1px dashed var(--border);

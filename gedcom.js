@@ -34,6 +34,7 @@ const UIState = {
   _navHistory:      [],          // Navigations-History für Detail-Ansichten
   _probandId:       null,        // null = Fallback auf kleinste ID
   _eventClipboard: null,         // kopiertes Ereignis für Übernehmen-Funktion
+  _citClipboard:   null,         // kopierte Quellenbezüge { sources[], pages{}, quay{} }
   _formState: {                  // transienter Formular-State (ADR-003)
     srcWidget:    {},            // srcWidgetState[prefix] = { ids, pages, quay }
     pfExtraNames:   [],          // Zusatz-Namen im Personen-Formular
