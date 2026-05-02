@@ -348,7 +348,7 @@ async function odOpenFilePicker() {
     const list = document.getElementById('odFileList');
     if (list) {
       list.innerHTML = allFiles.map(f => {
-        const date = new Date(f.lastModifiedDateTime).toLocaleDateString('de-DE');
+        const date = new Date(f.lastModifiedDateTime).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
         const kb   = Math.round((f.size || 0) / 1024);
         return `<div class="list-item" style="cursor:pointer"
           data-action="odLoadFile" data-odid="${esc(f.id)}" data-odname="${esc(f.name)}">
