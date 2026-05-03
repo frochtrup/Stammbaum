@@ -318,6 +318,7 @@ function _processLoadedText(text, filename) {
         setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
       }
       AppState.db.extraPlaces = loadExtraPlaces();
+      applyAllExtraPlaceCoords();
       AppState.db.hofObjects  = Object.assign({}, _derivedHofObjectsFromDb(AppState.db), loadHofObjects());
       // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
       { let maxUsed = 0;
@@ -373,6 +374,7 @@ async function _loadGRAMPS(file) {
     const db = await parseGRAMPS(file);
     AppState.db = db;
     AppState.db.extraPlaces = loadExtraPlaces();
+    applyAllExtraPlaceCoords();
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
     // localStorage-Einträge (user edits) überschreiben diese.
     AppState.db.hofObjects  = Object.assign({}, db.hofObjects || {}, loadHofObjects());

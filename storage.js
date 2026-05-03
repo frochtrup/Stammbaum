@@ -1,4 +1,23 @@
 // ─────────────────────────────────────
+//  EXTRA-PLACE COORDS PROPAGATION
+// ─────────────────────────────────────
+function applyAllExtraPlaceCoords() {
+  for (const ep of Object.values(AppState.db.extraPlaces)) {
+    if (ep.lati == null) continue;
+    const { name, lati, long } = ep;
+    for (const p of Object.values(AppState.db.individuals)) {
+      for (const ev of [p.birth, p.chr, p.death, p.buri, ...p.events]) {
+        if (ev && ev.place === name) { ev.lati = lati; ev.long = long; }
+      }
+    }
+    for (const f of Object.values(AppState.db.families)) {
+      if (f.marr?.place  === name) { f.marr.lati  = lati; f.marr.long  = long; }
+      if (f.engag?.place === name) { f.engag.lati = lati; f.engag.long = long; }
+    }
+  }
+}
+
+// ─────────────────────────────────────
 //  REVERT / NEW FILE
 // ─────────────────────────────────────
 async function revertToSaved() {
@@ -8,6 +27,7 @@ async function revertToSaved() {
   showLoadingOverlay('Stand wird wiederhergestellt …');
   AppState.db = parseGEDCOM(orig);
   AppState.db.extraPlaces = loadExtraPlaces();
+  applyAllExtraPlaceCoords();
   AppState.db.hofObjects  = Object.assign({}, _derivedHofObjectsFromDb(AppState.db), loadHofObjects());
   if (AppState.db.parseErrors?.length) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
