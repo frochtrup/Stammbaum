@@ -409,7 +409,7 @@ function togglePlaceMode(placeId) {
     if (toggleBtn) toggleBtn.textContent = '⊠ Freitext';
     _placeModes[placeId] = 'parts';
   } else {
-    const rawVal = joinPlaceParts(placeId);
+    const rawVal = compactPlace(joinPlaceParts(placeId));
     freeEl.style.display  = '';
     partsEl.style.display = 'none';
     if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
