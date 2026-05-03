@@ -85,6 +85,7 @@ async function loadDemo() {
     const text = await res.text();
     AppState.db = parseGEDCOM(text);
     AppState.db.extraPlaces = loadExtraPlaces();
+    applyAllExtraPlaceCoords();
     AppState._originalGedText = text;
     showStartView();
     showToast('✓ Demo geladen');
@@ -153,6 +154,7 @@ async function tryAutoLoad() {
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
       AppState.db.extraPlaces = loadExtraPlaces();
+      applyAllExtraPlaceCoords();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
       showStartView();
       updateBackupBtn();
@@ -173,6 +175,7 @@ async function tryAutoLoad() {
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
       AppState.db.extraPlaces = loadExtraPlaces();
+      applyAllExtraPlaceCoords();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
       updateBackupBtn();
