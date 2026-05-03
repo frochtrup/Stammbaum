@@ -187,7 +187,7 @@ function parseGEDCOM(text, parseErrors) {
           if (val && val.startsWith('@')) {
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:'', titleIsLv2:false, _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, _extra:[] });
           }
         }
         else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
@@ -296,7 +296,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='SOUR') { ev.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='OBJE') {
             if (val && val.startsWith('@')) { ev._extra.push('2 OBJE ' + val); _ptDepth = 2; _ptTarget = ev._extra; }
-            else ev.media.push({ file:'', title:'', form:'', _extra:[] });
+            else ev.media.push({ file:'', title:'', form:null, _extra:[] });
           }
           else { ev._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = ev._extra; }
         }
@@ -521,7 +521,7 @@ function parseGEDCOM(text, parseErrors) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:'', titleIsLv2:false, _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, _extra:[] });
           }
         }
         else {
@@ -537,7 +537,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='ADDR') cur.marr.addr=val;
           else if (tag==='SOUR') { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.marr.noteRefs.push(val); else { cur.marr.note = val; _ptDepth=2; _ptTarget=cur.marr._extra; } }
-          else if (tag==='OBJE') { cur.marr.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+          else if (tag==='OBJE') { cur.marr.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.marr._extra; }
         }
         if (lv1tag==='ENGA' || lv1tag==='ENG') {
@@ -545,7 +545,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='PLAC') cur.engag.place = val;
           else if (tag==='SOUR') { cur.engag.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.engag.noteRefs.push(val); else { cur.engag.note = val; _ptDepth=2; _ptTarget=cur.engag._extra; } }
-          else if (tag==='OBJE') { cur.engag.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+          else if (tag==='OBJE') { cur.engag.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.engag._extra; }
         }
         if (lv1tag==='DIV') {
@@ -553,7 +553,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='PLAC') cur.div.place = val;
           else if (tag==='SOUR') { cur.div.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.div.noteRefs.push(val); else { cur.div.note = val; _ptDepth=2; _ptTarget=cur.div._extra; } }
-          else if (tag==='OBJE') { cur.div.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+          else if (tag==='OBJE') { cur.div.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.div._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.div._extra; }
         }
         if (lv1tag==='DIVF') {
@@ -561,7 +561,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='PLAC') cur.divf.place = val;
           else if (tag==='SOUR') { cur.divf.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.divf.noteRefs.push(val); else { cur.divf.note = val; _ptDepth=2; _ptTarget=cur.divf._extra; } }
-          else if (tag==='OBJE') { cur.divf.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+          else if (tag==='OBJE') { cur.divf.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.divf._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.divf._extra; }
         }
         if (lv1tag==='EVEN' && evIdx >= 0 && cur.events[evIdx]) {
@@ -761,7 +761,7 @@ function parseGEDCOM(text, parseErrors) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:'', titleIsLv2:false, _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, _extra:[] });
           }
         }
         else {

@@ -63,7 +63,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | Aufgabe | Aufwand |
 |---|---|
-| OBJE ohne FORM stabilisieren — `m.form = null`; Writer nur ausgeben wenn nicht null | XS |
+| ~~OBJE ohne FORM stabilisieren — `m.form = null`; Writer nur ausgeben wenn nicht null~~ | ✓ |
 | Personen-Formular — `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar | M |
 | Ereignis-Formular — `_grampsAttrs[]` pro Event; Witness-Rollen (read-only) | M |
 | Orts-Picker — `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |

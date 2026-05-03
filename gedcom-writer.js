@@ -26,12 +26,7 @@ function _toPedi(v) {
   return m[(v||'').toLowerCase()] || 'birth';
 }
 
-// Leitet GEDCOM FORM-String aus Dateiendung ab
-function _mediaFormStr(m) {
-  if (m.form) return m.form;
-  const ext = (m.file.split('.').pop() || '').toUpperCase();
-  return { JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext;
-}
+function _mediaFormStr(m) { return m.form || null; }
 
 // Schreibt SOUR-Zitierungen (PAGE, QUAY, NOTE, _extra, OBJE-Media)
 // obj muss haben: sources[], sourcePages{}, sourceQUAY{}, sourceNote{}, sourceExtra{}, sourceMedia{}
