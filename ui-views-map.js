@@ -431,12 +431,15 @@ function selectMapPerson(personId) {
 function showPersonOnMap(personId) {
   _mapMode     = 'person';
   _mapPersonId = personId;
+  UIState._mapFromPersonId = personId;
   bnavTab('places');
   switchPlacesSubTab('karte');
   setTimeout(() => {
-    const p   = AppState.db.individuals[personId];
-    const btn = document.getElementById('map-person-btn');
-    if (btn && p) btn.textContent = p.name || personId;
+    const p    = AppState.db.individuals[personId];
+    const btn  = document.getElementById('map-person-btn');
+    const back = document.getElementById('map-from-person-back');
+    if (btn  && p) btn.textContent  = p.name || personId;
+    if (back && p) { back.textContent = '← ' + (p.name || 'Person'); back.style.display = ''; }
     switchMapMode('person');
   }, 120);
 }

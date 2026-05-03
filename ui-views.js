@@ -608,6 +608,7 @@ const _CLICK_MAP = {
   switchMapMode:           el => switchMapMode(el.dataset.mode),
   closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
   showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
+  mapBackToPerson:         ()  => { const id = UIState._mapFromPersonId; UIState._mapFromPersonId = null; const b = document.getElementById('map-from-person-back'); if (b) b.style.display = 'none'; if (id) showDetail(id); },
   openMapPersonPicker:     ()  => openMapPersonPicker(),
   selectMapPerson:         el => selectMapPerson(el.dataset.pid),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
