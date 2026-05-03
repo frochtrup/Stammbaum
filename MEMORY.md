@@ -151,14 +151,14 @@ Verbliebene Deltas (by design, kein Datenverlust):
 
 ## Version 7 — Schwerpunkte (Branch `v7-dev`)
 
-**Strategische Ausrichtung: GRAMPS als Desktop-Master, PWA als iOS-Companion.**
+**Strategische Ausrichtung: GRAMPS als Desktop-Master, PWA als universeller Client.**
 GEDCOM bleibt vollständig erhalten. GRAMPS-Unterstützung ist eine Erweiterung.
 Austauschformat mit GRAMPS: **GRAMPS XML** (.gramps, gzip + XML) — GEDCOM-Export verliert zu viel.
+iOS-Companion-Phase (Quick-Add, Foto-direkt-zu-Person) abgelehnt und entfernt.
 
 **Neue Dateien geplant:**
 - `gramps-parser.js` — gzip decompress + DOMParser → AppState (Phase 2, read-only)
 - `gramps-writer.js` — AppState → GRAMPS XML (Phase 3, Round-trip)
-- `ui-quick-add.js` — schlankes Quick-Add-Formular für iOS (Phase 4)
 
 **Neue AppState-Strukturen geplant:**
 - `db.placeObjects{}` — Ortshierarchie (GRAMPS top-level Orte)
@@ -169,7 +169,6 @@ Austauschformat mit GRAMPS: **GRAMPS XML** (.gramps, gzip + XML) — GEDCOM-Expo
 **Phase 1 (sofort):** detectGRAMPS() + Import-Toast + _GRAMPS_ID strukturieren + NAME-Duplikation prüfen
 **Phase 2:** gramps-parser.js (read-only Native Import)
 **Phase 3:** gramps-writer.js (Round-trip)
-**Phase 4:** Quick-Add UI, Foto-direkt-zu-Person, Tag-Editor
 
 **Offen aus v6 (P3–P5):**
 - Zeitleiste (`ui-timeline.js`), Nachkommen-Baum

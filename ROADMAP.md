@@ -70,14 +70,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | GRAMPS-Badge in Topbar — bei `db._grampsMaster`: Icon + `.gramps` als primäres Export-Format | S |
 | Tags anzeigen — `db.tags{}` in Personen-/Familien-Detail als Badges | S |
 
-### iOS-Companion (Phase 4 GRAMPS)
-
-| Aufgabe | Aufwand |
-|---|---|
-| Quick-Add — `ui-quick-add.js`: Vorname + Nachname + Geburtsjahr + optionale Familie | M |
-| Foto-direkt-zu-Person — iOS-Kamera ohne Umweg über Media-Browser | M |
-| Export-Hinweis — "Zuletzt geladen: Datum" in Topbar/Export-Dialog | S |
-
 ### Features & Analyse
 
 | ID | Aufgabe | Details | Aufwand |
