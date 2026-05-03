@@ -338,12 +338,12 @@ function fillPlaceParts(placeId, raw) {
   });
 }
 
-function joinPlaceParts(placeId) {
+function joinPlaceParts(placeId, keepAll = false) {
   const parts = getPlacLabels().map((_, i) => {
     const el = document.getElementById(`${placeId}-p${i}`);
     return el ? el.value.trim() : '';
   });
-  while (parts.length && !parts[parts.length - 1]) parts.pop();
+  if (!keepAll) while (parts.length && !parts[parts.length - 1]) parts.pop();
   return parts.join(', ');
 }
 
@@ -409,7 +409,7 @@ function togglePlaceMode(placeId) {
     if (toggleBtn) toggleBtn.textContent = '⊠ Freitext';
     _placeModes[placeId] = 'parts';
   } else {
-    const rawVal = compactPlace(joinPlaceParts(placeId));
+    const rawVal = joinPlaceParts(placeId, true); // alle Slots erhalten (Langdarstellung)
     freeEl.style.display  = '';
     partsEl.style.display = 'none';
     if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
