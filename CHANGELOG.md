@@ -9,6 +9,22 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-03 — F2 Beziehungsrechner Bugfixes + Quellen-Features + Orts-Karte-Nav (sw v333–v348)
+
+- **sw v333** `feat`: Beziehungsrechner F2 — `calcRelationship(idA, idB)` bidirektionale BFS (Tiefe 12); `_relLabel()` dt. Bezeichnungen (Vater/Mutter, Großelternteil, Onkel/Tante, Cousin n. Grads); Verwandtschafts-Sektion in `showDetail()` (klickbar); `showRelPath()`-Modal mit Pfad + gemeinsamem Vorfahren (⬡) + Kekule-Badge
+- **sw v334** `fix`: PAGE/QUAY im Quellenbezug für Geburtsname/Extraname korrekt gespeichert
+- **sw v335** `refactor`: `_hasMeta`-Whitelist aus `renderSrcTags()` entfernt
+- **sw v336** `feat`: Quellenbezüge kopieren & einfügen — Copy-Button in Quellenbezug-Widget; Paste aus Zwischenablage
+- **sw v337** `fix`: OneDrive-Dateiliste zeigt Datum + Uhrzeit
+- **sw v338** `feat`: URL-Quellenbezüge als anklickbarer Link — `_WWW`-Tag in Quelle; Link-Badge in Quellenzeile
+- **sw v339** `fix`: URL-Badge stoppt Event-Propagation korrekt (kein ungewolltes Detail-Öffnen)
+- **sw v340–v343** `fix`: Orts-Koordinaten in Event-Objekte propagieren — `applyAllExtraPlaceCoords()` via `collectPlaces()` statt direktem Stringvergleich; alle Ladepfade (IDB, GRAMPS, Demo) abgedeckt
+- **sw v344–v345** `feat`: Karte-Navigation aus Personendetail — `← Person`-Button + `× Zurück`-Button in Karten-Topbar
+- **sw v346–v347** `fix`: Felder↔Freitext-Wechsel im Ortsfeld — kompakter Ortsname beim Wechsel zu Freitext; vollständiger Positionsstring in Freitext-Ansicht
+- **sw v348** `fix`: F2 Bugfixes — Duplikat-`style` in `showRelPath()` zusammengeführt (`cursor:pointer` war wirkungslos); `relPathShowDetail` in `_CLICK_MAP` schließt Modal vor `showDetail()`; Pedigree-Collapse-Hinweis (`multiPath: true` wenn mehrere gleichwertige Pfade)
+
+---
+
 ### Session 2026-05-01 — Kekule-Nummerierung + Generationstiefe (sw v330–v332)
 
 - **sw v330** `feat`: Sanduhr-Baum bis 9 Generationen — Buttons 7–9 ergänzt; `anc6/7/8`-Arrays; `hasAnc6/7/8`-Prüfungen; `ancSlots` bis 256; `setTreeGens` Limit 6→9
@@ -35,6 +51,16 @@ Aktuelle Planung: `ROADMAP.md`
 - **sw v300** `fix`: `user-scalable=no` aus Viewport entfernt (WCAG 1.4.4); `ui-debug.js` + Roundtrip-Test-Buttons nur bei `?debug=1` sichtbar (`data-debug-only`-Muster); Hilfe-Modal: Version dynamisch aus SW-Cache-Namen statt hardcodiert „3.0"; `ui-views.js`: `typeof`-Guard für `runRoundtripTest` in `_CLICK_MAP`
 - **sw v301** *(extern — PRECACHE-Aktualisierung)*
 - **sw v302** `fix`: `esc()` um `'` → `&#39;` erweitert (vollständige HTML-Escapesequenz); `loadDemo()` mit `confirmModal()` bei ungespeicherten Änderungen abgesichert; `storage-file.js` in ARCHITECTURE.md + MEMORY.md dokumentiert
+
+---
+
+### Session 2026-04-29 — Debug-Fixes + Q11/A7/U15 + Forschungsaufgaben (sw v303–v307)
+
+- **sw v303** `fix`: Debug-only-Buttons via `hidden`-Attribut statt `display:none`
+- **sw v304** `fix`: Debug-Modus via `#debug`-Hash (Service Worker sieht keine URL-Hashes) + `?debug=1`-Fallback
+- **sw v305** `fix`: `debug-activate.js` ersetzt inline `<script>`-Block (CSP blockiert `script-src 'unsafe-inline'`)
+- **sw v306** `fix`: Q11 `parseCoordInput()` Bounds-Check (`Math.abs(lat)≤90` / `Math.abs(lon)≤180`); A7 `.menu-btn` CSS-Klasse in `styles.css` (12 Inline-Styles entfernt); U15 Hilfe-Modal Tabs korrigiert + Abschnitte Baum/Orte+Höfe+Karte/Statistik/Tastaturkürzel ergänzt
+- **sw v307** `feat`: Forschungsaufgaben — `TASK_CATEGORIES` (kirchenbuch/urkunde/online); `p._tasks[]` auf Person-Objekt; GEDCOM `1 _TASK` + `2 _CAT/_DONE/_DATE/_ID` Roundtrip; GRAMPS `<attribute type="_TASK" value="JSON"/>` Roundtrip; Person-Detail-Abschnitt; globale Liste mit Filter (Alle/Offen/Erledigt, nach Kategorie); Badge auf Personen-Tab; `markChanged()` beim Schreiben
 
 ---
 

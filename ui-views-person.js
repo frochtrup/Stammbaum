@@ -54,17 +54,18 @@ function calcRelationship(idA, idB) {
     return vis;
   }
   const ancA = bfsUp(idA), ancB = bfsUp(idB);
-  let best = null;
+  let best = null, multiCount = 0;
   for (const [id, infoA] of ancA) {
     const infoB = ancB.get(id);
     if (!infoB) continue;
     const total = infoA.dist + infoB.dist;
-    if (!best || total < best.total) best = { id, distA: infoA.dist, distB: infoB.dist, total, pathA: infoA.path, pathB: infoB.path };
+    if (!best || total < best.total) { best = { id, distA: infoA.dist, distB: infoB.dist, total, pathA: infoA.path, pathB: infoB.path }; multiCount = 1; }
+    else if (total === best.total) multiCount++;
   }
   if (!best) return { label: 'Nicht verwandt', path: [] };
   const path = [...best.pathA, ...best.pathB.slice(0, -1).reverse()];
   const sexA = AppState.db.individuals[idA]?.sex || 'U';
-  return { label: _relLabel(best.distA, best.distB, sexA), distA: best.distA, distB: best.distB, path, commonId: best.id };
+  return { label: _relLabel(best.distA, best.distB, sexA), distA: best.distA, distB: best.distB, path, commonId: best.id, multiPath: multiCount > 1 };
 }
 
 // ─────────────────────────────────────
@@ -767,15 +768,16 @@ function showRelPath(id) {
       const name = person?.name || pid;
       const isCommon = pid === rel.commonId;
       const arrow = i < rel.path.length - 1 ? `<div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:2px 0">↓</div>` : '';
-      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)${isCommon ? ';background:var(--surface2);border-radius:6px;padding:6px 8px' : ''}"
-        data-action="showDetail" data-id="${pid}" style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)${isCommon ? ';background:var(--surface2);border-radius:6px;padding:6px 8px' : ''}">
+      return `<div style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)${isCommon ? ';background:var(--surface2);border-radius:6px;padding:6px 8px' : ''}"
+        data-action="relPathShowDetail" data-id="${pid}">
         ${isCommon ? `<span style="font-size:0.75rem;color:var(--gold-dim)">⬡</span>` : `<span style="font-size:0.75rem;color:var(--text-muted)">${i + 1}.</span>`}
         <span style="flex:1;font-size:0.9rem${isCommon ? ';font-weight:600;color:var(--gold)' : ''}">${esc(name)}</span>
         ${kNum(pid)}
       </div>${arrow}`;
     }).join('');
     body.innerHTML = `<div style="margin-bottom:10px;font-size:1rem;font-weight:600;color:var(--gold)">${esc(rel.label)}</div>
-      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px">⬡ = gemeinsamer Vorfahre</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">⬡ = gemeinsamer Vorfahre</div>
+      ${rel.multiPath ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;font-style:italic">Mehrere Verwandtschaftspfade möglich – kürzester angezeigt.</div>` : '<div style="margin-bottom:10px"></div>'}
       ${rows}`;
   }
 

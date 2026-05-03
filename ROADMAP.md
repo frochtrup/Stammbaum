@@ -16,7 +16,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 **Roundtrip GEDCOM:** `stable=true`, `net_delta=0` — alle tag-counts ✓; CONC/CONT-Neuformatierung + HEAD-Rewrite by design akzeptiert
 **Roundtrip GRAMPS:** `deep_test=true`, 60034 Checks ✓ — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) / Unsere Familie.gramps (2894 Pers.)
-**Aktuelle sw-Version:** v332 / Cache: `stammbaum-v332`
+**Aktuelle sw-Version:** v348 / Cache: `stammbaum-v348`
 
 ---
 
@@ -47,6 +47,11 @@ GEDCOM (.ged)    ←→ GEDCOM 5.5.1          ←→ PWA (alle anderen Quellen)
 | 4f | UX/UI-Review: Touch-Targets, Leerzustände, Swipe-down, Event-Typ-Selektor, History-Picker, Unified Nav History, `showToast(type)`, `confirmModal(okLabel)` | v289–v297 |
 | 4g | Rufname: `_RUFNAME`-Tag GEDCOM-Roundtrip; Detailansicht Rufname+Spitzname; Baum unterstrichen | v298 |
 | 4h | Security/A11y-Review: `user-scalable=no` entfernt (WCAG 1.4.4); `esc()` + `'`; `ui-debug.js` + Roundtrip-Test `?debug=1`-only; `loadDemo()` `confirmModal()`; Hilfe-Version dynamisch | v300–v302 |
+| 4i | Debug-Mode-Fixes: hidden-Attribut, `#debug-Hash`, `debug-activate.js` (CSP); Koordinaten Bounds-Check; `.menu-btn` CSS; Hilfe-Modal Tabs+Abschnitte | v303–v306 |
+| 4j | Forschungsaufgaben: `p._tasks[]`, `TASK_CATEGORIES`, GEDCOM `1 _TASK`+`2 _CAT/_DONE/_DATE/_ID`, GRAMPS `<attribute type="_TASK">`, globale Liste, Badge | v307 |
+| 5.1 | ASSO/RELA/Taufpaten: `p.associations[]`, GEDCOM↔GRAMPS Roundtrip, `_witnessEvMap`, Taufpaten-CHR-Formular, reziproke Godchild-Relation, abgeleitete Assos visuell | v323–v329 |
+| F1 | Sosa/Kekule-Nummerierung: 9-Gen-Baum + Fächer, `_buildKekuleMap()`, `#N`-Badges in Liste, Baum+Fächer | v330–v332 |
+| F2 | Beziehungsrechner: bidirekt. BFS (Tiefe 12), `_relLabel()` dt. Bezeichnungen, Verwandtschafts-Sektion + Pfad-Modal, Pedigree-Collapse-Hinweis; Quellen-Features (Copy/Paste, URL-Links); Orts-Karte-Nav; Bugfixes | v333–v348 |
 | Cleanup | Virtual Scroll, onclick-Delegation, State-Konsolidierung, Suche indexiert, Debug ausgelagert | v230–v233 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung u.a.)
@@ -106,30 +111,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 - [ ] **Orts-Hierarchie-Editor** — Formular mit `db.placeObjects{}`-Unterstützung
 - [ ] **Export-Hinweis** — "Zuletzt geladen: Datum" in Topbar/Export-Dialog
 
-#### Phase 4d — Hof-Koordinaten + Notizen ✅ v283
-
-**Datenmodell:** `db.hofObjects[addr] = { addr, lat, long, note }` — localStorage (`stammbaum_hofobjects`), lazy (nur wenn Koordinaten/Notiz vorhanden).
-
-**Serialisierung:**
-- GEDCOM: Koordinaten als `PLAC + MAP/LATI/LONG` an allen RESI/PROP-Events dieser Adresse (ADDR bleibt erhalten, andere Programme lesen beides)
-- GRAMPS: `placeobj` mit `type="Building"` + `coord lat/long` + `noteref` (Phase 5)
-
-**Ortsliste:** bleibt unverändert sauber — `hofObjects` ist von `extraPlaces` getrennt, Höfe erscheinen nicht in `collectPlaces()`.
-
-| Schritt | Datei | Status |
-|---|---|---|
-| `db.hofObjects{}` + `loadHofObjects/saveHofObjects` | `gedcom.js`, `ui-forms.js`, `storage.js` | ✅ v280 |
-| Koordinaten-Sektion + Formular in Hof-Detail | `ui-views-hof.js` | ✅ v280 |
-| Notiz-Typ `'hof'` in Notizen-Modal | `ui-views-note.js` | ✅ v280 |
-| Hof-Marker auf Karte + RESI-Stationen in Personenbiografie | `ui-views-map.js` | ✅ v280 |
-| GEDCOM-Writer: PLAC+MAP an RESI/PROP-Events | `gedcom-writer.js` | ✅ v281 |
-| GEDCOM-Parser: PLAC+MAP aus RESI-Events → hofObjects | `gedcom-parser.js` | ✅ v281 |
-| GRAMPS: placeobj type=Building | `gramps-parser.js`, `gramps-writer.js` | ✅ v281 |
-| Fix: Hof-Notiz Roundtrip via OneDrive (lv=2 NOTE + ev.note in _derived) | `gedcom-writer.js`, `gedcom-parser.js` | ✅ v282 |
-| Fix: hofObjects Priorität vor extraPlaces in `geoLines()` | `gedcom-writer.js` | ✅ v283 |
-
----
-
 #### Phase 5.1 — Cross-Parser
 
 - ~~**ASSO/RELA/ROLE → Witness-Roundtrip (GEDCOM↔GRAMPS)**~~ ✅ v323–v329
@@ -169,48 +150,9 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~F1~~ | ~~**Sosa-Stradonitz-Nummerierung**~~ | ✅ v330–v332 — Kekule-Map aus Probanden (Tiefe 8); Badges im Sanduhr-Baum + Fächer-Diagramm; `#N`-Badge in Personenliste; Baum/Fächer bis 9 Generationen | ~~S~~ |
-| F2 | **Beziehungsrechner** | BFS-Graph über `f.husb/f.wife/f.chil`; "Wie ist A mit B verwandt?" → "3. Grad Cousin, 2× entfernt"; aufrufbar aus Person-Detail | M |
-
-#### F2 — Beziehungsrechner: Detailplanung
-
-**Ziel:** "Wie ist Person A mit dem Probanden (oder einer beliebigen Person B) verwandt?" — Anzeige in Person-Detail als klickbare Zeile.
-
-**Algorithmus: Bidirektionale BFS**
-1. BFS von A aufwärts → alle Vorfahren von A mit Pfadlänge (Generation + Seite: `V`=Vater, `M`=Mutter)
-2. BFS von B aufwärts → alle Vorfahren von B mit Pfadlänge
-3. Schnittmenge → gemeinsamer Vorfahre mit kürzestem Gesamtpfad
-4. Aus Pfadlängen Verwandtschaftsgrad berechnen
-
-**Ausgabe-Formel:**
-- Direkte Linie aufwärts (A ist Vorfahre von B): „Urgroßvater (3 Gen.)"
-- Direkte Linie abwärts (A ist Nachkomme von B): „Urenkel (3 Gen.)"
-- Seitenlinie (gemeinsamer Vorfahre C):
-  - Geschwister: `gen_A=1, gen_B=1`
-  - Onkel/Tante: `gen_A=2, gen_B=1` (oder umgekehrt)
-  - Cousins n-ten Grads: `min(gen_A, gen_B) - 1` = Grad; `|gen_A - gen_B|` = „x× entfernt"
-  - Beispiel: `gen_A=3, gen_B=4` → 2. Grad Cousin, 1× entfernt
-
-**Lokalisierung (Deutsch):**
-```
-Elternteil / Kind / Geschwister
-Großelternteil / Enkel / Onkel/Tante / Neffe/Nichte
-Urgroßelternteil / Urenkel / Großonkel / Großneffe
-Cousin/Cousine 1. Grads / 2. Grads / … [n× entfernt]
-Nicht verwandt (kein gemeinsamer Vorfahre im Datensatz)
-```
-
-**UI:**
-- In `ui-views-person.js` `showDetail()`: neue Zeile „Verwandtschaft zum Probanden: _Cousin 2. Grads_" (klickbar → öffnet Pfad-Modal)
-- Pfad-Modal: listet den Verwandtschaftspfad als Kette „A → Vater → Großvater (gemeinsam) → … → B"
-- Funktion `calcRelationship(idA, idB)` → `{ label, degree, path[] }` in `gedcom.js` oder eigenem `ui-views-relation.js`
-
-**Grenzen / Hinweise:**
-- Performance: BFS bricht ab wenn kein gemeinsamer Vorfahre in Tiefe 12 gefunden (≈4096 Vorfahren pro Person)
-- Pedigree-Collapse: mehrere Pfade möglich → kürzesten nehmen, Hinweis „mehrere Pfade"
-- Nur verwandtschaftliche Verbindungen (biologisch/adoptiv via `famc`), keine ASSO-Beziehungen
+| ~~F2~~ | ~~**Beziehungsrechner**~~ | ✅ v348 — Bidirektionale BFS (Tiefe 12); `_relLabel()` dt. Bezeichnungen (Elternteil→Ur-Ur…, Cousin/Cousine n. Grads, Onkel/Tante/Neffe/Nichte); Verwandtschafts-Sektion in Person-Detail (klickbar); Pfad-Modal mit gemeinsamem Vorfahren markiert (⬡), Kekule-Badge, Pedigree-Collapse-Hinweis bei mehreren Pfaden | ~~M~~ |
 | F3 | **Pedigree-Collapse-Erkennung** | Gemeinsame Vorfahren finden; Inzucht-Koeffizient berechnen; wichtig bei eng verwandten Dorfgemeinschaften; baut auf F2-BFS auf | M |
 | F4 | **Soundex / Namens-Fuzzy-Suche** | Soundex-Funktion für Nachnamen; historische Schreibvarianten (Decker/Deker/Döker); Erweiterung der bestehenden `_buildSearchIndex()`; opt-in Toggle in Suche | S |
-
 | F4b | **Mehrfach-Zitierungen derselben Quelle** | Datenmodell von `sources[]+sourcePages{}` auf `citations:[{sid,page,quay}]` umstellen — erlaubt dieselbe Quelle mehrfach mit verschiedenen Seitenzahlen (z.B. Kirchenbuch S.5 + S.12); betrifft Parser, Writer, GRAMPS-Parser/Writer, SrcWidget und alle Formulare (~8 Dateien); Roundtrip nach Migration neu verifizieren | XL |
 
 #### Mittlerer Nutzen, mittlerer Aufwand

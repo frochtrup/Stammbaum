@@ -674,6 +674,7 @@ const _CLICK_MAP = {
   toggleFanChart:          ()  => toggleFanChart(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
   showRelPath:             el  => showRelPath(el.dataset.pid),
+  relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
   showTree:                el  => showTree(el.dataset.id),
   toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),
