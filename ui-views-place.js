@@ -90,6 +90,18 @@ function showPlaceForm(placeName) {
   openModal('modalPlace');
 }
 
+function _propagateCoordsToEvents(placeName, lati, long) {
+  for (const p of Object.values(AppState.db.individuals)) {
+    for (const ev of [p.birth, p.chr, p.death, p.buri, ...p.events]) {
+      if (ev && ev.place === placeName) { ev.lati = lati; ev.long = long; }
+    }
+  }
+  for (const f of Object.values(AppState.db.families)) {
+    if (f.marr?.place  === placeName) { f.marr.lati  = lati; f.marr.long  = long; }
+    if (f.engag?.place === placeName) { f.engag.lati = lati; f.engag.long = long; }
+  }
+}
+
 function savePlace() {
   const oldName = document.getElementById('pl-old').value;
   const newName = document.getElementById('pl-name').value.trim();
@@ -122,6 +134,9 @@ function savePlace() {
   if (newName !== oldName) delete AppState.db.extraPlaces[oldName];
   AppState.db.extraPlaces[newName] = updated;
   saveExtraPlaces();
+
+  // Koordinaten sofort in alle passenden Event-Objekte übernehmen
+  _propagateCoordsToEvents(newName, lati, long);
 
   UIState._placesCache = null;
   markChanged();
