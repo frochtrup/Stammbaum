@@ -906,6 +906,12 @@ body.desktop-mode.places-karte #mapContainer {
   transition: color 0.12s, border-color 0.12s;
 }
 .src-badge:active { color: var(--gold); border-color: var(--gold); }
+.src-badge-link {
+  display: inline-block; font-size: 0.62rem; vertical-align: middle;
+  color: var(--gold-dim); text-decoration: none; margin-left: 1px;
+  line-height: 1.6; padding: 0 2px;
+}
+.src-badge-link:active { color: var(--gold); }
 /* QUAY-Qualitätsstufen */
 .src-badge--q3 { color: #52a878; border-color: #52a878; }   /* direkt/primär */
 .src-badge--q2 { color: #5b9bd4; border-color: #5b9bd4; }   /* plausibel */

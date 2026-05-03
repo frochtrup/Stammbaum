@@ -543,7 +543,11 @@ function sourceTagsHtml(sourceIds, pageMap, quayMap) {
       page ? `S.\u202f${page}` : '',
       quay !== '' ? `Q${quay}\u202f–\u202f${_QUAY_LABELS[quay] || quay}` : ''
     ].filter(Boolean);
-    return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(sid)}${pageSuffix}</span>`;
+    const isUrl = /^https?:\/\//i.test(page);
+    const linkBtn = isUrl
+      ? `<a class="src-badge-link" href="${esc(page)}" target="_blank" rel="noopener" title="${esc(page)}" onclick="event.stopPropagation()">↗</a>`
+      : '';
+    return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(sid)}${pageSuffix}</span>${linkBtn}`;
   }).filter(Boolean).join('');
 }
 
