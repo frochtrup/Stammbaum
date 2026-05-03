@@ -655,6 +655,7 @@ const _CLICK_MAP = {
   openModal:               el => openModal(el.dataset.modal),
   closeModal:              el => closeModal(el.dataset.modal),
   bnavSearch:              ()  => bnavSearch(),
+  toggleSoundex:           ()  => toggleSoundex(),
   openMenuModal:           ()  => { openModal('modalMenu'); _odUpdateUI(); },
   clearYearFilter:         ()  => clearYearFilter(),
   togglePersonSort:        ()  => togglePersonSort(),

@@ -501,6 +501,16 @@ body.desktop-mode.places-karte #mapContainer {
 }
 .search-input:focus { border-color: var(--gold-dim); }
 .search-input::placeholder { color: var(--text-muted); }
+.search-options-row { display: flex; gap: 8px; margin-top: 7px; }
+.soundex-toggle-btn {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 20px;
+  color: var(--text-muted); font-size: 0.8rem; padding: 4px 12px; cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.soundex-toggle-btn.active {
+  background: var(--gold-dim); border-color: var(--gold-dim);
+  color: var(--bg); font-weight: 600;
+}
 
 /* ═══════════════════════════════════════
    PERSON LIST

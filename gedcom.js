@@ -30,6 +30,7 @@ const UIState = {
   _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
   _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
   _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
+  _soundexMode:       false,     // Soundex-Suche: phonetische Namens-Varianten
   _placesSubTab:    'orte',      // 'orte' | 'hoefe'
   _navHistory:      [],          // Navigations-History für Detail-Ansichten
   _probandId:       null,        // null = Fallback auf kleinste ID

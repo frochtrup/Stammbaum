@@ -75,7 +75,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
-| F4 | **Soundex-Suche** | Schreibvarianten (Decker/Deker/Döker); Toggle in Suche | S |
+| ~~F4~~ | ~~**Soundex-Suche**~~ | ~~Schreibvarianten (Decker/Deker/Döker); Toggle in Suche~~ | ✓ |
 | F4b | **Mehrfach-Zitierungen** | `citations:[{sid,page,quay}]` statt `sources[]+sourcePages{}`; ~8 Dateien; Roundtrip neu verifizieren | XL |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO | M |
 | F6 | **Strict-GEDCOM-Export** | Alle `_`-Tags entfernen; max. Interoperabilität mit Ancestry/FTM | M |

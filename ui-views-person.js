@@ -393,7 +393,13 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
       if (!bp.includes(lowerPlace)) return false;
     }
     if (!lower) return true;
-    return (p._searchStr || '').includes(lower);
+    if ((p._searchStr || '').includes(lower)) return true;
+    if (UIState._soundexMode && /^[a-zäöüß]+$/i.test(lower)) {
+      const qSdx = germanSoundex(lower);
+      if (germanSoundex(p.surname) === qSdx) return true;
+      if (germanSoundex(p.given)   === qSdx) return true;
+    }
+    return false;
   });
 
   renderPersonList(filtered);
