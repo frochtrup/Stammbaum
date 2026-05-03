@@ -131,7 +131,6 @@
   <div id="tab-places" style="display:none">
     <div class="list-search-header" style="padding:0">
       <div class="places-toggle-bar">
-        <button type="button" id="map-from-person-back" class="topbar-btn back" data-action="mapBackToPerson" style="display:none">← Person</button>
         <div class="places-seg">
           <button type="button" id="toggle-orte"  class="places-toggle-btn active" data-action="switchPlacesSubTab" data-subtab="orte">Orte</button>
           <button type="button" id="toggle-hoefe" class="places-toggle-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
@@ -1422,6 +1421,7 @@
 
 <!-- Karten-Container: direkt in body (position:fixed, unabhängig von v-main overflow) -->
 <div id="mapContainer" style="display:none">
+  <button id="map-close-btn" data-action="mapClose" style="display:none;position:absolute;top:8px;right:8px;z-index:600;background:var(--surface2);border:1px solid var(--border);border-radius:50%;width:34px;height:34px;font-size:1.1rem;line-height:1;color:var(--text-dim);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)">×</button>
   <div id="map-controls">
     <div class="map-mode-bar">
       <button type="button" id="map-mode-orte"   class="map-mode-btn active" data-action="switchMapMode" data-mode="orte">Alle Orte</button>

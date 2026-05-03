@@ -144,6 +144,12 @@ function switchPlacesSubTab(sub) {
 
 // Bottom-Nav: Listen-Tabs
 function bnavTab(name) {
+  // Manueller Tab-Wechsel zur Karte löscht den Zurück-Button-Kontext
+  if (!UIState._mapFromContext) {
+    const cb = document.getElementById('map-close-btn');
+    if (cb) cb.style.display = 'none';
+  }
+  UIState._mapFromContext = null;
   AppState.currentTab = name;
   setBnavActive(name);
   showView('v-main');
@@ -608,7 +614,7 @@ const _CLICK_MAP = {
   switchMapMode:           el => switchMapMode(el.dataset.mode),
   closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
   showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
-  mapBackToPerson:         ()  => { const id = UIState._mapFromPersonId; UIState._mapFromPersonId = null; const b = document.getElementById('map-from-person-back'); if (b) b.style.display = 'none'; if (id) showDetail(id); },
+  mapClose:                ()  => { document.getElementById('map-close-btn').style.display = 'none'; goBack(); },
   openMapPersonPicker:     ()  => openMapPersonPicker(),
   selectMapPerson:         el => selectMapPerson(el.dataset.pid),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),

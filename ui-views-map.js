@@ -429,17 +429,24 @@ function selectMapPerson(personId) {
 //  EINSTIEG VON PERSONEN-DETAIL
 // ─────────────────────────────────────
 function showPersonOnMap(personId) {
+  // Aktuellen Detail-Zustand in History sichern, damit × / goBack() zurückführt
+  if (AppState._detailActive) {
+    if      (AppState.currentPersonId) UIState._navHistory.push({ type: 'person', id: AppState.currentPersonId });
+    else if (AppState.currentFamilyId) UIState._navHistory.push({ type: 'family', id: AppState.currentFamilyId });
+    else if (AppState.currentSourceId) UIState._navHistory.push({ type: 'source', id: AppState.currentSourceId });
+    else if (AppState.currentRepoId)   UIState._navHistory.push({ type: 'repo',   id: AppState.currentRepoId });
+  }
+  UIState._mapFromContext = true;
   _mapMode     = 'person';
   _mapPersonId = personId;
-  UIState._mapFromPersonId = personId;
   bnavTab('places');
   switchPlacesSubTab('karte');
+  const closeBtn = document.getElementById('map-close-btn');
+  if (closeBtn) closeBtn.style.display = '';
   setTimeout(() => {
-    const p    = AppState.db.individuals[personId];
-    const btn  = document.getElementById('map-person-btn');
-    const back = document.getElementById('map-from-person-back');
-    if (btn  && p) btn.textContent  = p.name || personId;
-    if (back && p) { back.textContent = '← ' + (p.name || 'Person'); back.style.display = ''; }
+    const p   = AppState.db.individuals[personId];
+    const btn = document.getElementById('map-person-btn');
+    if (btn && p) btn.textContent = p.name || personId;
     switchMapMode('person');
   }, 120);
 }
