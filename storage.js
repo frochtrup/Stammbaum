@@ -2,19 +2,26 @@
 //  EXTRA-PLACE COORDS PROPAGATION
 // ─────────────────────────────────────
 function applyAllExtraPlaceCoords() {
-  for (const ep of Object.values(AppState.db.extraPlaces)) {
-    if (ep.lati == null) continue;
-    const { name, lati, long } = ep;
-    for (const p of Object.values(AppState.db.individuals)) {
-      for (const ev of [p.birth, p.chr, p.death, p.buri, ...p.events]) {
-        if (ev && ev.place === name) { ev.lati = lati; ev.long = long; }
-      }
-    }
-    for (const f of Object.values(AppState.db.families)) {
-      if (f.marr?.place  === name) { f.marr.lati  = lati; f.marr.long  = long; }
-      if (f.engag?.place === name) { f.engag.lati = lati; f.engag.long = long; }
+  UIState._placesCache = null; // Cache neu aufbauen mit aktuellem db + extraPlaces
+  const places = collectPlaces();
+  for (const p of Object.values(AppState.db.individuals)) {
+    for (const ev of [p.birth, p.chr, p.death, p.buri, ...(p.events || [])]) {
+      if (!ev || !ev.place || ev.lati != null) continue;
+      const pl = places.get(ev.place.trim());
+      if (pl?.lati != null) { ev.lati = pl.lati; ev.long = pl.long; }
     }
   }
+  for (const f of Object.values(AppState.db.families)) {
+    if (f.marr?.place && f.marr.lati == null) {
+      const pl = places.get(f.marr.place.trim());
+      if (pl?.lati != null) { f.marr.lati = pl.lati; f.marr.long = pl.long; }
+    }
+    if (f.engag?.place && f.engag.lati == null) {
+      const pl = places.get(f.engag.place.trim());
+      if (pl?.lati != null) { f.engag.lati = pl.lati; f.engag.long = pl.long; }
+    }
+  }
+  UIState._placesCache = null; // Cache invalidieren damit Orte-Tab neu rendert
 }
 
 // ─────────────────────────────────────

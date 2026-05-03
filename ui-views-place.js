@@ -91,14 +91,15 @@ function showPlaceForm(placeName) {
 }
 
 function _propagateCoordsToEvents(placeName, lati, long) {
+  const key = placeName.trim();
   for (const p of Object.values(AppState.db.individuals)) {
-    for (const ev of [p.birth, p.chr, p.death, p.buri, ...p.events]) {
-      if (ev && ev.place === placeName) { ev.lati = lati; ev.long = long; }
+    for (const ev of [p.birth, p.chr, p.death, p.buri, ...(p.events || [])]) {
+      if (ev && ev.place?.trim() === key) { ev.lati = lati; ev.long = long; }
     }
   }
   for (const f of Object.values(AppState.db.families)) {
-    if (f.marr?.place  === placeName) { f.marr.lati  = lati; f.marr.long  = long; }
-    if (f.engag?.place === placeName) { f.engag.lati = lati; f.engag.long = long; }
+    if (f.marr?.place?.trim()  === key) { f.marr.lati  = lati; f.marr.long  = long; }
+    if (f.engag?.place?.trim() === key) { f.engag.lati = lati; f.engag.long = long; }
   }
 }
 
