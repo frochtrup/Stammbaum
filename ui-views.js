@@ -545,7 +545,7 @@ function sourceTagsHtml(sourceIds, pageMap, quayMap) {
     ].filter(Boolean);
     const isUrl = /^https?:\/\//i.test(page);
     const linkBtn = isUrl
-      ? `<a class="src-badge-link" href="${esc(page)}" target="_blank" rel="noopener" title="${esc(page)}" onclick="event.stopPropagation()">↗</a>`
+      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(page)}" title="${esc(page)}">↗</span>`
       : '';
     return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(sid)}${pageSuffix}</span>${linkBtn}`;
   }).filter(Boolean).join('');
@@ -630,6 +630,7 @@ const _CLICK_MAP = {
   toggleSrc:               el => toggleSrc(el.dataset.prefix, el.dataset.sid),
   'copy-cit':              el => copyCitations(el.dataset.prefix),
   'paste-cit':             el => pasteCitations(el.dataset.prefix),
+  openCitLink:             (el, e) => { e.stopPropagation(); window.open(el.dataset.href, '_blank', 'noopener'); },
   odLoadFile:              el => odLoadFile(el.dataset.odid, el.dataset.odname),
   odFolderBack:            ()  => _odFolderBack(),
   odPickCancel:            ()  => _odPickCancel(),
