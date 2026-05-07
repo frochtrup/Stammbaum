@@ -9,6 +9,13 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-08 — F4 Soundex-Suche + OBJE-Fix (sw v349–v350)
+
+- **sw v349** `fix`: OBJE ohne FORM — `m.form = null`; `gedcom-writer.js` gibt `FORM`-Tag nur aus wenn nicht null (GRAMPS-Kompatibilität, verhindert leere `2 FORM`-Zeilen)
+- **sw v350** `feat`: F4 Soundex-Suche — `germanSoundex()` mit Umlaut-Normalisierung (Ä→A, Ö→O, Ü→U, ß→S); ≈-Toggle in globaler Suche schaltet zwischen Exact- und Soundex-Match; findet Schreibvarianten (Decker/Deker/Döker)
+
+---
+
 ### Session 2026-05-03 — F2 Beziehungsrechner Bugfixes + Quellen-Features + Orts-Karte-Nav (sw v333–v348)
 
 - **sw v333** `feat`: Beziehungsrechner F2 — `calcRelationship(idA, idB)` bidirektionale BFS (Tiefe 12); `_relLabel()` dt. Bezeichnungen (Vater/Mutter, Großelternteil, Onkel/Tante, Cousin n. Grads); Verwandtschafts-Sektion in `showDetail()` (klickbar); `showRelPath()`-Modal mit Pfad + gemeinsamem Vorfahren (⬡) + Kekule-Badge
