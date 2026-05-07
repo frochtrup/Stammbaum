@@ -38,7 +38,8 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 5.1 | ASSO/RELA/Taufpaten: `p.associations[]`, GEDCOM↔GRAMPS, Taufpaten-CHR-Formular | v323–v329 |
 | F1 | Sosa/Kekule: 9-Gen-Baum + Fächer, `_buildKekuleMap()`, `#N`-Badges | v330–v332 |
 | F2 | Beziehungsrechner: BFS, `_relLabel()`, Pfad-Modal, Pedigree-Collapse-Hinweis | v333–v348 |
-| F4 | Soundex-Suche: `germanSoundex()`, Umlaut-Normalisierung, ≈-Toggle in globaler Suche | v350 |
+| — | OBJE ohne FORM: `m.form = null`; Writer gibt FORM nur aus wenn nicht null | v349 |
+| F4 | Soundex-Suche: `germanSoundex()` mit Umlaut-Normalisierung, ≈-Toggle in globaler Suche | v350 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -46,25 +47,45 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ## Offene Aufgaben
 
+### Security — Priorität 1 (alle klein im Aufwand)
+
+Ergebnis des vollständigen Security-Reviews (2026-05-08). Alle Lücken beziehen sich auf neu importierte
+GEDCOM-Dateien aus externen Quellen als Angriffspfad.
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| SEC-1 | **OAuth CSRF: State-Parameter** | `odLogin()`: `crypto.getRandomValues()` → State in sessionStorage; `odHandleCallback()`: validieren und verwerfen bei Mismatch. CRITICAL: ohne State ist CSRF auf OAuth-Flow möglich. | XS |
+| SEC-2 | **URL-Schema-Injection in `href`** | `ui-views-person.js:549`, `ui-forms-repo.js:96`: `safeLinkHref()` Wrapper der nur `http/https/mailto` durchlässt. `javascript:` in GEDCOM-`WWW`-Feld würde sonst als Link gerendert. | XS |
+| SEC-3 | **`esc(addr)` in Hof-View** | `ui-views-hof.js` (4 Stellen): `addr.replace(/"/g, '&quot;')` durch `esc(addr)` ersetzen. | XS |
+| SEC-4 | **`_validCoord()` Helper** | `ui-views-person.js`, `ui-views-family.js`: `isFinite()` + Range-Check wie in `ui-views-hof.js:456` — verhindert `NaN`/`Infinity` in Apple-Maps-URLs. | XS |
+
 ### Architektur
 
-| ID | Aufgabe | Aufwand |
-|---|---|---|
-| A5 | **`db`-Shim eliminieren**: `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js` | L |
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| A3 | **SW Cache-first für App-Assets** | `sw.js`: Strategie auf Cache-first für alle PRECACHE-Assets umstellen; Network-first nur für GEDCOM/OneDrive-Requests. Network-first + 4s Timeout = 4s Warte-Blockade bei schlechtem iOS-WLAN. | S |
+| A4 | **Google Fonts lokal cachen** | `Noto Sans` und `Material Icons` lokal herunterladen und in PRECACHE aufnehmen. Aktuell: Fonts fehlen beim ersten Offline-Start. | XS |
+| A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. `configurable:true` erlaubt lautloses Überschreiben des globalen State. | L |
+| A6 | **`initAutocomplete()` zusammenführen** | Drei unabhängige Implementierungen in `ui-forms.js`, `ui-views-hof.js`, `ui-views-tasks.js`. Gemeinsame Funktion in `ui-views.js`. | M |
 
-### UX
+### UX / Benutzerführung
 
-| ID | Aufgabe | Aufwand |
-|---|---|---|
-| U8 | **Cmd+Z granulares Undo**: History-Stack auf AppState | XL |
-| U12 | **Dark Mode**: `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
-| U16 | **Farbkodierung Baum A11y**: Geschlecht nur durch Farbe — keine Text-Alternative für Farb-Sehschwäche | XS |
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| U1 | **"Datei schließen" absichern** | `index.html:1011`: ans Ende des ☰-Menüs verlagern, rot färben (danger), immer Bestätigungs-Dialog — auch ohne ungespeicherte Änderungen. | XS |
+| U2 | **"Speichern" / "Sichern" vereinheitlichen** | Inkonsistenz quer durch Menü, Storage und Toasts. Festlegen: "Speichern" = als Datei exportieren, "Sichern" = Backup. Überall einheitlich. | S |
+| U3 | **Hilfe-Modal aktualisieren** | Inhalt veraltet: falsche Icons, veraltete Menüpfade. Fehlende Workflows: GRAMPS-Import, Beziehungsrechner, Forschungsaufgaben, OneDrive-Verbindung. | M |
+| U4 | **☰-Menü strukturieren** | 13 Aktionen ohne Hierarchie. Aufteilen in "Datei" (Öffnen/Speichern/OneDrive/Backup) und "Werkzeuge" (Duplikate/Statistik/Roundtrip). | S |
+| U5 | **ARIA-Dialog-Attribute auf Modals** | `role="dialog"`, `aria-modal="true"`, `aria-labelledby` fehlen auf mehreren Modals. Screen-Reader erkennen diese nicht als Dialoge. | S |
+| U6 | **Touch-Targets kleine Buttons** | Jahresfilter-Clear (×) und Sortier-Buttons in Listen unter 44px. `min-width/height: 44px` in `styles.css`. | XS |
+| U8 | **Cmd+Z granulares Undo** | History-Stack auf AppState; aktuell: Cmd+Z = "Revert to Saved" | XL |
+| U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
+| U16 | **Farbkodierung Baum A11y** | Geschlecht nur durch Farbe — keine Text-Alternative für Farb-Sehschwäche | XS |
 
 ### GRAMPS — Editierbarkeit (Phase 5.2/5.3)
 
 | Aufgabe | Aufwand |
 |---|---|
-| ~~OBJE ohne FORM stabilisieren — `m.form = null`; Writer nur ausgeben wenn nicht null~~ | ✓ |
 | Personen-Formular — `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar | M |
 | Ereignis-Formular — `_grampsAttrs[]` pro Event; Witness-Rollen (read-only) | M |
 | Orts-Picker — `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |
@@ -76,7 +97,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
-| ~~F4~~ | ~~**Soundex-Suche**~~ | ~~Schreibvarianten (Decker/Deker/Döker); Toggle in Suche~~ | ✓ |
 | F4b | **Mehrfach-Zitierungen** | `citations:[{sid,page,quay}]` statt `sources[]+sourcePages{}`; ~8 Dateien; Roundtrip neu verifizieren | XL |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO | M |
 | F6 | **Strict-GEDCOM-Export** | Alle `_`-Tags entfernen; max. Interoperabilität mit Ancestry/FTM | M |

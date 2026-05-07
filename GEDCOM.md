@@ -257,6 +257,55 @@ if (lv===1 && tag==='SOUR') cur.topSources.push(val);
 | `1 DATA` in SOUR-Records (GEDCOM 5.5 `2 AGNC`, `2 EVEN`) | SOUR `_passthrough[]` | Selten |
 | Mehrere `1 NAME`-Blöcke (Geburtsname, Alias) | INDI `_passthrough[]` | 2. Name editierbar machen |
 
+---
+
+## Proprietäre `_`-Tags — Analyse und Strict-Export-Planung
+
+Alle `_`-Tags werden im Roundtrip vollständig erhalten. Für einen künftigen **Strict GEDCOM 5.5.1 Export** (ohne proprietäre Tags) ist folgendes zu beachten:
+
+### Vollständig abgebildet (Parser + Writer)
+
+| Tag | Level | Kontext | Mapping | Häufigkeit (`Unsere Familie.ged`) |
+|---|---|---|---|---|
+| `_UID` | 1 | INDI | `p.uid` | 2769× |
+| `_PRIM Y` | 2+4 | OBJE | `m.prim` | 166× |
+| `_SCBK Y` | 2+4 | OBJE | `m.scbk` | 208× |
+| `_DATE` | 2–4 | OBJE | `m.date` | 18× |
+| `_DATE` | 1 | SOUR | `s._date` | 11× |
+| `_STAT` | 1 | INDI/FAM | `p._stat` / `f._stat` | 46× |
+| `_TASK/_CAT/_DONE/_ID` | 1–2 | INDI | eigene Impl. | <10× |
+
+### Nicht abgebildet — ignoriert (passthrough)
+
+| Tag | Level | Kontext | Bewertung |
+|---|---|---|---|
+| `_STYLE 1` | 2 | REPO→ADDR | Ancestris-intern, keine semantische Bedeutung |
+| `_NAME` | 2 | REPO→ADDR | Dupliziert `1 NAME` im selben REPO-Record |
+| `_VALID Y` | 1 | CHAN | Ancestris Nicht-Duplikat-Markierung, App-irrelevant |
+
+### Strict-Export-Mapping (geplant)
+
+| Tag | Häufigkeit | Standard-Äquivalent | Verlust-Risiko |
+|---|---|---|---|
+| `_UID` | 2769× | `1 REFN` + `2 TYPE UID` | Keiner — kann sauber gemappt werden; `REFN` ist GEDCOM 5.5.1-konform |
+| `_PRIM Y` | 166× | Reihenfolge (erstes OBJE = primär) | Gering — Reihenfolge wird beim Schreiben bereits nach `m.prim` sortiert |
+| `_SCBK Y` | 208× | Kein Äquivalent | Datenverlust — Flag hat außerhalb Ancestris/FTM keine Bedeutung; akzeptiert |
+| `_DATE` auf OBJE | 18× | Kein Standard-DATE unter OBJE | Datenverlust — Fotodatum kann in `2 NOTE` umgeschrieben werden (`Aufnahmedatum: 1929`) |
+| `_DATE` auf SOUR | 11× | `1 DATE` (standard) | Keiner — direkt als `1 DATE` schreiben, der ohnehin schon in GEDCOM.md aufgeführt ist |
+| `_STAT Never Married` | 44× | `1 FACT Never Married` + `2 TYPE Relationship Status` | Gering — Semantik bleibt erhalten; keine GEDCOM-Standardkategorie für Personenstatus |
+| `_STAT Geschieden` | 2× | wie oben | Gering |
+| `_TASK/_CAT/_DONE/_ID` | <10× | `1 NOTE` (Freitext-Fallback) oder weglassen | Verlust der Struktur; bei Strict-Export weglassen oder als NOTE serialisieren |
+
+### UI-Lücken (geparst + geschrieben, aber nicht angezeigt)
+
+| Tag | Info | Handlungsbedarf |
+|---|---|---|
+| `_DATE` auf OBJE | Aufnahmedatum des Fotos | Anzeige + Editierfeld im Medienbrowser / Medienformular |
+| `_STAT` | Beziehungsstatus der Person | Anzeige in Personen-Detail + Familien-Detail |
+| `_SCBK` | Scrapbook-Visibility-Flag | Kein Handlungsbedarf (Ancestris-intern) |
+
+---
+
 **Bekannte Einzelverluste (Edge Cases in MeineDaten_ancestris.ged):**
 | Was | Anzahl | Ursache |
 |---|---|---|
