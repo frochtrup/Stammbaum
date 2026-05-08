@@ -835,6 +835,7 @@ body.desktop-mode.places-karte #mapContainer {
 .btn-danger { background: var(--danger); color: var(--text); }
 .btn-primary { background: var(--gold); color: var(--bg); font-weight: 600; }
 .menu-btn { background: var(--surface2); color: var(--text); border: 1px solid var(--border); text-align: left; padding: 14px 16px; }
+.menu-section-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); padding: 6px 4px 2px; margin-top: 4px; }
 
 /* Zentriertes Modal (z.B. Bestätigungs-Dialog) */
 .modal-overlay.modal-center { align-items: center; justify-content: center; }
@@ -1344,3 +1345,7 @@ body.desktop-mode.places-karte #mapContainer {
   border-radius: 50%;
 }
 .task-del:active { color: var(--red, #c0392b); background: var(--surface2); }
+
+/* U6: Touch-Targets WCAG 2.5.5 */
+#yearFilterClear { min-width: 44px; min-height: 44px; }
+#personSortBtn   { min-height: 44px; }

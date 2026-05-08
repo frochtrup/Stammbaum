@@ -51,9 +51,10 @@ async function revertToSaved() {
 }
 
 async function confirmNewFile() {
-  if (AppState.changed) {
-    if (!await confirmModal('Sie haben ungespeicherte Änderungen. Trotzdem fortfahren?', 'Fortfahren')) return;
-  }
+  const msg = AppState.changed
+    ? 'Aktuelle Datei schließen? Ungespeicherte Änderungen gehen verloren.'
+    : 'Aktuelle Datei schließen?';
+  if (!await confirmModal(msg, 'Schließen')) return;
   AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), hofObjects: loadHofObjects(), repositories: {}, notes: {}, placForm: '' };
   AppState.changed = false;
   updateChangedIndicator();
@@ -283,13 +284,13 @@ function updateBackupBtn() {
   const hasBackup = !!_getOriginalText();
   btn.style.opacity = hasBackup ? '1' : '0.4';
   btn.querySelector('span').textContent = hasBackup
-    ? `Original-Backup herunterladen${date ? ' (' + date + ')' : ''}`
-    : 'Original-Backup (keines vorhanden)';
+    ? `Sichern (Original)${date ? ' (' + date + ')' : ''}`
+    : 'Sichern (Original — keines vorhanden)';
 }
 
 function downloadBackup() {
   const backup = _getOriginalText();
-  if (!backup) { showToast('⚠ Kein Backup vorhanden'); return; }
+  if (!backup) { showToast('⚠ Kein Original-Backup vorhanden', 'warn'); return; }
   const fname = localStorage.getItem('stammbaum_backup_filename') || 'stammbaum.ged';
   const backupName = fname.replace(/\.ged$/i, '') + '_original.ged';
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);

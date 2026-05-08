@@ -269,10 +269,10 @@
 ══════════════════════════════════════ -->
 
 <!-- Add chooser -->
-<div class="modal-overlay" id="modalAdd">
+<div class="modal-overlay" id="modalAdd" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAdd">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Neu hinzufügen</div>
+    <div class="sheet-title" id="lbl-modalAdd">Neu hinzufügen</div>
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
         <button class="btn btn-save" data-action="addPerson">👤 Neue Person</button>
@@ -286,10 +286,10 @@
 </div>
 
 <!-- Aufgabe hinzufügen -->
-<div class="modal-overlay" id="modalAddTask">
+<div class="modal-overlay" id="modalAddTask" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddTask">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Aufgabe hinzufügen</div>
+    <div class="sheet-title" id="lbl-modalAddTask">Aufgabe hinzufügen</div>
     <div class="sheet-body">
       <div style="display:flex;flex-direction:column;gap:12px">
         <input type="text" id="addTaskText" placeholder="Aufgabe beschreiben…"
@@ -307,7 +307,7 @@
 </div>
 
 <!-- Person form -->
-<div class="modal-overlay" id="modalPerson">
+<div class="modal-overlay" id="modalPerson" role="dialog" aria-modal="true" aria-labelledby="personFormTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="personFormTitle">Person bearbeiten</div>
@@ -393,7 +393,7 @@
 </div>
 
 <!-- Extra Name form -->
-<div class="modal-overlay" id="modalExtraName">
+<div class="modal-overlay" id="modalExtraName" role="dialog" aria-modal="true" aria-labelledby="extraNameFormTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="extraNameFormTitle">Weiterer Name</div>
@@ -450,7 +450,7 @@
 </div>
 
 <!-- Family form -->
-<div class="modal-overlay" id="modalFamily">
+<div class="modal-overlay" id="modalFamily" role="dialog" aria-modal="true" aria-labelledby="familyFormTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="familyFormTitle">Familie bearbeiten</div>
@@ -527,7 +527,7 @@
 </div>
 
 <!-- Family Event form (MARR / ENGA / DIV / DIVF / EVEN) -->
-<div class="modal-overlay" id="modalFamEvent">
+<div class="modal-overlay" id="modalFamEvent" role="dialog" aria-modal="true" aria-labelledby="famEventFormTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="famEventFormTitle">Ereignis bearbeiten</div>
@@ -604,7 +604,7 @@
 </div>
 
 <!-- Source form -->
-<div class="modal-overlay" id="modalSource">
+<div class="modal-overlay" id="modalSource" role="dialog" aria-modal="true" aria-labelledby="sourceFormTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="sourceFormTitle">Quelle bearbeiten</div>
@@ -691,10 +691,10 @@
 </div>
 
 <!-- Add Event to person -->
-<div class="modal-overlay" id="modalEvent">
+<div class="modal-overlay" id="modalEvent" role="dialog" aria-modal="true" aria-labelledby="lbl-modalEvent">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Ereignis hinzufügen</div>
+    <div class="sheet-title" id="lbl-modalEvent">Ereignis hinzufügen</div>
     <div class="sheet-body">
       <input type="hidden" id="ef-pid">
       <input type="hidden" id="ef-evidx">
@@ -829,10 +829,10 @@
 </div>
 
 <!-- Place edit form -->
-<div class="modal-overlay" id="modalPlace">
+<div class="modal-overlay" id="modalPlace" role="dialog" aria-modal="true" aria-labelledby="lbl-modalPlace">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Ort bearbeiten</div>
+    <div class="sheet-title" id="lbl-modalPlace">Ort bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="pl-old">
       <div class="form-group">
@@ -855,10 +855,10 @@
 </div>
 
 <!-- Neuer Ort -->
-<div class="modal-overlay" id="modalNewPlace">
+<div class="modal-overlay" id="modalNewPlace" role="dialog" aria-modal="true" aria-labelledby="lbl-modalNewPlace">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Neuer Ort</div>
+    <div class="sheet-title" id="lbl-modalNewPlace">Neuer Ort</div>
     <div class="sheet-body">
       <div class="form-group">
         <label class="form-label">Ortsname *</label>
@@ -883,7 +883,7 @@
 </div>
 
 <!-- Beziehungs-Picker: Ehepartner / Kind / Elternteil verknüpfen -->
-<div class="modal-overlay" id="modalRelPicker">
+<div class="modal-overlay" id="modalRelPicker" role="dialog" aria-modal="true" aria-labelledby="relPickerTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="relPickerTitle">Person verknüpfen</div>
@@ -906,7 +906,7 @@
 </div>
 
 <!-- Archiv-Formular -->
-<div class="modal-overlay" id="modalRepo">
+<div class="modal-overlay" id="modalRepo" role="dialog" aria-modal="true" aria-labelledby="repoFormTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="repoFormTitle">Archiv bearbeiten</div>
@@ -948,10 +948,10 @@
 </div>
 
 <!-- Archiv-Picker -->
-<div class="modal-overlay" id="modalRepoPicker">
+<div class="modal-overlay" id="modalRepoPicker" role="dialog" aria-modal="true" aria-labelledby="lbl-modalRepoPicker">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Archiv wählen</div>
+    <div class="sheet-title" id="lbl-modalRepoPicker">Archiv wählen</div>
     <div class="sheet-body">
       <input class="form-input" id="repoPickerSearch"
              placeholder="Archiv suchen…" autocomplete="off"
@@ -967,13 +967,17 @@
 </div>
 
 <!-- Menu drawer -->
-<div class="modal-overlay" id="modalMenu">
+<div class="modal-overlay" id="modalMenu" role="dialog" aria-modal="true" aria-labelledby="lbl-modalMenu">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Menü</div>
+    <div class="sheet-title" id="lbl-modalMenu">Menü</div>
     <div class="sheet-body">
       <div class="btn-row" style="flex-direction:column; gap:10px">
-        <!-- OneDrive (primär) -->
+        <!-- Datei -->
+        <div class="menu-section-label">Datei</div>
+        <button class="btn menu-btn" data-action="menuOpenFile">
+          📂 &nbsp; Öffnen… (lokal)
+        </button>
         <button id="odConnectBtn" class="btn menu-btn" data-action="menuOdToggle">
           ☁ &nbsp; OneDrive verbinden
         </button>
@@ -986,11 +990,6 @@
         <button id="odSettingsBtn" class="btn menu-btn" data-action="menuSettings">
           ⚙ &nbsp; Einstellungen
         </button>
-        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
-        <!-- Lokal (sekundär) -->
-        <button class="btn menu-btn" data-action="menuOpenFile">
-          📂 &nbsp; Öffnen… (lokal)
-        </button>
         <button class="btn menu-btn" data-save-btn data-action="menuExport">
           💾 &nbsp; Speichern (lokal)
         </button>
@@ -998,22 +997,18 @@
           💾 &nbsp; Als GRAMPS exportieren
         </button>
         <button id="backupMenuBtn" class="btn menu-btn" data-action="menuBackup">
-          🗄 &nbsp; <span>Original herunterladen</span>
+          🗄 &nbsp; <span>Sichern (Original)</span>
         </button>
-        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
-        <!-- Sonstiges -->
+        <!-- Bearbeiten -->
+        <div class="menu-section-label">Bearbeiten</div>
         <button class="btn menu-btn" data-action="menuRevert">
           ↩ &nbsp; Änderungen verwerfen
         </button>
         <button class="btn menu-btn" data-action="menuLoadDemo">
           🗂 &nbsp; Demo-Daten öffnen
         </button>
-        <button class="btn menu-btn" style="color:var(--text-muted)" data-action="menuNewFile">
-          ✕ &nbsp; Datei schließen
-        </button>
-        <button class="btn menu-btn" data-action="menuHelp">
-          ❓ &nbsp; Hilfe &amp; Anleitung
-        </button>
+        <!-- Werkzeuge -->
+        <div class="menu-section-label">Werkzeuge</div>
         <button class="btn menu-btn" data-action="menuDedup">
           &#128270; &nbsp; Duplikate erkennen
         </button>
@@ -1022,6 +1017,13 @@
         </button>
         <button hidden class="btn" style="background:var(--surface2);color:var(--gold);border:1px solid var(--gold-dim);text-align:left;padding:14px 16px;" data-action="menuRoundtrip" data-debug-only>
           🔁 &nbsp; Roundtrip-Test
+        </button>
+        <div style="border-top:1px solid var(--border);margin:2px 0"></div>
+        <button class="btn menu-btn" data-action="menuHelp">
+          ❓ &nbsp; Hilfe &amp; Anleitung
+        </button>
+        <button class="btn menu-btn" style="color:var(--red,#c0392b)" data-action="menuNewFile">
+          ✕ &nbsp; Datei schließen
         </button>
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalMenu">Abbrechen</button>
       </div>
@@ -1035,10 +1037,10 @@
   </div>
 </div>
 <!-- Einstellungen -->
-<div class="modal-overlay" id="modalSettings">
+<div class="modal-overlay" id="modalSettings" role="dialog" aria-modal="true" aria-labelledby="lbl-modalSettings">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Einstellungen</div>
+    <div class="sheet-title" id="lbl-modalSettings">Einstellungen</div>
     <div class="sheet-body">
       <div id="set-od-section">
       <div style="font-size:0.75rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">OneDrive-Ordner</div>
@@ -1084,10 +1086,10 @@
 </div>
 
 <!-- OneDrive Datei-Auswahl -->
-<div class="modal-overlay" id="modalOneDrive">
+<div class="modal-overlay" id="modalOneDrive" role="dialog" aria-modal="true" aria-labelledby="lbl-modalOneDrive">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">OneDrive — .ged Dateien</div>
+    <div class="sheet-title" id="lbl-modalOneDrive">OneDrive — .ged Dateien</div>
     <div class="sheet-body">
       <div id="odFileList" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto"></div>
       <div class="btn-row" style="margin-top:12px">
@@ -1097,10 +1099,10 @@
   </div>
 </div>
 <!-- Medium hinzufügen -->
-<div class="modal-overlay" id="modalAddMedia">
+<div class="modal-overlay" id="modalAddMedia" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddMedia">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Medium hinzufügen</div>
+    <div class="sheet-title" id="lbl-modalAddMedia">Medium hinzufügen</div>
     <div class="sheet-body">
       <div class="form-group">
         <label class="form-label">Titel (optional)</label>
@@ -1133,7 +1135,7 @@
 </div>
 
 <!-- Medien-Browser -->
-<div class="modal-overlay" id="modalMediaBrowser">
+<div class="modal-overlay" id="modalMediaBrowser" role="dialog" aria-modal="true" aria-labelledby="media-browser-title">
   <div class="sheet" style="max-height:88vh;display:flex;flex-direction:column">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="media-browser-title">Medien-Browser</div>
@@ -1145,10 +1147,10 @@
 </div>
 
 <!-- Medium bearbeiten -->
-<div class="modal-overlay" id="modalEditMedia">
+<div class="modal-overlay" id="modalEditMedia" role="dialog" aria-modal="true" aria-labelledby="lbl-modalEditMedia">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" style="display:flex;align-items:center;gap:10px">
+    <div class="sheet-title" id="lbl-modalEditMedia" style="display:flex;align-items:center;gap:10px">
       <div id="em-thumb-bar" style="flex-shrink:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color);overflow:hidden"></div>
       <span>Medium bearbeiten</span>
     </div>
@@ -1183,37 +1185,41 @@
   data-change="photoImportChange">
 
 <!-- Hilfe-Modal -->
-<div class="modal-overlay" id="modalHelp">
+<div class="modal-overlay" id="modalHelp" role="dialog" aria-modal="true" aria-labelledby="lbl-modalHelp">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Hilfe &amp; Anleitung</div>
+    <div class="sheet-title" id="lbl-modalHelp">Hilfe &amp; Anleitung</div>
     <div class="sheet-body">
       <div id="helpSwVersion" style="font-size:0.75rem;color:var(--text-muted);text-align:center;margin-bottom:14px;letter-spacing:0.04em">
         Stammbaum PWA
       </div>
       <div style="font-size:0.85rem;color:var(--text-dim);line-height:1.7">
-        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">GEDCOM-Datei öffnen</strong><br>
-        Tippen Sie auf „GEDCOM-Datei öffnen" auf dem Startbildschirm — oder wählen Sie im Menü ☰ → „Öffnen…". Auf dem iPhone navigieren Sie im Dateipicker zu iCloud Drive → Genealogie → Ihre .ged-Datei.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">GEDCOM- oder GRAMPS-Datei öffnen</strong><br>
+        Tippen Sie auf dem Startbildschirm auf „Datei öffnen" — oder wählen Sie im Menü ☰ → Datei → „Öffnen… (lokal)". Auf dem iPhone navigieren Sie im Dateipicker zu iCloud Drive → Genealogie → Ihre .ged- oder .gramps-Datei. GRAMPS-Dateien werden als Leseansicht geöffnet.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Speichern — Chrome (Mac)</strong><br>
-        Beim Öffnen fragt Chrome nach Schreibzugriff auf die Datei — bestätigen. Danach speichert ☁️ direkt in die Originaldatei, ohne Download-Dialog.</p>
+        Beim Öffnen fragt Chrome nach Schreibzugriff auf die Datei — bestätigen. Danach speichert das ☁-Symbol in der Topbar direkt in die Originaldatei, ohne Download-Dialog.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Speichern — Safari / Firefox (Mac)</strong><br>
-        ☁️ lädt die aktualisierte Datei herunter. Bei Änderungen wird zusätzlich ein Zeitstempel-Backup des Originals erzeugt. Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive/Genealogie setzen.</p>
+        Das ☁-Symbol lädt die aktualisierte Datei herunter. Tipp: Safari → Einstellungen → Allgemein → Downloadordner auf iCloud Drive/Genealogie setzen.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Speichern — iPhone / iPad</strong><br>
-        ☁️ öffnet das Share Sheet mit der aktualisierten Datei + Zeitstempel-Backup. Wählen Sie „In Dateien sichern" → iCloud Drive → Genealogie.</p>
+        Das ☁-Symbol öffnet das Share Sheet mit der aktualisierten Datei. Wählen Sie „In Dateien sichern" → iCloud Drive → Genealogie.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Sichern (Original)</strong><br>
+        Im Menü ☰ → Datei → „Sichern (Original)" lädt die zuletzt geladene Originalversion herunter — unabhängig von aktuellen Änderungen. Nützlich als Sicherheitskopie vor größeren Bearbeitungen.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Navigation</strong><br>
-        6 Tabs in der unteren Leiste: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · ⌂ Proband. Die 🔍 Suche ist in der Topbar und durchsucht gleichzeitig alle Entitätstypen. Aus der Detailansicht gelangen Sie mit „← Zurück" wieder zur Liste.</p>
+        6 Tabs in der unteren Leiste: ⧖ Baum · Personen · Familien · Quellen · Orte · Proband. Die Suche in der Topbar durchsucht gleichzeitig alle Entitätstypen. Mit dem ≈-Toggle aktivieren Sie die Soundex-Suche für Schreibvarianten (z. B. Decker / Deker / Döker). Aus der Detailansicht gelangen Sie mit „← Zurück" wieder zur Liste.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Baum (Sanduhr)</strong><br>
-        Der ⧖-Tab zeigt einen Sanduhr-Baum mit bis zu 4 Ahnen-Ebenen und 2 Nachkommen-Ebenen. Tippen auf eine Karte öffnet die Detailansicht oder wechselt den Probanden. Tastaturnavigation: Pfeiltasten wechseln zwischen Personen, Enter öffnet die Detailansicht.</p>
+        Der Baum-Tab zeigt einen Sanduhr-Baum mit bis zu 4 Ahnen-Ebenen und 2 Nachkommen-Ebenen. Tippen auf eine Karte öffnet die Detailansicht oder wechselt den Probanden. Tastaturnavigation: Pfeiltasten wechseln zwischen Personen, Enter öffnet die Detailansicht.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Beziehungsrechner</strong><br>
+        In der Personendetailansicht finden Sie den Abschnitt „Verwandtschaft". Wählen Sie eine zweite Person — die App berechnet den genauen Verwandtschaftsgrad (bidirektionale Suche bis Tiefe 12) und zeigt den Pfad im Detail-Modal an.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Forschungsaufgaben</strong><br>
+        In jeder Personendetailansicht gibt es einen Abschnitt „Forschungsaufgaben". Aufgaben können nach Kategorie (Kirchenbuch, Urkunde, Online) angelegt und als erledigt markiert werden. Die globale Aufgabenliste finden Sie im Menü ☰ → Werkzeuge → Statistik (oder als eigenen Tab).</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">OneDrive verbinden</strong><br>
+        Im Menü ☰ → Datei → „OneDrive verbinden" starten Sie den Login. Nach der Verbindung erscheinen „Aus OneDrive öffnen" und „In OneDrive speichern". Unter ☰ → Datei → Einstellungen richten Sie den Foto-Ordner ein. Die App lädt Fotos dynamisch — ohne vollständigen Download.</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Orte · Höfe · Karte</strong><br>
-        Im 📍-Tab wechseln Sie zwischen drei Ansichten: Ortsliste (alle PLAC-Einträge), Höfe (RESI-Adressen mit Koordinaten + Bewohnern) und Karte (Leaflet-Karte mit allen verorteten Orten und Personen). Hof-Koordinaten können direkt im Hof-Detail eingetragen werden.</p>
-        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Statistik</strong><br>
-        Im Menü ☰ → 📊 Statistik finden Sie eine Übersicht: Personen, Familien, Quellen, Vollständigkeitsgrad, Geburts- und Sterbedaten-Abdeckung.</p>
+        Im Orte-Tab wechseln Sie zwischen drei Ansichten: Ortsliste (alle PLAC-Einträge), Höfe (RESI-Adressen mit Koordinaten + Bewohnern) und Karte (alle verorteten Orte und Personen). Hof-Koordinaten können direkt im Hof-Detail eingetragen werden.</p>
+        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Statistik &amp; Duplikate</strong><br>
+        Im Menü ☰ → Werkzeuge finden Sie „Statistik" (Personen, Familien, Vollständigkeitsgrad) und „Duplikate erkennen" (Namens- und Datums-Vergleich mit Merge-Funktion).</p>
         <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Tastaturkürzel</strong><br>
-        Im Baum: Pfeiltasten navigieren, Enter öffnet Detail. Cmd+Z verwirft alle ungespeicherten Änderungen (entspricht „Änderungen verwerfen" im Menü).</p>
-        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">Fotos &amp; Medien</strong><br>
-        In jeder Detailansicht (Person, Familie, Quelle) finden Sie einen Abschnitt „Medien". Über „+ Hinzufügen" fügen Sie neue Einträge hinzu — bei aktiver OneDrive-Verbindung können Sie direkt eine Datei im Ordner auswählen. Mit dem ×-Button entfernen Sie Einträge. Tippen auf einen Medieneintrag öffnet das Foto in der Vollbild-Lightbox; dort können Sie es über „Als Hauptfoto setzen" zum Profilfoto machen.</p>
-        <p style="margin-bottom:12px"><strong style="color:var(--gold-lt)">OneDrive-Fotos</strong><br>
-        Im Menü ☰ → „🖼 Foto-Ordner einrichten" verbinden Sie einen OneDrive-Ordner mit Ihren Fotos. Die App verknüpft die Dateien automatisch mit den richtigen Personen (anhand der OBJE-Referenzen im GEDCOM) und lädt sie bei Bedarf dynamisch — ohne vollständigen Download.</p>
+        Im Baum: Pfeiltasten navigieren, Enter öffnet Detail. Cmd+Z verwirft alle ungespeicherten Änderungen (entspricht „Änderungen verwerfen" im Menü ☰ → Bearbeiten).</p>
         <p style="margin-bottom:0"><strong style="color:var(--gold-lt)">Datenschutz</strong><br>
         Alle Daten bleiben auf Ihrem Gerät. GEDCOM-Daten und Fotos werden nicht an Server übertragen. OneDrive-Zugriff erfolgt direkt zwischen Ihrem Browser und Microsoft — nur wenn Sie sich explizit verbinden.</p>
       </div>
@@ -1225,10 +1231,10 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalRoundtrip">
+<div class="modal-overlay" id="modalRoundtrip" role="dialog" aria-modal="true" aria-labelledby="lbl-modalRoundtrip">
   <div class="sheet" style="max-height:90vh">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Roundtrip-Test</div>
+    <div class="sheet-title" id="lbl-modalRoundtrip">Roundtrip-Test</div>
     <div class="sheet-body">
       <pre id="roundtrip-output" style="font-size:0.72rem;line-height:1.5;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;overflow-y:auto;max-height:60vh;background:var(--bg-card);padding:10px;border-radius:8px;margin-bottom:14px">Kein Ergebnis</pre>
       <div class="btn-row">
@@ -1240,10 +1246,10 @@
 
 <div class="toast" id="toast"></div>
 
-<div class="modal-overlay" id="modalChildRel">
+<div class="modal-overlay" id="modalChildRel" role="dialog" aria-modal="true" aria-labelledby="lbl-modalChildRel">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Kind-Verhältnis</div>
+    <div class="sheet-title" id="lbl-modalChildRel">Kind-Verhältnis</div>
     <div class="sheet-body">
       <input type="hidden" id="cr-famId">
       <input type="hidden" id="cr-childId">
@@ -1282,10 +1288,10 @@
   <button class="sync-save-btn" id="syncBannerBtn" data-action="syncBannerSave">Speichern</button>
 </div>
 
-<div class="modal-overlay" id="modalStartupChoice">
+<div class="modal-overlay" id="modalStartupChoice" role="dialog" aria-modal="true" aria-labelledby="lbl-modalStartupChoice">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Stammbaum laden</div>
+    <div class="sheet-title" id="lbl-modalStartupChoice">Stammbaum laden</div>
     <div class="sheet-body">
       <div id="_startupChoiceName" style="text-align:center;padding:4px 0 18px;color:var(--text-dim);font-size:0.9rem"></div>
       <div style="display:flex;flex-direction:column;gap:10px">
@@ -1306,10 +1312,10 @@
 </div>
 
 <!-- ── Notiz-Modal ───────────────────────────────────── -->
-<div class="modal-overlay" id="modalNote">
+<div class="modal-overlay" id="modalNote" role="dialog" aria-modal="true" aria-labelledby="lbl-modalNote">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Notiz bearbeiten</div>
+    <div class="sheet-title" id="lbl-modalNote">Notiz bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="note-type">
       <input type="hidden" id="note-id">
@@ -1338,10 +1344,10 @@
 <script src="ui-views-note.js"></script>
 <script src="ui-views-search.js"></script>
 <!-- Duplikat-Erkennung Modal -->
-<div class="modal-overlay" id="modalDedup">
+<div class="modal-overlay" id="modalDedup" role="dialog" aria-modal="true" aria-labelledby="lbl-modalDedup">
   <div class="sheet" style="max-height:90vh;display:flex;flex-direction:column">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Duplikate erkennen</div>
+    <div class="sheet-title" id="lbl-modalDedup">Duplikate erkennen</div>
     <div class="sheet-body" style="flex:1;overflow-y:auto;padding-bottom:0">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <label style="font-size:0.8rem;color:var(--text-muted);white-space:nowrap">Schwellenwert: <strong id="dedup-threshold-val">65</strong></label>
@@ -1359,10 +1365,10 @@
 </div>
 
 <!-- Merge-Bestätigung Modal -->
-<div class="modal-overlay" id="modalMerge">
+<div class="modal-overlay" id="modalMerge" role="dialog" aria-modal="true" aria-labelledby="lbl-modalMerge">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Personen zusammenführen</div>
+    <div class="sheet-title" id="lbl-modalMerge">Personen zusammenführen</div>
     <div class="sheet-body">
       <div id="merge-body"></div>
       <div class="btn-row" style="margin-top:14px;flex-direction:column;gap:8px">
@@ -1395,10 +1401,10 @@
 <script src="onedrive.js"></script>
 
 <!-- Karten Person-Picker Modal -->
-<div class="modal-overlay" id="modalMapPerson">
+<div class="modal-overlay" id="modalMapPerson" role="dialog" aria-modal="true" aria-labelledby="lbl-modalMapPerson">
   <div class="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title">Person wählen</div>
+    <div class="sheet-title" id="lbl-modalMapPerson">Person wählen</div>
     <div class="sheet-body" style="padding:0">
       <div class="search-wrap" style="padding:8px 16px 4px">
         <input class="search-input" id="mapPersonSearch" type="search" placeholder="Name suchen…" autocomplete="off" data-input="filterMapPersonList">
@@ -1438,7 +1444,7 @@
   <div id="map-explore-panel" class="map-explore-panel" style="display:none"></div>
   <div id="map-leaflet"></div>
 </div>
-<div class="modal-overlay" id="modalRelPath">
+<div class="modal-overlay" id="modalRelPath" role="dialog" aria-modal="true" aria-labelledby="relPathTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="relPathTitle">Verwandtschaft</div>

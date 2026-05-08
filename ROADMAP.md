@@ -72,12 +72,12 @@ GEDCOM-Dateien aus externen Quellen als Angriffspfad.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| U1 | **"Datei schließen" absichern** | `index.html:1011`: ans Ende des ☰-Menüs verlagern, rot färben (danger), immer Bestätigungs-Dialog — auch ohne ungespeicherte Änderungen. | XS |
-| U2 | **"Speichern" / "Sichern" vereinheitlichen** | Inkonsistenz quer durch Menü, Storage und Toasts. Festlegen: "Speichern" = als Datei exportieren, "Sichern" = Backup. Überall einheitlich. | S |
-| U3 | **Hilfe-Modal aktualisieren** | Inhalt veraltet: falsche Icons, veraltete Menüpfade. Fehlende Workflows: GRAMPS-Import, Beziehungsrechner, Forschungsaufgaben, OneDrive-Verbindung. | M |
-| U4 | **☰-Menü strukturieren** | 13 Aktionen ohne Hierarchie. Aufteilen in "Datei" (Öffnen/Speichern/OneDrive/Backup) und "Werkzeuge" (Duplikate/Statistik/Roundtrip). | S |
-| U5 | **ARIA-Dialog-Attribute auf Modals** | `role="dialog"`, `aria-modal="true"`, `aria-labelledby` fehlen auf mehreren Modals. Screen-Reader erkennen diese nicht als Dialoge. | S |
-| U6 | **Touch-Targets kleine Buttons** | Jahresfilter-Clear (×) und Sortier-Buttons in Listen unter 44px. `min-width/height: 44px` in `styles.css`. | XS |
+| ~~U1~~ | ~~**"Datei schließen" absichern**~~ | ~~Ans Ende des ☰-Menüs verlagert, rot gefärbt, immer Bestätigungs-Dialog.~~ | ~~XS~~ |
+| ~~U2~~ | ~~**"Speichern" / "Sichern" vereinheitlichen**~~ | ~~"Speichern" = Datei exportieren, "Sichern" = Original-Backup. Menü, `updateBackupBtn()`, Toast vereinheitlicht.~~ | ~~S~~ |
+| ~~U3~~ | ~~**Hilfe-Modal aktualisieren**~~ | ~~GRAMPS-Import, Beziehungsrechner, Forschungsaufgaben, OneDrive, Soundex, Sichern-Abschnitt, Menüpfade.~~ | ~~M~~ |
+| ~~U4~~ | ~~**☰-Menü strukturieren**~~ | ~~Drei Sektionen: Datei / Bearbeiten / Werkzeuge. Hilfe und Datei-schließen separat am Ende.~~ | ~~S~~ |
+| ~~U5~~ | ~~**ARIA-Dialog-Attribute auf Modals**~~ | ~~Alle 28 Modals: `role="dialog"`, `aria-modal="true"`, `aria-labelledby`. `modalConfirm` behielt `role="alertdialog"`.~~ | ~~S~~ |
+| ~~U6~~ | ~~**Touch-Targets kleine Buttons**~~ | ~~`#yearFilterClear`, `#personSortBtn`: `min-height: 44px` in `styles.css`.~~ | ~~XS~~ |
 | U8 | **Cmd+Z granulares Undo** | History-Stack auf AppState; aktuell: Cmd+Z = "Revert to Saved" | XL |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
 | U16 | **Farbkodierung Baum A11y** | Geschlecht nur durch Farbe — keine Text-Alternative für Farb-Sehschwäche | XS |
