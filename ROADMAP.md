@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v350 · Cache: `stammbaum-v350`
+**sw-Version:** v356 · Cache: `stammbaum-v356`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
@@ -39,7 +39,12 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | F1 | Sosa/Kekule: 9-Gen-Baum + Fächer, `_buildKekuleMap()`, `#N`-Badges | v330–v332 |
 | F2 | Beziehungsrechner: BFS, `_relLabel()`, Pfad-Modal, Pedigree-Collapse-Hinweis | v333–v348 |
 | — | OBJE ohne FORM: `m.form = null`; Writer gibt FORM nur aus wenn nicht null | v349 |
-| F4 | Soundex-Suche: `germanSoundex()` mit Umlaut-Normalisierung, ≈-Toggle in globaler Suche | v350 |
+| F4 | Soundex-Suche: `germanSoundex()` mit Umlaut-Normalisierung, ≈-Toggle | v350 |
+| SEC | Security-Review: OAuth CSRF State, `safeLinkHref()`, `esc(addr)`, `_validCoord()` | v351 |
+| A3/A4 | SW Cache-first für App-Assets + Fonts lokal (8 woff2, CSP bereinigt) | v352–v353 |
+| A6 | `initAutocomplete()` zusammengeführt — `initPlaceAutocomplete` u.a. als Wrapper | v354 |
+| U1–U6 | Menü (Sektionen, Datei schließen), ARIA Dialogs, Touch-Targets, Hilfe-Modal | v355 |
+| — | Rufname-Formularfeld `pf-rufname`; Parser: Asterisk-Konvention in `2 GIVN` | v356 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -47,38 +52,16 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ## Offene Aufgaben
 
-### Security — Priorität 1 (alle klein im Aufwand)
-
-Ergebnis des vollständigen Security-Reviews (2026-05-08). Alle Lücken beziehen sich auf neu importierte
-GEDCOM-Dateien aus externen Quellen als Angriffspfad.
-
-| ID | Aufgabe | Details | Aufwand |
-|---|---|---|---|
-| ~~SEC-1~~ | ~~**OAuth CSRF: State-Parameter**~~ | ~~`odLogin()`: `crypto.getRandomValues()` → State in sessionStorage; `odHandleCallback()`: validieren und verwerfen bei Mismatch.~~ | ~~XS~~ |
-| ~~SEC-2~~ | ~~**URL-Schema-Injection in `href`**~~ | ~~`safeLinkHref()` in `ui-views.js`; verwendet in `ui-views-person.js:549`, `ui-forms-repo.js:96`.~~ | ~~XS~~ |
-| ~~SEC-3~~ | ~~**`esc(addr)` in Hof-View**~~ | ~~`ui-views-hof.js` (4 Stellen) auf `esc(addr)` umgestellt.~~ | ~~XS~~ |
-| ~~SEC-4~~ | ~~**`_validCoord()` Helper**~~ | ~~`_validCoord()` in `ui-views.js`; verwendet in `ui-views-person.js` (5×) + `ui-views-family.js` (1×).~~ | ~~XS~~ |
-
 ### Architektur
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~A3~~ | ~~**SW Cache-first für App-Assets**~~ | ~~`PRECACHE_PATHS` Set; Fetch-Handler: Cache-first für PRECACHE-Assets, Network-first+4s für Rest.~~ | ~~S~~ |
-| ~~A4~~ | ~~**Fonts lokal cachen**~~ | ~~`fonts/` Ordner (8 woff2, fonts.css); Google Fonts Link + CSP entfernt; PRECACHE erweitert.~~ | ~~S~~ |
-| A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. `configurable:true` erlaubt lautloses Überschreiben des globalen State. | L |
-| A7 | **Strict GEDCOM Writer — Rufname via `NICK`** | Beim Export: `p._rufname` → `2 NICK` statt `2 _RUFNAME` (streng GEDCOM-5.5.1-konform, maximale Interoperabilität). Außerdem: Rufname-Wort im `2 GIVN`-Wert mit `*` markieren (Ahnenblatt-Konvention) als zweiten Ausgabemodus. Export-Option im Einstellungs-Modal. | S |
-| ~~A6~~ | ~~**`initAutocomplete()` zusammenführen**~~ | ~~`initAutocomplete(inputId, ddId, opts)` in `ui-views.js`; `initPlaceAutocomplete`, `_initAddrAutocompleteFor`, `_initHofPersonSearchFor` als Wrapper.~~ | ~~M~~ |
+| A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
 
 ### UX / Benutzerführung
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~U1~~ | ~~**"Datei schließen" absichern**~~ | ~~Ans Ende des ☰-Menüs verlagert, rot gefärbt, immer Bestätigungs-Dialog.~~ | ~~XS~~ |
-| ~~U2~~ | ~~**"Speichern" / "Sichern" vereinheitlichen**~~ | ~~"Speichern" = Datei exportieren, "Sichern" = Original-Backup. Menü, `updateBackupBtn()`, Toast vereinheitlicht.~~ | ~~S~~ |
-| ~~U3~~ | ~~**Hilfe-Modal aktualisieren**~~ | ~~GRAMPS-Import, Beziehungsrechner, Forschungsaufgaben, OneDrive, Soundex, Sichern-Abschnitt, Menüpfade.~~ | ~~M~~ |
-| ~~U4~~ | ~~**☰-Menü strukturieren**~~ | ~~Drei Sektionen: Datei / Bearbeiten / Werkzeuge. Hilfe und Datei-schließen separat am Ende.~~ | ~~S~~ |
-| ~~U5~~ | ~~**ARIA-Dialog-Attribute auf Modals**~~ | ~~Alle 28 Modals: `role="dialog"`, `aria-modal="true"`, `aria-labelledby`. `modalConfirm` behielt `role="alertdialog"`.~~ | ~~S~~ |
-| ~~U6~~ | ~~**Touch-Targets kleine Buttons**~~ | ~~`#yearFilterClear`, `#personSortBtn`: `min-height: 44px` in `styles.css`.~~ | ~~XS~~ |
 | U8 | **Cmd+Z granulares Undo** | History-Stack auf AppState; aktuell: Cmd+Z = "Revert to Saved" | XL |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
 | U16 | **Farbkodierung Baum A11y** | Geschlecht nur durch Farbe — keine Text-Alternative für Farb-Sehschwäche | XS |
@@ -100,7 +83,7 @@ GEDCOM-Dateien aus externen Quellen als Angriffspfad.
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
 | F4b | **Mehrfach-Zitierungen** | `citations:[{sid,page,quay}]` statt `sources[]+sourcePages{}`; ~8 Dateien; Roundtrip neu verifizieren | XL |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO | M |
-| F6 | **Strict-GEDCOM-Export** | Alle `_`-Tags entfernen; max. Interoperabilität mit Ancestry/FTM | M |
+| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen (maximale Interoperabilität mit Ancestry/FTM/MacFamilyTree). Konkret: `p._rufname` → `2 NICK`; Rufname-Wort im `2 GIVN` mit `*` markieren (Ahnenblatt-Konvention). Export-Modus als Option im Einstellungs-Modal. | M |
 | F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
 | F8 | **Cluster-Ansicht** | Personen in denselben Orten/Quellen wie Person X | L |
 | F9 | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |
