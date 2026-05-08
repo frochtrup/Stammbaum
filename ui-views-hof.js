@@ -104,7 +104,7 @@ function _hofSourceOptions() {
 }
 
 function _renderAddBewohnerForm(addr) {
-  const addrAttr = addr.replace(/"/g, '&quot;');
+  const addrAttr = esc(addr);
   return `
   <div id="hf-add-section" class="section fade-up" style="display:none">
     <div class="section-title">Bewohner hinzufügen</div>
@@ -193,7 +193,7 @@ function _propRelRow(p, roleStr) {
 }
 
 function _renderAddPropForm(addr) {
-  const addrAttr = addr.replace(/"/g, '&quot;');
+  const addrAttr = esc(addr);
   return `
   <div id="hfp-add-section" class="section fade-up" style="display:none">
     <div class="section-title">Eigentum hinzufügen</div>
@@ -291,42 +291,21 @@ function _initHofFormEvents() {
 }
 
 function _initHofPersonSearchFor(prefix) {
-  const input = document.getElementById(prefix + '-psearch');
-  const dd    = document.getElementById(prefix + '-person-dd');
   const pidEl = document.getElementById(prefix + '-pid');
-  if (!input || !dd || !pidEl) return;
-
-  const _search = debounce(() => {
-    const q = input.value.toLowerCase().trim();
-    dd.innerHTML = '';
-    if (!q) { dd.style.display = 'none'; return; }
-    const matches = Object.values(AppState.db.individuals)
+  initAutocomplete(prefix + '-psearch', prefix + '-person-dd', {
+    getItems: q => Object.values(AppState.db.individuals)
       .filter(p => (p.name || '').toLowerCase().includes(q))
-      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'))
-      .slice(0, 12);
-    if (!matches.length) { dd.style.display = 'none'; return; }
-    matches.forEach(p => {
-      const item = document.createElement('div');
-      item.className = 'place-dropdown-item';
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de')),
+    formatLabel: p => {
       const birth = p.birth?.date ? ' *' + (p.birth.date.match(/\d{4}/)?.[0] || '') : '';
-      item.textContent = (p.name || p.id) + birth;
-      item.addEventListener('mousedown', () => {
-        input.value = p.name || p.id;
-        pidEl.value = p.id;
-        dd.innerHTML = ''; dd.style.display = 'none';
-      });
-      dd.appendChild(item);
-    });
-    dd.style.display = 'block';
-  }, 150);
-
-  input.addEventListener('input', () => {
-    pidEl.value = '';
-    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
-    _search();
+      return (p.name || p.id) + birth;
+    },
+    onSelect: (p, input) => {
+      input.value = p.name || p.id;
+      if (pidEl) pidEl.value = p.id;
+    },
+    onInput: () => { if (pidEl) pidEl.value = ''; },
   });
-  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
-  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
 }
 
 function showHofDetail(addr, pushHistory = true) {
@@ -400,7 +379,7 @@ function _renderHofCoordSection(addr) {
   const m    = AppState.db.hofObjects?.[addr];
   const lat  = m?.lat ?? '';
   const long = m?.long ?? '';
-  const addrAttr = addr.replace(/"/g, '&quot;');
+  const addrAttr = esc(addr);
 
   let body = '';
   if (lat && long) {
@@ -485,7 +464,7 @@ function deleteHofCoord(addr) {
 function _renderHofNoteSection(addr) {
   const m    = AppState.db.hofObjects?.[addr];
   const note = m?.note || '';
-  const addrAttr = addr.replace(/"/g, '&quot;');
+  const addrAttr = esc(addr);
   const body = note
     ? `<div style="font-size:0.88rem;color:var(--text-main);white-space:pre-wrap">${esc(note)}</div>`
     : `<div style="font-size:0.85rem;color:var(--text-dim)">Keine Notiz hinterlegt</div>`;

@@ -54,19 +54,19 @@ GEDCOM-Dateien aus externen Quellen als Angriffspfad.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SEC-1 | **OAuth CSRF: State-Parameter** | `odLogin()`: `crypto.getRandomValues()` → State in sessionStorage; `odHandleCallback()`: validieren und verwerfen bei Mismatch. CRITICAL: ohne State ist CSRF auf OAuth-Flow möglich. | XS |
-| SEC-2 | **URL-Schema-Injection in `href`** | `ui-views-person.js:549`, `ui-forms-repo.js:96`: `safeLinkHref()` Wrapper der nur `http/https/mailto` durchlässt. `javascript:` in GEDCOM-`WWW`-Feld würde sonst als Link gerendert. | XS |
-| SEC-3 | **`esc(addr)` in Hof-View** | `ui-views-hof.js` (4 Stellen): `addr.replace(/"/g, '&quot;')` durch `esc(addr)` ersetzen. | XS |
-| SEC-4 | **`_validCoord()` Helper** | `ui-views-person.js`, `ui-views-family.js`: `isFinite()` + Range-Check wie in `ui-views-hof.js:456` — verhindert `NaN`/`Infinity` in Apple-Maps-URLs. | XS |
+| ~~SEC-1~~ | ~~**OAuth CSRF: State-Parameter**~~ | ~~`odLogin()`: `crypto.getRandomValues()` → State in sessionStorage; `odHandleCallback()`: validieren und verwerfen bei Mismatch.~~ | ~~XS~~ |
+| ~~SEC-2~~ | ~~**URL-Schema-Injection in `href`**~~ | ~~`safeLinkHref()` in `ui-views.js`; verwendet in `ui-views-person.js:549`, `ui-forms-repo.js:96`.~~ | ~~XS~~ |
+| ~~SEC-3~~ | ~~**`esc(addr)` in Hof-View**~~ | ~~`ui-views-hof.js` (4 Stellen) auf `esc(addr)` umgestellt.~~ | ~~XS~~ |
+| ~~SEC-4~~ | ~~**`_validCoord()` Helper**~~ | ~~`_validCoord()` in `ui-views.js`; verwendet in `ui-views-person.js` (5×) + `ui-views-family.js` (1×).~~ | ~~XS~~ |
 
 ### Architektur
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| A3 | **SW Cache-first für App-Assets** | `sw.js`: Strategie auf Cache-first für alle PRECACHE-Assets umstellen; Network-first nur für GEDCOM/OneDrive-Requests. Network-first + 4s Timeout = 4s Warte-Blockade bei schlechtem iOS-WLAN. | S |
-| A4 | **Google Fonts lokal cachen** | `Noto Sans` und `Material Icons` lokal herunterladen und in PRECACHE aufnehmen. Aktuell: Fonts fehlen beim ersten Offline-Start. | XS |
+| ~~A3~~ | ~~**SW Cache-first für App-Assets**~~ | ~~`PRECACHE_PATHS` Set; Fetch-Handler: Cache-first für PRECACHE-Assets, Network-first+4s für Rest.~~ | ~~S~~ |
+| ~~A4~~ | ~~**Fonts lokal cachen**~~ | ~~`fonts/` Ordner (8 woff2, fonts.css); Google Fonts Link + CSP entfernt; PRECACHE erweitert.~~ | ~~S~~ |
 | A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. `configurable:true` erlaubt lautloses Überschreiben des globalen State. | L |
-| A6 | **`initAutocomplete()` zusammenführen** | Drei unabhängige Implementierungen in `ui-forms.js`, `ui-views-hof.js`, `ui-views-tasks.js`. Gemeinsame Funktion in `ui-views.js`. | M |
+| ~~A6~~ | ~~**`initAutocomplete()` zusammenführen**~~ | ~~`initAutocomplete(inputId, ddId, opts)` in `ui-views.js`; `initPlaceAutocomplete`, `_initAddrAutocompleteFor`, `_initHofPersonSearchFor` als Wrapper.~~ | ~~M~~ |
 
 ### UX / Benutzerführung
 

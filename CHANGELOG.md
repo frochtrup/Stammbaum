@@ -9,6 +9,25 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-08 — A6 initAutocomplete() generisch (sw v354)
+
+- **sw v354** `refactor(A6)`: Generische `initAutocomplete(inputId, ddId, opts)` in `ui-views.js` (`opts`: `getItems`, `formatLabel`, `onSelect`, `configEl?`, `onInput?`, `limit?`); `initPlaceAutocomplete` (ui-forms.js), `_initAddrAutocompleteFor` (ui-forms-event.js), `_initHofPersonSearchFor` (ui-views-hof.js) als schlanke Wrapper; eliminiert ~60 Zeilen Boilerplate (debounce, input/blur/focus-Listener, display-Logik); alle 10 Aufrufstellen unverändert
+
+---
+
+### Session 2026-05-08 — A3 Cache-first + A4 Fonts lokal (sw v352–v353)
+
+- **sw v352** `perf(A3)`: SW Cache-first für App-Assets — `PRECACHE_PATHS` Set aus absoluten Pfaden; Fetch-Handler unterscheidet PRECACHE-Assets (sofort aus Cache, kein Netzwarten) von allen anderen Requests (weiter Network-first+4s); behebt 4s Ladeblockade beim App-Start bei schlechtem iOS-WLAN
+- **sw v353** `feat(A4)`: Fonts lokal — `fonts/` Ordner mit 8 woff2-Dateien (Playfair Display + Source Serif 4, latin+latin-ext); `fonts/fonts.css` mit @font-face variable-weight; Google Fonts `<link>` aus index.html entfernt; CSP bereinigt (`fonts.googleapis.com` + `fonts.gstatic.com` entfernt); alle Font-Dateien in PRECACHE → Fonts verfügbar ab erstem Offline-Start
+
+---
+
+### Session 2026-05-08 — Security-Fixes SEC1–SEC4 (sw v351)
+
+- **sw v351** `fix(sec)`: SEC-1 OAuth CSRF — `odLogin()` sendet zufälligen `state`-Parameter; `odHandleCallback()` verwirft Callback bei State-Mismatch; SEC-2 `safeLinkHref()` in `ui-views.js` — nur `http/https/mailto` in GEDCOM-Website-Links erlaubt; SEC-3 `ui-views-hof.js` (4×) `addr.replace(/"/g,'&quot;')` → `esc(addr)`; SEC-4 `_validCoord()` in `ui-views.js` — `isFinite()`+Range-Check ersetzt `!== null`-Checks in 6 Apple-Maps-URLs
+
+---
+
 ### Session 2026-05-08 — F4 Soundex-Suche + OBJE-Fix (sw v349–v350)
 
 - **sw v349** `fix`: OBJE ohne FORM — `m.form = null`; `gedcom-writer.js` gibt `FORM`-Tag nur aus wenn nicht null (GRAMPS-Kompatibilität, verhindert leere `2 FORM`-Zeilen)

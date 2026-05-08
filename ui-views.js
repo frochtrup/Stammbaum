@@ -517,6 +517,61 @@ function markChanged() { AppState.changed = true; UIState._placesCache = null; U
 // ─────────────────────────────────────
 //  SHARED VIEW HELPERS
 // ─────────────────────────────────────
+
+// Generische Autocomplete-Funktion für Orte, Adressen, Personen.
+// opts.getItems(q)       → Array — gefilterte+sortierte Treffer für Suchstring q
+// opts.formatLabel(item) → string — Anzeigetext pro Eintrag
+// opts.onSelect(item, inputEl) → void — Aktion beim Klick
+// opts.configEl?(el, item) — optionale Anpassung des Dropdown-Elements (z.B. Stil)
+// opts.onInput?(inputEl)   — optionale Aktion bei jedem Tastendruck (vor Suche)
+// opts.limit (default 12) — max. Trefferzahl
+function initAutocomplete(inputId, ddId, opts) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+  const limit = opts.limit ?? 12;
+
+  const _run = debounce(() => {
+    const q = input.value.toLowerCase().trim();
+    dd.innerHTML = '';
+    if (!q) { dd.style.display = 'none'; return; }
+    const items = opts.getItems(q).slice(0, limit);
+    if (!items.length) { dd.style.display = 'none'; return; }
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'place-dropdown-item';
+      el.textContent = opts.formatLabel(item);
+      if (opts.configEl) opts.configEl(el, item);
+      el.addEventListener('mousedown', () => {
+        opts.onSelect(item, input);
+        dd.innerHTML = ''; dd.style.display = 'none';
+      });
+      dd.appendChild(el);
+    });
+    dd.style.display = 'block';
+  }, 150);
+
+  input.addEventListener('input', () => {
+    opts.onInput?.(input);
+    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    _run();
+  });
+  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
+function safeLinkHref(url) {
+  if (!url) return '#';
+  const s = url.trim().toLowerCase();
+  if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('mailto:')) return url;
+  return '#';
+}
+
+function _validCoord(lat, lon) {
+  const la = parseFloat(lat), lo = parseFloat(lon);
+  return isFinite(la) && isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180;
+}
+
 function factRow(label, value, rawSuffix, srcIds, pageMap, quayMap) {
   const badges = srcIds ? sourceTagsHtml(srcIds, pageMap, quayMap) : '';
   return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}${badges}</span></div>`;

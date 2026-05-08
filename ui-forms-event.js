@@ -574,50 +574,26 @@ function _addrToPlace(addr) {
 }
 
 function _initAddrAutocompleteFor(inputId, ddId, placeInputId) {
-  const input = document.getElementById(inputId);
-  const dd    = document.getElementById(ddId);
-  if (!input || !dd) return;
-
-  const _search = debounce(() => {
-    const q = input.value.toLowerCase().trim();
-    dd.innerHTML = '';
-    if (!q) { dd.style.display = 'none'; return; }
-    const addrs = collectAddresses()
+  initAutocomplete(inputId, ddId, {
+    getItems: q => collectAddresses()
       .filter(a => a.toLowerCase().includes(q))
       .sort((a, b) => {
-        const aStart = a.toLowerCase().startsWith(q);
-        const bStart = b.toLowerCase().startsWith(q);
-        if (aStart !== bStart) return aStart ? -1 : 1;
+        const aS = a.toLowerCase().startsWith(q), bS = b.toLowerCase().startsWith(q);
+        if (aS !== bS) return aS ? -1 : 1;
         return a.localeCompare(b, 'de');
-      })
-      .slice(0, 12);
-    if (!addrs.length) { dd.style.display = 'none'; return; }
-    addrs.forEach(addr => {
-      const item = document.createElement('div');
-      item.className = 'place-dropdown-item';
-      item.style.whiteSpace = 'pre-wrap';
-      item.textContent = addr;
-      item.addEventListener('mousedown', () => {
-        input.value = addr;
-        dd.innerHTML = ''; dd.style.display = 'none';
-        // PLAC auto-fill: häufigster Ort zu dieser Adresse
-        const place = _addrToPlace(addr);
-        if (place && placeInputId) {
-          const placeInput = document.getElementById(placeInputId);
-          if (placeInput && !placeInput.value) placeInput.value = place;
-        }
-      });
-      dd.appendChild(item);
-    });
-    dd.style.display = 'block';
-  }, 150);
-
-  input.addEventListener('input', () => {
-    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
-    _search();
+      }),
+    formatLabel: addr => addr,
+    configEl:    el => { el.style.whiteSpace = 'pre-wrap'; },
+    onSelect:    (addr, input) => {
+      input.value = addr;
+      // PLAC auto-fill: häufigster Ort zu dieser Adresse
+      const place = _addrToPlace(addr);
+      if (place && placeInputId) {
+        const placeInput = document.getElementById(placeInputId);
+        if (placeInput && !placeInput.value) placeInput.value = place;
+      }
+    },
   });
-  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
-  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
 }
 
 function initAddrAutocomplete() {

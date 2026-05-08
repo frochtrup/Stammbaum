@@ -2,9 +2,14 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v350';
+const CACHE_NAME = 'stammbaum-v354';
 const PRECACHE = [
   './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
+  './fonts/fonts.css',
+  './fonts/playfair-display-normal-latin.woff2', './fonts/playfair-display-normal-latin-ext.woff2',
+  './fonts/playfair-display-italic-latin.woff2', './fonts/playfair-display-italic-latin-ext.woff2',
+  './fonts/source-serif-4-normal-latin.woff2', './fonts/source-serif-4-normal-latin-ext.woff2',
+  './fonts/source-serif-4-italic-latin.woff2', './fonts/source-serif-4-italic-latin-ext.woff2',
   './leaflet.js', './leaflet.css',
   './gedcom.js', './gedcom-parser.js', './gedcom-writer.js', './gramps-parser.js', './gramps-writer.js',
   './storage-file.js', './storage.js',
@@ -15,6 +20,9 @@ const PRECACHE = [
   './ui-fanchart.js', './ui-forms.js', './ui-forms-repo.js', './ui-forms-event.js', './ui-debug.js', './ui-media.js',
   './onedrive-auth.js', './onedrive-import.js', './onedrive.js'
 ];
+
+// Absolute Pfade für schnellen Cache-first-Lookup
+const PRECACHE_PATHS = new Set(PRECACHE.map(p => new URL(p, self.location.href).pathname));
 
 // Install: Dateien vorab cachen
 self.addEventListener('install', event => {
@@ -34,13 +42,33 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch: Network-first mit 4s Timeout → Fallback auf Cache
+// Fetch: Cache-first für App-Assets, Network-first mit 4s Timeout für alles andere
 self.addEventListener('fetch', event => {
   // Nur same-origin (keine externen Fonts/APIs)
   if (!event.request.url.startsWith(self.location.origin)) return;
   // Nur GET
   if (event.request.method !== 'GET') return;
 
+  const pathname = new URL(event.request.url).pathname;
+
+  if (PRECACHE_PATHS.has(pathname)) {
+    // Cache-first: App-Assets sofort aus Cache — kein Netzwarten beim Start
+    event.respondWith(
+      caches.open(CACHE_NAME).then(cache =>
+        cache.match(event.request).then(cached => {
+          if (cached) return cached;
+          // Noch nicht im Cache (z.B. erster SW-Install läuft noch): Netz
+          return fetch(event.request).then(response => {
+            if (response.ok) cache.put(event.request, response.clone());
+            return response;
+          });
+        })
+      )
+    );
+    return;
+  }
+
+  // Network-first mit 4s Timeout für alles andere (z.B. demo.ged)
   const networkWithTimeout = new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), 4000);
     fetch(event.request, { cache: 'no-cache' }).then(response => {
@@ -56,7 +84,6 @@ self.addEventListener('fetch', event => {
     networkWithTimeout
       .then(response => {
         if (response.ok) {
-          // Aktuelle Version im Cache speichern
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }

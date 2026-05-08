@@ -914,46 +914,18 @@ function hideLoadingOverlay() {
 //  PLACE AUTOCOMPLETE
 // ─────────────────────────────────────
 function initPlaceAutocomplete(inputId, ddId) {
-  const input = document.getElementById(inputId);
-  const dd    = document.getElementById(ddId);
-  if (!input || !dd) return;
-
-  const _searchPlaces = debounce(() => {
-    const q = input.value.toLowerCase().trim();
-    dd.innerHTML = '';
-    if (!q) { dd.style.display = 'none'; return; }
-    const names = [...collectPlaces().values()]
+  initAutocomplete(inputId, ddId, {
+    getItems: q => [...collectPlaces().values()]
       .map(p => p.name)
       .filter(n => n.toLowerCase().includes(q))
       .sort((a, b) => {
-        const aStart = a.toLowerCase().startsWith(q);
-        const bStart = b.toLowerCase().startsWith(q);
-        if (aStart !== bStart) return aStart ? -1 : 1;
+        const aS = a.toLowerCase().startsWith(q), bS = b.toLowerCase().startsWith(q);
+        if (aS !== bS) return aS ? -1 : 1;
         return a.localeCompare(b, 'de');
-      })
-      .slice(0, 12);
-    if (!names.length) { dd.style.display = 'none'; return; }
-    names.forEach(name => {
-      const item = document.createElement('div');
-      item.className = 'place-dropdown-item';
-      item.textContent = name;
-      item.addEventListener('mousedown', () => {
-        input.value = name;
-        dd.style.display = 'none';
-      });
-      dd.appendChild(item);
-    });
-    dd.style.display = 'block';
-  }, 150);
-
-  input.addEventListener('input', () => {
-    // Dropdown sofort leeren bei leerem Feld, sonst debounced suchen
-    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
-    _searchPlaces();
+      }),
+    formatLabel: name => name,
+    onSelect:    (name, input) => { input.value = name; },
   });
-
-  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
-  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
 }
 
 // Autocomplete für alle Ortsfelder einmalig initialisieren

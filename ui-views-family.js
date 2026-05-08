@@ -334,7 +334,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const ev = f[key];
       if (!ev?.date && !ev?.place && !ev?.seen) continue;
       _hasAnyEv = true;
-      const geoBtn = (ev.lati !== null && ev.lati !== undefined)
+      const geoBtn = _validCoord(ev.lati, ev.long)
         ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
       const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
       html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">

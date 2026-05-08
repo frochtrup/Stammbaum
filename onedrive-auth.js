@@ -57,11 +57,14 @@ function odLogout() {
 async function odLogin() {
   const verifier  = _odCodeVerifier();
   const challenge = await _odCodeChallenge(verifier);
+  const stateVal  = _odCodeVerifier();
   sessionStorage.setItem('od_verifier', verifier);
+  sessionStorage.setItem('od_state', stateVal);
   const p = new URLSearchParams({
     client_id: OD_CLIENT_ID, response_type: 'code',
     redirect_uri: _odRedirectUri(), scope: OD_SCOPES,
-    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query'
+    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query',
+    state: stateVal
   });
   location.href = OD_AUTH_EP + '?' + p;
 }
@@ -81,6 +84,9 @@ async function odHandleCallback() {
   const error = p.get('error');
   history.replaceState({}, '', location.pathname);
   if (error || !code) { if (error) showToast('OneDrive: ' + (p.get('error_description') || error)); return; }
+  const expectedState = sessionStorage.getItem('od_state');
+  sessionStorage.removeItem('od_state');
+  if (!expectedState || p.get('state') !== expectedState) { showToast('OneDrive: Sicherheitsfehler (CSRF)', 'error'); return; }
   const verifier = sessionStorage.getItem('od_verifier');
   sessionStorage.removeItem('od_verifier');
   if (!verifier) { showToast('OneDrive: Sitzung abgelaufen'); return; }

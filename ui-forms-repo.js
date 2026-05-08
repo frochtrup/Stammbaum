@@ -93,7 +93,7 @@ function showRepoDetail(id, pushHistory = true) {
   <div class="section fade-up"><div class="section-title">Details</div>`;
   if (r.addr)  html += factRow('Adresse', r.addr.replace(/\n/g, ', '));
   if (r.phon)  html += factRow('Telefon', r.phon);
-  if (r.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${esc(r.www)}" target="_blank" rel="noopener">${esc(r.www)}</a></span></div>`;
+  if (r.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(r.www)}" target="_blank" rel="noopener">${esc(r.www)}</a></span></div>`;
   if (r.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span></div>`;
   if (!r.addr && !r.phon && !r.www && !r.email)
     html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
