@@ -66,6 +66,7 @@ GEDCOM-Dateien aus externen Quellen als Angriffspfad.
 | ~~A3~~ | ~~**SW Cache-first für App-Assets**~~ | ~~`PRECACHE_PATHS` Set; Fetch-Handler: Cache-first für PRECACHE-Assets, Network-first+4s für Rest.~~ | ~~S~~ |
 | ~~A4~~ | ~~**Fonts lokal cachen**~~ | ~~`fonts/` Ordner (8 woff2, fonts.css); Google Fonts Link + CSP entfernt; PRECACHE erweitert.~~ | ~~S~~ |
 | A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. `configurable:true` erlaubt lautloses Überschreiben des globalen State. | L |
+| A7 | **Strict GEDCOM Writer — Rufname via `NICK`** | Beim Export: `p._rufname` → `2 NICK` statt `2 _RUFNAME` (streng GEDCOM-5.5.1-konform, maximale Interoperabilität). Außerdem: Rufname-Wort im `2 GIVN`-Wert mit `*` markieren (Ahnenblatt-Konvention) als zweiten Ausgabemodus. Export-Option im Einstellungs-Modal. | S |
 | ~~A6~~ | ~~**`initAutocomplete()` zusammenführen**~~ | ~~`initAutocomplete(inputId, ddId, opts)` in `ui-views.js`; `initPlaceAutocomplete`, `_initAddrAutocompleteFor`, `_initHofPersonSearchFor` als Wrapper.~~ | ~~M~~ |
 
 ### UX / Benutzerführung

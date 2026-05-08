@@ -240,7 +240,13 @@ function parseGEDCOM(text, parseErrors) {
             else if (tag === 'CONT') en.nameRaw += '\n' + val;
             else { en._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = en._extra; }
           } else {
-            if      (tag === 'GIVN') { cur.given = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
+            if      (tag === 'GIVN') {
+              // Asterisk-Konvention: *Rufname oder Rufname* markiert den Rufnamen
+              const starMatch = val.match(/\*(\S+)|\b(\S+)\*/);
+              if (starMatch && !cur._rufname) cur._rufname = (starMatch[1] || starMatch[2]);
+              cur.given = val.replace(/\*/g, '').replace(/\s{2,}/g, ' ').trim();
+              cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim();
+            }
             else if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
             else if (tag === 'NICK') cur.nick = val;
             else if (tag === '_RUFNAME') cur._rufname = val;
