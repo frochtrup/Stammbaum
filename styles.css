@@ -589,6 +589,8 @@ body.desktop-mode.places-karte #mapContainer {
 .detail-id { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
 .detail-id-xref { font-family: monospace; opacity: 0.75; }
 .age-tag { font-size: 0.72rem; color: var(--text-dim); margin-left: 6px; white-space: nowrap; }
+#_startupChoiceName { text-align: center; padding: 4px 0 18px; color: var(--text-dim); font-size: 0.9rem; }
+#cr-child-name { font-weight: 600; padding: 4px 0 8px; }
 
 .section {
   padding: 14px 16px;
