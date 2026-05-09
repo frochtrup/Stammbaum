@@ -588,6 +588,7 @@ body.desktop-mode.places-karte #mapContainer {
 .detail-rufname { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
 .detail-id { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
 .detail-id-xref { font-family: monospace; opacity: 0.75; }
+.age-tag { font-size: 0.72rem; color: var(--text-dim); margin-left: 6px; white-space: nowrap; }
 
 .section {
   padding: 14px 16px;

@@ -409,6 +409,29 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
 // ─────────────────────────────────────
 //  DETAIL: PERSON
 // ─────────────────────────────────────
+
+// Alter in Jahren zwischen zwei GEDCOM-Datumsstrings.
+// Gibt '<span class="age-tag">…</span>' zurück oder '' wenn nicht berechenbar.
+// ~ wenn mind. eines der Daten unscharf (ABT/BEF/AFT/CAL/EST/BET/FROM/TO).
+function _ageAt(refDateStr, evDateStr) {
+  if (!refDateStr || !evDateStr) return '';
+  const refKey = gedDateSortKey(refDateStr);
+  const evKey  = gedDateSortKey(evDateStr);
+  if (!refKey || !evKey) return '';
+  const refYear = Math.floor(refKey / 10000);
+  const refMM   = Math.floor((refKey % 10000) / 100);
+  const refDD   = refKey % 100;
+  const evYear  = Math.floor(evKey / 10000);
+  const evMM    = Math.floor((evKey % 10000) / 100);
+  const evDD    = evKey % 100;
+  let age = evYear - refYear;
+  if (refMM && evMM && (evMM < refMM || (evMM === refMM && refDD && evDD && evDD < refDD))) age--;
+  if (age < 0 || age > 130) return '';
+  const { qual: rq } = parseGedDate(refDateStr);
+  const { qual: eq } = parseGedDate(evDateStr);
+  const approx = (rq || eq) ? '~' : '';
+  return `<span class="age-tag">${approx}${age} J.</span>`;
+}
 function showDetail(id, pushHistory = true) {
   const p = AppState.db.individuals[id];
   if (!p) return;
@@ -478,6 +501,9 @@ function showDetail(id, pushHistory = true) {
     </div>`;
   });
 
+  // Referenzdatum für Altersberechnung: Geburt, Proxy Taufe
+  const _refDate = p.birth.date || p.chr.date || '';
+
   if (p.birth.date || p.birth.place) {
     const geoBtn = _validCoord(p.birth.lati, p.birth.long)
       ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
@@ -489,17 +515,19 @@ function showDetail(id, pushHistory = true) {
     const _gpHtml = _godparents.length
       ? `<div class="event-godparents">${_godparents.map(a => `<span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('')}</div>`
       : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="CHR" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
+    // Alter bei Taufe nur wenn Geburtsdatum bekannt (nicht wenn Taufe selbst der Proxy ist)
+    const _chrAge = p.birth.date ? _ageAt(p.birth.date, p.chr.date) : '';
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="CHR" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_chrAge}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = _validCoord(p.death.lati, p.death.long)
       ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="DEAT" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.death.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="DEAT" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_ageAt(_refDate, p.death.date)}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = _validCoord(p.buri.lati, p.buri.long)
       ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.buri.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
   // Hof-Notiz-Dedup: gleicher Text + gleiche Adresse → nur beim ersten Event zeigen
@@ -532,13 +560,14 @@ function showDetail(id, pushHistory = true) {
         const geoBtn = _validCoord(ev.lati, ev.long)
           ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
         const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
+        const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
         const _noteKey = (ev.addr && ev.note) ? `${ev.addr.trim()}\x00${ev.note}` : null;
         const _showEvNote = ev.note && (!_noteKey || !_shownAddrNotes.has(_noteKey));
         if (_noteKey) _shownAddrNotes.add(_noteKey);
         html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${mediaBadge}${_showEvNote ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${mediaBadge}${_showEvNote ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
         </div>`;
       }
     }
