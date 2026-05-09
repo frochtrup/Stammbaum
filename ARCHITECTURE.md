@@ -438,6 +438,75 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 
 ---
 
+---
+
+### ADR-015: A10 — `unsafe-inline` aus CSP entfernen (v7-dev)
+
+**Kontext:** Die Content Security Policy enthält `style-src 'unsafe-inline'`, was XSS-Angriffe über injizierte `style=`-Attribute ermöglicht. Ziel: 0 `style=`-Attribute im HTML + in JS-Templates → CSP ohne `unsafe-inline`.
+
+**Wichtig:** Nur HTML-geparste `style=`-Attribute erzwingen `unsafe-inline`. CSSOM (`el.style.display = 'flex'`) ist CSP-sicher — diese Aufrufe bleiben unverändert.
+
+**Ausgangslage:** 501 CSP-kritische `style=`-Attribute:
+- 240 in `index.html` (statisch)
+- 261 in 20 JS-Dateien (dynamisch in Template-Strings)
+
+**Strategie:**
+1. **Utility-Klassen** in `styles.css` — ersetzen einmalige Styles (display, flex, gap, font-size …)
+2. **Component-Klassen** in `styles.css` — ersetzen wiederkehrende mehrteilige Styles (`.filter-btn`, `.btn-gold`, `.sheet-footer` …)
+3. **ID-spezifische Regeln** in `styles.css` — für Elemente mit einmaligem Layout (`#modalLightbox`, `#mapContainer`, `#em-thumb-bar` …)
+4. **`hidden`-Attribut** statt `style="display:none"` — semantisch korrekt, JS-`el.style.display` überschreibt `[hidden]`-Regel (kein `!important`)
+5. **`[hidden] { display: none; }`** in `styles.css` — Basis für das `hidden`-Attribut
+
+**CSS-Variablen-Aliases** (ergänzt, da fehlend):
+```css
+:root { --bg-card: var(--surface); --border-color: var(--border); }
+```
+
+**Phasen-Plan:**
+
+| Phase | Scope | Status |
+|---|---|---|
+| 1 | Utility- + Component-Klassen in `styles.css` (+354 Zeilen) | ✅ abgeschlossen |
+| 2 | `index.html`: alle 240 `style=` entfernt | ✅ abgeschlossen |
+| 3 | `ui-forms.js`: Form-Labels + ~80 inline styles in Templates | ⬜ offen |
+| 4 | View-Dateien (6×): `ui-views-hof.js` 55 · `ui-views-person.js` 52 · `ui-views-family.js` 33 · `ui-media.js` 26 · `ui-views-source.js` 23 · Rest | ⬜ offen |
+| 5 | Focus-Management (`ui-views.js`) | ⬜ offen |
+| 6 | `unsafe-inline` aus CSP-Header in `index.html` entfernen | ⬜ offen |
+
+**Utility-Klassen (Auswahl, vollständig in `styles.css`):**
+
+*Display/Flex:* `.d-none` · `.d-flex` · `.flex-1` · `.flex-none` · `.flex-shrink-0` · `.flex-col` · `.flex-wrap` · `.ai-c` · `.jc-c`
+
+*Gap:* `.gap-4` … `.gap-12`
+
+*Sizing:* `.w-full` · `.min-w-0` · `.w-54` · `.w-72` · `.min-w-100` · `.ov-y-auto` · `.max-h-280`
+
+*Spacing:* `.mb-0` · `.mb-4` … `.mb-14` · `.mt-6` … `.mt-20` · `.p-0`
+
+*Typography:* `.fs-xxs` · `.fs-xs` · `.fs-sm` · `.fs-md` · `.fw-600` · `.c-muted` · `.c-dim` · `.c-gold-lt` · `.nowrap` · `.text-upper` · `.lh-17`
+
+*Misc:* `.resize-v` · `.pos-rel`
+
+**Component-Klassen (Auswahl):**
+`.topbar-btn-icon` · `.filter-input` · `.filter-btn` · `.filter-btn-md` · `.btn-outline-sm` · `.btn-dim` · `.btn-sec` · `.btn-gold` · `.btn-gold-sm` · `.btn-choice` · `.tpl-btn` · `.date-d` · `.date-y` · `.date-qual-sel` · `.place-toggle-btn` · `.btn-row-col` · `.empty-hint` · `.list-scroll-inner` · `.sheet-footer` · `.sheet-footer-safe` · `.sheet-tall-88` · `.sheet-tall-90` · `.repo-display` · `.repo-section-label` · `.settings-card` · `.settings-section-top` · `.settings-section-mid` · `.settings-section-bot` · `.version-info` · `.divider` · `.search-wrap-year` · `.media-prim-label` · `.help-body` · `.map-search-wrap` · `.map-close-wrap`
+
+**Konversions-Muster (Phase 2):**
+```html
+<!-- vorher -->
+<span id="changedIndicator" style="display:none" class="changed-dot"></span>
+<button class="topbar-btn" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
+<div class="search-wrap" style="display:flex;gap:6px;align-items:center;padding-top:0;margin-top:-4px">
+
+<!-- nachher -->
+<span id="changedIndicator" hidden class="changed-dot"></span>
+<button class="topbar-btn topbar-btn-icon">☰</button>
+<div class="search-wrap search-wrap-year d-flex gap-6 ai-c">
+```
+
+**Entscheidung:** `[hidden]` ohne `!important` — damit bleibt `el.style.display = 'flex'` im JS lauffähig ohne Anpassung aller show/hide-Aufrufe.
+
+---
+
 ## Bekannte Einschränkungen
 
 | Problem | Ursache | Status |

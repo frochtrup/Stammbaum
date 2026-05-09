@@ -59,34 +59,27 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| A10 | **`unsafe-inline` aus CSP entfernen** | `style-src 'unsafe-inline'` erlaubt CSS-Injection über `style`-Attribute. Scope-Analyse 2026-05-09 abgeschlossen — **revidierter Aufwand: XL**. Details im Analyse-Block unten. | XL |
+| A10 | **`unsafe-inline` aus CSP entfernen** | Phase 1+2 abgeschlossen (styles.css +354 Z., index.html 0 `style=`). Offen: Phase 3–6. Details im Abschnitt unten. | XL → in Arbeit |
 
-#### A10 — Detaillierter Umsetzungsplan (Stand 2026-05-09)
+#### A10 — Umsetzungsplan + Fortschritt (Stand 2026-05-09)
 
-**Gesamtscope:**
-- ~165 `style=` in JS-Template-Strings (17 Dateien), davon ~30 dynamisch (scColor, score%, Balkenbreiten)
-- ~240 `style=` in `index.html` (statische HTML), davon 53× `display:none`
-- ~25 `style.cssText` in JS (nicht CSP-relevant, aber Code-Qualität)
-- ~154 `el.style.display`-Toggles (müssen bei `display:none`-Konvertierung auf `el.hidden` umgestellt werden)
+**Gesamtscope:** 501 CSP-kritische `style=`: 261 in JS-Templates (20 Dateien) + 240 in `index.html`.
+`el.style.*` (~155) + `el.style.cssText` (5×) sind CSP-sicher (CSSOM) — bleiben unverändert.
+→ Details und vollständige Klassenliste: **ADR-015** in `ARCHITECTURE.md`.
 
-**Technische Strategie:**
+**Strategie (revidiert gegenüber Erstanalyse):**
+- `[hidden]` **ohne** `!important` — JS `el.style.display` überschreibt die Regel weiterhin. Keine Umstellung der ~154 show/hide-Aufrufe nötig.
+- Dynamische `style=` in JS-Templates (Farben, Balken): `data-il-*`-Attribute + `_applyDynStyles()` nach `innerHTML`-Zuweisung.
+- Keine `el.hidden`-Umstellung erforderlich (frühere Strategie war falsch).
 
-1. **Statische `style=` → CSS-Klassen** (~310 Stellen): ~60 neue Klassen in `styles.css` (Flex-Helfer, Text-Helfer, Media-Item-Rows, Source-Widget-Rows, Form-Helfer, Komponenten-Klassen). Bestehende Klassen werden erweitert (z.B. `textarea.form-input { resize:vertical; box-sizing:border-box }`).
-
-2. **`display:none` initial → `hidden`-Attribut**: `[hidden] { display:none !important }` in CSS; HTML-Templates und `index.html` nutzen `hidden`-Attribut; alle zugehörigen JS-Toggles von `el.style.display = '' / 'none'` auf `el.hidden = false/true` umstellen (~154 Stellen, in 12+ Dateien).
-
-3. **Dynamische `style=` → `data-*` + Post-Render-JS** (~30 Stellen): nach `innerHTML`-Zuweisung Hilfsfunktion `_applyDynStyles(container)` aufrufen, die `data-il-color`, `data-il-bg`, `data-il-w` per `el.style.xxx` setzt (JS CSSOM-Zuweisung erfordert kein `unsafe-inline`).
-
-4. **CSP: `'unsafe-inline'` aus `style-src` entfernen** — erst wenn alle obigen Punkte abgeschlossen sind.
-
-**Geplante Versionen** (v355–v359 für andere Features vergeben, nächste freie: v360+):
-- **v360**: CSS-Klassen definieren + statische `style=` in JS-Dateien ersetzen
-- **v361**: `display:none` → `hidden` in `index.html` + JS-Toggle-Umstellung
-- **v362**: Statische `style=` in `index.html` ersetzen
-- **v363**: Dynamische `style=` (ui-dedup, ui-views-stats, ui-views-search) + `_applyDynStyles()`
-- **v364**: CSP `unsafe-inline` entfernen + Browser-Test auf CSP-Violations
-
-**Dateien betroffen:** `styles.css`, `index.html`, `gedcom.js`, `ui-views.js`, `ui-views-hof.js`, `ui-views-family.js`, `ui-views-person.js`, `ui-views-source.js`, `ui-views-note.js`, `ui-views-place.js`, `ui-views-map.js`, `ui-views-search.js`, `ui-views-stats.js`, `ui-views-tasks.js`, `ui-media.js`, `ui-forms.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-dedup.js`, `onedrive.js`, `onedrive-import.js`, `storage.js`, `ui-fanchart.js`
+| Phase | Scope | Status | SW-Version |
+|---|---|---|---|
+| 1 | Utility- + Component-Klassen in `styles.css` (+354 Z., 1707 gesamt) | ✅ | — |
+| 2 | `index.html`: alle 240 `style=` → Klassen + `hidden` | ✅ | — |
+| 3 | `ui-forms.js`: Form-Labels + ~80 inline styles in Templates | ⬜ | v360 |
+| 4 | View-Dateien: hof 55 · person 52 · family 33 · media 26 · source 23 + Rest | ⬜ | v361 |
+| 5 | Focus-Management (`ui-views.js`) | ⬜ | v362 |
+| 6 | `unsafe-inline` aus CSP-Header entfernen + Browser-Test | ⬜ | v363 |
 
 ### UX / Benutzerführung
 
