@@ -192,7 +192,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   AppState.currentPlaceName = placeName;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').style.display = 'none';
+  document.getElementById('treeBtn').hidden = true;
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar" style="font-size:1.8rem; border-color:var(--gold-dim)">📍</div>

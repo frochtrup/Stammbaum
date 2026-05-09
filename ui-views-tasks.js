@@ -200,7 +200,7 @@ function switchPersonsMode(mode) {
   const isPersons = mode === 'persons';
 
   document.getElementById('persons-list-section').style.display = isPersons ? '' : 'none';
-  document.getElementById('tasksList').style.display            = isPersons ? 'none' : '';
+  document.getElementById('tasksList').hidden                   = isPersons;
 
   document.getElementById('toggle-persons-mode').classList.toggle('active',  isPersons);
   document.getElementById('toggle-tasks-mode').classList.toggle('active', !isPersons);

@@ -317,7 +317,7 @@ function applyPersonFilter() {
   const sex        = document.getElementById('sexFilter')?.value           || '';
   const birthPlace = (document.getElementById('birthPlaceFilter')?.value)  || '';
   const clearBtn   = document.getElementById('yearFilterClear');
-  if (clearBtn) clearBtn.style.display = (from || to) ? '' : 'none';
+  if (clearBtn) clearBtn.hidden = !(from || to);
   _applyPersonFilterDebounced(q, from, to, sex, birthPlace);
 }
 
@@ -333,8 +333,8 @@ function toggleAdvFilter() {
   const panel  = document.getElementById('advFilterPanel');
   const toggle = document.getElementById('advFilterToggle');
   if (!panel) return;
-  const open = panel.style.display === 'none';
-  panel.style.display = open ? '' : 'none';
+  const open = panel.hidden;
+  panel.hidden = !open;
   if (toggle) { toggle.style.color = open ? 'var(--gold-dim)' : 'var(--text-dim)'; toggle.setAttribute('aria-expanded', String(open)); }
   if (!open) {
     // Panel geschlossen → Adv-Filter zurücksetzen
@@ -448,11 +448,11 @@ function showDetail(id, pushHistory = true) {
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').style.display = '';
+  document.getElementById('treeBtn').hidden = false;
   document.getElementById('treeBtn').dataset.id = id;
   const pb = document.getElementById('probandBtn');
   if (pb) {
-    pb.style.display = '';
+    pb.hidden = false;
     pb.dataset.id = id;
     const isProband = getProbandId() === id;
     pb.classList.toggle('proband-active', isProband);

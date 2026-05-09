@@ -82,7 +82,7 @@ function showRepoDetail(id, pushHistory = true) {
   AppState.currentPlaceName = null;
   document.getElementById('detailTopTitle').textContent = 'Archiv';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').style.display = 'none';
+  document.getElementById('treeBtn').hidden = true;
 
   const linkedSources = Object.values(AppState.db.sources).filter(s => s.repo === id);
   let html = `<div class="detail-hero fade-up">

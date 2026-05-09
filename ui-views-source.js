@@ -13,7 +13,7 @@ function showSourceDetail(id, pushHistory = true) {
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').style.display = 'none';
+  document.getElementById('treeBtn').hidden = true;
 
   // Collect all persons and families referencing this source
   const refPersons = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));
@@ -280,9 +280,9 @@ function renderRepoList() {
   const el      = document.getElementById('repoList');
   const repos   = Object.values(AppState.db.repositories || {});
   const jumpBtn = document.getElementById('repoJumpBtn');
-  if (!repos.length) { section.style.display = 'none'; if (jumpBtn) jumpBtn.style.display = 'none'; return; }
+  if (!repos.length) { section.style.display = 'none'; if (jumpBtn) jumpBtn.hidden = true; return; }
   section.style.display = '';
-  if (jumpBtn) jumpBtn.style.display = '';
+  if (jumpBtn) jumpBtn.hidden = false;
   const sorted = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   el.innerHTML = sorted.map(r => {
     const srcCount = Object.values(AppState.db.sources).filter(s => s.repo === r.id).length;

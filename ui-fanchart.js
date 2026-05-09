@@ -30,7 +30,7 @@ window.showFanChart = function (pid) {
   setBnavActive('tree');
 
   document.getElementById('treeTopTitle').textContent = _fcName(getPerson(pid), 28);
-  document.getElementById('treeBtnBack').style.display = 'none';
+  document.getElementById('treeBtnBack').hidden = true;
 
   const tb = document.getElementById('treeFcToggle');
   if (tb) { tb.textContent = '⧖'; tb.title = 'Zur Sanduhr-Ansicht'; }

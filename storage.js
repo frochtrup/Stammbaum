@@ -74,7 +74,7 @@ async function confirmNewFile() {
   const si = document.getElementById('searchInput');     if (si) si.value = '';
   const yf = document.getElementById('yearFrom');        if (yf) yf.value = '';
   const yt = document.getElementById('yearTo');          if (yt) yt.value = '';
-  const cb = document.getElementById('yearFilterClear'); if (cb) cb.style.display = 'none';
+  const cb = document.getElementById('yearFilterClear'); if (cb) cb.hidden = true;
   UIState._navHistory = []; _updateTreeBackBtn();
   showView('v-landing');
 }

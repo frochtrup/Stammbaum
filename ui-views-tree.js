@@ -265,8 +265,8 @@ function _updateTreeBackBtn() {
   const btn  = document.getElementById('treeBtnBack');
   const hist = document.getElementById('treeHistBtn');
   const n = UIState._navHistory.length;
-  if (btn)  btn.style.display  = n > 0 ? '' : 'none';
-  if (hist) hist.style.display = n >= 2 ? '' : 'none';
+  if (btn)  btn.hidden  = n <= 0;
+  if (hist) hist.hidden = n < 2;
 }
 
 // "←" — immer 1 Schritt direkt zurück (unified history)

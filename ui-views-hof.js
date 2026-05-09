@@ -318,7 +318,7 @@ function showHofDetail(addr, pushHistory = true) {
 
   document.getElementById('detailTopTitle').textContent = 'Hof';
   document.getElementById('editBtn').style.display = 'none';
-  document.getElementById('treeBtn').style.display = 'none';
+  document.getElementById('treeBtn').hidden = true;
 
   const addrDisplay = esc(addr).replace(/\n/g, '<br>');
   const allEntries = [

@@ -126,8 +126,8 @@ function switchPlacesSubTab(sub) {
   const showOrteList   = sub === 'orte' || (sub === 'karte' && isDesktop);
   document.getElementById('placeList')?.style.setProperty('display',          showOrteList ? '' : 'none');
   document.getElementById('place-search-orte')?.style.setProperty('display',  showOrteList ? '' : 'none');
-  document.getElementById('hofList')?.style.setProperty('display',            sub === 'hoefe' ? '' : 'none');
-  document.getElementById('place-search-hoefe')?.style.setProperty('display', sub === 'hoefe' ? '' : 'none');
+  const _hofList = document.getElementById('hofList'); if (_hofList) _hofList.hidden = sub !== 'hoefe';
+  const _hofSearch = document.getElementById('place-search-hoefe'); if (_hofSearch) _hofSearch.hidden = sub !== 'hoefe';
   document.getElementById('mapContainer')?.style.setProperty('display',       sub === 'karte' ? '' : 'none');
   document.body.classList.toggle('places-karte', sub === 'karte');
   ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
@@ -422,7 +422,7 @@ function openDetailHistory() {
 // ▾-Button ein/ausblenden nach jeder Navigation
 function _updateDetailHistBtn() {
   const btn = document.getElementById('detailHistBtn');
-  if (btn) btn.style.display = UIState._navHistory.length >= 2 ? '' : 'none';
+  if (btn) btn.hidden = UIState._navHistory.length < 2;
 }
 
 // Kleinste numerische Personen-ID
