@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v358 · Cache: `stammbaum-v358`
+**sw-Version:** v359 · Cache: `stammbaum-v359`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
@@ -47,6 +47,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | — | Rufname-Formularfeld `pf-rufname`; Parser: Asterisk-Konvention in `2 GIVN` | v356 |
 | A11y/UX | Touch-Targets WCAG 2.5.5: `.topbar-btn` + `.search-input` + `.task-*` auf ≥44px; Toast `aria-live="polite"` für Screen-Reader | v357 |
 | SEC5 | `innerHTML` → `textContent` in `onedrive-auth.js` (Button-Label hardcoded, kein Risiko, aber cleaner Stil) | v358 |
+| A7/A9 | `_placeModes` → `UIState._placeModes`; `_odMigrateIfNeeded()` auch in `odAutoLoadFromOneDrive()` | v359 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -59,12 +60,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
-| A7 | **`_placeModes` → UIState** | `_placeModes{}` liegt in `gedcom.js` statt in `UIState` — Namespace-Inkonsistenz. | S |
-| A8 | **IDB-Schema-Versionierung** | `idb_version`-Key in IDB setzen; Breaking-Changes können so automatisch migriert werden statt manuell. | S |
-| A9 | **ADR-013-Migration automatisch** | `_odMigrateIfNeeded()` beim App-Start aufrufen, nicht erst beim `openSettings()`-Aufruf. | S |
 | A10 | **`unsafe-inline` aus CSP entfernen** | `style-src 'unsafe-inline'` erlaubt CSS-Injection über `style`-Attribute. Nur CSS-Klassen verwenden; dann Direktive entfernen. | M |
-| A11 | **OneDrive-Redirect-URI auf Whitelist** | Fallback `location.origin + location.pathname` ist offen; explizite Liste der drei erlaubten URIs (`github.io`, `localhost`, prod). | S |
-| A12 | **API-Response-Validierung OneDrive** | `parentReference?.path` aus Graph API ohne Längen- oder `../`-Check direkt in IDB-Key übernommen (`onedrive.js` ~Z. 313–386). | S |
 
 
 ### UX / Benutzerführung

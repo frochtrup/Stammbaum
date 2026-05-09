@@ -425,6 +425,7 @@ async function odSaveFile() {
 
 // Auto-Load beim App-Start: lädt letzte bekannte Datei von OneDrive (kein Redirect bei Fehler)
 async function odAutoLoadFromOneDrive() {
+  await _odMigrateIfNeeded();
   const fileId   = localStorage.getItem('od_file_id');
   const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
   if (!fileId) return false;

@@ -36,6 +36,7 @@ const UIState = {
   _probandId:       null,        // null = Fallback auf kleinste ID
   _eventClipboard: null,         // kopiertes Ereignis für Übernehmen-Funktion
   _citClipboard:   null,         // kopierte Quellenbezüge { sources[], pages{}, quay{} }
+  _placeModes:     {},           // { placeId: 'free'|'parts' } — UI-Toggle-Zustand Orts-Eingabe
   _formState: {                  // transienter Formular-State (ADR-003)
     srcWidget:    {},            // srcWidgetState[prefix] = { ids, pages, quay }
     pfExtraNames:   [],          // Zusatz-Namen im Personen-Formular
@@ -318,8 +319,6 @@ function buildGedDateFromFields(qualId, dateBaseId, date2BaseId) {
 }
 
 // ── PLAC-Modus-Hilfsfunktionen (Sprint 6b) ──────────────────────────────────
-const _placeModes = {};  // { placeId: 'free'|'parts' }
-
 function getPlacLabels() {
   const raw = AppState.db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat';
   return raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
@@ -383,7 +382,7 @@ function parseCoordInput(firstField, secondField) {
 }
 
 function getPlaceFromForm(placeId) {
-  if ((_placeModes[placeId] || 'free') === 'parts') return joinPlaceParts(placeId);
+  if ((UIState._placeModes[placeId] || 'free') === 'parts') return joinPlaceParts(placeId);
   return (document.getElementById(placeId)?.value || '').trim();
 }
 
@@ -394,21 +393,21 @@ function initPlaceMode(placeId) {
   if (freeEl)    freeEl.style.display  = '';
   if (partsEl)   partsEl.style.display = 'none';
   if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
-  _placeModes[placeId] = 'free';
+  UIState._placeModes[placeId] = 'free';
 }
 
 function togglePlaceMode(placeId) {
   const freeEl    = document.getElementById(`${placeId}-free`);
   const partsEl   = document.getElementById(`${placeId}-parts`);
   const toggleBtn = document.getElementById(`${placeId}-toggle`);
-  if ((_placeModes[placeId] || 'free') === 'free') {
+  if ((UIState._placeModes[placeId] || 'free') === 'free') {
     const rawVal = (document.getElementById(placeId)?.value || '').trim();
     partsEl.innerHTML = buildPlacePartsHtml(placeId);
     fillPlaceParts(placeId, rawVal);
     freeEl.style.display  = 'none';
     partsEl.style.display = '';
     if (toggleBtn) toggleBtn.textContent = '⊠ Freitext';
-    _placeModes[placeId] = 'parts';
+    UIState._placeModes[placeId] = 'parts';
   } else {
     const rawVal = joinPlaceParts(placeId, true); // alle Slots erhalten (Langdarstellung)
     freeEl.style.display  = '';
@@ -416,7 +415,7 @@ function togglePlaceMode(placeId) {
     if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
     const inp = document.getElementById(placeId);
     if (inp) inp.value = rawVal;
-    _placeModes[placeId] = 'free';
+    UIState._placeModes[placeId] = 'free';
   }
 }
 
