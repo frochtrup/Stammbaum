@@ -61,11 +61,12 @@ body {
 .topbar-btn {
   background: none; border: none;
   color: var(--gold); font-size: 0.9rem;
-  cursor: pointer; padding: 6px 10px;
+  cursor: pointer; padding: 10px 10px;
   border-radius: var(--radius-sm);
   font-family: 'Source Serif 4', serif;
   transition: background 0.15s;
   white-space: nowrap;
+  min-height: 44px;
 }
 .topbar-btn:active { background: var(--surface2); }
 .topbar-btn.back { color: var(--text-dim); }
@@ -493,11 +494,12 @@ body.desktop-mode.places-karte #mapContainer {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 9px 13px;
+  padding: 11px 13px;
   color: var(--text);
   font-family: 'Source Serif 4', serif;
   font-size: 0.95rem; outline: none;
   transition: border-color 0.2s;
+  min-height: 44px; box-sizing: border-box;
 }
 .search-input:focus { border-color: var(--gold-dim); }
 .search-input::placeholder { color: var(--text-muted); }
@@ -1317,7 +1319,7 @@ body.desktop-mode.places-karte #mapContainer {
   flex-shrink: 0;
   background: none; border: none; cursor: pointer;
   font-size: 1.15rem; color: var(--gold-dim);
-  padding: 4px; min-width: 32px; min-height: 32px;
+  padding: 4px; min-width: 44px; min-height: 44px;
   display: flex; align-items: center; justify-content: center;
 }
 .task-check:active { color: var(--gold); }
@@ -1331,7 +1333,7 @@ body.desktop-mode.places-karte #mapContainer {
   flex-shrink: 0;
   background: none; border: none; cursor: pointer;
   font-size: 0.95rem; color: var(--text-muted);
-  padding: 4px; min-width: 32px; min-height: 32px;
+  padding: 4px; min-width: 44px; min-height: 44px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
 }
@@ -1340,7 +1342,7 @@ body.desktop-mode.places-karte #mapContainer {
   flex-shrink: 0;
   background: none; border: none; cursor: pointer;
   font-size: 1.1rem; color: var(--text-muted);
-  padding: 4px; min-width: 32px; min-height: 32px;
+  padding: 4px; min-width: 44px; min-height: 44px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%;
 }

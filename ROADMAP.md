@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v356 · Cache: `stammbaum-v356`
+**sw-Version:** v357 · Cache: `stammbaum-v357`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
@@ -45,6 +45,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | A6 | `initAutocomplete()` zusammengeführt — `initPlaceAutocomplete` u.a. als Wrapper | v354 |
 | U1–U6 | Menü (Sektionen, Datei schließen), ARIA Dialogs, Touch-Targets, Hilfe-Modal | v355 |
 | — | Rufname-Formularfeld `pf-rufname`; Parser: Asterisk-Konvention in `2 GIVN` | v356 |
+| A11y/UX | Touch-Targets WCAG 2.5.5: `.topbar-btn` + `.search-input` + `.task-*` auf ≥44px; Toast `aria-live="polite"` für Screen-Reader | v357 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -57,6 +58,19 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
+| A7 | **`_placeModes` → UIState** | `_placeModes{}` liegt in `gedcom.js` statt in `UIState` — Namespace-Inkonsistenz. | S |
+| A8 | **IDB-Schema-Versionierung** | `idb_version`-Key in IDB setzen; Breaking-Changes können so automatisch migriert werden statt manuell. | S |
+| A9 | **ADR-013-Migration automatisch** | `_odMigrateIfNeeded()` beim App-Start aufrufen, nicht erst beim `openSettings()`-Aufruf. | S |
+| A10 | **`unsafe-inline` aus CSP entfernen** | `style-src 'unsafe-inline'` erlaubt CSS-Injection über `style`-Attribute. Nur CSS-Klassen verwenden; dann Direktive entfernen. | M |
+| A11 | **OneDrive-Redirect-URI auf Whitelist** | Fallback `location.origin + location.pathname` ist offen; explizite Liste der drei erlaubten URIs (`github.io`, `localhost`, prod). | S |
+| A12 | **API-Response-Validierung OneDrive** | `parentReference?.path` aus Graph API ohne Längen- oder `../`-Check direkt in IDB-Key übernommen (`onedrive.js` ~Z. 313–386). | S |
+
+### Sicherheit
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| SEC5 | **`innerHTML` → `textContent` in onedrive-auth.js** | Zeile ~23: Button-Label mit `innerHTML` + `&nbsp;` gesetzt; bei künftig dynamischem Inhalt XSS-Risiko. | XS |
+| SEC6 | **SW Cache-Validierung** | Service Worker cacht Responses ohne Content-Type-Check und ohne Größenlimit — Cache-Poisoning bei kompromittiertem Server möglich. | S |
 
 ### UX / Benutzerführung
 
@@ -65,6 +79,12 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | U8 | **Cmd+Z granulares Undo** | History-Stack auf AppState; aktuell: Cmd+Z = "Revert to Saved" | XL |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
 | U16 | **Farbkodierung Baum A11y** | Geschlecht nur durch Farbe — keine Text-Alternative für Farb-Sehschwäche | XS |
+| U17 | **Focus-Trap in Modals** | Tab-Navigation verlässt offene Modals; `Tab`-Cycle auf Modal-Inhalte begrenzen. | S |
+| U18 | **Formular-Validierung sichtbar** | `.form-error { display: none }` wird nie angezeigt; Inline-Fehlerhinweise vor Submit zeigen. | S |
+| U19 | **Tooltips auf Baum-Karten + QUAY-Legende** | `.tree-card` ohne Tooltip; QUAY-Stufen nur farbkodiert ohne Legende; Kekule-Nummern unerläutert. | S |
+| U20 | **`showDetail()` + `showFamilyDetail()` aufteilen** | 344 bzw. 235 Zeilen lange God-Functions; in 4–5 Hilfsfunktionen aufteilen. | M |
+| U21 | **Copy-Paste Meta/Geo-Templates auslagern** | Geburtsort/-datum-Konstruktion und Geo-Button-Template in `ui-views-person.js` + `ui-views-family.js` identisch dupliziert → in `ui-views.js` auslagern. | S |
+| U22 | **Onboarding verbessern** | Landing-Page erklärt nicht, was GEDCOM ist; kein Hinweis auf erwartetes Dateiformat; Demo-Button ohne Intro-Text. | S |
 
 ### GRAMPS — Editierbarkeit (Phase 5.2/5.3)
 
