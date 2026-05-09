@@ -557,6 +557,7 @@ body.desktop-mode.places-karte #mapContainer {
 }
 .p-arrow { color: var(--text-muted); font-size: 0.85rem; }
 .p-kekule { font-size: 0.7rem; color: var(--gold-dim); opacity: 0.85; white-space: nowrap; margin-right: 4px; }
+.p-id { font-family: monospace; font-size: 0.68rem; color: var(--text-muted); opacity: 0.6; margin-left: 5px; vertical-align: middle; }
 
 /* ═══════════════════════════════════════
    DETAIL VIEW
@@ -586,6 +587,7 @@ body.desktop-mode.places-karte #mapContainer {
 }
 .detail-rufname { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; }
 .detail-id { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+.detail-id-xref { font-family: monospace; opacity: 0.75; }
 
 .section {
   padding: 14px 16px;

@@ -113,7 +113,7 @@ function _personRowHtml(p, isCurrent, pos, total) {
   return `<div class="person-row${isCurrent ? ' current' : ''}" role="listitem"${ariaPos} data-action="showDetail" data-pid="${p.id}">
       <div class="p-avatar ${sc}">${ic}</div>
       <div class="p-info">
-        <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}</div>
+        <div class="p-name">${esc(p.name || p.id)}${pMediaBadge}<span class="p-id">${esc(p.id)}</span></div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
       </div>
       ${kBadge}<span class="p-arrow">›</span>
@@ -349,6 +349,7 @@ function toggleAdvFilter() {
 function _buildSearchIndex() {
   for (const p of Object.values(AppState.db.individuals)) {
     p._searchStr = [
+      p.id,
       p.name, p.surname, p.given, p.prefix, p.titl,
       p.nick, p.rufname,
       ...(p.extraNames || []).map(en => [en.nameRaw, en.given, en.surname, en.prefix, en.suffix].filter(Boolean).join(' ')),
@@ -449,7 +450,7 @@ function showDetail(id, pushHistory = true) {
       <div class="detail-name">${esc(fullName || id)} <span style="font-size:1rem;color:var(${sc === 'm' ? '--blue' : sc === 'f' ? '--pink' : '--gold-dim'})">${ic}</span></div>
       ${rufname  ? `<div class="detail-rufname">Rufname: <u>${esc(rufname)}</u></div>` : ''}
       ${spitzname ? `<div class="detail-rufname" style="font-style:italic">Spitzname: ${esc(spitzname)}</div>` : ''}
-      <div class="detail-id">${p.lastChanged ? 'Geändert ' + p.lastChanged : ''}</div>
+      <div class="detail-id"><span class="detail-id-xref">${esc(id)}</span>${p.lastChanged ? ' · Geändert ' + p.lastChanged : ''}</div>
     </div>
   </div>`;
 
