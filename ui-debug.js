@@ -10,18 +10,18 @@ function runRoundtripTest() {
       const t0 = performance.now();
 
       // Pass 1: parse original
-      const saved = AppState.db;
+      const savedSnapshot = Object.assign({}, AppState.db);
       const db1 = parseGEDCOM(_origText);
 
       // Write pass 1
-      AppState.db = db1;
+      setDb(db1);
       const out1 = writeGEDCOM();
       // Pass 2: parse out1, write out2
       const db2 = parseGEDCOM(out1);
-      AppState.db = db2;
+      setDb(db2);
       const out2 = writeGEDCOM();
       // Restore
-      AppState.db = saved;
+      setDb(savedSnapshot);
 
       const t1 = performance.now();
       const stable = out1 === out2;
@@ -679,7 +679,7 @@ function runRoundtripTest() {
         diffSnippet;
 
     } catch (e) {
-      try { AppState.db = saved; } catch(_) {}
+      try { setDb(savedSnapshot); } catch(_) {}
       out.textContent = 'Fehler: ' + e.message + '\n' + e.stack;
     }
   }, 30);

@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-09 — A5 db-Shim Setter eliminieren (sw v360)
+
+- **sw v360** `refactor(A5)`: `setDb(newDb)` in `gedcom.js` — mutiert `AppState.db` in-place via `Object.keys` delete + `Object.assign` statt Referenz zu ersetzen; `window.db` Shim-Setter entfernt (nur Getter bleibt); alle 12 `AppState.db = …` Zuweisungen in `storage.js` (5), `storage-file.js` (2), `ui-debug.js` (5) auf `setDb()` umgestellt; in `_loadGRAMPS` lokale Variable `db` → `parsed` umbenannt um Namenskonflikt zu vermeiden; Roundtrip-Test in `ui-debug.js` sichert mit `Object.assign({}, AppState.db)` statt Referenz
+
+---
+
 ### Session 2026-05-08 — A6 initAutocomplete() generisch (sw v354)
 
 - **sw v354** `refactor(A6)`: Generische `initAutocomplete(inputId, ddId, opts)` in `ui-views.js` (`opts`: `getItems`, `formatLabel`, `onSelect`, `configEl?`, `onInput?`, `limit?`); `initPlaceAutocomplete` (ui-forms.js), `_initAddrAutocompleteFor` (ui-forms-event.js), `_initHofPersonSearchFor` (ui-views-hof.js) als schlanke Wrapper; eliminiert ~60 Zeilen Boilerplate (debounce, input/blur/focus-Listener, display-Logik); alle 10 Aufrufstellen unverändert

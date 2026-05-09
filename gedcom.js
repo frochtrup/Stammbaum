@@ -48,9 +48,15 @@ const UIState = {
 // Backward-compat-Shim: bare `db` → AppState.db (wird in gedcom-writer.js + ui-*.js verwendet)
 Object.defineProperty(window, 'db', {
   get()  { return AppState.db; },
-  set(v) { AppState.db = v; },
   configurable: true,
 });
+
+// Mutiert AppState.db in-place statt die Referenz zu ersetzen.
+// So bleiben const db = AppState.db Bindings in allen Modulen dauerhaft gültig.
+function setDb(newDb) {
+  for (const k of Object.keys(AppState.db)) delete AppState.db[k];
+  Object.assign(AppState.db, newDb);
+}
 
 // Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
 // srcWidgetState[p] ist lesbarer als UIState._formState.srcWidget[p] (34 Verwendungen in ui-forms.js).

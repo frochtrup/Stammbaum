@@ -59,7 +59,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| A5 | **`db`-Shim eliminieren** | `setDb()` mit `Object.assign`; `const db = AppState.db` modul-level; ~12 Zuweisungen in `storage.js`, `storage-file.js`, `ui-debug.js`. | L |
 | A10 | **`unsafe-inline` aus CSP entfernen** | `style-src 'unsafe-inline'` erlaubt CSS-Injection über `style`-Attribute. Nur CSS-Klassen verwenden; dann Direktive entfernen. | M |
 
 

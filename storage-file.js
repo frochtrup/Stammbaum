@@ -306,7 +306,7 @@ function _processLoadedText(text, filename) {
   showLoadingOverlay('GEDCOM wird eingelesen …');
   requestAnimationFrame(() => setTimeout(() => {
     try {
-      AppState.db = parseGEDCOM(text);
+      setDb(parseGEDCOM(text));
       if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
@@ -371,15 +371,15 @@ function readFile(file) {
 async function _loadGRAMPS(file) {
   showLoadingOverlay('GRAMPS-Datei wird eingelesen …');
   try {
-    const db = await parseGRAMPS(file);
-    AppState.db = db;
+    const parsed = await parseGRAMPS(file);
+    setDb(parsed);
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
     // localStorage-Einträge (user edits) überschreiben diese.
-    AppState.db.hofObjects  = Object.assign({}, db.hofObjects || {}, loadHofObjects());
+    AppState.db.hofObjects  = Object.assign({}, parsed.hofObjects || {}, loadHofObjects());
     // Calibrate idCounter to avoid collisions
-    if (db._idCounterMax >= AppState.idCounter) AppState.idCounter = db._idCounterMax + 1;
+    if (parsed._idCounterMax >= AppState.idCounter) AppState.idCounter = parsed._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
     AppState._fileHandle      = null;
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();

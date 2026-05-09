@@ -32,7 +32,7 @@ async function revertToSaved() {
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
   if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?', 'Verwerfen')) return;
   showLoadingOverlay('Stand wird wiederhergestellt …');
-  AppState.db = parseGEDCOM(orig);
+  setDb(parseGEDCOM(orig));
   AppState.db.extraPlaces = loadExtraPlaces();
   applyAllExtraPlaceCoords();
   AppState.db.hofObjects  = Object.assign({}, _derivedHofObjectsFromDb(AppState.db), loadHofObjects());
@@ -55,7 +55,7 @@ async function confirmNewFile() {
     ? 'Aktuelle Datei schließen? Ungespeicherte Änderungen gehen verloren.'
     : 'Aktuelle Datei schließen?';
   if (!await confirmModal(msg, 'Schließen')) return;
-  AppState.db = { individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), hofObjects: loadHofObjects(), repositories: {}, notes: {}, placForm: '' };
+  setDb({ individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), hofObjects: loadHofObjects(), repositories: {}, notes: {}, placForm: '' });
   AppState.changed = false;
   updateChangedIndicator();
   AppState._originalGedText = null;
@@ -91,7 +91,7 @@ async function loadDemo() {
     const res = await fetch('./demo.ged');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
-    AppState.db = parseGEDCOM(text);
+    setDb(parseGEDCOM(text));
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
     AppState._originalGedText = text;
@@ -156,7 +156,7 @@ async function tryAutoLoad() {
     const saved = await idbGet('stammbaum_ged');
     if (saved && saved.length > 10) {
       const fname = (await idbGet('stammbaum_filename')) || localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
-      AppState.db = parseGEDCOM(saved);
+      setDb(parseGEDCOM(saved));
       if (AppState.db.parseErrors?.length) {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
@@ -177,7 +177,7 @@ async function tryAutoLoad() {
     const saved = localStorage.getItem('stammbaum_ged');
     const fname = localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
     if (saved && saved.length > 10) {
-      AppState.db = parseGEDCOM(saved);
+      setDb(parseGEDCOM(saved));
       if (AppState.db.parseErrors?.length) {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
