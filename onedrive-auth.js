@@ -21,11 +21,11 @@ function _odUpdateUI() {
   const ob  = document.getElementById('odOpenBtn');
   const sb  = document.getElementById('odSaveBtn');
   if (cb)  cb.textContent = conn ? '☁  OneDrive trennen' : '☁  OneDrive verbinden';
-  if (ob)  ob.style.display  = conn ? '' : 'none';
-  if (sb)  sb.style.display  = conn ? '' : 'none';
+  if (ob)  ob.hidden  = !conn;
+  if (sb)  sb.hidden  = !conn;
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
   const gb = document.getElementById('grampsExportBtn');
-  if (gb)  gb.style.display = AppState.db ? '' : 'none';
+  if (gb)  gb.hidden = !AppState.db;
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');

@@ -396,8 +396,8 @@ function initPlaceMode(placeId) {
   const freeEl    = document.getElementById(`${placeId}-free`);
   const partsEl   = document.getElementById(`${placeId}-parts`);
   const toggleBtn = document.getElementById(`${placeId}-toggle`);
-  if (freeEl)    freeEl.style.display  = '';
-  if (partsEl)   partsEl.style.display = 'none';
+  if (freeEl)    freeEl.hidden  = false;
+  if (partsEl)   partsEl.hidden = true;
   if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
   UIState._placeModes[placeId] = 'free';
 }
@@ -410,14 +410,14 @@ function togglePlaceMode(placeId) {
     const rawVal = (document.getElementById(placeId)?.value || '').trim();
     partsEl.innerHTML = buildPlacePartsHtml(placeId);
     fillPlaceParts(placeId, rawVal);
-    freeEl.style.display  = 'none';
-    partsEl.style.display = '';
+    freeEl.hidden  = true;
+    partsEl.hidden = false;
     if (toggleBtn) toggleBtn.textContent = '⊠ Freitext';
     UIState._placeModes[placeId] = 'parts';
   } else {
     const rawVal = joinPlaceParts(placeId, true); // alle Slots erhalten (Langdarstellung)
-    freeEl.style.display  = '';
-    partsEl.style.display = 'none';
+    freeEl.hidden  = false;
+    partsEl.hidden = true;
     if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
     const inp = document.getElementById(placeId);
     if (inp) inp.value = rawVal;

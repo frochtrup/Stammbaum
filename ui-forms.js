@@ -555,7 +555,7 @@ function showSourceForm(id) {
   const s = id ? getSource(id) : null;
   const isNew = !s;
   document.getElementById('sourceFormTitle').textContent = s ? 'Quelle bearbeiten' : 'Neue Quelle';
-  document.getElementById('sf-template-row').style.display = isNew ? '' : 'none';
+  document.getElementById('sf-template-row').hidden = !isNew;
   document.getElementById('sf-id').value    = id || '';
   document.getElementById('sf-abbr').value  = s?.abbr   || '';
   document.getElementById('sf-title').value = s?.title  || '';

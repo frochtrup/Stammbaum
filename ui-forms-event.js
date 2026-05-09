@@ -401,7 +401,7 @@ const _FAM_KEY_MAP   = { MARR:'marr', ENGA:'engag', DIV:'div', DIVF:'divf' };
 
 function onFamEventTypeChange() {
   const t = document.getElementById('fev-type').value;
-  document.getElementById('fev-etype-group').style.display = (t === 'EVEN') ? '' : 'none';
+  document.getElementById('fev-etype-group').hidden = t !== 'EVEN';
   const dd = document.getElementById('fev-etype-dd');
   if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
 }
