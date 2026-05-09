@@ -78,10 +78,10 @@
 - **Notizen-Modal (sw v238–v242):** `modalNote` Bottom-Sheet; `openNoteModal(type, id)` / `saveNoteModal()` in `ui-views.js`; ersetzt Inline-Textarea-Ansatz; zeigt eigene Notiz + alle noteRefs editierbar; `_noteRefUsers(ref)` zeigt referenzierende Personen/Familien; "× Entfernen" löscht noteRef-Verknüpfung; `_pruneOrphanNotes()` löscht verwaiste db.notes-Einträge wenn letzte Referenz entfernt wird
 - **Quellen-Notizen (sw v237):** `showSourceDetail` zeigt Notizen-Sektion mit `openNoteModal('source', id)`; `s.text` als Notizfeld
 - **Kartenansicht (sw v244):** Leaflet 1.9.4 lokal; Toggle "Orte|Höfe|Karte" im Orte-Tab; `ui-views-map.js`; Modus 1 "Alle Orte" — CircleMarker nach Personenzahl + Exploration-Panel (Bottom-Sheet); Modus 2 "Personenbiografie" — nummerierte Stationen + Verbindungslinie; Person-Picker; "📍 Karte" Button in Personen-Detail; CSP um OSM-Tiles erweitert
-- **Aktuelle sw-Version: v332** / Cache: `stammbaum-v332`
+- **Aktuelle sw-Version: v359** / Cache: `stammbaum-v359`
 - Git: Branch `v7-dev`
 
-*(Detaillierte Session-Geschichte ab v245 in CHANGELOG.md)*
+*(Detaillierte Session-Geschichte ab v245 in CHANGELOG.md — diese Datei ist veraltet; aktuelle Kopie: `.claude/projects/.../memory/MEMORY.md`)*
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
@@ -181,6 +181,12 @@ iOS-Companion-Phase (Quick-Add, Foto-direkt-zu-Person) abgelehnt und entfernt.
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo)
 - Familien-Avatar: CSS-Symbol statt OS-Emoji
 - NAME-Duplikation (GIVN/SURN/NICK strukturiert + passthrough): vor GRAMPS-Roundtrip verifizieren
+
+### A10 — `unsafe-inline` aus CSP entfernen (Scope-Analyse 2026-05-09, Aufwand XL)
+
+~405 `style=` Attribute (165 in JS + 240 in index.html), ~154 `el.style.display`-Toggles.
+Strategie: statisch → CSS-Klassen; `display:none` → `hidden`-Attribut; dynamisch → `data-*` + `_applyDynStyles()`.
+Geplant für v360–v364. Details: ROADMAP.md A10-Block + CHANGELOG.md Session 2026-05-09.
 
 ## Nutzer-Präferenzen
 - Sprache: Deutsch · Kommunikation: kurz und direkt · Keine Emojis

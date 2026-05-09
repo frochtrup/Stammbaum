@@ -9,6 +9,21 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-09 — A10 Analyse: unsafe-inline Scope-Aufnahme (kein sw-Bump)
+
+**Analyse (keine Code-Änderungen):**
+- Vollständige Bestandsaufnahme aller `style=`-Attribute und `style.cssText`-Zuweisungen im Projekt
+- **Gefunden:** ~165 `style=` in JS-Template-Strings (17 Dateien) + **240 `style=` in `index.html`** (anfangs übersehen) = ~405 inline styles gesamt
+- **Zusätzlich:** ~25 `style.cssText = '...'` (JS, nicht CSP-relevant aber Code-Qualität); ~154 `el.style.display`-Toggles in JS
+- **Kategorisierung:**
+  - Statisch (CSS-Klasse genügt): ~310 Stellen
+  - Dynamisch (Farbe/Breite per Datenwert): ~30 Stellen — `ui-dedup.js` (scColor, score%), `ui-views-stats.js` (Balkenbreiten), `ui-views-search.js`
+  - `display:none` initial + JS-Toggle: ~53 in `index.html` + je nach Template → `hidden`-Attribut + `el.hidden = true/false`
+- **Aufwand revidiert:** ursprünglich M (halber Tag) → tatsächlich XL (4–5 Versionen)
+- **Konsequenz:** A10 in ROADMAP.md auf XL hochgestuft und mit detailliertem Umsetzungsplan versehen
+
+---
+
 ### Session 2026-05-09 — A5 db-Shim Setter eliminieren (sw v360)
 
 - **sw v360** `refactor(A5)`: `setDb(newDb)` in `gedcom.js` — mutiert `AppState.db` in-place via `Object.keys` delete + `Object.assign` statt Referenz zu ersetzen; `window.db` Shim-Setter entfernt (nur Getter bleibt); alle 12 `AppState.db = …` Zuweisungen in `storage.js` (5), `storage-file.js` (2), `ui-debug.js` (5) auf `setDb()` umgestellt; in `_loadGRAMPS` lokale Variable `db` → `parsed` umbenannt um Namenskonflikt zu vermeiden; Roundtrip-Test in `ui-debug.js` sichert mit `Object.assign({}, AppState.db)` statt Referenz
