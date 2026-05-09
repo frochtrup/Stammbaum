@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v357 · Cache: `stammbaum-v357`
+**sw-Version:** v358 · Cache: `stammbaum-v358`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
@@ -46,6 +46,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | U1–U6 | Menü (Sektionen, Datei schließen), ARIA Dialogs, Touch-Targets, Hilfe-Modal | v355 |
 | — | Rufname-Formularfeld `pf-rufname`; Parser: Asterisk-Konvention in `2 GIVN` | v356 |
 | A11y/UX | Touch-Targets WCAG 2.5.5: `.topbar-btn` + `.search-input` + `.task-*` auf ≥44px; Toast `aria-live="polite"` für Screen-Reader | v357 |
+| SEC5 | `innerHTML` → `textContent` in `onedrive-auth.js` (Button-Label hardcoded, kein Risiko, aber cleaner Stil) | v358 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -65,12 +66,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | A11 | **OneDrive-Redirect-URI auf Whitelist** | Fallback `location.origin + location.pathname` ist offen; explizite Liste der drei erlaubten URIs (`github.io`, `localhost`, prod). | S |
 | A12 | **API-Response-Validierung OneDrive** | `parentReference?.path` aus Graph API ohne Längen- oder `../`-Check direkt in IDB-Key übernommen (`onedrive.js` ~Z. 313–386). | S |
 
-### Sicherheit
-
-| ID | Aufgabe | Details | Aufwand |
-|---|---|---|---|
-| SEC5 | **`innerHTML` → `textContent` in onedrive-auth.js** | Zeile ~23: Button-Label mit `innerHTML` + `&nbsp;` gesetzt; bei künftig dynamischem Inhalt XSS-Risiko. | XS |
-| SEC6 | **SW Cache-Validierung** | Service Worker cacht Responses ohne Content-Type-Check und ohne Größenlimit — Cache-Poisoning bei kompromittiertem Server möglich. | S |
 
 ### UX / Benutzerführung
 

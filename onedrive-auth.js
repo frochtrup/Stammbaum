@@ -20,7 +20,7 @@ function _odUpdateUI() {
   const cb  = document.getElementById('odConnectBtn');
   const ob  = document.getElementById('odOpenBtn');
   const sb  = document.getElementById('odSaveBtn');
-  if (cb)  cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
+  if (cb)  cb.textContent = conn ? '☁  OneDrive trennen' : '☁  OneDrive verbinden';
   if (ob)  ob.style.display  = conn ? '' : 'none';
   if (sb)  sb.style.display  = conn ? '' : 'none';
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
