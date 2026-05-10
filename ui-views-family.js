@@ -17,7 +17,7 @@ function _famRowHtml(f, isCurrent, pos, total) {
   const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
                     + (f.marr?.media || []).filter(m => m.file || m.titl).length
                     + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
-  const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
+  const fMediaBadge = fMediaCount ? `<span class="p-media-badge">📎</span>` : '';
   const ariaPos = pos != null ? ` aria-setsize="${total}" aria-posinset="${pos}"` : '';
   return `<div class="person-row${isCurrent ? ' current' : ''}" role="listitem"${ariaPos} data-action="showFamilyDetail" data-fid="${f.id}">
       <div class="p-avatar fam">⬡</div>
@@ -193,7 +193,7 @@ function renderRelPicker(q) {
 
   list.innerHTML = '';
   if (!persons.length) {
-    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Keine Treffer</div>';
+    list.innerHTML = '<div class="rel-picker-no-result">Keine Treffer</div>';
     return;
   }
   for (const p of persons) {
@@ -309,7 +309,7 @@ function showFamilyDetail(id, pushHistory = true) {
   if (_famTreeTarget) tb.dataset.id = _famTreeTarget;
 
   let html = `<div class="detail-hero fade-up">
-    <div id="det-fam-photo-${id}" style="display:none"></div>
+    <div id="det-fam-photo-${id}" class="det-photo-wrap"></div>
     <div id="det-fam-avatar-${id}" class="detail-avatar fam">⬡</div>
     <div class="detail-hero-text">
       <div class="detail-name">${esc(title)}</div>
@@ -335,11 +335,11 @@ function showFamilyDetail(id, pushHistory = true) {
       if (!ev?.date && !ev?.place && !ev?.seen) continue;
       _hasAnyEv = true;
       const geoBtn = _validCoord(ev.lati, ev.long)
-        ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+        ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
       const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
-      html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">
+      html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}">
         <span class="fact-lbl">${label}</span>
-        <span class="fact-val">${esc(parts || '–')}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
+        <span class="fact-val">${esc(parts || '–')}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     for (let _ei = 0; _ei < (f.events || []).length; _ei++) {
@@ -347,13 +347,13 @@ function showFamilyDetail(id, pushHistory = true) {
       _hasAnyEv = true;
       const label = (ev.eventType && ev.type === 'EVEN') ? ev.eventType : (EVENT_LABELS[ev.type] || ev.type);
       const parts = [ev.value, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
-      html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}" style="cursor:pointer">
+      html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}">
         <span class="fact-lbl">${esc(label)}</span>
-        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
+        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     if (!_hasAnyEv) {
-      html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Ereignisse eingetragen</div>`;
+      html += `<div class="no-data">Keine Ereignisse eingetragen</div>`;
     }
     html += `</div>`;
   }
@@ -372,15 +372,12 @@ function showFamilyDetail(id, pushHistory = true) {
     const _curPedi = (typeof _fe === 'object') ? (_toPedi(_fe.pedi || _fe.frel || '')) : '';
     const _pediLabels = { birth: 'leiblich', adopted: 'adoptiert', foster: 'Pflegekind', sealing: 'Sealing' };
     const _pediLabel = _curPedi ? (_pediLabels[_curPedi] || _curPedi) : '– Verhältnis';
-    const _pediSpan = `<span data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
-        style="font-size:0.78rem;color:var(--text-dim);cursor:pointer;border-bottom:1px dashed var(--border);padding-bottom:1px"
-        >${_pediLabel}</span>`;
+    const _pediSpan = `<span class="child-pedi-span" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}">${_pediLabel}</span>`;
     const _sourIds   = (typeof _fe === 'object') ? (_fe.sourIds   || []) : [];
     const _sourPages = (typeof _fe === 'object') ? (_fe.sourPages || {}) : {};
     const _sourQUAY  = (typeof _fe === 'object') ? (_fe.sourQUAY  || {}) : {};
-    const _addQBtn = `<button data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
-        title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
-        border-radius:12px;padding:1px 7px;font-size:0.7rem;color:var(--text-muted);cursor:pointer">+ Q</button>`;
+    const _addQBtn = `<button class="child-q-btn" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
+        title="Quelle hinzufügen">+ Q</button>`;
     const _sourWidget = _sourIds.length
       ? sourceTagsHtml(_sourIds, _sourPages, _sourQUAY) + _addQBtn
       : _addQBtn;
@@ -390,7 +387,7 @@ function showFamilyDetail(id, pushHistory = true) {
       <div class="rel-avatar ${sc}">${ic}</div>
       <div class="rel-info">
         <div class="rel-name">${esc(child.name || child.id)}</div>
-        <div class="rel-role" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">Kind · ${_pediSpan}${_sourWidget}</div>
+        <div class="rel-role rel-role-row">Kind · ${_pediSpan}${_sourWidget}</div>
       </div>
       <button class="unlink-btn" data-action="unlinkMember" data-fid="${id}" data-pid="${child.id}"
         title="Verbindung trennen">×</button>
@@ -404,13 +401,13 @@ function showFamilyDetail(id, pushHistory = true) {
   const _fHasRefs  = (f.noteRefs || []).some(r => AppState.db.notes?.[r]);
   html += `<div class="section fade-up">
     <div class="section-head">
-      <div class="section-title">Notizen${_fHasRefs ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-weight:normal">(+ verknüpfte)</span>` : ''}</div>
+      <div class="section-title">Notizen${_fHasRefs ? ` <span class="fs-xxs c-muted fw-400">(+ verknüpfte)</span>` : ''}</div>
       <button class="section-add" data-action="openNoteModal" data-ntype="family" data-nid="${id}">✎ Bearbeiten</button>
     </div>
-    <div data-action="openNoteModal" data-ntype="family" data-nid="${id}" style="cursor:pointer;min-height:32px;padding:4px 2px">
+    <div class="note-clickable" data-action="openNoteModal" data-ntype="family" data-nid="${id}">
       ${_fNoteText
-        ? `<div style="white-space:pre-wrap;font-size:0.88rem;color:var(--text-dim);line-height:1.6">${esc(_fNoteText)}</div>`
-        : `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Notiz hinzufügen…</div>`}
+        ? `<div class="note-text">${esc(_fNoteText)}</div>`
+        : `<div class="note-hint">Notiz hinzufügen…</div>`}
     </div>
   </div>`;
 
@@ -433,12 +430,12 @@ function showFamilyDetail(id, pushHistory = true) {
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+      html += `<div class="media-row"
         data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-fam-photo-${id}" data-avatar="det-fam-avatar-${id}">
-        <div id="media-thumb-fam-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        <div id="media-thumb-fam-${id}-${i}" class="media-thumb">${_icon}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(display)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
         </div>
         <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="family" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
@@ -450,12 +447,12 @@ function showFamilyDetail(id, pushHistory = true) {
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+      html += `<div class="media-row"
         data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-fam-photo-${id}" data-avatar="det-fam-avatar-${id}">
-        <div id="media-thumb-fam-media-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        <div id="media-thumb-fam-media-${id}-${i}" class="media-thumb">${_icon}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(display)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
         </div>
         <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="family_media" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
@@ -467,16 +464,16 @@ function showFamilyDetail(id, pushHistory = true) {
       const sub   = obj && obj.title && obj.file ? obj.file : '';
       const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
       const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
-        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
-          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+      html += `<div class="media-row--ref">
+        <div class="media-thumb">${_icon2}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(label)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
+          <div class="media-ref-label">Verweis</div>
         </div>
       </div>`;
     }
-    if (!marrObjeEntries.length && !famMedia.length && !famPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
+    if (!marrObjeEntries.length && !famMedia.length && !famPtObje.length) html += `<div class="no-data-pad">Keine Medien eingetragen</div>`;
     html += `</div>`;
   }
 
@@ -501,7 +498,7 @@ function showFamilyDetail(id, pushHistory = true) {
     const el = document.getElementById('det-fam-photo-' + id);
     const av = document.getElementById('det-fam-avatar-' + id);
     if (el) {
-      el.style.display = ''; el.innerHTML = '';
+      el.style.display = 'block'; el.innerHTML = '';
       const img = document.createElement('img');
       img.src = src; img.alt = 'Foto';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';

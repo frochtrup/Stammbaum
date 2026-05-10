@@ -106,7 +106,7 @@ function _personRowHtml(p, isCurrent, pos, total) {
   if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
   const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                     + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
-  const pMediaBadge = pMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
+  const pMediaBadge = pMediaCount ? `<span class="p-media-badge">📎</span>` : '';
   const kNum = _kekuleMap[p.id];
   const kBadge = kNum ? `<span class="p-kekule">#${kNum}</span>` : '';
   const ariaPos = pos != null ? ` aria-setsize="${total}" aria-posinset="${pos}"` : '';
@@ -471,12 +471,12 @@ function showDetail(id, pushHistory = true) {
   const spitzname = (p.nick && p.nick !== rufname) ? p.nick : '';
 
   let html = `<div class="detail-hero fade-up">
-    <div id="det-photo-${id}" style="display:none"></div>
+    <div id="det-photo-${id}" class="det-photo-wrap"></div>
     <div id="det-avatar-${id}" class="detail-avatar ${sc}">${ic}</div>
     <div class="detail-hero-text">
-      <div class="detail-name">${esc(fullName || id)} <span style="font-size:1rem;color:var(${sc === 'm' ? '--blue' : sc === 'f' ? '--pink' : '--gold-dim'})">${ic}</span></div>
+      <div class="detail-name">${esc(fullName || id)} <span class="fs-md ${sc === 'm' ? 'sex-icon-m' : sc === 'f' ? 'sex-icon-f' : 'sex-icon-u'}">${ic}</span></div>
       ${rufname  ? `<div class="detail-rufname">Rufname: <u>${esc(rufname)}</u></div>` : ''}
-      ${spitzname ? `<div class="detail-rufname" style="font-style:italic">Spitzname: ${esc(spitzname)}</div>` : ''}
+      ${spitzname ? `<div class="detail-rufname detail-spitzname">Spitzname: ${esc(spitzname)}</div>` : ''}
       <div class="detail-id"><span class="detail-id-xref">${esc(id)}</span>${p.lastChanged ? ' · Geändert ' + p.lastChanged : ''}</div>
     </div>
   </div>`;
@@ -487,9 +487,9 @@ function showDetail(id, pushHistory = true) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
-      <div style="display:flex;gap:6px;align-items:center">
-        ${_hasGeo ? `<button class="section-add" data-action="showPersonOnMap" data-pid="${id}" style="color:var(--gold-dim)">📍 Karte</button>` : ''}
-        ${UIState._eventClipboard ? `<button class="section-add" data-action="applyClipboardEvent" data-pid="${id}" style="color:var(--gold-dim)" title="${esc((EVENT_LABELS[UIState._eventClipboard.type]||UIState._eventClipboard.type) + (UIState._eventClipboard.addr||UIState._eventClipboard.place ? ': '+(UIState._eventClipboard.addr||UIState._eventClipboard.place) : ''))}">+ Übernehmen</button>` : ''}
+      <div class="det-btn-row">
+        ${_hasGeo ? `<button class="section-add c-gold-lt" data-action="showPersonOnMap" data-pid="${id}">📍 Karte</button>` : ''}
+        ${UIState._eventClipboard ? `<button class="section-add c-gold-lt" data-action="applyClipboardEvent" data-pid="${id}" title="${esc((EVENT_LABELS[UIState._eventClipboard.type]||UIState._eventClipboard.type) + (UIState._eventClipboard.addr||UIState._eventClipboard.place ? ': '+(UIState._eventClipboard.addr||UIState._eventClipboard.place) : ''))}">+ Übernehmen</button>` : ''}
         <button class="section-add" data-action="showEventForm" data-pid="${id}">+ Ereignis</button>
       </div>
     </div>`;
@@ -499,7 +499,7 @@ function showDetail(id, pushHistory = true) {
     const enVal = en.nameRaw
       ? en.nameRaw.replace(/\/([^\/]*)\//g, '$1').trim()
       : [en.prefix, en.given, en.surname, en.suffix].filter(Boolean).join(' ');
-    if (enVal) html += `<div class="fact-row" style="cursor:pointer" data-action="showExtraNameForm" data-pid="${id}" data-enidx="${enIdx}">
+    if (enVal) html += `<div class="fact-row fact-row--clickable" data-action="showExtraNameForm" data-pid="${id}" data-enidx="${enIdx}">
       <span class="fact-lbl">${esc(enLabel)}</span>
       <span class="fact-val">${esc(enVal)}${sourceTagsHtml(en.sources || [], en.sourcePages, en.sourceQUAY)}</span>
     </div>`;
@@ -510,8 +510,8 @@ function showDetail(id, pushHistory = true) {
 
   if (p.birth.date || p.birth.place) {
     const geoBtn = _validCoord(p.birth.lati, p.birth.long)
-      ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BIRT" style="cursor:pointer"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources, p.birth.sourcePages, p.birth.sourceQUAY)}${p.birth.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.birth.note)}</span>` : ''}</span></div>`;
+      ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources, p.birth.sourcePages, p.birth.sourceQUAY)}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
   const _chrGodparents = (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
   if (p.chr.date || p.chr.place || _chrGodparents.length) {
@@ -521,17 +521,17 @@ function showDetail(id, pushHistory = true) {
       : '';
     // Alter bei Taufe nur wenn Geburtsdatum bekannt (nicht wenn Taufe selbst der Proxy ist)
     const _chrAge = p.birth.date ? _ageAt(p.birth.date, p.chr.date) : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="CHR" style="cursor:pointer"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_chrAge}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_chrAge}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = _validCoord(p.death.lati, p.death.long)
-      ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="DEAT" style="cursor:pointer"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_ageAt(_refDate, p.death.date)}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.death.note)}</span>` : ''}</span></div>`;
+      ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_ageAt(_refDate, p.death.date)}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = _validCoord(p.buri.lati, p.buri.long)
-      ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" data-action="stop" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-    html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="BURI" style="cursor:pointer"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(p.buri.note)}</span>` : ''}</span></div>`;
+      ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
   // Hof-Notiz-Dedup: gleicher Text + gleiche Adresse → nur beim ersten Event zeigen
@@ -562,16 +562,16 @@ function showDetail(id, pushHistory = true) {
           ? ev.eventType
           : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
         const geoBtn = _validCoord(ev.lati, ev.long)
-          ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
+          ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" class="geo-link">📍</a>` : '';
         const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
-        const mediaBadge = (ev.media?.length > 0) ? `<span style="font-size:0.72rem;color:var(--text-dim);margin-left:5px">📎${ev.media.length}</span>` : '';
+        const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';
         const _noteKey = (ev.addr && ev.note) ? `${ev.addr.trim()}\x00${ev.note}` : null;
         const _showEvNote = ev.note && (!_noteKey || !_shownAddrNotes.has(_noteKey));
         if (_noteKey) _shownAddrNotes.add(_noteKey);
-        html += `<div class="fact-row" data-action="showEventForm" data-pid="${id}" data-ev="${idx}" style="cursor:pointer">
+        html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${mediaBadge}${_showEvNote ? `<span style="display:block;font-size:0.8rem;color:var(--text-dim);font-style:italic;margin-top:2px">${esc(ev.note)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${mediaBadge}${_showEvNote ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
         </div>`;
       }
     }
@@ -579,11 +579,11 @@ function showDetail(id, pushHistory = true) {
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);
   if (p.resn)  html += factRow('Beschränkung', p.resn);
-  if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" style="color:var(--gold)">${esc(p.email)}</a></span></div>`;
-  if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(p.www)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(p.www)}</a></span></div>`;
+  if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" class="person-email-link">${esc(p.email)}</a></span></div>`;
+  if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(p.www)}" target="_blank" rel="noopener" class="person-www-link">${esc(p.www)}</a></span></div>`;
 
   if (!p.birth.date && !p.death.date && !p.events.length && !p.chr.date && !p.buri.date)
-    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Lebensdaten eingetragen</div>`;
+    html += `<div class="no-data">Keine Lebensdaten eingetragen</div>`;
 
   html += `</div>`;
 
@@ -620,9 +620,9 @@ function showDetail(id, pushHistory = true) {
       const _probandName = AppState.db.individuals[_probandId]?.name || 'Proband';
       html += `<div class="section fade-up">
         <div class="section-head"><div class="section-title">Verwandtschaft</div></div>
-        <div class="fact-row" style="cursor:pointer" data-action="showRelPath" data-pid="${id}">
+        <div class="fact-row fact-row--clickable" data-action="showRelPath" data-pid="${id}">
           <span class="fact-lbl">${esc(_probandName)}</span>
-          <span class="fact-val" style="font-style:italic">${esc(_rel.label)}<span class="p-arrow" style="margin-left:6px">›</span></span>
+          <span class="fact-val rel-val-italic">${esc(_rel.label)}<span class="p-arrow ml-6">›</span></span>
         </div>
       </div>`;
     }
@@ -633,13 +633,13 @@ function showDetail(id, pushHistory = true) {
   const _pHasRefs  = (p.noteRefs || []).some(r => AppState.db.notes?.[r]);
   html += `<div class="section fade-up">
     <div class="section-head">
-      <div class="section-title">Notizen${_pHasRefs ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-weight:normal">(+ verknüpfte)</span>` : ''}</div>
+      <div class="section-title">Notizen${_pHasRefs ? ` <span class="fs-xxs c-muted fw-400">(+ verknüpfte)</span>` : ''}</div>
       <button class="section-add" data-action="openNoteModal" data-ntype="person" data-nid="${id}">✎ Bearbeiten</button>
     </div>
-    <div data-action="openNoteModal" data-ntype="person" data-nid="${id}" style="cursor:pointer;min-height:32px;padding:4px 2px">
+    <div class="note-clickable" data-action="openNoteModal" data-ntype="person" data-nid="${id}">
       ${_pNoteText
-        ? `<div style="white-space:pre-wrap;font-size:0.88rem;color:var(--text-dim);line-height:1.6">${esc(_pNoteText)}</div>`
-        : `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Notiz hinzufügen…</div>`}
+        ? `<div class="note-text">${esc(_pNoteText)}</div>`
+        : `<div class="note-hint">Notiz hinzufügen…</div>`}
     </div>
   </div>`;
 
@@ -660,12 +660,12 @@ function showDetail(id, pushHistory = true) {
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+      html += `<div class="media-row"
         data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-photo-${id}" data-avatar="det-avatar-${id}">
-        <div id="media-thumb-indi-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        <div id="media-thumb-indi-${id}-${i}" class="media-thumb">${_icon}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(display)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
         </div>
         <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="person" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
@@ -677,16 +677,16 @@ function showDetail(id, pushHistory = true) {
       const sub   = obj && obj.title && obj.file ? obj.file : '';
       const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
       const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
-        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
-          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+      html += `<div class="media-row--ref">
+        <div class="media-thumb">${_icon2}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(label)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
+          <div class="media-ref-label">Verweis</div>
         </div>
       </div>`;
     }
-    if (!indiMedia.length && !indiPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
+    if (!indiMedia.length && !indiPtObje.length) html += `<div class="no-data-pad">Keine Medien eingetragen</div>`;
     html += `</div>`;
   }
 
@@ -716,7 +716,7 @@ function showDetail(id, pushHistory = true) {
       const child = AppState.db.individuals[cid];
       if (child) html += relRow(child, 'Kind' + (child.birth.date ? ' · * ' + child.birth.date : ''), famId);
     }
-    html += `<div style="display:flex;justify-content:flex-end;padding:2px 0 8px">
+    html += `<div class="det-child-btn-row">
       <button class="section-add" data-action="showAddChildFlow" data-fid="${famId}">+ Kind</button>
     </div>`;
   }
@@ -732,11 +732,11 @@ function showDetail(id, pushHistory = true) {
     const famId = typeof fref === 'string' ? fref : fref.famId;
     const fam = AppState.db.families[famId];
     if (!fam) continue;
-    html += `<div class="family-nav-row" style="display:flex;align-items:center;gap:6px">
-      <span class="fnr-label" data-action="showFamilyDetail" data-id="${famId}" style="flex:1;cursor:pointer"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
+    html += `<div class="family-nav-row fam-nav-row-inner">
+      <span class="fnr-label fam-nav-label" data-action="showFamilyDetail" data-id="${famId}"><span class="fnr-icon">⚭</span> Herkunftsfamilie · ${famId}</span>
       <button class="unlink-btn" data-action="unlinkMember" data-fid="${famId}" data-pid="${id}"
         title="Aus Herkunftsfamilie austragen">×</button>
-      <span class="row-arrow" data-action="showFamilyDetail" data-id="${famId}" style="cursor:pointer">›</span>
+      <span class="row-arrow fact-row--clickable" data-action="showFamilyDetail" data-id="${famId}">›</span>
     </div>`;
     for (const pid of [fam.husb, fam.wife]) {
       if (!pid) continue;
@@ -769,7 +769,7 @@ function showDetail(id, pushHistory = true) {
     const el = document.getElementById('det-photo-' + id);
     const av = document.getElementById('det-avatar-' + id);
     if (el) {
-      el.style.display = '';
+      el.style.display = 'block';
       el.innerHTML = '';
       const heroImg = document.createElement('img');
       heroImg.src = src;
@@ -800,24 +800,24 @@ function showRelPath(id) {
 
   const body = document.getElementById('relPathBody');
   if (!rel.path.length) {
-    body.innerHTML = `<div style="color:var(--text-muted);font-style:italic;padding:8px 0">Keine verwandtschaftliche Verbindung gefunden.</div>`;
+    body.innerHTML = `<div class="rel-path-not-found">Keine verwandtschaftliche Verbindung gefunden.</div>`;
   } else {
     const kNum = id => _kekuleMap[id] ? `<span class="p-kekule">#${_kekuleMap[id]}</span>` : '';
     const rows = rel.path.map((pid, i) => {
       const person = AppState.db.individuals[pid];
       const name = person?.name || pid;
       const isCommon = pid === rel.commonId;
-      const arrow = i < rel.path.length - 1 ? `<div style="text-align:center;color:var(--text-muted);font-size:0.85rem;padding:2px 0">↓</div>` : '';
-      return `<div style="cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)${isCommon ? ';background:var(--surface2);border-radius:6px;padding:6px 8px' : ''}"
+      const arrow = i < rel.path.length - 1 ? `<div class="rel-path-arrow">↓</div>` : '';
+      return `<div class="rel-path-item${isCommon ? ' rel-path-item--common' : ''}"
         data-action="relPathShowDetail" data-id="${pid}">
-        ${isCommon ? `<span style="font-size:0.75rem;color:var(--gold-dim)">⬡</span>` : `<span style="font-size:0.75rem;color:var(--text-muted)">${i + 1}.</span>`}
-        <span style="flex:1;font-size:0.9rem${isCommon ? ';font-weight:600;color:var(--gold)' : ''}">${esc(name)}</span>
+        ${isCommon ? `<span class="rel-path-icon">⬡</span>` : `<span class="rel-path-idx">${i + 1}.</span>`}
+        <span class="rel-path-name${isCommon ? ' rel-path-name--common' : ''}">${esc(name)}</span>
         ${kNum(pid)}
       </div>${arrow}`;
     }).join('');
-    body.innerHTML = `<div style="margin-bottom:10px;font-size:1rem;font-weight:600;color:var(--gold)">${esc(rel.label)}</div>
-      <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">⬡ = gemeinsamer Vorfahre</div>
-      ${rel.multiPath ? `<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;font-style:italic">Mehrere Verwandtschaftspfade möglich – kürzester angezeigt.</div>` : '<div style="margin-bottom:10px"></div>'}
+    body.innerHTML = `<div class="rel-path-body-title">${esc(rel.label)}</div>
+      <div class="rel-path-legend">⬡ = gemeinsamer Vorfahre</div>
+      ${rel.multiPath ? `<div class="rel-path-multi">Mehrere Verwandtschaftspfade möglich – kürzester angezeigt.</div>` : '<div class="mb-10"></div>'}
       ${rows}`;
   }
 

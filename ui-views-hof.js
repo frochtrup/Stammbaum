@@ -58,14 +58,14 @@ function renderHofList(sorted) {
     const range  = minYr && maxYr && minYr !== maxYr ? `${minYr}–${maxYr}` : (minYr || '');
     const hofMeta   = AppState.db.hofObjects?.[hof.addr];
     const hasCoords = hofMeta?.lat && hofMeta?.long;
-    const addrLine  = (hasCoords ? '<span style="color:var(--gold);margin-right:4px">📍</span>' : '') + esc(hof.addr).replace(/\n/g, ' · ');
+    const addrLine  = (hasCoords ? '<span class="c-gold mr-4">📍</span>' : '') + esc(hof.addr).replace(/\n/g, ' · ');
     const metaParts = [];
     if (hof.place) metaParts.push(esc(compactPlace(hof.place)));
     metaParts.push(`${count} Person${count !== 1 ? 'en' : ''}`);
     if (propCount) metaParts.push(`${propCount} Eigentümer`);
     if (range) metaParts.push(range);
     html += `<div class="person-row" data-action="showHofDetail" data-addr="${esc(hof.addr)}">
-      <div class="p-avatar" style="font-size:1.1rem">🏠</div>
+      <div class="p-avatar fs-md">🏠</div>
       <div class="p-info">
         <div class="p-name">${addrLine}</div>
         <div class="p-meta">${metaParts.join(' · ')}</div>
@@ -106,21 +106,20 @@ function _hofSourceOptions() {
 function _renderAddBewohnerForm(addr) {
   const addrAttr = esc(addr);
   return `
-  <div id="hf-add-section" class="section fade-up" style="display:none">
+  <div id="hf-add-section" class="section fade-up d-none">
     <div class="section-title">Bewohner hinzufügen</div>
 
-    <div class="form-group" style="position:relative;margin-bottom:10px">
+    <div class="form-group hof-form-group-rel">
       <label class="form-label">Person</label>
       <input class="form-input" id="hf-psearch" placeholder="Name suchen…" autocomplete="off">
       <div class="place-dropdown" id="hf-person-dd"></div>
       <input type="hidden" id="hf-pid">
     </div>
 
-    <div class="form-group" style="margin-bottom:10px">
+    <div class="form-group hof-form-group">
       <label class="form-label">Datum</label>
-      <select class="form-select" id="hf-date-qual"
-          data-change="onDateQualChange" data-target="hf-date2"
-          style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+      <select class="form-select date-qual-sel" id="hf-date-qual"
+          data-change="onDateQualChange" data-target="hf-date2">
         <option value="">exakt</option>
         <option value="ABT">ca. (ABT)</option>
         <option value="CAL">berechnet (CAL)</option>
@@ -130,26 +129,26 @@ function _renderAddBewohnerForm(addr) {
         <option value="BET">zwischen (BET…AND)</option>
         <option value="FROM">von/bis (FROM…TO)</option>
       </select>
-      <div style="display:flex;gap:4px">
-        <input class="form-input" id="hf-date-d" type="text" placeholder="TT"
-          style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+      <div class="d-flex gap-4">
+        <input class="form-input date-d" id="hf-date-d" type="text" placeholder="TT"
+          inputmode="numeric" pattern="[0-9]*">
         <input class="form-input" id="hf-date-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
-        <input class="form-input" id="hf-date-y" type="text" placeholder="JJJJ"
-          style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+        <input class="form-input date-y" id="hf-date-y" type="text" placeholder="JJJJ"
+          inputmode="numeric" pattern="[0-9]*">
       </div>
-      <div id="hf-date2-group" style="display:none;margin-top:6px">
-        <div style="font-size:0.73rem;color:var(--text-dim);margin-bottom:3px">bis</div>
-        <div style="display:flex;gap:4px">
-          <input class="form-input" id="hf-date2-d" type="text" placeholder="TT"
-            style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+      <div id="hf-date2-group" class="d-none mt-6">
+        <div class="ef-date2-bis c-dim mb-4">bis</div>
+        <div class="d-flex gap-4">
+          <input class="form-input date-d" id="hf-date2-d" type="text" placeholder="TT"
+            inputmode="numeric" pattern="[0-9]*">
           <input class="form-input" id="hf-date2-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
-          <input class="form-input" id="hf-date2-y" type="text" placeholder="JJJJ"
-            style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          <input class="form-input date-y" id="hf-date2-y" type="text" placeholder="JJJJ"
+            inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
     </div>
 
-    <div class="form-group" style="margin-bottom:10px">
+    <div class="form-group hof-form-group">
       <label class="form-label">Ort</label>
       <div class="place-input-wrap">
         <input class="form-input" id="hf-place" placeholder="München" autocomplete="off">
@@ -157,10 +156,10 @@ function _renderAddBewohnerForm(addr) {
       </div>
     </div>
 
-    <div class="form-group" style="margin-bottom:10px">
+    <div class="form-group hof-form-group">
       <label class="form-label">Quelle</label>
-      <select class="form-select" id="hf-src" style="margin-bottom:4px">${_hofSourceOptions()}</select>
-      <input class="form-input" id="hf-srcpage" placeholder="Seite / Nachweis" style="margin-bottom:4px">
+      <select class="form-select hof-src-margin" id="hf-src">${_hofSourceOptions()}</select>
+      <input class="form-input hof-src-margin" id="hf-srcpage" placeholder="Seite / Nachweis">
       <select class="form-select" id="hf-quay">
         <option value="">Qualität…</option>
         <option value="3">3 – Direkt / Original</option>
@@ -195,32 +194,31 @@ function _propRelRow(p, roleStr) {
 function _renderAddPropForm(addr) {
   const addrAttr = esc(addr);
   return `
-  <div id="hfp-add-section" class="section fade-up" style="display:none">
+  <div id="hfp-add-section" class="section fade-up d-none">
     <div class="section-title">Eigentum hinzufügen</div>
 
-    <div class="form-group" style="position:relative;margin-bottom:10px">
+    <div class="form-group hof-form-group-rel">
       <label class="form-label">Person</label>
       <input class="form-input" id="hfp-psearch" placeholder="Name suchen…" autocomplete="off">
       <div class="place-dropdown" id="hfp-person-dd"></div>
       <input type="hidden" id="hfp-pid">
     </div>
 
-    <div class="form-group" style="margin-bottom:10px">
-      <label class="form-label">Beschreibung <span style="color:var(--text-dim);font-weight:400">(optional, z.B. Mühle, Acker)</span></label>
+    <div class="form-group hof-form-group">
+      <label class="form-label">Beschreibung <span class="c-dim" class="fw-400">(optional, z.B. Mühle, Acker)</span></label>
       <input class="form-input" id="hfp-desc" placeholder="Liegenschaft, Objekt…" autocomplete="off">
     </div>
 
-    <div class="form-group" style="position:relative;margin-bottom:10px">
-      <label class="form-label">Adresse <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+    <div class="form-group hof-form-group-rel">
+      <label class="form-label">Adresse <span class="c-dim" class="fw-400">(optional)</span></label>
       <input class="form-input" id="hfp-addr" placeholder="Adresse der Liegenschaft…" autocomplete="off" value="${addrAttr}">
       <div class="place-dropdown" id="hfp-addr-dd"></div>
     </div>
 
-    <div class="form-group" style="margin-bottom:10px">
+    <div class="form-group hof-form-group">
       <label class="form-label">Datum</label>
-      <select class="form-select" id="hfp-date-qual"
-          data-change="onDateQualChange" data-target="hfp-date2"
-          style="font-size:0.82rem;padding:5px 8px;margin-bottom:4px">
+      <select class="form-select date-qual-sel" id="hfp-date-qual"
+          data-change="onDateQualChange" data-target="hfp-date2">
         <option value="">exakt</option>
         <option value="ABT">ca. (ABT)</option>
         <option value="CAL">berechnet (CAL)</option>
@@ -230,26 +228,26 @@ function _renderAddPropForm(addr) {
         <option value="BET">zwischen (BET…AND)</option>
         <option value="FROM">von/bis (FROM…TO)</option>
       </select>
-      <div style="display:flex;gap:4px">
-        <input class="form-input" id="hfp-date-d" type="text" placeholder="TT"
-          style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+      <div class="d-flex gap-4">
+        <input class="form-input date-d" id="hfp-date-d" type="text" placeholder="TT"
+          inputmode="numeric" pattern="[0-9]*">
         <input class="form-input" id="hfp-date-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
-        <input class="form-input" id="hfp-date-y" type="text" placeholder="JJJJ"
-          style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+        <input class="form-input date-y" id="hfp-date-y" type="text" placeholder="JJJJ"
+          inputmode="numeric" pattern="[0-9]*">
       </div>
-      <div id="hfp-date2-group" style="display:none;margin-top:6px">
-        <div style="font-size:0.73rem;color:var(--text-dim);margin-bottom:3px">bis</div>
-        <div style="display:flex;gap:4px">
-          <input class="form-input" id="hfp-date2-d" type="text" placeholder="TT"
-            style="width:54px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+      <div id="hfp-date2-group" class="d-none mt-6">
+        <div class="ef-date2-bis c-dim mb-4">bis</div>
+        <div class="d-flex gap-4">
+          <input class="form-input date-d" id="hfp-date2-d" type="text" placeholder="TT"
+            inputmode="numeric" pattern="[0-9]*">
           <input class="form-input" id="hfp-date2-m" placeholder="Monat" autocomplete="off" data-blur="normMonth">
-          <input class="form-input" id="hfp-date2-y" type="text" placeholder="JJJJ"
-            style="width:72px;flex-shrink:0;text-align:center" inputmode="numeric" pattern="[0-9]*">
+          <input class="form-input date-y" id="hfp-date2-y" type="text" placeholder="JJJJ"
+            inputmode="numeric" pattern="[0-9]*">
         </div>
       </div>
     </div>
 
-    <div class="form-group" style="margin-bottom:10px">
+    <div class="form-group hof-form-group">
       <label class="form-label">Ort</label>
       <div class="place-input-wrap">
         <input class="form-input" id="hfp-place" placeholder="München" autocomplete="off">
@@ -257,10 +255,10 @@ function _renderAddPropForm(addr) {
       </div>
     </div>
 
-    <div class="form-group" style="margin-bottom:10px">
+    <div class="form-group hof-form-group">
       <label class="form-label">Quelle</label>
-      <select class="form-select" id="hfp-src" style="margin-bottom:4px">${_hofSourceOptions()}</select>
-      <input class="form-input" id="hfp-srcpage" placeholder="Seite / Nachweis" style="margin-bottom:4px">
+      <select class="form-select hof-src-margin" id="hfp-src">${_hofSourceOptions()}</select>
+      <input class="form-input hof-src-margin" id="hfp-srcpage" placeholder="Seite / Nachweis">
       <select class="form-select" id="hfp-quay">
         <option value="">Qualität…</option>
         <option value="3">3 – Direkt / Original</option>
@@ -332,8 +330,8 @@ function showHofDetail(addr, pushHistory = true) {
   const totalCount = new Set(allEntries.map(e => e.pid)).size;
 
   let html = `<div class="detail-hero fade-up">
-    <div class="detail-avatar" style="font-size:1.8rem;border-color:var(--gold-dim)">🏠</div>
-    <div class="detail-name" style="white-space:pre-wrap">${addrDisplay}</div>
+    <div class="detail-avatar hof">🏠</div>
+    <div class="detail-name">${addrDisplay}</div>
     <div class="detail-id">${totalCount} Person${totalCount !== 1 ? 'en' : ''}</div>
   </div>`;
 
@@ -343,7 +341,7 @@ function showHofDetail(addr, pushHistory = true) {
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Bewohner &amp; Eigentum</div>
-      <div style="display:flex;gap:6px">
+      <div class="section-btn-row">
         <button type="button" class="section-add" data-action="showHofAddForm" data-addr="${esc(addr)}">+ Bewohner</button>
         <button type="button" class="section-add" data-action="showHofPropForm" data-addr="${esc(addr)}">+ Eigentum</button>
       </div>
@@ -361,7 +359,7 @@ function showHofDetail(addr, pushHistory = true) {
     }
   }
   if (!allEntries.length) {
-    html += `<div class="empty" style="padding:10px 0;font-size:0.85rem">Keine Einträge</div>`;
+    html += `<div class="empty empty-pad">Keine Einträge</div>`;
   }
   html += `</div>`;
 
@@ -384,12 +382,12 @@ function _renderHofCoordSection(addr) {
   let body = '';
   if (lat && long) {
     const mapsUrl = `https://maps.apple.com/?ll=${encodeURIComponent(lat)},${encodeURIComponent(long)}&q=${encodeURIComponent(compactPlace(addr))}`;
-    body = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <span style="font-size:0.9rem;color:var(--text-main)">${esc(String(lat))}° N &nbsp; ${esc(String(long))}° E</span>
-      <a href="${mapsUrl}" target="_blank" style="font-size:0.82rem;color:var(--gold)">Karte öffnen</a>
+    body = `<div class="hof-coord-body">
+      <span class="hof-coord-val">${esc(String(lat))}° N &nbsp; ${esc(String(long))}° E</span>
+      <a href="${mapsUrl}" target="_blank" class="hof-map-link">Karte öffnen</a>
     </div>`;
   } else {
-    body = `<div style="font-size:0.85rem;color:var(--text-dim)">Keine Koordinaten hinterlegt</div>`;
+    body = `<div class="hof-coord-no-data">Keine Koordinaten hinterlegt</div>`;
   }
 
   return `<div class="section fade-up" id="hof-coord-section">
@@ -398,20 +396,20 @@ function _renderHofCoordSection(addr) {
       <button type="button" class="section-add" data-action="showHofCoordForm" data-addr="${addrAttr}">Bearbeiten</button>
     </div>
     ${body}
-    <div id="hof-coord-form" style="display:none;margin-top:10px">
-      <div style="margin-bottom:8px">
-        <label class="form-label" style="font-size:0.78rem">Breite (Lat) — oder Apple Maps-Koordinaten hier einfügen</label>
+    <div id="hof-coord-form" class="hof-coord-form-wrap">
+      <div class="hof-coord-field-wrap">
+        <label class="form-label hof-coord-label">Breite (Lat) — oder Apple Maps-Koordinaten hier einfügen</label>
         <input class="form-input" id="hof-coord-lat" type="text" inputmode="decimal" placeholder='52,22779° N, 7,17310° O' value="${esc(String(lat))}">
       </div>
-      <div style="margin-bottom:8px">
-        <label class="form-label" style="font-size:0.78rem">Länge (Lon)</label>
+      <div class="hof-coord-field-wrap">
+        <label class="form-label hof-coord-label">Länge (Lon)</label>
         <input class="form-input" id="hof-coord-lon" type="text" inputmode="decimal" placeholder="7.1845" value="${esc(String(long))}">
       </div>
-      <div style="font-size:0.75rem;color:var(--text-dim);margin-bottom:8px">Dezimalgrad (52.2073 / 7.1845) oder Apple Maps-Format (52,22779° N, 7,17310° O) ins erste Feld einfügen</div>
+      <div class="hof-coord-hint">Dezimalgrad (52.2073 / 7.1845) oder Apple Maps-Format (52,22779° N, 7,17310° O) ins erste Feld einfügen</div>
       <div class="btn-row">
         <button type="button" class="btn btn-save" data-action="saveHofCoord" data-addr="${addrAttr}">Speichern</button>
         <button type="button" class="btn btn-cancel" data-action="cancelHofCoord">Abbrechen</button>
-        ${lat && long ? `<button type="button" class="btn" style="margin-left:auto;color:var(--red)" data-action="deleteHofCoord" data-addr="${addrAttr}">Löschen</button>` : ''}
+        ${lat && long ? `<button type="button" class="btn hof-del-btn" data-action="deleteHofCoord" data-addr="${addrAttr}">Löschen</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -466,8 +464,8 @@ function _renderHofNoteSection(addr) {
   const note = m?.note || '';
   const addrAttr = esc(addr);
   const body = note
-    ? `<div style="font-size:0.88rem;color:var(--text-main);white-space:pre-wrap">${esc(note)}</div>`
-    : `<div style="font-size:0.85rem;color:var(--text-dim)">Keine Notiz hinterlegt</div>`;
+    ? `<div class="hof-note-body">${esc(note)}</div>`
+    : `<div class="hof-no-note">Keine Notiz hinterlegt</div>`;
   return `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Notiz</div>
