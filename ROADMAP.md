@@ -109,16 +109,6 @@ Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig �
 
 Schulden nach Dringlichkeit, unabhängig vom Feature-Backlog anzugehen:
 
-### Sofort adressierbar (je S)
-
-**U21: Duplizierter Template-Code** (→ P0 oben)
-`_renderBirthGeoBtn()` und gleichnamige Logik existieren in `ui-views-person.js` und `ui-views-family.js` nahezu identisch. Auslagern nach `ui-views.js` verhindert weitere Divergenz.
-
-**MEMORY.md-Overflow**
-Die Projektdokumentation ist >200 Zeilen und wird am Limit abgeschnitten. Detail-Abschnitte (z.B. A10-Fortschrittstabelle, Passthrough-Liste, Sanduhr-Dimensionen) in eigene Dateien (`ARCHITECTURE.md`, `DATAMODEL.md`) verschieben; `MEMORY.md` nur als Index ≤180 Zeilen halten.
-
-### Nächster Sprint (je M)
-
 ### Mittelfristig (je L)
 
 **F4b: Zitierungs-Datenstruktur**

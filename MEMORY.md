@@ -25,7 +25,9 @@
 - `ui-views-tasks.js` — Forschungsaufgaben: `TASK_CATEGORIES`, IDB-Persistenz, Person-Detail-Abschnitt, globale Aufgabenliste, Badge, Modal-Handler
 - `ui-views-tree.js` — Sanduhr-Baum + Tastaturnavigation
 - `ui-fanchart.js` — Fan Chart (SVG)
-- `ui-forms.js` — Formulare Person/Familie/Quelle + Source-Widget + Modal/Keyboard/Utils
+- `ui-forms.js` — Source-Widget, Media-Helfer, Quelle-Formular, Modals, Gesten, Keyboard, Utils (619 Z.)
+- `ui-forms-person.js` — Person-Formular + Extra-Name-Formular (273 Z.)
+- `ui-forms-family.js` — Familie-Formular (124 Z.)
 - `ui-forms-event.js` — Event-Formular (`_SPECIAL_OBJ` (Alias auf `SPECIAL_EVENT_KEYS`), `_efMedia`, `showEventForm`, `saveEvent`)
 - `ui-forms-repo.js` — Archiv-Formular, Picker, Detail-Ansicht
 - `ui-media.js` — Medien Add/Edit/Delete/Browser
@@ -37,7 +39,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v378)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v380)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -53,7 +55,7 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-10
 
 **Version 7.0 in Entwicklung — Branch `v7-dev`** (v4–v6 abgeschlossen auf `main`)
-- **Aktuelle sw-Version: v378** / Cache: `stammbaum-v378`
+- **Aktuelle sw-Version: v380** / Cache: `stammbaum-v380`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
@@ -115,5 +117,5 @@ GEDCOM bleibt vollständig erhalten. Austauschformat mit GRAMPS: **GRAMPS XML** 
 
 ## Offene Architektur-Schulden
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — Backlog U8
-- `showDetail()` 344 Z. + `showFamilyDetail()` 235 Z. — God-Functions → U20
+- `showDetail()` + `showFamilyDetail()` noch groß (U20 verworfen; `_pdetLifeData()` extrahiert)
 - `sources[]+sourcePages{}` Zitierungen: Mehrfachzitierungen nicht darstellbar → F4b (XL, Backlog)

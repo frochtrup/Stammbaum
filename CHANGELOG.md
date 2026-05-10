@@ -9,6 +9,18 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-10 — Refactoring-Sprint (sw v370–v380)
+
+- **sw v370–v373** `refactor(A10)`: `unsafe-inline` aus CSP entfernt — 6 Phasen abgeschlossen; alle `style=`-Inline-Attribute in Template-Strings durch CSS-Klassen ersetzt; `<meta http-equiv="Content-Security-Policy">` ohne `'unsafe-inline'`; ADR-015 in `ARCHITECTURE.md` dokumentiert
+- **sw v374–v375** `fix`: A10-Folgebug — `style.display=''` zeigte Elemente nicht wenn CSS `display:none` gesetzt; Sub-Tab-Wechsel (Orte/Höfe/Karte) löscht veralteten `detailContent`
+- **sw v376** `feat(A11y)`: U16–U19 — ♂/♀-Symbol + `aria-label` auf Baum-Karten (WCAG 1.4.1); Kekule-Badge `title`; `.field-invalid` Formular-Validierung (Blur+Submit); `<label for>` in allen Formularen
+- **sw v377** `refactor`: U21 `evGeoLink(lati, long)` in `ui-views.js` — 5 duplizierte `maps.apple.com`-URLs konsolidiert; Bugfix `data-action="stop"` in Events-Loop; U22 Onboarding überarbeitet (Formatzeile `.ged · .gramps`, Demo-Button mit Personenzahl)
+- **sw v378** `fix`: Baum-Tooltip Felder `given`/`surname` statt `givn`/`surn`; Fallback auf `q.name`
+- **sw v379** `refactor(U20)`: `_pdetLifeData()` aus `showDetail()` extrahiert (Lebensdaten-Block inkl. Events-Gruppierung)
+- **sw v380** `refactor(U23)`: `ui-forms.js` aufgeteilt (1007 → 619 Z.) — `ui-forms-person.js` (Person + Extra-Name-Formular, 273 Z.) + `ui-forms-family.js` (Familie-Formular, 124 Z.); Load-Order in `index.html` + SW-Precache aktualisiert
+
+---
+
 ### Session 2026-05-09 — A10 Analyse: unsafe-inline Scope-Aufnahme (kein sw-Bump)
 
 **Analyse (keine Code-Änderungen):**
