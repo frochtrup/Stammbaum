@@ -33,7 +33,7 @@ function renderSrcTags(prefix) {
     const pasteBtn = UIState._citClipboard
       ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
       : '';
-    container.innerHTML = `<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>${pasteBtn}`;
+    container.innerHTML = `<span class="fs-08 c-muted italic">Keine Quellen zugewiesen</span>${pasteBtn}`;
     return;
   }
   const pages = srcWidgetState[prefix]?.pages || {};
@@ -47,7 +47,6 @@ function renderSrcTags(prefix) {
     const pageField = `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
            data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`;
     const quayField = `<select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-sid="${sidEsc}"
-           style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
            <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
            <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
            <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>

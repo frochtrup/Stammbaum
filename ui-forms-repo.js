@@ -45,7 +45,7 @@ function renderRepoPicker(q) {
   repos = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   list.innerHTML = '';
   if (!repos.length) {
-    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Keine Archive gefunden</div>';
+    list.innerHTML = '<div class="c-muted fs-sm py-8">Keine Archive gefunden</div>';
     return;
   }
   for (const r of repos) {
@@ -86,7 +86,7 @@ function showRepoDetail(id, pushHistory = true) {
 
   const linkedSources = Object.values(AppState.db.sources).filter(s => s.repo === id);
   let html = `<div class="detail-hero fade-up">
-    <div class="detail-avatar" style="font-size:1.8rem">🏛</div>
+    <div class="detail-avatar repo">🏛</div>
     <div class="detail-name">${esc(r.name || id)}</div>
     <div class="detail-id">${r.lastChanged ? 'Geändert ' + r.lastChanged : ''}</div>
   </div>
@@ -96,7 +96,7 @@ function showRepoDetail(id, pushHistory = true) {
   if (r.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(r.www)}" target="_blank" rel="noopener">${esc(r.www)}</a></span></div>`;
   if (r.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span></div>`;
   if (!r.addr && !r.phon && !r.www && !r.email)
-    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
+    html += `<div class="c-muted italic fs-sm">Keine Details eingetragen</div>`;
   html += `</div>`;
   if (linkedSources.length) {
     html += `<div class="section fade-up"><div class="section-title">Quellen (${linkedSources.length})</div>`;
@@ -108,7 +108,7 @@ function showRepoDetail(id, pushHistory = true) {
     }
     html += `</div>`;
   } else {
-    html += `<div class="section fade-up"><div class="empty" style="padding:16px 0">Keine verknüpften Quellen</div></div>`;
+    html += `<div class="section fade-up"><div class="empty empty-compact">Keine verknüpften Quellen</div></div>`;
   }
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');

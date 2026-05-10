@@ -147,7 +147,7 @@ function _initGodparentSearch() {
       const meta = [p.birth?.date ? '* ' + p.birth.date : '', p.death?.date ? '† ' + p.death.date : ''].filter(Boolean).join('  ');
       const item = document.createElement('div');
       item.className = 'place-dropdown-item';
-      item.innerHTML = `<strong>${esc(p.name || p.id)}</strong>${meta ? `<span style="color:var(--text-muted);font-size:0.8em;margin-left:6px">${esc(meta)}</span>` : ''}`;
+      item.innerHTML = `<strong>${esc(p.name || p.id)}</strong>${meta ? `<span class="ac-meta">${esc(meta)}</span>` : ''}`;
       item.addEventListener('mousedown', () => {
         _efGodparents.push(p.id);
         _renderEfGodparents();
