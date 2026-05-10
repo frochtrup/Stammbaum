@@ -146,9 +146,16 @@ function switchPlacesSubTab(sub) {
   ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
     document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
   });
-  if (sub === 'hoefe') renderHofList();
-  else if (sub === 'orte') renderPlaceList();
-  else if (sub === 'karte') {
+  if (sub === 'hoefe') {
+    document.getElementById('detailContent').innerHTML = '';
+    document.body.classList.remove('has-detail');
+    renderHofList();
+  } else if (sub === 'orte') {
+    document.getElementById('detailContent').innerHTML = '';
+    document.body.classList.remove('has-detail');
+    renderPlaceList();
+  } else if (sub === 'karte') {
+    document.getElementById('detailContent').innerHTML = '';
     document.body.classList.remove('has-detail');
     if (isDesktop) renderPlaceList(); // linkes Panel: Orte-Navigation
     if (typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
