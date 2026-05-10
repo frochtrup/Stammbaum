@@ -59,27 +59,18 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| A10 | **`unsafe-inline` aus CSP entfernen** | Phase 1+2 abgeschlossen (styles.css +354 Z., index.html 0 `style=`). Offen: Phase 3–6. Details im Abschnitt unten. | XL → in Arbeit |
+| A10 | **`unsafe-inline` aus CSP entfernen** | Phasen 1–4 ✅, offen: Phase 5–6. Details: ADR-015 in `ARCHITECTURE.md`. | XL → in Arbeit |
 
-#### A10 — Umsetzungsplan + Fortschritt (Stand 2026-05-09)
+#### A10 — Fortschritt (Stand 2026-05-10)
 
-**Gesamtscope:** 501 CSP-kritische `style=`: 261 in JS-Templates (20 Dateien) + 240 in `index.html`.
-`el.style.*` (~155) + `el.style.cssText` (5×) sind CSP-sicher (CSSOM) — bleiben unverändert.
-→ Details und vollständige Klassenliste: **ADR-015** in `ARCHITECTURE.md`.
-
-**Strategie (revidiert gegenüber Erstanalyse):**
-- `[hidden]` **ohne** `!important` — JS `el.style.display` überschreibt die Regel weiterhin. Keine Umstellung der ~154 show/hide-Aufrufe nötig.
-- Dynamische `style=` in JS-Templates (Farben, Balken): `data-il-*`-Attribute + `_applyDynStyles()` nach `innerHTML`-Zuweisung.
-- Keine `el.hidden`-Umstellung erforderlich (frühere Strategie war falsch).
-
-| Phase | Scope | Status | SW-Version |
+| Phase | Scope | Status | SW |
 |---|---|---|---|
-| 1 | Utility- + Component-Klassen in `styles.css` (+354 Z., 1707 gesamt) | ✅ | — |
-| 2 | `index.html`: alle 240 `style=` → Klassen + `hidden` | ✅ | — |
-| 3 | `ui-forms.js`: Form-Labels + ~80 inline styles in Templates | ⬜ | v360 |
-| 4 | View-Dateien: hof 55 · person 52 · family 33 · media 26 · source 23 + Rest | ⬜ | v361 |
-| 5 | Focus-Management (`ui-views.js`) | ⬜ | v362 |
-| 6 | `unsafe-inline` aus CSP-Header entfernen + Browser-Test | ⬜ | v363 |
+| 1 | Utility- + Component-Klassen in `styles.css` (+354 Z.) | ✅ | — |
+| 2 | `index.html`: 240 `style=` → Klassen + `hidden` | ✅ | — |
+| 3 | `ui-forms*.js`: 7 inline styles | ✅ | v370 |
+| 4 | View-Dateien: hof 55 · person 52 · family 33 · media 26 · source 23 | ✅ | v371 |
+| 5 | Focus-Management (`ui-views.js`) | ⬜ | — |
+| 6 | `unsafe-inline` aus CSP-Header entfernen + Browser-Test | ⬜ | — |
 
 ### UX / Benutzerführung
 
