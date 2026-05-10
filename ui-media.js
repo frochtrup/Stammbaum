@@ -265,7 +265,7 @@ function _onCamCapture(b64) {
   document.getElementById('am-file').value = base + name;
   _addMediaCamB64 = b64;
   document.getElementById('am-cam-img').src = b64;
-  document.getElementById('am-cam-preview').style.display = '';
+  document.getElementById('am-cam-preview').hidden = false;
 }
 
 async function openAddMediaDialog(type, entityId) {
@@ -275,7 +275,7 @@ async function openAddMediaDialog(type, entityId) {
   _addMediaCamB64   = null;
   _addMediaDefaultFolderPath = '';
   document.getElementById('am-title').value = '';
-  document.getElementById('am-cam-preview').style.display = 'none';
+  document.getElementById('am-cam-preview').hidden = true;
   document.getElementById('am-cam-input').setAttribute('capture', 'environment');
   document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
   document.getElementById('am-file').value = '';
