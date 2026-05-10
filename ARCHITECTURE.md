@@ -469,7 +469,7 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 | 1 | Utility- + Component-Klassen in `styles.css` (+354 Zeilen) | ✅ abgeschlossen |
 | 2 | `index.html`: alle 240 `style=` entfernt | ✅ abgeschlossen |
 | 3 | `ui-forms.js` / `ui-forms-event.js` / `ui-forms-repo.js`: 7 inline styles | ✅ abgeschlossen (v370) |
-| 4 | View-Dateien (6×): `ui-views-hof.js` 55 · `ui-views-person.js` 52 · `ui-views-family.js` 33 · `ui-media.js` 26 · `ui-views-source.js` 23 · Rest | ⬜ offen |
+| 4 | View-Dateien: `ui-views-hof.js` 55 · `ui-views-person.js` 52 · `ui-views-family.js` 33 · `ui-media.js` 26 · `ui-views-source.js` 23 | ✅ abgeschlossen (v371) |
 | 5 | Focus-Management (`ui-views.js`) | ⬜ offen |
 | 6 | `unsafe-inline` aus CSP-Header in `index.html` entfernen | ⬜ offen |
 

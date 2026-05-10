@@ -78,7 +78,7 @@
 - **Notizen-Modal (sw v238–v242):** `modalNote` Bottom-Sheet; `openNoteModal(type, id)` / `saveNoteModal()` in `ui-views.js`; ersetzt Inline-Textarea-Ansatz; zeigt eigene Notiz + alle noteRefs editierbar; `_noteRefUsers(ref)` zeigt referenzierende Personen/Familien; "× Entfernen" löscht noteRef-Verknüpfung; `_pruneOrphanNotes()` löscht verwaiste db.notes-Einträge wenn letzte Referenz entfernt wird
 - **Quellen-Notizen (sw v237):** `showSourceDetail` zeigt Notizen-Sektion mit `openNoteModal('source', id)`; `s.text` als Notizfeld
 - **Kartenansicht (sw v244):** Leaflet 1.9.4 lokal; Toggle "Orte|Höfe|Karte" im Orte-Tab; `ui-views-map.js`; Modus 1 "Alle Orte" — CircleMarker nach Personenzahl + Exploration-Panel (Bottom-Sheet); Modus 2 "Personenbiografie" — nummerierte Stationen + Verbindungslinie; Person-Picker; "📍 Karte" Button in Personen-Detail; CSP um OSM-Tiles erweitert
-- **Aktuelle sw-Version: v370** / Cache: `stammbaum-v370`
+- **Aktuelle sw-Version: v371** / Cache: `stammbaum-v371`
 - Git: Branch `v7-dev`
 
 *(Detaillierte Session-Geschichte ab v245 in CHANGELOG.md — diese Datei ist veraltet; aktuelle Kopie: `.claude/projects/.../memory/MEMORY.md`)*
