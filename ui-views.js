@@ -837,7 +837,8 @@ document.addEventListener('change', e => {
   const el = e.target.closest('[data-change]');
   if (!el) return;
   const action = el.dataset.change;
-  if      (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
+  if      (action === 'applyPersonFilter') applyPersonFilter();
+  else if (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
   else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
   else if (action === 'onEventTypeChange')    onEventTypeChange();
   else if (action === 'onFamEventTypeChange') onFamEventTypeChange();

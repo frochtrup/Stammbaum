@@ -333,16 +333,20 @@ function toggleAdvFilter() {
   const panel  = document.getElementById('advFilterPanel');
   const toggle = document.getElementById('advFilterToggle');
   if (!panel) return;
-  const open = panel.hidden;
-  panel.hidden = !open;
-  if (toggle) { toggle.style.color = open ? 'var(--gold-dim)' : 'var(--text-dim)'; toggle.setAttribute('aria-expanded', String(open)); }
-  if (!open) {
-    // Panel geschlossen → Adv-Filter zurücksetzen
+  const isOpen = !panel.hidden && panel.style.display !== 'none';
+  if (isOpen) {
+    panel.hidden = true;
+    panel.style.display = 'none';
+    if (toggle) { toggle.style.color = 'var(--text-dim)'; toggle.setAttribute('aria-expanded', 'false'); }
     const sf = document.getElementById('sexFilter');
     const bp = document.getElementById('birthPlaceFilter');
     if (sf) sf.value = '';
     if (bp) bp.value = '';
     applyPersonFilter();
+  } else {
+    panel.hidden = false;
+    panel.style.display = 'block';
+    if (toggle) { toggle.style.color = 'var(--gold-dim)'; toggle.setAttribute('aria-expanded', 'true'); }
   }
 }
 
