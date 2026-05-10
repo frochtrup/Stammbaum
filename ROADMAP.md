@@ -70,7 +70,7 @@ Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig �
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| U20 | **God-Functions aufteilen** | `showDetail()` (344 Z.) + `showFamilyDetail()` (235 Z.) je in 4–5 Hilfsfunktionen — Wartbarkeit | M |
+| ~~U20~~ | ~~God-Functions aufteilen~~ | verworfen — Nutzen gering bei Solo-Projekt; nur `_pdetLifeData()` aus `showDetail()` extrahiert (Lebensdaten-Block inkl. Events-Gruppierung) | – |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO-konform | M |
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen; `p._rufname` → `2 NICK`; Export-Modus im Einstellungs-Modal | M |
 | GRAMPS-Badge | **GRAMPS-Modus sichtbar machen** | Bei `db._grampsMaster`: Badge in Topbar + primäres Export-Format = `.gramps` | S |
@@ -118,8 +118,6 @@ Die Projektdokumentation ist >200 Zeilen und wird am Limit abgeschnitten. Detail
 
 ### Nächster Sprint (je M)
 
-**U20: God-Functions** (→ P1 oben)
-`showDetail()` in `ui-views-person.js` und `showFamilyDetail()` in `ui-views-family.js` sind >200 Zeilen lang. Muster: Event-Sektion, Medien-Sektion, Relations-Sektion als eigene `_renderXxx(p, container)`-Funktionen extrahieren. Kein Verhalten ändern, nur aufteilen.
 
 **`ui-forms.js` 1007 Zeilen**
 Die Datei enthält Formular-Rendering, Event-Handler und Validierungslogik für 3 Entities. Kandidat für Aufteilung: Personen-Formular-Rendering → `ui-forms-person.js`, gemeinsame Helfer (Modal-Open/Close, Keyboard) bleiben in `ui-forms.js`.

@@ -436,55 +436,10 @@ function _ageAt(refDateStr, evDateStr) {
   const approx = (rq || eq) ? '~' : '';
   return `<span class="age-tag">${approx}${age} J.</span>`;
 }
-function showDetail(id, pushHistory = true) {
-  const p = AppState.db.individuals[id];
-  if (!p) return;
-  if (pushHistory) _beforeDetailNavigate();
-  AppState.currentPersonId  = id;
-  AppState.currentFamilyId  = null;
-  AppState.currentSourceId  = null;
-  AppState.currentRepoId    = null;
-  AppState.currentPlaceName = null;
-  if (document.body.classList.contains('desktop-mode')) {
-    if (AppState.currentTab === 'persons') _updatePersonListCurrent(id); else _updatePersonListCurrent(null);
-    _updateFamilyListCurrent(null);
-  }
-
-  document.getElementById('detailTopTitle').textContent = p.name || id;
-  document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden = false;
-  document.getElementById('treeBtn').dataset.id = id;
-  const pb = document.getElementById('probandBtn');
-  if (pb) {
-    pb.hidden = false;
-    pb.dataset.id = id;
-    const isProband = getProbandId() === id;
-    pb.classList.toggle('proband-active', isProband);
-    pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
-  }
-
-  const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
-  const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
-
-  const fullName = [p.prefix, p.name, p.suffix].filter(Boolean).join(' ');
-  const rufname  = p._rufname || p._grampsCall || '';
-  const spitzname = (p.nick && p.nick !== rufname) ? p.nick : '';
-
-  let html = `<div class="detail-hero fade-up">
-    <div id="det-photo-${id}" class="det-photo-wrap"></div>
-    <div id="det-avatar-${id}" class="detail-avatar ${sc}">${ic}</div>
-    <div class="detail-hero-text">
-      <div class="detail-name">${esc(fullName || id)} <span class="fs-md ${sc === 'm' ? 'sex-icon-m' : sc === 'f' ? 'sex-icon-f' : 'sex-icon-u'}">${ic}</span></div>
-      ${rufname  ? `<div class="detail-rufname">Rufname: <u>${esc(rufname)}</u></div>` : ''}
-      ${spitzname ? `<div class="detail-rufname detail-spitzname">Spitzname: ${esc(spitzname)}</div>` : ''}
-      <div class="detail-id"><span class="detail-id-xref">${esc(id)}</span>${p.lastChanged ? ' · Geändert ' + p.lastChanged : ''}</div>
-    </div>
-  </div>`;
-
-  // Life data
+function _pdetLifeData(p, id) {
   const _hasGeo = [p.birth, p.chr, p.death, p.buri, ...p.events]
     .some(ev => ev && _validCoord(ev.lati, ev.long));
-  html += `<div class="section fade-up">
+  let html = `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
       <div class="det-btn-row">
@@ -582,6 +537,55 @@ function showDetail(id, pushHistory = true) {
     html += `<div class="no-data">Keine Lebensdaten eingetragen</div>`;
 
   html += `</div>`;
+  return html;
+}
+
+function showDetail(id, pushHistory = true) {
+  const p = AppState.db.individuals[id];
+  if (!p) return;
+  if (pushHistory) _beforeDetailNavigate();
+  AppState.currentPersonId  = id;
+  AppState.currentFamilyId  = null;
+  AppState.currentSourceId  = null;
+  AppState.currentRepoId    = null;
+  AppState.currentPlaceName = null;
+  if (document.body.classList.contains('desktop-mode')) {
+    if (AppState.currentTab === 'persons') _updatePersonListCurrent(id); else _updatePersonListCurrent(null);
+    _updateFamilyListCurrent(null);
+  }
+
+  document.getElementById('detailTopTitle').textContent = p.name || id;
+  document.getElementById('editBtn').style.display = '';
+  document.getElementById('treeBtn').hidden = false;
+  document.getElementById('treeBtn').dataset.id = id;
+  const pb = document.getElementById('probandBtn');
+  if (pb) {
+    pb.hidden = false;
+    pb.dataset.id = id;
+    const isProband = getProbandId() === id;
+    pb.classList.toggle('proband-active', isProband);
+    pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+  }
+
+  const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
+  const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
+
+  const fullName = [p.prefix, p.name, p.suffix].filter(Boolean).join(' ');
+  const rufname  = p._rufname || p._grampsCall || '';
+  const spitzname = (p.nick && p.nick !== rufname) ? p.nick : '';
+
+  let html = `<div class="detail-hero fade-up">
+    <div id="det-photo-${id}" class="det-photo-wrap"></div>
+    <div id="det-avatar-${id}" class="detail-avatar ${sc}">${ic}</div>
+    <div class="detail-hero-text">
+      <div class="detail-name">${esc(fullName || id)} <span class="fs-md ${sc === 'm' ? 'sex-icon-m' : sc === 'f' ? 'sex-icon-f' : 'sex-icon-u'}">${ic}</span></div>
+      ${rufname  ? `<div class="detail-rufname">Rufname: <u>${esc(rufname)}</u></div>` : ''}
+      ${spitzname ? `<div class="detail-rufname detail-spitzname">Spitzname: ${esc(spitzname)}</div>` : ''}
+      <div class="detail-id"><span class="detail-id-xref">${esc(id)}</span>${p.lastChanged ? ' · Geändert ' + p.lastChanged : ''}</div>
+    </div>
+  </div>`;
+
+  html += _pdetLifeData(p, id);
 
   // Assoziationen (alle außer Godparent — der steht bereits unter der Taufe-Zeile)
   // Patenkinder werden dynamisch berechnet: alle Personen, die diesen als 'Godparent' führen
