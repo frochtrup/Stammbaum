@@ -231,7 +231,7 @@ async function _lightboxSetHero() {
   const el = document.getElementById(_lbHeroElemId);
   if (el) {
     el.style.display = '';
-    el.innerHTML = `<img src="${src}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`;
+    el.innerHTML = `<img src="${src}" alt="Foto" data-action="showLightbox" class="tree-photo-img">`;
   }
   if (_lbAvatarElemId) {
     const av = document.getElementById(_lbAvatarElemId);
@@ -549,7 +549,7 @@ function showTree(personId, addToHistory = true) {
     div.style.height = (isCenter ? CH : H) + 'px';
     if (!id) {
       div.classList.add('tree-card-empty');
-      div.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem">?</span>';
+      div.innerHTML = '<span class="tree-card-unknown">?</span>';
       wrap.appendChild(div);
       return;
     }
@@ -562,9 +562,9 @@ function showTree(personId, addToHistory = true) {
     const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =
       `<div class="tree-name">${_treeNameHtml(q, isCenter)}</div>` +
-      (yr ? `<div class="tree-yr" style="${isPortrait ? 'font-size:0.58rem;white-space:nowrap' : ''}">${yr}</div>` : '') +
+      (yr ? `<div class="tree-yr${isPortrait ? ' tree-yr--portrait' : ''}">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
-      (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${spouseFamsEarly.length}</div>` : '') +
+      (multiMarr ? `<div class="tree-half-badge tree-half-badge--right">⚭${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
     div.addEventListener('click', onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id)));
     wrap.appendChild(div);
@@ -604,7 +604,7 @@ function showTree(personId, addToHistory = true) {
     const y = ry(0) + i * PEEK;
     const z = nSibs - i + 5;
     const badge = (i === 0 && nSibs > 1)
-      ? `<div class="tree-half-badge" style="bottom:auto;top:3px;right:4px;color:var(--gold)">${nSibs}</div>`
+      ? `<div class="tree-half-badge tree-half-badge--sib">${nSibs}</div>`
       : '';
     mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge + kbadge(sid));
   });
@@ -638,7 +638,7 @@ function showTree(personId, addToHistory = true) {
       btn.className = 'tree-marr-btn';
       btn.style.cssText = `position:absolute;left:${Math.round(personX + CW)}px;top:${Math.round(lineY - 12)}px;width:${Math.round(spColX - personX - CW)}px;height:24px;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center`;
       btn.title = 'Familie öffnen';
-      btn.innerHTML = `<span style="background:var(--surface2);border:1px solid var(--gold-dim);border-radius:8px;padding:1px 5px;font-size:0.7rem;color:var(--gold-dim);pointer-events:none">⚭</span>`;
+      btn.innerHTML = `<span class="tree-marr-badge">⚭</span>`;
       btn.addEventListener('click', () => showFamilyDetail(fam.famId));
       wrap.appendChild(btn);
     }

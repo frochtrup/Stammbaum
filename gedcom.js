@@ -332,7 +332,7 @@ function getPlacLabels() {
 
 function buildPlacePartsHtml(placeId) {
   return getPlacLabels().map((lbl, i) =>
-    `<input class="form-input" id="${placeId}-p${i}" placeholder="${esc(lbl)}" style="margin-bottom:3px">`
+    `<input class="form-input mb-3" id="${placeId}-p${i}" placeholder="${esc(lbl)}">`
   ).join('');
 }
 

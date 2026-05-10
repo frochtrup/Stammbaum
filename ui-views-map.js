@@ -163,7 +163,7 @@ function _renderOrteModus() {
     const marker = L.marker([lat, lng], {
       icon: L.divIcon({
         className: '',
-        html: '<div style="width:10px;height:10px;background:#c8a84a;border:1.5px solid #1a140a;transform:rotate(45deg);opacity:0.9"></div>',
+        html: '<div class="map-diamond-marker"></div>',
         iconSize:   [10, 10],
         iconAnchor: [5, 5],
       }),
@@ -245,12 +245,12 @@ function _showPersonEventsAtPlace(p, placeName, allEvs) {
     </div>`;
   for (const e of eventsHere) {
     const meta = [e.date ? _mesc(e.date) : '', e.addr ? _mesc(e.addr) : ''].filter(Boolean).join(' · ');
-    html += `<div class="person-row" style="padding-left:52px;cursor:default">
+    html += `<div class="person-row map-event-row">
       <div class="p-info">
-        <div class="p-name" style="font-size:0.9rem">${_mesc(e.role)}</div>
+        <div class="p-name map-event-name">${_mesc(e.role)}</div>
         ${meta ? `<div class="p-meta">${meta}</div>` : ''}
         ${e.desc ? `<div class="p-meta">${_mesc(e.desc)}</div>` : ''}
-        ${e.note ? `<div class="p-meta" style="font-style:italic">${_mesc(e.note)}</div>` : ''}
+        ${e.note ? `<div class="p-meta map-event-note">${_mesc(e.note)}</div>` : ''}
       </div>
     </div>`;
   }
@@ -397,7 +397,7 @@ function _renderMapPersonList(filter) {
   const list = document.getElementById('mapPersonList');
   if (!list) return;
   if (!persons.length) {
-    list.innerHTML = '<div class="empty" style="padding:16px">Keine Person gefunden</div>';
+    list.innerHTML = '<div class="empty map-no-result">Keine Person gefunden</div>';
     return;
   }
   list.innerHTML = persons.map(p => {
@@ -405,7 +405,7 @@ function _renderMapPersonList(filter) {
     const by   = p.birth?.date?.match(/\b(\d{4})\b/)?.[1] || '';
     const dy   = p.death?.date?.match(/\b(\d{4})\b/)?.[1] || '';
     const years = by || dy ? `(${by || '?'}–${dy || ''})` : '';
-    return `<div class="person-row" style="cursor:pointer" data-action="selectMapPerson" data-pid="${p.id}">
+    return `<div class="person-row map-person-row" data-action="selectMapPerson" data-pid="${p.id}">
       <div class="p-avatar sex-${sex.toLowerCase()}">${sex === 'F' ? '♀' : sex === 'M' ? '♂' : '⚬'}</div>
       <div class="p-info">
         <div class="p-name">${_mesc(p.name || p.id)}</div>

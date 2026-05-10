@@ -86,14 +86,14 @@ function renderStatsTab() {
   const uW = 100 - mW - fW;
   html += _statsSection('Geschlecht', `
     <div class="stats-gender-bar">
-      <div class="stats-gender-seg" style="flex:${mW};background:var(--blue)" title="Männlich ${mW}%"></div>
-      <div class="stats-gender-seg" style="flex:${fW};background:var(--pink)" title="Weiblich ${fW}%"></div>
-      <div class="stats-gender-seg" style="flex:${Math.max(uW,1)};background:var(--surface3,var(--surface2))" title="Unbekannt ${uW}%"></div>
+      <div class="stats-gender-seg" data-il-style="flex:${mW};background:var(--blue)" title="Männlich ${mW}%"></div>
+      <div class="stats-gender-seg" data-il-style="flex:${fW};background:var(--pink)" title="Weiblich ${fW}%"></div>
+      <div class="stats-gender-seg" data-il-style="flex:${Math.max(uW,1)};background:var(--surface3,var(--surface2))" title="Unbekannt ${uW}%"></div>
     </div>
     <div class="stats-gender-legend">
-      <span style="color:var(--blue)">♂ ${nM} (${mW}%)</span>
-      <span style="color:var(--pink)">♀ ${nF} (${fW}%)</span>
-      <span style="color:var(--text-muted)">◇ ${nU} (${uW}%)</span>
+      <span class="c-blue">♂ ${nM} (${mW}%)</span>
+      <span class="c-pink">♀ ${nF} (${fW}%)</span>
+      <span class="c-muted">◇ ${nU} (${uW}%)</span>
     </div>`);
 
   // Datenvollständigkeit
@@ -122,7 +122,7 @@ function renderStatsTab() {
         ${binEntries.map(([bin, cnt]) => `
           <div class="stats-tl-item">
             <div class="stats-tl-bar-wrap">
-              <div class="stats-tl-bar" style="height:${Math.round(cnt / maxBin * 80)}px" title="${cnt}"></div>
+              <div class="stats-tl-bar" data-il-style="height:${Math.round(cnt / maxBin * 80)}px" title="${cnt}"></div>
             </div>
             <div class="stats-tl-lbl">${bin}er</div>
           </div>`).join('')}
@@ -130,6 +130,7 @@ function renderStatsTab() {
   }
 
   el.innerHTML = html;
+  _applyDynStyles(el);
 }
 
 // ── Hilfsfunktionen ──
@@ -157,9 +158,9 @@ function _progressRow(lbl, k, total, color = 'var(--gold-dim)') {
   return `<div class="stats-progress-row">
     <div class="stats-progress-lbl">${esc(lbl)}</div>
     <div class="stats-progress-track">
-      <div class="stats-progress-fill" style="width:${pct}%;background:${color}"></div>
+      <div class="stats-progress-fill" data-il-style="width:${pct}%;background:${color}"></div>
     </div>
-    <div class="stats-progress-val">${k.toLocaleString('de-DE')} <span style="color:var(--text-muted)">(${pct}%)</span></div>
+    <div class="stats-progress-val">${k.toLocaleString('de-DE')} <span class="c-muted">(${pct}%)</span></div>
   </div>`;
 }
 
@@ -169,7 +170,7 @@ function _barChart(entries, color = 'var(--gold-dim)') {
     <div class="stats-bar-row">
       <div class="stats-bar-lbl" title="${esc(lbl)}">${esc(lbl)}</div>
       <div class="stats-bar-track">
-        <div class="stats-bar-fill" style="width:${Math.round(cnt / max * 100)}%;background:${color}"></div>
+        <div class="stats-bar-fill" data-il-style="width:${Math.round(cnt / max * 100)}%;background:${color}"></div>
       </div>
       <div class="stats-bar-cnt">${cnt}</div>
     </div>`).join('');

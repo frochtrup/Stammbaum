@@ -1817,6 +1817,156 @@ body.desktop-mode.places-karte #mapContainer {
 .rel-path-arrow  { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 2px 0; }
 .rel-path-not-found { color: var(--text-muted); font-style: italic; padding: 8px 0; }
 
+/* ═══════════════════════════════════════
+   COMPONENT-KLASSEN Phase 5 (A10)
+═══════════════════════════════════════ */
+
+/* ── linkifyUrls ── */
+.linkify-url { color: var(--gold); text-decoration: underline; word-break: break-all; }
+
+/* ── Farb-Utilities ── */
+.c-blue      { color: var(--blue); }
+.c-pink      { color: var(--pink); }
+.mb-3        { margin-bottom: 3px; }
+
+/* ── Detail-Hero Ort ── */
+.detail-avatar.place { font-size: 1.8rem; border-color: var(--gold-dim); }
+
+/* ── Apple-Maps-Link im Ort-Detail ── */
+.place-maps-link {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  color: var(--gold); text-decoration: none; font-size: 0.9rem;
+}
+
+/* ── p-avatar Größenvarianten ── */
+.p-avatar--sm  { font-size: 0.95rem; }
+.p-avatar--md  { font-size: 1.1rem; }
+
+/* ── Textarea resize-Verhalten (form-input ergänzt) ── */
+textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inherit; }
+
+/* ── Dedup-Panel ── */
+.dedup-loading {
+  text-align: center; padding: 24px; color: var(--text-muted);
+}
+.dedup-empty {
+  text-align: center; padding: 32px 0;
+  color: var(--text-muted); font-style: italic;
+}
+.dedup-pair-row {
+  flex-direction: column; align-items: stretch;
+  gap: 4px; padding: 10px 0; cursor: pointer;
+}
+.dedup-pair-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dedup-pair-names  { font-weight: 600; font-size: 0.88rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dedup-pair-score  { font-size: 0.82rem; font-weight: 700; flex-shrink: 0; }
+.dedup-pair-meta   { font-size: 0.76rem; color: var(--text-muted); }
+.dedup-pair-reason { font-size: 0.74rem; color: var(--text-dim); }
+.dedup-score-bar   { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.dedup-score-fill  { height: 100%; }
+.dedup-merge-info {
+  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;
+}
+.dedup-merge-table {
+  width: 100%; border-collapse: collapse; margin-bottom: 14px;
+}
+.dedup-merge-th {
+  text-align: left; font-size: 0.72rem; padding: 4px 8px;
+  color: var(--text-muted); font-weight: 400;
+}
+.dedup-merge-th.winner { color: var(--accent, #4a90d9); font-weight: 600; }
+.dedup-merge-td { padding: 5px 8px; font-size: 0.82rem; }
+.dedup-merge-td.winner { font-weight: 600; color: var(--accent, #4a90d9); }
+.dedup-merge-td-label { padding: 5px 8px; font-size: 0.76rem; color: var(--text-muted); }
+.dedup-winner-box {
+  font-size: 0.82rem; margin-bottom: 8px; padding: 8px;
+  background: var(--surface2); border-radius: 6px; border: 1px solid var(--border);
+}
+.dedup-swap-btn {
+  width: 100%; margin-bottom: 10px;
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+}
+.dedup-hint { font-size: 0.74rem; color: var(--text-muted); line-height: 1.5; }
+
+/* ── OneDrive-Ordnerliste ── */
+.od-breadcrumb  { font-size: 0.75rem; color: var(--text-dim); padding-bottom: 8px; }
+.od-back-link   { cursor: pointer; color: var(--gold); }
+.od-parent-link { cursor: pointer; color: var(--text-dim); font-size: 0.85rem; }
+.od-action-item { cursor: pointer; font-weight: 600; color: var(--gold); border: 1px solid var(--gold-dim); }
+.od-empty-hint  { color: var(--text-dim); font-size: 0.85rem; padding: 8px; }
+.od-folder-item { cursor: pointer; }
+.od-file-item   { cursor: pointer; }
+
+/* ── OneDrive-Dateiliste ── */
+.od-file-name   { font-weight: 600; font-size: 0.9rem; }
+.od-file-meta   { font-size: 0.78rem; color: var(--text-dim); }
+
+/* ── Suche ── */
+.search-empty {
+  padding: 24px 16px; text-align: center;
+  color: var(--text-muted); font-size: 0.88rem;
+}
+.search-sdx-hint { font-weight: normal; opacity: 0.65; }
+.search-no-results {
+  padding: 24px 16px; text-align: center;
+  color: var(--text-muted); font-size: 0.88rem;
+}
+
+/* ── Notiz-Modal Formularabschnitt ── */
+.note-ref-section {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+.note-ref-header {
+  display: flex; align-items: baseline;
+  justify-content: space-between; margin-bottom: 4px;
+}
+.note-ref-label { margin-bottom: 0; }
+.note-ref-users { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; }
+
+/* ── Aufgaben ── */
+.tasks-open-cnt { font-size: 0.72rem; color: var(--text-muted); font-weight: normal; }
+.tasks-empty {
+  color: var(--text-muted); font-style: italic;
+  font-size: 0.85rem; padding: 4px 0;
+}
+.tasks-list-empty {
+  padding: 32px 16px; text-align: center;
+  color: var(--text-muted); font-style: italic; font-size: 0.88rem;
+}
+
+/* ── Karte ── */
+.map-diamond-marker {
+  width: 10px; height: 10px;
+  background: #c8a84a; border: 1.5px solid #1a140a;
+  transform: rotate(45deg); opacity: 0.9;
+}
+.map-event-row { padding-left: 52px; cursor: default; }
+.map-event-name { font-size: 0.9rem; }
+.map-event-note { font-style: italic; }
+.map-person-row { cursor: pointer; }
+.map-no-result  { padding: 16px; }
+
+/* ── Baum ── */
+.tree-card-unknown { color: var(--text-muted); font-size: 0.8rem; }
+.tree-marr-badge {
+  background: var(--surface2); border: 1px solid var(--gold-dim);
+  border-radius: 8px; padding: 1px 5px;
+  font-size: 0.7rem; color: var(--gold-dim); pointer-events: none;
+}
+.tree-half-badge--right {
+  left: auto; right: 4px;
+  background: var(--gold-dim); color: var(--bg);
+}
+.tree-half-badge--sib {
+  bottom: auto; top: 3px; right: 4px; color: var(--gold);
+}
+.tree-yr--portrait { font-size: 0.58rem; white-space: nowrap; }
+.tree-photo-img {
+  width: 80px; height: 96px; object-fit: cover;
+  border-radius: 8px; display: block; flex-shrink: 0; cursor: pointer;
+}
+
 /* ── Hof-Koordinaten ── */
 .hof-coord-body { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hof-coord-no-data { font-size: 0.85rem; color: var(--text-dim); }

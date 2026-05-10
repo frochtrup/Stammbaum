@@ -145,36 +145,34 @@ async function _odShowFolder(folderId, folderName) {
     const list = document.getElementById('odFileList');
     if (!list) return;
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
-    let html = `<div style="font-size:0.75rem;color:var(--text-dim);padding-bottom:8px">${esc(breadcrumb)}</div>`;
+    let html = `<div class="od-breadcrumb">${esc(breadcrumb)}</div>`;
     if (_odFolderStack.length > 0) {
-      html += `<div class="list-item" data-action="odFolderBack" style="cursor:pointer;color:var(--gold)">← Zurück</div>`;
+      html += `<div class="list-item od-back-link" data-action="odFolderBack">← Zurück</div>`;
     } else if (_isPickMode) {
-      html += `<div class="list-item" data-action="odPickCancel" style="cursor:pointer;color:var(--gold)">← Abbrechen</div>`;
+      html += `<div class="list-item od-back-link" data-action="odPickCancel">← Abbrechen</div>`;
       if (_odPickStartedFromSubfolder) {
-        html += `<div class="list-item" data-action="odShowAllFolders" style="cursor:pointer;color:var(--text-dim);font-size:0.85rem">↑ Übergeordneter Ordner</div>`;
+        html += `<div class="list-item od-parent-link" data-action="odShowAllFolders">↑ Übergeordneter Ordner</div>`;
       }
     }
     if (!_odPickMode && folderId !== 'root') {
       if (_odDocScanMode) {
-        html += `<div class="list-item" data-action="odScanDocFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
-          style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)">
+        html += `<div class="list-item od-action-item" data-action="odScanDocFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
           📂 Diesen Ordner als Dokumente-Ordner nutzen</div>`;
       } else {
-        html += `<div class="list-item" data-action="odImportPhotos" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
-          style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)">
+        html += `<div class="list-item od-action-item" data-action="odImportPhotos" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
           📥 Fotos aus diesem Ordner laden</div>`;
       }
     }
     if (folders.length === 0 && files.length === 0) {
-      html += `<div style="color:var(--text-dim);font-size:0.85rem;padding:8px">Keine Einträge</div>`;
+      html += `<div class="od-empty-hint">Keine Einträge</div>`;
     } else {
-      html += folders.map(f => `<div class="list-item" data-action="odEnterFolder" style="cursor:pointer"
+      html += folders.map(f => `<div class="list-item od-folder-item" data-action="odEnterFolder"
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}">📁 &nbsp;${esc(f.name)}</div>`).join('');
       const _fullFolderPath = [..._odFolderStack.map(f => f.name), folderName]
         .filter(n => n !== 'OneDrive').join('/');
       const _relFolderPath = _odToRelPath(_fullFolderPath, _odCurrentBasePath || '');
-      html += files.map(f => `<div class="list-item" data-action="odPickSelectFile" style="cursor:pointer"
+      html += files.map(f => `<div class="list-item od-file-item" data-action="odPickSelectFile"
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-path="${esc(_relFolderPath ? _relFolderPath + '/' + f.name : f.name)}">📄 &nbsp;${esc(f.name)}</div>`).join('');
     }

@@ -37,7 +37,6 @@ function openNoteModal(type, id) {
   let html = `<div class="form-group">
     <div class="form-label">Eigene Notiz</div>
     <textarea data-notetype="inline" class="form-input" rows="5"
-      style="resize:vertical;box-sizing:border-box;width:100%;font-family:inherit"
       placeholder="Notiz eingeben…">${esc(inlineText)}</textarea>
   </div>`;
 
@@ -45,16 +44,14 @@ function openNoteModal(type, id) {
     const noteObj = AppState.db.notes?.[ref];
     const users   = _noteRefUsers(ref);
     const usersHtml = users.length
-      ? `<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:6px">${
-          users.map(n => esc(n)).join(' · ')}</div>` : '';
-    html += `<div class="form-group" data-ref-section="${esc(ref)}" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color)">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
-        <div class="form-label" style="margin-bottom:0">${esc(ref)}</div>
+      ? `<div class="note-ref-users">${users.map(n => esc(n)).join(' · ')}</div>` : '';
+    html += `<div class="form-group note-ref-section" data-ref-section="${esc(ref)}">
+      <div class="note-ref-header">
+        <div class="form-label note-ref-label">${esc(ref)}</div>
         <button type="button" class="btn-remove-ref" onclick="this.closest('[data-ref-section]').remove()">× Entfernen</button>
       </div>
       ${usersHtml}
       <textarea data-notetype="ref" data-noteref="${esc(ref)}" class="form-input" rows="5"
-        style="resize:vertical;box-sizing:border-box;width:100%;font-family:inherit"
         placeholder="Notiz eingeben…">${esc(noteObj?.text ?? '')}</textarea>
     </div>`;
   }

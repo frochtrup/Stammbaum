@@ -146,7 +146,7 @@ function dedupRunScan() {
   const statusEl = document.getElementById('dedup-status');
   const listEl   = document.getElementById('dedup-list');
   if (statusEl) statusEl.textContent = 'Suche läuft…';
-  if (listEl)   listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted)">…</div>';
+  if (listEl)   listEl.innerHTML = '<div class="dedup-loading">…</div>';
   // Micro-Task damit der Browser den Status-Text rendert
   setTimeout(() => {
     _dedupLoadIgnored();
@@ -170,7 +170,7 @@ function _renderDedupList() {
   const n = _dedupPairs.length;
   if (!n) {
     if (statusEl) statusEl.textContent = 'Keine Duplikate gefunden.';
-    listEl.innerHTML = '<div style="text-align:center;padding:32px 0;color:var(--text-muted);font-style:italic">Keine verdächtigen Paare</div>';
+    listEl.innerHTML = '<div class="dedup-empty">Keine verdächtigen Paare</div>';
     return;
   }
 
@@ -184,20 +184,21 @@ function _renderDedupList() {
     const plB = compactPlace(pB.birth?.place || '');
     const metaA = [pA.birth?.date, plA].filter(Boolean).join(' ');
     const metaB = [pB.birth?.date, plB].filter(Boolean).join(' ');
-    html += `<div class="fact-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:10px 0;cursor:pointer"
+    html += `<div class="fact-row dedup-pair-row"
       data-action="dedupOpenMerge" data-pair="${i}">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-        <span style="font-weight:600;font-size:0.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(pA.name || pA.id)} \u2194 ${esc(pB.name || pB.id)}</span>
-        <span style="font-size:0.82rem;font-weight:700;color:${scColor};flex-shrink:0">${score}</span>
+      <div class="dedup-pair-header">
+        <span class="dedup-pair-names">${esc(pA.name || pA.id)} \u2194 ${esc(pB.name || pB.id)}</span>
+        <span class="dedup-pair-score" data-il-style="color:${scColor}">${score}</span>
       </div>
-      <div style="font-size:0.76rem;color:var(--text-muted)">* ${esc(metaA || '?')} &nbsp;\u2194&nbsp; * ${esc(metaB || '?')}</div>
-      <div style="font-size:0.74rem;color:var(--text-dim)">${esc(reasons.join(' \u00b7 '))}</div>
-      <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:2px">
-        <div style="height:100%;width:${Math.min(100, score)}%;background:${scColor}"></div>
+      <div class="dedup-pair-meta">* ${esc(metaA || '?')} &nbsp;\u2194&nbsp; * ${esc(metaB || '?')}</div>
+      <div class="dedup-pair-reason">${esc(reasons.join(' \u00b7 '))}</div>
+      <div class="dedup-score-bar">
+        <div class="dedup-score-fill" data-il-style="width:${Math.min(100, score)}%;background:${scColor}"></div>
       </div>
     </div>`;
   }
   listEl.innerHTML = html;
+  _applyDynStyles(listEl);
 }
 
 // ── Merge-Modal ───────────────────────
@@ -261,17 +262,17 @@ function _dedupRenderMergeBody(pair) {
 
   const wIsA = winner.id === pA.id;
   const _cell = (val, isWinner) =>
-    `<td style="padding:5px 8px;font-size:0.82rem${isWinner ? ';font-weight:600;color:var(--accent,#4a90d9)' : ''}">${esc(val || '–')}</td>`;
+    `<td class="dedup-merge-td${isWinner ? ' winner' : ''}">${esc(val || '–')}</td>`;
   const _row = (label, aVal, bVal) =>
-    `<tr><td style="padding:5px 8px;font-size:0.76rem;color:var(--text-muted)">${esc(label)}</td>${_cell(aVal, wIsA)}${_cell(bVal, !wIsA)}</tr>`;
+    `<tr><td class="dedup-merge-td-label">${esc(label)}</td>${_cell(aVal, wIsA)}${_cell(bVal, !wIsA)}</tr>`;
 
   el.innerHTML = `
-    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:10px">Score: <strong>${score}</strong> \u2014 ${esc(reasons.join(', '))}</div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+    <div class="dedup-merge-info">Score: <strong>${score}</strong> \u2014 ${esc(reasons.join(', '))}</div>
+    <table class="dedup-merge-table">
       <thead><tr>
-        <th style="text-align:left;font-size:0.72rem;padding:4px 8px;color:var(--text-muted);font-weight:400">Feld</th>
-        <th style="text-align:left;font-size:0.72rem;padding:4px 8px;color:var(--text-muted);font-weight:400${wIsA?';color:var(--accent,#4a90d9);font-weight:600':''}">A: ${esc(pA.name || pA.id)}</th>
-        <th style="text-align:left;font-size:0.72rem;padding:4px 8px;color:var(--text-muted);font-weight:400${!wIsA?';color:var(--accent,#4a90d9);font-weight:600':''}">B: ${esc(pB.name || pB.id)}</th>
+        <th class="dedup-merge-th">Feld</th>
+        <th class="dedup-merge-th${wIsA ? ' winner' : ''}">A: ${esc(pA.name || pA.id)}</th>
+        <th class="dedup-merge-th${!wIsA ? ' winner' : ''}">B: ${esc(pB.name || pB.id)}</th>
       </tr></thead>
       <tbody>
         ${_row('Nachname',   pA.surname,                              pB.surname)}
@@ -285,16 +286,17 @@ function _dedupRenderMergeBody(pair) {
         ${_row('ID',         pA.id,                                   pB.id)}
       </tbody>
     </table>
-    <div style="font-size:0.82rem;margin-bottom:8px;padding:8px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)">
+    <div class="dedup-winner-box">
       <strong>Bleibt:</strong> ${esc(winner.name || winner.id)} (ID: ${esc(winner.id)})<br>
       <strong>Wird gel\u00f6scht:</strong> ${esc(loser.name || loser.id)} (ID: ${esc(loser.id)})
     </div>
-    <button type="button" class="btn" style="width:100%;margin-bottom:10px;background:var(--surface2);color:var(--text);border:1px solid var(--border)"
+    <button type="button" class="btn dedup-swap-btn"
       data-action="dedupSwapWinner">\u21c4 Seiten tauschen</button>
-    <div style="font-size:0.74rem;color:var(--text-muted);line-height:1.5">
+    <div class="dedup-hint">
       Alle Ereignisse, Quellen, Medien und Familienbindungen beider Personen werden zusammengef\u00fchrt.
       Diese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.
     </div>`;
+  _applyDynStyles(el);
 }
 
 function dedupSwapWinner() {

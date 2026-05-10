@@ -350,10 +350,10 @@ async function odOpenFilePicker() {
       list.innerHTML = allFiles.map(f => {
         const date = new Date(f.lastModifiedDateTime).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
         const kb   = Math.round((f.size || 0) / 1024);
-        return `<div class="list-item" style="cursor:pointer"
+        return `<div class="list-item od-folder-item"
           data-action="odLoadFile" data-odid="${esc(f.id)}" data-odname="${esc(f.name)}">
-          <div style="font-weight:600;font-size:0.9rem">${esc(f.name)}</div>
-          <div style="font-size:0.78rem;color:var(--text-dim)">${date} · ${kb} KB</div>
+          <div class="od-file-name">${esc(f.name)}</div>
+          <div class="od-file-meta">${date} · ${kb} KB</div>
         </div>`;
       }).join('');
     }

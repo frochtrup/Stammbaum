@@ -59,7 +59,7 @@ function renderPlaceList(sorted) {
     const hasGeo = place.lati !== null;
     const geoIcon = hasGeo ? '📍' : '·';
     html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.name)}">
-      <div class="p-avatar" style="font-size:1.1rem">${geoIcon}</div>
+      <div class="p-avatar p-avatar--md">${geoIcon}</div>
       <div class="p-info">
         <div class="p-name">${esc(compactPlace(place.name))}</div>
         <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte verfügbar' : ''}</div>
@@ -195,15 +195,15 @@ function showPlaceDetail(placeName, pushHistory = true) {
   document.getElementById('treeBtn').hidden = true;
 
   let html = `<div class="detail-hero fade-up">
-    <div class="detail-avatar" style="font-size:1.8rem; border-color:var(--gold-dim)">📍</div>
+    <div class="detail-avatar place">📍</div>
     <div class="detail-name">${esc(compactPlace(placeName))}</div>
     <div class="detail-id">${place.personIds.size} Person${place.personIds.size !== 1 ? 'en' : ''}</div>
   </div>`;
 
   // Lösch-Button für manuell hinzugefügte Orte ohne verknüpfte Personen
   if (place.personIds.size === 0 && AppState.db.extraPlaces[placeName]) {
-    html += `<div style="padding:4px 0 12px">
-      <button class="btn btn-danger" style="width:100%"
+    html += `<div class="py-8">
+      <button class="btn btn-danger w-full"
         data-action="deleteExtraPlace" data-pname="${placeName.replace(/"/g,'&quot;')}">Ort entfernen</button>
     </div>`;
   }
@@ -214,9 +214,9 @@ function showPlaceDetail(placeName, pushHistory = true) {
       <div class="section-title">Standort</div>
       <a href="https://maps.apple.com/?ll=${place.lati},${place.long}&q=${encodeURIComponent(placeName)}"
          target="_blank"
-         style="display:flex;align-items:center;gap:10px;padding:10px 0;color:var(--gold);text-decoration:none;font-size:0.9rem">
+         class="place-maps-link">
         🗺 In Apple Maps öffnen
-        <span style="font-size:0.75rem;color:var(--text-muted)">${place.lati.toFixed(4)}, ${place.long.toFixed(4)}</span>
+        <span class="c-muted fs-xs">${place.lati.toFixed(4)}, ${place.long.toFixed(4)}</span>
       </a>
     </div>`;
   }

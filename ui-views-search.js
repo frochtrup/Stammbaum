@@ -36,7 +36,7 @@ function runGlobalSearch(q) {
   if (!out) return;
   const lower = (q || '').toLowerCase().trim();
   if (!lower) {
-    out.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Suchbegriff eingeben…</div>';
+    out.innerHTML = '<div class="search-empty">Suchbegriff eingeben…</div>';
     return;
   }
 
@@ -85,7 +85,7 @@ function runGlobalSearch(q) {
   const persons = _allPersons.slice(0, 20);
   if (persons.length) {
     const _ph = _allPersons.length > 20 ? ` — ${_allPersons.length} gesamt` : '';
-    const sdxHint = soundexMode ? ` <span style="font-weight:normal;opacity:.65">[≈ ${qSdx}]</span>` : '';
+    const sdxHint = soundexMode ? ` <span class="search-sdx-hint">[≈ ${qSdx}]</span>` : '';
     html += `<div class="alpha-sep">Personen (${persons.length}${_ph})${sdxHint}</div>`;
     for (const p of persons) {
       const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
@@ -136,7 +136,7 @@ function runGlobalSearch(q) {
       if (f.marr?.date) meta += f.marr.date;
       if (f.marr?.place) meta += (meta ? ', ' : '') + compactPlace(f.marr.place);
       html += `<div class="person-row" data-action="showFamilyDetail" data-id="${f.id}">
-        <div class="p-avatar" style="font-size:0.95rem">⚭</div>
+        <div class="p-avatar p-avatar--sm">⚭</div>
         <div class="p-info"><div class="p-name">${esc(label)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>
         <span class="p-arrow">›</span></div>`;
     }
@@ -155,7 +155,7 @@ function runGlobalSearch(q) {
       html += `<div class="alpha-sep">Quellen (${sources.length}${_sh})</div>`;
       for (const s of sources) {
         html += `<div class="person-row" data-action="showSourceDetail" data-sid="${s.id}">
-          <div class="p-avatar" style="font-size:0.95rem">📖</div>
+          <div class="p-avatar p-avatar--sm">📖</div>
           <div class="p-info"><div class="p-name">${esc(s.title||s.id)}</div><div class="p-meta">${esc(s.auth||'')}</div></div>
           <span class="p-arrow">›</span></div>`;
       }
@@ -171,7 +171,7 @@ function runGlobalSearch(q) {
       html += `<div class="alpha-sep">Orte (${places.length}${_plh})</div>`;
       for (const name of places) {
         html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(name)}">
-          <div class="p-avatar" style="font-size:0.95rem">📍</div>
+          <div class="p-avatar p-avatar--sm">📍</div>
           <div class="p-info"><div class="p-name">${esc(name)}</div><div class="p-meta">&nbsp;</div></div>
           <span class="p-arrow">›</span></div>`;
       }
@@ -180,7 +180,7 @@ function runGlobalSearch(q) {
 
   if (!html) {
     const hint = soundexMode ? ` (Soundex ${qSdx})` : '';
-    html = `<div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Keine Treffer für „${esc(q)}"${hint}</div>`;
+    html = `<div class="search-no-results">Keine Treffer für „${esc(q)}"${hint}</div>`;
   }
   out.innerHTML = html;
 }

@@ -88,7 +88,7 @@ function _tasksSectionHtml(personId) {
   let html = `<div class="section fade-up" id="tasks-section-${personId}">
     <div class="section-head">
       <div class="section-title">Aufgaben${tasks.length
-        ? ` <span style="font-size:0.72rem;color:var(--text-muted);font-weight:normal">(${openCnt} offen)</span>`
+        ? ` <span class="tasks-open-cnt">(${openCnt} offen)</span>`
         : ''}</div>
       <button class="section-add" data-action="showAddTaskForm" data-pid="${personId}">+ Aufgabe</button>
     </div>`;
@@ -111,7 +111,7 @@ function _tasksSectionHtml(personId) {
   }
 
   if (!tasks.length) {
-    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Aufgaben</div>`;
+    html += `<div class="tasks-empty">Keine Aufgaben</div>`;
   }
   html += `</div>`;
   return html;
@@ -253,7 +253,7 @@ function renderTasksView() {
     const msg = _tasksViewFilter === 'open' ? 'Keine offenen Aufgaben'
               : _tasksViewFilter === 'done' ? 'Keine erledigten Aufgaben'
               : 'Keine Aufgaben vorhanden';
-    html += `<div style="padding:32px 16px;text-align:center;color:var(--text-muted);font-style:italic;font-size:0.88rem">${msg}</div>`;
+    html += `<div class="tasks-list-empty">${msg}</div>`;
     container.innerHTML = html;
     return;
   }

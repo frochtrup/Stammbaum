@@ -106,9 +106,17 @@ function linkifyUrls(text) {
   if (!text) return '';
   return text.split(/(https?:\/\/[^\s<>"]+)/g).map((part, i) =>
     i % 2 === 1
-      ? `<a href="${esc(part)}" target="_blank" rel="noopener" style="color:var(--gold);text-decoration:underline;word-break:break-all">${esc(part)}</a>`
+      ? `<a href="${esc(part)}" target="_blank" rel="noopener" class="linkify-url">${esc(part)}</a>`
       : esc(part)
   ).join('');
+}
+
+// Setzt data-il-style-Attribute via CSSOM (CSP-sicher) und entfernt das Attribut danach.
+function _applyDynStyles(root) {
+  root.querySelectorAll('[data-il-style]').forEach(el => {
+    el.style.cssText = el.getAttribute('data-il-style');
+    el.removeAttribute('data-il-style');
+  });
 }
 
 // Bottom-Nav: Baum-Tab
