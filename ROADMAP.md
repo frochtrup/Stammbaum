@@ -59,7 +59,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| A10 | **`unsafe-inline` aus CSP entfernen** | Phasen 1–5 ✅, offen: Phase 6 (CSP-Header). Details: ADR-015 in `ARCHITECTURE.md`. | XL → fast fertig |
+| A10 | **`unsafe-inline` aus CSP entfernen** | ✅ alle 6 Phasen abgeschlossen (v373). Details: ADR-015 in `ARCHITECTURE.md`. | XL → ✅ |
 
 #### A10 — Fortschritt (Stand 2026-05-10)
 
@@ -70,7 +70,7 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 | 3 | `ui-forms*.js`: 7 inline styles | ✅ | v370 |
 | 4 | View-Dateien: hof 55 · person 52 · family 33 · media 26 · source 23 | ✅ | v371 |
 | 5 | Alle verbleibenden JS-Dateien (12×, inkl. `_applyDynStyles()` für dyn. Werte) | ✅ | v372 |
-| 6 | `unsafe-inline` aus CSP-Header entfernen + Browser-Test | ⬜ | — |
+| 6 | `unsafe-inline` aus CSP-Header entfernen | ✅ | v373 |
 
 ### UX / Benutzerführung
 
