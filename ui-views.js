@@ -592,6 +592,11 @@ function _validCoord(lat, lon) {
   return isFinite(la) && isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180;
 }
 
+function evGeoLink(lati, long) {
+  return _validCoord(lati, long)
+    ? `<a href="https://maps.apple.com/?ll=${lati},${long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+}
+
 function factRow(label, value, rawSuffix, srcIds, pageMap, quayMap) {
   const badges = srcIds ? sourceTagsHtml(srcIds, pageMap, quayMap) : '';
   return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}${badges}</span></div>`;

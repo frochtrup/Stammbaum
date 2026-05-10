@@ -509,8 +509,7 @@ function showDetail(id, pushHistory = true) {
   const _refDate = p.birth.date || p.chr.date || '';
 
   if (p.birth.date || p.birth.place) {
-    const geoBtn = _validCoord(p.birth.lati, p.birth.long)
-      ? `<a href="https://maps.apple.com/?ll=${p.birth.lati},${p.birth.long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+    const geoBtn = evGeoLink(p.birth.lati, p.birth.long);
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources, p.birth.sourcePages, p.birth.sourceQUAY)}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
   const _chrGodparents = (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
@@ -524,13 +523,11 @@ function showDetail(id, pushHistory = true) {
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_chrAge}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
   }
   if (p.death.date || p.death.place) {
-    const geoBtn = _validCoord(p.death.lati, p.death.long)
-      ? `<a href="https://maps.apple.com/?ll=${p.death.lati},${p.death.long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+    const geoBtn = evGeoLink(p.death.lati, p.death.long);
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_ageAt(_refDate, p.death.date)}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
-    const geoBtn = _validCoord(p.buri.lati, p.buri.long)
-      ? `<a href="https://maps.apple.com/?ll=${p.buri.lati},${p.buri.long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+    const geoBtn = evGeoLink(p.buri.lati, p.buri.long);
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
@@ -561,8 +558,7 @@ function showDetail(id, pushHistory = true) {
         const label = (ev.eventType && (ev.type === 'EVEN' || ev.type === 'FACT'))
           ? ev.eventType
           : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
-        const geoBtn = _validCoord(ev.lati, ev.long)
-          ? `<a href="https://maps.apple.com/?ll=${ev.lati},${ev.long}" target="_blank" class="geo-link">📍</a>` : '';
+        const geoBtn = evGeoLink(ev.lati, ev.long);
         const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';

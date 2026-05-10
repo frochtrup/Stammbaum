@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v375 · Cache: `stammbaum-v375`
+**sw-Version:** v377 · Cache: `stammbaum-v377`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
@@ -45,11 +45,14 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | A6 | `initAutocomplete()` zusammengeführt — `initPlaceAutocomplete` u.a. als Wrapper | v354 |
 | U1–U6 | Menü (Sektionen, Datei schließen), ARIA Dialogs, Touch-Targets, Hilfe-Modal | v355 |
 | — | Rufname-Formularfeld `pf-rufname`; Parser: Asterisk-Konvention in `2 GIVN` | v356 |
-| A11y/UX | Touch-Targets WCAG 2.5.5: `.topbar-btn` + `.search-input` + `.task-*` auf ≥44px; Toast `aria-live="polite"` für Screen-Reader | v357 |
-| SEC5 | `innerHTML` → `textContent` in `onedrive-auth.js` (Button-Label hardcoded, kein Risiko, aber cleaner Stil) | v358 |
-| A7/A9 | `_placeModes` → `UIState._placeModes`; `_odMigrateIfNeeded()` auch in `odAutoLoadFromOneDrive()` | v359 |
-| — | Personen-IDs anzeigen + suchbar: `.p-id` in Liste, `p.id` im Suchindex, `detail-id-xref` im Header | v361 |
-| U16–U19 | A11y/UX: ♂/♀-Symbol (CSS `::after`) + `aria-label`/`title` auf Baum-Karten; Kekule-Badge `title`; `.field-invalid` + `hidden` für Formular-Validierung (Blur + Submit); Focus-Trap bereits vollständig | v376 |
+| A11y/UX | Touch-Targets WCAG 2.5.5 (≥44px), Toast `aria-live="polite"` | v357 |
+| SEC5 | `innerHTML` → `textContent` in `onedrive-auth.js` | v358 |
+| A7/A9 | `_placeModes` → `UIState._placeModes`; `_odMigrateIfNeeded()` in auto-load | v359 |
+| — | Personen-IDs anzeigen + suchbar: `.p-id`, Suchindex, `detail-id-xref` | v361 |
+| A10 | `unsafe-inline` aus CSP entfernen — alle 6 Phasen ✅ (ADR-015) | v370–v373 |
+| U16–U19 + A11y | ♂/♀-Symbol + `aria-label` Baum-Karten; Kekule-Badge `title`; `.field-invalid` Formular-Validierung (Blur+Submit); `<label for>` in ui-forms.js ✅ | v376 |
+| U21 | `evGeoLink(lati, long)` in `ui-views.js` — 5 duplizierte maps.apple.com-Inline-URLs ersetzt; Bugfix `data-action="stop"` in generic-events-Loop | v377 |
+| U22 | Onboarding: „Stammbaum-Datei öffnen", Formatzeile `.ged · .gramps` mit Programmnamen, Demo-Button mit Personenzahl | v377 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -57,57 +60,77 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 
 ## Offene Aufgaben
 
-### Architektur
+Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohne festes Datum
+
+---
+
+---
+
+### P1 — Nächster Sprint
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| A10 | **`unsafe-inline` aus CSP entfernen** | ✅ alle 6 Phasen abgeschlossen (v373). Details: ADR-015 in `ARCHITECTURE.md`. | XL → ✅ |
+| U20 | **God-Functions aufteilen** | `showDetail()` (344 Z.) + `showFamilyDetail()` (235 Z.) je in 4–5 Hilfsfunktionen — Wartbarkeit | M |
+| F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO-konform | M |
+| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen; `p._rufname` → `2 NICK`; Export-Modus im Einstellungs-Modal | M |
+| GRAMPS-Badge | **GRAMPS-Modus sichtbar machen** | Bei `db._grampsMaster`: Badge in Topbar + primäres Export-Format = `.gramps` | S |
+| GRAMPS-Tags | **Tags als Badges** | `db.tags{}` in Personen-/Familien-Detail als farbige Badges | S |
 
-#### A10 — Fortschritt (Stand 2026-05-10)
+---
 
-| Phase | Scope | Status | SW |
-|---|---|---|---|
-| 1 | Utility- + Component-Klassen in `styles.css` (+354 Z.) | ✅ | — |
-| 2 | `index.html`: 240 `style=` → Klassen + `hidden` | ✅ | — |
-| 3 | `ui-forms*.js`: 7 inline styles | ✅ | v370 |
-| 4 | View-Dateien: hof 55 · person 52 · family 33 · media 26 · source 23 | ✅ | v371 |
-| 5 | Alle verbleibenden JS-Dateien (12×, inkl. `_applyDynStyles()` für dyn. Werte) | ✅ | v372 |
-| 6 | `unsafe-inline` aus CSP-Header entfernen | ✅ | v373 |
-
-### UX / Benutzerführung
+### P2 — Mittelfristig
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| U8 | **Cmd+Z granulares Undo** | History-Stack auf AppState; aktuell: Cmd+Z = "Revert to Saved" | XL |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
-| U20 | **`showDetail()` + `showFamilyDetail()` aufteilen** | 344 bzw. 235 Zeilen lange God-Functions; in 4–5 Hilfsfunktionen aufteilen. | M |
-| U21 | **Copy-Paste Meta/Geo-Templates auslagern** | Geburtsort/-datum-Konstruktion und Geo-Button-Template in `ui-views-person.js` + `ui-views-family.js` identisch dupliziert → in `ui-views.js` auslagern. | S |
-| U22 | **Onboarding verbessern** | Landing-Page erklärt nicht, was GEDCOM ist; kein Hinweis auf erwartetes Dateiformat; Demo-Button ohne Intro-Text. | S |
+| F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
+| GRAMPS-Orte | **Orts-Picker** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |
+| GRAMPS-Edit | **Personen-/Ereignis-Formular** | `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar; Witness-Rollen read-only | M+M |
+| Nachkommen | **Nachkommen-Baum** | Top-down SVG | L |
 
-### GRAMPS — Editierbarkeit (Phase 5.2/5.3)
+---
 
-| Aufgabe | Aufwand |
-|---|---|
-| Personen-Formular — `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar | M |
-| Ereignis-Formular — `_grampsAttrs[]` pro Event; Witness-Rollen (read-only) | M |
-| Orts-Picker — `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |
-| GRAMPS-Badge in Topbar — bei `db._grampsMaster`: Icon + `.gramps` als primäres Export-Format | S |
-| Tags anzeigen — `db.tags{}` in Personen-/Familien-Detail als Badges | S |
-
-### Features & Analyse
+### Backlog (kein festes Datum)
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
 | F4b | **Mehrfach-Zitierungen** | `citations:[{sid,page,quay}]` statt `sources[]+sourcePages{}`; ~8 Dateien; Roundtrip neu verifizieren | XL |
-| F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO | M |
-| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen (maximale Interoperabilität mit Ancestry/FTM/MacFamilyTree). Konkret: `p._rufname` → `2 NICK`; Rufname-Wort im `2 GIVN` mit `*` markieren (Ahnenblatt-Konvention). Export-Modus als Option im Einstellungs-Modal. | M |
+| U8 | **Granulares Undo** | History-Stack auf AppState; heute: Cmd+Z = "Revert to Saved" | XL |
 | F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
 | F8 | **Cluster-Ansicht** | Personen in denselben Orten/Quellen wie Person X | L |
 | F9 | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |
 | F10 | **Buchgenerator** | HTML/PDF Familienbuch; Ahnentafel + Biografie + Fotos | XL |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
-| — | **Nachkommen-Baum** | Top-down SVG | L |
+
+---
+
+## Wartungsschuld — Konkrete Hinweise
+
+Schulden nach Dringlichkeit, unabhängig vom Feature-Backlog anzugehen:
+
+### Sofort adressierbar (je S)
+
+**U21: Duplizierter Template-Code** (→ P0 oben)
+`_renderBirthGeoBtn()` und gleichnamige Logik existieren in `ui-views-person.js` und `ui-views-family.js` nahezu identisch. Auslagern nach `ui-views.js` verhindert weitere Divergenz.
+
+**MEMORY.md-Overflow**
+Die Projektdokumentation ist >200 Zeilen und wird am Limit abgeschnitten. Detail-Abschnitte (z.B. A10-Fortschrittstabelle, Passthrough-Liste, Sanduhr-Dimensionen) in eigene Dateien (`ARCHITECTURE.md`, `DATAMODEL.md`) verschieben; `MEMORY.md` nur als Index ≤180 Zeilen halten.
+
+### Nächster Sprint (je M)
+
+**U20: God-Functions** (→ P1 oben)
+`showDetail()` in `ui-views-person.js` und `showFamilyDetail()` in `ui-views-family.js` sind >200 Zeilen lang. Muster: Event-Sektion, Medien-Sektion, Relations-Sektion als eigene `_renderXxx(p, container)`-Funktionen extrahieren. Kein Verhalten ändern, nur aufteilen.
+
+**`ui-forms.js` 1007 Zeilen**
+Die Datei enthält Formular-Rendering, Event-Handler und Validierungslogik für 3 Entities. Kandidat für Aufteilung: Personen-Formular-Rendering → `ui-forms-person.js`, gemeinsame Helfer (Modal-Open/Close, Keyboard) bleiben in `ui-forms.js`.
+
+### Mittelfristig (je L)
+
+**F4b: Zitierungs-Datenstruktur**
+`sources[]+sourcePages{}` ist ein bekannter Kompromiss: zwei Arrays müssen synchron gehalten werden, Mehrfachzitierungen derselben Quelle an einem Event sind nicht darstellbar. Migration auf `citations:[{sid,page,quay,note}]` bereinigt das Model, erfordert aber Roundtrip-Neuverifikation in allen 8 betroffenen Dateien. Erst angehen wenn F5/F6 stabil sind.
+
+**Einheitliche Render-Konvention**
+Manche Views geben HTML-Strings zurück (`innerHTML =`), andere manipulieren direkt DOM-Nodes. Da `unsafe-inline` aus CSP entfernt ist, sollte mittelfristig alles auf DOM-Manipulation umgestellt werden — reduziert XSS-Angriffsfläche und macht Template-Strings überflüssig.
 
 ---
 

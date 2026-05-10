@@ -260,6 +260,7 @@ body.fc-mode #fcGenBtns { display: flex; }
   color: var(--gold-lt); font-size: 1rem; margin-bottom: 5px;
 }
 .upload-box p { color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; }
+.upload-box .ub-formats { font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; }
 #fileInput { display: none; }
 
 
