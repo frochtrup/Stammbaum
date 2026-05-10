@@ -214,11 +214,11 @@ function showEventForm(personId, evIdx) {
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
   onEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
-  document.getElementById('deleteEventBtn').style.display = isExisting ? '' : 'none';
+  document.getElementById('deleteEventBtn').hidden = !isExisting;
   const dateErrEl = document.getElementById('ef-date-err');
   if (dateErrEl) { dateErrEl.textContent = ''; dateErrEl.style.display = 'none'; }
   const copyBtn = document.getElementById('saveAndCopyEventBtn');
-  if (copyBtn) copyBtn.style.display = isSpecial ? 'none' : '';
+  if (copyBtn) copyBtn.hidden = isSpecial;
   openModal('modalEvent');
 }
 
