@@ -559,7 +559,7 @@ function showTree(personId, addToHistory = true) {
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
-    const fullName = [q.givn, q.surn].filter(Boolean).join(' ') || q.name || '(unbekannt)';
+    const fullName = [q.given, q.surname].filter(Boolean).join(' ') || q.name || '(unbekannt)';
     const sexLabel = q.sex === 'M' ? ', Mann' : q.sex === 'F' ? ', Frau' : '';
     div.title = fullName + sexLabel + (yr ? ' ' + yr : '');
     div.setAttribute('aria-label', _treeShortName(q, isCenter) + sexLabel + (yr ? ', ' + yr : ''));
