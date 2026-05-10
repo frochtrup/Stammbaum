@@ -48,6 +48,8 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | A11y/UX | Touch-Targets WCAG 2.5.5: `.topbar-btn` + `.search-input` + `.task-*` auf ≥44px; Toast `aria-live="polite"` für Screen-Reader | v357 |
 | SEC5 | `innerHTML` → `textContent` in `onedrive-auth.js` (Button-Label hardcoded, kein Risiko, aber cleaner Stil) | v358 |
 | A7/A9 | `_placeModes` → `UIState._placeModes`; `_odMigrateIfNeeded()` auch in `odAutoLoadFromOneDrive()` | v359 |
+| — | Personen-IDs anzeigen + suchbar: `.p-id` in Liste, `p.id` im Suchindex, `detail-id-xref` im Header | v361 |
+| U16–U19 | A11y/UX: ♂/♀-Symbol (CSS `::after`) + `aria-label`/`title` auf Baum-Karten; Kekule-Badge `title`; `.field-invalid` + `hidden` für Formular-Validierung (Blur + Submit); Focus-Trap bereits vollständig | v376 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -78,10 +80,6 @@ GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-N
 |---|---|---|---|
 | U8 | **Cmd+Z granulares Undo** | History-Stack auf AppState; aktuell: Cmd+Z = "Revert to Saved" | XL |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
-| U16 | **Farbkodierung Baum A11y** | Geschlecht nur durch Farbe — keine Text-Alternative für Farb-Sehschwäche | XS |
-| U17 | **Focus-Trap in Modals** | Tab-Navigation verlässt offene Modals; `Tab`-Cycle auf Modal-Inhalte begrenzen. | S |
-| U18 | **Formular-Validierung sichtbar** | `.form-error { display: none }` wird nie angezeigt; Inline-Fehlerhinweise vor Submit zeigen. | S |
-| U19 | **Tooltips auf Baum-Karten + QUAY-Legende** | `.tree-card` ohne Tooltip; QUAY-Stufen nur farbkodiert ohne Legende; Kekule-Nummern unerläutert. | S |
 | U20 | **`showDetail()` + `showFamilyDetail()` aufteilen** | 344 bzw. 235 Zeilen lange God-Functions; in 4–5 Hilfsfunktionen aufteilen. | M |
 | U21 | **Copy-Paste Meta/Geo-Templates auslagern** | Geburtsort/-datum-Konstruktion und Geo-Button-Template in `ui-views-person.js` + `ui-views-family.js` identisch dupliziert → in `ui-views.js` auslagern. | S |
 | U22 | **Onboarding verbessern** | Landing-Page erklärt nicht, was GEDCOM ist; kein Hinweis auf erwartetes Dateiformat; Demo-Button ohne Intro-Text. | S |

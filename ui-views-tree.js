@@ -381,7 +381,7 @@ function showTree(personId, addToHistory = true) {
   }
   const kbadge = id => {
     const k = id && kekuleMap[id];
-    return k ? `<div class="tree-kekule-badge">${k}</div>` : '';
+    return k ? `<div class="tree-kekule-badge" title="Kekule-Nr. ${k} (Proband = 1)">${k}</div>` : '';
   };
 
   // ── Vorfahren (4 Ebenen; Hochformat: max. 2 Ebenen) ──
@@ -559,6 +559,10 @@ function showTree(personId, addToHistory = true) {
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
+    const fullName = [q.givn, q.surn].filter(Boolean).join(' ') || '(unbekannt)';
+    const sexLabel = q.sex === 'M' ? ', Mann' : q.sex === 'F' ? ', Frau' : '';
+    div.title = fullName + sexLabel + (yr ? ' ' + yr : '');
+    div.setAttribute('aria-label', _treeShortName(q, isCenter) + sexLabel + (yr ? ', ' + yr : ''));
     const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =
       `<div class="tree-name">${_treeNameHtml(q, isCenter)}</div>` +

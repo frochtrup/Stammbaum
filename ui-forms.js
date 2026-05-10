@@ -168,9 +168,19 @@ function showPersonForm(id) {
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
   initSrcWidget('pf', p?.topSources || [], p?.topSourcePages || {}, p?.topSourceQUAY || {});
   const errEl = document.getElementById('pf-name-err');
-  if (errEl) { errEl.textContent = ''; errEl.style.display = 'none'; }
-  document.getElementById('pf-given').style.borderColor = '';
-  document.getElementById('pf-surname').style.borderColor = '';
+  if (errEl) { errEl.textContent = ''; errEl.setAttribute('hidden', ''); }
+  const givenEl = document.getElementById('pf-given');
+  const surnameEl = document.getElementById('pf-surname');
+  givenEl.classList.remove('field-invalid');
+  surnameEl.classList.remove('field-invalid');
+  const _checkNameBlur = () => {
+    const empty = !givenEl.value.trim() && !surnameEl.value.trim();
+    givenEl.classList.toggle('field-invalid', empty);
+    surnameEl.classList.toggle('field-invalid', empty);
+    if (errEl) { if (empty) errEl.removeAttribute('hidden'); else errEl.setAttribute('hidden', ''); }
+  };
+  givenEl.onblur = _checkNameBlur;
+  surnameEl.onblur = _checkNameBlur;
   openModal('modalPerson');
 }
 
@@ -238,9 +248,9 @@ function savePerson() {
 
   if (!given && !surname) {
     const errEl = document.getElementById('pf-name-err');
-    if (errEl) { errEl.textContent = 'Bitte mindestens Vor- oder Nachname eingeben'; errEl.style.display = 'block'; }
-    document.getElementById('pf-given').style.borderColor = 'var(--danger, #c0392b)';
-    document.getElementById('pf-surname').style.borderColor = 'var(--danger, #c0392b)';
+    if (errEl) { errEl.textContent = 'Bitte mindestens Vor- oder Nachname eingeben'; errEl.removeAttribute('hidden'); }
+    document.getElementById('pf-given').classList.add('field-invalid');
+    document.getElementById('pf-surname').classList.add('field-invalid');
     return;
   }
 
