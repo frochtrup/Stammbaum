@@ -90,15 +90,15 @@ function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
   const showEtype = !(t in _SPECIAL_OBJ);
-  document.getElementById('ef-etype-group').style.display = showEtype ? '' : 'none';
+  document.getElementById('ef-etype-group').hidden = !showEtype;
   if (showEtype) {
     const inp = document.getElementById('ef-etype');
     if (t === 'EVEN') { inp.placeholder = 'z.B. Militärdienst, Einlieferung …'; }
     else { inp.placeholder = 'Klassifikation (optional)'; }
   }
-  document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
+  document.getElementById('ef-cause-group').hidden = t !== 'DEAT';
   const showAddr = (t === 'RESI' || t === 'PROP');
-  document.getElementById('ef-addr-group').style.display = showAddr ? '' : 'none';
+  document.getElementById('ef-addr-group').hidden = !showAddr;
   const addrLabel = document.querySelector('#ef-addr-group .form-label');
   if (addrLabel) addrLabel.textContent = (t === 'PROP') ? 'Adresse (optional)' : 'Adresse';
   document.getElementById('ef-godparents-group').style.display = (t === 'CHR') ? '' : 'none';
