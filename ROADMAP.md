@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v378 · Cache: `stammbaum-v378`
+**sw-Version:** v380 · Cache: `stammbaum-v380`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
@@ -53,6 +53,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | U16–U19 + A11y | ♂/♀-Symbol + `aria-label` Baum-Karten; Kekule-Badge `title`; `.field-invalid` Formular-Validierung (Blur+Submit); `<label for>` in ui-forms.js ✅ | v376 |
 | U21 | `evGeoLink(lati, long)` in `ui-views.js` — 5 duplizierte maps.apple.com-Inline-URLs ersetzt; Bugfix `data-action="stop"` in generic-events-Loop | v377 |
 | U22 | Onboarding: „Stammbaum-Datei öffnen", Formatzeile `.ged · .gramps` mit Programmnamen, Demo-Button mit Personenzahl | v377 |
+| U23 | **`ui-forms.js` aufgeteilt** (1007 → 619 Z.): `ui-forms-person.js` (Person + Extra-Name-Formular, 273 Z.) + `ui-forms-family.js` (Familie-Formular, 124 Z.); Load-Order + SW-Precache aktualisiert | v380 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -117,10 +118,6 @@ Schulden nach Dringlichkeit, unabhängig vom Feature-Backlog anzugehen:
 Die Projektdokumentation ist >200 Zeilen und wird am Limit abgeschnitten. Detail-Abschnitte (z.B. A10-Fortschrittstabelle, Passthrough-Liste, Sanduhr-Dimensionen) in eigene Dateien (`ARCHITECTURE.md`, `DATAMODEL.md`) verschieben; `MEMORY.md` nur als Index ≤180 Zeilen halten.
 
 ### Nächster Sprint (je M)
-
-
-**`ui-forms.js` 1007 Zeilen**
-Die Datei enthält Formular-Rendering, Event-Handler und Validierungslogik für 3 Entities. Kandidat für Aufteilung: Personen-Formular-Rendering → `ui-forms-person.js`, gemeinsame Helfer (Modal-Open/Close, Keyboard) bleiben in `ui-forms.js`.
 
 ### Mittelfristig (je L)
 
