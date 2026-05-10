@@ -230,7 +230,7 @@ async function _lightboxSetHero() {
   await idbPut(_lbHeroKey, src).catch(() => {});
   const el = document.getElementById(_lbHeroElemId);
   if (el) {
-    el.style.display = '';
+    el.style.display = 'block';
     el.innerHTML = `<img src="${src}" alt="Foto" data-action="showLightbox" class="tree-photo-img">`;
   }
   if (_lbAvatarElemId) {

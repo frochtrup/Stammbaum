@@ -244,7 +244,7 @@ function saveAndCopyEvent() {
     || (['BET','FROM'].includes(qual) ? validateDatePartFields('ef-date2') : null);
   if (_dateErr) {
     const errEl = document.getElementById('ef-date-err');
-    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = ''; }
+    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = 'block'; }
     return;
   }
   UIState._eventClipboard = _buildClipboardFromForm();
@@ -291,7 +291,7 @@ function saveEvent() {
     || (['BET','FROM'].includes(qual) ? validateDatePartFields('ef-date2') : null);
   if (_dateErr) {
     const errEl = document.getElementById('ef-date-err');
-    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = ''; }
+    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = 'block'; }
     return;
   }
 

@@ -238,7 +238,7 @@ function savePerson() {
 
   if (!given && !surname) {
     const errEl = document.getElementById('pf-name-err');
-    if (errEl) { errEl.textContent = 'Bitte mindestens Vor- oder Nachname eingeben'; errEl.style.display = ''; }
+    if (errEl) { errEl.textContent = 'Bitte mindestens Vor- oder Nachname eingeben'; errEl.style.display = 'block'; }
     document.getElementById('pf-given').style.borderColor = 'var(--danger, #c0392b)';
     document.getElementById('pf-surname').style.borderColor = 'var(--danger, #c0392b)';
     return;

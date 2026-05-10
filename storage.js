@@ -365,7 +365,7 @@ async function _handlePhotoImport(file) {
       if (typeof b64 === 'string' && b64.startsWith('data:image/')) {
         const el = document.getElementById('det-photo-' + AppState.currentPersonId);
         if (el) {
-          el.style.display = '';
+          el.style.display = 'block';
           el.innerHTML = '';
           const img = document.createElement('img');
           img.src = b64;

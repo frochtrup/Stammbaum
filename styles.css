@@ -1649,7 +1649,6 @@ body.desktop-mode.places-karte #mapContainer {
 #am-cam-img     { max-width: 100%; max-height: 140px; border-radius: 8px; border: 1px solid var(--border); }
 
 #repoSection    { margin-top: 8px; }
-#repoJumpBtn    { display: none; }
 
 #tab-families,
 #tab-sources,
@@ -1666,14 +1665,11 @@ body.desktop-mode.places-karte #mapContainer {
 #probandBtn,
 #treeBtnBack,
 #treeFsBtn      { display: none; }
-#treeBtn        { display: none; font-size: 1rem; }
+#treeBtn        { font-size: 1rem; }
 
 #bottomNav      { display: none; }
 
-#tasksList      { display: none; }
 #advFilterPanel { display: none; }
-#sf-template-row { display: none; margin-bottom: 14px; }
-#sf-caln-group  { display: none; }
 #ff-mplace-parts { display: none; }
 
 #deletePersonBtn { width: 100%; }

@@ -104,7 +104,7 @@ function switchMapMode(mode) {
   _mapMode = mode;
   document.getElementById('map-mode-orte')  ?.classList.toggle('active', mode === 'orte');
   document.getElementById('map-mode-person')?.classList.toggle('active', mode === 'person');
-  document.getElementById('map-person-picker').style.display = mode === 'person' ? '' : 'none';
+  document.getElementById('map-person-picker').style.display = mode === 'person' ? 'block' : 'none';
   document.getElementById('map-explore-panel').style.display = 'none';
   _renderMap();
 }
@@ -442,7 +442,7 @@ function showPersonOnMap(personId) {
   bnavTab('places');
   switchPlacesSubTab('karte');
   const closeBtn = document.getElementById('map-close-btn');
-  if (closeBtn) closeBtn.style.display = '';
+  if (closeBtn) closeBtn.style.display = 'block';
   setTimeout(() => {
     const p   = AppState.db.individuals[personId];
     const btn = document.getElementById('map-person-btn');

@@ -114,8 +114,13 @@ function linkifyUrls(text) {
 // Setzt data-il-style-Attribute via CSSOM (CSP-sicher) und entfernt das Attribut danach.
 function _applyDynStyles(root) {
   root.querySelectorAll('[data-il-style]').forEach(el => {
-    el.style.cssText = el.getAttribute('data-il-style');
+    const s = el.getAttribute('data-il-style');
     el.removeAttribute('data-il-style');
+    s.split(';').forEach(d => {
+      const i = d.indexOf(':');
+      if (i < 0) return;
+      el.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim());
+    });
   });
 }
 
@@ -136,7 +141,7 @@ function switchPlacesSubTab(sub) {
   document.getElementById('place-search-orte')?.style.setProperty('display',  showOrteList ? '' : 'none');
   const _hofList = document.getElementById('hofList'); if (_hofList) _hofList.hidden = sub !== 'hoefe';
   const _hofSearch = document.getElementById('place-search-hoefe'); if (_hofSearch) _hofSearch.hidden = sub !== 'hoefe';
-  document.getElementById('mapContainer')?.style.setProperty('display',       sub === 'karte' ? '' : 'none');
+  document.getElementById('mapContainer')?.style.setProperty('display',       sub === 'karte' ? 'block' : 'none');
   document.body.classList.toggle('places-karte', sub === 'karte');
   ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
     document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);

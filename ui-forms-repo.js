@@ -9,20 +9,20 @@ function sfRepoUpdateDisplay() {
   const calnGrp  = document.getElementById('sf-caln-group');
   if (repoId.match(/^@[^@]+@$/)) {
     const r = AppState.db.repositories[repoId];
-    display.textContent    = r ? (r.name || repoId) : repoId;
-    display.style.color    = 'var(--gold)';
-    clearBtn.style.display = '';
-    calnGrp.style.display  = '';
+    display.textContent = r ? (r.name || repoId) : repoId;
+    display.style.color = 'var(--gold)';
+    clearBtn.hidden = false;
+    calnGrp.hidden  = false;
   } else if (repoId) {
-    display.textContent    = repoId;
-    display.style.color    = 'var(--text)';
-    clearBtn.style.display = '';
-    calnGrp.style.display  = 'none';
+    display.textContent = repoId;
+    display.style.color = 'var(--text)';
+    clearBtn.hidden = false;
+    calnGrp.hidden  = true;
   } else {
-    display.textContent    = '–';
-    display.style.color    = 'var(--text-muted)';
-    clearBtn.style.display = 'none';
-    calnGrp.style.display  = 'none';
+    display.textContent = '–';
+    display.style.color = 'var(--text-muted)';
+    clearBtn.hidden = true;
+    calnGrp.hidden  = true;
   }
 }
 

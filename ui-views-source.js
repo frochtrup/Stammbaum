@@ -189,7 +189,7 @@ function showSourceDetail(id, pushHistory = true) {
       const heroEl = document.getElementById('det-src-photo-' + id);
       const avatarEl = document.getElementById('det-src-avatar-' + id);
       if (heroEl) {
-        heroEl.style.display = '';
+        heroEl.style.display = 'block';
         heroEl.innerHTML = '';
         const hImg = document.createElement('img');
         hImg.src = url; hImg.alt = m.title || m.file || '';

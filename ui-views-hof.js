@@ -417,7 +417,7 @@ function _renderHofCoordSection(addr) {
 
 function showHofCoordForm(addr) {
   const form = document.getElementById('hof-coord-form');
-  if (form) { form.style.display = ''; form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  if (form) { form.style.display = 'block'; form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   document.getElementById('hof-coord-lat')?.focus();
 }
 
@@ -478,7 +478,7 @@ function _renderHofNoteSection(addr) {
 function showHofAddForm(addr) {
   const sec = document.getElementById('hf-add-section');
   if (!sec) return;
-  sec.style.display = '';
+  sec.style.display = 'block';
   // Ort vorbelegen
   const placeEl = document.getElementById('hf-place');
   if (placeEl && !placeEl.value && addr) {
@@ -531,7 +531,7 @@ function showHofPropForm(addr) {
   // Bewohner-Formular schließen falls offen
   const bewSec = document.getElementById('hf-add-section');
   if (bewSec) bewSec.style.display = 'none';
-  sec.style.display = '';
+  sec.style.display = 'block';
   // Adresse vorbelegen (Textarea)
   const addrEl = document.getElementById('hfp-addr');
   if (addrEl && !addrEl.value && addr) addrEl.value = addr;

@@ -221,7 +221,7 @@ function _updatePersonPhoto(id) {
       img.src = url; img.alt = 'Foto';
       img.dataset.action = 'showLightbox';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-      el.style.display = ''; el.innerHTML = ''; el.appendChild(img);
+      el.style.display = 'block'; el.innerHTML = ''; el.appendChild(img);
     }
     if (av) av.style.display = 'none';
   }).catch(() => {});
@@ -240,7 +240,7 @@ function _updateFamilyPhoto(id) {
       img.src = url; img.alt = 'Foto';
       img.dataset.action = 'showLightbox';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-      el.style.display = ''; el.innerHTML = ''; el.appendChild(img);
+      el.style.display = 'block'; el.innerHTML = ''; el.appendChild(img);
     }
     if (av) av.style.display = 'none';
   }).catch(() => {});
