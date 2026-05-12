@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-12 — F4b Citations-Datenmodell (sw v381)
+
+- **sw v381** `feat(F4b)`: `citations:[{sid,page,quay,note,extra,media}]` ersetzt 6 parallele Dicts (`sources[]+sourcePages{}+sourceQUAY{}+sourceNote{}+sourceExtra{}+sourceMedia{}`); `citationObj()` Factory + `_migrateLegacyCitations()` + `_addCitRefs()` in `gedcom.js`; `_curCit`-Pattern + unified lv=3 SOUR-Handler im Parser; `_writeSourCits()` im Writer; srcWidget komplett neu (mode:'new', `addSrc`, `citidx`-basiert); `citTagsHtml()` in `ui-views.js`; alle Forms + Views migriert; `test-citations.html` T0–T7 (9070 SOUR-Refs, 5253 Zitierungen verlustfrei)
+
+---
+
 ### Session 2026-05-10 — Refactoring-Sprint (sw v370–v380)
 
 - **sw v370–v373** `refactor(A10)`: `unsafe-inline` aus CSP entfernt — 6 Phasen abgeschlossen; alle `style=`-Inline-Attribute in Template-Strings durch CSS-Klassen ersetzt; `<meta http-equiv="Content-Security-Policy">` ohne `'unsafe-inline'`; ADR-015 in `ARCHITECTURE.md` dokumentiert
