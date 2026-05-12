@@ -179,7 +179,7 @@ function _renderDedupList() {
   let html = '';
   for (let i = 0; i < n; i++) {
     const { pA, pB, score, reasons } = _dedupPairs[i];
-    const scColor = score >= 85 ? 'var(--danger,#c0392b)' : score >= 75 ? '#b8860b' : 'var(--text-muted)';
+    const scColor = score >= 85 ? 'var(--red)' : score >= 75 ? '#b8860b' : 'var(--text-muted)';
     const plA = compactPlace(pA.birth?.place || '');
     const plB = compactPlace(pB.birth?.place || '');
     const metaA = [pA.birth?.date, plA].filter(Boolean).join(' ');
