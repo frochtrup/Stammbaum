@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v384 · Cache: `stammbaum-v384`
+**sw-Version:** v385 · Cache: `stammbaum-v385`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 

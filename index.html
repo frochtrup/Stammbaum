@@ -1315,21 +1315,6 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════ -->
-<script src="leaflet.js"></script>
-<script src="gedcom.js"></script>
-<script src="gedcom-parser.js"></script>
-<script src="gedcom-writer.js"></script>
-<script src="gramps-parser.js"></script>
-<script src="gramps-writer.js"></script>
-<script>if (location.search.includes('debug=1')) { const s = document.createElement('script'); s.src = 'debug-gramps.js'; document.head.appendChild(s); }</script>
-<script src="storage-file.js"></script>
-<script src="storage.js"></script>
-<script src="ui-views.js"></script>
-<script src="ui-views-note.js"></script>
-<script src="ui-views-search.js"></script>
 <!-- Duplikat-Erkennung Modal -->
 <div class="modal-overlay" id="modalDedup" role="dialog" aria-modal="true" aria-labelledby="lbl-modalDedup">
   <div class="sheet sheet-tall-90 d-flex flex-col">
@@ -1366,28 +1351,6 @@
     </div>
   </div>
 </div>
-
-<script src="ui-views-tree.js"></script>
-<script src="ui-views-tasks.js"></script>
-<script src="ui-views-person.js"></script>
-<script src="ui-views-family.js"></script>
-<script src="ui-views-source.js"></script>
-<script src="ui-views-place.js"></script>
-<script src="ui-views-hof.js"></script>
-<script src="ui-views-map.js"></script>
-<script src="ui-views-stats.js"></script>
-<script src="ui-dedup.js"></script>
-<script src="ui-fanchart.js"></script>
-<script src="ui-forms.js"></script>
-<script src="ui-forms-person.js"></script>
-<script src="ui-forms-family.js"></script>
-<script src="ui-forms-repo.js"></script>
-<script src="ui-forms-event.js"></script>
-<script src="debug-activate.js"></script>
-<script src="ui-media.js"></script>
-<script src="onedrive-auth.js"></script>
-<script src="onedrive-import.js"></script>
-<script src="onedrive.js"></script>
 
 <!-- Karten Person-Picker Modal -->
 <div class="modal-overlay" id="modalMapPerson" role="dialog" aria-modal="true" aria-labelledby="lbl-modalMapPerson">
@@ -1433,6 +1396,7 @@
   <div id="map-explore-panel" class="map-explore-panel" hidden></div>
   <div id="map-leaflet"></div>
 </div>
+
 <div class="modal-overlay" id="modalRelPath" role="dialog" aria-modal="true" aria-labelledby="relPathTitle">
   <div class="sheet">
     <div class="sheet-handle"></div>
@@ -1449,5 +1413,42 @@
   <div class="loading-spinner"></div>
   <p id="loadingMsg">Wird geladen …</p>
 </div>
+
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════ -->
+<script src="leaflet.js"></script>
+<script src="gedcom.js"></script>
+<script src="gedcom-parser.js"></script>
+<script src="gedcom-writer.js"></script>
+<script src="gramps-parser.js"></script>
+<script src="gramps-writer.js"></script>
+<script>if (location.search.includes('debug=1')) { const s = document.createElement('script'); s.src = 'debug-gramps.js'; document.head.appendChild(s); }</script>
+<script src="storage-file.js"></script>
+<script src="storage.js"></script>
+<script src="ui-views.js"></script>
+<script src="ui-views-note.js"></script>
+<script src="ui-views-search.js"></script>
+<script src="ui-views-tree.js"></script>
+<script src="ui-views-tasks.js"></script>
+<script src="ui-views-person.js"></script>
+<script src="ui-views-family.js"></script>
+<script src="ui-views-source.js"></script>
+<script src="ui-views-place.js"></script>
+<script src="ui-views-hof.js"></script>
+<script src="ui-views-map.js"></script>
+<script src="ui-views-stats.js"></script>
+<script src="ui-dedup.js"></script>
+<script src="ui-fanchart.js"></script>
+<script src="ui-forms.js"></script>
+<script src="ui-forms-person.js"></script>
+<script src="ui-forms-family.js"></script>
+<script src="ui-forms-repo.js"></script>
+<script src="ui-forms-event.js"></script>
+<script src="debug-activate.js"></script>
+<script src="ui-media.js"></script>
+<script src="onedrive-auth.js"></script>
+<script src="onedrive-import.js"></script>
+<script src="onedrive.js"></script>
 </body>
 </html>
