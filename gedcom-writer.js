@@ -212,31 +212,20 @@ function writeGEDCOM(updateHeadDate = false) {
             lines.push(`2 _MREL ${mv}`);
           }
         }
-        // Alle Quellen dedupl. sammeln: sourIds + frelSour + mrelSour
-        const _allSours = [...(fref.sourIds || [])];
-        const _sourPages = Object.assign({}, fref.sourPages);
-        const _sourQUAY  = Object.assign({}, fref.sourQUAY);
+        // Quellen: citations[] + frelSour/mrelSour als Fallback zusammenführen
+        const _famcCits = [...(fref.citations || [])];
         for (const [xSour, xPage, xQuay] of [
           [fref.frelSour, fref.frelPage, fref.frelQUAY],
           [fref.mrelSour, fref.mrelPage, fref.mrelQUAY]
         ]) {
-          if (xSour && !_allSours.includes(xSour)) {
-            _allSours.push(xSour);
-            if (xPage) _sourPages[xSour] = xPage;
-            if (xQuay) _sourQUAY[xSour]  = xQuay;
-          }
+          if (xSour && !_famcCits.some(c => c.sid === xSour))
+            _famcCits.push(citationObj(xSour, xPage || '', xQuay || ''));
         }
-        // Zusätzliche SOUR-IDs aus frelSourExtra / mrelSourExtra extrahieren
         for (const extra of [...(fref.frelSourExtra||[]), ...(fref.mrelSourExtra||[])]) {
           const m = extra.match(/^\d+ SOUR (@\S+@)/);
-          if (m && !_allSours.includes(m[1])) _allSours.push(m[1]);
+          if (m && !_famcCits.some(c => c.sid === m[1])) _famcCits.push(citationObj(m[1]));
         }
-        for (const s of _allSours) {
-          lines.push(`2 SOUR ${s}`);
-          if (_sourPages[s]) lines.push(`3 PAGE ${_sourPages[s]}`);
-          if (_sourQUAY[s])  lines.push(`3 QUAY ${_sourQUAY[s]}`);
-          if (fref.sourExtra && fref.sourExtra[s]) for (const l of fref.sourExtra[s]) lines.push(l);
-        }
+        _writeSourCits(lines, 2, { citations: _famcCits });
       }
     }
     for (const f of p.fams) lines.push(`1 FAMS ${f}`);

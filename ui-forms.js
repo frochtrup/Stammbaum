@@ -1,37 +1,28 @@
 // ─────────────────────────────────────
 //  SOURCE WIDGET
-//  new mode:    srcWidgetState[prefix] = { mode:'new', citations:[{sid,page,quay,...}] }
-//  legacy mode: srcWidgetState[prefix] = { mode:'legacy', ids:Set, pages:{}, quay:{} }
-//  'cr' (child-relation) uses legacy (FAMC sourIds/sourPages structure unchanged)
+//  srcWidgetState[prefix] = { mode:'new', citations:[{sid,page,quay,...}] }
 // ─────────────────────────────────────
 const srcWidgetState = {};
 
-function updateSrcPage(prefix, citIdxOrSid, value) {
+function updateSrcPage(prefix, citIdx, value) {
   const s = srcWidgetState[prefix];
-  if (!s) return;
-  if (s.mode === 'legacy') { s.pages[citIdxOrSid] = value; }
-  else { const i = +citIdxOrSid; if (s.citations[i]) s.citations[i].page = value; }
+  const i = +citIdx;
+  if (s?.citations[i]) s.citations[i].page = value;
 }
 
-function updateSrcQuay(prefix, citIdxOrSid, value) {
+function updateSrcQuay(prefix, citIdx, value) {
   const s = srcWidgetState[prefix];
-  if (!s) return;
-  if (s.mode === 'legacy') { s.quay[citIdxOrSid] = value; }
-  else { const i = +citIdxOrSid; if (s.citations[i]) s.citations[i].quay = value; }
+  const i = +citIdx;
+  if (s?.citations[i]) s.citations[i].quay = value;
 }
 
-function initSrcWidget(prefix, citationsOrIds, pageMap, quayMap) {
-  if (prefix === 'cr') {
-    const ids = citationsOrIds instanceof Set ? [...citationsOrIds] : (Array.isArray(citationsOrIds) ? citationsOrIds : []);
-    srcWidgetState[prefix] = { mode:'legacy', ids: new Set(ids), pages: pageMap ? {...pageMap} : {}, quay: quayMap ? {...quayMap} : {} };
-  } else {
-    const arr = Array.isArray(citationsOrIds) ? citationsOrIds : [];
-    srcWidgetState[prefix] = { mode:'new', citations: arr.map(c =>
-      (c && typeof c === 'object' && 'sid' in c)
-        ? { ...c, extra: [...(c.extra||[])], media: [...(c.media||[])] }
-        : citationObj(String(c))
-    )};
-  }
+function initSrcWidget(prefix, citationsOrIds) {
+  const arr = Array.isArray(citationsOrIds) ? citationsOrIds : [];
+  srcWidgetState[prefix] = { mode:'new', citations: arr.map(c =>
+    (c && typeof c === 'object' && 'sid' in c)
+      ? { ...c, extra: [...(c.extra||[])], media: [...(c.media||[])] }
+      : citationObj(String(c))
+  )};
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
   document.getElementById(prefix + '-src-picker').classList.remove('open');
@@ -42,37 +33,7 @@ function renderSrcTags(prefix) {
   const s = srcWidgetState[prefix];
   if (!s) return;
 
-  if (s.mode === 'legacy') {
-    if (!s.ids.size) {
-      container.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>';
-      return;
-    }
-    container.innerHTML = [...s.ids].map(sid => {
-      const src = AppState.db.sources[sid];
-      const label = src ? (src.abbr || src.title || sid) : sid;
-      const pageVal = s.pages[sid] || '';
-      const quayVal = String(s.quay[sid] ?? '');
-      const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-      return `<span class="src-tag">
-        ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
-        <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
-          data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">
-        <select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-sid="${sidEsc}"
-          style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
-          <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
-          <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
-          <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
-          <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
-          <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
-        </select>
-        <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-sid="${sid}"
-          style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
-      </span>`;
-    }).join('');
-    return;
-  }
-
-  // new mode: one tag per citation entry
+  // one tag per citation entry
   const cits = s.citations;
   if (!cits.length) {
     container.innerHTML = '<span style="font-size:0.8rem;color:var(--text-muted);font-style:italic">Keine Quellen zugewiesen</span>';
@@ -106,26 +67,15 @@ function renderSrcPicker(prefix) {
   const s = srcWidgetState[prefix];
   const srcs = Object.values(AppState.db.sources).sort((a,b) => (a.abbr||a.title||'').localeCompare(a.abbr||a.title||'','de'));
   if (!srcs.length) { list.innerHTML = '<div class="src-picker-empty">Noch keine Quellen vorhanden</div>'; return; }
-  if (s?.mode === 'legacy') {
-    const sel = s.ids;
-    list.innerHTML = srcs.map(src => {
-      const label = src.abbr || src.title || src.id;
-      const isSel = sel.has(src.id);
-      return `<div class="src-picker-item ${isSel ? 'selected' : ''}" data-action="toggleSrc" data-prefix="${prefix}" data-sid="${src.id}">
-        ${isSel ? '✓ ' : ''}${esc(label)}
-      </div>`;
-    }).join('');
-  } else {
-    const counts = {};
-    for (const c of (s?.citations || [])) counts[c.sid] = (counts[c.sid] || 0) + 1;
-    list.innerHTML = srcs.map(src => {
-      const label = src.abbr || src.title || src.id;
-      const cnt = counts[src.id] || 0;
-      return `<div class="src-picker-item" data-action="addSrc" data-prefix="${prefix}" data-sid="${src.id}">
-        + ${esc(label)}${cnt ? `<span style="font-size:0.75rem;opacity:0.6;margin-left:4px">(${cnt}×)</span>` : ''}
-      </div>`;
-    }).join('');
-  }
+  const counts = {};
+  for (const c of (s?.citations || [])) counts[c.sid] = (counts[c.sid] || 0) + 1;
+  list.innerHTML = srcs.map(src => {
+    const label = src.abbr || src.title || src.id;
+    const cnt = counts[src.id] || 0;
+    return `<div class="src-picker-item" data-action="addSrc" data-prefix="${prefix}" data-sid="${src.id}">
+      + ${esc(label)}${cnt ? `<span style="font-size:0.75rem;opacity:0.6;margin-left:4px">(${cnt}×)</span>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function toggleSrcPicker(prefix) {
@@ -141,20 +91,11 @@ function addSrc(prefix, sid) {
   renderSrcPicker(prefix);
 }
 
-function toggleSrc(prefix, sid) {
-  // legacy only ('cr' prefix)
-  const s = srcWidgetState[prefix];
-  if (!s || s.mode !== 'legacy') return;
-  if (s.ids.has(sid)) s.ids.delete(sid); else s.ids.add(sid);
-  renderSrcTags(prefix);
-  renderSrcPicker(prefix);
-}
-
-function removeSrc(prefix, citIdxOrSid) {
+function removeSrc(prefix, citIdx) {
   const s = srcWidgetState[prefix];
   if (!s) return;
-  if (s.mode === 'legacy') { s.ids.delete(citIdxOrSid); }
-  else { const i = parseInt(citIdxOrSid); if (!isNaN(i)) s.citations.splice(i, 1); }
+  const i = parseInt(citIdx);
+  if (!isNaN(i)) s.citations.splice(i, 1);
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
 }

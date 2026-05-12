@@ -24,7 +24,7 @@ function parseGEDCOM(text, parseErrors) {
   let inMap  = false; // are we inside a MAP block?
   let mapParent = ''; // which lv1 tag owns current MAP (BIRT/DEAT/etc.)
   let _curCit = null;   // aktuelles Citation-Objekt (gesetzt bei SOUR @id@, für PAGE/QUAY/NOTE/OBJE)
-  let lastSourVal = ''; // noch genutzt für: topSourcePages{} (lv=1 SOUR) + CHIL/SOUR (lv=2)
+  let lastSourVal = ''; // nur noch für topSourcePages{} / topSourceQUAY{} (lv=1 SOUR unter INDI)
   let _curNoteIsInline = false; // true when 1 NOTE was inline (not a @ref@)
   let _curExtraNameIdx = -1;   // index into cur.extraNames when parsing 2nd+ NAME
   let _ptDepth = 0;  // verbatim-passthrough depth (0 = off)
@@ -158,7 +158,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag === 'SEX')  cur.sex  = val;
         else if (tag === 'TITL') cur.titl = val;
         // RELI nicht mehr als einfaches Feld, sondern als Event (kann DATE/SOUR/TYPE-Kinder haben)
-        else if (tag === 'FAMC') cur.famc.push({ famId:val, pedi:'', frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
+        else if (tag === 'FAMC') cur.famc.push({ famId:val, pedi:'', frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], citations:[] });
         else if (tag === 'FAMS') cur.fams.push(val);
         else if (tag === 'NOTE') {
           if (!val.startsWith('@')) { cur.noteTexts.push(val); _curNoteIsInline = true; }
@@ -277,7 +277,7 @@ function parseGEDCOM(text, parseErrors) {
           if (tag==='PEDI') { fref.pedi = val; if (!fref.frelSeen) { fref.frel = val; fref.frelSeen = true; } if (!fref.mrelSeen) { fref.mrel = val; fref.mrelSeen = true; } }
           if (tag==='_FREL') { fref.frel = val; fref.frelSeen = true; }
           if (tag==='_MREL') { fref.mrel = val; fref.mrelSeen = true; }
-          if (tag==='SOUR' && val.startsWith('@')) { const _ns = val.replace(/^@@/,'@').replace(/@@$/,'@'); fref.sourIds.push(_ns); cur.sourceRefs.add(_ns); lastSourVal = _ns; }
+          if (tag==='SOUR' && val.startsWith('@')) { const _ns = val.replace(/^@@/,'@').replace(/@@$/,'@'); _curCit = citationObj(_ns); fref.citations.push(_curCit); cur.sourceRefs.add(_ns); }
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
@@ -332,12 +332,6 @@ function parseGEDCOM(text, parseErrors) {
             _curCit.extra.push('3 ' + tag + (val ? ' ' + val : ''));
             _ptDepth = 3; _ptTarget = _curCit.extra;
           }
-        }
-        // FAMC-Quellen: PAGE/QUAY über sourPages/sourQUAY (FAMC hat eigene Struktur)
-        if (lv2tag === 'SOUR' && lv1tag === 'FAMC' && cur.famc.length && lastSourVal) {
-          const fref = cur.famc[cur.famc.length-1];
-          if (tag === 'PAGE') fref.sourPages[lastSourVal] = val;
-          if (tag === 'QUAY') fref.sourQUAY[lastSourVal] = val;
         }
         // 3 SOUR unter 2 _FREL/_MREL (in 1 FAMC Kontext)
         if (lv1tag === 'FAMC' && cur.famc.length && tag === 'SOUR') {
@@ -498,11 +492,11 @@ function parseGEDCOM(text, parseErrors) {
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
         if (lv1tag==='CHIL' && cur._lastChil) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{},sourMedia:{}};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],citations:[]};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='_FREL') { cref.frel = val; cref.frelSeen = true; }
           if (tag==='_MREL') { cref.mrel = val; cref.mrelSeen = true; }
-          if (tag==='SOUR' && val.startsWith('@')) { cref.sourIds.push(val); cur.sourceRefs.add(val); lastSourVal = val; }
+          if (tag==='SOUR' && val.startsWith('@')) { _curCit = citationObj(val); cref.citations.push(_curCit); cur.sourceRefs.add(val); }
         }
       }
       else if (lv === 3) {
@@ -567,7 +561,7 @@ function parseGEDCOM(text, parseErrors) {
           else { _om._extra.push('3 '+tag+(val?' '+val:'')); _ptDepth=3; _ptTarget=_om._extra; }
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{},sourMedia:{}};
+          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],citations:[]};
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='SOUR') {
             if (lv2tag==='_FREL') {
@@ -579,14 +573,6 @@ function parseGEDCOM(text, parseErrors) {
               else { if (!cref.mrelSourExtra) cref.mrelSourExtra=[]; cref.mrelSourExtra.push('3 SOUR '+val); _ptDepth=3; _ptTarget=cref.mrelSourExtra; }
             }
           }
-        }
-        if (lv1tag==='CHIL' && cur._lastChil && lv2tag==='SOUR' && lastSourVal.startsWith('@')) {
-          if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{},sourMedia:{}};
-          const cref = cur.childRelations[cur._lastChil];
-          if      (tag==='PAGE') cref.sourPages[lastSourVal] = val;
-          else if (tag==='QUAY') cref.sourQUAY[lastSourVal] = val;
-          else if (tag==='OBJE' && !val.startsWith('@')) { if (!cref.sourMedia[lastSourVal]) cref.sourMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cref.sourMedia[lastSourVal].push(_sm); _smEntry=_sm; }
-          else { if (!cref.sourExtra[lastSourVal]) cref.sourExtra[lastSourVal] = []; cref.sourExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cref.sourExtra[lastSourVal]; }
         }
       }
       else if (lv === 4) {
@@ -731,26 +717,21 @@ function parseGEDCOM(text, parseErrors) {
         if (cref.mrelSeen) { famcEntry.mrel = cref.mrel; famcEntry.mrelSeen = true; }
       }
       // Quellen: immer kopieren wenn INDI-Seite noch keine hat (unabhängig von frelSeen)
-      if (!famcEntry.sourIds.length) {
+      if (!famcEntry.citations.length) {
         const _normSid = s => s ? s.replace(/^@@/, '@').replace(/@@$/, '@').trim() : s;
-        for (const s of (cref.sourIds || [])) {
-          const ns = _normSid(s);
-          if (!famcEntry.sourIds.includes(ns)) famcEntry.sourIds.push(ns);
-          if (cref.sourPages[s]) famcEntry.sourPages[ns] = cref.sourPages[s];
-          if (cref.sourQUAY[s])  famcEntry.sourQUAY[ns]  = cref.sourQUAY[s];
-          if (cref.sourExtra[s]) famcEntry.sourExtra[ns]  = cref.sourExtra[s];
+        for (const c of (cref.citations || [])) {
+          const ns = _normSid(c.sid);
+          if (!famcEntry.citations.some(x => x.sid === ns && x.page === c.page))
+            famcEntry.citations.push({ ...c, sid: ns });
         }
-        const _addSour = (raw, page, quay) => {
+        const _addCit = (raw, page, quay) => {
           if (!raw) return;
           const ns = _normSid(raw);
-          if (!famcEntry.sourIds.includes(ns)) {
-            famcEntry.sourIds.push(ns);
-            if (page) famcEntry.sourPages[ns] = page;
-            if (quay) famcEntry.sourQUAY[ns]  = quay;
-          }
+          if (!famcEntry.citations.some(x => x.sid === ns))
+            famcEntry.citations.push(citationObj(ns, page || '', quay || ''));
         };
-        _addSour(cref.frelSour, cref.frelPage, cref.frelQUAY);
-        if (cref.mrelSour !== cref.frelSour) _addSour(cref.mrelSour, cref.mrelPage, cref.mrelQUAY);
+        _addCit(cref.frelSour, cref.frelPage, cref.frelQUAY);
+        if (cref.mrelSour !== cref.frelSour) _addCit(cref.mrelSour, cref.mrelPage, cref.mrelQUAY);
       }
     }
   }

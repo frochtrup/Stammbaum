@@ -515,10 +515,7 @@ function showChildRelDialog(famId, childId) {
   document.getElementById('cr-child-name').textContent = p.name || childId;
   const curPedi = (fe && typeof fe === 'object') ? (fe.pedi || _toPedi(fe.frel || '')) : '';
   document.getElementById('cr-pedi').value = curPedi;
-  const sourIds  = (fe && typeof fe === 'object') ? (fe.sourIds  || []) : [];
-  const sourPages = (fe && typeof fe === 'object') ? (fe.sourPages || {}) : {};
-  const sourQUAY  = (fe && typeof fe === 'object') ? (fe.sourQUAY  || {}) : {};
-  initSrcWidget('cr', sourIds, sourPages, sourQUAY);
+  initSrcWidget('cr', (fe && typeof fe === 'object') ? (fe.citations || []) : []);
   openModal('modalChildRel');
 }
 
@@ -536,9 +533,7 @@ function saveChildRelDialog() {
   fe.mrel      = pediVal;
   fe.frelSeen  = !!pediVal;
   fe.mrelSeen  = !!pediVal;
-  fe.sourIds   = [...(srcWidgetState['cr']?.ids || [])];
-  fe.sourPages = { ...(srcWidgetState['cr']?.pages || {}) };
-  fe.sourQUAY  = { ...(srcWidgetState['cr']?.quay  || {}) };
+  fe.citations = [...(srcWidgetState['cr']?.citations || [])];
   markChanged();
   closeModal('modalChildRel');
   showFamilyDetail(famId);
