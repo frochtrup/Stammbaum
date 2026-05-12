@@ -238,7 +238,9 @@ Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf D
 
 ---
 
-## Datei-Statistiken (MeineDaten_ancestris.ged)
+## Datei-Statistiken
+
+### MeineDaten_ancestris.ged
 
 ```
 Personen:      2811
@@ -248,3 +250,141 @@ Archive:           4
 Notizen:         195
 Dateigröße:    ~5 MB  (83152 Zeilen)
 ```
+
+### Unsere Familie.ged — Primäre Roundtrip-Testdatei (aktuell, 2026-05-12)
+
+```
+Personen:      2918
+Familien:       917
+Quellen:        142
+Archive:           5
+Notizen:         195
+SOUR-Referenzen: 9070
+Dateigröße:    ~1.7 MB  (90681 Zeilen)
+```
+
+**Besonderheit:** 2360 Events mit Mehrfachzitierungen derselben Quelle (gleiche `@Sxx@` mehrfach
+pro Event mit verschiedenen Seitenzahlen) — direkter Nachweis des F4b-Datenmodell-Problems.
+Die aktuelle `sources[]+sourcePages{}`-Struktur verliert diese Duplikate beim Roundtrip.
+
+---
+
+## Backlog
+
+*Kein festes Datum. Vor Implementierung: erst P1-Features (F5 Anonymisierung, F6 Strict GEDCOM)
+abschließen.*
+
+| ID | Feature | Kurzbeschreibung | Aufwand |
+|---|---|---|---|
+| F4b | **Mehrfach-Zitierungen** | `citations:[{sid,page,quay,note,extra,media}]` statt 6 paralleler Felder; Migration + Roundtrip-Neuverifikation; 8 Dateien + Test-Suite | XL |
+| U8  | **Granulares Undo** | History-Stack auf AppState; heute: Cmd+Z = "Revert to Saved" | XL |
+| F3  | **Pedigree-Collapse** | Vorfahren-Kollaps im Baum bei gemeinsamen Ahnen | L |
+| F9  | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |
+| F10 | **Buchgenerator** | HTML/PDF Familienbuch; Ahnentafel + Biografie + Fotos | XL |
+| F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
+
+*Aufwand: XS (<1h) · S (1–2h) · M (halber Tag) · L (1–2 Tage) · XL (>2 Tage)*
+
+---
+
+## F4b — Detailplan: Mehrfach-Zitierungen
+
+### Problem (Ist-Zustand)
+
+Quellenreferenzen werden als **sechs parallele Felder** gespeichert:
+
+```js
+sources:     ['@S1@', '@S2@'],
+sourcePages: { '@S1@': 'S. 12' },
+sourceQUAY:  { '@S1@': '2' },
+sourceNote:  { '@S1@': 'Notiz' },
+sourceExtra: { '@S1@': ['3 DATA foo'] },
+sourceMedia: { '@S1@': [...] }
+```
+
+Kernproblem: Wenn dieselbe Quelle (`@S1@`) dasselbe Ereignis zweimal belegt
+(z.B. KB Taufe S. 12 + KB Taufe S. 87), überschreibt `sourcePages['@S1@']` den ersten Eintrag.
+Belegt durch `Unsere Familie.ged`: **2360 Events** mit Mehrfachzitierungen gehen beim Roundtrip verloren.
+
+### Ziel-Datenmodell
+
+```js
+citations: [
+  { sid: '@S1@', page: 'S. 12', quay: '2', note: '', extra: [], media: [] },
+  { sid: '@S1@', page: 'S. 87', quay: '2', note: '', extra: [], media: [] },
+  { sid: '@S2@', page: '',      quay: '3', note: '', extra: [], media: [] },
+]
+```
+
+`citations[]` ersetzt vollständig: `sources[]`, `sourcePages{}`, `sourceQUAY{}`,
+`sourceNote{}`, `sourceExtra{}`, `sourceMedia{}`.
+
+### Betroffene Dateien
+
+| Datei | Änderung |
+|---|---|
+| `gedcom.js` | `citationObj()` Factory, AppState-Defaults, Clipboard-Format |
+| `gedcom-parser.js` | `_curCit` statt `lastSourVal` + 6 parallele Dicts; alle 12 Event-Kontexte |
+| `gedcom-writer.js` | `writeSourCitations()` iteriert über `citations[]` |
+| `ui-forms.js` | `srcWidgetState`, `initSrcWidget`, `renderSrcTags`, Copy/Paste |
+| `ui-forms-event.js` | Event-Formular lesen/schreiben |
+| `ui-forms-person.js` | Name-Level-Zitierungen (`nameCitations`) |
+| `ui-forms-family.js` | Familien-Ereignisse |
+| `ui-views-person.js` | Detailansicht Quellen-Anzeige |
+
+Optional (wenn GRAMPS-Support erhalten): `gramps-parser.js`, `gramps-writer.js`.
+
+### Sprint-Aufteilung
+
+**Phase 1 — Datenmodell + Parser + Writer**
+
+1. `citationObj(sid,page,quay,note,extra,media)` Factory in `gedcom.js`; alle Defaults auf `citations:[]`
+2. Parser (`gedcom-parser.js`): `_curCit` ersetzt `lastSourVal`; beim `2/3 SOUR @Sxx@` → `citations.push(citationObj(sid))`; PAGE/QUAY/NOTE/OBJE/extra schreiben auf `_curCit`
+3. Migration beim Laden: `_migrateLegacyCitations(obj)` — erkennt Altformat (`sources[]` vorhanden), konvertiert in-memory transparent
+4. Writer (`gedcom-writer.js`): `writeSourCitations()` iteriert `citations[]`; kein Altformat-Code mehr
+
+**Phase 2 — UI-Widget**
+
+5. `srcWidgetState[prefix] = { citations: [] }` (statt `{ids, pages, quay}`)
+6. `initSrcWidget(prefix, citations)` — direkte Übergabe
+7. `renderSrcTags(prefix)` — eine Zeile pro Citation; Reihenfolge = GEDCOM-Reihenfolge; selbe Quelle mehrfach erlaubt
+8. Copy/Paste: Clipboard = `{ citations: [{...},...] }`; Paste fügt an, dedupliziert nur bei sid+page identisch
+
+**Phase 3 — Formulare + Ansichten + GRAMPS**
+
+9. `ui-forms-event.js`, `-person.js`, `-family.js`: `initSrcWidget` und Speicherpfade anpassen
+10. `ui-views-person.js`: Quellen-Badges aus `citations[]` statt `sources[]`
+11. GRAMPS: `gramps-parser.js` `sourceref` → `citationObj()`; `gramps-writer.js` `citations[]` → `<sourceref>`
+
+### Automatisierte Teststrategie
+
+**Datei:** `test-citations.js` — standalone, keine externen Dependencies, läuft im Browser
+(`test.html`) oder via `node --input-type=module`.
+
+| Gruppe | Was wird getestet |
+|---|---|
+| T1 Parser | GEDCOM-String → `citations[]`; Mehrfachzitierung derselben Quelle |
+| T2 Writer | `citations[]` → GEDCOM-Zeilen; korrekte Level, leere Felder ausgelassen |
+| T3 Roundtrip | `parse(write(parse(ged)))` === `parse(ged)` — kein Delta |
+| T4 Migration | Altformat `sources[]+sourcePages{}` → `citations[]`; Felder danach gelöscht |
+| T5 Widget | `initSrcWidget` + `renderSrcTags` DOM-Snapshot; Copy/Paste-Logik |
+| T6 Edge Cases | Leere Citations, fehlende Quelle in db, NOTE mit CONT, Inline-OBJE |
+| T7 Integration | `Unsere Familie.ged` (90681 Zeilen): Citation-Count vor/nach Migration identisch; Roundtrip ohne Delta |
+| T8 GRAMPS | `gramps-parser` → `citations[]` → `gramps-writer` → parse → identisch |
+
+**T7 konkret:**
+```js
+// Vor Migration: Summe aller sources[].length über alle Personen + Familien
+// Nach Migration: Summe aller citations.length muss identisch sein
+// Dann: parse(write(parse('Unsere Familie.ged'))) — vollständige Datei, kein Delta
+```
+
+### Risiken
+
+| Risiko | Maßnahme |
+|---|---|
+| Alter IDB-Cache (Altformat) | `_migrateLegacyCitations()` läuft transparent beim Laden |
+| `sourceRefs.add()` im Parser | bleibt: `cur.sourceRefs.add(_curCit.sid)` |
+| `topSources[]` auf INDI-Ebene | separates Feld, kein Teil von Event-Citations, unverändert |
+| `_SPECIAL_OBJ`-Alias | zeigt weiter auf Event-Objekte; nur deren interne Felder ändern sich |
+| GRAMPS-Roundtrip | eigene T8-Gruppe; erst nach T3 grün anfassen |
