@@ -456,7 +456,7 @@ function _pdetLifeData(p, id) {
       : [en.prefix, en.given, en.surname, en.suffix].filter(Boolean).join(' ');
     if (enVal) html += `<div class="fact-row fact-row--clickable" data-action="showExtraNameForm" data-pid="${id}" data-enidx="${enIdx}">
       <span class="fact-lbl">${esc(enLabel)}</span>
-      <span class="fact-val">${esc(enVal)}${sourceTagsHtml(en.sources || [], en.sourcePages, en.sourceQUAY)}</span>
+      <span class="fact-val">${esc(enVal)}${citTagsHtml(en.citations || [])}</span>
     </div>`;
   });
 
@@ -465,7 +465,7 @@ function _pdetLifeData(p, id) {
 
   if (p.birth.date || p.birth.place) {
     const geoBtn = evGeoLink(p.birth.lati, p.birth.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${geoBtn}${sourceTagsHtml(p.birth.sources, p.birth.sourcePages, p.birth.sourceQUAY)}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
   const _chrGodparents = (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
   if (p.chr.date || p.chr.place || _chrGodparents.length) {
@@ -475,15 +475,15 @@ function _pdetLifeData(p, id) {
       : '';
     // Alter bei Taufe nur wenn Geburtsdatum bekannt (nicht wenn Taufe selbst der Proxy ist)
     const _chrAge = p.birth.date ? _ageAt(p.birth.date, p.chr.date) : '';
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_chrAge}${sourceTagsHtml(p.chr.sources, p.chr.sourcePages, p.chr.sourceQUAY)}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = evGeoLink(p.death.lati, p.death.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_ageAt(_refDate, p.death.date)}${geoBtn}${sourceTagsHtml(p.death.sources, p.death.sourcePages, p.death.sourceQUAY)}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_ageAt(_refDate, p.death.date)}${geoBtn}${citTagsHtml(p.death.citations || [])}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = evGeoLink(p.buri.lati, p.buri.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${sourceTagsHtml(p.buri.sources, p.buri.sourcePages, p.buri.sourceQUAY)}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${citTagsHtml(p.buri.citations || [])}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
   // Hof-Notiz-Dedup: gleicher Text + gleiche Adresse → nur beim ersten Event zeigen
@@ -522,7 +522,7 @@ function _pdetLifeData(p, id) {
         if (_noteKey) _shownAddrNotes.add(_noteKey);
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${mediaBadge}${_showEvNote ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showEvNote ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
         </div>`;
       }
     }

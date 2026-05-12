@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>F4b Citation Tests</title>
+<style>
+  body { font-family: monospace; font-size: 13px; margin: 20px; background: #1a1a1a; color: #ddd; }
+  h1 { color: #fff; font-size: 16px; }
+  h2 { color: #aaa; font-size: 13px; margin-top: 20px; border-top: 1px solid #333; padding-top: 8px; }
+  button { background: #2a6; color: #fff; border: none; padding: 8px 18px; cursor: pointer; border-radius: 3px; font-size: 13px; margin-right: 8px; }
+  button:hover { background: #3b7; }
+  .ok   { color: #4e4; }
+  .err  { color: #f55; }
+  .warn { color: #fa4; }
+  .info { color: #8bf; }
+  pre { background: #111; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 400px; font-size: 11px; line-height: 1.4; }
+  .suite { margin-top: 16px; padding: 10px; background: #111; border-radius: 4px; }
+  .suite-title { font-weight: bold; color: #8bf; margin-bottom: 6px; }
+  .pass { color: #4e4; }
+  .fail { color: #f55; }
+  .summary { margin-top: 16px; font-size: 14px; font-weight: bold; }
+  input[type=file] { color: #ccc; }
+</style>
+</head>
+<body>
+<h1>F4b — Citation Tests</h1>
+<p style="color:#777">
+  T0 Baseline (Altformat-Roundtrip) + T1–T6 Unit-Tests + T7 Integrationstest mit echter GED-Datei.
+</p>
+
+<button onclick="runAll()">Alle Tests starten</button>
+<button onclick="runT7()">T7 Integrationstest (GED-Datei)</button>
+<input type="file" id="gedFile" accept=".ged">
+
+<div id="output"></div>
+
+<script src="gedcom.js"></script>
+<script src="gedcom-parser.js"></script>
+<script src="gedcom-writer.js"></script>
+<script>
+'use strict';
+
+// ── Mini-Testrunner ──────────────────────────────────────────────────────────
+let _suiteLog = [];
+let _pass = 0, _fail = 0;
+
+function suite(name) {
+  _suiteLog.push({ type: 'suite', name });
+}
+
+function assert(label, actual, expected) {
+  const aStr = JSON.stringify(actual);
+  const eStr = JSON.stringify(expected);
+  const ok = aStr === eStr;
+  if (ok) {
+    _pass++;
+    _suiteLog.push({ type: 'pass', label });
+  } else {
+    _fail++;
+    _suiteLog.push({ type: 'fail', label, actual: aStr, expected: eStr });
+  }
+}
+
+function assertContains(label, haystack, needle) {
+  const ok = typeof haystack === 'string'
+    ? haystack.includes(needle)
+    : Array.isArray(haystack) && haystack.includes(needle);
+  if (ok) {
+    _pass++;
+    _suiteLog.push({ type: 'pass', label });
+  } else {
+    _fail++;
+    _suiteLog.push({ type: 'fail', label,
+      actual: JSON.stringify(haystack).slice(0, 200),
+      expected: `contains ${JSON.stringify(needle)}` });
+  }
+}
+
+function assertApprox(label, actual, expected) {
+  const ok = Math.abs(actual - expected) <= Math.max(1, expected * 0.001);
+  if (ok) {
+    _pass++;
+    _suiteLog.push({ type: 'pass', label });
+  } else {
+    _fail++;
+    _suiteLog.push({ type: 'fail', label, actual: String(actual), expected: String(expected) });
+  }
+}
+
+function renderResults() {
+  let html = '';
+  let curSuite = '';
+  for (const e of _suiteLog) {
+    if (e.type === 'suite') {
+      if (curSuite) html += '</div>';
+      curSuite = e.name;
+      html += `<div class="suite"><div class="suite-title">${_esc(e.name)}</div>`;
+    } else if (e.type === 'pass') {
+      html += `<div class="pass">  ✓ ${_esc(e.label)}</div>`;
+    } else {
+      html += `<div class="fail">  ✗ ${_esc(e.label)}</div>`;
+      html += `<pre class="fail">    got:      ${_esc(e.actual)}\n    expected: ${_esc(e.expected)}</pre>`;
+    }
+  }
+  if (curSuite) html += '</div>';
+  const ok = _fail === 0;
+  html += `<div class="summary ${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${_pass} bestanden, ${_fail} fehlgeschlagen</div>`;
+  document.getElementById('output').innerHTML = html;
+}
+
+function _esc(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── Test-Hilfsfunktionen ─────────────────────────────────────────────────────
+
+function _writeWith(parsedDb) {
+  const prev = AppState.db;
+  AppState.db = parsedDb;
+  let result;
+  try { result = writeGEDCOM(); } finally { AppState.db = prev; }
+  return result;
+}
+
+function _countCitations(db) {
+  let n = 0;
+  for (const p of Object.values(db.individuals || {})) {
+    // citations[] (neues Format)
+    if (p.birth?.citations)  n += p.birth.citations.length;
+    if (p.death?.citations)  n += p.death.citations.length;
+    if (p.chr?.citations)    n += p.chr.citations.length;
+    if (p.buri?.citations)   n += p.buri.citations.length;
+    (p.events || []).forEach(ev => { if (ev.citations) n += ev.citations.length; });
+    // sources[] (altes Format)
+    if (p.birth?.sources)  n += p.birth.sources.length;
+    if (p.death?.sources)  n += p.death.sources.length;
+    if (p.chr?.sources)    n += p.chr.sources.length;
+    if (p.buri?.sources)   n += p.buri.sources.length;
+    (p.events || []).forEach(ev => { if (ev.sources) n += ev.sources.length; });
+  }
+  for (const f of Object.values(db.families || {})) {
+    if (f.marr?.citations)  n += f.marr.citations.length;
+    if (f.engag?.citations) n += f.engag.citations.length;
+    if (f.div?.citations)   n += f.div.citations.length;
+    if (f.divf?.citations)  n += f.divf.citations.length;
+    (f.events || []).forEach(ev => { if (ev.citations) n += ev.citations.length; });
+    if (f.marr?.sources)  n += f.marr.sources.length;
+    if (f.engag?.sources) n += f.engag.sources.length;
+    if (f.div?.sources)   n += f.div.sources.length;
+    if (f.divf?.sources)  n += f.divf.sources.length;
+    (f.events || []).forEach(ev => { if (ev.sources) n += ev.sources.length; });
+  }
+  return n;
+}
+
+function _countSourLines(text) {
+  return text.split('\n').filter(l => / SOUR @/.test(l)).length;
+}
+
+// ── T0: Baseline — Roundtrip mit Altformat ───────────────────────────────────
+function runT0() {
+  suite('T0 Baseline — Altformat-Roundtrip (Mini-GED)');
+
+  const MINI = `0 HEAD
+1 SOUR Test
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Johann /Müller/
+2 GIVN Johann
+2 SURN Müller
+1 BIRT
+2 DATE 15 MAR 1850
+2 PLAC Köln
+2 SOUR @S1@
+3 PAGE S. 12
+3 QUAY 2
+1 DEAT
+2 DATE 3 JUN 1920
+2 SOUR @S2@
+3 PAGE Bd. 3
+0 @S1@ SOUR
+1 TITL Kirchenbuch Köln
+1 ABBR KB Köln
+0 @S2@ SOUR
+1 TITL Sterbematrikel
+0 TRLR`;
+
+  const db1 = parseGEDCOM(MINI);
+  const text1 = _writeWith(db1);
+  const db2 = parseGEDCOM(text1);
+  const text2 = _writeWith(db2);
+
+  assert('Roundtrip: text1 === text2', text1, text2);
+
+  const p = Object.values(db1.individuals)[0];
+
+  // Prüfe je nach Datenmodell (alt oder neu)
+  if (p?.birth?.citations) {
+    // Neues Format
+    assert('BIRT hat 1 citation', p.birth.citations.length, 1);
+    assert('BIRT citation sid', p.birth.citations[0].sid, '@S1@');
+    assert('BIRT citation page', p.birth.citations[0].page, 'S. 12');
+    assert('BIRT citation quay', p.birth.citations[0].quay, '2');
+  } else {
+    // Altes Format
+    assert('BIRT hat 1 source (Altformat)', (p?.birth?.sources || []).length, 1);
+    assert('BIRT source id', (p?.birth?.sources || [])[0], '@S1@');
+    assert('BIRT page', p?.birth?.sourcePages?.['@S1@'], 'S. 12');
+    assert('BIRT quay', p?.birth?.sourceQUAY?.['@S1@'], '2');
+  }
+}
+
+// ── T1: Parser erzeugt citations[] ───────────────────────────────────────────
+function runT1() {
+  suite('T1 Parser — GEDCOM → citations[]');
+
+  const GED = `0 HEAD
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Anna /Schmidt/
+1 BIRT
+2 DATE 1 JAN 1880
+2 SOUR @S1@
+3 PAGE S. 12
+3 QUAY 2
+2 SOUR @S1@
+3 PAGE S. 87
+3 QUAY 2
+2 SOUR @S2@
+3 PAGE col. 3
+0 @I2@ INDI
+1 NAME Karl /Braun/
+1 OCCU Bauer
+2 SOUR @S1@
+3 PAGE Reg. 45
+0 @S1@ SOUR
+1 TITL Kirchenbuch
+0 @S2@ SOUR
+1 TITL Standesamt
+0 TRLR`;
+
+  const db = parseGEDCOM(GED);
+  const p = db.individuals['@I1@'];
+
+  if (!p?.birth?.citations) {
+    _suiteLog.push({ type: 'fail', label: 'citations[] vorhanden — ÜBERSPRUNGEN (Parser noch nicht umgebaut)',
+      actual: 'undefined', expected: 'Array' });
+    _fail++;
+    return;
+  }
+
+  assert('BIRT: 3 citations', p.birth.citations.length, 3);
+  assert('cit[0].sid', p.birth.citations[0].sid, '@S1@');
+  assert('cit[0].page', p.birth.citations[0].page, 'S. 12');
+  assert('cit[0].quay', p.birth.citations[0].quay, '2');
+  assert('cit[1].sid = @S1@ (Mehrfach!)', p.birth.citations[1].sid, '@S1@');
+  assert('cit[1].page', p.birth.citations[1].page, 'S. 87');
+  assert('cit[2].sid', p.birth.citations[2].sid, '@S2@');
+  assert('cit[2].page', p.birth.citations[2].page, 'col. 3');
+
+  // sourceRefs muss beide enthalten
+  assert('@S1@ in sourceRefs', p.sourceRefs.has('@S1@'), true);
+  assert('@S2@ in sourceRefs', p.sourceRefs.has('@S2@'), true);
+
+  // Event citations
+  const p2 = db.individuals['@I2@'];
+  const ev = p2?.events?.[0];
+  assert('OCCU hat citations[]', Array.isArray(ev?.citations), true);
+  assert('OCCU cit[0].sid', ev?.citations?.[0]?.sid, '@S1@');
+  assert('OCCU cit[0].page', ev?.citations?.[0]?.page, 'Reg. 45');
+}
+
+// ── T2: Writer erzeugt korrektes GEDCOM aus citations[] ──────────────────────
+function runT2() {
+  suite('T2 Writer — citations[] → GEDCOM-Zeilen');
+
+  const GED = `0 HEAD
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Test /Person/
+1 BIRT
+2 DATE 1900
+2 SOUR @S1@
+3 PAGE S. 1
+3 QUAY 1
+2 SOUR @S1@
+3 PAGE S. 99
+2 SOUR @S2@
+0 @S1@ SOUR
+1 TITL Quelle A
+0 @S2@ SOUR
+1 TITL Quelle B
+0 TRLR`;
+
+  const db = parseGEDCOM(GED);
+  const text = _writeWith(db);
+  const lines = text.split(/\r?\n/);
+
+  // Prüfe ob alle 3 SOUR-Blöcke vorhanden sind
+  const sourLines = lines.filter(l => /^2 SOUR @/.test(l));
+  assert('3× "2 SOUR @" Zeilen', sourLines.length, 3);
+
+  // Beide S1-Blöcke da?
+  const s1lines = sourLines.filter(l => l.includes('@S1@'));
+  assert('2× @S1@ (Mehrfachzitierung)', s1lines.length, 2);
+
+  // PAGE-Zeilen
+  const pageLines = lines.filter(l => /^3 PAGE /.test(l));
+  assert('2× PAGE (S2 hat keine)', pageLines.length, 2);
+  assertContains('PAGE S. 1 vorhanden', pageLines, '3 PAGE S. 1');
+  assertContains('PAGE S. 99 vorhanden', pageLines, '3 PAGE S. 99');
+
+  // QUAY nur für erste S1-Zitierung
+  const quayLines = lines.filter(l => /^3 QUAY /.test(l));
+  assert('1× QUAY', quayLines.length, 1);
+}
+
+// ── T3: Roundtrip parse→write→parse→write ────────────────────────────────────
+function runT3() {
+  suite('T3 Roundtrip — parse→write→parse→write idempotent');
+
+  const GED = `0 HEAD
+1 SOUR TestApp
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Hans /Wagner/
+2 GIVN Hans
+2 SURN Wagner
+1 BIRT
+2 DATE 5 MAY 1870
+2 PLAC München
+2 SOUR @S1@
+3 PAGE S. 3
+3 QUAY 2
+2 SOUR @S1@
+3 PAGE S. 44
+1 DEAT Y
+2 DATE 1945
+2 SOUR @S2@
+1 OCCU Lehrer
+2 DATE 1900
+2 SOUR @S1@
+3 PAGE Reg. 7
+0 @F1@ FAM
+1 HUSB @I1@
+1 MARR
+2 DATE 10 JUN 1895
+2 PLAC Berlin
+2 SOUR @S2@
+3 PAGE S. 100
+0 @S1@ SOUR
+1 TITL Kirchenbuch München
+1 ABBR KB Mün
+0 @S2@ SOUR
+1 TITL Standesamt Berlin
+0 TRLR`;
+
+  const db1 = parseGEDCOM(GED);
+  const text1 = _writeWith(db1);
+  const db2 = parseGEDCOM(text1);
+  const text2 = _writeWith(db2);
+
+  assert('Roundtrip text1 === text2', text1, text2);
+
+  // SOUR-Zeilenanzahl muss erhalten bleiben
+  const sourCount = _countSourLines(GED.split('\r\n').join('\n'));
+  const sourCount1 = _countSourLines(text1);
+  assert(`SOUR-Zeilen erhalten (${sourCount})`, sourCount1, sourCount);
+}
+
+// ── T4: Migration Altformat → citations[] ────────────────────────────────────
+function runT4() {
+  suite('T4 Migration — Altformat sources[]+sourcePages{} → citations[]');
+
+  if (typeof _migrateLegacyCitations !== 'function') {
+    _suiteLog.push({ type: 'fail', label: '_migrateLegacyCitations() vorhanden',
+      actual: 'undefined', expected: 'function' });
+    _fail++;
+    return;
+  }
+
+  const legacyEvent = {
+    sources:     ['@S1@', '@S2@'],
+    sourcePages: { '@S1@': 'S. 5', '@S2@': '' },
+    sourceQUAY:  { '@S1@': '3' },
+    sourceNote:  { '@S2@': 'Hinweis' },
+    sourceExtra: { '@S2@': ['3 DATA foo'] },
+    sourceMedia: {}
+  };
+
+  _migrateLegacyCitations(legacyEvent);
+
+  assert('citations[] vorhanden', Array.isArray(legacyEvent.citations), true);
+  assert('Länge 2', legacyEvent.citations.length, 2);
+  assert('S1 sid', legacyEvent.citations[0].sid, '@S1@');
+  assert('S1 page', legacyEvent.citations[0].page, 'S. 5');
+  assert('S1 quay', legacyEvent.citations[0].quay, '3');
+  assert('S2 sid', legacyEvent.citations[1].sid, '@S2@');
+  assert('S2 note', legacyEvent.citations[1].note, 'Hinweis');
+  assert('S2 extra', legacyEvent.citations[1].extra, ['3 DATA foo']);
+  assert('sources gelöscht', legacyEvent.sources, undefined);
+  assert('sourcePages gelöscht', legacyEvent.sourcePages, undefined);
+  assert('sourceQUAY gelöscht', legacyEvent.sourceQUAY, undefined);
+
+  // Idempotenz: zweiter Aufruf auf konvertiertem Objekt ändert nichts
+  _migrateLegacyCitations(legacyEvent);
+  assert('Idempotenz: citations.length bleibt 2', legacyEvent.citations.length, 2);
+
+  // Leeres Objekt (kein sources[])
+  const empty = { date: '1900', place: '' };
+  _migrateLegacyCitations(empty);
+  assert('kein sources[] → keine citations[]', empty.citations, undefined);
+}
+
+// ── T5: citationObj() Factory ────────────────────────────────────────────────
+function runT5() {
+  suite('T5 citationObj() Factory');
+
+  if (typeof citationObj !== 'function') {
+    _suiteLog.push({ type: 'fail', label: 'citationObj() vorhanden',
+      actual: 'undefined', expected: 'function' });
+    _fail++;
+    return;
+  }
+
+  const c1 = citationObj('@S1@', 'S. 5', '2', 'Notiz', ['3 DATA x'], []);
+  assert('sid', c1.sid, '@S1@');
+  assert('page', c1.page, 'S. 5');
+  assert('quay', c1.quay, '2');
+  assert('note', c1.note, 'Notiz');
+  assert('extra', c1.extra, ['3 DATA x']);
+  assert('media', c1.media, []);
+
+  // Defaults
+  const c2 = citationObj('@S2@');
+  assert('default page', c2.page, '');
+  assert('default quay', c2.quay, '');
+  assert('default note', c2.note, null);
+  assert('default extra', c2.extra, []);
+  assert('default media', c2.media, []);
+
+  // extra ist Kopie (kein Alias)
+  const orig = ['3 DATA y'];
+  const c3 = citationObj('@S3@', '', '', '', orig, []);
+  orig.push('mehr');
+  assert('extra ist Kopie', c3.extra, ['3 DATA y']);
+}
+
+// ── T6: Edge Cases ───────────────────────────────────────────────────────────
+function runT6() {
+  suite('T6 Edge Cases');
+
+  // Kein SOUR → kein citations/sources in Output
+  const GED_NOSOUR = `0 HEAD
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Leer /Test/
+1 BIRT
+2 DATE 1900
+0 TRLR`;
+
+  const db = parseGEDCOM(GED_NOSOUR);
+  const text = _writeWith(db);
+  assert('kein SOUR in Output', _countSourLines(text), 0);
+
+  const p = Object.values(db.individuals)[0];
+  const cits = p?.birth?.citations ?? p?.birth?.sources ?? [];
+  assert('birth: keine citations/sources', cits.length, 0);
+
+  // sourceRefs: Mehrfachzitierung derselben Quelle → sourceRefs enthält sie einmal
+  const GED_MULTI = `0 HEAD
+1 GEDC
+2 VERS 5.5.1
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Multi /Test/
+1 BIRT
+2 SOUR @S1@
+3 PAGE S. 1
+2 SOUR @S1@
+3 PAGE S. 2
+0 @S1@ SOUR
+1 TITL Test
+0 TRLR`;
+
+  const db2 = parseGEDCOM(GED_MULTI);
+  const p2 = Object.values(db2.individuals)[0];
+  assert('sourceRefs enthält @S1@ (genau einmal im Set)', p2.sourceRefs.has('@S1@'), true);
+  assert('sourceRefs.size = 1', p2.sourceRefs.size, 1);
+
+  // Roundtrip bei Mehrfachzitierung gleicher Quelle
+  const text2a = _writeWith(db2);
+  const text2b = _writeWith(parseGEDCOM(text2a));
+  assert('Mehrfach-Roundtrip idempotent', text2a, text2b);
+  const s1count = text2a.split('\n').filter(l => /^2 SOUR @S1@/.test(l)).length;
+  assert('Beide @S1@-Zitierungen im Output', s1count, 2);
+}
+
+// ── T7: Integrationstest mit echter GED-Datei ────────────────────────────────
+async function runT7() {
+  const fi = document.getElementById('gedFile');
+  const out = document.getElementById('output');
+
+  if (!fi.files.length) {
+    out.innerHTML = '<p class="warn">T7: Bitte zuerst eine GED-Datei auswählen.</p>';
+    return;
+  }
+
+  out.innerHTML = '<p class="info">T7: Lade Datei …</p>';
+
+  try {
+    const text0 = await fi.files[0].text();
+    out.innerHTML = '<p class="info">T7: Parse Pass 1 …</p>';
+
+    const t0 = performance.now();
+    const db1 = parseGEDCOM(text0);
+    const tP1 = (performance.now() - t0).toFixed(0);
+
+    const citCount1 = _countCitations(db1);
+    const sourCount0 = _countSourLines(text0);
+
+    out.innerHTML = `<p class="info">T7: Write Pass 1 … (${tP1} ms Parse, ${citCount1} Zitierungen)</p>`;
+
+    const t1 = performance.now();
+    const text1 = _writeWith(db1);
+    const tW1 = (performance.now() - t1).toFixed(0);
+
+    out.innerHTML = '<p class="info">T7: Parse Pass 2 …</p>';
+    const db2 = parseGEDCOM(text1);
+    const text2 = _writeWith(db2);
+
+    const citCount2 = _countCitations(db2);
+    const sourCount1 = _countSourLines(text1);
+    const sourCount2 = _countSourLines(text2);
+
+    // Diff
+    const lines1 = text1.split('\n');
+    const lines2 = text2.split('\n');
+    const diffs = [];
+    const len = Math.max(lines1.length, lines2.length);
+    for (let i = 0; i < len && diffs.length < 50; i++) {
+      if (lines1[i] !== lines2[i])
+        diffs.push({ ln: i+1, a: lines1[i] ?? '', b: lines2[i] ?? '' });
+    }
+
+    _suiteLog = []; _pass = 0; _fail = 0;
+    suite(`T7 Integration — ${fi.files[0].name}`);
+
+    assert('Roundtrip idempotent (text1 === text2)', text1, text2);
+    assertApprox('SOUR-Zeilen text0 ≈ text1', sourCount1, sourCount0);
+    assertApprox('SOUR-Zeilen text1 ≈ text2', sourCount2, sourCount1);
+    assert('Zitierungen Pass1 === Pass2', citCount1, citCount2);
+
+    _suiteLog.push({ type: 'suite', name: 'T7 Statistiken' });
+    _pass++; // Statistik-Suite zählt nicht als Fehler
+    _suiteLog.push({ type: 'pass',
+      label: `Personen: ${Object.keys(db1.individuals).length} | Familien: ${Object.keys(db1.families).length} | SOUR-Ref orig: ${sourCount0} → text1: ${sourCount1} | Zitierungen: ${citCount1}` });
+
+    if (diffs.length > 0) {
+      _suiteLog.push({ type: 'fail', label: `${diffs.length} Diff-Zeilen`,
+        actual: diffs.slice(0,3).map(d => `[${d.ln}] ${d.a} → ${d.b}`).join('\n'),
+        expected: '' });
+    }
+
+    renderResults();
+  } catch (err) {
+    document.getElementById('output').innerHTML =
+      `<p class="err">Fehler: ${_esc(String(err))}</p><pre>${_esc(err.stack||'')}</pre>`;
+  }
+}
+
+// ── Alle Unit-Tests ──────────────────────────────────────────────────────────
+function runAll() {
+  _suiteLog = []; _pass = 0; _fail = 0;
+  runT0();
+  runT5();
+  runT4();
+  runT1();
+  runT2();
+  runT3();
+  runT6();
+  renderResults();
+}
+
+window.addEventListener('error', e => {
+  document.getElementById('output').innerHTML =
+    `<p class="err">JS-Fehler: ${_esc(e.message)} (${_esc(e.filename)}:${e.lineno})</p>`;
+});
+</script>
+</body>
+</html>

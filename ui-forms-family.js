@@ -25,7 +25,7 @@ function showFamilyForm(id, ctx) {
   document.getElementById('ff-mplace').value = f?.marr?.place  || '';
   document.getElementById('ff-note').value = f?.noteTexts?.join('\n') ?? '';
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
-  initSrcWidget('ff', f?.marr?.sources || [], f?.marr?.sourcePages || {}, f?.marr?.sourceQUAY || {});
+  initSrcWidget('ff', f?.marr?.citations || []);
 
   _renderMediaList('ff', f?.media || []);
   document.getElementById('ff-media-add-file').value = '';
@@ -58,9 +58,7 @@ function saveFamily() {
     ...existingFam,
     id, husb, wife, children,
     marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,
-      sources:     [...(srcWidgetState['ff']?.ids   || [])],
-      sourcePages: { ...(srcWidgetState['ff']?.pages || {}) },
-      sourceQUAY:  { ...(srcWidgetState['ff']?.quay  || {}) }
+      citations: [...(srcWidgetState['ff']?.citations || [])]
     },
     engag: existingFam.engag || {},
     div:   existingFam.div   || {},
@@ -96,7 +94,7 @@ function saveFamily() {
   for (const cid of children) {
     const cPerson = getPerson(cid);
     if (cPerson && !cPerson.famc.some(f => famcId(f) === id))
-      cPerson.famc.push(savedFamc[cid] || { famId: id, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], sourIds:[], sourPages:{}, sourQUAY:{}, sourExtra:{} });
+      cPerson.famc.push(savedFamc[cid] || { famId: id, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], citations:[] });
   }
 
   closeModal('modalFamily');

@@ -186,7 +186,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-place').value = obj.place || '';
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
     document.getElementById('ef-note').value  = obj.note || '';
-    initSrcWidget('ef', obj.sources || [], obj.sourcePages || {}, obj.sourceQUAY || {});
+    initSrcWidget('ef', obj.citations || []);
     // Taufpaten laden
     _efGodparents = evIdx === 'CHR'
       ? (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref).map(a => a.xref)
@@ -207,7 +207,7 @@ function showEventForm(personId, evIdx) {
     document.getElementById('ef-cause').value = '';
     document.getElementById('ef-addr').value  = ev?.addr  || '';
     document.getElementById('ef-note').value  = ev?.note  || '';
-    initSrcWidget('ef', ev?.sources || [], ev?.sourcePages || {}, ev?.sourceQUAY || {});
+    initSrcWidget('ef', ev?.citations || []);
     _efMedia = (ev?.media || []).map(m => ({...m}));
     _renderEfMedia();
     document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
@@ -231,9 +231,7 @@ function _buildClipboardFromForm() {
     place:       getPlaceFromForm('ef-place'),
     addr:        document.getElementById('ef-addr').value.trim(),
     note:        document.getElementById('ef-note').value.trim(),
-    sources:     [...(srcWidgetState['ef']?.ids   || [])],
-    sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
-    sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) },
+    citations:   (srcWidgetState['ef']?.citations || []).map(c => ({...c})),
     media:       _efMedia.filter(m => m.file || m.title).map(m => ({...m})),
   };
 }
@@ -257,13 +255,11 @@ function applyClipboardEventToPerson(pid) {
   const p = AppState.db.individuals[pid];
   if (!p) return;
   const ev = { ...cb,
-    sources:     [...cb.sources],
-    sourcePages: { ...cb.sourcePages },
-    sourceQUAY:  { ...cb.sourceQUAY },
+    citations:   cb.citations.map(c => ({...c})),
     media:       cb.media.map(m => ({...m})),
   };
   p.events.push(ev);
-  if (ev.sources.length) _rebuildPersonSourceRefs(p);
+  if (ev.citations.length) _rebuildPersonSourceRefs(p);
   markChanged();
   showToast('Ereignis übernommen');
   if (AppState.currentPersonId === pid) showDetail(pid);
@@ -275,15 +271,7 @@ function saveEvent() {
   if (!p) return;
   const type = document.getElementById('ef-type').value;
 
-  // P4: Lazy rebuild — alte Quellen vor dem Überschreiben sichern
   const _efEvIdxRaw = document.getElementById('ef-evidx').value;
-  const _efEvIdx    = _efEvIdxRaw !== '' ? parseInt(_efEvIdxRaw) : null;
-  const _oldEvSrc   = type in _SPECIAL_OBJ
-    ? (p[_SPECIAL_OBJ[type]]?.sources || [])
-    : (_efEvIdx !== null ? (p.events[_efEvIdx]?.sources || []) : []);
-  const _newSrcIds  = srcWidgetState['ef']?.ids || [];
-  const _srcChanged = _oldEvSrc.length !== _newSrcIds.length
-    || _oldEvSrc.some((s, i) => s !== _newSrcIds[i]);
 
   // Datum-Validierung
   const qual = document.getElementById('ef-date-qual')?.value || '';
@@ -309,10 +297,8 @@ function saveEvent() {
       date:        buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
       place,
       ..._geoFromPlace(place),
-      note:        document.getElementById('ef-note').value.trim(),
-      sources:     [...(srcWidgetState['ef']?.ids   || [])],
-      sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
-      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) }
+      note:      document.getElementById('ef-note').value.trim(),
+      citations: [...(srcWidgetState['ef']?.citations || [])],
     };
     if (type === 'DEAT') p[key].cause = document.getElementById('ef-cause').value.trim();
     // Taufpaten: non-Godparent-Assoziationen behalten, Godparent-Einträge neu setzen
@@ -324,7 +310,7 @@ function saveEvent() {
         ...p.associations.filter(a => a.rela !== 'Godparent'),
         ...(_efGodparents || []).map(xref => ({
           xref, _grampsHlink: null, rela: 'Godparent',
-          note: '', sources: [], sourcePages: {}, sourceQUAY: {}
+          note: '', citations: []
         }))
       ];
       // Reziproke Godchild-Einträge synchronisieren
@@ -339,7 +325,7 @@ function saveEvent() {
         if (!gp.associations) gp.associations = [];
         if (!gp.associations.some(a => a.rela === 'Godchild' && a.xref === pid)) {
           gp.associations.push({ xref: pid, _grampsHlink: null, rela: 'Godchild',
-            note: '', sources: [], sourcePages: {}, sourceQUAY: {} });
+            note: '', citations: [] });
         }
       }
     }
@@ -354,12 +340,10 @@ function saveEvent() {
       place,
       addr:       document.getElementById('ef-addr').value.trim(),
       eventType:  (t => { _registerEventType(type, t); return t; })(document.getElementById('ef-etype').value.trim()),
-      note:       document.getElementById('ef-note').value.trim(),
+      note:      document.getElementById('ef-note').value.trim(),
       ..._geoFromPlace(place),
-      sources:    [...(srcWidgetState['ef']?.ids   || [])],
-      sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
-      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) },
-      media:      _efMedia.filter(m => m.file || m.title).map(m => ({...m}))
+      citations: [...(srcWidgetState['ef']?.citations || [])],
+      media:     _efMedia.filter(m => m.file || m.title).map(m => ({...m}))
     };
     if (evIdx !== null && p.events[evIdx]) {
       p.events[evIdx] = ev;
@@ -368,7 +352,7 @@ function saveEvent() {
     }
   }
 
-  if (_srcChanged) _rebuildPersonSourceRefs(p);
+  _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged();
   showToast('✓ Ereignis gespeichert');
@@ -382,7 +366,7 @@ function deleteEvent() {
   const evIdx = parseInt(evIdxRaw);
   const p = AppState.db.individuals[pid];
   if (!p?.events) return;
-  const _deletedHadSrc = (p.events[evIdx]?.sources?.length ?? 0) > 0;
+  const _deletedHadSrc = (p.events[evIdx]?.citations?.length ?? 0) > 0;
   p.events.splice(evIdx, 1);
   if (_deletedHadSrc) _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
@@ -423,7 +407,7 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     fillDateFields('fev-date-qual', 'fev-date', null, '');
     document.getElementById('fev-place').value = '';
     document.getElementById('fev-note').value  = '';
-    initSrcWidget('fev', [], {}, {});
+    initSrcWidget('fev', []);
     document.getElementById('famEventFormTitle').textContent = 'Ereignis hinzufügen';
     document.getElementById('saveFamEventBtn').textContent   = 'Hinzufügen';
     document.getElementById('deleteFamEventBtn').style.display = 'none';
@@ -437,7 +421,7 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
     document.getElementById('fev-place').value = ev.place || '';
     document.getElementById('fev-note').value  = ev.note  || '';
-    initSrcWidget('fev', ev.sources || [], ev.sourcePages || {}, ev.sourceQUAY || {});
+    initSrcWidget('fev', ev.citations || []);
     document.getElementById('famEventFormTitle').textContent = 'Ereignis bearbeiten';
     document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
     document.getElementById('deleteFamEventBtn').style.display = '';
@@ -450,7 +434,7 @@ function showFamEventForm(famId, evKey, evIdxRaw) {
     fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
     document.getElementById('fev-place').value = ev.place || '';
     document.getElementById('fev-note').value  = ev.note  || '';
-    initSrcWidget('fev', ev.sources || [], ev.sourcePages || {}, ev.sourceQUAY || {});
+    initSrcWidget('fev', ev.citations || []);
     document.getElementById('famEventFormTitle').textContent = (_FAM_EV_LABELS[evKey] || evKey) + ' bearbeiten';
     document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
     document.getElementById('deleteFamEventBtn').style.display = (ev.date || ev.place || ev.seen) ? '' : 'none';
@@ -471,9 +455,7 @@ function saveFamEvent() {
   const note  = document.getElementById('fev-note').value.trim();
   const etype = document.getElementById('fev-etype').value.trim();
   _registerEventType(type, etype);
-  const sources     = [...(srcWidgetState['fev']?.ids   || [])];
-  const sourcePages = { ...(srcWidgetState['fev']?.pages || {}) };
-  const sourceQUAY  = { ...(srcWidgetState['fev']?.quay  || {}) };
+  const citations = [...(srcWidgetState['fev']?.citations || [])];
 
   if (evKey === 'ev') {
     // Generisches Ereignis bearbeiten
@@ -481,7 +463,7 @@ function saveFamEvent() {
     const ev = {
       ...((evIdx !== null ? (f.events || [])[evIdx] : null) || {}),
       type, eventType: etype, value: '',
-      date, place, note, sources, sourcePages, sourceQUAY
+      date, place, note, citations
     };
     if (evIdx !== null && (f.events || [])[evIdx]) {
       f.events[evIdx] = ev;
@@ -495,22 +477,21 @@ function saveFamEvent() {
     if (targetKey) {
       f[targetKey] = {
         ...(f[targetKey] || {}),
-        date, place, note, seen: !!(date || place), sources, sourcePages, sourceQUAY
+        date, place, note, seen: !!(date || place), citations
       };
     } else {
       // Generisches Ereignis (EVEN) → f.events[]
       f.events = f.events || [];
       f.events.push({
         type, eventType: etype, value: '', date, place, note,
-        sources, sourcePages, sourceQUAY,
-        lati: null, long: null, _extra: []
+        citations, lati: null, long: null, _extra: []
       });
     }
   } else {
     // Bestehendes Sonderereignis
     f[evKey] = {
       ...(f[evKey] || {}),
-      date, place, note, seen: !!(date || place), sources, sourcePages, sourceQUAY
+      date, place, note, seen: !!(date || place), citations
     };
   }
   _rebuildFamilySourceRefs(f);
@@ -530,7 +511,7 @@ function deleteFamEvent() {
     const evIdx = parseInt(evIdxRaw);
     if (!isNaN(evIdx)) f.events.splice(evIdx, 1);
   } else {
-    f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, sources: [], sourcePages: {}, sourceQUAY: {} };
+    f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, citations: [] };
   }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');

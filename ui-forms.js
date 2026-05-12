@@ -1,26 +1,28 @@
 // ─────────────────────────────────────
 //  SOURCE WIDGET
-//  srcWidgetState[prefix] = { ids: Set, pages: {sid:page}, quay: {sid:quay} }
-//  Gespeichert in UIState._formState.srcWidget (shimmiert als srcWidgetState)
+//  srcWidgetState[prefix] = { mode:'new', citations:[{sid,page,quay,...}] }
 // ─────────────────────────────────────
+const srcWidgetState = {};
 
-function updateSrcPage(prefix, sid, value) {
-  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
-  srcWidgetState[prefix].pages[sid] = value;
+function updateSrcPage(prefix, citIdx, value) {
+  const s = srcWidgetState[prefix];
+  const i = +citIdx;
+  if (s?.citations[i]) s.citations[i].page = value;
 }
 
-function updateSrcQuay(prefix, sid, value) {
-  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
-  srcWidgetState[prefix].quay[sid] = value;
+function updateSrcQuay(prefix, citIdx, value) {
+  const s = srcWidgetState[prefix];
+  const i = +citIdx;
+  if (s?.citations[i]) s.citations[i].quay = value;
 }
 
-function initSrcWidget(prefix, selectedIds, pageMap, quayMap) {
-  const ids = selectedIds instanceof Set ? [...selectedIds] : (Array.isArray(selectedIds) ? selectedIds : []);
-  srcWidgetState[prefix] = {
-    ids:   new Set(ids),
-    pages: pageMap ? { ...pageMap } : {},
-    quay:  quayMap ? { ...quayMap } : {}
-  };
+function initSrcWidget(prefix, citationsOrIds) {
+  const arr = Array.isArray(citationsOrIds) ? citationsOrIds : [];
+  srcWidgetState[prefix] = { mode:'new', citations: arr.map(c =>
+    (c && typeof c === 'object' && 'sid' in c)
+      ? { ...c, extra: [...(c.extra||[])], media: [...(c.media||[])] }
+      : citationObj(String(c))
+  )};
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
   document.getElementById(prefix + '-src-picker').classList.remove('open');
@@ -28,35 +30,36 @@ function initSrcWidget(prefix, selectedIds, pageMap, quayMap) {
 
 function renderSrcTags(prefix) {
   const container = document.getElementById(prefix + '-src-tags');
-  const selected = srcWidgetState[prefix]?.ids || new Set();
-  if (!selected.size) {
+  const s = srcWidgetState[prefix];
+  if (!s) return;
+
+  const cits = s.citations;
+  if (!cits.length) {
     const pasteBtn = UIState._citClipboard
       ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
       : '';
     container.innerHTML = `<span class="fs-08 c-muted italic">Keine Quellen zugewiesen</span>${pasteBtn}`;
     return;
   }
-  const pages = srcWidgetState[prefix]?.pages || {};
-  const quays = srcWidgetState[prefix]?.quay  || {};
-  const tags = [...selected].map(sid => {
-    const s = AppState.db.sources[sid];
-    const label = s ? (s.abbr || s.title || sid) : sid;
-    const pageVal = pages[sid] || '';
-    const quayVal = String(quays[sid] ?? '');
-    const sidEsc = sid.replace(/'/g,"\\'").replace(/"/g,'&quot;');
-    const pageField = `<input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
-           data-input="updateSrcPage" data-prefix="${prefix}" data-sid="${sidEsc}">`;
-    const quayField = `<select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-sid="${sidEsc}"
-           <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
-           <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
-           <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
-           <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
-           <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
-         </select>`;
+  const tags = cits.map((c, idx) => {
+    const src = AppState.db.sources[c.sid];
+    const label = src ? (src.abbr || src.title || c.sid) : c.sid;
+    const pageVal = c.page || '';
+    const quayVal = String(c.quay ?? '');
     return `<span class="src-tag">
       ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
-      ${pageField}${quayField}
-      <button type="button" class="src-tag-x" data-action="removeSrc" data-prefix="${prefix}" data-sid="${sid}" aria-label="Quelle entfernen">✕</button>
+      <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
+        data-input="updateSrcPage" data-prefix="${prefix}" data-citidx="${idx}">
+      <select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-citidx="${idx}"
+        style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
+        <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
+        <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
+        <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
+        <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
+        <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
+      </select>
+      <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-citidx="${idx}"
+        style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
     </span>`;
   }).join('');
   const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">Kopieren</button>`;
@@ -68,17 +71,16 @@ function renderSrcTags(prefix) {
 
 function renderSrcPicker(prefix) {
   const list = document.getElementById(prefix + '-src-list');
-  const selected = srcWidgetState[prefix]?.ids || new Set();
+  const s = srcWidgetState[prefix];
   const srcs = Object.values(AppState.db.sources).sort((a,b) => (a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'));
-  if (!srcs.length) {
-    list.innerHTML = '<div class="src-picker-empty">Noch keine Quellen vorhanden</div>';
-    return;
-  }
-  list.innerHTML = srcs.map(s => {
-    const label = s.abbr || s.title || s.id;
-    const isSel = selected.has(s.id);
-    return `<div class="src-picker-item ${isSel ? 'selected' : ''}" data-action="toggleSrc" data-prefix="${prefix}" data-sid="${s.id}">
-      ${isSel ? '✓ ' : ''}${esc(label)}
+  if (!srcs.length) { list.innerHTML = '<div class="src-picker-empty">Noch keine Quellen vorhanden</div>'; return; }
+  const counts = {};
+  for (const c of (s?.citations || [])) counts[c.sid] = (counts[c.sid] || 0) + 1;
+  list.innerHTML = srcs.map(src => {
+    const label = src.abbr || src.title || src.id;
+    const cnt = counts[src.id] || 0;
+    return `<div class="src-picker-item" data-action="addSrc" data-prefix="${prefix}" data-sid="${src.id}">
+      + ${esc(label)}${cnt ? `<span style="font-size:0.75rem;opacity:0.6;margin-left:4px">(${cnt}×)</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -89,47 +91,42 @@ function toggleSrcPicker(prefix) {
   if (picker.classList.contains('open')) renderSrcPicker(prefix);
 }
 
-function toggleSrc(prefix, sid) {
-  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
-  const set = srcWidgetState[prefix].ids;
-  if (set.has(sid)) set.delete(sid); else set.add(sid);
+function addSrc(prefix, sid) {
+  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { mode:'new', citations: [] };
+  srcWidgetState[prefix].citations.push(citationObj(sid));
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
 }
 
-function removeSrc(prefix, sid) {
-  srcWidgetState[prefix]?.ids.delete(sid);
+function removeSrc(prefix, citIdx) {
+  const s = srcWidgetState[prefix];
+  if (!s) return;
+  const i = parseInt(citIdx);
+  if (!isNaN(i)) s.citations.splice(i, 1);
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
 }
 
 function copyCitations(prefix) {
   const w = srcWidgetState[prefix];
-  if (!w?.ids?.size) return;
-  UIState._citClipboard = {
-    sources: [...w.ids],
-    pages:   { ...w.pages },
-    quay:    { ...w.quay  }
-  };
-  const n = UIState._citClipboard.sources.length;
+  if (!w?.citations?.length) return;
+  UIState._citClipboard = w.citations.map(c => ({ ...c, extra: [...(c.extra||[])], media: [...(c.media||[])] }));
+  const n = UIState._citClipboard.length;
   showToast(`${n} Quellenbezug${n !== 1 ? 'e' : ''} kopiert`, 'success');
-  // Alle offenen Widgets refreshen damit Einfügen-Button erscheint
   for (const p of Object.keys(srcWidgetState)) renderSrcTags(p);
 }
 
 function pasteCitations(prefix) {
   const clip = UIState._citClipboard;
-  if (!clip) return;
-  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { ids: new Set(), pages: {}, quay: {} };
+  if (!clip?.length) return;
+  if (!srcWidgetState[prefix]) srcWidgetState[prefix] = { mode:'new', citations: [] };
   const w = srcWidgetState[prefix];
-  for (const sid of clip.sources) {
-    w.ids.add(sid);
-    if (!w.pages[sid] && clip.pages[sid]) w.pages[sid] = clip.pages[sid];
-    if ((w.quay[sid] == null || w.quay[sid] === '') && clip.quay[sid] != null) w.quay[sid] = clip.quay[sid];
+  for (const c of clip) {
+    w.citations.push({ ...c, extra: [...(c.extra||[])], media: [...(c.media||[])] });
   }
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
-  showToast(`${clip.sources.length} Quellenbezug${clip.sources.length !== 1 ? 'e' : ''} eingefügt`, 'info');
+  showToast(`${clip.length} Quellenbezug${clip.length !== 1 ? 'e' : ''} eingefügt`, 'info');
 }
 
 // ─────────────────────────────────────

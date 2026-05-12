@@ -28,22 +28,23 @@ function _toPedi(v) {
 
 function _mediaFormStr(m) { return m.form || null; }
 
-// Schreibt SOUR-Zitierungen (PAGE, QUAY, NOTE, _extra, OBJE-Media)
-// obj muss haben: sources[], sourcePages{}, sourceQUAY{}, sourceNote{}, sourceExtra{}, sourceMedia{}
-function writeSourCitations(lines, sourLv, obj) {
-  for (const s of (obj.sources || [])) {
-    lines.push(`${sourLv} SOUR ${s}`);
-    if (obj.sourcePages?.[s]) lines.push(`${sourLv+1} PAGE ${obj.sourcePages[s]}`);
-    if (obj.sourceQUAY?.[s])  lines.push(`${sourLv+1} QUAY ${obj.sourceQUAY[s]}`);
-    if (obj.sourceNote?.[s] !== undefined) lines.push(`${sourLv+1} NOTE${obj.sourceNote[s] ? ' ' + obj.sourceNote[s] : ''}`);
-    if (obj.sourceExtra?.[s]) for (const l of obj.sourceExtra[s]) lines.push(l);
-    if (obj.sourceMedia?.[s]) for (const m of obj.sourceMedia[s]) {
-      lines.push(`${sourLv+1} OBJE`);
-      if (m.file) { lines.push(`${sourLv+2} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-      if (m.scbk) lines.push(`${sourLv+2} _SCBK ${m.scbk}`);
-      if (m.prim) lines.push(`${sourLv+2} _PRIM ${m.prim}`);
-      if (m.titl) lines.push(`${sourLv+2} TITL ${m.titl}`);
-      if (m.note) lines.push(`${sourLv+2} NOTE ${m.note}`);
+// Schreibt SOUR-Zitierungen aus citations[] (PAGE, QUAY, NOTE, extra, OBJE-Media)
+function _writeSourCits(lines, lv, obj) {
+  if (!obj?.citations?.length) return;
+  for (const c of obj.citations) {
+    lines.push(`${lv} SOUR ${c.sid}`);
+    if (c.page)  lines.push(`${lv+1} PAGE ${c.page}`);
+    if (c.quay)  lines.push(`${lv+1} QUAY ${c.quay}`);
+    if (c.note !== null && c.note !== undefined)
+      lines.push(`${lv+1} NOTE${c.note ? ' ' + c.note : ''}`);
+    for (const l of (c.extra || [])) lines.push(l);
+    for (const m of (c.media || [])) {
+      lines.push(`${lv+1} OBJE`);
+      if (m.file) { lines.push(`${lv+2} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
+      if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
+      if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
+      if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
+      if (m.note) lines.push(`${lv+2} NOTE ${m.note}`);
     }
   }
 }
@@ -91,7 +92,7 @@ function geoLines(lines, obj, indent, useExtraPlaces = true) {
 
 // Schreibt einen strukturierten Ereignis-Block (BIRT, DEAT, MARR etc.)
 function eventBlock(lines, tag, obj, lv) {
-  if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length) && !(obj._extra && obj._extra.length))) return;
+  if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.citations && obj.citations.length) && !(obj._extra && obj._extra.length))) return;
   lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
   if (obj.date !== null && obj.date !== undefined)  lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
   if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
@@ -101,7 +102,7 @@ function eventBlock(lines, tag, obj, lv) {
   }
   if (obj.note) pushCont(lines, lv+1, 'NOTE', obj.note);
   for (const r of (obj.noteRefs||[])) lines.push(`${lv+1} NOTE ${r}`);
-  writeSourCitations(lines, lv+1, obj);
+  _writeSourCits(lines, lv+1, obj);
   if (obj.media && obj.media.length) for (const m of obj.media) {
     lines.push(`${lv+1} OBJE`);
     if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
@@ -134,14 +135,7 @@ function writeINDIRecord(lines, p) {
   if (p._rufname) lines.push(`2 _RUFNAME ${p._rufname}`);
   if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
   if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
-  writeSourCitations(lines, 2, {
-    sources: p.nameSources,
-    sourcePages: p.nameSourcePages,
-    sourceQUAY: p.nameSourceQUAY,
-    sourceNote: p.nameSourceNote,
-    sourceExtra: p.nameSourceExtra,
-    sourceMedia: p.nameSourceMedia
-  });
+  _writeSourCits(lines, 2, { citations: p.nameCitations });
 
   // NAME-context passthrough (2-level items at start of _passthrough, e.g. 2 NICK)
   const _pt = p._passthrough || [];
@@ -157,14 +151,7 @@ function writeINDIRecord(lines, p) {
     if (en.surname) lines.push(`2 SURN ${en.surname}`);
     if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
     if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
-    writeSourCitations(lines, 2, {
-      sources: en.sources,
-      sourcePages: en.sourcePages,
-      sourceQUAY: en.sourceQUAY,
-      sourceNote: en.sourceNote,
-      sourceExtra: en.sourceExtra,
-      sourceMedia: en.sourceMedia
-    });
+    _writeSourCits(lines, 2, en);
     for (const l of (en._extra || [])) lines.push(l);
   }
 
@@ -215,7 +202,7 @@ function writeINDIRecord(lines, p) {
     if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
     for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
     for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
-    writeSourCitations(lines, 2, ev);
+    _writeSourCits(lines, 2, ev);
     for (const m of (ev.media || [])) {
       lines.push('2 OBJE');
       if (m.title) lines.push(`3 TITL ${m.title}`);
@@ -248,32 +235,16 @@ function writeINDIRecord(lines, p) {
           lines.push(`2 _MREL ${mv}`);
         }
       }
-      // Alle echten SOUR-IDs dedupl. sammeln: sourIds + frelSour + mrelSour
-      const _allSours = [...new Set([
-        ...(fref.sourIds || []),
-        fref.frelSour,
-        fref.mrelSour,
-        ...[...(fref.frelSourExtra||[]), ...(fref.mrelSourExtra||[])]
-          .map(x => (x.match(/^\d+ SOUR (@\S+@)/) || [])[1])
-      ].filter(Boolean))];
-      const _sourPages = Object.assign({}, fref.sourPages);
-      const _sourQUAY  = Object.assign({}, fref.sourQUAY);
-      // frelPage/frelQUAY in _sourPages/_sourQUAY eintragen (immer, unabhängig von Deduplizierung)
+      // citations[] + frelSour/mrelSour zusammenführen
+      const _famcCits = [...(fref.citations || [])];
       for (const [xSour, xPage, xQuay] of [
         [fref.frelSour, fref.frelPage, fref.frelQUAY],
         [fref.mrelSour, fref.mrelPage, fref.mrelQUAY]
       ]) {
-        if (xSour) {
-          if (xPage) _sourPages[xSour] = xPage;
-          if (xQuay) _sourQUAY[xSour]  = xQuay;
-        }
+        if (xSour && !_famcCits.some(c => c.sid === xSour))
+          _famcCits.push(citationObj(xSour, xPage || '', xQuay || ''));
       }
-      for (const s of _allSours) {
-        lines.push(`2 SOUR ${s}`);
-        if (_sourPages[s]) lines.push(`3 PAGE ${_sourPages[s]}`);
-        if (_sourQUAY[s])  lines.push(`3 QUAY ${_sourQUAY[s]}`);
-        if (fref.sourExtra && fref.sourExtra[s]) for (const l of fref.sourExtra[s]) lines.push(l);
-      }
+      _writeSourCits(lines, 2, { citations: _famcCits });
     }
   }
 
@@ -316,7 +287,7 @@ function writeINDIRecord(lines, p) {
     lines.push(`1 ASSO ${a.xref}`);
     if (a.rela) lines.push(`2 RELA ${a.rela}`);
     if (a.note) pushCont(lines, 2, 'NOTE', a.note);
-    writeSourCitations(lines, 2, { sources: a.sources || [], sourcePages: a.sourcePages || {}, sourceQUAY: a.sourceQUAY || {}, sourceNote: a.sourceNote || {}, sourceExtra: a.sourceExtra || {}, sourceMedia: {} });
+    _writeSourCits(lines, 2, a);
   }
 
   // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
@@ -327,7 +298,7 @@ function writeINDIRecord(lines, p) {
     lines.push(`2 RELA ${wr.role || 'Witness'}`);
     const evInfo = [wr.type, wr.date, wr.place].filter(Boolean).join(', ');
     if (evInfo) lines.push(`2 NOTE GRAMPS event: ${evInfo}`);
-    writeSourCitations(lines, 2, { sources: wr.sources || [], sourcePages: wr.sourcePages || {}, sourceQUAY: wr.sourceQUAY || {}, sourceNote: {}, sourceExtra: {}, sourceMedia: {} });
+    _writeSourCits(lines, 2, wr);
   }
 
   writeCHAN(lines, p, 1);
@@ -356,12 +327,7 @@ function writeFAMRecord(lines, f) {
     lines.push(`1 CHIL ${c}`);
     const _cr = f.childRelations?.[c];
     if (_cr) {
-      for (const sId of (_cr.sourIds || [])) {
-        lines.push(`2 SOUR ${sId}`);
-        if (_cr.sourPages?.[sId]) lines.push(`3 PAGE ${_cr.sourPages[sId]}`);
-        if (_cr.sourQUAY?.[sId])  lines.push(`3 QUAY ${_cr.sourQUAY[sId]}`);
-        if (_cr.sourExtra?.[sId]) for (const l of _cr.sourExtra[sId]) lines.push(l);
-      }
+      _writeSourCits(lines, 2, _cr);
       // _FREL/_MREL mit verschachteltem SOUR (z.B. Ancestris-Format: 2 _FREL → 3 SOUR @@Sxx@@ → 4 PAGE/QUAY)
       if (_cr.frelSeen) {
         lines.push(`2 _FREL ${_cr.frel}`);
@@ -399,7 +365,7 @@ function writeFAMRecord(lines, f) {
       geoLines(lines, ev, 3);
     }
     if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
-    writeSourCitations(lines, 2, ev);
+    _writeSourCits(lines, 2, ev);
     if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
   }
 

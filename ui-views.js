@@ -637,6 +637,28 @@ function sourceTagsHtml(sourceIds, pageMap, quayMap) {
   }).filter(Boolean).join('');
 }
 
+function citTagsHtml(citations) {
+  if (!citations?.length) return '';
+  return citations.map(c => {
+    const s = AppState.db.sources[c.sid];
+    if (!s) return '';
+    const page  = c.page || '';
+    const quay  = c.quay != null ? String(c.quay) : '';
+    const qClass = quay !== '' ? ` src-badge--q${quay}` : '';
+    const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
+    const tipParts = [
+      (s.title || s.abbr || c.sid).substring(0, 50),
+      page ? `S. ${page}` : '',
+      quay !== '' ? `Q${quay} – ${_QUAY_LABELS[quay] || quay}` : ''
+    ].filter(Boolean);
+    const isUrl = /^https?:\/\//i.test(page);
+    const linkBtn = isUrl
+      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(page)}" title="${esc(page)}">↗</span>`
+      : '';
+    return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${c.sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(c.sid)}${pageSuffix}</span>${linkBtn}`;
+  }).filter(Boolean).join('');
+}
+
 function relRow(person, role, unlinkFamId) {
   const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
   const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
@@ -713,8 +735,8 @@ const _CLICK_MAP = {
   openEditMediaDialog:     el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
   openSourceMediaView:     el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
   showChildRelDialog:      el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
-  removeSrc:               el => removeSrc(el.dataset.prefix, el.dataset.sid),
-  toggleSrc:               el => toggleSrc(el.dataset.prefix, el.dataset.sid),
+  removeSrc:               el => removeSrc(el.dataset.prefix, +el.dataset.citidx),
+  addSrc:                  el => addSrc(el.dataset.prefix, el.dataset.sid),
   'copy-cit':              el => copyCitations(el.dataset.prefix),
   'paste-cit':             el => pasteCitations(el.dataset.prefix),
   openCitLink:             (el, e) => { e.stopPropagation(); window.open(el.dataset.href, '_blank', 'noopener'); },
@@ -864,7 +886,7 @@ document.addEventListener('change', e => {
   const action = el.dataset.change;
   if      (action === 'applyPersonFilter') applyPersonFilter();
   else if (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
-  else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
+  else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, +el.dataset.citidx, el.value);
   else if (action === 'onEventTypeChange')    onEventTypeChange();
   else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
@@ -886,7 +908,7 @@ document.addEventListener('input', e => {
   const el = e.target.closest('[data-input]');
   if (!el) return;
   const action = el.dataset.input;
-  if      (action === 'updateSrcPage')   updateSrcPage(el.dataset.prefix, el.dataset.sid, el.value);
+  if      (action === 'updateSrcPage')   updateSrcPage(el.dataset.prefix, +el.dataset.citidx, el.value);
   else if (action === 'applyPersonFilter') applyPersonFilter();
   else if (action === 'filterFamilies')  filterFamiliesDebounced(el.value);
   else if (action === 'filterSources')   filterSourcesDebounced(el.value);

@@ -338,7 +338,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
       html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}">
         <span class="fact-lbl">${label}</span>
-        <span class="fact-val">${esc(parts || '–')}${geoBtn}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+        <span class="fact-val">${esc(parts || '–')}${geoBtn}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     for (let _ei = 0; _ei < (f.events || []).length; _ei++) {
@@ -348,7 +348,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const parts = [ev.value, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
       html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}">
         <span class="fact-lbl">${esc(label)}</span>
-        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(ev.sources || [], ev.sourcePages, ev.sourceQUAY)}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+        <span class="fact-val">${esc(parts || '–')}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     if (!_hasAnyEv) {
@@ -372,13 +372,11 @@ function showFamilyDetail(id, pushHistory = true) {
     const _pediLabels = { birth: 'leiblich', adopted: 'adoptiert', foster: 'Pflegekind', sealing: 'Sealing' };
     const _pediLabel = _curPedi ? (_pediLabels[_curPedi] || _curPedi) : '– Verhältnis';
     const _pediSpan = `<span class="child-pedi-span" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}">${_pediLabel}</span>`;
-    const _sourIds   = (typeof _fe === 'object') ? (_fe.sourIds   || []) : [];
-    const _sourPages = (typeof _fe === 'object') ? (_fe.sourPages || {}) : {};
-    const _sourQUAY  = (typeof _fe === 'object') ? (_fe.sourQUAY  || {}) : {};
+    const _cits = (typeof _fe === 'object') ? (_fe.citations || []) : [];
     const _addQBtn = `<button class="child-q-btn" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
         title="Quelle hinzufügen">+ Q</button>`;
-    const _sourWidget = _sourIds.length
-      ? sourceTagsHtml(_sourIds, _sourPages, _sourQUAY) + _addQBtn
+    const _sourWidget = _cits.length
+      ? citTagsHtml(_cits) + _addQBtn
       : _addQBtn;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
     const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';
@@ -540,10 +538,7 @@ function showChildRelDialog(famId, childId) {
   document.getElementById('cr-child-name').textContent = p.name || childId;
   const curPedi = (fe && typeof fe === 'object') ? (fe.pedi || _toPedi(fe.frel || '')) : '';
   document.getElementById('cr-pedi').value = curPedi;
-  const sourIds  = (fe && typeof fe === 'object') ? (fe.sourIds  || []) : [];
-  const sourPages = (fe && typeof fe === 'object') ? (fe.sourPages || {}) : {};
-  const sourQUAY  = (fe && typeof fe === 'object') ? (fe.sourQUAY  || {}) : {};
-  initSrcWidget('cr', sourIds, sourPages, sourQUAY);
+  initSrcWidget('cr', (fe && typeof fe === 'object') ? (fe.citations || []) : []);
   openModal('modalChildRel');
 }
 
@@ -561,9 +556,7 @@ function saveChildRelDialog() {
   fe.mrel      = pediVal;
   fe.frelSeen  = !!pediVal;
   fe.mrelSeen  = !!pediVal;
-  fe.sourIds   = [...(srcWidgetState['cr']?.ids || [])];
-  fe.sourPages = { ...(srcWidgetState['cr']?.pages || {}) };
-  fe.sourQUAY  = { ...(srcWidgetState['cr']?.quay  || {}) };
+  fe.citations = [...(srcWidgetState['cr']?.citations || [])];
   markChanged();
   closeModal('modalChildRel');
   showFamilyDetail(famId);

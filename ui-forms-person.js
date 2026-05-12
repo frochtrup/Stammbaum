@@ -32,7 +32,7 @@ function showPersonForm(id) {
   _pfExtraNames = (p?.extraNames || []).map(en => ({...en}));
   _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
-  initSrcWidget('pf', p?.topSources || [], p?.topSourcePages || {}, p?.topSourceQUAY || {});
+  initSrcWidget('pf', p?.nameCitations || []);
   const errEl = document.getElementById('pf-name-err');
   if (errEl) { errEl.textContent = ''; errEl.setAttribute('hidden', ''); }
   const givenEl = document.getElementById('pf-given');
@@ -135,10 +135,10 @@ function savePerson() {
     name: (given + (surname ? ' ' + surname : '')).trim(),
     nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
-    birth: existing.birth || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
-    death: existing.death || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{}, cause:'' },
-    chr:   existing.chr   || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
-    buri:  existing.buri  || { date:'', place:'', lati:null, long:null, sources:[], sourcePages:{} },
+    birth: existing.birth || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
+    death: existing.death || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' },
+    chr:   existing.chr   || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
+    buri:  existing.buri  || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
     events,
     noteTexts: note ? [note] : [],
     noteRefs: existing.noteRefs || [],
@@ -160,11 +160,10 @@ function savePerson() {
     www,
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date()),
-    topSources:     [...(srcWidgetState['pf']?.ids   || [])],
-    topSourcePages: { ...(srcWidgetState['pf']?.pages || {}) },
-    topSourceQUAY:  { ...(srcWidgetState['pf']?.quay  || {}) },
-    sourceRefs: srcWidgetState['pf']?.ids || new Set()
+    nameCitations: [...(srcWidgetState['pf']?.citations || [])],
+    sourceRefs: new Set()
   };
+  _rebuildPersonSourceRefs(AppState.db.individuals[id]);
 
   // _pendingRelation vor closeModal sichern — closeModal löscht es sonst
   const _pendingRel = UIState._pendingRelation;
@@ -224,7 +223,7 @@ function showExtraNameForm(pid, enIdx) {
   document.getElementById('extraNameFormTitle').textContent = isNew ? 'Weiterer Name hinzufügen' : typeLabel + ' bearbeiten';
   document.getElementById('deleteExtraNameBtn').style.display = isNew ? 'none' : 'block';
 
-  initSrcWidget('enf', en?.sources || [], en?.sourcePages || {}, en?.sourceQUAY || {});
+  initSrcWidget('enf', en?.citations || []);
   openModal('modalExtraName');
 }
 
@@ -238,17 +237,13 @@ function saveExtraName() {
 
   const p = getPerson(pid);
   if (!p) return;
-  const { ids, pages, quay } = srcWidgetState['enf'] || { ids: new Set(), pages: {}, quay: {} };
-
   const prefix = document.getElementById('enf-prefix').value.trim();
   const suffix = document.getElementById('enf-suffix').value.trim();
   const entry = {
-    ...(enIdx >= 0 ? p.extraNames[enIdx] : { sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[] }),
+    ...(enIdx >= 0 ? p.extraNames[enIdx] : { _extra:[] }),
     given, surname, prefix, suffix,
     type:    document.getElementById('enf-type').value,
-    sources:     [...ids],
-    sourcePages: Object.fromEntries(Object.entries(pages).filter(([k]) => ids.has(k))),
-    sourceQUAY:  Object.fromEntries(Object.entries(quay).filter(([k]) => ids.has(k))),
+    citations: [...(srcWidgetState['enf']?.citations || [])],
     nameRaw: [prefix, given, surname ? '/' + surname + '/' : '', suffix].filter(Boolean).join(' '),
   };
 

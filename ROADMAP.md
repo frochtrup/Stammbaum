@@ -95,7 +95,7 @@ Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig �
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| F4b | **Mehrfach-Zitierungen** | `citations:[{sid,page,quay}]` statt `sources[]+sourcePages{}`; ~8 Dateien; Roundtrip neu verifizieren | XL |
+| ~~F4b~~ | ~~**Mehrfach-Zitierungen**~~ | ✅ **Abgeschlossen** (sw v381): `citations:[{sid,page,quay,note,extra,media}]` in allen 8 Dateien; Roundtrip verlustfrei | XL |
 | U8 | **Granulares Undo** | History-Stack auf AppState; heute: Cmd+Z = "Revert to Saved" | XL |
 | F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
 | F8 | **Cluster-Ansicht** | Personen in denselben Orten/Quellen wie Person X | L |
@@ -111,8 +111,7 @@ Schulden nach Dringlichkeit, unabhängig vom Feature-Backlog anzugehen:
 
 ### Mittelfristig (je L)
 
-**F4b: Zitierungs-Datenstruktur**
-`sources[]+sourcePages{}` ist ein bekannter Kompromiss: zwei Arrays müssen synchron gehalten werden, Mehrfachzitierungen derselben Quelle an einem Event sind nicht darstellbar. Migration auf `citations:[{sid,page,quay,note}]` bereinigt das Model, erfordert aber Roundtrip-Neuverifikation in allen 8 betroffenen Dateien. Erst angehen wenn F5/F6 stabil sind.
+~~**F4b: Zitierungs-Datenstruktur**~~ ✅ *Abgeschlossen sw v381* — `citations:[{sid,page,quay,note,extra,media}]` ersetzt 6 parallele Dicts; `citationObj()` Factory; `_migrateLegacyCitations()` für IDB-Altdaten; `citTagsHtml()` für Detailansichten; Parser/Writer/Forms/Views vollständig migriert.
 
 **Einheitliche Render-Konvention**
 Manche Views geben HTML-Strings zurück (`innerHTML =`), andere manipulieren direkt DOM-Nodes. Da `unsafe-inline` aus CSP entfernt ist, sollte mittelfristig alles auf DOM-Manipulation umgestellt werden — reduziert XSS-Angriffsfläche und macht Template-Strings überflüssig.
