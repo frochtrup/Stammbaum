@@ -289,6 +289,7 @@ function showMain() {
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
   renderTab();
+  if (typeof _updateTasksBadge === 'function') _updateTasksBadge();
   if (saved && saved.tab === AppState.currentTab) {
     // setTimeout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
     setTimeout(() => _setListScroll(saved.pos), 0);
