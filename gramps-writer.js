@@ -213,14 +213,14 @@ async function writeGRAMPS(db) {
 
   // ── Emit <attribute> element (self-closing or block with citations/notes) ──
   const _attrXML = (indent, a) => {
-    const hasSub = a.sources?.length || a.note;
+    const hasSub = a.citations?.length || a.note;
     if (!hasSub) {
       L.push(`${indent}<attribute type="${_esc(a.type)}" value="${_esc(a.value)}"/>`);
       return;
     }
     L.push(`${indent}<attribute type="${_esc(a.type)}" value="${_esc(a.value)}">`);
-    for (const sId of a.sources || []) {
-      const ch = _citHandle(sId, a.sourcePages?.[sId], a.sourceQUAY?.[sId] ?? 0);
+    for (const c of a.citations || []) {
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0);
       if (ch) L.push(`${indent}  <citationref hlink="${_esc(ch)}"/>`);
     }
     if (a.note) {
@@ -232,7 +232,7 @@ async function writeGRAMPS(db) {
 
   // ── Collect event from event-like object, return {handle, role} or null ───
   const _collectEv = (grampsType, evObj, role) => {
-    if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !evObj?.addr && !(evObj?.sources?.length)) return null;
+    if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !evObj?.addr && !(evObj?.citations?.length)) return null;
     const handle   = _h('ev');
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
     // Use original place ID if available (GRAMPS source with placeObjects), else string-based
@@ -243,8 +243,8 @@ async function writeGRAMPS(db) {
       : (evObj.addr && hofAddrToHandle[evObj.addr.trim()])
         ? hofAddrToHandle[evObj.addr.trim()]
         : _plHandle(evObj.place || null, evObj.lati, evObj.long);
-    const citHandles = (evObj.sources || [])
-      .map(srcId => _citHandle(srcId, evObj.sourcePages?.[srcId], evObj.sourceQUAY?.[srcId] ?? 0))
+    const citHandles = (evObj.citations || [])
+      .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0))
       .filter(Boolean);
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
     // addr → <attribute type="Address" value="..."/>  (prepend, before _grampsAttrs)
@@ -307,7 +307,7 @@ async function writeGRAMPS(db) {
           seen: true, date: wr.date, place: wr.place, placeId: wr.placeId,
           lati: wr.lati ?? null, long: wr.long ?? null,
           cause: wr.cause || '', note: wr.note, value: wr.desc,
-          sources: wr.sources, sourcePages: wr.sourcePages, sourceQUAY: wr.sourceQUAY,
+          citations: wr.citations || [],
         }, wr.role);
         if (r) witnessEvMap[wr._origHlink] = r.handle;
       }
@@ -432,9 +432,9 @@ async function writeGRAMPS(db) {
     if (p._grampsCall) L.push(`        <call>${_esc(p._grampsCall)}</call>`);
     if (prefix)  L.push(`        <title>${_esc(prefix)}</title>`);
     if (suffix)  L.push(`        <suffix>${_esc(suffix)}</suffix>`);
-    // Name sources
-    for (const srcId of p.nameSources||[]) {
-      const ch = _citHandle(srcId, p.nameSourcePages?.[srcId], p.nameSourceQUAY?.[srcId]??0);
+    // Name citations
+    for (const c of p.nameCitations||[]) {
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0);
       if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
     }
     L.push('      </name>');
@@ -447,6 +447,10 @@ async function writeGRAMPS(db) {
       if (en.given)   L.push(`        <first>${_esc(en.given)}</first>`);
       if (en.surname) L.push(`        <surname>${_esc(en.surname)}</surname>`);
       if (en.nick)    L.push(`        <nick>${_esc(en.nick)}</nick>`);
+      for (const c of en.citations||[]) {
+        const ch = _citHandle(c.sid, c.page||'', c.quay??0);
+        if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
+      }
       L.push('      </name>');
     }
 
@@ -474,8 +478,8 @@ async function writeGRAMPS(db) {
     for (const a of p.associations || []) {
       const aH = a._grampsHlink || (a.xref ? _entityHandle(a.xref, 'pe') : null);
       if (!aH) continue;
-      const aCitHandles = (a.sources || [])
-        .map(sId => _citHandle(sId, a.sourcePages?.[sId], a.sourceQUAY?.[sId] ?? 0))
+      const aCitHandles = (a.citations || [])
+        .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0))
         .filter(Boolean);
       const aNoteHandle = a.note ? _noteHandle(a.note, 'Association Note') : null;
       if (aCitHandles.length || aNoteHandle) {

@@ -32,8 +32,8 @@ function renderStatsTab() {
   const hasSex    = nM + nF;
   const hasSrc    = persons.filter(p =>
     (p.topSources?.length || 0) + (p.nameSources?.length || 0) +
-    (p.birth?.sources?.length || 0) + (p.death?.sources?.length || 0) +
-    (p.events?.some(ev => ev.sources?.length > 0) ? 1 : 0) > 0
+    (p.birth?.citations?.length || 0) + (p.death?.citations?.length || 0) +
+    (p.events?.some(ev => ev.citations?.length > 0) ? 1 : 0) > 0
   ).length;
   const hasPhoto  = persons.filter(p => (p.media || []).some(m => /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(m.file || ''))).length;
 

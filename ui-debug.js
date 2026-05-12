@@ -283,16 +283,18 @@ function runRoundtripTest() {
             if (_pqRecId && _pqLv2 === 'SOUR') {
               if (_pqRec === 'INDI' && _pqLv1 === 'FAMC') {
                 const _pr = db1.individuals[_pqRecId];
-                const _fc = _pr?.famc?.find(f => f.sourIds?.includes(_pqLv2Val));
+                const _fc = _pr?.famc?.find(f => f.citations?.some(c => c.sid === _pqLv2Val));
                 if (_fc) {
-                  const _has = tag3 === 'PAGE' ? !!_fc.sourPages?.[_pqLv2Val] : !!_fc.sourQUAY?.[_pqLv2Val];
+                  const _cit = _fc.citations?.find(c => c.sid === _pqLv2Val);
+                  const _has = tag3 === 'PAGE' ? !!_cit?.page : !!_cit?.quay;
                   _db1s = _has ? ' [db1:✓→writer-bug]' : ' [db1:✗→parser-bug]';
-                } else { _db1s = ` [db1:famc-not-found sourIds=${JSON.stringify(_pr?.famc?.map(f=>f.sourIds))}]`; }
+                } else { _db1s = ` [db1:famc-not-found cits=${JSON.stringify(_pr?.famc?.map(f=>f.citations?.map(c=>c.sid)))}]`; }
               } else if (_pqRec === 'FAM') {
                 const _fam = db1.families[_pqRecId];
-                const _ev = _pqLv1 === 'MARR' ? _fam?.marr : _pqLv1 === 'EVEN' ? _fam?.events?.find(e=>e.sources?.includes(_pqLv2Val)) : null;
+                const _ev = _pqLv1 === 'MARR' ? _fam?.marr : _pqLv1 === 'EVEN' ? _fam?.events?.find(e=>e.citations?.some(c=>c.sid===_pqLv2Val)) : null;
                 if (_ev) {
-                  const _has = tag3 === 'PAGE' ? !!_ev.sourcePages?.[_pqLv2Val] : !!_ev.sourceQUAY?.[_pqLv2Val];
+                  const _cit = _ev.citations?.find(c => c.sid === _pqLv2Val);
+                  const _has = tag3 === 'PAGE' ? !!_cit?.page : !!_cit?.quay;
                   _db1s = _has ? ' [db1:✓→writer-bug]' : ' [db1:✗→parser-bug]';
                 }
               }
@@ -320,48 +322,52 @@ function runRoundtripTest() {
           for (const evKey of ['marr','engag','div','divf']) {
             const e1 = f1[evKey], e2 = f2[evKey];
             if (!e1 || !e2) continue;
-            for (const s of (e1.sources||[])) {
-              if (e1.sourceQUAY?.[s] && !e2.sourceQUAY?.[s])
-                _db2LossLines.push(`FAM ${fid} ${evKey}.sourceQUAY[${s}]=${e1.sourceQUAY[s]} → FEHLT in db2`);
-              if (e1.sourcePages?.[s] && !e2.sourcePages?.[s])
-                _db2LossLines.push(`FAM ${fid} ${evKey}.sourcePages[${s}]=${e1.sourcePages[s].slice(0,40)} → FEHLT in db2`);
+            for (const c1 of (e1.citations||[])) {
+              const c2 = (e2.citations||[]).find(c => c.sid === c1.sid);
+              if (c1.quay && !c2?.quay)
+                _db2LossLines.push(`FAM ${fid} ${evKey}.citations[${c1.sid}].quay=${c1.quay} → FEHLT in db2`);
+              if (c1.page && !c2?.page)
+                _db2LossLines.push(`FAM ${fid} ${evKey}.citations[${c1.sid}].page=${c1.page.slice(0,40)} → FEHLT in db2`);
             }
           }
           // FAM events
           for (let ei = 0; ei < (f1.events||[]).length; ei++) {
             const e1 = f1.events[ei], e2 = (f2.events||[])[ei];
             if (!e1 || !e2) continue;
-            for (const s of (e1.sources||[])) {
-              if (e1.sourceQUAY?.[s] && !e2.sourceQUAY?.[s])
-                _db2LossLines.push(`FAM ${fid} events[${ei}].sourceQUAY[${s}]=${e1.sourceQUAY[s]} → FEHLT in db2`);
-              if (e1.sourcePages?.[s] && !e2.sourcePages?.[s])
-                _db2LossLines.push(`FAM ${fid} events[${ei}].sourcePages[${s}] → FEHLT in db2`);
+            for (const c1 of (e1.citations||[])) {
+              const c2 = (e2.citations||[]).find(c => c.sid === c1.sid);
+              if (c1.quay && !c2?.quay)
+                _db2LossLines.push(`FAM ${fid} events[${ei}].citations[${c1.sid}].quay=${c1.quay} → FEHLT in db2`);
+              if (c1.page && !c2?.page)
+                _db2LossLines.push(`FAM ${fid} events[${ei}].citations[${c1.sid}].page → FEHLT in db2`);
             }
           }
         }
-        // INDI FAMC sourPages/sourQUAY
+        // INDI FAMC citations
         for (const [iid, p1] of Object.entries(db1.individuals)) {
           const p2 = db2.individuals[iid];
           if (!p2) continue;
           for (let fi = 0; fi < (p1.famc||[]).length; fi++) {
             const fc1 = p1.famc[fi], fc2 = (p2.famc||[])[fi];
             if (!fc1 || !fc2) continue;
-            for (const s of (fc1.sourIds||[])) {
-              if (fc1.sourPages?.[s] && !fc2.sourPages?.[s])
-                _db2LossLines.push(`INDI ${iid} famc[${fi}].sourPages[${s}]=${fc1.sourPages[s].slice(0,40)} → FEHLT in db2`);
-              if (fc1.sourQUAY?.[s] && !fc2.sourQUAY?.[s])
-                _db2LossLines.push(`INDI ${iid} famc[${fi}].sourQUAY[${s}] → FEHLT in db2`);
+            for (const c1 of (fc1.citations||[])) {
+              const c2 = (fc2.citations||[]).find(c => c.sid === c1.sid);
+              if (c1.page && !c2?.page)
+                _db2LossLines.push(`INDI ${iid} famc[${fi}].citations[${c1.sid}].page=${c1.page.slice(0,40)} → FEHLT in db2`);
+              if (c1.quay && !c2?.quay)
+                _db2LossLines.push(`INDI ${iid} famc[${fi}].citations[${c1.sid}].quay → FEHLT in db2`);
             }
           }
           // INDI vital events
           for (const evKey of ['birth','death','chr','buri']) {
             const e1 = p1[evKey], e2 = p2[evKey];
             if (!e1 || !e2) continue;
-            for (const s of (e1.sources||[])) {
-              if (e1.sourceQUAY?.[s] && !e2.sourceQUAY?.[s])
-                _db2LossLines.push(`INDI ${iid} ${evKey}.sourceQUAY[${s}] → FEHLT in db2`);
-              if (e1.sourcePages?.[s] && !e2.sourcePages?.[s])
-                _db2LossLines.push(`INDI ${iid} ${evKey}.sourcePages[${s}] → FEHLT in db2`);
+            for (const c1 of (e1.citations||[])) {
+              const c2 = (e2.citations||[]).find(c => c.sid === c1.sid);
+              if (c1.quay && !c2?.quay)
+                _db2LossLines.push(`INDI ${iid} ${evKey}.citations[${c1.sid}].quay → FEHLT in db2`);
+              if (c1.page && !c2?.page)
+                _db2LossLines.push(`INDI ${iid} ${evKey}.citations[${c1.sid}].page → FEHLT in db2`);
             }
           }
         }
@@ -433,20 +439,20 @@ function runRoundtripTest() {
           _ptSecs.push(`INDI.events._extra   ${recs} Events · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
         }
       }
-      // 4. INDI sourceExtra (topSourceExtra + vital + events)
+      // 4. INDI citation.extra (topSourceExtra + vital + events)
       { let entries=0, lines=0; const agg={}; const allPt=[];
         for (const p of Object.values(db1.individuals)) {
           for (const arr of Object.values(p.topSourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
           for (const k of ['birth','death','chr','buri']) {
-            for (const arr of Object.values(p[k]?.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
+            for (const c of (p[k]?.citations||[])) { if (c.extra?.length) { entries++; lines+=c.extra.length; _ptAgg(c.extra,agg); allPt.push(c.extra); } }
           }
           for (const ev of (p.events||[])) {
-            for (const arr of Object.values(ev.sourceExtra||{})) { if (arr.length) { entries++; lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
+            for (const c of (ev.citations||[])) { if (c.extra?.length) { entries++; lines+=c.extra.length; _ptAgg(c.extra,agg); allPt.push(c.extra); } }
           }
         }
         if (lines) {
           const s = _ptCollect(allPt, 4);
-          _ptSecs.push(`INDI.sourceExtra     ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
+          _ptSecs.push(`INDI.cit.extra       ${entries} Eintr. · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
         }
       }
       // 5. FAM._passthrough
@@ -459,13 +465,13 @@ function runRoundtripTest() {
           _ptSecs.push(`FAM._passthrough     ${recs} FAMs · ${lines} Z.\n${_ptFmt(agg,lines)}${s.length?'\n'+s.join('\n'):''}`);
         }
       }
-      // 6. FAM marr/engag/div/divf._extra + sourceExtra
+      // 6. FAM marr/engag/div/divf._extra + citation.extra
       { let recs=0, lines=0; const agg={}; const allPt=[];
         for (const f of Object.values(db1.families)) {
           for (const evKey of ['marr','engag','div','divf']) {
             const ev = f[evKey];
             if (ev?._extra?.length) { recs++; lines+=ev._extra.length; _ptAgg(ev._extra,agg); allPt.push(ev._extra); }
-            for (const arr of Object.values(ev?.sourceExtra||{})) { if (arr.length) { lines+=arr.length; _ptAgg(arr,agg); allPt.push(arr); } }
+            for (const c of (ev?.citations||[])) { if (c.extra?.length) { lines+=c.extra.length; _ptAgg(c.extra,agg); allPt.push(c.extra); } }
           }
         }
         if (lines) {

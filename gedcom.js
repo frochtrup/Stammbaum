@@ -484,7 +484,7 @@ function _rebuildPersonSourceRefs(p) {
   _addCitRefs(refs, p.chr);
   _addCitRefs(refs, p.buri);
   (p.events || []).forEach(ev => _addCitRefs(refs, ev));
-  (p.famc   || []).forEach(fc => addArr(fc.sourIds));
+  (p.famc   || []).forEach(fc => _addCitRefs(refs, fc));
   p.sourceRefs = refs;
 }
 

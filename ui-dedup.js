@@ -32,9 +32,9 @@ function _dedupMergePersons(winnerId, loserId) {
     A[evKey] = aEv;
     if (!aEv.date  && bEv.date)  aEv.date  = bEv.date;
     if (!aEv.place && bEv.place) aEv.place = bEv.place;
-    aEv.sources     = [...new Set([...(aEv.sources||[]),    ...(bEv.sources||[])])];
-    aEv.sourcePages = { ...(bEv.sourcePages||{}), ...(aEv.sourcePages||{}) };
-    aEv.sourceQUAY  = { ...(bEv.sourceQUAY||{}),  ...(aEv.sourceQUAY||{}) };
+    const _aCits = aEv.citations || [];
+    const _bCits = bEv.citations || [];
+    aEv.citations = [..._aCits, ..._bCits.filter(bc => !_aCits.some(ac => ac.sid === bc.sid && ac.page === bc.page))];
   }
 
   // Quellen auf Personen-Ebene zusammenführen

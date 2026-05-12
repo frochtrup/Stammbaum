@@ -130,8 +130,7 @@ function _grampsMediaPath(src) {
 function _emptyEvI() {
   return {
     date:null, place:null, lati:null, long:null,
-    sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{},
-    _extra:[], value:'', seen:false, note:''
+    citations:[], _extra:[], value:'', seen:false, note:''
   };
 }
 // Empty event for INDI death (has cause field)
@@ -142,20 +141,19 @@ function _emptyDeath() {
 function _emptyFamEv() {
   return {
     date:null, place:null, lati:null, long:null,
-    sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{},
-    value:'', seen:false, note:'', noteRefs:[], _extra:[], media:[], addr:''
+    citations:[], value:'', seen:false, note:'', noteRefs:[], _extra:[], media:[], addr:''
   };
 }
 
-// Apply a citation reference to a sources-carrying object
+// Apply a citation reference to a citations[]-carrying object
 function _applyCit(target, citHandle, citMap, srcHandleToId) {
   const cit = citMap[citHandle];
   if (!cit || !cit.sourceHandle) return;
   const srcId = srcHandleToId[cit.sourceHandle];
   if (!srcId) return;
-  if (!target.sources.includes(srcId)) target.sources.push(srcId);
-  if (cit.page) target.sourcePages[srcId] = cit.page;
-  target.sourceQUAY[srcId] = _confToQuay(cit.confidence);
+  if (!target.citations.some(c => c.sid === srcId)) {
+    target.citations.push(citationObj(srcId, cit.page || '', String(_confToQuay(cit.confidence))));
+  }
 }
 
 // Get text of first child element with localName (direct children only, namespace-safe)
@@ -469,8 +467,8 @@ async function parseGRAMPS(file) {
 
     // Primary name (first <name> without alt attribute)
     let given = '', surname = '', nick = '', prefix = '', suffix = '', _pCall = '';
-    const nameSources = [], nameSourcePages = {}, nameSourceQUAY = {},
-          nameSourceNote = {}, nameSourceExtra = {}, nameSourceMedia = {};
+    const nameCitations = [];
+    const nameTarget = { citations: nameCitations };
     const nameEl = _byTag(person, 'name').find(n => !n.getAttribute('alt')) || null;
     if (nameEl) {
       given   = _child(nameEl, 'first');
@@ -480,8 +478,6 @@ async function parseGRAMPS(file) {
       suffix  = _child(nameEl, 'suffix');
       const titleEl = _byTag(nameEl, 'title')[0] || null;
       if (titleEl) prefix = titleEl.textContent.trim();
-      const nameTarget = { sources: nameSources, sourcePages: nameSourcePages, sourceQUAY: nameSourceQUAY,
-                           sourceNote: nameSourceNote, sourceExtra: nameSourceExtra, sourceMedia: nameSourceMedia };
       for (const cr of _byTag(nameEl, 'citationref'))
         _applyCit(nameTarget, cr.getAttribute('hlink'), citMap, srcHandleToId);
     }
@@ -493,10 +489,13 @@ async function parseGRAMPS(file) {
       const aGiven   = _child(altEl, 'first');
       const aSurname = _child(altEl, 'surname');
       const aType    = _GRAMPS_NAME_TYPE[altEl.getAttribute('type') || ''] || '';
+      const enTarget = { citations: [] };
+      for (const cr of _byTag(altEl, 'citationref'))
+        _applyCit(enTarget, cr.getAttribute('hlink'), citMap, srcHandleToId);
       extraNames.push({
         name: aGiven + (aSurname ? ' /' + aSurname + '/' : ''),
         given: aGiven, surname: aSurname, nick: '', prefix: '',
-        type: aType, sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {}, _passthrough: []
+        type: aType, citations: enTarget.citations, _passthrough: []
       });
     }
 
@@ -507,7 +506,7 @@ async function parseGRAMPS(file) {
       sex,
       uid: '',
       topSources: [], topSourcePages: {}, topSourceQUAY: {}, topSourceExtra: {},
-      nameSources, nameSourcePages, nameSourceQUAY, nameSourceNote, nameSourceExtra, nameSourceMedia,
+      nameCitations,
       birth: _emptyEvI(),
       death: _emptyDeath(),
       chr:   _emptyEvI(),
@@ -536,22 +535,12 @@ async function parseGRAMPS(file) {
     p._grampsAttrs = _byTag(person, 'attribute')
       .filter(a => !_HANDLED_P_ATTRS.has(a.getAttribute('type') || ''))
       .map(a => {
-        const aSrc = [], aSrcP = {}, aSrcQ = {};
-        for (const cr of _byTag(a, 'citationref')) {
-          const cit = citMap[cr.getAttribute('hlink')];
-          if (cit?.sourceHandle) {
-            const sId = srcHandleToId[cit.sourceHandle];
-            if (sId) {
-              aSrc.push(sId);
-              if (cit.page) aSrcP[sId] = cit.page;
-              aSrcQ[sId] = _confToQuay(cit.confidence);
-            }
-          }
-        }
+        const atgt = { citations: [] };
+        for (const cr of _byTag(a, 'citationref'))
+          _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
         const aNote = _byTag(a, 'noteref')
           .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
-        const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' };
-        if (aSrc.length) { obj.sources = aSrc; obj.sourcePages = aSrcP; obj.sourceQUAY = aSrcQ; }
+        const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '', citations: atgt.citations };
         if (aNote) obj.note = aNote;
         return obj;
       });
@@ -568,18 +557,8 @@ async function parseGRAMPS(file) {
           const plTitle = pl?.title || null;
           const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
           const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
-          const wSrc = [], wSrcP = {}, wSrcQ = {};
-          for (const ch of ev.citRefs) {
-            const cit = citMap[ch];
-            if (cit?.sourceHandle) {
-              const sId = srcHandleToId[cit.sourceHandle];
-              if (sId) {
-                wSrc.push(sId);
-                if (cit.page) wSrcP[sId] = cit.page;
-                wSrcQ[sId] = _confToQuay(cit.confidence);
-              }
-            }
-          }
+          const wtgt = { citations: [] };
+          for (const ch of ev.citRefs) _applyCit(wtgt, ch, citMap, srcHandleToId);
           if (!p._grampsWitnessRefs) p._grampsWitnessRefs = [];
           p._grampsWitnessRefs.push({
             _origHlink: evH, role,
@@ -588,7 +567,7 @@ async function parseGRAMPS(file) {
             lati: pl?.lat ?? null, long: pl?.long ?? null,
             cause: ev.cause || '',
             note: evNote, desc: ev.desc || '',
-            sources: wSrc, sourcePages: wSrcP, sourceQUAY: wSrcQ,
+            citations: wtgt.citations,
           });
         }
         continue;
@@ -635,8 +614,7 @@ async function parseGRAMPS(file) {
           addr:  ev.addr  || '',
           phon: [], email: [],
           noteRefs: [],
-          sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
-          sourceExtra: {}, sourceMedia: {}, _extra: [],
+          citations: [], _extra: [],
           _grampsAttrs: ev.attrs || [],
           _grampsEvHlink: evH
         };
@@ -670,8 +648,7 @@ async function parseGRAMPS(file) {
         value: '', addr,
         phon: phone ? [phone] : [], email: [],
         note: '', noteRefs: [],
-        sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
-        sourceExtra: {}, sourceMedia: {}, _extra: [],
+        citations: [], _extra: [],
         _grampsAttrs: []
       });
     }
@@ -709,17 +686,12 @@ async function parseGRAMPS(file) {
       const aHlink = pref.getAttribute('hlink') || '';
       const aRel   = pref.getAttribute('rel')   || '';
       const aXref  = personHandleToId[aHlink] || null;
-      const aSrc = [], aSrcP = {}, aSrcQ = {};
-      for (const cr of _byTag(pref, 'citationref')) {
-        const cit = citMap[cr.getAttribute('hlink')];
-        if (cit?.sourceHandle) {
-          const sId = srcHandleToId[cit.sourceHandle];
-          if (sId) { aSrc.push(sId); if (cit.page) aSrcP[sId] = cit.page; aSrcQ[sId] = _confToQuay(cit.confidence); }
-        }
-      }
+      const atgt = { citations: [] };
+      for (const cr of _byTag(pref, 'citationref'))
+        _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
       const aNote = _byTag(pref, 'noteref')
         .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
-      p.associations.push({ xref: aXref, _grampsHlink: aHlink, rela: aRel, note: aNote, sources: aSrc, sourcePages: aSrcP, sourceQUAY: aSrcQ });
+      p.associations.push({ xref: aXref, _grampsHlink: aHlink, rela: aRel, note: aNote, citations: atgt.citations });
     }
 
     // Family links (resolved in families pass)
@@ -796,8 +768,7 @@ async function parseGRAMPS(file) {
           lati: lat, long: lng,
           value: mapped.tag === 'EVEN' ? ev.type : (ev.desc || ''),
           note: evNote, addr: ev.addr || '', noteRefs: [],
-          sources: [], sourcePages: {}, sourceQUAY: {}, sourceNote: {},
-          sourceExtra: {}, sourceMedia: {}, _extra: [],
+          citations: [], _extra: [],
           _grampsAttrs: ev.attrs || []
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
@@ -823,22 +794,12 @@ async function parseGRAMPS(file) {
     // Extra attributes (all <attribute> on family, with optional citations/notes)
     f._grampsAttrs = _byTag(fam, 'attribute')
       .map(a => {
-        const aSrc = [], aSrcP = {}, aSrcQ = {};
-        for (const cr of _byTag(a, 'citationref')) {
-          const cit = citMap[cr.getAttribute('hlink')];
-          if (cit?.sourceHandle) {
-            const sId = srcHandleToId[cit.sourceHandle];
-            if (sId) {
-              aSrc.push(sId);
-              if (cit.page) aSrcP[sId] = cit.page;
-              aSrcQ[sId] = _confToQuay(cit.confidence);
-            }
-          }
-        }
+        const atgt = { citations: [] };
+        for (const cr of _byTag(a, 'citationref'))
+          _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
         const aNote = _byTag(a, 'noteref')
           .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
-        const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' };
-        if (aSrc.length) { obj.sources = aSrc; obj.sourcePages = aSrcP; obj.sourceQUAY = aSrcQ; }
+        const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '', citations: atgt.citations };
         if (aNote) obj.note = aNote;
         return obj;
       });
@@ -850,7 +811,7 @@ async function parseGRAMPS(file) {
   for (const p of Object.values(individuals)) {
     for (const fh of p._childofH || []) {
       const fId = famHandleToId[fh];
-      if (fId) p.famc.push({ famId: fId, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour: '', frelPage: '', frelQUAY: '', frelSourExtra: [], mrelSour: '', mrelPage: '', mrelQUAY: '', mrelSourExtra: [], sourIds: [], sourPages: {}, sourQUAY: {}, sourExtra: {} });
+      if (fId) p.famc.push({ famId: fId, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, frelSour: '', frelPage: '', frelQUAY: '', frelSourExtra: [], mrelSour: '', mrelPage: '', mrelQUAY: '', mrelSourExtra: [], citations: [] });
     }
     for (const fh of p._parentinH || []) {
       const fId = famHandleToId[fh];

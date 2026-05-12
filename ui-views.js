@@ -71,11 +71,12 @@ function setBnavActive(name) {
 function _collectSourceMeta(entity, sid) {
   const pairs = new Map(); // pageVal → quayVal (first found per page wins)
   function check(obj) {
-    if (!obj || !(obj.sources || []).includes(sid)) return;
-    const page = (obj.sourcePages || {})[sid] || '';
-    const quay = (obj.sourceQUAY  || {})[sid];
-    const key = page || '\x00'; // leerstring als eigenständiger Key
-    if (!pairs.has(key)) pairs.set(key, quay);
+    if (!obj) return;
+    for (const c of (obj.citations || [])) {
+      if (c.sid !== sid) continue;
+      const key = c.page || '\x00';
+      if (!pairs.has(key)) pairs.set(key, c.quay);
+    }
   }
   if (entity.birth !== undefined) {
     // topSources (INDI-Level)
