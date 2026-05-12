@@ -454,7 +454,8 @@ const _CLICK_MAP = {
   openEditMediaDialog:  el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
   openSourceMediaView:  el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
   showChildRelDialog:   el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
-  removeSrc:            el => removeSrc(el.dataset.prefix, el.dataset.sid),
+  removeSrc:            el => removeSrc(el.dataset.prefix, el.dataset.citidx ?? el.dataset.sid),
+  addSrc:               el => addSrc(el.dataset.prefix, el.dataset.sid),
   toggleSrc:            el => toggleSrc(el.dataset.prefix, el.dataset.sid),
   odLoadFile:           el => odLoadFile(el.dataset.odid, el.dataset.odname),
   odFolderBack:         ()  => _odFolderBack(),
@@ -484,11 +485,11 @@ document.addEventListener('change', e => {
   if (!el) return;
   const action = el.dataset.change;
   if (action === 'savePedi')      savePedi(el.dataset.fid, el.dataset.cid, el.value);
-  else if (action === 'updateSrcQuay') updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
+  else if (action === 'updateSrcQuay') updateSrcQuay(el.dataset.prefix, el.dataset.citidx ?? el.dataset.sid, el.value);
 });
 
 document.addEventListener('input', e => {
   const el = e.target.closest('[data-input]');
   if (!el) return;
-  if (el.dataset.input === 'updateSrcPage') updateSrcPage(el.dataset.prefix, el.dataset.sid, el.value);
+  if (el.dataset.input === 'updateSrcPage') updateSrcPage(el.dataset.prefix, el.dataset.citidx ?? el.dataset.sid, el.value);
 });
