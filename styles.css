@@ -17,6 +17,10 @@
   --pink-dim:  #6e2a42;
   --green:     #4a9060;
   --red:       #c04040;
+  --red-dim:   #8b2020;
+  --red-bg:    #2a1010;
+  --warn:      #d08830;
+  --warn-dim:  #b06820;
   --radius:    14px;
   --radius-sm: 9px;
 }
@@ -626,11 +630,11 @@ body.desktop-mode.places-karte #mapContainer {
 .event-godparents { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 5px; }
 .asso-chip {
   display: inline-flex; align-items: center; gap: 3px;
-  background: var(--card-bg, #2a2010); border: 1px solid var(--border);
+  background: var(--surface2); border: 1px solid var(--border);
   border-radius: 10px; padding: 2px 9px; font-size: 0.78rem;
-  color: var(--gold-dim, #c8a84b); cursor: pointer; white-space: nowrap;
+  color: var(--gold-dim); cursor: pointer; white-space: nowrap;
 }
-.asso-chip:hover { border-color: var(--gold-dim, #c8a84b); }
+.asso-chip:hover { border-color: var(--gold-dim); }
 .asso-chip--derived { border-style: dashed; opacity: 0.75; }
 
 .rel-row {
@@ -882,8 +886,8 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 .toast.show { opacity: 1; }
 .toast.toast-success { border-color: var(--gold); color: var(--gold-lt); }
-.toast.toast-warn    { border-color: #b06820; color: #d08830; }
-.toast.toast-error   { border-color: #8b2020; color: #d04040; background: #2a1010; }
+.toast.toast-warn    { border-color: var(--warn-dim); color: var(--warn); }
+.toast.toast-error   { border-color: var(--red-dim); color: var(--red); background: var(--red-bg); }
 
 /* ═══════════════════════════════════════
    SOURCES VIEW
@@ -1367,13 +1371,6 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 #yearFilterClear { min-width: 44px; min-height: 44px; }
 #personSortBtn   { min-height: 44px; }
 
-/* ═══════════════════════════════════════
-   CSS-VARIABLEN-ALIASES (fehlende Aliasse)
-═══════════════════════════════════════ */
-:root {
-  --bg-card:      var(--surface);
-  --border-color: var(--border);
-}
 
 /* ═══════════════════════════════════════
    [hidden] — ohne !important, damit JS
@@ -1426,7 +1423,6 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 
 /* Background */
 .bg-s2    { background: var(--surface2); }
-.bg-card  { background: var(--surface); }
 
 /* Border */
 .border   { border: 1px solid var(--border); }
@@ -1723,12 +1719,12 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 /* ── Media-Zeilen (person/family/source/media-browser) ── */
 .media-row {
   display: flex; align-items: center; gap: 8px;
-  padding: 7px 0; border-bottom: 1px solid var(--border-color);
+  padding: 7px 0; border-bottom: 1px solid var(--border);
   cursor: pointer;
 }
 .media-row--ref {
   display: flex; align-items: center; gap: 8px;
-  padding: 7px 0; border-bottom: 1px solid var(--border-color);
+  padding: 7px 0; border-bottom: 1px solid var(--border);
 }
 .media-row--browser {
   display: flex; align-items: center; gap: 8px;
@@ -1737,7 +1733,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .media-thumb, .media-thumb--sm {
   flex-shrink: 0; width: 44px; height: 44px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-card); border-radius: 6px;
+  background: var(--surface); border-radius: 6px;
   border: 1px solid var(--border);
 }
 .media-thumb    { font-size: 1.6rem; }
@@ -1860,9 +1856,9 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
   text-align: left; font-size: 0.72rem; padding: 4px 8px;
   color: var(--text-muted); font-weight: 400;
 }
-.dedup-merge-th.winner { color: var(--accent, #4a90d9); font-weight: 600; }
+.dedup-merge-th.winner { color: var(--blue); font-weight: 600; }
 .dedup-merge-td { padding: 5px 8px; font-size: 0.82rem; }
-.dedup-merge-td.winner { font-weight: 600; color: var(--accent, #4a90d9); }
+.dedup-merge-td.winner { font-weight: 600; color: var(--blue); }
 .dedup-merge-td-label { padding: 5px 8px; font-size: 0.76rem; color: var(--text-muted); }
 .dedup-winner-box {
   font-size: 0.82rem; margin-bottom: 8px; padding: 8px;
@@ -1897,7 +1893,7 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
 /* ── Notiz-Modal Formularabschnitt ── */
 .note-ref-section {
   margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
 }
 .note-ref-header {
   display: flex; align-items: baseline;
