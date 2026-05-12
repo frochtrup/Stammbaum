@@ -14,7 +14,7 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
 **Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v152 / Cache: `stammbaum-v152`
+**Aktuelle sw-Version:** v153 / Cache: `stammbaum-v153`
 
 ---
 
@@ -276,7 +276,7 @@ abschließen.*
 
 | ID | Feature | Kurzbeschreibung | Aufwand |
 |---|---|---|---|
-| F4b | **Mehrfach-Zitierungen** | `citations:[{sid,page,quay,note,extra,media}]` statt 6 paralleler Felder; Migration + Roundtrip-Neuverifikation; 8 Dateien + Test-Suite | XL |
+| F4b | **Mehrfach-Zitierungen** ✅ Phase 1 | `citations[]` Parser/Writer/Migration abgeschlossen (sw v153); T0–T7 grün; Phase 2 (UI-Widget) + Phase 3 (Formulare) offen | XL |
 | U8  | **Granulares Undo** | History-Stack auf AppState; heute: Cmd+Z = "Revert to Saved" | XL |
 | F3  | **Pedigree-Collapse** | Vorfahren-Kollaps im Baum bei gemeinsamen Ahnen | L |
 | F9  | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |
@@ -336,12 +336,13 @@ Optional (wenn GRAMPS-Support erhalten): `gramps-parser.js`, `gramps-writer.js`.
 
 ### Sprint-Aufteilung
 
-**Phase 1 — Datenmodell + Parser + Writer**
+**Phase 1 — Datenmodell + Parser + Writer ✅ ABGESCHLOSSEN (sw v153)**
 
-1. `citationObj(sid,page,quay,note,extra,media)` Factory in `gedcom.js`; alle Defaults auf `citations:[]`
-2. Parser (`gedcom-parser.js`): `_curCit` ersetzt `lastSourVal`; beim `2/3 SOUR @Sxx@` → `citations.push(citationObj(sid))`; PAGE/QUAY/NOTE/OBJE/extra schreiben auf `_curCit`
-3. Migration beim Laden: `_migrateLegacyCitations(obj)` — erkennt Altformat (`sources[]` vorhanden), konvertiert in-memory transparent
-4. Writer (`gedcom-writer.js`): `writeSourCitations()` iteriert `citations[]`; kein Altformat-Code mehr
+1. ✅ `citationObj()` Factory in `gedcom.js` (`note=null` Sentinel); alle Defaults auf `citations:[]`
+2. ✅ Parser (`gedcom-parser.js`): `_curCit` ersetzt `lastSourVal`; alle 12 Event-Kontexte; `lastSourVal` nur noch für `topSourcePages{}` + FAMC/CHIL
+3. ✅ Migration: `_migrateLegacyCitations(obj)` — erkennt Altformat, konvertiert transparent
+4. ✅ Writer (`gedcom-writer.js`): `_writeSourCits()` iteriert `citations[]`; Altformat-Code entfernt
+5. ✅ `test-citations.html` — T0–T7 alle grün; T7: 9070 SOUR-Refs verlustfrei, 5253 Zitierungen korrekt
 
 **Phase 2 — UI-Widget**
 
