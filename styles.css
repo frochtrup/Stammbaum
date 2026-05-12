@@ -289,17 +289,14 @@ body.fc-mode #fcGenBtns { display: flex; }
 }
 .btn-link:active { color: var(--gold); }
 
-/* ── Places Sub-Tab Toggle (Pill Segment Control) ── */
-.places-toggle-bar {
-  display: flex; padding: 10px 16px 6px;
-  background: var(--bg);
-}
-.places-seg {
+/* ── Pill Segment Control (Places + Persons/Tasks) ── */
+.seg-bar  { display: flex; padding: 10px 16px 6px; background: var(--bg); }
+.seg-ctrl {
   display: flex; flex: 1;
   background: var(--surface2); border: 1px solid var(--border);
   border-radius: 10px; padding: 3px; gap: 2px;
 }
-.places-toggle-btn {
+.seg-btn {
   flex: 1; padding: 7px 4px;
   font-size: 0.82rem; font-weight: 600;
   background: none; color: var(--text-muted);
@@ -308,14 +305,11 @@ body.fc-mode #fcGenBtns { display: flex; }
   transition: background 0.15s, color 0.15s;
   min-height: 36px;
 }
-.places-toggle-btn.active {
-  background: var(--gold-dim);
-  color: var(--gold-lt);
+.seg-btn.active {
+  background: var(--gold-dim); color: var(--gold-lt);
   box-shadow: 0 1px 4px rgba(0,0,0,0.35);
 }
-.places-toggle-btn:not(.active):active {
-  background: var(--surface3); color: var(--text-dim);
-}
+.seg-btn:not(.active):active { background: var(--surface3); color: var(--text-dim); }
 
 /* ── Karten-Container ───────────────────── */
 /* Direkt in body (außerhalb v-main), immer position:fixed */
@@ -1261,32 +1255,6 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   position: relative; top: -6px;
 }
 
-/* Personen/Aufgaben-Toggle im Personen-Tab */
-.persons-mode-bar {
-  display: flex; padding: 10px 16px 6px;
-  background: var(--bg);
-}
-.persons-mode-seg {
-  display: flex; flex: 1;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 10px; padding: 3px; gap: 2px;
-}
-.persons-mode-btn {
-  flex: 1; padding: 7px 4px;
-  font-size: 0.82rem; font-weight: 600;
-  background: none; color: var(--text-muted);
-  border: none; cursor: pointer; border-radius: 8px;
-  font-family: 'Source Serif 4', serif;
-  transition: background 0.15s, color 0.15s;
-  min-height: 36px;
-}
-.persons-mode-btn.active {
-  background: var(--gold-dim); color: var(--gold-lt);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
-}
-.persons-mode-btn:not(.active):active {
-  background: var(--surface3); color: var(--text-dim);
-}
 
 /* Filter-Leiste (Alle/Offen/Erledigt) */
 .tasks-filter-bar {
