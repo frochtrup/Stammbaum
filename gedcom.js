@@ -352,31 +352,69 @@ function debounce(fn, ms) {
 }
 
 // ─────────────────────────────────────
+//  F4b — Citation-Datenmodell
+// ─────────────────────────────────────
+
+// Factory für ein einzelnes Citation-Objekt (neues Datenmodell)
+function citationObj(sid = '', page = '', quay = '', note = null, extra = [], media = []) {
+  return { sid, page, quay, note, extra: [...extra], media: [...media] };
+}
+
+// Konvertiert Altformat (sources[]+sourcePages{}+...) in-place zu citations[]
+// Idempotent: kein sources[] vorhanden → nichts tun
+function _migrateLegacyCitations(obj) {
+  if (!Array.isArray(obj.sources)) return;
+  obj.citations = obj.sources.map(sid => citationObj(
+    sid,
+    obj.sourcePages?.[sid]  ?? '',
+    obj.sourceQUAY?.[sid]   ?? '',
+    obj.sourceNote?.[sid]   ?? null,   // null = kein NOTE-Tag vorhanden
+    obj.sourceExtra?.[sid]  ?? [],
+    obj.sourceMedia?.[sid]  ?? []
+  ));
+  delete obj.sources;
+  delete obj.sourcePages;
+  delete obj.sourceQUAY;
+  delete obj.sourceNote;
+  delete obj.sourceExtra;
+  delete obj.sourceMedia;
+}
+
+// ─────────────────────────────────────
 //  sourceRefs-Rebuild (nach Event-Saves)
 // ─────────────────────────────────────
+
+function _addCitRefs(refs, obj) {
+  if (!obj) return;
+  if (obj.citations) {
+    obj.citations.forEach(c => { if (c.sid?.startsWith('@')) refs.add(c.sid); });
+  } else if (obj.sources) {
+    obj.sources.forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
+  }
+}
+
 function _rebuildPersonSourceRefs(p) {
   if (!p) return;
   const refs = new Set();
-  const add = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
-  add(p.topSources);
-  add(p.nameSources);
-  add(p.birth?.sources);
-  add(p.death?.sources);
-  add(p.chr?.sources);
-  add(p.buri?.sources);
-  (p.events || []).forEach(ev => add(ev.sources));
-  (p.famc  || []).forEach(fc => add(fc.sourIds));
+  const addArr = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
+  addArr(p.topSources);
+  addArr(p.nameSources);
+  _addCitRefs(refs, p.birth);
+  _addCitRefs(refs, p.death);
+  _addCitRefs(refs, p.chr);
+  _addCitRefs(refs, p.buri);
+  (p.events || []).forEach(ev => _addCitRefs(refs, ev));
+  (p.famc   || []).forEach(fc => addArr(fc.sourIds));
   p.sourceRefs = refs;
 }
 
 function _rebuildFamilySourceRefs(f) {
   if (!f) return;
   const refs = new Set();
-  const add = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
-  add(f.marr?.sources);
-  add(f.engag?.sources);
-  add(f.div?.sources);
-  add(f.divf?.sources);
-  (f.events || []).forEach(ev => add(ev.sources));
+  _addCitRefs(refs, f.marr);
+  _addCitRefs(refs, f.engag);
+  _addCitRefs(refs, f.div);
+  _addCitRefs(refs, f.divf);
+  (f.events || []).forEach(ev => _addCitRefs(refs, ev));
   f.sourceRefs = refs;
 }

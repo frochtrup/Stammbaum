@@ -29,6 +29,29 @@ function _toPedi(v) {
 // ─────────────────────────────────────
 //  GEDCOM WRITER  (v2 – vollständig)
 // ─────────────────────────────────────
+
+// Schreibt Quellenreferenzen aus citations[].
+// lv = Level des SOUR-Tags (z.B. 2 für Event-Ebene, 3 für Name-Ebene).
+function _writeSourCits(lines, lv, obj) {
+  if (!obj?.citations?.length) return;
+  for (const c of obj.citations) {
+    lines.push(`${lv} SOUR ${c.sid}`);
+    if (c.page)  lines.push(`${lv+1} PAGE ${c.page}`);
+    if (c.quay)  lines.push(`${lv+1} QUAY ${c.quay}`);
+    if (c.note !== null && c.note !== undefined)
+      lines.push(`${lv+1} NOTE${c.note ? ' ' + c.note : ''}`);
+    for (const l of (c.extra || [])) lines.push(l);
+    for (const m of (c.media || [])) {
+      lines.push(`${lv+1} OBJE`);
+      if (m.file) { lines.push(`${lv+2} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
+      if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
+      if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
+      if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
+      if (m.note) lines.push(`${lv+2} NOTE ${m.note}`);
+    }
+  }
+}
+
 function writeGEDCOM(updateHeadDate = false) {
   const lines = [];
   const d = new Date();
@@ -72,7 +95,8 @@ function writeGEDCOM(updateHeadDate = false) {
   }
 
   function eventBlock(tag, obj, lv) {
-    if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length) && !(obj._extra && obj._extra.length))) return;
+    if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause &&
+        !(obj.citations?.length) && !(obj._extra?.length))) return;
     lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
     if (obj.date !== null && obj.date !== undefined)  lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
     if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
@@ -82,21 +106,7 @@ function writeGEDCOM(updateHeadDate = false) {
     }
     if (obj.note) pushCont(lines, lv+1, 'NOTE', obj.note);
     for (const r of (obj.noteRefs||[])) lines.push(`${lv+1} NOTE ${r}`);
-    if (obj.sources) for (const s of obj.sources) {
-      lines.push(`${lv+1} SOUR ${s}`);
-      if (obj.sourcePages && obj.sourcePages[s]) lines.push(`${lv+2} PAGE ${obj.sourcePages[s]}`);
-      if (obj.sourceQUAY && obj.sourceQUAY[s])   lines.push(`${lv+2} QUAY ${obj.sourceQUAY[s]}`);
-      if (obj.sourceNote && obj.sourceNote[s] !== undefined) lines.push(`${lv+2} NOTE${obj.sourceNote[s] ? ' ' + obj.sourceNote[s] : ''}`);
-      if (obj.sourceExtra && obj.sourceExtra[s]) for (const l of obj.sourceExtra[s]) lines.push(l);
-      if (obj.sourceMedia && obj.sourceMedia[s]) for (const m of obj.sourceMedia[s]) {
-        lines.push(`${lv+2} OBJE`);
-        if (m.file) { lines.push(`${lv+3} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-        if (m.scbk) lines.push(`${lv+3} _SCBK ${m.scbk}`);
-        if (m.prim) lines.push(`${lv+3} _PRIM ${m.prim}`);
-        if (m.titl) lines.push(`${lv+3} TITL ${m.titl}`);
-        if (m.note) lines.push(`${lv+3} NOTE ${m.note}`);
-      }
-    }
+    _writeSourCits(lines, lv+1, obj);
     if (obj.media && obj.media.length) for (const m of obj.media) {
       lines.push(`${lv+1} OBJE`);
       if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
@@ -123,21 +133,7 @@ function writeGEDCOM(updateHeadDate = false) {
     if (p.nick)    lines.push(`2 NICK ${p.nick}`);
     if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
     if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
-    for (const s of (p.nameSources || [])) {
-      lines.push(`2 SOUR ${s}`);
-      if (p.nameSourcePages?.[s]) lines.push(`3 PAGE ${p.nameSourcePages[s]}`);
-      if (p.nameSourceQUAY?.[s])  lines.push(`3 QUAY ${p.nameSourceQUAY[s]}`);
-      if (p.nameSourceNote?.[s] !== undefined) lines.push(`3 NOTE${p.nameSourceNote[s] ? ' ' + p.nameSourceNote[s] : ''}`);
-      if (p.nameSourceExtra?.[s]) for (const l of p.nameSourceExtra[s]) lines.push(l);
-      if (p.nameSourceMedia?.[s]) for (const m of p.nameSourceMedia[s]) {
-        lines.push(`3 OBJE`);
-        if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-        if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-        if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-        if (m.titl) lines.push(`4 TITL ${m.titl}`);
-        if (m.note) lines.push(`4 NOTE ${m.note}`);
-      }
-    }
+    _writeSourCits(lines, 2, { citations: p.nameCitations });
     // NAME-context passthrough (2-level items at start of _passthrough, e.g. 2 NICK)
     const _pt = p._passthrough || [];
     let _ptNameEnd = 0;
@@ -151,21 +147,7 @@ function writeGEDCOM(updateHeadDate = false) {
       if (en.surname) lines.push(`2 SURN ${en.surname}`);
       if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
       if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
-      for (const s of (en.sources || [])) {
-        lines.push(`2 SOUR ${s}`);
-        if (en.sourcePages?.[s]) lines.push(`3 PAGE ${en.sourcePages[s]}`);
-        if (en.sourceQUAY?.[s])  lines.push(`3 QUAY ${en.sourceQUAY[s]}`);
-        if (en.sourceNote?.[s] !== undefined) lines.push(`3 NOTE${en.sourceNote[s] ? ' ' + en.sourceNote[s] : ''}`);
-        if (en.sourceExtra?.[s]) for (const l of en.sourceExtra[s]) lines.push(l);
-        if (en.sourceMedia?.[s]) for (const m of en.sourceMedia[s]) {
-          lines.push(`3 OBJE`);
-          if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-          if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-          if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-          if (m.titl) lines.push(`4 TITL ${m.titl}`);
-          if (m.note) lines.push(`4 NOTE ${m.note}`);
-        }
-      }
+      _writeSourCits(lines, 2, en);
       for (const l of (en._extra || [])) lines.push(l);
     }
     if (p.titl)    lines.push(`1 TITL ${p.titl}`);
@@ -197,21 +179,7 @@ function writeGEDCOM(updateHeadDate = false) {
       if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
       for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
       for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
-      if (ev.sources) for (const s of ev.sources) {
-        lines.push(`2 SOUR ${s}`);
-        if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
-        if (ev.sourceQUAY && ev.sourceQUAY[s])   lines.push(`3 QUAY ${ev.sourceQUAY[s]}`);
-        if (ev.sourceNote && ev.sourceNote[s] !== undefined) lines.push(`3 NOTE${ev.sourceNote[s] ? ' ' + ev.sourceNote[s] : ''}`);
-        if (ev.sourceExtra && ev.sourceExtra[s]) for (const l of ev.sourceExtra[s]) lines.push(l);
-        if (ev.sourceMedia && ev.sourceMedia[s]) for (const m of ev.sourceMedia[s]) {
-          lines.push(`3 OBJE`);
-          if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-          if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-          if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-          if (m.titl) lines.push(`4 TITL ${m.titl}`);
-          if (m.note) lines.push(`4 NOTE ${m.note}`);
-        }
-      }
+      _writeSourCits(lines, 2, ev);
       for (const m of (ev.media || [])) {
         lines.push('2 OBJE');
         if (m.title) lines.push(`3 TITL ${m.title}`);
@@ -337,21 +305,7 @@ function writeGEDCOM(updateHeadDate = false) {
         geoLines(ev, 3);
       }
       if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
-      if (ev.sources) for (const s of ev.sources) {
-        lines.push(`2 SOUR ${s}`);
-        if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
-        if (ev.sourceQUAY && ev.sourceQUAY[s])   lines.push(`3 QUAY ${ev.sourceQUAY[s]}`);
-        if (ev.sourceNote && ev.sourceNote[s] !== undefined) lines.push(`3 NOTE${ev.sourceNote[s] ? ' ' + ev.sourceNote[s] : ''}`);
-        if (ev.sourceExtra && ev.sourceExtra[s]) for (const l of ev.sourceExtra[s]) lines.push(l);
-        if (ev.sourceMedia && ev.sourceMedia[s]) for (const m of ev.sourceMedia[s]) {
-          lines.push(`3 OBJE`);
-          if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-          if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-          if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-          if (m.titl) lines.push(`4 TITL ${m.titl}`);
-          if (m.note) lines.push(`4 NOTE ${m.note}`);
-        }
-      }
+      _writeSourCits(lines, 2, ev);
       if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
     }
     if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);

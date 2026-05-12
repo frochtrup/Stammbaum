@@ -23,7 +23,8 @@ function parseGEDCOM(text, parseErrors) {
   let evIdx  = -1;   // current event index in cur.events
   let inMap  = false; // are we inside a MAP block?
   let mapParent = ''; // which lv1 tag owns current MAP (BIRT/DEAT/etc.)
-  let lastSourVal = ''; // last seen 2 SOUR @id@ value (for 3 PAGE lookup)
+  let _curCit = null;   // aktuelles Citation-Objekt (gesetzt bei SOUR @id@, für PAGE/QUAY/NOTE/OBJE)
+  let lastSourVal = ''; // noch genutzt für: topSourcePages{} (lv=1 SOUR) + CHIL/SOUR (lv=2)
   let _curNoteIsInline = false; // true when 1 NOTE was inline (not a @ref@)
   let _curExtraNameIdx = -1;   // index into cur.extraNames when parsing 2nd+ NAME
   let _ptDepth = 0;  // verbatim-passthrough depth (0 = off)
@@ -59,26 +60,26 @@ function parseGEDCOM(text, parseErrors) {
     // ── Level 0 ──
     if (lv === 0) {
       lv1tag = lv2tag = lv3tag = '';
-      evIdx = -1; inMap = false; mapParent = ''; _ptDepth = 0; _smEntry = null;
+      evIdx = -1; inMap = false; mapParent = ''; _ptDepth = 0; _smEntry = null; _curCit = null;
       if (tag.startsWith('@') && val.trim() === 'INDI') {
         cur = {
           id: tag, _passthrough: [], _nameParsed: false,
           name:'', nameRaw:'', surname:'', given:'', nick:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
-          death:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], cause:'', value:'', seen:false, note:'' },
-          chr:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
-          buri:{ date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[], value:'', seen:false, note:'' },
+          birth:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
+          death:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' },
+          chr:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
+          buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'',
           extraNames:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, lastChanged:'', lastChangedTime:'',
-          nameSources:[], nameSourcePages:{}, nameSourceQUAY:{}, nameSourceNote:{}, nameSourceExtra:{}, nameSourceMedia:{},
+          nameCitations:[],
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
-        const _famEv = () => ({date:null,place:null,lati:null,long:null,sources:[],sourcePages:{},sourceQUAY:{},sourceNote:{},sourceExtra:{},sourceMedia:{},value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
+        const _famEv = () => ({date:null,place:null,lati:null,long:null,citations:[],value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
         cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, noteRefs:[], noteTexts:[], noteText:'', noteTextInline:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
@@ -117,9 +118,9 @@ function parseGEDCOM(text, parseErrors) {
     if (curType === 'HEAD') { _headLines.push(lv + ' ' + tag + (val ? ' ' + val : '')); continue; }
 
     // Track context tags
-    if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; lastSourVal = ''; _curNoteIsInline = false; _curExtraNameIdx = -1; _smEntry = null; }
-    if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag === 'SOUR') lastSourVal = val; _smEntry = null; }
-    if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } if (tag === 'SOUR') lastSourVal = val; _smEntry = null; }
+    if (lv === 1) { lv1tag = tag; lv2tag = ''; lv3tag = ''; inMap = false; mapParent = ''; _curCit = null; lastSourVal = ''; _curNoteIsInline = false; _curExtraNameIdx = -1; _smEntry = null; }
+    if (lv === 2) { lv2tag = tag; lv3tag = ''; if (tag !== 'MAP') inMap = false; if (tag !== 'SOUR') _curCit = null; _smEntry = null; }
+    if (lv === 3) { lv3tag = tag; if (tag === 'MAP') { inMap = true; mapParent = lv1tag; } else { inMap = false; } _smEntry = null; }
 
     // ── Verbatim Passthrough ──
     if (_ptDepth > 0) {
@@ -143,7 +144,7 @@ function parseGEDCOM(text, parseErrors) {
             const sn2 = (val||'').match(/\/([^\/]*)\//) || [];
             const surn2 = sn2[1] ? sn2[1].trim() : '';
             const giv2  = (val||'').replace(/\/[^\/]*\//, '').trim();
-            cur.extraNames.push({ nameRaw:val||'', given:giv2, surname:surn2, prefix:'', suffix:'', type:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[] });
+            cur.extraNames.push({ nameRaw:val||'', given:giv2, surname:surn2, prefix:'', suffix:'', type:'', citations:[], _extra:[] });
             _curExtraNameIdx = cur.extraNames.length - 1;
           } else {
             cur._nameParsed = true;
@@ -164,7 +165,7 @@ function parseGEDCOM(text, parseErrors) {
           else { cur.noteRefs.push(val); _curNoteIsInline = false; }
         }
         else if (tag === '_UID') cur.uid = val;
-        else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); lastSourVal = val; }
+        else if (tag === 'SOUR' && val.startsWith('@')) { cur.topSources.push(val); cur.sourceRefs.add(val); lastSourVal = val; /* für topSourcePages */ }
         // OBJE → fällt in else-Passthrough unten (vollständiger Block wird verbatim bewahrt)
         else if (tag === 'RESN')  cur.resn  = val;
         else if (tag === 'EMAIL') cur.email = val;
@@ -176,7 +177,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
                   'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB',
                   'DSCR','IDNO','SSN'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', addr:'', phon:[], email:[], sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, media:[], _extra:[] });
+          cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', addr:'', phon:[], email:[], citations:[], media:[], _extra:[] });
           evIdx = cur.events.length - 1;
         }
         else if (tag === 'OBJE') {
@@ -206,7 +207,7 @@ function parseGEDCOM(text, parseErrors) {
             else if (tag === 'SURN') { en.surname = val; }
             else if (tag === 'NPFX') en.prefix  = val;
             else if (tag === 'NSFX') en.suffix  = val;
-            else if (tag === 'SOUR' && val.startsWith('@')) { en.sources.push(val); cur.sourceRefs.add(val); }
+            else if (tag === 'SOUR') { _curCit = citationObj(val); en.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
             else if (tag === 'CONC') en.nameRaw += val;
             else if (tag === 'CONT') en.nameRaw += '\n' + val;
             else { en._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = en._extra; }
@@ -216,7 +217,7 @@ function parseGEDCOM(text, parseErrors) {
             else if (tag === 'NICK') cur.nick = val;
             else if (tag === 'NPFX') cur.prefix = val;
             else if (tag === 'NSFX') cur.suffix = val;
-            else if (tag === 'SOUR' && val.startsWith('@')) { cur.nameSources.push(val); cur.sourceRefs.add(val); }
+            else if (tag === 'SOUR') { _curCit = citationObj(val); cur.nameCitations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
             else if (tag === 'CONC') cur.nameRaw += val;
             else if (tag === 'CONT') cur.nameRaw += '\n' + val;
             else { cur._passthrough.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; }
@@ -227,7 +228,7 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='DATE') cur.birth.date=val;
           else if (tag==='PLAC') cur.birth.place=val;
           else if (tag==='NOTE') cur.birth.note=val;
-          else if (tag==='SOUR') { cur.birth.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.birth.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.birth._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.birth._extra; }
         }
         else if (lv1tag === 'DEAT') {
@@ -235,21 +236,21 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='PLAC') cur.death.place=val;
           else if (tag==='CAUS') cur.death.cause=val;
           else if (tag==='NOTE') cur.death.note=val;
-          else if (tag==='SOUR') { cur.death.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.death.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.death._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.death._extra; }
         }
         else if (lv1tag === 'CHR') {
           if      (tag==='DATE') cur.chr.date=val;
           else if (tag==='PLAC') cur.chr.place=val;
           else if (tag==='NOTE') cur.chr.note=val;
-          else if (tag==='SOUR') { cur.chr.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.chr.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.chr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.chr._extra; }
         }
         else if (lv1tag === 'BURI') {
           if      (tag==='DATE') cur.buri.date=val;
           else if (tag==='PLAC') cur.buri.place=val;
           else if (tag==='NOTE') cur.buri.note=val;
-          else if (tag==='SOUR') { cur.buri.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.buri.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.buri._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.buri._extra; }
         }
         // Other events
@@ -263,7 +264,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='EMAIL') ev.email.push(val);
           else if (tag==='ADDR') { ev.addr = (ev.addr ? ev.addr + '\n' : '') + val; if (!ev.addrExtra) ev.addrExtra=[]; _ptDepth=2; _ptTarget=ev.addrExtra; }
           else if (tag==='CONC'||tag==='CONT') ev.value += (tag==='CONT'?'\n':'') + val;
-          else if (tag==='SOUR') { ev.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); ev.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='OBJE') {
             if (val && val.startsWith('@')) { ev._extra.push('2 OBJE ' + val); _ptDepth = 2; _ptTarget = ev._extra; }
             else ev.media.push({ file:'', title:'', form:'', _extra:[] });
@@ -276,7 +277,7 @@ function parseGEDCOM(text, parseErrors) {
           if (tag==='PEDI') { fref.pedi = val; if (!fref.frelSeen) { fref.frel = val; fref.frelSeen = true; } if (!fref.mrelSeen) { fref.mrel = val; fref.mrelSeen = true; } }
           if (tag==='_FREL') { fref.frel = val; fref.frelSeen = true; }
           if (tag==='_MREL') { fref.mrel = val; fref.mrelSeen = true; }
-          if (tag==='SOUR' && val.startsWith('@')) { const _ns = val.replace(/^@@/,'@').replace(/@@$/,'@'); fref.sourIds.push(_ns); cur.sourceRefs.add(_ns); }
+          if (tag==='SOUR' && val.startsWith('@')) { const _ns = val.replace(/^@@/,'@').replace(/@@$/,'@'); fref.sourIds.push(_ns); cur.sourceRefs.add(_ns); lastSourVal = _ns; }
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
@@ -319,72 +320,24 @@ function parseGEDCOM(text, parseErrors) {
         // Event note continuation
         if (evIdx >= 0 && lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
           cur.events[evIdx].note += (tag==='CONT'?'\n':'') + val;
-        // 3 PAGE under 2 SOUR — Seitenangabe für Quellenreferenz
-        if (lv2tag === 'SOUR' && tag === 'PAGE' && lastSourVal.startsWith('@')) {
-          if      (lv1tag === 'BIRT') { if (!cur.birth.sourcePages) cur.birth.sourcePages={}; cur.birth.sourcePages[lastSourVal] = val; }
-          else if (lv1tag === 'DEAT') { if (!cur.death.sourcePages) cur.death.sourcePages={}; cur.death.sourcePages[lastSourVal] = val; }
-          else if (lv1tag === 'CHR')  { if (!cur.chr.sourcePages)   cur.chr.sourcePages={};   cur.chr.sourcePages[lastSourVal]   = val; }
-          else if (lv1tag === 'BURI') { if (!cur.buri.sourcePages)  cur.buri.sourcePages={};  cur.buri.sourcePages[lastSourVal]  = val; }
-          else if (lv1tag === 'NAME') {
-            if (_curExtraNameIdx >= 0 && cur.extraNames[_curExtraNameIdx])
-              cur.extraNames[_curExtraNameIdx].sourcePages[lastSourVal] = val;
-            else cur.nameSourcePages[lastSourVal] = val;
-          }
-          else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourPages[lastSourVal] = val;
-          else if (evIdx >= 0 && cur.events[evIdx]) {
-            if (!cur.events[evIdx].sourcePages) cur.events[evIdx].sourcePages = {};
-            cur.events[evIdx].sourcePages[lastSourVal] = val;
-          }
-        }
-        // 3 QUAY under 2 SOUR — Qualitätsbewertung der Quellenreferenz (0–3)
-        if (lv2tag === 'SOUR' && tag === 'QUAY' && lastSourVal.startsWith('@')) {
-          if      (lv1tag === 'BIRT') { if (!cur.birth.sourceQUAY) cur.birth.sourceQUAY={}; cur.birth.sourceQUAY[lastSourVal] = val; }
-          else if (lv1tag === 'DEAT') { if (!cur.death.sourceQUAY) cur.death.sourceQUAY={}; cur.death.sourceQUAY[lastSourVal] = val; }
-          else if (lv1tag === 'CHR')  { if (!cur.chr.sourceQUAY)   cur.chr.sourceQUAY={};   cur.chr.sourceQUAY[lastSourVal]   = val; }
-          else if (lv1tag === 'BURI') { if (!cur.buri.sourceQUAY)  cur.buri.sourceQUAY={};  cur.buri.sourceQUAY[lastSourVal]  = val; }
-          else if (lv1tag === 'NAME') {
-            if (_curExtraNameIdx >= 0 && cur.extraNames[_curExtraNameIdx])
-              cur.extraNames[_curExtraNameIdx].sourceQUAY[lastSourVal] = val;
-            else cur.nameSourceQUAY[lastSourVal] = val;
-          }
-          else if (lv1tag === 'FAMC' && cur.famc.length) cur.famc[cur.famc.length-1].sourQUAY[lastSourVal] = val;
-          else if (evIdx >= 0 && cur.events[evIdx]) {
-            if (!cur.events[evIdx].sourceQUAY) cur.events[evIdx].sourceQUAY = {};
-            cur.events[evIdx].sourceQUAY[lastSourVal] = val;
-          }
-        }
-        // lv=3 Tags unter 2 SOUR: NOTE → sourceNote{}; Rest → sourceExtra{}
-        if (lv2tag === 'SOUR' && lastSourVal &&
-            tag !== 'PAGE' && tag !== 'QUAY' && tag !== 'SOUR' && tag !== 'TIME') {
-          let _seDict = null; let _snDict = null; let _smDict2 = null;
-          if      (lv1tag === 'NAME') {
-            if (_curExtraNameIdx >= 0 && cur.extraNames[_curExtraNameIdx]) {
-              _seDict  = cur.extraNames[_curExtraNameIdx].sourceExtra  || (cur.extraNames[_curExtraNameIdx].sourceExtra  = {});
-              _snDict  = cur.extraNames[_curExtraNameIdx].sourceNote   || (cur.extraNames[_curExtraNameIdx].sourceNote   = {});
-              _smDict2 = cur.extraNames[_curExtraNameIdx].sourceMedia  || (cur.extraNames[_curExtraNameIdx].sourceMedia  = {});
-            } else { _seDict = cur.nameSourceExtra; _snDict = cur.nameSourceNote || (cur.nameSourceNote = {}); _smDict2 = cur.nameSourceMedia; }
-          }
-          else if (lv1tag === 'BIRT') { _seDict = cur.birth.sourceExtra; _snDict = cur.birth.sourceNote; _smDict2 = cur.birth.sourceMedia; }
-          else if (lv1tag === 'DEAT') { _seDict = cur.death.sourceExtra; _snDict = cur.death.sourceNote; _smDict2 = cur.death.sourceMedia; }
-          else if (lv1tag === 'CHR')  { _seDict = cur.chr.sourceExtra;   _snDict = cur.chr.sourceNote;   _smDict2 = cur.chr.sourceMedia; }
-          else if (lv1tag === 'BURI') { _seDict = cur.buri.sourceExtra;  _snDict = cur.buri.sourceNote;  _smDict2 = cur.buri.sourceMedia; }
-          else if (lv1tag === 'FAMC' && cur.famc.length) _seDict = cur.famc[cur.famc.length-1].sourExtra;
-          else if (evIdx >= 0 && cur.events[evIdx]) { _seDict = cur.events[evIdx].sourceExtra; _snDict = cur.events[evIdx].sourceNote; _smDict2 = cur.events[evIdx].sourceMedia; }
-          if (tag === 'NOTE' && _snDict !== null) {
-            _snDict[lastSourVal] = val || '';
-            // CONT/CONC gehen in sourceExtra (damit sie korrekt nach NOTE ausgegeben werden)
-            if (!_seDict) { /* no-op */ } else { _ptDepth = 3; _ptTarget = _seDict[lastSourVal] || (_seDict[lastSourVal] = []); }
-          } else if (tag === 'OBJE' && !val.startsWith('@') && _smDict2 !== null) {
-            // Inline OBJE unter SOUR-Zitation → sourceMedia{}
-            if (!_smDict2[lastSourVal]) _smDict2[lastSourVal] = [];
+        // lv=3 Sub-Tags unter 2 SOUR → direkt auf _curCit schreiben (PAGE/QUAY/NOTE/OBJE/extra)
+        if (lv2tag === 'SOUR' && _curCit && tag !== 'TIME' && tag !== 'SOUR') {
+          if      (tag === 'PAGE') _curCit.page = val;
+          else if (tag === 'QUAY') _curCit.quay = val;
+          else if (tag === 'NOTE') { _curCit.note = val || ''; _ptDepth = 3; _ptTarget = _curCit.extra; }
+          else if (tag === 'OBJE' && !val?.startsWith('@')) {
             const _sm = { file:'', scbk:'', prim:'', titl:'', note:'', _extra:[] };
-            _smDict2[lastSourVal].push(_sm);
-            _smEntry = _sm;
-          } else if (_seDict !== null) {
-            if (!_seDict[lastSourVal]) _seDict[lastSourVal] = [];
-            _seDict[lastSourVal].push('3 ' + tag + (val ? ' ' + val : ''));
-            _ptDepth = 3; _ptTarget = _seDict[lastSourVal];
+            _curCit.media.push(_sm); _smEntry = _sm;
+          } else {
+            _curCit.extra.push('3 ' + tag + (val ? ' ' + val : ''));
+            _ptDepth = 3; _ptTarget = _curCit.extra;
           }
+        }
+        // FAMC-Quellen: PAGE/QUAY über sourPages/sourQUAY (FAMC hat eigene Struktur)
+        if (lv2tag === 'SOUR' && lv1tag === 'FAMC' && cur.famc.length && lastSourVal) {
+          const fref = cur.famc[cur.famc.length-1];
+          if (tag === 'PAGE') fref.sourPages[lastSourVal] = val;
+          if (tag === 'QUAY') fref.sourQUAY[lastSourVal] = val;
         }
         // 3 SOUR unter 2 _FREL/_MREL (in 1 FAMC Kontext)
         if (lv1tag === 'FAMC' && cur.famc.length && tag === 'SOUR') {
@@ -476,7 +429,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag==='DIV')  { cur.div.seen   = true; cur.div.value   = val; }
         else if (tag==='DIVF') { cur.divf.seen  = true; cur.divf.value  = val; }
         else if (tag==='CHAN') { /* context-only */ }
-        else if (tag==='EVEN') { cur.events.push({ type:'EVEN', value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, _extra:[] }); evIdx = cur.events.length-1; }
+        else if (tag==='EVEN') { cur.events.push({ type:'EVEN', value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', citations:[], _extra:[] }); evIdx = cur.events.length-1; }
         else if (tag==='_STAT') { cur._stat = val; }
         else if (tag==='OBJE') {
           if (val && val.startsWith('@')) {
@@ -497,7 +450,7 @@ function parseGEDCOM(text, parseErrors) {
           if (tag==='DATE') cur.marr.date=val;
           else if (tag==='PLAC') cur.marr.place=val;
           else if (tag==='ADDR') cur.marr.addr=val;
-          else if (tag==='SOUR') { cur.marr.sources = cur.marr.sources||[]; cur.marr.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.marr.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.marr.noteRefs.push(val); else { cur.marr.note = val; _ptDepth=2; _ptTarget=cur.marr._extra; } }
           else if (tag==='OBJE') { cur.marr.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.marr._extra; }
@@ -505,7 +458,7 @@ function parseGEDCOM(text, parseErrors) {
         if (lv1tag==='ENGA' || lv1tag==='ENG') {
           if      (tag==='DATE') cur.engag.date = val;
           else if (tag==='PLAC') cur.engag.place = val;
-          else if (tag==='SOUR') { cur.engag.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.engag.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.engag.noteRefs.push(val); else { cur.engag.note = val; _ptDepth=2; _ptTarget=cur.engag._extra; } }
           else if (tag==='OBJE') { cur.engag.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.engag._extra; }
@@ -513,7 +466,7 @@ function parseGEDCOM(text, parseErrors) {
         if (lv1tag==='DIV') {
           if      (tag==='DATE') cur.div.date = val;
           else if (tag==='PLAC') cur.div.place = val;
-          else if (tag==='SOUR') { cur.div.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.div.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.div.noteRefs.push(val); else { cur.div.note = val; _ptDepth=2; _ptTarget=cur.div._extra; } }
           else if (tag==='OBJE') { cur.div.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.div._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.div._extra; }
@@ -521,7 +474,7 @@ function parseGEDCOM(text, parseErrors) {
         if (lv1tag==='DIVF') {
           if      (tag==='DATE') cur.divf.date = val;
           else if (tag==='PLAC') cur.divf.place = val;
-          else if (tag==='SOUR') { cur.divf.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); cur.divf.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else if (tag==='NOTE') { if (val.startsWith('@')) cur.divf.noteRefs.push(val); else { cur.divf.note = val; _ptDepth=2; _ptTarget=cur.divf._extra; } }
           else if (tag==='OBJE') { cur.divf.media.push({file:'',form:'',titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.divf._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.divf._extra; }
@@ -532,7 +485,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='PLAC') ev.place = val;
           else if (tag==='TYPE') ev.eventType = val;
           else if (tag==='NOTE') { ev.note += (ev.note ? '\n' : '') + (val||''); }
-          else if (tag==='SOUR') { ev.sources.push(val); if (val.startsWith('@')) cur.sourceRefs.add(val); }
+          else if (tag==='SOUR') { _curCit=citationObj(val); ev.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { ev._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = ev._extra; }
         }
         if (lv1tag==='OBJE' && cur.media.length) {
@@ -549,7 +502,7 @@ function parseGEDCOM(text, parseErrors) {
           const cref = cur.childRelations[cur._lastChil];
           if (tag==='_FREL') { cref.frel = val; cref.frelSeen = true; }
           if (tag==='_MREL') { cref.mrel = val; cref.mrelSeen = true; }
-          if (tag==='SOUR' && val.startsWith('@')) { cref.sourIds.push(val); cur.sourceRefs.add(val); }
+          if (tag==='SOUR' && val.startsWith('@')) { cref.sourIds.push(val); cur.sourceRefs.add(val); lastSourVal = val; }
         }
       }
       else if (lv === 3) {
@@ -560,33 +513,18 @@ function parseGEDCOM(text, parseErrors) {
           else { cur.media[cur.media.length-1]._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
         if (lv2tag==='DATE' && lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
-        if (lv1tag==='MARR' && lv2tag==='SOUR' && lastSourVal) {
-          if      (tag==='PAGE') cur.marr.sourcePages[lastSourVal] = val;
-          else if (tag==='QUAY') cur.marr.sourceQUAY[lastSourVal] = val;
-          else if (tag==='NOTE') { cur.marr.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(cur.marr.sourceExtra[lastSourVal]||(cur.marr.sourceExtra[lastSourVal]=[])); }
-          else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.marr.sourceMedia[lastSourVal]) cur.marr.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.marr.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
-          else if (tag !== 'SOUR') { if (!cur.marr.sourceExtra[lastSourVal]) cur.marr.sourceExtra[lastSourVal] = []; cur.marr.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.marr.sourceExtra[lastSourVal]; }
-        }
-        if ((lv1tag==='ENGA'||lv1tag==='ENG') && lv2tag==='SOUR' && lastSourVal) {
-          if      (tag==='PAGE') cur.engag.sourcePages[lastSourVal] = val;
-          else if (tag==='QUAY') cur.engag.sourceQUAY[lastSourVal] = val;
-          else if (tag==='NOTE') { cur.engag.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(cur.engag.sourceExtra[lastSourVal]||(cur.engag.sourceExtra[lastSourVal]=[])); }
-          else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.engag.sourceMedia[lastSourVal]) cur.engag.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.engag.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
-          else if (tag !== 'SOUR') { if (!cur.engag.sourceExtra[lastSourVal]) cur.engag.sourceExtra[lastSourVal] = []; cur.engag.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.engag.sourceExtra[lastSourVal]; }
-        }
-        if (lv1tag==='DIV' && lv2tag==='SOUR' && lastSourVal) {
-          if      (tag==='PAGE') cur.div.sourcePages[lastSourVal] = val;
-          else if (tag==='QUAY') cur.div.sourceQUAY[lastSourVal] = val;
-          else if (tag==='NOTE') { cur.div.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(cur.div.sourceExtra[lastSourVal]||(cur.div.sourceExtra[lastSourVal]=[])); }
-          else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.div.sourceMedia[lastSourVal]) cur.div.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.div.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
-          else if (tag !== 'SOUR') { if (!cur.div.sourceExtra[lastSourVal]) cur.div.sourceExtra[lastSourVal] = []; cur.div.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.div.sourceExtra[lastSourVal]; }
-        }
-        if (lv1tag==='DIVF' && lv2tag==='SOUR' && lastSourVal) {
-          if      (tag==='PAGE') cur.divf.sourcePages[lastSourVal] = val;
-          else if (tag==='QUAY') cur.divf.sourceQUAY[lastSourVal] = val;
-          else if (tag==='NOTE') { cur.divf.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(cur.divf.sourceExtra[lastSourVal]||(cur.divf.sourceExtra[lastSourVal]=[])); }
-          else if (tag==='OBJE' && !val.startsWith('@')) { if (!cur.divf.sourceMedia[lastSourVal]) cur.divf.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; cur.divf.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
-          else if (tag !== 'SOUR') { if (!cur.divf.sourceExtra[lastSourVal]) cur.divf.sourceExtra[lastSourVal] = []; cur.divf.sourceExtra[lastSourVal].push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth = 3; _ptTarget = cur.divf.sourceExtra[lastSourVal]; }
+        // lv=3 Sub-Tags unter 2 SOUR (FAM: MARR/ENGA/DIV/DIVF/EVEN) → direkt auf _curCit
+        if (lv2tag === 'SOUR' && _curCit && tag !== 'TIME' && tag !== 'SOUR') {
+          if      (tag === 'PAGE') _curCit.page = val;
+          else if (tag === 'QUAY') _curCit.quay = val;
+          else if (tag === 'NOTE') { _curCit.note = val || ''; _ptDepth = 3; _ptTarget = _curCit.extra; }
+          else if (tag === 'OBJE' && !val?.startsWith('@')) {
+            const _sm = { file:'', scbk:'', prim:'', titl:'', note:'', _extra:[] };
+            _curCit.media.push(_sm); _smEntry = _sm;
+          } else {
+            _curCit.extra.push('3 ' + tag + (val ? ' ' + val : ''));
+            _ptDepth = 3; _ptTarget = _curCit.extra;
+          }
         }
         if (lv1tag==='MARR' && lv2tag==='OBJE' && cur.marr.media.length) {
           const _om = cur.marr.media[cur.marr.media.length-1];
@@ -627,14 +565,6 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='_SCBK') _om.scbk = val;
           else if (tag==='_PRIM') _om.prim = val;
           else { _om._extra.push('3 '+tag+(val?' '+val:'')); _ptDepth=3; _ptTarget=_om._extra; }
-        }
-        if (lv1tag==='EVEN' && lv2tag==='SOUR' && lastSourVal && evIdx >= 0 && cur.events[evIdx]) {
-          const ev = cur.events[evIdx];
-          if      (tag==='PAGE') ev.sourcePages[lastSourVal] = val;
-          else if (tag==='QUAY') ev.sourceQUAY[lastSourVal] = val;
-          else if (tag==='NOTE') { ev.sourceNote[lastSourVal] = val||''; _ptDepth=3; _ptTarget=(ev.sourceExtra[lastSourVal]||(ev.sourceExtra[lastSourVal]=[])); }
-          else if (tag==='OBJE' && !val.startsWith('@')) { if (!ev.sourceMedia[lastSourVal]) ev.sourceMedia[lastSourVal]=[]; const _sm={file:'',scbk:'',prim:'',titl:'',note:'',_extra:[]}; ev.sourceMedia[lastSourVal].push(_sm); _smEntry=_sm; }
-          else if (tag !== 'SOUR') { if (!ev.sourceExtra[lastSourVal]) ev.sourceExtra[lastSourVal]=[]; ev.sourceExtra[lastSourVal].push('3 '+tag+(val?' '+val:'')); _ptDepth=3; _ptTarget=ev.sourceExtra[lastSourVal]; }
         }
         if (lv1tag==='CHIL' && cur._lastChil && (lv2tag==='_FREL'||lv2tag==='_MREL')) {
           if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],sourIds:[],sourPages:{},sourQUAY:{},sourExtra:{},sourMedia:{}};
