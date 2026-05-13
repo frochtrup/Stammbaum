@@ -171,7 +171,7 @@ function showPersonForm(id) {
   const pillsContainer = document.getElementById('pf-field-pills');
   const optFields = document.querySelectorAll('#modalPerson .pf-opt-field');
   const lifeSection = document.getElementById('pf-life-section');
-  const _EVENT_FIELDS = new Set(['taufe', 'beerdigung', 'beruf', 'wohnort']);
+  const _EVENT_FIELDS = new Set(['taufe', 'beerdigung', 'beruf', 'wohnort', 'note']);
   if (isNew) {
     optFields.forEach(el => { el.hidden = true; });
     if (lifeSection) lifeSection.hidden = false;
