@@ -170,11 +170,16 @@ function showPersonForm(id) {
   _pfActivePills = new Set();
   const pillsContainer = document.getElementById('pf-field-pills');
   const optFields = document.querySelectorAll('#modalPerson .pf-opt-field');
+  const lifeSection = document.getElementById('pf-life-section');
+  const _EVENT_FIELDS = new Set(['taufe', 'beerdigung', 'beruf', 'wohnort']);
   if (isNew) {
     optFields.forEach(el => { el.hidden = true; });
+    if (lifeSection) lifeSection.hidden = false;
     if (pillsContainer) { pillsContainer.hidden = false; _renderPills(); }
   } else {
-    optFields.forEach(el => { el.hidden = false; });
+    // Nur Name/Meta-Felder zeigen — Ereignisse über Detailview bearbeitbar
+    optFields.forEach(el => { el.hidden = _EVENT_FIELDS.has(el.dataset.field); });
+    if (lifeSection) lifeSection.hidden = true;
     if (pillsContainer) pillsContainer.hidden = true;
   }
   const saveNewBtn = document.getElementById('pfSaveNewBtn');
