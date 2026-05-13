@@ -616,8 +616,11 @@ body.desktop-mode.places-karte #mapContainer {
 .section-add:active { border-color: var(--gold-dim); color: var(--gold-dim); }
 
 .missing-events-row {
-  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+  display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px;
+  margin-bottom: 10px; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.missing-events-row::-webkit-scrollbar { display: none; }
 .quick-chip {
   background: none; border: 1px solid var(--border);
   color: var(--text-muted); font-size: 0.75rem;
