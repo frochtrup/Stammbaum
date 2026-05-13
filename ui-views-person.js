@@ -439,7 +439,7 @@ function _ageAt(refDateStr, evDateStr) {
 function _pdetLifeData(p, id) {
   const _hasGeo = [p.birth, p.chr, p.death, p.buri, ...p.events]
     .some(ev => ev && _validCoord(ev.lati, ev.long));
-  let html = `<div class="section fade-up">
+  let html = `<div class="section fade-up" id="pdet-life">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
       <div class="det-btn-row">
@@ -645,7 +645,7 @@ function showDetail(id, pushHistory = true) {
   // Notizen
   const _pNoteText = p.noteText || '';
   const _pHasRefs  = (p.noteRefs || []).some(r => AppState.db.notes?.[r]);
-  html += `<div class="section fade-up">
+  html += `<div class="section fade-up" id="pdet-notes">
     <div class="section-head">
       <div class="section-title">Notizen${_pHasRefs ? ` <span class="fs-xxs c-muted fw-400">(+ verknüpfte)</span>` : ''}</div>
       <button class="section-add" data-action="openNoteModal" data-ntype="person" data-nid="${id}">✎ Bearbeiten</button>
@@ -662,7 +662,7 @@ function showDetail(id, pushHistory = true) {
   const indiPtObje = (p._passthrough || []).filter(l => /^1 OBJE @/.test(l));
   {
     const _objeMap = _buildObjeRefMap();
-    html += `<div class="section fade-up">
+    html += `<div class="section fade-up" id="pdet-media">
       <div class="section-head">
         <div class="section-title">Medien</div>
         <button class="section-add" data-action="openAddMediaDialog" data-ctx="person" data-id="${id}">+ Hinzufügen</button>
@@ -705,7 +705,7 @@ function showDetail(id, pushHistory = true) {
   }
 
   // As spouse — immer anzeigen (Button auch wenn noch keine Familie)
-  html += `<div class="section fade-up">
+  html += `<div class="section fade-up" id="pdet-family">
     <div class="section-head">
       <div class="section-title">Ehepartner &amp; Kinder</div>
       <button class="section-add" data-action="showAddSpouseFlow" data-pid="${id}">+ Ehepartner</button>
@@ -737,7 +737,7 @@ function showDetail(id, pushHistory = true) {
   html += `</div>`;
 
   // Parents — immer anzeigen (Button auch wenn noch keine Eltern)
-  html += `<div class="section fade-up">
+  html += `<div class="section fade-up" id="pdet-parents">
     <div class="section-head">
       <div class="section-title">Eltern</div>
       <button class="section-add" data-action="showAddParentFlow" data-pid="${id}">+ Elternteil</button>
@@ -766,9 +766,10 @@ function showDetail(id, pushHistory = true) {
   html += `</div>`;
 
   // Aufgaben-Placeholder — wird async befüllt sobald IDB geladen
-  html += `<div id="tasks-section-placeholder-${id}" class="section fade-up"></div>`;
+  html += `<div id="tasks-section-placeholder-${id}" class="section fade-up" data-jump-id="pdet-tasks"></div>`;
 
   document.getElementById('detailContent').innerHTML = html;
+  _injectJumpBar();
   showView('v-detail');
   if (typeof _renderTasksSectionAsync === 'function') _renderTasksSectionAsync(id);
 
@@ -836,4 +837,22 @@ function showRelPath(id) {
   }
 
   openModal('modalRelPath');
+}
+
+function _injectJumpBar() {
+  const SECTIONS = [
+    { id: 'pdet-life',    lbl: 'Daten' },
+    { id: 'pdet-notes',   lbl: 'Notizen' },
+    { id: 'pdet-media',   lbl: 'Medien' },
+    { id: 'pdet-family',  lbl: 'Familie' },
+    { id: 'pdet-parents', lbl: 'Eltern' },
+  ];
+  const present = SECTIONS.filter(s => document.getElementById(s.id));
+  if (present.length < 3) return;
+  const bar = document.createElement('div');
+  bar.className = 'jump-bar';
+  bar.innerHTML = present.map(s =>
+    `<button class="jump-chip" data-action="jumpToSection" data-jump="${s.id}">${s.lbl}</button>`
+  ).join('');
+  document.getElementById('detailContent').prepend(bar);
 }
