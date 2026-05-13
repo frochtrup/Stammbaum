@@ -486,26 +486,18 @@ function _pdetLifeData(p, id) {
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_ageAt(_refDate, p.buri.date)}${geoBtn}${citTagsHtml(p.buri.citations || [])}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
-  // Fehlende Sonder-Ereignisse als kompakte Pill-Zeile
-  const _missingSpecial = [
-    !(p.birth.date || p.birth.place)                          && { ev: 'BIRT', lbl: '+ Geburt' },
-    !(p.chr.date  || p.chr.place  || _chrGodparents.length)   && { ev: 'CHR',  lbl: '+ Taufe' },
-    !(p.death.date || p.death.place)                          && { ev: 'DEAT', lbl: '+ Tod' },
-    !(p.buri.date  || p.buri.place)                           && { ev: 'BURI', lbl: '+ Beerdigung' },
+  // Alle Quick-Add-Chips in einer Zeile: fehlende Sonder-Events + generische Shortcuts
+  const _quickChips = [
+    !(p.birth.date || p.birth.place)                         && { ev: 'BIRT', lbl: '+ Geburt' },
+    !(p.chr.date  || p.chr.place  || _chrGodparents.length)  && { ev: 'CHR',  lbl: '+ Taufe' },
+    !(p.death.date || p.death.place)                         && { ev: 'DEAT', lbl: '+ Tod' },
+    !(p.buri.date  || p.buri.place)                          && { ev: 'BURI', lbl: '+ Beerdigung' },
+    { ev: 'RESI', lbl: '+ Wohnort', generic: true },
+    { ev: 'OCCU', lbl: '+ Beruf',   generic: true },
+    { ev: 'CENS', lbl: '+ Zählung', generic: true },
   ].filter(Boolean);
-  if (_missingSpecial.length) {
-    html += `<div class="missing-events-row">${_missingSpecial.map(m =>
-      `<button class="quick-chip" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}">${m.lbl}</button>`
-    ).join('')}</div>`;
-  }
-
-  // Generische Quick-Add-Shortcuts
-  html += `<div class="missing-events-row missing-events-row--generic">${[
-    { ev: 'RESI', lbl: '+ Wohnort' },
-    { ev: 'OCCU', lbl: '+ Beruf' },
-    { ev: 'CENS', lbl: '+ Zählung' },
-  ].map(m =>
-    `<button class="quick-chip quick-chip--generic" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}">${m.lbl}</button>`
+  html += `<div class="missing-events-row">${_quickChips.map(m =>
+    `<button class="quick-chip${m.generic ? ' quick-chip--generic' : ''}" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}">${m.lbl}</button>`
   ).join('')}</div>`;
 
   // Hof-Notiz-Dedup: gleicher Text + gleiche Adresse → nur beim ersten Event zeigen

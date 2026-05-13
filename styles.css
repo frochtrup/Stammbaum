@@ -618,7 +618,6 @@ body.desktop-mode.places-karte #mapContainer {
 .missing-events-row {
   display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
 }
-.missing-events-row--generic { margin-top: -4px; }
 .quick-chip {
   background: none; border: 1px solid var(--border);
   color: var(--text-muted); font-size: 0.75rem;
