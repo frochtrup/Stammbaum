@@ -607,9 +607,11 @@ function initPlaceAutocomplete(inputId, ddId) {
 }
 
 // Autocomplete für alle Ortsfelder einmalig initialisieren
-initPlaceAutocomplete('ef-place',  'ef-place-dd');
-initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd');
-initPlaceAutocomplete('fev-place', 'fev-place-dd');
+initPlaceAutocomplete('ef-place',        'ef-place-dd');
+initPlaceAutocomplete('ff-mplace',       'ff-mplace-dd');
+initPlaceAutocomplete('fev-place',       'fev-place-dd');
+initPlaceAutocomplete('pf-birth-place',  'pf-birth-place-dd');
+initPlaceAutocomplete('pf-death-place',  'pf-death-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
 
 

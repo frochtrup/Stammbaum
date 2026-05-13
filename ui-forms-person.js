@@ -12,6 +12,61 @@ function showEditSheet() {
 
 // _pfExtraNames lebt in UIState._formState.pfExtraNames (shimmiert als _pfExtraNames)
 
+// ─── Datum-Normalisierung für Quick-Entry ───────────────────────────────────
+function _normQuickDate(s) {
+  if (!s) return '';
+  const raw = s.trim();
+  if (!raw) return '';
+  const qualMap = [
+    ['ca. ','ABT'],['ca ','ABT'],['etwa ','ABT'],['um ','ABT'],['abt ','ABT'],
+    ['vor ','BEF'],['bef ','BEF'],['nach ','AFT'],['aft ','AFT'],
+    ['cal ','CAL'],['est ','EST'],['geschätzt ','EST'],
+  ];
+  let qual = '';
+  let rest = raw;
+  const lower = raw.toLowerCase();
+  for (const [prefix, code] of qualMap) {
+    if (lower.startsWith(prefix)) { qual = code; rest = raw.slice(prefix.length).trim(); break; }
+  }
+  const part = _pfParseDatePart(rest);
+  if (!part) return raw;
+  return qual ? `${qual} ${part}` : part;
+}
+
+function _pfParseDatePart(s) {
+  if (!s) return '';
+  const u = s.trim();
+  // d.m.y oder d/m/y  (3.5.1900, 3/5/1900)
+  const dotSlash = u.match(/^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$/);
+  if (dotSlash) {
+    const d = parseInt(dotSlash[1], 10), m = normMonth(dotSlash[2]), y = _pfNormYear(dotSlash[3]);
+    if (m && y) return `${d} ${m} ${y}`;
+    if (y) return y;
+  }
+  // "3 Mai 1900" oder "Mai 1900"
+  const textM = u.match(/^(?:(\d{1,2})\s+)?([A-Za-zäöüÄÖÜ]+)\s+(\d{2,4})$/);
+  if (textM) {
+    const d = textM[1] ? parseInt(textM[1], 10) : null;
+    const m = normMonth(textM[2]), y = _pfNormYear(textM[3]);
+    if (m && y) return d ? `${d} ${m} ${y}` : `${m} ${y}`;
+  }
+  // schon GEDCOM: "3 JAN 1900", "JAN 1900"
+  const g3 = u.match(/^(\d{1,2})\s+([A-Z]{3})\s+(\d{4})$/i);
+  if (g3) return `${parseInt(g3[1],10)} ${g3[2].toUpperCase()} ${g3[3]}`;
+  const g2 = u.match(/^([A-Z]{3})\s+(\d{4})$/i);
+  if (g2) return `${g2[1].toUpperCase()} ${g2[2]}`;
+  // nur Jahr
+  if (/^\d{1,4}$/.test(u)) return _pfNormYear(u);
+  return '';
+}
+
+function _pfNormYear(s) {
+  const n = parseInt(s, 10);
+  if (isNaN(n)) return '';
+  if (s.length === 2) return String(n < 30 ? 2000 + n : 1900 + n);
+  return String(n);
+}
+
 const _PF_PILLS = [
   { field: 'prefix-suffix', label: 'Präfix / Zusatz' },
   { field: 'rufname-nick',  label: 'Rufname / Spitzname' },
@@ -91,6 +146,12 @@ function showPersonForm(id) {
   };
   givenEl.onblur = _checkNameBlur;
   surnameEl.onblur = _checkNameBlur;
+
+  // Datum-Normalisierung bei Feldverlassen
+  ['pf-birth-date', 'pf-death-date'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.onblur = () => { el.value = _normQuickDate(el.value); };
+  });
 
   // Pills-Modus: neue Person → optionale Felder ausblenden + Pills zeigen
   // Bestehende Person → alle Felder sichtbar, keine Pills
