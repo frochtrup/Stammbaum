@@ -54,6 +54,8 @@ function saveFamily() {
   const children = [...(existingFam.children || [])];
   if (_pendingAddChild && !children.includes(_pendingAddChild)) children.push(_pendingAddChild);
   _pendingAddChild = null;
+  const _sfPrevPersonIds = [...new Set([existingFam.husb, existingFam.wife, ...(existingFam.children||[]), husb, wife].filter(Boolean))];
+  pushUndo('Familie gespeichert', { familyIds: [id], personIds: _sfPrevPersonIds });
   AppState.db.families[id] = {
     ...existingFam,
     id, husb, wife, children,
@@ -108,6 +110,9 @@ async function deleteFamily() {
   const id = document.getElementById('ff-id').value;
   if (!id) return;
   if (!await confirmModal('Familie wirklich löschen?', 'Löschen')) return;
+  const _dfFam = getFamily(id);
+  const _dfPersonIds = [...new Set([_dfFam?.husb, _dfFam?.wife, ...(_dfFam?.children||[])].filter(Boolean))];
+  pushUndo('Familie gelöscht', { familyIds: [id], personIds: _dfPersonIds });
   const famcId2 = f => (typeof f === 'string' ? f : f.famId);
   for (const p of Object.values(AppState.db.individuals)) {
     setPerson(p.id, {

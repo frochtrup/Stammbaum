@@ -328,6 +328,9 @@ function _processLoadedText(text, filename) {
         if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
       }
       AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
+      AppState._undoStack = [];
+      AppState._redoStack = [];
+      if (typeof _clearNavState === 'function') _clearNavState();
       _newPhotoIds.clear(); _deletedPhotoIds.clear();
       if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
       // IDB: primäre Persistenz (kein Größenlimit)

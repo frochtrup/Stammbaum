@@ -500,7 +500,12 @@ function _pdetLifeData(p, id) {
     `<button class="quick-chip${m.generic ? ' quick-chip--generic' : ''}" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}">${m.lbl}</button>`
   ).join('')}</div>`;
 
-  // Hof-Notiz-Dedup: gleicher Text + gleiche Adresse → nur beim ersten Event zeigen
+  // Alle bekannten Hof-Notiztexte vorberechnen — verhindert Anzeige von HOF-Notiztexten
+  // auf Events, deren Adresse NICHT zu diesem Hof gehört (durch _resolveNoteRefs gestreut).
+  const _allHofNoteTexts = new Set(
+    Object.values(AppState.db.hofObjects || {}).map(h => h.note).filter(Boolean)
+  );
+  // Hof-Notiz-Dedup: pro Adresse nur einmal anzeigen
   const _shownAddrNotes = new Set();
 
   // Group events: first by ev.type (first-seen order), then by ev.eventType within each type,
@@ -531,12 +536,17 @@ function _pdetLifeData(p, id) {
         const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';
-        const _noteKey = (ev.addr && ev.note) ? `${ev.addr.trim()}\x00${ev.note}` : null;
-        const _showEvNote = ev.note && (!_noteKey || !_shownAddrNotes.has(_noteKey));
-        if (_noteKey) _shownAddrNotes.add(_noteKey);
+        // Hof-Notiz: von hofObjects für DIESE Adresse autoritativ abrufen
+        const _addrKey  = ev.addr?.trim() || null;
+        const _hofNote  = _addrKey ? (AppState.db.hofObjects?.[_addrKey]?.note || null) : null;
+        const _showHofNote = _hofNote && !_shownAddrNotes.has(_addrKey);
+        if (_showHofNote) _shownAddrNotes.add(_addrKey);
+        // Persönliche Event-Notiz zeigen, wenn sie KEIN Hof-Notiztext ist
+        // (ev.note kann HOF-Text enthalten, der durch _resolveNoteRefs von fremder Adresse gestreut wurde)
+        const _showEvNote = ev.note && !_allHofNoteTexts.has(ev.note);
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showEvNote ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
         </div>`;
       }
     }

@@ -52,14 +52,16 @@
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-13
+## Aktueller Stand — zuletzt aktualisiert: 2026-05-14
 
 **Version 7.0 in Entwicklung — Branch `v7-dev`** (v4–v6 abgeschlossen auf `main`)
-- **Aktuelle sw-Version: v400** / Cache: `stammbaum-v400`
+- **Aktuelle sw-Version: v403** / Cache: `stammbaum-v403`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 - **F4b abgeschlossen (sw v381):** `citations[]` vollständig migriert — Parser/Writer/Forms/Views; `citationObj()`, `_migrateLegacyCitations()`, `_addCitRefs()`, `citTagsHtml()`, srcWidget neu; T0–T7 grün
 - **UX-Neu-Person abgeschlossen (sw v391–v397):** Progressive Disclosure im Neu-Person-Formular: Kern+Leben inline, Pills (Taufe/Beerdigung/Beruf/Wohnort/Notiz/Name-Details), Datum-Normalisierung, Orts-Autocomplete, Quellen-Auto-Assign, „+ Weitere"-Button; Bearbeiten-Dialog zeigt nur Name/Meta
 - **UX-Quick-Add + Jump-Bar (sw v388–v390, v398–v400):** Quick-Add Chips (fehlende Sonder-Events + generische Shortcuts, 1 scrollbare Zeile), Jump-Bar sticky (Abschnitts-Navigation, `_injectJumpBar()`), CSP-Fix (3 `onclick=` → `data-action`)
+- **U8 Granulares Undo (sw v401–v402):** `_undoStack/_redoStack` auf AppState (max 30); `pushUndo()` an 13 Mutations-Call-Sites; per-Entity-Snapshot (nur betroffene Persons/Families/Sources); Cmd+Z = Undo (Fallback: Revert-to-Saved), Cmd+Shift+Z = Redo; Stack-Reset bei Datei-Laden + revertToSaved
+- **Nav 2.0 (sw v403):** `_navFwdStack` auf UIState; `goForward()`; `→`-Button in Detail + Baum-Topbar; `_captureCurrentNavState()`; `_clearNavState()`; sessionStorage-Persistenz (`_persistNavState`/`_restoreNavState`); Alt+← / Alt+→ Keyboard-Shortcuts
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte

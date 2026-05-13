@@ -303,6 +303,7 @@ function savePerson(openNew = false) {
     if (resiIdx >= 0) events[resiIdx] = ev; else events.push(ev);
   }
 
+  pushUndo('Person gespeichert', { personIds: [id] });
   AppState.db.individuals[id] = {
     ...existing,
     id, given, surname, prefix, nick, _rufname: rufname,
@@ -362,6 +363,11 @@ async function deletePerson() {
   const _pd = getPerson(id);
   if (!id || !_pd) return;
   if (!await confirmModal(`${_pd.name || id} wirklich löschen?`, 'Löschen')) return;
+
+  const _delPersonFamIds = Object.values(AppState.db.families)
+    .filter(f => f.husb === id || f.wife === id || (f.children || []).includes(id))
+    .map(f => f.id);
+  pushUndo('Person gelöscht', { personIds: [id], familyIds: _delPersonFamIds });
 
   // Remove from families
   for (const f of Object.values(AppState.db.families)) {
@@ -423,6 +429,7 @@ function saveExtraName() {
   };
 
   if (!p.extraNames) p.extraNames = [];
+  pushUndo('Zusatzname gespeichert', { personIds: [pid] });
   if (enIdx >= 0) p.extraNames[enIdx] = entry;
   else p.extraNames.push(entry);
 
@@ -436,6 +443,7 @@ function deleteExtraName() {
   const enIdx = parseInt(document.getElementById('enf-enidx').value, 10);
   const p = getPerson(pid);
   if (!p || isNaN(enIdx)) return;
+  pushUndo('Zusatzname gelöscht', { personIds: [pid] });
   p.extraNames.splice(enIdx, 1);
   markChanged();
   closeModal('modalExtraName');

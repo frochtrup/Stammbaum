@@ -59,6 +59,8 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | UX-Neu-Person | Progressive Disclosure im Neu-Person-Formular: Kern+Leben inline, Pills für Taufe/Beerdigung/Beruf/Wohnort/Notiz/Name-Details; Datum-Normalisierung (GEDCOM blur), Orts-Autocomplete, Quellen-Auto-Assign, „+ Weitere"-Button; Bearbeiten-Dialog entschlackt (nur Name/Meta) | v391–v397 |
 | Jump-Bar | Sticky Abschnitts-Navigation in Personen-Detailview: `[Daten][Notizen][Medien][Familie][Eltern]`; ab ≥3 Sektionen; `scroll-margin-top` für Topbar-Offset; `_injectJumpBar()` | v398–v399 |
 | CSP-Fix | 3 `onclick=`-Handler in Template-Strings → `data-action` (`removeNoteRef`, `newSourceForm`, `newFamilyForm`); keine Inline-Event-Handler mehr im Codebase | v400 |
+| U8 | Granulares Undo: `_undoStack/_redoStack` auf AppState (max 30); `pushUndo()` an 13 Mutations-Call-Sites; per-Entity-Snapshot; Cmd+Z = Undo (Fallback: Revert), Cmd+Shift+Z = Redo | v401–v402 |
+| Nav 2.0 | Vorwärts-Navigation: `_navFwdStack` auf UIState; `goForward()`; `→`-Button in Detail + Baum-Topbar; `_captureCurrentNavState()`; `_clearNavState()`; sessionStorage-Persistenz (`_persistNavState` / `_restoreNavState`) — Nav-State überlebt F5; Alt+← / Alt+→ als Keyboard-Shortcuts | v403 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
@@ -101,7 +103,7 @@ Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig �
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~F4b~~ | ~~**Mehrfach-Zitierungen**~~ | ✅ **Abgeschlossen** (sw v381): `citations:[{sid,page,quay,note,extra,media}]` in allen 8 Dateien; Roundtrip verlustfrei | XL |
-| U8 | **Granulares Undo** | History-Stack auf AppState; heute: Cmd+Z = "Revert to Saved" | XL |
+| ~~U8~~ | ~~**Granulares Undo**~~ | ✅ **Abgeschlossen** (sw v402): `_undoStack/_redoStack` auf AppState; `pushUndo()` an 13 Call-Sites; Cmd+Z = Undo, Cmd+Shift+Z = Redo, Fallback auf Revert-to-Saved | XL |
 | F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
 | F8 | **Cluster-Ansicht** | Personen in denselben Orten/Quellen wie Person X | L |
 | F9 | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |

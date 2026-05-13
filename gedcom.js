@@ -19,6 +19,8 @@ const AppState = {
   _fileHandle:      null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
   _canDirectSave:   false,       // true wenn createWritable() auf _fileHandle funktioniert
   _originalGedText: null,        // Fallback wenn localStorage-Backup fehlschlägt; sonst null
+  _undoStack:       [],          // [{ label, persons:{}, families:{}, sources:{}, repos:{} }, …] max 30
+  _redoStack:       [],          // gleiche Struktur wie _undoStack
 };
 
 const UIState = {
@@ -32,7 +34,8 @@ const UIState = {
   _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
   _soundexMode:       false,     // Soundex-Suche: phonetische Namens-Varianten
   _placesSubTab:    'orte',      // 'orte' | 'hoefe'
-  _navHistory:      [],          // Navigations-History für Detail-Ansichten
+  _navHistory:      [],          // Navigations-History für Detail-Ansichten (Back-Stack)
+  _navFwdStack:     [],          // Vorwärts-Stack (gefüllt durch goBack(), geleert bei neuer Navigation)
   _probandId:       null,        // null = Fallback auf kleinste ID
   _eventClipboard: null,         // kopiertes Ereignis für Übernehmen-Funktion
   _citClipboard:   null,         // kopierte Quellenbezüge { sources[], pages{}, quay{} }

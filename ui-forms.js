@@ -277,6 +277,7 @@ function saveSource() {
   const title = document.getElementById('sf-title').value.trim();
   if (!abbr && !title) { showToast('⚠ Kurzname oder Titel erforderlich'); return; }
   const _now = new Date();
+  pushUndo('Quelle gespeichert', { sourceIds: [id] });
   AppState.db.sources[id] = {
     ...existing,
     id,
@@ -304,6 +305,7 @@ async function deleteSource() {
   const id = document.getElementById('sf-id').value;
   if (!id) return;
   if (!await confirmModal('Quelle wirklich löschen?', 'Löschen')) return;
+  pushUndo('Quelle gelöscht', { sourceIds: [id] });
   delete AppState.db.sources[id];
   closeModal('modalSource');
   markChanged();
@@ -523,12 +525,26 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  // Cmd/Ctrl+Z: Änderungen verwerfen (nur wenn keine Modals offen)
-  if (mod && e.key === 'z') {
+  // Cmd/Ctrl+Z: Undo (stack) oder Revert-to-Saved als Fallback
+  if (mod && e.key === 'z' && !e.shiftKey) {
     if (document.querySelector('.modal-overlay.open')) return;
     e.preventDefault();
-    revertToSaved();
+    if (AppState._undoStack.length) applyUndo(); else revertToSaved();
     return;
+  }
+
+  // Cmd/Ctrl+Shift+Z oder Cmd+Y: Redo
+  if ((mod && e.shiftKey && e.key === 'Z') || (mod && e.key === 'y')) {
+    if (document.querySelector('.modal-overlay.open')) return;
+    e.preventDefault();
+    applyRedo();
+    return;
+  }
+
+  // Alt+← / Alt+→: Navigation Zurück / Vorwärts
+  if (e.altKey && !mod) {
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); goBack();    return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); goForward(); return; }
   }
 
 });

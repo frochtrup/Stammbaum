@@ -258,6 +258,7 @@ function applyClipboardEventToPerson(pid) {
     citations:   cb.citations.map(c => ({...c})),
     media:       cb.media.map(m => ({...m})),
   };
+  pushUndo('Ereignis übernommen', { personIds: [pid] });
   p.events.push(ev);
   if (ev.citations.length) _rebuildPersonSourceRefs(p);
   markChanged();
@@ -290,6 +291,7 @@ function saveEvent() {
     return { lati: pl?.lati ?? null, long: pl?.long ?? null };
   };
 
+  pushUndo('Ereignis gespeichert', { personIds: [pid] });
   if (type in _SPECIAL_OBJ) {
     const key = _SPECIAL_OBJ[type];
     const place = getPlaceFromForm('ef-place');
@@ -367,6 +369,7 @@ function deleteEvent() {
   const p = AppState.db.individuals[pid];
   if (!p?.events) return;
   const _deletedHadSrc = (p.events[evIdx]?.citations?.length ?? 0) > 0;
+  pushUndo('Ereignis gelöscht', { personIds: [pid] });
   p.events.splice(evIdx, 1);
   if (_deletedHadSrc) _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
@@ -457,6 +460,7 @@ function saveFamEvent() {
   _registerEventType(type, etype);
   const citations = [...(srcWidgetState['fev']?.citations || [])];
 
+  pushUndo('Familien-Ereignis gespeichert', { familyIds: [famId] });
   if (evKey === 'ev') {
     // Generisches Ereignis bearbeiten
     const evIdx = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
@@ -507,6 +511,7 @@ function deleteFamEvent() {
   const evIdxRaw = document.getElementById('fev-evidx').value;
   const f = AppState.db.families[famId];
   if (!f) return;
+  pushUndo('Familien-Ereignis gelöscht', { familyIds: [famId] });
   if (evKey === 'ev') {
     const evIdx = parseInt(evIdxRaw);
     if (!isNaN(evIdx)) f.events.splice(evIdx, 1);

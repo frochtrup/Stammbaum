@@ -41,9 +41,12 @@ async function revertToSaved() {
     showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
   }
   AppState.changed = false;
+  AppState._undoStack = [];
+  AppState._redoStack = [];
   UIState._placesCache = null;
   UIState._hofCache = null;
   if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+  if (typeof _clearNavState === 'function') _clearNavState();
   updateChangedIndicator();
   renderTab();
   hideLoadingOverlay();
@@ -75,7 +78,8 @@ async function confirmNewFile() {
   const yf = document.getElementById('yearFrom');        if (yf) yf.value = '';
   const yt = document.getElementById('yearTo');          if (yt) yt.value = '';
   const cb = document.getElementById('yearFilterClear'); if (cb) cb.hidden = true;
-  UIState._navHistory = []; _updateTreeBackBtn();
+  if (typeof _clearNavState === 'function') _clearNavState(); else UIState._navHistory = [];
+  if (typeof _updateNavBtns === 'function') _updateNavBtns(); else if (typeof _updateTreeBackBtn === 'function') _updateTreeBackBtn();
   showView('v-landing');
 }
 
@@ -165,6 +169,7 @@ async function tryAutoLoad() {
       applyAllExtraPlaceCoords();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
       showStartView();
+      if (typeof _restoreNavState === 'function') _restoreNavState();
       updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
@@ -186,6 +191,7 @@ async function tryAutoLoad() {
       applyAllExtraPlaceCoords();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
+      if (typeof _restoreNavState === 'function') _restoreNavState();
       updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
