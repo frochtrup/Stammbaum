@@ -68,15 +68,16 @@ function _pfNormYear(s) {
 }
 
 const _PF_PILLS = [
+  { field: 'taufe',         label: 'Taufe' },
+  { field: 'beerdigung',    label: 'Beerdigung' },
+  { field: 'note',          label: 'Notiz' },
   { field: 'prefix-suffix', label: 'Präfix / Zusatz' },
   { field: 'rufname-nick',  label: 'Rufname / Spitzname' },
   { field: 'titl',          label: 'Titel' },
   { field: 'extranames',    label: 'Weiterer Name' },
-  { field: 'note',          label: 'Notiz' },
   { field: 'resn',          label: 'Beschränkung' },
   { field: 'email',         label: 'E-Mail' },
   { field: 'www',           label: 'Website' },
-  { field: 'sources',       label: 'Quellen' },
 ];
 let _pfActivePills = new Set();
 
@@ -128,6 +129,10 @@ function showPersonForm(id) {
   document.getElementById('pf-birth-place').value = p?.birth?.place || '';
   document.getElementById('pf-death-date').value  = p?.death?.date  || '';
   document.getElementById('pf-death-place').value = p?.death?.place || '';
+  document.getElementById('pf-chr-date').value    = p?.chr?.date    || '';
+  document.getElementById('pf-chr-place').value   = p?.chr?.place   || '';
+  document.getElementById('pf-buri-date').value   = p?.buri?.date   || '';
+  document.getElementById('pf-buri-place').value  = p?.buri?.place  || '';
   _pfExtraNames = (p?.extraNames || []).map(en => ({...en}));
   _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
@@ -148,7 +153,7 @@ function showPersonForm(id) {
   surnameEl.onblur = _checkNameBlur;
 
   // Datum-Normalisierung bei Feldverlassen
-  ['pf-birth-date', 'pf-death-date'].forEach(id => {
+  ['pf-birth-date', 'pf-death-date', 'pf-chr-date', 'pf-buri-date'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.onblur = () => { el.value = _normQuickDate(el.value); };
   });
@@ -252,6 +257,20 @@ function savePerson() {
   const birthPlace = document.getElementById('pf-birth-place')?.value.trim() || '';
   const deathDate  = document.getElementById('pf-death-date')?.value.trim()  || '';
   const deathPlace = document.getElementById('pf-death-place')?.value.trim() || '';
+  const chrDate    = document.getElementById('pf-chr-date')?.value.trim()    || '';
+  const chrPlace   = document.getElementById('pf-chr-place')?.value.trim()   || '';
+  const buriDate   = document.getElementById('pf-buri-date')?.value.trim()   || '';
+  const buriPlace  = document.getElementById('pf-buri-place')?.value.trim()  || '';
+
+  const nameCitations = [...(srcWidgetState['pf']?.citations || [])];
+  // Auto-assign: Quelle wird allen befüllten Sonderevents zugeordnet (ohne Duplikate)
+  const _mergeCits = (existing, toAdd) => {
+    if (!toAdd.length) return existing;
+    const seen = new Set(existing.map(c => c.sid));
+    return [...existing, ...toAdd.filter(c => !seen.has(c.sid))];
+  };
+  const _eventCits = (evExisting, hasData) =>
+    hasData ? _mergeCits(evExisting?.citations || [], nameCitations) : (evExisting?.citations || []);
 
   AppState.db.individuals[id] = {
     ...existing,
@@ -259,10 +278,10 @@ function savePerson() {
     name: (given + (surname ? ' ' + surname : '')).trim(),
     nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
-    birth: { ...(existing.birth || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: birthDate, place: birthPlace },
-    death: { ...(existing.death || { lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' }), date: deathDate, place: deathPlace },
-    chr:   existing.chr   || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
-    buri:  existing.buri  || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
+    birth: { ...(existing.birth || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: birthDate, place: birthPlace, citations: _eventCits(existing.birth, birthDate || birthPlace) },
+    death: { ...(existing.death || { lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' }), date: deathDate, place: deathPlace, citations: _eventCits(existing.death, deathDate || deathPlace) },
+    chr:   { ...(existing.chr   || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: chrDate,  place: chrPlace,  citations: _eventCits(existing.chr,   chrDate  || chrPlace)  },
+    buri:  { ...(existing.buri  || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: buriDate, place: buriPlace, citations: _eventCits(existing.buri,  buriDate || buriPlace) },
     events,
     noteTexts: note ? [note] : [],
     noteRefs: existing.noteRefs || [],
@@ -284,7 +303,7 @@ function savePerson() {
     www,
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date()),
-    nameCitations: [...(srcWidgetState['pf']?.citations || [])],
+    nameCitations,
     sourceRefs: new Set()
   };
   _rebuildPersonSourceRefs(AppState.db.individuals[id]);
