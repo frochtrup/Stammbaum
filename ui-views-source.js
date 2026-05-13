@@ -236,7 +236,7 @@ function renderSourceList(srcs) {
         <div class="empty-state-icon">§</div>
         <div class="empty-state-title">Noch keine Quellen</div>
         <div class="empty-state-msg">Quellen dokumentieren Ihre Belege — Kirchenbücher, Standesamtsregister, Urkunden.</div>
-        <button class="empty-state-btn" onclick="showSourceForm(null)">Erste Quelle anlegen</button>
+        <button class="empty-state-btn" data-action="newSourceForm">Erste Quelle anlegen</button>
       </div>`;
     } else {
       el.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';

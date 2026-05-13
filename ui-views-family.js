@@ -40,7 +40,7 @@ function renderFamilyList(fams) {
         <div class="empty-state-icon">⊕</div>
         <div class="empty-state-title">Noch keine Familien</div>
         <div class="empty-state-msg">Familien entstehen durch Verknüpfung von Personen als Ehepaar oder Eltern-Kind-Beziehung.</div>
-        <button class="empty-state-btn" onclick="showFamilyForm(null)">Familie anlegen</button>
+        <button class="empty-state-btn" data-action="newFamilyForm">Familie anlegen</button>
       </div>`;
     } else {
       listEl.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';

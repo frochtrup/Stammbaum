@@ -698,6 +698,9 @@ function _sortedChildren(children) {
 const _CLICK_MAP = {
   // Dynamisch generierte Einträge (bereits vorhanden)
   showEventFormTyped:      el => showEventForm(el.dataset.pid, undefined, el.dataset.evtype),
+  newSourceForm:           ()  => showSourceForm(null),
+  newFamilyForm:           ()  => showFamilyForm(null),
+  removeNoteRef:           el  => el.closest('[data-ref-section]')?.remove(),
   jumpToSection:           el => document.getElementById(el.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
   showDetail:              el => showDetail(el.dataset.pid  || el.dataset.id),
   showFamilyDetail:        el => showFamilyDetail(el.dataset.fid  || el.dataset.id),
