@@ -177,6 +177,8 @@ function showPersonForm(id) {
     optFields.forEach(el => { el.hidden = false; });
     if (pillsContainer) pillsContainer.hidden = true;
   }
+  const saveNewBtn = document.getElementById('pfSaveNewBtn');
+  if (saveNewBtn) saveNewBtn.hidden = !isNew;
 
   openModal('modalPerson');
 }
@@ -228,7 +230,7 @@ function removePfExtraName(idx) {
   _renderPfExtraNames();
 }
 
-function savePerson() {
+function savePerson(openNew = false) {
   const id = document.getElementById('pf-id').value || nextId('I');
   const given = document.getElementById('pf-given').value.trim();
   const surname = document.getElementById('pf-surname').value.trim();
@@ -346,6 +348,7 @@ function savePerson() {
     return;
   }
   showToast('✓ Person gespeichert');
+  if (openNew) { showPersonForm(null); return; }
   if (AppState.currentPersonId === id) showDetail(id);
 }
 

@@ -793,6 +793,7 @@ const _CLICK_MAP = {
   addPfExtraName:          ()  => addPfExtraName(),
   toggleSrcPicker:         el => toggleSrcPicker(el.dataset.prefix),
   savePerson:              ()  => savePerson(),
+  savePersonAndNew:        ()  => savePerson(true),
   deletePerson:            ()  => deletePerson(),
   togglePlaceMode:         el => togglePlaceMode(el.dataset.placeid),
   addMediaEntry:           el => _addMediaEntry(el.dataset.prefix),
