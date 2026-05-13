@@ -646,6 +646,8 @@ body.desktop-mode.places-karte #mapContainer {
 }
 .jump-chip:active { border-color: var(--gold-dim); color: var(--gold-dim); }
 
+[id^="pdet-"] { scroll-margin-top: calc(var(--topbar-h, 52px) + 44px); }
+
 .fact-row {
   display: flex; gap: 10px; margin-bottom: 9px; font-size: 0.88rem;
 }
