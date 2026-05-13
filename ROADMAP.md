@@ -119,8 +119,7 @@ Schulden nach Dringlichkeit, unabhängig vom Feature-Backlog anzugehen:
 
 ~~**F4b: Zitierungs-Datenstruktur**~~ ✅ *Abgeschlossen sw v381* — `citations:[{sid,page,quay,note,extra,media}]` ersetzt 6 parallele Dicts; `citationObj()` Factory; `_migrateLegacyCitations()` für IDB-Altdaten; `citTagsHtml()` für Detailansichten; Parser/Writer/Forms/Views vollständig migriert.
 
-**Einheitliche Render-Konvention**
-Manche Views geben HTML-Strings zurück (`innerHTML =`), andere manipulieren direkt DOM-Nodes. Da `unsafe-inline` aus CSP entfernt ist, sollte mittelfristig alles auf DOM-Manipulation umgestellt werden — reduziert XSS-Angriffsfläche und macht Template-Strings überflüssig.
+~~**Einheitliche Render-Konvention**~~ ✅ *Verworfen* — `innerHTML =` ist kein CSP-Verstoß (`script-src 'self'` blockiert nur Inline-Scripts und `onclick=`-Handler, nicht `innerHTML` selbst). Die 3 tatsächlichen `onclick=`-Verstöße wurden in sw v400 behoben. Vollmigration auf DOM-Manipulation: Wochen Aufwand für minimalen Sicherheitsgewinn bei Single-User-App mit konsequentem `esc()`-Einsatz — nicht geplant.
 
 ---
 
