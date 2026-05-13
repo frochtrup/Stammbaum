@@ -335,6 +335,7 @@ function showHofDetail(addr, pushHistory = true) {
     <div class="detail-id">${totalCount} Person${totalCount !== 1 ? 'en' : ''}</div>
   </div>`;
 
+  html += _renderHofRenameSection(addr);
   html += _renderHofCoordSection(addr);
   html += _renderHofNoteSection(addr);
 
@@ -581,4 +582,64 @@ function saveHofEigentum(addr) {
 function cancelHofEigentum() {
   const sec = document.getElementById('hfp-add-section');
   if (sec) sec.style.display = 'none';
+}
+
+// ── Umbenennen ───────────────────────────────────────────────────────────────
+
+function _renderHofRenameSection(addr) {
+  return `<div class="section fade-up" id="hof-rename-section">
+    <div class="section-head">
+      <div class="section-title">Adresse</div>
+      <button type="button" class="section-add" data-action="showHofRenameForm" data-addr="${esc(addr)}">Umbenennen</button>
+    </div>
+    <div id="hof-rename-form" hidden>
+      <textarea class="form-input resize-v" id="hof-rename-addr" rows="3">${esc(addr)}</textarea>
+      <div class="btn-row mt-8">
+        <button type="button" class="btn btn-cancel" data-action="cancelHofRename">Abbrechen</button>
+        <button type="button" class="btn btn-save" data-action="saveHofRename" data-addr="${esc(addr)}">Speichern</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function showHofRenameForm() {
+  const form = document.getElementById('hof-rename-form');
+  if (!form) return;
+  form.hidden = false;
+  document.getElementById('hof-rename-addr')?.focus();
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function cancelHofRename() {
+  const form = document.getElementById('hof-rename-form');
+  if (form) form.hidden = true;
+}
+
+function saveHofRename(oldAddr) {
+  const newAddr = document.getElementById('hof-rename-addr')?.value?.trim();
+  if (!newAddr) { showToast('Adresse darf nicht leer sein', 'warn'); return; }
+  if (newAddr === oldAddr) { cancelHofRename(); return; }
+
+  // Alle RESI/PROP-Ereignisse aller Personen aktualisieren
+  let count = 0;
+  for (const p of Object.values(AppState.db.individuals)) {
+    for (const ev of (p.events || [])) {
+      if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr === oldAddr) {
+        ev.addr = newAddr;
+        count++;
+      }
+    }
+  }
+
+  // hofObjects-Key migrieren
+  if (AppState.db.hofObjects?.[oldAddr]) {
+    AppState.db.hofObjects[newAddr] = { ...AppState.db.hofObjects[oldAddr], addr: newAddr };
+    delete AppState.db.hofObjects[oldAddr];
+    saveHofObjects();
+  }
+
+  UIState._hofCache = null;
+  markChanged();
+  showToast(`Adresse aktualisiert (${count} Ereignis${count !== 1 ? 'se' : ''})`, 'success');
+  showHofDetail(newAddr, false);
 }
