@@ -69,10 +69,10 @@ function parseGEDCOM(text, parseErrors) {
           id: tag, _passthrough: [], _nameParsed: false,
           name:'', nameRaw:'', surname:'', given:'', nick:'', _rufname:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
-          death:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' },
-          chr:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
-          buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
+          birth:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
+          death:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'', noteRefs:[] },
+          chr:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
+          buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'',
           extraNames:[], _tasks:[], associations:[],
@@ -181,7 +181,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
                   'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB',
                   'DSCR','IDNO','SSN'].includes(tag)) {
-          cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', addr:'', phon:[], email:[], citations:[], media:[], _extra:[] });
+          cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:[], media:[], _extra:[] });
           evIdx = cur.events.length - 1;
         }
         else if (tag === 'OBJE') {
@@ -263,7 +263,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (lv1tag === 'BIRT') {
           if      (tag==='DATE') cur.birth.date=val;
           else if (tag==='PLAC') cur.birth.place=val;
-          else if (tag==='NOTE') cur.birth.note=val;
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.birth.noteRefs.push(val); else cur.birth.note=val; }
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.birth.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.birth._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.birth._extra; }
         }
@@ -271,21 +271,21 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='DATE') cur.death.date=val;
           else if (tag==='PLAC') cur.death.place=val;
           else if (tag==='CAUS') cur.death.cause=val;
-          else if (tag==='NOTE') cur.death.note=val;
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.death.noteRefs.push(val); else cur.death.note=val; }
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.death.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.death._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.death._extra; }
         }
         else if (lv1tag === 'CHR') {
           if      (tag==='DATE') cur.chr.date=val;
           else if (tag==='PLAC') cur.chr.place=val;
-          else if (tag==='NOTE') cur.chr.note=val;
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.chr.noteRefs.push(val); else cur.chr.note=val; }
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.chr.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.chr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.chr._extra; }
         }
         else if (lv1tag === 'BURI') {
           if      (tag==='DATE') cur.buri.date=val;
           else if (tag==='PLAC') cur.buri.place=val;
-          else if (tag==='NOTE') cur.buri.note=val;
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.buri.noteRefs.push(val); else cur.buri.note=val; }
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.buri.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { cur.buri._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.buri._extra; }
         }
@@ -295,7 +295,7 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='DATE')  ev.date = val;
           else if (tag==='PLAC')  ev.place = val;
           else if (tag==='TYPE')  ev.eventType = val;
-          else if (tag==='NOTE')  ev.note += (ev.note ? '\n' : '') + val;
+          else if (tag==='NOTE') { if (val.startsWith('@')) ev.noteRefs.push(val); else ev.note += (ev.note ? '\n' : '') + val; }
           else if (tag==='PHON')  ev.phon.push(val);
           else if (tag==='EMAIL') ev.email.push(val);
           else if (tag==='ADDR') { ev.addr = (ev.addr ? ev.addr + '\n' : '') + val; if (!ev.addrExtra) ev.addrExtra=[]; _ptDepth=2; _ptTarget=ev.addrExtra; }
@@ -459,7 +459,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag==='DIV')  { cur.div.seen   = true; cur.div.value   = val; }
         else if (tag==='DIVF') { cur.divf.seen  = true; cur.divf.value  = val; }
         else if (tag==='CHAN') { /* context-only */ }
-        else if (tag==='EVEN') { cur.events.push({ type:'EVEN', value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', citations:[], _extra:[] }); evIdx = cur.events.length-1; }
+        else if (tag==='EVEN') { cur.events.push({ type:'EVEN', value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', noteRefs:[], citations:[], _extra:[] }); evIdx = cur.events.length-1; }
         else if (tag==='_STAT') { cur._stat = val; }
         else if (tag==='_GRAMPS_ID') { cur.grampId = val; }
         else if (tag==='OBJE') {
@@ -515,7 +515,7 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='DATE') ev.date = val;
           else if (tag==='PLAC') ev.place = val;
           else if (tag==='TYPE') ev.eventType = val;
-          else if (tag==='NOTE') { ev.note += (ev.note ? '\n' : '') + (val||''); }
+          else if (tag==='NOTE') { if (val?.startsWith('@')) ev.noteRefs.push(val); else ev.note += (ev.note ? '\n' : '') + (val||''); }
           else if (tag==='SOUR') { _curCit=citationObj(val); ev.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
           else { ev._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = ev._extra; }
         }
@@ -775,17 +775,28 @@ function parseGEDCOM(text, parseErrors) {
   }
 
   // Resolve NOTE references + build noteText from noteTexts[] + referenced notes
+  const _resolveNoteRefs = (obj) => {
+    for (const ref of (obj.noteRefs || [])) {
+      if (ref && notes[ref]) obj.note = (obj.note ? obj.note + '\n' : '') + notes[ref].text;
+    }
+  };
   for (const p of Object.values(individuals)) {
     p.noteText = p.noteTexts.join('\n');
     for (const ref of p.noteRefs) {
       if (ref && notes[ref]) p.noteText += (p.noteText ? '\n' : '') + notes[ref].text;
     }
+    _resolveNoteRefs(p.birth); _resolveNoteRefs(p.chr);
+    _resolveNoteRefs(p.death); _resolveNoteRefs(p.buri);
+    for (const ev of (p.events || [])) _resolveNoteRefs(ev);
   }
   for (const f of Object.values(families)) {
     f.noteText = f.noteTexts.join('\n');
     for (const ref of f.noteRefs) {
       if (ref && notes[ref]) f.noteText += (f.noteText ? '\n' : '') + notes[ref].text;
     }
+    _resolveNoteRefs(f.marr); _resolveNoteRefs(f.engag);
+    _resolveNoteRefs(f.div);  _resolveNoteRefs(f.divf);
+    for (const ev of (f.events || [])) _resolveNoteRefs(ev);
   }
 
   // Collect distinct eventType values per event tag from all INDI and FAM events

@@ -121,6 +121,8 @@ function eventBlock(lines, tag, obj, lv) {
 
 // Phase F: eventHandle → primary person ID (populated by writeGEDCOM for witness→ASSO bridge)
 let _witnessEvMap = {};
+// Phase F12: hofAddress → NOTE record ID (populated by writeGEDCOM)
+let _hofNoteIds = {};
 
 // ─── INDI-Record ──────────────────────────────────────────────────────────────
 function writeINDIRecord(lines, p) {
@@ -193,7 +195,13 @@ function writeINDIRecord(lines, p) {
     // Auch ev.note === hofMeta.note deduplizieren (aus altem GEDCOM-Import)
     const _addrKey = ev.addr?.trim();
     const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
-    if (_hofMeta?.note && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
+    for (const r of (ev.noteRefs || [])) lines.push(`2 NOTE ${r}`);
+    if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
+      if (!_writtenHofNotes.has(_addrKey)) {
+        lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
+        _writtenHofNotes.add(_addrKey);
+      }
+    } else if (_hofMeta?.note && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
       pushCont(lines, 2, 'NOTE', _hofMeta.note);
       _writtenHofNotes.add(_addrKey);
     } else if (ev.note && !_evNoteIsHofNote) {
@@ -515,11 +523,20 @@ function writeGEDCOM(updateHeadDate = false) {
     }
   }
 
+  // Phase F12: HOF NOTE-IDs aufbauen (stabil sortiert nach Adresse)
+  _hofNoteIds = {};
+  Object.entries(db.hofObjects || {})
+    .filter(([, h]) => h.note)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([addr], i) => { _hofNoteIds[addr] = `@N_HOF_${i + 1}@`; });
+
   for (const p of Object.values(db.individuals))  writeINDIRecord(lines, p);
   for (const f of Object.values(db.families))     writeFAMRecord(lines, f);
   for (const s of Object.values(db.sources))      writeSOURRecord(lines, s);
   for (const r of Object.values(db.repositories)) writeREPORecord(lines, r);
   for (const n of Object.values(db.notes || {}))  writeNOTERecord(lines, n);
+  for (const [addr, id] of Object.entries(_hofNoteIds))
+    writeNOTERecord(lines, { id, text: db.hofObjects[addr].note, _passthrough: [] });
 
   // Unknown lv=0 records (SUBM etc.) — verbatim passthrough
   for (const rec of (db.extraRecords || [])) {

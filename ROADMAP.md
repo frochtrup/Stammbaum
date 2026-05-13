@@ -102,7 +102,7 @@ Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig �
 | F9 | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |
 | F10 | **Buchgenerator** | HTML/PDF Familienbuch; Ahnentafel + Biografie + Fotos | XL |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
-| F12 | **Event-NOTE-Referenzen** | `ev.noteRefs[]` in allen Event-Objekten; Parser: `2 NOTE @ref@` → Ref statt Inline-Text; Writer: Refs ausgeben; Hof-Note → `0 @HOF_x@ NOTE`-Record (einmalig), alle RESI-Events referenzieren → kein Mehrfachschreiben, Personendetails konsistent. Baut auf bestehender `p.noteRefs[]`-Infrastruktur auf. | M |
+| F12 | **Event-NOTE-Referenzen** | ✅ sw v387 — `ev.noteRefs[]` in allen Event-Objekten; Parser: `2 NOTE @ref@` → Ref statt Inline-Text + Resolve-Loop; Writer: Refs ausgeben; HOF-Notizen als `0 @N_HOF_n@ NOTE`-Records + RESI-Events referenzieren. | M |
 
 ---
 
