@@ -39,7 +39,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v380)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v397)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -52,12 +52,13 @@
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-12
+## Aktueller Stand — zuletzt aktualisiert: 2026-05-13
 
 **Version 7.0 in Entwicklung — Branch `v7-dev`** (v4–v6 abgeschlossen auf `main`)
-- **Aktuelle sw-Version: v381** / Cache: `stammbaum-v381`
+- **Aktuelle sw-Version: v397** / Cache: `stammbaum-v397`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 - **F4b abgeschlossen (sw v381):** `citations[]` vollständig migriert — Parser/Writer/Forms/Views; `citationObj()`, `_migrateLegacyCitations()`, `_addCitRefs()`, `citTagsHtml()`, srcWidget neu; T0–T7 grün
+- **UX-Neu-Person abgeschlossen (sw v391–v397):** Progressive Disclosure im Neu-Person-Formular: Kern+Leben inline, Pills (Taufe/Beerdigung/Beruf/Wohnort/Notiz/Name-Details), Datum-Normalisierung, Orts-Autocomplete, Quellen-Auto-Assign, „+ Weitere"-Button; Bearbeiten-Dialog zeigt nur Name/Meta
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte

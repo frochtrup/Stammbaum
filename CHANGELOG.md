@@ -9,6 +9,18 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-13 — UX: Neue-Person-Formular (sw v391–v397)
+
+- **sw v391** `feat`: Neue-Person-Formular — Progressive Disclosure: Kern (Name/Geschlecht) + Leben (Geburt/Tod inline) immer sichtbar; optionale Felder per Field-Pills einblendbar (`_PF_PILLS`, `_renderPills()`, `_activatePill()`); Bearbeiten-Dialog bestehender Personen unverändert (alle Felder sichtbar)
+- **sw v392** `feat`: Datumsfelder normalisieren bei `blur` → GEDCOM-Format (`_normQuickDate()`, `_pfParseDatePart()`): `3.5.1900→3 MAY 1900`, `mai 1900→MAY 1900`, `ca 1900→ABT 1900`, `vor/nach→BEF/AFT`; Orts-Felder mit `initPlaceAutocomplete()` (wie Event-Formular)
+- **sw v393** `feat`: Pills um Taufe (CHR) + Beerdigung (BURI) erweitert (Datum+Ort inline); Notiz nach vorne; Quellen-Widget immer sichtbar; Quelle wird automatisch allen befüllten Sonderevents als Citation zugewiesen (`_mergeCits()`, `_eventCits()`)
+- **sw v394** `feat`: Pills um Beruf (OCCU) + Wohnort (RESI) erweitert; pre-populiert aus erstem vorhandenen Event; `savePerson()` aktualisiert/erstellt OCCU/RESI in `events[]`; Orts-Autocomplete + Datum-Normalisierung für Wohnort
+- **sw v395** `feat`: Button „+ Weitere" im Neu-Person-Formular — speichert und öffnet sofort leeres Formular (`savePerson(openNew=true)`); nur bei neuer Person sichtbar
+- **sw v396** `fix`: Bearbeiten-Dialog bestehender Personen: Leben-Sektion + Ereignis-Pills ausgeblendet — Ereignisse über Detailview bearbeitbar; `#pf-life-section` Wrapper + `_EVENT_FIELDS` Set
+- **sw v397** `fix`: Notiz ebenfalls aus Bearbeiten-Dialog ausgeblendet (direkt im Detailview editierbar)
+
+---
+
 ### Session 2026-05-12 — F4b Citations-Datenmodell (sw v381)
 
 - **sw v381** `feat(F4b)`: `citations:[{sid,page,quay,note,extra,media}]` ersetzt 6 parallele Dicts (`sources[]+sourcePages{}+sourceQUAY{}+sourceNote{}+sourceExtra{}+sourceMedia{}`); `citationObj()` Factory + `_migrateLegacyCitations()` + `_addCitRefs()` in `gedcom.js`; `_curCit`-Pattern + unified lv=3 SOUR-Handler im Parser; `_writeSourCits()` im Writer; srcWidget komplett neu (mode:'new', `addSrc`, `citidx`-basiert); `citTagsHtml()` in `ui-views.js`; alle Forms + Views migriert; `test-citations.html` T0–T7 (9070 SOUR-Refs, 5253 Zitierungen verlustfrei)
