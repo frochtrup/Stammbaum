@@ -163,7 +163,7 @@ function _initGodparentSearch() {
   input.addEventListener('blur',  () => setTimeout(() => { dd.innerHTML = ''; dd.style.display = 'none'; }, 160));
 }
 
-function showEventForm(personId, evIdx) {
+function showEventForm(personId, evIdx, defaultType) {
   // data-Attribute liefern immer Strings — numerische Indizes zurückkonvertieren
   if (typeof evIdx === 'string' && evIdx !== '' && !(evIdx in _SPECIAL_OBJ) && !isNaN(evIdx)) evIdx = +evIdx;
   const p = AppState.db.individuals[personId];
@@ -199,7 +199,7 @@ function showEventForm(personId, evIdx) {
   } else {
     const ev = isExisting ? p.events[evIdx] : null;
     typeEl.disabled = false;
-    typeEl.value = ev?.type || 'OCCU';
+    typeEl.value = ev?.type || defaultType || 'OCCU';
     document.getElementById('ef-val').value   = ev?.value || '';
     document.getElementById('ef-etype').value = ev?.eventType || '';
     fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', ev?.date || '');

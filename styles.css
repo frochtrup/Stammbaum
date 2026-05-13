@@ -615,6 +615,19 @@ body.desktop-mode.places-karte #mapContainer {
 }
 .section-add:active { border-color: var(--gold-dim); color: var(--gold-dim); }
 
+.missing-events-row {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+}
+.missing-events-row--generic { margin-top: -4px; }
+.quick-chip {
+  background: none; border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 0.75rem;
+  padding: 3px 10px; border-radius: 12px; cursor: pointer;
+  font-family: 'Source Serif 4', serif; white-space: nowrap;
+}
+.quick-chip:active { border-color: var(--gold-dim); color: var(--gold-dim); }
+.quick-chip--generic { opacity: 0.6; }
+
 .fact-row {
   display: flex; gap: 10px; margin-bottom: 9px; font-size: 0.88rem;
 }
