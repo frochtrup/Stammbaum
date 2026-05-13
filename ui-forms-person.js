@@ -69,7 +69,9 @@ function _pfNormYear(s) {
 
 const _PF_PILLS = [
   { field: 'taufe',         label: 'Taufe' },
-  { field: 'beerdigung',    label: 'Beerdigung' },
+  { field: 'beerdigung',   label: 'Beerdigung' },
+  { field: 'beruf',         label: 'Beruf' },
+  { field: 'wohnort',       label: 'Wohnort' },
   { field: 'note',          label: 'Notiz' },
   { field: 'prefix-suffix', label: 'Präfix / Zusatz' },
   { field: 'rufname-nick',  label: 'Rufname / Spitzname' },
@@ -133,6 +135,11 @@ function showPersonForm(id) {
   document.getElementById('pf-chr-place').value   = p?.chr?.place   || '';
   document.getElementById('pf-buri-date').value   = p?.buri?.date   || '';
   document.getElementById('pf-buri-place').value  = p?.buri?.place  || '';
+  const _firstOccu = p?.events?.find(e => e.type === 'OCCU');
+  const _firstResi = p?.events?.find(e => e.type === 'RESI');
+  document.getElementById('pf-beruf').value         = _firstOccu?.value || '';
+  document.getElementById('pf-wohnort-date').value  = _firstResi?.date  || '';
+  document.getElementById('pf-wohnort-place').value = _firstResi?.place || '';
   _pfExtraNames = (p?.extraNames || []).map(en => ({...en}));
   _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
@@ -153,7 +160,7 @@ function showPersonForm(id) {
   surnameEl.onblur = _checkNameBlur;
 
   // Datum-Normalisierung bei Feldverlassen
-  ['pf-birth-date', 'pf-death-date', 'pf-chr-date', 'pf-buri-date'].forEach(id => {
+  ['pf-birth-date', 'pf-death-date', 'pf-chr-date', 'pf-buri-date', 'pf-wohnort-date'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.onblur = () => { el.value = _normQuickDate(el.value); };
   });
@@ -246,6 +253,9 @@ function savePerson() {
 
   const existing = getPerson(id) || {};
   const events = existing.events ? [...existing.events] : [];
+  const berufVal     = document.getElementById('pf-beruf')?.value.trim()        || '';
+  const wohnortDate  = document.getElementById('pf-wohnort-date')?.value.trim() || '';
+  const wohnortPlace = document.getElementById('pf-wohnort-place')?.value.trim()|| '';
   const extraNames = _pfExtraNames
     .filter(en => en.given || en.surname)
     .map(en => ({
@@ -271,6 +281,20 @@ function savePerson() {
   };
   const _eventCits = (evExisting, hasData) =>
     hasData ? _mergeCits(evExisting?.citations || [], nameCitations) : (evExisting?.citations || []);
+  // OCCU: erstes vorhandenes Event aktualisieren oder neues anhängen
+  if (berufVal) {
+    const occuIdx = events.findIndex(e => e.type === 'OCCU');
+    const base = occuIdx >= 0 ? events[occuIdx] : { type:'OCCU', date:null, place:null, lati:null, long:null, eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:[], media:[], _extra:[] };
+    const ev = { ...base, value: berufVal, citations: _eventCits(base, true) };
+    if (occuIdx >= 0) events[occuIdx] = ev; else events.push(ev);
+  }
+  // RESI: erstes vorhandenes Event aktualisieren oder neues anhängen
+  if (wohnortPlace || wohnortDate) {
+    const resiIdx = events.findIndex(e => e.type === 'RESI');
+    const base = resiIdx >= 0 ? events[resiIdx] : { type:'RESI', value:'', lati:null, long:null, eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:[], media:[], _extra:[] };
+    const ev = { ...base, date: wohnortDate || null, place: wohnortPlace, citations: _eventCits(base, true) };
+    if (resiIdx >= 0) events[resiIdx] = ev; else events.push(ev);
+  }
 
   AppState.db.individuals[id] = {
     ...existing,

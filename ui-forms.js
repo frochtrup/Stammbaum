@@ -612,8 +612,9 @@ initPlaceAutocomplete('ff-mplace',       'ff-mplace-dd');
 initPlaceAutocomplete('fev-place',       'fev-place-dd');
 initPlaceAutocomplete('pf-birth-place',  'pf-birth-place-dd');
 initPlaceAutocomplete('pf-death-place',  'pf-death-place-dd');
-initPlaceAutocomplete('pf-chr-place',    'pf-chr-place-dd');
+initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd');
 initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd');
+initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
 
 
