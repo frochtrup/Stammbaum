@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-13b — UX: Quick-Add Chips, Jump-Bar, CSP-Fix (sw v388–v390, v398–v400)
+
+- **sw v388** `feat`: Quick-Add Chips in Personen-Detailview — fehlende Sonder-Events (BIRT/CHR/DEAT/BURI) + generische Shortcuts (RESI/OCCU/CENS) in einer Pill-Zeile; `showEventFormTyped` in `_CLICK_MAP`; `defaultType`-Parameter in `showEventForm()`
+- **sw v389** `fix`: Alle Chips in einer Zeile (statt zwei), CSS-Leiche `.missing-events-row--generic` entfernt
+- **sw v390** `fix`: `flex-wrap: nowrap` + `overflow-x: auto` — horizontales Scrollen statt Zeilenumbruch auf iPhone/Safari
+- **sw v398** `feat`: Jump-Bar in Personen-Detailview — sticky Abschnitts-Navigation `[Daten][Notizen][Medien][Familie][Eltern]`; erscheint ab ≥3 Sektionen; `_injectJumpBar()`; Section-IDs `pdet-*`; `jumpToSection` in `_CLICK_MAP`
+- **sw v399** `fix`: Jump-Bar `scroll-margin-top: calc(var(--topbar-h, 52px) + 44px)` — Offset für Topbar + Bar-Höhe
+- **sw v400** `fix`: CSP — 3 `onclick=`-Handler in Template-Strings durch `data-action` ersetzt (`removeNoteRef`, `newSourceForm`, `newFamilyForm`); keine Inline-Event-Handler mehr im Codebase
+
+---
+
 ### Session 2026-05-13 — UX: Neue-Person-Formular (sw v391–v397)
 
 - **sw v391** `feat`: Neue-Person-Formular — Progressive Disclosure: Kern (Name/Geschlecht) + Leben (Geburt/Tod inline) immer sichtbar; optionale Felder per Field-Pills einblendbar (`_PF_PILLS`, `_renderPills()`, `_activatePill()`); Bearbeiten-Dialog bestehender Personen unverändert (alle Felder sichtbar)

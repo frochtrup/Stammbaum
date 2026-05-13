@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
 | 7.0 | `v7-dev` | In Entwicklung |
 
-**sw-Version:** v397 · Cache: `stammbaum-v397`
+**sw-Version:** v400 · Cache: `stammbaum-v400`
 **Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
@@ -55,8 +55,10 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | U22 | Onboarding: „Stammbaum-Datei öffnen", Formatzeile `.ged · .gramps` mit Programmnamen, Demo-Button mit Personenzahl | v377 |
 | U23 | **`ui-forms.js` aufgeteilt** (1007 → 619 Z.): `ui-forms-person.js` (Person + Extra-Name-Formular, 273 Z.) + `ui-forms-family.js` (Familie-Formular, 124 Z.); Load-Order + SW-Precache aktualisiert | v380 |
 | F4b | Citations-Datenmodell: `citations:[{sid,page,quay,note,extra,media}]` in allen 8 Dateien; `citationObj()`, `_migrateLegacyCitations()`, `citTagsHtml()`; Roundtrip verlustfrei | v381 |
-| Quick-Add Chips | Event-Chips in Personen-Detailview: fehlende Sonder-Events + generische Shortcuts | v388–v390 |
+| Quick-Add Chips | Event-Chips in Personen-Detailview: fehlende Sonder-Events + generische Shortcuts (1 horizontale Zeile, nowrap/overflow-x) | v388–v390 |
 | UX-Neu-Person | Progressive Disclosure im Neu-Person-Formular: Kern+Leben inline, Pills für Taufe/Beerdigung/Beruf/Wohnort/Notiz/Name-Details; Datum-Normalisierung (GEDCOM blur), Orts-Autocomplete, Quellen-Auto-Assign, „+ Weitere"-Button; Bearbeiten-Dialog entschlackt (nur Name/Meta) | v391–v397 |
+| Jump-Bar | Sticky Abschnitts-Navigation in Personen-Detailview: `[Daten][Notizen][Medien][Familie][Eltern]`; ab ≥3 Sektionen; `scroll-margin-top` für Topbar-Offset; `_injectJumpBar()` | v398–v399 |
+| CSP-Fix | 3 `onclick=`-Handler in Template-Strings → `data-action` (`removeNoteRef`, `newSourceForm`, `newFamilyForm`); keine Inline-Event-Handler mehr im Codebase | v400 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
