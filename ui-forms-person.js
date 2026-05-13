@@ -12,9 +12,49 @@ function showEditSheet() {
 
 // _pfExtraNames lebt in UIState._formState.pfExtraNames (shimmiert als _pfExtraNames)
 
+const _PF_PILLS = [
+  { field: 'prefix-suffix', label: 'Präfix / Zusatz' },
+  { field: 'rufname-nick',  label: 'Rufname / Spitzname' },
+  { field: 'titl',          label: 'Titel' },
+  { field: 'extranames',    label: 'Weiterer Name' },
+  { field: 'note',          label: 'Notiz' },
+  { field: 'resn',          label: 'Beschränkung' },
+  { field: 'email',         label: 'E-Mail' },
+  { field: 'www',           label: 'Website' },
+  { field: 'sources',       label: 'Quellen' },
+];
+let _pfActivePills = new Set();
+
+function _renderPills() {
+  const container = document.getElementById('pf-field-pills');
+  if (!container) return;
+  container.innerHTML = '';
+  _PF_PILLS.forEach(({ field, label }) => {
+    if (_pfActivePills.has(field)) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'field-pill';
+    btn.textContent = '+ ' + label;
+    btn.addEventListener('click', () => _activatePill(field));
+    container.appendChild(btn);
+  });
+}
+
+function _activatePill(field) {
+  _pfActivePills.add(field);
+  const el = document.querySelector(`#modalPerson .pf-opt-field[data-field="${field}"]`);
+  if (el) {
+    el.hidden = false;
+    const input = el.querySelector('input,textarea,select');
+    if (input) input.focus();
+  }
+  _renderPills();
+}
+
 function showPersonForm(id) {
   closeModal('modalAdd');
   const p = id ? getPerson(id) : null;
+  const isNew = !id;
   document.getElementById('personFormTitle').textContent = p ? 'Person bearbeiten' : 'Neue Person';
   document.getElementById('pf-id').value = id || '';
   document.getElementById('pf-given').value = p?.given || '';
@@ -29,6 +69,10 @@ function showPersonForm(id) {
   document.getElementById('pf-resn').value   = p?.resn  || '';
   document.getElementById('pf-email').value  = p?.email || '';
   document.getElementById('pf-www').value    = p?.www   || '';
+  document.getElementById('pf-birth-date').value  = p?.birth?.date  || '';
+  document.getElementById('pf-birth-place').value = p?.birth?.place || '';
+  document.getElementById('pf-death-date').value  = p?.death?.date  || '';
+  document.getElementById('pf-death-place').value = p?.death?.place || '';
   _pfExtraNames = (p?.extraNames || []).map(en => ({...en}));
   _renderPfExtraNames();
   document.getElementById('deletePersonBtn').style.display = p ? 'block' : 'none';
@@ -47,6 +91,20 @@ function showPersonForm(id) {
   };
   givenEl.onblur = _checkNameBlur;
   surnameEl.onblur = _checkNameBlur;
+
+  // Pills-Modus: neue Person → optionale Felder ausblenden + Pills zeigen
+  // Bestehende Person → alle Felder sichtbar, keine Pills
+  _pfActivePills = new Set();
+  const pillsContainer = document.getElementById('pf-field-pills');
+  const optFields = document.querySelectorAll('#modalPerson .pf-opt-field');
+  if (isNew) {
+    optFields.forEach(el => { el.hidden = true; });
+    if (pillsContainer) { pillsContainer.hidden = false; _renderPills(); }
+  } else {
+    optFields.forEach(el => { el.hidden = false; });
+    if (pillsContainer) pillsContainer.hidden = true;
+  }
+
   openModal('modalPerson');
 }
 
@@ -129,14 +187,19 @@ function savePerson() {
       nameRaw: [en.given, en.surname ? '/' + en.surname + '/' : ''].filter(Boolean).join(' ')
     }));
 
+  const birthDate  = document.getElementById('pf-birth-date')?.value.trim()  || '';
+  const birthPlace = document.getElementById('pf-birth-place')?.value.trim() || '';
+  const deathDate  = document.getElementById('pf-death-date')?.value.trim()  || '';
+  const deathPlace = document.getElementById('pf-death-place')?.value.trim() || '';
+
   AppState.db.individuals[id] = {
     ...existing,
     id, given, surname, prefix, nick, _rufname: rufname,
     name: (given + (surname ? ' ' + surname : '')).trim(),
     nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
-    birth: existing.birth || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
-    death: existing.death || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' },
+    birth: { ...(existing.birth || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: birthDate, place: birthPlace },
+    death: { ...(existing.death || { lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' }), date: deathDate, place: deathPlace },
     chr:   existing.chr   || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
     buri:  existing.buri  || { date:'', place:'', lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' },
     events,

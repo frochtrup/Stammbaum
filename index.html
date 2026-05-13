@@ -312,6 +312,7 @@
     <div class="sheet-title" id="personFormTitle">Person bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="pf-id">
+      <!-- KERN: immer sichtbar -->
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Vorname</label>
@@ -331,60 +332,102 @@
           <option value="F">Weiblich</option>
         </select>
       </div>
+      <!-- LEBEN: immer sichtbar -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Namenspräfix (NPFX)</label>
-          <input class="form-input" id="pf-prefix" placeholder="Dr., Prof., …">
+          <label class="form-label">Geburt – Datum</label>
+          <input class="form-input" id="pf-birth-date" placeholder="z.B. 1900">
         </div>
         <div class="form-group">
-          <label class="form-label">Namenszusatz (NSFX)</label>
-          <input class="form-input" id="pf-suffix" placeholder="jr., sen., III.">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Rufname (_RUFNAME)</label>
-          <input class="form-input" id="pf-rufname" placeholder="z.B. Heinrich">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Spitzname (NICK)</label>
-          <input class="form-input" id="pf-nick" placeholder="z.B. Hannes">
+          <label class="form-label">Geburt – Ort</label>
+          <input class="form-input" id="pf-birth-place" placeholder="Ort">
         </div>
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Titel (TITL)</label>
-          <input class="form-input" id="pf-titl" placeholder="Graf, Freiherr, …">
+          <label class="form-label">Tod – Datum</label>
+          <input class="form-input" id="pf-death-date" placeholder="z.B. 1965">
         </div>
-        <div class="form-group"></div>
+        <div class="form-group">
+          <label class="form-label">Tod – Ort</label>
+          <input class="form-input" id="pf-death-place" placeholder="Ort">
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Weitere Namen</label>
-        <div id="pf-extranames-list"></div>
-        <button type="button" class="btn btn-sec mt-6 p-btn-sm" data-action="addPfExtraName">+ Weiteren Namen</button>
+      <!-- PILLS: nur bei neuer Person -->
+      <div id="pf-field-pills" hidden></div>
+      <!-- OPTIONAL: per Pill einblendbar (bei bestehender Person immer sichtbar) -->
+      <div class="pf-opt-field" data-field="prefix-suffix">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Namenspräfix (NPFX)</label>
+            <input class="form-input" id="pf-prefix" placeholder="Dr., Prof., …">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Namenszusatz (NSFX)</label>
+            <input class="form-input" id="pf-suffix" placeholder="jr., sen., III.">
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Notiz</label>
-        <textarea class="form-input resize-v" id="pf-note" rows="3" placeholder="Weitere Informationen…"></textarea>
+      <div class="pf-opt-field" data-field="rufname-nick">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Rufname (_RUFNAME)</label>
+            <input class="form-input" id="pf-rufname" placeholder="z.B. Heinrich">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Spitzname (NICK)</label>
+            <input class="form-input" id="pf-nick" placeholder="z.B. Hannes">
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Beschränkung (RESN)</label>
-        <input class="form-input" id="pf-resn" placeholder="confidential / locked / privacy">
+      <div class="pf-opt-field" data-field="titl">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Titel (TITL)</label>
+            <input class="form-input" id="pf-titl" placeholder="Graf, Freiherr, …">
+          </div>
+          <div class="form-group"></div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">E-Mail</label>
-        <input class="form-input" id="pf-email" type="email" placeholder="name@beispiel.de">
+      <div class="pf-opt-field" data-field="extranames">
+        <div class="form-group">
+          <label class="form-label">Weitere Namen</label>
+          <div id="pf-extranames-list"></div>
+          <button type="button" class="btn btn-sec mt-6 p-btn-sm" data-action="addPfExtraName">+ Weiteren Namen</button>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Website (WWW)</label>
-        <input class="form-input" id="pf-www" type="url" placeholder="https://…">
+      <div class="pf-opt-field" data-field="note">
+        <div class="form-group">
+          <label class="form-label">Notiz</label>
+          <textarea class="form-input resize-v" id="pf-note" rows="3" placeholder="Weitere Informationen…"></textarea>
+        </div>
       </div>
-      <div class="src-widget" id="pf-src-widget">
-        <label class="form-label">Quellen</label>
-        <div class="src-tags" id="pf-src-tags"></div>
-        <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="pf">＋ Quelle hinzufügen</button>
-        <div class="src-picker" id="pf-src-picker">
-          <div class="src-picker-list" id="pf-src-list"></div>
+      <div class="pf-opt-field" data-field="resn">
+        <div class="form-group">
+          <label class="form-label">Beschränkung (RESN)</label>
+          <input class="form-input" id="pf-resn" placeholder="confidential / locked / privacy">
+        </div>
+      </div>
+      <div class="pf-opt-field" data-field="email">
+        <div class="form-group">
+          <label class="form-label">E-Mail</label>
+          <input class="form-input" id="pf-email" type="email" placeholder="name@beispiel.de">
+        </div>
+      </div>
+      <div class="pf-opt-field" data-field="www">
+        <div class="form-group">
+          <label class="form-label">Website (WWW)</label>
+          <input class="form-input" id="pf-www" type="url" placeholder="https://…">
+        </div>
+      </div>
+      <div class="pf-opt-field" data-field="sources">
+        <div class="src-widget" id="pf-src-widget">
+          <label class="form-label">Quellen</label>
+          <div class="src-tags" id="pf-src-tags"></div>
+          <button type="button" class="src-add-btn" data-action="toggleSrcPicker" data-prefix="pf">＋ Quelle hinzufügen</button>
+          <div class="src-picker" id="pf-src-picker">
+            <div class="src-picker-list" id="pf-src-list"></div>
+          </div>
         </div>
       </div>
       <div class="btn-row">

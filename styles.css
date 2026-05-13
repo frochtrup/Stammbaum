@@ -783,6 +783,20 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 
 .btn-row { display: flex; gap: 10px; margin-top: 20px; }
 
+/* Field pills (neue Person) */
+#pf-field-pills {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin: 2px 0 14px;
+}
+.field-pill {
+  display: inline-flex; align-items: center;
+  background: var(--surface2); color: var(--text-muted);
+  border: 1px solid var(--border); border-radius: 22px;
+  padding: 6px 14px; font-size: 0.82rem; font-family: inherit;
+  cursor: pointer; white-space: nowrap; min-height: 36px;
+}
+.field-pill:active { border-color: var(--gold-dim); color: var(--gold); }
+
 /* Source widget */
 .src-widget { margin-bottom: 16px; }
 .src-tags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-bottom: 8px; }
