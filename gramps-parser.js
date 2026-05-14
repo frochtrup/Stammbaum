@@ -756,11 +756,19 @@ async function parseGRAMPS(file) {
       });
     }
 
-    // Top-level citation refs (on the person record itself)
-    const topTarget = { sources: p.topSources, sourcePages: p.topSourcePages,
-                        sourceQUAY: p.topSourceQUAY, sourceNote: {}, sourceExtra: p.topSourceExtra, sourceMedia: {} };
-    for (const cr of _byTag(person, 'citationref'))
-      _applyCit(topTarget, cr.getAttribute('hlink'), citMap, srcHandleToId);
+    // Top-level citation refs (direct children of person, not nested in name/attribute)
+    const topTarget = { citations: [] };
+    for (const ch of person.children) {
+      if ((ch.localName || ch.tagName) === 'citationref')
+        _applyCit(topTarget, ch.getAttribute('hlink'), citMap, srcHandleToId);
+    }
+    for (const c of topTarget.citations) {
+      if (!p.topSources.includes(c.sid)) {
+        p.topSources.push(c.sid);
+        if (c.page) p.topSourcePages[c.sid] = c.page;
+        if (c.quay != null) p.topSourceQUAY[c.sid] = +c.quay;
+      }
+    }
 
     // Notes
     for (const nr of _byTag(person, 'noteref')) {
