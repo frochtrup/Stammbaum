@@ -265,13 +265,13 @@ async function parseGRAMPS(file) {
     };
   }
 
-  // Notes: handle → text
+  // Notes: handle → {text, type}
   const noteMap = {};
   for (const note of _byTag(doc, 'note')) {
     const h      = note.getAttribute('handle');
     if (!h) continue;
     const textEl = _byTag(note, 'text')[0] || null;
-    noteMap[h]   = textEl ? textEl.textContent.trim() : '';
+    noteMap[h]   = { text: textEl ? textEl.textContent.trim() : '', type: note.getAttribute('type') || 'General' };
   }
 
   // Places: handle → {title, lat, long}  (for event resolution)
@@ -331,7 +331,7 @@ async function parseGRAMPS(file) {
   const placeObjects = {};
   for (const [pId, pl] of Object.entries(_placeObjsTemp)) {
     placeObjects[pId] = {
-      id: pl.id, _grampsHandle: pl._grampsHandle,
+      id: pl.id, grampId: pl.id.replace(/^@|@$/g, ''), _grampsHandle: pl._grampsHandle,
       title: pl.title, type: pl.type, pnames: pl.pnames,
       lat: pl.lat, long: pl.long,
       parentId: pl._parentHandle ? (placeHandleToId[pl._parentHandle] || null) : null,
@@ -387,7 +387,7 @@ async function parseGRAMPS(file) {
     const repoRefEl = _byTag(src, 'reporef')[0] || null;
     const repoId    = repoRefEl ? (repoHandleToId[repoRefEl.getAttribute('hlink')] || null) : null;
     const noteTexts = _byTag(src, 'noteref')
-      .map(n => noteMap[n.getAttribute('hlink')] || '').filter(Boolean);
+      .map(n => noteMap[n.getAttribute('hlink')]?.text || '').filter(Boolean);
     const srcMedia = [];
     for (const objRef of _byTag(src, 'objref')) {
       const obj = objMap[objRef.getAttribute('hlink')];
@@ -440,7 +440,7 @@ async function parseGRAMPS(file) {
     const nId = nh;  // GRAMPS handle direkt als Key — verhindert Kollisionen bei nh.slice(-10)
     if (!notes[nId] && noteMap[nh] !== undefined) {
       notes[nId] = {
-        id: nId, text: noteMap[nh] || '',
+        id: nId, text: noteMap[nh]?.text || '', type: noteMap[nh]?.type || 'General',
         _passthrough: [], lastChanged: '', lastChangedTime: '',
         _grampsHandle: nh
       };
@@ -539,7 +539,7 @@ async function parseGRAMPS(file) {
         for (const cr of _byTag(a, 'citationref'))
           _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
         const aNote = _byTag(a, 'noteref')
-          .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+          .map(nr => noteMap[nr.getAttribute('hlink')]?.text || '').filter(Boolean).join('\n');
         const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '', citations: atgt.citations };
         if (aNote) obj.note = aNote;
         return obj;
@@ -556,7 +556,7 @@ async function parseGRAMPS(file) {
           const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
           const plTitle = pl?.title || null;
           const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
-          const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
+          const evNote  = ev.noteRefs.map(nh => noteMap[nh]?.text || '').filter(Boolean).join('\n');
           const wtgt = { citations: [] };
           for (const ch of ev.citRefs) _applyCit(wtgt, ch, citMap, srcHandleToId);
           if (!p._grampsWitnessRefs) p._grampsWitnessRefs = [];
@@ -576,7 +576,7 @@ async function parseGRAMPS(file) {
       if (!ev) continue;
 
       const mapped  = _GRAMPS_EV[ev.type] || { tag:'EVEN', sp:null };
-      const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
+      const evNote  = ev.noteRefs.map(nh => noteMap[nh]?.text || '').filter(Boolean).join('\n');
       const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
       const plTitle = pl ? (pl.title || null) : null;
       const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
@@ -675,7 +675,7 @@ async function parseGRAMPS(file) {
     // Notes
     for (const nr of _byTag(person, 'noteref')) {
       const nh  = nr.getAttribute('hlink');
-      const txt = noteMap[nh] || '';
+      const txt = noteMap[nh]?.text || '';
       if (txt) p.noteTexts.push(txt);
       p.noteRefs.push(_noteId(nh));
     }
@@ -690,7 +690,7 @@ async function parseGRAMPS(file) {
       for (const cr of _byTag(pref, 'citationref'))
         _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
       const aNote = _byTag(pref, 'noteref')
-        .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+        .map(nr => noteMap[nr.getAttribute('hlink')]?.text || '').filter(Boolean).join('\n');
       p.associations.push({ xref: aXref, _grampsHlink: aHlink, rela: aRel, note: aNote, citations: atgt.citations });
     }
 
@@ -742,7 +742,7 @@ async function parseGRAMPS(file) {
       const ev  = evMap[evH];
       if (!ev) continue;
       const mapped  = _GRAMPS_EV[ev.type] || { tag:'EVEN', sp:null };
-      const evNote  = ev.noteRefs.map(nh => noteMap[nh] || '').filter(Boolean).join('\n');
+      const evNote  = ev.noteRefs.map(nh => noteMap[nh]?.text || '').filter(Boolean).join('\n');
       const pl      = ev.placeHandle ? placeMap[ev.placeHandle] : null;
       const plTitle = pl ? (pl.title || null) : null;
       const plId    = ev.placeHandle ? (placeHandleToId[ev.placeHandle] || null) : null;
@@ -785,7 +785,7 @@ async function parseGRAMPS(file) {
     // Notes
     for (const nr of _byTag(fam, 'noteref')) {
       const nh  = nr.getAttribute('hlink');
-      const txt = noteMap[nh] || '';
+      const txt = noteMap[nh]?.text || '';
       if (txt) f.noteTexts.push(txt);
       f.noteRefs.push(_noteId(nh));
     }
@@ -798,7 +798,7 @@ async function parseGRAMPS(file) {
         for (const cr of _byTag(a, 'citationref'))
           _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
         const aNote = _byTag(a, 'noteref')
-          .map(nr => noteMap[nr.getAttribute('hlink')] || '').filter(Boolean).join('\n');
+          .map(nr => noteMap[nr.getAttribute('hlink')]?.text || '').filter(Boolean).join('\n');
         const obj = { type: a.getAttribute('type') || '', value: a.getAttribute('value') || '', citations: atgt.citations };
         if (aNote) obj.note = aNote;
         return obj;

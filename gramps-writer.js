@@ -198,15 +198,15 @@ async function writeGRAMPS(db) {
     if (!text) return null;
     const key = noteObj._grampsHandle ? noteObj._grampsHandle : ('t:' + text);
     if (!noteRecs[key]) {
-      noteRecs[key] = { handle: noteObj._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: 'General' };
+      noteRecs[key] = { handle: noteObj._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: noteObj.type || 'General' };
     }
     return noteRecs[key].handle;
   };
 
-  const _objHandle = (file, titl, mime) => {
+  const _objHandle = (file, titl, mime, grampsHandle) => {
     if (!file) return null;
     if (!objRecs[file]) {
-      objRecs[file] = { handle: _h('ob'), id: `O${String(objCtr++).padStart(4,'0')}`, src: _toGrampsSrc(file), mime: mime||'image/jpeg', desc: titl||'' };
+      objRecs[file] = { handle: grampsHandle || _h('ob'), id: `O${String(objCtr++).padStart(4,'0')}`, src: _toGrampsSrc(file), mime: mime||'image/jpeg', desc: titl||'' };
     }
     return objRecs[file].handle;
   };
@@ -316,7 +316,7 @@ async function writeGRAMPS(db) {
     }
 
     personEvRefs[pId]   = refs;
-    personObjRefs[pId]  = (p.media||[]).map(m => _objHandle(m.file, m.titl, m.mime)).filter(Boolean);
+    personObjRefs[pId]  = (p.media||[]).map(m => _objHandle(m.file, m.titl, m.mime, m._grampsHandle)).filter(Boolean);
     personCitRefs[pId]  = (p.topSources||[]).map(s => _citHandle(s, p.topSourcePages?.[s], p.topSourceQUAY?.[s]??0)).filter(Boolean);
 
     // Person notes (Handle-first key → keine Verschmelzung gleicher Texte)
@@ -365,7 +365,7 @@ async function writeGRAMPS(db) {
 
   // ── Collect source media objects ──────────────────────────────────────────
   for (const s of Object.values(db.sources)) {
-    for (const m of s.media || []) _objHandle(m.file, m.titl, m.mime);
+    for (const m of s.media || []) _objHandle(m.file, m.titl, m.mime, m._grampsHandle);
   }
 
   // ── Build XML ──────────────────────────────────────────────────────────────
@@ -588,7 +588,7 @@ async function writeGRAMPS(db) {
     }
     // Source media
     for (const m of s.media||[]) {
-      const oh = _objHandle(m.file, m.titl, m.mime);
+      const oh = _objHandle(m.file, m.titl, m.mime, m._grampsHandle);
       if (oh) L.push(`      <objref hlink="${_esc(oh)}"/>`);
     }
     L.push('    </source>');

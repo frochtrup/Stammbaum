@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v414 · Cache: `stammbaum-v414`
+**sw-Version:** v415 · Cache: `stammbaum-v415`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -32,11 +32,13 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| GRAMPS-EventAttrFix | **Event-Attribute als Plain-Objects** | Parser-Bug: `evMap[h].attrs` speichert DOM-Elemente statt `{type,value}`-Plain-Objects; `_attrXML` scheitert bei DOM-Input → Event-Attribut-Ausgabe kaputt. Fix: wie bei `p._grampsAttrs` in Plain-Objects mappen. | S |
-| GRAMPS-NoteType | **Note-`type`-Attribut bewahren** | `<note type="Research/Private/…">` lesen → `db.notes[id].type`; Writer gibt `type="…"` wieder aus; sonst werden alle Notes zu `type="General"` | XS |
-| GRAMPS-ID | **Ursprüngliche Handles im Writer** | `gramps_id` (Personen, Familien, Quellen, Orte) und `_grampsHandle` beim GRAMPS-Export wieder ausgeben statt neu generieren; verhindert ID-Churn | S |
-| GRAMPS-ObjHandles | **Original Media-Handles bewahren** | Parser liest `hlink` bereits als `_grampsHandle`; Writer nutzt es statt `_h('ob')` — verhindert dass Objekt-IDs je Roundtrip wechseln und externe Referenzen brechen | S |
-| GRAMPS-CitHandles | **Original Citation-Handles bewahren** | `_grampsCitHandle` auf Citation-Objekte speichern; Writer nutzt Original-Handle statt `_citHandle()`-Neugenerat; verhindert Citation-ID-Churn | M |
+| ~~GRAMPS-EventAttrFix~~ | ~~**Event-Attribute als Plain-Objects**~~ | ~~Parser-Bug: `evMap[h].attrs` speichert DOM-Elemente statt `{type,value}`-Plain-Objects~~ | ~~S~~ | **erledigt (war bereits korrekt)** |
+| ~~GRAMPS-NoteType~~ | ~~**Note-`type`-Attribut bewahren**~~ | ~~`<note type="Research/Private/…">` lesen → `db.notes[id].type`; Writer gibt `type="…"` wieder aus~~ | ~~XS~~ | **erledigt sw v415** |
+| ~~GRAMPS-ID~~ | ~~**Ursprüngliche Handles im Writer**~~ | ~~`grampId` auf PlaceObjects ergänzt; Personen/Familien/Quellen/Repos bereits korrekt~~ | ~~S~~ | **erledigt sw v415** |
+| ~~GRAMPS-ObjHandles~~ | ~~**Original Media-Handles bewahren**~~ | ~~`_objHandle()` nutzt `m._grampsHandle` statt `_h('ob')` — verhindert Objekt-ID-Churn~~ | ~~S~~ | **erledigt sw v415** |
+| GRAMPS-EventHandles | **Original Event-Handles bewahren** | `evMap[h]._grampsHandle` im Parser speichern; Writer nutzt Original-Handle statt `_h('ev')`-Neugenerat — verhindert Event-ID-Churn bei jedem Roundtrip | XS |
+| GRAMPS-EventExtra | **Event-Passthrough für nicht-modellierte Sub-Elemente** | `evMap[h]._extra[]` im Parser als String-Array für `<objref>`, `<attribute private>`, `<change>`; Writer gibt sie nach den modellierten Feldern aus | S |
+| GRAMPS-CitHandles | **Original Citation-Handles + Passthrough** | `_grampsCitHandle` auf Citation-Objekte speichern; Writer nutzt Original-Handle; `cit._extra[]` für `<noteref>`, `<objref>`, `<attribute>`, `<change>` im Passthrough | M |
 | GRAMPS-Notes | **Notes als eigene Entität** | `db.notes{}` als Tabelle; mehrere Notes pro Entität nicht zu einer zusammenführen; Note-Handles original zurückschreiben; baut auf GRAMPS-NoteType auf | M |
 | GRAMPS-PlacePassthrough | **placeobj Sub-Elemente Passthrough** | `<noteref>`, `<citationref>`, `<attribute>`, `<objref>` auf `placeobj` im Parser erfassen (`pl._extra[]`); Writer gibt sie unverändert aus; kein GEDCOM-Einfluss | M |
 
