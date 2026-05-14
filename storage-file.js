@@ -166,7 +166,7 @@ function _downloadBlob(content, filename) {
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
 async function exportGEDCOM(forceGEDCOM = false) {
-  if (!forceGEDCOM && AppState.db?._grampsMaster) return exportGRAMPS();
+  if (!forceGEDCOM && AppState.db?._grampsMaster) return exportGRAMPS(true);
   const content  = writeGEDCOM(true);
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -233,8 +233,9 @@ async function exportGEDCOM(forceGEDCOM = false) {
   showToast('✓ ' + filename + ' heruntergeladen');
 }
 
-// GRAMPS XML Export (.gramps = gzip) — immer Download/Share (kein File Handle)
-async function exportGRAMPS() {
+// GRAMPS XML Export/Speichern (.gramps = gzip) — immer Download/Share (kein File Handle)
+// asSave=true: Originalname ohne Zeitstempel (Speichern); false: Zeitstempel (Formatkonvertierung)
+async function exportGRAMPS(asSave = false) {
   if (!AppState.db) {
     showToast('⚠ Keine Datei geladen');
     return;
@@ -254,13 +255,13 @@ async function exportGRAMPS() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const exportName = filename.replace(/\.gramps$/, `_${ts}.gramps`);
+  const outputName = asSave ? filename : filename.replace(/\.gramps$/, `_${ts}.gramps`);
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (isIOS && navigator.canShare) {
-    const file = new File([blob], exportName, { type: 'application/octet-stream' });
+    const file = new File([blob], outputName, { type: 'application/octet-stream' });
     if (navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: exportName })
+      navigator.share({ files: [file], title: outputName })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
       return;
     }
@@ -269,10 +270,10 @@ async function exportGRAMPS() {
   // Download
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
-  a.href = url; a.download = exportName; a.style.display = 'none';
+  a.href = url; a.download = outputName; a.style.display = 'none';
   document.body.appendChild(a); a.click();
   setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-  showToast('✓ ' + exportName + ' heruntergeladen');
+  showToast('✓ ' + outputName + ' heruntergeladen');
 }
 
 // ─────────────────────────────────────
