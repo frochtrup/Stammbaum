@@ -22,7 +22,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 Prioritäten: **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohne festes Datum
 
-**Design-Constraint:** Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delta=0`) stabil halten. Neue Datenstrukturen dürfen beim GEDCOM-Export keinen zusätzlichen Delta erzeugen — entweder als Passthrough oder als bekannte, dokumentierte Abweichung.
+**Design-Constraint:** Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delta=0`) stabil halten. Neue Datenstrukturen dürfen beim GEDCOM-Export keinen zusätzlichen Delta erzeugen — entweder als Passthrough oder als bekannte, dokumentierte Abweichung. Jede neue Abweichung vom Roundtrip-Verhalten muss explizit entschieden und in `ARCHITECTURE.md` (ADR) dokumentiert werden; sie darf nicht stillschweigend entstehen.
 
 ---
 
