@@ -192,21 +192,22 @@ function writeINDIRecord(lines, p) {
         geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
       }
     }
-    // Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse
-    // Auch ev.note === hofMeta.note deduplizieren (aus altem GEDCOM-Import)
+    // Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse,
+    // und nur wenn das Event selbst ursprünglich eine Note hatte.
     const _addrKey = ev.addr?.trim();
     const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
+    const _evHadNote = !!(ev._noteOrig || ev.noteRefs?.length);
     for (const r of (ev.noteRefs || [])) {
       // HOF-Notiz-Refs überspringen — werden über _hofNoteIds separat als @N_HOF_n@ geschrieben
       if (_hofMeta?.note && AppState.db.notes?.[r]?.text === _hofMeta.note) continue;
       lines.push(`2 NOTE ${r}`);
     }
     if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
-      if (!_writtenHofNotes.has(_addrKey)) {
+      if (_evHadNote && !_writtenHofNotes.has(_addrKey)) {
         lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
         _writtenHofNotes.add(_addrKey);
       }
-    } else if (_hofMeta?.note && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
+    } else if (_hofMeta?.note && _evHadNote && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
       pushCont(lines, 2, 'NOTE', _hofMeta.note);
       _writtenHofNotes.add(_addrKey);
     } else if (!_evNoteIsHofNote) {

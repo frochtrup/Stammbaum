@@ -834,11 +834,12 @@ function _derivedHofObjectsFromDb(db) {
       if ((ev.type !== 'RESI' && ev.type !== 'PROP') || !ev.addr) continue;
       const _hasCoords = ev.lati != null && ev.long != null;
       const _refNote = (ev.noteRefs || []).map(r => db.notes?.[r]?.text).find(t => t);
-      if (!_hasCoords && !_refNote) continue;
+      const _evNote = _refNote || ev._noteOrig || '';
+      if (!_hasCoords && !_evNote) continue;
       const addr = ev.addr.trim();
       if (!hof[addr]) hof[addr] = { addr };
       if (_hasCoords && hof[addr].lat == null) { hof[addr].lat = ev.lati; hof[addr].long = ev.long; }
-      if (!hof[addr].note && _refNote) hof[addr].note = _refNote;
+      if (!hof[addr].note && _evNote) hof[addr].note = _evNote;
     }
   }
   return hof;
