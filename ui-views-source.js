@@ -58,6 +58,7 @@ function showSourceDetail(id, pushHistory = true) {
         ? `<div class="note-text">${linkifyUrls(s.text)}</div>`
         : `<div class="note-hint">Notiz hinzufügen…</div>`}
     </div>
+    ${s.noteText ? `<div class="note-text note-ref-text">${linkifyUrls(s.noteText)}</div>` : ''}
   </div>`;
 
   // Referencing persons

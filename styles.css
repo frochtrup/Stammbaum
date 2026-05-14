@@ -1780,6 +1780,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 
 /* ── Notizen / Events ── */
 .note-text { white-space: pre-wrap; font-size: 0.88rem; color: var(--text-dim); line-height: 1.6; }
+.note-ref-text { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 6px; }
 .note-hint { color: var(--text-muted); font-style: italic; font-size: 0.85rem; }
 .ev-note   { display: block; font-size: 0.8rem; color: var(--text-dim); font-style: italic; margin-top: 2px; }
 .no-data   { color: var(--text-muted); font-style: italic; font-size: 0.85rem; }

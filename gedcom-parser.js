@@ -86,7 +86,7 @@ function parseGEDCOM(text, parseErrors) {
         cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallNumExtra:[], text:'', _textSeen:false, agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
@@ -684,6 +684,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag==='PUBL') cur.publ   = val;
         else if (tag==='REPO') { cur.repo = val; cur.repoCallNum = ''; }
         else if (tag==='TEXT') { cur.text = val; cur._textSeen = true; }
+        else if (tag==='NOTE') { if (val.startsWith('@')) cur.noteRefs.push(val); else { cur.note = val; } }
         else if (tag==='CHAN') { /* context-only */ }
         else if (tag==='DATA') { /* context-only — sub-tags handled at lv=2 */ }
         else if (tag==='_DATE') { cur._date = val; }
@@ -710,6 +711,7 @@ function parseGEDCOM(text, parseErrors) {
         }
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='TITL') cur.title  += (tag==='CONT'?'\n':'') + val;
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='TEXT') cur.text   += (tag==='CONT'?'\n':'') + val;
+        if ((tag==='CONC'||tag==='CONT') && lv1tag==='NOTE') cur.note   += (tag==='CONT'?'\n':'') + val;
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='AUTH') cur.author += (tag==='CONT'?'\n':'') + val;
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='PUBL') cur.publ   += (tag==='CONT'?'\n':'') + val;
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='ABBR') cur.abbr   += (tag==='CONT'?'\n':'') + val;
@@ -818,6 +820,12 @@ function parseGEDCOM(text, parseErrors) {
     _resolveNoteRefs(f.marr); _resolveNoteRefs(f.engag);
     _resolveNoteRefs(f.div);  _resolveNoteRefs(f.divf);
     for (const ev of (f.events || [])) _resolveNoteRefs(ev);
+  }
+  for (const s of Object.values(sources)) {
+    s.noteText = s.note;
+    for (const ref of (s.noteRefs || [])) {
+      if (ref && notes[ref]) s.noteText += (s.noteText ? '\n' : '') + notes[ref].text;
+    }
   }
 
   // Collect distinct eventType values per event tag from all INDI and FAM events

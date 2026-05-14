@@ -454,6 +454,8 @@ function writeSOURRecord(lines, s) {
     }
     for (const l of (m._extra || [])) lines.push(l);
   }
+  for (const ref of (s.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
+  if (s.note) pushCont(lines, 1, 'NOTE', s.note);
   if (s._date)   lines.push(`1 _DATE ${s._date}`);
   if (s.grampId) lines.push(`1 _GRAMPS_ID ${s.grampId}`);
   writeCHAN(lines, s, 1);
