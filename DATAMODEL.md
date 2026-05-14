@@ -278,15 +278,16 @@ Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → 
 | Fan Chart | ui-fanchart.js | `showFanChart()` |
 | Orte-System | ui-views.js | `collectPlaces()`, `renderPlaceList()`, `showPlaceDetail()`, `savePlace()` |
 | Render-Helfer | ui-views.js | `factRow()`, `srcNum()`, `sourceTagsHtml()`, `relRow()` |
-| Formulare Person/Familie/Quelle | ui-forms.js | `showPersonForm()`, `savePerson()`, `showFamilyForm()`, `saveFamily()`, `showSourceForm()`, `saveSource()` |
-| Quellen-Widget | ui-forms.js | `initSrcWidget()`, `renderSrcTags()`, `toggleSrc()`, `updateSrcPage()` |
+| Person-Formular | ui-forms-person.js | `showPersonForm()`, `savePerson()` |
+| Familie-Formular | ui-forms-family.js | `showFamilyForm()`, `saveFamily()` |
+| Quellen-Formular + Widget | ui-forms.js | `showSourceForm()`, `saveSource()`, `initSrcWidget()`, `renderSrcTags()`, `toggleSrc()`, `updateSrcPage()` |
 | Event-Formular | ui-forms-event.js | `showEventForm()`, `saveEvent()`, `deleteEvent()` |
 | Archiv-Formular + Picker | ui-forms-repo.js | `showRepoForm()`, `saveRepo()`, `showRepoPicker()` |
 | Medien | ui-media.js | `openAddMediaDialog()`, `confirmAddMedia()`, `deletePersonMedia()` |
 | OneDrive Auth | onedrive-auth.js | `_odConnect()`, `_odLogout()`, `_odRefreshTokenSilent()` |
 | OneDrive Import | onedrive-import.js | `_odShowFolder()`, `_odPickSelectFile()` |
 | OneDrive File I/O | onedrive.js | `_odGetMediaUrlByPath()`, `_odSaveFile()`, `openSettings()` |
-| Utils | ui-forms.js | `esc()`, `showToast()`, `openModal()`, `closeModal()` |
+| Utils | ui-views.js / ui-forms.js | `esc()`, `showToast()`, `openModal()`, `closeModal()` |
 
 ---
 
@@ -310,8 +311,6 @@ AppState = {
 
 UIState = {
   _treeScale:      1.0,        // Zoom-Faktor Sanduhr
-  _treeHistory:    [],         // [{id}] — History-Stack für ← im Baum
-  _treeHistoryPos: -1,
   _treeNavTargets: {},         // {up, upShift, down, right}
   _activeSpouseMap:{},         // {personId: famId}
   _probandId:      null,       // konfigurierbarer Proband
@@ -319,6 +318,7 @@ UIState = {
   _relMode:        '',         // 'spouse'|'child'|'parent'
   _relAnchorId:    '',
   _navHistory:     [],         // {type, id|name} — Stack für goBack()
+  _navFwdStack:    [],         // Vorwärts-Stack für goForward() (Nav 2.0)
   _placeModes:     {},         // {placeId: 'free'|'parts'}
   _personSort:     'name',     // 'name'|'birth'
 }

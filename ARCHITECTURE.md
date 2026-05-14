@@ -9,7 +9,7 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          Stammbaum PWA v7.0 (Branch v7-dev)          │
+│          Stammbaum PWA v7.0 (main)                    │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
@@ -27,27 +27,29 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  ui-views-source.js   — Quellen-Detailansicht        │
 │  ui-views-tree.js     — Sanduhr-Baum                 │
 │  ui-fanchart.js       — Fan Chart (SVG)              │
-│  ui-forms.js          — Formulare (Person/Fam/Src)   │
+│  ui-forms.js          — Source-Widget, Utils          │
+│  ui-forms-person.js   — Person-Formular               │
+│  ui-forms-family.js   — Familie-Formular              │
 │  ui-forms-event.js    — Event-Formular               │
 │  ui-forms-repo.js     — Archiv-Formular + Picker     │
 │  ui-media.js          — Medien Add/Edit/Delete       │
 │  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
 │  onedrive-import.js   — Foto-Import, Ordner-Browser  │
 │  onedrive.js          — Media-URL, Upload, File-I/O  │
-│  sw.js                — Service Worker (Cache v302)  │
+│  sw.js                — Service Worker (Cache v413)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~27 JS-Dateien · ~14000 Zeilen
+**Größe gesamt:** ~30 JS-Dateien · ~16000 Zeilen
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
 ### ADR-001: Multi-File (HTML-Shell + JS-Module)
-**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `gramps-parser.js`, `gramps-writer.js`, `storage-file.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-place.js`, `ui-views-hof.js`, `ui-views-map.js`, `ui-views-stats.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-tree.js`, `ui-fanchart.js`, `ui-forms.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-dedup.js`, `ui-media.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`.
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `gramps-parser.js`, `gramps-writer.js`, `storage-file.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-place.js`, `ui-views-hof.js`, `ui-views-map.js`, `ui-views-stats.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-tree.js`, `ui-fanchart.js`, `ui-forms.js`, `ui-forms-person.js`, `ui-forms-family.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-views-tasks.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-stats.js`, `ui-dedup.js`, `debug-activate.js`, `ui-media.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`.
 
 **Storage-Schichtung:** `storage-file.js` ist die I/O-Schicht (IDB-Helfer, File System Access API, Export/Import-Funktionen). `storage.js` ist die Persistenz-Schicht (Auto-Load, Backup, Demo) und baut auf `storage-file.js` auf.
 

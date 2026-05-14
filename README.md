@@ -42,7 +42,9 @@ stammbaum/
 ├── ui-views-source.js  ← Quellen-Detailansicht + Liste
 ├── ui-views-tree.js    ← Sanduhr-Baum + Tastaturnavigation
 ├── ui-fanchart.js      ← Fan Chart (SVG, konzentrische Halbkreis-Segmente)
-├── ui-forms.js         ← Formulare Person/Familie/Quelle + Source-Widget + Utils
+├── ui-forms.js         ← Source-Widget, Quelle-Formular, Modals, Gesten, Keyboard, Utils
+├── ui-forms-person.js  ← Person-Formular + Extra-Name-Formular
+├── ui-forms-family.js  ← Familie-Formular
 ├── ui-forms-event.js   ← Event-Formular (showEventForm, saveEvent, deleteEvent)
 ├── ui-forms-repo.js    ← Archiv-Formular + Picker + Detail-Ansicht
 ├── ui-media.js         ← Medien Add/Edit/Delete/Browser
@@ -51,7 +53,7 @@ stammbaum/
 ├── onedrive.js         ← Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v189)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v413)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
@@ -199,7 +201,7 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
-**Version 7.0** — April 2026 — Branch `v7-dev` · sw v189
+**Version 7.0** — Mai 2026 — `main` · sw v413
 
 ---
 
