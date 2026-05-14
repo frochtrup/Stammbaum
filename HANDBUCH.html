@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 7 · Mai 2026</p>
+  <p class="version">Version 8 · Mai 2026</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -578,6 +578,7 @@
       <ul class="sub">
         <li>Demo-Stammbaum ausprobieren</li>
         <li>Eigene GEDCOM-Datei öffnen</li>
+        <li>Gramps-Datei öffnen und speichern</li>
       </ul>
     </li>
     <li><a href="#kap3">Die sechs Hauptbereiche im Überblick</a></li>
@@ -646,6 +647,7 @@
   <li>Den Stammbaum als Baum-Grafik oder Fächer-Diagramm ansehen</li>
   <li>Alle Orte auf einer Karte anzeigen</li>
   <li>Ihre Daten im weit verbreiteten GEDCOM-Format speichern — das können fast alle anderen Stammbaum-Programme lesen</li>
+  <li>Dateien im <strong>Gramps-Format</strong> (.gramps) öffnen und direkt zurückspeichern</li>
   <li>Die Daten über OneDrive zwischen iPhone und Computer synchronisieren</li>
 </ul>
 
@@ -749,6 +751,26 @@ Der Demo-Stammbaum enthält eine fiktive Familie (Müller, Bauer, Fischer, Huber
 
 <div class="info">
 Auf Chrome am Computer (Windows/Mac) fragt die App, ob sie die Datei direkt schreiben darf. Bestätigen Sie das mit „Erlauben" oder „Allow" — dann können Sie später mit einem Klick speichern, ohne jedes Mal eine neue Datei herunterzuladen.
+</div>
+
+<h2>Gramps-Datei öffnen und speichern</h2>
+
+<p>Die App unterstützt neben GEDCOM auch das <strong>Gramps-Format</strong> (Dateiendung <em>.gramps</em>). Wenn Sie Ihren Stammbaum in der freien Software <em>Gramps</em> führen, können Sie die Datei direkt öffnen — ohne Export-Umweg.</p>
+
+<ol class="steps">
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">📂 Öffnen… (lokal)</span>.</div></li>
+  <li><div class="step-text">Wählen Sie Ihre <em>.gramps</em>-Datei aus.</div></li>
+  <li><div class="step-text">Die App erkennt das Format automatisch. In der Topbar erscheint ein lila <strong>GRAMPS</strong>-Badge, solange eine Gramps-Datei geladen ist.</div></li>
+</ol>
+
+<div class="tip">
+Wenn in Gramps farbige <strong>Tags</strong> (z. B. „Überprüft", „Unsicher") vergeben wurden, zeigt die App diese Tags als farbige Badges in der Detailansicht der Person oder Familie an.
+</div>
+
+<p><strong>Speichern:</strong> Mit <span class="button-label">💾 Speichern (lokal)</span> wird die Datei wieder als <em>.gramps</em> gespeichert — auf Chrome Desktop direkt in die Originaldatei, in anderen Browsern als Download.</p>
+
+<div class="info">
+Das Gramps-Format bewahrt alle Gramps-spezifischen Daten, die die App nicht direkt bearbeitet (z. B. interne Handles, private Markierungen). Diese werden unverändert durchgereicht, damit beim Wechsel zurück zu Gramps nichts verloren geht.
 </div>
 
 
@@ -982,6 +1004,7 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
     <h3>Die Topbar der Detailansicht</h3>
     <table style="font-size:0.85em;">
       <tr><td style="padding:4px 8px;"><span class="button-label">← Zurück</span></td><td>Zur vorherigen Seite</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">→ Vorwärts</span></td><td>Vorwärts in der Navigationshistorie (erscheint nach „Zurück")</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">⌂</span></td><td>Diese Person als Proband festlegen</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">✕</span></td><td>Person im Stammbaum anzeigen</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">Bearbeiten</span></td><td>Daten dieser Person ändern</td></tr>
@@ -1056,12 +1079,12 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
 
 <p>Es gibt mehrere Wege, eine neue Person anzulegen:</p>
 
-<p><strong>Weg 1 — Über den Plus-Knopf:</strong> Tippen Sie in der Personenliste auf den goldenen <span class="button-label">+</span>-Knopf unten rechts. Ein Formular erscheint, in dem Sie Name, Geschlecht und Grunddaten eingeben können.</p>
+<p><strong>Weg 1 — Über den Plus-Knopf:</strong> Tippen Sie in der Personenliste auf den goldenen <span class="button-label">+</span>-Knopf unten rechts. Das Formular zeigt zunächst nur die wichtigsten Felder (Name, Geschlecht, Geburt, Tod). Weitere Felder wie Taufe, Beerdigung, Beruf oder Wohnort lassen sich über die <strong>Felder-Schaltflächen</strong> am unteren Rand des Formulars einblenden.</p>
 
 <p><strong>Weg 2 — Über eine Beziehung:</strong> In der Detailansicht einer Person können Sie über <span class="button-label">+ Ehepartner</span>, <span class="button-label">+ Kind</span> oder <span class="button-label">+ Elternteil</span> direkt eine neue Person anlegen und gleichzeitig die Verwandtschaftsbeziehung herstellen.</p>
 
 <div class="tip">
-Beim Anlegen über eine Beziehung wird die neue Person sofort mit der bestehenden Person verknüpft. Das spart einen Schritt.
+Mit dem Knopf <span class="button-label">+ Weitere</span> am Ende des Formulars können Sie die gerade eingetragene Person speichern und sofort ein leeres Formular für die nächste Person öffnen — praktisch beim Erfassen mehrerer Personen hintereinander.
 </div>
 
 <h2>Ereignisse eintragen</h2>
@@ -1074,6 +1097,10 @@ Beim Anlegen über eine Beziehung wird die neue Person sofort mit der bestehende
   <li><div class="step-text">Ein kleines Formular öffnet sich. Geben Sie das Datum, den Ort und ggf. eine Quelle ein.</div></li>
   <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
 </ol>
+
+<div class="tip">
+Direkt über dem Abschnitt „Lebensdaten" zeigt die App eine Zeile mit <strong>Schnell-Schaltflächen</strong> für fehlende Sonder-Ereignisse (z. B. <span class="button-label">Geburt</span>, <span class="button-label">Tod</span>) und häufige Ereignisse (z. B. <span class="button-label">Beruf</span>, <span class="button-label">Wohnort</span>). Ein Tipp darauf öffnet sofort das passende Ereignis-Formular.
+</div>
 
 <h3>Datum eingeben — die verschiedenen Formate</h3>
 
@@ -1534,7 +1561,6 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
         <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
         <div class="app-menu-item"><span class="mi-icon">📂</span> Öffnen… (lokal)</div>
         <div class="app-menu-item"><span class="mi-icon">💾</span> Speichern (lokal)</div>
-        <div class="app-menu-item" style="font-size:7.5px;"><span class="mi-icon">🗄</span> Original-Backup herunterladen</div>
         <div class="app-menu-item"><span class="mi-icon">↩</span> Änderungen verwerfen</div>
         <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
         <div class="app-menu-item"><span class="mi-icon">🗂</span> Demo-Daten öffnen</div>
@@ -1547,12 +1573,9 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
     <h3>Lokal speichern</h3>
     <p>Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">💾 Speichern (lokal)</span>.</p>
     <ul style="margin: 0.4em 0 0 1.2em; font-size:0.9em; line-height:2em;">
-      <li><strong>Chrome am Computer:</strong> Wenn Sie beim Öffnen der Datei den Schreibzugriff erlaubt haben, wird direkt in die Originaldatei gespeichert.</li>
+      <li><strong>Chrome am Computer:</strong> Wenn Sie beim Öffnen der Datei den Schreibzugriff erlaubt haben, wird direkt in die Originaldatei gespeichert — bei GEDCOM (<em>.ged</em>) und Gramps (<em>.gramps</em>) gleichermaßen.</li>
       <li><strong>Andere Browser / iPhone:</strong> Es wird eine neue Datei heruntergeladen. Ersetzen Sie damit Ihre alte Datei.</li>
     </ul>
-
-    <h3>Backup herunterladen</h3>
-    <p>Tippen Sie auf <span class="button-label">🗄 Original-Backup herunterladen</span>, um eine Sicherungskopie der zuletzt geöffneten Datei herunterzuladen (ohne Ihre neuen Änderungen). Nützlich, wenn Sie Änderungen rückgängig machen möchten.</p>
 
     <h3>Änderungen verwerfen</h3>
     <p>Wenn Sie alle Änderungen seit dem letzten Speichern rückgängig machen möchten, tippen Sie auf <span class="button-label">↩ Änderungen verwerfen</span>. Die App fragt zur Sicherheit nach.</p>
@@ -1650,7 +1673,10 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
 <p>Beim allerersten Öffnen ist noch kein Stammbaum geladen. Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">📂 Öffnen… (lokal)</span>, um eine GEDCOM-Datei zu öffnen — oder auf <span class="button-label">🗂 Demo-Daten öffnen</span>, um die Beispieldaten zu laden.</p>
 
 <h2>Wie exportiere ich meinen Stammbaum für ein anderes Programm?</h2>
-<p>Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">💾 Speichern (lokal)</span>. Sie erhalten eine <em>.ged</em>-Datei (GEDCOM-Format), die von allen gängigen Stammbaum-Programmen gelesen werden kann — z. B. Ancestris, MacFamilyTree, Ahnenblatt oder Gramps.</p>
+<p>Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">💾 Speichern (lokal)</span>. Sie erhalten eine <em>.ged</em>-Datei (GEDCOM-Format), die von allen gängigen Stammbaum-Programmen gelesen werden kann — z. B. Ancestris, MacFamilyTree, Ahnenblatt oder Gramps. Wenn Sie eine Gramps-Datei geöffnet haben, wird im Gramps-Format gespeichert.</p>
+
+<h2>Was ist eine Gramps-Datei?</h2>
+<p><em>Gramps</em> ist ein kostenloses Open-Source-Programm für Genealogie. Es speichert Daten im eigenen <em>.gramps</em>-Format (komprimiertes XML). Stammbaum PWA kann diese Dateien direkt öffnen und bearbeiten — ohne vorherigen Export als GEDCOM. So können Sie auf dem iPhone oder im Browser an Ihrem Gramps-Stammbaum arbeiten und die Datei anschließend wieder in Gramps öffnen.</p>
 
 <h2>Kann ich die App auch ohne Internet nutzen?</h2>
 <p>Ja! Die App funktioniert vollständig offline. Sie muss lediglich einmal geladen worden sein. Danach können Sie auch ohne Internetverbindung arbeiten und speichern.</p>
@@ -1703,7 +1729,7 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 7 · Mai 2026<br>
+  Stammbaum PWA · Version 8 · Mai 2026<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 
