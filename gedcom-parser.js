@@ -832,7 +832,11 @@ function _derivedHofObjectsFromDb(db) {
       if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.lati != null && ev.long != null) {
         const addr = ev.addr.trim();
         if (!hof[addr]) hof[addr] = { addr, lat: ev.lati, long: ev.long };
-        if (!hof[addr].note && ev.note) hof[addr].note = ev.note;
+        // Nur Notizen aus noteRefs übernehmen — inline ev.note kann persönliche Notizen enthalten
+        if (!hof[addr].note) {
+          const _refNote = (ev.noteRefs || []).map(r => db.notes?.[r]?.text).find(t => t);
+          if (_refNote) hof[addr].note = _refNote;
+        }
       }
     }
   }

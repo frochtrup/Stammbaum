@@ -536,14 +536,15 @@ function _pdetLifeData(p, id) {
         const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';
-        // Hof-Notiz: von hofObjects für DIESE Adresse autoritativ abrufen, 1× pro Adresse
+        // Hof-Notiz: nur zeigen wenn dieses konkrete Event via noteRefs auf die Hof-Notiz verweist
         const _addrKey = ev.addr?.trim() || null;
         const _hofNote = _addrKey ? (AppState.db.hofObjects?.[_addrKey]?.note || null) : null;
-        const _showHofNote = _hofNote && !_shownAddrNotes.has(_addrKey);
+        const _evRefersToHofNote = _hofNote && (ev.noteRefs || []).some(
+          r => AppState.db.notes?.[r]?.text === _hofNote
+        );
+        const _showHofNote = _evRefersToHofNote && !_shownAddrNotes.has(_addrKey);
         if (_showHofNote) _shownAddrNotes.add(_addrKey);
-        // Persönliche Event-Notiz: zeigen wenn
-        //   (a) kein bekannter Hof-Notiztext (verhindert Leak durch _resolveNoteRefs)
-        //   (b) diese (Adresse + Notiztext)-Kombination noch nicht gezeigt (alter Dedup)
+        // Persönliche Event-Notiz: zeigen wenn kein Hof-Notiztext und nicht dupliziert
         const _isAnyHofNote = ev.note ? _allHofNoteTexts.has(ev.note) : false;
         const _evNoteKey = (_addrKey && ev.note) ? `${_addrKey}\x00${ev.note}` : null;
         const _showEvNote = ev.note && !_isAnyHofNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
