@@ -319,6 +319,7 @@ function _processLoadedText(text, filename) {
       if (_gd.isGramps) {
         setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
       }
+      AppState._currentFilename = filename;
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
       { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
@@ -378,6 +379,7 @@ async function _loadGRAMPS(file) {
   try {
     const parsed = await parseGRAMPS(file);
     setDb(parsed);
+    AppState._currentFilename = file.name;
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
@@ -393,6 +395,7 @@ async function _loadGRAMPS(file) {
     _deletedPhotoIds.clear();
     // Persist filename in localStorage for display
     const filename = file.name;
+    AppState._currentFilename = filename;
     try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
     updateSaveIndicator();
     updateBackupBtn();

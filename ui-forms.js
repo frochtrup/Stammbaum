@@ -554,14 +554,18 @@ document.addEventListener('keydown', e => {
 // ─────────────────────────────────────
 
 // ── Extra-Places Persistenz ──────────
+function _extraPlacesKey() {
+  const fn = AppState._currentFilename || '';
+  return fn ? 'stammbaum_extraplaces_' + fn : 'stammbaum_extraplaces';
+}
 function loadExtraPlaces() {
   try {
-    const r = localStorage.getItem('stammbaum_extraplaces');
+    const r = localStorage.getItem(_extraPlacesKey());
     return r ? JSON.parse(r).reduce((o, p) => { o[p.name] = p; return o; }, {}) : {};
   } catch(e) { return {}; }
 }
 function saveExtraPlaces() {
-  try { localStorage.setItem('stammbaum_extraplaces', JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
+  try { localStorage.setItem(_extraPlacesKey(), JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
 }
 
 // ── Hof-Objects Persistenz ──────────

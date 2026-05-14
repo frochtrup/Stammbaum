@@ -16,6 +16,7 @@ const AppState = {
   currentPlaceName: null,
   currentTab:       'persons',
   _detailActive:    false,       // true wenn v-detail echten Inhalt zeigt
+  _currentFilename: '',          // Dateiname der aktuell geladenen Datei (für per-Datei extraPlaces)
   _fileHandle:      null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
   _canDirectSave:   false,       // true wenn createWritable() auf _fileHandle funktioniert
   _originalGedText: null,        // Fallback wenn localStorage-Backup fehlschlägt; sonst null

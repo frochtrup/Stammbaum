@@ -58,7 +58,8 @@ async function confirmNewFile() {
     ? 'Aktuelle Datei schließen? Ungespeicherte Änderungen gehen verloren.'
     : 'Aktuelle Datei schließen?';
   if (!await confirmModal(msg, 'Schließen')) return;
-  setDb({ individuals: {}, families: {}, sources: {}, extraPlaces: loadExtraPlaces(), hofObjects: loadHofObjects(), repositories: {}, notes: {}, placForm: '' });
+  AppState._currentFilename = '';
+  setDb({ individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '' });
   AppState.changed = false;
   updateChangedIndicator();
   AppState._originalGedText = null;
@@ -96,6 +97,7 @@ async function loadDemo() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const text = await res.text();
     setDb(parseGEDCOM(text));
+    AppState._currentFilename = 'demo.ged';
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
     AppState._originalGedText = text;
@@ -165,6 +167,7 @@ async function tryAutoLoad() {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
+      AppState._currentFilename = fname;
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
@@ -187,6 +190,7 @@ async function tryAutoLoad() {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
         showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
       }
+      AppState._currentFilename = fname;
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
