@@ -277,18 +277,23 @@ async function parseGRAMPS(file) {
     citMap[h] = { sourceHandle: sr ? sr.getAttribute('hlink') : null, confidence: +conf || 0, page, _grampsHandle: h, _extra: citExtra };
   }
 
-  // Objects: handle → {src, mime, desc}
+  // Objects: handle → {src, mime, desc, priv, _extra[]}
   const objMap = {};
   for (const obj of _byTag(doc, 'object')) {
     const h   = obj.getAttribute('handle');
     if (!h) continue;
-    const id  = obj.getAttribute('id') || '';
-    const fEl = _byTag(obj, 'file')[0] || null;
+    const id   = obj.getAttribute('id') || '';
+    const priv = obj.getAttribute('priv') || null;
+    const fEl  = _byTag(obj, 'file')[0] || null;
+    const objExtra = [];
+    for (const ch of obj.children) {
+      if ((ch.localName || ch.tagName) !== 'file') objExtra.push(_xmlEl(ch));
+    }
     if (fEl) objMap[h] = {
       src:  fEl.getAttribute('src')         || '',
       mime: fEl.getAttribute('mime')        || '',
       desc: fEl.getAttribute('description') || '',
-      id
+      id, priv, _extra: objExtra
     };
   }
 
@@ -934,6 +939,9 @@ async function parseGRAMPS(file) {
     _sourceFormat: 'gramps',
     _grampsMaster: true,
     _grampsHandles,
+    _grampsObjMeta: Object.fromEntries(
+      Object.entries(objMap).map(([h, o]) => [h, { priv: o.priv || null, _extra: o._extra || [] }])
+    ),
     _grampsNS, _grampsNSVersion, _grampsVersion,
     _idCounterMax: maxId
   };

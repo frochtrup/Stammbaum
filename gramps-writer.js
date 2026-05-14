@@ -213,7 +213,8 @@ async function writeGRAMPS(db) {
   const _objHandle = (file, titl, mime, grampsHandle) => {
     if (!file) return null;
     if (!objRecs[file]) {
-      objRecs[file] = { handle: grampsHandle || _h('ob'), id: `O${String(objCtr++).padStart(4,'0')}`, src: _toGrampsSrc(file), mime: mime||'image/jpeg', desc: titl||'' };
+      const meta = grampsHandle && db._grampsObjMeta ? db._grampsObjMeta[grampsHandle] : null;
+      objRecs[file] = { handle: grampsHandle || _h('ob'), id: `O${String(objCtr++).padStart(4,'0')}`, src: _toGrampsSrc(file), mime: mime||'image/jpeg', desc: titl||'', priv: meta?.priv || null, _extra: meta?._extra || [] };
     }
     return objRecs[file].handle;
   };
@@ -740,8 +741,9 @@ async function writeGRAMPS(db) {
   if (objArr.length) {
     L.push('  <objects>');
     for (const obj of objArr) {
-      L.push(`    <object handle="${_esc(obj.handle)}" id="${_esc(obj.id)}">`);
+      L.push(`    <object handle="${_esc(obj.handle)}" id="${_esc(obj.id)}"${obj.priv ? ` priv="${_esc(obj.priv)}"` : ''}>`);
       L.push(`      <file src="${_esc(obj.src)}" mime="${_esc(obj.mime)}" description="${_esc(obj.desc)}"/>`);
+      for (const x of obj._extra||[]) L.push(`      ${x}`);
       L.push('    </object>');
     }
     L.push('  </objects>');
