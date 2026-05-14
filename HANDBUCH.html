@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stammbaum PWA — Benutzerhandbuch</title>
+<style>
+  /* ===== ALLGEMEINES LAYOUT ===== */
+  :root {
+    --gold: #b8962e;
+    --gold-light: #d4a843;
+    --app-bg: #1a1510;
+    --app-card: #2a2218;
+    --app-border: #3a3020;
+    --text-main: #e8dcc8;
+    --text-dim: #8a7a5a;
+    --pink: #c26080;
+    --blue: #5080c2;
+    --green: #4a8a4a;
+    --page-bg: #f8f5f0;
+    --page-text: #2a2218;
+    --accent: #6b4c1e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Georgia, 'Times New Roman', serif;
+    background: var(--page-bg);
+    color: var(--page-text);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* ===== DECKBLATT ===== */
+  .cover {
+    background: var(--app-bg);
+    color: var(--text-main);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 40px;
+    page-break-after: always;
+  }
+  .cover h1 {
+    font-size: 2.8em;
+    color: var(--gold);
+    margin-bottom: 0.3em;
+    letter-spacing: 2px;
+  }
+  .cover .subtitle {
+    font-size: 1.4em;
+    color: var(--text-dim);
+    margin-bottom: 2em;
+  }
+  .cover .version {
+    font-size: 1em;
+    color: var(--gold-light);
+    border: 1px solid var(--gold);
+    padding: 6px 20px;
+    border-radius: 20px;
+    margin-bottom: 3em;
+  }
+  .cover .tagline {
+    font-size: 1.1em;
+    color: var(--text-main);
+    max-width: 500px;
+    line-height: 1.8;
+    border-top: 1px solid var(--app-border);
+    padding-top: 2em;
+  }
+  .tree-icon {
+    font-size: 4em;
+    margin-bottom: 0.5em;
+    color: var(--gold);
+  }
+
+  /* ===== HAUPT-INHALT ===== */
+  .content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 30px;
+  }
+
+  /* ===== INHALTSVERZEICHNIS ===== */
+  .toc {
+    background: white;
+    border: 1px solid #ddd;
+    border-left: 4px solid var(--gold);
+    padding: 30px 35px;
+    margin: 40px 0;
+    border-radius: 4px;
+    page-break-after: always;
+  }
+  .toc h2 {
+    color: var(--accent);
+    font-size: 1.3em;
+    margin-bottom: 1.2em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid #eee;
+  }
+  .toc ol {
+    padding-left: 1.5em;
+  }
+  .toc li {
+    margin: 0.4em 0;
+    font-size: 1em;
+  }
+  .toc a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .toc a:hover { text-decoration: underline; }
+  .toc .sub {
+    list-style: none;
+    padding-left: 1.5em;
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 0.3em;
+  }
+  .toc .sub li::before { content: "– "; }
+
+  /* ===== KAPITEL ===== */
+  h1.chapter {
+    font-size: 2em;
+    color: var(--accent);
+    border-bottom: 3px solid var(--gold);
+    padding-bottom: 0.4em;
+    margin: 2em 0 1em 0;
+    page-break-before: always;
+  }
+  h2 {
+    font-size: 1.4em;
+    color: var(--accent);
+    margin: 1.8em 0 0.7em 0;
+    padding-left: 10px;
+    border-left: 3px solid var(--gold);
+  }
+  h3 {
+    font-size: 1.15em;
+    color: #4a3010;
+    margin: 1.4em 0 0.5em 0;
+    font-style: italic;
+  }
+  p { margin: 0.7em 0; }
+
+  /* ===== HINWEISBOXEN ===== */
+  .tip, .info, .warning, .important {
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 1.2em 0;
+    font-size: 0.95em;
+  }
+  .tip { background: #f0f8f0; border-left: 4px solid #4a8a4a; }
+  .info { background: #f0f4ff; border-left: 4px solid #5080c2; }
+  .warning { background: #fff8f0; border-left: 4px solid #c26020; }
+  .important { background: #fff0f5; border-left: 4px solid var(--pink); }
+  .tip::before { content: "Tipp: "; font-weight: bold; color: #4a8a4a; }
+  .info::before { content: "Hinweis: "; font-weight: bold; color: #5080c2; }
+  .warning::before { content: "Achtung: "; font-weight: bold; color: #c26020; }
+  .important::before { content: "Wichtig: "; font-weight: bold; color: var(--pink); }
+
+  /* ===== SCHRITTANLEITUNGEN ===== */
+  .steps {
+    counter-reset: step;
+    padding: 0;
+    list-style: none;
+    margin: 1em 0;
+  }
+  .steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 14px;
+    margin: 0.8em 0;
+    align-items: flex-start;
+  }
+  .steps li::before {
+    content: counter(step);
+    background: var(--gold);
+    color: white;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85em;
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .steps li .step-text { flex: 1; }
+
+  /* ===== APP-MOCKUPS (Bildschirm-Darstellungen) ===== */
+  .mockup-wrapper {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+    margin: 1.5em 0 2em 0;
+    flex-wrap: wrap;
+  }
+  .mockup-wrapper .explanation {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  /* Smartphone-Rahmen */
+  .phone-frame {
+    width: 240px;
+    flex-shrink: 0;
+    background: #111;
+    border: 4px solid #333;
+    border-radius: 30px;
+    padding: 10px 6px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    font-family: -apple-system, sans-serif;
+  }
+  .phone-frame .phone-screen {
+    background: var(--app-bg);
+    border-radius: 22px;
+    overflow: hidden;
+    color: var(--text-main);
+    font-size: 9px;
+    line-height: 1.4;
+  }
+
+  /* App-Topbar */
+  .app-topbar {
+    background: var(--app-bg);
+    border-bottom: 1px solid var(--app-border);
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+  }
+  .app-topbar .title { color: var(--gold); font-weight: bold; font-size: 10px; }
+  .app-topbar .actions { color: var(--gold-light); }
+  .app-topbar .back { color: var(--gold-light); font-size: 8px; }
+
+  /* App-Navigationbar */
+  .app-nav {
+    background: var(--app-card);
+    display: flex;
+    border-top: 1px solid var(--app-border);
+    padding: 6px 0 4px 0;
+  }
+  .app-nav .nav-item {
+    flex: 1;
+    text-align: center;
+    font-size: 7px;
+    color: var(--text-dim);
+    padding: 2px;
+  }
+  .app-nav .nav-item.active { color: var(--gold); }
+  .app-nav .nav-item .nav-icon { font-size: 10px; display: block; }
+
+  /* App-Inhalt */
+  .app-content {
+    padding: 8px;
+    min-height: 200px;
+    background: var(--app-bg);
+  }
+
+  /* Suchfeld */
+  .app-search {
+    background: var(--app-card);
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    padding: 5px 10px;
+    color: var(--text-dim);
+    font-size: 8.5px;
+    margin-bottom: 6px;
+    width: 100%;
+  }
+
+  /* Listen-Einträge */
+  .app-list-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--app-border);
+    font-size: 8.5px;
+  }
+  .app-list-item:last-child { border-bottom: none; }
+  .app-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .app-avatar.female { background: rgba(194,96,128,0.3); border: 1px solid var(--pink); color: var(--pink); }
+  .app-avatar.male { background: rgba(80,128,194,0.3); border: 1px solid var(--blue); color: var(--blue); }
+  .app-avatar.family { background: rgba(184,150,46,0.2); border: 1px solid var(--gold); color: var(--gold); }
+  .app-list-item .item-name { color: var(--text-main); font-weight: bold; font-size: 9px; }
+  .app-list-item .item-sub { color: var(--text-dim); font-size: 7.5px; }
+  .app-list-item .item-arrow { color: var(--text-dim); margin-left: auto; }
+  .app-list-item .item-proband { border-left: 2px solid var(--gold); padding-left: 4px; }
+
+  /* Alphasektor */
+  .app-alpha { color: var(--gold); font-size: 8px; font-weight: bold; padding: 4px 2px 2px; }
+
+  /* Detail-Karte */
+  .app-hero {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--app-bg);
+  }
+  .app-photo {
+    width: 46px;
+    height: 52px;
+    background: var(--app-card);
+    border: 1px solid var(--pink);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: var(--pink);
+  }
+  .app-hero-name { font-size: 11px; color: var(--text-main); font-weight: bold; }
+  .app-hero-gender { color: var(--pink); font-size: 9px; }
+
+  .app-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 4px 3px;
+    border-bottom: 1px solid var(--app-border);
+    margin-top: 5px;
+  }
+  .app-section-title { color: var(--gold); font-size: 7px; letter-spacing: 1px; text-transform: uppercase; }
+  .app-section-btn { color: var(--gold-light); font-size: 7px; border: 1px solid var(--app-border); border-radius: 8px; padding: 1px 5px; }
+
+  .app-event-row {
+    display: flex;
+    gap: 6px;
+    padding: 4px 4px;
+    border-bottom: 1px solid var(--app-border);
+    font-size: 8px;
+  }
+  .app-event-label { color: var(--text-dim); width: 28px; flex-shrink: 0; }
+  .app-event-value { color: var(--text-main); }
+
+  /* Baum-Mockup */
+  .tree-mockup {
+    background: var(--app-bg);
+    padding: 10px;
+    font-size: 8px;
+    text-align: center;
+    min-height: 200px;
+    position: relative;
+  }
+  .tree-card {
+    background: var(--app-card);
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    padding: 5px 8px;
+    display: inline-block;
+    margin: 3px;
+    font-size: 7.5px;
+    text-align: center;
+    vertical-align: top;
+  }
+  .tree-card.proband { border: 2px solid var(--pink); color: var(--text-main); }
+  .tree-card.male { border-left: 2px solid var(--blue); }
+  .tree-card.female { border-left: 2px solid var(--pink); }
+  .tree-card .tc-name { color: var(--text-main); font-weight: bold; }
+  .tree-card .tc-dates { color: var(--text-dim); }
+  .tree-gen { display: flex; justify-content: center; gap: 4px; margin: 4px 0; }
+  .tree-connector { color: var(--text-dim); font-size: 8px; }
+
+  /* Quellen-Eintrag */
+  .app-source-item {
+    padding: 5px 4px;
+    border-bottom: 1px solid var(--app-border);
+  }
+  .app-source-title { color: var(--text-main); font-size: 9px; font-weight: bold; }
+  .app-source-sub { color: var(--text-dim); font-size: 7.5px; }
+
+  /* Ort-Eintrag */
+  .app-place-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 4px;
+    border-bottom: 1px solid var(--app-border);
+  }
+  .place-dot { width: 20px; height: 20px; border-radius: 50%; background: var(--app-card); border: 1px solid var(--app-border); display: flex; align-items: center; justify-content: center; font-size: 9px; }
+
+  /* Menü-Mockup */
+  .app-menu-item {
+    padding: 7px 8px;
+    border: 1px solid var(--app-border);
+    border-radius: 8px;
+    margin: 3px 0;
+    font-size: 8px;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .app-menu-item .mi-icon { font-size: 10px; }
+
+  /* + Button */
+  .fab {
+    width: 30px;
+    height: 30px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    position: absolute;
+    bottom: 40px;
+    right: 10px;
+  }
+
+  /* Fächer-Chart Mockup */
+  .fan-mockup {
+    background: var(--app-bg);
+    padding: 10px;
+    text-align: center;
+    height: 180px;
+    position: relative;
+    overflow: hidden;
+  }
+  .fan-center {
+    width: 36px;
+    height: 36px;
+    background: var(--pink);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6px;
+    color: white;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+  .fan-arc {
+    position: absolute;
+    bottom: 36px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 100px 100px 0 0;
+    border: 1px solid var(--app-border);
+    opacity: 0.4;
+  }
+
+  /* ===== TABELLEN ===== */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.9em;
+  }
+  th {
+    background: var(--accent);
+    color: white;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: normal;
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #e8e0d0;
+  }
+  tr:nth-child(even) td { background: #f8f4ee; }
+
+  /* ===== CODE / TASTEN ===== */
+  kbd {
+    background: #f0e8d8;
+    border: 1px solid #c8b898;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: monospace;
+    font-size: 0.85em;
+    color: #4a3010;
+  }
+  .button-label {
+    background: var(--app-card);
+    color: var(--gold-light);
+    border: 1px solid var(--app-border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.85em;
+    font-family: -apple-system, sans-serif;
+    display: inline-block;
+  }
+
+  /* ===== VOLLBREITE MOCKUP ===== */
+  .full-mockup {
+    background: var(--app-bg);
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 1.5em 0;
+    font-family: -apple-system, sans-serif;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+
+  /* ===== ABSCHNITT-TRENNER ===== */
+  .section-divider {
+    border: none;
+    border-top: 2px dashed #d8c8a8;
+    margin: 2.5em 0;
+  }
+
+  /* ===== CHECKLISTEN ===== */
+  .checklist {
+    list-style: none;
+    padding: 0;
+  }
+  .checklist li {
+    padding: 4px 0 4px 28px;
+    position: relative;
+  }
+  .checklist li::before {
+    content: "☐";
+    position: absolute;
+    left: 0;
+    color: var(--gold);
+    font-size: 1.1em;
+  }
+
+  /* ===== DRUCKEN ===== */
+  @media print {
+    .cover { min-height: 100vh; }
+    h1.chapter { page-break-before: always; }
+    .mockup-wrapper { break-inside: avoid; }
+    .full-mockup { break-inside: avoid; }
+    table { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ====================================================== -->
+<!-- DECKBLATT -->
+<!-- ====================================================== -->
+<div class="cover">
+  <div class="tree-icon">⧖</div>
+  <h1>Stammbaum PWA</h1>
+  <p class="subtitle">Benutzerhandbuch</p>
+  <p class="version">Version 7 · Mai 2026</p>
+  <p class="tagline">
+    Eine einfache Anleitung für alle, die ihre Familiengeschichte
+    erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
+  </p>
+</div>
+
+<!-- ====================================================== -->
+<!-- INHALTSVERZEICHNIS -->
+<!-- ====================================================== -->
+<div class="content">
+<div class="toc">
+  <h2>Inhaltsverzeichnis</h2>
+  <ol>
+    <li><a href="#kap1">Was ist Stammbaum PWA?</a></li>
+    <li><a href="#kap2">Die erste Schritte: App starten</a>
+      <ul class="sub">
+        <li>Demo-Stammbaum ausprobieren</li>
+        <li>Eigene GEDCOM-Datei öffnen</li>
+      </ul>
+    </li>
+    <li><a href="#kap3">Die sechs Hauptbereiche im Überblick</a></li>
+    <li><a href="#kap4">Personen — das Herzstück</a>
+      <ul class="sub">
+        <li>Die Personenliste</li>
+        <li>Eine Person aufrufen</li>
+        <li>Eine Person bearbeiten</li>
+        <li>Eine neue Person anlegen</li>
+        <li>Ereignisse eintragen</li>
+      </ul>
+    </li>
+    <li><a href="#kap5">Familien</a>
+      <ul class="sub">
+        <li>Familien ansehen</li>
+        <li>Personen verheiraten</li>
+        <li>Kinder zuordnen</li>
+      </ul>
+    </li>
+    <li><a href="#kap6">Quellen und Archive</a>
+      <ul class="sub">
+        <li>Wozu brauche ich Quellen?</li>
+        <li>Eine Quelle anlegen</li>
+        <li>Quellen mit Ereignissen verknüpfen</li>
+      </ul>
+    </li>
+    <li><a href="#kap7">Orte und Karte</a></li>
+    <li><a href="#kap8">Stammbaum-Ansichten</a>
+      <ul class="sub">
+        <li>Sanduhr-Baum</li>
+        <li>Fächer-Diagramm</li>
+      </ul>
+    </li>
+    <li><a href="#kap9">Suchen und Finden</a></li>
+    <li><a href="#kap10">Speichern und Sichern</a>
+      <ul class="sub">
+        <li>Lokal speichern</li>
+        <li>OneDrive-Synchronisation</li>
+        <li>Datensicherung</li>
+      </ul>
+    </li>
+    <li><a href="#kap11">Forschungsaufgaben</a></li>
+    <li><a href="#kap12">Höfe und Wohnorte</a></li>
+    <li><a href="#kap13">Häufige Fragen und Tipps</a></li>
+  </ol>
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 1: WAS IST STAMMBAUM PWA -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap1">1. Was ist Stammbaum PWA?</h1>
+
+<p>Stammbaum PWA ist ein Programm für die Familienforschung. Es läuft direkt im Webbrowser — Sie brauchen also keine zusätzliche Software zu installieren. Das Besondere: Die App funktioniert auch auf dem iPhone und iPad genauso gut wie auf einem Windows- oder Mac-Computer.</p>
+
+<p><strong>PWA</strong> steht für „Progressive Web App" — das bedeutet einfach, dass die App wie eine normale App aussieht und sich auch so anfühlt, obwohl sie eigentlich eine Webseite ist.</p>
+
+<h2>Was kann die App?</h2>
+
+<p>Mit Stammbaum PWA können Sie:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Personen mit Geburts-, Heirats- und Sterbedaten eintragen</li>
+  <li>Familien (Ehepaare und Kinder) verknüpfen</li>
+  <li>Dokumente wie Kirchenbücher oder Urkunden als Quellen vermerken</li>
+  <li>Fotos und Dokumente den Personen zuordnen</li>
+  <li>Den Stammbaum als Baum-Grafik oder Fächer-Diagramm ansehen</li>
+  <li>Alle Orte auf einer Karte anzeigen</li>
+  <li>Ihre Daten im weit verbreiteten GEDCOM-Format speichern — das können fast alle anderen Stammbaum-Programme lesen</li>
+  <li>Die Daten über OneDrive zwischen iPhone und Computer synchronisieren</li>
+</ul>
+
+<h2>Was brauche ich, um loszulegen?</h2>
+
+<p>Einen modernen Webbrowser — am besten <strong>Google Chrome</strong> oder <strong>Microsoft Edge</strong>. Die App funktioniert auch in Safari auf iPhone und iPad. Für das direkte Speichern in eine Datei (ohne Download-Knopf) empfehlen wir Chrome auf dem Computer.</p>
+
+<div class="info">
+Die App arbeitet vollständig <strong>ohne Internet</strong>. Ihre Daten verlassen Ihr Gerät nicht — es sei denn, Sie verbinden sich freiwillig mit OneDrive.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 2: ERSTE SCHRITTE -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap2">2. Die ersten Schritte</h1>
+
+<h2>Die App öffnen</h2>
+
+<p>Öffnen Sie Ihren Browser und navigieren Sie zur Adresse der App (z. B. von der Verknüpfung, die Sie erhalten haben). Die App lädt und zeigt nach kurzer Zeit die Startansicht.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">Elisabeth Bau…</span>
+        <span class="actions">2 3 4 5 6 ◑ ☰</span>
+      </div>
+      <!-- Baum-Ansicht Mini -->
+      <div class="tree-mockup" style="min-height:180px; font-size:7px;">
+        <div style="margin-top:8px;">
+          <div class="tree-gen">
+            <div class="tree-card" style="font-size:6.5px;"><div class="tc-name" style="color:var(--text-dim);">?</div></div>
+            <div class="tree-card" style="font-size:6.5px;"><div class="tc-name" style="color:var(--text-dim);">?</div></div>
+            <div class="tree-card" style="font-size:6.5px;"><div class="tc-name" style="color:var(--text-dim);">?</div></div>
+            <div class="tree-card" style="font-size:6.5px;"><div class="tc-name" style="color:var(--text-dim);">?</div></div>
+          </div>
+          <div class="tree-gen">
+            <div class="tree-card" style="font-size:6.5px;"><div class="tc-name" style="color:var(--text-dim);">?</div></div>
+            <div class="tree-card" style="font-size:6.5px;"><div class="tc-name" style="color:var(--text-dim);">?</div></div>
+          </div>
+          <div class="tree-gen">
+            <div class="tree-card proband" style="font-size:7px; padding:5px 7px;">
+              <div class="tc-name">Elisabeth Bauer</div>
+              <div class="tc-dates" style="color:var(--text-dim); font-size:6px;">*1855 †1935</div>
+            </div>
+            <div style="display:inline-flex;align-items:center;color:var(--gold);font-size:8px;margin:0 2px;">⚭</div>
+            <div class="tree-card male" style="font-size:7px; padding:5px 7px;">
+              <div class="tc-name">Johann Müller</div>
+              <div class="tc-dates" style="color:var(--text-dim); font-size:6px;">*1845 †1912</div>
+            </div>
+          </div>
+          <div class="tree-gen">
+            <div class="tree-card male" style="font-size:7px;">
+              <div class="tc-name">Max Müller</div>
+              <div class="tc-dates" style="color:var(--text-dim); font-size:6px;">*1891 †1950</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item active"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <p><strong>Die Baum-Ansicht</strong> zeigt beim ersten Öffnen die zuletzt bearbeitete Person im Mittelpunkt — mit Vorfahren oben und Nachkommen unten.</p>
+    <p style="margin-top:1em;">Wenn Sie die App zum allerersten Mal öffnen, sind noch keine Daten vorhanden. Sie können den Demo-Stammbaum laden, um die App kennenzulernen.</p>
+  </div>
+</div>
+
+<h2>Demo-Stammbaum laden</h2>
+
+<p>Um die App auszuprobieren, ohne eigene Daten einzugeben, laden Sie den eingebauten Demo-Stammbaum:</p>
+
+<ol class="steps">
+  <li><div class="step-text">Tippen Sie oben rechts auf das <span class="button-label">☰</span>-Symbol (Menü).</div></li>
+  <li><div class="step-text">Im Menü erscheinen mehrere Schaltflächen. Tippen Sie auf <span class="button-label">🗂 Demo-Daten öffnen</span>.</div></li>
+  <li><div class="step-text">Der Demo-Stammbaum lädt sofort. Unten am Bildschirm erscheint kurz die Meldung „✓ Demo geladen".</div></li>
+</ol>
+
+<div class="tip">
+Der Demo-Stammbaum enthält eine fiktive Familie (Müller, Bauer, Fischer, Huber) mit 12 Personen und 6 Familien. Er ist ideal, um alle Funktionen kennenzulernen — Ihre Änderungen daran gehen beim Schließen des Browsers verloren.
+</div>
+
+<h2>Eigene GEDCOM-Datei öffnen</h2>
+
+<p>Wenn Sie bereits einen Stammbaum in einem anderen Programm (z. B. Ancestris, MacFamilyTree, Ahnenblatt) angelegt haben, können Sie ihn als <strong>GEDCOM-Datei</strong> exportieren und hier öffnen.</p>
+
+<ol class="steps">
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">📂 Öffnen… (lokal)</span>.</div></li>
+  <li><div class="step-text">Ein Dateiauswahl-Fenster öffnet sich. Wählen Sie Ihre <em>.ged</em>-Datei aus.</div></li>
+  <li><div class="step-text">Die Datei wird eingelesen. Große Dateien (mehrere tausend Personen) können einige Sekunden dauern.</div></li>
+  <li><div class="step-text">Danach sehen Sie den Stammbaum in der Baum-Ansicht.</div></li>
+</ol>
+
+<div class="info">
+Auf Chrome am Computer (Windows/Mac) fragt die App, ob sie die Datei direkt schreiben darf. Bestätigen Sie das mit „Erlauben" oder „Allow" — dann können Sie später mit einem Klick speichern, ohne jedes Mal eine neue Datei herunterzuladen.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 3: DIE SECHS HAUPTBEREICHE -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap3">3. Die sechs Hauptbereiche im Überblick</h1>
+
+<p>Ganz unten am Bildschirm sehen Sie sechs Schaltflächen — die Hauptnavigation. Tippen Sie auf eine Schaltfläche, um den jeweiligen Bereich zu öffnen.</p>
+
+<div class="full-mockup">
+  <div class="app-nav" style="padding: 10px 0 8px; border-top: none; border-bottom: 1px solid var(--app-border);">
+    <div class="nav-item active" style="font-size: 11px; padding: 4px;">
+      <span class="nav-icon" style="font-size: 18px;">⧖</span><br>Baum
+    </div>
+    <div class="nav-item" style="font-size: 11px; padding: 4px;">
+      <span class="nav-icon" style="font-size: 18px;">👤</span><br>Personen
+    </div>
+    <div class="nav-item" style="font-size: 11px; padding: 4px;">
+      <span class="nav-icon" style="font-size: 18px;">⚭</span><br>Familien
+    </div>
+    <div class="nav-item" style="font-size: 11px; padding: 4px;">
+      <span class="nav-icon" style="font-size: 18px;">📖</span><br>Quellen
+    </div>
+    <div class="nav-item" style="font-size: 11px; padding: 4px;">
+      <span class="nav-icon" style="font-size: 18px;">📍</span><br>Orte
+    </div>
+    <div class="nav-item" style="font-size: 11px; padding: 4px;">
+      <span class="nav-icon" style="font-size: 18px;">⌂</span><br>Proband
+    </div>
+  </div>
+</div>
+
+<table>
+  <tr>
+    <th>Symbol</th>
+    <th>Bereich</th>
+    <th>Was finde ich hier?</th>
+  </tr>
+  <tr>
+    <td style="font-size:1.3em; text-align:center;">⧖</td>
+    <td><strong>Baum</strong></td>
+    <td>Grafische Stammbaum-Darstellung: Sanduhr (Vor- und Nachfahren) sowie Fächer-Diagramm</td>
+  </tr>
+  <tr>
+    <td style="font-size:1.3em; text-align:center;">👤</td>
+    <td><strong>Personen</strong></td>
+    <td>Liste aller Personen, Suche und Filter, Forschungsaufgaben</td>
+  </tr>
+  <tr>
+    <td style="font-size:1.3em; text-align:center;">⚭</td>
+    <td><strong>Familien</strong></td>
+    <td>Liste aller Ehepaare und Familien</td>
+  </tr>
+  <tr>
+    <td style="font-size:1.3em; text-align:center;">📖</td>
+    <td><strong>Quellen</strong></td>
+    <td>Kirchenbücher, Urkunden, Online-Datenbanken und Archive</td>
+  </tr>
+  <tr>
+    <td style="font-size:1.3em; text-align:center;">📍</td>
+    <td><strong>Orte</strong></td>
+    <td>Alle Orte mit Personenzahl, Höfe/Wohnadressen und Kartenansicht</td>
+  </tr>
+  <tr>
+    <td style="font-size:1.3em; text-align:center;">⌂</td>
+    <td><strong>Proband</strong></td>
+    <td>Wechselt zur aktuell als Mittelpunkt festgelegten Person</td>
+  </tr>
+</table>
+
+<div class="tip">
+Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen Sie in der Detailansicht einer Person fest — tippen Sie dort auf das <span class="button-label">⌂</span>-Symbol in der Topbar.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 4: PERSONEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap4">4. Personen — das Herzstück</h1>
+
+<h2>Die Personenliste</h2>
+
+<p>Wenn Sie auf <span class="button-label">👤 Personen</span> tippen, sehen Sie alle erfassten Personen in einer alphabetischen Liste.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">☙ Stammbaum · demo.ged</span>
+        <span class="actions">🔍 ☰</span>
+      </div>
+      <div class="app-content" style="padding:6px;">
+        <div class="app-search">Name, Ort, Datum, Beruf…</div>
+        <div style="display:flex; gap:4px; margin-bottom:5px; font-size:7.5px;">
+          <div style="background:var(--app-card); border:1px solid var(--app-border); border-radius:8px; padding:2px 8px; color:var(--text-dim);">Geb.-Jahr: von</div>
+          <div style="background:var(--app-card); border:1px solid var(--app-border); border-radius:8px; padding:2px 8px; color:var(--text-dim);">bis</div>
+          <div style="background:var(--app-card); border:1px solid var(--app-border); border-radius:8px; padding:2px 8px; color:var(--gold-light);">↕ Name</div>
+        </div>
+        <div class="app-alpha">B</div>
+        <div class="app-list-item">
+          <div class="app-avatar female">♀</div>
+          <div class="item-proband">
+            <div class="item-name">Elisabeth Bauer</div>
+            <div class="item-sub">* 22 JAN 1855, Landsberg · † 11 FEB 1935</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+        <div class="app-alpha">F</div>
+        <div class="app-list-item">
+          <div class="app-avatar male">♂</div>
+          <div>
+            <div class="item-name">Ernst Fischer</div>
+            <div class="item-sub">* 15 OCT 1890, München · † 3 JAN 1960</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+        <div class="app-list-item">
+          <div class="app-avatar female">♀</div>
+          <div>
+            <div class="item-name">Rosa Fischer</div>
+            <div class="item-sub">* 9 JAN 1925, München</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+        <div class="app-alpha">H</div>
+        <div class="app-list-item">
+          <div class="app-avatar female">♀</div>
+          <div>
+            <div class="item-name">Maria Huber</div>
+            <div class="item-sub">* 5 JUN 1850, Augsburg · † 14 AUG 1888</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item active"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <h3>Was sehe ich in der Liste?</h3>
+    <p>Jeder Eintrag zeigt:</p>
+    <ul style="margin: 0.5em 0 0.5em 1.2em; font-size: 0.9em; line-height: 1.9em;">
+      <li>Ein farbiges Symbol: <span style="color:var(--pink);">♀</span> (Frau) oder <span style="color:var(--blue);">♂</span> (Mann)</li>
+      <li>Name der Person</li>
+      <li>Geburts- und Sterbedatum mit Ort</li>
+      <li>Ein Büroklammer-Symbol 🖇, wenn Fotos oder Dokumente vorhanden sind</li>
+    </ul>
+    <p>Die aktuell als Proband festgelegte Person ist durch einen goldenen linken Rand hervorgehoben.</p>
+
+    <h3>Suche und Filter</h3>
+    <p>Tippen Sie in das Suchfeld und geben Sie einen Namen, Ort, Beruf oder ein Datum ein. Die Liste aktualisiert sich sofort.</p>
+    <p>Mit <span class="button-label">↕ Name</span> können Sie zwischen Sortierung nach Name und nach Geburtsjahr wechseln.</p>
+    <p>Im Feld „Geb.-Jahr: von … bis" können Sie die Liste auf einen Zeitraum einschränken.</p>
+  </div>
+</div>
+
+<h2>Eine Person aufrufen</h2>
+
+<p>Tippen Sie auf einen Namen in der Liste. Sie gelangen zur Detailansicht dieser Person.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="back">← Zurück</span>
+        <span class="title">Elisabeth…</span>
+        <span class="actions">⌂ ✕ Bearbeiten</span>
+      </div>
+      <div class="app-content" style="padding:0;">
+        <div class="app-hero">
+          <div class="app-photo">♀</div>
+          <div>
+            <div class="app-hero-name">Elisabeth Bauer <span class="app-hero-gender">♀</span></div>
+            <div style="font-size:7.5px; color:var(--text-dim); margin-top:2px;">* 22 JAN 1855 – † 11 FEB 1935</div>
+          </div>
+        </div>
+        <div class="app-section-header">
+          <span class="app-section-title">Lebensdaten</span>
+          <span class="app-section-btn">+ Ereignis</span>
+        </div>
+        <div class="app-event-row">
+          <span class="app-event-label">Geburt</span>
+          <span class="app-event-value">22 JAN 1855, Landsberg, Landsberg, Bayern</span>
+        </div>
+        <div class="app-event-row">
+          <span class="app-event-label">Tod</span>
+          <span class="app-event-value">11 FEB 1935, München, München, Bayern</span>
+        </div>
+        <div class="app-section-header">
+          <span class="app-section-title">Ehepartner &amp; Kinder</span>
+          <span class="app-section-btn">+ Ehepartner</span>
+        </div>
+        <div class="app-event-row" style="flex-direction:column; gap:2px;">
+          <div style="color:var(--gold-light); font-size:7.5px;">⚭ Familie · 15 MAR 1890</div>
+        </div>
+        <div class="app-list-item" style="font-size:8px; padding:3px 4px;">
+          <div class="app-avatar male" style="width:20px;height:20px;font-size:9px;">♂</div>
+          <div>
+            <div style="color:var(--text-main); font-size:8px; font-weight:bold;">Johann Müller</div>
+            <div style="color:var(--text-dim); font-size:7px;">Ehepartner · 15 MAR 1890</div>
+          </div>
+          <div style="margin-left:auto; color:var(--text-dim); font-size:9px;">✕ ›</div>
+        </div>
+        <div class="app-list-item" style="font-size:8px; padding:3px 4px;">
+          <div class="app-avatar male" style="width:20px;height:20px;font-size:9px;">♂</div>
+          <div>
+            <div style="color:var(--text-main); font-size:8px; font-weight:bold;">Max Müller</div>
+            <div style="color:var(--text-dim); font-size:7px;">Kind · * 30 APR 1891</div>
+          </div>
+          <div style="margin-left:auto; color:var(--text-dim); font-size:9px;">✕ ›</div>
+        </div>
+        <div style="text-align:right; padding:3px 4px;">
+          <span class="app-section-btn">+ Kind</span>
+        </div>
+        <div class="app-section-header">
+          <span class="app-section-title">Eltern</span>
+          <span class="app-section-btn">+ Elternteil</span>
+        </div>
+        <div style="font-size:7.5px; color:var(--text-dim); padding:4px;">Keine Eltern eingetragen</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <h3>Die Topbar der Detailansicht</h3>
+    <table style="font-size:0.85em;">
+      <tr><td style="padding:4px 8px;"><span class="button-label">← Zurück</span></td><td>Zur vorherigen Seite</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">⌂</span></td><td>Diese Person als Proband festlegen</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">✕</span></td><td>Person im Stammbaum anzeigen</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">Bearbeiten</span></td><td>Daten dieser Person ändern</td></tr>
+    </table>
+
+    <h3 style="margin-top:1em;">Abschnitte in der Detailansicht</h3>
+    <ul style="margin: 0.5em 0 0 1.2em; font-size:0.88em; line-height:2em;">
+      <li><strong>Lebensdaten</strong> — Geburt, Taufe, Tod, Beerdigung, weitere Ereignisse</li>
+      <li><strong>Medien</strong> — Fotos und Dokumente</li>
+      <li><strong>Ehepartner &amp; Kinder</strong> — die Familie dieser Person</li>
+      <li><strong>Eltern</strong> — Elternfamilie</li>
+      <li><strong>Notizen</strong> — freie Texte</li>
+      <li><strong>Verwandtschaft</strong> — Beziehung zum Probanden</li>
+      <li><strong>Aufgaben</strong> — offene Forschungsaufgaben</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Eine Person bearbeiten</h2>
+
+<p>Tippen Sie in der Detailansicht auf <span class="button-label">Bearbeiten</span>. Ein Formular öffnet sich von unten.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div style="background:rgba(0,0,0,0.6); min-height:80px;"></div>
+      <div style="background:var(--app-card); padding:10px 8px; border-radius:12px 12px 0 0;">
+        <div style="width:30px;height:3px;background:var(--app-border);border-radius:2px;margin:0 auto 8px;"></div>
+        <div style="color:var(--gold);font-size:10px;font-weight:bold;margin-bottom:8px;">Person bearbeiten</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px;">
+          <div>
+            <div style="font-size:6.5px;color:var(--text-dim);margin-bottom:2px;">VORNAME</div>
+            <div style="background:var(--app-bg);border:1px solid var(--app-border);border-radius:6px;padding:4px 6px;font-size:9px;color:var(--text-main);">Elisabeth</div>
+          </div>
+          <div>
+            <div style="font-size:6.5px;color:var(--text-dim);margin-bottom:2px;">NACHNAME</div>
+            <div style="background:var(--app-bg);border:1px solid var(--app-border);border-radius:6px;padding:4px 6px;font-size:9px;color:var(--text-main);">Bauer</div>
+          </div>
+        </div>
+        <div style="margin-bottom:6px;">
+          <div style="font-size:6.5px;color:var(--text-dim);margin-bottom:2px;">GESCHLECHT</div>
+          <div style="background:var(--app-bg);border:1px solid var(--app-border);border-radius:6px;padding:4px 6px;font-size:9px;color:var(--text-main);">Weiblich</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+          <div>
+            <div style="font-size:6.5px;color:var(--text-dim);margin-bottom:2px;">NAMENSPRÄFIX</div>
+            <div style="background:var(--app-bg);border:1px solid var(--app-border);border-radius:6px;padding:4px 6px;font-size:9px;color:var(--text-dim);">z.B. von, van…</div>
+          </div>
+          <div>
+            <div style="font-size:6.5px;color:var(--text-dim);margin-bottom:2px;">NAMENSZUSATZ</div>
+            <div style="background:var(--app-bg);border:1px solid var(--app-border);border-radius:6px;padding:4px 6px;font-size:9px;color:var(--text-dim);">z.B. jr., sen…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <h3>Was kann ich bearbeiten?</h3>
+    <ul style="margin: 0.5em 0 0 1.2em; font-size:0.9em; line-height:2em;">
+      <li><strong>Vorname und Nachname</strong></li>
+      <li><strong>Geschlecht</strong>: Männlich, Weiblich oder Unbekannt</li>
+      <li><strong>Namenspräfix</strong>: z. B. „von", „van", „de"</li>
+      <li><strong>Namenszusatz</strong>: z. B. „jr.", „sen.", „III."</li>
+      <li><strong>Weitere Namen</strong>: Taufname, Rufname, Geburtsname etc.</li>
+    </ul>
+    <p style="margin-top:0.8em;">Scrollen Sie im Formular nach unten, um alle Felder zu sehen.</p>
+    <p style="margin-top:0.5em;">Am Ende tippen Sie auf <span class="button-label">Speichern</span> — oder auf <span class="button-label">Abbrechen</span>, wenn Sie nichts ändern möchten.</p>
+  </div>
+</div>
+
+<h2>Eine neue Person anlegen</h2>
+
+<p>Es gibt mehrere Wege, eine neue Person anzulegen:</p>
+
+<p><strong>Weg 1 — Über den Plus-Knopf:</strong> Tippen Sie in der Personenliste auf den goldenen <span class="button-label">+</span>-Knopf unten rechts. Ein Formular erscheint, in dem Sie Name, Geschlecht und Grunddaten eingeben können.</p>
+
+<p><strong>Weg 2 — Über eine Beziehung:</strong> In der Detailansicht einer Person können Sie über <span class="button-label">+ Ehepartner</span>, <span class="button-label">+ Kind</span> oder <span class="button-label">+ Elternteil</span> direkt eine neue Person anlegen und gleichzeitig die Verwandtschaftsbeziehung herstellen.</p>
+
+<div class="tip">
+Beim Anlegen über eine Beziehung wird die neue Person sofort mit der bestehenden Person verknüpft. Das spart einen Schritt.
+</div>
+
+<h2>Ereignisse eintragen</h2>
+
+<p>Für jede Person können Sie verschiedene Lebensereignisse eintragen: Geburt, Taufe, Tod, Beerdigung, Beruf, Wohnort und mehr.</p>
+
+<ol class="steps">
+  <li><div class="step-text">Öffnen Sie die Detailansicht der Person.</div></li>
+  <li><div class="step-text">Im Abschnitt „Lebensdaten" tippen Sie auf einen vorhandenen Eintrag, um ihn zu bearbeiten — oder auf <span class="button-label">+ Ereignis</span>, um ein neues anzulegen.</div></li>
+  <li><div class="step-text">Ein kleines Formular öffnet sich. Geben Sie das Datum, den Ort und ggf. eine Quelle ein.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+
+<h3>Datum eingeben — die verschiedenen Formate</h3>
+
+<p>Genealogische Daten sind oft ungenau. Die App unterstützt verschiedene Datumsarten:</p>
+
+<table>
+  <tr><th>Format</th><th>Bedeutung</th><th>Beispiel</th></tr>
+  <tr><td>Genau</td><td>Das genaue Datum ist bekannt</td><td>22 JAN 1855</td></tr>
+  <tr><td>Ca. (circa)</td><td>Ungefähres Datum</td><td>ca. 1855</td></tr>
+  <tr><td>Vor</td><td>Vor diesem Datum</td><td>vor 1860</td></tr>
+  <tr><td>Nach</td><td>Nach diesem Datum</td><td>nach 1850</td></tr>
+  <tr><td>Zwischen</td><td>Innerhalb eines Zeitraums</td><td>zwischen 1850 und 1860</td></tr>
+  <tr><td>Nur Jahr</td><td>Nur das Jahr ist bekannt</td><td>1855</td></tr>
+</table>
+
+<div class="info">
+Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Monat und Jahr ohne Tag. Die App speichert genau das, was Sie eingeben.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 5: FAMILIEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap5">5. Familien</h1>
+
+<p>Im Bereich <span class="button-label">⚭ Familien</span> sehen Sie alle eingetragenen Ehepaare und Partnerschaften.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">☙ Stammbaum · demo.ged</span>
+        <span class="actions">🔍 ☰</span>
+      </div>
+      <div class="app-content" style="padding:6px;">
+        <div class="app-search">Name, Datum, Ort…</div>
+        <div class="app-list-item">
+          <div class="app-avatar family" style="border-radius:8px;width:26px;height:26px;">⚭</div>
+          <div>
+            <div class="item-name">Ernst Fischer &amp; Sophie Müller</div>
+            <div class="item-sub">⚭ 14 FEB 1921, München · 1 Kind</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+        <div class="app-list-item">
+          <div class="app-avatar family" style="border-radius:8px;width:26px;height:26px;">⚭</div>
+          <div>
+            <div class="item-name">Johann Müller &amp; Maria Huber</div>
+            <div class="item-sub">⚭ 10 JUN 1870, München · 1 Kind</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+        <div class="app-list-item">
+          <div class="app-avatar family" style="border-radius:8px;width:26px;height:26px;">⚭</div>
+          <div>
+            <div class="item-name">Johann Müller &amp; Elisabeth Bauer</div>
+            <div class="item-sub">⚭ 15 MAR 1890, München · 1 Kind</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+        <div class="app-list-item">
+          <div class="app-avatar family" style="border-radius:8px;width:26px;height:26px;">⚭</div>
+          <div>
+            <div class="item-name">Heinrich Müller &amp; Anna Schmidt</div>
+            <div class="item-sub">⚭ 5 APR 1898, München · 2 Kinder</div>
+          </div>
+          <div class="item-arrow">›</div>
+        </div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item active"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <p>Jeder Listeneintrag zeigt die Namen beider Partner und das Heiratsdatum sowie die Anzahl der Kinder.</p>
+
+    <h3>Personen verheiraten</h3>
+    <p>Tippen Sie in der Detailansicht einer Person auf <span class="button-label">+ Ehepartner</span>. Ein Auswahl-Dialog öffnet sich:</p>
+    <ul style="margin: 0.4em 0 0.4em 1.2em; font-size:0.9em; line-height:2em;">
+      <li>Suchen Sie eine vorhandene Person</li>
+      <li>Oder tippen Sie auf „Neue Person anlegen"</li>
+    </ul>
+    <p>Nach der Auswahl sind beide Personen als Ehepaar verknüpft.</p>
+
+    <h3>Kinder zuordnen</h3>
+    <p>Tippen Sie in der Familiendetailansicht oder in der Detailansicht eines Elternteils auf <span class="button-label">+ Kind</span>. Wählen Sie das Kind aus der Liste oder legen Sie eine neue Person an.</p>
+
+    <h3>Kind-Verhältnis ändern</h3>
+    <p>Standardmäßig wird jedes Kind als „leibliches Kind" eingetragen. Tippen Sie auf den Verhältnis-Text (z. B. „Kind"), um auf „Adoptiert" oder „Pflegekind" zu wechseln.</p>
+  </div>
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 6: QUELLEN UND ARCHIVE -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap6">6. Quellen und Archive</h1>
+
+<h2>Wozu brauche ich Quellen?</h2>
+
+<p>In der Genealogie ist es wichtig zu wissen, <em>woher</em> eine Information stammt. War es ein Kirchenbuch? Eine Urkunde vom Standesamt? Ein Online-Archiv? Quellen helfen Ihnen und anderen, die Angaben später nachzuprüfen.</p>
+
+<div class="full-mockup">
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px; background:var(--app-border);">
+    <div style="background:var(--app-bg); padding:14px; text-align:center; font-family:sans-serif;">
+      <div style="font-size:2em; margin-bottom:6px; color:var(--gold);">📖</div>
+      <div style="color:var(--text-main); font-size:0.95em; font-weight:bold;">Quelle</div>
+      <div style="color:var(--text-dim); font-size:0.8em; margin-top:4px;">z. B. „Kirchenbuch München St. Peter"</div>
+    </div>
+    <div style="background:var(--app-bg); padding:14px; text-align:center; font-family:sans-serif;">
+      <div style="font-size:2em; margin-bottom:6px; color:var(--gold);">🏛</div>
+      <div style="color:var(--text-main); font-size:0.95em; font-weight:bold;">Archiv</div>
+      <div style="color:var(--text-dim); font-size:0.8em; margin-top:4px;">z. B. „Stadtarchiv München"</div>
+    </div>
+    <div style="background:var(--app-bg); padding:14px; text-align:center; font-family:sans-serif;">
+      <div style="font-size:2em; margin-bottom:6px; color:var(--gold);">🔗</div>
+      <div style="color:var(--text-main); font-size:0.95em; font-weight:bold;">Verknüpfung</div>
+      <div style="color:var(--text-dim); font-size:0.8em; margin-top:4px;">Quelle ↔ Ereignis einer Person</div>
+    </div>
+  </div>
+</div>
+
+<p>Eine <strong>Quelle</strong> ist das Dokument (z. B. das Kirchenbuch). Ein <strong>Archiv</strong> ist der Ort, wo dieses Dokument aufbewahrt wird. Quellen können mit einem Archiv verknüpft werden.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">☙ Stammbaum · demo.ged</span>
+        <span class="actions">🔍 ☰</span>
+      </div>
+      <div class="app-content" style="padding:6px;">
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <div class="app-search" style="flex:1;margin-bottom:0;">Titel, Autor…</div>
+          <div style="background:var(--app-card);border:1px solid var(--app-border);border-radius:8px;padding:3px 6px;font-size:7px;color:var(--gold-light);">🏛 Archive</div>
+        </div>
+        <div class="app-source-item">
+          <div class="app-source-title">KB München St. Peter 🏛</div>
+          <div class="app-source-sub">Pfarramt St. Peter München · 2 Referenzen</div>
+        </div>
+        <div class="app-source-item">
+          <div class="app-source-title">StA München 1870 🏛</div>
+          <div class="app-source-sub">Standesamt München · 1 Referenz</div>
+        </div>
+        <div class="app-source-item">
+          <div class="app-source-title">Verlustliste 1916</div>
+          <div class="app-source-sub">Kriegsarchiv München · 1 Referenz</div>
+        </div>
+        <div style="padding:6px 4px; border-top:1px solid var(--app-border); margin-top:4px;">
+          <div style="font-size:7px;color:var(--gold);letter-spacing:1px;margin-bottom:4px;">ARCHIVE</div>
+          <div class="app-source-item">
+            <div class="app-source-title">Stadtarchiv München</div>
+            <div class="app-source-sub">Winzererstraße 68 · 2 Quellen</div>
+          </div>
+        </div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item active"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <h3>Neue Quelle anlegen</h3>
+    <ol class="steps" style="margin-top:0.5em;">
+      <li><div class="step-text">Wechseln Sie zu <span class="button-label">📖 Quellen</span>.</div></li>
+      <li><div class="step-text">Tippen Sie auf <span class="button-label">+</span> unten rechts.</div></li>
+      <li><div class="step-text">Füllen Sie die Felder aus: Kurzname (z. B. „KB München 1855"), Vollständiger Titel, Autor, Archiv.</div></li>
+      <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+    </ol>
+
+    <h3 style="margin-top:1em;">Quelle mit einem Ereignis verknüpfen</h3>
+    <ol class="steps">
+      <li><div class="step-text">Öffnen Sie das Bearbeitungsformular eines Ereignisses (z. B. die Geburt einer Person).</div></li>
+      <li><div class="step-text">Tippen Sie auf das Quellen-Feld oder <span class="button-label">+ Quelle</span>.</div></li>
+      <li><div class="step-text">Wählen Sie eine vorhandene Quelle aus der Liste.</div></li>
+      <li><div class="step-text">Optional: Tragen Sie die genaue Seitenzahl oder Signatur ein.</div></li>
+    </ol>
+
+    <p style="margin-top:0.8em;">Das 🏛-Symbol bei einer Quelle zeigt an, dass diese mit einem Archiv verknüpft ist.</p>
+  </div>
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 7: ORTE UND KARTE -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap7">7. Orte und Karte</h1>
+
+<p>Im Bereich <span class="button-label">📍 Orte</span> sehen Sie alle im Stammbaum verwendeten Orte. Die App erkennt automatisch, welche Personen mit welchem Ort verbunden sind.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">☙ Stammbaum · demo.ged</span>
+        <span class="actions">🔍 ☰</span>
+      </div>
+      <div class="app-content" style="padding:6px;">
+        <div class="app-search" style="margin-bottom:6px;">Ortsname…</div>
+        <div class="app-alpha">A</div>
+        <div class="app-place-item">
+          <div class="place-dot">·</div>
+          <div>
+            <div style="font-size:8.5px;color:var(--text-main);font-weight:bold;">Augsburg, Augsburg, Bayern</div>
+            <div style="font-size:7.5px;color:var(--text-dim);">1 Person</div>
+          </div>
+          <div class="item-arrow" style="margin-left:auto;">›</div>
+        </div>
+        <div class="app-alpha">L</div>
+        <div class="app-place-item">
+          <div class="place-dot">·</div>
+          <div>
+            <div style="font-size:8.5px;color:var(--text-main);font-weight:bold;">Landsberg, Landsberg, Bayern</div>
+            <div style="font-size:7.5px;color:var(--text-dim);">1 Person</div>
+          </div>
+          <div class="item-arrow" style="margin-left:auto;">›</div>
+        </div>
+        <div class="app-alpha">M</div>
+        <div class="app-place-item">
+          <div class="place-dot" style="background:rgba(184,150,46,0.2);border-color:var(--gold);color:var(--gold);">📍</div>
+          <div>
+            <div style="font-size:8.5px;color:var(--text-main);font-weight:bold;">München, München, Bayern</div>
+            <div style="font-size:7.5px;color:var(--text-dim);">12 Personen</div>
+          </div>
+          <div class="item-arrow" style="margin-left:auto;">›</div>
+        </div>
+        <div class="app-alpha">N</div>
+        <div class="app-place-item">
+          <div class="place-dot">·</div>
+          <div>
+            <div style="font-size:8.5px;color:var(--text-main);font-weight:bold;">Nürnberg, Nürnberg, Bayern</div>
+            <div style="font-size:7.5px;color:var(--text-dim);">1 Person</div>
+          </div>
+          <div class="item-arrow" style="margin-left:auto;">›</div>
+        </div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item active"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <p>Das <strong>📍-Symbol</strong> vor einem Ort bedeutet, dass für diesen Ort geografische Koordinaten (GPS-Koordinaten) hinterlegt sind — solche Orte können auf der Karte angezeigt werden.</p>
+    <p style="margin-top:0.7em;">Ein einfacher <strong>·</strong> Punkt bedeutet: keine Koordinaten vorhanden.</p>
+
+    <h3>Ort bearbeiten und Koordinaten eingeben</h3>
+    <ol class="steps" style="margin-top:0.4em;">
+      <li><div class="step-text">Tippen Sie auf einen Ort in der Liste.</div></li>
+      <li><div class="step-text">In der Ortsdetailansicht tippen Sie auf ✎ (Bearbeiten).</div></li>
+      <li><div class="step-text">Geben Sie den genauen Ortsnamen und die Koordinaten ein (Dezimalgrad, z. B. 48.1374 für Breitengrad München).</div></li>
+      <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+    </ol>
+
+    <div class="tip" style="margin-top:0.8em;">
+      Koordinaten finden Sie einfach in Google Maps: Tippen Sie auf einen Ort, dann erscheinen die Koordinaten unten am Bildschirm.
+    </div>
+
+    <h3>Karte anzeigen</h3>
+    <p>Tippen Sie in der Ortsliste auf <span class="button-label">Karte</span> (rechts in der Topbar), um alle Orte mit Koordinaten auf einer Landkarte zu sehen. Tippen Sie auf einen Marker, um alle Personen zu sehen, die mit diesem Ort verbunden sind.</p>
+  </div>
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 8: STAMMBAUM-ANSICHTEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap8">8. Stammbaum-Ansichten</h1>
+
+<h2>Der Sanduhr-Baum</h2>
+
+<p>Der <strong>Sanduhr-Baum</strong> ist die Hauptansicht unter <span class="button-label">⧖ Baum</span>. Er zeigt die ausgewählte Person in der Mitte — oben die Vorfahren, unten die Nachkommen.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">Elisabeth Bau…</span>
+        <span class="actions">2 3 4 5 6 ◑ ☰</span>
+      </div>
+      <div class="tree-mockup" style="min-height:230px;">
+        <div style="color:var(--text-dim);font-size:7px;margin-bottom:4px;">↑ Vorfahren</div>
+        <div class="tree-gen">
+          <div class="tree-card" style="font-size:6px;opacity:0.4;"><div class="tc-name">?</div></div>
+          <div class="tree-card" style="font-size:6px;opacity:0.4;"><div class="tc-name">?</div></div>
+          <div class="tree-card" style="font-size:6px;opacity:0.4;"><div class="tc-name">?</div></div>
+          <div class="tree-card" style="font-size:6px;opacity:0.4;"><div class="tc-name">?</div></div>
+        </div>
+        <div class="tree-gen">
+          <div class="tree-card" style="font-size:6.5px;opacity:0.5;"><div class="tc-name">?</div></div>
+          <div class="tree-card" style="font-size:6.5px;opacity:0.5;"><div class="tc-name">?</div></div>
+        </div>
+        <div class="tree-gen" style="margin:6px 0;">
+          <div class="tree-card proband" style="font-size:7.5px; padding:6px 9px;">
+            <div class="tc-name" style="font-size:8px;">Elisabeth Bauer</div>
+            <div class="tc-dates" style="font-size:6.5px;">*1855 †1935</div>
+          </div>
+          <div style="display:inline-flex;align-items:center;color:var(--gold);font-size:9px;margin:0 2px;">⚭</div>
+          <div class="tree-card male" style="font-size:7.5px; padding:6px 9px;">
+            <div class="tc-name" style="font-size:8px;">Johann Müller</div>
+            <div class="tc-dates" style="font-size:6.5px;">*1845 †1912</div>
+          </div>
+        </div>
+        <div class="tree-gen">
+          <div class="tree-card male" style="font-size:7px; padding:5px 8px;">
+            <div class="tc-name">Max Müller</div>
+            <div class="tc-dates" style="font-size:6px;">*1891 †1950</div>
+          </div>
+        </div>
+        <div style="color:var(--text-dim);font-size:7px;margin-top:4px;">↓ Nachkommen</div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item active"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <h3>Steuerung des Baums</h3>
+    <table style="font-size:0.85em;">
+      <tr><th>Aktion</th><th>Ergebnis</th></tr>
+      <tr><td>Auf Person tippen</td><td>Detailansicht oder Baumfokus wechseln</td></tr>
+      <tr><td>2 Finger auseinander</td><td>Vergrößern</td></tr>
+      <tr><td>2 Finger zusammen</td><td>Verkleinern</td></tr>
+      <tr><td>Mit Finger ziehen</td><td>Baum verschieben</td></tr>
+      <tr><td>Zahlen 2–6</td><td>Anzahl der Generationen wählen</td></tr>
+      <tr><td><span class="button-label">◑</span></td><td>Zum Fächer-Diagramm wechseln</td></tr>
+    </table>
+
+    <h3 style="margin-top:1em;">Bedeutung der Farben</h3>
+    <ul style="margin: 0.4em 0 0 1.2em; font-size:0.9em; line-height:2em;">
+      <li><span style="color:var(--pink);">Rosa Rahmen / ♀</span>: weibliche Person</li>
+      <li><span style="color:var(--blue);">Blauer Rahmen / ♂</span>: männliche Person</li>
+      <li><span style="color:var(--gold);">Goldener Rahmen + Zahl 1</span>: der Proband (Mittelpunkt)</li>
+      <li><span style="color:var(--text-dim);">Graue Felder mit ?</span>: unbekannte Vorfahren</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Das Fächer-Diagramm</h2>
+
+<p>Das <strong>Fächer-Diagramm</strong> (Fan-Chart) zeigt ausschließlich die Vorfahren einer Person in konzentrischen Halbkreisen. Es eignet sich besonders gut, um zu sehen, wie viele Vorfahren noch unbekannt sind.</p>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">Elisabeth Bauer</span>
+        <span class="actions">3 4 5 6 ⧖ ☰</span>
+      </div>
+      <div class="fan-mockup">
+        <!-- Stilisierter Fächer -->
+        <div class="fan-arc" style="width:200px;height:100px;"></div>
+        <div class="fan-arc" style="width:160px;height:80px;bottom:28px;"></div>
+        <div class="fan-arc" style="width:120px;height:60px;bottom:30px;"></div>
+        <div class="fan-arc" style="width:80px;height:40px;bottom:30px;"></div>
+        <div class="fan-center">Elisabeth<br>Bauer</div>
+        <div style="position:absolute;bottom:8px;left:0;right:0;font-size:7px;color:var(--text-dim);">Fächer-Diagramm (Vorfahren)</div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item active"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <p>Die zentrale Person (Proband) steht im Mittelpunkt. Jeder Ring nach außen stellt eine Generation dar:</p>
+    <ul style="margin: 0.4em 0 0 1.2em; font-size:0.9em; line-height:2em;">
+      <li>Ring 1 (nächster Ring): Eltern</li>
+      <li>Ring 2: Großeltern</li>
+      <li>Ring 3: Urgroßeltern</li>
+      <li>Ring 4 und mehr: weitere Generationen</li>
+    </ul>
+    <p style="margin-top:0.7em;">Dunkle (leere) Segmente stehen für unbekannte Vorfahren. Das zeigt Ihnen auf einen Blick, wo noch Forschungsbedarf besteht.</p>
+    <p style="margin-top:0.7em;">Mit den Zahlen <span class="button-label">3</span> bis <span class="button-label">6</span> in der Topbar wählen Sie, wie viele Generationen angezeigt werden.</p>
+    <p style="margin-top:0.7em;">Tippen Sie auf <span class="button-label">⧖</span>, um zum Sanduhr-Baum zurückzukehren.</p>
+  </div>
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 9: SUCHEN UND FINDEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap9">9. Suchen und Finden</h1>
+
+<h2>Suche innerhalb eines Bereichs</h2>
+
+<p>In der Personen-, Familien-, Quellen- und Ortsliste befindet sich oben jeweils ein Suchfeld. Tippen Sie einfach los — die Liste filtert sich sofort.</p>
+
+<p>In der Personensuche können Sie suchen nach:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Name (Vor- und Nachname)</li>
+  <li>Geburts- oder Sterbeort</li>
+  <li>Beruf</li>
+  <li>Datum (z. B. „1855")</li>
+  <li>Textinhalt aus Notizen</li>
+</ul>
+
+<h2>Globale Suche</h2>
+
+<p>Für eine übergreifende Suche tippen Sie in der Personenliste auf das <span class="button-label">🔍</span>-Symbol oben rechts. Hier können Sie gleichzeitig in Personen, Familien, Quellen und Orten suchen.</p>
+
+<h2>Ähnlichkeitssuche (Soundex)</h2>
+
+<p>Wenn Sie einen Namen nicht ganz sicher kennen (z. B. alte Schreibweisen: „Meyer" statt „Maier"), aktivieren Sie die Ähnlichkeitssuche. Ein kleines Symbol <span class="button-label">~</span> in der Suchleiste schaltet sie ein. Die Suche findet dann auch Namen, die ähnlich klingen.</p>
+
+<h2>Geburtsjahrfilter</h2>
+
+<p>In der Personenliste können Sie mit den Feldern „Geb.-Jahr: von … bis" die Liste auf Personen eingrenzen, die in einem bestimmten Zeitraum geboren wurden. Das ist hilfreich, wenn Sie z. B. alle Personen aus dem 18. Jahrhundert suchen.</p>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 10: SPEICHERN UND SICHERN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap10">10. Speichern und Sichern</h1>
+
+<h2>Wann muss ich speichern?</h2>
+
+<p>Die App speichert Ihre Änderungen <strong>nicht automatisch</strong> in eine Datei. Sie sehen in der Topbar einen kleinen Punkt, wenn es ungespeicherte Änderungen gibt. Speichern Sie regelmäßig, damit Ihre Arbeit nicht verloren geht.</p>
+
+<div class="full-mockup">
+  <div style="background:var(--app-bg); padding:14px 18px; font-family:sans-serif; display:flex; align-items:center; gap:14px;">
+    <div style="width:10px; height:10px; background:#4a8a4a; border-radius:50; border-radius:50%; flex-shrink:0;"></div>
+    <div style="color:var(--text-dim); font-size:0.9em;">Der grüne Punkt zeigt: Es gibt ungespeicherte Änderungen.</div>
+  </div>
+</div>
+
+<div class="mockup-wrapper">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div style="background:var(--app-card); padding:8px; border-radius:0 0 0 0; font-family:sans-serif;">
+        <div style="color:var(--gold);font-size:10px;font-weight:bold;margin-bottom:8px;">Menü</div>
+        <div class="app-menu-item"><span class="mi-icon">☁</span> OneDrive verbinden</div>
+        <div class="app-menu-item"><span class="mi-icon">⚙</span> Einstellungen</div>
+        <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
+        <div class="app-menu-item"><span class="mi-icon">📂</span> Öffnen… (lokal)</div>
+        <div class="app-menu-item"><span class="mi-icon">💾</span> Speichern (lokal)</div>
+        <div class="app-menu-item" style="font-size:7.5px;"><span class="mi-icon">🗄</span> Original-Backup herunterladen</div>
+        <div class="app-menu-item"><span class="mi-icon">↩</span> Änderungen verwerfen</div>
+        <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
+        <div class="app-menu-item"><span class="mi-icon">🗂</span> Demo-Daten öffnen</div>
+        <div class="app-menu-item" style="color:var(--text-dim);"><span class="mi-icon" style="opacity:0.4;">✕</span> Datei schließen</div>
+        <div class="app-menu-item"><span class="mi-icon">❓</span> Hilfe &amp; Anleitung</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <h3>Lokal speichern</h3>
+    <p>Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">💾 Speichern (lokal)</span>.</p>
+    <ul style="margin: 0.4em 0 0 1.2em; font-size:0.9em; line-height:2em;">
+      <li><strong>Chrome am Computer:</strong> Wenn Sie beim Öffnen der Datei den Schreibzugriff erlaubt haben, wird direkt in die Originaldatei gespeichert.</li>
+      <li><strong>Andere Browser / iPhone:</strong> Es wird eine neue Datei heruntergeladen. Ersetzen Sie damit Ihre alte Datei.</li>
+    </ul>
+
+    <h3>Backup herunterladen</h3>
+    <p>Tippen Sie auf <span class="button-label">🗄 Original-Backup herunterladen</span>, um eine Sicherungskopie der zuletzt geöffneten Datei herunterzuladen (ohne Ihre neuen Änderungen). Nützlich, wenn Sie Änderungen rückgängig machen möchten.</p>
+
+    <h3>Änderungen verwerfen</h3>
+    <p>Wenn Sie alle Änderungen seit dem letzten Speichern rückgängig machen möchten, tippen Sie auf <span class="button-label">↩ Änderungen verwerfen</span>. Die App fragt zur Sicherheit nach.</p>
+
+    <div class="warning" style="margin-top:0.8em;">
+      Verwerfen kann nicht rückgängig gemacht werden! Alle Änderungen seit dem letzten Speichern gehen verloren.
+    </div>
+  </div>
+</div>
+
+<h2>OneDrive-Synchronisation</h2>
+
+<p>Wenn Sie die App sowohl auf dem iPhone als auch auf dem Computer nutzen, können Sie Ihre Daten über <strong>Microsoft OneDrive</strong> synchronisieren. Fotos und Dokumente, die Sie in OneDrive gespeichert haben, werden direkt in der App angezeigt.</p>
+
+<ol class="steps">
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">☁ OneDrive verbinden</span>.</div></li>
+  <li><div class="step-text">Ein Microsoft-Anmeldefenster öffnet sich. Melden Sie sich mit Ihrem Microsoft-Konto an.</div></li>
+  <li><div class="step-text">Wählen Sie den Ordner in OneDrive, in dem Ihre GEDCOM-Datei und Fotos gespeichert sind.</div></li>
+  <li><div class="step-text">Die App verbindet sich und lädt Ihre Daten.</div></li>
+</ol>
+
+<div class="info">
+OneDrive ist optional. Die App funktioniert vollständig ohne OneDrive — mit lokalen Dateien auf Ihrem Gerät.
+</div>
+
+<h2>Undo — Änderungen rückgängig machen</h2>
+
+<p>Mit <kbd>Cmd</kbd> + <kbd>Z</kbd> (Mac) bzw. <kbd>Strg</kbd> + <kbd>Z</kbd> (Windows) können Sie die letzte Änderung rückgängig machen. Mit <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> stellen Sie sie wieder her.</p>
+
+<div class="tip">
+Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren Änderungen eine Sicherungskopie über <span class="button-label">🗄 Original-Backup herunterladen</span>.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 11: FORSCHUNGSAUFGABEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap11">11. Forschungsaufgaben</h1>
+
+<p>In der Familienforschung gibt es immer offene Fragen: Welches Kirchenbuch muss ich noch durchsuchen? Welche Urkunde fehlt noch? Die App hilft Ihnen, diese Aufgaben zu verwalten.</p>
+
+<h2>Aufgabe hinzufügen</h2>
+
+<ol class="steps">
+  <li><div class="step-text">Öffnen Sie die Detailansicht einer Person.</div></li>
+  <li><div class="step-text">Scrollen Sie zum Abschnitt „Aufgaben".</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">+ Aufgabe</span>.</div></li>
+  <li><div class="step-text">Schreiben Sie die Aufgabe (z. B. „Taufeintrag im Kirchenbuch München 1855 suchen").</div></li>
+  <li><div class="step-text">Wählen Sie eine Kategorie: <em>Kirchenbuch</em>, <em>Urkunde / Standesamt</em> oder <em>Online-Recherche</em>.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+
+<h2>Aufgaben verwalten</h2>
+
+<p>In der Personenliste zeigt der Tab <span class="button-label">👤 Personen</span> einen Zahlenbadge, wenn es offene Aufgaben gibt. Tippen Sie auf den Tab und wechseln Sie oben zu „Aufgaben", um alle offenen Aufgaben in einer Liste zu sehen.</p>
+
+<p>Jede Aufgabe können Sie:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Mit einer Checkbox <span class="button-label">☑</span> als erledigt markieren</li>
+  <li>Mit <span class="button-label">✎</span> bearbeiten</li>
+  <li>Mit <span class="button-label">✕</span> löschen</li>
+</ul>
+
+<div class="tip">
+Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim nächsten Sitzen sofort, wo Sie aufgehört hatten.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 12: HÖFE UND WOHNORTE -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap12">12. Höfe und Wohnorte</h1>
+
+<p>Wenn Sie viele Wohnorte (RESI-Einträge) erfasst haben, bündelt die App diese automatisch zu <strong>Höfen</strong> — also Adressen, an denen mehrere Personen zu verschiedenen Zeiten gelebt haben. Das ist besonders nützlich für die Bauernhof-Genealogie.</p>
+
+<p>Zu finden sind die Höfe im Bereich <span class="button-label">📍 Orte</span> → dann im oberen Bereich auf den Tab „Höfe" wechseln.</p>
+
+<p>Für jeden Hof sehen Sie:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Die Adresse</li>
+  <li>Alle Personen, die dort gelebt haben, mit Zeitraum</li>
+  <li>Koordinaten für die Kartenanzeige</li>
+</ul>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 13: HÄUFIGE FRAGEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap13">13. Häufige Fragen und Tipps</h1>
+
+<h2>Ich habe aus Versehen etwas gelöscht — was nun?</h2>
+<p>Wenn Sie noch nicht gespeichert haben, tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">↩ Änderungen verwerfen</span>. Damit kehren Sie zum letzten gespeicherten Stand zurück. Falls Sie auf dem Computer mit Chrome arbeiten, können Sie auch <kbd>Cmd</kbd> + <kbd>Z</kbd> drücken.</p>
+
+<h2>Die App zeigt nach dem Öffnen nichts an</h2>
+<p>Beim allerersten Öffnen ist noch kein Stammbaum geladen. Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">📂 Öffnen… (lokal)</span>, um eine GEDCOM-Datei zu öffnen — oder auf <span class="button-label">🗂 Demo-Daten öffnen</span>, um die Beispieldaten zu laden.</p>
+
+<h2>Wie exportiere ich meinen Stammbaum für ein anderes Programm?</h2>
+<p>Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">💾 Speichern (lokal)</span>. Sie erhalten eine <em>.ged</em>-Datei (GEDCOM-Format), die von allen gängigen Stammbaum-Programmen gelesen werden kann — z. B. Ancestris, MacFamilyTree, Ahnenblatt oder Gramps.</p>
+
+<h2>Kann ich die App auch ohne Internet nutzen?</h2>
+<p>Ja! Die App funktioniert vollständig offline. Sie muss lediglich einmal geladen worden sein. Danach können Sie auch ohne Internetverbindung arbeiten und speichern.</p>
+
+<h2>Was ist ein GEDCOM?</h2>
+<p>GEDCOM (Genealogical Data Communication) ist ein Standardformat für Stammbaumdaten, das von fast allen Genealogie-Programmen unterstützt wird. Dateien enden auf <em>.ged</em> und sind eigentlich einfache Textdateien.</p>
+
+<h2>Was ist der Proband?</h2>
+<p>Der <strong>Proband</strong> ist die Person, die im Mittelpunkt des Stammbaums steht — meist Sie selbst oder eine ausgewählte Startperson. Der Proband beeinflusst die Berechnung der Verwandtschaftsbeziehungen (z. B. „Cousin 1. Grades von Elisabeth Bauer").</p>
+<p>Zum Festlegen: Öffnen Sie die Detailansicht der gewünschten Person und tippen Sie auf <span class="button-label">⌂</span> in der Topbar.</p>
+
+<h2>Wie füge ich ein Foto zu einer Person hinzu?</h2>
+<ol class="steps">
+  <li><div class="step-text">Öffnen Sie die Detailansicht der Person.</div></li>
+  <li><div class="step-text">Im Abschnitt „Medien" tippen Sie auf <span class="button-label">+ Hinzufügen</span>.</div></li>
+  <li><div class="step-text">Wählen Sie ein Foto aus Ihren Dateien.</div></li>
+  <li><div class="step-text">Geben Sie einen Titel ein und tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+<div class="info">
+Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbst bleiben auf Ihrem Gerät oder in OneDrive. Die App speichert keine Fotos in der GEDCOM-Datei selbst.
+</div>
+
+<h2>Tastaturkürzel (Computer)</h2>
+<table>
+  <tr><th>Tastenkombination</th><th>Funktion</th></tr>
+  <tr><td><kbd>Cmd</kbd> + <kbd>Z</kbd></td><td>Letzte Änderung rückgängig</td></tr>
+  <tr><td><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td><td>Rückgängig wiederherstellen</td></tr>
+  <tr><td><kbd>ESC</kbd></td><td>Dialog / Formular schließen</td></tr>
+  <tr><td><kbd>Alt</kbd> + <kbd>←</kbd></td><td>Zurück in der Navigationshistorie</td></tr>
+  <tr><td><kbd>Alt</kbd> + <kbd>→</kbd></td><td>Vorwärts in der Navigationshistorie</td></tr>
+  <tr><td><kbd>↑</kbd> im Baum</td><td>Zu Vater wechseln</td></tr>
+  <tr><td><kbd>↓</kbd> im Baum</td><td>Zum ersten Kind wechseln</td></tr>
+  <tr><td><kbd>→</kbd> im Baum</td><td>Zum Ehepartner wechseln</td></tr>
+</table>
+
+<hr class="section-divider">
+
+<h2>Checkliste für einen guten Start</h2>
+<ul class="checklist">
+  <li>Demo-Daten ausprobiert und die Navigation kennengelernt</li>
+  <li>Eigene GEDCOM-Datei geöffnet (oder einen neuen Stammbaum begonnen)</li>
+  <li>Die ersten Personen vollständig eingetragen (Name, Geburts- und Sterbedaten)</li>
+  <li>Familien (Ehepaare) miteinander verknüpft</li>
+  <li>Erste Quellen angelegt und mit Ereignissen verknüpft</li>
+  <li>Daten gespeichert und Backup erstellt</li>
+  <li>Probanden festgelegt</li>
+  <li>Baum-Ansicht erkundet</li>
+</ul>
+
+<hr class="section-divider">
+
+<p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
+  Stammbaum PWA · Version 7 · Mai 2026<br>
+  Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
+</p>
+
+</div><!-- /content -->
+</body>
+</html>
