@@ -480,11 +480,14 @@ async function _grampsDeepRoundtrip() {
 //  Aufruf: Menü → GRAMPS Roundtrip-Test (nur bei ?debug=1 sichtbar)
 // ─────────────────────────────────────
 async function runGrampsRoundtripTest() {
-  const db1 = AppState.db;
-  if (db1?._sourceFormat !== 'gramps') { showToast('⚠ Keine GRAMPS-Datei geladen'); return; }
   const out = document.getElementById('roundtrip-output');
   out.textContent = 'GRAMPS Roundtrip läuft…';
   openModal('modalRoundtrip');
+  const db1 = AppState.db;
+  if (!db1?._grampsMaster) {
+    out.textContent = 'Fehler: Keine GRAMPS-Datei geladen.\n(_grampsMaster=' + db1?._grampsMaster + ', _sourceFormat=' + db1?._sourceFormat + ')';
+    return;
+  }
 
   const lines = [];
   const log = s => lines.push(s);
