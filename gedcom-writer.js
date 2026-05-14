@@ -94,6 +94,7 @@ function geoLines(lines, obj, indent, useExtraPlaces = true) {
 function eventBlock(lines, tag, obj, lv) {
   if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.citations && obj.citations.length) && !(obj._extra && obj._extra.length))) return;
   lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
+  if (obj._grampsEvPriv) lines.push(`${lv+1} RESN confidential`);
   if (obj.date !== null && obj.date !== undefined)  lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
   if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
   if (obj.place !== null && obj.place !== undefined) {
@@ -102,7 +103,7 @@ function eventBlock(lines, tag, obj, lv) {
   }
   const _origNote = obj._noteOrig !== undefined ? obj._noteOrig : obj.note;
   if (_origNote) pushCont(lines, lv+1, 'NOTE', _origNote);
-  for (const r of (obj.noteRefs||[])) lines.push(`${lv+1} NOTE ${r}`);
+  for (const r of (obj.noteRefs||[])) lines.push(`${lv+1} NOTE ${_noteXref[r]||r}`);
   _writeSourCits(lines, lv+1, obj);
   if (obj.media && obj.media.length) for (const m of obj.media) {
     lines.push(`${lv+1} OBJE`);
@@ -124,6 +125,8 @@ function eventBlock(lines, tag, obj, lv) {
 let _witnessEvMap = {};
 // Phase F12: hofAddress → NOTE record ID (populated by writeGEDCOM)
 let _hofNoteIds = {};
+// Cross-mode: GRAMPS handle → GEDCOM XREF (populated by writeGEDCOM before write functions)
+let _noteXref = {};
 
 // ─── INDI-Record ──────────────────────────────────────────────────────────────
 function writeINDIRecord(lines, p) {
@@ -179,6 +182,7 @@ function writeINDIRecord(lines, p) {
   const _writtenHofNotes = new Set();
   for (const ev of p.events) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
+    if (ev._grampsEvPriv) lines.push(`2 RESN confidential`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
     if (ev.date !== null && ev.date !== undefined)  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
     const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
@@ -200,7 +204,7 @@ function writeINDIRecord(lines, p) {
     for (const r of (ev.noteRefs || [])) {
       // HOF-Notiz-Refs überspringen — werden über _hofNoteIds separat als @N_HOF_n@ geschrieben
       if (_hofMeta?.note && AppState.db.notes?.[r]?.text === _hofMeta.note) continue;
-      lines.push(`2 NOTE ${r}`);
+      lines.push(`2 NOTE ${_noteXref[r]||r}`);
     }
     if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
       if (_evHadNote && !_writtenHofNotes.has(_addrKey)) {
@@ -230,7 +234,7 @@ function writeINDIRecord(lines, p) {
     if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
   }
 
-  for (const ref of (p.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
+  for (const ref of (p.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
   for (const nt of (p.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
 
   for (const fref of p.famc) {
@@ -373,6 +377,7 @@ function writeFAMRecord(lines, f) {
 
   for (const ev of (f.events || [])) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
+    if (ev._grampsEvPriv) lines.push(`2 RESN confidential`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
     if (ev.date !== null && ev.date !== undefined) lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
     if (ev.place !== null && ev.place !== undefined) {
@@ -381,14 +386,14 @@ function writeFAMRecord(lines, f) {
     }
     const _famEvNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
     if (_famEvNote) pushCont(lines, 2, 'NOTE', _famEvNote);
-    for (const r of (ev.noteRefs || [])) lines.push(`2 NOTE ${r}`);
+    for (const r of (ev.noteRefs || [])) lines.push(`2 NOTE ${_noteXref[r]||r}`);
     _writeSourCits(lines, 2, ev);
     if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
   }
 
   if (f.grampId)  lines.push(`1 _GRAMPS_ID ${f.grampId}`);
   if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
-  for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
+  for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
   for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
 
   for (const m of (f.media || [])) {
@@ -478,13 +483,13 @@ function writeNOTERecord(lines, n) {
     do {
       const chunk = s.slice(0, MAX);
       s = s.slice(MAX);
-      if (li === 0 && firstChunk) lines.push(`0 ${n.id} NOTE ${chunk}`);
+      if (li === 0 && firstChunk) lines.push(`0 ${_noteXref[n.id]||n.id} NOTE ${chunk}`);
       else if (firstChunk)        lines.push(`1 CONT ${chunk}`);
       else                        lines.push(`1 CONC ${chunk}`);
       firstChunk = false;
     } while (s.length > 0);
   }
-  if (!rawLines.length) lines.push(`0 ${n.id} NOTE `);
+  if (!rawLines.length) lines.push(`0 ${_noteXref[n.id]||n.id} NOTE `);
   writeCHAN(lines, n, 1);
   for (const l of (n._passthrough || [])) lines.push(l);
 }
@@ -538,6 +543,12 @@ function writeGEDCOM(updateHeadDate = false) {
     .filter(([, h]) => h.note)
     .sort((a, b) => a[0].localeCompare(b[0]))
     .forEach(([addr], i) => { _hofNoteIds[addr] = `@N_HOF_${i + 1}@`; });
+
+  // Cross-mode: GRAMPS handle → GEDCOM XREF (grampId → @N0001@; GEDCOM ids sind schon @…@)
+  _noteXref = {};
+  for (const n of Object.values(db.notes || {})) {
+    _noteXref[n.id] = n.grampId ? `@${n.grampId}@` : n.id;
+  }
 
   for (const p of Object.values(db.individuals))  writeINDIRecord(lines, p);
   for (const f of Object.values(db.families))     writeFAMRecord(lines, f);

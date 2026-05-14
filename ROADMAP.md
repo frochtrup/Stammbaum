@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v418 · Cache: `stammbaum-v418`
+**sw-Version:** v419 · Cache: `stammbaum-v419`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -59,6 +59,7 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| CrossMode-CitNotes | **Citation-Notizen im Cross-Mode** | `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@` im GEDCOM-Export; setzt Fix-1 (Note-XREF) voraus; nur bei GRAMPS-Quelle aktiv | M |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
 | GRAMPS-Orte | **Orts-Picker** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |
