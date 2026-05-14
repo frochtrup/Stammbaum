@@ -100,7 +100,8 @@ function eventBlock(lines, tag, obj, lv) {
     lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
     geoLines(lines, obj, lv+2);
   }
-  if (obj.note) pushCont(lines, lv+1, 'NOTE', obj.note);
+  const _origNote = obj._noteOrig !== undefined ? obj._noteOrig : obj.note;
+  if (_origNote) pushCont(lines, lv+1, 'NOTE', _origNote);
   for (const r of (obj.noteRefs||[])) lines.push(`${lv+1} NOTE ${r}`);
   _writeSourCits(lines, lv+1, obj);
   if (obj.media && obj.media.length) for (const m of obj.media) {
@@ -208,8 +209,9 @@ function writeINDIRecord(lines, p) {
     } else if (_hofMeta?.note && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
       pushCont(lines, 2, 'NOTE', _hofMeta.note);
       _writtenHofNotes.add(_addrKey);
-    } else if (ev.note && !_evNoteIsHofNote) {
-      pushCont(lines, 2, 'NOTE', ev.note);
+    } else if (!_evNoteIsHofNote) {
+      const _inlineNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
+      if (_inlineNote) pushCont(lines, 2, 'NOTE', _inlineNote);
     }
     if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
     for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
@@ -376,7 +378,9 @@ function writeFAMRecord(lines, f) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
       geoLines(lines, ev, 3);
     }
-    if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
+    const _famEvNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
+    if (_famEvNote) pushCont(lines, 2, 'NOTE', _famEvNote);
+    for (const r of (ev.noteRefs || [])) lines.push(`2 NOTE ${r}`);
     _writeSourCits(lines, 2, ev);
     if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
   }

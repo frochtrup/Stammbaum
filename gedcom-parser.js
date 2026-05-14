@@ -775,7 +775,9 @@ function parseGEDCOM(text, parseErrors) {
   }
 
   // Resolve NOTE references + build noteText from noteTexts[] + referenced notes
+  // _noteOrig preserves the original inline-only text so the writer doesn't double-write refs
   const _resolveNoteRefs = (obj) => {
+    obj._noteOrig = obj.note;
     for (const ref of (obj.noteRefs || [])) {
       if (ref && notes[ref]) obj.note = (obj.note ? obj.note + '\n' : '') + notes[ref].text;
     }
