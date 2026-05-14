@@ -22,6 +22,8 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 Prioritäten: **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohne festes Datum
 
+**Design-Constraint:** Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delta=0`) stabil halten. Neue Datenstrukturen dürfen beim GEDCOM-Export keinen zusätzlichen Delta erzeugen — entweder als Passthrough oder als bekannte, dokumentierte Abweichung.
+
 ---
 
 ### P1 — Nächster Sprint
@@ -42,7 +44,7 @@ Prioritäten: **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohn
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
 | GRAMPS-Orte | **Orts-Picker** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |
-| GRAMPS-Edit | **Personen-/Ereignis-Formular** | `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar; Witness-Rollen read-only | M+M |
+| GRAMPS-Edit | **Personen-/Ereignis-Formular** | `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar; Witness-Rollen read-only (Editierbarkeit → ASSO-Edit im Backlog) | M+M |
 | GRAMPS-ID | **gramps_id im Writer** | `gramps_id` aus `db.persons/families` beim GRAMPS-Export wieder ausgeben; verhindert Handle-Verlust bei Roundtrip | S |
 | GRAMPS-Notes | **Notes als eigene Entität** | `db.notes{}` im Parser als eigene Tabelle; Passthrough für Top-Level-`NOTE`-Records; verhindert Datenverlust bei fremden GRAMPS-Dateien | M |
 | Perf-Worker | **Web Worker Duplikate-Scan** | Duplikat-Erkennung in `Worker` auslagern; entlastet Main Thread bei >2000 Personen | M |
@@ -54,7 +56,8 @@ Prioritäten: **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohn
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| GRAMPS-ASSO | **Association-Objekte** | `ASSO`-Tag parsen; Zeugen/Beziehungen in Personen-Detail anzeigen (read-only → später editierbar) | L |
+| ASSO-Parser | **ASSO-Tag parsen (GEDCOM + GRAMPS)** | `1 ASSO @Ix@` + `2 RELA`-Text parsen; in Personen-Detail read-only anzeigen (Zeuge, Pate, Trauzeugen, Nachbar…); GEDCOM 5.5.1-konform, kein Roundtrip-Delta da Passthrough | L |
+| ASSO-Edit | **Event-Rollen editierbar** | Personen als Zeugen/Paten zu Events zuordnen; schreibt `1 ASSO`-Block in GEDCOM-Output; nur nach ASSO-Parser sinnvoll | L |
 | F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
 | F8 | **Cluster-Ansicht** | Personen in denselben Orten/Quellen wie Person X | L |
 | F9 | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |
