@@ -9,42 +9,49 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          Stammbaum PWA v5.0 (Branch v5-dev)          │
+│          Stammbaum PWA v7.0 (main)                    │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
-│  index.html           — App-Shell (HTML + CSS)       │
+│  index.html           — App-Shell (HTML)             │
+│  styles.css           — alle App-Styles              │
+│  offline.html         — Offline-Fallback             │
 │  gedcom.js            — AppState/UIState, Labels     │
 │  gedcom-parser.js     — parseGEDCOM()                │
-│  gedcom-writer.js     — writeGEDCOM(), pushCont()    │
-│  storage.js           — IndexedDB, Dateiverwaltung   │
+│  gedcom-writer.js     — write*Record(), pushCont()   │
+│  storage.js           — Demo, Backup, Init           │
+│  storage-file.js      — IDB, File System Access API  │
 │  ui-views.js          — gemeinsame Hilfsfunktionen   │
 │  ui-views-person.js   — Personen-Detailansicht       │
 │  ui-views-family.js   — Familien-Detailansicht       │
 │  ui-views-source.js   — Quellen-Detailansicht        │
-│  ui-views-tree.js     — Sanduhr-Baum + Fan Chart     │
-│  ui-forms.js          — Formulare (Person/Fam/Src)   │
+│  ui-views-tree.js     — Sanduhr-Baum                 │
+│  ui-fanchart.js       — Fan Chart (SVG)              │
+│  ui-forms.js          — Source-Widget, Utils          │
+│  ui-forms-person.js   — Person-Formular               │
+│  ui-forms-family.js   — Familie-Formular              │
 │  ui-forms-event.js    — Event-Formular               │
 │  ui-forms-repo.js     — Archiv-Formular + Picker     │
 │  ui-media.js          — Medien Add/Edit/Delete       │
-│  ui-fanchart.js       — Fan Chart (SVG)              │
 │  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
 │  onedrive-import.js   — Foto-Import, Ordner-Browser  │
 │  onedrive.js          — Media-URL, Upload, File-I/O  │
-│  sw.js                — Service Worker (Cache v146)  │
+│  sw.js                — Service Worker (Cache v413)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~19 JS-Dateien · ~200 Funktionen · ~10500 Zeilen
+**Größe gesamt:** ~30 JS-Dateien · ~16000 Zeilen
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
 ### ADR-001: Multi-File (HTML-Shell + JS-Module)
-**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-tree.js`, `ui-forms.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-media.js`, `ui-fanchart.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`.
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `gramps-parser.js`, `gramps-writer.js`, `storage-file.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-place.js`, `ui-views-hof.js`, `ui-views-map.js`, `ui-views-stats.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-tree.js`, `ui-fanchart.js`, `ui-forms.js`, `ui-forms-person.js`, `ui-forms-family.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-views-tasks.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-stats.js`, `ui-dedup.js`, `debug-activate.js`, `ui-media.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`.
+
+**Storage-Schichtung:** `storage-file.js` ist die I/O-Schicht (IDB-Helfer, File System Access API, Export/Import-Funktionen). `storage.js` ist die Persistenz-Schicht (Auto-Load, Backup, Demo) und baut auf `storage-file.js` auf.
 
 **Vorgänger:** v1.x–v2.x waren Single-File-HTML (~4700 Z.). Bei ~5000 Zeilen wurde aufgeteilt. `ui-views.js` wurde in v5-dev (sw v94) in 5 Module aufgeteilt. `onedrive.js` (946 Z.) in 3 Module (sw v140), `ui-forms.js` (1036 Z.) in 3 Module (sw v141).
 
@@ -115,8 +122,8 @@ navigator.share({ files: [mainFile, backupFile], title: filename });
 
 ---
 
-### ADR-006: Geo-Koordinaten nur lesen
-**Entscheidung:** Koordinaten werden gelesen und als Apple Maps Links angezeigt, aber nicht editierbar.
+### ADR-006: Geo-Koordinaten — lesen + über Orte-Tab editieren
+**Entscheidung (v7.0):** Koordinaten gehören zum Ort, nicht zum Ereignis. Koordinaten werden über den Orte-Tab bearbeitet (Ort-Detail → Bearbeiten) und wirken automatisch auf alle Ereignisse an diesem Ort. Beim Schreiben: `geoLines()` schlägt zuerst in `AppState.db.extraPlaces[placeName]` nach, Fallback auf `obj.lati/obj.long`.
 
 **Legacy-spezifisches Format:**
 ```gedcom
@@ -285,21 +292,20 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 
 ---
 
-## Roundtrip-Delta-Verlauf (MeineDaten_ancestris.ged, 2796 Personen)
+## Roundtrip-Delta-Verlauf (MeineDaten_ancestris.ged, 2811 Personen)
 
 | Stand | Delta |
 |---|---|
-| Sprint 10 Ausgangslage | -708 |
+| Ausgangslage (Sprint 10) | -708 |
 | + Verbatim Passthrough INDI/FAM | -226 |
-| Sprint 12: frelSeen/mrelSeen, extraRecords | -126 |
-| Sprint 13: alle OBJE-Kontexte | -84 |
-| Roundtrip-Fix 2026-03-24 | ~-12 |
-| Roundtrip-Fix 2026-03-26: addrExtra, NICK-Position, _FREL-Space | **-7** |
-| v4-dev 2026-03-28: HEAD `_headLines[]`, ENGA vollständig, leere Events `seen`-Flag, NOTE-Record Sub-Tags, MAP ohne PLAC | **-7** |
-| v4-dev 2026-03-28: ENGA MAP, leere DATE/PLAC `null`-Init | **≈0** |
-| v5-dev 2026-04-05: DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter fix (sw v135) | **≈0** |
-| v5-dev 2026-04-05: Parser lv>4 passthrough fix + writer `updateHeadDate=false` (sw v142) | **0** |
-| v5-dev 2026-04-05: `DSCR`/`IDNO`/`SSN` aus passthrough → `events[]` (sw v148) | **0** |
+| frelSeen/mrelSeen, extraRecords | -126 |
+| alle OBJE-Kontexte | -84 |
+| addrExtra, NICK-Position, _FREL-Space | **-7** |
+| HEAD `_headLines[]`, ENGA vollständig, `seen`-Flag, MAP ohne PLAC | **≈0** |
+| DIV/DIVF/ENG strukturiert (sw v134); ENGA passthrough-Filter (sw v135) | **≈0** |
+| Parser lv>4 fix + `updateHeadDate=false` (sw v142) | **0** |
+| `DSCR`/`IDNO`/`SSN` → `events[]` (sw v148) | **0** |
+| writeGEDCOM() in Subfunktionen, FAM-events-Duplikation behoben (sw v167) | **0** |
 
 `roundtrip_stable: true` · `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
 
@@ -434,16 +440,78 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 
 ---
 
+---
+
+### ADR-015: A10 — `unsafe-inline` aus CSP entfernen (v7-dev)
+
+**Kontext:** Die Content Security Policy enthält `style-src 'unsafe-inline'`, was XSS-Angriffe über injizierte `style=`-Attribute ermöglicht. Ziel: 0 `style=`-Attribute im HTML + in JS-Templates → CSP ohne `unsafe-inline`.
+
+**Wichtig:** Nur HTML-geparste `style=`-Attribute erzwingen `unsafe-inline`. CSSOM (`el.style.display = 'flex'`) ist CSP-sicher — diese Aufrufe bleiben unverändert.
+
+**Ausgangslage:** 501 CSP-kritische `style=`-Attribute:
+- 240 in `index.html` (statisch)
+- 261 in 20 JS-Dateien (dynamisch in Template-Strings)
+
+**Strategie:**
+1. **Utility-Klassen** in `styles.css` — ersetzen einmalige Styles (display, flex, gap, font-size …)
+2. **Component-Klassen** in `styles.css` — ersetzen wiederkehrende mehrteilige Styles (`.filter-btn`, `.btn-gold`, `.sheet-footer` …)
+3. **ID-spezifische Regeln** in `styles.css` — für Elemente mit einmaligem Layout (`#modalLightbox`, `#mapContainer`, `#em-thumb-bar` …)
+4. **`hidden`-Attribut** statt `style="display:none"` — semantisch korrekt, JS-`el.style.display` überschreibt `[hidden]`-Regel (kein `!important`)
+5. **`[hidden] { display: none; }`** in `styles.css` — Basis für das `hidden`-Attribut
+
+**CSS-Variablen-Aliases** (ergänzt, da fehlend):
+```css
+:root { --bg-card: var(--surface); --border-color: var(--border); }
+```
+
+**Phasen-Übersicht** (Fortschritt → ROADMAP.md):
+1. Utility- + Component-Klassen in `styles.css`
+2. `index.html` statische `style=`-Attribute
+3. `ui-forms*.js` Formular-Templates
+4. View-Dateien (`ui-views-*.js`, `ui-media.js`)
+5. Focus-Management (`ui-views.js`)
+6. `unsafe-inline` aus CSP-Header entfernen
+
+**Utility-Klassen (Auswahl, vollständig in `styles.css`):**
+
+*Display/Flex:* `.d-none` · `.d-flex` · `.flex-1` · `.flex-none` · `.flex-shrink-0` · `.flex-col` · `.flex-wrap` · `.ai-c` · `.jc-c`
+
+*Gap:* `.gap-4` … `.gap-12`
+
+*Sizing:* `.w-full` · `.min-w-0` · `.w-54` · `.w-72` · `.min-w-100` · `.ov-y-auto` · `.max-h-280`
+
+*Spacing:* `.mb-0` · `.mb-4` … `.mb-14` · `.mt-6` … `.mt-20` · `.p-0`
+
+*Typography:* `.fs-xxs` · `.fs-xs` · `.fs-sm` · `.fs-md` · `.fw-600` · `.c-muted` · `.c-dim` · `.c-gold-lt` · `.nowrap` · `.text-upper` · `.lh-17`
+
+*Misc:* `.resize-v` · `.pos-rel`
+
+**Component-Klassen (Auswahl):**
+`.topbar-btn-icon` · `.filter-input` · `.filter-btn` · `.filter-btn-md` · `.btn-outline-sm` · `.btn-dim` · `.btn-sec` · `.btn-gold` · `.btn-gold-sm` · `.btn-choice` · `.tpl-btn` · `.date-d` · `.date-y` · `.date-qual-sel` · `.place-toggle-btn` · `.btn-row-col` · `.empty-hint` · `.list-scroll-inner` · `.sheet-footer` · `.sheet-footer-safe` · `.sheet-tall-88` · `.sheet-tall-90` · `.repo-display` · `.repo-section-label` · `.settings-card` · `.settings-section-top` · `.settings-section-mid` · `.settings-section-bot` · `.version-info` · `.divider` · `.search-wrap-year` · `.media-prim-label` · `.help-body` · `.map-search-wrap` · `.map-close-wrap`
+
+**Konversions-Muster (Phase 2):**
+```html
+<!-- vorher -->
+<span id="changedIndicator" style="display:none" class="changed-dot"></span>
+<button class="topbar-btn" style="font-size:1.2rem; padding: 6px 8px;">☰</button>
+<div class="search-wrap" style="display:flex;gap:6px;align-items:center;padding-top:0;margin-top:-4px">
+
+<!-- nachher -->
+<span id="changedIndicator" hidden class="changed-dot"></span>
+<button class="topbar-btn topbar-btn-icon">☰</button>
+<div class="search-wrap search-wrap-year d-flex gap-6 ai-c">
+```
+
+**Entscheidung:** `[hidden]` ohne `!important` — damit bleibt `el.style.display = 'flex'` im JS lauffähig ohne Anpassung aller show/hide-Aufrufe.
+
+---
+
 ## Bekannte Einschränkungen
 
 | Problem | Ursache | Status |
 |---|---|---|
-| ~~DIV/DIVF nicht editierbar~~ | → sw v134/v147: als FAM-Events strukturiert + Formularfelder | Abgeschlossen (v5-dev) |
-| Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
+| Mehrere inline INDI-Notes beim Editieren zusammengeführt | ui-forms.js joind noteTexts[] beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog (v7) |
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
-| ~~State-Management~~ | 22 cross-file Globals → `AppState`/`UIState` Namespaces | Abgeschlossen (v4.0) |
-| Cmd+Z = "Revert to Saved" | Kein granulares Undo | Dokumentiert, UX-Problem |
-| ~~Virtuelles Scrollen~~ | → sw v145: Spacer-div-Ansatz, O(log n) Binary-Search | Abgeschlossen (v5-dev) |
-| ~~`ui-views.js` gross~~ | → 5 Module aufgeteilt (sw v94) | Abgeschlossen (v5-dev) |
-| ~~`onedrive.js` 946 Z.~~ | → 3 Module aufgeteilt (sw v140) | Abgeschlossen (v5-dev) |
-| ~~`ui-forms.js` 1036 Z.~~ | → 3 Module aufgeteilt (sw v141) | Abgeschlossen (v5-dev) |
+| Cmd+Z = "Revert to Saved" | Kein granulares Undo — History-Stack fehlt | Backlog (v7) |
+| `_GRAMPS_ID` nicht strukturiert | Landet in `_passthrough[]` → GRAMPS-Re-Import verliert ID-Zuordnung | v7 Phase 1 |
+| `_ASSO` (Assoziationen) nur passthrough | Kein UI, kein TYPE-Handling | v7 Phase 2 |

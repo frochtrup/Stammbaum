@@ -8,7 +8,7 @@ Architektur-Entscheidungen: `ARCHITECTURE.md` · Datenmodell: `DATAMODEL.md`
 ## HTML-Seitenstruktur
 
 ```
-body
+body  (index.html — Hauptapp)
 ├── #v-landing          Startseite: GEDCOM laden / Demo
 │   ├── Upload-Box      Drag & Drop + Datei-Picker
 │   ├── .landing-tagline  „Vollständig im Browser · Keine Installation · Keine Cloud"
@@ -63,6 +63,8 @@ body
 │
 ├── .fab                Floating Action Button (＋), ausgeblendet auf Orte-Tab + Baum
 └── #toast              Status-Meldungen (auto-hide nach 2.8s)
+
+offline.html  (self-contained, kein ext. CSS/JS — Offline-Fallback via Service Worker)
 ```
 
 ---
@@ -178,7 +180,8 @@ body.desktop-mode:
 | `.rel-row` | Personen-Verknüpfung mit Pfeil (Eltern, Kinder, Partner) |
 | `.unlink-btn` | Kreisförmiger ×-Button (24px) zum Trennen von Beziehungen |
 | `.source-card` | Quellen-Karte in der Quellen-Liste |
-| `.src-badge` | Kompakter Quellen-Badge: §N (inline in fact-row, gold-dim, 0.62rem) |
+| `.src-badge` | Kompakter Quellen-Badge: §N (inline in fact-row, gold-dim, 0.62rem); optional mit Seiten-Suffix (z.B. `§42·15`) |
+| `.src-badge--q0/q1/q2/q3` | QUAY-Farbindikator: Rot (unzuverlässig) / Orange / Blau / Grün (direkt) |
 | `.src-picker-item` | Eintrag in der Quellen-Auswahlliste |
 | `.sheet` | Bottom-Sheet Modal (slide-up von unten) |
 | `.modal-overlay` | Halbtransparenter Hintergrund hinter Modals |
@@ -205,7 +208,7 @@ Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
 | Symbol / Klasse | Bedeutung | Kontext |
 |---|---|---|
 | `📎` | Medien-Anhang vorhanden (OBJE, Foto, Dokument) | Personen-/Familien-Liste, Detail-Hero |
-| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID; Tooltip = `s.abbr \|\| s.title` | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
+| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID; Tooltip = `s.abbr \|\| s.title`; QUAY-Farbe via `.src-badge--q0/q1/q2/q3`; Seiten-Suffix wenn ≤5 Zeichen | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
 | `+ Q` (gestrichelt) | Quellen-Zitat hinzufügen — CTA wenn noch keine Quelle zugewiesen | Kindbeziehungs-Zeile, Events ohne Quellen |
 | `½` (`.tree-half-badge`) | Halbgeschwister — Kind gehört zu anderer Ehe des Zentrum-Elternteils | Baum-Karte (bottom-right) |
 | `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Baum |
@@ -218,6 +221,7 @@ Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
 - Click auf `.src-badge` öffnet je nach Kontext `showSourceDetail(sid)` (fact-row) oder den zugehörigen Dialog (z.B. `showChildRelDialog`)
 - `+ Q` erscheint nur wenn wirklich 0 Quellen zugewiesen sind; verschwindet nach erstem Hinzufügen
 - `.src-tag` wird **nicht** verwendet — war ein veraltetes Zwischenformat, abgelöst durch `.src-badge`
+- **ExtraNames** (zweite+ Namenangaben) sind in Personendetail klickbar (`data-action="showPersonForm"`) und öffnen das Personen-Formular
 
 ### Geschlecht im Baum
 ```css

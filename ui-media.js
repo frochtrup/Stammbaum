@@ -1,3 +1,49 @@
+// ─────────────────────────────────────
+//  FOTO RESIZE HELPERS
+// ─────────────────────────────────────
+function resizeImageToBase64(file, maxPx = 800, quality = 0.82) {
+  const _drawAndResolve = (source, resolve, reject) => {
+    let w = source.width || source.naturalWidth;
+    let h = source.height || source.naturalHeight;
+    if (!w || !h) { reject(new Error('Bildgrösse unbekannt')); return; }
+    if (w > maxPx || h > maxPx) {
+      if (w >= h) { h = Math.round(h * maxPx / w); w = maxPx; }
+      else        { w = Math.round(w * maxPx / h); h = maxPx; }
+    }
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(source, 0, 0, w, h);
+    if (source.close) source.close(); // ImageBitmap cleanup
+    const b64 = cv.toDataURL('image/jpeg', quality);
+    if (b64.length > 400000) showToast('Foto ist gross (' + Math.round(b64.length / 1024) + ' KB) – ggf. Qualität reduzieren');
+    resolve(b64);
+  };
+
+  return new Promise((resolve, reject) => {
+    if (typeof createImageBitmap === 'function') {
+      createImageBitmap(file).then(bmp => {
+        _drawAndResolve(bmp, resolve, reject);
+      }).catch(() => {
+        _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve);
+      });
+    } else {
+      _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve);
+    }
+  });
+}
+
+function _tryViaImg(file, maxPx, quality, resolve, reject, _drawAndResolve) {
+  const reader = new FileReader();
+  reader.onerror = reject;
+  reader.onload = e => {
+    const img = new Image();
+    img.onerror = reject;
+    img.onload = () => _drawAndResolve(img, resolve, reject);
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 // ─── Medien hinzufügen / löschen ─────────────────────────────────────────
 let _addMediaType            = null; // 'person' | 'family' | 'source'
 let _addMediaId              = null;
@@ -35,7 +81,7 @@ function openEditMediaDialog(type, entityId, idx) {
   const thumbBar = document.getElementById('em-thumb-bar');
   const preview  = document.getElementById('em-preview');
   thumbBar.textContent = icon;
-  preview.innerHTML = `<div style="font-size:3rem">${icon}</div>`;
+  preview.innerHTML = `<div class="fs-huge">${icon}</div>`;
 
   openModal('modalEditMedia');
 
@@ -49,7 +95,7 @@ function openEditMediaDialog(type, entityId, idx) {
       _odGetSourceFileUrl(entityId, idx).then(url => {
         if (!url) return;
         if (isImg) { _setEditMediaPreview(url); }
-        else { if (preview) preview.innerHTML = `<a href="${url}" target="_blank" style="font-size:3rem;text-decoration:none">${icon}</a>`; }
+        else { if (preview) preview.innerHTML = `<a href="${url}" target="_blank" class="fs-huge no-underline">${icon}</a>`; }
       }).catch(() => {});
     }
   } else {
@@ -70,7 +116,7 @@ function _setEditMediaPreview(src) {
   const img = document.createElement('img');
   img.src = src;
   img.style.cssText = 'max-width:100%;max-height:200px;object-fit:contain;border-radius:8px;cursor:pointer';
-  img.onclick = () => showLightbox(src);
+  img.addEventListener('click', () => showLightbox(src));
   preview.appendChild(img);
   if (thumbBar) {
     thumbBar.innerHTML = '';
@@ -219,7 +265,7 @@ function _onCamCapture(b64) {
   document.getElementById('am-file').value = base + name;
   _addMediaCamB64 = b64;
   document.getElementById('am-cam-img').src = b64;
-  document.getElementById('am-cam-preview').style.display = '';
+  document.getElementById('am-cam-preview').hidden = false;
 }
 
 async function openAddMediaDialog(type, entityId) {
@@ -229,7 +275,7 @@ async function openAddMediaDialog(type, entityId) {
   _addMediaCamB64   = null;
   _addMediaDefaultFolderPath = '';
   document.getElementById('am-title').value = '';
-  document.getElementById('am-cam-preview').style.display = 'none';
+  document.getElementById('am-cam-preview').hidden = true;
   document.getElementById('am-cam-input').setAttribute('capture', 'environment');
   document.getElementById('am-od-row').style.display = _odIsConnected() ? '' : 'none';
   document.getElementById('am-file').value = '';
@@ -359,9 +405,9 @@ function showMediaBrowser() {
 
   let html = '';
   if (!items.length) {
-    html = '<div style="color:var(--text-muted);font-style:italic;padding:24px 0;text-align:center;font-size:0.88rem">Keine Medien gefunden</div>';
+    html = '<div class="empty-hint">Keine Medien gefunden</div>';
   } else {
-    html += `<div style="font-size:0.78rem;color:var(--text-muted);padding:0 0 10px 0">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
+    html += `<div class="media-count">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
     // Gruppiert nach Quelle
     const bySource = {};
     for (const item of items) {
@@ -370,18 +416,18 @@ function showMediaBrowser() {
     }
     for (const srcId of Object.keys(bySource)) {
       const group = bySource[srcId];
-      html += `<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:10px 0 4px 0;border-top:1px solid var(--border)">${esc(group[0].srcTitle)}</div>`;
+      html += `<div class="media-browser-header">${esc(group[0].srcTitle)}</div>`;
       for (const { srcId: sid, idx, m } of group) {
         const _ext = (m.file || '').split('.').pop().toLowerCase();
         const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
         const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
         const thumbId = 'mb-thumb-' + sid + '-' + idx;
-        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
+        html += `<div class="media-row--browser"
           data-action="browserShowSource" data-sid="${sid}">
-          <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
-            ${m.title && m.file ? `<div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all">${esc(m.file)}</div>` : ''}
+          <div id="${thumbId}" class="media-thumb--sm">${_icon}</div>
+          <div class="media-info">
+            <div class="media-title">${esc(m.title || m.file)}</div>
+            ${m.title && m.file ? `<div class="media-sub">${esc(m.file)}</div>` : ''}
           </div>
           <span class="p-arrow">›</span>
         </div>`;
@@ -422,9 +468,9 @@ function showPersonMediaBrowser() {
 
   let html = '';
   if (!items.length) {
-    html = '<div style="color:var(--text-muted);font-style:italic;padding:24px 0;text-align:center;font-size:0.88rem">Keine Medien gefunden</div>';
+    html = '<div class="empty-hint">Keine Medien gefunden</div>';
   } else {
-    html += `<div style="font-size:0.78rem;color:var(--text-muted);padding:0 0 10px 0">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
+    html += `<div class="media-count">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
     const byPerson = {};
     const pidOrder = [];
     for (const item of items) {
@@ -433,18 +479,18 @@ function showPersonMediaBrowser() {
     }
     for (const pid of pidOrder) {
       const group = byPerson[pid];
-      html += `<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:10px 0 4px 0;border-top:1px solid var(--border)">${esc(group[0].pName)}</div>`;
+      html += `<div class="media-browser-header">${esc(group[0].pName)}</div>`;
       for (const { pid: p_id, idx, m } of group) {
         const _ext = (m.file || '').split('.').pop().toLowerCase();
         const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
         const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
         const thumbId = 'mb-p-' + p_id.replace(/@/g, '') + '-' + idx;
-        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
+        html += `<div class="media-row--browser"
           data-action="browserShowPerson" data-pid="${p_id}">
-          <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
-            ${m.title && m.file ? `<div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all">${esc(m.file)}</div>` : ''}
+          <div id="${thumbId}" class="media-thumb--sm">${_icon}</div>
+          <div class="media-info">
+            <div class="media-title">${esc(m.title || m.file)}</div>
+            ${m.title && m.file ? `<div class="media-sub">${esc(m.file)}</div>` : ''}
           </div>
           <span class="p-arrow">›</span>
         </div>`;
@@ -492,9 +538,9 @@ function showFamilyMediaBrowser() {
 
   let html = '';
   if (!items.length) {
-    html = '<div style="color:var(--text-muted);font-style:italic;padding:24px 0;text-align:center;font-size:0.88rem">Keine Medien gefunden</div>';
+    html = '<div class="empty-hint">Keine Medien gefunden</div>';
   } else {
-    html += `<div style="font-size:0.78rem;color:var(--text-muted);padding:0 0 10px 0">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
+    html += `<div class="media-count">${items.length} Medium${items.length !== 1 ? 'en' : ''}</div>`;
     const byFamily = {};
     const fidOrder = [];
     for (const item of items) {
@@ -503,18 +549,18 @@ function showFamilyMediaBrowser() {
     }
     for (const fid of fidOrder) {
       const group = byFamily[fid];
-      html += `<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;padding:10px 0 4px 0;border-top:1px solid var(--border)">${esc(group[0].fTitle)}</div>`;
+      html += `<div class="media-browser-header">${esc(group[0].fTitle)}</div>`;
       for (const { fid: f_id, idx, m } of group) {
         const _ext = (m.file || '').split('.').pop().toLowerCase();
         const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
         const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
         const thumbId = 'mb-f-' + f_id.replace(/@/g, '') + '-' + idx;
-        html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer"
+        html += `<div class="media-row--browser"
           data-action="browserShowFamily" data-fid="${f_id}">
-          <div id="${thumbId}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border)">${_icon}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:0.88rem;font-weight:500;word-break:break-all">${esc(m.title || m.file)}</div>
-            ${m.title && m.file ? `<div style="font-size:0.78rem;color:var(--text-muted);word-break:break-all">${esc(m.file)}</div>` : ''}
+          <div id="${thumbId}" class="media-thumb--sm">${_icon}</div>
+          <div class="media-info">
+            <div class="media-title">${esc(m.title || m.file)}</div>
+            ${m.title && m.file ? `<div class="media-sub">${esc(m.file)}</div>` : ''}
           </div>
           <span class="p-arrow">›</span>
         </div>`;

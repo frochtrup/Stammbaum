@@ -6,63 +6,86 @@
 // sodass bestehende Aufrufer ohne Änderung weiter funktionieren.
 
 const AppState = {
-  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] },
+  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] },
   changed:          false,
   idCounter:        1000,
   currentPersonId:  null,
   currentFamilyId:  null,
   currentSourceId:  null,
   currentRepoId:    null,
+  currentPlaceName: null,
   currentTab:       'persons',
   _detailActive:    false,       // true wenn v-detail echten Inhalt zeigt
   _fileHandle:      null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
   _canDirectSave:   false,       // true wenn createWritable() auf _fileHandle funktioniert
   _originalGedText: null,        // Fallback wenn localStorage-Backup fehlschlägt; sonst null
+  _undoStack:       [],          // [{ label, persons:{}, families:{}, sources:{}, repos:{} }, …] max 30
+  _redoStack:       [],          // gleiche Struktur wie _undoStack
 };
 
 const UIState = {
   _treeScale:       1,           // Zoom-Faktor Sanduhr-Ansicht
-  _treeHistory:     [],          // Navigations-History im Baum
-  _treeHistoryPos:  -1,
   _relMode:         '',          // 'spouse' | 'child' | 'parent'
   _relAnchorId:     '',          // personId (spouse/parent) oder famId (child)
   _pendingRelation: null,        // { mode, anchorId } — gesetzt vor showPersonForm()
   _pendingRepoLink: null,        // { sourceId } — gesetzt vor showRepoForm(null)
-  _placesCache:     null,        // Cache für collectPlaces(); wird in markChanged() geleert
+  _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
+  _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
+  _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
+  _soundexMode:       false,     // Soundex-Suche: phonetische Namens-Varianten
+  _placesSubTab:    'orte',      // 'orte' | 'hoefe'
+  _navHistory:      [],          // Navigations-History für Detail-Ansichten (Back-Stack)
+  _navFwdStack:     [],          // Vorwärts-Stack (gefüllt durch goBack(), geleert bei neuer Navigation)
+  _probandId:       null,        // null = Fallback auf kleinste ID
+  _eventClipboard: null,         // kopiertes Ereignis für Übernehmen-Funktion
+  _citClipboard:   null,         // kopierte Quellenbezüge { sources[], pages{}, quay{} }
+  _placeModes:     {},           // { placeId: 'free'|'parts' } — UI-Toggle-Zustand Orts-Eingabe
+  _formState: {                  // transienter Formular-State (ADR-003)
+    srcWidget:    {},            // srcWidgetState[prefix] = { ids, pages, quay }
+    pfExtraNames:   [],          // Zusatz-Namen im Personen-Formular
+    efMedia:        [],          // Medien im Event-Formular
+    efGodparents:   [],          // Taufpaten im CHR-Event-Formular (Xrefs)
+  },
 };
 
-// Backward-compat-Shims: bare Variablennamen leiten zu AppState / UIState um.
-// Entfernen sobald alle Aufrufer auf AppState.x / UIState.x umgestellt sind.
-(function _installStateShims() {
-  const _map = [
-    [AppState, ['db','changed','idCounter','currentPersonId','currentFamilyId',
-                'currentSourceId','currentRepoId','currentTab','_detailActive',
-                '_fileHandle','_canDirectSave','_originalGedText']],
-    [UIState,  ['_treeScale','_treeHistory','_treeHistoryPos',
-                '_relMode','_relAnchorId','_pendingRelation','_pendingRepoLink','_placesCache']],
-  ];
-  for (const [ns, keys] of _map) {
-    for (const k of keys) {
-      Object.defineProperty(window, k, {
-        get()  { return ns[k]; },
-        set(v) { ns[k] = v; },
-        configurable: true,
-      });
-    }
+// Backward-compat-Shim: bare `db` → AppState.db (wird in gedcom-writer.js + ui-*.js verwendet)
+Object.defineProperty(window, 'db', {
+  get()  { return AppState.db; },
+  configurable: true,
+});
+
+// Mutiert AppState.db in-place statt die Referenz zu ersetzen.
+// So bleiben const db = AppState.db Bindings in allen Modulen dauerhaft gültig.
+function setDb(newDb) {
+  for (const k of Object.keys(AppState.db)) delete AppState.db[k];
+  Object.assign(AppState.db, newDb);
+}
+
+// Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
+// srcWidgetState[p] ist lesbarer als UIState._formState.srcWidget[p] (34 Verwendungen in ui-forms.js).
+(function _installFormStateShims() {
+  for (const [prop, subKey] of [
+    ['srcWidgetState', 'srcWidget'],
+    ['_pfExtraNames',   'pfExtraNames'],
+    ['_efMedia',        'efMedia'],
+    ['_efGodparents',   'efGodparents'],
+  ]) {
+    Object.defineProperty(window, prop, {
+      get()  { return UIState._formState[subKey]; },
+      set(v) { UIState._formState[subKey] = v; },
+      configurable: true,
+    });
   }
 })();
 
 // ─── Konstante Globals (const — kein Shim nötig) ────────────────────────────
-const _navHistory      = [];    // Navigations-History für Detail-Ansichten
 const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto
 const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde
 const _activeSpouseMap = {};    // personId → aktiver Ehepartner-Index
 
-// Liefert den Original-GEDCOM-Text (erste geladene Version).
-// Bevorzugt _originalGedText (RAM, immer aktuell für aktive Session);
-// localStorage-Backup als Fallback nach Reload (wenn RAM verloren, aber Storage erhalten).
+// Liefert den Original-GEDCOM-Text (erste geladene Version, aus RAM oder IDB via tryAutoLoad).
 function _getOriginalText() {
-  return AppState._originalGedText || localStorage.getItem('stammbaum_ged_backup') || null;
+  return AppState._originalGedText ?? null;
 }
 
 function nextId(prefix) {
@@ -87,6 +110,22 @@ const EVENT_LABELS = {
   ENGA:'Verlobung',      DIV:'Scheidung',       DIVF:'Scheidungsantrag',
   MARR:'Heirat',         BIRT:'Geburt',         DEAT:'Tod',
   CHR:'Taufe',           BURI:'Beerdigung',
+};
+
+// GEDCOM-Typ → Person-Property-Name für die 4 Sonder-Ereignisse (BIRT/CHR/DEAT/BURI)
+const SPECIAL_EVENT_KEYS = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
+
+// Label-Map für ASSO RELA-Werte (GEDCOM) / rel-Attribut (GRAMPS <personref>)
+const RELA_LABELS = {
+  'Godparent':  'Taufpate/-mutter',
+  'Godchild':   'Patenkind',
+  'Witness':    'Zeuge/Zeugin',
+  'Friend':     'Freund/in',
+  'Neighbor':   'Nachbar/in',
+  'Associate':  'Bekannte(r)',
+  'Employer':   'Arbeitgeber',
+  'Employee':   'Arbeitnehmer',
+  'Landlord':   'Vermieter',
 };
 
 // Label-Map für GEDCOM NAME TYPE-Werte
@@ -267,6 +306,18 @@ function readDatePartFromFields(baseId) {
   return y;
 }
 
+// Validiert drei Datumsfelder (baseId+'-d'/'-m'/'-y') — gibt Fehlerstring oder null zurück
+function validateDatePartFields(baseId) {
+  const d = (document.getElementById(baseId + '-d')?.value || '').trim();
+  const mRaw = (document.getElementById(baseId + '-m')?.value || '').trim();
+  const y = (document.getElementById(baseId + '-y')?.value || '').trim();
+  if (y && !/^\d{4}$/.test(y)) return 'Jahr muss 4-stellig sein (z.B. 1875)';
+  if (y && (+y < 1000 || +y > 2099)) return 'Jahr außerhalb 1000–2099';
+  if (d && (!/^\d{1,2}$/.test(d) || +d < 1 || +d > 31)) return 'Tag muss 1–31 sein';
+  if (mRaw && !normMonth(mRaw)) return 'Ungültiger Monat';
+  return null;
+}
+
 // Wrapper: liest Qualifier + zwei Datumsbasen → buildGedDate
 function buildGedDateFromFields(qualId, dateBaseId, date2BaseId) {
   return buildGedDate(
@@ -277,8 +328,6 @@ function buildGedDateFromFields(qualId, dateBaseId, date2BaseId) {
 }
 
 // ── PLAC-Modus-Hilfsfunktionen (Sprint 6b) ──────────────────────────────────
-const _placeModes = {};  // { placeId: 'free'|'parts' }
-
 function getPlacLabels() {
   const raw = AppState.db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat';
   return raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
@@ -286,7 +335,7 @@ function getPlacLabels() {
 
 function buildPlacePartsHtml(placeId) {
   return getPlacLabels().map((lbl, i) =>
-    `<input class="form-input" id="${placeId}-p${i}" placeholder="${lbl}" style="margin-bottom:3px">`
+    `<input class="form-input mb-3" id="${placeId}-p${i}" placeholder="${esc(lbl)}">`
   ).join('');
 }
 
@@ -298,17 +347,51 @@ function fillPlaceParts(placeId, raw) {
   });
 }
 
-function joinPlaceParts(placeId) {
+function joinPlaceParts(placeId, keepAll = false) {
   const parts = getPlacLabels().map((_, i) => {
     const el = document.getElementById(`${placeId}-p${i}`);
     return el ? el.value.trim() : '';
   });
-  while (parts.length && !parts[parts.length - 1]) parts.pop();
+  if (!keepAll) while (parts.length && !parts[parts.length - 1]) parts.pop();
   return parts.join(', ');
 }
 
+// Compact-Darstellung: leere Hierarchieteile weglassen ("Ochtrup, , , NRW" → "Ochtrup, NRW")
+function compactPlace(place) {
+  if (!place) return '';
+  return place.split(',').map(s => s.trim()).filter(Boolean).join(', ');
+}
+
+// Parst Koordinaten-Eingabe — unterstützt:
+//   Apple Maps (deutsch): "52,22779° N, 7,17310° O" → ganzer String ins erste Feld
+//   Dezimalgrad:          "52.2073" / "52,2073"
+//   GEDCOM:               "N52.2073"
+// Gibt { lat, lon } zurück (beide können NaN sein bei ungültiger Eingabe).
+function parseCoordInput(firstField, secondField) {
+  const s = (firstField || '').trim();
+  // Vollständiges Paar: <zahl>°<dir> <zahl>°<dir>
+  // O = Ost (DE), E = East, W = West, N/S wie üblich
+  const m = /^([\d.,]+)\s*°?\s*([NSns])\s*[,;\s]+\s*([\d.,]+)\s*°?\s*([OoEeWw])/.exec(s);
+  if (m) {
+    let lat = parseFloat(m[1].replace(/,/g, '.'));
+    let lon = parseFloat(m[3].replace(/,/g, '.'));
+    if (m[2].toUpperCase() === 'S') lat = -lat;
+    if (m[4].toUpperCase() === 'W') lon = -lon;
+    return { lat: Math.abs(lat) <= 90 ? lat : NaN, lon: Math.abs(lon) <= 180 ? lon : NaN };
+  }
+  // Einzelfelder — GEDCOM-Format (N52.2073) oder Dezimalgrad
+  const _one = v => {
+    const t = (v || '').trim();
+    const g = /^([NSns])\s*([\d.,]+)$/.exec(t);
+    if (g) return (g[1].toUpperCase() === 'S' ? -1 : 1) * parseFloat(g[2].replace(',', '.'));
+    return parseFloat(t.replace(',', '.'));
+  };
+  const lat = _one(firstField), lon = _one(secondField);
+  return { lat: Math.abs(lat) <= 90 ? lat : NaN, lon: Math.abs(lon) <= 180 ? lon : NaN };
+}
+
 function getPlaceFromForm(placeId) {
-  if ((_placeModes[placeId] || 'free') === 'parts') return joinPlaceParts(placeId);
+  if ((UIState._placeModes[placeId] || 'free') === 'parts') return joinPlaceParts(placeId);
   return (document.getElementById(placeId)?.value || '').trim();
 }
 
@@ -316,32 +399,32 @@ function initPlaceMode(placeId) {
   const freeEl    = document.getElementById(`${placeId}-free`);
   const partsEl   = document.getElementById(`${placeId}-parts`);
   const toggleBtn = document.getElementById(`${placeId}-toggle`);
-  if (freeEl)    freeEl.style.display  = '';
-  if (partsEl)   partsEl.style.display = 'none';
+  if (freeEl)    freeEl.hidden  = false;
+  if (partsEl)   partsEl.hidden = true;
   if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
-  _placeModes[placeId] = 'free';
+  UIState._placeModes[placeId] = 'free';
 }
 
 function togglePlaceMode(placeId) {
   const freeEl    = document.getElementById(`${placeId}-free`);
   const partsEl   = document.getElementById(`${placeId}-parts`);
   const toggleBtn = document.getElementById(`${placeId}-toggle`);
-  if ((_placeModes[placeId] || 'free') === 'free') {
+  if ((UIState._placeModes[placeId] || 'free') === 'free') {
     const rawVal = (document.getElementById(placeId)?.value || '').trim();
     partsEl.innerHTML = buildPlacePartsHtml(placeId);
     fillPlaceParts(placeId, rawVal);
-    freeEl.style.display  = 'none';
-    partsEl.style.display = '';
+    freeEl.hidden  = true;
+    partsEl.hidden = false;
     if (toggleBtn) toggleBtn.textContent = '⊠ Freitext';
-    _placeModes[placeId] = 'parts';
+    UIState._placeModes[placeId] = 'parts';
   } else {
-    const rawVal = joinPlaceParts(placeId);
-    freeEl.style.display  = '';
-    partsEl.style.display = 'none';
+    const rawVal = joinPlaceParts(placeId, true); // alle Slots erhalten (Langdarstellung)
+    freeEl.hidden  = false;
+    partsEl.hidden = true;
     if (toggleBtn) toggleBtn.textContent = '⊞ Felder';
     const inp = document.getElementById(placeId);
     if (inp) inp.value = rawVal;
-    _placeModes[placeId] = 'free';
+    UIState._placeModes[placeId] = 'free';
   }
 }
 
@@ -352,31 +435,261 @@ function debounce(fn, ms) {
 }
 
 // ─────────────────────────────────────
+//  F4b — Citation-Datenmodell
+// ─────────────────────────────────────
+
+// Factory für ein einzelnes Citation-Objekt (neues Datenmodell)
+function citationObj(sid = '', page = '', quay = '', note = null, extra = [], media = []) {
+  return { sid, page, quay, note, extra: [...extra], media: [...media] };
+}
+
+// Konvertiert Altformat (sources[]+sourcePages{}+...) in-place zu citations[]
+// Idempotent: kein sources[] vorhanden → nichts tun
+function _migrateLegacyCitations(obj) {
+  if (!Array.isArray(obj.sources)) return;
+  obj.citations = obj.sources.map(sid => citationObj(
+    sid,
+    obj.sourcePages?.[sid]  ?? '',
+    obj.sourceQUAY?.[sid]   ?? '',
+    obj.sourceNote?.[sid]   ?? null,   // null = kein NOTE-Tag vorhanden
+    obj.sourceExtra?.[sid]  ?? [],
+    obj.sourceMedia?.[sid]  ?? []
+  ));
+  delete obj.sources;
+  delete obj.sourcePages;
+  delete obj.sourceQUAY;
+  delete obj.sourceNote;
+  delete obj.sourceExtra;
+  delete obj.sourceMedia;
+}
+
+// ─────────────────────────────────────
 //  sourceRefs-Rebuild (nach Event-Saves)
 // ─────────────────────────────────────
+
+function _addCitRefs(refs, obj) {
+  if (!obj) return;
+  if (obj.citations) {
+    obj.citations.forEach(c => { if (c.sid?.startsWith('@')) refs.add(c.sid); });
+  } else if (obj.sources) {
+    obj.sources.forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
+  }
+}
+
 function _rebuildPersonSourceRefs(p) {
   if (!p) return;
   const refs = new Set();
-  const add = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
-  add(p.topSources);
-  add(p.nameSources);
-  add(p.birth?.sources);
-  add(p.death?.sources);
-  add(p.chr?.sources);
-  add(p.buri?.sources);
-  (p.events || []).forEach(ev => add(ev.sources));
-  (p.famc  || []).forEach(fc => add(fc.sourIds));
+  const addArr = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
+  addArr(p.topSources);
+  addArr(p.nameSources);
+  _addCitRefs(refs, p.birth);
+  _addCitRefs(refs, p.death);
+  _addCitRefs(refs, p.chr);
+  _addCitRefs(refs, p.buri);
+  (p.events || []).forEach(ev => _addCitRefs(refs, ev));
+  (p.famc   || []).forEach(fc => _addCitRefs(refs, fc));
   p.sourceRefs = refs;
 }
 
 function _rebuildFamilySourceRefs(f) {
   if (!f) return;
   const refs = new Set();
-  const add = arr => (arr || []).forEach(s => { if (typeof s === 'string' && s.startsWith('@')) refs.add(s); });
-  add(f.marr?.sources);
-  add(f.engag?.sources);
-  add(f.div?.sources);
-  add(f.divf?.sources);
-  (f.events || []).forEach(ev => add(ev.sources));
+  _addCitRefs(refs, f.marr);
+  _addCitRefs(refs, f.engag);
+  _addCitRefs(refs, f.div);
+  _addCitRefs(refs, f.divf);
+  (f.events || []).forEach(ev => _addCitRefs(refs, ev));
   f.sourceRefs = refs;
+}
+
+// Sortierkey für GEDCOM-Datumsstrings → 'YYYYMMDD' (undatiert → '99999999')
+function evDateKey(d) {
+  if (!d) return '99999999';
+  const mo = {JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
+  const yr    = (d.match(/\b(\d{4})\b/) || [])[1] || '9999';
+  const mStr  = (d.match(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/) || [])[1];
+  const dyStr = (d.match(/\b(\d{1,2})\b(?=\s+(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC))/) || [])[1];
+  return yr + (mStr ? mo[mStr] : '00') + (dyStr ? dyStr.padStart(2,'0') : '00');
+}
+
+// ─────────────────────────────────────
+//  DOMAIN-LOGIK: HOF-INDEX
+// ─────────────────────────────────────
+
+// Aggregiert RESI- und PROP-Ereignisse nach Adresse → Map<addr, {addr, entries[], propEntries[]}>
+// Cache in UIState._hofCache; wird von markChanged() geleert.
+function buildHofIndex() {
+  if (UIState._hofCache) return UIState._hofCache;
+  const hoefe = new Map(); // addr → { addr, place, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
+  for (const p of Object.values(AppState.db.individuals)) {
+    for (const ev of (p.events || [])) {
+      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
+        const addr = ev.addr.trim();
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
+        const hof = hoefe.get(addr);
+        if (!hof.propEntries) hof.propEntries = [];
+        // Ersten nicht-leeren Ort aus RESI-Events übernehmen
+        if (!hof.place && ev.place) hof.place = ev.place.trim();
+        hof.entries.push({
+          pid:     p.id,
+          name:    p.name || p.id,
+          date:    ev.date || '',
+          dateKey: evDateKey(ev.date || ''),
+        });
+      }
+      if (ev.type === 'PROP' && ev.addr && ev.addr.trim()) {
+        const addr = ev.addr.trim();
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
+        const hof = hoefe.get(addr);
+        if (!hof.propEntries) hof.propEntries = [];
+        if (!hof.place && ev.place) hof.place = ev.place.trim();
+        hof.propEntries.push({
+          pid:     p.id,
+          name:    p.name || p.id,
+          date:    ev.date || '',
+          dateKey: evDateKey(ev.date || ''),
+          desc:    ev.value || '',
+        });
+      }
+    }
+  }
+  for (const hof of hoefe.values()) {
+    hof.entries.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+    (hof.propEntries || []).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  }
+  UIState._hofCache = hoefe;
+  return hoefe;
+}
+
+// ─────────────────────────────────────
+//  DOMAIN-LOGIK: DUPLIKAT-SCORING
+// ─────────────────────────────────────
+
+// Normiert Namen für Ähnlichkeitsvergleich (Kleinbuchstaben, Umlaute, Whitespace)
+function _dedupNormName(str) {
+  if (!str) return '';
+  return str.toLowerCase().trim()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/\s+/g, ' ');
+}
+
+// Levenshtein-Ähnlichkeit 0..1 (1 = identisch)
+function _dedupLevenshtein(a, b) {
+  if (!a && !b) return 1;
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const la = a.length, lb = b.length;
+  if (Math.max(la, lb) === 0) return 1;
+  const dp = Array.from({ length: la + 1 }, (_, i) => [i]);
+  for (let j = 0; j <= lb; j++) dp[0][j] = j;
+  for (let i = 1; i <= la; i++) {
+    for (let j = 1; j <= lb; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return 1 - dp[la][lb] / Math.max(la, lb);
+}
+
+// Extrahiert Geburtsjahr aus GEDCOM-Datumsstring
+function _dedupYearFromGed(dateStr) {
+  if (!dateStr) return null;
+  const { date1 } = parseGedDate(dateStr);
+  const iso = gedDatePartToISO(date1 || dateStr);
+  const y = parseInt((iso || '').split('-')[0]);
+  return isNaN(y) ? null : y;
+}
+
+// Berechnet Ähnlichkeits-Score zwischen zwei Personen (0..100)
+// Gibt { score, reasons[] } zurück
+function _dedupScorePair(pA, pB) {
+  const reasons = [];
+  let score = 0;
+
+  // Nachname (max 30)
+  const snA = _dedupNormName(pA.surname || '');
+  const snB = _dedupNormName(pB.surname || '');
+  if (snA && snB) {
+    const r = _dedupLevenshtein(snA, snB);
+    score += r * 30;
+    if (r >= 0.9) reasons.push('Nachname identisch');
+    else if (r >= 0.7) reasons.push('Nachname ähnlich');
+  }
+
+  // Vorname (max 25)
+  const gnA = _dedupNormName(pA.given || '');
+  const gnB = _dedupNormName(pB.given || '');
+  if (gnA && gnB) {
+    const r = _dedupLevenshtein(gnA, gnB);
+    score += r * 25;
+    if (r >= 0.9) reasons.push('Vorname identisch');
+    else if (r >= 0.7) reasons.push('Vorname ähnlich');
+  }
+
+  // Geschlecht (max 15, Malus -20)
+  if (pA.sex !== 'U' && pB.sex !== 'U') {
+    if (pA.sex === pB.sex) { score += 15; }
+    else { score -= 20; reasons.push('Geschlecht verschieden'); }
+  }
+
+  // Geburtsjahr (max 20)
+  const yA = _dedupYearFromGed(pA.birth?.date);
+  const yB = _dedupYearFromGed(pB.birth?.date);
+  if (yA && yB) {
+    const diff = Math.abs(yA - yB);
+    if      (diff === 0) { score += 20; reasons.push('Geburtsjahr identisch'); }
+    else if (diff <= 1)  { score += 15; reasons.push('Geburtsjahr ±1'); }
+    else if (diff <= 2)  { score +=  8; }
+    else if (diff <= 5)  { score +=  3; }
+  } else {
+    score += 5; // neutral wenn kein Datum bekannt
+  }
+
+  // Geburtsort (max 10)
+  const plA = compactPlace(pA.birth?.place || '').toLowerCase().slice(0, 40);
+  const plB = compactPlace(pB.birth?.place || '').toLowerCase().slice(0, 40);
+  if (plA && plB) {
+    const r = _dedupLevenshtein(plA, plB);
+    score += r * 10;
+    if (r >= 0.9) reasons.push('Geburtsort identisch');
+    else if (r >= 0.7) reasons.push('Geburtsort ähnlich');
+  }
+
+  return { score: Math.round(score), reasons };
+}
+
+// Paarweise Duplikatsuche mit Nachname-Bucketing (O(n·k²) statt O(n²))
+// Gibt sortierte Liste [{pA, pB, score, reasons}] zurück
+function findDuplicatePairs(threshold) {
+  threshold = threshold || 65;
+  const persons = Object.values(AppState.db.individuals);
+  const results = [];
+
+  const buckets = {};
+  for (const p of persons) {
+    const key = _dedupNormName(p.surname || p.name || '').slice(0, 3) || '___';
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push(p);
+  }
+
+  for (const bucket of Object.values(buckets)) {
+    for (let i = 0; i < bucket.length - 1; i++) {
+      for (let j = i + 1; j < bucket.length; j++) {
+        const pA = bucket[i], pB = bucket[j];
+        const { score, reasons } = _dedupScorePair(pA, pB);
+        if (score >= threshold) results.push({ pA, pB, score, reasons });
+      }
+    }
+  }
+
+  return results.sort((a, b) => b.score - a.score);
+}
+
+// ─────────────────────────────────────
+//  HTML-UTILS
+// ─────────────────────────────────────
+function esc(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }

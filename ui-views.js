@@ -1,10 +1,25 @@
 // ─────────────────────────────────────
 //  PROBAND
 // ─────────────────────────────────────
-let _probandId = null;  // null = Fallback auf kleinste ID
+// UIState._probandId — Proband-ID (kein Shim mehr)
 
 function getProbandId() {
-  return (_probandId && AppState.db.individuals[_probandId]) ? _probandId : smallestPersonId();
+  return (UIState._probandId && AppState.db.individuals[UIState._probandId]) ? UIState._probandId : smallestPersonId();
+}
+
+function _toggleProband(id) {
+  const p = AppState.db.individuals[id];
+  if (!p) return;
+  if (getProbandId() === id) {
+    UIState._probandId = null;
+    idbPut('proband_id', null).catch(() => {});
+    showToast('Proband zurückgesetzt (kleinste ID)');
+  } else {
+    UIState._probandId = id;
+    idbPut('proband_id', id).catch(() => {});
+    showToast('Proband: ' + (p.name || id));
+  }
+  showDetail(id, false);
 }
 
 // ─────────────────────────────────────
@@ -21,6 +36,11 @@ function showView(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   if (id === 'v-main') _updateTopbarH();
+  // Karte ausblenden wenn nicht im Orte-Tab
+  if (id !== 'v-main' || AppState.currentTab !== 'places') {
+    document.body.classList.remove('places-karte');
+    document.getElementById('mapContainer')?.style.setProperty('display', 'none');
+  }
 
   if (desktop) {
     document.getElementById('v-main').classList.add('active');
@@ -29,7 +49,7 @@ function showView(id) {
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); }
+    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
@@ -47,6 +67,64 @@ function setBnavActive(name) {
   if (btn) btn.classList.add('active');
 }
 
+// Sammelt PAGE/QUAY-Angaben einer Person oder Familie für eine bestimmte Quelle
+function _collectSourceMeta(entity, sid) {
+  const pairs = new Map(); // pageVal → quayVal (first found per page wins)
+  function check(obj) {
+    if (!obj) return;
+    for (const c of (obj.citations || [])) {
+      if (c.sid !== sid) continue;
+      const key = c.page || '\x00';
+      if (!pairs.has(key)) pairs.set(key, c.quay);
+    }
+  }
+  if (entity.birth !== undefined) {
+    // topSources (INDI-Level)
+    if ((entity.topSources || []).includes(sid)) {
+      const page = (entity.topSourcePages || {})[sid] || '';
+      const quay = (entity.topSourceQUAY  || {})[sid];
+      const key = page || '\x00';
+      if (!pairs.has(key)) pairs.set(key, quay);
+    }
+    check(entity.birth); check(entity.death); check(entity.chr); check(entity.buri);
+    for (const ev of (entity.events || [])) check(ev);
+    for (const en of (entity.extraNames || [])) check(en);
+  }
+  if (entity.marr !== undefined) {
+    check(entity.marr); check(entity.engag); check(entity.div); check(entity.divf);
+  }
+  if (!pairs.size) return '';
+  return [...pairs.entries()].map(([page, quay]) => {
+    const parts = [];
+    if (page && page !== '\x00') parts.push('S.' + page);
+    if (quay !== undefined && quay !== '') parts.push('Q' + quay);
+    return parts.join('\u202f') || '–';
+  }).join(', ');
+}
+
+// Wandelt http(s)-URLs in anklickbare Links um; escapet den Rest
+function linkifyUrls(text) {
+  if (!text) return '';
+  return text.split(/(https?:\/\/[^\s<>"]+)/g).map((part, i) =>
+    i % 2 === 1
+      ? `<a href="${esc(part)}" target="_blank" rel="noopener" class="linkify-url">${esc(part)}</a>`
+      : esc(part)
+  ).join('');
+}
+
+// Setzt data-il-style-Attribute via CSSOM (CSP-sicher) und entfernt das Attribut danach.
+function _applyDynStyles(root) {
+  root.querySelectorAll('[data-il-style]').forEach(el => {
+    const s = el.getAttribute('data-il-style');
+    el.removeAttribute('data-il-style');
+    s.split(';').forEach(d => {
+      const i = d.indexOf(':');
+      if (i < 0) return;
+      el.style.setProperty(d.slice(0, i).trim(), d.slice(i + 1).trim());
+    });
+  });
+}
+
 // Bottom-Nav: Baum-Tab
 function bnavTree() {
   setBnavActive('tree');
@@ -55,8 +133,44 @@ function bnavTree() {
   else { showView('v-main'); setBnavActive('persons'); }
 }
 
+function switchPlacesSubTab(sub) {
+  UIState._placesSubTab = sub;
+  const isDesktop = document.body.classList.contains('desktop-mode');
+  // Desktop: Orte-Liste bleibt im linken Panel als Navigation auch wenn Karte aktiv
+  const showOrteList   = sub === 'orte' || (sub === 'karte' && isDesktop);
+  document.getElementById('placeList')?.style.setProperty('display',          showOrteList ? '' : 'none');
+  document.getElementById('place-search-orte')?.style.setProperty('display',  showOrteList ? '' : 'none');
+  const _hofList = document.getElementById('hofList'); if (_hofList) _hofList.hidden = sub !== 'hoefe';
+  const _hofSearch = document.getElementById('place-search-hoefe'); if (_hofSearch) _hofSearch.hidden = sub !== 'hoefe';
+  document.getElementById('mapContainer')?.style.setProperty('display',       sub === 'karte' ? 'block' : 'none');
+  document.body.classList.toggle('places-karte', sub === 'karte');
+  ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
+    document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
+  });
+  if (sub === 'hoefe') {
+    document.getElementById('detailContent').innerHTML = '';
+    document.body.classList.remove('has-detail');
+    renderHofList();
+  } else if (sub === 'orte') {
+    document.getElementById('detailContent').innerHTML = '';
+    document.body.classList.remove('has-detail');
+    renderPlaceList();
+  } else if (sub === 'karte') {
+    document.getElementById('detailContent').innerHTML = '';
+    document.body.classList.remove('has-detail');
+    if (isDesktop) renderPlaceList(); // linkes Panel: Orte-Navigation
+    if (typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
+  }
+}
+
 // Bottom-Nav: Listen-Tabs
 function bnavTab(name) {
+  // Manueller Tab-Wechsel zur Karte löscht den Zurück-Button-Kontext
+  if (!UIState._mapFromContext) {
+    const cb = document.getElementById('map-close-btn');
+    if (cb) cb.style.display = 'none';
+  }
+  UIState._mapFromContext = null;
   AppState.currentTab = name;
   setBnavActive(name);
   showView('v-main');
@@ -77,104 +191,7 @@ function bnavHome() {
   if (id) { setBnavActive('home'); showTree(id); }
 }
 
-// Globale Suche über Personen, Familien, Quellen, Orte
-function runGlobalSearch(q) {
-  const out = document.getElementById('globalSearchResults');
-  if (!out) return;
-  const lower = (q || '').toLowerCase().trim();
-  if (!lower) {
-    out.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Suchbegriff eingeben…</div>';
-    return;
-  }
-
-  let html = '';
-
-  // ── Personen ──
-  const persons = Object.values(AppState.db.individuals).filter(p =>
-    (p.name||'').toLowerCase().includes(lower) ||
-    (p.given||'').toLowerCase().includes(lower) ||
-    (p.surname||'').toLowerCase().includes(lower) ||
-    (p.birth?.place||'').toLowerCase().includes(lower) ||
-    (p.death?.place||'').toLowerCase().includes(lower) ||
-    (p.birth?.date||'').toLowerCase().includes(lower) ||
-    (p.death?.date||'').toLowerCase().includes(lower)
-  ).slice(0, 20);
-  if (persons.length) {
-    html += `<div class="alpha-sep">Personen (${persons.length})</div>`;
-    for (const p of persons) {
-      const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
-      const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
-      let meta = '';
-      if (p.birth?.date) meta += '* ' + p.birth.date;
-      if (p.birth?.place) meta += (meta ? ', ' : '') + p.birth.place;
-      if (p.death?.date) meta += (meta ? '  † ' : '† ') + p.death.date;
-      html += `<div class="person-row" data-action="showDetail" data-id="${p.id}">
-        <div class="p-avatar ${sc}">${ic}</div>
-        <div class="p-info"><div class="p-name">${esc(p.name||p.id)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>
-        <span class="p-arrow">›</span></div>`;
-    }
-  }
-
-  // ── Familien ──
-  const families = Object.values(AppState.db.families).filter(f => {
-    const h = AppState.db.individuals[f.husb];
-    const w = AppState.db.individuals[f.wife];
-    return (h?.name||'').toLowerCase().includes(lower) ||
-           (w?.name||'').toLowerCase().includes(lower) ||
-           (f.marr?.place||'').toLowerCase().includes(lower) ||
-           (f.marr?.date||'').toLowerCase().includes(lower);
-  }).slice(0, 12);
-  if (families.length) {
-    html += `<div class="alpha-sep">Familien (${families.length})</div>`;
-    for (const f of families) {
-      const h = AppState.db.individuals[f.husb];
-      const w = AppState.db.individuals[f.wife];
-      const label = [h?.name, w?.name].filter(Boolean).join(' ⚭ ') || f.id;
-      let meta = '';
-      if (f.marr?.date) meta += f.marr.date;
-      if (f.marr?.place) meta += (meta ? ', ' : '') + f.marr.place;
-      html += `<div class="person-row" data-action="showFamilyDetail" data-id="${f.id}">
-        <div class="p-avatar" style="font-size:0.95rem">⚭</div>
-        <div class="p-info"><div class="p-name">${esc(label)}</div><div class="p-meta">${esc(meta)||'&nbsp;'}</div></div>
-        <span class="p-arrow">›</span></div>`;
-    }
-  }
-
-  // ── Quellen ──
-  const sources = Object.values(AppState.db.sources).filter(s =>
-    (s.title||'').toLowerCase().includes(lower) ||
-    (s.auth||'').toLowerCase().includes(lower) ||
-    (s.publ||'').toLowerCase().includes(lower)
-  ).slice(0, 10);
-  if (sources.length) {
-    html += `<div class="alpha-sep">Quellen (${sources.length})</div>`;
-    for (const s of sources) {
-      html += `<div class="person-row" data-action="showSourceDetail" data-sid="${s.id}">
-        <div class="p-avatar" style="font-size:0.95rem">📖</div>
-        <div class="p-info"><div class="p-name">${esc(s.title||s.id)}</div><div class="p-meta">${esc(s.auth||'')}</div></div>
-        <span class="p-arrow">›</span></div>`;
-    }
-  }
-
-  // ── Orte ──
-  const places = Object.keys(AppState.db.extraPlaces || {}).filter(name =>
-    name.toLowerCase().includes(lower)
-  ).slice(0, 8);
-  if (places.length) {
-    html += `<div class="alpha-sep">Orte (${places.length})</div>`;
-    for (const name of places) {
-      html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(name)}">
-        <div class="p-avatar" style="font-size:0.95rem">📍</div>
-        <div class="p-info"><div class="p-name">${esc(name)}</div><div class="p-meta">&nbsp;</div></div>
-        <span class="p-arrow">›</span></div>`;
-    }
-  }
-
-  if (!html) {
-    html = `<div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:0.88rem">Keine Treffer für „${esc(q)}"</div>`;
-  }
-  out.innerHTML = html;
-}
+// runGlobalSearch → ui-views-search.js
 
 function _getListScroll() {
   return window.innerWidth >= 900
@@ -188,6 +205,14 @@ function _setListScroll(pos) {
   } else {
     window.scrollTo(0, pos);
   }
+}
+
+// ─── ARIA-Announcement für Listenergebnisse ────────────────────────
+function _announceList(text) {
+  const el = document.getElementById('list-announce');
+  if (!el) return;
+  el.textContent = '';
+  requestAnimationFrame(() => { el.textContent = text; });
 }
 
 // ─── Virtual Scroll ────────────────────────────────────────────────
@@ -256,58 +281,234 @@ function _vsTeardown(st) {
 function showMain() {
   const saved = UIState._savedListScroll;
   UIState._savedListScroll = null;
-  _navHistory.length = 0; // Liste = frischer Start, History löschen
+  _clearNavState();
+  _closeHistoryPicker();
+  _updateNavBtns();
   document.body.classList.remove('tree-active', 'fc-mode');
   setBnavActive(AppState.currentTab || 'persons');
   showView('v-main');
-  updateStats();
   renderTab();
+  if (typeof _updateTasksBadge === 'function') _updateTasksBadge();
   if (saved && saved.tab === AppState.currentTab) {
     // setTimeout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
     setTimeout(() => _setListScroll(saved.pos), 0);
   }
 }
 
-// ─── History-Navigation ───────────────────────────────────────────
-// Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/
-// showPlaceDetail stehen.
-function _beforeDetailNavigate() {
-  if (AppState._detailActive) {
-    // Detail → Detail: aktuellen Zustand in History sichern
-    if      (AppState.currentPersonId) _navHistory.push({ type: 'person', id: AppState.currentPersonId });
-    else if (AppState.currentFamilyId) _navHistory.push({ type: 'family', id: AppState.currentFamilyId });
-    else if (AppState.currentSourceId) _navHistory.push({ type: 'source', id: AppState.currentSourceId });
-    else if (AppState.currentRepoId)   _navHistory.push({ type: 'repo',   id: AppState.currentRepoId });
-    // Place: Name liegt nicht in einer ID-Variable – über detailTopTitle rekonstruieren
-    else {
-      const title = document.getElementById('detailTopTitle')?.textContent;
-      if (title && title !== '📍 Ort') _navHistory.push({ type: 'place', name: title });
-    }
-  } else {
-    _navHistory.length = 0;
-    // Baum → Detail: bei fc-mode Fan Chart merken, sonst Sanduhr
-    if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
-      const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
-      _navHistory.push({ type: _type, id: currentTreeId });
-    } else {
-      // Liste → Detail: Scroll-Position für Rückkehr sichern
-      UIState._savedListScroll = { tab: AppState.currentTab, pos: _getListScroll() };
-    }
+// ─── History-Picker (Back-Button Dropdown) ────────────────────────
+// Label für einen History-Eintrag
+function _historyItemLabel(item) {
+  if (item.type === 'person') {
+    const p = AppState.db.individuals[item.id];
+    if (!p) return item.id;
+    return p.surname ? p.surname + (p.given ? ', ' + p.given.split(' ')[0] : '') : (p.name || item.id);
   }
+  if (item.type === 'family') {
+    const f = AppState.db.families[item.id];
+    if (!f) return item.id;
+    const h = f.husb && AppState.db.individuals[f.husb];
+    const w = f.wife && AppState.db.individuals[f.wife];
+    const parts = [h?.surname, w?.surname].filter(Boolean);
+    return parts.length ? parts.join(' & ') : (h?.name || w?.name || item.id);
+  }
+  if (item.type === 'source')   { const s = AppState.db.sources[item.id];       return s ? (s.abbr || s.title || item.id) : item.id; }
+  if (item.type === 'repo')     { const r = AppState.db.repositories[item.id];  return r ? (r.name  || item.id) : item.id; }
+  if (item.type === 'place')    return item.name || 'Ort';
+  if (item.type === 'tree')     return 'Baum';
+  if (item.type === 'fanchart') return 'Fächer';
+  return '◂';
 }
 
-// "← Zurück" – geht zur vorherigen Detail-Ansicht, zum Baum oder zur Liste
-function goBack() {
-  const prev = _navHistory.pop();
-  if (!prev) { showMain(); return; }
-  if      (prev.type === 'person') showDetail(prev.id, false);
-  else if (prev.type === 'family') showFamilyDetail(prev.id, false);
-  else if (prev.type === 'source') showSourceDetail(prev.id, false);
-  else if (prev.type === 'repo')   showRepoDetail(prev.id, false);
-  else if (prev.type === 'place')  showPlaceDetail(prev.name, false);
-  else if (prev.type === 'tree')     showTree(prev.id, false);
-  else if (prev.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(prev.id); }
+// Generischer Picker: items = [{label, data}], onSelect(idx, data) — idx=-1 → rootLabel geklickt
+function _showHistoryPicker(triggerEl, items, onSelect, rootLabel) {
+  _closeHistoryPicker();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'history-picker-overlay';
+  overlay.addEventListener('click', _closeHistoryPicker);
+
+  const picker = document.createElement('div');
+  picker.className = 'history-picker';
+  picker.addEventListener('click', e => e.stopPropagation());
+
+  items.forEach((item, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'history-picker-item';
+    btn.type = 'button';
+    btn.textContent = item.label;
+    btn.addEventListener('click', () => { _closeHistoryPicker(); onSelect(i, item.data); });
+    picker.appendChild(btn);
+  });
+
+  if (rootLabel) {
+    picker.appendChild(Object.assign(document.createElement('div'), { className: 'history-picker-sep' }));
+    const rootBtn = document.createElement('button');
+    rootBtn.className = 'history-picker-item history-picker-root';
+    rootBtn.type = 'button';
+    rootBtn.textContent = rootLabel;
+    rootBtn.addEventListener('click', () => { _closeHistoryPicker(); onSelect(-1, null); });
+    picker.appendChild(rootBtn);
+  }
+
+  overlay.appendChild(picker);
+  document.body.appendChild(overlay);
+
+  // Positionierung unterhalb des Trigger-Buttons
+  if (triggerEl) {
+    const r = triggerEl.getBoundingClientRect();
+    picker.style.top  = (r.bottom + 6) + 'px';
+    picker.style.left = r.left + 'px';
+    requestAnimationFrame(() => {
+      const pw = picker.offsetWidth;
+      const left = parseFloat(picker.style.left);
+      if (left + pw > window.innerWidth - 8)
+        picker.style.left = Math.max(8, window.innerWidth - pw - 8) + 'px';
+    });
+  }
+
+  // ESC schließt
+  const onKey = e => { if (e.key === 'Escape') { _closeHistoryPicker(); document.removeEventListener('keydown', onKey); } };
+  document.addEventListener('keydown', onKey);
+}
+
+function _closeHistoryPicker() {
+  document.querySelector('.history-picker-overlay')?.remove();
+}
+
+// Navigation zu einem History-Eintrag (ohne History-Push)
+function _navToHistoryItem(item) {
+  if      (item.type === 'person')   showDetail(item.id, false);
+  else if (item.type === 'family')   showFamilyDetail(item.id, false);
+  else if (item.type === 'source')   showSourceDetail(item.id, false);
+  else if (item.type === 'repo')     showRepoDetail(item.id, false);
+  else if (item.type === 'place')    showPlaceDetail(item.name, false);
+  else if (item.type === 'tree')     showTree(item.id, false);
+  else if (item.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(item.id); }
   else showMain();
+}
+
+// ─── History-Navigation ───────────────────────────────────────────
+
+// Aktuell angezeigte Entity als History-Eintrag (null = Listenansicht)
+function _captureCurrentNavState() {
+  if (AppState.currentPersonId) return { type: 'person', id: AppState.currentPersonId };
+  if (AppState.currentFamilyId) return { type: 'family', id: AppState.currentFamilyId };
+  if (AppState.currentSourceId) return { type: 'source', id: AppState.currentSourceId };
+  if (AppState.currentRepoId)   return { type: 'repo',   id: AppState.currentRepoId };
+  if (AppState._detailActive) {
+    const title = document.getElementById('detailTopTitle')?.textContent;
+    if (title) return { type: 'place', name: title };
+  }
+  if (document.getElementById('v-tree')?.classList.contains('active') && currentTreeId) {
+    return { type: document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree', id: currentTreeId };
+  }
+  return null;
+}
+
+// Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/showPlaceDetail stehen.
+function _beforeDetailNavigate() {
+  if (AppState._detailActive) {
+    // Detail → Detail: aktuellen Zustand in Back-Stack sichern, Fwd-Stack leeren
+    const cur = _captureCurrentNavState();
+    if (cur) UIState._navHistory.push(cur);
+    UIState._navFwdStack = [];
+  } else if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
+    // Baum → Detail
+    const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
+    UIState._navHistory.push({ type: _type, id: currentTreeId });
+    UIState._navFwdStack = [];
+  } else {
+    // Liste → Detail: History neu starten + Scroll-Position sichern
+    UIState._navHistory.length = 0;
+    UIState._navFwdStack = [];
+    UIState._savedListScroll = { tab: AppState.currentTab, pos: _getListScroll() };
+  }
+  setTimeout(_persistNavState, 0); // nach show*() ausführen, wenn neue currentXxxId gesetzt ist
+}
+
+// "← Zurück" — 1 Schritt zurück, aktuellen Zustand auf Fwd-Stack
+function goBack() {
+  const hist = UIState._navHistory;
+  if (!hist.length) { showMain(); return; }
+  const cur = _captureCurrentNavState();
+  if (cur) UIState._navFwdStack.push(cur);
+  _navToHistoryItem(hist.pop());
+  _updateNavBtns();
+  _persistNavState();
+}
+
+// "→ Vorwärts" — 1 Schritt vor, aktuellen Zustand auf Back-Stack
+function goForward() {
+  const fwd = UIState._navFwdStack;
+  if (!fwd.length) return;
+  const cur = _captureCurrentNavState();
+  if (cur) UIState._navHistory.push(cur);
+  _navToHistoryItem(fwd.pop());
+  _updateNavBtns();
+  _persistNavState();
+}
+
+// "▾" — Picker mit vollständigem Verlauf
+function openDetailHistory() {
+  const hist = UIState._navHistory;
+  if (!hist.length) return;
+  const btn = document.getElementById('detailHistBtn');
+  const items = [...hist].reverse().map((item, i) => ({
+    label: _historyItemLabel(item),
+    data:  { item, actualIdx: hist.length - 1 - i }
+  }));
+  _showHistoryPicker(btn, items, (idx, data) => {
+    if (idx < 0) { showMain(); return; }
+    hist.splice(data.actualIdx);
+    UIState._navFwdStack = [];
+    _navToHistoryItem(data.item);
+    _updateNavBtns();
+    _persistNavState();
+  }, 'Liste');
+}
+
+// Alle Nav-Buttons synchron aktualisieren (Back ▾, Fwd, Tree-Back, Tree-Fwd)
+function _updateNavBtns() {
+  _updateDetailHistBtn();
+  if (typeof _updateTreeBackBtn === 'function') _updateTreeBackBtn();
+}
+
+function _updateDetailHistBtn() {
+  const btn = document.getElementById('detailHistBtn');
+  if (btn) btn.hidden = UIState._navHistory.length < 2;
+  const fwd = document.getElementById('detailFwdBtn');
+  if (fwd) fwd.hidden = UIState._navFwdStack.length === 0;
+}
+
+// ─── Nav-State Persistenz (sessionStorage) ───────────────────────
+
+function _persistNavState() {
+  try {
+    sessionStorage.setItem('stammbaum_nav', JSON.stringify({
+      back:    UIState._navHistory,
+      fwd:     UIState._navFwdStack,
+      current: _captureCurrentNavState()
+    }));
+  } catch(e) {}
+}
+
+function _restoreNavState() {
+  try {
+    const raw = sessionStorage.getItem('stammbaum_nav');
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    UIState._navHistory  = Array.isArray(saved.back) ? saved.back : [];
+    UIState._navFwdStack = Array.isArray(saved.fwd)  ? saved.fwd  : [];
+    if (saved.current) { _navToHistoryItem(saved.current); return true; }
+    _updateNavBtns();
+  } catch(e) { sessionStorage.removeItem('stammbaum_nav'); }
+  return false;
+}
+
+function _clearNavState() {
+  UIState._navHistory.length = 0;
+  UIState._navFwdStack = [];
+  try { sessionStorage.removeItem('stammbaum_nav'); } catch(e) {}
 }
 
 // Kleinste numerische Personen-ID
@@ -326,7 +527,7 @@ async function showStartView() {
   AppState.currentTab = 'persons';
   showMain();
   const saved = await idbGet('proband_id').catch(() => null);
-  _probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
+  UIState._probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
   const startId = getProbandId();
   if (startId) showTree(startId);
 }
@@ -336,12 +537,21 @@ async function showStartView() {
 // ─────────────────────────────────────
 function switchTab(tab) {
   AppState.currentTab = tab;
+  if (tab !== 'places') {
+    document.body.classList.remove('places-karte');
+    document.getElementById('mapContainer')?.style.setProperty('display', 'none');
+  }
+  // Personen-Tab: immer in Personen-Modus zurücksetzen (nicht Tasks)
+  if (tab === 'persons' && typeof switchPersonsMode === 'function') {
+    switchPersonsMode('persons');
+  }
   document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
   document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
   document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
+  document.getElementById('tab-stats').style.display = tab === 'stats' ? 'block' : 'none';
   document.getElementById('tab-search').style.display = tab === 'search' ? 'block' : 'none';
-  document.getElementById('fabBtn').style.display = tab === 'search' ? 'none' : '';
+  document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats') ? 'none' : '';
   renderTab();
 }
 
@@ -350,13 +560,20 @@ function renderTab() {
   if (AppState.currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
   else if (AppState.currentTab === 'families') renderFamilyList();
   else if (AppState.currentTab === 'sources') { renderSourceList(); renderRepoList(); }
-  else if (AppState.currentTab === 'places') renderPlaceList();
+  else if (AppState.currentTab === 'places') {
+    if (UIState._placesSubTab === 'hoefe') renderHofList();
+    else if (UIState._placesSubTab === 'karte') {
+      document.body.classList.add('places-karte');
+      const isDesktop = document.body.classList.contains('desktop-mode');
+      if (isDesktop) renderPlaceList();
+      initOrRefreshPlaceMap();
+    }
+    else renderPlaceList();
+  }
+  else if (AppState.currentTab === 'stats') renderStatsTab();
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
 }
 
-function updateStats() {
-  // Stats-Leiste entfernt – Funktion bleibt als No-op erhalten
-}
 
 function updateChangedIndicator() {
   const show = AppState.changed;
@@ -381,13 +598,133 @@ function _syncBannerSave() {
   if (canOD) odSaveFile(); else exportGEDCOM();
 }
 
-function markChanged() { AppState.changed = true; UIState._placesCache = null; updateChangedIndicator(); }
+function markChanged() { AppState.changed = true; UIState._placesCache = null; UIState._hofCache = null; UIState._searchIndexDirty = true; updateChangedIndicator(); }
+
+// ─────────────────────────────────────
+//  UNDO / REDO (U8)
+// ─────────────────────────────────────
+
+// Snapshot der angegebenen Entities vor einer Mutation aufnehmen.
+// Muss VOR der Mutation aufgerufen werden.
+function pushUndo(label, { personIds = [], familyIds = [], sourceIds = [], repoIds = [] } = {}) {
+  const clone = v => (v === undefined || v === null) ? null
+    : (typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
+  const snap = {
+    label,
+    persons:  Object.fromEntries(personIds.map(id  => [id, clone(db.individuals[id])])),
+    families: Object.fromEntries(familyIds.map(id  => [id, clone(db.families[id])])),
+    sources:  Object.fromEntries(sourceIds.map(id  => [id, clone(db.sources[id])])),
+    repos:    Object.fromEntries(repoIds.map(id    => [id, clone(db.repositories[id])])),
+  };
+  AppState._undoStack.push(snap);
+  if (AppState._undoStack.length > 30) AppState._undoStack.shift();
+  AppState._redoStack = [];
+}
+
+function applyUndo() { _applyUndoStack(AppState._undoStack, AppState._redoStack); }
+function applyRedo() { _applyUndoStack(AppState._redoStack, AppState._undoStack); }
+
+function _applyUndoStack(from, to) {
+  if (!from.length) return;
+  const snap = from.pop();
+  const clone = v => (v === null) ? null
+    : (typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
+
+  // Gegenzug aufnehmen (aktuellen Zustand der betroffenen Entities sichern)
+  const counter = { label: snap.label, persons: {}, families: {}, sources: {}, repos: {} };
+  for (const [id, val] of Object.entries(snap.persons)) {
+    counter.persons[id] = clone(db.individuals[id] ?? null);
+    if (val === null) delete db.individuals[id]; else db.individuals[id] = val;
+  }
+  for (const [id, val] of Object.entries(snap.families)) {
+    counter.families[id] = clone(db.families[id] ?? null);
+    if (val === null) delete db.families[id]; else db.families[id] = val;
+  }
+  for (const [id, val] of Object.entries(snap.sources)) {
+    counter.sources[id] = clone(db.sources[id] ?? null);
+    if (val === null) delete db.sources[id]; else db.sources[id] = val;
+  }
+  for (const [id, val] of Object.entries(snap.repos)) {
+    counter.repos[id] = clone(db.repositories[id] ?? null);
+    if (val === null) delete db.repositories[id]; else db.repositories[id] = val;
+  }
+  to.push(counter);
+
+  UIState._placesCache = null;
+  UIState._hofCache = null;
+  UIState._searchIndexDirty = true;
+  AppState.changed = AppState._undoStack.length > 0;
+  updateChangedIndicator();
+  if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+  renderTab();
+  showToast('↩ ' + snap.label, 'info');
+}
 
 // ─────────────────────────────────────
 //  SHARED VIEW HELPERS
 // ─────────────────────────────────────
-function factRow(label, value, rawSuffix, srcIds) {
-  const badges = srcIds ? sourceTagsHtml(srcIds) : '';
+
+// Generische Autocomplete-Funktion für Orte, Adressen, Personen.
+// opts.getItems(q)       → Array — gefilterte+sortierte Treffer für Suchstring q
+// opts.formatLabel(item) → string — Anzeigetext pro Eintrag
+// opts.onSelect(item, inputEl) → void — Aktion beim Klick
+// opts.configEl?(el, item) — optionale Anpassung des Dropdown-Elements (z.B. Stil)
+// opts.onInput?(inputEl)   — optionale Aktion bei jedem Tastendruck (vor Suche)
+// opts.limit (default 12) — max. Trefferzahl
+function initAutocomplete(inputId, ddId, opts) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+  const limit = opts.limit ?? 12;
+
+  const _run = debounce(() => {
+    const q = input.value.toLowerCase().trim();
+    dd.innerHTML = '';
+    if (!q) { dd.style.display = 'none'; return; }
+    const items = opts.getItems(q).slice(0, limit);
+    if (!items.length) { dd.style.display = 'none'; return; }
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'place-dropdown-item';
+      el.textContent = opts.formatLabel(item);
+      if (opts.configEl) opts.configEl(el, item);
+      el.addEventListener('mousedown', () => {
+        opts.onSelect(item, input);
+        dd.innerHTML = ''; dd.style.display = 'none';
+      });
+      dd.appendChild(el);
+    });
+    dd.style.display = 'block';
+  }, 150);
+
+  input.addEventListener('input', () => {
+    opts.onInput?.(input);
+    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    _run();
+  });
+  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
+function safeLinkHref(url) {
+  if (!url) return '#';
+  const s = url.trim().toLowerCase();
+  if (s.startsWith('http://') || s.startsWith('https://') || s.startsWith('mailto:')) return url;
+  return '#';
+}
+
+function _validCoord(lat, lon) {
+  const la = parseFloat(lat), lo = parseFloat(lon);
+  return isFinite(la) && isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180;
+}
+
+function evGeoLink(lati, long) {
+  return _validCoord(lati, long)
+    ? `<a href="https://maps.apple.com/?ll=${lati},${long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
+}
+
+function factRow(label, value, rawSuffix, srcIds, pageMap, quayMap) {
+  const badges = srcIds ? sourceTagsHtml(srcIds, pageMap, quayMap) : '';
   return `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val">${esc(value)}${rawSuffix||''}${badges}</span></div>`;
 }
 
@@ -397,16 +734,54 @@ function srcNum(sid) {
   return m ? parseInt(m[0], 10) : sid;
 }
 
-// Kompakte Quellen-Badges: §42 — inline in fact-val einbettbar
-function sourceTagsHtml(sourceIds) {
+// Kompakte Quellen-Badges: §42 (optional farbig nach QUAY + Seitenangabe)
+// pageMap: {sid: page}, quayMap: {sid: quay}
+const _QUAY_LABELS = { '0':'unbelegt', '1':'fragwürdig', '2':'plausibel', '3':'direkt' };
+function sourceTagsHtml(sourceIds, pageMap, quayMap) {
   if (!sourceIds) return '';
   const ids = sourceIds instanceof Set ? [...sourceIds] : (Array.isArray(sourceIds) ? sourceIds : []);
   if (!ids.length) return '';
+  const pages = pageMap || {};
+  const quays = quayMap || {};
   return ids.map(sid => {
     const s = AppState.db.sources[sid];
     if (!s) return '';
-    const tooltip = esc((s.title || s.abbr || sid).substring(0, 60));
-    return `<span class="src-badge" data-action="showSourceDetail" data-sid="${sid}" title="${tooltip}">§${srcNum(sid)}</span>`;
+    const page  = pages[sid] != null ? String(pages[sid]) : '';
+    const quay  = quays[sid] != null ? String(quays[sid]) : '';
+    const qClass = quay !== '' ? ` src-badge--q${quay}` : '';
+    const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
+    const tipParts = [
+      (s.title || s.abbr || sid).substring(0, 50),
+      page ? `S.\u202f${page}` : '',
+      quay !== '' ? `Q${quay}\u202f–\u202f${_QUAY_LABELS[quay] || quay}` : ''
+    ].filter(Boolean);
+    const isUrl = /^https?:\/\//i.test(page);
+    const linkBtn = isUrl
+      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(page)}" title="${esc(page)}">↗</span>`
+      : '';
+    return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(sid)}${pageSuffix}</span>${linkBtn}`;
+  }).filter(Boolean).join('');
+}
+
+function citTagsHtml(citations) {
+  if (!citations?.length) return '';
+  return citations.map(c => {
+    const s = AppState.db.sources[c.sid];
+    if (!s) return '';
+    const page  = c.page || '';
+    const quay  = c.quay != null ? String(c.quay) : '';
+    const qClass = quay !== '' ? ` src-badge--q${quay}` : '';
+    const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
+    const tipParts = [
+      (s.title || s.abbr || c.sid).substring(0, 50),
+      page ? `S. ${page}` : '',
+      quay !== '' ? `Q${quay} – ${_QUAY_LABELS[quay] || quay}` : ''
+    ].filter(Boolean);
+    const isUrl = /^https?:\/\//i.test(page);
+    const linkBtn = isUrl
+      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(page)}" title="${esc(page)}">↗</span>`
+      : '';
+    return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${c.sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(c.sid)}${pageSuffix}</span>${linkBtn}`;
   }).filter(Boolean).join('');
 }
 
@@ -436,38 +811,200 @@ function relRow(person, role, unlinkFamId) {
 //  data-input   → input
 //  data-action="stop" → stopPropagation ohne Aktion (z.B. <select> in klickbarer Zeile)
 // ─────────────────────────────────────
+function _sortedChildren(children) {
+  return [...(children || [])].sort((a, b) => {
+    const pa = AppState.db.individuals[a];
+    const pb = AppState.db.individuals[b];
+    return evDateKey(pa?.birth?.date || '').localeCompare(evDateKey(pb?.birth?.date || ''));
+  });
+}
+
 const _CLICK_MAP = {
-  showDetail:           el => showDetail(el.dataset.pid  || el.dataset.id),
-  showFamilyDetail:     el => showFamilyDetail(el.dataset.fid  || el.dataset.id),
-  showSourceDetail:     el => showSourceDetail(el.dataset.sid  || el.dataset.id),
-  showRepoDetail:       el => showRepoDetail(el.dataset.id),
-  showPlaceDetail:      el => showPlaceDetail(el.dataset.name),
-  deleteExtraPlace:     el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
-  unlinkMember:         el => unlinkMember(el.dataset.fid, el.dataset.pid),
-  showEventForm:        el => showEventForm(el.dataset.pid, el.dataset.ev),
-  showFamEventForm:     el => showFamEventForm(el.dataset.fid, el.dataset.evkey),
-  showAddSpouseFlow:    el => showAddSpouseFlow(el.dataset.pid),
-  showAddChildFlow:     el => showAddChildFlow(el.dataset.fid),
-  showAddParentFlow:    el => showAddParentFlow(el.dataset.pid),
-  openAddMediaDialog:   el => openAddMediaDialog(el.dataset.ctx, el.dataset.id),
-  openMediaPhoto:       el => openMediaPhoto(el.dataset.mediaFile, el.dataset.hero, el.dataset.avatar),
-  openEditMediaDialog:  el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
-  openSourceMediaView:  el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
-  showChildRelDialog:   el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
-  removeSrc:            el => removeSrc(el.dataset.prefix, el.dataset.sid),
-  toggleSrc:            el => toggleSrc(el.dataset.prefix, el.dataset.sid),
-  odLoadFile:           el => odLoadFile(el.dataset.odid, el.dataset.odname),
-  odFolderBack:         ()  => _odFolderBack(),
-  odPickCancel:         ()  => _odPickCancel(),
-  odShowAllFolders:     ()  => _odShowAllFolders(),
-  odScanDocFolder:      el => odScanDocFolder(el.dataset.odid, el.dataset.odname),
-  odImportPhotos:       el => odImportPhotosFromFolder(el.dataset.odid, el.dataset.odname),
-  odEnterFolder:        el => _odEnterFolder(el),
-  odPickSelectFile:     el => _odPickSelectFile(el.dataset.odid, el.dataset.odname, el.dataset.path),
-  browserShowSource:    el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
-  browserShowPerson:    el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
-  browserShowFamily:    el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
-  showLightbox:         el => showLightbox(el.src || el.dataset.src),
+  // Dynamisch generierte Einträge (bereits vorhanden)
+  showEventFormTyped:      el => showEventForm(el.dataset.pid, undefined, el.dataset.evtype),
+  newSourceForm:           ()  => showSourceForm(null),
+  newFamilyForm:           ()  => showFamilyForm(null),
+  removeNoteRef:           el  => el.closest('[data-ref-section]')?.remove(),
+  jumpToSection:           el => document.getElementById(el.dataset.jump)?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+  showDetail:              el => showDetail(el.dataset.pid  || el.dataset.id),
+  showFamilyDetail:        el => showFamilyDetail(el.dataset.fid  || el.dataset.id),
+  showSourceDetail:        el => showSourceDetail(el.dataset.sid  || el.dataset.id),
+  showRepoDetail:          el => showRepoDetail(el.dataset.id),
+  showPlaceDetail:         el => showPlaceDetail(el.dataset.name),
+  showHofDetail:           el => showHofDetail(el.dataset.addr),
+  showHofAddForm:          el => showHofAddForm(el.dataset.addr),
+  showHofPropForm:         el => showHofPropForm(el.dataset.addr),
+  saveHofBewohner:         el => saveHofBewohner(el.dataset.addr),
+  cancelHofBewohner:       ()  => cancelHofBewohner(),
+  saveHofEigentum:         el => saveHofEigentum(el.dataset.addr),
+  cancelHofEigentum:       ()  => cancelHofEigentum(),
+  showHofCoordForm:        el => showHofCoordForm(el.dataset.addr),
+  cancelHofCoord:          ()  => cancelHofCoord(),
+  saveHofCoord:            el => saveHofCoord(el.dataset.addr),
+  deleteHofCoord:          el => deleteHofCoord(el.dataset.addr),
+  openHofNote:             el => openNoteModal('hof', el.dataset.addr),
+  showHofRenameForm:       ()  => showHofRenameForm(),
+  cancelHofRename:         ()  => cancelHofRename(),
+  saveHofRename:           el  => saveHofRename(el.dataset.addr),
+  switchPlacesSubTab:      el => switchPlacesSubTab(el.dataset.subtab),
+  switchMapMode:           el => switchMapMode(el.dataset.mode),
+  closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
+  showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
+  mapClose:                ()  => { document.getElementById('map-close-btn').style.display = 'none'; goBack(); },
+  openMapPersonPicker:     ()  => openMapPersonPicker(),
+  selectMapPerson:         el => selectMapPerson(el.dataset.pid),
+  deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
+  unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
+  showPersonForm:          el => showPersonForm(el.dataset.pid),
+  showExtraNameForm:       el => showExtraNameForm(el.dataset.pid, parseInt(el.dataset.enidx ?? '-1', 10)),
+  saveExtraName:           ()  => saveExtraName(),
+  deleteExtraName:         ()  => deleteExtraName(),
+  showEventForm:           el => showEventForm(el.dataset.pid, el.dataset.ev),
+  showFamEventForm:        el => showFamEventForm(el.dataset.fid, el.dataset.evkey, el.dataset.evidx),
+  showAddSpouseFlow:       el => showAddSpouseFlow(el.dataset.pid),
+  showAddChildFlow:        el => showAddChildFlow(el.dataset.fid),
+  showAddParentFlow:       el => showAddParentFlow(el.dataset.pid),
+  openAddMediaDialog:      el => openAddMediaDialog(el.dataset.ctx, el.dataset.id),
+  openMediaPhoto:          el => openMediaPhoto(el.dataset.mediaFile, el.dataset.hero, el.dataset.avatar),
+  openEditMediaDialog:     el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
+  openSourceMediaView:     el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
+  showChildRelDialog:      el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
+  removeSrc:               el => removeSrc(el.dataset.prefix, +el.dataset.citidx),
+  addSrc:                  el => addSrc(el.dataset.prefix, el.dataset.sid),
+  'copy-cit':              el => copyCitations(el.dataset.prefix),
+  'paste-cit':             el => pasteCitations(el.dataset.prefix),
+  openCitLink:             (el, e) => { e.stopPropagation(); window.open(el.dataset.href, '_blank', 'noopener'); },
+  odLoadFile:              el => odLoadFile(el.dataset.odid, el.dataset.odname),
+  odFolderBack:            ()  => _odFolderBack(),
+  odPickCancel:            ()  => _odPickCancel(),
+  odShowAllFolders:        ()  => _odShowAllFolders(),
+  odScanDocFolder:         el => odScanDocFolder(el.dataset.odid, el.dataset.odname),
+  odImportPhotos:          el => odImportPhotosFromFolder(el.dataset.odid, el.dataset.odname),
+  odEnterFolder:           el => _odEnterFolder(el),
+  odPickSelectFile:        el => _odPickSelectFile(el.dataset.odid, el.dataset.odname, el.dataset.path),
+  browserShowSource:       el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
+  browserShowPerson:       el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
+  browserShowFamily:       el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
+  showLightbox:            el => showLightbox(el.src || el.dataset.src),
+  // Statische index.html-Handler (P1-Migration)
+  loadDemo:                ()  => loadDemo(),
+  openModal:               el => openModal(el.dataset.modal),
+  closeModal:              el => closeModal(el.dataset.modal),
+  bnavSearch:              ()  => bnavSearch(),
+  toggleSoundex:           ()  => toggleSoundex(),
+  openMenuModal:           ()  => { openModal('modalMenu'); _odUpdateUI(); },
+  clearYearFilter:         ()  => clearYearFilter(),
+  togglePersonSort:        ()  => togglePersonSort(),
+  toggleAdvFilter:         ()  => toggleAdvFilter(),
+  showPersonMediaBrowser:  ()  => showPersonMediaBrowser(),
+  showFamilyMediaBrowser:  ()  => showFamilyMediaBrowser(),
+  scrollToRepo:            ()  => document.getElementById('repoSection').scrollIntoView({behavior:'smooth'}),
+  showMediaBrowser:        ()  => showMediaBrowser(),
+  showAddSheet:            ()  => showAddSheet(),
+  goBack:                  ()  => goBack(),
+  goForward:               ()  => goForward(),
+  openDetailHistory:       ()  => openDetailHistory(),
+  openTreeHistory:         ()  => openTreeHistory(),
+  showEditSheet:           ()  => showEditSheet(),
+  treeNavBack:             ()  => treeNavBack(),
+  setTreeGens:             el => setTreeGens(+el.dataset.tgen),
+  setFcGens:               el => setFcGens(+el.dataset.gen),
+  toggleFanChart:          ()  => toggleFanChart(),
+  toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
+  showRelPath:             el  => showRelPath(el.dataset.pid),
+  relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
+  showTree:                el  => showTree(el.dataset.id),
+  toggleProband:           el  => _toggleProband(el.dataset.id),
+  bnavTree:                ()  => bnavTree(),
+  bnavTab:                 el => bnavTab(el.dataset.tab),
+  bnavHome:                ()  => bnavHome(),
+  addPerson:               ()  => { closeModal('modalAdd'); showPersonForm(null); },
+  addFamily:               ()  => { closeModal('modalAdd'); showFamilyForm(null); },
+  addSource:               ()  => { closeModal('modalAdd'); showSourceForm(null); },
+  addPlace:                ()  => { closeModal('modalAdd'); showNewPlaceForm(); },
+  addPfExtraName:          ()  => addPfExtraName(),
+  toggleSrcPicker:         el => toggleSrcPicker(el.dataset.prefix),
+  savePerson:              ()  => savePerson(),
+  savePersonAndNew:        ()  => savePerson(true),
+  deletePerson:            ()  => deletePerson(),
+  togglePlaceMode:         el => togglePlaceMode(el.dataset.placeid),
+  addMediaEntry:           el => _addMediaEntry(el.dataset.prefix),
+  saveFamily:              ()  => saveFamily(),
+  deleteFamily:            ()  => deleteFamily(),
+  saveFamEvent:            ()  => saveFamEvent(),
+  deleteFamEvent:          ()  => deleteFamEvent(),
+  applySourceTemplate:     el => _applySourceTemplate(el.dataset.tpl),
+  sfRepoClear:             ()  => sfRepoClear(),
+  openRepoPicker:          ()  => openRepoPicker(),
+  sfToggleMore:            ()  => sfToggleMore(),
+  saveSource:              ()  => saveSource(),
+  deleteSource:            ()  => deleteSource(),
+  addEfMedia:              ()  => addEfMedia(),
+  saveEvent:               ()  => saveEvent(),
+  saveAndCopyEvent:        ()  => saveAndCopyEvent(),
+  applyClipboardEvent:     el  => applyClipboardEventToPerson(el.dataset.pid),
+  deleteEvent:             ()  => deleteEvent(),
+  savePlace:               ()  => savePlace(),
+  saveNewPlace:            ()  => saveNewPlace(),
+  relPickerCreateNew:      ()  => relPickerCreateNew(),
+  saveRepo:                ()  => saveRepo(),
+  deleteRepo:              ()  => deleteRepo(),
+  repoPickerCreateNew:     ()  => repoPickerCreateNew(),
+  menuOdToggle:            ()  => { closeModal('modalMenu'); odToggle(); },
+  menuOdOpen:              ()  => { closeModal('modalMenu'); odOpenFilePicker(); },
+  odSaveFile:              ()  => odSaveFile(),
+  menuSettings:            ()  => { closeModal('modalMenu'); openSettings(); },
+  menuOpenFile:            ()  => { closeModal('modalMenu'); openFileOrDir(); },
+  menuExport:              ()  => { closeModal('modalMenu'); exportGEDCOM(); },
+  menuGrampsExport:        ()  => { closeModal('modalMenu'); exportGRAMPS(); },
+  menuBackup:              ()  => { closeModal('modalMenu'); downloadBackup(); },
+  menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
+  menuLoadDemo:            ()  => { closeModal('modalMenu'); loadDemo(); },
+  menuNewFile:             ()  => { closeModal('modalMenu'); confirmNewFile(); },
+  menuHelp:                ()  => { closeModal('modalMenu'); openModal('modalHelp'); },
+  menuRoundtrip:           ()  => { closeModal('modalMenu'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
+  settingsChangePhoto:     ()  => { closeModal('modalSettings'); odImportPhotos(); },
+  odClearPhotoFolder:      ()  => odClearPhotoFolder(),
+  settingsChangeDoc:       ()  => { closeModal('modalSettings'); odSetupDocFolder(); },
+  odClearDocFolder:        ()  => odClearDocFolder(),
+  odCancelOrClose:         ()  => _odCancelOrClose(),
+  camCapture:              ()  => document.getElementById('am-cam-input').click(),
+  camGallery:              ()  => {
+    const inp = document.getElementById('am-cam-input');
+    inp.removeAttribute('capture');
+    inp.click();
+    setTimeout(() => inp.setAttribute('capture', 'environment'), 500);
+  },
+  odPickFileForMedia:      ()  => odPickFileForMedia(),
+  confirmAddMedia:         ()  => confirmAddMedia(),
+  odPickFileForEditMedia:  ()  => odPickFileForEditMedia(),
+  confirmDeleteMedia:      ()  => confirmDeleteMedia(),
+  confirmEditMedia:        ()  => confirmEditMedia(),
+  helpRoundtrip:           ()  => { closeModal('modalHelp'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
+  menuDedup:               ()  => { closeModal('modalMenu'); openDedupModal(); },
+  menuStats:               ()  => { closeModal('modalMenu'); bnavTab('stats'); },
+  dedupRunScan:            ()  => dedupRunScan(),
+  dedupOpenMerge:          el  => dedupOpenMerge(el),
+  dedupSwapWinner:         ()  => dedupSwapWinner(),
+  dedupIgnorePair:         ()  => dedupIgnorePair(),
+  dedupConfirmMerge:       ()  => dedupConfirmMerge(),
+  openNoteModal:           el  => openNoteModal(el.dataset.ntype, el.dataset.nid),
+  saveNoteModal:           ()  => saveNoteModal(),
+  saveChildRelDialog:      ()  => saveChildRelDialog(),
+  syncBannerSave:          ()  => _syncBannerSave(),
+  startupChoiceOneDrive:   ()  => _startupChoiceOneDrive(),
+  startupChoiceLocal:      ()  => _startupChoiceLocal(),
+  closeLightbox:           ()  => { document.getElementById('modalLightbox').style.display = 'none'; },
+  lightboxSetHero:         (el, e) => { e.stopPropagation(); _lightboxSetHero(); },
+  confirmModalOk:          ()  => { _confirmResolve?.(true); _confirmResolve = null; closeModal('modalConfirm'); },
+  confirmModalCancel:      ()  => closeModal('modalConfirm'),
+  switchPersonsMode:       el  => switchPersonsMode(el.dataset.mode),
+  switchTasksFilter:       el  => switchTasksFilter(el.dataset.filter),
+  showAddTaskForm:         el  => showAddTaskForm(el.dataset.pid),
+  saveAddTask:             ()  => _saveAddTask(),
+  toggleTask:              el  => _handleToggleTask(el),
+  editTask:                el  => _handleEditTask(el),
+  deleteTask:              el  => _handleDeleteTask(el),
 };
 
 document.addEventListener('click', e => {
@@ -483,12 +1020,71 @@ document.addEventListener('change', e => {
   const el = e.target.closest('[data-change]');
   if (!el) return;
   const action = el.dataset.change;
-  if (action === 'savePedi')      savePedi(el.dataset.fid, el.dataset.cid, el.value);
-  else if (action === 'updateSrcQuay') updateSrcQuay(el.dataset.prefix, el.dataset.sid, el.value);
+  if      (action === 'applyPersonFilter') applyPersonFilter();
+  else if (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
+  else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, +el.dataset.citidx, el.value);
+  else if (action === 'onEventTypeChange')    onEventTypeChange();
+  else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
+  else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
+  else if (action === 'amCamChange') {
+    (async () => {
+      const f = el.files[0];
+      if (!f) return;
+      try { const b64 = await resizeImageToBase64(f); _onCamCapture(b64); }
+      catch(err) { showToast('Fehler: ' + err.message); }
+      el.value = '';
+    })();
+  }
+  else if (action === 'photoImportChange') {
+    _handlePhotoImport(el.files[0]).finally(() => { el.value = ''; });
+  }
 });
 
 document.addEventListener('input', e => {
   const el = e.target.closest('[data-input]');
   if (!el) return;
-  if (el.dataset.input === 'updateSrcPage') updateSrcPage(el.dataset.prefix, el.dataset.sid, el.value);
+  const action = el.dataset.input;
+  if      (action === 'updateSrcPage')   updateSrcPage(el.dataset.prefix, +el.dataset.citidx, el.value);
+  else if (action === 'applyPersonFilter') applyPersonFilter();
+  else if (action === 'filterFamilies')  filterFamiliesDebounced(el.value);
+  else if (action === 'filterSources')   filterSourcesDebounced(el.value);
+  else if (action === 'filterPlaces')    filterPlacesDebounced(el.value);
+  else if (action === 'filterHoefe')     filterHoefeDebounced(el.value);
+  else if (action === 'runGlobalSearch') runGlobalSearch(el.value);
+  else if (action === 'filterMapPersonList') filterMapPersonList();
+  else if (action === 'renderRelPicker') renderRelPicker(el.value);
+  else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
+  else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
 });
+
+document.addEventListener('blur', e => {
+  const el = e.target.closest('[data-blur]');
+  if (!el) return;
+  if (el.dataset.blur === 'normMonth') {
+    const v = normMonth(el.value);
+    if (v && el.value) el.value = v;
+  }
+}, true);
+
+// openNoteModal / saveNoteModal / _pruneOrphanNotes / _noteRefUsers → ui-views-note.js
+
+// ─────────────────────────────────────
+//  OBJE-REFERENZ-HELPER
+//  Baut Map @Oxx@ → {file, title} aus AppState.db.extraRecords
+// ─────────────────────────────────────
+function _buildObjeRefMap() {
+  const map = {};
+  for (const rec of (AppState.db.extraRecords || [])) {
+    if (!rec._lines || !rec._lines.length) continue;
+    const hm = rec._lines[0].match(/^0 (@[^@]+@) OBJE$/);
+    if (!hm) continue;
+    const objId = hm[1];
+    let file = '', title = '';
+    for (let i = 1; i < rec._lines.length; i++) {
+      const lm = rec._lines[i].match(/^1 (FILE|TITL) (.+)$/);
+      if (lm) { if (lm[1] === 'FILE') file = lm[2]; else title = lm[2]; }
+    }
+    map[objId] = { file, title };
+  }
+  return map;
+}

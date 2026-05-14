@@ -1,6 +1,6 @@
 # Roadmap
 
-Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
+Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 ---
 
@@ -8,243 +8,124 @@ Detaillierte Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 | Version | Branch | Status |
 |---|---|---|
-| 4.0 | `main` | Abgeschlossen (2026-03-30) — Details: CHANGELOG.md |
-| 5.0 | `main` | Abgeschlossen (2026-04-05) — Details: CHANGELOG.md |
-| 6.0 | `v6-dev` | In Entwicklung |
+| 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
+| 7.0 | `v7-dev` | **Abgeschlossen — bereit für Merge auf `main`** |
+| 8.0 | – | Planung |
 
-**Roundtrip:** `stable=true`, `net_delta≈0` (CONC/CONT-Neuformatierung + HEAD-Rewrite akzeptiert; alle tag-counts ✓)
-**Testdaten:** MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive
-**Aktuelle sw-Version:** v152 / Cache: `stammbaum-v152`
-
----
-
-## Version 6.0 (Branch `v6-dev`, ab 2026-04-05)
-
-*Planung in Arbeit — offene Punkte aus v5 + neue Schwerpunkte*
-
-### Offen aus v5
-
-- [ ] Zeitleiste (`ui-timeline.js`) — Personen/Ereignisse auf horizontaler Zeitachse
-- [ ] Nachkommen-Baum (top-down SVG)
-- [ ] Karten-Ansicht (Apple Maps Link-Cluster oder leaflet.js)
-- [ ] Statistik-Dashboard (Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte)
-- [ ] Duplikat-Erkennung (gleicher Name + Geburtsjahr ±2, nur Anzeige)
-- [ ] Volltextsuche (Ereignis-Orte, Quellen-Titel, Notizen)
-- [ ] `writeGEDCOM()` in Subfunktionen aufteilen (477-Zeilen-Monolith)
-- [ ] `touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen
-- [ ] Globale Suche indexieren (Debounce + vorberechneter Index)
-
-### Neue Schwerpunkte
-
-*(werden in der nächsten Session definiert)*
+**sw-Version:** v413 · Cache: `stammbaum-v413`
+**Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
+**Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
 ---
 
-## Version 5.0 (Branch `v5-dev`, 2026-03-30 — 2026-04-05) — ABGESCHLOSSEN
+## Version 7.0 — Abgeschlossene Phasen
 
-### Schwerpunkt 1: Weitere Darstellungen
+| Phase | Inhalt | SW |
+|---|---|---|
+| 1 | GRAMPS-GEDCOM-Kompatibilität — `detectGRAMPS()`, `grampId`-Felder | v190 |
+| 2 | GRAMPS XML Import — `gramps-parser.js`, `db.placeObjects{}`, `db._grampsHandles{}` | v191–v196 |
+| 3 | GRAMPS XML Round-trip — `gramps-writer.js`, 60034 Deep-Test-Checks ✓ | v193–v204 |
+| 3b | UI: Höfe-Ansicht, RESI-Autocomplete, Bewohner-Formular | v224–v228 |
+| Cleanup | Virtual Scroll, onclick-Delegation, State-Konsolidierung, Suche indexiert | v230–v233 |
+| 4a | UX: `compactPlace()`, Notizen-Modal, noteRefs editierbar + löschbar | v236–v242 |
+| 4b | Duplikat-Erkennung + Merge: Levenshtein-Scoring, Merge-Modal | v243 |
+| 4c | Kartenansicht: Leaflet lokal, Orte + Personenbiografie, Desktop-Panel | v244–v250 |
+| 4d | Hof-Koordinaten + Notizen: `db.hofObjects{}`, PLAC+MAP am RESI, Hof-Marker | v280–v283 |
+| 4e | Hof-Eigentum: PROP-Ereignisse, `propEntries[]`, chronologische Sortierung | v261–v265 |
+| 4f | UX/UI-Review: Touch-Targets, Swipe-down, Unified Nav, `showToast(type)` | v289–v297 |
+| 4g | Rufname: `_RUFNAME`-Tag Roundtrip, Detailansicht, Baum | v298 |
+| 4h | Security/A11y: `user-scalable=no` entfernt, `esc()`, Debug `?debug=1`-only | v300–v306 |
+| 4j | Forschungsaufgaben: `p._tasks[]`, GEDCOM+GRAMPS-Roundtrip, globale Liste, Badge | v307 |
+| 5.1 | ASSO/RELA/Taufpaten: `p.associations[]`, GEDCOM↔GRAMPS, Taufpaten-CHR-Formular | v323–v329 |
+| F1 | Sosa/Kekule: 9-Gen-Baum + Fächer, `_buildKekuleMap()`, `#N`-Badges | v330–v332 |
+| F2 | Beziehungsrechner: BFS, `_relLabel()`, Pfad-Modal, Pedigree-Collapse-Hinweis | v333–v348 |
+| — | OBJE ohne FORM: `m.form = null`; Writer gibt FORM nur aus wenn nicht null | v349 |
+| F4 | Soundex-Suche: `germanSoundex()` mit Umlaut-Normalisierung, ≈-Toggle | v350 |
+| SEC | Security-Review: OAuth CSRF State, `safeLinkHref()`, `esc(addr)`, `_validCoord()` | v351 |
+| A3/A4 | SW Cache-first für App-Assets + Fonts lokal (8 woff2, CSP bereinigt) | v352–v353 |
+| A6 | `initAutocomplete()` zusammengeführt — `initPlaceAutocomplete` u.a. als Wrapper | v354 |
+| U1–U6 | Menü (Sektionen, Datei schließen), ARIA Dialogs, Touch-Targets, Hilfe-Modal | v355 |
+| — | Rufname-Formularfeld `pf-rufname`; Parser: Asterisk-Konvention in `2 GIVN` | v356 |
+| A11y/UX | Touch-Targets WCAG 2.5.5 (≥44px), Toast `aria-live="polite"` | v357 |
+| SEC5 | `innerHTML` → `textContent` in `onedrive-auth.js` | v358 |
+| A7/A9 | `_placeModes` → `UIState._placeModes`; `_odMigrateIfNeeded()` in auto-load | v359 |
+| — | Personen-IDs anzeigen + suchbar: `.p-id`, Suchindex, `detail-id-xref` | v361 |
+| A10 | `unsafe-inline` aus CSP entfernen — alle 6 Phasen ✅ (ADR-015) | v370–v373 |
+| U16–U19 + A11y | ♂/♀-Symbol + `aria-label` Baum-Karten; Kekule-Badge `title`; `.field-invalid` Formular-Validierung (Blur+Submit); `<label for>` in ui-forms.js ✅ | v376 |
+| U21 | `evGeoLink(lati, long)` in `ui-views.js` — 5 duplizierte maps.apple.com-Inline-URLs ersetzt; Bugfix `data-action="stop"` in generic-events-Loop | v377 |
+| U22 | Onboarding: „Stammbaum-Datei öffnen", Formatzeile `.ged · .gramps` mit Programmnamen, Demo-Button mit Personenzahl | v377 |
+| U23 | **`ui-forms.js` aufgeteilt** (1007 → 619 Z.): `ui-forms-person.js` (Person + Extra-Name-Formular, 273 Z.) + `ui-forms-family.js` (Familie-Formular, 124 Z.); Load-Order + SW-Precache aktualisiert | v380 |
+| F4b | Citations-Datenmodell: `citations:[{sid,page,quay,note,extra,media}]` in allen 8 Dateien; `citationObj()`, `_migrateLegacyCitations()`, `citTagsHtml()`; Roundtrip verlustfrei | v381 |
+| Quick-Add Chips | Event-Chips in Personen-Detailview: fehlende Sonder-Events + generische Shortcuts (1 horizontale Zeile, nowrap/overflow-x) | v388–v390 |
+| UX-Neu-Person | Progressive Disclosure im Neu-Person-Formular: Kern+Leben inline, Pills für Taufe/Beerdigung/Beruf/Wohnort/Notiz/Name-Details; Datum-Normalisierung (GEDCOM blur), Orts-Autocomplete, Quellen-Auto-Assign, „+ Weitere"-Button; Bearbeiten-Dialog entschlackt (nur Name/Meta) | v391–v397 |
+| Jump-Bar | Sticky Abschnitts-Navigation in Personen-Detailview: `[Daten][Notizen][Medien][Familie][Eltern]`; ab ≥3 Sektionen; `scroll-margin-top` für Topbar-Offset; `_injectJumpBar()` | v398–v399 |
+| CSP-Fix | 3 `onclick=`-Handler in Template-Strings → `data-action` (`removeNoteRef`, `newSourceForm`, `newFamilyForm`); keine Inline-Event-Handler mehr im Codebase | v400 |
+| U8 | Granulares Undo: `_undoStack/_redoStack` auf AppState (max 30); `pushUndo()` an 13 Mutations-Call-Sites; per-Entity-Snapshot; Cmd+Z = Undo (Fallback: Revert), Cmd+Shift+Z = Redo | v401–v402 |
+| Nav 2.0 | Vorwärts-Navigation: `_navFwdStack` auf UIState; `goForward()`; `→`-Button in Detail + Baum-Topbar; `_captureCurrentNavState()`; `_clearNavState()`; sessionStorage-Persistenz (`_persistNavState` / `_restoreNavState`) — Nav-State überlebt F5; Alt+← / Alt+→ als Keyboard-Shortcuts | v403 |
+| Hof-Umbenennen | `renameHofAddress(oldAddr, newAddr)` — zentrale Adressänderung für alle RESI/PROP-Ereignisse + hofObjects-Key + localStorage | v401 |
+| HOF-Notizen | `ev.noteRefs[]` → `@N_HOF_n@ NOTE`-Records; `_evHadNote`-Guard; `_noteOrig`-Sentinel; `_derivedHofObjectsFromDb` für Höfe ohne Koordinaten; hofObjects-Merge in allen 3 Ladepfaden | v404–v411 |
+| CONT/CONC-Parser | `3 CONT/CONC` unter `2 NOTE` in BIRT/CHR/DEAT/BURI (lv=3-Handler für evIdx<0) + MARR/ENGA/DIV/DIVF/EVEN (direkter Append statt Passthrough→_extra); Roundtrip STABIL out1===out2 | v412–v413 |
 
-Ziel: Ergänzende Visualisierungen neben der Sanduhr — besonders nutzbar auf Desktop und iPhone Querformat.
-
-#### Fan Chart (Fächer-/Halbkreisdiagramm) — ✅ ABGESCHLOSSEN (sw v83–v84)
-- [x] Vorfahren als konzentrische Halbkreis-Segmente (Probanden-Mitte, Eltern 1. Ring, Großeltern 2. Ring usw.)
-- [x] Rendering: SVG, polar coordinates; Segmente klickbar → showFanChart(id) oder showDetail(id)
-- [x] Konfigurierbar: 3–6 Generationen; Buttons in Topbar
-- [x] Toggle-Button `◑` im Baum-View; Desktop + Mobile
-- [x] Neue Datei `ui-fanchart.js`
-
-#### Generationen-Buttons im Sanduhr-Baum — ✅ ABGESCHLOSSEN (sw v84)
-- [x] Buttons 2/3/4/5/6 in Topbar (nur bei tree-active); Standard 5
-- [x] Dynamische Positionsfunktionen für bis zu 5 Ahnen-Ebenen (32 Slots)
-- [x] Portrait bleibt auf max. 2 Ebenen begrenzt
-
-#### Zeitleiste — Priorität 2
-- [ ] Personen/Ereignisse auf horizontaler Zeitachse (Geburt, Heirat, Tod)
-- [ ] Gefiltert nach aktueller Person + direkte Vorfahren/Nachkommen
-- [ ] Neue Datei `ui-timeline.js`
-
-#### Nachkommen-Baum — Priorität 3
-- [ ] Probanden oben, Kinder/Enkel nach unten (top-down SVG)
-
-#### Karten-Ansicht — Priorität 4
-- [ ] Geburts-/Sterbeorte auf Landkarte (Apple Maps Link-Cluster oder leaflet.js)
-
----
-
-### Schwerpunkt 2: Performance + UX
-
-#### Virtuelles Scrollen ✅ sw v145
-- [x] Listen >500 Einträge: nur sichtbare Zeilen + Puffer im DOM rendern
-- [x] Betrifft: Personen-Liste (2811 Eintr.), Familien-Liste (880 Eintr.)
-- [x] Kein Framework; Spacer-div-Ansatz, Binary-Search O(log n)
-
-#### Statistik-Dashboard — Priorität 2
-- [ ] Neues Modal oder eigener Tab: Gesamtzahlen, Vollständigkeit, häufigste Namen/Orte
-- [ ] Karten-Grid (Personen, Familien, Quellen, Medien, fehlende Daten %)
-
-#### Offline-Sync-Indikator — ✅ ABGESCHLOSSEN (sw v152)
-- [x] Floating Pill über Bottom-Nav: "● Nicht gespeichert" + Speichern-Button
-- [x] Button adaptiv: ☁ Speichern (OD) · ↑ Teilen (iPhone) · ↓ Speichern (Desktop)
-- [x] Global in allen Views sichtbar; erscheint/verschwindet via `updateChangedIndicator()`
-
----
-
-### Schwerpunkt 3: Datenqualität
-
-#### Erweiterte Events (restliche Passthrough-Reste) — Priorität 1
-- [x] FAM-Events: `DIV`, `DIVF`, `ENG`/`ENGA` — strukturiert statt passthrough ✅ (sw v134–v135)
-- [x] FAM-Events: Formularfelder für DIV/DIVF/ENG (Datum, Ort) — "Ereignisse"-Sektion in Familiendetail, Verlobung aus Haupt-Edit in Ereignisliste verschoben ✅ (sw v147)
-- [x] INDI-Events: `DSCR`, `IDNO`, `SSN` — strukturiert statt passthrough ✅ (sw v148)
-
-#### Ereignisliste Personendetail — ✅ ABGESCHLOSSEN (sw v150)
-- [x] Gleiche Ereignistypen als Block gruppiert darstellen (alle OCCU zusammen, alle RESI zusammen etc.)
-- [x] Innerhalb jedes Blocks: Ereignisse nach Datum sortiert (undatierte ans Ende)
-
-#### Duplikat-Erkennung — Priorität 2
-- [ ] Personen mit gleichem Name + Geburtsjahr (±2): Hinweis + Vergleichs-Ansicht
-- [ ] Kein automatisches Merge — nur Anzeige + manuelle Entscheidung
-
-#### Volltextsuche — Priorität 3
-- [ ] Suche über Ereignis-Orte, Quellen-Titel, Notizen (nicht nur Name)
-- [ ] Erweiterung des bestehenden Suchfelds in Personen-/Quellen-Liste
+GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
 ---
 
-### Schwerpunkt 4: OneDrive-Integration
+## Version 8.0 — Offene Aufgaben
 
-#### Startsequenz — ✅ ABGESCHLOSSEN (sw v151)
-- [x] Auswahl-Dialog bei Neustart (kein Session-Token): "☁ Von OneDrive laden" vs. "📱 Lokal"
-- [x] Gleiche Session (Token in sessionStorage): direkt von OneDrive laden, kein alter IDB-Stand
-- [x] OAuth-Return mit `od_autoload_pending`: nach Login automatisch Datei laden
-- [x] Timeout 8s + stiller Fallback auf IDB bei Fehler/Offline
-- [x] `_odRefreshTokenSilent()` — Token-Refresh ohne OAuth-Redirect (kein ungewolltes Login)
-- [x] `window._odCallbackPromise` — `window.load` wartet auf laufenden OAuth-Callback
+Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohne festes Datum
 
 ---
 
-### Schwerpunkt 5: Sonstiges
+### P1 — Nächster Sprint
 
-#### Offene Fehler — ✅ ABGESCHLOSSEN (sw v149–v150)
-- [x] Bug: Neue Quellenzuordnung bei FAM-/INDI-Ereignis erschien nicht sofort in Quellendetail „Verwendet in" — behoben durch `_rebuildPersonSourceRefs()` / `_rebuildFamilySourceRefs()` nach jedem Event-Save/Delete (sw v149)
-- [x] Bug: `saveFamily()` setzte `sourceRefs` nur aus Hochzeits-Quellen → Verlobung/Scheidung-Quellen fehlten in Referenzliste — behoben sw v149
-
-#### Fehler allgemein — ✅ ABGESCHLOSSEN (sw v85)
-- [x] Fan Button wird nicht angezeigt ✅ (sw v84)
-- [x] bei 'Medien einfügen' den vollständigen Pfad abspeichern ✅ (sw v85)
-- [x] bei 'Medien einfügen' mit dem in der Konfiguration definierten Dateipfad starten ✅ (sw v85)
-- [x] neues Sonstiges Ereignis speichert den Typ nicht ✅ (sw v85)
-- [x] ermögliche das Löschen von Ereignissen ✅ (sw v85)
-
-#### Fehler Mobile — ✅ ABGESCHLOSSEN (sw v91–v92)
-- [x] Querformat mit Liste: Suchzeile Gap zur Topbar ✅ (sw v92)
-- [x] Personen Detail: Foto Anzeige nach Verknüpfung neues Bild ✅ (sw v91)
-
-#### Fehler Desktop — ✅ ABGESCHLOSSEN (sw v92–v93)
-- [x] Pfeil links: ein Tastendruck → zwei Schritte zurück ✅ (sw v92–v93)
-
-#### Refactoring: ui-views.js Split — ✅ ABGESCHLOSSEN (sw v94–v95)
-- [x] `ui-views.js` (1963 Z.) aufgeteilt in 5 Module (sw v94)
-- [x] `showSourceDetail()` aus `ui-forms.js` in `ui-views-source.js` ausgelagert (sw v95)
-
-#### Medien-Handling Überarbeitung — ✅ ABGESCHLOSSEN (sw v96–v99)
-- [x] Relative OneDrive-Pfade: `_odPickSelectFile` speichert `fullPath` direkt (sw v96)
-- [x] Bevorzugtes Medium (`_PRIM Y`) in Titelleiste Person/Familie/Quelle (sw v96)
-- [x] Bug fix: `_odEditPickMode` zeigte keine Dateien (sw v97)
-- [x] `↑ Übergeordneter Ordner`-Button im Picker (sw v97–v98)
-- [x] `_odGetMediaUrlByPath(path)` — path-based OneDrive API, ein Pfad = eine Datei (sw v99)
-- [x] `od_filemap` nur noch Legacy-Fallback; Pfad in `m.file` ist Single Source of Truth (sw v99)
-- [x] Kamera-Fotos werden per PUT-API direkt in konfigurierten OneDrive-Ordner hochgeladen (sw v100)
-
-#### OneDrive-Pfad-Architektur: od_base_path — ✅ ABGESCHLOSSEN (sw v107–v112)
-- [x] `@microsoft.graph.downloadUrl` statt `/content`-Redirect (CORS-Fix) (sw v107)
-- [x] Picker-Pfad filtert `'OneDrive'`-Prefix konsistent (sw v108)
-- [x] Ordner-Picker startet bei konfiguriertem Ordner (nicht Root) (sw v109)
-- [x] `od_base_path` = einzige absolute Referenz; alle `m.file` relativ dazu (sw v110)
-- [x] `od_photo_folder` / `od_docs_folder` mit `relPath`-Feld (sw v110)
-- [x] `od_base_path` automatisch aus GED-Datei `parentReference.path` ableiten (sw v111)
-- [x] Einstellungen: Startpfad separat anzeigen; Ordner als relativer Pfad (sw v112)
-
-#### PEDI + Eltern-Kind-Quellen — ✅ ABGESCHLOSSEN (sw v121–v124)
-- [x] PEDI statt `_FREL`/`_MREL` — GEDCOM 5.5.1 Standard (sw v121)
-- [x] UI: inline PEDI-Dropdown in Familien-Ansicht + Suffix in Personen-Ansicht (sw v122)
-- [x] `#modalChildRel` — PEDI + Quellenangabe pro Kind-Verhältnis (sw v123)
-- [x] `.src-badge §N`-Stil für Kind-Verhältnis-Quellen (sw v124–v126)
-
-#### Quellen-Badges + OneDrive-Fix + DIV/DIVF strukturiert — ✅ ABGESCHLOSSEN (sw v125–v135)
-- [x] `.src-badge §N` einheitlich für alle Kontexte; Tooltip = `s.title || s.abbr` (sw v125–v127)
-- [x] `@@S2@@` doppelte @-Bug in Source-IDs behoben (sw v128–v129)
-- [x] OneDrive-Speichern: robuste Fehlerbehandlung, 30s Timeout, Pfad im Toast (sw v130–v133)
-- [x] DIV / DIVF / ENG strukturiert in Parser + Writer + Anzeige (sw v134)
-- [x] ENGA im Passthrough-Filter; Menü OneDrive-first; Roundtrip explizit (sw v135)
-
----
-
-### Schwerpunkt 5 — OCR
-- [ ] Konzept in `OCR.md`
-
----
-
----
-
-### Schwerpunkt 6: Code-Qualität & Sicherheit (aus Review 2026-04-05)
-
-#### Sicherheit — Priorität 1
-
-- [x] **OAuth-Token von `localStorage` → `sessionStorage`** — Token sind aktuell im DevTools lesbar und bei XSS abgreifbar; betrifft OneDrive-Vollzugriff (onedrive.js, storage.js)
-- [x] **Service Worker: Netzwerk-Timeout einbauen** — Network-first ohne Fallback-Timeout lässt App bei hängendem Netz unbegrenzt warten; Fix: 4s-Timeout → Cache-Fallback (sw.js)
-- [x] **`demo.ged` aus Produktions-Cache entfernen** — wird bei jedem Nutzer unnötig mitgeladen (sw.js)
-
-#### Performance — Priorität 2
-
-- [ ] **`touchmove` Pinch-Zoom mit `requestAnimationFrame` throttlen** — feuert aktuell 100+/s direkt auf DOM-Properties, Frame-Drops auf älteren iPhones (ui-views-tree.js)
-- [ ] **Globale Suche indexieren** — O(n×m) auf alle Personen/Felder ohne Cache; spürbar ab ~1000 Personen; Debounce + vorberechneter Index (ui-views.js)
-
-#### Refactoring — Priorität 3
-
-- [x] **Inline Event-Handler durch Event-Delegation ersetzen** — `oninput="updateSrcPage(...)"` u.ä. sind XSS-anfällig bei unvollständigem Escaping und erzeugen Memory-Leaks bei Modal-Reopen (ui-forms.js, viele ui-*.js)
-- [x] **GEDCOM-Parser: Error-Sammler einbauen** — ungültige Zeilen werden aktuell still ignoriert; `parseErrors[]`-Array als optionaler zweiter Parameter; Level-Validierung (max. lv=4) (gedcom-parser.js) ✅ (sw v138)
-- [ ] **`writeGEDCOM()` in Subfunktionen aufteilen** — 477-Zeilen-Monolith; je ein Writer für INDI/FAM/SOUR/HEAD (gedcom-writer.js)
-- [x] **`catch { return null }` durch echtes Error-Handling ersetzen** — maskiert alle OneDrive-API-Fehler, erschwert Debugging (onedrive.js) ✅ (sw v139)
-- [x] **`onedrive.js` in 3 Module aufteilen** — 946-Zeilen-Monolith; `onedrive-auth.js` (OAuth-Flow, Token), `onedrive-import.js` (Foto-Import-Wizard, Ordner-Browser), `onedrive.js` (Media-URL, File-I/O, Pfad-Helfer, Settings) ✅ (sw v140)
-- [x] **`ui-forms.js` in 3 Module aufteilen** — 1036 Zeilen; `ui-forms-event.js` (Event-Formular ~170 Z.), `ui-forms-repo.js` (Archiv/Picker/Detail ~163 Z.), `ui-forms.js` (Person/Familie/Quelle + Utilities ~706 Z.) ✅ (sw v141)
-
----
-
-## Offene Architektur-Schulden
-
-- ~~Virtuelles Scrollen für Listen >500 Einträge~~ → behoben sw v145: Spacer-div, Binary-Search, Desktop-Sync-Fix sw v146
-- Cmd+Z = "Revert to Saved" (nicht granulares Undo) — dokumentiert, aber UX-Problem
-- Familien-Avatar: CSS-Symbol statt OS-Emoji
-- Duplikat-Erkennung in Suche
-- ~~DIV/DIVF/ENG: Formularfelder für Datum/Ort~~ → behoben sw v147: "Ereignisse"-Sektion in Familiendetail
-- ~~OAuth-Token in `localStorage`~~ → behoben sw v136: jetzt `sessionStorage`
-- ~~Inline Event-Handler in HTML-Strings~~ → behoben sw v137: globale Event-Delegation
-- ~~GEDCOM-Parser ohne Fehler-Sammler~~ → behoben sw v138: `parseErrors[]` + Level-Validierung
-- ~~`sourceRefs` nach Event-Save nicht aktualisiert~~ → behoben sw v149: rebuild-Funktionen nach save/delete
-- ~~Ereignisliste unsortiert/ungruppiert~~ → behoben sw v150: Typ-Gruppen + Datum-Sortierung
-
----
-
-## Getestete Umgebungen
-
-| Plattform | Browser | Laden | Speichern |
+| ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| iPhone (iOS 17+) | Safari | ✅ | ✅ OneDrive (primär) / Share Sheet (lokal) |
-| iPhone (iOS 17+) | Chrome | ✅ | ✅ OneDrive (primär) |
-| Mac | Safari | ✅ | ✅ OneDrive (primär) / Download (lokal) |
-| Mac | Chrome | ✅ | ✅ OneDrive (primär) / Direktes Speichern (lokal) |
-| Mac | Firefox | ✅ | ✅ OneDrive (primär) / Download (lokal) |
-| Android | Chrome | ✅ | ✅ OneDrive (primär) |
+| ~~U20~~ | ~~God-Functions aufteilen~~ | verworfen — Nutzen gering bei Solo-Projekt; nur `_pdetLifeData()` aus `showDetail()` extrahiert (Lebensdaten-Block inkl. Events-Gruppierung) | – |
+| F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO-konform | M |
+| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen; `p._rufname` → `2 NICK`; Export-Modus im Einstellungs-Modal | M |
+| GRAMPS-Badge | **GRAMPS-Modus sichtbar machen** | Bei `db._grampsMaster`: Badge in Topbar + primäres Export-Format = `.gramps` | S |
+| GRAMPS-Tags | **Tags als Badges** | `db.tags{}` in Personen-/Familien-Detail als farbige Badges | S |
 
 ---
 
-## Datei-Statistiken (MeineDaten_ancestris.ged)
+### P2 — Mittelfristig
 
-```
-Personen:      2811
-Familien:       880
-Quellen:        130
-Archive:           4
-Notizen:         195
-Dateigröße:    ~5 MB  (83152 Zeilen)
-```
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
+| F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
+| GRAMPS-Orte | **Orts-Picker** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |
+| GRAMPS-Edit | **Personen-/Ereignis-Formular** | `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar; Witness-Rollen read-only | M+M |
+| Nachkommen | **Nachkommen-Baum** | Top-down SVG | L |
+
+---
+
+### Backlog (kein festes Datum)
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| ~~F4b~~ | ~~**Mehrfach-Zitierungen**~~ | ✅ **Abgeschlossen** (sw v381): `citations:[{sid,page,quay,note,extra,media}]` in allen 8 Dateien; Roundtrip verlustfrei | XL |
+| ~~U8~~ | ~~**Granulares Undo**~~ | ✅ **Abgeschlossen** (sw v402): `_undoStack/_redoStack` auf AppState; `pushUndo()` an 13 Call-Sites; Cmd+Z = Undo, Cmd+Shift+Z = Redo, Fallback auf Revert-to-Saved | XL |
+| F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
+| F8 | **Cluster-Ansicht** | Personen in denselben Orten/Quellen wie Person X | L |
+| F9 | **Zeitleiste** | Events neben historischen Ereignissen; `ui-timeline.js` | XL |
+| F10 | **Buchgenerator** | HTML/PDF Familienbuch; Ahnentafel + Biografie + Fotos | XL |
+| F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
+| F12 | **Event-NOTE-Referenzen** | ✅ sw v387 — `ev.noteRefs[]` in allen Event-Objekten; Parser: `2 NOTE @ref@` → Ref statt Inline-Text + Resolve-Loop; Writer: Refs ausgeben; HOF-Notizen als `0 @N_HOF_n@ NOTE`-Records + RESI-Events referenzieren. | M |
+
+---
+
+## Wartungsschuld — Konkrete Hinweise
+
+Schulden nach Dringlichkeit, unabhängig vom Feature-Backlog anzugehen:
+
+### Mittelfristig (je L)
+
+~~**F4b: Zitierungs-Datenstruktur**~~ ✅ *Abgeschlossen sw v381* — `citations:[{sid,page,quay,note,extra,media}]` ersetzt 6 parallele Dicts; `citationObj()` Factory; `_migrateLegacyCitations()` für IDB-Altdaten; `citTagsHtml()` für Detailansichten; Parser/Writer/Forms/Views vollständig migriert.
+
+~~**Einheitliche Render-Konvention**~~ ✅ *Verworfen* — `innerHTML =` ist kein CSP-Verstoß (`script-src 'self'` blockiert nur Inline-Scripts und `onclick=`-Handler, nicht `innerHTML` selbst). Die 3 tatsächlichen `onclick=`-Verstöße wurden in sw v400 behoben. Vollmigration auf DOM-Manipulation: Wochen Aufwand für minimalen Sicherheitsgewinn bei Single-User-App mit konsequentem `esc()`-Einsatz — nicht geplant.
+
+---
+
+*Aufwand: XS (<1h) · S (1–2h) · M (halber Tag) · L (1–2 Tage) · XL (>2 Tage)*
+*Abgelehnte Aufgaben und Archiv: CHANGELOG.md*

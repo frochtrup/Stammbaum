@@ -14,7 +14,7 @@ const FC = {
 
 // RADII[g] = Außenradius der Generation g
 // RADII[0] = Radius des Proband-Kreises
-const RADII = [38, 90, 148, 218, 296, 380, 464];
+const RADII = [38, 90, 148, 218, 296, 380, 464, 550, 638, 728];
 
 // ──────────────────────────────────────────
 //  Öffentliche API
@@ -30,7 +30,7 @@ window.showFanChart = function (pid) {
   setBnavActive('tree');
 
   document.getElementById('treeTopTitle').textContent = _fcName(getPerson(pid), 28);
-  document.getElementById('treeBtnBack').style.display = 'none';
+  document.getElementById('treeBtnBack').hidden = true;
 
   const tb = document.getElementById('treeFcToggle');
   if (tb) { tb.textContent = '⧖'; tb.title = 'Zur Sanduhr-Ansicht'; }
@@ -53,7 +53,7 @@ window.toggleFanChart = function () {
 
 // Generationenzahl ändern (3–6)
 window.setFcGens = function (n) {
-  FC.genCount = Math.max(3, Math.min(6, n));
+  FC.genCount = Math.max(3, Math.min(9, n));
   document.querySelectorAll('.fc-gen-btn').forEach(b => {
     b.classList.toggle('active', +b.dataset.gen === FC.genCount);
   });

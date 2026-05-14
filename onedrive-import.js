@@ -145,36 +145,34 @@ async function _odShowFolder(folderId, folderName) {
     const list = document.getElementById('odFileList');
     if (!list) return;
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
-    let html = `<div style="font-size:0.75rem;color:var(--text-dim);padding-bottom:8px">${esc(breadcrumb)}</div>`;
+    let html = `<div class="od-breadcrumb">${esc(breadcrumb)}</div>`;
     if (_odFolderStack.length > 0) {
-      html += `<div class="list-item" data-action="odFolderBack" style="cursor:pointer;color:var(--gold)">← Zurück</div>`;
+      html += `<div class="list-item od-back-link" data-action="odFolderBack">← Zurück</div>`;
     } else if (_isPickMode) {
-      html += `<div class="list-item" data-action="odPickCancel" style="cursor:pointer;color:var(--gold)">← Abbrechen</div>`;
+      html += `<div class="list-item od-back-link" data-action="odPickCancel">← Abbrechen</div>`;
       if (_odPickStartedFromSubfolder) {
-        html += `<div class="list-item" data-action="odShowAllFolders" style="cursor:pointer;color:var(--text-dim);font-size:0.85rem">↑ Übergeordneter Ordner</div>`;
+        html += `<div class="list-item od-parent-link" data-action="odShowAllFolders">↑ Übergeordneter Ordner</div>`;
       }
     }
     if (!_odPickMode && folderId !== 'root') {
       if (_odDocScanMode) {
-        html += `<div class="list-item" data-action="odScanDocFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
-          style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)">
+        html += `<div class="list-item od-action-item" data-action="odScanDocFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
           📂 Diesen Ordner als Dokumente-Ordner nutzen</div>`;
       } else {
-        html += `<div class="list-item" data-action="odImportPhotos" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}"
-          style="cursor:pointer;font-weight:600;color:var(--gold);border:1px solid var(--gold-dim)">
+        html += `<div class="list-item od-action-item" data-action="odImportPhotos" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
           📥 Fotos aus diesem Ordner laden</div>`;
       }
     }
     if (folders.length === 0 && files.length === 0) {
-      html += `<div style="color:var(--text-dim);font-size:0.85rem;padding:8px">Keine Einträge</div>`;
+      html += `<div class="od-empty-hint">Keine Einträge</div>`;
     } else {
-      html += folders.map(f => `<div class="list-item" data-action="odEnterFolder" style="cursor:pointer"
+      html += folders.map(f => `<div class="list-item od-folder-item" data-action="odEnterFolder"
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-parentid="${esc(folderId)}" data-parentname="${esc(folderName)}">📁 &nbsp;${esc(f.name)}</div>`).join('');
       const _fullFolderPath = [..._odFolderStack.map(f => f.name), folderName]
         .filter(n => n !== 'OneDrive').join('/');
       const _relFolderPath = _odToRelPath(_fullFolderPath, _odCurrentBasePath || '');
-      html += files.map(f => `<div class="list-item" data-action="odPickSelectFile" style="cursor:pointer"
+      html += files.map(f => `<div class="list-item od-file-item" data-action="odPickSelectFile"
           data-odid="${esc(f.id)}" data-odname="${esc(f.name)}"
           data-path="${esc(_relFolderPath ? _relFolderPath + '/' + f.name : f.name)}">📄 &nbsp;${esc(f.name)}</div>`).join('');
     }
@@ -208,6 +206,44 @@ async function _odShowAllFolders() {
     if (parentId) await _odShowFolder(parentId, parentName);
     else await _odShowFolder('root', 'OneDrive');
   } catch(e) { console.warn('[OD] Parent-Ordner laden:', e); await _odShowFolder('root', 'OneDrive'); }
+}
+
+function _updatePersonPhoto(id) {
+  const p = getPerson(id);
+  const prim = p?.media?.find(m => m.prim) || p?.media?.[0];
+  if (!prim?.file) return;
+  _odGetMediaUrlByPath(prim.file).then(url => {
+    if (!url) return;
+    const el = document.getElementById('det-photo-' + id);
+    const av = document.getElementById('det-avatar-' + id);
+    if (el) {
+      const img = document.createElement('img');
+      img.src = url; img.alt = 'Foto';
+      img.dataset.action = 'showLightbox';
+      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
+      el.style.display = 'block'; el.innerHTML = ''; el.appendChild(img);
+    }
+    if (av) av.style.display = 'none';
+  }).catch(() => {});
+}
+
+function _updateFamilyPhoto(id) {
+  const f = getFamily(id);
+  const prim = f?.media?.find(m => m.prim) || f?.media?.[0];
+  if (!prim?.file) return;
+  _odGetMediaUrlByPath(prim.file).then(url => {
+    if (!url) return;
+    const el = document.getElementById('det-fam-photo-' + id);
+    const av = document.getElementById('det-fam-avatar-' + id);
+    if (el) {
+      const img = document.createElement('img');
+      img.src = url; img.alt = 'Foto';
+      img.dataset.action = 'showLightbox';
+      img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
+      el.style.display = 'block'; el.innerHTML = ''; el.appendChild(img);
+    }
+    if (av) av.style.display = 'none';
+  }).catch(() => {});
 }
 
 async function odImportPhotosFromFolder(folderId, folderName) {
@@ -296,32 +332,8 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     Object.keys(_odPhotoCache).forEach(k => delete _odPhotoCache[k]);
 
     // Aktuelle Ansicht sofort aktualisieren
-    if (AppState.currentPersonId) {
-      const p = getPerson(AppState.currentPersonId);
-      const primMedia = p?.media?.find(m => m.prim) || p?.media?.[0];
-      if (primMedia?.file) {
-        _odGetMediaUrlByPath(primMedia.file).then(url => {
-          if (!url) return;
-          const el = document.getElementById('det-photo-' + AppState.currentPersonId);
-          const av = document.getElementById('det-avatar-' + AppState.currentPersonId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`; }
-          if (av) av.style.display = 'none';
-        }).catch(() => {});
-      }
-    }
-    if (AppState.currentFamilyId) {
-      const f = getFamily(AppState.currentFamilyId);
-      const primMedia = f?.media?.find(m => m.prim) || f?.media?.[0];
-      if (primMedia?.file) {
-        _odGetMediaUrlByPath(primMedia.file).then(url => {
-          if (!url) return;
-          const el = document.getElementById('det-fam-photo-' + AppState.currentFamilyId);
-          const av = document.getElementById('det-fam-avatar-' + AppState.currentFamilyId);
-          if (el) { el.style.display = ''; el.innerHTML = `<img src="${url}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`; }
-          if (av) av.style.display = 'none';
-        }).catch(() => {});
-      }
-    }
+    if (AppState.currentPersonId) _updatePersonPhoto(AppState.currentPersonId);
+    if (AppState.currentFamilyId) _updateFamilyPhoto(AppState.currentFamilyId);
 
     let msg = `✓ ${linked} Fotos verknüpft`;
     if (missing) msg += ` · ${missing} nicht gefunden`;

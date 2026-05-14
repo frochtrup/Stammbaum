@@ -6,20 +6,21 @@ function _famSortKey(a) {
   return na;
 }
 
-function _famRowHtml(f, isCurrent) {
+function _famRowHtml(f, isCurrent, pos, total) {
   const husb = (f.husb && AppState.db.individuals[f.husb]) || null;
   const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
   let meta = '';
   if (f.marr.date) meta += '⚭ ' + f.marr.date;
-  if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + f.marr.place;
+  if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + compactPlace(f.marr.place);
   if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
   const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
                     + (f.marr?.media || []).filter(m => m.file || m.titl).length
                     + (f._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
-  const fMediaBadge = fMediaCount ? `<span style="font-size:0.78rem;margin-left:4px;vertical-align:middle;opacity:0.7">📎</span>` : '';
-  return `<div class="person-row${isCurrent ? ' current' : ''}" data-action="showFamilyDetail" data-fid="${f.id}">
-      <div class="p-avatar">👨‍👩‍👧</div>
+  const fMediaBadge = fMediaCount ? `<span class="p-media-badge">📎</span>` : '';
+  const ariaPos = pos != null ? ` aria-setsize="${total}" aria-posinset="${pos}"` : '';
+  return `<div class="person-row${isCurrent ? ' current' : ''}" role="listitem"${ariaPos} data-action="showFamilyDetail" data-fid="${f.id}">
+      <div class="p-avatar fam">⬡</div>
       <div class="p-info">
         <div class="p-name">${esc(title)}${fMediaBadge}</div>
         <div class="p-meta">${esc(meta) || '&nbsp;'}</div>
@@ -33,7 +34,18 @@ function renderFamilyList(fams) {
   if (!fams) fams = Object.values(AppState.db.families);
   if (!fams.length) {
     _vsTeardown(_vsF);
-    listEl.innerHTML = '<div class="empty">Keine Familien gefunden</div>';
+    const totalFams = Object.keys(AppState.db.families || {}).length;
+    if (totalFams === 0) {
+      listEl.innerHTML = `<div class="empty-state">
+        <div class="empty-state-icon">⊕</div>
+        <div class="empty-state-title">Noch keine Familien</div>
+        <div class="empty-state-msg">Familien entstehen durch Verknüpfung von Personen als Ehepaar oder Eltern-Kind-Beziehung.</div>
+        <button class="empty-state-btn" data-action="newFamilyForm">Familie anlegen</button>
+      </div>`;
+    } else {
+      listEl.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';
+    }
+    _announceList('Keine Familien');
     return;
   }
   fams = [...fams].sort((a, b) => {
@@ -46,8 +58,9 @@ function renderFamilyList(fams) {
     // ── Normales Rendering ──
     _vsTeardown(_vsF);
     let html = '';
-    for (const f of fams) html += _famRowHtml(f, false);
+    for (let i = 0; i < fams.length; i++) html += _famRowHtml(fams[i], false, i + 1, fams.length);
     listEl.innerHTML = html;
+    _announceList(fams.length + (fams.length === 1 ? ' Familie' : ' Familien'));
     if (AppState.currentFamilyId) {
       const cur = listEl.querySelector(`[data-fid="${AppState.currentFamilyId}"]`);
       if (cur) {
@@ -65,14 +78,16 @@ function renderFamilyList(fams) {
   let offset = 0;
   const curId = AppState.currentFamilyId;
 
-  for (const f of fams) {
-    _vsF.items.push({ px: _VS_ROW, s: _famRowHtml(f, f.id === curId), id: f.id });
+  for (let i = 0; i < fams.length; i++) {
+    const f = fams[i];
+    _vsF.items.push({ px: _VS_ROW, s: _famRowHtml(f, f.id === curId, i + 1, fams.length), id: f.id });
     _vsF.offsets.push(offset);
     offset += _VS_ROW;
   }
   _vsF.total = offset;
 
   _vsSetup(listEl, _vsF);
+  _announceList(fams.length + (fams.length === 1 ? ' Familie' : ' Familien'));
 
   if (curId) {
     const idx = _vsF.items.findIndex(it => it.id === curId);
@@ -101,8 +116,19 @@ function filterFamilies(q) {
     const wife = (f.wife && AppState.db.individuals[f.wife]) || null;
     if (husb && (husb.name||'').toLowerCase().includes(lower)) return true;
     if (wife && (wife.name||'').toLowerCase().includes(lower)) return true;
-    if ((f.marr.date||'').toLowerCase().includes(lower)) return true;
-    if ((f.marr.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.marr?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.div?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.div?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.engag?.date||'').toLowerCase().includes(lower)) return true;
+    if ((f.engag?.place||'').toLowerCase().includes(lower)) return true;
+    if ((f.noteText||'').toLowerCase().includes(lower)) return true;
+    for (const ev of (f.events || [])) {
+      if ((ev.value||'').toLowerCase().includes(lower)) return true;
+      if ((ev.place||'').toLowerCase().includes(lower)) return true;
+      if ((ev.date||'').toLowerCase().includes(lower)) return true;
+      if ((ev.eventType||'').toLowerCase().includes(lower)) return true;
+    }
     return false;
   }));
 }
@@ -167,7 +193,7 @@ function renderRelPicker(q) {
 
   list.innerHTML = '';
   if (!persons.length) {
-    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Keine Treffer</div>';
+    list.innerHTML = '<div class="rel-picker-no-result">Keine Treffer</div>';
     return;
   }
   for (const p of persons) {
@@ -230,8 +256,8 @@ function openRelFamilyForm(anchorId, partnerId, mode) {
   }
 }
 
-function unlinkMember(famId, personId) {
-  if (!confirm('Verbindung wirklich trennen?')) return;
+async function unlinkMember(famId, personId) {
+  if (!await confirmModal('Verbindung wirklich trennen?', 'Trennen')) return;
   const f = AppState.db.families[famId];
   const p = AppState.db.individuals[personId];
   if (!f || !p) return;
@@ -248,7 +274,7 @@ function unlinkMember(famId, personId) {
     p.famc = p.famc.filter(c => famcIdOf(c) !== famId);
   } else return; // nichts gefunden
 
-  markChanged(); updateStats(); renderTab();
+  markChanged(); renderTab();
   showToast('✓ Verbindung getrennt');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
   else if (AppState.currentPersonId) showDetail(AppState.currentPersonId);
@@ -261,11 +287,15 @@ function showFamilyDetail(id, pushHistory = true) {
   const f = AppState.db.families[id];
   if (!f) return;
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentFamilyId = id;
-  AppState.currentPersonId = null;
-  AppState.currentSourceId = null;
-  AppState.currentRepoId   = null;
-  if (document.body.classList.contains('desktop-mode')) { _updateFamilyListCurrent(id); _updatePersonListCurrent(null); }
+  AppState.currentFamilyId  = id;
+  AppState.currentPersonId  = null;
+  AppState.currentSourceId  = null;
+  AppState.currentRepoId    = null;
+  AppState.currentPlaceName = null;
+  if (document.body.classList.contains('desktop-mode')) {
+    if (AppState.currentTab === 'families') _updateFamilyListCurrent(id); else _updateFamilyListCurrent(null);
+    _updatePersonListCurrent(null);
+  }
 
   const husb = f.husb ? AppState.db.individuals[f.husb] : null;
   const wife = f.wife ? AppState.db.individuals[f.wife] : null;
@@ -273,59 +303,56 @@ function showFamilyDetail(id, pushHistory = true) {
 
   document.getElementById('detailTopTitle').textContent = 'Familie';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('editBtn').onclick = () => showFamilyForm(id);
   const _famTreeTarget = f.husb || f.wife || null;
-  document.getElementById('treeBtn').style.display = _famTreeTarget ? '' : 'none';
-  if (_famTreeTarget) document.getElementById('treeBtn').onclick = () => showTree(_famTreeTarget);
+  const tb = document.getElementById('treeBtn');
+  tb.style.display = _famTreeTarget ? '' : 'none';
+  if (_famTreeTarget) tb.dataset.id = _famTreeTarget;
 
   let html = `<div class="detail-hero fade-up">
-    <div id="det-fam-photo-${id}" style="display:none"></div>
-    <div id="det-fam-avatar-${id}" class="detail-avatar" style="font-size:1.8rem">👨‍👩‍👧</div>
+    <div id="det-fam-photo-${id}" class="det-photo-wrap"></div>
+    <div id="det-fam-avatar-${id}" class="detail-avatar fam">⬡</div>
     <div class="detail-hero-text">
       <div class="detail-name">${esc(title)}</div>
     </div>
   </div>`;
 
-  if (f.marr.date || f.marr.place || f.marr.addr) {
-    html += `<div class="section fade-up"><div class="section-title">Heirat</div>`;
-    const marrSrc = (f.marr.sources?.length) ? f.marr.sources : (f.sourceRefs?.length ? [...f.sourceRefs] : null);
-    if (f.marr.date) html += factRow('Datum', f.marr.date, '', f.marr.place ? null : marrSrc);
-    if (f.marr.place) {
-      const geoBtn = (f.marr.lati !== null && f.marr.lati !== undefined)
-        ? `<a href="https://maps.apple.com/?ll=${f.marr.lati},${f.marr.long}" target="_blank" style="color:var(--gold-dim);font-size:0.75rem;text-decoration:none;margin-left:5px">📍</a>` : '';
-      html += factRow('Ort', f.marr.place, geoBtn, marrSrc);
-    }
-    if (f.marr.addr) html += factRow('Adresse', f.marr.addr);
-    html += `</div>`;
-  }
   {
+    // Einheitliche Ereignisse-Section (analog Lebensdaten bei Personen)
     const _famEvDefs = [
+      { key:'marr',  label:'Heirat' },
       { key:'engag', label:'Verlobung' },
       { key:'div',   label:'Scheidung' },
       { key:'divf',  label:'Scheidungsantrag' }
     ];
-    const _existing = _famEvDefs.filter(e => f[e.key]?.date || f[e.key]?.place || f[e.key]?.seen);
-    const _missing  = _famEvDefs.filter(e => !f[e.key]?.date && !f[e.key]?.place && !f[e.key]?.seen);
-    const _addBtns  = _missing.map(e =>
-      `<button class="section-add" data-action="showFamEventForm" data-fid="${id}" data-evkey="${e.key}">+ ${e.label}</button>`
-    ).join('');
     html += `<div class="section fade-up">
       <div class="section-head">
         <div class="section-title">Ereignisse</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap">${_addBtns}</div>
+        <button class="section-add" data-action="showFamEventForm" data-fid="${id}">+ Ereignis</button>
       </div>`;
+    let _hasAnyEv = false;
     for (const { key, label } of _famEvDefs) {
       const ev = f[key];
       if (!ev?.date && !ev?.place && !ev?.seen) continue;
-      const src   = ev.sources?.length ? ev.sources : null;
-      const parts = [ev.date, ev.place].filter(Boolean).join(', ');
-      html += `<div class="fact-row" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}" style="cursor:pointer">
+      _hasAnyEv = true;
+      const geoBtn = evGeoLink(ev.lati, ev.long);
+      const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
+      html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}">
         <span class="fact-lbl">${label}</span>
-        <span class="fact-val">${esc(parts || '–')}${sourceTagsHtml(src || [])}</span>
+        <span class="fact-val">${esc(parts || '–')}${geoBtn}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
-    if (_existing.length === 0) {
-      html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Ereignisse eingetragen</div>`;
+    for (let _ei = 0; _ei < (f.events || []).length; _ei++) {
+      const ev = f.events[_ei];
+      _hasAnyEv = true;
+      const label = (ev.eventType && ev.type === 'EVEN') ? ev.eventType : (EVENT_LABELS[ev.type] || ev.type);
+      const parts = [ev.value, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
+      html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}">
+        <span class="fact-lbl">${esc(label)}</span>
+        <span class="fact-val">${esc(parts || '–')}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+      </div>`;
+    }
+    if (!_hasAnyEv) {
+      html += `<div class="no-data">Keine Ereignisse eingetragen</div>`;
     }
     html += `</div>`;
   }
@@ -337,32 +364,19 @@ function showFamilyDetail(id, pushHistory = true) {
     </div>`;
   if (husb) html += relRow(husb, 'Ehemann / Vater', id);
   if (wife) html += relRow(wife, 'Ehefrau / Mutter', id);
-  for (const cid of f.children) {
+  for (const cid of _sortedChildren(f.children)) {
     const child = AppState.db.individuals[cid];
     if (!child) continue;
     const _fe = (child.famc || []).find(x => (typeof x === 'string' ? x : x.famId) === id);
     const _curPedi = (typeof _fe === 'object') ? (_toPedi(_fe.pedi || _fe.frel || '')) : '';
-    const _pSel = v => v === _curPedi ? ' selected' : '';
-    const _pediSelect = `<select
-        data-action="stop" data-change="savePedi" data-fid="${id}" data-cid="${cid}"
-        style="font-size:0.8rem;border:none;background:transparent;color:var(--text-dim);cursor:pointer;max-width:90px">
-      <option value=""${_pSel('')}>– Verhältnis</option>
-      <option value="birth"${_pSel('birth')}>leiblich</option>
-      <option value="adopted"${_pSel('adopted')}>adoptiert</option>
-      <option value="foster"${_pSel('foster')}>Pflegekind</option>
-      <option value="sealing"${_pSel('sealing')}>Sealing</option>
-    </select>`;
-    const _sourIds = (typeof _fe === 'object') ? (_fe.sourIds || []) : [];
-    const _addQBtn = `<button data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
-        title="Quelle hinzufügen" style="background:none;border:1px dashed var(--border);
-        border-radius:12px;padding:1px 7px;font-size:0.7rem;color:var(--text-muted);cursor:pointer">+ Q</button>`;
-    const _sourWidget = _sourIds.length
-      ? _sourIds.map(sid => {
-          const s = AppState.db.sources[sid];
-          const tooltip = s ? esc((s.title || s.abbr || sid).substring(0, 60)) : esc(sid);
-          const num = (sid.match(/\d+/) || [sid])[0];
-          return `<span class="src-badge" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}" data-sid="${sid}" title="${tooltip}">§${num}</span>`;
-        }).join('') + _addQBtn
+    const _pediLabels = { birth: 'leiblich', adopted: 'adoptiert', foster: 'Pflegekind', sealing: 'Sealing' };
+    const _pediLabel = _curPedi ? (_pediLabels[_curPedi] || _curPedi) : '– Verhältnis';
+    const _pediSpan = `<span class="child-pedi-span" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}">${_pediLabel}</span>`;
+    const _cits = (typeof _fe === 'object') ? (_fe.citations || []) : [];
+    const _addQBtn = `<button class="child-q-btn" data-action="showChildRelDialog" data-fid="${id}" data-cid="${cid}"
+        title="Quelle hinzufügen">+ Q</button>`;
+    const _sourWidget = _cits.length
+      ? citTagsHtml(_cits) + _addQBtn
       : _addQBtn;
     const sc = child.sex === 'M' ? 'm' : child.sex === 'F' ? 'f' : '';
     const ic = child.sex === 'M' ? '♂' : child.sex === 'F' ? '♀' : '◇';
@@ -370,7 +384,7 @@ function showFamilyDetail(id, pushHistory = true) {
       <div class="rel-avatar ${sc}">${ic}</div>
       <div class="rel-info">
         <div class="rel-name">${esc(child.name || child.id)}</div>
-        <div class="rel-role" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">Kind${_pediSelect}${_sourWidget}</div>
+        <div class="rel-role rel-role-row">Kind · ${_pediSpan}${_sourWidget}</div>
       </div>
       <button class="unlink-btn" data-action="unlinkMember" data-fid="${id}" data-pid="${child.id}"
         title="Verbindung trennen">×</button>
@@ -379,11 +393,20 @@ function showFamilyDetail(id, pushHistory = true) {
   }
   html += `</div>`;
 
-  if (f.noteText) {
-    html += `<div class="section fade-up"><div class="section-title">Notizen</div>
-      <div style="font-size:0.88rem;color:var(--text-dim);line-height:1.6;white-space:pre-wrap">${esc(f.noteText)}</div>
-    </div>`;
-  }
+  // Notizen
+  const _fNoteText = f.noteText || '';
+  const _fHasRefs  = (f.noteRefs || []).some(r => AppState.db.notes?.[r]);
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Notizen${_fHasRefs ? ` <span class="fs-xxs c-muted fw-400">(+ verknüpfte)</span>` : ''}</div>
+      <button class="section-add" data-action="openNoteModal" data-ntype="family" data-nid="${id}">✎ Bearbeiten</button>
+    </div>
+    <div class="note-clickable" data-action="openNoteModal" data-ntype="family" data-nid="${id}">
+      ${_fNoteText
+        ? `<div class="note-text">${esc(_fNoteText)}</div>`
+        : `<div class="note-hint">Notiz hinzufügen…</div>`}
+    </div>
+  </div>`;
 
   // Media section: marr.media[] (2 OBJE unter MARR), f.media[] (1 OBJE auf FAM-Ebene), ref OBJE in _passthrough
   const famMedia = f.media || [];
@@ -404,12 +427,12 @@ function showFamilyDetail(id, pushHistory = true) {
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+      html += `<div class="media-row"
         data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-fam-photo-${id}" data-avatar="det-fam-avatar-${id}">
-        <div id="media-thumb-fam-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        <div id="media-thumb-fam-${id}-${i}" class="media-thumb">${_icon}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(display)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
         </div>
         <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="family" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
@@ -421,12 +444,12 @@ function showFamilyDetail(id, pushHistory = true) {
       const _ext = (m.file || '').split('.').pop().toLowerCase();
       const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
       const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color);cursor:pointer"
+      html += `<div class="media-row"
         data-action="openMediaPhoto" data-media-file="${esc(m.file || '')}" data-hero="det-fam-photo-${id}" data-avatar="det-fam-avatar-${id}">
-        <div id="media-thumb-fam-media-${id}-${i}" style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(display)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
+        <div id="media-thumb-fam-media-${id}-${i}" class="media-thumb">${_icon}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(display)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
         </div>
         <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="family_media" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
       </div>`;
@@ -438,16 +461,16 @@ function showFamilyDetail(id, pushHistory = true) {
       const sub   = obj && obj.title && obj.file ? obj.file : '';
       const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
       const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border-color)">
-        <div style="flex-shrink:0;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--bg-card);border-radius:6px;border:1px solid var(--border-color)">${_icon2}</div>
-        <div style="flex:1;min-width:0">
-          <div style="word-break:break-all;font-size:0.88rem;font-weight:500">${esc(label)}</div>
-          ${sub ? `<div style="color:var(--text-muted);font-size:0.78rem;word-break:break-all">${esc(sub)}</div>` : ''}
-          <div style="color:var(--text-muted);font-size:0.78rem">Verweis</div>
+      html += `<div class="media-row--ref">
+        <div class="media-thumb">${_icon2}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(label)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
+          <div class="media-ref-label">Verweis</div>
         </div>
       </div>`;
     }
-    if (!marrObjeEntries.length && !famMedia.length && !famPtObje.length) html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem;padding:4px 0">Keine Medien eingetragen</div>`;
+    if (!marrObjeEntries.length && !famMedia.length && !famPtObje.length) html += `<div class="no-data-pad">Keine Medien eingetragen</div>`;
     html += `</div>`;
   }
 
@@ -472,11 +495,11 @@ function showFamilyDetail(id, pushHistory = true) {
     const el = document.getElementById('det-fam-photo-' + id);
     const av = document.getElementById('det-fam-avatar-' + id);
     if (el) {
-      el.style.display = ''; el.innerHTML = '';
+      el.style.display = 'block'; el.innerHTML = '';
       const img = document.createElement('img');
       img.src = src; img.alt = 'Foto';
       img.style.cssText = 'width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer';
-      img.onclick = () => showLightbox(img.src, null, 'det-fam-photo-' + id, 'det-fam-avatar-' + id, null);
+      img.addEventListener('click', () => showLightbox(img.src, null, 'det-fam-photo-' + id, 'det-fam-avatar-' + id, null));
       img.onerror = () => { el.style.display = 'none'; if (av) av.style.display = ''; };
       el.appendChild(img);
       if (av) av.style.display = 'none';
@@ -515,10 +538,7 @@ function showChildRelDialog(famId, childId) {
   document.getElementById('cr-child-name').textContent = p.name || childId;
   const curPedi = (fe && typeof fe === 'object') ? (fe.pedi || _toPedi(fe.frel || '')) : '';
   document.getElementById('cr-pedi').value = curPedi;
-  const sourIds  = (fe && typeof fe === 'object') ? (fe.sourIds  || []) : [];
-  const sourPages = (fe && typeof fe === 'object') ? (fe.sourPages || {}) : {};
-  const sourQUAY  = (fe && typeof fe === 'object') ? (fe.sourQUAY  || {}) : {};
-  initSrcWidget('cr', sourIds, sourPages, sourQUAY);
+  initSrcWidget('cr', (fe && typeof fe === 'object') ? (fe.citations || []) : []);
   openModal('modalChildRel');
 }
 
@@ -536,9 +556,7 @@ function saveChildRelDialog() {
   fe.mrel      = pediVal;
   fe.frelSeen  = !!pediVal;
   fe.mrelSeen  = !!pediVal;
-  fe.sourIds   = [...(srcWidgetState['cr']?.ids || [])];
-  fe.sourPages = { ...(srcWidgetState['cr']?.pages || {}) };
-  fe.sourQUAY  = { ...(srcWidgetState['cr']?.quay  || {}) };
+  fe.citations = [...(srcWidgetState['cr']?.citations || [])];
   markChanged();
   closeModal('modalChildRel');
   showFamilyDetail(famId);

@@ -1,10 +1,10 @@
 // ─────────────────────────────────────
 //  FORMS: EVENT
 // ─────────────────────────────────────
-const _SPECIAL_OBJ = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
-const _SPECIAL_LBL = { BIRT:'Geburt', CHR:'Taufe', DEAT:'Tod', BURI:'Beerdigung' };
+// _SPECIAL_OBJ → SPECIAL_EVENT_KEYS (gedcom.js); _SPECIAL_LBL → EVENT_LABELS (gedcom.js)
+const _SPECIAL_OBJ = SPECIAL_EVENT_KEYS;
 
-let _efMedia = [];
+// _efMedia lebt in UIState._formState.efMedia (shimmiert als _efMedia)
 
 function _renderEfMedia() {
   const list = document.getElementById('ef-media-list');
@@ -26,7 +26,8 @@ function _renderEfMedia() {
     row.appendChild(mkInput('Titel', m.title || '', 'title'));
     const del = document.createElement('button');
     del.type = 'button'; del.textContent = '×';
-    del.style.cssText = 'padding:4px 10px;background:var(--danger,#c0392b);color:#fff;border:none;border-radius:6px;cursor:pointer;flex-shrink:0';
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'padding:4px 10px;flex-shrink:0';
     del.addEventListener('click', () => { _efMedia.splice(idx, 1); _renderEfMedia(); });
     row.appendChild(del);
     list.appendChild(row);
@@ -38,22 +39,131 @@ function addEfMedia() {
   _renderEfMedia();
 }
 
+function _showEtypeDropdown(inputId, ddId, tag) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+  const map   = AppState.db.eventTypesByTag || {};
+  const all   = map[tag] || [];
+  const q     = input.value.toLowerCase();
+  const matches = q
+    ? all.filter(t => t.toLowerCase().includes(q))
+    : all;
+  if (!matches.length) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+  dd.innerHTML = '';
+  matches.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'place-dropdown-item';
+    item.textContent = name;
+    item.addEventListener('mousedown', () => { input.value = name; dd.innerHTML = ''; dd.style.display = 'none'; });
+    dd.appendChild(item);
+  });
+  dd.style.display = 'block';
+}
+
+function _updateEventTypeDatalist(tag, inputId, ddId) {
+  // Called on tag change: show full list, or hide if empty
+  const dd = document.getElementById(ddId);
+  if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
+}
+
+function _initEtypeAutocomplete(inputId, ddId, getTag) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+  input.addEventListener('input',  () => _showEtypeDropdown(inputId, ddId, getTag()));
+  input.addEventListener('focus',  () => _showEtypeDropdown(inputId, ddId, getTag()));
+  input.addEventListener('blur',   () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+}
+
+function _registerEventType(tag, val) {
+  if (!tag || !val) return;
+  if (!AppState.db.eventTypesByTag) AppState.db.eventTypesByTag = {};
+  const arr = AppState.db.eventTypesByTag[tag] || (AppState.db.eventTypesByTag[tag] = []);
+  if (!arr.includes(val)) {
+    arr.push(val);
+    arr.sort((a, b) => a.localeCompare(b));
+  }
+}
+
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
-  const showEtype = (t === 'FACT' || t === 'MILI' || t === 'EVEN');
-  document.getElementById('ef-etype-group').style.display = showEtype ? '' : 'none';
+  const showEtype = !(t in _SPECIAL_OBJ);
+  document.getElementById('ef-etype-group').hidden = !showEtype;
   if (showEtype) {
-    const lbl = document.querySelector('#ef-etype-group .form-label');
     const inp = document.getElementById('ef-etype');
-    if (t === 'EVEN') { lbl.textContent = 'Bezeichnung'; inp.placeholder = 'z.B. Militärdienst, Einlieferung …'; }
-    else { lbl.textContent = 'TYPE (Klassifikation)'; inp.placeholder = 'z.B. Staatsangehörigkeit'; }
+    if (t === 'EVEN') { inp.placeholder = 'z.B. Militärdienst, Einlieferung …'; }
+    else { inp.placeholder = 'Klassifikation (optional)'; }
   }
-  document.getElementById('ef-cause-group').style.display = (t === 'DEAT') ? '' : 'none';
-  document.getElementById('ef-addr-group').style.display  = (t === 'RESI') ? '' : 'none';
+  document.getElementById('ef-cause-group').hidden = t !== 'DEAT';
+  const showAddr = (t === 'RESI' || t === 'PROP');
+  document.getElementById('ef-addr-group').hidden = !showAddr;
+  const addrLabel = document.querySelector('#ef-addr-group .form-label');
+  if (addrLabel) addrLabel.textContent = (t === 'PROP') ? 'Adresse (optional)' : 'Adresse';
+  document.getElementById('ef-godparents-group').style.display = (t === 'CHR') ? '' : 'none';
+  // Reset dropdown on type change; content rebuilt on focus/input
+  const dd = document.getElementById('ef-etype-dd');
+  if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
 }
 
-function showEventForm(personId, evIdx) {
+// ── Taufpaten-Picker ──────────────────────────────────────────────────────────
+
+function _renderEfGodparents() {
+  const list = document.getElementById('ef-godparents-list');
+  if (!list) return;
+  list.innerHTML = '';
+  (_efGodparents || []).forEach((xref, idx) => {
+    const p = AppState.db.individuals[xref];
+    const chip = document.createElement('span');
+    chip.className = 'asso-chip';
+    chip.innerHTML = esc(p?.name || xref);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.style.cssText = 'margin-left:5px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1rem;line-height:1;padding:0 1px';
+    del.addEventListener('click', () => { _efGodparents.splice(idx, 1); _renderEfGodparents(); });
+    chip.appendChild(del);
+    list.appendChild(chip);
+  });
+}
+
+function _initGodparentSearch() {
+  const input = document.getElementById('ef-godparent-search');
+  const dd    = document.getElementById('ef-godparent-dd');
+  if (!input || !dd) return;
+  const show = () => {
+    const q   = input.value.trim().toLowerCase();
+    if (!q) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    const pid = document.getElementById('ef-pid').value;
+    const persons = Object.values(AppState.db.individuals)
+      .filter(p => p.id !== pid && !(_efGodparents||[]).includes(p.id))
+      .filter(p => (p.name || p.id).toLowerCase().includes(q))
+      .sort((a, b) => (a.name||'').localeCompare(b.name||'', 'de'))
+      .slice(0, 20);
+    if (!persons.length) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    dd.innerHTML = '';
+    for (const p of persons) {
+      const meta = [p.birth?.date ? '* ' + p.birth.date : '', p.death?.date ? '† ' + p.death.date : ''].filter(Boolean).join('  ');
+      const item = document.createElement('div');
+      item.className = 'place-dropdown-item';
+      item.innerHTML = `<strong>${esc(p.name || p.id)}</strong>${meta ? `<span class="ac-meta">${esc(meta)}</span>` : ''}`;
+      item.addEventListener('mousedown', () => {
+        _efGodparents.push(p.id);
+        _renderEfGodparents();
+        input.value = '';
+        dd.innerHTML = ''; dd.style.display = 'none';
+      });
+      dd.appendChild(item);
+    }
+    dd.style.display = 'block';
+  };
+  input.addEventListener('input', show);
+  input.addEventListener('focus', show);
+  input.addEventListener('blur',  () => setTimeout(() => { dd.innerHTML = ''; dd.style.display = 'none'; }, 160));
+}
+
+function showEventForm(personId, evIdx, defaultType) {
   // data-Attribute liefern immer Strings — numerische Indizes zurückkonvertieren
   if (typeof evIdx === 'string' && evIdx !== '' && !(evIdx in _SPECIAL_OBJ) && !isNaN(evIdx)) evIdx = +evIdx;
   const p = AppState.db.individuals[personId];
@@ -75,28 +185,85 @@ function showEventForm(personId, evIdx) {
     fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', obj.date || '');
     document.getElementById('ef-place').value = obj.place || '';
     document.getElementById('ef-cause').value = evIdx === 'DEAT' ? (obj.cause || '') : '';
-    initSrcWidget('ef', obj.sources || [], obj.sourcePages || {}, obj.sourceQUAY || {});
-    document.querySelector('#modalEvent .sheet-title').textContent = _SPECIAL_LBL[evIdx] + ' bearbeiten';
+    document.getElementById('ef-note').value  = obj.note || '';
+    initSrcWidget('ef', obj.citations || []);
+    // Taufpaten laden
+    _efGodparents = evIdx === 'CHR'
+      ? (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref).map(a => a.xref)
+      : [];
+    _renderEfGodparents();
+    const gSearch = document.getElementById('ef-godparent-search');
+    if (gSearch) gSearch.value = '';
+    document.querySelector('#modalEvent .sheet-title').textContent = EVENT_LABELS[evIdx] + ' bearbeiten';
     document.getElementById('saveEventBtn').textContent = 'Speichern';
   } else {
     const ev = isExisting ? p.events[evIdx] : null;
     typeEl.disabled = false;
-    typeEl.value = ev?.type || 'OCCU';
+    typeEl.value = ev?.type || defaultType || 'OCCU';
     document.getElementById('ef-val').value   = ev?.value || '';
     document.getElementById('ef-etype').value = ev?.eventType || '';
     fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', ev?.date || '');
     document.getElementById('ef-place').value = ev?.place || '';
     document.getElementById('ef-cause').value = '';
     document.getElementById('ef-addr').value  = ev?.addr  || '';
-    initSrcWidget('ef', ev?.sources || [], ev?.sourcePages || {}, ev?.sourceQUAY || {});
+    document.getElementById('ef-note').value  = ev?.note  || '';
+    initSrcWidget('ef', ev?.citations || []);
     _efMedia = (ev?.media || []).map(m => ({...m}));
     _renderEfMedia();
     document.querySelector('#modalEvent .sheet-title').textContent = ev ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen';
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
-  onEventTypeChange();
-  document.getElementById('deleteEventBtn').style.display = isExisting ? '' : 'none';
+  onEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
+  document.getElementById('deleteEventBtn').hidden = !isExisting;
+  const dateErrEl = document.getElementById('ef-date-err');
+  if (dateErrEl) { dateErrEl.textContent = ''; dateErrEl.style.display = 'none'; }
+  const copyBtn = document.getElementById('saveAndCopyEventBtn');
+  if (copyBtn) copyBtn.hidden = isSpecial;
   openModal('modalEvent');
+}
+
+function _buildClipboardFromForm() {
+  return {
+    type:        document.getElementById('ef-type').value,
+    value:       document.getElementById('ef-val').value.trim(),
+    eventType:   document.getElementById('ef-etype').value.trim(),
+    date:        buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
+    place:       getPlaceFromForm('ef-place'),
+    addr:        document.getElementById('ef-addr').value.trim(),
+    note:        document.getElementById('ef-note').value.trim(),
+    citations:   (srcWidgetState['ef']?.citations || []).map(c => ({...c})),
+    media:       _efMedia.filter(m => m.file || m.title).map(m => ({...m})),
+  };
+}
+
+function saveAndCopyEvent() {
+  const qual = document.getElementById('ef-date-qual')?.value || '';
+  const _dateErr = validateDatePartFields('ef-date')
+    || (['BET','FROM'].includes(qual) ? validateDatePartFields('ef-date2') : null);
+  if (_dateErr) {
+    const errEl = document.getElementById('ef-date-err');
+    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = 'block'; }
+    return;
+  }
+  UIState._eventClipboard = _buildClipboardFromForm();
+  saveEvent();
+}
+
+function applyClipboardEventToPerson(pid) {
+  const cb = UIState._eventClipboard;
+  if (!cb) return;
+  const p = AppState.db.individuals[pid];
+  if (!p) return;
+  const ev = { ...cb,
+    citations:   cb.citations.map(c => ({...c})),
+    media:       cb.media.map(m => ({...m})),
+  };
+  pushUndo('Ereignis übernommen', { personIds: [pid] });
+  p.events.push(ev);
+  if (ev.citations.length) _rebuildPersonSourceRefs(p);
+  markChanged();
+  showToast('Ereignis übernommen');
+  if (AppState.currentPersonId === pid) showDetail(pid);
 }
 
 function saveEvent() {
@@ -105,50 +272,91 @@ function saveEvent() {
   if (!p) return;
   const type = document.getElementById('ef-type').value;
 
+  const _efEvIdxRaw = document.getElementById('ef-evidx').value;
+
+  // Datum-Validierung
+  const qual = document.getElementById('ef-date-qual')?.value || '';
+  const _dateErr = validateDatePartFields('ef-date')
+    || (['BET','FROM'].includes(qual) ? validateDatePartFields('ef-date2') : null);
+  if (_dateErr) {
+    const errEl = document.getElementById('ef-date-err');
+    if (errEl) { errEl.textContent = _dateErr; errEl.style.display = 'block'; }
+    return;
+  }
+
+  // Koordinaten aus Ortsregister — lati/long sind Attribut des Ortes, nicht des Ereignisses
+  const _geoFromPlace = placeName => {
+    if (!placeName) return { lati: null, long: null };
+    const pl = collectPlaces().get(placeName.trim());
+    return { lati: pl?.lati ?? null, long: pl?.long ?? null };
+  };
+
+  pushUndo('Ereignis gespeichert', { personIds: [pid] });
   if (type in _SPECIAL_OBJ) {
     const key = _SPECIAL_OBJ[type];
+    const place = getPlaceFromForm('ef-place');
     p[key] = { ...(p[key] || {}),
       date:        buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
-      place:       getPlaceFromForm('ef-place'),
-      sources:     [...(srcWidgetState['ef']?.ids   || [])],
-      sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
-      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) }
+      place,
+      ..._geoFromPlace(place),
+      note:      document.getElementById('ef-note').value.trim(),
+      citations: [...(srcWidgetState['ef']?.citations || [])],
     };
     if (type === 'DEAT') p[key].cause = document.getElementById('ef-cause').value.trim();
+    // Taufpaten: non-Godparent-Assoziationen behalten, Godparent-Einträge neu setzen
+    if (type === 'CHR') {
+      if (!p.associations) p.associations = [];
+      const _oldGpXrefs = new Set(p.associations.filter(a => a.rela === 'Godparent').map(a => a.xref));
+      const _newGpXrefs = new Set(_efGodparents || []);
+      p.associations = [
+        ...p.associations.filter(a => a.rela !== 'Godparent'),
+        ...(_efGodparents || []).map(xref => ({
+          xref, _grampsHlink: null, rela: 'Godparent',
+          note: '', citations: []
+        }))
+      ];
+      // Reziproke Godchild-Einträge synchronisieren
+      for (const gpId of _oldGpXrefs) {
+        if (_newGpXrefs.has(gpId)) continue;
+        const gp = AppState.db.individuals[gpId];
+        if (gp) gp.associations = (gp.associations || []).filter(a => !(a.rela === 'Godchild' && a.xref === pid));
+      }
+      for (const gpId of _newGpXrefs) {
+        const gp = AppState.db.individuals[gpId];
+        if (!gp) continue;
+        if (!gp.associations) gp.associations = [];
+        if (!gp.associations.some(a => a.rela === 'Godchild' && a.xref === pid)) {
+          gp.associations.push({ xref: pid, _grampsHlink: null, rela: 'Godchild',
+            note: '', citations: [] });
+        }
+      }
+    }
   } else {
     const evIdxRaw = document.getElementById('ef-evidx').value;
     const evIdx    = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
+    const place    = getPlaceFromForm('ef-place');
     const ev = {
       type,
       value:      document.getElementById('ef-val').value.trim(),
       date:       buildGedDateFromFields('ef-date-qual', 'ef-date', 'ef-date2'),
-      place:      getPlaceFromForm('ef-place'),
+      place,
       addr:       document.getElementById('ef-addr').value.trim(),
-      eventType:  '',
-      note:       '',
-      lati:       null,
-      long:       null,
-      sources:    [...(srcWidgetState['ef']?.ids   || [])],
-      sourcePages: { ...(srcWidgetState['ef']?.pages || {}) },
-      sourceQUAY:  { ...(srcWidgetState['ef']?.quay  || {}) },
-      media:      _efMedia.filter(m => m.file || m.title).map(m => ({...m}))
+      eventType:  (t => { _registerEventType(type, t); return t; })(document.getElementById('ef-etype').value.trim()),
+      note:      document.getElementById('ef-note').value.trim(),
+      ..._geoFromPlace(place),
+      citations: [...(srcWidgetState['ef']?.citations || [])],
+      media:     _efMedia.filter(m => m.file || m.title).map(m => ({...m}))
     };
     if (evIdx !== null && p.events[evIdx]) {
-      ev.lati      = p.events[evIdx].lati;
-      ev.long      = p.events[evIdx].long;
-      ev.eventType = p.events[evIdx].eventType || '';
-      ev.note      = p.events[evIdx].note      || '';
       p.events[evIdx] = ev;
     } else {
       p.events.push(ev);
     }
-    // TYPE-Feld aus Formular für FACT/MILI übernehmen
-    if (type === 'FACT' || type === 'MILI' || type === 'EVEN') ev.eventType = document.getElementById('ef-etype').value.trim();
   }
 
   _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -160,66 +368,222 @@ function deleteEvent() {
   const evIdx = parseInt(evIdxRaw);
   const p = AppState.db.individuals[pid];
   if (!p?.events) return;
+  const _deletedHadSrc = (p.events[evIdx]?.citations?.length ?? 0) > 0;
+  pushUndo('Ereignis gelöscht', { personIds: [pid] });
   p.events.splice(evIdx, 1);
-  _rebuildPersonSourceRefs(p);
+  if (_deletedHadSrc) _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('Ereignis gelöscht');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
 
 // ─────────────────────────────────────
-//  FORMS: FAMILY EVENTS (ENGA / DIV / DIVF)
+//  FORMS: FAMILY EVENTS (MARR / ENGA / DIV / DIVF / EVEN)
 // ─────────────────────────────────────
-const _FAM_EV_LABELS = { engag:'Verlobung', div:'Scheidung', divf:'Scheidungsantrag' };
+const _FAM_EV_LABELS = { marr:'Heirat', engag:'Verlobung', div:'Scheidung', divf:'Scheidungsantrag' };
+// Mapping: interner Schlüssel → GEDCOM-Tag und umgekehrt
+const _FAM_TYPE_MAP  = { marr:'MARR', engag:'ENGA', div:'DIV', divf:'DIVF' };
+const _FAM_KEY_MAP   = { MARR:'marr', ENGA:'engag', DIV:'div', DIVF:'divf' };
 
-function showFamEventForm(famId, evKey) {
+function onFamEventTypeChange() {
+  const t = document.getElementById('fev-type').value;
+  document.getElementById('fev-etype-group').hidden = t !== 'EVEN';
+  const dd = document.getElementById('fev-etype-dd');
+  if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
+}
+
+function showFamEventForm(famId, evKey, evIdxRaw) {
   const f = AppState.db.families[famId];
   if (!f) return;
-  const ev = f[evKey] || {};
-  const isExisting = !!(ev.date || ev.place || ev.seen);
-  document.getElementById('fev-fid').value = famId;
-  document.getElementById('fev-key').value = evKey;
-  document.getElementById('famEventFormTitle').textContent = (_FAM_EV_LABELS[evKey] || evKey) + ' bearbeiten';
-  fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
-  document.getElementById('fev-place').value = ev.place || '';
-  initSrcWidget('fev', ev.sources || [], ev.sourcePages || {}, ev.sourceQUAY || {});
-  document.getElementById('deleteFamEventBtn').style.display = isExisting ? '' : 'none';
+  document.getElementById('fev-fid').value   = famId;
+  document.getElementById('fev-key').value   = evKey   || '';
+  document.getElementById('fev-evidx').value = evIdxRaw != null ? evIdxRaw : '';
+  const typeEl = document.getElementById('fev-type');
+
+  initPlaceMode('fev-place');
+  if (!evKey) {
+    // Neues Ereignis — Typ wählbar
+    typeEl.value    = 'MARR';
+    typeEl.disabled = false;
+    document.getElementById('fev-etype').value = '';
+    fillDateFields('fev-date-qual', 'fev-date', null, '');
+    document.getElementById('fev-place').value = '';
+    document.getElementById('fev-note').value  = '';
+    initSrcWidget('fev', []);
+    document.getElementById('famEventFormTitle').textContent = 'Ereignis hinzufügen';
+    document.getElementById('saveFamEventBtn').textContent   = 'Hinzufügen';
+    document.getElementById('deleteFamEventBtn').style.display = 'none';
+  } else if (evKey === 'ev') {
+    // Generisches Ereignis aus f.events[]
+    const evIdx = parseInt(evIdxRaw);
+    const ev = (f.events || [])[evIdx] || {};
+    typeEl.value    = ev.type || 'EVEN';
+    typeEl.disabled = false;
+    document.getElementById('fev-etype').value = ev.eventType || '';
+    fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
+    document.getElementById('fev-place').value = ev.place || '';
+    document.getElementById('fev-note').value  = ev.note  || '';
+    initSrcWidget('fev', ev.citations || []);
+    document.getElementById('famEventFormTitle').textContent = 'Ereignis bearbeiten';
+    document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
+    document.getElementById('deleteFamEventBtn').style.display = '';
+  } else {
+    // Bestehendes Sonderereignis (marr / engag / div / divf) — Typ gesperrt
+    const ev = f[evKey] || {};
+    typeEl.value    = _FAM_TYPE_MAP[evKey] || evKey.toUpperCase();
+    typeEl.disabled = true;
+    document.getElementById('fev-etype').value = '';
+    fillDateFields('fev-date-qual', 'fev-date', null, ev.date || '');
+    document.getElementById('fev-place').value = ev.place || '';
+    document.getElementById('fev-note').value  = ev.note  || '';
+    initSrcWidget('fev', ev.citations || []);
+    document.getElementById('famEventFormTitle').textContent = (_FAM_EV_LABELS[evKey] || evKey) + ' bearbeiten';
+    document.getElementById('saveFamEventBtn').textContent   = 'Speichern';
+    document.getElementById('deleteFamEventBtn').style.display = (ev.date || ev.place || ev.seen) ? '' : 'none';
+  }
+  onFamEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
   openModal('modalFamEvent');
 }
 
 function saveFamEvent() {
-  const famId = document.getElementById('fev-fid').value;
-  const evKey = document.getElementById('fev-key').value;
+  const famId    = document.getElementById('fev-fid').value;
+  const evKey    = document.getElementById('fev-key').value;
+  const evIdxRaw = document.getElementById('fev-evidx').value;
   const f = AppState.db.families[famId];
   if (!f) return;
+  const type  = document.getElementById('fev-type').value;
   const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
-  const place = document.getElementById('fev-place').value.trim();
-  f[evKey] = {
-    ...(f[evKey] || {}),
-    date,
-    place,
-    seen:        !!(date || place),
-    sources:     [...(srcWidgetState['fev']?.ids   || [])],
-    sourcePages: { ...(srcWidgetState['fev']?.pages || {}) },
-    sourceQUAY:  { ...(srcWidgetState['fev']?.quay  || {}) }
-  };
+  const place = getPlaceFromForm('fev-place');
+  const note  = document.getElementById('fev-note').value.trim();
+  const etype = document.getElementById('fev-etype').value.trim();
+  _registerEventType(type, etype);
+  const citations = [...(srcWidgetState['fev']?.citations || [])];
+
+  pushUndo('Familien-Ereignis gespeichert', { familyIds: [famId] });
+  if (evKey === 'ev') {
+    // Generisches Ereignis bearbeiten
+    const evIdx = evIdxRaw !== '' ? parseInt(evIdxRaw) : null;
+    const ev = {
+      ...((evIdx !== null ? (f.events || [])[evIdx] : null) || {}),
+      type, eventType: etype, value: '',
+      date, place, note, citations
+    };
+    if (evIdx !== null && (f.events || [])[evIdx]) {
+      f.events[evIdx] = ev;
+    } else {
+      f.events = f.events || [];
+      f.events.push(ev);
+    }
+  } else if (!evKey) {
+    // Neues Ereignis anlegen
+    const targetKey = _FAM_KEY_MAP[type];
+    if (targetKey) {
+      f[targetKey] = {
+        ...(f[targetKey] || {}),
+        date, place, note, seen: !!(date || place), citations
+      };
+    } else {
+      // Generisches Ereignis (EVEN) → f.events[]
+      f.events = f.events || [];
+      f.events.push({
+        type, eventType: etype, value: '', date, place, note,
+        citations, lati: null, long: null, _extra: []
+      });
+    }
+  } else {
+    // Bestehendes Sonderereignis
+    f[evKey] = {
+      ...(f[evKey] || {}),
+      date, place, note, seen: !!(date || place), citations
+    };
+  }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }
 
 function deleteFamEvent() {
-  const famId = document.getElementById('fev-fid').value;
-  const evKey = document.getElementById('fev-key').value;
+  const famId    = document.getElementById('fev-fid').value;
+  const evKey    = document.getElementById('fev-key').value;
+  const evIdxRaw = document.getElementById('fev-evidx').value;
   const f = AppState.db.families[famId];
   if (!f) return;
-  f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, sources: [], sourcePages: {}, sourceQUAY: {} };
+  pushUndo('Familien-Ereignis gelöscht', { familyIds: [famId] });
+  if (evKey === 'ev') {
+    const evIdx = parseInt(evIdxRaw);
+    if (!isNaN(evIdx)) f.events.splice(evIdx, 1);
+  } else {
+    f[evKey] = { ...(f[evKey] || {}), date: '', place: '', seen: false, citations: [] };
+  }
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
-  markChanged(); updateStats();
+  markChanged();
   showToast('Ereignis gelöscht');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }
+
+// Autocomplete für Event-TYPE-Felder — hier initialisieren, da _initEtypeAutocomplete hier definiert ist
+_initEtypeAutocomplete('ef-etype',  'ef-etype-dd',  () => document.getElementById('ef-type')?.value  || '');
+_initEtypeAutocomplete('fev-etype', 'fev-etype-dd', () => document.getElementById('fev-type')?.value || '');
+
+// Taufpaten-Suche — einmalig initialisieren
+_initGodparentSearch();
+
+// ─────────────────────────────────────
+//  ADRESS-AUTOCOMPLETE (RESI)
+// ─────────────────────────────────────
+function collectAddresses() {
+  const set = new Set();
+  Object.values(AppState.db.individuals || {}).forEach(p => {
+    (p.events || []).forEach(ev => {
+      if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.addr.trim()) set.add(ev.addr.trim());
+    });
+  });
+  return [...set].sort((a, b) => a.localeCompare(b, 'de'));
+}
+
+// Ermittelt den häufigsten Ort (PLAC) zu einer gegebenen Adresse
+function _addrToPlace(addr) {
+  const counts = {};
+  Object.values(AppState.db.individuals || {}).forEach(p => {
+    (p.events || []).forEach(ev => {
+      if (ev.type === 'RESI' && ev.addr && ev.addr.trim() === addr && ev.place && ev.place.trim())
+        counts[ev.place.trim()] = (counts[ev.place.trim()] || 0) + 1;
+    });
+  });
+  const entries = Object.entries(counts);
+  if (!entries.length) return '';
+  return entries.sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function _initAddrAutocompleteFor(inputId, ddId, placeInputId) {
+  initAutocomplete(inputId, ddId, {
+    getItems: q => collectAddresses()
+      .filter(a => a.toLowerCase().includes(q))
+      .sort((a, b) => {
+        const aS = a.toLowerCase().startsWith(q), bS = b.toLowerCase().startsWith(q);
+        if (aS !== bS) return aS ? -1 : 1;
+        return a.localeCompare(b, 'de');
+      }),
+    formatLabel: addr => addr,
+    configEl:    el => { el.style.whiteSpace = 'pre-wrap'; },
+    onSelect:    (addr, input) => {
+      input.value = addr;
+      // PLAC auto-fill: häufigster Ort zu dieser Adresse
+      const place = _addrToPlace(addr);
+      if (place && placeInputId) {
+        const placeInput = document.getElementById(placeInputId);
+        if (placeInput && !placeInput.value) placeInput.value = place;
+      }
+    },
+  });
+}
+
+function initAddrAutocomplete() {
+  _initAddrAutocompleteFor('ef-addr', 'ef-addr-dd', 'ef-place');
+}
+
+initAddrAutocomplete();

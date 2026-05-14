@@ -26,8 +26,471 @@ function _toPedi(v) {
   return m[(v||'').toLowerCase()] || 'birth';
 }
 
+function _mediaFormStr(m) { return m.form || null; }
+
+// Schreibt SOUR-Zitierungen aus citations[] (PAGE, QUAY, NOTE, extra, OBJE-Media)
+function _writeSourCits(lines, lv, obj) {
+  if (!obj?.citations?.length) return;
+  for (const c of obj.citations) {
+    lines.push(`${lv} SOUR ${c.sid}`);
+    if (c.page)  lines.push(`${lv+1} PAGE ${c.page}`);
+    if (c.quay)  lines.push(`${lv+1} QUAY ${c.quay}`);
+    if (c.note !== null && c.note !== undefined)
+      lines.push(`${lv+1} NOTE${c.note ? ' ' + c.note : ''}`);
+    for (const l of (c.extra || [])) lines.push(l);
+    for (const m of (c.media || [])) {
+      lines.push(`${lv+1} OBJE`);
+      if (m.file) { lines.push(`${lv+2} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
+      if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
+      if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
+      if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
+      if (m.note) lines.push(`${lv+2} NOTE ${m.note}`);
+    }
+  }
+}
+
+// Schreibt CHAN-Block (lv = Level des CHAN-Tags, Standard: 1)
+function writeCHAN(lines, obj, lv = 1) {
+  if (!obj.lastChanged) return;
+  lines.push(`${lv} CHAN`);
+  lines.push(`${lv+1} DATE ${obj.lastChanged}`);
+  if (obj.lastChangedTime) lines.push(`${lv+2} TIME ${obj.lastChangedTime}`);
+}
+
+// Schreibt MAP/LATI/LONG-Block.
+// useExtraPlaces=true  → für strukturierte Events (BIRT/DEAT/CHR/BURI/MARR):
+//   Priorität hofObjects > extraPlaces > obj.lati/obj.long
+// useExtraPlaces=false → für Array-Events (RESI/PROP/EVEN…):
+//   Nur hofObjects oder explizite ev.lati — NIEMALS extraPlaces,
+//   damit _derivedHofObjectsFromDb() keine Ortskoordinaten als Hofkoordinaten
+//   zurückliest.
+function geoLines(lines, obj, indent, useExtraPlaces = true) {
+  let lati = null, long = null;
+  // 1. Hof-Koordinaten (spezifischer als Ortsregister)
+  if (obj?.addr) {
+    const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
+    if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
+  }
+  // 2. Ortsregister (nur für strukturierte Events)
+  if (lati === null && useExtraPlaces && obj?.place && AppState.db?.extraPlaces?.[obj.place]) {
+    const ep = AppState.db.extraPlaces[obj.place];
+    if (ep.lati != null) { lati = ep.lati; long = ep.long; }
+  }
+  // 3. Explizite Event-Koordinaten (aus Parser) — immer als letzter Fallback.
+  //    extraPlaces wird nur für strukturierte Events genutzt (Schritt 2), aber direkte
+  //    obj.lati-Werte werden für alle Event-Typen geschrieben, damit keine GEDCOM-
+  //    Koordinaten verloren gehen.
+  if (lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
+  if (lati !== null && long !== null) {
+    lines.push(`${indent} MAP`);
+    const latStr = (lati >= 0 ? 'N' : 'S') + Math.abs(lati);
+    const lonStr = (long >= 0 ? 'E' : 'W') + Math.abs(long);
+    lines.push(`${indent+1} LATI ${latStr}`);
+    lines.push(`${indent+1} LONG ${lonStr}`);
+  }
+}
+
+// Schreibt einen strukturierten Ereignis-Block (BIRT, DEAT, MARR etc.)
+function eventBlock(lines, tag, obj, lv) {
+  if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.citations && obj.citations.length) && !(obj._extra && obj._extra.length))) return;
+  lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
+  if (obj.date !== null && obj.date !== undefined)  lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
+  if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
+  if (obj.place !== null && obj.place !== undefined) {
+    lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
+    geoLines(lines, obj, lv+2);
+  }
+  const _origNote = obj._noteOrig !== undefined ? obj._noteOrig : obj.note;
+  if (_origNote) pushCont(lines, lv+1, 'NOTE', _origNote);
+  for (const r of (obj.noteRefs||[])) lines.push(`${lv+1} NOTE ${r}`);
+  _writeSourCits(lines, lv+1, obj);
+  if (obj.media && obj.media.length) for (const m of obj.media) {
+    lines.push(`${lv+1} OBJE`);
+    if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
+    if (m.file) {
+      lines.push(`${lv+2} FILE ${m.file}`);
+      if (m.form) lines.push(`${lv+3} FORM ${m.form}`);
+      for (const l of (m._extra || [])) lines.push(l);
+    }
+    if (m.note) lines.push(`${lv+2} NOTE ${m.note}`);
+    if (m.date) lines.push(`${lv+2} _DATE ${m.date}`);
+    if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
+    if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
+  }
+  if (obj._extra && obj._extra.length) for (const l of obj._extra) lines.push(l);
+}
+
+// Phase F: eventHandle → primary person ID (populated by writeGEDCOM for witness→ASSO bridge)
+let _witnessEvMap = {};
+// Phase F12: hofAddress → NOTE record ID (populated by writeGEDCOM)
+let _hofNoteIds = {};
+
+// ─── INDI-Record ──────────────────────────────────────────────────────────────
+function writeINDIRecord(lines, p) {
+  lines.push(`0 ${p.id} INDI`);
+
+  // Name mit Sub-Tags
+  const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
+  lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
+  if (p.given)   lines.push(`2 GIVN ${p.given}`);
+  if (p.surname) lines.push(`2 SURN ${p.surname}`);
+  if (p.nick)     lines.push(`2 NICK ${p.nick}`);
+  if (p._rufname) lines.push(`2 _RUFNAME ${p._rufname}`);
+  if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
+  if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
+  _writeSourCits(lines, 2, { citations: p.nameCitations });
+
+  // NAME-context passthrough (2-level items at start of _passthrough, e.g. 2 NICK)
+  const _pt = p._passthrough || [];
+  let _ptNameEnd = 0;
+  while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
+  for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
+
+  // Extra NAME-Einträge (Geburtsname etc.)
+  for (const en of (p.extraNames || [])) {
+    lines.push(`1 NAME${en.nameRaw ? ' ' + en.nameRaw : ''}`);
+    if (en.type)    lines.push(`2 TYPE ${en.type}`);
+    if (en.given)   lines.push(`2 GIVN ${en.given}`);
+    if (en.surname) lines.push(`2 SURN ${en.surname}`);
+    if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
+    if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
+    _writeSourCits(lines, 2, en);
+    for (const l of (en._extra || [])) lines.push(l);
+  }
+
+  if (p.titl)    lines.push(`1 TITL ${p.titl}`);
+  if (p.resn)    lines.push(`1 RESN ${p.resn}`);
+  if (p.email)   lines.push(`1 EMAIL ${p.email}`);
+  if (p.www)     lines.push(`1 WWW ${p.www}`);
+  if (p.sex) lines.push(`1 SEX ${p.sex}`);
+
+  for (const s of (p.topSources || [])) {
+    lines.push(`1 SOUR ${s}`);
+    if (p.topSourcePages?.[s]) lines.push(`2 PAGE ${p.topSourcePages[s]}`);
+    if (p.topSourceQUAY?.[s])  lines.push(`2 QUAY ${p.topSourceQUAY[s]}`);
+    if (p.topSourceExtra?.[s]) for (const l of p.topSourceExtra[s]) lines.push(l);
+  }
+
+  eventBlock(lines, 'BIRT', p.birth, 1);
+  eventBlock(lines, 'CHR',  p.chr,   1);
+  eventBlock(lines, 'DEAT', p.death, 1);
+  eventBlock(lines, 'BURI', p.buri,  1);
+
+  const _writtenHofNotes = new Set();
+  for (const ev of p.events) {
+    lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
+    if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
+    if (ev.date !== null && ev.date !== undefined)  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+    const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
+    if (ev.place !== null && ev.place !== undefined) {
+      lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
+      geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
+    } else if (ev.addr) {
+      // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
+      if (_hofMeta?.lat != null) {
+        lines.push(`2 PLAC ${ev.addr.replace(/\n/g, ', ')}`);
+        geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
+      }
+    }
+    // Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse,
+    // und nur wenn das Event selbst ursprünglich eine Note hatte.
+    const _addrKey = ev.addr?.trim();
+    const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
+    const _evHadNote = !!(ev._noteOrig || ev.noteRefs?.length);
+    for (const r of (ev.noteRefs || [])) {
+      // HOF-Notiz-Refs überspringen — werden über _hofNoteIds separat als @N_HOF_n@ geschrieben
+      if (_hofMeta?.note && AppState.db.notes?.[r]?.text === _hofMeta.note) continue;
+      lines.push(`2 NOTE ${r}`);
+    }
+    if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
+      if (_evHadNote && !_writtenHofNotes.has(_addrKey)) {
+        lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
+        _writtenHofNotes.add(_addrKey);
+      }
+    } else if (_hofMeta?.note && _evHadNote && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
+      pushCont(lines, 2, 'NOTE', _hofMeta.note);
+      _writtenHofNotes.add(_addrKey);
+    } else if (!_evNoteIsHofNote) {
+      const _inlineNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
+      if (_inlineNote) pushCont(lines, 2, 'NOTE', _inlineNote);
+    }
+    if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
+    for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
+    for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
+    _writeSourCits(lines, 2, ev);
+    for (const m of (ev.media || [])) {
+      lines.push('2 OBJE');
+      if (m.title) lines.push(`3 TITL ${m.title}`);
+      if (m.file) {
+        lines.push(`3 FILE ${m.file}`);
+        if (m.form) lines.push(`4 FORM ${m.form}`);
+      }
+      for (const l of (m._extra || [])) lines.push(l);
+    }
+    if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
+  }
+
+  for (const ref of (p.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
+  for (const nt of (p.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
+
+  for (const fref of p.famc) {
+    const famId = typeof fref === 'string' ? fref : fref.famId;
+    lines.push(`1 FAMC ${famId}`);
+    if (typeof fref === 'object') {
+      if (fref.frelSeen || fref.mrelSeen || fref.pedi) {
+        const fv = fref.frel || fref.pedi || '';
+        const mv = fref.mrel || fref.pedi || '';
+        const fp = _toPedi(fv);
+        const mp = _toPedi(mv);
+        if (fp === mp) {
+          lines.push(`2 PEDI ${fp}`);
+        } else {
+          // Vater/Mutter-Verhältnis verschieden — _FREL/_MREL als Erweiterung beibehalten
+          lines.push(`2 _FREL ${fv}`);
+          lines.push(`2 _MREL ${mv}`);
+        }
+      }
+      // citations[] + frelSour/mrelSour zusammenführen
+      const _famcCits = [...(fref.citations || [])];
+      for (const [xSour, xPage, xQuay] of [
+        [fref.frelSour, fref.frelPage, fref.frelQUAY],
+        [fref.mrelSour, fref.mrelPage, fref.mrelQUAY]
+      ]) {
+        if (xSour && !_famcCits.some(c => c.sid === xSour))
+          _famcCits.push(citationObj(xSour, xPage || '', xQuay || ''));
+      }
+      _writeSourCits(lines, 2, { citations: _famcCits });
+    }
+  }
+
+  for (const f of p.fams) lines.push(`1 FAMS ${f}`);
+
+  for (const m of p.media) {
+    lines.push(`1 OBJE`);
+    if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
+    if (m.file) {
+      lines.push(`2 FILE ${m.file}`);
+      const form = _mediaFormStr(m);
+      if (form) lines.push(`3 FORM ${form}`);
+    }
+    if (!m.titleIsLv2 && m.title) lines.push(`3 TITL ${m.title}`);
+    for (const l of (m._extra || [])) lines.push(l);
+  }
+
+  // Manuell hinzugefügtes Foto ohne ursprünglichen OBJE-Eintrag → FILE-Referenz erzeugen
+  if (_newPhotoIds.has(p.id)) {
+    lines.push(`1 OBJE`);
+    lines.push(`2 FILE photos/${p.id}.jpg`);
+    lines.push(`3 FORM JPEG`);
+  }
+
+  if (p.uid)      lines.push(`1 _UID ${p.uid}`);
+  if (p.grampId)  lines.push(`1 _GRAMPS_ID ${p.grampId}`);
+  if (p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
+
+  for (const t of (p._tasks || [])) {
+    lines.push(`1 _TASK ${t.text || ''}`);
+    if (t.category) lines.push(`2 _CAT ${t.category}`);
+    lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+    if (t.created)  lines.push(`2 _DATE ${t.created}`);
+    if (t.id)       lines.push(`2 _ID ${t.id}`);
+  }
+
+  // ASSO: native associations (GEDCOM↔GRAMPS <personref> roundtrip)
+  for (const a of (p.associations || [])) {
+    if (!a.xref) continue;
+    lines.push(`1 ASSO ${a.xref}`);
+    if (a.rela) lines.push(`2 RELA ${a.rela}`);
+    if (a.note) pushCont(lines, 2, 'NOTE', a.note);
+    _writeSourCits(lines, 2, a);
+  }
+
+  // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
+  for (const wr of (p._grampsWitnessRefs || [])) {
+    const primaryId = _witnessEvMap[wr._origHlink];
+    if (!primaryId) continue;
+    lines.push(`1 ASSO ${primaryId}`);
+    lines.push(`2 RELA ${wr.role || 'Witness'}`);
+    const evInfo = [wr.type, wr.date, wr.place].filter(Boolean).join(', ');
+    if (evInfo) lines.push(`2 NOTE GRAMPS event: ${evInfo}`);
+    _writeSourCits(lines, 2, wr);
+  }
+
+  writeCHAN(lines, p, 1);
+
+  // Passthrough: gelöschte Fotos → OBJE-Block entfernen
+  if (_deletedPhotoIds.has(p.id)) {
+    let skip = false;
+    for (let i = _ptNameEnd; i < _pt.length; i++) {
+      const l = _pt[i];
+      if (/^1 OBJE/.test(l)) { skip = true; continue; }
+      if (skip && /^[2-9] /.test(l)) continue;
+      skip = false;
+      lines.push(l);
+    }
+  } else {
+    for (let i = _ptNameEnd; i < _pt.length; i++) lines.push(_pt[i]);
+  }
+}
+
+// ─── FAM-Record ───────────────────────────────────────────────────────────────
+function writeFAMRecord(lines, f) {
+  lines.push(`0 ${f.id} FAM`);
+  if (f.husb) lines.push(`1 HUSB ${f.husb}`);
+  if (f.wife) lines.push(`1 WIFE ${f.wife}`);
+  for (const c of f.children) {
+    lines.push(`1 CHIL ${c}`);
+    const _cr = f.childRelations?.[c];
+    if (_cr) {
+      _writeSourCits(lines, 2, _cr);
+      // _FREL/_MREL mit verschachteltem SOUR (z.B. Ancestris-Format: 2 _FREL → 3 SOUR @@Sxx@@ → 4 PAGE/QUAY)
+      if (_cr.frelSeen) {
+        lines.push(`2 _FREL ${_cr.frel}`);
+        if (_cr.frelSour) {
+          lines.push(`3 SOUR ${_cr.frelSour}`);
+          if (_cr.frelPage) lines.push(`4 PAGE ${_cr.frelPage}`);
+          if (_cr.frelQUAY) lines.push(`4 QUAY ${_cr.frelQUAY}`);
+          for (const l of (_cr.frelSourExtra || [])) lines.push(l);
+        }
+      }
+      if (_cr.mrelSeen) {
+        lines.push(`2 _MREL ${_cr.mrel}`);
+        if (_cr.mrelSour) {
+          lines.push(`3 SOUR ${_cr.mrelSour}`);
+          if (_cr.mrelPage) lines.push(`4 PAGE ${_cr.mrelPage}`);
+          if (_cr.mrelQUAY) lines.push(`4 QUAY ${_cr.mrelQUAY}`);
+          for (const l of (_cr.mrelSourExtra || [])) lines.push(l);
+        }
+      }
+    }
+  }
+
+  eventBlock(lines, 'MARR', f.marr, 1);
+  if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
+  eventBlock(lines, 'ENGA', f.engag, 1);
+  eventBlock(lines, 'DIV',  f.div,   1);
+  eventBlock(lines, 'DIVF', f.divf,  1);
+
+  for (const ev of (f.events || [])) {
+    lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
+    if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
+    if (ev.date !== null && ev.date !== undefined) lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+    if (ev.place !== null && ev.place !== undefined) {
+      lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
+      geoLines(lines, ev, 3);
+    }
+    const _famEvNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
+    if (_famEvNote) pushCont(lines, 2, 'NOTE', _famEvNote);
+    for (const r of (ev.noteRefs || [])) lines.push(`2 NOTE ${r}`);
+    _writeSourCits(lines, 2, ev);
+    if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
+  }
+
+  if (f.grampId)  lines.push(`1 _GRAMPS_ID ${f.grampId}`);
+  if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
+  for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
+  for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
+
+  for (const m of (f.media || [])) {
+    if (!m.file && !m.title) continue;
+    lines.push(`1 OBJE`);
+    if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
+    if (m.file) {
+      lines.push(`2 FILE ${m.file}`);
+      const form = _mediaFormStr(m);
+      if (form) lines.push(`3 FORM ${form}`);
+      if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
+    } else if (m.title && !m.titleIsLv2) {
+      lines.push(`2 TITL ${m.title}`);
+    }
+    for (const l of (m._extra || [])) lines.push(l);
+  }
+
+  writeCHAN(lines, f, 1);
+
+  for (const l of (f._passthrough || [])) {
+    if (/^1 (DIV|DIVF|ENG|ENGA)\b/.test(l)) continue; // jetzt strukturiert
+    lines.push(l);
+  }
+}
+
+// ─── SOUR-Record ──────────────────────────────────────────────────────────────
+function writeSOURRecord(lines, s) {
+  lines.push(`0 ${s.id} SOUR`);
+  if (s.abbr)   lines.push(`1 ABBR ${s.abbr}`);
+  if (s.title)  pushCont(lines, 1, 'TITL', s.title);
+  if (s.author) pushCont(lines, 1, 'AUTH', s.author);
+  if (s.date)   lines.push(`1 DATE ${s.date}`);
+  if (s.publ)   pushCont(lines, 1, 'PUBL', s.publ);
+  if (s.repo) {
+    lines.push(`1 REPO ${s.repo}`);
+    if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
+  }
+  if (s._textSeen) pushCont(lines, 1, 'TEXT', s.text || '');
+  if (s.agnc || (s.dataExtra && s.dataExtra.length)) {
+    lines.push(`1 DATA`);
+    if (s.agnc) lines.push(`2 AGNC ${s.agnc}`);
+    for (const l of (s.dataExtra || [])) lines.push(l);
+  }
+  for (const m of (s.media || [])) {
+    if (!m.file && !m.title) continue;
+    lines.push(`1 OBJE`);
+    if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
+    if (m.file) {
+      lines.push(`2 FILE ${m.file}`);
+      const form = _mediaFormStr(m);
+      if (form) lines.push(`3 FORM ${form}`);
+      if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
+    } else if (m.title && !m.titleIsLv2) {
+      lines.push(`2 TITL ${m.title}`);
+    }
+    for (const l of (m._extra || [])) lines.push(l);
+  }
+  if (s._date)   lines.push(`1 _DATE ${s._date}`);
+  if (s.grampId) lines.push(`1 _GRAMPS_ID ${s.grampId}`);
+  writeCHAN(lines, s, 1);
+  for (const l of (s._passthrough || [])) lines.push(l);
+}
+
+// ─── REPO-Record ──────────────────────────────────────────────────────────────
+function writeREPORecord(lines, r) {
+  lines.push(`0 ${r.id} REPO`);
+  if (r.name) lines.push(`1 NAME ${r.name}`);
+  if (r.addr || (r.addrExtra && r.addrExtra.length)) {
+    const al = r.addr ? r.addr.split('\n') : [];
+    lines.push(`1 ADDR${al[0] ? ' ' + al[0] : ''}`);
+    for (let i = 1; i < al.length; i++) lines.push(`2 CONT ${al[i]}`);
+    if (r.addrExtra && r.addrExtra.length) for (const l of r.addrExtra) lines.push(l);
+  }
+  if (r.phon)  lines.push(`1 PHON ${r.phon}`);
+  if (r.www)   lines.push(`1 WWW ${r.www}`);
+  if (r.email) lines.push(`1 EMAIL ${r.email}`);
+  writeCHAN(lines, r, 1);
+}
+
+// ─── NOTE-Record ──────────────────────────────────────────────────────────────
+function writeNOTERecord(lines, n) {
+  const MAX = 248;
+  const rawLines = (n.text || '').split('\n');
+  for (let li = 0; li < rawLines.length; li++) {
+    let s = rawLines[li];
+    let firstChunk = true;
+    do {
+      const chunk = s.slice(0, MAX);
+      s = s.slice(MAX);
+      if (li === 0 && firstChunk) lines.push(`0 ${n.id} NOTE ${chunk}`);
+      else if (firstChunk)        lines.push(`1 CONT ${chunk}`);
+      else                        lines.push(`1 CONC ${chunk}`);
+      firstChunk = false;
+    } while (s.length > 0);
+  }
+  if (!rawLines.length) lines.push(`0 ${n.id} NOTE `);
+  writeCHAN(lines, n, 1);
+  for (const l of (n._passthrough || [])) lines.push(l);
+}
+
 // ─────────────────────────────────────
-//  GEDCOM WRITER  (v2 – vollständig)
+//  GEDCOM WRITER  (v3 – aufgeteilt)
 // ─────────────────────────────────────
 function writeGEDCOM(updateHeadDate = false) {
   const lines = [];
@@ -61,411 +524,31 @@ function writeGEDCOM(updateHeadDate = false) {
     lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
   }
 
-  function geoLines(obj, indent) {
-    if (obj && obj.lati !== null && obj.long !== null) {
-      lines.push(`${indent} MAP`);
-      const latStr = (obj.lati >= 0 ? 'N' : 'S') + Math.abs(obj.lati);
-      const lonStr = (obj.long >= 0 ? 'E' : 'W') + Math.abs(obj.long);
-      lines.push(`${indent+1} LATI ${latStr}`);
-      lines.push(`${indent+1} LONG ${lonStr}`);
+  // Phase F: build eventHandle → primaryPersonId for witness→ASSO bridge
+  _witnessEvMap = {};
+  for (const [pId, p] of Object.entries(db.individuals)) {
+    for (const ev of [p.birth, p.chr, p.death, p.buri, ...(p.events || [])]) {
+      if (ev?._grampsEvHlink) _witnessEvMap[ev._grampsEvHlink] = pId;
     }
   }
 
-  function eventBlock(tag, obj, lv) {
-    if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.sources && obj.sources.length) && !(obj._extra && obj._extra.length))) return;
-    lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
-    if (obj.date !== null && obj.date !== undefined)  lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
-    if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
-    if (obj.place !== null && obj.place !== undefined || obj.lati !== null) {
-      if (obj.place !== null && obj.place !== undefined) lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
-      geoLines(obj, lv+2);
-    }
-    if (obj.note) pushCont(lines, lv+1, 'NOTE', obj.note);
-    for (const r of (obj.noteRefs||[])) lines.push(`${lv+1} NOTE ${r}`);
-    if (obj.sources) for (const s of obj.sources) {
-      lines.push(`${lv+1} SOUR ${s}`);
-      if (obj.sourcePages && obj.sourcePages[s]) lines.push(`${lv+2} PAGE ${obj.sourcePages[s]}`);
-      if (obj.sourceQUAY && obj.sourceQUAY[s])   lines.push(`${lv+2} QUAY ${obj.sourceQUAY[s]}`);
-      if (obj.sourceNote && obj.sourceNote[s] !== undefined) lines.push(`${lv+2} NOTE${obj.sourceNote[s] ? ' ' + obj.sourceNote[s] : ''}`);
-      if (obj.sourceExtra && obj.sourceExtra[s]) for (const l of obj.sourceExtra[s]) lines.push(l);
-      if (obj.sourceMedia && obj.sourceMedia[s]) for (const m of obj.sourceMedia[s]) {
-        lines.push(`${lv+2} OBJE`);
-        if (m.file) { lines.push(`${lv+3} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-        if (m.scbk) lines.push(`${lv+3} _SCBK ${m.scbk}`);
-        if (m.prim) lines.push(`${lv+3} _PRIM ${m.prim}`);
-        if (m.titl) lines.push(`${lv+3} TITL ${m.titl}`);
-        if (m.note) lines.push(`${lv+3} NOTE ${m.note}`);
-      }
-    }
-    if (obj.media && obj.media.length) for (const m of obj.media) {
-      lines.push(`${lv+1} OBJE`);
-      if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
-      if (m.file) {
-        lines.push(`${lv+2} FILE ${m.file}`);
-        if (m.form) lines.push(`${lv+3} FORM ${m.form}`);
-        for (const l of (m._extra || [])) lines.push(l);
-      }
-      if (m.note) lines.push(`${lv+2} NOTE ${m.note}`);
-      if (m.date) lines.push(`${lv+2} _DATE ${m.date}`);
-      if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
-      if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
-    }
-    if (obj._extra && obj._extra.length) for (const l of obj._extra) lines.push(l);
-  }
+  // Phase F12: HOF NOTE-IDs aufbauen (stabil sortiert nach Adresse)
+  _hofNoteIds = {};
+  Object.entries(db.hofObjects || {})
+    .filter(([, h]) => h.note)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([addr], i) => { _hofNoteIds[addr] = `@N_HOF_${i + 1}@`; });
 
-  for (const p of Object.values(db.individuals)) {
-    lines.push(`0 ${p.id} INDI`);
-    // Name with sub-tags
-    const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
-    lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
-    if (p.given)   lines.push(`2 GIVN ${p.given}`);
-    if (p.surname) lines.push(`2 SURN ${p.surname}`);
-    if (p.nick)    lines.push(`2 NICK ${p.nick}`);
-    if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
-    if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
-    for (const s of (p.nameSources || [])) {
-      lines.push(`2 SOUR ${s}`);
-      if (p.nameSourcePages?.[s]) lines.push(`3 PAGE ${p.nameSourcePages[s]}`);
-      if (p.nameSourceQUAY?.[s])  lines.push(`3 QUAY ${p.nameSourceQUAY[s]}`);
-      if (p.nameSourceNote?.[s] !== undefined) lines.push(`3 NOTE${p.nameSourceNote[s] ? ' ' + p.nameSourceNote[s] : ''}`);
-      if (p.nameSourceExtra?.[s]) for (const l of p.nameSourceExtra[s]) lines.push(l);
-      if (p.nameSourceMedia?.[s]) for (const m of p.nameSourceMedia[s]) {
-        lines.push(`3 OBJE`);
-        if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-        if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-        if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-        if (m.titl) lines.push(`4 TITL ${m.titl}`);
-        if (m.note) lines.push(`4 NOTE ${m.note}`);
-      }
-    }
-    // NAME-context passthrough (2-level items at start of _passthrough, e.g. 2 NICK)
-    const _pt = p._passthrough || [];
-    let _ptNameEnd = 0;
-    while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
-    for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
-    // Extra NAME-Einträge (Geburtsname etc.)
-    for (const en of (p.extraNames || [])) {
-      lines.push(`1 NAME${en.nameRaw ? ' ' + en.nameRaw : ''}`);
-      if (en.type)    lines.push(`2 TYPE ${en.type}`);
-      if (en.given)   lines.push(`2 GIVN ${en.given}`);
-      if (en.surname) lines.push(`2 SURN ${en.surname}`);
-      if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
-      if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
-      for (const s of (en.sources || [])) {
-        lines.push(`2 SOUR ${s}`);
-        if (en.sourcePages?.[s]) lines.push(`3 PAGE ${en.sourcePages[s]}`);
-        if (en.sourceQUAY?.[s])  lines.push(`3 QUAY ${en.sourceQUAY[s]}`);
-        if (en.sourceNote?.[s] !== undefined) lines.push(`3 NOTE${en.sourceNote[s] ? ' ' + en.sourceNote[s] : ''}`);
-        if (en.sourceExtra?.[s]) for (const l of en.sourceExtra[s]) lines.push(l);
-        if (en.sourceMedia?.[s]) for (const m of en.sourceMedia[s]) {
-          lines.push(`3 OBJE`);
-          if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-          if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-          if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-          if (m.titl) lines.push(`4 TITL ${m.titl}`);
-          if (m.note) lines.push(`4 NOTE ${m.note}`);
-        }
-      }
-      for (const l of (en._extra || [])) lines.push(l);
-    }
-    if (p.titl)    lines.push(`1 TITL ${p.titl}`);
-    if (p.resn)    lines.push(`1 RESN ${p.resn}`);
-    if (p.email)   lines.push(`1 EMAIL ${p.email}`);
-    if (p.www)     lines.push(`1 WWW ${p.www}`);
-    if (p.sex) lines.push(`1 SEX ${p.sex}`);
-    for (const s of (p.topSources || [])) {
-      lines.push(`1 SOUR ${s}`);
-      if (p.topSourcePages?.[s]) lines.push(`2 PAGE ${p.topSourcePages[s]}`);
-      if (p.topSourceQUAY?.[s])  lines.push(`2 QUAY ${p.topSourceQUAY[s]}`);
-      if (p.topSourceExtra?.[s]) for (const l of p.topSourceExtra[s]) lines.push(l);
-    }
-
-    eventBlock('BIRT', p.birth, 1);
-    eventBlock('CHR',  p.chr,   1);
-    eventBlock('DEAT', p.death, 1);
-    eventBlock('BURI', p.buri,  1);
-
-    for (const ev of p.events) {
-      lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
-      if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
-      if (ev.date !== null && ev.date !== undefined)  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
-      if (ev.place !== null && ev.place !== undefined || ev.lati !== null) {
-        if (ev.place !== null && ev.place !== undefined) lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
-        geoLines(ev, 3);
-      }
-      if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
-      if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
-      for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
-      for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
-      if (ev.sources) for (const s of ev.sources) {
-        lines.push(`2 SOUR ${s}`);
-        if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
-        if (ev.sourceQUAY && ev.sourceQUAY[s])   lines.push(`3 QUAY ${ev.sourceQUAY[s]}`);
-        if (ev.sourceNote && ev.sourceNote[s] !== undefined) lines.push(`3 NOTE${ev.sourceNote[s] ? ' ' + ev.sourceNote[s] : ''}`);
-        if (ev.sourceExtra && ev.sourceExtra[s]) for (const l of ev.sourceExtra[s]) lines.push(l);
-        if (ev.sourceMedia && ev.sourceMedia[s]) for (const m of ev.sourceMedia[s]) {
-          lines.push(`3 OBJE`);
-          if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-          if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-          if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-          if (m.titl) lines.push(`4 TITL ${m.titl}`);
-          if (m.note) lines.push(`4 NOTE ${m.note}`);
-        }
-      }
-      for (const m of (ev.media || [])) {
-        lines.push('2 OBJE');
-        if (m.title) lines.push(`3 TITL ${m.title}`);
-        if (m.file) {
-          lines.push(`3 FILE ${m.file}`);
-          if (m.form) lines.push(`4 FORM ${m.form}`);
-        }
-        for (const l of (m._extra || [])) lines.push(l);
-      }
-      if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
-    }
-
-    for (const ref of (p.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
-    for (const nt of (p.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
-
-    for (const fref of p.famc) {
-      const famId = typeof fref === 'string' ? fref : fref.famId;
-      lines.push(`1 FAMC ${famId}`);
-      if (typeof fref === 'object') {
-        if (fref.frelSeen || fref.mrelSeen || fref.pedi) {
-          const fv = fref.frel || fref.pedi || '';
-          const mv = fref.mrel || fref.pedi || '';
-          const fp = _toPedi(fv);
-          const mp = _toPedi(mv);
-          if (fp === mp) {
-            lines.push(`2 PEDI ${fp}`);
-          } else {
-            // Vater/Mutter-Verhältnis verschieden — _FREL/_MREL als Erweiterung beibehalten
-            lines.push(`2 _FREL ${fv}`);
-            lines.push(`2 _MREL ${mv}`);
-          }
-        }
-        // Alle Quellen dedupl. sammeln: sourIds + frelSour + mrelSour
-        const _allSours = [...(fref.sourIds || [])];
-        const _sourPages = Object.assign({}, fref.sourPages);
-        const _sourQUAY  = Object.assign({}, fref.sourQUAY);
-        for (const [xSour, xPage, xQuay] of [
-          [fref.frelSour, fref.frelPage, fref.frelQUAY],
-          [fref.mrelSour, fref.mrelPage, fref.mrelQUAY]
-        ]) {
-          if (xSour && !_allSours.includes(xSour)) {
-            _allSours.push(xSour);
-            if (xPage) _sourPages[xSour] = xPage;
-            if (xQuay) _sourQUAY[xSour]  = xQuay;
-          }
-        }
-        // Zusätzliche SOUR-IDs aus frelSourExtra / mrelSourExtra extrahieren
-        for (const extra of [...(fref.frelSourExtra||[]), ...(fref.mrelSourExtra||[])]) {
-          const m = extra.match(/^\d+ SOUR (@\S+@)/);
-          if (m && !_allSours.includes(m[1])) _allSours.push(m[1]);
-        }
-        for (const s of _allSours) {
-          lines.push(`2 SOUR ${s}`);
-          if (_sourPages[s]) lines.push(`3 PAGE ${_sourPages[s]}`);
-          if (_sourQUAY[s])  lines.push(`3 QUAY ${_sourQUAY[s]}`);
-          if (fref.sourExtra && fref.sourExtra[s]) for (const l of fref.sourExtra[s]) lines.push(l);
-        }
-      }
-    }
-    for (const f of p.fams) lines.push(`1 FAMS ${f}`);
-    for (const m of p.media) {
-      lines.push(`1 OBJE`);
-      if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
-      if (m.file) {
-        lines.push(`2 FILE ${m.file}`);
-        const form = m.form || (() => {
-          const ext = (m.file.split('.').pop() || '').toUpperCase();
-          return { JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext;
-        })();
-        if (form) lines.push(`3 FORM ${form}`);
-      }
-      if (!m.titleIsLv2 && m.title) lines.push(`3 TITL ${m.title}`);
-      for (const l of (m._extra || [])) lines.push(l);
-    }
-    // Manuell hinzugefügtes Foto ohne ursprünglichen OBJE-Eintrag → FILE-Referenz erzeugen
-    if (_newPhotoIds.has(p.id)) {
-      lines.push(`1 OBJE`);
-      lines.push(`2 FILE photos/${p.id}.jpg`);
-      lines.push(`3 FORM JPEG`);
-    }
-    if (p.uid) lines.push(`1 _UID ${p.uid}`);
-    if (p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
-    if (p.lastChanged) {
-      lines.push(`1 CHAN`);
-      lines.push(`2 DATE ${p.lastChanged}`);
-      if (p.lastChangedTime) lines.push(`3 TIME ${p.lastChangedTime}`);
-    }
-    // Passthrough: gelöschte Fotos → OBJE-Block entfernen
-    // (_pt and _ptNameEnd already declared above; write remaining items starting at _ptNameEnd)
-    if (_deletedPhotoIds.has(p.id)) {
-      let skip = false;
-      for (let i = _ptNameEnd; i < _pt.length; i++) {
-        const l = _pt[i];
-        if (/^1 OBJE/.test(l)) { skip = true; continue; }
-        if (skip && /^[2-9] /.test(l)) continue;
-        skip = false;
-        lines.push(l);
-      }
-    } else {
-      for (let i = _ptNameEnd; i < _pt.length; i++) lines.push(_pt[i]);
-    }
-  }
-
-  for (const f of Object.values(db.families)) {
-    lines.push(`0 ${f.id} FAM`);
-    if (f.husb) lines.push(`1 HUSB ${f.husb}`);
-    if (f.wife) lines.push(`1 WIFE ${f.wife}`);
-    for (const c of f.children) {
-      lines.push(`1 CHIL ${c}`);
-      // Verhältnistyp und Quellen werden gem. GEDCOM 5.5.1 auf INDI-Seite (FAMC/PEDI) geführt.
-    }
-    eventBlock('MARR', f.marr, 1);
-    if (f.marr.addr) pushCont(lines, 2, 'ADDR', f.marr.addr);
-    eventBlock('ENGA', f.engag, 1);
-    eventBlock('DIV',  f.div,   1);
-    eventBlock('DIVF', f.divf,  1);
-    for (const ev of (f.events || [])) {
-      lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
-      if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
-      if (ev.date !== null && ev.date !== undefined) lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
-      if (ev.place !== null && ev.place !== undefined || ev.lati !== null) {
-        if (ev.place !== null && ev.place !== undefined) lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
-        geoLines(ev, 3);
-      }
-      if (ev.note) pushCont(lines, 2, 'NOTE', ev.note);
-      if (ev.sources) for (const s of ev.sources) {
-        lines.push(`2 SOUR ${s}`);
-        if (ev.sourcePages && ev.sourcePages[s]) lines.push(`3 PAGE ${ev.sourcePages[s]}`);
-        if (ev.sourceQUAY && ev.sourceQUAY[s])   lines.push(`3 QUAY ${ev.sourceQUAY[s]}`);
-        if (ev.sourceNote && ev.sourceNote[s] !== undefined) lines.push(`3 NOTE${ev.sourceNote[s] ? ' ' + ev.sourceNote[s] : ''}`);
-        if (ev.sourceExtra && ev.sourceExtra[s]) for (const l of ev.sourceExtra[s]) lines.push(l);
-        if (ev.sourceMedia && ev.sourceMedia[s]) for (const m of ev.sourceMedia[s]) {
-          lines.push(`3 OBJE`);
-          if (m.file) { lines.push(`4 FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-          if (m.scbk) lines.push(`4 _SCBK ${m.scbk}`);
-          if (m.prim) lines.push(`4 _PRIM ${m.prim}`);
-          if (m.titl) lines.push(`4 TITL ${m.titl}`);
-          if (m.note) lines.push(`4 NOTE ${m.note}`);
-        }
-      }
-      if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
-    }
-    if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
-    for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${ref}`);
-    for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
-    for (const m of (f.media || [])) {
-      if (!m.file && !m.title) continue;
-      lines.push(`1 OBJE`);
-      if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
-      if (m.file) {
-        lines.push(`2 FILE ${m.file}`);
-        const ext = (m.file.split('.').pop() || '').toUpperCase();
-        const form = m.form || ({ JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext);
-        if (form) lines.push(`3 FORM ${form}`);
-        if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
-      } else if (m.title && !m.titleIsLv2) {
-        lines.push(`2 TITL ${m.title}`);
-      }
-      for (const l of (m._extra || [])) lines.push(l);
-    }
-    if (f.lastChanged) {
-      lines.push(`1 CHAN`);
-      lines.push(`2 DATE ${f.lastChanged}`);
-      if (f.lastChangedTime) lines.push(`3 TIME ${f.lastChangedTime}`);
-    }
-    for (const l of (f._passthrough || [])) {
-      if (/^1 (DIV|DIVF|ENG|ENGA)\b/.test(l)) continue; // jetzt strukturiert
-      lines.push(l);
-    }
-  }
-
-  for (const s of Object.values(db.sources)) {
-    lines.push(`0 ${s.id} SOUR`);
-    if (s.abbr)   lines.push(`1 ABBR ${s.abbr}`);
-    if (s.title)  pushCont(lines, 1, 'TITL', s.title);
-    if (s.author) pushCont(lines, 1, 'AUTH', s.author);
-    if (s.date)   lines.push(`1 DATE ${s.date}`);
-    if (s.publ)   pushCont(lines, 1, 'PUBL', s.publ);
-    if (s.repo) {
-    lines.push(`1 REPO ${s.repo}`);
-    if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
-  }
-    if (s.text)   { pushCont(lines, 1, 'TEXT', s.text); }
-    if (s.agnc || (s.dataExtra && s.dataExtra.length)) {
-      lines.push(`1 DATA`);
-      if (s.agnc) lines.push(`2 AGNC ${s.agnc}`);
-      for (const l of (s.dataExtra || [])) lines.push(l);
-    }
-    for (const m of (s.media || [])) {
-      if (!m.file && !m.title) continue;
-      lines.push(`1 OBJE`);
-      if (m.titleIsLv2 && m.title) lines.push(`2 TITL ${m.title}`);
-      if (m.file) {
-        lines.push(`2 FILE ${m.file}`);
-        const ext = (m.file.split('.').pop() || '').toUpperCase();
-        const form = m.form || ({ JPG:'JPEG', JPEG:'JPEG', PNG:'PNG', GIF:'GIF', TIF:'TIFF', TIFF:'TIFF', BMP:'BMP', PDF:'PDF' }[ext] || ext);
-        if (form) lines.push(`3 FORM ${form}`);
-        if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
-      } else if (m.title && !m.titleIsLv2) {
-        lines.push(`2 TITL ${m.title}`);
-      }
-      for (const l of (m._extra || [])) lines.push(l);
-    }
-    if (s._date) lines.push(`1 _DATE ${s._date}`);
-    if (s.lastChanged) {
-      lines.push(`1 CHAN`);
-      lines.push(`2 DATE ${s.lastChanged}`);
-      if (s.lastChangedTime) lines.push(`3 TIME ${s.lastChangedTime}`);
-    }
-    for (const l of (s._passthrough || [])) lines.push(l);
-  }
-
-  for (const r of Object.values(db.repositories)) {
-    lines.push(`0 ${r.id} REPO`);
-    if (r.name) lines.push(`1 NAME ${r.name}`);
-    if (r.addr || (r.addrExtra && r.addrExtra.length)) {
-      const al = r.addr ? r.addr.split('\n') : [];
-      lines.push(`1 ADDR${al[0] ? ' ' + al[0] : ''}`);
-      for (let i = 1; i < al.length; i++) lines.push(`2 CONT ${al[i]}`);
-      if (r.addrExtra && r.addrExtra.length) for (const l of r.addrExtra) lines.push(l);
-    }
-    if (r.phon)  lines.push(`1 PHON ${r.phon}`);
-    if (r.www)   lines.push(`1 WWW ${r.www}`);
-    if (r.email) lines.push(`1 EMAIL ${r.email}`);
-    if (r.lastChanged) {
-      lines.push(`1 CHAN`);
-      lines.push(`2 DATE ${r.lastChanged}`);
-      if (r.lastChangedTime) lines.push(`3 TIME ${r.lastChangedTime}`);
-    }
-  }
-
-  for (const n of Object.values(db.notes || {})) {
-    const MAX = 248;
-    const rawLines = (n.text || '').split('\n');
-    for (let li = 0; li < rawLines.length; li++) {
-      let s = rawLines[li];
-      let firstChunk = true;
-      do {
-        const chunk = s.slice(0, MAX);
-        s = s.slice(MAX);
-        if (li === 0 && firstChunk) lines.push(`0 ${n.id} NOTE ${chunk}`);
-        else if (firstChunk)        lines.push(`1 CONT ${chunk}`);
-        else                        lines.push(`1 CONC ${chunk}`);
-        firstChunk = false;
-      } while (s.length > 0);
-    }
-    if (!rawLines.length) lines.push(`0 ${n.id} NOTE `);
-    if (n.lastChanged) {
-      lines.push(`1 CHAN`);
-      lines.push(`2 DATE ${n.lastChanged}`);
-      if (n.lastChangedTime) lines.push(`3 TIME ${n.lastChangedTime}`);
-    }
-    for (const l of (n._passthrough || [])) lines.push(l);
-  }
+  for (const p of Object.values(db.individuals))  writeINDIRecord(lines, p);
+  for (const f of Object.values(db.families))     writeFAMRecord(lines, f);
+  for (const s of Object.values(db.sources))      writeSOURRecord(lines, s);
+  for (const r of Object.values(db.repositories)) writeREPORecord(lines, r);
+  // HOF-Notiz-Texte die über _hofNoteIds geschrieben werden — nicht doppelt aus db.notes schreiben
+  const _hofNoteTexts = new Set(Object.keys(_hofNoteIds).map(addr => db.hofObjects[addr].note));
+  for (const n of Object.values(db.notes || {}))
+    if (!_hofNoteTexts.has(n.text)) writeNOTERecord(lines, n);
+  for (const [addr, id] of Object.entries(_hofNoteIds))
+    writeNOTERecord(lines, { id, text: db.hofObjects[addr].note, _passthrough: [] });
 
   // Unknown lv=0 records (SUBM etc.) — verbatim passthrough
   for (const rec of (db.extraRecords || [])) {
@@ -475,4 +558,3 @@ function writeGEDCOM(updateHeadDate = false) {
   lines.push('0 TRLR');
   return lines.join('\r\n');
 }
-

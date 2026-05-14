@@ -8,7 +8,9 @@ const OD_TOKEN_EP  = 'https://login.microsoftonline.com/common/oauth2/v2.0/token
 const OD_GRAPH     = 'https://graph.microsoft.com/v1.0';
 
 function _odRedirectUri() {
-  // /Stammbaum/index.html → /Stammbaum/  (muss mit registrierter URI übereinstimmen)
+  if (location.origin === 'https://frochtrup.github.io') return 'https://frochtrup.github.io/Stammbaum/';
+  if (location.origin === 'http://localhost:8080')       return 'http://localhost:8080/';
+  // Unbekannte Origin → dynamisch (wird von Microsoft abgelehnt wenn nicht registriert)
   return location.origin + location.pathname.replace(/[^/]*$/, '');
 }
 function _odIsConnected()  { return !!sessionStorage.getItem('od_access_token'); }
@@ -18,10 +20,27 @@ function _odUpdateUI() {
   const cb  = document.getElementById('odConnectBtn');
   const ob  = document.getElementById('odOpenBtn');
   const sb  = document.getElementById('odSaveBtn');
-  if (cb)  cb.innerHTML = (conn ? '☁ &nbsp; OneDrive trennen' : '☁ &nbsp; OneDrive verbinden');
-  if (ob)  ob.style.display  = conn ? '' : 'none';
-  if (sb)  sb.style.display  = conn ? '' : 'none';
+  if (cb)  cb.textContent = conn ? '☁  OneDrive trennen' : '☁  OneDrive verbinden';
+  if (ob)  ob.hidden  = !conn;
+  if (sb)  sb.hidden  = !conn;
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
+  const gb = document.getElementById('grampsExportBtn');
+  if (gb)  gb.hidden = !AppState.db;
+  // SW-Version aus aktivem Cache-Namen auslesen
+  const swVerEl   = document.getElementById('menuSwVersion');
+  const swStateEl = document.getElementById('menuSwState');
+  const helpVerEl = document.getElementById('helpSwVersion');
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    caches.keys().then(keys => {
+      const name = keys.find(k => k.startsWith('stammbaum-')) || keys[0] || '–';
+      if (swVerEl)   swVerEl.textContent   = 'SW: ' + name;
+      if (swStateEl) swStateEl.textContent = 'Status: aktiv';
+      if (helpVerEl) helpVerEl.textContent = 'Stammbaum PWA · ' + name;
+    });
+  } else {
+    if (swVerEl)   swVerEl.textContent   = 'SW: nicht aktiv';
+    if (swStateEl) swStateEl.textContent = 'Status: –';
+  }
 }
 
 function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
@@ -38,11 +57,14 @@ function odLogout() {
 async function odLogin() {
   const verifier  = _odCodeVerifier();
   const challenge = await _odCodeChallenge(verifier);
+  const stateVal  = _odCodeVerifier();
   sessionStorage.setItem('od_verifier', verifier);
+  sessionStorage.setItem('od_state', stateVal);
   const p = new URLSearchParams({
     client_id: OD_CLIENT_ID, response_type: 'code',
     redirect_uri: _odRedirectUri(), scope: OD_SCOPES,
-    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query'
+    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query',
+    state: stateVal
   });
   location.href = OD_AUTH_EP + '?' + p;
 }
@@ -62,6 +84,9 @@ async function odHandleCallback() {
   const error = p.get('error');
   history.replaceState({}, '', location.pathname);
   if (error || !code) { if (error) showToast('OneDrive: ' + (p.get('error_description') || error)); return; }
+  const expectedState = sessionStorage.getItem('od_state');
+  sessionStorage.removeItem('od_state');
+  if (!expectedState || p.get('state') !== expectedState) { showToast('OneDrive: Sicherheitsfehler (CSRF)', 'error'); return; }
   const verifier = sessionStorage.getItem('od_verifier');
   sessionStorage.removeItem('od_verifier');
   if (!verifier) { showToast('OneDrive: Sitzung abgelaufen'); return; }

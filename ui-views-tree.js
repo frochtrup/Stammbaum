@@ -9,7 +9,7 @@ let _treeGenPortrait = 3;  // letzter Portrait-Wert  (Standard: 3 = +Großeltern
 let _treeGenLandscape= 5;  // letzter Landscape-Wert (Standard: 5 = +Ur²Gr.)
 
 function setTreeGens(n) {
-  _treeGenCount = Math.max(2, Math.min(6, n));
+  _treeGenCount = Math.max(2, Math.min(9, n));
   const ip = window.innerWidth < window.innerHeight;
   if (ip) _treeGenPortrait  = _treeGenCount;
   else    _treeGenLandscape = _treeGenCount;
@@ -87,7 +87,7 @@ function _initTreeDrag() {
     _updateTopbarH();
     clearTimeout(_treeResizeTimer);
     _treeResizeTimer = setTimeout(() => {
-      const id = UIState._treeHistory[UIState._treeHistoryPos];
+      const id = currentTreeId;
       if (!id) return;
       if (!document.getElementById('v-tree')?.classList.contains('active')) return;
       showTree(id, false);
@@ -95,7 +95,7 @@ function _initTreeDrag() {
   });
 
   // Pinch-to-Zoom (Touch, 2 Finger)
-  let _pinchStartDist = 0, _pinchStartScale = 1;
+  let _pinchStartDist = 0, _pinchStartScale = 1, _pinchRafPending = false;
   sc.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
       _pinchStartDist = Math.hypot(
@@ -114,15 +114,21 @@ function _initTreeDrag() {
       e.touches[0].clientY - e.touches[1].clientY
     );
     _treeZoomScale = Math.min(3, Math.max(0.3, _pinchStartScale * dist / _pinchStartDist));
-    const wrap = document.getElementById('treeWrap');
-    const scaleWrap = document.getElementById('treeScaleWrap');
-    if (wrap) {
-      wrap.style.transform = `scale(${_treeZoomScale})`;
-      wrap.style.transformOrigin = '0 0';
-    }
-    if (scaleWrap && wrap) {
-      scaleWrap.style.width  = Math.round(parseFloat(wrap.style.width)  * _treeZoomScale) + 'px';
-      scaleWrap.style.height = Math.round(parseFloat(wrap.style.height) * _treeZoomScale) + 'px';
+    if (!_pinchRafPending) {
+      _pinchRafPending = true;
+      requestAnimationFrame(() => {
+        const wrap = document.getElementById('treeWrap');
+        const scaleWrap = document.getElementById('treeScaleWrap');
+        if (wrap) {
+          wrap.style.transform = `scale(${_treeZoomScale})`;
+          wrap.style.transformOrigin = '0 0';
+        }
+        if (scaleWrap && wrap) {
+          scaleWrap.style.width  = Math.round(parseFloat(wrap.style.width)  * _treeZoomScale) + 'px';
+          scaleWrap.style.height = Math.round(parseFloat(wrap.style.height) * _treeZoomScale) + 'px';
+        }
+        _pinchRafPending = false;
+      });
     }
     e.preventDefault();
   }, { passive: false });
@@ -224,8 +230,8 @@ async function _lightboxSetHero() {
   await idbPut(_lbHeroKey, src).catch(() => {});
   const el = document.getElementById(_lbHeroElemId);
   if (el) {
-    el.style.display = '';
-    el.innerHTML = `<img src="${src}" alt="Foto" data-action="showLightbox" style="width:80px;height:96px;object-fit:cover;border-radius:8px;display:block;flex-shrink:0;cursor:pointer">`;
+    el.style.display = 'block';
+    el.innerHTML = `<img src="${src}" alt="Foto" data-action="showLightbox" class="tree-photo-img">`;
   }
   if (_lbAvatarElemId) {
     const av = document.getElementById(_lbAvatarElemId);
@@ -256,20 +262,41 @@ function getChildIds(pid) {
 let currentTreeId = null;
 
 function _updateTreeBackBtn() {
-  const btn = document.getElementById('treeBtnBack');
-  if (btn) btn.style.display = UIState._treeHistoryPos > 0 ? '' : 'none';
+  const btn  = document.getElementById('treeBtnBack');
+  const hist = document.getElementById('treeHistBtn');
+  const fwd  = document.getElementById('treeBtnFwd');
+  const n = UIState._navHistory.length;
+  if (btn)  btn.hidden  = n <= 0;
+  if (hist) hist.hidden = n < 2;
+  if (fwd)  fwd.hidden  = UIState._navFwdStack.length === 0;
 }
 
+// "←" — immer 1 Schritt direkt zurück (unified history)
 function treeNavBack() {
-  if (UIState._treeHistoryPos <= 0) return;
-  UIState._treeHistoryPos--;
-  showTree(UIState._treeHistory[UIState._treeHistoryPos], false);
+  goBack();
+}
+
+// "▾" — Picker mit vollständigem Verlauf (unified history)
+function openTreeHistory() {
+  const hist = UIState._navHistory;
+  if (!hist.length) return;
+  const btn = document.getElementById('treeHistBtn');
+  const items = [...hist].reverse().map((item, i) => ({
+    label: _historyItemLabel(item),
+    data:  { actualIdx: hist.length - 1 - i, item }
+  }));
+  _showHistoryPicker(btn, items, (idx, data) => {
+    if (!data) return;
+    hist.splice(data.actualIdx);
+    _navToHistoryItem(data.item);
+    _updateTreeBackBtn();
+  }, null);
 }
 
 // Kürzt lange Namen im Baum: Vornamen → Initiale(n), Nachname bleibt
 function _treeShortName(p, isCenter) {
   const nm = p.name || p.id || '';
-  const limit = isCenter ? 26 : 18;
+  const limit = isCenter ? 26 : 22;
   if (nm.length <= limit) return nm;
   const given = p.given || '';
   const surn  = p.surname || '';
@@ -281,6 +308,21 @@ function _treeShortName(p, isCenter) {
   return nm;
 }
 
+// Gibt HTML für den Kartennamen zurück — Rufname wird unterstrichen
+function _treeNameHtml(p, isCenter) {
+  const nm = _treeShortName(p, isCenter);
+  const rufname = p._rufname || p._grampsCall || '';
+  if (!rufname) return esc(nm);
+  // Rufname-Wort im Anzeigenamen suchen (Wortgrenze, case-insensitive)
+  const escaped = esc(rufname);
+  const re = new RegExp('(^|\\s)(' + rufname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(\\s|$)', 'i');
+  const match = nm.match(re);
+  if (!match) return esc(nm);
+  const idx = match.index + match[1].length;
+  const len = match[2].length;
+  return esc(nm.slice(0, idx)) + '<u>' + esc(nm.slice(idx, idx + len)) + '</u>' + esc(nm.slice(idx + len));
+}
+
 function showTree(personId, addToHistory = true) {
   const p = AppState.db.individuals[personId];
   if (!p) return;
@@ -288,10 +330,9 @@ function showTree(personId, addToHistory = true) {
   currentTreeId   = personId;
 
   // ── Navigations-History ──
-  if (addToHistory) {
-    UIState._treeHistory = UIState._treeHistory.slice(0, UIState._treeHistoryPos + 1);
-    if (UIState._treeHistory[UIState._treeHistory.length - 1] !== personId) UIState._treeHistory.push(personId);
-    UIState._treeHistoryPos = UIState._treeHistory.length - 1;
+  if (addToHistory && currentTreeId && currentTreeId !== personId) {
+    const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
+    UIState._navHistory.push({ type: _type, id: currentTreeId });
   }
   _updateTreeBackBtn();
   setBnavActive('tree');
@@ -342,7 +383,7 @@ function showTree(personId, addToHistory = true) {
   }
   const kbadge = id => {
     const k = id && kekuleMap[id];
-    return k ? `<div class="tree-kekule-badge">${k}</div>` : '';
+    return k ? `<div class="tree-kekule-badge" title="Kekule-Nr. ${k} (Proband = 1)">${k}</div>` : '';
   };
 
   // ── Vorfahren (4 Ebenen; Hochformat: max. 2 Ebenen) ──
@@ -353,6 +394,9 @@ function showTree(personId, addToHistory = true) {
   const anc3 = anc2.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 8
   const anc4 = anc3.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 16
   const anc5 = anc4.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 32
+  const anc6 = anc5.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 64
+  const anc7 = anc6.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 128
+  const anc8 = anc7.flatMap(id => { const q = _gp(id); return [q.father, q.mother]; });  // 256
 
   // ── Geschwister (aus erster Elternfamilie) ──
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
@@ -369,7 +413,7 @@ function showTree(personId, addToHistory = true) {
     const spId = personId === fam.husb ? (fam.wife || null)
                : personId === fam.wife ? (fam.husb || null)
                : null;
-    return { famId, spId, kids: fam.children || [] };
+    return { famId, spId, kids: _sortedChildren(fam.children) };
   }).filter(Boolean);
 
   // ── Kinder (alle Familien, ohne Duplikate) ──
@@ -393,15 +437,16 @@ function showTree(personId, addToHistory = true) {
   const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
   const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
   // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene
-  // _treeGenCount = Generationen gesamt inkl. Proband:
-  //   2 = nur Eltern (1 Ahnen-Ebene), 3 = +Großeltern (2 Ebenen),
-  //   4 = +Urgroßeltern (3 Ebenen), 5 = +Ururgroßeltern (4 Ebenen)
-  const _maxAnc = _treeGenCount - 1;  // max. Ahnen-Ebenen (1..5); Hochformat scrollt horizontal
+  // _treeGenCount = Generationen gesamt inkl. Proband (2..9); scrollt horizontal
+  const _maxAnc = _treeGenCount - 1;  // max. Ahnen-Ebenen (1..8)
+  const hasAnc8 = _maxAnc >= 8 && anc8.some(Boolean);
+  const hasAnc7 = _maxAnc >= 7 && anc7.some(Boolean);
+  const hasAnc6 = _maxAnc >= 6 && anc6.some(Boolean);
   const hasAnc5 = _maxAnc >= 5 && anc5.some(Boolean);
   const hasAnc4 = _maxAnc >= 4 && anc4.some(Boolean);
   const hasAnc3 = _maxAnc >= 3 && anc3.some(Boolean);
-  const ancLevels = hasAnc5 ? 5 : hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
-  const ancSlots  = hasAnc5 ? 32 : hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
+  const ancLevels = hasAnc8 ? 8 : hasAnc7 ? 7 : hasAnc6 ? 6 : hasAnc5 ? 5 : hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
+  const ancSlots  = hasAnc8 ? 256 : hasAnc7 ? 128 : hasAnc6 ? 64 : hasAnc5 ? 32 : hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
   const ancSpan = ancSlots * SLOT;
   const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
@@ -506,30 +551,33 @@ function showTree(personId, addToHistory = true) {
     div.style.height = (isCenter ? CH : H) + 'px';
     if (!id) {
       div.classList.add('tree-card-empty');
-      div.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem">?</span>';
+      div.innerHTML = '<span class="tree-card-unknown">?</span>';
       wrap.appendChild(div);
       return;
     }
     const q = AppState.db.individuals[id];
     if (!q) return;
     div.dataset.sex = q.sex || 'U';
-    const nm = _treeShortName(q, isCenter);
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
+    const fullName = [q.given, q.surname].filter(Boolean).join(' ') || q.name || '(unbekannt)';
+    const sexLabel = q.sex === 'M' ? ', Mann' : q.sex === 'F' ? ', Frau' : '';
+    div.title = fullName + sexLabel + (yr ? ' ' + yr : '');
+    div.setAttribute('aria-label', _treeShortName(q, isCenter) + sexLabel + (yr ? ', ' + yr : ''));
     const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =
-      `<div class="tree-name">${esc(nm)}</div>` +
-      (yr ? `<div class="tree-yr" style="${isPortrait ? 'font-size:0.58rem;white-space:nowrap' : ''}">${yr}</div>` : '') +
+      `<div class="tree-name">${_treeNameHtml(q, isCenter)}</div>` +
+      (yr ? `<div class="tree-yr${isPortrait ? ' tree-yr--portrait' : ''}">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
-      (multiMarr ? `<div class="tree-half-badge" style="left:auto;right:4px;background:var(--gold-dim);color:var(--bg)">⚭${spouseFamsEarly.length}</div>` : '') +
+      (multiMarr ? `<div class="tree-half-badge tree-half-badge--right">⚭${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
-    div.onclick = onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id));
+    div.addEventListener('click', onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id)));
     wrap.appendChild(div);
   }
 
   // ── Ahnen-Ebenen ancLevels..2 (generisch für 2–5 Ebenen) ──
-  const _ancArrays = [null, anc1, anc2, anc3, anc4, anc5];
+  const _ancArrays = [null, anc1, anc2, anc3, anc4, anc5, anc6, anc7, anc8];
   for (let _d = ancLevels; _d >= 2; _d--) {
     _ancArrays[_d].forEach((id, i) => {
       if (!id && _d >= 3) return;  // tiefe Ebenen: leere Slots überspringen
@@ -562,7 +610,7 @@ function showTree(personId, addToHistory = true) {
     const y = ry(0) + i * PEEK;
     const z = nSibs - i + 5;
     const badge = (i === 0 && nSibs > 1)
-      ? `<div class="tree-half-badge" style="bottom:auto;top:3px;right:4px;color:var(--gold)">${nSibs}</div>`
+      ? `<div class="tree-half-badge tree-half-badge--sib">${nSibs}</div>`
       : '';
     mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge + kbadge(sid));
   });
@@ -596,7 +644,7 @@ function showTree(personId, addToHistory = true) {
       btn.className = 'tree-marr-btn';
       btn.style.cssText = `position:absolute;left:${Math.round(personX + CW)}px;top:${Math.round(lineY - 12)}px;width:${Math.round(spColX - personX - CW)}px;height:24px;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center`;
       btn.title = 'Familie öffnen';
-      btn.innerHTML = `<span style="background:var(--surface2);border:1px solid var(--gold-dim);border-radius:8px;padding:1px 5px;font-size:0.7rem;color:var(--gold-dim);pointer-events:none">⚭</span>`;
+      btn.innerHTML = `<span class="tree-marr-badge">⚭</span>`;
       btn.addEventListener('click', () => showFamilyDetail(fam.famId));
       wrap.appendChild(btn);
     }

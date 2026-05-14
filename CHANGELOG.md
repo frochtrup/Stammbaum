@@ -5,6 +5,466 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 7.0 (Branch `v7-dev`, ab 2026-04-10) — ABGESCHLOSSEN
+
+---
+
+### Session 2026-05-14b — HOF-Notizen vollständig + GEDCOM-Roundtrip-Stabilisierung (sw v405–v413)
+
+- **HANDBUCH.html** `docs`: vollständiges Benutzerhandbuch als eigenständige Offline-Seite
+- **sw v408** `feat`: Handbuch-Link im Hilfe-Modal
+- **HOF-Notizen** (mehrere Fixes ohne einzelne sw-Bumps):
+  - Notizen korrekt per Adresse zuordnen, kein Mehrfach-Anzeigen im Personen-Detail
+  - HOF-Notiz nur anzeigen wenn Event sie via `noteRefs` referenziert
+  - Duplikate in GED eliminieren — HOF-Notiz-Refs und -Records konsolidieren
+  - `_derivedHofObjectsFromDb` auch für Höfe ohne Koordinaten (nur Notiz reicht)
+- **sw v409** `fix(roundtrip)`: event-NOTEs nicht doppelt schreiben — `_noteOrig` sichert Original-Inline-Text vor `_resolveNoteRefs()`; Writer nutzt `_noteOrig` statt aufgelöstem `note`; behebt +182 Duplikat-NOTE-Zeilen
+- **sw v410** `fix(roundtrip)`: HOF-Note nur schreiben wenn Event sie ursprünglich hatte (`_evHadNote`-Guard); behebt +70 unerwünschte HOF-Notiz-Refs auf Events ohne Notiz
+- **sw v411** `fix(hof)`: `hofObjects`-Merge in allen 3 Ladepfaden (IDB, GEDCOM, GRAMPS) — `Object.assign`-Shallow-Merge durch Post-Merge-Loop ersetzt der fehlende `note` aus abgeleiteten Einträgen übernimmt; behebt N_HOF_10-Verlust bei localStorage-Einträgen ohne Note
+- **sw v412** `fix(parser)`: `3 CONT/CONC` unter `2 NOTE` in Sonder-Events (BIRT/CHR/DEAT/BURI) — kein `_ptDepth` gesetzt → CONT landete im lv=3-Handler; neuer Handler für `evIdx < 0`
+- **sw v413** `fix(parser)`: `3 CONT/CONC` unter `2 NOTE` in FAM-Events (MARR/ENGA/DIV/DIVF/EVEN) — MARR/ENGA/DIV/DIVF NOTE-Handler setzte `_ptDepth=2` → CONT via Passthrough in `_extra`; Writer schrieb sie nach SOUR → INSTABIL; jetzt direkter lv=3-Handler hängt an `.note` an; FAM EVEN hatte gar keinen Handler
+- **Roundtrip-Ergebnis**: `orig=90520 out=90520` · `✓ STABIL` (out1 === out2)
+
+---
+
+### Session 2026-05-14a — Hof-Umbenennen, U8 Granulares Undo, Nav 2.0 (sw v401–v404)
+
+- **sw v401** `feat`: Hof-Umbenennen — zentrale Adressänderung für alle RESI/PROP-Ereignisse in `db.individuals`; `renameHofAddress(oldAddr, newAddr)` in `ui-views-hof.js`; aktualisiert RESI/PROP `.addr` + `hofObjects`-Key + localStorage
+- **sw v401–v402** `feat(U8)`: Granulares Undo — `_undoStack/_redoStack` auf `AppState` (max 30 Schritte); `pushUndo()` an 13 Mutations-Call-Sites (savePerson, saveFamily, saveEvent, deleteEvent, mergePerson usw.); per-Entity-Snapshot (nur betroffene Persons/Families/Sources); Cmd+Z = Undo (Fallback: Revert-to-Saved), Cmd+Shift+Z = Redo; Stack-Reset bei Datei-Laden + `revertToSaved`
+- **sw v403** `feat(Nav 2.0)`: Vorwärts-Navigation — `_navFwdStack` auf `UIState`; `goForward()`; `→`-Button in Detail-Topbar + Baum-Topbar; `_captureCurrentNavState()` + `_clearNavState()`; `_persistNavState`/`_restoreNavState` via sessionStorage (überlebt F5); Alt+← / Alt+→ als Keyboard-Shortcuts
+- **sw v404** `fix(hof)`: erste Hof-Notiz-Fixes (Basis für v409–v413)
+
+---
+
+### Session 2026-05-13b — UX: Quick-Add Chips, Jump-Bar, CSP-Fix (sw v388–v390, v398–v400)
+
+- **sw v388** `feat`: Quick-Add Chips in Personen-Detailview — fehlende Sonder-Events (BIRT/CHR/DEAT/BURI) + generische Shortcuts (RESI/OCCU/CENS) in einer Pill-Zeile; `showEventFormTyped` in `_CLICK_MAP`; `defaultType`-Parameter in `showEventForm()`
+- **sw v389** `fix`: Alle Chips in einer Zeile (statt zwei), CSS-Leiche `.missing-events-row--generic` entfernt
+- **sw v390** `fix`: `flex-wrap: nowrap` + `overflow-x: auto` — horizontales Scrollen statt Zeilenumbruch auf iPhone/Safari
+- **sw v398** `feat`: Jump-Bar in Personen-Detailview — sticky Abschnitts-Navigation `[Daten][Notizen][Medien][Familie][Eltern]`; erscheint ab ≥3 Sektionen; `_injectJumpBar()`; Section-IDs `pdet-*`; `jumpToSection` in `_CLICK_MAP`
+- **sw v399** `fix`: Jump-Bar `scroll-margin-top: calc(var(--topbar-h, 52px) + 44px)` — Offset für Topbar + Bar-Höhe
+- **sw v400** `fix`: CSP — 3 `onclick=`-Handler in Template-Strings durch `data-action` ersetzt (`removeNoteRef`, `newSourceForm`, `newFamilyForm`); keine Inline-Event-Handler mehr im Codebase
+
+---
+
+### Session 2026-05-13 — UX: Neue-Person-Formular (sw v391–v397)
+
+- **sw v391** `feat`: Neue-Person-Formular — Progressive Disclosure: Kern (Name/Geschlecht) + Leben (Geburt/Tod inline) immer sichtbar; optionale Felder per Field-Pills einblendbar (`_PF_PILLS`, `_renderPills()`, `_activatePill()`); Bearbeiten-Dialog bestehender Personen unverändert (alle Felder sichtbar)
+- **sw v392** `feat`: Datumsfelder normalisieren bei `blur` → GEDCOM-Format (`_normQuickDate()`, `_pfParseDatePart()`): `3.5.1900→3 MAY 1900`, `mai 1900→MAY 1900`, `ca 1900→ABT 1900`, `vor/nach→BEF/AFT`; Orts-Felder mit `initPlaceAutocomplete()` (wie Event-Formular)
+- **sw v393** `feat`: Pills um Taufe (CHR) + Beerdigung (BURI) erweitert (Datum+Ort inline); Notiz nach vorne; Quellen-Widget immer sichtbar; Quelle wird automatisch allen befüllten Sonderevents als Citation zugewiesen (`_mergeCits()`, `_eventCits()`)
+- **sw v394** `feat`: Pills um Beruf (OCCU) + Wohnort (RESI) erweitert; pre-populiert aus erstem vorhandenen Event; `savePerson()` aktualisiert/erstellt OCCU/RESI in `events[]`; Orts-Autocomplete + Datum-Normalisierung für Wohnort
+- **sw v395** `feat`: Button „+ Weitere" im Neu-Person-Formular — speichert und öffnet sofort leeres Formular (`savePerson(openNew=true)`); nur bei neuer Person sichtbar
+- **sw v396** `fix`: Bearbeiten-Dialog bestehender Personen: Leben-Sektion + Ereignis-Pills ausgeblendet — Ereignisse über Detailview bearbeitbar; `#pf-life-section` Wrapper + `_EVENT_FIELDS` Set
+- **sw v397** `fix`: Notiz ebenfalls aus Bearbeiten-Dialog ausgeblendet (direkt im Detailview editierbar)
+
+---
+
+### Session 2026-05-12 — F4b Citations-Datenmodell (sw v381)
+
+- **sw v381** `feat(F4b)`: `citations:[{sid,page,quay,note,extra,media}]` ersetzt 6 parallele Dicts (`sources[]+sourcePages{}+sourceQUAY{}+sourceNote{}+sourceExtra{}+sourceMedia{}`); `citationObj()` Factory + `_migrateLegacyCitations()` + `_addCitRefs()` in `gedcom.js`; `_curCit`-Pattern + unified lv=3 SOUR-Handler im Parser; `_writeSourCits()` im Writer; srcWidget komplett neu (mode:'new', `addSrc`, `citidx`-basiert); `citTagsHtml()` in `ui-views.js`; alle Forms + Views migriert; `test-citations.html` T0–T7 (9070 SOUR-Refs, 5253 Zitierungen verlustfrei)
+
+---
+
+### Session 2026-05-10 — Refactoring-Sprint (sw v370–v380)
+
+- **sw v370–v373** `refactor(A10)`: `unsafe-inline` aus CSP entfernt — 6 Phasen abgeschlossen; alle `style=`-Inline-Attribute in Template-Strings durch CSS-Klassen ersetzt; `<meta http-equiv="Content-Security-Policy">` ohne `'unsafe-inline'`; ADR-015 in `ARCHITECTURE.md` dokumentiert
+- **sw v374–v375** `fix`: A10-Folgebug — `style.display=''` zeigte Elemente nicht wenn CSS `display:none` gesetzt; Sub-Tab-Wechsel (Orte/Höfe/Karte) löscht veralteten `detailContent`
+- **sw v376** `feat(A11y)`: U16–U19 — ♂/♀-Symbol + `aria-label` auf Baum-Karten (WCAG 1.4.1); Kekule-Badge `title`; `.field-invalid` Formular-Validierung (Blur+Submit); `<label for>` in allen Formularen
+- **sw v377** `refactor`: U21 `evGeoLink(lati, long)` in `ui-views.js` — 5 duplizierte `maps.apple.com`-URLs konsolidiert; Bugfix `data-action="stop"` in Events-Loop; U22 Onboarding überarbeitet (Formatzeile `.ged · .gramps`, Demo-Button mit Personenzahl)
+- **sw v378** `fix`: Baum-Tooltip Felder `given`/`surname` statt `givn`/`surn`; Fallback auf `q.name`
+- **sw v379** `refactor(U20)`: `_pdetLifeData()` aus `showDetail()` extrahiert (Lebensdaten-Block inkl. Events-Gruppierung)
+- **sw v380** `refactor(U23)`: `ui-forms.js` aufgeteilt (1007 → 619 Z.) — `ui-forms-person.js` (Person + Extra-Name-Formular, 273 Z.) + `ui-forms-family.js` (Familie-Formular, 124 Z.); Load-Order in `index.html` + SW-Precache aktualisiert
+
+---
+
+### Session 2026-05-09 — A10 Analyse: unsafe-inline Scope-Aufnahme (kein sw-Bump)
+
+**Analyse (keine Code-Änderungen):**
+- Vollständige Bestandsaufnahme aller `style=`-Attribute und `style.cssText`-Zuweisungen im Projekt
+- **Gefunden:** ~165 `style=` in JS-Template-Strings (17 Dateien) + **240 `style=` in `index.html`** (anfangs übersehen) = ~405 inline styles gesamt
+- **Zusätzlich:** ~25 `style.cssText = '...'` (JS, nicht CSP-relevant aber Code-Qualität); ~154 `el.style.display`-Toggles in JS
+- **Kategorisierung:**
+  - Statisch (CSS-Klasse genügt): ~310 Stellen
+  - Dynamisch (Farbe/Breite per Datenwert): ~30 Stellen — `ui-dedup.js` (scColor, score%), `ui-views-stats.js` (Balkenbreiten), `ui-views-search.js`
+  - `display:none` initial + JS-Toggle: ~53 in `index.html` + je nach Template → `hidden`-Attribut + `el.hidden = true/false`
+- **Aufwand revidiert:** ursprünglich M (halber Tag) → tatsächlich XL (4–5 Versionen)
+- **Konsequenz:** A10 in ROADMAP.md auf XL hochgestuft und mit detailliertem Umsetzungsplan versehen
+
+---
+
+### Session 2026-05-09 — A5 db-Shim Setter eliminieren (sw v360)
+
+- **sw v360** `refactor(A5)`: `setDb(newDb)` in `gedcom.js` — mutiert `AppState.db` in-place via `Object.keys` delete + `Object.assign` statt Referenz zu ersetzen; `window.db` Shim-Setter entfernt (nur Getter bleibt); alle 12 `AppState.db = …` Zuweisungen in `storage.js` (5), `storage-file.js` (2), `ui-debug.js` (5) auf `setDb()` umgestellt; in `_loadGRAMPS` lokale Variable `db` → `parsed` umbenannt um Namenskonflikt zu vermeiden; Roundtrip-Test in `ui-debug.js` sichert mit `Object.assign({}, AppState.db)` statt Referenz
+
+---
+
+### Session 2026-05-08 — A6 initAutocomplete() generisch (sw v354)
+
+- **sw v354** `refactor(A6)`: Generische `initAutocomplete(inputId, ddId, opts)` in `ui-views.js` (`opts`: `getItems`, `formatLabel`, `onSelect`, `configEl?`, `onInput?`, `limit?`); `initPlaceAutocomplete` (ui-forms.js), `_initAddrAutocompleteFor` (ui-forms-event.js), `_initHofPersonSearchFor` (ui-views-hof.js) als schlanke Wrapper; eliminiert ~60 Zeilen Boilerplate (debounce, input/blur/focus-Listener, display-Logik); alle 10 Aufrufstellen unverändert
+
+---
+
+### Session 2026-05-08 — A3 Cache-first + A4 Fonts lokal (sw v352–v353)
+
+- **sw v352** `perf(A3)`: SW Cache-first für App-Assets — `PRECACHE_PATHS` Set aus absoluten Pfaden; Fetch-Handler unterscheidet PRECACHE-Assets (sofort aus Cache, kein Netzwarten) von allen anderen Requests (weiter Network-first+4s); behebt 4s Ladeblockade beim App-Start bei schlechtem iOS-WLAN
+- **sw v353** `feat(A4)`: Fonts lokal — `fonts/` Ordner mit 8 woff2-Dateien (Playfair Display + Source Serif 4, latin+latin-ext); `fonts/fonts.css` mit @font-face variable-weight; Google Fonts `<link>` aus index.html entfernt; CSP bereinigt (`fonts.googleapis.com` + `fonts.gstatic.com` entfernt); alle Font-Dateien in PRECACHE → Fonts verfügbar ab erstem Offline-Start
+
+---
+
+### Session 2026-05-08 — Security-Fixes SEC1–SEC4 (sw v351)
+
+- **sw v351** `fix(sec)`: SEC-1 OAuth CSRF — `odLogin()` sendet zufälligen `state`-Parameter; `odHandleCallback()` verwirft Callback bei State-Mismatch; SEC-2 `safeLinkHref()` in `ui-views.js` — nur `http/https/mailto` in GEDCOM-Website-Links erlaubt; SEC-3 `ui-views-hof.js` (4×) `addr.replace(/"/g,'&quot;')` → `esc(addr)`; SEC-4 `_validCoord()` in `ui-views.js` — `isFinite()`+Range-Check ersetzt `!== null`-Checks in 6 Apple-Maps-URLs
+
+---
+
+### Session 2026-05-08 — F4 Soundex-Suche + OBJE-Fix (sw v349–v350)
+
+- **sw v349** `fix`: OBJE ohne FORM — `m.form = null`; `gedcom-writer.js` gibt `FORM`-Tag nur aus wenn nicht null (GRAMPS-Kompatibilität, verhindert leere `2 FORM`-Zeilen)
+- **sw v350** `feat`: F4 Soundex-Suche — `germanSoundex()` mit Umlaut-Normalisierung (Ä→A, Ö→O, Ü→U, ß→S); ≈-Toggle in globaler Suche schaltet zwischen Exact- und Soundex-Match; findet Schreibvarianten (Decker/Deker/Döker)
+
+---
+
+### Session 2026-05-03 — F2 Beziehungsrechner Bugfixes + Quellen-Features + Orts-Karte-Nav (sw v333–v348)
+
+- **sw v333** `feat`: Beziehungsrechner F2 — `calcRelationship(idA, idB)` bidirektionale BFS (Tiefe 12); `_relLabel()` dt. Bezeichnungen (Vater/Mutter, Großelternteil, Onkel/Tante, Cousin n. Grads); Verwandtschafts-Sektion in `showDetail()` (klickbar); `showRelPath()`-Modal mit Pfad + gemeinsamem Vorfahren (⬡) + Kekule-Badge
+- **sw v334** `fix`: PAGE/QUAY im Quellenbezug für Geburtsname/Extraname korrekt gespeichert
+- **sw v335** `refactor`: `_hasMeta`-Whitelist aus `renderSrcTags()` entfernt
+- **sw v336** `feat`: Quellenbezüge kopieren & einfügen — Copy-Button in Quellenbezug-Widget; Paste aus Zwischenablage
+- **sw v337** `fix`: OneDrive-Dateiliste zeigt Datum + Uhrzeit
+- **sw v338** `feat`: URL-Quellenbezüge als anklickbarer Link — `_WWW`-Tag in Quelle; Link-Badge in Quellenzeile
+- **sw v339** `fix`: URL-Badge stoppt Event-Propagation korrekt (kein ungewolltes Detail-Öffnen)
+- **sw v340–v343** `fix`: Orts-Koordinaten in Event-Objekte propagieren — `applyAllExtraPlaceCoords()` via `collectPlaces()` statt direktem Stringvergleich; alle Ladepfade (IDB, GRAMPS, Demo) abgedeckt
+- **sw v344–v345** `feat`: Karte-Navigation aus Personendetail — `← Person`-Button + `× Zurück`-Button in Karten-Topbar
+- **sw v346–v347** `fix`: Felder↔Freitext-Wechsel im Ortsfeld — kompakter Ortsname beim Wechsel zu Freitext; vollständiger Positionsstring in Freitext-Ansicht
+- **sw v348** `fix`: F2 Bugfixes — Duplikat-`style` in `showRelPath()` zusammengeführt (`cursor:pointer` war wirkungslos); `relPathShowDetail` in `_CLICK_MAP` schließt Modal vor `showDetail()`; Pedigree-Collapse-Hinweis (`multiPath: true` wenn mehrere gleichwertige Pfade)
+
+---
+
+### Session 2026-05-01 — Kekule-Nummerierung + Generationstiefe (sw v330–v332)
+
+- **sw v330** `feat`: Sanduhr-Baum bis 9 Generationen — Buttons 7–9 ergänzt; `anc6/7/8`-Arrays; `hasAnc6/7/8`-Prüfungen; `ancSlots` bis 256; `setTreeGens` Limit 6→9
+- **sw v331** `feat`: Fächer-Diagramm bis 9 Generationen — `RADII` auf 10 Einträge (max. 728px); Buttons 7–9 in `#fcGenBtns`; `setFcGens` Limit 6→9
+- **sw v332** `feat`: Kekule-Nummern als Badges in der Personenliste — `_buildKekuleMap()` aus Probanden (Tiefe 8) per `_kWalk`; `#N`-Badge (`.p-kekule`) rechts in jeder Zeile für direkte Vorfahren; wird bei jedem `renderPersonList()` neu berechnet
+
+---
+
+### Session 2026-05-01 — ASSO/Taufpaten + Assoziationen-UI (sw v323–v329)
+
+- **sw v323–v325** `feat`: ASSO/RELA Roundtrip + Taufpaten-UI
+  - `p.associations[]` (xref, `_grampsHlink`, rela, note, sources…); GEDCOM `1 ASSO … 2 RELA` ↔ GRAMPS `<personref hlink rel>` vollständiger Roundtrip
+  - Phase F: `_grampsWitnessRefs[]` → ASSO via `_witnessEvMap`
+  - Taufpaten in CHR-Ereignisformular (Personen-Autocomplete, Chips mit ×); `.asso-chip`s in Personendetail; `RELA_LABELS{}` in gedcom.js; `_efGodparents` Shim
+- **sw v326** `feat`: Reziproke Godchild-Relation + ASSOZIATIONEN-Abschnitt in Personendetail
+- **sw v327** `fix`: Patenkinder dynamisch berechnen statt nur aus gespeicherten Einträgen
+- **sw v328** `feat`: Abgeleitete Assoziationen visuell kennzeichnen
+- **sw v329** `feat`: Aufgaben editierbar — bestehende Forschungsaufgaben können nachträglich bearbeitet werden
+
+---
+
+### Session 2026-04-28 — Architektur/Security/A11y-Review-Fixes (sw v300–v302)
+
+- **sw v300** `fix`: `user-scalable=no` aus Viewport entfernt (WCAG 1.4.4); `ui-debug.js` + Roundtrip-Test-Buttons nur bei `?debug=1` sichtbar (`data-debug-only`-Muster); Hilfe-Modal: Version dynamisch aus SW-Cache-Namen statt hardcodiert „3.0"; `ui-views.js`: `typeof`-Guard für `runRoundtripTest` in `_CLICK_MAP`
+- **sw v301** *(extern — PRECACHE-Aktualisierung)*
+- **sw v302** `fix`: `esc()` um `'` → `&#39;` erweitert (vollständige HTML-Escapesequenz); `loadDemo()` mit `confirmModal()` bei ungespeicherten Änderungen abgesichert; `storage-file.js` in ARCHITECTURE.md + MEMORY.md dokumentiert
+
+---
+
+### Session 2026-04-29 — Debug-Fixes + Q11/A7/U15 + Forschungsaufgaben (sw v303–v307)
+
+- **sw v303** `fix`: Debug-only-Buttons via `hidden`-Attribut statt `display:none`
+- **sw v304** `fix`: Debug-Modus via `#debug`-Hash (Service Worker sieht keine URL-Hashes) + `?debug=1`-Fallback
+- **sw v305** `fix`: `debug-activate.js` ersetzt inline `<script>`-Block (CSP blockiert `script-src 'unsafe-inline'`)
+- **sw v306** `fix`: Q11 `parseCoordInput()` Bounds-Check (`Math.abs(lat)≤90` / `Math.abs(lon)≤180`); A7 `.menu-btn` CSS-Klasse in `styles.css` (12 Inline-Styles entfernt); U15 Hilfe-Modal Tabs korrigiert + Abschnitte Baum/Orte+Höfe+Karte/Statistik/Tastaturkürzel ergänzt
+- **sw v307** `feat`: Forschungsaufgaben — `TASK_CATEGORIES` (kirchenbuch/urkunde/online); `p._tasks[]` auf Person-Objekt; GEDCOM `1 _TASK` + `2 _CAT/_DONE/_DATE/_ID` Roundtrip; GRAMPS `<attribute type="_TASK" value="JSON"/>` Roundtrip; Person-Detail-Abschnitt; globale Liste mit Filter (Alle/Offen/Erledigt, nach Kategorie); Badge auf Personen-Tab; `markChanged()` beim Schreiben
+
+---
+
+### Session 2026-04-27 — UX/UI-Review, Statistik-Dashboard, Rufname (sw v284–v299)
+
+- **sw v284–v288** `fix/ux`: Hof-Koordinaten Nachbesserungen + UX-Review Vorbereitung
+- **sw v289–v297** `ux`: Phase 4f — UI/UX-Review
+  - Touch-Targets ≥44px konsequent, Leerzustände mit CTA
+  - Swipe-down Bottom-Sheet (touch-start/move/end auf `.sheet-handle`)
+  - Event-Formular: Typ-Selektor als horizontales Scroll-Menü
+  - Orte-Tab: Segment-Control als Pill (Orte | Höfe | Karte)
+  - History-Picker Dropdown: Split-Button (← direkt / ▾ Verlauf-Dropdown)
+  - Unified Navigation History: `_navHistory[]` in UIState; Baum + Detail teilen einen Stack; `treeNavBack()` delegiert an `goBack()`; `_treeHistory`/`_treeHistoryPos` entfernt
+  - `showToast(msg, type)`: type = success/error/warn/info; typabhängige Dauer; `.toast-error` rot; rückwärtskompatibel
+  - `confirmModal(okLabel)`: konfigurierbarer OK-Button-Text
+- **sw v298** `feat`: Phase 4g — Rufname (`_RUFNAME`-Tag / NICK) GEDCOM-Roundtrip; Detailansicht Rufname unterstrichen + Spitzname kursiv; Baum: Rufname unterstrichen; `btn-danger` CSS-Refaktor
+- **sw v299** `feat`: Statistik-Dashboard — `ui-views-stats.js`; 6. Tab; Kennzahlen, Altersverteilung, häufige Nachnamen, Ereignis-Abdeckung
+
+---
+
+### Session 2026-04-27 — Phase 4d: Hof-Koordinaten + Notizen, Roundtrip-Fixes (sw v280–v283)
+
+- **sw v280** `feat`: Hof-Koordinaten + Notizen
+  - `db.hofObjects[addr] = { addr, lat, long, note }` — localStorage (`stammbaum_hofobjects`), lazy
+  - `loadHofObjects()` / `saveHofObjects()` in `ui-forms.js`
+  - `ui-views-hof.js`: Koordinaten-Sektion + Formular (`showHofCoordForm`, `saveHofCoord`, `deleteHofCoord`); 📍 Icon in Hof-Liste wenn Koordinaten vorhanden
+  - `ui-views-note.js`: `openNoteModal('hof', addr)` — liest/schreibt `hofObjects[addr].note`
+  - `ui-views-map.js`: Gold-Rautenmarker für Höfe in Ortsmodus; RESI/PROP-Stationen in Personenbiografie nutzen hofObjects als Koordinaten-Fallback
+  - `storage.js` / `storage-file.js`: `_derivedHofObjectsFromDb()` als Roundtrip-Fallback — stellt Koordinaten nach GEDCOM-Reload wieder her; Merge: `_derived` < `loadHofObjects()`
+  - `gedcom-writer.js`: RESI/PROP-Events ohne PLAC → `PLAC+MAP` aus hofObjects für Ancestris-Kompatibilität; `geoLines()`: hofObjects-Fallback ergänzt
+  - `gramps-parser.js`: Building/Farm/Neighborhood placeObjects → hofObjects abgeleitet
+  - `gramps-writer.js`: `hofAddrToHandle{}` — neue Hof-Placeobjs als `type="Building"` mit `<coord>`; `_collectEv` nutzt hofAddrToHandle
+- **sw v281** `feat`: Hof-Koordinaten GEDCOM + GRAMPS Roundtrip vollständig
+  - `gedcom-parser.js`: `_derivedHofObjectsFromDb()` exportiert (für storage.js / storage-file.js)
+  - `gedcom-writer.js`: PLAC+MAP an RESI/PROP-Events aus hofObjects; Hof-Notiz als `2 NOTE` (event-level, parseable)
+  - `gramps-writer.js`: Building-Placeobjs mit `<coord>` + `<noteref>`; `_collectEv` korrekt verknüpft
+- **sw v282** `fix`: Hof-Notiz Roundtrip via OneDrive/cross-device
+  - `gedcom-writer.js`: Hof-Notiz auf `2 NOTE` (statt `3 NOTE` unter PLAC — war parser-unsichtbar); nur wenn kein eigenes Event-NOTE (`!ev.note`)
+  - `gedcom-parser.js`: `_derivedHofObjectsFromDb()` erfasst jetzt auch `ev.note` — Notiz wird nach GEDCOM-Reload aus RESI-Events wiederhergestellt
+- **sw v283** `fix`: hofObjects-Koordinaten haben Vorrang vor extraPlaces in `geoLines()`
+  - Neue Priorität: hofObjects > extraPlaces > ev.lati/ev.long — verhindert, dass Ortsregister-Koordinaten spezifischere Hof-Koordinaten überschreiben
+
+---
+
+### Session 2026-04-27 — Qualitäts-Sprint P0–P4 (sw v265–v279)
+
+- **sw v265** `fix`: XSS in Karten-Exploration-Panel — `e.date` mit `_mesc()` escapen
+- **sw v266** `refactor`: `evDateKey()` nach `gedcom.js` zentralisiert (Q1)
+- **sw v267** `fix`: Parse-Fehler-Toast ohne Konsolen-Verweis (U1)
+- **sw v268** `refactor`: Backward-Compat-Shims bereinigt (Q3)
+- **sw v269** `feat`: Erweiterte Personensuche (U7) + Baum-Namens-Limit 18/26 Zeichen (U5)
+- **sw v270** `fix`: Qualitäts-Sprint 1 — S4 `buildPlacePartsHtml()` XSS-fix; S5 GEDCOM aus localStorage entfernt; S6 Redirect-URI fest kodiert
+- **sw v271** `refactor`: Qualitäts-Sprint 2 — Dead Code entfernt; `showToast(type)` visuell differenziert (U4); Modal-Stack / Escape-Verhalten (U2)
+- **sw v272** `refactor`: Qualitäts-Sprint 3 — `<main>`/`<nav>` Landmark-Elemente (U11b); Touch-Targets ≥44px (U10); Domain-Logik in `gedcom.js` (A3); `esc()` nach `gedcom.js` verschoben
+- **sw v273** `feat`: `confirm()` → `confirmModal()` Promise (U3); Hofliste — Eigentum vor Bewohner bei gleichem Datum
+- **sw v274** `feat`: Suchergebnisse ranken P3; `_rebuildPersonSourceRefs()` lazy P4
+- **sw v275** `fix`: `window.db`-Shim ergänzt; Q5/Q6/Q7/Q8 abgeschlossen; U6/A4 abgelehnt
+- **sw v276** `refactor`: A1 — `ui-views-note.js` (Notiz-Modal, 120 Z.) + `ui-views-search.js` (globale Suche, 139 Z.) aus `ui-views.js` extrahiert; `ui-views.js`: 935 → 683 Z.
+- **sw v277** `refactor+ux`: `esc()` zentralisiert in `gedcom.js`; Focus-Trap in Modals (`openModal`/`closeModal`, Tab-Zyklus, `aria-modal`, Fokus-Rückkehr) U9; Lade-Spinner für GEDCOM/GRAMPS Parse (`#loadingOverlay`, rAF+setTimeout) A3
+- **sw v279** `fix+a11y`: Q9 Input-Validierung `savePerson()`/`saveEvent()` (Name, Jahr 4-stellig, Tag 1–31, Monat); Q10 `onedrive-import.js` Foto-Injection Refaktor (`createElement`); U13 `aria-live` nach Filter/Suche; U14 VS ARIA `role=list/listitem` + `aria-setsize/posinset`; Icon-Buttons `aria-label`/`aria-expanded` (U11)
+
+---
+
+### Session 2026-04-16 — Kartenansicht-Ausbau + PROP in Hofhistorie (sw v251–v264)
+
+- **sw v251** `fix`: `#mapContainer` beim Tab-Wechsel explizit ausblenden
+- **sw v252** `fix`: Karte beim Wechsel zu Baum/anderen Views ausblenden
+- **sw v253** `feat`: Exploration-Panel in Biografie-Modus
+- **sw v254** `feat`: Person-Picker Modal in Karten-Biografie-Modus
+- **sw v255** `fix`: Exploration-Panel Biografie-Modus zeigt nur Ereignisse der gewählten Person
+- **sw v256** `fix`: Person-Picker Safari-Kompatibilität + Sort alphabetisch → Geburtsjahr
+- **sw v257** `feat`: Vollständige Ereignisbeschreibung im Exploration-Panel
+- **sw v258** `feat`: Person-Picker Sort Nachname → Vorname → Geburtsjahr
+- **sw v259** `feat`: EVEN-Beschreibung in Personenbiografie-Panel + Abbrechen-Button im Person-Picker
+- **sw v260** `fix`: `ev.value` für alle Ereignistypen im Karten-Biografiepanel
+- **sw v261** `feat`: PROP-Ereignisse in Hofhistorie + Adress-Autocomplete in Hof-Formular
+- **sw v262** `feat`: Bewohner + Eigentum in gemeinsamer Liste nach Datum sortiert
+- **sw v263** `fix`: `showHofPropForm` / `saveHofEigentum` / `cancelHofEigentum` in `_CLICK_MAP`
+- **sw v264** `fix`: `_renderAddBewohnerForm` fehlte in `showHofDetail`
+
+---
+
+### Session 2026-04-15 — Desktop-Kartenansicht + Safari-Fix (sw v245–v250)
+
+- **sw v245** `feat`: Kartenansicht im rechten Desktop-Panel
+  - `styles.css`: `body.desktop-mode.places-karte #mapContainer` → `position: fixed; left: 360px` (rechtes Panel)
+  - `ui-views.js`: `switchPlacesSubTab()` zeigt Orte-Liste links + Karte rechts auf Desktop
+  - `renderTab()`: stellt `places-karte`-Klasse bei Tab-Rückkehr wieder her
+- **sw v246** `fix`: `#v-detail` verdeckte Karte auf Desktop
+  - `switchPlacesSubTab('karte')`: `has-detail`-Klasse entfernen
+  - `body.desktop-mode.places-karte:not(.has-detail) #v-detail { display: none !important }`
+- **sw v247** `fix`: Safari zeigte keine Karte (weißer/brauner Hintergrund)
+  - Ursache: `100dvh` in Safari < 16 nicht unterstützt; `height: auto` auf fixed Element ohne Pixel-Höhe → `height: 100%` auf Kind ergibt 0px
+  - `100vh` statt `100dvh`; `position: absolute` auf `#map-leaflet` entfernt (brach Leaflet-Layout)
+  - Zweites `invalidateSize()` nach 300ms als Safari-Fallback
+- **sw v250** `fix`: **Eigentliche Safari-Ursache**: `#mapContainer` innerhalb `#v-main { overflow-y: auto }` — Safari clippt `position: fixed` Kinder von Scroll-Containern
+  - `index.html`: `#mapContainer` direkt in `<body>` verschoben (außerhalb `#v-main`)
+  - `styles.css`: `#mapContainer` immer `position: fixed` (nicht mehr `relative`); Mobile: `top = topbar+togglebar`, `bottom = bottomnav+safe-area`; Desktop: `top:0 bottom:0 left:360px right:0`
+
+---
+
+### Session 2026-04-15 — Duplikat-Erkennung + Merge (sw v243)
+
+- **sw v243** `feat`: `ui-dedup.js` — Duplikat-Erkennung und Merge
+  - **Levenshtein-Scoring**: Name, Geburtsjahr, Geburtsort, Geschlecht → gewichteter Score (0–100)
+  - **Nachname-Bucketing** für Performance (nur gleiche/ähnliche Nachnamen vergleichen)
+  - **Schwellenwert-Slider** — konfigurierbarer Ähnlichkeitsschwellenwert
+  - **Ignorieren-Funktion** — Paare dauerhaft ignorieren (localStorage-persistent)
+  - **`_dedupMergePersons()`** — vollständige Merge-Strategie: prefer-nonempty, merge-arrays (events, sources, notes, media), concat-text
+  - **Merge-Modal** (`modalMerge`): Gegenüberstellung Gewinner/Verlierer; Felder einzeln swappbar; Eltern (`_dedupParents()`) + Partner (`_dedupPartners()`) als zusätzliche Vergleichszeilen
+  - **Scan-Modal** (`modalDedup`): Trefferanzahl, Paar-Liste, Direktlink zum Merge-Modal
+  - **Menü-Eintrag** "Duplikate suchen" in Hamburger-Menü
+  - 6 neue `_CLICK_MAP`-Actions: `menuDedup`, `dedupRunScan`, `dedupOpenMerge`, `dedupSwapWinner`, `dedupIgnorePair`, `dedupConfirmMerge`
+
+---
+
+### Session 2026-04-15 — Kartenansicht (sw v244)
+
+- **sw v244** `feat`: Kartenansicht — `ui-views-map.js` (neu), Leaflet 1.9.4 lokal
+  - **Toggle "Orte|Höfe|Karte"** im Orte-Tab — dritter Punkt in `switchPlacesSubTab()`
+  - **Modus "Alle Orte"**: CircleMarker für alle Orte mit Koordinaten; Größe nach Personenzahl (3 Stufen: 1–4 / 5–19 / 20+); Tooltip mit Name + Personenzahl
+  - **Exploration-Panel**: Klick auf Pin → Bottom-Sheet mit Personenliste (Name, Ereignistyp, Jahr); Klick auf Person → Personen-Detail
+  - **Modus "Personenbiografie"**: Person-Picker (Suche + Dropdown); alle Geo-Events als nummerierte Pins + gestrichelte Verbindungslinie chronologisch sortiert; Popup pro Pin mit Ereignisdetail
+  - **"📍 Karte"-Button** in Personen-Detailansicht (nur wenn Person Geo-Events hat) → öffnet direkt Biografie-Modus
+  - **`_buildPlacePersonIndex()`** — einmaliger Cache: Ort → `[{personId, role, date}]`; `invalidatePlacePersonIndex()` zum Zurücksetzen
+  - **Leaflet lokal**: `leaflet.js` + `leaflet.css` direkt im Projektordner (kein CDN, CSP-sicher)
+  - **Dark-Theme-Overrides**: Popups, Tooltips, Zoom-Controls, Attribution in App-Farbpalette
+  - **CSP erweitert**: `img-src` um `https://*.tile.openstreetmap.org`
+  - **Offline-Banner**: erscheint wenn `navigator.onLine === false`
+  - SW PRECACHE: `leaflet.js`, `leaflet.css`, `ui-views-map.js` ergänzt
+
+---
+
+### Session 2026-04-11 — Phase 3 Bugfixes: GRAMPS Export GRAMPS-kompatibel (sw v198–v204)
+
+- **sw v198** `fix`: DTD-Reihenfolge `name*` vor `gender` (kein Effekt — war nicht die Ursache)
+- **sw v199** `fix`: gender-Parser case-insensitive; Writer → `male/female/unknown` (falsch, s.u.)
+- **sw v200** `fix`: Source-Medien (`<objref>` auf `<source>`) werden jetzt geparst
+  - Parser: `srcMedia[]` aus `<objref>`-Elementen in `<source>` aufgebaut
+  - Deep Test: 60034 Checks (138 neue Source-Media-Checks) ✓
+- **sw v201** `fix`: NS/Version aus Originaldatei übernehmen (kein Effekt — Original war bereits 1.7.2)
+- **sw v202** `debug`: Gender-Statistik in `_grampsXMLDebug` (male/female/unknown Count)
+- **sw v203** `fix+debug`: `_grampsMinimalTest()` — 2-Personen Test-Datei; citations/sources Reihenfolge-Experiment
+- **sw v204** `fix`: **Eigentliche Gender-Ursache gefunden und behoben**
+  - Original-Datei analysiert: GRAMPS 6.x erwartet `M`/`F`/`U`, NICHT `male`/`female`/`unknown`
+  - Writer: `genderMap = { M:'M', F:'F', U:'U' }` statt `male/female/unknown`
+  - gender kommt VOR name (wie GRAMPS es selbst ausgibt)
+  - citations VOR sources (Original-Reihenfolge wiederhergestellt)
+  - Deep Test: 60034 Checks ✓
+
+**Phase 3 vollständig abgeschlossen (sw v204):** GRAMPS Export ist GRAMPS-Desktop-kompatibel
+
+---
+
+### Session 2026-04-11 — Phase 3: GRAMPS XML Writer + Roundtrip (sw v193–v197)
+
+- **sw v193** `feat(Phase 3)`: `gramps-writer.js` — verlustfreier GRAMPS XML Export
+  - `writeGRAMPS(db)` → gzip-komprimierter `.gramps` Blob (CompressionStream)
+  - Handle-Rekonstruktion aus `db._grampsHandles` — Original-Handles erhalten
+  - Neue Handles für PWA-Entitäten: `_pwa{prefix}{counter}` Format
+  - Events als Top-Level-Objekte; dedupl. Citations, Places, Notes, Objects per Collector
+  - GEDCOM→GRAMPS Datum: `_gedToGrampsDateXML()` für alle Formate (dateval/datespan/daterange/datestr)
+  - GEDCOM→GRAMPS Eventtyp: `_GED_TO_GRAMPS`-Map; EVEN-Werte via `TypeName: description`
+  - `_grampsRoundtripTest()` — Basis-Roundtrip (Counts + Person-Stichprobe)
+  - `exportGRAMPS()` in `storage-file.js` — iOS Share-Sheet / Desktop-Download
+  - Menü-Button "Als GRAMPS exportieren" (nur sichtbar wenn `_sourceFormat === 'gramps'`)
+  - SW PRECACHE: `gramps-writer.js` ergänzt
+- **sw v194** `test`: `_grampsDeepTest()` — 55534 Checks über alle Personen/Familien/Quellen
+  - Alle Namen (given/surname/nick/prefix/suffix/extraNames), Daten, Orte
+  - Attribute (_UID/_STAT), Medien-Pfade, GRAMPS Handles (Stichprobe 20)
+- **sw v195** `feat`: GRAMPS Orts-Hierarchie vollständig erhalten
+  - Parser: `placeHandleToId` + `db.placeObjects{}` (id, title, type, pnames[], lat/long, parentId)
+  - Alle Place-Handles in `_grampsHandles` für Round-trip
+  - `placeId` auf allen Events (structured + array, INDI + FAM)
+  - Writer: `db.placeObjects` direkt schreiben (ptitle, pname[], coord, placeref-Hierarchie)
+  - Fallback auf flache String-Orte für GEDCOM-Quellen
+  - Fix: `_grampsHandles` Deklaration vor Places-Schleife verschoben (sw v196)
+- **sw v197** `feat`: childref Attribute + vollständiger GRAMPS-Attribute-Roundtrip
+  - Parser: `childref` frel/mrel → `f.childRelations[childId]`
+  - Parser: Person `_grampsAttrs[]` (alle `<attribute>` außer _UID/_STAT/RESN/E-MAIL)
+  - Parser: Familie `_grampsAttrs[]` (alle `<attribute>`)
+  - Parser: Events `_grampsAttrs[]` (alle `<attribute>` außer Cause) — structured + array, INDI + FAM
+  - Writer: childref mit `frel`/`mrel` aus `f.childRelations`
+  - Writer: `_grampsAttrs` auf Events, Personen, Familien
+  - Deep Test erweitert: 59896 Checks, 0 Fehler ✓
+
+**Roundtrip-Ergebnis:** 2894 Personen, 910 Familien, 138 Quellen, 139 Orte — alle Checks ✓
+
+---
+
+### Session 2026-04-11 — Phase 2: GRAMPS XML Import (sw v190–v192)
+
+- **sw v190** `feat(Phase 1)`: GRAMPS-GEDCOM-Kompatibilität
+  - `detectGRAMPS(gedText)` in `storage-file.js` — Heuristik via `HEAD SOUR GRAMPS` + `_GRAMPS_ID`
+  - `grampId`-Felder auf Person/Familie/Quelle strukturiert
+  - `db._grampsMaster = true` Flag
+- **sw v191** `feat(Phase 2)`: `gramps-parser.js` — nativer GRAMPS XML Import
+  - `parseGRAMPS(file)` async → db (identische Shape wie parseGEDCOM)
+  - gzip via `DecompressionStream('gzip')` + DOMParser
+  - `_byTag(root, tag)` — namespace-sicherer Element-Lookup (getElementsByTagNameNS + Fallback)
+  - Zwei-Pass-Parsing: Handle-Maps → vollständige Objekte
+  - Event-Mapping: 25+ englische + deutsche GRAMPS-Typen → GEDCOM Tags
+  - Citation-Indirektion: confidence (0–4) → QUAY (0–3)
+  - Orts-Auflösung via placeMap (ptitle + Koordinaten)
+  - storage-file.js: `_loadGRAMPS()`, `.gramps` in `showOpenFilePicker` types
+  - index.html: `<script src="gramps-parser.js">` ergänzt
+- **sw v192** `fix`: famc-Schlüssel `fam` → `famId` (Elternverknüpfungen im Baum)
+  - `ui-views-tree.js` liest `ref.famId`, Parser hatte `fam: fId` → Baum zeigte keine Eltern
+  - Fix: vollständige GEDCOM-kompatible famc-Shape mit `famId: fId`
+  - SW-Bump erzwungen um gecachtes gramps-parser.js zu ersetzen
+
+---
+
+## Version 6.0 (Branch `v6-dev`, 2026-04-05 — 2026-04-10) — ABGESCHLOSSEN
+
+---
+
+### Session 2026-04-07 — Bugfix Safari-Syntax + CHR-Koordinaten (sw v176)
+
+- **sw v176** `fix`: Syntax-Fehler in `savePlace()` behoben
+  - `ui-views-source.js:368–369`: `??` und `||` ohne Klammern → Safari-SyntaxError → gesamtes Script geladen nicht → kaskadierend `filterSources` undefined → `toastTimer`-TDZ-Fehler in `showToast`
+  - Fix: `parseFloat(latiRaw) || null` in eigene Klammern gefasst
+  - Nebenfix: CHR-Koordinaten in `collectPlaces()` ergänzt (`p.chr.lati/long` statt `null, null`)
+  - Nebenfix: `extraPlaces`-Koordinaten haben jetzt Vorrang vor GEDCOM-Werten (überschreiben bestehenden Eintrag wenn `ep.lati != null`)
+
+### Session 2026-04-07 — Koordinaten im Ort-Formular editierbar (sw v175)
+
+- **sw v175** `feat`: Ort-Bearbeitungs-Formular (`modalPlace`) um Koordinaten-Felder erweitert
+  - `index.html`: `pl-lati`/`pl-long` als Dezimalgrad oder GEDCOM-Format (N48.1374/E11.5755)
+  - `showPlaceForm()`: bestehende Koordinaten aus `extraPlaces` oder `collectPlaces`-Cache vorbefüllen
+  - `savePlace()`: `parseGeoCoord()` + `parseFloat()` als Fallback; Koordinaten immer in `extraPlaces` schreiben (Eintrag wird ggf. neu angelegt); `_placesCache` invalidiert
+
+### Session 2026-04-07 — LON/LAT als Ortsattribut (sw v174)
+
+- **sw v174** `refactor`: Koordinaten gehören zum Ort, nicht zum Ereignis
+  - `index.html`: `ef-geo-group` (ef-lati/ef-long) aus Event-Formular entfernt
+  - `ui-forms-event.js`: `_fillGeoFields()` entfernt; beim Speichern werden lati/long über `collectPlaces()` aus dem Ortsregister nachgeschlagen (Fallback: Parser-Wert bleibt erhalten)
+  - `gedcom-writer.js`: `geoLines()` schlägt zuerst in `AppState.db.extraPlaces[placeName]` nach, Fallback auf `obj.lati/obj.long` (Roundtrip-Stabilität); PLAC-Bedingung vereinfacht (kein separater `|| obj.lati !== null`-Zweig mehr)
+  - **Effekt**: Koordinaten an einem Ort einmal pflegen (Ort-Detailansicht → Bearbeiten) → wirkt automatisch auf alle Ereignisse an diesem Ort
+
+### Session 2026-04-07 — Familie-Formular PAGE+QUAY + ExtraNames klickbar (sw v170)
+
+- **sw v170** `feat`:
+  - **Familie-Formular**: Quellen-Widget (`ff`) zeigt jetzt PAGE + QUAY; `initSrcWidget('ff', ...)` erhält `marr.sourcePages`/`marr.sourceQUAY`; `saveFamily()` speichert beide Felder; `_hasMeta` um `'ff'` erweitert
+  - **ExtraNames in Personendetail**: zusätzliche Namensangaben sind jetzt klickbar (`data-action="showPersonForm"`) und öffnen das Personen-Bearbeitungs-Formular; Quellen-Badges mit QUAY-Farbe werden angezeigt; `showPersonForm` in `_CLICK_MAP` ergänzt
+
+### Session 2026-04-07 — QUAY-Farbindikator auf Quellen-Badges (sw v169)
+
+- **sw v169** `feat`: Farbliche QUAY-Qualitätsstufen auf `.src-badge`
+  - `sourceTagsHtml(ids, pageMap, quayMap)` — zwei optionale Parameter ergänzt
+  - CSS: `.src-badge--q0/q1/q2/q3` — Rot/Orange/Blau/Grün je nach Qualität
+  - Badge zeigt Seitenangabe als Suffix wenn ≤5 Zeichen (z.B. `§42·15`)
+  - Tooltip: `"Stammrolle Bayern · S. 15 · Q2 – plausibel"`
+  - `factRow()` um `pageMap`/`quayMap` erweitert (rückwärtskompatibel)
+  - `ui-views-person.js`: alle 5 `sourceTagsHtml()`-Aufrufe übergeben jetzt page/quay-Maps (BIRT/CHR/DEAT/BURI/Events)
+  - `ui-views-family.js`: Heirat + Familien-Events mit page/quay-Maps
+
+### Session 2026-04-07 — UX-Verbesserungen (sw v168)
+
+- **sw v168** `feat`: 4 kleine Erweiterungen aus Roadmap
+  - **HTTP-Links klickbar**: `linkifyUrls()` in `ui-views.js`; Quellen-Notiz im Quellendetail rendert URLs als anklickbare `<a>`-Tags
+  - **LON/LAT editierbar**: Koordinaten-Felder (`ef-lati`/`ef-long`) im Event-Formular für alle Typen inkl. BIRT/CHR/DEAT/BURI; Helfer `_fillGeoFields()`; `parseGeoCoord()` beim Speichern; GEDCOM-Format `N49.123456` / `E12.567890`
+  - **PAGE + QUAY im Personen-Formular**: `renderSrcTags()` zeigt PAGE/QUAY-Felder jetzt auch für Prefix `pf` (Person) und `fev` (Familien-Event); `showPersonForm()` initialisiert Widget mit `topSources`/`topSourcePages`/`topSourceQUAY`; `savePerson()` speichert diese Felder
+  - **Quellendetail mit PAGE/QUAY**: `_collectSourceMeta(entity, sid)` durchsucht alle Events, topSources, BIRT/DEAT/CHR/BURI und FAM-Events; Ergebnis (z.B. `S.42 Q2`) erscheint in der Referenzliste des Quellendetails bei Personen und Familien
+
+### Session 2026-04-06 — writeGEDCOM() aufgeteilt (sw v167)
+
+- **sw v167** `refactor`: `writeGEDCOM()` (477 Z.) in Subfunktionen aufgeteilt
+  - `gedcom-writer.js`: neue Top-Level-Funktionen `writeINDIRecord`, `writeFAMRecord`, `writeSOURRecord`, `writeREPORecord`, `writeNOTERecord` — je ein Writer pro Record-Typ
+  - `writeSourCitations(lines, sourLv, obj)` — SOUR+PAGE+QUAY+NOTE+_extra+OBJE war 4× dupliziert
+  - `writeCHAN(lines, obj, lv=1)` — CHAN+DATE+TIME war 4× dupliziert
+  - `_mediaFormStr(m)` — FORM-Ableitung aus Dateiendung war 3× dupliziert
+  - `geoLines` + `eventBlock` aus Inner-Functions herausgehoben (benötigen nun `lines` als Parameter)
+  - **Bugfix:** FAM-events-Schleife duplizierte den SOUR-Zitierblock manuell statt `writeSourCitations` zu nutzen
+  - `writeGEDCOM()` ist jetzt ~35 Z. (HEAD + 5 Record-Schleifen + TRLR)
+
+---
+
+### Session 2026-04-06 — SW Offline-Fallback + Security-Review (sw v162)
+
+- **sw v162** `feat`: Service Worker Offline-Fallback
+  - `sw.js`: `offline.html` in PRECACHE aufgenommen; Cache-Version → v162
+  - `sw.js`: catch-Handler prüft `event.request.destination === 'document'` — nur Navigation-Requests erhalten `offline.html` als Fallback; Sub-Ressourcen (JS, CSS, Bilder) geben `undefined` zurück (korrekt)
+  - `offline.html`: neue self-contained Offline-Seite (inline styles, kein ext. CSS/JS, kein Script); passt zum App-Design; "Erneut versuchen"-Link auf `./`
+  - Vorher: leererer Cache + Netz-Timeout → weißer Screen; jetzt: on-brand Fehlermeldung
+  - Security-Review `onclick=`-Handler: 95 inline `onclick=` in `index.html` blockieren `unsafe-inline`-Entfernung aus CSP; Risiko niedrig für aktuelle Nutzung — dokumentiert als **Pflicht-TODO vor** GED-Import aus unbekannter Quelle / Sharing-Features (ROADMAP.md)
+
+---
+
 ## Version 5.0 (Branch `v5-dev`, 2026-03-30 — 2026-04-05) — ABGESCHLOSSEN
 
 ---

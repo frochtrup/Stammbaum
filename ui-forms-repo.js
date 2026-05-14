@@ -9,20 +9,20 @@ function sfRepoUpdateDisplay() {
   const calnGrp  = document.getElementById('sf-caln-group');
   if (repoId.match(/^@[^@]+@$/)) {
     const r = AppState.db.repositories[repoId];
-    display.textContent    = r ? (r.name || repoId) : repoId;
-    display.style.color    = 'var(--gold)';
-    clearBtn.style.display = '';
-    calnGrp.style.display  = '';
+    display.textContent = r ? (r.name || repoId) : repoId;
+    display.style.color = 'var(--gold)';
+    clearBtn.hidden = false;
+    calnGrp.hidden  = false;
   } else if (repoId) {
-    display.textContent    = repoId;
-    display.style.color    = 'var(--text)';
-    clearBtn.style.display = '';
-    calnGrp.style.display  = 'none';
+    display.textContent = repoId;
+    display.style.color = 'var(--text)';
+    clearBtn.hidden = false;
+    calnGrp.hidden  = true;
   } else {
-    display.textContent    = '–';
-    display.style.color    = 'var(--text-muted)';
-    clearBtn.style.display = 'none';
-    calnGrp.style.display  = 'none';
+    display.textContent = '–';
+    display.style.color = 'var(--text-muted)';
+    clearBtn.hidden = true;
+    calnGrp.hidden  = true;
   }
 }
 
@@ -45,7 +45,7 @@ function renderRepoPicker(q) {
   repos = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   list.innerHTML = '';
   if (!repos.length) {
-    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Keine Archive gefunden</div>';
+    list.innerHTML = '<div class="c-muted fs-sm py-8">Keine Archive gefunden</div>';
     return;
   }
   for (const r of repos) {
@@ -75,25 +75,28 @@ function repoPickerCreateNew() {
 function showRepoDetail(id, pushHistory = true) {
   const r = getRepo(id); if (!r) return;
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentRepoId = id; AppState.currentPersonId = null; AppState.currentFamilyId = null; AppState.currentSourceId = null;
+  AppState.currentRepoId    = id;
+  AppState.currentPersonId  = null;
+  AppState.currentFamilyId  = null;
+  AppState.currentSourceId  = null;
+  AppState.currentPlaceName = null;
   document.getElementById('detailTopTitle').textContent = 'Archiv';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('editBtn').onclick = () => showRepoForm(id);
-  document.getElementById('treeBtn').style.display = 'none';
+  document.getElementById('treeBtn').hidden = true;
 
   const linkedSources = Object.values(AppState.db.sources).filter(s => s.repo === id);
   let html = `<div class="detail-hero fade-up">
-    <div class="detail-avatar" style="font-size:1.8rem">🏛</div>
+    <div class="detail-avatar repo">🏛</div>
     <div class="detail-name">${esc(r.name || id)}</div>
     <div class="detail-id">${r.lastChanged ? 'Geändert ' + r.lastChanged : ''}</div>
   </div>
   <div class="section fade-up"><div class="section-title">Details</div>`;
   if (r.addr)  html += factRow('Adresse', r.addr.replace(/\n/g, ', '));
   if (r.phon)  html += factRow('Telefon', r.phon);
-  if (r.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${esc(r.www)}" target="_blank" rel="noopener">${esc(r.www)}</a></span></div>`;
+  if (r.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(r.www)}" target="_blank" rel="noopener">${esc(r.www)}</a></span></div>`;
   if (r.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span></div>`;
   if (!r.addr && !r.phon && !r.www && !r.email)
-    html += `<div style="color:var(--text-muted);font-style:italic;font-size:0.85rem">Keine Details eingetragen</div>`;
+    html += `<div class="c-muted italic fs-sm">Keine Details eingetragen</div>`;
   html += `</div>`;
   if (linkedSources.length) {
     html += `<div class="section fade-up"><div class="section-title">Quellen (${linkedSources.length})</div>`;
@@ -105,7 +108,7 @@ function showRepoDetail(id, pushHistory = true) {
     }
     html += `</div>`;
   } else {
-    html += `<div class="section fade-up"><div class="empty" style="padding:16px 0">Keine verknüpften Quellen</div></div>`;
+    html += `<div class="section fade-up"><div class="empty empty-compact">Keine verknüpften Quellen</div></div>`;
   }
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
@@ -151,13 +154,13 @@ function saveRepo() {
   }
 }
 
-function deleteRepo() {
+async function deleteRepo() {
   const id = document.getElementById('rf-id').value; if (!id) return;
   const linked = Object.values(AppState.db.sources).filter(s => s.repo === id);
   const msg = linked.length
     ? `Archiv löschen? ${linked.length} Quelle(n) verlieren die Archiv-Verknüpfung.`
     : 'Archiv wirklich löschen?';
-  if (!confirm(msg)) return;
+  if (!await confirmModal(msg, 'Löschen')) return;
   for (const s of linked) { setSource(s.id, { repo: '', repoCallNum: '' }); }
   delete AppState.db.repositories[id];
   closeModal('modalRepo');
