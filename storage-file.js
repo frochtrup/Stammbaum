@@ -226,11 +226,6 @@ async function exportGEDCOM() {
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-  // Backup (Original) nur wenn Inhalt geändert
-  const _origForExport = _getOriginalText();
-  if (_origForExport && _origForExport !== content) {
-    _downloadBlob(_origForExport, `${basename}_${ts}.ged`);
-  }
   _downloadBlob(content, filename);
   AppState.changed = false; updateChangedIndicator();
   idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));

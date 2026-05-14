@@ -72,7 +72,6 @@ async function confirmNewFile() {
     localStorage.removeItem('stammbaum_ged'); localStorage.removeItem('stammbaum_filename');
     localStorage.removeItem('stammbaum_ged_backup'); localStorage.removeItem('stammbaum_backup_filename'); localStorage.removeItem('stammbaum_backup_date');
   } catch(e) {}
-  updateBackupBtn();
   updateSaveIndicator();
   // Suchfelder, Jahresfilter und Baum-History zurücksetzen
   const si = document.getElementById('searchInput');     if (si) si.value = '';
@@ -173,7 +172,6 @@ async function tryAutoLoad() {
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
       showStartView();
       if (typeof _restoreNavState === 'function') _restoreNavState();
-      updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
       return true;
@@ -196,7 +194,6 @@ async function tryAutoLoad() {
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       showStartView();
       if (typeof _restoreNavState === 'function') _restoreNavState();
-      updateBackupBtn();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
       // Nach IDB migrieren
@@ -282,43 +279,6 @@ window.addEventListener('resize', debounce(() => {
   // Layout bei Fenster-Resize neu berechnen (Breakpoint 900px)
   showView(activeView.id);
 }, 150));
-
-// ─────────────────────────────────────
-//  BACKUP
-// ─────────────────────────────────────
-function updateBackupBtn() {
-  const btn = document.getElementById('backupMenuBtn');
-  if (!btn) return;
-  const fname = localStorage.getItem('stammbaum_backup_filename') || '';
-  const date  = localStorage.getItem('stammbaum_backup_date') || '';
-  const hasBackup = !!_getOriginalText();
-  btn.style.opacity = hasBackup ? '1' : '0.4';
-  btn.querySelector('span').textContent = hasBackup
-    ? `Sichern (Original)${date ? ' (' + date + ')' : ''}`
-    : 'Sichern (Original — keines vorhanden)';
-}
-
-function downloadBackup() {
-  const backup = _getOriginalText();
-  if (!backup) { showToast('⚠ Kein Original-Backup vorhanden', 'warn'); return; }
-  const fname = localStorage.getItem('stammbaum_backup_filename') || 'stammbaum.ged';
-  const backupName = fname.replace(/\.ged$/i, '') + '_original.ged';
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  if (isIOS && navigator.canShare) {
-    const file = new File([backup], backupName, { type: 'text/plain' });
-    if (navigator.canShare({ files: [file] })) {
-      navigator.share({ files: [file], title: backupName }).catch(() => {});
-      return;
-    }
-  }
-  const blob = new Blob([backup], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = backupName; a.style.display = 'none';
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
-  showToast('✓ Original-Backup heruntergeladen');
-}
 
 // ─────────────────────────────────────
 //  FOTO EXPORT / IMPORT (Sprint P3-2)
