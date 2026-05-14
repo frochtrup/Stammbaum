@@ -737,6 +737,13 @@ async function writeGRAMPS(db) {
   }
 
   // ── Objects (media) ───────────────────────────────────────────────────────
+  // Nicht-referenzierte Objekte aus _grampsObjMeta ergänzen (würden sonst verloren gehen)
+  const usedHandles = new Set(Object.values(objRecs).map(r => r.handle));
+  for (const [h, meta] of Object.entries(db._grampsObjMeta || {})) {
+    if (!usedHandles.has(h) && meta.src) {
+      objRecs[`__orphan__${h}`] = { handle: h, id: meta.id || h, src: meta.src, mime: meta.mime || '', desc: meta.desc || '', priv: meta.priv, _extra: meta._extra || [] };
+    }
+  }
   const objArr = Object.values(objRecs);
   if (objArr.length) {
     L.push('  <objects>');

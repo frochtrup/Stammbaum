@@ -963,7 +963,7 @@ async function parseGRAMPS(file) {
     tags: Object.fromEntries(Object.entries(tagMap).map(([h, t]) => [h, { name: t.name, color: t.color, priority: t.priority }])),
     _grampsHandles,
     _grampsObjMeta: Object.fromEntries(
-      Object.entries(objMap).map(([h, o]) => [h, { priv: o.priv || null, _extra: o._extra || [] }])
+      Object.entries(objMap).map(([h, o]) => [h, { src: o.src, mime: o.mime, desc: o.desc, id: o.id, priv: o.priv || null, _extra: o._extra || [] }])
     ),
     _grampsNS, _grampsNSVersion, _grampsVersion,
     _idCounterMax: maxId
