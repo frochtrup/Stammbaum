@@ -356,6 +356,14 @@ function parseGEDCOM(text, parseErrors) {
         // Event note continuation
         if (evIdx >= 0 && lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
           cur.events[evIdx].note += (tag==='CONT'?'\n':'') + val;
+        // Special event note continuation (BIRT/CHR/DEAT/BURI have evIdx=-1)
+        if (evIdx < 0 && lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT')) {
+          const _sfx = (tag==='CONT'?'\n':'') + val;
+          if      (lv1tag==='BIRT') cur.birth.note += _sfx;
+          else if (lv1tag==='DEAT') cur.death.note += _sfx;
+          else if (lv1tag==='CHR')  cur.chr.note   += _sfx;
+          else if (lv1tag==='BURI') cur.buri.note  += _sfx;
+        }
         // lv=3 Sub-Tags unter 2 SOUR → direkt auf _curCit schreiben (PAGE/QUAY/NOTE/OBJE/extra)
         if (lv2tag === 'SOUR' && _curCit && tag !== 'TIME' && tag !== 'SOUR') {
           if      (tag === 'PAGE') _curCit.page = val;
