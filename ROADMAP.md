@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v420 · Cache: `stammbaum-v420`
+**sw-Version:** v421 · Cache: `stammbaum-v421`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -65,6 +65,7 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 |---|---|---|---|
 | CrossMode-CitNotes | **Citation-Notizen im Cross-Mode** | `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@` im GEDCOM-Export; setzt Fix-1 (Note-XREF) voraus; nur bei GRAMPS-Quelle aktiv | M |
 | GRAMPS-ObjPassthrough | **Media `priv` + `_extra`** | `objMap[h]` + `objRecs` um `priv`/`_extra` ergänzen; Writer gibt `priv`-Attribut + `_extra` aus; cascading durch alle Media-Stellen | S |
+| GEDCOM-ObjePtBug | **OBJE-Passthrough bei Photo-Löschung** | `_deletedPhotoIds`-Pfad löscht alle `1 OBJE`-Blöcke aus `_passthrough`, nicht nur das gelöschte Foto; Fix: Handle-Tracking pro OBJE-Block | S |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
 | GRAMPS-Orte | **Orts-Picker** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |

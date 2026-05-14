@@ -36,7 +36,7 @@ function _writeSourCits(lines, lv, obj) {
     if (c.page)  lines.push(`${lv+1} PAGE ${c.page}`);
     if (c.quay)  lines.push(`${lv+1} QUAY ${c.quay}`);
     if (c.note !== null && c.note !== undefined)
-      lines.push(`${lv+1} NOTE${c.note ? ' ' + c.note : ''}`);
+      pushCont(lines, lv+1, 'NOTE', c.note || '');
     for (const l of (c.extra || [])) lines.push(l);
     for (const m of (c.media || [])) {
       lines.push(`${lv+1} OBJE`);
