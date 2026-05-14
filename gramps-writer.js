@@ -784,6 +784,16 @@ async function writeGRAMPS(db) {
     L.push('  </notes>');
   }
 
+  // ── Tags ──────────────────────────────────────────────────────────────────
+  const tagEntries = Object.entries(db.tags || {});
+  if (tagEntries.length) {
+    L.push('  <tags>');
+    for (const [handle, t] of tagEntries) {
+      L.push(`    <tag handle="${_esc(handle)}" name="${_esc(t.name)}" color="${_esc(t.color)}" priority="${t.priority ?? 0}"/>`);
+    }
+    L.push('  </tags>');
+  }
+
   L.push('</database>');
 
   // ── Compress to gzip ──────────────────────────────────────────────────────

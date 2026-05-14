@@ -91,8 +91,15 @@ async function openFilePicker() {
     updateSaveIndicator();
     const file = await fh.getFile();
     if (file.name.toLowerCase().endsWith('.gramps')) {
+      // _loadGRAMPS setzt _canDirectSave=false — vorher sichern und danach wiederherstellen
+      const savedHandle  = AppState._fileHandle;
+      const savedCanSave = AppState._canDirectSave;
       await _loadGRAMPS(file);
-      if (AppState._canDirectSave) showToast('✓ ' + file.name + ' geladen · Direktes Speichern aktiv');
+      AppState._fileHandle     = savedHandle;
+      AppState._canDirectSave  = savedCanSave;
+      updateSaveIndicator();
+      const saveInfo = savedCanSave ? ' · Direktes Speichern aktiv' : '';
+      showToast('✓ ' + file.name + ' geladen' + saveInfo);
     } else {
       _processLoadedText(await file.text(), file.name);
       const saveInfo = AppState._canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';

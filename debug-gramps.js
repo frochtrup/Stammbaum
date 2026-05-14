@@ -352,3 +352,125 @@ async function _grampsRoundtripTest() {
   console.log(`\nErgebnis: ${allOk ? '✓ ROUNDTRIP OK' : '✗ DELTA vorhanden'}`);
   return { db1, db2, blob };
 }
+
+// ─────────────────────────────────────
+//  GRAMPS DEEP ROUNDTRIP TEST
+//  Aufruf: await _grampsDeepRoundtrip()
+//  Prüft Personen, Familien, Quellen, Orte, Medien, Notizen, Tags
+// ─────────────────────────────────────
+async function _grampsDeepRoundtrip() {
+  const db1 = AppState.db;
+  if (db1?._sourceFormat !== 'gramps') {
+    console.warn('Kein GRAMPS db — lade zuerst eine .gramps Datei');
+    return null;
+  }
+
+  console.log('=== GRAMPS Deep Roundtrip Test ===');
+
+  let blob;
+  try {
+    blob = await writeGRAMPS(db1);
+    console.log(`Write: ${(blob.size/1024).toFixed(1)} KB`);
+  } catch(e) { console.error('writeGRAMPS fehlgeschlagen:', e); return null; }
+
+  let db2;
+  try {
+    db2 = await parseGRAMPS(new File([blob], 'rt.gramps', { type: 'application/octet-stream' }));
+    console.log(`Parse: OK`);
+  } catch(e) { console.error('parseGRAMPS fehlgeschlagen:', e); return null; }
+
+  let pass = 0, fail = 0;
+  const chk = (label, a, b) => {
+    const ok = String(a ?? '') === String(b ?? '');
+    if (!ok) { console.warn(`  ✗ ${label}: "${a}" → "${b}"`); fail++; }
+    else pass++;
+    return ok;
+  };
+  const sec = label => console.log(`\n── ${label} ──`);
+
+  // ── Counts ────────────────────────────────────────────────────────────────
+  sec('Zählungen');
+  chk('Personen',   Object.keys(db1.individuals).length,  Object.keys(db2.individuals).length);
+  chk('Familien',   Object.keys(db1.families).length,     Object.keys(db2.families).length);
+  chk('Quellen',    Object.keys(db1.sources).length,      Object.keys(db2.sources).length);
+  chk('Archive',    Object.keys(db1.repositories||{}).length, Object.keys(db2.repositories||{}).length);
+  chk('Tags',       Object.keys(db1.tags||{}).length,     Object.keys(db2.tags||{}).length);
+
+  // ── Persons ───────────────────────────────────────────────────────────────
+  sec('Personen (alle)');
+  let pFail = [];
+  for (const [id, p1] of Object.entries(db1.individuals)) {
+    const p2 = db2.individuals[id];
+    if (!p2) { console.warn(`  ✗ Person ${id} fehlt in DB2`); fail++; continue; }
+    const pOk = (k, a, b) => { if (!chk(`${id}.${k}`, a, b)) pFail.push(id); };
+    pOk('given',       p1.given,         p2.given);
+    pOk('surname',     p1.surname,       p2.surname);
+    pOk('sex',         p1.sex,           p2.sex);
+    pOk('birth.date',  p1.birth?.date,   p2.birth?.date);
+    pOk('birth.place', p1.birth?.place,  p2.birth?.place);
+    pOk('death.date',  p1.death?.date,   p2.death?.date);
+    pOk('death.place', p1.death?.place,  p2.death?.place);
+    pOk('famc.len',    p1.famc?.length,  p2.famc?.length);
+    pOk('fams.len',    p1.fams?.length,  p2.fams?.length);
+    pOk('events.len',  p1.events?.length, p2.events?.length);
+    pOk('media.len',   p1.media?.length, p2.media?.length);
+    pOk('cit.len',     p1.citations?.length, p2.citations?.length);
+  }
+  if (!pFail.length) console.log('  Alle Personen OK');
+  else console.warn(`  ${[...new Set(pFail)].length} Personen mit Deltas`);
+
+  // ── Families ──────────────────────────────────────────────────────────────
+  sec('Familien (alle)');
+  let fFail = [];
+  for (const [id, f1] of Object.entries(db1.families)) {
+    const f2 = db2.families[id];
+    if (!f2) { console.warn(`  ✗ Familie ${id} fehlt in DB2`); fail++; continue; }
+    const fOk = (k, a, b) => { if (!chk(`${id}.${k}`, a, b)) fFail.push(id); };
+    fOk('husb',       f1.husb,           f2.husb);
+    fOk('wife',       f1.wife,           f2.wife);
+    fOk('children',   f1.children?.length, f2.children?.length);
+    fOk('marr.date',  f1.marr?.date,     f2.marr?.date);
+    fOk('marr.place', f1.marr?.place,    f2.marr?.place);
+    fOk('events.len', f1.events?.length, f2.events?.length);
+    fOk('cit.len',    f1.citations?.length, f2.citations?.length);
+  }
+  if (!fFail.length) console.log('  Alle Familien OK');
+  else console.warn(`  ${[...new Set(fFail)].length} Familien mit Deltas`);
+
+  // ── Sources ───────────────────────────────────────────────────────────────
+  sec('Quellen (alle)');
+  let sFail = [];
+  for (const [id, s1] of Object.entries(db1.sources)) {
+    const s2 = db2.sources[id];
+    if (!s2) { console.warn(`  ✗ Quelle ${id} fehlt in DB2`); fail++; continue; }
+    const sOk = (k, a, b) => { if (!chk(`${id}.${k}`, a, b)) sFail.push(id); };
+    sOk('title',  s1.title,  s2.title);
+    sOk('author', s1.author, s2.author);
+    sOk('publ',   s1.publ,   s2.publ);
+  }
+  if (!sFail.length) console.log('  Alle Quellen OK');
+  else console.warn(`  ${[...new Set(sFail)].length} Quellen mit Deltas`);
+
+  // ── Media ─────────────────────────────────────────────────────────────────
+  sec('Medien (Stichprobe erste 20)');
+  const allMedia1 = Object.values(db1.individuals).flatMap(p => p.media||[]);
+  const allMedia2 = Object.values(db2.individuals).flatMap(p => p.media||[]);
+  chk('Gesamt-Media-Einträge', allMedia1.length, allMedia2.length);
+
+  // ── Tags ─────────────────────────────────────────────────────────────────
+  sec('Tags');
+  const tags1 = db1.tags || {}, tags2 = db2.tags || {};
+  for (const [h, t1] of Object.entries(tags1)) {
+    const t2 = tags2[h];
+    if (!t2) { console.warn(`  ✗ Tag ${h} (${t1.name}) fehlt in DB2`); fail++; continue; }
+    chk(`tag.${h}.name`,  t1.name,  t2.name);
+    chk(`tag.${h}.color`, t1.color, t2.color);
+  }
+
+  // ── Zusammenfassung ───────────────────────────────────────────────────────
+  const total = pass + fail;
+  console.log(`\n${'─'.repeat(40)}`);
+  console.log(`Checks: ${total}  ✓ ${pass}  ✗ ${fail}`);
+  console.log(fail === 0 ? '✓ ROUNDTRIP VOLLSTÄNDIG OK' : `✗ ${fail} Fehlschläge — siehe oben`);
+  return { db1, db2, blob, pass, fail };
+}

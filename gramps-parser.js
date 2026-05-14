@@ -224,7 +224,7 @@ async function parseGRAMPS(file) {
     const attrs = [...el.attributes].map(a => ` ${a.name}="${a.value.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"`).join('');
     const kids  = [...el.childNodes];
     if (!kids.length) return `<${tag}${attrs}/>`;
-    const inner = kids.map(c => c.nodeType === 3 ? c.textContent : _xmlEl(c)).join('');
+    const inner = kids.map(c => c.nodeType === 3 ? c.textContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : _xmlEl(c)).join('');
     return `<${tag}${attrs}>${inner}</${tag}>`;
   };
 
