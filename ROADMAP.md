@@ -48,6 +48,9 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| ~~CrossMode-NoteXREF~~ | ~~**Note-XREF im GEDCOM Cross-Mode**~~ | ~~`_noteXref`-Lookup in `writeGEDCOM`; GRAMPS-Handles → `@grampId@`; alle 6 NOTE-Ref-Stellen (eventBlock, p/f.events, p/f.noteRefs, writeNOTERecord) nutzen Lookup~~ | ~~S~~ | **erledigt sw v419** |
+| ~~CrossMode-RESN~~ | ~~**`_grampsEvPriv` → `RESN confidential`**~~ | ~~`eventBlock`, `p.events`, `f.events` geben bei `_grampsEvPriv` eine `RESN confidential`-Zeile aus~~ | ~~XS~~ | **erledigt sw v419** |
+| ~~GEDCOM-CitNote~~ | ~~**Citation-Note via `pushCont()`**~~ | ~~`_writeSourCits`: `c.note`-Ausgabe von `lines.push()` auf `pushCont()` umgestellt — verhindert Verlust bei Zeilenumbrüchen und Texten >248 Zeichen~~ | ~~XS~~ | **erledigt sw v421** |
 | ~~GRAMPS-SrcPassthrough~~ | ~~**Source `priv` + `_extra`**~~ | ~~Parser: `priv`-Attribut + `_extra[]` via `_xmlEl` für `change` etc.; Writer: `priv`-Attribut + `_extra`-Ausgabe~~ | ~~XS~~ | **erledigt sw v420** |
 | ~~GRAMPS-RepoPassthrough~~ | ~~**Repo `priv` + `_extra`**~~ | ~~Parser: `priv`-Attribut + `_extra[]`; Writer: `priv`-Attribut + `_extra`-Ausgabe~~ | ~~XS~~ | **erledigt sw v420** |
 | ~~GRAMPS-PersonPriv~~ | ~~**`<person priv>` + `_extra`**~~ | ~~Parser: `priv`-Attribut auf `<person>`-Entität + `_extra[]` für `change`/`tag`; Writer: `priv`-Attribut + `_extra` am Ende des `<person>`-Blocks~~ | ~~S~~ | **erledigt sw v420** |
