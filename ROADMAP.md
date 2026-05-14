@@ -26,7 +26,23 @@ Prioritäten: **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohn
 
 ---
 
-### P1 — Nächster Sprint
+### P1 — GRAMPS Roundtrip (aktiver Sprint)
+
+Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenfolge = Implementierungsreihenfolge (Abhängigkeiten beachten).
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| GRAMPS-EventAttrFix | **Event-Attribute als Plain-Objects** | Parser-Bug: `evMap[h].attrs` speichert DOM-Elemente statt `{type,value}`-Plain-Objects; `_attrXML` scheitert bei DOM-Input → Event-Attribut-Ausgabe kaputt. Fix: wie bei `p._grampsAttrs` in Plain-Objects mappen. | S |
+| GRAMPS-NoteType | **Note-`type`-Attribut bewahren** | `<note type="Research/Private/…">` lesen → `db.notes[id].type`; Writer gibt `type="…"` wieder aus; sonst werden alle Notes zu `type="General"` | XS |
+| GRAMPS-ID | **Ursprüngliche Handles im Writer** | `gramps_id` (Personen, Familien, Quellen, Orte) und `_grampsHandle` beim GRAMPS-Export wieder ausgeben statt neu generieren; verhindert ID-Churn | S |
+| GRAMPS-ObjHandles | **Original Media-Handles bewahren** | Parser liest `hlink` bereits als `_grampsHandle`; Writer nutzt es statt `_h('ob')` — verhindert dass Objekt-IDs je Roundtrip wechseln und externe Referenzen brechen | S |
+| GRAMPS-CitHandles | **Original Citation-Handles bewahren** | `_grampsCitHandle` auf Citation-Objekte speichern; Writer nutzt Original-Handle statt `_citHandle()`-Neugenerat; verhindert Citation-ID-Churn | M |
+| GRAMPS-Notes | **Notes als eigene Entität** | `db.notes{}` als Tabelle; mehrere Notes pro Entität nicht zu einer zusammenführen; Note-Handles original zurückschreiben; baut auf GRAMPS-NoteType auf | M |
+| GRAMPS-PlacePassthrough | **placeobj Sub-Elemente Passthrough** | `<noteref>`, `<citationref>`, `<attribute>`, `<objref>` auf `placeobj` im Parser erfassen (`pl._extra[]`); Writer gibt sie unverändert aus; kein GEDCOM-Einfluss | M |
+
+---
+
+### P1b — Nächster Sprint (Features)
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -45,8 +61,6 @@ Prioritäten: **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohn
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
 | GRAMPS-Orte | **Orts-Picker** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |
 | GRAMPS-Edit | **Personen-/Ereignis-Formular** | `_grampsAttrs[]` anzeigen/editieren; `grampId` + `_grampsCall` sichtbar; Witness-Rollen read-only (Editierbarkeit → ASSO-Edit im Backlog) | M+M |
-| GRAMPS-ID | **gramps_id im Writer** | `gramps_id` aus `db.persons/families` beim GRAMPS-Export wieder ausgeben; verhindert Handle-Verlust bei Roundtrip | S |
-| GRAMPS-Notes | **Notes als eigene Entität** | `db.notes{}` im Parser als eigene Tabelle; Passthrough für Top-Level-`NOTE`-Records; verhindert Datenverlust bei fremden GRAMPS-Dateien | M |
 | ASSO-Parser | **ASSO-Tag parsen (GEDCOM + GRAMPS)** | `1 ASSO @Ix@` + `2 RELA`-Text parsen; in Personen-Detail read-only anzeigen (Zeuge, Pate, Trauzeugen, Nachbar…); GEDCOM 5.5.1-konform, kein Roundtrip-Delta da Passthrough | L |
 | Perf-Worker | **Web Worker Duplikate-Scan** | Duplikat-Erkennung in `Worker` auslagern; entlastet Main Thread bei >2000 Personen | M |
 
