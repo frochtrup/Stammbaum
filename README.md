@@ -1,4 +1,4 @@
-# Stammbaum PWA — Version 7.0
+# Stammbaum PWA — Version 8.0
 
 Genealogie-Editor als Progressive Web App für iPhone/iPad und Desktop.
 Läuft vollständig im Browser — keine Installation, kein App Store, kein Server.
@@ -51,9 +51,18 @@ stammbaum/
 ├── onedrive-auth.js    ← OAuth2 PKCE: Login, Logout, Token-Refresh, Callback
 ├── onedrive-import.js  ← Foto-Import-Wizard, Ordner-Browser, Pick-Modus
 ├── onedrive.js         ← Media-URL, Upload, File-I/O, Pfad-Helfer, Settings
+├── gramps-parser.js    ← parseGRAMPS() — GRAMPS XML-Import (read-only)
+├── gramps-writer.js    ← writeGRAMPS() — GRAMPS XML-Export (gzip Blob)
+├── debug-gramps.js     ← Debug-Tools für GRAMPS-Roundtrip (nur bei ?debug=1)
+├── ui-views-map.js     ← Kartenansicht (Leaflet, Orte- und Personen-Modus)
+├── ui-views-place.js   ← Orte-Ansicht: collectPlaces(), renderPlaceList(), showPlaceDetail()
+├── ui-views-hof.js     ← Höfe-Ansicht: buildHofIndex(), renderHofList(), showHofDetail()
+├── ui-views-tasks.js   ← Forschungsaufgaben: IDB-Persistenz, Badge, Modal-Handler
+├── leaflet.js          ← Leaflet 1.9.4 lokal (kein CDN)
+├── leaflet.css         ← Leaflet CSS
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v413)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v444)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
@@ -61,7 +70,7 @@ stammbaum/
 ├── UI-DESIGN.md        ← HTML-Struktur, Navigation, CSS Design-System, Sanduhr-Layout
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
 ├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
-├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v7.0
+├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v8.0
 └── MEMORY.md           ← Projekt-Memory für KI-Kontext
 ```
 
@@ -87,7 +96,9 @@ stammbaum/
 | **Dokumente-Ordner** | Einstellungen → Dokumente-Ordner einrichten |
 | Auto-Load | Letzte Datei in IndexedDB gecacht → automatisch beim Start |
 | GEDCOM öffnen (lokal) | Menü → Öffnen… (lokal) → `showOpenFilePicker()` (Chrome) oder `<input type="file">` |
-| Direktes Speichern (Chrome Mac) | `fileHandle.createWritable()` → schreibt direkt in die geöffnete Datei |
+| **GRAMPS XML öffnen** | Menü → Öffnen… (lokal) → `.gramps`-Datei wählen (gzip XML, read/write) |
+| **GRAMPS-Badge** | Lila Pill in Topbar zeigt aktiven GRAMPS-Modus |
+| Direktes Speichern (Chrome Mac) | `fileHandle.createWritable()` → schreibt direkt in die geöffnete Datei (GED + GRAMPS) |
 | Download-Fallback (Safari/Firefox) | `<a download>` → Datei im Browser-Download-Ordner + Zeitstempel-Backup |
 | iOS Speichern (lokal) | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
 | Demo-Modus | Menü → Demo-Daten öffnen |
@@ -143,6 +154,18 @@ stammbaum/
 - Alphabetisch mit 📍 bei vorhandenen Koordinaten
 - Detail: Apple Maps Link + alle Personen dieses Ortes
 - **Ort bearbeiten**: Name umbenennen (wirkt auf alle Personen/Familien) + Koordinaten editieren (Dezimalgrad oder GEDCOM-Format)
+- **Kartenansicht**: interaktive Karte (Leaflet) mit Orte-Modus (alle geokodierten Orte) und Personen-Modus (Personen-Cluster)
+
+### Höfe-Tab
+- Listet alle Hofnamen aus den Ereignissen (RESI, EVEN, FACT)
+- Detail: alle Bewohner eines Hofs chronologisch
+- **Höfe-Formular**: Bewohner hinzufügen/entfernen
+
+### Forschungsaufgaben
+- Aufgaben pro Person kategorisiert (TASK_CATEGORIES)
+- Persistenz in IndexedDB
+- Badge in Topbar zeigt offene Aufgaben
+- Globale Aufgabenliste mit Priorität und Status
 
 ### Bearbeiten
 | Was | Felder |
@@ -170,30 +193,37 @@ stammbaum/
 
 ```
 ┌──────────────────────────────────────────────┐
-│  Stammbaum PWA v7.0                          │
+│  Stammbaum PWA v8.0                          │
 │  Vanilla JS · Kein Framework · Kein Build    │
 │                                              │
-│  index.html        — App-Shell               │
-│  styles.css        — alle Styles             │
-│  gedcom.js         — State, Labels, Helfer   │
-│  gedcom-parser.js  — parseGEDCOM()           │
-│  gedcom-writer.js  — write*Record()          │
-│  storage*.js       — IDB, Dateiverwaltung    │
-│  ui-views*.js      — Baum, Detail, Listen    │
-│  ui-forms*.js      — Formulare (3 Module)    │
-│  ui-fanchart.js    — Fan Chart (SVG)         │
-│  ui-media.js       — Medien                  │
-│  onedrive*.js      — OAuth, Fotos (3 Module) │
-│  sw.js             — Service Worker (offline)│
+│  index.html          — App-Shell             │
+│  styles.css          — alle Styles           │
+│  gedcom.js           — State, Labels, Helfer │
+│  gedcom-parser.js    — parseGEDCOM()         │
+│  gedcom-writer.js    — write*Record()        │
+│  gramps-parser.js    — parseGRAMPS()         │
+│  gramps-writer.js    — writeGRAMPS()         │
+│  storage*.js         — IDB, Dateiverwaltung  │
+│  ui-views*.js        — Baum, Detail, Listen  │
+│  ui-views-map.js     — Kartenansicht         │
+│  ui-views-place.js   — Orte-Ansicht          │
+│  ui-views-hof.js     — Höfe-Ansicht          │
+│  ui-views-tasks.js   — Forschungsaufgaben    │
+│  ui-forms*.js        — Formulare (4 Module)  │
+│  ui-fanchart.js      — Fan Chart (SVG)       │
+│  ui-media.js         — Medien                │
+│  onedrive*.js        — OAuth, Fotos (3 Mod.) │
+│  leaflet.js/css      — Karte (lokal)         │
+│  sw.js               — Service Worker        │
 │                                              │
 │  State: AppState { db, changed, currentId…} │
-│         UIState  { _treeHistory, _relMode…} │
+│         UIState  { _navHistory, _relMode…}  │
 │                                              │
 │  Persistenz:                                 │
-│  - IndexedDB primär (GEDCOM-Text, Fotos)     │
+│  - IndexedDB primär (GEDCOM/GRAMPS, Fotos)   │
 │  - localStorage stiller Fallback             │
 │  - FileSystemFileHandle (Chrome direktes     │
-│    Speichern)                                │
+│    Speichern, GED + GRAMPS gzip)             │
 │  - Microsoft Graph API (OneDrive)            │
 │                                              │
 │  Offline: sw.js + manifest.json              │
@@ -201,7 +231,8 @@ stammbaum/
 ```
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
-**Version 7.0** — Mai 2026 — `main` · sw v413
+**GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
+**Version 8.0** — Mai 2026 — `main` · sw v444
 
 ---
 
