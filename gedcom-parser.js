@@ -829,15 +829,14 @@ function _derivedHofObjectsFromDb(db) {
   const hof = {};
   for (const p of Object.values(db.individuals || {})) {
     for (const ev of p.events || []) {
-      if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.lati != null && ev.long != null) {
-        const addr = ev.addr.trim();
-        if (!hof[addr]) hof[addr] = { addr, lat: ev.lati, long: ev.long };
-        // Nur Notizen aus noteRefs übernehmen — inline ev.note kann persönliche Notizen enthalten
-        if (!hof[addr].note) {
-          const _refNote = (ev.noteRefs || []).map(r => db.notes?.[r]?.text).find(t => t);
-          if (_refNote) hof[addr].note = _refNote;
-        }
-      }
+      if ((ev.type !== 'RESI' && ev.type !== 'PROP') || !ev.addr) continue;
+      const _hasCoords = ev.lati != null && ev.long != null;
+      const _refNote = (ev.noteRefs || []).map(r => db.notes?.[r]?.text).find(t => t);
+      if (!_hasCoords && !_refNote) continue;
+      const addr = ev.addr.trim();
+      if (!hof[addr]) hof[addr] = { addr };
+      if (_hasCoords && hof[addr].lat == null) { hof[addr].lat = ev.lati; hof[addr].long = ev.long; }
+      if (!hof[addr].note && _refNote) hof[addr].note = _refNote;
     }
   }
   return hof;
