@@ -24,8 +24,14 @@ function _odUpdateUI() {
   if (ob)  ob.hidden  = !conn;
   if (sb)  sb.hidden  = !conn;
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
-  const gb = document.getElementById('grampsExportBtn');
-  if (gb)  gb.hidden = !AppState.db;
+  const gb = document.getElementById('formatConvertBtn');
+  if (gb) {
+    gb.hidden = !AppState.db;
+    if (AppState.db) {
+      const sp = gb.querySelector('span');
+      if (sp) sp.textContent = AppState.db._grampsMaster ? 'Als GEDCOM exportieren' : 'Als GRAMPS exportieren';
+    }
+  }
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');

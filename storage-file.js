@@ -165,7 +165,8 @@ function _downloadBlob(content, filename) {
 // ─────────────────────────────────────
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
-async function exportGEDCOM() {
+async function exportGEDCOM(forceGEDCOM = false) {
+  if (!forceGEDCOM && AppState.db?._grampsMaster) return exportGRAMPS();
   const content  = writeGEDCOM(true);
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);

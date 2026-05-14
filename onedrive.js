@@ -295,9 +295,11 @@ async function odClearDocFolder() {
 
 // ── File I/O ──────────────────────────────────────────────────────────────────
 
+const _isGedOrGramps = n => { const l = n.toLowerCase(); return l.endsWith('.ged') || l.endsWith('.gramps'); };
+
 async function odOpenFilePicker() {
   const token = await _odGetToken(); if (!token) return;
-  showToast('Suche GEDCOM-Dateien…');
+  showToast('Suche Dateien in OneDrive…');
   try {
     const seen = new Set();
     const allFiles = [];
@@ -326,24 +328,26 @@ async function odOpenFilePicker() {
       if (folderRes?.ok) {
         const folderData = await folderRes.json();
         for (const f of (folderData.value || [])) {
-          if (f.name.toLowerCase().endsWith('.ged')) addFile(f);
+          if (_isGedOrGramps(f.name)) addFile(f);
         }
       }
     }
 
-    // 2) Suchindex (findet Dateien in anderen Ordnern, hat aber Delay für neue Dateien)
-    let url = `${OD_GRAPH}/me/drive/root/search(q='.ged')?select=id,name,lastModifiedDateTime,size&top=200`;
-    while (url) {
-      const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      for (const f of (data.value || [])) {
-        if (f.name.toLowerCase().endsWith('.ged')) addFile(f);
+    // 2) Suchindex — je eine Suche für .ged und .gramps
+    for (const ext of ['.ged', '.gramps']) {
+      let url = `${OD_GRAPH}/me/drive/root/search(q='${ext}')?select=id,name,lastModifiedDateTime,size&top=200`;
+      while (url) {
+        const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        for (const f of (data.value || [])) {
+          if (_isGedOrGramps(f.name)) addFile(f);
+        }
+        url = data['@odata.nextLink'] || null;
       }
-      url = data['@odata.nextLink'] || null;
     }
 
-    if (!allFiles.length) { showToast('Keine .ged-Dateien in OneDrive gefunden'); return; }
+    if (!allFiles.length) { showToast('Keine .ged/.gramps-Dateien in OneDrive gefunden'); return; }
     allFiles.sort((a, b) => (b.lastModifiedDateTime || '').localeCompare(a.lastModifiedDateTime || ''));
     const list = document.getElementById('odFileList');
     if (list) {
@@ -365,6 +369,7 @@ async function odLoadFile(itemId, fileName) {
   closeModal('modalOneDrive');
   const token = await _odGetToken(); if (!token) return;
   showToast('Lade ' + fileName + '…');
+  const isGramps = fileName.toLowerCase().endsWith('.gramps');
   try {
     const res = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}/content`, {
       headers: { Authorization: 'Bearer ' + token }
@@ -372,8 +377,14 @@ async function odLoadFile(itemId, fileName) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     localStorage.setItem('od_file_id',   itemId);
     localStorage.setItem('od_file_name', fileName);
-    _processLoadedText(await res.text(), fileName);
-    // Startpfad (od_base_path) aus dem Ordner der GED-Datei ableiten
+    if (isGramps) {
+      const blob = await res.blob();
+      await _loadGRAMPS(new File([blob], fileName, { type: 'application/octet-stream' }));
+    } else {
+      _processLoadedText(await res.text(), fileName);
+      showToast('✓ ' + fileName + ' geladen');
+    }
+    // Startpfad (od_base_path) aus dem Ordner der Datei ableiten
     try {
       const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${itemId}`, {
         headers: { Authorization: 'Bearer ' + token }
@@ -388,11 +399,11 @@ async function odLoadFile(itemId, fileName) {
         if (basePath) _odStripBaseFromPaths(basePath);
       }
     } catch(e) { console.warn('[OD] Basis-Pfad ermitteln:', e); }
-    showToast('✓ ' + fileName + ' geladen');
   } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
 }
 
 async function odSaveFile() {
+  if (AppState.db?._grampsMaster) return _odSaveGramps();
   showToast('Verbinde mit OneDrive…');
   const token = await _odGetToken();
   if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
@@ -423,6 +434,38 @@ async function odSaveFile() {
   } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + (e.name === 'AbortError' ? 'Timeout (30s)' : e.message)); }
 }
 
+async function _odSaveGramps() {
+  showToast('Verbinde mit OneDrive…');
+  const token = await _odGetToken();
+  if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
+  const fileId   = localStorage.getItem('od_file_id');
+  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.gramps';
+  showToast('GRAMPS-Datei wird erstellt …');
+  let blob;
+  try { blob = await writeGRAMPS(AppState.db); } catch(e) { showToast('Fehler: ' + e.message); return; }
+  showToast('Speichere in OneDrive… (' + Math.round(blob.size/1024) + ' KB)');
+  try {
+    const url = fileId
+      ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
+      : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
+    const ctrl = new AbortController();
+    const _to = setTimeout(() => ctrl.abort(), 30000);
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/octet-stream' },
+      body: blob,
+      signal: ctrl.signal
+    });
+    clearTimeout(_to);
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
+    const saved = await res.json().catch(() => ({}));
+    if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
+    AppState.changed = false; updateChangedIndicator();
+    const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
+    showToast('✓ In OneDrive gespeichert: ' + _loc);
+  } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + (e.name === 'AbortError' ? 'Timeout (30s)' : e.message)); }
+}
+
 // Auto-Load beim App-Start: lädt letzte bekannte Datei von OneDrive (kein Redirect bei Fehler)
 async function odAutoLoadFromOneDrive() {
   await _odMigrateIfNeeded();
@@ -439,9 +482,14 @@ async function odAutoLoadFromOneDrive() {
     });
     clearTimeout(_to);
     if (!res.ok) return false;
-    _processLoadedText(await res.text(), fileName);
+    if (fileName.toLowerCase().endsWith('.gramps')) {
+      const blob = await res.blob();
+      await _loadGRAMPS(new File([blob], fileName, { type: 'application/octet-stream' }));
+    } else {
+      _processLoadedText(await res.text(), fileName);
+      showToast('☁ ' + fileName + ' von OneDrive geladen');
+    }
     _odUpdateUI();
-    showToast('☁ ' + fileName + ' von OneDrive geladen');
     return true;
   } catch(e) {
     clearTimeout(_to);
