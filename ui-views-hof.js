@@ -58,7 +58,10 @@ function renderHofList(sorted) {
     const range  = minYr && maxYr && minYr !== maxYr ? `${minYr}–${maxYr}` : (minYr || '');
     const hofMeta   = AppState.db.hofObjects?.[hof.addr];
     const hasCoords = hofMeta?.lat && hofMeta?.long;
-    const addrLine  = (hasCoords ? '<span class="c-gold mr-4">📍</span>' : '') + esc(hof.addr).replace(/\n/g, ' · ');
+    const hasNote   = !!hofMeta?.note;
+    const addrLine  = (hasCoords ? '<span class="c-gold mr-4">📍</span>' : '')
+                    + (hasNote   ? '<span class="c-dim  mr-4">📝</span>' : '')
+                    + esc(hof.addr).replace(/\n/g, ' · ');
     const metaParts = [];
     if (hof.place) metaParts.push(esc(compactPlace(hof.place)));
     metaParts.push(`${count} Person${count !== 1 ? 'en' : ''}`);
