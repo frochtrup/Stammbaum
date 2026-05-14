@@ -212,6 +212,16 @@ async function parseGRAMPS(file) {
     return [...root.getElementsByTagName(tag)];
   };
 
+  // ─── Minimal XML serializer for _extra passthrough ───────────────────────
+  const _xmlEl = el => {
+    const tag   = el.localName;
+    const attrs = [...el.attributes].map(a => ` ${a.name}="${a.value.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"`).join('');
+    const kids  = [...el.childNodes];
+    if (!kids.length) return `<${tag}${attrs}/>`;
+    const inner = kids.map(c => c.nodeType === 3 ? c.textContent : _xmlEl(c)).join('');
+    return `<${tag}${attrs}>${inner}</${tag}>`;
+  };
+
   // ─── Build handle lookup maps ────────────────────────────────────────────
   // Note: _byTag returns ALL descendants with that localName, which is correct
   // for GRAMPS XML where same-tag nesting never occurs within a section.
@@ -236,7 +246,12 @@ async function parseGRAMPS(file) {
       .map(a => ({ type: a.getAttribute('type') || '', value: a.getAttribute('value') || '' }));
     const noteRefs    = _byTag(ev, 'noteref').map(n => n.getAttribute('hlink'));
     const citRefs     = _byTag(ev, 'citationref').map(c => c.getAttribute('hlink'));
-    evMap[h] = { type, date, placeHandle, desc, cause, addr: evAddr, attrs, noteRefs, citRefs };
+    const priv        = ev.getAttribute('priv') || null;
+    const evExtra     = [];
+    for (const obj of _byTag(ev, 'objref')) evExtra.push(_xmlEl(obj));
+    const changeEl = _byTag(ev, 'change')[0];
+    if (changeEl) evExtra.push(_xmlEl(changeEl));
+    evMap[h] = { type, date, placeHandle, desc, cause, addr: evAddr, attrs, noteRefs, citRefs, _priv: priv, _extra: evExtra, _grampsHandle: h };
   }
 
   // Citations: handle → {sourceHandle, confidence, page}
@@ -568,6 +583,8 @@ async function parseGRAMPS(file) {
             cause: ev.cause || '',
             note: evNote, desc: ev.desc || '',
             citations: wtgt.citations,
+            _grampsEvExtra: ev._extra || [],
+            _grampsEvPriv:  ev._priv  || null,
           });
         }
         continue;
@@ -593,9 +610,11 @@ async function parseGRAMPS(file) {
           tgt.placeId      = plId;
           tgt.lati         = lat;
           tgt.long         = lng;
-          tgt.note         = evNote;
+          tgt.note          = evNote;
           tgt._grampsAttrs  = ev.attrs || [];
           tgt._grampsEvHlink = evH;
+          tgt._grampsEvExtra = ev._extra || [];
+          tgt._grampsEvPriv  = ev._priv  || null;
           if (sp === 'death' && ev.cause) tgt.cause = ev.cause;
           for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
         }
@@ -615,8 +634,10 @@ async function parseGRAMPS(file) {
           phon: [], email: [],
           noteRefs: [],
           citations: [], _extra: [],
-          _grampsAttrs: ev.attrs || [],
-          _grampsEvHlink: evH
+          _grampsAttrs:   ev.attrs  || [],
+          _grampsEvHlink: evH,
+          _grampsEvExtra: ev._extra || [],
+          _grampsEvPriv:  ev._priv  || null,
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         p.events.push(evObj);
@@ -759,8 +780,11 @@ async function parseGRAMPS(file) {
         tgt.placeId      = plId;
         tgt.lati         = lat;
         tgt.long         = lng;
-        tgt.note         = evNote;
-        tgt._grampsAttrs = ev.attrs || [];
+        tgt.note           = evNote;
+        tgt._grampsAttrs   = ev.attrs  || [];
+        tgt._grampsEvHlink = evH;
+        tgt._grampsEvExtra = ev._extra || [];
+        tgt._grampsEvPriv  = ev._priv  || null;
         for (const ch of ev.citRefs) _applyCit(tgt, ch, citMap, srcHandleToId);
       } else if (!tgt) {
         const evObj = {
@@ -769,7 +793,10 @@ async function parseGRAMPS(file) {
           value: mapped.tag === 'EVEN' ? ev.type : (ev.desc || ''),
           note: evNote, addr: ev.addr || '', noteRefs: [],
           citations: [], _extra: [],
-          _grampsAttrs: ev.attrs || []
+          _grampsAttrs:   ev.attrs  || [],
+          _grampsEvHlink: evH,
+          _grampsEvExtra: ev._extra || [],
+          _grampsEvPriv:  ev._priv  || null,
         };
         for (const ch of ev.citRefs) _applyCit(evObj, ch, citMap, srcHandleToId);
         f.events.push(evObj);

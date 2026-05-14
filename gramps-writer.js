@@ -233,7 +233,7 @@ async function writeGRAMPS(db) {
   // ── Collect event from event-like object, return {handle, role} or null ───
   const _collectEv = (grampsType, evObj, role) => {
     if (!evObj?.seen && !evObj?.date && !evObj?.place && !evObj?.placeId && !evObj?.addr && !(evObj?.citations?.length)) return null;
-    const handle   = _h('ev');
+    const handle   = evObj._grampsEvHlink || _h('ev');
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
     // Use original place ID if available (GRAMPS source with placeObjects), else string-based
     // Guard: placeId nur verwenden wenn das placeObject auch existiert (defekte Dateien)
@@ -249,7 +249,7 @@ async function writeGRAMPS(db) {
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
     // addr → <attribute type="Address" value="..."/>  (prepend, before _grampsAttrs)
     const addrAttr = evObj.addr ? [{ type: 'Address', value: evObj.addr }] : [];
-    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: [...addrAttr, ...(evObj._grampsAttrs||[])], citHandles, noteHandle });
+    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: [...addrAttr, ...(evObj._grampsAttrs||[])], citHandles, noteHandle, _priv: evObj._grampsEvPriv||null, _extra: evObj._grampsEvExtra||[] });
     return { handle, role: role||'Primary' };
   };
 
@@ -308,6 +308,9 @@ async function writeGRAMPS(db) {
           lati: wr.lati ?? null, long: wr.long ?? null,
           cause: wr.cause || '', note: wr.note, value: wr.desc,
           citations: wr.citations || [],
+          _grampsEvHlink: wr._origHlink,
+          _grampsEvExtra: wr._grampsEvExtra || [],
+          _grampsEvPriv:  wr._grampsEvPriv  || null,
         }, wr.role);
         if (r) witnessEvMap[wr._origHlink] = r.handle;
       }
@@ -390,7 +393,7 @@ async function writeGRAMPS(db) {
   if (evRecs.length) {
     L.push('  <events>');
     for (const ev of evRecs) {
-      L.push(`    <event handle="${_esc(ev.handle)}" id="${_esc(ev.id)}">`);
+      L.push(`    <event handle="${_esc(ev.handle)}" id="${_esc(ev.id)}"${ev._priv ? ` priv="${_esc(ev._priv)}"` : ''}>`);
       L.push(`      <type>${_esc(ev.type)}</type>`);
       const dateXML = _gedToGrampsDateXML(ev.date);
       if (dateXML) L.push(`      ${dateXML}`);
@@ -400,6 +403,7 @@ async function writeGRAMPS(db) {
       for (const a of ev.attrs||[]) _attrXML('      ', a);
       if (ev.noteHandle) L.push(`      <noteref hlink="${_esc(ev.noteHandle)}"/>`);
       for (const ch of ev.citHandles) L.push(`      <citationref hlink="${_esc(ch)}"/>`);
+      for (const x of ev._extra||[]) L.push(`      ${x}`);
       L.push('    </event>');
     }
     L.push('  </events>');

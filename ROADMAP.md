@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v415 · Cache: `stammbaum-v415`
+**sw-Version:** v416 · Cache: `stammbaum-v416`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -36,8 +36,8 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 | ~~GRAMPS-NoteType~~ | ~~**Note-`type`-Attribut bewahren**~~ | ~~`<note type="Research/Private/…">` lesen → `db.notes[id].type`; Writer gibt `type="…"` wieder aus~~ | ~~XS~~ | **erledigt sw v415** |
 | ~~GRAMPS-ID~~ | ~~**Ursprüngliche Handles im Writer**~~ | ~~`grampId` auf PlaceObjects ergänzt; Personen/Familien/Quellen/Repos bereits korrekt~~ | ~~S~~ | **erledigt sw v415** |
 | ~~GRAMPS-ObjHandles~~ | ~~**Original Media-Handles bewahren**~~ | ~~`_objHandle()` nutzt `m._grampsHandle` statt `_h('ob')` — verhindert Objekt-ID-Churn~~ | ~~S~~ | **erledigt sw v415** |
-| GRAMPS-EventHandles | **Original Event-Handles bewahren** | `evMap[h]._grampsHandle` im Parser speichern; Writer nutzt Original-Handle statt `_h('ev')`-Neugenerat — verhindert Event-ID-Churn bei jedem Roundtrip | XS |
-| GRAMPS-EventExtra | **Event-Passthrough für nicht-modellierte Sub-Elemente** | `evMap[h]._extra[]` im Parser als String-Array für `<objref>`, `<attribute private>`, `<change>`; Writer gibt sie nach den modellierten Feldern aus | S |
+| ~~GRAMPS-EventHandles~~ | ~~**Original Event-Handles bewahren**~~ | ~~`evObj._grampsEvHlink` im Parser; Writer nutzt Original-Handle statt `_h('ev')`; Witness-Events via `wr._origHlink`~~ | ~~XS~~ | **erledigt sw v416** |
+| ~~GRAMPS-EventExtra~~ | ~~**Event-Passthrough für nicht-modellierte Sub-Elemente**~~ | ~~`_xmlEl`-Helper; `evMap._extra[]` für `<objref>`, `<change>`; `_priv`-Attribut; Propagation auf alle Event-Typen + Witness; Writer gibt `_extra` und `priv` aus~~ | ~~S~~ | **erledigt sw v416** |
 | GRAMPS-CitHandles | **Original Citation-Handles + Passthrough** | `_grampsCitHandle` auf Citation-Objekte speichern; Writer nutzt Original-Handle; `cit._extra[]` für `<noteref>`, `<objref>`, `<attribute>`, `<change>` im Passthrough | M |
 | GRAMPS-Notes | **Notes als eigene Entität** | `db.notes{}` als Tabelle; mehrere Notes pro Entität nicht zu einer zusammenführen; Note-Handles original zurückschreiben; baut auf GRAMPS-NoteType auf | M |
 | GRAMPS-PlacePassthrough | **placeobj Sub-Elemente Passthrough** | `<noteref>`, `<citationref>`, `<attribute>`, `<objref>` auf `placeobj` im Parser erfassen (`pl._extra[]`); Writer gibt sie unverändert aus; kein GEDCOM-Einfluss | M |
