@@ -421,7 +421,7 @@ async function writeGRAMPS(db) {
   for (const [pId, p] of Object.entries(db.individuals)) {
     const handle = _entityHandle(pId, 'pe');
     const gid    = pId.replace(/^@|@$/g, '');
-    L.push(`    <person handle="${_esc(handle)}" id="${_esc(gid)}">`);
+    L.push(`    <person handle="${_esc(handle)}" id="${_esc(gid)}"${p.priv ? ` priv="${_esc(p.priv)}"` : ''}>`);
 
     // Original-Reihenfolge: gender, name*, eventref*, objref*, attribute*, childof*, parentin*, noteref*, citationref*
 
@@ -524,6 +524,7 @@ async function writeGRAMPS(db) {
       L.push(`      <citationref hlink="${_esc(ch)}"/>`);
     }
 
+    for (const x of p._extra||[]) L.push(`      ${x}`);
     L.push('    </person>');
   }
   L.push('  </people>');
@@ -533,7 +534,7 @@ async function writeGRAMPS(db) {
   for (const [fId, f] of Object.entries(db.families)) {
     const handle = _entityHandle(fId, 'fa');
     const gid    = fId.replace(/^@|@$/g, '');
-    L.push(`    <family handle="${_esc(handle)}" id="${_esc(gid)}">`);
+    L.push(`    <family handle="${_esc(handle)}" id="${_esc(gid)}"${f.priv ? ` priv="${_esc(f.priv)}"` : ''}>`);
 
     // Relationship type
     const rel = f.marr?.seen ? 'Married' : 'Unknown';
@@ -561,6 +562,7 @@ async function writeGRAMPS(db) {
       L.push(`      <noteref hlink="${_esc(nh)}"/>`);
     }
 
+    for (const x of f._extra||[]) L.push(`      ${x}`);
     L.push('    </family>');
   }
   L.push('  </families>');
@@ -585,7 +587,7 @@ async function writeGRAMPS(db) {
   for (const [sId, s] of Object.entries(db.sources)) {
     const handle = _entityHandle(sId, 'so');
     const gid    = sId.replace(/^@|@$/g, '');
-    L.push(`    <source handle="${_esc(handle)}" id="${_esc(gid)}">`);
+    L.push(`    <source handle="${_esc(handle)}" id="${_esc(gid)}"${s.priv ? ` priv="${_esc(s.priv)}"` : ''}>`);
     if (s.title)  L.push(`      <stitle>${_esc(s.title)}</stitle>`);
     if (s.author) L.push(`      <sauthor>${_esc(s.author)}</sauthor>`);
     if (s.publ)   L.push(`      <spubinfo>${_esc(s.publ)}</spubinfo>`);
@@ -603,6 +605,7 @@ async function writeGRAMPS(db) {
       const oh = _objHandle(m.file, m.titl, m.mime, m._grampsHandle);
       if (oh) L.push(`      <objref hlink="${_esc(oh)}"/>`);
     }
+    for (const x of s._extra||[]) L.push(`      ${x}`);
     L.push('    </source>');
   }
   L.push('  </sources>');
@@ -751,7 +754,7 @@ async function writeGRAMPS(db) {
     for (const [rId, r] of repoEntries) {
       const handle = _entityHandle(rId, 're');
       const gid    = rId.replace(/^@|@$/g, '');
-      L.push(`    <repository handle="${_esc(handle)}" id="${_esc(gid)}">`);
+      L.push(`    <repository handle="${_esc(handle)}" id="${_esc(gid)}"${r.priv ? ` priv="${_esc(r.priv)}"` : ''}>`);
       L.push(`      <rname>${_esc(r.name)}</rname>`);
       L.push('      <type>Library</type>');
       if (r.addr) {
@@ -760,6 +763,7 @@ async function writeGRAMPS(db) {
         L.push('      </address>');
       }
       if (r.www) L.push(`      <url href="${_esc(r.www)}" type="Web Home"/>`);
+      for (const x of r._extra||[]) L.push(`      ${x}`);
       L.push('    </repository>');
     }
     L.push('  </repositories>');

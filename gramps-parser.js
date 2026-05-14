@@ -398,9 +398,11 @@ async function parseGRAMPS(file) {
 
   // ─── Repositories ────────────────────────────────────────────────────────
   const repoHandleToId = {};
+  const _REPO_MODELLED = new Set(['rname', 'address', 'url']);
   for (const repo of _byTag(doc, 'repository')) {
     const h   = repo.getAttribute('handle');
     if (!h) continue;
+    const priv = repo.getAttribute('priv') || null;
     const gid = repo.getAttribute('id') || '';
     const rId = '@' + gid + '@';
     repoHandleToId[h] = rId;
@@ -412,20 +414,26 @@ async function parseGRAMPS(file) {
         .map(t => _child(addrEl, t)).filter(Boolean).join(', ');
     }
     const urlEl = _byTag(repo, 'url')[0] || null;
+    const repoExtra = [];
+    for (const ch of repo.children) {
+      if (!_REPO_MODELLED.has(ch.localName)) repoExtra.push(_xmlEl(ch));
+    }
     repositories[rId] = {
       id: rId,
       name: _child(repo, 'rname'),
       addr, phon: '', www: urlEl ? (urlEl.getAttribute('href') || '') : '', email: '',
       lastChanged: '', lastChangedTime: '',
-      grampId: gid, _grampsHandle: h
+      grampId: gid, _grampsHandle: h, priv, _extra: repoExtra
     };
   }
 
   // ─── Sources ─────────────────────────────────────────────────────────────
   const srcHandleToId = {};
+  const _SRC_MODELLED = new Set(['stitle', 'sauthor', 'sabbrev', 'spubinfo', 'noteref', 'objref', 'reporef']);
   for (const src of _byTag(doc, 'source')) {
     const h   = src.getAttribute('handle');
     if (!h) continue;
+    const priv = src.getAttribute('priv') || null;
     const gid = src.getAttribute('id') || '';
     const sId = '@' + gid + '@';
     srcHandleToId[h] = sId;
@@ -445,6 +453,10 @@ async function parseGRAMPS(file) {
         _grampsHandle: objRef.getAttribute('hlink')
       });
     }
+    const srcExtra = [];
+    for (const ch of src.children) {
+      if (!_SRC_MODELLED.has(ch.localName)) srcExtra.push(_xmlEl(ch));
+    }
     sources[sId] = {
       id: sId, _passthrough: [], dataExtra: [], media: srcMedia,
       title:  _child(src, 'stitle'),
@@ -456,6 +468,7 @@ async function parseGRAMPS(file) {
       agnc: '', date: '', _date: '',
       grampId: gid, _grampsHandle: h,
       lastChanged: '', lastChangedTime: '',
+      priv, _extra: srcExtra,
     };
   }
 
@@ -502,9 +515,11 @@ async function parseGRAMPS(file) {
   }
 
   // ─── Persons (second pass: build full objects) ─────────────────────────────
+  const _PERSON_MODELLED = new Set(['gender','name','eventref','objref','attribute','childof','parentin','noteref','citationref','personref','address']);
   for (const person of _byTag(doc, 'person')) {
     const h   = person.getAttribute('handle');
     if (!h) continue;
+    const priv = person.getAttribute('priv') || null;
     const gid = person.getAttribute('id') || '';
     const pId = personHandleToId[h];
 
@@ -548,6 +563,10 @@ async function parseGRAMPS(file) {
     }
 
     // Build person object
+    const pExtra = [];
+    for (const ch of person.children) {
+      if (!_PERSON_MODELLED.has(ch.localName)) pExtra.push(_xmlEl(ch));
+    }
     const p = {
       id: pId, _passthrough: [], _nameParsed: true,
       name: nameRaw, nameRaw, surname, given, nick, prefix, suffix, _grampsCall: _pCall,
@@ -567,7 +586,8 @@ async function parseGRAMPS(file) {
       media: [], titl: '', reli: '', resn: '', email: '', www: '',
       _stat: null, grampId: gid, _grampsHandle: h,
       lastChanged: '', lastChangedTime: '',
-      sourceRefs: new Set()
+      sourceRefs: new Set(),
+      priv, _extra: pExtra,
     };
 
     // Attributes
@@ -756,9 +776,11 @@ async function parseGRAMPS(file) {
   }
 
   // ─── Families ─────────────────────────────────────────────────────────────
+  const _FAMILY_MODELLED = new Set(['rel','father','mother','eventref','childref','attribute','noteref','citationref']);
   for (const fam of _byTag(doc, 'family')) {
     const h   = fam.getAttribute('handle');
     if (!h) continue;
+    const priv = fam.getAttribute('priv') || null;
     const gid = fam.getAttribute('id') || '';
     const fId = famHandleToId[h];
 
@@ -778,6 +800,10 @@ async function parseGRAMPS(file) {
       if (frel || mrel) childRels[ch] = { frel, mrel };
     }
 
+    const fExtra = [];
+    for (const ch of fam.children) {
+      if (!_FAMILY_MODELLED.has(ch.localName)) fExtra.push(_xmlEl(ch));
+    }
     const f = {
       id: fId, _passthrough: [],
       husb, wife, children, childRelations: childRels, _lastChil: null,
@@ -787,7 +813,8 @@ async function parseGRAMPS(file) {
       noteRefs: [], noteTexts: [], noteText: '',
       sourceRefs: new Set(),
       media: [],
-      lastChanged: '', lastChangedTime: ''
+      lastChanged: '', lastChangedTime: '',
+      priv, _extra: fExtra,
     };
 
     // Family event refs
