@@ -49,9 +49,11 @@ function updateSaveIndicator() {
     else btn.classList.remove('direct-save');
   });
 }
-function updateTopbarTitle(filename) {
+function updateTopbarTitle(filename, isGramps = false) {
   const el = document.getElementById('topbarFileName');
   if (el) el.textContent = filename ? ' · ' + filename : '';
+  const badge = document.getElementById('grampsBadge');
+  if (badge) badge.hidden = !isGramps;
 }
 
 // Prüft ob createWritable() für diesen Handle tatsächlich funktioniert.
@@ -394,7 +396,7 @@ async function _loadGRAMPS(file) {
     try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
     updateSaveIndicator();
     updateBackupBtn();
-    updateTopbarTitle(filename);
+    updateTopbarTitle(filename, true);
     showStartView();
     const n = Object.keys(db.individuals).length;
     const f = Object.keys(db.families).length;

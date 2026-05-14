@@ -297,6 +297,14 @@ async function parseGRAMPS(file) {
     };
   }
 
+  // Tags: handle → {name, color, priority}
+  const tagMap = {};
+  for (const tag of _byTag(doc, 'tag')) {
+    const h = tag.getAttribute('handle');
+    if (!h) continue;
+    tagMap[h] = { name: tag.getAttribute('name') || '', color: tag.getAttribute('color') || '', priority: +(tag.getAttribute('priority') || 0) };
+  }
+
   // Notes: handle → {text, type, grampId, _extra[]}
   const noteMap = {};
   for (const note of _byTag(doc, 'note')) {
@@ -569,8 +577,11 @@ async function parseGRAMPS(file) {
 
     // Build person object
     const pExtra = [];
+    const pTags  = [];
     for (const ch of person.children) {
-      if (!_PERSON_MODELLED.has(ch.localName)) pExtra.push(_xmlEl(ch));
+      const ln = ch.localName || ch.tagName;
+      if (!_PERSON_MODELLED.has(ln)) pExtra.push(_xmlEl(ch));
+      if (ln === 'tagref') { const t = tagMap[ch.getAttribute('hlink')]; if (t) pTags.push({ name: t.name, color: t.color }); }
     }
     const p = {
       id: pId, _passthrough: [], _nameParsed: true,
@@ -592,7 +603,7 @@ async function parseGRAMPS(file) {
       _stat: null, grampId: gid, _grampsHandle: h,
       lastChanged: '', lastChangedTime: '',
       sourceRefs: new Set(),
-      priv, _extra: pExtra,
+      priv, _extra: pExtra, _grampsTags: pTags,
     };
 
     // Attributes
@@ -806,8 +817,11 @@ async function parseGRAMPS(file) {
     }
 
     const fExtra = [];
+    const fTags  = [];
     for (const ch of fam.children) {
-      if (!_FAMILY_MODELLED.has(ch.localName)) fExtra.push(_xmlEl(ch));
+      const ln = ch.localName || ch.tagName;
+      if (!_FAMILY_MODELLED.has(ln)) fExtra.push(_xmlEl(ch));
+      if (ln === 'tagref') { const t = tagMap[ch.getAttribute('hlink')]; if (t) fTags.push({ name: t.name, color: t.color }); }
     }
     const f = {
       id: fId, _passthrough: [],
@@ -819,7 +833,7 @@ async function parseGRAMPS(file) {
       sourceRefs: new Set(),
       media: [],
       lastChanged: '', lastChangedTime: '',
-      priv, _extra: fExtra,
+      priv, _extra: fExtra, _grampsTags: fTags,
     };
 
     // Family event refs
@@ -938,6 +952,7 @@ async function parseGRAMPS(file) {
     extraRecords: [], headLines: [],
     _sourceFormat: 'gramps',
     _grampsMaster: true,
+    tags: Object.fromEntries(Object.entries(tagMap).map(([h, t]) => [h, { name: t.name, color: t.color, priority: t.priority }])),
     _grampsHandles,
     _grampsObjMeta: Object.fromEntries(
       Object.entries(objMap).map(([h, o]) => [h, { priv: o.priv || null, _extra: o._extra || [] }])

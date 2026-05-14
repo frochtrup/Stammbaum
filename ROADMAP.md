@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v422 · Cache: `stammbaum-v422`
+**sw-Version:** v423 · Cache: `stammbaum-v423`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -57,8 +57,8 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 | ~~GRAMPS-FamilyPriv~~ | ~~**`<family priv>` + `_extra`**~~ | ~~Parser: `priv`-Attribut auf `<family>`-Entität + `_extra[]`; Writer: `priv`-Attribut + `_extra` am Ende des `<family>`-Blocks~~ | ~~S~~ | **erledigt sw v420** |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → "Lebende Person"; DSGVO-konform | M |
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen; `p._rufname` → `2 NICK`; Export-Modus im Einstellungs-Modal | M |
-| GRAMPS-Badge | **GRAMPS-Modus sichtbar machen** | Bei `db._grampsMaster`: Badge in Topbar + primäres Export-Format = `.gramps` | S |
-| GRAMPS-Tags | **Tags als Badges** | `db.tags{}` in Personen-/Familien-Detail als farbige Badges | S |
+| ~~GRAMPS-Badge~~ | ~~**GRAMPS-Modus sichtbar machen**~~ | ~~`#grampsBadge` in Topbar; `updateTopbarTitle(filename, isGramps)` setzt `hidden`; bei GRAMPS-Load `true`, bei GEDCOM-Load `false`~~ | ~~XS~~ | **erledigt sw v423** |
+| ~~GRAMPS-Tags~~ | ~~**Tags als Badges**~~ | ~~`tagMap` aus `<tags>`-Sektion; `p/_grampsTags[]` + `f._grampsTags[]` mit `{name,color}`; Personen-/Familien-Detail zeigt `.gramps-tag`-Pills mit inline `background-color`; `db.tags{}` im return~~ | ~~S~~ | **erledigt sw v423** |
 
 ---
 

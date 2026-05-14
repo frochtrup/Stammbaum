@@ -474,6 +474,8 @@ function showFamilyDetail(id, pushHistory = true) {
     html += `</div>`;
   }
 
+  if (f._grampsTags?.length) html += `<div class="section fade-up"><div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${f._grampsTags.map(t => `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div></div>`;
+
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 
