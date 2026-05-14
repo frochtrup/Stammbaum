@@ -962,7 +962,17 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuNewFile:             ()  => { closeModal('modalMenu'); confirmNewFile(); },
   menuHelp:                ()  => { closeModal('modalMenu'); openModal('modalHelp'); },
   menuRoundtrip:           ()  => { closeModal('modalMenu'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
-  menuGrampsRoundtrip:     ()  => { closeModal('modalMenu'); runGrampsRoundtripTest(); },
+  menuGrampsRoundtrip:     ()  => {
+    closeModal('modalMenu');
+    const out = document.getElementById('roundtrip-output');
+    if (out) out.textContent = 'Starte GRAMPS Roundtrip-Test…';
+    openModal('modalRoundtrip');
+    if (typeof runGrampsRoundtripTest === 'function') {
+      runGrampsRoundtripTest();
+    } else if (out) {
+      out.textContent = 'Fehler: debug-gramps.js nicht geladen.\nSeite mit ?debug=1 öffnen und neu laden.';
+    }
+  },
   settingsChangePhoto:     ()  => { closeModal('modalSettings'); odImportPhotos(); },
   odClearPhotoFolder:      ()  => odClearPhotoFolder(),
   settingsChangeDoc:       ()  => { closeModal('modalSettings'); odSetupDocFolder(); },
