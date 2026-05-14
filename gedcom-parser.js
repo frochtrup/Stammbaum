@@ -86,14 +86,14 @@ function parseGEDCOM(text, parseErrors) {
         cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', text:'', _textSeen:false, agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallNumExtra:[], text:'', _textSeen:false, agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
         cur = { id:tag, text: _noteinit, _passthrough: [], lastChanged:'', lastChangedTime:'' };
         notes[tag] = cur; curType = 'NOTE';
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
-        cur = { id:tag, name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough:[], name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'' };
         repositories[tag] = cur; curType = 'REPO';
       } else if (tag.startsWith('@')) {
         // Unknown @ID@ lv=0 record (e.g. SUBM) — store verbatim for roundtrip
@@ -714,7 +714,7 @@ function parseGEDCOM(text, parseErrors) {
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='PUBL') cur.publ   += (tag==='CONT'?'\n':'') + val;
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='ABBR') cur.abbr   += (tag==='CONT'?'\n':'') + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
-        if (lv1tag==='REPO' && tag==='CALN') cur.repoCallNum = val;
+        if (lv1tag==='REPO' && tag==='CALN') { cur.repoCallNum = val; _ptDepth=2; _ptTarget=cur.repoCallNumExtra; }
         if (lv1tag==='DATA' && tag==='AGNC') cur.agnc = val;
         else if (lv1tag==='DATA' && tag !== 'AGNC') { cur.dataExtra.push('2 '+tag+(val?' '+val:'')); _ptDepth=2; _ptTarget=cur.dataExtra; }
       }
@@ -749,6 +749,8 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag==='PHON')  cur.phon  = val;
         else if (tag==='WWW')   cur.www   = val;
         else if (tag==='EMAIL') cur.email = val;
+        else if (tag==='CHAN') { /* context-only */ }
+        else { cur._passthrough.push('1 '+tag+(val?' '+val:'')); _ptDepth=1; _ptTarget=cur._passthrough; }
       } else if (lv === 2) {
         if (lv1tag==='ADDR' && tag==='CONT') cur.addr += '\n' + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;

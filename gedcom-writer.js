@@ -429,7 +429,10 @@ function writeSOURRecord(lines, s) {
   if (s.publ)   pushCont(lines, 1, 'PUBL', s.publ);
   if (s.repo) {
     lines.push(`1 REPO ${s.repo}`);
-    if (s.repoCallNum) lines.push(`2 CALN ${s.repoCallNum}`);
+    if (s.repoCallNum) {
+      lines.push(`2 CALN ${s.repoCallNum}`);
+      for (const l of (s.repoCallNumExtra || [])) lines.push(l);
+    }
   }
   if (s._textSeen) pushCont(lines, 1, 'TEXT', s.text || '');
   if (s.agnc || (s.dataExtra && s.dataExtra.length)) {
@@ -470,6 +473,7 @@ function writeREPORecord(lines, r) {
   if (r.phon)  lines.push(`1 PHON ${r.phon}`);
   if (r.www)   lines.push(`1 WWW ${r.www}`);
   if (r.email) lines.push(`1 EMAIL ${r.email}`);
+  for (const l of (r._passthrough || [])) lines.push(l);
   writeCHAN(lines, r, 1);
 }
 
