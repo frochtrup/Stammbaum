@@ -195,7 +195,11 @@ function writeINDIRecord(lines, p) {
     // Auch ev.note === hofMeta.note deduplizieren (aus altem GEDCOM-Import)
     const _addrKey = ev.addr?.trim();
     const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
-    for (const r of (ev.noteRefs || [])) lines.push(`2 NOTE ${r}`);
+    for (const r of (ev.noteRefs || [])) {
+      // HOF-Notiz-Refs überspringen — werden über _hofNoteIds separat als @N_HOF_n@ geschrieben
+      if (_hofMeta?.note && AppState.db.notes?.[r]?.text === _hofMeta.note) continue;
+      lines.push(`2 NOTE ${r}`);
+    }
     if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
       if (!_writtenHofNotes.has(_addrKey)) {
         lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
@@ -534,7 +538,10 @@ function writeGEDCOM(updateHeadDate = false) {
   for (const f of Object.values(db.families))     writeFAMRecord(lines, f);
   for (const s of Object.values(db.sources))      writeSOURRecord(lines, s);
   for (const r of Object.values(db.repositories)) writeREPORecord(lines, r);
-  for (const n of Object.values(db.notes || {}))  writeNOTERecord(lines, n);
+  // HOF-Notiz-Texte die über _hofNoteIds geschrieben werden — nicht doppelt aus db.notes schreiben
+  const _hofNoteTexts = new Set(Object.keys(_hofNoteIds).map(addr => db.hofObjects[addr].note));
+  for (const n of Object.values(db.notes || {}))
+    if (!_hofNoteTexts.has(n.text)) writeNOTERecord(lines, n);
   for (const [addr, id] of Object.entries(_hofNoteIds))
     writeNOTERecord(lines, { id, text: db.hofObjects[addr].note, _passthrough: [] });
 
