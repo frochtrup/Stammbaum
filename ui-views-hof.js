@@ -68,7 +68,6 @@ function renderHofList(sorted) {
     if (propCount) metaParts.push(`${propCount} Eigentümer`);
     if (range) metaParts.push(range);
     html += `<div class="person-row" data-action="showHofDetail" data-addr="${esc(hof.addr)}">
-      <div class="p-avatar fs-md">🏠</div>
       <div class="p-info">
         <div class="p-name">${addrLine}</div>
         <div class="p-meta">${metaParts.join(' · ')}</div>
