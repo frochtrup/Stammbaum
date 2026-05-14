@@ -9,10 +9,11 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | Version | Branch | Status |
 |---|---|---|
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
-| 7.0 | `v7-dev` | In Entwicklung |
+| 7.0 | `v7-dev` | **Abgeschlossen — bereit für Merge auf `main`** |
+| 8.0 | – | Planung |
 
-**sw-Version:** v400 · Cache: `stammbaum-v400`
-**Roundtrip GEDCOM:** stabil, net_delta=0 · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
+**sw-Version:** v413 · Cache: `stammbaum-v413`
+**Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
 ---
@@ -61,16 +62,17 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | CSP-Fix | 3 `onclick=`-Handler in Template-Strings → `data-action` (`removeNoteRef`, `newSourceForm`, `newFamilyForm`); keine Inline-Event-Handler mehr im Codebase | v400 |
 | U8 | Granulares Undo: `_undoStack/_redoStack` auf AppState (max 30); `pushUndo()` an 13 Mutations-Call-Sites; per-Entity-Snapshot; Cmd+Z = Undo (Fallback: Revert), Cmd+Shift+Z = Redo | v401–v402 |
 | Nav 2.0 | Vorwärts-Navigation: `_navFwdStack` auf UIState; `goForward()`; `→`-Button in Detail + Baum-Topbar; `_captureCurrentNavState()`; `_clearNavState()`; sessionStorage-Persistenz (`_persistNavState` / `_restoreNavState`) — Nav-State überlebt F5; Alt+← / Alt+→ als Keyboard-Shortcuts | v403 |
+| Hof-Umbenennen | `renameHofAddress(oldAddr, newAddr)` — zentrale Adressänderung für alle RESI/PROP-Ereignisse + hofObjects-Key + localStorage | v401 |
+| HOF-Notizen | `ev.noteRefs[]` → `@N_HOF_n@ NOTE`-Records; `_evHadNote`-Guard; `_noteOrig`-Sentinel; `_derivedHofObjectsFromDb` für Höfe ohne Koordinaten; hofObjects-Merge in allen 3 Ladepfaden | v404–v411 |
+| CONT/CONC-Parser | `3 CONT/CONC` unter `2 NOTE` in BIRT/CHR/DEAT/BURI (lv=3-Handler für evIdx<0) + MARR/ENGA/DIV/DIVF/EVEN (direkter Append statt Passthrough→_extra); Roundtrip STABIL out1===out2 | v412–v413 |
 
 GEDCOM-Roundtrip-Fixes: v208–v220 (Orts-Hierarchie, FAM CHIL-Quellenrefs, @@-Normalisierung)
 
 ---
 
-## Offene Aufgaben
+## Version 8.0 — Offene Aufgaben
 
 Prioritäten: **P0** sofort · **P1** nächster Sprint · **P2** mittelfristig · **Backlog** ohne festes Datum
-
----
 
 ---
 

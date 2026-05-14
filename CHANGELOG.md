@@ -5,7 +5,34 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
-## Version 7.0 (Branch `v7-dev`, ab 2026-04-10) — IN ENTWICKLUNG
+## Version 7.0 (Branch `v7-dev`, ab 2026-04-10) — ABGESCHLOSSEN
+
+---
+
+### Session 2026-05-14b — HOF-Notizen vollständig + GEDCOM-Roundtrip-Stabilisierung (sw v405–v413)
+
+- **HANDBUCH.html** `docs`: vollständiges Benutzerhandbuch als eigenständige Offline-Seite
+- **sw v408** `feat`: Handbuch-Link im Hilfe-Modal
+- **HOF-Notizen** (mehrere Fixes ohne einzelne sw-Bumps):
+  - Notizen korrekt per Adresse zuordnen, kein Mehrfach-Anzeigen im Personen-Detail
+  - HOF-Notiz nur anzeigen wenn Event sie via `noteRefs` referenziert
+  - Duplikate in GED eliminieren — HOF-Notiz-Refs und -Records konsolidieren
+  - `_derivedHofObjectsFromDb` auch für Höfe ohne Koordinaten (nur Notiz reicht)
+- **sw v409** `fix(roundtrip)`: event-NOTEs nicht doppelt schreiben — `_noteOrig` sichert Original-Inline-Text vor `_resolveNoteRefs()`; Writer nutzt `_noteOrig` statt aufgelöstem `note`; behebt +182 Duplikat-NOTE-Zeilen
+- **sw v410** `fix(roundtrip)`: HOF-Note nur schreiben wenn Event sie ursprünglich hatte (`_evHadNote`-Guard); behebt +70 unerwünschte HOF-Notiz-Refs auf Events ohne Notiz
+- **sw v411** `fix(hof)`: `hofObjects`-Merge in allen 3 Ladepfaden (IDB, GEDCOM, GRAMPS) — `Object.assign`-Shallow-Merge durch Post-Merge-Loop ersetzt der fehlende `note` aus abgeleiteten Einträgen übernimmt; behebt N_HOF_10-Verlust bei localStorage-Einträgen ohne Note
+- **sw v412** `fix(parser)`: `3 CONT/CONC` unter `2 NOTE` in Sonder-Events (BIRT/CHR/DEAT/BURI) — kein `_ptDepth` gesetzt → CONT landete im lv=3-Handler; neuer Handler für `evIdx < 0`
+- **sw v413** `fix(parser)`: `3 CONT/CONC` unter `2 NOTE` in FAM-Events (MARR/ENGA/DIV/DIVF/EVEN) — MARR/ENGA/DIV/DIVF NOTE-Handler setzte `_ptDepth=2` → CONT via Passthrough in `_extra`; Writer schrieb sie nach SOUR → INSTABIL; jetzt direkter lv=3-Handler hängt an `.note` an; FAM EVEN hatte gar keinen Handler
+- **Roundtrip-Ergebnis**: `orig=90520 out=90520` · `✓ STABIL` (out1 === out2)
+
+---
+
+### Session 2026-05-14a — Hof-Umbenennen, U8 Granulares Undo, Nav 2.0 (sw v401–v404)
+
+- **sw v401** `feat`: Hof-Umbenennen — zentrale Adressänderung für alle RESI/PROP-Ereignisse in `db.individuals`; `renameHofAddress(oldAddr, newAddr)` in `ui-views-hof.js`; aktualisiert RESI/PROP `.addr` + `hofObjects`-Key + localStorage
+- **sw v401–v402** `feat(U8)`: Granulares Undo — `_undoStack/_redoStack` auf `AppState` (max 30 Schritte); `pushUndo()` an 13 Mutations-Call-Sites (savePerson, saveFamily, saveEvent, deleteEvent, mergePerson usw.); per-Entity-Snapshot (nur betroffene Persons/Families/Sources); Cmd+Z = Undo (Fallback: Revert-to-Saved), Cmd+Shift+Z = Redo; Stack-Reset bei Datei-Laden + `revertToSaved`
+- **sw v403** `feat(Nav 2.0)`: Vorwärts-Navigation — `_navFwdStack` auf `UIState`; `goForward()`; `→`-Button in Detail-Topbar + Baum-Topbar; `_captureCurrentNavState()` + `_clearNavState()`; `_persistNavState`/`_restoreNavState` via sessionStorage (überlebt F5); Alt+← / Alt+→ als Keyboard-Shortcuts
+- **sw v404** `fix(hof)`: erste Hof-Notiz-Fixes (Basis für v409–v413)
 
 ---
 

@@ -39,7 +39,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v397)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v413)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -48,20 +48,23 @@
 - `UI-DESIGN.md` — HTML-Seitenstruktur, Navigationsmodell, CSS Design-System, Sanduhr-Layout
 - `GEDCOM.md` — Parser/Writer-Referenz, alle unterstützten Tags
 - `ROADMAP.md` — Phasen-Übersicht, offene Features, bekannte Probleme
-- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v6.0-dev
+- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v7.0
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-14
 
-**Version 7.0 in Entwicklung — Branch `v7-dev`** (v4–v6 abgeschlossen auf `main`)
-- **Aktuelle sw-Version: v403** / Cache: `stammbaum-v403`
+**Version 7.0 ABGESCHLOSSEN — Branch `v7-dev` bereit für Merge auf `main`**
+- **Aktuelle sw-Version: v413** / Cache: `stammbaum-v413`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 - **F4b abgeschlossen (sw v381):** `citations[]` vollständig migriert — Parser/Writer/Forms/Views; `citationObj()`, `_migrateLegacyCitations()`, `_addCitRefs()`, `citTagsHtml()`, srcWidget neu; T0–T7 grün
 - **UX-Neu-Person abgeschlossen (sw v391–v397):** Progressive Disclosure im Neu-Person-Formular: Kern+Leben inline, Pills (Taufe/Beerdigung/Beruf/Wohnort/Notiz/Name-Details), Datum-Normalisierung, Orts-Autocomplete, Quellen-Auto-Assign, „+ Weitere"-Button; Bearbeiten-Dialog zeigt nur Name/Meta
 - **UX-Quick-Add + Jump-Bar (sw v388–v390, v398–v400):** Quick-Add Chips (fehlende Sonder-Events + generische Shortcuts, 1 scrollbare Zeile), Jump-Bar sticky (Abschnitts-Navigation, `_injectJumpBar()`), CSP-Fix (3 `onclick=` → `data-action`)
 - **U8 Granulares Undo (sw v401–v402):** `_undoStack/_redoStack` auf AppState (max 30); `pushUndo()` an 13 Mutations-Call-Sites; per-Entity-Snapshot (nur betroffene Persons/Families/Sources); Cmd+Z = Undo (Fallback: Revert-to-Saved), Cmd+Shift+Z = Redo; Stack-Reset bei Datei-Laden + revertToSaved
 - **Nav 2.0 (sw v403):** `_navFwdStack` auf UIState; `goForward()`; `→`-Button in Detail + Baum-Topbar; `_captureCurrentNavState()`; `_clearNavState()`; sessionStorage-Persistenz (`_persistNavState`/`_restoreNavState`); Alt+← / Alt+→ Keyboard-Shortcuts
+- **Hof-Umbenennen (sw v401):** `renameHofAddress(oldAddr, newAddr)` — zentrale Adressänderung für alle RESI/PROP + hofObjects + localStorage
+- **HOF-Notizen vollständig (sw v404–v411):** `ev.noteRefs[]` → `@N_HOF_n@ NOTE`-Records; `_evHadNote`-Guard; `_noteOrig`-Sentinel; `_derivedHofObjectsFromDb` für Höfe ohne Koordinaten; hofObjects-Merge in allen 3 Ladepfaden (IDB/GEDCOM/GRAMPS)
+- **CONT/CONC-Parser (sw v412–v413):** `3 CONT/CONC` unter `2 NOTE` in BIRT/CHR/DEAT/BURI + FAM-Events (MARR/ENGA/DIV/DIVF/EVEN); INSTABIL durch Passthrough→_extra behoben; Roundtrip: `orig=out=90520` ✓ STABIL
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
