@@ -629,6 +629,7 @@ async function writeGRAMPS(db) {
         const parentH = _entityHandle(pl.parentId, 'pl');
         L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
       }
+      for (const x of pl._extra||[]) L.push(`      ${x}`);
       L.push('    </placeobj>');
     }
     // Neue Hof-Einträge aus hofObjects die noch kein placeObject haben

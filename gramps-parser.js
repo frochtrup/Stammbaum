@@ -324,6 +324,8 @@ async function parseGRAMPS(file) {
     return (dir === 'S' || dir === 'W') ? -val : val;
   };
 
+  const _PLACE_MODELLED = new Set(['ptitle', 'pname', 'coord', 'placeref']);
+
   for (const pl of _byTag(doc, 'placeobj')) {
     const h   = pl.getAttribute('handle');
     if (!h) continue;
@@ -354,13 +356,19 @@ async function parseGRAMPS(file) {
     const placerefEl    = _byTag(pl, 'placeref')[0] || null;
     const _parentHandle = placerefEl ? placerefEl.getAttribute('hlink') : null;
 
+    // Sub-elements not explicitly modelled → passthrough
+    const plExtra = [];
+    for (const ch of pl.children) {
+      if (!_PLACE_MODELLED.has(ch.localName || ch.tagName || '')) plExtra.push(_xmlEl(ch));
+    }
+
     const primaryTitle = ptitle || (pnames[0]?.value || '');
     placeMap[h] = { title: primaryTitle, lat, long };  // backward compat for event resolution
 
     _placeObjsTemp[pId] = {
       id: pId, _grampsHandle: h,
       title: primaryTitle, type, pnames, lat, long,
-      _parentHandle
+      _parentHandle, _extra: plExtra,
     };
   }
 
@@ -372,6 +380,7 @@ async function parseGRAMPS(file) {
       title: pl.title, type: pl.type, pnames: pl.pnames,
       lat: pl.lat, long: pl.long,
       parentId: pl._parentHandle ? (placeHandleToId[pl._parentHandle] || null) : null,
+      _extra: pl._extra || [],
     };
   }
 

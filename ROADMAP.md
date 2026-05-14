@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v417 · Cache: `stammbaum-v417`
+**sw-Version:** v418 · Cache: `stammbaum-v418`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -40,7 +40,7 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 | ~~GRAMPS-EventExtra~~ | ~~**Event-Passthrough für nicht-modellierte Sub-Elemente**~~ | ~~`_xmlEl`-Helper; `evMap._extra[]` für `<objref>`, `<change>`; `_priv`-Attribut; Propagation auf alle Event-Typen + Witness; Writer gibt `_extra` und `priv` aus~~ | ~~S~~ | **erledigt sw v416** |
 | ~~GRAMPS-CitHandles~~ | ~~**Original Citation-Handles + Passthrough**~~ | ~~`_grampsCitHandle`+`_citExtra` in `_applyCit`; `citMap` erfasst `<noteref>`,`<objref>`,`<attribute>`,`<change>`; `_citHandle` nutzt Original-Handle; alle 5 Call-Sites aktualisiert; Citation-XML gibt `_extra` aus~~ | ~~M~~ | **erledigt sw v417** |
 | ~~GRAMPS-Notes~~ | ~~**Notes als eigene Entität**~~ | ~~`noteMap` erfasst `grampId` + `_extra` (style/change/citref); `_noteId` propagiert beide; `_noteHandleFromObj` nutzt `grampId` + `_extra`; Note-XML gibt `_extra` aus~~ | ~~M~~ | **erledigt sw v417** |
-| GRAMPS-PlacePassthrough | **placeobj Sub-Elemente Passthrough** | `<noteref>`, `<citationref>`, `<attribute>`, `<objref>` auf `placeobj` im Parser erfassen (`pl._extra[]`); Writer gibt sie unverändert aus; kein GEDCOM-Einfluss | M |
+| ~~GRAMPS-PlacePassthrough~~ | ~~**placeobj Sub-Elemente Passthrough**~~ | ~~`_PLACE_MODELLED`-Set; `plExtra[]` via `_xmlEl` für alle nicht-modellierten Kinder; `_extra` in `_placeObjsTemp` + `placeObjects`; Writer gibt `_extra` nach `<placeref>` aus~~ | ~~M~~ | **erledigt sw v418** |
 
 ---
 
