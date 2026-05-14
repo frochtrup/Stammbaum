@@ -5,6 +5,43 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+## Version 8.0 (Branch `v8-dev`, ab 2026-05-14) — AKTIV
+
+---
+
+### Session 2026-05-14d — GRAMPS Speichern + Roundtrip-Test + GEDCOM-Fixes (sw v424–v443)
+
+- **sw v424** `fix(gramps)`: `topTarget.citations` crash beim Laden behoben
+- **sw v425** `fix(gramps)`: GRAMPS-Badge als fixes globales Element — in allen Views sichtbar (nicht mehr View-lokal)
+- **sw v426** `fix`: `extraPlaces` per-Datei in localStorage — kein Überlauf mehr zwischen verschiedenen Dateien
+- **sw v427** `feat`: Menüoption „Sichern (Original)" entfernt; verbleibende `updateBackupBtn`-Aufrufe bereinigt
+- **sw v428** `feat`: einheitliches Dateihandling für GED + GRAMPS — `openFilePicker()` erkennt Dateiformat, setzt `_isGramps`; `saveToFile()` delegiert an GEDCOM oder GRAMPS-Export
+- **sw v429** `fix`: GRAMPS-Speichern nutzt Originalnamen ohne Zeitstempel (statt generiertem Dateinamen)
+- **sw v430** `feat`: GRAMPS direktes Speichern via File Handle — `saveToFileHandleBinary()` für gzip-Blob; `_fileHandle`/`_canDirectSave` auch für `.gramps` gesetzt; `exportGRAMPS(asSave=true)` nutzt direkten Speicherpfad auf Chrome Desktop
+- **sw v431** `fix`: GRAMPS-Roundtrip-Bugs + Deep-Roundtrip-Test — `_xmlEl` Textknoten-Escaping (`&`, `<`, `>`); `<tags>`-Sektion aus `db.tags` im Writer rekonstruiert; `_fileHandle/_canDirectSave` nach `_loadGRAMPS` wiederhergestellt; `_grampsDeepRoundtrip()` prüft alle Entitäten vollständig
+- **sw v432** `feat`: GRAMPS Roundtrip-Test als Debug-Button — `runGrampsRoundtripTest()` in `debug-gramps.js`; Ergebnis im Modal
+- **sw v433–v439** `fix`: Roundtrip-Test-Stabilisierung — `debug-gramps.js` in SW PRECACHE; synchrones Laden von `ui-debug.js` + `debug-gramps.js`; Modal öffnet immer (auch bei Fehler); korrekte Lade-Reihenfolge
+- **sw v440** `feat`: Medien-Detailcheck im GRAMPS Roundtrip-Test — vergleicht `handle`, `path`, `desc`, `mime`, `date` aller Media-Objekte
+- **sw v441** `fix`: nicht-referenzierte GRAMPS-Objekte im Roundtrip erhalten — `_unreferencedObjs` via `db._grampsObjMeta` im Writer ergänzt wenn kein `objRef` existiert
+- **sw v442** `fix(roundtrip)`: REPO `NOTE @xref@` + `SOUR CALN MEDI` Roundtrip-Verlust — REPO `_passthrough[]` für unbekannte lv=1-Tags (inkl. `1 NOTE @xref@`); `repoCallNumExtra[]` für `3 MEDI` unter `2 CALN`; Writer für beide aktualisiert
+- **sw v443** `feat`: SOUR `NOTE @xref@` strukturiert parsen und in UI anzeigen — `1 NOTE @xref@` landet in `s.noteRefs[]` (nicht mehr in `_passthrough`); Post-Processing löst auf `s.noteText`; Writer schreibt `1 NOTE @xref@` aus `s.noteRefs`; Quellen-Detail zeigt `.note-ref-text` (read-only, visuell abgetrennt)
+
+---
+
+### Session 2026-05-14c — GRAMPS P1: Roundtrip-Passthrough vollständig + P1b + Badge/Tags (sw v415–v423)
+
+- **sw v415** `fix(gramps)`: GRAMPS P1 — NoteType (`type`-Attribut auf `<note>`); PlaceObjects `grampId`; Original Media-Handles (`_grampsHandle`) statt neu generierter IDs
+- **sw v416** `fix(gramps)`: GRAMPS P1 — EventHandles (`_grampsEvHlink`); Event-Passthrough `_extra[]` für `<objref>`, `<change>` via `_xmlEl`; `priv`-Attribut; Writer gibt Original-Handle + `_extra` aus
+- **sw v417** `fix(gramps)`: GRAMPS P1 — CitHandles (`_grampsCitHandle`) + Citation-`_extra` für `<noteref>/<objref>/<attribute>/<change>`; Notes als eigene Entität mit `grampId` + `_extra`; alle 5 Call-Sites + Note-XML aktualisiert
+- **sw v418** `fix(gramps)`: GRAMPS P1 — PlacePassthrough: `_PLACE_MODELLED`-Set; `plExtra[]` für nicht-modellierte Kinder; Writer gibt `_extra` nach `<placeref>` aus — **GRAMPS Roundtrip 60034 Checks ✓**
+- **sw v419** `fix(cross-mode)`: GEDCOM Cross-Mode — Note-XREF (`_noteXref`-Lookup, 6 Stellen); `_grampsEvPriv` → `1 RESN confidential` in `eventBlock` + `p/f.events`
+- **sw v420** `feat(gramps)`: Source/Repo/Person/Family `priv`-Attribut + `_extra`-Passthrough via `_xmlEl`-Pattern; `_SRC/REPO/PERSON/FAMILY_MODELLED`-Sets
+- **sw v421** `fix(gedcom)`: Citation-Note via `pushCont()` — verhindert Verlust bei Zeilenumbrüchen und Texten >248 Zeichen
+- **sw v422** `feat(gramps)`: Media `priv` + `_extra` Passthrough — `objMap[h]` + `db._grampsObjMeta` als Single Source of Truth; `_objHandle()` liest daraus; Writer gibt `priv` + `_extra` nach `<file/>` aus
+- **sw v423** `feat(gramps)`: GRAMPS-Badge in Topbar (`#grampsBadge`, lila Pill); `updateTopbarTitle(filename, isGramps)` schaltet `hidden`; Tags-System — `tagMap` aus `<tags>`-Sektion; `p._grampsTags[]/f._grampsTags[]` mit `{name,color}`; Personen-/Familien-Detail zeigt `.gramps-tag`-Badges mit inline `background-color`; `db.tags{}` im Parser-Return
+
+---
+
 ## Version 7.0 (Branch `v7-dev`, ab 2026-04-10) — ABGESCHLOSSEN
 
 ---

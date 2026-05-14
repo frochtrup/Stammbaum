@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v423 · Cache: `stammbaum-v423`
+**sw-Version:** v443 · Cache: `stammbaum-v443`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -59,6 +59,17 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen; `p._rufname` → `2 NICK`; Export-Modus im Einstellungs-Modal | M |
 | ~~GRAMPS-Badge~~ | ~~**GRAMPS-Modus sichtbar machen**~~ | ~~`#grampsBadge` in Topbar; `updateTopbarTitle(filename, isGramps)` setzt `hidden`; bei GRAMPS-Load `true`, bei GEDCOM-Load `false`~~ | ~~XS~~ | **erledigt sw v423** |
 | ~~GRAMPS-Tags~~ | ~~**Tags als Badges**~~ | ~~`tagMap` aus `<tags>`-Sektion; `p/_grampsTags[]` + `f._grampsTags[]` mit `{name,color}`; Personen-/Familien-Detail zeigt `.gramps-tag`-Pills mit inline `background-color`; `db.tags{}` im return~~ | ~~S~~ | **erledigt sw v423** |
+
+---
+
+### P1c — GRAMPS Direktspeichern + Roundtrip-Test + GEDCOM-Fixes (sw v424–v443)
+
+| ID | Aufgabe | Details | Status |
+|---|---|---|---|
+| ~~GRAMPS-Save~~ | ~~**GRAMPS direktes Speichern via File Handle**~~ | ~~`saveToFileHandleBinary()` für gzip-Blob; einheitliches Dateihandling GED+GRAMPS; Originalnamen ohne Zeitstempel; `_fileHandle/_canDirectSave` nach `_loadGRAMPS` erhalten~~ | **erledigt sw v428–v430** |
+| ~~GRAMPS-RoundtripTest~~ | ~~**GRAMPS Roundtrip-Test als Debug-Tool**~~ | ~~`runGrampsRoundtripTest()` + `_grampsDeepRoundtrip()` in `debug-gramps.js`; Debug-Button; Modal mit Ergebnis; SW-Precache; `_xmlEl` Textknoten-Escaping; `<tags>`-Sektion im Writer rekonstruiert~~ | **erledigt sw v431–v440** |
+| ~~GEDCOM-RepoNotePt~~ | ~~**REPO NOTE @xref@ + SOUR CALN MEDI Roundtrip**~~ | ~~REPO `_passthrough[]` für unbekannte lv=1-Tags; `repoCallNumExtra[]` für `3 MEDI` unter `2 CALN`~~ | **erledigt sw v442** |
+| ~~GEDCOM-SourNoteXREF~~ | ~~**SOUR NOTE @xref@ parsen + anzeigen**~~ | ~~`s.noteRefs[]` + `s.noteText` (Post-Processing); Writer; Quellen-Detail `.note-ref-text`~~ | **erledigt sw v443** |
 
 ---
 
