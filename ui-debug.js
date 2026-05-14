@@ -746,6 +746,13 @@ async function runGrampsRoundtripTest() {
       chk(`${id}.fams`,       p1.fams?.length,       p2.fams?.length);
       chk(`${id}.events`,     p1.events?.length,     p2.events?.length);
       chk(`${id}.media`,      p1.media?.length,      p2.media?.length);
+      for (let mi = 0; mi < (p1.media?.length || 0); mi++) {
+        const m1 = p1.media[mi], m2 = p2.media?.[mi];
+        if (!m2) { log(`  ✗ ${id}.media[${mi}] fehlt`); fail++; continue; }
+        chk(`${id}.media[${mi}].file`, m1.file, m2.file);
+        chk(`${id}.media[${mi}].titl`, m1.titl, m2.titl);
+        chk(`${id}.media[${mi}].mime`, m1.mime, m2.mime);
+      }
       chk(`${id}.cits`,       p1.citations?.length,  p2.citations?.length);
       if (fail > prev) pDeltas.push(id);
     }
@@ -763,6 +770,14 @@ async function runGrampsRoundtripTest() {
       chk(`${id}.marr.date`, f1.marr?.date,         f2.marr?.date);
       chk(`${id}.marr.plc`,  f1.marr?.place,        f2.marr?.place);
       chk(`${id}.events`,    f1.events?.length,     f2.events?.length);
+      chk(`${id}.media`,     f1.media?.length,      f2.media?.length);
+      for (let mi = 0; mi < (f1.media?.length || 0); mi++) {
+        const m1 = f1.media[mi], m2 = f2.media?.[mi];
+        if (!m2) { log(`  ✗ ${id}.media[${mi}] fehlt`); fail++; continue; }
+        chk(`${id}.media[${mi}].file`, m1.file, m2.file);
+        chk(`${id}.media[${mi}].titl`, m1.titl, m2.titl);
+        chk(`${id}.media[${mi}].mime`, m1.mime, m2.mime);
+      }
       chk(`${id}.cits`,      f1.citations?.length,  f2.citations?.length);
       if (fail > prev) fDeltas.push(id);
     }
@@ -780,6 +795,15 @@ async function runGrampsRoundtripTest() {
       if (fail > prev) sDeltas.push(id);
     }
     log(sDeltas.length ? `  ${sDeltas.length} Quelle(n) mit Delta` : '  Alle OK');
+
+    log('\n── Medien (global) ──');
+    const om1 = db1._grampsObjMeta || {}, om2 = db2._grampsObjMeta || {};
+    chk('Medien-Anzahl', Object.keys(om1).length, Object.keys(om2).length);
+    let mFail = 0;
+    for (const [h, o1] of Object.entries(om1)) {
+      if (!(h in om2)) { log(`  ✗ Objekt ${h} fehlt`); fail++; mFail++; }
+    }
+    if (!mFail) log('  Alle OK');
 
     log('\n── Tags ──');
     let tFail = 0;
