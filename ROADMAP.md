@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v416 · Cache: `stammbaum-v416`
+**sw-Version:** v417 · Cache: `stammbaum-v417`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -38,8 +38,8 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 | ~~GRAMPS-ObjHandles~~ | ~~**Original Media-Handles bewahren**~~ | ~~`_objHandle()` nutzt `m._grampsHandle` statt `_h('ob')` — verhindert Objekt-ID-Churn~~ | ~~S~~ | **erledigt sw v415** |
 | ~~GRAMPS-EventHandles~~ | ~~**Original Event-Handles bewahren**~~ | ~~`evObj._grampsEvHlink` im Parser; Writer nutzt Original-Handle statt `_h('ev')`; Witness-Events via `wr._origHlink`~~ | ~~XS~~ | **erledigt sw v416** |
 | ~~GRAMPS-EventExtra~~ | ~~**Event-Passthrough für nicht-modellierte Sub-Elemente**~~ | ~~`_xmlEl`-Helper; `evMap._extra[]` für `<objref>`, `<change>`; `_priv`-Attribut; Propagation auf alle Event-Typen + Witness; Writer gibt `_extra` und `priv` aus~~ | ~~S~~ | **erledigt sw v416** |
-| GRAMPS-CitHandles | **Original Citation-Handles + Passthrough** | `_grampsCitHandle` auf Citation-Objekte speichern; Writer nutzt Original-Handle; `cit._extra[]` für `<noteref>`, `<objref>`, `<attribute>`, `<change>` im Passthrough | M |
-| GRAMPS-Notes | **Notes als eigene Entität** | `db.notes{}` als Tabelle; mehrere Notes pro Entität nicht zu einer zusammenführen; Note-Handles original zurückschreiben; baut auf GRAMPS-NoteType auf | M |
+| ~~GRAMPS-CitHandles~~ | ~~**Original Citation-Handles + Passthrough**~~ | ~~`_grampsCitHandle`+`_citExtra` in `_applyCit`; `citMap` erfasst `<noteref>`,`<objref>`,`<attribute>`,`<change>`; `_citHandle` nutzt Original-Handle; alle 5 Call-Sites aktualisiert; Citation-XML gibt `_extra` aus~~ | ~~M~~ | **erledigt sw v417** |
+| ~~GRAMPS-Notes~~ | ~~**Notes als eigene Entität**~~ | ~~`noteMap` erfasst `grampId` + `_extra` (style/change/citref); `_noteId` propagiert beide; `_noteHandleFromObj` nutzt `grampId` + `_extra`; Note-XML gibt `_extra` aus~~ | ~~M~~ | **erledigt sw v417** |
 | GRAMPS-PlacePassthrough | **placeobj Sub-Elemente Passthrough** | `<noteref>`, `<citationref>`, `<attribute>`, `<objref>` auf `placeobj` im Parser erfassen (`pl._extra[]`); Writer gibt sie unverändert aus; kein GEDCOM-Einfluss | M |
 
 ---

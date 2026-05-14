@@ -151,8 +151,14 @@ function _applyCit(target, citHandle, citMap, srcHandleToId) {
   if (!cit || !cit.sourceHandle) return;
   const srcId = srcHandleToId[cit.sourceHandle];
   if (!srcId) return;
-  if (!target.citations.some(c => c.sid === srcId)) {
-    target.citations.push(citationObj(srcId, cit.page || '', String(_confToQuay(cit.confidence))));
+  const alreadyExists = cit._grampsHandle
+    ? target.citations.some(c => c._grampsCitHandle === cit._grampsHandle)
+    : target.citations.some(c => c.sid === srcId);
+  if (!alreadyExists) {
+    const obj = citationObj(srcId, cit.page || '', String(_confToQuay(cit.confidence)));
+    obj._grampsCitHandle = cit._grampsHandle || null;
+    obj._citExtra        = cit._extra        || [];
+    target.citations.push(obj);
   }
 }
 
@@ -254,7 +260,7 @@ async function parseGRAMPS(file) {
     evMap[h] = { type, date, placeHandle, desc, cause, addr: evAddr, attrs, noteRefs, citRefs, _priv: priv, _extra: evExtra, _grampsHandle: h };
   }
 
-  // Citations: handle → {sourceHandle, confidence, page}
+  // Citations: handle → {sourceHandle, confidence, page, _grampsHandle, _extra[]}
   const citMap = {};
   for (const cit of _byTag(doc, 'citation')) {
     const h    = cit.getAttribute('handle');
@@ -262,7 +268,13 @@ async function parseGRAMPS(file) {
     const page = _child(cit, 'page');
     const conf = _child(cit, 'confidence');
     const sr   = _byTag(cit, 'sourceref')[0] || null;
-    citMap[h]  = { sourceHandle: sr ? sr.getAttribute('hlink') : null, confidence: +conf || 0, page };
+    const citExtra = [];
+    for (const nr  of _byTag(cit, 'noteref'))   citExtra.push(_xmlEl(nr));
+    for (const obj of _byTag(cit, 'objref'))     citExtra.push(_xmlEl(obj));
+    for (const a   of _byTag(cit, 'attribute'))  citExtra.push(_xmlEl(a));
+    const citChange = _byTag(cit, 'change')[0];
+    if (citChange) citExtra.push(_xmlEl(citChange));
+    citMap[h] = { sourceHandle: sr ? sr.getAttribute('hlink') : null, confidence: +conf || 0, page, _grampsHandle: h, _extra: citExtra };
   }
 
   // Objects: handle → {src, mime, desc}
@@ -280,13 +292,23 @@ async function parseGRAMPS(file) {
     };
   }
 
-  // Notes: handle → {text, type}
+  // Notes: handle → {text, type, grampId, _extra[]}
   const noteMap = {};
   for (const note of _byTag(doc, 'note')) {
     const h      = note.getAttribute('handle');
     if (!h) continue;
     const textEl = _byTag(note, 'text')[0] || null;
-    noteMap[h]   = { text: textEl ? textEl.textContent.trim() : '', type: note.getAttribute('type') || 'General' };
+    const nExtra = [];
+    for (const ch of note.children) {
+      const ln = ch.localName || ch.tagName || '';
+      if (ln !== 'text') nExtra.push(_xmlEl(ch));
+    }
+    noteMap[h] = {
+      text: textEl ? textEl.textContent.trim() : '',
+      type: note.getAttribute('type') || 'General',
+      grampId: note.getAttribute('id') || '',
+      _extra: nExtra,
+    };
   }
 
   // Places: handle → {title, lat, long}  (for event resolution)
@@ -456,8 +478,10 @@ async function parseGRAMPS(file) {
     if (!notes[nId] && noteMap[nh] !== undefined) {
       notes[nId] = {
         id: nId, text: noteMap[nh]?.text || '', type: noteMap[nh]?.type || 'General',
+        grampId: noteMap[nh]?.grampId || '',
+        _extra: noteMap[nh]?._extra || [],
         _passthrough: [], lastChanged: '', lastChangedTime: '',
-        _grampsHandle: nh
+        _grampsHandle: nh,
       };
     }
     return nId;

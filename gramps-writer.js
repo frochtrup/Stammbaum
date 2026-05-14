@@ -164,17 +164,18 @@ async function writeGRAMPS(db) {
     hofAddrToHandle[trimmed] = handle;
   }
 
-  const _citHandle = (srcId, page, quay) => {
+  const _citHandle = (srcId, page, quay, grampsHandle, extra) => {
     const srcH = idToHandle[srcId];
     if (!srcH) return null;
-    const key = `${srcH}|${page||''}|${quay||0}`;
+    const key = grampsHandle || `${srcH}|${page||''}|${quay||0}`;
     if (!citRecs[key]) {
       citRecs[key] = {
-        handle: _h('ci'),
+        handle: grampsHandle || _h('ci'),
         id: `C${String(citCtr++).padStart(4,'0')}`,
         sourceHandle: srcH,
         confidence: _QUAY_TO_CONF[Math.min(3, Math.max(0, +quay || 0))],
-        page: page || ''
+        page: page || '',
+        _extra: extra || [],
       };
     }
     return citRecs[key].handle;
@@ -198,7 +199,13 @@ async function writeGRAMPS(db) {
     if (!text) return null;
     const key = noteObj._grampsHandle ? noteObj._grampsHandle : ('t:' + text);
     if (!noteRecs[key]) {
-      noteRecs[key] = { handle: noteObj._grampsHandle || _h('no'), id: `N${String(noteCtr++).padStart(4,'0')}`, text, type: noteObj.type || 'General' };
+      noteRecs[key] = {
+        handle: noteObj._grampsHandle || _h('no'),
+        id:     noteObj.grampId || `N${String(noteCtr++).padStart(4,'0')}`,
+        text,
+        type:   noteObj.type  || 'General',
+        _extra: noteObj._extra || [],
+      };
     }
     return noteRecs[key].handle;
   };
@@ -220,7 +227,7 @@ async function writeGRAMPS(db) {
     }
     L.push(`${indent}<attribute type="${_esc(a.type)}" value="${_esc(a.value)}">`);
     for (const c of a.citations || []) {
-      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0);
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra);
       if (ch) L.push(`${indent}  <citationref hlink="${_esc(ch)}"/>`);
     }
     if (a.note) {
@@ -244,7 +251,7 @@ async function writeGRAMPS(db) {
         ? hofAddrToHandle[evObj.addr.trim()]
         : _plHandle(evObj.place || null, evObj.lati, evObj.long);
     const citHandles = (evObj.citations || [])
-      .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0))
+      .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra))
       .filter(Boolean);
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
     // addr → <attribute type="Address" value="..."/>  (prepend, before _grampsAttrs)
@@ -438,7 +445,7 @@ async function writeGRAMPS(db) {
     if (suffix)  L.push(`        <suffix>${_esc(suffix)}</suffix>`);
     // Name citations
     for (const c of p.nameCitations||[]) {
-      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0);
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra);
       if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
     }
     L.push('      </name>');
@@ -452,7 +459,7 @@ async function writeGRAMPS(db) {
       if (en.surname) L.push(`        <surname>${_esc(en.surname)}</surname>`);
       if (en.nick)    L.push(`        <nick>${_esc(en.nick)}</nick>`);
       for (const c of en.citations||[]) {
-        const ch = _citHandle(c.sid, c.page||'', c.quay??0);
+        const ch = _citHandle(c.sid, c.page||'', c.quay??0, c._grampsCitHandle, c._citExtra);
         if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
       }
       L.push('      </name>');
@@ -483,7 +490,7 @@ async function writeGRAMPS(db) {
       const aH = a._grampsHlink || (a.xref ? _entityHandle(a.xref, 'pe') : null);
       if (!aH) continue;
       const aCitHandles = (a.citations || [])
-        .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0))
+        .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra))
         .filter(Boolean);
       const aNoteHandle = a.note ? _noteHandle(a.note, 'Association Note') : null;
       if (aCitHandles.length || aNoteHandle) {
@@ -567,6 +574,7 @@ async function writeGRAMPS(db) {
       if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
       L.push(`      <confidence>${cit.confidence}</confidence>`);
       L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
+      for (const x of cit._extra||[]) L.push(`      ${x}`);
       L.push('    </citation>');
     }
     L.push('  </citations>');
@@ -763,6 +771,7 @@ async function writeGRAMPS(db) {
     for (const note of noteArr) {
       L.push(`    <note handle="${_esc(note.handle)}" id="${_esc(note.id)}" type="${_esc(note.type)}">`);
       L.push(`      <text>${_esc(note.text)}</text>`);
+      for (const x of note._extra||[]) L.push(`      ${x}`);
       L.push('    </note>');
     }
     L.push('  </notes>');
