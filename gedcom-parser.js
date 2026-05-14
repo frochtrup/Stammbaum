@@ -490,7 +490,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='PLAC') cur.marr.place=val;
           else if (tag==='ADDR') cur.marr.addr=val;
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.marr.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
-          else if (tag==='NOTE') { if (val.startsWith('@')) cur.marr.noteRefs.push(val); else { cur.marr.note = val; _ptDepth=2; _ptTarget=cur.marr._extra; } }
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.marr.noteRefs.push(val); else cur.marr.note = val; }
           else if (tag==='OBJE') { cur.marr.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.marr._extra; }
         }
@@ -498,7 +498,7 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='DATE') cur.engag.date = val;
           else if (tag==='PLAC') cur.engag.place = val;
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.engag.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
-          else if (tag==='NOTE') { if (val.startsWith('@')) cur.engag.noteRefs.push(val); else { cur.engag.note = val; _ptDepth=2; _ptTarget=cur.engag._extra; } }
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.engag.noteRefs.push(val); else cur.engag.note = val; }
           else if (tag==='OBJE') { cur.engag.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.engag._extra; }
         }
@@ -506,7 +506,7 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='DATE') cur.div.date = val;
           else if (tag==='PLAC') cur.div.place = val;
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.div.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
-          else if (tag==='NOTE') { if (val.startsWith('@')) cur.div.noteRefs.push(val); else { cur.div.note = val; _ptDepth=2; _ptTarget=cur.div._extra; } }
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.div.noteRefs.push(val); else cur.div.note = val; }
           else if (tag==='OBJE') { cur.div.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.div._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.div._extra; }
         }
@@ -514,7 +514,7 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='DATE') cur.divf.date = val;
           else if (tag==='PLAC') cur.divf.place = val;
           else if (tag==='SOUR') { _curCit=citationObj(val); cur.divf.citations.push(_curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
-          else if (tag==='NOTE') { if (val.startsWith('@')) cur.divf.noteRefs.push(val); else { cur.divf.note = val; _ptDepth=2; _ptTarget=cur.divf._extra; } }
+          else if (tag==='NOTE') { if (val.startsWith('@')) cur.divf.noteRefs.push(val); else cur.divf.note = val; }
           else if (tag==='OBJE') { cur.divf.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
           else { cur.divf._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = cur.divf._extra; }
         }
@@ -546,6 +546,15 @@ function parseGEDCOM(text, parseErrors) {
       }
       else if (lv === 3) {
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
+        // Family event note continuation (MARR/ENGA/DIV/DIVF/EVEN)
+        if (lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT')) {
+          const _sfx = (tag==='CONT'?'\n':'') + val;
+          if      (lv1tag==='MARR')                          cur.marr.note  += _sfx;
+          else if (lv1tag==='ENGA'||lv1tag==='ENG')         cur.engag.note += _sfx;
+          else if (lv1tag==='DIV')                           cur.div.note   += _sfx;
+          else if (lv1tag==='DIVF')                          cur.divf.note  += _sfx;
+          else if (lv1tag==='EVEN' && evIdx >= 0 && cur.events[evIdx]) cur.events[evIdx].note += _sfx;
+        }
         if (lv1tag==='OBJE' && lv2tag==='FILE' && cur.media.length) {
           if (tag==='FORM')      { cur.media[cur.media.length-1].form  = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
           else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
