@@ -91,10 +91,8 @@ async function openFilePicker() {
     updateSaveIndicator();
     const file = await fh.getFile();
     if (file.name.toLowerCase().endsWith('.gramps')) {
-      // GRAMPS: async path, no direct-save
-      AppState._fileHandle = null; AppState._canDirectSave = false;
-      updateSaveIndicator();
       await _loadGRAMPS(file);
+      if (AppState._canDirectSave) showToast('✓ ' + file.name + ' geladen · Direktes Speichern aktiv');
     } else {
       _processLoadedText(await file.text(), file.name);
       const saveInfo = AppState._canDirectSave ? ' · Direktes Speichern aktiv' : ' · Speichern via Download';
@@ -143,10 +141,38 @@ async function saveToFileHandle(content) {
   } catch(e) {
     if (w) { try { await w.abort(); } catch(_) {} }
     if (e.name === 'NotAllowedError') {
-      // Datei möglicherweise durch Cloud-Sync gesperrt → Retry anbieten
       showToast('⚠ Datei gesperrt (Cloud-Sync?) – nochmals versuchen');
     } else {
       console.error('saveToFileHandle:', e.name, e.message);
+      showToast('⚠ Fehler beim Speichern: ' + (e.message || e.name));
+    }
+    return false;
+  }
+}
+
+async function saveToFileHandleBinary(blob) {
+  let w = null;
+  try {
+    let perm = await AppState._fileHandle.queryPermission({ mode: 'readwrite' });
+    if (perm === 'prompt') perm = await AppState._fileHandle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      AppState._fileHandle = null; AppState._canDirectSave = false;
+      idbDel('fileHandle').catch(() => {});
+      updateSaveIndicator();
+      return false;
+    }
+    w = await AppState._fileHandle.createWritable();
+    await w.write(blob);
+    await w.close(); w = null;
+    AppState.changed = false; updateChangedIndicator();
+    showToast('✓ Direkt gespeichert');
+    return true;
+  } catch(e) {
+    if (w) { try { await w.abort(); } catch(_) {} }
+    if (e.name === 'NotAllowedError') {
+      showToast('⚠ Datei gesperrt (Cloud-Sync?) – nochmals versuchen');
+    } else {
+      console.error('saveToFileHandleBinary:', e.name, e.message);
       showToast('⚠ Fehler beim Speichern: ' + (e.message || e.name));
     }
     return false;
@@ -256,6 +282,13 @@ async function exportGRAMPS(asSave = false) {
   const pad = n => String(n).padStart(2, '0');
   const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   const outputName = asSave ? filename : filename.replace(/\.gramps$/, `_${ts}.gramps`);
+
+  // Chrome Desktop: Direkt speichern via File Handle
+  if (asSave && AppState._fileHandle && AppState._canDirectSave) {
+    const ok = await saveToFileHandleBinary(blob);
+    if (ok) return;
+    if (AppState._canDirectSave) return;
+  }
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   if (isIOS && navigator.canShare) {
@@ -385,7 +418,6 @@ async function _loadGRAMPS(file) {
     // Calibrate idCounter to avoid collisions
     if (parsed._idCounterMax >= AppState.idCounter) AppState.idCounter = parsed._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
-    AppState._fileHandle      = null;
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
     AppState._canDirectSave   = false;
     _newPhotoIds.clear();
