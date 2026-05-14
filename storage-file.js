@@ -337,7 +337,7 @@ function _processLoadedText(text, filename) {
         idbPut('stammbaum_ged_backup', text),
         idbPut('stammbaum_filename', filename)
       ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
-      updateBackupBtn();
+
       updateTopbarTitle(filename);
       showStartView();
       showToast('✓ ' + filename + ' geladen');
@@ -393,7 +393,6 @@ async function _loadGRAMPS(file) {
     AppState._currentFilename = filename;
     try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
     updateSaveIndicator();
-    updateBackupBtn();
     updateTopbarTitle(filename, true);
     showStartView();
     const n = Object.keys(db.individuals).length;
