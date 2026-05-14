@@ -694,6 +694,7 @@ function runRoundtripTest() {
 async function runGrampsRoundtripTest() {
   const out = document.getElementById('roundtrip-output');
   if (out) out.textContent = 'GRAMPS Roundtrip läuft…';
+  openModal('modalRoundtrip');
   const db1 = AppState.db;
   if (!db1?._grampsMaster) {
     if (out) out.textContent = 'Fehler: Keine GRAMPS-Datei geladen.\n(_grampsMaster=' + db1?._grampsMaster + ', _sourceFormat=' + db1?._sourceFormat + ')';
