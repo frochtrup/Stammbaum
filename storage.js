@@ -35,7 +35,7 @@ async function revertToSaved() {
   setDb(parseGEDCOM(orig));
   AppState.db.extraPlaces = loadExtraPlaces();
   applyAllExtraPlaceCoords();
-  AppState.db.hofObjects  = Object.assign({}, _derivedHofObjectsFromDb(AppState.db), loadHofObjects());
+  { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
   if (AppState.db.parseErrors?.length) {
     console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
     showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');

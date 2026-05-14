@@ -319,7 +319,7 @@ function _processLoadedText(text, filename) {
       }
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
-      AppState.db.hofObjects  = Object.assign({}, _derivedHofObjectsFromDb(AppState.db), loadHofObjects());
+      { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
       // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
       { let maxUsed = 0;
         const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
@@ -380,7 +380,7 @@ async function _loadGRAMPS(file) {
     applyAllExtraPlaceCoords();
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
     // localStorage-Einträge (user edits) überschreiben diese.
-    AppState.db.hofObjects  = Object.assign({}, parsed.hofObjects || {}, loadHofObjects());
+    { const _hb = parsed.hofObjects || {}; AppState.db.hofObjects = Object.assign({}, _hb, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hb[a]?.note) h.note = _hb[a].note; }
     // Calibrate idCounter to avoid collisions
     if (parsed._idCounterMax >= AppState.idCounter) AppState.idCounter = parsed._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
