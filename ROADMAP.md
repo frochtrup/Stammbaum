@@ -12,7 +12,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 7.0 | `main` (PR #1) | **Abgeschlossen** |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v443 · Cache: `stammbaum-v443`
+**sw-Version:** v444 · Cache: `stammbaum-v444`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
@@ -70,6 +70,7 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 | ~~GRAMPS-RoundtripTest~~ | ~~**GRAMPS Roundtrip-Test als Debug-Tool**~~ | ~~`runGrampsRoundtripTest()` + `_grampsDeepRoundtrip()` in `debug-gramps.js`; Debug-Button; Modal mit Ergebnis; SW-Precache; `_xmlEl` Textknoten-Escaping; `<tags>`-Sektion im Writer rekonstruiert~~ | **erledigt sw v431–v440** |
 | ~~GEDCOM-RepoNotePt~~ | ~~**REPO NOTE @xref@ + SOUR CALN MEDI Roundtrip**~~ | ~~REPO `_passthrough[]` für unbekannte lv=1-Tags; `repoCallNumExtra[]` für `3 MEDI` unter `2 CALN`~~ | **erledigt sw v442** |
 | ~~GEDCOM-SourNoteXREF~~ | ~~**SOUR NOTE @xref@ parsen + anzeigen**~~ | ~~`s.noteRefs[]` + `s.noteText` (Post-Processing); Writer; Quellen-Detail `.note-ref-text`~~ | **erledigt sw v443** |
+| ~~GRAMPS-AttrsDisplay~~ | ~~**GRAMPS Attribute in Detailansicht**~~ | ~~`p._grampsAttrs[]`/`f._grampsAttrs[]` als fact-rows (type/value/note) in Personen- und Familien-Detail; bisher geparst aber nie angezeigt~~ | **erledigt sw v444** |
 
 ---
 

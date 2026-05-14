@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-14e — GRAMPS Attribute anzeigen (sw v444)
+
+- **sw v444** `feat(gramps)`: `p._grampsAttrs[]`/`f._grampsAttrs[]` in Personen- und Familien-Detailansicht als fact-rows ausgegeben (type als Label, value als Wert, optionale Note); bisher geparst aber nie angezeigt
+
+---
+
 ### Session 2026-05-14d — GRAMPS Speichern + Roundtrip-Test + GEDCOM-Fixes (sw v424–v443)
 
 - **sw v424** `fix(gramps)`: `topTarget.citations` crash beim Laden behoben
