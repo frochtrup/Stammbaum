@@ -9,12 +9,12 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | Version | Branch | Status |
 |---|---|---|
 | 4.0–6.0 | `main` / `v6-dev` | Abgeschlossen — Details: CHANGELOG.md |
-| 7.0 | `v7-dev` | **Abgeschlossen — bereit für Merge auf `main`** |
-| 8.0 | – | Planung |
+| 7.0 | `main` (via PR #1) | **Abgeschlossen** |
+| 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v413 · Cache: `stammbaum-v413`
+**sw-Version:** v414 · Cache: `stammbaum-v414`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ · **GRAMPS:** 60034 Checks ✓ (2894 Pers.)
-**Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
+**Testdaten:** Unsere Familie.gramps (2894 Pers.)
 
 ---
 
