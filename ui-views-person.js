@@ -546,14 +546,18 @@ function _pdetLifeData(p, id) {
         );
         const _showHofNote = _evRefersToHofNote && !_shownAddrNotes.has(_addrKey);
         if (_showHofNote) _shownAddrNotes.add(_addrKey);
-        // Persönliche Event-Notiz: zeigen wenn kein Hof-Notiztext und nicht dupliziert
-        const _isAnyHofNote = ev.note ? _allHofNoteTexts.has(ev.note) : false;
-        const _evNoteKey = ev.note ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + ev.note) : null;
-        const _showEvNote = ev.note && !_isAnyHofNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
+        // Persönliche Event-Notiz: wenn Event via noteRefs auf Hof-Notiz verweist,
+        // nur den Inline-Anteil (ev._noteOrig) zeigen — sonst würde ev.note den
+        // konkatenierten Text (inline + hofNote) enthalten und der Hof-Notiz-Pfad
+        // dupliziert angezeigt.
+        const _evInlineNote = _evRefersToHofNote ? (ev._noteOrig || null) : ev.note;
+        const _isAnyHofNote = _evInlineNote ? _allHofNoteTexts.has(_evInlineNote) : false;
+        const _evNoteKey = _evInlineNote ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + _evInlineNote) : null;
+        const _showEvNote = _evInlineNote && !_isAnyHofNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
         if (_evNoteKey && _showEvNote) _shownAddrNotes.add(_evNoteKey);
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_evInlineNote)}</span>` : ''}</span>
         </div>`;
       }
     }
