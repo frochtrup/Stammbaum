@@ -58,16 +58,11 @@
     </div>
   </div>
 
+  <div id="tab-tasks" style="display:none">
+    <div id="tasksList"></div>
+  </div>
+
   <div id="tab-persons">
-    <div class="seg-bar">
-      <div class="seg-ctrl">
-        <button type="button" id="toggle-persons-mode" class="seg-btn active"
-          data-action="switchPersonsMode" data-mode="persons">Personen</button>
-        <button type="button" id="toggle-tasks-mode" class="seg-btn"
-          data-action="switchPersonsMode" data-mode="tasks">Aufgaben</button>
-      </div>
-    </div>
-    <div id="tasksList" hidden></div>
     <div id="persons-list-section">
     <div class="list-search-header">
       <div class="search-wrap">
@@ -253,7 +248,7 @@
     <span class="bnav-lbl">Baum</span>
   </button>
   <button class="bnav-btn" id="bnav-persons" data-action="bnavTab" data-tab="persons">
-    <span class="bnav-icon">👤<span id="tasks-badge" hidden></span></span>
+    <span class="bnav-icon">👤</span>
     <span class="bnav-lbl">Personen</span>
   </button>
   <button class="bnav-btn" id="bnav-families" data-action="bnavTab" data-tab="families">
@@ -268,9 +263,9 @@
     <span class="bnav-icon">📍</span>
     <span class="bnav-lbl">Orte</span>
   </button>
-  <button class="bnav-btn" id="bnav-home" data-action="bnavHome">
-    <span class="bnav-icon">⌂</span>
-    <span class="bnav-lbl">Proband</span>
+  <button class="bnav-btn" id="bnav-tasks" data-action="bnavTasks">
+    <span class="bnav-icon">☑<span id="tasks-badge" hidden></span></span>
+    <span class="bnav-lbl">Aufgaben</span>
   </button>
 </nav>
 
@@ -1106,6 +1101,9 @@
         <button class="btn menu-btn" data-action="menuLoadDemo">
           🗂 &nbsp; Demo-Daten öffnen
         </button>
+        <button class="btn menu-btn" data-action="menuProband">
+          ⌂ &nbsp; Zum Probanden
+        </button>
         <!-- Werkzeuge -->
         <div class="menu-section-label">Werkzeuge</div>
         <button class="btn menu-btn" data-action="menuBook">
@@ -1113,6 +1111,9 @@
         </button>
         <button class="btn menu-btn" data-action="menuDedup">
           &#128270; &nbsp; Duplikate erkennen
+        </button>
+        <button class="btn menu-btn" data-action="menuValidate">
+          ✓ &nbsp; Daten prüfen
         </button>
         <button class="btn menu-btn" data-action="menuStats">
           📊 &nbsp; Statistik

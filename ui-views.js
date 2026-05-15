@@ -188,10 +188,18 @@ function bnavSearch() {
   setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
 }
 
-// Bottom-Nav: Proband
+// Bottom-Nav: Proband (nur noch aus Menü erreichbar)
 function bnavHome() {
   const id = getProbandId();
-  if (id) { setBnavActive('home'); showTree(id); }
+  if (id) { setBnavActive('tree'); showTree(id); }
+}
+
+// Bottom-Nav: Aufgaben-Tab
+function bnavTasks() {
+  AppState.currentTab = 'tasks';
+  setBnavActive('tasks');
+  showView('v-main');
+  switchTab('tasks');
 }
 
 // runGlobalSearch → ui-views-search.js
@@ -549,17 +557,14 @@ function switchTab(tab) {
     document.body.classList.remove('places-karte');
     document.getElementById('mapContainer')?.style.setProperty('display', 'none');
   }
-  // Personen-Tab: immer in Personen-Modus zurücksetzen (nicht Tasks)
-  if (tab === 'persons' && typeof switchPersonsMode === 'function') {
-    switchPersonsMode('persons');
-  }
-  document.getElementById('tab-persons').style.display = tab === 'persons' ? 'block' : 'none';
+  document.getElementById('tab-persons').style.display  = tab === 'persons'  ? 'block' : 'none';
   document.getElementById('tab-families').style.display = tab === 'families' ? 'block' : 'none';
-  document.getElementById('tab-sources').style.display = tab === 'sources' ? 'block' : 'none';
-  document.getElementById('tab-places').style.display = tab === 'places' ? 'block' : 'none';
-  document.getElementById('tab-stats').style.display = tab === 'stats' ? 'block' : 'none';
-  document.getElementById('tab-search').style.display = tab === 'search' ? 'block' : 'none';
-  document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats') ? 'none' : '';
+  document.getElementById('tab-sources').style.display  = tab === 'sources'  ? 'block' : 'none';
+  document.getElementById('tab-places').style.display   = tab === 'places'   ? 'block' : 'none';
+  document.getElementById('tab-stats').style.display    = tab === 'stats'    ? 'block' : 'none';
+  document.getElementById('tab-search').style.display   = tab === 'search'   ? 'block' : 'none';
+  document.getElementById('tab-tasks').style.display    = tab === 'tasks'    ? 'block' : 'none';
+  document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats' || tab === 'tasks') ? 'none' : '';
   renderTab();
 }
 
@@ -580,6 +585,7 @@ function renderTab() {
   }
   else if (AppState.currentTab === 'stats') renderStatsTab();
   else if (AppState.currentTab === 'search') runGlobalSearch(document.getElementById('searchGlobal')?.value || '');
+  else if (AppState.currentTab === 'tasks') { if (typeof renderTasksView === 'function') renderTasksView(); }
 }
 
 
@@ -928,6 +934,9 @@ const _CLICK_MAP = {
   bnavTree:                ()  => bnavTree(),
   bnavTab:                 el => bnavTab(el.dataset.tab),
   bnavHome:                ()  => bnavHome(),
+  bnavTasks:               ()  => bnavTasks(),
+  menuProband:             ()  => { closeModal('modalMenu'); bnavHome(); },
+  menuValidate:            ()  => { closeModal('modalMenu'); bnavTasks(); setTimeout(() => { if (typeof _handleRunValidation === 'function') _handleRunValidation(); }, 80); },
   addPerson:               ()  => { closeModal('modalAdd'); showPersonForm(null); },
   addFamily:               ()  => { closeModal('modalAdd'); showFamilyForm(null); },
   addSource:               ()  => { closeModal('modalAdd'); showSourceForm(null); },
@@ -1018,7 +1027,6 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   lightboxSetHero:         (el, e) => { e.stopPropagation(); _lightboxSetHero(); },
   confirmModalOk:          ()  => { _confirmResolve?.(true); _confirmResolve = null; closeModal('modalConfirm'); },
   confirmModalCancel:      ()  => closeModal('modalConfirm'),
-  switchPersonsMode:       el  => switchPersonsMode(el.dataset.mode),
   switchTasksFilter:       el  => switchTasksFilter(el.dataset.filter),
   showAddTaskForm:         el  => showAddTaskForm(el.dataset.pid),
   saveAddTask:             ()  => _saveAddTask(),

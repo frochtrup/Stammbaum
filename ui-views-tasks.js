@@ -187,29 +187,13 @@ function _saveAddTask() {
     showToast('Aufgabe gespeichert', 'success');
   }
   _refreshTasksSection(_addTaskPersonId);
-  if (_personsMode === 'tasks') renderTasksView();
+  if (AppState.currentTab === 'tasks') renderTasksView();
 }
 
-// ─── Globale Aufgabenliste (in Personen-Tab) ──────────────────────────────────
+// ─── Globale Aufgabenliste (eigener Tab) ─────────────────────────────────────
 
-let _personsMode      = 'persons'; // 'persons' | 'tasks'
 let _tasksViewFilter  = 'open';    // 'all' | 'open' | 'done'
 let _validationResults = null;     // null = noch nicht gelaufen; [] = leer/abgearbeitet
-
-function switchPersonsMode(mode) {
-  _personsMode = mode;
-  const isPersons = mode === 'persons';
-
-  document.getElementById('persons-list-section').style.display = isPersons ? '' : 'none';
-  document.getElementById('tasksList').hidden                   = isPersons;
-
-  document.getElementById('toggle-persons-mode').classList.toggle('active',  isPersons);
-  document.getElementById('toggle-tasks-mode').classList.toggle('active', !isPersons);
-
-  document.getElementById('fabBtn').style.display = isPersons ? '' : 'none';
-
-  if (!isPersons) renderTasksView();
-}
 
 function switchTasksFilter(f) {
   _tasksViewFilter = f;
@@ -248,7 +232,6 @@ function renderTasksView() {
     <button id="tasks-filter-all"  class="tasks-filter-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
     <button id="tasks-filter-open" class="tasks-filter-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
     <button id="tasks-filter-done" class="tasks-filter-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
-    <button class="tasks-validate-btn" data-action="runValidation" title="Daten auf Fehler und Luecken pruefen">Pruefen</button>
   </div>`;
 
   html += _renderValidationPanel();
@@ -297,7 +280,7 @@ function _handleToggleTask(el) {
   const { pid, tid } = el.dataset;
   _toggleTaskInDb(pid, tid);
   _refreshTasksSection(pid);
-  if (_personsMode === 'tasks') renderTasksView();
+  if (AppState.currentTab === 'tasks') renderTasksView();
 }
 
 function _handleEditTask(el) {
@@ -309,7 +292,7 @@ function _handleDeleteTask(el) {
   const { pid, tid } = el.dataset;
   _deleteTaskFromDb(pid, tid);
   _refreshTasksSection(pid);
-  if (_personsMode === 'tasks') renderTasksView();
+  if (AppState.currentTab === 'tasks') renderTasksView();
 }
 
 // ─── Validierungspanel ────────────────────────────────────────────────────────
