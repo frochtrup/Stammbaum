@@ -65,12 +65,13 @@ function _collectCitations(p) {
 function _eventsTableHtml(p) {
   const db = AppState.db;
   const rows = [];
-  const shownNotes = new Set();
 
-  // Alle bekannten Hof-Notiztexte — für Filterung aus ev.noteRefs
+  // Exakt gleiche Dedup-Logik wie Personen-Detail (ui-views-person.js)
   const _allHofNoteTexts = new Set(
     Object.values(db.hofObjects || {}).map(h => h.note).filter(Boolean)
   );
+  const shownHofAddrs = new Set(); // Hof-Notiz pro Adresse nur 1x zeigen
+  const shownNoteKeys = new Set(); // reguläre Notizen de-duplizieren
 
   const evLabel = ev => {
     const base = EVENT_LABELS[ev.type] || ev.type;
@@ -81,7 +82,17 @@ function _eventsTableHtml(p) {
   const addRow = (lbl, ev) => {
     if (!ev) return;
     const val = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
-    // Notiz aus Einzelteilen ohne Hof-Anteile rekonstruieren (identisch zu Personen-Detail)
+
+    // Hof-Notiz: 1x pro Adresse, nur wenn Event via noteRefs darauf verweist
+    const _addrKey = ev.addr?.trim() || null;
+    const _hofNote = _addrKey ? (db.hofObjects?.[_addrKey]?.note || null) : null;
+    const _evRefersToHofNote = _hofNote && (ev.noteRefs || []).some(
+      r => db.notes?.[r]?.text === _hofNote
+    );
+    const showHofNote = _evRefersToHofNote && !shownHofAddrs.has(_addrKey);
+    if (showHofNote) shownHofAddrs.add(_addrKey);
+
+    // Persönliche Notiz: aus ev._noteOrig + noteRefs ohne Hof-Texte rekonstruieren
     const _nonHofParts = [
       (ev._noteOrig && !_allHofNoteTexts.has(ev._noteOrig)) ? ev._noteOrig : null,
       ...(ev.noteRefs || []).map(r => {
@@ -90,10 +101,16 @@ function _eventsTableHtml(p) {
       }),
     ].filter(Boolean);
     const noteText = _nonHofParts.join('\n') || null;
-    if (!val && !noteText) return;
-    const showNote = noteText && !shownNotes.has(noteText);
-    if (showNote) shownNotes.add(noteText);
-    rows.push(`<tr><th>${esc(lbl)}</th><td>${esc(val)}${showNote ? `<br><small class="ev-note">${esc(noteText)}</small>` : ''}</td></tr>`);
+    const _noteKey = noteText ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + noteText) : null;
+    const showNote = noteText && (!_noteKey || !shownNoteKeys.has(_noteKey));
+    if (_noteKey && showNote) shownNoteKeys.add(_noteKey);
+
+    if (!val && !showHofNote && !showNote) return;
+    const noteHtml = [
+      showHofNote ? `<br><small class="ev-note">${esc(_hofNote)}</small>` : '',
+      showNote    ? `<br><small class="ev-note">${esc(noteText)}</small>` : '',
+    ].join('');
+    rows.push(`<tr><th>${esc(lbl)}</th><td>${esc(val)}${noteHtml}</td></tr>`);
   };
 
   // Sonder-Events in fixer Reihenfolge
