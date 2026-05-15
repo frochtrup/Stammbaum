@@ -187,6 +187,8 @@
     <div class="topbar-inner">
       <button class="topbar-btn back" id="treeBtnBack" hidden data-action="treeNavBack">←</button><button class="topbar-btn back-hist" id="treeHistBtn" data-action="openTreeHistory" hidden title="Verlauf" aria-label="Baum-Verlauf">▾</button><button class="topbar-btn fwd" id="treeBtnFwd" hidden data-action="goForward" title="Vorwärts" aria-label="Vorwärts">→</button>
       <span class="topbar-title" id="treeTopTitle"></span>
+      <button class="topbar-btn" id="treeProbandBtn" data-action="treeShowProband" title="Proband — Detail" aria-label="Proband — Detail">⌂</button>
+      <span class="topbar-sep" aria-hidden="true"></span>
       <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◑</button>
       <button class="topbar-btn" id="treeDescToggle" data-action="toggleDescTree" title="Nachkommen-Baum" aria-label="Nachkommen-Baum">⇩</button>
       <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" aria-label="Vollbild" hidden>⤢</button>
@@ -211,6 +213,7 @@
     <div class="tkl-row"><span class="tkl-key">←</span><span class="tkl-lbl">Zurück</span></div>
   </div>
   <div id="treeGenOverlay">
+    <span class="gen-overlay-label">Gen</span>
     <span id="treeGenBtns">
       <button class="fc-gen-btn" data-tgen="2" data-action="setTreeGens">2</button>
       <button class="fc-gen-btn" data-tgen="3" data-action="setTreeGens">3</button>

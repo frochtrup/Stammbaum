@@ -199,10 +199,27 @@ body.desktop-mode.fc-mode #fcContainer { min-height: 0; height: 100%; }
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 4px 6px;
+  padding: 4px 8px;
   opacity: 0.75;
+  align-items: center;
+  gap: 4px;
 }
-body.tree-active #treeGenOverlay { display: block; }
+body.tree-active #treeGenOverlay { display: flex; }
+.gen-overlay-label {
+  font-size: 0.65rem; color: var(--text-dim);
+  white-space: nowrap; padding-right: 2px;
+  border-right: 1px solid var(--border);
+}
+/* Topbar: Proband-Button + Trennlinie vor Darstellungsarten */
+#treeProbandBtn              { display: none; }
+body.tree-active #treeProbandBtn { display: inline-flex; }
+.topbar-sep {
+  display: none;
+  width: 1px; height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+body.tree-active .topbar-sep { display: inline-flex; }
 #treeGenBtns, #fcGenBtns, #descGenBtns { display: none; align-items: center; gap: 2px; }
 body.tree-active:not(.fc-mode):not(.desc-tree-mode) #treeGenBtns { display: flex; }
 body.fc-mode #fcGenBtns                                           { display: flex; }

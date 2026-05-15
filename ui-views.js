@@ -880,6 +880,7 @@ const _CLICK_MAP = {
   openMapPersonPicker:     ()  => openMapPersonPicker(),
   selectMapPerson:         el => selectMapPerson(el.dataset.pid),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
+  treeShowProband:         ()  => showDetail(currentTreeId || AppState.currentPersonId),
   moveFamUp:               el => moveFamOrder(el.dataset.pid, el.dataset.fid, -1),
   moveFamDown:             el => moveFamOrder(el.dataset.pid, el.dataset.fid, +1),
   unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
