@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v479 · Cache: `stammbaum-v479`
+**sw-Version:** v480 · Cache: `stammbaum-v480`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -51,7 +51,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | ~~U12~~ | ~~**Dark Mode**~~ | ~~`prefers-color-scheme: light` + `[data-theme]`-Toggle in `styles.css`; `<meta theme-color media>` in `index.html`; Segment-Control (Auto/Hell/Dunkel) im Einstellungs-Modal; `applyTheme`/`setThemePref` in `storage-file.js` — **erledigt sw v452**~~ | — |
 | SOUR-DATA | **SOUR.DATA.EVEN/DATE strukturiert** | Laufzeit + Ereignistypen einer Quelle (z. B. Kirchenbuch 1750–1850, BIRT/MARR/DEAT); Parser: `dataExtra[]` → `s.dataEvens[]` mit `{type,date,plac}`; Writer: `2 DATA / 3 EVEN / 3 DATE / 3 PLAC`; UI: Quellen-Formular + Quellen-Detail (Deckungsbereich sichtbar für Forschungsplanung) | M |
 | MEDI-CALN | **MEDI-Typ unter REPO.CALN** | `3 MEDI Mikrofilm\|Digitalisat\|Original` unter `2 CALN`; Parser: `s.repoCallNumMedi`; Writer: eine Zeile; UI: ein Feld im Quellen-Formular | S |
-| TREE-GEN-IN-TREE | **Gen-Buttons in den Baum** | Generationswahl (2–6 bzw. 2–7) aus der Topbar herausnehmen und als schwebende Buttons im Baum selbst platzieren; Topbar wird dadurch frei für Proband-Schnellknopf (⌂ direkt in der Topbar) — betrifft Sanduhr-Baum, Nachkommen-Baum und Fächer | S |
+| ~~TREE-GEN-IN-TREE~~ | ~~**Gen-Buttons in den Baum**~~ | ✅ **Abgeschlossen** (sw v480): Gen-Buttons aus Topbar in floating `#treeGenOverlay` (bottom-left, analog Tastatur-Legende bottom-right); `#v-tree { position: relative }` als Anker; `.fc-gen-btn` self-contained (kein `.topbar-btn` mehr); alle 3 Modi (Sanduhr 2–9, Nachkommen 2–7, Fächer 3–9) schalten per bestehender body-class-CSS | ~~S~~ |
 | ~~TREE-SPOUSE-FOCUS~~ | ~~**Fokus-Ehepartner bei Mehrfachehen**~~ | ✅ **Abgeschlossen** (sw v478–v479): Nachkommen-Baum + Personen-Detail verwenden beide `p.fams`-Reihenfolge statt Datum-Sort; Personen-Detail: ↑/↓-Buttons zum Umordnen wenn `p.fams.length > 1`; `moveFamOrder()` tauscht Array-Einträge + setzt `changed`; GEDCOM-Roundtrip verlustfrei (Reihenfolge der `1 FAMS`-Zeilen bleibt erhalten). Nachkommen-Baum: Tastatur-Legende jetzt auch im desc-tree-Modus sichtbar. | ~~S~~ |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren erkennen + im Sanduhr-Baum zusammenführen; Inzucht-Koeffizient berechnen | M |
 | Perf-Worker | **Web Worker für Duplikat-Scan** | `findDuplicatePairs()` in `Worker` auslagern; Main Thread bleibt bei >2000 Personen reaktiv | M |

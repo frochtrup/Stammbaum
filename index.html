@@ -187,33 +187,6 @@
     <div class="topbar-inner">
       <button class="topbar-btn back" id="treeBtnBack" hidden data-action="treeNavBack">←</button><button class="topbar-btn back-hist" id="treeHistBtn" data-action="openTreeHistory" hidden title="Verlauf" aria-label="Baum-Verlauf">▾</button><button class="topbar-btn fwd" id="treeBtnFwd" hidden data-action="goForward" title="Vorwärts" aria-label="Vorwärts">→</button>
       <span class="topbar-title" id="treeTopTitle"></span>
-      <span id="treeGenBtns">
-        <button class="topbar-btn fc-gen-btn" data-tgen="2" data-action="setTreeGens">2</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="3" data-action="setTreeGens">3</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="4" data-action="setTreeGens">4</button>
-        <button class="topbar-btn fc-gen-btn active" data-tgen="5" data-action="setTreeGens">5</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="6" data-action="setTreeGens">6</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="7" data-action="setTreeGens">7</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="8" data-action="setTreeGens">8</button>
-        <button class="topbar-btn fc-gen-btn" data-tgen="9" data-action="setTreeGens">9</button>
-      </span>
-      <span id="descGenBtns">
-        <button class="topbar-btn fc-gen-btn" data-dgen="2" data-action="setDescTreeGens">2</button>
-        <button class="topbar-btn fc-gen-btn" data-dgen="3" data-action="setDescTreeGens">3</button>
-        <button class="topbar-btn fc-gen-btn active" data-dgen="4" data-action="setDescTreeGens">4</button>
-        <button class="topbar-btn fc-gen-btn" data-dgen="5" data-action="setDescTreeGens">5</button>
-        <button class="topbar-btn fc-gen-btn" data-dgen="6" data-action="setDescTreeGens">6</button>
-        <button class="topbar-btn fc-gen-btn" data-dgen="7" data-action="setDescTreeGens">7</button>
-      </span>
-      <span id="fcGenBtns">
-        <button class="topbar-btn fc-gen-btn" data-gen="3" data-action="setFcGens">3</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="4" data-action="setFcGens">4</button>
-        <button class="topbar-btn fc-gen-btn active" data-gen="5" data-action="setFcGens">5</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="6" data-action="setFcGens">6</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="7" data-action="setFcGens">7</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="8" data-action="setFcGens">8</button>
-        <button class="topbar-btn fc-gen-btn" data-gen="9" data-action="setFcGens">9</button>
-      </span>
       <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◑</button>
       <button class="topbar-btn" id="treeDescToggle" data-action="toggleDescTree" title="Nachkommen-Baum" aria-label="Nachkommen-Baum">⇩</button>
       <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" aria-label="Vollbild" hidden>⤢</button>
@@ -236,6 +209,35 @@
     <div class="tkl-row"><span class="tkl-key">↓</span><span class="tkl-lbl">Kind</span></div>
     <div class="tkl-row"><span class="tkl-key">→</span><span class="tkl-lbl">Partner</span></div>
     <div class="tkl-row"><span class="tkl-key">←</span><span class="tkl-lbl">Zurück</span></div>
+  </div>
+  <div id="treeGenOverlay">
+    <span id="treeGenBtns">
+      <button class="fc-gen-btn" data-tgen="2" data-action="setTreeGens">2</button>
+      <button class="fc-gen-btn" data-tgen="3" data-action="setTreeGens">3</button>
+      <button class="fc-gen-btn" data-tgen="4" data-action="setTreeGens">4</button>
+      <button class="fc-gen-btn active" data-tgen="5" data-action="setTreeGens">5</button>
+      <button class="fc-gen-btn" data-tgen="6" data-action="setTreeGens">6</button>
+      <button class="fc-gen-btn" data-tgen="7" data-action="setTreeGens">7</button>
+      <button class="fc-gen-btn" data-tgen="8" data-action="setTreeGens">8</button>
+      <button class="fc-gen-btn" data-tgen="9" data-action="setTreeGens">9</button>
+    </span>
+    <span id="descGenBtns">
+      <button class="fc-gen-btn" data-dgen="2" data-action="setDescTreeGens">2</button>
+      <button class="fc-gen-btn" data-dgen="3" data-action="setDescTreeGens">3</button>
+      <button class="fc-gen-btn active" data-dgen="4" data-action="setDescTreeGens">4</button>
+      <button class="fc-gen-btn" data-dgen="5" data-action="setDescTreeGens">5</button>
+      <button class="fc-gen-btn" data-dgen="6" data-action="setDescTreeGens">6</button>
+      <button class="fc-gen-btn" data-dgen="7" data-action="setDescTreeGens">7</button>
+    </span>
+    <span id="fcGenBtns">
+      <button class="fc-gen-btn" data-gen="3" data-action="setFcGens">3</button>
+      <button class="fc-gen-btn" data-gen="4" data-action="setFcGens">4</button>
+      <button class="fc-gen-btn active" data-gen="5" data-action="setFcGens">5</button>
+      <button class="fc-gen-btn" data-gen="6" data-action="setFcGens">6</button>
+      <button class="fc-gen-btn" data-gen="7" data-action="setFcGens">7</button>
+      <button class="fc-gen-btn" data-gen="8" data-action="setFcGens">8</button>
+      <button class="fc-gen-btn" data-gen="9" data-action="setFcGens">9</button>
+    </span>
   </div>
 </div>
 
