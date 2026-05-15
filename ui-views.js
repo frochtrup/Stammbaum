@@ -883,8 +883,9 @@ const _CLICK_MAP = {
   treeShowProband:         ()  => {
     const id = getProbandId();
     if (!id) return;
-    if (document.body.classList.contains('desc-tree-mode')) showDescTree(id, false);
-    else if (!document.body.classList.contains('fc-mode'))  showTree(id, false);
+    if (document.body.classList.contains('fc-mode'))        showFanChart(id);
+    else if (document.body.classList.contains('desc-tree-mode')) showDescTree(id, false);
+    else showTree(id, false);
   },
   moveFamUp:               el => moveFamOrder(el.dataset.pid, el.dataset.fid, -1),
   moveFamDown:             el => moveFamOrder(el.dataset.pid, el.dataset.fid, +1),
