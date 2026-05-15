@@ -63,8 +63,14 @@ function _collectCitations(p) {
 
 // ── Lebensdaten-Tabelle HTML ───────────────────────────────────────
 function _eventsTableHtml(p) {
+  const db = AppState.db;
   const rows = [];
   const shownNotes = new Set();
+
+  // Alle bekannten Hof-Notiztexte — für Filterung aus ev.noteRefs
+  const _allHofNoteTexts = new Set(
+    Object.values(db.hofObjects || {}).map(h => h.note).filter(Boolean)
+  );
 
   const evLabel = ev => {
     const base = EVENT_LABELS[ev.type] || ev.type;
@@ -75,11 +81,19 @@ function _eventsTableHtml(p) {
   const addRow = (lbl, ev) => {
     if (!ev) return;
     const val = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
-    if (!val && !ev.note) return;
-    const noteKey = ev.note || null;
-    const showNote = noteKey && !shownNotes.has(noteKey);
-    if (showNote) shownNotes.add(noteKey);
-    rows.push(`<tr><th>${esc(lbl)}</th><td>${esc(val)}${showNote ? `<br><small class="ev-note">${esc(ev.note)}</small>` : ''}</td></tr>`);
+    // Notiz aus Einzelteilen ohne Hof-Anteile rekonstruieren (identisch zu Personen-Detail)
+    const _nonHofParts = [
+      (ev._noteOrig && !_allHofNoteTexts.has(ev._noteOrig)) ? ev._noteOrig : null,
+      ...(ev.noteRefs || []).map(r => {
+        const t = db.notes?.[r]?.text;
+        return (t && !_allHofNoteTexts.has(t)) ? t : null;
+      }),
+    ].filter(Boolean);
+    const noteText = _nonHofParts.join('\n') || null;
+    if (!val && !noteText) return;
+    const showNote = noteText && !shownNotes.has(noteText);
+    if (showNote) shownNotes.add(noteText);
+    rows.push(`<tr><th>${esc(lbl)}</th><td>${esc(val)}${showNote ? `<br><small class="ev-note">${esc(noteText)}</small>` : ''}</td></tr>`);
   };
 
   // Sonder-Events in fixer Reihenfolge
