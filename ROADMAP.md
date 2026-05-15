@@ -59,6 +59,9 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| VAL-FAM | **Familien-Tasks** | `f._tasks[]` analog zu `p._tasks[]` aufbauen; GEDCOM-Roundtrip via `_TASK` unter FAM-Record; Validierungsbefunde für Familien direkt auf der Familie ablegen statt auf Elternteilen | M |
+| VAL-AMPEL | **Severity-Ampel im Personen-Detail** | Kleines farbiges Indikator-Icon (rot/orange/grau) in der Personen-Detailansicht wenn offene Validierungsbefunde vorliegen; Klick navigiert in Aufgaben-Tab gefiltert auf diese Person | S |
+| VAL-CONFIG | **Regelkonfiguration Validierung** | Nutzer kann einzelne Validierungsregeln (de)aktivieren und Schwellenwerte anpassen (z. B. Altersgrenze, Jahreszahl Standesamt-Ära); gespeichert in IDB | M |
 | GEDCOM-7 | **GEDCOM 7.0 Evaluierung** | FamilySearch-Standard im Kommen; Parser/Writer-Anpassung für neue Tag-Struktur; HEAD GEDC VERS 7.0 | L |
 | ASSO-Event | **Event-Rollen voll editierbar** | Personen als Zeugen/Paten zu Events zuordnen; schreibt `1 ASSO`-Block; nur nach ASSO-UI sinnvoll | L |
 | Nachkommen | **Nachkommen-Baum** | Top-down SVG analog zum Sanduhr-Baum | L |
