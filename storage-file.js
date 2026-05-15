@@ -373,6 +373,7 @@ function _processLoadedText(text, filename) {
       AppState._undoStack = [];
       AppState._redoStack = [];
       if (typeof _clearNavState === 'function') _clearNavState();
+      if (typeof clearValidationResults === 'function') clearValidationResults();
       if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
       // IDB: primäre Persistenz (kein Größenlimit)
       Promise.all([
@@ -426,6 +427,7 @@ async function _loadGRAMPS(file) {
     // Calibrate idCounter to avoid collisions
     if (parsed._idCounterMax >= AppState.idCounter) AppState.idCounter = parsed._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
+    if (typeof clearValidationResults === 'function') clearValidationResults();
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
     AppState._canDirectSave   = false;
     // Persist filename in localStorage for display

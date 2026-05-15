@@ -106,6 +106,7 @@ async function loadDemo() {
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
     AppState._originalGedText = text;
+    if (typeof clearValidationResults === 'function') clearValidationResults();
     showStartView();
     showToast('✓ Demo geladen');
     _loadDemoPhotos();

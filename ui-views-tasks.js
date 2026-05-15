@@ -195,6 +195,8 @@ function _saveAddTask() {
 let _tasksViewFilter  = 'open';    // 'all' | 'open' | 'done'
 let _validationResults = null;     // null = noch nicht gelaufen; [] = leer/abgearbeitet
 
+window.clearValidationResults = function () { _validationResults = null; };
+
 function switchTasksFilter(f) {
   _tasksViewFilter = f;
   ['all', 'open', 'done'].forEach(k => {
