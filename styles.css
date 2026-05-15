@@ -1343,15 +1343,17 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   background: var(--gold-dim); color: var(--gold-lt);
   border-color: var(--gold-dim);
 }
-.tasks-validate-btn {
-  flex: none; padding: 6px 10px;
-  font-size: 0.8rem; font-weight: 600;
+.tasks-validate-bar {
+  padding: 0 16px 8px;
+}
+.tasks-validate-bar-btn {
+  width: 100%; padding: 8px;
+  font-size: 0.82rem; font-weight: 600;
   background: var(--surface2); color: var(--text-muted);
   border: 1px solid var(--border); cursor: pointer; border-radius: 8px;
   font-family: 'Source Serif 4', serif;
-  min-height: 36px; white-space: nowrap;
 }
-.tasks-validate-btn:active { opacity: 0.7; }
+.tasks-validate-bar-btn:active { opacity: 0.7; }
 
 /* Validierungspanel */
 .val-panel {

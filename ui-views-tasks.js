@@ -232,6 +232,9 @@ function renderTasksView() {
     <button id="tasks-filter-all"  class="tasks-filter-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
     <button id="tasks-filter-open" class="tasks-filter-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
     <button id="tasks-filter-done" class="tasks-filter-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
+  </div>
+  <div class="tasks-validate-bar">
+    <button class="tasks-validate-bar-btn" data-action="runValidation">✓ Daten prüfen</button>
   </div>`;
 
   html += _renderValidationPanel();
