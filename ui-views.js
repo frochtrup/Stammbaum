@@ -799,6 +799,18 @@ function citTagsHtml(citations) {
   }).filter(Boolean).join('');
 }
 
+// Gibt Eltern-Hierarchiekette als HTML zurück (z.B. "Rhein-Sieg-Kreis → NRW").
+// Leer wenn kein placeObjects-Modus oder keine Eltern vorhanden.
+function _placeHierHtml(placeId) {
+  const po = AppState.db?.placeObjects;
+  if (!po || !placeId || !po[placeId]) return '';
+  const chain = [];
+  let cur = po[placeId], guard = 8;
+  while (cur && guard-- > 0) { chain.push(cur.title); cur = cur.parentId ? po[cur.parentId] : null; }
+  if (chain.length <= 1) return '';
+  return `<span class="place-hier">${chain.slice(1).map(esc).join(' → ')}</span>`;
+}
+
 function relRow(person, role, unlinkFamId) {
   const sc = person.sex === 'M' ? 'm' : person.sex === 'F' ? 'f' : '';
   const ic = person.sex === 'M' ? '♂' : person.sex === 'F' ? '♀' : '◇';
