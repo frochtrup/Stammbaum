@@ -363,6 +363,8 @@ function _buildSearchIndex() {
       p.reli,       p.noteText,
       ...p.events.map(ev => [ev.value, ev.place, ev.date, ev.eventType].join(' ')),
     ].filter(Boolean).join(' ').toLowerCase();
+    p._sdxSurname = germanSoundex(p.surname || '');
+    p._sdxGiven   = germanSoundex(p.given   || '');
   }
   UIState._searchIndexDirty = false;
 }
@@ -401,8 +403,8 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
     if ((p._searchStr || '').includes(lower)) return true;
     if (UIState._soundexMode && /^[a-zäöüß]+$/i.test(lower)) {
       const qSdx = germanSoundex(lower);
-      if (germanSoundex(p.surname) === qSdx) return true;
-      if (germanSoundex(p.given)   === qSdx) return true;
+      if ((p._sdxSurname || germanSoundex(p.surname)) === qSdx) return true;
+      if ((p._sdxGiven   || germanSoundex(p.given))   === qSdx) return true;
     }
     return false;
   });

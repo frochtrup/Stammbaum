@@ -1050,7 +1050,7 @@ document.addEventListener('input', e => {
   else if (action === 'filterSources')   filterSourcesDebounced(el.value);
   else if (action === 'filterPlaces')    filterPlacesDebounced(el.value);
   else if (action === 'filterHoefe')     filterHoefeDebounced(el.value);
-  else if (action === 'runGlobalSearch') runGlobalSearch(el.value);
+  else if (action === 'runGlobalSearch') runGlobalSearchDebounced(el.value);
   else if (action === 'filterMapPersonList') filterMapPersonList();
   else if (action === 'renderRelPicker') renderRelPicker(el.value);
   else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
