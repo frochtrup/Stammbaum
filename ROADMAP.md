@@ -31,7 +31,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~SEC-1~~ | ~~**XSS in onedrive.js**~~ | ~~Falschalarm: `esc()` wird korrekt verwendet~~ | — |
-| SEC-2 | **Foto-Upload ohne MIME-Validierung** | `ui-media.js`: nur Extension geprüft, kein Blob-Magic-Byte-Check; Fix: `file.type.startsWith('image/')` vor IDB-Write | XS |
+| ~~SEC-2~~ | ~~**Foto-Upload ohne MIME-Validierung**~~ | ~~Falschalarm: `am-cam-input` hat `accept="image/*"` + `createImageBitmap` wirft bei Nicht-Bild; JSON-Import prüft `startsWith('data:image/')`~~ | — |
 | ~~ERR-1~~ | ~~**3 async-Funktionen ohne try-catch**~~ | ~~`revertToSaved` (storage.js), `exportGEDCOM` (storage-file.js), `odLogin` (onedrive-auth.js) — **erledigt sw v448**~~ | — |
 | ~~PERF-1~~ | ~~**Kein Debouncing auf Filter-Inputs**~~ | ~~`runGlobalSearch` auf Input debounced (200ms); alle anderen Filter waren bereits debounced — **erledigt sw v449**~~ | — |
 | ~~PERF-2~~ | ~~**Soundex nicht gecacht**~~ | ~~`_sdxSurname`/`_sdxGiven` in `_buildSearchIndex` vorberechnet; `filterPersons` nutzt Cache mit Fallback — **erledigt sw v449**~~ | — |
