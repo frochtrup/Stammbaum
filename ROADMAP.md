@@ -71,8 +71,6 @@ Features, die aus oberflächlicher Datensammlung systematische Forschung machen.
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | SOUR-DATA | **SOUR.DATA.EVEN/DATE strukturiert** | Laufzeit + Ereignistypen einer Quelle (z. B. Kirchenbuch 1750–1850, BIRT/MARR/DEAT); Parser: `s.dataEvens[]`; Writer: `2 DATA / 3 EVEN / 3 DATE / 3 PLAC`; UI: Deckungsbereich sichtbar im Quellen-Formular + Quellen-Detail | M |
-| VAL-FAM | **Familien-Validierungsaufgaben** | `f._tasks[]` analog zu `p._tasks[]`; GEDCOM-Roundtrip via `_TASK` unter FAM; Validierungsbefunde direkt auf der Familie | M |
-| VAL-CONFIG | **Regelkonfiguration Validierung** | Einzelne Validierungsregeln (de)aktivieren; Schwellenwerte anpassen (Altersgrenze, Standesamt-Ära); gespeichert in IDB | M |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + zusammenführen; Inzucht-Koeffizient berechnen | M |
 | Perf-Worker | **Web Worker für Duplikat-Scan** | `findDuplicatePairs()` in Worker auslagern; Main Thread bleibt bei >2000 Personen reaktiv | M |
 

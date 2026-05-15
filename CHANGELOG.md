@@ -9,6 +9,15 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-16 — VAL-FAM + VAL-CONFIG + Bugfixes (sw v496–v497)
+
+- **sw v496** `feat(tasks/validation)`: VAL-FAM — `f._tasks[]` auf Familien-Objekten; GEDCOM-Roundtrip via `1 _TASK` unter FAM (Parser + Writer); `_famTasksSectionHtml()` in `showFamilyDetail()`; globale Task-Liste zeigt Personen- und Familien-Tasks gemischt nach Kategorie mit klickbarem Familien-Header
+- **sw v496** `feat(tasks/validation)`: VAL-CONFIG — `VAL_RULES` + `VAL_CONFIG_DEFAULTS` in `gedcom-validator.js`; `runValidation(db, config)` mit konfigurierbaren Schwellenwerten (maxAge, staStAera, minMotherAge, maxMotherAge, maxFatherAge) und deaktivierbaren Regeln; Config in IDB (`val_config`); `modalValConfig` mit Checkboxen pro Regel + Zahlenfeldern; ⚙-Button in validate-bar; `openValConfig()` / `saveValConfig()` / `resetValConfig()`
+- **sw v496** `feat(validator)`: `familyId`-Feld in Validierungsbefunden; `val-fam-link` im Panel verlinkt auf Familien-Detail; Familien-Regeln (F1–F4) mit `familyId` annotiert
+- **sw v497** `fix(tasks)`: sticky header — filter-bar + validate-bar in `.tasks-sticky-header`-Wrapper (`position:sticky; top:var(--topbar-h)`); `#tab-tasks` erhält `padding-bottom` (letzte Task war hinter Bottom-Nav abgeschnitten); Befund-Dedup — bereits promovierte Tasks werden beim erneuten Prüfen herausgefiltert (Text-Abgleich mit `p._tasks[]`)
+
+---
+
 ### Session 2026-05-15c — Nachkommen-Baum: Ehepartner/Geschwister (sw v466–v470)
 
 - **sw v466** `feat(desc-tree)`: Ehepartner-Karte + ⚭-Button rechts neben Proband; Geschwister-Stapel links (PEEK-Überlapp); `SLOT = W + MGAP + W + HGAP`
