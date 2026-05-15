@@ -33,12 +33,19 @@ window.toggleDescTree = function () {
 };
 
 // ── Layout-Berechnung (bottom-up) ──
-// Gibt {slots, id, children[], hasMore} zurück.
-// slots = Breite in SLOT-Einheiten = max(1, Summe Kinder-Slots)
+// Jeder Knoten enthält zusätzlich spouseId (Hauptehepartner, falls vorhanden).
+// slots = Anzahl SLOT-Einheiten für diesen Teilbaum.
 
 function _descLayout(pid, depth) {
   const p = AppState.db.individuals[pid];
   if (!p) return { slots: 1, id: pid, children: [] };
+
+  const mainFam = (p.fams || [])
+    .map(fid => AppState.db.families[fid]).filter(Boolean)
+    .find(f => f.husb && f.wife);
+  const spouseId = mainFam
+    ? (mainFam.husb === pid ? mainFam.wife : mainFam.husb)
+    : null;
 
   const seen = new Set();
   const childIds = (p.fams || [])
@@ -46,12 +53,12 @@ function _descLayout(pid, depth) {
     .filter(id => seen.has(id) ? false : (seen.add(id), true));
 
   if (depth <= 0 || !childIds.length) {
-    return { slots: 1, id: pid, children: [], hasMore: depth <= 0 && childIds.length > 0 };
+    return { slots: 1, id: pid, spouseId, children: [], hasMore: depth <= 0 && childIds.length > 0 };
   }
 
   const children = childIds.map(cid => _descLayout(cid, depth - 1));
   const totalSlots = children.reduce((s, c) => s + c.slots, 0);
-  return { slots: Math.max(1, totalSlots), id: pid, children, hasMore: false };
+  return { slots: Math.max(1, totalSlots), id: pid, spouseId, children, hasMore: false };
 }
 
 // ── Hauptfunktion ──
@@ -85,14 +92,27 @@ window.showDescTree = function (personId, addToHistory = true) {
 
   // ── Dimensionen ──
   const isPortrait = window.innerWidth < window.innerHeight;
-  const W    = isPortrait ? 80  : 96;
-  const H    = isPortrait ? 54  : 64;
-  const CW   = isPortrait ? 124 : 160;
-  const CH   = isPortrait ? 72  : 80;
-  const HGAP = isPortrait ? 8   : 10;
-  const VGAP = isPortrait ? 38  : 48;
-  const PAD  = isPortrait ? 14  : 20;
-  const SLOT = W + HGAP;
+  const W       = isPortrait ? 80  : 96;
+  const H       = isPortrait ? 54  : 64;
+  const CW      = isPortrait ? 124 : 160;
+  const CH      = isPortrait ? 72  : 80;
+  const HGAP    = isPortrait ? 8   : 10;
+  const VGAP    = isPortrait ? 38  : 48;
+  const PAD     = isPortrait ? 14  : 20;
+  const MGAP    = isPortrait ? 8   : 10;  // Abstand Person–Ehepartner
+  const SIB_GAP = isPortrait ? 8   : 10;  // Abstand Geschwister-Stapel zu Proband
+  const PEEK    = isPortrait ? 10  : 12;  // Überlapp pro Geschwister-Karte
+  // SLOT: Breite einer Einheit inkl. Ehepartner-Platz rechts + Abstand
+  const SLOT = W + MGAP + W + HGAP;
+
+  // ── Geschwister des Probanden ──
+  const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
+  const sibFamId  = sibFamRef ? (typeof sibFamRef === 'string' ? sibFamRef : sibFamRef.famId) : null;
+  const siblings  = sibFamId
+    ? (AppState.db.families[sibFamId]?.children || []).filter(id => id !== personId)
+    : [];
+  const nSibs = siblings.length;
+  const sibsW = nSibs > 0 ? W + SIB_GAP : 0;
 
   // ── Layout ──
   const layout = _descLayout(personId, _descGens - 1);
@@ -102,18 +122,27 @@ window.showDescTree = function (personId, addToHistory = true) {
     return 1 + Math.max(...node.children.map(_depth));
   }
   const actualDepth = _depth(layout);
+  const treeSpan    = layout.slots * SLOT;
 
-  const totalW = Math.max(CW + 2 * PAD, layout.slots * SLOT + 2 * PAD);
+  // rootCX: weit genug rechts für Geschwisterstapel links + halbe Baumbreite
+  const rootCX = Math.max(PAD + sibsW + CW / 2, PAD + sibsW + treeSpan / 2);
+
+  // totalW: berücksichtigt Ehepartner des Probanden + Ehepartner des rechtesten Kindes
+  const rootSpouseW = layout.spouseId ? MGAP + W : 0;
+  const totalW = Math.max(
+    CW + 2 * PAD,
+    rootCX + CW / 2 + rootSpouseW + PAD,
+    rootCX + treeSpan / 2 + W + MGAP + PAD   // Platz für rechteste Ehepartnerkarte
+  );
   const totalH = PAD + CH + (actualDepth > 1 ? (actualDepth - 1) * (H + VGAP) : 0) + PAD;
-  const rootCX = totalW / 2;
 
   // ── DOM ──
   const wrap = document.getElementById('treeWrap');
   const scaleWrap = document.getElementById('treeScaleWrap');
   if (_descZoomScale <= 0) _descZoomScale = 1;
-  wrap.style.width         = totalW + 'px';
-  wrap.style.height        = totalH + 'px';
-  wrap.style.transform     = _descZoomScale !== 1 ? `scale(${_descZoomScale})` : '';
+  wrap.style.width          = totalW + 'px';
+  wrap.style.height         = totalH + 'px';
+  wrap.style.transform      = _descZoomScale !== 1 ? `scale(${_descZoomScale})` : '';
   wrap.style.transformOrigin = '0 0';
   if (scaleWrap) {
     scaleWrap.style.width  = Math.round(totalW * _descZoomScale) + 'px';
@@ -137,14 +166,14 @@ window.showDescTree = function (personId, addToHistory = true) {
     svg.appendChild(el);
   }
 
-  // ── Karte erstellen ──
-  function mkDescCard(id, x, y, isRoot, hasMore) {
+  // ── Personen-Karte ──
+  function mkDescCard(id, x, y, cardW, cardH, isRoot, hasMore, isSpouse) {
     const div = document.createElement('div');
-    div.className = 'tree-card' + (isRoot ? ' tree-card-center' : '');
+    div.className = 'tree-card' + (isRoot && !isSpouse ? ' tree-card-center' : '');
     div.style.left   = Math.round(x) + 'px';
     div.style.top    = Math.round(y) + 'px';
-    div.style.width  = (isRoot ? CW : W) + 'px';
-    div.style.height = (isRoot ? CH : H) + 'px';
+    div.style.width  = cardW + 'px';
+    div.style.height = cardH + 'px';
 
     if (!id) {
       div.classList.add('tree-card-empty');
@@ -162,22 +191,62 @@ window.showDescTree = function (personId, addToHistory = true) {
     const fn  = [q.given, q.surname].filter(Boolean).join(' ') || q.name || '(unbekannt)';
     const sl  = q.sex === 'M' ? ', Mann' : q.sex === 'F' ? ', Frau' : '';
     div.title = fn + sl + (yr ? ' ' + yr : '');
-    div.setAttribute('aria-label', _treeShortName(q, isRoot) + sl + (yr ? ', ' + yr : ''));
+    div.setAttribute('aria-label', _treeShortName(q, isRoot && !isSpouse) + sl + (yr ? ', ' + yr : ''));
 
     div.innerHTML =
-      `<div class="tree-name">${_treeNameHtml(q, isRoot)}</div>` +
+      `<div class="tree-name">${_treeNameHtml(q, isRoot && !isSpouse)}</div>` +
       (yr ? `<div class="tree-yr${isPortrait ? ' tree-yr--portrait' : ''}">${yr}</div>` : '') +
       (hasMore ? `<div class="tree-half-badge tree-desc-more" title="Mehr Nachkommen — klicken zum Anzeigen">▼</div>` : '');
 
-    div.addEventListener('click', isRoot ? () => showDetail(id) : () => showDescTree(id));
+    div.addEventListener('click', isSpouse ? () => showDetail(id) : (isRoot ? () => showDetail(id) : () => showDescTree(id)));
     wrap.appendChild(div);
+  }
+
+  // ── Heirats-Button zwischen zwei Karten ──
+  function mkMarrBtn(leftX, rightX, midY, famId) {
+    const fam = famId ? AppState.db.families[famId] : null;
+    const md  = fam?.marr?.date ? fam.marr.date.replace(/.*(\d{4}).*/, '$1') : '';
+    const btn = document.createElement('div');
+    btn.className = 'tree-marr-btn';
+    btn.style.cssText = `position:absolute;left:${Math.round(leftX)}px;top:${Math.round(midY - 12)}px;` +
+      `width:${Math.round(rightX - leftX)}px;height:24px;cursor:pointer;z-index:6;` +
+      `display:flex;align-items:center;justify-content:center`;
+    btn.title = md ? '⚭ ' + md : '⚭';
+    btn.innerHTML = `<span class="tree-marr-badge">⚭</span>`;
+    if (famId) btn.addEventListener('click', () => showFamilyDetail(famId));
+    wrap.appendChild(btn);
+  }
+
+  // ── Familien-ID für ein Paar ──
+  function getSpouseFamId(pid, spouseId) {
+    for (const fid of (AppState.db.individuals[pid]?.fams || [])) {
+      const f = AppState.db.families[fid];
+      if (f && ((f.husb === pid && f.wife === spouseId) || (f.wife === pid && f.husb === spouseId)))
+        return fid;
+    }
+    return null;
   }
 
   // ── Rekursives Rendern ──
   function renderNode(node, cx, y, isRoot) {
     const cardW = isRoot ? CW : W;
     const cardH = isRoot ? CH : H;
-    mkDescCard(node.id, cx - cardW / 2, y, isRoot, node.hasMore);
+    const cardX = cx - cardW / 2;
+
+    mkDescCard(node.id, cardX, y, cardW, cardH, isRoot, node.hasMore, false);
+
+    // Ehepartner rechts
+    if (node.spouseId) {
+      const spouseX = cardX + cardW + MGAP;
+      const spouseY = isRoot ? y + (CH - H) / 2 : y;
+      mkDescCard(node.spouseId, spouseX, spouseY, W, H, false, false, true);
+      mkMarrBtn(
+        cardX + cardW,
+        spouseX,
+        y + cardH / 2,
+        getSpouseFamId(node.id, node.spouseId)
+      );
+    }
 
     if (!node.children?.length) return;
 
@@ -186,7 +255,6 @@ window.showDescTree = function (personId, addToHistory = true) {
     const connY        = y + cardH;
     const juncY        = connY + Math.round(VGAP * 0.4);
 
-    // Kindmittelpunkte berechnen
     const childCXs = [];
     let xCur = cx - childrenSpan / 2;
     node.children.forEach(child => {
@@ -194,15 +262,11 @@ window.showDescTree = function (personId, addToHistory = true) {
       xCur += child.slots * SLOT;
     });
 
-    // Vertikaler Stiel vom Elternteil
     dLine(cx, connY, cx, juncY);
-    // Horizontaler Balken über alle Kinder
     if (childCXs.length > 1)
       dLine(childCXs[0], juncY, childCXs[childCXs.length - 1], juncY);
-    // Vertikale Tropfen zu jedem Kind
     childCXs.forEach(childCX => dLine(childCX, juncY, childCX, nextY));
 
-    // Kinder rekursiv rendern
     xCur = cx - childrenSpan / 2;
     node.children.forEach(child => {
       renderNode(child, xCur + child.slots * SLOT / 2, nextY, false);
@@ -212,13 +276,49 @@ window.showDescTree = function (personId, addToHistory = true) {
 
   renderNode(layout, rootCX, PAD, true);
 
+  // ── Geschwister-Stapel (links vom Probanden) ──
+  if (nSibs > 0) {
+    const sibColX   = rootCX - CW / 2 - SIB_GAP - W;
+    const sibBaseY  = PAD + (CH - H) / 2;
+    const sibStackH = H + (nSibs - 1) * PEEK;
+    const midY      = PAD + CH / 2;
+
+    // T-Linie: horizontal von Stapel rechts zur Proband-Linken Kante
+    dLine(sibColX + W, midY, rootCX - CW / 2, midY);
+    // Vertikale Linie durch den Stapel
+    if (nSibs > 1)
+      dLine(sibColX + W, sibBaseY + H / 2, sibColX + W, sibBaseY + sibStackH - H / 2);
+
+    siblings.forEach((sid, i) => {
+      const sq = AppState.db.individuals[sid];
+      if (!sq) return;
+      const div = document.createElement('div');
+      div.className = 'tree-card';
+      div.style.left   = Math.round(sibColX) + 'px';
+      div.style.top    = Math.round(sibBaseY + i * PEEK) + 'px';
+      div.style.width  = W + 'px';
+      div.style.height = H + 'px';
+      div.style.zIndex = siblings.length - i + 1;
+      div.dataset.sex  = sq.sex || 'U';
+      const by = (sq.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
+      const dy = (sq.death?.date || '').replace(/.*(\d{4}).*/, '$1');
+      const yr = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
+      div.title = sq.name || sid;
+      div.innerHTML =
+        `<div class="tree-name">${_treeNameHtml(sq, false)}</div>` +
+        (yr ? `<div class="tree-yr${isPortrait ? ' tree-yr--portrait' : ''}">${yr}</div>` : '');
+      div.addEventListener('click', () => showDetail(sid));
+      wrap.appendChild(div);
+    });
+  }
+
   // ── Tastatur-Navigationsziele ──
   const par0 = getParentIds(personId);
   _treeNavTargets = {
     up:    par0.father || par0.mother || null,
     up2:   par0.father ? par0.mother : null,
     down:  layout.children?.[0]?.id   || null,
-    right: layout.children?.[1]?.id   || null,
+    right: layout.spouseId            || layout.children?.[1]?.id || null,
   };
 
   showView('v-tree');
