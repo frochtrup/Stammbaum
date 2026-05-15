@@ -210,11 +210,6 @@ body.tree-active #treeGenOverlay { display: flex; }
 body.desktop-mode #treeGenOverlay {
   bottom: 12px;
 }
-.gen-overlay-label {
-  font-size: 0.65rem; color: var(--text-dim);
-  white-space: nowrap; padding-right: 2px;
-  border-right: 1px solid var(--border);
-}
 /* Topbar: Proband-Button + Trennlinie vor Darstellungsarten */
 #treeProbandBtn              { display: none; }
 body.tree-active #treeProbandBtn { display: inline-flex; }
