@@ -89,7 +89,7 @@ function parseGEDCOM(text, parseErrors) {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
-        const _noteinit = val.trim().slice(4).trim(); // text after 'NOTE' on same line
+        const _noteinit = val.slice(val.startsWith('NOTE ') ? 5 : 4); // preserve trailing whitespace (CONC-Roundtrip)
         cur = { id:tag, text: _noteinit, _passthrough: [], lastChanged:'', lastChangedTime:'' };
         notes[tag] = cur; curType = 'NOTE';
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
