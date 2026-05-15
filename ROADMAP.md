@@ -49,6 +49,8 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | GRAMPS-Orte | **Orts-Picker im GRAMPS-Modus** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land); Orts-Zuweisung an Events | M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
 | ~~U12~~ | ~~**Dark Mode**~~ | ~~`prefers-color-scheme: light` + `[data-theme]`-Toggle in `styles.css`; `<meta theme-color media>` in `index.html`; Segment-Control (Auto/Hell/Dunkel) im Einstellungs-Modal; `applyTheme`/`setThemePref` in `storage-file.js` — **erledigt sw v452**~~ | — |
+| SOUR-DATA | **SOUR.DATA.EVEN/DATE strukturiert** | Laufzeit + Ereignistypen einer Quelle (z. B. Kirchenbuch 1750–1850, BIRT/MARR/DEAT); Parser: `dataExtra[]` → `s.dataEvens[]` mit `{type,date,plac}`; Writer: `2 DATA / 3 EVEN / 3 DATE / 3 PLAC`; UI: Quellen-Formular + Quellen-Detail (Deckungsbereich sichtbar für Forschungsplanung) | M |
+| MEDI-CALN | **MEDI-Typ unter REPO.CALN** | `3 MEDI Mikrofilm\|Digitalisat\|Original` unter `2 CALN`; Parser: `s.repoCallNumMedi`; Writer: eine Zeile; UI: ein Feld im Quellen-Formular | S |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren erkennen + im Sanduhr-Baum zusammenführen; Inzucht-Koeffizient berechnen | M |
 | Perf-Worker | **Web Worker für Duplikat-Scan** | `findDuplicatePairs()` in `Worker` auslagern; Main Thread bleibt bei >2000 Personen reaktiv | M |
 | ~~Nachkommen~~ | ~~**Nachkommen-Baum**~~ | ✅ **Abgeschlossen** (sw v468): `ui-desc-tree.js`; Toggle-Button `⇩` im Baum-View; Gen-Buttons 2–7; T-Linien-Layout; `▼`-Badge bei abgeschnittener Tiefe; alle Ehepartner in Reihe rechts am Startpunkt (je ⚭-Button); Geschwister horizontal gestapelt links (variable Überlappung); `½`-Badge für Kinder aus Nebenehe | ~~L~~ |
@@ -59,6 +61,8 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| ALIA | **ALIA-Aliasverweise** | `1 ALIA @xref@` auf INDI; Parser: `p.alia[]`; Writer: `1 ALIA`-Blöcke (aktuell Passthrough — kein Datenverlust, aber kein strukturierter Zugriff); UI: Personen-Detail zeigt verlinkte Alias-Personen (read-only Schritt 1, Edit Schritt 2) | S+S |
+| REFN | **REFN/RIN strukturiert** | `1 REFN value / 2 TYPE type` auf INDI/FAM/SOUR/REPO; Parser: `p.refns[]` mit `{val,type}`; Writer: `1 REFN`-Blöcke (aktuell Passthrough); UI optional — primär für Companion-Workflows mit externen Programmen (Legacy, RootsMagic) | S |
 | VAL-FAM | **Familien-Tasks** | `f._tasks[]` analog zu `p._tasks[]` aufbauen; GEDCOM-Roundtrip via `_TASK` unter FAM-Record; Validierungsbefunde für Familien direkt auf der Familie ablegen statt auf Elternteilen | M |
 | VAL-AMPEL | **Severity-Ampel im Personen-Detail** | Kleines farbiges Indikator-Icon (rot/orange/grau) in der Personen-Detailansicht wenn offene Validierungsbefunde vorliegen; Klick navigiert in Aufgaben-Tab gefiltert auf diese Person | S |
 | VAL-CONFIG | **Regelkonfiguration Validierung** | Nutzer kann einzelne Validierungsregeln (de)aktivieren und Schwellenwerte anpassen (z. B. Altersgrenze, Jahreszahl Standesamt-Ära); gespeichert in IDB | M |
