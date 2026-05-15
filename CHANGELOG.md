@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-15a — GEDCOM-ObjePtBug: toter Code entfernt (sw v445–v447)
+
+- **sw v445–v447** `refactor(writer)`: `_newPhotoIds`/`_deletedPhotoIds` (nie befüllte Sets) + zugehörige Writer-Blöcke entfernt; Passthrough-if/else vereinfacht auf einfaches `for`-Loop; Inline-OBJE-Löschung via `p.media[]`-Splice war bereits korrekt; Linked-OBJE-Management (`@Mxx@`) als optionales zukünftiges Feature dokumentiert
+
+---
+
 ### Session 2026-05-14e — GRAMPS Attribute anzeigen (sw v444)
 
 - **sw v444** `feat(gramps)`: `p._grampsAttrs[]`/`f._grampsAttrs[]` in Personen- und Familien-Detailansicht als fact-rows ausgegeben (type als Label, value als Wert, optionale Note); bisher geparst aber nie angezeigt

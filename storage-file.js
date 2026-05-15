@@ -371,7 +371,6 @@ function _processLoadedText(text, filename) {
       AppState._undoStack = [];
       AppState._redoStack = [];
       if (typeof _clearNavState === 'function') _clearNavState();
-      _newPhotoIds.clear(); _deletedPhotoIds.clear();
       if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
       // IDB: primäre Persistenz (kein Größenlimit)
       Promise.all([
@@ -427,8 +426,6 @@ async function _loadGRAMPS(file) {
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
     AppState._canDirectSave   = false;
-    _newPhotoIds.clear();
-    _deletedPhotoIds.clear();
     // Persist filename in localStorage for display
     const filename = file.name;
     AppState._currentFilename = filename;

@@ -80,7 +80,7 @@ Ziel: Passthrough-Lücken schließen ohne GEDCOM-Roundtrip zu berühren. Reihenf
 |---|---|---|---|
 | CrossMode-CitNotes | **Citation-Notizen im Cross-Mode** | `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@` im GEDCOM-Export; setzt Fix-1 (Note-XREF) voraus; nur bei GRAMPS-Quelle aktiv | M |
 | ~~GRAMPS-ObjPassthrough~~ | ~~**Media `priv` + `_extra`**~~ | ~~`objMap[h]` + `_grampsObjMeta` auf `db`; `_objHandle()` liest `priv`/`_extra` daraus; Writer gibt `priv`-Attribut + `_extra` nach `<file/>` aus~~ | ~~S~~ | **erledigt sw v422** |
-| GEDCOM-ObjePtBug | **OBJE-Passthrough bei Photo-Löschung** | `_deletedPhotoIds`-Pfad löscht alle `1 OBJE`-Blöcke aus `_passthrough`, nicht nur das gelöschte Foto; Fix: Handle-Tracking pro OBJE-Block | S |
+| ~~GEDCOM-ObjePtBug~~ | ~~**OBJE-Passthrough bei Photo-Löschung**~~ | ~~`_deletedPhotoIds`-Pfad löscht alle `1 OBJE`-Blöcke aus `_passthrough`~~ | ~~S~~ | **erledigt sw v447** — toter Code entfernt (`_newPhotoIds`/`_deletedPhotoIds` + Writer-Blöcke); Inline-OBJE-Löschung via `p.media[]`-Splice korrekt; Linked-OBJE-Management (`@Mxx@`) → eigenes Feature wenn nötig |
 | U12 | **Dark Mode** | `prefers-color-scheme` in `styles.css`; `theme_color` in `manifest.json` | M |
 | F3 | **Pedigree-Collapse** | Inzucht-Koeffizient; baut auf F2-BFS auf | M |
 | GRAMPS-Orte | **Orts-Picker** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land) | M |

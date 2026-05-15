@@ -281,13 +281,6 @@ function writeINDIRecord(lines, p) {
     for (const l of (m._extra || [])) lines.push(l);
   }
 
-  // Manuell hinzugefügtes Foto ohne ursprünglichen OBJE-Eintrag → FILE-Referenz erzeugen
-  if (_newPhotoIds.has(p.id)) {
-    lines.push(`1 OBJE`);
-    lines.push(`2 FILE photos/${p.id}.jpg`);
-    lines.push(`3 FORM JPEG`);
-  }
-
   if (p.uid)      lines.push(`1 _UID ${p.uid}`);
   if (p.grampId)  lines.push(`1 _GRAMPS_ID ${p.grampId}`);
   if (p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
@@ -322,19 +315,7 @@ function writeINDIRecord(lines, p) {
 
   writeCHAN(lines, p, 1);
 
-  // Passthrough: gelöschte Fotos → OBJE-Block entfernen
-  if (_deletedPhotoIds.has(p.id)) {
-    let skip = false;
-    for (let i = _ptNameEnd; i < _pt.length; i++) {
-      const l = _pt[i];
-      if (/^1 OBJE/.test(l)) { skip = true; continue; }
-      if (skip && /^[2-9] /.test(l)) continue;
-      skip = false;
-      lines.push(l);
-    }
-  } else {
-    for (let i = _ptNameEnd; i < _pt.length; i++) lines.push(_pt[i]);
-  }
+  for (let i = _ptNameEnd; i < _pt.length; i++) lines.push(_pt[i]);
 }
 
 // ─── FAM-Record ───────────────────────────────────────────────────────────────

@@ -80,8 +80,6 @@ function setDb(newDb) {
 })();
 
 // ─── Konstante Globals (const — kein Shim nötig) ────────────────────────────
-const _newPhotoIds     = new Set(); // Personen mit manuell hinzugefügtem Foto
-const _deletedPhotoIds = new Set(); // Personen deren Foto gelöscht wurde
 const _activeSpouseMap = {};    // personId → aktiver Ehepartner-Index
 
 // Liefert den Original-GEDCOM-Text (erste geladene Version, aus RAM oder IDB via tryAutoLoad).
