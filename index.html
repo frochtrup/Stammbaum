@@ -1099,6 +1099,9 @@
         </button>
         <!-- Werkzeuge -->
         <div class="menu-section-label">Werkzeuge</div>
+        <button class="btn menu-btn" data-action="menuBook">
+          &#128214; &nbsp; Familienbuch erstellen
+        </button>
         <button class="btn menu-btn" data-action="menuDedup">
           &#128270; &nbsp; Duplikate erkennen
         </button>
@@ -1129,6 +1132,35 @@
     </div>
   </div>
 </div>
+<!-- Familienbuch -->
+<div class="modal-overlay" id="modalBook" role="dialog" aria-modal="true" aria-labelledby="lbl-modalBook">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalBook">Familienbuch erstellen</div>
+    <div class="sheet-body">
+
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Titel</div>
+      <input id="book-title" type="text" placeholder="z.B. Familie Müller — Familienbuch" class="mb-16">
+
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Inhalt</div>
+      <div class="theme-seg mb-16" id="book-mode-seg">
+        <button data-book-mode="ancestors" class="active">Ahnen des Probanden</button>
+        <button data-book-mode="all">Alle Personen</button>
+      </div>
+
+      <div class="d-flex ai-c gap-8 mb-16">
+        <input type="checkbox" id="book-photos" checked style="width:18px;height:18px;accent-color:var(--gold)">
+        <label for="book-photos" class="fs-090">Hauptfoto pro Person einbetten</label>
+      </div>
+
+      <button id="bookGenerateBtn" class="btn btn-primary w-full mb-8" data-action="generateBook">
+        Erstellen &amp; Herunterladen
+      </button>
+      <button class="btn btn-cancel w-full" data-action="closeModal" data-modal="modalBook">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Einstellungen -->
 <div class="modal-overlay" id="modalSettings" role="dialog" aria-modal="true" aria-labelledby="lbl-modalSettings">
   <div class="sheet">
@@ -1550,6 +1582,7 @@
 <script src="ui-views-hof.js"></script>
 <script src="ui-views-map.js"></script>
 <script src="ui-views-stats.js"></script>
+<script src="ui-book.js"></script>
 <script src="ui-dedup.js"></script>
 <script src="ui-fanchart.js"></script>
 <script src="ui-forms.js"></script>

@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v452 · Cache: `stammbaum-v452`
+**sw-Version:** v453 · Cache: `stammbaum-v453`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -64,7 +64,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X | L |
 | F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
 | F9 | **Zeitleiste** | Personen-Events neben historischen Ereignissen; `ui-timeline.js` | XL |
-| F10 | **Buchgenerator** | HTML/PDF Familienbuch; Ahnentafel + Biografie + Fotos | XL |
+| ~~F10~~ | ~~**Buchgenerator**~~ | ~~`ui-book.js`: Kekule-Ahnenindex, Personen-Biografie, Hauptfoto (base64), Familien, Quellen, Inhaltsverzeichnis, Namenindex; Modus Ahnen/Alle; Download als HTML — **erledigt sw v453**~~ | — |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
 
 ---

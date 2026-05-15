@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v452';
+const CACHE_NAME = 'stammbaum-v453';
 const PRECACHE = [
   './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
   './fonts/fonts.css',
@@ -17,6 +17,7 @@ const PRECACHE = [
   './ui-views-tree.js', './ui-views-tasks.js', './ui-views-person.js', './ui-views-family.js',
   './ui-views-source.js', './ui-views-place.js', './ui-views-hof.js', './ui-views-map.js', './ui-views-stats.js', './ui-dedup.js',
   './debug-activate.js', './debug-gramps.js',
+  './ui-book.js',
   './ui-fanchart.js', './ui-forms.js', './ui-forms-person.js', './ui-forms-family.js', './ui-forms-repo.js', './ui-forms-event.js', './ui-debug.js', './ui-media.js',
   './onedrive-auth.js', './onedrive-import.js', './onedrive.js'
 ];
