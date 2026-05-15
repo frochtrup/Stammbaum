@@ -739,18 +739,19 @@ function showDetail(id, pushHistory = true) {
       <div class="section-title">Ehepartner &amp; Kinder</div>
       <button class="section-add" data-action="showAddSpouseFlow" data-pid="${id}">+ Ehepartner</button>
     </div>`;
-  const _sortedFams = [...p.fams].sort((a, b) => {
-    const da = AppState.db.families[a]?.marr?.date || '';
-    const db_ = AppState.db.families[b]?.marr?.date || '';
-    return evDateKey(da).localeCompare(evDateKey(db_));
-  });
-  for (const famId of _sortedFams) {
+  const nFams = p.fams.length;
+  for (let _fi = 0; _fi < nFams; _fi++) {
+    const famId = p.fams[_fi];
     const fam = AppState.db.families[famId];
     if (!fam) continue;
     const marriageLabel = fam.marr.date ? fam.marr.date : famId;
+    const upBtn   = nFams > 1 && _fi > 0
+      ? `<button class="fam-order-btn" data-action="moveFamUp"   data-pid="${id}" data-fid="${famId}" title="Früher">↑</button>` : '';
+    const downBtn = nFams > 1 && _fi < nFams - 1
+      ? `<button class="fam-order-btn" data-action="moveFamDown" data-pid="${id}" data-fid="${famId}" title="Später">↓</button>` : '';
     html += `<div class="family-nav-row" data-action="showFamilyDetail" data-id="${famId}">
       <span class="fnr-label"><span class="fnr-icon">⚭</span> Familie · ${esc(marriageLabel)}</span>
-      <span class="row-arrow">›</span>
+      <span class="fnr-reorder">${upBtn}${downBtn}<span class="row-arrow">›</span></span>
     </div>`;
     const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
     const partner = partnerId ? AppState.db.individuals[partnerId] : null;
@@ -885,3 +886,16 @@ function _injectJumpBar() {
   ).join('');
   document.getElementById('detailContent').prepend(bar);
 }
+
+// ── Familien-Reihenfolge ändern ──
+window.moveFamOrder = function (pid, famId, dir) {
+  const p = AppState.db.individuals[pid];
+  if (!p) return;
+  const i = p.fams.indexOf(famId);
+  if (i < 0) return;
+  const j = i + dir;
+  if (j < 0 || j >= p.fams.length) return;
+  [p.fams[i], p.fams[j]] = [p.fams[j], p.fams[i]];
+  markChanged();
+  showDetail(pid);
+};

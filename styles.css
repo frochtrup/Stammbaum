@@ -1064,6 +1064,12 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .family-nav-row:active { opacity: 0.6; }
 .family-nav-row .fnr-label { display: flex; align-items: center; gap: 6px; }
 .family-nav-row .fnr-icon { font-size: 1rem; }
+.fnr-reorder { display: flex; align-items: center; gap: 2px; }
+.fam-order-btn {
+  background: none; border: none; cursor: pointer; padding: 2px 6px;
+  color: var(--gold-dim); font-size: 0.9rem; line-height: 1;
+}
+.fam-order-btn:active { color: var(--gold-lt); }
 .row-arrow { color: var(--gold-dim); font-size: 1.15rem; line-height: 1; }
 
 /* ═══════════════════════════════════════
