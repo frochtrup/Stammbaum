@@ -244,7 +244,7 @@ function fillDateFields(qualId, dateBaseId, date2BaseId, raw) {
   if (date2BaseId) {
     writeDatePartToFields(date2BaseId, date2);
     const grp = document.getElementById(date2BaseId + '-group');
-    if (grp) grp.style.display = (qual === 'BET' || qual === 'FROM') ? '' : 'none';
+    if (grp) grp.hidden = !(qual === 'BET' || qual === 'FROM');
   }
 }
 
@@ -252,7 +252,7 @@ function fillDateFields(qualId, dateBaseId, date2BaseId, raw) {
 function onDateQualChange(selectEl, date2Id) {
   if (!date2Id) return;
   const grp = document.getElementById(date2Id + '-group');
-  if (grp) grp.style.display = (selectEl.value === 'BET' || selectEl.value === 'FROM') ? '' : 'none';
+  if (grp) grp.hidden = !(selectEl.value === 'BET' || selectEl.value === 'FROM');
 }
 
 // ── 3-Felder-Datum-Hilfsfunktionen ──────────────────────────────────────────
