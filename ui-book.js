@@ -116,13 +116,16 @@ function _familyBlockHtml(p) {
   const db = AppState.db;
   let html = '';
 
+  const personLink = (id, name) => `<a href="#p-${id}">${esc(name)}</a>`;
+
   // Eltern
   const famcId = p.famc?.[0]?.famId;
   if (famcId && db.families[famcId]) {
     const fam = db.families[famcId];
-    const husb = fam.husb && db.individuals[fam.husb];
-    const wife = fam.wife && db.individuals[fam.wife];
-    const parts = [husb && esc(husb.name), wife && esc(wife.name)].filter(Boolean);
+    const parts = [
+      fam.husb && db.individuals[fam.husb] && personLink(fam.husb, db.individuals[fam.husb].name),
+      fam.wife && db.individuals[fam.wife] && personLink(fam.wife, db.individuals[fam.wife].name),
+    ].filter(Boolean);
     if (parts.length) {
       html += `<div class="family-block"><span class="fam-label">Eltern</span> ${parts.join(' &amp; ')}</div>`;
     }
@@ -132,11 +135,10 @@ function _familyBlockHtml(p) {
   (p.fams || []).forEach(famId => {
     const fam = db.families[famId];
     if (!fam) return;
-    const spouse = p.sex === 'F'
-      ? (fam.husb && db.individuals[fam.husb])
-      : (fam.wife && db.individuals[fam.wife]);
+    const spouseId = p.sex === 'F' ? fam.husb : fam.wife;
+    const spouse   = spouseId && db.individuals[spouseId];
     const marrParts = [fam.marr?.date, compactPlace(fam.marr?.place)].filter(Boolean).join(', ');
-    const spouseName = spouse ? esc(spouse.name) : '—';
+    const spouseName = spouse ? personLink(spouseId, spouse.name) : '—';
     html += `<div class="family-block">`;
     html += `<span class="fam-label">&#x26AD;</span> ${spouseName}`;
     if (marrParts) html += ` <span class="fam-meta">${esc(marrParts)}</span>`;
