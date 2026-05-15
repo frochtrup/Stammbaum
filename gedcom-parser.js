@@ -188,7 +188,7 @@ function parseGEDCOM(text, parseErrors) {
           if (val && val.startsWith('@')) {
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
         else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
@@ -317,9 +317,14 @@ function parseGEDCOM(text, parseErrors) {
         }
         // Media
         if (lv1tag === 'OBJE' && cur.media.length) {
-          if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
-          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; cur.media[cur.media.length-1].titleIsLv2 = true; }
-          else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
+          const _cm = cur.media[cur.media.length-1];
+          if      (tag==='FILE')  _cm.file  = val;
+          else if (tag==='TITL')  { _cm.title = val; _cm.titleIsLv2 = true; }
+          else if (tag==='NOTE')  _cm.note  = val;
+          else if (tag==='_DATE') _cm.date  = val;
+          else if (tag==='_SCBK') _cm.scbk  = val;
+          else if (tag==='_PRIM') _cm.prim  = val;
+          else { _cm._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=_cm._extra; }
         }
         // Last changed
         if (lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
@@ -345,6 +350,8 @@ function parseGEDCOM(text, parseErrors) {
           cur.media[cur.media.length-1].title = val;
         if (lv1tag === 'OBJE' && lv2tag === 'FILE' && tag === 'FORM' && cur.media.length)
           cur.media[cur.media.length-1].form = val;
+        if (lv1tag === 'OBJE' && lv2tag === 'NOTE' && (tag === 'CONC' || tag === 'CONT') && cur.media.length)
+          cur.media[cur.media.length-1].note += (tag === 'CONT' ? '\n' : '') + val;
         // Event media (2 OBJE → 3 FILE/TITL/FORM)
         if (lv2tag === 'OBJE' && evIdx >= 0 && cur.events[evIdx]?.media?.length > 0) {
           const em = cur.events[evIdx].media[cur.events[evIdx].media.length - 1];
@@ -475,7 +482,7 @@ function parseGEDCOM(text, parseErrors) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
         else {
@@ -528,9 +535,14 @@ function parseGEDCOM(text, parseErrors) {
           else { ev._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth = 2; _ptTarget = ev._extra; }
         }
         if (lv1tag==='OBJE' && cur.media.length) {
-          if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
-          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; cur.media[cur.media.length-1].titleIsLv2 = true; }
-          else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
+          const _cm = cur.media[cur.media.length-1];
+          if      (tag==='FILE')  _cm.file  = val;
+          else if (tag==='TITL')  { _cm.title = val; _cm.titleIsLv2 = true; }
+          else if (tag==='NOTE')  _cm.note  = val;
+          else if (tag==='_DATE') _cm.date  = val;
+          else if (tag==='_SCBK') _cm.scbk  = val;
+          else if (tag==='_PRIM') _cm.prim  = val;
+          else { _cm._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=_cm._extra; }
         }
         if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.noteTexts.length) cur.noteTexts[cur.noteTexts.length-1] += (tag==='CONT'?'\n':'') + val;
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
@@ -560,6 +572,8 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
           else { cur.media[cur.media.length-1]._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
+        if (lv1tag==='OBJE' && lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.media.length)
+          cur.media[cur.media.length-1].note += (tag==='CONT' ? '\n' : '') + val;
         if (lv2tag==='DATE' && lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
         // lv=3 Sub-Tags unter 2 SOUR → direkt auf _curCit schreiben (PAGE/QUAY/NOTE/OBJE/extra)
         if (lv2tag === 'SOUR' && _curCit && tag !== 'TIME' && tag !== 'SOUR') {
@@ -694,7 +708,7 @@ function parseGEDCOM(text, parseErrors) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
         else {
@@ -705,9 +719,14 @@ function parseGEDCOM(text, parseErrors) {
       }
       else if (lv === 2) {
         if (lv1tag==='OBJE' && cur.media.length) {
-          if (tag==='FILE')      cur.media[cur.media.length-1].file  = val;
-          else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; cur.media[cur.media.length-1].titleIsLv2 = true; }
-          else { cur.media[cur.media.length-1]._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=cur.media[cur.media.length-1]._extra; }
+          const _cm = cur.media[cur.media.length-1];
+          if      (tag==='FILE')  _cm.file  = val;
+          else if (tag==='TITL')  { _cm.title = val; _cm.titleIsLv2 = true; }
+          else if (tag==='NOTE')  _cm.note  = val;
+          else if (tag==='_DATE') _cm.date  = val;
+          else if (tag==='_SCBK') _cm.scbk  = val;
+          else if (tag==='_PRIM') _cm.prim  = val;
+          else { _cm._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=_cm._extra; }
         }
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='TITL') cur.title  += (tag==='CONT'?'\n':'') + val;
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='TEXT') cur.text   += (tag==='CONT'?'\n':'') + val;
@@ -726,6 +745,8 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='TITL') { cur.media[cur.media.length-1].title = val; _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
           else { cur.media[cur.media.length-1]._extra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.media[cur.media.length-1]._extra; }
         }
+        if (lv1tag==='OBJE' && lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.media.length)
+          cur.media[cur.media.length-1].note += (tag==='CONT' ? '\n' : '') + val;
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
       }
     }

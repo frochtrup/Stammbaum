@@ -70,8 +70,10 @@ function openEditMediaDialog(type, entityId, idx) {
   else if (type === 'source')       m = getSource(entityId)?.media?.[idx];
   if (!m) return;
 
-  document.getElementById('em-title').value = m.title || '';
+  document.getElementById('em-title').value = m.title || m.titl || '';
   document.getElementById('em-file').value  = m.file  || '';
+  document.getElementById('em-note').value  = m.note  || '';
+  document.getElementById('em-date').value  = m.date  || '';
   document.getElementById('em-prim-check').checked = !!(m.prim && m.prim !== '');
   document.getElementById('em-od-row').style.display = _odIsConnected() ? '' : 'none';
 
@@ -129,13 +131,13 @@ function _setEditMediaPreview(src) {
 
 function _getFamMarrObjeEntries(f) {
   // f.marr.media[] enthält inline OBJE-Blöcke unter MARR; Feld ist titl (nicht title)
-  return (f?.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '' }));
+  return (f?.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '', note: m.note || '', date: m.date || '', prim: m.prim || '' }));
 }
 
-function _updateFamMarrObjeAt(f, targetIdx, { title, file, form }) {
+function _updateFamMarrObjeAt(f, targetIdx, { title, file, form, note, date }) {
   const media = f.marr?.media;
   if (!media || targetIdx >= media.length) return;
-  media[targetIdx] = { ...media[targetIdx], titl: title, file, form };
+  media[targetIdx] = { ...media[targetIdx], titl: title, file, form, note, date };
 }
 
 async function openSourceMediaView(srcId, idx) {
@@ -174,6 +176,8 @@ function _invalidateThumbCache(entityPrefix) {
 function confirmEditMedia() {
   const title   = document.getElementById('em-title').value.trim();
   const file    = document.getElementById('em-file').value.trim();
+  const note    = document.getElementById('em-note').value.trim();
+  const date    = document.getElementById('em-date').value.trim();
   const setPrim = document.getElementById('em-prim-check').checked;
   if (!title && !file) { showToast('Bitte Titel oder Dateiname eingeben'); return; }
   const form = file ? (file.match(/\.(jpe?g)$/i) ? 'JPEG' : file.match(/\.png$/i) ? 'PNG' : 'FILE') : 'FILE';
@@ -181,7 +185,7 @@ function confirmEditMedia() {
   if (_editMediaType === 'person') {
     const p = getPerson(_editMediaId);
     if (!p?.media) return;
-    p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title };
+    p.media[_editMediaIdx] = { ...p.media[_editMediaIdx], form, file, title, note, date };
     const moved = _applyPrimAndReorder(p.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('persons', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
@@ -191,7 +195,7 @@ function confirmEditMedia() {
   } else if (_editMediaType === 'family') {
     const f = getFamily(_editMediaId);
     if (!f) return;
-    _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title });
+    _updateFamMarrObjeAt(f, _editMediaIdx, { form, file, title, note, date });
     const moved = _applyPrimAndReorder(f.marr?.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_fam_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('families', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
@@ -201,7 +205,7 @@ function confirmEditMedia() {
   } else if (_editMediaType === 'family_media') {
     const f = getFamily(_editMediaId);
     if (!f?.media) return;
-    f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title };
+    f.media[_editMediaIdx] = { ...f.media[_editMediaIdx], form, file, title, note, date };
     const moved = _applyPrimAndReorder(f.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_fam_media_' + _editMediaId);
     AppState.changed = true;
@@ -210,7 +214,7 @@ function confirmEditMedia() {
   } else if (_editMediaType === 'source') {
     const s = getSource(_editMediaId);
     if (!s?.media) return;
-    s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title };
+    s.media[_editMediaIdx] = { ...s.media[_editMediaIdx], form, file, title, note, date };
     const moved = _applyPrimAndReorder(s.media, _editMediaIdx, setPrim);
     if (moved) _invalidateThumbCache('photo_src_' + _editMediaId);
     if (_editMediaOdFileId) _addMediaToFilemap('sources', _editMediaId, { fileId: _editMediaOdFileId, filename: file, prim: _editMediaIdx === 0 }, _editMediaIdx);
