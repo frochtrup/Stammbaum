@@ -191,12 +191,17 @@ body.tree-active #treeFcToggle     { display: inline-flex; }
 body.fc-mode #treeFcToggle         { display: inline-flex; }
 body.desktop-mode.fc-mode #fcContainer { min-height: 0; height: 100%; }
 
-/* Gen-Buttons Overlay (fixed, 12px über Bottom-Nav) */
+/* #v-tree explizite Höhe damit absolute bottom-Positionierung korrekt ist */
+#v-tree {
+  height: calc(100dvh - 57px - env(safe-area-inset-bottom, 0px));
+}
+body.desktop-mode #v-tree { height: auto; }
+
+/* Gen-Buttons Overlay (bottom-left im Baum) */
 #treeGenOverlay {
   display: none;
-  position: fixed;
-  bottom: calc(57px + env(safe-area-inset-bottom, 0px) + 12px);
-  left: 12px;
+  position: absolute;
+  bottom: 12px; left: 12px;
   z-index: 10;
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -207,9 +212,6 @@ body.desktop-mode.fc-mode #fcContainer { min-height: 0; height: 100%; }
   gap: 4px;
 }
 body.tree-active #treeGenOverlay { display: flex; }
-body.desktop-mode #treeGenOverlay {
-  bottom: 12px;
-}
 /* Topbar: Proband-Button + Trennlinie vor Darstellungsarten */
 #treeProbandBtn              { display: none; }
 body.tree-active #treeProbandBtn { display: inline-flex; }

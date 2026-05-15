@@ -880,7 +880,11 @@ const _CLICK_MAP = {
   openMapPersonPicker:     ()  => openMapPersonPicker(),
   selectMapPerson:         el => selectMapPerson(el.dataset.pid),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
-  treeShowProband:         ()  => showDetail(currentTreeId || AppState.currentPersonId),
+  treeShowProband:         ()  => {
+    const id = currentTreeId || AppState.currentPersonId;
+    if (document.body.classList.contains('desc-tree-mode')) showDescTree(id, false);
+    else if (!document.body.classList.contains('fc-mode'))  showTree(id, false);
+  },
   moveFamUp:               el => moveFamOrder(el.dataset.pid, el.dataset.fid, -1),
   moveFamDown:             el => moveFamOrder(el.dataset.pid, el.dataset.fid, +1),
   unlinkMember:            el => unlinkMember(el.dataset.fid, el.dataset.pid),
