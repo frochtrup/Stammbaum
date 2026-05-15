@@ -433,6 +433,75 @@ function debounce(fn, ms) {
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
+// Place-Autocomplete für alle Ort-Eingabefelder.
+// Im GRAMPS-Modus (db.placeObjects vorhanden) werden strukturierte Orte angeboten
+// und placeIdFieldId mit der passenden ID befüllt; im GEDCOM-Modus nur Freitext-Vorschläge.
+// placeIdFieldId kann null sein (kein placeId-Tracking).
+function initPlaceAutocomplete(placeInputId, ddId, placeIdFieldId) {
+  const input = document.getElementById(placeInputId);
+  const dd    = document.getElementById(ddId);
+  if (!input || !dd) return;
+
+  const _run = debounce(() => {
+    const q  = input.value.toLowerCase().trim();
+    dd.innerHTML = '';
+    if (!q) { dd.style.display = 'none'; return; }
+
+    const po       = AppState.db?.placeObjects;
+    const isGramps = po && Object.keys(po).length > 0;
+    let items;
+
+    if (isGramps) {
+      items = Object.values(po)
+        .filter(p => p.title.toLowerCase().includes(q))
+        .sort((a, b) => a.title.localeCompare(b.title, 'de'))
+        .slice(0, 15);
+    } else {
+      items = [...collectPlaces().values()]
+        .filter(p => p.name.toLowerCase().includes(q))
+        .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+        .slice(0, 15);
+    }
+    if (!items.length) { dd.style.display = 'none'; return; }
+
+    const idField = placeIdFieldId ? document.getElementById(placeIdFieldId) : null;
+    items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'place-dropdown-item';
+      if (isGramps) {
+        el.textContent = item.title;
+        if (item.type && item.type !== 'Unknown') {
+          const badge = document.createElement('span');
+          badge.className = 'ac-meta';
+          badge.textContent = ' · ' + item.type;
+          el.appendChild(badge);
+        }
+        el.addEventListener('mousedown', () => {
+          input.value = item.title;
+          if (idField) idField.value = item.id;
+          dd.innerHTML = ''; dd.style.display = 'none';
+        });
+      } else {
+        el.textContent = item.name;
+        el.addEventListener('mousedown', () => {
+          input.value = item.name;
+          if (idField) idField.value = '';
+          dd.innerHTML = ''; dd.style.display = 'none';
+        });
+      }
+      dd.appendChild(el);
+    });
+    dd.style.display = 'block';
+  }, 150);
+
+  input.addEventListener('input', () => {
+    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    _run();
+  });
+  input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
+  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+}
+
 // ─────────────────────────────────────
 //  F4b — Citation-Datenmodell
 // ─────────────────────────────────────

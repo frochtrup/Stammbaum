@@ -22,7 +22,8 @@ function showFamilyForm(id, ctx) {
   document.getElementById('ff-wife').value = f?.wife || '';
   fillDateFields('ff-mdate-qual', 'ff-mdate', null, f?.marr?.date  || '');
   initPlaceMode('ff-mplace');
-  document.getElementById('ff-mplace').value = f?.marr?.place  || '';
+  document.getElementById('ff-mplace').value    = f?.marr?.place   || '';
+  document.getElementById('ff-mplace-id').value = f?.marr?.placeId || '';
   document.getElementById('ff-note').value = f?.noteTexts?.join('\n') ?? '';
   document.getElementById('deleteFamilyBtn').style.display = f ? 'block' : 'none';
   initSrcWidget('ff', f?.marr?.citations || []);
@@ -47,8 +48,10 @@ function saveFamily() {
   const husb = document.getElementById('ff-husb').value || null;
   const wife = document.getElementById('ff-wife').value || null;
   if (!husb && !wife) { showToast('⚠ Mindestens ein Elternteil erforderlich'); return; }
-  const mdate  = buildGedDateFromFields('ff-mdate-qual', 'ff-mdate', null);
-  const mplace = getPlaceFromForm('ff-mplace');
+  const mdate   = buildGedDateFromFields('ff-mdate-qual', 'ff-mdate', null);
+  const mplace  = getPlaceFromForm('ff-mplace');
+  const _fmpid  = document.getElementById('ff-mplace-id')?.value || null;
+  const mplaceId = (_fmpid && AppState.db.placeObjects?.[_fmpid]?.title === mplace) ? _fmpid : null;
   const note = document.getElementById('ff-note').value.trim();
   const existingFam = getFamily(id) || {};
   const children = [...(existingFam.children || [])];
@@ -59,7 +62,7 @@ function saveFamily() {
   AppState.db.families[id] = {
     ...existingFam,
     id, husb, wife, children,
-    marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace,
+    marr:  { ...(existingFam.marr||{}),  date: mdate,  place: mplace, placeId: mplaceId,
       citations: [...(srcWidgetState['ff']?.citations || [])]
     },
     engag: existingFam.engag || {},
@@ -125,3 +128,5 @@ async function deleteFamily() {
   markChanged();
   showMain(); showToast('✓ Familie gelöscht');
 }
+
+initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd', 'ff-mplace-id');

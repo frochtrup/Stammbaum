@@ -454,3 +454,9 @@ function deleteExtraName() {
   closeModal('modalExtraName');
   showDetail(pid);
 }
+
+initPlaceAutocomplete('pf-birth-place',  'pf-birth-place-dd',  null);
+initPlaceAutocomplete('pf-death-place',  'pf-death-place-dd',  null);
+initPlaceAutocomplete('pf-chr-place',    'pf-chr-place-dd',    null);
+initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd',   null);
+initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd', null);

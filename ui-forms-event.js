@@ -601,3 +601,6 @@ function initAddrAutocomplete() {
 }
 
 initAddrAutocomplete();
+
+initPlaceAutocomplete('ef-place',  'ef-place-dd',  'ef-place-id');
+initPlaceAutocomplete('fev-place', 'fev-place-dd', 'fev-place-id');
