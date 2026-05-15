@@ -73,9 +73,11 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | VAL-CONFIG | **Regelkonfiguration Validierung** | Nutzer kann einzelne Validierungsregeln (de)aktivieren und Schwellenwerte anpassen (z. B. Altersgrenze, Jahreszahl Standesamt-Ära); gespeichert in IDB | M |
 | GEDCOM-7 | **GEDCOM 7.0 Evaluierung** | FamilySearch-Standard im Kommen; Parser/Writer-Anpassung für neue Tag-Struktur; HEAD GEDC VERS 7.0 | L |
 | ASSO-Event | **Event-Rollen voll editierbar** | Personen als Zeugen/Paten zu Events zuordnen; schreibt `1 ASSO`-Block; nur nach ASSO-UI sinnvoll | L |
+| MAP-HIST | **Historische Karten** | Alternative Basiskarte im Kartenview (z. B. OpenHistoricalMap-Tiles, auswählbar per Umschalter); Epochen-Slider oder festes Jahrhundert wählbar; setzt `ui-views-map.js` voraus | M |
+| MAP-MIGR | **Migrationswege** | Pfeile/Linien zwischen Geburtsort → Wohnorte → Sterbeort einer Person oder Familiengruppe; Farbe nach Generation oder Zeitraum; Modus-Toggle im Kartenview neben Personen/Orte | M |
 | F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X | L |
 | F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
-| F9 | **Zeitleiste** | Personen-Events neben historischen Ereignissen; `ui-timeline.js` | XL |
+| F9 | **Visuelle Timeline** | Horizontale Lebenslinie pro Person in `ui-timeline.js`; Ereignisse als Icons auf der Zeitachse; Farben nach Kategorie (Familie/Beruf/Militär/Migration); Fotos an markanten Punkten einblendbar; historische Ereignisse als Kontext-Ebene; Export als SVG/HTML | XL |
 | ~~F10~~ | ~~**Buchgenerator**~~ | ~~`ui-book.js`: Kekule-Ahnenindex, Personen-Biografie, Hauptfoto (base64), Familien, Quellen, Inhaltsverzeichnis, Namenindex; Modus Ahnen/Alle; Download als HTML — **erledigt sw v453**~~ | — |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
 
