@@ -61,6 +61,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| OBJE-FIELDS | **OBJE.TYPE / DATE / TEXT strukturiert** | Top-level OBJE: vollständig Passthrough (kein Datenverlust). Inline OBJE unter INDI/FAM: standard `DATE`, `TYPE` und `TEXT` landen in `_extra[]`; `_DATE`-Extension bereits geparst. Parser: `m.type` (Foto/Urkunde/Karte), `m.date` (Entstehungsdatum), `m.text` (Bildunterschrift); Writer: strukturierte Ausgabe statt `_extra[]`; UI: TYPE als Filter im Media-Browser, TEXT als Bildunterschrift | S+S |
 | ALIA | **ALIA-Aliasverweise** | `1 ALIA @xref@` auf INDI; Parser: `p.alia[]`; Writer: `1 ALIA`-Blöcke (aktuell Passthrough — kein Datenverlust, aber kein strukturierter Zugriff); UI: Personen-Detail zeigt verlinkte Alias-Personen (read-only Schritt 1, Edit Schritt 2) | S+S |
 | REFN | **REFN/RIN strukturiert** | `1 REFN value / 2 TYPE type` auf INDI/FAM/SOUR/REPO; Parser: `p.refns[]` mit `{val,type}`; Writer: `1 REFN`-Blöcke (aktuell Passthrough); UI optional — primär für Companion-Workflows mit externen Programmen (Legacy, RootsMagic) | S |
 | VAL-FAM | **Familien-Tasks** | `f._tasks[]` analog zu `p._tasks[]` aufbauen; GEDCOM-Roundtrip via `_TASK` unter FAM-Record; Validierungsbefunde für Familien direkt auf der Familie ablegen statt auf Elternteilen | M |
