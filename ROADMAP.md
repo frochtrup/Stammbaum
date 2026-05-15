@@ -54,6 +54,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren erkennen + im Sanduhr-Baum zusammenführen; Inzucht-Koeffizient berechnen | M |
 | Perf-Worker | **Web Worker für Duplikat-Scan** | `findDuplicatePairs()` in `Worker` auslagern; Main Thread bleibt bei >2000 Personen reaktiv | M |
 | ~~Nachkommen~~ | ~~**Nachkommen-Baum**~~ | ✅ **Abgeschlossen** (sw v468): `ui-desc-tree.js`; Toggle-Button `⇩` im Baum-View; Gen-Buttons 2–7; T-Linien-Layout; `▼`-Badge bei abgeschnittener Tiefe; alle Ehepartner in Reihe rechts am Startpunkt (je ⚭-Button); Geschwister horizontal gestapelt links (variable Überlappung); `½`-Badge für Kinder aus Nebenehe | ~~L~~ |
+| ~~OBJE-FIELDS~~ | ~~**OBJE-Felder note/date/scbk/prim dediziert**~~ | ✅ **Abgeschlossen** (sw v476): `p.media[]`/`f.media[]`/`s.media[]` erhalten `note`/`date`/`scbk`/`prim` als dedizierte Felder statt `_extra[]`-Passthrough; `_PRIM` aus GEDCOM korrekt in `m.prim`; `_DATE` → `2 NOTE Aufnahmedatum: …` (GEDCOM-konform, keine neuen Schulden); Edit-Form: Felder Notiz + Aufnahmedatum; alle 4 Save-Pfade | ~~S+S~~ |
 
 ---
 
@@ -61,7 +62,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| OBJE-FIELDS | **OBJE.TYPE / DATE / TEXT strukturiert** | Top-level OBJE: vollständig Passthrough (kein Datenverlust). Inline OBJE unter INDI/FAM: standard `DATE`, `TYPE` und `TEXT` landen in `_extra[]`; `_DATE`-Extension bereits geparst. Parser: `m.type` (Foto/Urkunde/Karte), `m.date` (Entstehungsdatum), `m.text` (Bildunterschrift); Writer: strukturierte Ausgabe statt `_extra[]`; UI: TYPE als Filter im Media-Browser, TEXT als Bildunterschrift | S+S |
+| OBJE-TYPE | **OBJE.TYPE strukturiert** | `m.type` (Foto/Urkunde/Karte); Parser + Writer; UI: TYPE als Filter im Media-Browser | S |
 | ALIA | **ALIA-Aliasverweise** | `1 ALIA @xref@` auf INDI; Parser: `p.alia[]`; Writer: `1 ALIA`-Blöcke (aktuell Passthrough — kein Datenverlust, aber kein strukturierter Zugriff); UI: Personen-Detail zeigt verlinkte Alias-Personen (read-only Schritt 1, Edit Schritt 2) | S+S |
 | REFN | **REFN/RIN strukturiert** | `1 REFN value / 2 TYPE type` auf INDI/FAM/SOUR/REPO; Parser: `p.refns[]` mit `{val,type}`; Writer: `1 REFN`-Blöcke (aktuell Passthrough); UI optional — primär für Companion-Workflows mit externen Programmen (Legacy, RootsMagic) | S |
 | VAL-FAM | **Familien-Tasks** | `f._tasks[]` analog zu `p._tasks[]` aufbauen; GEDCOM-Roundtrip via `_TASK` unter FAM-Record; Validierungsbefunde für Familien direkt auf der Familie ablegen statt auf Elternteilen | M |
