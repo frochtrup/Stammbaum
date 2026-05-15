@@ -40,10 +40,8 @@ function _descLayout(pid, depth) {
   const p = AppState.db.individuals[pid];
   if (!p) return { slots: 1, id: pid, children: [] };
 
-  // Hauptfamilie = erste Familie mit beiden Partnern (für Halbkind-Markierung)
-  const mainFam = (p.fams || [])
-    .map(fid => AppState.db.families[fid]).filter(Boolean)
-    .find(f => f.husb && f.wife);
+  // Hauptfamilie = erster Familieneintrag (Reihenfolge analog GEDCOM-Einträge)
+  const mainFam = (p.fams || []).map(fid => AppState.db.families[fid]).find(Boolean);
   const spouseId = mainFam
     ? (mainFam.husb === pid ? mainFam.wife : mainFam.husb)
     : null;

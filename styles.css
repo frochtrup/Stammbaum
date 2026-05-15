@@ -203,7 +203,7 @@ body.fc-mode #fcGenBtns { display: flex; }
 body.tree-active #treeDescToggle                { display: inline-flex; }
 #descGenBtns                                    { display: none; align-items: center; gap: 2px; }
 body.desc-tree-mode:not(.fc-mode) #descGenBtns { display: flex; }
-body.desc-tree-mode #treeKeyLegend             { display: none !important; }
+body.desc-tree-mode.fc-mode #treeKeyLegend      { display: none !important; }
 .tree-desc-more { right: auto; left: 4px; color: var(--gold); }
 
 .fc-gen-btn {
