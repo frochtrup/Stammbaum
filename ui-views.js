@@ -129,8 +129,11 @@ function _applyDynStyles(root) {
 function bnavTree() {
   setBnavActive('tree');
   const id = currentTreeId || smallestPersonId();
-  if (id) showTree(id);
-  else { showView('v-main'); setBnavActive('persons'); }
+  if (!id) { showView('v-main'); setBnavActive('persons'); return; }
+  if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
+    showDescTree(id, false);
+  else
+    showTree(id);
 }
 
 function switchPlacesSubTab(sub) {
@@ -316,6 +319,7 @@ function _historyItemLabel(item) {
   if (item.type === 'place')    return item.name || 'Ort';
   if (item.type === 'tree')     return 'Baum';
   if (item.type === 'fanchart') return 'Fächer';
+  if (item.type === 'desctree') return 'Nachkommen';
   return '◂';
 }
 
@@ -383,7 +387,8 @@ function _navToHistoryItem(item) {
   else if (item.type === 'repo')     showRepoDetail(item.id, false);
   else if (item.type === 'place')    showPlaceDetail(item.name, false);
   else if (item.type === 'tree')     showTree(item.id, false);
-  else if (item.type === 'fanchart') { if (typeof showFanChart === 'function') showFanChart(item.id); }
+  else if (item.type === 'fanchart') { if (typeof showFanChart  === 'function') showFanChart(item.id); }
+  else if (item.type === 'desctree') { if (typeof showDescTree  === 'function') showDescTree(item.id, false); }
   else showMain();
 }
 
@@ -400,7 +405,9 @@ function _captureCurrentNavState() {
     if (title) return { type: 'place', name: title };
   }
   if (document.getElementById('v-tree')?.classList.contains('active') && currentTreeId) {
-    return { type: document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree', id: currentTreeId };
+    const _ttype = document.body.classList.contains('fc-mode')       ? 'fanchart'  :
+                   document.body.classList.contains('desc-tree-mode') ? 'desctree' : 'tree';
+    return { type: _ttype, id: currentTreeId };
   }
   return null;
 }
@@ -414,7 +421,8 @@ function _beforeDetailNavigate() {
     UIState._navFwdStack = [];
   } else if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
     // Baum → Detail
-    const _type = document.body.classList.contains('fc-mode') ? 'fanchart' : 'tree';
+    const _type = document.body.classList.contains('fc-mode')       ? 'fanchart'  :
+                  document.body.classList.contains('desc-tree-mode') ? 'desctree' : 'tree';
     UIState._navHistory.push({ type: _type, id: currentTreeId });
     UIState._navFwdStack = [];
   } else {
@@ -909,7 +917,9 @@ const _CLICK_MAP = {
   treeNavBack:             ()  => treeNavBack(),
   setTreeGens:             el => setTreeGens(+el.dataset.tgen),
   setFcGens:               el => setFcGens(+el.dataset.gen),
+  setDescTreeGens:         el => setDescTreeGens(+el.dataset.dgen),
   toggleFanChart:          ()  => toggleFanChart(),
+  toggleDescTree:          ()  => toggleDescTree(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
   showRelPath:             el  => showRelPath(el.dataset.pid),
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },

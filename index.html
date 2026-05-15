@@ -202,6 +202,14 @@
         <button class="topbar-btn fc-gen-btn" data-tgen="8" data-action="setTreeGens">8</button>
         <button class="topbar-btn fc-gen-btn" data-tgen="9" data-action="setTreeGens">9</button>
       </span>
+      <span id="descGenBtns">
+        <button class="topbar-btn fc-gen-btn" data-dgen="2" data-action="setDescTreeGens">2</button>
+        <button class="topbar-btn fc-gen-btn" data-dgen="3" data-action="setDescTreeGens">3</button>
+        <button class="topbar-btn fc-gen-btn active" data-dgen="4" data-action="setDescTreeGens">4</button>
+        <button class="topbar-btn fc-gen-btn" data-dgen="5" data-action="setDescTreeGens">5</button>
+        <button class="topbar-btn fc-gen-btn" data-dgen="6" data-action="setDescTreeGens">6</button>
+        <button class="topbar-btn fc-gen-btn" data-dgen="7" data-action="setDescTreeGens">7</button>
+      </span>
       <span id="fcGenBtns">
         <button class="topbar-btn fc-gen-btn" data-gen="3" data-action="setFcGens">3</button>
         <button class="topbar-btn fc-gen-btn" data-gen="4" data-action="setFcGens">4</button>
@@ -212,6 +220,7 @@
         <button class="topbar-btn fc-gen-btn" data-gen="9" data-action="setFcGens">9</button>
       </span>
       <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◑</button>
+      <button class="topbar-btn" id="treeDescToggle" data-action="toggleDescTree" title="Nachkommen-Baum" aria-label="Nachkommen-Baum">⇩</button>
       <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" aria-label="Vollbild" hidden>⤢</button>
       <button class="topbar-btn topbar-btn-icon" data-action="openMenuModal" title="Menü" aria-label="Menü">☰</button>
     </div>
@@ -1585,6 +1594,7 @@
 <script src="ui-book.js"></script>
 <script src="ui-dedup.js"></script>
 <script src="ui-fanchart.js"></script>
+<script src="ui-desc-tree.js"></script>
 <script src="ui-forms.js"></script>
 <script src="ui-forms-person.js"></script>
 <script src="ui-forms-family.js"></script>

@@ -195,8 +195,16 @@ body.desktop-mode.fc-mode #fcContainer { min-height: 0; height: 100%; }
   align-items: center;
   gap: 2px;
 }
-body.tree-active:not(.fc-mode) #treeGenBtns { display: flex; }
+body.tree-active:not(.fc-mode):not(.desc-tree-mode) #treeGenBtns { display: flex; }
 body.fc-mode #fcGenBtns { display: flex; }
+
+/* Nachkommen-Baum */
+#treeDescToggle                                 { display: none; }
+body.tree-active #treeDescToggle                { display: inline-flex; }
+#descGenBtns                                    { display: none; align-items: center; gap: 2px; }
+body.desc-tree-mode:not(.fc-mode) #descGenBtns { display: flex; }
+body.desc-tree-mode #treeKeyLegend             { display: none !important; }
+.tree-desc-more { right: auto; left: 4px; color: var(--gold); }
 
 .fc-gen-btn {
   padding: 4px 8px !important;

@@ -27,6 +27,7 @@ window.showFanChart = function (pid) {
   FC._pid = pid;
   AppState.currentPersonId = pid;
   document.body.classList.add('fc-mode', 'tree-active');
+  document.body.classList.remove('desc-tree-mode');
   setBnavActive('tree');
 
   document.getElementById('treeTopTitle').textContent = _fcName(getPerson(pid), 28);

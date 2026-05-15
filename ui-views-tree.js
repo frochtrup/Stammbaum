@@ -19,6 +19,13 @@ function setTreeGens(n) {
   if (AppState.currentPersonId) showTree(AppState.currentPersonId, false);
 }
 
+function _navTreeFn(id) {
+  if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
+    showDescTree(id);
+  else
+    showTree(id);
+}
+
 function _initTreeKeys() {
   if (_treeKeyInit) return;
   _treeKeyInit = true;
@@ -27,10 +34,10 @@ function _initTreeKeys() {
     if (!document.getElementById('v-tree')?.classList.contains('active')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
     const t = _treeNavTargets;
-    if (e.key === 'ArrowUp')    { e.preventDefault(); const id = e.shiftKey ? t.up2 : t.up; if (id) showTree(id); }
-    if (e.key === 'ArrowDown')  { e.preventDefault(); if (t.down)  showTree(t.down); }
+    if (e.key === 'ArrowUp')    { e.preventDefault(); const id = e.shiftKey ? t.up2 : t.up; if (id) _navTreeFn(id); }
+    if (e.key === 'ArrowDown')  { e.preventDefault(); if (t.down)  _navTreeFn(t.down); }
     if (e.key === 'ArrowLeft')  { e.preventDefault(); treeNavBack(); }
-    if (e.key === 'ArrowRight') { e.preventDefault(); if (t.right) showTree(t.right); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (t.right) _navTreeFn(t.right); }
   });
 }
 
@@ -90,7 +97,10 @@ function _initTreeDrag() {
       const id = currentTreeId;
       if (!id) return;
       if (!document.getElementById('v-tree')?.classList.contains('active')) return;
-      showTree(id, false);
+      if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
+        showDescTree(id, false);
+      else
+        showTree(id, false);
     }, 250);
   });
 
@@ -338,11 +348,13 @@ function showTree(personId, addToHistory = true) {
   setBnavActive('tree');
   // Zoom-Scale sanieren (kann durch frühen Aufruf auf 0 gesetzt worden sein)
   if (_treeZoomScale <= 0) _treeZoomScale = 1;
-  // Fan Chart deaktivieren + Toggle-Button + Gen-Buttons einblenden
-  document.body.classList.remove('fc-mode');
+  // Fan Chart + Nachkommen-Baum deaktivieren, Toggle-Buttons zurücksetzen
+  document.body.classList.remove('fc-mode', 'desc-tree-mode');
   document.body.classList.add('tree-active');
   const _fcTb = document.getElementById('treeFcToggle');
   if (_fcTb) { _fcTb.style.display = 'inline-flex'; _fcTb.textContent = '◑'; _fcTb.title = 'Fächer-Diagramm'; }
+  const _dtTb = document.getElementById('treeDescToggle');
+  if (_dtTb) { _dtTb.textContent = '⇩'; _dtTb.title = 'Nachkommen-Baum'; }
   if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(personId);
 
   // ── Orientierung + Dimensionen ──

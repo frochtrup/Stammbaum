@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v461 · Cache: `stammbaum-v461`
+**sw-Version:** v462 · Cache: `stammbaum-v462`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -51,6 +51,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | ~~U12~~ | ~~**Dark Mode**~~ | ~~`prefers-color-scheme: light` + `[data-theme]`-Toggle in `styles.css`; `<meta theme-color media>` in `index.html`; Segment-Control (Auto/Hell/Dunkel) im Einstellungs-Modal; `applyTheme`/`setThemePref` in `storage-file.js` — **erledigt sw v452**~~ | — |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren erkennen + im Sanduhr-Baum zusammenführen; Inzucht-Koeffizient berechnen | M |
 | Perf-Worker | **Web Worker für Duplikat-Scan** | `findDuplicatePairs()` in `Worker` auslagern; Main Thread bleibt bei >2000 Personen reaktiv | M |
+| ~~Nachkommen~~ | ~~**Nachkommen-Baum**~~ | ✅ **Abgeschlossen** (sw v462): `ui-desc-tree.js`; Toggle-Button `⇩` im Baum-View; Gen-Buttons 2–7; T-Linien-Layout; `▼`-Badge bei abgeschnittener Tiefe | ~~L~~ |
 
 ---
 
