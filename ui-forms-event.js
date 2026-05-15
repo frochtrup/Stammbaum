@@ -101,7 +101,7 @@ function onEventTypeChange() {
   document.getElementById('ef-addr-group').hidden = !showAddr;
   const addrLabel = document.querySelector('#ef-addr-group .form-label');
   if (addrLabel) addrLabel.textContent = (t === 'PROP') ? 'Adresse (optional)' : 'Adresse';
-  document.getElementById('ef-godparents-group').style.display = (t === 'CHR') ? '' : 'none';
+  document.getElementById('ef-godparents-group').hidden = t !== 'CHR';
   // Reset dropdown on type change; content rebuilt on focus/input
   const dd = document.getElementById('ef-etype-dd');
   if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
