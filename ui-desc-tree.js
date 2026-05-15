@@ -40,23 +40,28 @@ function _descLayout(pid, depth) {
   const p = AppState.db.individuals[pid];
   if (!p) return { slots: 1, id: pid, children: [] };
 
+  // Hauptfamilie = erste Familie mit beiden Partnern (für Halbkind-Markierung)
   const mainFam = (p.fams || [])
     .map(fid => AppState.db.families[fid]).filter(Boolean)
     .find(f => f.husb && f.wife);
   const spouseId = mainFam
     ? (mainFam.husb === pid ? mainFam.wife : mainFam.husb)
     : null;
+  const mainKidSet = mainFam ? new Set(mainFam.children || []) : new Set();
 
   const seen = new Set();
-  const childIds = (p.fams || [])
-    .flatMap(famId => _sortedChildren(AppState.db.families[famId]?.children || []))
-    .filter(id => seen.has(id) ? false : (seen.add(id), true));
+  const childEntries = (p.fams || [])
+    .flatMap(famId => {
+      const kids = _sortedChildren(AppState.db.families[famId]?.children || []);
+      return kids.map(id => ({ id, isHalf: !mainKidSet.has(id) }));
+    })
+    .filter(e => seen.has(e.id) ? false : (seen.add(e.id), true));
 
-  if (depth <= 0 || !childIds.length) {
-    return { slots: 1, id: pid, spouseId, children: [], hasMore: depth <= 0 && childIds.length > 0 };
+  if (depth <= 0 || !childEntries.length) {
+    return { slots: 1, id: pid, spouseId, children: [], hasMore: depth <= 0 && childEntries.length > 0 };
   }
 
-  const children = childIds.map(cid => _descLayout(cid, depth - 1));
+  const children = childEntries.map(e => ({ ...(_descLayout(e.id, depth - 1)), isHalf: e.isHalf }));
   const totalSlots = children.reduce((s, c) => s + c.slots, 0);
   return { slots: Math.max(1, totalSlots), id: pid, spouseId, children, hasMore: false };
 }
@@ -99,11 +104,10 @@ window.showDescTree = function (personId, addToHistory = true) {
   const HGAP    = isPortrait ? 8   : 10;
   const VGAP    = isPortrait ? 38  : 48;
   const PAD     = isPortrait ? 14  : 20;
-  const MGAP    = isPortrait ? 8   : 10;  // Abstand Person–Ehepartner
+  const MGAP    = isPortrait ? 8   : 10;  // Abstand Person–Ehepartner (nur Wurzel)
   const SIB_GAP = isPortrait ? 8   : 10;  // Abstand Geschwister-Stapel zu Proband
   const PEEK    = isPortrait ? 10  : 12;  // Überlapp pro Geschwister-Karte
-  // SLOT: Breite einer Einheit inkl. Ehepartner-Platz rechts + Abstand
-  const SLOT = W + MGAP + W + HGAP;
+  const SLOT    = W + HGAP;               // Breite einer Kind-Einheit
 
   // ── Geschwister des Probanden ──
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
@@ -127,12 +131,12 @@ window.showDescTree = function (personId, addToHistory = true) {
   // rootCX: weit genug rechts für Geschwisterstapel links + halbe Baumbreite
   const rootCX = Math.max(PAD + sibsW + CW / 2, PAD + sibsW + treeSpan / 2);
 
-  // totalW: berücksichtigt Ehepartner des Probanden + Ehepartner des rechtesten Kindes
+  // totalW: berücksichtigt nur Ehepartner des Probanden (Wurzel)
   const rootSpouseW = layout.spouseId ? MGAP + W : 0;
   const totalW = Math.max(
     CW + 2 * PAD,
     rootCX + CW / 2 + rootSpouseW + PAD,
-    rootCX + treeSpan / 2 + W + MGAP + PAD   // Platz für rechteste Ehepartnerkarte
+    rootCX + treeSpan / 2 + PAD
   );
   const totalH = PAD + CH + (actualDepth > 1 ? (actualDepth - 1) * (H + VGAP) : 0) + PAD;
 
@@ -167,9 +171,11 @@ window.showDescTree = function (personId, addToHistory = true) {
   }
 
   // ── Personen-Karte ──
-  function mkDescCard(id, x, y, cardW, cardH, isRoot, hasMore, isSpouse) {
+  function mkDescCard(id, x, y, cardW, cardH, isRoot, hasMore, isSpouse, isHalf) {
     const div = document.createElement('div');
-    div.className = 'tree-card' + (isRoot && !isSpouse ? ' tree-card-center' : '');
+    div.className = 'tree-card' +
+      (isRoot && !isSpouse ? ' tree-card-center' : '') +
+      (isHalf ? ' tree-card-half' : '');
     div.style.left   = Math.round(x) + 'px';
     div.style.top    = Math.round(y) + 'px';
     div.style.width  = cardW + 'px';
@@ -196,6 +202,7 @@ window.showDescTree = function (personId, addToHistory = true) {
     div.innerHTML =
       `<div class="tree-name">${_treeNameHtml(q, isRoot && !isSpouse)}</div>` +
       (yr ? `<div class="tree-yr${isPortrait ? ' tree-yr--portrait' : ''}">${yr}</div>` : '') +
+      (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (hasMore ? `<div class="tree-half-badge tree-desc-more" title="Mehr Nachkommen — klicken zum Anzeigen">▼</div>` : '');
 
     div.addEventListener('click', isSpouse ? () => showDetail(id) : (isRoot ? () => showDetail(id) : () => showDescTree(id)));
@@ -228,18 +235,18 @@ window.showDescTree = function (personId, addToHistory = true) {
   }
 
   // ── Rekursives Rendern ──
-  function renderNode(node, cx, y, isRoot) {
+  function renderNode(node, cx, y, isRoot, isHalf) {
     const cardW = isRoot ? CW : W;
     const cardH = isRoot ? CH : H;
     const cardX = cx - cardW / 2;
 
-    mkDescCard(node.id, cardX, y, cardW, cardH, isRoot, node.hasMore, false);
+    mkDescCard(node.id, cardX, y, cardW, cardH, isRoot, node.hasMore, false, isHalf);
 
-    // Ehepartner rechts
-    if (node.spouseId) {
+    // Ehepartner rechts — nur am Wurzelknoten
+    if (isRoot && node.spouseId) {
       const spouseX = cardX + cardW + MGAP;
-      const spouseY = isRoot ? y + (CH - H) / 2 : y;
-      mkDescCard(node.spouseId, spouseX, spouseY, W, H, false, false, true);
+      const spouseY = y + (CH - H) / 2;
+      mkDescCard(node.spouseId, spouseX, spouseY, W, H, false, false, true, false);
       mkMarrBtn(
         cardX + cardW,
         spouseX,
@@ -269,12 +276,12 @@ window.showDescTree = function (personId, addToHistory = true) {
 
     xCur = cx - childrenSpan / 2;
     node.children.forEach(child => {
-      renderNode(child, xCur + child.slots * SLOT / 2, nextY, false);
+      renderNode(child, xCur + child.slots * SLOT / 2, nextY, false, child.isHalf);
       xCur += child.slots * SLOT;
     });
   }
 
-  renderNode(layout, rootCX, PAD, true);
+  renderNode(layout, rootCX, PAD, true, false);
 
   // ── Geschwister-Stapel (links vom Probanden) ──
   if (nSibs > 0) {
