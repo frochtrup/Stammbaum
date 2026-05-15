@@ -37,6 +37,8 @@ window.showFanChart = function (pid) {
   const tb = document.getElementById('treeFcToggle');
   if (tb) { tb.textContent = '⧖'; tb.title = 'Zur Sanduhr-Ansicht'; }
 
+  document.querySelectorAll('[data-gen]').forEach(b =>
+    b.classList.toggle('active', +b.dataset.gen === FC.genCount));
   _render(pid);
   _initResizeObserver();
 };

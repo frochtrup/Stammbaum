@@ -362,11 +362,9 @@ function showTree(personId, addToHistory = true) {
   if (isPortrait) _treeZoomScale = 1; // Portrait: kein Zoom, kompaktes Layout
   // Orientierungsabhängigen Default anwenden (Portrait=3, Landscape=5)
   const _orientGen = isPortrait ? _treeGenPortrait : _treeGenLandscape;
-  if (_orientGen !== _treeGenCount) {
-    _treeGenCount = _orientGen;
-    document.querySelectorAll('[data-tgen]').forEach(b =>
-      b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
-  }
+  if (_orientGen !== _treeGenCount) _treeGenCount = _orientGen;
+  document.querySelectorAll('[data-tgen]').forEach(b =>
+    b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
 
   const W   = isPortrait ? 80  : 96;
   const H   = isPortrait ? 54  : 64;

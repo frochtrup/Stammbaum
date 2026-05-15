@@ -49,7 +49,7 @@ function showView(id) {
     AppState._detailActive = (id === 'v-detail');
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
-    if (id === 'v-detail') { document.getElementById('v-detail').scrollTop = 0; _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
+    if (id === 'v-detail') { const _det = document.getElementById('v-detail'); _det.scrollTop = 0; _normalizeWheel(_det); _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
@@ -236,6 +236,19 @@ function _vsScrollEl() {
   return window.innerWidth >= 900 ? document.getElementById('v-main') : null;
 }
 
+// Firefox normalisiert Wheel-Events im DOM_DELTA_LINE-Modus (1) nicht auf Pixel.
+// Das führt zu zu schnellem Scrollen. Einmalig pro Element registrieren.
+const _wheelNormalized = new WeakSet();
+function _normalizeWheel(el) {
+  if (!el || _wheelNormalized.has(el)) return;
+  _wheelNormalized.add(el);
+  el.addEventListener('wheel', e => {
+    if (e.deltaMode !== 1) return; // nur DOM_DELTA_LINE (Firefox)
+    e.preventDefault();
+    el.scrollTop += e.deltaY * _VS_ROW;
+  }, { passive: false });
+}
+
 function _vsRender(listEl, st) {
   if (!st.active || !listEl.offsetParent) return;
   const sc     = st.sc;
@@ -278,6 +291,7 @@ function _vsSetup(listEl, st) {
   st.mid = document.createElement('div');
   st.bot = document.createElement('div');
   listEl.append(st.top, st.mid, st.bot);
+  _normalizeWheel(st.sc);
   _vsRender(listEl, st);
   st.fn = () => _vsRender(listEl, st);
   (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
