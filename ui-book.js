@@ -64,17 +64,26 @@ function _collectCitations(p) {
 // ── Lebensdaten-Tabelle HTML ───────────────────────────────────────
 function _eventsTableHtml(p) {
   const rows = [];
+  const shownNotes = new Set();
   const addRow = (lbl, ev) => {
     if (!ev) return;
-    const val = [ev.date, compactPlace(ev.place), ev.cause].filter(Boolean).join(', ');
+    const val = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
     if (!val && !ev.note) return;
-    rows.push(`<tr><th>${lbl}</th><td>${esc(val)}${ev.note ? `<br><small class="ev-note">${esc(ev.note)}</small>` : ''}</td></tr>`);
+    const noteKey = ev.note || null;
+    const showNote = noteKey && !shownNotes.has(noteKey);
+    if (showNote) shownNotes.add(noteKey);
+    rows.push(`<tr><th>${lbl}</th><td>${esc(val)}${showNote ? `<br><small class="ev-note">${esc(ev.note)}</small>` : ''}</td></tr>`);
+  };
+  const evLabel = ev => {
+    const base = EVENT_LABELS[ev.type] || ev.type;
+    if (!ev.eventType) return base;
+    return (ev.type === 'EVEN' || ev.type === 'FACT') ? ev.eventType : `${base}: ${ev.eventType}`;
   };
   addRow('Geburt',     p.birth);
   addRow('Taufe',      p.chr);
   addRow('Tod',        p.death);
   addRow('Beerdigung', p.buri);
-  (p.events || []).forEach(ev => addRow(EVENT_LABELS[ev.type] || ev.type, ev));
+  (p.events || []).forEach(ev => addRow(evLabel(ev), ev));
   if (!rows.length) return '';
   return `<table class="facts-table">${rows.join('')}</table>`;
 }

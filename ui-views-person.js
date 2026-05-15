@@ -548,7 +548,7 @@ function _pdetLifeData(p, id) {
         if (_showHofNote) _shownAddrNotes.add(_addrKey);
         // Persönliche Event-Notiz: zeigen wenn kein Hof-Notiztext und nicht dupliziert
         const _isAnyHofNote = ev.note ? _allHofNoteTexts.has(ev.note) : false;
-        const _evNoteKey = (_addrKey && ev.note) ? `${_addrKey}\x00${ev.note}` : null;
+        const _evNoteKey = ev.note ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + ev.note) : null;
         const _showEvNote = ev.note && !_isAnyHofNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
         if (_evNoteKey && _showEvNote) _shownAddrNotes.add(_evNoteKey);
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
