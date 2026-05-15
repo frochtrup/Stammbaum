@@ -17,8 +17,9 @@ function _buildKekuleMap(probandId) {
     seen.add(id);
     map[k] = id;
     const p = db.individuals[id];
-    if (p.famc && db.families[p.famc]) {
-      const fam = db.families[p.famc];
+    const famcId = p.famc?.[0]?.famId;
+    if (famcId && db.families[famcId]) {
+      const fam = db.families[famcId];
       if (fam.husb) queue.push([fam.husb, 2 * k]);
       if (fam.wife) queue.push([fam.wife, 2 * k + 1]);
     }
@@ -84,8 +85,9 @@ function _familyBlockHtml(p) {
   let html = '';
 
   // Eltern
-  if (p.famc && db.families[p.famc]) {
-    const fam = db.families[p.famc];
+  const famcId = p.famc?.[0]?.famId;
+  if (famcId && db.families[famcId]) {
+    const fam = db.families[famcId];
     const husb = fam.husb && db.individuals[fam.husb];
     const wife = fam.wife && db.individuals[fam.wife];
     const parts = [husb && esc(husb.name), wife && esc(wife.name)].filter(Boolean);
