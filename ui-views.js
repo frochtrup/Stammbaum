@@ -881,7 +881,8 @@ const _CLICK_MAP = {
   selectMapPerson:         el => selectMapPerson(el.dataset.pid),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
   treeShowProband:         ()  => {
-    const id = currentTreeId || AppState.currentPersonId;
+    const id = getProbandId();
+    if (!id) return;
     if (document.body.classList.contains('desc-tree-mode')) showDescTree(id, false);
     else if (!document.body.classList.contains('fc-mode'))  showTree(id, false);
   },
