@@ -365,14 +365,16 @@ function renderTasksView() {
   });
   const totalVisible = Object.values(byCat).reduce((s, arr) => s + arr.length, 0);
 
-  let html = `<div class="tasks-filter-bar">
-    <button id="tasks-filter-all"  class="tasks-filter-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
-    <button id="tasks-filter-open" class="tasks-filter-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
-    <button id="tasks-filter-done" class="tasks-filter-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
-  </div>
-  <div class="tasks-validate-bar">
-    <button class="tasks-validate-bar-btn" data-action="runValidation">✓ Daten prüfen</button>
-    <button class="tasks-validate-cfg-btn" data-action="openValConfig" title="Prüfregeln konfigurieren">⚙</button>
+  let html = `<div class="tasks-sticky-header">
+    <div class="tasks-filter-bar">
+      <button id="tasks-filter-all"  class="tasks-filter-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
+      <button id="tasks-filter-open" class="tasks-filter-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
+      <button id="tasks-filter-done" class="tasks-filter-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
+    </div>
+    <div class="tasks-validate-bar">
+      <button class="tasks-validate-bar-btn" data-action="runValidation">✓ Daten prüfen</button>
+      <button class="tasks-validate-cfg-btn" data-action="openValConfig" title="Prüfregeln konfigurieren">⚙</button>
+    </div>
   </div>`;
 
   html += _renderValidationPanel();
@@ -524,7 +526,12 @@ async function _handleRunValidation() {
   const db = AppState.db;
   if (!db?.individuals) { showToast('Keine Daten geladen', 'warn'); return; }
   const cfg = await _loadValConfig();
-  _validationResults = runValidation(db, cfg);
+  const raw = runValidation(db, cfg);
+  // Befunde herausfiltern, für die bereits eine Task mit gleichem Text existiert
+  _validationResults = raw.filter(r => {
+    const tasks = r.personId ? (db.individuals[r.personId]?._tasks || []) : [];
+    return !tasks.some(t => t.text === r.text);
+  });
   renderTasksView();
   const n = _validationResults.length;
   showToast(n === 0 ? 'Keine Befunde' : `${n} Befund${n === 1 ? '' : 'e'}`, n === 0 ? 'success' : 'info');

@@ -1108,7 +1108,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 /* ═══════════════════════════════════════
    LIST TAB CONTENT PADDING
 ═══════════════════════════════════════ */
-#tab-families, #tab-sources, #tab-places {
+#tab-families, #tab-sources, #tab-places, #tab-tasks {
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -1384,6 +1384,13 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .tasks-filter-btn.active {
   background: var(--gold-dim); color: var(--gold-lt);
   border-color: var(--gold-dim);
+}
+.tasks-sticky-header {
+  position: sticky;
+  top: var(--topbar-h, 52px);
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 .tasks-validate-bar {
   padding: 0 16px 8px;
