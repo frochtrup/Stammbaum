@@ -139,8 +139,13 @@ window.showDescTree = function (personId, addToHistory = true) {
   // rootCX: weit genug rechts für Geschwisterstapel links + halbe Baumbreite
   const rootCX = Math.max(PAD + sibsW + CW / 2, PAD + sibsW + treeSpan / 2);
 
-  // totalW: alle Ehepartner rechts des Probanden in Reihe
-  const rootSpouseW = rootSpouseIds.length > 0 ? rootSpouseIds.length * (MGAP + W) : 0;
+  // Ehepartner-Gruppe: variable Überlappung analog Geschwister, max Schritt = W+HGAP
+  const nSpouses = rootSpouseIds.length;
+  const spouseAvailW = nSpouses <= 1 ? W
+    : Math.min(nSpouses * (MGAP + W), Math.max(MGAP + W, treeSpan));
+  const spouseStep = nSpouses <= 1 ? 0
+    : Math.max(Math.round(W * 0.3), Math.min(W + HGAP, Math.floor((spouseAvailW - W) / (nSpouses - 1))));
+  const rootSpouseW = nSpouses > 0 ? MGAP + spouseStep * (nSpouses - 1) + W : 0;
   const totalW = Math.max(
     CW + 2 * PAD,
     rootCX + CW / 2 + rootSpouseW + PAD,
@@ -278,15 +283,13 @@ window.showDescTree = function (personId, addToHistory = true) {
 
   renderNode(layout, rootCX, PAD, true, false);
 
-  // ── Alle Ehepartner des Probanden rechts in Reihe ──
-  {
-    let spX = rootCX + CW / 2;
-    for (const spId of rootSpouseIds) {
-      const famId = getSpouseFamId(personId, spId);
-      mkMarrBtn(spX, spX + MGAP, PAD + CH / 2, famId);
-      mkDescCard(spId, spX + MGAP, PAD + (CH - H) / 2, W, H, false, false, true, false);
-      spX += MGAP + W;
-    }
+  // ── Ehepartner-Gruppe rechts: ⚭-Button nur zum ersten, dann variabler Schritt ──
+  if (nSpouses > 0) {
+    const spStart = rootCX + CW / 2 + MGAP;
+    mkMarrBtn(rootCX + CW / 2, spStart, PAD + CH / 2, getSpouseFamId(personId, rootSpouseIds[0]));
+    rootSpouseIds.forEach((spId, i) => {
+      mkDescCard(spId, spStart + i * spouseStep, PAD + (CH - H) / 2, W, H, false, false, true, false);
+    });
   }
 
   // ── Geschwister-Stapel (links vom Probanden, horizontal mit variabler Überlappung) ──
@@ -294,9 +297,9 @@ window.showDescTree = function (personId, addToHistory = true) {
     const sibY      = PAD + (CH - H) / 2;
     const midY      = PAD + CH / 2;
     const stackRightX = rootCX - CW / 2 - SIB_GAP;
-    // Verfügbare Breite links; Schritt so groß wie möglich, mind. 16px (immer etwas sichtbar)
+    // Schritt: so groß wie verfügbar, aber max normaler Kästchenabstand (W+HGAP)
     const availW  = stackRightX - PAD;
-    const sibStep = nSibs === 1 ? 0 : Math.max(16, Math.floor((availW - W) / (nSibs - 1)));
+    const sibStep = nSibs === 1 ? 0 : Math.max(16, Math.min(W + HGAP, Math.floor((availW - W) / (nSibs - 1))));
     const stackW  = nSibs === 1 ? W : sibStep * (nSibs - 1) + W;
     const stackLeftX = stackRightX - stackW;
 
