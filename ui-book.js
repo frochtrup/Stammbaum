@@ -65,6 +65,13 @@ function _collectCitations(p) {
 function _eventsTableHtml(p) {
   const rows = [];
   const shownNotes = new Set();
+
+  const evLabel = ev => {
+    const base = EVENT_LABELS[ev.type] || ev.type;
+    if (!ev.eventType) return base;
+    return (ev.type === 'EVEN' || ev.type === 'FACT') ? ev.eventType : `${base}: ${ev.eventType}`;
+  };
+
   const addRow = (lbl, ev) => {
     if (!ev) return;
     const val = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
@@ -72,18 +79,34 @@ function _eventsTableHtml(p) {
     const noteKey = ev.note || null;
     const showNote = noteKey && !shownNotes.has(noteKey);
     if (showNote) shownNotes.add(noteKey);
-    rows.push(`<tr><th>${lbl}</th><td>${esc(val)}${showNote ? `<br><small class="ev-note">${esc(ev.note)}</small>` : ''}</td></tr>`);
+    rows.push(`<tr><th>${esc(lbl)}</th><td>${esc(val)}${showNote ? `<br><small class="ev-note">${esc(ev.note)}</small>` : ''}</td></tr>`);
   };
-  const evLabel = ev => {
-    const base = EVENT_LABELS[ev.type] || ev.type;
-    if (!ev.eventType) return base;
-    return (ev.type === 'EVEN' || ev.type === 'FACT') ? ev.eventType : `${base}: ${ev.eventType}`;
-  };
+
+  // Sonder-Events in fixer Reihenfolge
   addRow('Geburt',     p.birth);
   addRow('Taufe',      p.chr);
   addRow('Tod',        p.death);
   addRow('Beerdigung', p.buri);
-  (p.events || []).forEach(ev => addRow(evLabel(ev), ev));
+
+  // p.events: gruppiert nach Typ (Erscheinungsreihenfolge) → eventType → Datum aufsteigend
+  const typeOrder = [];
+  const typeSet   = new Set();
+  const groups    = new Map(); // type → Map(eventType → ev[])
+  (p.events || []).forEach(ev => {
+    if (!typeSet.has(ev.type)) { typeOrder.push(ev.type); typeSet.add(ev.type); }
+    if (!groups.has(ev.type)) groups.set(ev.type, new Map());
+    const sub = ev.eventType || '';
+    const subMap = groups.get(ev.type);
+    if (!subMap.has(sub)) subMap.set(sub, []);
+    subMap.get(sub).push(ev);
+  });
+  for (const subMap of groups.values())
+    for (const items of subMap.values())
+      items.sort((a, b) => evDateKey(a.date).localeCompare(evDateKey(b.date)));
+  for (const type of typeOrder)
+    for (const items of groups.get(type).values())
+      items.forEach(ev => addRow(evLabel(ev), ev));
+
   if (!rows.length) return '';
   return `<table class="facts-table">${rows.join('')}</table>`;
 }
