@@ -213,7 +213,7 @@ window.showDescTree = function (personId, addToHistory = true) {
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (hasMore ? `<div class="tree-half-badge tree-desc-more" title="Mehr Nachkommen — klicken zum Anzeigen">▼</div>` : '');
 
-    div.addEventListener('click', isSpouse ? () => showDetail(id) : (isRoot ? () => showDetail(id) : () => showDescTree(id)));
+    div.addEventListener('click', isRoot ? () => showDetail(id) : () => showDescTree(id));
     wrap.appendChild(div);
   }
 
@@ -321,7 +321,7 @@ window.showDescTree = function (personId, addToHistory = true) {
       div.innerHTML =
         `<div class="tree-name">${_treeNameHtml(sq, false)}</div>` +
         (yr ? `<div class="tree-yr${isPortrait ? ' tree-yr--portrait' : ''}">${yr}</div>` : '');
-      div.addEventListener('click', () => showDetail(sid));
+      div.addEventListener('click', () => showDescTree(sid));
       wrap.appendChild(div);
     });
   }
