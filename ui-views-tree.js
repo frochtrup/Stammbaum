@@ -15,7 +15,6 @@ function setTreeGens(n) {
   else    _treeGenLandscape = _treeGenCount;
   document.querySelectorAll('[data-tgen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
-  if (typeof _setGenCur === 'function') _setGenCur(_treeGenCount);
   _treeZoomScale = 1; // Reset damit Auto-Fit neu kalkuliert
   if (AppState.currentPersonId) showTree(AppState.currentPersonId, false);
 }
@@ -366,7 +365,6 @@ function showTree(personId, addToHistory = true) {
   if (_orientGen !== _treeGenCount) _treeGenCount = _orientGen;
   document.querySelectorAll('[data-tgen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.tgen === _treeGenCount));
-  if (typeof _setGenCur === 'function') _setGenCur(_treeGenCount);
 
   const W   = isPortrait ? 80  : 96;
   const H   = isPortrait ? 54  : 64;

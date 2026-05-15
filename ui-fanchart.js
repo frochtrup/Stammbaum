@@ -39,7 +39,6 @@ window.showFanChart = function (pid) {
 
   document.querySelectorAll('[data-gen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.gen === FC.genCount));
-  if (typeof _setGenCur === 'function') _setGenCur(FC.genCount);
   _render(pid);
   _initResizeObserver();
 };
@@ -62,7 +61,6 @@ window.setFcGens = function (n) {
   document.querySelectorAll('.fc-gen-btn').forEach(b => {
     b.classList.toggle('active', +b.dataset.gen === FC.genCount);
   });
-  if (typeof _setGenCur === 'function') _setGenCur(FC.genCount);
   if (FC._pid) _render(FC._pid);
 };
 
