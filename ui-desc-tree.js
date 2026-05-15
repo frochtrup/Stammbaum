@@ -27,7 +27,7 @@ window.toggleDescTree = function () {
     const pid = currentTreeId || AppState.currentPersonId;
     if (pid) showTree(pid, false);
   } else {
-    const pid = currentTreeId || AppState.currentPersonId;
+    const pid = AppState.currentPersonId || currentTreeId;
     if (pid) showDescTree(pid, false);
   }
 };

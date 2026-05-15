@@ -29,6 +29,7 @@ window.showFanChart = function (pid) {
   document.body.classList.add('fc-mode', 'tree-active');
   document.body.classList.remove('desc-tree-mode');
   setBnavActive('tree');
+  if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(pid);
 
   document.getElementById('treeTopTitle').textContent = _fcName(getPerson(pid), 28);
   document.getElementById('treeBtnBack').hidden = true;
