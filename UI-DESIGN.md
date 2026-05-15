@@ -100,7 +100,9 @@ v-detail           (BottomNav versteckt)
 - **Kein Konflikt** mit vertikalem Scrollen (dy-Check) und Modals (früher Abbruch)
 
 ### Bottom-Nav Highlight
-`setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places', 'search' }`
+`setBnavActive(name)` mit `name ∈ { 'tree', 'persons', 'families', 'sources', 'places', 'tasks' }`
+
+`#bnav-tasks` (☑ Aufgaben) ist der sechste Tab; Proband-Navigation über `menuProband` im ☰-Menü.
 
 ### Desktop-Zweispalten (ab 900px)
 ```
@@ -196,8 +198,12 @@ body.desktop-mode:
 | `.tree-card-half` | Halbgeschwister-Karte (gestrichelter Rahmen, gold-dim) |
 | `.tree-half-badge` | „½"-Badge auf Halbgeschwister-Karten (bottom-right) |
 | `.tree-card-empty` | Ghost-Karte für unbekannte Vorfahren (opacity 0.18, gestrichelt) |
+| `.tree-card-peek` | Geschwister-Karte im Peek-Stapel (Sanduhr) |
 | `.tree-name` | Name in Tree-Karte (2-zeilig via -webkit-line-clamp) |
 | `.tree-yr` | Geburts-/Sterbejahr in Tree-Karte (0.68rem) |
+| `.tree-desc-more` | `▼`-Badge auf Karte mit abgeschnittenen Nachkommen |
+| `.tree-marr-btn` | Klickbarer ⚭-Button zwischen Proband und erstem Ehepartner |
+| `.tree-marr-badge` | ⚭-Symbol-Span innerhalb des Marr-Buttons |
 | `.landing-tagline` | Tagline auf Landing-Screen |
 | `.btn-link` | Textlink-Button (Hilfe-Link auf Landing-Screen) |
 
@@ -211,8 +217,11 @@ Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
 | `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID; Tooltip = `s.abbr \|\| s.title`; QUAY-Farbe via `.src-badge--q0/q1/q2/q3`; Seiten-Suffix wenn ≤5 Zeichen | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
 | `+ Q` (gestrichelt) | Quellen-Zitat hinzufügen — CTA wenn noch keine Quelle zugewiesen | Kindbeziehungs-Zeile, Events ohne Quellen |
 | `½` (`.tree-half-badge`) | Halbgeschwister — Kind gehört zu anderer Ehe des Zentrum-Elternteils | Baum-Karte (bottom-right) |
-| `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Baum |
+| `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Sanduhr-Baum |
+| `⚭` (`.tree-marr-btn`) | Heirats-Navigation — öffnet Familien-Detail; zwischen Proband und Ehepartner | Nachkommen-Baum |
+| `▼` (`.tree-desc-more`) | Abgeschnittene Nachkommen — mehr vorhanden, Klick lädt tiefere Gens | Nachkommen-Baum-Karte |
 | `◑` | Fan-Chart-Umschalter in Topbar | Baum-Topbar |
+| `⇩` | Nachkommen-Baum-Umschalter in Topbar | Baum-Topbar |
 
 **Regeln:**
 - `📎` steht **ausschließlich** für Medien/OBJE — nie für Quellen
@@ -296,3 +305,55 @@ Ebene +1:         [K0] [K1] [K2] [K3]       ← max. 4 Kinder/Zeile, mehrzeilig
 **Mehrfach-Ehen:**
 - `⚭N`-Badge auf Zentrum-Karte wenn Person >1 Ehe hat
 - Alle Ehe-Familien navigierbar; aktive Familie in `_activeSpouseMap` gespeichert
+
+---
+
+## Nachkommen-Ansicht: Layout-Algorithmus
+
+`ui-desc-tree.js` — Toggle `⇩` in Baum-Topbar; `body.desc-tree-mode` aktiv.
+
+```
+Ebene 0:  [Geschwister-Stapel←]  [Proband★]  [⚭]  [Ehepartner1] [Ehepartner2…]
+Ebene 1:      [Kind1]  [Kind2½]  [Kind3]           ← ½ = Halbkind (andere Ehe)
+Ebene 2:    [Enkel1]  [Enkel2]     [Enkel3]
+     …
+```
+
+**Konstanten** (Portrait / Landscape):
+- Reguläre Karte: W=80/96 px, H=54/64 px
+- Proband-Karte: CW=124/160 px, CH=72/80 px
+- HGAP=8/10, VGAP=38/48, MGAP=8/10 (Proband↔Ehepartner-Gruppe), SIB_GAP=8/10
+- `SLOT = W + HGAP` — Breite einer Kind-Einheit (kein Ehepartner-Platz pro Kind)
+
+**Layout-Berechnung (`_descLayout`):**
+- Bottom-up: `slots` = Summe der Kinder-Slots (mind. 1)
+- `spouseId` = erster Ehepartner mit vollständiger Familie → bestimmt `mainKidSet`
+- `isHalf: true` auf Kindern außerhalb der Hauptfamilie (andere Ehe)
+- `hasMore: true` wenn `depth=0` aber Kinder vorhanden (→ `▼`-Badge)
+
+**Ehepartner-Gruppe (Proband-Ebene):**
+- `rootSpouseIds[]` = alle Ehepartner in Familien-Reihenfolge
+- `spouseStep = min(W+HGAP, f(treeSpan))` — Überlapp bei schmalem Baum, max. normaler Abstand
+- Ein ⚭-Button zwischen Proband-Karte und erster Ehepartner-Karte (öffnet Familien-Detail)
+- `rootSpouseW = MGAP + spouseStep × (n−1) + W`
+
+**Geschwister-Stapel (Proband-Ebene links):**
+- Aus `p.famc[0]` ohne Proband selbst
+- Horizontal gestapelt; `sibStep = min(W+HGAP, (availW−W)/(n−1))`, mind. 16 px sichtbar
+- T-Linie horizontal: rechte Stapelkante → linke Proband-Kante
+
+**Verbindungslinien (T-Linien):**
+- Proband → `juncY` (40% von VGAP): vertikale Linie
+- `juncY`: horizontale Linie über alle Kinder-CXs
+- Jeder Kind-CX: vertikale Linie nach unten
+
+**Interaktion:**
+- Klick auf Proband → `showDetail(id)`
+- Klick auf alle anderen Karten (Kinder, Ehepartner, Geschwister) → `showDescTree(id)`
+- Gen-Buttons 2–7 in Topbar (`#descGenBtns`, `data-dgen`): `setDescTreeGens(n)`
+- `⇩`-Button: Toggle zwischen Sanduhr und Nachkommen-Baum (`toggleDescTree()`)
+- Tastatur: `↑`=Vater, `↓`=erstes Kind, `→`=erster Ehepartner, `←`=History-Back
+
+**Auto-Fit + Scroll (Desktop):**
+- `fit = min(1, clientW/totalW, clientH/totalH)` — Zoom wenn Baum größer als Fenster
+- Scroll zentriert auf Proband-X; Scroll-Top = 0

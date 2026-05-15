@@ -22,8 +22,10 @@
 - `ui-views-source.js` — Quellen-Detailansicht + Liste (nur noch Source/Repo-Funktionen)
 - `ui-views-place.js` — Orte-Ansicht: `collectPlaces()`, `renderPlaceList()`, `filterPlaces()`, `showPlaceDetail()` etc.
 - `ui-views-hof.js` — Höfe-Ansicht: `buildHofIndex()`, `renderHofList()`, `showHofDetail()`, Bewohner-Formular
-- `ui-views-tasks.js` — Forschungsaufgaben: `TASK_CATEGORIES`, IDB-Persistenz, Person-Detail-Abschnitt, globale Aufgabenliste, Badge, Modal-Handler
-- `ui-views-tree.js` — Sanduhr-Baum + Tastaturnavigation
+- `ui-views-tasks.js` — Forschungsaufgaben: `TASK_CATEGORIES`, IDB-Persistenz, Person-Detail-Abschnitt, globale Aufgabenliste, Badge, Modal-Handler; Validierungspanel (`_renderValidationPanel`, `_handleRunValidation`, `_handlePromoteToTask`); eigener Bottom-Nav-Tab (`bnavTasks()`)
+- `ui-views-tree.js` — Sanduhr-Baum + Tastaturnavigation; `_navTreeFn()` für modusabhängige Navigation (Sanduhr vs. Nachkommen)
+- `gedcom-validator.js` — Validierungsengine: `runValidation(db)` → `[{personId, rule, severity, text, category}]`; 11 Regeln (P1–P7 Person, F1–F4 Familie); reines RAM-Ergebnis, kein GEDCOM-Storage
+- `ui-desc-tree.js` — Nachkommen-Baum (top-down SVG): `showDescTree()`, `toggleDescTree()`, `setDescTreeGens()`; T-Linien-Layout; `▼`-Badge; Toggle `⇩`; alle Ehepartner in Reihe mit ⚭-Button (variabler Überlapp); Geschwister horizontal gestapelt links; `½`-Badge für Kinder aus Nebenehe; Klick-Navigation analog Sanduhr
 - `ui-fanchart.js` — Fan Chart (SVG)
 - `ui-forms.js` — Source-Widget, Media-Helfer, Quelle-Formular, Modals, Gesten, Keyboard, Utils (619 Z.)
 - `ui-forms-person.js` — Person-Formular + Extra-Name-Formular (273 Z.)
@@ -39,7 +41,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v413)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v470)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -48,23 +50,24 @@
 - `UI-DESIGN.md` — HTML-Seitenstruktur, Navigationsmodell, CSS Design-System, Sanduhr-Layout
 - `GEDCOM.md` — Parser/Writer-Referenz, alle unterstützten Tags
 - `ROADMAP.md` — Phasen-Übersicht, offene Features, bekannte Probleme
-- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v7.0
+- `CHANGELOG.md` — vollständige Sprint-Geschichte v1.0–v8.0-aktiv
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-14
+## Aktueller Stand — zuletzt aktualisiert: 2026-05-15
 
-**Version 7.0 ABGESCHLOSSEN — Branch `v7-dev` bereit für Merge auf `main`**
-- **Aktuelle sw-Version: v413** / Cache: `stammbaum-v413`
+**Version 8.0 aktiv — Branch `v8-dev`**
+- **Aktuelle sw-Version: v470** / Cache: `stammbaum-v470`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
-- **F4b abgeschlossen (sw v381):** `citations[]` vollständig migriert — Parser/Writer/Forms/Views; `citationObj()`, `_migrateLegacyCitations()`, `_addCitRefs()`, `citTagsHtml()`, srcWidget neu; T0–T7 grün
-- **UX-Neu-Person abgeschlossen (sw v391–v397):** Progressive Disclosure im Neu-Person-Formular: Kern+Leben inline, Pills (Taufe/Beerdigung/Beruf/Wohnort/Notiz/Name-Details), Datum-Normalisierung, Orts-Autocomplete, Quellen-Auto-Assign, „+ Weitere"-Button; Bearbeiten-Dialog zeigt nur Name/Meta
-- **UX-Quick-Add + Jump-Bar (sw v388–v390, v398–v400):** Quick-Add Chips (fehlende Sonder-Events + generische Shortcuts, 1 scrollbare Zeile), Jump-Bar sticky (Abschnitts-Navigation, `_injectJumpBar()`), CSP-Fix (3 `onclick=` → `data-action`)
-- **U8 Granulares Undo (sw v401–v402):** `_undoStack/_redoStack` auf AppState (max 30); `pushUndo()` an 13 Mutations-Call-Sites; per-Entity-Snapshot (nur betroffene Persons/Families/Sources); Cmd+Z = Undo (Fallback: Revert-to-Saved), Cmd+Shift+Z = Redo; Stack-Reset bei Datei-Laden + revertToSaved
-- **Nav 2.0 (sw v403):** `_navFwdStack` auf UIState; `goForward()`; `→`-Button in Detail + Baum-Topbar; `_captureCurrentNavState()`; `_clearNavState()`; sessionStorage-Persistenz (`_persistNavState`/`_restoreNavState`); Alt+← / Alt+→ Keyboard-Shortcuts
-- **Hof-Umbenennen (sw v401):** `renameHofAddress(oldAddr, newAddr)` — zentrale Adressänderung für alle RESI/PROP + hofObjects + localStorage
-- **HOF-Notizen vollständig (sw v404–v411):** `ev.noteRefs[]` → `@N_HOF_n@ NOTE`-Records; `_evHadNote`-Guard; `_noteOrig`-Sentinel; `_derivedHofObjectsFromDb` für Höfe ohne Koordinaten; hofObjects-Merge in allen 3 Ladepfaden (IDB/GEDCOM/GRAMPS)
-- **CONT/CONC-Parser (sw v412–v413):** `3 CONT/CONC` unter `2 NOTE` in BIRT/CHR/DEAT/BURI + FAM-Events (MARR/ENGA/DIV/DIVF/EVEN); INSTABIL durch Passthrough→_extra behoben; Roundtrip: `orig=out=90520` ✓ STABIL
+
+**Abgeschlossene Sprints (v8-dev, sw v448–v470):**
+- **PERF-1/2 (sw v448–v449):** Debouncing Filter-Inputs + Soundex-Cache
+- **CrossMode-CitNotes (sw v450):** `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@`
+- **Dark Mode (sw v452):** `prefers-color-scheme` + `[data-theme]`-Toggle, 3-Stufen-Segment
+- **Buchgenerator (sw v453):** `ui-book.js`; Ahnenindex, Biografie, Medien, Namenindex
+- **Nachkommen-Baum (sw v462–v470):** `ui-desc-tree.js`; Toggle `⇩`; Gen-Buttons 2–7; T-Linien; `▼`-Badge; alle Ehepartner in Reihe mit ⚭-Button (variabler Überlapp); Geschwister horizontal gestapelt; `½`-Badge für Kinder aus Nebenehe; Klick-Navigation analog Sanduhr
+- **Validierungsengine (sw v463):** `gedcom-validator.js`; 11 Regeln; RAM-only; Befunde manuell als `_task` übernehmbar
+- **Aufgaben Bottom-Tab (sw v464–v465):** `bnavTasks()`; Proband über Menü; „✓ Daten prüfen"-Button direkt im Aufgaben-Tab
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte

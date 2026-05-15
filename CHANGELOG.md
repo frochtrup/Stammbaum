@@ -9,6 +9,25 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-15c — Nachkommen-Baum: Ehepartner/Geschwister (sw v466–v470)
+
+- **sw v466** `feat(desc-tree)`: Ehepartner-Karte + ⚭-Button rechts neben Proband; Geschwister-Stapel links (PEEK-Überlapp); `SLOT = W + MGAP + W + HGAP`
+- **sw v467** `fix(desc-tree)`: Ehepartner/Geschwister nur am Startpunkt — `renderNode` rendert Ehepartner nur wenn `isRoot`; `SLOT` zurück auf `W + HGAP`; `½`-Badge für Kinder aus Nebenehe des direkten Elternteils (`isHalf`-Flag in `_descLayout`)
+- **sw v468** `fix(desc-tree)`: alle Ehepartner in Reihe (`rootSpouseIds[]` aus allen `fams`); Geschwister horizontal gestapelt statt vertikaler PEEK-Stapel — variable Überlappung, kein Konflikt mit Kind-Verbindungslinien; ⚭-Button nur noch zwischen Proband und erstem Ehepartner
+- **sw v469** `fix(desc-tree)`: Klick-Navigation analog Sanduhr — alle Nicht-Proband-Karten (Kinder, Ehepartner, Geschwister) → `showDescTree()`; nur Proband → `showDetail()`
+- **sw v470** `fix(desc-tree)`: Ehepartner-Überlappung bei schmalem Baum — `spouseStep = min(W+HGAP, f(treeSpan))`; Geschwister-Schritt auf `W+HGAP` gedeckelt (kein zu weites Spreizen)
+
+---
+
+### Session 2026-05-15b — Validierungsengine + Aufgaben-Navigation + Nachkommen-Baum (sw v462–v465)
+
+- **sw v462** `feat(tree)`: Nachkommen-Baum (top-down SVG) — `ui-desc-tree.js` neu; Toggle-Button `⇩` neben Fächer-Button in Baum-Topbar; Gen-Buttons 2–7 (`#descGenBtns`); T-Linien-Layout; `▼`-Badge wenn Tiefe abgeschnitten; `body.desc-tree-mode`; `_navTreeFn()` in `ui-views-tree.js` für modusabhängige Tastaturnavigation; Auto-Fit + Scroll-Zentrierung
+- **sw v463** `feat(validator)`: Validierungsengine `gedcom-validator.js` — `runValidation(db)` gibt reines RAM-Ergebnis zurück (keine GEDCOM-Speicherung); 11 Regeln (P1–P7 Person, F1–F4 Familie); Befunde manuell via „+" als `_task` übernehmbar; `_renderValidationPanel()` in `ui-views-tasks.js`
+- **sw v464** `feat(nav)`: Aufgaben als eigener Bottom-Nav-Tab — `bnavTasks()`, `#bnav-tasks` ersetzt `#bnav-home` (Proband); Proband-Wechsel über `menuProband` im ☰-Menü; `menuValidate` startet Prüfung direkt aus Menü; `tab-tasks` im DOM; `renderTab()` ruft `renderTasksView()`
+- **sw v465** `feat(tasks)`: „✓ Daten prüfen"-Button direkt im Aufgaben-Tab (`.tasks-validate-bar`) — kein Menü-Umweg nötig
+
+---
+
 ### Session 2026-05-15a — GEDCOM-ObjePtBug: toter Code entfernt (sw v445–v447)
 
 - **sw v445–v447** `refactor(writer)`: `_newPhotoIds`/`_deletedPhotoIds` (nie befüllte Sets) + zugehörige Writer-Blöcke entfernt; Passthrough-if/else vereinfacht auf einfaches `for`-Loop; Inline-OBJE-Löschung via `p.media[]`-Splice war bereits korrekt; Linked-OBJE-Management (`@Mxx@`) als optionales zukünftiges Feature dokumentiert
