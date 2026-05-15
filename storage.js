@@ -32,25 +32,31 @@ async function revertToSaved() {
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
   if (!await confirmModal('Alle Änderungen verwerfen und zum zuletzt geladenen Stand zurücksetzen?', 'Verwerfen')) return;
   showLoadingOverlay('Stand wird wiederhergestellt …');
-  setDb(parseGEDCOM(orig));
-  AppState.db.extraPlaces = loadExtraPlaces();
-  applyAllExtraPlaceCoords();
-  { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
-  if (AppState.db.parseErrors?.length) {
-    console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-    showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+  try {
+    setDb(parseGEDCOM(orig));
+    AppState.db.extraPlaces = loadExtraPlaces();
+    applyAllExtraPlaceCoords();
+    { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
+    if (AppState.db.parseErrors?.length) {
+      console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+      showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+    }
+    AppState.changed = false;
+    AppState._undoStack = [];
+    AppState._redoStack = [];
+    UIState._placesCache = null;
+    UIState._hofCache = null;
+    if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+    if (typeof _clearNavState === 'function') _clearNavState();
+    updateChangedIndicator();
+    renderTab();
+    showToast('✓ Zurückgesetzt');
+  } catch(e) {
+    console.error('revertToSaved:', e);
+    showToast('⚠ Fehler beim Zurücksetzen: ' + e.message, 'error');
+  } finally {
+    hideLoadingOverlay();
   }
-  AppState.changed = false;
-  AppState._undoStack = [];
-  AppState._redoStack = [];
-  UIState._placesCache = null;
-  UIState._hofCache = null;
-  if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
-  if (typeof _clearNavState === 'function') _clearNavState();
-  updateChangedIndicator();
-  renderTab();
-  hideLoadingOverlay();
-  showToast('✓ Zurückgesetzt');
 }
 
 async function confirmNewFile() {

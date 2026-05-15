@@ -61,18 +61,22 @@ function odLogout() {
 }
 
 async function odLogin() {
-  const verifier  = _odCodeVerifier();
-  const challenge = await _odCodeChallenge(verifier);
-  const stateVal  = _odCodeVerifier();
-  sessionStorage.setItem('od_verifier', verifier);
-  sessionStorage.setItem('od_state', stateVal);
-  const p = new URLSearchParams({
-    client_id: OD_CLIENT_ID, response_type: 'code',
-    redirect_uri: _odRedirectUri(), scope: OD_SCOPES,
-    code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query',
-    state: stateVal
-  });
-  location.href = OD_AUTH_EP + '?' + p;
+  try {
+    const verifier  = _odCodeVerifier();
+    const challenge = await _odCodeChallenge(verifier);
+    const stateVal  = _odCodeVerifier();
+    sessionStorage.setItem('od_verifier', verifier);
+    sessionStorage.setItem('od_state', stateVal);
+    const p = new URLSearchParams({
+      client_id: OD_CLIENT_ID, response_type: 'code',
+      redirect_uri: _odRedirectUri(), scope: OD_SCOPES,
+      code_challenge: challenge, code_challenge_method: 'S256', response_mode: 'query',
+      state: stateVal
+    });
+    location.href = OD_AUTH_EP + '?' + p;
+  } catch(e) {
+    showToast('OneDrive: Anmeldung nicht möglich — ' + e.message, 'error');
+  }
 }
 
 function _odCodeVerifier() {

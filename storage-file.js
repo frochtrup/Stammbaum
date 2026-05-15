@@ -200,7 +200,9 @@ function _downloadBlob(content, filename) {
 // ─────────────────────────────────────
 async function exportGEDCOM(forceGEDCOM = false) {
   if (!forceGEDCOM && AppState.db?._grampsMaster) return exportGRAMPS(true);
-  const content  = writeGEDCOM(true);
+  let content;
+  try { content = writeGEDCOM(true); }
+  catch(e) { showToast('⚠ Fehler beim Schreiben: ' + e.message, 'error'); return; }
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
