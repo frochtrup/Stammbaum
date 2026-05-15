@@ -1431,7 +1431,18 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   color: var(--text-muted); font-size: 1rem; cursor: pointer; line-height: 1;
 }
 .val-promote:active { opacity: 0.7; }
+.val-panel-header {
+  display: flex; justify-content: flex-end;
+  padding: 6px 8px 2px;
+}
+.val-dismiss {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-muted); font-size: 0.75rem; cursor: pointer;
+  padding: 3px 8px; line-height: 1.4;
+}
+.val-dismiss:active { opacity: 0.7; }
 .val-empty {
+  display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px; font-size: 0.85rem;
   color: var(--text-muted); font-style: italic;
 }

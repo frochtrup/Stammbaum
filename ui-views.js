@@ -1075,6 +1075,7 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   editTask:                el  => _handleEditTask(el),
   deleteTask:              el  => _handleDeleteTask(el),
   runValidation:           ()  => _handleRunValidation(),
+  dismissValidation:       ()  => { clearValidationResults(); renderTasksView(); },
   promoteToTask:           el  => _handlePromoteToTask(el),
 };
 

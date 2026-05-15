@@ -331,14 +331,15 @@ function _handlePromoteToTask(el) {
 function _renderValidationPanel() {
   if (!_validationResults) return '';
   const results = _validationResults;
-  if (!results.length) return '<div class="val-empty">Keine Befunde — Daten sehen gut aus.</div>';
+  const dismissBtn = '<button class="val-dismiss" data-action="dismissValidation" title="Hinweise ausblenden">✕ Ausblenden</button>';
+  if (!results.length) return `<div class="val-empty">Keine Befunde — Daten sehen gut aus. ${dismissBtn}</div>`;
 
   const bySeverity = { error: [], warn: [], info: [] };
   for (const r of results) {
     (bySeverity[r.severity] || bySeverity.info).push(r);
   }
 
-  let html = '<div class="val-panel">';
+  let html = `<div class="val-panel"><div class="val-panel-header">${dismissBtn}</div>`;
   for (const sev of ['error', 'warn', 'info']) {
     const list = bySeverity[sev];
     if (!list.length) continue;
