@@ -1025,6 +1025,8 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   toggleTask:              el  => _handleToggleTask(el),
   editTask:                el  => _handleEditTask(el),
   deleteTask:              el  => _handleDeleteTask(el),
+  runValidation:           ()  => _handleRunValidation(),
+  promoteToTask:           el  => _handlePromoteToTask(el),
 };
 
 document.addEventListener('click', e => {

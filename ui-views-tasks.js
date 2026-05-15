@@ -192,8 +192,9 @@ function _saveAddTask() {
 
 // ─── Globale Aufgabenliste (in Personen-Tab) ──────────────────────────────────
 
-let _personsMode     = 'persons'; // 'persons' | 'tasks'
-let _tasksViewFilter = 'open';    // 'all' | 'open' | 'done'
+let _personsMode      = 'persons'; // 'persons' | 'tasks'
+let _tasksViewFilter  = 'open';    // 'all' | 'open' | 'done'
+let _validationResults = null;     // null = noch nicht gelaufen; [] = leer/abgearbeitet
 
 function switchPersonsMode(mode) {
   _personsMode = mode;
@@ -247,7 +248,10 @@ function renderTasksView() {
     <button id="tasks-filter-all"  class="tasks-filter-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
     <button id="tasks-filter-open" class="tasks-filter-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
     <button id="tasks-filter-done" class="tasks-filter-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
+    <button class="tasks-validate-btn" data-action="runValidation" title="Daten auf Fehler und Luecken pruefen">Pruefen</button>
   </div>`;
+
+  html += _renderValidationPanel();
 
   if (!totalVisible) {
     const msg = _tasksViewFilter === 'open' ? 'Keine offenen Aufgaben'
@@ -306,6 +310,67 @@ function _handleDeleteTask(el) {
   _deleteTaskFromDb(pid, tid);
   _refreshTasksSection(pid);
   if (_personsMode === 'tasks') renderTasksView();
+}
+
+// ─── Validierungspanel ────────────────────────────────────────────────────────
+
+const _VAL_SEVERITY_ICON = { error: '✗', warn: '⚠', info: 'ℹ' };
+const _VAL_SEVERITY_LABEL = { error: 'Fehler', warn: 'Warnungen', info: 'Hinweise' };
+
+function _handleRunValidation() {
+  const db = AppState.db;
+  if (!db?.individuals) { showToast('Keine Daten geladen', 'warn'); return; }
+  _validationResults = runValidation(db);
+  renderTasksView();
+  const n = _validationResults.length;
+  showToast(n === 0 ? 'Keine Befunde' : `${n} Befund${n === 1 ? '' : 'e'}`, n === 0 ? 'success' : 'info');
+}
+
+function _handlePromoteToTask(el) {
+  const { pid, text, cat } = el.dataset;
+  if (!pid || !text) return;
+  _addTaskToDb(pid, decodeURIComponent(text), cat || 'online');
+  // Befund aus Liste entfernen — rule ist eindeutig per pid+text
+  if (_validationResults) {
+    _validationResults = _validationResults.filter(
+      r => !(r.personId === pid && r.text === decodeURIComponent(text))
+    );
+  }
+  renderTasksView();
+  _refreshTasksSection(pid);
+}
+
+function _renderValidationPanel() {
+  if (!_validationResults) return '';
+  const results = _validationResults;
+  if (!results.length) return '<div class="val-empty">Keine Befunde — Daten sehen gut aus.</div>';
+
+  const bySeverity = { error: [], warn: [], info: [] };
+  for (const r of results) {
+    (bySeverity[r.severity] || bySeverity.info).push(r);
+  }
+
+  let html = '<div class="val-panel">';
+  for (const sev of ['error', 'warn', 'info']) {
+    const list = bySeverity[sev];
+    if (!list.length) continue;
+    html += `<div class="val-group-header val-sev-${sev}">${_VAL_SEVERITY_ICON[sev]} ${_VAL_SEVERITY_LABEL[sev]} (${list.length})</div>`;
+    for (const r of list) {
+      const p = AppState.db.individuals[r.personId];
+      const pname = esc(p?.name || r.personId);
+      const textEnc = encodeURIComponent(r.text);
+      html += `<div class="val-row val-sev-${sev}">
+        <span class="val-icon">${_VAL_SEVERITY_ICON[r.severity]}</span>
+        <span class="val-person" data-action="showDetail" data-pid="${r.personId}">${pname}</span>
+        <span class="val-text">${esc(r.text)}</span>
+        <button class="val-promote" data-action="promoteToTask"
+          data-pid="${r.personId}" data-text="${textEnc}" data-cat="${r.category}"
+          title="Als Aufgabe anlegen">+</button>
+      </div>`;
+    }
+  }
+  html += '</div>';
+  return html;
 }
 
 // ─── Startup-Badge ────────────────────────────────────────────────────────────
