@@ -279,6 +279,11 @@ function savePerson(openNew = false) {
   const buriDate   = document.getElementById('pf-buri-date')?.value.trim()   || '';
   const buriPlace  = document.getElementById('pf-buri-place')?.value.trim()  || '';
 
+  const _keepPlaceId = (existing, newPlace) => {
+    const id = existing?.placeId || null;
+    return (id && AppState.db.placeObjects?.[id]?.title === newPlace) ? id : null;
+  };
+
   const nameCitations = [...(srcWidgetState['pf']?.citations || [])];
   // Auto-assign: Quelle wird allen befüllten Sonderevents zugeordnet (ohne Duplikate)
   const _mergeCits = (existing, toAdd) => {
@@ -310,10 +315,10 @@ function savePerson(openNew = false) {
     name: (given + (surname ? ' ' + surname : '')).trim(),
     nameRaw: '',  // reset when edited via UI; parser sets original value
     sex,
-    birth: { ...(existing.birth || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: birthDate, place: birthPlace, citations: _eventCits(existing.birth, birthDate || birthPlace) },
-    death: { ...(existing.death || { lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' }), date: deathDate, place: deathPlace, citations: _eventCits(existing.death, deathDate || deathPlace) },
-    chr:   { ...(existing.chr   || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: chrDate,  place: chrPlace,  citations: _eventCits(existing.chr,   chrDate  || chrPlace)  },
-    buri:  { ...(existing.buri  || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: buriDate, place: buriPlace, citations: _eventCits(existing.buri,  buriDate || buriPlace) },
+    birth: { ...(existing.birth || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: birthDate, place: birthPlace, placeId: _keepPlaceId(existing.birth, birthPlace), citations: _eventCits(existing.birth, birthDate || birthPlace) },
+    death: { ...(existing.death || { lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'' }), date: deathDate, place: deathPlace, placeId: _keepPlaceId(existing.death, deathPlace), citations: _eventCits(existing.death, deathDate || deathPlace) },
+    chr:   { ...(existing.chr   || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: chrDate,  place: chrPlace,  placeId: _keepPlaceId(existing.chr,   chrPlace),  citations: _eventCits(existing.chr,   chrDate  || chrPlace)  },
+    buri:  { ...(existing.buri  || { lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'' }), date: buriDate, place: buriPlace, placeId: _keepPlaceId(existing.buri,  buriPlace), citations: _eventCits(existing.buri,  buriDate || buriPlace) },
     events,
     noteTexts: note ? [note] : [],
     noteRefs: existing.noteRefs || [],
