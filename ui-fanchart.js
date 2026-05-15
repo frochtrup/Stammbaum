@@ -209,10 +209,16 @@ function _arc(cx, cy, r1, r2, a1, a2) {
 //  Farben, Skalierung, Hilfsfunktionen
 // ──────────────────────────────────────────
 
-// Füllfarbe: Geschlecht × Generation (außen dunkler)
+// Füllfarbe: Geschlecht × Generation (außen dunkler/heller je nach Theme)
 function _fill(sex, gen, hasData) {
   if (!hasData) return 'var(--surface)';
-  const pal = {
+  const theme = document.documentElement.dataset.theme;
+  const light = theme === 'light' || (!theme && window.matchMedia('(prefers-color-scheme: light)').matches);
+  const pal = light ? {
+    M: ['#a8c4e8', '#88a8d8', '#6890c8', '#4878b8', '#2860a0', '#184880'],
+    F: ['#e8a8c0', '#d888a8', '#c86890', '#b84878', '#a02858', '#801840'],
+    U: ['#ddd0b8', '#ccc0a0', '#bcb090', '#aca080', '#9c9070', '#8c8060'],
+  } : {
     M: ['#4a7ab5', '#2a4a72', '#1e3550', '#162540', '#101830', '#0c121a'],
     F: ['#a84a6e', '#6e2a42', '#501830', '#3a1020', '#280810', '#180406'],
     U: ['#342c1e', '#2a2318', '#211c14', '#1a1610', '#151210', '#111008'],

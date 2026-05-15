@@ -233,6 +233,10 @@ window.addEventListener('load', async () => {
   const urlFile = new URLSearchParams(location.search).get('datei');
   if (urlFile) updateTopbarTitle(urlFile);
 
+  // Theme-Präferenz anwenden
+  const themePref = await idbGet('theme_pref').catch(() => null);
+  if (themePref) applyTheme(themePref);
+
   // Warten falls OAuth-Callback noch läuft (Rückkehr von Login-Redirect)
   if (window._odCallbackPromise) await window._odCallbackPromise;
 

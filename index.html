@@ -10,7 +10,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Stammbaum">
-<meta name="theme-color" content="#c8a84a">
+<meta name="theme-color" content="#c8a84a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#8a6420" media="(prefers-color-scheme: light)">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -1134,6 +1135,14 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="lbl-modalSettings">Einstellungen</div>
     <div class="sheet-body">
+      <!-- Erscheinungsbild -->
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Erscheinungsbild</div>
+      <div class="theme-seg mb-16">
+        <button data-action="themeAuto"  data-theme="auto"  class="active">Automatisch</button>
+        <button data-action="themeLight" data-theme="light">Hell</button>
+        <button data-action="themeDark"  data-theme="dark">Dunkel</button>
+      </div>
+
       <div id="set-od-section">
       <div class="fs-075 fw-600 c-muted mb-8 text-upper">OneDrive-Ordner</div>
 

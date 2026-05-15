@@ -451,3 +451,21 @@ function openFileOrDir() {
   if (!isIOS && 'showOpenFilePicker' in window) { openFilePicker(); }
   else { document.getElementById('fileInput2').click(); }
 }
+
+// ─────────────────────────────────────
+//  THEME-VERWALTUNG
+// ─────────────────────────────────────
+function applyTheme(pref) {
+  const html = document.documentElement;
+  if (pref === 'light') html.dataset.theme = 'light';
+  else if (pref === 'dark') html.dataset.theme = 'dark';
+  else delete html.dataset.theme;
+  document.querySelectorAll('.theme-seg button[data-theme]').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === (pref || 'auto'));
+  });
+}
+
+async function setThemePref(pref) {
+  await idbPut('theme_pref', pref).catch(() => {});
+  applyTheme(pref);
+}

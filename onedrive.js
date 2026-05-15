@@ -235,6 +235,8 @@ async function _odGetSourceFileUrl(srcId, idx) {
 async function openSettings() {
   await _odMigrateIfNeeded();
   openModal('modalSettings');
+  const themePref = (await idbGet('theme_pref').catch(() => null)) || 'auto';
+  applyTheme(themePref);
   const odSection = document.getElementById('set-od-section');
   if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
   const basePath = await _odGetBasePath();

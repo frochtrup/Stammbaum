@@ -23,6 +23,8 @@
   --warn-dim:  #b06820;
   --radius:    14px;
   --radius-sm: 9px;
+  --topbar-bg: rgba(24,20,15,0.96);
+  --bottomnav-bg: rgba(24,20,15,0.97);
 }
 
 * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
@@ -41,7 +43,7 @@ body {
 ═══════════════════════════════════════ */
 .topbar {
   position: sticky; top: 0; z-index: 200;
-  background: rgba(24,20,15,0.96);
+  background: var(--topbar-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
@@ -461,7 +463,7 @@ body.desktop-mode.places-karte #mapContainer {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   z-index: 400;
-  background: rgba(24,20,15,0.97);
+  background: var(--bottomnav-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
@@ -2034,3 +2036,108 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
 
 /* ── Source-Detail: Aufbewahrung link ── */
 .repo-link { cursor: pointer; }
+
+/* ── Light Mode (U12) ── */
+@media (prefers-color-scheme: light) {
+  :root {
+    --topbar-bg:    rgba(250,246,239,0.96);
+    --bottomnav-bg: rgba(250,246,239,0.97);
+    --bg:        #faf6ef;
+    --surface:   #f0e8d8;
+    --surface2:  #e6d8c0;
+    --surface3:  #d8c8a8;
+    --border:    #c0a878;
+    --gold:      #8a6420;
+    --gold-lt:   #5a3e0e;
+    --gold-dim:  #c8a84a;
+    --gold-glow: rgba(138,100,32,0.12);
+    --text:      #1a1208;
+    --text-dim:  #4a3418;
+    --text-muted:#8a7050;
+    --blue:      #1a4e90;
+    --blue-dim:  #a8c0e0;
+    --pink:      #8a1e40;
+    --pink-dim:  #e0a8b8;
+    --green:     #1a5e30;
+    --red:       #8b0000;
+    --red-dim:   #d09090;
+    --red-bg:    #f5e0e0;
+    --warn:      #7a4800;
+    --warn-dim:  #c08020;
+  }
+}
+/* Manuell Hell — überschreibt OS-Dunkel */
+html[data-theme="light"] {
+  --topbar-bg:    rgba(250,246,239,0.96);
+  --bottomnav-bg: rgba(250,246,239,0.97);
+  --bg:        #faf6ef;
+  --surface:   #f0e8d8;
+  --surface2:  #e6d8c0;
+  --surface3:  #d8c8a8;
+  --border:    #c0a878;
+  --gold:      #8a6420;
+  --gold-lt:   #5a3e0e;
+  --gold-dim:  #c8a84a;
+  --gold-glow: rgba(138,100,32,0.12);
+  --text:      #1a1208;
+  --text-dim:  #4a3418;
+  --text-muted:#8a7050;
+  --blue:      #1a4e90;
+  --blue-dim:  #a8c0e0;
+  --pink:      #8a1e40;
+  --pink-dim:  #e0a8b8;
+  --green:     #1a5e30;
+  --red:       #8b0000;
+  --red-dim:   #d09090;
+  --red-bg:    #f5e0e0;
+  --warn:      #7a4800;
+  --warn-dim:  #c08020;
+}
+/* Manuell Dunkel — überschreibt OS-Hell */
+html[data-theme="dark"] {
+  --topbar-bg:    rgba(24,20,15,0.96);
+  --bottomnav-bg: rgba(24,20,15,0.97);
+  --bg:        #18140f;
+  --surface:   #211c14;
+  --surface2:  #2a2318;
+  --surface3:  #342c1e;
+  --border:    #3e3424;
+  --gold:      #c8a84a;
+  --gold-lt:   #e5c96e;
+  --gold-dim:  #7a6328;
+  --gold-glow: rgba(200,168,74,0.15);
+  --text:      #f2e8d4;
+  --text-dim:  #a0906e;
+  --text-muted:#5a4e38;
+  --blue:      #4a7ab5;
+  --blue-dim:  #2a4a72;
+  --pink:      #a84a6e;
+  --pink-dim:  #6e2a42;
+  --green:     #4a9060;
+  --red:       #c04040;
+  --red-dim:   #8b2020;
+  --red-bg:    #2a1010;
+  --warn:      #d08830;
+  --warn-dim:  #b06820;
+}
+
+/* ── Theme-Toggle Segment-Control ── */
+.theme-seg {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.theme-seg button {
+  flex: 1; padding: 7px 0;
+  font-size: 0.82rem; font-family: inherit;
+  background: none; border: none;
+  color: var(--text-dim); cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.theme-seg button.active {
+  background: var(--gold);
+  color: var(--bg);
+  font-weight: 600;
+}
+.theme-seg button:not(.active):active { background: var(--surface2); }
