@@ -546,18 +546,24 @@ function _pdetLifeData(p, id) {
         );
         const _showHofNote = _evRefersToHofNote && !_shownAddrNotes.has(_addrKey);
         if (_showHofNote) _shownAddrNotes.add(_addrKey);
-        // Persönliche Event-Notiz: wenn Event via noteRefs auf Hof-Notiz verweist,
-        // nur den Inline-Anteil (ev._noteOrig) zeigen — sonst würde ev.note den
-        // konkatenierten Text (inline + hofNote) enthalten und der Hof-Notiz-Pfad
-        // dupliziert angezeigt.
-        const _evInlineNote = _evRefersToHofNote ? (ev._noteOrig || null) : ev.note;
-        const _isAnyHofNote = _evInlineNote ? _allHofNoteTexts.has(_evInlineNote) : false;
-        const _evNoteKey = _evInlineNote ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + _evInlineNote) : null;
-        const _showEvNote = _evInlineNote && !_isAnyHofNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
+        // Anzuzeigende Notiz aus den Einzelteilen rekonstruieren — ev.note ist
+        // nach _resolveNoteRefs eine Konkatenation aller Refs inkl. aller Hof-Notizen,
+        // daher ungeeignet für Vergleiche. Stattdessen: ev._noteOrig (Inline-Anteil)
+        // + alle noteRefs deren Text KEINE bekannte Hof-Notiz ist.
+        const _nonHofParts = [
+          (ev._noteOrig && !_allHofNoteTexts.has(ev._noteOrig)) ? ev._noteOrig : null,
+          ...(ev.noteRefs || []).map(r => {
+            const t = AppState.db.notes?.[r]?.text;
+            return (t && !_allHofNoteTexts.has(t)) ? t : null;
+          }),
+        ].filter(Boolean);
+        const _combinedNote = _nonHofParts.join('\n') || null;
+        const _evNoteKey = _combinedNote ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + _combinedNote) : null;
+        const _showEvNote = _combinedNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
         if (_evNoteKey && _showEvNote) _shownAddrNotes.add(_evNoteKey);
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_evInlineNote)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_combinedNote)}</span>` : ''}</span>
         </div>`;
       }
     }
