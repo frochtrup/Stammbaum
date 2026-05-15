@@ -243,11 +243,15 @@ function _normalizeWheel(el) {
   if (!el || _wheelNormalized.has(el)) return;
   _wheelNormalized.add(el);
   el.addEventListener('wheel', e => {
-    if (e.deltaMode !== 1) return; // nur DOM_DELTA_LINE (Firefox)
-    e.preventDefault();
-    // 40px/Zeile, max. 5 Zeilen → verhindert Firefox-Beschleunigungseffekt
-    const lines = Math.max(-5, Math.min(5, e.deltaY));
-    el.scrollTop += lines * 40;
+    if (e.deltaMode === 1) {
+      // DOM_DELTA_LINE (Firefox Maus): 40px/Zeile, max. 5 Zeilen
+      e.preventDefault();
+      el.scrollTop += Math.max(-5, Math.min(5, e.deltaY)) * 40;
+    } else if (e.deltaMode === 0 && Math.abs(e.deltaY) > 200) {
+      // DOM_DELTA_PIXEL: Beschleunigungsspike deckeln (Trackpad-Gliding bleibt ok)
+      e.preventDefault();
+      el.scrollTop += Math.sign(e.deltaY) * 200;
+    }
   }, { passive: false });
 }
 
@@ -1073,6 +1077,11 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   runValidation:           ()  => _handleRunValidation(),
   promoteToTask:           el  => _handlePromoteToTask(el),
 };
+
+// Firefox Wheel-Normalisierung für Hauptliste frühzeitig registrieren
+document.addEventListener('DOMContentLoaded', () => {
+  _normalizeWheel(document.getElementById('v-main'));
+});
 
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-action]');
