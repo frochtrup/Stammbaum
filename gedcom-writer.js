@@ -38,6 +38,12 @@ function _writeSourCits(lines, lv, obj) {
     if (c.note !== null && c.note !== undefined)
       pushCont(lines, lv+1, 'NOTE', c.note || '');
     for (const l of (c.extra || [])) lines.push(l);
+    if (db._grampsMaster && c._citExtra?.length) {
+      for (const xml of c._citExtra) {
+        const mt = xml.match(/noteref[^>]+hlink="([^"]+)"/);
+        if (mt && _noteXref[mt[1]]) lines.push(`${lv+1} NOTE ${_noteXref[mt[1]]}`);
+      }
+    }
     for (const m of (c.media || [])) {
       lines.push(`${lv+1} OBJE`);
       if (m.file) { lines.push(`${lv+2} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }

@@ -11,7 +11,7 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v447 · Cache: `stammbaum-v447`
+**sw-Version:** v450 · Cache: `stammbaum-v450`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -45,7 +45,7 @@ Ergebnis eines Code-Audits (2026-05-15): konkrete Bugs und Sicherheitslücken im
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → Name „Lebende Person", alle Events entfernt; DSGVO-konform; Opt-in im Einstellungs-Modal | M |
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags (\_RUFNAME, \_TASK, \_GRAMPS\_ID etc.) entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; dokumentiert in ADR | M |
 | ASSO-UI | **ASSO-Beziehungen editierbar** | ASSO wird geparst + geschrieben (korrekt), aber kein UI-Formular; read-only Anzeige in Personen-Detail als Schritt 1; Bearbeitung (Zeuge/Pate zu Event zuordnen) als Schritt 2 | M+M |
-| CrossMode-CitNotes | **Citation-Notizen im GRAMPS→GEDCOM-Cross-Mode** | `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@` im GEDCOM-Export; setzt Note-XREF voraus (erledigt v419) | M |
+| ~~CrossMode-CitNotes~~ | ~~**Citation-Notizen im GRAMPS→GEDCOM-Cross-Mode**~~ | ~~`_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@` im GEDCOM-Export; setzt Note-XREF voraus (erledigt v419) — **erledigt sw v450**~~ | — |
 | GRAMPS-Orte | **Orts-Picker im GRAMPS-Modus** | `db.placeObjects{}` als strukturierter Picker (Hierarchie: Stadt → Kreis → Land); Orts-Zuweisung an Events | M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
 | U12 | **Dark Mode** | `prefers-color-scheme` Media Query in `styles.css`; `theme_color` in `manifest.json` anpassen | M |
