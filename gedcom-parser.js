@@ -858,6 +858,15 @@ function parseGEDCOM(text, parseErrors) {
     for (const ev of (f.events || [])) _etAdd(ev.type, ev.eventType);
   const eventTypesByTag = Object.fromEntries(Object.entries(_etMap).map(([k, s]) => [k, [...s].sort((a, b) => a.localeCompare(b))]));
 
+  // _PRIM Y → Foto an Position 0 schieben (nur wenn vorhanden, keine neuen erzeugen)
+  const _primSort = arr => { if (!arr) return; const i = arr.findIndex(m => m.prim === 'Y'); if (i > 0) arr.unshift(arr.splice(i, 1)[0]); };
+  for (const p of Object.values(individuals)) _primSort(p.media);
+  for (const f of Object.values(families)) {
+    _primSort(f.media);
+    _primSort(f.marr?.media); _primSort(f.engag?.media); _primSort(f.div?.media); _primSort(f.divf?.media);
+  }
+  for (const s of Object.values(sources)) _primSort(s.media);
+
   return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors, eventTypesByTag };
 }
 
