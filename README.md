@@ -41,6 +41,7 @@ stammbaum/
 ├── ui-views-family.js  ← Familien-Detailansicht + Liste
 ├── ui-views-source.js  ← Quellen-Detailansicht + Liste
 ├── ui-views-tree.js    ← Sanduhr-Baum + Tastaturnavigation
+├── ui-desc-tree.js     ← Nachkommen-Baum (top-down SVG, Ehepartner/Geschwister)
 ├── ui-fanchart.js      ← Fan Chart (SVG, konzentrische Halbkreis-Segmente)
 ├── ui-forms.js         ← Source-Widget, Quelle-Formular, Modals, Gesten, Keyboard, Utils
 ├── ui-forms-person.js  ← Person-Formular + Extra-Name-Formular
@@ -57,12 +58,13 @@ stammbaum/
 ├── ui-views-map.js     ← Kartenansicht (Leaflet, Orte- und Personen-Modus)
 ├── ui-views-place.js   ← Orte-Ansicht: collectPlaces(), renderPlaceList(), showPlaceDetail()
 ├── ui-views-hof.js     ← Höfe-Ansicht: buildHofIndex(), renderHofList(), showHofDetail()
-├── ui-views-tasks.js   ← Forschungsaufgaben: IDB-Persistenz, Badge, Modal-Handler
+├── ui-views-tasks.js   ← Forschungsaufgaben + Validierungspanel: IDB-Persistenz, Badge, Tab
+├── gedcom-validator.js ← Validierungsengine: runValidation(db) → RAM-Befundbericht
 ├── leaflet.js          ← Leaflet 1.9.4 lokal (kein CDN)
 ├── leaflet.css         ← Leaflet CSS
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v444)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v470)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
@@ -81,7 +83,8 @@ stammbaum/
 ### Navigation
 | Feature | Details |
 |---|---|
-| Globale Bottom-Nav | 6 Tabs: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · 🔍 Suche |
+| Globale Bottom-Nav | 6 Tabs: ⧖ Baum · 👤 Personen · ⚭ Familien · 📖 Quellen · 📍 Orte · ☑ Aufgaben |
+| Proband wechseln | ☰ Menü → „⌂ Zum Probanden" navigiert zur aktuellen Startperson |
 | Baum als Standardansicht | Nach Datei-Load wird der Sanduhr-Baum gezeigt |
 | History-Navigation | Zurück-Button merkt Herkunft: Detail→Detail→Baum navigiert korrekt zurück |
 | Menü überall erreichbar | ☰ Menü-Button in Baum- und Listenansicht |
@@ -122,6 +125,16 @@ stammbaum/
 - **Desktop Auto-Fit-Zoom**: Baum passt sich beim ersten Laden an die Fenstergröße an
 - **Fan Chart**: ◑-Button in Topbar — konzentrische Halbkreis-Segmente (3–6 Generationen)
 
+### Nachkommen-Ansicht
+- **Toggle `⇩`** in der Baum-Topbar wechselt zwischen Sanduhr und Nachkommen-Baum
+- Top-down-Darstellung: Proband oben, Kinder/Enkel darunter (Generationen 2–7 wählbar)
+- **Ehepartner** des Probanden: in Reihe rechts mit ⚭-Button (öffnet Familien-Detail); bei mehreren Ehepartnern variabler Überlapp wenn wenig Platz
+- **Geschwister** des Probanden: horizontal gestapelt links (variable Überlappung, max. normaler Kästchenabstand)
+- **`½`-Badge** auf Kindern aus anderen Ehen des Elternteils (Halbkinder, analog Sanduhr)
+- **`▼`-Badge** auf Karten mit abgeschnittenen Nachkommen — Klick lädt tiefere Generationen
+- **Klick-Navigation**: alle Nicht-Proband-Karten navigieren im Baum; Klick auf Proband öffnet Detailansicht
+- **T-Linien-Layout**: vertikale Linie vom Elternteil → horizontale Verbindungslinie → vertikale Linien zu allen Kindern
+
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
 - **Suche** über: Name, Titel, alle Ereignisse (Typ, Wert, Datum, Ort), Notizen, Religion
@@ -161,11 +174,19 @@ stammbaum/
 - Detail: alle Bewohner eines Hofs chronologisch
 - **Höfe-Formular**: Bewohner hinzufügen/entfernen
 
-### Forschungsaufgaben
-- Aufgaben pro Person kategorisiert (TASK_CATEGORIES)
-- Persistenz in IndexedDB
-- Badge in Topbar zeigt offene Aufgaben
-- Globale Aufgabenliste mit Priorität und Status
+### Forschungsaufgaben (☑ Aufgaben-Tab)
+- Eigener Bottom-Nav-Tab ☑ mit Badge für offene Aufgaben
+- Aufgaben pro Person, kategorisiert (Kirchenbuch / Urkunde / Online-Recherche)
+- Persistenz in GEDCOM (`_TASK`-Tag) und GRAMPS — Roundtrip-stabil
+- Globale Aufgabenliste: Filter Alle / Offen / Erledigt; Klick auf Personennamen → Detailansicht
+- Aufgaben in der Personen-Detailansicht direkt hinzufügen/bearbeiten/abhaken
+
+### Datenprüfung
+- **„✓ Daten prüfen"**-Button direkt im Aufgaben-Tab (auch über ☰ Menü erreichbar)
+- Prüft alle Personen und Familien auf 11 Regeln (fehlende Quellen, unrealistische Altersangaben, fehlende Daten, Konsistenz)
+- Befunde werden als reiner RAM-Bericht angezeigt (keine automatischen Aufgaben)
+- **„+"**-Button neben jedem Befund: Befund als Forschungsaufgabe übernehmen
+- Schweregrade: ✗ Fehler · ⚠ Warnungen · ℹ Hinweise
 
 ### Bearbeiten
 | Was | Felder |
@@ -208,7 +229,9 @@ stammbaum/
 │  ui-views-map.js     — Kartenansicht         │
 │  ui-views-place.js   — Orte-Ansicht          │
 │  ui-views-hof.js     — Höfe-Ansicht          │
-│  ui-views-tasks.js   — Forschungsaufgaben    │
+│  ui-views-tasks.js   — Aufgaben + Validierung │
+│  ui-desc-tree.js     — Nachkommen-Baum       │
+│  gedcom-validator.js — Validierungsengine    │
 │  ui-forms*.js        — Formulare (4 Module)  │
 │  ui-fanchart.js      — Fan Chart (SVG)       │
 │  ui-media.js         — Medien                │
@@ -232,7 +255,7 @@ stammbaum/
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
 **GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
-**Version 8.0** — Mai 2026 — `main` · sw v444
+**Version 8.0** — Mai 2026 — `v8-dev` · sw v470
 
 ---
 
