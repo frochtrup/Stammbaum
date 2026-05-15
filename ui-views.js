@@ -245,7 +245,9 @@ function _normalizeWheel(el) {
   el.addEventListener('wheel', e => {
     if (e.deltaMode !== 1) return; // nur DOM_DELTA_LINE (Firefox)
     e.preventDefault();
-    el.scrollTop += e.deltaY * _VS_ROW;
+    // 40px/Zeile, max. 5 Zeilen → verhindert Firefox-Beschleunigungseffekt
+    const lines = Math.max(-5, Math.min(5, e.deltaY));
+    el.scrollTop += lines * 40;
   }, { passive: false });
 }
 
