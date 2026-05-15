@@ -105,9 +105,17 @@ window.showDescTree = function (personId, addToHistory = true) {
   const VGAP    = isPortrait ? 38  : 48;
   const PAD     = isPortrait ? 14  : 20;
   const MGAP    = isPortrait ? 8   : 10;  // Abstand Person–Ehepartner (nur Wurzel)
-  const SIB_GAP = isPortrait ? 8   : 10;  // Abstand Geschwister-Stapel zu Proband
-  const PEEK    = isPortrait ? 10  : 12;  // Überlapp pro Geschwister-Karte
+  const SIB_GAP = isPortrait ? 8   : 10;  // Abstand Geschwister zum Probanden
   const SLOT    = W + HGAP;               // Breite einer Kind-Einheit
+
+  // Alle Ehepartner des Probanden (in Familien-Reihenfolge)
+  const rootSpouseIds = (p.fams || []).flatMap(fid => {
+    const f = AppState.db.families[fid];
+    if (!f) return [];
+    if (f.husb === personId && f.wife) return [f.wife];
+    if (f.wife === personId && f.husb) return [f.husb];
+    return [];
+  });
 
   // ── Geschwister des Probanden ──
   const sibFamRef = p.famc && p.famc.length > 0 ? p.famc[0] : null;
@@ -131,8 +139,8 @@ window.showDescTree = function (personId, addToHistory = true) {
   // rootCX: weit genug rechts für Geschwisterstapel links + halbe Baumbreite
   const rootCX = Math.max(PAD + sibsW + CW / 2, PAD + sibsW + treeSpan / 2);
 
-  // totalW: berücksichtigt nur Ehepartner des Probanden (Wurzel)
-  const rootSpouseW = layout.spouseId ? MGAP + W : 0;
+  // totalW: alle Ehepartner rechts des Probanden in Reihe
+  const rootSpouseW = rootSpouseIds.length > 0 ? rootSpouseIds.length * (MGAP + W) : 0;
   const totalW = Math.max(
     CW + 2 * PAD,
     rootCX + CW / 2 + rootSpouseW + PAD,
@@ -242,19 +250,6 @@ window.showDescTree = function (personId, addToHistory = true) {
 
     mkDescCard(node.id, cardX, y, cardW, cardH, isRoot, node.hasMore, false, isHalf);
 
-    // Ehepartner rechts — nur am Wurzelknoten
-    if (isRoot && node.spouseId) {
-      const spouseX = cardX + cardW + MGAP;
-      const spouseY = y + (CH - H) / 2;
-      mkDescCard(node.spouseId, spouseX, spouseY, W, H, false, false, true, false);
-      mkMarrBtn(
-        cardX + cardW,
-        spouseX,
-        y + cardH / 2,
-        getSpouseFamId(node.id, node.spouseId)
-      );
-    }
-
     if (!node.children?.length) return;
 
     const nextY        = y + cardH + VGAP;
@@ -283,29 +278,41 @@ window.showDescTree = function (personId, addToHistory = true) {
 
   renderNode(layout, rootCX, PAD, true, false);
 
-  // ── Geschwister-Stapel (links vom Probanden) ──
-  if (nSibs > 0) {
-    const sibColX   = rootCX - CW / 2 - SIB_GAP - W;
-    const sibBaseY  = PAD + (CH - H) / 2;
-    const sibStackH = H + (nSibs - 1) * PEEK;
-    const midY      = PAD + CH / 2;
+  // ── Alle Ehepartner des Probanden rechts in Reihe ──
+  {
+    let spX = rootCX + CW / 2;
+    for (const spId of rootSpouseIds) {
+      const famId = getSpouseFamId(personId, spId);
+      mkMarrBtn(spX, spX + MGAP, PAD + CH / 2, famId);
+      mkDescCard(spId, spX + MGAP, PAD + (CH - H) / 2, W, H, false, false, true, false);
+      spX += MGAP + W;
+    }
+  }
 
-    // T-Linie: horizontal von Stapel rechts zur Proband-Linken Kante
-    dLine(sibColX + W, midY, rootCX - CW / 2, midY);
-    // Vertikale Linie durch den Stapel
-    if (nSibs > 1)
-      dLine(sibColX + W, sibBaseY + H / 2, sibColX + W, sibBaseY + sibStackH - H / 2);
+  // ── Geschwister-Stapel (links vom Probanden, horizontal mit variabler Überlappung) ──
+  if (nSibs > 0) {
+    const sibY      = PAD + (CH - H) / 2;
+    const midY      = PAD + CH / 2;
+    const stackRightX = rootCX - CW / 2 - SIB_GAP;
+    // Verfügbare Breite links; Schritt so groß wie möglich, mind. 16px (immer etwas sichtbar)
+    const availW  = stackRightX - PAD;
+    const sibStep = nSibs === 1 ? 0 : Math.max(16, Math.floor((availW - W) / (nSibs - 1)));
+    const stackW  = nSibs === 1 ? W : sibStep * (nSibs - 1) + W;
+    const stackLeftX = stackRightX - stackW;
+
+    // T-Linie: rechte Stapelkante → linke Proband-Kante
+    dLine(stackRightX, midY, rootCX - CW / 2, midY);
 
     siblings.forEach((sid, i) => {
       const sq = AppState.db.individuals[sid];
       if (!sq) return;
       const div = document.createElement('div');
       div.className = 'tree-card';
-      div.style.left   = Math.round(sibColX) + 'px';
-      div.style.top    = Math.round(sibBaseY + i * PEEK) + 'px';
+      div.style.left   = Math.round(stackLeftX + i * sibStep) + 'px';
+      div.style.top    = Math.round(sibY) + 'px';
       div.style.width  = W + 'px';
       div.style.height = H + 'px';
-      div.style.zIndex = siblings.length - i + 1;
+      div.style.zIndex = i + 1;  // rechteste Karte oben
       div.dataset.sex  = sq.sex || 'U';
       const by = (sq.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
       const dy = (sq.death?.date || '').replace(/.*(\d{4}).*/, '$1');
@@ -325,7 +332,7 @@ window.showDescTree = function (personId, addToHistory = true) {
     up:    par0.father || par0.mother || null,
     up2:   par0.father ? par0.mother : null,
     down:  layout.children?.[0]?.id   || null,
-    right: layout.spouseId            || layout.children?.[1]?.id || null,
+    right: rootSpouseIds[0]            || layout.children?.[1]?.id || null,
   };
 
   showView('v-tree');
