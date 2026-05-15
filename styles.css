@@ -212,6 +212,12 @@ body.desktop-mode #v-tree { height: auto; }
   gap: 4px;
 }
 body.tree-active #treeGenOverlay { display: flex; }
+#treeGenCur {
+  font-size: 0.78rem; font-family: 'Source Serif 4', serif;
+  color: var(--gold); font-weight: 600;
+  min-width: 18px; text-align: center;
+  padding-right: 4px; border-right: 1px solid var(--border);
+}
 /* Topbar: Proband-Button + Trennlinie vor Darstellungsarten */
 #treeProbandBtn              { display: none; }
 body.tree-active #treeProbandBtn { display: inline-flex; }

@@ -12,6 +12,7 @@ window.setDescTreeGens = function (n) {
   _descGens = Math.max(2, Math.min(7, n));
   document.querySelectorAll('[data-dgen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.dgen === _descGens));
+  if (typeof _setGenCur === 'function') _setGenCur(_descGens);
   _descZoomScale = 1;
   if (document.body.classList.contains('desc-tree-mode') && currentTreeId)
     showDescTree(currentTreeId, false);
@@ -90,6 +91,7 @@ window.showDescTree = function (personId, addToHistory = true) {
 
   document.querySelectorAll('[data-dgen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.dgen === _descGens));
+  if (typeof _setGenCur === 'function') _setGenCur(_descGens);
   document.getElementById('treeTopTitle').textContent = p.name || personId;
   if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(personId);
 

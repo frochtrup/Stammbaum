@@ -236,6 +236,11 @@ function _vsScrollEl() {
   return window.innerWidth >= 900 ? document.getElementById('v-main') : null;
 }
 
+function _setGenCur(n) {
+  const el = document.getElementById('treeGenCur');
+  if (el) el.textContent = n;
+}
+
 // Firefox normalisiert Wheel-Events im DOM_DELTA_LINE-Modus (1) nicht auf Pixel.
 // Das führt zu zu schnellem Scrollen. Einmalig pro Element registrieren.
 const _wheelNormalized = new WeakSet();
