@@ -384,6 +384,13 @@ function writeFAMRecord(lines, f) {
 
   if (f.grampId)  lines.push(`1 _GRAMPS_ID ${f.grampId}`);
   if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
+  for (const t of (f._tasks || [])) {
+    lines.push(`1 _TASK ${t.text || ''}`);
+    if (t.category) lines.push(`2 _CAT ${t.category}`);
+    lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+    if (t.created)  lines.push(`2 _DATE ${t.created}`);
+    if (t.id)       lines.push(`2 _ID ${t.id}`);
+  }
   for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
   for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
 

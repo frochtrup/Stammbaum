@@ -477,6 +477,8 @@ function showFamilyDetail(id, pushHistory = true) {
   if (f._grampsTags?.length) html += `<div class="section fade-up"><div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${f._grampsTags.map(t => `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div></div>`;
   if (f._grampsAttrs?.length) html += `<div class="section fade-up">${f._grampsAttrs.map(a => `<div class="fact-row"><span class="fact-lbl">${esc(a.type)}</span><span class="fact-val">${esc(a.value)}${a.note ? `<div class="note-text">${esc(a.note)}</div>` : ''}</span></div>`).join('')}</div>`;
 
+  html += _famTasksSectionHtml(id);
+
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
 

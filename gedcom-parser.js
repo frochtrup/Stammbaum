@@ -83,7 +83,7 @@ function parseGEDCOM(text, parseErrors) {
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,citations:[],value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
@@ -485,6 +485,10 @@ function parseGEDCOM(text, parseErrors) {
             cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
+        else if (tag === '_TASK') {
+          _curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
+          cur._tasks.push(_curTask);
+        }
         else {
           // Unknown FAM lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -492,7 +496,13 @@ function parseGEDCOM(text, parseErrors) {
         }
       }
       else if (lv === 2) {
-        if (lv1tag==='MARR') {
+        if (lv1tag === '_TASK' && _curTask) {
+          if      (tag === '_CAT')  _curTask.category = val;
+          else if (tag === '_DONE') _curTask.done = val === '1';
+          else if (tag === '_DATE') _curTask.created = val;
+          else if (tag === '_ID')   _curTask.id = val;
+        }
+        else if (lv1tag==='MARR') {
           if (tag==='DATE') cur.marr.date=val;
           else if (tag==='PLAC') cur.marr.place=val;
           else if (tag==='ADDR') cur.marr.addr=val;

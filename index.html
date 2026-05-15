@@ -294,6 +294,58 @@
   </div>
 </div>
 
+<!-- Prüfregeln konfigurieren -->
+<div class="modal-overlay" id="modalValConfig" role="dialog" aria-modal="true" aria-labelledby="lbl-modalValConfig">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalValConfig">Prüfregeln konfigurieren</div>
+    <div class="sheet-body">
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Regeln aktivieren</div>
+      <div class="d-flex flex-col gap-6 mb-16">
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_SURNAME"> Nachname fehlt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_SEX"> Geschlecht unbekannt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_BIRTH"> Geburtsdatum/-taufe fehlt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-DEATH_BEFORE_BIRTH"> Sterbejahr vor Geburtsjahr</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-AGE_OVER_MAX"> Unrealistisches Alter</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-BIRTH_AFTER_STAERA"> Geburt nach Standesamt-Jahr, keine Quelle</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_BIRTHPLACE"> Geburtsort fehlt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MARR_BEFORE_BIRTH"> Heirat vor eigener Geburt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MOTHER_TOO_YOUNG"> Mutter zu jung bei Geburt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MOTHER_TOO_OLD"> Mutter zu alt bei Geburt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-FATHER_TOO_OLD"> Vater zu alt bei Geburt</label>
+      </div>
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Schwellenwerte</div>
+      <div class="d-flex flex-col gap-8 mb-16">
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxAge">Max. Lebensalter (Jahre)</label>
+          <input type="number" id="valcfg-thr-maxAge" min="80" max="200" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-staStAera">Standesamt ab Jahr</label>
+          <input type="number" id="valcfg-thr-staStAera" min="1800" max="1920" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-minMotherAge">Min. Mutteralter bei Geburt</label>
+          <input type="number" id="valcfg-thr-minMotherAge" min="10" max="20" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxMotherAge">Max. Mutteralter bei Geburt</label>
+          <input type="number" id="valcfg-thr-maxMotherAge" min="40" max="80" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxFatherAge">Max. Vateralter bei Geburt</label>
+          <input type="number" id="valcfg-thr-maxFatherAge" min="40" max="120" class="valcfg-thr-inp">
+        </div>
+      </div>
+      <div class="btn-row gap-8">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalValConfig">Abbrechen</button>
+        <button class="btn btn-outline" data-action="resetValConfig">Zurücksetzen</button>
+        <button class="btn btn-save" data-action="saveValConfig">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Aufgabe hinzufügen -->
 <div class="modal-overlay" id="modalAddTask" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddTask">
   <div class="sheet">
