@@ -2602,27 +2602,32 @@ html[data-theme="dark"] {
 /* Kinder blau in Familie-Lane */
 .tl-lane--family .tl-chip--child { border-left-color: var(--blue); }
 
-/* Hist-Chips */
-.tl-chip--hist-war,
-.tl-chip--hist-disease,
-.tl-chip--hist-political,
-.tl-chip--hist-religion,
-.tl-chip--hist-natural {
+/* Historische Ereignisse — kein Chip, nur Tick + Text */
+.tl-hist-evt {
   position: absolute;
-  width: 88px;
-  padding: 2px 5px;
-  font-size: 0.70rem;
-  border-radius: var(--radius-sm);
-  line-height: 1.2;
+  top: 8px;
+  width: 76px;
+  padding-top: 7px;
+  font-size: 0.58rem;
+  line-height: 1.25;
   color: var(--text-dim);
-  background: var(--surface2);
-  border-left: 3px solid var(--border);
+  pointer-events: none;
 }
-.tl-chip--hist-war      { border-left-color: var(--red); }
-.tl-chip--hist-disease  { border-left-color: var(--warn); }
-.tl-chip--hist-political{ border-left-color: var(--blue); }
-.tl-chip--hist-religion { border-left-color: #8a6aaa; }
-.tl-chip--hist-natural  { border-left-color: var(--green); }
+.tl-hist-evt::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 2px; height: 5px;
+  background: var(--border);
+  border-radius: 1px;
+}
+.tl-hist-evt .tl-y  { display: block; font-size: 0.55rem; color: var(--text-muted); margin-bottom: 1px; }
+.tl-hist-evt .tl-lbl { display: block; }
+.tl-hist-evt--war::before      { background: var(--red); }
+.tl-hist-evt--disease::before  { background: var(--warn); }
+.tl-hist-evt--political::before{ background: var(--blue); }
+.tl-hist-evt--religion::before { background: #8a6aaa; }
+.tl-hist-evt--natural::before  { background: var(--green); }
 
 /* Undatierte Chips */
 .tl-chip--undated { opacity: 0.65; border-left-style: dashed; }

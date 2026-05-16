@@ -325,8 +325,7 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
 
     } else if (lane.id === 'hist') {
       for (const ev of evs) {
-        const nd = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
-        html += `<div class="tl-chip tl-chip--hist-${ev.cat}" data-left="${ev.pxLeft}"${nd}>`;
+        html += `<div class="tl-hist-evt tl-hist-evt--${ev.cat}" data-left="${ev.pxLeft}">`;
         html += `<span class="tl-y">${ev.year}</span><span class="tl-lbl">${_esc(ev.label)}</span></div>`;
       }
 
@@ -366,6 +365,11 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
   }
 
   // Positionen via CSSOM setzen (CSP: kein inline style-Attribut)
+  // Achse + Lanes auf volle Scroll-Breite ausdehnen (border-bottom folgt)
+  const _fullW = _SL_LABEL_W + totalW;
+  body.querySelectorAll('.tl-swim-axis, .tl-lane').forEach(el => {
+    el.style.minWidth = _fullW + 'px';
+  });
   body.querySelectorAll('.tl-swim-axis-pad[data-w]').forEach(el => {
     el.style.width = el.dataset.w + 'px';
     el.style.flexShrink = '0';
@@ -378,6 +382,10 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     el.style.minWidth = el.dataset.w + 'px';
   });
   body.querySelectorAll('.tl-lane[data-h]').forEach(el => { el.style.height = el.dataset.h + 'px'; });
+  // Historische Ereignisse: nur links positionieren, kein Chip-Top
+  body.querySelectorAll('.tl-hist-evt[data-left]').forEach(el => {
+    el.style.left = el.dataset.left + 'px';
+  });
   body.querySelectorAll('.tl-tick[data-left]').forEach(el => { el.style.left = el.dataset.left + 'px'; });
   body.querySelectorAll('.tl-swim-span').forEach(el => {
     el.style.left  = el.dataset.left + 'px';
