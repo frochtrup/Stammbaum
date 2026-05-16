@@ -207,6 +207,17 @@ function toggleTreeFullscreen() {
     btn.textContent = isFs ? '⤡' : '⤢';
     btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
   }
+  // Sanduhr neu rendern, damit Karten die neue Containerbreite nutzen.
+  // Fan-Chart und Nachkommen-Baum haben eigene Resize-Logik.
+  const pid = AppState.currentPersonId;
+  if (!pid) return;
+  if (document.body.classList.contains('fc-mode')) {
+    if (typeof showFanChart === 'function') setTimeout(() => showFanChart(pid), 50);
+  } else if (document.body.classList.contains('desc-tree-mode')) {
+    if (typeof showDescTree === 'function') setTimeout(() => showDescTree(pid, false), 50);
+  } else {
+    setTimeout(() => showTree(pid, false), 50);
+  }
 }
 
 // ─────────────────────────────────────
