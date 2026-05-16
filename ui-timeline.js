@@ -84,7 +84,7 @@ const _TL_PX_DEC_MIN = 90;   // Mindesthöhe einer belegten Dekade
 // Swim-Lane-Konstanten (horizontale Variante)
 const _SL_LABEL_W  = 76;   // px — sticky Lane-Label-Breite
 const _SL_MIN_PX_Y = 14;   // px/Jahr — Mindest-Skalierung
-const _SL_CHIP_W   = 106;  // px — nominale Chip-Breite für Kollisionserkennung
+const _SL_CHIP_W   = 140;  // px — nominale Chip-Breite für Kollisionserkennung
 const _SL_PAD_YR   = 1.5;  // Jahre — Rand links/rechts der Zeitachse
 
 const _SL_LANES = [
@@ -395,12 +395,13 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     el.style.left  = el.dataset.left + 'px';
     el.style.width = el.dataset.bw + 'px';
   });
-  // Datierte Chips: position + vertikale Zentrierung + Nudge
+  // Datierte Chips: position + vertikale Zentrierung via offsetHeight + Nudge
   body.querySelectorAll('.tl-chip[data-left]').forEach(el => {
     const lH    = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
     const nudge = parseInt(el.dataset.nudge || 0);
+    const chipH = el.offsetHeight || 40;
     el.style.left = el.dataset.left + 'px';
-    el.style.top  = Math.round((lH - 40) / 2 + nudge) + 'px';
+    el.style.top  = Math.round(Math.max((lH - chipH) / 2 + nudge, 4)) + 'px';
   });
   // Undatierte Links-gestapelt (Beruf)
   body.querySelectorAll('.tl-chip--undated[data-stacki]:not(.tl-chip--right)').forEach(el => {

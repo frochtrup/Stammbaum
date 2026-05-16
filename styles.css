@@ -2577,7 +2577,7 @@ html[data-theme="dark"] {
 /* ── Chips ── */
 .tl-chip {
   position: absolute;
-  width: 104px;
+  width: 140px;
   padding: 3px 5px 3px 7px;
   background: var(--surface2);
   border-radius: var(--radius-sm);
