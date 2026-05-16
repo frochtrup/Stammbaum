@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v576 · Cache: `stammbaum-v576`
+**sw-Version:** v578 · Cache: `stammbaum-v578`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -51,6 +51,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | REFN | REFN/RIN strukturiert | v548 |
 | SEC-1 | XSS-Härtung: URL-Sanitizer href (onedrive-Vorschau) | v576 |
 | SEC-2 | MIME-Validierung Foto-Upload + Fehler-Toast | v576 |
+| QUICK-ADD | Schnellerfassung neue Person (Masseneingabe-Modus) | v577 |
+| CAM-LINK | Foto direkt an Ereignis (Kamera-Button im Event-Formular) | v578 |
 
 ---
 
@@ -72,8 +74,8 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| QUICK-ADD | **Schnellerfassung neue Person** | FAB-Button (+) in Personen-Liste: Minimalformular (Vorname, Nachname, Ereignis-Typ, Datum, Ort, Quelle-Picker). Alle anderen Felder optional/später. Kein Vollformular beim ersten Aufruf. | S |
-| CAM-LINK | **Foto direkt an Zitation** | In Ereignis-Detail: `<input type="file" capture="camera">` direkt sichtbar, nicht hinter Medien-Browser vergraben. Foto → IDB → `cit.media[]` des aktuellen Ereignisses. | S |
+| QUICK-ADD | **Schnellerfassung neue Person** ✓ | `modalAdd` → „⚡ Neue Person (Schnell)": Minimalformular (Vorname, Nachname, Ereignis-Typ, Datum, Ort, Quelle-Picker); Masseneingabe-Modus (Modal bleibt offen, Quelle+Seite bleiben vorbelegt); „Fertig"-Button öffnet letzte angelegte Person (sw v577) | S ✓ |
+| CAM-LINK | **Foto direkt an Ereignis** ✓ | Im Ereignis-Formular: „📷 Foto aufnehmen"-Button oberhalb Medien-Liste; `<input capture="environment">` direkt sichtbar; Foto → IDB → `ev.media[]` (sw v578) | S ✓ |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform beim Teilen; Opt-in im Einstellungs-Modal | M |
 
 ---

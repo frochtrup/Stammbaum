@@ -459,4 +459,101 @@ initPlaceAutocomplete('pf-birth-place',  'pf-birth-place-dd',  null);
 initPlaceAutocomplete('pf-death-place',  'pf-death-place-dd',  null);
 initPlaceAutocomplete('pf-chr-place',    'pf-chr-place-dd',    null);
 initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd',   null);
+
+// ─── QUICK-ADD: Schnellerfassung neue Person ────────────────────────────────
+let _qaLastId = null;
+
+function showQuickAdd() {
+  closeModal('modalAdd');
+  // Quellen-Dropdown befüllen
+  const sel = document.getElementById('qa-src');
+  const prevSrc  = sel.value;
+  const prevPage = document.getElementById('qa-page').value;
+  sel.innerHTML = '<option value="">— keine —</option>';
+  Object.values(AppState.db.sources || {}).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.abbr || s.title || s.id;
+    sel.appendChild(opt);
+  });
+  // Letzte Quellenauswahl beibehalten
+  if (prevSrc) sel.value = prevSrc;
+  document.getElementById('qa-page').value = prevPage;
+  // Personenfelder leeren
+  ['qa-given','qa-surname','qa-date','qa-place'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  const evSel = document.getElementById('qa-evtype');
+  evSel.value = '';
+  document.getElementById('qa-ev-fields').hidden = true;
+  document.getElementById('qa-hint').hidden = true;
+  document.getElementById('qa-done-btn').hidden = !_qaLastId;
+  openModal('modalQuickAdd');
+  document.getElementById('qa-given').focus();
+}
+
+function saveQuickAdd() {
+  const given   = document.getElementById('qa-given').value.trim();
+  const surname = document.getElementById('qa-surname').value.trim();
+  if (!given && !surname) {
+    showToast('Vorname oder Nachname erforderlich', 'warn');
+    return;
+  }
+  const evType = document.getElementById('qa-evtype').value;
+  const date   = _normQuickDate(document.getElementById('qa-date').value.trim());
+  const place  = document.getElementById('qa-place').value.trim();
+  const srcId  = document.getElementById('qa-src').value;
+  const page   = document.getElementById('qa-page').value.trim();
+
+  const id  = nextId('I');
+  const cit = srcId ? [citationObj(srcId, page)] : [];
+  const _ev = (d, p) => ({ lati:null, long:null, citations: d || p ? cit : [], _extra:[], value:'', seen:false, note:'', noteRefs:[], date: d, place: p, placeId:null });
+
+  const person = {
+    id, given, surname,
+    name: [given, surname].filter(Boolean).join(' '),
+    nameRaw: '', sex: 'U', prefix: '', nick: '', _rufname: '', suffix: '', titl: '', resn: '', email: '', www: '',
+    birth: _ev('',''), death: _ev('',''), chr: _ev('',''), buri: _ev('',''),
+    events: [], noteTexts: [], noteRefs: [], noteText: '',
+    famc: [], fams: [], media: [], extraNames: [],
+    lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+    nameCitations: [], sourceRefs: new Set()
+  };
+
+  const _SPEC = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
+  if (_SPEC[evType]) {
+    person[_SPEC[evType]].date  = date;
+    person[_SPEC[evType]].place = place;
+    person[_SPEC[evType]].citations = cit;
+  } else if (evType) {
+    person.events.push({ type:evType, value:'', date, place, lati:null, long:null,
+      eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:cit, media:[], _extra:[] });
+  }
+
+  pushUndo('Person angelegt', { personIds: [id] });
+  AppState.db.individuals[id] = person;
+  _rebuildPersonSourceRefs(person);
+  _qaLastId = id;
+  markChanged();
+  renderTab();
+
+  // Felder leeren, Modal offen lassen (Masseneingabe)
+  ['qa-given','qa-surname','qa-date','qa-place'].forEach(elId => {
+    document.getElementById(elId).value = '';
+  });
+  document.getElementById('qa-evtype').value = '';
+  document.getElementById('qa-ev-fields').hidden = true;
+  document.getElementById('qa-given').focus();
+  document.getElementById('qa-done-btn').hidden = false;
+
+  const label = person.name || id;
+  const hint  = document.getElementById('qa-hint');
+  hint.textContent = `✓ ${label} angelegt`;
+  hint.hidden = false;
+}
+
+function quickAddDone() {
+  closeModal('modalQuickAdd');
+  if (_qaLastId) { showDetail(_qaLastId); _qaLastId = null; }
+}
 initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd', null);

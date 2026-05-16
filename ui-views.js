@@ -1067,6 +1067,9 @@ const _CLICK_MAP = {
   scrollToRepo:            ()  => document.getElementById('repoSection').scrollIntoView({behavior:'smooth'}),
   showMediaBrowser:        ()  => showMediaBrowser(),
   showAddSheet:            ()  => showAddSheet(),
+  showQuickAdd:            ()  => showQuickAdd(),
+  saveQuickAdd:            ()  => saveQuickAdd(),
+  quickAddDone:            ()  => quickAddDone(),
   goBack:                  ()  => goBack(),
   goForward:               ()  => goForward(),
   openDetailHistory:       ()  => openDetailHistory(),
@@ -1121,6 +1124,7 @@ const _CLICK_MAP = {
   saveSource:              ()  => saveSource(),
   deleteSource:            ()  => deleteSource(),
   addEfMedia:              ()  => addEfMedia(),
+  efCamCapture:            ()  => document.getElementById('ef-cam-input').click(),
   saveEvent:               ()  => saveEvent(),
   saveAndCopyEvent:        ()  => saveAndCopyEvent(),
   applyClipboardEvent:     el  => applyClipboardEventToPerson(el.dataset.pid),
@@ -1239,6 +1243,7 @@ document.addEventListener('change', e => {
   else if (action === 'onEventTypeChange')    onEventTypeChange();
   else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
+  else if (action === 'qaEvTypeChange')    document.getElementById('qa-ev-fields').hidden = !el.value;
   else if (action === 'amCamChange') {
     (async () => {
       const f = el.files[0];
@@ -1252,6 +1257,10 @@ document.addEventListener('change', e => {
       catch(err) { showToast('Bild konnte nicht geladen werden', 'error'); }
       el.value = '';
     })();
+  }
+  else if (action === 'efCamChange') {
+    _efCamChange(el.files[0]);
+    el.value = '';
   }
   else if (action === 'photoImportChange') {
     _handlePhotoImport(el.files[0]).finally(() => { el.value = ''; });

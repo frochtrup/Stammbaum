@@ -39,6 +39,25 @@ function addEfMedia() {
   _renderEfMedia();
 }
 
+function _efCamChange(file) {
+  if (!file) return;
+  if (!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)) {
+    showToast('Nur Bilder erlaubt (JPG, PNG, WEBP, GIF)', 'error');
+    return;
+  }
+  resizeImageToBase64(file).then(b64 => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const fileName = `foto_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_`
+                   + `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.jpg`;
+    idbPut('img:' + fileName, b64).then(() => {
+      _efMedia.push({ file: fileName, title: '', form: 'jpeg', _extra: [] });
+      _renderEfMedia();
+      showToast('Foto gespeichert', 'success');
+    });
+  }).catch(() => showToast('Bild konnte nicht geladen werden', 'error'));
+}
+
 function _showEtypeDropdown(inputId, ddId, tag) {
   const input = document.getElementById(inputId);
   const dd    = document.getElementById(ddId);

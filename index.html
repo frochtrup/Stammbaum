@@ -326,12 +326,70 @@
     <div class="sheet-title" id="lbl-modalAdd">Neu hinzufügen</div>
     <div class="sheet-body">
       <div class="btn-row btn-row-col">
-        <button class="btn btn-save" data-action="addPerson">👤 Neue Person</button>
+        <button class="btn btn-save" data-action="showQuickAdd">⚡ Neue Person (Schnell)</button>
+        <button class="btn btn-save btn-dim" data-action="addPerson">👤 Neue Person (Vollformular)</button>
         <button class="btn btn-save btn-dim" data-action="addFamily">👨‍👩‍👧 Neue Familie</button>
         <button class="btn btn-save btn-dim" data-action="addSource">📖 Neue Quelle</button>
         <button class="btn btn-save btn-dim" data-action="addPlace">📍 Neuer Ort</button>
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAdd">Abbrechen</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Schnellerfassung neue Person -->
+<div class="modal-overlay" id="modalQuickAdd" role="dialog" aria-modal="true" aria-labelledby="lbl-modalQuickAdd">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalQuickAdd">Neue Person — Schnellerfassung</div>
+    <div class="sheet-body">
+      <div class="form-row">
+        <label class="form-label" style="flex:1">Vorname
+          <input class="form-input" id="qa-given" type="text" placeholder="Vorname" autocomplete="off">
+        </label>
+        <label class="form-label" style="flex:1">Nachname
+          <input class="form-input" id="qa-surname" type="text" placeholder="Nachname" autocomplete="off">
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="form-label" style="flex:1">Ereignis
+          <select class="form-input" id="qa-evtype" data-change="qaEvTypeChange">
+            <option value="">— kein —</option>
+            <option value="BIRT">Geburt</option>
+            <option value="CHR">Taufe</option>
+            <option value="DEAT">Tod</option>
+            <option value="BURI">Beerdigung</option>
+            <option value="OCCU">Beruf</option>
+            <option value="RESI">Wohnort</option>
+          </select>
+        </label>
+      </div>
+      <div id="qa-ev-fields" hidden>
+        <div class="form-row">
+          <label class="form-label" style="flex:1">Datum
+            <input class="form-input" id="qa-date" type="text" placeholder="TT.MM.JJJJ">
+          </label>
+          <label class="form-label" style="flex:1">Ort
+            <input class="form-input" id="qa-place" type="text" placeholder="Ort">
+          </label>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label" style="flex:1">Quelle (optional)
+          <select class="form-input" id="qa-src"></select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label class="form-label" style="flex:1">Seite
+          <input class="form-input" id="qa-page" type="text" placeholder="z.B. S. 12">
+        </label>
+      </div>
+      <p id="qa-hint" class="form-hint" hidden></p>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-cancel" data-action="closeModal" data-modal="modalQuickAdd">Abbrechen</button>
+      <button class="btn btn-dim" id="qa-done-btn" data-action="quickAddDone" hidden>Fertig</button>
+      <button class="btn btn-save" data-action="saveQuickAdd">Speichern ＋</button>
     </div>
   </div>
 </div>
@@ -1038,7 +1096,9 @@
       </div>
       <div class="form-group">
         <label class="form-label">Medien</label>
-        <div id="ef-media-list"></div>
+        <input type="file" id="ef-cam-input" accept="image/*" capture="environment" data-action="efCamChange" hidden>
+        <button type="button" class="src-add-btn" data-action="efCamCapture">📷 Foto aufnehmen</button>
+        <div id="ef-media-list" style="margin-top:6px"></div>
         <button type="button" class="src-add-btn mt-6" data-action="addEfMedia">＋ Medium hinzufügen</button>
       </div>
       <div class="btn-row">
