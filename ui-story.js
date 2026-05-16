@@ -38,6 +38,72 @@
     setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
   };
 
+  // ── Foto-Loader (IDB → OneDrive) ────────────────────────────────────────────
+
+  async function _loadMediaSrc(file) {
+    if (!file) return null;
+    // 1. IDB-Cache
+    if (typeof idbGet === 'function') {
+      try { const s = await idbGet('img:' + file); if (s) return s; } catch (_) {}
+    }
+    // 2. OneDrive (gibt data-URL zurück — print-sicher)
+    if (typeof _odGetMediaUrlByPath === 'function') {
+      try { const s = await _odGetMediaUrlByPath(file); if (s) return s; } catch (_) {}
+    }
+    return null;
+  }
+
+  // ── Foto-Embedding (async) ──────────────────────────────────────────────────
+
+  async function _embedPhotosAsync(pid) {
+    const p = getPerson(pid);
+    if (!p || UIState._storyPid !== pid) return;
+
+    const media = p.media || [];
+    const prim  = media.find(m => m.prim) || media[0];
+
+    // 1. Hero-Bild
+    if (prim?.file) {
+      const src = await _loadMediaSrc(prim.file);
+      if (UIState._storyPid !== pid) return;
+      const el = document.getElementById('story-hero-img');
+      if (el && src) { el.src = src; el.style.display = ''; }
+    }
+
+    // 2. Galerie — restliche Personen-Fotos (max. 5)
+    const others = media.filter(m => m !== prim && m.file).slice(0, 5);
+    if (others.length) {
+      const gallery = document.getElementById('story-gallery');
+      for (const m of others) {
+        if (UIState._storyPid !== pid || !gallery) break;
+        const src = await _loadMediaSrc(m.file);
+        if (!src) continue;
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = 'story-gallery-img';
+        img.alt = m.title || '';
+        if (m.title) img.title = m.title;
+        gallery.appendChild(img);
+      }
+    }
+
+    // 3. Event-Fotos — befülle alle [data-ev-files]-Container
+    const evDivs = document.querySelectorAll('#storyBody [data-ev-files]');
+    for (const div of evDivs) {
+      if (UIState._storyPid !== pid) break;
+      const files = (div.dataset.evFiles || '').split('|').filter(Boolean);
+      for (const f of files) {
+        if (UIState._storyPid !== pid) break;
+        const src = await _loadMediaSrc(f);
+        if (!src) continue;
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = 'story-ev-img';
+        div.appendChild(img);
+      }
+    }
+  }
+
   // ── Text-Helfer ─────────────────────────────────────────────────────────────
 
   function _esc(s) {
@@ -122,10 +188,11 @@
     const lifespan = (birth || death)
       ? `<p class="story-lifespan">${_esc(birth)}${birth && death ? ' – ' : ''}${_esc(death)}</p>`
       : '';
-    // Hero-Bild; wird durch _embedPhotosAsync befüllt
-    const hero = `<img id="story-hero-img" class="story-hero-img" alt="${_esc(p.name)}" style="display:none">`;
+    const hero    = `<img id="story-hero-img" class="story-hero-img" alt="${_esc(p.name)}" style="display:none">`;
+    const gallery = `<div id="story-gallery" class="story-gallery"></div>`;
     return `<header class="story-header">
 ${hero}
+${gallery}
 <h1 class="story-name">${_esc(p.name || p.id)}</h1>
 ${lifespan}
 </header>`;
@@ -134,21 +201,18 @@ ${lifespan}
   function _sectionEarlyLife(p, pr) {
     const sentences = [];
 
-    // Geburt
     const bDate  = p.birth?.date  ? ' am ' + _esc(p.birth.date)              : '';
     const bPlace = p.birth?.place ? ' in ' + _esc(_shortPlace(p.birth.place)) : '';
     if (p.birth?.seen || bDate || bPlace) {
       sentences.push(`${_esc(p.name || pr.Er)} wurde${bDate}${bPlace} geboren.`);
     }
 
-    // Taufe
     if (p.chr?.seen) {
       const cDate  = p.chr.date  ? ' am ' + _esc(p.chr.date)              : '';
       const cPlace = p.chr.place ? ' in ' + _esc(_shortPlace(p.chr.place)) : '';
       sentences.push(`${pr.Er} wurde${cDate}${cPlace} getauft.`);
     }
 
-    // Eltern
     const { father, mother } = _getParents(p);
     if (father || mother) {
       const fn = father ? _esc(father.name || father.id) : null;
@@ -176,9 +240,13 @@ ${lifespan}
       return ya - yb;
     });
 
-    const items = sorted.map(ev =>
-      `<p class="story-ev">${_eventSentence(ev, pr)}</p>`
-    ).join('\n');
+    const items = sorted.map(ev => {
+      const evMedia = (ev.media || []).filter(m => m.file);
+      const imgDiv  = evMedia.length
+        ? `<div class="story-ev-imgs" data-ev-files="${evMedia.map(m => _esc(m.file)).join('|')}"></div>`
+        : '';
+      return `<div class="story-ev-wrap"><p class="story-ev">${_eventSentence(ev, pr)}</p>${imgDiv}</div>`;
+    }).join('\n');
     return `<section class="story-section story-events">${items}</section>`;
   }
 
@@ -256,21 +324,6 @@ ${lifespan}
     }
     html += '</article>';
     return html;
-  }
-
-  // ── Foto-Embedding (async, Sprint A: nur IDB) ───────────────────────────────
-
-  function _embedPhotosAsync(pid) {
-    const p = getPerson(pid);
-    if (!p) return;
-    const prim = (p.media || []).find(m => m.prim) || (p.media || [])[0];
-    if (!prim?.file) return;
-    if (typeof idbGet !== 'function') return;
-    idbGet('img:' + prim.file).then(src => {
-      if (!src) return;
-      const el = document.getElementById('story-hero-img');
-      if (el && UIState._storyPid === pid) { el.src = src; el.style.display = ''; }
-    }).catch(() => {});
   }
 
   // ── Export ──────────────────────────────────────────────────────────────────
