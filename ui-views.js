@@ -174,6 +174,12 @@ function bnavTab(name) {
     if (cb) cb.style.display = 'none';
   }
   UIState._mapFromContext = null;
+  // Mobile: Orte-Tab erneut tippen während Karte aktiv → zurück zur Orte-Liste
+  if (name === 'places' && AppState.currentTab === 'places' && UIState._placesSubTab === 'karte'
+      && !document.body.classList.contains('desktop-mode')) {
+    switchPlacesSubTab('orte');
+    return;
+  }
   AppState.currentTab = name;
   setBnavActive(name);
   showView('v-main');
