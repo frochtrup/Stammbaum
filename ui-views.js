@@ -1210,6 +1210,13 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
 // Firefox Wheel-Normalisierung für Hauptliste frühzeitig registrieren
 document.addEventListener('DOMContentLoaded', () => {
   _normalizeWheel(document.getElementById('v-main'));
+  // Safari-Swipe-Back abfangen: pushState-Anker verhindert, dass der Browser
+  // die App verlässt; popstate delegiert an internes Nav-System
+  history.pushState({ app: true }, '');
+  window.addEventListener('popstate', () => {
+    history.pushState({ app: true }, '');
+    goBack();
+  });
 });
 
 document.addEventListener('click', e => {

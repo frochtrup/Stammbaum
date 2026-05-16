@@ -22,7 +22,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v572 · Cache: `stammbaum-v572`
+**sw-Version:** v573 · Cache: `stammbaum-v573`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -41,7 +41,7 @@ Kleine Aufwände mit hohem Orientierungswert für neue Nutzer.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SAFARI-SWIPE | **Safari-„Zurück"-Swipe abfangen** | Wischgeste nach rechts in Safari löst Browser-History-Back aus → App wird auf leere Seite zurückgesetzt (kompletter State-Verlust). Lösungsansatz: `history.pushState` beim App-Start + `popstate`-Event abfangen und an internes Nav-System delegieren statt Browser-Default zuzulassen. Betrifft iPhone/iPad im Browser-Modus (nicht als PWA installiert). | M |
+| SAFARI-SWIPE | **Safari-„Zurück"-Swipe abfangen** ✓ | `history.pushState({app:true},'')` beim App-Start + `popstate`-Listener in `ui-views.js`: Re-Anker + `goBack()` — verhindert State-Verlust im Browser-Modus (sw v573) | M ✓ |
 | TASK-EXPORT-MD | **Aufgabenliste als Markdown exportieren** | Alle offenen Forschungsaufgaben + Validierungsbefunde als `.md`-Datei; gegliedert nach Kategorie und Schweregrad; Download-Button im Aufgaben-Tab | S |
 | OBJE-TYPE | **Medien-Typ strukturiert** ⚠ nicht GEDCOM-konform | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag unter OBJE in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform; Opt-in im Einstellungs-Modal | M |
