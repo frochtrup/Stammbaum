@@ -160,7 +160,7 @@ function _esc(s) {
 
 function _shortPlace(place) {
   if (!place) return '';
-  return place.split(',')[0].trim();
+  return place.split(',').map(s => s.trim()).find(s => s) || '';
 }
 
 // ── Historische Ereignisse ─────────────────────
