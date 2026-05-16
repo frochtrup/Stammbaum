@@ -2751,11 +2751,15 @@ html[data-theme="dark"] {
   body * { visibility: hidden; }
   #v-story, #v-story * { visibility: visible; }
   #v-story .topbar, #v-story .topbar * { visibility: hidden; display: none !important; }
+  /* Leaflet-Kacheln drucken nie korrekt — Karte komplett ausblenden */
+  .story-map, .story-map * { visibility: hidden; display: none !important; }
   #v-story { position: absolute !important; left: 0; top: 0; width: 100%; overflow: visible !important; }
   #storyBody { overflow: visible !important; }
   .story-article { max-width: 100%; padding: 0; }
-  .story-hero-img { max-height: 7cm; }
-  .story-map-container { page-break-inside: avoid; }
+  /* Fotos auf Druckgröße begrenzen */
+  .story-hero-img { max-width: 100%; max-height: 6cm; width: auto; object-fit: cover; display: block; }
+  .story-gallery-img { max-width: 4cm; max-height: 4cm; object-fit: cover; }
+  .story-ev-img { max-width: 3cm; max-height: 3cm; object-fit: cover; }
   .story-gallery  { flex-wrap: wrap; overflow: visible; }
   .story-ev-imgs  { flex-wrap: wrap; }
 }
