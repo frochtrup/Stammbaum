@@ -86,6 +86,8 @@ let changed = false;  // Ungespeicherte Änderungen?
   //                  sources[], sourcePages{}, sourceQUAY{},
   //                  sourceExtra{}, sourceMedia{}, _extra[] }
 
+  aliases: ['@I002@'],  // 1 ALIA @xref@ — Verweise auf identische/gleichnamige Personen
+
   // Assoziationen (GEDCOM ASSO ↔ GRAMPS <personref>)
   associations: [{
     xref:         '@I002@',     // GEDCOM-Xref der verknüpften Person (null bei GRAMPS-only-Herkunft)

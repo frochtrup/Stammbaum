@@ -462,6 +462,15 @@ function _pdetLifeData(p, id) {
     </div>`;
   });
 
+  (p.aliases || []).forEach(aliasXref => {
+    const aliasP = AppState.db.individuals[aliasXref];
+    if (!aliasP) return;
+    html += `<div class="fact-row fact-row--clickable" data-action="showDetail" data-id="${aliasXref}">
+      <span class="fact-lbl">Alias</span>
+      <span class="fact-val">${esc(aliasP.name)}</span>
+    </div>`;
+  });
+
   // Referenzdatum für Altersberechnung: Geburt, Proxy Taufe
   const _refDate = p.birth.date || p.chr.date || '';
 

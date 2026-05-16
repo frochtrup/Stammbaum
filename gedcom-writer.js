@@ -312,6 +312,8 @@ function writeINDIRecord(lines, p) {
     _writeSourCits(lines, 2, a);
   }
 
+  for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
+
   // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
   for (const wr of (p._grampsWitnessRefs || [])) {
     const primaryId = _witnessEvMap[wr._origHlink];

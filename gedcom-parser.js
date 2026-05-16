@@ -75,7 +75,7 @@ function parseGEDCOM(text, parseErrors) {
           buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'',
-          extraNames:[], _tasks:[], associations:[],
+          extraNames:[], _tasks:[], associations:[], aliases:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
           nameCitations:[],
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
@@ -200,6 +200,9 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag === 'ASSO') {
           _curAsso = { xref: val, rela: '', note: '', citations: [] };
           cur.associations.push(_curAsso);
+        }
+        else if (tag === 'ALIA') {
+          if (val && val.startsWith('@')) cur.aliases.push(val);
         }
         else {
           // Unknown lv1 tag → verbatim passthrough

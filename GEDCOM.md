@@ -60,6 +60,7 @@
 | `_FREL` | 2 | `famc[].frel` + `famc[].frelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
 | `_MREL` | 2 | `famc[].mrel` + `famc[].mrelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
 | `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
+| `ALIA` | 1 | `aliases[]` | Verweis auf identische/gleichnamige Person (@xref@); nur @-Referenzen geparst |
 | `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum |
 
 ### FAM (Familie)
