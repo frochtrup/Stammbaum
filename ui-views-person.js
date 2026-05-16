@@ -612,6 +612,8 @@ function showDetail(id, pushHistory = true) {
   document.getElementById('editBtn').style.display = '';
   document.getElementById('treeBtn').hidden = false;
   document.getElementById('treeBtn').dataset.id = id;
+  const tlBtn = document.getElementById('timelineBtn');
+  if (tlBtn) { tlBtn.hidden = false; tlBtn.dataset.id = id; }
   const pb = document.getElementById('probandBtn');
   if (pb) {
     pb.hidden = false;

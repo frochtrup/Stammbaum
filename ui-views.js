@@ -57,6 +57,7 @@ function showView(id) {
     const showNav = (id === 'v-main' || id === 'v-tree');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
+    if (id === 'v-timeline') { const _tl = document.getElementById('v-timeline'); if (_tl) _tl.scrollTop = 0; }
   }
 }
 
@@ -354,6 +355,7 @@ function _historyItemLabel(item) {
   if (item.type === 'tree')     return 'Baum';
   if (item.type === 'fanchart') return 'Fächer';
   if (item.type === 'desctree') return 'Nachkommen';
+  if (item.type === 'timeline') return 'Zeitleiste';
   return '◂';
 }
 
@@ -423,6 +425,7 @@ function _navToHistoryItem(item) {
   else if (item.type === 'tree')     showTree(item.id, false);
   else if (item.type === 'fanchart') { if (typeof showFanChart  === 'function') showFanChart(item.id); }
   else if (item.type === 'desctree') { if (typeof showDescTree  === 'function') showDescTree(item.id, false); }
+  else if (item.type === 'timeline') { if (typeof showTimeline  === 'function') showTimeline(item.id, false); }
   else showMain();
 }
 
@@ -430,6 +433,8 @@ function _navToHistoryItem(item) {
 
 // Aktuell angezeigte Entity als History-Eintrag (null = Listenansicht)
 function _captureCurrentNavState() {
+  if (document.getElementById('v-timeline')?.classList.contains('active') && UIState._timelinePid)
+    return { type: 'timeline', id: UIState._timelinePid };
   if (AppState.currentPersonId) return { type: 'person', id: AppState.currentPersonId };
   if (AppState.currentFamilyId) return { type: 'family', id: AppState.currentFamilyId };
   if (AppState.currentSourceId) return { type: 'source', id: AppState.currentSourceId };
@@ -458,6 +463,10 @@ function _beforeDetailNavigate() {
     const _type = document.body.classList.contains('fc-mode')       ? 'fanchart'  :
                   document.body.classList.contains('desc-tree-mode') ? 'desctree' : 'tree';
     UIState._navHistory.push({ type: _type, id: currentTreeId });
+    UIState._navFwdStack = [];
+  } else if (document.getElementById('v-timeline')?.classList.contains('active') && UIState._timelinePid) {
+    // Zeitleiste → Detail
+    UIState._navHistory.push({ type: 'timeline', id: UIState._timelinePid });
     UIState._navFwdStack = [];
   } else {
     // Liste → Detail: History neu starten + Scroll-Position sichern
@@ -979,6 +988,7 @@ const _CLICK_MAP = {
   showRelPath:             el  => showRelPath(el.dataset.pid),
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
   showTree:                el  => showTree(el.dataset.id),
+  showTimeline:            el  => { if (typeof showTimeline === 'function') showTimeline(el.dataset.id); },
   toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),
   bnavTab:                 el => bnavTab(el.dataset.tab),
