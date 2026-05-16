@@ -55,6 +55,9 @@ window._tlFilterToggle = function (cat) {
 };
 
 // ── Rendering ──────────────────────────────────
+// Inline-style-Attribute werden durch CSP (style-src 'self') verworfen.
+// Lösung: HTML ohne style-Attribute bauen, Werte in data-* speichern,
+// danach per element.style.xxx = ... anwenden (JS-CSSOM ist CSP-konform).
 
 const _TL_PX_EMPTY   = 36;   // Höhe einer leeren Dekade (px)
 const _TL_PX_PER_EV  = 58;   // Höhe pro Event innerhalb einer Dekade
@@ -85,11 +88,11 @@ function _renderTimeline(pid) {
     decades.push({ d, pEvs, hEvs, count, height });
   }
 
-  // Alter einer Person zu einem Jahr berechnen
+  // Alter einer Person zu einem Jahr
   const birthYear = personEvs.find(e => e.type === 'birth')?.year ?? null;
   const age = y => birthYear !== null ? ` (${y - birthYear})` : '';
 
-  // Lebensspanne-Balken: Offset der Geburts- und Todesdekade berechnen
+  // Lebensspanne-Balken: Offset berechnen
   const birthEv = personEvs.find(e => e.type === 'birth');
   const deathEv = personEvs.find(e => e.type === 'death');
   const _decOffset = y => {
@@ -103,19 +106,17 @@ function _renderTimeline(pid) {
   const spanTop    = birthEv ? _decOffset(birthEv.year) : 0;
   const totalH     = decades.reduce((s, d) => s + d.height, 0);
   const spanBottom = deathEv ? _decOffset(deathEv.year) : totalH;
-  const spanStyle  = `top:${spanTop}px;height:${Math.max(spanBottom - spanTop, 4)}px`;
 
-  // HTML aufbauen
+  // HTML ohne style-Attribute aufbauen — Positionswerte als data-Attribute
   let html = '<div class="tl-wrap">';
-  html += `<div class="tl-lifespan" style="${spanStyle}"></div>`;
+  html += `<div class="tl-lifespan" data-top="${spanTop}" data-h="${Math.max(spanBottom - spanTop, 4)}"></div>`;
 
   for (const dec of decades) {
-    html += `<div class="tl-decade" style="height:${dec.height}px">`;
+    html += `<div class="tl-decade" data-h="${dec.height}">`;
     html += `<div class="tl-dec-label">${dec.d}er</div>`;
     html += '<div class="tl-axis-seg"></div>';
 
     if (dec.count) {
-      // Alle Events gemischt, nach Jahr sortiert
       const all = [
         ...dec.pEvs.map(e => ({ ...e, side: 'p' })),
         ...dec.hEvs.map(e => ({ ...e, side: 'h' })),
@@ -123,15 +124,15 @@ function _renderTimeline(pid) {
 
       const innerH = dec.height - 20;
       all.forEach((ev, i) => {
-        const top = 14 + (all.length > 1 ? i * (innerH / (all.length)) : innerH / 2 - 10);
+        const top = 14 + (all.length > 1 ? i * (innerH / all.length) : innerH / 2 - 10);
         if (ev.side === 'p') {
-          html += `<div class="tl-ev tl-ev--${ev.type}" style="top:${top}px">`;
+          html += `<div class="tl-ev tl-ev--${ev.type}" data-top="${top}">`;
           html += `<span class="tl-y">${ev.year}${age(ev.year)}</span>`;
           html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
           if (ev.place) html += `<span class="tl-place">${_esc(ev.place)}</span>`;
           html += '</div>';
         } else {
-          html += `<div class="tl-hist tl-hist--${ev.cat}" style="top:${top}px">`;
+          html += `<div class="tl-hist tl-hist--${ev.cat}" data-top="${top}">`;
           html += `<span class="tl-y">${ev.year}</span>`;
           html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
           html += '</div>';
@@ -141,9 +142,16 @@ function _renderTimeline(pid) {
 
     html += '</div>';
   }
-
   html += '</div>';
+
+  // DOM setzen, danach Positionierung per JS (CSP-konform)
   body.innerHTML = html;
+  body.querySelectorAll('[data-h]').forEach(el => {
+    el.style.height = el.dataset.h + 'px';
+  });
+  body.querySelectorAll('[data-top]').forEach(el => {
+    el.style.top = el.dataset.top + 'px';
+  });
 }
 
 function _esc(s) {

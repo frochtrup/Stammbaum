@@ -2318,8 +2318,8 @@ html[data-theme="dark"] {
 /* ══════════════════════════════════════════════
    ZEITLEISTE  (#v-timeline / ui-timeline.js)
 ══════════════════════════════════════════════ */
-#v-timeline { overflow-y: auto; }
-#tlBody { padding-bottom: 3rem; }
+#v-timeline { display: flex; flex-direction: column; overflow: hidden; }
+#tlBody { flex: 1; overflow-y: auto; padding-bottom: 3rem; }
 
 .tl-empty { padding: 2rem 1rem; color: var(--text-dim); }
 
@@ -2437,10 +2437,14 @@ html[data-theme="dark"] {
 }
 
 /* ── Filter-Bar ── */
-#tlFilterBar {
+.tl-filter-row {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--topbar-bg);
+  flex-shrink: 0;
 }
 .tl-filter-btn {
   font-size: 0.72rem;

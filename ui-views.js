@@ -57,7 +57,7 @@ function showView(id) {
     const showNav = (id === 'v-main' || id === 'v-tree');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
-    if (id === 'v-timeline') { const _tl = document.getElementById('v-timeline'); if (_tl) _tl.scrollTop = 0; }
+    if (id === 'v-timeline') { const _tb = document.getElementById('tlBody'); if (_tb) _tb.scrollTop = 0; }
   }
 }
 
