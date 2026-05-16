@@ -9,6 +9,14 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-16 — SAFARI-SWIPE + TASK-EXPORT-MD + Menü-Reihenfolge (sw v573–v575)
+
+- **sw v573** `feat(nav)`: SAFARI-SWIPE — `history.pushState({app:true},'')` beim App-Start in `DOMContentLoaded` (ui-views.js); `popstate`-Listener: Re-Anker sofort pushen + `goBack()` aufrufen; verhindert State-Verlust durch Safari-Wischgeste nach rechts im Browser-Modus (iPhone/iPad)
+- **sw v574** `feat(tasks)`: TASK-EXPORT-MD — `exportTasksMd()` in `ui-views-tasks.js`; Button „↓ MD" in `tasks-validate-bar`; pro Person: Name, Geschlecht, Geburt/Tod, Elternfamilie, eigene Ehen; pro Familie: Gatten mit Lebensdaten, Heirat, Kinderzahl; nach Kategorie sortiert; aktiver Filter (offen/erledigt/alle) übernommen; Dateiname `aufgaben_[Datei]_[YYYY-MM-DD].md`
+- **sw v575** `fix(menu)`: Menü-Reihenfolge — „Datei schließen" ans Ende des Datei-Abschnitts (war nach Hilfe); „Einstellungen" hinter Trennstrich vor „Hilfe & Anleitung" (war im Datei-Abschnitt)
+
+---
+
 ### Session 2026-05-16 — Story Mode (sw v549–v560)
 
 - **sw v549–v552** `feat(story)`: `ui-story.js` neu — View `#v-story`; 📖-Button in Detail-Topbar; `showStory(pid)` / `printStory()` / `downloadStory()`; Nav-System (type:'story' in `_navHistory`, Back/Fwd/Verlauf-Buttons); `body.story-active` für Desktop-Layout (Detailansicht überlagern)

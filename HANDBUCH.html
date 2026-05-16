@@ -1556,15 +1556,17 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
     <div class="phone-screen">
       <div style="background:var(--app-card); padding:8px; border-radius:0 0 0 0; font-family:sans-serif;">
         <div style="color:var(--gold);font-size:10px;font-weight:bold;margin-bottom:8px;">Menü</div>
-        <div class="app-menu-item"><span class="mi-icon">☁</span> OneDrive verbinden</div>
-        <div class="app-menu-item"><span class="mi-icon">⚙</span> Einstellungen</div>
-        <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
+        <div style="color:var(--text-dim);font-size:9px;margin-bottom:3px;">Datei</div>
         <div class="app-menu-item"><span class="mi-icon">📂</span> Öffnen… (lokal)</div>
+        <div class="app-menu-item"><span class="mi-icon">☁</span> OneDrive verbinden</div>
         <div class="app-menu-item"><span class="mi-icon">💾</span> Speichern (lokal)</div>
-        <div class="app-menu-item"><span class="mi-icon">↩</span> Änderungen verwerfen</div>
-        <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
-        <div class="app-menu-item"><span class="mi-icon">🗂</span> Demo-Daten öffnen</div>
         <div class="app-menu-item" style="color:var(--text-dim);"><span class="mi-icon" style="opacity:0.4;">✕</span> Datei schließen</div>
+        <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
+        <div style="color:var(--text-dim);font-size:9px;margin-bottom:3px;">Bearbeiten</div>
+        <div class="app-menu-item"><span class="mi-icon">↩</span> Änderungen verwerfen</div>
+        <div class="app-menu-item"><span class="mi-icon">🗂</span> Demo-Daten öffnen</div>
+        <div style="border-top:1px solid var(--app-border);margin:5px 0;"></div>
+        <div class="app-menu-item"><span class="mi-icon">⚙</span> Einstellungen</div>
         <div class="app-menu-item"><span class="mi-icon">❓</span> Hilfe &amp; Anleitung</div>
       </div>
     </div>
@@ -1630,7 +1632,14 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
 
 <h2>Aufgaben verwalten</h2>
 
-<p>In der Personenliste zeigt der Tab <span class="button-label">👤 Personen</span> einen Zahlenbadge, wenn es offene Aufgaben gibt. Tippen Sie auf den Tab und wechseln Sie oben zu „Aufgaben", um alle offenen Aufgaben in einer Liste zu sehen.</p>
+<p>Der Tab <span class="button-label">☑ Aufgaben</span> in der unteren Navigation zeigt alle Aufgaben in einer Gesamtliste — gegliedert nach Kategorie, mit klickbaren Personen- und Familien-Namen.</p>
+
+<p>Oben in der Liste können Sie filtern:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Offen</strong> — nur unerledigte Aufgaben</li>
+  <li><strong>Erledigt</strong> — abgehakte Aufgaben</li>
+  <li><strong>Alle</strong> — vollständige Liste</li>
+</ul>
 
 <p>Jede Aufgabe können Sie:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
@@ -1638,6 +1647,21 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
   <li>Mit <span class="button-label">✎</span> bearbeiten</li>
   <li>Mit <span class="button-label">✕</span> löschen</li>
 </ul>
+
+<h2>Aufgaben als Markdown exportieren</h2>
+
+<p>Mit dem Button <span class="button-label">↓ MD</span> oben im Aufgaben-Tab laden Sie alle Aufgaben als Textdatei herunter (Markdown-Format, Dateiendung <em>.md</em>). Die Datei lässt sich in jedem Texteditor öffnen und eignet sich als Forschungsprotokoll zum Ausdrucken oder Weiterschicken.</p>
+
+<p>Für jede Person und Familie enthält die Datei:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Name und GEDCOM-Kennung</li>
+  <li>Geburts- und Sterbedaten mit Ort</li>
+  <li>Elternfamilie (bei Personen)</li>
+  <li>Ehen mit Ehepartner und Heiratsjahr</li>
+  <li>Ehegatten-Lebensdaten und Kinderzahl (bei Familien)</li>
+</ul>
+
+<p>Der aktive Filter (Offen / Erledigt / Alle) wird in den Export übernommen.</p>
 
 <div class="tip">
 Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim nächsten Sitzen sofort, wo Sie aufgehört hatten.
@@ -1677,6 +1701,10 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
 
 <h2>Was ist eine Gramps-Datei?</h2>
 <p><em>Gramps</em> ist ein kostenloses Open-Source-Programm für Genealogie. Es speichert Daten im eigenen <em>.gramps</em>-Format (komprimiertes XML). Stammbaum PWA kann diese Dateien direkt öffnen und bearbeiten — ohne vorherigen Export als GEDCOM. So können Sie auf dem iPhone oder im Browser an Ihrem Gramps-Stammbaum arbeiten und die Datei anschließend wieder in Gramps öffnen.</p>
+
+<h2>In Safari wische ich aus Versehen zurück — die App verschwindet</h2>
+<p>Die Wischgeste nach rechts am Bildschirmrand ist in Safari die „Zurück"-Geste des Browsers. Seit Version 8 fängt die App diese Geste ab und navigiert stattdessen intern zurück — genau wie der <span class="button-label">←</span>-Button in der App. Die App verlässt dabei nicht mehr die Seite, kein Datenverlust.</p>
+<p>Das gilt im Browser-Modus (Safari ohne Installation). Als installierte PWA (über „Zum Home-Bildschirm hinzufügen") ist diese Geste ohnehin deaktiviert.</p>
 
 <h2>Kann ich die App auch ohne Internet nutzen?</h2>
 <p>Ja! Die App funktioniert vollständig offline. Sie muss lediglich einmal geladen worden sein. Danach können Sie auch ohne Internetverbindung arbeiten und speichern.</p>

@@ -64,7 +64,7 @@ stammbaum/
 ├── leaflet.css         ← Leaflet CSS
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v470)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v575)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
@@ -176,10 +176,11 @@ stammbaum/
 
 ### Forschungsaufgaben (☑ Aufgaben-Tab)
 - Eigener Bottom-Nav-Tab ☑ mit Badge für offene Aufgaben
-- Aufgaben pro Person, kategorisiert (Kirchenbuch / Urkunde / Online-Recherche)
+- Aufgaben pro Person und Familie, kategorisiert (Kirchenbuch / Urkunde / Online-Recherche)
 - Persistenz in GEDCOM (`_TASK`-Tag) und GRAMPS — Roundtrip-stabil
-- Globale Aufgabenliste: Filter Alle / Offen / Erledigt; Klick auf Personennamen → Detailansicht
-- Aufgaben in der Personen-Detailansicht direkt hinzufügen/bearbeiten/abhaken
+- Globale Aufgabenliste: Filter Alle / Offen / Erledigt; Klick auf Person/Familie → Detailansicht
+- Aufgaben in der Personen- und Familien-Detailansicht direkt hinzufügen/bearbeiten/abhaken
+- **Markdown-Export** (↓ MD): alle Aufgaben mit Kerndaten (Lebensdaten, Eltern, Ehen) als `.md`-Download
 
 ### Datenprüfung
 - **„✓ Daten prüfen"**-Button direkt im Aufgaben-Tab (auch über ☰ Menü erreichbar)

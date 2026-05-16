@@ -43,7 +43,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v548)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v575)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -59,10 +59,13 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-16
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v548** / Cache: `stammbaum-v548`
+- **Aktuelle sw-Version: v575** / Cache: `stammbaum-v575`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
-**Abgeschlossene Sprints (v8-dev, sw v448–v548):**
+**Abgeschlossene Sprints (v8-dev, sw v448–v575):**
+- **SAFARI-SWIPE (sw v573):** `history.pushState({app:true},'')` in DOMContentLoaded + `popstate`-Listener → Re-Anker + `goBack()`; verhindert State-Verlust durch Safari-Wischgeste im Browser-Modus
+- **TASK-EXPORT-MD (sw v574):** `exportTasksMd()` in `ui-views-tasks.js`; Button „↓ MD" in `tasks-validate-bar`; pro Person: Name, Geschlecht, Geburt/Tod, Elternfamilie, Ehen; pro Familie: Gatten + Lebensdaten + Heirat + Kinderzahl; nach Kategorie; aktiver Filter übernommen
+- **Menü-Reihenfolge (sw v575):** „Datei schließen" am Ende des Datei-Abschnitts; „Einstellungen" hinter Trennstrich vor „Hilfe & Anleitung"
 - **PERF-1/2 (sw v448–v449):** Debouncing Filter-Inputs + Soundex-Cache
 - **CrossMode-CitNotes (sw v450):** `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@`
 - **Dark Mode (sw v452):** `prefers-color-scheme` + `[data-theme]`-Toggle, 3-Stufen-Segment
