@@ -174,6 +174,46 @@ function _readMediaList(prefix, existingMedia) {
   return result;
 }
 
+function _renderDataEvens(evens) {
+  const container = document.getElementById('sf-data-evens-list');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < (evens || []).length; i++) {
+    const de = evens[i];
+    _appendDataEvenRow(container, de.evens, de.date, de.plac);
+  }
+}
+
+function _appendDataEvenRow(container, evens, date, plac) {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;padding:4px 0;border-bottom:1px solid var(--border)';
+  row.innerHTML = `
+    <input class="form-input" placeholder="BIRT, MARR, DEAT" value="${(evens||'').replace(/"/g,'&quot;')}" data-de="evens">
+    <input class="form-input" placeholder="FROM 1750 TO 1850" value="${(date||'').replace(/"/g,'&quot;')}" data-de="date">
+    <input class="form-input" placeholder="Ort" value="${(plac||'').replace(/"/g,'&quot;')}" data-de="plac">
+    <button type="button" class="btn btn-danger" style="padding:2px 8px">×</button>`;
+  row.querySelector('.btn-danger').addEventListener('click', () => row.remove());
+  container.appendChild(row);
+}
+
+function _readDataEvens() {
+  const container = document.getElementById('sf-data-evens-list');
+  if (!container) return [];
+  const result = [];
+  for (const row of container.children) {
+    const evens = row.querySelector('[data-de="evens"]')?.value.trim() || '';
+    const date  = row.querySelector('[data-de="date"]')?.value.trim()  || '';
+    const plac  = row.querySelector('[data-de="plac"]')?.value.trim()  || '';
+    if (evens || date || plac) result.push({evens, date, plac});
+  }
+  return result;
+}
+
+function addDataEven() {
+  const container = document.getElementById('sf-data-evens-list');
+  if (container) _appendDataEvenRow(container, '', '', '');
+}
+
 function _addMediaEntry(prefix) {
   const fileInput = document.getElementById(prefix + '-media-add-file');
   const file = (fileInput?.value || '').trim();
@@ -240,7 +280,9 @@ function showSourceForm(id) {
   document.getElementById('sf-publ').value  = s?.publ   || '';
   document.getElementById('sf-repo').value  = s?.repo         || '';
   document.getElementById('sf-caln').value  = s?.repoCallNum  || '';
+  document.getElementById('sf-medi').value  = s?.repoCallMedi || '';
   document.getElementById('sf-text').value  = s?.text         || '';
+  _renderDataEvens(s?.dataEvens || []);
   sfRepoUpdateDisplay();
   document.getElementById('deleteSourceBtn').style.display = s ? 'block' : 'none';
 
@@ -287,7 +329,9 @@ function saveSource() {
     date:        document.getElementById('sf-date').value.trim(),
     publ:        document.getElementById('sf-publ').value.trim(),
     repo:        document.getElementById('sf-repo').value.trim(),
-    repoCallNum: document.getElementById('sf-caln').value.trim(),
+    repoCallNum:  document.getElementById('sf-caln').value.trim(),
+    repoCallMedi: document.getElementById('sf-medi').value,
+    dataEvens:    _readDataEvens(),
     text:        document.getElementById('sf-text').value.trim(),
     media:       _readMediaList('sf', existing.media || []),
     lastChanged:     gedcomDate(_now),

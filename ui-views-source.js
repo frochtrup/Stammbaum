@@ -38,11 +38,20 @@ function showSourceDetail(id, pushHistory = true) {
   if (s.repo) {
     if (s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo]) {
       const r = AppState.db.repositories[s.repo];
-      const callNum = s.repoCallNum ? ` · Signatur: ${esc(s.repoCallNum)}` : '';
+      const callNum = s.repoCallNum ? ` · Signatur: ${esc(s.repoCallNum)}${s.repoCallMedi ? ' (' + esc(s.repoCallMedi) + ')' : ''}` : '';
       html += `<div class="fact-row"><span class="fact-lbl">Aufbewahrung</span>
         <span class="fact-val"><span class="btn-link" data-action="showRepoDetail" data-id="${s.repo}">${esc(r.name || s.repo)}</span>${callNum}</span></div>`;
     } else {
       html += factRow('Aufbewahrung', s.repo);
+    }
+  }
+  if (s.agnc) html += factRow('Behörde', s.agnc);
+  if (s.dataEvens && s.dataEvens.length) {
+    for (const de of s.dataEvens) {
+      let cov = de.evens || '(alle Ereignisse)';
+      if (de.date) cov += ` · ${esc(de.date)}`;
+      if (de.plac) cov += ` · ${esc(de.plac)}`;
+      html += factRow('Deckungsbereich', cov);
     }
   }
   html += `</div>`;

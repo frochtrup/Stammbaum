@@ -842,6 +842,23 @@
       <div class="form-group" id="sf-caln-group" hidden>
         <label class="form-label">Signatur / Bestellnummer (CALN)</label>
         <input class="form-input" id="sf-caln" placeholder="IV/342">
+        <label class="form-label" style="margin-top:6px">Medientyp (MEDI)</label>
+        <select class="form-input" id="sf-medi">
+          <option value="">– kein Medientyp –</option>
+          <option value="audio">audio</option>
+          <option value="book">book</option>
+          <option value="card">card</option>
+          <option value="electronic">electronic</option>
+          <option value="fiche">fiche</option>
+          <option value="film">film</option>
+          <option value="magazine">magazine</option>
+          <option value="manuscript">manuscript</option>
+          <option value="map">map</option>
+          <option value="newspaper">newspaper</option>
+          <option value="photo">photo</option>
+          <option value="tombstone">tombstone</option>
+          <option value="video">video</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label">Notiz / Beschreibung</label>
@@ -856,6 +873,11 @@
         </div>
       </div>
       </div><!-- /sf-optional-fields -->
+      <div class="form-group">
+        <label class="form-label">Deckungsbereich (DATA.EVEN)</label>
+        <div id="sf-data-evens-list"></div>
+        <button type="button" class="btn btn-dim mt-6" data-action="addDataEven">+ Deckungsbereich</button>
+      </div>
       <button type="button" id="sf-more-btn" class="btn w-full mb-12 fs-md btn-sec"
               data-action="sfToggleMore">Weitere Felder ▼</button>
       <div class="btn-row">

@@ -22,7 +22,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v540 · Cache: `stammbaum-v540`
+**sw-Version:** v546 · Cache: `stammbaum-v546`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -68,7 +68,7 @@ Features, die aus oberflächlicher Datensammlung systematische Forschung machen.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SOUR-DATA | **SOUR.DATA.EVEN/DATE strukturiert** | Laufzeit + Ereignistypen einer Quelle (z. B. Kirchenbuch 1750–1850, BIRT/MARR/DEAT); Parser: `s.dataEvens[]`; Writer: `2 DATA / 3 EVEN / 3 DATE / 3 PLAC`; UI: Deckungsbereich sichtbar im Quellen-Formular + Quellen-Detail | M |
+| SOUR-DATA | **SOUR.DATA.EVEN/DATE strukturiert** ✓ | `s.dataEvens[]` mit `{evens,date,plac}`; Parser + Writer + Detail-Anzeige + Formular (sw v546) | M ✓ |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + zusammenführen; Inzucht-Koeffizient berechnen | M |
 | Perf-Worker | **Web Worker für Duplikat-Scan** | `findDuplicatePairs()` in Worker auslagern; Main Thread bleibt bei >2000 Personen reaktiv | M |
 
@@ -83,7 +83,7 @@ Wichtig für Nutzer, die mit anderen Tools (Legacy, RootsMagic, GRAMPS) zusammen
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; ADR dokumentiert | M |
 | ASSO-UI | **ASSO-Beziehungen** | Read-only Anzeige in Personen-Detail (Schritt 1); Bearbeitung (Zeuge/Pate zu Event zuordnen, Schritt 2) | M+M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
-| MEDI-CALN | **MEDI-Typ unter REPO.CALN** | `3 MEDI Mikrofilm\|Digitalisat\|Original` unter `2 CALN`; Parser + Writer + ein Feld im Quellen-Formular | S |
+| MEDI-CALN | **MEDI-Typ unter REPO.CALN** ✓ | `3 MEDI` unter `2 CALN`; `s.repoCallMedi`; Parser + Writer + Select im Quellen-Formular (sw v545) | S ✓ |
 | ALIA | **ALIA-Aliasverweise** ✓ | `1 ALIA @xref@`; Parser: `p.alia[]`; Writer; UI: Warn-Row mit ≈-Label + left-border; Edit: symmetrisch hinzufügen/entfernen (sw v499) | S+S ✓ |
 | REFN | **REFN/RIN strukturiert** | `p.refns[]` mit `{val,type}`; aktuell Passthrough; primär für Companion-Workflows | S |
 

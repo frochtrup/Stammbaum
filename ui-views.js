@@ -1061,6 +1061,7 @@ const _CLICK_MAP = {
   saveFamEvent:            ()  => saveFamEvent(),
   deleteFamEvent:          ()  => deleteFamEvent(),
   applySourceTemplate:     el => _applySourceTemplate(el.dataset.tpl),
+  addDataEven:             ()  => addDataEven(),
   sfRepoClear:             ()  => sfRepoClear(),
   openRepoPicker:          ()  => openRepoPicker(),
   sfToggleMore:            ()  => sfToggleMore(),

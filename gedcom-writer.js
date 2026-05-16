@@ -435,13 +435,19 @@ function writeSOURRecord(lines, s) {
     lines.push(`1 REPO ${s.repo}`);
     if (s.repoCallNum) {
       lines.push(`2 CALN ${s.repoCallNum}`);
+      if (s.repoCallMedi) lines.push(`3 MEDI ${s.repoCallMedi}`);
       for (const l of (s.repoCallNumExtra || [])) lines.push(l);
     }
   }
   if (s._textSeen) pushCont(lines, 1, 'TEXT', s.text || '');
-  if (s.agnc || (s.dataExtra && s.dataExtra.length)) {
+  if (s.agnc || (s.dataEvens && s.dataEvens.length) || (s.dataExtra && s.dataExtra.length)) {
     lines.push(`1 DATA`);
     if (s.agnc) lines.push(`2 AGNC ${s.agnc}`);
+    for (const de of (s.dataEvens || [])) {
+      lines.push(`2 EVEN${de.evens ? ' ' + de.evens : ''}`);
+      if (de.date) lines.push(`3 DATE ${de.date}`);
+      if (de.plac) lines.push(`3 PLAC ${de.plac}`);
+    }
     for (const l of (s.dataExtra || [])) lines.push(l);
   }
   for (const m of (s.media || [])) {

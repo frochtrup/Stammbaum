@@ -86,7 +86,7 @@ function parseGEDCOM(text, parseErrors) {
         cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallMedi:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.slice(val.startsWith('NOTE ') ? 5 : 4); // preserve trailing whitespace (CONC-Roundtrip)
@@ -748,9 +748,10 @@ function parseGEDCOM(text, parseErrors) {
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='PUBL') cur.publ   += (tag==='CONT'?'\n':'') + val;
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='ABBR') cur.abbr   += (tag==='CONT'?'\n':'') + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
-        if (lv1tag==='REPO' && tag==='CALN') { cur.repoCallNum = val; _ptDepth=2; _ptTarget=cur.repoCallNumExtra; }
+        if (lv1tag==='REPO' && tag==='CALN') { cur.repoCallNum = val; }
         if (lv1tag==='DATA' && tag==='AGNC') cur.agnc = val;
-        else if (lv1tag==='DATA' && tag !== 'AGNC') { cur.dataExtra.push('2 '+tag+(val?' '+val:'')); _ptDepth=2; _ptTarget=cur.dataExtra; }
+        else if (lv1tag==='DATA' && tag==='EVEN') { cur.dataEvens.push({evens:val||'',date:'',plac:''}); }
+        else if (lv1tag==='DATA' && tag !== 'AGNC' && tag !== 'EVEN') { cur.dataExtra.push('2 '+tag+(val?' '+val:'')); _ptDepth=2; _ptTarget=cur.dataExtra; }
       }
       else if (lv === 3) {
         if (lv1tag==='OBJE' && lv2tag==='FILE' && cur.media.length) {
@@ -760,6 +761,14 @@ function parseGEDCOM(text, parseErrors) {
         }
         if (lv1tag==='OBJE' && lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.media.length)
           cur.media[cur.media.length-1].note += (tag==='CONT' ? '\n' : '') + val;
+        if (lv1tag==='REPO' && lv2tag==='CALN' && tag==='MEDI') cur.repoCallMedi = val;
+        else if (lv1tag==='REPO' && lv2tag==='CALN') { cur.repoCallNumExtra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.repoCallNumExtra; }
+        if (lv1tag==='DATA' && lv2tag==='EVEN' && cur.dataEvens.length) {
+          const _de = cur.dataEvens[cur.dataEvens.length-1];
+          if      (tag==='DATE') _de.date = val;
+          else if (tag==='PLAC') _de.plac = val;
+          else { cur.dataExtra.push('3 ' + tag + (val ? ' ' + val : '')); _ptDepth=3; _ptTarget=cur.dataExtra; }
+        }
         if (lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
       }
     }
