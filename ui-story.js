@@ -125,9 +125,9 @@
     };
   }
 
-  function _shortPlace(pl) {
-    if (!pl) return '';
-    return pl.split(',')[0].trim();
+  function _shortPlace(place) {
+    if (!place) return '';
+    return place.split(',').map(s => s.trim()).find(s => s) || '';
   }
 
   function _atPlace(ev) {
