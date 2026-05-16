@@ -2636,7 +2636,7 @@ html[data-theme="dark"] {
 .theme-seg button:not(.active):active { background: var(--surface2); }
 
 /* ── Story Mode ─────────────────────────────────────── */
-#v-story { display:flex; flex-direction:column; overflow:hidden; }
+#v-story.active { display:flex; flex-direction:column; overflow:hidden; }
 #storyBody { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0; }
 
 .story-article {
