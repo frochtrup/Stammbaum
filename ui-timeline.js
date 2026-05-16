@@ -214,18 +214,16 @@ function _swimLane(type, gedType, eventType) {
 }
 
 function _resolveSwimOverlaps(chips, chipW) {
-  // Nur Richtung speichern (+1/-1/0) — Pixel-Versatz wird im CSSOM-Schritt
-  // aus dem echten offsetHeight berechnet.
-  let lastRight = -Infinity, dir = 1;
+  let lastRight = -Infinity, prev = null;
   for (const c of chips) {
-    if (c.pxLeft < lastRight + 6) {
-      c.nudge = dir;
-      dir = -dir;
+    if (prev && c.pxLeft < lastRight + 6) {
+      if (prev.nudge === 0) prev.nudge = 1;        // erstes Paar: prev → oben/Hintergrund
+      c.nudge = prev.nudge === 1 ? -1 : 1;         // aktueller → entgegengesetzt
     } else {
       c.nudge = 0;
-      dir = 1;
     }
     lastRight = Math.max(lastRight, c.pxLeft + chipW);
+    prev = c;
   }
 }
 
@@ -414,14 +412,22 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     el.style.left  = el.dataset.left + 'px';
     el.style.width = el.dataset.bw + 'px';
   });
-  // Datierte Chips: position + vertikale Zentrierung; bei Überlappung ±(chipH/2 + 8px)
+  // Datierte Chips: zentriert; bei Überlappung oben (Hintergrund) / unten (Vordergrund)
   body.querySelectorAll('.tl-chip[data-left]').forEach(el => {
     const lH    = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
     const dir   = parseInt(el.dataset.nudge || 0);
     const chipH = el.offsetHeight || 40;
-    const nudge = dir * (chipH / 2 + 8);
+    const pad   = 6;
     el.style.left = el.dataset.left + 'px';
-    el.style.top  = Math.round(Math.max((lH - chipH) / 2 + nudge, 4)) + 'px';
+    if (dir === 1) {
+      el.style.top    = pad + 'px';
+      el.style.zIndex = '1';
+    } else if (dir === -1) {
+      el.style.top    = Math.max(lH - chipH - pad, pad) + 'px';
+      el.style.zIndex = '2';
+    } else {
+      el.style.top = Math.round(Math.max((lH - chipH) / 2, pad)) + 'px';
+    }
   });
   // Undatierte Links-gestapelt (Beruf) — Stapel als Block zentrieren
   body.querySelectorAll('.tl-chip--undated[data-stacki]:not(.tl-chip--right)').forEach(el => {
