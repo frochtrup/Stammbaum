@@ -106,6 +106,7 @@ let _tlResizeTimer = null;
 window.addEventListener('resize', () => {
   if (!UIState._timelinePid) return;
   if (document.getElementById('v-timeline')?.classList.contains('active')) {
+    window.scrollTo(0, 0);
     clearTimeout(_tlResizeTimer);
     _tlResizeTimer = setTimeout(() => _renderTimeline(UIState._timelinePid), 150);
   }

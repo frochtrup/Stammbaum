@@ -2346,7 +2346,8 @@ html[data-theme="dark"] {
 /* ══════════════════════════════════════════════
    ZEITLEISTE  (#v-timeline / ui-timeline.js)
 ══════════════════════════════════════════════ */
-#v-timeline.active { display: flex; flex-direction: column; overflow: hidden; min-height: calc(100dvh - 52px); }
+/* position:fixed;inset:0 verhindert Bleed-Through bei Rotation (wie Desktop-Mode) */
+#v-timeline.active { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
 #tlBody { flex: 1; overflow-y: auto; padding-bottom: 3rem; }
 
 .tl-empty { padding: 2rem 1rem; color: var(--text-dim); }
@@ -2653,7 +2654,7 @@ html[data-theme="dark"] {
 .theme-seg button:not(.active):active { background: var(--surface2); }
 
 /* ── Story Mode ─────────────────────────────────────── */
-#v-story.active { display:flex; flex-direction:column; overflow:hidden; }
+#v-story.active { position: fixed; inset: 0; z-index: 50; display:flex; flex-direction:column; overflow:hidden; background: var(--bg); }
 #storyBody { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0; }
 
 .story-article {
