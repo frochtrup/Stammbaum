@@ -2751,10 +2751,11 @@ html[data-theme="dark"] {
   body * { visibility: hidden; }
   #v-story, #v-story * { visibility: visible; }
   #v-story .topbar, #v-story .topbar * { visibility: hidden; display: none !important; }
-  /* Leaflet-Div ausblenden; Snapshot-Bild (_onBeforePrint) sichtbar lassen */
-  .story-map-container { visibility: hidden; }
-  .story-map-print-img { visibility: visible; display: block; width: 100%; border-radius: 6px; page-break-inside: avoid; }
-  #v-story { position: absolute !important; left: 0; top: 0; width: 100%; overflow: visible !important; }
+  /* Leaflet-Div: display:none schlägt #v-story * { visibility:visible } mit !important */
+  #v-story .story-map-container { display: none !important; }
+  .story-map-print-img { visibility: visible !important; display: block !important; width: 100%; border-radius: 6px; page-break-inside: avoid; }
+  /* Kein absolute/fixed — verhindert Right-Shift im Desktop-Modus */
+  #v-story { position: static !important; left: auto !important; width: 100% !important; overflow: visible !important; }
   #storyBody { overflow: visible !important; }
   .story-article { max-width: 100%; padding: 0; }
   /* Fotos auf Druckgröße begrenzen */
