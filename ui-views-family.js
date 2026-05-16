@@ -319,6 +319,7 @@ function showFamilyDetail(id, pushHistory = true) {
   AppState.currentSourceId  = null;
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = null;
+  (UIState._lastTabSel || (UIState._lastTabSel = {})).families = id;
   if (document.body.classList.contains('desktop-mode')) {
     if (AppState.currentTab === 'families') _updateFamilyListCurrent(id); else _updateFamilyListCurrent(null);
     _updatePersonListCurrent(null);

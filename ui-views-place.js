@@ -190,6 +190,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   AppState.currentSourceId  = null;
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = placeName;
+  (UIState._lastTabSel || (UIState._lastTabSel = {})).places = placeName;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('treeBtn').hidden = true;

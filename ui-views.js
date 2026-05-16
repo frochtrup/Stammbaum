@@ -223,6 +223,7 @@ function bnavTab(name) {
   setBnavActive(name);
   showView('v-main');
   switchTab(name);
+  _desktopAutoSelect(name);
 }
 
 // Bottom-Nav: Globale Suche
@@ -629,6 +630,41 @@ function smallestPersonId() {
     const nb = parseInt(b.replace(/\D/g, '')) || 0;
     return na - nb;
   })[0];
+}
+
+// Kleinste numerische ID aus beliebiger Map (families, sources)
+function _smallestId(map) {
+  const ids = Object.keys(map || {});
+  if (!ids.length) return null;
+  return ids.sort((a, b) => (parseInt(a.replace(/\D/g,''))||0) - (parseInt(b.replace(/\D/g,''))||0))[0];
+}
+
+// Alphabetisch erster Ortsname
+function _firstPlaceName() {
+  if (typeof collectPlaces !== 'function') return null;
+  const places = collectPlaces();
+  if (!places.size) return null;
+  return [...places.keys()].sort((a, b) => a.localeCompare(b, 'de'))[0] || null;
+}
+
+// Desktop: rechtes Panel beim Tab-Wechsel automatisch befüllen
+function _desktopAutoSelect(tab) {
+  if (!document.body.classList.contains('desktop-mode')) return;
+  const sel = UIState._lastTabSel || (UIState._lastTabSel = {});
+  if (tab === 'persons') {
+    const id = sel.persons || smallestPersonId();
+    if (id) showDetail(id, false);
+  } else if (tab === 'families') {
+    const id = sel.families || _smallestId(AppState.db.families);
+    if (id && typeof showFamilyDetail === 'function') showFamilyDetail(id, false);
+  } else if (tab === 'sources') {
+    const id = sel.sources || _smallestId(AppState.db.sources);
+    if (id && typeof showSourceDetail === 'function') showSourceDetail(id, false);
+  } else if (tab === 'places') {
+    const name = sel.places || _firstPlaceName();
+    if (name && typeof showPlaceDetail === 'function') showPlaceDetail(name, false);
+  }
+  // tasks / search / stats: kein Detail-View
 }
 
 // Startansicht nach Datei-Load: Tree des Probanden (oder kleinste ID)

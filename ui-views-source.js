@@ -10,6 +10,7 @@ function showSourceDetail(id, pushHistory = true) {
   AppState.currentFamilyId  = null;
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = null;
+  (UIState._lastTabSel || (UIState._lastTabSel = {})).sources = id;
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
