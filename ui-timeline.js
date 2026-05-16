@@ -63,23 +63,55 @@ const _TL_PX_EMPTY   = 36;   // Höhe einer leeren Dekade (px)
 const _TL_PX_PER_EV  = 58;   // Höhe pro Event innerhalb einer Dekade
 const _TL_PX_DEC_MIN = 90;   // Mindesthöhe einer belegten Dekade
 
+// Horizontale Variante
+const _TL_H_EMPTY   = 55;    // Breite einer leeren Dekade (px)
+const _TL_H_PER_EV  = 110;   // Breite pro Event (je Seite)
+const _TL_H_DEC_MIN = 120;   // Mindestbreite einer belegten Dekade
+
+function _isTlHoriz() {
+  return window.innerWidth > window.innerHeight && window.innerWidth >= 500;
+}
+
+// Neu rendern bei Orientierungswechsel
+let _tlResizeTimer = null;
+window.addEventListener('resize', () => {
+  if (!UIState._timelinePid) return;
+  if (document.getElementById('v-timeline')?.classList.contains('active')) {
+    clearTimeout(_tlResizeTimer);
+    _tlResizeTimer = setTimeout(() => _renderTimeline(UIState._timelinePid), 150);
+  }
+});
+
+// ── Dispatcher ─────────────────────────────────────
 function _renderTimeline(pid) {
   const personEvs = _buildPersonEvents(pid);
   const body = document.getElementById('tlBody');
   if (!personEvs.length) {
     body.innerHTML = '<p class="tl-empty">Keine datierten Ereignisse vorhanden.</p>';
+    body.classList.remove('horiz');
     return;
   }
-
-  const minYear = Math.min(...personEvs.map(e => e.year));
-  const maxYear = Math.max(...personEvs.map(e => e.year));
-  const filters = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
-  const histEvs = _HIST_EVENTS.filter(e => e.year >= minYear - 2 && e.year <= maxYear + 2 && filters.has(e.cat));
-
-  // Dekaden-Struktur
+  const minYear  = Math.min(...personEvs.map(e => e.year));
+  const maxYear  = Math.max(...personEvs.map(e => e.year));
+  const filters  = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
+  const histEvs  = _HIST_EVENTS.filter(e => e.year >= minYear - 2 && e.year <= maxYear + 2 && filters.has(e.cat));
   const decStart = Math.floor(minYear / 10) * 10;
   const decEnd   = Math.floor(maxYear / 10) * 10;
-  const decades  = [];
+  const birthEv  = personEvs.find(e => e.type === 'birth');
+  const deathEv  = personEvs.find(e => e.type === 'death');
+  const birthYear = birthEv?.year ?? null;
+  const age = y => birthYear !== null ? ` (${y - birthYear})` : '';
+
+  if (_isTlHoriz()) {
+    _renderTlH(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body);
+  } else {
+    _renderTlV(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body);
+  }
+}
+
+// ── Vertikal ───────────────────────────────────────
+function _renderTlV(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body) {
+  const decades = [];
   for (let d = decStart; d <= decEnd; d += 10) {
     const pEvs = personEvs.filter(e => e.year >= d && e.year < d + 10);
     const hEvs = histEvs.filter(e => e.year >= d && e.year < d + 10);
@@ -87,14 +119,6 @@ function _renderTimeline(pid) {
     const height = count ? Math.max(count * _TL_PX_PER_EV + 20, _TL_PX_DEC_MIN) : _TL_PX_EMPTY;
     decades.push({ d, pEvs, hEvs, count, height });
   }
-
-  // Alter einer Person zu einem Jahr
-  const birthYear = personEvs.find(e => e.type === 'birth')?.year ?? null;
-  const age = y => birthYear !== null ? ` (${y - birthYear})` : '';
-
-  // Lebensspanne-Balken: Offset berechnen
-  const birthEv = personEvs.find(e => e.type === 'birth');
-  const deathEv = personEvs.find(e => e.type === 'death');
   const _decOffset = y => {
     let off = 0;
     for (const dec of decades) {
@@ -107,21 +131,18 @@ function _renderTimeline(pid) {
   const totalH     = decades.reduce((s, d) => s + d.height, 0);
   const spanBottom = deathEv ? _decOffset(deathEv.year) : totalH;
 
-  // HTML ohne style-Attribute aufbauen — Positionswerte als data-Attribute
+  body.classList.remove('horiz');
   let html = '<div class="tl-wrap">';
   html += `<div class="tl-lifespan" data-top="${spanTop}" data-h="${Math.max(spanBottom - spanTop, 4)}"></div>`;
-
   for (const dec of decades) {
     html += `<div class="tl-decade" data-h="${dec.height}">`;
     html += `<div class="tl-dec-label">${dec.d}er</div>`;
     html += '<div class="tl-axis-seg"></div>';
-
     if (dec.count) {
       const all = [
         ...dec.pEvs.map(e => ({ ...e, side: 'p' })),
         ...dec.hEvs.map(e => ({ ...e, side: 'h' })),
       ].sort((a, b) => a.year - b.year);
-
       const innerH = dec.height - 20;
       all.forEach((ev, i) => {
         const top = 14 + (all.length > 1 ? i * (innerH / all.length) : innerH / 2 - 10);
@@ -139,19 +160,74 @@ function _renderTimeline(pid) {
         }
       });
     }
-
     html += '</div>';
   }
   html += '</div>';
-
-  // DOM setzen, danach Positionierung per JS (CSP-konform)
   body.innerHTML = html;
-  body.querySelectorAll('[data-h]').forEach(el => {
-    el.style.height = el.dataset.h + 'px';
+  body.querySelectorAll('[data-h]').forEach(el => { el.style.height = el.dataset.h + 'px'; });
+  body.querySelectorAll('[data-top]').forEach(el => { el.style.top   = el.dataset.top + 'px'; });
+}
+
+// ── Horizontal (Landscape) ─────────────────────────
+// Dekaden als Spalten; Personen-Events oberhalb der Achse, Hist-Events unterhalb.
+function _renderTlH(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body) {
+  const decades = [];
+  for (let d = decStart; d <= decEnd; d += 10) {
+    const pEvs = personEvs.filter(e => e.year >= d && e.year < d + 10);
+    const hEvs = histEvs.filter(e => e.year >= d && e.year < d + 10);
+    const count = Math.max(pEvs.length, hEvs.length); // je Seite unabhängig
+    const width = count ? Math.max(count * _TL_H_PER_EV + 20, _TL_H_DEC_MIN) : _TL_H_EMPTY;
+    decades.push({ d, pEvs, hEvs, width });
+  }
+  const _decOffH = y => {
+    let off = 0;
+    for (const dec of decades) {
+      if (y !== null && dec.d <= y && y < dec.d + 10) return off + (y - dec.d) / 10 * dec.width;
+      off += dec.width;
+    }
+    return off;
+  };
+  const spanLeft  = birthEv ? _decOffH(birthEv.year) : 0;
+  const totalW    = decades.reduce((s, d) => s + d.width, 0);
+  const spanRight = deathEv ? _decOffH(deathEv.year) : totalW;
+
+  body.classList.add('horiz');
+  let html = '<div class="tl-wrap horiz">';
+  html += `<div class="tl-lifespan" data-lh="${spanLeft}" data-wh="${Math.max(spanRight - spanLeft, 4)}"></div>`;
+  for (const dec of decades) {
+    html += `<div class="tl-decade" data-w="${dec.width}">`;
+    html += `<div class="tl-dec-label">${dec.d}er</div>`;
+    html += '<div class="tl-axis-seg"></div>';
+    // Person-Events: oberhalb Achse, nach Jahr verteilt
+    const pSorted = [...dec.pEvs].sort((a, b) => a.year - b.year);
+    pSorted.forEach((ev, i) => {
+      const left = pSorted.length > 1 ? Math.round(5 + i * ((dec.width - 10) / pSorted.length)) : 5;
+      html += `<div class="tl-ev tl-ev--${ev.type}" data-hleft="${left}">`;
+      html += `<span class="tl-y">${ev.year}${age(ev.year)}</span>`;
+      html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
+      if (ev.place) html += `<span class="tl-place">${_esc(ev.place)}</span>`;
+      html += '</div>';
+    });
+    // Hist-Events: unterhalb Achse, nach Jahr verteilt
+    const hSorted = [...dec.hEvs].sort((a, b) => a.year - b.year);
+    hSorted.forEach((ev, i) => {
+      const left = hSorted.length > 1 ? Math.round(5 + i * ((dec.width - 10) / hSorted.length)) : 5;
+      html += `<div class="tl-hist tl-hist--${ev.cat}" data-hleft="${left}">`;
+      html += `<span class="tl-y">${ev.year}</span>`;
+      html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  body.innerHTML = html;
+  body.querySelectorAll('.tl-decade[data-w]').forEach(el => { el.style.width = el.dataset.w + 'px'; });
+  body.querySelectorAll('[data-lh]').forEach(el => {
+    el.style.left  = el.dataset.lh + 'px';
+    el.style.width = el.dataset.wh + 'px';
   });
-  body.querySelectorAll('[data-top]').forEach(el => {
-    el.style.top = el.dataset.top + 'px';
-  });
+  body.querySelectorAll('.tl-ev[data-hleft]').forEach(el => { el.style.left = el.dataset.hleft + 'px'; });
+  body.querySelectorAll('.tl-hist[data-hleft]').forEach(el => { el.style.left = el.dataset.hleft + 'px'; });
 }
 
 function _esc(s) {

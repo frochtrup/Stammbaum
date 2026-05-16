@@ -2486,4 +2486,65 @@ html[data-theme="dark"] {
 @media (max-width: 599px) {
   .tl-lifespan { left: 19px; }
 }
+
+/* ── Horizontale Variante (Landscape ≥500px) ── */
+#tlBody.horiz {
+  overflow-y: hidden;
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tl-wrap.horiz {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  max-width: none;
+  padding: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.tl-wrap.horiz .tl-decade {
+  position: relative;
+  flex-shrink: 0;
+  /* height via align-items: stretch vom Flex-Container */
+  border-right: 1px solid var(--border);
+}
+/* Achse: horizontal */
+.tl-wrap.horiz .tl-axis-seg {
+  left: 0; right: 0; top: 50%;
+  width: auto; height: 2px;
+  transform: translateY(-50%);
+}
+/* Dekaden-Label: oben mittig in der Spalte */
+.tl-wrap.horiz .tl-dec-label {
+  left: 50%; top: 6px;
+  transform: translateX(-50%);
+}
+/* Person-Events: oberhalb Achse (CSS-Anker; left via JS) */
+.tl-wrap.horiz .tl-ev {
+  left: auto; right: auto; top: auto;
+  bottom: calc(50% + 8px);
+  width: 100px;
+}
+/* Hist-Events: unterhalb Achse */
+.tl-wrap.horiz .tl-hist {
+  left: auto; right: auto;
+  top: calc(50% + 8px);
+  text-align: left;
+  border-right: none;
+  border-left: 2px solid var(--border);
+  width: 100px;
+}
+.tl-wrap.horiz .tl-hist--war      { border-left-color: var(--red); }
+.tl-wrap.horiz .tl-hist--disease  { border-left-color: var(--warn); }
+.tl-wrap.horiz .tl-hist--political{ border-left-color: var(--blue); }
+.tl-wrap.horiz .tl-hist--religion { border-left-color: #8a6aaa; }
+.tl-wrap.horiz .tl-hist--natural  { border-left-color: var(--green); }
+/* Lebensspanne: horizontaler Balken auf der Achse */
+.tl-wrap.horiz .tl-lifespan {
+  top: calc(50% - 3px);
+  height: 5px;
+}
 .theme-seg button:not(.active):active { background: var(--surface2); }
