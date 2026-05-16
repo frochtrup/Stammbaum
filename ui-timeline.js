@@ -129,7 +129,7 @@ function _renderTimeline(pid) {
           html += `<div class="tl-ev tl-ev--${ev.type}" data-top="${top}">`;
           html += `<span class="tl-y">${ev.year}${age(ev.year)}</span>`;
           html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
-          if (ev.place) html += `<span class="tl-place">${_esc(_shortPlace(ev.place))}</span>`;
+          if (ev.place) html += `<span class="tl-place">${_esc(ev.place)}</span>`;
           html += '</div>';
         } else {
           html += `<div class="tl-hist tl-hist--${ev.cat}" data-top="${top}">`;
@@ -253,7 +253,7 @@ function _buildPersonEvents(pid) {
   for (const [key, label] of special) {
     const ev = p[key];
     if (ev?.seen && ev.date) {
-      evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: key, place: ev.place || '' });
+      evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: key, place: _shortPlace(ev.place) });
     }
   }
 
@@ -262,7 +262,9 @@ function _buildPersonEvents(pid) {
     if (!ev.date) continue;
     const baseLabel = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
     const label = baseLabel + (ev.value ? ': ' + ev.value : '');
-    const place = ev.place || (ev.addr ? ev.addr.split('\n')[0] : '');
+    const addrLine = ev.addr ? ev.addr.split('\n')[0].trim() : '';
+    const placePart = _shortPlace(ev.place);
+    const place = [addrLine, placePart].filter(Boolean).join(', ');
     evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: 'event', place });
   }
 
@@ -276,13 +278,13 @@ function _buildPersonEvents(pid) {
       const partner = partnerId ? getPerson(partnerId) : null;
       const partnerName = partner ? (partner.surname || partner.given || '') : '';
       const label = 'Heirat' + (partnerName ? ': ' + partnerName : '');
-      evs.push({ year: _dedupYearFromGed(f.marr.date), date: f.marr.date, label, type: 'marr', place: f.marr.place || '' });
+      evs.push({ year: _dedupYearFromGed(f.marr.date), date: f.marr.date, label, type: 'marr', place: _shortPlace(f.marr.place) });
     }
     for (const cid of (f.children || [])) {
       const c = getPerson(cid);
       if (!c?.birth?.seen || !c.birth.date) continue;
       const childName = c.given || c.name || cid;
-      evs.push({ year: _dedupYearFromGed(c.birth.date), date: c.birth.date, label: 'Kind: ' + childName, type: 'child', place: c.birth.place || '' });
+      evs.push({ year: _dedupYearFromGed(c.birth.date), date: c.birth.date, label: 'Kind: ' + childName, type: 'child', place: _shortPlace(c.birth.place) });
     }
   }
 
