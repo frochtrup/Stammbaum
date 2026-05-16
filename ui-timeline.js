@@ -261,7 +261,8 @@ function _buildPersonEvents(pid) {
   for (const ev of (p.events || [])) {
     if (!ev.date) continue;
     const label = (EVENT_LABELS[ev.type] || ev.type) + (ev.value ? ': ' + ev.value : '');
-    evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: 'event', place: ev.place || '' });
+    const place = ev.place || ev.addr || '';
+    evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: 'event', place });
   }
 
   // Familien: Heirat + Kinder
