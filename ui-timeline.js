@@ -246,8 +246,28 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
   const maxYear   = Math.max(...allYrs);
   const span      = Math.max(maxYear - minYear, 10);
   const availW    = Math.max((body.clientWidth || window.innerWidth) - _SL_LABEL_W - 16, 200);
-  const pxPerYear = Math.max(availW / (span + _SL_PAD_YR * 2), _SL_MIN_PX_Y);
-  const totalW    = Math.ceil((span + _SL_PAD_YR * 2 + 1) * pxPerYear);
+
+  // Mindest-px/Jahr aus Event-Dichte: dichteste Lane bestimmt Breite
+  const _laneYrs = {};
+  for (const ln of _SL_LANES) _laneYrs[ln.id] = [];
+  for (const ev of datedEvs) _laneYrs[_swimLane(ev.type, ev.gedType)].push(ev.year);
+  let _minDist = Infinity;
+  for (const id of Object.keys(_laneYrs)) {
+    const ys = _laneYrs[id].sort((a, b) => a - b);
+    for (let i = 1; i < ys.length; i++) {
+      if (ys[i] > ys[i - 1]) _minDist = Math.min(_minDist, ys[i] - ys[i - 1]);
+    }
+  }
+  if (_minDist === Infinity) _minDist = span || 10;
+
+  const pxForFit   = availW / (span + _SL_PAD_YR * 2);
+  const pxForChips = Math.min((_SL_CHIP_W + 4) / _minDist, 40); // max 40px/Jahr
+  const pxPerYear  = Math.max(pxForFit, pxForChips, _SL_MIN_PX_Y);
+  // totalW: Inhalt + rechter Chip-Puffer, mindestens Container-Breite
+  const totalW     = Math.max(
+    Math.ceil((span + _SL_PAD_YR * 2 + 1) * pxPerYear) + _SL_CHIP_W,
+    availW
+  );
   const yearToX   = y => Math.round((y - minYear + _SL_PAD_YR) * pxPerYear);
 
   // Events in Lanes klassifizieren
