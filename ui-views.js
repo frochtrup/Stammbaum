@@ -819,12 +819,36 @@ function initAutocomplete(inputId, ddId, opts) {
   const dd    = document.getElementById(ddId);
   if (!input || !dd) return;
   const limit = opts.limit ?? 12;
+  const showAllOnFocus = opts.showAllOnFocus ?? false;
+  const useFixed = opts.useFixed ?? false;
 
-  const _run = debounce(() => {
-    const q = input.value.toLowerCase().trim();
+  // Portal-Modus: Dropdown an body hängen + fixed positionieren (umgeht overflow-Clipping)
+  if (useFixed && dd.parentElement !== document.body) {
+    document.body.appendChild(dd);
+    Object.assign(dd.style, { position: 'fixed', width: 'auto', margin: '0' });
+  }
+
+  const _reposition = () => {
+    if (!useFixed) return;
+    const r = input.getBoundingClientRect();
+    const ddH = Math.min(180, dd.scrollHeight || 180);
+    const spaceBelow = window.innerHeight - r.bottom;
+    if (spaceBelow >= ddH || spaceBelow >= r.top) {
+      dd.style.top  = (r.bottom + 2) + 'px';
+      dd.style.bottom = 'auto';
+    } else {
+      dd.style.top  = 'auto';
+      dd.style.bottom = (window.innerHeight - r.top + 2) + 'px';
+    }
+    dd.style.left  = r.left + 'px';
+    dd.style.width = r.width + 'px';
+  };
+
+  const _hide = () => { dd.innerHTML = ''; dd.style.display = 'none'; };
+
+  const _populate = q => {
     dd.innerHTML = '';
-    if (!q) { dd.style.display = 'none'; return; }
-    const items = opts.getItems(q).slice(0, limit);
+    const items = opts.getItems(q).slice(0, limit || 50);
     if (!items.length) { dd.style.display = 'none'; return; }
     items.forEach(item => {
       const el = document.createElement('div');
@@ -833,20 +857,30 @@ function initAutocomplete(inputId, ddId, opts) {
       if (opts.configEl) opts.configEl(el, item);
       el.addEventListener('mousedown', () => {
         opts.onSelect(item, input);
-        dd.innerHTML = ''; dd.style.display = 'none';
+        _hide();
       });
       dd.appendChild(el);
     });
     dd.style.display = 'block';
+    _reposition();
+  };
+
+  const _run = debounce(() => {
+    const q = input.value.toLowerCase().trim();
+    if (!q && !showAllOnFocus) { dd.style.display = 'none'; return; }
+    _populate(q);
   }, 150);
 
   input.addEventListener('input', () => {
     opts.onInput?.(input);
-    if (!input.value.trim()) { dd.innerHTML = ''; dd.style.display = 'none'; return; }
+    if (!input.value.trim() && !showAllOnFocus) { _hide(); return; }
     _run();
   });
   input.addEventListener('blur',  () => setTimeout(() => { dd.style.display = 'none'; }, 150));
-  input.addEventListener('focus', () => { if (dd.children.length) dd.style.display = 'block'; });
+  input.addEventListener('focus', () => {
+    if (showAllOnFocus) { _populate(input.value.toLowerCase().trim()); }
+    else if (dd.children.length) { dd.style.display = 'block'; _reposition(); }
+  });
 }
 
 function safeLinkHref(url) {

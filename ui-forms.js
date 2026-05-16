@@ -683,12 +683,29 @@ initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd');
 initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd');
 initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
-initPlaceAutocomplete('qa-place',  'qa-place-dd');
+initAutocomplete('qa-place', 'qa-place-dd', {
+  showAllOnFocus: true,
+  useFixed: true,
+  getItems: q => [...collectPlaces().values()]
+    .map(p => p.name)
+    .filter(n => !q || n.toLowerCase().includes(q))
+    .sort((a, b) => {
+      if (q) {
+        const aS = a.toLowerCase().startsWith(q), bS = b.toLowerCase().startsWith(q);
+        if (aS !== bS) return aS ? -1 : 1;
+      }
+      return a.localeCompare(b, 'de');
+    }),
+  formatLabel: name => name,
+  onSelect: (name, input) => { input.value = name; },
+});
 
 initAutocomplete('qa-src-input', 'qa-src-dd', {
-  limit: 10,
+  showAllOnFocus: true,
+  useFixed: true,
+  limit: 50,
   getItems: q => Object.values(AppState.db.sources || {})
-    .filter(s => (s.abbr || s.title || s.id || '').toLowerCase().includes(q))
+    .filter(s => !q || (s.abbr || s.title || s.id || '').toLowerCase().includes(q))
     .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de')),
   formatLabel: s => s.abbr ? `${s.abbr} — ${s.title || ''}`.trim() : (s.title || s.id),
   onSelect: (s, input) => {
