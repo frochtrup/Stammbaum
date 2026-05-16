@@ -3,7 +3,12 @@
 
   // ── State ───────────────────────────────────────────────────────────────────
   UIState._storyPid = null;
-  let _storyMap = null;
+  let _storyMap    = null;
+  let _mapDataUrl  = null;   // canvas-snapshot nach Tile-Load
+  let _printImg    = null;   // temporäres <img> während Druck
+
+  window.addEventListener('beforeprint', _onBeforePrint);
+  window.addEventListener('afterprint',  _onAfterPrint);
 
   // ── Öffentliche API ─────────────────────────────────────────────────────────
 
@@ -350,8 +355,17 @@ ${lifespan}
 
   function _storyAsHTML() {
     const link = document.querySelector('link[href="styles.css"]')?.outerHTML || '';
-    const body = document.getElementById('storyBody')?.innerHTML || '';
     const name = _esc(getPerson(UIState._storyPid)?.name || 'Lebensgeschichte');
+    // Karte: Leaflet-Div durch Snapshot-Bild ersetzen (Leaflet läuft nicht standalone)
+    let body = document.getElementById('storyBody')?.innerHTML || '';
+    if (_mapDataUrl) {
+      body = body.replace(
+        /<div id="storyMap"[^>]*><\/div>/,
+        `<img src="${_mapDataUrl}" class="story-map-print-img" style="width:100%;border-radius:6px;border:1px solid #ccc;display:block;">`
+      );
+    } else {
+      body = body.replace(/<section class="story-section story-map">[\s\S]*?<\/section>/, '');
+    }
     return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -416,14 +430,16 @@ ${link}
     const container = document.getElementById('storyMap');
     if (!container) return;
     if (_storyMap) { _storyMap.remove(); _storyMap = null; }
+    _mapDataUrl = null;
 
     const pts = _collectGeoPoints(pid);
     if (!pts.length) { container.closest('.story-map').hidden = true; return; }
     container.closest('.story-map').hidden = false;
 
     _storyMap = L.map(container, { zoomControl: true, attributionControl: true });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
+      crossOrigin: 'anonymous',
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(_storyMap);
 
@@ -443,6 +459,63 @@ ${link}
     } else {
       _storyMap.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
     }
+
+    // Canvas-Snapshot nach vollständigem Tile-Load
+    tileLayer.once('load', () => _captureMapSnapshot());
+  }
+
+  async function _captureMapSnapshot() {
+    const container = document.getElementById('storyMap');
+    if (!container || !_storyMap) return;
+    const mr = container.getBoundingClientRect();
+    const W = Math.round(mr.width), H = Math.round(mr.height);
+    if (!W || !H) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#e8e4da';
+    ctx.fillRect(0, 0, W, H);
+
+    // Tiles: BoundingClientRect gibt bereits transformierte Position
+    for (const tile of container.querySelectorAll('.leaflet-tile:not(.leaflet-tile-loading)')) {
+      if (!tile.complete || !tile.naturalWidth) continue;
+      const tr = tile.getBoundingClientRect();
+      try { ctx.drawImage(tile, tr.left - mr.left, tr.top - mr.top, tr.width, tr.height); } catch (_) {}
+    }
+
+    // SVG-Overlay (Polyline + Marker)
+    const svgEl = container.querySelector('svg.leaflet-zoom-animated');
+    if (svgEl) {
+      const sr = svgEl.getBoundingClientRect();
+      const svgStr = new XMLSerializer().serializeToString(svgEl);
+      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      const img  = new Image();
+      await new Promise(res => { img.onload = res; img.onerror = res; img.src = url; });
+      ctx.drawImage(img, sr.left - mr.left, sr.top - mr.top, sr.width, sr.height);
+      URL.revokeObjectURL(url);
+    }
+
+    _mapDataUrl = canvas.toDataURL('image/png');
+  }
+
+  function _onBeforePrint() {
+    const container = document.getElementById('storyMap');
+    if (!container || !_mapDataUrl) return;
+    const mr = container.getBoundingClientRect();
+    _printImg = document.createElement('img');
+    _printImg.src = _mapDataUrl;
+    _printImg.className = 'story-map-print-img';
+    _printImg.style.cssText = `width:${mr.width}px;height:${mr.height}px;`;
+    container.parentNode.insertBefore(_printImg, container);
+    container.style.visibility = 'hidden';
+  }
+
+  function _onAfterPrint() {
+    if (_printImg) { _printImg.remove(); _printImg = null; }
+    const container = document.getElementById('storyMap');
+    if (container) container.style.visibility = '';
   }
 
   // ── Hilfsfunktionen ─────────────────────────────────────────────────────────
