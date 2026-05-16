@@ -207,7 +207,7 @@ function _swimLane(type, gedType, eventType) {
   const t  = (gedType   || '').toUpperCase();
   const et = (eventType || '').toUpperCase();
   if (['RESI','EMIG','IMMI','NATU'].includes(t)) return 'resi';
-  if (['OCCU','TITL','PROP','EDUC','GRAD','RETI','FACT'].includes(t)) return 'work';
+  if (['OCCU','TITL','EDUC','GRAD','RETI'].includes(t)) return 'work';
   if (t === 'EVEN' && /BESCH[AÄ]FTIGUNG|BERUF|AUSBILDUNG|OCCUPATION|EMPLOYMENT/i.test(et)) return 'work';
   if (['RELI','CONF','FCOM','ORDN','CENS','MILI','ADOP'].includes(t)) return 'church';
   return 'other';
@@ -494,6 +494,16 @@ const _HIST_EVENTS = [
   { year:1990, label:'Deutsche Wiedervereinigung',              cat:'political'},
   { year:1993, label:'Maastricht-Vertrag — EU gegründet',      cat:'political'},
   { year:2002, label:'Euro-Bargeld eingeführt',                 cat:'political'},
+  { year:2004, label:'EU-Erweiterung auf 25 Mitglieder',        cat:'political'},
+  { year:2005, label:'Merkel erste Bundeskanzlerin',            cat:'political'},
+  { year:2008, label:'Weltfinanzkrise',                         cat:'political'},
+  { year:2009, label:'Lissabon-Vertrag in Kraft',               cat:'political'},
+  { year:2011, label:'Fukushima-Reaktorunfall',                 cat:'natural'  },
+  { year:2015, label:'Flüchtlingskrise in Europa',              cat:'political'},
+  { year:2016, label:'Brexit-Referendum',                       cat:'political'},
+  { year:2020, label:'COVID-19-Pandemie',                       cat:'disease'  },
+  { year:2022, label:'Russischer Angriffskrieg auf Ukraine',    cat:'war'      },
+  { year:2024, label:'Europawahl — Rechtsruck in Europa',       cat:'political'},
 ];
 
 // ── Event-Extraktion ───────────────────────────
