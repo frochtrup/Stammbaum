@@ -35,6 +35,17 @@ function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  // Vollbild-Klassen bereinigen wenn die zugehörige Ansicht verlassen wird
+  if (id !== 'v-tree') {
+    document.body.classList.remove('tree-fullscreen');
+    const tfsBtn = document.getElementById('treeFsBtn');
+    if (tfsBtn) { tfsBtn.textContent = '⤢'; tfsBtn.title = 'Vollbild'; }
+  }
+  if (id !== 'v-timeline') {
+    document.body.classList.remove('timeline-fullscreen');
+    const tlfsBtn = document.getElementById('tlFsBtn');
+    if (tlfsBtn) { tlfsBtn.textContent = '⤢'; tlfsBtn.title = 'Vollbild'; }
+  }
   if (id === 'v-main') _updateTopbarH();
   // Karte ausblenden wenn nicht im Orte-Tab
   if (id !== 'v-main' || AppState.currentTab !== 'places') {
