@@ -994,6 +994,8 @@ const _CLICK_MAP = {
   toggleDescTree:          ()  => toggleDescTree(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
   tlShowTree:              ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid) showTree(pid); },
+  tlShowFanChart:          ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid && typeof showFanChart  === 'function') showFanChart(pid); },
+  tlShowDescTree:          ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid && typeof showDescTree  === 'function') showDescTree(pid, false); },
   toggleTimelineFullscreen:()  => { if (typeof toggleTimelineFullscreen === 'function') toggleTimelineFullscreen(); },
   showRelPath:             el  => showRelPath(el.dataset.pid),
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
