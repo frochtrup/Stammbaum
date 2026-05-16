@@ -53,13 +53,12 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Höch
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| MAP-MIGR | **Migrationswege auf Karte** | Pfeile zwischen Geburts-/Wohn-/Sterbeort; Farbe nach Generation oder Zeitraum; Modus-Toggle im Kartenview | M |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln via `L.tileLayer className`; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key, keine neue Bibliothek. Hinweis: ändert nur Optik, keine historischen Daten. | S |
 | MAP-HIST-B | **Echter Historikkartenhintergrund** | `L.tileLayer.wms()` gegen Mapire.eu (Habsburg ~1780–1918) oder deutschen Geodatendienst (Messtischblätter); erfordert Research-Spike: ToS-Prüfung, WMS-URL-Validierung, Coverage-Check (wahrscheinlich nur Habsburggebiet/Preußen, nicht flächendeckend). OHM und freie XYZ-Raster-Tiles ohne API-Key sind nicht verfügbar (OHM liefert nur Vektor-PBF, braucht MapLibre). | S+Research |
 | F9 | **Visuelle Timeline** | Horizontale Lebenslinie in `ui-timeline.js`; Ereignisse als Icons auf der Zeitachse; Farben nach Kategorie (Familie/Beruf/Militär/Migration); Fotos an markanten Punkten; historische Kontext-Ebene; Export als SVG/HTML | XL |
 | STORY | **Story Mode** | Reichhaltige Personen-Erzählung aus GEDCOM-Events: Markdown-Template mit Platzhaltern → clientseitig befülltes HTML → PDF via `window.print()` + Print-CSS; Fließtext-Gerüst automatisch generiert; eingebettete Fotos (base64); Mini-Karte (→ MAP-MIGR) + Zeitstrahl (→ F9) an Lebenspunkten; `ui-story.js`; Download als HTML oder PDF | XL |
 
-*Empfohlene Reihenfolge: MAP-MIGR → MAP-HIST (Fundament für STORY-Karte) → F9 (Fundament für STORY-Timeline) → STORY*
+*Empfohlene Reihenfolge: MAP-HIST (Fundament für STORY-Karte) → F9 (Fundament für STORY-Timeline) → STORY*
 
 ---
 

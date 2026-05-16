@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-16 — MAP-MIGR: Migrationswege auf Karte (sw v498)
+
+- **sw v498** `feat(map)`: MAP-MIGR — dritter Karten-Modus „Migrationen"; `_renderMigrModus()` zeichnet für jede Person mit ≥ 2 Geo-Events eine Linie Geburt → RESI → Tod; aufeinanderfolgende Duplikat-Koordinaten dedupliziert; Endpunkt-Marker (gefüllter Kreis) am Zielort; Tooltip mit Name, Lebensjahren, Herkunft → Ziel; Klick öffnet Exploration-Panel; Epochen-Farben via `_MIGR_EPOCHS` / `_migrColor()`: vor 1700 lila · 1700–99 blau · 1800–49 teal · 1850–99 amber · 1900–49 orange · 1950+ grau; Farb-Legende (`#map-migr-legend`) erscheint/verschwindet beim Moduswechsel; Dots als CSS-Klassen `.map-migr-e0`–`.map-migr-e5` statt Inline-Styles (CSP `style-src 'self'`)
+
+---
+
 ### Session 2026-05-16 — VAL-FAM + VAL-CONFIG + Bugfixes (sw v496–v497)
 
 - **sw v496** `feat(tasks/validation)`: VAL-FAM — `f._tasks[]` auf Familien-Objekten; GEDCOM-Roundtrip via `1 _TASK` unter FAM (Parser + Writer); `_famTasksSectionHtml()` in `showFamilyDetail()`; globale Task-Liste zeigt Personen- und Familien-Tasks gemischt nach Kategorie mit klickbarem Familien-Header
