@@ -8,10 +8,12 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 **Visuell-einsteigerfreundlich für ambitionierte Hobby-Genealogen.**
 
+Zielgruppe: Ambitionierte Hobby-Genealogen, die **mobil** (Archiv, Feldarbeit: schnelle Erfassung, Forschungsaufgaben, Medien) und **am Desktop** (heavy use: Quellen, Auswertung, Ausgaben) arbeiten.
+
 Drei Dimensionen leiten die Priorisierung:
-- **Visuell** — Ausgaben, die Genealogen stolz zeigen: Karten, Timeline, Story
-- **Einsteigerfreundlich** — Orientierung, was fehlt; Teilen ohne DSGVO-Stress
-- **Ambitioniert** — Quellenqualität, Validierung, Standards für ernsthafte Forschung
+- **Mobil** — Schnellerfassung, Offline-Robustheit, Kamera-Integration
+- **Forschungsqualität** — Protokoll, Quellenvorlagen, Validierung, Duplikate
+- **Ausgaben** — Karten, Timeline, Story, Druckausgaben
 
 ---
 
@@ -35,59 +37,91 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ---
 
-## T1 — Einstieg & Orientierung *(Beginner-UX zuerst)*
+## Abgeschlossen in v8-dev *(Auswahl — vollständig: CHANGELOG.md)*
 
-Kleine Aufwände mit hohem Orientierungswert für neue Nutzer.
-
-| ID | Aufgabe | Details | Aufwand |
-|---|---|---|---|
-| SAFARI-SWIPE | **Safari-„Zurück"-Swipe abfangen** ✓ | `history.pushState({app:true},'')` beim App-Start + `popstate`-Listener in `ui-views.js`: Re-Anker + `goBack()` — verhindert State-Verlust im Browser-Modus (sw v573) | M ✓ |
-| TASK-EXPORT-MD | **Aufgabenliste als Markdown exportieren** ✓ | `exportTasksMd()` in `ui-views-tasks.js`: Download-Button „↓ MD" im Aufgaben-Tab; pro Person/Familie: Name, Lebensdaten, Eltern, Ehen resp. Gatten+Kinderzahl; nach Kategorie gruppiert; Filter (offen/erledigt/alle) wird übernommen (sw v574) | S ✓ |
-| OBJE-TYPE | **Medien-Typ strukturiert** ⚠ nicht GEDCOM-konform | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag unter OBJE in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
-| F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform; Opt-in im Einstellungs-Modal | M |
-
----
-
-## T2 — Visuelle Ausgaben *(der „Wow"-Faktor für Hobby-Genealogen)*
-
-Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Höchster Ziel-Impact.
-
-| ID | Aufgabe | Details | Aufwand |
-|---|---|---|---|
-| MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln via `L.tileLayer className`; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key, keine neue Bibliothek. Hinweis: ändert nur Optik, keine historischen Daten. | S |
-| MAP-HIST-B | **Echter Historikkartenhintergrund** | Verifiziert funktionierender freier WMTS: **Swisstopo** Siegfriedkarte (1883–1949, HTTP 200 bestätigt) + Dufourkarte (~1845–1865). URL: `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.hiks-siegfried/default/{year}/3857/{z}/{x}/{y}.png`; `{year}` = 1883–1949. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). Für Deutschland flächendeckend kein freier Dienst ohne API-Key verfügbar (OHM: nur Vektor/MapLibre; NLS-S3-URLs: 404; Landesarchiv-WMS: instabil). Nächster Schritt: Swisstopo als ersten echten Historik-Layer + Jahres-Dropdown (1883–1949). | M |
-| F9 | **Zeitleiste** ✓ | `ui-timeline.js` + `timeline-hist-events.js` (sw v501–v540): View `#v-timeline`, ⊙-Button (⟷) in Detail-Topbar + Baum-Topbar, `_buildPersonEvents()` (Sonder-Ereignisse + events[] + Heiraten + Kinder), `_HIST_EVENTS` (71 Einträge 1315–2024, in eigene Datei ausgelagert), Rendering vertikal (Dekaden) / horizontal Swim-Lane (5 Lanes: Leben/Wohnorte/Beruf/Familie/Kirche), `_afterLayout`-Utility, Vollbild-Modus, Baumnavigation in Topbar (Sanduhr/Fächer/Nachkommen/Proband), Mouseover-Tooltip, Filter-Toggles (Krieg/Seuche/Politik/Religion/Natur), Lebensspanne-Balken, Altersanzeige, undatierte Chips vertikal zentriert | XL ✓ |
-| STORY | **Story Mode** ✓ | `ui-story.js` (sw v549–v560): View `#v-story`, 📖-Button in Detail-Topbar, Fließtext-Erzählung aus GEDCOM-Events (Geburt/Taufe/Eltern/Events/Ehen/Kinder/Tod/Notiz), pronomen-aware Templates (18 Event-Typen), deutsches Datumsformat (FROM/BET/BEF/AFT/ABT), Orts-Kurzform (addr+place kombiniert wie Timeline), Hero-Foto + Galerie async (IDB/OneDrive), Leaflet-Karte mit Bewegungspfad + CircleMarker, HTML-Download, Print-CSS | XL ✓ |
-| STORY-OPT | **Story: Textqualität verbessern** | Weiterer Optimierungsbedarf: natürlichere Satzstrukturen für häufige Ereigniskombinationen (z.B. Beruf mit Zeitraum), Familiennarrative (Geschwister, Anzahl Kinder), Kontext bei Epochen, LLM-optionale Anreicherung als Opt-in | M |
-
-*Empfohlene Reihenfolge: MAP-HIST (Fundament für STORY-Karte) → F9 (Fundament für STORY-Timeline) → STORY ✓*
+| ID | Feature | sw |
+|---|---|---|
+| SAFARI-SWIPE | Safari-„Zurück"-Swipe abfangen | v573 |
+| TASK-EXPORT-MD | Aufgabenliste als Markdown exportieren | v574 |
+| F9 | Zeitleiste (Swim-Lane, 71 hist. Ereignisse) | v501–v540 |
+| STORY | Story Mode (Fließtext, Karte, Galerie, Print) | v549–v560 |
+| SOUR-DATA | SOUR.DATA.EVEN/DATE strukturiert | v546 |
+| MEDI-CALN | MEDI-Typ unter REPO.CALN | v545 |
+| ALIA | ALIA-Aliasverweise symmetrisch | v499 |
+| REFN | REFN/RIN strukturiert | v548 |
 
 ---
 
-## T3 — Forschungsqualität *(für ernsthafte Hobby-Genealogen)*
-
-Features, die aus oberflächlicher Datensammlung systematische Forschung machen.
+## P0 — Sicherheit & Stabilität *(Pflicht vor jedem Release)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SOUR-DATA | **SOUR.DATA.EVEN/DATE strukturiert** ✓ | `s.dataEvens[]` mit `{evens,date,plac}`; Parser + Writer + Detail-Anzeige + Formular (sw v546) | M ✓ |
-| F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + zusammenführen; Inzucht-Koeffizient berechnen | M |
-| Perf-Worker | **Web Worker für Duplikat-Scan** | `findDuplicatePairs()` in Worker auslagern; Main Thread bleibt bei >2000 Personen reaktiv | M |
+| SEC-1 | **XSS in onedrive.js** | `innerHTML`-Assignments mit Nutzerdaten absichern; `textContent` + DOM-API statt String-Interpolation | S |
+| SEC-2 | **MIME-Validierung Foto-Upload** | Magic-Bytes-Check (JPEG/PNG/WEBP) vor IDB-Speicherung; Dateiendung allein nicht ausreichend | S |
+| ERR-1 | **try-catch in async-Funktionen** | 17 async-Funktionen ohne Error-Handling (storage-file.js, onedrive.js, gramps-parser.js); `showToast(err, 'error')` als Fallback | M |
+| PERF-1 | **Debouncing Suche/Filter** | Personenliste: 300ms Debounce auf Filterinput; verhindert Layout-Thrashing bei >1000 Personen | XS |
+| PERF-2 | **Soundex-Cache** | `_soundexCache` Map; einmal berechnen bei Load, nicht bei jedem Filteraufruf | S |
 
 ---
 
-## T4 — Standards & Interoperabilität *(für Fortgeschrittene)*
+## P1 — Mobile Feldarbeit *(Kernnutzen unterwegs)*
 
-Wichtig für Nutzer, die mit anderen Tools (Legacy, RootsMagic, GRAMPS) zusammenarbeiten.
+Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erkenntnisse in <60 Sekunden erfassen, ohne Desktop-Ablenkung.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; ADR dokumentiert | M |
+| QUICK-ADD | **Schnellerfassung neue Person** | FAB-Button (+) in Personen-Liste: Minimalformular (Vorname, Nachname, Ereignis-Typ, Datum, Ort, Quelle-Picker). Alle anderen Felder optional/später. Kein Vollformular beim ersten Aufruf. | S |
+| CAM-LINK | **Foto direkt an Zitation** | In Ereignis-Detail: `<input type="file" capture="camera">` direkt sichtbar, nicht hinter Medien-Browser vergraben. Foto → IDB → `cit.media[]` des aktuellen Ereignisses. | S |
+| F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform beim Teilen; Opt-in im Einstellungs-Modal | M |
+
+---
+
+## P2 — Forschungsqualität *(von Datensammlung zu systematischer Forschung)*
+
+Der Unterschied zwischen Hobbysammler und ernsthaftem Forscher: Protokoll, Quellenkritik, Lückenanalyse.
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| FORSCH-LOG | **Forschungsprotokoll** | Neues IDB-Objekt `researchLog[]`: Datum, verknüpfte Person/Familie, Archiv/Quelle, Suchzeitraum, Ergebnis (Treffer / Kein Treffer / Unvollständig), Notiz. Anzeige im Aufgaben-Tab als zweiter Reiter „Protokoll". Export MD/CSV. — Negativbefunde sind für ernsthafte Genealogie genauso dokumentationspflichtig wie Funde. | M |
+| SOUR-TMPL | **Quellen-Vorlagen** | `sourceTemplates[]` als JSON-Config: 8–10 deutsche Standardquellen (Kirchenbuch Taufe/Heirat/Tod, Standesamt Geburt/Heirat/Tod, Volkszählung, Grabstein, Totenzettel, Militärakte). Im Quellen-Formular: Vorlage wählen → Felder vorausfüllen. GEDCOM-konform über bestehende Felder. | M |
+| VAL-EXTEND | **Validierung ausbauen** | Bestehende `VAL_RULES` dokumentieren + ergänzen: Elternteil-Alterscheck (>70 bei Geburt Kind), Heiratsalter (<14), Tod vor Geburt, Person ohne Quellenangabe (Badge), chronologische Konsistenz Events, Name+Geburtsdatum-Duplikat als Warnhinweis | M |
+| F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional | M |
+
+---
+
+## P3 — Desktop-Auswertung *(Heavy Use am Desktop)*
+
+Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgeben.
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| SEARCH-ADV | **Erweiterte Suche** | Kombinationsfilter: Geburtsort, Geburtsjahr-Bereich, Geburtsname, fehlende Felder (kein Tod / keine Quelle / kein Elternteil). Ergebnis als Liste mit Direktsprung. Basis für systematische Lückenanalyse. | M |
+| DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread bleibt reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |
+| REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Anzeige: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erreichbar aus Personen-Detail. | M |
+| PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Kein Layout-Monster — die 2 für den deutschen Raum relevantesten Formate. | M+M |
+
+---
+
+## P4 — Visuelle Ausgaben *(Wow-Faktor)*
+
+Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Fundament bereits abgeschlossen (Timeline ✓, Story ✓, Karte ✓).
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Anzahl Kinder); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
+| MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key, keine neue Bibliothek | S |
+| MAP-HIST-B | **Echter Historikkartenhintergrund** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als erster Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). Für Deutschland kein freier Flächendienst verfügbar. | M |
+
+---
+
+## P5 — Standards & Interoperabilität *(für Fortgeschrittene)*
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
 | ASSO-UI | **ASSO-Beziehungen** | Read-only Anzeige in Personen-Detail (Schritt 1); Bearbeitung (Zeuge/Pate zu Event zuordnen, Schritt 2) | M+M |
+| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; ADR dokumentiert | M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
-| MEDI-CALN | **MEDI-Typ unter REPO.CALN** ✓ | `3 MEDI` unter `2 CALN`; `s.repoCallMedi`; Parser + Writer + Select im Quellen-Formular (sw v545) | S ✓ |
-| ALIA | **ALIA-Aliasverweise** ✓ | `1 ALIA @xref@`; Parser: `p.alia[]`; Writer; UI: Warn-Row mit ≈-Label + left-border; Edit: symmetrisch hinzufügen/entfernen (sw v499) | S+S ✓ |
-| REFN | **REFN/RIN strukturiert** ✓ | `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; Parser + Writer + read-only Detail (sw v548) | S ✓ |
+| OBJE-TYPE | **Medien-Typ strukturiert** ⚠ | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
 
 ---
 
