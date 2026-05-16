@@ -2461,4 +2461,19 @@ html[data-theme="dark"] {
 .tl-filter-btn[data-cat="political"].active{ background: var(--blue); border-color: var(--blue); }
 .tl-filter-btn[data-cat="religion"].active { background: #8a6aaa;    border-color: #8a6aaa; }
 .tl-filter-btn[data-cat="natural"].active  { background: var(--green);border-color: var(--green); }
+
+/* Lebensspanne-Balken */
+.tl-lifespan {
+  position: absolute;
+  left: calc(50% - 5px);
+  width: 5px;
+  background: var(--gold-dim);
+  opacity: 0.45;
+  border-radius: 3px;
+  z-index: 0;
+  pointer-events: none;
+}
+@media (max-width: 599px) {
+  .tl-lifespan { left: 19px; }
+}
 .theme-seg button:not(.active):active { background: var(--surface2); }

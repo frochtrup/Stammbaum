@@ -7,6 +7,17 @@
 
 // ── Öffentliche API ────────────────────────
 
+// Aktive Filter — alle standardmäßig an
+UIState._tlFilters = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
+
+const _TL_FILTER_LABELS = {
+  war:      '⚔ Krieg',
+  disease:  '☠ Seuche',
+  political:'⚑ Politik',
+  religion: '⛪ Religion',
+  natural:  '⚡ Natur',
+};
+
 window.showTimeline = function (pid, pushHistory) {
   pid = pid || AppState.currentPersonId;
   if (!pid || !getPerson(pid)) return;
@@ -20,13 +31,27 @@ window.showTimeline = function (pid, pushHistory) {
   UIState._timelinePid = pid;
   const p = getPerson(pid);
   document.getElementById('tlTopTitle').textContent = p.name || pid;
-  document.getElementById('tlFilterBar').innerHTML = '';
-  document.getElementById('tlBody').innerHTML =
-    '<p style="padding:2rem 1rem;color:var(--text-2,#888)">Zeitleiste wird geladen…</p>';
+  _renderFilterBar();
+  document.getElementById('tlBody').innerHTML = '';
 
   showView('v-timeline');
   _updateNavBtns();
   _renderTimeline(pid);
+};
+
+function _renderFilterBar() {
+  const bar = document.getElementById('tlFilterBar');
+  if (!bar) return;
+  bar.innerHTML = Object.entries(_TL_FILTER_LABELS).map(([cat, lbl]) =>
+    `<button class="tl-filter-btn${UIState._tlFilters.has(cat) ? ' active' : ''}" data-action="tlFilter" data-cat="${cat}">${lbl}</button>`
+  ).join('');
+}
+
+window._tlFilterToggle = function (cat) {
+  if (UIState._tlFilters.has(cat)) UIState._tlFilters.delete(cat);
+  else UIState._tlFilters.add(cat);
+  _renderFilterBar();
+  if (UIState._timelinePid) _renderTimeline(UIState._timelinePid);
 };
 
 // ── Rendering ──────────────────────────────────
@@ -64,8 +89,25 @@ function _renderTimeline(pid) {
   const birthYear = personEvs.find(e => e.type === 'birth')?.year ?? null;
   const age = y => birthYear !== null ? ` (${y - birthYear})` : '';
 
+  // Lebensspanne-Balken: Offset der Geburts- und Todesdekade berechnen
+  const birthEv = personEvs.find(e => e.type === 'birth');
+  const deathEv = personEvs.find(e => e.type === 'death');
+  const _decOffset = y => {
+    let off = 0;
+    for (const dec of decades) {
+      if (y !== null && dec.d <= y && y < dec.d + 10) return off + (y - dec.d) / 10 * dec.height;
+      off += dec.height;
+    }
+    return off;
+  };
+  const spanTop    = birthEv ? _decOffset(birthEv.year) : 0;
+  const totalH     = decades.reduce((s, d) => s + d.height, 0);
+  const spanBottom = deathEv ? _decOffset(deathEv.year) : totalH;
+  const spanStyle  = `top:${spanTop}px;height:${Math.max(spanBottom - spanTop, 4)}px`;
+
   // HTML aufbauen
   let html = '<div class="tl-wrap">';
+  html += `<div class="tl-lifespan" style="${spanStyle}"></div>`;
 
   for (const dec of decades) {
     html += `<div class="tl-decade" style="height:${dec.height}px">`;

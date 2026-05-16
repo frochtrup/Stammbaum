@@ -989,6 +989,7 @@ const _CLICK_MAP = {
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
   showTree:                el  => showTree(el.dataset.id),
   showTimeline:            el  => { if (typeof showTimeline === 'function') showTimeline(el.dataset.id); },
+  tlFilter:                el  => { if (typeof _tlFilterToggle === 'function') _tlFilterToggle(el.dataset.cat); },
   toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),
   bnavTab:                 el => bnavTab(el.dataset.tab),
