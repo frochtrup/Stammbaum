@@ -2537,7 +2537,6 @@ html[data-theme="dark"] {
   border-bottom: 1px solid var(--border);
 }
 .tl-lane--hist { border-bottom: none; }
-.tl-swim .tl-lane:last-child { flex: 1; min-height: 44px; }
 
 .tl-lane-lbl {
   width: 76px;

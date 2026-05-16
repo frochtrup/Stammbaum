@@ -353,12 +353,28 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
   html += '</div>';
   body.innerHTML = html;
 
+  // Lanehöhen proportional auf verfügbare Höhe skalieren
+  {
+    const _axisH  = 26;
+    const _availH = Math.max((body.clientHeight || window.innerHeight - 150) - _axisH, 200);
+    const _laneEls = [...body.querySelectorAll('.tl-lane[data-h]')];
+    const _baseH  = _laneEls.reduce((s, el) => s + parseInt(el.dataset.h), 0);
+    if (_availH > _baseH && _laneEls.length > 0) {
+      const _scale = _availH / _baseH;
+      _laneEls.forEach(el => { el.dataset.h = String(Math.round(parseInt(el.dataset.h) * _scale)); });
+    }
+  }
+
   // Positionen via CSSOM setzen (CSP: kein inline style-Attribut)
   body.querySelectorAll('.tl-swim-axis-pad[data-w]').forEach(el => {
     el.style.width = el.dataset.w + 'px';
     el.style.flexShrink = '0';
   });
-  body.querySelectorAll('.tl-swim-axis-track[data-w], .tl-lane-body[data-w]').forEach(el => {
+  body.querySelectorAll('.tl-swim-axis-track[data-w]').forEach(el => {
+    el.style.width = el.dataset.w + 'px';
+    el.style.flexShrink = '0';
+  });
+  body.querySelectorAll('.tl-lane-body[data-w]').forEach(el => {
     el.style.minWidth = el.dataset.w + 'px';
   });
   body.querySelectorAll('.tl-lane[data-h]').forEach(el => { el.style.height = el.dataset.h + 'px'; });
