@@ -1930,7 +1930,6 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .btn-gold-text     { color: var(--gold); border-color: var(--gold-dim); }
 .c-red             { color: var(--red); }
 #menuNewFile       { color: var(--red); }
-[data-action="menuRoundtrip"],
 [data-action="helpRoundtrip"] { color: var(--gold); border-color: var(--gold-dim); }
 
 /* ═══════════════════════════════════════
