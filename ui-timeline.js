@@ -51,10 +51,12 @@ window.toggleTimelineFullscreen = function () {
     btn.textContent = isFs ? '⤡' : '⤢';
     btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
   }
-  // Swim-Lane-Breite hat sich geändert — neu rendern
+  // Swim-Lane neu rendern (Breite hat sich geändert)
   if (UIState._timelinePid && _isTlHoriz()) {
     setTimeout(() => _renderTimeline(UIState._timelinePid), 60);
   }
+  // Beim Exit: linke Seite neu kalibrieren (Virtual-Scroll)
+  if (!isFs) setTimeout(() => window.dispatchEvent(new Event('resize')), 60);
 };
 
 function _renderFilterBar() {

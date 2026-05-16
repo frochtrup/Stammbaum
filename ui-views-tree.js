@@ -207,8 +207,9 @@ function toggleTreeFullscreen() {
     btn.textContent = isFs ? '⤡' : '⤢';
     btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
   }
-  // Sanduhr neu rendern, damit Karten die neue Containerbreite nutzen.
-  // Fan-Chart und Nachkommen-Baum haben eigene Resize-Logik.
+  // Beim Exit: linke Seite neu kalibrieren (Virtual-Scroll)
+  if (!isFs) { setTimeout(() => window.dispatchEvent(new Event('resize')), 50); return; }
+  // Beim Eintritt: Baum-Darstellung an neue Breite anpassen
   const pid = AppState.currentPersonId;
   if (!pid) return;
   if (document.body.classList.contains('fc-mode')) {

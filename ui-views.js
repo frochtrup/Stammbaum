@@ -35,16 +35,35 @@ function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
-  // Vollbild-Klassen bereinigen wenn die zugehörige Ansicht verlassen wird
-  if (id !== 'v-tree') {
-    document.body.classList.remove('tree-fullscreen');
-    const tfsBtn = document.getElementById('treeFsBtn');
-    if (tfsBtn) { tfsBtn.textContent = '⤢'; tfsBtn.title = 'Vollbild'; }
+  // Vollbild-Zustand zwischen Views übertragen oder beenden
+  const _fsTree = document.body.classList.contains('tree-fullscreen');
+  const _fsTl   = document.body.classList.contains('timeline-fullscreen');
+  const _anyFs  = _fsTree || _fsTl;
+  document.body.classList.remove('tree-fullscreen', 'timeline-fullscreen');
+  if (_anyFs) {
+    if (id === 'v-tree') {
+      // Vollbild an Baum weitergeben
+      document.body.classList.add('tree-fullscreen');
+      const b = document.getElementById('treeFsBtn');
+      if (b) { b.textContent = '⤡'; b.title = 'Sidebar einblenden'; }
+    } else if (id === 'v-timeline') {
+      // Vollbild an Timeline weitergeben
+      document.body.classList.add('timeline-fullscreen');
+      const b = document.getElementById('tlFsBtn');
+      if (b) { b.textContent = '⤡'; b.title = 'Sidebar einblenden'; }
+    } else {
+      // Vollbild beendet — linke Seite neu kalibrieren
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+    }
   }
-  if (id !== 'v-timeline') {
-    document.body.classList.remove('timeline-fullscreen');
-    const tlfsBtn = document.getElementById('tlFsBtn');
-    if (tlfsBtn) { tlfsBtn.textContent = '⤢'; tlfsBtn.title = 'Vollbild'; }
+  // Buttons der verlassenen View zurücksetzen
+  if (!document.body.classList.contains('tree-fullscreen')) {
+    const b = document.getElementById('treeFsBtn');
+    if (b) { b.textContent = '⤢'; b.title = 'Vollbild'; }
+  }
+  if (!document.body.classList.contains('timeline-fullscreen')) {
+    const b = document.getElementById('tlFsBtn');
+    if (b) { b.textContent = '⤢'; b.title = 'Vollbild'; }
   }
   if (id === 'v-main') _updateTopbarH();
   // Karte ausblenden wenn nicht im Orte-Tab
