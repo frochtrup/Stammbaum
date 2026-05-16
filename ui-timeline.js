@@ -29,16 +29,83 @@ window.showTimeline = function (pid, pushHistory) {
   _renderTimeline(pid);
 };
 
-// ── Internes Rendering (Platzhalter bis TL-4) ─
+// ── Rendering ──────────────────────────────────
+
+const _TL_PX_EMPTY   = 36;   // Höhe einer leeren Dekade (px)
+const _TL_PX_PER_EV  = 58;   // Höhe pro Event innerhalb einer Dekade
+const _TL_PX_DEC_MIN = 90;   // Mindesthöhe einer belegten Dekade
 
 function _renderTimeline(pid) {
-  const events = _buildPersonEvents(pid);
-  const years = events.map(e => e.year);
-  const info = years.length
-    ? `${years[0]}–${years[years.length - 1]} · ${events.length} Ereignisse`
-    : 'Keine datierten Ereignisse';
-  document.getElementById('tlBody').innerHTML =
-    `<p style="padding:2rem 1rem;color:var(--text-2,#888)">${info}</p>`;
+  const personEvs = _buildPersonEvents(pid);
+  const body = document.getElementById('tlBody');
+  if (!personEvs.length) {
+    body.innerHTML = '<p class="tl-empty">Keine datierten Ereignisse vorhanden.</p>';
+    return;
+  }
+
+  const minYear = Math.min(...personEvs.map(e => e.year));
+  const maxYear = Math.max(...personEvs.map(e => e.year));
+  const filters = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
+  const histEvs = _HIST_EVENTS.filter(e => e.year >= minYear - 2 && e.year <= maxYear + 2 && filters.has(e.cat));
+
+  // Dekaden-Struktur
+  const decStart = Math.floor(minYear / 10) * 10;
+  const decEnd   = Math.floor(maxYear / 10) * 10;
+  const decades  = [];
+  for (let d = decStart; d <= decEnd; d += 10) {
+    const pEvs = personEvs.filter(e => e.year >= d && e.year < d + 10);
+    const hEvs = histEvs.filter(e => e.year >= d && e.year < d + 10);
+    const count = pEvs.length + hEvs.length;
+    const height = count ? Math.max(count * _TL_PX_PER_EV + 20, _TL_PX_DEC_MIN) : _TL_PX_EMPTY;
+    decades.push({ d, pEvs, hEvs, count, height });
+  }
+
+  // Alter einer Person zu einem Jahr berechnen
+  const birthYear = personEvs.find(e => e.type === 'birth')?.year ?? null;
+  const age = y => birthYear !== null ? ` (${y - birthYear})` : '';
+
+  // HTML aufbauen
+  let html = '<div class="tl-wrap">';
+
+  for (const dec of decades) {
+    html += `<div class="tl-decade" style="height:${dec.height}px">`;
+    html += `<div class="tl-dec-label">${dec.d}er</div>`;
+    html += '<div class="tl-axis-seg"></div>';
+
+    if (dec.count) {
+      // Alle Events gemischt, nach Jahr sortiert
+      const all = [
+        ...dec.pEvs.map(e => ({ ...e, side: 'p' })),
+        ...dec.hEvs.map(e => ({ ...e, side: 'h' })),
+      ].sort((a, b) => a.year - b.year);
+
+      const innerH = dec.height - 20;
+      all.forEach((ev, i) => {
+        const top = 14 + (all.length > 1 ? i * (innerH / (all.length)) : innerH / 2 - 10);
+        if (ev.side === 'p') {
+          html += `<div class="tl-ev tl-ev--${ev.type}" style="top:${top}px">`;
+          html += `<span class="tl-y">${ev.year}${age(ev.year)}</span>`;
+          html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
+          if (ev.place) html += `<span class="tl-place">${_esc(ev.place)}</span>`;
+          html += '</div>';
+        } else {
+          html += `<div class="tl-hist tl-hist--${ev.cat}" style="top:${top}px">`;
+          html += `<span class="tl-y">${ev.year}</span>`;
+          html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
+          html += '</div>';
+        }
+      });
+    }
+
+    html += '</div>';
+  }
+
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function _esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 // ── Historische Ereignisse ─────────────────────
