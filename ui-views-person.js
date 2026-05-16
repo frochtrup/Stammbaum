@@ -311,6 +311,12 @@ function _updateFamilyListCurrent(id) {
 }
 
 function applyPersonFilter() {
+  // QA-Session-Filter: nur neu angelegte Personen zeigen
+  if (UIState._qaSessionIds) {
+    const ids = UIState._qaSessionIds;
+    renderPersonList(Object.values(AppState.db.individuals).filter(p => ids.has(p.id)));
+    return;
+  }
   const q          = (document.getElementById('searchInput')?.value)      || '';
   const from       = parseInt(document.getElementById('yearFrom')?.value)  || null;
   const to         = parseInt(document.getElementById('yearTo')?.value)    || null;
@@ -319,6 +325,13 @@ function applyPersonFilter() {
   const clearBtn   = document.getElementById('yearFilterClear');
   if (clearBtn) clearBtn.hidden = !(from || to);
   _applyPersonFilterDebounced(q, from, to, sex, birthPlace);
+}
+
+function clearQaFilter() {
+  UIState._qaSessionIds = null;
+  const banner = document.getElementById('qa-session-banner');
+  if (banner) banner.hidden = true;
+  applyPersonFilter();
 }
 
 function clearYearFilter() {

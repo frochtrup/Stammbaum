@@ -1070,6 +1070,8 @@ const _CLICK_MAP = {
   showQuickAdd:            ()  => showQuickAdd(),
   saveQuickAdd:            ()  => saveQuickAdd(),
   quickAddDone:            ()  => quickAddDone(),
+  clearQaFilter:           ()  => clearQaFilter(),
+  citCamCapture:           el  => citCamCapture(el.dataset.prefix, +el.dataset.citidx),
   goBack:                  ()  => goBack(),
   goForward:               ()  => goForward(),
   openDetailHistory:       ()  => openDetailHistory(),
@@ -1260,6 +1262,10 @@ document.addEventListener('change', e => {
   }
   else if (action === 'efCamChange') {
     _efCamChange(el.files[0]);
+    el.value = '';
+  }
+  else if (action === 'citCamChange') {
+    citCamChange(el.files[0]);
     el.value = '';
   }
   else if (action === 'photoImportChange') {

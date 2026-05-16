@@ -1,7 +1,10 @@
 // ─────────────────────────────────────
 //  FORMS: PERSON
 // ─────────────────────────────────────
-function showAddSheet() { openModal('modalAdd'); }
+function showAddSheet() {
+  if (AppState.currentTab === 'persons') { showQuickAdd(); return; }
+  openModal('modalAdd');
+}
 function showEditSheet() {
   if (AppState.currentPersonId) showPersonForm(AppState.currentPersonId);
   else if (AppState.currentFamilyId) showFamilyForm(AppState.currentFamilyId);
@@ -461,7 +464,7 @@ initPlaceAutocomplete('pf-chr-place',    'pf-chr-place-dd',    null);
 initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd',   null);
 
 // ─── QUICK-ADD: Schnellerfassung neue Person ────────────────────────────────
-let _qaLastId = null;
+let _qaSessionIds = [];
 
 function showQuickAdd() {
   closeModal('modalAdd');
@@ -487,7 +490,7 @@ function showQuickAdd() {
   evSel.value = '';
   document.getElementById('qa-ev-fields').hidden = true;
   document.getElementById('qa-hint').hidden = true;
-  document.getElementById('qa-done-btn').hidden = !_qaLastId;
+  document.getElementById('qa-done-btn').hidden = !_qaSessionIds.length;
   openModal('modalQuickAdd');
   document.getElementById('qa-given').focus();
 }
@@ -533,7 +536,7 @@ function saveQuickAdd() {
   pushUndo('Person angelegt', { personIds: [id] });
   AppState.db.individuals[id] = person;
   _rebuildPersonSourceRefs(person);
-  _qaLastId = id;
+  _qaSessionIds.push(id);
   markChanged();
   renderTab();
 
@@ -546,14 +549,26 @@ function saveQuickAdd() {
   document.getElementById('qa-given').focus();
   document.getElementById('qa-done-btn').hidden = false;
 
+  const n     = _qaSessionIds.length;
   const label = person.name || id;
   const hint  = document.getElementById('qa-hint');
-  hint.textContent = `✓ ${label} angelegt`;
+  hint.textContent = `✓ ${label} angelegt (${n} in dieser Session)`;
   hint.hidden = false;
 }
 
 function quickAddDone() {
   closeModal('modalQuickAdd');
-  if (_qaLastId) { showDetail(_qaLastId); _qaLastId = null; }
+  if (!_qaSessionIds.length) return;
+  UIState._qaSessionIds = new Set(_qaSessionIds);
+  _qaSessionIds = [];
+  const banner = document.getElementById('qa-session-banner');
+  const label  = document.getElementById('qa-session-label');
+  const n = UIState._qaSessionIds.size;
+  if (banner && label) {
+    label.textContent = `${n} neu angelegte Person${n > 1 ? 'en' : ''}`;
+    banner.hidden = false;
+  }
+  if (AppState.currentTab !== 'persons') switchTab('persons');
+  else applyPersonFilter();
 }
 initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd', null);

@@ -60,6 +60,8 @@ function renderSrcTags(prefix) {
       </select>
       <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-citidx="${idx}"
         style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
+      <button type="button" data-action="citCamCapture" data-prefix="${prefix}" data-citidx="${idx}"
+        title="Foto zur Quelle" style="background:none;border:none;cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">📷</button>
     </span>`;
   }).join('');
   const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">Kopieren</button>`;
@@ -681,6 +683,40 @@ initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd');
 initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd');
 initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
+
+// ─── CAM-LINK: Foto direkt zur Zitation (cit.media[]) ──────────────────────
+let _citCamPrefix = null, _citCamIdx = -1;
+
+function citCamCapture(prefix, citIdx) {
+  _citCamPrefix = prefix;
+  _citCamIdx    = citIdx;
+  document.getElementById('cit-cam-input').click();
+}
+
+function citCamChange(file) {
+  const prefix = _citCamPrefix;
+  const idx    = _citCamIdx;
+  _citCamPrefix = null; _citCamIdx = -1;
+  if (!file || !prefix || idx < 0) return;
+  if (!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type)) {
+    showToast('Nur Bilder erlaubt (JPG, PNG, WEBP, GIF)', 'error');
+    return;
+  }
+  resizeImageToBase64(file).then(b64 => {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const fileName = `foto_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_`
+                   + `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.jpg`;
+    idbPut('img:' + fileName, b64).then(() => {
+      const cit = srcWidgetState[prefix]?.citations[idx];
+      if (!cit) return;
+      if (!Array.isArray(cit.media)) cit.media = [];
+      cit.media.push({ file: fileName, title: '', form: 'jpeg', _extra: [] });
+      renderSrcTags(prefix);
+      showToast('Foto zur Quelle gespeichert', 'success');
+    });
+  }).catch(() => showToast('Bild konnte nicht geladen werden', 'error'));
+}
 
 
 
