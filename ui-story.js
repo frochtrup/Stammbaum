@@ -3,6 +3,7 @@
 
   // ── State ───────────────────────────────────────────────────────────────────
   UIState._storyPid = null;
+  let _storyMap = null;
 
   // ── Öffentliche API ─────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@
     showView('v-story');
     _updateNavBtns();
     _embedPhotosAsync(pid);
+    _initStoryMap(pid);
   };
 
   window.printStory = function () { window.print(); };
@@ -329,8 +331,7 @@ ${lifespan}
     const pr = _pronoun(p);
     let html = '<article class="story-article">';
     html += _sectionHeader(p, pr);
-    const mapSvg = _buildLifeMapSVG(pid);
-    if (mapSvg) html += `<section class="story-section story-map">${mapSvg}</section>`;
+    html += `<section class="story-section story-map"><div id="storyMap" class="story-map-container"></div></section>`;
     html += _sectionEarlyLife(p, pr);
     html += _sectionEvents(p, pr);
     html += _sectionFamilies(p, pr);
@@ -381,7 +382,7 @@ ${link}
 
     for (const ev of (p.events || [])) {
       if (ev.lati == null) continue;
-      const label = _shortPlace(ev.place) ||
+      const label = _shortPlace(ev.place) || ev.eventType ||
         (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) || ev.type || '';
       add(ev.lati, ev.long, ev.date, label, 'event');
     }
@@ -411,80 +412,37 @@ ${link}
     });
   }
 
-  function _buildLifeMapSVG(pid) {
+  function _initStoryMap(pid) {
+    const container = document.getElementById('storyMap');
+    if (!container) return;
+    if (_storyMap) { _storyMap.remove(); _storyMap = null; }
+
     const pts = _collectGeoPoints(pid);
-    if (!pts.length) return '';
+    if (!pts.length) { container.closest('.story-map').hidden = true; return; }
+    container.closest('.story-map').hidden = false;
 
-    const W = 360, H = 200, PAD = 0.14;
+    _storyMap = L.map(container, { zoomControl: true, attributionControl: true });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(_storyMap);
 
-    const lats = pts.map(p => p.lati);
-    const lngs = pts.map(p => p.long);
-    let minLat = Math.min(...lats), maxLat = Math.max(...lats);
-    let minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    const latlngs = pts.map(pt => [pt.lati, pt.long]);
+    L.polyline(latlngs, { color: '#8b6914', weight: 2.5, dashArray: '6,5', opacity: 0.85 }).addTo(_storyMap);
 
-    // Mindest-Ausdehnung (verhindert Division durch Null bei einzelnem Punkt)
-    const dlat = maxLat - minLat || 0.5;
-    const dlng = maxLng - minLng || 0.5;
-    minLat -= dlat * PAD; maxLat += dlat * PAD;
-    minLng -= dlng * PAD; maxLng += dlng * PAD;
-
-    const toX = lng => ((lng - minLng) / (maxLng - minLng)) * W;
-    const toY = lat => H - ((lat - minLat) / (maxLat - minLat)) * H;
-
-    const coords = pts.map(pt => ({
-      x: +toX(pt.long).toFixed(1),
-      y: +toY(pt.lati).toFixed(1),
-      ...pt,
-    }));
-
-    // Graticule step: smallest that gives ≤6 lines per axis
-    const _gStep = range => [0.25, 0.5, 1, 2, 5, 10, 20].find(s => range / s <= 6) || 20;
-    const latStep = _gStep(maxLat - minLat);
-    const lngStep = _gStep(maxLng - minLng);
-
-    let svg = `<svg class="story-map-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Karte der Lebensstationen">`;
-    svg += `<rect width="${W}" height="${H}" class="story-map-bg"/>`;
-
-    // Lat lines (horizontal)
-    const latStart = Math.ceil(minLat / latStep) * latStep;
-    for (let lat = latStart; lat <= maxLat + 0.001; lat += latStep) {
-      const y = toY(lat).toFixed(1);
-      svg += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" class="story-map-grid"/>`;
-      svg += `<text x="3" y="${Math.max(10, +y - 2)}" class="story-map-gridlabel">${lat.toFixed(lat % 1 ? 2 : 0)}°N</text>`;
-    }
-    // Lng lines (vertical)
-    const lngStart = Math.ceil(minLng / lngStep) * lngStep;
-    for (let lng = lngStart; lng <= maxLng + 0.001; lng += lngStep) {
-      const x = toX(lng).toFixed(1);
-      svg += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" class="story-map-grid"/>`;
-      svg += `<text x="${+x + 2}" y="${H - 3}" class="story-map-gridlabel">${lng.toFixed(lng % 1 ? 2 : 0)}°E</text>`;
+    const fillColors = { birth: '#4a7c59', chr: '#4a7c59', death: '#9b3a3a', buri: '#9b3a3a', marr: '#5a6fa8' };
+    for (const pt of pts) {
+      const fill = fillColors[pt.type] || '#8b6914';
+      L.circleMarker([pt.lati, pt.long], {
+        radius: 6, color: '#fff', weight: 1.5, fillColor: fill, fillOpacity: 1,
+      }).bindTooltip(pt.label || '', { permanent: false }).addTo(_storyMap);
     }
 
-    if (coords.length >= 2) {
-      const points = coords.map(c => `${c.x},${c.y}`).join(' ');
-      svg += `<polyline points="${points}" class="story-map-line"/>`;
+    if (latlngs.length === 1) {
+      _storyMap.setView(latlngs[0], 9);
+    } else {
+      _storyMap.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
     }
-
-    for (const c of coords) {
-      svg += `<circle cx="${c.x}" cy="${c.y}" r="5" class="story-map-dot story-map-dot--${c.type}"/>`;
-    }
-
-    // Label für Start- und Endpunkt
-    const first = coords[0];
-    const last  = coords[coords.length - 1];
-    const _addLabel = (c, forceLeft) => {
-      if (!c.label) return;
-      const lbl = _esc(c.label.slice(0, 22));
-      const right = !forceLeft && c.x < W - 90;
-      const lx = right ? c.x + 8 : c.x - 8;
-      const anchor = right ? '' : ' text-anchor="end"';
-      svg += `<text x="${lx}" y="${c.y + 4}" class="story-map-label"${anchor}>${lbl}</text>`;
-    };
-    _addLabel(first, false);
-    if (last !== first) _addLabel(last, last.x > W / 2);
-
-    svg += '</svg>';
-    return svg;
   }
 
   // ── Hilfsfunktionen ─────────────────────────────────────────────────────────
