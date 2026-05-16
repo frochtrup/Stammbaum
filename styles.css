@@ -2748,9 +2748,10 @@ html[data-theme="dark"] {
 
 /* Drucken / PDF */
 @media print {
-  body > *:not(#v-story) { display: none !important; }
-  #v-story { display: block !important; position: static !important; overflow: visible !important; }
-  #v-story .topbar { display: none !important; }
+  body * { visibility: hidden; }
+  #v-story, #v-story * { visibility: visible; }
+  #v-story .topbar, #v-story .topbar * { visibility: hidden; display: none !important; }
+  #v-story { position: absolute !important; left: 0; top: 0; width: 100%; overflow: visible !important; }
   #storyBody { overflow: visible !important; }
   .story-article { max-width: 100%; padding: 0; }
   .story-hero-img { max-height: 7cm; }
