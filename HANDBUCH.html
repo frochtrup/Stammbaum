@@ -574,7 +574,7 @@
   <h2>Inhaltsverzeichnis</h2>
   <ol>
     <li><a href="#kap1">Was ist Stammbaum PWA?</a></li>
-    <li><a href="#kap2">Die erste Schritte: App starten</a>
+    <li><a href="#kap2">Die ersten Schritte: App starten</a>
       <ul class="sub">
         <li>Demo-Stammbaum ausprobieren</li>
         <li>Eigene GEDCOM-Datei öffnen</li>
@@ -610,19 +610,22 @@
       <ul class="sub">
         <li>Sanduhr-Baum</li>
         <li>Fächer-Diagramm</li>
+        <li>Nachkommen-Baum</li>
       </ul>
     </li>
-    <li><a href="#kap9">Suchen und Finden</a></li>
-    <li><a href="#kap10">Speichern und Sichern</a>
+    <li><a href="#kap9">Zeitleiste</a></li>
+    <li><a href="#kap10">Biografie (Story Mode)</a></li>
+    <li><a href="#kap11">Suchen und Finden</a></li>
+    <li><a href="#kap12">Speichern und Sichern</a>
       <ul class="sub">
         <li>Lokal speichern</li>
         <li>OneDrive-Synchronisation</li>
         <li>Datensicherung</li>
       </ul>
     </li>
-    <li><a href="#kap11">Forschungsaufgaben</a></li>
-    <li><a href="#kap12">Höfe und Wohnorte</a></li>
-    <li><a href="#kap13">Häufige Fragen und Tipps</a></li>
+    <li><a href="#kap13">Forschungsaufgaben</a></li>
+    <li><a href="#kap14">Höfe und Wohnorte</a></li>
+    <li><a href="#kap15">Häufige Fragen und Tipps</a></li>
   </ol>
 </div>
 
@@ -649,6 +652,10 @@
   <li>Ihre Daten im weit verbreiteten GEDCOM-Format speichern — das können fast alle anderen Stammbaum-Programme lesen</li>
   <li>Dateien im <strong>Gramps-Format</strong> (.gramps) öffnen und direkt zurückspeichern</li>
   <li>Die Daten über OneDrive zwischen iPhone und Computer synchronisieren</li>
+  <li>Eine persönliche Biografie als lesbaren Fließtext erzeugen (<strong>Story-Modus</strong>)</li>
+  <li>Eine persönliche <strong>Zeitleiste</strong> mit historischen Ereignissen anzeigen</li>
+  <li>Alle Nachkommen in einem <strong>Nachkommen-Baum</strong> (top-down, mehrere Generationen) darstellen</li>
+  <li><strong>Forschungsaufgaben</strong> verwalten und als Markdown exportieren</li>
 </ul>
 
 <h2>Was brauche ich, um loszulegen?</h2>
@@ -714,7 +721,7 @@ Die App arbeitet vollständig <strong>ohne Internet</strong>. Ihre Daten verlass
         <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
         <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
         <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
-        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+        <div class="nav-item"><span class="nav-icon">☑</span>Aufgaben</div>
       </div>
     </div>
   </div>
@@ -799,7 +806,7 @@ Das Gramps-Format bewahrt alle Gramps-spezifischen Daten, die die App nicht dire
       <span class="nav-icon" style="font-size: 18px;">📍</span><br>Orte
     </div>
     <div class="nav-item" style="font-size: 11px; padding: 4px;">
-      <span class="nav-icon" style="font-size: 18px;">⌂</span><br>Proband
+      <span class="nav-icon" style="font-size: 18px;">☑</span><br>Aufgaben
     </div>
   </div>
 </div>
@@ -836,14 +843,14 @@ Das Gramps-Format bewahrt alle Gramps-spezifischen Daten, die die App nicht dire
     <td>Alle Orte mit Personenzahl, Höfe/Wohnadressen und Kartenansicht</td>
   </tr>
   <tr>
-    <td style="font-size:1.3em; text-align:center;">⌂</td>
-    <td><strong>Proband</strong></td>
-    <td>Wechselt zur aktuell als Mittelpunkt festgelegten Person</td>
+    <td style="font-size:1.3em; text-align:center;">☑</td>
+    <td><strong>Aufgaben</strong></td>
+    <td>Offene Forschungsaufgaben, Datenprüfung, Markdown-Export</td>
   </tr>
 </table>
 
 <div class="tip">
-Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen Sie in der Detailansicht einer Person fest — tippen Sie dort auf das <span class="button-label">⌂</span>-Symbol in der Topbar.
+Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen Sie über das Menü oder in der Detailansicht einer Person fest — tippen Sie dort auf das <span class="button-label">⌂</span>-Symbol in der Topbar.
 </div>
 
 
@@ -912,7 +919,7 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
         <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
         <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
         <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
-        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+        <div class="nav-item"><span class="nav-icon">☑</span>Aufgaben</div>
       </div>
     </div>
   </div>
@@ -1007,6 +1014,8 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
       <tr><td style="padding:4px 8px;"><span class="button-label">→ Vorwärts</span></td><td>Vorwärts in der Navigationshistorie (erscheint nach „Zurück")</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">⌂</span></td><td>Diese Person als Proband festlegen</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">✕</span></td><td>Person im Stammbaum anzeigen</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">⟷</span></td><td>Zeitleiste dieser Person aufrufen (Swim-Lane-Layout mit historischen Ereignissen)</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">📖</span></td><td>Biografie (Story Mode) aufrufen</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">Bearbeiten</span></td><td>Daten dieser Person ändern</td></tr>
     </table>
 
@@ -1176,7 +1185,7 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
         <div class="nav-item active"><span class="nav-icon">⚭</span>Familien</div>
         <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
         <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
-        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+        <div class="nav-item"><span class="nav-icon">☑</span>Aufgaben</div>
       </div>
     </div>
   </div>
@@ -1269,7 +1278,7 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
         <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
         <div class="nav-item active"><span class="nav-icon">📖</span>Quellen</div>
         <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
-        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+        <div class="nav-item"><span class="nav-icon">☑</span>Aufgaben</div>
       </div>
     </div>
   </div>
@@ -1354,7 +1363,7 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
         <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
         <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
         <div class="nav-item active"><span class="nav-icon">📍</span>Orte</div>
-        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+        <div class="nav-item"><span class="nav-icon">☑</span>Aufgaben</div>
       </div>
     </div>
   </div>
@@ -1375,7 +1384,7 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
     </div>
 
     <h3>Karte anzeigen</h3>
-    <p>Tippen Sie in der Ortsliste auf <span class="button-label">Karte</span> (rechts in der Topbar), um alle Orte mit Koordinaten auf einer Landkarte zu sehen. Tippen Sie auf einen Marker, um alle Personen zu sehen, die mit diesem Ort verbunden sind.</p>
+    <p>Tippen Sie in der Ortsliste auf <span class="button-label">Karte</span> (rechts in der Topbar), um alle Orte mit Koordinaten auf einer Landkarte zu sehen. Tippen Sie auf einen Marker, um alle Personen zu sehen, die mit diesem Ort verbunden sind. Über den Schalter in der Karten-Topbar wechseln Sie zwischen drei Modi: <strong>Orte</strong> (alle Orte), <strong>Personen</strong> (Personen-Cluster nach Geburtsort) und <strong>Migrationen</strong> (Lebenswege als farbige Linien, nach Epoche eingefärbt).</p>
   </div>
 </div>
 
@@ -1433,7 +1442,7 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
         <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
         <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
         <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
-        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+        <div class="nav-item"><span class="nav-icon">☑</span>Aufgaben</div>
       </div>
     </div>
   </div>
@@ -1485,7 +1494,7 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
         <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
         <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
         <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
-        <div class="nav-item"><span class="nav-icon">⌂</span>Proband</div>
+        <div class="nav-item"><span class="nav-icon">☑</span>Aufgaben</div>
       </div>
     </div>
   </div>
@@ -1504,10 +1513,82 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
 </div>
 
 
+<h2>Der Nachkommen-Baum</h2>
+
+<p>Neben dem Sanduhr-Baum gibt es einen <strong>Nachkommen-Baum</strong> (top-down): Er zeigt alle Kinder, Enkel und weiteren Nachkommen der ausgewählten Person. Tippen Sie in der Baum-Topbar auf <span class="button-label">⇩</span>, um zwischen Sanduhr-Baum und Nachkommen-Baum umzuschalten.</p>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Mit den Schaltflächen <span class="button-label">2</span> bis <span class="button-label">7</span> wählen Sie, wie viele Generationen angezeigt werden.</li>
+  <li>Ein <strong>▼</strong>-Badge auf einer Karte zeigt, dass noch weitere Nachkommen vorhanden sind — tippen Sie darauf, um tiefer zu navigieren.</li>
+  <li>Ehepartner des Probanden erscheinen rechts daneben, Geschwister links.</li>
+  <li>Ein <strong>½</strong>-Badge markiert Halbgeschwister (Kinder aus einer anderen Ehe des Elternteils).</li>
+</ul>
+
+
 <!-- ====================================================== -->
-<!-- KAPITEL 9: SUCHEN UND FINDEN -->
+<!-- KAPITEL 9: ZEITLEISTE -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap9">9. Suchen und Finden</h1>
+<h1 class="chapter" id="kap9">9. Zeitleiste</h1>
+
+<p>Die <strong>Zeitleiste</strong> zeigt alle Ereignisse einer Person in chronologischer Reihenfolge — kombiniert mit bedeutenden historischen Ereignissen (Kriege, Seuchen, politische Umbrüche). Sie öffnet sich über den Button <span class="button-label">⟷</span> in der Topbar einer Detailansicht.</p>
+
+<h2>Aufbau der Zeitleiste</h2>
+
+<p>Die Zeitleiste hat zwei Darstellungsformen, die automatisch je nach Bildschirmausrichtung gewählt werden:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Vertikal</strong> (Hochformat): Ereignisse sind nach Jahrzehnten gestapelt.</li>
+  <li><strong>Horizontal</strong> (Querformat/Desktop): Swim-Lane-Layout mit fünf Spuren — Leben, Wohnorte, Beruf, Familie, Kirche/Sonstiges. Historische Ereignisse erscheinen als eigene Hintergrundspur.</li>
+</ul>
+
+<h2>Historische Ereignisse filtern</h2>
+
+<p>In der Topbar der Zeitleiste befinden sich Filter-Schalter für die Kategorien historischer Ereignisse: <strong>Krieg · Seuche · Politik · Religion · Natur</strong>. Schalten Sie einzelne Kategorien ein oder aus, um die Zeitleiste übersichtlicher zu gestalten.</p>
+
+<h2>Navigation in der Zeitleiste</h2>
+
+<p>Die Baum-Navigation steht auch in der Zeitleiste zur Verfügung: Sanduhr <span class="button-label">⧖</span>, Fächer <span class="button-label">✿</span>, Nachkommen <span class="button-label">⇩</span> und Proband <span class="button-label">⌂</span> wechseln direkt zur entsprechenden Ansicht der aktuellen Person.</p>
+
+<div class="tip">
+Tipp: Drehen Sie das Gerät ins Querformat, um die Swim-Lane-Ansicht zu aktivieren — so sehen Sie auf einen Blick, in welche historische Epoche ein Ereignis fällt.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 10: BIOGRAFIE (STORY MODE) -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap10">10. Biografie (Story Mode)</h1>
+
+<p>Der <strong>Story Mode</strong> verwandelt die GEDCOM-Daten einer Person in einen lesbaren Fließtext — eine persönliche Lebensgeschichte. Tippen Sie in der Detailansicht einer Person auf <span class="button-label">📖</span> in der Topbar.</p>
+
+<h2>Was enthält die Biografie?</h2>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Frühe Lebensjahre (Geburt, Taufe, Elternhaus)</li>
+  <li>Alle weiteren Ereignisse in Erzählform (Beruf, Wohnorte, Militär, Emigration …)</li>
+  <li>Ehen und Kinder</li>
+  <li>Tod und Beerdigung</li>
+  <li>Persönliche Notizen am Ende</li>
+</ul>
+
+<p>Wenn Fotos zur Person hinterlegt sind, erscheinen diese als <strong>Hero-Foto</strong> und kleine Galerie am Kopf der Biografie. Eine <strong>Karte</strong> zeigt alle Lebensstationen mit Bewegungspfad.</p>
+
+<h2>Biografie herunterladen und drucken</h2>
+
+<p>Über die Schaltflächen in der Topbar der Biografie können Sie:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>HTML herunterladen</strong> — eine eigenständige Datei, die ohne App im Browser geöffnet werden kann</li>
+  <li><strong>Drucken</strong> — die Biografie direkt ausdrucken (mit Druckstil-Optimierung)</li>
+</ul>
+
+<div class="info">
+Die Biografie wird automatisch aus den vorhandenen Daten erzeugt. Je vollständiger die Ereignisse eingetragen sind, desto reichhaltiger der Text.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 11: SUCHEN UND FINDEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap11">11. Suchen und Finden</h1>
 
 <h2>Suche innerhalb eines Bereichs</h2>
 
@@ -1536,9 +1617,9 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 10: SPEICHERN UND SICHERN -->
+<!-- KAPITEL 12: SPEICHERN UND SICHERN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap10">10. Speichern und Sichern</h1>
+<h1 class="chapter" id="kap12">12. Speichern und Sichern</h1>
 
 <h2>Wann muss ich speichern?</h2>
 
@@ -1613,9 +1694,9 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 11: FORSCHUNGSAUFGABEN -->
+<!-- KAPITEL 13: FORSCHUNGSAUFGABEN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap11">11. Forschungsaufgaben</h1>
+<h1 class="chapter" id="kap13">13. Forschungsaufgaben</h1>
 
 <p>In der Familienforschung gibt es immer offene Fragen: Welches Kirchenbuch muss ich noch durchsuchen? Welche Urkunde fehlt noch? Die App hilft Ihnen, diese Aufgaben zu verwalten.</p>
 
@@ -1669,9 +1750,9 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 12: HÖFE UND WOHNORTE -->
+<!-- KAPITEL 14: HÖFE UND WOHNORTE -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap12">12. Höfe und Wohnorte</h1>
+<h1 class="chapter" id="kap14">14. Höfe und Wohnorte</h1>
 
 <p>Wenn Sie viele Wohnorte (RESI-Einträge) erfasst haben, bündelt die App diese automatisch zu <strong>Höfen</strong> — also Adressen, an denen mehrere Personen zu verschiedenen Zeiten gelebt haben. Das ist besonders nützlich für die Bauernhof-Genealogie.</p>
 
@@ -1686,9 +1767,9 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 13: HÄUFIGE FRAGEN -->
+<!-- KAPITEL 15: HÄUFIGE FRAGEN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap13">13. Häufige Fragen und Tipps</h1>
+<h1 class="chapter" id="kap15">15. Häufige Fragen und Tipps</h1>
 
 <h2>Ich habe aus Versehen etwas gelöscht — was nun?</h2>
 <p>Wenn Sie noch nicht gespeichert haben, tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">↩ Änderungen verwerfen</span>. Damit kehren Sie zum letzten gespeicherten Stand zurück. Falls Sie auf dem Computer mit Chrome arbeiten, können Sie auch <kbd>Cmd</kbd> + <kbd>Z</kbd> drücken.</p>
