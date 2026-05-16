@@ -207,10 +207,21 @@ function toggleTreeFullscreen() {
     btn.textContent = isFs ? '⤡' : '⤢';
     btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
   }
-  // Beim Exit: linke Seite neu kalibrieren (Virtual-Scroll)
-  if (!isFs) { setTimeout(() => window.dispatchEvent(new Event('resize')), 50); return; }
-  // Beim Eintritt: Baum-Darstellung an neue Breite anpassen
   const pid = AppState.currentPersonId;
+  if (!isFs) {
+    // Beim Exit: linke Seite + Diagramm für neue Breite neu aufbauen
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+    if (!pid) return;
+    if (document.body.classList.contains('fc-mode')) {
+      if (typeof showFanChart === 'function') setTimeout(() => showFanChart(pid), 80);
+    } else if (document.body.classList.contains('desc-tree-mode')) {
+      if (typeof showDescTree === 'function') setTimeout(() => showDescTree(pid, false), 80);
+    } else {
+      setTimeout(() => showTree(pid, false), 80);
+    }
+    return;
+  }
+  // Beim Eintritt: Baum-Darstellung an neue (breitere) Breite anpassen
   if (!pid) return;
   if (document.body.classList.contains('fc-mode')) {
     if (typeof showFanChart === 'function') setTimeout(() => showFanChart(pid), 50);
