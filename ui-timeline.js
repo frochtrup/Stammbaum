@@ -420,15 +420,21 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     el.style.left = el.dataset.left + 'px';
     el.style.top  = Math.round(Math.max((lH - chipH) / 2 + nudge, 4)) + 'px';
   });
-  // Undatierte Links-gestapelt (Beruf)
+  // Undatierte Links-gestapelt (Beruf) — vertikal zentriert + stacki-Versatz
   body.querySelectorAll('.tl-chip--undated[data-stacki]:not(.tl-chip--right)').forEach(el => {
+    const lH     = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
+    const chipH  = el.offsetHeight || 36;
+    const stacki = parseInt(el.dataset.stacki);
     el.style.left = '2px';
-    el.style.top  = (4 + parseInt(el.dataset.stacki) * 22) + 'px';
+    el.style.top  = Math.round(Math.max((lH - chipH) / 2 + stacki * 22, 4)) + 'px';
   });
-  // Undatierte Rechts-gestapelt (Kinder ohne Datum)
+  // Undatierte Rechts-gestapelt (Kinder ohne Datum) — vertikal zentriert + stacki-Versatz
   body.querySelectorAll('.tl-chip--right[data-stacki]').forEach(el => {
+    const lH     = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
+    const chipH  = el.offsetHeight || 36;
+    const stacki = parseInt(el.dataset.stacki);
     el.style.right = '2px';
-    el.style.top   = (4 + parseInt(el.dataset.stacki) * 22) + 'px';
+    el.style.top   = Math.round(Math.max((lH - chipH) / 2 + stacki * 22, 4)) + 'px';
   });
 }
 
