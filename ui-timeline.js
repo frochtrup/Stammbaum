@@ -420,21 +420,31 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     el.style.left = el.dataset.left + 'px';
     el.style.top  = Math.round(Math.max((lH - chipH) / 2 + nudge, 4)) + 'px';
   });
-  // Undatierte Links-gestapelt (Beruf) — vertikal zentriert + stacki-Versatz
+  // Undatierte Links-gestapelt (Beruf) — Stapel als Block zentrieren
   body.querySelectorAll('.tl-chip--undated[data-stacki]:not(.tl-chip--right)').forEach(el => {
-    const lH     = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
+    const lane   = el.closest('.tl-lane');
+    const lH     = parseInt(lane?.dataset.h || 58);
     const chipH  = el.offsetHeight || 36;
     const stacki = parseInt(el.dataset.stacki);
+    const count  = lane?.querySelectorAll('.tl-chip--undated:not(.tl-chip--right)').length || 1;
+    const gap    = 8;
+    const stackH = count * chipH + (count - 1) * gap;
+    const topBase = Math.max((lH - stackH) / 2, 4);
     el.style.left = '2px';
-    el.style.top  = Math.round(Math.max((lH - chipH) / 2 + stacki * 22, 4)) + 'px';
+    el.style.top  = Math.round(topBase + stacki * (chipH + gap)) + 'px';
   });
-  // Undatierte Rechts-gestapelt (Kinder ohne Datum) — vertikal zentriert + stacki-Versatz
+  // Undatierte Rechts-gestapelt (Kinder ohne Datum) — Stapel als Block zentrieren
   body.querySelectorAll('.tl-chip--right[data-stacki]').forEach(el => {
-    const lH     = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
+    const lane   = el.closest('.tl-lane');
+    const lH     = parseInt(lane?.dataset.h || 58);
     const chipH  = el.offsetHeight || 36;
     const stacki = parseInt(el.dataset.stacki);
+    const count  = lane?.querySelectorAll('.tl-chip--right').length || 1;
+    const gap    = 8;
+    const stackH = count * chipH + (count - 1) * gap;
+    const topBase = Math.max((lH - stackH) / 2, 4);
     el.style.right = '2px';
-    el.style.top   = Math.round(Math.max((lH - chipH) / 2 + stacki * 22, 4)) + 'px';
+    el.style.top   = Math.round(topBase + stacki * (chipH + gap)) + 'px';
   });
 }
 
