@@ -6,9 +6,27 @@
 let _leafletMap       = null;   // Leaflet-Instanz
 let _mapMarkerLayer   = null;   // L.LayerGroup für Marker
 let _mapLineLayer     = null;   // L.LayerGroup für Biografie-Linie
-let _mapMode          = 'orte'; // 'orte' | 'person'
+let _mapMode          = 'orte'; // 'orte' | 'person' | 'migr'
 let _mapPersonId      = null;   // aktive Person im Biografie-Modus
 let _placePersonIndex = null;   // cache: placeName → [{personId, role, date}]
+
+// Epochen-Farben für Migrations-Modus (nach Geburtsjahr)
+const _MIGR_EPOCHS = [
+  { label: 'vor 1700',  from:    0, to: 1699, color: '#9b7aaa' },
+  { label: '1700–1799', from: 1700, to: 1799, color: '#5b9bd5' },
+  { label: '1800–1849', from: 1800, to: 1849, color: '#4aaa8a' },
+  { label: '1850–1899', from: 1850, to: 1899, color: '#e8a33a' },
+  { label: '1900–1949', from: 1900, to: 1949, color: '#e07050' },
+  { label: '1950+',     from: 1950, to: 9999, color: '#a0a8b0' },
+];
+
+function _migrColor(birthYear) {
+  if (!birthYear) return '#777';
+  for (const e of _MIGR_EPOCHS) {
+    if (birthYear >= e.from && birthYear <= e.to) return e.color;
+  }
+  return '#777';
+}
 
 // ─────────────────────────────────────
 //  PLACE-PERSON-INDEX
@@ -93,8 +111,9 @@ function initOrRefreshPlaceMap() {
 }
 
 function _renderMap() {
-  if (_mapMode === 'orte') _renderOrteModus();
-  else                     _renderPersonModus(_mapPersonId);
+  if      (_mapMode === 'orte')   _renderOrteModus();
+  else if (_mapMode === 'migr')   _renderMigrModus();
+  else                            _renderPersonModus(_mapPersonId);
 }
 
 // ─────────────────────────────────────
@@ -104,7 +123,9 @@ function switchMapMode(mode) {
   _mapMode = mode;
   document.getElementById('map-mode-orte')  ?.classList.toggle('active', mode === 'orte');
   document.getElementById('map-mode-person')?.classList.toggle('active', mode === 'person');
+  document.getElementById('map-mode-migr')  ?.classList.toggle('active', mode === 'migr');
   document.getElementById('map-person-picker').style.display = mode === 'person' ? 'block' : 'none';
+  document.getElementById('map-migr-legend') .style.display  = mode === 'migr'   ? 'flex'  : 'none';
   document.getElementById('map-explore-panel').style.display = 'none';
   _renderMap();
 }
@@ -182,6 +203,64 @@ function _renderOrteModus() {
 
   if (!bounds.length) {
     showToast('Keine Orte mit Koordinaten vorhanden');
+    return;
+  }
+  _leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });
+}
+
+// ─────────────────────────────────────
+//  MODUS 3: MIGRATIONSWEGE
+// ─────────────────────────────────────
+function _renderMigrModus() {
+  _mapMarkerLayer.clearLayers();
+  _mapLineLayer.clearLayers();
+  document.getElementById('map-explore-panel').style.display = 'none';
+
+  const bounds = [];
+  let count = 0;
+
+  for (const p of Object.values(AppState.db.individuals)) {
+    const evs = _personGeoEvents(p);
+    if (evs.length < 2) continue;
+
+    // aufeinanderfolgende Duplikat-Koordinaten entfernen
+    const pts = [evs[0]];
+    for (let i = 1; i < evs.length; i++) {
+      const prev = pts[pts.length - 1];
+      if (evs[i].lat !== prev.lat || evs[i].lng !== prev.lng) pts.push(evs[i]);
+    }
+    if (pts.length < 2) continue;
+
+    const byStr = p.birth?.date?.match(/\b(\d{4})\b/)?.[1];
+    const color = _migrColor(byStr ? parseInt(byStr, 10) : null);
+
+    const latLngs = pts.map(e => [e.lat, e.lng]);
+    const line = L.polyline(latLngs, { color, weight: 1.5, opacity: 0.5 });
+
+    const from  = compactPlace(pts[0].place);
+    const to    = compactPlace(pts[pts.length - 1].place);
+    const years = _mapPersonYears(p);
+    line.bindTooltip(
+      `<b>${_mesc(p.name || p.id)}</b>${years ? ' ' + years : ''}<br>${_mesc(from)} → ${_mesc(to)}`,
+      { sticky: true }
+    );
+    line.on('click', () =>
+      _showExplorationPanel(pts[0].place, [{ personId: p.id, role: pts[0].role, date: pts[0].date }])
+    );
+    line.addTo(_mapLineLayer);
+
+    // Endpunkt-Marker (Zielort)
+    L.circleMarker([pts[pts.length - 1].lat, pts[pts.length - 1].lng], {
+      radius: 3.5, fillColor: color, color: '#1a140a',
+      weight: 1, opacity: 1, fillOpacity: 0.9,
+    }).addTo(_mapMarkerLayer);
+
+    latLngs.forEach(ll => bounds.push(ll));
+    count++;
+  }
+
+  if (!count) {
+    showToast('Keine Personen mit Migrations-Koordinaten gefunden');
     return;
   }
   _leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });

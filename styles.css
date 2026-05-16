@@ -425,6 +425,20 @@ body.desc-tree-mode.fc-mode #treeKeyLegend      { display: none !important; }
   box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
 
+/* Migrations-Legende */
+.map-migr-legend {
+  display: flex; flex-wrap: wrap; gap: 3px 10px; align-items: center;
+  padding: 5px 12px 7px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  font-size: 0.72rem; color: var(--text-dim);
+}
+.map-migr-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0; border: 1px solid rgba(0,0,0,.3);
+}
+
 /* Biografie-Marker (nummeriert) */
 .map-bio-marker {
   width: 22px; height: 22px; border-radius: 50%;
