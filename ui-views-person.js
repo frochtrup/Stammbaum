@@ -626,6 +626,22 @@ function showDetail(id, pushHistory = true) {
     pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
   }
 
+  // Detail Action Bar (Mobile)
+  const navBar = document.getElementById('detailNavBar');
+  if (navBar) {
+    navBar.hidden = false;
+    const isProband = getProbandId() === id;
+    ['detailNavProband', 'detailNavTree', 'detailNavTimeline', 'detailNavStory'].forEach(btnId => {
+      const btn = document.getElementById(btnId);
+      if (btn) btn.dataset.id = id;
+    });
+    const navPb = document.getElementById('detailNavProband');
+    if (navPb) {
+      navPb.classList.toggle('proband-active', isProband);
+      navPb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+    }
+  }
+
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
 
