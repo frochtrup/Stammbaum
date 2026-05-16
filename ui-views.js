@@ -86,6 +86,7 @@ function showView(id) {
     document.body.classList.add('desktop-mode');
     document.body.classList.toggle('has-detail', id === 'v-detail');
     document.body.classList.toggle('timeline-active', id === 'v-timeline');
+    document.body.classList.toggle('story-active', id === 'v-story');
     if (id === 'v-detail') { const _det = document.getElementById('v-detail'); _det.scrollTop = 0; _normalizeWheel(_det); _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');

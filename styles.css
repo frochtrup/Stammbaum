@@ -1243,6 +1243,12 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
     left: 360px; right: 0; top: 0; bottom: 0;
     min-height: 0;
   }
+  body.desktop-mode.story-active #v-detail { display: none !important; }
+  body.desktop-mode #v-story.active {
+    position: fixed;
+    left: 360px; right: 0; top: 0; bottom: 0;
+    min-height: 0;
+  }
 }
 #desktopPlaceholder {
   display: none;
