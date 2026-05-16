@@ -292,11 +292,15 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     _resolveSwimOverlaps(laneEvs[ln.id], ln.id === 'hist' ? 88 : _SL_CHIP_W);
   }
 
-  // Aktive Lanes: Leben immer, andere nur wenn Events vorhanden
+  // Aktive Lanes: Leben immer, andere nur wenn darstellbare Events vorhanden.
+  // work/family zeigen auch undatierte Events (gestapelt) → zählen mit.
+  // resi/church/other: nur datierte Events zählen (undatierte werden nicht gerendert).
   const activeLanes = _SL_LANES.filter(ln => {
-    if (ln.id === 'life') return true;
-    if (ln.id === 'hist') return laneEvs['hist'].length > 0;
-    return laneEvs[ln.id].length > 0 || laneUnd[ln.id].length > 0;
+    if (ln.id === 'life')   return true;
+    if (ln.id === 'hist')   return laneEvs['hist'].length > 0;
+    if (ln.id === 'work')   return laneEvs['work'].length > 0   || laneUnd['work'].length > 0;
+    if (ln.id === 'family') return laneEvs['family'].length > 0 || laneUnd['family'].filter(e => e.type === 'child').length > 0;
+    return laneEvs[ln.id].length > 0; // resi / church / other: nur datierte
   });
 
   body.classList.add('horiz');
