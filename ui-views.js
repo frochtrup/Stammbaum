@@ -993,6 +993,7 @@ const _CLICK_MAP = {
   toggleFanChart:          ()  => toggleFanChart(),
   toggleDescTree:          ()  => toggleDescTree(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
+  tlShowTree:              ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid) showTree(pid); },
   toggleTimelineFullscreen:()  => { if (typeof toggleTimelineFullscreen === 'function') toggleTimelineFullscreen(); },
   showRelPath:             el  => showRelPath(el.dataset.pid),
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
