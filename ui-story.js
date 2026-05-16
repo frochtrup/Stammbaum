@@ -357,6 +357,13 @@ ${lifespan}
     const name = _esc(getPerson(UIState._storyPid)?.name || 'Lebensgeschichte');
     let body = document.getElementById('storyBody')?.innerHTML || '';
 
+    // Hero-Img: display:none entfernen wenn src gesetzt, sonst Element entfernen
+    body = body.replace(/<img id="story-hero-img"([^>]*)>/g, (match, attrs) => {
+      if (/\bsrc="[^"]{4,}/.test(attrs))
+        return `<img id="story-hero-img"${attrs.replace(/\s*style="[^"]*"/, '')}>`;
+      return '';
+    });
+
     // Gesamten Karten-Section ersetzen (Leaflet-Div ist nach Init nicht mehr leer)
     if (_mapDataUrl) {
       body = body.replace(
@@ -477,11 +484,11 @@ body{padding:1.5rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif
       _storyMap.fitBounds(L.latLngBounds(latlngs), { padding: [24, 24] });
     }
 
-    // Canvas-Snapshot nach vollständigem Tile-Load
-    tileLayer.once('load', () => _captureMapSnapshot());
+    // Canvas-Snapshot nach vollständigem Tile-Load (pts per Closure)
+    tileLayer.once('load', () => _captureMapSnapshot(pts));
   }
 
-  async function _captureMapSnapshot() {
+  async function _captureMapSnapshot(pts) {
     const container = document.getElementById('storyMap');
     if (!container || !_storyMap) return;
     const mr = container.getBoundingClientRect();
@@ -494,24 +501,36 @@ body{padding:1.5rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif
     ctx.fillStyle = '#e8e4da';
     ctx.fillRect(0, 0, W, H);
 
-    // Tiles: BoundingClientRect gibt bereits transformierte Position
+    // Tiles via getBoundingClientRect (CSS-Transform bereits eingerechnet)
     for (const tile of container.querySelectorAll('.leaflet-tile:not(.leaflet-tile-loading)')) {
       if (!tile.complete || !tile.naturalWidth) continue;
       const tr = tile.getBoundingClientRect();
       try { ctx.drawImage(tile, tr.left - mr.left, tr.top - mr.top, tr.width, tr.height); } catch (_) {}
     }
 
-    // SVG-Overlay (Polyline + Marker)
-    const svgEl = container.querySelector('svg.leaflet-zoom-animated');
-    if (svgEl) {
-      const sr = svgEl.getBoundingClientRect();
-      const svgStr = new XMLSerializer().serializeToString(svgEl);
-      const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-      const url  = URL.createObjectURL(blob);
-      const img  = new Image();
-      await new Promise(res => { img.onload = res; img.onerror = res; img.src = url; });
-      ctx.drawImage(img, sr.left - mr.left, sr.top - mr.top, sr.width, sr.height);
-      URL.revokeObjectURL(url);
+    // Overlay direkt mit latLngToContainerPoint() — kein SVG-Serialisierungsproblem
+    const fillColors = { birth: '#4a7c59', chr: '#4a7c59', death: '#9b3a3a', buri: '#9b3a3a', marr: '#5a6fa8' };
+    const pixPts = pts.map(pt => _storyMap.latLngToContainerPoint([pt.lati, pt.long]));
+
+    if (pixPts.length >= 2) {
+      ctx.beginPath();
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = 'rgba(139,105,20,0.85)';
+      ctx.lineWidth = 2.5;
+      ctx.moveTo(pixPts[0].x, pixPts[0].y);
+      for (let i = 1; i < pixPts.length; i++) ctx.lineTo(pixPts[i].x, pixPts[i].y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    for (let i = 0; i < pts.length; i++) {
+      const px = pixPts[i];
+      ctx.beginPath();
+      ctx.arc(px.x, px.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = fillColors[pts[i].type] || '#8b6914';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
 
     _mapDataUrl = canvas.toDataURL('image/png');
