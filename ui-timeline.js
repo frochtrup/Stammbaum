@@ -260,8 +260,9 @@ function _buildPersonEvents(pid) {
   // Reguläre Ereignisse
   for (const ev of (p.events || [])) {
     if (!ev.date) continue;
-    const label = (EVENT_LABELS[ev.type] || ev.type) + (ev.value ? ': ' + ev.value : '');
-    const place = ev.place || ev.addr || '';
+    const baseLabel = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
+    const label = baseLabel + (ev.value ? ': ' + ev.value : '');
+    const place = ev.place || (ev.addr ? ev.addr.split('\n')[0] : '');
     evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: 'event', place });
   }
 
