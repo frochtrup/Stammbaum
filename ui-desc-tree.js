@@ -336,35 +336,38 @@ window.showDescTree = function (personId, addToHistory = true) {
     right: rootSpouseIds[0]            || layout.children?.[1]?.id || null,
   };
 
-  showView('v-tree');
+  const _vTree = document.getElementById('v-tree');
+  if (!(_vTree && _vTree.classList.contains('active'))) showView('v-tree');
   _initTreeDrag();
   _initTreeKeys();
 
   // ── Auto-Fit + Scroll ──
-  setTimeout(() => {
+  _afterLayout(() => {
     const sc = document.getElementById('treeScroll');
     if (_descZoomScale <= 0) _descZoomScale = 1;
-    if (!isPortrait && sc.clientWidth > 0 && sc.clientHeight > 0) {
-      const fit = Math.min(1, sc.clientWidth / totalW, sc.clientHeight / totalH);
-      if (fit > 0 && fit < _descZoomScale) {
-        _descZoomScale = Math.round(fit * 100) / 100;
-        wrap.style.transform = `scale(${_descZoomScale})`;
-        wrap.style.transformOrigin = '0 0';
-        if (scaleWrap) {
-          scaleWrap.style.width  = Math.round(totalW * _descZoomScale) + 'px';
-          scaleWrap.style.height = Math.round(totalH * _descZoomScale) + 'px';
+    if (sc.clientWidth > 0 && sc.clientHeight > 0) {
+      if (!isPortrait) {
+        const fit = Math.min(1, sc.clientWidth / totalW, sc.clientHeight / totalH);
+        if (fit > 0 && fit < _descZoomScale) {
+          _descZoomScale = Math.round(fit * 100) / 100;
+          wrap.style.transform = `scale(${_descZoomScale})`;
+          wrap.style.transformOrigin = '0 0';
+          if (scaleWrap) {
+            scaleWrap.style.width  = Math.round(totalW * _descZoomScale) + 'px';
+            scaleWrap.style.height = Math.round(totalH * _descZoomScale) + 'px';
+          }
         }
       }
+      const scaledW = totalW * _descZoomScale;
+      const scaledH = totalH * _descZoomScale;
+      const lPad = Math.max(0, Math.floor((sc.clientWidth  - scaledW) / 2));
+      const tPad = Math.max(0, Math.floor((sc.clientHeight - scaledH) / 2));
+      const posEl = scaleWrap || wrap;
+      posEl.style.marginLeft = lPad + 'px';
+      posEl.style.marginTop  = tPad  + 'px';
+      if (scaleWrap) { wrap.style.marginLeft = ''; wrap.style.marginTop = ''; }
+      sc.scrollLeft = Math.max(0, lPad + rootCX * _descZoomScale - sc.clientWidth  / 2);
+      sc.scrollTop  = 0;
     }
-    const scaledW = totalW * _descZoomScale;
-    const scaledH = totalH * _descZoomScale;
-    const lPad = Math.max(0, Math.floor((sc.clientWidth  - scaledW) / 2));
-    const tPad = Math.max(0, Math.floor((sc.clientHeight - scaledH) / 2));
-    const posEl = scaleWrap || wrap;
-    posEl.style.marginLeft = lPad + 'px';
-    posEl.style.marginTop  = tPad  + 'px';
-    if (scaleWrap) { wrap.style.marginLeft = ''; wrap.style.marginTop = ''; }
-    sc.scrollLeft = Math.max(0, lPad + rootCX * _descZoomScale - sc.clientWidth  / 2);
-    sc.scrollTop  = 0;
-  }, 60);
+  });
 };

@@ -209,21 +209,16 @@ function toggleTreeFullscreen() {
     btn.textContent = isFs ? '⤡' : '⤢';
     btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
   }
-  if (!isFs) {
-    // Beim Exit: resize-Event löst den Resize-Handler aus, der korrekt neu rendert
-    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-    return;
-  }
-  // Beim Eintritt: Baum-Darstellung an neue (breitere) Breite anpassen
   const pid = AppState.currentPersonId;
   if (!pid) return;
-  if (document.body.classList.contains('fc-mode')) {
-    if (typeof showFanChart === 'function') setTimeout(() => showFanChart(pid), 50);
-  } else if (document.body.classList.contains('desc-tree-mode')) {
-    if (typeof showDescTree === 'function') setTimeout(() => showDescTree(pid, false), 50);
-  } else {
-    setTimeout(() => showTree(pid, false), 50);
-  }
+  _afterLayout(() => {
+    if (document.body.classList.contains('fc-mode') && typeof showFanChart === 'function')
+      showFanChart(pid);
+    else if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
+      showDescTree(pid, false);
+    else
+      showTree(pid, false);
+  });
 }
 
 // ─────────────────────────────────────
@@ -699,8 +694,8 @@ function showTree(personId, addToHistory = true) {
   showView('v-tree');
   _initTreeDrag();
   _initTreeKeys();
-  // Auto-Zentrierung: Zentrumsperson horizontal + vertikal ~1/3 von oben
-  setTimeout(() => {
+  // Auto-Zentrierung: nach Browser-Layout (2×rAF statt magic-number setTimeout)
+  _afterLayout(() => {
     const sc = document.getElementById('treeScroll');
     // Desktop: Auto-Fit wenn Baum breiter oder höher als Viewport
     // Guard: Scroll-Container muss messbare Dimensionen haben

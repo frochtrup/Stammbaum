@@ -30,6 +30,12 @@ function _updateTopbarH() {
   if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
 }
 
+// Führt fn aus nachdem der Browser das Layout neu berechnet hat (2× rAF).
+// Ersetzt alle magic-number setTimeout-Delays nach CSS-Klassen-Änderungen.
+window._afterLayout = function (fn) {
+  requestAnimationFrame(() => requestAnimationFrame(fn));
+};
+
 function showView(id) {
   const desktop = window.innerWidth >= 900 && id !== 'v-landing';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
