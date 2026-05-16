@@ -312,6 +312,8 @@ ${lifespan}
     const pr = _pronoun(p);
     let html = '<article class="story-article">';
     html += _sectionHeader(p, pr);
+    const mapSvg = _buildLifeMapSVG(pid);
+    if (mapSvg) html += `<section class="story-section story-map">${mapSvg}</section>`;
     html += _sectionEarlyLife(p, pr);
     html += _sectionEvents(p, pr);
     html += _sectionFamilies(p, pr);
@@ -343,6 +345,109 @@ ${link}
 </head>
 <body>${body}</body>
 </html>`;
+  }
+
+  // ── SVG-Minikarte ───────────────────────────────────────────────────────────
+
+  function _collectGeoPoints(pid) {
+    const p = getPerson(pid);
+    if (!p) return [];
+    const pts = [];
+
+    function add(lati, long, date, label, type) {
+      if (lati == null || long == null) return;
+      pts.push({ lati, long, year: _yearFromDate(date), label: label || '', type });
+    }
+
+    add(p.birth?.lati, p.birth?.long, p.birth?.date, _shortPlace(p.birth?.place) || 'Geburt', 'birth');
+    add(p.chr?.lati,   p.chr?.long,   p.chr?.date,   _shortPlace(p.chr?.place)   || 'Taufe',  'chr');
+
+    for (const ev of (p.events || [])) {
+      if (ev.lati == null) continue;
+      const label = _shortPlace(ev.place) ||
+        (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) || ev.type || '';
+      add(ev.lati, ev.long, ev.date, label, 'event');
+    }
+
+    for (const famId of (p.fams || [])) {
+      const f = getFamily(famId);
+      if (f?.marr?.lati != null)
+        add(f.marr.lati, f.marr.long, f.marr.date, _shortPlace(f.marr.place) || 'Heirat', 'marr');
+    }
+
+    add(p.death?.lati, p.death?.long, p.death?.date, _shortPlace(p.death?.place) || 'Tod',       'death');
+    add(p.buri?.lati,  p.buri?.long,  p.buri?.date,  _shortPlace(p.buri?.place)  || 'Begräbnis', 'buri');
+
+    // Chronologisch sortieren, undatierte ans Ende
+    pts.sort((a, b) => {
+      if (a.year === null && b.year === null) return 0;
+      if (a.year === null) return 1;
+      if (b.year === null) return -1;
+      return a.year - b.year;
+    });
+
+    // Aufeinanderfolgende Duplikate entfernen
+    return pts.filter((pt, i) => {
+      if (i === 0) return true;
+      const prev = pts[i - 1];
+      return !(Math.abs(pt.lati - prev.lati) < 0.001 && Math.abs(pt.long - prev.long) < 0.001);
+    });
+  }
+
+  function _buildLifeMapSVG(pid) {
+    const pts = _collectGeoPoints(pid);
+    if (!pts.length) return '';
+
+    const W = 360, H = 200, PAD = 0.14;
+
+    const lats = pts.map(p => p.lati);
+    const lngs = pts.map(p => p.long);
+    let minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    let minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+
+    // Mindest-Ausdehnung (verhindert Division durch Null bei einzelnem Punkt)
+    const dlat = maxLat - minLat || 0.5;
+    const dlng = maxLng - minLng || 0.5;
+    minLat -= dlat * PAD; maxLat += dlat * PAD;
+    minLng -= dlng * PAD; maxLng += dlng * PAD;
+
+    const toX = lng => ((lng - minLng) / (maxLng - minLng)) * W;
+    const toY = lat => H - ((lat - minLat) / (maxLat - minLat)) * H;
+
+    const coords = pts.map(pt => ({
+      x: +toX(pt.long).toFixed(1),
+      y: +toY(pt.lati).toFixed(1),
+      ...pt,
+    }));
+
+    let svg = `<svg class="story-map-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Karte der Lebensstationen">`;
+    svg += `<rect width="${W}" height="${H}" class="story-map-bg"/>`;
+
+    if (coords.length >= 2) {
+      const points = coords.map(c => `${c.x},${c.y}`).join(' ');
+      svg += `<polyline points="${points}" class="story-map-line"/>`;
+    }
+
+    for (const c of coords) {
+      svg += `<circle cx="${c.x}" cy="${c.y}" r="5" class="story-map-dot story-map-dot--${c.type}"/>`;
+    }
+
+    // Label für Start- und Endpunkt
+    const first = coords[0];
+    const last  = coords[coords.length - 1];
+    const _addLabel = (c, forceLeft) => {
+      if (!c.label) return;
+      const lbl = _esc(c.label.slice(0, 22));
+      const right = !forceLeft && c.x < W - 90;
+      const lx = right ? c.x + 8 : c.x - 8;
+      const anchor = right ? '' : ' text-anchor="end"';
+      svg += `<text x="${lx}" y="${c.y + 4}" class="story-map-label"${anchor}>${lbl}</text>`;
+    };
+    _addLabel(first, false);
+    if (last !== first) _addLabel(last, last.x > W / 2);
+
+    svg += '</svg>';
+    return svg;
   }
 
   // ── Hilfsfunktionen ─────────────────────────────────────────────────────────
