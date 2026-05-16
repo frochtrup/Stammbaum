@@ -1232,6 +1232,12 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   body.desktop-mode #v-detail { background: var(--bg); }
   body.desktop-mode.places-karte:not(.has-detail) #v-detail { display: none !important; }
   body.desktop-mode.has-detail #v-detail { z-index: 10; }
+  body.desktop-mode.timeline-active #v-detail { display: none !important; }
+  body.desktop-mode #v-timeline.active {
+    position: fixed;
+    left: 360px; right: 0; top: 0; bottom: 0;
+    min-height: 0;
+  }
 }
 #desktopPlaceholder {
   display: none;
@@ -2318,7 +2324,7 @@ html[data-theme="dark"] {
 /* ══════════════════════════════════════════════
    ZEITLEISTE  (#v-timeline / ui-timeline.js)
 ══════════════════════════════════════════════ */
-#v-timeline { display: flex; flex-direction: column; overflow: hidden; }
+#v-timeline.active { display: flex; flex-direction: column; overflow: hidden; min-height: calc(100dvh - 52px); }
 #tlBody { flex: 1; overflow-y: auto; padding-bottom: 3rem; }
 
 .tl-empty { padding: 2rem 1rem; color: var(--text-dim); }
