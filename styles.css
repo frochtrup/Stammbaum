@@ -2613,7 +2613,7 @@ html[data-theme="dark"] {
   font-size: 0.58rem;
   line-height: 1.25;
   color: var(--text-dim);
-  pointer-events: none;
+  cursor: default;
 }
 .tl-hist-evt::before {
   content: '';
