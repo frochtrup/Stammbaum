@@ -182,6 +182,10 @@ function renderRelPicker(q) {
     }
   } else if (UIState._relMode === 'parent') {
     persons = persons.filter(x => x.id !== UIState._relAnchorId);
+  } else if (UIState._relMode === 'alias') {
+    const p = AppState.db.individuals[UIState._relAnchorId];
+    const excl = new Set([UIState._relAnchorId, ...(p?.aliases || [])]);
+    persons = persons.filter(x => !excl.has(x.id));
   }
 
   if (q) {
@@ -212,7 +216,30 @@ function renderRelPicker(q) {
 
 function relPickerSelect(selectedId) {
   closeModal('modalRelPicker');
-  openRelFamilyForm(UIState._relAnchorId, selectedId, UIState._relMode);
+  if (UIState._relMode === 'alias') {
+    addAlias(UIState._relAnchorId, selectedId);
+  } else {
+    openRelFamilyForm(UIState._relAnchorId, selectedId, UIState._relMode);
+  }
+}
+
+function addAlias(pid1, pid2) {
+  const p1 = AppState.db.individuals[pid1];
+  const p2 = AppState.db.individuals[pid2];
+  if (!p1 || !p2) return;
+  if (!p1.aliases.includes(pid2)) p1.aliases.push(pid2);
+  if (!p2.aliases.includes(pid1)) p2.aliases.push(pid1);
+  markChanged();
+  showDetail(pid1);
+}
+
+function removeAlias(pid, aliasId) {
+  const p1 = AppState.db.individuals[pid];
+  const p2 = AppState.db.individuals[aliasId];
+  if (p1) p1.aliases = (p1.aliases || []).filter(x => x !== aliasId);
+  if (p2) p2.aliases = (p2.aliases || []).filter(x => x !== pid);
+  markChanged();
+  showDetail(pid);
 }
 
 function relPickerCreateNew() {

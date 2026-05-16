@@ -730,6 +730,7 @@ body.desktop-mode.places-karte #mapContainer {
 
 .fact-row--alias { border-left: 3px solid var(--warn); margin-left: -12px; padding-left: 9px; }
 .fact-row--alias .fact-lbl { color: var(--warn); }
+.alias-name-link { cursor: pointer; }
 
 .rel-row {
   display: flex; align-items: center; gap: 10px;
