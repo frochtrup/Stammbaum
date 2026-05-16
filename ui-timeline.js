@@ -227,15 +227,27 @@ function _resolveSwimOverlaps(chips, chipW) {
   }
 }
 
+function _chipTooltip(ev, age) {
+  const parts = [];
+  if (ev.date)  parts.push(ev.date);
+  else if (ev.year !== null) parts.push(String(ev.year) + age(ev.year));
+  const typePart = ev.title || ev.label || '';
+  const descPart = ev.desc  || '';
+  if (typePart)  parts.push(descPart ? `${typePart}: ${descPart}` : typePart);
+  if (ev.place)  parts.push(ev.place);
+  return parts.join('\n');
+}
+
 function _swimChipHTML(ev, age) {
-  const yr  = ev.year !== null ? `<span class="tl-y">${ev.year}${age(ev.year)}</span>` : '';
-  const pl  = ev.place ? `<span class="tl-place">${_esc(ev.place)}</span>` : '';
-  const nd  = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
-  const und = ev.pxLeft === null ? ' tl-chip--undated' : '';
-  const dl  = ev.pxLeft !== null ? ` data-left="${ev.pxLeft}"` : '';
+  const yr    = ev.year !== null ? `<span class="tl-y">${ev.year}${age(ev.year)}</span>` : '';
+  const pl    = ev.place ? `<span class="tl-place">${_esc(ev.place)}</span>` : '';
+  const nd    = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
+  const und   = ev.pxLeft === null ? ' tl-chip--undated' : '';
+  const dl    = ev.pxLeft !== null ? ` data-left="${ev.pxLeft}"` : '';
   const title = _esc(ev.title || ev.label || '');
   const desc  = ev.desc ? `<span class="tl-desc">${_esc(ev.desc)}</span>` : '';
-  return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}"${dl}${nd}>` +
+  const tip   = _esc(_chipTooltip(ev, age));
+  return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}"${dl}${nd} title="${tip}">` +
          `${yr}<span class="tl-type">${title}</span>${desc}${pl}</div>`;
 }
 
@@ -333,7 +345,8 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
 
     } else if (lane.id === 'hist') {
       for (const ev of evs) {
-        html += `<div class="tl-hist-evt tl-hist-evt--${ev.cat}" data-left="${ev.pxLeft}">`;
+        const tip = _esc(`${ev.year}: ${ev.label}`);
+        html += `<div class="tl-hist-evt tl-hist-evt--${ev.cat}" data-left="${ev.pxLeft}" title="${tip}">`;
         html += `<span class="tl-y">${ev.year}</span><span class="tl-lbl">${_esc(ev.label)}</span></div>`;
       }
 
