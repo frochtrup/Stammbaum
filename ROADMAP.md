@@ -84,7 +84,7 @@ Wichtig für Nutzer, die mit anderen Tools (Legacy, RootsMagic, GRAMPS) zusammen
 | ASSO-UI | **ASSO-Beziehungen** | Read-only Anzeige in Personen-Detail (Schritt 1); Bearbeitung (Zeuge/Pate zu Event zuordnen, Schritt 2) | M+M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
 | MEDI-CALN | **MEDI-Typ unter REPO.CALN** | `3 MEDI Mikrofilm\|Digitalisat\|Original` unter `2 CALN`; Parser + Writer + ein Feld im Quellen-Formular | S |
-| ALIA | **ALIA-Aliasverweise** | `1 ALIA @xref@`; Parser: `p.alia[]`; Writer; UI: verlinkte Alias-Personen in Personen-Detail | S+S |
+| ALIA | **ALIA-Aliasverweise** ✓ | `1 ALIA @xref@`; Parser: `p.alia[]`; Writer; UI: Warn-Row mit ≈-Label + left-border; Edit: symmetrisch hinzufügen/entfernen (sw v499) | S+S ✓ |
 | REFN | **REFN/RIN strukturiert** | `p.refns[]` mit `{val,type}`; aktuell Passthrough; primär für Companion-Workflows | S |
 
 ---
