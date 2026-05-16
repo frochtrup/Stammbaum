@@ -212,11 +212,11 @@
     const lifespan = (birth || death)
       ? `<p class="story-lifespan">${_esc(birth)}${birth && death ? ' – ' : ''}${_esc(death)}</p>`
       : '';
-    const hero    = `<img id="story-hero-img" class="story-hero-img" alt="${_esc(p.name)}" style="display:none">`;
-    const gallery = `<div id="story-gallery" class="story-gallery"></div>`;
     return `<header class="story-header">
-${hero}
-${gallery}
+<div class="story-media-row">
+  <img id="story-hero-img" class="story-hero-img" alt="${_esc(p.name)}" style="display:none">
+  <div id="story-gallery" class="story-gallery"></div>
+</div>
 <h1 class="story-name">${_esc(p.name || p.id)}</h1>
 ${lifespan}
 </header>`;
@@ -380,9 +380,10 @@ body{padding:1.5rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif
 .story-header{border-bottom:2px solid #c8b97a;margin-bottom:1.2rem;padding-bottom:.8rem}
 .story-name{font-size:2rem;margin:0 0 .25rem;font-family:inherit}
 .story-lifespan{color:#666;margin:0 0 .5rem}
-.story-hero-img{max-width:100%;max-height:280px;width:auto;object-fit:cover;border-radius:6px;display:block;margin-bottom:.8rem}
-.story-gallery{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}
-.story-gallery-img{max-width:120px;max-height:120px;object-fit:cover;border-radius:4px}
+.story-media-row{display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.8rem}
+.story-hero-img{flex-shrink:0;max-width:60%;max-height:220px;object-fit:cover;border-radius:6px}
+.story-gallery{display:flex;flex-wrap:wrap;gap:.4rem;align-content:flex-start;flex:1}
+.story-gallery-img{width:80px;height:80px;object-fit:cover;border-radius:4px}
 .story-section{margin-bottom:1.2rem}
 .story-section-title{font-size:1.1rem;color:#8b6914;border-bottom:1px solid #e0d5b0;margin-bottom:.5rem;padding-bottom:.2rem}
 .story-section p{margin:0 0 .5rem;line-height:1.75}

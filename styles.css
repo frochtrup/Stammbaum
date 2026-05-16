@@ -2661,12 +2661,19 @@ html[data-theme="dark"] {
   margin-bottom: 1.4rem;
 }
 
+.story-media-row {
+  display: flex;
+  gap: .5rem;
+  align-items: flex-start;
+  margin-bottom: .8rem;
+}
+
 .story-hero-img {
-  width: 100%;
-  max-height: 260px;
+  flex-shrink: 0;
+  max-width: 60%;
+  max-height: 220px;
   object-fit: cover;
   border-radius: 6px;
-  margin-bottom: .8rem;
 }
 
 .story-name {
@@ -2700,18 +2707,16 @@ html[data-theme="dark"] {
 
 .story-ev { color: var(--text); margin: .2rem 0; }
 
-/* Foto-Galerie (Strip unter Hero) */
+/* Foto-Galerie (rechts neben Hero) */
 .story-gallery {
   display: flex;
+  flex-wrap: wrap;
   gap: .4rem;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  margin-bottom: .8rem;
-  scrollbar-width: thin;
+  align-content: flex-start;
+  flex: 1;
 }
 .story-gallery:empty { display: none; }
 .story-gallery-img {
-  flex-shrink: 0;
   width: 80px;
   height: 80px;
   object-fit: cover;
