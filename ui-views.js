@@ -1243,8 +1243,13 @@ document.addEventListener('change', e => {
     (async () => {
       const f = el.files[0];
       if (!f) return;
+      if (!['image/jpeg','image/png','image/webp','image/gif'].includes(f.type)) {
+        showToast('Nur Bilder erlaubt (JPG, PNG, WEBP, GIF)', 'error');
+        el.value = '';
+        return;
+      }
       try { const b64 = await resizeImageToBase64(f); _onCamCapture(b64); }
-      catch(err) { showToast('Fehler: ' + err.message); }
+      catch(err) { showToast('Bild konnte nicht geladen werden', 'error'); }
       el.value = '';
     })();
   }

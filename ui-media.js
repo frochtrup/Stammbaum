@@ -97,7 +97,7 @@ function openEditMediaDialog(type, entityId, idx) {
       _odGetSourceFileUrl(entityId, idx).then(url => {
         if (!url) return;
         if (isImg) { _setEditMediaPreview(url); }
-        else { if (preview) preview.innerHTML = `<a href="${url}" target="_blank" class="fs-huge no-underline">${icon}</a>`; }
+        else { if (preview) preview.innerHTML = `<a href="${/^https?:\/\//i.test(url) ? url : '#'}" target="_blank" class="fs-huge no-underline">${icon}</a>`; }
       }).catch(() => {});
     }
   } else {

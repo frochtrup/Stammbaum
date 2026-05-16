@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v575 · Cache: `stammbaum-v575`
+**sw-Version:** v576 · Cache: `stammbaum-v576`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -49,6 +49,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | MEDI-CALN | MEDI-Typ unter REPO.CALN | v545 |
 | ALIA | ALIA-Aliasverweise symmetrisch | v499 |
 | REFN | REFN/RIN strukturiert | v548 |
+| SEC-1 | XSS-Härtung: URL-Sanitizer href (onedrive-Vorschau) | v576 |
+| SEC-2 | MIME-Validierung Foto-Upload + Fehler-Toast | v576 |
 
 ---
 
@@ -56,8 +58,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SEC-1 | **XSS in onedrive.js** | `innerHTML`-Assignments mit Nutzerdaten absichern; `textContent` + DOM-API statt String-Interpolation | S |
-| SEC-2 | **MIME-Validierung Foto-Upload** | Magic-Bytes-Check (JPEG/PNG/WEBP) vor IDB-Speicherung; Dateiendung allein nicht ausreichend | S |
+| ~~SEC-1~~ | ~~XSS in onedrive.js~~ | ✓ URL-Sanitizer für href in ui-media.js (sw v576) | S ✓ |
+| ~~SEC-2~~ | ~~MIME-Validierung Foto-Upload~~ | ✓ file.type-Check + Fehler-Toast in amCamChange (sw v576) | S ✓ |
 | ERR-1 | **try-catch in async-Funktionen** | 17 async-Funktionen ohne Error-Handling (storage-file.js, onedrive.js, gramps-parser.js); `showToast(err, 'error')` als Fallback | M |
 | PERF-1 | **Debouncing Suche/Filter** | Personenliste: 300ms Debounce auf Filterinput; verhindert Layout-Thrashing bei >1000 Personen | XS |
 | PERF-2 | **Soundex-Cache** | `_soundexCache` Map; einmal berechnen bei Load, nicht bei jedem Filteraufruf | S |
