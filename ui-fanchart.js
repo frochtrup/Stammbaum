@@ -38,6 +38,8 @@ window.showFanChart = function (pid) {
 
   const tb = document.getElementById('treeFcToggle');
   if (tb) { tb.textContent = '⧖'; tb.title = 'Zur Sanduhr-Ansicht'; }
+  const dtTb = document.getElementById('treeDescToggle');
+  if (dtTb) { dtTb.textContent = '⇩'; dtTb.title = 'Nachkommen-Baum'; }
 
   document.querySelectorAll('[data-gen]').forEach(b =>
     b.classList.toggle('active', +b.dataset.gen === FC.genCount));
