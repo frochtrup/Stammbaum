@@ -356,16 +356,15 @@
         </label>
       </div>
       <div class="form-row">
-        <label class="form-label" style="flex:1">Ereignis
-          <select class="form-input" id="qa-evtype" data-change="qaEvTypeChange">
-            <option value="">— kein —</option>
-            <option value="BIRT">Geburt</option>
-            <option value="CHR">Taufe</option>
-            <option value="DEAT">Tod</option>
-            <option value="BURI">Beerdigung</option>
-            <option value="OCCU">Beruf</option>
-            <option value="RESI">Wohnort</option>
-          </select>
+        <label class="form-label" style="width:100%">Ereignisse
+          <div id="qa-ev-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="BIRT">Geburt</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="CHR">Taufe</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="DEAT">Tod</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="BURI">Beerdigung</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="OCCU">Beruf</button>
+            <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="RESI">Wohnort</button>
+          </div>
         </label>
       </div>
       <div id="qa-ev-fields" hidden>
@@ -373,19 +372,21 @@
           <label class="form-label" style="flex:1">Datum
             <input class="form-input" id="qa-date" type="text" placeholder="TT.MM.JJJJ">
           </label>
-          <label class="form-label" style="flex:1">Ort
-            <input class="form-input" id="qa-place" type="text" placeholder="Ort">
+          <label class="form-label" style="flex:2;position:relative">Ort
+            <input class="form-input" id="qa-place" type="text" placeholder="Ort" autocomplete="off">
+            <div class="place-dropdown" id="qa-place-dd" style="display:none;z-index:600"></div>
           </label>
         </div>
       </div>
       <div class="form-row">
         <label class="form-label" style="flex:1">Quelle (optional)
-          <select class="form-input" id="qa-src"></select>
+          <div style="position:relative">
+            <input class="form-input" id="qa-src-input" type="text" placeholder="Quelle suchen…" autocomplete="off">
+            <div class="place-dropdown" id="qa-src-dd" style="display:none;z-index:600"></div>
+          </div>
         </label>
-      </div>
-      <div class="form-row">
-        <label class="form-label" style="flex:1">Seite
-          <input class="form-input" id="qa-page" type="text" placeholder="z.B. S. 12">
+        <label class="form-label" style="flex:none;width:90px">Seite
+          <input class="form-input" id="qa-page" type="text" placeholder="z.B. 12">
         </label>
       </div>
       <p id="qa-hint" class="form-hint" hidden></p>

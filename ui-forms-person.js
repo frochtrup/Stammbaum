@@ -465,30 +465,37 @@ initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd',   null);
 
 // ─── QUICK-ADD: Schnellerfassung neue Person ────────────────────────────────
 let _qaSessionIds = [];
+let _qaSrcId      = null;
+const _qaSelectedEvs = new Set();
+
+function qaToggleEv(evType, btn) {
+  if (_qaSelectedEvs.has(evType)) {
+    _qaSelectedEvs.delete(evType);
+    btn.classList.remove('quick-chip--active');
+  } else {
+    _qaSelectedEvs.add(evType);
+    btn.classList.add('quick-chip--active');
+  }
+  document.getElementById('qa-ev-fields').hidden = _qaSelectedEvs.size === 0;
+}
 
 function showQuickAdd() {
   closeModal('modalAdd');
-  // Quellen-Dropdown befüllen
-  const sel = document.getElementById('qa-src');
-  const prevSrc  = sel.value;
-  const prevPage = document.getElementById('qa-page').value;
-  sel.innerHTML = '<option value="">— keine —</option>';
-  Object.values(AppState.db.sources || {}).forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.id;
-    opt.textContent = s.abbr || s.title || s.id;
-    sel.appendChild(opt);
-  });
-  // Letzte Quellenauswahl beibehalten
-  if (prevSrc) sel.value = prevSrc;
-  document.getElementById('qa-page').value = prevPage;
+  const prevSrcId = _qaSrcId;
+  const prevPage  = document.getElementById('qa-page').value;
   // Personenfelder leeren
   ['qa-given','qa-surname','qa-date','qa-place'].forEach(id => {
     document.getElementById(id).value = '';
   });
-  const evSel = document.getElementById('qa-evtype');
-  evSel.value = '';
+  // Ereignis-Chips zurücksetzen
+  _qaSelectedEvs.clear();
+  document.querySelectorAll('#qa-ev-chips .quick-chip').forEach(c => c.classList.remove('quick-chip--active'));
   document.getElementById('qa-ev-fields').hidden = true;
+  // Quelle + Seite wiederherstellen
+  _qaSrcId = prevSrcId;
+  const prevSrc = prevSrcId ? AppState.db.sources?.[prevSrcId] : null;
+  document.getElementById('qa-src-input').value = prevSrc ? (prevSrc.abbr || prevSrc.title || prevSrcId) : '';
+  document.getElementById('qa-page').value = prevPage;
   document.getElementById('qa-hint').hidden = true;
   document.getElementById('qa-done-btn').hidden = !_qaSessionIds.length;
   openModal('modalQuickAdd');
@@ -502,11 +509,10 @@ function saveQuickAdd() {
     showToast('Vorname oder Nachname erforderlich', 'warn');
     return;
   }
-  const evType = document.getElementById('qa-evtype').value;
-  const date   = _normQuickDate(document.getElementById('qa-date').value.trim());
-  const place  = document.getElementById('qa-place').value.trim();
-  const srcId  = document.getElementById('qa-src').value;
-  const page   = document.getElementById('qa-page').value.trim();
+  const date  = _normQuickDate(document.getElementById('qa-date').value.trim());
+  const place = document.getElementById('qa-place').value.trim();
+  const srcId = _qaSrcId;
+  const page  = document.getElementById('qa-page').value.trim();
 
   const id  = nextId('I');
   const cit = srcId ? [citationObj(srcId, page)] : [];
@@ -524,13 +530,15 @@ function saveQuickAdd() {
   };
 
   const _SPEC = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
-  if (_SPEC[evType]) {
-    person[_SPEC[evType]].date  = date;
-    person[_SPEC[evType]].place = place;
-    person[_SPEC[evType]].citations = cit;
-  } else if (evType) {
-    person.events.push({ type:evType, value:'', date, place, lati:null, long:null,
-      eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:cit, media:[], _extra:[] });
+  for (const evType of _qaSelectedEvs) {
+    if (_SPEC[evType]) {
+      person[_SPEC[evType]].date  = date;
+      person[_SPEC[evType]].place = place;
+      person[_SPEC[evType]].citations = cit;
+    } else {
+      person.events.push({ type:evType, value:'', date, place, lati:null, long:null,
+        eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:cit, media:[], _extra:[] });
+    }
   }
 
   pushUndo('Person angelegt', { personIds: [id] });
@@ -540,11 +548,12 @@ function saveQuickAdd() {
   markChanged();
   renderTab();
 
-  // Felder leeren, Modal offen lassen (Masseneingabe)
+  // Personenfelder leeren, Chips + Ereignisfelder zurücksetzen; Quelle/Seite bleibt
   ['qa-given','qa-surname','qa-date','qa-place'].forEach(elId => {
     document.getElementById(elId).value = '';
   });
-  document.getElementById('qa-evtype').value = '';
+  _qaSelectedEvs.clear();
+  document.querySelectorAll('#qa-ev-chips .quick-chip').forEach(c => c.classList.remove('quick-chip--active'));
   document.getElementById('qa-ev-fields').hidden = true;
   document.getElementById('qa-given').focus();
   document.getElementById('qa-done-btn').hidden = false;

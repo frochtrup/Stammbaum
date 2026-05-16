@@ -683,6 +683,19 @@ initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd');
 initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd');
 initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd');
 initPlaceAutocomplete('np-name',   'np-name-dd');
+initPlaceAutocomplete('qa-place',  'qa-place-dd');
+
+initAutocomplete('qa-src-input', 'qa-src-dd', {
+  limit: 10,
+  getItems: q => Object.values(AppState.db.sources || {})
+    .filter(s => (s.abbr || s.title || s.id || '').toLowerCase().includes(q))
+    .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de')),
+  formatLabel: s => s.abbr ? `${s.abbr} — ${s.title || ''}`.trim() : (s.title || s.id),
+  onSelect: (s, input) => {
+    input.value = s.abbr || s.title || s.id;
+    _qaSrcId = s.id;
+  },
+});
 
 // ─── CAM-LINK: Foto direkt zur Zitation (cit.media[]) ──────────────────────
 let _citCamPrefix = null, _citCamIdx = -1;

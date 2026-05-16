@@ -707,6 +707,7 @@ body.desktop-mode.places-karte #mapContainer {
   font-family: 'Source Serif 4', serif; white-space: nowrap;
 }
 .quick-chip:active { border-color: var(--gold-dim); color: var(--gold-dim); }
+.quick-chip--active { border-color: var(--gold); color: var(--gold); background: rgba(200,168,74,0.1); }
 .quick-chip--generic { opacity: 0.6; }
 
 .jump-bar {

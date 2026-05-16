@@ -1071,6 +1071,7 @@ const _CLICK_MAP = {
   saveQuickAdd:            ()  => saveQuickAdd(),
   quickAddDone:            ()  => quickAddDone(),
   clearQaFilter:           ()  => clearQaFilter(),
+  qaToggleEv:              el  => qaToggleEv(el.dataset.ev, el),
   citCamCapture:           el  => citCamCapture(el.dataset.prefix, +el.dataset.citidx),
   goBack:                  ()  => goBack(),
   goForward:               ()  => goForward(),
@@ -1245,7 +1246,6 @@ document.addEventListener('change', e => {
   else if (action === 'onEventTypeChange')    onEventTypeChange();
   else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
-  else if (action === 'qaEvTypeChange')    document.getElementById('qa-ev-fields').hidden = !el.value;
   else if (action === 'amCamChange') {
     (async () => {
       const f = el.files[0];
