@@ -27,6 +27,8 @@
 - `gedcom-validator.js` — Validierungsengine: `runValidation(db)` → `[{personId, rule, severity, text, category}]`; 11 Regeln (P1–P7 Person, F1–F4 Familie); reines RAM-Ergebnis, kein GEDCOM-Storage
 - `ui-desc-tree.js` — Nachkommen-Baum (top-down SVG): `showDescTree()`, `toggleDescTree()`, `setDescTreeGens()`; T-Linien-Layout; `▼`-Badge; Toggle `⇩`; alle Ehepartner in Reihe mit ⚭-Button (variabler Überlapp); Geschwister horizontal gestapelt links; `½`-Badge für Kinder aus Nebenehe; Klick-Navigation analog Sanduhr
 - `ui-fanchart.js` — Fan Chart (SVG)
+- `ui-timeline.js` — Zeitleiste: `showTimeline()`, `_renderTlV()` (vertikal Dekaden), `_renderTlH()` (horizontal Swim-Lane 5 Lanes), `_buildPersonEvents()`, `_swimLane()`, `_afterLayout()`; Vollbild, Baumnavigation, Tooltip, Filter-Toggles
+- `timeline-hist-events.js` — Historische Ereignisse `_HIST_EVENTS` (71 Einträge 1315–2024); eigenständig editierbar
 - `ui-forms.js` — Source-Widget, Media-Helfer, Quelle-Formular, Modals, Gesten, Keyboard, Utils (619 Z.)
 - `ui-forms-person.js` — Person-Formular + Extra-Name-Formular (273 Z.)
 - `ui-forms-family.js` — Familie-Formular (124 Z.)
@@ -41,7 +43,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v470)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v540)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -54,13 +56,13 @@
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-15
+## Aktueller Stand — zuletzt aktualisiert: 2026-05-16
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v470** / Cache: `stammbaum-v470`
+- **Aktuelle sw-Version: v540** / Cache: `stammbaum-v540`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
-**Abgeschlossene Sprints (v8-dev, sw v448–v470):**
+**Abgeschlossene Sprints (v8-dev, sw v448–v540):**
 - **PERF-1/2 (sw v448–v449):** Debouncing Filter-Inputs + Soundex-Cache
 - **CrossMode-CitNotes (sw v450):** `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@`
 - **Dark Mode (sw v452):** `prefers-color-scheme` + `[data-theme]`-Toggle, 3-Stufen-Segment
@@ -68,6 +70,13 @@
 - **Nachkommen-Baum (sw v462–v470):** `ui-desc-tree.js`; Toggle `⇩`; Gen-Buttons 2–7; T-Linien; `▼`-Badge; alle Ehepartner in Reihe mit ⚭-Button (variabler Überlapp); Geschwister horizontal gestapelt; `½`-Badge für Kinder aus Nebenehe; Klick-Navigation analog Sanduhr
 - **Validierungsengine (sw v463):** `gedcom-validator.js`; 11 Regeln; RAM-only; Befunde manuell als `_task` übernehmbar
 - **Aufgaben Bottom-Tab (sw v464–v465):** `bnavTasks()`; Proband über Menü; „✓ Daten prüfen"-Button direkt im Aufgaben-Tab
+- **GRAMPS-Orte (sw v471–v475):** placeId-Erhalt im Edit-Pfad; Place-Picker aus `placeObjects` mit Typ-Badge; Hierarchie-Anzeige in Event-Detail
+- **OBJE-FIELDS (sw v476):** `p/f/s.media[]` erhalten `note`/`date`/`scbk`/`prim` als dedizierte Felder; `_PRIM Y` an Position 0 sortiert; Edit-Form: Notiz + Aufnahmedatum
+- **VAL-FAM + VAL-CONFIG (sw v496–v497):** `f._tasks[]`; GEDCOM-Roundtrip `1 _TASK FAM`; `VAL_RULES`/`VAL_CONFIG_DEFAULTS`; konfigurierbarer `runValidation(db, config)`; `modalValConfig`; sticky header im Aufgaben-Tab
+- **MAP-MIGR (sw v498):** dritter Karten-Modus „Migrationen"; `_renderMigrModus()`; Epochen-Farben `.map-migr-e0`–`.map-migr-e5`; Farb-Legende; Endpunkt-Marker
+- **ALIA (sw v499):** `p.alia[]` Parser/Writer; symmetrisches Edit; Warn-Row mit ≈-Label + left-border; Label „Selbe Person?"
+- **Mobile-Karte-Fix (sw v500):** Orte/Höfe/Karte-Toggle auf Mobile bei Karte-Modus ausgeblendet
+- **F9 Zeitleiste (sw v501–v540):** `ui-timeline.js` + `timeline-hist-events.js`; View `#v-timeline`; `_buildPersonEvents()` (Sonder-Ereignisse + events[] + Heiraten + Kinder); `_HIST_EVENTS` (71 Einträge 1315–2024, eigene Datei); Rendering vertikal (Dekaden) / horizontal Swim-Lane (5 Lanes); `_afterLayout()`-Utility; Vollbild-Modus; Baumnavigation in Topbar (⟷/⧖/✿/⇩/⌂); Mouseover-Tooltip; Filter-Toggles; Lebensspanne-Balken; undatierte Chips vertikal zentriert
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte

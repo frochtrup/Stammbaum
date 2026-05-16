@@ -22,7 +22,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v539 · Cache: `stammbaum-v539`
+**sw-Version:** v540 · Cache: `stammbaum-v540`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -55,7 +55,7 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Höch
 |---|---|---|---|
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln via `L.tileLayer className`; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key, keine neue Bibliothek. Hinweis: ändert nur Optik, keine historischen Daten. | S |
 | MAP-HIST-B | **Echter Historikkartenhintergrund** | `L.tileLayer.wms()` gegen Mapire.eu (Habsburg ~1780–1918) oder deutschen Geodatendienst (Messtischblätter); erfordert Research-Spike: ToS-Prüfung, WMS-URL-Validierung, Coverage-Check (wahrscheinlich nur Habsburggebiet/Preußen, nicht flächendeckend). OHM und freie XYZ-Raster-Tiles ohne API-Key sind nicht verfügbar (OHM liefert nur Vektor-PBF, braucht MapLibre). | S+Research |
-| F9 | **Zeitleiste** ✓ | `ui-timeline.js` (sw v501–v505): View `#v-timeline`, ⊙-Button in Detail-Topbar, `_buildPersonEvents()` (Sonder-Ereignisse + events[] + Heiraten + Kinder), `_HIST_EVENTS` (65 Einträge 1315–2002), Rendering geclustert-proportional (Dekaden-Blöcke), Desktop zweispaltig / Mobile einkolumnig, Filter-Toggles (Krieg/Seuche/Politik/Religion/Natur), Lebensspanne-Balken, Altersanzeige | XL ✓ |
+| F9 | **Zeitleiste** ✓ | `ui-timeline.js` + `timeline-hist-events.js` (sw v501–v540): View `#v-timeline`, ⊙-Button (⟷) in Detail-Topbar + Baum-Topbar, `_buildPersonEvents()` (Sonder-Ereignisse + events[] + Heiraten + Kinder), `_HIST_EVENTS` (71 Einträge 1315–2024, in eigene Datei ausgelagert), Rendering vertikal (Dekaden) / horizontal Swim-Lane (5 Lanes: Leben/Wohnorte/Beruf/Familie/Kirche), `_afterLayout`-Utility, Vollbild-Modus, Baumnavigation in Topbar (Sanduhr/Fächer/Nachkommen/Proband), Mouseover-Tooltip, Filter-Toggles (Krieg/Seuche/Politik/Religion/Natur), Lebensspanne-Balken, Altersanzeige, undatierte Chips vertikal zentriert | XL ✓ |
 | STORY | **Story Mode** | Reichhaltige Personen-Erzählung aus GEDCOM-Events: Markdown-Template mit Platzhaltern → clientseitig befülltes HTML → PDF via `window.print()` + Print-CSS; Fließtext-Gerüst automatisch generiert; eingebettete Fotos (base64); Mini-Karte (→ MAP-MIGR) + Zeitstrahl (→ F9) an Lebenspunkten; `ui-story.js`; Download als HTML oder PDF | XL |
 
 *Empfohlene Reihenfolge: MAP-HIST (Fundament für STORY-Karte) → F9 (Fundament für STORY-Timeline) → STORY*

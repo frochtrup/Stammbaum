@@ -9,6 +9,56 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-16 — Zeitleiste: Refactoring + Fixes (sw v537, v540)
+
+- **sw v537** `refactor(timeline)`: `_HIST_EVENTS` (71 Einträge) aus `ui-timeline.js` in eigene Datei `timeline-hist-events.js` ausgelagert; `index.html` lädt die neue Datei vor `ui-timeline.js`; Ereignisliste kann damit unabhängig gepflegt werden
+- **sw v540** `fix(timeline)`: undatierte Chips (Beruf ohne Datum, Kinder ohne Datum) vertikal zentriert — `top: 4px` durch `(lH - chipH) / 2 + stacki * 22` ersetzt, identische Logik wie datierte Chips
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Tooltip + Lanes + Fixes (sw v525–v536)
+
+- **sw v525–v536** `feat/fix(timeline)`: Mouseover-Tooltip mit Vollinformation (Jahr, Altersangabe, Ort, Beschreibung) auf allen Chips; `pointer-events: none` auf hist-Events für Tooltip-Durchlass; leere Kirche/Sonstiges-Lanes ausgeblendet; PROP-Ereignisse → Sonstiges-Lane; EVEN-Beschäftigung/Beruf → Beruf-Lane; historische Ereignisse bis 2024 (71 Einträge); Chip-Breite 140px, vertikale Zentrierung via `offsetHeight`; Basisraster volle Breite; Lanehöhen proportional skaliert; horizontales Scrollen voll ausgenutzt; `refactor(layout)`: `_afterLayout()`-Utility ersetzt alle `setTimeout(0)`-Delays; Fächer-Button navigiert korrekt nach Vollbild-Exit; Sanduhr/Fächer/Nachkommen nach Vollbild-Toggle neu rendern
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Topbar + Vollbild + Navigation (sw v518–v524)
+
+- **sw v518** `feat(timeline)`: Baum-gleichwertiger Topbar mit Titel + Vollbild-Button (`⤢`/`⤡`); `toggleTimelineFullscreen()` + `body.timeline-fullscreen`
+- **sw v519** `feat(timeline)`: Baumnavigation vollständig in Timeline-Topbar — Sanduhr `⧖`, Fächer `✿`, Nachkommen `⇩`, Person-Button `⌂`
+- **sw v520** `feat(timeline)`: `⌂` navigiert zur Sanduhr der aktuellen Timeline-Person
+- **sw v521** `fix(tree)`: Sanduhr/Fächer/Nachkommen nach Vollbild-Toggle neu rendern
+- **sw v522** `fix(timeline)`: direkte Navigation zu Sanduhr/Fächer/Nachkommen aus Timeline
+- **sw v523** `fix(nav)`: `tree-fullscreen` + `timeline-fullscreen` beim View-Wechsel bereinigt
+- **sw v524** `fix(fullscreen)`: Vollbild zwischen Views übertragen; Exit kalibriert `#v-main`; Diagramm beim Vollbild-Exit neu rendern; Exit ohne `showView`-Seiteneffekte
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Horizontal + Swim-Lane (sw v506–v517)
+
+- **sw v506** `fix(timeline)`: CSP-Konformität + Topbar-Layout (`#v-timeline` `always-flex`-Bug behoben)
+- **sw v507–v516** `fix(timeline)`: `_shortPlace()` findet erstes nicht-leeres PLAC-Segment; RESI-Adresse wenn PLAC fehlt; `addr` erste Zeile als Ort; `eventType` als Label; Ortsdarstellung — `_shortPlace` nur beim Aufbau, `addr+place` kombiniert; Timeline-Button `⊙` → `⟷`; `⟷`-Button in Baum-Topbar; horizontale Variante gesteuert über Viewport (Breite > Höhe ∧ ≥ 500px)
+- **sw v517** `feat(timeline)`: Swim-Lane-Layout für Horizontalansicht — 5 Lanes (Leben / Wohnorte / Beruf / Familie / Kirche/Sonstiges / Geschichte); `_swimLane()` klassifiziert Events; `_resolveSwimOverlaps()` verhindert Kollisionen; `_SL_LANES`, `_SL_CHIP_W=140`, `_SL_MIN_PX_Y`; Lanehöhen proportional auf verfügbare Höhe skaliert; Jahres-Skala via `yearToX()`; CSP-konform (CSSOM statt Inline-Style)
+
+---
+
+### Session 2026-05-16 — Zeitleiste: Grundgerüst vertikal (sw v501–v505)
+
+- **sw v501** `feat(timeline)`: View-Container `#v-timeline`; ⊙-Button in Detail-Topbar; `showTimeline(pid)` in `UIState._navHistory`; `showView('v-timeline')`
+- **sw v502** `feat(timeline)`: `_buildPersonEvents()` — Sonder-Ereignisse (BIRT/CHR/DEAT/BURI) + `p.events[]` + Heiraten + Kinder aus allen `p.fams`
+- **sw v503** `feat(timeline)`: `_HIST_EVENTS` — 65 Einträge 1315–2002, Kategorien: war/disease/political/religion/natural
+- **sw v504** `feat(timeline)`: Rendering geclustert-proportional — Dekaden-Blöcke; leer=36px, belegt=max(N×58, 90)px; `_decOffset()` für Lebensspanne-Balken (gold-dim)
+- **sw v505** `feat(timeline)`: Filter-Toggles (Krieg/Seuche/Politik/Religion/Natur) in Topbar; Altersanzeige je Event; Nav-System in `_navHistory`-Stack; Resize-Listener für Orientierungswechsel
+
+---
+
+### Session 2026-05-16 — ALIA + Mobile-Karte-Fix (sw v499–v500)
+
+- **sw v499** `feat(alia)`: `p.alia[]` — Parser liest `1 ALIA @xref@`; Writer schreibt symmetrisch; Personen-Detail zeigt verlinkte Alias-Personen als Warn-Row mit `≈`-Label + `border-left`; Edit-Formular: Alias hinzufügen/entfernen symmetrisch (beide Seiten synchron); Label auf „Selbe Person?"
+- **sw v500** `fix(map)`: Orte/Höfe/Karte-Toggle auf Mobile bei Karte-Modus ausgeblendet (verhinderte Rückkehr zur Hauptnavigation)
+
+---
+
 ### Session 2026-05-16 — MAP-MIGR: Migrationswege auf Karte (sw v498)
 
 - **sw v498** `feat(map)`: MAP-MIGR — dritter Karten-Modus „Migrationen"; `_renderMigrModus()` zeichnet für jede Person mit ≥ 2 Geo-Events eine Linie Geburt → RESI → Tod; aufeinanderfolgende Duplikat-Koordinaten dedupliziert; Endpunkt-Marker (gefüllter Kreis) am Zielort; Tooltip mit Name, Lebensjahren, Herkunft → Ziel; Klick öffnet Exploration-Panel; Epochen-Farben via `_MIGR_EPOCHS` / `_migrColor()`: vor 1700 lila · 1700–99 blau · 1800–49 teal · 1850–99 amber · 1900–49 orange · 1950+ grau; Farb-Legende (`#map-migr-legend`) erscheint/verschwindet beim Moduswechsel; Dots als CSS-Klassen `.map-migr-e0`–`.map-migr-e5` statt Inline-Styles (CSP `style-src 'self'`)
