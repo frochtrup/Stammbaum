@@ -129,7 +129,7 @@ function _renderTimeline(pid) {
           html += `<div class="tl-ev tl-ev--${ev.type}" data-top="${top}">`;
           html += `<span class="tl-y">${ev.year}${age(ev.year)}</span>`;
           html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
-          if (ev.place) html += `<span class="tl-place">${_esc(ev.place)}</span>`;
+          if (ev.place) html += `<span class="tl-place">${_esc(_shortPlace(ev.place))}</span>`;
           html += '</div>';
         } else {
           html += `<div class="tl-hist tl-hist--${ev.cat}" data-top="${top}">`;
@@ -156,6 +156,11 @@ function _renderTimeline(pid) {
 
 function _esc(s) {
   return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function _shortPlace(place) {
+  if (!place) return '';
+  return place.split(',')[0].trim();
 }
 
 // ── Historische Ereignisse ─────────────────────
