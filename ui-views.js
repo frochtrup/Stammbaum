@@ -92,7 +92,7 @@ function showView(id) {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
     if (id === 'v-detail') _initDetailSwipe();
-    const showNav = (id === 'v-main' || id === 'v-tree');
+    const showNav = (id === 'v-main' || id === 'v-tree' || id === 'v-detail');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
     if (id === 'v-timeline') { const _tb = document.getElementById('tlBody'); if (_tb) _tb.scrollTop = 0; }
