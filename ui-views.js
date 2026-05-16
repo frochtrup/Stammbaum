@@ -463,6 +463,7 @@ function _navToHistoryItem(item) {
   else if (item.type === 'fanchart') { if (typeof showFanChart  === 'function') showFanChart(item.id); }
   else if (item.type === 'desctree') { if (typeof showDescTree  === 'function') showDescTree(item.id, false); }
   else if (item.type === 'timeline') { if (typeof showTimeline  === 'function') showTimeline(item.id, false); }
+  else if (item.type === 'story')    { if (typeof showStory     === 'function') showStory(item.id, false); }
   else showMain();
 }
 
@@ -470,6 +471,8 @@ function _navToHistoryItem(item) {
 
 // Aktuell angezeigte Entity als History-Eintrag (null = Listenansicht)
 function _captureCurrentNavState() {
+  if (document.getElementById('v-story')?.classList.contains('active') && UIState._storyPid)
+    return { type: 'story', id: UIState._storyPid };
   if (document.getElementById('v-timeline')?.classList.contains('active') && UIState._timelinePid)
     return { type: 'timeline', id: UIState._timelinePid };
   if (AppState.currentPersonId) return { type: 'person', id: AppState.currentPersonId };
@@ -500,6 +503,10 @@ function _beforeDetailNavigate() {
     const _type = document.body.classList.contains('fc-mode')       ? 'fanchart'  :
                   document.body.classList.contains('desc-tree-mode') ? 'desctree' : 'tree';
     UIState._navHistory.push({ type: _type, id: currentTreeId });
+    UIState._navFwdStack = [];
+  } else if (document.getElementById('v-story')?.classList.contains('active') && UIState._storyPid) {
+    // Story → Detail
+    UIState._navHistory.push({ type: 'story', id: UIState._storyPid });
     UIState._navFwdStack = [];
   } else if (document.getElementById('v-timeline')?.classList.contains('active') && UIState._timelinePid) {
     // Zeitleiste → Detail
@@ -566,6 +573,12 @@ function _updateNavBtns() {
   if (tlBack) tlBack.hidden = n <= 0;
   if (tlHist) tlHist.hidden = n < 2;
   if (tlFwd)  tlFwd.hidden  = UIState._navFwdStack.length === 0;
+  const stBack = document.getElementById('storyBtnBack');
+  const stHist = document.getElementById('storyHistBtn');
+  const stFwd  = document.getElementById('storyBtnFwd');
+  if (stBack) stBack.hidden = n <= 0;
+  if (stHist) stHist.hidden = n < 2;
+  if (stFwd)  stFwd.hidden  = UIState._navFwdStack.length === 0;
 }
 
 function _updateDetailHistBtn() {
@@ -1037,6 +1050,9 @@ const _CLICK_MAP = {
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
   showTree:                el  => showTree(el.dataset.id),
   showTimeline:            el  => { if (typeof showTimeline === 'function') showTimeline(el.dataset.id); },
+  showStory:               el  => { if (typeof showStory    === 'function') showStory(el.dataset.id); },
+  printStory:              ()  => { if (typeof printStory   === 'function') printStory(); },
+  downloadStory:           ()  => { if (typeof downloadStory === 'function') downloadStory(); },
   tlFilter:                el  => { if (typeof _tlFilterToggle === 'function') _tlFilterToggle(el.dataset.cat); },
   toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),
