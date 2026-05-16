@@ -75,7 +75,7 @@ function parseGEDCOM(text, parseErrors) {
           buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'',
-          extraNames:[], _tasks:[], associations:[], aliases:[],
+          extraNames:[], _tasks:[], associations:[], aliases:[], refns:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
           nameCitations:[],
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
@@ -83,10 +83,10 @@ function parseGEDCOM(text, parseErrors) {
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,citations:[],value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], refns:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallMedi:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallMedi:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.slice(val.startsWith('NOTE ') ? 5 : 4); // preserve trailing whitespace (CONC-Roundtrip)
@@ -204,6 +204,7 @@ function parseGEDCOM(text, parseErrors) {
         else if (tag === 'ALIA') {
           if (val && val.startsWith('@')) cur.aliases.push(val);
         }
+        else if (tag === 'REFN') { cur.refns.push({val:val||'', type:''}); }
         else {
           // Unknown lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -341,6 +342,7 @@ function parseGEDCOM(text, parseErrors) {
             _ptDepth = 2; _ptTarget = cur.topSourceExtra[lastSourVal];
           }
         }
+        if (lv1tag === 'REFN' && tag === 'TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
         // Collect source references at level 2
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
       }
@@ -492,6 +494,7 @@ function parseGEDCOM(text, parseErrors) {
           _curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
           cur._tasks.push(_curTask);
         }
+        else if (tag === 'REFN') { cur.refns.push({val:val||'', type:''}); }
         else {
           // Unknown FAM lv1 tag → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -557,6 +560,7 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag==='_PRIM') _cm.prim  = val;
           else { _cm._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=_cm._extra; }
         }
+        if (lv1tag === 'REFN' && tag === 'TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
         if (lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.noteTexts.length) cur.noteTexts[cur.noteTexts.length-1] += (tag==='CONT'?'\n':'') + val;
         if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
@@ -724,6 +728,7 @@ function parseGEDCOM(text, parseErrors) {
             cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
+        else if (tag === 'REFN') { cur.refns.push({val:val||'', type:''}); }
         else {
           // Unknown lv1 tag (incl. DATA, etc.) → verbatim passthrough
           cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -749,6 +754,7 @@ function parseGEDCOM(text, parseErrors) {
         if ((tag==='CONC'||tag==='CONT') && lv1tag==='ABBR') cur.abbr   += (tag==='CONT'?'\n':'') + val;
         if (lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
         if (lv1tag==='REPO' && tag==='CALN') { cur.repoCallNum = val; }
+        if (lv1tag==='REFN' && tag==='TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
         if (lv1tag==='DATA' && tag==='AGNC') cur.agnc = val;
         else if (lv1tag==='DATA' && tag==='EVEN') { cur.dataEvens.push({evens:val||'',date:'',plac:''}); }
         else if (lv1tag==='DATA' && tag !== 'AGNC' && tag !== 'EVEN') { cur.dataExtra.push('2 '+tag+(val?' '+val:'')); _ptDepth=2; _ptTarget=cur.dataExtra; }

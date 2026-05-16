@@ -582,6 +582,7 @@ function _pdetLifeData(p, id) {
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);
   if (p.resn)  html += factRow('Beschränkung', p.resn);
+  if (p.refns && p.refns.length) for (const r of p.refns) html += factRow(r.type ? `Ref (${esc(r.type)})` : 'Ref', r.val);
   if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" class="person-email-link">${esc(p.email)}</a></span></div>`;
   if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(p.www)}" target="_blank" rel="noopener" class="person-www-link">${esc(p.www)}</a></span></div>`;
   if (p._grampsTags?.length) html += `<div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${p._grampsTags.map(t => `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div>`;

@@ -87,6 +87,7 @@ let changed = false;  // Ungespeicherte Änderungen?
   //                  sourceExtra{}, sourceMedia{}, _extra[] }
 
   aliases: ['@I002@'],  // 1 ALIA @xref@ — Verweise auf identische/gleichnamige Personen
+  refns:   [{val:'https://...', type:''}],  // 1 REFN + 2 TYPE; read-only (sw v548)
 
   // Assoziationen (GEDCOM ASSO ↔ GRAMPS <personref>)
   associations: [{
@@ -203,7 +204,11 @@ let changed = false;  // Ungespeicherte Änderungen?
   date:        '1845-1912',
   publ:        '',
   repo:        '@R1@',        // @Rxx@-Referenz ODER Legacy-Freitext ODER ''
-  repoCallNum: 'IV/342',      // 2 CALN unter 1 REPO (v1.2)
+  repoCallNum:  'IV/342',     // 2 CALN unter 1 REPO
+  repoCallMedi: 'film',       // 3 MEDI unter 2 CALN (sw v545)
+  agnc:        '',            // 2 AGNC unter 1 DATA
+  dataEvens:   [{evens:'BIRT, MARR', date:'FROM 1750 TO 1850', plac:'Ochtrup'}],  // 2 EVEN/3 DATE/3 PLAC (sw v546)
+  refns:       [{val:'Non_Duplicates', type:''}],  // 1 REFN + 2 TYPE (sw v548)
   text:        '',
   media:       [{ file:'scan001.pdf', title:'Titelblatt', _extra:[] }],
   lastChanged: '1 MAR 2026',  // CHAN/DATE — auto-gesetzt beim Speichern

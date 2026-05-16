@@ -22,7 +22,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v547 · Cache: `stammbaum-v547`
+**sw-Version:** v548 · Cache: `stammbaum-v548`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -42,7 +42,7 @@ Kleine Aufwände mit hohem Orientierungswert für neue Nutzer.
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | TASK-EXPORT-MD | **Aufgabenliste als Markdown exportieren** | Alle offenen Forschungsaufgaben + Validierungsbefunde als `.md`-Datei; gegliedert nach Kategorie und Schweregrad; Download-Button im Aufgaben-Tab | S |
-| OBJE-TYPE | **Medien-Typ strukturiert** | `m.type` (Foto/Urkunde/Karte); Parser + Writer; UI: TYPE als Filter im Media-Browser | S |
+| OBJE-TYPE | **Medien-Typ strukturiert** ⚠ nicht GEDCOM-konform | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag unter OBJE in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform; Opt-in im Einstellungs-Modal | M |
 
 ---
@@ -85,7 +85,7 @@ Wichtig für Nutzer, die mit anderen Tools (Legacy, RootsMagic, GRAMPS) zusammen
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
 | MEDI-CALN | **MEDI-Typ unter REPO.CALN** ✓ | `3 MEDI` unter `2 CALN`; `s.repoCallMedi`; Parser + Writer + Select im Quellen-Formular (sw v545) | S ✓ |
 | ALIA | **ALIA-Aliasverweise** ✓ | `1 ALIA @xref@`; Parser: `p.alia[]`; Writer; UI: Warn-Row mit ≈-Label + left-border; Edit: symmetrisch hinzufügen/entfernen (sw v499) | S+S ✓ |
-| REFN | **REFN/RIN strukturiert** | `p.refns[]` mit `{val,type}`; aktuell Passthrough; primär für Companion-Workflows | S |
+| REFN | **REFN/RIN strukturiert** ✓ | `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; Parser + Writer + read-only Detail (sw v548) | S ✓ |
 
 ---
 

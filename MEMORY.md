@@ -43,7 +43,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v540)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v548)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -59,10 +59,10 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-16
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v540** / Cache: `stammbaum-v540`
+- **Aktuelle sw-Version: v548** / Cache: `stammbaum-v548`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
-**Abgeschlossene Sprints (v8-dev, sw v448–v540):**
+**Abgeschlossene Sprints (v8-dev, sw v448–v548):**
 - **PERF-1/2 (sw v448–v449):** Debouncing Filter-Inputs + Soundex-Cache
 - **CrossMode-CitNotes (sw v450):** `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@`
 - **Dark Mode (sw v452):** `prefers-color-scheme` + `[data-theme]`-Toggle, 3-Stufen-Segment
@@ -76,6 +76,10 @@
 - **MAP-MIGR (sw v498):** dritter Karten-Modus „Migrationen"; `_renderMigrModus()`; Epochen-Farben `.map-migr-e0`–`.map-migr-e5`; Farb-Legende; Endpunkt-Marker
 - **ALIA (sw v499):** `p.alia[]` Parser/Writer; symmetrisches Edit; Warn-Row mit ≈-Label + left-border; Label „Selbe Person?"
 - **Mobile-Karte-Fix (sw v500):** Orte/Höfe/Karte-Toggle auf Mobile bei Karte-Modus ausgeblendet
+- **MEDI-CALN (sw v545):** `s.repoCallMedi`; `3 MEDI` unter `2 CALN`; Select im Quellen-Formular (13 GEDCOM-5.5.1-Werte)
+- **SOUR-DATA (sw v546):** `s.dataEvens[]` mit `{evens,date,plac}`; `2 EVEN`/`3 DATE`/`3 PLAC` aus Passthrough herausgezogen; Deckungsbereich im Quellen-Detail + Formular
+- **Quellensicht-Reorder (sw v547):** Personen-/Familien-Liste ans Ende (nach Medien)
+- **REFN (sw v548):** `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; Parser + Writer + read-only Detail; Roundtrip-Delta: 0
 - **F9 Zeitleiste (sw v501–v540):** `ui-timeline.js` + `timeline-hist-events.js`; View `#v-timeline`; `_buildPersonEvents()` (Sonder-Ereignisse + events[] + Heiraten + Kinder); `_HIST_EVENTS` (71 Einträge 1315–2024, eigene Datei); Rendering vertikal (Dekaden) / horizontal Swim-Lane (5 Lanes); `_afterLayout()`-Utility; Vollbild-Modus; Baumnavigation in Topbar (⟷/⧖/✿/⇩/⌂); Mouseover-Tooltip; Filter-Toggles; Lebensspanne-Balken; undatierte Chips vertikal zentriert
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)

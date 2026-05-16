@@ -313,6 +313,7 @@ function writeINDIRecord(lines, p) {
   }
 
   for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
+  for (const r of (p.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
 
   // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
   for (const wr of (p._grampsWitnessRefs || [])) {
@@ -384,6 +385,7 @@ function writeFAMRecord(lines, f) {
     if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
   }
 
+  for (const r of (f.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
   if (f.grampId)  lines.push(`1 _GRAMPS_ID ${f.grampId}`);
   if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
   for (const t of (f._tasks || [])) {
@@ -471,6 +473,7 @@ function writeSOURRecord(lines, s) {
   for (const ref of (s.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
   if (s.note) pushCont(lines, 1, 'NOTE', s.note);
   if (s._date)   lines.push(`1 _DATE ${s._date}`);
+  for (const r of (s.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
   if (s.grampId) lines.push(`1 _GRAMPS_ID ${s.grampId}`);
   writeCHAN(lines, s, 1);
   for (const l of (s._passthrough || [])) lines.push(l);

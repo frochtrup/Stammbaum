@@ -45,6 +45,12 @@ function showSourceDetail(id, pushHistory = true) {
       html += factRow('Aufbewahrung', s.repo);
     }
   }
+  if (s.refns && s.refns.length) {
+    for (const r of s.refns) {
+      const label = r.type ? `Referenz (${esc(r.type)})` : 'Referenz';
+      html += factRow(label, r.val);
+    }
+  }
   if (s.agnc) html += factRow('Behörde', s.agnc);
   if (s.dataEvens && s.dataEvens.length) {
     for (const de of s.dataEvens) {
