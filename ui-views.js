@@ -523,6 +523,13 @@ function openDetailHistory() {
 function _updateNavBtns() {
   _updateDetailHistBtn();
   if (typeof _updateTreeBackBtn === 'function') _updateTreeBackBtn();
+  const n = UIState._navHistory.length;
+  const tlBack = document.getElementById('tlBtnBack');
+  const tlHist = document.getElementById('tlHistBtn');
+  const tlFwd  = document.getElementById('tlBtnFwd');
+  if (tlBack) tlBack.hidden = n <= 0;
+  if (tlHist) tlHist.hidden = n < 2;
+  if (tlFwd)  tlFwd.hidden  = UIState._navFwdStack.length === 0;
 }
 
 function _updateDetailHistBtn() {
@@ -986,6 +993,7 @@ const _CLICK_MAP = {
   toggleFanChart:          ()  => toggleFanChart(),
   toggleDescTree:          ()  => toggleDescTree(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
+  toggleTimelineFullscreen:()  => { if (typeof toggleTimelineFullscreen === 'function') toggleTimelineFullscreen(); },
   showRelPath:             el  => showRelPath(el.dataset.pid),
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
   showTree:                el  => showTree(el.dataset.id),

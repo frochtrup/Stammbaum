@@ -36,7 +36,25 @@ window.showTimeline = function (pid, pushHistory) {
 
   showView('v-timeline');
   _updateNavBtns();
+
+  // Vollbild-Button nur auf Desktop sichtbar
+  const fsBtn = document.getElementById('tlFsBtn');
+  if (fsBtn) fsBtn.hidden = !document.body.classList.contains('desktop-mode');
+
   _renderTimeline(pid);
+};
+
+window.toggleTimelineFullscreen = function () {
+  const isFs = document.body.classList.toggle('timeline-fullscreen');
+  const btn = document.getElementById('tlFsBtn');
+  if (btn) {
+    btn.textContent = isFs ? '⤡' : '⤢';
+    btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
+  }
+  // Swim-Lane-Breite hat sich geändert — neu rendern
+  if (UIState._timelinePid && _isTlHoriz()) {
+    setTimeout(() => _renderTimeline(UIState._timelinePid), 60);
+  }
 };
 
 function _renderFilterBar() {

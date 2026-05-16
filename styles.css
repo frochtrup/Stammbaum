@@ -1213,6 +1213,11 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   body.desktop-mode.tree-fullscreen #v-main { display: none !important; }
   body.desktop-mode.tree-fullscreen .bottom-nav { display: none !important; }
   body.desktop-mode #treeKeyLegend { display: none; }
+  /* Timeline Vollbild */
+  body.desktop-mode #tlFsBtn { display: inline-flex !important; }
+  body.desktop-mode.timeline-fullscreen #v-timeline { left: 0 !important; }
+  body.desktop-mode.timeline-fullscreen #v-main { display: none !important; }
+  body.desktop-mode.timeline-fullscreen .bottom-nav { display: none !important; }
 }
 @media (min-width: 900px) and (pointer: fine) {
   body.desktop-mode #treeKeyLegend { display: block; }
