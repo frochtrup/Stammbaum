@@ -354,26 +354,43 @@ ${lifespan}
   // ── Export ──────────────────────────────────────────────────────────────────
 
   function _storyAsHTML() {
-    const link = document.querySelector('link[href="styles.css"]')?.outerHTML || '';
     const name = _esc(getPerson(UIState._storyPid)?.name || 'Lebensgeschichte');
-    // Karte: Leaflet-Div durch Snapshot-Bild ersetzen (Leaflet läuft nicht standalone)
     let body = document.getElementById('storyBody')?.innerHTML || '';
+
+    // Gesamten Karten-Section ersetzen (Leaflet-Div ist nach Init nicht mehr leer)
     if (_mapDataUrl) {
       body = body.replace(
-        /<div id="storyMap"[^>]*><\/div>/,
-        `<img src="${_mapDataUrl}" class="story-map-print-img" style="width:100%;border-radius:6px;border:1px solid #ccc;display:block;">`
+        /<section[^>]*story-map[^>]*>[\s\S]*?<\/section>/,
+        `<section class="story-section story-map"><img src="${_mapDataUrl}" style="width:100%;max-height:280px;border-radius:6px;border:1px solid #ccc;display:block;object-fit:cover;"></section>`
       );
     } else {
-      body = body.replace(/<section class="story-section story-map">[\s\S]*?<\/section>/, '');
+      body = body.replace(/<section[^>]*story-map[^>]*>[\s\S]*?<\/section>/, '');
     }
+
+    // Styles inline — styles.css ist im Download-Kontext (anderer Ordner) nicht verfügbar
+    const css = `
+body{padding:1.5rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif;background:#faf8f3;color:#2c2a26}
+.story-header{border-bottom:2px solid #c8b97a;margin-bottom:1.2rem;padding-bottom:.8rem}
+.story-name{font-size:2rem;margin:0 0 .25rem;font-family:inherit}
+.story-lifespan{color:#666;margin:0 0 .5rem}
+.story-hero-img{max-width:100%;max-height:280px;width:auto;object-fit:cover;border-radius:6px;display:block;margin-bottom:.8rem}
+.story-gallery{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}
+.story-gallery-img{max-width:120px;max-height:120px;object-fit:cover;border-radius:4px}
+.story-section{margin-bottom:1.2rem}
+.story-section-title{font-size:1.1rem;color:#8b6914;border-bottom:1px solid #e0d5b0;margin-bottom:.5rem;padding-bottom:.2rem}
+.story-section p{margin:0 0 .5rem;line-height:1.75}
+.story-ev-block{margin-bottom:.6rem}
+.story-ev-imgs{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem}
+.story-ev-img{max-width:80px;max-height:80px;object-fit:cover;border-radius:3px}
+.story-note{background:#f5f0e0;border-left:3px solid #c8b97a;padding:.8rem 1rem;border-radius:0 4px 4px 0}`;
+
     return `<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Lebensgeschichte: ${name}</title>
-${link}
-<style>body{padding:1rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif}</style>
+<style>${css}</style>
 </head>
 <body>${body}</body>
 </html>`;
