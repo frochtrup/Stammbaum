@@ -9,6 +9,24 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-16 — Story Mode (sw v549–v560)
+
+- **sw v549–v552** `feat(story)`: `ui-story.js` neu — View `#v-story`; 📖-Button in Detail-Topbar; `showStory(pid)` / `printStory()` / `downloadStory()`; Nav-System (type:'story' in `_navHistory`, Back/Fwd/Verlauf-Buttons); `body.story-active` für Desktop-Layout (Detailansicht überlagern)
+- **sw v549–v552** `feat(story)`: Fließtext aus GEDCOM — `_sectionEarlyLife()` (Geburt, Taufe, Eltern), `_sectionEvents()` (chronologisch), `_sectionFamilies()` (Ehen + Kinder), `_sectionDeath()` (Tod + Begräbnis), `_sectionHeader()` (Name, Lebensdaten); pronomen-aware (`_pronoun(p)`: Er/Sie/Name)
+- **sw v549–v552** `feat(story)`: 18 Event-Typ-Templates in `_EV_TPL` (OCCU, RESI, EDUC, MILI, EMIG, IMMI, NATU, CONF, FCOM, GRAD, RELI, TITL, CENS, RETI, PROP, WILL, PROB, ADOP, ORDN, BAPM); generischer Fallback `ev.eventType || EVENT_LABELS[ev.type]`
+- **sw v549–v552** `feat(story)`: Hero-Foto + Galerie (max. 5) async via IDB → OneDrive; Event-Fotos via `data-ev-files`; Print-CSS; HTML-Download als standalone-Datei
+- **sw v553–v556** `fix(story)`: Desktop-Layout — `body.story-active #v-detail { display:none }`; `#v-story.active { display:flex }` statt globalem `#v-story`
+- **sw v557–v559** `fix(story)`: `_atPlace()` kombiniert `ev.addr` + `ev.place` wie Timeline; `_fmtDate()` übersetzt GEDCOM-Qualifier (FROM/TO→von/bis, BET/AND→zwischen/und, BEF→vor, AFT→nach, ABT→um); `_shortPlace()` identisch mit Timeline; `_eventSentence` — `ev.eventType` vor `EVENT_LABELS`
+- **sw v560** `feat(story)`: Leaflet-OSM-Karte ersetzt SVG-Schematik — `_initStoryMap()`; CircleMarker farbkodiert (grün=Geburt/Taufe, rot=Tod/Begräbnis, blau=Heirat); gestrichelte Polyline; `fitBounds()` auf alle Geo-Punkte
+
+---
+
+### Session 2026-05-16 — SAFARI-SWIPE dokumentiert
+
+- **ROADMAP**: `SAFARI-SWIPE` als offenes Problem in T1 — Safari-Zurück-Swipe setzt App auf leere Seite zurück; Lösungsansatz `history.pushState` + `popstate`-Handler
+
+---
+
 ### Session 2026-05-16 — Zeitleiste: Refactoring + Fixes (sw v537, v540)
 
 - **sw v537** `refactor(timeline)`: `_HIST_EVENTS` (71 Einträge) aus `ui-timeline.js` in eigene Datei `timeline-hist-events.js` ausgelagert; `index.html` lädt die neue Datei vor `ui-timeline.js`; Ereignisliste kann damit unabhängig gepflegt werden
