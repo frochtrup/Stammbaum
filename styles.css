@@ -728,7 +728,7 @@ body.desktop-mode.places-karte #mapContainer {
 .asso-chip:hover { border-color: var(--gold-dim); }
 .asso-chip--derived { border-style: dashed; opacity: 0.75; }
 
-.fact-row--alias { border-left: 3px solid var(--warn); padding-left: 9px; }
+.fact-row--alias { border-left: 3px solid var(--warn); margin-left: -12px; padding-left: 9px; }
 .fact-row--alias .fact-lbl { color: var(--warn); }
 
 .rel-row {
