@@ -719,15 +719,17 @@ function showTree(personId, addToHistory = true) {
         }
       }
     }
-    const scaledW = totalW * _treeZoomScale;
-    const scaledH = totalH * _treeZoomScale;
-    const leftPad = Math.max(0, Math.floor((sc.clientWidth  - scaledW) / 2));
-    const topPad  = Math.max(0, Math.floor((sc.clientHeight - scaledH) / 2));
-    const posEl = scaleWrap || wrap;
-    posEl.style.marginLeft = leftPad + 'px';
-    posEl.style.marginTop  = topPad  + 'px';
-    if (scaleWrap) { wrap.style.marginLeft = ''; wrap.style.marginTop = ''; }
-    sc.scrollLeft = Math.max(0, leftPad + personCX * _treeZoomScale - sc.clientWidth  / 2);
-    sc.scrollTop  = Math.max(0, topPad  + ry(0) * _treeZoomScale   - Math.round(sc.clientHeight * 0.4));
+    if (sc.clientWidth > 0 && sc.clientHeight > 0) {
+      const scaledW = totalW * _treeZoomScale;
+      const scaledH = totalH * _treeZoomScale;
+      const leftPad = Math.max(0, Math.floor((sc.clientWidth  - scaledW) / 2));
+      const topPad  = Math.max(0, Math.floor((sc.clientHeight - scaledH) / 2));
+      const posEl = scaleWrap || wrap;
+      posEl.style.marginLeft = leftPad + 'px';
+      posEl.style.marginTop  = topPad  + 'px';
+      if (scaleWrap) { wrap.style.marginLeft = ''; wrap.style.marginTop = ''; }
+      sc.scrollLeft = Math.max(0, leftPad + personCX * _treeZoomScale - sc.clientWidth  / 2);
+      sc.scrollTop  = Math.max(0, topPad  + ry(0) * _treeZoomScale   - Math.round(sc.clientHeight * 0.4));
+    }
   }, 60);
 }
