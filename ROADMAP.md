@@ -41,7 +41,6 @@ Kleine Aufwände mit hohem Orientierungswert für neue Nutzer.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| VAL-AMPEL | **Severity-Ampel im Personen-Detail** | Farbiges Icon (rot/orange/grau) im Personen-Detail wenn offene Validierungsbefunde vorliegen; Klick filtert Aufgaben-Tab auf diese Person | S |
 | TASK-EXPORT-MD | **Aufgabenliste als Markdown exportieren** | Alle offenen Forschungsaufgaben + Validierungsbefunde als `.md`-Datei; gegliedert nach Kategorie und Schweregrad; Download-Button im Aufgaben-Tab | S |
 | OBJE-TYPE | **Medien-Typ strukturiert** | `m.type` (Foto/Urkunde/Karte); Parser + Writer; UI: TYPE als Filter im Media-Browser | S |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform; Opt-in im Einstellungs-Modal | M |
