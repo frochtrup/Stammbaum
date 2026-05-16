@@ -2416,7 +2416,9 @@ html[data-theme="dark"] {
   color: var(--text-muted);
   margin-right: 3px;
 }
-.tl-lbl { font-weight: 500; }
+.tl-lbl  { font-weight: 500; }
+.tl-type { display: block; font-weight: 700; }
+.tl-desc { display: block; font-weight: 400; color: var(--text); }
 .tl-place {
   display: block;
   font-size: 0.70rem;

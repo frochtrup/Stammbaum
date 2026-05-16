@@ -201,12 +201,14 @@ function _renderTlV(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age,
 
 // ── Swim-Lane-Helfer ───────────────────────────────
 
-function _swimLane(type, gedType) {
+function _swimLane(type, gedType, eventType) {
   if (['birth','chr','death','buri'].includes(type)) return 'life';
   if (['marr','enga','div','child'].includes(type)) return 'family';
-  const t = (gedType || '').toUpperCase();
+  const t  = (gedType   || '').toUpperCase();
+  const et = (eventType || '').toUpperCase();
   if (['RESI','EMIG','IMMI','NATU'].includes(t)) return 'resi';
   if (['OCCU','TITL','PROP','EDUC','GRAD','RETI','FACT'].includes(t)) return 'work';
+  if (t === 'EVEN' && /BESCH[AÄ]FTIGUNG|BERUF|AUSBILDUNG|OCCUPATION|EMPLOYMENT/i.test(et)) return 'work';
   if (['RELI','CONF','FCOM','ORDN','CENS','MILI','ADOP'].includes(t)) return 'church';
   return 'other';
 }
@@ -231,8 +233,10 @@ function _swimChipHTML(ev, age) {
   const nd  = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
   const und = ev.pxLeft === null ? ' tl-chip--undated' : '';
   const dl  = ev.pxLeft !== null ? ` data-left="${ev.pxLeft}"` : '';
+  const title = _esc(ev.title || ev.label || '');
+  const desc  = ev.desc ? `<span class="tl-desc">${_esc(ev.desc)}</span>` : '';
   return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}"${dl}${nd}>` +
-         `${yr}<span class="tl-lbl">${_esc(ev.label)}</span>${pl}</div>`;
+         `${yr}<span class="tl-type">${title}</span>${desc}${pl}</div>`;
 }
 
 // ── Horizontal — Swim-Lane-Layout ─────────────────
@@ -250,7 +254,7 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
   // Mindest-px/Jahr aus Event-Dichte: dichteste Lane bestimmt Breite
   const _laneYrs = {};
   for (const ln of _SL_LANES) _laneYrs[ln.id] = [];
-  for (const ev of datedEvs) _laneYrs[_swimLane(ev.type, ev.gedType)].push(ev.year);
+  for (const ev of datedEvs) _laneYrs[_swimLane(ev.type, ev.gedType, ev.eventType)].push(ev.year);
   let _minDist = Infinity;
   for (const id of Object.keys(_laneYrs)) {
     const ys = _laneYrs[id].sort((a, b) => a - b);
@@ -274,11 +278,11 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
   const laneEvs = {}, laneUnd = {};
   for (const ln of _SL_LANES) { laneEvs[ln.id] = []; laneUnd[ln.id] = []; }
   for (const ev of datedEvs) {
-    const lid = _swimLane(ev.type, ev.gedType);
+    const lid = _swimLane(ev.type, ev.gedType, ev.eventType);
     laneEvs[lid].push({ ...ev, pxLeft: yearToX(ev.year), nudge: 0 });
   }
   for (const ev of undatedEvs) {
-    laneUnd[_swimLane(ev.type, ev.gedType)].push({ ...ev, pxLeft: null, nudge: 0 });
+    laneUnd[_swimLane(ev.type, ev.gedType, ev.eventType)].push({ ...ev, pxLeft: null, nudge: 0 });
   }
   laneEvs['hist'] = histEvs.map(e => ({ ...e, pxLeft: yearToX(e.year), nudge: 0 }));
 
@@ -509,7 +513,7 @@ function _buildPersonEvents(pid, includeUndated) {
   for (const [key, label] of special) {
     const ev = p[key];
     if (ev?.seen && ev.date) {
-      evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: key, place: _shortPlace(ev.place) });
+      evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, title: label, desc: '', type: key, place: _shortPlace(ev.place) });
     }
   }
 
@@ -517,12 +521,13 @@ function _buildPersonEvents(pid, includeUndated) {
   for (const ev of (p.events || [])) {
     if (!ev.date && !includeUndated) continue;
     const baseLabel = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
-    const label = baseLabel + (ev.value ? ': ' + ev.value : '');
+    const desc  = ev.value || '';
+    const label = baseLabel + (desc ? ': ' + desc : '');
     const addrLine = ev.addr ? ev.addr.split('\n')[0].trim() : '';
     const placePart = _shortPlace(ev.place);
     const place = [addrLine, placePart].filter(Boolean).join(', ');
     const year = ev.date ? _dedupYearFromGed(ev.date) : null;
-    evs.push({ year, date: ev.date || null, label, type: 'event', gedType: ev.type, place });
+    evs.push({ year, date: ev.date || null, label, title: baseLabel, desc, type: 'event', gedType: ev.type, eventType: ev.eventType || '', place });
   }
 
   // Familien: Heirat + Kinder
@@ -534,7 +539,7 @@ function _buildPersonEvents(pid, includeUndated) {
       const partner = partnerId ? getPerson(partnerId) : null;
       const partnerName = partner ? (partner.surname || partner.given || '') : '';
       const label = 'Heirat' + (partnerName ? ': ' + partnerName : '');
-      evs.push({ year: _dedupYearFromGed(f.marr.date), date: f.marr.date, label, type: 'marr', place: _shortPlace(f.marr.place) });
+      evs.push({ year: _dedupYearFromGed(f.marr.date), date: f.marr.date, label, title: 'Heirat', desc: partnerName, type: 'marr', place: _shortPlace(f.marr.place) });
     }
     for (const cid of (f.children || [])) {
       const c = getPerson(cid);
@@ -542,7 +547,7 @@ function _buildPersonEvents(pid, includeUndated) {
       if (!c.birth.date && !includeUndated) continue;
       const childName = c.given || c.name || cid;
       const year = c.birth.date ? _dedupYearFromGed(c.birth.date) : null;
-      evs.push({ year, date: c.birth.date || null, label: 'Kind: ' + childName, type: 'child', place: _shortPlace(c.birth.place) });
+      evs.push({ year, date: c.birth.date || null, label: 'Kind: ' + childName, title: 'Kind', desc: childName, type: 'child', place: _shortPlace(c.birth.place) });
     }
   }
 
