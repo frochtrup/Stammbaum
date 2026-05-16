@@ -131,12 +131,29 @@
   }
 
   function _atPlace(ev) {
-    const pl = ev.place || ev.addr;
-    return pl ? ' in ' + _esc(_shortPlace(pl)) : '';
+    const addrLine = ev.addr ? ev.addr.split('\n')[0].trim() : '';
+    const placePart = _shortPlace(ev.place);
+    const pl = [addrLine, placePart].filter(Boolean).join(', ');
+    return pl ? ' in ' + _esc(pl) : '';
+  }
+
+  function _fmtDate(d) {
+    if (!d) return '';
+    return d
+      .replace(/^FROM\s+(.+?)\s+TO\s+(.+)$/i,  'von $1 bis $2')
+      .replace(/^BET\s+(.+?)\s+AND\s+(.+)$/i,  'zwischen $1 und $2')
+      .replace(/^BEF\s+/i,  'vor ')
+      .replace(/^AFT\s+/i,  'nach ')
+      .replace(/^ABT\s+/i,  'um ')
+      .replace(/^CAL\s+/i,  'errechnet ')
+      .replace(/^EST\s+/i,  'geschätzt ');
   }
 
   function _atDate(ev) {
-    return ev.date ? ' am ' + _esc(ev.date) : '';
+    if (!ev.date) return '';
+    const fmt = _fmtDate(ev.date);
+    const hasQual = /^(von|zwischen|vor|nach|um|errechnet|geschätzt)\s/.test(fmt);
+    return ' ' + (hasQual ? '' : 'am ') + _esc(fmt);
   }
 
   function _yearFromDate(d) {
@@ -173,8 +190,9 @@
   function _eventSentence(ev, pr) {
     const fn = _EV_TPL[ev.type];
     if (fn) return fn(ev, pr);
-    const label = (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) ||
-      ev.eventType || ev.type || 'Ereignis';
+    const label = ev.eventType ||
+      (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) ||
+      ev.type || 'Ereignis';
     const val = ev.value ? ': ' + _esc(ev.value) : '';
     return `${pr.Er} — ${_esc(label)}${val}${_atDate(ev)}${_atPlace(ev)}.`;
   }
