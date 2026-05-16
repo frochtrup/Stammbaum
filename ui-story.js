@@ -109,6 +109,22 @@
         div.appendChild(img);
       }
     }
+
+    // 4. Hochzeitsbilder — befülle alle [data-marr-files]-Container
+    const marrDivs = document.querySelectorAll('#storyBody [data-marr-files]');
+    for (const div of marrDivs) {
+      if (UIState._storyPid !== pid) break;
+      const files = (div.dataset.marrFiles || '').split('|').filter(Boolean);
+      for (const f of files) {
+        if (UIState._storyPid !== pid) break;
+        const src = await _loadMediaSrc(f);
+        if (!src) continue;
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = 'story-ev-img story-marr-img';
+        div.appendChild(img);
+      }
+    }
   }
 
   // ── Text-Helfer ─────────────────────────────────────────────────────────────
@@ -305,7 +321,12 @@ ${lifespan}
       }
 
       if (sentences.length) {
-        html += `<section class="story-section story-family"><p>${sentences.join(' ')}</p></section>`;
+        const marrMedia = (f.marr?.media || []).filter(m => m.file);
+        const marrFiles = marrMedia.map(m => m.file).join('|');
+        const marrImgs  = marrFiles
+          ? `<div class="story-ev-imgs" data-marr-files="${_esc(marrFiles)}"></div>`
+          : '';
+        html += `<section class="story-section story-family"><p>${sentences.join(' ')}</p>${marrImgs}</section>`;
       }
     }
     return html;
