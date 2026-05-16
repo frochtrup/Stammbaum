@@ -465,9 +465,9 @@ function _pdetLifeData(p, id) {
   (p.aliases || []).forEach(aliasXref => {
     const aliasP = AppState.db.individuals[aliasXref];
     if (!aliasP) return;
-    html += `<div class="fact-row fact-row--clickable" data-action="showDetail" data-id="${aliasXref}">
-      <span class="fact-lbl">Alias</span>
-      <span class="fact-val">${esc(aliasP.name)}</span>
+    html += `<div class="fact-row fact-row--clickable fact-row--alias" data-action="showDetail" data-id="${aliasXref}">
+      <span class="fact-lbl">≈ Selbe Person?</span>
+      <span class="fact-val">${esc(aliasP.name)} →</span>
     </div>`;
   });
 
