@@ -1203,6 +1203,7 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   dismissValidation:       ()  => { clearValidationResults(); renderTasksView(); },
   promoteToTask:           el  => _handlePromoteToTask(el),
   openValConfig:           ()  => openValConfig(),
+  exportTasksMd:           ()  => exportTasksMd(),
   saveValConfig:           ()  => saveValConfig(),
   resetValConfig:          ()  => resetValConfig(),
 };

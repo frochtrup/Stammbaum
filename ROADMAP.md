@@ -22,7 +22,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v573 · Cache: `stammbaum-v573`
+**sw-Version:** v574 · Cache: `stammbaum-v574`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -42,7 +42,7 @@ Kleine Aufwände mit hohem Orientierungswert für neue Nutzer.
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | SAFARI-SWIPE | **Safari-„Zurück"-Swipe abfangen** ✓ | `history.pushState({app:true},'')` beim App-Start + `popstate`-Listener in `ui-views.js`: Re-Anker + `goBack()` — verhindert State-Verlust im Browser-Modus (sw v573) | M ✓ |
-| TASK-EXPORT-MD | **Aufgabenliste als Markdown exportieren** | Alle offenen Forschungsaufgaben + Validierungsbefunde als `.md`-Datei; gegliedert nach Kategorie und Schweregrad; Download-Button im Aufgaben-Tab | S |
+| TASK-EXPORT-MD | **Aufgabenliste als Markdown exportieren** ✓ | `exportTasksMd()` in `ui-views-tasks.js`: Download-Button „↓ MD" im Aufgaben-Tab; pro Person/Familie: Name, Lebensdaten, Eltern, Ehen resp. Gatten+Kinderzahl; nach Kategorie gruppiert; Filter (offen/erledigt/alle) wird übernommen (sw v574) | S ✓ |
 | OBJE-TYPE | **Medien-Typ strukturiert** ⚠ nicht GEDCOM-konform | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag unter OBJE in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform; Opt-in im Einstellungs-Modal | M |
 

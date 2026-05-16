@@ -374,6 +374,7 @@ function renderTasksView() {
     <div class="tasks-validate-bar">
       <button class="tasks-validate-bar-btn" data-action="runValidation">✓ Daten prüfen</button>
       <button class="tasks-validate-cfg-btn" data-action="openValConfig" title="Prüfregeln konfigurieren">⚙</button>
+      <button class="tasks-validate-cfg-btn" data-action="exportTasksMd" title="Als Markdown exportieren">↓ MD</button>
     </div>
   </div>`;
 
@@ -440,6 +441,136 @@ function renderTasksView() {
   }
 
   container.innerHTML = html;
+}
+
+// ─── Markdown-Export ──────────────────────────────────────────────────────────
+
+function exportTasksMd() {
+  const db       = AppState.db;
+  const persons  = db.individuals || {};
+  const families = db.families    || {};
+  const catOrder = TASK_CATEGORIES.map(c => c.key);
+  const filter   = _tasksViewFilter;
+
+  const byCat = {};
+  for (const [pid, p] of Object.entries(persons)) {
+    for (const t of (p._tasks || [])) {
+      if (filter === 'open' && t.done)  continue;
+      if (filter === 'done' && !t.done) continue;
+      if (!byCat[t.category]) byCat[t.category] = [];
+      byCat[t.category].push({ kind: 'person', entity: p, id: pid, t });
+    }
+  }
+  for (const [fid, f] of Object.entries(families)) {
+    for (const t of (f._tasks || [])) {
+      if (filter === 'open' && t.done)  continue;
+      if (filter === 'done' && !t.done) continue;
+      if (!byCat[t.category]) byCat[t.category] = [];
+      byCat[t.category].push({ kind: 'family', entity: f, id: fid, t });
+    }
+  }
+
+  const usedCats = Object.keys(byCat).sort((a, b) => {
+    const ai = catOrder.indexOf(a), bi = catOrder.indexOf(b);
+    return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);
+  });
+  const total       = Object.values(byCat).reduce((s, arr) => s + arr.length, 0);
+  const filterLabel = filter === 'open' ? 'Offen' : filter === 'done' ? 'Erledigt' : 'Alle';
+  const dateStr     = new Date().toLocaleDateString('de-DE');
+  const srcFile     = localStorage.getItem('stammbaum_filename') || 'Stammbaum';
+
+  function _lifeStr(p) {
+    const parts = [];
+    if (p.birth?.date || p.birth?.place)
+      parts.push('* ' + [p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '));
+    if (p.death?.date || p.death?.place)
+      parts.push('† ' + [p.death.date, compactPlace(p.death.place)].filter(Boolean).join(', '));
+    return parts.join('  ');
+  }
+
+  function _personBlock(pid, p) {
+    const lines = [];
+    const fullName = [p.prefix, p.name, p.suffix].filter(Boolean).join(' ') || pid;
+    const sexLabel = p.sex === 'M' ? ' [m]' : p.sex === 'F' ? ' [w]' : '';
+    lines.push(`### Person: ${fullName} (${pid})${sexLabel}`);
+    const life = _lifeStr(p);
+    if (life) lines.push(life);
+    const fref0 = (p.famc || [])[0];
+    if (fref0) {
+      const fam = families[fref0.famId];
+      if (fam) {
+        const hName = fam.husb ? (persons[fam.husb]?.name || fam.husb) : null;
+        const wName = fam.wife ? (persons[fam.wife]?.name || fam.wife) : null;
+        const parents = [hName, wName].filter(Boolean).join(' & ');
+        if (parents) lines.push(`Eltern: ${parents} (${fref0.famId})`);
+      }
+    }
+    for (const famId of (p.fams || [])) {
+      const fam = families[famId];
+      if (!fam) continue;
+      const partnerId = p.sex === 'M' ? fam.wife : fam.husb;
+      const partnerName = partnerId ? (persons[partnerId]?.name || partnerId) : '–';
+      const year = fam.marr?.date?.match(/\d{4}/)?.[0] || '';
+      lines.push(`Ehe: ${partnerName}${year ? ' (' + year + ')' : ''} (${famId})`);
+    }
+    return lines;
+  }
+
+  function _familyBlock(fid, f) {
+    const lines = [];
+    const hPerson = f.husb ? persons[f.husb] : null;
+    const wPerson = f.wife ? persons[f.wife] : null;
+    const hName = hPerson?.name || f.husb || '–';
+    const wName = wPerson?.name || f.wife || '–';
+    lines.push(`### Familie: ${hName} & ${wName} (${fid})`);
+    const marrParts = [f.marr?.date, f.marr?.place ? compactPlace(f.marr.place) : ''].filter(Boolean);
+    if (marrParts.length) lines.push(`Heirat: ${marrParts.join(', ')}`);
+    if (hPerson) { const l = _lifeStr(hPerson); if (l) lines.push(`Ehemann: ${hName}  ${l}`); }
+    if (wPerson) { const l = _lifeStr(wPerson); if (l) lines.push(`Ehefrau: ${wName}  ${l}`); }
+    const n = (f.children || []).length;
+    if (n) lines.push(`${n} ${n === 1 ? 'Kind' : 'Kinder'}`);
+    return lines;
+  }
+
+  let md = `# Forschungsaufgaben — ${srcFile}\n\n`;
+  md += `Exportiert: ${dateStr} · Filter: ${filterLabel} · ${total} Aufgabe${total !== 1 ? 'n' : ''}\n\n---\n\n`;
+
+  for (const catKey of usedCats) {
+    const catLabel = TASK_CATEGORIES.find(c => c.key === catKey)?.label || catKey;
+    md += `## ${catLabel}\n\n`;
+
+    const entries = byCat[catKey].sort((a, b) => {
+      const na = a.kind === 'person' ? (a.entity?.surname || a.entity?.name || '') : _famDisplayName(a.id);
+      const nb = b.kind === 'person' ? (b.entity?.surname || b.entity?.name || '') : _famDisplayName(b.id);
+      return na.localeCompare(nb, 'de');
+    });
+
+    let lastKey = null;
+    let blockLines = null;
+    const flush = () => { if (blockLines) { md += blockLines.join('\n') + '\n\n'; blockLines = null; } };
+
+    for (const { kind, id, entity, t } of entries) {
+      const key = kind + ':' + id;
+      if (key !== lastKey) {
+        flush();
+        blockLines = kind === 'person' ? _personBlock(id, entity) : _familyBlock(id, entity);
+        blockLines.push('');
+        lastKey = key;
+      }
+      blockLines.push(`- [${t.done ? 'x' : ' '}] ${t.text}`);
+    }
+    flush();
+  }
+
+  const blob    = new Blob([md], { type: 'text/markdown; charset=utf-8' });
+  const url     = URL.createObjectURL(blob);
+  const a       = document.createElement('a');
+  const safeSrc = srcFile.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9_\-äöüÄÖÜß]/g, '_');
+  a.href        = url;
+  a.download    = `aufgaben_${safeSrc}_${new Date().toISOString().slice(0, 10)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Markdown exportiert', 'success');
 }
 
 function _famDisplayName(famId) {
