@@ -2487,64 +2487,138 @@ html[data-theme="dark"] {
   .tl-lifespan { left: 19px; }
 }
 
-/* ── Horizontale Variante (Landscape ≥500px) ── */
-#tlBody.horiz {
-  overflow-y: hidden;
-  padding-bottom: 0;
+/* ── Swim-Lane-Horizontal (Landscape ≥500px) ── */
+#tlBody.horiz { overflow-y: hidden; padding-bottom: 0; display: flex; flex-direction: column; }
+
+.tl-swim {
   display: flex;
   flex-direction: column;
-}
-.tl-wrap.horiz {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  max-width: none;
-  padding: 0;
   overflow-x: auto;
   overflow-y: hidden;
 }
-.tl-wrap.horiz .tl-decade {
-  position: relative;
+
+/* Jahres-Tick-Leiste */
+.tl-swim-axis {
+  display: flex;
+  flex-direction: row;
   flex-shrink: 0;
-  /* height via align-items: stretch vom Flex-Container */
-  border-right: 1px solid var(--border);
+  height: 26px;
+  border-bottom: 2px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
-/* Achse: horizontal */
-.tl-wrap.horiz .tl-axis-seg {
-  left: 0; right: 0; top: 50%;
-  width: auto; height: 2px;
-  transform: translateY(-50%);
+.tl-swim-axis-track {
+  position: relative;
+  flex: 1;
 }
-/* Dekaden-Label: oben mittig in der Spalte */
-.tl-wrap.horiz .tl-dec-label {
-  left: 50%; top: 6px;
+.tl-tick {
+  position: absolute;
+  top: 5px;
+  font-size: 0.65rem;
+  color: var(--text-muted);
   transform: translateX(-50%);
+  white-space: nowrap;
 }
-/* Person-Events: oberhalb Achse (CSS-Anker; left via JS) */
-.tl-wrap.horiz .tl-ev {
-  left: auto; right: auto; top: auto;
-  bottom: calc(50% + 8px);
-  width: 100px;
+
+/* Lanes */
+.tl-lane {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
 }
-/* Hist-Events: unterhalb Achse */
-.tl-wrap.horiz .tl-hist {
-  left: auto; right: auto;
-  top: calc(50% + 8px);
-  text-align: left;
-  border-right: none;
-  border-left: 2px solid var(--border);
-  width: 100px;
+.tl-lane--hist { border-bottom: none; }
+
+.tl-lane-lbl {
+  width: 76px;
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 0.63rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  border-right: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
-.tl-wrap.horiz .tl-hist--war      { border-left-color: var(--red); }
-.tl-wrap.horiz .tl-hist--disease  { border-left-color: var(--warn); }
-.tl-wrap.horiz .tl-hist--political{ border-left-color: var(--blue); }
-.tl-wrap.horiz .tl-hist--religion { border-left-color: #8a6aaa; }
-.tl-wrap.horiz .tl-hist--natural  { border-left-color: var(--green); }
-/* Lebensspanne: horizontaler Balken auf der Achse */
-.tl-wrap.horiz .tl-lifespan {
-  top: calc(50% - 3px);
-  height: 5px;
+.tl-lane-body {
+  position: relative;
+  flex: 1;
 }
+
+/* Lebensspanne-Balken */
+.tl-swim-span {
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  transform: translateY(-50%);
+  background: var(--gold-dim);
+  opacity: 0.5;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+/* ── Chips ── */
+.tl-chip {
+  position: absolute;
+  width: 104px;
+  padding: 3px 5px 3px 7px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--gold);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+/* Lane-Standardfarben */
+.tl-lane--life   .tl-chip { border-left-color: var(--gold); }
+.tl-lane--resi   .tl-chip { border-left-color: #4a9eff; }
+.tl-lane--work   .tl-chip { border-left-color: var(--gold); }
+.tl-lane--family .tl-chip { border-left-color: var(--pink); }
+.tl-lane--church .tl-chip { border-left-color: #8a6aaa; }
+.tl-lane--other  .tl-chip { border-left-color: var(--text-muted); }
+
+/* Spezifische Farben in Leben-Lane */
+.tl-lane--life .tl-chip--birth,
+.tl-lane--life .tl-chip--chr   { border-left-color: var(--green); }
+.tl-lane--life .tl-chip--death,
+.tl-lane--life .tl-chip--buri  { border-left-color: var(--text-muted); }
+
+/* Kinder blau in Familie-Lane */
+.tl-lane--family .tl-chip--child { border-left-color: var(--blue); }
+
+/* Hist-Chips */
+.tl-chip--hist-war,
+.tl-chip--hist-disease,
+.tl-chip--hist-political,
+.tl-chip--hist-religion,
+.tl-chip--hist-natural {
+  position: absolute;
+  width: 88px;
+  padding: 2px 5px;
+  font-size: 0.70rem;
+  border-radius: var(--radius-sm);
+  line-height: 1.2;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border-left: 3px solid var(--border);
+}
+.tl-chip--hist-war      { border-left-color: var(--red); }
+.tl-chip--hist-disease  { border-left-color: var(--warn); }
+.tl-chip--hist-political{ border-left-color: var(--blue); }
+.tl-chip--hist-religion { border-left-color: #8a6aaa; }
+.tl-chip--hist-natural  { border-left-color: var(--green); }
+
+/* Undatierte Chips */
+.tl-chip--undated { opacity: 0.65; border-left-style: dashed; }
 .theme-seg button:not(.active):active { background: var(--surface2); }

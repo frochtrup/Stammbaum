@@ -63,10 +63,21 @@ const _TL_PX_EMPTY   = 36;   // Höhe einer leeren Dekade (px)
 const _TL_PX_PER_EV  = 58;   // Höhe pro Event innerhalb einer Dekade
 const _TL_PX_DEC_MIN = 90;   // Mindesthöhe einer belegten Dekade
 
-// Horizontale Variante
-const _TL_H_EMPTY   = 55;    // Breite einer leeren Dekade (px)
-const _TL_H_PER_EV  = 110;   // Breite pro Event (je Seite)
-const _TL_H_DEC_MIN = 120;   // Mindestbreite einer belegten Dekade
+// Swim-Lane-Konstanten (horizontale Variante)
+const _SL_LABEL_W  = 76;   // px — sticky Lane-Label-Breite
+const _SL_MIN_PX_Y = 14;   // px/Jahr — Mindest-Skalierung
+const _SL_CHIP_W   = 106;  // px — nominale Chip-Breite für Kollisionserkennung
+const _SL_PAD_YR   = 1.5;  // Jahre — Rand links/rechts der Zeitachse
+
+const _SL_LANES = [
+  { id: 'life',   label: 'Leben',      h: 50, always: true  },
+  { id: 'resi',   label: 'Wohnorte',   h: 58, always: false },
+  { id: 'work',   label: 'Beruf',      h: 58, always: false },
+  { id: 'family', label: 'Familie',    h: 62, always: false },
+  { id: 'church', label: 'Kirche',     h: 58, always: false },
+  { id: 'other',  label: 'Sonstiges',  h: 58, always: false },
+  { id: 'hist',   label: 'Geschichte', h: 44, always: false },
+];
 
 function _isTlHoriz() {
   return window.innerWidth > window.innerHeight && window.innerWidth >= 500;
@@ -84,28 +95,30 @@ window.addEventListener('resize', () => {
 
 // ── Dispatcher ─────────────────────────────────────
 function _renderTimeline(pid) {
-  const personEvs = _buildPersonEvents(pid);
-  const body = document.getElementById('tlBody');
-  if (!personEvs.length) {
+  const isH       = _isTlHoriz();
+  const personEvs = _buildPersonEvents(pid, isH);
+  const body      = document.getElementById('tlBody');
+  const datedEvs  = personEvs.filter(e => e.year !== null);
+  if (!datedEvs.length) {
     body.innerHTML = '<p class="tl-empty">Keine datierten Ereignisse vorhanden.</p>';
     body.classList.remove('horiz');
     return;
   }
-  const minYear  = Math.min(...personEvs.map(e => e.year));
-  const maxYear  = Math.max(...personEvs.map(e => e.year));
-  const filters  = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
-  const histEvs  = _HIST_EVENTS.filter(e => e.year >= minYear - 2 && e.year <= maxYear + 2 && filters.has(e.cat));
-  const decStart = Math.floor(minYear / 10) * 10;
-  const decEnd   = Math.floor(maxYear / 10) * 10;
-  const birthEv  = personEvs.find(e => e.type === 'birth');
-  const deathEv  = personEvs.find(e => e.type === 'death');
+  const minYear   = Math.min(...datedEvs.map(e => e.year));
+  const maxYear   = Math.max(...datedEvs.map(e => e.year));
+  const filters   = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
+  const histEvs   = _HIST_EVENTS.filter(e => e.year >= minYear - 2 && e.year <= maxYear + 2 && filters.has(e.cat));
+  const decStart  = Math.floor(minYear / 10) * 10;
+  const decEnd    = Math.floor(maxYear / 10) * 10;
+  const birthEv   = datedEvs.find(e => e.type === 'birth');
+  const deathEv   = datedEvs.find(e => e.type === 'death');
   const birthYear = birthEv?.year ?? null;
   const age = y => birthYear !== null ? ` (${y - birthYear})` : '';
 
-  if (_isTlHoriz()) {
-    _renderTlH(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body);
+  if (isH) {
+    _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body);
   } else {
-    _renderTlV(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body);
+    _renderTlV(datedEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body);
   }
 }
 
@@ -168,66 +181,171 @@ function _renderTlV(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age,
   body.querySelectorAll('[data-top]').forEach(el => { el.style.top   = el.dataset.top + 'px'; });
 }
 
-// ── Horizontal (Landscape) ─────────────────────────
-// Dekaden als Spalten; Personen-Events oberhalb der Achse, Hist-Events unterhalb.
-function _renderTlH(personEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body) {
-  const decades = [];
-  for (let d = decStart; d <= decEnd; d += 10) {
-    const pEvs = personEvs.filter(e => e.year >= d && e.year < d + 10);
-    const hEvs = histEvs.filter(e => e.year >= d && e.year < d + 10);
-    const count = Math.max(pEvs.length, hEvs.length); // je Seite unabhängig
-    const width = count ? Math.max(count * _TL_H_PER_EV + 20, _TL_H_DEC_MIN) : _TL_H_EMPTY;
-    decades.push({ d, pEvs, hEvs, width });
-  }
-  const _decOffH = y => {
-    let off = 0;
-    for (const dec of decades) {
-      if (y !== null && dec.d <= y && y < dec.d + 10) return off + (y - dec.d) / 10 * dec.width;
-      off += dec.width;
+// ── Swim-Lane-Helfer ───────────────────────────────
+
+function _swimLane(type, gedType) {
+  if (['birth','chr','death','buri'].includes(type)) return 'life';
+  if (['marr','enga','div','child'].includes(type)) return 'family';
+  const t = (gedType || '').toUpperCase();
+  if (['RESI','EMIG','IMMI','NATU'].includes(t)) return 'resi';
+  if (['OCCU','TITL','PROP','EDUC','GRAD','RETI','FACT'].includes(t)) return 'work';
+  if (['RELI','CONF','FCOM','ORDN','CENS','MILI','ADOP'].includes(t)) return 'church';
+  return 'other';
+}
+
+function _resolveSwimOverlaps(chips, chipW) {
+  let lastRight = -Infinity, dir = 1;
+  for (const c of chips) {
+    if (c.pxLeft < lastRight + 6) {
+      c.nudge = 10 * dir;
+      dir = -dir;
+    } else {
+      c.nudge = 0;
+      dir = 1;
     }
-    return off;
-  };
-  const spanLeft  = birthEv ? _decOffH(birthEv.year) : 0;
-  const totalW    = decades.reduce((s, d) => s + d.width, 0);
-  const spanRight = deathEv ? _decOffH(deathEv.year) : totalW;
+    lastRight = Math.max(lastRight, c.pxLeft + chipW);
+  }
+}
+
+function _swimChipHTML(ev, age) {
+  const yr  = ev.year !== null ? `<span class="tl-y">${ev.year}${age(ev.year)}</span>` : '';
+  const pl  = ev.place ? `<span class="tl-place">${_esc(ev.place)}</span>` : '';
+  const nd  = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
+  const und = ev.pxLeft === null ? ' tl-chip--undated' : '';
+  const dl  = ev.pxLeft !== null ? ` data-left="${ev.pxLeft}"` : '';
+  return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}"${dl}${nd}>` +
+         `${yr}<span class="tl-lbl">${_esc(ev.label)}</span>${pl}</div>`;
+}
+
+// ── Horizontal — Swim-Lane-Layout ─────────────────
+function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
+  const datedEvs   = personEvs.filter(e => e.year !== null);
+  const undatedEvs = personEvs.filter(e => e.year === null);
+
+  // Jahres-Skala
+  const allYrs    = datedEvs.map(e => e.year).concat(histEvs.map(e => e.year));
+  const minYear   = Math.min(...allYrs);
+  const maxYear   = Math.max(...allYrs);
+  const span      = Math.max(maxYear - minYear, 10);
+  const availW    = Math.max((body.clientWidth || window.innerWidth) - _SL_LABEL_W - 16, 200);
+  const pxPerYear = Math.max(availW / (span + _SL_PAD_YR * 2), _SL_MIN_PX_Y);
+  const totalW    = Math.ceil((span + _SL_PAD_YR * 2 + 1) * pxPerYear);
+  const yearToX   = y => Math.round((y - minYear + _SL_PAD_YR) * pxPerYear);
+
+  // Events in Lanes klassifizieren
+  const laneEvs = {}, laneUnd = {};
+  for (const ln of _SL_LANES) { laneEvs[ln.id] = []; laneUnd[ln.id] = []; }
+  for (const ev of datedEvs) {
+    const lid = _swimLane(ev.type, ev.gedType);
+    laneEvs[lid].push({ ...ev, pxLeft: yearToX(ev.year), nudge: 0 });
+  }
+  for (const ev of undatedEvs) {
+    laneUnd[_swimLane(ev.type, ev.gedType)].push({ ...ev, pxLeft: null, nudge: 0 });
+  }
+  laneEvs['hist'] = histEvs.map(e => ({ ...e, pxLeft: yearToX(e.year), nudge: 0 }));
+
+  // Überlappungen je Lane auflösen
+  for (const ln of _SL_LANES) {
+    laneEvs[ln.id].sort((a,b) => a.pxLeft - b.pxLeft);
+    _resolveSwimOverlaps(laneEvs[ln.id], ln.id === 'hist' ? 88 : _SL_CHIP_W);
+  }
+
+  // Aktive Lanes: Leben immer, andere nur wenn Events vorhanden
+  const activeLanes = _SL_LANES.filter(ln => {
+    if (ln.id === 'life') return true;
+    if (ln.id === 'hist') return laneEvs['hist'].length > 0;
+    return laneEvs[ln.id].length > 0 || laneUnd[ln.id].length > 0;
+  });
 
   body.classList.add('horiz');
-  let html = '<div class="tl-wrap horiz">';
-  html += `<div class="tl-lifespan" data-lh="${spanLeft}" data-wh="${Math.max(spanRight - spanLeft, 4)}"></div>`;
-  for (const dec of decades) {
-    html += `<div class="tl-decade" data-w="${dec.width}">`;
-    html += `<div class="tl-dec-label">${dec.d}er</div>`;
-    html += '<div class="tl-axis-seg"></div>';
-    // Person-Events: oberhalb Achse, nach Jahr verteilt
-    const pSorted = [...dec.pEvs].sort((a, b) => a.year - b.year);
-    pSorted.forEach((ev, i) => {
-      const left = pSorted.length > 1 ? Math.round(5 + i * ((dec.width - 10) / pSorted.length)) : 5;
-      html += `<div class="tl-ev tl-ev--${ev.type}" data-hleft="${left}">`;
-      html += `<span class="tl-y">${ev.year}${age(ev.year)}</span>`;
-      html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
-      if (ev.place) html += `<span class="tl-place">${_esc(ev.place)}</span>`;
-      html += '</div>';
-    });
-    // Hist-Events: unterhalb Achse, nach Jahr verteilt
-    const hSorted = [...dec.hEvs].sort((a, b) => a.year - b.year);
-    hSorted.forEach((ev, i) => {
-      const left = hSorted.length > 1 ? Math.round(5 + i * ((dec.width - 10) / hSorted.length)) : 5;
-      html += `<div class="tl-hist tl-hist--${ev.cat}" data-hleft="${left}">`;
-      html += `<span class="tl-y">${ev.year}</span>`;
-      html += `<span class="tl-lbl">${_esc(ev.label)}</span>`;
-      html += '</div>';
-    });
-    html += '</div>';
+  let html = '<div class="tl-swim">';
+
+  // Jahres-Ticks
+  html += `<div class="tl-swim-axis">`;
+  html += `<div class="tl-swim-axis-pad" data-w="${_SL_LABEL_W}"></div>`;
+  html += `<div class="tl-swim-axis-track" data-w="${totalW}">`;
+  const tick0 = Math.ceil(minYear / 10) * 10;
+  for (let y = tick0; y <= maxYear + 1; y += 10) {
+    html += `<div class="tl-tick" data-left="${yearToX(y)}">${y}</div>`;
+  }
+  html += '</div></div>';
+
+  // Lanes
+  for (const lane of activeLanes) {
+    const evs = laneEvs[lane.id] || [];
+    html += `<div class="tl-lane tl-lane--${lane.id}" data-h="${lane.h}">`;
+    html += `<div class="tl-lane-lbl">${lane.label}</div>`;
+    html += `<div class="tl-lane-body" data-w="${totalW}">`;
+
+    if (lane.id === 'life') {
+      if (birthEv && deathEv) {
+        const barL = yearToX(birthEv.year);
+        const barW = Math.max(yearToX(deathEv.year) - barL, 4);
+        html += `<div class="tl-swim-span" data-left="${barL}" data-bw="${barW}"></div>`;
+      }
+      for (const ev of evs) html += _swimChipHTML(ev, age);
+
+    } else if (lane.id === 'hist') {
+      for (const ev of evs) {
+        const nd = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
+        html += `<div class="tl-chip tl-chip--hist-${ev.cat}" data-left="${ev.pxLeft}"${nd}>`;
+        html += `<span class="tl-y">${ev.year}</span><span class="tl-lbl">${_esc(ev.label)}</span></div>`;
+      }
+
+    } else {
+      for (const ev of evs) html += _swimChipHTML(ev, age);
+      // Undatierte Beruf-Events → linker Rand, gestapelt
+      if (lane.id === 'work') {
+        laneUnd['work'].forEach((ev, i) => {
+          html += `<div class="tl-chip tl-chip--event tl-chip--undated" data-stacki="${i}">` +
+                  `<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
+        });
+      }
+      // Undatierte Kinder → rechter Rand, gestapelt
+      if (lane.id === 'family') {
+        laneUnd['family'].filter(e => e.type === 'child').forEach((ev, i) => {
+          html += `<div class="tl-chip tl-chip--child tl-chip--undated tl-chip--right" data-stacki="${i}">` +
+                  `<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
+        });
+      }
+    }
+
+    html += '</div></div>';
   }
   html += '</div>';
   body.innerHTML = html;
-  body.querySelectorAll('.tl-decade[data-w]').forEach(el => { el.style.width = el.dataset.w + 'px'; });
-  body.querySelectorAll('[data-lh]').forEach(el => {
-    el.style.left  = el.dataset.lh + 'px';
-    el.style.width = el.dataset.wh + 'px';
+
+  // Positionen via CSSOM setzen (CSP: kein inline style-Attribut)
+  body.querySelectorAll('.tl-swim-axis-pad[data-w]').forEach(el => {
+    el.style.width = el.dataset.w + 'px';
+    el.style.flexShrink = '0';
   });
-  body.querySelectorAll('.tl-ev[data-hleft]').forEach(el => { el.style.left = el.dataset.hleft + 'px'; });
-  body.querySelectorAll('.tl-hist[data-hleft]').forEach(el => { el.style.left = el.dataset.hleft + 'px'; });
+  body.querySelectorAll('.tl-swim-axis-track[data-w], .tl-lane-body[data-w]').forEach(el => {
+    el.style.minWidth = el.dataset.w + 'px';
+  });
+  body.querySelectorAll('.tl-lane[data-h]').forEach(el => { el.style.height = el.dataset.h + 'px'; });
+  body.querySelectorAll('.tl-tick[data-left]').forEach(el => { el.style.left = el.dataset.left + 'px'; });
+  body.querySelectorAll('.tl-swim-span').forEach(el => {
+    el.style.left  = el.dataset.left + 'px';
+    el.style.width = el.dataset.bw + 'px';
+  });
+  // Datierte Chips: position + vertikale Zentrierung + Nudge
+  body.querySelectorAll('.tl-chip[data-left]').forEach(el => {
+    const lH    = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
+    const nudge = parseInt(el.dataset.nudge || 0);
+    el.style.left = el.dataset.left + 'px';
+    el.style.top  = Math.round((lH - 40) / 2 + nudge) + 'px';
+  });
+  // Undatierte Links-gestapelt (Beruf)
+  body.querySelectorAll('.tl-chip--undated[data-stacki]:not(.tl-chip--right)').forEach(el => {
+    el.style.left = '2px';
+    el.style.top  = (4 + parseInt(el.dataset.stacki) * 22) + 'px';
+  });
+  // Undatierte Rechts-gestapelt (Kinder ohne Datum)
+  body.querySelectorAll('.tl-chip--right[data-stacki]').forEach(el => {
+    el.style.right = '2px';
+    el.style.top   = (4 + parseInt(el.dataset.stacki) * 22) + 'px';
+  });
 }
 
 function _esc(s) {
@@ -314,12 +432,12 @@ const _HIST_EVENTS = [
 
 // ── Event-Extraktion ───────────────────────────
 
-function _buildPersonEvents(pid) {
+function _buildPersonEvents(pid, includeUndated) {
   const p = getPerson(pid);
   if (!p) return [];
   const evs = [];
 
-  // Sonder-Ereignisse
+  // Sonder-Ereignisse (BIRT/CHR/DEAT/BURI — immer datiert)
   const special = [
     ['birth', 'Geburt'],
     ['chr',   'Taufe'],
@@ -335,13 +453,14 @@ function _buildPersonEvents(pid) {
 
   // Reguläre Ereignisse
   for (const ev of (p.events || [])) {
-    if (!ev.date) continue;
+    if (!ev.date && !includeUndated) continue;
     const baseLabel = ev.eventType || EVENT_LABELS[ev.type] || ev.type;
     const label = baseLabel + (ev.value ? ': ' + ev.value : '');
     const addrLine = ev.addr ? ev.addr.split('\n')[0].trim() : '';
     const placePart = _shortPlace(ev.place);
     const place = [addrLine, placePart].filter(Boolean).join(', ');
-    evs.push({ year: _dedupYearFromGed(ev.date), date: ev.date, label, type: 'event', place });
+    const year = ev.date ? _dedupYearFromGed(ev.date) : null;
+    evs.push({ year, date: ev.date || null, label, type: 'event', gedType: ev.type, place });
   }
 
   // Familien: Heirat + Kinder
@@ -349,7 +468,6 @@ function _buildPersonEvents(pid) {
     const f = getFamily(famId);
     if (!f) continue;
     if (f.marr?.seen && f.marr.date) {
-      // Ehepartner-Name für das Label
       const partnerId = (p.id === f.husb) ? f.wife : f.husb;
       const partner = partnerId ? getPerson(partnerId) : null;
       const partnerName = partner ? (partner.surname || partner.given || '') : '';
@@ -358,13 +476,17 @@ function _buildPersonEvents(pid) {
     }
     for (const cid of (f.children || [])) {
       const c = getPerson(cid);
-      if (!c?.birth?.seen || !c.birth.date) continue;
+      if (!c?.birth?.seen) continue;
+      if (!c.birth.date && !includeUndated) continue;
       const childName = c.given || c.name || cid;
-      evs.push({ year: _dedupYearFromGed(c.birth.date), date: c.birth.date, label: 'Kind: ' + childName, type: 'child', place: _shortPlace(c.birth.place) });
+      const year = c.birth.date ? _dedupYearFromGed(c.birth.date) : null;
+      evs.push({ year, date: c.birth.date || null, label: 'Kind: ' + childName, type: 'child', place: _shortPlace(c.birth.place) });
     }
   }
 
-  return evs.filter(e => e.year !== null).sort((a, b) => a.year - b.year);
+  const dated   = evs.filter(e => e.year !== null).sort((a, b) => a.year - b.year);
+  const undated = evs.filter(e => e.year === null);
+  return includeUndated ? [...dated, ...undated] : dated;
 }
 
 })();
