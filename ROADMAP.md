@@ -58,11 +58,11 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~SEC-1~~ | ~~XSS in onedrive.js~~ | ✓ URL-Sanitizer für href in ui-media.js (sw v576) | S ✓ |
-| ~~SEC-2~~ | ~~MIME-Validierung Foto-Upload~~ | ✓ file.type-Check + Fehler-Toast in amCamChange (sw v576) | S ✓ |
-| ERR-1 | **try-catch in async-Funktionen** | 17 async-Funktionen ohne Error-Handling (storage-file.js, onedrive.js, gramps-parser.js); `showToast(err, 'error')` als Fallback | M |
-| PERF-1 | **Debouncing Suche/Filter** | Personenliste: 300ms Debounce auf Filterinput; verhindert Layout-Thrashing bei >1000 Personen | XS |
-| PERF-2 | **Soundex-Cache** | `_soundexCache` Map; einmal berechnen bei Load, nicht bei jedem Filteraufruf | S |
+| SEC-1 | XSS in onedrive.js | ✓ URL-Sanitizer für href in ui-media.js (sw v576) | S ✓ |
+| SEC-2 | MIME-Validierung Foto-Upload | ✓ file.type-Check + Fehler-Toast in amCamChange (sw v576) | S ✓ |
+| ERR-1 | try-catch in async-Funktionen | ✓ bereits vollständig — alle Funktionen haben try/catch oder .catch()-Fallback | — ✓ |
+| PERF-1 | Debouncing Suche/Filter | ✓ bereits erledigt — _applyPersonFilterDebounced 200ms in ui-forms.js | — ✓ |
+| PERF-2 | Soundex-Cache | ✓ bereits erledigt — p._sdxSurname/_sdxGiven beim Index-Aufbau vorberechnet | — ✓ |
 
 ---
 
