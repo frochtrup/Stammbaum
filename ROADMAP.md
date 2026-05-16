@@ -98,7 +98,6 @@ Kein festes Datum. Kandidaten für spätere Versionen.
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X | L |
-| F7 | **Narrative-Export** | Fließtext-Biografie → TXT/HTML; LLM-Erweiterung optional | L |
 | ASSO-Event | **Event-Rollen voll editierbar** | Personen als Zeugen/Paten zu Events; `1 ASSO`-Block schreiben; nur nach ASSO-UI sinnvoll | L |
 | GEDCOM-7 | **GEDCOM 7.0 Evaluierung** | FamilySearch-Standard; Parser/Writer-Anpassung; HEAD GEDC VERS 7.0 | L |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
