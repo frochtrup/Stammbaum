@@ -70,6 +70,53 @@ function showSourceDetail(id, pushHistory = true) {
     ${s.noteText ? `<div class="note-text note-ref-text">${linkifyUrls(s.noteText)}</div>` : ''}
   </div>`;
 
+  // Media section: inline entries from media[] + reference entries from passthrough
+  const srcMedia = s.media || [];
+  const srcPtObje = (s._passthrough || []).filter(l => /^1 OBJE @/.test(l));
+  {
+    const _objeMap = _buildObjeRefMap();
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Medien</div>
+        <button class="section-add" data-action="openAddMediaDialog" data-ctx="source" data-id="${id}">+ Hinzufügen</button>
+      </div>`;
+    for (let i = 0; i < srcMedia.length; i++) {
+      const m = srcMedia[i];
+      if (!m.file && !m.title) continue;
+      const _ext = (m.file || '').split('.').pop().toLowerCase();
+      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
+      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
+      html += `<div class="media-row"
+        data-action="openSourceMediaView" data-sid="${id}" data-idx="${i}">
+        <div id="src-media-thumb-${i}" class="media-thumb">${_icon}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(m.title || m.file)}</div>
+          ${m.title && m.file ? `<div class="media-sub">${esc(m.file)}</div>` : ''}
+          ${m.form ? `<div class="media-ref-label">${esc(m.form)}</div>` : ''}
+        </div>
+        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="source" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
+      </div>`;
+    }
+    for (const l of srcPtObje) {
+      const ref = l.replace(/^1 OBJE\s+/, '').trim();
+      const obj = _objeMap[ref];
+      const label = obj ? (obj.title || obj.file || ref) : ref;
+      const sub   = obj && obj.title && obj.file ? obj.file : '';
+      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
+      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
+      html += `<div class="media-row--ref">
+        <div class="media-thumb">${_icon2}</div>
+        <div class="media-info">
+          <div class="media-title">${esc(label)}</div>
+          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
+          <div class="media-ref-label">Verweis</div>
+        </div>
+      </div>`;
+    }
+    if (!srcMedia.filter(m => m.file || m.title).length && !srcPtObje.length) html += `<div class="no-data-pad">Keine Medien eingetragen</div>`;
+    html += `</div>`;
+  }
+
   // Referencing persons
   if (refPersons.length) {
     const sorted = [...refPersons].sort((a, b) => (a.name||'').localeCompare(b.name||'', 'de'));
@@ -118,53 +165,6 @@ function showSourceDetail(id, pushHistory = true) {
 
   if (!refPersons.length && !refFamilies.length) {
     html += `<div class="section fade-up"><div class="empty no-ref-pad">Keine Referenzen gefunden</div></div>`;
-  }
-
-  // Media section: inline entries from media[] + reference entries from passthrough
-  const srcMedia = s.media || [];
-  const srcPtObje = (s._passthrough || []).filter(l => /^1 OBJE @/.test(l));
-  {
-    const _objeMap = _buildObjeRefMap();
-    html += `<div class="section fade-up">
-      <div class="section-head">
-        <div class="section-title">Medien</div>
-        <button class="section-add" data-action="openAddMediaDialog" data-ctx="source" data-id="${id}">+ Hinzufügen</button>
-      </div>`;
-    for (let i = 0; i < srcMedia.length; i++) {
-      const m = srcMedia[i];
-      if (!m.file && !m.title) continue;
-      const _ext = (m.file || '').split('.').pop().toLowerCase();
-      const _isImg = ['jpg','jpeg','png','gif','bmp','webp','tif','tiff'].includes(_ext);
-      const _icon = _isImg ? '🖼' : _ext === 'pdf' ? '📄' : '📎';
-      html += `<div class="media-row"
-        data-action="openSourceMediaView" data-sid="${id}" data-idx="${i}">
-        <div id="src-media-thumb-${i}" class="media-thumb">${_icon}</div>
-        <div class="media-info">
-          <div class="media-title">${esc(m.title || m.file)}</div>
-          ${m.title && m.file ? `<div class="media-sub">${esc(m.file)}</div>` : ''}
-          ${m.form ? `<div class="media-ref-label">${esc(m.form)}</div>` : ''}
-        </div>
-        <button class="edit-media-btn" data-action="openEditMediaDialog" data-ctx="source" data-id="${id}" data-idx="${i}" title="Bearbeiten">✎</button>
-      </div>`;
-    }
-    for (const l of srcPtObje) {
-      const ref = l.replace(/^1 OBJE\s+/, '').trim();
-      const obj = _objeMap[ref];
-      const label = obj ? (obj.title || obj.file || ref) : ref;
-      const sub   = obj && obj.title && obj.file ? obj.file : '';
-      const _ext2 = (obj?.file || '').split('.').pop().toLowerCase();
-      const _icon2 = ['jpg','jpeg','png','gif','bmp','webp'].includes(_ext2) ? '🖼' : _ext2 === 'pdf' ? '📄' : '📎';
-      html += `<div class="media-row--ref">
-        <div class="media-thumb">${_icon2}</div>
-        <div class="media-info">
-          <div class="media-title">${esc(label)}</div>
-          ${sub ? `<div class="media-sub">${esc(sub)}</div>` : ''}
-          <div class="media-ref-label">Verweis</div>
-        </div>
-      </div>`;
-    }
-    if (!srcMedia.filter(m => m.file || m.title).length && !srcPtObje.length) html += `<div class="no-data-pad">Keine Medien eingetragen</div>`;
-    html += `</div>`;
   }
 
   document.getElementById('detailContent').innerHTML = html;
