@@ -131,7 +131,7 @@
   }
 
   function _atPlace(ev) {
-    const pl = ev.place || ev.plac;
+    const pl = ev.place || ev.addr;
     return pl ? ' in ' + _esc(_shortPlace(pl)) : '';
   }
 
@@ -173,11 +173,10 @@
   function _eventSentence(ev, pr) {
     const fn = _EV_TPL[ev.type];
     if (fn) return fn(ev, pr);
-    const label = ev.eventType ||
-      (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) ||
-      ev.type || 'Ereignis';
+    const label = (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) ||
+      ev.eventType || ev.type || 'Ereignis';
     const val = ev.value ? ': ' + _esc(ev.value) : '';
-    return `${_esc(label)}${val}${_atDate(ev)}${_atPlace(ev)}.`;
+    return `${pr.Er} — ${_esc(label)}${val}${_atDate(ev)}${_atPlace(ev)}.`;
   }
 
   // ── Abschnitte ──────────────────────────────────────────────────────────────
@@ -420,8 +419,28 @@ ${link}
       ...pt,
     }));
 
+    // Graticule step: smallest that gives ≤6 lines per axis
+    const _gStep = range => [0.25, 0.5, 1, 2, 5, 10, 20].find(s => range / s <= 6) || 20;
+    const latStep = _gStep(maxLat - minLat);
+    const lngStep = _gStep(maxLng - minLng);
+
     let svg = `<svg class="story-map-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Karte der Lebensstationen">`;
     svg += `<rect width="${W}" height="${H}" class="story-map-bg"/>`;
+
+    // Lat lines (horizontal)
+    const latStart = Math.ceil(minLat / latStep) * latStep;
+    for (let lat = latStart; lat <= maxLat + 0.001; lat += latStep) {
+      const y = toY(lat).toFixed(1);
+      svg += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" class="story-map-grid"/>`;
+      svg += `<text x="3" y="${Math.max(10, +y - 2)}" class="story-map-gridlabel">${lat.toFixed(lat % 1 ? 2 : 0)}°N</text>`;
+    }
+    // Lng lines (vertical)
+    const lngStart = Math.ceil(minLng / lngStep) * lngStep;
+    for (let lng = lngStart; lng <= maxLng + 0.001; lng += lngStep) {
+      const x = toX(lng).toFixed(1);
+      svg += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" class="story-map-grid"/>`;
+      svg += `<text x="${+x + 2}" y="${H - 3}" class="story-map-gridlabel">${lng.toFixed(lng % 1 ? 2 : 0)}°E</text>`;
+    }
 
     if (coords.length >= 2) {
       const points = coords.map(c => `${c.x},${c.y}`).join(' ');

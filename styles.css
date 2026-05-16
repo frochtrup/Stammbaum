@@ -2746,13 +2746,15 @@ html[data-theme="dark"] {
   border: 1px solid var(--border);
   display: block;
 }
-.story-map-bg    { fill: #f5f0e8; }
-.story-map-line  { fill: none; stroke: #8b6914; stroke-width: 1.5; stroke-dasharray: 5 3; }
-.story-map-dot   { fill: #8b6914; stroke: #fff; stroke-width: 1.5; }
+.story-map-bg        { fill: #f5f0e8; }
+.story-map-grid      { stroke: #c8bfa8; stroke-width: 0.5; fill: none; }
+.story-map-gridlabel { font-size: 7px; fill: #a89880; font-family: sans-serif; }
+.story-map-line      { fill: none; stroke: #8b6914; stroke-width: 1.5; stroke-dasharray: 5 3; }
+.story-map-dot       { fill: #8b6914; stroke: #fff; stroke-width: 1.5; }
 .story-map-dot--birth { fill: #4a7c59; }
 .story-map-dot--death { fill: #9b3a3a; }
 .story-map-dot--marr  { fill: #5a6fa8; }
-.story-map-label { font-size: 10px; fill: #444; font-family: sans-serif; }
+.story-map-label     { font-size: 10px; fill: #444; font-family: sans-serif; }
 
 /* Drucken / PDF */
 @media print {
