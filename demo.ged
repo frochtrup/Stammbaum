@@ -61,6 +61,13 @@
 2 DATE 6 NOV 1912
 2 PLAC Ostfriedhof, München, Bayern
 1 OCCU Bäckermeister
+1 RESI
+2 DATE 1873
+2 ADDR Sendlinger Straße 14
+2 PLAC München
+1 RESI
+2 DATE 1895
+2 ADDR Leopoldstraße 3
 1 NOTE Johann Müller eröffnete 1873 eine eigene Bäckerei in der Sendlinger Straße. Nach dem Tod seiner ersten Frau heiratete er 1890 erneut.
 1 FAMS @F001@
 1 FAMS @F002@
