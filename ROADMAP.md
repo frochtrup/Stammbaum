@@ -41,6 +41,7 @@ Kleine Aufwände mit hohem Orientierungswert für neue Nutzer.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| SAFARI-SWIPE | **Safari-„Zurück"-Swipe abfangen** | Wischgeste nach rechts in Safari löst Browser-History-Back aus → App wird auf leere Seite zurückgesetzt (kompletter State-Verlust). Lösungsansatz: `history.pushState` beim App-Start + `popstate`-Event abfangen und an internes Nav-System delegieren statt Browser-Default zuzulassen. Betrifft iPhone/iPad im Browser-Modus (nicht als PWA installiert). | M |
 | TASK-EXPORT-MD | **Aufgabenliste als Markdown exportieren** | Alle offenen Forschungsaufgaben + Validierungsbefunde als `.md`-Datei; gegliedert nach Kategorie und Schweregrad; Download-Button im Aufgaben-Tab | S |
 | OBJE-TYPE | **Medien-Typ strukturiert** ⚠ nicht GEDCOM-konform | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag unter OBJE in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform; Opt-in im Einstellungs-Modal | M |
