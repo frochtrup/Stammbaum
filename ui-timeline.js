@@ -214,18 +214,18 @@ function _swimLane(type, gedType, eventType) {
 }
 
 function _resolveSwimOverlaps(chips, chipW) {
-  // Cluster-Erkennung: überlappende Chips in Gruppen zusammenfassen
-  const clusters = [];
-  let cur = [], lastRight = -Infinity;
+  // Nur Richtung speichern (+1/-1/0) — Pixel-Versatz wird im CSSOM-Schritt
+  // aus dem echten offsetHeight berechnet.
+  let lastRight = -Infinity, dir = 1;
   for (const c of chips) {
-    if (cur.length && c.pxLeft >= lastRight + 6) { clusters.push(cur); cur = []; }
-    cur.push(c);
+    if (c.pxLeft < lastRight + 6) {
+      c.nudge = dir;
+      dir = -dir;
+    } else {
+      c.nudge = 0;
+      dir = 1;
+    }
     lastRight = Math.max(lastRight, c.pxLeft + chipW);
-  }
-  if (cur.length) clusters.push(cur);
-  // Index + Größe speichern (nudge entfällt — Verteilung erfolgt im CSSOM-Schritt)
-  for (const cl of clusters) {
-    cl.forEach((c, i) => { c._ci = i; c._cs = cl.length; c.nudge = 0; });
   }
 }
 
@@ -245,11 +245,11 @@ function _swimChipHTML(ev, age) {
   const pl    = ev.place ? `<span class="tl-place">${_esc(ev.place)}</span>` : '';
   const und   = ev.pxLeft === null ? ' tl-chip--undated' : '';
   const dl    = ev.pxLeft !== null ? ` data-left="${ev.pxLeft}"` : '';
-  const ci    = (ev._ci !== undefined && ev._cs > 1) ? ` data-ci="${ev._ci}" data-cs="${ev._cs}"` : '';
+  const nd    = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
   const title = _esc(ev.title || ev.label || '');
   const desc  = ev.desc ? `<span class="tl-desc">${_esc(ev.desc)}</span>` : '';
   const tip   = _esc(_chipTooltip(ev, age));
-  return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}"${dl}${ci} title="${tip}">` +
+  return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}"${dl}${nd} title="${tip}">` +
          `${yr}<span class="tl-type">${title}</span>${desc}${pl}</div>`;
 }
 
@@ -414,20 +414,14 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     el.style.left  = el.dataset.left + 'px';
     el.style.width = el.dataset.bw + 'px';
   });
-  // Datierte Chips: position + vertikale Zentrierung; bei Überlappung gleichmäßig verteilen
+  // Datierte Chips: position + vertikale Zentrierung; bei Überlappung ±(chipH/2 + 8px)
   body.querySelectorAll('.tl-chip[data-left]').forEach(el => {
     const lH    = parseInt(el.closest('.tl-lane')?.dataset.h || 58);
+    const dir   = parseInt(el.dataset.nudge || 0);
     const chipH = el.offsetHeight || 40;
-    const ci    = el.dataset.ci !== undefined ? parseInt(el.dataset.ci) : -1;
-    const cs    = el.dataset.cs !== undefined ? parseInt(el.dataset.cs) :  1;
+    const nudge = dir * (chipH / 2 + 8);
     el.style.left = el.dataset.left + 'px';
-    if (cs > 1) {
-      const pad   = 6;
-      const avail = Math.max(lH - chipH - 2 * pad, 0);
-      el.style.top = Math.round(pad + ci * (avail / (cs - 1))) + 'px';
-    } else {
-      el.style.top = Math.round(Math.max((lH - chipH) / 2, 4)) + 'px';
-    }
+    el.style.top  = Math.round(Math.max((lH - chipH) / 2 + nudge, 4)) + 'px';
   });
   // Undatierte Links-gestapelt (Beruf) — Stapel als Block zentrieren
   body.querySelectorAll('.tl-chip--undated[data-stacki]:not(.tl-chip--right)').forEach(el => {
