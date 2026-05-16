@@ -94,10 +94,12 @@ function _initTreeDrag() {
     _updateTopbarH();
     clearTimeout(_treeResizeTimer);
     _treeResizeTimer = setTimeout(() => {
-      const id = currentTreeId;
+      const id = currentTreeId || AppState.currentPersonId;
       if (!id) return;
       if (!document.getElementById('v-tree')?.classList.contains('active')) return;
-      if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
+      if (document.body.classList.contains('fc-mode') && typeof showFanChart === 'function')
+        showFanChart(id);
+      else if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
         showDescTree(id, false);
       else
         showTree(id, false);
@@ -207,21 +209,13 @@ function toggleTreeFullscreen() {
     btn.textContent = isFs ? '⤡' : '⤢';
     btn.title = isFs ? 'Sidebar einblenden' : 'Vollbild';
   }
-  const pid = AppState.currentPersonId;
   if (!isFs) {
-    // Beim Exit: linke Seite + Diagramm für neue Breite neu aufbauen
+    // Beim Exit: resize-Event löst den Resize-Handler aus, der korrekt neu rendert
     setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-    if (!pid) return;
-    if (document.body.classList.contains('fc-mode')) {
-      if (typeof showFanChart === 'function') setTimeout(() => showFanChart(pid), 80);
-    } else if (document.body.classList.contains('desc-tree-mode')) {
-      if (typeof showDescTree === 'function') setTimeout(() => showDescTree(pid, false), 80);
-    } else {
-      setTimeout(() => showTree(pid, false), 80);
-    }
     return;
   }
   // Beim Eintritt: Baum-Darstellung an neue (breitere) Breite anpassen
+  const pid = AppState.currentPersonId;
   if (!pid) return;
   if (document.body.classList.contains('fc-mode')) {
     if (typeof showFanChart === 'function') setTimeout(() => showFanChart(pid), 50);
