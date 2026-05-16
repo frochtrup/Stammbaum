@@ -24,6 +24,8 @@ window.showFanChart = function (pid) {
   pid = pid || AppState.currentPersonId;
   if (!pid || !getPerson(pid)) return;
 
+  if (typeof showView === 'function') showView('v-tree');
+
   FC._pid = pid;
   AppState.currentPersonId = pid;
   document.body.classList.add('fc-mode', 'tree-active');
