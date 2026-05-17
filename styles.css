@@ -1564,6 +1564,13 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   color: var(--text-muted); font-style: italic;
 }
 /* Prüfregeln-Config-Modal */
+/* Scroll-Fix für modalValConfig: sheet-body scrollt, sheet-Container bleibt fixiert */
+#modalValConfig .sheet { display: flex; flex-direction: column; overflow: hidden; }
+#modalValConfig .sheet-body {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+}
+
 .valcfg-rules-grid {
   display: grid; grid-template-columns: 1fr 1fr;
   grid-template-rows: repeat(11, auto); grid-auto-flow: column; gap: 4px 16px;
