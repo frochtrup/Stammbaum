@@ -627,14 +627,36 @@
     <li><a href="#kap14">Forschungsprotokoll</a></li>
     <li><a href="#kap15">Höfe und Wohnorte</a></li>
     <li><a href="#kap16">Häufige Fragen und Tipps</a></li>
-    <li><a href="#kap17">Anhang A: GEDCOM-Dateiformat</a>
+    <li><a href="#kap17">Umstieg von anderen Programmen</a>
+      <ul class="sub">
+        <li>Von Gramps</li>
+        <li>Von MacFamilyTree, Ahnenblatt, Ancestris</li>
+        <li>Was wird übernommen?</li>
+      </ul>
+    </li>
+    <li><a href="#kap18">Fotos und Medien organisieren</a>
+      <ul class="sub">
+        <li>Ordnerstruktur empfohlen</li>
+        <li>OneDrive-Foto-Ordner</li>
+        <li>Wie die App Fotos speichert</li>
+      </ul>
+    </li>
+    <li><a href="#kap19">Best Practices: Datenqualität</a>
+      <ul class="sub">
+        <li>Quellen konsequent erfassen</li>
+        <li>Daten prüfen und bereinigen</li>
+        <li>Backup-Strategie</li>
+      </ul>
+    </li>
+    <li><a href="#kap20">Glossar</a></li>
+    <li><a href="#kap21">Anhang A: GEDCOM-Dateiformat</a>
       <ul class="sub">
         <li>Unterstützte Datensätze</li>
         <li>Roundtrip und Passthrough</li>
         <li>Proprietäre Tags</li>
       </ul>
     </li>
-    <li><a href="#kap18">Anhang B: GRAMPS-Dateiformat</a>
+    <li><a href="#kap22">Anhang B: GRAMPS-Dateiformat</a>
       <ul class="sub">
         <li>Import und Export</li>
         <li>Orte, Tags, Attribute</li>
@@ -644,6 +666,21 @@
   </ol>
 </div>
 
+
+<!-- ====================================================== -->
+<!-- SCHNELLSTART -->
+<!-- ====================================================== -->
+<div style="background:var(--app-card);border:2px solid var(--gold);border-radius:12px;padding:1.2em 1.5em;margin:2em 0;">
+  <div style="font-size:1.1em;font-weight:bold;color:var(--gold);margin-bottom:0.7em;">⚡ Schnellstart — in 5 Minuten loslegen</div>
+  <ol style="margin:0;padding-left:1.4em;line-height:2.2em;">
+    <li>Browser öffnen → URL der App eingeben → App lädt (kein Install nötig)</li>
+    <li><strong>☰ → 🗂 Demo-Daten öffnen</strong> — Beispiel-Stammbaum erkunden</li>
+    <li><strong>☰ → 📂 Öffnen…</strong> — eigene GEDCOM- oder Gramps-Datei laden</li>
+    <li>Person antippen → <strong>✎</strong> → Daten ergänzen → <strong>Speichern</strong></li>
+    <li><strong>☰ → 💾 Speichern</strong> — Datei sichern (regelmäßig wiederholen)</li>
+  </ol>
+  <div style="margin-top:0.8em;font-size:0.9em;color:var(--text-dim);">Alle weiteren Funktionen sind im Handbuch beschrieben. Auf dem iPhone: erst aufrufen, dann <strong>Teilen → Zum Home-Bildschirm</strong> für Offline-Nutzung.</div>
+</div>
 
 <!-- ====================================================== -->
 <!-- KAPITEL 1: WAS IST STAMMBAUM PWA -->
@@ -2299,6 +2336,56 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 <hr class="section-divider">
 
+<h2>Fotos werden nicht angezeigt</h2>
+<p>Fotos werden als Dateipfade gespeichert. Wenn ein Foto nicht erscheint, sind mögliche Ursachen:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Datei wurde verschoben oder umbenannt</strong> — Foto erneut zuweisen: ✎ am Medieneintrag → neues Foto wählen</li>
+  <li><strong>OneDrive nicht verbunden</strong> — ☰ → Einstellungen → OneDrive-Status prüfen</li>
+  <li><strong>Erstmalig geöffnet, kein Cache</strong> — Foto einmal öffnen, dann wird es lokal gecacht</li>
+</ul>
+
+<h2>Daten aus einem anderen Programm wurden nicht vollständig importiert</h2>
+<p>Einige Programme exportieren GEDCOM in veralteten Formaten oder mit proprietären Tags. Tipps:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Beim Export <strong>UTF-8</strong> als Zeichensatz wählen (nicht ANSI) — verhindert Zeichenfehler bei Umlauten</li>
+  <li><strong>GEDCOM 5.5.1</strong> als Version wählen, nicht 5.5 oder 7.0</li>
+  <li>Unbekannte Tags werden als Passthrough erhalten — sie sind in der App nicht sichtbar, gehen aber nicht verloren</li>
+  <li>Medien-Verweise funktionieren nur, wenn die Fotos am selben relativen Pfad verfügbar sind</li>
+</ul>
+
+<h2>Die App ist langsam bei großen Dateien</h2>
+<p>Ab ca. 5 000 Personen kann das erste Laden etwas dauern. Danach ist alles gecacht. Tipps:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Filter in der Personenliste nutzen — reduziert die angezeigte Menge sofort</li>
+  <li>Baumansicht: weniger Generationen wählen (2–3 statt 5–6)</li>
+  <li>Zeitleiste und Fächer-Diagramm: auf einem schwachen Gerät langsamer — Vollbild vermeiden</li>
+</ul>
+
+<h2>OneDrive-Verbindung schlägt fehl</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>☰ → Einstellungen → OneDrive abmelden</strong> — dann neu anmelden</li>
+  <li>Browser-Cookies müssen für die Microsoft-Domain erlaubt sein</li>
+  <li>Im Safari-Privatmodus funktioniert OneDrive nicht (keine Cookies)</li>
+  <li>Token läuft nach ca. 1 Stunde Inaktivität ab — die App erneuert ihn automatisch beim nächsten Speichern</li>
+</ul>
+
+<h2>Die App funktioniert nach einem Update nicht mehr</h2>
+<p>Der Service Worker cacht die App. Nach einem Update kann es vorkommen, dass die alte Version noch im Cache ist:</p>
+<ol class="steps">
+  <li><div class="step-text">Seite hart neu laden: <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> (Mac) bzw. <kbd>Strg</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> (Windows)</div></li>
+  <li><div class="step-text">Alternativ: Browser-Cache leeren → Einstellungen des Browsers → Verlauf und Cookies löschen</div></li>
+  <li><div class="step-text">Daten gehen dabei <strong>nicht</strong> verloren — sie liegen in IndexedDB, nicht im Cache</div></li>
+</ol>
+
+<h2>Ich habe die App auf dem iPhone installiert — wie komme ich an meine Daten?</h2>
+<p>Als installierte PWA (über „Zum Home-Bildschirm hinzufügen") hat die App einen eigenen Datenspeicher. Ihre zuletzt geladene Datei ist dort automatisch verfügbar. Zum Synchronisieren mit dem Desktop:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>OneDrive</strong>: Auf beiden Geräten dieselbe Datei öffnen und speichern — empfohlener Weg</li>
+  <li><strong>Manuell</strong>: Auf dem iPhone <strong>☰ → 💾 Speichern</strong> → Datei über AirDrop oder iCloud Drive übertragen</li>
+</ul>
+
+<hr class="section-divider">
+
 <h2>Checkliste für einen guten Start</h2>
 <ul class="checklist">
   <li>Demo-Daten ausprobiert und die Navigation kennengelernt</li>
@@ -2314,9 +2401,230 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 17: ANHANG A — GEDCOM -->
+<!-- KAPITEL 17: UMSTIEG VON ANDEREN PROGRAMMEN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap17">Anhang A: GEDCOM-Dateiformat</h1>
+<h1 class="chapter" id="kap17">17. Umstieg von anderen Programmen</h1>
+
+<p>Sie arbeiten bereits mit einem anderen Genealogieprogramm und möchten auf Stammbaum PWA wechseln — oder beide parallel nutzen? Dieser Abschnitt erklärt, wie der Datentransfer funktioniert und was dabei zu beachten ist.</p>
+
+<h2>Von Gramps</h2>
+<p>Gramps ist das einzige Programm, das Stammbaum PWA nativ unterstützt — ohne Umweg über GEDCOM:</p>
+<ol class="steps">
+  <li><div class="step-text">In Gramps: <strong>Datei → Exportieren → Gramps XML</strong> (Dateiendung <em>.gramps</em>)</div></li>
+  <li><div class="step-text">In Stammbaum PWA: <strong>☰ → 📂 Öffnen…</strong> → <em>.gramps</em>-Datei wählen</div></li>
+  <li><div class="step-text">Alle Daten werden geladen — Personen, Familien, Orte, Quellen, Medien, Tags, Attribute</div></li>
+  <li><div class="step-text">Speichern in Stammbaum PWA erzeugt wieder eine <em>.gramps</em>-Datei, die Gramps ohne Datenverlust öffnet</div></li>
+</ol>
+<div class="tip">Gramps-spezifische Daten (Handles, Attribute, Tags, private Markierungen) bleiben vollständig erhalten — auch wenn Stammbaum PWA sie nicht bearbeiten kann. Sie gehen beim Roundtrip nicht verloren.</div>
+
+<h2>Von MacFamilyTree</h2>
+<ol class="steps">
+  <li><div class="step-text">In MacFamilyTree: <strong>Ablage → Exportieren → GEDCOM…</strong> → Format GEDCOM 5.5.1 wählen</div></li>
+  <li><div class="step-text">In Stammbaum PWA: <strong>☰ → 📂 Öffnen…</strong> → <em>.ged</em>-Datei wählen</div></li>
+</ol>
+<div class="info">MacFamilyTree verwendet eigene Erweiterungs-Tags (<code>_MFTREE</code>, <code>_UID</code> u. a.). Diese werden als Passthrough erhalten — Stammbaum PWA liest und schreibt sie unverändert, zeigt sie aber nicht in der Oberfläche an.</div>
+
+<h2>Von Ahnenblatt</h2>
+<ol class="steps">
+  <li><div class="step-text">In Ahnenblatt: <strong>Datei → Exportieren → GEDCOM-Datei</strong></div></li>
+  <li><div class="step-text">Zeichensatz <strong>UTF-8</strong> wählen (wichtig für Umlaute)</div></li>
+  <li><div class="step-text">In Stammbaum PWA: <strong>☰ → 📂 Öffnen…</strong> → <em>.ged</em>-Datei wählen</div></li>
+</ol>
+
+<h2>Von Ancestris</h2>
+<ol class="steps">
+  <li><div class="step-text">In Ancestris: <strong>Datei → Speichern unter → GEDCOM</strong></div></li>
+  <li><div class="step-text">In Stammbaum PWA: <strong>☰ → 📂 Öffnen…</strong> → <em>.ged</em>-Datei wählen</div></li>
+</ol>
+<div class="tip">Ancestris erzeugt sehr saubere GEDCOM-Dateien — der Import ist in der Regel problemlos und vollständig.</div>
+
+<h2>Von Family Tree Maker / Legacy / anderen Programmen</h2>
+<p>Fast alle Genealogieprogramme können GEDCOM exportieren. Der Weg ist immer gleich: In Ihrem Programm <strong>als GEDCOM 5.5.1 exportieren</strong> (UTF-8-Zeichensatz bevorzugen), dann in Stammbaum PWA öffnen.</p>
+
+<h2>Was wird beim Import übernommen?</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
+  <thead><tr style="background:var(--app-card);text-align:left;">
+    <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Daten</th>
+    <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">GEDCOM</th>
+    <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Gramps</th>
+  </tr></thead>
+  <tbody>
+    <tr><td style="padding:3px 8px;">Personen, Namen, Geschlecht</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓</td></tr>
+    <tr><td style="padding:3px 8px;">Geburt, Taufe, Tod, Bestattung</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓</td></tr>
+    <tr><td style="padding:3px 8px;">Alle weiteren Ereignisse</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓</td></tr>
+    <tr><td style="padding:3px 8px;">Familien, Ehen, Kinder</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓</td></tr>
+    <tr><td style="padding:3px 8px;">Quellen und Archive</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓</td></tr>
+    <tr><td style="padding:3px 8px;">Orte mit Koordinaten</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓ (Place-Objekte)</td></tr>
+    <tr><td style="padding:3px 8px;">Medienverweise (Fotos, Dokumente)</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓</td></tr>
+    <tr><td style="padding:3px 8px;">Notizen</td><td style="padding:3px 8px;">✓</td><td style="padding:3px 8px;">✓</td></tr>
+    <tr><td style="padding:3px 8px;">Tags (Gramps-spezifisch)</td><td style="padding:3px 8px;">–</td><td style="padding:3px 8px;">✓ (Anzeige)</td></tr>
+    <tr><td style="padding:3px 8px;">Attribute (Gramps-spezifisch)</td><td style="padding:3px 8px;">–</td><td style="padding:3px 8px;">✓ (Anzeige)</td></tr>
+    <tr><td style="padding:3px 8px;">Unbekannte Tags (Passthrough)</td><td style="padding:3px 8px;">✓ erhalten</td><td style="padding:3px 8px;">✓ erhalten</td></tr>
+  </tbody>
+</table>
+
+<div class="info">Fotos selbst werden <strong>nicht</strong> in die GEDCOM- oder Gramps-Datei eingebettet — nur die Dateipfade. Nach dem Import müssen die Fotos am selben Speicherort verfügbar sein (lokal oder OneDrive), damit sie angezeigt werden.</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 18: FOTOS UND MEDIEN ORGANISIEREN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap18">18. Fotos und Medien organisieren</h1>
+
+<p>Fotos und Dokumente sind ein zentraler Teil der Familienforschung. Dieser Abschnitt erklärt, wie Stammbaum PWA mit Medien umgeht — und wie Sie Ihre Dateien am besten organisieren.</p>
+
+<h2>Wie die App Fotos speichert</h2>
+<p>Stammbaum PWA speichert <strong>keine Fotos in der GEDCOM- oder Gramps-Datei selbst</strong>. Stattdessen werden nur Dateipfade gespeichert (z. B. <code>Fotos/Johann_Decker.jpg</code>). Die Fotos selbst bleiben auf Ihrem Gerät oder in OneDrive.</p>
+<p>Beim Hinzufügen eines Fotos legt die App zusätzlich eine Kopie im internen Speicher (IndexedDB) ab — so sind die Fotos auch offline sichtbar, ohne dass Sie jedes Mal die Datei neu öffnen müssen.</p>
+
+<h2>Empfohlene Ordnerstruktur</h2>
+<p>Legen Sie alle Dateien, die zu Ihrem Stammbaum gehören, in <strong>einen gemeinsamen Ordner</strong>:</p>
+<div style="background:var(--app-card);border:1px solid var(--app-border);border-radius:8px;padding:0.9em 1.2em;font-family:monospace;font-size:0.88em;margin:0.8em 0;line-height:1.9em;">
+  📁 Genealogie/<br>
+  &nbsp;&nbsp;├── MeineDaten.ged &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← GEDCOM-Datei<br>
+  &nbsp;&nbsp;├── 📁 Fotos/<br>
+  &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── Johann_Decker_1823.jpg<br>
+  &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── Hochzeit_1855.jpg<br>
+  &nbsp;&nbsp;└── 📁 Dokumente/<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── Taufurkunde_1823.pdf<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── Kirchenbuch_1820.jpg
+</div>
+<div class="tip">Speichern Sie die GEDCOM-Datei und den Foto-Ordner <strong>nebeneinander</strong> im selben Überordner. So bleiben die relativen Pfade beim Verschieben erhalten.</div>
+
+<h2>OneDrive: Foto-Ordner einrichten</h2>
+<p>Wenn Sie OneDrive nutzen, verbindet die App automatisch den Ordner, in dem Ihre GEDCOM-Datei liegt. Für Fotos gehen Sie so vor:</p>
+<ol class="steps">
+  <li><div class="step-text"><strong>☰ → Einstellungen → OneDrive-Foto-Ordner</strong> wählen</div></li>
+  <li><div class="step-text">Den Unterordner <em>Fotos</em> (oder einen anderen Namen) auswählen</div></li>
+  <li><div class="step-text">Ab sofort können Sie Fotos direkt aus diesem OneDrive-Ordner importieren (<strong>☰ → Fotos aus OneDrive</strong>)</div></li>
+</ol>
+
+<h2>Fotos benennen und ordnen</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Verwenden Sie sprechende Dateinamen: <code>Nachname_Vorname_Jahr.jpg</code></li>
+  <li>Vermeiden Sie Sonderzeichen, Leerzeichen und Umlaute in Dateinamen</li>
+  <li>JPG und PNG funktionieren zuverlässig auf allen Geräten</li>
+  <li>HEIC-Dateien (iPhone-Format) werden unterstützt, aber JPG ist kompatibler</li>
+</ul>
+
+<h2>Foto direkt mit der Kamera aufnehmen</h2>
+<p>Im Ereignis-Formular gibt es einen <strong>📷-Button</strong>: Tippen Sie darauf, um direkt ein Foto aufzunehmen (Archiv-Besuch, Grabstein, Urkunde vor Ort). Das Foto wird sofort mit dem Ereignis verknüpft und im internen Speicher abgelegt — auch ohne Internetverbindung.</p>
+
+<h2>Was passiert, wenn ich Fotos verschiebe?</h2>
+<p>Wenn Sie Fotos auf Ihrem Gerät oder in OneDrive verschieben, können die Verweise in der App ungültig werden — das Foto erscheint dann nicht mehr. Lösung: Foto erneut zuweisen (<strong>✎ am Medieneintrag → neues Foto wählen</strong>). Fotos im internen App-Speicher bleiben dagegen immer sichtbar.</p>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 19: BEST PRACTICES DATENQUALITÄT -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap19">19. Best Practices: Datenqualität</h1>
+
+<p>Der Unterschied zwischen einer Sammlung von Namen und einem echten genealogischen Forschungsstand liegt in der Datenqualität. Dieser Abschnitt zeigt, wie Sie mit Stammbaum PWA systematisch und nachvollziehbar arbeiten.</p>
+
+<h2>Jedes Ereignis braucht eine Quelle</h2>
+<p>Die wichtigste Regel der Genealogie: <strong>Keine Aussage ohne Beleg.</strong> Verknüpfen Sie jedes Ereignis (Geburt, Heirat, Tod, Beruf …) mit mindestens einer Quelle. Das verhindert, dass ungesicherte Daten als Fakten behandelt werden.</p>
+<div class="tip">Nutzen Sie die <strong>Quellen-Vorlagen</strong> (☰ → Neue Quelle): 10 vorgefertigte Vorlagen für Kirchenbücher, Standesamtsurkunden, Volkszählungen u. a. sparen Zeit und erzeugen konsistente Einträge.</div>
+
+<h2>Strukturierte Datumsangaben verwenden</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Nutzen Sie immer das 3-Felder-Datum (Tag / Monat / Jahr) statt Freitext</li>
+  <li>Unbekannte Teile einfach leer lassen — besser „1823" als „ca. 1823" im Freitextfeld</li>
+  <li>Für Schätzungen: Qualifier <em>ca.</em> verwenden, nicht einfach runden</li>
+  <li>„zwischen 1820 und 1825" ist aussagekräftiger als „1822" ohne Quellenbeleg</li>
+</ul>
+
+<h2>Orte vollständig und einheitlich erfassen</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Nutzen Sie die 6-Felder-Ortsstruktur (Dorf / Stadt / Landkreis / Bundesland / Staat)</li>
+  <li>Verwenden Sie <strong>immer denselben Ortsnamen</strong> — „München" statt mal „München", mal „Munich"</li>
+  <li>Koordinaten eingeben, damit der Ort auf der Karte erscheint (Google Maps → Koordinaten ablesen)</li>
+  <li>Historische Ortsnamen: den damaligen Namen verwenden, heutigen als Notiz ergänzen</li>
+</ul>
+
+<h2>Regelmäßig Daten prüfen</h2>
+<p>Nutzen Sie die automatische Datenprüfung nach jeder größeren Eingabesitzung:</p>
+<ol class="steps">
+  <li><div class="step-text">Aufgaben-Tab öffnen → <span class="button-label">✓ Daten prüfen</span> tippen</div></li>
+  <li><div class="step-text">Fehler (✗) sofort korrigieren — das sind logische Unmöglichkeiten</div></li>
+  <li><div class="step-text">Warnungen (⚠) prüfen — oft steckt ein Tippfehler im Datum dahinter</div></li>
+  <li><div class="step-text">Hinweise (ℹ) als Forschungsaufgaben übernehmen — fehlende Orte, fehlende Quellen</div></li>
+</ol>
+
+<h2>Forschungsprotokoll führen</h2>
+<p>Notieren Sie <strong>jede Recherche</strong> im Forschungsprotokoll — auch wenn sie ohne Ergebnis war. „Kirchenbuch Landsberg 1780–1800 durchsucht — kein Eintrag" ist eine wertvolle Information: Sie müssen diese Suche nie wiederholen.</p>
+<p>Das Protokoll ist unter <strong>☑ Aufgaben → Protokoll</strong> erreichbar. Ein Eintrag dauert 30 Sekunden.</p>
+
+<h2>Backup-Strategie</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Nach jeder Sitzung speichern</strong> (<strong>☰ → 💾 Speichern</strong>) — der Änderungsindikator zeigt ungespeicherte Daten</li>
+  <li><strong>Wöchentlich</strong>: Datei mit Datum im Namen sichern (z. B. <code>MeineDaten_2026-05-18.ged</code>)</li>
+  <li><strong>Zwei Orte</strong>: lokal + Cloud (OneDrive, iCloud) — nie nur einen Speicherort</li>
+  <li>Die App bietet unter <strong>☰ → Backup erstellen</strong> eine Datumskopie an</li>
+</ul>
+
+<h2>Lebende Personen schützen</h2>
+<p>Beim Weitergeben Ihrer GEDCOM-Datei an Dritte: Nutzen Sie den Export mit Lebende-Anonymisierung (in Vorbereitung). Bis dahin: Prüfen Sie vor dem Weitergeben, welche Personen nach 1920 geboren wurden und noch kein Sterbedatum haben — diese sollten nicht mit vollen Daten geteilt werden.</p>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 20: GLOSSAR -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap20">20. Glossar</h1>
+
+<p>Erklärung der wichtigsten Fachbegriffe aus Genealogie, GEDCOM und der App.</p>
+
+<h2>GEDCOM-Begriffe</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
+  <thead><tr style="background:var(--app-card);text-align:left;">
+    <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);width:25%;">Begriff</th>
+    <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Bedeutung</th>
+  </tr></thead>
+  <tbody>
+    <tr><td style="padding:4px 8px;font-family:monospace;">INDI</td><td style="padding:4px 8px;">Individual — ein Personen-Datensatz in GEDCOM</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">FAM</td><td style="padding:4px 8px;">Family — ein Familien-Datensatz (Eltern + Kinder)</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">SOUR</td><td style="padding:4px 8px;">Source — ein Quellen-Datensatz</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">REPO</td><td style="padding:4px 8px;">Repository — ein Archiv- oder Bibliotheks-Datensatz</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">OBJE</td><td style="padding:4px 8px;">Object — ein Medien-Datensatz (Foto, Dokument)</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">EVEN</td><td style="padding:4px 8px;">Event — ein Ereignis (generisch)</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">BIRT / DEAT</td><td style="padding:4px 8px;">Birth / Death — Geburt / Tod</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">CHR / BURI</td><td style="padding:4px 8px;">Christening / Burial — Taufe / Bestattung</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">MARR</td><td style="padding:4px 8px;">Marriage — Heirat</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">OCCU</td><td style="padding:4px 8px;">Occupation — Beruf</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">RESI</td><td style="padding:4px 8px;">Residence — Wohnort</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">PLAC</td><td style="padding:4px 8px;">Place — Ortsangabe</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">PAGE</td><td style="padding:4px 8px;">Seitenangabe in einer Quelle (z. B. „Seite 42, Nr. 7")</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">QUAY</td><td style="padding:4px 8px;">Quality — Quellenqualität (0 = unzuverlässig … 3 = direkte Evidenz)</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">CALN</td><td style="padding:4px 8px;">Call Number — Signatur eines Bestands im Archiv</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">ASSO</td><td style="padding:4px 8px;">Association — Beziehung zu einer anderen Person (z. B. Zeuge, Pate)</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">NOTE</td><td style="padding:4px 8px;">Freitext-Notiz zu einem Datensatz</td></tr>
+    <tr><td style="padding:4px 8px;font-family:monospace;">CONT / CONC</td><td style="padding:4px 8px;">Continuation / Concatenation — Zeilenfortsetzung in langen Texten</td></tr>
+  </tbody>
+</table>
+
+<h2>App-spezifische Begriffe</h2>
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
+  <thead><tr style="background:var(--app-card);text-align:left;">
+    <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);width:25%;">Begriff</th>
+    <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Bedeutung</th>
+  </tr></thead>
+  <tbody>
+    <tr><td style="padding:4px 8px;"><strong>Proband</strong></td><td style="padding:4px 8px;">Die zentrale Person des Stammbaums — beeinflusst Baumansicht und Verwandtschaftsberechnung</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Roundtrip</strong></td><td style="padding:4px 8px;">Einlesen und erneutes Speichern einer Datei ohne Datenverlust — Stammbaum PWA ist byte-identisch stabil</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Passthrough</strong></td><td style="padding:4px 8px;">Unbekannte GEDCOM-Tags werden unverändert durchgereicht — kein Datenverlust beim Öffnen fremder Dateien</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>PWA</strong></td><td style="padding:4px 8px;">Progressive Web App — eine Web-App, die wie eine native App installiert und offline genutzt werden kann</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Sanduhr-Baum</strong></td><td style="padding:4px 8px;">Baumansicht: Person in der Mitte, Vorfahren oben, Nachkommen unten</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Swim-Lane</strong></td><td style="padding:4px 8px;">Horizontales Zeitleisten-Layout mit mehreren parallelen Spuren</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>IDB / IndexedDB</strong></td><td style="padding:4px 8px;">Lokaler Browser-Speicher — hier cacht die App Stammbaumdaten und Fotos für den Offline-Betrieb</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>GEDCOM 5.5.1</strong></td><td style="padding:4px 8px;">Aktueller Genealogie-Dateistandard (1999/2019) — unterstützt von fast allen Programmen</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Gramps XML</strong></td><td style="padding:4px 8px;">Dateiformat des Open-Source-Programms Gramps (.gramps) — von Stammbaum PWA nativ unterstützt</td></tr>
+  </tbody>
+</table>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 21: ANHANG A — GEDCOM -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap21">Anhang A: GEDCOM-Dateiformat</h1>
 
 <p>Dieser Anhang richtet sich an Anwender, die verstehen möchten, wie Stammbaum PWA GEDCOM-Dateien liest und schreibt — z. B. beim Austausch mit anderen Programmen oder beim Prüfen von Importergebnissen.</p>
 
@@ -2392,9 +2700,9 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 18: ANHANG B — GRAMPS -->
+<!-- KAPITEL 22: ANHANG B — GRAMPS -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap18">Anhang B: GRAMPS-Dateiformat</h1>
+<h1 class="chapter" id="kap22">Anhang B: GRAMPS-Dateiformat</h1>
 
 <p><strong>Gramps</strong> ist ein kostenloses Open-Source-Genealogie-Programm für Windows, Mac und Linux. Es speichert Daten im eigenen <em>.gramps</em>-Format — einer mit gzip komprimierten XML-Datei. Stammbaum PWA kann diese Dateien direkt öffnen und nach der Bearbeitung wieder im selben Format speichern.</p>
 
