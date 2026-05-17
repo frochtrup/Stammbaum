@@ -439,11 +439,12 @@ body.desc-tree-mode.fc-mode #treeKeyLegend      { display: none !important; }
 }
 #map-person-btn {
   display: block; width: 100%;
-  background: var(--surface3); color: var(--text);
-  border: 1px solid var(--border); border-radius: 5px;
-  padding: 5px 10px; font-size: 0.85rem; text-align: left; cursor: pointer;
+  background: transparent; color: var(--text);
+  border: none; border-radius: 0;
+  padding: 7px 12px; font-size: 0.88rem; text-align: left; cursor: pointer;
 }
-#map-person-btn:active { background: var(--gold-dim); }
+#map-person-btn:hover { background: var(--gold-glow); }
+#map-person-btn:active { background: var(--gold-dim); color: var(--bg); }
 
 /* Migrations-Legende */
 .map-migr-legend {
