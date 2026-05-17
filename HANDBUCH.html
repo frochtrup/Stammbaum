@@ -657,6 +657,14 @@
       </ul>
     </li>
     <li><a href="#kap22">Anhang B: GRAMPS-Dateiformat</a>
+    <li><a href="#kap23">Anhang C: Symbol-Referenz</a>
+      <ul>
+        <li><a href="#kap23-nav">Navigation &amp; Bottom-Tabs</a></li>
+        <li><a href="#kap23-topbar">Topbar-Aktionen</a></li>
+        <li><a href="#kap23-forms">Formulare &amp; Listen</a></li>
+        <li><a href="#kap23-keys">Tastaturkürzel</a></li>
+      </ul>
+    </li>
       <ul class="sub">
         <li>Import und Export</li>
         <li>Orte, Tags, Attribute</li>
@@ -914,6 +922,7 @@ Das Gramps-Format bewahrt alle Gramps-spezifischen Daten, die die App nicht dire
 Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen Sie über das Menü oder in der Detailansicht einer Person fest — dort finden Sie zwei <span class="button-label">⌂</span>-Symbole in der Topbar: das erste navigiert zum aktuellen Probanden, das zweite (mit Rahmen, direkt neben Bearbeiten) setzt diese Person als Probanden.
 </div>
 
+<p>Eine vollständige Übersicht aller Symbole, Schaltflächen und Tastaturkürzel finden Sie in <a href="#kap23">Anhang C: Symbol-Referenz</a>.</p>
 
 <!-- ====================================================== -->
 <!-- KAPITEL 4: PERSONEN -->
@@ -1742,7 +1751,7 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
         <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;color:var(--text-main);">5</span>
         <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;color:var(--text-main);">6</span>
       </div>
-      <div class="tree-mockup" style="min-height:230px;">
+      <div class="tree-mockup" style="min-height:290px;">
         <div style="color:var(--text-dim);font-size:7px;margin-bottom:4px;">↑ Vorfahren</div>
         <div class="tree-gen">
           <div class="tree-card" style="font-size:6px;opacity:0.4;"><div class="tc-name">?</div></div>
@@ -1751,8 +1760,14 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
           <div class="tree-card" style="font-size:6px;opacity:0.4;"><div class="tc-name">?</div></div>
         </div>
         <div class="tree-gen">
-          <div class="tree-card" style="font-size:6.5px;opacity:0.5;"><div class="tc-name">?</div></div>
-          <div class="tree-card" style="font-size:6.5px;opacity:0.5;"><div class="tc-name">?</div></div>
+          <div class="tree-card" style="font-size:6.5px;opacity:0.6;">
+            <div class="tc-name">Karl Bauer</div>
+            <div class="tc-dates" style="font-size:6px;">*1825 †1898</div>
+          </div>
+          <div class="tree-card female" style="font-size:6.5px;opacity:0.6;">
+            <div class="tc-name">Maria Weber</div>
+            <div class="tc-dates" style="font-size:6px;">*1830 †1895</div>
+          </div>
         </div>
         <div class="tree-gen" style="margin:6px 0;">
           <div class="tree-card proband" style="font-size:7.5px; padding:6px 9px;">
@@ -1766,9 +1781,17 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
           </div>
         </div>
         <div class="tree-gen">
+          <div class="tree-card female" style="font-size:7px; padding:5px 8px;">
+            <div class="tc-name">Anna Müller</div>
+            <div class="tc-dates" style="font-size:6px;">*1878 †1952</div>
+          </div>
           <div class="tree-card male" style="font-size:7px; padding:5px 8px;">
             <div class="tc-name">Max Müller</div>
-            <div class="tc-dates" style="font-size:6px;">*1891 †1950</div>
+            <div class="tc-dates" style="font-size:6px;">*1881 †1944</div>
+          </div>
+          <div class="tree-card male" style="font-size:7px; padding:5px 8px;">
+            <div class="tc-name">Josef Müller</div>
+            <div class="tc-dates" style="font-size:6px;">*1884 †1960</div>
           </div>
         </div>
         <div style="color:var(--text-dim);font-size:7px;margin-top:4px;">↓ Nachkommen</div>
@@ -1823,13 +1846,42 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
         <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">6</span>
       </div>
       <div class="fan-mockup">
-        <!-- Stilisierter Fächer -->
-        <div class="fan-arc" style="width:200px;height:100px;"></div>
-        <div class="fan-arc" style="width:160px;height:80px;bottom:28px;"></div>
-        <div class="fan-arc" style="width:120px;height:60px;bottom:30px;"></div>
-        <div class="fan-arc" style="width:80px;height:40px;bottom:30px;"></div>
-        <div class="fan-center">Elisabeth<br>Bauer</div>
-        <div style="position:absolute;bottom:8px;left:0;right:0;font-size:7px;color:var(--text-dim);">Fächer-Diagramm (Vorfahren)</div>
+        <svg viewBox="0 0 200 112" width="200" height="112" style="display:block;margin:0 auto;">
+          <defs>
+            <clipPath id="fc-clip"><rect x="0" y="2" width="200" height="110"/></clipPath>
+          </defs>
+          <!-- Gen 4: outermost ring -->
+          <circle cx="100" cy="112" r="109" fill="#c8d8e8" clip-path="url(#fc-clip)"/>
+          <!-- Gen 3 -->
+          <circle cx="100" cy="112" r="79" fill="#8aaac8" clip-path="url(#fc-clip)"/>
+          <!-- Gen 2 -->
+          <circle cx="100" cy="112" r="51" fill="#5580a8" clip-path="url(#fc-clip)"/>
+          <!-- Gen 1: proband -->
+          <circle cx="100" cy="112" r="23" fill="#c8a832" clip-path="url(#fc-clip)"/>
+          <!-- dividing lines -->
+          <line x1="100" y1="112" x2="100" y2="2"   stroke="white" stroke-width="1"/>
+          <line x1="100" y1="112" x2="0"   y2="112" stroke="white" stroke-width="1"/>
+          <line x1="100" y1="112" x2="200" y2="112" stroke="white" stroke-width="1"/>
+          <line x1="100" y1="112" x2="16"  y2="34"  stroke="white" stroke-width="0.8"/>
+          <line x1="100" y1="112" x2="184" y2="34"  stroke="white" stroke-width="0.8"/>
+          <line x1="100" y1="112" x2="5"   y2="70"  stroke="white" stroke-width="0.6"/>
+          <line x1="100" y1="112" x2="195" y2="70"  stroke="white" stroke-width="0.6"/>
+          <line x1="100" y1="112" x2="44"  y2="10"  stroke="white" stroke-width="0.6"/>
+          <line x1="100" y1="112" x2="156" y2="10"  stroke="white" stroke-width="0.6"/>
+          <!-- proband label -->
+          <text x="100" y="100" text-anchor="middle" font-size="6" fill="white" font-weight="bold">Elisabeth</text>
+          <text x="100" y="107" text-anchor="middle" font-size="5.5" fill="white">Bauer</text>
+          <!-- Gen 2 labels -->
+          <text x="66"  y="78"  text-anchor="middle" font-size="5.5" fill="white">K. Bauer</text>
+          <text x="134" y="78"  text-anchor="middle" font-size="5.5" fill="white">M. Weber</text>
+          <!-- Gen 3 labels -->
+          <text x="36"  y="62"  text-anchor="middle" font-size="5" fill="white">J. Bauer</text>
+          <text x="164" y="62"  text-anchor="middle" font-size="5" fill="white">L. Huber</text>
+          <text x="88"  y="38"  text-anchor="middle" font-size="5" fill="white">H. Bauer</text>
+          <text x="112" y="38"  text-anchor="middle" font-size="5" fill="white">?</text>
+          <!-- caption -->
+          <text x="100" y="12" text-anchor="middle" font-size="5" fill="#888">Fächer-Diagramm (Vorfahren)</text>
+        </svg>
       </div>
       <div class="app-nav">
         <div class="nav-item active"><span class="nav-icon">⧖</span>Baum</div>
@@ -2792,6 +2844,69 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
   <li>Place Objects können über den Orts-Picker ausgewählt, aber nicht neu angelegt werden.</li>
   <li>Gramps-spezifische Beziehungstypen (über GEDCOM ASSO hinaus) werden als Passthrough erhalten, aber nicht angezeigt.</li>
 </ul>
+
+<!-- ====================================================== -->
+<!-- ANHANG C: SYMBOL-REFERENZ -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap23">Anhang C: Symbol-Referenz</h1>
+
+<p>Diese Übersicht listet alle häufig verwendeten Symbole, Schaltflächen und Tastaturkürzel der App. Nutzen Sie sie als Nachschlagewerk, wenn Sie ein Symbol nicht sofort erkennen.</p>
+
+<h2 id="kap23-nav">Navigation &amp; Bottom-Tabs</h2>
+
+<table>
+  <tr><th>Symbol</th><th>Name</th><th>Funktion</th></tr>
+  <tr><td style="font-size:1.3em;text-align:center;">⧖</td><td><strong>Baum</strong></td><td>Sanduhr-Baum, Fächer-Diagramm, Nachkommen-Baum, Zeitleiste</td></tr>
+  <tr><td style="font-size:1.3em;text-align:center;">👤</td><td><strong>Personen</strong></td><td>Personenliste mit Suche, Filter und Schnellerfassung</td></tr>
+  <tr><td style="font-size:1.3em;text-align:center;">⚭</td><td><strong>Familien</strong></td><td>Liste aller Ehepaare und Familien</td></tr>
+  <tr><td style="font-size:1.3em;text-align:center;">📖</td><td><strong>Quellen</strong></td><td>Kirchenbücher, Urkunden, Archive und Online-Datenbanken</td></tr>
+  <tr><td style="font-size:1.3em;text-align:center;">📍</td><td><strong>Orte</strong></td><td>Ortsliste, Höfe/Adressen und interaktive Karte</td></tr>
+  <tr><td style="font-size:1.3em;text-align:center;">☑</td><td><strong>Aufgaben</strong></td><td>Forschungsaufgaben, Datenprüfung, Forschungsprotokoll</td></tr>
+</table>
+
+<h2 id="kap23-topbar">Topbar-Aktionen</h2>
+
+<table>
+  <tr><th>Symbol</th><th>Funktion</th><th>Erscheint wo</th></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">☰</td><td>Menü öffnen (Datei, Einstellungen, Export …)</td><td>Überall oben rechts</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">✎</td><td>Person / Familie / Quelle bearbeiten</td><td>Detailansichten</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">⌂</td><td>Zum Probanden navigieren (plain) / Person als Probanden setzen (mit Rahmen)</td><td>Detailansicht Person</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">⤢</td><td>Vollbild ein-/ausschalten</td><td>Alle vier Diagramme</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">◑</td><td>Zum Fächer-Diagramm wechseln</td><td>Baum-Topbar</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">⇩</td><td>Zum Nachkommen-Baum wechseln</td><td>Baum-Topbar</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">⟷</td><td>Zur Zeitleiste wechseln</td><td>Detailansicht, Baum-Topbar</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">←</td><td>Zurück zur vorherigen Ansicht</td><td>Alle Detailansichten</td></tr>
+</table>
+
+<h2 id="kap23-forms">Formulare &amp; Listen</h2>
+
+<table>
+  <tr><th>Symbol</th><th>Funktion</th><th>Kontext</th></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">💾</td><td>Speichern (Formular abschließen)</td><td>Alle Formulare</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">+</td><td>Neues Objekt anlegen (Person, Ereignis, Quelle …)</td><td>Listen und Detailansichten</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">✕</td><td>Abbrechen / Formular schließen ohne Speichern</td><td>Alle Formulare</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">✓</td><td>Bestätigen / Aufgabe als erledigt markieren</td><td>Aufgabenliste, Bestätigungs-Dialoge</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">📷</td><td>Foto aufnehmen (Kamera) oder aus Mediathek wählen</td><td>Ereignis-Formular (mobil)</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">▼</td><td>Aufklappen / weitere Kinder anzeigen</td><td>Nachkommen-Baum</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">½</td><td>Kind aus einer anderen Ehe (Halbgeschwister)</td><td>Nachkommen-Baum</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">📍</td><td>GPS-Koordinaten vorhanden — Ort auf Karte zeigbar</td><td>Ortsliste, Ereignis-Detail</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">🏛</td><td>Quelle ist mit einem Archiv verknüpft</td><td>Quellenliste, Quellen-Detail</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">~</td><td>Ähnlichkeitssuche (Soundex) ein-/ausschalten</td><td>Suchleiste</td></tr>
+</table>
+
+<h2 id="kap23-keys">Tastaturkürzel (Mac/Desktop)</h2>
+
+<table>
+  <tr><th>Kürzel</th><th>Funktion</th></tr>
+  <tr><td><kbd>Cmd+Z</kbd> / <kbd>Ctrl+Z</kbd></td><td>Letzte Änderung rückgängig machen (bis 30 Schritte)</td></tr>
+  <tr><td><kbd>Cmd+Shift+Z</kbd> / <kbd>Ctrl+Y</kbd></td><td>Rückgängig wiederherstellen (Redo)</td></tr>
+  <tr><td><kbd>Cmd+S</kbd> / <kbd>Ctrl+S</kbd></td><td>GEDCOM-Datei speichern</td></tr>
+  <tr><td><kbd>Cmd+F</kbd> / <kbd>Ctrl+F</kbd></td><td>Suche öffnen</td></tr>
+  <tr><td><kbd>Esc</kbd></td><td>Formular oder Modal schließen</td></tr>
+  <tr><td><kbd>↑ ↓ ← →</kbd></td><td>Im Baum navigieren (Tastaturmodus)</td></tr>
+  <tr><td><kbd>Enter</kbd></td><td>Detailansicht der markierten Person öffnen</td></tr>
+  <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Baum vergrößern / verkleinern</td></tr>
+</table>
 
 <hr class="section-divider">
 
