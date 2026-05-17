@@ -76,6 +76,7 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 |---|---|---|---|
 | QUICK-ADD | **Schnellerfassung neue Person** ✓ | `modalAdd` → „⚡ Neue Person (Schnell)": Minimalformular (Vorname, Nachname, Ereignis-Typ, Datum, Ort, Quelle-Picker); Masseneingabe-Modus (Modal bleibt offen, Quelle+Seite bleiben vorbelegt); „Fertig"-Button öffnet letzte angelegte Person (sw v577) | S ✓ |
 | CAM-LINK | **Foto direkt an Ereignis** ✓ | Im Ereignis-Formular: „📷 Foto aufnehmen"-Button oberhalb Medien-Liste; `<input capture="environment">` direkt sichtbar; Foto → IDB → `ev.media[]` (sw v578) | S ✓ |
+| QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich der gewählten Quelle an: Quellentyp (Taufbuch, Sterbematrikel, Volkszählung …) bestimmt welche Felder erscheinen und welche vorbelegt sind. Beispiel Taufbuch: Geburt + Taufe als Chips vorausgewählt, separates Datum je Ereignis, Orts-Picker doppelt (Geburtsort ≠ Taufort optional). Beispiel Volkszählung: Wohnort + Beruf + evtl. Alter statt Geburtsdatum. Konfiguration als `quickAddTemplates[]` JSON (analog SOUR-TMPL), verknüpft mit Quell-Typ aus `sourceTemplates`. Vorauswahl: letzte genutzte Vorlage bleibt aktiv. | M |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform beim Teilen; Opt-in im Einstellungs-Modal | M |
 
 ---
