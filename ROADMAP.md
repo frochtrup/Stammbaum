@@ -142,6 +142,8 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 
 Handbuch-Pflege: kein Funktionsrelease nötig, aber separater Aufwand.
 
+**Konvention:** Bei jedem Handbuch-Update wird der aktuelle sw-Stand im `HANDBUCH.html`-Deckblatt vermerkt (z. B. `Stand: sw v601`) und parallel in dieser Sektion notiert — so ist jederzeit nachvollziehbar, welche Features bereits dokumentiert sind.
+
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | DOC-SEARCH-ADV | **Handbuch Kap. 11: Erweiterte Suche** | Abschnitt „Fehlende-Felder-Filter" ergänzen: Die drei Checkboxen „Kein Sterbedatum", „Keine Quellen", „Keine Eltern" im advFilterPanel (☰ Suche → Erweitert) erklären; kombinierbar mit Jahresfilter, Geburtsort, Geschlecht, Volltext. | XS |
