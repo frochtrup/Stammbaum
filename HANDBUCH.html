@@ -2101,16 +2101,62 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
 
 <h2>Daten prüfen und Aufgaben automatisch erstellen</h2>
 
-<p>Die App kann Ihren gesamten Stammbaum automatisch auf häufige Fehler und Ungereimtheiten durchsuchen. Tippen Sie dazu im Aufgaben-Tab auf <span class="button-label">✓ Daten prüfen</span>.</p>
+<p>Die App kann Ihren gesamten Stammbaum automatisch auf Fehler, Ungereimtheiten und Lücken durchsuchen. Tippen Sie dazu im Aufgaben-Tab auf <span class="button-label">✓ Daten prüfen</span>. Die Prüfung läuft über alle Personen und Familien und liefert einen Befundbericht mit drei Schweregraden:</p>
 
-<p>Gefundene Probleme werden als Aufgaben-Vorschläge angezeigt — zum Beispiel:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li>„Sterbedatum liegt vor Geburtsdatum"</li>
-  <li>„Kind wurde geboren, als der Vater bereits 80 Jahre alt war"</li>
-  <li>„Keine Quellen vorhanden"</li>
+  <li><strong>✗ Fehler</strong> — logisch unmöglich (z. B. Sterbedatum vor Geburtsdatum)</li>
+  <li><strong>⚠ Warnung</strong> — unwahrscheinlich, aber nicht ausgeschlossen</li>
+  <li><strong>ℹ Hinweis</strong> — fehlende Angaben, die die Forschung verbessern würden</li>
 </ul>
 
-<p>Mit dem Button <span class="button-label">⚙ Konfigurieren</span> können Sie einstellen, welche Prüfregeln aktiv sind und welche ignoriert werden sollen — zum Beispiel wenn Sie bewusst unvollständige Daten haben.</p>
+<p>Die Validierungsengine prüft 21 Regeln in vier Gruppen:</p>
+
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
+  <thead>
+    <tr style="background:var(--app-card);text-align:left;">
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Regel</th>
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Schwere</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">LOGISCHE FEHLER</td></tr>
+    <tr><td style="padding:3px 8px;">Sterbejahr vor Geburtsjahr</td><td style="padding:3px 8px;">✗ Fehler</td></tr>
+    <tr><td style="padding:3px 8px;">Ereignis nach Sterbedatum</td><td style="padding:3px 8px;">✗ Fehler</td></tr>
+    <tr><td style="padding:3px 8px;">Heirat vor eigener Geburt</td><td style="padding:3px 8px;">✗ Fehler</td></tr>
+    <tr><td style="padding:3px 8px;">Heirat nach Tod eines Gatten</td><td style="padding:3px 8px;">✗ Fehler</td></tr>
+    <tr><td style="padding:3px 8px;">Kind nicht jünger als Elternteil</td><td style="padding:3px 8px;">✗ Fehler</td></tr>
+    <tr><td style="padding:3px 8px;">Kind &gt;1 Jahr nach Tod des Vaters</td><td style="padding:3px 8px;">✗ Fehler</td></tr>
+    <tr><td style="padding:3px 8px;">Mutter zu jung bei Geburt (Standard: &lt;14 J.)</td><td style="padding:3px 8px;">✗ Fehler</td></tr>
+    <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">PLAUSIBILITÄT</td></tr>
+    <tr><td style="padding:3px 8px;">Unrealistisches Alter (Standard: &gt;110 J.)</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
+    <tr><td style="padding:3px 8px;">Mutter zu alt bei Geburt (Standard: &gt;55 J.)</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
+    <tr><td style="padding:3px 8px;">Vater zu alt bei Geburt (Standard: &gt;80 J.)</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
+    <tr><td style="padding:3px 8px;">Vater zu jung bei Geburt (Standard: &lt;14 J.)</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
+    <tr><td style="padding:3px 8px;">Heiratsalter zu jung (Standard: &lt;14 J.)</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
+    <tr><td style="padding:3px 8px;">Nachname fehlt</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
+    <tr><td style="padding:3px 8px;">Geschlecht unbekannt</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
+    <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">VOLLSTÄNDIGKEIT</td></tr>
+    <tr><td style="padding:3px 8px;">Geburtsdatum/-taufe fehlt</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Geburtsort fehlt (wenn Datum bekannt)</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Sterbeort fehlt (wenn Datum bekannt)</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Vorname fehlt</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Keine Quellenangabe vorhanden</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Heiratsdatum fehlt</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">QUELLEN</td></tr>
+    <tr><td style="padding:3px 8px;">Geburt nach Standesamt-Ära, keine Quelle</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+  </tbody>
+</table>
+
+<h2>Prüfregeln konfigurieren</h2>
+
+<p>Mit dem Button <span class="button-label">⚙ Konfigurieren</span> öffnen Sie die Regelkonfiguration. Dort können Sie:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Einzelne Regeln aktivieren oder deaktivieren</li>
+  <li>Schwellenwerte anpassen (z. B. Maximalalter, Mindestalter bei Heirat)</li>
+  <li>Hinweis-Regeln ausblenden, wenn Sie bewusst unvollständige Daten erfassen</li>
+</ul>
+
+<p>Die Konfiguration wird in Ihrer GEDCOM-Datei gespeichert und bleibt beim nächsten Öffnen erhalten.</p>
 
 <p>Jedes gefundene Problem lässt sich mit einem Tipp auf <span class="button-label">→ Als Aufgabe übernehmen</span> direkt in Ihre persönliche Aufgabenliste überführen.</p>
 
@@ -2127,13 +2173,34 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
   <li><div class="step-text">Öffnen Sie die Detailansicht einer Person oder Familie.</div></li>
   <li><div class="step-text">Scrollen Sie zum Abschnitt „Forschungsprotokoll".</div></li>
   <li><div class="step-text">Tippen Sie auf <span class="button-label">+ Protokoll</span>.</div></li>
-  <li><div class="step-text">Tragen Sie das Datum, das Archiv (wählbar aus Ihrer Archivliste), die Suchanfrage und das Ergebnis ein.</div></li>
-  <li><div class="step-text">Wählen Sie ein Ergebnis: <em>Gefunden</em>, <em>Teilweise</em>, <em>Nicht gefunden</em> oder <em>Ausstehend</em>.</div></li>
-  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+  <li><div class="step-text">Füllen Sie die Felder aus:</div></li>
 </ol>
 
-<h2>Protokoll anzeigen</h2>
-<p>Im Aufgaben-Tab können Sie mit dem Umschalter oben zwischen <strong>Aufgaben</strong> und <strong>Protokoll</strong> wechseln. Die Protokoll-Ansicht zeigt alle Einträge über alle Personen und Familien hinweg — filterbar und als Markdown exportierbar (<span class="button-label">↓ MD</span>).</p>
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.5em 0 1em 0;">
+  <thead>
+    <tr style="background:var(--app-card);text-align:left;">
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Feld</th>
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Bedeutung</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:3px 8px;"><strong>Datum</strong></td><td style="padding:3px 8px;">Wann wurde gesucht?</td></tr>
+    <tr><td style="padding:3px 8px;"><strong>Archiv</strong></td><td style="padding:3px 8px;">Picker aus Ihrer Archivliste (REPO) — z. B. Diözesanarchiv München</td></tr>
+    <tr><td style="padding:3px 8px;"><strong>Quelle</strong></td><td style="padding:3px 8px;">Picker aus Ihrer Quellenliste — verknüpft den Eintrag mit einem Quellen-Datensatz</td></tr>
+    <tr><td style="padding:3px 8px;"><strong>Suchanfrage</strong></td><td style="padding:3px 8px;">Was wurde gesucht? (z. B. „Taufeintrag Johann Decker 1823")</td></tr>
+    <tr><td style="padding:3px 8px;"><strong>Ergebnis</strong></td><td style="padding:3px 8px;">Gefunden / Teilweise / Nicht gefunden / Ausstehend</td></tr>
+    <tr><td style="padding:3px 8px;"><strong>Notiz</strong></td><td style="padding:3px 8px;">Freitext — z. B. Fundstelle, Signatur, nächste Schritte</td></tr>
+  </tbody>
+</table>
+
+<p>Tippen Sie abschließend auf <span class="button-label">Speichern</span>.</p>
+
+<div class="tip">
+Aus einer Forschungsaufgabe heraus können Sie direkt einen Protokolleintrag anlegen: Tippen Sie auf den <span class="button-label">→</span>-Button neben der Aufgabe — das Formular öffnet sich vorausgefüllt mit dem Aufgabentext als Suchanfrage.
+</div>
+
+<h2>Protokoll anzeigen und exportieren</h2>
+<p>Im Aufgaben-Tab wechseln Sie mit dem Umschalter oben zwischen <strong>Aufgaben</strong> und <strong>Protokoll</strong>. Die Protokoll-Ansicht zeigt alle Einträge über alle Personen und Familien hinweg — sortiert nach Datum, mit Personen- und Familienname als Sprungmarke.</p>
 
 <p>Einträge werden mit einem farbigen Badge markiert:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
@@ -2142,6 +2209,8 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
   <li><strong style="color:#f44336;">Nicht gefunden</strong> — gezielt gesucht, ohne Ergebnis</li>
   <li><strong style="color:#888;">Ausstehend</strong> — geplant, noch nicht durchgeführt</li>
 </ul>
+
+<p>Mit <span class="button-label">↓ MD</span> exportieren Sie das gefilterte Protokoll als Markdown-Datei — gegliedert nach Personen und Familien, mit allen Feldern. Die Datei eignet sich zum Ausdrucken oder als Anhang zu einer Forschungsanfrage.</p>
 
 <div class="tip">
 Tragen Sie auch negative Ergebnisse ein. „Kirchenbuch München 1855 durchsucht — kein Treffer" ist eine wertvolle Information: Sie müssen diese Suche nicht nochmals durchführen.
@@ -2171,7 +2240,13 @@ Tragen Sie auch negative Ergebnisse ein. „Kirchenbuch München 1855 durchsucht
 <h1 class="chapter" id="kap16">16. Häufige Fragen und Tipps</h1>
 
 <h2>Ich habe aus Versehen etwas gelöscht — was nun?</h2>
-<p>Wenn Sie noch nicht gespeichert haben, tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">↩ Änderungen verwerfen</span>. Damit kehren Sie zum letzten gespeicherten Stand zurück. Falls Sie auf dem Computer mit Chrome arbeiten, können Sie auch <kbd>Cmd</kbd> + <kbd>Z</kbd> drücken.</p>
+<p>Auf dem Computer (Chrome/Edge/Firefox) können Sie einzelne Schritte rückgängig machen:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><kbd>Cmd</kbd> + <kbd>Z</kbd> (Mac) bzw. <kbd>Strg</kbd> + <kbd>Z</kbd> (Windows) — letzten Schritt rückgängig machen</li>
+  <li><kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> (Mac) bzw. <kbd>Strg</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> (Windows) — Schritt wiederherstellen</li>
+</ul>
+<p>Die App speichert bis zu 30 Schritte im Verlauf. Gespeicherte, gelöschte und hinzugefügte Personen, Familien und Ereignisse lassen sich so schrittweise rückgängig machen. Der Verlauf wird beim Laden einer neuen Datei zurückgesetzt.</p>
+<p>Alternativ: Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">↩ Änderungen verwerfen</span>, um zum letzten gespeicherten Stand zurückzukehren. Das setzt alle ungespeicherten Änderungen auf einmal zurück.</p>
 
 <h2>Die App zeigt nach dem Öffnen nichts an</h2>
 <p>Beim allerersten Öffnen ist noch kein Stammbaum geladen. Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">📂 Öffnen… (lokal)</span>, um eine GEDCOM-Datei zu öffnen — oder auf <span class="button-label">🗂 Demo-Daten öffnen</span>, um die Beispieldaten zu laden.</p>

@@ -13,7 +13,7 @@ Zielgruppe: Ambitionierte Hobby-Genealogen, die **mobil** (Archiv, Feldarbeit: s
 Drei Dimensionen leiten die Priorisierung:
 - **Mobil** — Schnellerfassung, Offline-Robustheit, Kamera-Integration
 - **Forschungsqualität** — Protokoll, Quellenvorlagen, Validierung, Duplikate
-- **Ausgaben** — Karten, Timeline, Story, Druckausgaben
+- **Ausgaben** — Karten, Timeline, Story, Diagramme, Druckausgaben
 
 ---
 
@@ -62,9 +62,9 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 |---|---|---|---|
 | SEC-1 | XSS in onedrive.js | ✓ URL-Sanitizer für href in ui-media.js (sw v576) | S ✓ |
 | SEC-2 | MIME-Validierung Foto-Upload | ✓ file.type-Check + Fehler-Toast in amCamChange (sw v576) | S ✓ |
-| ERR-1 | try-catch in async-Funktionen | ✓ bereits vollständig — alle Funktionen haben try/catch oder .catch()-Fallback | — ✓ |
-| PERF-1 | Debouncing Suche/Filter | ✓ bereits erledigt — _applyPersonFilterDebounced 200ms in ui-forms.js | — ✓ |
-| PERF-2 | Soundex-Cache | ✓ bereits erledigt — p._sdxSurname/_sdxGiven beim Index-Aufbau vorberechnet | — ✓ |
+| ERR-1 | try-catch in async-Funktionen | ✓ bereits vollständig | — ✓ |
+| PERF-1 | Debouncing Suche/Filter | ✓ bereits erledigt | — ✓ |
+| PERF-2 | Soundex-Cache | ✓ bereits erledigt | — ✓ |
 
 ---
 
@@ -74,9 +74,9 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| QUICK-ADD | **Schnellerfassung neue Person** ✓ | `modalAdd` → „⚡ Neue Person (Schnell)": Minimalformular (Vorname, Nachname, Ereignis-Typ, Datum, Ort, Quelle-Picker); Masseneingabe-Modus (Modal bleibt offen, Quelle+Seite bleiben vorbelegt); „Fertig"-Button öffnet letzte angelegte Person (sw v577) | S ✓ |
-| CAM-LINK | **Foto direkt an Ereignis** ✓ | Im Ereignis-Formular: „📷 Foto aufnehmen"-Button oberhalb Medien-Liste; `<input capture="environment">` direkt sichtbar; Foto → IDB → `ev.media[]` (sw v578) | S ✓ |
-| QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich der gewählten Quelle an: Quellentyp (Taufbuch, Sterbematrikel, Volkszählung …) bestimmt welche Felder erscheinen und welche vorbelegt sind. Beispiel Taufbuch: Geburt + Taufe als Chips vorausgewählt, separates Datum je Ereignis, Orts-Picker doppelt (Geburtsort ≠ Taufort optional). Beispiel Volkszählung: Wohnort + Beruf + evtl. Alter statt Geburtsdatum. Konfiguration als `quickAddTemplates[]` JSON (analog SOUR-TMPL), verknüpft mit Quell-Typ aus `sourceTemplates`. Vorauswahl: letzte genutzte Vorlage bleibt aktiv. | M |
+| QUICK-ADD | **Schnellerfassung neue Person** ✓ | `modalAdd` → „⚡ Neue Person (Schnell)": Minimalformular; Masseneingabe-Modus; „Fertig"-Button öffnet letzte Person (sw v577) | S ✓ |
+| CAM-LINK | **Foto direkt an Ereignis** ✓ | `<input capture="environment">` im Ereignis-Formular; Foto → IDB → `ev.media[]` (sw v578) | S ✓ |
+| QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich der gewählten Quelle an: Quellentyp bestimmt welche Felder erscheinen. Beispiel Taufbuch: Geburt + Taufe als Chips, separates Datum je Ereignis. Konfiguration als `quickAddTemplates[]` JSON, analog SOUR-TMPL. | M |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform beim Teilen; Opt-in im Einstellungs-Modal | M |
 
 ---
@@ -87,9 +87,10 @@ Der Unterschied zwischen Hobbysammler und ernsthaftem Forscher: Protokoll, Quell
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SOUR-TMPL | **Quellen-Vorlagen** ✓ | `_SOUR_TEMPLATES` (10 Einträge: KB Taufen/Heiraten/Beerdigungen, StA Geburt/Heirat/Sterbefall, Volkszählung, Grabstein, Totenzettel, Militärakte); Select-Dropdown im Quellen-Formular (nur bei Neuanlage); befüllt ABBR, TITL, AUTH, PUBL, MEDI; immer überschreiben; öffnet optional fields + CALN-Gruppe automatisch; Cursor vor `…` → Nutzer tippt Ort/Jahr direkt ein (sw v586) | S ✓ |
-| FORSCH-LOG | **Forschungsprotokoll** ✓ | `1 _RLOG` unter INDI/FAM; Felder: DATE · REPO-Picker · SOUR-Picker · `_QUERY` · `_RESULT` (found/partial/not-found/pending) · NOTE; Abschnitt in Personen-/Familien-Detail; globaler Log-Tab (Modus-Umschalter „Aufgaben/Protokoll"); Filter + MD-Export; „→"-Button auf Task-Rows öffnet Log-Formular vorausgefüllt (sw v582–v585) | M ✓ |
-| VAL-EXTEND | **Validierung ausbauen** ✓ | +10 neue Regeln (P1–P3): EVENT_AFTER_DEATH, CHILD_BEFORE_PARENT, MARR_AFTER_DEATH, CHILD_AFTER_FATHER_DEATH, FATHER_TOO_YOUNG, MARR_TOO_YOUNG, NO_SOURCES_AT_ALL, MISSING_GIVEN, MISSING_DEATHPLACE, MISSING_MARRDATE; Config-UI automatisch (sw v590) | M ✓ |
+| SOUR-TMPL | **Quellen-Vorlagen** ✓ | 10 Vorlagen; Select-Dropdown bei Neuanlage; befüllt ABBR/TITL/AUTH/PUBL/MEDI (sw v586) | S ✓ |
+| FORSCH-LOG | **Forschungsprotokoll** ✓ | `1 _RLOG`; Felder DATE/REPO/SOUR/QUERY/RESULT/NOTE; globaler Tab; Filter + MD-Export (sw v582–v585) | M ✓ |
+| VAL-EXTEND | **Validierung ausbauen** ✓ | 21 Regeln in 4 Gruppen; konfigurierbarer `VAL_CONFIG`; Config-UI (sw v590) | M ✓ |
+| TREE-HEAT | **Vollständigkeits-Heatmap im Baum** | Personen ohne Geburtsdatum / ohne Quelle / ohne Foto erhalten im Sanduhr-Baum und Nachkommen-Baum eine schwache Umrandung (CSS `data-completeness`-Attribut + 3 Stufen). Direkte visuelle Forschungssteuerung ohne separaten View. | S |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional | M |
 
 ---
@@ -100,22 +101,28 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig | XS |
+| CHART-EXPORT | **Diagramm-Export als PNG** | SVG-basierte Diagramme (Fächer, Nachkommen-Baum) via Canvas-Konvertierung als PNG herunterladen; Download-Button in Topbar; ein Button pro Diagramm | S |
+| STATS-2 | **Statistik-Dashboard ausbauen** | Zu `ui-views-stats.js` ergänzen: Lebensspannen-Statistik (Ø, Min, Max, Histogramm); Heiratsalter-Verteilung; Geburten/Sterbefälle/Heiraten getrennt pro Jahrzehnt; Top-Sterbeorte; Kinderzahl-Verteilung pro Familie | M |
 | SEARCH-ADV | **Erweiterte Suche** | Kombinationsfilter: Geburtsort, Geburtsjahr-Bereich, Geburtsname, fehlende Felder (kein Tod / keine Quelle / kein Elternteil). Ergebnis als Liste mit Direktsprung. Basis für systematische Lückenanalyse. | M |
-| DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread bleibt reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |
-| REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Anzeige: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erreichbar aus Personen-Detail. | M |
-| PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Kein Layout-Monster — die 2 für den deutschen Raum relevantesten Formate. | M+M |
+| REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Text: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erweiterung: visueller Pfad als klickbare Karten-Kette im Modal. Erreichbar aus Personen-Detail. | M |
+| PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
+| DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |
 
 ---
 
 ## P4 — Visuelle Ausgaben *(Wow-Faktor)*
 
-Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Fundament bereits abgeschlossen (Timeline ✓, Story ✓, Karte ✓).
+Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Fundament bereits abgeschlossen (Timeline ✓, Story ✓, Karte ✓, Fächer ✓, Nachkommen-Baum ✓).
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Anzahl Kinder); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
-| MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key, keine neue Bibliothek | S |
-| MAP-HIST-B | **Echter Historikkartenhintergrund** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als erster Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). Für Deutschland kein freier Flächendienst verfügbar. | M |
+| MAP-ANIM | **Karte: animierter Migrationspfad** | Play-Button im Migrationsmodus: `polyline`-Segmente werden zeitlich per CSS-Transition abgefahren (Epochen-Farben bleiben); Geschwindigkeit wählbar; Loop-Option | S |
+| MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
+| TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
+| STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Kinderzahl); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
+| STORY-FAM | **Story-Mode für Familien** | Familien-Narrative: Eltern + alle Kinder, gemeinsame Ereignisse, Geschwister-Vergleich, Zeitspanne der Familie; HTML-Download + Print-CSS analog Person-Story | M |
+| MAP-HIST-B | **Echter Historikkartenhintergrund** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). | M |
 
 ---
 
@@ -123,7 +130,7 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ASSO-UI | **ASSO-Beziehungen** | Read-only Anzeige in Personen-Detail (Schritt 1); Bearbeitung (Zeuge/Pate zu Event zuordnen, Schritt 2) | M+M |
+| ASSO-UI | **ASSO-Beziehungen** | Read-only Anzeige in Personen-Detail (Schritt 1); Bearbeitung: Zeuge/Pate zu Event zuordnen (Schritt 2) | M+M |
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; ADR dokumentiert | M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
 | OBJE-TYPE | **Medien-Typ strukturiert** ⚠ | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
