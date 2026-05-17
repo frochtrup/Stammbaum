@@ -1420,22 +1420,8 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 
 
-/* Filter-Leiste (Alle/Offen/Erledigt + Pruefen-Button) */
-.tasks-filter-bar { display: flex; gap: 6px; padding: 8px 12px 6px; }
-
-/* Einheitliche Filter-Chips (Tasks + Protokoll) */
-.seg-btn {
-  padding: 4px 12px; border-radius: 14px;
-  border: 1px solid var(--border);
-  background: none; color: var(--text-muted);
-  font-size: 0.8rem; font-weight: 500; cursor: pointer;
-  white-space: nowrap; font-family: inherit;
-}
-.seg-btn.active {
-  background: var(--gold); color: #1a1400;
-  border-color: var(--gold); font-weight: 700;
-}
-.seg-btn:active { opacity: 0.75; }
+/* ── Einheitliche Filter+Aktions-Leiste (Aufgaben + Protokoll) ── */
+/* Regel: filter-action-bar enthält immer filter-chips (links) + action-btns (rechts) */
 .tasks-sticky-header {
   position: sticky;
   top: var(--topbar-h, 52px);
@@ -1443,24 +1429,41 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
-.tasks-validate-bar {
-  padding: 0 16px 8px;
-  display: flex; gap: 8px; align-items: center;
+.filter-action-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px 6px; gap: 8px;
 }
-.tasks-validate-bar-btn {
-  flex: 1; padding: 8px;
-  font-size: 0.82rem; font-weight: 600;
-  background: var(--surface2); color: var(--text-muted);
-  border: 1px solid var(--border); cursor: pointer; border-radius: 8px;
-  font-family: 'Source Serif 4', serif;
+.filter-chips { display: flex; gap: 4px; align-items: center; }
+.action-btns  { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+
+/* Icon-Filter-Buttons (symbol + title-tooltip) */
+.flt-btn {
+  min-width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text-muted); font-size: 1rem; cursor: pointer;
+  padding: 0 6px; line-height: 1;
 }
-.tasks-validate-bar-btn:active { opacity: 0.7; }
-.tasks-validate-cfg-btn {
-  flex: none; width: 36px; height: 36px; border-radius: 8px;
+.flt-btn.active { background: var(--gold); color: #1a1400; border-color: var(--gold); }
+.flt-btn:active { opacity: 0.75; }
+/* Protokoll-Filter: aktive Farben passend zu rlog-Badges */
+.flt-btn[data-filter="found"].active     { background: #1e4d1e; color: #6fcf6f; border-color: #2d6b2d; }
+.flt-btn[data-filter="partial"].active   { background: #4d3d00; color: #f0c040; border-color: #6a5400; }
+.flt-btn[data-filter="not-found"].active { background: #3a1414; color: #e07070; border-color: #5a2020; }
+.flt-btn[data-filter="pending"].active   { background: var(--surface2); color: var(--text-dim); }
+
+/* Aktions-Buttons (Icon und Text-Variante) */
+.act-btn-icon {
+  width: 32px; height: 32px; border-radius: 8px;
   background: var(--surface2); color: var(--text-muted);
   border: 1px solid var(--border); cursor: pointer; font-size: 1rem;
 }
-.tasks-validate-cfg-btn:active { opacity: 0.7; }
+.act-btn-text {
+  height: 32px; padding: 0 10px; border-radius: 8px;
+  background: var(--surface2); color: var(--text-muted);
+  border: 1px solid var(--border); cursor: pointer;
+  font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+}
+.act-btn-icon:active, .act-btn-text:active { opacity: 0.7; }
 
 /* Validierungspanel */
 .val-panel {
@@ -2165,16 +2168,6 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
 }
 .rlog-edit:active, .rlog-del:active { background: var(--surface2); }
 .rlog-del:active { color: var(--red, #c0392b); }
-.rlog-filter-bar {
-  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
-  padding: 8px 12px 6px; border-bottom: 1px solid var(--border);
-}
-.rlog-export-btn {
-  margin-left: auto; padding: 4px 12px; border-radius: 14px;
-  border: 1px solid var(--border); background: none;
-  color: var(--text-muted); font-size: 0.8rem; cursor: pointer;
-}
-.rlog-export-btn:active { opacity: 0.7; }
 
 /* ── Karte ── */
 .map-diamond-marker {

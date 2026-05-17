@@ -508,27 +508,35 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 
 ---
 
-### ADR-016: Einheitliches Umschalter-Pattern (sw v587)
+### ADR-016: Einheitliches Tab-Header-Pattern (sw v587–v588)
 
-**Kontext:** Zwei verschiedene visuelle Stile für Primärumschalter in Tabs: Orte/Höfe/Karte nutzte iOS-Segment-Control (`.seg-ctrl > .seg-btn`), Aufgaben/Protokoll nutzte Underline-Tabs (`.tasks-mode-bar > .tasks-mode-btn`). Dazu kam eine doppelte `.seg-btn`-Definition in styles.css.
+**Kontext:** Drei verschiedene Stile für Umschalter und Aktionen in Tab-Köpfen; Aktions-Buttons (↓ MD) waren im Protokoll-Tab mit Filter-Chips gemischt; Filter-Chips (5 Stück) liefen auf Mobile auf zwei Zeilen um.
 
-**Entscheidung:** Einheitliche Klassen `.tab-bar` / `.tab-btn` (Underline-Stil, Gold-Bottom-Border) für alle **Primär-Modus-Umschalter** in Tabs.
+**Entscheidung:** Jeder Tab-Kopf hat genau zwei Zeilen:
+1. `.tab-bar` — Primär-Modus-Umschalter (Underline, Gold-Strich)
+2. `.filter-action-bar` — Filter-Icons links, Aktions-Buttons rechts
 
-**Regel für neue Umschalter:**
-- **Primärumschalter** (2–4 Haupt-Modi eines Tabs): `.tab-bar > .tab-btn` — Underline-Stil
-- **Sekundär-Filter-Chips** (Alle/Offen/Erledigt, Gefunden/…): `.seg-btn` — Pill-Chips mit Border, kein Container nötig
+**Regel für neue Tab-Köpfe:**
+- **Primärumschalter**: `.tab-bar > .tab-btn` — Underline-Stil, volle Breite geteilt
+- **Icon-Filter**: `.filter-chips > .flt-btn` — 32×32px quadratisch, Symbol + `title`-Tooltip; aktive Farbe kontextabhängig (gold = neutral, badge-Farben = Protokoll)
+- **Aktions-Icons**: `.action-btns > .act-btn-icon` — 32×32px, surface2-Hintergrund
+- **Aktions-Text**: `.action-btns > .act-btn-text` — kompaktes Schaltfläche mit Kurztext
 
 ```html
-<!-- Primärumschalter -->
-<div class="tab-bar">
-  <button class="tab-btn active" data-action="switchXMode" data-mode="a">Modus A</button>
-  <button class="tab-btn"        data-action="switchXMode" data-mode="b">Modus B</button>
-</div>
-
-<!-- Filter-Chips -->
-<div class="tasks-filter-bar">
-  <button class="seg-btn active" data-action="switchXFilter" data-filter="all">Alle</button>
-  <button class="seg-btn"        data-action="switchXFilter" data-filter="open">Offen</button>
+<div class="tasks-sticky-header">
+  <div class="tab-bar">
+    <button class="tab-btn active" data-action="switchXMode" data-mode="a">Modus A</button>
+    <button class="tab-btn"        data-action="switchXMode" data-mode="b">Modus B</button>
+  </div>
+  <div class="filter-action-bar">
+    <div class="filter-chips">
+      <button class="flt-btn active" data-action="switchXFilter" data-filter="all"  title="Alle">≡</button>
+      <button class="flt-btn"        data-action="switchXFilter" data-filter="open" title="Offen">○</button>
+    </div>
+    <div class="action-btns">
+      <button class="act-btn-icon" data-action="exportX" title="Exportieren">↓</button>
+    </div>
+  </div>
 </div>
 ```
 

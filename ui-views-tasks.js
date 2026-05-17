@@ -385,15 +385,17 @@ function renderTasksView() {
       <button class="tab-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
       <button class="tab-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
     </div>
-    <div class="tasks-filter-bar">
-      <button id="tasks-filter-all"  class="seg-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
-      <button id="tasks-filter-open" class="seg-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
-      <button id="tasks-filter-done" class="seg-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
-    </div>
-    <div class="tasks-validate-bar">
-      <button class="tasks-validate-bar-btn" data-action="runValidation">✓ Daten prüfen</button>
-      <button class="tasks-validate-cfg-btn" data-action="openValConfig" title="Prüfregeln konfigurieren">⚙</button>
-      <button class="tasks-validate-cfg-btn" data-action="exportTasksMd" title="Als Markdown exportieren">↓ MD</button>
+    <div class="filter-action-bar">
+      <div class="filter-chips">
+        <button id="tasks-filter-all"  class="flt-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all"  title="Alle Aufgaben">≡</button>
+        <button id="tasks-filter-open" class="flt-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open" title="Offen">○</button>
+        <button id="tasks-filter-done" class="flt-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done" title="Erledigt">✓</button>
+      </div>
+      <div class="action-btns">
+        <button class="act-btn-text" data-action="runValidation" title="Daten prüfen">Prüfen</button>
+        <button class="act-btn-icon" data-action="openValConfig" title="Prüfregeln konfigurieren">⚙</button>
+        <button class="act-btn-icon" data-action="exportTasksMd" title="Als Markdown exportieren">↓</button>
+      </div>
     </div>
   </div>`;
 
@@ -842,13 +844,13 @@ function _renderRlogView() {
   entries.sort((a, b) => (b.rl.date || '').localeCompare(a.rl.date || '') || 0);
 
   const filterBtns = [
-    { k: 'all',       l: 'Alle' },
-    { k: 'found',     l: 'Gefunden' },
-    { k: 'partial',   l: 'Teilweise' },
-    { k: 'not-found', l: 'Nicht gefunden' },
-    { k: 'pending',   l: 'Ausstehend' },
-  ].map(b => `<button id="rlog-filter-${b.k}" class="seg-btn${_rlogViewFilter === b.k ? ' active' : ''}"
-    data-action="switchRlogFilter" data-filter="${b.k}">${esc(b.l)}</button>`).join('');
+    { k: 'all',       s: '≡', l: 'Alle' },
+    { k: 'found',     s: '✓', l: 'Gefunden' },
+    { k: 'partial',   s: '≈', l: 'Teilweise' },
+    { k: 'not-found', s: '✗', l: 'Nicht gefunden' },
+    { k: 'pending',   s: '○', l: 'Ausstehend' },
+  ].map(b => `<button id="rlog-filter-${b.k}" class="flt-btn${_rlogViewFilter === b.k ? ' active' : ''}"
+    data-action="switchRlogFilter" data-filter="${b.k}" title="${b.l}">${b.s}</button>`).join('');
 
   const modeBar = `<div class="tab-bar">
     <button class="tab-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
@@ -857,9 +859,11 @@ function _renderRlogView() {
 
   let html = `<div class="tasks-sticky-header">
     ${modeBar}
-    <div class="rlog-filter-bar">
-      ${filterBtns}
-      <button class="rlog-export-btn" data-action="exportRlogMd">↓ MD</button>
+    <div class="filter-action-bar">
+      <div class="filter-chips">${filterBtns}</div>
+      <div class="action-btns">
+        <button class="act-btn-icon" data-action="exportRlogMd" title="Als Markdown exportieren">↓</button>
+      </div>
     </div>
   </div>`;
 
