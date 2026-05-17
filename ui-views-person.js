@@ -646,6 +646,8 @@ function showDetail(id, pushHistory = true) {
   if (tlBtn) { tlBtn.hidden = false; tlBtn.dataset.id = id; }
   const stBtn = document.getElementById('storyBtn');
   if (stBtn) { stBtn.hidden = false; stBtn.dataset.id = id; }
+  const mapBtn = document.getElementById('detailMapBtn');
+  if (mapBtn) mapBtn.hidden = false;
   const pb = document.getElementById('probandBtn');
   if (pb) { pb.hidden = false; }
   const pbSet = document.getElementById('probandSetBtn');

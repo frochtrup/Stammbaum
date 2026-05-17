@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v603 · Cache: `stammbaum-v603`
+**sw-Version:** v604 · Cache: `stammbaum-v604`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -119,7 +119,7 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | Play/Pause/Stopp-Bar in Migrationen- und Person-Modus; stroke-dashoffset (Migr) / opacity-Fade (Person, Segment-für-Segment); Geschwindigkeit; Loop (sw v603) | - |
-| MAP-TOPBAR | **Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars** | Karte ist bisher versteckt im Orte-Tab. Ziel: `🗺`-Button als 5. Diagramm-Wechsel in den Topbars aller vier Diagramme (`[⌂][⤢] \| [⧖][◑][⇩][⟷][🗺][☰]`) sowie in der Person-Detail-Topbar neben 📖. Klick ruft `showPersonOnMap(currentPid)` auf (Person-Modus mit History-Push). Alle-Orte- und Migrations-Modus bleiben über Orte-Tab erreichbar. Umsetzung: Button-HTML in ~5 Topbar-Stellen + Action `showCurrentPersonOnMap` im `_CLICK_MAP`. | S |
+| ~~MAP-TOPBAR~~ | ~~**Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars**~~ | 🗺 in Person-Detail, Zeitleiste, Sanduhr-Baum + Detail-NavBar; Action `showCurrentPersonOnMap`; `detailMapBtn` in Familie/Quelle/Hof ausgeblendet (sw v604) | - |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
 | TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
 | STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Kinderzahl); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |

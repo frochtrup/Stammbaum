@@ -1041,6 +1041,11 @@ const _CLICK_MAP = {
   stopMigrAnim:            ()  => stopMigrAnim(),
   closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
   showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
+  showCurrentPersonOnMap:  ()  => {
+    const pid = UIState._timelinePid || AppState.currentPersonId;
+    if (pid) showPersonOnMap(pid);
+    else showToast('Keine Person ausgewählt');
+  },
   mapClose:                ()  => { document.getElementById('map-close-btn').style.display = 'none'; goBack(); },
   openMapPersonPicker:     ()  => openMapPersonPicker(),
   selectMapPerson:         el => selectMapPerson(el.dataset.pid),

@@ -339,6 +339,7 @@ function showFamilyDetail(id, pushHistory = true) {
   const _stBtn  = document.getElementById('storyBtn');      if (_stBtn)  _stBtn.hidden  = true;
   const _pbBtn  = document.getElementById('probandBtn');    if (_pbBtn)  _pbBtn.hidden  = true;
   const _pbsBtn = document.getElementById('probandSetBtn'); if (_pbsBtn) _pbsBtn.hidden = true;
+  const _mapBtn = document.getElementById('detailMapBtn');  if (_mapBtn) _mapBtn.hidden = true;
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-fam-photo-${id}" class="det-photo-wrap"></div>

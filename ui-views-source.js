@@ -15,6 +15,7 @@ function showSourceDetail(id, pushHistory = true) {
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('treeBtn').hidden = true;
+  document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
 
   // Collect all persons and families referencing this source
   const refPersons = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));
