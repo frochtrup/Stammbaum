@@ -1132,6 +1132,7 @@ const _CLICK_MAP = {
   printStory:              ()  => { if (typeof printStory   === 'function') printStory(); },
   downloadStory:           ()  => { if (typeof downloadStory === 'function') downloadStory(); },
   tlFilter:                el  => { if (typeof _tlFilterToggle === 'function') _tlFilterToggle(el.dataset.cat); },
+  detailShowProband:       ()  => { const id = getProbandId(); if (id) showDetail(id); },
   toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),
   bnavTab:                 el => bnavTab(el.dataset.tab),
