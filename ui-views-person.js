@@ -632,7 +632,13 @@ function showDetail(id, pushHistory = true) {
   const stBtn = document.getElementById('storyBtn');
   if (stBtn) { stBtn.hidden = false; stBtn.dataset.id = id; }
   const pb = document.getElementById('probandBtn');
-  if (pb) { pb.hidden = false; pb.classList.remove('proband-active'); }
+  if (pb) {
+    pb.hidden = false;
+    pb.dataset.id = id;
+    const isProband = getProbandId() === id;
+    pb.classList.toggle('proband-active', isProband);
+    pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+  }
 
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';
