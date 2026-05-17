@@ -335,9 +335,10 @@ function showFamilyDetail(id, pushHistory = true) {
   const tb = document.getElementById('treeBtn');
   tb.style.display = _famTreeTarget ? '' : 'none';
   if (_famTreeTarget) tb.dataset.id = _famTreeTarget;
-  const _tlBtn = document.getElementById('timelineBtn'); if (_tlBtn) _tlBtn.hidden = true;
-  const _stBtn = document.getElementById('storyBtn');    if (_stBtn) _stBtn.hidden = true;
-  const _pbBtn = document.getElementById('probandBtn');  if (_pbBtn) _pbBtn.hidden = true;
+  const _tlBtn  = document.getElementById('timelineBtn');   if (_tlBtn)  _tlBtn.hidden  = true;
+  const _stBtn  = document.getElementById('storyBtn');      if (_stBtn)  _stBtn.hidden  = true;
+  const _pbBtn  = document.getElementById('probandBtn');    if (_pbBtn)  _pbBtn.hidden  = true;
+  const _pbsBtn = document.getElementById('probandSetBtn'); if (_pbsBtn) _pbsBtn.hidden = true;
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-fam-photo-${id}" class="det-photo-wrap"></div>

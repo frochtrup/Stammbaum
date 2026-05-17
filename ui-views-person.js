@@ -632,12 +632,14 @@ function showDetail(id, pushHistory = true) {
   const stBtn = document.getElementById('storyBtn');
   if (stBtn) { stBtn.hidden = false; stBtn.dataset.id = id; }
   const pb = document.getElementById('probandBtn');
-  if (pb) {
-    pb.hidden = false;
-    pb.dataset.id = id;
+  if (pb) { pb.hidden = false; }
+  const pbSet = document.getElementById('probandSetBtn');
+  if (pbSet) {
+    pbSet.hidden = false;
+    pbSet.dataset.id = id;
     const isProband = getProbandId() === id;
-    pb.classList.toggle('proband-active', isProband);
-    pb.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+    pbSet.classList.toggle('proband-active', isProband);
+    pbSet.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
   }
 
 
