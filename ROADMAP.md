@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v595 · Cache: `stammbaum-v595`
+**sw-Version:** v596 · Cache: `stammbaum-v596`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -104,7 +104,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig | XS |
 | CHART-EXPORT | **Diagramm-Export als PNG** | SVG-basierte Diagramme (Fächer, Nachkommen-Baum) via Canvas-Konvertierung als PNG herunterladen; Download-Button in Topbar; ein Button pro Diagramm | S |
 | STATS-2 | **Statistik-Dashboard ausbauen** | Zu `ui-views-stats.js` ergänzen: Lebensspannen-Statistik (Ø, Min, Max, Histogramm); Heiratsalter-Verteilung; Geburten/Sterbefälle/Heiraten getrennt pro Jahrzehnt; Top-Sterbeorte; Kinderzahl-Verteilung pro Familie | M |
-| SEARCH-ADV | **Erweiterte Suche** | Kombinationsfilter: Geburtsort, Geburtsjahr-Bereich, Geburtsname, fehlende Felder (kein Tod / keine Quelle / kein Elternteil). Ergebnis als Liste mit Direktsprung. Basis für systematische Lückenanalyse. | M |
+| SEARCH-ADV | **Erweiterte Suche** ✓ | Fehlende-Felder-Checkboxen: Kein Sterbedatum / Keine Quellen / Keine Eltern; in advFilterPanel integriert; kombinierbar mit Jahresfilter, Geburtsort, Geschlecht, Volltext (sw v596) | M ✓ |
 | REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Text: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erweiterung: visueller Pfad als klickbare Karten-Kette im Modal. Erreichbar aus Personen-Detail. | M |
 | PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
 | DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |

@@ -324,7 +324,12 @@ function applyPersonFilter() {
   const birthPlace = (document.getElementById('birthPlaceFilter')?.value)  || '';
   const clearBtn   = document.getElementById('yearFilterClear');
   if (clearBtn) clearBtn.hidden = !(from || to);
-  _applyPersonFilterDebounced(q, from, to, sex, birthPlace);
+  const flags = {
+    noDeathDate: document.getElementById('fltrNoDeathDate')?.checked || false,
+    noSources:   document.getElementById('fltrNoSources')?.checked   || false,
+    noParents:   document.getElementById('fltrNoParents')?.checked   || false,
+  };
+  _applyPersonFilterDebounced(q, from, to, sex, birthPlace, flags);
 }
 
 function clearQaFilter() {
@@ -355,6 +360,10 @@ function toggleAdvFilter() {
     const bp = document.getElementById('birthPlaceFilter');
     if (sf) sf.value = '';
     if (bp) bp.value = '';
+    ['fltrNoDeathDate', 'fltrNoSources', 'fltrNoParents'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.checked = false;
+    });
     applyPersonFilter();
   } else {
     panel.hidden = false;
@@ -382,7 +391,7 @@ function _buildSearchIndex() {
   UIState._searchIndexDirty = false;
 }
 
-function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
+function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '', flags = {}) {
   const lower      = q.toLowerCase().trim();
   const lowerPlace = birthPlace.toLowerCase().trim();
   const all = Object.values(AppState.db.individuals);
@@ -412,6 +421,10 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '') {
       const bp = compactPlace(p.birth.place || p.chr.place || '').toLowerCase();
       if (!bp.includes(lowerPlace)) return false;
     }
+    // Fehlende-Felder-Filter
+    if (flags.noDeathDate && p.death.date) return false;
+    if (flags.noSources   && p.sourceRefs?.size > 0) return false;
+    if (flags.noParents   && p.famc?.length > 0) return false;
     if (!lower) return true;
     if ((p._searchStr || '').includes(lower)) return true;
     if (UIState._soundexMode && /^[a-zäöüß]+$/i.test(lower)) {

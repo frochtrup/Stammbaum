@@ -640,7 +640,7 @@ function saveHofObjects() {
   try { localStorage.setItem('stammbaum_hofobjects', JSON.stringify(AppState.db.hofObjects)); } catch(e) {}
 }
 
-const _applyPersonFilterDebounced = debounce((q, from, to, sex, birthPlace) => filterPersons(q, from, to, sex, birthPlace), 200);
+const _applyPersonFilterDebounced = debounce((q, from, to, sex, birthPlace, flags) => filterPersons(q, from, to, sex, birthPlace, flags), 200);
 const filterFamiliesDebounced     = debounce(filterFamilies,  200);
 const filterSourcesDebounced      = debounce(filterSources,   200);
 const filterPlacesDebounced       = debounce(filterPlaces,    200);
