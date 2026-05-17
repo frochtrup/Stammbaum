@@ -80,7 +80,6 @@
         <button type="button" id="yearFilterClear" hidden data-action="clearYearFilter" title="Jahresfilter zurücksetzen" aria-label="Jahresfilter zurücksetzen">✕</button>
         <button type="button" id="personSortBtn" data-action="togglePersonSort" class="filter-btn" title="Sortierung umschalten" aria-label="Sortierung umschalten">⇅ Name</button>
         <button type="button" id="advFilterToggle" data-action="toggleAdvFilter" class="filter-btn" title="Erweiterte Filter" aria-label="Erweiterte Filter" aria-expanded="false">⊞</button>
-        <button type="button" data-action="showPersonMediaBrowser" class="filter-btn filter-btn-md" title="Alle Medien anzeigen" aria-label="Alle Medien anzeigen">📎</button>
       </div>
       <div id="advFilterPanel" hidden class="search-wrap adv-filter-panel">
         <div class="d-flex gap-6 ai-c flex-wrap">
@@ -1366,6 +1365,9 @@
         </button>
         <button class="btn menu-btn" data-action="menuStats">
           📊 &nbsp; Statistik
+        </button>
+        <button class="btn menu-btn" data-action="showPersonMediaBrowser">
+          📎 &nbsp; Medienübersicht
         </button>
         <button hidden class="btn btn-gold btn-choice" data-action="menuRoundtrip" data-debug-only>
           🔁 &nbsp; Roundtrip-Test
