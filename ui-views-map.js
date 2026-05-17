@@ -11,12 +11,14 @@ let _mapPersonId      = null;   // aktive Person im Biografie-Modus
 let _placePersonIndex = null;   // cache: placeName → [{personId, role, date}]
 
 // Animations-State (MAP-ANIM)
-let _animTimer   = null;
-let _animRunning = false;
-let _animLines   = [];   // [{p, pts, color, latLngs, year}] sortiert nach Geburtsjahr
-let _animIdx     = 0;
-let _animSpeed   = 600;  // ms pro Linie
-let _animLoop    = false;
+let _animTimer           = null;
+let _animRunning         = false;
+let _animLines           = [];    // Migr-Modus: [{p, pts, color, latLngs, year}]
+let _animPersonEvs       = [];    // Person-Modus: Geo-Events der aktuellen Person
+let _animCurrentPersonId = null;  // Person-Modus: ID der animierten Person
+let _animIdx             = 0;
+let _animSpeed           = 600;   // ms pro Schritt
+let _animLoop            = false;
 
 // Epochen-Farben für Migrations-Modus (nach Geburtsjahr)
 const _MIGR_EPOCHS = [
@@ -139,14 +141,16 @@ function _renderMap() {
 //  MODUS-WECHSEL
 // ─────────────────────────────────────
 function switchMapMode(mode) {
-  if (mode !== 'migr') { clearTimeout(_animTimer); _animRunning = false; }
+  clearTimeout(_animTimer);
+  _animRunning = false;
   _mapMode = mode;
   document.getElementById('map-mode-orte')  ?.classList.toggle('active', mode === 'orte');
   document.getElementById('map-mode-person')?.classList.toggle('active', mode === 'person');
   document.getElementById('map-mode-migr')  ?.classList.toggle('active', mode === 'migr');
   document.getElementById('map-person-picker').style.display = mode === 'person' ? 'block' : 'none';
   document.getElementById('map-migr-legend') .style.display  = mode === 'migr'   ? 'flex'  : 'none';
-  document.getElementById('map-anim-bar')    ?.style.setProperty('display', mode === 'migr' ? 'flex' : 'none');
+  document.getElementById('map-anim-bar')    ?.style.setProperty('display',
+    (mode === 'migr' || mode === 'person') ? 'flex' : 'none');
   document.getElementById('map-explore-panel').style.display = 'none';
   _renderMap();
 }
@@ -308,7 +312,10 @@ function _renderMigrModus() {
 //  ANIMATIONS-STEUERUNG (MAP-ANIM)
 // ─────────────────────────────────────
 function _animStep() {
-  if (_animIdx >= _animLines.length) {
+  const isMigr  = _mapMode === 'migr';
+  const maxIdx  = isMigr ? _animLines.length : _animPersonEvs.length;
+
+  if (_animIdx >= maxIdx) {
     if (_animLoop) {
       _animIdx = 0;
       _mapLineLayer.clearLayers();
@@ -319,11 +326,23 @@ function _animStep() {
       return;
     }
   }
-  _addMigrLine(_animLines[_animIdx++], true);
+
+  if (isMigr) _addMigrLine(_animLines[_animIdx++], true);
+  else        _addPersonStep(_animPersonEvs, _animIdx++, true);
+
   _animTimer = setTimeout(_animStep, _animSpeed);
 }
 
 function _startMigrAnim() {
+  _mapLineLayer.clearLayers();
+  _mapMarkerLayer.clearLayers();
+  _animIdx = 0;
+  _animRunning = true;
+  _updateAnimBtn();
+  _animStep();
+}
+
+function _startPersonAnim() {
   _mapLineLayer.clearLayers();
   _mapMarkerLayer.clearLayers();
   _animIdx = 0;
@@ -342,7 +361,8 @@ function _stopMigrAnim() {
   clearTimeout(_animTimer);
   _animRunning = false;
   _animIdx = 0;
-  _renderMigrModus();
+  if (_mapMode === 'migr') _renderMigrModus();
+  else                     _renderPersonModus(_animCurrentPersonId);
 }
 
 function _updateAnimBtn() {
@@ -351,14 +371,16 @@ function _updateAnimBtn() {
 }
 
 function toggleMigrAnim() {
+  const maxIdx = _mapMode === 'migr' ? _animLines.length : _animPersonEvs.length;
   if (_animRunning) {
     _pauseMigrAnim();
-  } else if (_animIdx > 0 && _animIdx < _animLines.length) {
+  } else if (_animIdx > 0 && _animIdx < maxIdx) {
     _animRunning = true;
     _updateAnimBtn();
     _animStep();
   } else {
-    _startMigrAnim();
+    if (_mapMode === 'migr') _startMigrAnim();
+    else                     _startPersonAnim();
   }
 }
 
@@ -446,6 +468,42 @@ function _mapPersonYears(p) {
 // ─────────────────────────────────────
 //  MODUS 2: PERSONENBIOGRAFIE
 // ─────────────────────────────────────
+function _addPersonStep(evs, idx, animate) {
+  const ev = evs[idx];
+  const p  = AppState.db.individuals[_animCurrentPersonId];
+
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="map-bio-marker">${idx + 1}</div>`,
+    iconSize: [22, 22], iconAnchor: [11, 11],
+  });
+  const marker = L.marker([ev.lat, ev.lng], { icon });
+  marker.bindTooltip(
+    `<b>${idx + 1}. ${_mesc(ev.role)}</b><br>${_mesc(compactPlace(ev.place))}${ev.date ? '<br>' + _mesc(ev.date) : ''}`,
+    { direction: 'top', offset: [0, -12] }
+  );
+  if (p) marker.on('click', () => _showPersonEventsAtPlace(p, ev.place, evs));
+  marker.addTo(_mapMarkerLayer);
+
+  if (idx > 0) {
+    const prev = evs[idx - 1];
+    const seg  = L.polyline([[prev.lat, prev.lng], [ev.lat, ev.lng]], {
+      color: '#c8a84a', weight: 2,
+      opacity:   animate ? 0 : 0.55,
+      dashArray: '6, 5',
+    });
+    seg.addTo(_mapLineLayer);
+    if (animate) {
+      requestAnimationFrame(() => {
+        const sp = seg._path;
+        if (!sp) return;
+        sp.style.transition = `opacity ${Math.min(_animSpeed * 0.8, 800)}ms ease`;
+        requestAnimationFrame(() => { sp.style.opacity = '0.55'; });
+      });
+    }
+  }
+}
+
 function _renderPersonModus(personId) {
   _mapMarkerLayer.clearLayers();
   _mapLineLayer.clearLayers();
@@ -461,40 +519,13 @@ function _renderPersonModus(personId) {
     return;
   }
 
-  const bounds  = [];
-  const latLngs = [];
+  _animPersonEvs       = evs;
+  _animCurrentPersonId = personId;
 
-  evs.forEach((ev, i) => {
-    latLngs.push([ev.lat, ev.lng]);
-    bounds.push([ev.lat, ev.lng]);
-
-    const icon = L.divIcon({
-      className: '',
-      html: `<div class="map-bio-marker">${i + 1}</div>`,
-      iconSize:   [22, 22],
-      iconAnchor: [11, 11],
-    });
-
-    const marker = L.marker([ev.lat, ev.lng], { icon });
-    marker.bindTooltip(
-      `<b>${i + 1}. ${_mesc(ev.role)}</b><br>${_mesc(compactPlace(ev.place))}${ev.date ? '<br>' + _mesc(ev.date) : ''}`,
-      { direction: 'top', offset: [0, -12] }
-    );
-    // Klick: alle Ereignisse der ausgewählten Person an diesem Ort
-    marker.on('click', () => _showPersonEventsAtPlace(p, ev.place, evs));
-    marker.addTo(_mapMarkerLayer);
-  });
-
-  if (latLngs.length > 1) {
-    L.polyline(latLngs, {
-      color:     '#c8a84a',
-      weight:    2,
-      opacity:   0.55,
-      dashArray: '6, 5',
-    }).addTo(_mapLineLayer);
-  }
-
+  const bounds = evs.map(ev => [ev.lat, ev.lng]);
+  evs.forEach((_, i) => _addPersonStep(evs, i, false));
   _leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+  _updateAnimBtn();
 }
 
 function _personGeoEvents(p) {

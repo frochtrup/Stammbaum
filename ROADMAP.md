@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v602 · Cache: `stammbaum-v602`
+**sw-Version:** v603 · Cache: `stammbaum-v603`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -118,7 +118,7 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | ✓ sw v602 — Play/Pause/Stopp-Bar im Migrationen-Modus; stroke-dashoffset-Animation; Geschwindigkeit (Langsam/Normal/Schnell/Sehr schnell); Loop-Option | S |
+| ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | ✓ sw v603 — Play/Pause/Stopp-Bar in Migrationen- und Person-Modus; stroke-dashoffset (Migr) / opacity-Fade (Person, Segment-für-Segment); Geschwindigkeit; Loop | S |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
 | TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
 | STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Kinderzahl); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
