@@ -293,13 +293,9 @@ function filterSources(q) {
 }
 
 function renderRepoList() {
-  const section = document.getElementById('repoSection');
-  const el      = document.getElementById('repoList');
-  const repos   = Object.values(AppState.db.repositories || {});
-  const jumpBtn = document.getElementById('repoJumpBtn');
-  if (!repos.length) { section.style.display = 'none'; if (jumpBtn) jumpBtn.hidden = true; return; }
-  section.style.display = '';
-  if (jumpBtn) jumpBtn.hidden = false;
+  const el    = document.getElementById('repoList');
+  const repos = Object.values(AppState.db.repositories || {});
+  if (!repos.length) { el.innerHTML = '<div class="empty">Keine Archive vorhanden</div>'; return; }
   const sorted = repos.sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
   el.innerHTML = sorted.map(r => {
     const srcCount = Object.values(AppState.db.sources).filter(s => s.repo === r.id).length;
@@ -308,4 +304,14 @@ function renderRepoList() {
       <div class="source-meta">${r.addr ? esc(r.addr.split('\n')[0]) : '&nbsp;'}${srcCount ? ' · ' + srcCount + ' Quel.' : ''}</div>
     </div>`;
   }).join('');
+}
+
+function switchSourcesSubTab(sub) {
+  document.getElementById('toggle-sources')?.classList.toggle('active', sub === 'sources');
+  document.getElementById('toggle-repos')?.classList.toggle('active', sub === 'repos');
+  const isSources = sub === 'sources';
+  document.getElementById('sourceList').hidden         = !isSources;
+  document.getElementById('source-search-wrap').hidden = !isSources;
+  document.getElementById('repoSection').hidden        = isSources;
+  if (!isSources) renderRepoList();
 }

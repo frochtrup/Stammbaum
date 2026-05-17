@@ -115,15 +115,17 @@
 
   <div id="tab-sources">
     <div class="list-search-header">
-    <div class="search-wrap d-flex gap-8 ai-c">
-      <input class="search-input flex-1" type="search" id="searchSources" placeholder="Titel, Autor…" data-input="filterSources">
-      <button id="repoJumpBtn" class="btn btn-outline-sm" hidden data-action="scrollToRepo">🏛 Archive</button>
-      <button class="btn btn-outline-sm" data-action="showMediaBrowser" title="Alle Medien anzeigen">📎</button>
-    </div>
+      <div class="tab-bar">
+        <button type="button" id="toggle-sources" class="tab-btn active" data-action="switchSourcesSubTab" data-subtab="sources">Quellen</button>
+        <button type="button" id="toggle-repos"   class="tab-btn"        data-action="switchSourcesSubTab" data-subtab="repos">Archiv</button>
+      </div>
+      <div id="source-search-wrap" class="search-wrap d-flex gap-8 ai-c">
+        <input class="search-input flex-1" type="search" id="searchSources" placeholder="Titel, Autor…" data-input="filterSources">
+        <button class="btn btn-outline-sm" data-action="showMediaBrowser" title="Alle Medien anzeigen">📎</button>
+      </div>
     </div>
     <div id="sourceList" role="list"></div>
-    <div id="repoSection">
-      <div class="repo-section-label">Archive</div>
+    <div id="repoSection" hidden>
       <div id="repoList"></div>
     </div>
   </div>
