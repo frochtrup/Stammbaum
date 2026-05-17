@@ -1561,7 +1561,8 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 /* Prüfregeln-Config-Modal */
 .valcfg-rules-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(11, auto); grid-auto-flow: column; gap: 4px 16px;
 }
 .valcfg-rule-row {
   display: flex; align-items: center; gap: 8px;
