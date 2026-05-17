@@ -202,6 +202,8 @@ window.showDescTree = function (personId, addToHistory = true) {
     if (!q) return;
 
     div.dataset.sex = q.sex || 'U';
+    const _compl = _personCompleteness(q);
+    if (_compl) div.dataset.completeness = _compl;
     const by  = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy  = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr  = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');

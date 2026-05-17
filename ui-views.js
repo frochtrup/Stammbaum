@@ -1351,6 +1351,37 @@ document.addEventListener('blur', e => {
 //  OBJE-REFERENZ-HELPER
 //  Baut Map @Oxx@ → {file, title} aus AppState.db.extraRecords
 // ─────────────────────────────────────
+// ── TREE-HEAT: Vollständigkeits-Score für Baum-Karten ──
+// Prüft 3 Felder: Geburtsdatum, mind. 1 Quellenreferenz, mind. 1 Zitat mit QUAY ≥ 2
+// Gibt null (vollständig) oder '1'/'2'/'3' (Anzahl fehlender Felder) zurück.
+function _personCompleteness(p) {
+  if (!p) return null;
+  let missing = 0;
+
+  if (!p.birth?.date) missing++;
+
+  const hasSrc = (p.topSources?.length || 0) > 0 ||
+    (p.nameCitations?.length || 0) > 0 ||
+    (p.birth?.citations?.length || 0) > 0 ||
+    (p.death?.citations?.length || 0) > 0 ||
+    (p.events || []).some(ev => ev.citations?.length > 0);
+  if (!hasSrc) missing++;
+
+  const allCits = [
+    ...Object.entries(p.topSourceQUAY || {}).map(([, q]) => ({ quay: q })),
+    ...(p.nameCitations || []),
+    ...(p.birth?.citations || []),
+    ...(p.death?.citations || []),
+    ...(p.chr?.citations || []),
+    ...(p.buri?.citations || []),
+    ...(p.events || []).flatMap(ev => ev.citations || []),
+  ];
+  const hasHighQuay = allCits.some(c => parseInt(c.quay) >= 2);
+  if (!hasHighQuay) missing++;
+
+  return missing > 0 ? String(missing) : null;
+}
+
 function _buildObjeRefMap() {
   const map = {};
   for (const rec of (AppState.db.extraRecords || [])) {

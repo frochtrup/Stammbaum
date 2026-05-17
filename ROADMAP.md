@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v597 · Cache: `stammbaum-v597`
+**sw-Version:** v598 · Cache: `stammbaum-v598`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -90,7 +90,7 @@ Der Unterschied zwischen Hobbysammler und ernsthaftem Forscher: Protokoll, Quell
 | SOUR-TMPL | **Quellen-Vorlagen** ✓ | 10 Vorlagen; Select-Dropdown bei Neuanlage; befüllt ABBR/TITL/AUTH/PUBL/MEDI (sw v586) | S ✓ |
 | FORSCH-LOG | **Forschungsprotokoll** ✓ | `1 _RLOG`; Felder DATE/REPO/SOUR/QUERY/RESULT/NOTE; globaler Tab; Filter + MD-Export (sw v582–v585) | M ✓ |
 | VAL-EXTEND | **Validierung ausbauen** ✓ | 21 Regeln in 4 Gruppen; konfigurierbarer `VAL_CONFIG`; Config-UI (sw v590) | M ✓ |
-| TREE-HEAT | **Vollständigkeits-Heatmap im Baum** | Personen ohne Geburtsdatum / ohne Quelle / ohne Foto erhalten im Sanduhr-Baum und Nachkommen-Baum eine schwache Umrandung (CSS `data-completeness`-Attribut + 3 Stufen). Direkte visuelle Forschungssteuerung ohne separaten View. | S |
+| TREE-HEAT | **Vollständigkeits-Heatmap im Baum** ✓ | `data-completeness="1/2/3"` auf Baum-Karten (Sanduhr + Nachkommen): fehlend: Geburtsdatum / mind. 1 Quellenreferenz / mind. 1 Zitat mit QUAY≥2; box-shadow gelb→orange→rot; `_personCompleteness()` in ui-views.js (sw v598) | S ✓ |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional | M |
 
 ---
