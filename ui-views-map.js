@@ -143,6 +143,13 @@ function _renderMap() {
 function switchMapMode(mode) {
   clearTimeout(_animTimer);
   _animRunning = false;
+  // Person-Modus: zuletzt aktive App-Person als Fallback wenn noch keine Karten-Person gewählt
+  if (mode === 'person' && !_mapPersonId && AppState.currentPersonId) {
+    _mapPersonId = AppState.currentPersonId;
+    const p   = AppState.db.individuals[_mapPersonId];
+    const btn = document.getElementById('map-person-btn');
+    if (btn && p) btn.textContent = p.name || _mapPersonId;
+  }
   _mapMode = mode;
   document.getElementById('map-mode-orte')  ?.classList.toggle('active', mode === 'orte');
   document.getElementById('map-mode-person')?.classList.toggle('active', mode === 'person');
