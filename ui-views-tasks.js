@@ -149,12 +149,14 @@ function _tasksSectionHtml(personId) {
           data-pid="${personId}" data-tid="${t.id}"
           aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
         <span class="task-text">${esc(t.text)}</span>
-        <button class="task-log" data-action="taskToLog"
-          data-pid="${personId}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
-        <button class="task-edit" data-action="editTask"
-          data-pid="${personId}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
-        <button class="task-del" data-action="deleteTask"
-          data-pid="${personId}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+        <div class="task-actions">
+          <button class="task-log" data-action="taskToLog"
+            data-pid="${personId}" data-query="${encodeURIComponent(t.text)}" title="Als Protokoll erfassen">→</button>
+          <button class="task-edit" data-action="editTask"
+            data-pid="${personId}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
+          <button class="task-del" data-action="deleteTask"
+            data-pid="${personId}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+        </div>
       </div>`;
     }
   }
@@ -212,12 +214,14 @@ function _famTasksSectionHtml(famId) {
           data-fid="${famId}" data-tid="${t.id}"
           aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
         <span class="task-text">${esc(t.text)}</span>
-        <button class="task-log" data-action="taskToLog"
-          data-fid="${famId}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
-        <button class="task-edit" data-action="editFamTask"
-          data-fid="${famId}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
-        <button class="task-del" data-action="deleteFamTask"
-          data-fid="${famId}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+        <div class="task-actions">
+          <button class="task-log" data-action="taskToLog"
+            data-fid="${famId}" data-query="${encodeURIComponent(t.text)}" title="Als Protokoll erfassen">→</button>
+          <button class="task-edit" data-action="editFamTask"
+            data-fid="${famId}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
+          <button class="task-del" data-action="deleteFamTask"
+            data-fid="${famId}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+        </div>
       </div>`;
     }
   }
@@ -382,9 +386,9 @@ function renderTasksView() {
       <button class="tasks-mode-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
     </div>
     <div class="tasks-filter-bar">
-      <button id="tasks-filter-all"  class="tasks-filter-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
-      <button id="tasks-filter-open" class="tasks-filter-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
-      <button id="tasks-filter-done" class="tasks-filter-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
+      <button id="tasks-filter-all"  class="seg-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
+      <button id="tasks-filter-open" class="seg-btn${_tasksViewFilter === 'open' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="open">Offen</button>
+      <button id="tasks-filter-done" class="seg-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done">Erledigt</button>
     </div>
     <div class="tasks-validate-bar">
       <button class="tasks-validate-bar-btn" data-action="runValidation">✓ Daten prüfen</button>
@@ -435,12 +439,14 @@ function renderTasksView() {
             data-pid="${id}" data-tid="${t.id}"
             aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
           <span class="task-text">${esc(t.text)}</span>
-          <button class="task-log" data-action="taskToLog"
-            data-pid="${id}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
-          <button class="task-edit" data-action="editTask"
-            data-pid="${id}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
-          <button class="task-del" data-action="deleteTask"
-            data-pid="${id}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+          <div class="task-actions">
+            <button class="task-log" data-action="taskToLog"
+              data-pid="${id}" data-query="${encodeURIComponent(t.text)}" title="Als Protokoll erfassen">→</button>
+            <button class="task-edit" data-action="editTask"
+              data-pid="${id}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
+            <button class="task-del" data-action="deleteTask"
+              data-pid="${id}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+          </div>
         </div>`;
       } else {
         html += `<div class="task-row${t.done ? ' task-done' : ''} task-row-global">
@@ -448,12 +454,14 @@ function renderTasksView() {
             data-fid="${id}" data-tid="${t.id}"
             aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
           <span class="task-text">${esc(t.text)}</span>
-          <button class="task-log" data-action="taskToLog"
-            data-fid="${id}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
-          <button class="task-edit" data-action="editFamTask"
-            data-fid="${id}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
-          <button class="task-del" data-action="deleteFamTask"
-            data-fid="${id}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+          <div class="task-actions">
+            <button class="task-log" data-action="taskToLog"
+              data-fid="${id}" data-query="${encodeURIComponent(t.text)}" title="Als Protokoll erfassen">→</button>
+            <button class="task-edit" data-action="editFamTask"
+              data-fid="${id}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
+            <button class="task-del" data-action="deleteFamTask"
+              data-fid="${id}" data-tid="${t.id}" aria-label="Aufgabe löschen">×</button>
+          </div>
         </div>`;
       }
     }
@@ -839,7 +847,7 @@ function _renderRlogView() {
     { k: 'partial',   l: 'Teilweise' },
     { k: 'not-found', l: 'Nicht gefunden' },
     { k: 'pending',   l: 'Ausstehend' },
-  ].map(b => `<button id="rlog-filter-${b.k}" class="rlog-filter-btn${_rlogViewFilter === b.k ? ' active' : ''}"
+  ].map(b => `<button id="rlog-filter-${b.k}" class="seg-btn${_rlogViewFilter === b.k ? ' active' : ''}"
     data-action="switchRlogFilter" data-filter="${b.k}">${esc(b.l)}</button>`).join('');
 
   const modeBar = `<div class="tasks-mode-bar">
