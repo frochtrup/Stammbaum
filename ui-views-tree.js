@@ -581,13 +581,14 @@ function showTree(personId, addToHistory = true) {
     if (!q) return;
     div.dataset.sex = q.sex || 'U';
     const _compl = _personCompleteness(q);
-    if (_compl) div.dataset.completeness = _compl;
+    if (_compl.level) div.dataset.completeness = _compl.level;
     const by   = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy   = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr   = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
     const fullName = [q.given, q.surname].filter(Boolean).join(' ') || q.name || '(unbekannt)';
     const sexLabel = q.sex === 'M' ? ', Mann' : q.sex === 'F' ? ', Frau' : '';
-    div.title = fullName + sexLabel + (yr ? ' ' + yr : '');
+    const complHint = _compl.labels.length ? '\n⚠ Fehlend: ' + _compl.labels.join(', ') : '';
+    div.title = fullName + sexLabel + (yr ? ' ' + yr : '') + complHint;
     div.setAttribute('aria-label', _treeShortName(q, isCenter) + sexLabel + (yr ? ', ' + yr : ''));
     const multiMarr = isCenter && spouseFamsEarly.length > 1;
     div.innerHTML =

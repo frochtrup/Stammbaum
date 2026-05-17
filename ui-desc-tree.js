@@ -203,13 +203,14 @@ window.showDescTree = function (personId, addToHistory = true) {
 
     div.dataset.sex = q.sex || 'U';
     const _compl = _personCompleteness(q);
-    if (_compl) div.dataset.completeness = _compl;
+    if (_compl.level) div.dataset.completeness = _compl.level;
     const by  = (q.birth?.date || '').replace(/.*(\d{4}).*/, '$1');
     const dy  = (q.death?.date || '').replace(/.*(\d{4}).*/, '$1');
     const yr  = [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(' ');
     const fn  = [q.given, q.surname].filter(Boolean).join(' ') || q.name || '(unbekannt)';
     const sl  = q.sex === 'M' ? ', Mann' : q.sex === 'F' ? ', Frau' : '';
-    div.title = fn + sl + (yr ? ' ' + yr : '');
+    const complHint = _compl.labels.length ? '\n⚠ Fehlend: ' + _compl.labels.join(', ') : '';
+    div.title = fn + sl + (yr ? ' ' + yr : '') + complHint;
     div.setAttribute('aria-label', _treeShortName(q, isRoot && !isSpouse) + sl + (yr ? ', ' + yr : ''));
 
     div.innerHTML =

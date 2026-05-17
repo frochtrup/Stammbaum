@@ -1353,19 +1353,20 @@ document.addEventListener('blur', e => {
 // ─────────────────────────────────────
 // ── TREE-HEAT: Vollständigkeits-Score für Baum-Karten ──
 // Prüft 3 Felder: Geburtsdatum, mind. 1 Quellenreferenz, mind. 1 Zitat mit QUAY ≥ 2
-// Gibt null (vollständig) oder '1'/'2'/'3' (Anzahl fehlender Felder) zurück.
+// Gibt {level: null|'1'|'2'|'3', labels: string[]} zurück.
+// level = null → vollständig; labels = Liste der fehlenden Felder (für Tooltip).
 function _personCompleteness(p) {
-  if (!p) return null;
-  let missing = 0;
+  if (!p) return { level: null, labels: [] };
+  const labels = [];
 
-  if (!p.birth?.date) missing++;
+  if (!p.birth?.date) labels.push('Geburtsdatum');
 
   const hasSrc = (p.topSources?.length || 0) > 0 ||
     (p.nameCitations?.length || 0) > 0 ||
     (p.birth?.citations?.length || 0) > 0 ||
     (p.death?.citations?.length || 0) > 0 ||
     (p.events || []).some(ev => ev.citations?.length > 0);
-  if (!hasSrc) missing++;
+  if (!hasSrc) labels.push('Quellenangabe');
 
   const allCits = [
     ...Object.entries(p.topSourceQUAY || {}).map(([, q]) => ({ quay: q })),
@@ -1377,9 +1378,9 @@ function _personCompleteness(p) {
     ...(p.events || []).flatMap(ev => ev.citations || []),
   ];
   const hasHighQuay = allCits.some(c => parseInt(c.quay) >= 2);
-  if (!hasHighQuay) missing++;
+  if (!hasHighQuay) labels.push('Quelle mit QUAY ≥ 2');
 
-  return missing > 0 ? String(missing) : null;
+  return { level: labels.length > 0 ? String(labels.length) : null, labels };
 }
 
 function _buildObjeRefMap() {
