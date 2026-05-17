@@ -91,12 +91,10 @@
           </select>
           <input type="search" id="birthPlaceFilter" placeholder="Geburtsort…" data-input="applyPersonFilter"
             class="filter-input flex-1 min-w-100">
-        </div>
-        <div class="d-flex gap-10 ai-c flex-wrap adv-filter-flags">
-          <span class="fs-xs c-muted nowrap">Fehlende Felder:</span>
-          <label class="d-flex ai-c gap-4 fs-s c-text"><input type="checkbox" id="fltrNoDeathDate" data-change="applyPersonFilter"> Kein Sterbedatum</label>
-          <label class="d-flex ai-c gap-4 fs-s c-text"><input type="checkbox" id="fltrNoSources" data-change="applyPersonFilter"> Keine Quellen</label>
-          <label class="d-flex ai-c gap-4 fs-s c-text"><input type="checkbox" id="fltrNoParents" data-change="applyPersonFilter"> Keine Eltern</label>
+          <span class="fs-xs c-muted nowrap" style="padding-left:4px">∅</span>
+          <label class="adv-flag-lbl" title="Kein Sterbedatum"><input type="checkbox" id="fltrNoDeathDate" data-change="applyPersonFilter"> †?</label>
+          <label class="adv-flag-lbl" title="Keine Quellen"><input type="checkbox" id="fltrNoSources" data-change="applyPersonFilter"> Q?</label>
+          <label class="adv-flag-lbl" title="Keine Eltern"><input type="checkbox" id="fltrNoParents" data-change="applyPersonFilter"> ↑?</label>
         </div>
       </div>
     </div>

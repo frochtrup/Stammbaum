@@ -1606,6 +1606,13 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 #personSortBtn   { min-height: 44px; }
 
+/* Fehlende-Felder Checkboxen — kompakte Symbol-Labels */
+.adv-flag-lbl {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 0.8rem; color: var(--text); cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
+}
+
 /* Spinner-Pfeile in Jahres-Eingaben ausblenden */
 #yearFrom::-webkit-inner-spin-button,
 #yearFrom::-webkit-outer-spin-button,
