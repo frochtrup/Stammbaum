@@ -137,6 +137,16 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 
 ---
 
+## Dokumentation
+
+Handbuch-Pflege: kein Funktionsrelease nötig, aber separater Aufwand.
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| DOC-SCREENS | **Handbuch: echte Screenshots** | Alle Mockups und Prinzipbilder in `HANDBUCH.html` durch echte Screenshots aus dem Preview-Fenster ersetzen. Priorität: Sanduhr-Baum, Fächer-Diagramm, Nachkommen-Baum, Zeitleiste, Karte (Migrations-Modus), Personen-Detailansicht, Ereignis-Formular. Vorgehen: App mit Demo-Daten laden, Screenshot je View, als `<img>` einbetten oder als Base64-Data-URI. | M |
+
+---
+
 ## Backlog / Forschung
 
 Kein festes Datum. Kandidaten für spätere Versionen.
