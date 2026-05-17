@@ -829,6 +829,9 @@ function showDetail(id, pushHistory = true) {
   // Aufgaben-Placeholder — wird async befüllt sobald IDB geladen
   html += `<div id="tasks-section-placeholder-${id}" class="section fade-up" data-jump-id="pdet-tasks"></div>`;
 
+  // Forschungsprotokoll
+  if (typeof _rlogSectionHtml === 'function') html += _rlogSectionHtml(id);
+
   document.getElementById('detailContent').innerHTML = html;
   _injectJumpBar();
   showView('v-detail');

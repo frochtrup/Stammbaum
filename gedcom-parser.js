@@ -75,7 +75,7 @@ function parseGEDCOM(text, parseErrors) {
           buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'',
-          extraNames:[], _tasks:[], associations:[], aliases:[], refns:[],
+          extraNames:[], _tasks:[], _rlog:[], associations:[], aliases:[], refns:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
           nameCitations:[],
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
@@ -83,7 +83,7 @@ function parseGEDCOM(text, parseErrors) {
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,citations:[],value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], refns:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], refns:[], lastChanged:'', lastChangedTime:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallMedi:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
@@ -197,6 +197,10 @@ function parseGEDCOM(text, parseErrors) {
           _curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
           cur._tasks.push(_curTask);
         }
+        else if (tag === '_RLOG') {
+          const _rl = { date:'', repoRef:'', sourRef:'', query:'', result:'pending', note:'' };
+          cur._rlog.push(_rl);
+        }
         else if (tag === 'ASSO') {
           _curAsso = { xref: val, rela: '', note: '', citations: [] };
           cur.associations.push(_curAsso);
@@ -220,6 +224,16 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag === '_DATE') _curTask.created = val;
           else if (tag === '_ID')   _curTask.id = val;
           // silently ignore unknown _TASK subtags
+        }
+        // Research log subtags
+        else if (lv1tag === '_RLOG' && cur._rlog.length) {
+          const _rl = cur._rlog[cur._rlog.length - 1];
+          if      (tag === 'DATE') _rl.date    = val;
+          else if (tag === 'REPO') _rl.repoRef = val;
+          else if (tag === 'SOUR') _rl.sourRef = val;
+          else if (tag === '_QUERY')  _rl.query  = val;
+          else if (tag === '_RESULT') _rl.result = val;
+          else if (tag === 'NOTE')    _rl.note   = val;
         }
         // Association subtags
         else if (lv1tag === 'ASSO' && _curAsso) {
@@ -494,6 +508,10 @@ function parseGEDCOM(text, parseErrors) {
           _curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
           cur._tasks.push(_curTask);
         }
+        else if (tag === '_RLOG') {
+          const _rl = { date:'', repoRef:'', sourRef:'', query:'', result:'pending', note:'' };
+          cur._rlog.push(_rl);
+        }
         else if (tag === 'REFN') { cur.refns.push({val:val||'', type:''}); }
         else {
           // Unknown FAM lv1 tag → verbatim passthrough
@@ -507,6 +525,15 @@ function parseGEDCOM(text, parseErrors) {
           else if (tag === '_DONE') _curTask.done = val === '1';
           else if (tag === '_DATE') _curTask.created = val;
           else if (tag === '_ID')   _curTask.id = val;
+        }
+        else if (lv1tag === '_RLOG' && cur._rlog.length) {
+          const _rl = cur._rlog[cur._rlog.length - 1];
+          if      (tag === 'DATE') _rl.date    = val;
+          else if (tag === 'REPO') _rl.repoRef = val;
+          else if (tag === 'SOUR') _rl.sourRef = val;
+          else if (tag === '_QUERY')  _rl.query  = val;
+          else if (tag === '_RESULT') _rl.result = val;
+          else if (tag === 'NOTE')    _rl.note   = val;
         }
         else if (lv1tag==='MARR') {
           if (tag==='DATE') cur.marr.date=val;

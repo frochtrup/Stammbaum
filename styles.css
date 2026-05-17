@@ -2148,6 +2148,58 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
   color: var(--text-muted); font-style: italic; font-size: 0.88rem;
 }
 
+/* ── Forschungsprotokoll ── */
+.tasks-mode-bar {
+  display: flex; gap: 0; border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.tasks-mode-btn {
+  flex: 1; padding: 8px 4px; background: none; border: none;
+  color: var(--text-muted); font-size: 0.82rem; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: color 0.15s;
+}
+.tasks-mode-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+.tasks-mode-btn:active { opacity: 0.7; }
+
+.rlog-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+.rlog-badge {
+  display: inline-block; padding: 2px 6px; border-radius: 3px;
+  font-size: 0.72rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+}
+.rlog-badge-found    { background: #1e4d1e; color: #6fcf6f; }
+.rlog-badge-partial  { background: #4d3d00; color: #f0c040; }
+.rlog-badge-not-found{ background: #3a1414; color: #e07070; }
+.rlog-badge-pending  { background: var(--surface2); color: var(--text-muted); }
+.rlog-body { flex: 1; min-width: 0; }
+.rlog-meta { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
+.rlog-query { font-size: 0.85rem; color: var(--text); }
+.rlog-note  { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; white-space: pre-wrap; }
+.rlog-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.rlog-edit, .rlog-del {
+  background: none; border: none; cursor: pointer; padding: 2px 6px;
+  font-size: 0.85rem; color: var(--text-muted); border-radius: 4px;
+}
+.rlog-edit:active, .rlog-del:active { background: var(--surface2); }
+.rlog-del:active { color: var(--red, #c0392b); }
+.rlog-filter-bar {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  padding: 6px 12px 4px; border-bottom: 1px solid var(--border);
+}
+.rlog-filter-btn {
+  padding: 3px 10px; border-radius: 12px; border: 1px solid var(--border);
+  background: none; color: var(--text-muted); font-size: 0.78rem; cursor: pointer;
+}
+.rlog-filter-btn.active { background: var(--gold); color: #1a1400; border-color: var(--gold); font-weight: 600; }
+.rlog-export-btn {
+  margin-left: auto; padding: 3px 10px; border-radius: 12px;
+  border: 1px solid var(--border); background: none;
+  color: var(--text-muted); font-size: 0.78rem; cursor: pointer;
+}
+.rlog-export-btn:active { opacity: 0.7; }
+
 /* ── Karte ── */
 .map-diamond-marker {
   width: 10px; height: 10px;

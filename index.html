@@ -471,6 +471,49 @@
   </div>
 </div>
 
+<!-- Forschungsprotokoll: Log-Eintrag hinzufügen/bearbeiten -->
+<div class="modal-overlay" id="modalAddRlog" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddRlog">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalAddRlog">Log-Eintrag</div>
+    <div class="sheet-body">
+      <div class="d-flex flex-col gap-12">
+        <label class="form-label">Datum
+          <input type="date" id="rlogDate" class="form-input w-full">
+        </label>
+        <label class="form-label">Archiv
+          <select id="rlogRepo" class="form-select w-full">
+            <option value="">(kein Archiv)</option>
+          </select>
+        </label>
+        <label class="form-label">Quelle
+          <select id="rlogSour" class="form-select w-full">
+            <option value="">(keine Quelle)</option>
+          </select>
+        </label>
+        <label class="form-label">Suchbegriff / Fragestellung
+          <input type="text" id="rlogQuery" placeholder="Was wurde gesucht?" class="form-input w-full">
+        </label>
+        <label class="form-label">Ergebnis
+          <select id="rlogResult" class="form-select w-full">
+            <option value="found">Gefunden</option>
+            <option value="partial">Teilweise gefunden</option>
+            <option value="not-found">Nicht gefunden</option>
+            <option value="pending">Ausstehend</option>
+          </select>
+        </label>
+        <label class="form-label">Notiz / Fundstätte
+          <textarea id="rlogNote" rows="3" placeholder="Was wurde gefunden? Signatur, Seite, …" class="form-input w-full"></textarea>
+        </label>
+        <div class="btn-row gap-8">
+          <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAddRlog">Abbrechen</button>
+          <button class="btn btn-save" data-action="saveRlog">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Person form -->
 <div class="modal-overlay" id="modalPerson" role="dialog" aria-modal="true" aria-labelledby="personFormTitle">
   <div class="sheet">

@@ -302,6 +302,15 @@ function writeINDIRecord(lines, p) {
     if (t.created)  lines.push(`2 _DATE ${t.created}`);
     if (t.id)       lines.push(`2 _ID ${t.id}`);
   }
+  for (const rl of (p._rlog || [])) {
+    lines.push(`1 _RLOG`);
+    if (rl.date)    lines.push(`2 DATE ${rl.date}`);
+    if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
+    if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
+    if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
+    if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
+    if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
+  }
 
   // ASSO: native associations (GEDCOM↔GRAMPS <personref> roundtrip)
   for (const a of (p.associations || [])) {
@@ -394,6 +403,15 @@ function writeFAMRecord(lines, f) {
     lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
     if (t.created)  lines.push(`2 _DATE ${t.created}`);
     if (t.id)       lines.push(`2 _ID ${t.id}`);
+  }
+  for (const rl of (f._rlog || [])) {
+    lines.push(`1 _RLOG`);
+    if (rl.date)    lines.push(`2 DATE ${rl.date}`);
+    if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
+    if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
+    if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
+    if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
+    if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
   }
   for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
   for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);

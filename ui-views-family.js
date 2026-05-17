@@ -506,6 +506,7 @@ function showFamilyDetail(id, pushHistory = true) {
   if (f._grampsAttrs?.length) html += `<div class="section fade-up">${f._grampsAttrs.map(a => `<div class="fact-row"><span class="fact-lbl">${esc(a.type)}</span><span class="fact-val">${esc(a.value)}${a.note ? `<div class="note-text">${esc(a.note)}</div>` : ''}</span></div>`).join('')}</div>`;
 
   html += _famTasksSectionHtml(id);
+  if (typeof _famRlogSectionHtml === 'function') html += _famRlogSectionHtml(id);
 
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
