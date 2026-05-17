@@ -1600,8 +1600,18 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .task-del:active  { background: var(--surface2); color: var(--red, #c0392b); }
 
 /* U6: Touch-Targets WCAG 2.5.5 */
-#yearFilterClear { min-width: 44px; min-height: 44px; }
+#yearFilterClear {
+  background: none; border: none; padding: 0 4px;
+  font-size: 0.75rem; color: var(--text-dim); cursor: pointer; flex-shrink: 0;
+}
 #personSortBtn   { min-height: 44px; }
+
+/* Spinner-Pfeile in Jahres-Eingaben ausblenden */
+#yearFrom::-webkit-inner-spin-button,
+#yearFrom::-webkit-outer-spin-button,
+#yearTo::-webkit-inner-spin-button,
+#yearTo::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+#yearFrom, #yearTo { -moz-appearance: textfield; }
 
 
 /* ═══════════════════════════════════════
