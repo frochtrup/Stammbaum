@@ -2426,14 +2426,86 @@ Tragen Sie auch negative Ergebnisse ein. „Kirchenbuch München 1855 durchsucht
 
 <p>Wenn Sie viele Wohnorte (RESI-Einträge) erfasst haben, bündelt die App diese automatisch zu <strong>Höfen</strong> — also Adressen, an denen mehrere Personen zu verschiedenen Zeiten gelebt haben. Das ist besonders nützlich für die Bauernhof-Genealogie.</p>
 
-<p>Zu finden sind die Höfe im Bereich <span class="button-label">📍 Orte</span> → dann im oberen Bereich auf den Tab „Höfe" wechseln.</p>
+<p>Zu finden sind die Höfe im Bereich <span class="button-label">📍 Orte</span> → Tab <strong>Höfe</strong>. Tippen Sie auf einen Hof, um die Detailansicht zu öffnen.</p>
 
-<p>Für jeden Hof sehen Sie:</p>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li>Die Adresse</li>
-  <li>Alle Personen, die dort gelebt haben, mit Zeitraum</li>
-  <li>Koordinaten für die Kartenanzeige</li>
-</ul>
+<h2>Bewohner und Eigentümer — der Unterschied</h2>
+
+<p>Die Detailansicht eines Hofes unterscheidet zwei Arten von Personen:</p>
+
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Typ</th><th>Bedeutung</th><th>Datenbasis</th></tr>
+  <tr>
+    <td><strong>Bewohner</strong></td>
+    <td>Person hat an dieser Adresse gewohnt — egal ob als Knecht, Magd, Mieter oder Hofinhaber</td>
+    <td>RESI-Ereignis der Person (Wohndatum + Ort)</td>
+  </tr>
+  <tr>
+    <td><strong>Eigentum</strong></td>
+    <td>Person hat die Liegenschaft besessen oder eine bestimmte Flur/Mühle/Acker an dieser Adresse besessen</td>
+    <td>PROP-Eintrag mit optionaler Beschreibung (z. B. „Mühle", „Acker Nord")</td>
+  </tr>
+</table>
+
+<p>Beide werden in der Sektion <strong>Bewohner &amp; Eigentum</strong> chronologisch zusammen angezeigt. Ein <span class="button-label">+ Bewohner</span>- und ein <span class="button-label">+ Eigentum</span>-Button stehen direkt in dieser Sektion.</p>
+
+<h2>Bewohner hinzufügen</h2>
+
+<ol class="steps">
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">+ Bewohner</span>.</div></li>
+  <li><div class="step-text">Suchen Sie die Person über das Namensfeld (Autocomplete).</div></li>
+  <li><div class="step-text">Geben Sie <strong>Datum</strong> und <strong>Ort</strong> des Wohnorts ein (optional, aber empfohlen).</div></li>
+  <li><div class="step-text">Wählen Sie optional eine <strong>Quelle</strong> mit Seite/Nachweis und Quellenqualität.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+
+<div class="info">
+Das Speichern legt ein <strong>RESI-Ereignis</strong> direkt auf der Person an — mit der Hof-Adresse als Wohnort. Der Eintrag ist damit vollständig GEDCOM-kompatibel und erscheint auch in der Personen-Detailansicht unter „Ereignisse".
+</div>
+
+<h2>Eigentum eintragen</h2>
+
+<ol class="steps">
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">+ Eigentum</span>.</div></li>
+  <li><div class="step-text">Wählen Sie die Person.</div></li>
+  <li><div class="step-text">Tragen Sie optional eine <strong>Beschreibung</strong> der Liegenschaft ein (z. B. „Mühle am Bach", „Acker Flur 7", „Gesamtanwesen").</div></li>
+  <li><div class="step-text">Ergänzen Sie Datum, Ort und Quelle nach Bedarf.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+
+<p>In der Übersicht erscheint ein Eigentumseintrag mit dem Label <em>„Eigentum · [Beschreibung] · [Datum]"</em>. So sehen Sie auf einen Blick: Wer hat wann was an dieser Adresse besessen?</p>
+
+<div class="tip">
+Für bäuerliche Genealogie empfiehlt sich folgende Konvention: Beim Übergabevertrag (Hofübergabe) beide Einträge anlegen — der alte Eigentümer bekommt ein Eigentum-Ende-Datum (BEF/AFT), der neue einen neuen Eigentum-Eintrag. So entsteht eine lückenlose Besitzerliste.
+</div>
+
+<h2>Notiz zum Hof</h2>
+
+<p>Jeder Hof hat eine eigene Notiz — ein freies Textfeld für Informationen, die nicht in einzelne Ereignisse passen: Hofname, Hofgeschichte, Besonderheiten, Quellenhinweise oder Forschungsstand.</p>
+
+<ol class="steps">
+  <li><div class="step-text">In der Hof-Detailansicht sehen Sie den Abschnitt <strong>Notiz</strong>.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Bearbeiten</span> neben dem Abschnitt.</div></li>
+  <li><div class="step-text">Ein Textfeld öffnet sich — schreiben Sie Ihre Notiz.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+
+<p>Die Notiz wird direkt an der Hof-Adresse gespeichert und bleibt beim nächsten Öffnen erhalten. In der Höfeliste ist ein Notiz-Symbol sichtbar, wenn eine Notiz vorhanden ist.</p>
+
+<h2>Koordinaten und Kartenanzeige</h2>
+
+<p>Damit ein Hof auf der Karte erscheint, hinterlegen Sie GPS-Koordinaten:</p>
+
+<ol class="steps">
+  <li><div class="step-text">Öffnen Sie die Hof-Detailansicht → Abschnitt <strong>Koordinaten</strong> → <span class="button-label">Bearbeiten</span>.</div></li>
+  <li><div class="step-text">Geben Sie Breitengrad (Lat) und Längengrad (Lon) ein — Dezimalgrad (z. B. 52.2073) oder Apple Maps-Format (z. B. 52,22779° N).</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+
+<p>Sobald Koordinaten vorhanden sind, erscheint ein Link <span class="button-label">Karte öffnen</span>, der direkt zu Apple Maps navigiert.</p>
+
+<h2>Hof umbenennen</h2>
+
+<p>Die Hof-Adresse ist gleichzeitig der eindeutige Schlüssel. Wenn Sie die Adresse korrigieren möchten, tippen Sie in der Detailansicht auf den Abschnitt <strong>Adresse</strong> und dann auf <span class="button-label">Umbenennen</span>. Alle verknüpften Bewohner- und Eigentum-Einträge werden automatisch auf die neue Adresse umgestellt.</p>
 
 
 <!-- ====================================================== -->
