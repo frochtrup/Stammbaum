@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v596 · Cache: `stammbaum-v596`
+**sw-Version:** v597 · Cache: `stammbaum-v597`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -103,7 +103,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 |---|---|---|---|
 | FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig | XS |
 | CHART-EXPORT | **Diagramm-Export als PNG** | SVG-basierte Diagramme (Fächer, Nachkommen-Baum) via Canvas-Konvertierung als PNG herunterladen; Download-Button in Topbar; ein Button pro Diagramm | S |
-| STATS-2 | **Statistik-Dashboard ausbauen** | Zu `ui-views-stats.js` ergänzen: Lebensspannen-Statistik (Ø, Min, Max, Histogramm); Heiratsalter-Verteilung; Geburten/Sterbefälle/Heiraten getrennt pro Jahrzehnt; Top-Sterbeorte; Kinderzahl-Verteilung pro Familie | M |
+| STATS-2 | **Statistik-Dashboard ausbauen** ✓ | Lebensspannen (Ø, Median, Min, Max + 10-Jahres-Histogramm); Heiratsalter-Verteilung (Ø Mann/Frau + 5-Jahres-Bins); Ereignisse pro Jahrzehnt (Geburten/Sterbefälle/Heiraten getrennt mit Legende); Top-Sterbeorte; Kinderzahl-Verteilung pro Familie (sw v597) | M ✓ |
 | SEARCH-ADV | **Erweiterte Suche** ✓ | Fehlende-Felder-Checkboxen: Kein Sterbedatum / Keine Quellen / Keine Eltern; in advFilterPanel integriert; kombinierbar mit Jahresfilter, Geburtsort, Geschlecht, Volltext (sw v596) | M ✓ |
 | MEDIA-MGR | **Medienverwaltung (eigene View)** | Zentraler Medien-Tab oder Menüeintrag statt verteilter 📎-Buttons in Personen-/Familien-/Quellen-Liste. Einheitliche Galerie aller Medien mit Filter nach Typ (Foto/Dokument/Audio), Zuordnung (Person/Familie/Quelle) und fehlender Verknüpfung. Klick öffnet Kontext (Person-/Familiendetail). Ersetzt `showPersonMediaBrowser`, `showFamilyMediaBrowser`, `showMediaBrowser` durch einen einzigen View `#v-media`. | L |
 | REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Text: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erweiterung: visueller Pfad als klickbare Karten-Kette im Modal. Erreichbar aus Personen-Detail. | M |

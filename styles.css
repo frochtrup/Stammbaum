@@ -1403,6 +1403,43 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   white-space: nowrap; text-align: center;
 }
 
+/* STATS-2 — Lebensspannen / Heiratsalter / Jahrzehnt / Kinderzahl */
+.stats-ls-summary {
+  display: flex; gap: 8px; margin-bottom: 10px;
+}
+.stats-ls-kachel {
+  flex: 1; background: var(--surface2); border-radius: 8px;
+  padding: 6px 4px; text-align: center;
+}
+.stats-ls-val { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+.stats-ls-lbl { font-size: 0.65rem; color: var(--text-muted); margin-top: 2px; }
+
+/* Mehrbalken-Wrap: dual (2 Balken) und tri (3 Balken) */
+.stats-tl-bar-wrap--dual { gap: 2px; }
+.stats-tl-bar-wrap--tri  { gap: 1px; }
+
+/* Farben der Spezialbalken */
+.stats-tl-bar--ls    { background: var(--gold-dim); }
+.stats-tl-bar--birth { background: var(--gold-dim); width: 8px; }
+.stats-tl-bar--death { background: var(--text-dim); width: 8px; }
+.stats-tl-bar--marr  { background: var(--green, #4caf50); width: 8px; }
+.stats-tl-bar--marr-m { background: var(--blue); width: 10px; }
+.stats-tl-bar--marr-f { background: var(--pink); width: 10px; }
+.stats-tl-bar--child  { background: var(--blue); width: 18px; }
+
+/* Jahrzehnt-Diagramm: schmalere Items für mehr Dekaden */
+.stats-timeline--dec .stats-tl-item  { flex: 1 0 28px; min-width: 28px; }
+.stats-timeline--child .stats-tl-item { flex: 1 0 32px; min-width: 32px; }
+
+/* Legende unter Diagramm */
+.stats-dec-legend {
+  display: flex; gap: 12px; align-items: center;
+  font-size: 0.7rem; color: var(--text-dim); margin-top: 6px; flex-wrap: wrap;
+}
+.stats-dec-dot {
+  width: 10px; height: 10px; border-radius: 2px; display: inline-block;
+}
+
 /* ═══════════════════════════════════════
    FORSCHUNGSAUFGABEN
 ═══════════════════════════════════════ */
