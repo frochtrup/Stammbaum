@@ -790,7 +790,7 @@ let _rlogViewFilter = 'all';
 
 function switchRlogFilter(f) {
   _rlogViewFilter = f;
-  ['all', 'found', 'not-found', 'pending'].forEach(k => {
+  ['all', 'found', 'partial', 'not-found', 'pending'].forEach(k => {
     document.getElementById('rlog-filter-' + k)?.classList.toggle('active', k === f);
   });
   _renderRlogView();
@@ -822,6 +822,7 @@ function _renderRlogView() {
   const filterBtns = [
     { k: 'all',       l: 'Alle' },
     { k: 'found',     l: 'Gefunden' },
+    { k: 'partial',   l: 'Teilweise' },
     { k: 'not-found', l: 'Nicht gefunden' },
     { k: 'pending',   l: 'Ausstehend' },
   ].map(b => `<button id="rlog-filter-${b.k}" class="rlog-filter-btn${_rlogViewFilter === b.k ? ' active' : ''}"
