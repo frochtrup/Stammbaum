@@ -139,9 +139,9 @@ body {
 .tree-card[data-sex="M"]::after { content: '♂'; position: absolute; top: 2px; right: 4px; font-size: 0.65rem; color: #5b9bd5; opacity: 0.75; pointer-events: none; line-height: 1; }
 .tree-card[data-sex="F"]::after { content: '♀'; position: absolute; top: 2px; right: 4px; font-size: 0.65rem; color: #c27b8a; opacity: 0.75; pointer-events: none; line-height: 1; }
 /* TREE-HEAT: Vollständigkeits-Heatmap (box-shadow, kein Konflikt mit border-left/data-sex) */
-.tree-card[data-completeness="1"] { box-shadow: 0 0 0 1.5px rgba(220,180,40,0.45); }
-.tree-card[data-completeness="2"] { box-shadow: 0 0 0 2px rgba(210,110,30,0.6); }
-.tree-card[data-completeness="3"] { box-shadow: 0 0 0 2px rgba(190,40,40,0.7); }
+.tree-card[data-completeness="1"] { box-shadow: 0 0 0 2.5px #c9a820, 0 0 6px rgba(201,168,32,0.45); }
+.tree-card[data-completeness="2"] { box-shadow: 0 0 0 3px #c05812, 0 0 7px rgba(192,88,18,0.5); }
+.tree-card[data-completeness="3"] { box-shadow: 0 0 0 3px #b01a1a, 0 0 8px rgba(176,26,26,0.55); }
 .tree-name {
   font-size: 0.7rem; color: var(--text);
   overflow: hidden; line-height: 1.2;
