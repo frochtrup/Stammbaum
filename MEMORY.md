@@ -43,7 +43,7 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v575)
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v595)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -56,34 +56,40 @@
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-16
+## Aktueller Stand — zuletzt aktualisiert: 2026-05-17
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v575** / Cache: `stammbaum-v575`
+- **Aktuelle sw-Version: v595** / Cache: `stammbaum-v595`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
-**Abgeschlossene Sprints (v8-dev, sw v448–v575):**
-- **SAFARI-SWIPE (sw v573):** `history.pushState({app:true},'')` in DOMContentLoaded + `popstate`-Listener → Re-Anker + `goBack()`; verhindert State-Verlust durch Safari-Wischgeste im Browser-Modus
-- **TASK-EXPORT-MD (sw v574):** `exportTasksMd()` in `ui-views-tasks.js`; Button „↓ MD" in `tasks-validate-bar`; pro Person: Name, Geschlecht, Geburt/Tod, Elternfamilie, Ehen; pro Familie: Gatten + Lebensdaten + Heirat + Kinderzahl; nach Kategorie; aktiver Filter übernommen
-- **Menü-Reihenfolge (sw v575):** „Datei schließen" am Ende des Datei-Abschnitts; „Einstellungen" hinter Trennstrich vor „Hilfe & Anleitung"
+**Abgeschlossene Sprints (v8-dev, Auswahl — vollständig: CHANGELOG.md):**
 - **PERF-1/2 (sw v448–v449):** Debouncing Filter-Inputs + Soundex-Cache
 - **CrossMode-CitNotes (sw v450):** `_citExtra[]` `<noteref>`-Einträge → `3 NOTE @grampId@`
 - **Dark Mode (sw v452):** `prefers-color-scheme` + `[data-theme]`-Toggle, 3-Stufen-Segment
 - **Buchgenerator (sw v453):** `ui-book.js`; Ahnenindex, Biografie, Medien, Namenindex
-- **Nachkommen-Baum (sw v462–v470):** `ui-desc-tree.js`; Toggle `⇩`; Gen-Buttons 2–7; T-Linien; `▼`-Badge; alle Ehepartner in Reihe mit ⚭-Button (variabler Überlapp); Geschwister horizontal gestapelt; `½`-Badge für Kinder aus Nebenehe; Klick-Navigation analog Sanduhr
+- **Nachkommen-Baum (sw v462–v470):** `ui-desc-tree.js`; Toggle `⇩`; Gen-Buttons 2–7; T-Linien; `▼`-Badge; alle Ehepartner in Reihe mit ⚭-Button; Geschwister horizontal gestapelt; `½`-Badge für Kinder aus Nebenehe
 - **Validierungsengine (sw v463):** `gedcom-validator.js`; 11 Regeln; RAM-only; Befunde manuell als `_task` übernehmbar
 - **Aufgaben Bottom-Tab (sw v464–v465):** `bnavTasks()`; Proband über Menü; „✓ Daten prüfen"-Button direkt im Aufgaben-Tab
 - **GRAMPS-Orte (sw v471–v475):** placeId-Erhalt im Edit-Pfad; Place-Picker aus `placeObjects` mit Typ-Badge; Hierarchie-Anzeige in Event-Detail
-- **OBJE-FIELDS (sw v476):** `p/f/s.media[]` erhalten `note`/`date`/`scbk`/`prim` als dedizierte Felder; `_PRIM Y` an Position 0 sortiert; Edit-Form: Notiz + Aufnahmedatum
-- **VAL-FAM + VAL-CONFIG (sw v496–v497):** `f._tasks[]`; GEDCOM-Roundtrip `1 _TASK FAM`; `VAL_RULES`/`VAL_CONFIG_DEFAULTS`; konfigurierbarer `runValidation(db, config)`; `modalValConfig`; sticky header im Aufgaben-Tab
-- **MAP-MIGR (sw v498):** dritter Karten-Modus „Migrationen"; `_renderMigrModus()`; Epochen-Farben `.map-migr-e0`–`.map-migr-e5`; Farb-Legende; Endpunkt-Marker
-- **ALIA (sw v499):** `p.alia[]` Parser/Writer; symmetrisches Edit; Warn-Row mit ≈-Label + left-border; Label „Selbe Person?"
-- **Mobile-Karte-Fix (sw v500):** Orte/Höfe/Karte-Toggle auf Mobile bei Karte-Modus ausgeblendet
-- **MEDI-CALN (sw v545):** `s.repoCallMedi`; `3 MEDI` unter `2 CALN`; Select im Quellen-Formular (13 GEDCOM-5.5.1-Werte)
-- **SOUR-DATA (sw v546):** `s.dataEvens[]` mit `{evens,date,plac}`; `2 EVEN`/`3 DATE`/`3 PLAC` aus Passthrough herausgezogen; Deckungsbereich im Quellen-Detail + Formular
-- **Quellensicht-Reorder (sw v547):** Personen-/Familien-Liste ans Ende (nach Medien)
-- **REFN (sw v548):** `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; Parser + Writer + read-only Detail; Roundtrip-Delta: 0
-- **F9 Zeitleiste (sw v501–v540):** `ui-timeline.js` + `timeline-hist-events.js`; View `#v-timeline`; `_buildPersonEvents()` (Sonder-Ereignisse + events[] + Heiraten + Kinder); `_HIST_EVENTS` (71 Einträge 1315–2024, eigene Datei); Rendering vertikal (Dekaden) / horizontal Swim-Lane (5 Lanes); `_afterLayout()`-Utility; Vollbild-Modus; Baumnavigation in Topbar (⟷/⧖/✿/⇩/⌂); Mouseover-Tooltip; Filter-Toggles; Lebensspanne-Balken; undatierte Chips vertikal zentriert
+- **OBJE-FIELDS (sw v476):** `p/f/s.media[]` erhalten `note`/`date`/`scbk`/`prim` als dedizierte Felder; Edit-Form: Notiz + Aufnahmedatum
+- **VAL-FAM + VAL-CONFIG (sw v496–v497):** `f._tasks[]`; `VAL_RULES`/`VAL_CONFIG_DEFAULTS`; konfigurierbarer `runValidation(db, config)`; `modalValConfig`
+- **MAP-MIGR (sw v498):** dritter Karten-Modus „Migrationen"; Epochen-Farben `.map-migr-e0`–`.map-migr-e5`; Farb-Legende
+- **ALIA (sw v499):** `p.alia[]` Parser/Writer; symmetrisches Edit; Warn-Row ≈-Label
+- **F9 Zeitleiste (sw v501–v540, v591):** `ui-timeline.js` + `timeline-hist-events.js`; View `#v-timeline`; Swim-Lane horizontal (5 Lanes) + vertikal (Dekaden); `_HIST_EVENTS` 71 Einträge; Vollbild-Modus; Filter-Toggles; Lebensspanne-Balken; ab v591 vollwertiges Diagramm mit einheitlicher Topbar-Struktur (s. u.)
+- **STORY (sw v549–v560):** `ui-story.js`; View `#v-story`; Fließtext-Erzählung (18 Event-Templates); Hero-Foto + Galerie; Leaflet-Karte mit Bewegungspfad; HTML-Download + Print-CSS
+- **MEDI-CALN (sw v545):** `s.repoCallMedi`; `3 MEDI` unter `2 CALN`; Select im Quellen-Formular
+- **SOUR-DATA (sw v546):** `s.dataEvens[]` mit `{evens,date,plac}`; Deckungsbereich im Quellen-Detail + Formular
+- **REFN (sw v548):** `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; read-only Detail
+- **SAFARI-SWIPE (sw v573):** `history.pushState({app:true},'')` + `popstate`-Listener; verhindert State-Verlust durch Safari-Wischgeste
+- **TASK-EXPORT-MD (sw v574):** `exportTasksMd()` in `ui-views-tasks.js`; Button „↓ MD"; pro Person: Name, Geschlecht, Geburt/Tod, Ehen; nach Kategorie; aktiver Filter übernommen
+- **Menü-Reihenfolge (sw v575):** „Datei schließen" am Ende; „Einstellungen" hinter Trennstrich
+- **SEC-1/SEC-2 (sw v576):** XSS URL-Sanitizer + MIME-Validierung Foto-Upload
+- **QUICK-ADD (sw v577):** `modalAdd` → „⚡ Neue Person (Schnell)"; Masseneingabe-Modus (Modal bleibt offen, Quelle+Seite vorbelegt); `_qaLastId` + „Fertig"-Button → `showDetail()`
+- **CAM-LINK (sw v578):** 📷-Button im Ereignis-Formular; `<input capture=environment>`; Foto → IDB → `ev.media[]`
+- **FORSCH-LOG (sw v582–v585):** `1 _RLOG` unter INDI/FAM; Felder DATE · REPO · SOUR · `_QUERY` · `_RESULT` (found/partial/not-found/pending) · NOTE; globaler Log-Tab im Aufgaben-View; Filter + `exportRlogMd()`; `#modalAddRlog` mit REPO/SOUR-Picker; Ergebnis-Badges
+- **SOUR-TMPL (sw v586):** `_SOUR_TEMPLATES` (10 Einträge); Select-Dropdown im Quellen-Formular bei Neuanlage; befüllt ABBR, TITL, AUTH, PUBL, MEDI; Cursor vor `…`
+- **VAL-EXTEND (sw v590):** +10 neue Validierungsregeln (EVENT_AFTER_DEATH, CHILD_BEFORE_PARENT, MARR_AFTER_DEATH u. a.); Config-UI automatisch
+- **Diagramm-Topbars + Proband-Navigation (sw v591–v595):** einheitliches Topbar-Muster für alle vier Diagramme `[⌂][⤢] | [Diagramm-Wechsel][☰]`; Zeitleiste vollwertiges Diagramm; `tlShowProband()` Action; Familie-Topbar blendet Timeline/Story/Proband-Buttons aus; Person-Detail-Topbar: zwei ⌂-Buttons — `probandBtn` (navigiert zum Probanden) + `probandSetBtn` (`.proband-set-btn`, CSS-Rahmen, setzt/hebt Proband, direkt vor `✎`)
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
@@ -123,6 +129,8 @@ Passthrough-System (10 Mechanismen) + Reste-Details: `ARCHITECTURE.md` ADR-012.
 - **showToast(msg, type)**: type = 'success'|'error'|'warn'|'info'; typabhängige Dauer
 - **Virtuelles Scrollen**: `_VS_ROW=69`, `_VS_BUF=600`, `_VS_MIN=500`, Binary-Search O(log n)
 - **Baum Tooltip**: `given`/`surname` → Fallback `name` → `(unbekannt)`; `evGeoLink(lati, long)` in `ui-views.js` zentralisiert
+- **Einheitliche Diagramm-Topbar**: alle vier Diagramme (Sanduhr, Fächer, Nachkommen, Zeitleiste) folgen `[⌂ Proband][⤢ Vollbild] | [Diagramm-Wechsel][☰]` (v591)
+- **Zwei Proband-Buttons in Person-Detail**: `probandBtn` (plain ⌂, navigiert zum Probanden) + `probandSetBtn` (⌂ mit CSS-Rahmen `.proband-set-btn`, setzt/hebt Proband, steht direkt vor `✎`); Familie-Topbar blendet beide aus (v595)
 
 ## IDB-Schlüssel (OneDrive-Ordner)
 - `od_base_path`: String — absoluter OneDrive-Pfad des GED-Ordners (auto-abgeleitet)
@@ -130,17 +138,12 @@ Passthrough-System (10 Mechanismen) + Reste-Details: `ARCHITECTURE.md` ADR-012.
 - `od_docs_folder`: `{ id, name, relPath }` — Dokumente-Ordner relativ zu od_base_path
 - `od_default_folder`, `od_doc_folder`, `od_filemap`, `od_doc_filemap` — **LEGACY/DEPRECATED**
 
-## Version 7 — Schwerpunkte (Branch `v7-dev`)
+## Version 7 — Schwerpunkte (Branch `v7-dev`, abgeschlossen)
 
 **Strategische Ausrichtung: GRAMPS als Desktop-Master, PWA als iOS-Companion.**
 GEDCOM bleibt vollständig erhalten. Austauschformat mit GRAMPS: **GRAMPS XML** (.gramps, gzip + XML).
 
-**Implementiert:** `gramps-parser.js` (Phase 2), `gramps-writer.js` (Phase 3), `db.placeObjects{}`, `db.tags{}`, `db._grampsHandles{}`, `db._sourceFormat`, Statistik-Dashboard, Duplikat-Erkennung, Soundex-Suche (F4), Beziehungsrechner (F2), Sosa/Kekule (F1)
-
-**Noch offen (Priorität laut ROADMAP.md):**
-- P1: F5 Lebende-Anonymisierung, F6 Strict GEDCOM, GRAMPS-Badge, Tags-Badges
-- P2: Dark Mode, F3 Pedigree-Collapse, GRAMPS Orts-Picker + Editierbarkeit
-- Backlog: Nachkommen-Baum, Zeitleiste, Cmd+Z granular, F4b Mehrfach-Zitierungen
+**Implementiert:** `gramps-parser.js` (Phase 2), `gramps-writer.js` (Phase 3), `db.placeObjects{}`, `db.tags{}`, `db._grampsHandles{}`, `db._sourceFormat`, Statistik-Dashboard, Duplikat-Erkennung, Soundex-Suche (F4), Beziehungsrechner (F2), Sosa/Kekule (F1); alle v7-Backlog-Items in v8-dev weitergeführt
 
 ## Offene Architektur-Schulden
 - Cmd+Z = "Revert to Saved" (nicht granulares Undo) — Backlog U8
