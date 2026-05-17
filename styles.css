@@ -1560,9 +1560,12 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   color: var(--text-muted); font-style: italic;
 }
 /* Prüfregeln-Config-Modal */
+.valcfg-rules-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;
+}
 .valcfg-rule-row {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 0.88rem; cursor: pointer; padding: 2px 0;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.85rem; cursor: pointer; padding: 2px 0;
 }
 .valcfg-rule-row input[type="checkbox"] { width: 16px; height: 16px; flex: none; cursor: pointer; }
 .valcfg-thr-row {
