@@ -9,10 +9,10 @@
   :root {
     --gold: #b8962e;
     --gold-light: #d4a843;
-    --app-bg: #1a1510;
-    --app-card: #2a2218;
-    --app-border: #3a3020;
-    --text-main: #e8dcc8;
+    --app-bg: #f8f6f2;
+    --app-card: #ffffff;
+    --app-border: #ddd8cc;
+    --text-main: #2a2218;
     --text-dim: #8a7a5a;
     --pink: #c26080;
     --blue: #5080c2;
@@ -211,8 +211,8 @@
   .phone-frame {
     width: 240px;
     flex-shrink: 0;
-    background: #111;
-    border: 4px solid #333;
+    background: #c8c8c8;
+    border: 4px solid #aaa;
     border-radius: 30px;
     padding: 10px 6px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.3);
@@ -681,8 +681,17 @@ Die App arbeitet vollständig <strong>ohne Internet</strong>. Ihre Daten verlass
   <div class="phone-frame">
     <div class="phone-screen">
       <div class="app-topbar">
-        <span class="title">⌂ ⤢ | Elisabeth Bau…</span>
-        <span class="actions">2 3 4 5 6 ◑ ⇩ ⟷ ☰</span>
+        <span class="back">← ▾</span>
+        <span class="title">Elisabeth Bauer</span>
+        <span class="actions">⌂ ⤢ | ◑ ⇩ ⟷ ☰</span>
+      </div>
+      <div style="background:var(--app-card);border-bottom:1px solid var(--app-border);padding:3px 8px;display:flex;gap:4px;justify-content:center;">
+        <span style="font-size:7px;color:var(--text-dim);margin-right:4px;">Gen:</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">2</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--gold);border-radius:3px;color:white;">3</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">4</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">5</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">6</span>
       </div>
       <!-- Baum-Ansicht Mini -->
       <div class="tree-mockup" style="min-height:180px; font-size:7px;">
@@ -1572,6 +1581,21 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
 <!-- ====================================================== -->
 <h1 class="chapter" id="kap8">8. Stammbaum-Ansichten und Diagramme</h1>
 
+<p>Alle vier Diagramme (Sanduhr, Fächer, Nachkommen-Baum und Zeitleiste) haben eine einheitliche Topbar-Struktur: Links stehen <strong>Proband-Navigation</strong> und <strong>Vollbild</strong>, dann ein Trennstrich, dann die <strong>Wechsel-Buttons</strong> zu den anderen Diagrammen und das Menü.</p>
+
+<table style="font-size:0.88em; margin: 1em 0;">
+  <tr><th>Button</th><th>Funktion</th><th>In welchem Diagramm</th></tr>
+  <tr><td><span class="button-label">⌂</span></td><td>Zum Probanden navigieren</td><td>Alle vier Diagramme</td></tr>
+  <tr><td><span class="button-label">⤢</span></td><td>Vollbild ein/aus (nur Desktop)</td><td>Alle vier Diagramme</td></tr>
+  <tr><td style="color:#aaa; padding:4px 8px;">|</td><td style="color:#aaa;">Trennstrich</td><td></td></tr>
+  <tr><td><span class="button-label">⧖</span></td><td>Zum Sanduhr-Baum wechseln</td><td>Fächer, Nachkommen, Zeitleiste</td></tr>
+  <tr><td><span class="button-label">◑</span></td><td>Zum Fächer-Diagramm wechseln</td><td>Sanduhr, Nachkommen, Zeitleiste</td></tr>
+  <tr><td><span class="button-label">⇩</span></td><td>Zum Nachkommen-Baum wechseln</td><td>Sanduhr, Fächer, Zeitleiste</td></tr>
+  <tr><td><span class="button-label">⟷</span></td><td>Zur Zeitleiste wechseln</td><td>Sanduhr, Fächer, Nachkommen</td></tr>
+</table>
+
+<p>Die Generationsauswahl (Zahlen <span class="button-label">2</span> bis <span class="button-label">6</span> bzw. <span class="button-label">7</span>) erscheint in einer eigenen Leiste <em>unterhalb</em> der Topbar, direkt über dem Diagramm.</p>
+
 <h2>Der Sanduhr-Baum</h2>
 
 <p>Der <strong>Sanduhr-Baum</strong> ist die Hauptansicht unter <span class="button-label">⧖ Baum</span>. Er zeigt die ausgewählte Person in der Mitte — oben die Vorfahren, unten die Nachkommen.</p>
@@ -1580,8 +1604,17 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
   <div class="phone-frame">
     <div class="phone-screen">
       <div class="app-topbar">
-        <span class="title">⌂ ⤢ | Elisabeth Bau…</span>
-        <span class="actions">2 3 4 5 6 ◑ ⇩ ⟷ ☰</span>
+        <span class="back">← ▾</span>
+        <span class="title">Elisabeth Bauer</span>
+        <span class="actions">⌂ ⤢ | ◑ ⇩ ⟷ ☰</span>
+      </div>
+      <div style="background:var(--app-card);border-bottom:1px solid var(--app-border);padding:3px 8px;display:flex;gap:4px;justify-content:center;">
+        <span style="font-size:7px;color:var(--text-dim);margin-right:4px;">Generationen:</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;color:var(--text-main);">2</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--gold);border-radius:3px;color:white;">3</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;color:var(--text-main);">4</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;color:var(--text-main);">5</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;color:var(--text-main);">6</span>
       </div>
       <div class="tree-mockup" style="min-height:230px;">
         <div style="color:var(--text-dim);font-size:7px;margin-bottom:4px;">↑ Vorfahren</div>
@@ -1632,8 +1665,6 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
       <tr><td>2 Finger auseinander</td><td>Vergrößern</td></tr>
       <tr><td>2 Finger zusammen</td><td>Verkleinern</td></tr>
       <tr><td>Mit Finger ziehen</td><td>Baum verschieben</td></tr>
-      <tr><td>Zahlen 2–6</td><td>Anzahl der Generationen wählen</td></tr>
-      <tr><td><span class="button-label">◑</span></td><td>Zum Fächer-Diagramm wechseln</td></tr>
     </table>
 
     <h3 style="margin-top:1em;">Bedeutung der Farben</h3>
@@ -1654,8 +1685,16 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
   <div class="phone-frame">
     <div class="phone-screen">
       <div class="app-topbar">
-        <span class="title">⌂ ⤢ | Elisabeth Bauer</span>
-        <span class="actions">3 4 5 6 ⧖ ⇩ ⟷ ☰</span>
+        <span class="back">← ▾</span>
+        <span class="title">Elisabeth Bauer</span>
+        <span class="actions">⌂ ⤢ | ⧖ ⇩ ⟷ ☰</span>
+      </div>
+      <div style="background:var(--app-card);border-bottom:1px solid var(--app-border);padding:3px 8px;display:flex;gap:4px;justify-content:center;">
+        <span style="font-size:7px;color:var(--text-dim);margin-right:4px;">Gen:</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">3</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--gold);border-radius:3px;color:white;">4</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">5</span>
+        <span style="font-size:7px;padding:1px 4px;background:var(--app-border);border-radius:3px;">6</span>
       </div>
       <div class="fan-mockup">
         <!-- Stilisierter Fächer -->
@@ -1685,8 +1724,7 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
       <li>Ring 4 und mehr: weitere Generationen</li>
     </ul>
     <p style="margin-top:0.7em;">Dunkle (leere) Segmente stehen für unbekannte Vorfahren. Das zeigt Ihnen auf einen Blick, wo noch Forschungsbedarf besteht.</p>
-    <p style="margin-top:0.7em;">Mit den Zahlen <span class="button-label">3</span> bis <span class="button-label">6</span> in der Topbar wählen Sie, wie viele Generationen angezeigt werden.</p>
-    <p style="margin-top:0.7em;">Tippen Sie auf <span class="button-label">⧖</span>, um zum Sanduhr-Baum zurückzukehren.</p>
+    <p style="margin-top:0.7em;">Mit den Zahlen in der Generationen-Leiste unterhalb der Topbar wählen Sie, wie viele Ringe angezeigt werden.</p>
   </div>
 </div>
 
@@ -1723,10 +1761,6 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
 <h3>Historische Ereignisse filtern</h3>
 
 <p>In der Topbar der Zeitleiste befinden sich Filter-Schalter für die Kategorien historischer Ereignisse: <strong>Krieg · Seuche · Politik · Religion · Natur</strong>. Schalten Sie einzelne Kategorien ein oder aus, um die Zeitleiste übersichtlicher zu gestalten.</p>
-
-<h3>Navigation in der Zeitleiste</h3>
-
-<p>Die Diagramm-Navigation steht in der Zeitleiste vollständig zur Verfügung: <span class="button-label">⌂</span> navigiert zum Probanden, <span class="button-label">⤢</span> schaltet Vollbild ein/aus. Nach dem Separator wechseln Sanduhr <span class="button-label">⧖</span>, Fächer <span class="button-label">◑</span> und Nachkommen <span class="button-label">⇩</span> direkt zur entsprechenden Ansicht der aktuellen Person.</p>
 
 <div class="tip">
 Tipp: Drehen Sie das Gerät ins Querformat, um die Swim-Lane-Ansicht zu aktivieren — so sehen Sie auf einen Blick, in welche historische Epoche ein Ereignis fällt.
@@ -1894,6 +1928,56 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
 <h2>Aufgaben verwalten</h2>
 
 <p>Der Tab <span class="button-label">☑ Aufgaben</span> in der unteren Navigation zeigt alle Aufgaben in einer Gesamtliste — gegliedert nach Kategorie, mit klickbaren Personen- und Familien-Namen.</p>
+
+<div class="mockup-wrapper" style="margin-top:1em;">
+  <div class="phone-frame">
+    <div class="phone-screen">
+      <div class="app-topbar">
+        <span class="title">☑ Aufgaben</span>
+        <span class="actions">↓ MD ☰</span>
+      </div>
+      <div style="background:var(--app-card);border-bottom:1px solid var(--app-border);padding:4px 8px;display:flex;gap:8px;align-items:center;">
+        <span style="font-size:8px;font-weight:bold;color:var(--gold);border-bottom:2px solid var(--gold);padding-bottom:1px;">Aufgaben</span>
+        <span style="font-size:8px;color:var(--text-dim);">Protokoll</span>
+        <span style="margin-left:auto;display:flex;gap:4px;">
+          <span style="font-size:7px;background:var(--gold);color:white;padding:1px 5px;border-radius:8px;">Offen</span>
+          <span style="font-size:7px;color:var(--text-dim);">Erledigt</span>
+          <span style="font-size:7px;color:var(--text-dim);">Alle</span>
+        </span>
+      </div>
+      <div class="app-content" style="padding:4px 6px;">
+        <div style="font-size:7.5px;color:var(--gold);letter-spacing:0.5px;margin-bottom:3px;font-weight:bold;">KIRCHENBUCH</div>
+        <div style="background:var(--app-card);border:1px solid var(--app-border);border-radius:6px;padding:5px 7px;margin-bottom:4px;">
+          <div style="font-size:8px;font-weight:bold;color:var(--text-main);">Taufeintrag suchen</div>
+          <div style="font-size:7px;color:var(--text-dim);">Elisabeth Bauer</div>
+        </div>
+        <div style="font-size:7.5px;color:var(--gold);letter-spacing:0.5px;margin:5px 0 3px 0;font-weight:bold;">URKUNDE / STANDESAMT</div>
+        <div style="background:var(--app-card);border:1px solid var(--app-border);border-radius:6px;padding:5px 7px;margin-bottom:4px;">
+          <div style="font-size:8px;font-weight:bold;color:var(--text-main);">Sterbeurkunde anfordern</div>
+          <div style="font-size:7px;color:var(--text-dim);">Johann Müller</div>
+        </div>
+        <div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--app-border);display:flex;gap:6px;">
+          <span style="font-size:7px;color:var(--text-dim);">✓ Daten prüfen</span>
+          <span style="font-size:7px;color:var(--text-dim);">↓ MD</span>
+        </div>
+      </div>
+      <div class="app-nav">
+        <div class="nav-item"><span class="nav-icon">⧖</span>Baum</div>
+        <div class="nav-item"><span class="nav-icon">👤</span>Personen</div>
+        <div class="nav-item"><span class="nav-icon">⚭</span>Familien</div>
+        <div class="nav-item"><span class="nav-icon">📖</span>Quellen</div>
+        <div class="nav-item"><span class="nav-icon">📍</span>Orte</div>
+        <div class="nav-item active"><span class="nav-icon">☑</span>Aufgaben</div>
+      </div>
+    </div>
+  </div>
+  <div class="explanation">
+    <p>Mit dem Umschalter <strong>Aufgaben / Protokoll</strong> oben wechseln Sie zur Forschungsprotokoll-Ansicht (Kapitel 14).</p>
+    <p style="margin-top:0.6em;">Die Filter <strong>Offen · Erledigt · Alle</strong> gelten jeweils für den aktiven Modus.</p>
+    <p style="margin-top:0.6em;"><span class="button-label">✓ Daten prüfen</span> analysiert den gesamten Stammbaum automatisch auf Fehler.</p>
+    <p style="margin-top:0.6em;"><span class="button-label">↓ MD</span> exportiert die gefilterte Liste als Markdown-Datei.</p>
+  </div>
+</div>
 
 <p>Oben in der Liste können Sie filtern:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
