@@ -24,7 +24,7 @@ Drei Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v589 · Cache: `stammbaum-v589`
+**sw-Version:** v590 · Cache: `stammbaum-v590`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -89,7 +89,7 @@ Der Unterschied zwischen Hobbysammler und ernsthaftem Forscher: Protokoll, Quell
 |---|---|---|---|
 | SOUR-TMPL | **Quellen-Vorlagen** ✓ | `_SOUR_TEMPLATES` (10 Einträge: KB Taufen/Heiraten/Beerdigungen, StA Geburt/Heirat/Sterbefall, Volkszählung, Grabstein, Totenzettel, Militärakte); Select-Dropdown im Quellen-Formular (nur bei Neuanlage); befüllt ABBR, TITL, AUTH, PUBL, MEDI; immer überschreiben; öffnet optional fields + CALN-Gruppe automatisch; Cursor vor `…` → Nutzer tippt Ort/Jahr direkt ein (sw v586) | S ✓ |
 | FORSCH-LOG | **Forschungsprotokoll** ✓ | `1 _RLOG` unter INDI/FAM; Felder: DATE · REPO-Picker · SOUR-Picker · `_QUERY` · `_RESULT` (found/partial/not-found/pending) · NOTE; Abschnitt in Personen-/Familien-Detail; globaler Log-Tab (Modus-Umschalter „Aufgaben/Protokoll"); Filter + MD-Export; „→"-Button auf Task-Rows öffnet Log-Formular vorausgefüllt (sw v582–v585) | M ✓ |
-| VAL-EXTEND | **Validierung ausbauen** | Bestehende `VAL_RULES` dokumentieren + ergänzen: Elternteil-Alterscheck (>70 bei Geburt Kind), Heiratsalter (<14), Tod vor Geburt, Person ohne Quellenangabe (Badge), chronologische Konsistenz Events, Name+Geburtsdatum-Duplikat als Warnhinweis | M |
+| VAL-EXTEND | **Validierung ausbauen** ✓ | +10 neue Regeln (P1–P3): EVENT_AFTER_DEATH, CHILD_BEFORE_PARENT, MARR_AFTER_DEATH, CHILD_AFTER_FATHER_DEATH, FATHER_TOO_YOUNG, MARR_TOO_YOUNG, NO_SOURCES_AT_ALL, MISSING_GIVEN, MISSING_DEATHPLACE, MISSING_MARRDATE; Config-UI automatisch; Backlog: POSSIBLE_DUPLICATE (sw v590) | M ✓ |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional | M |
 
 ---
