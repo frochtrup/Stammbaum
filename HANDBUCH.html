@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v603</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -614,8 +614,20 @@
         <li>Zeitleiste</li>
       </ul>
     </li>
+    <li><a href="#kap-stats">Statistik &amp; Auswertung</a>
+      <ul class="sub">
+        <li>Übersichts-Kacheln</li>
+        <li>Lebensspannen und Altersverteilung</li>
+        <li>Ereignisse pro Jahrzehnt</li>
+        <li>Top-Listen</li>
+      </ul>
+    </li>
     <li><a href="#kap10">Biografie (Story Mode)</a></li>
-    <li><a href="#kap11">Suchen und Finden</a></li>
+    <li><a href="#kap11">Suchen und Finden</a>
+      <ul class="sub">
+        <li>Fehlende-Felder-Filter</li>
+      </ul>
+    </li>
     <li><a href="#kap12">Speichern und Sichern</a>
       <ul class="sub">
         <li>Lokal speichern</li>
@@ -1711,6 +1723,30 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
 </div>
 
 
+<h2>Animierter Migrationspfad</h2>
+
+<p>Im Migrations-Modus und im Personen-Modus erscheint unterhalb der Karte eine <strong>Animations-Leiste</strong>. Sie ermöglicht es, Migrationswege zeitlich animiert darzustellen — statt alle Linien auf einmal zu zeigen, werden sie nacheinander eingeblendet.</p>
+
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Schaltfläche</th><th>Funktion</th></tr>
+  <tr><td><span class="button-label">▶</span></td><td>Animation starten</td></tr>
+  <tr><td><span class="button-label">⏸</span></td><td>Animation pausieren (Linien bleiben sichtbar)</td></tr>
+  <tr><td><span class="button-label">⏹</span></td><td>Stopp — alle Linien statisch anzeigen</td></tr>
+  <tr><td>Geschwindigkeit</td><td>Langsam / Normal / Schnell / Sehr schnell</td></tr>
+  <tr><td>Loop</td><td>Nach der letzten Linie von vorne beginnen</td></tr>
+</table>
+
+<h3>Modus Migrationen</h3>
+<p>Alle Personen mit mindestens zwei bekannten Orten werden der Reihe nach animiert — sortiert nach Geburtsjahr, vom ältesten zum jüngsten. Jede Linie „zeichnet sich" sichtbar ein. Mit <strong>Sehr schnell</strong> erhalten Sie in wenigen Sekunden einen Überblick über alle Bewegungen; mit <strong>Langsam</strong> eignet sich die Animation für Präsentationen.</p>
+
+<h3>Modus Person</h3>
+<p>Beim Öffnen der Karte über eine Personen-Detailansicht startet die Animation im Personen-Modus: Die Lebensstationen der ausgewählten Person werden Station für Station eingeblendet — mit nummerierten Markern und gestrichelten Verbindungslinien.</p>
+
+<div class="tip">
+Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Marker — der Tooltip zeigt Name, Daten und Orte der Person.
+</div>
+
+
 <!-- ====================================================== -->
 <!-- KAPITEL 8: STAMMBAUM-ANSICHTEN -->
 <!-- ====================================================== -->
@@ -1823,6 +1859,19 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
       <li><span style="color:var(--gold);">Goldener Rahmen + Zahl 1</span>: der Proband (Mittelpunkt)</li>
       <li><span style="color:var(--text-dim);">Graue Felder mit ?</span>: unbekannte Vorfahren</li>
     </ul>
+    <h3 style="margin-top:1em;">Vollständigkeits-Heatmap</h3>
+    <p style="font-size:0.9em;">Jede Karte im Baum trägt am Rand einen farbigen Ring, wenn Daten fehlen. Geprüft werden drei Kriterien:</p>
+    <ul style="margin: 0.3em 0 0 1.2em; font-size:0.9em; line-height:2em;">
+      <li>Geburtsdatum vorhanden?</li>
+      <li>Mindestens eine Quellenangabe?</li>
+      <li>Mindestens ein Zitat mit Quellenqualität ≥ 2?</li>
+    </ul>
+    <ul style="margin: 0.3em 0 0 1.2em; font-size:0.9em; line-height:2em;">
+      <li><span style="color:#c8a832; font-weight:bold;">Goldgelber Ring</span>: eines der drei Kriterien fehlt</li>
+      <li><span style="color:#e07820; font-weight:bold;">Oranger Ring</span>: zwei Kriterien fehlen</li>
+      <li><span style="color:#c04030; font-weight:bold;">Roter Ring</span>: alle drei fehlen</li>
+    </ul>
+    <p style="font-size:0.9em;">Der Hover-Tooltip nennt konkret, welche Felder fehlen. Nutzen Sie die Heatmap, um gezielt die lückenhaftesten Personen in Ihrem Stammbaum zu identifizieren.</p>
   </div>
 </div>
 
@@ -1946,6 +1995,50 @@ Tipp: Drehen Sie das Gerät ins Querformat, um die Swim-Lane-Ansicht zu aktivier
 
 
 <!-- ====================================================== -->
+<!-- KAPITEL STATISTIK: STATISTIK & AUSWERTUNG -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap-stats">9. Statistik &amp; Auswertung</h1>
+
+<p>Das Statistik-Dashboard gibt Ihnen einen schnellen Überblick über Ihren gesamten Stammbaum — mit Kennzahlen, Verteilungen und Top-Listen. Sie öffnen es über <span class="button-label">☰ → Statistik</span>.</p>
+
+<h2>Übersichts-Kacheln</h2>
+
+<p>Ganz oben stehen auf einen Blick:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Anzahl Personen, Familien, Quellen und Orte</li>
+  <li>Geschlechterverteilung (♂ / ♀ / unbekannt) als Balken</li>
+  <li>Datenvollständigkeit: Anteil der Personen mit Geburtsdatum, Sterbedatum, Geburtsort und Quellenangabe</li>
+</ul>
+
+<h2>Lebensspannen und Altersverteilung</h2>
+
+<p>Dieser Abschnitt zeigt, wie alt die Personen in Ihrem Stammbaum wurden:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Durchschnitt, Median, Minimum und Maximum</strong> — jeweils getrennt für Männer und Frauen</li>
+  <li><strong>Histogramm</strong>: Verteilung der Lebensspannen in 10-Jahres-Schritten</li>
+</ul>
+
+<p>Ergänzend erscheint die <strong>Heiratsalter-Verteilung</strong>: In welchem Alter haben die Männer und Frauen Ihres Stammbaums geheiratet? Das Diagramm zeigt Durchschnitt und 5-Jahres-Bins getrennt für beide Geschlechter.</p>
+
+<h2>Ereignisse pro Jahrzehnt</h2>
+
+<p>Ein Diagramm zeigt, in welchen Jahrzehnten besonders viele Geburten, Sterbefälle und Heiraten stattgefunden haben — mit einer Legende für jede Ereignisart. So sehen Sie auf einen Blick, in welchem historischen Zeitraum Ihr Stammbaum am dichtesten belegt ist.</p>
+
+<h2>Top-Listen</h2>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Top-Sterbeorte</strong>: Welche Orte tauchen am häufigsten als Sterbeort auf?</li>
+  <li><strong>Kinderzahl-Verteilung</strong>: Wie viele Kinder hatten die Familien? (0, 1, 2 … 10+)</li>
+  <li><strong>Häufigste Vornamen und Nachnamen</strong></li>
+  <li><strong>Häufigste Geburtsorte</strong></li>
+</ul>
+
+<div class="info">
+Das Statistik-Dashboard wertet nur die in der App geladene Datei aus — es sendet keine Daten ins Internet.
+</div>
+
+
+<!-- ====================================================== -->
 <!-- KAPITEL 10: BIOGRAFIE (STORY MODE) -->
 <!-- ====================================================== -->
 <h1 class="chapter" id="kap10">10. Biografie (Story Mode)</h1>
@@ -2006,6 +2099,23 @@ Die Biografie wird automatisch aus den vorhandenen Daten erzeugt. Je vollständi
 <h2>Geburtsjahrfilter</h2>
 
 <p>In der Personenliste können Sie mit den Feldern „Geb.-Jahr: von … bis" die Liste auf Personen eingrenzen, die in einem bestimmten Zeitraum geboren wurden. Das ist hilfreich, wenn Sie z. B. alle Personen aus dem 18. Jahrhundert suchen.</p>
+
+<h2>Fehlende-Felder-Filter</h2>
+
+<p>Im erweiterten Suchbereich (<span class="button-label">☰ Suche → Erweitert</span>) finden Sie drei Checkboxen, mit denen Sie gezielt nach Personen mit lückenhaften Daten filtern können:</p>
+
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Checkbox</th><th>Filtert nach …</th></tr>
+  <tr><td><strong>Kein Sterbedatum</strong></td><td>Personen, bei denen kein Sterbedatum eingetragen ist</td></tr>
+  <tr><td><strong>Keine Quellen</strong></td><td>Personen ohne jegliche Quellenangabe</td></tr>
+  <tr><td><strong>Keine Eltern</strong></td><td>Personen, die keiner Familie als Kind zugeordnet sind</td></tr>
+</table>
+
+<p>Die Checkboxen sind frei kombinierbar — wählen Sie mehrere gleichzeitig, um z. B. alle quelllosen Personen ohne bekannte Eltern aufzuspüren. Sie lassen sich außerdem mit dem Jahresfilter, Geburtsort, Geschlecht und Volltext-Suche kombinieren.</p>
+
+<div class="tip">
+Nutzen Sie „Keine Quellen" in Kombination mit dem Jahrgangsfilter, um gezielt nach Lücken in einer bestimmten Generation zu suchen — ideal als Vorbereitung für einen Archivbesuch.
+</div>
 
 
 <!-- ====================================================== -->
@@ -2200,7 +2310,7 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
   <li><strong>ℹ Hinweis</strong> — fehlende Angaben, die die Forschung verbessern würden</li>
 </ul>
 
-<p>Die Validierungsengine prüft 21 Regeln in vier Gruppen:</p>
+<p>Die Validierungsengine prüft 22 Regeln in vier Gruppen:</p>
 
 <table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
   <thead>
@@ -2235,6 +2345,7 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
     <tr><td style="padding:3px 8px;">Heiratsdatum fehlt</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
     <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">QUELLEN</td></tr>
     <tr><td style="padding:3px 8px;">Geburt nach Standesamt-Ära, keine Quelle</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Keine Quellenangabe (Familie)</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
   </tbody>
 </table>
 
