@@ -60,11 +60,11 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SEC-1 | XSS in onedrive.js | ✓ URL-Sanitizer für href in ui-media.js (sw v576) | S ✓ |
-| SEC-2 | MIME-Validierung Foto-Upload | ✓ file.type-Check + Fehler-Toast in amCamChange (sw v576) | S ✓ |
-| ERR-1 | try-catch in async-Funktionen | ✓ bereits vollständig | — ✓ |
-| PERF-1 | Debouncing Suche/Filter | ✓ bereits erledigt | — ✓ |
-| PERF-2 | Soundex-Cache | ✓ bereits erledigt | — ✓ |
+| ~~SEC-1~~ | ~~**XSS in onedrive.js**~~ | URL-Sanitizer für href in ui-media.js (sw v576) | - |
+| ~~SEC-2~~ | ~~**MIME-Validierung Foto-Upload**~~ | file.type-Check + Fehler-Toast in amCamChange (sw v576) | - |
+| ~~ERR-1~~ | ~~**try-catch in async-Funktionen**~~ | bereits vollständig | - |
+| ~~PERF-1~~ | ~~**Debouncing Suche/Filter**~~ | bereits erledigt | - |
+| ~~PERF-2~~ | ~~**Soundex-Cache**~~ | bereits erledigt | - |
 
 ---
 
@@ -74,8 +74,8 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| QUICK-ADD | **Schnellerfassung neue Person** ✓ | `modalAdd` → „⚡ Neue Person (Schnell)": Minimalformular; Masseneingabe-Modus; „Fertig"-Button öffnet letzte Person (sw v577) | S ✓ |
-| CAM-LINK | **Foto direkt an Ereignis** ✓ | `<input capture="environment">` im Ereignis-Formular; Foto → IDB → `ev.media[]` (sw v578) | S ✓ |
+| ~~QUICK-ADD~~ | ~~**Schnellerfassung neue Person**~~ | `modalAdd` → „⚡ Neue Person (Schnell)": Minimalformular; Masseneingabe-Modus; „Fertig"-Button öffnet letzte Person (sw v577) | - |
+| ~~CAM-LINK~~ | ~~**Foto direkt an Ereignis**~~ | `<input capture="environment">` im Ereignis-Formular; Foto → IDB → `ev.media[]` (sw v578) | - |
 | QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich der gewählten Quelle an: Quellentyp bestimmt welche Felder erscheinen. Beispiel Taufbuch: Geburt + Taufe als Chips, separates Datum je Ereignis. Konfiguration als `quickAddTemplates[]` JSON, analog SOUR-TMPL. | M |
 | F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform beim Teilen; Opt-in im Einstellungs-Modal | M |
 
@@ -87,10 +87,10 @@ Der Unterschied zwischen Hobbysammler und ernsthaftem Forscher: Protokoll, Quell
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| SOUR-TMPL | **Quellen-Vorlagen** ✓ | 10 Vorlagen; Select-Dropdown bei Neuanlage; befüllt ABBR/TITL/AUTH/PUBL/MEDI (sw v586) | S ✓ |
-| FORSCH-LOG | **Forschungsprotokoll** ✓ | `1 _RLOG`; Felder DATE/REPO/SOUR/QUERY/RESULT/NOTE; globaler Tab; Filter + MD-Export (sw v582–v585) | M ✓ |
-| VAL-EXTEND | **Validierung ausbauen** ✓ | 21 Regeln in 4 Gruppen; konfigurierbarer `VAL_CONFIG`; Config-UI (sw v590) | M ✓ |
-| TREE-HEAT | **Vollständigkeits-Heatmap im Baum** ✓ | `data-completeness="1/2/3"` auf Baum-Karten (Sanduhr + Nachkommen): fehlend: Geburtsdatum / mind. 1 Quellenreferenz / mind. 1 Zitat mit QUAY≥2; box-shadow gelb→orange→rot; `_personCompleteness()` in ui-views.js (sw v598) | S ✓ |
+| ~~SOUR-TMPL~~ | ~~**Quellen-Vorlagen**~~ | 10 Vorlagen; Select-Dropdown bei Neuanlage; befüllt ABBR/TITL/AUTH/PUBL/MEDI (sw v586) | - |
+| ~~FORSCH-LOG~~ | ~~**Forschungsprotokoll**~~ | `1 _RLOG`; Felder DATE/REPO/SOUR/QUERY/RESULT/NOTE; globaler Tab; Filter + MD-Export (sw v582–v585) | - |
+| ~~VAL-EXTEND~~ | ~~**Validierung ausbauen**~~ | 21 Regeln in 4 Gruppen; konfigurierbarer `VAL_CONFIG`; Config-UI (sw v590) | - |
+| ~~TREE-HEAT~~ | ~~**Vollständigkeits-Heatmap im Baum**~~ | `data-completeness="1/2/3"` auf Baum-Karten (Sanduhr + Nachkommen): fehlend: Geburtsdatum / mind. 1 Quellenreferenz / mind. 1 Zitat mit QUAY≥2; box-shadow gelb→orange→rot; `_personCompleteness()` in ui-views.js (sw v598) | - |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional | M |
 
 ---
@@ -103,8 +103,8 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 |---|---|---|---|
 | FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig | XS |
 | CHART-EXPORT | **Diagramm-Export als PNG** | SVG-basierte Diagramme (Fächer, Nachkommen-Baum) via Canvas-Konvertierung als PNG herunterladen; Download-Button in Topbar; ein Button pro Diagramm | S |
-| STATS-2 | **Statistik-Dashboard ausbauen** ✓ | Lebensspannen (Ø, Median, Min, Max + 10-Jahres-Histogramm); Heiratsalter-Verteilung (Ø Mann/Frau + 5-Jahres-Bins); Ereignisse pro Jahrzehnt (Geburten/Sterbefälle/Heiraten getrennt mit Legende); Top-Sterbeorte; Kinderzahl-Verteilung pro Familie (sw v597) | M ✓ |
-| SEARCH-ADV | **Erweiterte Suche** ✓ | Fehlende-Felder-Checkboxen: Kein Sterbedatum / Keine Quellen / Keine Eltern; in advFilterPanel integriert; kombinierbar mit Jahresfilter, Geburtsort, Geschlecht, Volltext (sw v596) | M ✓ |
+| ~~STATS-2~~ | ~~**Statistik-Dashboard ausbauen**~~ | Lebensspannen (Ø, Median, Min, Max + 10-Jahres-Histogramm); Heiratsalter-Verteilung (Ø Mann/Frau + 5-Jahres-Bins); Ereignisse pro Jahrzehnt (Geburten/Sterbefälle/Heiraten getrennt mit Legende); Top-Sterbeorte; Kinderzahl-Verteilung pro Familie (sw v597) | - |
+| ~~SEARCH-ADV~~ | ~~**Erweiterte Suche**~~ | Fehlende-Felder-Checkboxen: Kein Sterbedatum / Keine Quellen / Keine Eltern; in advFilterPanel integriert; kombinierbar mit Jahresfilter, Geburtsort, Geschlecht, Volltext (sw v596) | - |
 | MEDIA-MGR | **Medienverwaltung (eigene View)** | Zentraler Medien-Tab oder Menüeintrag statt verteilter 📎-Buttons in Personen-/Familien-/Quellen-Liste. Einheitliche Galerie aller Medien mit Filter nach Typ (Foto/Dokument/Audio), Zuordnung (Person/Familie/Quelle) und fehlender Verknüpfung. Klick öffnet Kontext (Person-/Familiendetail). Ersetzt `showPersonMediaBrowser`, `showFamilyMediaBrowser`, `showMediaBrowser` durch einen einzigen View `#v-media`. | L |
 | REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Text: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erweiterung: visueller Pfad als klickbare Karten-Kette im Modal. Erreichbar aus Personen-Detail. | M |
 | PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
@@ -118,7 +118,7 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | ✓ sw v603 — Play/Pause/Stopp-Bar in Migrationen- und Person-Modus; stroke-dashoffset (Migr) / opacity-Fade (Person, Segment-für-Segment); Geschwindigkeit; Loop | S |
+| ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | Play/Pause/Stopp-Bar in Migrationen- und Person-Modus; stroke-dashoffset (Migr) / opacity-Fade (Person, Segment-für-Segment); Geschwindigkeit; Loop (sw v603) | - |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
 | TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
 | STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Kinderzahl); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
