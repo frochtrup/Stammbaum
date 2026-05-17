@@ -1037,6 +1037,8 @@ const _CLICK_MAP = {
   saveHofRename:           el  => saveHofRename(el.dataset.addr),
   switchPlacesSubTab:      el => switchPlacesSubTab(el.dataset.subtab),
   switchMapMode:           el => switchMapMode(el.dataset.mode),
+  toggleMigrAnim:          ()  => toggleMigrAnim(),
+  stopMigrAnim:            ()  => stopMigrAnim(),
   closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
   showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
   mapClose:                ()  => { document.getElementById('map-close-btn').style.display = 'none'; goBack(); },

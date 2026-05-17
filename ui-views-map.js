@@ -10,6 +10,14 @@ let _mapMode          = 'orte'; // 'orte' | 'person' | 'migr'
 let _mapPersonId      = null;   // aktive Person im Biografie-Modus
 let _placePersonIndex = null;   // cache: placeName → [{personId, role, date}]
 
+// Animations-State (MAP-ANIM)
+let _animTimer   = null;
+let _animRunning = false;
+let _animLines   = [];   // [{p, pts, color, latLngs, year}] sortiert nach Geburtsjahr
+let _animIdx     = 0;
+let _animSpeed   = 600;  // ms pro Linie
+let _animLoop    = false;
+
 // Epochen-Farben für Migrations-Modus (nach Geburtsjahr)
 const _MIGR_EPOCHS = [
   { label: 'vor 1700',  from:    0, to: 1699, color: '#9b7aaa' },
@@ -100,6 +108,17 @@ function _updateMapOfflineBanner() {
 // ─────────────────────────────────────
 function initOrRefreshPlaceMap() {
   _ensureMap();
+  // Speed-/Loop-Listener einmalig binden
+  const speedSel = document.getElementById('map-anim-speed');
+  if (speedSel && !speedSel._animBound) {
+    speedSel.addEventListener('change', e => { _animSpeed = parseInt(e.target.value, 10); });
+    speedSel._animBound = true;
+  }
+  const loopChk = document.getElementById('map-anim-loop');
+  if (loopChk && !loopChk._animBound) {
+    loopChk.addEventListener('change', e => { _animLoop = e.target.checked; });
+    loopChk._animBound = true;
+  }
   setTimeout(() => {
     if (!_leafletMap) return;
     _leafletMap.invalidateSize();
@@ -120,12 +139,14 @@ function _renderMap() {
 //  MODUS-WECHSEL
 // ─────────────────────────────────────
 function switchMapMode(mode) {
+  if (mode !== 'migr') { clearTimeout(_animTimer); _animRunning = false; }
   _mapMode = mode;
   document.getElementById('map-mode-orte')  ?.classList.toggle('active', mode === 'orte');
   document.getElementById('map-mode-person')?.classList.toggle('active', mode === 'person');
   document.getElementById('map-mode-migr')  ?.classList.toggle('active', mode === 'migr');
   document.getElementById('map-person-picker').style.display = mode === 'person' ? 'block' : 'none';
   document.getElementById('map-migr-legend') .style.display  = mode === 'migr'   ? 'flex'  : 'none';
+  document.getElementById('map-anim-bar')    ?.style.setProperty('display', mode === 'migr' ? 'flex' : 'none');
   document.getElementById('map-explore-panel').style.display = 'none';
   _renderMap();
 }
@@ -211,60 +232,137 @@ function _renderOrteModus() {
 // ─────────────────────────────────────
 //  MODUS 3: MIGRATIONSWEGE
 // ─────────────────────────────────────
-function _renderMigrModus() {
-  _mapMarkerLayer.clearLayers();
-  _mapLineLayer.clearLayers();
-  document.getElementById('map-explore-panel').style.display = 'none';
-
-  const bounds = [];
-  let count = 0;
-
+function _buildMigrLines() {
+  const lines = [];
   for (const p of Object.values(AppState.db.individuals)) {
     const evs = _personGeoEvents(p);
     if (evs.length < 2) continue;
-
-    // aufeinanderfolgende Duplikat-Koordinaten entfernen
     const pts = [evs[0]];
     for (let i = 1; i < evs.length; i++) {
       const prev = pts[pts.length - 1];
       if (evs[i].lat !== prev.lat || evs[i].lng !== prev.lng) pts.push(evs[i]);
     }
     if (pts.length < 2) continue;
-
     const byStr = p.birth?.date?.match(/\b(\d{4})\b/)?.[1];
-    const color = _migrColor(byStr ? parseInt(byStr, 10) : null);
+    const year  = byStr ? parseInt(byStr, 10) : 9999;
+    const color = _migrColor(byStr ? year : null);
+    lines.push({ p, pts, color, latLngs: pts.map(e => [e.lat, e.lng]), year });
+  }
+  return lines.sort((a, b) => a.year - b.year);
+}
 
-    const latLngs = pts.map(e => [e.lat, e.lng]);
-    const line = L.polyline(latLngs, { color, weight: 1.5, opacity: 0.5 });
+function _addMigrLine({ p, pts, color, latLngs }, animate) {
+  const line = L.polyline(latLngs, { color, weight: 1.5, opacity: animate ? 0 : 0.5 });
+  const from  = compactPlace(pts[0].place);
+  const to    = compactPlace(pts[pts.length - 1].place);
+  const years = _mapPersonYears(p);
+  line.bindTooltip(
+    `<b>${_mesc(p.name || p.id)}</b>${years ? ' ' + years : ''}<br>${_mesc(from)} → ${_mesc(to)}`,
+    { sticky: true }
+  );
+  line.on('click', () =>
+    _showExplorationPanel(pts[0].place, [{ personId: p.id, role: pts[0].role, date: pts[0].date }])
+  );
+  line.addTo(_mapLineLayer);
 
-    const from  = compactPlace(pts[0].place);
-    const to    = compactPlace(pts[pts.length - 1].place);
-    const years = _mapPersonYears(p);
-    line.bindTooltip(
-      `<b>${_mesc(p.name || p.id)}</b>${years ? ' ' + years : ''}<br>${_mesc(from)} → ${_mesc(to)}`,
-      { sticky: true }
-    );
-    line.on('click', () =>
-      _showExplorationPanel(pts[0].place, [{ personId: p.id, role: pts[0].role, date: pts[0].date }])
-    );
-    line.addTo(_mapLineLayer);
-
-    // Endpunkt-Marker (Zielort)
-    L.circleMarker([pts[pts.length - 1].lat, pts[pts.length - 1].lng], {
-      radius: 3.5, fillColor: color, color: '#1a140a',
-      weight: 1, opacity: 1, fillOpacity: 0.9,
-    }).addTo(_mapMarkerLayer);
-
-    latLngs.forEach(ll => bounds.push(ll));
-    count++;
+  if (animate) {
+    requestAnimationFrame(() => {
+      const svgPath = line._path;
+      if (!svgPath) return;
+      const len = svgPath.getTotalLength?.() ?? 300;
+      svgPath.style.strokeDasharray  = len;
+      svgPath.style.strokeDashoffset = len;
+      svgPath.style.opacity = '0.5';
+      svgPath.style.transition = `stroke-dashoffset ${Math.min(_animSpeed * 0.8, 800)}ms ease, opacity 0.15s`;
+      requestAnimationFrame(() => { svgPath.style.strokeDashoffset = '0'; });
+    });
   }
 
-  if (!count) {
+  L.circleMarker([pts[pts.length - 1].lat, pts[pts.length - 1].lng], {
+    radius: 3.5, fillColor: color, color: '#1a140a',
+    weight: 1, opacity: 1, fillOpacity: 0.9,
+  }).addTo(_mapMarkerLayer);
+}
+
+function _renderMigrModus() {
+  _mapMarkerLayer.clearLayers();
+  _mapLineLayer.clearLayers();
+  document.getElementById('map-explore-panel').style.display = 'none';
+
+  _animLines = _buildMigrLines();
+  if (!_animLines.length) {
     showToast('Keine Personen mit Migrations-Koordinaten gefunden');
     return;
   }
+
+  const bounds = [];
+  for (const item of _animLines) {
+    _addMigrLine(item, false);
+    item.latLngs.forEach(ll => bounds.push(ll));
+  }
   _leafletMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 10 });
+  _updateAnimBtn();
 }
+
+// ─────────────────────────────────────
+//  ANIMATIONS-STEUERUNG (MAP-ANIM)
+// ─────────────────────────────────────
+function _animStep() {
+  if (_animIdx >= _animLines.length) {
+    if (_animLoop) {
+      _animIdx = 0;
+      _mapLineLayer.clearLayers();
+      _mapMarkerLayer.clearLayers();
+    } else {
+      _animRunning = false;
+      _updateAnimBtn();
+      return;
+    }
+  }
+  _addMigrLine(_animLines[_animIdx++], true);
+  _animTimer = setTimeout(_animStep, _animSpeed);
+}
+
+function _startMigrAnim() {
+  _mapLineLayer.clearLayers();
+  _mapMarkerLayer.clearLayers();
+  _animIdx = 0;
+  _animRunning = true;
+  _updateAnimBtn();
+  _animStep();
+}
+
+function _pauseMigrAnim() {
+  clearTimeout(_animTimer);
+  _animRunning = false;
+  _updateAnimBtn();
+}
+
+function _stopMigrAnim() {
+  clearTimeout(_animTimer);
+  _animRunning = false;
+  _animIdx = 0;
+  _renderMigrModus();
+}
+
+function _updateAnimBtn() {
+  const btn = document.getElementById('map-anim-play');
+  if (btn) btn.textContent = _animRunning ? '⏸' : '▶';
+}
+
+function toggleMigrAnim() {
+  if (_animRunning) {
+    _pauseMigrAnim();
+  } else if (_animIdx > 0 && _animIdx < _animLines.length) {
+    _animRunning = true;
+    _updateAnimBtn();
+    _animStep();
+  } else {
+    _startMigrAnim();
+  }
+}
+
+function stopMigrAnim() { _stopMigrAnim(); }
 
 // ─────────────────────────────────────
 //  EXPLORATION-PANEL

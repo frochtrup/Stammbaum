@@ -443,7 +443,7 @@ body.desc-tree-mode.fc-mode #treeKeyLegend      { display: none !important; }
   display: none; flex-wrap: wrap; gap: 3px 10px; align-items: center;
   padding: 5px 12px 7px;
   background: var(--surface2); border: 1px solid var(--border);
-  border-top: none; border-radius: 0 0 8px 8px;
+  border-top: none; border-radius: 0;
   box-shadow: 0 4px 12px rgba(0,0,0,.4);
   font-size: 0.72rem; color: var(--text-dim);
 }
@@ -457,6 +457,28 @@ body.desc-tree-mode.fc-mode #treeKeyLegend      { display: none !important; }
 .map-migr-e3 { background: #e8a33a; }
 .map-migr-e4 { background: #e07050; }
 .map-migr-e5 { background: #a0a8b0; }
+#map-anim-bar {
+  display: none; align-items: center; gap: 6px;
+  padding: 5px 12px 7px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+}
+.map-anim-btn {
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 5px; padding: 2px 8px; font-size: 1rem;
+  cursor: pointer; color: var(--text); line-height: 1.4;
+}
+.map-anim-btn:active { background: var(--gold-dim); }
+.map-anim-speed {
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 5px; padding: 2px 4px; font-size: 0.78rem;
+  color: var(--text); cursor: pointer;
+}
+.map-anim-loop-label {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.78rem; color: var(--text-dim); cursor: pointer;
+}
 
 /* Biografie-Marker (nummeriert) */
 .map-bio-marker {
