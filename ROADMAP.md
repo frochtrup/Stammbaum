@@ -119,6 +119,7 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | Play/Pause/Stopp-Bar in Migrationen- und Person-Modus; stroke-dashoffset (Migr) / opacity-Fade (Person, Segment-für-Segment); Geschwindigkeit; Loop (sw v603) | - |
+| MAP-TOPBAR | **Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars** | Karte ist bisher versteckt im Orte-Tab. Ziel: `🗺`-Button als 5. Diagramm-Wechsel in den Topbars aller vier Diagramme (`[⌂][⤢] \| [⧖][◑][⇩][⟷][🗺][☰]`) sowie in der Person-Detail-Topbar neben 📖. Klick ruft `showPersonOnMap(currentPid)` auf (Person-Modus mit History-Push). Alle-Orte- und Migrations-Modus bleiben über Orte-Tab erreichbar. Umsetzung: Button-HTML in ~5 Topbar-Stellen + Action `showCurrentPersonOnMap` im `_CLICK_MAP`. | S |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
 | TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
 | STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Kinderzahl); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
