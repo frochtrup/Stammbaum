@@ -928,14 +928,27 @@
     <div class="sheet-body">
       <input type="hidden" id="sf-id">
       <div id="sf-template-row" class="mb-14" hidden>
-        <div class="form-label mb-6">Vorlage wählen</div>
-        <div class="d-flex flex-wrap gap-6">
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="kirchenbuch">Kirchenbuch</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="standesamt">Standesamt</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="volkszaehlung">Volkszählung</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="familienbuch">Familienstammbuch</button>
-          <button type="button" class="btn tpl-btn" data-action="applySourceTemplate" data-tpl="zeitung">Zeitungsartikel</button>
-        </div>
+        <label class="form-label">Vorlage
+          <select id="sf-template-select" class="form-select w-full mt-4" data-change="applySourceTemplate">
+            <option value="">(Vorlage wählen …)</option>
+            <optgroup label="Kirchenbuch">
+              <option value="kb-tauf">Kirchenbuch Taufen</option>
+              <option value="kb-heir">Kirchenbuch Heiraten</option>
+              <option value="kb-beer">Kirchenbuch Beerdigungen</option>
+            </optgroup>
+            <optgroup label="Standesamt">
+              <option value="sta-geb">Standesamt Geburten</option>
+              <option value="sta-heir">Standesamt Heiraten</option>
+              <option value="sta-sterb">Standesamt Sterbefälle</option>
+            </optgroup>
+            <optgroup label="Sonstige">
+              <option value="volkszaehl">Volkszählung</option>
+              <option value="grabstein">Grabstein</option>
+              <option value="totenzettel">Totenzettel</option>
+              <option value="militaer">Militärakte</option>
+            </optgroup>
+          </select>
+        </label>
       </div>
       <div class="form-group">
         <label class="form-label">Kurzname (ABBR)</label>

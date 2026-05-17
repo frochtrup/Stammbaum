@@ -245,27 +245,42 @@ function _addMediaEntry(prefix) {
 // ─────────────────────────────────────
 //  FORMS: SOURCE
 // ─────────────────────────────────────
+const _SOUR_TEMPLATES = {
+  'kb-tauf':    { abbr: 'KB Taufen …',      title: 'Kirchenbuch …, Taufen',       auth: 'Pfarramt …',              publ: '', medi: 'manuscript' },
+  'kb-heir':    { abbr: 'KB Heiraten …',    title: 'Kirchenbuch …, Heiraten',     auth: 'Pfarramt …',              publ: '', medi: 'manuscript' },
+  'kb-beer':    { abbr: 'KB Beerdigungen …',title: 'Kirchenbuch …, Beerdigungen', auth: 'Pfarramt …',              publ: '', medi: 'manuscript' },
+  'sta-geb':    { abbr: 'StA Geburten …',   title: 'Geburtsregister …, …',        auth: 'Standesamt …',            publ: '', medi: 'manuscript' },
+  'sta-heir':   { abbr: 'StA Heiraten …',   title: 'Heiratsregister …, …',        auth: 'Standesamt …',            publ: '', medi: 'manuscript' },
+  'sta-sterb':  { abbr: 'StA Sterbefälle …',title: 'Sterberegister …, …',         auth: 'Standesamt …',            publ: '', medi: 'manuscript' },
+  'volkszaehl': { abbr: 'Volkszählung …',   title: 'Volkszählung …',              auth: 'Statistisches Amt',       publ: '', medi: 'manuscript' },
+  'grabstein':  { abbr: 'Grabstein …',      title: 'Grabstein …',                 auth: '',                        publ: '', medi: 'tombstone'  },
+  'totenzettel':{ abbr: 'Totenzettel …',    title: 'Totenzettel …',               auth: '',                        publ: '', medi: 'card'       },
+  'militaer':   { abbr: 'Militärakte …',    title: 'Militärakte …',               auth: 'Bundesarchiv-Militärarchiv', publ: '', medi: 'manuscript' },
+};
+
 function _applySourceTemplate(type) {
-  const abbr  = document.getElementById('sf-abbr');
-  const title = document.getElementById('sf-title');
-  const auth  = document.getElementById('sf-auth');
-  const date  = document.getElementById('sf-date');
-  const text  = document.getElementById('sf-text');
-  const templates = {
-    kirchenbuch:  { abbr: 'KB ', title: 'Kirchenbuch ', auth: 'Pfarramt', text: 'Tauf-/Heirats-/Sterbebuch' },
-    standesamt:   { abbr: 'SA ', title: 'Standesamt ', auth: 'Standesamt', text: 'Geburts-/Heirats-/Sterbeurkunde' },
-    volkszaehlung:{ abbr: 'VZ ', title: 'Volkszählung ', auth: 'Statistisches Amt', text: '' },
-    familienbuch: { abbr: 'FSB ', title: 'Familienstammbuch ', auth: '', text: '' },
-    zeitung:      { abbr: 'Ztg ', title: 'Zeitungsartikel: ', auth: '', text: '' },
-  };
-  const t = templates[type];
+  if (!type) return;
+  const t = _SOUR_TEMPLATES[type];
   if (!t) return;
-  if (!abbr.value)  abbr.value  = t.abbr;
-  if (!title.value) title.value = t.title;
-  if (!auth.value && t.auth)  auth.value  = t.auth;
-  if (!text.value && t.text)  text.value  = t.text;
+  document.getElementById('sf-abbr').value  = t.abbr;
+  document.getElementById('sf-title').value = t.title;
+  document.getElementById('sf-auth').value  = t.auth;
+  document.getElementById('sf-publ').value  = t.publ;
+  document.getElementById('sf-medi').value  = t.medi;
+  // Optional-Felder aufklappen damit Nutzer alles sieht
+  const opt = document.getElementById('sf-optional-fields');
+  const btn = document.getElementById('sf-more-btn');
+  if (opt.style.display === 'none') {
+    opt.style.display = '';
+    if (btn) btn.textContent = 'Weniger Felder ▲';
+  }
+  // Signatur-Gruppe einblenden (Archiv/CALN)
+  document.getElementById('sf-caln-group').hidden = false;
+  // Cursor ans Ende von sf-abbr, vor „…" damit Nutzer direkt Ort eintippt
+  const abbr = document.getElementById('sf-abbr');
   abbr.focus();
-  abbr.setSelectionRange(abbr.value.length, abbr.value.length);
+  const pos = abbr.value.indexOf('…');
+  abbr.setSelectionRange(pos >= 0 ? pos : abbr.value.length, abbr.value.length);
 }
 
 function showSourceForm(id) {

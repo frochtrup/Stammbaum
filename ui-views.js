@@ -1289,6 +1289,7 @@ document.addEventListener('change', e => {
   else if (action === 'onEventTypeChange')    onEventTypeChange();
   else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
+  else if (action === 'applySourceTemplate') _applySourceTemplate(el.value);
   else if (action === 'amCamChange') {
     (async () => {
       const f = el.files[0];
