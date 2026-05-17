@@ -437,6 +437,13 @@ body.desc-tree-mode.fc-mode #treeKeyLegend      { display: none !important; }
   border-top: none; border-radius: 0 0 8px 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,.4);
 }
+#map-person-btn {
+  display: block; width: 100%;
+  background: var(--surface3); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 5px 10px; font-size: 0.85rem; text-align: left; cursor: pointer;
+}
+#map-person-btn:active { background: var(--gold-dim); }
 
 /* Migrations-Legende */
 .map-migr-legend {
