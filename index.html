@@ -84,17 +84,17 @@
       <div id="advFilterPanel" hidden class="search-wrap adv-filter-panel">
         <div class="d-flex gap-6 ai-c flex-wrap">
           <select id="sexFilter" data-input="applyPersonFilter" data-change="applyPersonFilter" class="filter-input flex-none">
-            <option value="">Geschlecht: alle</option>
+            <option value="">Geschlecht</option>
             <option value="M">Männlich</option>
             <option value="F">Weiblich</option>
             <option value="U">Unbekannt</option>
           </select>
           <input type="search" id="birthPlaceFilter" placeholder="Geburtsort…" data-input="applyPersonFilter"
             class="filter-input flex-1 min-w-100">
-          <span class="fs-xs c-muted nowrap" style="padding-left:4px">∅</span>
-          <label class="adv-flag-lbl" title="Kein Sterbedatum"><input type="checkbox" id="fltrNoDeathDate" data-change="applyPersonFilter"> †?</label>
-          <label class="adv-flag-lbl" title="Keine Quellen"><input type="checkbox" id="fltrNoSources" data-change="applyPersonFilter"> Q?</label>
-          <label class="adv-flag-lbl" title="Keine Eltern"><input type="checkbox" id="fltrNoParents" data-change="applyPersonFilter"> ↑?</label>
+          <span class="fs-xs nowrap" style="padding-left:4px;font-weight:700">∅:</span>
+          <label class="adv-flag-lbl" title="Kein Sterbedatum"><input type="checkbox" id="fltrNoDeathDate" data-change="applyPersonFilter"> †</label>
+          <label class="adv-flag-lbl" title="Keine Quellen"><input type="checkbox" id="fltrNoSources" data-change="applyPersonFilter"> Q</label>
+          <label class="adv-flag-lbl" title="Keine Eltern"><input type="checkbox" id="fltrNoParents" data-change="applyPersonFilter"> ↑</label>
         </div>
       </div>
     </div>
