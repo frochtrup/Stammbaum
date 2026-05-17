@@ -149,6 +149,8 @@ function _tasksSectionHtml(personId) {
           data-pid="${personId}" data-tid="${t.id}"
           aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
         <span class="task-text">${esc(t.text)}</span>
+        <button class="task-log" data-action="taskToLog"
+          data-pid="${personId}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
         <button class="task-edit" data-action="editTask"
           data-pid="${personId}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
         <button class="task-del" data-action="deleteTask"
@@ -210,6 +212,8 @@ function _famTasksSectionHtml(famId) {
           data-fid="${famId}" data-tid="${t.id}"
           aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
         <span class="task-text">${esc(t.text)}</span>
+        <button class="task-log" data-action="taskToLog"
+          data-fid="${famId}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
         <button class="task-edit" data-action="editFamTask"
           data-fid="${famId}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
         <button class="task-del" data-action="deleteFamTask"
@@ -431,6 +435,8 @@ function renderTasksView() {
             data-pid="${id}" data-tid="${t.id}"
             aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
           <span class="task-text">${esc(t.text)}</span>
+          <button class="task-log" data-action="taskToLog"
+            data-pid="${id}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
           <button class="task-edit" data-action="editTask"
             data-pid="${id}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
           <button class="task-del" data-action="deleteTask"
@@ -442,6 +448,8 @@ function renderTasksView() {
             data-fid="${id}" data-tid="${t.id}"
             aria-label="${t.done ? 'Erledigt' : 'Offen'}">${t.done ? '☑' : '☐'}</button>
           <span class="task-text">${esc(t.text)}</span>
+          <button class="task-log" data-action="taskToLog"
+            data-fid="${id}" data-query="${encodeURIComponent(t.text)}" aria-label="Als Protokoll erfassen">→ Log</button>
           <button class="task-edit" data-action="editFamTask"
             data-fid="${id}" data-tid="${t.id}" aria-label="Aufgabe bearbeiten">✎</button>
           <button class="task-del" data-action="deleteFamTask"
@@ -625,6 +633,12 @@ function _rlogRowHtml(rl, idx, contextAttr) {
   </div>`;
 }
 
+function _taskToLog(el) {
+  const query = decodeURIComponent(el.dataset.query || '');
+  if (el.dataset.pid) showAddRlogForm(el.dataset.pid, query);
+  else if (el.dataset.fid) showAddFamRlogForm(el.dataset.fid, query);
+}
+
 function _rlogSectionHtml(personId) {
   const p    = AppState.db.individuals?.[personId];
   const rlog = p?._rlog || [];
@@ -706,14 +720,14 @@ function _openRlogModal(title, rl) {
   openModal('modalAddRlog');
 }
 
-function showAddRlogForm(personId) {
+function showAddRlogForm(personId, prefillQuery) {
   _rlogPersonId = personId; _rlogFamId = null; _rlogEditIdx = null;
-  _openRlogModal('Log-Eintrag hinzufügen', null);
+  _openRlogModal('Log-Eintrag hinzufügen', prefillQuery ? { query: prefillQuery } : null);
 }
 
-function showAddFamRlogForm(famId) {
+function showAddFamRlogForm(famId, prefillQuery) {
   _rlogPersonId = null; _rlogFamId = famId; _rlogEditIdx = null;
-  _openRlogModal('Log-Eintrag hinzufügen', null);
+  _openRlogModal('Log-Eintrag hinzufügen', prefillQuery ? { query: prefillQuery } : null);
 }
 
 function showEditRlogForm(personId, idx) {
