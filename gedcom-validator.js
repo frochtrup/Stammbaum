@@ -45,6 +45,7 @@ const VAL_RULES = [
   { key: 'MISSING_GIVEN',            label: 'Vorname fehlt',                         severity: 'info',  threshold: null },
   { key: 'MISSING_DEATHPLACE',       label: 'Sterbeort fehlt',                       severity: 'info',  threshold: null },
   { key: 'MISSING_MARRDATE',         label: 'Heiratsdatum fehlt',                    severity: 'info',  threshold: null },
+  { key: 'NO_FAM_SOURCES',           label: 'Familie ohne Quellenangabe',            severity: 'info',  threshold: null },
 ];
 
 // Extrahiert eine 4-stellige Jahreszahl aus einem GEDCOM-Datumsstring.
@@ -208,6 +209,14 @@ function runValidation(db, config) {
     if (husb && wife && !f.marr?.date)
       push(f.husb, 'MISSING_MARRDATE', 'info',
         'Heiratsdatum fehlt', 'urkunde', fid);
+
+    // F9 — Familie ohne Quellenangabe
+    if (!(f.sourceRefs?.size > 0)) {
+      const anchor = f.husb || f.wife;
+      if (anchor)
+        push(anchor, 'NO_FAM_SOURCES', 'info',
+          'Familie ohne Quellenangabe', 'kirchenbuch', fid);
+    }
 
     // F6 / F7 / F8 — Elternalter bei Kindsgeburt
     for (const childId of (f.children || [])) {
