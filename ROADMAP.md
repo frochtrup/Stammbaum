@@ -130,7 +130,7 @@ Ausgaben, die Genealogen ihren Familien zeigen und auf die sie stolz sind. Funda
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ASSO-UI | **ASSO-Beziehungen** | Read-only Anzeige in Personen-Detail (Schritt 1); Bearbeitung: Zeuge/Pate zu Event zuordnen (Schritt 2) | M+M |
+| ASSO-UI | **ASSO-Beziehungen (Zeugen, Paten, Informanten)** | Schritt 1: Read-only Anzeige vorhandener `1 ASSO`-Blöcke in Personen-Detail (Rolle + verknüpfte Person). Schritt 2: Bearbeitung — Person als Zeuge/Pate/Informant zu einem Ereignis zuordnen, `1 ASSO`-Block schreiben + Roundtrip-stabil. | M+M |
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; ADR dokumentiert | M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
 | OBJE-TYPE | **Medien-Typ strukturiert** ⚠ | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
@@ -144,7 +144,6 @@ Kein festes Datum. Kandidaten für spätere Versionen.
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X | L |
-| ASSO-Event | **Event-Rollen voll editierbar** | Personen als Zeugen/Paten zu Events; `1 ASSO`-Block schreiben; nur nach ASSO-UI sinnvoll | L |
 | GEDCOM-7 | **GEDCOM 7.0 Evaluierung** | FamilySearch-Standard; Parser/Writer-Anpassung; HEAD GEDC VERS 7.0 | L |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
 
