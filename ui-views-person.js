@@ -436,6 +436,8 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '', flags = {
   });
 
   renderPersonList(filtered);
+  const sc = document.getElementById('v-main');
+  if (sc) sc.scrollTop = 0;
 }
 
 // ─────────────────────────────────────
