@@ -1119,6 +1119,7 @@ const _CLICK_MAP = {
   toggleFanChart:          ()  => toggleFanChart(),
   toggleDescTree:          ()  => toggleDescTree(),
   toggleTreeFullscreen:    ()  => toggleTreeFullscreen(),
+  tlShowProband:           ()  => { const id = getProbandId(); if (id && typeof showTimeline === 'function') showTimeline(id); },
   tlShowTree:              ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid) showTree(pid); },
   tlShowFanChart:          ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid && typeof showFanChart  === 'function') showFanChart(pid); },
   tlShowDescTree:          ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid && typeof showDescTree  === 'function') showDescTree(pid, false); },
