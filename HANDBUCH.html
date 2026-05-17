@@ -606,14 +606,14 @@
       </ul>
     </li>
     <li><a href="#kap7">Orte und Karte</a></li>
-    <li><a href="#kap8">Stammbaum-Ansichten</a>
+    <li><a href="#kap8">Stammbaum-Ansichten und Diagramme</a>
       <ul class="sub">
         <li>Sanduhr-Baum</li>
         <li>Fächer-Diagramm</li>
         <li>Nachkommen-Baum</li>
+        <li>Zeitleiste</li>
       </ul>
     </li>
-    <li><a href="#kap9">Zeitleiste</a></li>
     <li><a href="#kap10">Biografie (Story Mode)</a></li>
     <li><a href="#kap11">Suchen und Finden</a></li>
     <li><a href="#kap12">Speichern und Sichern</a>
@@ -680,8 +680,8 @@ Die App arbeitet vollständig <strong>ohne Internet</strong>. Ihre Daten verlass
   <div class="phone-frame">
     <div class="phone-screen">
       <div class="app-topbar">
-        <span class="title">Elisabeth Bau…</span>
-        <span class="actions">2 3 4 5 6 ◑ ⇩ ☰</span>
+        <span class="title">⌂ ⤢ | Elisabeth Bau…</span>
+        <span class="actions">2 3 4 5 6 ◑ ⇩ ⟷ ☰</span>
       </div>
       <!-- Baum-Ansicht Mini -->
       <div class="tree-mockup" style="min-height:180px; font-size:7px;">
@@ -850,7 +850,7 @@ Das Gramps-Format bewahrt alle Gramps-spezifischen Daten, die die App nicht dire
 </table>
 
 <div class="tip">
-Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen Sie über das Menü oder in der Detailansicht einer Person fest — tippen Sie dort auf das <span class="button-label">⌂</span>-Symbol in der Topbar.
+Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen Sie über das Menü oder in der Detailansicht einer Person fest — dort finden Sie zwei <span class="button-label">⌂</span>-Symbole in der Topbar: das erste navigiert zum aktuellen Probanden, das zweite (mit Rahmen, direkt neben Bearbeiten) setzt diese Person als Probanden.
 </div>
 
 
@@ -1014,7 +1014,7 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
       <div style="background:var(--app-card); border-bottom:1px solid var(--app-border); padding:5px 10px; display:flex; justify-content:space-between; align-items:center;">
         <span style="color:var(--gold-light);font-size:8px;">← Zurück</span>
         <span style="color:var(--gold);font-size:9px;font-weight:bold;">Elisabeth Bauer</span>
-        <span style="color:var(--gold-light);font-size:8px;">⌂ ✕ ⟷ 📖 Bearbeiten</span>
+        <span style="color:var(--gold-light);font-size:8px;">⌂ ✕ ⟷ 📖 ⌂▢ Bearbeiten</span>
       </div>
       <!-- Hero -->
       <div style="display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:1px solid var(--app-border);">
@@ -1075,7 +1075,7 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
       <div class="app-topbar">
         <span class="back">← Zurück</span>
         <span class="title">Elisabeth…</span>
-        <span class="actions">⌂ ✕ ⟷ 📖 Bearbeiten</span>
+        <span class="actions">⌂ ✕ ⟷ 📖 ⌂▢ Bearbeiten</span>
       </div>
       <div class="app-content" style="padding:0;">
         <div class="app-hero">
@@ -1136,7 +1136,8 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
     <table style="font-size:0.85em;">
       <tr><td style="padding:4px 8px;"><span class="button-label">← Zurück</span></td><td>Zur vorherigen Seite</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">→ Vorwärts</span></td><td>Vorwärts in der Navigationshistorie (erscheint nach „Zurück")</td></tr>
-      <tr><td style="padding:4px 8px;"><span class="button-label">⌂</span></td><td>Diese Person als Proband festlegen</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">⌂</span></td><td>Zum Probanden navigieren (zur aktuell festgelegten Mittelpunkt-Person)</td></tr>
+      <tr><td style="padding:4px 8px;"><span class="button-label">⌂</span> <small style="color:#888;">(mit Rahmen)</small></td><td>Diese Person als Proband festlegen / Proband-Status aufheben — steht direkt vor Bearbeiten</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">✕</span></td><td>Person im Stammbaum anzeigen</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">⟷</span></td><td>Zeitleiste dieser Person aufrufen (Swim-Lane-Layout mit historischen Ereignissen)</td></tr>
       <tr><td style="padding:4px 8px;"><span class="button-label">📖</span></td><td>Biografie (Story Mode) aufrufen</td></tr>
@@ -1516,7 +1517,7 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
 <!-- ====================================================== -->
 <!-- KAPITEL 8: STAMMBAUM-ANSICHTEN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap8">8. Stammbaum-Ansichten</h1>
+<h1 class="chapter" id="kap8">8. Stammbaum-Ansichten und Diagramme</h1>
 
 <h2>Der Sanduhr-Baum</h2>
 
@@ -1526,8 +1527,8 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
   <div class="phone-frame">
     <div class="phone-screen">
       <div class="app-topbar">
-        <span class="title">Elisabeth Bau…</span>
-        <span class="actions">2 3 4 5 6 ◑ ⇩ ☰</span>
+        <span class="title">⌂ ⤢ | Elisabeth Bau…</span>
+        <span class="actions">2 3 4 5 6 ◑ ⇩ ⟷ ☰</span>
       </div>
       <div class="tree-mockup" style="min-height:230px;">
         <div style="color:var(--text-dim);font-size:7px;margin-bottom:4px;">↑ Vorfahren</div>
@@ -1600,8 +1601,8 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
   <div class="phone-frame">
     <div class="phone-screen">
       <div class="app-topbar">
-        <span class="title">Elisabeth Bauer</span>
-        <span class="actions">3 4 5 6 ⧖ ☰</span>
+        <span class="title">⌂ ⤢ | Elisabeth Bauer</span>
+        <span class="actions">3 4 5 6 ⧖ ⇩ ⟷ ☰</span>
       </div>
       <div class="fan-mockup">
         <!-- Stilisierter Fächer -->
@@ -1650,13 +1651,15 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 9: ZEITLEISTE -->
+<!-- ZEITLEISTE (Teil von Kapitel 8) -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap9">9. Zeitleiste</h1>
+<h2 id="kap9">Die Zeitleiste</h2>
 
-<p>Die <strong>Zeitleiste</strong> zeigt alle Ereignisse einer Person in chronologischer Reihenfolge — kombiniert mit bedeutenden historischen Ereignissen (Kriege, Seuchen, politische Umbrüche). Sie öffnet sich über den Button <span class="button-label">⟷</span> in der Topbar einer Detailansicht.</p>
+<p>Die <strong>Zeitleiste</strong> ist ein vollwertiges Diagramm neben Sanduhr, Fächer und Nachkommen-Baum. Sie zeigt alle Ereignisse einer Person in chronologischer Reihenfolge — kombiniert mit bedeutenden historischen Ereignissen (Kriege, Seuchen, politische Umbrüche). Sie öffnet sich über den Button <span class="button-label">⟷</span> in der Topbar einer Detailansicht.</p>
 
-<h2>Aufbau der Zeitleiste</h2>
+<p>Wie alle Diagramme folgt die Zeitleiste dem einheitlichen Topbar-Muster: <code>⌂ ⤢ | ⧖ ◑ ⇩ ☰</code> — links Proband-Navigation und Vollbild, rechts davon die Wechsel-Buttons zu den anderen Diagrammen.</p>
+
+<h3>Aufbau der Zeitleiste</h3>
 
 <p>Die Zeitleiste hat zwei Darstellungsformen, die automatisch je nach Bildschirmausrichtung gewählt werden:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
@@ -1664,13 +1667,13 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
   <li><strong>Horizontal</strong> (Querformat/Desktop): Swim-Lane-Layout mit fünf Spuren — Leben, Wohnorte, Beruf, Familie, Kirche/Sonstiges. Historische Ereignisse erscheinen als eigene Hintergrundspur.</li>
 </ul>
 
-<h2>Historische Ereignisse filtern</h2>
+<h3>Historische Ereignisse filtern</h3>
 
 <p>In der Topbar der Zeitleiste befinden sich Filter-Schalter für die Kategorien historischer Ereignisse: <strong>Krieg · Seuche · Politik · Religion · Natur</strong>. Schalten Sie einzelne Kategorien ein oder aus, um die Zeitleiste übersichtlicher zu gestalten.</p>
 
-<h2>Navigation in der Zeitleiste</h2>
+<h3>Navigation in der Zeitleiste</h3>
 
-<p>Die Baum-Navigation steht auch in der Zeitleiste zur Verfügung: Sanduhr <span class="button-label">⧖</span>, Fächer <span class="button-label">✿</span>, Nachkommen <span class="button-label">⇩</span> und Proband <span class="button-label">⌂</span> wechseln direkt zur entsprechenden Ansicht der aktuellen Person.</p>
+<p>Die Diagramm-Navigation steht in der Zeitleiste vollständig zur Verfügung: <span class="button-label">⌂</span> navigiert zum Probanden, <span class="button-label">⤢</span> schaltet Vollbild ein/aus. Nach dem Separator wechseln Sanduhr <span class="button-label">⧖</span>, Fächer <span class="button-label">◑</span> und Nachkommen <span class="button-label">⇩</span> direkt zur entsprechenden Ansicht der aktuellen Person.</p>
 
 <div class="tip">
 Tipp: Drehen Sie das Gerät ins Querformat, um die Swim-Lane-Ansicht zu aktivieren — so sehen Sie auf einen Blick, in welche historische Epoche ein Ereignis fällt.
@@ -1919,7 +1922,7 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
 
 <h2>Was ist der Proband?</h2>
 <p>Der <strong>Proband</strong> ist die Person, die im Mittelpunkt des Stammbaums steht — meist Sie selbst oder eine ausgewählte Startperson. Der Proband beeinflusst die Berechnung der Verwandtschaftsbeziehungen (z. B. „Cousin 1. Grades von Elisabeth Bauer").</p>
-<p>Zum Festlegen: Öffnen Sie die Detailansicht der gewünschten Person und tippen Sie auf <span class="button-label">⌂</span> in der Topbar.</p>
+<p>Zum Festlegen: Öffnen Sie die Detailansicht der gewünschten Person und tippen Sie auf das <span class="button-label">⌂</span> mit Rahmen in der Topbar (direkt neben Bearbeiten). Das erste <span class="button-label">⌂</span> ohne Rahmen navigiert dagegen nur zum aktuellen Probanden.</p>
 
 <h2>Wie füge ich ein Foto zu einer Person hinzu?</h2>
 <ol class="steps">

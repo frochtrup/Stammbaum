@@ -24,7 +24,7 @@ body  (index.html — Hauptapp)
 │   └── #tab-search     Globale Suche (alle Entitätstypen)
 │
 ├── #v-detail           Detailansicht (Person / Familie / Quelle / Ort)
-│   ├── .topbar         ← Zurück · Titel · ⧖ Sanduhr · Bearbeiten
+│   ├── .topbar         ← Zurück · Titel · [⌂ navigate] … [⌂▢ set] [✎ Bearbeiten]
 │   └── #detailContent  dynamisch gerendert
 │       ├── .fact-row + inline §N Quellen-Badges
 │       └── .family-nav-row  (⚭ Familie › in Person-Detail)
@@ -220,8 +220,12 @@ Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
 | `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Sanduhr-Baum |
 | `⚭` (`.tree-marr-btn`) | Heirats-Navigation — öffnet Familien-Detail; zwischen Proband und Ehepartner | Nachkommen-Baum |
 | `▼` (`.tree-desc-more`) | Abgeschnittene Nachkommen — mehr vorhanden, Klick lädt tiefere Gens | Nachkommen-Baum-Karte |
-| `◑` | Fan-Chart-Umschalter in Topbar | Baum-Topbar |
-| `⇩` | Nachkommen-Baum-Umschalter in Topbar | Baum-Topbar |
+| `◑` | Fan-Chart-Umschalter in Topbar | Alle Diagramm-Topbars |
+| `⇩` | Nachkommen-Baum-Umschalter in Topbar | Alle Diagramm-Topbars |
+| `⟷` | Zeitleiste-Umschalter in Topbar | Alle Diagramm-Topbars + Person-Detail |
+| `⤢` / `⤡` | Vollbild ein/aus — steht in jeder Diagramm-Topbar VOR dem Separator; Layout: `[⌂ Proband] [⤢ Vollbild] \| [Diagramm-Wechsel] [☰]` | Sanduhr, Fächer, Nachkommen, Zeitleiste |
+| `⌂` (plain) | Zum Probanden navigieren — ohne Rahmenstil; in Diagramm-Topbars ganz links, in Person-Detail-Topbar nach Zurück-Buttons | Alle Diagramm-Topbars, Person-Detail |
+| `⌂` (`.proband-set-btn`) | Proband setzen / Proband-Status aufheben — Rahmen-Stil (`box-shadow: inset 0 0 0 1.5px currentColor`); Rahmen verschwindet im aktiven Zustand (goldene Füllung); steht direkt vor dem Bearbeiten-Button | Person-Detail-Topbar |
 
 **Regeln:**
 - `📎` steht **ausschließlich** für Medien/OBJE — nie für Quellen
@@ -357,3 +361,17 @@ Ebene 2:    [Enkel1]  [Enkel2]     [Enkel3]
 **Auto-Fit + Scroll (Desktop):**
 - `fit = min(1, clientW/totalW, clientH/totalH)` — Zoom wenn Baum größer als Fenster
 - Scroll zentriert auf Proband-X; Scroll-Top = 0
+
+---
+
+## Einheitliche Diagramm-Topbar-Struktur (ab sw v591)
+
+Alle vier Diagramme — Sanduhr (`#v-tree`), Fächer (`ui-fanchart.js`), Nachkommen-Baum (`ui-desc-tree.js`) und Zeitleiste (`ui-timeline.js`) — folgen demselben Topbar-Muster:
+
+```
+[⌂ Proband]  [⤢ Vollbild]  |  [Diagramm-Wechsel-Buttons]  [☰ Menü]
+```
+
+- **Vor dem Separator:** `⌂ tlProbandBtn` (navigiert zur aktuellen Person im Probanden-Fokus) + `⤢ tlFsBtn` (Vollbild-Toggle)
+- **Nach dem Separator:** Diagramm-spezifische Wechsel-Buttons (`⧖ ◑ ⇩ ⟷`) + `☰ Menü`
+- **Person-Detail-Topbar:** zwei `⌂`-Buttons — `probandBtn` (plain, navigiert zum Probanden) + `probandSetBtn` (`.proband-set-btn`, setzt/hebt Proband, steht direkt vor `✎ Bearbeiten`)

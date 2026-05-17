@@ -43,7 +43,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 |---|---|---|
 | SAFARI-SWIPE | Safari-„Zurück"-Swipe abfangen | v573 |
 | TASK-EXPORT-MD | Aufgabenliste als Markdown exportieren | v574 |
-| F9 | Zeitleiste (Swim-Lane, 71 hist. Ereignisse) | v501–v540 |
+| F9 | Zeitleiste (Swim-Lane, 71 hist. Ereignisse); ab v591 vollwertiges Diagramm mit einheitlicher Topbar-Struktur (`[⌂][⤢] \| [⧖◑⇩][☰]`) | v501–v540, v591 |
 | STORY | Story Mode (Fließtext, Karte, Galerie, Print) | v549–v560 |
 | SOUR-DATA | SOUR.DATA.EVEN/DATE strukturiert | v546 |
 | MEDI-CALN | MEDI-Typ unter REPO.CALN | v545 |

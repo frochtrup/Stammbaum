@@ -9,6 +9,14 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-17 — Diagramm-Topbars + Proband-Navigation (sw v591–v595)
+
+- **sw v591** `feat(topbar)`: Zeitleiste als vollwertiges Diagramm — einheitliche Topbar-Struktur für alle vier Diagramme (Sanduhr, Fächer, Nachkommen, Zeitleiste): `[⌂ Proband] [⤢ Vollbild] | [Diagramm-Wechsel] [☰]`; Sanduhr: `⤢` vor Separator verschoben; Zeitleiste: `⌂ tlProbandBtn` + `⤢ tlFsBtn` vor Separator; `⧖ ◑ ⇩` danach; `tlShowProband()` Action neu
+- **sw v592** `fix(topbar)`: `showFamilyDetail()` blendet `timelineBtn`/`storyBtn`/`probandBtn` explizit aus — blieben bisher von Personen-Ansicht sichtbar
+- **sw v593–v595** `feat(proband)`: zwei Proband-Buttons in Person-Detail-Topbar — `⌂` (plain, `detailShowProband`, navigiert zum Probanden wie in Diagrammen) + `⌂` mit CSS-Rahmen (`.proband-set-btn`, `toggleProband`, setzt/hebt Proband) direkt vor `✎` Bearbeiten; `.proband-set-btn` Rahmen verschwindet im aktiven Zustand (goldene Füllung); Familie-Topbar blendet beide aus
+
+---
+
 ### Session 2026-05-16 — SAFARI-SWIPE + TASK-EXPORT-MD + Menü-Reihenfolge (sw v573–v575)
 
 - **sw v573** `feat(nav)`: SAFARI-SWIPE — `history.pushState({app:true},'')` beim App-Start in `DOMContentLoaded` (ui-views.js); `popstate`-Listener: Re-Anker sofort pushen + `goBack()` aufrufen; verhindert State-Verlust durch Safari-Wischgeste nach rechts im Browser-Modus (iPhone/iPad)
