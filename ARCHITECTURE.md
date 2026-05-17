@@ -506,6 +506,36 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 
 ---
 
+---
+
+### ADR-016: Einheitliches Umschalter-Pattern (sw v587)
+
+**Kontext:** Zwei verschiedene visuelle Stile für Primärumschalter in Tabs: Orte/Höfe/Karte nutzte iOS-Segment-Control (`.seg-ctrl > .seg-btn`), Aufgaben/Protokoll nutzte Underline-Tabs (`.tasks-mode-bar > .tasks-mode-btn`). Dazu kam eine doppelte `.seg-btn`-Definition in styles.css.
+
+**Entscheidung:** Einheitliche Klassen `.tab-bar` / `.tab-btn` (Underline-Stil, Gold-Bottom-Border) für alle **Primär-Modus-Umschalter** in Tabs.
+
+**Regel für neue Umschalter:**
+- **Primärumschalter** (2–4 Haupt-Modi eines Tabs): `.tab-bar > .tab-btn` — Underline-Stil
+- **Sekundär-Filter-Chips** (Alle/Offen/Erledigt, Gefunden/…): `.seg-btn` — Pill-Chips mit Border, kein Container nötig
+
+```html
+<!-- Primärumschalter -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-action="switchXMode" data-mode="a">Modus A</button>
+  <button class="tab-btn"        data-action="switchXMode" data-mode="b">Modus B</button>
+</div>
+
+<!-- Filter-Chips -->
+<div class="tasks-filter-bar">
+  <button class="seg-btn active" data-action="switchXFilter" data-filter="all">Alle</button>
+  <button class="seg-btn"        data-action="switchXFilter" data-filter="open">Offen</button>
+</div>
+```
+
+**Betroffene Stellen:** `index.html` (tab-places), `ui-views-tasks.js` (beide Render-Funktionen).
+
+---
+
 ## Bekannte Einschränkungen
 
 | Problem | Ursache | Status |

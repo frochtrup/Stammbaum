@@ -381,9 +381,9 @@ function renderTasksView() {
   const totalVisible = Object.values(byCat).reduce((s, arr) => s + arr.length, 0);
 
   let html = `<div class="tasks-sticky-header">
-    <div class="tasks-mode-bar">
-      <button class="tasks-mode-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
-      <button class="tasks-mode-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
+    <div class="tab-bar">
+      <button class="tab-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
+      <button class="tab-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
     </div>
     <div class="tasks-filter-bar">
       <button id="tasks-filter-all"  class="seg-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all">Alle</button>
@@ -850,9 +850,9 @@ function _renderRlogView() {
   ].map(b => `<button id="rlog-filter-${b.k}" class="seg-btn${_rlogViewFilter === b.k ? ' active' : ''}"
     data-action="switchRlogFilter" data-filter="${b.k}">${esc(b.l)}</button>`).join('');
 
-  const modeBar = `<div class="tasks-mode-bar">
-    <button class="tasks-mode-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
-    <button class="tasks-mode-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
+  const modeBar = `<div class="tab-bar">
+    <button class="tab-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
+    <button class="tab-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
   </div>`;
 
   let html = `<div class="tasks-sticky-header">
