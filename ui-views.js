@@ -1096,6 +1096,7 @@ const _CLICK_MAP = {
   browserShowFamily:       el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
   filterMedia:             el => filterMedia(el.dataset.ctx),
   toggleMediaView:         ()  => toggleMediaView(),
+  cycleMediaSort:          ()  => cycleMediaSort(),
   mediaNavCtx:             el => showMediaDetail(el.dataset.mediaType, el.dataset.ctxId, parseInt(el.dataset.idx, 10)),
   mediaEditGoTo:           el => {
     closeModal('modalEditMedia');

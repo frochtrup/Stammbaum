@@ -735,14 +735,33 @@ function _setupMediaObserver(container) {
   container.querySelectorAll('[data-thumb-id]').forEach(el => _mediaObserver.observe(el));
 }
 
+function cycleMediaSort() {
+  const modes = ['ctx', 'file-asc', 'file-desc'];
+  const labels = { ctx: '⇅ Kontext', 'file-asc': '⇅ Datei ↑', 'file-desc': '⇅ Datei ↓' };
+  const cur = UIState._mediaSortMode || 'ctx';
+  UIState._mediaSortMode = modes[(modes.indexOf(cur) + 1) % modes.length];
+  const btn = document.getElementById('mediaSortBtn');
+  if (btn) btn.textContent = labels[UIState._mediaSortMode];
+  _renderMedia();
+}
+
 function _renderMedia() {
   const ctx      = UIState._mediaCtxFilter;
+  const sort     = UIState._mediaSortMode || 'ctx';
   const isList   = UIState._mediaViewMode === 'list';
-  const filtered = ctx === 'all' ? _mediaAllItems : _mediaAllItems.filter(m => m.ctx === ctx);
+  let filtered   = ctx === 'all' ? _mediaAllItems.slice() : _mediaAllItems.filter(m => m.ctx === ctx);
 
-  // Filter-Chips sync
+  if (sort === 'file-asc')
+    filtered.sort((a, b) => (a.file || '').split('/').pop().localeCompare((b.file || '').split('/').pop(), 'de', { sensitivity: 'base' }));
+  else if (sort === 'file-desc')
+    filtered.sort((a, b) => (b.file || '').split('/').pop().localeCompare((a.file || '').split('/').pop(), 'de', { sensitivity: 'base' }));
+
+  // Filter-Chips + Sort-Button sync
   document.querySelectorAll('.media-ctx-chip').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.ctx === ctx));
+  const sortLabels = { ctx: '⇅ Kontext', 'file-asc': '⇅ Datei ↑', 'file-desc': '⇅ Datei ↓' };
+  const sortBtn = document.getElementById('mediaSortBtn');
+  if (sortBtn) sortBtn.textContent = sortLabels[sort];
 
   // View-Toggle-Icon: zeigt Ziel-Modus (was ein Klick bewirken würde)
   const tog = document.getElementById('mediaViewToggle');
