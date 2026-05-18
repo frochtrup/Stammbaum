@@ -183,6 +183,7 @@ Handbuch-Pflege: kein Funktionsrelease nötig, aber separater Aufwand.
 | ~~DOC-MAP-ANIM~~ | ~~**Handbuch Kap. 9: Animierter Migrationspfad**~~ | Animations-Leiste erklärt (sw v603) | - |
 | ~~DOC-MAP-TOPBAR~~ | ~~**Handbuch Kap. 9: 🗺-Button in Diagramm-Topbars**~~ | 🗺-Button in Diagramm-Topbar-Tabelle ergänzt + eigener Unterabschnitt in Kap. 7 (sw v622) | - |
 | ~~DOC-MEDIA-MGR~~ | ~~**Handbuch Kap. 18: Medien-Manager vollständig**~~ | Kap. 18 komplett überarbeitet: Galerie, Detailansicht, Referenz-Management, Suchpanel mit Lebensdaten (sw v622) | - |
+| DOC-REL-CALC | **Handbuch Kap. 4: Beziehungsrechner** | Neuer Unterabschnitt unter „Abschnitte in der Detailansicht": (1) Verwandtschaft-Zeile zum Probanden mit gemeinsamem Vorfahren und Geburtsjahr; (2) „🔗 zu …"-Button für freien Zweipersonen-Vergleich; (3) Pfad-Modal: klickbare Karten-Kette, ⬡-Symbol für gemeinsamen Vorfahren, Hinweis auf mehrere Pfade (sw v626) | S |
 | DOC-SCREENS | **Handbuch: echte Screenshots** | Alle Mockups in `HANDBUCH.html` durch echte Screenshots ersetzen. Priorität: Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste, Karte (Migrations-Modus + Person-Modus + animiert), Personen-Detail, Ereignis-Formular. | M |
 
 ---
