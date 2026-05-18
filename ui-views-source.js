@@ -310,9 +310,13 @@ function renderRepoList() {
 function switchSourcesSubTab(sub) {
   document.getElementById('toggle-sources')?.classList.toggle('active', sub === 'sources');
   document.getElementById('toggle-repos')?.classList.toggle('active', sub === 'repos');
+  document.getElementById('toggle-media')?.classList.toggle('active', sub === 'media');
   const isSources = sub === 'sources';
+  const isMedia   = sub === 'media';
   document.getElementById('sourceList').hidden         = !isSources;
   document.getElementById('source-search-wrap').hidden = !isSources;
-  document.getElementById('repoSection').hidden        = isSources;
-  if (!isSources) renderRepoList();
+  document.getElementById('repoSection').hidden        = isSources || isMedia;
+  document.getElementById('mediaSection').hidden       = !isMedia;
+  if (sub === 'repos') renderRepoList();
+  if (isMedia) showMediaSection();
 }

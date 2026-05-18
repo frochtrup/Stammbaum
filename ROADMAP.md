@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v607 · Cache: `stammbaum-v607`
+**sw-Version:** v608 · Cache: `stammbaum-v608`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -60,6 +60,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | MAP-TOPBAR | Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars | v604 |
 | SEC-3 | XSS: `buildPlacePartsHtml()` → DOM-API `_buildPlaceParts()` | v607 |
 | STAB-2 | Konflikt-Erkennung beim Speichern (`lastModified`-Check) | v607 |
+| MEDIA-MGR | Medien-Sub-Tab im Quellen-Tab (Kachelgalerie, Lazy-Loading, Filter) | v608 |
 
 ---
 
@@ -116,7 +117,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | CHART-EXPORT | **Diagramm-Export als PNG** | SVG-basierte Diagramme (Fächer, Nachkommen-Baum) via Canvas-Konvertierung als PNG herunterladen; Download-Button in Topbar | S |
 | CSV-EXPORT | **CSV-Export für Listen** | Personen- und Familienliste als CSV aus der aktuell gefilterten Ansicht; Spalten konfigurierbar (Name, Geburt, Tod, Ort, Quellenzahl); Download-Button im Listen-Header. Wichtige Kompatibilität zu Excel/Numbers für Abgleich und Druck. | S |
 | REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Text: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erweiterung: visueller Pfad als klickbare Karten-Kette im Modal. Erreichbar aus Personen-Detail. | M |
-| MEDIA-MGR | **Medienverwaltung (eigene View)** | Zentraler Medien-Tab statt verteilter 📎-Buttons. Einheitliche Galerie aller Medien mit Filter nach Typ (Foto/Dokument/Audio), Zuordnung (Person/Familie/Quelle) und fehlender Verknüpfung. Ersetzt `showPersonMediaBrowser`, `showFamilyMediaBrowser`, `showMediaBrowser` durch einen `#v-media`-View. | L |
+| ~~MEDIA-MGR~~ | ~~**Medienverwaltung (eigene View)**~~ | Dritter Sub-Tab „Medien" im Quellen-Tab; Kachelgalerie aller Medien (Personen + Familien + Quellen); Filter-Chips Alle/Personen/Familien/Quellen; Lazy-Loading mit ⚠-Overlay; Klick navigiert zum Kontext-Datensatz; ersetzt drei Modal-Browser (sw v608) | - |
 | DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |
 | PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
 | WW-PARSER | **Web Worker für große GEDCOM-Dateien** | `parseGEDCOM()` in einen Web Worker auslagern: Main Thread bleibt bei Dateien >50K Personen reaktiv; Fortschrittsbalken möglich; keine UI-Blockierung auf mobilen Geräten. Voraussetzung: parseGEDCOM() aus dem globalen State lösen (REFACT-1). | M |

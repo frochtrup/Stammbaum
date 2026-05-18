@@ -121,15 +121,24 @@
       <div class="tab-bar">
         <button type="button" id="toggle-sources" class="tab-btn active" data-action="switchSourcesSubTab" data-subtab="sources">Quellen</button>
         <button type="button" id="toggle-repos"   class="tab-btn"        data-action="switchSourcesSubTab" data-subtab="repos">Archiv</button>
+        <button type="button" id="toggle-media"   class="tab-btn"        data-action="switchSourcesSubTab" data-subtab="media">Medien</button>
       </div>
       <div id="source-search-wrap" class="search-wrap d-flex gap-8 ai-c">
         <input class="search-input flex-1" type="search" id="searchSources" placeholder="Titel, Autor…" data-input="filterSources">
-        <button class="btn btn-outline-sm" data-action="showMediaBrowser" title="Alle Medien anzeigen">📎</button>
       </div>
     </div>
     <div id="sourceList" role="list"></div>
     <div id="repoSection" hidden>
       <div id="repoList"></div>
+    </div>
+    <div id="mediaSection" hidden>
+      <div class="media-filter-bar">
+        <button class="media-ctx-chip active" data-action="filterMedia" data-ctx="all">Alle</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="person">👤 Personen</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="family">⚭ Familien</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="source">📖 Quellen</button>
+      </div>
+      <div id="mediaGrid" class="media-grid"></div>
     </div>
   </div>
 
@@ -1379,8 +1388,8 @@
         <button class="btn menu-btn" data-action="menuStats">
           📊 &nbsp; Statistik
         </button>
-        <button class="btn menu-btn" data-action="showPersonMediaBrowser">
-          📎 &nbsp; Medienübersicht Personen
+        <button class="btn menu-btn" data-action="showMediaBrowser">
+          📎 &nbsp; Medienübersicht
         </button>
         <button hidden class="btn btn-gold btn-choice" data-action="menuRoundtrip" data-debug-only>
           🔁 &nbsp; Roundtrip-Test

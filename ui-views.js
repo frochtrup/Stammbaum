@@ -1092,6 +1092,13 @@ const _CLICK_MAP = {
   browserShowSource:       el => { closeModal('modalMediaBrowser'); showSourceDetail(el.dataset.sid); },
   browserShowPerson:       el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
   browserShowFamily:       el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
+  filterMedia:             el => filterMedia(el.dataset.ctx),
+  mediaNavCtx:             el => {
+    const { ctx, ctxId } = el.dataset;
+    if (ctx === 'person') showDetail(ctxId);
+    else if (ctx === 'family') showFamilyDetail(ctxId);
+    else if (ctx === 'source') showSourceDetail(ctxId);
+  },
   showLightbox:            el => showLightbox(el.src || el.dataset.src),
   // Statische index.html-Handler (P1-Migration)
   loadDemo:                ()  => loadDemo(),

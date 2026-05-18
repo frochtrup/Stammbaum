@@ -395,6 +395,12 @@ async function deleteSourceMedia(srcId, idx) {
 }
 
 function showMediaBrowser() {
+  _mediaCtxFilter = 'all';
+  bnavTab('sources');
+  switchSourcesSubTab('media');
+}
+
+function _showMediaBrowserLegacy() {
   const titleEl = document.getElementById('media-browser-title');
   if (titleEl) titleEl.textContent = 'Medien-Browser · Quellen';
   const allSrcs = Object.values(AppState.db.sources || {});
@@ -451,6 +457,12 @@ function showMediaBrowser() {
 }
 
 function showPersonMediaBrowser() {
+  _mediaCtxFilter = 'person';
+  bnavTab('sources');
+  switchSourcesSubTab('media');
+}
+
+function _showPersonMediaBrowserLegacy() {
   const titleEl = document.getElementById('media-browser-title');
   if (titleEl) titleEl.textContent = 'Medien-Browser · Personen';
 
@@ -513,6 +525,12 @@ function showPersonMediaBrowser() {
 }
 
 function showFamilyMediaBrowser() {
+  _mediaCtxFilter = 'family';
+  bnavTab('sources');
+  switchSourcesSubTab('media');
+}
+
+function _showFamilyMediaBrowserLegacy() {
   const titleEl = document.getElementById('media-browser-title');
   if (titleEl) titleEl.textContent = 'Medien-Browser · Familien';
 
@@ -585,5 +603,130 @@ function showFamilyMediaBrowser() {
 function _removeFamMarrObjeAt(f, targetIdx) {
   // Legacy: war für _extra-basierte Speicherung; jetzt über f.marr.media.splice()
   if (f?.marr?.media) f.marr.media.splice(targetIdx, 1);
+}
+
+// ─────────────────────────────────────
+//  MEDIA-MGR — Kachelansicht (Sub-Tab "Medien" im Quellen-Tab)
+// ─────────────────────────────────────
+
+const _IMG_EXTS = new Set(['jpg','jpeg','png','gif','bmp','webp','tif','tiff']);
+let _mediaCtxFilter = 'all';
+let _mediaAllItems  = [];
+
+function _collectAllMedia() {
+  const items = [];
+  const db = AppState.db;
+
+  const sortedPersons = Object.values(db.individuals || {})
+    .sort((a, b) => (a.surname || '').localeCompare(b.surname || '', 'de')
+                 || (a.given  || '').localeCompare(b.given  || '', 'de'));
+  for (const p of sortedPersons) {
+    for (let i = 0; i < (p.media || []).length; i++) {
+      const m = p.media[i];
+      if (!m.file && !m.title) continue;
+      const key = p.id.replace(/[^a-zA-Z0-9]/g, '');
+      items.push({ file: m.file, title: m.title || m.file,
+        ctx: 'person', ctxId: p.id, ctxLabel: p.name || p.id,
+        thumbId: 'mt-p-' + key + '-' + i });
+    }
+  }
+
+  const sortedFams = Object.values(db.families || {}).sort((a, b) => {
+    const na = a.husb ? (db.individuals[a.husb]?.surname || '') : '';
+    const nb = b.husb ? (db.individuals[b.husb]?.surname || '') : '';
+    return na.localeCompare(nb, 'de');
+  });
+  for (const f of sortedFams) {
+    const husb  = f.husb ? db.individuals[f.husb] : null;
+    const wife  = f.wife ? db.individuals[f.wife] : null;
+    const label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+    const key   = f.id.replace(/[^a-zA-Z0-9]/g, '');
+    for (let i = 0; i < (f.marr?.media || []).length; i++) {
+      const m = f.marr.media[i];
+      if (!m.file && !m.titl && !m.title) continue;
+      items.push({ file: m.file, title: m.titl || m.title || m.file,
+        ctx: 'family', ctxId: f.id, ctxLabel: label,
+        thumbId: 'mt-fm-' + key + '-' + i });
+    }
+    for (let i = 0; i < (f.media || []).length; i++) {
+      const m = f.media[i];
+      if (!m.file && !m.title) continue;
+      items.push({ file: m.file, title: m.title || m.file,
+        ctx: 'family', ctxId: f.id, ctxLabel: label,
+        thumbId: 'mt-f-' + key + '-' + i });
+    }
+  }
+
+  for (const s of Object.values(db.sources || {})) {
+    for (let i = 0; i < (s.media || []).length; i++) {
+      const m = s.media[i];
+      if (!m.file && !m.title) continue;
+      const key = s.id.replace(/[^a-zA-Z0-9]/g, '');
+      items.push({ file: m.file, title: m.title || m.file,
+        ctx: 'source', ctxId: s.id, ctxLabel: s.abbr || s.title || s.id,
+        thumbId: 'mt-s-' + key + '-' + i });
+    }
+  }
+
+  return items;
+}
+
+async function _loadMediaTileThumb(tileId, filePath) {
+  const el = document.getElementById(tileId);
+  if (!el) return;
+  const src = filePath
+    ? (await _odGetMediaUrlByPath(filePath).catch(() => null)
+    || await idbGet('img:' + filePath).catch(() => null))
+    : null;
+  if (!src) { el.classList.add('broken'); el.textContent = '⚠'; return; }
+  const img = document.createElement('img');
+  img.onerror = () => { el.classList.add('broken'); el.textContent = '⚠'; el.removeChild(img); };
+  img.src = src;
+  el.textContent = '';
+  el.appendChild(img);
+}
+
+const _CTX_ICON = { person: '👤', family: '⚭', source: '📖' };
+
+function _renderMediaGrid() {
+  const filtered = _mediaCtxFilter === 'all'
+    ? _mediaAllItems
+    : _mediaAllItems.filter(m => m.ctx === _mediaCtxFilter);
+
+  document.querySelectorAll('.media-ctx-chip').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.ctx === _mediaCtxFilter));
+
+  const grid = document.getElementById('mediaGrid');
+  if (!grid) return;
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted)">Keine Medien vorhanden</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(({ file, title, ctx, ctxId, ctxLabel, thumbId }) => {
+    const ext  = (file || '').split('.').pop().toLowerCase();
+    const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+    return `<div class="media-tile" data-action="mediaNavCtx" data-ctx="${esc(ctx)}" data-ctx-id="${esc(ctxId)}">
+      <div class="media-tile-thumb" id="${esc(thumbId)}">${icon}</div>
+      <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
+      <div class="media-tile-ctx">${_CTX_ICON[ctx] || ''} ${esc(ctxLabel)}</div>
+    </div>`;
+  }).join('');
+
+  for (const item of filtered) {
+    if (_IMG_EXTS.has((item.file || '').split('.').pop().toLowerCase()))
+      _loadMediaTileThumb(item.thumbId, item.file);
+  }
+}
+
+function showMediaSection() {
+  _mediaAllItems = _collectAllMedia();
+  _renderMediaGrid();
+}
+
+function filterMedia(ctx) {
+  _mediaCtxFilter = ctx || 'all';
+  _renderMediaGrid();
 }
 
