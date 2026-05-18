@@ -2086,6 +2086,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .media-filter-bar {
   display: flex; align-items: center; gap: 5px;
   padding: 6px 10px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10; background: var(--bg);
 }
 .media-ctx-chip {
   flex-shrink: 0; padding: 4px 9px; border-radius: 20px;
