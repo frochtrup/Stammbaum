@@ -169,6 +169,8 @@ function bnavTree() {
   setBnavActive('tree');
   const id = currentTreeId || smallestPersonId();
   if (!id) { showView('v-main'); setBnavActive('persons'); return; }
+  // Linken Panel auf Personen zurücksetzen — Personenliste ist der natürliche Partner zur Baumansicht
+  if (AppState.currentTab !== 'persons') switchTab('persons');
   if (document.body.classList.contains('desc-tree-mode') && typeof showDescTree === 'function')
     showDescTree(id, false);
   else
