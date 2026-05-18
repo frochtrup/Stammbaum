@@ -1107,6 +1107,12 @@ const _CLICK_MAP = {
   saveMediaDetail:         ()  => saveMediaDetail(),
   saveMediaGlobal:         ()  => saveMediaGlobal(),
   mediaDetailGoRef:        el => showMediaDetail(el.dataset.mediaType, el.dataset.ctxId, parseInt(el.dataset.idx, 10)),
+  mediaDetailNavEntity:    el  => {
+    const { type, id } = el.dataset;
+    if (type === 'person')                               showDetail(id);
+    else if (type === 'family' || type === 'family_media') showFamilyDetail(id);
+    else if (type === 'source')                          showSourceDetail(id);
+  },
   mediaDetailLinkPerson:   ()  => showToast('Person zuordnen: Funktion folgt', 'info'),
   mediaDetailLinkFamily:   ()  => showToast('Familie zuordnen: Funktion folgt', 'info'),
   mediaDetailLinkSource:   ()  => showToast('Quelle zuordnen: Funktion folgt', 'info'),

@@ -2083,6 +2083,14 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .em-ref-label { font-size: 0.9rem; font-weight: 500; }
 
 /* ── Medien-Kachelansicht (MEDIA-MGR) ── */
+.form-row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.md-nav-btn {
+  flex-shrink: 0; margin-left: 6px;
+  padding: 4px 8px; border-radius: 6px; font-size: 0.85rem;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-muted); cursor: pointer; line-height: 1.4;
+}
+.md-nav-btn:active { opacity: 0.6; }
 .md-preview-hero {
   display: flex; justify-content: center; align-items: center;
   padding: 16px 12px 8px; min-height: 60px;

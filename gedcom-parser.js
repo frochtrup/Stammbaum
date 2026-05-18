@@ -188,7 +188,7 @@ function parseGEDCOM(text, parseErrors) {
           if (val && val.startsWith('@')) {
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, medi:'', titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
         else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
@@ -444,9 +444,13 @@ function parseGEDCOM(text, parseErrors) {
         }
         // Collect source references at level 4
         if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
-        // Person OBJE: lv=4 Sub-Tags (z.B. 4 TYPE PHOTO unter 3 FORM)
+        // Person OBJE: lv=4 Sub-Tags (z.B. 4 MEDI/TYPE photo unter 3 FORM)
         if (lv1tag === 'OBJE' && cur.media.length) {
-          cur.media[cur.media.length-1]._extra.push('4 ' + tag + (val ? ' ' + val : ''));
+          const _cm4 = cur.media[cur.media.length-1];
+          if (lv2tag === 'FILE' && lv3tag === 'FORM' && (tag === 'MEDI' || tag === 'TYPE'))
+            _cm4.medi = val.toLowerCase();
+          else
+            _cm4._extra.push('4 ' + tag + (val ? ' ' + val : ''));
         }
         // Event OBJE: 4 FORM unter 3 FILE (lv=4 da OBJE bei lv=2)
         if (lv2tag === 'OBJE' && evIdx >= 0 && cur.events[evIdx]?.media?.length > 0) {
@@ -501,7 +505,7 @@ function parseGEDCOM(text, parseErrors) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, medi:'', titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
         else if (tag === '_TASK') {
@@ -752,7 +756,7 @@ function parseGEDCOM(text, parseErrors) {
             // Referenz auf externen OBJE-Record → verbatim passthrough
             cur._passthrough.push('1 OBJE ' + val); _ptDepth = 1;
           } else {
-            cur.media.push({ file:'', title:'', form:null, titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
+            cur.media.push({ file:'', title:'', form:null, medi:'', titleIsLv2:false, note:'', date:'', scbk:'', prim:'', _extra:[] });
           }
         }
         else if (tag === 'REFN') { cur.refns.push({val:val||'', type:''}); }

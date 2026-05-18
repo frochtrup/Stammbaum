@@ -281,7 +281,7 @@ function writeINDIRecord(lines, p) {
     if (m.file) {
       lines.push(`2 FILE ${m.file}`);
       const form = _mediaFormStr(m);
-      if (form) lines.push(`3 FORM ${form}`);
+      if (form) { lines.push(`3 FORM ${form}`); if (m.medi) lines.push(`4 MEDI ${m.medi}`); }
     }
     if (!m.titleIsLv2 && m.title) lines.push(`3 TITL ${m.title}`);
     for (const l of (m._extra || [])) lines.push(l);
@@ -423,7 +423,7 @@ function writeFAMRecord(lines, f) {
     if (m.file) {
       lines.push(`2 FILE ${m.file}`);
       const form = _mediaFormStr(m);
-      if (form) lines.push(`3 FORM ${form}`);
+      if (form) { lines.push(`3 FORM ${form}`); if (m.medi) lines.push(`4 MEDI ${m.medi}`); }
       if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
     } else if (m.title && !m.titleIsLv2) {
       lines.push(`2 TITL ${m.title}`);
@@ -477,7 +477,7 @@ function writeSOURRecord(lines, s) {
     if (m.file) {
       lines.push(`2 FILE ${m.file}`);
       const form = _mediaFormStr(m);
-      if (form) lines.push(`3 FORM ${form}`);
+      if (form) { lines.push(`3 FORM ${form}`); if (m.medi) lines.push(`4 MEDI ${m.medi}`); }
       if (m.title && !m.titleIsLv2) lines.push(`3 TITL ${m.title}`);
     } else if (m.title && !m.titleIsLv2) {
       lines.push(`2 TITL ${m.title}`);

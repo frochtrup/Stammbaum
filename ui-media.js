@@ -883,15 +883,28 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
     <div class="md-preview-icon">${fileIcon}</div>
   </div>`;
 
-  // 2. Global fields: FILE + FORM — changes update ALL references
+  // 2. Global fields: FILE + FORM + MEDI — changes update ALL references
+  const _MEDI_OPTS = ['','audio','book','card','electronic','fiche','film','magazine','manuscript','map','newspaper','photo','tombstone','video'];
+  const _MEDI_LABELS = {'':'—','audio':'Audio','book':'Buch','card':'Karte','electronic':'Elektronisch','fiche':'Microfiche','film':'Microfilm','magazine':'Zeitschrift','manuscript':'Manuskript','map':'Landkarte','newspaper':'Zeitung','photo':'Foto','tombstone':'Grabstein','video':'Video'};
+  const curMedi = (m.medi || '').toLowerCase();
+  const mediOpts = _MEDI_OPTS.map(v => `<option value="${v}"${v === curMedi ? ' selected' : ''}>${_MEDI_LABELS[v]}</option>`).join('');
+
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Datei (alle Referenzen)</div>
     </div>
     <label class="form-label">Datei / Pfad</label>
     <input class="form-input mb-3" id="md-file" type="text" value="${esc(file)}">
-    <label class="form-label">Format (FORM)</label>
-    <input class="form-input mb-3" id="md-form" type="text" value="${esc(m.form || '')}">
+    <div class="form-row-2col mb-3">
+      <div>
+        <label class="form-label">Format (FORM)</label>
+        <input class="form-input" id="md-form" type="text" value="${esc(m.form || '')}" placeholder="jpg, png, pdf…">
+      </div>
+      <div>
+        <label class="form-label">Medientyp (MEDI)</label>
+        <select class="form-select" id="md-medi">${mediOpts}</select>
+      </div>
+    </div>
     <div class="btn-row">
       <button type="button" class="btn btn-save" data-action="saveMediaGlobal">Speichern (alle Ref.)</button>
     </div>
@@ -917,7 +930,8 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
           <div class="rel-name">${esc(r.label)}</div>
           <div class="rel-role">${typeLabel}</div>
         </div>
-        <span class="p-arrow">›</span>
+        <button class="md-nav-btn" data-action="mediaDetailNavEntity"
+          data-type="${esc(r.type)}" data-id="${esc(r.id)}" title="Zum Eintrag">↗</button>
       </div>`;
     }
   }
@@ -1008,25 +1022,25 @@ function saveMediaDetail() {
 function saveMediaGlobal() {
   const newFile = document.getElementById('md-file')?.value.trim() || '';
   const newForm = document.getElementById('md-form')?.value.trim() || '';
+  const newMedi = document.getElementById('md-medi')?.value || '';
   const oldFile = (_getMdEntry(_mdType, _mdId, _mdIdx)?.file || '').trim();
   const db = AppState.db;
   let count = 0;
 
-  const _updateEntry = (entry, isFamily) => {
+  const _updateEntry = entry => {
     if ((entry.file || '').trim() !== oldFile && oldFile !== '') return;
-    if (isFamily) { entry.file = newFile; entry.form = newForm; }
-    else          { entry.file = newFile; entry.form = newForm; }
+    entry.file = newFile; entry.form = newForm; entry.medi = newMedi;
     count++;
   };
 
   for (const p of Object.values(db.individuals || {}))
-    for (const e of (p.media || [])) _updateEntry(e, false);
+    for (const e of (p.media || [])) _updateEntry(e);
   for (const f of Object.values(db.families || {})) {
-    for (const e of (f.marr?.media || [])) _updateEntry(e, true);
-    for (const e of (f.media || []))       _updateEntry(e, false);
+    for (const e of (f.marr?.media || [])) _updateEntry(e);
+    for (const e of (f.media || []))       _updateEntry(e);
   }
   for (const s of Object.values(db.sources || {}))
-    for (const e of (s.media || [])) _updateEntry(e, false);
+    for (const e of (s.media || [])) _updateEntry(e);
 
   AppState.changed = true;
   updateChangedIndicator();
