@@ -2235,10 +2235,12 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .rel-path-name--common { font-weight: 600; color: var(--gold); }
 .rel-path-icon { font-size: 0.75rem; color: var(--gold-dim); }
 .rel-path-body-title { margin-bottom: 10px; font-size: 1rem; font-weight: 600; color: var(--gold); }
+.rel-path-ancestor { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; font-style: italic; }
 .rel-path-legend { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
 .rel-path-multi  { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; font-style: italic; }
 .rel-path-arrow  { text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 2px 0; }
 .rel-path-not-found { color: var(--text-muted); font-style: italic; padding: 8px 0; }
+.rel-anc-hint    { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
 
 /* ═══════════════════════════════════════
    COMPONENT-KLASSEN Phase 5 (A10)

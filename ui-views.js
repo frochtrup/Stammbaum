@@ -1164,6 +1164,7 @@ const _CLICK_MAP = {
   tlShowDescTree:          ()  => { const pid = UIState._timelinePid || AppState.currentPersonId; if (pid && typeof showDescTree  === 'function') showDescTree(pid, false); },
   toggleTimelineFullscreen:()  => { if (typeof toggleTimelineFullscreen === 'function') toggleTimelineFullscreen(); },
   showRelPath:             el  => showRelPath(el.dataset.pid),
+  showRelCalcPicker:       el  => showRelCalcPicker(el.dataset.pid),
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
   showTree:                el  => showTree(el.dataset.id),
   showTimeline:            el  => { if (typeof showTimeline === 'function') showTimeline(el.dataset.id); },

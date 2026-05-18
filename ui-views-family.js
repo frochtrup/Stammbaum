@@ -186,6 +186,8 @@ function renderRelPicker(q) {
     const p = AppState.db.individuals[UIState._relAnchorId];
     const excl = new Set([UIState._relAnchorId, ...(p?.aliases || [])]);
     persons = persons.filter(x => !excl.has(x.id));
+  } else if (UIState._relMode === 'relcalc') {
+    persons = persons.filter(x => x.id !== UIState._relAnchorId);
   }
 
   if (q) {
@@ -218,6 +220,8 @@ function relPickerSelect(selectedId) {
   closeModal('modalRelPicker');
   if (UIState._relMode === 'alias') {
     addAlias(UIState._relAnchorId, selectedId);
+  } else if (UIState._relMode === 'relcalc') {
+    showRelPath(UIState._relAnchorId, selectedId);
   } else {
     openRelFamilyForm(UIState._relAnchorId, selectedId, UIState._relMode);
   }

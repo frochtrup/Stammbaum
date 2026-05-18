@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-18 — REL-CALC: Beziehungsrechner ausgebaut (sw v626)
+
+- **sw v626** `feat(rel)`: REL-CALC — Beziehungsrechner vollständig: gemeinsamer Vorfahre mit Geburtsjahr in Verwandtschaft-Zeile (`rel-anc-hint`) und im Pfad-Modal (`rel-path-ancestor`); freier Zweipersonen-Vergleich via „🔗 zu …"-Button in jedem Person-Detail; `showRelCalcPicker(anchorId)` öffnet vorhandenen `modalRelPicker` mit `_relMode='relcalc'`; `relPickerSelect()` leitet in `showRelPath(idA, selectedId)` um; `showRelPath(idA, targetId?)` mit optionalem zweiten Parameter (Standard: Proband); `_relAncestorHint()` Helper; Verwandtschaft-Sektion erscheint immer wenn >1 Person geladen; `showRelCalcPicker` in `_CLICK_MAP`; CSS `.rel-path-ancestor` + `.rel-anc-hint`
+
+---
+
 ### Session 2026-05-18 — Medien-Manager: Detailansicht, Performance, Sortierung (sw v609–v625)
 
 - **sw v609–v620** `feat(media)`: `showMediaDetail()` — Detailansicht im rechten Panel (analog Hof/Person/Quelle); globale Felder FILE/FORM/MEDI mit „Speichern (alle Ref.)"; Referenzliste mit ↗-Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; MEDI-Select + FORMAT+MEDI in einer Zeile; Inline-Suchpanel `_mdShowLinkPanel()` für + Person/Familie/Quelle; Filter-Leiste sticky via `.list-search-header`; GEDCOM: `_DATE` statt `NOTE Aufnahmedatum:`, lv=4 MEDI-Parser, `_mediaFormStr()` leitet FORM aus Dateiendung ab

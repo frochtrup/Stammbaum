@@ -705,20 +705,27 @@ function showDetail(id, pushHistory = true) {
     html += `</div></div>`;
   }
 
-  // Verwandtschaft zum Probanden
+  // Verwandtschaft
   const _probandId = getProbandId();
-  if (_probandId && id !== _probandId) {
-    const _rel = calcRelationship(id, _probandId);
-    if (_rel && _rel.label !== 'Nicht verwandt') {
-      const _probandName = AppState.db.individuals[_probandId]?.name || 'Proband';
-      html += `<div class="section fade-up">
-        <div class="section-head"><div class="section-title">Verwandtschaft</div></div>
-        <div class="fact-row fact-row--clickable" data-action="showRelPath" data-pid="${id}">
-          <span class="fact-lbl">${esc(_probandName)}</span>
-          <span class="fact-val rel-val-italic">${esc(_rel.label)}<span class="p-arrow ml-6">›</span></span>
-        </div>
+  const _hasMultiPersons = Object.keys(AppState.db.individuals || {}).length > 1;
+  if (_hasMultiPersons) {
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Verwandtschaft</div>
+        <button class="section-add" data-action="showRelCalcPicker" data-pid="${id}">🔗 zu …</button>
       </div>`;
+    if (_probandId && id !== _probandId) {
+      const _rel = calcRelationship(id, _probandId);
+      if (_rel && _rel.label !== 'Nicht verwandt') {
+        const _probandName = AppState.db.individuals[_probandId]?.name || 'Proband';
+        const _ancHint = _relAncestorHint(_rel);
+        html += `<div class="fact-row fact-row--clickable" data-action="showRelPath" data-pid="${id}">
+          <span class="fact-lbl">${esc(_probandName)}</span>
+          <span class="fact-val rel-val-italic">${esc(_rel.label)}${_ancHint ? `<span class="rel-anc-hint"> (${esc(_ancHint)})</span>` : ''}<span class="p-arrow ml-6">›</span></span>
+        </div>`;
+      }
     }
+    html += `</div>`;
   }
 
   // Notizen
@@ -885,22 +892,31 @@ function showDetail(id, pushHistory = true) {
   }
 }
 
-function showRelPath(id) {
-  const probandId = getProbandId();
-  if (!probandId || !id) return;
-  const rel = calcRelationship(id, probandId);
+function _relAncestorHint(rel) {
+  if (!rel || !rel.commonId || rel.distA === 0 || rel.distB === 0) return '';
+  const anc = AppState.db.individuals[rel.commonId];
+  if (!anc) return '';
+  const year = (anc.birth?.date || '').match(/\d{4}/)?.[0];
+  return `gm. Vorfahre: ${anc.name || rel.commonId}${year ? ' *' + year : ''}`;
+}
+
+function showRelPath(idA, targetId) {
+  const bId = targetId || getProbandId();
+  if (!bId || !idA) return;
+  const rel = calcRelationship(idA, bId);
   if (!rel) return;
 
-  const pA = AppState.db.individuals[id];
-  const pB = AppState.db.individuals[probandId];
+  const pA = AppState.db.individuals[idA];
+  const pB = AppState.db.individuals[bId];
   document.getElementById('relPathTitle').textContent =
-    `${pA?.name || id} → ${pB?.name || probandId}`;
+    `${pA?.name || idA} → ${pB?.name || bId}`;
 
   const body = document.getElementById('relPathBody');
   if (!rel.path.length) {
     body.innerHTML = `<div class="rel-path-not-found">Keine verwandtschaftliche Verbindung gefunden.</div>`;
   } else {
-    const kNum = id => _kekuleMap[id] ? `<span class="p-kekule">#${_kekuleMap[id]}</span>` : '';
+    const kNum = pid => _kekuleMap[pid] ? `<span class="p-kekule">#${_kekuleMap[pid]}</span>` : '';
+    const ancestorHint = _relAncestorHint(rel);
     const rows = rel.path.map((pid, i) => {
       const person = AppState.db.individuals[pid];
       const name = person?.name || pid;
@@ -914,12 +930,22 @@ function showRelPath(id) {
       </div>${arrow}`;
     }).join('');
     body.innerHTML = `<div class="rel-path-body-title">${esc(rel.label)}</div>
+      ${ancestorHint ? `<div class="rel-path-ancestor">${esc(ancestorHint)}</div>` : ''}
       <div class="rel-path-legend">⬡ = gemeinsamer Vorfahre</div>
       ${rel.multiPath ? `<div class="rel-path-multi">Mehrere Verwandtschaftspfade möglich – kürzester angezeigt.</div>` : '<div class="mb-10"></div>'}
       ${rows}`;
   }
 
   openModal('modalRelPath');
+}
+
+function showRelCalcPicker(anchorId) {
+  UIState._relMode = 'relcalc';
+  UIState._relAnchorId = anchorId;
+  document.getElementById('relPickerTitle').textContent = 'Verwandtschaft berechnen zu …';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
 }
 
 function _injectJumpBar() {
