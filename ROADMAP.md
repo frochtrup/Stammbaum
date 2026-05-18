@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v612 · Cache: `stammbaum-v612`
+**sw-Version:** v622 · Cache: `stammbaum-v622`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -61,6 +61,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | SEC-3 | XSS: `buildPlacePartsHtml()` → DOM-API `_buildPlaceParts()` | v607 |
 | STAB-2 | Konflikt-Erkennung beim Speichern (`lastModified`-Check) | v607 |
 | MEDIA-MGR | Medien-Sub-Tab im Quellen-Tab (Kachelgalerie, Lazy-Loading, Filter) | v608 |
+| MEDIA-MGR-DETAIL | Medien-Detailansicht mit Referenz-Management | v609–v622 |
 
 ---
 
@@ -118,6 +119,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | CSV-EXPORT | **CSV-Export für Listen** | Personen- und Familienliste als CSV aus der aktuell gefilterten Ansicht; Spalten konfigurierbar (Name, Geburt, Tod, Ort, Quellenzahl); Download-Button im Listen-Header. Wichtige Kompatibilität zu Excel/Numbers für Abgleich und Druck. | S |
 | REL-CALC | **Beziehungsrechner** | „Wie sind X und Y verwandt?" — BFS durch Familiengraph. Text: „3. Grad Cousin, gemeinsamer Vorfahre: Johann Decker (1780)". Erweiterung: visueller Pfad als klickbare Karten-Kette im Modal. Erreichbar aus Personen-Detail. | M |
 | ~~MEDIA-MGR~~ | ~~**Medienverwaltung (eigene View)**~~ | Dritter Sub-Tab „Medien" im Quellen-Tab; Kachelgalerie aller Medien (Personen + Familien + Quellen); Filter-Chips Alle/Personen/Familien/Quellen; Lazy-Loading mit ⚠-Overlay; Klick navigiert zum Kontext-Datensatz; ersetzt drei Modal-Browser (sw v608) | - |
+| ~~MEDIA-MGR-DETAIL~~ | ~~**Medien-Detailansicht**~~ | `showMediaDetail()`: Detailansicht im rechten Panel; globale Felder FILE/FORM/MEDI; Referenzliste mit ↗ Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; Inline-Suchpanel zum Hinzufügen neuer Referenzen (Person/Familie/Quelle) mit Lebensdaten-Anzeige (sw v609–v622) | - |
 | DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |
 | PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
 | WW-PARSER | **Web Worker für große GEDCOM-Dateien** | `parseGEDCOM()` in einen Web Worker auslagern: Main Thread bleibt bei Dateien >50K Personen reaktiv; Fortschrittsbalken möglich; keine UI-Blockierung auf mobilen Geräten. Voraussetzung: parseGEDCOM() aus dem globalen State lösen (REFACT-1). | M |
@@ -168,7 +170,7 @@ Handbuch-Pflege: kein Funktionsrelease nötig, aber separater Aufwand.
 
 **Konvention:** Bei jedem Handbuch-Update wird der aktuelle sw-Stand im `HANDBUCH.html`-Deckblatt vermerkt (z. B. `Stand: sw v604`) und parallel in dieser Sektion notiert.
 
-**Handbuch-Stand: sw v603** (aktualisiert 2026-05-18)
+**Handbuch-Stand: sw v622** (aktualisiert 2026-05-18)
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -177,7 +179,8 @@ Handbuch-Pflege: kein Funktionsrelease nötig, aber separater Aufwand.
 | ~~DOC-TREE-HEAT~~ | ~~**Handbuch Kap. 8: Vollständigkeits-Heatmap**~~ | Farb-Ringe in Sanduhr-Baum (sw v598) | - |
 | ~~DOC-VAL-22~~ | ~~**Handbuch Kap. 13: Regelzahl korrigiert**~~ | 21 → 22 Regeln (sw v590) | - |
 | ~~DOC-MAP-ANIM~~ | ~~**Handbuch Kap. 9: Animierter Migrationspfad**~~ | Animations-Leiste erklärt (sw v603) | - |
-| DOC-MAP-TOPBAR | **Handbuch Kap. 9: 🗺-Button in Diagramm-Topbars** | Neuer Unterabschnitt: 🗺-Button öffnet aktuellen Probanden auf Karte — erreichbar aus Personen-Detail, Zeitleiste, Sanduhr-Baum, Detail-NavBar; Verhalten bei Person ohne Koordinaten (Toast). | XS |
+| ~~DOC-MAP-TOPBAR~~ | ~~**Handbuch Kap. 9: 🗺-Button in Diagramm-Topbars**~~ | 🗺-Button in Diagramm-Topbar-Tabelle ergänzt + eigener Unterabschnitt in Kap. 7 (sw v622) | - |
+| ~~DOC-MEDIA-MGR~~ | ~~**Handbuch Kap. 18: Medien-Manager vollständig**~~ | Kap. 18 komplett überarbeitet: Galerie, Detailansicht, Referenz-Management, Suchpanel mit Lebensdaten (sw v622) | - |
 | DOC-SCREENS | **Handbuch: echte Screenshots** | Alle Mockups in `HANDBUCH.html` durch echte Screenshots ersetzen. Priorität: Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste, Karte (Migrations-Modus + Person-Modus + animiert), Personen-Detail, Ereignis-Formular. | M |
 
 ---

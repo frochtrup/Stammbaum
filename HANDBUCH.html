@@ -1746,6 +1746,19 @@ Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Fel
 Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Marker — der Tooltip zeigt Name, Daten und Orte der Person.
 </div>
 
+<h2>Karte direkt aus einem Diagramm öffnen</h2>
+
+<p>In der Topbar aller vier Diagramme (Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste) und in der Personen-Detailansicht gibt es einen <span class="button-label">🗺</span>-Button. Ein Tipp darauf öffnet die Karte und zeigt sofort die Lebensstationen des aktuellen Probanden — ohne dass Sie manuell zum Karten-Tab wechseln müssen.</p>
+
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Erreichbar aus</th><th>Verhalten</th></tr>
+  <tr><td>Personen-Detailansicht</td><td>Öffnet Karte im Personen-Modus mit dieser Person</td></tr>
+  <tr><td>Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste</td><td>Öffnet Karte mit dem aktuellen Probanden</td></tr>
+  <tr><td>Person ohne Koordinaten</td><td>Kurze Meldung: „Keine Koordinaten für diese Person"</td></tr>
+</table>
+
+<div class="tip">Der <span class="button-label">🗺</span>-Button ist eine Abkürzung — er ersetzt nicht den Karten-Tab, sondern wechselt schnell vom Diagramm zur Karte für dieselbe Person.</div>
+
 
 <!-- ====================================================== -->
 <!-- KAPITEL 8: STAMMBAUM-ANSICHTEN -->
@@ -1763,6 +1776,7 @@ Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Mar
   <tr><td><span class="button-label">◑</span></td><td>Zum Fächer-Diagramm wechseln</td><td>Sanduhr, Nachkommen, Zeitleiste</td></tr>
   <tr><td><span class="button-label">⇩</span></td><td>Zum Nachkommen-Baum wechseln</td><td>Sanduhr, Fächer, Zeitleiste</td></tr>
   <tr><td><span class="button-label">⟷</span></td><td>Zur Zeitleiste wechseln</td><td>Sanduhr, Fächer, Nachkommen</td></tr>
+  <tr><td><span class="button-label">🗺</span></td><td>Karte für aktuellen Probanden öffnen</td><td>Alle vier Diagramme + Personen-Detail</td></tr>
 </table>
 
 <p>Die Generationsauswahl (Zahlen <span class="button-label">2</span> bis <span class="button-label">6</span> bzw. <span class="button-label">7</span>) erscheint in einer eigenen Leiste <em>unterhalb</em> der Topbar, direkt über dem Diagramm.</p>
@@ -2706,11 +2720,69 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 <!-- ====================================================== -->
 <h1 class="chapter" id="kap18">18. Fotos und Medien organisieren</h1>
 
-<p>Fotos und Dokumente sind ein zentraler Teil der Familienforschung. Dieser Abschnitt erklärt, wie Stammbaum PWA mit Medien umgeht — und wie Sie Ihre Dateien am besten organisieren.</p>
+<p>Fotos und Dokumente sind ein zentraler Teil der Familienforschung. Stammbaum PWA verwaltet Medien über drei aufeinander aufbauende Ebenen: die <strong>Kachelgalerie</strong> aller Medien, die <strong>Detailansicht</strong> eines einzelnen Mediums und die direkte Verknüpfung mit Personen, Familien und Quellen.</p>
 
 <h2>Wie die App Fotos speichert</h2>
 <p>Stammbaum PWA speichert <strong>keine Fotos in der GEDCOM- oder Gramps-Datei selbst</strong>. Stattdessen werden nur Dateipfade gespeichert (z. B. <code>Fotos/Johann_Decker.jpg</code>). Die Fotos selbst bleiben auf Ihrem Gerät oder in OneDrive.</p>
 <p>Beim Hinzufügen eines Fotos legt die App zusätzlich eine Kopie im internen Speicher (IndexedDB) ab — so sind die Fotos auch offline sichtbar, ohne dass Sie jedes Mal die Datei neu öffnen müssen.</p>
+
+<h2>Der Medien-Tab: Kachelgalerie</h2>
+<p>Alle Medien (Fotos, Dokumente, Scans) sind zentral über <strong>Quellen → Medien</strong> erreichbar. Die Galerie zeigt alle Medien als Kacheln — unabhängig davon, ob sie einer Person, einer Familie oder einer Quelle zugewiesen sind.</p>
+
+<h3>Filtern und Suchen</h3>
+<p>Die Filter-Leiste am oberen Rand hält die Galerie übersichtlich:</p>
+<table style="font-size:0.9em; margin:0.8em 0;">
+  <tr><th>Filter</th><th>Zeigt</th></tr>
+  <tr><td><span class="button-label">Alle</span></td><td>Sämtliche Medien</td></tr>
+  <tr><td><span class="button-label">Personen</span></td><td>Nur Medien, die Personen zugeordnet sind</td></tr>
+  <tr><td><span class="button-label">Familien</span></td><td>Nur Medien, die Familien zugeordnet sind</td></tr>
+  <tr><td><span class="button-label">Quellen</span></td><td>Nur Medien, die Quellen zugeordnet sind</td></tr>
+</table>
+<p>Das Suchfeld daneben filtert nach Dateinamen, Titel und Notiz. Medien, deren Bild-Datei nicht geladen werden kann, erscheinen mit einem ⚠-Symbol — der Pfad ist gespeichert, die Datei aber nicht erreichbar.</p>
+
+<h2>Detailansicht eines Mediums</h2>
+<p>Ein Tipp auf eine Kachel öffnet die <strong>Detailansicht</strong> in der rechten Spalte (Desktop) bzw. als Vollansicht (Mobil). Sie ist in drei Bereiche gegliedert:</p>
+
+<h3>Globale Felder (gelten für alle Verknüpfungen)</h3>
+<p>Oben stehen die Felder, die das Medium selbst beschreiben — unabhängig davon, wo es verwendet wird:</p>
+<table style="font-size:0.9em; margin:0.8em 0;">
+  <tr><th>Feld</th><th>Bedeutung</th></tr>
+  <tr><td>Dateipfad (FILE)</td><td>Relativer Pfad zur Mediendatei</td></tr>
+  <tr><td>Format (FORM)</td><td>Dateiformat, z. B. <code>jpg</code>, <code>pdf</code></td></tr>
+  <tr><td>Medientyp (MEDI)</td><td>Art des Mediums: Foto, Dokument, Ton, Video usw.</td></tr>
+</table>
+<p><span class="button-label">Speichern (alle Ref.)</span> übernimmt Änderungen an Dateipfad, Format und Medientyp für <em>alle</em> Verknüpfungen dieses Mediums gleichzeitig.</p>
+
+<h3>Referenzliste</h3>
+<p>Darunter erscheint die Liste aller Personen, Familien und Quellen, denen dieses Medium zugeordnet ist. Jede Zeile zeigt:</p>
+<ul style="margin:0.5em 0 0.5em 1.5em; line-height:2em;">
+  <li>Symbol und Name des verknüpften Datensatzes</li>
+  <li><span class="button-label">↗</span> — direkt zur Person, Familie oder Quelle wechseln</li>
+  <li><span class="button-label">×</span> — diese Verknüpfung löschen (nur die Zuordnung, nicht die Datei)</li>
+</ul>
+<p>Durch Antippen einer Zeile (nicht ↗ oder ×) wechselt der untere Bereich zu den referenz-spezifischen Feldern dieses Datensatzes.</p>
+
+<h3>Referenz-spezifische Felder</h3>
+<p>Jede Verknüpfung kann eigene Metadaten haben — diese gelten nur für <em>diese eine</em> Referenz:</p>
+<table style="font-size:0.9em; margin:0.8em 0;">
+  <tr><th>Feld</th><th>Bedeutung</th></tr>
+  <tr><td>Titel (TITL)</td><td>Beschriftung speziell für diesen Kontext</td></tr>
+  <tr><td>Datum (_DATE)</td><td>Aufnahmedatum des Fotos / Scans</td></tr>
+  <tr><td>Notiz (NOTE)</td><td>Freier Text zu dieser Verknüpfung</td></tr>
+  <tr><td>Primärbild (_PRIM)</td><td>Dieses Foto als Hauptfoto des Datensatzes markieren</td></tr>
+</table>
+<p><span class="button-label">Speichern</span> speichert nur die Felder dieser einen Referenz.</p>
+
+<h2>Neue Verknüpfung hinzufügen</h2>
+<p>Unterhalb der Referenzliste finden Sie drei Buttons:</p>
+<ul style="margin:0.5em 0 0.5em 1.5em; line-height:2em;">
+  <li><span class="button-label">+ Person</span> — dieses Medium einer weiteren Person zuordnen</li>
+  <li><span class="button-label">+ Familie</span> — dieses Medium einer Familie zuordnen</li>
+  <li><span class="button-label">+ Quelle</span> — dieses Medium einer Quelle zuordnen</li>
+</ul>
+<p>Ein Tipp öffnet ein Suchfeld direkt im Panel. Die Trefferliste zeigt bei Personen Geburts- und Sterbejahr, bei Familien das Heiratsdatum — so lassen sich gleichnamige Personen sicher unterscheiden. Ein Tipp auf einen Eintrag erstellt die Verknüpfung sofort.</p>
+
+<div class="tip">Ein Medium kann gleichzeitig mehreren Personen, Familien und Quellen zugeordnet sein — z. B. ein Familienfoto, das bei drei Personen und der zugehörigen Heiratsquelle verknüpft ist.</div>
 
 <h2>Empfohlene Ordnerstruktur</h2>
 <p>Legen Sie alle Dateien, die zu Ihrem Stammbaum gehören, in <strong>einen gemeinsamen Ordner</strong>:</p>
@@ -2746,7 +2818,7 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 <p>Im Ereignis-Formular gibt es einen <strong>📷-Button</strong>: Tippen Sie darauf, um direkt ein Foto aufzunehmen (Archiv-Besuch, Grabstein, Urkunde vor Ort). Das Foto wird sofort mit dem Ereignis verknüpft und im internen Speicher abgelegt — auch ohne Internetverbindung.</p>
 
 <h2>Was passiert, wenn ich Fotos verschiebe?</h2>
-<p>Wenn Sie Fotos auf Ihrem Gerät oder in OneDrive verschieben, können die Verweise in der App ungültig werden — das Foto erscheint dann nicht mehr. Lösung: Foto erneut zuweisen (<strong>✎ am Medieneintrag → neues Foto wählen</strong>). Fotos im internen App-Speicher bleiben dagegen immer sichtbar.</p>
+<p>Wenn Sie Fotos auf Ihrem Gerät oder in OneDrive verschieben, können die Verweise in der App ungültig werden — das Foto erscheint dann mit einem ⚠-Symbol. Öffnen Sie die Detailansicht des Mediums und korrigieren Sie den Dateipfad im Feld FILE. Fotos im internen App-Speicher bleiben dagegen immer sichtbar.</p>
 
 
 <!-- ====================================================== -->
