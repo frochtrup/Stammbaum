@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-18 — Medien-Manager: Detailansicht, Performance, Sortierung (sw v609–v625)
+
+- **sw v609–v620** `feat(media)`: `showMediaDetail()` — Detailansicht im rechten Panel (analog Hof/Person/Quelle); globale Felder FILE/FORM/MEDI mit „Speichern (alle Ref.)"; Referenzliste mit ↗-Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; MEDI-Select + FORMAT+MEDI in einer Zeile; Inline-Suchpanel `_mdShowLinkPanel()` für + Person/Familie/Quelle; Filter-Leiste sticky via `.list-search-header`; GEDCOM: `_DATE` statt `NOTE Aufnahmedatum:`, lv=4 MEDI-Parser, `_mediaFormStr()` leitet FORM aus Dateiendung ab
+- **sw v621** `feat(media)`: `_mdDeleteRef()` — × Button pro Referenzzeile; spliced aus person/family/family_media/source-Array; Redirect auf verbleibende Refs oder `goBack()`; `mediaDetailDeleteRef` im `_CLICK_MAP`
+- **sw v622** `fix(media)` `docs`: × statt 🗑 (konsistent mit App); Suchpanel zeigt Lebensdaten (* Geburt † Tod) bei Personen, Heiratsdatum bei Familien; `.md-link-info` flex-column; ROADMAP + HANDBUCH Kap. 7/8/18 aktualisiert; Titelblatt auf sw v622
+- **sw v623** `perf(media)`: IntersectionObserver + `_thumbCache` (Map filePath→src) — Kacheln laden erst beim Einscrolle in Viewport (rootMargin 300px); Cache überlebt Filterwechsel, cleared bei `showMediaSection()`; `_applyThumbSrc()` extrahiert; `data-thumb-id`/`data-file` auf Thumb-Divs
+- **sw v624** `feat(media)` `fix(media)`: Sort-Button `⇅` in Filter-Bar — 3 Zustände Kontext/Datei↑/Datei↓; `cycleMediaSort()` + `_CLICK_MAP`-Eintrag; `display:flex` auf `.media-filter-bar` überschrieb `[hidden]` → `.media-filter-bar[hidden]{display:none}` ergänzt
+- **sw v625** `fix(media)`: Medienliste nach Tab-Rückkehr aktuell — `renderTab()` erkennt aktiven Sub-Tab (toggle-media/toggle-repos/sources) und ruft `showMediaSection()`/`renderRepoList()`/`renderSourceList()` entsprechend auf; vorher wurde bei sources-Tab immer nur `renderSourceList()` gerufen
+
+---
+
 ### Session 2026-05-17 — Diagramm-Topbars + Proband-Navigation (sw v591–v595)
 
 - **sw v591** `feat(topbar)`: Zeitleiste als vollwertiges Diagramm — einheitliche Topbar-Struktur für alle vier Diagramme (Sanduhr, Fächer, Nachkommen, Zeitleiste): `[⌂ Proband] [⤢ Vollbild] | [Diagramm-Wechsel] [☰]`; Sanduhr: `⤢` vor Separator verschoben; Zeitleiste: `⌂ tlProbandBtn` + `⤢ tlFsBtn` vor Separator; `⧖ ◑ ⇩` danach; `tlShowProband()` Action neu
