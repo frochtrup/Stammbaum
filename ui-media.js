@@ -940,6 +940,7 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
     <button type="button" class="section-add" data-action="mediaDetailLinkFamily">+ Familie</button>
     <button type="button" class="section-add" data-action="mediaDetailLinkSource">+ Quelle</button>
   </div>
+  <div id="md-link-panel"></div>
   </div>`;
 
   // 4. Per-reference fields — specific to selected entity
@@ -1045,6 +1046,118 @@ function saveMediaGlobal() {
   AppState.changed = true;
   updateChangedIndicator();
   showToast(`Datei in ${count} Referenz${count !== 1 ? 'en' : ''} aktualisiert`, 'success');
+  showMediaDetail(_mdType, _mdId, _mdIdx, false);
+}
+
+// ─── Link-Panel: Person / Familie / Quelle zuordnen ──────────────────────────
+
+let _mdLinkPanelType = null;
+
+function _mdShowLinkPanel(type) {
+  _mdLinkPanelType = type;
+  const panel = document.getElementById('md-link-panel');
+  if (!panel) return;
+  const titles = { person: 'Person zuordnen', family: 'Familie zuordnen', source: 'Quelle zuordnen' };
+  panel.innerHTML = `
+    <div class="md-link-section">
+      <div class="md-link-head">
+        <span class="md-link-title">${titles[type] || 'Zuordnen'}</span>
+        <button class="md-link-cancel" data-action="mediaDetailLinkCancel">✕</button>
+      </div>
+      <input class="form-input md-link-search" id="md-link-q" placeholder="Suchen…"
+        autocomplete="off" data-input="mdFilterLinkPanel">
+      <div class="md-link-list" id="md-link-list"></div>
+    </div>`;
+  _mdRenderLinkList('');
+  panel.querySelector('#md-link-q')?.focus();
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function _mdRenderLinkList(q) {
+  const list = document.getElementById('md-link-list');
+  if (!list) return;
+  const db  = AppState.db;
+  const lq  = q.trim().toLowerCase();
+
+  let rows = '';
+  if (_mdLinkPanelType === 'person') {
+    const persons = Object.values(db.individuals || {})
+      .filter(p => !lq || (p.name || '').toLowerCase().includes(lq)
+                        || (p.given || '').toLowerCase().includes(lq)
+                        || (p.surname || '').toLowerCase().includes(lq))
+      .sort((a, b) => (a.surname || '').localeCompare(b.surname || '', 'de')
+                   || (a.given  || '').localeCompare(b.given  || '', 'de'))
+      .slice(0, 80);
+    if (!persons.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
+    rows = persons.map(p => `<div class="md-link-row" data-action="mediaDetailAddRef"
+        data-type="person" data-id="${esc(p.id)}">
+      <span class="md-link-icon">👤</span>
+      <span class="md-link-label">${esc(p.name || p.id)}</span>
+      <span class="md-link-sub">${esc(p.id)}</span>
+    </div>`).join('');
+
+  } else if (_mdLinkPanelType === 'family') {
+    const fams = Object.values(db.families || {}).map(f => {
+      const husb = f.husb ? db.individuals[f.husb] : null;
+      const wife = f.wife ? db.individuals[f.wife] : null;
+      const label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
+      return { f, label };
+    }).filter(({ label }) => !lq || label.toLowerCase().includes(lq))
+      .sort((a, b) => a.label.localeCompare(b.label, 'de'))
+      .slice(0, 80);
+    if (!fams.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
+    rows = fams.map(({ f, label }) => `<div class="md-link-row" data-action="mediaDetailAddRef"
+        data-type="family" data-id="${esc(f.id)}">
+      <span class="md-link-icon">⚭</span>
+      <span class="md-link-label">${esc(label)}</span>
+      <span class="md-link-sub">${esc(f.id)}</span>
+    </div>`).join('');
+
+  } else if (_mdLinkPanelType === 'source') {
+    const sources = Object.values(db.sources || {})
+      .filter(s => !lq || (s.abbr || '').toLowerCase().includes(lq)
+                        || (s.title || '').toLowerCase().includes(lq))
+      .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de'))
+      .slice(0, 80);
+    if (!sources.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
+    rows = sources.map(s => `<div class="md-link-row" data-action="mediaDetailAddRef"
+        data-type="source" data-id="${esc(s.id)}">
+      <span class="md-link-icon">📖</span>
+      <span class="md-link-label">${esc(s.abbr || s.title || s.id)}</span>
+      <span class="md-link-sub">${esc(s.title || '')}</span>
+    </div>`).join('');
+  }
+
+  list.innerHTML = rows;
+}
+
+function _mdFilterLinkPanel(q) { _mdRenderLinkList(q); }
+
+function _mdAddRef(type, entityId) {
+  const src = _getMdEntry(_mdType, _mdId, _mdIdx);
+  if (!src) return;
+  const newEntry = { file: src.file || '', form: src.form || '', medi: src.medi || '',
+    title: '', titleIsLv2: false, date: '', note: '', scbk: '', prim: '', _extra: [] };
+
+  if (type === 'person') {
+    const p = getPerson(entityId);
+    if (!p) return;
+    p.media.push(newEntry);
+  } else if (type === 'family') {
+    const f = getFamily(entityId);
+    if (!f) return;
+    if (!f.marr) f.marr = { date: null, place: null, lati: null, long: null, sources: [], media: [] };
+    if (!f.marr.media) f.marr.media = [];
+    f.marr.media.push({ ...newEntry, titl: '', title: undefined });
+  } else if (type === 'source') {
+    const s = getSource(entityId);
+    if (!s) return;
+    s.media.push(newEntry);
+  } else return;
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast('Referenz hinzugefügt', 'success');
   showMediaDetail(_mdType, _mdId, _mdIdx, false);
 }
 

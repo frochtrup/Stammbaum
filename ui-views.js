@@ -1113,9 +1113,11 @@ const _CLICK_MAP = {
     else if (type === 'family' || type === 'family_media') showFamilyDetail(id);
     else if (type === 'source')                          showSourceDetail(id);
   },
-  mediaDetailLinkPerson:   ()  => showToast('Person zuordnen: Funktion folgt', 'info'),
-  mediaDetailLinkFamily:   ()  => showToast('Familie zuordnen: Funktion folgt', 'info'),
-  mediaDetailLinkSource:   ()  => showToast('Quelle zuordnen: Funktion folgt', 'info'),
+  mediaDetailLinkPerson:   ()  => _mdShowLinkPanel('person'),
+  mediaDetailLinkFamily:   ()  => _mdShowLinkPanel('family'),
+  mediaDetailLinkSource:   ()  => _mdShowLinkPanel('source'),
+  mediaDetailLinkCancel:   ()  => { const p = document.getElementById('md-link-panel'); if (p) p.innerHTML = ''; },
+  mediaDetailAddRef:       el  => _mdAddRef(el.dataset.type, el.dataset.id),
   showLightbox:            el => showLightbox(el.src || el.dataset.src),
   // Statische index.html-Handler (P1-Migration)
   loadDemo:                ()  => loadDemo(),
@@ -1364,6 +1366,7 @@ document.addEventListener('input', e => {
   else if (action === 'filterMapPersonList') filterMapPersonList();
   else if (action === 'renderRelPicker') renderRelPicker(el.value);
   else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
+  else if (action === 'mdFilterLinkPanel') _mdFilterLinkPanel(el.value);
   else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
 });
 
