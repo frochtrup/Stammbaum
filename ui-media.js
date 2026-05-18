@@ -791,3 +791,215 @@ function toggleMediaView() {
   _renderMedia();
 }
 
+// ─── Medien-Detailansicht (rechter Panel, analog Hof-Detail) ──────────────────
+
+let _mdType  = null; // 'person' | 'family' | 'family_media' | 'source'
+let _mdId    = null; // ctxId
+let _mdIdx   = null; // index im media-Array
+
+function _getMdEntry(type, id, idx) {
+  if      (type === 'person')       return getPerson(id)?.media?.[idx]    || null;
+  else if (type === 'family')       return _getFamMarrObjeEntries(getFamily(id))[idx] || null;
+  else if (type === 'family_media') return getFamily(id)?.media?.[idx]   || null;
+  else if (type === 'source')       return getSource(id)?.media?.[idx]   || null;
+  return null;
+}
+
+function _mdEntityLabel(type, id) {
+  if (type === 'person') {
+    const p = getPerson(id); return { icon: '👤', label: p?.name || id };
+  }
+  if (type === 'family' || type === 'family_media') {
+    const f = getFamily(id);
+    const husb = f?.husb ? getPerson(f.husb) : null;
+    const wife = f?.wife ? getPerson(f.wife) : null;
+    const label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || id;
+    return { icon: '⚭', label };
+  }
+  if (type === 'source') {
+    const s = getSource(id); return { icon: '📖', label: s?.abbr || s?.title || id };
+  }
+  return { icon: '📎', label: id };
+}
+
+function _mdFindAllRefs(filePath) {
+  // Returns all entities referencing the same file path
+  const db  = AppState.db;
+  const refs = [];
+  if (!filePath) return refs;
+  const fp  = filePath.trim().toLowerCase();
+  for (const p of Object.values(db.individuals || {})) {
+    for (let i = 0; i < (p.media || []).length; i++) {
+      if ((p.media[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'person', id: p.id, idx: i, label: p.name || p.id, icon: '👤' });
+    }
+  }
+  for (const f of Object.values(db.families || {})) {
+    const marrMediaList = _getFamMarrObjeEntries(f);
+    for (let i = 0; i < marrMediaList.length; i++) {
+      if ((marrMediaList[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'family', id: f.id, idx: i, label: _mdEntityLabel('family', f.id).label, icon: '⚭' });
+    }
+    for (let i = 0; i < (f.media || []).length; i++) {
+      if ((f.media[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'family_media', id: f.id, idx: i, label: _mdEntityLabel('family', f.id).label, icon: '⚭' });
+    }
+  }
+  for (const s of Object.values(db.sources || {})) {
+    for (let i = 0; i < (s.media || []).length; i++) {
+      if ((s.media[i].file || '').trim().toLowerCase() === fp)
+        refs.push({ type: 'source', id: s.id, idx: i, label: s.abbr || s.title || s.id, icon: '📖' });
+    }
+  }
+  return refs;
+}
+
+function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
+  const m = _getMdEntry(mediaType, ctxId, idx);
+  if (!m) return;
+  if (pushHistory) _beforeDetailNavigate();
+
+  _mdType = mediaType;
+  _mdId   = ctxId;
+  _mdIdx  = idx;
+
+  AppState.currentPersonId = null;
+  AppState.currentFamilyId = null;
+  AppState.currentSourceId = null;
+  AppState.currentRepoId   = null;
+
+  document.getElementById('detailTopTitle').textContent = 'Medium';
+  document.getElementById('editBtn').style.display      = 'none';
+  document.getElementById('treeBtn').hidden              = true;
+  document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+
+  const file  = m.file  || '';
+  const title = m.title || m.titl || file || '';
+  const ext   = file.split('.').pop().toLowerCase();
+  const isImg = _IMG_EXTS.has(ext);
+  const fileIcon = isImg ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+
+  const { icon: ctxIcon, label: ctxLabel } = _mdEntityLabel(mediaType, ctxId);
+
+  let html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar source">${fileIcon}</div>
+    <div class="detail-name">${esc(title || '(Kein Titel)')}</div>
+    <div class="detail-id" id="md-preview-wrap"></div>
+  </div>`;
+
+  // Editable fields
+  html += `<div class="section fade-up" id="md-form-section">
+    <div class="section-head">
+      <div class="section-title">Mediendaten</div>
+    </div>
+    <label class="form-label">Titel</label>
+    <input class="form-input mb-3" id="md-title" type="text" value="${esc(m.title || m.titl || '')}">
+    <label class="form-label">Datei / Pfad</label>
+    <input class="form-input mb-3" id="md-file" type="text" value="${esc(file)}">
+    <label class="form-label">Format (FORM)</label>
+    <input class="form-input mb-3" id="md-form" type="text" value="${esc(m.form || '')}">
+    <label class="form-label">Aufnahmedatum</label>
+    <input class="form-input mb-3" id="md-date" type="text" value="${esc(m.date || '')}">
+    <label class="form-label">Notiz</label>
+    <textarea class="form-textarea mb-3" id="md-note" rows="3">${esc(m.note || '')}</textarea>
+    <label class="form-label form-check-row">
+      <input type="checkbox" id="md-prim"${m.prim && m.prim !== '' ? ' checked' : ''}> Bevorzugtes Medium (_PRIM)
+    </label>
+    <div class="btn-row mt-3">
+      <button type="button" class="btn btn-save" data-action="saveMediaDetail">Speichern</button>
+    </div>
+  </div>`;
+
+  // References section — all entities using same file path
+  const refs = _mdFindAllRefs(file);
+
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Referenzen (${refs.length})</div>
+    </div>`;
+
+  if (!refs.length) {
+    html += `<div class="empty empty-pad">Keine Referenzen gefunden</div>`;
+  } else {
+    for (const r of refs) {
+      const isCurrentRef = r.type === mediaType && r.id === ctxId && r.idx === idx;
+      const activeCls = isCurrentRef ? ' rel-row-active' : '';
+      html += `<div class="rel-row${activeCls}" data-action="mediaDetailGoRef"
+          data-media-type="${esc(r.type)}" data-ctx-id="${esc(r.id)}" data-idx="${r.idx}">
+        <div class="rel-avatar">${r.icon}</div>
+        <div class="rel-info">
+          <div class="rel-name">${esc(r.label)}</div>
+          <div class="rel-role">${r.type === 'family' ? 'Hochzeit-OBJE' : r.type === 'family_media' ? 'Familie-OBJE' : r.type}</div>
+        </div>
+        <span class="p-arrow">›</span>
+      </div>`;
+    }
+  }
+
+  // "Weitere Referenzen" add-buttons
+  html += `<div class="section-btn-row mt-2">
+    <button type="button" class="section-add" data-action="mediaDetailLinkPerson" title="Person zuordnen">+ Person</button>
+    <button type="button" class="section-add" data-action="mediaDetailLinkFamily" title="Familie zuordnen">+ Familie</button>
+    <button type="button" class="section-add" data-action="mediaDetailLinkSource" title="Quelle zuordnen">+ Quelle</button>
+  </div>
+  </div>`;
+
+  document.getElementById('detailContent').innerHTML = html;
+  showView('v-detail');
+
+  // Load preview async
+  if (isImg) {
+    _odGetMediaUrlByPath(file).then(url => {
+      if (!url) return idbGet('img:' + file).then(s => s && _mdSetPreview(s)).catch(() => {});
+      _mdSetPreview(url);
+    }).catch(() => {
+      idbGet('img:' + file).then(s => { if (s) _mdSetPreview(s); }).catch(() => {});
+    });
+  }
+}
+
+function _mdSetPreview(src) {
+  const wrap = document.getElementById('md-preview-wrap');
+  if (!wrap) return;
+  const img = document.createElement('img');
+  img.src = src;
+  img.style.cssText = 'max-width:100%;max-height:180px;object-fit:contain;border-radius:10px;margin-top:8px;cursor:pointer';
+  img.addEventListener('click', () => showLightbox(src));
+  wrap.appendChild(img);
+}
+
+function saveMediaDetail() {
+  const title = document.getElementById('md-title')?.value.trim() || '';
+  const file  = document.getElementById('md-file')?.value.trim() || '';
+  const form  = document.getElementById('md-form')?.value.trim() || '';
+  const date  = document.getElementById('md-date')?.value.trim() || '';
+  const note  = document.getElementById('md-note')?.value.trim() || '';
+  const prim  = document.getElementById('md-prim')?.checked ? 'Y' : '';
+
+  const db = AppState.db;
+  if (_mdType === 'person') {
+    const p = getPerson(_mdId);
+    if (!p || !p.media?.[_mdIdx]) return;
+    p.media[_mdIdx] = { ...p.media[_mdIdx], title, file, form, date, note, prim };
+  } else if (_mdType === 'family') {
+    const f = getFamily(_mdId);
+    if (!f || !f.marr?.media?.[_mdIdx]) return;
+    f.marr.media[_mdIdx] = { ...f.marr.media[_mdIdx], titl: title, file, form, date, note, prim };
+  } else if (_mdType === 'family_media') {
+    const f = getFamily(_mdId);
+    if (!f || !f.media?.[_mdIdx]) return;
+    f.media[_mdIdx] = { ...f.media[_mdIdx], title, file, form, date, note, prim };
+  } else if (_mdType === 'source') {
+    const s = getSource(_mdId);
+    if (!s || !s.media?.[_mdIdx]) return;
+    s.media[_mdIdx] = { ...s.media[_mdIdx], title, file, form, date, note, prim };
+  } else return;
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast('Medium gespeichert', 'success');
+
+  // Re-render to reflect changes
+  showMediaDetail(_mdType, _mdId, _mdIdx, false);
+}
+

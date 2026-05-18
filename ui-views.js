@@ -1096,7 +1096,7 @@ const _CLICK_MAP = {
   browserShowFamily:       el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
   filterMedia:             el => filterMedia(el.dataset.ctx),
   toggleMediaView:         ()  => toggleMediaView(),
-  mediaNavCtx:             el => openEditMediaDialog(el.dataset.mediaType, el.dataset.ctxId, parseInt(el.dataset.idx, 10)),
+  mediaNavCtx:             el => showMediaDetail(el.dataset.mediaType, el.dataset.ctxId, parseInt(el.dataset.idx, 10)),
   mediaEditGoTo:           el => {
     closeModal('modalEditMedia');
     const { type, id } = el.dataset;
@@ -1104,6 +1104,11 @@ const _CLICK_MAP = {
     else if (type === 'family' || type === 'family_media') showFamilyDetail(id);
     else if (type === 'source')                     showSourceDetail(id);
   },
+  saveMediaDetail:         ()  => saveMediaDetail(),
+  mediaDetailGoRef:        el => showMediaDetail(el.dataset.mediaType, el.dataset.ctxId, parseInt(el.dataset.idx, 10)),
+  mediaDetailLinkPerson:   ()  => showToast('Person zuordnen: Funktion folgt', 'info'),
+  mediaDetailLinkFamily:   ()  => showToast('Familie zuordnen: Funktion folgt', 'info'),
+  mediaDetailLinkSource:   ()  => showToast('Quelle zuordnen: Funktion folgt', 'info'),
   showLightbox:            el => showLightbox(el.src || el.dataset.src),
   // Statische index.html-Handler (P1-Migration)
   loadDemo:                ()  => loadDemo(),

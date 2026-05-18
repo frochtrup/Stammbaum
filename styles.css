@@ -786,6 +786,7 @@ body.desktop-mode.places-karte #mapContainer {
 }
 .rel-row:last-child { border-bottom: none; }
 .rel-row:active { opacity: 0.6; }
+.rel-row-active { background: rgba(200,168,74,0.08); border-left: 3px solid var(--gold); padding-left: 6px; }
 .rel-row--prop {
   background: rgba(200, 168, 74, 0.06);
   border-left: 3px solid var(--gold-dim);
