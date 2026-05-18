@@ -339,7 +339,7 @@ function parseGEDCOM(text, parseErrors) {
           if      (tag==='FILE')  _cm.file  = val;
           else if (tag==='TITL')  { _cm.title = val; _cm.titleIsLv2 = true; }
           else if (tag==='NOTE')  _cm.note  = val;
-          else if (tag==='_DATE') _cm.date  = val;
+          else if (tag==='_DATE' || tag==='DATE') _cm.date  = val;
           else if (tag==='_SCBK') _cm.scbk  = val;
           else if (tag==='_PRIM') _cm.prim  = val;
           else { _cm._extra.push('2 ' + tag + (val ? ' ' + val : '')); _ptDepth=2; _ptTarget=_cm._extra; }
