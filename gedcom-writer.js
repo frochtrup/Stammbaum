@@ -26,7 +26,11 @@ function _toPedi(v) {
   return m[(v||'').toLowerCase()] || 'birth';
 }
 
-function _mediaFormStr(m) { return m.form || null; }
+function _mediaFormStr(m) {
+  if (m.form) return m.form;
+  if (m.medi && m.file) { const ext = m.file.split('.').pop().toLowerCase(); return ext || null; }
+  return null;
+}
 
 // Schreibt SOUR-Zitierungen aus citations[] (PAGE, QUAY, NOTE, extra, OBJE-Media)
 function _writeSourCits(lines, lv, obj) {

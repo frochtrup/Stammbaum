@@ -155,7 +155,7 @@ function _setEditMediaPreview(src) {
 
 function _getFamMarrObjeEntries(f) {
   // f.marr.media[] enthält inline OBJE-Blöcke unter MARR; Feld ist titl (nicht title)
-  return (f?.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '', note: m.note || '', date: m.date || '', prim: m.prim || '' }));
+  return (f?.marr?.media || []).map(m => ({ file: m.file || '', title: m.titl || '', form: m.form || '', medi: m.medi || '', note: m.note || '', date: m.date || '', prim: m.prim || '' }));
 }
 
 function _updateFamMarrObjeAt(f, targetIdx, { title, file, form, note, date }) {
