@@ -2120,6 +2120,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   display: flex; align-items: center; gap: 5px;
   padding: 6px 10px; border-bottom: 1px solid var(--border);
 }
+.media-filter-bar[hidden] { display: none; }
 .media-ctx-chip {
   flex-shrink: 0; padding: 4px 9px; border-radius: 20px;
   font-size: 0.85rem; border: 1px solid var(--border);
