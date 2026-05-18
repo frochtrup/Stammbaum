@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v606 · Cache: `stammbaum-v606`
+**sw-Version:** v607 · Cache: `stammbaum-v607`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -58,6 +58,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | SEARCH-ADV | Erweiterte Suche: Fehlende-Felder-Checkboxen | v596 |
 | MAP-ANIM | Karte: animierter Migrationspfad (Play/Pause/Stopp) | v603 |
 | MAP-TOPBAR | Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars | v604 |
+| SEC-3 | XSS: `buildPlacePartsHtml()` → DOM-API `_buildPlaceParts()` | v607 |
+| STAB-2 | Konflikt-Erkennung beim Speichern (`lastModified`-Check) | v607 |
 
 ---
 
@@ -70,9 +72,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | ~~ERR-1~~ | ~~**try-catch in async-Funktionen**~~ | bereits vollständig | - |
 | ~~PERF-1~~ | ~~**Debouncing Suche/Filter**~~ | bereits erledigt | - |
 | ~~PERF-2~~ | ~~**Soundex-Cache**~~ | bereits erledigt | - |
-| SEC-3 | **XSS: innerHTML mit placeId absichern** | `gedcom.js`: `partsEl.innerHTML = buildPlacePartsHtml(placeId)` — placeId kommt aus GEDCOM-Datei (potenziell manipuliert). `buildPlacePartsHtml()` auf DOM-API (`createElement`/`textContent`) umstellen; alle ähnlichen innerHTML-Pattern mit GEDCOM-Daten prüfen. | XS |
-| STAB-1 | **Datei-Größen-Warnung vor dem Parsen** | `storage-file.js`: Dateigröße prüfen vor `readFile()`. >50 MB → Toast-Warnung „Große Datei — Laden kann etwas dauern". >200 MB → Confirm-Dialog. Verhindert stilles OOM auf mobilen Geräten. | XS |
-| STAB-2 | **Konflikt-Erkennung beim Speichern (Desktop)** | `storage-file.js`: Beim Speichern via File System Access API (`saveToFileHandle`) `file.lastModified` gegen gespeicherten Timestamp prüfen. Bei Abweichung: „Datei wurde extern verändert — trotzdem überschreiben?" Verhindert Datenverlust bei versehentlichem Doppel-Edit. | S |
+| ~~SEC-3~~ | ~~**XSS: innerHTML mit placeId absichern**~~ | `buildPlacePartsHtml()` → `_buildPlaceParts(placeId, container)` mit DOM-API (`createElement`/`textContent`); kein innerHTML mehr (sw v607) | - |
+| ~~STAB-2~~ | ~~**Konflikt-Erkennung beim Speichern (Desktop)**~~ | `saveToFileHandle()` prüft `file.lastModified` vor dem Schreiben; Confirm-Dialog bei externer Änderung; Timestamp nach jedem Laden/Speichern in `AppState._fileLastModified` (sw v607) | - |
 
 ---
 

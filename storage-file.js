@@ -90,6 +90,7 @@ async function openFilePicker() {
     await idbPut('fileHandle', fh).catch(() => {});
     updateSaveIndicator();
     const file = await fh.getFile();
+    AppState._fileLastModified = file.lastModified;
     if (file.name.toLowerCase().endsWith('.gramps')) {
       // _loadGRAMPS setzt _canDirectSave=false — vorher sichern und danach wiederherstellen
       const savedHandle  = AppState._fileHandle;
@@ -120,6 +121,7 @@ async function restoreFileHandle() {
     if (perm === 'granted') {
       AppState._fileHandle = fh;
       AppState._canDirectSave = await testCanWrite(fh);
+      try { AppState._fileLastModified = (await fh.getFile()).lastModified; } catch(_) {}
       updateSaveIndicator();
     }
   } catch(e) {}
@@ -138,9 +140,14 @@ async function saveToFileHandle(content) {
       updateSaveIndicator();
       return false;
     }
+    const curFile = await AppState._fileHandle.getFile();
+    if (AppState._fileLastModified && curFile.lastModified !== AppState._fileLastModified) {
+      if (!confirm('Datei wurde extern verändert — trotzdem überschreiben?')) return false;
+    }
     w = await AppState._fileHandle.createWritable();
     await w.write(new Blob([content], { type: 'text/plain;charset=utf-8' }));
     await w.close(); w = null;
+    try { AppState._fileLastModified = (await AppState._fileHandle.getFile()).lastModified; } catch(_) {}
     AppState.changed = false; updateChangedIndicator();
     idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
     showToast('✓ Direkt gespeichert');

@@ -17,8 +17,9 @@ const AppState = {
   currentTab:       'persons',
   _detailActive:    false,       // true wenn v-detail echten Inhalt zeigt
   _currentFilename: '',          // Dateiname der aktuell geladenen Datei (für per-Datei extraPlaces)
-  _fileHandle:      null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
-  _canDirectSave:   false,       // true wenn createWritable() auf _fileHandle funktioniert
+  _fileHandle:        null,        // FileSystemFileHandle von showOpenFilePicker (Chrome Desktop)
+  _canDirectSave:     false,       // true wenn createWritable() auf _fileHandle funktioniert
+  _fileLastModified:  null,        // lastModified-Timestamp beim letzten Laden/Speichern (STAB-2)
   _originalGedText: null,        // Fallback wenn localStorage-Backup fehlschlägt; sonst null
   _undoStack:       [],          // [{ label, persons:{}, families:{}, sources:{}, repos:{} }, …] max 30
   _redoStack:       [],          // gleiche Struktur wie _undoStack
@@ -332,10 +333,15 @@ function getPlacLabels() {
   return raw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 6);
 }
 
-function buildPlacePartsHtml(placeId) {
-  return getPlacLabels().map((lbl, i) =>
-    `<input class="form-input mb-3" id="${placeId}-p${i}" placeholder="${esc(lbl)}">`
-  ).join('');
+function _buildPlaceParts(placeId, container) {
+  container.textContent = '';
+  getPlacLabels().forEach((lbl, i) => {
+    const inp = document.createElement('input');
+    inp.className = 'form-input mb-3';
+    inp.id = placeId + '-p' + i;
+    inp.placeholder = lbl;
+    container.appendChild(inp);
+  });
 }
 
 function fillPlaceParts(placeId, raw) {
@@ -410,7 +416,7 @@ function togglePlaceMode(placeId) {
   const toggleBtn = document.getElementById(`${placeId}-toggle`);
   if ((UIState._placeModes[placeId] || 'free') === 'free') {
     const rawVal = (document.getElementById(placeId)?.value || '').trim();
-    partsEl.innerHTML = buildPlacePartsHtml(placeId);
+    _buildPlaceParts(placeId, partsEl);
     fillPlaceParts(placeId, rawVal);
     freeEl.hidden  = true;
     partsEl.hidden = false;
