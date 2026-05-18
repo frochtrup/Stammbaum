@@ -703,7 +703,11 @@ function renderTab() {
   if (!document.getElementById('v-main').classList.contains('active')) return;
   if (AppState.currentTab === 'persons') applyPersonFilter(); // respektiert aktive Such- und Jahresfilter
   else if (AppState.currentTab === 'families') renderFamilyList();
-  else if (AppState.currentTab === 'sources') { renderSourceList(); }
+  else if (AppState.currentTab === 'sources') {
+    if (document.getElementById('toggle-media')?.classList.contains('active')) showMediaSection();
+    else if (document.getElementById('toggle-repos')?.classList.contains('active')) renderRepoList();
+    else renderSourceList();
+  }
   else if (AppState.currentTab === 'places') {
     if (UIState._placesSubTab === 'hoefe') renderHofList();
     else if (UIState._placesSubTab === 'karte') {
