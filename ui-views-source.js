@@ -313,10 +313,11 @@ function switchSourcesSubTab(sub) {
   document.getElementById('toggle-media')?.classList.toggle('active', sub === 'media');
   const isSources = sub === 'sources';
   const isMedia   = sub === 'media';
-  document.getElementById('sourceList').hidden         = !isSources;
-  document.getElementById('source-search-wrap').hidden = !isSources;
-  document.getElementById('repoSection').hidden        = isSources || isMedia;
-  document.getElementById('mediaSection').hidden       = !isMedia;
+  document.getElementById('sourceList').hidden              = !isSources;
+  document.getElementById('source-search-wrap').hidden      = !isSources;
+  document.getElementById('media-filter-bar-wrap').hidden   = !isMedia;
+  document.getElementById('repoSection').hidden             = isSources || isMedia;
+  document.getElementById('mediaSection').hidden            = !isMedia;
   if (sub === 'repos') renderRepoList();
   if (isMedia) showMediaSection();
 }

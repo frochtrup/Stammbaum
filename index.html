@@ -126,19 +126,19 @@
       <div id="source-search-wrap" class="search-wrap d-flex gap-8 ai-c">
         <input class="search-input flex-1" type="search" id="searchSources" placeholder="Titel, Autor…" data-input="filterSources">
       </div>
-    </div>
-    <div id="sourceList" role="list"></div>
-    <div id="repoSection" hidden>
-      <div id="repoList"></div>
-    </div>
-    <div id="mediaSection" hidden>
-      <div class="media-filter-bar">
+      <div id="media-filter-bar-wrap" class="media-filter-bar" hidden>
         <button class="media-ctx-chip active" data-action="filterMedia" data-ctx="all"    title="Alle Medien">Alle</button>
         <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="person" title="Personen">👤</button>
         <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="family" title="Familien">⚭</button>
         <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="source" title="Quellen">📖</button>
         <button class="media-view-toggle" id="mediaViewToggle" data-action="toggleMediaView" title="Listenansicht">☰</button>
       </div>
+    </div>
+    <div id="sourceList" role="list"></div>
+    <div id="repoSection" hidden>
+      <div id="repoList"></div>
+    </div>
+    <div id="mediaSection" hidden>
       <div id="mediaGrid" class="media-grid"></div>
     </div>
   </div>

@@ -1105,6 +1105,7 @@ const _CLICK_MAP = {
     else if (type === 'source')                     showSourceDetail(id);
   },
   saveMediaDetail:         ()  => saveMediaDetail(),
+  saveMediaGlobal:         ()  => saveMediaGlobal(),
   mediaDetailGoRef:        el => showMediaDetail(el.dataset.mediaType, el.dataset.ctxId, parseInt(el.dataset.idx, 10)),
   mediaDetailLinkPerson:   ()  => showToast('Person zuordnen: Funktion folgt', 'info'),
   mediaDetailLinkFamily:   ()  => showToast('Familie zuordnen: Funktion folgt', 'info'),

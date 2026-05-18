@@ -874,74 +874,78 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
   document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
 
   const file  = m.file  || '';
-  const title = m.title || m.titl || file || '';
   const ext   = file.split('.').pop().toLowerCase();
   const isImg = _IMG_EXTS.has(ext);
   const fileIcon = isImg ? '🖼' : ext === 'pdf' ? '📄' : '📎';
 
-  const { icon: ctxIcon, label: ctxLabel } = _mdEntityLabel(mediaType, ctxId);
-
-  let html = `<div class="detail-hero fade-up">
-    <div class="detail-avatar source">${fileIcon}</div>
-    <div class="detail-name">${esc(title || '(Kein Titel)')}</div>
-    <div class="detail-id" id="md-preview-wrap"></div>
+  // 1. Preview placeholder (image loads async into this)
+  let html = `<div class="md-preview-hero fade-up" id="md-preview-wrap">
+    <div class="md-preview-icon">${fileIcon}</div>
   </div>`;
 
-  // Editable fields
-  html += `<div class="section fade-up" id="md-form-section">
+  // 2. Global fields: FILE + FORM — changes update ALL references
+  html += `<div class="section fade-up">
     <div class="section-head">
-      <div class="section-title">Mediendaten</div>
+      <div class="section-title">Datei (alle Referenzen)</div>
     </div>
-    <label class="form-label">Titel</label>
-    <input class="form-input mb-3" id="md-title" type="text" value="${esc(m.title || m.titl || '')}">
     <label class="form-label">Datei / Pfad</label>
     <input class="form-input mb-3" id="md-file" type="text" value="${esc(file)}">
     <label class="form-label">Format (FORM)</label>
     <input class="form-input mb-3" id="md-form" type="text" value="${esc(m.form || '')}">
-    <label class="form-label">Aufnahmedatum</label>
-    <input class="form-input mb-3" id="md-date" type="text" value="${esc(m.date || '')}">
-    <label class="form-label">Notiz</label>
-    <textarea class="form-textarea mb-3" id="md-note" rows="3">${esc(m.note || '')}</textarea>
-    <label class="form-label form-check-row">
-      <input type="checkbox" id="md-prim"${m.prim && m.prim !== '' ? ' checked' : ''}> Bevorzugtes Medium (_PRIM)
-    </label>
-    <div class="btn-row mt-3">
-      <button type="button" class="btn btn-save" data-action="saveMediaDetail">Speichern</button>
+    <div class="btn-row">
+      <button type="button" class="btn btn-save" data-action="saveMediaGlobal">Speichern (alle Ref.)</button>
     </div>
   </div>`;
 
-  // References section — all entities using same file path
+  // 3. References list
   const refs = _mdFindAllRefs(file);
-
   html += `<div class="section fade-up">
     <div class="section-head">
       <div class="section-title">Referenzen (${refs.length})</div>
     </div>`;
-
   if (!refs.length) {
     html += `<div class="empty empty-pad">Keine Referenzen gefunden</div>`;
   } else {
     for (const r of refs) {
       const isCurrentRef = r.type === mediaType && r.id === ctxId && r.idx === idx;
       const activeCls = isCurrentRef ? ' rel-row-active' : '';
+      const typeLabel = r.type === 'family' ? 'Hochzeit-OBJE' : r.type === 'family_media' ? 'Familie-OBJE' : r.type;
       html += `<div class="rel-row${activeCls}" data-action="mediaDetailGoRef"
           data-media-type="${esc(r.type)}" data-ctx-id="${esc(r.id)}" data-idx="${r.idx}">
         <div class="rel-avatar">${r.icon}</div>
         <div class="rel-info">
           <div class="rel-name">${esc(r.label)}</div>
-          <div class="rel-role">${r.type === 'family' ? 'Hochzeit-OBJE' : r.type === 'family_media' ? 'Familie-OBJE' : r.type}</div>
+          <div class="rel-role">${typeLabel}</div>
         </div>
         <span class="p-arrow">›</span>
       </div>`;
     }
   }
-
-  // "Weitere Referenzen" add-buttons
   html += `<div class="section-btn-row mt-2">
-    <button type="button" class="section-add" data-action="mediaDetailLinkPerson" title="Person zuordnen">+ Person</button>
-    <button type="button" class="section-add" data-action="mediaDetailLinkFamily" title="Familie zuordnen">+ Familie</button>
-    <button type="button" class="section-add" data-action="mediaDetailLinkSource" title="Quelle zuordnen">+ Quelle</button>
+    <button type="button" class="section-add" data-action="mediaDetailLinkPerson">+ Person</button>
+    <button type="button" class="section-add" data-action="mediaDetailLinkFamily">+ Familie</button>
+    <button type="button" class="section-add" data-action="mediaDetailLinkSource">+ Quelle</button>
   </div>
+  </div>`;
+
+  // 4. Per-reference fields — specific to selected entity
+  const { icon: refIcon, label: refLabel } = _mdEntityLabel(mediaType, ctxId);
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">${refIcon} ${esc(refLabel)}</div>
+    </div>
+    <label class="form-label">Titel</label>
+    <input class="form-input mb-3" id="md-title" type="text" value="${esc(m.title || m.titl || '')}">
+    <label class="form-label">Aufnahmedatum</label>
+    <input class="form-input mb-3" id="md-date" type="text" value="${esc(m.date || '')}">
+    <label class="form-label">Notiz</label>
+    <textarea class="form-textarea mb-3" id="md-note" rows="4" style="width:100%;box-sizing:border-box">${esc(m.note || '')}</textarea>
+    <label class="form-label form-check-row">
+      <input type="checkbox" id="md-prim"${m.prim && m.prim !== '' ? ' checked' : ''}> Bevorzugtes Medium (_PRIM)
+    </label>
+    <div class="btn-row mt-3">
+      <button type="button" class="btn btn-save" data-action="saveMediaDetail">Speichern</button>
+    </div>
   </div>`;
 
   document.getElementById('detailContent').innerHTML = html;
@@ -961,45 +965,72 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
 function _mdSetPreview(src) {
   const wrap = document.getElementById('md-preview-wrap');
   if (!wrap) return;
+  wrap.innerHTML = '';
   const img = document.createElement('img');
   img.src = src;
-  img.style.cssText = 'max-width:100%;max-height:180px;object-fit:contain;border-radius:10px;margin-top:8px;cursor:pointer';
+  img.className = 'md-preview-img';
   img.addEventListener('click', () => showLightbox(src));
   wrap.appendChild(img);
 }
 
+// Save per-reference fields (TITL, DATE, NOTE, _PRIM) for currently selected ref
 function saveMediaDetail() {
   const title = document.getElementById('md-title')?.value.trim() || '';
-  const file  = document.getElementById('md-file')?.value.trim() || '';
-  const form  = document.getElementById('md-form')?.value.trim() || '';
-  const date  = document.getElementById('md-date')?.value.trim() || '';
-  const note  = document.getElementById('md-note')?.value.trim() || '';
+  const date  = document.getElementById('md-date')?.value.trim()  || '';
+  const note  = document.getElementById('md-note')?.value.trim()  || '';
   const prim  = document.getElementById('md-prim')?.checked ? 'Y' : '';
 
-  const db = AppState.db;
   if (_mdType === 'person') {
     const p = getPerson(_mdId);
     if (!p || !p.media?.[_mdIdx]) return;
-    p.media[_mdIdx] = { ...p.media[_mdIdx], title, file, form, date, note, prim };
+    p.media[_mdIdx] = { ...p.media[_mdIdx], title, date, note, prim };
   } else if (_mdType === 'family') {
     const f = getFamily(_mdId);
     if (!f || !f.marr?.media?.[_mdIdx]) return;
-    f.marr.media[_mdIdx] = { ...f.marr.media[_mdIdx], titl: title, file, form, date, note, prim };
+    f.marr.media[_mdIdx] = { ...f.marr.media[_mdIdx], titl: title, date, note, prim };
   } else if (_mdType === 'family_media') {
     const f = getFamily(_mdId);
     if (!f || !f.media?.[_mdIdx]) return;
-    f.media[_mdIdx] = { ...f.media[_mdIdx], title, file, form, date, note, prim };
+    f.media[_mdIdx] = { ...f.media[_mdIdx], title, date, note, prim };
   } else if (_mdType === 'source') {
     const s = getSource(_mdId);
     if (!s || !s.media?.[_mdIdx]) return;
-    s.media[_mdIdx] = { ...s.media[_mdIdx], title, file, form, date, note, prim };
+    s.media[_mdIdx] = { ...s.media[_mdIdx], title, date, note, prim };
   } else return;
 
   AppState.changed = true;
   updateChangedIndicator();
-  showToast('Medium gespeichert', 'success');
+  showToast('Referenz gespeichert', 'success');
+  showMediaDetail(_mdType, _mdId, _mdIdx, false);
+}
 
-  // Re-render to reflect changes
+// Save global fields (FILE, FORM) — updates every entity that references this file
+function saveMediaGlobal() {
+  const newFile = document.getElementById('md-file')?.value.trim() || '';
+  const newForm = document.getElementById('md-form')?.value.trim() || '';
+  const oldFile = (_getMdEntry(_mdType, _mdId, _mdIdx)?.file || '').trim();
+  const db = AppState.db;
+  let count = 0;
+
+  const _updateEntry = (entry, isFamily) => {
+    if ((entry.file || '').trim() !== oldFile && oldFile !== '') return;
+    if (isFamily) { entry.file = newFile; entry.form = newForm; }
+    else          { entry.file = newFile; entry.form = newForm; }
+    count++;
+  };
+
+  for (const p of Object.values(db.individuals || {}))
+    for (const e of (p.media || [])) _updateEntry(e, false);
+  for (const f of Object.values(db.families || {})) {
+    for (const e of (f.marr?.media || [])) _updateEntry(e, true);
+    for (const e of (f.media || []))       _updateEntry(e, false);
+  }
+  for (const s of Object.values(db.sources || {}))
+    for (const e of (s.media || [])) _updateEntry(e, false);
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast(`Datei in ${count} Referenz${count !== 1 ? 'en' : ''} aktualisiert`, 'success');
   showMediaDetail(_mdType, _mdId, _mdIdx, false);
 }
 
