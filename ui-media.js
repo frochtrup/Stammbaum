@@ -636,6 +636,8 @@ function _removeFamMarrObjeAt(f, targetIdx) {
 const _IMG_EXTS  = new Set(['jpg','jpeg','png','gif','bmp','webp','tif','tiff']);
 const _CTX_ICON  = { person: '👤', family: '⚭', source: '📖' };
 let   _mediaAllItems = [];
+const _thumbCache = new Map(); // filePath → src; lebt über Filterwechsel, cleared bei showMediaSection()
+let   _mediaObserver = null;
 
 function _collectAllMedia() {
   const items = [];
@@ -699,20 +701,38 @@ function _collectAllMedia() {
   return items;
 }
 
+function _applyThumbSrc(el, src) {
+  const img = document.createElement('img');
+  img.onerror = () => { el.classList.add('broken'); el.textContent = '⚠'; if (el.contains(img)) el.removeChild(img); };
+  img.src = src;
+  el.textContent = '';
+  el.appendChild(img);
+}
+
 async function _loadMediaTileThumb(tileId, filePath) {
   const el = document.getElementById(tileId);
   if (!el) return;
+  if (_thumbCache.has(filePath)) { _applyThumbSrc(el, _thumbCache.get(filePath)); return; }
   const src = filePath
     ? (await _odGetMediaUrlByPath(filePath).catch(() => null)
     || await idbGet('img:' + filePath).catch(() => null))
     : null;
   if (!src) { el.classList.add('broken'); el.textContent = '⚠'; return; }
-  const img = document.createElement('img');
-  img.onerror = () => { el.classList.add('broken'); el.textContent = '⚠';
-    if (el.contains(img)) el.removeChild(img); };
-  img.src = src;
-  el.textContent = '';
-  el.appendChild(img);
+  _thumbCache.set(filePath, src);
+  _applyThumbSrc(el, src);
+}
+
+function _setupMediaObserver(container) {
+  if (_mediaObserver) _mediaObserver.disconnect();
+  _mediaObserver = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      _mediaObserver.unobserve(entry.target);
+      const { thumbId, file } = entry.target.dataset;
+      if (thumbId && file) _loadMediaTileThumb(thumbId, file);
+    }
+  }, { rootMargin: '300px' });
+  container.querySelectorAll('[data-thumb-id]').forEach(el => _mediaObserver.observe(el));
 }
 
 function _renderMedia() {
@@ -740,12 +760,13 @@ function _renderMedia() {
   if (isList) {
     container.className = 'media-list';
     container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId, mediaType, idx }) => {
-      const ext  = (file || '').split('.').pop().toLowerCase();
-      const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
-      const tid  = thumbId + 'l';
+      const ext   = (file || '').split('.').pop().toLowerCase();
+      const icon  = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+      const tid   = thumbId + 'l';
+      const isImg = _IMG_EXTS.has(ext);
       return `<div class="media-tile-row" data-action="mediaNavCtx"
           data-media-type="${esc(mediaType)}" data-ctx-id="${esc(ctxId)}" data-idx="${idx}">
-        <div class="media-tile-thumb-sm" id="${esc(tid)}">${icon}</div>
+        <div class="media-tile-thumb-sm" id="${esc(tid)}"${isImg ? ` data-thumb-id="${esc(tid)}" data-file="${esc(file)}"` : ''}>${icon}</div>
         <div class="media-tile-info">
           <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
           <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
@@ -753,30 +774,25 @@ function _renderMedia() {
         <span class="p-arrow">›</span>
       </div>`;
     }).join('');
-    for (const item of filtered) {
-      if (_IMG_EXTS.has((item.file || '').split('.').pop().toLowerCase()))
-        _loadMediaTileThumb(item.thumbId + 'l', item.file);
-    }
   } else {
     container.className = 'media-grid';
     container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId, mediaType, idx }) => {
-      const ext  = (file || '').split('.').pop().toLowerCase();
-      const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+      const ext   = (file || '').split('.').pop().toLowerCase();
+      const icon  = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+      const isImg = _IMG_EXTS.has(ext);
       return `<div class="media-tile" data-action="mediaNavCtx"
           data-media-type="${esc(mediaType)}" data-ctx-id="${esc(ctxId)}" data-idx="${idx}">
-        <div class="media-tile-thumb" id="${esc(thumbId)}">${icon}</div>
+        <div class="media-tile-thumb" id="${esc(thumbId)}"${isImg ? ` data-thumb-id="${esc(thumbId)}" data-file="${esc(file)}"` : ''}>${icon}</div>
         <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
         <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
       </div>`;
     }).join('');
-    for (const item of filtered) {
-      if (_IMG_EXTS.has((item.file || '').split('.').pop().toLowerCase()))
-        _loadMediaTileThumb(item.thumbId, item.file);
-    }
   }
+  _setupMediaObserver(container);
 }
 
 function showMediaSection() {
+  _thumbCache.clear();
   _mediaAllItems = _collectAllMedia();
   _renderMedia();
 }
