@@ -1042,9 +1042,9 @@ const _CLICK_MAP = {
   closeMapPanel:           ()  => { document.getElementById('map-explore-panel').style.display = 'none'; },
   showPersonOnMap:         el => showPersonOnMap(el.dataset.pid || el.dataset.id),
   showCurrentPersonOnMap:  ()  => {
-    const pid = UIState._timelinePid || AppState.currentPersonId;
+    const pid = UIState._timelinePid || AppState.currentPersonId || getProbandId();
     if (pid) showPersonOnMap(pid);
-    else showToast('Keine Person ausgewählt');
+    else showToast('Keine Daten geladen');
   },
   mapClose:                ()  => { document.getElementById('map-close-btn').style.display = 'none'; goBack(); },
   openMapPersonPicker:     ()  => openMapPersonPicker(),
