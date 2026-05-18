@@ -934,7 +934,7 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
           data-type="${esc(r.type)}" data-id="${esc(r.id)}" title="Zum Eintrag">↗</button>
         <button class="md-nav-btn md-del-btn" data-action="mediaDetailDeleteRef"
           data-media-type="${esc(r.type)}" data-ctx-id="${esc(r.id)}" data-idx="${r.idx}"
-          title="Referenz löschen">🗑</button>
+          title="Referenz löschen">×</button>
       </div>`;
     }
   }
@@ -1092,12 +1092,19 @@ function _mdRenderLinkList(q) {
                    || (a.given  || '').localeCompare(b.given  || '', 'de'))
       .slice(0, 80);
     if (!persons.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
-    rows = persons.map(p => `<div class="md-link-row" data-action="mediaDetailAddRef"
+    rows = persons.map(p => {
+      let life = '';
+      if (p.birth?.date) life += '* ' + p.birth.date;
+      if (p.death?.date) life += (life ? '  † ' : '† ') + p.death.date;
+      return `<div class="md-link-row" data-action="mediaDetailAddRef"
         data-type="person" data-id="${esc(p.id)}">
       <span class="md-link-icon">👤</span>
-      <span class="md-link-label">${esc(p.name || p.id)}</span>
-      <span class="md-link-sub">${esc(p.id)}</span>
-    </div>`).join('');
+      <div class="md-link-info">
+        <span class="md-link-label">${esc(p.name || p.id)}</span>
+        ${life ? `<span class="md-link-sub">${esc(life)}</span>` : ''}
+      </div>
+    </div>`;
+    }).join('');
 
   } else if (_mdLinkPanelType === 'family') {
     const fams = Object.values(db.families || {}).map(f => {
@@ -1109,12 +1116,17 @@ function _mdRenderLinkList(q) {
       .sort((a, b) => a.label.localeCompare(b.label, 'de'))
       .slice(0, 80);
     if (!fams.length) { list.innerHTML = '<div class="md-link-empty">Keine Treffer</div>'; return; }
-    rows = fams.map(({ f, label }) => `<div class="md-link-row" data-action="mediaDetailAddRef"
+    rows = fams.map(({ f, label }) => {
+      const marrDate = f.marr?.date ? '⚭ ' + f.marr.date : '';
+      return `<div class="md-link-row" data-action="mediaDetailAddRef"
         data-type="family" data-id="${esc(f.id)}">
       <span class="md-link-icon">⚭</span>
-      <span class="md-link-label">${esc(label)}</span>
-      <span class="md-link-sub">${esc(f.id)}</span>
-    </div>`).join('');
+      <div class="md-link-info">
+        <span class="md-link-label">${esc(label)}</span>
+        ${marrDate ? `<span class="md-link-sub">${esc(marrDate)}</span>` : ''}
+      </div>
+    </div>`;
+    }).join('');
 
   } else if (_mdLinkPanelType === 'source') {
     const sources = Object.values(db.sources || {})
@@ -1126,8 +1138,10 @@ function _mdRenderLinkList(q) {
     rows = sources.map(s => `<div class="md-link-row" data-action="mediaDetailAddRef"
         data-type="source" data-id="${esc(s.id)}">
       <span class="md-link-icon">📖</span>
-      <span class="md-link-label">${esc(s.abbr || s.title || s.id)}</span>
-      <span class="md-link-sub">${esc(s.title || '')}</span>
+      <div class="md-link-info">
+        <span class="md-link-label">${esc(s.abbr || s.title || s.id)}</span>
+        ${s.abbr && s.title ? `<span class="md-link-sub">${esc(s.title)}</span>` : ''}
+      </div>
     </div>`).join('');
   }
 

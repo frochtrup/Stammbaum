@@ -2106,7 +2106,8 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .md-link-row:last-child { border-bottom: none; }
 .md-link-row:active { background: var(--surface2); }
 .md-link-icon { flex-shrink: 0; font-size: 1rem; }
-.md-link-label { flex: 1; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-link-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.md-link-label { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .md-link-sub { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; }
 .md-link-empty { padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.9rem; }
 .md-preview-hero {
