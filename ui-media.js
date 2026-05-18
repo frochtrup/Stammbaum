@@ -718,8 +718,8 @@ function _renderMedia() {
       return `<div class="media-tile-row" data-action="mediaNavCtx" data-ctx="${esc(c)}" data-ctx-id="${esc(ctxId)}">
         <div class="media-tile-thumb-sm" id="${esc(tid)}">${icon}</div>
         <div class="media-tile-info">
-          <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
           <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
+          <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
         </div>
         <span class="p-arrow">›</span>
       </div>`;
