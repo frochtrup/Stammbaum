@@ -2074,6 +2074,12 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   padding: 10px 0 4px 0; border-top: 1px solid var(--border);
 }
 .media-count { font-size: 0.78rem; color: var(--text-muted); padding: 0 0 10px 0; }
+.em-ref-info-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 0 0 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.em-ref-info-bar:empty { display: none; }
+.em-ref-label { font-size: 0.9rem; font-weight: 500; }
 
 /* ── Medien-Kachelansicht (MEDIA-MGR) ── */
 .media-filter-bar {

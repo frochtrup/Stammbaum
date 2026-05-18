@@ -85,6 +85,30 @@ function openEditMediaDialog(type, entityId, idx) {
   thumbBar.textContent = icon;
   preview.innerHTML = `<div class="fs-huge">${icon}</div>`;
 
+  // Kontext-Zeile: referenzierendes Objekt + Navigations-Button
+  const refInfo = document.getElementById('em-ref-info');
+  if (refInfo) {
+    let label = '', icon = '';
+    if (type === 'person') {
+      const p = getPerson(entityId);
+      label = p?.name || entityId; icon = '👤';
+    } else if (type === 'family' || type === 'family_media') {
+      const f = getFamily(entityId);
+      const husb = f?.husb ? getPerson(f.husb) : null;
+      const wife = f?.wife ? getPerson(f.wife) : null;
+      label = [husb?.name, wife?.name].filter(Boolean).join(' & ') || entityId;
+      icon = '⚭';
+    } else if (type === 'source') {
+      const s = getSource(entityId);
+      label = s?.abbr || s?.title || entityId; icon = '📖';
+    }
+    refInfo.innerHTML = label
+      ? `<span class="em-ref-label">${icon} ${esc(label)}</span>
+         <button class="btn btn-outline-sm" data-action="mediaEditGoTo"
+           data-type="${esc(type)}" data-id="${esc(entityId)}" title="Zum Eintrag navigieren">→</button>`
+      : '';
+  }
+
   openModal('modalEditMedia');
 
   // Vorschau laden — für source: bereits geladenes Thumbnail aus DOM wiederverwenden
@@ -627,6 +651,7 @@ function _collectAllMedia() {
       const key = p.id.replace(/[^a-zA-Z0-9]/g, '');
       items.push({ file: m.file, title: m.title || m.file,
         ctx: 'person', ctxId: p.id, ctxLabel: p.name || p.id,
+        mediaType: 'person', idx: i,
         thumbId: 'mt-p-' + key + '-' + i });
     }
   }
@@ -646,6 +671,7 @@ function _collectAllMedia() {
       if (!m.file && !m.titl && !m.title) continue;
       items.push({ file: m.file, title: m.titl || m.title || m.file,
         ctx: 'family', ctxId: f.id, ctxLabel: label,
+        mediaType: 'family', idx: i,
         thumbId: 'mt-fm-' + key + '-' + i });
     }
     for (let i = 0; i < (f.media || []).length; i++) {
@@ -653,6 +679,7 @@ function _collectAllMedia() {
       if (!m.file && !m.title) continue;
       items.push({ file: m.file, title: m.title || m.file,
         ctx: 'family', ctxId: f.id, ctxLabel: label,
+        mediaType: 'family_media', idx: i,
         thumbId: 'mt-f-' + key + '-' + i });
     }
   }
@@ -664,6 +691,7 @@ function _collectAllMedia() {
       const key = s.id.replace(/[^a-zA-Z0-9]/g, '');
       items.push({ file: m.file, title: m.title || m.file,
         ctx: 'source', ctxId: s.id, ctxLabel: s.abbr || s.title || s.id,
+        mediaType: 'source', idx: i,
         thumbId: 'mt-s-' + key + '-' + i });
     }
   }
@@ -711,11 +739,12 @@ function _renderMedia() {
 
   if (isList) {
     container.className = 'media-list';
-    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId }) => {
+    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId, mediaType, idx }) => {
       const ext  = (file || '').split('.').pop().toLowerCase();
       const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
       const tid  = thumbId + 'l';
-      return `<div class="media-tile-row" data-action="mediaNavCtx" data-ctx="${esc(c)}" data-ctx-id="${esc(ctxId)}">
+      return `<div class="media-tile-row" data-action="mediaNavCtx"
+          data-media-type="${esc(mediaType)}" data-ctx-id="${esc(ctxId)}" data-idx="${idx}">
         <div class="media-tile-thumb-sm" id="${esc(tid)}">${icon}</div>
         <div class="media-tile-info">
           <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
@@ -730,10 +759,11 @@ function _renderMedia() {
     }
   } else {
     container.className = 'media-grid';
-    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId }) => {
+    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId, mediaType, idx }) => {
       const ext  = (file || '').split('.').pop().toLowerCase();
       const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
-      return `<div class="media-tile" data-action="mediaNavCtx" data-ctx="${esc(c)}" data-ctx-id="${esc(ctxId)}">
+      return `<div class="media-tile" data-action="mediaNavCtx"
+          data-media-type="${esc(mediaType)}" data-ctx-id="${esc(ctxId)}" data-idx="${idx}">
         <div class="media-tile-thumb" id="${esc(thumbId)}">${icon}</div>
         <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
         <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
