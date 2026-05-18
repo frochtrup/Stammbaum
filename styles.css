@@ -2091,6 +2091,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   color: var(--text-muted); cursor: pointer; line-height: 1.4;
 }
 .md-nav-btn:active { opacity: 0.6; }
+.md-del-btn { color: var(--red, #c0392b); border-color: var(--red, #c0392b); }
 .md-link-section { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 6px; }
 .md-link-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .md-link-title { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }

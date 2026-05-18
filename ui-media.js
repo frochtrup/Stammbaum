@@ -932,6 +932,9 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
         </div>
         <button class="md-nav-btn" data-action="mediaDetailNavEntity"
           data-type="${esc(r.type)}" data-id="${esc(r.id)}" title="Zum Eintrag">↗</button>
+        <button class="md-nav-btn md-del-btn" data-action="mediaDetailDeleteRef"
+          data-media-type="${esc(r.type)}" data-ctx-id="${esc(r.id)}" data-idx="${r.idx}"
+          title="Referenz löschen">🗑</button>
       </div>`;
     }
   }
@@ -1132,6 +1135,45 @@ function _mdRenderLinkList(q) {
 }
 
 function _mdFilterLinkPanel(q) { _mdRenderLinkList(q); }
+
+function _mdDeleteRef(type, entityId, idx) {
+  if (!confirm('Medienzuordnung löschen?')) return;
+
+  if (type === 'person') {
+    const p = getPerson(entityId);
+    if (!p?.media) return;
+    p.media.splice(idx, 1);
+  } else if (type === 'family') {
+    const f = getFamily(entityId);
+    if (!f?.marr?.media) return;
+    f.marr.media.splice(idx, 1);
+  } else if (type === 'family_media') {
+    const f = getFamily(entityId);
+    if (!f?.media) return;
+    f.media.splice(idx, 1);
+  } else if (type === 'source') {
+    const s = getSource(entityId);
+    if (!s?.media) return;
+    s.media.splice(idx, 1);
+  } else return;
+
+  AppState.changed = true;
+  updateChangedIndicator();
+  showToast('Referenz gelöscht', 'success');
+
+  // If we deleted the currently viewed ref, shift idx or switch to first remaining ref
+  if (type === _mdType && entityId === _mdId) {
+    // same entity — idx was removed, try previous slot
+    const newIdx = Math.max(0, idx - 1);
+    const stillExists = _getMdEntry(_mdType, _mdId, newIdx);
+    if (stillExists) { showMediaDetail(_mdType, _mdId, newIdx, false); return; }
+  }
+  // stay on current ref if it still exists (different entity deleted, or idx adjusted)
+  const current = _getMdEntry(_mdType, _mdId, _mdIdx);
+  if (current) { showMediaDetail(_mdType, _mdId, _mdIdx, false); return; }
+  // current ref gone (splice shifted it away) — go back
+  goBack();
+}
 
 function _mdAddRef(type, entityId) {
   const src = _getMdEntry(_mdType, _mdId, _mdIdx);

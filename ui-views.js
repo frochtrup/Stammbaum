@@ -1118,6 +1118,7 @@ const _CLICK_MAP = {
   mediaDetailLinkSource:   ()  => _mdShowLinkPanel('source'),
   mediaDetailLinkCancel:   ()  => { const p = document.getElementById('md-link-panel'); if (p) p.innerHTML = ''; },
   mediaDetailAddRef:       el  => _mdAddRef(el.dataset.type, el.dataset.id),
+  mediaDetailDeleteRef:    el  => _mdDeleteRef(el.dataset.mediaType, el.dataset.ctxId, parseInt(el.dataset.idx, 10)),
   showLightbox:            el => showLightbox(el.src || el.dataset.src),
   // Statische index.html-Handler (P1-Migration)
   loadDemo:                ()  => loadDemo(),
