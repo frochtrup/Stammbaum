@@ -1095,6 +1095,7 @@ const _CLICK_MAP = {
   browserShowPerson:       el => { closeModal('modalMediaBrowser'); showDetail(el.dataset.pid); },
   browserShowFamily:       el => { closeModal('modalMediaBrowser'); showFamilyDetail(el.dataset.fid); },
   filterMedia:             el => filterMedia(el.dataset.ctx),
+  toggleMediaView:         ()  => toggleMediaView(),
   mediaNavCtx:             el => {
     const { ctx, ctxId } = el.dataset;
     if (ctx === 'person') showDetail(ctxId);

@@ -395,7 +395,7 @@ async function deleteSourceMedia(srcId, idx) {
 }
 
 function showMediaBrowser() {
-  _mediaCtxFilter = 'all';
+  UIState._mediaCtxFilter = 'all';
   bnavTab('sources');
   switchSourcesSubTab('media');
 }
@@ -457,7 +457,7 @@ function _showMediaBrowserLegacy() {
 }
 
 function showPersonMediaBrowser() {
-  _mediaCtxFilter = 'person';
+  UIState._mediaCtxFilter = 'person';
   bnavTab('sources');
   switchSourcesSubTab('media');
 }
@@ -525,7 +525,7 @@ function _showPersonMediaBrowserLegacy() {
 }
 
 function showFamilyMediaBrowser() {
-  _mediaCtxFilter = 'family';
+  UIState._mediaCtxFilter = 'family';
   bnavTab('sources');
   switchSourcesSubTab('media');
 }
@@ -606,12 +606,12 @@ function _removeFamMarrObjeAt(f, targetIdx) {
 }
 
 // ─────────────────────────────────────
-//  MEDIA-MGR — Kachelansicht (Sub-Tab "Medien" im Quellen-Tab)
+//  MEDIA-MGR — Kachel- / Listenansicht (Sub-Tab "Medien" im Quellen-Tab)
 // ─────────────────────────────────────
 
-const _IMG_EXTS = new Set(['jpg','jpeg','png','gif','bmp','webp','tif','tiff']);
-let _mediaCtxFilter = 'all';
-let _mediaAllItems  = [];
+const _IMG_EXTS  = new Set(['jpg','jpeg','png','gif','bmp','webp','tif','tiff']);
+const _CTX_ICON  = { person: '👤', family: '⚭', source: '📖' };
+let   _mediaAllItems = [];
 
 function _collectAllMedia() {
   const items = [];
@@ -680,53 +680,84 @@ async function _loadMediaTileThumb(tileId, filePath) {
     : null;
   if (!src) { el.classList.add('broken'); el.textContent = '⚠'; return; }
   const img = document.createElement('img');
-  img.onerror = () => { el.classList.add('broken'); el.textContent = '⚠'; el.removeChild(img); };
+  img.onerror = () => { el.classList.add('broken'); el.textContent = '⚠';
+    if (el.contains(img)) el.removeChild(img); };
   img.src = src;
   el.textContent = '';
   el.appendChild(img);
 }
 
-const _CTX_ICON = { person: '👤', family: '⚭', source: '📖' };
+function _renderMedia() {
+  const ctx      = UIState._mediaCtxFilter;
+  const isList   = UIState._mediaViewMode === 'list';
+  const filtered = ctx === 'all' ? _mediaAllItems : _mediaAllItems.filter(m => m.ctx === ctx);
 
-function _renderMediaGrid() {
-  const filtered = _mediaCtxFilter === 'all'
-    ? _mediaAllItems
-    : _mediaAllItems.filter(m => m.ctx === _mediaCtxFilter);
-
+  // Filter-Chips sync
   document.querySelectorAll('.media-ctx-chip').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.ctx === _mediaCtxFilter));
+    btn.classList.toggle('active', btn.dataset.ctx === ctx));
 
-  const grid = document.getElementById('mediaGrid');
-  if (!grid) return;
+  // View-Toggle-Icon: zeigt Ziel-Modus (was ein Klick bewirken würde)
+  const tog = document.getElementById('mediaViewToggle');
+  if (tog) tog.textContent = isList ? '⊞' : '☰';
+
+  const container = document.getElementById('mediaGrid');
+  if (!container) return;
 
   if (!filtered.length) {
-    grid.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted)">Keine Medien vorhanden</div>';
+    container.className = 'media-grid';
+    container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted)">Keine Medien vorhanden</div>';
     return;
   }
 
-  grid.innerHTML = filtered.map(({ file, title, ctx, ctxId, ctxLabel, thumbId }) => {
-    const ext  = (file || '').split('.').pop().toLowerCase();
-    const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
-    return `<div class="media-tile" data-action="mediaNavCtx" data-ctx="${esc(ctx)}" data-ctx-id="${esc(ctxId)}">
-      <div class="media-tile-thumb" id="${esc(thumbId)}">${icon}</div>
-      <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
-      <div class="media-tile-ctx">${_CTX_ICON[ctx] || ''} ${esc(ctxLabel)}</div>
-    </div>`;
-  }).join('');
-
-  for (const item of filtered) {
-    if (_IMG_EXTS.has((item.file || '').split('.').pop().toLowerCase()))
-      _loadMediaTileThumb(item.thumbId, item.file);
+  if (isList) {
+    container.className = 'media-list';
+    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId }) => {
+      const ext  = (file || '').split('.').pop().toLowerCase();
+      const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+      const tid  = thumbId + 'l';
+      return `<div class="media-tile-row" data-action="mediaNavCtx" data-ctx="${esc(c)}" data-ctx-id="${esc(ctxId)}">
+        <div class="media-tile-thumb-sm" id="${esc(tid)}">${icon}</div>
+        <div class="media-tile-info">
+          <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
+          <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
+        </div>
+        <span class="p-arrow">›</span>
+      </div>`;
+    }).join('');
+    for (const item of filtered) {
+      if (_IMG_EXTS.has((item.file || '').split('.').pop().toLowerCase()))
+        _loadMediaTileThumb(item.thumbId + 'l', item.file);
+    }
+  } else {
+    container.className = 'media-grid';
+    container.innerHTML = filtered.map(({ file, title, ctx: c, ctxId, ctxLabel, thumbId }) => {
+      const ext  = (file || '').split('.').pop().toLowerCase();
+      const icon = _IMG_EXTS.has(ext) ? '🖼' : ext === 'pdf' ? '📄' : '📎';
+      return `<div class="media-tile" data-action="mediaNavCtx" data-ctx="${esc(c)}" data-ctx-id="${esc(ctxId)}">
+        <div class="media-tile-thumb" id="${esc(thumbId)}">${icon}</div>
+        <div class="media-tile-label" title="${esc(title)}">${esc(title)}</div>
+        <div class="media-tile-ctx">${_CTX_ICON[c] || ''} ${esc(ctxLabel)}</div>
+      </div>`;
+    }).join('');
+    for (const item of filtered) {
+      if (_IMG_EXTS.has((item.file || '').split('.').pop().toLowerCase()))
+        _loadMediaTileThumb(item.thumbId, item.file);
+    }
   }
 }
 
 function showMediaSection() {
   _mediaAllItems = _collectAllMedia();
-  _renderMediaGrid();
+  _renderMedia();
 }
 
 function filterMedia(ctx) {
-  _mediaCtxFilter = ctx || 'all';
-  _renderMediaGrid();
+  UIState._mediaCtxFilter = ctx || 'all';
+  _renderMedia();
+}
+
+function toggleMediaView() {
+  UIState._mediaViewMode = UIState._mediaViewMode === 'grid' ? 'list' : 'grid';
+  _renderMedia();
 }
 

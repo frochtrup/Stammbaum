@@ -133,10 +133,11 @@
     </div>
     <div id="mediaSection" hidden>
       <div class="media-filter-bar">
-        <button class="media-ctx-chip active" data-action="filterMedia" data-ctx="all">Alle</button>
-        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="person">👤 Personen</button>
-        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="family">⚭ Familien</button>
-        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="source">📖 Quellen</button>
+        <button class="media-ctx-chip active" data-action="filterMedia" data-ctx="all"    title="Alle Medien">Alle</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="person" title="Personen">👤</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="family" title="Familien">⚭</button>
+        <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="source" title="Quellen">📖</button>
+        <button class="media-view-toggle" id="mediaViewToggle" data-action="toggleMediaView" title="Listenansicht">☰</button>
       </div>
       <div id="mediaGrid" class="media-grid"></div>
     </div>

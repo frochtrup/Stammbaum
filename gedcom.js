@@ -42,6 +42,8 @@ const UIState = {
   _eventClipboard: null,         // kopiertes Ereignis für Übernehmen-Funktion
   _citClipboard:   null,         // kopierte Quellenbezüge { sources[], pages{}, quay{} }
   _placeModes:     {},           // { placeId: 'free'|'parts' } — UI-Toggle-Zustand Orts-Eingabe
+  _mediaCtxFilter: 'all',        // 'all'|'person'|'family'|'source' — Medien-Sub-Tab Filter
+  _mediaViewMode:  'grid',       // 'grid'|'list' — Medien-Sub-Tab Ansicht
   _formState: {                  // transienter Formular-State (ADR-003)
     srcWidget:    {},            // srcWidgetState[prefix] = { ids, pages, quay }
     pfExtraNames:   [],          // Zusatz-Namen im Personen-Formular
