@@ -939,7 +939,7 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
     <label class="form-label">Aufnahmedatum</label>
     <input class="form-input mb-3" id="md-date" type="text" value="${esc(m.date || '')}">
     <label class="form-label">Notiz</label>
-    <textarea class="form-textarea mb-3" id="md-note" rows="4" style="width:100%;box-sizing:border-box">${esc(m.note || '')}</textarea>
+    <textarea class="form-input mb-3" id="md-note" rows="4">${esc(m.note || '')}</textarea>
     <label class="form-label form-check-row">
       <input type="checkbox" id="md-prim"${m.prim && m.prim !== '' ? ' checked' : ''}> Bevorzugtes Medium (_PRIM)
     </label>
