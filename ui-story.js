@@ -178,13 +178,16 @@
       .replace(/^CAL\s+/i,  'errechnet ')
       .replace(/^EST\s+/i,  'geschätzt ')
       .replace(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/g,
-               m => _MONTHS_DE[m] || m);
+               m => _MONTHS_DE[m] || m)
+      // Tageszahl vor übersetztem Monatsnamen: „10 April" → „10. April"
+      .replace(/\b(\d{1,2})\s+(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\b/g,
+               '$1. $2');
   }
 
   function _atDate(ev) {
     if (!ev.date) return '';
     const raw = ev.date.trim();
-    if (/^\d{4}$/.test(raw)) return ' ' + raw;   // Jahr-only: kein „am"
+    if (/^\d{4}$/.test(raw)) return ' (' + raw + ')';  // Jahr-only in Klammern
     const fmt = _fmtDate(raw);
     const hasQual = /^(von|zwischen|vor|nach|um|errechnet|geschätzt)\s/.test(fmt);
     return ' ' + (hasQual ? '' : 'am ') + _esc(fmt);
@@ -198,16 +201,22 @@
 
   // ── Text-Kompositions-Helfer ────────────────────────────────────────────────
 
-  // „FROM 1850 TO 1870" → „1850–1870"; einzelnes Datum → Jahreszahl-String
+  // „FROM 1850 TO 1870" → „1850–1870"; gleiches Jahr → nur „1850"
   function _occuPeriod(dateStr) {
     if (!dateStr) return '';
     const m = dateStr.match(/^FROM\s+(.+?)\s+TO\s+(.+)$/i);
     if (m) {
       const y1 = _yearFromDate(m[1]), y2 = _yearFromDate(m[2]);
-      return y1 && y2 ? `${y1}–${y2}` : `${_fmtDate(m[1])} bis ${_fmtDate(m[2])}`;
+      if (y1 && y2) return y1 === y2 ? String(y1) : `${y1}–${y2}`;
+      return `${_fmtDate(m[1])} bis ${_fmtDate(m[2])}`;
     }
     const y = _yearFromDate(dateStr);
     return y ? String(y) : '';
+  }
+
+  // Führende/schließende Anführungszeichen aus GEDCOM-Werten entfernen
+  function _stripQuotes(s) {
+    return s ? s.replace(/^["'“„‘‚]|["'”’‛]$/g, '').trim() : '';
   }
 
   // Partner-Lebensdaten als kurze Klammer: „(*1820, †1902)"
@@ -264,15 +273,39 @@
       (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
     if (sorted.length === 1) {
       const ev = sorted[0];
-      return `${pr.Er} erlangte ${ev.value ? _esc(ev.value) : 'einen Abschluss'}${_atPlace(ev)}${_atDate(ev)}.`;
+      const val = ev.value ? _esc(_stripQuotes(ev.value)) : 'einen Abschluss';
+      return `${pr.Er} erlangte ${val}${_atPlace(ev)}${_atDate(ev)}.`;
     }
     const parts = sorted.map(ev => {
       const yr = _yearFromDate(ev.date);
-      return (ev.value ? _esc(ev.value) : 'Abschluss') + (yr ? ` (${yr})` : '');
+      return (ev.value ? _esc(_stripQuotes(ev.value)) : 'Abschluss') + (yr ? ` (${yr})` : '');
     });
     const last = parts.slice(-1)[0];
     const rest = parts.slice(0, -1);
     return `${pr.Er} erlangte: ${rest.join(', ')} sowie ${last}.`;
+  }
+
+  // Mehrere EDUC-Ereignisse zu einem Bildungsweg-Satz zusammenführen
+  function _mergeEducSentence(educs, pr) {
+    if (!educs.length) return '';
+    const sorted = [...educs].sort((a, b) =>
+      (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
+    if (sorted.length === 1) {
+      const ev = sorted[0];
+      const val = ev.value ? _esc(_stripQuotes(ev.value)) : '';
+      return `${pr.Er} besuchte${val ? ' ' + val : ''}${_atPlace(ev)}${_atDate(ev)}.`;
+    }
+    const parts = sorted.map(ev => {
+      const period = _occuPeriod(ev.date);
+      const place  = _shortPlace(ev.place);
+      const val    = ev.value ? _esc(_stripQuotes(ev.value)) : 'Bildungseinrichtung';
+      return val
+        + (place ? ' in ' + _esc(place) : '')
+        + (period ? ` (${period})` : '');
+    });
+    const last = parts.slice(-1)[0];
+    const rest = parts.slice(0, -1);
+    return `${pr.Er} besuchte: ${rest.join(', ')} sowie ${last}.`;
   }
 
   // 3+ RESI-Ereignisse als kompakte Ortsliste; ≤2 bleiben Einzelsätze
@@ -405,8 +438,10 @@ ${lifespan}
 
     const occus = byType('OCCU');
     const grads = byType('GRAD');
+    const educs = byType('EDUC');
     const resis = byType('RESI');
-    const evs   = allEvs.filter(ev => ev.type !== 'OCCU' && ev.type !== 'GRAD' && ev.type !== 'RESI');
+    const merged = new Set(['OCCU','GRAD','EDUC','RESI']);
+    const evs   = allEvs.filter(ev => !merged.has(ev.type));
 
     const parts = [];
 
@@ -415,6 +450,9 @@ ${lifespan}
 
     const resiSent = _mergeResiSentence(resis, pr);
     if (resiSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${resiSent}</p></div>`);
+
+    const educSent = _mergeEducSentence(educs, pr);
+    if (educSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${educSent}</p></div>`);
 
     const gradSent = _mergeGradSentence(grads, pr);
     if (gradSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${gradSent}</p></div>`);
@@ -531,8 +569,11 @@ ${lifespan}
   function _sectionReli(p, pr) {
     const reli = (p.events || []).find(ev => ev.type === 'RELI' && ev.value);
     if (!reli) return '';
+    const val = reli.value.trim();
+    const period = _atDate(reli);
+    const dot = val.endsWith('.') ? '' : '.';
     return `<section class="story-section story-reli">
-<p class="story-reli-note">${pr.Er} war ${_esc(reli.value)}${_atDate(reli)}.</p>
+<p class="story-reli-note">${pr.Er} war ${_esc(val)}${period}${dot}</p>
 </section>`;
   }
 
