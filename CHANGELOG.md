@@ -9,6 +9,14 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-20 — STORY-OPT-5/6 + STORY-DIAGRAM (sw v642–v645)
+
+- **sw v642–v643** `feat(story)`: STORY-OPT-5 — „Im August 2021" statt „Am August 2021" (`_MONTH_YEAR_RE` Regex-Guard in `_atDate()`); Verbindungsformulierungen für Berufsstationen: `_mergeCareerSentence()` mit `zunächst/danach/zuletzt`; modernes Story-Design (Header-Goldlinie, `◆`-Bullets, Familien-Cards mit goldenem Rand, Callout-Epoche, Lebenszeit in Kapitälchen)
+- **sw v644** `feat(story)`: STORY-OPT-6 — Lebensdatum-Übersetzung in `_sectionHeader()` (Geburts-/Sterbejahr sichtbar unter dem Namen); Geburtsatz-Variation (`kam … zur Welt` bei reinem Jahreseintrag); natürliche Kinderliste mit Geburtsjahren in `_childSentence()`; Epochen-Kontext (`ctx`-Feld) aus `_STORY_EPOCHS` in `_sectionEpoch()`; Epochen-Jahresanzeige ohne Wiederholung bei `from===to`
+- **sw v645** `feat(story)`: STORY-DIAGRAM — Inline-SVG Ahnentafel nach der Karte: 4 Großeltern-Slots → Eltern → Proband (gold) ⚭ Partner → Kinder (bis 4 + +N-Pill); `_sectionDiagram()` + `_dgCard()`-Helfer in `ui-story.js`; eigenständig ohne DOM-Abhängigkeit; CSS-Var-Fallbacks für HTML-Export; Klick-Navigation via `showDetail()`
+
+---
+
 ### Session 2026-05-19 — TEST-AUTO: Standalone GEDCOM Roundtrip Tester
 
 - **test.html** `tooling`: Standalone-Testseite — lädt nur `gedcom.js` + `gedcom-parser.js` + `gedcom-writer.js` (kein UI, kein Leaflet, kein OneDrive); Drag-Drop für beliebig viele `.ged`-Dateien; parse→write→parse→write pro Datei; Ergebnistabelle mit Personen/Familien/Quellen, net_delta, Stabil ✓/✗, Zeit in ms; aufklappbarer Diff bei Instabilität (erste 20 abweichende Zeilen); kein SW-Eintrag (Dev-Tool)
