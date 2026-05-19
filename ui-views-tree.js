@@ -649,11 +649,24 @@ function showTree(personId, addToHistory = true) {
   // ── Geschwister ──
   if (useHorizSibs) {
     siblings.slice(0, nFit).forEach((sid, i) => {
-      const badge = (i === 0 && nHidden > 0)
-        ? `<div class="tree-half-badge tree-half-badge--sib">+${nHidden}</div>`
-        : '';
-      mkCard(sid, sibX(i), sibY, false, false, null, false, null, badge + kbadge(sid), sibCardW);
+      mkCard(sid, sibX(i), sibY, false, false, null, false, null, kbadge(sid), sibCardW);
     });
+    // „…"-Indikator wenn Geschwister nicht alle dargestellt werden können
+    if (nHidden > 0) {
+      const morW = isPortrait ? 22 : 26;
+      const morX = nFit > 0
+        ? Math.max(PAD, sibRowStartX - 4 - morW)
+        : personX - SIB_GAP - morW;
+      const morEl = document.createElement('div');
+      morEl.className = 'tree-sib-more';
+      morEl.style.left   = Math.round(morX) + 'px';
+      morEl.style.top    = Math.round(sibY)  + 'px';
+      morEl.style.width  = morW + 'px';
+      morEl.style.height = H   + 'px';
+      morEl.title = `+${nHidden} Geschwister nicht dargestellt`;
+      morEl.textContent = '…';
+      wrap.appendChild(morEl);
+    }
   } else {
     // Fallback: Peek-Stapel
     siblings.forEach((sid, i) => {
@@ -668,7 +681,7 @@ function showTree(personId, addToHistory = true) {
 
   // ── Zentrumsperson ──
   const sibCountBadge = nSibs > 0
-    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">${nSibs}</div>`
+    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">~${nSibs}</div>`
     : '';
   mkCard(personId, personX, ry(0), true, false, null, false, null, sibCountBadge + kbadge(personId));
 

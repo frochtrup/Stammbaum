@@ -2413,8 +2413,17 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
 }
 .tree-half-badge--sib-count {
   right: auto; left: 4px; font-style: normal;
-  background: var(--border); color: var(--text);
+  background: var(--gold-dim); color: var(--bg);
   border-radius: 4px; padding: 0 3px;
+}
+.tree-sib-more {
+  position: absolute;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 0.68rem; letter-spacing: 1px;
+  pointer-events: none;
 }
 .tree-half-badge--sib {
   bottom: auto; top: 3px; right: 4px; color: var(--gold);
