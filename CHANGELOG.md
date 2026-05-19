@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-19 — REFACT-1: parseGEDCOM() in Sub-Parser aufgeteilt (sw v627)
+
+- **sw v627** `refact(parser)`: REFACT-1 — monolithische ~977-Zeilen-Hauptschleife in `gedcom-parser.js` in 5 Sub-Parser aufgeteilt: `_parseINDILine(cur, x, lv, tag, val)` (~290 Z.), `_parseFAMLine(cur, x, lv, tag, val)` (~170 Z.), `_parseSOURLine(cur, x, lv, tag, val)` (~80 Z.), `_parseNOTELine(cur, x, lv, tag, val)` (~15 Z.), `_parseREPOLine(cur, x, lv, tag, val)` (~15 Z.); gemeinsamer Kontext-Objekt `x` (14 Felder: `lv1tag`, `lv2tag`, `lv3tag`, `evIdx`, `inMap`, `mapParent`, `_curCit`, `lastSourVal`, `_curNoteIsInline`, `_curExtraNameIdx`, `_ptDepth`, `_ptTarget`, `_smEntry`, `_curTask`, `_curAsso`) per Parameter übergeben; Hauptfunktion `parseGEDCOM()` auf ~200 Z. geschrumpft; Dispatch-Switch in Hauptloop; Lv1/2/3-Tag-Tracking + Passthrough-Guard verbleiben in Hauptloop; Roundtrip net_delta=0, gleicher Input/Output; Voraussetzung für WW-PARSER + TEST-AUTO
+
+---
+
 ### Session 2026-05-18 — REL-CALC: Beziehungsrechner ausgebaut (sw v626)
 
 - **sw v626** `feat(rel)`: REL-CALC — Beziehungsrechner vollständig: gemeinsamer Vorfahre mit Geburtsjahr in Verwandtschaft-Zeile (`rel-anc-hint`) und im Pfad-Modal (`rel-path-ancestor`); freier Zweipersonen-Vergleich via „🔗 zu …"-Button in jedem Person-Detail; `showRelCalcPicker(anchorId)` öffnet vorhandenen `modalRelPicker` mit `_relMode='relcalc'`; `relPickerSelect()` leitet in `showRelPath(idA, selectedId)` um; `showRelPath(idA, targetId?)` mit optionalem zweiten Parameter (Standard: Proband); `_relAncestorHint()` Helper; Verwandtschaft-Sektion erscheint immer wenn >1 Person geladen; `showRelCalcPicker` in `_CLICK_MAP`; CSS `.rel-path-ancestor` + `.rel-anc-hint`

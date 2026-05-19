@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v626 · Cache: `stammbaum-v626`
+**sw-Version:** v627 · Cache: `stammbaum-v627`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -161,8 +161,8 @@ Ausgaben, die Genealogen ihren Familien zeigen. Fundament abgeschlossen (Timelin
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| REFACT-1 | **`parseGEDCOM()` in Sub-Parser aufteilen** | Die ~977-Zeilen-Hauptschleife in `gedcom-parser.js` auf Sub-Parser pro Record-Typ aufteilen: `_parseINDI()`, `_parseFAM()`, `_parseSOUR()`, `_parseREPO()`, `_parseNOTE()`. Kein State-Änderung — gleicher Input/Output. Voraussetzung für WW-PARSER und TEST-AUTO. | L |
-| REFACT-2 | **Datum-Parsing-Logik zentralisieren** | Datum-Parsing ist in `gedcom.js`, `gedcom-parser.js` und mehreren UI-Dateien dupliziert. Einzige Quelle der Wahrheit: `parseDateStr()` / `writeDateStr()` in `gedcom.js`. Alle Duplikate ersetzen. | S |
+| ~~REFACT-1~~ | ~~**`parseGEDCOM()` in Sub-Parser aufteilen**~~ | Monolithische ~977-Zeilen-Hauptschleife in 5 Sub-Parser aufgeteilt: `_parseINDILine`, `_parseFAMLine`, `_parseSOURLine`, `_parseNOTELine`, `_parseREPOLine`; gemeinsamer Kontext-Objekt `x` (14 Felder) per Parameter übergeben; Hauptfunktion auf ~200 Z. geschrumpft; gleicher Input/Output, Roundtrip net_delta=0 stabil (sw v627) | - |
+| ~~REFACT-2~~ | ~~**Datum-Parsing-Logik zentralisieren**~~ | Bereits erledigt: alle Datum-Funktionen (`normGedDate`, `normMonth`, `parseGedDate`, `buildGedDate`, `gedDateSortKey`, `gedDatePartToISO`) sind in `gedcom.js` zentralisiert; `gedcom-parser.js` speichert nur rohe Strings; UI-Dateien nutzen ausschließlich die Funktionen aus `gedcom.js`; `gramps-parser.js:_parseDateEl()` ist korrekterweise ein eigenständiger XML-Attribut-Parser. | - |
 
 ---
 
