@@ -47,18 +47,12 @@
   .btn:hover { border-color: #c8a84a; color: #c8a84a; }
 
   #results { display: none; }
-  .results-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 12px;
-  }
-  #summary {
-    font-size: 0.85rem;
-    color: #888;
-  }
+  .results-header { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+  #summary { font-size: 0.85rem; color: #888; }
   #summary .pass { color: #5c9e5c; font-weight: 600; }
   #summary .fail { color: #c05050; font-weight: 600; }
+  #summary .warn { color: #c8a84a; font-weight: 600; }
+  #clear-btn { margin-left: auto; }
 
   table { width: 100%; border-collapse: collapse; }
   th {
@@ -71,12 +65,9 @@
     padding: 6px 10px;
     border-bottom: 1px solid #333;
   }
-  td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #2a2a2a;
-    vertical-align: top;
-  }
-  tr:hover td { background: #222; }
+  td { padding: 8px 10px; border-bottom: 1px solid #2a2a2a; vertical-align: top; }
+  tr.data-row:hover td { background: #222; }
+  tr.detail-row td { padding: 0; border-bottom: 1px solid #333; }
 
   .status-ok  { color: #5c9e5c; font-weight: 600; }
   .status-err { color: #c05050; font-weight: 600; }
@@ -90,22 +81,77 @@
   .num { font-variant-numeric: tabular-nums; color: #bbb; }
   .time-col { color: #666; font-size: 12px; }
 
-  .diff-toggle {
+  /* expand button */
+  .expand-btn {
+    font-size: 11px;
+    color: #666;
+    cursor: pointer;
+    background: none;
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    line-height: 1.4;
+  }
+  .expand-btn:hover { color: #c8a84a; border-color: #c8a84a; }
+
+  /* detail panel */
+  .detail-panel {
+    display: none;
+    padding: 12px 16px;
+    background: #141414;
+    font-size: 12px;
+  }
+  .detail-panel.open { display: block; }
+
+  .dp-section { margin-bottom: 14px; }
+  .dp-section:last-child { margin-bottom: 0; }
+  .dp-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #555;
+    margin-bottom: 6px;
+  }
+
+  /* warnings */
+  .warn-list { list-style: none; }
+  .warn-list li {
+    padding: 3px 0;
+    border-bottom: 1px solid #222;
+    font-family: monospace;
     font-size: 11px;
     color: #c8a84a;
-    cursor: pointer;
-    text-decoration: underline;
-    background: none;
-    border: none;
-    padding: 0;
-    margin-left: 6px;
   }
+  .warn-list li span { color: #666; margin-right: 6px; }
+  .warn-raw { color: #555 !important; font-size: 10px; display: block; margin-left: 12px; }
+
+  /* tag delta table */
+  .tag-delta { display: flex; flex-wrap: wrap; gap: 4px; }
+  .td-chip {
+    font-family: monospace;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    white-space: nowrap;
+  }
+  .td-chip.td-loss { border-color: #6a2020; color: #c05050; }
+  .td-chip.td-gain { border-color: #4a5a20; color: #8ab840; }
+
+  /* missing tags */
+  .miss-list { font-family: monospace; font-size: 11px; color: #c05050; }
+  .miss-list span { color: #555; margin-left: 8px; font-size: 10px; }
+
+  /* date/plac context */
+  .ctx-list { font-family: monospace; font-size: 11px; color: #bbb; }
+  .ctx-list div { padding: 1px 0; }
+  .ctx-example { color: #888; margin-left: 12px; font-size: 10px; }
+
+  /* diff */
   .diff-block {
-    display: none;
-    margin-top: 8px;
-    padding: 10px;
-    background: #111;
-    border-radius: 4px;
     font-family: monospace;
     font-size: 11px;
     white-space: pre-wrap;
@@ -113,11 +159,9 @@
     max-height: 300px;
     overflow-y: auto;
   }
-  .diff-block .d-out1 { color: #c05050; }
-  .diff-block .d-out2 { color: #5c9e5c; }
-  .diff-block .d-head { color: #888; font-style: italic; }
-
-  #clear-btn { margin-left: auto; }
+  .d-out1 { color: #c05050; display: block; }
+  .d-out2 { color: #5c9e5c; display: block; }
+  .d-head { color: #555; display: block; margin-top: 6px; }
 </style>
 </head>
 <body>
@@ -164,10 +208,9 @@ const resultsEl = document.getElementById('results');
 const tbody     = document.getElementById('results-body');
 const summaryEl = document.getElementById('summary');
 
-let _passCount = 0;
-let _failCount = 0;
+let _passCount = 0, _failCount = 0, _warnCount = 0;
 
-// ── Drag & Drop ──────────────────────────────────────────────
+// ── Drag & Drop ───────────────────────────────────────────────
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', e => {
@@ -180,8 +223,7 @@ fileInput.addEventListener('change', () => { processFiles([...fileInput.files]);
 document.getElementById('clear-btn').addEventListener('click', () => {
   tbody.innerHTML = '';
   resultsEl.style.display = 'none';
-  _passCount = 0;
-  _failCount = 0;
+  _passCount = 0; _failCount = 0; _warnCount = 0;
 });
 
 // ── File Queue ────────────────────────────────────────────────
@@ -190,10 +232,11 @@ async function processFiles(files) {
   if (!gedFiles.length) return;
   resultsEl.style.display = 'block';
   for (const f of gedFiles) {
-    const row = addPendingRow(f.name);
+    const { dataRow, detailRow } = addPendingRow(f.name);
     const result = await runTest(f);
-    updateRow(row, result);
+    updateRow(dataRow, detailRow, result);
     if (result.stable) _passCount++; else _failCount++;
+    if (result.errs1 > 0) _warnCount++;
     updateSummary();
   }
 }
@@ -203,78 +246,154 @@ async function runTest(file) {
   const text = await file.text();
   const t0 = performance.now();
 
-  // Round 1
   const errs1 = [];
   const db1 = parseGEDCOM(text, errs1);
   setDb(db1);
   const out1 = writeGEDCOM(false);
 
-  // Round 2
   const errs2 = [];
   const db2 = parseGEDCOM(out1, errs2);
   setDb(db2);
   const out2 = writeGEDCOM(false);
 
-  const t1 = performance.now();
-  const stable   = out1 === out2;
-  const inLines  = text.split('\n').length;
-  const outLines = out1.split('\n').length;
+  const t1    = performance.now();
+  const stable = out1 === out2;
+  const delta  = out1.split('\n').length - text.split('\n').length;
 
   return {
     name:     file.name,
     persons:  Object.keys(db1.individuals || {}).length,
     families: Object.keys(db1.families    || {}).length,
     sources:  Object.keys(db1.sources     || {}).length,
+    notes:    Object.keys(db1.notes       || {}).length,
+    repos:    Object.keys(db1.repositories|| {}).length,
     stable,
-    delta:    outLines - inLines,
+    delta,
     time:     Math.round(t1 - t0),
-    errs1:    errs1.length,
+    errs1,
     errs2:    errs2.length,
     diff:     stable ? null : firstDiffs(out1, out2, 20),
+    deltaAnalysis: delta !== 0 ? analyzeDelta(text, out1) : null,
   };
 }
 
-function firstDiffs(a, b, max) {
-  const la = a.split('\n');
-  const lb = b.split('\n');
-  const out = [];
-  const len = Math.max(la.length, lb.length);
-  let found = 0;
-  for (let i = 0; i < len && found < max; i++) {
-    if (la[i] !== lb[i]) {
-      out.push({ line: i + 1, a: la[i] ?? '<fehlt>', b: lb[i] ?? '<fehlt>' });
-      found++;
+// ── Delta Analysis (analog ui-debug.js) ──────────────────────
+const TAG_CHECKS = [
+  { lbl:'0 INDI', re:/^0 @[^@]+@ INDI\b/mg },
+  { lbl:'0 FAM',  re:/^0 @[^@]+@ FAM\b/mg },
+  { lbl:'0 SOUR', re:/^0 @[^@]+@ SOUR\b/mg },
+  { lbl:'0 NOTE', re:/^0 @[^@]+@ NOTE\b/mg },
+  { lbl:'0 REPO', re:/^0 @[^@]+@ REPO\b/mg },
+  { lbl:'1 BIRT', re:/^\s*1 BIRT\b/mg }, { lbl:'1 DEAT', re:/^\s*1 DEAT\b/mg },
+  { lbl:'1 CHR',  re:/^\s*1 CHR\b/mg },  { lbl:'1 BURI', re:/^\s*1 BURI\b/mg },
+  { lbl:'1 OCCU', re:/^\s*1 OCCU\b/mg }, { lbl:'1 RESI', re:/^\s*1 RESI\b/mg },
+  { lbl:'1 EVEN', re:/^\s*1 EVEN\b/mg }, { lbl:'1 CENS', re:/^\s*1 CENS\b/mg },
+  { lbl:'1 EMIG', re:/^\s*1 EMIG\b/mg }, { lbl:'1 IMMI', re:/^\s*1 IMMI\b/mg },
+  { lbl:'1 FACT', re:/^\s*1 FACT\b/mg }, { lbl:'1 MILI', re:/^\s*1 MILI\b/mg },
+  { lbl:'1 MARR', re:/^\s*1 MARR\b/mg }, { lbl:'1 DIV',  re:/^\s*1 DIV\b/mg },
+  { lbl:'1 ENGA', re:/^\s*1 ENGA\b/mg },
+  { lbl:'1 NAME', re:/^\s*1 NAME\b/mg }, { lbl:'1 SEX',  re:/^\s*1 SEX\b/mg },
+  { lbl:'2 DATE', re:/^\s*2 DATE\b/mg }, { lbl:'2 PLAC', re:/^\s*2 PLAC\b/mg },
+  { lbl:'2 ADDR', re:/^\s*2 ADDR\b/mg }, { lbl:'2 CAUS', re:/^\s*2 CAUS\b/mg },
+  { lbl:'3 MAP',  re:/^\s*3 MAP\b/mg },  { lbl:'4 LATI', re:/^\s*4 LATI\b/mg },
+  { lbl:'2 NOTE', re:/^\s*2 NOTE\b/mg }, { lbl:'3 NOTE', re:/^\s*3 NOTE\b/mg },
+  { lbl:'1 NOTE', re:/^\s*1 NOTE\b/mg },
+  { lbl:'1 OBJE', re:/^\s*1 OBJE\b/mg }, { lbl:'2 OBJE', re:/^\s*2 OBJE\b/mg },
+  { lbl:'2 FILE', re:/^\s*2 FILE\b/mg }, { lbl:'2 TITL', re:/^\s*2 TITL\b/mg },
+  { lbl:'1 SOUR', re:/^\s*1 SOUR\b/mg }, { lbl:'2 SOUR', re:/^\s*2 SOUR\b/mg },
+  { lbl:'3 PAGE', re:/^\s*3 PAGE\b/mg }, { lbl:'3 QUAY', re:/^\s*3 QUAY\b/mg },
+  { lbl:'4 PAGE', re:/^\s*4 PAGE\b/mg }, { lbl:'4 QUAY', re:/^\s*4 QUAY\b/mg },
+  { lbl:'1 CHAN', re:/^\s*1 CHAN\b/mg },
+  { lbl:'1 ABBR', re:/^\s*1 ABBR\b/mg }, { lbl:'1 AUTH', re:/^\s*1 AUTH\b/mg },
+  { lbl:'2 CALN', re:/^\s*2 CALN\b/mg }, { lbl:'2 GIVN', re:/^\s*2 GIVN\b/mg },
+  { lbl:'2 SURN', re:/^\s*2 SURN\b/mg },
+  { lbl:'DATE ABT', re:/\bDATE ABT\b/mg, additive: true },
+  { lbl:'DATE BEF', re:/\bDATE BEF\b/mg, additive: true },
+  { lbl:'DATE AFT', re:/\bDATE AFT\b/mg, additive: true },
+  { lbl:'DATE BET', re:/\bDATE BET\b/mg, additive: true },
+];
+
+function analyzeDelta(orig, out1) {
+  const cnt = (text, re) => (text.match(re) || []).length;
+  const norm = l => l.trim().replace(/@@/g, '@');
+
+  // Tag delta — nur abweichende
+  const tagDiffs = TAG_CHECKS
+    .map(t => ({ lbl: t.lbl, d: cnt(out1, t.re) - cnt(orig, t.re), additive: t.additive }))
+    .filter(t => t.d !== 0)
+    .sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+
+  // Missing tags (orig lines not in out1)
+  const origLines = orig.split(/\r?\n/).map(norm).filter(Boolean);
+  const outCounts = new Map();
+  for (const l of out1.split(/\r?\n/).map(norm).filter(Boolean))
+    outCounts.set(l, (outCounts.get(l) || 0) + 1);
+
+  const missingTags = {};
+  let dpRecType = '', dpLv1 = '';
+  const dpCtx = {}, dpSamples = [];
+
+  for (const l of origLines) {
+    const lv = parseInt(l);
+    if (lv === 0) { dpRecType = (l.match(/^0 @\S+@ (\S+)/) || l.match(/^0 (\S+)/))?.[1] || ''; dpLv1 = ''; }
+    else if (lv === 1) dpLv1 = l.match(/^1 (\S+)/)?.[1] || '';
+    const rem = outCounts.get(l) || 0;
+    if (rem > 0) { outCounts.set(l, rem - 1); continue; }
+    const tag = l.match(/^\d+ (\S+)/)?.[1] || '?';
+    missingTags[tag] = (missingTags[tag] || 0) + 1;
+    if ((tag === 'DATE' || tag === 'PLAC') && lv === 2) {
+      const key = `${dpRecType} / 1 ${dpLv1} / ${tag}`;
+      dpCtx[key] = (dpCtx[key] || 0) + 1;
+      if (dpSamples.length < 6) dpSamples.push(`${dpRecType} · 1 ${dpLv1} → ${l}`);
     }
+  }
+
+  const topMissing = Object.entries(missingTags).sort((a, b) => b[1] - a[1]).slice(0, 20);
+
+  return { tagDiffs, topMissing, dpCtx, dpSamples };
+}
+
+// ── Diff helper ───────────────────────────────────────────────
+function firstDiffs(a, b, max) {
+  const la = a.split('\n'), lb = b.split('\n');
+  const out = []; const len = Math.max(la.length, lb.length); let found = 0;
+  for (let i = 0; i < len && found < max; i++) {
+    if (la[i] !== lb[i]) { out.push({ line: i + 1, a: la[i] ?? '<fehlt>', b: lb[i] ?? '<fehlt>' }); found++; }
   }
   return out;
 }
 
 // ── DOM ───────────────────────────────────────────────────────
 function addPendingRow(name) {
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class="filename">${esc(name)}</td>
-    <td colspan="6" class="status-run">läuft…</td>
-  `;
-  tbody.appendChild(tr);
-  return tr;
+  const dataRow = document.createElement('tr');
+  dataRow.className = 'data-row';
+  dataRow.innerHTML = `<td class="filename">${esc(name)}</td><td colspan="6" class="status-run">läuft…</td>`;
+  const detailRow = document.createElement('tr');
+  detailRow.className = 'detail-row';
+  detailRow.innerHTML = `<td colspan="7"><div class="detail-panel"></div></td>`;
+  tbody.appendChild(dataRow);
+  tbody.appendChild(detailRow);
+  return { dataRow, detailRow };
 }
 
-function updateRow(tr, r) {
+function updateRow(dataRow, detailRow, r) {
+  const hasDetail = r.errs1.length > 0 || r.delta !== 0 || !r.stable;
   const deltaClass = r.delta === 0 ? 'delta-zero' : (r.delta > 0 ? 'delta-pos' : 'delta-neg');
   const deltaStr   = r.delta === 0 ? '0' : (r.delta > 0 ? '+' + r.delta : String(r.delta));
+
+  const expandBtn = hasDetail
+    ? `<button class="expand-btn" onclick="toggleDetail(this)">▶ Details</button>`
+    : '';
+
   const statusHtml = r.stable
     ? `<span class="status-ok">✓</span>`
-    : `<span class="status-err">✗</span><button class="diff-toggle" onclick="toggleDiff(this)">diff</button>`;
+    : `<span class="status-err">✗ instabil</span>`;
 
-  let errNote = '';
-  if (r.errs1 > 0) errNote += ` <span style="color:#c8a84a" title="Parse-Fehler Runde 1">(${r.errs1} Warn.)</span>`;
+  let warnBadge = '';
+  if (r.errs1 > 0) warnBadge = ` <span style="color:#c8a84a;font-size:11px">${r.errs1} Warn.</span>`;
 
-  tr.innerHTML = `
-    <td>
-      <span class="filename">${esc(r.name)}</span>${errNote}
-      ${r.diff ? `<div class="diff-block">${buildDiffHtml(r.diff)}</div>` : ''}
-    </td>
+  dataRow.innerHTML = `
+    <td><span class="filename">${esc(r.name)}</span>${warnBadge}${expandBtn}</td>
     <td class="num">${r.persons}</td>
     <td class="num">${r.families}</td>
     <td class="num">${r.sources}</td>
@@ -282,22 +401,87 @@ function updateRow(tr, r) {
     <td>${statusHtml}</td>
     <td class="time-col">${r.time} ms</td>
   `;
+
+  if (hasDetail) buildDetailPanel(detailRow.querySelector('.detail-panel'), r);
 }
 
-function buildDiffHtml(diffs) {
-  return diffs.map(d =>
-    `<span class="d-head">Zeile ${d.line}:</span>\n` +
-    `<span class="d-out1">− ${esc(d.a)}</span>\n` +
-    `<span class="d-out2">+ ${esc(d.b)}</span>\n`
-  ).join('\n');
+function buildDetailPanel(panel, r) {
+  const sections = [];
+
+  // ── Warnungen ─────────────────────────────────────────────
+  if (r.errs1.length > 0) {
+    const items = r.errs1.map(e =>
+      `<li><span>Z.${e.line}</span>${esc(e.msg)}<span class="warn-raw">${esc(e.raw || '')}</span></li>`
+    ).join('');
+    sections.push(`
+      <div class="dp-section">
+        <div class="dp-title">Parse-Warnungen (${r.errs1.length})</div>
+        <ul class="warn-list">${items}</ul>
+      </div>`);
+  }
+
+  // ── Tag-Delta ─────────────────────────────────────────────
+  if (r.deltaAnalysis?.tagDiffs.length > 0) {
+    const chips = r.deltaAnalysis.tagDiffs.map(t => {
+      const cls = t.d < 0 ? 'td-chip td-loss' : 'td-chip td-gain';
+      const sign = t.d > 0 ? '+' : '';
+      return `<span class="${cls}">${esc(t.lbl)} ${sign}${t.d}</span>`;
+    }).join('');
+    sections.push(`
+      <div class="dp-section">
+        <div class="dp-title">Tag-Delta (nur Abweichungen)</div>
+        <div class="tag-delta">${chips}</div>
+      </div>`);
+  }
+
+  // ── Fehlende Tags ─────────────────────────────────────────
+  if (r.deltaAnalysis?.topMissing.length > 0) {
+    const items = r.deltaAnalysis.topMissing.map(([tag, n]) =>
+      `<div>${esc(tag)}<span>−${n}×</span></div>`
+    ).join('');
+    sections.push(`
+      <div class="dp-section">
+        <div class="dp-title">Fehlende Zeilen (Top-Tags aus Orig, nicht in out1)</div>
+        <div class="miss-list">${items}</div>
+      </div>`);
+  }
+
+  // ── DATE/PLAC Kontext ─────────────────────────────────────
+  const dpCtx = r.deltaAnalysis?.dpCtx;
+  if (dpCtx && Object.keys(dpCtx).length > 0) {
+    const ctxLines = Object.entries(dpCtx).sort((a, b) => b[1] - a[1])
+      .map(([k, n]) => `<div>${esc(k)} <span style="color:#c05050">${n}×</span></div>`).join('');
+    const samples = (r.deltaAnalysis.dpSamples || [])
+      .map(s => `<div class="ctx-example">${esc(s)}</div>`).join('');
+    sections.push(`
+      <div class="dp-section">
+        <div class="dp-title">Fehlende 2 DATE / 2 PLAC — Kontext</div>
+        <div class="ctx-list">${ctxLines}${samples}</div>
+      </div>`);
+  }
+
+  // ── Diff (Instabilität) ───────────────────────────────────
+  if (r.diff) {
+    const lines = r.diff.map(d =>
+      `<span class="d-head">Zeile ${d.line}:</span>` +
+      `<span class="d-out1">− ${esc(d.a)}</span>` +
+      `<span class="d-out2">+ ${esc(d.b)}</span>`
+    ).join('');
+    sections.push(`
+      <div class="dp-section">
+        <div class="dp-title">out1 ≠ out2 — erste Unterschiede (max. 20)</div>
+        <div class="diff-block">${lines}</div>
+      </div>`);
+  }
+
+  panel.innerHTML = sections.join('');
 }
 
-function toggleDiff(btn) {
-  const block = btn.closest('td').querySelector('.diff-block');
-  if (!block) return;
-  const open = block.style.display === 'block';
-  block.style.display = open ? 'none' : 'block';
-  btn.textContent = open ? 'diff' : 'schließen';
+function toggleDetail(btn) {
+  const panel = btn.closest('tr').nextElementSibling?.querySelector('.detail-panel');
+  if (!panel) return;
+  const open = panel.classList.toggle('open');
+  btn.textContent = open ? '▼ Details' : '▶ Details';
 }
 
 function updateSummary() {
@@ -305,7 +489,8 @@ function updateSummary() {
   summaryEl.innerHTML =
     `${total} Datei${total !== 1 ? 'en' : ''} · ` +
     `<span class="pass">${_passCount} stabil</span>` +
-    (_failCount ? ` · <span class="fail">${_failCount} instabil</span>` : '');
+    (_failCount ? ` · <span class="fail">${_failCount} instabil</span>` : '') +
+    (_warnCount ? ` · <span class="warn">${_warnCount} mit Warnungen</span>` : '');
 }
 
 function esc(s) {
