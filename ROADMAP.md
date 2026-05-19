@@ -64,6 +64,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | MEDIA-MGR-DETAIL | Medien-Detailansicht mit Referenz-Management | v609–v622 |
 | PERF-MEDIA | Medien-Galerie: IntersectionObserver + Thumb-Cache | v623 |
 | MEDIA-SORT | Medienliste: Sortierung nach Dateiname (⇅) | v624 |
+| REFACT-1 | `parseGEDCOM()` in 5 Sub-Parser aufgeteilt; Kontext-Objekt `x`; Roundtrip stabil | v627 |
+| TEST-AUTO | `test.html`: Standalone Roundtrip-Tester (kein UI-Load); Drag-Drop beliebig viele .ged | — |
 
 ---
 
@@ -124,7 +126,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | ~~MEDIA-MGR-DETAIL~~ | ~~**Medien-Detailansicht**~~ | `showMediaDetail()`: Detailansicht im rechten Panel; globale Felder FILE/FORM/MEDI; Referenzliste mit ↗ Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; Inline-Suchpanel zum Hinzufügen neuer Referenzen (Person/Familie/Quelle) mit Lebensdaten-Anzeige (sw v609–v622) | - |
 | DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |
 | PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
-| WW-PARSER | **Web Worker für große GEDCOM-Dateien** | `parseGEDCOM()` in einen Web Worker auslagern: Main Thread bleibt bei Dateien >50K Personen reaktiv; Fortschrittsbalken möglich; keine UI-Blockierung auf mobilen Geräten. Voraussetzung: parseGEDCOM() aus dem globalen State lösen (REFACT-1). | M |
+| WW-PARSER | **Web Worker für große GEDCOM-Dateien** | `parseGEDCOM()` in einen Web Worker auslagern: Main Thread bleibt bei Dateien >50K Personen reaktiv; Fortschrittsbalken möglich; keine UI-Blockierung auf mobilen Geräten. Voraussetzung REFACT-1 ✓ erledigt. | M |
 
 ---
 
@@ -152,7 +154,7 @@ Ausgaben, die Genealogen ihren Familien zeigen. Fundament abgeschlossen (Timelin
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; ADR dokumentiert | M |
 | GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
 | GRAMPS-RT | **GRAMPS-Writer vollständig + Roundtrip-Test** | `gramps-writer.js` auf Vollständigkeit prüfen: alle geparsten GRAMPS-Felder müssen zurückgeschrieben werden. Automatisierter Test: GRAMPS laden → exportieren → reimportieren → Delta auf 0. Besonderes Augenmerk: `_TASK`/`_RLOG` (kein GRAMPS-Pendant — als `attribute type="…"` oder Note schreiben?); FREL/MREL-Qualifiers. | M |
-| TEST-AUTO | **Automatisierter GEDCOM-Roundtrip-Test** | Node.js- oder Browser-Skript: Test-GEDCOM laden → `parseGEDCOM()` → `writeGEDCOM()` → Zeilenvergleich gegen Referenz-Output. In CI oder als manuelles `?test=1`-Mode einbinden. Verhindert Regressionen beim Parser/Writer-Refactoring. | S |
+| ~~TEST-AUTO~~ | ~~**Standalone GEDCOM Roundtrip Test**~~ | `test.html`: lädt nur `gedcom.js` + `gedcom-parser.js` + `gedcom-writer.js` (kein UI, ~100ms); Drag-Drop für beliebig viele .ged-Dateien; parse→write→parse→write; Tabelle mit Personen/Familien/Quellen, net_delta, Stabilität, Zeit; aufklappbarer Diff bei Instabilität | - |
 | OBJE-TYPE | **Medien-Typ strukturiert** ⚠ | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
 
 ---
