@@ -641,6 +641,195 @@ ${lifespan}
 </section>`;
   }
 
+  // ── Mini-Sanduhr-Diagram (inline SVG, datenbasiert) ─────────────────────────
+
+  function _sectionDiagram(p) {
+    const CW = 100, CH = 38;        // Normalkarte
+    const PW = 120, PH = 46;        // Proband-Karte
+    const HG = 10,  VG = 42;        // H-/V-Abstand
+    const M  = 16,  BIGAP = 22;     // Randabstand, Lücke paternal/maternal
+
+    // Daten sammeln
+    const famc   = p.famc?.[0] ? getFamily(p.famc[0].famId) : null;
+    const father = famc?.husb ? getPerson(famc.husb) : null;
+    const mother = famc?.wife ? getPerson(famc.wife) : null;
+
+    const famF  = father?.famc?.[0] ? getFamily(father.famc[0].famId) : null;
+    const famM  = mother?.famc?.[0] ? getFamily(mother.famc[0].famId) : null;
+    const patGF = famF?.husb ? getPerson(famF.husb) : null;
+    const patGM = famF?.wife ? getPerson(famF.wife) : null;
+    const matGF = famM?.husb ? getPerson(famM.husb) : null;
+    const matGM = famM?.wife ? getPerson(famM.wife) : null;
+
+    const hasGP      = !!(patGF || patGM || matGF || matGM);
+    const hasParents = !!(father || mother);
+
+    const allChildren = [];
+    for (const famId of (p.fams || [])) {
+      const f = getFamily(famId);
+      if (f?.children) {
+        for (const cid of f.children) {
+          const c = getPerson(cid);
+          if (c) allChildren.push(c);
+        }
+      }
+    }
+    allChildren.sort((a, b) =>
+      (_yearFromDate(a.birth?.date || a.chr?.date) ?? Infinity) -
+      (_yearFromDate(b.birth?.date || b.chr?.date) ?? Infinity));
+    const hasChildren = allChildren.length > 0;
+
+    if (!hasParents && !hasChildren) return '';
+
+    const firstFam  = p.fams?.length ? getFamily(p.fams[0]) : null;
+    const partnerId = firstFam ? (p.id === firstFam.husb ? firstFam.wife : firstFam.husb) : null;
+    const partner   = partnerId ? getPerson(partnerId) : null;
+
+    // ── Layout ────────────────────────────────────────────────────────────────
+    const svgW = M + 3 * (CW + HG) + CW + BIGAP + M; // 484 px
+
+    const gpL  = [M, M+CW+HG, M+2*(CW+HG)+BIGAP, M+3*(CW+HG)+BIGAP];
+    const gpCx = gpL.map(l => l + CW / 2);
+    const fCx  = (gpCx[0] + gpCx[1]) / 2;  // 121
+    const mCx  = (gpCx[2] + gpCx[3]) / 2;  // 353
+    const pCx  = hasParents ? (fCx + mCx) / 2 : svgW / 2;
+    const pL   = pCx - PW / 2;
+    const partL = pCx + PW / 2 + HG;
+
+    let svgH = M;
+    const gpY  = hasGP      ? svgH : -1; if (hasGP)      svgH += CH + VG;
+    const parY = hasParents  ? svgH : -1; if (hasParents)  svgH += CH + VG;
+    const pY   = svgH; svgH += PH + VG;
+    const cY   = hasChildren ? svgH : -1; if (hasChildren) svgH += CH;
+    svgH += M;
+
+    // ── SVG-Helfer ────────────────────────────────────────────────────────────
+    const BRD = 'var(--border,#d8ceb8)';
+    const GLD = 'var(--gold,#c8b97a)';
+    const FILL= 'var(--surface2,#f2ede0)';
+    const TXT = 'var(--text,#2c2a26)';
+    const DIM = 'var(--text2,#888)';
+
+    function vln(x, y1, y2, col) {
+      return `<line x1="${+x.toFixed(1)}" y1="${y1}" x2="${+x.toFixed(1)}" y2="${y2}" stroke="${col}" stroke-width="1.5"/>`;
+    }
+    function hln(x1, y, x2, col, dash) {
+      return `<line x1="${+x1.toFixed(1)}" y1="${y}" x2="${+x2.toFixed(1)}" y2="${y}" stroke="${col}" stroke-width="1.5"${dash ? ' stroke-dasharray="4,3"' : ''}/>`;
+    }
+
+    function mkCard(x, y, w, h, person, isProband) {
+      if (!person) return '';
+      const id  = person.id;
+      const sex = person.sex || 'U';
+      const sc  = sex === 'M' ? 'var(--male-col,#5b8fd4)' : sex === 'F' ? 'var(--female-col,#c47a9f)' : BRD;
+      const stroke = isProband ? GLD : sc;
+      const sw     = isProband ? 2.5 : 1.5;
+      const cx     = +(x + w / 2).toFixed(1);
+
+      const given  = (person.given || (person.name||'').split(',')[1]?.trim() || '').trim();
+      const sur    = (person.surname || (person.name||'').split(',')[0]?.trim() || '').trim();
+      const by     = _yearFromDate(person.birth?.date || person.chr?.date);
+      const dy     = _yearFromDate(person.death?.date);
+      const yrs    = by && dy ? `*${by} †${dy}` : by ? `*${by}` : dy ? `†${dy}` : '';
+
+      let txt = [];
+      if (isProband) {
+        const g = _esc((given || sur).substring(0, 15));
+        const s = given ? _esc(sur.substring(0, 15)) : '';
+        if (g) txt.push(`<text x="${cx}" y="${+(y+h*.28).toFixed(1)}" font-size="11" font-weight="bold" fill="${TXT}" text-anchor="middle" dominant-baseline="middle">${g}</text>`);
+        if (s) txt.push(`<text x="${cx}" y="${+(y+h*.52).toFixed(1)}" font-size="10" fill="${TXT}" text-anchor="middle" dominant-baseline="middle">${s}</text>`);
+        if (yrs) txt.push(`<text x="${cx}" y="${+(y+h*.78).toFixed(1)}" font-size="9" fill="${DIM}" text-anchor="middle" dominant-baseline="middle">${_esc(yrs)}</text>`);
+      } else {
+        const nm = _esc((given || sur).substring(0, 13));
+        if (nm)  txt.push(`<text x="${cx}" y="${+(y+h*(yrs?.35:.5)).toFixed(1)}" font-size="10" font-weight="600" fill="${TXT}" text-anchor="middle" dominant-baseline="middle">${nm}</text>`);
+        if (yrs) txt.push(`<text x="${cx}" y="${+(y+h*.72).toFixed(1)}" font-size="9" fill="${DIM}" text-anchor="middle" dominant-baseline="middle">${_esc(yrs)}</text>`);
+      }
+
+      const onClick = id ? ` onclick="if(typeof showDetail==='function')showDetail('${_esc(id)}')"` : '';
+      return `<g style="cursor:${id?'pointer':'default'}"${onClick}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${FILL}" stroke="${stroke}" stroke-width="${sw}"/>${txt.join('')}</g>`;
+    }
+
+    // ── Elemente aufbauen (lines z=0, cards z=1) ───────────────────────────
+    const elems = [];
+
+    // Großeltern
+    if (hasGP) {
+      [[patGF,0],[patGM,1],[matGF,2],[matGM,3]].forEach(([gp,i]) => {
+        if (gp) elems.push([1, mkCard(gpL[i], gpY, CW, CH, gp, false)]);
+      });
+      if (hasParents) {
+        const jY = gpY + CH + Math.round(VG / 3);
+        if (father && (patGF || patGM)) {
+          if (patGF && patGM) elems.push([0, hln(gpCx[0], jY, gpCx[1], BRD)]);
+          if (patGF) elems.push([0, vln(gpCx[0], gpY+CH, jY, BRD)]);
+          if (patGM) elems.push([0, vln(gpCx[1], gpY+CH, jY, BRD)]);
+          elems.push([0, vln(fCx, jY, parY, BRD)]);
+        }
+        if (mother && (matGF || matGM)) {
+          if (matGF && matGM) elems.push([0, hln(gpCx[2], jY, gpCx[3], BRD)]);
+          if (matGF) elems.push([0, vln(gpCx[2], gpY+CH, jY, BRD)]);
+          if (matGM) elems.push([0, vln(gpCx[3], gpY+CH, jY, BRD)]);
+          elems.push([0, vln(mCx, jY, parY, BRD)]);
+        }
+      }
+    }
+
+    // Eltern
+    if (hasParents) {
+      if (father) elems.push([1, mkCard(fCx-CW/2, parY, CW, CH, father, false)]);
+      if (mother) elems.push([1, mkCard(mCx-CW/2, parY, CW, CH, mother, false)]);
+      const jY2 = parY + CH + Math.round(VG / 2);
+      const lCx = father ? fCx : mCx, rCx = mother ? mCx : fCx;
+      if (father && mother) elems.push([0, hln(lCx, jY2, rCx, GLD)]);
+      if (father) elems.push([0, vln(fCx, parY+CH, jY2, GLD)]);
+      if (mother) elems.push([0, vln(mCx, parY+CH, jY2, GLD)]);
+      elems.push([0, vln(pCx, jY2, pY, GLD)]);
+    }
+
+    // Proband
+    elems.push([1, mkCard(pL, pY, PW, PH, p, true)]);
+
+    // Partner
+    if (partner) {
+      elems.push([0, hln(pL+PW, pY+PH/2, partL, GLD, true)]);
+      const mpX = +(pL+PW+HG/2).toFixed(1);
+      elems.push([0, `<text x="${mpX}" y="${+(pY+PH/2+0.5).toFixed(1)}" font-size="9" fill="${GLD}" text-anchor="middle" dominant-baseline="middle">⚭</text>`]);
+      elems.push([1, mkCard(partL, pY, CW, PH, partner, false)]);
+    }
+
+    // Kinder
+    if (hasChildren) {
+      const MAX_C  = 4;
+      const shown  = allChildren.slice(0, MAX_C);
+      const hasMore = allChildren.length > MAX_C;
+      const slots  = shown.length + (hasMore ? 1 : 0);
+      const rowW   = slots * CW + (slots - 1) * HG;
+      const cStart = Math.min(Math.max(M, pCx - rowW / 2), svgW - M - rowW);
+      const jY3    = pY + PH + Math.round(VG / 3);
+      const cCxArr = shown.map((_, i) => cStart + i*(CW+HG) + CW/2);
+      if (hasMore) cCxArr.push(cStart + shown.length*(CW+HG) + CW/2);
+
+      elems.push([0, vln(pCx, pY+PH, jY3, BRD)]);
+      elems.push([0, hln(Math.min(pCx,cCxArr[0]), jY3, Math.max(pCx,cCxArr.at(-1)), BRD)]);
+      shown.forEach((child, i) => {
+        const cx2 = cStart + i*(CW+HG);
+        elems.push([0, vln(cx2+CW/2, jY3, cY, BRD)]);
+        elems.push([1, mkCard(cx2, cY, CW, CH, child, false)]);
+      });
+      if (hasMore) {
+        const mX = cStart + shown.length*(CW+HG), mCxN = mX+CW/2;
+        elems.push([0, vln(mCxN, jY3, cY, BRD)]);
+        elems.push([0, `<rect x="${mX}" y="${cY}" width="${CW}" height="${CH}" rx="5" fill="${FILL}" stroke="${BRD}" stroke-dasharray="4,3"/>`]);
+        elems.push([0, `<text x="${+mCxN.toFixed(1)}" y="${+(cY+CH/2).toFixed(1)}" font-size="12" fill="${DIM}" text-anchor="middle" dominant-baseline="middle">+${allChildren.length-MAX_C}</text>`]);
+      }
+    }
+
+    elems.sort((a, b) => a[0] - b[0]);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" style="font-family:system-ui,sans-serif">\n${elems.map(e => '  '+e[1]).join('\n')}\n</svg>`;
+
+    return `<section class="story-section story-diagram"><div class="story-diagram-wrap">${svg}</div></section>`;
+  }
+
   // ── Haupt-Renderer ──────────────────────────────────────────────────────────
 
   function _renderStory(pid) {
@@ -650,6 +839,7 @@ ${lifespan}
     let html = '<article class="story-article">';
     html += _sectionHeader(p, pr);
     html += `<section class="story-section story-map"><div id="storyMap" class="story-map-container"></div></section>`;
+    html += _sectionDiagram(p);
     html += _sectionEarlyLife(p, pr);
     html += _sectionEpoch(p, pr);
     html += _sectionEvents(p, pr);
@@ -714,7 +904,10 @@ body{padding:2rem 2rem 4rem;max-width:740px;margin:0 auto;font-family:Georgia,se
 .story-death{border-left:3px solid #aaa;padding-left:.9rem;font-style:italic;color:#555}
 .story-reli{text-align:center}
 .story-reli-note{color:#888;font-size:.82rem;margin:0}
-.story-note{background:#f2ede0;border-radius:6px;padding:.75rem 1rem}`;
+.story-note{background:#f2ede0;border-radius:6px;padding:.75rem 1rem}
+.story-diagram{margin-bottom:1.4rem}
+.story-diagram-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:6px}
+.story-diagram-wrap svg{width:100%;height:auto;display:block;min-width:320px}`;
 
     return `<!DOCTYPE html>
 <html lang="de">

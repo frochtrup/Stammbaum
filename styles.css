@@ -3033,6 +3033,10 @@ html[data-theme="dark"] {
 /* ── Note ── */
 .story-note { background: var(--surface2); border-radius: 6px; padding: .75rem 1rem; }
 
+.story-diagram { margin-bottom: 1.4rem; }
+.story-diagram-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+.story-diagram-wrap svg { width: 100%; height: auto; display: block; min-width: 320px; }
+
 .story-section-title {
   font-size: .75rem;
   font-weight: 700;
