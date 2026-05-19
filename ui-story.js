@@ -231,25 +231,20 @@
     return ' (' + [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(', ') + ')';
   }
 
-  // Kinderliste mit Geburtsjahren; gibt den Satzteil ab „stammt/stammen/gingen" zurück
-  function _childNames(children) {
+  // Kinderliste: vollständiger Satz, natürliche Formulierung
+  function _childSentence(children) {
     if (!children.length) return null;
     const withYr = children.map(c => {
       const yr = _yearFromDate(c.birth?.date || c.chr?.date);
       return _esc(c.name || c.id) + (yr ? ` (*${yr})` : '');
     });
     const n = withYr.length;
-    if (n <= 3) {
-      const last = withYr.slice(-1)[0];
-      const rest = withYr.slice(0, -1);
-      return n === 1 ? `stammt ${last}` : `stammen ${rest.join(', ')} und ${last}`;
-    }
-    if (n <= 6) {
-      const last = withYr.slice(-1)[0];
-      const rest = withYr.slice(0, -1);
-      return `gingen ${n} Kinder hervor: ${rest.join(', ')} und ${last}`;
-    }
-    return `gingen ${n} Kinder hervor`;
+    const last = withYr.slice(-1)[0];
+    const rest = withYr.slice(0, -1);
+    if (n === 1) return `Das gemeinsame Kind war ${last}.`;
+    if (n <= 3)  return `Die gemeinsamen Kinder waren ${rest.join(', ')} und ${last}.`;
+    if (n <= 6)  return `Das Paar hatte ${n} Kinder: ${rest.join(', ')} und ${last}.`;
+    return `Das Paar hatte ${n} Kinder.`;
   }
 
   // Mehrere OCCU-Ereignisse zu einem Satz zusammenführen
@@ -411,8 +406,10 @@
   function _sectionHeader(p, pr) {
     const birth = p.birth?.date || p.chr?.date || '';
     const death = p.death?.date || '';
-    const lifespan = (birth || death)
-      ? `<p class="story-lifespan">${_esc(birth)}${birth && death ? ' – ' : ''}${_esc(death)}</p>`
+    const fmtB  = birth ? _fmtDate(birth) : '';
+    const fmtD  = death ? _fmtDate(death) : '';
+    const lifespan = (fmtB || fmtD)
+      ? `<p class="story-lifespan">${_esc(fmtB)}${fmtB && fmtD ? ' – ' : ''}${_esc(fmtD)}</p>`
       : '';
     return `<header class="story-header">
 <div class="story-media-row">
@@ -427,10 +424,17 @@ ${lifespan}
   function _sectionEarlyLife(p, pr) {
     const sentences = [];
 
-    const bDate  = _atDate({ date: p.birth?.date });
+    const bRaw   = p.birth?.date || '';
     const bPlace = p.birth?.place ? ' in ' + _esc(_shortPlace(p.birth.place)) : '';
-    if (p.birth?.seen || bDate || bPlace) {
-      sentences.push(`${_esc(p.name || pr.Er)} wurde${bDate}${bPlace} geboren.`);
+    if (p.birth?.seen || bRaw || bPlace) {
+      const yearOnly = /^\d{4}$/.test(bRaw.trim());
+      if (yearOnly) {
+        const yr = bRaw.trim();
+        sentences.push(`${_esc(p.name || pr.Er)} kam ${yr}${bPlace} zur Welt.`);
+      } else {
+        const bDate = _atDate({ date: bRaw });
+        sentences.push(`${_esc(p.name || pr.Er)} wurde${bDate}${bPlace} geboren.`);
+      }
     }
 
     if (p.chr?.seen) {
@@ -553,8 +557,8 @@ ${lifespan}
 
       const children = (f.children || []).map(cid => getPerson(cid)).filter(Boolean);
       if (children.length) {
-        const childStr = _childNames(children);
-        if (childStr) sentences.push(`Aus dieser Ehe ${childStr}.`);
+        const childStr = _childSentence(children);
+        if (childStr) sentences.push(childStr);
       }
 
       if (sentences.length) {
@@ -600,16 +604,25 @@ ${lifespan}
     const matches   = _STORY_EPOCHS.filter(e => e.from <= lifeEnd && e.to >= lifeStart);
     if (!matches.length) return '';
 
+    const eLabel = e => `${_esc(e.gen)} (${e.from === e.to ? e.from : e.from + '–' + e.to})`;
     const top = matches.slice(0, 3);
     let sentence;
     if (top.length === 1) {
-      sentence = `${pr.Er} lebte in der Zeit ${_esc(top[0].gen)} (${top[0].from}–${top[0].to}).`;
+      sentence = `${pr.Er} lebte in der Zeit ${eLabel(top[0])}.`;
     } else {
       const last = top[top.length - 1];
       const rest = top.slice(0, -1);
-      const restStr = rest.map(e => `${_esc(e.gen)} (${e.from}–${e.to})`).join(', ');
-      sentence = `${pr.Er} lebte in der Zeit ${restStr} und ${_esc(last.gen)} (${last.from}–${last.to}).`;
+      sentence = `${pr.Er} lebte in der Zeit ${rest.map(eLabel).join(', ')} und ${eLabel(last)}.`;
     }
+    // Kontext-Satz: Epoche mit größtem Lebens-Überlapp aus den angezeigten (top)
+    const ctxEpoch = top.reduce((best, e) => {
+      if (!e.ctx) return best;
+      const overlap = Math.min(lifeEnd, e.to) - Math.max(lifeStart, e.from);
+      if (!best) return e;
+      const bestOverlap = Math.min(lifeEnd, best.to) - Math.max(lifeStart, best.from);
+      return overlap > bestOverlap ? e : best;
+    }, null);
+    if (ctxEpoch?.ctx) sentence += ' ' + _esc(ctxEpoch.ctx);
     return `<section class="story-section story-epoch">
 <p class="story-epoch-ctx">${sentence}</p>
 </section>`;
