@@ -265,6 +265,21 @@
       <div id="or-passthrough"></div>
     </div>
   </div>
+
+  <div style="margin-top:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <div class="or-section-title" style="margin:0;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#555">
+        Maschinenlesbarer Report
+      </div>
+      <button class="btn" id="copy-report-btn" style="margin-top:0;font-size:11px;padding:3px 10px" onclick="copyReport()">📋 Kopieren</button>
+      <span id="copy-confirm" style="font-size:11px;color:#5c9e5c;display:none">✓ Kopiert</span>
+    </div>
+    <textarea id="machine-report" readonly
+      style="width:100%;height:420px;background:#0d0d0d;border:1px solid #333;border-radius:6px;
+             color:#ccc;font-family:monospace;font-size:11px;padding:12px;resize:vertical;
+             line-height:1.5;white-space:pre"
+      placeholder="Erscheint nach dem ersten Test …"></textarea>
+  </div>
 </div>
 
 <script src="gedcom.js"></script>
@@ -282,11 +297,14 @@ let _passCount = 0, _failCount = 0, _warnCount = 0;
 
 const _agg = {
   persons: 0, families: 0, sources: 0, netDelta: 0, unstable: 0,
-  tagDeltas: {},   // lbl → cumulative diff
-  missingTags: {}, // tag → count (non-DATE/PLAC)
-  dpCtx: {},       // "RecType / 1 ev / TAG" → count
-  warnMsgs: {},    // msg → count
-  ptTags: {},      // passthrough tag → count
+  tagDeltas: {},    // lbl → cumulative diff
+  missingTags: {},  // tag → count (non-DATE/PLAC)
+  dpCtx: {},        // "RecType / 1 ev / TAG" → count
+  warnMsgs: {},     // msg → count
+  ptTags: {},       // passthrough tag → count
+  lostExamples: {}, // tag → [{recType,recId,lv1tag,prev,line,next,lineNo,file}]
+  warnExamples: {}, // msg → [{line,raw,file}]
+  fileNames: [],
 };
 
 function _aggResult(r) {
@@ -294,6 +312,7 @@ function _aggResult(r) {
   _agg.families += r.families;
   _agg.sources  += r.sources;
   _agg.netDelta += r.delta;
+  _agg.fileNames.push(r.name);
   if (!r.stable) _agg.unstable++;
 
   if (r.deltaAnalysis) {
@@ -305,20 +324,30 @@ function _aggResult(r) {
     }
     for (const [k, n] of Object.entries(r.deltaAnalysis.dpCtx || {}))
       _agg.dpCtx[k] = (_agg.dpCtx[k] || 0) + n;
+    // Beispiele sammeln (max. 3 pro Tag gesamt)
+    for (const [tag, examples] of Object.entries(r.deltaAnalysis.lostExamples || {})) {
+      if (!_agg.lostExamples[tag]) _agg.lostExamples[tag] = [];
+      for (const ex of examples) {
+        if (_agg.lostExamples[tag].length < 3)
+          _agg.lostExamples[tag].push({ ...ex, file: r.name });
+      }
+    }
   }
-  for (const e of (r.errs1 || []))
+  for (const e of (r.errs1 || [])) {
     _agg.warnMsgs[e.msg] = (_agg.warnMsgs[e.msg] || 0) + 1;
+    if (!_agg.warnExamples[e.msg]) _agg.warnExamples[e.msg] = [];
+    if (_agg.warnExamples[e.msg].length < 3)
+      _agg.warnExamples[e.msg].push({ lineNo: e.line, raw: e.raw || '', file: r.name });
+  }
 
   // Passthrough-Tags aus db
   const db = AppState.db;
-  for (const p of Object.values(db.individuals || {})) {
+  for (const p of Object.values(db.individuals || {}))
     for (const l of (p._passthrough || []))
       { const t = l.match(/^\d+ (\S+)/)?.[1]; if (t) _agg.ptTags[t] = (_agg.ptTags[t]||0)+1; }
-  }
-  for (const f of Object.values(db.families || {})) {
+  for (const f of Object.values(db.families || {}))
     for (const l of (f._passthrough || []))
       { const t = l.match(/^\d+ (\S+)/)?.[1]; if (t) _agg.ptTags[t] = (_agg.ptTags[t]||0)+1; }
-  }
 }
 
 // ── Drag & Drop ───────────────────────────────────────────────
@@ -337,7 +366,8 @@ document.getElementById('clear-btn').addEventListener('click', () => {
   document.getElementById('opt-report').style.display = 'none';
   _passCount = 0; _failCount = 0; _warnCount = 0;
   Object.assign(_agg, { persons:0, families:0, sources:0, netDelta:0, unstable:0,
-    tagDeltas:{}, missingTags:{}, dpCtx:{}, warnMsgs:{}, ptTags:{} });
+    tagDeltas:{}, missingTags:{}, dpCtx:{}, warnMsgs:{}, ptTags:{},
+    lostExamples:{}, warnExamples:{}, fileNames:[] });
 });
 
 // ── File Queue ────────────────────────────────────────────────
@@ -430,7 +460,7 @@ const TAG_CHECKS = [
 ];
 
 function analyzeDelta(orig, out1) {
-  const cnt = (text, re) => (text.match(re) || []).length;
+  const cnt  = (text, re) => (text.match(re) || []).length;
   const norm = l => l.trim().replace(/@@/g, '@');
 
   // Tag delta — nur abweichende
@@ -439,24 +469,41 @@ function analyzeDelta(orig, out1) {
     .filter(t => t.d !== 0)
     .sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
 
-  // Missing tags (orig lines not in out1)
-  const origLines = orig.split(/\r?\n/).map(norm).filter(Boolean);
+  // Missing tags + Beispielzeilen mit Kontext
+  const normArr = orig.split(/\r?\n/).map(norm);
   const outCounts = new Map();
   for (const l of out1.split(/\r?\n/).map(norm).filter(Boolean))
     outCounts.set(l, (outCounts.get(l) || 0) + 1);
 
-  const missingTags = {};
-  let dpRecType = '', dpLv1 = '';
+  const missingTags = {}, lostExamples = {};
+  let dpRecType = '', dpLv1 = '', dpRecId = '';
   const dpCtx = {}, dpSamples = [];
 
-  for (const l of origLines) {
+  for (let i = 0; i < normArr.length; i++) {
+    const l = normArr[i]; if (!l) continue;
     const lv = parseInt(l);
-    if (lv === 0) { dpRecType = (l.match(/^0 @\S+@ (\S+)/) || l.match(/^0 (\S+)/))?.[1] || ''; dpLv1 = ''; }
-    else if (lv === 1) dpLv1 = l.match(/^1 (\S+)/)?.[1] || '';
+    if (lv === 0) {
+      dpRecType = (l.match(/^0 @\S+@ (\S+)/) || l.match(/^0 (\S+)/))?.[1] || '';
+      dpRecId   = l.match(/^0 (@\S+@)/)?.[1] || '';
+      dpLv1 = '';
+    } else if (lv === 1) dpLv1 = l.match(/^1 (\S+)/)?.[1] || '';
+
     const rem = outCounts.get(l) || 0;
     if (rem > 0) { outCounts.set(l, rem - 1); continue; }
+
     const tag = l.match(/^\d+ (\S+)/)?.[1] || '?';
     missingTags[tag] = (missingTags[tag] || 0) + 1;
+
+    // Beispielzeilen mit Kontext (max. 4 pro Tag)
+    if (!lostExamples[tag]) lostExamples[tag] = [];
+    if (lostExamples[tag].length < 4) {
+      lostExamples[tag].push({
+        recType: dpRecType, recId: dpRecId, lv1tag: dpLv1,
+        prev: normArr[i - 1] || '', line: l, next: normArr[i + 1] || '',
+        lineNo: i + 1,
+      });
+    }
+
     if ((tag === 'DATE' || tag === 'PLAC') && lv === 2) {
       const key = `${dpRecType} / 1 ${dpLv1} / ${tag}`;
       dpCtx[key] = (dpCtx[key] || 0) + 1;
@@ -465,8 +512,7 @@ function analyzeDelta(orig, out1) {
   }
 
   const topMissing = Object.entries(missingTags).sort((a, b) => b[1] - a[1]).slice(0, 20);
-
-  return { tagDiffs, topMissing, dpCtx, dpSamples };
+  return { tagDiffs, topMissing, dpCtx, dpSamples, lostExamples };
 }
 
 // ── Diff helper ───────────────────────────────────────────────
@@ -617,6 +663,7 @@ function esc(s) {
 function renderOptReport() {
   const rpt = document.getElementById('opt-report');
   rpt.style.display = 'block';
+  document.getElementById('machine-report').value = buildMachineReport();
 
   // Statistik-Zeile
   const deltaClass = _agg.netDelta === 0 ? 'zero' : (_agg.netDelta > 0 ? 'pos' : 'neg');
@@ -670,6 +717,159 @@ function renderOptReport() {
   document.getElementById('or-passthrough').innerHTML = ptEntries.length
     ? ptEntries.slice(0,15).map(([t, n]) => barRow(t, n, maxPt, 'warn', `${n}×`)).join('')
     : '<div class="or-empty">Kein Passthrough</div>';
+}
+
+// ── Maschinenlesbarer Report ──────────────────────────────────
+function buildMachineReport() {
+  const now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const lines = [];
+  const nl  = s => lines.push(s ?? '');
+  const sep = () => nl('─'.repeat(72));
+
+  nl(`# GEDCOM Roundtrip Analyse — ${now}`);
+  nl(`# Generiert von test.html (gedcom-parser.js + gedcom-writer.js)`);
+  nl();
+  nl(`## Getestete Dateien`);
+  for (const f of _agg.fileNames) nl(`  - ${f}`);
+  nl();
+  nl(`## Zusammenfassung`);
+  nl(`  Personen:  ${_agg.persons.toLocaleString('de')}`);
+  nl(`  Familien:  ${_agg.families.toLocaleString('de')}`);
+  nl(`  Quellen:   ${_agg.sources.toLocaleString('de')}`);
+  nl(`  net_delta: ${_agg.netDelta >= 0 ? '+' : ''}${_agg.netDelta}  (Zeilen orig → out1)`);
+  nl(`  Instabil:  ${_agg.unstable} Datei(en)  [out1 ≠ out2]`);
+  nl();
+  sep();
+  nl(`## Parser/Writer-Verluste (nach Priorität)`);
+  nl(`## Relevante Dateien: gedcom-parser.js, gedcom-writer.js`);
+  sep();
+  nl();
+
+  const losses = Object.entries(_agg.tagDeltas)
+    .filter(([, d]) => d < 0)
+    .sort((a, b) => a[1] - b[1]);
+
+  if (!losses.length) {
+    nl('  (keine Tag-Verluste)');
+  } else {
+    losses.forEach(([lbl, d], i) => {
+      nl(`### ${i + 1}. \`${lbl}\`  verliert ${Math.abs(d)} Zeilen`);
+      nl();
+
+      // DATE/PLAC Kontext
+      if (lbl === '2 DATE' || lbl === '2 PLAC') {
+        const tag = lbl.split(' ')[1];
+        const ctx = Object.entries(_agg.dpCtx)
+          .filter(([k]) => k.endsWith(`/ ${tag}`))
+          .sort((a, b) => b[1] - a[1]);
+        if (ctx.length) {
+          nl('  Ereignistypen mit Verlust:');
+          for (const [k, n] of ctx) nl(`    ${k}:  ${n}×`);
+          nl();
+        }
+      }
+
+      // Beispiele
+      const exs = _agg.lostExamples[lbl.split(' ')[1]] || [];
+      if (exs.length) {
+        nl('  Beispiele (Originalzeile → fehlt in out1):');
+        for (const ex of exs) {
+          nl(`  Datei: ${ex.file}  Z.${ex.lineNo}  [${ex.recType} ${ex.recId} / 1 ${ex.lv1tag}]`);
+          if (ex.prev) nl(`    ${ex.prev}`);
+          nl(`  ► ${ex.line}   ← FEHLT`);
+          if (ex.next) nl(`    ${ex.next}`);
+          nl();
+        }
+      }
+
+      // Lösungshinweis
+      const tag = lbl.split(' ')[1];
+      const isINDI = (exs[0]?.recType === 'INDI');
+      const isFAM  = (exs[0]?.recType === 'FAM');
+      nl('  Lösungshinweis:');
+      if (isINDI) nl(`    → gedcom-parser.js _parseINDILine(): ${tag} bei Ereignis 1 ${exs[0]?.lv1tag} prüfen`);
+      else if (isFAM) nl(`    → gedcom-parser.js _parseFAMLine(): ${tag} bei Ereignis 1 ${exs[0]?.lv1tag} prüfen`);
+      else nl(`    → gedcom-parser.js / gedcom-writer.js: ${lbl} Roundtrip prüfen`);
+      nl();
+      sep();
+      nl();
+    });
+  }
+
+  const gains = Object.entries(_agg.tagDeltas).filter(([, d]) => d > 0).sort((a, b) => b[1] - a[1]);
+  if (gains.length) {
+    nl(`## Tag-Gewinne (Writer schreibt mehr als Original)`);
+    nl(`## Hinweis: CONC/CONT-Gewinne sind by design (Zeilenumbruch-Normalisierung)`);
+    nl();
+    for (const [lbl, d] of gains) nl(`  \`${lbl}\`  +${d} Zeilen`);
+    nl(); sep(); nl();
+  }
+
+  // Sonstige fehlende Tags
+  const miss = Object.entries(_agg.missingTags).sort((a, b) => b[1] - a[1]);
+  if (miss.length) {
+    nl('## Sonstige fehlende Zeilen (kein Tag-Delta-Match)');
+    nl();
+    for (const [tag, n] of miss.slice(0, 15)) {
+      nl(`  \`${tag}\`  ${n}×`);
+      const exs = _agg.lostExamples[tag] || [];
+      for (const ex of exs.slice(0, 2))
+        nl(`    [${ex.file} Z.${ex.lineNo}] ${ex.prev ? ex.prev + ' / ' : ''}${ex.line}`);
+    }
+    nl(); sep(); nl();
+  }
+
+  // Passthrough
+  const pt = Object.entries(_agg.ptTags).sort((a, b) => b[1] - a[1]);
+  if (pt.length) {
+    nl('## Passthrough-Tags (kein Parser-Support)');
+    nl('## Diese Tags werden verbatim durchgereicht — kein Datenverlust, aber kein Edit möglich');
+    nl();
+    for (const [tag, n] of pt.slice(0, 20)) nl(`  \`${tag}\`  ${n}×`);
+    nl(); sep(); nl();
+  }
+
+  // Warnungen
+  const warns = Object.entries(_agg.warnMsgs).sort((a, b) => b[1] - a[1]);
+  if (warns.length) {
+    nl('## Parse-Warnungen');
+    nl();
+    for (const [msg, n] of warns) {
+      nl(`  "${msg}"  ${n}×`);
+      for (const ex of (_agg.warnExamples[msg] || []).slice(0, 2))
+        nl(`    [${ex.file} Z.${ex.lineNo}]  ${ex.raw}`);
+      nl();
+    }
+    sep(); nl();
+  }
+
+  nl('## Fix-Prompt für Claude Code');
+  nl('## ─────────────────────────────────────────────────────────────────────');
+  nl('## Kopiere alles ab hier und füge es in Claude Code ein:');
+  nl();
+  nl('Analysiere gedcom-parser.js und gedcom-writer.js und behebe folgende');
+  nl('Roundtrip-Verluste (Testbasis: test.html, Roundtrip net_delta soll 0 sein):');
+  nl();
+  losses.slice(0, 5).forEach(([lbl, d], i) => {
+    const exs = _agg.lostExamples[lbl.split(' ')[1]] || [];
+    const ctx = exs[0] ? `[${exs[0].recType}/1 ${exs[0].lv1tag}]` : '';
+    nl(`${i + 1}. \`${lbl}\` verliert ${Math.abs(d)} Zeilen ${ctx}`);
+    if (exs[0]) nl(`   Beispiel Z.${exs[0].lineNo} (${exs[0].file}): ${exs[0].prev} | ${exs[0].line}`);
+  });
+  nl();
+  nl('Vorgehen: Roundtrip-Test nach jeder Änderung mit test.html verifizieren.');
+
+  return lines.join('\n');
+}
+
+function copyReport() {
+  const text = buildMachineReport();
+  document.getElementById('machine-report').value = text;
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById('copy-confirm');
+    el.style.display = 'inline';
+    setTimeout(() => { el.style.display = 'none'; }, 2000);
+  });
 }
 
 function barRow(lbl, val, max, type, countStr) {
