@@ -667,7 +667,10 @@ function showTree(personId, addToHistory = true) {
   }
 
   // ── Zentrumsperson ──
-  mkCard(personId, personX, ry(0), true, false, null, false, null, kbadge(personId));
+  const sibCountBadge = nSibs > 0
+    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">${nSibs}</div>`
+    : '';
+  mkCard(personId, personX, ry(0), true, false, null, false, null, sibCountBadge + kbadge(personId));
 
   // ── Ehepartner: horizontal rechts ──
   // Aktiver Ehepartner (Index aus _activeSpouseMap) steht links (nächste am Probanden).
