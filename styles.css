@@ -2407,16 +2407,18 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
 }
 .tree-half-badge--right {
   left: auto; right: 4px;
-  font-size: 0.72rem; font-style: normal;
+  font-size: 0.72rem; font-style: normal; line-height: 1.5;
   background: var(--gold-dim); color: var(--bg);
-  border-radius: 4px; padding: 1px 4px;
+  border-radius: 4px; padding: 1px 5px;
   display: inline-flex; align-items: center; justify-content: center;
+  letter-spacing: 0.02em;
 }
 .tree-half-badge--sib-count {
-  right: auto; left: 4px; font-style: normal;
+  right: auto; left: 4px; font-style: normal; line-height: 1.5;
   background: var(--gold-dim); color: var(--bg);
-  border-radius: 4px; padding: 1px 4px;
+  border-radius: 4px; padding: 1px 5px;
   display: inline-flex; align-items: center; justify-content: center;
+  letter-spacing: 0.02em;
 }
 .tree-sib-more {
   position: absolute;

@@ -605,7 +605,7 @@ function showTree(personId, addToHistory = true) {
       `<div class="tree-name">${_treeNameHtml(q, isCenter)}</div>` +
       (yr ? `<div class="tree-yr${isPortrait ? ' tree-yr--portrait' : ''}">${yr}</div>` : '') +
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
-      (multiMarr ? `<div class="tree-half-badge tree-half-badge--right">⚭${spouseFamsEarly.length}</div>` : '') +
+      (multiMarr ? `<div class="tree-half-badge tree-half-badge--right">⚭ ${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
     div.addEventListener('click', onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id)));
     wrap.appendChild(div);
@@ -681,7 +681,7 @@ function showTree(personId, addToHistory = true) {
 
   // ── Zentrumsperson ──
   const sibCountBadge = nSibs > 0
-    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">∞${nSibs}</div>`
+    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">∞ ${nSibs}</div>`
     : '';
   mkCard(personId, personX, ry(0), true, false, null, false, null, sibCountBadge + kbadge(personId));
 
