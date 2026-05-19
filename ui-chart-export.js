@@ -211,6 +211,24 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
     outSvg.appendChild(mkText(bx + bw / 2, by + bh / 2, '⚭', 10, COL.gold));
   });
 
+  // ── „…"-Mehr-Geschwister-Indikator (horizontales Layout) ──
+  wrap.querySelectorAll('.tree-sib-more').forEach(el => {
+    const bx = parseFloat(el.style.left)   || 0;
+    const by = parseFloat(el.style.top)    || 0;
+    const bw = parseFloat(el.style.width)  || 24;
+    const bh = parseFloat(el.style.height) || 64;
+    const morRect = svgEl('rect');
+    morRect.setAttribute('x', bx); morRect.setAttribute('y', by);
+    morRect.setAttribute('width', bw); morRect.setAttribute('height', bh);
+    morRect.setAttribute('rx', 6); morRect.setAttribute('ry', 6);
+    morRect.setAttribute('fill', 'none');
+    morRect.setAttribute('stroke', COL.border);
+    morRect.setAttribute('stroke-width', '1.5');
+    morRect.setAttribute('stroke-dasharray', '3 2');
+    outSvg.appendChild(morRect);
+    outSvg.appendChild(mkText(bx + bw / 2, by + bh / 2, '…', 8, COL.muted));
+  });
+
   // ── Karten vorbereiten: Z-Sortierung + ggf. Unstack ──
   let cards = Array.from(wrap.querySelectorAll('.tree-card'));
   if (opts.zSort) {
@@ -220,6 +238,7 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
   }
 
   // Unstack: aufgelöste Positionen berechnen und SVG-Höhe anpassen
+  // (Fallback für schmale Bäume mit ancLevels < 3, wo Peek-Stapel noch aktiv sind)
   let posMap = new Map();
   if (opts.unstack) {
     const { posMap: pm, extraH } = _computeUnstack(cards);
@@ -230,37 +249,6 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
       outSvg.setAttribute('viewBox', `0 0 ${totalW} ${newH}`);
       outSvg.setAttribute('height', newH);
       bg.setAttribute('height', newH);
-    }
-
-    // sib-v: vertikale T-Linie bis zur letzten aufgelösten Geschwister-Karte verlängern
-    const sibV = outSvg.querySelector('line[data-role="sib-v"]');
-    if (sibV) {
-      const sibCX   = parseFloat(sibV.getAttribute('x1'));
-      const sibCards = Array.from(posMap.keys())
-        .filter(c => Math.round(parseFloat(c.style.left) || 0) === Math.round(sibCX - (parseFloat(c.style.width) || 96) / 2))
-        .sort((a, b) => posMap.get(b).y - posMap.get(a).y); // absteigend nach neuem y
-      if (sibCards.length) {
-        const last = sibCards[0];
-        const h    = parseFloat(last.style.height) || 64;
-        sibV.setAttribute('y2', posMap.get(last).y + h / 2);
-      }
-    }
-
-    // spouse-active: Endpunkt auf neue Y-Mitte des aktiven Ehepartners setzen
-    const spLine = outSvg.querySelector('line[data-role="spouse-active"]');
-    if (spLine) {
-      const centerCard = wrap.querySelector('.tree-card-center');
-      const cLeft = parseFloat(centerCard?.style.left || 0);
-      const cW    = parseFloat(centerCard?.style.width || 160);
-      const activeSpouse = Array.from(posMap.keys()).find(c =>
-        (parseFloat(c.style.left) || 0) > cLeft + cW + 5 &&
-        !c.classList.contains('tree-card-peek')
-      );
-      if (activeSpouse) {
-        const pos = posMap.get(activeSpouse);
-        const h   = parseFloat(activeSpouse.style.height) || 64;
-        spLine.setAttribute('y2', pos.y + h / 2);
-      }
     }
   }
 
@@ -342,11 +330,27 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
       }
     }
 
-    // Geschwisterzahl-Badge — oben rechts, gold (nur wenn kein ⚭N)
+    // Geschwisterzahl-Badge — oben rechts, gold (nur wenn kein ⚭N, schmaler Baum-Fallback)
     const sibBadge = card.querySelector('.tree-half-badge--sib');
     if (sibBadge && !rrBadge) {
       const sTxt = sibBadge.textContent?.trim();
       if (sTxt) outSvg.appendChild(mkText(x + w - 4, y + 7, sTxt, 7, COL.gold, 'end', '600'));
+    }
+
+    // ∞N-Badge (Geschwisterzahl, horizontales Layout) — unten links als Pill
+    const scBadge = card.querySelector('.tree-half-badge--sib-count');
+    if (scBadge) {
+      const scTxt = scBadge.textContent?.trim();
+      if (scTxt) {
+        const pillW = 20;
+        const pill  = svgEl('rect');
+        pill.setAttribute('x', x + 2); pill.setAttribute('y', y + h - 12);
+        pill.setAttribute('width', pillW); pill.setAttribute('height', 10);
+        pill.setAttribute('rx', 3); pill.setAttribute('ry', 3);
+        pill.setAttribute('fill', COL.goldDim);
+        outSvg.appendChild(pill);
+        outSvg.appendChild(mkText(x + 2 + pillW / 2, y + h - 7, scTxt, 6.5, COL.bgSolid, 'middle', '600'));
+      }
     }
   });
 
