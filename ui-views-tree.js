@@ -547,6 +547,7 @@ function showTree(personId, addToHistory = true) {
     el.setAttribute('stroke-width', '1.5');
     if (dash) el.setAttribute('stroke-dasharray', dash);
     svg.appendChild(el);
+    return el;
   }
 
   function line(x1, y1, x2, y2, color = 'var(--border)', dash = null) {
@@ -623,8 +624,8 @@ function showTree(personId, addToHistory = true) {
     line(juncX, juncY, personCX, ry(0));
     if (nSibs > 0) {
       // T-Strich: horizontal zum Geschwisterstapel, dann vertikal durch den Stapel
-      svgLine(juncX, juncY, sibColCX, juncY);
-      svgLine(sibColCX, juncY, sibColCX, sibMidY(nSibs - 1));
+      svgLine(juncX, juncY, sibColCX, juncY).dataset.role = 'sib-h';
+      svgLine(sibColCX, juncY, sibColCX, sibMidY(nSibs - 1)).dataset.role = 'sib-v';
     }
   }
 
@@ -662,7 +663,7 @@ function showTree(personId, addToHistory = true) {
       : () => { _activeSpouseMap[personId] = origIdx; showTree(personId, false); };
     mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick, kbadge(fam.spId));
     if (isActive) {
-      svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3');
+      svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3').dataset.role = 'spouse-active';
       // Klickbares div-Element auf der Ehe-Linie (SVG hat pointer-events:none)
       const lineY = ry(0) + CH / 2;
       const btn   = document.createElement('div');

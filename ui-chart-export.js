@@ -5,12 +5,18 @@
 //  Öffentliche API:
 //    exportFanChartPng()   — Fächer-Chart
 //    exportDescTreePng()   — Nachkommen-Baum (DOM-Snapshot)
-//    exportSandUhrPng()    — Sanduhr-Baum   (DOM-Snapshot)
+//    exportSandUhrPng()    — Sanduhr-Baum   (DOM-Snapshot, Stapel aufgelöst)
 //
 //  Interne Kern-Engine:
-//    _svgToPng(svgEl, filename, scale)   — SVG → Canvas → PNG
+//    _svgToPng(svgEl, filename, scale)        — SVG → Canvas → PNG
 //    _buildTreeSvg(wrap, lineSvg, w, h, opts) — gemeinsamer
 //      DOM-Snapshot-Builder für Nachkommen-Baum und Sanduhr
+//
+//  opts für _buildTreeSvg:
+//    zSort     {bool} — Karten nach z-index sortieren (Sanduhr-Stapel)
+//    badgeFull {bool} — alle 4 Badge-Typen rendern (Sanduhr)
+//    unstack   {bool} — Peek-Stapel auflösen: jede Karte vollständig
+//                       sichtbar, SVG-Höhe wächst entsprechend
 // ─────────────────────────────────────
 
 // ── CSS-Variable auslesen ─────────────────────────────
@@ -18,8 +24,7 @@ function _chartCssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-// Alle var(--*) in einem serialisierten SVG-String durch aufgelöste
-// Werte ersetzen — benötigt von _svgToPng() für Fächer-Chart
+// Alle var(--*) in einem serialisierten SVG-String ersetzen
 function _resolveVars(str) {
   return str.replace(/var\(--([^)]+)\)/g, (_, name) => {
     const v = _chartCssVar('--' + name.trim());
@@ -28,9 +33,6 @@ function _resolveVars(str) {
 }
 
 // ── Kern: SVG-Element → PNG-Download ─────────────────
-// svgEl    — SVG DOM-Element mit gesetztem viewBox
-// filename — Dateiname für den Download
-// scale    — Pixeldichte (2 = Retina-Auflösung)
 function _svgToPng(svgEl, filename, scale) {
   scale = scale || 2;
   const vb = (svgEl.getAttribute('viewBox') || '').split(' ').map(Number);
@@ -86,23 +88,64 @@ function _chartFilename(prefix) {
 }
 
 // ─────────────────────────────────────────────────────
+//  UNSTACK-VORBEREITUNG
+// ─────────────────────────────────────────────────────
+// Erkennt Peek-Stapel im DOM (gleiche left-Position, mind. eine
+// .tree-card-peek), berechnet aufgelöste Y-Positionen und gibt
+// eine Map<DOMElement → {x,y}> zurück sowie die zusätzliche SVG-Höhe.
+
+function _computeUnstack(cards) {
+  const GAP   = 8;   // Abstand zwischen aufgelösten Karten
+  const posMap = new Map();
+  let extraH   = 0;
+
+  // Alle Nicht-Zentrumskarten nach Spalte (gerundetes left) gruppieren
+  const byCol = {};
+  cards.forEach(card => {
+    if (card.classList.contains('tree-card-center')) return;
+    const col = Math.round(parseFloat(card.style.left) || 0);
+    (byCol[col] = byCol[col] || []).push(card);
+  });
+
+  Object.values(byCol).forEach(group => {
+    // Nur Gruppen mit tatsächlichen Peek-Karten auflösen
+    if (group.length < 2 || !group.some(c => c.classList.contains('tree-card-peek'))) return;
+
+    // Nach originalem top sortieren (Karte 0 = oberste/vorderste)
+    const sorted = group.slice().sort(
+      (a, b) => (parseFloat(a.style.top) || 0) - (parseFloat(b.style.top) || 0)
+    );
+
+    const anchorY  = parseFloat(sorted[0].style.top)    || 0;
+    const cardH    = parseFloat(sorted[0].style.height) || 64;
+    // Tatsächlichen PEEK-Abstand aus DOM auslesen (robust gegen Portrait/Landscape)
+    const peekDist = sorted.length > 1
+      ? Math.round(Math.abs((parseFloat(sorted[1].style.top) || 0) - anchorY))
+      : 0;
+
+    const oldBottom = anchorY + cardH + (sorted.length - 1) * peekDist;
+    const newBottom = anchorY + sorted.length * (cardH + GAP) - GAP;
+    extraH = Math.max(extraH, newBottom - oldBottom);
+
+    sorted.forEach((card, i) => {
+      posMap.set(card, {
+        x: parseFloat(card.style.left) || 0,
+        y: anchorY + i * (cardH + GAP),
+      });
+    });
+  });
+
+  return { posMap, extraH };
+}
+
+// ─────────────────────────────────────────────────────
 //  GEMEINSAMER DOM-SNAPSHOT-BUILDER FÜR BAUM-MODI
 // ─────────────────────────────────────────────────────
-// Liest den gerenderten DOM aus (#treeSvg-Linien + .tree-card-Divs)
-// und erzeugt ein eigenständiges SVG-Dokument ohne Eingriff in
-// den jeweiligen Renderer.
-//
-// opts.zSort    {boolean} — Karten vor dem Zeichnen nach z-index
-//               sortieren (Sanduhr: Peek-Stapel korrekt überlagern)
-// opts.badgeFull {boolean} — alle 4 Badge-Typen rendern
-//               (Sanduhr: Kekule, ½, ⚭N, Geschwisterzahl);
-//               false = nur ½-Badge (Nachkommen-Baum)
 
 function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
   opts = opts || {};
   const NS = 'http://www.w3.org/2000/svg';
 
-  // Alle Theme-Farben einmalig auslesen
   const COL = {
     bg:      _chartCssVar('--bg')       || '#1a1a2e',
     border:  _chartCssVar('--border')   || '#404060',
@@ -116,11 +159,10 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
     bgSolid: _chartCssVar('--bg')       || '#1a1a2e',
   };
 
-  // ── Hilfsfunktionen ──
-  const el = tag => document.createElementNS(NS, tag);
+  const svgEl = tag => document.createElementNS(NS, tag);
 
   function mkText(x, y, content, size, fill, anchor, weight) {
-    const t = el('text');
+    const t = svgEl('text');
     t.setAttribute('x', x); t.setAttribute('y', y);
     t.setAttribute('font-size', size);
     t.setAttribute('font-family', 'system-ui,-apple-system,sans-serif');
@@ -133,37 +175,34 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
     return t;
   }
 
-  // ── Root-SVG ──
-  const outSvg = el('svg');
+  // ── Root-SVG + Hintergrund ──
+  const outSvg = svgEl('svg');
   outSvg.setAttribute('xmlns', NS);
   outSvg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
   outSvg.setAttribute('width',  totalW);
   outSvg.setAttribute('height', totalH);
 
-  // Hintergrund
-  const bg = el('rect');
+  const bg = svgEl('rect');
   bg.setAttribute('width', totalW); bg.setAttribute('height', totalH);
   bg.setAttribute('fill', COL.bg);
   outSvg.appendChild(bg);
 
-  // ── Verbindungslinien aus #treeSvg klonen ──
-  // stroke-Attribute mit var(--*) werden einzeln aufgelöst, damit
-  // --border, --gold und --gold-dim korrekt unterschieden werden.
+  // ── Verbindungslinien klonen ──
+  // data-role-Attribute (sib-h, sib-v, spouse-active) bleiben bei cloneNode erhalten.
+  // stroke var(--*) werden einzeln aufgelöst: --border, --gold, --gold-dim.
   Array.from(lineSvg.childNodes).forEach(child => {
     const clone = child.cloneNode(true);
     if (clone.getAttribute) {
       const s = clone.getAttribute('stroke');
       if (s && s.startsWith('var(--')) {
         const varName = s.match(/var\(--([\w-]+)\)/)?.[1];
-        const resolved = varName ? (_chartCssVar('--' + varName) || COL.border) : COL.border;
-        clone.setAttribute('stroke', resolved);
+        clone.setAttribute('stroke', varName ? (_chartCssVar('--' + varName) || COL.border) : COL.border);
       }
     }
     outSvg.appendChild(clone);
   });
 
   // ── Heirats-Buttons ──
-  // Sanduhr: marr-btns sind in DOM-Reihenfolge — vor den Karten zeichnen
   wrap.querySelectorAll('.tree-marr-btn').forEach(btn => {
     const bx = parseFloat(btn.style.left)   || 0;
     const by = parseFloat(btn.style.top)    || 0;
@@ -172,10 +211,7 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
     outSvg.appendChild(mkText(bx + bw / 2, by + bh / 2, '⚭', 10, COL.gold));
   });
 
-  // ── Personen-Karten ──
-  // Sanduhr: Karten nach z-index sortieren, damit Stapel korrekt
-  // überlagern (z.B. aktiver Ehepartner oben, Geschwister vorne).
-  const RADIUS = 4;
+  // ── Karten vorbereiten: Z-Sortierung + ggf. Unstack ──
   let cards = Array.from(wrap.querySelectorAll('.tree-card'));
   if (opts.zSort) {
     cards = cards.slice().sort(
@@ -183,20 +219,68 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
     );
   }
 
+  // Unstack: aufgelöste Positionen berechnen und SVG-Höhe anpassen
+  let posMap = new Map();
+  if (opts.unstack) {
+    const { posMap: pm, extraH } = _computeUnstack(cards);
+    posMap = pm;
+
+    if (extraH > 0) {
+      const newH = totalH + extraH;
+      outSvg.setAttribute('viewBox', `0 0 ${totalW} ${newH}`);
+      outSvg.setAttribute('height', newH);
+      bg.setAttribute('height', newH);
+    }
+
+    // sib-v: vertikale T-Linie bis zur letzten aufgelösten Geschwister-Karte verlängern
+    const sibV = outSvg.querySelector('line[data-role="sib-v"]');
+    if (sibV) {
+      const sibCX   = parseFloat(sibV.getAttribute('x1'));
+      const sibCards = Array.from(posMap.keys())
+        .filter(c => Math.round(parseFloat(c.style.left) || 0) === Math.round(sibCX - (parseFloat(c.style.width) || 96) / 2))
+        .sort((a, b) => posMap.get(b).y - posMap.get(a).y); // absteigend nach neuem y
+      if (sibCards.length) {
+        const last = sibCards[0];
+        const h    = parseFloat(last.style.height) || 64;
+        sibV.setAttribute('y2', posMap.get(last).y + h / 2);
+      }
+    }
+
+    // spouse-active: Endpunkt auf neue Y-Mitte des aktiven Ehepartners setzen
+    const spLine = outSvg.querySelector('line[data-role="spouse-active"]');
+    if (spLine) {
+      const centerCard = wrap.querySelector('.tree-card-center');
+      const cLeft = parseFloat(centerCard?.style.left || 0);
+      const cW    = parseFloat(centerCard?.style.width || 160);
+      const activeSpouse = Array.from(posMap.keys()).find(c =>
+        (parseFloat(c.style.left) || 0) > cLeft + cW + 5 &&
+        !c.classList.contains('tree-card-peek')
+      );
+      if (activeSpouse) {
+        const pos = posMap.get(activeSpouse);
+        const h   = parseFloat(activeSpouse.style.height) || 64;
+        spLine.setAttribute('y2', pos.y + h / 2);
+      }
+    }
+  }
+
+  // ── Karten zeichnen ──
+  const RADIUS = 4;
   cards.forEach(card => {
-    const x       = parseFloat(card.style.left)   || 0;
-    const y       = parseFloat(card.style.top)    || 0;
+    const pos     = posMap.get(card);
+    const x       = pos ? pos.x : (parseFloat(card.style.left)   || 0);
+    const y       = pos ? pos.y : (parseFloat(card.style.top)    || 0);
     const w       = parseFloat(card.style.width)  || 96;
     const h       = parseFloat(card.style.height) || 64;
     const sex     = card.dataset.sex || 'U';
     const isRoot  = card.classList.contains('tree-card-center');
     const isEmpty = card.classList.contains('tree-card-empty');
     const isHalf  = card.classList.contains('tree-card-half');
-    const isPeek  = card.classList.contains('tree-card-peek');
+    // Peek-Optik nur wenn Karte NICHT aufgelöst wurde
+    const isPeek  = card.classList.contains('tree-card-peek') && !pos;
     const cardFill = COL[sex] || COL.U;
 
-    // Karte — Peek-Karten mit reduzierter Opazität (wie CSS opacity:0.5)
-    const rect = el('rect');
+    const rect = svgEl('rect');
     rect.setAttribute('x', x);  rect.setAttribute('y', y);
     rect.setAttribute('width', w); rect.setAttribute('height', h);
     rect.setAttribute('rx', RADIUS); rect.setAttribute('ry', RADIUS);
@@ -204,8 +288,7 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
     rect.setAttribute('fill-opacity', isRoot ? '0.45' : isPeek ? '0.15' : '0.30');
     rect.setAttribute('stroke', isRoot ? cardFill : isHalf ? COL.goldDim : COL.border);
     rect.setAttribute('stroke-width', isRoot ? '2' : '1');
-    rect.setAttribute('stroke-dasharray', isHalf ? '3 2' : 'none');
-    if (isPeek) rect.setAttribute('stroke-dasharray', '3 2');
+    if (isHalf || isPeek) rect.setAttribute('stroke-dasharray', '3 2');
     outSvg.appendChild(rect);
 
     if (isEmpty) {
@@ -213,7 +296,6 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
       return;
     }
 
-    // Name + Jahr — textContent liefert Klartext auch bei HTML-Inhalt
     const nameTxt = card.querySelector('.tree-name')?.textContent?.trim() || '';
     const yrTxt   = card.querySelector('.tree-yr')?.textContent?.trim()   || '';
     const hasYr   = !!yrTxt;
@@ -228,34 +310,29 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
       ));
     }
     if (hasYr) {
-      outSvg.appendChild(mkText(
-        x + w / 2, y + h / 2 + 8, yrTxt,
-        isRoot ? 8 : 7, COL.muted
-      ));
+      outSvg.appendChild(mkText(x + w / 2, y + h / 2 + 8, yrTxt, isRoot ? 8 : 7, COL.muted));
     }
 
-    // ── Badges ──
-
-    // ½-Badge (Kinder aus Nebenehe) — beide Modi
+    // ½-Badge — beide Modi
     if (isHalf) {
       outSvg.appendChild(mkText(x + w - 3, y + h - 5, '½', 7, COL.goldDim, 'end'));
     }
 
     if (!opts.badgeFull) return;
 
-    // Kekule-Nummer (Sanduhr) — oben links, gold
+    // Kekule-Nummer (Sanduhr) — oben links
     const kBadge = card.querySelector('.tree-kekule-badge');
     if (kBadge) {
       const kTxt = kBadge.textContent?.trim();
       if (kTxt) outSvg.appendChild(mkText(x + 4, y + 7, kTxt, 6.5, COL.gold, 'start', '700'));
     }
 
-    // ⚭N-Badge (Mehrehen) — oben rechts, goldDim-Hintergrund
+    // ⚭N-Badge (Mehrehen) — oben rechts als Pill
     const rrBadge = card.querySelector('.tree-half-badge--right');
     if (rrBadge) {
       const rTxt = rrBadge.textContent?.trim();
       if (rTxt) {
-        const pill = el('rect');
+        const pill = svgEl('rect');
         pill.setAttribute('x', x + w - 18); pill.setAttribute('y', y + 2);
         pill.setAttribute('width', 16); pill.setAttribute('height', 10);
         pill.setAttribute('rx', 3); pill.setAttribute('ry', 3);
@@ -265,7 +342,7 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
       }
     }
 
-    // Geschwisterzahl-Badge (.tree-half-badge--sib) — oben rechts, gold
+    // Geschwisterzahl-Badge — oben rechts, gold (nur wenn kein ⚭N)
     const sibBadge = card.querySelector('.tree-half-badge--sib');
     if (sibBadge && !rrBadge) {
       const sTxt = sibBadge.textContent?.trim();
@@ -277,10 +354,8 @@ function _buildTreeSvg(wrap, lineSvg, totalW, totalH, opts) {
 }
 
 // ─────────────────────────────────────────────────────
-//  FÄCHER-CHART: #fcSvg direkt exportieren
+//  FÄCHER-CHART
 // ─────────────────────────────────────────────────────
-// Reines SVG — Segment-Farben schon als Hex gesetzt (_fill() in
-// ui-fanchart.js); verbleibende var(--*) löst _resolveVars() auf.
 
 window.exportFanChartPng = function () {
   const svg = document.getElementById('fcSvg');
@@ -291,44 +366,35 @@ window.exportFanChartPng = function () {
 };
 
 // ─────────────────────────────────────────────────────
-//  NACHKOMMEN-BAUM: DOM-Snapshot → reines SVG
+//  NACHKOMMEN-BAUM
 // ─────────────────────────────────────────────────────
 
 window.exportDescTreePng = function () {
   const wrap    = document.getElementById('treeWrap');
   const lineSvg = document.getElementById('treeSvg');
   if (!wrap || !lineSvg) { showToast('Kein Nachkommen-Baum vorhanden', 'warn'); return; }
-
-  const totalW = parseFloat(wrap.style.width)  || 800;
-  const totalH = parseFloat(wrap.style.height) || 600;
-
-  const outSvg = _buildTreeSvg(wrap, lineSvg, totalW, totalH, {
-    zSort:     false,  // desc-tree hat keine gestapelten Karten
-    badgeFull: false,  // nur ½-Badge benötigt
-  });
+  const outSvg = _buildTreeSvg(wrap, lineSvg,
+    parseFloat(wrap.style.width) || 800, parseFloat(wrap.style.height) || 600,
+    { zSort: false, badgeFull: false, unstack: false }
+  );
   _svgToPng(outSvg, _chartFilename('nachkommen'));
 };
 
 // ─────────────────────────────────────────────────────
-//  SANDUHR-BAUM: DOM-Snapshot → reines SVG
+//  SANDUHR-BAUM (Stapel aufgelöst)
 // ─────────────────────────────────────────────────────
-// Unterschiede zu Nachkommen-Baum:
-//   · zSort=true  — Peek-Stapel (Geschwister, Ehepartner) korrekt überlagern
-//   · badgeFull=true — Kekule, ½, ⚭N, Geschwisterzahl-Badges
-//   · Linienfarben --gold / --gold-dim (Ehe- + Halbkind-Linien)
-//     werden automatisch über stroke-Attribut-Auflösung korrekt dargestellt
+// unstack: Geschwister- und Ehepartner-Peek-Stapel werden vollständig
+// nebeneinander ausgeklappt; die sib-v- und spouse-active-Linien
+// (data-role-Attribute im Renderer gesetzt) werden auf die neuen
+// Endpunkte angepasst; SVG-Höhe wächst entsprechend.
 
 window.exportSandUhrPng = function () {
   const wrap    = document.getElementById('treeWrap');
   const lineSvg = document.getElementById('treeSvg');
   if (!wrap || !lineSvg) { showToast('Kein Sanduhr-Baum vorhanden', 'warn'); return; }
-
-  const totalW = parseFloat(wrap.style.width)  || 800;
-  const totalH = parseFloat(wrap.style.height) || 600;
-
-  const outSvg = _buildTreeSvg(wrap, lineSvg, totalW, totalH, {
-    zSort:     true,   // Stapel nach z-index: aktiver Ehepartner / vorderstes Geschwister oben
-    badgeFull: true,   // alle vier Badge-Typen
-  });
+  const outSvg = _buildTreeSvg(wrap, lineSvg,
+    parseFloat(wrap.style.width) || 800, parseFloat(wrap.style.height) || 600,
+    { zSort: true, badgeFull: true, unstack: true }
+  );
   _svgToPng(outSvg, _chartFilename('sanduhr'));
 };
