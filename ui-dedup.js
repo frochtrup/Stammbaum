@@ -334,6 +334,16 @@ function dedupConfirmMerge() {
   const winnerName = (AppState.db.individuals[_dedupWinnerId] || {}).name || _dedupWinnerId;
   const loserName  = (AppState.db.individuals[_dedupLoserId]  || {}).name || _dedupLoserId;
 
+  const affectedFams = Object.keys(AppState.db.families).filter(fid => {
+    const f = AppState.db.families[fid];
+    return f.husb === _dedupLoserId || f.wife === _dedupLoserId ||
+           (f.children || []).includes(_dedupLoserId);
+  });
+  pushUndo('Merge: ' + loserName + ' → ' + winnerName, {
+    personIds: [_dedupWinnerId, _dedupLoserId],
+    familyIds: affectedFams,
+  });
+
   const ok = _dedupMergePersons(_dedupWinnerId, _dedupLoserId);
   if (!ok) { showToast('Fehler beim Zusammenf\u00fchren'); return; }
 

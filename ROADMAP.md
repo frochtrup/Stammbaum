@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v627 · Cache: `stammbaum-v627`
+**sw-Version:** v628 · Cache: `stammbaum-v628`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -124,7 +124,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | ~~REL-CALC~~ | ~~**Beziehungsrechner**~~ | BFS-Beziehungsrechner: Verwandtschaft zum Probanden + gemeinsamer Vorfahre mit Geburtsjahr in Person-Detail; freier Zweipersonen-Vergleich via „🔗 zu …"-Button; visueller Pfad als klickbare Karten-Kette im Modal (sw v626) | - |
 | ~~MEDIA-MGR~~ | ~~**Medienverwaltung (eigene View)**~~ | Dritter Sub-Tab „Medien" im Quellen-Tab; Kachelgalerie aller Medien (Personen + Familien + Quellen); Filter-Chips Alle/Personen/Familien/Quellen; Lazy-Loading mit ⚠-Overlay; Klick navigiert zum Kontext-Datensatz; ersetzt drei Modal-Browser (sw v608) | - |
 | ~~MEDIA-MGR-DETAIL~~ | ~~**Medien-Detailansicht**~~ | `showMediaDetail()`: Detailansicht im rechten Panel; globale Felder FILE/FORM/MEDI; Referenzliste mit ↗ Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; Inline-Suchpanel zum Hinzufügen neuer Referenzen (Person/Familie/Quelle) mit Lebensdaten-Anzeige (sw v609–v622) | - |
-| DUP-DETECT | **Duplikat-Erkennung** | `findDuplicatePairs()` via Web Worker (Main Thread reaktiv bei >2000 Personen). Soundex-Namensvergleich + Geburtsdatum-Ähnlichkeit. Merge-Vorschlag-UI. | L |
+| ~~DUP-DETECT~~ | ~~**Duplikat-Erkennung**~~ | Levenshtein-Score (Nachname/Vorname/Sex/Geburtsjahr/Ort), Nachname-Bucketing O(n·k²), Merge-Modal mit Seiten-Tausch, Ignore-Liste (localStorage), `pushUndo` vor Merge (sw v628). Web Worker → WW-PARSER. | - |
 | PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
 | WW-PARSER | **Web Worker für große GEDCOM-Dateien** | `parseGEDCOM()` in einen Web Worker auslagern: Main Thread bleibt bei Dateien >50K Personen reaktiv; Fortschrittsbalken möglich; keine UI-Blockierung auf mobilen Geräten. Voraussetzung REFACT-1 ✓ erledigt. | M |
 
