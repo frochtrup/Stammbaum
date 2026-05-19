@@ -184,12 +184,15 @@
                '$1. $2');
   }
 
+  const _MONTH_YEAR_RE = /^(Januar|Februar|März|April|Mai|Juni|Juli|August|September|Oktober|November|Dezember)\s+\d{4}$/;
+
   function _atDate(ev) {
     if (!ev.date) return '';
     const raw = ev.date.trim();
     if (/^\d{4}$/.test(raw)) return ' (' + raw + ')';  // Jahr-only in Klammern
     const fmt = _fmtDate(raw);
     const hasQual = /^(von|zwischen|vor|nach|um|errechnet|geschätzt)\s/.test(fmt);
+    if (!hasQual && _MONTH_YEAR_RE.test(fmt)) return ' im ' + _esc(fmt);
     return ' ' + (hasQual ? '' : 'am ') + _esc(fmt);
   }
 
@@ -331,6 +334,24 @@
     return `${pr.Er} wohnte in ${rest.join(', ')} und ${last}.`;
   }
 
+  // FROM-TO-Ereignisse mit Wert (generische berufliche Stationen): zunächst/danach/zuletzt
+  function _mergeCareerSentence(careers, pr) {
+    if (!careers.length) return '';
+    if (careers.length === 1) {
+      const ev = careers[0];
+      const period = _occuPeriod(ev.date);
+      return `${pr.Er} war ${_esc(ev.value)}${period ? ' (' + period + ')' : ''}${_atPlace(ev)}.`;
+    }
+    const parts = careers.map((ev, i) => {
+      const period = _occuPeriod(ev.date);
+      const val = _esc(ev.value) + (period ? ` (${period})` : '') + _atPlace(ev);
+      if (i === 0) return `${pr.Er} war zunächst ${val}`;
+      if (i === careers.length - 1) return `zuletzt ${val}`;
+      return `danach ${val}`;
+    });
+    return parts.join('; ') + '.';
+  }
+
   // ── Event-Satz-Templates ────────────────────────────────────────────────────
 
   const _EV_TPL = {
@@ -374,7 +395,8 @@
       const hasQual    = /^(von|zwischen|vor|nach|um|errechnet|geschätzt)\s/.test(fmt);
       // Konkretes Datum (Tag+Monat+Jahr, kein Qualifier) → Datum vorne
       if (!isYearOnly && !hasQual) {
-        return `Am ${_esc(fmt)}${_atPlace(ev)}: ${_esc(ev.value)}.`;
+        const prep = _MONTH_YEAR_RE.test(fmt) ? 'Im' : 'Am';
+        return `${prep} ${_esc(fmt)}${_atPlace(ev)}: ${_esc(ev.value)}.`;
       }
     }
     // Wert vorhanden: Wert als Hauptaussage, Label weglassen
@@ -457,6 +479,12 @@ ${lifespan}
     const merged = new Set(['OCCU','GRAD','EDUC','RESI']);
     const evs   = allEvs.filter(ev => !merged.has(ev.type));
 
+    // FROM-TO-Ereignisse mit Wert → Verbindungsformulierungen (berufliche Stationen)
+    const isCareer = ev => ev.value && ev.date && /^FROM\s+/i.test(ev.date);
+    const careers  = evs.filter(isCareer)
+      .sort((a, b) => (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
+    const otherEvs = evs.filter(ev => !isCareer(ev));
+
     const parts = [];
 
     // Reihenfolge: Bildung → Beruf → Wohnorte → Abschlüsse → Rest
@@ -466,15 +494,18 @@ ${lifespan}
     const occuSent = _mergeOccuSentence(occus, pr);
     if (occuSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${occuSent}</p></div>`);
 
+    const careerSent = _mergeCareerSentence(careers, pr);
+    if (careerSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${careerSent}</p></div>`);
+
     const resiSent = _mergeResiSentence(resis, pr);
     if (resiSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${resiSent}</p></div>`);
 
     const gradSent = _mergeGradSentence(grads, pr);
     if (gradSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${gradSent}</p></div>`);
 
-    if (!evs.length && !parts.length) return '';
+    if (!otherEvs.length && !parts.length) return '';
 
-    const sorted = [...evs].sort((a, b) => {
+    const sorted = [...otherEvs].sort((a, b) => {
       const ya = _yearFromDate(a.date), yb = _yearFromDate(b.date);
       if (ya === null && yb === null) return 0;
       if (ya === null) return 1;
@@ -647,23 +678,30 @@ ${lifespan}
 
     // Styles inline — styles.css ist im Download-Kontext (anderer Ordner) nicht verfügbar
     const css = `
-body{padding:1.5rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif;background:#faf8f3;color:#2c2a26}
-.story-header{border-bottom:2px solid #c8b97a;margin-bottom:1.2rem;padding-bottom:.8rem}
-.story-name{font-size:2rem;margin:0 0 .25rem;font-family:inherit}
-.story-lifespan{color:#666;margin:0 0 .5rem}
-.story-media-row{display:flex;gap:.5rem;align-items:flex-start;margin-bottom:.8rem}
-.story-hero-img{flex-shrink:0;max-width:60%;max-height:220px;object-fit:cover;border-radius:6px}
-.story-gallery{display:flex;flex-wrap:wrap;gap:.4rem;align-content:flex-start;flex:1}
-.story-gallery-img{width:80px;height:80px;object-fit:cover;border-radius:4px}
-.story-section{margin-bottom:1.2rem}
-.story-section-title{font-size:1.1rem;color:#8b6914;border-bottom:1px solid #e0d5b0;margin-bottom:.5rem;padding-bottom:.2rem}
-.story-section p{margin:0 0 .5rem;line-height:1.75}
-.story-ev-block{margin-bottom:.6rem}
-.story-ev-imgs{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem}
-.story-ev-img{max-width:80px;max-height:80px;object-fit:cover;border-radius:3px}
-.story-note{background:#f5f0e0;border-left:3px solid #c8b97a;padding:.8rem 1rem;border-radius:0 4px 4px 0}
-.story-epoch-ctx{color:#6b5c2a;font-style:italic;font-size:.92rem;line-height:1.65;margin:0}
-.story-reli-note{color:#777;font-size:.88rem;margin:0}`;
+body{padding:2rem 2rem 4rem;max-width:740px;margin:0 auto;font-family:Georgia,serif;font-size:1rem;line-height:1.78;background:#faf8f3;color:#2c2a26}
+.story-header{text-align:center;padding-bottom:1.6rem;margin-bottom:1.8rem;position:relative}
+.story-header::after{content:'';display:block;width:2.5rem;height:2px;background:#c8b97a;margin:1.1rem auto 0;border-radius:1px}
+.story-name{font-size:1.9rem;font-weight:600;letter-spacing:-.015em;margin:0 0 .35rem;line-height:1.2}
+.story-lifespan{color:#777;font-size:.8rem;letter-spacing:.07em;text-transform:uppercase;margin:0}
+.story-media-row{display:flex;gap:.75rem;align-items:flex-start;margin-bottom:1rem;justify-content:center}
+.story-hero-img{flex-shrink:0;max-width:55%;max-height:240px;object-fit:cover;border-radius:8px;box-shadow:0 2px 14px rgba(0,0,0,.18)}
+.story-gallery{display:flex;flex-wrap:wrap;gap:.45rem;align-content:flex-start;flex:1}
+.story-gallery-img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid #ddd;box-shadow:0 1px 5px rgba(0,0,0,.1)}
+.story-section{margin-bottom:1.4rem}
+.story-section p{margin:0}
+.story-section-title{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 .45rem;font-family:system-ui,sans-serif}
+.story-epoch{border-left:3px solid #c8b97a;padding:.6rem 1rem;background:#f2ede0;border-radius:0 6px 6px 0}
+.story-epoch-ctx{color:#6b5c2a;font-style:italic;font-size:.91rem;line-height:1.65;margin:0}
+.story-ev-wrap{position:relative;padding-left:1.15rem;margin:.45rem 0}
+.story-ev-wrap::before{content:'◆';position:absolute;left:0;top:.38em;color:#c8b97a;font-size:.42rem;line-height:1;opacity:.85}
+.story-ev{margin:0}
+.story-ev-imgs{display:flex;gap:.3rem;flex-wrap:wrap;margin:.35rem 0 .1rem}
+.story-ev-img{width:72px;height:72px;object-fit:cover;border-radius:5px;border:1px solid #ddd}
+.story-family{background:#f2ede0;border-radius:8px;padding:.9rem 1.1rem;border-left:3px solid #c8b97a;margin-bottom:.75rem}
+.story-death{border-left:3px solid #aaa;padding-left:.9rem;font-style:italic;color:#555}
+.story-reli{text-align:center}
+.story-reli-note{color:#888;font-size:.82rem;margin:0}
+.story-note{background:#f2ede0;border-radius:6px;padding:.75rem 1rem}`;
 
     return `<!DOCTYPE html>
 <html lang="de">

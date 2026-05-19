@@ -2917,110 +2917,173 @@ html[data-theme="dark"] {
 #storyBody { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:0; }
 
 .story-article {
-  max-width: 680px;
+  max-width: 700px;
   margin: 0 auto;
-  padding: 1.2rem 1rem 3rem;
+  padding: 1.5rem 1.25rem 4rem;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1rem;
-  line-height: 1.7;
+  line-height: 1.78;
   color: var(--text);
 }
 
+/* ── Header ── */
 .story-header {
   text-align: center;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 1.4rem;
+  padding-bottom: 1.6rem;
+  margin-bottom: 1.8rem;
+  position: relative;
+}
+.story-header::after {
+  content: '';
+  display: block;
+  width: 2.5rem;
+  height: 2px;
+  background: var(--gold, #c8b97a);
+  margin: 1.1rem auto 0;
+  border-radius: 1px;
 }
 
 .story-media-row {
   display: flex;
-  gap: .5rem;
+  gap: .75rem;
   align-items: flex-start;
-  margin-bottom: .8rem;
+  margin-bottom: 1rem;
+  justify-content: center;
 }
 
 .story-hero-img {
   flex-shrink: 0;
-  max-width: 60%;
-  max-height: 220px;
+  max-width: 55%;
+  max-height: 240px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 8px;
+  box-shadow: 0 2px 14px rgba(0,0,0,.18);
 }
 
 .story-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 .25rem;
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  margin: 0 0 .35rem;
+  line-height: 1.2;
   color: var(--text);
 }
 
 .story-lifespan {
   color: var(--text2);
-  font-size: .9rem;
+  font-size: .8rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
   margin: 0;
 }
 
+/* ── Sections ── */
 .story-section {
-  margin-bottom: 1rem;
+  margin-bottom: 1.4rem;
 }
-
 .story-section p { margin: 0; }
 
-.story-death { border-left: 3px solid var(--border); padding-left: .75rem; }
-.story-note  { background: var(--surface2); border-radius: 6px; padding: .75rem 1rem; }
-.story-epoch-ctx { color: var(--text-dim); font-style: italic; font-size: .92rem; line-height: 1.65; margin: 0; }
-.story-reli-note { color: var(--text-dim); font-size: .88rem; margin: 0; }
+/* ── Epoch — Zitat-Block ── */
+.story-epoch {
+  border-left: 3px solid var(--gold, #c8b97a);
+  padding: .6rem 1rem;
+  background: var(--surface2);
+  border-radius: 0 6px 6px 0;
+}
+.story-epoch-ctx { color: var(--text-dim); font-style: italic; font-size: .91rem; line-height: 1.65; margin: 0; }
 
-.story-section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 .4rem;
-  color: var(--text);
+/* ── Events — Timeline-Bullets ── */
+.story-ev-wrap {
+  position: relative;
+  padding-left: 1.15rem;
+  margin: .45rem 0;
+}
+.story-ev-wrap::before {
+  content: '◆';
+  position: absolute;
+  left: 0;
+  top: .38em;
+  color: var(--gold, #c8b97a);
+  font-size: .42rem;
+  line-height: 1;
+  opacity: .85;
+}
+.story-ev { color: var(--text); margin: 0; }
+
+/* ── Family — Card ── */
+.story-family {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: .9rem 1.1rem;
+  border-left: 3px solid var(--gold, #c8b97a);
 }
 
-.story-ev { color: var(--text); margin: .2rem 0; }
+/* ── Death — abgesetzt, kursiv ── */
+.story-death {
+  border-left: 3px solid var(--text-dim, #aaa);
+  padding-left: .9rem;
+  font-style: italic;
+  color: var(--text2);
+}
 
-/* Foto-Galerie (rechts neben Hero) */
+/* ── Reli — diskrete Fußnote ── */
+.story-reli { text-align: center; }
+.story-reli-note { color: var(--text-dim); font-size: .82rem; margin: 0; }
+
+/* ── Note ── */
+.story-note { background: var(--surface2); border-radius: 6px; padding: .75rem 1rem; }
+
+.story-section-title {
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text2);
+  margin: 0 0 .45rem;
+  font-family: system-ui, sans-serif;
+}
+
+/* ── Galerie ── */
 .story-gallery {
   display: flex;
   flex-wrap: wrap;
-  gap: .4rem;
+  gap: .45rem;
   align-content: flex-start;
   flex: 1;
 }
 .story-gallery:empty { display: none; }
 .story-gallery-img {
-  width: 80px;
-  height: 80px;
+  width: 84px;
+  height: 84px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 6px;
   border: 1px solid var(--border);
+  box-shadow: 0 1px 5px rgba(0,0,0,.1);
 }
 
-/* Event-Fotos inline */
-.story-ev-wrap { margin: .15rem 0; }
+/* ── Event-Fotos inline ── */
 .story-ev-imgs {
   display: flex;
   flex-wrap: wrap;
   gap: .3rem;
-  margin: .3rem 0 .1rem;
+  margin: .35rem 0 .1rem;
 }
 .story-ev-imgs:empty { display: none; }
 .story-ev-img {
   width: 72px;
   height: 72px;
   object-fit: cover;
-  border-radius: 3px;
+  border-radius: 5px;
   border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
 }
 
-/* Story Leaflet-Karte */
-.story-map { margin-bottom: .6rem; }
+/* ── Story Karte ── */
+.story-map { margin-bottom: .8rem; }
 .story-map-container {
   width: 100%;
-  height: 280px;
-  border-radius: 6px;
+  height: 260px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   overflow: hidden;
 }
