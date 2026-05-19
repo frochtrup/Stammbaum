@@ -9,6 +9,13 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-20 — STORY-PRINT: Abschnittstitel + Print-CSS (sw v646–v647)
+
+- **sw v646** `feat(story)`: STORY-PRINT — „Lebenslauf" + „Familie"-Titel als `<h2 class="story-section-title">` in `_sectionEvents()`/`_sectionFamilies()`; `*{print-color-adjust:exact}` global; `@media print` mit `@page{margin:2.5cm 2cm;size:A4}`, `page-break-inside:avoid` auf allen Sections, Box-Shadow-Entfernung; SVG-Partnerabstand 10→28px, ⚭ font-size 9→11 bold; `.story-reli` Trennlinie
+- **sw v647** `fix(story)`: Print-CSS präziser — `page-break-inside:avoid` nur auf kompakten Sections (family/epoch/death/note/reli), nicht global; Karte auf `max-height:200px`, SVG-Diagramm auf `max-height:180px` in `@media print` → verhindert Leerseiten durch zu aggressive Seitenumbrüche
+
+---
+
 ### Session 2026-05-20 — STORY-OPT-5/6 + STORY-DIAGRAM (sw v642–v645)
 
 - **sw v642–v643** `feat(story)`: STORY-OPT-5 — „Im August 2021" statt „Am August 2021" (`_MONTH_YEAR_RE` Regex-Guard in `_atDate()`); Verbindungsformulierungen für Berufsstationen: `_mergeCareerSentence()` mit `zunächst/danach/zuletzt`; modernes Story-Design (Header-Goldlinie, `◆`-Bullets, Familien-Cards mit goldenem Rand, Callout-Epoche, Lebenszeit in Kapitälchen)
