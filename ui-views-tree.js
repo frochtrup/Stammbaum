@@ -681,7 +681,7 @@ function showTree(personId, addToHistory = true) {
 
   // ── Zentrumsperson ──
   const sibCountBadge = nSibs > 0
-    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">~${nSibs}</div>`
+    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">∞${nSibs}</div>`
     : '';
   mkCard(personId, personX, ry(0), true, false, null, false, null, sibCountBadge + kbadge(personId));
 
