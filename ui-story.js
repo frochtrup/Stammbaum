@@ -525,7 +525,9 @@ ${lifespan}
       parts.push(`<div class="story-ev-wrap"><p class="story-ev">${_eventSentence(ev, pr)}</p>${imgDiv}</div>`);
     });
 
-    return parts.length ? `<section class="story-section story-events">${parts.join('\n')}</section>` : '';
+    return parts.length
+      ? `<section class="story-section story-events"><h2 class="story-section-title">Lebenslauf</h2>${parts.join('\n')}</section>`
+      : '';
   }
 
   function _sectionFamilies(p, pr) {
@@ -567,7 +569,8 @@ ${lifespan}
         const marrImgs  = marrFiles
           ? `<div class="story-ev-imgs" data-marr-files="${_esc(marrFiles)}"></div>`
           : '';
-        html += `<section class="story-section story-family"><p>${sentences.join(' ')}</p>${marrImgs}</section>`;
+        const famTitle = html === '' ? '<h2 class="story-section-title">Familie</h2>' : '';
+        html += `<section class="story-section story-family">${famTitle}<p>${sentences.join(' ')}</p>${marrImgs}</section>`;
       }
     }
     return html;
@@ -693,8 +696,9 @@ ${lifespan}
     const fCx  = (gpCx[0] + gpCx[1]) / 2;  // 121
     const mCx  = (gpCx[2] + gpCx[3]) / 2;  // 353
     const pCx  = hasParents ? (fCx + mCx) / 2 : svgW / 2;
+    const PG   = 28;             // Proband ↔ Partner Abstand
     const pL   = pCx - PW / 2;
-    const partL = pCx + PW / 2 + HG;
+    const partL = pL + PW + PG;
 
     let svgH = M;
     const gpY  = hasGP      ? svgH : -1; if (hasGP)      svgH += CH + VG;
@@ -792,8 +796,8 @@ ${lifespan}
     // Partner
     if (partner) {
       elems.push([0, hln(pL+PW, pY+PH/2, partL, GLD, true)]);
-      const mpX = +(pL+PW+HG/2).toFixed(1);
-      elems.push([0, `<text x="${mpX}" y="${+(pY+PH/2+0.5).toFixed(1)}" font-size="9" fill="${GLD}" text-anchor="middle" dominant-baseline="middle">⚭</text>`]);
+      const mpX = +(pL + PW + PG/2).toFixed(1);
+      elems.push([0, `<text x="${mpX}" y="${+(pY+PH/2+0.5).toFixed(1)}" font-size="11" font-weight="bold" fill="${GLD}" text-anchor="middle" dominant-baseline="middle">⚭</text>`]);
       elems.push([1, mkCard(partL, pY, CW, PH, partner, false)]);
     }
 
@@ -881,6 +885,7 @@ ${lifespan}
 
     // Styles inline — styles.css ist im Download-Kontext (anderer Ordner) nicht verfügbar
     const css = `
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{padding:2rem 2rem 4rem;max-width:740px;margin:0 auto;font-family:Georgia,serif;font-size:1rem;line-height:1.78;background:#faf8f3;color:#2c2a26}
 .story-header{text-align:center;padding-bottom:1.6rem;margin-bottom:1.8rem;position:relative}
 .story-header::after{content:'';display:block;width:2.5rem;height:2px;background:#c8b97a;margin:1.1rem auto 0;border-radius:1px}
@@ -892,7 +897,7 @@ body{padding:2rem 2rem 4rem;max-width:740px;margin:0 auto;font-family:Georgia,se
 .story-gallery-img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid #ddd;box-shadow:0 1px 5px rgba(0,0,0,.1)}
 .story-section{margin-bottom:1.4rem}
 .story-section p{margin:0}
-.story-section-title{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 .45rem;font-family:system-ui,sans-serif}
+.story-section-title{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 .55rem;font-family:system-ui,sans-serif}
 .story-epoch{border-left:3px solid #c8b97a;padding:.6rem 1rem;background:#f2ede0;border-radius:0 6px 6px 0}
 .story-epoch-ctx{color:#6b5c2a;font-style:italic;font-size:.91rem;line-height:1.65;margin:0}
 .story-ev-wrap{position:relative;padding-left:1.15rem;margin:.45rem 0}
@@ -902,12 +907,19 @@ body{padding:2rem 2rem 4rem;max-width:740px;margin:0 auto;font-family:Georgia,se
 .story-ev-img{width:72px;height:72px;object-fit:cover;border-radius:5px;border:1px solid #ddd}
 .story-family{background:#f2ede0;border-radius:8px;padding:.9rem 1.1rem;border-left:3px solid #c8b97a;margin-bottom:.75rem}
 .story-death{border-left:3px solid #aaa;padding-left:.9rem;font-style:italic;color:#555}
-.story-reli{text-align:center}
+.story-reli{text-align:center;margin-top:2rem;padding-top:1rem;border-top:1px solid #e8e0d0}
 .story-reli-note{color:#888;font-size:.82rem;margin:0}
 .story-note{background:#f2ede0;border-radius:6px;padding:.75rem 1rem}
-.story-diagram{margin-bottom:1.4rem}
+.story-diagram{margin-bottom:1.6rem}
 .story-diagram-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:6px}
-.story-diagram-wrap svg{width:100%;height:auto;display:block;min-width:320px}`;
+.story-diagram-wrap svg{width:100%;height:auto;display:block;min-width:320px}
+@media print{
+  @page{margin:2.5cm 2cm;size:A4}
+  body{max-width:none;padding:0;background:#faf8f3}
+  .story-header{page-break-after:avoid}
+  section{page-break-inside:avoid}
+  .story-hero-img,.story-gallery-img,.story-ev-img{box-shadow:none}
+}`;
 
     return `<!DOCTYPE html>
 <html lang="de">

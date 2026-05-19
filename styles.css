@@ -3027,7 +3027,7 @@ html[data-theme="dark"] {
 }
 
 /* ── Reli — diskrete Fußnote ── */
-.story-reli { text-align: center; }
+.story-reli { text-align: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 .story-reli-note { color: var(--text-dim); font-size: .82rem; margin: 0; }
 
 /* ── Note ── */
