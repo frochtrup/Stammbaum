@@ -140,11 +140,12 @@
     const m = p.sex === 'M', f = p.sex === 'F';
     const n = p.given || (p.name || '').split(',')[1]?.trim() || p.name || '';
     return {
-      Er:   m ? 'Er'      : f ? 'Sie'     : _esc(n),
-      er:   m ? 'er'      : f ? 'sie'     : _esc(n),
-      Sein: m ? 'Sein'    : f ? 'Ihr'     : 'Sein',
-      sein: m ? 'sein'    : f ? 'ihr'     : 'sein',
-      Sohn: m ? 'Sohn'    : f ? 'Tochter' : 'Kind',
+      Er:      m ? 'Er'      : f ? 'Sie'     : _esc(n),
+      er:      m ? 'er'      : f ? 'sie'     : _esc(n),
+      Sein:    m ? 'Sein'    : f ? 'Ihr'     : 'Sein',
+      sein:    m ? 'sein'    : f ? 'ihr'     : 'sein',
+      Sohn:    m ? 'Sohn'    : f ? 'Tochter' : 'Kind',
+      SohnArt: m ? 'der'     : f ? 'die'     : 'das',
     };
   }
 
@@ -160,6 +161,12 @@
     return pl ? ' in ' + _esc(pl) : '';
   }
 
+  const _MONTHS_DE = {
+    JAN:'Januar', FEB:'Februar', MAR:'März',     APR:'April',
+    MAY:'Mai',    JUN:'Juni',    JUL:'Juli',      AUG:'August',
+    SEP:'September', OCT:'Oktober', NOV:'November', DEC:'Dezember',
+  };
+
   function _fmtDate(d) {
     if (!d) return '';
     return d
@@ -169,12 +176,16 @@
       .replace(/^AFT\s+/i,  'nach ')
       .replace(/^ABT\s+/i,  'um ')
       .replace(/^CAL\s+/i,  'errechnet ')
-      .replace(/^EST\s+/i,  'geschätzt ');
+      .replace(/^EST\s+/i,  'geschätzt ')
+      .replace(/\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/g,
+               m => _MONTHS_DE[m] || m);
   }
 
   function _atDate(ev) {
     if (!ev.date) return '';
-    const fmt = _fmtDate(ev.date);
+    const raw = ev.date.trim();
+    if (/^\d{4}$/.test(raw)) return ' ' + raw;   // Jahr-only: kein „am"
+    const fmt = _fmtDate(raw);
     const hasQual = /^(von|zwischen|vor|nach|um|errechnet|geschätzt)\s/.test(fmt);
     return ' ' + (hasQual ? '' : 'am ') + _esc(fmt);
   }
@@ -246,6 +257,43 @@
     return `${pr.Er} arbeitete als ${rest.join(', ')} und später als ${last}.`;
   }
 
+  // Mehrere GRAD-Ereignisse chronologisch zu einem Satz zusammenführen
+  function _mergeGradSentence(grads, pr) {
+    if (!grads.length) return '';
+    const sorted = [...grads].sort((a, b) =>
+      (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
+    if (sorted.length === 1) {
+      const ev = sorted[0];
+      return `${pr.Er} erlangte ${ev.value ? _esc(ev.value) : 'einen Abschluss'}${_atPlace(ev)}${_atDate(ev)}.`;
+    }
+    const parts = sorted.map(ev => {
+      const yr = _yearFromDate(ev.date);
+      return (ev.value ? _esc(ev.value) : 'Abschluss') + (yr ? ` (${yr})` : '');
+    });
+    const last = parts.slice(-1)[0];
+    const rest = parts.slice(0, -1);
+    return `${pr.Er} erlangte: ${rest.join(', ')} sowie ${last}.`;
+  }
+
+  // 3+ RESI-Ereignisse als kompakte Ortsliste; ≤2 bleiben Einzelsätze
+  function _mergeResiSentence(resis, pr) {
+    if (!resis.length) return '';
+    if (resis.length <= 2) {
+      return resis.map(ev => `${pr.Er} lebte${_atPlace(ev)}${_atDate(ev)}.`).join(' ');
+    }
+    const places = resis.map(ev => {
+      const addrLine = ev.addr ? ev.addr.split('\n')[0].trim() : '';
+      const placePart = _shortPlace(ev.place);
+      const pl = [addrLine, placePart].filter(Boolean).join(', ');
+      const yr = _yearFromDate(ev.date);
+      return pl ? _esc(pl) + (yr ? ` (${yr})` : '') : null;
+    }).filter(Boolean);
+    if (!places.length) return '';
+    const last = places.slice(-1)[0];
+    const rest = places.slice(0, -1);
+    return `${pr.Er} wohnte in ${rest.join(', ')} und ${last}.`;
+  }
+
   // ── Event-Satz-Templates ────────────────────────────────────────────────────
 
   const _EV_TPL = {
@@ -277,8 +325,16 @@
     const label = ev.eventType ||
       (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) ||
       ev.type || 'Ereignis';
-    const val = ev.value ? ': ' + _esc(ev.value) : '';
-    return `${pr.Er} — ${_esc(label)}${val}${_atDate(ev)}${_atPlace(ev)}.`;
+    // FROM-TO-Zeitraum mit Wert: natürlicher Tätigkeitssatz
+    if (ev.value && ev.date && /^FROM\s+/i.test(ev.date)) {
+      const period = _occuPeriod(ev.date);
+      return `${pr.Er} war ${_esc(ev.value)}${period ? ' (' + period + ')' : ''}${_atPlace(ev)}.`;
+    }
+    // Wert vorhanden: Wert als Hauptaussage, Label weglassen
+    if (ev.value) {
+      return `${pr.Er} — ${_esc(ev.value)}${_atDate(ev)}${_atPlace(ev)}.`;
+    }
+    return `${pr.Er} — ${_esc(label)}${_atDate(ev)}${_atPlace(ev)}.`;
   }
 
   // ── Abschnitte ──────────────────────────────────────────────────────────────
@@ -302,14 +358,14 @@ ${lifespan}
   function _sectionEarlyLife(p, pr) {
     const sentences = [];
 
-    const bDate  = p.birth?.date  ? ' am ' + _esc(p.birth.date)              : '';
+    const bDate  = _atDate({ date: p.birth?.date });
     const bPlace = p.birth?.place ? ' in ' + _esc(_shortPlace(p.birth.place)) : '';
     if (p.birth?.seen || bDate || bPlace) {
       sentences.push(`${_esc(p.name || pr.Er)} wurde${bDate}${bPlace} geboren.`);
     }
 
     if (p.chr?.seen) {
-      const cDate  = p.chr.date  ? ' am ' + _esc(p.chr.date)              : '';
+      const cDate  = _atDate({ date: p.chr?.date });
       const cPlace = p.chr.place ? ' in ' + _esc(_shortPlace(p.chr.place)) : '';
       sentences.push(`${pr.Er} wurde${cDate}${cPlace} getauft.`);
     }
@@ -319,7 +375,7 @@ ${lifespan}
       const fn = father ? _esc(father.name || father.id) : null;
       const mn = mother ? _esc(mother.name || mother.id) : null;
       const parents = fn && mn ? fn + ' und ' + mn : fn || mn;
-      sentences.push(`${pr.Er} war das ${pr.Sohn} von ${parents}.`);
+      sentences.push(`${pr.Er} war ${pr.SohnArt} ${pr.Sohn} von ${parents}.`);
     }
 
     // Geschwister-Kontext
@@ -340,17 +396,28 @@ ${lifespan}
   }
 
   function _sectionEvents(p, pr) {
-    const skip = new Set(['MARR','ENGA','DIV','DIVF','BIRT','CHR','DEAT','BURI']);
+    // RELI und spezielle Typen werden separat behandelt
+    const skip = new Set(['MARR','ENGA','DIV','DIVF','BIRT','CHR','DEAT','BURI','RELI']);
     const allEvs = (p.events || []).filter(ev => !skip.has(ev.type));
 
-    // OCCU-Ereignisse zusammenführen, restliche chronologisch sortiert
-    const occus = allEvs.filter(ev => ev.type === 'OCCU')
+    const byType = t => allEvs.filter(ev => ev.type === t)
       .sort((a, b) => (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
-    const evs = allEvs.filter(ev => ev.type !== 'OCCU');
+
+    const occus = byType('OCCU');
+    const grads = byType('GRAD');
+    const resis = byType('RESI');
+    const evs   = allEvs.filter(ev => ev.type !== 'OCCU' && ev.type !== 'GRAD' && ev.type !== 'RESI');
 
     const parts = [];
+
     const occuSent = _mergeOccuSentence(occus, pr);
     if (occuSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${occuSent}</p></div>`);
+
+    const resiSent = _mergeResiSentence(resis, pr);
+    if (resiSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${resiSent}</p></div>`);
+
+    const gradSent = _mergeGradSentence(grads, pr);
+    if (gradSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${gradSent}</p></div>`);
 
     if (!evs.length && !parts.length) return '';
 
@@ -384,7 +451,7 @@ ${lifespan}
       const sentences = [];
 
       if (f.marr?.seen || f.marr?.date || f.marr?.place) {
-        const mDate  = f.marr.date  ? ' am ' + _esc(f.marr.date)               : '';
+        const mDate  = _atDate({ date: f.marr.date });
         const mPlace = f.marr.place ? ' in ' + _esc(_shortPlace(f.marr.place))  : '';
         const pName  = partner
           ? _esc(partner.name || partnerId) + _partnerSpan(partner)
@@ -416,7 +483,7 @@ ${lifespan}
   function _sectionDeath(p, pr) {
     const sentences = [];
     if (p.death?.seen || p.death?.date || p.death?.place) {
-      const dDate  = p.death.date  ? ' am ' + _esc(p.death.date)               : '';
+      const dDate  = _atDate({ date: p.death.date });
       const dPlace = p.death.place ? ' in ' + _esc(_shortPlace(p.death.place))  : '';
       const causeFull = p.death.cause
         ? (p.death.cause.length > 30 ? ' (' + _esc(p.death.cause) + ')' : ' an ' + _esc(p.death.cause))
@@ -424,7 +491,7 @@ ${lifespan}
       sentences.push(`${_esc(p.name || pr.Er)} verstarb${dDate}${dPlace}${causeFull}.`);
     }
     if (p.buri?.seen || p.buri?.place) {
-      const bDate  = p.buri.date  ? ' am ' + _esc(p.buri.date)               : '';
+      const bDate  = _atDate({ date: p.buri.date });
       const bPlace = p.buri.place ? ' in ' + _esc(_shortPlace(p.buri.place))  : '';
       sentences.push(`${pr.Er} wurde${bDate}${bPlace} begraben.`);
     }
@@ -448,14 +515,24 @@ ${lifespan}
     let sentence;
     if (top.length === 1) {
       sentence = `${pr.Er} lebte in der Zeit ${_esc(top[0].gen)} (${top[0].from}–${top[0].to}).`;
-    } else if (top.length === 2) {
-      sentence = `${pr.Er} lebte in der Zeit ${_esc(top[0].gen)} (${top[0].from}–${top[0].to}) und ${_esc(top[1].gen)} (${top[1].from}–${top[1].to}).`;
     } else {
-      const parts = top.map(e => `${_esc(e.label)} (${e.from}–${e.to})`).join(', ');
-      sentence = `${pr.Er} lebte in einer Zeit großer Veränderungen: ${parts}.`;
+      const last = top[top.length - 1];
+      const rest = top.slice(0, -1);
+      const restStr = rest.map(e => `${_esc(e.gen)} (${e.from}–${e.to})`).join(', ');
+      sentence = `${pr.Er} lebte in der Zeit ${restStr} und ${_esc(last.gen)} (${last.from}–${last.to}).`;
     }
     return `<section class="story-section story-epoch">
 <p class="story-epoch-ctx">${sentence}</p>
+</section>`;
+  }
+
+  // ── Konfession — kurze Schlusszeile ─────────────────────────────────────────
+
+  function _sectionReli(p, pr) {
+    const reli = (p.events || []).find(ev => ev.type === 'RELI' && ev.value);
+    if (!reli) return '';
+    return `<section class="story-section story-reli">
+<p class="story-reli-note">${pr.Er} war ${_esc(reli.value)}${_atDate(reli)}.</p>
 </section>`;
   }
 
@@ -472,6 +549,7 @@ ${lifespan}
     html += _sectionEpoch(p, pr);
     html += _sectionEvents(p, pr);
     html += _sectionFamilies(p, pr);
+    html += _sectionReli(p, pr);
     html += _sectionDeath(p, pr);
     if (p.note) {
       html += `<section class="story-section story-note">
@@ -523,7 +601,8 @@ body{padding:1.5rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif
 .story-ev-imgs{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem}
 .story-ev-img{max-width:80px;max-height:80px;object-fit:cover;border-radius:3px}
 .story-note{background:#f5f0e0;border-left:3px solid #c8b97a;padding:.8rem 1rem;border-radius:0 4px 4px 0}
-.story-epoch-ctx{color:#6b5c2a;font-style:italic;font-size:.92rem;line-height:1.65;margin:0}`;
+.story-epoch-ctx{color:#6b5c2a;font-style:italic;font-size:.92rem;line-height:1.65;margin:0}
+.story-reli-note{color:#777;font-size:.88rem;margin:0}`;
 
     return `<!DOCTYPE html>
 <html lang="de">
