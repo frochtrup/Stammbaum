@@ -192,6 +192,8 @@ body.fc-mode #fcContainer          { display: flex; }
 body.fc-mode #treeScaleWrap        { display: none !important; }
 body.fc-mode #treeKeyLegend        { display: none !important; }
 body.fc-mode #treeFsBtn            { display: none !important; }
+body.fc-mode #treeExportBtn        { display: inline-flex; }
+body.desc-tree-mode #treeExportBtn { display: inline-flex; }
 #treeFcToggle                      { display: none; }
 body.tree-active #treeFcToggle     { display: inline-flex; }
 body.fc-mode #treeFcToggle         { display: inline-flex; }
@@ -1992,7 +1994,8 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 #probandBtn,
 #probandSetBtn,
 #treeBtnBack,
-#treeFsBtn      { display: none; }
+#treeFsBtn,
+#treeExportBtn  { display: none; }
 #treeBtn        { font-size: 1rem; }
 
 #bottomNav      { display: none; }

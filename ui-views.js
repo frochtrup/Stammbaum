@@ -1262,6 +1262,10 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   dedupSwapWinner:         ()  => dedupSwapWinner(),
   dedupIgnorePair:         ()  => dedupIgnorePair(),
   dedupConfirmMerge:       ()  => dedupConfirmMerge(),
+  exportChartPng:          ()  => {
+    if (document.body.classList.contains('fc-mode')) exportFanChartPng();
+    else exportDescTreePng();
+  },
   openNoteModal:           el  => openNoteModal(el.dataset.ntype, el.dataset.nid),
   saveNoteModal:           ()  => saveNoteModal(),
   saveChildRelDialog:      ()  => saveChildRelDialog(),

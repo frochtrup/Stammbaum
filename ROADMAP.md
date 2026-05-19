@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v628 · Cache: `stammbaum-v628`
+**sw-Version:** v629 · Cache: `stammbaum-v629`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -119,7 +119,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | ~~STATS-2~~ | ~~**Statistik-Dashboard ausgebaut**~~ | Lebensspannen, Heiratsalter-Verteilung, Ereignisse/Jahrzehnt, Top-Sterbeorte, Kinderzahl-Verteilung (sw v597) | - |
 | ~~SEARCH-ADV~~ | ~~**Erweiterte Suche**~~ | Fehlende-Felder-Checkboxen kombinierbar mit allen Filtern (sw v596) | - |
 | FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig | XS |
-| CHART-EXPORT | **Diagramm-Export als PNG** | SVG-basierte Diagramme (Fächer, Nachkommen-Baum) via Canvas-Konvertierung als PNG herunterladen; Download-Button in Topbar | S |
+| ~~CHART-EXPORT~~ | ~~**Diagramm-Export als PNG**~~ | `ui-chart-export.js`: `_svgToPng()` Kern-Engine (CSS-Var-Auflösung + Canvas); Fächer-Chart direkt; Nachkommen-Baum DOM-Snapshot (lines + rect+text aus Divs); `↓`-Button in Baum-Topbar (sw v629) | - |
 | CSV-EXPORT | **CSV-Export für Listen** | Personen- und Familienliste als CSV aus der aktuell gefilterten Ansicht; Spalten konfigurierbar (Name, Geburt, Tod, Ort, Quellenzahl); Download-Button im Listen-Header. Wichtige Kompatibilität zu Excel/Numbers für Abgleich und Druck. | S |
 | ~~REL-CALC~~ | ~~**Beziehungsrechner**~~ | BFS-Beziehungsrechner: Verwandtschaft zum Probanden + gemeinsamer Vorfahre mit Geburtsjahr in Person-Detail; freier Zweipersonen-Vergleich via „🔗 zu …"-Button; visueller Pfad als klickbare Karten-Kette im Modal (sw v626) | - |
 | ~~MEDIA-MGR~~ | ~~**Medienverwaltung (eigene View)**~~ | Dritter Sub-Tab „Medien" im Quellen-Tab; Kachelgalerie aller Medien (Personen + Familien + Quellen); Filter-Chips Alle/Personen/Familien/Quellen; Lazy-Loading mit ⚠-Overlay; Klick navigiert zum Kontext-Datensatz; ersetzt drei Modal-Browser (sw v608) | - |
