@@ -1263,8 +1263,9 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   dedupIgnorePair:         ()  => dedupIgnorePair(),
   dedupConfirmMerge:       ()  => dedupConfirmMerge(),
   exportChartPng:          ()  => {
-    if (document.body.classList.contains('fc-mode')) exportFanChartPng();
-    else exportDescTreePng();
+    if (document.body.classList.contains('fc-mode'))        exportFanChartPng();
+    else if (document.body.classList.contains('desc-tree-mode')) exportDescTreePng();
+    else                                                         exportSandUhrPng();
   },
   openNoteModal:           el  => openNoteModal(el.dataset.ntype, el.dataset.nid),
   saveNoteModal:           ()  => saveNoteModal(),
