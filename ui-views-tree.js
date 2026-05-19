@@ -454,10 +454,7 @@ function showTree(personId, addToHistory = true) {
   for (let i = 0; i < allKids.length; i += MAX_CHILD_COLS) childRows.push(allKids.slice(i, i + MAX_CHILD_COLS));
 
   // ── Layout-Breite ──
-  // Geschwister: eine Spalte links (W + SIB_GAP), egal wie viele
-  // Ehepartner:  eine Spalte rechts (MGAP + W), egal wie viele
-  const sibsW   = nSibs > 0 ? W + SIB_GAP : 0;
-  const spousesW = allFamilies.some(f => f.spId) ? MGAP + W : 0;
+  const nSp = allFamilies.filter(f => f.spId).length;
   // ancSpan: nur so breit wie die tiefste belegte Vorfahren-Ebene
   // _treeGenCount = Generationen gesamt inkl. Proband (2..9); scrollt horizontal
   const _maxAnc = _treeGenCount - 1;  // max. Ahnen-Ebenen (1..8)
@@ -470,7 +467,21 @@ function showTree(personId, addToHistory = true) {
   const ancLevels = hasAnc8 ? 8 : hasAnc7 ? 7 : hasAnc6 ? 6 : hasAnc5 ? 5 : hasAnc4 ? 4 : hasAnc3 ? 3 : _maxAnc >= 2 ? 2 : 1;
   const ancSlots  = hasAnc8 ? 256 : hasAnc7 ? 128 : hasAnc6 ? 64 : hasAnc5 ? 32 : hasAnc4 ? 16 : hasAnc3 ? 8 : ancLevels >= 2 ? 4 : 2;
   const ancSpan = ancSlots * SLOT;
-  const personCX = Math.max(PAD + sibsW + CW / 2, PAD + ancSpan / 2);
+  const personCX = Math.max(PAD + CW / 2, PAD + ancSpan / 2);
+  const personX  = personCX - CW / 2;
+
+  // ── Geschwister: horizontal links wenn ≥3 Ahnen-Ebenen, sonst Peek-Stapel ──
+  const MIN_SIB_W    = isPortrait ? 52 : 60;
+  const useHorizSibs = nSibs > 0 && ancLevels >= 3;
+  const availSibW    = personX - PAD - SIB_GAP;
+  const sibCardW     = useHorizSibs && availSibW > 0
+    ? Math.max(MIN_SIB_W, Math.min(W, Math.floor((availSibW - Math.max(0, nSibs - 1) * SIB_GAP) / nSibs)))
+    : W;
+  const nFit    = useHorizSibs ? Math.min(nSibs, Math.max(0, Math.floor((availSibW + SIB_GAP) / (sibCardW + SIB_GAP)))) : nSibs;
+  const nHidden = nSibs - nFit;
+
+  // Ehepartner: immer horizontal rechts
+  const spousesW  = nSp > 0 ? nSp * (W + MGAP) : 0;
   const rightEdge = personCX + CW / 2 + spousesW + PAD;
   const childMaxCols = childRows.length > 0 ? Math.max(...childRows.map(r => r.length)) : 0;
   const totalW = Math.max(personCX + ancSpan / 2 + PAD, rightEdge, personCX + childMaxCols * SLOT / 2 + PAD);
@@ -479,12 +490,9 @@ function showTree(personId, addToHistory = true) {
   const baseY = PAD + ancLevels * ROW;
   function ry(lv) { return lv <= 0 ? baseY + lv * ROW : baseY + CH + VGAP + (lv - 1) * ROW; }
 
-  // Höhe der Kartenstapel (Peek-Überlappung: je +PEEK px pro weitere Karte)
-  const nSp       = allFamilies.filter(f => f.spId).length;
-  const sibStackH = nSibs > 0 ? H + (nSibs - 1) * PEEK : 0;
-  const spStackH  = nSp  > 0 ? H + (nSp  - 1) * PEEK : 0;
-  // Unterkante der Zeile 0 (Maximum aus Center, Geschwister, Ehepartner)
-  const row0Bottom = Math.max(ry(0) + CH, ry(0) + sibStackH, ry(0) + (CH - H) / 2 + spStackH);
+  // Geschwister + Ehepartner in gleicher Zeile → kein Stapel nach unten
+  const sibStackH  = useHorizSibs ? 0 : (nSibs > 0 ? H + (nSibs - 1) * PEEK : 0);
+  const row0Bottom = Math.max(ry(0) + CH, ry(0) + sibStackH);
   const childStartY = row0Bottom + VGAP;
   const totalH = childRows.length > 0
     ? childStartY + childRows.length * ROW - VGAP + PAD
@@ -503,18 +511,19 @@ function showTree(personId, addToHistory = true) {
   function aXFn (d) { return i => _lCX[ancLevels - d](i) - W / 2; }
   function aCXFn(d) { return _lCX[ancLevels - d]; }
 
-  // ── X/Y: Zentrumsperson ──
-  const personX = personCX - CW / 2;
-
-  // ── X/Y: Geschwister-Stapel (links, eine Spalte) ──
+  // ── X/Y: Geschwister ──
+  const sibY        = ry(0) + Math.round((CH - H) / 2);  // vertikal zentriert auf Proband
+  const sibRowW     = nFit > 0 ? nFit * sibCardW + Math.max(0, nFit - 1) * SIB_GAP : 0;
+  const sibRowStartX = personX - SIB_GAP - sibRowW;
+  function sibX(i)  { return sibRowStartX + i * (sibCardW + SIB_GAP); }
+  function sibCX(i) { return sibX(i) + sibCardW / 2; }
+  // Fallback-Variablen für useHorizSibs=false (Peek-Stapel)
   const sibColX  = personX - SIB_GAP - W;
   const sibColCX = sibColX + W / 2;
-  // Stapel: Karte i bei ry(0) + i*PEEK; Mitte von Karte i = ry(0) + i*PEEK + H/2
   function sibMidY(i) { return ry(0) + i * PEEK + H / 2; }
 
-  // ── X/Y: Ehepartner-Stapel (rechts, eine Spalte) ──
-  const spColX  = personX + CW + MGAP;
-  const spColCX = spColX + W / 2;
+  // ── X/Y: Ehepartner (horizontal rechts) ──
+  const spColX = personX + CW + MGAP;
 
   // ── X: Kinder (zentriert auf personCX) ──
   function childRowCX(row, i) { return personCX - (row.length * SLOT) / 2 + (i + 0.5) * SLOT; }
@@ -561,7 +570,7 @@ function showTree(personId, addToHistory = true) {
     svg.appendChild(el);
   }
 
-  function mkCard(id, x, y, isCenter, isHalf = false, zidx = null, isPeek = false, onClick = null, extraBadge = '') {
+  function mkCard(id, x, y, isCenter, isHalf = false, zidx = null, isPeek = false, onClick = null, extraBadge = '', customW = null) {
     const div = document.createElement('div');
     div.className = 'tree-card' +
       (isCenter ? ' tree-card-center' : '') +
@@ -570,7 +579,7 @@ function showTree(personId, addToHistory = true) {
     div.style.left = Math.round(x) + 'px';
     div.style.top  = Math.round(y) + 'px';
     if (zidx !== null) div.style.zIndex = zidx;
-    div.style.width  = (isCenter ? CW : W) + 'px';
+    div.style.width  = (customW !== null ? customW : isCenter ? CW : W) + 'px';
     div.style.height = (isCenter ? CH : H) + 'px';
     if (!id) {
       div.classList.add('tree-card-empty');
@@ -623,52 +632,67 @@ function showTree(personId, addToHistory = true) {
     if (anc1[1]) line(aCXFn(1)(1), ry(-1) + H, juncX, juncY);
     line(juncX, juncY, personCX, ry(0));
     if (nSibs > 0) {
-      // T-Strich: horizontal zum Geschwisterstapel, dann vertikal durch den Stapel
-      svgLine(juncX, juncY, sibColCX, juncY).dataset.role = 'sib-h';
-      svgLine(sibColCX, juncY, sibColCX, sibMidY(nSibs - 1)).dataset.role = 'sib-v';
+      if (useHorizSibs && nFit > 0) {
+        // Horizontaler T-Balken von linkster Geschwister-Mitte bis personCX
+        svgLine(sibCX(0), juncY, personCX, juncY).dataset.role = 'sib-h';
+        // Kurze Vertikale von T-Balken zur Oberkante jeder Geschwister-Karte
+        for (let _si = 0; _si < nFit; _si++)
+          svgLine(sibCX(_si), juncY, sibCX(_si), sibY).dataset.role = 'sib-drop';
+      } else {
+        // Fallback: Peek-Stapel (wenige Generationen)
+        svgLine(juncX, juncY, sibColCX, juncY).dataset.role = 'sib-h';
+        svgLine(sibColCX, juncY, sibColCX, sibMidY(nSibs - 1)).dataset.role = 'sib-v';
+      }
     }
   }
 
-  // ── Geschwister: Kartenstapel links ──
-  // Alle stapeln sich mit PEEK-Streifen; jede Karte navigiert zum jeweiligen Geschwister.
-  // Erste (oberste) Karte zeigt Anzahl-Badge.
-  siblings.forEach((sid, i) => {
-    const y = ry(0) + i * PEEK;
-    const z = nSibs - i + 5;
-    const badge = (i === 0 && nSibs > 1)
-      ? `<div class="tree-half-badge tree-half-badge--sib">${nSibs}</div>`
-      : '';
-    mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge + kbadge(sid));
-  });
+  // ── Geschwister ──
+  if (useHorizSibs) {
+    siblings.slice(0, nFit).forEach((sid, i) => {
+      const badge = (i === 0 && nHidden > 0)
+        ? `<div class="tree-half-badge tree-half-badge--sib">+${nHidden}</div>`
+        : '';
+      mkCard(sid, sibX(i), sibY, false, false, null, false, null, badge + kbadge(sid), sibCardW);
+    });
+  } else {
+    // Fallback: Peek-Stapel
+    siblings.forEach((sid, i) => {
+      const y = ry(0) + i * PEEK;
+      const z = nSibs - i + 5;
+      const badge = (i === 0 && nSibs > 1)
+        ? `<div class="tree-half-badge tree-half-badge--sib">${nSibs}</div>`
+        : '';
+      mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge + kbadge(sid));
+    });
+  }
 
   // ── Zentrumsperson ──
   mkCard(personId, personX, ry(0), true, false, null, false, null, kbadge(personId));
 
-  // ── Ehepartner: Kartenstapel rechts ──
-  // Aktiver Ehepartner (Index aus _activeSpouseMap) liegt oben und ist voll lesbar.
-  // Andere Karten zeigen nur einen PEEK-Streifen; Klick macht diese zur aktiven.
+  // ── Ehepartner: horizontal rechts ──
+  // Aktiver Ehepartner (Index aus _activeSpouseMap) steht links (nächste am Probanden).
+  // Inaktive Ehepartner stehen daneben; Klick macht sie aktiv.
   const spouseFams  = spouseFamsEarly;
   const activeSpIdx = activeSpIdxEarly;
   const orderedSp   = spouseFams.length > 0
     ? [spouseFams[activeSpIdx], ...spouseFams.filter((_, i) => i !== activeSpIdx)]
     : [];
-  const spouseBaseY = ry(0) + (CH - H) / 2;
+  const spouseBaseY = ry(0) + Math.round((CH - H) / 2);
   orderedSp.forEach((fam, displayIdx) => {
-    const origIdx = spouseFams.indexOf(fam);
+    const origIdx  = spouseFams.indexOf(fam);
     const isActive = displayIdx === 0;
-    const y = spouseBaseY + displayIdx * PEEK;
-    const z = spouseFams.length - displayIdx + 5;
-    const onClick = isActive
+    const spX      = spColX + displayIdx * (W + MGAP);
+    const onClick  = isActive
       ? () => showTree(fam.spId)
       : () => { _activeSpouseMap[personId] = origIdx; showTree(personId, false); };
-    mkCard(fam.spId, spColX, y, false, false, z, !isActive, onClick, kbadge(fam.spId));
+    mkCard(fam.spId, spX, spouseBaseY, false, false, null, !isActive, onClick, kbadge(fam.spId));
     if (isActive) {
-      svgLine(personX + CW, ry(0) + CH / 2, spColX, y + H / 2, 'var(--gold)', '5 3').dataset.role = 'spouse-active';
+      svgLine(personX + CW, ry(0) + CH / 2, spX, spouseBaseY + H / 2, 'var(--gold)', '5 3').dataset.role = 'spouse-active';
       // Klickbares div-Element auf der Ehe-Linie (SVG hat pointer-events:none)
       const lineY = ry(0) + CH / 2;
       const btn   = document.createElement('div');
       btn.className = 'tree-marr-btn';
-      btn.style.cssText = `position:absolute;left:${Math.round(personX + CW)}px;top:${Math.round(lineY - 12)}px;width:${Math.round(spColX - personX - CW)}px;height:24px;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center`;
+      btn.style.cssText = `position:absolute;left:${Math.round(personX + CW)}px;top:${Math.round(lineY - 12)}px;width:${Math.round(spX - personX - CW)}px;height:24px;cursor:pointer;z-index:6;display:flex;align-items:center;justify-content:center`;
       btn.title = 'Familie öffnen';
       btn.innerHTML = `<span class="tree-marr-badge">⚭</span>`;
       btn.addEventListener('click', () => showFamilyDetail(fam.famId));
