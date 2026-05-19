@@ -916,8 +916,10 @@ body{padding:2rem 2rem 4rem;max-width:740px;margin:0 auto;font-family:Georgia,se
 @media print{
   @page{margin:2.5cm 2cm;size:A4}
   body{max-width:none;padding:0;background:#faf8f3}
-  .story-header{page-break-after:avoid}
-  section{page-break-inside:avoid}
+  .story-map img{max-height:200px;width:100%;object-fit:cover}
+  .story-diagram-wrap svg{max-height:180px}
+  .story-family,.story-epoch,.story-death,.story-note,.story-reli{page-break-inside:avoid}
+  .story-header,.story-section-title{page-break-after:avoid}
   .story-hero-img,.story-gallery-img,.story-ev-img{box-shadow:none}
 }`;
 
