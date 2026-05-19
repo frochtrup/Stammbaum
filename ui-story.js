@@ -185,6 +185,67 @@
     return m ? parseInt(m[1], 10) : null;
   }
 
+  // ── Text-Kompositions-Helfer ────────────────────────────────────────────────
+
+  // „FROM 1850 TO 1870" → „1850–1870"; einzelnes Datum → Jahreszahl-String
+  function _occuPeriod(dateStr) {
+    if (!dateStr) return '';
+    const m = dateStr.match(/^FROM\s+(.+?)\s+TO\s+(.+)$/i);
+    if (m) {
+      const y1 = _yearFromDate(m[1]), y2 = _yearFromDate(m[2]);
+      return y1 && y2 ? `${y1}–${y2}` : `${_fmtDate(m[1])} bis ${_fmtDate(m[2])}`;
+    }
+    const y = _yearFromDate(dateStr);
+    return y ? String(y) : '';
+  }
+
+  // Partner-Lebensdaten als kurze Klammer: „(*1820, †1902)"
+  function _partnerSpan(partner) {
+    if (!partner) return '';
+    const by = _yearFromDate(partner.birth?.date || partner.chr?.date);
+    const dy = _yearFromDate(partner.death?.date);
+    if (!by && !dy) return '';
+    return ' (' + [by ? '*' + by : '', dy ? '†' + dy : ''].filter(Boolean).join(', ') + ')';
+  }
+
+  // Kinderliste mit Geburtsjahren; gibt den Satzteil ab „stammt/stammen/gingen" zurück
+  function _childNames(children) {
+    if (!children.length) return null;
+    const withYr = children.map(c => {
+      const yr = _yearFromDate(c.birth?.date || c.chr?.date);
+      return _esc(c.name || c.id) + (yr ? ` (*${yr})` : '');
+    });
+    const n = withYr.length;
+    if (n <= 3) {
+      const last = withYr.slice(-1)[0];
+      const rest = withYr.slice(0, -1);
+      return n === 1 ? `stammt ${last}` : `stammen ${rest.join(', ')} und ${last}`;
+    }
+    if (n <= 6) {
+      const last = withYr.slice(-1)[0];
+      const rest = withYr.slice(0, -1);
+      return `gingen ${n} Kinder hervor: ${rest.join(', ')} und ${last}`;
+    }
+    return `gingen ${n} Kinder hervor`;
+  }
+
+  // Mehrere OCCU-Ereignisse zu einem Satz zusammenführen
+  function _mergeOccuSentence(occus, pr) {
+    const jobs = occus.filter(ev => ev.value);
+    if (!jobs.length) return '';
+    if (jobs.length === 1) {
+      const ev = jobs[0];
+      return `${pr.Er} war als ${_esc(ev.value)} tätig${_atPlace(ev)}${_atDate(ev)}.`;
+    }
+    const parts = jobs.map(ev => {
+      const period = _occuPeriod(ev.date);
+      return _esc(ev.value) + (period ? ` (${period})` : '');
+    });
+    const last = parts.slice(-1)[0];
+    const rest = parts.slice(0, -1);
+    return `${pr.Er} arbeitete als ${rest.join(', ')} und später als ${last}.`;
+  }
+
   // ── Event-Satz-Templates ────────────────────────────────────────────────────
 
   const _EV_TPL = {
@@ -261,6 +322,17 @@ ${lifespan}
       sentences.push(`${pr.Er} war das ${pr.Sohn} von ${parents}.`);
     }
 
+    // Geschwister-Kontext
+    const fam0 = p.famc?.[0] ? getFamily(p.famc[0].famId) : null;
+    if (fam0) {
+      const sibCount = (fam0.children || []).filter(cid => cid !== p.id).length;
+      if (sibCount === 0 && (father || mother)) {
+        sentences.push(`${pr.Er} war Einzelkind.`);
+      } else if (sibCount > 0) {
+        sentences.push(`${pr.Er} hatte ${sibCount} Geschwister.`);
+      }
+    }
+
     if (!sentences.length) return '';
     return `<section class="story-section">
 <p>${sentences.join(' ')}</p>
@@ -269,8 +341,18 @@ ${lifespan}
 
   function _sectionEvents(p, pr) {
     const skip = new Set(['MARR','ENGA','DIV','DIVF','BIRT','CHR','DEAT','BURI']);
-    const evs  = (p.events || []).filter(ev => !skip.has(ev.type));
-    if (!evs.length) return '';
+    const allEvs = (p.events || []).filter(ev => !skip.has(ev.type));
+
+    // OCCU-Ereignisse zusammenführen, restliche chronologisch sortiert
+    const occus = allEvs.filter(ev => ev.type === 'OCCU')
+      .sort((a, b) => (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
+    const evs = allEvs.filter(ev => ev.type !== 'OCCU');
+
+    const parts = [];
+    const occuSent = _mergeOccuSentence(occus, pr);
+    if (occuSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${occuSent}</p></div>`);
+
+    if (!evs.length && !parts.length) return '';
 
     const sorted = [...evs].sort((a, b) => {
       const ya = _yearFromDate(a.date), yb = _yearFromDate(b.date);
@@ -280,14 +362,15 @@ ${lifespan}
       return ya - yb;
     });
 
-    const items = sorted.map(ev => {
+    sorted.forEach(ev => {
       const evMedia = (ev.media || []).filter(m => m.file);
       const imgDiv  = evMedia.length
         ? `<div class="story-ev-imgs" data-ev-files="${evMedia.map(m => _esc(m.file)).join('|')}"></div>`
         : '';
-      return `<div class="story-ev-wrap"><p class="story-ev">${_eventSentence(ev, pr)}</p>${imgDiv}</div>`;
-    }).join('\n');
-    return `<section class="story-section story-events">${items}</section>`;
+      parts.push(`<div class="story-ev-wrap"><p class="story-ev">${_eventSentence(ev, pr)}</p>${imgDiv}</div>`);
+    });
+
+    return parts.length ? `<section class="story-section story-events">${parts.join('\n')}</section>` : '';
   }
 
   function _sectionFamilies(p, pr) {
@@ -303,21 +386,19 @@ ${lifespan}
       if (f.marr?.seen || f.marr?.date || f.marr?.place) {
         const mDate  = f.marr.date  ? ' am ' + _esc(f.marr.date)               : '';
         const mPlace = f.marr.place ? ' in ' + _esc(_shortPlace(f.marr.place))  : '';
-        const pName  = partner ? _esc(partner.name || partnerId) : 'unbekannt';
+        const pName  = partner
+          ? _esc(partner.name || partnerId) + _partnerSpan(partner)
+          : 'unbekannt';
         sentences.push(`${_esc(p.name || pr.Er)} heiratete ${pName}${mDate}${mPlace}.`);
       } else if (partner) {
-        sentences.push(`${_esc(p.name || pr.Er)} war mit ${_esc(partner.name || partnerId)} verheiratet.`);
+        const pName = _esc(partner.name || partnerId) + _partnerSpan(partner);
+        sentences.push(`${_esc(p.name || pr.Er)} war mit ${pName} verheiratet.`);
       }
 
       const children = (f.children || []).map(cid => getPerson(cid)).filter(Boolean);
       if (children.length) {
-        const names = children.map(c => _esc(c.name || c.id));
-        if (names.length === 1) {
-          sentences.push(`Aus dieser Ehe stammt ${names[0]}.`);
-        } else {
-          const last = names.pop();
-          sentences.push(`Aus dieser Ehe stammen ${names.join(', ')} und ${last}.`);
-        }
+        const childStr = _childNames(children);
+        if (childStr) sentences.push(`Aus dieser Ehe ${childStr}.`);
       }
 
       if (sentences.length) {
@@ -337,8 +418,10 @@ ${lifespan}
     if (p.death?.seen || p.death?.date || p.death?.place) {
       const dDate  = p.death.date  ? ' am ' + _esc(p.death.date)               : '';
       const dPlace = p.death.place ? ' in ' + _esc(_shortPlace(p.death.place))  : '';
-      const cause  = p.death.cause ? ' (' + _esc(p.death.cause) + ')'           : '';
-      sentences.push(`${_esc(p.name || pr.Er)} verstarb${dDate}${dPlace}${cause}.`);
+      const causeFull = p.death.cause
+        ? (p.death.cause.length > 30 ? ' (' + _esc(p.death.cause) + ')' : ' an ' + _esc(p.death.cause))
+        : '';
+      sentences.push(`${_esc(p.name || pr.Er)} verstarb${dDate}${dPlace}${causeFull}.`);
     }
     if (p.buri?.seen || p.buri?.place) {
       const bDate  = p.buri.date  ? ' am ' + _esc(p.buri.date)               : '';
@@ -347,6 +430,33 @@ ${lifespan}
     }
     if (!sentences.length) return '';
     return `<section class="story-section story-death"><p>${sentences.join(' ')}</p></section>`;
+  }
+
+  // ── Epochen-Kontext ─────────────────────────────────────────────────────────
+
+  function _sectionEpoch(p, pr) {
+    if (typeof _STORY_EPOCHS === 'undefined' || !_STORY_EPOCHS.length) return '';
+    const by = _yearFromDate(p.birth?.date || p.chr?.date);
+    const dy = _yearFromDate(p.death?.date) || (by ? by + 80 : null);
+    if (!by && !dy) return '';
+    const lifeStart = by  || 0;
+    const lifeEnd   = dy  || 9999;
+    const matches   = _STORY_EPOCHS.filter(e => e.from <= lifeEnd && e.to >= lifeStart);
+    if (!matches.length) return '';
+
+    const top = matches.slice(0, 3);
+    let sentence;
+    if (top.length === 1) {
+      sentence = `${pr.Er} lebte in der Zeit ${_esc(top[0].gen)} (${top[0].from}–${top[0].to}).`;
+    } else if (top.length === 2) {
+      sentence = `${pr.Er} lebte in der Zeit ${_esc(top[0].gen)} (${top[0].from}–${top[0].to}) und ${_esc(top[1].gen)} (${top[1].from}–${top[1].to}).`;
+    } else {
+      const parts = top.map(e => `${_esc(e.label)} (${e.from}–${e.to})`).join(', ');
+      sentence = `${pr.Er} lebte in einer Zeit großer Veränderungen: ${parts}.`;
+    }
+    return `<section class="story-section story-epoch">
+<p class="story-epoch-ctx">${sentence}</p>
+</section>`;
   }
 
   // ── Haupt-Renderer ──────────────────────────────────────────────────────────
@@ -359,6 +469,7 @@ ${lifespan}
     html += _sectionHeader(p, pr);
     html += `<section class="story-section story-map"><div id="storyMap" class="story-map-container"></div></section>`;
     html += _sectionEarlyLife(p, pr);
+    html += _sectionEpoch(p, pr);
     html += _sectionEvents(p, pr);
     html += _sectionFamilies(p, pr);
     html += _sectionDeath(p, pr);
@@ -411,7 +522,8 @@ body{padding:1.5rem 2rem;max-width:800px;margin:0 auto;font-family:Georgia,serif
 .story-ev-block{margin-bottom:.6rem}
 .story-ev-imgs{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.3rem}
 .story-ev-img{max-width:80px;max-height:80px;object-fit:cover;border-radius:3px}
-.story-note{background:#f5f0e0;border-left:3px solid #c8b97a;padding:.8rem 1rem;border-radius:0 4px 4px 0}`;
+.story-note{background:#f5f0e0;border-left:3px solid #c8b97a;padding:.8rem 1rem;border-radius:0 4px 4px 0}
+.story-epoch-ctx{color:#6b5c2a;font-style:italic;font-size:.92rem;line-height:1.65;margin:0}`;
 
     return `<!DOCTYPE html>
 <html lang="de">

@@ -2969,6 +2969,7 @@ html[data-theme="dark"] {
 
 .story-death { border-left: 3px solid var(--border); padding-left: .75rem; }
 .story-note  { background: var(--surface2); border-radius: 6px; padding: .75rem 1rem; }
+.story-epoch-ctx { color: var(--text-dim); font-style: italic; font-size: .92rem; line-height: 1.65; margin: 0; }
 
 .story-section-title {
   font-size: 1rem;

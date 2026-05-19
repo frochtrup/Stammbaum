@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v637 · Cache: `stammbaum-v637`
+**sw-Version:** v638 · Cache: `stammbaum-v638`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -143,7 +143,7 @@ Ausgaben, die Genealogen ihren Familien zeigen. Fundament abgeschlossen (Timelin
 | ~~MAP-TOPBAR~~ | ~~**Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars**~~ | 🗺 in Person-Detail, Zeitleiste, Sanduhr-Baum + Detail-NavBar (sw v604) | - |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
 | TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
-| STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Kinderzahl); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
+| ~~STORY-OPT~~ | ~~**Story: Textqualität verbessern**~~ | OCCU-Merge (Berufe mit Zeitraum in einem Satz); Kinder mit Geburtsjahren; Partner-Lebensdaten in Heiratssatz; Geschwisterzahl in Frühleben; Todesursache mit „an"-Präposition; `_sectionEpoch` + `story-epochs.js` (11 Epochen); LLM-Opt-in separates Ticket (sw v638) | - |
 | STORY-FAM | **Story-Mode für Familien** | Familien-Narrative: Eltern + alle Kinder, gemeinsame Ereignisse, Geschwister-Vergleich, Zeitspanne der Familie; HTML-Download + Print-CSS analog Person-Story | M |
 | STORY-DIAGRAM | **Story: Stammbaum-Diagramme einbetten** | Mini-Sanduhr (Konfig 2+1+1: 2 Vorfahren-Ebenen + Proband + 1 Kinder-Ebene) als SVG direkt in der Story-HTML-Seite; optional Fächer-Chart; Schalter im Story-Header; im HTML-Download und Print-CSS enthalten; Basis: `ui-chart-export.js` (`_buildTreeSvg`) | M |
 | MAP-HIST-B | **Echter Historikkartenhintergrund** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). | M |
