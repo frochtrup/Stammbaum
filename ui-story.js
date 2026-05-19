@@ -318,8 +318,12 @@
       const addrLine = ev.addr ? ev.addr.split('\n')[0].trim() : '';
       const placePart = _shortPlace(ev.place);
       const pl = [addrLine, placePart].filter(Boolean).join(', ');
-      const yr = _yearFromDate(ev.date);
-      return pl ? _esc(pl) + (yr ? ` (${yr})` : '') : null;
+      if (!pl) return null;
+      const yr  = _yearFromDate(ev.date);
+      if (!yr) return _esc(pl);
+      const fmt = _fmtDate(ev.date || '');
+      const qm  = fmt.match(/^(um|vor|nach|errechnet|geschätzt)\s+/);
+      return _esc(pl) + (qm ? ` (${qm[1]} ${yr})` : ` (${yr})`);
     }).filter(Boolean);
     if (!places.length) return '';
     const last = places.slice(-1)[0];
@@ -362,6 +366,16 @@
     if (ev.value && ev.date && /^FROM\s+/i.test(ev.date)) {
       const period = _occuPeriod(ev.date);
       return `${pr.Er} war ${_esc(ev.value)}${period ? ' (' + period + ')' : ''}${_atPlace(ev)}.`;
+    }
+    if (ev.value && ev.date) {
+      const raw = ev.date.trim();
+      const fmt = _fmtDate(raw);
+      const isYearOnly = /^\d{4}$/.test(raw);
+      const hasQual    = /^(von|zwischen|vor|nach|um|errechnet|geschätzt)\s/.test(fmt);
+      // Konkretes Datum (Tag+Monat+Jahr, kein Qualifier) → Datum vorne
+      if (!isYearOnly && !hasQual) {
+        return `Am ${_esc(fmt)}${_atPlace(ev)}: ${_esc(ev.value)}.`;
+      }
     }
     // Wert vorhanden: Wert als Hauptaussage, Label weglassen
     if (ev.value) {
@@ -445,14 +459,15 @@ ${lifespan}
 
     const parts = [];
 
+    // Reihenfolge: Bildung → Beruf → Wohnorte → Abschlüsse → Rest
+    const educSent = _mergeEducSentence(educs, pr);
+    if (educSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${educSent}</p></div>`);
+
     const occuSent = _mergeOccuSentence(occus, pr);
     if (occuSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${occuSent}</p></div>`);
 
     const resiSent = _mergeResiSentence(resis, pr);
     if (resiSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${resiSent}</p></div>`);
-
-    const educSent = _mergeEducSentence(educs, pr);
-    if (educSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${educSent}</p></div>`);
 
     const gradSent = _mergeGradSentence(grads, pr);
     if (gradSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${gradSent}</p></div>`);
@@ -481,7 +496,12 @@ ${lifespan}
   function _sectionFamilies(p, pr) {
     if (!p.fams?.length) return '';
     let html = '';
-    for (const famId of p.fams) {
+    const sortedFams = [...p.fams].sort((a, b) => {
+      const ya = _yearFromDate(getFamily(a)?.marr?.date) ?? Infinity;
+      const yb = _yearFromDate(getFamily(b)?.marr?.date) ?? Infinity;
+      return ya - yb;
+    });
+    for (const famId of sortedFams) {
       const f = getFamily(famId);
       if (!f) continue;
       const partnerId = p.id === f.husb ? f.wife : f.husb;
