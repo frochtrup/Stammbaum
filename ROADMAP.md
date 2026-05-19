@@ -142,6 +142,7 @@ Ausgaben, die Genealogen ihren Familien zeigen. Fundament abgeschlossen (Timelin
 | TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
 | STORY-OPT | **Story: Textqualität verbessern** | Natürlichere Satzstrukturen für häufige Ereigniskombinationen (Beruf mit Zeitraum, Familiennarrative, Kinderzahl); Epochen-Kontext; LLM-optionale Anreicherung als Opt-in | M |
 | STORY-FAM | **Story-Mode für Familien** | Familien-Narrative: Eltern + alle Kinder, gemeinsame Ereignisse, Geschwister-Vergleich, Zeitspanne der Familie; HTML-Download + Print-CSS analog Person-Story | M |
+| STORY-DIAGRAM | **Story: Stammbaum-Diagramme einbetten** | Mini-Sanduhr (Konfig 2+1+1: 2 Vorfahren-Ebenen + Proband + 1 Kinder-Ebene) als SVG direkt in der Story-HTML-Seite; optional Fächer-Chart; Schalter im Story-Header; im HTML-Download und Print-CSS enthalten; Basis: `ui-chart-export.js` (`_buildTreeSvg`) | M |
 | MAP-HIST-B | **Echter Historikkartenhintergrund** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). | M |
 
 ---
