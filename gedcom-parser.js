@@ -286,7 +286,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
     if (x.lv1tag === 'OBJE' && cur.media.length) {
       const _cm4 = cur.media[cur.media.length-1];
-      if (x.lv2tag === 'FILE' && x.lv3tag === 'FORM' && (tag === 'MEDI' || tag === 'TYPE'))
+      if (x.lv2tag === 'FILE' && x.lv3tag === 'FORM' && tag === 'MEDI')
         _cm4.medi = val.toLowerCase();
       else
         _cm4._extra.push('4 ' + tag + (val ? ' ' + val : ''));
@@ -849,22 +849,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
         if (cref.frelSeen) { famcEntry.frel = cref.frel; famcEntry.frelSeen = true; }
         if (cref.mrelSeen) { famcEntry.mrel = cref.mrel; famcEntry.mrelSeen = true; }
       }
-      if (!famcEntry.citations.length) {
-        const _normSid = s => s ? s.replace(/^@@/, '@').replace(/@@$/, '@').trim() : s;
-        for (const c of (cref.citations || [])) {
-          const ns = _normSid(c.sid);
-          if (!famcEntry.citations.some(x => x.sid === ns && x.page === c.page))
-            famcEntry.citations.push({ ...c, sid: ns });
-        }
-        const _addCit = (raw, page, quay) => {
-          if (!raw) return;
-          const ns = _normSid(raw);
-          if (!famcEntry.citations.some(x => x.sid === ns))
-            famcEntry.citations.push(citationObj(ns, page || '', quay || ''));
-        };
-        _addCit(cref.frelSour, cref.frelPage, cref.frelQUAY);
-        if (cref.mrelSour !== cref.frelSour) _addCit(cref.mrelSour, cref.mrelPage, cref.mrelQUAY);
-      }
+      // Citations bleiben auf ihrer Originalseite: FAM CHIL → nur in FAM geschrieben, nicht nach INDI FAMC kopiert
     }
   }
 
