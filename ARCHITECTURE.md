@@ -306,8 +306,11 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 | Parser lv>4 fix + `updateHeadDate=false` (sw v142) | **0** |
 | `DSCR`/`IDNO`/`SSN` → `events[]` (sw v148) | **0** |
 | writeGEDCOM() in Subfunktionen, FAM-events-Duplikation behoben (sw v167) | **0** |
+| CHAN NOTE CONC/CONT alle 5 Sub-Parser; FAM-OBJE @ref; `repoCalns[]` (sw v654–v656) | **-1** |
 
-`roundtrip_stable: true` · `net_delta=0` — alle Tag-Counts bestanden; TIME-stabil (out1 === out2).
+`roundtrip_stable: true` · `net_delta=-1` (bekannte Ausnahme, kein Datenverlust) — TIME-stabil (out1 === out2).
+
+**Bekannte Ausnahme net_delta=-1:** `pushCont()` splittet CONC/CONT bei 248 Zeichen neu, unabhängig von Original-Splitpunkten. Textinhalt ist identisch — jeder GEDCOM-Reader reassembliert identisch. Verbatim-Passthrough wäre unverhältnismäßig komplex (stale-Risiko bei Edits). CONC/CONT sind Standard-Konstrukte, kein Datenverlust.
 
 ---
 
