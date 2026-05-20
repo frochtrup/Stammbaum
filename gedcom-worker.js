@@ -6,6 +6,11 @@
 //        { type: 'done',     db:  object  }  (pct 100 impliziert)
 //        { type: 'error',    message: string }
 
+// citationObj wird von gedcom-parser.js benötigt; gedcom.js nicht laden (DOM-Abhängigkeiten)
+function citationObj(sid = '', page = '', quay = '', note = null, extra = [], media = []) {
+  return { sid, page, quay, note, extra: [...extra], media: [...media] };
+}
+
 importScripts('gedcom-parser.js');
 
 self.onmessage = function(e) {
