@@ -11,7 +11,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
         const sn2 = (val||'').match(/\/([^\/]*)\//) || [];
         const surn2 = sn2[1] ? sn2[1].trim() : '';
         const giv2  = (val||'').replace(/\/[^\/]*\//, '').trim();
-        cur.extraNames.push({ nameRaw:val||'', given:giv2, surname:surn2, prefix:'', suffix:'', type:'', citations:[], _extra:[] });
+        cur.extraNames.push({ nameRaw:val||'', given:giv2, surname:surn2, prefix:'', suffix:'', type:'', citations:[], _extra:[], _hasGivn:false, _hasSurn:false });
         x._curExtraNameIdx = cur.extraNames.length - 1;
       } else {
         cur._nameParsed = true;
@@ -105,8 +105,8 @@ function _parseINDILine(cur, x, lv, tag, val) {
       if (x._curExtraNameIdx >= 0) {
         const en = cur.extraNames[x._curExtraNameIdx];
         if      (tag === 'TYPE') en.type   = val;
-        else if (tag === 'GIVN') { en.given   = val; }
-        else if (tag === 'SURN') { en.surname = val; }
+        else if (tag === 'GIVN') { en.given = val; en._hasGivn = true; }
+        else if (tag === 'SURN') { en.surname = val; en._hasSurn = true; }
         else if (tag === 'NPFX') en.prefix  = val;
         else if (tag === 'NSFX') en.suffix  = val;
         else if (tag === 'SOUR') { x._curCit = citationObj(val); en.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
@@ -119,8 +119,9 @@ function _parseINDILine(cur, x, lv, tag, val) {
           if (starMatch && !cur._rufname) cur._rufname = (starMatch[1] || starMatch[2]);
           cur.given = val.replace(/\*/g, '').replace(/\s{2,}/g, ' ').trim();
           cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim();
+          cur._hasGivn = true;
         }
-        else if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); }
+        else if (tag === 'SURN') { cur.surname = val; cur.name = (cur.given + (cur.surname ? ' '+cur.surname : '')).trim(); cur._hasSurn = true; }
         else if (tag === 'NICK') cur.nick = val;
         else if (tag === '_RUFNAME') cur._rufname = val;
         else if (tag === 'NPFX') cur.prefix = val;
@@ -195,6 +196,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
       else { _cm._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=_cm._extra; }
     }
     if (x.lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
+    if (x.lv1tag === 'CHAN' && tag==='NOTE') cur.chanNote = val || '';
     if (x.lv1tag === 'SOUR' && x.lastSourVal) {
       if      (tag === 'PAGE') cur.topSourcePages[x.lastSourVal] = val;
       else if (tag === 'QUAY') cur.topSourceQUAY[x.lastSourVal] = val;
@@ -270,13 +272,13 @@ function _parseINDILine(cur, x, lv, tag, val) {
     }
     if (x.inMap) {
       const coord = parseGeoCoord(val);
-      if      (x.mapParent === 'BIRT') { if (tag==='LATI') cur.birth.lati=coord; if (tag==='LONG') cur.birth.long=coord; }
-      else if (x.mapParent === 'DEAT') { if (tag==='LATI') cur.death.lati=coord; if (tag==='LONG') cur.death.long=coord; }
-      else if (x.mapParent === 'CHR')  { if (tag==='LATI') cur.chr.lati=coord;   if (tag==='LONG') cur.chr.long=coord; }
-      else if (x.mapParent === 'BURI') { if (tag==='LATI') cur.buri.lati=coord;  if (tag==='LONG') cur.buri.long=coord; }
+      if      (x.mapParent === 'BIRT') { if (tag==='LATI') { cur.birth.lati=coord; cur.birth._latiStr=val; } if (tag==='LONG') { cur.birth.long=coord; cur.birth._longStr=val; } }
+      else if (x.mapParent === 'DEAT') { if (tag==='LATI') { cur.death.lati=coord; cur.death._latiStr=val; } if (tag==='LONG') { cur.death.long=coord; cur.death._longStr=val; } }
+      else if (x.mapParent === 'CHR')  { if (tag==='LATI') { cur.chr.lati=coord;   cur.chr._latiStr=val;   } if (tag==='LONG') { cur.chr.long=coord;   cur.chr._longStr=val;   } }
+      else if (x.mapParent === 'BURI') { if (tag==='LATI') { cur.buri.lati=coord;  cur.buri._latiStr=val;  } if (tag==='LONG') { cur.buri.long=coord;  cur.buri._longStr=val;  } }
       else if (x.evIdx >= 0 && cur.events[x.evIdx]) {
-        if (tag==='LATI') cur.events[x.evIdx].lati = coord;
-        if (tag==='LONG') cur.events[x.evIdx].long = coord;
+        if (tag==='LATI') { cur.events[x.evIdx].lati = coord; cur.events[x.evIdx]._latiStr = val; }
+        if (tag==='LONG') { cur.events[x.evIdx].long = coord; cur.events[x.evIdx]._longStr = val; }
       }
     }
     if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
@@ -426,6 +428,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
     if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
     if (x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
     if (x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+    if (x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
     if (x.lv1tag==='CHIL' && cur._lastChil) {
       if (!cur.childRelations[cur._lastChil]) cur.childRelations[cur._lastChil] = {frel:'',mrel:'',frelSeen:false,mrelSeen:false,frelSour:'',frelPage:'',frelQUAY:'',frelSourExtra:[],mrelSour:'',mrelPage:'',mrelQUAY:'',mrelSourExtra:[],citations:[]};
       const cref = cur.childRelations[cur._lastChil];
@@ -552,12 +555,12 @@ function _parseFAMLine(cur, x, lv, tag, val) {
     if (x.inMap && (x.mapParent === 'MARR' || x.mapParent === 'ENGA' || x.mapParent === 'ENG' || x.mapParent === 'DIV' || x.mapParent === 'DIVF' || x.mapParent === 'EVEN')) {
       const coord = parseGeoCoord(val);
       if (x.mapParent === 'EVEN' && x.evIdx >= 0 && cur.events[x.evIdx]) {
-        if (tag==='LATI') cur.events[x.evIdx].lati = coord;
-        if (tag==='LONG') cur.events[x.evIdx].long = coord;
+        if (tag==='LATI') { cur.events[x.evIdx].lati = coord; cur.events[x.evIdx]._latiStr = val; }
+        if (tag==='LONG') { cur.events[x.evIdx].long = coord; cur.events[x.evIdx]._longStr = val; }
       } else {
         const evObj = (x.mapParent==='ENGA'||x.mapParent==='ENG') ? cur.engag : x.mapParent==='DIV' ? cur.div : x.mapParent==='DIVF' ? cur.divf : cur.marr;
-        if (tag==='LATI') evObj.lati = coord;
-        if (tag==='LONG') evObj.long = coord;
+        if (tag==='LATI') { evObj.lati = coord; evObj._latiStr = val; }
+        if (tag==='LONG') { evObj.long = coord; evObj._longStr = val; }
       }
     }
   }
@@ -609,6 +612,7 @@ function _parseSOURLine(cur, x, lv, tag, val) {
     if ((tag==='CONC'||tag==='CONT') && x.lv1tag==='PUBL') cur.publ   += (tag==='CONT'?'\n':'') + val;
     if ((tag==='CONC'||tag==='CONT') && x.lv1tag==='ABBR') cur.abbr   += (tag==='CONT'?'\n':'') + val;
     if (x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
+    if (x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
     if (x.lv1tag==='REPO' && tag==='CALN') { cur.repoCallNum = val; }
     if (x.lv1tag==='REFN' && tag==='TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
     if (x.lv1tag==='DATA' && tag==='AGNC') cur.agnc = val;
@@ -641,6 +645,7 @@ function _parseNOTELine(cur, x, lv, tag, val) {
   else if (tag==='CONT') cur.text += '\n' + val;
   else if (lv===1 && tag==='CHAN') { /* context-only */ }
   else if (lv===2 && x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
+  else if (lv===2 && x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
   else if (lv===3 && x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
   else {
     cur._passthrough.push(lv + ' ' + tag + (val ? ' ' + val : ''));
@@ -661,6 +666,7 @@ function _parseREPOLine(cur, x, lv, tag, val) {
   } else if (lv === 2) {
     if (x.lv1tag==='ADDR' && tag==='CONT') cur.addr += '\n' + val;
     if (x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
+    if (x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
   } else if (lv === 3) {
     if (x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
   }
@@ -739,24 +745,24 @@ function parseGEDCOM(text, parseErrors, onProgress) {
           events:[], famc:[], fams:[],
           noteRefs:[], noteTexts:[], noteText:'',
           extraNames:[], _tasks:[], _rlog:[], associations:[], aliases:[], refns:[],
-          media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'',
-          nameCitations:[],
+          media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'', chanNote:'',
+          nameCitations:[], _hasGivn:false, _hasSurn:false,
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
         };
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,citations:[],value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], refns:[], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], refns:[], lastChanged:'', lastChangedTime:'', chanNote:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallMedi:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallMedi:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'', chanNote:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.slice(val.startsWith('NOTE ') ? 5 : 4);
-        cur = { id:tag, text: _noteinit, _passthrough: [], lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, text: _noteinit, _passthrough: [], lastChanged:'', lastChangedTime:'', chanNote:'' };
         notes[tag] = cur; curType = 'NOTE';
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
-        cur = { id:tag, _passthrough:[], name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'' };
+        cur = { id:tag, _passthrough:[], name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'', chanNote:'' };
         repositories[tag] = cur; curType = 'REPO';
       } else if (tag.startsWith('@')) {
         const recLine = '0 ' + tag + (val ? ' ' + val : '');

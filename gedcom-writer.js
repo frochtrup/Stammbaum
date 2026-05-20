@@ -65,6 +65,7 @@ function writeCHAN(lines, obj, lv = 1) {
   lines.push(`${lv} CHAN`);
   lines.push(`${lv+1} DATE ${obj.lastChanged}`);
   if (obj.lastChangedTime) lines.push(`${lv+2} TIME ${obj.lastChangedTime}`);
+  if (obj.chanNote) pushCont(lines, lv+1, 'NOTE', obj.chanNote);
 }
 
 // Schreibt MAP/LATI/LONG-Block.
@@ -93,8 +94,8 @@ function geoLines(lines, obj, indent, useExtraPlaces = true) {
   if (lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
   if (lati !== null && long !== null) {
     lines.push(`${indent} MAP`);
-    const latStr = (lati >= 0 ? 'N' : 'S') + Math.abs(lati);
-    const lonStr = (long >= 0 ? 'E' : 'W') + Math.abs(long);
+    const latStr = obj?._latiStr || ((lati >= 0 ? 'N' : 'S') + Math.abs(lati));
+    const lonStr = obj?._longStr || ((long >= 0 ? 'E' : 'W') + Math.abs(long));
     lines.push(`${indent+1} LATI ${latStr}`);
     lines.push(`${indent+1} LONG ${lonStr}`);
   }
@@ -145,8 +146,8 @@ function writeINDIRecord(lines, p) {
   // Name mit Sub-Tags
   const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
   lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
-  if (p.given)   lines.push(`2 GIVN ${p.given}`);
-  if (p.surname) lines.push(`2 SURN ${p.surname}`);
+  if (p.given   && p._hasGivn) lines.push(`2 GIVN ${p.given}`);
+  if (p.surname && p._hasSurn) lines.push(`2 SURN ${p.surname}`);
   if (p.nick)     lines.push(`2 NICK ${p.nick}`);
   if (p._rufname) lines.push(`2 _RUFNAME ${p._rufname}`);
   if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
@@ -163,8 +164,8 @@ function writeINDIRecord(lines, p) {
   for (const en of (p.extraNames || [])) {
     lines.push(`1 NAME${en.nameRaw ? ' ' + en.nameRaw : ''}`);
     if (en.type)    lines.push(`2 TYPE ${en.type}`);
-    if (en.given)   lines.push(`2 GIVN ${en.given}`);
-    if (en.surname) lines.push(`2 SURN ${en.surname}`);
+    if (en.given   && en._hasGivn) lines.push(`2 GIVN ${en.given}`);
+    if (en.surname && en._hasSurn) lines.push(`2 SURN ${en.surname}`);
     if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
     if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
     _writeSourCits(lines, 2, en);
