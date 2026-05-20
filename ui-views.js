@@ -1139,6 +1139,7 @@ const _CLICK_MAP = {
   showFamilyMediaBrowser:  ()  => showFamilyMediaBrowser(),
   switchSourcesSubTab:     el  => switchSourcesSubTab(el.dataset.subtab),
   showMediaBrowser:        ()  => showMediaBrowser(),
+  menuMediaBrowser:        ()  => { closeModal('modalMenu'); showMediaBrowser(); },
   showAddSheet:            ()  => showAddSheet(),
   showQuickAdd:            ()  => showQuickAdd(),
   saveQuickAdd:            ()  => saveQuickAdd(),
