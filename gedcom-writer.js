@@ -146,8 +146,8 @@ function writeINDIRecord(lines, p) {
   // Name mit Sub-Tags
   const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
   lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
-  if (p.given   && p._hasGivn) lines.push(`2 GIVN ${p.given}`);
-  if (p.surname && p._hasSurn) lines.push(`2 SURN ${p.surname}`);
+  if (p._hasGivn) lines.push(`2 GIVN ${p.given || ''}`);
+  if (p._hasSurn) lines.push(`2 SURN ${p.surname || ''}`);
   if (p.nick)     lines.push(`2 NICK ${p.nick}`);
   if (p._rufname) lines.push(`2 _RUFNAME ${p._rufname}`);
   if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
@@ -164,8 +164,8 @@ function writeINDIRecord(lines, p) {
   for (const en of (p.extraNames || [])) {
     lines.push(`1 NAME${en.nameRaw ? ' ' + en.nameRaw : ''}`);
     if (en.type)    lines.push(`2 TYPE ${en.type}`);
-    if (en.given   && en._hasGivn) lines.push(`2 GIVN ${en.given}`);
-    if (en.surname && en._hasSurn) lines.push(`2 SURN ${en.surname}`);
+    if (en._hasGivn) lines.push(`2 GIVN ${en.given || ''}`);
+    if (en._hasSurn) lines.push(`2 SURN ${en.surname || ''}`);
     if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
     if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
     _writeSourCits(lines, 2, en);

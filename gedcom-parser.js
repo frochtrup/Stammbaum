@@ -142,7 +142,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     else if (x.lv1tag === 'DEAT') {
       if      (tag==='DATE') cur.death.date=val;
       else if (tag==='PLAC') cur.death.place=val;
-      else if (tag==='CAUS') cur.death.cause=val;
+      else if (tag==='CAUS') { cur.death.cause=val; x._ptDepth=2; x._ptTarget=cur.death._extra; }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.death.noteRefs.push(val); else cur.death.note=val; }
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.death.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else { cur.death._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur.death._extra; }
@@ -200,7 +200,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     if (x.lv1tag === 'SOUR' && x.lastSourVal) {
       if      (tag === 'PAGE') cur.topSourcePages[x.lastSourVal] = val;
       else if (tag === 'QUAY') cur.topSourceQUAY[x.lastSourVal] = val;
-      else if (tag !== 'SOUR') {
+      else {
         if (!cur.topSourceExtra[x.lastSourVal]) cur.topSourceExtra[x.lastSourVal] = [];
         cur.topSourceExtra[x.lastSourVal].push('2 ' + tag + (val ? ' ' + val : ''));
         x._ptDepth = 2; x._ptTarget = cur.topSourceExtra[x.lastSourVal];
