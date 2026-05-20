@@ -259,6 +259,8 @@ function _parseINDILine(cur, x, lv, tag, val) {
     }
     if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
     if (x.lv1tag === 'CHAN' && tag === 'TIME') cur.lastChangedTime = val;
+    if (x.lv1tag === 'CHAN' && x.lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT'))
+      cur.chanNote += (tag==='CONT' ? '\n' : '') + val;
   }
 
   else if (lv === 4) {
@@ -455,6 +457,8 @@ function _parseFAMLine(cur, x, lv, tag, val) {
     if (x.lv1tag==='OBJE' && x.lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.media.length)
       cur.media[cur.media.length-1].note += (tag==='CONT' ? '\n' : '') + val;
     if (x.lv2tag==='DATE' && x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+    if (x.lv1tag==='CHAN' && x.lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT'))
+      cur.chanNote += (tag==='CONT' ? '\n' : '') + val;
     if (x.lv2tag === 'SOUR' && x._curCit && tag !== 'TIME' && tag !== 'SOUR') {
       if      (tag === 'PAGE') x._curCit.page = val;
       else if (tag === 'QUAY') x._curCit.quay = val;
@@ -636,6 +640,8 @@ function _parseSOURLine(cur, x, lv, tag, val) {
       else { cur.dataExtra.push('3 ' + tag + (val ? ' ' + val : '')); x._ptDepth=3; x._ptTarget=cur.dataExtra; }
     }
     if (x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+    if (x.lv1tag==='CHAN' && x.lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT'))
+      cur.chanNote += (tag==='CONT' ? '\n' : '') + val;
   }
 }
 
@@ -647,6 +653,8 @@ function _parseNOTELine(cur, x, lv, tag, val) {
   else if (lv===2 && x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
   else if (lv===2 && x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
   else if (lv===3 && x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+  else if (lv===3 && x.lv1tag==='CHAN' && x.lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT'))
+    cur.chanNote += (tag==='CONT' ? '\n' : '') + val;
   else {
     cur._passthrough.push(lv + ' ' + tag + (val ? ' ' + val : ''));
     if (lv === 1) x._ptDepth = 1;
@@ -669,6 +677,8 @@ function _parseREPOLine(cur, x, lv, tag, val) {
     if (x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
   } else if (lv === 3) {
     if (x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
+    if (x.lv1tag==='CHAN' && x.lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT'))
+      cur.chanNote += (tag==='CONT' ? '\n' : '') + val;
   }
 }
 
