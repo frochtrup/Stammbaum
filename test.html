@@ -345,7 +345,7 @@ const summaryEl = document.getElementById('summary');
 let _passCount = 0, _failCount = 0, _warnCount = 0;
 
 const _agg = {
-  persons: 0, families: 0, sources: 0, netDelta: 0, concContDelta: 0, unstable: 0,
+  persons: 0, families: 0, sources: 0, netDelta: 0, concContDelta: 0, pediDelta: 0, unstable: 0,
   tagDeltas: {},    // lbl → cumulative diff
   missingTags: {},  // tag → count (non-DATE/PLAC)
   dpCtx: {},        // "RecType / 1 ev / TAG" → count
@@ -360,8 +360,9 @@ function _aggResult(r) {
   _agg.persons  += r.persons;
   _agg.families += r.families;
   _agg.sources  += r.sources;
-  _agg.netDelta      += r.delta;
+  _agg.netDelta      += r.normDelta;
   _agg.concContDelta += r.concContDelta;
+  _agg.pediDelta     += r.pediDelta;
   _agg.fileNames.push(r.name);
   if (!r.stable) _agg.unstable++;
 
@@ -415,7 +416,7 @@ document.getElementById('clear-btn').addEventListener('click', () => {
   resultsEl.style.display = 'none';
   document.getElementById('opt-report').style.display = 'none';
   _passCount = 0; _failCount = 0; _warnCount = 0;
-  Object.assign(_agg, { persons:0, families:0, sources:0, netDelta:0, concContDelta:0, unstable:0,
+  Object.assign(_agg, { persons:0, families:0, sources:0, netDelta:0, concContDelta:0, pediDelta:0, unstable:0,
     tagDeltas:{}, missingTags:{}, dpCtx:{}, warnMsgs:{}, ptTags:{},
     lostExamples:{}, warnExamples:{}, fileNames:[] });
 });
@@ -518,6 +519,11 @@ async function runTest(file, onStatus) {
   const rawDelta      = out1.split('\n').length - text.split('\n').length;
   const delta         = assembleLines(out1).length - assembleLines(text).length;
   const concContDelta = rawDelta - delta;  // Anteil der durch CONC/CONT-Resplit erklärt wird
+  // pediDelta: intentionelle PEDI-Gewinne durch _FREL→PEDI Normalisierung (sw v121, by design)
+  const origPediCount = (text.match(/^\s*2 PEDI\b/mg) || []).length;
+  const out1PediCount = (out1.match(/^\s*2 PEDI\b/mg) || []).length;
+  const pediDelta     = Math.max(0, out1PediCount - origPediCount);
+  const normDelta     = delta - pediDelta;  // Delta nach allen bekannten Normalisierungen
 
   return {
     name:     file.name,
@@ -530,6 +536,8 @@ async function runTest(file, onStatus) {
     delta,
     rawDelta,
     concContDelta,
+    pediDelta,
+    normDelta,
     time:     Math.round(t1 - t0),
     errs1,
     errs2:    errs2.length,
@@ -589,6 +597,11 @@ function analyzeDelta(orig, out1) {
   const outCounts = new Map();
   for (const l of out1.split(/\r?\n/).map(norm).filter(Boolean))
     outCounts.set(l, (outCounts.get(l) || 0) + 1);
+  // Assembled out1 Map: erkennt lange Eltern-Zeilen die der Writer via CONC aufteilt
+  // (z.B. "1 TEXT <500 Zeichen>" → "1 TEXT <248>" + "2 CONC <252>") — kein echter Verlust
+  const asmOut1Map = new Map();
+  for (const l of assembleLines(out1))
+    asmOut1Map.set(l, (asmOut1Map.get(l) || 0) + 1);
 
   const missingTags = {}, lostExamples = {};
   let dpRecType = '', dpLv1 = '', dpRecId = '';
@@ -609,6 +622,18 @@ function analyzeDelta(orig, out1) {
     const tag = l.match(/^\d+ (\S+)/)?.[1] || '?';
     // CONC/CONT: reine Zeilenumbruch-Unterschiede — nicht als Verlust werten
     if (tag === 'CONC' || tag === 'CONT') continue;
+    // Assembled-Form prüfen: Eltern-Zeilen die der Writer via pushCont (>248 Zeichen) aufteilt
+    // (z.B. "1 TEXT <500 Zeichen>" → split via CONC) — assembled identisch, kein echter Verlust
+    { let asmL = l;
+      for (let j = i + 1; j < normArr.length; j++) {
+        const nx = normArr[j]; if (!nx) continue;
+        const mc = nx.match(/^(\d+) (CONC|CONT)(?: (.*))?$/);
+        if (!mc) break;
+        asmL += mc[2] === 'CONT' ? '\n' + (mc[3] || '') : (mc[3] || '');
+      }
+      const asmR = asmOut1Map.get(asmL) || 0;
+      if (asmR > 0) { asmOut1Map.set(asmL, asmR - 1); continue; }
+    }
     missingTags[tag] = (missingTags[tag] || 0) + 1;
 
     // ±3-Zeilen-Kontext (7 Zeilen Fenster)
@@ -659,11 +684,14 @@ function addPendingRow(name) {
 }
 
 function updateRow(dataRow, detailRow, r) {
-  const hasDetail = r.errs1.length > 0 || r.delta !== 0 || !r.stable;
-  const deltaClass = r.delta === 0 ? 'delta-zero' : (r.delta > 0 ? 'delta-pos' : 'delta-neg');
-  const deltaStr   = r.delta === 0 ? '0' : (r.delta > 0 ? '+' + r.delta : String(r.delta));
+  const hasDetail = r.errs1.length > 0 || r.normDelta !== 0 || !r.stable;
+  const deltaClass = r.normDelta === 0 ? 'delta-zero' : (r.normDelta > 0 ? 'delta-pos' : 'delta-neg');
+  const deltaStr   = r.normDelta === 0 ? '0' : (r.normDelta > 0 ? '+' + r.normDelta : String(r.normDelta));
   const ccNote = r.concContDelta !== 0
     ? ` <span title="CONC/CONT-Resplit, by design — Text nach Reassemblierung identisch" style="color:#444;font-size:10px">(${r.concContDelta > 0 ? '+' : ''}${r.concContDelta} CC)</span>`
+    : '';
+  const pediNote = r.pediDelta
+    ? ` <span title="PEDI-Normalisierung by design (_FREL→PEDI, sw v121)" style="color:#444;font-size:10px">(+${r.pediDelta} PEDI)</span>`
     : '';
 
   const expandBtn = hasDetail
@@ -682,7 +710,7 @@ function updateRow(dataRow, detailRow, r) {
     <td class="num">${r.persons}</td>
     <td class="num">${r.families}</td>
     <td class="num">${r.sources}</td>
-    <td class="${deltaClass}">${deltaStr}${ccNote}</td>
+    <td class="${deltaClass}">${deltaStr}${ccNote}${pediNote}</td>
     <td>${statusHtml}</td>
     <td class="time-col">${r.time} ms</td>
   `;
@@ -835,8 +863,9 @@ function renderOptReport() {
     <div class="or-stat"><div class="or-stat-val">${_agg.persons.toLocaleString('de')}</div><div class="or-stat-lbl">Personen</div></div>
     <div class="or-stat"><div class="or-stat-val">${_agg.families.toLocaleString('de')}</div><div class="or-stat-lbl">Familien</div></div>
     <div class="or-stat"><div class="or-stat-val">${_agg.sources.toLocaleString('de')}</div><div class="or-stat-lbl">Quellen</div></div>
-    <div class="or-stat"><div class="or-stat-val ${deltaClass}">${deltaStr}</div><div class="or-stat-lbl">net_delta (asm.)</div></div>
+    <div class="or-stat"><div class="or-stat-val ${deltaClass}">${deltaStr}</div><div class="or-stat-lbl">net_delta (norm.)</div></div>
     ${_agg.concContDelta !== 0 ? `<div class="or-stat"><div class="or-stat-val" style="color:#444">${_agg.concContDelta > 0 ? '+' : ''}${_agg.concContDelta}</div><div class="or-stat-lbl" title="CONC/CONT-Resplit, by design">CONC/CONT (CC)</div></div>` : ''}
+    ${_agg.pediDelta ? `<div class="or-stat"><div class="or-stat-val" style="color:#444">+${_agg.pediDelta}</div><div class="or-stat-lbl" title="PEDI-Normalisierung by design (_FREL→PEDI, sw v121)">PEDI (Norm.)</div></div>` : ''}
     ${_agg.unstable ? `<div class="or-stat"><div class="or-stat-val neg">${_agg.unstable}</div><div class="or-stat-lbl">instabil</div></div>` : ''}
   `;
 
@@ -900,9 +929,11 @@ function buildMachineReport() {
   nl(`  Personen:  ${_agg.persons.toLocaleString('de')}`);
   nl(`  Familien:  ${_agg.families.toLocaleString('de')}`);
   nl(`  Quellen:   ${_agg.sources.toLocaleString('de')}`);
-  nl(`  net_delta: ${_agg.netDelta >= 0 ? '+' : ''}${_agg.netDelta}  (logische Zeilen nach CONC/CONT-Reassemblierung)`);
+  nl(`  net_delta: ${_agg.netDelta >= 0 ? '+' : ''}${_agg.netDelta}  (nach CONC/CONT- und PEDI-Normalisierung)`);
   if (_agg.concContDelta !== 0)
     nl(`  CONC/CONT: ${_agg.concContDelta > 0 ? '+' : ''}${_agg.concContDelta} Zeilen by design (Zeilenumbruch-Resplit, Text identisch nach Reassemblierung)`);
+  if (_agg.pediDelta)
+    nl(`  PEDI:      +${_agg.pediDelta} Zeilen by design (_FREL/_MREL→PEDI Normalisierung, sw v121)`);
   nl(`  Instabil:  ${_agg.unstable} Datei(en)  [out1 ≠ out2]`);
   nl();
   sep();
