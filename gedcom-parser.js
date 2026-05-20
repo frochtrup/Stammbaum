@@ -379,7 +379,10 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag==='ADDR') cur.marr.addr=val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.marr.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.marr.noteRefs.push(val); else cur.marr.note = val; }
-      else if (tag==='OBJE') { cur.marr.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+      else if (tag==='OBJE') {
+        if (val && val.startsWith('@')) cur.marr._extra.push('2 OBJE ' + val);
+        else cur.marr.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]});
+      }
       else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth = 2; x._ptTarget = cur.marr._extra; }
     }
     if (x.lv1tag==='ENGA' || x.lv1tag==='ENG') {
@@ -387,7 +390,10 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag==='PLAC') cur.engag.place = val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.engag.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.engag.noteRefs.push(val); else cur.engag.note = val; }
-      else if (tag==='OBJE') { cur.engag.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+      else if (tag==='OBJE') {
+        if (val && val.startsWith('@')) cur.engag._extra.push('2 OBJE ' + val);
+        else cur.engag.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]});
+      }
       else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth = 2; x._ptTarget = cur.engag._extra; }
     }
     if (x.lv1tag==='DIV') {
@@ -395,7 +401,10 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag==='PLAC') cur.div.place = val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.div.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.div.noteRefs.push(val); else cur.div.note = val; }
-      else if (tag==='OBJE') { cur.div.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+      else if (tag==='OBJE') {
+        if (val && val.startsWith('@')) cur.div._extra.push('2 OBJE ' + val);
+        else cur.div.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]});
+      }
       else { cur.div._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth = 2; x._ptTarget = cur.div._extra; }
     }
     if (x.lv1tag==='DIVF') {
@@ -403,7 +412,10 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag==='PLAC') cur.divf.place = val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.divf.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.divf.noteRefs.push(val); else cur.divf.note = val; }
-      else if (tag==='OBJE') { cur.divf.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]}); }
+      else if (tag==='OBJE') {
+        if (val && val.startsWith('@')) cur.divf._extra.push('2 OBJE ' + val);
+        else cur.divf.media.push({file:'',form:null,titl:'',note:'',date:'',scbk:'',prim:'',_extra:[]});
+      }
       else { cur.divf._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth = 2; x._ptTarget = cur.divf._extra; }
     }
     if (x.lv1tag==='EVEN' && x.evIdx >= 0 && cur.events[x.evIdx]) {
@@ -618,6 +630,7 @@ function _parseSOURLine(cur, x, lv, tag, val) {
     if (x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
     if (x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
     if (x.lv1tag==='REPO' && tag==='CALN') { cur.repoCallNum = val; }
+    else if (x.lv1tag==='REPO') { cur._passthrough.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur._passthrough; }
     if (x.lv1tag==='REFN' && tag==='TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
     if (x.lv1tag==='DATA' && tag==='AGNC') cur.agnc = val;
     else if (x.lv1tag==='DATA' && tag==='EVEN') { cur.dataEvens.push({evens:val||'',date:'',plac:''}); }
