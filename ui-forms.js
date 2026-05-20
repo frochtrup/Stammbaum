@@ -296,8 +296,8 @@ function showSourceForm(id) {
   document.getElementById('sf-date').value  = s?.date   || '';
   document.getElementById('sf-publ').value  = s?.publ   || '';
   document.getElementById('sf-repo').value  = s?.repo         || '';
-  document.getElementById('sf-caln').value  = s?.repoCallNum  || '';
-  document.getElementById('sf-medi').value  = s?.repoCallMedi || '';
+  document.getElementById('sf-caln').value  = s?.repoCalns?.[0]?.num  || s?.repoCallNum  || '';
+  document.getElementById('sf-medi').value  = s?.repoCalns?.[0]?.medi || s?.repoCallMedi || '';
   document.getElementById('sf-text').value  = s?.text         || '';
   _renderDataEvens(s?.dataEvens || []);
   sfRepoUpdateDisplay();
@@ -346,8 +346,13 @@ function saveSource() {
     date:        document.getElementById('sf-date').value.trim(),
     publ:        document.getElementById('sf-publ').value.trim(),
     repo:        document.getElementById('sf-repo').value.trim(),
-    repoCallNum:  document.getElementById('sf-caln').value.trim(),
-    repoCallMedi: document.getElementById('sf-medi').value,
+    repoCalns: (() => {
+      const _n = document.getElementById('sf-caln').value.trim();
+      const _m = document.getElementById('sf-medi').value;
+      const _prev = existing.repoCalns || (existing.repoCallNum ? [{num:existing.repoCallNum, medi:existing.repoCallMedi||'', extra:[]}] : []);
+      const _first = {num:_n, medi:_m, extra:_prev[0]?.extra || []};
+      return _n ? [_first, ..._prev.slice(1)] : _prev.slice(1);
+    })(),
     dataEvens:    _readDataEvens(),
     text:        document.getElementById('sf-text').value.trim(),
     media:       _readMediaList('sf', existing.media || []),

@@ -40,7 +40,8 @@ function showSourceDetail(id, pushHistory = true) {
   if (s.repo) {
     if (s.repo.match(/^@[^@]+@$/) && AppState.db.repositories[s.repo]) {
       const r = AppState.db.repositories[s.repo];
-      const callNum = s.repoCallNum ? ` · Signatur: ${esc(s.repoCallNum)}${s.repoCallMedi ? ' (' + esc(s.repoCallMedi) + ')' : ''}` : '';
+      const _rc0 = s.repoCalns?.[0] || (s.repoCallNum ? {num:s.repoCallNum, medi:s.repoCallMedi||''} : null);
+      const callNum = _rc0?.num ? ` · Signatur: ${esc(_rc0.num)}${_rc0.medi ? ' (' + esc(_rc0.medi) + ')' : ''}` : '';
       html += `<div class="fact-row"><span class="fact-lbl">Aufbewahrung</span>
         <span class="fact-val"><span class="btn-link" data-action="showRepoDetail" data-id="${s.repo}">${esc(r.name || s.repo)}</span>${callNum}</span></div>`;
     } else {

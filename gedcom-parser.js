@@ -590,7 +590,7 @@ function _parseSOURLine(cur, x, lv, tag, val) {
     else if (tag==='AUTH') cur.author = val;
     else if (tag==='DATE') cur.date   = val;
     else if (tag==='PUBL') cur.publ   = val;
-    else if (tag==='REPO') { cur.repo = val; cur.repoCallNum = ''; }
+    else if (tag==='REPO') { cur.repo = val; cur.repoCalns = []; }
     else if (tag==='TEXT') { cur.text = val; cur._textSeen = true; }
     else if (tag==='NOTE') { if (val.startsWith('@')) cur.noteRefs.push(val); else { cur.note = val; } }
     else if (tag==='CHAN') { /* context-only */ }
@@ -629,8 +629,12 @@ function _parseSOURLine(cur, x, lv, tag, val) {
     if ((tag==='CONC'||tag==='CONT') && x.lv1tag==='ABBR') cur.abbr   += (tag==='CONT'?'\n':'') + val;
     if (x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
     if (x.lv1tag==='CHAN' && tag==='NOTE') cur.chanNote = val || '';
-    if (x.lv1tag==='REPO' && tag==='CALN') { cur.repoCallNum = val; }
-    else if (x.lv1tag==='REPO') { cur._passthrough.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur._passthrough; }
+    if (x.lv1tag==='REPO' && tag==='CALN') { cur.repoCalns.push({num:val, medi:'', extra:[]}); }
+    else if (x.lv1tag==='REPO' && cur.repoCalns.length) {
+      const _rc = cur.repoCalns[cur.repoCalns.length-1];
+      _rc.extra.push('2 ' + tag + (val ? ' ' + val : ''));
+      x._ptDepth=2; x._ptTarget=_rc.extra;
+    }
     if (x.lv1tag==='REFN' && tag==='TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
     if (x.lv1tag==='DATA' && tag==='AGNC') cur.agnc = val;
     else if (x.lv1tag==='DATA' && tag==='EVEN') { cur.dataEvens.push({evens:val||'',date:'',plac:''}); }
@@ -644,8 +648,11 @@ function _parseSOURLine(cur, x, lv, tag, val) {
     }
     if (x.lv1tag==='OBJE' && x.lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.media.length)
       cur.media[cur.media.length-1].note += (tag==='CONT' ? '\n' : '') + val;
-    if (x.lv1tag==='REPO' && x.lv2tag==='CALN' && tag==='MEDI') cur.repoCallMedi = val;
-    else if (x.lv1tag==='REPO' && x.lv2tag==='CALN') { cur.repoCallNumExtra.push('3 ' + tag + (val ? ' ' + val : '')); x._ptDepth=3; x._ptTarget=cur.repoCallNumExtra; }
+    if (x.lv1tag==='REPO' && x.lv2tag==='CALN' && cur.repoCalns.length) {
+      const _rc = cur.repoCalns[cur.repoCalns.length-1];
+      if (tag==='MEDI') _rc.medi = val;
+      else { _rc.extra.push('3 ' + tag + (val ? ' ' + val : '')); x._ptDepth=3; x._ptTarget=_rc.extra; }
+    }
     if (x.lv1tag==='DATA' && x.lv2tag==='EVEN' && cur.dataEvens.length) {
       const _de = cur.dataEvens[cur.dataEvens.length-1];
       if      (tag==='DATE') _de.date = val;
@@ -778,7 +785,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
         cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], refns:[], lastChanged:'', lastChangedTime:'', chanNote:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
-        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCallNum:'', repoCallMedi:'', repoCallNumExtra:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'', chanNote:'' };
+        cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCalns:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'', chanNote:'' };
         sources[tag] = cur; curType = 'SOUR';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.slice(val.startsWith('NOTE ') ? 5 : 4);

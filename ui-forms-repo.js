@@ -103,7 +103,7 @@ function showRepoDetail(id, pushHistory = true) {
     for (const s of linkedSources.sort((a,b)=>(a.abbr||a.title||'').localeCompare(b.abbr||b.title||'','de'))) {
       html += `<div class="source-card" data-action="showSourceDetail" data-sid="${s.id}">
         <div class="source-title">${esc(s.abbr || s.title || s.id)}</div>
-        <div class="source-meta">${s.repoCallNum ? 'Signatur: ' + esc(s.repoCallNum) : '&nbsp;'}</div>
+        <div class="source-meta">${(s.repoCalns?.[0]?.num || s.repoCallNum) ? 'Signatur: ' + esc(s.repoCalns?.[0]?.num || s.repoCallNum) : '&nbsp;'}</div>
       </div>`;
     }
     html += `</div>`;
@@ -161,7 +161,7 @@ async function deleteRepo() {
     ? `Archiv löschen? ${linked.length} Quelle(n) verlieren die Archiv-Verknüpfung.`
     : 'Archiv wirklich löschen?';
   if (!await confirmModal(msg, 'Löschen')) return;
-  for (const s of linked) { setSource(s.id, { repo: '', repoCallNum: '' }); }
+  for (const s of linked) { setSource(s.id, { repo: '', repoCallNum: '', repoCalns: [] }); }
   delete AppState.db.repositories[id];
   closeModal('modalRepo');
   markChanged();

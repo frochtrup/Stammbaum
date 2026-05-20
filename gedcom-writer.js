@@ -458,7 +458,14 @@ function writeSOURRecord(lines, s) {
   if (s.publ)   pushCont(lines, 1, 'PUBL', s.publ);
   if (s.repo) {
     lines.push(`1 REPO ${s.repo}`);
-    if (s.repoCallNum) {
+    if (s.repoCalns?.length) {
+      for (const rc of s.repoCalns) {
+        if (!rc.num) continue;
+        lines.push(`2 CALN ${rc.num}`);
+        if (rc.medi) lines.push(`3 MEDI ${rc.medi}`);
+        for (const l of (rc.extra || [])) lines.push(l);
+      }
+    } else if (s.repoCallNum) {
       lines.push(`2 CALN ${s.repoCallNum}`);
       if (s.repoCallMedi) lines.push(`3 MEDI ${s.repoCallMedi}`);
       for (const l of (s.repoCallNumExtra || [])) lines.push(l);
