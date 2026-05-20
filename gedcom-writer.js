@@ -54,7 +54,7 @@ function _writeSourCits(lines, lv, obj) {
       if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
       if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
       if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
-      if (m.note) lines.push(`${lv+2} NOTE ${m.note}`);
+      if (m.note) pushCont(lines, lv+2, 'NOTE', m.note);
     }
   }
 }
@@ -124,7 +124,7 @@ function eventBlock(lines, tag, obj, lv) {
       if (m.form) lines.push(`${lv+3} FORM ${m.form}`);
       for (const l of (m._extra || [])) lines.push(l);
     }
-    if (m.note) lines.push(`${lv+2} NOTE ${m.note}`);
+    if (m.note) pushCont(lines, lv+2, 'NOTE', m.note);
     if (m.date) lines.push(`${lv+2} _DATE ${m.date}`);
     if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
     if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
@@ -290,7 +290,7 @@ function writeINDIRecord(lines, p) {
     }
     if (!m.titleIsLv2 && m.title) lines.push(`3 TITL ${m.title}`);
     for (const l of (m._extra || [])) lines.push(l);
-    if (m.note)  lines.push(`2 NOTE ${m.note}`);
+    if (m.note)  pushCont(lines, 2, 'NOTE', m.note);
     if (m.date)  lines.push(`2 _DATE ${m.date}`);
     if (m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
     if (m.prim)  lines.push(`2 _PRIM ${m.prim}`);
@@ -434,7 +434,7 @@ function writeFAMRecord(lines, f) {
       lines.push(`2 TITL ${m.title}`);
     }
     for (const l of (m._extra || [])) lines.push(l);
-    if (m.note)  lines.push(`2 NOTE ${m.note}`);
+    if (m.note)  pushCont(lines, 2, 'NOTE', m.note);
     if (m.date)  lines.push(`2 _DATE ${m.date}`);
     if (m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
     if (m.prim)  lines.push(`2 _PRIM ${m.prim}`);
@@ -495,7 +495,7 @@ function writeSOURRecord(lines, s) {
       lines.push(`2 TITL ${m.title}`);
     }
     for (const l of (m._extra || [])) lines.push(l);
-    if (m.note)  lines.push(`2 NOTE ${m.note}`);
+    if (m.note)  pushCont(lines, 2, 'NOTE', m.note);
     if (m.date)  lines.push(`2 _DATE ${m.date}`);
     if (m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
     if (m.prim)  lines.push(`2 _PRIM ${m.prim}`);
