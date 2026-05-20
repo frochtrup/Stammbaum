@@ -349,56 +349,85 @@ document.getElementById('fileInput2').addEventListener('change', e => {
   if (e.target.files[0]) readFile(e.target.files[0]);
 });
 
+// Post-parse: db-Objekt einbauen + UI auffrischen (Worker- und Sync-Pfad)
+function _finishLoad(db, text, filename) {
+  try {
+    setDb(db);
+    if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
+      console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
+      showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+    }
+    const _gd = detectGRAMPS(text);
+    AppState.db._grampsMaster = _gd.isGramps;
+    if (_gd.isGramps) {
+      setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
+    }
+    AppState._currentFilename = filename;
+    AppState.db.extraPlaces = loadExtraPlaces();
+    applyAllExtraPlaceCoords();
+    { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
+    { let maxUsed = 0;
+      const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
+                      ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
+      for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
+      if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
+    }
+    AppState._originalGedText = text;
+    AppState._undoStack = [];
+    AppState._redoStack = [];
+    if (typeof _clearNavState === 'function') _clearNavState();
+    if (typeof clearValidationResults === 'function') clearValidationResults();
+    if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+    Promise.all([
+      idbPut('stammbaum_ged', text),
+      idbPut('stammbaum_ged_backup', text),
+      idbPut('stammbaum_filename', filename)
+    ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
+    updateTopbarTitle(filename);
+    showStartView();
+    showToast('✓ ' + filename + ' geladen');
+  } catch(err) {
+    console.error('_finishLoad:', err);
+    showToast('⚠ Fehler beim Laden: ' + err.message);
+  } finally {
+    hideLoadingOverlay();
+  }
+}
+
 // Gemeinsame Lade-Logik für openFilePicker() und readFile()
 function _processLoadedText(text, filename) {
   showLoadingOverlay('GEDCOM wird eingelesen …');
-  requestAnimationFrame(() => setTimeout(() => {
-    try {
-      setDb(parseGEDCOM(text));
-      if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
-        console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
-        showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
+  if (typeof Worker !== 'undefined') {
+    const worker = new Worker('gedcom-worker.js');
+    worker.onmessage = function(e) {
+      if (e.data.type === 'progress') {
+        if (typeof updateLoadingProgress === 'function') updateLoadingProgress(e.data.pct);
+        document.getElementById('loadingMsg').textContent = 'GEDCOM wird eingelesen … ' + e.data.pct + ' %';
+        return;
       }
-      // GRAMPS-Export erkennen und Hinweis anzeigen
-      const _gd = detectGRAMPS(text);
-      AppState.db._grampsMaster = _gd.isGramps;
-      if (_gd.isGramps) {
-        setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
+      worker.terminate();
+      if (e.data.type === 'error') {
+        hideLoadingOverlay();
+        showToast('⚠ Fehler beim Laden: ' + e.data.message);
+        return;
       }
-      AppState._currentFilename = filename;
-      AppState.db.extraPlaces = loadExtraPlaces();
-      applyAllExtraPlaceCoords();
-      { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
-      // Kalibriere idCounter: verhindert Kollisionen mit bereits vorhandenen IDs
-      { let maxUsed = 0;
-        const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
-                        ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
-        for (const id of allIds) { const m = id.match(/\d+/); if (m) maxUsed = Math.max(maxUsed, +m[0]); }
-        if (maxUsed >= AppState.idCounter) AppState.idCounter = maxUsed;
-      }
-      AppState._originalGedText = text;  // immer in RAM; IDB für Persistenz
-      AppState._undoStack = [];
-      AppState._redoStack = [];
-      if (typeof _clearNavState === 'function') _clearNavState();
-      if (typeof clearValidationResults === 'function') clearValidationResults();
-      if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
-      // IDB: primäre Persistenz (kein Größenlimit)
-      Promise.all([
-        idbPut('stammbaum_ged', text),
-        idbPut('stammbaum_ged_backup', text),
-        idbPut('stammbaum_filename', filename)
-      ]).catch(() => showToast('⚠ Offline-Speicher (IndexedDB) nicht verfügbar — Daten nur im RAM'));
-
-      updateTopbarTitle(filename);
-      showStartView();
-      showToast('✓ ' + filename + ' geladen');
-    } catch(err) {
-      console.error('_processLoadedText:', err);
-      showToast('⚠ Fehler beim Laden: ' + err.message);
-    } finally {
-      hideLoadingOverlay();
-    }
-  }, 0));
+      // type === 'done'
+      _finishLoad(e.data.db, text, filename);
+    };
+    worker.onerror = function(err) {
+      console.warn('[WW-PARSER] Worker-Fehler, Sync-Fallback:', err.message);
+      worker.terminate();
+      try { _finishLoad(parseGEDCOM(text), text, filename); }
+      catch(e2) { hideLoadingOverlay(); showToast('⚠ Fehler beim Laden: ' + e2.message); }
+    };
+    worker.postMessage({ type: 'parse', text: text });
+  } else {
+    // Sync-Fallback (kein Worker-Support)
+    requestAnimationFrame(() => setTimeout(() => {
+      try { _finishLoad(parseGEDCOM(text), text, filename); }
+      catch(err) { hideLoadingOverlay(); showToast('⚠ Fehler beim Laden: ' + err.message); }
+    }, 0));
+  }
 }
 
 // Öffnen per <input> (iOS / Drag & Drop / Fallback)

@@ -669,7 +669,7 @@ function _parseREPOLine(cur, x, lv, tag, val) {
 // ─────────────────────────────────────
 //  MAIN PARSER
 // ─────────────────────────────────────
-function parseGEDCOM(text, parseErrors) {
+function parseGEDCOM(text, parseErrors, onProgress) {
   text = text.replace(/^﻿/, '');
   const lines = text.split(/\r?\n/);
 
@@ -695,8 +695,13 @@ function parseGEDCOM(text, parseErrors) {
     _smEntry: null, _curTask: null, _curAsso: null
   };
 
+  const _total = lines.length;
+  const _progStep = onProgress ? Math.max(1, Math.floor(_total / 20)) : 0;
+  let _lineIdx = 0;
+
   for (let raw of lines) {
     lineNo++;
+    if (_progStep && ++_lineIdx % _progStep === 0) onProgress(Math.round(_lineIdx / _total * 95));
     // Nur \r am Ende entfernen (Windows CRLF)
     const line = raw.replace(/\r$/, '');
     if (!line.trim()) continue;

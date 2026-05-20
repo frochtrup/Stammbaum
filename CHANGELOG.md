@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-20 — WW-PARSER: Web Worker für GEDCOM-Parse (sw v649)
+
+- **sw v649** `feat(perf)`: WW-PARSER — `parseGEDCOM()` in `gedcom-worker.js` ausgelagert; `onProgress`-Callback (alle 5% der Zeilen, 0–95%) via `importScripts('gedcom-parser.js')`; `_processLoadedText()` in `storage-file.js` nutzt `new Worker('gedcom-worker.js')` wenn `Worker` verfügbar; progress-Nachrichten aktualisieren `#loadingBar` (schmaler `--gold-lt`-Balken unter dem Spinner) + Prozent-Text im Overlay; `_finishLoad(db, text, filename)` als gemeinsamer Post-Parse-Pfad (Worker + Sync-Fallback); Sync-Fallback bleibt erhalten wenn `typeof Worker === 'undefined'`; Worker-`onerror` → Sync-Fallback; `updateLoadingProgress(pct|null)` in `ui-forms.js`, `hideLoadingOverlay` setzt Bar zurück; `gedcom-worker.js` in SW-PRECACHE aufgenommen
+
+---
+
 ### Session 2026-05-20 — STORY-PRINT: Abschnittstitel + Print-CSS (sw v646–v647)
 
 - **sw v646** `feat(story)`: STORY-PRINT — „Lebenslauf" + „Familie"-Titel als `<h2 class="story-section-title">` in `_sectionEvents()`/`_sectionFamilies()`; `*{print-color-adjust:exact}` global; `@media print` mit `@page{margin:2.5cm 2cm;size:A4}`, `page-break-inside:avoid` auf allen Sections, Box-Shadow-Entfernung; SVG-Partnerabstand 10→28px, ⚭ font-size 9→11 bold; `.story-reli` Trennlinie

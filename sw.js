@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v648';
+const CACHE_NAME = 'stammbaum-v649';
 const PRECACHE = [
   './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
   './fonts/fonts.css',
@@ -11,7 +11,7 @@ const PRECACHE = [
   './fonts/source-serif-4-normal-latin.woff2', './fonts/source-serif-4-normal-latin-ext.woff2',
   './fonts/source-serif-4-italic-latin.woff2', './fonts/source-serif-4-italic-latin-ext.woff2',
   './leaflet.js', './leaflet.css',
-  './gedcom.js', './gedcom-parser.js', './gedcom-writer.js', './gramps-parser.js', './gramps-writer.js',
+  './gedcom.js', './gedcom-parser.js', './gedcom-worker.js', './gedcom-writer.js', './gramps-parser.js', './gramps-writer.js',
   './storage-file.js', './storage.js',
   './ui-views.js', './ui-views-note.js', './ui-views-search.js',
   './ui-views-tree.js', './ui-views-tasks.js', './ui-views-person.js', './ui-views-family.js',

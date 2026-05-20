@@ -668,6 +668,15 @@ function showLoadingOverlay(msg) {
 }
 function hideLoadingOverlay() {
   document.getElementById('loadingOverlay').classList.remove('active');
+  updateLoadingProgress(null);
+}
+function updateLoadingProgress(pct) {
+  const bar  = document.getElementById('loadingBar');
+  const fill = document.getElementById('loadingBarFill');
+  if (!bar || !fill) return;
+  if (pct == null) { bar.classList.remove('active'); fill.style.width = '0%'; return; }
+  bar.classList.add('active');
+  fill.style.width = Math.min(100, pct) + '%';
 }
 
 // ─────────────────────────────────────

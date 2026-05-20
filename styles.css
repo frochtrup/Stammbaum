@@ -1366,6 +1366,9 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 @keyframes _spin { to { transform: rotate(360deg); } }
 #loadingMsg { color: var(--text-dim); font-size: 0.9rem; }
+#loadingBar { width: 220px; height: 4px; background: var(--border); border-radius: 2px; display: none; }
+#loadingBar.active { display: block; }
+#loadingBarFill { height: 100%; width: 0%; background: var(--gold-lt); border-radius: 2px; transition: width 0.15s ease; }
 
 /* ── Statistik-Dashboard ────────────────────────────────────────── */
 #tab-stats { padding-bottom: 80px; }
