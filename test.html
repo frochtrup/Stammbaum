@@ -184,12 +184,13 @@
     font-size: 11px;
     white-space: pre-wrap;
     color: #bbb;
-    max-height: 300px;
+    max-height: 360px;
     overflow-y: auto;
   }
   .d-out1 { color: #c05050; display: block; }
   .d-out2 { color: #5c9e5c; display: block; }
-  .d-head { color: #555; display: block; margin-top: 6px; }
+  .d-head { color: #555; display: block; margin-top: 8px; }
+  .d-ctx  { color: #3a3a3a; display: block; }
 
   /* lost-examples context block */
   .ctx-block {
@@ -661,13 +662,49 @@ function analyzeDelta(orig, out1) {
 }
 
 // ── Diff helper ───────────────────────────────────────────────
-function firstDiffs(a, b, max) {
-  const la = a.split('\n'), lb = b.split('\n');
-  const out = []; const len = Math.max(la.length, lb.length); let found = 0;
-  for (let i = 0; i < len && found < max; i++) {
-    if (la[i] !== lb[i]) { out.push({ line: i + 1, a: la[i] ?? '<fehlt>', b: lb[i] ?? '<fehlt>' }); found++; }
+// Lookahead-Diff: erkennt Insertions/Deletions statt naiver Zeilenverschiebung.
+// Gibt Hunks zurück: { lineA, lineB, del[], ins[], ctx[] }
+// del = Zeilen nur in out1 (Pass 1), ins = Zeilen nur in out2 (Pass 2).
+function firstDiffs(out1, out2, maxHunks = 20) {
+  const la = out1.split('\n'), lb = out2.split('\n');
+  const LOOK = 12;
+  const hunks = [];
+  let ai = 0, bi = 0, found = 0;
+
+  while (ai < la.length && bi < lb.length && found < maxHunks) {
+    if (la[ai] === lb[bi]) { ai++; bi++; continue; }
+
+    // Lookahead: finde nächsten gemeinsamen Ankerpunkt
+    let skipA = -1, skipB = -1;
+    for (let k = 1; k <= LOOK; k++) {
+      if (skipB < 0 && bi + k < lb.length && la[ai] === lb[bi + k]) skipB = k;
+      if (skipA < 0 && ai + k < la.length && la[ai + k] === lb[bi]) skipA = k;
+      if (skipA >= 0 && skipB >= 0) break;
+    }
+
+    let del_lines = [], ins_lines = [];
+    if (skipA >= 0 && (skipB < 0 || skipA <= skipB)) {
+      del_lines = la.slice(ai, ai + skipA); ai += skipA;
+    } else if (skipB >= 0) {
+      ins_lines = lb.slice(bi, bi + skipB); bi += skipB;
+    } else {
+      del_lines = [la[ai++]]; ins_lines = [lb[bi++]];
+    }
+
+    // 2 Kontext-Zeilen nach der Änderung
+    const ctx = la.slice(ai, Math.min(ai + 2, la.length));
+    const lineA = ai - del_lines.length + 1;
+    const lineB = bi - ins_lines.length + 1;
+    hunks.push({ lineA, lineB, del: del_lines, ins: ins_lines, ctx });
+    found++;
   }
-  return out;
+  while (ai < la.length && found < maxHunks) {
+    hunks.push({ lineA: ai + 1, lineB: bi + 1, del: [la[ai++]], ins: [], ctx: [] }); found++;
+  }
+  while (bi < lb.length && found < maxHunks) {
+    hunks.push({ lineA: ai + 1, lineB: bi + 1, del: [], ins: [lb[bi++]], ctx: [] }); found++;
+  }
+  return hunks;
 }
 
 // ── DOM ───────────────────────────────────────────────────────
@@ -804,15 +841,22 @@ function buildDetailPanel(panel, r) {
 
   // ── Diff (Instabilität) ───────────────────────────────────
   if (r.diff) {
-    const lines = r.diff.map(d =>
-      `<span class="d-head">Zeile ${d.line}:</span>` +
-      `<span class="d-out1">− ${esc(d.a)}</span>` +
-      `<span class="d-out2">+ ${esc(d.b)}</span>`
-    ).join('');
+    const html = r.diff.map(h => {
+      const isDel = h.del.length > 0 && h.ins.length === 0;
+      const isIns = h.ins.length > 0 && h.del.length === 0;
+      let s = '';
+      if (isDel)       s += `<span class="d-head">Z.${h.lineA} — nur in out1 (Pass 1):</span>`;
+      else if (isIns)  s += `<span class="d-head">Z.${h.lineB} — nur in out2 (Pass 2):</span>`;
+      else             s += `<span class="d-head">Z.${h.lineA} — ersetzt:</span>`;
+      for (const l of h.del) s += `<span class="d-out1">− ${esc(l)}</span>`;
+      for (const l of h.ins) s += `<span class="d-out2">+ ${esc(l)}</span>`;
+      for (const l of h.ctx) s += `<span class="d-ctx">  ${esc(l)}</span>`;
+      return s;
+    }).join('');
     sections.push(`
       <div class="dp-section">
-        <div class="dp-title">out1 ≠ out2 — erste Unterschiede (max. 20)</div>
-        <div class="diff-block">${lines}</div>
+        <div class="dp-title">out1 ≠ out2 — erste Unterschiede (max. 20 Hunks)</div>
+        <div class="diff-block">${html}</div>
       </div>`);
   }
 
