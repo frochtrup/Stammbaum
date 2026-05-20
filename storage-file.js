@@ -407,8 +407,10 @@ function _processLoadedText(text, filename) {
       }
       worker.terminate();
       if (e.data.type === 'error') {
-        hideLoadingOverlay();
-        showToast('⚠ Fehler beim Laden: ' + e.data.message);
+        // Worker-Fehler → Sync-Fallback (z.B. bei veralteten Caches)
+        console.warn('[WW-PARSER] Worker-Fehler, Sync-Fallback:', e.data.message);
+        try { _finishLoad(parseGEDCOM(text), text, filename); }
+        catch(e2) { hideLoadingOverlay(); showToast('⚠ Fehler beim Laden: ' + e2.message); }
         return;
       }
       // type === 'done'
