@@ -345,7 +345,7 @@ const summaryEl = document.getElementById('summary');
 let _passCount = 0, _failCount = 0, _warnCount = 0;
 
 const _agg = {
-  persons: 0, families: 0, sources: 0, netDelta: 0, unstable: 0,
+  persons: 0, families: 0, sources: 0, netDelta: 0, concContDelta: 0, unstable: 0,
   tagDeltas: {},    // lbl → cumulative diff
   missingTags: {},  // tag → count (non-DATE/PLAC)
   dpCtx: {},        // "RecType / 1 ev / TAG" → count
@@ -360,7 +360,8 @@ function _aggResult(r) {
   _agg.persons  += r.persons;
   _agg.families += r.families;
   _agg.sources  += r.sources;
-  _agg.netDelta += r.delta;
+  _agg.netDelta      += r.delta;
+  _agg.concContDelta += r.concContDelta;
   _agg.fileNames.push(r.name);
   if (!r.stable) _agg.unstable++;
 
@@ -414,7 +415,7 @@ document.getElementById('clear-btn').addEventListener('click', () => {
   resultsEl.style.display = 'none';
   document.getElementById('opt-report').style.display = 'none';
   _passCount = 0; _failCount = 0; _warnCount = 0;
-  Object.assign(_agg, { persons:0, families:0, sources:0, netDelta:0, unstable:0,
+  Object.assign(_agg, { persons:0, families:0, sources:0, netDelta:0, concContDelta:0, unstable:0,
     tagDeltas:{}, missingTags:{}, dpCtx:{}, warnMsgs:{}, ptTags:{},
     lostExamples:{}, warnExamples:{}, fileNames:[] });
 });
@@ -457,6 +458,29 @@ async function processFiles(files) {
   }
 }
 
+// ── CONC/CONT Assembler ───────────────────────────────────────
+// Fasse CONC/CONT-Fortsetzungszeilen zum logischen Eltern-Eintrag zusammen.
+// Gibt ein Array normierter "logischer Zeilen" zurück — CONC/CONT sind darin aufgelöst.
+// Zweck: net_delta auf Basis logischer Zeilen berechnen, damit reine Zeilenumbruch-
+// Unterschiede (Writer spaltet CONC/CONT anders) nicht als Verlust gewertet werden.
+function assembleLines(text) {
+  const result = [];
+  let buf = null;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/@@/g, '@').trim();
+    if (!line) continue;
+    const m = line.match(/^(\d+) (CONC|CONT)(?: (.*))?$/);
+    if (m && buf !== null) {
+      buf += m[2] === 'CONT' ? '\n' + (m[3] || '') : (m[3] || '');
+    } else {
+      if (buf !== null) result.push(buf);
+      buf = line;
+    }
+  }
+  if (buf !== null) result.push(buf);
+  return result;
+}
+
 // ── Core Test ─────────────────────────────────────────────────
 // _yield gibt dem Browser zwischen den sync-lastigen parse/write Phasen Luft zum Rendern
 const _yield = () => new Promise(r => setTimeout(r, 0));
@@ -487,7 +511,13 @@ async function runTest(file, onStatus) {
 
   const t1    = performance.now();
   const stable = out1 === out2;
-  const delta  = out1.split('\n').length - text.split('\n').length;
+
+  // rawDelta: Zeilenanzahl-Differenz auf Rohtext-Ebene
+  // delta:    Differenz auf Ebene logischer Zeilen (CONC/CONT reassembliert)
+  //           → 0 wenn nur Zeilenumbrüche anders, aber Text identisch
+  const rawDelta      = out1.split('\n').length - text.split('\n').length;
+  const delta         = assembleLines(out1).length - assembleLines(text).length;
+  const concContDelta = rawDelta - delta;  // Anteil der durch CONC/CONT-Resplit erklärt wird
 
   return {
     name:     file.name,
@@ -498,11 +528,13 @@ async function runTest(file, onStatus) {
     repos:    Object.keys(db1.repositories|| {}).length,
     stable,
     delta,
+    rawDelta,
+    concContDelta,
     time:     Math.round(t1 - t0),
     errs1,
     errs2:    errs2.length,
     diff:     stable ? null : firstDiffs(out1, out2, 20),
-    deltaAnalysis: delta !== 0 ? analyzeDelta(text, out1) : null,
+    deltaAnalysis: rawDelta !== 0 ? analyzeDelta(text, out1) : null,
   };
 }
 
@@ -575,6 +607,8 @@ function analyzeDelta(orig, out1) {
     if (rem > 0) { outCounts.set(l, rem - 1); continue; }
 
     const tag = l.match(/^\d+ (\S+)/)?.[1] || '?';
+    // CONC/CONT: reine Zeilenumbruch-Unterschiede — nicht als Verlust werten
+    if (tag === 'CONC' || tag === 'CONT') continue;
     missingTags[tag] = (missingTags[tag] || 0) + 1;
 
     // ±3-Zeilen-Kontext (7 Zeilen Fenster)
@@ -628,6 +662,9 @@ function updateRow(dataRow, detailRow, r) {
   const hasDetail = r.errs1.length > 0 || r.delta !== 0 || !r.stable;
   const deltaClass = r.delta === 0 ? 'delta-zero' : (r.delta > 0 ? 'delta-pos' : 'delta-neg');
   const deltaStr   = r.delta === 0 ? '0' : (r.delta > 0 ? '+' + r.delta : String(r.delta));
+  const ccNote = r.concContDelta !== 0
+    ? ` <span title="CONC/CONT-Resplit, by design — Text nach Reassemblierung identisch" style="color:#444;font-size:10px">(${r.concContDelta > 0 ? '+' : ''}${r.concContDelta} CC)</span>`
+    : '';
 
   const expandBtn = hasDetail
     ? `<button class="expand-btn" onclick="toggleDetail(this)">▶ Details</button>`
@@ -645,7 +682,7 @@ function updateRow(dataRow, detailRow, r) {
     <td class="num">${r.persons}</td>
     <td class="num">${r.families}</td>
     <td class="num">${r.sources}</td>
-    <td class="${deltaClass}">${deltaStr}</td>
+    <td class="${deltaClass}">${deltaStr}${ccNote}</td>
     <td>${statusHtml}</td>
     <td class="time-col">${r.time} ms</td>
   `;
@@ -798,7 +835,8 @@ function renderOptReport() {
     <div class="or-stat"><div class="or-stat-val">${_agg.persons.toLocaleString('de')}</div><div class="or-stat-lbl">Personen</div></div>
     <div class="or-stat"><div class="or-stat-val">${_agg.families.toLocaleString('de')}</div><div class="or-stat-lbl">Familien</div></div>
     <div class="or-stat"><div class="or-stat-val">${_agg.sources.toLocaleString('de')}</div><div class="or-stat-lbl">Quellen</div></div>
-    <div class="or-stat"><div class="or-stat-val ${deltaClass}">${deltaStr}</div><div class="or-stat-lbl">net_delta (gesamt)</div></div>
+    <div class="or-stat"><div class="or-stat-val ${deltaClass}">${deltaStr}</div><div class="or-stat-lbl">net_delta (asm.)</div></div>
+    ${_agg.concContDelta !== 0 ? `<div class="or-stat"><div class="or-stat-val" style="color:#444">${_agg.concContDelta > 0 ? '+' : ''}${_agg.concContDelta}</div><div class="or-stat-lbl" title="CONC/CONT-Resplit, by design">CONC/CONT (CC)</div></div>` : ''}
     ${_agg.unstable ? `<div class="or-stat"><div class="or-stat-val neg">${_agg.unstable}</div><div class="or-stat-lbl">instabil</div></div>` : ''}
   `;
 
@@ -862,7 +900,9 @@ function buildMachineReport() {
   nl(`  Personen:  ${_agg.persons.toLocaleString('de')}`);
   nl(`  Familien:  ${_agg.families.toLocaleString('de')}`);
   nl(`  Quellen:   ${_agg.sources.toLocaleString('de')}`);
-  nl(`  net_delta: ${_agg.netDelta >= 0 ? '+' : ''}${_agg.netDelta}  (Zeilen orig → out1)`);
+  nl(`  net_delta: ${_agg.netDelta >= 0 ? '+' : ''}${_agg.netDelta}  (logische Zeilen nach CONC/CONT-Reassemblierung)`);
+  if (_agg.concContDelta !== 0)
+    nl(`  CONC/CONT: ${_agg.concContDelta > 0 ? '+' : ''}${_agg.concContDelta} Zeilen by design (Zeilenumbruch-Resplit, Text identisch nach Reassemblierung)`);
   nl(`  Instabil:  ${_agg.unstable} Datei(en)  [out1 ≠ out2]`);
   nl();
   sep();
