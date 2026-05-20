@@ -4,6 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stammbaum — GEDCOM Roundtrip Test</title>
+<!--
+  AUTOMATISIERUNG
+  ───────────────
+  Dev-Server starten:  python3 -m http.server 8080
+  Einzeldatei:         http://localhost:8080/test.html?file=demo.ged
+  Mehrere Dateien:     http://localhost:8080/test.html?files=demo.ged,test_ged.ged
+  Bash-Skript:         ./run-tests.sh [datei1.ged,datei2.ged]
+
+  OUTPUT
+  ──────
+  - Tabelle: Datei, Pers./Fam./Quellen, net_delta, stabil?, Zeit
+  - Optimierungs-Report: Tag-Verluste/-Gewinne, DATE/PLAC-Kontext, Passthrough
+  - Maschinenlesbarer Report: kopieren und an Claude Code übergeben
+    Enthält: Parser-Pfad (_parseXXXLine lv=N tag=T lv1tag='X'), ±3-Zeilen-Kontext, Fix-Prompt
+-->
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,7 +41,7 @@
     text-align: center;
     cursor: pointer;
     transition: border-color 0.15s, background 0.15s;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
   }
   #drop-zone.drag-over { border-color: #c8a84a; background: rgba(200,168,74,0.06); }
   #drop-zone p { color: #888; margin-bottom: 8px; }
@@ -45,6 +60,19 @@
     margin-top: 8px;
   }
   .btn:hover { border-color: #c8a84a; color: #c8a84a; }
+
+  /* server quick-load */
+  #server-section { margin-bottom: 24px; }
+  #server-section .section-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: .06em; color: #555; margin-bottom: 8px;
+  }
+  #server-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #server-file-input {
+    background: #2a2a2a; border: 1px solid #555; border-radius: 4px;
+    color: #ccc; padding: 5px 10px; font-size: 13px; width: 200px;
+  }
+  #server-file-input:focus { outline: none; border-color: #c8a84a; }
+  #server-msg { font-size: 11px; color: #c05050; margin-top: 5px; display: none; }
 
   #results { display: none; }
   .results-header { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
@@ -163,6 +191,15 @@
   .d-out2 { color: #5c9e5c; display: block; }
   .d-head { color: #555; display: block; margin-top: 6px; }
 
+  /* lost-examples context block */
+  .ctx-block {
+    font-family: monospace; font-size: 11px;
+    background: #0d0d0d; border-radius: 4px; padding: 6px 10px;
+    margin: 4px 0 8px; white-space: pre;
+  }
+  .ctx-line { color: #666; display: block; }
+  .ctx-line.missing { color: #c05050; font-weight: 600; }
+
   /* ── Optimierungs-Report ─────────────────────────────────── */
   #opt-report { display: none; margin-top: 32px; }
   .or-title {
@@ -187,7 +224,7 @@
 
   /* bar rows */
   .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-family: monospace; font-size: 11px; }
-  .bar-lbl { width: 90px; color: #bbb; flex-shrink: 0; }
+  .bar-lbl { width: 90px; color: #bbb; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bar-lbl.loss { color: #c05050; }
   .bar-lbl.gain { color: #8ab840; }
   .bar-lbl.warn { color: #c8a84a; }
@@ -213,6 +250,18 @@
   <p>hierher ziehen oder</p>
   <label class="btn" for="file-input">Dateien auswählen</label>
   <input type="file" id="file-input" accept=".ged,.GED,text/plain" multiple>
+</div>
+
+<div id="server-section">
+  <div class="section-label">Vom Dev-Server laden (localhost:8080)</div>
+  <div id="server-row">
+    <button class="btn" style="margin-top:0" onclick="loadFromServer('demo.ged')">demo.ged</button>
+    <input id="server-file-input" type="text" placeholder="dateiname.ged"
+      onkeydown="if(event.key==='Enter')loadFromServer(this.value)">
+    <button class="btn" style="margin-top:0"
+      onclick="loadFromServer(document.getElementById('server-file-input').value)">Laden</button>
+  </div>
+  <div id="server-msg"></div>
 </div>
 
 <div id="results">
@@ -302,7 +351,7 @@ const _agg = {
   dpCtx: {},        // "RecType / 1 ev / TAG" → count
   warnMsgs: {},     // msg → count
   ptTags: {},       // passthrough tag → count
-  lostExamples: {}, // tag → [{recType,recId,lv1tag,prev,line,next,lineNo,file}]
+  lostExamples: {}, // tag → [{recType,recId,lv,lv1tag,ctx,line,lineNo,prev,next,file}]
   warnExamples: {}, // msg → [{line,raw,file}]
   fileNames: [],
 };
@@ -370,14 +419,35 @@ document.getElementById('clear-btn').addEventListener('click', () => {
     lostExamples:{}, warnExamples:{}, fileNames:[] });
 });
 
+// ── Server quick-load ─────────────────────────────────────────
+async function loadFromServer(name) {
+  name = (name || '').trim();
+  if (!name) return;
+  const msgEl = document.getElementById('server-msg');
+  msgEl.style.display = 'none';
+  try {
+    const resp = await fetch(name);
+    if (!resp.ok) {
+      msgEl.textContent = `Nicht gefunden: ${name} (HTTP ${resp.status})`;
+      msgEl.style.display = 'block';
+      return;
+    }
+    const text = await resp.text();
+    processFiles([new File([text], name.split('/').pop(), { type: 'text/plain' })]);
+  } catch(e) {
+    msgEl.textContent = `Fehler: ${e.message}`;
+    msgEl.style.display = 'block';
+  }
+}
+
 // ── File Queue ────────────────────────────────────────────────
 async function processFiles(files) {
   const gedFiles = files.filter(f => /\.(ged|GED)$/i.test(f.name) || f.type === 'text/plain');
   if (!gedFiles.length) return;
   resultsEl.style.display = 'block';
   for (const f of gedFiles) {
-    const { dataRow, detailRow } = addPendingRow(f.name);
-    const result = await runTest(f);
+    const { dataRow, detailRow, statusCell } = addPendingRow(f.name);
+    const result = await runTest(f, msg => { statusCell.textContent = msg; });
     updateRow(dataRow, detailRow, result);
     if (result.stable) _passCount++; else _failCount++;
     if (result.errs1.length > 0) _warnCount++;
@@ -388,18 +458,31 @@ async function processFiles(files) {
 }
 
 // ── Core Test ─────────────────────────────────────────────────
-async function runTest(file) {
+// _yield gibt dem Browser zwischen den sync-lastigen parse/write Phasen Luft zum Rendern
+const _yield = () => new Promise(r => setTimeout(r, 0));
+
+async function runTest(file, onStatus) {
   const text = await file.text();
   const t0 = performance.now();
 
+  onStatus?.('1/4 parse…');
+  await _yield();
   const errs1 = [];
   const db1 = parseGEDCOM(text, errs1);
   setDb(db1);
+
+  onStatus?.('2/4 write…');
+  await _yield();
   const out1 = writeGEDCOM(false);
 
+  onStatus?.('3/4 parse…');
+  await _yield();
   const errs2 = [];
   const db2 = parseGEDCOM(out1, errs2);
   setDb(db2);
+
+  onStatus?.('4/4 write…');
+  await _yield();
   const out2 = writeGEDCOM(false);
 
   const t1    = performance.now();
@@ -423,7 +506,7 @@ async function runTest(file) {
   };
 }
 
-// ── Delta Analysis (analog ui-debug.js) ──────────────────────
+// ── Delta Analysis ────────────────────────────────────────────
 const TAG_CHECKS = [
   { lbl:'0 INDI', re:/^0 @[^@]+@ INDI\b/mg },
   { lbl:'0 FAM',  re:/^0 @[^@]+@ FAM\b/mg },
@@ -469,7 +552,7 @@ function analyzeDelta(orig, out1) {
     .filter(t => t.d !== 0)
     .sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
 
-  // Missing tags + Beispielzeilen mit Kontext
+  // Missing tags + Beispielzeilen mit ±3-Zeilen-Kontext
   const normArr = orig.split(/\r?\n/).map(norm);
   const outCounts = new Map();
   for (const l of out1.split(/\r?\n/).map(norm).filter(Boolean))
@@ -494,13 +577,16 @@ function analyzeDelta(orig, out1) {
     const tag = l.match(/^\d+ (\S+)/)?.[1] || '?';
     missingTags[tag] = (missingTags[tag] || 0) + 1;
 
-    // Beispielzeilen mit Kontext (max. 4 pro Tag)
+    // ±3-Zeilen-Kontext (7 Zeilen Fenster)
     if (!lostExamples[tag]) lostExamples[tag] = [];
     if (lostExamples[tag].length < 4) {
+      const ctx = [];
+      for (let j = Math.max(0, i - 3); j <= Math.min(normArr.length - 1, i + 3); j++)
+        ctx.push({ ln: j + 1, text: normArr[j], missing: j === i });
       lostExamples[tag].push({
-        recType: dpRecType, recId: dpRecId, lv1tag: dpLv1,
-        prev: normArr[i - 1] || '', line: l, next: normArr[i + 1] || '',
-        lineNo: i + 1,
+        recType: dpRecType, recId: dpRecId, lv1tag: dpLv1, lv,
+        ctx, line: l, lineNo: i + 1,
+        prev: normArr[i - 1] || '', next: normArr[i + 1] || '',
       });
     }
 
@@ -535,7 +621,7 @@ function addPendingRow(name) {
   detailRow.innerHTML = `<td colspan="7"><div class="detail-panel"></div></td>`;
   tbody.appendChild(dataRow);
   tbody.appendChild(detailRow);
-  return { dataRow, detailRow };
+  return { dataRow, detailRow, statusCell: dataRow.cells[1] };
 }
 
 function updateRow(dataRow, detailRow, r) {
@@ -608,6 +694,35 @@ function buildDetailPanel(panel, r) {
       </div>`);
   }
 
+  // ── Verlorene Zeilen mit ±3-Kontext ───────────────────────
+  const le = r.deltaAnalysis?.lostExamples;
+  if (le && Object.keys(le).length > 0) {
+    const topLoss = Object.entries(r.deltaAnalysis.topMissing || [])
+      .filter(([t]) => le[t]).slice(0, 4);
+    if (topLoss.length) {
+      const blocks = topLoss.map(([tag]) => {
+        const exs = le[tag].slice(0, 2);
+        return exs.map(ex => {
+          const ctxHtml = (ex.ctx || []).map(c =>
+            `<span class="ctx-line${c.missing ? ' missing' : ''}">${
+              String(c.ln).padStart(5, ' ')}: ${esc(c.text)}${c.missing ? '  ← FEHLT' : ''}</span>`
+          ).join('');
+          return `<div style="margin-bottom:8px">
+            <div style="color:#666;font-size:10px;margin-bottom:2px">
+              [${esc(ex.recType)} ${esc(ex.recId)} / 1 ${esc(ex.lv1tag)}]
+            </div>
+            <div class="ctx-block">${ctxHtml}</div>
+          </div>`;
+        }).join('');
+      }).join('');
+      sections.push(`
+        <div class="dp-section">
+          <div class="dp-title">Verlorene Zeilen — ±3-Kontext</div>
+          ${blocks}
+        </div>`);
+    }
+  }
+
   // ── DATE/PLAC Kontext ─────────────────────────────────────
   const dpCtx = r.deltaAnalysis?.dpCtx;
   if (dpCtx && Object.keys(dpCtx).length > 0) {
@@ -657,6 +772,17 @@ function updateSummary() {
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Parser-Pfad-Hint ──────────────────────────────────────────
+function _parserHint(recType, lv, lv1tag, tag) {
+  const detail = `lv=${lv}, tag=${tag}, x.lv1tag='${lv1tag}'`;
+  if (recType === 'INDI') return `_parseINDILine(): ${detail}`;
+  if (recType === 'FAM')  return `_parseFAMLine(): ${detail}`;
+  if (recType === 'SOUR') return `_parseSOURLine(): ${detail}`;
+  if (recType === 'NOTE') return `_parseNOTELine(): ${detail}`;
+  if (recType === 'REPO') return `_parseREPOLine(): ${detail}`;
+  return `gedcom-parser.js / gedcom-writer.js: ${tag} Roundtrip prüfen`;
 }
 
 // ── Optimierungs-Report ───────────────────────────────────────
@@ -769,27 +895,24 @@ function buildMachineReport() {
         }
       }
 
-      // Beispiele
+      // Beispiele mit ±3-Zeilen-Kontext
       const exs = _agg.lostExamples[lbl.split(' ')[1]] || [];
       if (exs.length) {
         nl('  Beispiele (Originalzeile → fehlt in out1):');
         for (const ex of exs) {
           nl(`  Datei: ${ex.file}  Z.${ex.lineNo}  [${ex.recType} ${ex.recId} / 1 ${ex.lv1tag}]`);
-          if (ex.prev) nl(`    ${ex.prev}`);
-          nl(`  ► ${ex.line}   ← FEHLT`);
-          if (ex.next) nl(`    ${ex.next}`);
+          for (const c of (ex.ctx || [])) {
+            const pfx = c.missing ? '  ►' : '   ';
+            nl(`${pfx}  ${String(c.ln).padStart(5)}: ${c.text}${c.missing ? '  ← FEHLT' : ''}`);
+          }
           nl();
         }
       }
 
-      // Lösungshinweis
+      // Lösungshinweis mit konkretem Parser-Pfad
       const tag = lbl.split(' ')[1];
-      const isINDI = (exs[0]?.recType === 'INDI');
-      const isFAM  = (exs[0]?.recType === 'FAM');
       nl('  Lösungshinweis:');
-      if (isINDI) nl(`    → gedcom-parser.js _parseINDILine(): ${tag} bei Ereignis 1 ${exs[0]?.lv1tag} prüfen`);
-      else if (isFAM) nl(`    → gedcom-parser.js _parseFAMLine(): ${tag} bei Ereignis 1 ${exs[0]?.lv1tag} prüfen`);
-      else nl(`    → gedcom-parser.js / gedcom-writer.js: ${lbl} Roundtrip prüfen`);
+      nl(`    → gedcom-parser.js → ${_parserHint(exs[0]?.recType || '', exs[0]?.lv ?? '?', exs[0]?.lv1tag || '', tag)}`);
       nl();
       sep();
       nl();
@@ -813,8 +936,9 @@ function buildMachineReport() {
     for (const [tag, n] of miss.slice(0, 15)) {
       nl(`  \`${tag}\`  ${n}×`);
       const exs = _agg.lostExamples[tag] || [];
-      for (const ex of exs.slice(0, 2))
+      for (const ex of exs.slice(0, 2)) {
         nl(`    [${ex.file} Z.${ex.lineNo}] ${ex.prev ? ex.prev + ' / ' : ''}${ex.line}`);
+      }
     }
     nl(); sep(); nl();
   }
@@ -852,11 +976,19 @@ function buildMachineReport() {
   nl();
   losses.slice(0, 5).forEach(([lbl, d], i) => {
     const exs = _agg.lostExamples[lbl.split(' ')[1]] || [];
-    const ctx = exs[0] ? `[${exs[0].recType}/1 ${exs[0].lv1tag}]` : '';
-    nl(`${i + 1}. \`${lbl}\` verliert ${Math.abs(d)} Zeilen ${ctx}`);
-    if (exs[0]) nl(`   Beispiel Z.${exs[0].lineNo} (${exs[0].file}): ${exs[0].prev} | ${exs[0].line}`);
+    const tag  = lbl.split(' ')[1];
+    const hint = _parserHint(exs[0]?.recType || '', exs[0]?.lv ?? '?', exs[0]?.lv1tag || '', tag);
+    nl(`${i + 1}. \`${lbl}\` verliert ${Math.abs(d)} Zeilen`);
+    nl(`   Parser-Pfad: gedcom-parser.js → ${hint}`);
+    if (exs[0]?.ctx) {
+      nl(`   Kontext (±3 Zeilen, Z.${exs[0].lineNo}, ${exs[0].file}):`);
+      for (const c of exs[0].ctx) {
+        const pfx = c.missing ? '   ►' : '    ';
+        nl(`${pfx} ${c.text}${c.missing ? '  ← FEHLT' : ''}`);
+      }
+    }
+    nl();
   });
-  nl();
   nl('Vorgehen: Roundtrip-Test nach jeder Änderung mit test.html verifizieren.');
 
   return lines.join('\n');
@@ -876,11 +1008,29 @@ function barRow(lbl, val, max, type, countStr) {
   const pct = Math.round((val / max) * 100);
   return `
     <div class="bar-row">
-      <div class="bar-lbl ${type}">${esc(lbl)}</div>
+      <div class="bar-lbl ${type}" title="${esc(lbl)}">${esc(lbl)}</div>
       <div class="bar-track"><div class="bar-fill ${type}" style="width:${pct}%"></div></div>
       <div class="bar-count ${type}">${esc(countStr)}</div>
     </div>`;
 }
+
+// ── URL-Params: ?file=X oder ?files=A,B,C ────────────────────
+// Automatischer Start wenn Dev-Server läuft: python3 -m http.server 8080
+// Beispiel: http://localhost:8080/test.html?file=demo.ged
+;(async function autoLoadFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const f = params.get('file'), fs = params.get('files');
+  const names = f ? [f] : fs ? fs.split(',').map(s => s.trim()).filter(Boolean) : [];
+  if (!names.length) return;
+  for (const name of names) {
+    try {
+      const resp = await fetch(name);
+      if (!resp.ok) { console.warn('[test.html] Nicht gefunden:', name, resp.status); continue; }
+      const text = await resp.text();
+      processFiles([new File([text], name.split('/').pop(), { type: 'text/plain' })]);
+    } catch(e) { console.warn('[test.html] Ladefehler:', name, e.message); }
+  }
+})();
 
 </script>
 </body>
