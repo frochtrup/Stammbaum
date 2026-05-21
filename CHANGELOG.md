@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-21 — ROUNDTRIP-FAM-OBJE: FAM DIV/DIVF OBJE FILE lv=4 Handler (sw v663)
+
+- **sw v663** `fix(roundtrip)`: ROUNDTRIP-FAM-OBJE — `_parseFAMLine` lv=4 Handler für `OBJE → FILE` Sub-Tags deckte nur `MARR`/`ENGA` ab; `DIV`/`DIVF`-Events hatten keinen lv=4-Handler, wodurch `4 FORM` (und lv=5+ Sub-Tags) unter `DIV/DIVF → 2 OBJE → 3 FILE` still gedroppt wurden; Fix: Condition um `DIV`/`DIVF` erweitert, `_oa`-Selektor auf alle vier Event-Typen ausgedehnt; analoges Muster zum v662-INDI-Fix (gleicher Anti-Pattern: Named-Field ohne `_ptDepth`); kein net_delta-Effekt auf `MeineDaten.ged` (keine DIV/DIVF-OBJE vorhanden), aber defensive Korrektur für andere GEDCOM-Quellen
+
+---
+
 ### Session 2026-05-21 — ROUNDTRIP-LV5: 5 TYPE PHOTO in INDI-Event-OBJE + ROUNDTRIP-NOTE (sw v661–v662)
 
 - **sw v662** `fix(roundtrip)`: ROUNDTRIP-LV5 — `_parseINDILine` lv=4 OBJE/FILE/FORM-Handler setzte kein `_ptDepth=4`, wodurch `5 TYPE PHOTO` (und andere lv=5-Sub-Tags) unter `2 OBJE` in INDI-Array-Events (`EVEN`, generisch) still gedroppt wurden; Fix: `_ptDepth=4; _ptTarget=_em4._extra` in beiden Zweigen (FORM und else); behebt net_delta=-1 auf `MeineDaten.ged` (1 Instanz: `1 EVEN → 2 OBJE → 3 FILE → 4 FORM → 5 TYPE PHOTO`)

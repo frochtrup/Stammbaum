@@ -557,8 +557,8 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag==='NOTE')  x._smEntry.note=val;
       else { x._smEntry._extra.push('4 '+tag+(val?' '+val:'')); x._ptDepth=4; x._ptTarget=x._smEntry._extra; }
     }
-    if ((x.lv1tag==='MARR'||x.lv1tag==='ENGA') && x.lv2tag==='OBJE' && x.lv3tag==='FILE') {
-      const _oa = x.lv1tag==='MARR' ? cur.marr.media : cur.engag.media;
+    if ((x.lv1tag==='MARR'||x.lv1tag==='ENGA'||x.lv1tag==='DIV'||x.lv1tag==='DIVF') && x.lv2tag==='OBJE' && x.lv3tag==='FILE') {
+      const _oa = x.lv1tag==='MARR' ? cur.marr.media : x.lv1tag==='ENGA' ? cur.engag.media : x.lv1tag==='DIV' ? cur.div.media : cur.divf.media;
       if (_oa.length) {
         if (tag==='FORM') { _oa[_oa.length-1].form = val; x._ptDepth=4; x._ptTarget=_oa[_oa.length-1]._extra; }
         else { _oa[_oa.length-1]._extra.push('4 '+tag+(val?' '+val:'')); x._ptDepth=4; x._ptTarget=_oa[_oa.length-1]._extra; }
