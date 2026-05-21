@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-21 — ROUNDTRIP-NOTE: 2 SOUR unter 1 NOTE @ref@ erhalten (sw v661)
+
+- **sw v661** `fix(roundtrip)`: ROUNDTRIP-NOTE — Ancestris schreibt `2 SOUR @ref@` direkt unter `1 NOTE @xref@` auf INDI/FAM (non-standard Extension für Quellenbelege an Notizreferenzen); bisher: Parser hatte keinen Handler für `x.lv1tag==='NOTE'` auf lv=2 → 137 `2 SOUR`-Zeilen + 3 lv=3-Sub-Tags (`3 QUAY`, `3 PAGE`) still dropped; Fix: neues `noteRefExtras{}` Map auf INDI/FAM (parallel zu `noteRefs[]`, keyed by `@ref@`); `x.lastNoteRef` im Kontext-Objekt trackt aktiven NOTE-Ref; lv=2-Handler speichert Verbatim-Zeile in `noteRefExtras[ref]`; `_ptDepth=2; _ptTarget=noteRefExtras[ref]` für lv=3-Sub-Tags; Writer gibt `noteRefExtras[ref]`-Zeilen direkt nach `1 NOTE`-Zeile aus; net_delta -141 → ~0 auf `MeineDaten.ged` (2795 Pers.)
+
+---
+
 ### Session 2026-05-20 — WW-PARSER: Web Worker für GEDCOM-Parse (sw v649)
 
 - **sw v649** `feat(perf)`: WW-PARSER — `parseGEDCOM()` in `gedcom-worker.js` ausgelagert; `onProgress`-Callback (alle 5% der Zeilen, 0–95%) via `importScripts('gedcom-parser.js')`; `_processLoadedText()` in `storage-file.js` nutzt `new Worker('gedcom-worker.js')` wenn `Worker` verfügbar; progress-Nachrichten aktualisieren `#loadingBar` (schmaler `--gold-lt`-Balken unter dem Spinner) + Prozent-Text im Overlay; `_finishLoad(db, text, filename)` als gemeinsamer Post-Parse-Pfad (Worker + Sync-Fallback); Sync-Fallback bleibt erhalten wenn `typeof Worker === 'undefined'`; Worker-`onerror` → Sync-Fallback; `updateLoadingProgress(pct|null)` in `ui-forms.js`, `hideLoadingOverlay` setzt Bar zurück; `gedcom-worker.js` in SW-PRECACHE aufgenommen
