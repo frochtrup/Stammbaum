@@ -9,6 +9,10 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-21 — ROUNDTRIP-LV5: 5 TYPE PHOTO in INDI-Event-OBJE + ROUNDTRIP-NOTE (sw v661–v662)
+
+- **sw v662** `fix(roundtrip)`: ROUNDTRIP-LV5 — `_parseINDILine` lv=4 OBJE/FILE/FORM-Handler setzte kein `_ptDepth=4`, wodurch `5 TYPE PHOTO` (und andere lv=5-Sub-Tags) unter `2 OBJE` in INDI-Array-Events (`EVEN`, generisch) still gedroppt wurden; Fix: `_ptDepth=4; _ptTarget=_em4._extra` in beiden Zweigen (FORM und else); behebt net_delta=-1 auf `MeineDaten.ged` (1 Instanz: `1 EVEN → 2 OBJE → 3 FILE → 4 FORM → 5 TYPE PHOTO`)
+
 ### Session 2026-05-21 — ROUNDTRIP-NOTE: 2 SOUR unter 1 NOTE @ref@ erhalten (sw v661)
 
 - **sw v661** `fix(roundtrip)`: ROUNDTRIP-NOTE — Ancestris schreibt `2 SOUR @ref@` direkt unter `1 NOTE @xref@` auf INDI/FAM (non-standard Extension für Quellenbelege an Notizreferenzen); bisher: Parser hatte keinen Handler für `x.lv1tag==='NOTE'` auf lv=2 → 137 `2 SOUR`-Zeilen + 3 lv=3-Sub-Tags (`3 QUAY`, `3 PAGE`) still dropped; Fix: neues `noteRefExtras{}` Map auf INDI/FAM (parallel zu `noteRefs[]`, keyed by `@ref@`); `x.lastNoteRef` im Kontext-Objekt trackt aktiven NOTE-Ref; lv=2-Handler speichert Verbatim-Zeile in `noteRefExtras[ref]`; `_ptDepth=2; _ptTarget=noteRefExtras[ref]` für lv=3-Sub-Tags; Writer gibt `noteRefExtras[ref]`-Zeilen direkt nach `1 NOTE`-Zeile aus; net_delta -141 → ~0 auf `MeineDaten.ged` (2795 Pers.)
