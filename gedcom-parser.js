@@ -298,8 +298,8 @@ function _parseINDILine(cur, x, lv, tag, val) {
     }
     if (x.lv2tag === 'OBJE' && x.evIdx >= 0 && cur.events[x.evIdx]?.media?.length > 0) {
       const _em4 = cur.events[x.evIdx].media[cur.events[x.evIdx].media.length - 1];
-      if (x.lv3tag === 'FILE' && tag === 'FORM') _em4.form = val;
-      else _em4._extra.push('4 ' + tag + (val ? ' ' + val : ''));
+      if (x.lv3tag === 'FILE' && tag === 'FORM') { _em4.form = val; x._ptDepth=4; x._ptTarget=_em4._extra; }
+      else { _em4._extra.push('4 ' + tag + (val ? ' ' + val : '')); x._ptDepth=4; x._ptTarget=_em4._extra; }
     }
     if (x.lv1tag === 'FAMC' && x.lv3tag === 'SOUR' && cur.famc.length) {
       const fref = cur.famc[cur.famc.length-1];
