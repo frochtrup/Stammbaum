@@ -245,7 +245,10 @@ function writeINDIRecord(lines, p) {
     if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
   }
 
-  for (const ref of (p.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
+  for (const ref of (p.noteRefs || [])) {
+    lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
+    for (const l of (p.noteRefExtras?.[ref] || [])) lines.push(l);
+  }
   for (const nt of (p.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
 
   for (const fref of p.famc) {
@@ -418,7 +421,10 @@ function writeFAMRecord(lines, f) {
     if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
     if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
   }
-  for (const ref of (f.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
+  for (const ref of (f.noteRefs || [])) {
+    lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
+    for (const l of (f.noteRefExtras?.[ref] || [])) lines.push(l);
+  }
   for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
 
   for (const m of (f.media || [])) {

@@ -27,8 +27,8 @@ function _parseINDILine(cur, x, lv, tag, val) {
     else if (tag === 'FAMC') cur.famc.push({ famId:val, pedi:'', frel:'', mrel:'', frelSeen:false, mrelSeen:false, frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[], mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], citations:[] });
     else if (tag === 'FAMS') cur.fams.push(val);
     else if (tag === 'NOTE') {
-      if (!val.startsWith('@')) { cur.noteTexts.push(val); x._curNoteIsInline = true; }
-      else { cur.noteRefs.push(val); x._curNoteIsInline = false; }
+      if (!val.startsWith('@')) { cur.noteTexts.push(val); x._curNoteIsInline = true; x.lastNoteRef = ''; }
+      else { cur.noteRefs.push(val); x._curNoteIsInline = false; x.lastNoteRef = val; }
     }
     else if (tag === '_UID') cur.uid = val;
     else if (tag === '_GRAMPS_ID') cur.grampId = val;
@@ -206,6 +206,11 @@ function _parseINDILine(cur, x, lv, tag, val) {
         x._ptDepth = 2; x._ptTarget = cur.topSourceExtra[x.lastSourVal];
       }
     }
+    if (x.lv1tag === 'NOTE' && x.lastNoteRef) {
+      if (!cur.noteRefExtras[x.lastNoteRef]) cur.noteRefExtras[x.lastNoteRef] = [];
+      cur.noteRefExtras[x.lastNoteRef].push('2 ' + tag + (val ? ' ' + val : ''));
+      x._ptDepth = 2; x._ptTarget = cur.noteRefExtras[x.lastNoteRef];
+    }
     if (x.lv1tag === 'REFN' && tag === 'TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
     if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
   }
@@ -323,8 +328,8 @@ function _parseFAMLine(cur, x, lv, tag, val) {
     else if (tag==='WIFE') cur.wife = val;
     else if (tag==='CHIL') { cur.children.push(val); cur._lastChil = val; }
     else if (tag==='NOTE') {
-      if (!val.startsWith('@')) { cur.noteTexts.push(val); x._curNoteIsInline = true; }
-      else { cur.noteRefs.push(val); x._curNoteIsInline = false; }
+      if (!val.startsWith('@')) { cur.noteTexts.push(val); x._curNoteIsInline = true; x.lastNoteRef = ''; }
+      else { cur.noteRefs.push(val); x._curNoteIsInline = false; x.lastNoteRef = val; }
     }
     else if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
     else if (tag==='MARR') { cur.marr.seen  = true; cur.marr.value  = val; }
@@ -438,6 +443,11 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else { _cm._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=_cm._extra; }
     }
     if (x.lv1tag === 'REFN' && tag === 'TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
+    if (x.lv1tag==='NOTE' && x.lastNoteRef) {
+      if (!cur.noteRefExtras[x.lastNoteRef]) cur.noteRefExtras[x.lastNoteRef] = [];
+      cur.noteRefExtras[x.lastNoteRef].push('2 ' + tag + (val ? ' ' + val : ''));
+      x._ptDepth = 2; x._ptTarget = cur.noteRefExtras[x.lastNoteRef];
+    }
     if (x.lv1tag==='NOTE' && (tag==='CONC'||tag==='CONT') && cur.noteTexts.length) cur.noteTexts[cur.noteTexts.length-1] += (tag==='CONT'?'\n':'') + val;
     if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
     if (x.lv1tag==='CHAN' && tag==='DATE') cur.lastChanged = val;
@@ -725,7 +735,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
   const x = {
     lv1tag: '', lv2tag: '', lv3tag: '',
     evIdx: -1, inMap: false, mapParent: '',
-    _curCit: null, lastSourVal: '',
+    _curCit: null, lastSourVal: '', lastNoteRef: '',
     _curNoteIsInline: false, _curExtraNameIdx: -1,
     _ptDepth: 0, _ptTarget: null,
     _smEntry: null, _curTask: null, _curAsso: null
@@ -773,7 +783,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
           chr:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
           buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
           events:[], famc:[], fams:[],
-          noteRefs:[], noteTexts:[], noteText:'',
+          noteRefs:[], noteRefExtras:{}, noteTexts:[], noteText:'',
           extraNames:[], _tasks:[], _rlog:[], associations:[], aliases:[], refns:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'', chanNote:'',
           nameCitations:[], _hasGivn:false, _hasSurn:false,
@@ -782,7 +792,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,citations:[],value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], refns:[], lastChanged:'', lastChangedTime:'', chanNote:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteRefExtras:{}, noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], refns:[], lastChanged:'', lastChangedTime:'', chanNote:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCalns:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'', chanNote:'' };
