@@ -133,14 +133,14 @@ function _parseINDILine(cur, x, lv, tag, val) {
       }
     }
     else if (x.lv1tag === 'BIRT') {
-      if      (tag==='DATE') cur.birth.date=val;
+      if      (tag==='DATE') { cur.birth.date=val; x._ptDepth=2; x._ptTarget=cur.birth._extra; }
       else if (tag==='PLAC') cur.birth.place=val;
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.birth.noteRefs.push(val); else cur.birth.note=val; }
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.birth.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else { cur.birth._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur.birth._extra; }
     }
     else if (x.lv1tag === 'DEAT') {
-      if      (tag==='DATE') cur.death.date=val;
+      if      (tag==='DATE') { cur.death.date=val; x._ptDepth=2; x._ptTarget=cur.death._extra; }
       else if (tag==='PLAC') cur.death.place=val;
       else if (tag==='CAUS') { cur.death.cause=val; x._ptDepth=2; x._ptTarget=cur.death._extra; }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.death.noteRefs.push(val); else cur.death.note=val; }
@@ -148,14 +148,14 @@ function _parseINDILine(cur, x, lv, tag, val) {
       else { cur.death._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur.death._extra; }
     }
     else if (x.lv1tag === 'CHR') {
-      if      (tag==='DATE') cur.chr.date=val;
+      if      (tag==='DATE') { cur.chr.date=val; x._ptDepth=2; x._ptTarget=cur.chr._extra; }
       else if (tag==='PLAC') cur.chr.place=val;
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.chr.noteRefs.push(val); else cur.chr.note=val; }
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.chr.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else { cur.chr._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur.chr._extra; }
     }
     else if (x.lv1tag === 'BURI') {
-      if      (tag==='DATE') cur.buri.date=val;
+      if      (tag==='DATE') { cur.buri.date=val; x._ptDepth=2; x._ptTarget=cur.buri._extra; }
       else if (tag==='PLAC') cur.buri.place=val;
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.buri.noteRefs.push(val); else cur.buri.note=val; }
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.buri.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
@@ -163,7 +163,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     }
     else if (x.evIdx >= 0 && cur.events[x.evIdx]) {
       const ev = cur.events[x.evIdx];
-      if      (tag==='DATE')  ev.date = val;
+      if      (tag==='DATE')  { ev.date = val; x._ptDepth=2; x._ptTarget=ev._extra; }
       else if (tag==='PLAC')  ev.place = val;
       else if (tag==='TYPE')  ev.eventType = val;
       else if (tag==='NOTE') { if (val.startsWith('@')) ev.noteRefs.push(val); else ev.note += (ev.note ? '\n' : '') + val; }
@@ -374,7 +374,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag === 'NOTE')    _rl.note   = val;
     }
     else if (x.lv1tag==='MARR') {
-      if (tag==='DATE') cur.marr.date=val;
+      if (tag==='DATE') { cur.marr.date=val; x._ptDepth=2; x._ptTarget=cur.marr._extra; }
       else if (tag==='PLAC') cur.marr.place=val;
       else if (tag==='ADDR') cur.marr.addr=val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.marr.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
@@ -386,7 +386,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else { cur.marr._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth = 2; x._ptTarget = cur.marr._extra; }
     }
     if (x.lv1tag==='ENGA' || x.lv1tag==='ENG') {
-      if      (tag==='DATE') cur.engag.date = val;
+      if      (tag==='DATE') { cur.engag.date = val; x._ptDepth=2; x._ptTarget=cur.engag._extra; }
       else if (tag==='PLAC') cur.engag.place = val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.engag.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.engag.noteRefs.push(val); else cur.engag.note = val; }
@@ -397,7 +397,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else { cur.engag._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth = 2; x._ptTarget = cur.engag._extra; }
     }
     if (x.lv1tag==='DIV') {
-      if      (tag==='DATE') cur.div.date = val;
+      if      (tag==='DATE') { cur.div.date = val; x._ptDepth=2; x._ptTarget=cur.div._extra; }
       else if (tag==='PLAC') cur.div.place = val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.div.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.div.noteRefs.push(val); else cur.div.note = val; }
@@ -408,7 +408,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else { cur.div._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth = 2; x._ptTarget = cur.div._extra; }
     }
     if (x.lv1tag==='DIVF') {
-      if      (tag==='DATE') cur.divf.date = val;
+      if      (tag==='DATE') { cur.divf.date = val; x._ptDepth=2; x._ptTarget=cur.divf._extra; }
       else if (tag==='PLAC') cur.divf.place = val;
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.divf.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.divf.noteRefs.push(val); else cur.divf.note = val; }
@@ -420,7 +420,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
     }
     if (x.lv1tag==='EVEN' && x.evIdx >= 0 && cur.events[x.evIdx]) {
       const ev = cur.events[x.evIdx];
-      if      (tag==='DATE') ev.date = val;
+      if      (tag==='DATE') { ev.date = val; x._ptDepth=2; x._ptTarget=ev._extra; }
       else if (tag==='PLAC') ev.place = val;
       else if (tag==='TYPE') ev.eventType = val;
       else if (tag==='NOTE') { if (val?.startsWith('@')) ev.noteRefs.push(val); else ev.note += (ev.note ? '\n' : '') + (val||''); }
