@@ -740,7 +740,7 @@ function updateRow(dataRow, detailRow, r) {
     : `<span class="status-err">✗ instabil</span>`;
 
   let warnBadge = '';
-  if (r.errs1 > 0) warnBadge = ` <span style="color:#c8a84a;font-size:11px">${r.errs1} Warn.</span>`;
+  if (r.errs1.length > 0) warnBadge = ` <span style="color:#c8a84a;font-size:11px">${r.errs1.length} Warn.</span>`;
 
   dataRow.innerHTML = `
     <td><span class="filename">${esc(r.name)}</span>${warnBadge}${expandBtn}</td>
@@ -809,11 +809,13 @@ function buildDetailPanel(panel, r) {
             `<span class="ctx-line${c.missing ? ' missing' : ''}">${
               String(c.ln).padStart(5, ' ')}: ${esc(c.text)}${c.missing ? '  ← FEHLT' : ''}</span>`
           ).join('');
+          const hint = _parserHint(ex.recType, ex.lv, ex.lv1tag, tag);
           return `<div style="margin-bottom:8px">
             <div style="color:#666;font-size:10px;margin-bottom:2px">
               [${esc(ex.recType)} ${esc(ex.recId)} / 1 ${esc(ex.lv1tag)}]
             </div>
             <div class="ctx-block">${ctxHtml}</div>
+            <div style="color:#555;font-size:10px;font-family:monospace;margin-top:2px">→ ${esc(hint)}</div>
           </div>`;
         }).join('');
       }).join('');
