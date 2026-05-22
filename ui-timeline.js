@@ -440,15 +440,26 @@ function _renderTlH(allPersonEvs, histEvs, age, body, isMulti, numPersons) {
       // Undatierte Beruf-Events → linker Rand, gestapelt
       if (lane.id === 'work') {
         laneUnd['work'].forEach((ev, i) => {
-          html += `<div class="tl-chip tl-chip--event tl-chip--undated" data-stacki="${i}">` +
-                  `<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
+          const _idx = ev.personIdx ?? 0;
+          const _pc  = isMulti ? ` tl-pc${_idx}` : '';
+          const _dot = isMulti ? `<span class="tl-chip-dot tl-pc${_idx}"></span>` : '';
+          const _tip = isMulti ? (() => {
+            const _pid = (UIState._tlPersonIds || [])[_idx];
+            const _p   = _pid ? getPerson(_pid) : null;
+            return ` title="${_esc('👤 ' + (_p ? (_p.given || _p.name || '') : '') + '\n' + ev.label)}"`;
+          })() : '';
+          html += `<div class="tl-chip tl-chip--event tl-chip--undated${_pc}" data-stacki="${i}"${_tip}>` +
+                  `${_dot}<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
         });
       }
       // Undatierte Kinder → rechter Rand, gestapelt
       if (lane.id === 'family') {
         laneUnd['family'].filter(e => e.type === 'child').forEach((ev, i) => {
-          html += `<div class="tl-chip tl-chip--child tl-chip--undated tl-chip--right" data-stacki="${i}">` +
-                  `<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
+          const _idx = ev.personIdx ?? 0;
+          const _pc  = isMulti ? ` tl-pc${_idx}` : '';
+          const _dot = isMulti ? `<span class="tl-chip-dot tl-pc${_idx}"></span>` : '';
+          html += `<div class="tl-chip tl-chip--child tl-chip--undated tl-chip--right${_pc}" data-stacki="${i}">` +
+                  `${_dot}<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
         });
       }
     }
