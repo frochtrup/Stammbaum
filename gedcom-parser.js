@@ -240,7 +240,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
       else if (x.lv1tag==='CHR')  cur.chr.note   += _sfx;
       else if (x.lv1tag==='BURI') cur.buri.note  += _sfx;
     }
-    if (x.lv2tag === 'SOUR' && x._curCit && tag !== 'TIME' && tag !== 'SOUR') {
+    if (x.lv2tag === 'SOUR' && x._curCit && tag !== 'TIME') {
       if      (tag === 'PAGE') x._curCit.page = val;
       else if (tag === 'QUAY') x._curCit.quay = val;
       else if (tag === 'NOTE') { x._curCit.note = val || ''; x._ptDepth = 3; x._ptTarget = x._curCit.extra; }
@@ -248,6 +248,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
         const _sm = { file:'', scbk:'', prim:'', titl:'', note:'', _extra:[] };
         x._curCit.media.push(_sm); x._smEntry = _sm;
       } else {
+        // Includes '3 SOUR @ref@' (source for CAUS via passthrough → reattaches to citation for stable roundtrip)
         x._curCit.extra.push('3 ' + tag + (val ? ' ' + val : ''));
         x._ptDepth = 3; x._ptTarget = x._curCit.extra;
       }
@@ -481,7 +482,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
     if (x.lv2tag==='DATE' && x.lv1tag==='CHAN' && tag==='TIME') cur.lastChangedTime = val;
     if (x.lv1tag==='CHAN' && x.lv2tag==='NOTE' && (tag==='CONC'||tag==='CONT'))
       cur.chanNote += (tag==='CONT' ? '\n' : '') + val;
-    if (x.lv2tag === 'SOUR' && x._curCit && tag !== 'TIME' && tag !== 'SOUR') {
+    if (x.lv2tag === 'SOUR' && x._curCit && tag !== 'TIME') {
       if      (tag === 'PAGE') x._curCit.page = val;
       else if (tag === 'QUAY') x._curCit.quay = val;
       else if (tag === 'NOTE') { x._curCit.note = val || ''; x._ptDepth = 3; x._ptTarget = x._curCit.extra; }
@@ -489,6 +490,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
         const _sm = { file:'', scbk:'', prim:'', titl:'', note:'', _extra:[] };
         x._curCit.media.push(_sm); x._smEntry = _sm;
       } else {
+        // Includes '3 SOUR @ref@' (source for CAUS via passthrough → reattaches to citation for stable roundtrip)
         x._curCit.extra.push('3 ' + tag + (val ? ' ' + val : ''));
         x._ptDepth = 3; x._ptTarget = x._curCit.extra;
       }

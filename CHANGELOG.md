@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-22 — ROUNDTRIP-CAUS-SOUR: 3 SOUR unter 2 CAUS (Instabilität) (sw v664)
+
+- **sw v664** `fix(roundtrip)`: ROUNDTRIP-CAUS-SOUR — Instabilität (`out1≠out2`) in `MeineDaten.ged` (6 Vorkommen): Originaldatei enthält `3 SOUR @Sxx@` als Quellenbeleg für `2 CAUS`-Tag in DEAT/RESI/anderen INDI-Events; `2 CAUS` setzt `_ptDepth=2; _ptTarget=obj._extra` → `3 SOUR @Sxx@` via Passthrough in `obj._extra` gespeichert; Writer gibt `_extra` am Ende von `eventBlock` aus (nach `2 SOUR`-Zitierungen) → in Runde 2 erscheint `3 SOUR` im Kontext `lv2tag='SOUR'`, wo die Bedingung `tag !== 'SOUR'` im lv=3-Zitierungshandler den Eintrag silently dropped; Fix: Bedingung `tag !== 'SOUR'` aus lv=3-Zitierungshandler in `_parseINDILine` und `_parseFAMLine` entfernt → `3 SOUR @ref@` landet nun in `c.extra` und wird via `_writeSourCits` stabil nach `2 SOUR` ausgegeben; alle 6 Testvokommen stabil; alle Testdateien `out1===out2 ✓`, net_delta=0
+
+---
+
 ### Session 2026-05-21 — ROUNDTRIP-FAM-OBJE: FAM DIV/DIVF OBJE FILE lv=4 Handler (sw v663)
 
 - **sw v663** `fix(roundtrip)`: ROUNDTRIP-FAM-OBJE — `_parseFAMLine` lv=4 Handler für `OBJE → FILE` Sub-Tags deckte nur `MARR`/`ENGA` ab; `DIV`/`DIVF`-Events hatten keinen lv=4-Handler, wodurch `4 FORM` (und lv=5+ Sub-Tags) unter `DIV/DIVF → 2 OBJE → 3 FILE` still gedroppt wurden; Fix: Condition um `DIV`/`DIVF` erweitert, `_oa`-Selektor auf alle vier Event-Typen ausgedehnt; analoges Muster zum v662-INDI-Fix (gleicher Anti-Pattern: Named-Field ohne `_ptDepth`); kein net_delta-Effekt auf `MeineDaten.ged` (keine DIV/DIVF-OBJE vorhanden), aber defensive Korrektur für andere GEDCOM-Quellen
