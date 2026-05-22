@@ -2783,17 +2783,23 @@ html[data-theme="dark"] {
   margin-left: 2px; cursor: pointer; flex-shrink: 0;
   padding: 0 2px;
 }
-/* ── TL-MULTI: Person-Farben ─────────────────── */
-.tl-person-pill.tl-pc0, .tl-chip.tl-pc0  { border-left-color: var(--gold); }
-.tl-person-pill.tl-pc0                    { border-color: var(--gold-dim); color: var(--gold); }
-.tl-person-pill.tl-pc1                    { border-color: #b03838; color: #e05c5c; }
-.tl-person-pill.tl-pc2                    { border-color: #2e7d52; color: #4a9e6e; }
-.tl-person-pill.tl-pc3                    { border-color: #3a5aa0; color: #5b7ed4; }
-.tl-person-pill.tl-pc4                    { border-color: #6a4a85; color: #9b70b5; }
-.tl-chip.tl-pc1 { border-left-color: #e05c5c; }
-.tl-chip.tl-pc2 { border-left-color: #4a9e6e; }
-.tl-chip.tl-pc3 { border-left-color: #5b7ed4; }
-.tl-chip.tl-pc4 { border-left-color: #9b70b5; }
+/* ── TL-MULTI: Person-Pills ──────────────────── */
+.tl-person-pill.tl-pc0 { border-color: var(--gold-dim); color: var(--gold); }
+.tl-person-pill.tl-pc1 { border-color: #b03838; color: #e05c5c; }
+.tl-person-pill.tl-pc2 { border-color: #2e7d52; color: #4a9e6e; }
+.tl-person-pill.tl-pc3 { border-color: #3a5aa0; color: #5b7ed4; }
+.tl-person-pill.tl-pc4 { border-color: #6a4a85; color: #9b70b5; }
+/* Person-Dot im Chip */
+.tl-chip-dot {
+  display: inline-block; width: 7px; height: 7px;
+  border-radius: 50%; vertical-align: middle;
+  margin-right: 4px; position: relative; top: -1px;
+}
+.tl-chip-dot.tl-pc0 { background: var(--gold); }
+.tl-chip-dot.tl-pc1 { background: #e05c5c; }
+.tl-chip-dot.tl-pc2 { background: #4a9e6e; }
+.tl-chip-dot.tl-pc3 { background: #5b7ed4; }
+.tl-chip-dot.tl-pc4 { background: #9b70b5; }
 .tl-swim-span.tl-pc0 { background: var(--gold-dim); }
 .tl-swim-span.tl-pc1 { background: #c04040; opacity: 0.45; }
 .tl-swim-span.tl-pc2 { background: #2e7d52; opacity: 0.45; }
@@ -2924,6 +2930,14 @@ html[data-theme="dark"] {
 
 /* Kinder blau in Familie-Lane */
 .tl-lane--family .tl-chip--child { border-left-color: var(--blue); }
+
+/* ── TL-MULTI: Person-Farben in Chips (3-Klassen-Spezifität → schlägt Lane-Regeln) ── */
+/* border-left = Personfarbe; background-tint = sanfte Einfärbung */
+.tl-lane .tl-chip.tl-pc0 { border-left-color: var(--gold);   background: rgba(200,168,74,0.07); }
+.tl-lane .tl-chip.tl-pc1 { border-left-color: #e05c5c;       background: rgba(224,92,92,0.07);  }
+.tl-lane .tl-chip.tl-pc2 { border-left-color: #4a9e6e;       background: rgba(74,158,110,0.07); }
+.tl-lane .tl-chip.tl-pc3 { border-left-color: #5b7ed4;       background: rgba(91,126,212,0.07); }
+.tl-lane .tl-chip.tl-pc4 { border-left-color: #9b70b5;       background: rgba(155,112,181,0.07);}
 
 /* Historische Ereignisse — kein Chip, nur Tick + Text */
 .tl-hist-evt {

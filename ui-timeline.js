@@ -284,8 +284,9 @@ function _resolveSwimOverlaps(chips, chipW) {
   }
 }
 
-function _chipTooltip(ev, age) {
+function _chipTooltip(ev, age, personName) {
   const parts = [];
+  if (personName) parts.push('👤 ' + personName);
   if (ev.date)  parts.push(ev.date);
   else if (ev.year !== null) parts.push(String(ev.year) + age(ev.year));
   const typePart = ev.title || ev.label || '';
@@ -301,12 +302,21 @@ function _swimChipHTML(ev, age, isMulti) {
   const und   = ev.pxLeft === null ? ' tl-chip--undated' : '';
   const dl    = ev.pxLeft !== null ? ` data-left="${ev.pxLeft}"` : '';
   const nd    = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
-  const pc    = isMulti ? ` tl-pc${ev.personIdx ?? 0}` : '';
+  const idx   = ev.personIdx ?? 0;
+  const pc    = isMulti ? ` tl-pc${idx}` : '';
+  // Dot + Personenname für Tooltip im Multi-Person-Mode
+  let dot = '', personName = '';
+  if (isMulti) {
+    dot = `<span class="tl-chip-dot tl-pc${idx}"></span>`;
+    const pid = (UIState._tlPersonIds || [])[idx];
+    const p   = pid ? getPerson(pid) : null;
+    personName = p ? (p.given || p.surname || p.name || '') : '';
+  }
   const title = _esc(ev.title || ev.label || '');
   const desc  = ev.desc ? `<span class="tl-desc">${_esc(ev.desc)}</span>` : '';
-  const tip   = _esc(_chipTooltip(ev, age));
+  const tip   = _esc(_chipTooltip(ev, age, personName));
   return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}${pc}"${dl}${nd} title="${tip}">` +
-         `${yr}<span class="tl-type">${title}</span>${desc}${pl}</div>`;
+         `${dot}${yr}<span class="tl-type">${title}</span>${desc}${pl}</div>`;
 }
 
 // ── Horizontal — Swim-Lane-Layout ─────────────────
