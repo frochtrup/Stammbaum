@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v664 · Cache: `stammbaum-v664`
+**sw-Version:** v665 · Cache: `stammbaum-v665`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -66,6 +66,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | MEDIA-SORT | Medienliste: Sortierung nach Dateiname (⇅) | v624 |
 | REFACT-1 | `parseGEDCOM()` in 5 Sub-Parser aufgeteilt; Kontext-Objekt `x`; Roundtrip stabil | v627 |
 | TEST-AUTO | `test.html`: Standalone Roundtrip-Tester (kein UI-Load); Drag-Drop beliebig viele .ged | — |
+| TL-MULTI | Zeitleiste Mehrpersonen-Modus: 2–5 Personen parallel, ⊕-Button, Farb-Chips, Person-Bar | v665 |
 
 ---
 
@@ -142,7 +143,7 @@ Ausgaben, die Genealogen ihren Familien zeigen. Fundament abgeschlossen (Timelin
 | ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | Play/Pause/Stopp-Bar; stroke-dashoffset (Migr) / opacity-Fade (Person); Geschwindigkeit; Loop (sw v603) | - |
 | ~~MAP-TOPBAR~~ | ~~**Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars**~~ | 🗺 in Person-Detail, Zeitleiste, Sanduhr-Baum + Detail-NavBar (sw v604) | - |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
-| TL-MULTI | **Zeitleiste: Mehrpersonen-Modus** | 2–5 Personen parallel in den Swim-Lanes; Personen-Picker analog Baum; gemeinsame historische Ereignisse; Farb-Kodierung pro Person; Basis (`ui-timeline.js`) steht | M |
+| ~~TL-MULTI~~ | ~~**Zeitleiste: Mehrpersonen-Modus**~~ | 2–5 Personen in Swim-Lanes; ⊕-Button in Filterbar; farbige Chips + Lebensspannen pro Person; `_tlPersonIds[]`; Person-Bar mit ✕; Querformat only (sw v665) | - |
 | ~~STORY-OPT~~ | ~~**Story: Textqualität verbessern**~~ | OCCU-Merge (Berufe mit Zeitraum in einem Satz); Kinder mit Geburtsjahren; Partner-Lebensdaten in Heiratssatz; Geschwisterzahl in Frühleben; Todesursache mit „an"-Präposition; `_sectionEpoch` + `story-epochs.js` (11 Epochen); LLM-Opt-in separates Ticket (sw v638) | - |
 | STORY-FAM | **Story-Mode für Familien** | Familien-Narrative: Eltern + alle Kinder, gemeinsame Ereignisse, Geschwister-Vergleich, Zeitspanne der Familie; HTML-Download + Print-CSS analog Person-Story | M |
 | ~~STORY-DIAGRAM~~ | ~~**Story: Stammbaum-Diagramme einbetten**~~ | Inline-SVG Ahnentafel nach der Karte: GP-Zeile → Eltern → Proband ⚭ Partner → Kinder (bis 4 + „+N"-Pill); eigenständiger SVG-Generator in `_sectionDiagram()` ohne DOM-Abhängigkeit; CSS-Var-Fallbacks für HTML-Export; Klick-Navigation via `showDetail()`; entfällt wenn weder Eltern noch Kinder vorhanden (sw v645) | - |

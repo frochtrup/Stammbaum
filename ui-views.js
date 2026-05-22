@@ -1173,6 +1173,16 @@ const _CLICK_MAP = {
   printStory:              ()  => { if (typeof printStory   === 'function') printStory(); },
   downloadStory:           ()  => { if (typeof downloadStory === 'function') downloadStory(); },
   tlFilter:                el  => { if (typeof _tlFilterToggle === 'function') _tlFilterToggle(el.dataset.cat); },
+  tlPersonAdd:             ()  => {
+    UIState._relMode = 'tlmulti';
+    UIState._relAnchorId = null;
+    document.getElementById('relPickerTitle').textContent = 'Person zur Zeitleiste hinzufügen';
+    document.getElementById('relPickerSearch').value = '';
+    if (typeof renderRelPicker === 'function') renderRelPicker('');
+    openModal('modalRelPicker');
+  },
+  tlPersonRemove:          el  => { if (typeof window._tlRemovePerson === 'function') window._tlRemovePerson(el.dataset.pid); },
+  tlPersonNav:             el  => { if (el.dataset.pid) showDetail(el.dataset.pid); },
   detailShowProband:       ()  => { const id = getProbandId(); if (id) showDetail(id); },
   toggleProband:           el  => _toggleProband(el.dataset.id),
   bnavTree:                ()  => bnavTree(),

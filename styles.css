@@ -2758,6 +2758,47 @@ html[data-theme="dark"] {
 .tl-filter-btn[data-cat="political"].active{ background: var(--blue); border-color: var(--blue); }
 .tl-filter-btn[data-cat="religion"].active { background: #8a6aaa;    border-color: #8a6aaa; }
 .tl-filter-btn[data-cat="natural"].active  { background: var(--green);border-color: var(--green); }
+.tl-filter-add { margin-left: auto; color: var(--gold); border-color: var(--gold-dim); }
+.tl-filter-add:hover { background: rgba(200,168,74,0.08); }
+
+/* ── TL-MULTI: Person-Bar ─────────────────────── */
+.tl-person-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--topbar-bg);
+  flex-shrink: 0;
+}
+.tl-person-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 0.75rem; color: var(--text-dim);
+  cursor: pointer; max-width: 160px; white-space: nowrap; overflow: hidden;
+  font-family: inherit;
+}
+.tl-person-pill-rm {
+  font-size: 0.62rem; color: var(--text-muted);
+  margin-left: 2px; cursor: pointer; flex-shrink: 0;
+  padding: 0 2px;
+}
+/* ── TL-MULTI: Person-Farben ─────────────────── */
+.tl-person-pill.tl-pc0, .tl-chip.tl-pc0  { border-left-color: var(--gold); }
+.tl-person-pill.tl-pc0                    { border-color: var(--gold-dim); color: var(--gold); }
+.tl-person-pill.tl-pc1                    { border-color: #b03838; color: #e05c5c; }
+.tl-person-pill.tl-pc2                    { border-color: #2e7d52; color: #4a9e6e; }
+.tl-person-pill.tl-pc3                    { border-color: #3a5aa0; color: #5b7ed4; }
+.tl-person-pill.tl-pc4                    { border-color: #6a4a85; color: #9b70b5; }
+.tl-chip.tl-pc1 { border-left-color: #e05c5c; }
+.tl-chip.tl-pc2 { border-left-color: #4a9e6e; }
+.tl-chip.tl-pc3 { border-left-color: #5b7ed4; }
+.tl-chip.tl-pc4 { border-left-color: #9b70b5; }
+.tl-swim-span.tl-pc0 { background: var(--gold-dim); }
+.tl-swim-span.tl-pc1 { background: #c04040; opacity: 0.45; }
+.tl-swim-span.tl-pc2 { background: #2e7d52; opacity: 0.45; }
+.tl-swim-span.tl-pc3 { background: #3a5aa0; opacity: 0.45; }
+.tl-swim-span.tl-pc4 { background: #6a4a85; opacity: 0.45; }
 
 /* Lebensspanne-Balken */
 .tl-lifespan {

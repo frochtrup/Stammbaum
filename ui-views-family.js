@@ -188,6 +188,9 @@ function renderRelPicker(q) {
     persons = persons.filter(x => !excl.has(x.id));
   } else if (UIState._relMode === 'relcalc') {
     persons = persons.filter(x => x.id !== UIState._relAnchorId);
+  } else if (UIState._relMode === 'tlmulti') {
+    const excl = new Set(UIState._tlPersonIds || []);
+    persons = persons.filter(x => !excl.has(x.id));
   }
 
   if (q) {
@@ -222,6 +225,8 @@ function relPickerSelect(selectedId) {
     addAlias(UIState._relAnchorId, selectedId);
   } else if (UIState._relMode === 'relcalc') {
     showRelPath(UIState._relAnchorId, selectedId);
+  } else if (UIState._relMode === 'tlmulti') {
+    if (typeof window._tlAddPerson === 'function') window._tlAddPerson(selectedId);
   } else {
     openRelFamilyForm(UIState._relAnchorId, selectedId, UIState._relMode);
   }

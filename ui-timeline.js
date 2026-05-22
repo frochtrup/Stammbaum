@@ -8,7 +8,9 @@
 // ── Öffentliche API ────────────────────────
 
 // Aktive Filter — alle standardmäßig an
-UIState._tlFilters = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
+UIState._tlFilters   = UIState._tlFilters   || new Set(['war','disease','political','religion','natural']);
+// Multi-Person-State
+UIState._tlPersonIds = UIState._tlPersonIds || [];  // Array von PIDs; [0]=primäre Person
 
 const _TL_FILTER_LABELS = {
   war:      '⚔ Krieg',
@@ -29,9 +31,11 @@ window.showTimeline = function (pid, pushHistory) {
   }
 
   UIState._timelinePid = pid;
+  UIState._tlPersonIds = [pid];  // Reset auf Single-Person-Mode
   const p = getPerson(pid);
   document.getElementById('tlTopTitle').textContent = p.name || pid;
   _renderFilterBar();
+  _tlPersonBarRender();
   document.getElementById('tlBody').innerHTML = '';
 
   showView('v-timeline');
@@ -41,7 +45,7 @@ window.showTimeline = function (pid, pushHistory) {
   const fsBtn = document.getElementById('tlFsBtn');
   if (fsBtn) fsBtn.hidden = !document.body.classList.contains('desktop-mode');
 
-  _renderTimeline(pid);
+  _renderTimeline();
 };
 
 window.toggleTimelineFullscreen = function () {
@@ -53,7 +57,7 @@ window.toggleTimelineFullscreen = function () {
   }
   // Swim-Lane neu rendern nach Browser-Layout
   if (UIState._timelinePid && _isTlHoriz()) {
-    _afterLayout(() => _renderTimeline(UIState._timelinePid));
+    _afterLayout(() => _renderTimeline());
   }
 };
 
@@ -62,15 +66,53 @@ function _renderFilterBar() {
   if (!bar) return;
   bar.innerHTML = Object.entries(_TL_FILTER_LABELS).map(([cat, lbl]) =>
     `<button class="tl-filter-btn${UIState._tlFilters.has(cat) ? ' active' : ''}" data-action="tlFilter" data-cat="${cat}">${lbl}</button>`
-  ).join('');
+  ).join('') +
+  `<button class="tl-filter-btn tl-filter-add" data-action="tlPersonAdd" title="Person vergleichen" aria-label="Person hinzufügen">⊕</button>`;
 }
 
 window._tlFilterToggle = function (cat) {
   if (UIState._tlFilters.has(cat)) UIState._tlFilters.delete(cat);
   else UIState._tlFilters.add(cat);
   _renderFilterBar();
-  if (UIState._timelinePid) _renderTimeline(UIState._timelinePid);
+  if (UIState._timelinePid) _renderTimeline();
 };
+
+// ── Multi-Person-API ───────────────────────────────────────────────────────
+
+window._tlAddPerson = function (pid) {
+  if (!pid || !getPerson(pid)) return;
+  if ((UIState._tlPersonIds || []).includes(pid)) return;
+  if ((UIState._tlPersonIds || []).length >= 5) {
+    showToast('Maximal 5 Personen gleichzeitig', 'warn'); return;
+  }
+  UIState._tlPersonIds.push(pid);
+  _tlPersonBarRender();
+  _renderTimeline();
+};
+
+window._tlRemovePerson = function (pid) {
+  if (!pid || UIState._tlPersonIds[0] === pid) return;
+  UIState._tlPersonIds = UIState._tlPersonIds.filter(p => p !== pid);
+  _tlPersonBarRender();
+  _renderTimeline();
+};
+
+function _tlPersonBarRender() {
+  const bar = document.getElementById('tlPersonBar');
+  if (!bar) return;
+  const pids = UIState._tlPersonIds || [];
+  bar.hidden = pids.length < 2;
+  if (pids.length < 2) return;
+  bar.innerHTML = pids.map((pid, idx) => {
+    const p = getPerson(pid);
+    const name = p ? (p.given || p.surname || p.name || pid) : pid;
+    const short = name.length > 22 ? name.slice(0, 20) + '…' : name;
+    const rmBtn = idx > 0
+      ? `<span class="tl-person-pill-rm" data-action="tlPersonRemove" data-pid="${_esc(pid)}">✕</span>`
+      : '';
+    return `<button class="tl-person-pill tl-pc${idx}" data-action="tlPersonNav" data-pid="${_esc(pid)}">${_esc(short)}${rmBtn}</button>`;
+  }).join('');
+}
 
 // ── Rendering ──────────────────────────────────
 // Inline-style-Attribute werden durch CSP (style-src 'self') verworfen.
@@ -108,36 +150,50 @@ window.addEventListener('resize', () => {
   if (document.getElementById('v-timeline')?.classList.contains('active')) {
     window.scrollTo(0, 0);
     clearTimeout(_tlResizeTimer);
-    _tlResizeTimer = setTimeout(() => _renderTimeline(UIState._timelinePid), 150);
+    _tlResizeTimer = setTimeout(() => _renderTimeline(), 150);
   }
 });
 
 // ── Dispatcher ─────────────────────────────────────
-function _renderTimeline(pid) {
-  const isH       = _isTlHoriz();
-  const personEvs = _buildPersonEvents(pid, isH);
-  const body      = document.getElementById('tlBody');
-  const datedEvs  = personEvs.filter(e => e.year !== null);
+function _renderTimeline() {
+  const pidArr  = (UIState._tlPersonIds && UIState._tlPersonIds.length)
+                  ? UIState._tlPersonIds : [UIState._timelinePid];
+  const isMulti = pidArr.length > 1;
+  const isH     = _isTlHoriz();
+  const body    = document.getElementById('tlBody');
+
+  // Events aller Personen sammeln, personIdx anhängen
+  const allPersonEvs = pidArr.flatMap((pid, idx) =>
+    _buildPersonEvents(pid, isH).map(ev => ({ ...ev, personIdx: idx }))
+  );
+
+  const datedEvs = allPersonEvs.filter(e => e.year !== null);
   if (!datedEvs.length) {
     body.innerHTML = '<p class="tl-empty">Keine datierten Ereignisse vorhanden.</p>';
     body.classList.remove('horiz');
     return;
   }
-  const minYear   = Math.min(...datedEvs.map(e => e.year));
-  const maxYear   = Math.max(...datedEvs.map(e => e.year));
-  const filters   = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
-  const histEvs   = _HIST_EVENTS.filter(e => e.year >= minYear - 2 && e.year <= maxYear + 2 && filters.has(e.cat));
-  const decStart  = Math.floor(minYear / 10) * 10;
-  const decEnd    = Math.floor(maxYear / 10) * 10;
-  const birthEv   = datedEvs.find(e => e.type === 'birth');
-  const deathEv   = datedEvs.find(e => e.type === 'death');
-  const birthYear = birthEv?.year ?? null;
-  const age = y => birthYear !== null ? ` (${y - birthYear})` : '';
+
+  const minYear = Math.min(...datedEvs.map(e => e.year));
+  const maxYear = Math.max(...datedEvs.map(e => e.year));
+  const filters = UIState._tlFilters || new Set(['war','disease','political','religion','natural']);
+  const histEvs = _HIST_EVENTS.filter(e => e.year >= minYear - 2 && e.year <= maxYear + 2 && filters.has(e.cat));
+
+  // Age-Funktion: nur im Single-Person-Mode
+  const birthYear = !isMulti ? (datedEvs.find(e => e.type === 'birth')?.year ?? null) : null;
+  const age = isMulti ? () => '' : y => birthYear !== null ? ` (${y - birthYear})` : '';
 
   if (isH) {
-    _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body);
+    _renderTlH(allPersonEvs, histEvs, age, body, isMulti, pidArr.length);
   } else {
-    _renderTlV(datedEvs, histEvs, decStart, decEnd, birthEv, deathEv, age, body);
+    // Vertikal: Multi-Person → nur erste Person + Toast
+    const p0Evs   = isMulti ? datedEvs.filter(e => e.personIdx === 0) : datedEvs;
+    const birthEv = p0Evs.find(e => e.type === 'birth');
+    const deathEv = p0Evs.find(e => e.type === 'death');
+    const p0Min   = Math.min(...p0Evs.map(e => e.year));
+    const p0Max   = Math.max(...p0Evs.map(e => e.year));
+    _renderTlV(p0Evs, histEvs, Math.floor(p0Min/10)*10, Math.floor(p0Max/10)*10, birthEv, deathEv, age, body);
+    if (isMulti) showToast('Mehrpersonen-Vergleich nur im Querformat', 'info');
   }
 }
 
@@ -239,23 +295,27 @@ function _chipTooltip(ev, age) {
   return parts.join('\n');
 }
 
-function _swimChipHTML(ev, age) {
+function _swimChipHTML(ev, age, isMulti) {
   const yr    = ev.year !== null ? `<span class="tl-y">${ev.year}${age(ev.year)}</span>` : '';
   const pl    = ev.place ? `<span class="tl-place">${_esc(ev.place)}</span>` : '';
   const und   = ev.pxLeft === null ? ' tl-chip--undated' : '';
   const dl    = ev.pxLeft !== null ? ` data-left="${ev.pxLeft}"` : '';
   const nd    = ev.nudge ? ` data-nudge="${ev.nudge}"` : '';
+  const pc    = isMulti ? ` tl-pc${ev.personIdx ?? 0}` : '';
   const title = _esc(ev.title || ev.label || '');
   const desc  = ev.desc ? `<span class="tl-desc">${_esc(ev.desc)}</span>` : '';
   const tip   = _esc(_chipTooltip(ev, age));
-  return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}"${dl}${nd} title="${tip}">` +
+  return `<div class="tl-chip tl-chip--${ev.type || 'event'}${und}${pc}"${dl}${nd} title="${tip}">` +
          `${yr}<span class="tl-type">${title}</span>${desc}${pl}</div>`;
 }
 
 // ── Horizontal — Swim-Lane-Layout ─────────────────
-function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
-  const datedEvs   = personEvs.filter(e => e.year !== null);
-  const undatedEvs = personEvs.filter(e => e.year === null);
+function _renderTlH(allPersonEvs, histEvs, age, body, isMulti, numPersons) {
+  const datedEvs   = allPersonEvs.filter(e => e.year !== null);
+  const undatedEvs = allPersonEvs.filter(e => e.year === null);
+  // Leben-Lane: höher bei Multi-Person für gestaffelte Lebensspannen
+  const lifeH = isMulti ? Math.max(50, numPersons * 16) : 50;
+  const lanes = _SL_LANES.map(ln => ln.id === 'life' ? { ...ln, h: lifeH } : ln);
 
   // Jahres-Skala
   const allYrs    = datedEvs.map(e => e.year).concat(histEvs.map(e => e.year));
@@ -266,7 +326,7 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
 
   // Mindest-px/Jahr aus Event-Dichte: dichteste Lane bestimmt Breite
   const _laneYrs = {};
-  for (const ln of _SL_LANES) _laneYrs[ln.id] = [];
+  for (const ln of lanes) _laneYrs[ln.id] = [];
   for (const ev of datedEvs) _laneYrs[_swimLane(ev.type, ev.gedType, ev.eventType)].push(ev.year);
   let _minDist = Infinity;
   for (const id of Object.keys(_laneYrs)) {
@@ -289,7 +349,7 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
 
   // Events in Lanes klassifizieren
   const laneEvs = {}, laneUnd = {};
-  for (const ln of _SL_LANES) { laneEvs[ln.id] = []; laneUnd[ln.id] = []; }
+  for (const ln of lanes) { laneEvs[ln.id] = []; laneUnd[ln.id] = []; }
   for (const ev of datedEvs) {
     const lid = _swimLane(ev.type, ev.gedType, ev.eventType);
     laneEvs[lid].push({ ...ev, pxLeft: yearToX(ev.year), nudge: 0 });
@@ -300,20 +360,18 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
   laneEvs['hist'] = histEvs.map(e => ({ ...e, pxLeft: yearToX(e.year), nudge: 0 }));
 
   // Überlappungen je Lane auflösen
-  for (const ln of _SL_LANES) {
+  for (const ln of lanes) {
     laneEvs[ln.id].sort((a,b) => a.pxLeft - b.pxLeft);
     _resolveSwimOverlaps(laneEvs[ln.id], ln.id === 'hist' ? 88 : _SL_CHIP_W);
   }
 
   // Aktive Lanes: Leben immer, andere nur wenn darstellbare Events vorhanden.
-  // work/family zeigen auch undatierte Events (gestapelt) → zählen mit.
-  // resi/church/other: nur datierte Events zählen (undatierte werden nicht gerendert).
-  const activeLanes = _SL_LANES.filter(ln => {
+  const activeLanes = lanes.filter(ln => {
     if (ln.id === 'life')   return true;
     if (ln.id === 'hist')   return laneEvs['hist'].length > 0;
     if (ln.id === 'work')   return laneEvs['work'].length > 0   || laneUnd['work'].length > 0;
     if (ln.id === 'family') return laneEvs['family'].length > 0 || laneUnd['family'].filter(e => e.type === 'child').length > 0;
-    return laneEvs[ln.id].length > 0; // resi / church / other: nur datierte
+    return laneEvs[ln.id].length > 0;
   });
 
   body.classList.add('horiz');
@@ -337,12 +395,28 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
     html += `<div class="tl-lane-body" data-w="${totalW}">`;
 
     if (lane.id === 'life') {
-      if (birthEv && deathEv) {
-        const barL = yearToX(birthEv.year);
-        const barW = Math.max(yearToX(deathEv.year) - barL, 4);
-        html += `<div class="tl-swim-span" data-left="${barL}" data-bw="${barW}"></div>`;
+      if (isMulti) {
+        // Gestaffelte Lebensspannen pro Person
+        for (let idx = 0; idx < numPersons; idx++) {
+          const bEv = datedEvs.find(e => e.personIdx === idx && e.type === 'birth');
+          const dEv = datedEvs.find(e => e.personIdx === idx && e.type === 'death');
+          if (bEv && dEv) {
+            const barL   = yearToX(bEv.year);
+            const barW   = Math.max(yearToX(dEv.year) - barL, 4);
+            const topPct = 10 + idx * 20;
+            html += `<div class="tl-swim-span tl-pc${idx}" data-left="${barL}" data-bw="${barW}" data-toppct="${topPct}"></div>`;
+          }
+        }
+      } else {
+        const birthEv0 = datedEvs.find(e => e.type === 'birth');
+        const deathEv0 = datedEvs.find(e => e.type === 'death');
+        if (birthEv0 && deathEv0) {
+          const barL = yearToX(birthEv0.year);
+          const barW = Math.max(yearToX(deathEv0.year) - barL, 4);
+          html += `<div class="tl-swim-span" data-left="${barL}" data-bw="${barW}"></div>`;
+        }
       }
-      for (const ev of evs) html += _swimChipHTML(ev, age);
+      for (const ev of evs) html += _swimChipHTML(ev, age, isMulti);
 
     } else if (lane.id === 'hist') {
       for (const ev of evs) {
@@ -352,7 +426,7 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
       }
 
     } else {
-      for (const ev of evs) html += _swimChipHTML(ev, age);
+      for (const ev of evs) html += _swimChipHTML(ev, age, isMulti);
       // Undatierte Beruf-Events → linker Rand, gestapelt
       if (lane.id === 'work') {
         laneUnd['work'].forEach((ev, i) => {
@@ -412,6 +486,12 @@ function _renderTlH(personEvs, histEvs, birthEv, deathEv, age, body) {
   body.querySelectorAll('.tl-swim-span').forEach(el => {
     el.style.left  = el.dataset.left + 'px';
     el.style.width = el.dataset.bw + 'px';
+    if (el.dataset.toppct !== undefined) {
+      // Multi-Person: gestaffelt statt zentriert
+      el.style.top       = el.dataset.toppct + '%';
+      el.style.transform = 'none';
+      el.style.height    = '8px';
+    }
   });
   // Datierte Chips: zentriert; bei Überlappung oben (Hintergrund) / unten (Vordergrund)
   body.querySelectorAll('.tl-chip[data-left]').forEach(el => {

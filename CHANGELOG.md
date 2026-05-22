@@ -9,6 +9,12 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-22 — TL-MULTI: Zeitleiste Mehrpersonen-Modus (sw v665)
+
+- **sw v665** `feat(timeline)`: TL-MULTI — Mehrpersonen-Modus für die Swim-Lane-Zeitleiste; 2–5 Personen gleichzeitig auf gemeinsamer Zeitachse; ⊕-Button in der Filterleiste öffnet `modalRelPicker` im Modus `'tlmulti'`; farbige Chips (`tl-pc0`–`tl-pc4`: Gold/Rot/Grün/Blau/Lila) und Lebensspannen-Balken pro Person; Person-Bar (`#tlPersonBar`) mit farbigen Pills + ✕-Button zum Entfernen; primäre Person nicht entfernbar; Max. 5 Personen (Toast bei Überschreitung); Querformat only (Portrait: nur erste Person + Info-Toast); Single-Person-Mode unverändert (keine Farb-Klassen, Age-Anzeige aktiv); neue State-Variable `UIState._tlPersonIds[]`; neue globale Funktionen `_tlAddPerson()` / `_tlRemovePerson()`; `renderRelPicker()` + `relPickerSelect()` in `ui-views-family.js` um `tlmulti`-Branch erweitert; 3 neue `_CLICK_MAP`-Einträge in `ui-views.js`
+
+---
+
 ### Session 2026-05-22 — ROUNDTRIP-CAUS-SOUR: 3 SOUR unter 2 CAUS (Instabilität) (sw v664)
 
 - **sw v664** `fix(roundtrip)`: ROUNDTRIP-CAUS-SOUR — Instabilität (`out1≠out2`) in `MeineDaten.ged` (6 Vorkommen): Originaldatei enthält `3 SOUR @Sxx@` als Quellenbeleg für `2 CAUS`-Tag in DEAT/RESI/anderen INDI-Events; `2 CAUS` setzt `_ptDepth=2; _ptTarget=obj._extra` → `3 SOUR @Sxx@` via Passthrough in `obj._extra` gespeichert; Writer gibt `_extra` am Ende von `eventBlock` aus (nach `2 SOUR`-Zitierungen) → in Runde 2 erscheint `3 SOUR` im Kontext `lv2tag='SOUR'`, wo die Bedingung `tag !== 'SOUR'` im lv=3-Zitierungshandler den Eintrag silently dropped; Fix: Bedingung `tag !== 'SOUR'` aus lv=3-Zitierungshandler in `_parseINDILine` und `_parseFAMLine` entfernt → `3 SOUR @ref@` landet nun in `c.extra` und wird via `_writeSourCits` stabil nach `2 SOUR` ausgegeben; alle 6 Testvokommen stabil; alle Testdateien `out1===out2 ✓`, net_delta=0
