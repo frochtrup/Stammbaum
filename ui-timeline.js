@@ -379,9 +379,8 @@ function _renderTlH(allPersonEvs, histEvs, age, body, isMulti, numPersons) {
   const activeLanes = lanes.filter(ln => {
     if (ln.id === 'life')   return true;
     if (ln.id === 'hist')   return laneEvs['hist'].length > 0;
-    if (ln.id === 'work')   return laneEvs['work'].length > 0   || laneUnd['work'].length > 0;
     if (ln.id === 'family') return laneEvs['family'].length > 0 || laneUnd['family'].filter(e => e.type === 'child').length > 0;
-    return laneEvs[ln.id].length > 0;
+    return laneEvs[ln.id].length > 0 || laneUnd[ln.id].length > 0;
   });
 
   body.classList.add('horiz');
@@ -437,31 +436,26 @@ function _renderTlH(allPersonEvs, histEvs, age, body, isMulti, numPersons) {
 
     } else {
       for (const ev of evs) html += _swimChipHTML(ev, age, isMulti);
-      // Undatierte Beruf-Events → linker Rand, gestapelt
-      if (lane.id === 'work') {
-        laneUnd['work'].forEach((ev, i) => {
-          const _idx = ev.personIdx ?? 0;
-          const _pc  = isMulti ? ` tl-pc${_idx}` : '';
-          const _dot = isMulti ? `<span class="tl-chip-dot tl-pc${_idx}"></span>` : '';
-          const _tip = isMulti ? (() => {
-            const _pid = (UIState._tlPersonIds || [])[_idx];
-            const _p   = _pid ? getPerson(_pid) : null;
-            return ` title="${_esc('👤 ' + (_p ? (_p.given || _p.name || '') : '') + '\n' + ev.label)}"`;
-          })() : '';
-          html += `<div class="tl-chip tl-chip--event tl-chip--undated${_pc}" data-stacki="${i}"${_tip}>` +
-                  `${_dot}<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
-        });
-      }
-      // Undatierte Kinder → rechter Rand, gestapelt
-      if (lane.id === 'family') {
-        laneUnd['family'].filter(e => e.type === 'child').forEach((ev, i) => {
-          const _idx = ev.personIdx ?? 0;
-          const _pc  = isMulti ? ` tl-pc${_idx}` : '';
-          const _dot = isMulti ? `<span class="tl-chip-dot tl-pc${_idx}"></span>` : '';
-          html += `<div class="tl-chip tl-chip--child tl-chip--undated tl-chip--right${_pc}" data-stacki="${i}">` +
-                  `${_dot}<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
-        });
-      }
+      // Undatierte Events aller Lanes: links gestapelt (Kinder in Familie-Lane rechts)
+      const _undList = lane.id === 'family'
+        ? laneUnd['family'].filter(e => e.type === 'child')
+        : laneUnd[lane.id];
+      _undList.forEach((ev, i) => {
+        const _idx   = ev.personIdx ?? 0;
+        const _pc    = isMulti ? ` tl-pc${_idx}` : '';
+        const _dot   = isMulti ? `<span class="tl-chip-dot tl-pc${_idx}"></span>` : '';
+        const _right = lane.id === 'family' ? ' tl-chip--right' : '';
+        const _type  = lane.id === 'family' ? 'child' : 'event';
+        let _tip = '';
+        if (isMulti) {
+          const _pid  = (UIState._tlPersonIds || [])[_idx];
+          const _p    = _pid ? getPerson(_pid) : null;
+          const _name = _p ? (_p.given || _p.surname || _p.name || '') : '';
+          _tip = ` title="${_esc('👤 ' + _name + '\n' + ev.label)}"`;
+        }
+        html += `<div class="tl-chip tl-chip--${_type} tl-chip--undated${_right}${_pc}" data-stacki="${i}"${_tip}>` +
+                `${_dot}<span class="tl-lbl">${_esc(ev.label)}</span></div>`;
+      });
     }
 
     html += '</div></div>';
