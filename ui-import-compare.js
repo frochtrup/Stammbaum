@@ -285,6 +285,8 @@ function _cmpRenderDiff(cmpId) {
     <div class="cmp-diff-header">
       <strong>${esc(cmpP.name || cmpId)}</strong>
       <span class="cmp-score-badge" title="${esc(match.reasons.join(', '))}">Score ${match.score}</span>
+      <button class="cmp-reject-match-btn" data-action="cmpRejectMatch" data-cmpid="${cmpId}"
+        title="Personen als verschieden markieren — Import-Person wird als Neue behandelt">≠ Andere Person</button>
     </div>
     ${_cmpRenderIdenticalSection(diff, match, baseP)}
     ${_cmpRenderContextSection(diff)}
@@ -720,8 +722,11 @@ function _cmpHandleClick(action, el) {
       _cmpState.matchConfirm[cmpid] = null;
       const match = _cmpState.matches.find(m => m.cmpId === cmpid);
       if (match) { match.status = 'new'; match.baseId = null; }
+      // Bisherige Feld-Selektionen löschen — sie bezogen sich auf den jetzt ungültigen Match
+      _cmpState.selections[cmpid] = { '__import_new': false };
       _cmpRenderDiff(cmpid);
-      _cmpRefreshListItem(cmpid);
+      _cmpRenderList(_cmpActiveFilter);  // Liste neu filtern (Person wechselt zu 'new')
+      _cmpUpdateFooter();
       break;
     }
 
