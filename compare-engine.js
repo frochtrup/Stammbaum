@@ -10,8 +10,9 @@ const _cmpState = {
   matches:      [],     // [{baseId, cmpId, score, reasons, status}]
   // status: 'matched' (≥75) | 'uncertain' (40–74) | 'new' (<40)
   matchConfirm: {},     // {cmpId: baseId | null}  — Nutzer-Bestätigung unsicherer Matches
-  selections:   {},     // {cmpId: {fieldKey: true|false|'base'|'import'|'both'}}
+  selections:   {},     // {cmpId: {fieldKey: true|false|'base'|'import'|'both'|'rlog'}}
   importSourceId: null,
+  rlogCreated:  {},     // {baseId: count} — Forschungseinträge in dieser Session angelegt
 };
 
 // ── Parsen ────────────────────────────────────────────────────────────────────
@@ -316,27 +317,41 @@ function cmpApplyPatch(importSourceConfig) {
     const cmpP = cmpDb.individuals[match.cmpId];
     if (!base || !cmpP) continue;
 
-    let changed = false;
+    const hasRlog = Object.entries(sel).some(([k, v]) => !k.startsWith('__') && v === 'rlog');
+    const rlogDiff = hasRlog ? cmpComputePersonDiff(baseId, match.cmpId) : null;
+
+    let dataApplied = false;
+    let rlogAdded   = 0;
     for (const [fieldKey, decision] of Object.entries(sel)) {
       if (fieldKey.startsWith('__')) continue;
       if (!decision || decision === 'base') continue;
-      _cmpApplyField(base, cmpP, fieldKey, decision, importSrcId);
-      changed = true;
+      if (decision === 'rlog') {
+        _cmpCreateRlogEntry(base, fieldKey, rlogDiff, _cmpState.filename);
+        rlogAdded++;
+      } else {
+        _cmpApplyField(base, cmpP, fieldKey, decision, importSrcId);
+        dataApplied = true;
+      }
     }
 
-    if (changed) {
+    if (dataApplied || rlogAdded > 0) {
       _rebuildPersonSourceRefs(base);
 
-      // RLOG-Eintrag
-      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-      const d = new Date();
-      if (!base._rlog) base._rlog = [];
-      base._rlog.push({
-        date: `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`,
-        repoRef: '', sourRef: importSrcId || '',
-        query: '', result: 'found',
-        note: `Ergänzt aus: ${_cmpState.filename}`,
-      });
+      if (dataApplied) {
+        // Zusammenfassender RLOG-Eintrag nur wenn Daten tatsächlich übernommen wurden
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        const d = new Date();
+        if (!base._rlog) base._rlog = [];
+        base._rlog.push({
+          date: `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`,
+          repoRef: '', sourRef: importSrcId || '',
+          query: '', result: 'found',
+          note: `Ergänzt aus: ${_cmpState.filename}`,
+        });
+      }
+      if (rlogAdded > 0) {
+        _cmpState.rlogCreated[baseId] = (_cmpState.rlogCreated[baseId] || 0) + rlogAdded;
+      }
       patchCount++;
     }
   }
@@ -426,6 +441,33 @@ function _cmpApplyField(base, cmpP, fieldKey, decision, importSrcId) {
     // Addition: Feld war leer → direkt setzen
     base[fieldKey] = cmpP[fieldKey];
   }
+}
+
+function _cmpCreateRlogEntry(base, fieldKey, diff, filename) {
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const d      = new Date();
+  const date   = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
+  const addition = diff?.additions?.find(a => a.field === fieldKey);
+  const conflict  = diff?.conflicts?.find(c => c.field === fieldKey);
+
+  let query = '';
+  if (addition) {
+    query = `${addition.label}: "${addition.value}" — aus ${filename}`;
+  } else if (conflict) {
+    query = `${conflict.label}: Basis="${conflict.baseVal}" / Import="${conflict.cmpVal}" — aus ${filename}`;
+  } else {
+    query = `${fieldKey} — aus ${filename}`;
+  }
+
+  if (!base._rlog) base._rlog = [];
+  base._rlog.push({
+    date,
+    repoRef: '', sourRef: _cmpState.importSourceId || '',
+    query,
+    result: 'pending',
+    note: '',
+  });
 }
 
 function _cmpDoImportNew(cmpId, importSrcId, cmpDb, db) {

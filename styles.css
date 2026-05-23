@@ -3231,6 +3231,7 @@ html[data-theme="dark"] {
 .cmp-ind-add        { background:#cce5ff; color:#004085; }
 .cmp-ind-conflict   { background:#ffe0cc; color:#b84000; }
 .cmp-ind-identical  { background:var(--surface2); color:var(--text-muted); }
+.cmp-ind-rlog       { background:#fff3cd; color:#7a5800; }
 
 /* Diff-Panel leer */
 .cmp-diff-empty { display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:0.88rem; }
@@ -3259,8 +3260,25 @@ html[data-theme="dark"] {
 .cmp-td-label  { padding:4px 6px; font-size:0.75rem; color:var(--text-muted); white-space:nowrap; vertical-align:top; }
 .cmp-td-val    { padding:4px 6px; vertical-align:top; }
 .cmp-td-check  { padding:4px 4px; vertical-align:middle; width:22px; }
+.cmp-td-action { padding:2px 4px; vertical-align:middle; white-space:nowrap; }
 .cmp-match-val { color:var(--green,#1a7c34); }
 .cmp-add-val   { color:var(--blue); }
+
+/* 3-Wege Feld-Aktions-Buttons (✓ / 📋 / ✗) */
+.cmp-fa-group  { display:inline-flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.cmp-fa-btn    { padding:2px 7px; font-size:0.78rem; background:transparent; border:none; border-right:1px solid var(--border); cursor:pointer; color:var(--text-muted); line-height:1.4; }
+.cmp-fa-btn:last-child { border-right:none; }
+.cmp-fa-btn:hover      { background:var(--surface2); }
+.cmp-fa-active         { background:var(--surface2); color:var(--text); font-weight:600; }
+.cmp-fa-active.cmp-fa-rlog   { background:#fff8e1; color:#7a5800; }
+.cmp-fa-active.cmp-fa-ignore { background:#fdecea; color:#b00020; }
+
+/* Bulk-Buttons in Section-Headern */
+.cmp-bulk-actions { margin-left:auto; display:inline-flex; gap:4px; }
+.cmp-bulk-btn     { padding:1px 7px; font-size:0.72rem; border:1px solid var(--border); border-radius:10px; background:transparent; color:var(--text-muted); cursor:pointer; }
+.cmp-bulk-btn:hover  { background:var(--surface2); }
+.cmp-bulk-rlog    { border-color:#e8c900; color:#7a5800; }
+.cmp-bulk-rlog:hover { background:#fff8e1; }
 
 /* Konflikte */
 .cmp-conflict-label { color:#b84000; font-size:0.75rem; }

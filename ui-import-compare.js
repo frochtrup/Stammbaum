@@ -41,6 +41,7 @@ function showImportCompare() {
   _cmpHideIdentical = false;
   _cmpActiveFilter  = 'all';
   _cmpApplyScope    = 'all';
+  if (_cmpState) _cmpState.rlogCreated = {};
 
   _cmpRenderLoadPanel();
   openModal('modalImportCompare');
@@ -177,7 +178,7 @@ function _cmpRenderListItem(m) {
                    : m.status === 'uncertain' ? '<span class="cmp-chip cmp-chip-uncertain">?</span>'
                    :                            '<span class="cmp-chip cmp-chip-new">+</span>';
 
-  // Diff-Indikatoren (+N Ergänzungen / ⚡N Konflikte / = identisch)
+  // Diff-Indikatoren (+N Ergänzungen / ⚡N Konflikte / = identisch / 📋N Forschungseinträge)
   let diffInds = '';
   const diff = _cmpListItemDiff(m);
   if (diff) {
@@ -185,6 +186,9 @@ function _cmpRenderListItem(m) {
     if (diff.conflicts.length > 0) diffInds += `<span class="cmp-diff-ind cmp-ind-conflict">⚡${diff.conflicts.length}</span>`;
     if (!diffInds && m.status === 'matched') diffInds = `<span class="cmp-diff-ind cmp-ind-identical">=</span>`;
   }
+  const baseId4rlog = _cmpResolvedBaseId(m);
+  const rlogDone = baseId4rlog ? (_cmpState.rlogCreated?.[baseId4rlog] || 0) : 0;
+  if (rlogDone > 0) diffInds += `<span class="cmp-diff-ind cmp-ind-rlog">📋${rlogDone}</span>`;
 
   // Selektions-Badge
   const sel   = _cmpState.selections[m.cmpId];
@@ -346,30 +350,36 @@ function _cmpRenderContextSection(diff) {
 
 // ── Ergänzungen ───────────────────────────────────────────────────────────────
 
+function _cmpFieldActionBtns(cmpId, field, dec) {
+  const isAccept = dec !== false && dec !== 'rlog';
+  const isRlog   = dec === 'rlog';
+  const isIgnore = dec === false;
+  const _b = (val, label, active, mod) =>
+    `<button class="cmp-fa-btn${active ? ` cmp-fa-active${mod ? ' ' + mod : ''}` : ''}"
+       data-action="cmpSetFieldDecision" data-cmpid="${cmpId}" data-field="${esc(field)}" data-val="${val}"
+       title="${val === 'accept' ? 'Übernehmen' : val === 'rlog' ? 'Forschungseintrag anlegen' : 'Ignorieren'}">${label}</button>`;
+  return `<div class="cmp-fa-group">${_b('accept','✓',isAccept,'')}${_b('rlog','📋',isRlog,'cmp-fa-rlog')}${_b('ignore','✗',isIgnore,'cmp-fa-ignore')}</div>`;
+}
+
 function _cmpRenderAdditionsSection(diff, cmpId) {
   if (!diff.additions.length) return '';
-  const sel = _cmpState.selections[cmpId] || {};
-  const rows = diff.additions.map(a => {
-    const checked = sel[a.field] !== false ? 'checked' : '';
-    return `<tr>
-      <td class="cmp-td-check">
-        <input type="checkbox" class="cmp-check" ${checked}
-          data-action="cmpToggleAddition" data-cmpid="${cmpId}" data-field="${esc(a.field)}">
-      </td>
+  const sel  = _cmpState.selections[cmpId] || {};
+  const rows = diff.additions.map(a =>
+    `<tr>
       <td class="cmp-td-label">${esc(a.label)}</td>
       <td class="cmp-td-val cmp-add-val">${esc(a.value)}</td>
-    </tr>`;
-  }).join('');
+      <td class="cmp-td-action">${_cmpFieldActionBtns(cmpId, a.field, sel[a.field])}</td>
+    </tr>`
+  ).join('');
 
-  const allChecked = diff.additions.every(a => sel[a.field] !== false);
   return `
     <details class="cmp-section-details" open>
       <summary class="cmp-section-title cmp-section-add">
         Ergänzungen <span class="cmp-count">(${diff.additions.length})</span>
-        <label class="cmp-all-check" onclick="event.stopPropagation()">
-          <input type="checkbox" ${allChecked ? 'checked' : ''}
-            data-action="cmpToggleAllAdditions" data-cmpid="${cmpId}"> alle
-        </label>
+        <span class="cmp-bulk-actions" onclick="event.stopPropagation()">
+          <button class="cmp-bulk-btn" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="additions" data-val="accept" title="Alle übernehmen">alle ✓</button>
+          <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="additions" data-val="rlog" title="Alle als Forschungseinträge">alle 📋</button>
+        </span>
       </summary>
       <table class="cmp-table">${rows}</table>
     </details>`;
@@ -394,6 +404,7 @@ function _cmpRenderConflictsSection(diff, cmpId) {
         ${_r(c.baseVal, 'base')}
         ${_r(c.cmpVal, 'import')}
         ${_r('Beide als Notiz', 'both')}
+        ${_r('📋 Forschungseintrag', 'rlog')}
       </td>
     </tr>`;
   }).join('');
@@ -402,6 +413,9 @@ function _cmpRenderConflictsSection(diff, cmpId) {
     <details class="cmp-section-details" open>
       <summary class="cmp-section-title cmp-section-conflict">
         Konflikte <span class="cmp-count">(${diff.conflicts.length})</span>
+        <span class="cmp-bulk-actions" onclick="event.stopPropagation()">
+          <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="conflicts" data-val="rlog" title="Alle als Forschungseinträge">alle 📋</button>
+        </span>
       </summary>
       <table class="cmp-table">${rows}</table>
     </details>`;
@@ -601,18 +615,25 @@ function _cmpHandleClick(action, el) {
       _cmpSelectPerson(el.dataset.cmpid || el.closest('[data-cmpid]')?.dataset.cmpid);
       break;
 
-    case 'cmpToggleAddition': {
-      const { cmpid, field } = el.dataset;
+    case 'cmpSetFieldDecision': {
+      const { cmpid, field, val } = el.dataset;
       if (!_cmpState.selections[cmpid]) _cmpState.selections[cmpid] = {};
-      _cmpState.selections[cmpid][field] = el.checked;
+      const decision = val === 'accept' ? true : val === 'ignore' ? false : val; // 'rlog'
+      _cmpState.selections[cmpid][field] = decision;
+      // Button-Styling direkt aktualisieren
+      el.closest('.cmp-fa-group')?.querySelectorAll('.cmp-fa-btn').forEach(btn => {
+        const isActive = btn.dataset.val === val;
+        btn.classList.toggle('cmp-fa-active', isActive);
+        btn.classList.toggle('cmp-fa-rlog',   isActive && val === 'rlog');
+        btn.classList.toggle('cmp-fa-ignore',  isActive && val === 'ignore');
+      });
       _cmpUpdateFooter();
       _cmpRefreshListItem(cmpid);
       break;
     }
 
-    case 'cmpToggleAllAdditions': {
-      const cmpid = el.dataset.cmpid;
-      const checked = el.checked;
+    case 'cmpSetAllDecision': {
+      const { cmpid, section, val } = el.dataset;
       const match = _cmpState.matches.find(m => m.cmpId === cmpid);
       if (!match) break;
       const bid = _cmpResolvedBaseId(match);
@@ -620,8 +641,11 @@ function _cmpHandleClick(action, el) {
       const diff = cmpComputePersonDiff(bid, cmpid);
       if (!diff) break;
       if (!_cmpState.selections[cmpid]) _cmpState.selections[cmpid] = {};
-      for (const a of diff.additions) _cmpState.selections[cmpid][a.field] = checked;
+      const decision = val === 'accept' ? true : val === 'ignore' ? false : val;
+      const items = section === 'additions' ? diff.additions : diff.conflicts;
+      for (const item of items) _cmpState.selections[cmpid][item.field] = decision;
       _cmpRenderDiff(cmpid);
+      _cmpUpdateFooter();
       break;
     }
 
