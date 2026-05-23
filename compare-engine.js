@@ -141,8 +141,8 @@ function cmpComputePersonDiff(baseId, cmpId) {
     const k = (ev.type || '') + '|' + (ev.date || '');
     const evLabel = EVENT_LABELS[ev.type] || ev.type || 'Ereignis';
     if (!baseEvKeys.has(k)) {
-      // ev.value = Beschreibung (z.B. Beruf, Wohnort-Bezeichnung); date + place als Kontext
-      const summary = [ev.value, ev.date, compactPlace(ev.place || ''), ev.note].filter(Boolean).join(' · ');
+      // ev.value = Beschreibung (z.B. Beruf); ev.addr = Adresse (z.B. bei RESI); date + place als Kontext
+      const summary = [ev.value, ev.addr, ev.date, compactPlace(ev.place || ''), ev.note].filter(Boolean).join(' · ');
       additions.push({ field: 'event|' + k, label: evLabel, value: summary });
     }
   }

@@ -3191,8 +3191,12 @@ html[data-theme="dark"] {
 .cmp-progress   { width:100%; max-width:280px; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
 .cmp-progress-bar { height:100%; background:var(--blue); transition:width 0.2s; }
 
+/* Modal-Container: Sheet + Body als feste Flex-Säule, kein Sheet-eigenes Scrollen */
+#modalImportCompare .sheet      { overflow: hidden; }
+#modalImportCompare .sheet-body { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+
 /* Haupt-Layout: nebeneinander auf Desktop, gestapelt auf Mobile */
-.cmp-layout       { display:flex; gap:0; height:100%; overflow:hidden; }
+.cmp-layout       { display:flex; gap:0; flex:1; min-height:0; overflow:hidden; }
 .cmp-list-panel   { display:flex; flex-direction:column; width:260px; min-width:200px; flex-shrink:0; border-right:1px solid var(--border); overflow:hidden; min-height:0; }
 .cmp-diff-panel   { flex:1; overflow-y:auto; padding:12px; min-height:0; }
 @media (max-width: 600px) {

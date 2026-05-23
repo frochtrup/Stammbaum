@@ -52,8 +52,6 @@ function showImportCompare() {
 function _cmpRenderLoadPanel() {
   const body = document.getElementById('cmp-body');
   if (!body) return;
-  body.style.overflow = '';
-  body.style.padding  = '';
   body.innerHTML = `
     <div class="cmp-load-panel">
       <p class="cmp-load-hint">Wähle eine zweite GEDCOM- oder GRAMPS-Datei zum Vergleich mit der geladenen Datei.</p>
@@ -108,8 +106,6 @@ function _cmpRunMatching() {
 function _cmpRenderMain() {
   const body = document.getElementById('cmp-body');
   if (!body) return;
-  body.style.overflow = 'hidden';
-  body.style.padding  = '0';
 
   const st = cmpStats();
   body.innerHTML = `
@@ -443,7 +439,7 @@ function _cmpNewPersonRows(cmpP) {
 
   for (const ev of (cmpP.events || [])) {
     const label = EVENT_LABELS?.[ev.type] || ev.type || 'Ereignis';
-    const val   = [ev.value, ev.date, compactPlace(ev.place || ''), ev.note].filter(Boolean).join(' · ');
+    const val   = [ev.value, ev.addr, ev.date, compactPlace(ev.place || ''), ev.note].filter(Boolean).join(' · ');
     if (val) _row(label, val);
   }
 
