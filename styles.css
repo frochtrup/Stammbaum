@@ -3192,9 +3192,9 @@ html[data-theme="dark"] {
 .cmp-progress-bar { height:100%; background:var(--blue); transition:width 0.2s; }
 
 /* Haupt-Layout: nebeneinander auf Desktop, gestapelt auf Mobile */
-.cmp-layout       { display:flex; gap:0; height:100%; }
-.cmp-list-panel   { display:flex; flex-direction:column; width:260px; min-width:200px; flex-shrink:0; border-right:1px solid var(--border); }
-.cmp-diff-panel   { flex:1; overflow-y:auto; padding:12px; }
+.cmp-layout       { display:flex; gap:0; height:100%; overflow:hidden; }
+.cmp-list-panel   { display:flex; flex-direction:column; width:260px; min-width:200px; flex-shrink:0; border-right:1px solid var(--border); overflow:hidden; min-height:0; }
+.cmp-diff-panel   { flex:1; overflow-y:auto; padding:12px; min-height:0; }
 @media (max-width: 600px) {
   .cmp-layout     { flex-direction:column; }
   .cmp-list-panel { width:100%; border-right:none; border-bottom:1px solid var(--border); max-height:220px; }
@@ -3204,6 +3204,8 @@ html[data-theme="dark"] {
 .cmp-filter-bar { display:flex; gap:4px; padding:8px 8px 4px; flex-wrap:wrap; }
 .cmp-filter-btn { padding:3px 8px; font-size:0.78rem; border:1px solid var(--border); border-radius:12px; background:transparent; color:var(--text); cursor:pointer; }
 .cmp-filter-btn.active { background:var(--blue); color:#fff; border-color:var(--blue); }
+.cmp-filter-btn-toggle { margin-left:auto; border-style:dashed; }
+.cmp-filter-btn-toggle.active { background:var(--surface2); color:var(--text); border-color:var(--text-muted); border-style:solid; }
 
 /* Statistik-Leiste */
 .cmp-stats-bar { display:flex; align-items:center; gap:6px; padding:4px 8px 6px; flex-wrap:wrap; font-size:0.76rem; }
@@ -3217,14 +3219,18 @@ html[data-theme="dark"] {
 .cmp-stat-chip     { padding:2px 7px; border-radius:10px; font-size:0.76rem; font-weight:600; }
 
 /* Personen-Liste */
-.cmp-list       { flex:1; overflow-y:auto; }
+.cmp-list       { flex:1; overflow-y:auto; min-height:0; }
 .cmp-list-empty { padding:16px; font-size:0.85rem; color:var(--text-muted); text-align:center; }
 .cmp-list-item  { display:flex; align-items:center; gap:6px; padding:7px 10px; border-bottom:1px solid var(--border); cursor:pointer; font-size:0.84rem; }
 .cmp-list-item:hover, .cmp-list-item[data-active="true"] { background:var(--surface2); }
 .cmp-list-item[data-active="true"] { border-left:3px solid var(--blue); }
-.cmp-list-name  { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cmp-list-name  { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
 .cmp-list-year  { font-size:0.76rem; color:var(--text-muted); }
-.cmp-sel-badge  { background:var(--blue); color:#fff; border-radius:10px; padding:1px 6px; font-size:0.72rem; font-weight:700; }
+.cmp-sel-badge  { background:var(--blue); color:#fff; border-radius:10px; padding:1px 6px; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+.cmp-diff-ind       { display:inline-block; padding:0 4px; border-radius:8px; font-size:0.68rem; font-weight:700; flex-shrink:0; }
+.cmp-ind-add        { background:#cce5ff; color:#004085; }
+.cmp-ind-conflict   { background:#ffe0cc; color:#b84000; }
+.cmp-ind-identical  { background:var(--surface2); color:var(--text-muted); }
 
 /* Diff-Panel leer */
 .cmp-diff-empty { display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted); font-size:0.88rem; }

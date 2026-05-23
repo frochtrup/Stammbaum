@@ -38,6 +38,9 @@ function showImportCompare() {
   _cmpState.matchConfirm = {};
   _cmpState.selections   = {};
   _cmpState.importSourceId = null;
+  _cmpHideIdentical = false;
+  _cmpActiveFilter  = 'all';
+  _cmpApplyScope    = 'all';
 
   _cmpRenderLoadPanel();
   openModal('modalImportCompare');
@@ -48,6 +51,8 @@ function showImportCompare() {
 function _cmpRenderLoadPanel() {
   const body = document.getElementById('cmp-body');
   if (!body) return;
+  body.style.overflow = '';
+  body.style.padding  = '';
   body.innerHTML = `
     <div class="cmp-load-panel">
       <p class="cmp-load-hint">Wähle eine zweite GEDCOM- oder GRAMPS-Datei zum Vergleich mit der geladenen Datei.</p>
@@ -102,6 +107,8 @@ function _cmpRunMatching() {
 function _cmpRenderMain() {
   const body = document.getElementById('cmp-body');
   if (!body) return;
+  body.style.overflow = 'hidden';
+  body.style.padding  = '0';
 
   const st = cmpStats();
   body.innerHTML = `
@@ -135,9 +142,11 @@ const _CMP_FILTERS = [
 function _cmpRenderFilterBar() {
   const el = document.getElementById('cmpFilterBar');
   if (!el) return;
+  const active = _cmpActiveFilter;
   el.innerHTML = _CMP_FILTERS.map(f =>
-    `<button class="cmp-filter-btn${f.key === 'all' ? ' active' : ''}" data-action="cmpFilter" data-filter="${f.key}">${f.label}</button>`
-  ).join('');
+    `<button class="cmp-filter-btn${f.key === active ? ' active' : ''}" data-action="cmpFilter" data-filter="${f.key}">${f.label}</button>`
+  ).join('') + `<button class="cmp-filter-btn cmp-filter-btn-toggle${_cmpHideIdentical ? ' active' : ''}"
+      data-action="cmpToggleHideIdentical" title="Datensätze ohne Unterschiede ausblenden">= ausbl.</button>`;
 }
 
 function _cmpRenderStatsBar(st) {
@@ -152,18 +161,56 @@ function _cmpRenderStatsBar(st) {
 
 // ── Personen-Liste ────────────────────────────────────────────────────────────
 
+function _cmpListItemDiff(m) {
+  if (m.status === 'new') return null;
+  const bid = _cmpResolvedBaseId(m);
+  if (!bid) return null;
+  return cmpComputePersonDiff(bid, m.cmpId);
+}
+
+function _cmpRenderListItem(m) {
+  const cmpP = _cmpState.db?.individuals[m.cmpId];
+  if (!cmpP) return '';
+  const name   = esc(cmpP.name || cmpP.id);
+  const year   = _dedupYearFromGed(cmpP.birth?.date) || '';
+  const statusChip = m.status === 'matched'   ? '<span class="cmp-chip cmp-chip-matched">✓</span>'
+                   : m.status === 'uncertain' ? '<span class="cmp-chip cmp-chip-uncertain">?</span>'
+                   :                            '<span class="cmp-chip cmp-chip-new">+</span>';
+
+  // Diff-Indikatoren (+N Ergänzungen / ⚡N Konflikte / = identisch)
+  let diffInds = '';
+  const diff = _cmpListItemDiff(m);
+  if (diff) {
+    if (diff.additions.length > 0) diffInds += `<span class="cmp-diff-ind cmp-ind-add">+${diff.additions.length}</span>`;
+    if (diff.conflicts.length > 0) diffInds += `<span class="cmp-diff-ind cmp-ind-conflict">⚡${diff.conflicts.length}</span>`;
+    if (!diffInds && m.status === 'matched') diffInds = `<span class="cmp-diff-ind cmp-ind-identical">=</span>`;
+  }
+
+  // Selektions-Badge
+  const sel   = _cmpState.selections[m.cmpId];
+  const count = sel ? Object.entries(sel).filter(([k,v]) => !k.startsWith('__') && v && v !== 'base').length
+                    + (sel['__import_new'] === true ? 1 : 0) : 0;
+  const badge = count > 0 ? `<span class="cmp-sel-badge">${count}</span>` : '';
+
+  const isActive = _cmpState.activeCmpId === m.cmpId;
+  return `<div class="cmp-list-item" data-action="cmpSelectPerson" data-cmpid="${m.cmpId}" data-active="${isActive}">
+    ${statusChip}
+    <div class="cmp-list-name">${name}${year ? ` <span class="cmp-list-year">*${year}</span>` : ''}</div>
+    ${diffInds}${badge}
+  </div>`;
+}
+
 function _cmpRenderList(filter) {
   const el = document.getElementById('cmpList');
   if (!el) return;
 
-  // Filter auf Matches anwenden
   let matches = _cmpState.matches;
+
+  // Typ-Filter
   if (filter === 'additions' || filter === 'conflicts') {
     matches = matches.filter(m => {
       if (m.status === 'new') return false;
-      const bid = _cmpResolvedBaseId(m);
-      if (!bid) return false;
-      const diff = cmpComputePersonDiff(bid, m.cmpId);
+      const diff = _cmpListItemDiff(m);
       if (!diff) return false;
       return filter === 'additions' ? diff.additions.length > 0 : diff.conflicts.length > 0;
     });
@@ -173,28 +220,21 @@ function _cmpRenderList(filter) {
     matches = matches.filter(m => m.status === 'new');
   }
 
+  // Identische ausblenden
+  if (_cmpHideIdentical) {
+    matches = matches.filter(m => {
+      if (m.status === 'new') return true;
+      const diff = _cmpListItemDiff(m);
+      return diff ? (diff.additions.length > 0 || diff.conflicts.length > 0) : true;
+    });
+  }
+
   if (!matches.length) {
     el.innerHTML = '<div class="cmp-list-empty">Keine Einträge für diesen Filter</div>';
     return;
   }
 
-  el.innerHTML = matches.map(m => {
-    const cmpP = _cmpState.db.individuals[m.cmpId];
-    if (!cmpP) return '';
-    const name   = esc(cmpP.name || cmpP.id);
-    const year   = _dedupYearFromGed(cmpP.birth?.date) || '';
-    const status = m.status === 'matched'   ? '<span class="cmp-chip cmp-chip-matched">✓</span>'
-                 : m.status === 'uncertain' ? '<span class="cmp-chip cmp-chip-uncertain">?</span>'
-                 :                            '<span class="cmp-chip cmp-chip-new">+</span>';
-    const sel   = _cmpState.selections[m.cmpId];
-    const count = sel ? Object.values(sel).filter(v => v && v !== 'base' && !String(v).startsWith('__')).length : 0;
-    const badge = count > 0 ? `<span class="cmp-sel-badge">${count}</span>` : '';
-    return `<div class="cmp-list-item" data-action="cmpSelectPerson" data-cmpid="${m.cmpId}" data-active="false">
-      ${status}
-      <div class="cmp-list-name">${name}${year ? ` <span class="cmp-list-year">*${year}</span>` : ''}</div>
-      ${badge}
-    </div>`;
-  }).join('');
+  el.innerHTML = matches.map(m => _cmpRenderListItem(m)).join('');
 }
 
 // ── Diff-Detail ───────────────────────────────────────────────────────────────
@@ -446,7 +486,9 @@ function _cmpRenderConfirmPanel(cmpId, match) {
 // ── Footer ────────────────────────────────────────────────────────────────────
 
 // 'all' = alle Personen übernehmen | cmpId = nur diese eine Person
-let _cmpApplyScope = 'all';
+let _cmpApplyScope    = 'all';
+let _cmpHideIdentical = false;
+let _cmpActiveFilter  = 'all';
 
 function _cmpUpdateFooter() {
   const footer = document.getElementById('cmp-footer');
@@ -526,7 +568,7 @@ function _cmpDoApply() {
     const panel = document.getElementById('cmpDiffPanel');
     if (panel) panel.innerHTML = '<div class="cmp-diff-empty">✓ Übernommen — nächste Person wählen</div>';
     _cmpState.activeCmpId = null;
-    _cmpRenderList(_cmpState.activeFilter || 'all');
+    _cmpRenderList(_cmpActiveFilter);
     _cmpUpdateFooter();
   }
 }
@@ -538,8 +580,16 @@ function _cmpHandleClick(action, el) {
 
     case 'cmpFilter': {
       const filter = el.dataset.filter || 'all';
-      document.querySelectorAll('.cmp-filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+      _cmpActiveFilter = filter;
+      document.querySelectorAll('.cmp-filter-btn[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
       _cmpRenderList(filter);
+      break;
+    }
+
+    case 'cmpToggleHideIdentical': {
+      _cmpHideIdentical = !_cmpHideIdentical;
+      el.classList.toggle('active', _cmpHideIdentical);
+      _cmpRenderList(_cmpActiveFilter);
       break;
     }
 
@@ -631,18 +681,14 @@ function _cmpHandleClick(action, el) {
   }
 }
 
-// Aktualisiert nur einen Listen-Eintrag (Badge-Count) ohne komplettes Re-Render
+// Aktualisiert einen Listen-Eintrag komplett (Badge + Diff-Indikatoren)
 function _cmpRefreshListItem(cmpid) {
   const item = document.querySelector(`.cmp-list-item[data-cmpid="${cmpid}"]`);
   if (!item) return;
-  const sel   = _cmpState.selections[cmpid];
-  const count = sel ? Object.entries(sel).filter(([k, v]) => !k.startsWith('__') && v && v !== 'base').length
-                    + (sel['__import_new'] === true ? 1 : 0) : 0;
-  let badge = item.querySelector('.cmp-sel-badge');
-  if (count > 0) {
-    if (!badge) { badge = document.createElement('span'); badge.className = 'cmp-sel-badge'; item.appendChild(badge); }
-    badge.textContent = count;
-  } else if (badge) {
-    badge.remove();
-  }
+  const match = _cmpState.matches.find(m => m.cmpId === cmpid);
+  if (!match) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = _cmpRenderListItem(match);
+  const newItem = tmp.firstElementChild;
+  if (newItem) item.replaceWith(newItem);
 }
