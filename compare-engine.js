@@ -295,6 +295,7 @@ function cmpApplyPatch(importSourceConfig) {
   }
 
   let patchCount = 0;
+  const importedMap = {}; // cmpId → newId für Familienverknüpfung
 
   for (const match of _cmpState.matches) {
     const sel = sels[match.cmpId];
@@ -302,12 +303,14 @@ function cmpApplyPatch(importSourceConfig) {
 
     // Neue Person importieren
     if (match.status === 'new' && sel['__import_new'] === true) {
-      _cmpDoImportNew(match.cmpId, importSrcId, cmpDb, db);
+      const newId = _cmpDoImportNew(match.cmpId, importSrcId, cmpDb, db);
+      if (newId) importedMap[match.cmpId] = newId;
       patchCount++;
       continue;
     }
     if (match.status === 'uncertain' && _cmpState.matchConfirm[match.cmpId] === null && sel['__import_new'] === true) {
-      _cmpDoImportNew(match.cmpId, importSrcId, cmpDb, db);
+      const newId = _cmpDoImportNew(match.cmpId, importSrcId, cmpDb, db);
+      if (newId) importedMap[match.cmpId] = newId;
       patchCount++;
       continue;
     }
@@ -355,6 +358,10 @@ function cmpApplyPatch(importSourceConfig) {
       }
       patchCount++;
     }
+  }
+
+  if (Object.keys(importedMap).length > 0) {
+    _cmpReconnectFamilies(importedMap, cmpDb, db);
   }
 
   UIState._searchIndexDirty = true;
@@ -473,12 +480,15 @@ function _cmpCreateRlogEntry(base, fieldKey, diff, filename) {
 
 function _cmpDoImportNew(cmpId, importSrcId, cmpDb, db) {
   const cmpP = cmpDb.individuals[cmpId];
-  if (!cmpP) return;
+  if (!cmpP) return null;
 
   const newId = nextId('I');
   const clone = typeof structuredClone === 'function' ? structuredClone : v => JSON.parse(JSON.stringify(v));
   const newP  = clone(cmpP);
-  newP.id = newId;
+  newP.id   = newId;
+  // Familienverknüpfungen werden nach dem Import aller Personen separat rekonstruiert
+  newP.famc = [];
+  newP.fams = [];
 
   if (importSrcId) {
     for (const evKey of ['birth', 'death', 'chr', 'buri']) {
@@ -503,4 +513,92 @@ function _cmpDoImportNew(cmpId, importSrcId, cmpDb, db) {
     query: '', result: 'found',
     note: `Neu importiert aus: ${_cmpState.filename}`,
   });
+  return newId;
+}
+
+// ── Familienverknüpfung nach Massen-Import ─────────────────────────────────
+
+function _toBaseId(cmpPersonId, importedMap) {
+  if (importedMap[cmpPersonId]) return importedMap[cmpPersonId];
+  const match = _cmpState.matches.find(m => m.cmpId === cmpPersonId);
+  if (!match) return null;
+  return _cmpResolvedBaseId(match);
+}
+
+function _cmpFindOrCreateFamily(husbId, wifeId, db) {
+  // Suche in vorhandenen Familien des ersten bekannten Partners
+  const searchId = husbId || wifeId;
+  if (searchId && db.individuals[searchId]) {
+    for (const famId of (db.individuals[searchId].fams || [])) {
+      const fam = db.families[famId];
+      if (!fam) continue;
+      if (fam.husb === (husbId || '') && fam.wife === (wifeId || '')) return famId;
+    }
+  }
+  // Neue Familie anlegen
+  const famId = nextId('F');
+  db.families[famId] = {
+    id: famId,
+    husb: husbId || '', wife: wifeId || '',
+    chil: [], marr: {}, _rlog: [], _passthrough: [],
+    sourceRefs: new Set(),
+  };
+  if (husbId && db.individuals[husbId]) {
+    if (!db.individuals[husbId].fams) db.individuals[husbId].fams = [];
+    db.individuals[husbId].fams.push(famId);
+  }
+  if (wifeId && db.individuals[wifeId]) {
+    if (!db.individuals[wifeId].fams) db.individuals[wifeId].fams = [];
+    db.individuals[wifeId].fams.push(famId);
+  }
+  return famId;
+}
+
+function _cmpReconnectFamilies(importedMap, cmpDb, db) {
+  for (const [cmpId, newId] of Object.entries(importedMap)) {
+    const cmpP = cmpDb.individuals[cmpId];
+    const newP = db.individuals[newId];
+    if (!cmpP || !newP) continue;
+
+    // famc: Kind in Elternfamilie eintragen
+    for (const { famId: cmpFamId } of (cmpP.famc || [])) {
+      const cmpFam = cmpDb.families[cmpFamId];
+      if (!cmpFam) continue;
+      const baseHusb = cmpFam.husb ? _toBaseId(cmpFam.husb, importedMap) : null;
+      const baseWife = cmpFam.wife ? _toBaseId(cmpFam.wife, importedMap) : null;
+      if (!baseHusb && !baseWife) continue;
+      const famId = _cmpFindOrCreateFamily(baseHusb, baseWife, db);
+      const fam = db.families[famId];
+      if (!fam.chil) fam.chil = [];
+      if (!fam.chil.includes(newId)) fam.chil.push(newId);
+      if (!newP.famc.some(f => f.famId === famId)) newP.famc.push({ famId });
+    }
+
+    // fams: Person als Ehepartner eintragen + Kinder verknüpfen
+    for (const cmpFamId of (cmpP.fams || [])) {
+      const cmpFam = cmpDb.families[cmpFamId];
+      if (!cmpFam) continue;
+      const isHusb = cmpFam.husb === cmpId;
+      const partnerCmpId = isHusb ? cmpFam.wife : cmpFam.husb;
+      const partnerBaseId = partnerCmpId ? _toBaseId(partnerCmpId, importedMap) : null;
+      const husbId = isHusb ? newId : (partnerBaseId || null);
+      const wifeId = isHusb ? (partnerBaseId || null) : newId;
+      const famId = _cmpFindOrCreateFamily(husbId, wifeId, db);
+      const fam = db.families[famId];
+      if (isHusb && !fam.husb) fam.husb = newId;
+      if (!isHusb && !fam.wife) fam.wife = newId;
+      if (!newP.fams.includes(famId)) newP.fams.push(famId);
+      // Kinder aus der Import-Familie übernehmen, falls bereits im Basis-db
+      for (const childCmpId of (cmpFam.chil || [])) {
+        const childBaseId = _toBaseId(childCmpId, importedMap);
+        if (!childBaseId) continue;
+        if (!fam.chil) fam.chil = [];
+        if (!fam.chil.includes(childBaseId)) fam.chil.push(childBaseId);
+        const childP = db.individuals[childBaseId];
+        if (childP && !childP.famc.some(f => f.famId === famId)) {
+          childP.famc.push({ famId });
+        }
+      }
+    }
+  }
 }
