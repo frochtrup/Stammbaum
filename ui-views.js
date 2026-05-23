@@ -1268,6 +1268,7 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   confirmDeleteMedia:      ()  => confirmDeleteMedia(),
   confirmEditMedia:        ()  => confirmEditMedia(),
   helpRoundtrip:           ()  => { closeModal('modalHelp'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
+  menuImportCompare:       ()  => openImportCompare(),
   menuDedup:               ()  => { closeModal('modalMenu'); openDedupModal(); },
   menuStats:               ()  => { closeModal('modalMenu'); bnavTab('stats'); },
   dedupRunScan:            ()  => dedupRunScan(),
@@ -1337,7 +1338,9 @@ document.addEventListener('click', e => {
   const action = el.dataset.action;
   if (action === 'stop') { e.stopPropagation(); return; }
   const fn = _CLICK_MAP[action];
-  if (fn) fn(el, e);
+  if (fn) { fn(el, e); return; }
+  // Import-Vergleich Click-Handler (lazy-loaded Modul)
+  if (typeof _cmpHandleClick === 'function' && action.startsWith('cmp')) _cmpHandleClick(action, el);
 });
 
 document.addEventListener('change', e => {

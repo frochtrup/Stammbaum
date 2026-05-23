@@ -1383,6 +1383,9 @@
         <button class="btn menu-btn" data-action="menuBook">
           &#128214; &nbsp; Familienbuch erstellen
         </button>
+        <button class="btn menu-btn" data-action="menuImportCompare">
+          🔀 &nbsp; Datei vergleichen …
+        </button>
         <button class="btn menu-btn" data-action="menuDedup">
           &#128270; &nbsp; Duplikate erkennen
         </button>
@@ -1883,6 +1886,43 @@
   </div>
 </div>
 
+<!-- Import-Vergleich Haupt-Modal -->
+<div class="modal-overlay" id="modalImportCompare" role="dialog" aria-modal="true" aria-labelledby="lbl-modalImportCompare">
+  <div class="sheet sheet-tall-90 d-flex flex-col">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalImportCompare">Datei vergleichen</div>
+    <div class="sheet-body flex-1 ov-y-auto" id="cmp-body"></div>
+    <div class="sheet-footer-safe" id="cmp-footer"></div>
+  </div>
+</div>
+
+<!-- Import-Quelle konfigurieren -->
+<div class="modal-overlay" id="modalImportSource" role="dialog" aria-modal="true" aria-labelledby="lbl-modalImportSource">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalImportSource">Import-Quelle</div>
+    <div class="sheet-body">
+      <p class="fs-08 c-muted mb-10">Für Daten ohne eigene Quellenangabe wird ein Quellen-Eintrag angelegt.</p>
+      <label class="form-label">Titel
+        <input type="text" id="cmpSrcTitle" class="form-input" placeholder="Import: Dateiname.ged">
+      </label>
+      <label class="form-label">Datum
+        <input type="text" id="cmpSrcDate" class="form-input" placeholder="1 JAN 2026">
+      </label>
+      <label class="form-label">Notiz
+        <input type="text" id="cmpSrcNote" class="form-input" placeholder="Abgeglichen am …">
+      </label>
+      <label class="cmp-no-src-lbl fs-08">
+        <input type="checkbox" id="cmpSrcCreate" checked> Quelle anlegen
+      </label>
+    </div>
+    <div class="sheet-footer-safe">
+      <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalImportSource">Zurück</button>
+      <button class="btn btn-primary flex-1" data-action="cmpDoApply">Übernehmen</button>
+    </div>
+  </div>
+</div>
+
 <p id="list-announce" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
 <div id="loadingOverlay" role="status" aria-live="polite" aria-label="Datei wird geladen">
   <div class="loading-spinner"></div>
@@ -1936,6 +1976,7 @@
 <script src="onedrive-auth.js"></script>
 <script src="onedrive-import.js"></script>
 <script src="onedrive.js"></script>
+<script src="ui-import-compare.js"></script>
 <input type="file" id="cit-cam-input" accept="image/*" capture="environment" data-action="citCamChange" hidden>
 </body>
 </html>
