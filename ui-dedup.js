@@ -135,6 +135,7 @@ function _dedupMergePersons(winnerId, loserId) {
 
 let _dedupPairs       = [];
 let _dedupThreshold   = 65;
+let _dedupSearchQuery = '';
 let _dedupWinnerId    = null;
 let _dedupLoserId     = null;
 let _dedupIgnored     = null; // Set<"idA|idB">
@@ -166,16 +167,24 @@ function _dedupIgnoreKey(pA, pB) {
 function openDedupModal() {
   _dedupLoadIgnored();
   _dedupPairs = [];
-  _dedupWinnerId = null;
-  _dedupLoserId  = null;
-  const statusEl = document.getElementById('dedup-status');
-  const listEl   = document.getElementById('dedup-list');
-  if (statusEl) statusEl.textContent = 'Noch kein Scan durchgeführt.';
-  if (listEl)   listEl.innerHTML = '';
+  _dedupWinnerId    = null;
+  _dedupLoserId     = null;
+  _dedupSearchQuery = '';
+  const statusEl  = document.getElementById('dedup-status');
+  const listEl    = document.getElementById('dedup-list');
+  const searchEl  = document.getElementById('dedup-search');
+  if (statusEl)  statusEl.textContent = 'Noch kein Scan durchgeführt.';
+  if (listEl)    listEl.innerHTML = '';
+  if (searchEl)  searchEl.value = '';
   // Schwellenwert-Slider zurücksetzen
   const slider = document.getElementById('dedup-threshold');
   if (slider) { slider.value = _dedupThreshold; document.getElementById('dedup-threshold-val').textContent = _dedupThreshold; }
   openModal('modalDedup');
+}
+
+function dedupSearchChange(val) {
+  _dedupSearchQuery = val.trim().toLowerCase();
+  _renderDedupList();
 }
 
 function dedupRunScan() {
@@ -203,25 +212,47 @@ function _renderDedupList() {
   const statusEl = document.getElementById('dedup-status');
   if (!listEl) return;
 
-  const n = _dedupPairs.length;
-  if (!n) {
+  const total = _dedupPairs.length;
+  if (!total) {
     if (statusEl) statusEl.textContent = 'Keine Duplikate gefunden.';
     listEl.innerHTML = '<div class="dedup-empty">Keine verdächtigen Paare</div>';
     return;
   }
 
-  if (statusEl) statusEl.textContent = n + ' verdächtige Paare (Score \u2265 ' + _dedupThreshold + ')';
+  // Suchfilter — Originalindex für data-pair beibehalten
+  const q = _dedupSearchQuery;
+  const toRender = _dedupPairs.reduce((acc, pair, i) => {
+    if (!q ||
+        (pair.pA.name || pair.pA.id).toLowerCase().includes(q) ||
+        (pair.pB.name || pair.pB.id).toLowerCase().includes(q) ||
+        pair.pA.id.toLowerCase().includes(q) ||
+        pair.pB.id.toLowerCase().includes(q)) {
+      acc.push({ pair, origIdx: i });
+    }
+    return acc;
+  }, []);
+
+  if (statusEl) {
+    statusEl.textContent = q
+      ? toRender.length + ' von ' + total + ' Paaren (Score \u2265 ' + _dedupThreshold + ')'
+      : total + ' verdächtige Paare (Score \u2265 ' + _dedupThreshold + ')';
+  }
+
+  if (!toRender.length) {
+    listEl.innerHTML = '<div class="dedup-empty">Keine Treffer für \u201e' + esc(q) + '\u201c</div>';
+    return;
+  }
 
   let html = '';
-  for (let i = 0; i < n; i++) {
-    const { pA, pB, score, reasons } = _dedupPairs[i];
+  for (const { pair, origIdx } of toRender) {
+    const { pA, pB, score, reasons } = pair;
     const scColor = score >= 85 ? 'var(--red)' : score >= 75 ? '#b8860b' : 'var(--text-muted)';
     const plA = compactPlace(pA.birth?.place || '');
     const plB = compactPlace(pB.birth?.place || '');
     const metaA = [pA.birth?.date, plA].filter(Boolean).join(' ');
     const metaB = [pB.birth?.date, plB].filter(Boolean).join(' ');
     html += `<div class="fact-row dedup-pair-row"
-      data-action="dedupOpenMerge" data-pair="${i}">
+      data-action="dedupOpenMerge" data-pair="${origIdx}">
       <div class="dedup-pair-header">
         <span class="dedup-pair-names">${esc(pA.name || pA.id)} \u2194 ${esc(pB.name || pB.id)}</span>
         <span class="dedup-pair-score" data-il-style="color:${scColor}">${score}</span>
