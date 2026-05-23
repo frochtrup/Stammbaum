@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v672 · Cache: `stammbaum-v672`
+**sw-Version:** v683 · Cache: `stammbaum-v683`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -131,6 +131,8 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | ~~MEDIA-MGR-DETAIL~~ | ~~**Medien-Detailansicht**~~ | `showMediaDetail()`: Detailansicht im rechten Panel; globale Felder FILE/FORM/MEDI; Referenzliste mit ↗ Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; Inline-Suchpanel zum Hinzufügen neuer Referenzen (Person/Familie/Quelle) mit Lebensdaten-Anzeige (sw v609–v622) | - |
 | ~~DUP-DETECT~~ | ~~**Duplikat-Erkennung**~~ | Levenshtein-Score (Nachname/Vorname/Sex/Geburtsjahr/Ort), Nachname-Bucketing O(n·k²), Merge-Modal mit Seiten-Tausch, Ignore-Liste (localStorage), `pushUndo` vor Merge (sw v628). Web Worker → WW-PARSER. | - |
 | ~~PRINT-OUT~~ | ~~**Strukturierte Druckausgaben**~~ | Ahnenliste (Kekule-Tabelle) + Familienbogen als druckbare HTML-Downloads; `ui-print.js` (sw v669) | - |
+| ~~DEDUP-ENH~~ | ~~**Duplikat-Erkennung ausgebaut**~~ | Zeilenweise Feldauswahl im Merge-Modal (sw v670); Forschungseintrag-Button für beide Personen (sw v671); Eltern + Partner im Scoring, normalisiert auf 100 (sw v672); Suchfeld zum Filtern der Paar-Liste (sw v683) | - |
+| ~~IMPORT-CMP~~ | ~~**Datei-Vergleichs- & Merge-Assistent**~~ | `compare-engine.js` + `ui-import-compare.js`; Matching, Diff, Additions/Konflikte, Forschungseinträge (📋), Neue-Person-Import mit Familienverknüpfung (sw v673–v682) | - |
 | ~~WW-PARSER~~ | ~~**Web Worker für große GEDCOM-Dateien**~~ | `parseGEDCOM()` in `gedcom-worker.js` ausgelagert; `onProgress`-Callback alle 5%; Fortschrittsbalken `#loadingBar` im Lade-Overlay; Sync-Fallback wenn `Worker` nicht verfügbar; `_finishLoad()` als gemeinsamer Post-Parse-Pfad (sw v649) | - |
 
 ---

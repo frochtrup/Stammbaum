@@ -9,6 +9,62 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-24 — DUP-SEARCH: Suchfeld in Duplikate-Liste (sw v683)
+
+- **sw v683** `feat(dedup)`: DUP-SEARCH — Suchfeld (`<input type="search" id="dedup-search">`) im Duplikate-Modal oberhalb der Statuszeile; filtert `_dedupPairs` live nach Name (pA/pB) oder ID; `_dedupSearchQuery`-State + `dedupSearchChange()`; `_renderDedupList()` auf Filterlogik umgestellt: `reduce()` mit `origIdx` sichert korrekte `data-pair`-Referenzen auch in gefilterter Ansicht; Statuszeile zeigt `N von M Paaren` bei aktiver Suche; Reset beim Öffnen des Modals; `_dedupSearchQuery` als Modul-Variable ergänzt
+
+---
+
+### Session 2026-05-23 — IMPORT-CMP: Datei-Vergleichs- & Merge-Assistent (sw v673–v682)
+
+- **sw v673** `feat(import-compare)`: IMPORT-CMP — Datei-Vergleichs- & Merge-Assistent; `compare-engine.js` + `ui-import-compare.js` neu; `_cmpState` mit `db/filename/matches/matchConfirm/selections/importSourceId`; `cmpLoadFile()` (GEDCOM + GRAMPS); `cmpMatchPersons()` via `_dedupScorePair`; Status-Gruppen matched/uncertain/new; `cmpComputePersonDiff()` → `{additions[], conflicts[], identical}`; `cmpApplyPatch()` mit Import-Quelle; `_cmpApplyField()` für alle Feldtypen (events, notes, event-subfields, scalars); `_cmpDoImportNew()` klont Person in Basis-db; Sheet-Modal mit 2-Panel-Layout (Liste links, Diff rechts); Score-Badge + Reasons-Tooltip; Merge-Bestätigungs-Footer; undo-Integration via `pushUndo`
+
+- **sw v674** `feat(import-compare)`: Auswahl A/B/A+B für Konflikte; `'both'`-Entscheidung schreibt Importwert als Notiz; Einzel-Person-Übernahme-Button (`__import_new`) für neue + abgelehnte unsichere Matches; Vorauswahl aller Additions auf `true` + Konflikte auf `'base'` bei erstem Öffnen via `cmpInitSelections()`
+
+- **sw v675** `feat(import-compare)`: Diff-Indikatoren in der Übersichts-Liste (`+N` blau für Ergänzungen, `⚡N` orange für Konflikte, `=` grau für identisch); `= ausbl.`-Toggle blendet identische Personen aus (`_cmpHideIdentical`); CSS-only Scroll-Fix — `.sheet { overflow:hidden }` + `.sheet-body { display:flex; flex-direction:column }` + `.cmp-layout { flex:1; min-height:0 }` damit Liste und Diff-Panel unabhängig scrollen
+
+- **sw v676** `feat(import-compare)`: Forschungseinträge (📋) als Alternative zu Ergänzungen — `'rlog'`-Entscheidungswert; 3-Wege-Buttons `[✓][📋][✗]` pro Ergänzungs-Feld (`.cmp-fa-group`); Konflikte um 4. Radio-Option `📋 Forschungseintrag` erweitert; `_cmpCreateRlogEntry()` legt `_rlog`-Eintrag mit `result:'pending'` + Kontext-Query an; `cmpApplyPatch()` interceptet `'rlog'`-Decisions vor `_cmpApplyField()`; `_cmpState.rlogCreated{}` zählt angelegte Einträge; `📋N`-Indikator in der Übersichts-Liste; „alle 📋"-Bulk-Button in Sektions-Header
+
+- **sw v677** `feat(import-compare)`: Vollständige Neue-Person-Ansicht — alle Felder der Import-Person sichtbar (Basisfelder, 4 Standard-Events, freie Events mit value+addr+date+place+note, Notizen); `_cmpNewPersonRows()` als eigenständiger Builder; Kontext bei Ergänzungen: OCCU zeigt Beruf + Ort, RESI zeigt Adresse (`ev.addr` aus `2 ADDR`); `cmpComputePersonDiff()` ergänzt um `ev.addr` in der Zusammenfassung
+
+- **sw v678** `fix(import-compare)`: CSS-only Scroll-Fix (JS-Ansatz via `body.style.overflow` funktionierte nicht wegen `.sheet`-eigenem overflow); leere Ergänzungswerte: RESI-Adresse in `ev.addr` statt `ev.value`; `evLabel` ohne Datum (Datum erscheint bereits im Wert-String)
+
+- **sw v679** `feat(import-compare)`: „≠ Andere Person"-Button auch bei sicheren Matches (Score ≥ 75); Diff-Header jedes gematchten Eintrags erhält `cmp-reject-match-btn`; `cmpRejectMatch`-Handler setzt `match.status='new'` + `match.baseId=null` + Selections-Reset → Person wird als Neue behandelt
+
+- **sw v680** `fix(import-compare)`: Abbrechen + Neu laden = echte Neubewertung ohne vorherige Auswahlen; `cmpInitAllSelections()` aus `_cmpRunMatching()` entfernt (nur noch lazy bei erstem Öffnen eines Eintrags via `cmpInitSelections()`); vollständiger State-Reset in `_cmpRunMatching()` + `showImportCompare()`
+
+- **sw v681** `feat(import-compare)`: Familienverknüpfungen bei neu importierten Personen; `_cmpDoImportNew()` löscht `famc`/`fams` vor dem Einfügen + gibt `newId` zurück; `cmpApplyPatch()` sammelt `importedMap{cmpId→newId}`; neue Hilfsfunktionen: `_toBaseId()` (importedMap + matches), `_cmpFindOrCreateFamily()` (sucht vorhandene oder legt neue Familie an), `_cmpReconnectFamilies()` (rekonstruiert famc + fams für alle importierten Personen, überträgt Kinder)
+
+- **sw v682** `fix(import-compare)`: Fehler beim Speichern nach Import — `_cmpFindOrCreateFamily()` erstellte Familie mit `chil:[]` statt `children:[]` (GEDCOM-Writer erwartet `children`); vollständige Familienstruktur analog `gedcom-parser.js` (alle Pflichtfelder: `childRelations{}`, `marr/engag/div/divf` via `_cmpEmptyFamEv()`, `events[]`, `_tasks[]`, `_rlog[]`, `refns[]`, `noteRefExtras{}` etc.)
+
+---
+
+### Session 2026-05-23 — DEDUP-ENH: Duplikat-Erkennung ausgebaut (sw v670–v672)
+
+- **sw v670** `feat(dedup)`: Zeilenweise Feldauswahl im Merge-Modal — `[data-sel-field]`/`[data-sel-side]` Attribute auf `<tr>`/`<td>`; Click-Handler setzt `_dedupSelections[field] = 'A'|'B'`; `.selected`-Highlight; `_dedupMergePersons()` berücksichtigt `_dedupSelections` via `_pick(field, aVal, bVal)` für alle 7 selektierbaren Felder (`surname/given/sex/birth.date/birth.place/death.date/death.place`)
+
+- **sw v671** `feat(dedup)`: Forschungseintrag-Button im Merge-Modal — `dedupCreateRlog()` legt bei beiden Personen einen `_rlog`-Eintrag an (`result:'pending'`, Score + Reasons + Geburtsinfos als Note); kehrt zur Paar-Liste zurück ohne Merge; `_refreshRlogSection()` aufgerufen wenn verfügbar
+
+- **sw v672** `feat(dedup)`: DEDUP-SCORE — Eltern + Partner im Duplikat-Scoring; `_dedupScorePair()` in `gedcom.js` um `parentScore` (gemeinsame Nachnamen in Elternfamilien, Levenshtein) und `partnerScore` (Nachname des ersten Partners) erweitert; Gesamt-Score auf 100 normalisiert (Gewichtung: Name 40/10, Geschlecht 5, Geburt 20/5, Tod 10/5, Eltern 10, Partner 5)
+
+---
+
+### Session 2026-05-23 — PRINT-OUT: Druckausgaben (sw v669)
+
+- **sw v669** `feat(print-out)`: PRINT-OUT — `ui-print.js` neu; Ahnenliste als Kekule-Tabelle (nummerierte Vorfahren-Reihen, direkt klickbarer HTML-Download); Familienbogen mit Eltern + Kinder + Ereignisübersicht; `@media print` CSS; Button im Personen-Detail-Menü; keine externen Abhängigkeiten
+
+---
+
+### Session 2026-05-22/23 — TL-MULTI Follow-up: Farbkodierung (sw v666–v668)
+
+- **sw v666** `fix(timeline)`: TL-MULTI Farbkodierung für alle Personen-Chips; Dot-Indikator (farbiger Punkt) pro Lane in der Filterleiste; Personen-Tooltip zeigt Name + Lebensdaten beim Hover auf Person-Bar-Pill
+
+- **sw v667** `fix(timeline)`: Undatierte Chips (Beruf `OCCU`, Kinder `CHIL`) erhalten Farb-Klasse der zugehörigen Person auch ohne Datum-Kontext
+
+- **sw v668** `fix(timeline)`: Undatierte Chips aller Swim-Lanes (nicht nur Beruf/Kinder) erhalten korrekte Personenfarbe — vollständige Farbzuweisung für alle Event-Typen ohne Datum
+
+---
+
 ### Session 2026-05-22 — TL-MULTI: Zeitleiste Mehrpersonen-Modus (sw v665)
 
 - **sw v665** `feat(timeline)`: TL-MULTI — Mehrpersonen-Modus für die Swim-Lane-Zeitleiste; 2–5 Personen gleichzeitig auf gemeinsamer Zeitachse; ⊕-Button in der Filterleiste öffnet `modalRelPicker` im Modus `'tlmulti'`; farbige Chips (`tl-pc0`–`tl-pc4`: Gold/Rot/Grün/Blau/Lila) und Lebensspannen-Balken pro Person; Person-Bar (`#tlPersonBar`) mit farbigen Pills + ✕-Button zum Entfernen; primäre Person nicht entfernbar; Max. 5 Personen (Toast bei Überschreitung); Querformat only (Portrait: nur erste Person + Info-Toast); Single-Person-Mode unverändert (keine Farb-Klassen, Age-Anzeige aktiv); neue State-Variable `UIState._tlPersonIds[]`; neue globale Funktionen `_tlAddPerson()` / `_tlRemovePerson()`; `renderRelPicker()` + `relPickerSelect()` in `ui-views-family.js` um `tlmulti`-Branch erweitert; 3 neue `_CLICK_MAP`-Einträge in `ui-views.js`
