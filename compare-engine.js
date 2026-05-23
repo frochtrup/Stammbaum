@@ -525,6 +525,10 @@ function _toBaseId(cmpPersonId, importedMap) {
   return _cmpResolvedBaseId(match);
 }
 
+function _cmpEmptyFamEv() {
+  return { date: null, place: null, lati: null, long: null, citations: [], value: '', seen: false, note: '', noteRefs: [], _extra: [], media: [] };
+}
+
 function _cmpFindOrCreateFamily(husbId, wifeId, db) {
   // Suche in vorhandenen Familien des ersten bekannten Partners
   const searchId = husbId || wifeId;
@@ -532,16 +536,21 @@ function _cmpFindOrCreateFamily(husbId, wifeId, db) {
     for (const famId of (db.individuals[searchId].fams || [])) {
       const fam = db.families[famId];
       if (!fam) continue;
-      if (fam.husb === (husbId || '') && fam.wife === (wifeId || '')) return famId;
+      if (fam.husb === (husbId || null) && fam.wife === (wifeId || null)) return famId;
     }
   }
-  // Neue Familie anlegen
+  // Neue Familie anlegen — vollständige Struktur wie gedcom-parser
   const famId = nextId('F');
   db.families[famId] = {
-    id: famId,
-    husb: husbId || '', wife: wifeId || '',
-    chil: [], marr: {}, _rlog: [], _passthrough: [],
-    sourceRefs: new Set(),
+    id: famId, _passthrough: [],
+    husb: husbId || null, wife: wifeId || null,
+    children: [], childRelations: {}, _lastChil: null,
+    marr: { ..._cmpEmptyFamEv(), addr: '' },
+    engag: _cmpEmptyFamEv(), div: _cmpEmptyFamEv(), divf: _cmpEmptyFamEv(),
+    events: [], _stat: null, grampId: '',
+    noteRefs: [], noteRefExtras: {}, noteTexts: [], noteText: '',
+    sourceRefs: new Set(), media: [], _tasks: [], _rlog: [], refns: [],
+    lastChanged: '', lastChangedTime: '', chanNote: '',
   };
   if (husbId && db.individuals[husbId]) {
     if (!db.individuals[husbId].fams) db.individuals[husbId].fams = [];
@@ -569,9 +578,10 @@ function _cmpReconnectFamilies(importedMap, cmpDb, db) {
       if (!baseHusb && !baseWife) continue;
       const famId = _cmpFindOrCreateFamily(baseHusb, baseWife, db);
       const fam = db.families[famId];
-      if (!fam.chil) fam.chil = [];
-      if (!fam.chil.includes(newId)) fam.chil.push(newId);
-      if (!newP.famc.some(f => f.famId === famId)) newP.famc.push({ famId });
+      if (!fam.children.includes(newId)) fam.children.push(newId);
+      if (!newP.famc.some(f => f.famId === famId)) {
+        newP.famc.push({ famId, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, citations: [] });
+      }
     }
 
     // fams: Person als Ehepartner eintragen + Kinder verknüpfen
@@ -581,22 +591,21 @@ function _cmpReconnectFamilies(importedMap, cmpDb, db) {
       const isHusb = cmpFam.husb === cmpId;
       const partnerCmpId = isHusb ? cmpFam.wife : cmpFam.husb;
       const partnerBaseId = partnerCmpId ? _toBaseId(partnerCmpId, importedMap) : null;
-      const husbId = isHusb ? newId : (partnerBaseId || null);
-      const wifeId = isHusb ? (partnerBaseId || null) : newId;
+      const husbId = isHusb ? newId : partnerBaseId;
+      const wifeId = isHusb ? partnerBaseId : newId;
       const famId = _cmpFindOrCreateFamily(husbId, wifeId, db);
       const fam = db.families[famId];
       if (isHusb && !fam.husb) fam.husb = newId;
       if (!isHusb && !fam.wife) fam.wife = newId;
       if (!newP.fams.includes(famId)) newP.fams.push(famId);
       // Kinder aus der Import-Familie übernehmen, falls bereits im Basis-db
-      for (const childCmpId of (cmpFam.chil || [])) {
+      for (const childCmpId of (cmpFam.children || [])) {
         const childBaseId = _toBaseId(childCmpId, importedMap);
         if (!childBaseId) continue;
-        if (!fam.chil) fam.chil = [];
-        if (!fam.chil.includes(childBaseId)) fam.chil.push(childBaseId);
+        if (!fam.children.includes(childBaseId)) fam.children.push(childBaseId);
         const childP = db.individuals[childBaseId];
         if (childP && !childP.famc.some(f => f.famId === famId)) {
-          childP.famc.push({ famId });
+          childP.famc.push({ famId, pedi: '', frel: '', mrel: '', frelSeen: false, mrelSeen: false, citations: [] });
         }
       }
     }
