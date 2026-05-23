@@ -423,20 +423,58 @@ function _cmpRenderConflictsSection(diff, cmpId) {
 
 // ── Neue Person ───────────────────────────────────────────────────────────────
 
+function _cmpNewPersonRows(cmpP) {
+  const rows = [];
+  const _row = (l, v) => { if (v) rows.push([l, v]); };
+  const _ev  = (evKey, label) => {
+    const ev = cmpP[evKey];
+    if (!ev) return;
+    const val = [ev.date, compactPlace(ev.place || '')].filter(Boolean).join(' · ');
+    if (val) _row(label, val);
+  };
+
+  _row('Nachname',   cmpP.surname);
+  _row('Vorname',    cmpP.given);
+  _row('Geschlecht', cmpP.sex === 'M' ? 'männlich' : cmpP.sex === 'F' ? 'weiblich' : cmpP.sex);
+  _ev('birth', 'Geburt');
+  _ev('chr',   'Taufe');
+  _ev('death', 'Tod');
+  _ev('buri',  'Beerdigung');
+
+  for (const ev of (cmpP.events || [])) {
+    const label = EVENT_LABELS?.[ev.type] || ev.type || 'Ereignis';
+    const val   = [ev.value, ev.date, compactPlace(ev.place || ''), ev.note].filter(Boolean).join(' · ');
+    if (val) _row(label, val);
+  }
+
+  for (const note of (cmpP.noteTexts || [])) {
+    const t = note.trim();
+    if (t) _row('Notiz', t.length > 140 ? t.slice(0, 140) + '…' : t);
+  }
+
+  return rows;
+}
+
+function _cmpMatchChip(matchStatus) {
+  return matchStatus === 'matched'   ? '<span class="cmp-chip cmp-chip-matched  cmp-chip-sm">✓</span>'
+       : matchStatus === 'uncertain' ? '<span class="cmp-chip cmp-chip-uncertain cmp-chip-sm">?</span>'
+       :                               '<span class="cmp-chip cmp-chip-new       cmp-chip-sm">+</span>';
+}
+
 function _cmpRenderNewPersonPanel(cmpId, match) {
   const cmpP = _cmpState.db.individuals[cmpId];
   if (!cmpP) return '';
-  const sel = _cmpState.selections[cmpId] || {};
+  const sel     = _cmpState.selections[cmpId] || {};
   const checked = sel['__import_new'] === true;
 
-  const fields = [
-    ['Nachname', cmpP.surname], ['Vorname', cmpP.given], ['Geschlecht', cmpP.sex],
-    ['Geburt', [cmpP.birth?.date, compactPlace(cmpP.birth?.place||'')].filter(Boolean).join(' · ')],
-    ['Tod',    [cmpP.death?.date, compactPlace(cmpP.death?.place||'')].filter(Boolean).join(' · ')],
-  ].filter(([, v]) => v);
-
+  const rows     = _cmpNewPersonRows(cmpP);
   const parents  = _cmpGetParentInfos(cmpP, _cmpState.db);
   const partners = _cmpGetPartnerInfos(cmpP, _cmpState.db);
+
+  const _relRow = (label, persons) =>
+    `<tr><td class="cmp-td-label">${esc(label)}</td><td class="cmp-td-val">${
+      persons.map(p => `${esc(p.name)} ${_cmpMatchChip(p.matchStatus)}`).join(', ')
+    }</td></tr>`;
 
   return `
     <div class="cmp-diff-header">
@@ -445,9 +483,9 @@ function _cmpRenderNewPersonPanel(cmpId, match) {
       <span class="c-muted fs-08">Neue Person</span>
     </div>
     <table class="cmp-table">
-      ${fields.map(([l, v]) => `<tr><td class="cmp-td-label">${esc(l)}</td><td class="cmp-td-val">${esc(v)}</td></tr>`).join('')}
-      ${parents.length  ? `<tr><td class="cmp-td-label">Eltern</td><td class="cmp-td-val">${parents.map(p=>`${esc(p.name)} <span class="cmp-chip cmp-chip-${p.matchStatus||'new'} cmp-chip-sm">${p.matchStatus==='matched'?'✓':p.matchStatus==='uncertain'?'?':'+'}</span>`).join(', ')}</td></tr>` : ''}
-      ${partners.length ? `<tr><td class="cmp-td-label">Partner</td><td class="cmp-td-val">${partners.map(p=>`${esc(p.name)} <span class="cmp-chip cmp-chip-${p.matchStatus||'new'} cmp-chip-sm">${p.matchStatus==='matched'?'✓':p.matchStatus==='uncertain'?'?':'+'}</span>`).join(', ')}</td></tr>` : ''}
+      ${rows.map(([l, v]) => `<tr><td class="cmp-td-label">${esc(l)}</td><td class="cmp-td-val">${esc(v)}</td></tr>`).join('')}
+      ${parents.length  ? _relRow('Eltern',   parents)  : ''}
+      ${partners.length ? _relRow('Partner',  partners) : ''}
     </table>
     <label class="cmp-import-new-lbl">
       <input type="checkbox" ${checked ? 'checked' : ''}

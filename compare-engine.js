@@ -139,9 +139,10 @@ function cmpComputePersonDiff(baseId, cmpId) {
   const baseEvKeys = new Set((base.events || []).map(ev => (ev.type || '') + '|' + (ev.date || '')));
   for (const ev of (cmpP.events || [])) {
     const k = (ev.type || '') + '|' + (ev.date || '');
-    const evLabel = (EVENT_LABELS[ev.type] || ev.type || 'Ereignis') + (ev.date ? ' ' + ev.date : '');
+    const evLabel = EVENT_LABELS[ev.type] || ev.type || 'Ereignis';
     if (!baseEvKeys.has(k)) {
-      const summary = [ev.date, compactPlace(ev.place || ''), ev.note].filter(Boolean).join(' · ');
+      // ev.value = Beschreibung (z.B. Beruf, Wohnort-Bezeichnung); date + place als Kontext
+      const summary = [ev.value, ev.date, compactPlace(ev.place || ''), ev.note].filter(Boolean).join(' · ');
       additions.push({ field: 'event|' + k, label: evLabel, value: summary });
     }
   }
