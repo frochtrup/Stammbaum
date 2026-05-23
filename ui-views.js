@@ -1275,6 +1275,7 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   dedupSwapWinner:         ()  => dedupSwapWinner(),
   dedupIgnorePair:         ()  => dedupIgnorePair(),
   dedupConfirmMerge:       ()  => dedupConfirmMerge(),
+  dedupCreateRlog:         ()  => dedupCreateRlog(),
   exportChartPng:          ()  => {
     if (document.body.classList.contains('fc-mode'))        exportFanChartPng();
     else if (document.body.classList.contains('desc-tree-mode')) exportDescTreePng();

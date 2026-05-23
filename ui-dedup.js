@@ -417,6 +417,58 @@ function dedupConfirmMerge() {
   if (AppState.currentTab === 'persons') renderPersonList();
 }
 
+// ── Forschungseintrag aus Merge-Modal ────────────────────────────
+// Legt bei beiden Personen einen _rlog-Eintrag an und kehrt zur
+// Paar-Liste zurück, ohne zu mergen.
+function dedupCreateRlog() {
+  if (!_dedupWinnerId || !_dedupLoserId) return;
+  const db = AppState.db;
+  const pair = _dedupPairs.find(p =>
+    (p.pA.id === _dedupWinnerId || p.pB.id === _dedupWinnerId) &&
+    (p.pA.id === _dedupLoserId  || p.pB.id === _dedupLoserId)
+  );
+  const pA = pair?.pA || db.individuals[_dedupWinnerId];
+  const pB = pair?.pB || db.individuals[_dedupLoserId];
+  if (!pA || !pB) return;
+
+  const persA = db.individuals[pA.id];
+  const persB = db.individuals[pB.id];
+  if (!persA || !persB) return;
+
+  const today   = new Date().toISOString().slice(0, 10);
+  const score   = pair?.score ?? '?';
+  const reasons = (pair?.reasons || []).join(', ');
+  const noteBase = [
+    'Gründe: ' + reasons,
+    'A (' + pA.id + '): *' + (pA.birth?.date || '?') + ' ' + compactPlace(pA.birth?.place || ''),
+    'B (' + pB.id + '): *' + (pB.birth?.date || '?') + ' ' + compactPlace(pB.birth?.place || ''),
+  ].join('\n').trim();
+
+  if (!persA._rlog) persA._rlog = [];
+  persA._rlog.push({
+    date: today, repoRef: '', sourRef: '', result: 'pending',
+    query: 'Duplikat-Prüfung mit ' + (pB.name || pB.id) + ' (' + pB.id + ') — Score ' + score,
+    note: noteBase,
+  });
+
+  if (!persB._rlog) persB._rlog = [];
+  persB._rlog.push({
+    date: today, repoRef: '', sourRef: '', result: 'pending',
+    query: 'Duplikat-Prüfung mit ' + (pA.name || pA.id) + ' (' + pA.id + ') — Score ' + score,
+    note: noteBase,
+  });
+
+  markChanged();
+  if (typeof _refreshRlogSection === 'function') {
+    _refreshRlogSection(pA.id);
+    _refreshRlogSection(pB.id);
+  }
+
+  closeModal('modalMerge');
+  openModal('modalDedup');
+  showToast('✓ Forschungseintrag bei beiden Personen angelegt');
+}
+
 // ── Zeilenweise Feldauswahl im Merge-Modal ────────────────────────
 // Klick auf eine [data-sel-side]-Zelle → Selektion für dieses Feld umschalten
 document.addEventListener('click', e => {
