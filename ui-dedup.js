@@ -11,30 +11,58 @@ function _dedupMergePersons(winnerId, loserId) {
   const B = AppState.db.individuals[loserId];
   if (!A || !B) return false;
 
-  // prefer-nonempty: einfache Felder
-  const _pref = (aVal, bVal) => (aVal || '') || (bVal || '');
-  A.surname    = _pref(A.surname, B.surname);
-  A.given      = _pref(A.given, B.given);
-  A.name       = _pref(A.name, B.name);
-  A.nameRaw    = _pref(A.nameRaw, B.nameRaw);
-  A.sex        = (A.sex && A.sex !== 'U') ? A.sex : (B.sex || 'U');
-  A.titl       = _pref(A.titl, B.titl);
-  A.reli       = _pref(A.reli, B.reli);
-  A.email      = _pref(A.email, B.email);
-  A.www        = _pref(A.www, B.www);
-  A.uid        = _pref(A.uid, B.uid);
-  A.grampId    = _pref(A.grampId, B.grampId);
+  // pA/pB aus dem aktuellen Paar ermitteln (für per-Feld-Selektion)
+  const _curPair = _dedupPairs.find(p =>
+    (p.pA.id === winnerId || p.pB.id === winnerId) &&
+    (p.pA.id === loserId  || p.pB.id === loserId)
+  );
+  const pA = _curPair?.pA || A;
+  const pB = _curPair?.pB || B;
 
-  // prefer-nonempty für Sonder-Events (birth/death/chr/buri)
+  // _pick: wählt Wert nach _dedupSelections[field]; Fallback prefer-nonempty
+  const _pick = (field, aVal, bVal) => {
+    const s = _dedupSelections[field];
+    if (!s) return (aVal || '') || (bVal || '');
+    const chosen = s === 'A' ? aVal : bVal;
+    const other  = s === 'A' ? bVal : aVal;
+    return chosen || other || '';
+  };
+  // prefer-nonempty für Felder ohne Selektion
+  const _pref = (aVal, bVal) => (aVal || '') || (bVal || '');
+
+  A.surname = _pick('surname', pA.surname, pB.surname);
+  A.given   = _pick('given',   pA.given,   pB.given);
+  A.sex     = _pick('sex',     pA.sex,     pB.sex) || 'U';
+  // name/nameRaw aus gewähltem surname+given ableiten
+  A.name    = [A.given, A.surname].filter(Boolean).join(' ') || _pref(pA.name, pB.name);
+  A.nameRaw = A.name;
+  A.titl    = _pref(A.titl,    B.titl);
+  A.reli    = _pref(A.reli,    B.reli);
+  A.email   = _pref(A.email,   B.email);
+  A.www     = _pref(A.www,     B.www);
+  A.uid     = _pref(A.uid,     B.uid);
+  A.grampId = _pref(A.grampId, B.grampId);
+
+  // Sonder-Events: birth/death mit per-Feld-Selektion, chr/buri prefer-nonempty
   for (const evKey of ['birth', 'death', 'chr', 'buri']) {
-    const aEv = A[evKey] || {};
-    const bEv = B[evKey] || {};
-    A[evKey] = aEv;
-    if (!aEv.date  && bEv.date)  aEv.date  = bEv.date;
-    if (!aEv.place && bEv.place) aEv.place = bEv.place;
-    const _aCits = aEv.citations || [];
+    const aEv = pA[evKey] || {};
+    const bEv = pB[evKey] || {};
+    const tgt = A[evKey]  || {}; A[evKey] = tgt;
+    const dateKey  = evKey + '.date';
+    const placeKey = evKey + '.place';
+    if (_DEDUP_SEL_FIELDS.includes(dateKey)) {
+      tgt.date  = _pick(dateKey,  aEv.date,  bEv.date);
+    } else {
+      if (!tgt.date  && bEv.date)  tgt.date  = bEv.date;
+    }
+    if (_DEDUP_SEL_FIELDS.includes(placeKey)) {
+      tgt.place = _pick(placeKey, aEv.place, bEv.place);
+    } else {
+      if (!tgt.place && bEv.place) tgt.place = bEv.place;
+    }
+    const _aCits = tgt.citations || [];
     const _bCits = bEv.citations || [];
-    aEv.citations = [..._aCits, ..._bCits.filter(bc => !_aCits.some(ac => ac.sid === bc.sid && ac.page === bc.page))];
+    tgt.citations = [..._aCits, ..._bCits.filter(bc => !_aCits.some(ac => ac.sid === bc.sid && ac.page === bc.page))];
   }
 
   // Quellen auf Personen-Ebene zusammenführen
@@ -110,6 +138,14 @@ let _dedupThreshold   = 65;
 let _dedupWinnerId    = null;
 let _dedupLoserId     = null;
 let _dedupIgnored     = null; // Set<"idA|idB">
+let _dedupSelections  = {};   // { fieldKey: 'A' | 'B' }
+
+// Felder, die im Merge-Modal zeilenweise wählbar sind
+const _DEDUP_SEL_FIELDS = [
+  'surname', 'given', 'sex',
+  'birth.date', 'birth.place',
+  'death.date', 'death.place',
+];
 
 function _dedupLoadIgnored() {
   if (_dedupIgnored) return;
@@ -218,6 +254,10 @@ function dedupOpenMerge(el) {
   _dedupWinnerId = _richness(pA) >= _richness(pB) ? pA.id : pB.id;
   _dedupLoserId  = _dedupWinnerId === pA.id ? pB.id : pA.id;
 
+  // Selektion initialisieren: Winner-Seite für alle Felder vorausgewählt
+  const _winSide = _dedupWinnerId === pA.id ? 'A' : 'B';
+  _dedupSelections = Object.fromEntries(_DEDUP_SEL_FIELDS.map(f => [f, _winSide]));
+
   _dedupRenderMergeBody(pair);
   openModal('modalMerge');
 }
@@ -261,13 +301,27 @@ function _dedupRenderMergeBody(pair) {
   if (!winner || !loser) return;
 
   const wIsA = winner.id === pA.id;
-  const _cell = (val, isWinner) =>
-    `<td class="dedup-merge-td${isWinner ? ' winner' : ''}">${esc(val || '–')}</td>`;
+
+  // Klickbare, selektierbare Zeile (Feldwahl A/B)
+  const _selRow = (label, field, aVal, bVal) => {
+    const selA = _dedupSelections[field] === 'A';
+    const selB = _dedupSelections[field] === 'B';
+    return `<tr data-sel-field="${field}">
+      <td class="dedup-merge-td-label">${esc(label)}</td>
+      <td class="dedup-merge-td${selA ? ' selected' : ''}" data-sel-side="A">${esc(aVal || '\u2013')}</td>
+      <td class="dedup-merge-td${selB ? ' selected' : ''}" data-sel-side="B">${esc(bVal || '\u2013')}</td>
+    </tr>`;
+  };
+  // Nicht-selektierbare Zeile (Referenz-Felder)
   const _row = (label, aVal, bVal) =>
-    `<tr><td class="dedup-merge-td-label">${esc(label)}</td>${_cell(aVal, wIsA)}${_cell(bVal, !wIsA)}</tr>`;
+    `<tr><td class="dedup-merge-td-label">${esc(label)}</td>
+      <td class="dedup-merge-td${wIsA ? ' winner' : ''}">${esc(aVal || '\u2013')}</td>
+      <td class="dedup-merge-td${!wIsA ? ' winner' : ''}">${esc(bVal || '\u2013')}</td>
+    </tr>`;
 
   el.innerHTML = `
     <div class="dedup-merge-info">Score: <strong>${score}</strong> \u2014 ${esc(reasons.join(', '))}</div>
+    <p class="dedup-sel-hint">Klick auf eine Zelle w\u00e4hlt den \u00fcbernommenen Wert.</p>
     <table class="dedup-merge-table">
       <thead><tr>
         <th class="dedup-merge-th">Feld</th>
@@ -275,15 +329,16 @@ function _dedupRenderMergeBody(pair) {
         <th class="dedup-merge-th${!wIsA ? ' winner' : ''}">B: ${esc(pB.name || pB.id)}</th>
       </tr></thead>
       <tbody>
-        ${_row('Nachname',   pA.surname,                              pB.surname)}
-        ${_row('Vorname',    pA.given,                                pB.given)}
-        ${_row('Geschlecht', pA.sex,                                  pB.sex)}
-        ${_row('Geb. Datum', pA.birth?.date,                          pB.birth?.date)}
-        ${_row('Geb. Ort',   compactPlace(pA.birth?.place || ''),     compactPlace(pB.birth?.place || ''))}
-        ${_row('Tod Datum',  pA.death?.date,                          pB.death?.date)}
-        ${_row('Eltern',     _dedupParents(pA),                       _dedupParents(pB))}
-        ${_row('Partner',    _dedupPartners(pA),                      _dedupPartners(pB))}
-        ${_row('ID',         pA.id,                                   pB.id)}
+        ${_selRow('Nachname',   'surname',     pA.surname,                          pB.surname)}
+        ${_selRow('Vorname',    'given',       pA.given,                            pB.given)}
+        ${_selRow('Geschlecht', 'sex',         pA.sex,                              pB.sex)}
+        ${_selRow('Geb. Datum', 'birth.date',  pA.birth?.date,                      pB.birth?.date)}
+        ${_selRow('Geb. Ort',   'birth.place', compactPlace(pA.birth?.place || ''), compactPlace(pB.birth?.place || ''))}
+        ${_selRow('Tod Datum',  'death.date',  pA.death?.date,                      pB.death?.date)}
+        ${_selRow('Tod Ort',    'death.place', compactPlace(pA.death?.place || ''), compactPlace(pB.death?.place || ''))}
+        ${_row(   'Eltern',                    _dedupParents(pA),                   _dedupParents(pB))}
+        ${_row(   'Partner',                   _dedupPartners(pA),                  _dedupPartners(pB))}
+        ${_row(   'ID',                        pA.id,                               pB.id)}
       </tbody>
     </table>
     <div class="dedup-winner-box">
@@ -361,3 +416,17 @@ function dedupConfirmMerge() {
   // Personen-Liste aktualisieren wenn sichtbar
   if (AppState.currentTab === 'persons') renderPersonList();
 }
+
+// ── Zeilenweise Feldauswahl im Merge-Modal ────────────────────────
+// Klick auf eine [data-sel-side]-Zelle → Selektion für dieses Feld umschalten
+document.addEventListener('click', e => {
+  const td = e.target.closest('[data-sel-side]');
+  if (!td) return;
+  const row = td.closest('[data-sel-field]');
+  if (!row) return;
+  const field = row.dataset.selField;
+  const side  = td.dataset.selSide;
+  _dedupSelections[field] = side;
+  row.querySelectorAll('[data-sel-side]').forEach(c => c.classList.remove('selected'));
+  td.classList.add('selected');
+});

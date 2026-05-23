@@ -2319,6 +2319,16 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
   background: var(--surface2); color: var(--text); border: 1px solid var(--border);
 }
 .dedup-hint { font-size: 0.74rem; color: var(--text-muted); line-height: 1.5; }
+.dedup-sel-hint { font-size: 0.74rem; color: var(--text-muted); margin: 4px 0 6px; }
+/* Klickbare Felder in der Merge-Tabelle */
+.dedup-merge-td[data-sel-side] { cursor: pointer; user-select: none; transition: background 0.1s; }
+.dedup-merge-td[data-sel-side]:not(.selected):hover { background: var(--surface2); }
+.dedup-merge-td.selected {
+  background: color-mix(in srgb, var(--accent, #b87c2a) 14%, transparent);
+  outline: 2px solid var(--accent, #b87c2a);
+  outline-offset: -2px;
+  font-weight: 600;
+}
 
 /* ── OneDrive-Ordnerliste ── */
 .od-breadcrumb  { font-size: 0.75rem; color: var(--text-dim); padding-bottom: 8px; }
