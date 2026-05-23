@@ -679,57 +679,121 @@ function _dedupYearFromGed(dateStr) {
 
 // Berechnet Ähnlichkeits-Score zwischen zwei Personen (0..100)
 // Gibt { score, reasons[] } zurück
+// Gewichte: Nachname ×24 + Vorname ×20 + Sex ±11/−15 + Geburtsjahr max 16 +
+//           Geburtsort ×7 + Vater max 7 + Mutter max 7 + Partner max 8 = 100
 function _dedupScorePair(pA, pB) {
   const reasons = [];
   let score = 0;
 
-  // Nachname (max 30)
+  // Nachname (max 24)
   const snA = _dedupNormName(pA.surname || '');
   const snB = _dedupNormName(pB.surname || '');
   if (snA && snB) {
     const r = _dedupLevenshtein(snA, snB);
-    score += r * 30;
+    score += r * 24;
     if (r >= 0.9) reasons.push('Nachname identisch');
     else if (r >= 0.7) reasons.push('Nachname ähnlich');
   }
 
-  // Vorname (max 25)
+  // Vorname (max 20)
   const gnA = _dedupNormName(pA.given || '');
   const gnB = _dedupNormName(pB.given || '');
   if (gnA && gnB) {
     const r = _dedupLevenshtein(gnA, gnB);
-    score += r * 25;
+    score += r * 20;
     if (r >= 0.9) reasons.push('Vorname identisch');
     else if (r >= 0.7) reasons.push('Vorname ähnlich');
   }
 
-  // Geschlecht (max 15, Malus -20)
+  // Geschlecht (max +11, Malus −15)
   if (pA.sex !== 'U' && pB.sex !== 'U') {
-    if (pA.sex === pB.sex) { score += 15; }
-    else { score -= 20; reasons.push('Geschlecht verschieden'); }
+    if (pA.sex === pB.sex) { score += 11; }
+    else { score -= 15; reasons.push('Geschlecht verschieden'); }
   }
 
-  // Geburtsjahr (max 20)
+  // Geburtsjahr (max 16)
   const yA = _dedupYearFromGed(pA.birth?.date);
   const yB = _dedupYearFromGed(pB.birth?.date);
   if (yA && yB) {
     const diff = Math.abs(yA - yB);
-    if      (diff === 0) { score += 20; reasons.push('Geburtsjahr identisch'); }
-    else if (diff <= 1)  { score += 15; reasons.push('Geburtsjahr ±1'); }
-    else if (diff <= 2)  { score +=  8; }
-    else if (diff <= 5)  { score +=  3; }
+    if      (diff === 0) { score += 16; reasons.push('Geburtsjahr identisch'); }
+    else if (diff <= 1)  { score += 12; reasons.push('Geburtsjahr ±1'); }
+    else if (diff <= 2)  { score +=  6; }
+    else if (diff <= 5)  { score +=  2; }
   } else {
-    score += 5; // neutral wenn kein Datum bekannt
+    score += 4; // neutral wenn kein Datum bekannt
   }
 
-  // Geburtsort (max 10)
+  // Geburtsort (max 7)
   const plA = compactPlace(pA.birth?.place || '').toLowerCase().slice(0, 40);
   const plB = compactPlace(pB.birth?.place || '').toLowerCase().slice(0, 40);
   if (plA && plB) {
     const r = _dedupLevenshtein(plA, plB);
-    score += r * 10;
+    score += r * 7;
     if (r >= 0.9) reasons.push('Geburtsort identisch');
     else if (r >= 0.7) reasons.push('Geburtsort ähnlich');
+  }
+
+  // Eltern (max +14: Vater max 7 + Mutter max 7)
+  const db = AppState.db;
+  if (db) {
+    const famcIdA = pA.famc?.[0]?.famId;
+    const famcIdB = pB.famc?.[0]?.famId;
+    if (famcIdA && famcIdB) {
+      const fA = db.families[famcIdA];
+      const fB = db.families[famcIdB];
+      if (fA && fB) {
+        // Vater (max 7)
+        const vatA = fA.husb && db.individuals[fA.husb];
+        const vatB = fB.husb && db.individuals[fB.husb];
+        if (vatA && vatB) {
+          const rSn = _dedupLevenshtein(_dedupNormName(vatA.surname || ''), _dedupNormName(vatB.surname || ''));
+          const rGn = _dedupLevenshtein(_dedupNormName(vatA.given   || ''), _dedupNormName(vatB.given   || ''));
+          score += rSn * 5 + rGn * 2;
+          if (rSn >= 0.9 && rGn >= 0.85) reasons.push('Vater identisch');
+          else if (rSn >= 0.75)           reasons.push('Vater ähnlich');
+        }
+        // Mutter (max 7)
+        const mutA = fA.wife && db.individuals[fA.wife];
+        const mutB = fB.wife && db.individuals[fB.wife];
+        if (mutA && mutB) {
+          const rSn = _dedupLevenshtein(_dedupNormName(mutA.surname || ''), _dedupNormName(mutB.surname || ''));
+          const rGn = _dedupLevenshtein(_dedupNormName(mutA.given   || ''), _dedupNormName(mutB.given   || ''));
+          score += rSn * 5 + rGn * 2;
+          if (rSn >= 0.9 && rGn >= 0.85) reasons.push('Mutter identisch');
+          else if (rSn >= 0.75)           reasons.push('Mutter ähnlich');
+        }
+      }
+    }
+
+    // Partner / Ehegatten (max +8, bestes Paar)
+    const _spouseList = p => (p.fams || []).map(fid => {
+      const f = db.families[fid];
+      if (!f) return null;
+      const sid = f.husb === p.id ? f.wife : f.husb;
+      return sid ? db.individuals[sid] : null;
+    }).filter(Boolean);
+
+    const spousesA = _spouseList(pA);
+    const spousesB = _spouseList(pB);
+    if (spousesA.length && spousesB.length) {
+      let bestPts = 0; let bestLabel = '';
+      for (const sA of spousesA) {
+        for (const sB of spousesB) {
+          const rSn = _dedupLevenshtein(_dedupNormName(sA.surname || ''), _dedupNormName(sB.surname || ''));
+          const rGn = _dedupLevenshtein(_dedupNormName(sA.given   || ''), _dedupNormName(sB.given   || ''));
+          const pts = rSn * 5 + rGn * 3;
+          if (pts > bestPts) {
+            bestPts   = pts;
+            bestLabel = (rSn >= 0.9 && rGn >= 0.85) ? 'Partner identisch'
+                      : (rSn >= 0.75)                ? 'Partner ähnlich'
+                      : '';
+          }
+        }
+      }
+      score += bestPts;
+      if (bestLabel) reasons.push(bestLabel);
+    }
   }
 
   return { score: Math.round(score), reasons };
