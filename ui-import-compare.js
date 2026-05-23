@@ -93,10 +93,20 @@ function _cmpRunMatching() {
   const body = document.getElementById('cmp-body');
   if (body) body.innerHTML = `<div class="cmp-load-panel"><p class="c-muted">Personen werden abgeglichen …</p></div>`;
 
-  // Matching in nächstem Frame starten, damit UI Update sichtbar wird
+  // Vollständiger Reset — sichert sauberen Zustand auch bei Reload innerhalb derselben Session
+  _cmpState.matches      = [];
+  _cmpState.matchConfirm = {};
+  _cmpState.selections   = {};
+  _cmpState.rlogCreated  = {};
+  _cmpHideIdentical = false;
+  _cmpActiveFilter  = 'all';
+  _cmpApplyScope    = 'all';
+
+  // Matching im nächsten Frame starten, damit UI-Update sichtbar wird
+  // Keine Vorauswahl (cmpInitAllSelections) mehr: Selektionen entstehen erst beim
+  // Öffnen einer Person, damit jeder Ladevorgang als echte Neubewertung beginnt.
   setTimeout(() => {
     cmpMatchPersons();
-    cmpInitAllSelections();
     _cmpRenderMain();
   }, 30);
 }
