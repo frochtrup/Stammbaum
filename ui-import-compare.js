@@ -92,6 +92,7 @@ function _cmpRunMatching() {
   // Matching in nächstem Frame starten, damit UI Update sichtbar wird
   setTimeout(() => {
     cmpMatchPersons();
+    cmpInitAllSelections();
     _cmpRenderMain();
   }, 30);
 }
@@ -444,11 +445,14 @@ function _cmpRenderConfirmPanel(cmpId, match) {
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 
+// 'all' = alle Personen übernehmen | cmpId = nur diese eine Person
+let _cmpApplyScope = 'all';
+
 function _cmpUpdateFooter() {
   const footer = document.getElementById('cmp-footer');
   if (!footer || !_cmpState.matches.length) return;
 
-  // Zählen wie viele Selektionen aktiv sind
+  // Gesamtzahl aktiver Selektionen (alle Personen)
   let total = 0;
   for (const sel of Object.values(_cmpState.selections)) {
     for (const [k, v] of Object.entries(sel)) {
@@ -457,16 +461,32 @@ function _cmpUpdateFooter() {
     if (sel['__import_new'] === true) total++;
   }
 
+  // Anzahl aktiver Selektionen der gerade angezeigten Person
+  const activeSel   = _cmpState.activeCmpId ? (_cmpState.selections[_cmpState.activeCmpId] || {}) : null;
+  const activeCount = activeSel
+    ? Object.entries(activeSel).filter(([k,v]) => !k.startsWith('__') && v && v !== 'base').length
+      + (activeSel['__import_new'] === true ? 1 : 0)
+    : 0;
+
+  const personBtn = (activeSel && activeCount > 0)
+    ? `<button class="btn btn-sec cmp-person-btn" data-action="cmpApplyCurrentPerson"
+         data-cmpid="${_cmpState.activeCmpId}" title="Nur diese Person übernehmen">
+         Person (${activeCount})
+       </button>`
+    : '';
+
   footer.innerHTML = `
     <button class="btn btn-cancel" data-action="closeModal" data-modal="modalImportCompare">Abbrechen</button>
-    <button class="btn btn-primary flex-1" data-action="cmpOpenSourceConfig" ${total === 0 ? 'disabled' : ''}>
-      ${total > 0 ? `${total} Änderung${total === 1 ? '' : 'en'} übernehmen` : 'Übernehmen'}
+    ${personBtn}
+    <button class="btn btn-primary flex-1" data-action="cmpOpenSourceConfig" data-scope="all" ${total === 0 ? 'disabled' : ''}>
+      Alle ${total > 0 ? `(${total})` : ''} übernehmen
     </button>`;
 }
 
 // ── Quelle konfigurieren & anwenden ───────────────────────────────────────────
 
-function _cmpOpenSourceConfig() {
+function _cmpOpenSourceConfig(scope) {
+  _cmpApplyScope = scope || 'all';
   const months  = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
   const d       = new Date();
   const dateStr = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
@@ -486,10 +506,29 @@ function _cmpDoApply() {
   const date   = document.getElementById('cmpSrcDate')?.value?.trim() || '';
   const note   = document.getElementById('cmpSrcNote')?.value?.trim() || '';
   const create = document.getElementById('cmpSrcCreate')?.checked !== false;
+  const config = { title, date, note, create };
 
-  const count = cmpApplyPatch({ title, date, note, create });
-  closeModal('modalImportCompare');
-  showToast(`✓ ${count} Einträge übernommen`, 'success');
+  if (_cmpApplyScope === 'all') {
+    const count = cmpApplyPatch(config);
+    closeModal('modalImportCompare');
+    showToast(`✓ ${count} Einträge übernommen`, 'success');
+  } else {
+    // Nur die eine Person anwenden — Modal bleibt offen
+    const cmpId      = _cmpApplyScope;
+    const allMatches = _cmpState.matches;
+    _cmpState.matches = _cmpState.matches.filter(m => m.cmpId === cmpId);
+    const count = cmpApplyPatch(config);
+    _cmpState.matches = allMatches;
+    // Selektion der Person zurücksetzen (damit sie aus dem Counter verschwindet)
+    delete _cmpState.selections[cmpId];
+    showToast(`✓ ${count} Felder für ${esc(_cmpState.db?.individuals?.[cmpId]?.name || cmpId)} übernommen`, 'success');
+    // Diff-Panel zurücksetzen, Liste + Footer aktualisieren
+    const panel = document.getElementById('cmpDiffPanel');
+    if (panel) panel.innerHTML = '<div class="cmp-diff-empty">✓ Übernommen — nächste Person wählen</div>';
+    _cmpState.activeCmpId = null;
+    _cmpRenderList(_cmpState.activeFilter || 'all');
+    _cmpUpdateFooter();
+  }
 }
 
 // ── Click-Handler (ins globale _CLICK_MAP eingehängt) ─────────────────────────
@@ -579,7 +618,11 @@ function _cmpHandleClick(action, el) {
     }
 
     case 'cmpOpenSourceConfig':
-      _cmpOpenSourceConfig();
+      _cmpOpenSourceConfig(el.dataset.scope || 'all');
+      break;
+
+    case 'cmpApplyCurrentPerson':
+      _cmpOpenSourceConfig(el.dataset.cmpid);
       break;
 
     case 'cmpDoApply':

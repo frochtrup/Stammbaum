@@ -221,6 +221,25 @@ function cmpInitSelections(cmpId, diff) {
   _cmpState.selections[cmpId] = sel;
 }
 
+// ── Default-Selektion für ALLE gematchten Personen ────────────────────────────
+// Wird direkt nach cmpMatchPersons() aufgerufen, sodass der Footer-Counter
+// von Anfang an die Gesamtzahl zeigt und kein Eintrag still übersprungen wird.
+
+function cmpInitAllSelections() {
+  for (const match of _cmpState.matches) {
+    if (_cmpState.selections[match.cmpId]) continue;
+    if (match.status === 'new') {
+      // Neue Personen: default nicht importieren, Nutzer muss explizit ✓ setzen
+      _cmpState.selections[match.cmpId] = { '__import_new': false };
+      continue;
+    }
+    const baseId = _cmpResolvedBaseId(match);
+    if (!baseId) continue;
+    const diff = cmpComputePersonDiff(baseId, match.cmpId);
+    if (diff) cmpInitSelections(match.cmpId, diff);
+  }
+}
+
 // ── Statistik ─────────────────────────────────────────────────────────────────
 
 function cmpStats() {
