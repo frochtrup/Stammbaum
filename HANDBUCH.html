@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v622</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v683</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -611,7 +611,7 @@
         <li>Sanduhr-Baum</li>
         <li>Fächer-Diagramm</li>
         <li>Nachkommen-Baum</li>
-        <li>Zeitleiste</li>
+        <li>Zeitleiste · Mehrpersonen-Zeitleiste</li>
       </ul>
     </li>
     <li><a href="#kap-stats">Statistik &amp; Auswertung</a>
@@ -658,6 +658,42 @@
         <li>Quellen konsequent erfassen</li>
         <li>Daten prüfen und bereinigen</li>
         <li>Backup-Strategie</li>
+      </ul>
+    </li>
+    <li><a href="#kap-dedup">Duplikate finden und zusammenführen</a>
+      <ul class="sub">
+        <li>Scan starten · Liste durchsuchen</li>
+        <li>Merge-Modal · Forschungseintrag</li>
+      </ul>
+    </li>
+    <li><a href="#kap-cmp">Dateien vergleichen und zusammenführen</a>
+      <ul class="sub">
+        <li>Ergänzungen, Konflikte, neue Personen</li>
+        <li>Forschungseinträge · Familienverknüpfung</li>
+      </ul>
+    </li>
+    <li><a href="#kap-print">Druckausgaben</a>
+      <ul class="sub">
+        <li>Ahnenliste (Kekule-Tabelle)</li>
+        <li>Familienbogen</li>
+      </ul>
+    </li>
+    <li><a href="#kap-dedup">Duplikate finden und zusammenführen</a>
+      <ul class="sub">
+        <li>Scan starten · Liste durchsuchen</li>
+        <li>Merge-Modal · Forschungseintrag</li>
+      </ul>
+    </li>
+    <li><a href="#kap-cmp">Dateien vergleichen und zusammenführen</a>
+      <ul class="sub">
+        <li>Ergänzungen, Konflikte, neue Personen</li>
+        <li>Forschungseinträge · Familienverknüpfung</li>
+      </ul>
+    </li>
+    <li><a href="#kap-print">Druckausgaben</a>
+      <ul class="sub">
+        <li>Ahnenliste (Kekule-Tabelle)</li>
+        <li>Familienbogen</li>
       </ul>
     </li>
     <li><a href="#kap20">Glossar</a></li>
@@ -2007,6 +2043,16 @@ Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Mar
 Tipp: Drehen Sie das Gerät ins Querformat, um die Swim-Lane-Ansicht zu aktivieren — so sehen Sie auf einen Blick, in welche historische Epoche ein Ereignis fällt.
 </div>
 
+<h3>Mehrpersonen-Zeitleiste</h3>
+
+<p>Im Querformat können Sie <strong>2 bis 5 Personen gleichzeitig</strong> auf einer gemeinsamen Zeitachse vergleichen. Öffnen Sie die Zeitleiste für eine Person, wechseln Sie ins Querformat, und tippen Sie dann auf <span class="button-label">⊕</span> in der Filterleiste — ein Picker öffnet sich, um weitere Personen hinzuzufügen.</p>
+
+<p>Jede Person erhält eine eigene Farbe (Gold, Rot, Grün, Blau, Lila). Die <strong>Personen-Bar</strong> am oberen Rand zeigt alle aktiven Personen als farbige Pills; ein <span class="button-label">✕</span> entfernt eine Person wieder. Die erste (primäre) Person kann nicht entfernt werden.</p>
+
+<div class="tip">
+Tipp: Der Mehrpersonen-Modus eignet sich besonders gut, um die Lebensspannen von Geschwistern oder Ehepartnern direkt nebeneinander zu sehen.
+</div>
+
 
 <!-- ====================================================== -->
 <!-- KAPITEL STATISTIK: STATISTIK & AUSWERTUNG -->
@@ -2874,9 +2920,122 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 20: GLOSSAR -->
+<!-- KAPITEL 20: DUPLIKATE -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap20">20. Glossar</h1>
+<h1 class="chapter" id="kap-dedup">20. Duplikate finden und zusammenführen</h1>
+
+<p>Wenn Sie Daten aus verschiedenen Quellen zusammengeführt oder eine Datei über Jahre aufgebaut haben, entstehen leicht doppelte Einträge für dieselbe Person. Die <strong>Duplikat-Erkennung</strong> findet solche Paare automatisch und bietet einen Merge-Assistenten an.</p>
+
+<p>Sie öffnen die Funktion über <span class="button-label">☰ → Duplikate suchen</span>.</p>
+
+<h2>Scan starten</h2>
+
+<p>Mit dem Regler <strong>Schwellenwert</strong> (Standard: 65) bestimmen Sie, ab welchem Ähnlichkeits-Score ein Paar als Duplikat gilt. Ein höherer Wert liefert weniger, aber treffsichere Paare; ein niedrigerer Wert zeigt auch unsichere Kandidaten.</p>
+
+<p>Tippen Sie auf <span class="button-label">Scan starten</span>. Die App vergleicht alle Personen nach Name, Geschlecht, Geburts- und Sterbedaten, Geburtsort sowie Eltern- und Partnernamen und listet alle verdächtigen Paare mit ihrem Score auf.</p>
+
+<h2>Liste durchsuchen</h2>
+
+<p>Bei großen Dateien kann die Liste lang werden. Nutzen Sie das <strong>Suchfeld</strong> oben in der Liste, um direkt nach einem Namen zu filtern — die Statuszeile zeigt dann <em>N von M Paaren</em>.</p>
+
+<h2>Merge-Modal: Datensätze zusammenführen</h2>
+
+<p>Tippen Sie auf ein Paar, um das Merge-Modal zu öffnen. Es zeigt beide Personen nebeneinander (A und B) mit allen relevanten Feldern.</p>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Feldauswahl</strong>: Klicken Sie auf eine Zelle, um für dieses Feld die Seite A oder B zu bevorzugen. Die gewählte Zelle wird hervorgehoben.</li>
+  <li><strong>Seiten tauschen</strong>: Der Button <span class="button-label">⇄ Seiten tauschen</span> vertauscht Gewinner und Verlierer.</li>
+  <li><strong>Zusammenführen</strong>: Der Gewinner-Datensatz erhält alle Felder, Ereignisse, Quellen, Medien und Familienbindungen beider Personen. Der Verlierer wird gelöscht. Die Aktion kann über <em>Bearbeiten → Rückgängig</em> zurückgenommen werden.</li>
+  <li><strong>Forschungseintrag</strong>: Statt zu mergen können Sie einen <span class="button-label">📋 Forschungseintrag</span> anlegen — bei beiden Personen wird ein offener Protokolleintrag erstellt, um die Frage später zu klären.</li>
+  <li><strong>Ignorieren</strong>: Wenn zwei Personen eindeutig verschieden sind, tippen Sie auf <span class="button-label">Ignorieren</span>. Das Paar wird dauerhaft aus der Liste entfernt (in localStorage gespeichert).</li>
+</ul>
+
+<div class="tip">
+Tipp: Bei historischen Familienforschern taucht derselbe Name oft in mehreren Generationen auf. Prüfen Sie immer Geburtsjahr und Elternnamen, bevor Sie zusammenführen.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 21: DATEI-VERGLEICH -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap-cmp">21. Dateien vergleichen und zusammenführen</h1>
+
+<p>Wenn Sie mit mehreren Dateien arbeiten — zum Beispiel eine ältere Version Ihrer GEDCOM-Datei und eine neuere aus Gramps — können Sie beide Dateien direkt in der App <strong>vergleichen</strong> und gezielt Ergänzungen übernehmen.</p>
+
+<p>Sie öffnen den Assistenten über <span class="button-label">☰ → Datei vergleichen…</span>. Wählen Sie dann die zweite Datei (GEDCOM oder Gramps) aus.</p>
+
+<h2>Wie der Abgleich funktioniert</h2>
+
+<p>Die App vergleicht jede Person der Import-Datei mit Ihrem aktuellen Bestand. Jede Person erhält einen Status:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Übereinstimmung</strong> (Score ≥ 75): Eine passende Person wurde gefunden — grüner Eintrag.</li>
+  <li><strong>Unsicher</strong> (Score 40–74): Eine mögliche Entsprechung, muss manuell bestätigt werden.</li>
+  <li><strong>Neu</strong> (Score &lt; 40): Die Person existiert noch nicht in Ihrer Datei.</li>
+</ul>
+
+<h2>Unterschiede ansehen</h2>
+
+<p>Tippen Sie in der linken Liste auf eine Person. Im rechten Panel erscheinen:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Ergänzungen</strong> (blau): Felder, die in der Import-Datei vorhanden sind, in Ihrer Datei aber fehlen.</li>
+  <li><strong>Konflikte</strong> (orange): Felder, die in beiden Dateien vorhanden sind, aber unterschiedliche Werte haben.</li>
+  <li><strong>Identisch</strong>: Felder, die in beiden Dateien übereinstimmen (können ausgeblendet werden).</li>
+</ul>
+
+<h2>Entscheidungen treffen</h2>
+
+<p>Für jede Ergänzung und jeden Konflikt entscheiden Sie individuell:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><span class="button-label">✓</span> <strong>Übernehmen</strong>: Der Wert aus der Import-Datei wird in Ihren Bestand übertragen.</li>
+  <li><span class="button-label">📋</span> <strong>Forschungseintrag</strong>: Ein offener Protokolleintrag wird angelegt — der Wert wird nicht direkt übernommen, aber zur späteren Prüfung notiert.</li>
+  <li><span class="button-label">✗</span> <strong>Ignorieren</strong>: Der Wert wird nicht übernommen.</li>
+</ul>
+
+<p>Bei Konflikten gibt es zusätzlich die Option <strong>A+B</strong>: Beide Werte werden behalten — der Import-Wert erscheint als Notiz.</p>
+
+<h2>Neue Personen importieren</h2>
+
+<p>Für Personen mit Status <em>Neu</em> erscheint die Schaltfläche <span class="button-label">Person importieren</span>. Die Person wird mit allen ihren Ereignissen, Quellen und Medien übernommen. <strong>Familienbindungen</strong> (Eltern, Partner, Kinder) werden automatisch rekonstruiert, sofern die entsprechenden Personen bereits in Ihrem Bestand vorhanden sind oder in derselben Session importiert wurden.</p>
+
+<h2>≠ Andere Person</h2>
+
+<p>Auch bei einem hohen Score können zwei Personen verschieden sein — etwa gleichnamige Geschwister. Tippen Sie auf <span class="button-label">≠ Andere Person</span> im Diff-Header, um die Verknüpfung aufzuheben. Die Import-Person wird dann als <em>Neu</em> behandelt und kann separat importiert werden.</p>
+
+<h2>Änderungen anwenden</h2>
+
+<p>Am unteren Rand des Assistenten wählen Sie, ob alle Entscheidungen oder nur die aktuell angezeigte Person übernommen werden sollen. Tippen Sie auf <span class="button-label">Übernehmen</span>. Die App legt automatisch eine Import-Quelle an, die bei allen übernommenen Daten als Quellenbeleg eingetragen wird.</p>
+
+<div class="tip">
+Tipp: Der Assistent eignet sich besonders gut, um Daten aus Gramps (Desktop) mit dem iOS-Bestand abzugleichen — ohne eine der beiden Dateien manuell zu durchsuchen.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 22: DRUCKAUSGABEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap-print">22. Druckausgaben</h1>
+
+<p>Stammbaum PWA kann strukturierte Dokumente als druckbare HTML-Dateien erzeugen. Sie öffnen die Funktion in der Personendetailansicht über <span class="button-label">☰ → Druckausgabe…</span>.</p>
+
+<h2>Ahnenliste (Kekule-Tabelle)</h2>
+
+<p>Die <strong>Ahnenliste</strong> listet alle direkten Vorfahren der gewählten Person in der klassischen Kekule-Nummerierung auf: Die Person selbst trägt die Nummer 1, Vater = 2, Mutter = 3, Großvater väterlicherseits = 4 usw. (ungerade Nummern = Väter, gerade = Mütter).</p>
+
+<p>Die Tabelle zeigt für jede Person: Kekule-Nummer, Name, Geburts- und Sterbedatum mit Ort. Tippen Sie auf <span class="button-label">↓ Ahnenliste</span>, um die Datei herunterzuladen und im Browser zu drucken.</p>
+
+<h2>Familienbogen</h2>
+
+<p>Der <strong>Familienbogen</strong> zeigt die gewählte Person mit Eltern, Geschwistern und eigenen Kindern in einer übersichtlichen Tabelle — ideal für Archiv-Besuche oder zur Weitergabe an Verwandte. Tippen Sie auf <span class="button-label">↓ Familienbogen</span>.</p>
+
+<div class="tip">
+Tipp: Öffnen Sie die heruntergeladene HTML-Datei im Browser und drucken Sie mit <strong>⌘P / Strg+P</strong>. Beide Ausgaben sind für A4-Druck optimiert.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 23: GLOSSAR (ehemals 20) -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap20">23. Glossar</h1>
 
 <p>Erklärung der wichtigsten Fachbegriffe aus Genealogie, GEDCOM und der App.</p>
 
