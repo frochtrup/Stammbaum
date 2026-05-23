@@ -1239,6 +1239,8 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuRoundtrip:           ()  => { closeModal('modalMenu'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
   menuGrampsRoundtrip:     ()  => { closeModal('modalMenu'); if (typeof runGrampsRoundtripTest === 'function') runGrampsRoundtripTest(); },
   menuBook:                ()  => { closeModal('modalMenu'); openBookModal(); },
+  menuPrintAhnenliste:    ()  => { closeModal('modalMenu'); downloadAhnenliste(); },
+  menuPrintFamilienbogen: ()  => { closeModal('modalMenu'); downloadFamilienbogen(); },
   generateBook:            ()  => {
     const mode      = document.querySelector('#book-mode-seg button.active')?.dataset.bookMode || 'ancestors';
     const title     = document.getElementById('book-title')?.value.trim() || 'Familienbuch';

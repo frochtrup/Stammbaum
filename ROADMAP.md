@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v666 · Cache: `stammbaum-v666`
+**sw-Version:** v669 · Cache: `stammbaum-v669`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -67,6 +67,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | REFACT-1 | `parseGEDCOM()` in 5 Sub-Parser aufgeteilt; Kontext-Objekt `x`; Roundtrip stabil | v627 |
 | TEST-AUTO | `test.html`: Standalone Roundtrip-Tester (kein UI-Load); Drag-Drop beliebig viele .ged | — |
 | TL-MULTI | Zeitleiste Mehrpersonen-Modus: 2–5 Personen parallel, ⊕-Button, Farb-Chips, Person-Bar | v665 |
+| PRINT-OUT | Ahnenliste (Kekule-Tabelle) + Familienbogen als druckbare HTML-Downloads; `ui-print.js` | v669 |
 
 ---
 
@@ -129,7 +130,7 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | ~~MEDIA-MGR~~ | ~~**Medienverwaltung (eigene View)**~~ | Dritter Sub-Tab „Medien" im Quellen-Tab; Kachelgalerie aller Medien (Personen + Familien + Quellen); Filter-Chips Alle/Personen/Familien/Quellen; Lazy-Loading mit ⚠-Overlay; Klick navigiert zum Kontext-Datensatz; ersetzt drei Modal-Browser (sw v608) | - |
 | ~~MEDIA-MGR-DETAIL~~ | ~~**Medien-Detailansicht**~~ | `showMediaDetail()`: Detailansicht im rechten Panel; globale Felder FILE/FORM/MEDI; Referenzliste mit ↗ Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; Inline-Suchpanel zum Hinzufügen neuer Referenzen (Person/Familie/Quelle) mit Lebensdaten-Anzeige (sw v609–v622) | - |
 | ~~DUP-DETECT~~ | ~~**Duplikat-Erkennung**~~ | Levenshtein-Score (Nachname/Vorname/Sex/Geburtsjahr/Ort), Nachname-Bucketing O(n·k²), Merge-Modal mit Seiten-Tausch, Ignore-Liste (localStorage), `pushUndo` vor Merge (sw v628). Web Worker → WW-PARSER. | - |
-| PRINT-OUT | **Strukturierte Druckausgaben** | Ahnenliste (Kekule-Nummerierung) als HTML-Tabelle + PDF via `window.print()`. Familienbogen als druckbare HTML-Seite. Die 2 für den deutschen Raum relevantesten Formate. | M+M |
+| ~~PRINT-OUT~~ | ~~**Strukturierte Druckausgaben**~~ | Ahnenliste (Kekule-Tabelle) + Familienbogen als druckbare HTML-Downloads; `ui-print.js` (sw v669) | - |
 | ~~WW-PARSER~~ | ~~**Web Worker für große GEDCOM-Dateien**~~ | `parseGEDCOM()` in `gedcom-worker.js` ausgelagert; `onProgress`-Callback alle 5%; Fortschrittsbalken `#loadingBar` im Lade-Overlay; Sync-Fallback wenn `Worker` nicht verfügbar; `_finishLoad()` als gemeinsamer Post-Parse-Pfad (sw v649) | - |
 
 ---
