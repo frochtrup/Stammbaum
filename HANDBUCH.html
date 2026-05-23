@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v683</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v685</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -638,14 +638,6 @@
     <li><a href="#kap13">Forschungsaufgaben</a></li>
     <li><a href="#kap14">Forschungsprotokoll</a></li>
     <li><a href="#kap15">Höfe und Wohnorte</a></li>
-    <li><a href="#kap16">Häufige Fragen und Tipps</a></li>
-    <li><a href="#kap17">Umstieg von anderen Programmen</a>
-      <ul class="sub">
-        <li>Von Gramps</li>
-        <li>Von MacFamilyTree, Ahnenblatt, Ancestris</li>
-        <li>Was wird übernommen?</li>
-      </ul>
-    </li>
     <li><a href="#kap18">Fotos und Medien organisieren</a>
       <ul class="sub">
         <li>Ordnerstruktur empfohlen</li>
@@ -674,27 +666,17 @@
     </li>
     <li><a href="#kap-print">Druckausgaben</a>
       <ul class="sub">
-        <li>Ahnenliste (Kekule-Tabelle)</li>
-        <li>Familienbogen</li>
-      </ul>
-    </li>
-    <li><a href="#kap-dedup">Duplikate finden und zusammenführen</a>
-      <ul class="sub">
-        <li>Scan starten · Liste durchsuchen</li>
-        <li>Merge-Modal · Forschungseintrag</li>
-      </ul>
-    </li>
-    <li><a href="#kap-cmp">Dateien vergleichen und zusammenführen</a>
-      <ul class="sub">
-        <li>Ergänzungen, Konflikte, neue Personen</li>
-        <li>Forschungseinträge · Familienverknüpfung</li>
-      </ul>
-    </li>
-    <li><a href="#kap-print">Druckausgaben</a>
-      <ul class="sub">
         <li>Familienbuch</li>
         <li>Ahnenliste (Kekule-Tabelle)</li>
         <li>Familienbogen</li>
+      </ul>
+    </li>
+    <li><a href="#kap16">Häufige Fragen und Tipps</a></li>
+    <li><a href="#kap17">Umstieg von anderen Programmen</a>
+      <ul class="sub">
+        <li>Von Gramps</li>
+        <li>Von MacFamilyTree, Ahnenblatt, Ancestris</li>
+        <li>Was wird übernommen?</li>
       </ul>
     </li>
     <li><a href="#kap20">Glossar</a></li>
@@ -706,18 +688,18 @@
       </ul>
     </li>
     <li><a href="#kap22">Anhang B: GRAMPS-Dateiformat</a>
+      <ul class="sub">
+        <li>Import und Export</li>
+        <li>Orte, Tags, Attribute</li>
+        <li>Passthrough-Unterschiede</li>
+      </ul>
+    </li>
     <li><a href="#kap23">Anhang C: Symbol-Referenz</a>
       <ul>
         <li><a href="#kap23-nav">Navigation &amp; Bottom-Tabs</a></li>
         <li><a href="#kap23-topbar">Topbar-Aktionen</a></li>
         <li><a href="#kap23-forms">Formulare &amp; Listen</a></li>
         <li><a href="#kap23-keys">Tastaturkürzel</a></li>
-      </ul>
-    </li>
-      <ul class="sub">
-        <li>Import und Export</li>
-        <li>Orte, Tags, Attribute</li>
-        <li>Passthrough-Unterschiede</li>
       </ul>
     </li>
   </ol>
@@ -2570,9 +2552,288 @@ Für bäuerliche Genealogie empfiehlt sich folgende Konvention: Beim Übergabeve
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 16: HÄUFIGE FRAGEN -->
+<!-- KAPITEL 16: FOTOS UND MEDIEN ORGANISIEREN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap16">16. Häufige Fragen und Tipps</h1>
+<h1 class="chapter" id="kap18">16. Fotos und Medien organisieren</h1>
+
+<p>Fotos und Dokumente sind ein zentraler Teil der Familienforschung. Stammbaum PWA verwaltet Medien über drei aufeinander aufbauende Ebenen: die <strong>Kachelgalerie</strong> aller Medien, die <strong>Detailansicht</strong> eines einzelnen Mediums und die direkte Verknüpfung mit Personen, Familien und Quellen.</p>
+
+<h2>Wie die App Fotos speichert</h2>
+<p>Stammbaum PWA speichert <strong>keine Fotos in der GEDCOM- oder Gramps-Datei selbst</strong>. Stattdessen werden nur Dateipfade gespeichert (z. B. <code>Fotos/Johann_Decker.jpg</code>). Die Fotos selbst bleiben auf Ihrem Gerät oder in OneDrive.</p>
+<p>Beim Hinzufügen eines Fotos legt die App zusätzlich eine Kopie im internen Speicher (IndexedDB) ab — so sind die Fotos auch offline sichtbar, ohne dass Sie jedes Mal die Datei neu öffnen müssen.</p>
+
+<h2>Der Medien-Tab: Kachelgalerie</h2>
+<p>Alle Medien (Fotos, Dokumente, Scans) sind zentral über <strong>Quellen → Medien</strong> erreichbar. Die Galerie zeigt alle Medien als Kacheln — unabhängig davon, ob sie einer Person, einer Familie oder einer Quelle zugewiesen sind.</p>
+
+<h3>Filtern und Suchen</h3>
+<p>Die Filter-Leiste am oberen Rand hält die Galerie übersichtlich:</p>
+<table style="font-size:0.9em; margin:0.8em 0;">
+  <tr><th>Filter</th><th>Zeigt</th></tr>
+  <tr><td><span class="button-label">Alle</span></td><td>Sämtliche Medien</td></tr>
+  <tr><td><span class="button-label">Personen</span></td><td>Nur Medien, die Personen zugeordnet sind</td></tr>
+  <tr><td><span class="button-label">Familien</span></td><td>Nur Medien, die Familien zugeordnet sind</td></tr>
+  <tr><td><span class="button-label">Quellen</span></td><td>Nur Medien, die Quellen zugeordnet sind</td></tr>
+</table>
+<p>Das Suchfeld daneben filtert nach Dateinamen, Titel und Notiz. Medien, deren Bild-Datei nicht geladen werden kann, erscheinen mit einem ⚠-Symbol — der Pfad ist gespeichert, die Datei aber nicht erreichbar.</p>
+
+<h2>Detailansicht eines Mediums</h2>
+<p>Ein Tipp auf eine Kachel öffnet die <strong>Detailansicht</strong> in der rechten Spalte (Desktop) bzw. als Vollansicht (Mobil). Sie ist in drei Bereiche gegliedert:</p>
+
+<h3>Globale Felder (gelten für alle Verknüpfungen)</h3>
+<p>Oben stehen die Felder, die das Medium selbst beschreiben — unabhängig davon, wo es verwendet wird:</p>
+<table style="font-size:0.9em; margin:0.8em 0;">
+  <tr><th>Feld</th><th>Bedeutung</th></tr>
+  <tr><td>Dateipfad (FILE)</td><td>Relativer Pfad zur Mediendatei</td></tr>
+  <tr><td>Format (FORM)</td><td>Dateiformat, z. B. <code>jpg</code>, <code>pdf</code></td></tr>
+  <tr><td>Medientyp (MEDI)</td><td>Art des Mediums: Foto, Dokument, Ton, Video usw.</td></tr>
+</table>
+<p><span class="button-label">Speichern (alle Ref.)</span> übernimmt Änderungen an Dateipfad, Format und Medientyp für <em>alle</em> Verknüpfungen dieses Mediums gleichzeitig.</p>
+
+<h3>Referenzliste</h3>
+<p>Darunter erscheint die Liste aller Personen, Familien und Quellen, denen dieses Medium zugeordnet ist. Jede Zeile zeigt:</p>
+<ul style="margin:0.5em 0 0.5em 1.5em; line-height:2em;">
+  <li>Symbol und Name des verknüpften Datensatzes</li>
+  <li><span class="button-label">↗</span> — direkt zur Person, Familie oder Quelle wechseln</li>
+  <li><span class="button-label">×</span> — diese Verknüpfung löschen (nur die Zuordnung, nicht die Datei)</li>
+</ul>
+<p>Durch Antippen einer Zeile (nicht ↗ oder ×) wechselt der untere Bereich zu den referenz-spezifischen Feldern dieses Datensatzes.</p>
+
+<h3>Referenz-spezifische Felder</h3>
+<p>Jede Verknüpfung kann eigene Metadaten haben — diese gelten nur für <em>diese eine</em> Referenz:</p>
+<table style="font-size:0.9em; margin:0.8em 0;">
+  <tr><th>Feld</th><th>Bedeutung</th></tr>
+  <tr><td>Titel (TITL)</td><td>Beschriftung speziell für diesen Kontext</td></tr>
+  <tr><td>Datum (_DATE)</td><td>Aufnahmedatum des Fotos / Scans</td></tr>
+  <tr><td>Notiz (NOTE)</td><td>Freier Text zu dieser Verknüpfung</td></tr>
+  <tr><td>Primärbild (_PRIM)</td><td>Dieses Foto als Hauptfoto des Datensatzes markieren</td></tr>
+</table>
+<p><span class="button-label">Speichern</span> speichert nur die Felder dieser einen Referenz.</p>
+
+<h2>Neue Verknüpfung hinzufügen</h2>
+<p>Unterhalb der Referenzliste finden Sie drei Buttons:</p>
+<ul style="margin:0.5em 0 0.5em 1.5em; line-height:2em;">
+  <li><span class="button-label">+ Person</span> — dieses Medium einer weiteren Person zuordnen</li>
+  <li><span class="button-label">+ Familie</span> — dieses Medium einer Familie zuordnen</li>
+  <li><span class="button-label">+ Quelle</span> — dieses Medium einer Quelle zuordnen</li>
+</ul>
+<p>Ein Tipp öffnet ein Suchfeld direkt im Panel. Die Trefferliste zeigt bei Personen Geburts- und Sterbejahr, bei Familien das Heiratsdatum — so lassen sich gleichnamige Personen sicher unterscheiden. Ein Tipp auf einen Eintrag erstellt die Verknüpfung sofort.</p>
+
+<div class="tip">Ein Medium kann gleichzeitig mehreren Personen, Familien und Quellen zugeordnet sein — z. B. ein Familienfoto, das bei drei Personen und der zugehörigen Heiratsquelle verknüpft ist.</div>
+
+<h2>Empfohlene Ordnerstruktur</h2>
+<p>Legen Sie alle Dateien, die zu Ihrem Stammbaum gehören, in <strong>einen gemeinsamen Ordner</strong>:</p>
+<div style="background:var(--app-card);border:1px solid var(--app-border);border-radius:8px;padding:0.9em 1.2em;font-family:monospace;font-size:0.88em;margin:0.8em 0;line-height:1.9em;">
+  📁 Genealogie/<br>
+  &nbsp;&nbsp;├── MeineDaten.ged &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← GEDCOM-Datei<br>
+  &nbsp;&nbsp;├── 📁 Fotos/<br>
+  &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── Johann_Decker_1823.jpg<br>
+  &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── Hochzeit_1855.jpg<br>
+  &nbsp;&nbsp;└── 📁 Dokumente/<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── Taufurkunde_1823.pdf<br>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── Kirchenbuch_1820.jpg
+</div>
+<div class="tip">Speichern Sie die GEDCOM-Datei und den Foto-Ordner <strong>nebeneinander</strong> im selben Überordner. So bleiben die relativen Pfade beim Verschieben erhalten.</div>
+
+<h2>OneDrive: Foto-Ordner einrichten</h2>
+<p>Wenn Sie OneDrive nutzen, verbindet die App automatisch den Ordner, in dem Ihre GEDCOM-Datei liegt. Für Fotos gehen Sie so vor:</p>
+<ol class="steps">
+  <li><div class="step-text"><strong>☰ → Einstellungen → OneDrive-Foto-Ordner</strong> wählen</div></li>
+  <li><div class="step-text">Den Unterordner <em>Fotos</em> (oder einen anderen Namen) auswählen</div></li>
+  <li><div class="step-text">Ab sofort können Sie Fotos direkt aus diesem OneDrive-Ordner importieren (<strong>☰ → Fotos aus OneDrive</strong>)</div></li>
+</ol>
+
+<h2>Fotos benennen und ordnen</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Verwenden Sie sprechende Dateinamen: <code>Nachname_Vorname_Jahr.jpg</code></li>
+  <li>Vermeiden Sie Sonderzeichen, Leerzeichen und Umlaute in Dateinamen</li>
+  <li>JPG und PNG funktionieren zuverlässig auf allen Geräten</li>
+  <li>HEIC-Dateien (iPhone-Format) werden unterstützt, aber JPG ist kompatibler</li>
+</ul>
+
+<h2>Foto direkt mit der Kamera aufnehmen</h2>
+<p>Im Ereignis-Formular gibt es einen <strong>📷-Button</strong>: Tippen Sie darauf, um direkt ein Foto aufzunehmen (Archiv-Besuch, Grabstein, Urkunde vor Ort). Das Foto wird sofort mit dem Ereignis verknüpft und im internen Speicher abgelegt — auch ohne Internetverbindung.</p>
+
+<h2>Was passiert, wenn ich Fotos verschiebe?</h2>
+<p>Wenn Sie Fotos auf Ihrem Gerät oder in OneDrive verschieben, können die Verweise in der App ungültig werden — das Foto erscheint dann mit einem ⚠-Symbol. Öffnen Sie die Detailansicht des Mediums und korrigieren Sie den Dateipfad im Feld FILE. Fotos im internen App-Speicher bleiben dagegen immer sichtbar.</p>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 17: BEST PRACTICES DATENQUALITÄT -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap19">17. Best Practices: Datenqualität</h1>
+
+<p>Der Unterschied zwischen einer Sammlung von Namen und einem echten genealogischen Forschungsstand liegt in der Datenqualität. Dieser Abschnitt zeigt, wie Sie mit Stammbaum PWA systematisch und nachvollziehbar arbeiten.</p>
+
+<h2>Jedes Ereignis braucht eine Quelle</h2>
+<p>Die wichtigste Regel der Genealogie: <strong>Keine Aussage ohne Beleg.</strong> Verknüpfen Sie jedes Ereignis (Geburt, Heirat, Tod, Beruf …) mit mindestens einer Quelle. Das verhindert, dass ungesicherte Daten als Fakten behandelt werden.</p>
+<div class="tip">Nutzen Sie die <strong>Quellen-Vorlagen</strong> (☰ → Neue Quelle): 10 vorgefertigte Vorlagen für Kirchenbücher, Standesamtsurkunden, Volkszählungen u. a. sparen Zeit und erzeugen konsistente Einträge.</div>
+
+<h2>Strukturierte Datumsangaben verwenden</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Nutzen Sie immer das 3-Felder-Datum (Tag / Monat / Jahr) statt Freitext</li>
+  <li>Unbekannte Teile einfach leer lassen — besser „1823" als „ca. 1823" im Freitextfeld</li>
+  <li>Für Schätzungen: Qualifier <em>ca.</em> verwenden, nicht einfach runden</li>
+  <li>„zwischen 1820 und 1825" ist aussagekräftiger als „1822" ohne Quellenbeleg</li>
+</ul>
+
+<h2>Orte vollständig und einheitlich erfassen</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Nutzen Sie die 6-Felder-Ortsstruktur (Dorf / Stadt / Landkreis / Bundesland / Staat)</li>
+  <li>Verwenden Sie <strong>immer denselben Ortsnamen</strong> — „München" statt mal „München", mal „Munich"</li>
+  <li>Koordinaten eingeben, damit der Ort auf der Karte erscheint (Google Maps → Koordinaten ablesen)</li>
+  <li>Historische Ortsnamen: den damaligen Namen verwenden, heutigen als Notiz ergänzen</li>
+</ul>
+
+<h2>Regelmäßig Daten prüfen</h2>
+<p>Nutzen Sie die automatische Datenprüfung nach jeder größeren Eingabesitzung:</p>
+<ol class="steps">
+  <li><div class="step-text">Aufgaben-Tab öffnen → <span class="button-label">✓ Daten prüfen</span> tippen</div></li>
+  <li><div class="step-text">Fehler (✗) sofort korrigieren — das sind logische Unmöglichkeiten</div></li>
+  <li><div class="step-text">Warnungen (⚠) prüfen — oft steckt ein Tippfehler im Datum dahinter</div></li>
+  <li><div class="step-text">Hinweise (ℹ) als Forschungsaufgaben übernehmen — fehlende Orte, fehlende Quellen</div></li>
+</ol>
+
+<h2>Forschungsprotokoll führen</h2>
+<p>Notieren Sie <strong>jede Recherche</strong> im Forschungsprotokoll — auch wenn sie ohne Ergebnis war. „Kirchenbuch Landsberg 1780–1800 durchsucht — kein Eintrag" ist eine wertvolle Information: Sie müssen diese Suche nie wiederholen.</p>
+<p>Das Protokoll ist unter <strong>☑ Aufgaben → Protokoll</strong> erreichbar. Ein Eintrag dauert 30 Sekunden.</p>
+
+<h2>Backup-Strategie</h2>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Nach jeder Sitzung speichern</strong> (<strong>☰ → 💾 Speichern</strong>) — der Änderungsindikator zeigt ungespeicherte Daten</li>
+  <li><strong>Wöchentlich</strong>: Datei mit Datum im Namen sichern (z. B. <code>MeineDaten_2026-05-18.ged</code>)</li>
+  <li><strong>Zwei Orte</strong>: lokal + Cloud (OneDrive, iCloud) — nie nur einen Speicherort</li>
+  <li>Die App bietet unter <strong>☰ → Backup erstellen</strong> eine Datumskopie an</li>
+</ul>
+
+<h2>Lebende Personen schützen</h2>
+<p>Beim Weitergeben Ihrer GEDCOM-Datei an Dritte: Nutzen Sie den Export mit Lebende-Anonymisierung (in Vorbereitung). Bis dahin: Prüfen Sie vor dem Weitergeben, welche Personen nach 1920 geboren wurden und noch kein Sterbedatum haben — diese sollten nicht mit vollen Daten geteilt werden.</p>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 18: DUPLIKATE -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap-dedup">18. Duplikate finden und zusammenführen</h1>
+
+<p>Wenn Sie Daten aus verschiedenen Quellen zusammengeführt oder eine Datei über Jahre aufgebaut haben, entstehen leicht doppelte Einträge für dieselbe Person. Die <strong>Duplikat-Erkennung</strong> findet solche Paare automatisch und bietet einen Merge-Assistenten an.</p>
+
+<p>Sie öffnen die Funktion über <span class="button-label">☰ → Duplikate suchen</span>.</p>
+
+<h2>Scan starten</h2>
+
+<p>Mit dem Regler <strong>Schwellenwert</strong> (Standard: 65) bestimmen Sie, ab welchem Ähnlichkeits-Score ein Paar als Duplikat gilt. Ein höherer Wert liefert weniger, aber treffsichere Paare; ein niedrigerer Wert zeigt auch unsichere Kandidaten.</p>
+
+<p>Tippen Sie auf <span class="button-label">Scan starten</span>. Die App vergleicht alle Personen nach Name, Geschlecht, Geburts- und Sterbedaten, Geburtsort sowie Eltern- und Partnernamen und listet alle verdächtigen Paare mit ihrem Score auf.</p>
+
+<h2>Liste durchsuchen</h2>
+
+<p>Bei großen Dateien kann die Liste lang werden. Nutzen Sie das <strong>Suchfeld</strong> oben in der Liste, um direkt nach einem Namen zu filtern — die Statuszeile zeigt dann <em>N von M Paaren</em>.</p>
+
+<h2>Merge-Modal: Datensätze zusammenführen</h2>
+
+<p>Tippen Sie auf ein Paar, um das Merge-Modal zu öffnen. Es zeigt beide Personen nebeneinander (A und B) mit allen relevanten Feldern.</p>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Feldauswahl</strong>: Klicken Sie auf eine Zelle, um für dieses Feld die Seite A oder B zu bevorzugen. Die gewählte Zelle wird hervorgehoben.</li>
+  <li><strong>Seiten tauschen</strong>: Der Button <span class="button-label">⇄ Seiten tauschen</span> vertauscht Gewinner und Verlierer.</li>
+  <li><strong>Zusammenführen</strong>: Der Gewinner-Datensatz erhält alle Felder, Ereignisse, Quellen, Medien und Familienbindungen beider Personen. Der Verlierer wird gelöscht. Die Aktion kann über <em>Bearbeiten → Rückgängig</em> zurückgenommen werden.</li>
+  <li><strong>Forschungseintrag</strong>: Statt zu mergen können Sie einen <span class="button-label">📋 Forschungseintrag</span> anlegen — bei beiden Personen wird ein offener Protokolleintrag erstellt, um die Frage später zu klären.</li>
+  <li><strong>Ignorieren</strong>: Wenn zwei Personen eindeutig verschieden sind, tippen Sie auf <span class="button-label">Ignorieren</span>. Das Paar wird dauerhaft aus der Liste entfernt (in localStorage gespeichert).</li>
+</ul>
+
+<div class="tip">
+Tipp: Bei historischen Familienforschern taucht derselbe Name oft in mehreren Generationen auf. Prüfen Sie immer Geburtsjahr und Elternnamen, bevor Sie zusammenführen.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 19: DATEI-VERGLEICH -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap-cmp">19. Dateien vergleichen und zusammenführen</h1>
+
+<p>Wenn Sie mit mehreren Dateien arbeiten — zum Beispiel eine ältere Version Ihrer GEDCOM-Datei und eine neuere aus Gramps — können Sie beide Dateien direkt in der App <strong>vergleichen</strong> und gezielt Ergänzungen übernehmen.</p>
+
+<p>Sie öffnen den Assistenten über <span class="button-label">☰ → Datei vergleichen…</span>. Wählen Sie dann die zweite Datei (GEDCOM oder Gramps) aus.</p>
+
+<h2>Wie der Abgleich funktioniert</h2>
+
+<p>Die App vergleicht jede Person der Import-Datei mit Ihrem aktuellen Bestand. Jede Person erhält einen Status:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Übereinstimmung</strong> (Score ≥ 75): Eine passende Person wurde gefunden — grüner Eintrag.</li>
+  <li><strong>Unsicher</strong> (Score 40–74): Eine mögliche Entsprechung, muss manuell bestätigt werden.</li>
+  <li><strong>Neu</strong> (Score &lt; 40): Die Person existiert noch nicht in Ihrer Datei.</li>
+</ul>
+
+<h2>Unterschiede ansehen</h2>
+
+<p>Tippen Sie in der linken Liste auf eine Person. Im rechten Panel erscheinen:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Ergänzungen</strong> (blau): Felder, die in der Import-Datei vorhanden sind, in Ihrer Datei aber fehlen.</li>
+  <li><strong>Konflikte</strong> (orange): Felder, die in beiden Dateien vorhanden sind, aber unterschiedliche Werte haben.</li>
+  <li><strong>Identisch</strong>: Felder, die in beiden Dateien übereinstimmen (können ausgeblendet werden).</li>
+</ul>
+
+<h2>Entscheidungen treffen</h2>
+
+<p>Für jede Ergänzung und jeden Konflikt entscheiden Sie individuell:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><span class="button-label">✓</span> <strong>Übernehmen</strong>: Der Wert aus der Import-Datei wird in Ihren Bestand übertragen.</li>
+  <li><span class="button-label">📋</span> <strong>Forschungseintrag</strong>: Ein offener Protokolleintrag wird angelegt — der Wert wird nicht direkt übernommen, aber zur späteren Prüfung notiert.</li>
+  <li><span class="button-label">✗</span> <strong>Ignorieren</strong>: Der Wert wird nicht übernommen.</li>
+</ul>
+
+<p>Bei Konflikten gibt es zusätzlich die Option <strong>A+B</strong>: Beide Werte werden behalten — der Import-Wert erscheint als Notiz.</p>
+
+<h2>Neue Personen importieren</h2>
+
+<p>Für Personen mit Status <em>Neu</em> erscheint die Schaltfläche <span class="button-label">Person importieren</span>. Die Person wird mit allen ihren Ereignissen, Quellen und Medien übernommen. <strong>Familienbindungen</strong> (Eltern, Partner, Kinder) werden automatisch rekonstruiert, sofern die entsprechenden Personen bereits in Ihrem Bestand vorhanden sind oder in derselben Session importiert wurden.</p>
+
+<h2>≠ Andere Person</h2>
+
+<p>Auch bei einem hohen Score können zwei Personen verschieden sein — etwa gleichnamige Geschwister. Tippen Sie auf <span class="button-label">≠ Andere Person</span> im Diff-Header, um die Verknüpfung aufzuheben. Die Import-Person wird dann als <em>Neu</em> behandelt und kann separat importiert werden.</p>
+
+<h2>Änderungen anwenden</h2>
+
+<p>Am unteren Rand des Assistenten wählen Sie, ob alle Entscheidungen oder nur die aktuell angezeigte Person übernommen werden sollen. Tippen Sie auf <span class="button-label">Übernehmen</span>. Die App legt automatisch eine Import-Quelle an, die bei allen übernommenen Daten als Quellenbeleg eingetragen wird.</p>
+
+<div class="tip">
+Tipp: Der Assistent eignet sich besonders gut, um Daten aus Gramps (Desktop) mit dem iOS-Bestand abzugleichen — ohne eine der beiden Dateien manuell zu durchsuchen.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 20: DRUCKAUSGABEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap-print">20. Druckausgaben</h1>
+
+<p>Stammbaum PWA bietet drei strukturierte Ausgaben, die Sie alle über <span class="button-label">☰ → Ausgaben</span> erreichen. Die Dokumente werden als HTML-Dateien heruntergeladen und im Browser gedruckt.</p>
+
+<h2>Familienbuch</h2>
+
+<p>Das <strong>Familienbuch</strong> ist die umfangreichste Ausgabe: Es erzeugt ein mehrseitiges Dokument für die gewählte Person mit Lebenslauf, Ahnen- und Nachkommentabellen, Quellen sowie einem Namensindex. Öffnen Sie die Ausgabe über <span class="button-label">☰ → Ausgaben → Familienbuch erstellen</span>. Im Einstellungsdialog können Sie Titel, Untertitel, die Anzahl der Ahnengenerationen und den Umfang der Inhalte festlegen.</p>
+
+<div class="tip">
+Tipp: Das Familienbuch eignet sich besonders gut als Geburtstagsgeschenk oder zur Weitergabe an Familienmitglieder ohne Stammbaum-Software — es ist eine vollständig eigenständige HTML-Datei.
+</div>
+
+<h2>Ahnenliste (Kekule-Tabelle)</h2>
+
+<p>Die <strong>Ahnenliste</strong> listet alle direkten Vorfahren der gewählten Person in der klassischen Kekule-Nummerierung auf: Die Person selbst trägt die Nummer 1, Vater = 2, Mutter = 3, Großvater väterlicherseits = 4 usw. (ungerade Nummern = Väter, gerade = Mütter).</p>
+
+<p>Die Tabelle zeigt für jede Person: Kekule-Nummer, Name, Geburts- und Sterbedatum mit Ort. Tippen Sie auf <span class="button-label">↓ Ahnenliste</span>, um die Datei herunterzuladen und im Browser zu drucken.</p>
+
+<h2>Familienbogen</h2>
+
+<p>Der <strong>Familienbogen</strong> zeigt die gewählte Person mit Eltern, Geschwistern und eigenen Kindern in einer übersichtlichen Tabelle — ideal für Archiv-Besuche oder zur Weitergabe an Verwandte. Tippen Sie auf <span class="button-label">↓ Familienbogen</span>.</p>
+
+<div class="tip">
+Tipp: Öffnen Sie die heruntergeladene HTML-Datei im Browser und drucken Sie mit <strong>⌘P / Strg+P</strong>. Beide Ausgaben sind für A4-Druck optimiert.
+</div>
+
+
+<!-- ====================================================== -->
+<!-- KAPITEL 21: HÄUFIGE FRAGEN -->
+<!-- ====================================================== -->
+<h1 class="chapter" id="kap16">21. Häufige Fragen und Tipps</h1>
 
 <h2>Ich habe aus Versehen etwas gelöscht — was nun?</h2>
 <p>Auf dem Computer (Chrome/Edge/Firefox) können Sie einzelne Schritte rückgängig machen:</p>
@@ -2697,9 +2958,9 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 17: UMSTIEG VON ANDEREN PROGRAMMEN -->
+<!-- KAPITEL 22: UMSTIEG VON ANDEREN PROGRAMMEN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap17">17. Umstieg von anderen Programmen</h1>
+<h1 class="chapter" id="kap17">22. Umstieg von anderen Programmen</h1>
 
 <p>Sie arbeiten bereits mit einem anderen Genealogieprogramm und möchten auf Stammbaum PWA wechseln — oder beide parallel nutzen? Dieser Abschnitt erklärt, wie der Datentransfer funktioniert und was dabei zu beachten ist.</p>
 
@@ -2763,286 +3024,7 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 
 <!-- ====================================================== -->
-<!-- KAPITEL 18: FOTOS UND MEDIEN ORGANISIEREN -->
-<!-- ====================================================== -->
-<h1 class="chapter" id="kap18">18. Fotos und Medien organisieren</h1>
-
-<p>Fotos und Dokumente sind ein zentraler Teil der Familienforschung. Stammbaum PWA verwaltet Medien über drei aufeinander aufbauende Ebenen: die <strong>Kachelgalerie</strong> aller Medien, die <strong>Detailansicht</strong> eines einzelnen Mediums und die direkte Verknüpfung mit Personen, Familien und Quellen.</p>
-
-<h2>Wie die App Fotos speichert</h2>
-<p>Stammbaum PWA speichert <strong>keine Fotos in der GEDCOM- oder Gramps-Datei selbst</strong>. Stattdessen werden nur Dateipfade gespeichert (z. B. <code>Fotos/Johann_Decker.jpg</code>). Die Fotos selbst bleiben auf Ihrem Gerät oder in OneDrive.</p>
-<p>Beim Hinzufügen eines Fotos legt die App zusätzlich eine Kopie im internen Speicher (IndexedDB) ab — so sind die Fotos auch offline sichtbar, ohne dass Sie jedes Mal die Datei neu öffnen müssen.</p>
-
-<h2>Der Medien-Tab: Kachelgalerie</h2>
-<p>Alle Medien (Fotos, Dokumente, Scans) sind zentral über <strong>Quellen → Medien</strong> erreichbar. Die Galerie zeigt alle Medien als Kacheln — unabhängig davon, ob sie einer Person, einer Familie oder einer Quelle zugewiesen sind.</p>
-
-<h3>Filtern und Suchen</h3>
-<p>Die Filter-Leiste am oberen Rand hält die Galerie übersichtlich:</p>
-<table style="font-size:0.9em; margin:0.8em 0;">
-  <tr><th>Filter</th><th>Zeigt</th></tr>
-  <tr><td><span class="button-label">Alle</span></td><td>Sämtliche Medien</td></tr>
-  <tr><td><span class="button-label">Personen</span></td><td>Nur Medien, die Personen zugeordnet sind</td></tr>
-  <tr><td><span class="button-label">Familien</span></td><td>Nur Medien, die Familien zugeordnet sind</td></tr>
-  <tr><td><span class="button-label">Quellen</span></td><td>Nur Medien, die Quellen zugeordnet sind</td></tr>
-</table>
-<p>Das Suchfeld daneben filtert nach Dateinamen, Titel und Notiz. Medien, deren Bild-Datei nicht geladen werden kann, erscheinen mit einem ⚠-Symbol — der Pfad ist gespeichert, die Datei aber nicht erreichbar.</p>
-
-<h2>Detailansicht eines Mediums</h2>
-<p>Ein Tipp auf eine Kachel öffnet die <strong>Detailansicht</strong> in der rechten Spalte (Desktop) bzw. als Vollansicht (Mobil). Sie ist in drei Bereiche gegliedert:</p>
-
-<h3>Globale Felder (gelten für alle Verknüpfungen)</h3>
-<p>Oben stehen die Felder, die das Medium selbst beschreiben — unabhängig davon, wo es verwendet wird:</p>
-<table style="font-size:0.9em; margin:0.8em 0;">
-  <tr><th>Feld</th><th>Bedeutung</th></tr>
-  <tr><td>Dateipfad (FILE)</td><td>Relativer Pfad zur Mediendatei</td></tr>
-  <tr><td>Format (FORM)</td><td>Dateiformat, z. B. <code>jpg</code>, <code>pdf</code></td></tr>
-  <tr><td>Medientyp (MEDI)</td><td>Art des Mediums: Foto, Dokument, Ton, Video usw.</td></tr>
-</table>
-<p><span class="button-label">Speichern (alle Ref.)</span> übernimmt Änderungen an Dateipfad, Format und Medientyp für <em>alle</em> Verknüpfungen dieses Mediums gleichzeitig.</p>
-
-<h3>Referenzliste</h3>
-<p>Darunter erscheint die Liste aller Personen, Familien und Quellen, denen dieses Medium zugeordnet ist. Jede Zeile zeigt:</p>
-<ul style="margin:0.5em 0 0.5em 1.5em; line-height:2em;">
-  <li>Symbol und Name des verknüpften Datensatzes</li>
-  <li><span class="button-label">↗</span> — direkt zur Person, Familie oder Quelle wechseln</li>
-  <li><span class="button-label">×</span> — diese Verknüpfung löschen (nur die Zuordnung, nicht die Datei)</li>
-</ul>
-<p>Durch Antippen einer Zeile (nicht ↗ oder ×) wechselt der untere Bereich zu den referenz-spezifischen Feldern dieses Datensatzes.</p>
-
-<h3>Referenz-spezifische Felder</h3>
-<p>Jede Verknüpfung kann eigene Metadaten haben — diese gelten nur für <em>diese eine</em> Referenz:</p>
-<table style="font-size:0.9em; margin:0.8em 0;">
-  <tr><th>Feld</th><th>Bedeutung</th></tr>
-  <tr><td>Titel (TITL)</td><td>Beschriftung speziell für diesen Kontext</td></tr>
-  <tr><td>Datum (_DATE)</td><td>Aufnahmedatum des Fotos / Scans</td></tr>
-  <tr><td>Notiz (NOTE)</td><td>Freier Text zu dieser Verknüpfung</td></tr>
-  <tr><td>Primärbild (_PRIM)</td><td>Dieses Foto als Hauptfoto des Datensatzes markieren</td></tr>
-</table>
-<p><span class="button-label">Speichern</span> speichert nur die Felder dieser einen Referenz.</p>
-
-<h2>Neue Verknüpfung hinzufügen</h2>
-<p>Unterhalb der Referenzliste finden Sie drei Buttons:</p>
-<ul style="margin:0.5em 0 0.5em 1.5em; line-height:2em;">
-  <li><span class="button-label">+ Person</span> — dieses Medium einer weiteren Person zuordnen</li>
-  <li><span class="button-label">+ Familie</span> — dieses Medium einer Familie zuordnen</li>
-  <li><span class="button-label">+ Quelle</span> — dieses Medium einer Quelle zuordnen</li>
-</ul>
-<p>Ein Tipp öffnet ein Suchfeld direkt im Panel. Die Trefferliste zeigt bei Personen Geburts- und Sterbejahr, bei Familien das Heiratsdatum — so lassen sich gleichnamige Personen sicher unterscheiden. Ein Tipp auf einen Eintrag erstellt die Verknüpfung sofort.</p>
-
-<div class="tip">Ein Medium kann gleichzeitig mehreren Personen, Familien und Quellen zugeordnet sein — z. B. ein Familienfoto, das bei drei Personen und der zugehörigen Heiratsquelle verknüpft ist.</div>
-
-<h2>Empfohlene Ordnerstruktur</h2>
-<p>Legen Sie alle Dateien, die zu Ihrem Stammbaum gehören, in <strong>einen gemeinsamen Ordner</strong>:</p>
-<div style="background:var(--app-card);border:1px solid var(--app-border);border-radius:8px;padding:0.9em 1.2em;font-family:monospace;font-size:0.88em;margin:0.8em 0;line-height:1.9em;">
-  📁 Genealogie/<br>
-  &nbsp;&nbsp;├── MeineDaten.ged &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← GEDCOM-Datei<br>
-  &nbsp;&nbsp;├── 📁 Fotos/<br>
-  &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── Johann_Decker_1823.jpg<br>
-  &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── Hochzeit_1855.jpg<br>
-  &nbsp;&nbsp;└── 📁 Dokumente/<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── Taufurkunde_1823.pdf<br>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── Kirchenbuch_1820.jpg
-</div>
-<div class="tip">Speichern Sie die GEDCOM-Datei und den Foto-Ordner <strong>nebeneinander</strong> im selben Überordner. So bleiben die relativen Pfade beim Verschieben erhalten.</div>
-
-<h2>OneDrive: Foto-Ordner einrichten</h2>
-<p>Wenn Sie OneDrive nutzen, verbindet die App automatisch den Ordner, in dem Ihre GEDCOM-Datei liegt. Für Fotos gehen Sie so vor:</p>
-<ol class="steps">
-  <li><div class="step-text"><strong>☰ → Einstellungen → OneDrive-Foto-Ordner</strong> wählen</div></li>
-  <li><div class="step-text">Den Unterordner <em>Fotos</em> (oder einen anderen Namen) auswählen</div></li>
-  <li><div class="step-text">Ab sofort können Sie Fotos direkt aus diesem OneDrive-Ordner importieren (<strong>☰ → Fotos aus OneDrive</strong>)</div></li>
-</ol>
-
-<h2>Fotos benennen und ordnen</h2>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li>Verwenden Sie sprechende Dateinamen: <code>Nachname_Vorname_Jahr.jpg</code></li>
-  <li>Vermeiden Sie Sonderzeichen, Leerzeichen und Umlaute in Dateinamen</li>
-  <li>JPG und PNG funktionieren zuverlässig auf allen Geräten</li>
-  <li>HEIC-Dateien (iPhone-Format) werden unterstützt, aber JPG ist kompatibler</li>
-</ul>
-
-<h2>Foto direkt mit der Kamera aufnehmen</h2>
-<p>Im Ereignis-Formular gibt es einen <strong>📷-Button</strong>: Tippen Sie darauf, um direkt ein Foto aufzunehmen (Archiv-Besuch, Grabstein, Urkunde vor Ort). Das Foto wird sofort mit dem Ereignis verknüpft und im internen Speicher abgelegt — auch ohne Internetverbindung.</p>
-
-<h2>Was passiert, wenn ich Fotos verschiebe?</h2>
-<p>Wenn Sie Fotos auf Ihrem Gerät oder in OneDrive verschieben, können die Verweise in der App ungültig werden — das Foto erscheint dann mit einem ⚠-Symbol. Öffnen Sie die Detailansicht des Mediums und korrigieren Sie den Dateipfad im Feld FILE. Fotos im internen App-Speicher bleiben dagegen immer sichtbar.</p>
-
-
-<!-- ====================================================== -->
-<!-- KAPITEL 19: BEST PRACTICES DATENQUALITÄT -->
-<!-- ====================================================== -->
-<h1 class="chapter" id="kap19">19. Best Practices: Datenqualität</h1>
-
-<p>Der Unterschied zwischen einer Sammlung von Namen und einem echten genealogischen Forschungsstand liegt in der Datenqualität. Dieser Abschnitt zeigt, wie Sie mit Stammbaum PWA systematisch und nachvollziehbar arbeiten.</p>
-
-<h2>Jedes Ereignis braucht eine Quelle</h2>
-<p>Die wichtigste Regel der Genealogie: <strong>Keine Aussage ohne Beleg.</strong> Verknüpfen Sie jedes Ereignis (Geburt, Heirat, Tod, Beruf …) mit mindestens einer Quelle. Das verhindert, dass ungesicherte Daten als Fakten behandelt werden.</p>
-<div class="tip">Nutzen Sie die <strong>Quellen-Vorlagen</strong> (☰ → Neue Quelle): 10 vorgefertigte Vorlagen für Kirchenbücher, Standesamtsurkunden, Volkszählungen u. a. sparen Zeit und erzeugen konsistente Einträge.</div>
-
-<h2>Strukturierte Datumsangaben verwenden</h2>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li>Nutzen Sie immer das 3-Felder-Datum (Tag / Monat / Jahr) statt Freitext</li>
-  <li>Unbekannte Teile einfach leer lassen — besser „1823" als „ca. 1823" im Freitextfeld</li>
-  <li>Für Schätzungen: Qualifier <em>ca.</em> verwenden, nicht einfach runden</li>
-  <li>„zwischen 1820 und 1825" ist aussagekräftiger als „1822" ohne Quellenbeleg</li>
-</ul>
-
-<h2>Orte vollständig und einheitlich erfassen</h2>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li>Nutzen Sie die 6-Felder-Ortsstruktur (Dorf / Stadt / Landkreis / Bundesland / Staat)</li>
-  <li>Verwenden Sie <strong>immer denselben Ortsnamen</strong> — „München" statt mal „München", mal „Munich"</li>
-  <li>Koordinaten eingeben, damit der Ort auf der Karte erscheint (Google Maps → Koordinaten ablesen)</li>
-  <li>Historische Ortsnamen: den damaligen Namen verwenden, heutigen als Notiz ergänzen</li>
-</ul>
-
-<h2>Regelmäßig Daten prüfen</h2>
-<p>Nutzen Sie die automatische Datenprüfung nach jeder größeren Eingabesitzung:</p>
-<ol class="steps">
-  <li><div class="step-text">Aufgaben-Tab öffnen → <span class="button-label">✓ Daten prüfen</span> tippen</div></li>
-  <li><div class="step-text">Fehler (✗) sofort korrigieren — das sind logische Unmöglichkeiten</div></li>
-  <li><div class="step-text">Warnungen (⚠) prüfen — oft steckt ein Tippfehler im Datum dahinter</div></li>
-  <li><div class="step-text">Hinweise (ℹ) als Forschungsaufgaben übernehmen — fehlende Orte, fehlende Quellen</div></li>
-</ol>
-
-<h2>Forschungsprotokoll führen</h2>
-<p>Notieren Sie <strong>jede Recherche</strong> im Forschungsprotokoll — auch wenn sie ohne Ergebnis war. „Kirchenbuch Landsberg 1780–1800 durchsucht — kein Eintrag" ist eine wertvolle Information: Sie müssen diese Suche nie wiederholen.</p>
-<p>Das Protokoll ist unter <strong>☑ Aufgaben → Protokoll</strong> erreichbar. Ein Eintrag dauert 30 Sekunden.</p>
-
-<h2>Backup-Strategie</h2>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li><strong>Nach jeder Sitzung speichern</strong> (<strong>☰ → 💾 Speichern</strong>) — der Änderungsindikator zeigt ungespeicherte Daten</li>
-  <li><strong>Wöchentlich</strong>: Datei mit Datum im Namen sichern (z. B. <code>MeineDaten_2026-05-18.ged</code>)</li>
-  <li><strong>Zwei Orte</strong>: lokal + Cloud (OneDrive, iCloud) — nie nur einen Speicherort</li>
-  <li>Die App bietet unter <strong>☰ → Backup erstellen</strong> eine Datumskopie an</li>
-</ul>
-
-<h2>Lebende Personen schützen</h2>
-<p>Beim Weitergeben Ihrer GEDCOM-Datei an Dritte: Nutzen Sie den Export mit Lebende-Anonymisierung (in Vorbereitung). Bis dahin: Prüfen Sie vor dem Weitergeben, welche Personen nach 1920 geboren wurden und noch kein Sterbedatum haben — diese sollten nicht mit vollen Daten geteilt werden.</p>
-
-
-<!-- ====================================================== -->
-<!-- KAPITEL 20: DUPLIKATE -->
-<!-- ====================================================== -->
-<h1 class="chapter" id="kap-dedup">20. Duplikate finden und zusammenführen</h1>
-
-<p>Wenn Sie Daten aus verschiedenen Quellen zusammengeführt oder eine Datei über Jahre aufgebaut haben, entstehen leicht doppelte Einträge für dieselbe Person. Die <strong>Duplikat-Erkennung</strong> findet solche Paare automatisch und bietet einen Merge-Assistenten an.</p>
-
-<p>Sie öffnen die Funktion über <span class="button-label">☰ → Duplikate suchen</span>.</p>
-
-<h2>Scan starten</h2>
-
-<p>Mit dem Regler <strong>Schwellenwert</strong> (Standard: 65) bestimmen Sie, ab welchem Ähnlichkeits-Score ein Paar als Duplikat gilt. Ein höherer Wert liefert weniger, aber treffsichere Paare; ein niedrigerer Wert zeigt auch unsichere Kandidaten.</p>
-
-<p>Tippen Sie auf <span class="button-label">Scan starten</span>. Die App vergleicht alle Personen nach Name, Geschlecht, Geburts- und Sterbedaten, Geburtsort sowie Eltern- und Partnernamen und listet alle verdächtigen Paare mit ihrem Score auf.</p>
-
-<h2>Liste durchsuchen</h2>
-
-<p>Bei großen Dateien kann die Liste lang werden. Nutzen Sie das <strong>Suchfeld</strong> oben in der Liste, um direkt nach einem Namen zu filtern — die Statuszeile zeigt dann <em>N von M Paaren</em>.</p>
-
-<h2>Merge-Modal: Datensätze zusammenführen</h2>
-
-<p>Tippen Sie auf ein Paar, um das Merge-Modal zu öffnen. Es zeigt beide Personen nebeneinander (A und B) mit allen relevanten Feldern.</p>
-
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li><strong>Feldauswahl</strong>: Klicken Sie auf eine Zelle, um für dieses Feld die Seite A oder B zu bevorzugen. Die gewählte Zelle wird hervorgehoben.</li>
-  <li><strong>Seiten tauschen</strong>: Der Button <span class="button-label">⇄ Seiten tauschen</span> vertauscht Gewinner und Verlierer.</li>
-  <li><strong>Zusammenführen</strong>: Der Gewinner-Datensatz erhält alle Felder, Ereignisse, Quellen, Medien und Familienbindungen beider Personen. Der Verlierer wird gelöscht. Die Aktion kann über <em>Bearbeiten → Rückgängig</em> zurückgenommen werden.</li>
-  <li><strong>Forschungseintrag</strong>: Statt zu mergen können Sie einen <span class="button-label">📋 Forschungseintrag</span> anlegen — bei beiden Personen wird ein offener Protokolleintrag erstellt, um die Frage später zu klären.</li>
-  <li><strong>Ignorieren</strong>: Wenn zwei Personen eindeutig verschieden sind, tippen Sie auf <span class="button-label">Ignorieren</span>. Das Paar wird dauerhaft aus der Liste entfernt (in localStorage gespeichert).</li>
-</ul>
-
-<div class="tip">
-Tipp: Bei historischen Familienforschern taucht derselbe Name oft in mehreren Generationen auf. Prüfen Sie immer Geburtsjahr und Elternnamen, bevor Sie zusammenführen.
-</div>
-
-
-<!-- ====================================================== -->
-<!-- KAPITEL 21: DATEI-VERGLEICH -->
-<!-- ====================================================== -->
-<h1 class="chapter" id="kap-cmp">21. Dateien vergleichen und zusammenführen</h1>
-
-<p>Wenn Sie mit mehreren Dateien arbeiten — zum Beispiel eine ältere Version Ihrer GEDCOM-Datei und eine neuere aus Gramps — können Sie beide Dateien direkt in der App <strong>vergleichen</strong> und gezielt Ergänzungen übernehmen.</p>
-
-<p>Sie öffnen den Assistenten über <span class="button-label">☰ → Datei vergleichen…</span>. Wählen Sie dann die zweite Datei (GEDCOM oder Gramps) aus.</p>
-
-<h2>Wie der Abgleich funktioniert</h2>
-
-<p>Die App vergleicht jede Person der Import-Datei mit Ihrem aktuellen Bestand. Jede Person erhält einen Status:</p>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li><strong>Übereinstimmung</strong> (Score ≥ 75): Eine passende Person wurde gefunden — grüner Eintrag.</li>
-  <li><strong>Unsicher</strong> (Score 40–74): Eine mögliche Entsprechung, muss manuell bestätigt werden.</li>
-  <li><strong>Neu</strong> (Score &lt; 40): Die Person existiert noch nicht in Ihrer Datei.</li>
-</ul>
-
-<h2>Unterschiede ansehen</h2>
-
-<p>Tippen Sie in der linken Liste auf eine Person. Im rechten Panel erscheinen:</p>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li><strong>Ergänzungen</strong> (blau): Felder, die in der Import-Datei vorhanden sind, in Ihrer Datei aber fehlen.</li>
-  <li><strong>Konflikte</strong> (orange): Felder, die in beiden Dateien vorhanden sind, aber unterschiedliche Werte haben.</li>
-  <li><strong>Identisch</strong>: Felder, die in beiden Dateien übereinstimmen (können ausgeblendet werden).</li>
-</ul>
-
-<h2>Entscheidungen treffen</h2>
-
-<p>Für jede Ergänzung und jeden Konflikt entscheiden Sie individuell:</p>
-<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li><span class="button-label">✓</span> <strong>Übernehmen</strong>: Der Wert aus der Import-Datei wird in Ihren Bestand übertragen.</li>
-  <li><span class="button-label">📋</span> <strong>Forschungseintrag</strong>: Ein offener Protokolleintrag wird angelegt — der Wert wird nicht direkt übernommen, aber zur späteren Prüfung notiert.</li>
-  <li><span class="button-label">✗</span> <strong>Ignorieren</strong>: Der Wert wird nicht übernommen.</li>
-</ul>
-
-<p>Bei Konflikten gibt es zusätzlich die Option <strong>A+B</strong>: Beide Werte werden behalten — der Import-Wert erscheint als Notiz.</p>
-
-<h2>Neue Personen importieren</h2>
-
-<p>Für Personen mit Status <em>Neu</em> erscheint die Schaltfläche <span class="button-label">Person importieren</span>. Die Person wird mit allen ihren Ereignissen, Quellen und Medien übernommen. <strong>Familienbindungen</strong> (Eltern, Partner, Kinder) werden automatisch rekonstruiert, sofern die entsprechenden Personen bereits in Ihrem Bestand vorhanden sind oder in derselben Session importiert wurden.</p>
-
-<h2>≠ Andere Person</h2>
-
-<p>Auch bei einem hohen Score können zwei Personen verschieden sein — etwa gleichnamige Geschwister. Tippen Sie auf <span class="button-label">≠ Andere Person</span> im Diff-Header, um die Verknüpfung aufzuheben. Die Import-Person wird dann als <em>Neu</em> behandelt und kann separat importiert werden.</p>
-
-<h2>Änderungen anwenden</h2>
-
-<p>Am unteren Rand des Assistenten wählen Sie, ob alle Entscheidungen oder nur die aktuell angezeigte Person übernommen werden sollen. Tippen Sie auf <span class="button-label">Übernehmen</span>. Die App legt automatisch eine Import-Quelle an, die bei allen übernommenen Daten als Quellenbeleg eingetragen wird.</p>
-
-<div class="tip">
-Tipp: Der Assistent eignet sich besonders gut, um Daten aus Gramps (Desktop) mit dem iOS-Bestand abzugleichen — ohne eine der beiden Dateien manuell zu durchsuchen.
-</div>
-
-
-<!-- ====================================================== -->
-<!-- KAPITEL 22: DRUCKAUSGABEN -->
-<!-- ====================================================== -->
-<h1 class="chapter" id="kap-print">22. Druckausgaben</h1>
-
-<p>Stammbaum PWA bietet drei strukturierte Ausgaben, die Sie alle über <span class="button-label">☰ → Ausgaben</span> erreichen. Die Dokumente werden als HTML-Dateien heruntergeladen und im Browser gedruckt.</p>
-
-<h2>Familienbuch</h2>
-
-<p>Das <strong>Familienbuch</strong> ist die umfangreichste Ausgabe: Es erzeugt ein mehrseitiges Dokument für die gewählte Person mit Lebenslauf, Ahnen- und Nachkommentabellen, Quellen sowie einem Namensindex. Öffnen Sie die Ausgabe über <span class="button-label">☰ → Ausgaben → Familienbuch erstellen</span>. Im Einstellungsdialog können Sie Titel, Untertitel, die Anzahl der Ahnengenerationen und den Umfang der Inhalte festlegen.</p>
-
-<div class="tip">
-Tipp: Das Familienbuch eignet sich besonders gut als Geburtstagsgeschenk oder zur Weitergabe an Familienmitglieder ohne Stammbaum-Software — es ist eine vollständig eigenständige HTML-Datei.
-</div>
-
-<h2>Ahnenliste (Kekule-Tabelle)</h2>
-
-<p>Die <strong>Ahnenliste</strong> listet alle direkten Vorfahren der gewählten Person in der klassischen Kekule-Nummerierung auf: Die Person selbst trägt die Nummer 1, Vater = 2, Mutter = 3, Großvater väterlicherseits = 4 usw. (ungerade Nummern = Väter, gerade = Mütter).</p>
-
-<p>Die Tabelle zeigt für jede Person: Kekule-Nummer, Name, Geburts- und Sterbedatum mit Ort. Tippen Sie auf <span class="button-label">↓ Ahnenliste</span>, um die Datei herunterzuladen und im Browser zu drucken.</p>
-
-<h2>Familienbogen</h2>
-
-<p>Der <strong>Familienbogen</strong> zeigt die gewählte Person mit Eltern, Geschwistern und eigenen Kindern in einer übersichtlichen Tabelle — ideal für Archiv-Besuche oder zur Weitergabe an Verwandte. Tippen Sie auf <span class="button-label">↓ Familienbogen</span>.</p>
-
-<div class="tip">
-Tipp: Öffnen Sie die heruntergeladene HTML-Datei im Browser und drucken Sie mit <strong>⌘P / Strg+P</strong>. Beide Ausgaben sind für A4-Druck optimiert.
-</div>
-
-
-<!-- ====================================================== -->
-<!-- KAPITEL 23: GLOSSAR (ehemals 20) -->
+<!-- KAPITEL 23: GLOSSAR -->
 <!-- ====================================================== -->
 <h1 class="chapter" id="kap20">23. Glossar</h1>
 
