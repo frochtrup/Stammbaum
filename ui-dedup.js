@@ -221,12 +221,12 @@ function _renderDedupList() {
 
   // Suchfilter — Originalindex für data-pair beibehalten
   const q = _dedupSearchQuery;
+  const _matchPerson = p => {
+    const haystack = [p.name, p.given, p.surname, p.id].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(q);
+  };
   const toRender = _dedupPairs.reduce((acc, pair, i) => {
-    if (!q ||
-        (pair.pA.name || pair.pA.id).toLowerCase().includes(q) ||
-        (pair.pB.name || pair.pB.id).toLowerCase().includes(q) ||
-        pair.pA.id.toLowerCase().includes(q) ||
-        pair.pB.id.toLowerCase().includes(q)) {
+    if (!q || _matchPerson(pair.pA) || _matchPerson(pair.pB)) {
       acc.push({ pair, origIdx: i });
     }
     return acc;

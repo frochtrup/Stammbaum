@@ -1397,6 +1397,7 @@ document.addEventListener('input', e => {
   else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
   else if (action === 'mdFilterLinkPanel') _mdFilterLinkPanel(el.value);
   else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
+  else if (action === 'dedupSearch')     dedupSearchChange(el.value);
 });
 
 document.addEventListener('blur', e => {
