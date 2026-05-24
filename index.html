@@ -410,6 +410,10 @@
         <label class="form-label" style="flex:none;width:90px">Seite
           <input class="form-input" id="qa-page" type="text" placeholder="z.B. 12">
         </label>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding-bottom:2px">
+          <button type="button" class="btn btn-dim" id="qa-src-copy-btn" data-action="qaCopySrc" title="Quelle in Zwischenablage kopieren" style="padding:4px 8px;font-size:12px">📋</button>
+          <button type="button" class="btn btn-dim" id="qa-src-paste-btn" data-action="qaPasteSrc" title="Quelle aus Zwischenablage einfügen" style="padding:4px 8px;font-size:12px" hidden>📌</button>
+        </div>
       </div>
       <p id="qa-hint" class="form-hint" hidden></p>
     </div>

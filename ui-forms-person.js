@@ -466,7 +466,35 @@ initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd',   null);
 // ─── QUICK-ADD: Schnellerfassung neue Person ────────────────────────────────
 let _qaSessionIds = [];
 let _qaSrcId      = null;
+let _qaSrcClip    = null; // { srcId, label, page } — session clipboard
 const _qaSelectedEvs = new Set();
+
+function _qaUpdateClipBtns() {
+  const copyBtn  = document.getElementById('qa-src-copy-btn');
+  const pasteBtn = document.getElementById('qa-src-paste-btn');
+  if (!copyBtn || !pasteBtn) return;
+  copyBtn.hidden  = !_qaSrcId;
+  pasteBtn.hidden = !_qaSrcClip;
+  if (_qaSrcClip) pasteBtn.title = `Einfügen: ${_qaSrcClip.label}${_qaSrcClip.page ? ' S.' + _qaSrcClip.page : ''}`;
+}
+
+function qaCopySrc() {
+  if (!_qaSrcId) return;
+  const src = AppState.db.sources?.[_qaSrcId];
+  const label = src ? (src.abbr || src.title || _qaSrcId) : _qaSrcId;
+  const page  = document.getElementById('qa-page')?.value.trim() || '';
+  _qaSrcClip = { srcId: _qaSrcId, label, page };
+  _qaUpdateClipBtns();
+  showToast(`Quelle „${label}" kopiert`, 'success');
+}
+
+function qaPasteSrc() {
+  if (!_qaSrcClip) return;
+  _qaSrcId = _qaSrcClip.srcId;
+  document.getElementById('qa-src-input').value = _qaSrcClip.label;
+  document.getElementById('qa-page').value       = _qaSrcClip.page;
+  _qaUpdateClipBtns();
+}
 
 function qaToggleEv(evType, btn) {
   if (_qaSelectedEvs.has(evType)) {
@@ -498,6 +526,7 @@ function showQuickAdd() {
   document.getElementById('qa-page').value = prevPage;
   document.getElementById('qa-hint').hidden = true;
   document.getElementById('qa-done-btn').hidden = !_qaSessionIds.length;
+  _qaUpdateClipBtns();
   openModal('modalQuickAdd');
   document.getElementById('qa-given').focus();
 }

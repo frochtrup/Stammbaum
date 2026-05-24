@@ -384,7 +384,7 @@ function _buildSearchIndex() {
       p.chr.place,  p.buri.place,
       p.reli,       p.noteText,
       ...p.events.map(ev => [ev.value, ev.place, ev.date, ev.eventType].join(' ')),
-    ].filter(Boolean).join(' ').toLowerCase();
+    ].filter(Boolean).join(' ').toLowerCase().replace(/,/g, ' ');
     p._sdxSurname = germanSoundex(p.surname || '');
     p._sdxGiven   = germanSoundex(p.given   || '');
   }
@@ -392,7 +392,7 @@ function _buildSearchIndex() {
 }
 
 function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '', flags = {}) {
-  const lower      = q.toLowerCase().trim();
+  const lower      = q.toLowerCase().trim().replace(/,/g, ' ');
   const lowerPlace = birthPlace.toLowerCase().trim();
   const all = Object.values(AppState.db.individuals);
 

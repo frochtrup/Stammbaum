@@ -740,6 +740,7 @@ initAutocomplete('qa-src-input', 'qa-src-dd', {
   onSelect: (s, input) => {
     input.value = s.abbr || s.title || s.id;
     _qaSrcId = s.id;
+    if (typeof _qaUpdateClipBtns === 'function') _qaUpdateClipBtns();
   },
 });
 
