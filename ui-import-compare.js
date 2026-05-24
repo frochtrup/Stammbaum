@@ -384,7 +384,7 @@ function _cmpRenderAdditionsSection(diff, cmpId) {
     <details class="cmp-section-details" open>
       <summary class="cmp-section-title cmp-section-add">
         Ergänzungen <span class="cmp-count">(${diff.additions.length})</span>
-        <span class="cmp-bulk-actions" onclick="event.stopPropagation()">
+        <span class="cmp-bulk-actions">
           <button class="cmp-bulk-btn" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="additions" data-val="accept" title="Alle übernehmen">alle ✓</button>
           <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="additions" data-val="rlog" title="Alle als Forschungseinträge">alle 📋</button>
         </span>
@@ -421,7 +421,7 @@ function _cmpRenderConflictsSection(diff, cmpId) {
     <details class="cmp-section-details" open>
       <summary class="cmp-section-title cmp-section-conflict">
         Konflikte <span class="cmp-count">(${diff.conflicts.length})</span>
-        <span class="cmp-bulk-actions" onclick="event.stopPropagation()">
+        <span class="cmp-bulk-actions">
           <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="conflicts" data-val="rlog" title="Alle als Forschungseinträge">alle 📋</button>
         </span>
       </summary>

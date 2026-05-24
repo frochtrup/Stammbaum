@@ -140,7 +140,7 @@ function renderPersonList(persons) {
         <div class="empty-state-icon">◇</div>
         <div class="empty-state-title">Noch keine Personen</div>
         <div class="empty-state-msg">Importieren Sie eine GEDCOM- oder GRAMPS-Datei, oder legen Sie die erste Person manuell an.</div>
-        <button class="empty-state-btn" onclick="showPersonForm(null)">Erste Person anlegen</button>
+        <button class="empty-state-btn" data-action="showPersonForm">Erste Person anlegen</button>
       </div>`;
     } else {
       listEl.innerHTML = '<div class="empty">Keine Treffer zur Suche</div>';

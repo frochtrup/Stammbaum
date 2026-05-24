@@ -1334,6 +1334,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.addEventListener('click', e => {
+  // Prevent <details> toggle when clicking bulk-action buttons inside <summary>
+  if (e.target.closest('.cmp-bulk-actions')) e.preventDefault();
   const el = e.target.closest('[data-action]');
   if (!el) return;
   const action = el.dataset.action;

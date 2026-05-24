@@ -750,7 +750,8 @@ ${lifespan}
       }
 
       const onClick = id ? ` onclick="if(typeof showDetail==='function')showDetail('${_esc(id)}')"` : '';
-      return `<g style="cursor:${id?'pointer':'default'}"${onClick}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${FILL}" stroke="${stroke}" stroke-width="${sw}"/>${txt.join('')}</g>`;
+      const dataNav = id ? ` data-action="showDetail" data-pid="${_esc(id)}"` : '';
+      return `<g style="cursor:${id?'pointer':'default'}"${onClick}${dataNav}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${FILL}" stroke="${stroke}" stroke-width="${sw}"/>${txt.join('')}</g>`;
     }
 
     // ── Elemente aufbauen (lines z=0, cards z=1) ───────────────────────────
