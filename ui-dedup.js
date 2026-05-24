@@ -97,10 +97,16 @@ function _dedupMergePersons(winnerId, loserId) {
     if (f.wife === loserId) { f.wife = winnerId; changed = true; }
     const ci = (f.children||[]).indexOf(loserId);
     if (ci >= 0) {
-      f.children[ci] = winnerId;
-      if ((f.childRelations||{})[loserId]) {
-        f.childRelations[winnerId] = f.childRelations[loserId];
-        delete f.childRelations[loserId];
+      if (f.children.includes(winnerId)) {
+        // Winner already in this family → just remove the loser entry
+        f.children.splice(ci, 1);
+        if ((f.childRelations||{})[loserId]) delete f.childRelations[loserId];
+      } else {
+        f.children[ci] = winnerId;
+        if ((f.childRelations||{})[loserId]) {
+          f.childRelations[winnerId] = f.childRelations[loserId];
+          delete f.childRelations[loserId];
+        }
       }
       changed = true;
     }
@@ -112,7 +118,10 @@ function _dedupMergePersons(winnerId, loserId) {
     if (!(A.fams||[]).includes(famId)) { A.fams = A.fams || []; A.fams.push(famId); }
   }
   for (const fc of (B.famc||[])) {
-    if (!(A.famc||[]).some(x => x.famId === fc.famId)) { A.famc = A.famc || []; A.famc.push(fc); }
+    const fcId = typeof fc === 'string' ? fc : fc.famId;
+    if (!(A.famc||[]).some(x => (typeof x === 'string' ? x : x.famId) === fcId)) {
+      A.famc = A.famc || []; A.famc.push(fc);
+    }
   }
 
   // Globalen State umbiegen
@@ -513,3 +522,77 @@ document.addEventListener('click', e => {
   row.querySelectorAll('[data-sel-side]').forEach(c => c.classList.remove('selected'));
   td.classList.add('selected');
 });
+
+// ── Datenbank-Reparatur ───────────────
+
+function repairDatabase() {
+  const db = AppState.db;
+  if (!db) { showToast('Keine Datei geladen.', 'warn'); return; }
+
+  const famcIdOf = c => typeof c === 'string' ? c : c.famId;
+  let fixes = [];
+
+  // 1) Doppelte Kinder in Familien
+  for (const f of Object.values(db.families)) {
+    const before = f.children.length;
+    const seen = new Set();
+    f.children = f.children.filter(cid => {
+      if (seen.has(cid)) return false;
+      seen.add(cid); return true;
+    });
+    if (f.children.length < before)
+      fixes.push(`Familie ${f.id}: ${before - f.children.length} doppelte(s) Kind entfernt`);
+  }
+
+  // 2) Doppelte famc-Einträge bei Personen
+  for (const p of Object.values(db.individuals)) {
+    if (!p.famc?.length) continue;
+    const before = p.famc.length;
+    const seen = new Set();
+    p.famc = p.famc.filter(fc => {
+      const id = famcIdOf(fc);
+      if (seen.has(id)) return false;
+      seen.add(id); return true;
+    });
+    if (p.famc.length < before)
+      fixes.push(`Person ${p.id} (${p.name || '?'}): ${before - p.famc.length} doppelte(r) famc-Eintrag entfernt`);
+  }
+
+  // 3) Doppelte fams-Einträge bei Personen
+  for (const p of Object.values(db.individuals)) {
+    if (!p.fams?.length) continue;
+    const before = p.fams.length;
+    p.fams = [...new Set(p.fams)];
+    if (p.fams.length < before)
+      fixes.push(`Person ${p.id} (${p.name || '?'}): ${before - p.fams.length} doppelte(r) fams-Eintrag entfernt`);
+  }
+
+  // 4) famc-Referenzen auf nicht-existente Familien
+  for (const p of Object.values(db.individuals)) {
+    if (!p.famc?.length) continue;
+    const before = p.famc.length;
+    p.famc = p.famc.filter(fc => !!db.families[famcIdOf(fc)]);
+    if (p.famc.length < before)
+      fixes.push(`Person ${p.id} (${p.name || '?'}): ${before - p.famc.length} verwaiste(r) famc-Eintrag entfernt`);
+  }
+
+  // 5) fams-Referenzen auf nicht-existente Familien
+  for (const p of Object.values(db.individuals)) {
+    if (!p.fams?.length) continue;
+    const before = p.fams.length;
+    p.fams = p.fams.filter(fid => !!db.families[fid]);
+    if (p.fams.length < before)
+      fixes.push(`Person ${p.id} (${p.name || '?'}): ${before - p.fams.length} verwaiste(r) fams-Eintrag entfernt`);
+  }
+
+  if (fixes.length === 0) {
+    showToast('Datenbank ist konsistent — keine Fehler gefunden.', 'success');
+    return;
+  }
+
+  markChanged();
+  const msg = fixes.length + ' Problem' + (fixes.length === 1 ? '' : 'e') + ' behoben:\n' + fixes.join('\n');
+  console.info('[repairDatabase]', msg);
+  showToast(fixes.length + ' Datenfehler repariert. Details in der Konsole.', 'success');
+  alert('Datenbank repariert:\n\n' + fixes.join('\n'));
+}
