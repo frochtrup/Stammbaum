@@ -115,6 +115,38 @@ async function odImportFromDefaultFolder() {
   await odImportPhotosFromFolder(folder.id || folder.folderId, folder.name || folder.folderName);
 }
 
+// Zum Eltern-Ordner eines bekannten Ordners navigieren (Ordner-Auswahl-Dialoge)
+// → parallele Ordner sofort sichtbar, Navigation mit ← Zurück
+async function _odNavigateToParentOf(folderId) {
+  const token = await _odGetToken().catch(() => null);
+  if (!token) { _odFolderStack = []; await _odShowFolder('root', 'OneDrive'); return; }
+  try {
+    const res = await fetch(
+      `${OD_GRAPH}/me/drive/items/${folderId}?$select=id,name,parentReference`,
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    if (!res.ok) throw new Error('Ordner nicht gefunden');
+    const data = await res.json();
+    const parentId   = data.parentReference?.id;
+    const parentPath = data.parentReference?.path || '';
+    const parentIsRoot = !/\/drive\/root:.+/.test(parentPath);
+    if (parentId && !parentIsRoot) {
+      const parentName = decodeURIComponent(
+        parentPath.replace(/.*\/drive\/root:\//, '').split('/').pop() || 'OneDrive'
+      );
+      _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
+      await _odShowFolder(parentId, parentName);
+    } else {
+      _odFolderStack = [];
+      await _odShowFolder('root', 'OneDrive');
+    }
+  } catch(e) {
+    console.warn('[OD] Navigate to parent:', e);
+    _odFolderStack = [];
+    await _odShowFolder('root', 'OneDrive');
+  }
+}
+
 async function odImportPhotos() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
   _odFolderStack = [];
@@ -122,7 +154,7 @@ async function odImportPhotos() {
   const folder = await idbGet('od_photo_folder').catch(() => null)
               || await idbGet('od_default_folder').catch(() => null);
   const folderId = folder?.id || folder?.folderId;
-  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
+  if (folderId) await _odNavigateToParentOf(folderId);
   else await _odShowFolder('root', 'OneDrive');
 }
 
@@ -355,7 +387,7 @@ async function odSetupDocFolder() {
   const folder = await idbGet('od_docs_folder').catch(() => null)
               || await idbGet('od_doc_folder').catch(() => null);
   const folderId = folder?.id || folder?.folderId;
-  if (folderId) await _odShowFolder(folderId, folder.name || folder.folderName);
+  if (folderId) await _odNavigateToParentOf(folderId);
   else await _odShowFolder('root', 'OneDrive');
 }
 

@@ -298,34 +298,20 @@ async function odBrowseBasePath() {
   _odPickMode = false; _odDocScanMode = false; _odEditPickMode = false;
   _odFolderStack = [];
   closeModal('modalSettings');
-  await _odGetBasePath(); // Basis-Pfad in _odCurrentBasePath laden
+  await _odGetBasePath();
   const token = await _odGetToken().catch(() => null);
 
   if (token && _odCurrentBasePath) {
     try {
-      // Aktuellen Ordner holen → parentReference gibt uns die Eltern-ID
-      const parts = _odCurrentBasePath.split('/').filter(Boolean);
-      const encoded = parts.map(encodeURIComponent).join('/');
+      // Pfad → Ordner-ID auflösen, dann über gemeinsamen Helper zum Parent navigieren
+      const encoded = _odCurrentBasePath.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       const res = await fetch(
-        `${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name,parentReference`,
+        `${OD_GRAPH}/me/drive/root:/${encoded}?$select=id`,
         { headers: { Authorization: 'Bearer ' + token } }
       );
       if (res.ok) {
-        const cur = await res.json();
-        const parentId   = cur.parentReference?.id;
-        const parentPath = cur.parentReference?.path || '';
-        // Ist parent der Root-Ordner? → /drive/root: ohne Unterpfad
-        const parentIsRoot = !/\/drive\/root:.+/.test(parentPath);
-        if (parentId && !parentIsRoot) {
-          const parentName = decodeURIComponent(
-            parentPath.replace(/.*\/drive\/root:\//, '').split('/').pop() || 'OneDrive'
-          );
-          _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
-          await _odShowFolder(parentId, parentName);
-        } else {
-          await _odShowFolder('root', 'OneDrive');
-        }
-        return;
+        const { id } = await res.json();
+        if (id) { await _odNavigateToParentOf(id); return; }
       }
     } catch(e) { console.warn('[OD] Browse base path:', e); }
   }
