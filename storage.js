@@ -107,9 +107,9 @@ async function loadDemo() {
     applyAllExtraPlaceCoords();
     AppState._originalGedText = text;
     if (typeof clearValidationResults === 'function') clearValidationResults();
+    await _loadDemoPhotos();  // Foto in IDB bevor Detail gerendert wird
     showStartView();
     showToast('✓ Demo geladen');
-    _loadDemoPhotos();
   } catch(e) {
     showToast('Demo konnte nicht geladen werden: ' + e.message);
   } finally {
@@ -119,7 +119,7 @@ async function loadDemo() {
 
 function _loadDemoPhotos() {
   // Demo-Foto Anna.png laden und unter dem GEDCOM-Pfad im IDB ablegen
-  fetch('./Anna.png')
+  return fetch('./Anna.png')
     .then(r => r.ok ? r.blob() : Promise.reject())
     .then(blob => new Promise((res, rej) => {
       const rd = new FileReader();
