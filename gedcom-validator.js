@@ -15,6 +15,7 @@ const VAL_CONFIG_DEFAULTS = {
     maxFatherAge:   90,
     minFatherAge:   15,
     minMarrAge:     14,
+    maxChildren:    15,
   }
 };
 
@@ -46,6 +47,10 @@ const VAL_RULES = [
   { key: 'MISSING_DEATHPLACE',       label: 'Sterbeort fehlt',                       severity: 'info',  threshold: null },
   { key: 'MISSING_MARRDATE',         label: 'Heiratsdatum fehlt',                    severity: 'info',  threshold: null },
   { key: 'NO_FAM_SOURCES',           label: 'Familie ohne Quellenangabe',            severity: 'info',  threshold: null },
+  // ── P4: Datenqualität ──
+  { key: 'PLACE_INCONSISTENCY',      label: 'Ortsname-Varianten erkannt',            severity: 'info',  threshold: null },
+  { key: 'MISSING_QUAY',             label: 'Quellen ohne QUAY-Bewertung',           severity: 'info',  threshold: null },
+  { key: 'MANY_CHILDREN',            label: 'Ungewöhnlich viele Kinder',             severity: 'warn',  threshold: 'maxChildren' },
 ];
 
 // Extrahiert eine 4-stellige Jahreszahl aus einem GEDCOM-Datumsstring.
@@ -55,6 +60,19 @@ function _valYear(dateStr) {
   const iso = gedDatePartToISO(date1 || dateStr);
   const y = parseInt((iso || '').split('-')[0]);
   return isNaN(y) ? null : y;
+}
+
+// Gibt true zurück wenn mind. eine Quellenangabe eine QUAY-Bewertung trägt
+function _hasAnyQuay(p) {
+  const ok = cits => cits?.some(c => c.quay !== undefined && c.quay !== '');
+  if (ok(p.nameSources)) return true;
+  for (const key of ['birth', 'chr', 'death', 'buri']) {
+    if (ok(p[key]?.citations)) return true;
+  }
+  for (const ev of (p.events || [])) {
+    if (ok(ev.citations)) return true;
+  }
+  return false;
 }
 
 // Gibt true zurück wenn die Person mind. eine Quellenangabe hat
@@ -84,6 +102,23 @@ function runValidation(db, config) {
   function push(personId, rule, severity, text, category, familyId = null) {
     if (disabled.has(rule)) return;
     results.push({ personId, familyId, rule, severity, text, category });
+  }
+
+  // ─── Orts-Varianten-Index (einmalig vor den Schleifen) ──────────────────────
+  const _placeNorm = s => s.toLowerCase().trim()
+    .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 's')
+    .replace(/ae(?=[a-z])/g, 'a').replace(/oe(?=[a-z])/g, 'o').replace(/ue(?=[a-z])/g, 'u')
+    .replace(/\s+/g, ' ');
+  const _placeVariants = new Map();
+  const _regPlace = s => {
+    const t = s?.trim(); if (!t) return;
+    const n = _placeNorm(t);
+    if (!_placeVariants.has(n)) _placeVariants.set(n, new Set());
+    _placeVariants.get(n).add(t);
+  };
+  for (const p of Object.values(db.individuals)) {
+    for (const key of ['birth', 'chr', 'death', 'buri']) _regPlace(p[key]?.place);
+    for (const ev of (p.events || [])) _regPlace(ev.place);
   }
 
   // ─── Personen-Regeln ────────────────────────────────────────────────────────
@@ -149,6 +184,31 @@ function runValidation(db, config) {
     // P11 — Keine Quellenangabe
     if (!_hasSources(p))
       push(pid, 'NO_SOURCES_AT_ALL', 'info', 'Keine Quellenangabe vorhanden', 'kirchenbuch');
+
+    // P12 — Ortsname-Varianten
+    {
+      const seen = new Set();
+      const allPlaces = [];
+      for (const key of ['birth', 'chr', 'death', 'buri'])
+        if (p[key]?.place) allPlaces.push(p[key].place.trim());
+      for (const ev of (p.events || []))
+        if (ev.place) allPlaces.push(ev.place.trim());
+      for (const place of allPlaces) {
+        if (seen.has(place)) continue; seen.add(place);
+        const variants = _placeVariants.get(_placeNorm(place));
+        if (variants?.size >= 2) {
+          const others = [...variants].filter(v => v !== place).slice(0, 2).join('", "');
+          push(pid, 'PLACE_INCONSISTENCY', 'info',
+            `Ortsname "${place}" hat ${variants.size} Schreibweisen (auch: "${others}")`, 'online');
+          break;
+        }
+      }
+    }
+
+    // P13 — Quellen ohne QUAY-Bewertung
+    if (_hasSources(p) && !_hasAnyQuay(p))
+      push(pid, 'MISSING_QUAY', 'info',
+        'Quellenangaben ohne Qualitätsbewertung (kein QUAY)', 'online');
   }
 
   // ─── Familien-Regeln ────────────────────────────────────────────────────────
@@ -216,6 +276,14 @@ function runValidation(db, config) {
       if (anchor)
         push(anchor, 'NO_FAM_SOURCES', 'info',
           'Familie ohne Quellenangabe', 'kirchenbuch', fid);
+    }
+
+    // F10 — Ungewöhnlich viele Kinder
+    if ((f.children?.length || 0) > thr.maxChildren) {
+      const anchor = f.husb || f.wife;
+      if (anchor)
+        push(anchor, 'MANY_CHILDREN', 'warn',
+          `Ungewöhnlich viele Kinder: ${f.children.length} (Grenze: ${thr.maxChildren})`, 'kirchenbuch', fid);
     }
 
     // F6 / F7 / F8 — Elternalter bei Kindsgeburt

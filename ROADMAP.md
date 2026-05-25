@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v700 · Cache: `stammbaum-v700`
+**sw-Version:** v701 · Cache: `stammbaum-v701`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -159,7 +159,7 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 | ~~VAL-EXTEND~~ | ~~Validierung ausgebaut (21 Regeln)~~ | v590 | - |
 | ~~TREE-HEAT~~ | ~~Vollständigkeits-Heatmap im Baum~~ | v598 | - |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional. Relevant sobald Stammbäume >5 Generationen in enge Regionen zurückgehen. Voraussetzung: BFS-Algorithmus aus REL-CALC nutzen. | M |
-| VAL-RULES-2 | **Validierung: inhaltliche Regeln ausbauen** | Aktuelle 21 Regeln prüfen nur strukturelle Probleme (Datum-Logik, fehlende Felder). Fehlende inhaltliche Regeln: Ortsname-Konsistenz (gleiche Person, 3 Schreibweisen), Quellenqualität (QUAY-Wert fehlt häufig), Alter-bei-Heirat unter 14, unwahrscheinliche Geschwisterzahl (>15). | M |
+| ~~VAL-RULES-2~~ | ~~Validierung: inhaltliche Regeln ausbauen~~ | v701 — 3 neue Regeln: PLACE_INCONSISTENCY (Ortsname-Varianten), MISSING_QUAY (Quellen ohne Qualitätsbewertung), MANY_CHILDREN (>15 Kinder, konfigurierbar) | - |
 | ~~ASSO-DISP~~ | ~~ASSO-Beziehungen anzeigen (Read-only)~~ | v698+ | - |
 
 ---
