@@ -144,6 +144,14 @@ async function saveValConfig() {
   showToast('Prüfregeln gespeichert', 'success');
 }
 
+function valcfgAll() {
+  document.querySelectorAll('.valcfg-rules-grid input[type=checkbox]').forEach(cb => { cb.checked = true; });
+}
+
+function valcfgNone() {
+  document.querySelectorAll('.valcfg-rules-grid input[type=checkbox]').forEach(cb => { cb.checked = false; });
+}
+
 async function resetValConfig() {
   await _saveValConfig({
     disabled:   new Set(),

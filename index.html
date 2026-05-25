@@ -433,7 +433,14 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="lbl-modalValConfig">Prüfregeln konfigurieren</div>
     <div class="sheet-body">
-      <div class="fs-075 fw-600 c-muted mb-8 text-upper">Regeln aktivieren</div>
+      <div class="valcfg-rules-header mb-8">
+        <span class="fs-075 fw-600 c-muted text-upper">Regeln aktivieren</span>
+        <span class="valcfg-toggle-links">
+          <button class="btn-link fs-085" data-action="valcfgAll">Alle</button>
+          <span class="c-muted"> / </span>
+          <button class="btn-link fs-085" data-action="valcfgNone">Keine</button>
+        </span>
+      </div>
       <div class="valcfg-rules-grid mb-16">
         <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_SURNAME"> Nachname fehlt</label>
         <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_SEX"> Geschlecht unbekannt</label>
@@ -457,6 +464,9 @@
         <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-FATHER_TOO_OLD"> Vater zu alt bei Geburt</label>
         <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-CHILD_BEFORE_PARENT"> Kind nicht jünger als Elternteil</label>
         <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-CHILD_AFTER_FATHER_DEATH"> Kind &gt;1 J. nach Tod des Vaters</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-PLACE_INCONSISTENCY"> Ortsname-Varianten erkannt</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_QUAY"> Quellen ohne QUAY-Bewertung</label>
+        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MANY_CHILDREN"> Ungewöhnlich viele Kinder</label>
       </div>
       <div class="fs-075 fw-600 c-muted mb-8 text-upper">Schwellenwerte</div>
       <div class="d-flex flex-col gap-8 mb-16">
@@ -479,6 +489,10 @@
         <div class="valcfg-thr-row">
           <label for="valcfg-thr-maxFatherAge">Max. Vateralter bei Geburt</label>
           <input type="number" id="valcfg-thr-maxFatherAge" min="40" max="120" class="valcfg-thr-inp">
+        </div>
+        <div class="valcfg-thr-row">
+          <label for="valcfg-thr-maxChildren">Max. Kinderzahl pro Familie</label>
+          <input type="number" id="valcfg-thr-maxChildren" min="5" max="30" class="valcfg-thr-inp">
         </div>
       </div>
       <div class="btn-row gap-8">
