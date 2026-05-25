@@ -9,6 +9,16 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-25 — T0-REFACT-3 Phase A: ui-views-tasks.js aufgeteilt (sw v696)
+
+- **sw v696** `refactor(tasks)`: T0-REFACT-3 Phase A — `ui-views-tasks.js` (1.143 Z.) in drei Dateien aufgeteilt:
+  - **`ui-views-tasks.js`** (642 Z.) — Aufgaben-CRUD, Badge, Personen/Familien-Detailabschnitt, globale Aufgabenliste, MD-Export, Click-Handler
+  - **`ui-views-rlog.js`** (353 Z., NEU) — Forschungsprotokoll (RLOG): `_rlogSectionHtml`, `_famRlogSectionHtml`, `_renderRlogView`, `exportRlogMd`, `showAddRlogForm`, `showAddFamRlogForm`, `showEditRlogForm`, `showEditFamRlogForm`, `_saveRlog`, `_deleteRlogEntry`, `_deleteFamRlogEntry`, `switchRlogFilter`, `_famDisplayName`
+  - **`ui-views-val.js`** (162 Z., NEU) — Validierungspanel + VAL-Config: `_renderValidationPanel`, `_handleRunValidation`, `_handlePromoteToTask`, `openValConfig`, `saveValConfig`, `resetValConfig`, Startup-Badge
+  - `index.html`: zwei neue `<script>`-Tags in korrekter Reihenfolge nach `ui-views-tasks.js`; `sw.js` PRECACHE um beide neuen Dateien erweitert
+
+---
+
 ### Session 2026-05-25 — T0-DEBUG + T0-STORAGE: localStorage → IDB-Migration (sw v694–v695)
 
 - **sw v694** `refactor(debug)`: T0-DEBUG — `debug-gramps.js` (591 Z., ~28 KB) aus statischem `<script src>` in `index.html` entfernt; `debug-activate.js` lädt die Datei jetzt dynamisch via `document.createElement('script')` nur wenn `?debug=1` oder `#debug` gesetzt ist; Browser parst `debug-gramps.js` damit nur noch im echten Debug-Betrieb; Datei verbleibt in sw.js PRECACHE für Offline-Verfügbarkeit

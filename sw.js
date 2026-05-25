@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v695';
+const CACHE_NAME = 'stammbaum-v696';
 const PRECACHE = [
   './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
   './fonts/fonts.css',
@@ -14,7 +14,7 @@ const PRECACHE = [
   './gedcom.js', './gedcom-parser.js', './gedcom-worker.js', './gedcom-writer.js', './gramps-parser.js', './gramps-writer.js',
   './storage-file.js', './storage.js',
   './ui-views.js', './ui-views-note.js', './ui-views-search.js',
-  './ui-views-tree.js', './ui-views-tasks.js', './ui-views-person.js', './ui-views-family.js',
+  './ui-views-tree.js', './ui-views-tasks.js', './ui-views-rlog.js', './ui-views-val.js', './ui-views-person.js', './ui-views-family.js',
   './ui-views-source.js', './ui-views-place.js', './ui-views-hof.js', './ui-views-map.js', './ui-views-stats.js', './ui-dedup.js', './ui-chart-export.js',
   './debug-activate.js', './debug-gramps.js',
   './ui-book.js', './ui-print.js', './story-epochs.js',
