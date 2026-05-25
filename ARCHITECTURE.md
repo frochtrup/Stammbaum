@@ -47,20 +47,20 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  onedrive-import.js   — Foto-Import, Ordner-Browser  │
 │  onedrive.js          — Media-URL, Upload, File-I/O  │
 │  gedcom-worker.js     — Web Worker (GEDCOM-Parse)    │
-│  sw.js                — Service Worker (Cache v691)  │
+│  sw.js                — Service Worker (Cache v715)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~50 JS-Dateien · ~25000 Zeilen
+**Größe gesamt:** ~45 JS-Dateien · ~26000 Zeilen
 
 ---
 
 ## Architektur-Entscheidungen (ADRs)
 
 ### ADR-001: Multi-File (HTML-Shell + JS-Module)
-**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `gramps-parser.js`, `gramps-writer.js`, `storage-file.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-place.js`, `ui-views-hof.js`, `ui-views-map.js`, `ui-views-stats.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-tree.js`, `ui-fanchart.js`, `ui-forms.js`, `ui-forms-person.js`, `ui-forms-family.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-views-tasks.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-stats.js`, `ui-dedup.js`, `debug-activate.js`, `ui-media.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`.
+**Entscheidung (ab v3.0):** `index.html` ist reine App-Shell (HTML + CSS). JavaScript in Modulen: `gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`, `gramps-parser.js`, `gramps-writer.js`, `storage-file.js`, `storage.js`, `ui-views.js`, `ui-views-person.js`, `ui-views-family.js`, `ui-views-source.js`, `ui-views-place.js`, `ui-views-hof.js`, `ui-views-map.js`, `ui-views-stats.js`, `ui-views-note.js`, `ui-views-search.js`, `ui-views-tree.js`, `ui-views-nav.js`, `ui-views-undo.js`, `ui-views-tasks.js`, `ui-views-rlog.js`, `ui-views-val.js`, `ui-event-delegation.js`, `ui-fanchart.js`, `ui-desc-tree.js`, `ui-timeline.js`, `ui-story.js`, `ui-story-person.js`, `ui-story-fam.js`, `ui-chart-export.js`, `ui-forms.js`, `ui-forms-person.js`, `ui-forms-family.js`, `ui-forms-event.js`, `ui-forms-repo.js`, `ui-dedup.js`, `ui-import-compare.js`, `compare-engine.js`, `ui-print.js`, `ui-book.js`, `ui-media.js`, `gedcom-validator.js`, `gedcom-worker.js`, `debug-activate.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`, `story-epochs.js`, `timeline-hist-events.js`.
 
 **Storage-Schichtung:** `storage-file.js` ist die I/O-Schicht (IDB-Helfer, File System Access API, Export/Import-Funktionen). `storage.js` ist die Persistenz-Schicht (Auto-Load, Backup, Demo) und baut auf `storage-file.js` auf.
 
@@ -562,6 +562,23 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 
 ---
 
+### ADR-017: Lebende-Anonymisierung beim GEDCOM-Export (sw v715)
+
+**Kontext:** DSGVO-Anforderung: beim Weitergeben von GEDCOM-Dateien sollen Daten noch lebender Personen nicht mit exportiert werden.
+
+**Entscheidung:** `_buildLivingSet(db)` in `gedcom-writer.js` klassifiziert Personen in 3 Phasen:
+1. **Datumbasiert**: Kein Sterbedatum + Geburtsjahr > (aktuellesJahr − 100) → lebend; Sterbedatum vorhanden → verstorben
+2. **BFS-Propagation**: Verwandte (Eltern, Kinder, Ehepartner) einer lebenden Person → ebenfalls lebend
+3. **Konservativ**: Alle verbleibenden Personen ohne Datumsinformation → lebend
+
+Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAMC`/`FAMS`-Links. Alle Ereignisse, Quellen, Medien, Notizen entfernt.
+
+**Roundtrip-Abweichung:** Bewusst akzeptiert — Export mit `AppState.privacyAnon=true` erzeugt eine datenschutzkonforme Kopie, kein idempotentes Roundtrip-Ergebnis. Originaldatei bleibt stets unberührt (Direct-Save-Pfad deaktiviert bei Anon-Export). Dateiname erhält `_anon`-Suffix.
+
+**Aktivierung:** `AppState.privacyAnon` (IDB: `privacy_anon`), Toggle in modalSettings → Datenschutz-Sektion.
+
+---
+
 ## Bekannte Einschränkungen
 
 | Problem | Ursache | Status |
@@ -570,4 +587,4 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 | localStorage-Limit | ~5 MB Limit, Datei ≈ 5 MB | Toast-Warnung wenn voll |
 | Cmd+Z = "Revert to Saved" | Kein granulares Undo — History-Stack fehlt | Backlog (v7) |
 | `_GRAMPS_ID` nicht strukturiert | Landet in `_passthrough[]` → GRAMPS-Re-Import verliert ID-Zuordnung | v7 Phase 1 |
-| `_ASSO` (Assoziationen) nur passthrough | Kein UI, kein TYPE-Handling | v7 Phase 2 |
+| ASSO-Beziehungen nicht editierbar | Paten/Zeugen werden angezeigt (ASSO-DISP v698); Anlegen/Bearbeiten noch nicht möglich (ASSO-EDIT in Roadmap) | P5-Backlog |

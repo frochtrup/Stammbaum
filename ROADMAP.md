@@ -39,13 +39,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | Sicherheit | 8/10 | Starke CSP, konsequentes `esc()`, aber keine strukturelle Escaping-Garantie |
 | Design / UX | 8.5/10 | Hochwertige Ästhetik, Mobile-First — Accessibility-Lücken |
 | Funktionsstand | 8/10 | Starke Kernfunktionen; DSGVO-Export ✓; Lücken: GEDCOM 7.0, editierbare ASSO |
-| Code-Qualität | 7/10 | Lesbar, kein Overengineering; kein Linter/Tests, einige zu große Dateien |
+| Code-Qualität | 7.5/10 | Lesbar, kein Overengineering; JSDoc-Typen + .editorconfig ✓; kein Test-Framework; einige Dateien >800 Z. |
 | Performance | 7.5/10 | Gute Optimierungen; 44 HTTP-Requests ohne Bundling |
 | GEDCOM-Konformität | 9/10 | Roundtrip-Integrität auf hohem Niveau — beste GEDCOM-Treue unter Web-Tools |
 | Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt |
 | PWA / Offline | 9/10 | Eines der besten Beispiele für ernsthaftes PWA-Design |
 | Datenschutz | 8/10 | Lokal-First ✓ · Lebende-Anonymisierung ✓ (v715) |
-| **∅ Gesamt** | **8.1/10** | |
+| **∅ Gesamt** | **8.2/10** | |
 
 ---
 
@@ -180,7 +180,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | Story-Modus | ✅ einzigartig | ⚠ Reports | ❌ | ❌ | ❌ |
 | Duplikat-Erkennung | ✅ | ✅ | ✅ | ✅ | ⚠ |
 | Datei-Merge | ✅ | ✅ | ⚠ | ✅ | ⚠ |
-| Validierungsregeln | ✅ 22 Regeln | ⚠ | ⚠ | ✅ | ⚠ |
+| Validierungsregeln | ✅ 25 Regeln | ⚠ | ⚠ | ✅ | ⚠ |
 | CSV-Export | ✅ | ✅ | ✅ | ✅ | ✅ |
 | DNA-Integration | ❌ | ❌ | ✅ | ❌ | ❌ |
 | Multi-User | ❌ | ❌ | ✅ | ❌ | ❌ |

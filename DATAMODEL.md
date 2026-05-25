@@ -314,6 +314,7 @@ AppState = {
   currentTab:      'persons',
   _fileHandle:     null,       // FileSystemFileHandle (Chrome Desktop)
   _canDirectSave:  false,
+  privacyAnon:     false,      // F5: Lebende beim GEDCOM-Export anonymisieren (IDB: 'privacy_anon')
 }
 
 UIState = {
@@ -340,6 +341,9 @@ UIState = {
 'stammbaum_filename'     — Dateiname
 'fileHandle'             — FileSystemFileHandle (Chrome)
 'proband_id'             — konfigurierter Proband
+'theme_pref'             — Dark/Light-Mode ('dark'|'light'|null)
+'privacy_anon'           — Lebende-Anonymisierung aktiv (boolean, F5/ADR-017)
+'dedup_ignored'          — Set ignorierter Duplikat-Paare ('id1|id2'-Strings)
 
 // Medien (pfad-basiert seit sw v105)
 'img:<relPath>'          — Foto-Cache (base64 Data-URL), relativer Pfad ab od_base_path

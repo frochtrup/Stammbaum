@@ -45,7 +45,9 @@ stammbaum/
 ├── ui-fanchart.js      ← Fan Chart (SVG, konzentrische Halbkreis-Segmente)
 ├── ui-timeline.js      ← Zeitleiste (Swim-Lane 5 Lanes + Dekaden-Modus, Mehrpersonen)
 ├── timeline-hist-events.js ← Historische Ereignisse (71 Einträge 1315–2024)
-├── ui-story.js         ← Story Mode (Fließtext, Karte, Galerie, HTML-Download)
+├── ui-story.js         ← Story Mode (Koordination, Helfer, Karte, Download)
+├── ui-story-person.js  ← Personen-Biografie (18 Event-Templates, Ahnentafel-SVG)
+├── ui-story-fam.js     ← Familien-Biografie (Heirat, Kinder, Geschwister)
 ├── story-epochs.js     ← Epochen-Tabelle für Story Mode (11 Einträge)
 ├── ui-chart-export.js  ← Diagramm-Export als PNG (Fächer, Sanduhr, Nachkommen)
 ├── gedcom-validator.js ← Validierungsengine: runValidation(db) → RAM-Befundbericht
@@ -70,7 +72,12 @@ stammbaum/
 ├── ui-views-map.js     ← Kartenansicht (Leaflet, Orte- und Personen-Modus, Animation)
 ├── ui-views-place.js   ← Orte-Ansicht: collectPlaces(), renderPlaceList(), showPlaceDetail()
 ├── ui-views-hof.js     ← Höfe-Ansicht: buildHofIndex(), renderHofList(), showHofDetail()
-├── ui-views-tasks.js   ← Forschungsaufgaben + Validierungspanel: IDB-Persistenz, Badge, Tab
+├── ui-views-tasks.js   ← Forschungsaufgaben: IDB-Persistenz, Badge, Tab, Click-Handler
+├── ui-views-rlog.js    ← Forschungsprotokoll (RLOG): Add/Edit/Delete, Filter, MD-Export
+├── ui-views-val.js     ← Validierungspanel + Val-Config-Modal
+├── ui-views-nav.js     ← History-Navigation: goBack/goForward, _navHistory, Verlaufs-Picker
+├── ui-views-undo.js    ← Undo/Redo: pushUndo, applyUndo, applyRedo
+├── ui-event-delegation.js ← _CLICK_MAP (~100 Einträge), document-Listener (click/change/input)
 ├── ui-views-stats.js   ← Statistik-Dashboard (Lebensspannen, Heiratsalter, Histogramme)
 ├── ui-views-search.js  ← Globale Suche (Personen + Familien + Quellen + Orte, gruppiert)
 ├── ui-views-note.js    ← Notiz-Ansicht
@@ -78,10 +85,10 @@ stammbaum/
 ├── leaflet.css         ← Leaflet CSS
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v691)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v715)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── test.html           ← Standalone GEDCOM Roundtrip-Tester (kein UI, Drag-Drop .ged)
-├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v685)
+├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v715)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
@@ -122,6 +129,8 @@ stammbaum/
 | iOS Speichern (lokal) | `navigator.share()` → Share Sheet mit Hauptdatei + Zeitstempel-Backup |
 | Demo-Modus | Menü → Demo-Daten öffnen |
 | **Offline** | Service Worker + `manifest.json` → App funktioniert ohne Internet-Verbindung |
+| **Offline-Indikator** | Roter Indikator in Topbar + Toast bei Online/Offline-Wechsel; Cache-Status-Check |
+| **DSGVO-Export** | Einstellungen → Datenschutz: lebende Personen beim GEDCOM-Export anonymisieren; `_anon`-Suffix; Original bleibt unberührt |
 | **Keyboard-Shortcuts** | `Cmd/Ctrl+S` = Speichern · `Cmd/Ctrl+Z` = Änderungen verwerfen · `Escape` = Modal schließen · `←` = Baum zurück |
 
 ### Sanduhr-Ansicht (Stammbaum)
@@ -154,7 +163,9 @@ stammbaum/
 ### Personen-Tab
 - Alphabetische Liste mit Buchstaben-Trenner, Geburts-/Sterbejahr und Ort
 - **Suche** über: Name, Titel, alle Ereignisse (Typ, Wert, Datum, Ort), Notizen, Religion
+- **Erweiterte Filter**: Fehlende Felder-Checkboxen (kein Sterbedatum, keine Quellen, keine Eltern) kombinierbar
 - **Geburtsjahr-Filter**: Von/Bis-Felder mit ✕-Clear-Button
+- **CSV-Export**: gefilterte Personenliste als `;`-getrennte CSV-Datei (BOM für Excel/Numbers)
 - **Foto**: Upload im Personen-Formular, Anzeige links neben Name in Detailansicht; Klick öffnet Lightbox
 - **Mehrere Fotos**: Medien-Abschnitt mit allen Fotos klickbar; „Als Hauptfoto setzen" in Lightbox
 - **Medien bearbeiten**: + Hinzufügen (Titel + Dateiname, optional aus OneDrive) · × Entfernen
@@ -168,6 +179,7 @@ stammbaum/
 - Liste: Elternpaar, Heiratsdatum, Kinderanzahl
 - Detail: Heirat (Datum, Ort, Geo-Link, Quellen), Mitglieder anklickbar
 - **Medien bearbeiten**: + Hinzufügen · × Entfernen
+- **CSV-Export**: gefilterte Familienliste als `;`-getrennte CSV-Datei
 - ⧖-Button öffnet Sanduhr zentriert auf den Ehemann
 
 ### Quellen-Tab
@@ -197,10 +209,11 @@ stammbaum/
 - Globale Aufgabenliste: Filter Alle / Offen / Erledigt; Klick auf Person/Familie → Detailansicht
 - Aufgaben in der Personen- und Familien-Detailansicht direkt hinzufügen/bearbeiten/abhaken
 - **Markdown-Export** (↓ MD): alle Aufgaben mit Kerndaten (Lebensdaten, Eltern, Ehen) als `.md`-Download
+- **Forschungsprotokoll** (RLOG): pro Person/Familie — Archiv, Quelle, Suchanfrage, Ergebnis-Badge (gefunden/nicht gefunden/ausstehend); globaler Protokoll-Tab mit Filter + MD-Export
 
 ### Datenprüfung
 - **„✓ Daten prüfen"**-Button direkt im Aufgaben-Tab (auch über ☰ Menü erreichbar)
-- Prüft alle Personen und Familien auf 11 Regeln (fehlende Quellen, unrealistische Altersangaben, fehlende Daten, Konsistenz)
+- Prüft alle Personen und Familien auf 25 Regeln (fehlende Quellen, unrealistische Altersangaben, Konsistenz, Ortsnamenvarianten …)
 - Befunde werden als reiner RAM-Bericht angezeigt (keine automatischen Aufgaben)
 - **„+"**-Button neben jedem Befund: Befund als Forschungsaufgabe übernehmen
 - Schweregrade: ✗ Fehler · ⚠ Warnungen · ℹ Hinweise
@@ -214,6 +227,8 @@ stammbaum/
 | Quelle | Titel, Kurzname, Autor, Datum, Verlag, Archiv (aus REPO-Liste), Signatur (CALN), Notiz |
 | Archiv | Name, Adresse, Telefon, Website, E-Mail |
 | Ort | Name umbenennen + Koordinaten (wirkt sich auf alle Personen und Familien aus) |
+
+**Beziehungsrechner**: Verwandtschaftsbeziehung zwischen zwei beliebigen Personen berechnen (BFS-Algorithmus, gemeinsamer Vorfahre, Generationsabstand). Aufruf über „🔗 zu …"-Button in der Personen-Detailansicht.
 
 **Beziehungen modellieren**: `+ Ehepartner`, `+ Kind`, `+ Elternteil` direkt in den Detailansichten — bestehende Person wählen oder neue erstellen → Familien-Formular öffnet vorausgefüllt.
 
@@ -272,7 +287,7 @@ stammbaum/
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
 **GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
-**Version 8.0** — Mai 2026 — `v8-dev` · sw v691
+**Version 8.0** — Mai 2026 — `v8-dev` · sw v715
 
 ---
 

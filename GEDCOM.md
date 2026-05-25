@@ -61,6 +61,8 @@
 | `_MREL` | 2 | `famc[].mrel` + `famc[].mrelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
 | `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
 | `ALIA` | 1 | `aliases[]` | Verweis auf identische/gleichnamige Person (@xref@); nur @-Referenzen geparst |
+| `ASSO` | 1 | `associations[].{xref,rela,note,sources,sourcePages,sourceQUAY}` | Assoziationsbeziehung (Pate, Zeuge, Informant …); read+write; Anzeige in Detailansicht (ASSO-DISP v698); Editieren noch nicht möglich (ASSO-EDIT in Roadmap) |
+| `RELA` | 2 | `associations[].rela` | Beziehungstyp unter ASSO (z. B. „Godparent", „Witness") |
 | `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum |
 
 ### FAM (Familie)
