@@ -717,6 +717,13 @@ function _parseREPOLine(cur, x, lv, tag, val) {
 // ─────────────────────────────────────
 //  MAIN PARSER
 // ─────────────────────────────────────
+/**
+ * Parst einen GEDCOM-Text und gibt die vollständige Datenbankstruktur zurück.
+ * @param {string}    text         - Roher GEDCOM-Text
+ * @param {Object[]}  [parseErrors] - Wird mit Fehler-Objekten befüllt (optional)
+ * @param {function}  [onProgress] - Callback(pct:number) für Web-Worker-Fortschritt
+ * @returns {AppDb}
+ */
 function parseGEDCOM(text, parseErrors, onProgress) {
   text = text.replace(/^﻿/, '');
   const lines = text.split(/\r?\n/);

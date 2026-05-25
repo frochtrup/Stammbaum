@@ -174,6 +174,11 @@ function _child(el, tag) {
 // ─────────────────────────────────────
 //  MAIN PARSER
 // ─────────────────────────────────────
+/**
+ * Parst eine .gramps-Datei (gzip + XML) und gibt die Datenbankstruktur zurück.
+ * @param {File} file
+ * @returns {Promise<AppDb>}
+ */
 async function parseGRAMPS(file) {
   // 1. Read and decompress .gramps file (gzip)
   const buf = await file.arrayBuffer();

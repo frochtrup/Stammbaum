@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v697 · Cache: `stammbaum-v697`
+**sw-Version:** v698 · Cache: `stammbaum-v698`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -125,8 +125,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | ~~T0-DEBUG~~ | ~~`debug-gramps.js` bedingt laden~~ | v694 | - |
 | **T0-STORAGE** | **localStorage / IDB-Strategie (Phase 3 offen)** | Abgeschlossen v695: `od_file_id`/`od_file_name` → IDB-Cache (`_odCurFileId`/`_odCurFileName`), `dedup_ignored` → IDB, `stammbaum_filename` GRAMPS-Schreibpfad → IDB. **Offen:** `stammbaum_extraplaces_*` + `stammbaum_hofobjects` (4 Calls in `ui-forms.js`) — brauchen async `loadExtraPlaces()`/`loadHofObjects()` + `await` in Ladepfad; Quota-Risiko gering; residuale `stammbaum_filename`-Lesezugriffe (5) via `AppState._currentFilename`; Q3/2026-Cleanup (GEDCOM-Migrations-Fallback). | S |
 | **T0-REFACT-3** | **Große Dateien aufteilen** | ~~Phase A (v696): `ui-views-tasks.js` → tasks + rlog + val~~ ~~Phase B (v697): `ui-views.js` (1.471 Z.) → `ui-views.js` (691 Z.) + `ui-views-nav.js` (249 Z.) + `ui-views-undo.js` (59 Z.) + `ui-event-delegation.js` (471 Z., letztes Script)~~ **Offen Phase C:** `ui-story.js` (1.104 Z.) — IIFE-Closure, komplex, defer. | L |
-| **T0-LINTER** | **ESLint einrichten** | Kein Linter → stilistische Inkonsistenzen (mixed `const`/`let`, variable Einrückung, fehlende Semikolons). ESLint mit Flat Config, nur Fehler-Rules (keine Style-Streitigkeiten), CI-fähig über `npx eslint` ohne Installation. Scope: globale Funktionen korrekt deklariert, keine `var`, keine unsicheren Patterns. | S |
-| **T0-TYPES** | **JSDoc-Typen für Kern-Datenstrukturen** | `db.persons{}`, `db.families{}`, `db.sources{}` haben keine formale Typdefinition. Fehler wie `f.children` statt `f.chil` (Import-Compare-Bug v682) entstehen durch fehlende Typ-Prüfung. Ziel: `@typedef` für Person, Family, Source, Event in `gedcom.js`; `@param`/`@returns` in allen Parser/Writer-Funktionen. Kein TypeScript-Build nötig — VS Code und IntelliJ nutzen JSDoc nativ. | M |
+| ~~T0-LINTER~~ | ~~ESLint einrichten~~ | Gestrichen: Code hat kein `var`, kein eval, konsequentes `esc()`. Multi-File-Globalnamespace macht `no-undef` wartungsintensiv. Ersetzt durch `.editorconfig` (v698): 2-Space, LF, UTF-8, trim-trailing-whitespace. | - |
+| ~~T0-TYPES~~ | ~~JSDoc-Typen für Kern-Datenstrukturen~~ | v698: `@typedef` für 9 Typen (`Citation`, `MediaRef`, `SpecialEvent`, `PersonEvent`, `Task`, `RlogEntry`, `Person`, `Family`, `Source`, `Repo`, `FamilyEvent`, `AppDb`) in `gedcom.js`; `@param`/`@returns` auf 8 Gettern/Settern + `parseGEDCOM`, `writeGEDCOM`, `parseGRAMPS`. | - |
 | ~~T0-DEBUG~~ | ~~`debug-gramps.js` bedingt laden~~ | v694 | - |
 | ~~REFACT-1~~ | ~~`parseGEDCOM()` in Sub-Parser aufgeteilt~~ | v627 | - |
 | ~~REFACT-2~~ | ~~Datum-Parsing zentralisiert~~ | bereits in `gedcom.js` | - |

@@ -556,6 +556,11 @@ function writeNOTERecord(lines, n) {
 // ─────────────────────────────────────
 //  GEDCOM WRITER  (v3 – aufgeteilt)
 // ─────────────────────────────────────
+/**
+ * Serialisiert AppState.db als GEDCOM 5.5.1-Text.
+ * @param {boolean} [updateHeadDate=false] - true = HEAD/DATE auf jetzt setzen
+ * @returns {string}
+ */
 function writeGEDCOM(updateHeadDate = false) {
   const lines = [];
   const d = new Date();

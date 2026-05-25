@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-25 — T0-LINTER + T0-TYPES: .editorconfig + JSDoc-Typen (sw v698)
+
+- **sw v698** `refactor(types)`: T0-TYPES + T0-LINTER-Ersatz:
+  - **`.editorconfig`** (NEU): 2-Space, LF, UTF-8, `trim_trailing_whitespace`, `insert_final_newline`; löst T0-LINTER ab (ESLint gestrichen — Multi-File-Globalnamespace macht `no-undef` wartungsintensiv, Code ist bereits clean)
+  - **JSDoc `@typedef`** in `gedcom.js` (12 Typen): `Citation`, `MediaRef`, `SpecialEvent`, `PersonEvent`, `Task`, `RlogEntry`, `Person` (31 Felder), `FamilyEvent`, `Family` (25 Felder), `Source`, `Repo`, `AppDb`; direkt vor den Getter-Funktionen eingefügt
+  - **`@param`/`@returns`** auf den 8 Gettern/Settern (`getPerson`/`getFamily`/`getSource`/`getRepo` → `T|null`; Setter mit `Partial<T>`)
+  - **`@param`/`@returns`** auf Entry-Points: `parseGEDCOM(text,errors,onProgress)→AppDb`, `writeGEDCOM(updateHeadDate)→string`, `parseGRAMPS(file)→Promise<AppDb>`
+  - VS Code und IntelliJ nutzen `@typedef` nativ: Autocomplete auf `p.`, `f.`, `s.` in allen Dateien; Tippfehler wie `f.chil` statt `f.children` werden sofort unterstrichen
+
+---
+
 ### Session 2026-05-25 — T0-REFACT-3 Phase B: ui-views.js aufgeteilt (sw v697)
 
 - **sw v697** `refactor(views)`: T0-REFACT-3 Phase B — `ui-views.js` (1.471 Z.) in vier Dateien aufgeteilt:

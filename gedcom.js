@@ -140,19 +140,227 @@ const NAME_TYPE_LABELS = {
   nickname:  'Spitzname',
 };
 
+// ─────────────────────────────────────
+//  JSDoc-Typen (T0-TYPES, sw v698)
+//  VS Code / IntelliJ nutzen @typedef nativ — kein Build-Step nötig.
+//  Änderungen hier synchron halten mit gedcom-parser.js (Struct-Init).
+// ─────────────────────────────────────
+
+/** @typedef {{ sourceId:string, page?:string, quay?:string, text?:string, media?:Object }} Citation */
+
+/** @typedef {{ file:string, titl?:string, note?:string, date?:string, prim?:boolean, scbk?:boolean }} MediaRef */
+
+/**
+ * @typedef {Object} SpecialEvent  Sonder-Ereignis (BIRT/CHR/DEAT/BURI) direkt auf der Person.
+ * @property {string|null}  date
+ * @property {string|null}  place
+ * @property {number|null}  lati
+ * @property {number|null}  long
+ * @property {string}       value
+ * @property {string}       note
+ * @property {string[]}     noteRefs
+ * @property {Citation[]}   citations
+ * @property {Object[]}     _extra
+ * @property {boolean}      seen
+ * @property {string}       [cause]   Todesursache (nur DEAT)
+ */
+
+/**
+ * @typedef {Object} PersonEvent  Freies Ereignis einer Person.
+ * @property {string}     type
+ * @property {string}     [value]
+ * @property {string}     [date]
+ * @property {string}     [place]
+ * @property {number|null} [lati]
+ * @property {number|null} [long]
+ * @property {string}     [addr]
+ * @property {string}     [note]
+ * @property {string[]}   [noteRefs]
+ * @property {Citation[]} citations
+ * @property {MediaRef[]} media
+ * @property {Object[]}   [_extra]
+ */
+
+/** @typedef {{ id:string, text:string, cat:string, done:boolean, added?:string }} Task */
+
+/** @typedef {{ id:string, date?:string, repo?:string, sour?:string, query?:string, result:string, note?:string }} RlogEntry */
+
+/**
+ * @typedef {Object} Person  Personen-Datensatz (GEDCOM INDI).
+ * @property {string}          id
+ * @property {string}          name
+ * @property {string}          nameRaw
+ * @property {string}          surname
+ * @property {string}          given
+ * @property {string}          nick
+ * @property {string}          prefix
+ * @property {string}          suffix
+ * @property {'M'|'F'|'U'}    sex
+ * @property {string}          uid
+ * @property {string}          grampId
+ * @property {string}          resn
+ * @property {string}          reli
+ * @property {string}          titl
+ * @property {string}          email
+ * @property {string}          www
+ * @property {SpecialEvent}    birth
+ * @property {SpecialEvent}    death
+ * @property {SpecialEvent}    chr
+ * @property {SpecialEvent}    buri
+ * @property {PersonEvent[]}   events
+ * @property {string[]}        famc
+ * @property {string[]}        fams
+ * @property {string[]}        topSources
+ * @property {Citation[]}      nameCitations
+ * @property {Set<string>}     sourceRefs
+ * @property {Object}          topSourcePages
+ * @property {Object}          topSourceQUAY
+ * @property {Object}          topSourceExtra
+ * @property {string[]}        noteRefs
+ * @property {Object}          noteRefExtras
+ * @property {string[]}        noteTexts
+ * @property {string}          noteText
+ * @property {Object[]}        extraNames
+ * @property {Object[]}        aliases
+ * @property {Object[]}        refns
+ * @property {Object[]}        associations
+ * @property {MediaRef[]}      media
+ * @property {Task[]}          _tasks
+ * @property {RlogEntry[]}     _rlog
+ * @property {Object[]}        _passthrough
+ * @property {boolean}         _hasGivn
+ * @property {boolean}         _hasSurn
+ * @property {boolean}         _nameParsed
+ * @property {string|null}     _stat
+ * @property {string}          lastChanged
+ * @property {string}          lastChangedTime
+ * @property {string}          chanNote
+ */
+
+/**
+ * @typedef {Object} FamilyEvent  Familien-Ereignis (MARR/ENGA/DIV/DIVF + freie FAM-Events).
+ * @property {string|null}  date
+ * @property {string|null}  place
+ * @property {number|null}  lati
+ * @property {number|null}  long
+ * @property {string}       value
+ * @property {string}       note
+ * @property {string[]}     noteRefs
+ * @property {Citation[]}   citations
+ * @property {MediaRef[]}   media
+ * @property {Object[]}     _extra
+ * @property {boolean}      seen
+ * @property {string}       [addr]
+ * @property {string}       [type]
+ */
+
+/**
+ * @typedef {Object} Family  Familien-Datensatz (GEDCOM FAM).
+ * @property {string}         id
+ * @property {string|null}    husb
+ * @property {string|null}    wife
+ * @property {string[]}       children
+ * @property {Object}         childRelations
+ * @property {FamilyEvent}    marr
+ * @property {FamilyEvent}    engag
+ * @property {FamilyEvent}    div
+ * @property {FamilyEvent}    divf
+ * @property {FamilyEvent[]}  events
+ * @property {string[]}       noteRefs
+ * @property {Object}         noteRefExtras
+ * @property {string[]}       noteTexts
+ * @property {string}         noteText
+ * @property {Set<string>}    sourceRefs
+ * @property {MediaRef[]}     media
+ * @property {Task[]}         _tasks
+ * @property {RlogEntry[]}    _rlog
+ * @property {Object[]}       refns
+ * @property {Object[]}       _passthrough
+ * @property {string|null}    _stat
+ * @property {string}         grampId
+ * @property {string}         lastChanged
+ * @property {string}         lastChangedTime
+ * @property {string}         chanNote
+ */
+
+/**
+ * @typedef {Object} Source  Quellen-Datensatz (GEDCOM SOUR).
+ * @property {string}    id
+ * @property {string}    title
+ * @property {string}    abbr
+ * @property {string}    author
+ * @property {string}    date
+ * @property {string}    publ
+ * @property {string}    repo
+ * @property {Object[]}  repoCalns
+ * @property {string}    text
+ * @property {string}    note
+ * @property {string[]}  noteRefs
+ * @property {string}    agnc
+ * @property {string}    grampId
+ * @property {Object[]}  dataEvens
+ * @property {Object[]}  dataExtra
+ * @property {Object[]}  refns
+ * @property {MediaRef[]} media
+ * @property {Object[]}  _passthrough
+ * @property {string}    lastChanged
+ * @property {string}    lastChangedTime
+ * @property {string}    chanNote
+ */
+
+/**
+ * @typedef {Object} Repo  Archiv-Datensatz (GEDCOM REPO).
+ * @property {string}    id
+ * @property {string}    name
+ * @property {string}    addr
+ * @property {string}    phon
+ * @property {string}    www
+ * @property {string}    email
+ * @property {Object[]}  _passthrough
+ * @property {string}    lastChanged
+ * @property {string}    lastChangedTime
+ * @property {string}    chanNote
+ */
+
+/**
+ * @typedef {Object} AppDb  Haupt-Datenbankstruktur (AppState.db / globales `db`).
+ * @property {Object.<string, Person>}  individuals
+ * @property {Object.<string, Family>}  families
+ * @property {Object.<string, Source>}  sources
+ * @property {Object.<string, Repo>}    repositories
+ * @property {Object.<string, Object>}  notes
+ * @property {Object}   extraPlaces
+ * @property {Object}   hofObjects
+ * @property {Object}   [placeObjects]
+ * @property {Object}   [tags]
+ * @property {Object}   [_grampsHandles]
+ * @property {string}   placForm
+ * @property {string}   [_sourceFormat]
+ * @property {Object[]} extraRecords
+ * @property {string[]} headLines
+ */
+
 // ── Getters / Mutations-Helpers ────────────────────────────────────────────
 // Zentraler Einstiegspunkt — ein Ort für künftige Validierung, Undo oder Struktur-Änderungen.
 // Getters geben null zurück statt undefined, sodass Aufrufer einheitlich auf null prüfen können.
+/** @param {string} id @returns {Person|null} */
 function getPerson(id)  { return AppState.db.individuals[id]  ?? null; }
+/** @param {string} id @returns {Family|null} */
 function getFamily(id)  { return AppState.db.families[id]     ?? null; }
+/** @param {string} id @returns {Source|null} */
 function getSource(id)  { return AppState.db.sources[id]      ?? null; }
+/** @param {string} id @returns {Repo|null} */
 function getRepo(id)    { return AppState.db.repositories[id] ?? null; }
 
 // Setters — Object.assign-Patch auf bestehende Top-Level-Felder.
 // Für verschachtelte Array-Mutations (media[idx], fams.push etc.) weiter direkt verwenden.
+/** @param {string} id @param {Partial<Person>} patch */
 function setPerson(id, patch) { const p = AppState.db.individuals[id]; if (p) Object.assign(p, patch); }
+/** @param {string} id @param {Partial<Family>} patch */
 function setFamily(id, patch) { const f = AppState.db.families[id];   if (f) Object.assign(f, patch); }
+/** @param {string} id @param {Partial<Source>} patch */
 function setSource(id, patch) { const s = AppState.db.sources[id];    if (s) Object.assign(s, patch); }
+/** @param {string} id @param {Partial<Repo>} patch */
 function setRepo(id, patch)   { const r = AppState.db.repositories[id]; if (r) Object.assign(r, patch); }
 
 // ─────────────────────────────────────
