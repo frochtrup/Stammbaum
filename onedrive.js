@@ -290,6 +290,60 @@ async function odSetBasePath(val) {
   _odPhotoCache.clear();
 }
 
+// Ordner-Browser für GED-Startpfad öffnen
+// Startet am Parent des aktuellen Basis-Pfads, damit parallel liegende Ordner sichtbar sind
+async function odBrowseBasePath() {
+  if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odBasePathMode = true;
+  _odPickMode = false; _odDocScanMode = false; _odEditPickMode = false;
+  _odFolderStack = [];
+  closeModal('modalSettings');
+  await _odGetBasePath(); // Basis-Pfad in _odCurrentBasePath laden
+  const token = await _odGetToken().catch(() => null);
+
+  if (token && _odCurrentBasePath) {
+    try {
+      // Aktuellen Ordner holen → parentReference gibt uns die Eltern-ID
+      const parts = _odCurrentBasePath.split('/').filter(Boolean);
+      const encoded = parts.map(encodeURIComponent).join('/');
+      const res = await fetch(
+        `${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name,parentReference`,
+        { headers: { Authorization: 'Bearer ' + token } }
+      );
+      if (res.ok) {
+        const cur = await res.json();
+        const parentId   = cur.parentReference?.id;
+        const parentPath = cur.parentReference?.path || '';
+        // Ist parent der Root-Ordner? → /drive/root: ohne Unterpfad
+        const parentIsRoot = !/\/drive\/root:.+/.test(parentPath);
+        if (parentId && !parentIsRoot) {
+          const parentName = decodeURIComponent(
+            parentPath.replace(/.*\/drive\/root:\//, '').split('/').pop() || 'OneDrive'
+          );
+          _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
+          await _odShowFolder(parentId, parentName);
+        } else {
+          await _odShowFolder('root', 'OneDrive');
+        }
+        return;
+      }
+    } catch(e) { console.warn('[OD] Browse base path:', e); }
+  }
+
+  await _odShowFolder('root', 'OneDrive');
+}
+
+// GED-Startpfad aus Ordner-Browser übernehmen
+async function odScanBasePathFolder(folderId, folderName) {
+  closeModal('modalOneDrive');
+  _odBasePathMode = false;
+  const fullPath = [..._odFolderStack.map(f => f.name), folderName]
+    .filter(n => n !== 'OneDrive').join('/');
+  await odSetBasePath(fullPath);
+  showToast(`✓ GED-Ordner: ${fullPath || '/'}`);
+  openSettings();
+}
+
 async function odClearPhotoFolder() {
   await idbDel('od_photo_folder').catch(() => {});
   await idbDel('od_base_path').catch(() => {});

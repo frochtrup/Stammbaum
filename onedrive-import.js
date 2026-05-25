@@ -141,7 +141,7 @@ async function _odShowFolder(folderId, folderName) {
     const _isPickMode = _odPickMode || _odEditPickMode;
     const files   = _isPickMode ? items.filter(f => !f.folder) : [];
     const title   = document.querySelector('#modalOneDrive .sheet-title');
-    if (title) title.textContent = _isPickMode ? 'Datei auswählen' : _odDocScanMode ? 'Dokumente-Ordner wählen' : 'Fotos importieren';
+    if (title) title.textContent = _isPickMode ? 'Datei auswählen' : _odBasePathMode ? 'GED-Ordner wählen' : _odDocScanMode ? 'Dokumente-Ordner wählen' : 'Fotos importieren';
     const list = document.getElementById('odFileList');
     if (!list) return;
     const breadcrumb = [..._odFolderStack.map(f => f.name), folderName].join(' / ');
@@ -155,7 +155,10 @@ async function _odShowFolder(folderId, folderName) {
       }
     }
     if (!_odPickMode && folderId !== 'root') {
-      if (_odDocScanMode) {
+      if (_odBasePathMode) {
+        html += `<div class="list-item od-action-item" data-action="odScanBasePathFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
+          📁 Diesen Ordner als GED-Ordner setzen</div>`;
+      } else if (_odDocScanMode) {
         html += `<div class="list-item od-action-item" data-action="odScanDocFolder" data-odid="${esc(folderId)}" data-odname="${esc(folderName)}">
           📂 Diesen Ordner als Dokumente-Ordner nutzen</div>`;
       } else {
@@ -386,6 +389,7 @@ async function odScanDocFolder(folderId, folderName) {
 let _odPickMode               = false;
 let _odEditPickMode           = false; // true wenn OD-Picker aus Edit-Modal geöffnet
 let _odDocScanMode            = false; // true wenn Dokumente-Ordner gewählt wird
+let _odBasePathMode           = false; // true wenn GED-Startpfad gewählt wird
 let _odPickStartedFromSubfolder = false; // true wenn Picker aus konfiguriertem Unterordner gestartet
 let _odPickStartFolderId      = '';    // ID des konfigurierten Start-Ordners (für Parent-Navigation)
 
@@ -471,7 +475,8 @@ function _odPickCancel() {
 }
 
 function _odCancelOrClose() {
-  if (_odPickMode)     { _odPickMode = false;     closeModal('modalOneDrive'); openModal('modalAddMedia'); }
-  else if (_odEditPickMode) { _odEditPickMode = false; closeModal('modalOneDrive'); openModal('modalEditMedia'); }
+  if (_odPickMode)         { _odPickMode = false;     closeModal('modalOneDrive'); openModal('modalAddMedia'); }
+  else if (_odEditPickMode){ _odEditPickMode = false; closeModal('modalOneDrive'); openModal('modalEditMedia'); }
+  else if (_odBasePathMode){ _odBasePathMode = false; closeModal('modalOneDrive'); openSettings(); }
   else { _odDocScanMode = false; closeModal('modalOneDrive'); }
 }
