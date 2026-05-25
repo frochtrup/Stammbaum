@@ -9,7 +9,7 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│          Stammbaum PWA v7.0 (main)                    │
+│          Stammbaum PWA v8.0 (v8-dev)                  │
 │  Keine externen Dependencies · Kein Build-Step       │
 │  Keine Frameworks · Kein Server                      │
 │                                                      │
@@ -26,7 +26,17 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  ui-views-family.js   — Familien-Detailansicht       │
 │  ui-views-source.js   — Quellen-Detailansicht        │
 │  ui-views-tree.js     — Sanduhr-Baum                 │
+│  ui-desc-tree.js      — Nachkommen-Baum (SVG)        │
 │  ui-fanchart.js       — Fan Chart (SVG)              │
+│  ui-timeline.js       — Zeitleiste (Swim-Lane + Dekaden)│
+│  ui-story.js          — Story Mode (Fließtext, Karte) │
+│  ui-chart-export.js   — Diagramm-Export als PNG      │
+│  gedcom-validator.js  — Validierungsengine (RAM)     │
+│  ui-dedup.js          — Duplikat-Erkennung + Merge   │
+│  compare-engine.js    — Datei-Vergleichs-Engine      │
+│  ui-import-compare.js — Merge-Assistent (2-Panel)    │
+│  ui-print.js          — Druckausgaben (Ahnenliste)   │
+│  ui-book.js           — Buchgenerator                │
 │  ui-forms.js          — Source-Widget, Utils          │
 │  ui-forms-person.js   — Person-Formular               │
 │  ui-forms-family.js   — Familie-Formular              │
@@ -36,13 +46,14 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │  onedrive-auth.js     — OAuth2 PKCE: Login/Token     │
 │  onedrive-import.js   — Foto-Import, Ordner-Browser  │
 │  onedrive.js          — Media-URL, Upload, File-I/O  │
-│  sw.js                — Service Worker (Cache v413)  │
+│  gedcom-worker.js     — Web Worker (GEDCOM-Parse)    │
+│  sw.js                — Service Worker (Cache v691)  │
 │  manifest.json        — PWA-Manifest                 │
 │  demo.ged             — Demo-GEDCOM (12 Pers., 6 Fam.)│
 └──────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~30 JS-Dateien · ~16000 Zeilen
+**Größe gesamt:** ~50 JS-Dateien · ~25000 Zeilen
 
 ---
 
@@ -307,10 +318,14 @@ sourceMedia[sId] = [{ file, scbk, prim, titl, note, _extra:[] }]
 | `DSCR`/`IDNO`/`SSN` → `events[]` (sw v148) | **0** |
 | writeGEDCOM() in Subfunktionen, FAM-events-Duplikation behoben (sw v167) | **0** |
 | CHAN NOTE CONC/CONT alle 5 Sub-Parser; FAM-OBJE @ref; `repoCalns[]` (sw v654–v656) | **-1** |
+| ROUNDTRIP-FIX-Batch: `m.note` via `pushCont()`; DEAT CAUS `_ptDepth=2`; `topSources` lv=2-Fix; GIVN/SURN falsy-Check (sw v658–v659) | **0** |
+| ROUNDTRIP-TIME: `3 _TIME` (Ancestris private time-of-day sub-tag) via `_ptDepth=2; _ptTarget=obj._extra` (sw v660) | **0** |
+| ROUNDTRIP-NOTE: `2 SOUR @ref@` unter `1 NOTE @xref@` via `noteRefExtras{}`-Map (sw v661) | **0** |
+| ROUNDTRIP-LV5: `5 TYPE PHOTO` unter `2 OBJE` in INDI-Array-Events via `_ptDepth=4` (sw v662) | **0** |
+| ROUNDTRIP-FAM-OBJE: FAM `DIV`/`DIVF`-Events lv=4-Handler für `OBJE → FILE` Sub-Tags (sw v663) | **0** |
+| ROUNDTRIP-CAUS-SOUR: `3 SOUR @ref@` unter `2 CAUS` via `c.extra` stabil nach `2 SOUR` (sw v664) | **0** |
 
-`roundtrip_stable: true` · `net_delta=-1` (bekannte Ausnahme, kein Datenverlust) — TIME-stabil (out1 === out2).
-
-**Bekannte Ausnahme net_delta=-1:** `pushCont()` splittet CONC/CONT bei 248 Zeichen neu, unabhängig von Original-Splitpunkten. Textinhalt ist identisch — jeder GEDCOM-Reader reassembliert identisch. Verbatim-Passthrough wäre unverhältnismäßig komplex (stale-Risiko bei Edits). CONC/CONT sind Standard-Konstrukte, kein Datenverlust.
+`roundtrip_stable: true` · `net_delta=0` — STABIL: out1 === out2, alle Testdateien (MeineDaten_ancestris.ged 2811 Pers., Unsere Familie.gramps 2894 Pers.).
 
 ---
 
@@ -467,13 +482,13 @@ Ergebnis auf 2811 Personen: BESTANDEN, 622×PEDI birth, 0×_FREL/_MREL im Output
 :root { --bg-card: var(--surface); --border-color: var(--border); }
 ```
 
-**Phasen-Übersicht** (Fortschritt → ROADMAP.md):
-1. Utility- + Component-Klassen in `styles.css`
-2. `index.html` statische `style=`-Attribute
-3. `ui-forms*.js` Formular-Templates
-4. View-Dateien (`ui-views-*.js`, `ui-media.js`)
-5. Focus-Management (`ui-views.js`)
-6. `unsafe-inline` aus CSP-Header entfernen
+**Phasen-Übersicht** (abgeschlossen sw v690):
+1. ✅ Utility- + Component-Klassen in `styles.css`
+2. ✅ `index.html` statische `style=`-Attribute
+3. ✅ `ui-forms*.js` Formular-Templates
+4. ✅ View-Dateien (`ui-views-*.js`, `ui-media.js`)
+5. ✅ Focus-Management (`ui-views.js`)
+6. ✅ Alle Inline-Handler (`oninput`/`onclick`) durch `data-input`/`data-action` Event-Delegation ersetzt (sw v686–v690)
 
 **Utility-Klassen (Auswahl, vollständig in `styles.css`):**
 

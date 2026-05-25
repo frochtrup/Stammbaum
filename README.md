@@ -43,6 +43,17 @@ stammbaum/
 ├── ui-views-tree.js    ← Sanduhr-Baum + Tastaturnavigation
 ├── ui-desc-tree.js     ← Nachkommen-Baum (top-down SVG, Ehepartner/Geschwister)
 ├── ui-fanchart.js      ← Fan Chart (SVG, konzentrische Halbkreis-Segmente)
+├── ui-timeline.js      ← Zeitleiste (Swim-Lane 5 Lanes + Dekaden-Modus, Mehrpersonen)
+├── timeline-hist-events.js ← Historische Ereignisse (71 Einträge 1315–2024)
+├── ui-story.js         ← Story Mode (Fließtext, Karte, Galerie, HTML-Download)
+├── story-epochs.js     ← Epochen-Tabelle für Story Mode (11 Einträge)
+├── ui-chart-export.js  ← Diagramm-Export als PNG (Fächer, Sanduhr, Nachkommen)
+├── gedcom-validator.js ← Validierungsengine: runValidation(db) → RAM-Befundbericht
+├── ui-dedup.js         ← Duplikat-Erkennung (Levenshtein, Merge-Modal)
+├── compare-engine.js   ← Datei-Vergleichs-Engine: cmpLoadFile(), cmpMatchPersons()
+├── ui-import-compare.js ← Merge-Assistent (2-Panel Sheet: Liste + Diff)
+├── ui-print.js         ← Druckausgaben: Ahnenliste (Kekule) + Familienbogen
+├── ui-book.js          ← Buchgenerator (Ahnenindex, Biografie, Namenindex)
 ├── ui-forms.js         ← Source-Widget, Quelle-Formular, Modals, Gesten, Keyboard, Utils
 ├── ui-forms-person.js  ← Person-Formular + Extra-Name-Formular
 ├── ui-forms-family.js  ← Familie-Formular
@@ -55,17 +66,22 @@ stammbaum/
 ├── gramps-parser.js    ← parseGRAMPS() — GRAMPS XML-Import (read-only)
 ├── gramps-writer.js    ← writeGRAMPS() — GRAMPS XML-Export (gzip Blob)
 ├── debug-gramps.js     ← Debug-Tools für GRAMPS-Roundtrip (nur bei ?debug=1)
-├── ui-views-map.js     ← Kartenansicht (Leaflet, Orte- und Personen-Modus)
+├── gedcom-worker.js    ← Web Worker: parseGEDCOM() mit onProgress-Callback (5%-Schritte)
+├── ui-views-map.js     ← Kartenansicht (Leaflet, Orte- und Personen-Modus, Animation)
 ├── ui-views-place.js   ← Orte-Ansicht: collectPlaces(), renderPlaceList(), showPlaceDetail()
 ├── ui-views-hof.js     ← Höfe-Ansicht: buildHofIndex(), renderHofList(), showHofDetail()
 ├── ui-views-tasks.js   ← Forschungsaufgaben + Validierungspanel: IDB-Persistenz, Badge, Tab
-├── gedcom-validator.js ← Validierungsengine: runValidation(db) → RAM-Befundbericht
+├── ui-views-stats.js   ← Statistik-Dashboard (Lebensspannen, Heiratsalter, Histogramme)
+├── ui-views-search.js  ← Globale Suche (Personen + Familien + Quellen + Orte, gruppiert)
+├── ui-views-note.js    ← Notiz-Ansicht
 ├── leaflet.js          ← Leaflet 1.9.4 lokal (kein CDN)
 ├── leaflet.css         ← Leaflet CSS
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v575)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v691)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
+├── test.html           ← Standalone GEDCOM Roundtrip-Tester (kein UI, Drag-Drop .ged)
+├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v685)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
@@ -256,7 +272,7 @@ stammbaum/
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
 **GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
-**Version 8.0** — Mai 2026 — `v8-dev` · sw v470
+**Version 8.0** — Mai 2026 — `v8-dev` · sw v691
 
 ---
 

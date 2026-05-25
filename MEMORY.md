@@ -56,10 +56,10 @@
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-17
+## Aktueller Stand — zuletzt aktualisiert: 2026-05-25
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v595** / Cache: `stammbaum-v595`
+- **Aktuelle sw-Version: v691** / Cache: `stammbaum-v691`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
 **Abgeschlossene Sprints (v8-dev, Auswahl — vollständig: CHANGELOG.md):**

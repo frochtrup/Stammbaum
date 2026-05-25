@@ -25,7 +25,7 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v686 · Cache: `stammbaum-v686`
+**sw-Version:** v691 · Cache: `stammbaum-v691`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -134,6 +134,8 @@ Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgebe
 | ~~DEDUP-ENH~~ | ~~**Duplikat-Erkennung ausgebaut**~~ | Zeilenweise Feldauswahl im Merge-Modal (sw v670); Forschungseintrag-Button für beide Personen (sw v671); Eltern + Partner im Scoring, normalisiert auf 100 (sw v672); Suchfeld zum Filtern der Paar-Liste (sw v683) | - |
 | ~~IMPORT-CMP~~ | ~~**Datei-Vergleichs- & Merge-Assistent**~~ | `compare-engine.js` + `ui-import-compare.js`; Matching, Diff, Additions/Konflikte, Forschungseinträge (📋), Neue-Person-Import mit Familienverknüpfung (sw v673–v682) | - |
 | ~~WW-PARSER~~ | ~~**Web Worker für große GEDCOM-Dateien**~~ | `parseGEDCOM()` in `gedcom-worker.js` ausgelagert; `onProgress`-Callback alle 5%; Fortschrittsbalken `#loadingBar` im Lade-Overlay; Sync-Fallback wenn `Worker` nicht verfügbar; `_finishLoad()` als gemeinsamer Post-Parse-Pfad (sw v649) | - |
+| ~~CSP-FINAL~~ | ~~**CSP vollständig: alle Inline-Handler durch Event-Delegation ersetzt**~~ | Dedup-Threshold-Slider + Suche via `data-input`-Delegation; alle verbleibenden `oninput`/`onclick` Inline-Handler ersetzt; ADR-015 abgeschlossen (sw v686–v690) | - |
+| ~~SEARCH-QA~~ | ~~**Komma-Normierung in Namen + Quellen-Zwischenablage**~~ | Nachname-Parsing bereinigt (Komma als Trennzeichen normiert); QuickAdd-Formular: zuletzt verwendete Quelle + Seite in Zwischenablage vorbelegt (sw v691) | - |
 
 ---
 
