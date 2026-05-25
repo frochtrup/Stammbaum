@@ -29,9 +29,32 @@ function _famRowHtml(f, isCurrent, pos, total) {
     </div>`;
 }
 
+let _lastFilteredFamilies = null;
+
+function exportFamiliesCsv() {
+  const fams = _lastFilteredFamilies || Object.values(AppState.db.families);
+  const SEP = ';';
+  const cols = ['ID','Partner1','Partner2','Heiratsdatum','Heiratsort','Kinder'];
+  const rows = [cols.join(SEP)];
+  for (const f of fams) {
+    const husb = (f.husb && AppState.db.individuals[f.husb]?.name) || '';
+    const wife = (f.wife && AppState.db.individuals[f.wife]?.name) || '';
+    rows.push([
+      f.id, husb, wife,
+      f.marr.date || '', compactPlace(f.marr.place || ''),
+      String(f.children.length)
+    ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(SEP));
+  }
+  const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'familien.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
 function renderFamilyList(fams) {
   const listEl = document.getElementById('familyList');
   if (!fams) fams = Object.values(AppState.db.families);
+  _lastFilteredFamilies = fams;
   if (!fams.length) {
     _vsTeardown(_vsF);
     const totalFams = Object.keys(AppState.db.families || {}).length;

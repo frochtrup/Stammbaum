@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v698 · Cache: `stammbaum-v698`
+**sw-Version:** v699 · Cache: `stammbaum-v699`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -96,6 +96,9 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | IMPORT-CMP | Datei-Vergleichs- & Merge-Assistent | v673–v682 |
 | CSP-FINAL | CSP vollständig: alle Inline-Handler durch Event-Delegation ersetzt | v686–v690 |
 | SEARCH-QA | Komma-Normierung Namen + Quellen-Zwischenablage | v691 |
+| ASSO-DISP | ASSO-Beziehungen anzeigen (Paten, Zeugen, Patenkinder) | v698+ |
+| CSV-EXPORT | CSV-Export Personen- und Familienliste (gefiltert, `;`-getrennt, BOM) | v699 |
+| OFFLINE-DIAG | Offline-Indikator im Header + online/offline-Toast + Cache-Check | v699 |
 | TEST-AUTO | `test.html`: Standalone GEDCOM Roundtrip-Tester | — |
 
 ---
@@ -142,7 +145,7 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 | ~~QUICK-ADD~~ | ~~Schnellerfassung neue Person (Masseneingabe-Modus)~~ | v577 | - |
 | ~~CAM-LINK~~ | ~~Foto direkt an Ereignis (Kamera-Button)~~ | v578 | - |
 | QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich der gewählten Quelle an: Quellentyp bestimmt welche Felder erscheinen. Beispiel Taufbuch: Geburt + Taufe als Chips, separates Datum je Ereignis. Konfiguration als `quickAddTemplates[]` JSON, analog SOUR-TMPL. | M |
-| OFFLINE-DIAG | **Offline-Statusanzeige verbessern** | Aktuell zeigt der Sync-Indikator nur „geändert/gespeichert". Kein klares Signal ob die App gerade offline läuft und ob alle Assets gecacht sind. Ziel: `navigator.onLine`-Listener → Toast + persistentes Indikator-Icon im Header bei Offline-Modus; Cache-Vollständigkeit prüfen (alle PRECACHE-Dateien vorhanden?). | S |
+| ~~OFFLINE-DIAG~~ | ~~Offline-Indikator im Header + Cache-Check~~ | v699 | - |
 
 ---
 
@@ -156,7 +159,7 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 | ~~TREE-HEAT~~ | ~~Vollständigkeits-Heatmap im Baum~~ | v598 | - |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional. Relevant sobald Stammbäume >5 Generationen in enge Regionen zurückgehen. Voraussetzung: BFS-Algorithmus aus REL-CALC nutzen. | M |
 | VAL-RULES-2 | **Validierung: inhaltliche Regeln ausbauen** | Aktuelle 21 Regeln prüfen nur strukturelle Probleme (Datum-Logik, fehlende Felder). Fehlende inhaltliche Regeln: Ortsname-Konsistenz (gleiche Person, 3 Schreibweisen), Quellenqualität (QUAY-Wert fehlt häufig), Alter-bei-Heirat unter 14, unwahrscheinliche Geschwisterzahl (>15). | M |
-| ASSO-DISP | **ASSO-Beziehungen anzeigen (Read-only)** | Zeugen, Paten, Informanten aus `1 ASSO`-Blöcken in Personen-Detail anzeigen (Rolle + verknüpfte Person + klickbar). Schritt 1 vor editierbarem ASSO (P5). Roundtrip bereits stabil via Passthrough. | S |
+| ~~ASSO-DISP~~ | ~~ASSO-Beziehungen anzeigen (Read-only)~~ | v698+ | - |
 
 ---
 
@@ -171,7 +174,7 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 | ~~DUP-DETECT~~ | ~~Duplikat-Erkennung + Merge~~ | v628–v683 | - |
 | ~~IMPORT-CMP~~ | ~~Datei-Vergleichs- & Merge-Assistent~~ | v673–v682 | - |
 | ~~PRINT-OUT~~ | ~~Ahnenliste + Familienbogen~~ | v669 | - |
-| **CSV-EXPORT** | **CSV-Export für Listen** | Personen- und Familienliste als CSV aus der aktuell gefilterten Ansicht; Spalten konfigurierbar (Name, Geburt, Tod, Ort, Quellenzahl, Quellenreferenzen). Download-Button im Listen-Header. Kompatibilität zu Excel/Numbers für Abgleich + Druck. Jedes kommerzielle Genealogie-Tool bietet das. | S |
+| ~~CSV-EXPORT~~ | ~~CSV-Export Personen- und Familienliste~~ | v699 | - |
 | FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig. | XS |
 | ACCESSIBILITY | **Accessibility-Audit + Grundhärtung** | Die App hat 88 `aria-*`-Attribute in index.html — unzureichend für dynamisch gerenderte Listen, Modal-Dialoge, Baum-Navigation. Ziel: WCAG 2.1 AA für die vier häufigsten Flows (Laden, Person suchen, Detailansicht, Baum navigieren). Keine vollständige Screen-Reader-Parität, aber funktionale Tastaturnavigation und korrekte `role`/`aria-label` auf allen interaktiven Elementen. | M |
 | LIGHT-MODE | **Light-Mode Parity** | Light Mode wurde als Sekundär-Theme entwickelt. Erkennbare Schwächen: Gold auf hellem Hintergrund hat schlechtere Kontrast-Ratio (WCAG AA verfehlt), Baum-Konnektoren kaum sichtbar, Karten-Tooltip-Hintergrund zu dunkel. Ziel: gleiche visuelle Qualität in beiden Modi. | M |
@@ -261,7 +264,7 @@ Kein festes Datum. Kandidaten für v9+ oder bei geänderter Priorität.
 | Duplikat-Erkennung | ✅ | ✅ | ✅ | ✅ | ⚠ |
 | Datei-Merge | ✅ | ✅ | ⚠ | ✅ | ⚠ |
 | Validierungsregeln | ✅ 21 Regeln | ⚠ | ⚠ | ✅ | ⚠ |
-| CSV-Export | ❌ (P3 offen) | ✅ | ✅ | ✅ | ✅ |
+| CSV-Export | ✅ | ✅ | ✅ | ✅ | ✅ |
 | DNA-Integration | ❌ | ❌ | ✅ | ❌ | ❌ |
 | Multi-User | ❌ | ❌ | ✅ | ❌ | ❌ |
 | Datenschutz (lokal-first) | ✅ | ✅ | ❌ | ✅ | ✅ |
@@ -270,7 +273,7 @@ Kein festes Datum. Kandidaten für v9+ oder bei geänderter Priorität.
 
 **Einzigartige Stärken:** Offline-PWA + Story-Modus + animierter Migrationspfad + GRAMPS-Brücke + Forschungsprotokoll + Mehrpersonen-Zeitleiste + vollständig lokal ohne Datamining.
 
-**Verbleibende Lücken:** CSV-Export, GDPR-Anonymisierung, GEDCOM 7.0, editierbare ASSO-Beziehungen, Accessibility.
+**Verbleibende Lücken:** GDPR-Anonymisierung, GEDCOM 7.0, editierbare ASSO-Beziehungen, Accessibility.
 
 ---
 

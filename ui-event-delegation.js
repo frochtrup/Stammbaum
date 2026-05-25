@@ -330,6 +330,8 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   deleteRlog:  el => el.dataset.pid ? _deleteRlogEntry(el.dataset.pid, +el.dataset.ridx)    : _deleteFamRlogEntry(el.dataset.fid, +el.dataset.ridx),
   switchRlogFilter:        el  => switchRlogFilter(el.dataset.filter),
   exportRlogMd:            ()  => exportRlogMd(),
+  exportPersonsCsv:        ()  => exportPersonsCsv(),
+  exportFamiliesCsv:       ()  => exportFamiliesCsv(),
 };
 
 // Firefox Wheel-Normalisierung für Hauptliste frühzeitig registrieren

@@ -268,6 +268,8 @@ window.addEventListener('load', async () => {
 
   restoreFileHandle(); updateSaveIndicator();
 
+  _initOfflineDiag();
+
   // Service Worker registrieren
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});

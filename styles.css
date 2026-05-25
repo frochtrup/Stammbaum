@@ -1137,6 +1137,11 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   border-radius: 50%; background: var(--gold);
   margin-left: 6px; vertical-align: middle;
 }
+.offline-indicator {
+  display: inline-block; font-size: 0.7rem; font-weight: 600;
+  color: var(--err, #e55); margin-left: 6px; vertical-align: middle;
+  letter-spacing: 0.02em;
+}
 #syncBanner {
   position: fixed;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 68px);

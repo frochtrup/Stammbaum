@@ -120,7 +120,30 @@ function _personRowHtml(p, isCurrent, pos, total) {
     </div>`;
 }
 
+let _lastFilteredPersons = null;
+
+function exportPersonsCsv() {
+  const persons = _lastFilteredPersons || Object.values(AppState.db.individuals);
+  const SEP = ';';
+  const cols = ['ID','Nachname','Vorname','Geschlecht','Geburtsdatum','Geburtsort','Sterbedatum','Sterbeort','Quellen'];
+  const rows = [cols.join(SEP)];
+  for (const p of persons) {
+    const sex = p.sex === 'M' ? 'M' : p.sex === 'F' ? 'F' : '';
+    rows.push([
+      p.id, p.surname || '', p.given || '', sex,
+      p.birth.date || '', compactPlace(p.birth.place || ''),
+      p.death.date || '', compactPlace(p.death.place || ''),
+      String(p.sourceRefs?.size || 0)
+    ].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(SEP));
+  }
+  const blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'personen.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
 function renderPersonList(persons) {
+  _lastFilteredPersons = persons;
   _buildKekuleMap();
   const sorted = [...persons].sort((a, b) => {
     if (_personSort === 'date') {

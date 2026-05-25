@@ -500,6 +500,31 @@ function _syncBannerSave() {
 
 function markChanged() { AppState.changed = true; UIState._placesCache = null; UIState._hofCache = null; UIState._searchIndexDirty = true; updateChangedIndicator(); }
 
+function _setOfflineIndicator(offline) {
+  const el = document.getElementById('offlineIndicator');
+  if (el) el.hidden = !offline;
+}
+
+async function _checkCacheStatus() {
+  if (!('caches' in window)) return;
+  const keys = await caches.keys();
+  if (!keys.some(k => k.startsWith('stammbaum-'))) {
+    showToast('Cache fehlt — bitte einmal online öffnen für Offline-Funktion', 'warn');
+  }
+}
+
+function _initOfflineDiag() {
+  if (!navigator.onLine) { _setOfflineIndicator(true); _checkCacheStatus(); }
+  window.addEventListener('offline', () => {
+    _setOfflineIndicator(true);
+    showToast('Offline — App läuft aus dem Cache', 'warn');
+  });
+  window.addEventListener('online', () => {
+    _setOfflineIndicator(false);
+    showToast('Wieder online', 'success');
+  });
+}
+
 // ─────────────────────────────────────
 //  SHARED VIEW HELPERS
 // ─────────────────────────────────────

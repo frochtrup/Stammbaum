@@ -52,7 +52,7 @@
 <main id="v-main" class="view">
   <div class="topbar">
     <div class="topbar-inner">
-      <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" hidden class="changed-dot"></span></span>
+      <span class="topbar-title">⚘ Stammbaum<span id="topbarFileName"></span> <span id="changedIndicator" hidden class="changed-dot"></span><span id="offlineIndicator" hidden class="offline-indicator" title="Offline — App läuft aus dem Cache">⊘ offline</span></span>
       <button class="topbar-btn" data-action="bnavSearch" title="Suche" aria-label="Suche">🔍</button>
       <button class="topbar-btn topbar-btn-icon" data-action="openMenuModal" title="Menü" aria-label="Menü">☰</button>
     </div>
@@ -80,6 +80,7 @@
         <button type="button" id="yearFilterClear" hidden data-action="clearYearFilter" title="Jahresfilter zurücksetzen" aria-label="Jahresfilter zurücksetzen">✕</button>
         <button type="button" id="personSortBtn" data-action="togglePersonSort" class="filter-btn" title="Sortierung umschalten" aria-label="Sortierung umschalten">⇅ Name</button>
         <button type="button" id="advFilterToggle" data-action="toggleAdvFilter" class="filter-btn" title="Erweiterte Filter" aria-label="Erweiterte Filter" aria-expanded="false">⊞</button>
+        <button type="button" data-action="exportPersonsCsv" class="filter-btn" title="Gefilterte Liste als CSV exportieren" aria-label="Als CSV exportieren">↓ CSV</button>
       </div>
       <div id="advFilterPanel" hidden class="search-wrap adv-filter-panel">
         <div class="d-flex gap-6 ai-c flex-wrap">
@@ -111,6 +112,7 @@
       <div class="search-wrap d-flex gap-6 ai-c">
         <input class="search-input flex-1" type="search" id="searchFamilies" placeholder="Name, Datum, Ort…" data-input="filterFamilies">
         <button type="button" data-action="showFamilyMediaBrowser" class="filter-btn filter-btn-md" title="Alle Medien anzeigen" aria-label="Alle Medien anzeigen">📎</button>
+        <button type="button" data-action="exportFamiliesCsv" class="filter-btn" title="Gefilterte Liste als CSV exportieren" aria-label="Als CSV exportieren">↓ CSV</button>
       </div>
     </div>
     <div id="familyList" role="list"></div>
