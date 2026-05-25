@@ -134,7 +134,7 @@ ${marrSub}${lifespan}
       if (bRaw || bPlace || p.birth?.seen) {
         const yearOnly = /^\d{4}$/.test(bRaw.trim());
         if (yearOnly) {
-          sentences.push(`${_esc(p.name || pr.Er)} wurde ${bRaw.trim()}${bPlace} geboren.`);
+          sentences.push(`${_esc(p.name || pr.Er)} kam ${bRaw.trim()}${bPlace} zur Welt.`);
         } else {
           sentences.push(`${_esc(p.name || pr.Er)} wurde${_atDate({ date: bRaw })}${bPlace} geboren.`);
         }

@@ -203,7 +203,9 @@
     if (!jobs.length) return '';
     if (jobs.length === 1) {
       const ev = jobs[0];
-      return `${pr.Er} war als ${_esc(ev.value)} tätig${_atPlace(ev)}${_atDate(ev)}.`;
+      const date  = _atDate(ev);
+      const place = date ? _atPlace(ev) : '';   // Ort nur zusammen mit Datum
+      return `${pr.Er} war ${_esc(ev.value)}${date}${place}.`;
     }
     const parts = jobs.map(ev => {
       const period = _occuPeriod(ev.date);
@@ -211,7 +213,7 @@
     });
     const last = parts.slice(-1)[0];
     const rest = parts.slice(0, -1);
-    return `${pr.Er} arbeitete als ${rest.join(', ')} und später als ${last}.`;
+    return `${pr.Er} war ${rest.join(', ')} und später ${last}.`;
   }
 
   // Mehrere GRAD-Ereignisse chronologisch zu einem Satz zusammenführen
@@ -300,7 +302,7 @@
   // ── Event-Satz-Templates ────────────────────────────────────────────────────
 
   const _EV_TPL = {
-    OCCU: (ev, pr) => `${pr.Er} war als ${_esc(ev.value || ev.eventType || '')} tätig${_atPlace(ev)}${_atDate(ev)}.`,
+    OCCU: (ev, pr) => `${pr.Er} war ${_esc(ev.value || ev.eventType || '')}${_atDate(ev)}.`,
     RESI: (ev, pr) => `${pr.Er} lebte${_atPlace(ev)}${_atDate(ev)}.`,
     EDUC: (ev, pr) => `${pr.Er} erhielt Bildung${ev.value ? ': ' + _esc(ev.value) : ''}${_atPlace(ev)}${_atDate(ev)}.`,
     MILI: (ev, pr) => `${pr.Er} leistete Militärdienst${ev.value ? ' (' + _esc(ev.value) + ')' : ''}${_atPlace(ev)}${_atDate(ev)}.`,

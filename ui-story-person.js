@@ -145,9 +145,11 @@ ${lifespan}
     if (fam0) {
       const sibCount = (fam0.children || []).filter(cid => cid !== p.id).length;
       if (sibCount === 0 && (father || mother)) {
-        sentences.push(`${pr.Er} war Einzelkind.`);
-      } else if (sibCount > 0) {
-        sentences.push(`${pr.Er} hatte ${sibCount} Geschwister.`);
+        sentences.push(`${pr.Er} wuchs als Einzelkind auf.`);
+      } else if (sibCount === 1) {
+        sentences.push(`${pr.Er} wuchs mit einem Geschwister auf.`);
+      } else if (sibCount > 1) {
+        sentences.push(`${pr.Er} wuchs mit ${sibCount} Geschwistern auf.`);
       }
     }
 
