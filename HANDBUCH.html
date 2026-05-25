@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v685</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v692</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -1363,6 +1363,8 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
 <p>Tippen Sie auf <span class="button-label">☰</span> → <span class="button-label">⚡ Neue Person (Schnell)</span>. Es öffnet sich ein vereinfachtes Formular mit nur den wichtigsten Feldern: Vorname, Nachname, Ereignis-Typ (z. B. Geburt), Datum, Ort sowie Quelle und Seite.</p>
 
 <p>Der besondere Vorteil: Nach dem Speichern bleibt das Modal geöffnet, und Quelle sowie Seitenangabe bleiben vorausgefüllt. So können Sie eine Person nach der anderen eintragen, ohne jedes Mal neu zu beginnen. Ein Tipp auf <span class="button-label">Fertig</span> schließt das Modal und öffnet direkt die zuletzt angelegte Person in der Detailansicht.</p>
+
+<p>Mit der <strong>Quellen-Zwischenablage</strong> können Sie eine bereits eingetragene Quellreferenz schnell wiederverwenden: Tippen Sie auf <span class="button-label">⧉</span> neben einem Quellenfeld, um Quelle und Seite zu kopieren. An anderer Stelle — im Schnellerfassungs-Modal oder in einem beliebigen Ereignis-Formular — erscheint daraufhin der Button <span class="button-label">📋</span>, mit dem Sie die kopierte Referenz direkt einfügen. Das erspart bei langen Kirchenbuchreihen das wiederholte Heraussuchen derselben Quelle.</p>
 
 <div class="tip">
 Der Schnellerfassungs-Modus eignet sich besonders gut für die Arbeit im Archiv: Tragen Sie alle Personen aus einem Kirchenbuch ein, tragen Sie dieselbe Quelle und Seite vorab ein, und hangeln Sie sich Eintrag für Eintrag durch — ohne Unterbrechung.
@@ -2736,7 +2738,7 @@ Für bäuerliche Genealogie empfiehlt sich folgende Konvention: Beim Übergabeve
   <li><strong>Feldauswahl</strong>: Klicken Sie auf eine Zelle, um für dieses Feld die Seite A oder B zu bevorzugen. Die gewählte Zelle wird hervorgehoben.</li>
   <li><strong>Seiten tauschen</strong>: Der Button <span class="button-label">⇄ Seiten tauschen</span> vertauscht Gewinner und Verlierer.</li>
   <li><strong>Zusammenführen</strong>: Der Gewinner-Datensatz erhält alle Felder, Ereignisse, Quellen, Medien und Familienbindungen beider Personen. Der Verlierer wird gelöscht. Die Aktion kann über <em>Bearbeiten → Rückgängig</em> zurückgenommen werden.</li>
-  <li><strong>Forschungseintrag</strong>: Statt zu mergen können Sie einen <span class="button-label">📋 Forschungseintrag</span> anlegen — bei beiden Personen wird ein offener Protokolleintrag erstellt, um die Frage später zu klären.</li>
+  <li><strong>Forschungseintrag</strong>: Statt zu mergen können Sie einen <span class="button-label">📝 Forschungseintrag</span> anlegen — bei beiden Personen wird ein offener Protokolleintrag erstellt, um die Frage später zu klären.</li>
   <li><strong>Ignorieren</strong>: Wenn zwei Personen eindeutig verschieden sind, tippen Sie auf <span class="button-label">Ignorieren</span>. Das Paar wird dauerhaft aus der Liste entfernt (in localStorage gespeichert).</li>
 </ul>
 
@@ -2777,7 +2779,7 @@ Tipp: Bei historischen Familienforschern taucht derselbe Name oft in mehreren Ge
 <p>Für jede Ergänzung und jeden Konflikt entscheiden Sie individuell:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
   <li><span class="button-label">✓</span> <strong>Übernehmen</strong>: Der Wert aus der Import-Datei wird in Ihren Bestand übertragen.</li>
-  <li><span class="button-label">📋</span> <strong>Forschungseintrag</strong>: Ein offener Protokolleintrag wird angelegt — der Wert wird nicht direkt übernommen, aber zur späteren Prüfung notiert.</li>
+  <li><span class="button-label">📝</span> <strong>Forschungseintrag</strong>: Ein offener Protokolleintrag wird angelegt — der Wert wird nicht direkt übernommen, aber zur späteren Prüfung notiert.</li>
   <li><span class="button-label">✗</span> <strong>Ignorieren</strong>: Der Wert wird nicht übernommen.</li>
 </ul>
 
@@ -3280,6 +3282,7 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
   <tr><td style="font-size:1.2em;text-align:center;">◑</td><td>Zum Fächer-Diagramm wechseln</td><td>Baum-Topbar</td></tr>
   <tr><td style="font-size:1.2em;text-align:center;">⇩</td><td>Zum Nachkommen-Baum wechseln</td><td>Baum-Topbar</td></tr>
   <tr><td style="font-size:1.2em;text-align:center;">⟷</td><td>Zur Zeitleiste wechseln</td><td>Detailansicht, Baum-Topbar</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">🗺</td><td>Zur Kartenansicht wechseln</td><td>Detailansicht, Baum-Topbar</td></tr>
   <tr><td style="font-size:1.2em;text-align:center;">←</td><td>Zurück zur vorherigen Ansicht</td><td>Alle Detailansichten</td></tr>
 </table>
 
@@ -3297,6 +3300,9 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
   <tr><td style="font-size:1.2em;text-align:center;">📍</td><td>GPS-Koordinaten vorhanden — Ort auf Karte zeigbar</td><td>Ortsliste, Ereignis-Detail</td></tr>
   <tr><td style="font-size:1.2em;text-align:center;">🏛</td><td>Quelle ist mit einem Archiv verknüpft</td><td>Quellenliste, Quellen-Detail</td></tr>
   <tr><td style="font-size:1.2em;text-align:center;">~</td><td>Ähnlichkeitssuche (Soundex) ein-/ausschalten</td><td>Suchleiste</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">⧉</td><td>Quellreferenz kopieren (Quelle + Seite in Zwischenablage)</td><td>Quellen-Widget, Schnellerfassung</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">📋</td><td>Quellreferenz einfügen (aus Zwischenablage)</td><td>Quellen-Widget, Schnellerfassung</td></tr>
+  <tr><td style="font-size:1.2em;text-align:center;">📝</td><td>Forschungseintrag anlegen (Protokolleintrag ohne direkten Datenimport)</td><td>Duplikat-Merge, Datei-Vergleich</td></tr>
 </table>
 
 <h2 id="kap23-keys">Tastaturkürzel (Mac/Desktop)</h2>
@@ -3316,7 +3322,7 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Mai 2026<br>
+  Stammbaum PWA · Version 8 · Mai 2026 · sw v692<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 
