@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v699 · Cache: `stammbaum-v699`
+**sw-Version:** v700 · Cache: `stammbaum-v700`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -99,6 +99,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | ASSO-DISP | ASSO-Beziehungen anzeigen (Paten, Zeugen, Patenkinder) | v698+ |
 | CSV-EXPORT | CSV-Export Personen- und Familienliste (gefiltert, `;`-getrennt, BOM) | v699 |
 | OFFLINE-DIAG | Offline-Indikator im Header + online/offline-Toast + Cache-Check | v699 |
+| LIGHT-MODE | Light-Mode Parity: `--border`/`--gold` Kontrast, Leaflet-Attribution, Schatten | v700 |
 | TEST-AUTO | `test.html`: Standalone GEDCOM Roundtrip-Tester | — |
 
 ---
@@ -177,7 +178,7 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 | ~~CSV-EXPORT~~ | ~~CSV-Export Personen- und Familienliste~~ | v699 | - |
 | FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig. | XS |
 | ACCESSIBILITY | **Accessibility-Audit + Grundhärtung** | Die App hat 88 `aria-*`-Attribute in index.html — unzureichend für dynamisch gerenderte Listen, Modal-Dialoge, Baum-Navigation. Ziel: WCAG 2.1 AA für die vier häufigsten Flows (Laden, Person suchen, Detailansicht, Baum navigieren). Keine vollständige Screen-Reader-Parität, aber funktionale Tastaturnavigation und korrekte `role`/`aria-label` auf allen interaktiven Elementen. | M |
-| LIGHT-MODE | **Light-Mode Parity** | Light Mode wurde als Sekundär-Theme entwickelt. Erkennbare Schwächen: Gold auf hellem Hintergrund hat schlechtere Kontrast-Ratio (WCAG AA verfehlt), Baum-Konnektoren kaum sichtbar, Karten-Tooltip-Hintergrund zu dunkel. Ziel: gleiche visuelle Qualität in beiden Modi. | M |
+| ~~LIGHT-MODE~~ | ~~Light-Mode Parity~~ | v700 | - |
 
 ---
 

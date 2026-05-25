@@ -400,7 +400,7 @@ body.desc-tree-mode.fc-mode #treeKeyLegend      { display: none !important; }
 .leaflet-popup-content { margin: 10px 12px; font-size: 0.88rem; }
 .leaflet-attribution-flag { display: none !important; }
 .leaflet-control-attribution {
-  background: rgba(20,16,8,.75) !important;
+  background: var(--topbar-bg) !important;
   color: var(--text-muted) !important;
   font-size: 0.68rem !important;
 }
@@ -1139,7 +1139,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 .offline-indicator {
   display: inline-block; font-size: 0.7rem; font-weight: 600;
-  color: var(--err, #e55); margin-left: 6px; vertical-align: middle;
+  color: var(--red, #c04040); margin-left: 6px; vertical-align: middle;
   letter-spacing: 0.02em;
 }
 #syncBanner {
@@ -2525,11 +2525,11 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
     --surface:   #f0e8d8;
     --surface2:  #e6d8c0;
     --surface3:  #d8c8a8;
-    --border:    #c0a878;
-    --gold:      #8a6420;
-    --gold-lt:   #5a3e0e;
+    --border:    #8a7050;
+    --gold:      #6e4e18;
+    --gold-lt:   #4a2e08;
     --gold-dim:  #c8a84a;
-    --gold-glow: rgba(138,100,32,0.12);
+    --gold-glow: rgba(110,78,24,0.12);
     --text:      #1a1208;
     --text-dim:  #4a3418;
     --text-muted:#8a7050;
@@ -2544,6 +2544,10 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
     --warn:      #7a4800;
     --warn-dim:  #c08020;
   }
+  .history-picker          { box-shadow: 0 6px 28px rgba(0,0,0,.18); }
+  .leaflet-popup-content-wrapper { box-shadow: 0 4px 16px rgba(0,0,0,.15) !important; }
+  .leaflet-tooltip         { box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+  #syncBanner              { box-shadow: 0 2px 12px rgba(0,0,0,.2); }
 }
 /* Manuell Hell — überschreibt OS-Dunkel */
 html[data-theme="light"] {
@@ -2553,11 +2557,11 @@ html[data-theme="light"] {
   --surface:   #f0e8d8;
   --surface2:  #e6d8c0;
   --surface3:  #d8c8a8;
-  --border:    #c0a878;
-  --gold:      #8a6420;
-  --gold-lt:   #5a3e0e;
+  --border:    #8a7050;
+  --gold:      #6e4e18;
+  --gold-lt:   #4a2e08;
   --gold-dim:  #c8a84a;
-  --gold-glow: rgba(138,100,32,0.12);
+  --gold-glow: rgba(110,78,24,0.12);
   --text:      #1a1208;
   --text-dim:  #4a3418;
   --text-muted:#8a7050;
@@ -2572,6 +2576,10 @@ html[data-theme="light"] {
   --warn:      #7a4800;
   --warn-dim:  #c08020;
 }
+html[data-theme="light"] .history-picker          { box-shadow: 0 6px 28px rgba(0,0,0,.18); }
+html[data-theme="light"] .leaflet-popup-content-wrapper { box-shadow: 0 4px 16px rgba(0,0,0,.15) !important; }
+html[data-theme="light"] .leaflet-tooltip         { box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+html[data-theme="light"] #syncBanner              { box-shadow: 0 2px 12px rgba(0,0,0,.2); }
 /* Manuell Dunkel — überschreibt OS-Hell */
 html[data-theme="dark"] {
   --topbar-bg:    rgba(24,20,15,0.96);
