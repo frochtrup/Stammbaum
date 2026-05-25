@@ -152,6 +152,11 @@
     return m ? parseInt(m[1], 10) : null;
   }
 
+  // Erkennt Arbeitgeber-/Firmenangaben (vs. Berufsbezeichnungen) im OCCU-Wert
+  function _isEmployer(val) {
+    return /\b(Gebr\.|Fa\.|Firma|GmbH|AG|KG|OHG|GbR|Co\.|Ltd\.)\b/i.test(val);
+  }
+
   // ── Text-Kompositions-Helfer ────────────────────────────────────────────────
 
   // „FROM 1850 TO 1870" → „1850–1870"; gleiches Jahr → nur „1850"
@@ -205,11 +210,15 @@
       const ev = jobs[0];
       const date  = _atDate(ev);
       const place = date ? _atPlace(ev) : '';   // Ort nur zusammen mit Datum
+      if (_isEmployer(ev.value)) {
+        return `${pr.Er} arbeitete bei ${_esc(ev.value)}${date}${place}.`;
+      }
       return `${pr.Er} war ${_esc(ev.value)}${date}${place}.`;
     }
     const parts = jobs.map(ev => {
       const period = _occuPeriod(ev.date);
-      return _esc(ev.value) + (period ? ` (${period})` : '');
+      const label  = (_isEmployer(ev.value) ? 'bei ' : '') + _esc(ev.value);
+      return label + (period ? ` (${period})` : '');
     });
     const last = parts.slice(-1)[0];
     const rest = parts.slice(0, -1);
@@ -223,8 +232,10 @@
       (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
     if (sorted.length === 1) {
       const ev = sorted[0];
-      const val = ev.value ? _esc(_stripQuotes(ev.value)) : 'einen Abschluss';
-      return `${pr.Er} erlangte ${val}${_atPlace(ev)}${_atDate(ev)}.`;
+      const val = ev.value ? _esc(_stripQuotes(ev.value)) : null;
+      // Datum vor Ort; Artikel „die" vor dem Abschluss-Wert
+      if (val) return `${pr.Er} erlangte${_atDate(ev)}${_atPlace(ev)} die ${val}.`;
+      return `${pr.Er} erlangte${_atDate(ev)}${_atPlace(ev)} einen Abschluss.`;
     }
     const parts = sorted.map(ev => {
       const yr = _yearFromDate(ev.date);
@@ -232,7 +243,7 @@
     });
     const last = parts.slice(-1)[0];
     const rest = parts.slice(0, -1);
-    return `${pr.Er} erlangte: ${rest.join(', ')} sowie ${last}.`;
+    return `${pr.Er} erlangte ${rest.join(', ')} sowie ${last}.`;
   }
 
   // Mehrere EDUC-Ereignisse zu einem Bildungsweg-Satz zusammenführen
@@ -255,7 +266,7 @@
     });
     const last = parts.slice(-1)[0];
     const rest = parts.slice(0, -1);
-    return `${pr.Er} besuchte: ${rest.join(', ')} sowie ${last}.`;
+    return `${pr.Er} besuchte ${rest.join(', ')} sowie ${last}.`;
   }
 
   // 3+ RESI-Ereignisse als kompakte Ortsliste; ≤2 bleiben Einzelsätze
@@ -311,7 +322,7 @@
     NATU: (ev, pr) => `${pr.Er} wurde eingebürgert${_atPlace(ev)}${_atDate(ev)}.`,
     CONF: (ev, pr) => `${pr.Er} wurde konfirmiert${_atPlace(ev)}${_atDate(ev)}.`,
     FCOM: (ev, pr) => `${pr.Er} erhielt die Erstkommunion${_atPlace(ev)}${_atDate(ev)}.`,
-    GRAD: (ev, pr) => `${pr.Er} erlangte einen Abschluss${ev.value ? ': ' + _esc(ev.value) : ''}${_atPlace(ev)}${_atDate(ev)}.`,
+    GRAD: (ev, pr) => `${pr.Er} erlangte${_atDate(ev)}${_atPlace(ev)} ${ev.value ? 'die ' + _esc(ev.value) : 'einen Abschluss'}.`,
     RELI: (ev, pr) => `${pr.Er} gehörte der Religion ${_esc(ev.value || '')} an${_atDate(ev)}.`,
     TITL: (ev, pr) => `${pr.Er} trug den Titel ${_esc(ev.value || '')}${_atDate(ev)}.`,
     CENS: (ev, pr) => `${pr.Er} wurde in einer Volkszählung erfasst${_atPlace(ev)}${_atDate(ev)}.`,
