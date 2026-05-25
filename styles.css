@@ -3168,6 +3168,23 @@ html[data-theme="dark"] {
   box-shadow: 0 1px 4px rgba(0,0,0,.08);
 }
 
+/* ── Familien-Story ── */
+.story-fam-marr-sub { color: var(--gold-lt, #8b6914); margin: .25rem 0 0; font-size: .9rem; }
+.story-fam-parents { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.story-fam-parent { background: var(--surface2); border-radius: 6px; padding: .7rem 1rem; }
+.story-fam-parent-role { font-size: .72rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 .4rem; font-family: system-ui, sans-serif; }
+.story-child-list { list-style: none; padding: 0; margin: 0; }
+.story-child-row { padding: .35rem 0; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: .3rem .6rem; align-items: baseline; }
+.story-child-name { font-weight: 600; }
+.story-child-years { color: var(--text-dim); font-size: .85em; }
+.story-child-note { color: var(--red, #c04040); font-size: .8em; font-style: italic; }
+.story-child-occu { color: var(--text2, #888); font-size: .85em; }
+.story-child-partner { color: var(--text2, #888); font-size: .85em; }
+.story-tl-list { list-style: none; padding: 0; margin: 0; }
+.story-tl-row { display: flex; gap: .6rem; padding: .3rem 0; border-bottom: 1px solid var(--surface3, #f0ece4); align-items: baseline; font-size: .9rem; }
+.story-tl-year { min-width: 3rem; color: var(--text-dim); font-size: .82em; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.story-tl-label { flex: 1; }
+
 /* ── Story Karte ── */
 .story-map { margin-bottom: .8rem; }
 .story-map-container {

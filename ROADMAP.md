@@ -194,7 +194,7 @@ Fundament abgeschlossen: Timeline ✓, Story ✓, Karte ✓, Fächer ✓, Nachko
 | ~~TL-MULTI~~ | ~~Zeitleiste Mehrpersonen-Modus~~ | v665 | - |
 | ~~STORY-OPT~~ | ~~Story: Textqualität (Epochen, OCCU-Merge)~~ | v638–v644 | - |
 | ~~STORY-DIAGRAM~~ | ~~Story: Inline-SVG Ahnentafel~~ | v645 | - |
-| STORY-FAM | **Story-Mode für Familien** | Familien-Narrative: Eltern + alle Kinder, gemeinsame Ereignisse, Geschwister-Vergleich, Zeitspanne der Familie. HTML-Download + Print-CSS analog Person-Story. Einzigartiges Feature — kein anderes Genealogie-Tool bietet das. | M |
+| ~~STORY-FAM~~ | ~~Story-Mode für Familien~~ | v713 | - |
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key. | S |
 | MAP-HIST-B | **Historischer Kartenhintergrund (Swisstopo)** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). Nur sinnvoll nach MAP-HIST-A. | M |
 | ONBOARDING | **Onboarding für Erstnutzer** | Landing-Seite erklärt das Konzept, aber kein interaktiver Einführungsflow. Ziel: nach Demo-Load zeigt ein dismissibler Overlay 3–4 Schritte: „Klick auf eine Person", „Öffne den Baum", „Bearbeite ein Ereignis". Einmalig, localStorage-Flag. | S |

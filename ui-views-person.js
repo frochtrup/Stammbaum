@@ -668,7 +668,7 @@ function showDetail(id, pushHistory = true) {
   const tlBtn = document.getElementById('timelineBtn');
   if (tlBtn) { tlBtn.hidden = false; tlBtn.dataset.id = id; }
   const stBtn = document.getElementById('storyBtn');
-  if (stBtn) { stBtn.hidden = false; stBtn.dataset.id = id; }
+  if (stBtn) { stBtn.hidden = false; stBtn.dataset.action = 'showStory'; stBtn.dataset.id = id; delete stBtn.dataset.fid; }
   const mapBtn = document.getElementById('detailMapBtn');
   if (mapBtn) mapBtn.hidden = false;
   const pb = document.getElementById('probandBtn');

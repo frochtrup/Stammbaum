@@ -59,7 +59,7 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-25
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v712** / Cache: `stammbaum-v712`
+- **Aktuelle sw-Version: v713** / Cache: `stammbaum-v713`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
 **Abgeschlossene Sprints (v8-dev, Auswahl — vollständig: CHANGELOG.md):**

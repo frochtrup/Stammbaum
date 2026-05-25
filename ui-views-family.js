@@ -368,7 +368,8 @@ function showFamilyDetail(id, pushHistory = true) {
   tb.style.display = _famTreeTarget ? '' : 'none';
   if (_famTreeTarget) tb.dataset.id = _famTreeTarget;
   const _tlBtn  = document.getElementById('timelineBtn');   if (_tlBtn)  _tlBtn.hidden  = true;
-  const _stBtn  = document.getElementById('storyBtn');      if (_stBtn)  _stBtn.hidden  = true;
+  const _stBtn = document.getElementById('storyBtn');
+  if (_stBtn) { _stBtn.hidden = false; _stBtn.dataset.action = 'showFamilyStory'; _stBtn.dataset.fid = id; delete _stBtn.dataset.id; }
   const _pbBtn  = document.getElementById('probandBtn');    if (_pbBtn)  _pbBtn.hidden  = true;
   const _pbsBtn = document.getElementById('probandSetBtn'); if (_pbsBtn) _pbsBtn.hidden = true;
   const _mapBtn = document.getElementById('detailMapBtn');  if (_mapBtn) _mapBtn.hidden = true;

@@ -182,9 +182,10 @@ const _CLICK_MAP = {
   relPathShowDetail:       el  => { closeModal('modalRelPath'); showDetail(el.dataset.id); },
   showTree:                el  => showTree(el.dataset.id),
   showTimeline:            el  => { if (typeof showTimeline === 'function') showTimeline(el.dataset.id); },
-  showStory:               el  => { if (typeof showStory    === 'function') showStory(el.dataset.id); },
-  printStory:              ()  => { if (typeof printStory   === 'function') printStory(); },
-  downloadStory:           ()  => { if (typeof downloadStory === 'function') downloadStory(); },
+  showStory:               el  => { if (typeof showStory        === 'function') showStory(el.dataset.id); },
+  showFamilyStory:         el  => { if (typeof showFamilyStory === 'function') showFamilyStory(el.dataset.fid); },
+  printStory:              ()  => { if (typeof printStory       === 'function') printStory(); },
+  downloadStory:           ()  => { if (typeof downloadStory    === 'function') downloadStory(); },
   tlFilter:                el  => { if (typeof _tlFilterToggle === 'function') _tlFilterToggle(el.dataset.cat); },
   tlPersonAdd:             ()  => {
     UIState._relMode = 'tlmulti';
