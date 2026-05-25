@@ -211,28 +211,72 @@ body.desktop-mode:
 
 Jedes Symbol hat genau eine Bedeutung — sie dürfen nicht gemischt werden.
 
+#### Baum-Badges
+
 | Symbol / Klasse | Bedeutung | Kontext |
 |---|---|---|
 | `📎` | Medien-Anhang vorhanden (OBJE, Foto, Dokument) | Personen-/Familien-Liste, Detail-Hero |
-| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID; Tooltip = `s.abbr \|\| s.title`; QUAY-Farbe via `.src-badge--q0/q1/q2/q3`; Seiten-Suffix wenn ≤5 Zeichen | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
+| `.src-badge` (`§N`) | Quellen-Zitat — N = numerischer Teil der GEDCOM-ID (z.B. `@S042@` → `§42`); Tooltip = `s.abbr \|\| s.title` (max. 60 Z.); QUAY-Farbe via `.src-badge--q0/q1/q2/q3`; Seiten-Suffix wenn ≤5 Zeichen | fact-row, Kindbeziehungs-Zeile, überall einheitlich |
 | `+ Q` (gestrichelt) | Quellen-Zitat hinzufügen — CTA wenn noch keine Quelle zugewiesen | Kindbeziehungs-Zeile, Events ohne Quellen |
 | `½` (`.tree-half-badge`) | Halbgeschwister — Kind gehört zu anderer Ehe des Zentrum-Elternteils | Baum-Karte (bottom-right) |
 | `⚭N` | Mehrfach-Ehe — Person hat N Ehen gesamt; Karte zeigt aktive Ehe | Zentrum-Karte im Sanduhr-Baum |
 | `⚭` (`.tree-marr-btn`) | Heirats-Navigation — öffnet Familien-Detail; zwischen Proband und Ehepartner | Nachkommen-Baum |
 | `▼` (`.tree-desc-more`) | Abgeschnittene Nachkommen — mehr vorhanden, Klick lädt tiefere Gens | Nachkommen-Baum-Karte |
-| `◑` | Fan-Chart-Umschalter in Topbar | Alle Diagramm-Topbars |
-| `⇩` | Nachkommen-Baum-Umschalter in Topbar | Alle Diagramm-Topbars |
-| `⟷` | Zeitleiste-Umschalter in Topbar | Alle Diagramm-Topbars + Person-Detail |
-| `⤢` / `⤡` | Vollbild ein/aus — steht in jeder Diagramm-Topbar VOR dem Separator; Layout: `[⌂ Proband] [⤢ Vollbild] \| [Diagramm-Wechsel] [☰]` | Sanduhr, Fächer, Nachkommen, Zeitleiste |
-| `⌂` (plain) | Zum Probanden navigieren — ohne Rahmenstil; in Diagramm-Topbars ganz links, in Person-Detail-Topbar nach Zurück-Buttons | Alle Diagramm-Topbars, Person-Detail |
-| `⌂` (`.proband-set-btn`) | Proband setzen / Proband-Status aufheben — Rahmen-Stil (`box-shadow: inset 0 0 0 1.5px currentColor`); Rahmen verschwindet im aktiven Zustand (goldene Füllung); steht direkt vor dem Bearbeiten-Button | Person-Detail-Topbar |
+
+#### Topbar-Aktionen
+
+| Symbol / Klasse | Bedeutung | Position in Topbar | Kontext |
+|---|---|---|---|
+| `⌂` (plain) | Zum Probanden navigieren — ohne Rahmenstil | Ganz links (Diagramme) / nach Zurück-Button (Person-Detail) | Alle Diagramm-Topbars, Person-Detail |
+| `⤢` / `⤡` | Vollbild ein / aus | Zweite Position von links, vor Separator | Sanduhr, Fächer, Nachkommen, Zeitleiste |
+| `◑` | Fan-Chart-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars |
+| `⇩` | Nachkommen-Baum-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars |
+| `⟷` | Zeitleiste-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars + Person-Detail |
+| `🗺` | Kartenansicht-Umschalter | Nach Separator, Diagramm-Wechsel-Gruppe | Alle Diagramm-Topbars + Person-Detail |
+| `☰` | Menü öffnen | Immer **ganz rechts** | Alle Topbars |
+| `⌂` (`.proband-set-btn`) | Proband setzen / aufheben — Rahmen-Stil (`box-shadow: inset 0 0 0 1.5px currentColor`); goldene Füllung im aktiven Zustand | Direkt vor `✎` | Person-Detail-Topbar |
+| `✎` | Bearbeiten — öffnet Formular des aktuellen Datensatzes | Direkt vor `☰` | Person-/Familien-/Quellen-Detail-Topbar |
+| `←` | Zurück — `goBack()`; Swipe-Right auf Mobile hat dieselbe Wirkung | Ganz links | Detail-Topbar |
+
+**Topbar-Layout** (unveränderlich):
+```
+Diagramm:      [⌂] [⤢]  |  [◑][⇩][⟷][🗺]  [☰]
+Person-Detail: [←] [⌂]  …  [⌂▢] [✎]  [☰]
+```
+
+#### Aktions-Buttons (Tab-Header, Modals, Listen)
+
+| Symbol / Klasse | Bedeutung | Kontext |
+|---|---|---|
+| `＋` (FAB, `.fab`) | Neu erstellen — öffnet `#modalAdd` (Person/Familie/Quelle); ausgeblendet auf Orte-Tab + Baum | Floating Action Button (unten rechts) |
+| `↓` (`.act-btn-icon`) | Exportieren / Herunterladen — Download der aktuellen Ansicht | Tab-Header `action-btns` (z.B. `↓ MD` Aufgaben, `↓ PNG` Diagramm) |
+| `⊕` | Person zur Mehrpersonen-Zeitleiste hinzufügen — öffnet modalRelPicker im Modus `'tlmulti'`; max. 5 Personen | **Nur** Zeitleiste Filterleiste (TL-MULTI) |
+
+#### Import-Vergleich (3-Wege-Entscheidung)
+
+Diese drei Symbole sind **ausschließlich** im Merge-Assistenten als Gruppe definiert:
+
+| Symbol | Bedeutung |
+|---|---|
+| `✓` | Feld / Person übernehmen |
+| `📋` | Als Forschungseintrag anlegen — erstellt `_rlog`-Eintrag mit `result:'pending'` |
+| `✗` | Ablehnen / nicht übernehmen |
+
+In anderen Kontexten einzeln: `✓` = Aufgabe erledigt (Aufgaben-Liste); `✗` / `×` = Modal schließen oder Tag entfernen.
+
+---
 
 **Regeln:**
 - `📎` steht **ausschließlich** für Medien/OBJE — nie für Quellen
-- Quellen werden **überall einheitlich** als `.src-badge` `§N` dargestellt — in fact-rows, Kindbeziehungs-Zeilen und allen anderen Kontexten
+- Quellen werden **überall einheitlich** als `.src-badge` `§N` dargestellt — N ist der numerische Teil der GEDCOM-ID; in fact-rows, Kindbeziehungs-Zeilen und allen anderen Kontexten
 - Tooltip auf `.src-badge` zeigt immer den Quellentitel (`s.abbr || s.title`, max. 60 Zeichen), nicht die GEDCOM-ID
 - Click auf `.src-badge` öffnet je nach Kontext `showSourceDetail(sid)` (fact-row) oder den zugehörigen Dialog (z.B. `showChildRelDialog`)
 - `+ Q` erscheint nur wenn wirklich 0 Quellen zugewiesen sind; verschwindet nach erstem Hinzufügen
+- `☰` steht **immer ganz rechts** in jeder Topbar — kein anderer Button darf rechts davon stehen
+- `✎` steht **direkt links von `☰`** in der Detail-Topbar — nie an anderer Position
+- `⊕` erscheint **nur in der Zeitleiste** als „Person hinzufügen" — nicht als allgemeines Hinzufügen-Symbol (dafür: `＋` FAB oder `.section-add`)
+- Die vier Diagramm-Wechsel-Symbole (`◑ ⇩ ⟷ 🗺`) stehen **immer nach dem Separator** und **immer vor `☰`** — keine andere Reihenfolge
+- Die 3-Wege-Gruppe `✓ / 📋 / ✗` wird **ausschließlich** im Import-Vergleich als Gruppe eingesetzt
 - `.src-tag` wird **nicht** verwendet — war ein veraltetes Zwischenformat, abgelöst durch `.src-badge`
 - **ExtraNames** (zweite+ Namenangaben) sind in Personendetail klickbar (`data-action="showPersonForm"`) und öffnen das Personen-Formular
 
