@@ -43,7 +43,10 @@
 - `debug-gramps.js` — Debug-Tools: `_grampsXMLDebug`, `_grampsMinimalTest`, `_grampsDeepTest`, `_grampsRoundtripTest`; nur bei `?debug=1` geladen
 - `leaflet.js` / `leaflet.css` — Leaflet 1.9.4 lokal (kein CDN), für Kartenansicht
 - `ui-views-map.js` — Kartenansicht: `initOrRefreshPlaceMap()`, `_buildPlacePersonIndex()`, `switchMapMode()`, `showPersonOnMap()`, `_renderOrteModus()`, `_renderPersonModus()`
-- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v595)
+- `ui-story.js` — Story-Kern: State, Public API (`showStory`, `printStory`, `downloadStory`), `_loadMediaSrc`, Text-/Kompositions-Helfer, Event-Templates, SVG-Karte, `_getParents`, `window._storyShared`-Bridge
+- `ui-story-person.js` — Personen-Story: `_embedPhotosAsync`, alle `_section*`-Funktionen (Header, EarlyLife, Events, Families, Death, Epoch, Reli, Diagram), `_renderStory`, `_storyAsHTML`; registriert sich in `_storyShared`
+- `ui-story-fam.js` — Familien-Story: `showFamilyStory`, `_embedFamPhotosAsync`, `_famSection*`, `_renderFamilyStory`, `_famStoryAsHTML`; registriert sich in `_storyShared`
+- `sw.js` — Service Worker (Network-first + 4s Timeout, offline, Cache v714)
 - `manifest.json` — PWA-Manifest (Icons, standalone)
 - `index_v1.2.html` — Archiv: Version 1.2 (Phase 1)
 - `README.md` — Schnellstart, Feature-Übersicht, Workflow iPhone↔Mac
@@ -59,7 +62,7 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-25
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v713** / Cache: `stammbaum-v713`
+- **Aktuelle sw-Version: v714** / Cache: `stammbaum-v714`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
 **Abgeschlossene Sprints (v8-dev, Auswahl — vollständig: CHANGELOG.md):**
@@ -77,6 +80,7 @@
 - **ALIA (sw v499):** `p.alia[]` Parser/Writer; symmetrisches Edit; Warn-Row ≈-Label
 - **F9 Zeitleiste (sw v501–v540, v591):** `ui-timeline.js` + `timeline-hist-events.js`; View `#v-timeline`; Swim-Lane horizontal (5 Lanes) + vertikal (Dekaden); `_HIST_EVENTS` 71 Einträge; Vollbild-Modus; Filter-Toggles; Lebensspanne-Balken; ab v591 vollwertiges Diagramm mit einheitlicher Topbar-Struktur (s. u.)
 - **STORY (sw v549–v560):** `ui-story.js`; View `#v-story`; Fließtext-Erzählung (18 Event-Templates); Hero-Foto + Galerie; Leaflet-Karte mit Bewegungspfad; HTML-Download + Print-CSS
+- **STORY-SPLIT (sw v714):** T0-REFACT-3 Phase C: `ui-story.js` (1.530 Z.) → `ui-story.js` (Shared Core ~370 Z.) + `ui-story-person.js` (Personen-Abschnitte ~530 Z.) + `ui-story-fam.js` (Familien-Abschnitte ~330 Z.); `window._storyShared`-Bridge; IIFE-Kapselung bleibt erhalten; `showStory`/`downloadStory` delegieren via Bridge
 - **MEDI-CALN (sw v545):** `s.repoCallMedi`; `3 MEDI` unter `2 CALN`; Select im Quellen-Formular
 - **SOUR-DATA (sw v546):** `s.dataEvens[]` mit `{evens,date,plac}`; Deckungsbereich im Quellen-Detail + Formular
 - **REFN (sw v548):** `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; read-only Detail
