@@ -153,9 +153,13 @@
   }
 
   // Erkennt Arbeitgeber-/Firmenangaben (vs. Berufsbezeichnungen) im OCCU-Wert
+  // Kein \b am Ende — nach „." gibt es keine Wortgrenze
   function _isEmployer(val) {
-    return /\b(Gebr\.|Fa\.|Firma|GmbH|AG|KG|OHG|GbR|Co\.|Ltd\.)\b/i.test(val);
+    return /\b(Gebr\.|Fa\.|Firma|GmbH|AG|KG|OHG|GbR|Co\.|Ltd\.)/i.test(val);
   }
+
+  // Entfernt abschließende Satzzeichen aus GEDCOM-Werten (z. B. trailing Komma)
+  function _trimVal(s) { return s ? s.replace(/[,;:\s]+$/, '') : s; }
 
   // ── Text-Kompositions-Helfer ────────────────────────────────────────────────
 
@@ -344,7 +348,7 @@
     // FROM-TO-Zeitraum mit Wert: natürlicher Tätigkeitssatz
     if (ev.value && ev.date && /^FROM\s+/i.test(ev.date)) {
       const period = _occuPeriod(ev.date);
-      return `${pr.Er} war ${_esc(ev.value)}${period ? ' (' + period + ')' : ''}${_atPlace(ev)}.`;
+      return `${pr.Er} war ${_esc(_trimVal(ev.value))}${period ? ' (' + period + ')' : ''}${_atPlace(ev)}.`;
     }
     if (ev.value && ev.date) {
       const raw = ev.date.trim();
@@ -354,12 +358,12 @@
       // Konkretes Datum (Tag+Monat+Jahr, kein Qualifier) → Datum vorne
       if (!isYearOnly && !hasQual) {
         const prep = _MONTH_YEAR_RE.test(fmt) ? 'Im' : 'Am';
-        return `${prep} ${_esc(fmt)}${_atPlace(ev)}: ${_esc(ev.value)}.`;
+        return `${prep} ${_esc(fmt)}${_atPlace(ev)}: ${_esc(_trimVal(ev.value))}.`;
       }
     }
     // Wert vorhanden: Wert als Hauptaussage, Label weglassen
     if (ev.value) {
-      return `${pr.Er} — ${_esc(ev.value)}${_atDate(ev)}${_atPlace(ev)}.`;
+      return `${pr.Er} — ${_esc(_trimVal(ev.value))}${_atDate(ev)}${_atPlace(ev)}.`;
     }
     return `${pr.Er} — ${_esc(label)}${_atDate(ev)}${_atPlace(ev)}.`;
   }
