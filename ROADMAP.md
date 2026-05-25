@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v702 · Cache: `stammbaum-v702`
+**sw-Version:** v704 · Cache: `stammbaum-v704`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -101,6 +101,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | OFFLINE-DIAG | Offline-Indikator im Header + online/offline-Toast + Cache-Check | v699 |
 | LIGHT-MODE | Light-Mode Parity: `--border`/`--gold` Kontrast, Leaflet-Attribution, Schatten | v700 |
 | TEST-AUTO | `test.html`: Standalone GEDCOM Roundtrip-Tester | — |
+| BUG-704 | 6 Bugfixes: stale Hof-Cache, Baum-"…"-Überbleibsel, Geschwisterzähler entfernt, leere Elternkachel öffnet neues Individuum, Fächersymbol ◗, Personenliste min-height | v704 |
 
 ---
 

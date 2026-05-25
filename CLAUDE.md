@@ -22,7 +22,7 @@ Kein cherry-pick, keine Konflikte.
 
 ## Pflichtregeln bei Code-Änderungen
 
-- `sw.js`: `CACHE_NAME` bei jeder Änderung hochzählen (aktuell: `stammbaum-v693`)
+- `sw.js`: `CACHE_NAME` bei jeder Änderung hochzählen (aktuell: `stammbaum-v704`)
 - `ROADMAP.md`: sw-Version im Abschnitt "Aktueller Stand" synchron halten
 
 ## Projektpfad

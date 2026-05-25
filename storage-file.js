@@ -378,6 +378,8 @@ function _finishLoad(db, text, filename) {
     if (typeof _clearNavState === 'function') _clearNavState();
     if (typeof clearValidationResults === 'function') clearValidationResults();
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+    UIState._hofCache = null;
+    UIState._placesCache = null;
     Promise.all([
       idbPut('stammbaum_ged', text),
       idbPut('stammbaum_ged_backup', text),
@@ -467,6 +469,8 @@ async function _loadGRAMPS(file) {
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
     if (typeof clearValidationResults === 'function') clearValidationResults();
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
+    UIState._hofCache = null;
+    UIState._placesCache = null;
     AppState._canDirectSave   = false;
     // Persist filename in localStorage for display
     const filename = file.name;

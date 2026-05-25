@@ -630,6 +630,7 @@ body.desktop-mode.places-karte #mapContainer {
 /* ═══════════════════════════════════════
    PERSON LIST
 ═══════════════════════════════════════ */
+#persons-list-section { min-height: calc(100dvh - var(--topbar-h, 52px)); }
 #personList, #familyList, #sourceList, #placeList, #repoList { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 
 .alpha-sep {

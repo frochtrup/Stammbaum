@@ -541,7 +541,7 @@ function showTree(personId, addToHistory = true) {
     scaleWrap.style.width  = Math.round(totalW * _treeZoomScale) + 'px';
     scaleWrap.style.height = Math.round(totalH * _treeZoomScale) + 'px';
   }
-  wrap.querySelectorAll('.tree-card, .tree-marr-btn').forEach(el => el.remove());
+  wrap.querySelectorAll('.tree-card, .tree-marr-btn, .tree-sib-more').forEach(el => el.remove());
   const svg = document.getElementById('treeSvg');
   svg.setAttribute('width',   totalW);
   svg.setAttribute('height',  totalH);
@@ -584,6 +584,7 @@ function showTree(personId, addToHistory = true) {
     if (!id) {
       div.classList.add('tree-card-empty');
       div.innerHTML = '<span class="tree-card-unknown">?</span>';
+      if (onClick) div.addEventListener('click', onClick);
       wrap.appendChild(div);
       return;
     }
@@ -622,7 +623,17 @@ function showTree(personId, addToHistory = true) {
   }
 
   // ── Eltern ──
-  anc1.forEach((id, i) => mkCard(id, aXFn(1)(i), ry(-1), false, false, null, false, null, kbadge(id)));
+  anc1.forEach((id, i) => {
+    const sexHint = i === 0 ? 'M' : 'F';
+    const emptyClick = !id ? () => {
+      UIState._relAnchorId = personId;
+      UIState._pendingRelation = { mode: 'parent', anchorId: personId };
+      showPersonForm(null);
+      const sexEl = document.getElementById('pf-sex');
+      if (sexEl) sexEl.value = sexHint;
+    } : null;
+    mkCard(id, aXFn(1)(i), ry(-1), false, false, null, false, emptyClick, kbadge(id));
+  });
 
   // ── Eltern → Kinder: symmetrischer Verzweigungspunkt bei personCX ──
   if (anc1[0] || anc1[1] || nSibs > 0) {
@@ -680,10 +691,7 @@ function showTree(personId, addToHistory = true) {
   }
 
   // ── Zentrumsperson ──
-  const sibCountBadge = nSibs > 0
-    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">∞ ${nSibs}</div>`
-    : '';
-  mkCard(personId, personX, ry(0), true, false, null, false, null, sibCountBadge + kbadge(personId));
+  mkCard(personId, personX, ry(0), true, false, null, false, null, kbadge(personId));
 
   // ── Ehepartner: horizontal rechts ──
   // Aktiver Ehepartner (Index aus _activeSpouseMap) steht links (nächste am Probanden).
