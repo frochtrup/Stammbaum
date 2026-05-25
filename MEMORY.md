@@ -62,7 +62,7 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-25
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v714** / Cache: `stammbaum-v714`
+- **Aktuelle sw-Version: v716** / Cache: `stammbaum-v716`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
 **Abgeschlossene Sprints (v8-dev, Auswahl — vollständig: CHANGELOG.md):**
@@ -81,6 +81,8 @@
 - **F9 Zeitleiste (sw v501–v540, v591):** `ui-timeline.js` + `timeline-hist-events.js`; View `#v-timeline`; Swim-Lane horizontal (5 Lanes) + vertikal (Dekaden); `_HIST_EVENTS` 71 Einträge; Vollbild-Modus; Filter-Toggles; Lebensspanne-Balken; ab v591 vollwertiges Diagramm mit einheitlicher Topbar-Struktur (s. u.)
 - **STORY (sw v549–v560):** `ui-story.js`; View `#v-story`; Fließtext-Erzählung (18 Event-Templates); Hero-Foto + Galerie; Leaflet-Karte mit Bewegungspfad; HTML-Download + Print-CSS
 - **STORY-SPLIT (sw v714):** T0-REFACT-3 Phase C: `ui-story.js` (1.530 Z.) → `ui-story.js` (Shared Core ~370 Z.) + `ui-story-person.js` (Personen-Abschnitte ~530 Z.) + `ui-story-fam.js` (Familien-Abschnitte ~330 Z.); `window._storyShared`-Bridge; IIFE-Kapselung bleibt erhalten; `showStory`/`downloadStory` delegieren via Bridge
+- **STORY-TEXT-1 (sw v715):** Story-Texte flüssiger: `_mergeOccuSentence` „war als X tätig" → „war X" (kein Ort ohne Datum); Mehrfach-OCCU „arbeitete als … und später als" → „war … und später"; Geschwister „hatte X" → „wuchs mit X Geschwistern auf"; FamStory-Eltern-Geburt Jahr-only → „kam zur Welt"
+- **STORY-TEXT-2 (sw v716):** `_isEmployer()` erkennt Fa./Gebr./GmbH/AG etc. → „arbeitete bei X" statt „war X"; `_mergeGradSentence` Datum vor Ort + Artikel „die"; `_mergeEducSentence`/`_mergeGradSentence` multiple: Doppelpunkt nach Verb entfernt; `_EV_TPL.GRAD` analog
 - **MEDI-CALN (sw v545):** `s.repoCallMedi`; `3 MEDI` unter `2 CALN`; Select im Quellen-Formular
 - **SOUR-DATA (sw v546):** `s.dataEvens[]` mit `{evens,date,plac}`; Deckungsbereich im Quellen-Detail + Formular
 - **REFN (sw v548):** `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; read-only Detail
