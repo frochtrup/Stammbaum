@@ -53,7 +53,7 @@ window.toggleFanChart = function () {
   if (document.body.classList.contains('fc-mode')) {
     document.body.classList.remove('fc-mode');
     const tb = document.getElementById('treeFcToggle');
-    if (tb) { tb.textContent = '◑'; tb.title = 'Fächer-Diagramm'; }
+    if (tb) { tb.textContent = '◠'; tb.title = 'Fächer-Diagramm'; }
     showTree(FC._pid || AppState.currentPersonId);
   } else {
     showFanChart(AppState.currentPersonId);

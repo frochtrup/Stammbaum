@@ -364,7 +364,7 @@ function showTree(personId, addToHistory = true) {
   document.body.classList.remove('fc-mode', 'desc-tree-mode');
   document.body.classList.add('tree-active');
   const _fcTb = document.getElementById('treeFcToggle');
-  if (_fcTb) { _fcTb.style.display = 'inline-flex'; _fcTb.textContent = '◑'; _fcTb.title = 'Fächer-Diagramm'; }
+  if (_fcTb) { _fcTb.style.display = 'inline-flex'; _fcTb.textContent = '◠'; _fcTb.title = 'Fächer-Diagramm'; }
   const _dtTb = document.getElementById('treeDescToggle');
   if (_dtTb) { _dtTb.textContent = '⇩'; _dtTb.title = 'Nachkommen-Baum'; }
   if (document.body.classList.contains('desktop-mode')) _updatePersonListCurrent(personId);

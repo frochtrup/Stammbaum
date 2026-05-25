@@ -84,7 +84,7 @@ window.showDescTree = function (personId, addToHistory = true) {
   document.body.classList.remove('fc-mode');
 
   const fcTb = document.getElementById('treeFcToggle');
-  if (fcTb) { fcTb.style.display = 'inline-flex'; fcTb.textContent = '◑'; fcTb.title = 'Fächer-Diagramm'; }
+  if (fcTb) { fcTb.style.display = 'inline-flex'; fcTb.textContent = '◠'; fcTb.title = 'Fächer-Diagramm'; }
   const dtTb = document.getElementById('treeDescToggle');
   if (dtTb) { dtTb.textContent = '⧖'; dtTb.title = 'Zur Sanduhr-Ansicht'; }
 
