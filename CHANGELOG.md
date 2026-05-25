@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-25 — T0-REFACT-3 Phase B: ui-views.js aufgeteilt (sw v697)
+
+- **sw v697** `refactor(views)`: T0-REFACT-3 Phase B — `ui-views.js` (1.471 Z.) in vier Dateien aufgeteilt:
+  - **`ui-views.js`** (691 Z.) — PROBAND, Basis-Navigation, Virtual Scroll, `showMain()`, Tab-Switching, `renderTab()`, `updateChangedIndicator()`, Shared View Helpers (Autocomplete, `factRow`, `relRow`, `evGeoLink` etc.)
+  - **`ui-views-nav.js`** (249 Z., NEU) — History-Navigation: `_historyItemLabel`, `_showHistoryPicker`, `_closeHistoryPicker`, `_navToHistoryItem`, `_captureCurrentNavState`, `_beforeDetailNavigate`, `goBack`, `goForward`, `openDetailHistory`, `_updateNavBtns`, `_persistNavState`, `_restoreNavState`, `_clearNavState`
+  - **`ui-views-undo.js`** (59 Z., NEU) — Undo/Redo: `pushUndo`, `applyUndo`, `applyRedo`, `_applyUndoStack`
+  - **`ui-event-delegation.js`** (471 Z., NEU) — `_sortedChildren`, `_CLICK_MAP` (alle ~100 Einträge), `document.addEventListener` für click/change/input/blur, `_personCompleteness`, `_buildObjeRefMap`; muss letztes `<script>` in index.html sein
+  - `index.html`: `ui-views-nav.js` + `ui-views-undo.js` nach `ui-views.js`; `ui-event-delegation.js` als letztes Script; `sw.js` PRECACHE aktualisiert
+
+---
+
 ### Session 2026-05-25 — T0-REFACT-3 Phase A: ui-views-tasks.js aufgeteilt (sw v696)
 
 - **sw v696** `refactor(tasks)`: T0-REFACT-3 Phase A — `ui-views-tasks.js` (1.143 Z.) in drei Dateien aufgeteilt:
