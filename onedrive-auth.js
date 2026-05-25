@@ -54,8 +54,9 @@ function odToggle() { _odIsConnected() ? odLogout() : odLogin(); }
 function odLogout() {
   ['od_access_token','od_refresh_token','od_token_expiry']
     .forEach(k => sessionStorage.removeItem(k));
-  ['od_file_id','od_file_name']
-    .forEach(k => localStorage.removeItem(k));
+  idbDel('od_file_id').catch(() => {});
+  idbDel('od_file_name').catch(() => {});
+  _odCurFileId = null; _odCurFileName = null;
   _odUpdateUI();
   showToast('OneDrive getrennt');
 }

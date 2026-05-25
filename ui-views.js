@@ -731,7 +731,7 @@ function updateChangedIndicator() {
   if (!banner) return;
   if (show) {
     const btn = document.getElementById('syncBannerBtn');
-    const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && localStorage.getItem('od_file_id');
+    const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && _odCurFileId;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (canOD)       { btn.textContent = '☁ Speichern'; }
     else if (isIOS)  { btn.textContent = '↑ Teilen'; }
@@ -743,7 +743,7 @@ function updateChangedIndicator() {
 }
 
 function _syncBannerSave() {
-  const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && localStorage.getItem('od_file_id');
+  const canOD = typeof _odIsConnected === 'function' && _odIsConnected() && _odCurFileId;
   if (canOD) odSaveFile(); else exportGEDCOM();
 }
 

@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v693 · Cache: `stammbaum-v693`
+**sw-Version:** v695 · Cache: `stammbaum-v695`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -122,11 +122,12 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| **T0-DEBUG** | **`debug-gramps.js` bedingt laden** | `debug-gramps.js` (591 Z., 28 KB) wird immer per `<script>` eingebunden und vom Browser geparsed — auch wenn `?debug=1` nie gesetzt ist. Lösung: dynamisches `import` nur wenn `new URL(location).searchParams.has('debug')`. Alternativ: in `debug-activate.js` als `document.createElement('script')` nachladen. | XS |
-| **T0-STORAGE** | **localStorage / IDB-Strategie vereinheitlichen** | Derzeit: 67 `localStorage`-Zugriffe in 7 Dateien (OneDrive-IDs, Dateiname, Ignore-Liste, Backup-Fallback). Kein zentrales Storage-API. Risiko: localStorage-Quota-Fehler auf iOS (5 MB), inkonsistente Fehlerbehandlung. Ziel: `idbGet`/`idbPut` als primäre API, localStorage nur für winzige Session-Flags (<100 Byte). | M |
+| ~~T0-DEBUG~~ | ~~`debug-gramps.js` bedingt laden~~ | v694 | - |
+| **T0-STORAGE** | **localStorage / IDB-Strategie (Phase 3 offen)** | Abgeschlossen v695: `od_file_id`/`od_file_name` → IDB-Cache (`_odCurFileId`/`_odCurFileName`), `dedup_ignored` → IDB, `stammbaum_filename` GRAMPS-Schreibpfad → IDB. **Offen:** `stammbaum_extraplaces_*` + `stammbaum_hofobjects` (4 Calls in `ui-forms.js`) — brauchen async `loadExtraPlaces()`/`loadHofObjects()` + `await` in Ladepfad; Quota-Risiko gering; residuale `stammbaum_filename`-Lesezugriffe (5) via `AppState._currentFilename`; Q3/2026-Cleanup (GEDCOM-Migrations-Fallback). | S |
 | **T0-REFACT-3** | **Große Dateien aufteilen** | Drei Dateien sind deutlich zu groß für ihren Scope: `ui-views.js` (1.471 Z.) enthält Baum-Navigation, Scroll-Helpers, Undo, State-Management und Event-Delegation; `ui-views-tasks.js` (1.143 Z.) mischt Aufgaben-CRUD, Validierungs-UI und Forschungsprotokoll-UI; `ui-story.js` (1.104 Z.) ist monolithisch. Aufteilen nach dem Muster von REFACT-1. | L |
 | **T0-LINTER** | **ESLint einrichten** | Kein Linter → stilistische Inkonsistenzen (mixed `const`/`let`, variable Einrückung, fehlende Semikolons). ESLint mit Flat Config, nur Fehler-Rules (keine Style-Streitigkeiten), CI-fähig über `npx eslint` ohne Installation. Scope: globale Funktionen korrekt deklariert, keine `var`, keine unsicheren Patterns. | S |
 | **T0-TYPES** | **JSDoc-Typen für Kern-Datenstrukturen** | `db.persons{}`, `db.families{}`, `db.sources{}` haben keine formale Typdefinition. Fehler wie `f.children` statt `f.chil` (Import-Compare-Bug v682) entstehen durch fehlende Typ-Prüfung. Ziel: `@typedef` für Person, Family, Source, Event in `gedcom.js`; `@param`/`@returns` in allen Parser/Writer-Funktionen. Kein TypeScript-Build nötig — VS Code und IntelliJ nutzen JSDoc nativ. | M |
+| ~~T0-DEBUG~~ | ~~`debug-gramps.js` bedingt laden~~ | v694 | - |
 | ~~REFACT-1~~ | ~~`parseGEDCOM()` in Sub-Parser aufgeteilt~~ | v627 | - |
 | ~~REFACT-2~~ | ~~Datum-Parsing zentralisiert~~ | bereits in `gedcom.js` | - |
 

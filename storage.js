@@ -215,7 +215,7 @@ async function tryAutoLoad() {
 
 // Startup-Dialog: Auswahl lokale Version vs. OneDrive
 function _showStartupChoice() {
-  const fname = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  const fname = (typeof _odCurFileName !== 'undefined' && _odCurFileName) || 'stammbaum.ged';
   document.getElementById('_startupChoiceName').textContent = fname;
   openModal('modalStartupChoice');
 }
@@ -241,7 +241,7 @@ window.addEventListener('load', async () => {
   // Warten falls OAuth-Callback noch läuft (Rückkehr von Login-Redirect)
   if (window._odCallbackPromise) await window._odCallbackPromise;
 
-  const hasOdFile  = localStorage.getItem('od_file_id');
+  const hasOdFile  = await idbGet('od_file_id').catch(() => null);
   const hasSession = sessionStorage.getItem('od_refresh_token');
   const pendingLoad = sessionStorage.getItem('od_autoload_pending');
 

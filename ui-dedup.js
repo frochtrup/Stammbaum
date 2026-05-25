@@ -148,6 +148,17 @@ let _dedupSearchQuery = '';
 let _dedupWinnerId    = null;
 let _dedupLoserId     = null;
 let _dedupIgnored     = null; // Set<"idA|idB">
+// Init from IDB; one-time migration from localStorage
+(async () => {
+  const stored = await idbGet('dedup_ignored').catch(() => null);
+  if (stored !== null) {
+    try { _dedupIgnored = new Set(JSON.parse(stored)); } catch { _dedupIgnored = new Set(); }
+  } else {
+    const ls = localStorage.getItem('dedup_ignored');
+    _dedupIgnored = new Set(ls ? JSON.parse(ls) : []);
+    if (ls) { idbPut('dedup_ignored', ls).catch(() => {}); localStorage.removeItem('dedup_ignored'); }
+  }
+})();
 let _dedupSelections  = {};   // { fieldKey: 'A' | 'B' }
 
 // Felder, die im Merge-Modal zeilenweise wählbar sind
@@ -159,13 +170,11 @@ const _DEDUP_SEL_FIELDS = [
 
 function _dedupLoadIgnored() {
   if (_dedupIgnored) return;
-  try { _dedupIgnored = new Set(JSON.parse(localStorage.getItem('dedup_ignored') || '[]')); }
-  catch { _dedupIgnored = new Set(); }
+  _dedupIgnored = new Set(); // IDB init not yet complete — safe fallback
 }
 
 function _dedupSaveIgnored() {
-  try { localStorage.setItem('dedup_ignored', JSON.stringify([..._dedupIgnored])); }
-  catch {}
+  idbPut('dedup_ignored', JSON.stringify([..._dedupIgnored])).catch(() => {});
 }
 
 function _dedupIgnoreKey(pA, pB) {

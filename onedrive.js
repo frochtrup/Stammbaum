@@ -20,6 +20,22 @@ const _odPhotoCache = (() => {
 // Basis-Pfad-Cache (voller OneDrive-Pfad zum GED-Ordner)
 let _odCurrentBasePath = null; // null = nicht geladen; '' = kein Basis-Pfad
 
+// Datei-ID und -Name der zuletzt geladenen Datei (IDB-primär, sync-cached)
+let _odCurFileId   = null;
+let _odCurFileName = null;
+(async () => {
+  _odCurFileId   = await idbGet('od_file_id').catch(() => null);
+  _odCurFileName = await idbGet('od_file_name').catch(() => null);
+  if (_odCurFileId === null) {
+    const ls = localStorage.getItem('od_file_id');
+    if (ls) { _odCurFileId = ls; idbPut('od_file_id', ls).catch(() => {}); localStorage.removeItem('od_file_id'); }
+  }
+  if (_odCurFileName === null) {
+    const ls = localStorage.getItem('od_file_name');
+    if (ls) { _odCurFileName = ls; idbPut('od_file_name', ls).catch(() => {}); localStorage.removeItem('od_file_name'); }
+  }
+})();
+
 async function _odGetBasePath() {
   if (_odCurrentBasePath !== null) return _odCurrentBasePath;
   _odCurrentBasePath = await idbGet('od_base_path').catch(() => null) ?? '';
@@ -311,7 +327,7 @@ async function odOpenFilePicker() {
     let basePath = await idbGet('od_base_path').catch(() => null);
     // Fallback: Ordner der zuletzt geladenen Datei per od_file_id ermitteln
     if (!basePath) {
-      const lastId = localStorage.getItem('od_file_id');
+      const lastId = _odCurFileId;
       if (lastId) {
         const metaRes = await fetch(`${OD_GRAPH}/me/drive/items/${lastId}?select=parentReference`, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
         if (metaRes?.ok) {
@@ -377,8 +393,8 @@ async function odLoadFile(itemId, fileName) {
       headers: { Authorization: 'Bearer ' + token }
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    localStorage.setItem('od_file_id',   itemId);
-    localStorage.setItem('od_file_name', fileName);
+    _odCurFileId   = itemId;   idbPut('od_file_id',   itemId).catch(() => {});
+    _odCurFileName = fileName; idbPut('od_file_name', fileName).catch(() => {});
     if (isGramps) {
       const blob = await res.blob();
       await _loadGRAMPS(new File([blob], fileName, { type: 'application/octet-stream' }));
@@ -409,8 +425,8 @@ async function odSaveFile() {
   showToast('Verbinde mit OneDrive…');
   const token = await _odGetToken();
   if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
-  const fileId   = localStorage.getItem('od_file_id');
-  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  const fileId   = _odCurFileId;
+  const fileName = _odCurFileName || 'stammbaum.ged';
   let text;
   try { text = writeGEDCOM(true); } catch(e) { showToast('Fehler beim Schreiben: ' + e.message); return; }
   showToast('Speichere in OneDrive… (' + Math.round(text.length/1024) + ' KB)');
@@ -429,7 +445,7 @@ async function odSaveFile() {
     clearTimeout(_to);
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
     const saved = await res.json().catch(() => ({}));
-    if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
+    if (!fileId && saved.id) { _odCurFileId = saved.id; idbPut('od_file_id', saved.id).catch(() => {}); }
     AppState.changed = false; updateChangedIndicator();
     const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
     showToast('✓ In OneDrive gespeichert: ' + _loc);
@@ -440,8 +456,8 @@ async function _odSaveGramps() {
   showToast('Verbinde mit OneDrive…');
   const token = await _odGetToken();
   if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
-  const fileId   = localStorage.getItem('od_file_id');
-  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.gramps';
+  const fileId   = _odCurFileId;
+  const fileName = _odCurFileName || 'stammbaum.gramps';
   showToast('GRAMPS-Datei wird erstellt …');
   let blob;
   try { blob = await writeGRAMPS(AppState.db); } catch(e) { showToast('Fehler: ' + e.message); return; }
@@ -461,7 +477,7 @@ async function _odSaveGramps() {
     clearTimeout(_to);
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
     const saved = await res.json().catch(() => ({}));
-    if (!fileId && saved.id) localStorage.setItem('od_file_id', saved.id);
+    if (!fileId && saved.id) { _odCurFileId = saved.id; idbPut('od_file_id', saved.id).catch(() => {}); }
     AppState.changed = false; updateChangedIndicator();
     const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
     showToast('✓ In OneDrive gespeichert: ' + _loc);
@@ -471,8 +487,8 @@ async function _odSaveGramps() {
 // Auto-Load beim App-Start: lädt letzte bekannte Datei von OneDrive (kein Redirect bei Fehler)
 async function odAutoLoadFromOneDrive() {
   await _odMigrateIfNeeded();
-  const fileId   = localStorage.getItem('od_file_id');
-  const fileName = localStorage.getItem('od_file_name') || 'stammbaum.ged';
+  const fileId   = _odCurFileId;
+  const fileName = _odCurFileName || 'stammbaum.ged';
   if (!fileId) return false;
   const token = await _odRefreshTokenSilent();
   if (!token) return false;

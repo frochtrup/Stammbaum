@@ -9,6 +9,18 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-25 — T0-DEBUG + T0-STORAGE: localStorage → IDB-Migration (sw v694–v695)
+
+- **sw v694** `refactor(debug)`: T0-DEBUG — `debug-gramps.js` (591 Z., ~28 KB) aus statischem `<script src>` in `index.html` entfernt; `debug-activate.js` lädt die Datei jetzt dynamisch via `document.createElement('script')` nur wenn `?debug=1` oder `#debug` gesetzt ist; Browser parst `debug-gramps.js` damit nur noch im echten Debug-Betrieb; Datei verbleibt in sw.js PRECACHE für Offline-Verfügbarkeit
+
+- **sw v695** `refactor(storage)`: T0-STORAGE Phase 1+2+4 — localStorage → IDB für drei Schlüssel-Gruppen:
+  - **Phase 1 (`dedup_ignored`)** `ui-dedup.js`: async IIFE lädt Ignore-Set beim Modulstart aus IDB (mit einmaliger localStorage-Migration + `localStorage.removeItem`); `_dedupLoadIgnored()` auf leeres-Set-Fallback reduziert; `_dedupSaveIgnored()` schreibt via `idbPut` statt `localStorage.setItem`
+  - **Phase 2 (`od_file_id`/`od_file_name`)** `onedrive.js`: Modulvariablen `_odCurFileId`/`_odCurFileName` (Sync-Cache); async IIFE initialisiert aus IDB mit einmaliger localStorage-Migration; alle 11 `localStorage.getItem/setItem`-Stellen in `odOpenFilePicker`, `odLoadFile`, `odSaveFile`, `_odSaveGramps`, `odAutoLoadFromOneDrive` ersetzt; `onedrive-auth.js` Logout: `localStorage.removeItem` durch `idbDel` + Cache-Reset ersetzt; `storage.js` window.load-Handler: `localStorage.getItem('od_file_id')` → `await idbGet('od_file_id')`; `_showStartupChoice()`: `_odCurFileName`-Cache; `ui-views.js`: beide `localStorage.getItem('od_file_id')`-Checks → `_odCurFileId` (replace_all)
+  - **Phase 4 (`stammbaum_filename` Schreibpfad)** `storage-file.js`: GRAMPS-Ladepfad schreibt Dateinamen jetzt via `idbPut` statt `localStorage.setItem` (GEDCOM-Pfad hatte das bereits seit v5)
+  - **Offen (Phase 3)**: `stammbaum_extraplaces_*` + `stammbaum_hofobjects` in `ui-forms.js` (4 Calls) — async Init in `_autoLoad()` erforderlich; Quota-Risiko gering; Defer auf nächsten Sprint
+
+---
+
 ### Session 2026-05-24 — DUP-SEARCH: Suchfeld in Duplikate-Liste (sw v683)
 
 - **sw v683** `feat(dedup)`: DUP-SEARCH — Suchfeld (`<input type="search" id="dedup-search">`) im Duplikate-Modal oberhalb der Statuszeile; filtert `_dedupPairs` live nach Name (pA/pB) oder ID; `_dedupSearchQuery`-State + `dedupSearchChange()`; `_renderDedupList()` auf Filterlogik umgestellt: `reduce()` mit `origIdx` sichert korrekte `data-pair`-Referenzen auch in gefilterter Ansicht; Statuszeile zeigt `N von M Paaren` bei aktiver Suche; Reset beim Öffnen des Modals; `_dedupSearchQuery` als Modul-Variable ergänzt

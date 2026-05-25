@@ -471,7 +471,7 @@ async function _loadGRAMPS(file) {
     // Persist filename in localStorage for display
     const filename = file.name;
     AppState._currentFilename = filename;
-    try { localStorage.setItem('stammbaum_filename', filename); } catch(e) {}
+    idbPut('stammbaum_filename', filename).catch(() => {});
     updateSaveIndicator();
     updateTopbarTitle(filename, true);
     showStartView();
