@@ -36,7 +36,7 @@ function renderSrcTags(prefix) {
   const cits = s.citations;
   if (!cits.length) {
     const pasteBtn = UIState._citClipboard
-      ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
+      ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">📋</button>`
       : '';
     container.innerHTML = `<span class="fs-08 c-muted italic">Keine Quellen zugewiesen</span>${pasteBtn}`;
     return;
@@ -64,9 +64,9 @@ function renderSrcTags(prefix) {
         title="Foto zur Quelle" style="background:none;border:none;cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">📷</button>
     </span>`;
   }).join('');
-  const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">Kopieren</button>`;
+  const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">⧉</button>`;
   const pasteBtn = UIState._citClipboard
-    ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">Einfügen</button>`
+    ? `<button type="button" class="src-cit-btn" data-action="paste-cit" data-prefix="${prefix}" title="Quellenbezüge einfügen">📋</button>`
     : '';
   container.innerHTML = tags + copyBtn + pasteBtn;
 }

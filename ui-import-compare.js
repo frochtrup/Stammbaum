@@ -184,7 +184,7 @@ function _cmpRenderListItem(m) {
                    : m.status === 'uncertain' ? '<span class="cmp-chip cmp-chip-uncertain">?</span>'
                    :                            '<span class="cmp-chip cmp-chip-new">+</span>';
 
-  // Diff-Indikatoren (+N Ergänzungen / ⚡N Konflikte / = identisch / 📋N Forschungseinträge)
+  // Diff-Indikatoren (+N Ergänzungen / ⚡N Konflikte / = identisch / 📝N Forschungseinträge)
   let diffInds = '';
   const diff = _cmpListItemDiff(m);
   if (diff) {
@@ -194,7 +194,7 @@ function _cmpRenderListItem(m) {
   }
   const baseId4rlog = _cmpResolvedBaseId(m);
   const rlogDone = baseId4rlog ? (_cmpState.rlogCreated?.[baseId4rlog] || 0) : 0;
-  if (rlogDone > 0) diffInds += `<span class="cmp-diff-ind cmp-ind-rlog">📋${rlogDone}</span>`;
+  if (rlogDone > 0) diffInds += `<span class="cmp-diff-ind cmp-ind-rlog">📝${rlogDone}</span>`;
 
   // Selektions-Badge
   const sel   = _cmpState.selections[m.cmpId];
@@ -366,7 +366,7 @@ function _cmpFieldActionBtns(cmpId, field, dec) {
     `<button class="cmp-fa-btn${active ? ` cmp-fa-active${mod ? ' ' + mod : ''}` : ''}"
        data-action="cmpSetFieldDecision" data-cmpid="${cmpId}" data-field="${esc(field)}" data-val="${val}"
        title="${val === 'accept' ? 'Übernehmen' : val === 'rlog' ? 'Forschungseintrag anlegen' : 'Ignorieren'}">${label}</button>`;
-  return `<div class="cmp-fa-group">${_b('accept','✓',isAccept,'')}${_b('rlog','📋',isRlog,'cmp-fa-rlog')}${_b('ignore','✗',isIgnore,'cmp-fa-ignore')}</div>`;
+  return `<div class="cmp-fa-group">${_b('accept','✓',isAccept,'')}${_b('rlog','📝',isRlog,'cmp-fa-rlog')}${_b('ignore','✗',isIgnore,'cmp-fa-ignore')}</div>`;
 }
 
 function _cmpRenderAdditionsSection(diff, cmpId) {
@@ -386,7 +386,7 @@ function _cmpRenderAdditionsSection(diff, cmpId) {
         Ergänzungen <span class="cmp-count">(${diff.additions.length})</span>
         <span class="cmp-bulk-actions">
           <button class="cmp-bulk-btn" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="additions" data-val="accept" title="Alle übernehmen">alle ✓</button>
-          <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="additions" data-val="rlog" title="Alle als Forschungseinträge">alle 📋</button>
+          <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="additions" data-val="rlog" title="Alle als Forschungseinträge">alle 📝</button>
         </span>
       </summary>
       <table class="cmp-table">${rows}</table>
@@ -412,7 +412,7 @@ function _cmpRenderConflictsSection(diff, cmpId) {
         ${_r(c.baseVal, 'base')}
         ${_r(c.cmpVal, 'import')}
         ${_r('Beide als Notiz', 'both')}
-        ${_r('📋 Forschungseintrag', 'rlog')}
+        ${_r('📝 Forschungseintrag', 'rlog')}
       </td>
     </tr>`;
   }).join('');
@@ -422,7 +422,7 @@ function _cmpRenderConflictsSection(diff, cmpId) {
       <summary class="cmp-section-title cmp-section-conflict">
         Konflikte <span class="cmp-count">(${diff.conflicts.length})</span>
         <span class="cmp-bulk-actions">
-          <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="conflicts" data-val="rlog" title="Alle als Forschungseinträge">alle 📋</button>
+          <button class="cmp-bulk-btn cmp-bulk-rlog" data-action="cmpSetAllDecision" data-cmpid="${cmpId}" data-section="conflicts" data-val="rlog" title="Alle als Forschungseinträge">alle 📝</button>
         </span>
       </summary>
       <table class="cmp-table">${rows}</table>

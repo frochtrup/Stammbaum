@@ -251,6 +251,8 @@ Person-Detail: [←] [⌂]  …  [⌂▢] [✎]  [☰]
 | `＋` (FAB, `.fab`) | Neu erstellen — öffnet `#modalAdd` (Person/Familie/Quelle); ausgeblendet auf Orte-Tab + Baum | Floating Action Button (unten rechts) |
 | `↓` (`.act-btn-icon`) | Exportieren / Herunterladen — Download der aktuellen Ansicht | Tab-Header `action-btns` (z.B. `↓ MD` Aufgaben, `↓ PNG` Diagramm) |
 | `⊕` | Person zur Mehrpersonen-Zeitleiste hinzufügen — öffnet modalRelPicker im Modus `'tlmulti'`; max. 5 Personen | **Nur** Zeitleiste Filterleiste (TL-MULTI) |
+| `⧉` | Kopieren — Quelle/Zitat in Zwischenablage legen | QuickAdd Quellen-Zwischenablage, src-Widget |
+| `📋` | Einfügen (Paste) — Quelle/Zitat aus Zwischenablage übernehmen | QuickAdd Quellen-Zwischenablage, src-Widget |
 
 #### Import-Vergleich (3-Wege-Entscheidung)
 
@@ -259,7 +261,7 @@ Diese drei Symbole sind **ausschließlich** im Merge-Assistenten als Gruppe defi
 | Symbol | Bedeutung |
 |---|---|
 | `✓` | Feld / Person übernehmen |
-| `📋` | Als Forschungseintrag anlegen — erstellt `_rlog`-Eintrag mit `result:'pending'` |
+| `📝` | Als Forschungseintrag anlegen — erstellt `_rlog`-Eintrag mit `result:'pending'` |
 | `✗` | Ablehnen / nicht übernehmen |
 
 In anderen Kontexten einzeln: `✓` = Aufgabe erledigt (Aufgaben-Liste); `✗` / `×` = Modal schließen oder Tag entfernen.
@@ -276,7 +278,7 @@ In anderen Kontexten einzeln: `✓` = Aufgabe erledigt (Aufgaben-Liste); `✗` /
 - `✎` steht **direkt links von `☰`** in der Detail-Topbar — nie an anderer Position
 - `⊕` erscheint **nur in der Zeitleiste** als „Person hinzufügen" — nicht als allgemeines Hinzufügen-Symbol (dafür: `＋` FAB oder `.section-add`)
 - Die vier Diagramm-Wechsel-Symbole (`◑ ⇩ ⟷ 🗺`) stehen **immer nach dem Separator** und **immer vor `☰`** — keine andere Reihenfolge
-- Die 3-Wege-Gruppe `✓ / 📋 / ✗` wird **ausschließlich** im Import-Vergleich als Gruppe eingesetzt
+- Die 3-Wege-Gruppe `✓ / 📝 / ✗` wird **ausschließlich** im Import-Vergleich als Gruppe eingesetzt
 - `.src-tag` wird **nicht** verwendet — war ein veraltetes Zwischenformat, abgelöst durch `.src-badge`
 - **ExtraNames** (zweite+ Namenangaben) sind in Personendetail klickbar (`data-action="showPersonForm"`) und öffnen das Personen-Formular
 
