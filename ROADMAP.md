@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v714 · Cache: `stammbaum-v714`
+**sw-Version:** v715 · Cache: `stammbaum-v715`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -102,6 +102,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | LIGHT-MODE | Light-Mode Parity: `--border`/`--gold` Kontrast, Leaflet-Attribution, Schatten | v700 |
 | TEST-AUTO | `test.html`: Standalone GEDCOM Roundtrip-Tester | — |
 | BUG-704 | 6 Bugfixes: stale Hof-Cache, Baum-"…"-Überbleibsel, Geschwisterzähler entfernt, leere Elternkachel öffnet neues Individuum, Fächersymbol ◗, Personenliste min-height | v704 |
+| HOTFIX-CMP | `compare-engine.js` in index.html eingebunden (ReferenceError-Fix) | v714 |
+| F5 | DSGVO: Lebende-Anonymisierung beim GEDCOM-Export (BFS-Propagation, `_anon`-Suffix) | v715 |
 
 ---
 
@@ -111,8 +113,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| **HOTFIX-CMP** | **⚠ `compare-engine.js` fehlt in index.html** | `ui-import-compare.js` ruft `cmpLoadFile()`, `cmpMatchPersons()`, `cmpComputePersonDiff()`, `cmpApplyPatch()` auf — alle undefined, da `compare-engine.js` kein `<script src>` in `index.html` hat (nur in sw.js PRECACHE). Import-Compare-Feature wirft ReferenceError. Fix: `<script src="compare-engine.js">` vor `<script src="ui-import-compare.js">` einfügen. | XS |
-| **F5** | **DSGVO: Lebende-Anonymisierung beim Export** | Export-Option: Personen mit Geb. >~1920 und kein Sterbedatum werden anonymisiert → Name „Lebende Person", alle Ereignisse entfernt. Ohne diese Funktion ist die Weitergabe von GEDCOM-Dateien mit lebenden Personen potenziell DSGVO-widrig. Opt-in im Einstellungs-Modal; GEDCOM-Export + GRAMPS-Export. Roundtrip-Auswirkung: dokumentierte, bewusste Abweichung (ADR). | M |
+| ~~HOTFIX-CMP~~ | ~~`compare-engine.js` fehlt in index.html~~ | v714 | - |
+| ~~F5~~ | ~~DSGVO: Lebende-Anonymisierung beim GEDCOM-Export~~ | v715 | - |
 | ~~SEC-1~~ | ~~XSS URL-Sanitizer onedrive-Vorschau~~ | v576 | - |
 | ~~SEC-2~~ | ~~MIME-Validierung Foto-Upload~~ | v576 | - |
 | ~~SEC-3~~ | ~~XSS: DOM-API statt innerHTML für Orte~~ | v607 | - |

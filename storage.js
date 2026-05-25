@@ -212,6 +212,9 @@ window.addEventListener('load', async () => {
   const themePref = await idbGet('theme_pref').catch(() => null);
   if (themePref) applyTheme(themePref);
 
+  // Datenschutz: Anonymisierungs-Flag laden
+  AppState.privacyAnon = !!(await idbGet('privacy_anon').catch(() => null));
+
   // Warten falls OAuth-Callback noch läuft (Rückkehr von Login-Redirect)
   if (window._odCallbackPromise) await window._odCallbackPromise;
 

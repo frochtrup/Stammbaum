@@ -1534,6 +1534,16 @@
 
       </div><!-- /set-od-section -->
 
+      <!-- Datenschutz -->
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper mt-16">Datenschutz</div>
+      <div class="settings-card">
+        <label class="d-flex ai-c gap-8 settings-section-top" style="cursor:pointer">
+          <input type="checkbox" id="set-privacy-anon" data-change="privacyAnonChange">
+          <span>Lebende beim GEDCOM-Export anonymisieren</span>
+        </label>
+        <div class="form-hint-top">Personen ohne Sterbedatum, geboren nach <span id="set-privacy-year"></span>, werden als „Lebende Person" exportiert. Dateiname erhält Suffix <code>_anon</code>.</div>
+      </div>
+
 <button class="btn btn-cancel w-full" data-action="closeModal" data-modal="modalSettings">Schließen</button>
     </div>
   </div>

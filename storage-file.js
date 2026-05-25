@@ -206,29 +206,31 @@ function _downloadBlob(content, filename) {
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
 async function exportGEDCOM(forceGEDCOM = false) {
-  if (!forceGEDCOM && AppState.db?._grampsMaster) return exportGRAMPS(true);
+  const isAnon = AppState.privacyAnon;
+  if (!forceGEDCOM && !isAnon && AppState.db?._grampsMaster) return exportGRAMPS(true);
   let content;
   try { content = writeGEDCOM(true); }
   catch(e) { showToast('⚠ Fehler beim Schreiben: ' + e.message, 'error'); return; }
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
-  const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const basename = filename.replace(/\.ged$/i, '');
+  const exportFilename = isAnon ? `${basename}_anon.ged` : filename;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // iOS Safari: Share Sheet (Hauptdatei + Zeitstempel-Backup)
   if (isIOS && navigator.canShare) {
-    const basename   = filename.replace(/\.ged$/i, '');
     const now        = new Date();
     const today      = now.toISOString().slice(0, 10);
     const time       = now.toTimeString().slice(0, 8).replace(/:/g, '');
-    const backupName = `${basename}_${today}_${time}.ged`;
-    const mainFile   = new File([content], filename,   { type: 'text/plain' });
-    const backupFile = new File([content], backupName, { type: 'text/plain' });
+    const backupName = `${exportFilename.replace(/\.ged$/i, '')}_${today}_${time}.ged`;
+    const mainFile   = new File([content], exportFilename, { type: 'text/plain' });
+    const backupFile = new File([content], backupName,     { type: 'text/plain' });
     if (navigator.canShare({ files: [mainFile] })) {
-      navigator.share({ files: [mainFile, backupFile], title: filename })
+      navigator.share({ files: [mainFile, backupFile], title: exportFilename })
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
-          // des Share-Dialogs gemacht wurden (Race-Condition-Schutz)
-          if (writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
-          showToast('✓ Gespeichert');
+          // des Share-Dialogs gemacht wurden — und nur wenn nicht anonymisiert
+          if (!isAnon && writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
+          showToast(isAnon ? '✓ Anonymisierte Kopie geteilt' : '✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
       return;
@@ -236,43 +238,38 @@ async function exportGEDCOM(forceGEDCOM = false) {
   }
 
   // Chrome Desktop: Direkt speichern via gespeichertem File Handle
-  if (!AppState._fileHandle) {
-    try {
-      const stored = await idbGet('fileHandle');
-      if (stored) {
-        const perm = await stored.queryPermission({ mode: 'readwrite' });
-        if (perm === 'granted') {
-          AppState._fileHandle = stored;
-          AppState._canDirectSave = await testCanWrite(stored);
-          updateSaveIndicator();
+  // Bei Anonymisierung immer Download (nie Originaldatei überschreiben)
+  if (!isAnon) {
+    if (!AppState._fileHandle) {
+      try {
+        const stored = await idbGet('fileHandle');
+        if (stored) {
+          const perm = await stored.queryPermission({ mode: 'readwrite' });
+          if (perm === 'granted') {
+            AppState._fileHandle = stored;
+            AppState._canDirectSave = await testCanWrite(stored);
+            updateSaveIndicator();
+          }
         }
-      }
-    } catch(e) {}
+      } catch(e) {}
+    }
+    if (AppState._fileHandle && AppState._canDirectSave) {
+      const ok = await saveToFileHandle(content);
+      if (ok) return;
+      if (AppState._canDirectSave) return;
+    }
+    if (!AppState._fileHandle && 'showOpenFilePicker' in window) {
+      showToast('Bitte Datei öffnen um direktes Speichern zu aktivieren');
+    }
   }
 
-  if (AppState._fileHandle && AppState._canDirectSave) {
-    const ok = await saveToFileHandle(content);
-    if (ok) return;
-    // NotAllowedError (Cloud-Sync-Lock): Nutzer soll es nochmals versuchen,
-    // KEIN automatischer Fallback auf Download (würde verwirren).
-    if (AppState._canDirectSave) return; // Toast wurde bereits gezeigt
+  // Download (Safari Mac, Firefox, kein File Handle, oder Anon-Modus)
+  _downloadBlob(content, exportFilename);
+  if (!isAnon) {
+    AppState.changed = false; updateChangedIndicator();
+    idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   }
-
-  // Fallback 1: showOpenFilePicker war nicht verfügbar oder handle fehlt →
-  // Datei öffnen lassen, dann direkt speichern
-  if (!AppState._fileHandle && 'showOpenFilePicker' in window) {
-    showToast('Bitte Datei öffnen um direktes Speichern zu aktivieren');
-  }
-
-  // Fallback 2: Download (Safari Mac, Firefox, kein File Handle)
-  const basename = filename.replace(/\.ged$/i, '');
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const ts  = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-  _downloadBlob(content, filename);
-  AppState.changed = false; updateChangedIndicator();
-  idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
-  showToast('✓ ' + filename + ' heruntergeladen');
+  showToast(isAnon ? `✓ ${exportFilename} heruntergeladen (anonymisiert)` : '✓ ' + exportFilename + ' heruntergeladen');
 }
 
 // GRAMPS XML Export/Speichern (.gramps = gzip) — immer Download/Share (kein File Handle)

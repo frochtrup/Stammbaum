@@ -23,6 +23,7 @@ const AppState = {
   _originalGedText: null,        // Fallback wenn localStorage-Backup fehlschlägt; sonst null
   _undoStack:       [],          // [{ label, persons:{}, families:{}, sources:{}, repos:{} }, …] max 30
   _redoStack:       [],          // gleiche Struktur wie _undoStack
+  privacyAnon:      false,       // F5: lebende Personen beim GEDCOM-Export anonymisieren
 };
 
 const UIState = {

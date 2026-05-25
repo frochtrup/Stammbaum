@@ -139,8 +139,67 @@ let _hofNoteIds = {};
 // Cross-mode: GRAMPS handle → GEDCOM XREF (populated by writeGEDCOM before write functions)
 let _noteXref = {};
 
+// ─── Lebende-Personen-Set (F5 DSGVO) ─────────────────────────────────────────
+// Gibt ein Set<personId> zurück, das alle Personen enthält, die anonymisiert
+// werden sollen. Kriterien:
+//   1. Kein Sterbedatum + Geburtsjahr > (aktuelles Jahr - 100) → living
+//   2. BFS: undatierte Verwandte (Eltern, Ehepartner, Kinder) von living-Personen → living
+//   3. Restliche undatierte Personen → konservativ living (anonymisieren)
+function _buildLivingSet(db) {
+  const threshold = new Date().getFullYear() - 100;
+  const living = new Set();
+  const dead   = new Set();
+
+  for (const [id, p] of Object.entries(db.individuals || {})) {
+    if (p.death?.date) { dead.add(id); continue; }
+    if (p.birth?.date) {
+      const m = p.birth.date.match(/(\d{4})/);
+      if (m) { parseInt(m[1]) > threshold ? living.add(id) : dead.add(id); }
+      // kein parsebares Jahr → Phase 2
+    }
+  }
+
+  const queue = [...living];
+  while (queue.length) {
+    const id = queue.shift();
+    const p  = db.individuals[id];
+    if (!p) continue;
+    for (const famId of (p.fams || [])) {
+      const fam = db.families[famId];
+      if (!fam) continue;
+      for (const relId of [fam.husb, fam.wife, ...(fam.children || [])].filter(Boolean)) {
+        if (!living.has(relId) && !dead.has(relId)) { living.add(relId); queue.push(relId); }
+      }
+    }
+    for (const famcRef of (p.famc || [])) {
+      const famId = typeof famcRef === 'string' ? famcRef : famcRef.famId;
+      const fam = db.families[famId];
+      if (!fam) continue;
+      for (const parentId of [fam.husb, fam.wife].filter(Boolean)) {
+        if (!living.has(parentId) && !dead.has(parentId)) { living.add(parentId); queue.push(parentId); }
+      }
+    }
+  }
+
+  for (const id of Object.keys(db.individuals || {})) {
+    if (!living.has(id) && !dead.has(id)) living.add(id);
+  }
+  return living;
+}
+
 // ─── INDI-Record ──────────────────────────────────────────────────────────────
-function writeINDIRecord(lines, p) {
+function writeINDIRecord(lines, p, livingSet = null) {
+  if (livingSet?.has(p.id)) {
+    lines.push(`0 ${p.id} INDI`);
+    lines.push('1 NAME Lebende Person');
+    if (p.sex) lines.push(`1 SEX ${p.sex}`);
+    for (const famcRef of (p.famc || [])) {
+      const famId = typeof famcRef === 'string' ? famcRef : famcRef.famId;
+      lines.push(`1 FAMC ${famId}`);
+    }
+    for (const f of (p.fams || [])) lines.push(`1 FAMS ${f}`);
+    return;
+  }
   lines.push(`0 ${p.id} INDI`);
 
   // Name mit Sub-Tags
@@ -614,7 +673,8 @@ function writeGEDCOM(updateHeadDate = false) {
     _noteXref[n.id] = n.grampId ? `@${n.grampId}@` : n.id;
   }
 
-  for (const p of Object.values(db.individuals))  writeINDIRecord(lines, p);
+  const _livingSet = AppState.privacyAnon ? _buildLivingSet(db) : null;
+  for (const p of Object.values(db.individuals))  writeINDIRecord(lines, p, _livingSet);
   for (const f of Object.values(db.families))     writeFAMRecord(lines, f);
   for (const s of Object.values(db.sources))      writeSOURRecord(lines, s);
   for (const r of Object.values(db.repositories)) writeREPORecord(lines, r);

@@ -255,6 +255,10 @@ async function openSettings() {
   applyTheme(themePref);
   const odSection = document.getElementById('set-od-section');
   if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
+  const privacyAnonEl = document.getElementById('set-privacy-anon');
+  if (privacyAnonEl) privacyAnonEl.checked = AppState.privacyAnon;
+  const privacyYearEl = document.getElementById('set-privacy-year');
+  if (privacyYearEl) privacyYearEl.textContent = new Date().getFullYear() - 100;
   const basePath = await _odGetBasePath();
   const baseEl = document.getElementById('set-base-path');
   if (baseEl) baseEl.value = basePath || '';

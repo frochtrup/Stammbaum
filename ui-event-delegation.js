@@ -389,6 +389,11 @@ document.addEventListener('change', e => {
       el.value = '';
     })();
   }
+  else if (action === 'privacyAnonChange') {
+    AppState.privacyAnon = el.checked;
+    idbPut('privacy_anon', el.checked).catch(() => {});
+    showToast(el.checked ? 'Anonymisierung beim Export aktiviert' : 'Anonymisierung deaktiviert', 'info');
+  }
   else if (action === 'efCamChange') {
     _efCamChange(el.files[0]);
     el.value = '';
