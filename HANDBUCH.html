@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v692</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v715</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -584,16 +584,17 @@
     <li><a href="#kap3">Die sechs Hauptbereiche im Überblick</a></li>
     <li><a href="#kap4">Personen — das Herzstück</a>
       <ul class="sub">
-        <li>Die Personenliste</li>
+        <li>Die Personenliste · CSV-Export</li>
         <li>Eine Person aufrufen</li>
         <li>Eine Person bearbeiten</li>
         <li>Eine neue Person anlegen</li>
         <li>Ereignisse eintragen</li>
+        <li>Beziehungsrechner</li>
       </ul>
     </li>
     <li><a href="#kap5">Familien</a>
       <ul class="sub">
-        <li>Familien ansehen</li>
+        <li>Familien ansehen · CSV-Export</li>
         <li>Personen verheiraten</li>
         <li>Kinder zuordnen</li>
       </ul>
@@ -622,7 +623,13 @@
         <li>Top-Listen</li>
       </ul>
     </li>
-    <li><a href="#kap10">Biografie (Story Mode)</a></li>
+    <li><a href="#kap10">Biografie (Story Mode)</a>
+      <ul class="sub">
+        <li>Personen-Biografie</li>
+        <li>Familien-Biografie</li>
+        <li>Herunterladen und drucken</li>
+      </ul>
+    </li>
     <li><a href="#kap11">Suchen und Finden</a>
       <ul class="sub">
         <li>Fehlende-Felder-Filter</li>
@@ -650,6 +657,7 @@
         <li>Quellen konsequent erfassen</li>
         <li>Daten prüfen und bereinigen</li>
         <li>Backup-Strategie</li>
+        <li><a href="#kap19-dsgvo">Lebende Personen schützen (DSGVO-Export)</a></li>
       </ul>
     </li>
     <li><a href="#kap-dedup">Duplikate finden und zusammenführen</a>
@@ -1166,6 +1174,16 @@ Den <strong>Probanden</strong> (die Person im Mittelpunkt des Stammbaums) legen 
 
 <p style="font-size:0.88em; color:#666; margin-top:-0.5em;">Der goldene linke Rand in der Liste zeigt die gerade geöffnete Person. Alle anderen Personen sind durch einfaches Klicken erreichbar — ohne Seitenwechsel.</p>
 
+<h2>Liste als CSV exportieren</h2>
+
+<p>Im Kopf der Personenliste befindet sich der Button <span class="button-label">↓ CSV</span>. Er exportiert die <strong>aktuell gefilterte Liste</strong> als CSV-Datei — mit Semikolon als Trennzeichen und BOM-Markierung für korrekte Darstellung in Excel und Numbers.</p>
+
+<p>Der Export enthält: ID, Name, Geschlecht, Geburtsdatum, Geburtsort, Sterbedatum, Sterbeort, Anzahl Familien und Quellen. Wenn Sie zuvor einen Namens- oder Jahrgangsfilter gesetzt haben, enthält die CSV-Datei nur die gefilterten Personen — ideal für gezielte Auswertungen in einer Tabellenkalkulation.</p>
+
+<div class="tip">
+Tipp: Kombinieren Sie den „Keine Quellen"-Filter mit dem CSV-Export, um schnell eine Liste aller Personen ohne Quellenbeleg zu erhalten — als Grundlage für Ihre nächste Recherche-Session.
+</div>
+
 <h2>Eine Person aufrufen</h2>
 
 <p>Tippen Sie auf einen Namen in der Liste. Sie gelangen zur Detailansicht dieser Person.</p>
@@ -1385,6 +1403,16 @@ Die Kamera-Schaltfläche erscheint nur auf Mobilgeräten mit eingebauter Kamera.
 Besonders praktisch: auf dem Friedhof Grabsteine fotografieren oder im Archiv direkt eine Urkundenzeile festhalten — das Foto landet ohne Zwischenschritte beim richtigen Ereignis.
 </div>
 
+
+<h2>Beziehungsrechner</h2>
+
+<p>Die App berechnet automatisch den <strong>Verwandtschaftsgrad</strong> zwischen zwei Personen. In der Detailansicht einer Person erscheint — sobald mehr als eine Person im Stammbaum vorhanden ist — ein Abschnitt <strong>Verwandtschaft</strong> mit dem Verwandtschaftsgrad zum aktuellen Probanden (z. B. „Urgroßvater", „3. Cousin 1× entfernt") sowie dem gemeinsamen Vorfahren und seinem Geburtsjahr.</p>
+
+<p>Für einen <strong>freien Vergleich</strong> zwischen zwei beliebigen Personen tippen Sie auf den Button <span class="button-label">🔗 zu …</span> in der Verwandtschaft-Zeile. Ein Picker öffnet sich, mit dem Sie die zweite Person auswählen können. Das Ergebnis zeigt den genauen Verwandtschaftspfad als Modal-Dialog — Schritt für Schritt vom Ausgangspunkt über den gemeinsamen Vorfahren bis zur Zielperson.</p>
+
+<div class="info">
+Der Beziehungsrechner nutzt eine BFS-Breitensuche (Breadth-First Search) im Familiengraphen. Er findet immer den <em>nächsten</em> gemeinsamen Vorfahren — bei komplexen Stammbäumen (Pedigree-Collapse) kann es mehrere gleichwertige Pfade geben.
+</div>
 
 <!-- ====================================================== -->
 <!-- KAPITEL 5: FAMILIEN -->
@@ -2088,26 +2116,33 @@ Das Statistik-Dashboard wertet nur die in der App geladene Datei aus — es send
 <!-- ====================================================== -->
 <h1 class="chapter" id="kap10">10. Biografie (Story Mode)</h1>
 
+<h2>Personen-Biografie</h2>
+
 <p>Der <strong>Story Mode</strong> verwandelt die GEDCOM-Daten einer Person in einen lesbaren Fließtext — eine persönliche Lebensgeschichte. Tippen Sie in der Detailansicht einer Person auf <span class="button-label">📖</span> in der Topbar.</p>
 
-<h2>Was enthält die Biografie?</h2>
-
+<p>Was die Biografie enthält:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
-  <li>Frühe Lebensjahre (Geburt, Taufe, Elternhaus)</li>
-  <li>Alle weiteren Ereignisse in Erzählform (Beruf, Wohnorte, Militär, Emigration …)</li>
-  <li>Ehen und Kinder</li>
+  <li>Frühe Lebensjahre (Geburt, Taufe, Elternhaus, Epochen-Kontext)</li>
+  <li>Alle weiteren Ereignisse in Erzählform (Berufe mit zeitlichen Übergängen, Wohnorte, Militär, Emigration …)</li>
+  <li>Ehen und Kinder (mit Geburtsjahren)</li>
   <li>Tod und Beerdigung</li>
   <li>Persönliche Notizen am Ende</li>
+  <li>Eine <strong>Karte</strong> mit Bewegungspfad aller Lebensstationen</li>
+  <li>Ein <strong>Ahnentafel-Diagramm</strong>: Großeltern → Eltern → Person ⚭ Partner → Kinder</li>
 </ul>
 
-<p>Wenn Fotos zur Person hinterlegt sind, erscheinen diese als <strong>Hero-Foto</strong> und kleine Galerie am Kopf der Biografie. Eine <strong>Karte</strong> zeigt alle Lebensstationen mit Bewegungspfad.</p>
+<p>Wenn Fotos zur Person hinterlegt sind, erscheinen diese als <strong>Hero-Foto</strong> und kleine Galerie am Kopf der Biografie.</p>
+
+<h2>Familien-Biografie</h2>
+
+<p>Auch für <strong>Familien</strong> gibt es eine Story-Ansicht. Öffnen Sie die Detailansicht einer Familie und tippen Sie auf <span class="button-label">📖</span> in der Topbar. Die Familien-Biografie schildert die Geschichte des Paares: Herkunft beider Partner, Heirat, Kinder mit ihren Lebensdaten und — falls vorhanden — eine Hochzeitskarte.</p>
 
 <h2>Biografie herunterladen und drucken</h2>
 
-<p>Über die Schaltflächen in der Topbar der Biografie können Sie:</p>
+<p>Über die Schaltflächen in der Topbar können Sie:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
   <li><strong>HTML herunterladen</strong> — eine eigenständige Datei, die ohne App im Browser geöffnet werden kann</li>
-  <li><strong>Drucken</strong> — die Biografie direkt ausdrucken (mit Druckstil-Optimierung)</li>
+  <li><strong>Drucken</strong> — die Biografie direkt ausdrucken (mit A4-Druckstil-Optimierung)</li>
 </ul>
 
 <div class="info">
@@ -2707,8 +2742,29 @@ Für bäuerliche Genealogie empfiehlt sich folgende Konvention: Beim Übergabeve
   <li>Die App bietet unter <strong>☰ → Backup erstellen</strong> eine Datumskopie an</li>
 </ul>
 
-<h2>Lebende Personen schützen</h2>
-<p>Beim Weitergeben Ihrer GEDCOM-Datei an Dritte: Nutzen Sie den Export mit Lebende-Anonymisierung (in Vorbereitung). Bis dahin: Prüfen Sie vor dem Weitergeben, welche Personen nach 1920 geboren wurden und noch kein Sterbedatum haben — diese sollten nicht mit vollen Daten geteilt werden.</p>
+<h2 id="kap19-dsgvo">Lebende Personen schützen</h2>
+<p>Beim Weitergeben Ihrer GEDCOM-Datei an Dritte schützt die eingebaute <strong>Lebende-Anonymisierung</strong> die Privatsphäre noch lebender Personen automatisch.</p>
+
+<h3>Aktivieren</h3>
+<ol class="steps">
+  <li><div class="step-text"><span class="button-label">☰ → Einstellungen</span> öffnen</div></li>
+  <li><div class="step-text">Im Abschnitt <strong>Datenschutz</strong> die Checkbox <em>„Lebende beim GEDCOM-Export anonymisieren"</em> aktivieren</div></li>
+  <li><div class="step-text">Datei wie gewohnt exportieren (<span class="button-label">☰ → Als GEDCOM exportieren</span>)</div></li>
+</ol>
+
+<h3>Was wird anonymisiert?</h3>
+<p>Als <strong>lebend</strong> gilt eine Person, wenn sie kein Sterbedatum hat und nach dem Schwellenjahr (aktuelles Jahr − 100, also derzeit 1926) geboren wurde. Personen ohne Geburtsdatum werden über Familienverbindungen eingestuft: Wer direktes Familienmitglied (Elternteil, Kind, Ehepartner) einer lebenden Person ist, gilt ebenfalls als lebend. Alle verbleibenden Personen ohne Datumsinformation werden konservativ als lebend behandelt.</p>
+<p>Anonymisierte Einträge enthalten nur:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li>Name → <code>Lebende Person</code></li>
+  <li>Geschlecht (SEX) — erhalten</li>
+  <li>Familienbindungen (FAMC/FAMS) — erhalten, damit die Baumstruktur lesbar bleibt</li>
+  <li>Alle Ereignisse, Quellen, Medien, Notizen → <strong>entfernt</strong></li>
+</ul>
+
+<h3>Dateiname und Originaldatei</h3>
+<p>Die exportierte Datei erhält automatisch den Suffix <code>_anon</code> (z. B. <code>MeineDaten_anon.ged</code>). Die Originaldatei wird dabei <strong>nie überschrieben</strong> — der direkte Speichern-Pfad (Chrome Datei-API) ist beim anonymisierten Export deaktiviert.</p>
+<div class="tip">Die Anonymisierung wirkt nur auf den Export. Ihre gespeicherten Originaldaten bleiben vollständig erhalten — die Einstellung lässt sich jederzeit deaktivieren.</div>
 
 
 <!-- ====================================================== -->
