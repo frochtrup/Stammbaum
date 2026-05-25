@@ -644,6 +644,19 @@ function loadHofObjects() {
 function saveHofObjects() {
   try { localStorage.setItem('stammbaum_hofobjects', JSON.stringify(AppState.db.hofObjects)); } catch(e) {}
 }
+// Nur gespeicherte Hof-Koordinaten für Adressen übernehmen, die in der
+// aktuell geladenen Datei auch vorkommen — verhindert dateiübergreifende Leckage.
+function _mergeHofObjects(derived, saved) {
+  const result = { ...derived };
+  for (const [addr, data] of Object.entries(saved)) {
+    if (derived[addr]) result[addr] = { ...derived[addr], ...data };
+  }
+  // note-Fallback aus derived wiederherstellen
+  for (const [a, h] of Object.entries(result)) {
+    if (!h.note && derived[a]?.note) h.note = derived[a].note;
+  }
+  return result;
+}
 
 const _applyPersonFilterDebounced = debounce((q, from, to, sex, birthPlace, flags) => filterPersons(q, from, to, sex, birthPlace, flags), 200);
 const filterFamiliesDebounced     = debounce(filterFamilies,  200);

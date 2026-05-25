@@ -365,7 +365,7 @@ function _finishLoad(db, text, filename) {
     AppState._currentFilename = filename;
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
-    { const _hd = _derivedHofObjectsFromDb(AppState.db); AppState.db.hofObjects = Object.assign({}, _hd, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hd[a]?.note) h.note = _hd[a].note; }
+    AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
     { let maxUsed = 0;
       const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
                       ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
@@ -462,8 +462,8 @@ async function _loadGRAMPS(file) {
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
-    // localStorage-Einträge (user edits) überschreiben diese.
-    { const _hb = parsed.hofObjects || {}; AppState.db.hofObjects = Object.assign({}, _hb, loadHofObjects()); for (const [a, h] of Object.entries(AppState.db.hofObjects)) if (!h.note && _hb[a]?.note) h.note = _hb[a].note; }
+    // Nur gespeicherte Koordinaten für Adressen dieser Datei übernehmen (kein Leck aus anderen Dateien).
+    AppState.db.hofObjects = _mergeHofObjects(parsed.hofObjects || {}, loadHofObjects());
     // Calibrate idCounter to avoid collisions
     if (parsed._idCounterMax >= AppState.idCounter) AppState.idCounter = parsed._idCounterMax + 1;
     AppState._originalGedText = null; // kein GEDCOM-Text verfügbar
