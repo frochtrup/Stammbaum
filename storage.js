@@ -118,43 +118,17 @@ async function loadDemo() {
 }
 
 function _loadDemoPhotos() {
-  function _mkPhoto(text, bg, fg = '#fff') {
-    try {
-      const c = document.createElement('canvas');
-      c.width = 320; c.height = 400;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = bg;
-      ctx.fillRect(0, 0, 320, 400);
-      // leichtes Verlauf-Overlay
-      const g = ctx.createLinearGradient(0, 0, 0, 400);
-      g.addColorStop(0, 'rgba(255,255,255,0.15)');
-      g.addColorStop(1, 'rgba(0,0,0,0.25)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 320, 400);
-      // Initiale/Symbol
-      ctx.fillStyle = fg;
-      ctx.font = 'bold 140px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(text, 160, 185);
-      // kleiner Untertitel-Balken
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(0, 330, 320, 70);
-      return c.toDataURL('image/jpeg', 0.82);
-    } catch(e) { return null; }
-  }
-  const photos = [
-    ['photo_@I001@',     'J',  '#5b3a20'],  // Johann — braun
-    ['photo_@I004@',     'H',  '#1e3a5f'],  // Heinrich — dunkelblau
-    ['photo_@I007@',     'S',  '#5b2a4a'],  // Sophie — violett
-    ['photo_@I009@',     'L',  '#2e4a2e'],  // Ludwig — dunkelgrün (Uniform)
-    ['photo_fam_@F001@', '♥',  '#7a3020'],  // Familie F001 — Hochzeitsrot
-    ['photo_fam_@F005@', '♥',  '#3a5070'],  // Familie F005 — Stahlblau
-  ];
-  for (const [key, letter, color] of photos) {
-    const b64 = _mkPhoto(letter, color);
-    if (b64) idbPut(key, b64).catch(() => {});
-  }
+  // Demo-Foto Anna.png laden und unter dem GEDCOM-Pfad im IDB ablegen
+  fetch('./Anna.png')
+    .then(r => r.ok ? r.blob() : Promise.reject())
+    .then(blob => new Promise((res, rej) => {
+      const rd = new FileReader();
+      rd.onload  = e => res(e.target.result);
+      rd.onerror = rej;
+      rd.readAsDataURL(blob);
+    }))
+    .then(dataUrl => idbPut('img:Anna.png', dataUrl).catch(() => {}))
+    .catch(() => {});
 }
 
 // ─────────────────────────────────────

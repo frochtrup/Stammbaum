@@ -1,269 +1,526 @@
 0 HEAD
-1 SOUR Demo Stammbaum
+1 SOUR TestHierarchy
+2 VERS 2.1
+1 CHAR UTF-8
 1 GEDC
 2 VERS 5.5.1
-1 CHAR UTF-8
-1 PLAC
-2 FORM Ort, Kreis, Land
-0 @R001@ REPO
-1 NAME Stadtarchiv München
-1 ADDR Winzererstraße 68
-2 CONT 80797 München
-1 WWW https://www.muenchen.de/stadtarchiv
-0 @S001@ SOUR
-1 TITL Kirchenbuch München St. Peter 1845–1912
-1 ABBR KB München St. Peter
-1 AUTH Pfarramt St. Peter München
-1 REPO @R001@
-2 CALN KBM-1845-I
-1 OBJE @O003@
-0 @S002@ SOUR
-1 TITL Heiratsurkunde Standesamt München Nr. 142/1870
-1 ABBR StA München 1870
-1 AUTH Standesamt München
-1 REPO @R001@
-2 CALN SAM-1870-H-142
-0 @S003@ SOUR
-1 TITL Verlustliste Deutsches Heer, Verdun 1916
-1 ABBR Verlustliste 1916
-1 AUTH Kriegsarchiv München
-0 @O001@ OBJE
-1 FILE Fotos/Hochzeit_Johann_Maria_1870.jpg
-1 TITL Hochzeitsfoto Johann & Maria Müller, Juni 1870
-1 FORM JPEG
-0 @O002@ OBJE
-1 FILE Fotos/Portrait_Heinrich_Müller_1920.jpg
-1 TITL Portrait Heinrich Müller, ca. 1920
-1 FORM JPEG
-0 @O003@ OBJE
-1 FILE Scans/KB_Muenchen_1845_Taufe_Johann.jpg
-1 TITL Kirchenbuch-Eintrag Taufe Johann Müller 12. März 1845
-1 FORM JPEG
-0 @O004@ OBJE
-1 FILE Fotos/Hochzeit_Sophie_Ernst_1921.jpg
-1 TITL Hochzeitsfoto Sophie Müller & Ernst Fischer, 1921
-1 FORM JPEG
-0 @I001@ INDI
-1 NAME Johann /Müller/
-1 GIVN Johann
-1 SURN Müller
-1 SEX M
+2 FORM LINEAGE-LINKED
+0 @I1@ INDI
+1 NAME Anna /Muster/
+1 SEX F
 1 BIRT
-2 DATE 12 MAR 1845
-2 PLAC München, München, Bayern
-2 SOUR @S001@
-3 PAGE Taufbuch 1845, S. 12
+2 DATE 12 MAR 1985
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S1@
 3 QUAY 3
-1 DEAT
-2 DATE 3 NOV 1912
-2 PLAC München, München, Bayern
-1 BURI
-2 DATE 6 NOV 1912
-2 PLAC Ostfriedhof, München, Bayern
-1 OCCU Bäckermeister
-1 RESI
-2 DATE 1873
-2 ADDR Sendlinger Straße 14
-2 PLAC München
-1 RESI
-2 DATE 1895
-2 ADDR Leopoldstraße 3
-1 NOTE Johann Müller eröffnete 1873 eine eigene Bäckerei in der Sendlinger Straße. Nach dem Tod seiner ersten Frau heiratete er 1890 erneut.
-1 FAMS @F001@
-1 FAMS @F002@
-1 OBJE @O002@
-0 @I002@ INDI
-1 NAME Maria /Huber/
-1 GIVN Maria
-1 SURN Huber
-1 SEX F
-1 BIRT
-2 DATE 5 JUN 1850
-2 PLAC Augsburg, Augsburg, Bayern
-1 DEAT
-2 DATE 14 AUG 1888
-2 PLAC München, München, Bayern
-1 NOTE Maria starb mit 38 Jahren an Typhus und hinterließ einen Sohn.
-1 FAMS @F001@
-0 @I003@ INDI
-1 NAME Elisabeth /Bauer/
-1 GIVN Elisabeth
-1 SURN Bauer
-1 SEX F
-1 BIRT
-2 DATE 22 JAN 1855
-2 PLAC Landsberg, Landsberg, Bayern
-1 DEAT
-2 DATE 11 FEB 1935
-2 PLAC München, München, Bayern
-1 FAMS @F002@
-0 @I004@ INDI
-1 NAME Heinrich /Müller/
-1 GIVN Heinrich
-1 SURN Müller
-1 SEX M
-1 BIRT
-2 DATE 8 JAN 1872
-2 PLAC München, München, Bayern
-2 SOUR @S001@
-3 PAGE Taufbuch 1872, S. 47
+1 EDUC
+2 DATE BET 1991 AND 2003
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S5@
+3 QUAY 1
+1 GRAD
+2 DATE 2003
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S5@
 3 QUAY 3
-1 DEAT
-2 DATE 15 APR 1940
-2 PLAC München, München, Bayern
-1 OCCU Kaufmann
+1 OCCU Softwareentwicklerin
+2 DATE AFT 2010
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
 1 RESI
-2 DATE ABT 1905
-2 PLAC Schwabing, München, Bayern
-1 FAMC @F001@
-1 FAMS @F003@
-1 OBJE @O002@
-0 @I005@ INDI
-1 NAME Anna /Schmidt/
-1 GIVN Anna
-1 SURN Schmidt
-1 SEX F
-1 BIRT
-2 DATE 22 SEP 1875
-2 PLAC Nürnberg, Nürnberg, Bayern
-1 DEAT
-2 DATE 8 MAR 1960
-2 PLAC München, München, Bayern
-1 FAMS @F003@
-0 @I006@ INDI
-1 NAME Karl /Müller/
-1 GIVN Karl
-1 SURN Müller
-1 SEX M
-1 BIRT
-2 DATE 14 JUL 1900
-2 PLAC München, München, Bayern
-1 DEAT
-2 DATE 2 SEP 1944
-2 PLAC Stalingrad, Wolgograd, Russland
-1 OCCU Schreiner
-1 FAMC @F003@
-1 FAMS @F006@
-0 @I007@ INDI
-1 NAME Sophie /Müller/
-1 GIVN Sophie
-1 SURN Müller
-1 SEX F
-1 BIRT
-2 DATE 3 MAR 1903
-2 PLAC München, München, Bayern
-1 DEAT
-2 DATE 27 DEC 1985
-2 PLAC München, München, Bayern
-1 NOTE Sophie heiratete zweimal: Ludwig Wagner fiel 1916 bei Verdun, woraufhin sie 1921 Ernst Fischer heiratete.
-1 FAMC @F003@
-1 FAMS @F004@
-1 FAMS @F005@
-0 @I008@ INDI
-1 NAME Max /Müller/
-1 GIVN Max
-1 SURN Müller
-1 SEX M
-1 BIRT
-2 DATE 30 APR 1891
-2 PLAC München, München, Bayern
-1 DEAT
-2 DATE 19 JUL 1950
-2 PLAC München, München, Bayern
-1 FAMC @F002@
-0 @I009@ INDI
-1 NAME Ludwig /Wagner/
-1 GIVN Ludwig
-1 SURN Wagner
-1 SEX M
-1 BIRT
-2 DATE 7 MAY 1892
-2 PLAC Würzburg, Würzburg, Bayern
-1 DEAT
-2 DATE 12 JUN 1916
-2 PLAC Verdun, Meuse, Frankreich
-2 SOUR @S003@
+2 DATE FROM 1985 TO 2005
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.13696
+4 LONG E11.5643
+2 ADDR Sonnenstraße 12
+2 SOUR @S4@
 3 QUAY 2
-1 NOTE Gefallen im Ersten Weltkrieg bei Verdun. Kriegsgräberstätte Verdun, Block 5, Grab 212.
-1 FAMS @F004@
-0 @I010@ INDI
-1 NAME Ernst /Fischer/
-1 GIVN Ernst
-1 SURN Fischer
+1 RESI
+2 DATE FROM 2005 TO 2016
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36333
+4 LONG E10.89986
+2 ADDR Maximilianstraße 88
+2 SOUR @S4@
+3 QUAY 1
+1 RESI
+2 DATE FROM 2016
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.157
+4 LONG E11.58495
+2 ADDR Leopoldstraße 44
+2 SOUR @S4@
+3 QUAY 3
+1 PROP
+2 DATE 2020
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.157
+4 LONG E11.58495
+2 NOTE Eigentumswohnung
+2 ADDR Leopoldstraße 44
+2 SOUR @S4@
+3 QUAY 2
+1 NOTE Zentrale Testperson mit vollständiger Ahnen- und Nachfahrenstruktur.
+1 FAMC @F10@
+1 FAMS @F1@
+1 FAMS @F2@
+1 OBJE
+2 FILE Anna.png
+3 FORM PNG
+3 TITL Anna Muster
+1 _UID A1A1A1A1-A1A1-A1A1-A1A1-A1A1A1A1A1A1
+1 CHAN
+2 DATE 20240525
+3 TIME 1830
+1 BAPM
+2 DATE ABT 1985
+2 PLAC München, Bayern, Deutschland
+2 SOUR @S6@
+3 QUAY 2
+0 @I2@ INDI
+1 NAME Markus /Altmann/
 1 SEX M
 1 BIRT
-2 DATE 15 OCT 1890
-2 PLAC München, München, Bayern
-1 DEAT
-2 DATE 3 JAN 1960
-2 PLAC München, München, Bayern
-1 OCCU Lehrer
-1 FAMS @F005@
-0 @I011@ INDI
-1 NAME Rosa /Fischer/
-1 GIVN Rosa
-1 SURN Fischer
+2 DATE 05 JAN 1982
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36873
+4 LONG E10.89825
+2 SOUR @S2@
+3 QUAY 2
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Tobias /Kern/
+1 SEX M
+1 BIRT
+2 DATE 10 OCT 1984
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S2@
+3 QUAY 1
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Lea /Altmann/
 1 SEX F
 1 BIRT
-2 DATE 9 JAN 1925
-2 PLAC München, München, Bayern
-1 FAMC @F005@
-0 @I012@ INDI
-1 NAME Margarete /Schuster/
-1 GIVN Margarete
-1 SURN Schuster
-1 SEX F
-1 BIRT
-2 DATE 18 JUN 1898
-2 PLAC Regensburg, Regensburg, Bayern
-1 FAMS @F006@
-0 @F001@ FAM
-1 HUSB @I001@
-1 WIFE @I002@
-1 CHIL @I004@
-1 MARR
-2 DATE 10 JUN 1870
-2 PLAC München, München, Bayern
-2 SOUR @S002@
+2 DATE 20 SEP 2010
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S3@
 3 QUAY 3
-1 OBJE @O001@
-0 @F002@ FAM
-1 HUSB @I001@
-1 WIFE @I003@
-1 CHIL @I008@
+1 FAMC @F1@
+0 @I5@ INDI
+1 NAME Jonas /Kern/
+1 SEX M
+1 BIRT
+2 DATE 14 FEB 2018
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S3@
+3 QUAY 2
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I6@ INDI
+1 NAME Mia /Kern/
+1 SEX F
+1 BIRT
+2 DATE 03 MAR 2040
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S3@
+3 QUAY 1
+1 FAMC @F3@
+0 @I21@ INDI
+1 NAME Unbekannt /Partnerin/
+1 SEX F
+1 BIRT
+2 DATE ABT 2018
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+1 FAMS @F3@
+0 @I7@ INDI
+1 NAME Lisa /Muster/
+1 SEX F
+1 BIRT
+2 DATE 09 SEP 1988
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S1@
+3 QUAY 2
+1 FAMC @F10@
+0 @I8@ INDI
+1 NAME Jonas /Muster/
+1 SEX M
+1 BIRT
+2 DATE 18 AUG 1990
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S1@
+3 QUAY 1
+1 FAMC @F10@
+0 @I9@ INDI
+1 NAME Paul /Schneider/
+1 SEX M
+1 BIRT
+2 DATE 12 DEC 1995
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S4@
+3 QUAY 0
+1 FAMC @F11@
+0 @I10@ INDI
+1 NAME Karl /Muster/
+1 SEX M
+1 BIRT
+2 DATE 10 JAN 1955
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S5@
+3 QUAY 2
+1 RESI
+2 DATE FROM 1955 TO 2000
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.13696
+4 LONG E11.5643
+2 ADDR Sonnenstraße 12
+1 FAMC @F20@
+1 FAMS @F10@
+0 @I11@ INDI
+1 NAME Helga /Muster/
+1 SEX F
+1 BIRT
+2 DATE 22 FEB 1957
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S5@
+3 QUAY 3
+1 FAMC @F21@
+1 FAMS @F10@
+1 FAMS @F11@
+0 @I12@ INDI
+1 NAME Stefan /Schneider/
+1 SEX M
+1 BIRT
+2 DATE 01 JAN 1958
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S4@
+3 QUAY 1
+1 FAMS @F11@
+0 @I13@ INDI
+1 NAME Josef /Muster/
+1 SEX M
+1 BIRT
+2 DATE 1930
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S6@
+3 QUAY 1
+1 RESI
+2 DATE FROM 1930 TO 1980
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.13696
+4 LONG E11.5643
+2 ADDR Sonnenstraße 12
+1 FAMS @F20@
+0 @I14@ INDI
+1 NAME Maria /Muster/
+1 SEX F
+1 BIRT
+2 DATE 1932
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S6@
+3 QUAY 2
+1 FAMS @F20@
+0 @I15@ INDI
+1 NAME Otto /Bauer/
+1 SEX M
+1 BIRT
+2 DATE 1928
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36873
+4 LONG E10.89825
+2 SOUR @S6@
+3 QUAY 0
+1 FAMS @F21@
+0 @I16@ INDI
+1 NAME Klara /Bauer/
+1 SEX F
+1 BIRT
+2 DATE 1931
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36873
+4 LONG E10.89825
+2 SOUR @S6@
+3 QUAY 3
+1 FAMS @F21@
+0 @I17@ INDI
+1 NAME Franz /Muster/
+1 SEX M
+1 BIRT
+2 DATE 1900
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S6@
+3 QUAY 1
+1 RESI
+2 DATE FROM 1900 TO 1950
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.13696
+4 LONG E11.5643
+2 ADDR Sonnenstraße 12
+1 FAMC @F30@
+0 @I18@ INDI
+1 NAME Elise /Muster/
+1 SEX F
+1 BIRT
+2 DATE 1902
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S6@
+3 QUAY 3
+1 FAMC @F30@
+0 @I19@ INDI
+1 NAME Ludwig /Bauer/
+1 SEX M
+1 BIRT
+2 DATE 1898
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36873
+4 LONG E10.89825
+2 SOUR @S6@
+3 QUAY 0
+1 FAMC @F31@
+0 @I20@ INDI
+1 NAME Rosa /Bauer/
+1 SEX F
+1 BIRT
+2 DATE 1901
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36873
+4 LONG E10.89825
+2 SOUR @S6@
+3 QUAY 2
+1 FAMC @F31@
+0 @I30@ INDI
+1 NAME Georg /Muster/
+1 SEX M
+1 BIRT
+2 DATE 1870
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S6@
+3 QUAY 1
+0 @I31@ INDI
+1 NAME Anna /Muster/
+1 SEX F
+1 BIRT
+2 DATE 1874
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S6@
+3 QUAY 2
+0 @I32@ INDI
+1 NAME Heinrich /Bauer/
+1 SEX M
+1 BIRT
+2 DATE 1868
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36873
+4 LONG E10.89825
+2 SOUR @S6@
+3 QUAY 0
+0 @I33@ INDI
+1 NAME Luise /Bauer/
+1 SEX F
+1 BIRT
+2 DATE 1872
+2 PLAC Augsburg, Bayern, Deutschland
+3 MAP
+4 LATI N48.36873
+4 LONG E10.89825
+2 SOUR @S6@
+3 QUAY 3
+0 @F1@ FAM
+1 HUSB @I2@
+1 WIFE @I1@
+1 CHIL @I4@
 1 MARR
-2 DATE 15 MAR 1890
-2 PLAC München, München, Bayern
-1 NOTE Zweite Ehe von Johann Müller, zwei Jahre nach dem Tod seiner ersten Frau Maria.
-0 @F003@ FAM
-1 HUSB @I004@
-1 WIFE @I005@
-1 CHIL @I006@
-1 CHIL @I007@
+2 DATE 10 JUN 2009
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S2@
+3 QUAY 2
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I1@
+1 CHIL @I5@
 1 MARR
-2 DATE 5 APR 1898
-2 PLAC München, München, Bayern
-0 @F004@ FAM
-1 HUSB @I009@
-1 WIFE @I007@
+2 DATE 15 AUG 2016
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S2@
+3 QUAY 1
+0 @F3@ FAM
+1 HUSB @I5@
+1 WIFE @I21@
+1 CHIL @I6@
 1 MARR
-2 DATE 22 AUG 1914
-2 PLAC München, München, Bayern
-1 NOTE Kriegsheirat kurz vor Ludwigs Einberufung. Er fiel 1916, die Ehe blieb kinderlos.
-0 @F005@ FAM
-1 HUSB @I010@
-1 WIFE @I007@
-1 CHIL @I011@
-1 ENGA
-2 DATE 25 DEC 1920
+2 DATE 2039
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S3@
+3 QUAY 1
+0 @F10@ FAM
+1 HUSB @I10@
+1 WIFE @I11@
+1 CHIL @I1@
+1 CHIL @I7@
+1 CHIL @I8@
 1 MARR
-2 DATE 14 FEB 1921
-2 PLAC München, München, Bayern
-1 OBJE @O004@
-0 @F006@ FAM
-1 HUSB @I006@
-1 WIFE @I012@
+2 DATE 1979
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S5@
+3 QUAY 2
+0 @F11@ FAM
+1 HUSB @I12@
+1 WIFE @I11@
+1 CHIL @I9@
 1 MARR
-2 DATE 12 SEP 1923
-2 PLAC München, München, Bayern
+2 DATE 1994
+2 PLAC München, Bayern, Deutschland
+3 MAP
+4 LATI N48.1371
+4 LONG E11.5754
+2 SOUR @S4@
+3 QUAY 0
+0 @F20@ FAM
+1 HUSB @I13@
+1 WIFE @I14@
+1 CHIL @I10@
+0 @F21@ FAM
+1 HUSB @I15@
+1 WIFE @I16@
+1 CHIL @I11@
+0 @F30@ FAM
+1 HUSB @I30@
+1 WIFE @I31@
+1 CHIL @I17@
+1 CHIL @I18@
+0 @F31@ FAM
+1 HUSB @I32@
+1 WIFE @I33@
+1 CHIL @I19@
+1 CHIL @I20@
+0 @S1@ SOUR
+1 TITL Geburtsregister München 1985
+1 AUTH Standesamt München
+1 PUBL Stadtarchiv München
+1 REPO @R1@
+1 PAGE Register 1985, Eintrag 248
+1 QUAY 3
+0 @S2@ SOUR
+1 TITL Heiratsregister München
+1 AUTH Standesamt München
+1 PUBL Stadtarchiv München
+1 REPO @R1@
+1 PAGE Heiratsbuch 2009–2016
+1 QUAY 2
+0 @S3@ SOUR
+1 TITL Geburtsregister München 2010–2040
+1 AUTH Standesamt München
+1 PUBL Stadtarchiv München
+1 REPO @R1@
+1 QUAY 1
+0 @S4@ SOUR
+1 TITL Melderegister München
+1 AUTH Einwohnermeldeamt
+1 PUBL Stadt München
+1 REPO @R2@
+1 QUAY 0
+0 @S5@ SOUR
+1 TITL Geburtsregister 1955–1957
+1 AUTH Standesamt München
+1 PUBL Stadtarchiv München
+1 REPO @R1@
+1 QUAY 2
+0 @S6@ SOUR
+1 TITL Kirchenbuch Bayern
+1 AUTH Erzdiözese München
+1 PUBL Kirchenarchiv
+1 REPO @R3@
+1 QUAY 3
+0 @R1@ REPO
+1 NAME Stadtarchiv München
+0 @R2@ REPO
+1 NAME Einwohnermeldeamt München
+0 @R3@ REPO
+1 NAME Kirchenarchiv Bayern
 0 TRLR
