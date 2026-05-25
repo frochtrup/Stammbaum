@@ -323,7 +323,20 @@ async function odOpenFilePicker() {
     const allFiles = [];
     const addFile = f => { if (!seen.has(f.id)) { seen.add(f.id); allFiles.push(f); } };
 
-    // 1) Bekannten Ordner direkt auflisten (sofort aktuell, kein Index-Delay)
+    // Hilfsfunktion: Ordner direkt auflisten (Index-frei, immer aktuell)
+    const _listFolder = async (folderPath) => {
+      const encodedPath = folderPath.split('/').map(encodeURIComponent).join('/');
+      const url = `${OD_GRAPH}/me/drive/root:/${encodedPath}:/children?select=id,name,lastModifiedDateTime,size&$orderby=lastModifiedDateTime desc&top=200`;
+      const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
+      if (!res?.ok) return;
+      const data = await res.json();
+      for (const f of (data.value || [])) { if (_isGedOrGramps(f.name)) addFile(f); }
+    };
+
+    // 1a) Standard-Speicherpfad immer scannen (kein Index-Delay für zuletzt gespeicherte Dateien)
+    await _listFolder('Stammbaum');
+
+    // 1b) Bekannten Basis-Ordner scannen (falls abweichend von Stammbaum/)
     let basePath = await idbGet('od_base_path').catch(() => null);
     // Fallback: Ordner der zuletzt geladenen Datei per od_file_id ermitteln
     if (!basePath) {
@@ -338,20 +351,9 @@ async function odOpenFilePicker() {
         }
       }
     }
-    if (basePath) {
-      // Pfad-Segmente einzeln kodieren (nicht encodeURIComponent auf den ganzen Pfad!)
-      const encodedPath = basePath.split('/').map(encodeURIComponent).join('/');
-      const folderUrl = `${OD_GRAPH}/me/drive/root:/${encodedPath}:/children?select=id,name,lastModifiedDateTime,size&top=200`;
-      const folderRes = await fetch(folderUrl, { headers: { Authorization: 'Bearer ' + token } }).catch(() => null);
-      if (folderRes?.ok) {
-        const folderData = await folderRes.json();
-        for (const f of (folderData.value || [])) {
-          if (_isGedOrGramps(f.name)) addFile(f);
-        }
-      }
-    }
+    if (basePath && basePath !== 'Stammbaum') await _listFolder(basePath);
 
-    // 2) Suchindex — je eine Suche für .ged und .gramps
+    // 2) Suchindex als Fallback für Dateien außerhalb bekannter Ordner
     for (const ext of ['.ged', '.gramps']) {
       let url = `${OD_GRAPH}/me/drive/root/search(q='${ext}')?select=id,name,lastModifiedDateTime,size&top=200`;
       while (url) {
