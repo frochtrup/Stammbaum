@@ -10,8 +10,9 @@ Sprint-Geschichte aller abgeschlossenen Versionen: `CHANGELOG.md`
 
 Zielgruppe: Ambitionierte Hobby-Genealogen, die **mobil** (Archiv, Feldarbeit: schnelle Erfassung, Forschungsaufgaben, Medien) und **am Desktop** (heavy use: Quellen, Auswertung, Ausgaben) arbeiten.
 
-Vier Dimensionen leiten die Priorisierung:
+Fünf Dimensionen leiten die Priorisierung:
 - **Stabilität** — Sicherheit, Roundtrip-Integrität, technische Schulden
+- **Datenschutz** — Lokal-First, DSGVO-Konformität beim Export, keine Cloud-Pflicht
 - **Mobil** — Schnellerfassung, Offline-Robustheit, Kamera-Integration
 - **Forschungsqualität** — Protokoll, Quellenvorlagen, Validierung, Duplikate
 - **Ausgaben** — Karten, Timeline, Story, Diagramme, Druckausgaben
@@ -25,10 +26,26 @@ Vier Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v692 · Cache: `stammbaum-v692`
+**sw-Version:** v693 · Cache: `stammbaum-v693`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
+
+### Gesamtbewertung (Mai 2026)
+
+| Bereich | Note | Kernbefund |
+|---|---|---|
+| Architektur | 7/10 | Klare Schichtung, aber globaler Namespace + keine ES-Module = wachsende Schuld |
+| Sicherheit | 8/10 | Starke CSP, konsequentes `esc()`, aber keine strukturelle Escaping-Garantie |
+| Design / UX | 8.5/10 | Hochwertige Ästhetik, Mobile-First — Accessibility-Lücken |
+| Funktionsstand | 7.5/10 | Starke Kernfunktionen; Lücken bei CSV, GEDCOM 7.0, DSGVO-Export |
+| Code-Qualität | 7/10 | Lesbar, kein Overengineering; kein Linter/Tests, einige zu große Dateien |
+| Performance | 7.5/10 | Gute Optimierungen; 44 HTTP-Requests ohne Bundling |
+| GEDCOM-Konformität | 9/10 | Roundtrip-Integrität auf hohem Niveau — beste GEDCOM-Treue unter Web-Tools |
+| Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt |
+| PWA / Offline | 9/10 | Eines der besten Beispiele für ernsthaftes PWA-Design |
+| Datenschutz | 6.5/10 | Lokal-First ✓ — Lebende-Anonymisierung beim Export fehlt noch |
+| **∅ Gesamt** | **7.9/10** | |
 
 ---
 
@@ -44,7 +61,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 |---|---|---|
 | SAFARI-SWIPE | Safari-„Zurück"-Swipe abfangen | v573 |
 | TASK-EXPORT-MD | Aufgabenliste als Markdown exportieren | v574 |
-| F9 | Zeitleiste (Swim-Lane, 71 hist. Ereignisse); ab v591 vollwertiges Diagramm mit einheitlicher Topbar-Struktur (`[⌂][⤢] \| [⧖◑⇩][☰]`) | v501–v540, v591 |
+| F9 | Zeitleiste (Swim-Lane, 71 hist. Ereignisse); ab v591 vollwertiges Diagramm mit einheitlicher Topbar-Struktur | v501–v591 |
 | STORY | Story Mode (Fließtext, Karte, Galerie, Print) | v549–v560 |
 | SOUR-DATA | SOUR.DATA.EVEN/DATE strukturiert | v546 |
 | MEDI-CALN | MEDI-Typ unter REPO.CALN | v545 |
@@ -52,36 +69,66 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | REFN | REFN/RIN strukturiert | v548 |
 | SEC-1 | XSS-Härtung: URL-Sanitizer href (onedrive-Vorschau) | v576 |
 | SEC-2 | MIME-Validierung Foto-Upload + Fehler-Toast | v576 |
+| SEC-3 | XSS: `buildPlacePartsHtml()` → DOM-API `_buildPlaceParts()` | v607 |
+| STAB-2 | Konflikt-Erkennung beim Speichern (`lastModified`-Check) | v607 |
 | QUICK-ADD | Schnellerfassung neue Person (Masseneingabe-Modus) | v577 |
 | CAM-LINK | Foto direkt an Ereignis (Kamera-Button im Event-Formular) | v578 |
 | STATS-2 | Statistik-Dashboard ausgebaut (Lebensspannen, Heiratsalter, Ereignisse/Dekade, Sterbeorte, Kinderzahl) | v597 |
 | SEARCH-ADV | Erweiterte Suche: Fehlende-Felder-Checkboxen | v596 |
 | MAP-ANIM | Karte: animierter Migrationspfad (Play/Pause/Stopp) | v603 |
 | MAP-TOPBAR | Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars | v604 |
-| SEC-3 | XSS: `buildPlacePartsHtml()` → DOM-API `_buildPlaceParts()` | v607 |
-| STAB-2 | Konflikt-Erkennung beim Speichern (`lastModified`-Check) | v607 |
-| MEDIA-MGR | Medien-Sub-Tab im Quellen-Tab (Kachelgalerie, Lazy-Loading, Filter) | v608 |
+| MEDIA-MGR | Medien-Galerie (Kacheln, Lazy-Loading, Filter) | v608 |
 | MEDIA-MGR-DETAIL | Medien-Detailansicht mit Referenz-Management | v609–v622 |
 | PERF-MEDIA | Medien-Galerie: IntersectionObserver + Thumb-Cache | v623 |
 | MEDIA-SORT | Medienliste: Sortierung nach Dateiname (⇅) | v624 |
-| REFACT-1 | `parseGEDCOM()` in 5 Sub-Parser aufgeteilt; Kontext-Objekt `x`; Roundtrip stabil | v627 |
-| TEST-AUTO | `test.html`: Standalone Roundtrip-Tester (kein UI-Load); Drag-Drop beliebig viele .ged | — |
-| TL-MULTI | Zeitleiste Mehrpersonen-Modus: 2–5 Personen parallel, ⊕-Button, Farb-Chips, Person-Bar | v665 |
-| PRINT-OUT | Ahnenliste (Kekule-Tabelle) + Familienbogen als druckbare HTML-Downloads; `ui-print.js` | v669 |
+| REL-CALC | Beziehungsrechner (BFS, gemeinsamer Vorfahre, Pfad-Modal) | v626 |
+| REFACT-1 | `parseGEDCOM()` in 5 Sub-Parser aufgeteilt; Kontext-Objekt `x` | v627 |
+| DUP-DETECT | Duplikat-Erkennung (Levenshtein+Soundex, Merge-Modal) | v628 |
+| CHART-EXPORT | Diagramm-Export als PNG | v629 |
+| TREE-SIB-HORIZ | Sanduhr: Geschwister + Ehepartner horizontal | v632 |
+| STORY-OPT | Story: Textqualität (OCCU-Merge, Epochen, Berufsverbindungen) | v638–v644 |
+| STORY-DIAGRAM | Story: Inline-SVG Ahnentafel | v645 |
+| STORY-PRINT | Story: Print-CSS A4, `@media print` | v646–v647 |
+| WW-PARSER | Web Worker für GEDCOM-Parse + Fortschrittsbalken | v649 |
+| TL-MULTI | Zeitleiste Mehrpersonen-Modus (2–5 Personen, Farb-Chips) | v665 |
+| PRINT-OUT | Ahnenliste (Kekule) + Familienbogen als HTML-Download | v669 |
+| DEDUP-ENH | Duplikat-Erkennung ausgebaut (Feldauswahl, Scoring, Suchfeld) | v670–v683 |
+| IMPORT-CMP | Datei-Vergleichs- & Merge-Assistent | v673–v682 |
+| CSP-FINAL | CSP vollständig: alle Inline-Handler durch Event-Delegation ersetzt | v686–v690 |
+| SEARCH-QA | Komma-Normierung Namen + Quellen-Zwischenablage | v691 |
+| TEST-AUTO | `test.html`: Standalone GEDCOM Roundtrip-Tester | — |
 
 ---
 
-## P0 — Sicherheit & Stabilität *(Pflicht vor jedem Release)*
+## P0 — Kritische Fehler & Sicherheit *(sofort, blockiert Features)*
+
+> P0-Items gelten als Pflicht vor jedem Release. Sicherheits-Items vor jedem Share-Link.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~SEC-1~~ | ~~**XSS in onedrive.js**~~ | URL-Sanitizer für href in ui-media.js (sw v576) | - |
-| ~~SEC-2~~ | ~~**MIME-Validierung Foto-Upload**~~ | file.type-Check + Fehler-Toast in amCamChange (sw v576) | - |
-| ~~ERR-1~~ | ~~**try-catch in async-Funktionen**~~ | bereits vollständig | - |
-| ~~PERF-1~~ | ~~**Debouncing Suche/Filter**~~ | bereits erledigt | - |
-| ~~PERF-2~~ | ~~**Soundex-Cache**~~ | bereits erledigt | - |
-| ~~SEC-3~~ | ~~**XSS: innerHTML mit placeId absichern**~~ | `buildPlacePartsHtml()` → `_buildPlaceParts(placeId, container)` mit DOM-API (`createElement`/`textContent`); kein innerHTML mehr (sw v607) | - |
-| ~~STAB-2~~ | ~~**Konflikt-Erkennung beim Speichern (Desktop)**~~ | `saveToFileHandle()` prüft `file.lastModified` vor dem Schreiben; Confirm-Dialog bei externer Änderung; Timestamp nach jedem Laden/Speichern in `AppState._fileLastModified` (sw v607) | - |
+| **HOTFIX-CMP** | **⚠ `compare-engine.js` fehlt in index.html** | `ui-import-compare.js` ruft `cmpLoadFile()`, `cmpMatchPersons()`, `cmpComputePersonDiff()`, `cmpApplyPatch()` auf — alle undefined, da `compare-engine.js` kein `<script src>` in `index.html` hat (nur in sw.js PRECACHE). Import-Compare-Feature wirft ReferenceError. Fix: `<script src="compare-engine.js">` vor `<script src="ui-import-compare.js">` einfügen. | XS |
+| **F5** | **DSGVO: Lebende-Anonymisierung beim Export** | Export-Option: Personen mit Geb. >~1920 und kein Sterbedatum werden anonymisiert → Name „Lebende Person", alle Ereignisse entfernt. Ohne diese Funktion ist die Weitergabe von GEDCOM-Dateien mit lebenden Personen potenziell DSGVO-widrig. Opt-in im Einstellungs-Modal; GEDCOM-Export + GRAMPS-Export. Roundtrip-Auswirkung: dokumentierte, bewusste Abweichung (ADR). | M |
+| ~~SEC-1~~ | ~~XSS URL-Sanitizer onedrive-Vorschau~~ | v576 | - |
+| ~~SEC-2~~ | ~~MIME-Validierung Foto-Upload~~ | v576 | - |
+| ~~SEC-3~~ | ~~XSS: DOM-API statt innerHTML für Orte~~ | v607 | - |
+| ~~STAB-2~~ | ~~Konflikt-Erkennung beim Speichern~~ | v607 | - |
+| ~~CSP-FINAL~~ | ~~CSP vollständig ohne Inline-Handler~~ | v690 | - |
+
+---
+
+## T0 — Technische Schulden *(kein Nutzer-Feature, aber Fundament)*
+
+> Technische Schulden bremsen jede neue Entwicklung. Diese Items werden parallel zu Features abgearbeitet, nicht nach.
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| **T0-DEBUG** | **`debug-gramps.js` bedingt laden** | `debug-gramps.js` (591 Z., 28 KB) wird immer per `<script>` eingebunden und vom Browser geparsed — auch wenn `?debug=1` nie gesetzt ist. Lösung: dynamisches `import` nur wenn `new URL(location).searchParams.has('debug')`. Alternativ: in `debug-activate.js` als `document.createElement('script')` nachladen. | XS |
+| **T0-STORAGE** | **localStorage / IDB-Strategie vereinheitlichen** | Derzeit: 67 `localStorage`-Zugriffe in 7 Dateien (OneDrive-IDs, Dateiname, Ignore-Liste, Backup-Fallback). Kein zentrales Storage-API. Risiko: localStorage-Quota-Fehler auf iOS (5 MB), inkonsistente Fehlerbehandlung. Ziel: `idbGet`/`idbPut` als primäre API, localStorage nur für winzige Session-Flags (<100 Byte). | M |
+| **T0-REFACT-3** | **Große Dateien aufteilen** | Drei Dateien sind deutlich zu groß für ihren Scope: `ui-views.js` (1.471 Z.) enthält Baum-Navigation, Scroll-Helpers, Undo, State-Management und Event-Delegation; `ui-views-tasks.js` (1.143 Z.) mischt Aufgaben-CRUD, Validierungs-UI und Forschungsprotokoll-UI; `ui-story.js` (1.104 Z.) ist monolithisch. Aufteilen nach dem Muster von REFACT-1. | L |
+| **T0-LINTER** | **ESLint einrichten** | Kein Linter → stilistische Inkonsistenzen (mixed `const`/`let`, variable Einrückung, fehlende Semikolons). ESLint mit Flat Config, nur Fehler-Rules (keine Style-Streitigkeiten), CI-fähig über `npx eslint` ohne Installation. Scope: globale Funktionen korrekt deklariert, keine `var`, keine unsicheren Patterns. | S |
+| **T0-TYPES** | **JSDoc-Typen für Kern-Datenstrukturen** | `db.persons{}`, `db.families{}`, `db.sources{}` haben keine formale Typdefinition. Fehler wie `f.children` statt `f.chil` (Import-Compare-Bug v682) entstehen durch fehlende Typ-Prüfung. Ziel: `@typedef` für Person, Family, Source, Event in `gedcom.js`; `@param`/`@returns` in allen Parser/Writer-Funktionen. Kein TypeScript-Build nötig — VS Code und IntelliJ nutzen JSDoc nativ. | M |
+| ~~REFACT-1~~ | ~~`parseGEDCOM()` in Sub-Parser aufgeteilt~~ | v627 | - |
+| ~~REFACT-2~~ | ~~Datum-Parsing zentralisiert~~ | bereits in `gedcom.js` | - |
 
 ---
 
@@ -91,125 +138,138 @@ Feldarbeit = Archiv, Kirchenbuch vor Ort, Friedhof, Bibliothek. Ziel: neue Erken
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~QUICK-ADD~~ | ~~**Schnellerfassung neue Person**~~ | `modalAdd` → „⚡ Neue Person (Schnell)": Minimalformular; Masseneingabe-Modus; „Fertig"-Button öffnet letzte Person (sw v577) | - |
-| ~~CAM-LINK~~ | ~~**Foto direkt an Ereignis**~~ | `<input capture="environment">` im Ereignis-Formular; Foto → IDB → `ev.media[]` (sw v578) | - |
+| ~~QUICK-ADD~~ | ~~Schnellerfassung neue Person (Masseneingabe-Modus)~~ | v577 | - |
+| ~~CAM-LINK~~ | ~~Foto direkt an Ereignis (Kamera-Button)~~ | v578 | - |
 | QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich der gewählten Quelle an: Quellentyp bestimmt welche Felder erscheinen. Beispiel Taufbuch: Geburt + Taufe als Chips, separates Datum je Ereignis. Konfiguration als `quickAddTemplates[]` JSON, analog SOUR-TMPL. | M |
-| F5 | **Lebende-Anonymisierung** | Export: Geb. >~1920 + kein Sterbedatum → „Lebende Person", alle Events entfernt; DSGVO-konform beim Teilen; Opt-in im Einstellungs-Modal | M |
+| OFFLINE-DIAG | **Offline-Statusanzeige verbessern** | Aktuell zeigt der Sync-Indikator nur „geändert/gespeichert". Kein klares Signal ob die App gerade offline läuft und ob alle Assets gecacht sind. Ziel: `navigator.onLine`-Listener → Toast + persistentes Indikator-Icon im Header bei Offline-Modus; Cache-Vollständigkeit prüfen (alle PRECACHE-Dateien vorhanden?). | S |
 
 ---
 
 ## P2 — Forschungsqualität *(von Datensammlung zu systematischer Forschung)*
 
-Der Unterschied zwischen Hobbysammler und ernsthaftem Forscher: Protokoll, Quellenkritik, Lückenanalyse.
-
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~SOUR-TMPL~~ | ~~**Quellen-Vorlagen**~~ | 10 Vorlagen; Select-Dropdown bei Neuanlage; befüllt ABBR/TITL/AUTH/PUBL/MEDI (sw v586) | - |
-| ~~FORSCH-LOG~~ | ~~**Forschungsprotokoll**~~ | `1 _RLOG`; Felder DATE/REPO/SOUR/QUERY/RESULT/NOTE; globaler Tab; Filter + MD-Export (sw v582–v585) | - |
-| ~~VAL-EXTEND~~ | ~~**Validierung ausbauen**~~ | 21 Regeln in 4 Gruppen; konfigurierbarer `VAL_CONFIG`; Config-UI (sw v590) | - |
-| ~~TREE-HEAT~~ | ~~**Vollständigkeits-Heatmap im Baum**~~ | `data-completeness="1/2/3"` auf Baum-Karten (Sanduhr + Nachkommen); Farb-Ringe; `_personCompleteness()` in ui-views.js (sw v598) | - |
-| F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional | M |
+| ~~SOUR-TMPL~~ | ~~Quellen-Vorlagen (10 Templates)~~ | v586 | - |
+| ~~FORSCH-LOG~~ | ~~Forschungsprotokoll (`_RLOG`)~~ | v582–v585 | - |
+| ~~VAL-EXTEND~~ | ~~Validierung ausgebaut (21 Regeln)~~ | v590 | - |
+| ~~TREE-HEAT~~ | ~~Vollständigkeits-Heatmap im Baum~~ | v598 | - |
+| F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional. Relevant sobald Stammbäume >5 Generationen in enge Regionen zurückgehen. Voraussetzung: BFS-Algorithmus aus REL-CALC nutzen. | M |
+| VAL-RULES-2 | **Validierung: inhaltliche Regeln ausbauen** | Aktuelle 21 Regeln prüfen nur strukturelle Probleme (Datum-Logik, fehlende Felder). Fehlende inhaltliche Regeln: Ortsname-Konsistenz (gleiche Person, 3 Schreibweisen), Quellenqualität (QUAY-Wert fehlt häufig), Alter-bei-Heirat unter 14, unwahrscheinliche Geschwisterzahl (>15). | M |
+| ASSO-DISP | **ASSO-Beziehungen anzeigen (Read-only)** | Zeugen, Paten, Informanten aus `1 ASSO`-Blöcken in Personen-Detail anzeigen (Rolle + verknüpfte Person + klickbar). Schritt 1 vor editierbarem ASSO (P5). Roundtrip bereits stabil via Passthrough. | S |
 
 ---
 
 ## P3 — Desktop-Auswertung *(Heavy Use am Desktop)*
 
-Funktionen für den Rechner-Abend: strukturieren, bereinigen, auswerten, ausgeben.
-
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~STATS-2~~ | ~~**Statistik-Dashboard ausgebaut**~~ | Lebensspannen, Heiratsalter-Verteilung, Ereignisse/Jahrzehnt, Top-Sterbeorte, Kinderzahl-Verteilung (sw v597) | - |
-| ~~SEARCH-ADV~~ | ~~**Erweiterte Suche**~~ | Fehlende-Felder-Checkboxen kombinierbar mit allen Filtern (sw v596) | - |
-| FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig | XS |
-| ~~CHART-EXPORT~~ | ~~**Diagramm-Export als PNG**~~ | `ui-chart-export.js`: `_svgToPng()` Kern-Engine (CSS-Var-Auflösung + Canvas); Fächer-Chart direkt; Nachkommen-Baum DOM-Snapshot (lines + rect+text aus Divs); `↓`-Button in Baum-Topbar (sw v629) | - |
-| ~~EXPORT-UNSTACK~~ | ~~**PNG-Export: Stapel auflösen**~~ | Sanduhr-Export: Peek-Karten (Geschwister + Ehepartner) vollständig nebeneinander; `_computeUnstack()` berechnet neue Positionen + SVG wächst in der Höhe; `data-role`-Labels auf SVG-Linien für saubere Endpoint-Korrektur (sw v631) | - |
-| ~~TREE-SIB-HORIZ~~ | ~~**Sanduhr: Geschwister + Ehepartner horizontal**~~ | Geschwister in einer Reihe links des Probanden (baumbreitenabhängige Kartenbreite, min 60px, +N-Badge bei Überlauf); Ehepartner immer horizontal rechts; kein vertikaler Stapel mehr; T-Balken-Konnektoren; Fallback Peek-Stapel bei ancLevels < 3 (sw v632) | - |
-| ~~EXPORT-SANDUHR-FIX~~ | ~~**Sanduhr-Export: neue Elemente nachgezogen**~~ | `ui-chart-export.js`: `.tree-sib-more` (…-Box) als gestricheltes SVG-Rect gerendert; `--sib-count`-Badge (∞N, unten links) als goldene Pill im `badgeFull`-Pfad; obsolete `sib-v`- und `spouse-active`-Endpunkt-Korrekturen entfernt (sw v637) | - |
-| CSV-EXPORT | **CSV-Export für Listen** | Personen- und Familienliste als CSV aus der aktuell gefilterten Ansicht; Spalten konfigurierbar (Name, Geburt, Tod, Ort, Quellenzahl); Download-Button im Listen-Header. Wichtige Kompatibilität zu Excel/Numbers für Abgleich und Druck. | S |
-| ~~REL-CALC~~ | ~~**Beziehungsrechner**~~ | BFS-Beziehungsrechner: Verwandtschaft zum Probanden + gemeinsamer Vorfahre mit Geburtsjahr in Person-Detail; freier Zweipersonen-Vergleich via „🔗 zu …"-Button; visueller Pfad als klickbare Karten-Kette im Modal (sw v626) | - |
-| ~~MEDIA-MGR~~ | ~~**Medienverwaltung (eigene View)**~~ | Dritter Sub-Tab „Medien" im Quellen-Tab; Kachelgalerie aller Medien (Personen + Familien + Quellen); Filter-Chips Alle/Personen/Familien/Quellen; Lazy-Loading mit ⚠-Overlay; Klick navigiert zum Kontext-Datensatz; ersetzt drei Modal-Browser (sw v608) | - |
-| ~~MEDIA-MGR-DETAIL~~ | ~~**Medien-Detailansicht**~~ | `showMediaDetail()`: Detailansicht im rechten Panel; globale Felder FILE/FORM/MEDI; Referenzliste mit ↗ Navigation und × Löschen; per-Ref-Felder TITL/DATE/NOTE/_PRIM; Inline-Suchpanel zum Hinzufügen neuer Referenzen (Person/Familie/Quelle) mit Lebensdaten-Anzeige (sw v609–v622) | - |
-| ~~DUP-DETECT~~ | ~~**Duplikat-Erkennung**~~ | Levenshtein-Score (Nachname/Vorname/Sex/Geburtsjahr/Ort), Nachname-Bucketing O(n·k²), Merge-Modal mit Seiten-Tausch, Ignore-Liste (localStorage), `pushUndo` vor Merge (sw v628). Web Worker → WW-PARSER. | - |
-| ~~PRINT-OUT~~ | ~~**Strukturierte Druckausgaben**~~ | Ahnenliste (Kekule-Tabelle) + Familienbogen als druckbare HTML-Downloads; `ui-print.js` (sw v669) | - |
-| ~~DEDUP-ENH~~ | ~~**Duplikat-Erkennung ausgebaut**~~ | Zeilenweise Feldauswahl im Merge-Modal (sw v670); Forschungseintrag-Button für beide Personen (sw v671); Eltern + Partner im Scoring, normalisiert auf 100 (sw v672); Suchfeld zum Filtern der Paar-Liste (sw v683) | - |
-| ~~IMPORT-CMP~~ | ~~**Datei-Vergleichs- & Merge-Assistent**~~ | `compare-engine.js` + `ui-import-compare.js`; Matching, Diff, Additions/Konflikte, Forschungseinträge (📝), Neue-Person-Import mit Familienverknüpfung (sw v673–v682) | - |
-| ~~WW-PARSER~~ | ~~**Web Worker für große GEDCOM-Dateien**~~ | `parseGEDCOM()` in `gedcom-worker.js` ausgelagert; `onProgress`-Callback alle 5%; Fortschrittsbalken `#loadingBar` im Lade-Overlay; Sync-Fallback wenn `Worker` nicht verfügbar; `_finishLoad()` als gemeinsamer Post-Parse-Pfad (sw v649) | - |
-| ~~CSP-FINAL~~ | ~~**CSP vollständig: alle Inline-Handler durch Event-Delegation ersetzt**~~ | Dedup-Threshold-Slider + Suche via `data-input`-Delegation; alle verbleibenden `oninput`/`onclick` Inline-Handler ersetzt; ADR-015 abgeschlossen (sw v686–v690) | - |
-| ~~SEARCH-QA~~ | ~~**Komma-Normierung in Namen + Quellen-Zwischenablage**~~ | Nachname-Parsing bereinigt (Komma als Trennzeichen normiert); QuickAdd-Formular: zuletzt verwendete Quelle + Seite in Zwischenablage vorbelegt (sw v691) | - |
+| ~~STATS-2~~ | ~~Statistik-Dashboard ausgebaut~~ | v597 | - |
+| ~~SEARCH-ADV~~ | ~~Erweiterte Suche: Fehlende-Felder-Checkboxen~~ | v596 | - |
+| ~~REL-CALC~~ | ~~Beziehungsrechner (BFS, Pfad-Modal)~~ | v626 | - |
+| ~~MEDIA-MGR~~ | ~~Medienverwaltung + Detailansicht~~ | v608–v622 | - |
+| ~~DUP-DETECT~~ | ~~Duplikat-Erkennung + Merge~~ | v628–v683 | - |
+| ~~IMPORT-CMP~~ | ~~Datei-Vergleichs- & Merge-Assistent~~ | v673–v682 | - |
+| ~~PRINT-OUT~~ | ~~Ahnenliste + Familienbogen~~ | v669 | - |
+| **CSV-EXPORT** | **CSV-Export für Listen** | Personen- und Familienliste als CSV aus der aktuell gefilterten Ansicht; Spalten konfigurierbar (Name, Geburt, Tod, Ort, Quellenzahl, Quellenreferenzen). Download-Button im Listen-Header. Kompatibilität zu Excel/Numbers für Abgleich + Druck. Jedes kommerzielle Genealogie-Tool bietet das. | S |
+| FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; sofort lesbarer; keine Layout-Änderung nötig. | XS |
+| ACCESSIBILITY | **Accessibility-Audit + Grundhärtung** | Die App hat 88 `aria-*`-Attribute in index.html — unzureichend für dynamisch gerenderte Listen, Modal-Dialoge, Baum-Navigation. Ziel: WCAG 2.1 AA für die vier häufigsten Flows (Laden, Person suchen, Detailansicht, Baum navigieren). Keine vollständige Screen-Reader-Parität, aber funktionale Tastaturnavigation und korrekte `role`/`aria-label` auf allen interaktiven Elementen. | M |
+| LIGHT-MODE | **Light-Mode Parity** | Light Mode wurde als Sekundär-Theme entwickelt. Erkennbare Schwächen: Gold auf hellem Hintergrund hat schlechtere Kontrast-Ratio (WCAG AA verfehlt), Baum-Konnektoren kaum sichtbar, Karten-Tooltip-Hintergrund zu dunkel. Ziel: gleiche visuelle Qualität in beiden Modi. | M |
 
 ---
 
 ## P4 — Visuelle Ausgaben *(Wow-Faktor)*
 
-Ausgaben, die Genealogen ihren Familien zeigen. Fundament abgeschlossen (Timeline ✓, Story ✓, Karte ✓, Fächer ✓, Nachkommen-Baum ✓, Animierter Migrationspfad ✓).
+Fundament abgeschlossen: Timeline ✓, Story ✓, Karte ✓, Fächer ✓, Nachkommen-Baum ✓, Animierter Migrationspfad ✓, Diagramm-Export ✓.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~MAP-ANIM~~ | ~~**Karte: animierter Migrationspfad**~~ | Play/Pause/Stopp-Bar; stroke-dashoffset (Migr) / opacity-Fade (Person); Geschwindigkeit; Loop (sw v603) | - |
-| ~~MAP-TOPBAR~~ | ~~**Karte als Diagramm: 🗺-Button in allen Diagramm-Topbars**~~ | 🗺 in Person-Detail, Zeitleiste, Sanduhr-Baum + Detail-NavBar (sw v604) | - |
-| MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key | S |
-| ~~TL-MULTI~~ | ~~**Zeitleiste: Mehrpersonen-Modus**~~ | 2–5 Personen in Swim-Lanes; ⊕-Button in Filterbar; farbige Chips + Lebensspannen pro Person; `_tlPersonIds[]`; Person-Bar mit ✕; Querformat only (sw v665) | - |
-| ~~STORY-OPT~~ | ~~**Story: Textqualität verbessern**~~ | OCCU-Merge (Berufe mit Zeitraum in einem Satz); Kinder mit Geburtsjahren; Partner-Lebensdaten in Heiratssatz; Geschwisterzahl in Frühleben; Todesursache mit „an"-Präposition; `_sectionEpoch` + `story-epochs.js` (11 Epochen); LLM-Opt-in separates Ticket (sw v638) | - |
-| STORY-FAM | **Story-Mode für Familien** | Familien-Narrative: Eltern + alle Kinder, gemeinsame Ereignisse, Geschwister-Vergleich, Zeitspanne der Familie; HTML-Download + Print-CSS analog Person-Story | M |
-| ~~STORY-DIAGRAM~~ | ~~**Story: Stammbaum-Diagramme einbetten**~~ | Inline-SVG Ahnentafel nach der Karte: GP-Zeile → Eltern → Proband ⚭ Partner → Kinder (bis 4 + „+N"-Pill); eigenständiger SVG-Generator in `_sectionDiagram()` ohne DOM-Abhängigkeit; CSS-Var-Fallbacks für HTML-Export; Klick-Navigation via `showDetail()`; entfällt wenn weder Eltern noch Kinder vorhanden (sw v645) | - |
-| MAP-HIST-B | **Echter Historikkartenhintergrund** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). | M |
+| ~~MAP-ANIM~~ | ~~Karte: animierter Migrationspfad~~ | v603 | - |
+| ~~MAP-TOPBAR~~ | ~~Karte als Diagramm in Topbars~~ | v604 | - |
+| ~~TL-MULTI~~ | ~~Zeitleiste Mehrpersonen-Modus~~ | v665 | - |
+| ~~STORY-OPT~~ | ~~Story: Textqualität (Epochen, OCCU-Merge)~~ | v638–v644 | - |
+| ~~STORY-DIAGRAM~~ | ~~Story: Inline-SVG Ahnentafel~~ | v645 | - |
+| STORY-FAM | **Story-Mode für Familien** | Familien-Narrative: Eltern + alle Kinder, gemeinsame Ereignisse, Geschwister-Vergleich, Zeitspanne der Familie. HTML-Download + Print-CSS analog Person-Story. Einzigartiges Feature — kein anderes Genealogie-Tool bietet das. | M |
+| MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch im Kartenview; UIState-Persistenz; kein API-Key. | S |
+| MAP-HIST-B | **Historischer Kartenhintergrund (Swisstopo)** | Swisstopo Siegfriedkarte (1883–1949, WMTS bestätigt) als Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen (Vorarlberg, Elsass, Baden). Nur sinnvoll nach MAP-HIST-A. | M |
+| ONBOARDING | **Onboarding für Erstnutzer** | Landing-Seite erklärt das Konzept, aber kein interaktiver Einführungsflow. Ziel: nach Demo-Load zeigt ein dismissibler Overlay 3–4 Schritte: „Klick auf eine Person", „Öffne den Baum", „Bearbeite ein Ereignis". Einmalig, localStorage-Flag. | S |
 
 ---
 
-## P5 — Standards & Interoperabilität *(für Fortgeschrittene)*
+## P5 — Standards & Interoperabilität
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ASSO-UI | **ASSO-Beziehungen (Zeugen, Paten, Informanten)** | Schritt 1: Read-only Anzeige vorhandener `1 ASSO`-Blöcke in Personen-Detail (Rolle + verknüpfte Person). Schritt 2: Bearbeitung — Person als Zeuge/Pate/Informant zu einem Ereignis zuordnen, `1 ASSO`-Block schreiben + Roundtrip-stabil. | M+M |
-| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal; ADR dokumentiert | M |
-| GRAMPS-Edit | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar | M |
-| GRAMPS-RT | **GRAMPS-Writer vollständig + Roundtrip-Test** | `gramps-writer.js` auf Vollständigkeit prüfen: alle geparsten GRAMPS-Felder müssen zurückgeschrieben werden. Automatisierter Test: GRAMPS laden → exportieren → reimportieren → Delta auf 0. Besonderes Augenmerk: `_TASK`/`_RLOG` (kein GRAMPS-Pendant — als `attribute type="…"` oder Note schreiben?); FREL/MREL-Qualifiers. | M |
-| ~~TEST-AUTO~~ | ~~**Standalone GEDCOM Roundtrip Test**~~ | `test.html`: lädt nur `gedcom.js` + `gedcom-parser.js` + `gedcom-writer.js` (kein UI, ~100ms); Drag-Drop für beliebig viele .ged-Dateien; parse→write→parse→write; Tabelle mit Personen/Familien/Quellen, net_delta, Stabilität, Zeit; aufklappbarer Diff bei Instabilität | - |
-| OBJE-TYPE | **Medien-Typ strukturiert** ⚠ | `m._type` als Vendor-Extension (`2 _TYPE`); kein Standard-Tag in GEDCOM 5.5.1; ADR erforderlich vor Umsetzung | S |
-
----
-
-## T0 — Technische Schulden *(kein Nutzer-Feature, aber Fundament für alles andere)*
-
-| ID | Aufgabe | Details | Aufwand |
-|---|---|---|---|
-| ~~REFACT-1~~ | ~~**`parseGEDCOM()` in Sub-Parser aufteilen**~~ | Monolithische ~977-Zeilen-Hauptschleife in 5 Sub-Parser aufgeteilt: `_parseINDILine`, `_parseFAMLine`, `_parseSOURLine`, `_parseNOTELine`, `_parseREPOLine`; gemeinsamer Kontext-Objekt `x` (14 Felder) per Parameter übergeben; Hauptfunktion auf ~200 Z. geschrumpft; gleicher Input/Output, Roundtrip net_delta=0 stabil (sw v627) | - |
-| ~~REFACT-2~~ | ~~**Datum-Parsing-Logik zentralisieren**~~ | Bereits erledigt: alle Datum-Funktionen (`normGedDate`, `normMonth`, `parseGedDate`, `buildGedDate`, `gedDateSortKey`, `gedDatePartToISO`) sind in `gedcom.js` zentralisiert; `gedcom-parser.js` speichert nur rohe Strings; UI-Dateien nutzen ausschließlich die Funktionen aus `gedcom.js`; `gramps-parser.js:_parseDateEl()` ist korrekterweise ein eigenständiger XML-Attribut-Parser. | - |
+| ~~TEST-AUTO~~ | ~~Standalone GEDCOM Roundtrip-Tester~~ | `test.html` | - |
+| ASSO-EDIT | **ASSO-Beziehungen editierbar** | Nach ASSO-DISP (P2): Person als Zeuge/Pate/Informant zu einem Ereignis zuordnen; `1 ASSO`-Block schreiben + Roundtrip-stabil. ADR erforderlich (Extension auf Event-Level?). | M |
+| F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal. Nötig für Kompatibilität mit strikten Programmen (Ancestry-Import, FamilySearch). ADR + Test erforderlich. | M |
+| GRAMPS-EDIT | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar; keine GRAMPS-spezifischen Felder verlieren beim Roundtrip. | M |
+| GRAMPS-RT | **GRAMPS-Writer vollständig + Roundtrip-Test** | `gramps-writer.js` auf Vollständigkeit prüfen; automatisierter Test: GRAMPS laden → exportieren → reimportieren → Delta auf 0. Besonderes Augenmerk: `_TASK`/`_RLOG` (kein GRAMPS-Pendant). | M |
+| OBJE-TYPE | **Medien-Typ strukturiert** ⚠ | `m._type` als Vendor-Extension (`2 _TYPE`); ADR erforderlich vor Umsetzung. | S |
+| GEDCOM-7-EVAL | **GEDCOM 7.0 Evaluierung** | FamilySearch treibt GEDCOM 7.0 aktiv voran (UTF-8 statt ANSEL, strukturierte Orte, neue Datums-Syntax). Evaluierung: welche Parser/Writer-Änderungen wären nötig, welche Roundtrip-Garantien brechen, welche neuen Features würden möglich. Ergebnis: ADR + Go/No-Go-Entscheidung. | M |
 
 ---
 
 ## Dokumentation
 
-Handbuch-Pflege: kein Funktionsrelease nötig, aber separater Aufwand.
+**Konvention:** Bei jedem Handbuch-Update wird der aktuelle sw-Stand im `HANDBUCH.html`-Deckblatt vermerkt und hier notiert.
 
-**Konvention:** Bei jedem Handbuch-Update wird der aktuelle sw-Stand im `HANDBUCH.html`-Deckblatt vermerkt (z. B. `Stand: sw v604`) und parallel in dieser Sektion notiert.
-
-**Handbuch-Stand: sw v622** (aktualisiert 2026-05-18)
+**Handbuch-Stand: sw v692** (synchron mit Code-Stand v693 — frisch aktualisiert)
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~DOC-SEARCH-ADV~~ | ~~**Handbuch Kap. 11: Erweiterte Suche**~~ | Abschnitt „Fehlende-Felder-Filter" ergänzen (sw v596) | - |
-| ~~DOC-STATS~~ | ~~**Handbuch: Statistik-Kapitel**~~ | Neues Kapitel Statistik & Auswertung (sw v597) | - |
-| ~~DOC-TREE-HEAT~~ | ~~**Handbuch Kap. 8: Vollständigkeits-Heatmap**~~ | Farb-Ringe in Sanduhr-Baum (sw v598) | - |
-| ~~DOC-VAL-22~~ | ~~**Handbuch Kap. 13: Regelzahl korrigiert**~~ | 21 → 22 Regeln (sw v590) | - |
-| ~~DOC-MAP-ANIM~~ | ~~**Handbuch Kap. 9: Animierter Migrationspfad**~~ | Animations-Leiste erklärt (sw v603) | - |
-| ~~DOC-MAP-TOPBAR~~ | ~~**Handbuch Kap. 9: 🗺-Button in Diagramm-Topbars**~~ | 🗺-Button in Diagramm-Topbar-Tabelle ergänzt + eigener Unterabschnitt in Kap. 7 (sw v622) | - |
-| ~~DOC-MEDIA-MGR~~ | ~~**Handbuch Kap. 18: Medien-Manager vollständig**~~ | Kap. 18 komplett überarbeitet: Galerie, Detailansicht, Referenz-Management, Suchpanel mit Lebensdaten (sw v622) | - |
-| DOC-REL-CALC | **Handbuch Kap. 4: Beziehungsrechner** | Neuer Unterabschnitt unter „Abschnitte in der Detailansicht": (1) Verwandtschaft-Zeile zum Probanden mit gemeinsamem Vorfahren und Geburtsjahr; (2) „🔗 zu …"-Button für freien Zweipersonen-Vergleich; (3) Pfad-Modal: klickbare Karten-Kette, ⬡-Symbol für gemeinsamen Vorfahren, Hinweis auf mehrere Pfade (sw v626) | S |
-| DOC-SCREENS | **Handbuch: echte Screenshots** | Alle Mockups in `HANDBUCH.html` durch echte Screenshots ersetzen. Priorität: Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste, Karte (Migrations-Modus + Person-Modus + animiert), Personen-Detail, Ereignis-Formular. | M |
+| ~~DOC-SEARCH-ADV~~ | ~~Handbuch Kap. 11: Erweiterte Suche~~ | v596 | - |
+| ~~DOC-STATS~~ | ~~Handbuch: Statistik-Kapitel~~ | v597 | - |
+| ~~DOC-TREE-HEAT~~ | ~~Handbuch Kap. 8: Vollständigkeits-Heatmap~~ | v598 | - |
+| ~~DOC-MAP-ANIM~~ | ~~Handbuch Kap. 9: Animierter Migrationspfad~~ | v603 | - |
+| ~~DOC-MAP-TOPBAR~~ | ~~Handbuch Kap. 9: 🗺-Button~~ | v622 | - |
+| ~~DOC-MEDIA-MGR~~ | ~~Handbuch Kap. 18: Medien-Manager~~ | v622 | - |
+| ~~DOC-CATCHUP~~ | ~~Handbuch auf sw v692 gebracht~~ | Beziehungsrechner, Import-Compare, Duplikat-Erkennung, Mehrpersonen-Zeitleiste, Komma-Normierung, Symbole | - |
+| DOC-REL-CALC | **Handbuch Kap. 4: Beziehungsrechner** | Prüfen ob Verwandtschaft-Zeile, „🔗 zu …"-Button und Pfad-Modal bereits dokumentiert sind; ggf. ergänzen. | S |
+| DOC-SCREENS | **Handbuch: echte Screenshots** | Alle Mockups durch echte Screenshots ersetzen. Priorität: Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste, Karte (alle 3 Modi), Personen-Detail. | M |
 
 ---
 
 ## Backlog / Forschung
 
-Kein festes Datum. Kandidaten für spätere Versionen.
+Kein festes Datum. Kandidaten für v9+ oder bei geänderter Priorität.
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X | L |
-| GEDCOM-7 | **GEDCOM 7.0 Evaluierung** | FamilySearch-Standard; Parser/Writer-Anpassung; HEAD GEDC VERS 7.0 | L |
-| F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend | XL |
-| COLLAB | **Kollaboratives Editieren** | Konflikt-freies Merge zweier GEDCOM-Dateien (ähnliche Personen identifizieren, Delta anzeigen). Grundlage: DUP-DETECT + STAB-2. | XL |
+| F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X — Netzwerk-Graph oder Liste. | L |
+| F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend als Opt-in. | XL |
+| COLLAB | **Kollaboratives Editieren** | Konflikt-freies Merge zweier GEDCOM-Dateien. Grundlage: IMPORT-CMP + DUP-DETECT. Erfordert Server oder CRDTs. | XL |
+| ES-MODULE | **Echtes ES-Modul-System** | Umstieg von 44 globalen Script-Tags auf `import`/`export`. Würde: Tree-Shaking, explizite Abhängigkeiten, keine Namenskollisionen, Ladezeit-Optimierung. Aufwand enorm (alle Funktionsreferenzen prüfen), Nutzen hoch — Entscheidung erst wenn Codebase stabil ist. | XL |
+| BUNDLING | **Bundling für Erstladezeit** | 44 HTTP-Requests ohne SW-Cache (Erststart). esbuild oder Rollup würden auf 3–5 Dateien reduzieren. Bedingt: ES-MODULE oder zumindest IIFE-Bundles. Kein npm-Build-Zwang — esbuild als CLI aufrufbar. | L |
+| LLM-STORY | **LLM-gestützte Story-Verbesserung** | Opt-in API-Call (OpenAI/Anthropic) zum Umschreiben des generierten Story-Textes in natürlicheres Deutsch. Privacy: nur anonymisierte Daten senden. | M |
+
+---
+
+## Vergleich mit kommerziellen Tools *(Benchmarks)*
+
+| Feature | Stammbaum PWA | MacFamilyTree | Ancestry | GRAMPS | Ahnenblatt |
+|---|---|---|---|---|---|
+| Plattform | Web/PWA/iOS/Desktop | Mac/iOS | Web | Desktop | Windows |
+| Offline | ✅ vollständig | ✅ | ❌ | ✅ | ✅ |
+| GEDCOM Roundtrip | ✅ exzellent | ✅ gut | ⚠ verlustbehaftet | ✅ gut | ✅ gut |
+| GEDCOM 7.0 | ❌ (geplant) | ⚠ | ❌ | ⚠ | ❌ |
+| GRAMPS XML | ✅ (read+write) | ❌ | ❌ | ✅ nativ | ❌ |
+| Karte + Animation | ✅ | ✅ | ✅ | ⚠ | ⚠ |
+| Zeitleiste (hist. Ereignisse) | ✅ | ✅ | ⚠ | ⚠ | ⚠ |
+| Diagramm-Export | ✅ PNG | ✅ PDF/PNG | ⚠ | ✅ | ✅ |
+| Story-Modus | ✅ einzigartig | ⚠ Reports | ❌ | ❌ | ❌ |
+| Duplikat-Erkennung | ✅ | ✅ | ✅ | ✅ | ⚠ |
+| Datei-Merge | ✅ | ✅ | ⚠ | ✅ | ⚠ |
+| Validierungsregeln | ✅ 21 Regeln | ⚠ | ⚠ | ✅ | ⚠ |
+| CSV-Export | ❌ (P3 offen) | ✅ | ✅ | ✅ | ✅ |
+| DNA-Integration | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Multi-User | ❌ | ❌ | ✅ | ❌ | ❌ |
+| Datenschutz (lokal-first) | ✅ | ✅ | ❌ | ✅ | ✅ |
+| Lebende anonymisieren | ❌ (P0 offen) | ✅ | ⚠ | ✅ | ✅ |
+| Kosten | gratis | kostenpflichtig | Abo | gratis | gratis |
+
+**Einzigartige Stärken:** Offline-PWA + Story-Modus + animierter Migrationspfad + GRAMPS-Brücke + Forschungsprotokoll + Mehrpersonen-Zeitleiste + vollständig lokal ohne Datamining.
+
+**Verbleibende Lücken:** CSV-Export, GDPR-Anonymisierung, GEDCOM 7.0, editierbare ASSO-Beziehungen, Accessibility.
 
 ---
 
