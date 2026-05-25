@@ -273,7 +273,6 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
     inp.click();
     setTimeout(() => inp.setAttribute('capture', 'environment'), 500);
   },
-  amLinkPick:              ()  => document.getElementById('am-link-input').click(),
   odPickFileForMedia:      ()  => odPickFileForMedia(),
   confirmAddMedia:         ()  => confirmAddMedia(),
   odPickFileForEditMedia:  ()  => odPickFileForEditMedia(),
@@ -386,23 +385,6 @@ document.addEventListener('change', e => {
       catch(err) { showToast('Bild konnte nicht geladen werden', 'error'); }
       el.value = '';
     })();
-  }
-  else if (action === 'amLinkChange') {
-    // Nur Dateinamen übernehmen — kein Kopieren in IDB
-    const f = el.files[0];
-    if (!f) { el.value = ''; return; }
-    const cur = document.getElementById('am-file').value;
-    let base = _addMediaDefaultFolderPath;
-    if (!base) {
-      const sep = cur.lastIndexOf('/');
-      base = sep >= 0 ? cur.substring(0, sep + 1) : '';
-    } else if (!base.endsWith('/')) {
-      base += '/';
-    }
-    document.getElementById('am-file').value = base + f.name;
-    document.getElementById('am-cam-preview').hidden = true;
-    _addMediaCamB64 = null;
-    el.value = '';
   }
   else if (action === 'efCamChange') {
     _efCamChange(el.files[0]);
