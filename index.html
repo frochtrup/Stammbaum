@@ -1545,6 +1545,16 @@
         <div class="form-hint-top">Personen ohne Sterbedatum, geboren nach <span id="set-privacy-year"></span>, werden als „Lebende Person" exportiert. Dateiname erhält Suffix <code>_anon</code>.</div>
       </div>
 
+      <!-- GEDCOM-Export -->
+      <div class="fs-075 fw-600 c-muted mb-8 text-upper mt-16">GEDCOM-Export</div>
+      <div class="settings-card">
+        <label class="d-flex ai-c gap-8 settings-section-top" style="cursor:pointer">
+          <input type="checkbox" id="set-ged7-export" data-change="ged7ExportChange">
+          <span>GEDCOM 7.0 exportieren</span>
+        </label>
+        <div class="form-hint-top">Standard: GEDCOM 5.5.1. Im 7.0-Modus: kein CONC, kein CHAR, <code>SNOTE</code>, <code>ROLE</code>, <code>PHRASE</code>, <code>TRAN</code>.</div>
+      </div>
+
 <button class="btn btn-cancel w-full" data-action="closeModal" data-modal="modalSettings">Schließen</button>
     </div>
   </div>

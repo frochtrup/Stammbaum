@@ -1,7 +1,39 @@
+// GED7-Modus-Flag — wird zu Beginn von writeGEDCOM() gesetzt
+let _ged7 = false;
+
+// GED7: SCHMA-Block für alle _-Extension-Tags
+function _g7WriteSchma(lines) {
+  const _base = 'https://github.com/frochtrup/Stammbaum/ext';
+  lines.push('1 SCHMA');
+  for (const t of ['_UID','_GRAMPS_ID','_STAT','_TASK','_CAT','_DONE','_DATE','_ID',
+                   '_RLOG','_QUERY','_RESULT','_RUFNAME','_FREL','_MREL','_SCBK','_PRIM'])
+    lines.push(`2 TAG ${t} ${_base}/${t}`);
+}
+
+// GED7: PLAC/TRAN-Einträge aus extraPlaces-Registry
+function _writePlacTrans(lines, placeName, indent) {
+  const ep = AppState.db?.extraPlaces?.[placeName];
+  if (!ep?.trans?.length) return;
+  for (const t of ep.trans) {
+    if (!t.value) continue;
+    lines.push(`${indent} TRAN ${t.value}`);
+    if (t.lang) lines.push(`${indent+1} LANG ${t.lang}`);
+  }
+}
+
 // Schreibt Text als GEDCOM-Zeile: CONT für Zeilenumbrüche, CONC für Zeichenlimit-Splits
+// GED7: kein CONC (kein Zeilenlimit), nur CONT für echte Umbrüche
 function pushCont(lines, lv, tag, text) {
-  const MAX = 248;
   const rawLines = (text || '').split('\n');
+  if (_ged7) {
+    for (let li = 0; li < rawLines.length; li++) {
+      if (li === 0) lines.push(`${lv} ${tag} ${rawLines[li]}`);
+      else          lines.push(`${lv+1} CONT ${rawLines[li]}`);
+    }
+    if (!rawLines.length) lines.push(`${lv} ${tag} `);
+    return;
+  }
+  const MAX = 248;
   for (let li = 0; li < rawLines.length; li++) {
     let s = rawLines[li];
     let firstChunk = true;
@@ -106,10 +138,14 @@ function eventBlock(lines, tag, obj, lv) {
   if (!obj || (!obj.seen && !obj.value && !obj.date && !obj.place && !obj.cause && !(obj.citations && obj.citations.length) && !(obj._extra && obj._extra.length))) return;
   lines.push(`${lv} ${tag}${obj.value ? ' ' + obj.value : ''}`);
   if (obj._grampsEvPriv) lines.push(`${lv+1} RESN confidential`);
-  if (obj.date !== null && obj.date !== undefined)  lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
+  if (obj.date !== null && obj.date !== undefined) {
+    lines.push(`${lv+1} DATE${obj.date ? ' ' + normGedDate(obj.date) : ''}`);
+    if (_ged7 && obj.datePhrase) lines.push(`${lv+2} PHRASE ${obj.datePhrase}`);
+  }
   if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
   if (obj.place !== null && obj.place !== undefined) {
     lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
+    if (_ged7) _writePlacTrans(lines, obj.place, lv+2);
     geoLines(lines, obj, lv+2);
   }
   const _origNote = obj._noteOrig !== undefined ? obj._noteOrig : obj.note;
@@ -219,6 +255,14 @@ function writeINDIRecord(lines, p, livingSet = null) {
   while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
   for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
 
+  // GED7: NAME/TRAN
+  if (_ged7) for (const nt of (p.nameTrans || [])) {
+    lines.push(`2 TRAN${nt.nameRaw ? ' ' + nt.nameRaw : ''}`);
+    if (nt.lang)    lines.push(`3 LANG ${nt.lang}`);
+    if (nt.given)   lines.push(`3 GIVN ${nt.given}`);
+    if (nt.surname) lines.push(`3 SURN ${nt.surname}`);
+  }
+
   // Extra NAME-Einträge (Geburtsname etc.)
   for (const en of (p.extraNames || [])) {
     lines.push(`1 NAME${en.nameRaw ? ' ' + en.nameRaw : ''}`);
@@ -254,10 +298,14 @@ function writeINDIRecord(lines, p, livingSet = null) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
     if (ev._grampsEvPriv) lines.push(`2 RESN confidential`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
-    if (ev.date !== null && ev.date !== undefined)  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+    if (ev.date !== null && ev.date !== undefined) {
+      lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+      if (_ged7 && ev.datePhrase) lines.push(`3 PHRASE ${ev.datePhrase}`);
+    }
     const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
     if (ev.place !== null && ev.place !== undefined) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
+      if (_ged7) _writePlacTrans(lines, ev.place, 3);
       geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
     } else if (ev.addr) {
       // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
@@ -383,7 +431,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
   for (const a of (p.associations || [])) {
     if (!a.xref) continue;
     lines.push(`1 ASSO ${a.xref}`);
-    if (a.role) lines.push(`2 RELA ${a.role}`);
+    if (a.role) lines.push(_ged7 ? `2 ROLE ${a.role}` : `2 RELA ${a.role}`);
     if (a.note) pushCont(lines, 2, 'NOTE', a.note);
     _writeSourCits(lines, 2, a);
   }
@@ -391,12 +439,22 @@ function writeINDIRecord(lines, p, livingSet = null) {
   for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
   for (const r of (p.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
 
+  // GED7: NO / EXID / CREA
+  if (_ged7) {
+    for (const ev of (p.noEvents || [])) lines.push(`1 NO ${ev}`);
+    for (const ex of (p.exids || [])) {
+      lines.push(`1 EXID ${ex.value || ''}`);
+      if (ex.type) lines.push(`2 TYPE ${ex.type}`);
+    }
+    if (p.createdDate) { lines.push('1 CREA'); lines.push(`2 DATE ${p.createdDate}`); }
+  }
+
   // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
   for (const wr of (p._grampsWitnessRefs || [])) {
     const primaryId = _witnessEvMap[wr._origHlink];
     if (!primaryId) continue;
     lines.push(`1 ASSO ${primaryId}`);
-    lines.push(`2 RELA ${wr.role || 'Witness'}`);
+    lines.push(_ged7 ? `2 ROLE ${wr.role || 'WITN'}` : `2 RELA ${wr.role || 'Witness'}`);
     const evInfo = [wr.type, wr.date, wr.place].filter(Boolean).join(', ');
     if (evInfo) lines.push(`2 NOTE GRAMPS event: ${evInfo}`);
     _writeSourCits(lines, 2, wr);
@@ -449,9 +507,13 @@ function writeFAMRecord(lines, f) {
     lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
     if (ev._grampsEvPriv) lines.push(`2 RESN confidential`);
     if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
-    if (ev.date !== null && ev.date !== undefined) lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+    if (ev.date !== null && ev.date !== undefined) {
+      lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+      if (_ged7 && ev.datePhrase) lines.push(`3 PHRASE ${ev.datePhrase}`);
+    }
     if (ev.place !== null && ev.place !== undefined) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
+      if (_ged7) _writePlacTrans(lines, ev.place, 3);
       geoLines(lines, ev, 3);
     }
     const _famEvNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
@@ -593,21 +655,33 @@ function writeREPORecord(lines, r) {
 
 // ─── NOTE-Record ──────────────────────────────────────────────────────────────
 function writeNOTERecord(lines, n) {
-  const MAX = 248;
-  const rawLines = (n.text || '').split('\n');
-  for (let li = 0; li < rawLines.length; li++) {
-    let s = rawLines[li];
-    let firstChunk = true;
-    do {
-      const chunk = s.slice(0, MAX);
-      s = s.slice(MAX);
-      if (li === 0 && firstChunk) lines.push(`0 ${_noteXref[n.id]||n.id} NOTE ${chunk}`);
-      else if (firstChunk)        lines.push(`1 CONT ${chunk}`);
-      else                        lines.push(`1 CONC ${chunk}`);
-      firstChunk = false;
-    } while (s.length > 0);
+  const _tag = (_ged7 && n.type === 'SNOTE') ? 'SNOTE' : 'NOTE';
+  const _xref = _noteXref[n.id] || n.id;
+  if (_ged7) {
+    // GED7: kein CONC, kein Längenlimit
+    const rawLines = (n.text || '').split('\n');
+    for (let li = 0; li < rawLines.length; li++) {
+      if (li === 0) lines.push(`0 ${_xref} ${_tag} ${rawLines[li]}`);
+      else          lines.push(`1 CONT ${rawLines[li]}`);
+    }
+    if (!rawLines.length) lines.push(`0 ${_xref} ${_tag} `);
+  } else {
+    const MAX = 248;
+    const rawLines = (n.text || '').split('\n');
+    for (let li = 0; li < rawLines.length; li++) {
+      let s = rawLines[li];
+      let firstChunk = true;
+      do {
+        const chunk = s.slice(0, MAX);
+        s = s.slice(MAX);
+        if (li === 0 && firstChunk) lines.push(`0 ${_xref} ${_tag} ${chunk}`);
+        else if (firstChunk)        lines.push(`1 CONT ${chunk}`);
+        else                        lines.push(`1 CONC ${chunk}`);
+        firstChunk = false;
+      } while (s.length > 0);
+    }
+    if (!rawLines.length) lines.push(`0 ${_xref} ${_tag} `);
   }
-  if (!rawLines.length) lines.push(`0 ${_noteXref[n.id]||n.id} NOTE `);
   writeCHAN(lines, n, 1);
   for (const l of (n._passthrough || [])) lines.push(l);
 }
@@ -621,35 +695,65 @@ function writeNOTERecord(lines, n) {
  * @returns {string}
  */
 function writeGEDCOM(updateHeadDate = false) {
+  _ged7 = AppState.gedExportVersion === '7.0';
   const lines = [];
   const d = new Date();
   const fname = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
 
   // ── HEAD ──
   if (db.headLines && db.headLines.length > 0) {
-    // Verbatim HEAD aus Original; DATE/TIME nur bei updateHeadDate=true aktualisieren
-    // (false = Roundtrip-idempotent; true = beim echten Speichern)
-    for (const l of db.headLines) {
-      if (updateHeadDate && /^1 DATE /.test(l)) { lines.push(`1 DATE ${gedcomDate(d)}`); continue; }
-      if (updateHeadDate && /^2 TIME /.test(l)) { lines.push(`2 TIME ${gedcomTime(d)}`); continue; }
-      lines.push(l);
+    if (!_ged7) {
+      // GED5: Verbatim HEAD aus Original; DATE/TIME nur bei updateHeadDate=true aktualisieren
+      for (const l of db.headLines) {
+        if (updateHeadDate && /^1 DATE /.test(l)) { lines.push(`1 DATE ${gedcomDate(d)}`); continue; }
+        if (updateHeadDate && /^2 TIME /.test(l)) { lines.push(`2 TIME ${gedcomTime(d)}`); continue; }
+        lines.push(l);
+      }
+    } else {
+      // GED7: HEAD aus Original, aber CHAR/FORM entfernen, VERS 7.0, SCHMA einfügen
+      let _afterGedcVers = false, _schmaInserted = false;
+      for (const l of db.headLines) {
+        if (/^1 CHAR\b/.test(l)) continue;
+        if (/^2 FORM LINEAGE-LINKED/.test(l)) continue;
+        if (/^2 VERS 5\.5/.test(l)) { lines.push('2 VERS 7.0'); _afterGedcVers = true; continue; }
+        if (updateHeadDate && /^1 DATE /.test(l)) { lines.push(`1 DATE ${gedcomDate(d)}`); continue; }
+        if (updateHeadDate && /^2 TIME /.test(l)) { lines.push(`2 TIME ${gedcomTime(d)}`); continue; }
+        if (_afterGedcVers && !/^[23456789] /.test(l) && !_schmaInserted) {
+          _g7WriteSchma(lines); _schmaInserted = true; _afterGedcVers = false;
+        }
+        lines.push(l);
+      }
+      if (!_schmaInserted) _g7WriteSchma(lines);
     }
   } else {
-    // Fallback: minimaler HEAD (kein Original geladen)
-    lines.push('0 HEAD');
-    lines.push('1 SOUR Stammbaum-App');
-    lines.push('2 VERS 2.0');
-    lines.push('2 NAME Stammbaum PWA');
-    lines.push('1 DEST ANY');
-    lines.push(`1 DATE ${gedcomDate(d)}`);
-    lines.push(`2 TIME ${gedcomTime(d)}`);
-    lines.push('1 GEDC');
-    lines.push('2 VERS 5.5.1');
-    lines.push('2 FORM LINEAGE-LINKED');
-    lines.push('1 CHAR UTF-8');
-    lines.push(`1 FILE ${fname}`);
-    lines.push('1 PLAC');
-    lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
+    if (!_ged7) {
+      // GED5 Fallback: minimaler HEAD
+      lines.push('0 HEAD');
+      lines.push('1 SOUR Stammbaum-App');
+      lines.push('2 VERS 2.0');
+      lines.push('2 NAME Stammbaum PWA');
+      lines.push('1 DEST ANY');
+      lines.push(`1 DATE ${gedcomDate(d)}`);
+      lines.push(`2 TIME ${gedcomTime(d)}`);
+      lines.push('1 GEDC');
+      lines.push('2 VERS 5.5.1');
+      lines.push('2 FORM LINEAGE-LINKED');
+      lines.push('1 CHAR UTF-8');
+      lines.push(`1 FILE ${fname}`);
+      lines.push('1 PLAC');
+      lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
+    } else {
+      // GED7 Fallback HEAD
+      lines.push('0 HEAD');
+      lines.push('1 GEDC');
+      lines.push('2 VERS 7.0');
+      _g7WriteSchma(lines);
+      lines.push(`1 DATE ${gedcomDate(d)}`);
+      lines.push(`2 TIME ${gedcomTime(d)}`);
+      lines.push(`1 FILE ${fname}`);
+      lines.push('1 PLAC');
+      lines.push(`2 FORM ${db.placForm || 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat'}`);
+    }
   }
 
   // Phase F: build eventHandle → primaryPersonId for witness→ASSO bridge

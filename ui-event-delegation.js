@@ -394,6 +394,11 @@ document.addEventListener('change', e => {
     idbPut('privacy_anon', el.checked).catch(() => {});
     showToast(el.checked ? 'Anonymisierung beim Export aktiviert' : 'Anonymisierung deaktiviert', 'info');
   }
+  else if (action === 'ged7ExportChange') {
+    AppState.gedExportVersion = el.checked ? '7.0' : '5.5.1';
+    idbPut('ged_export_version', AppState.gedExportVersion).catch(() => {});
+    showToast(el.checked ? 'GEDCOM-Export: 7.0 aktiviert' : 'GEDCOM-Export: 5.5.1 (Standard)', 'info');
+  }
   else if (action === 'efCamChange') {
     _efCamChange(el.files[0]);
     el.value = '';
