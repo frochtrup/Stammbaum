@@ -24,7 +24,6 @@ const AppState = {
   _undoStack:       [],          // [{ label, persons:{}, families:{}, sources:{}, repos:{} }, …] max 30
   _redoStack:       [],          // gleiche Struktur wie _undoStack
   privacyAnon:      false,       // F5: lebende Personen beim GEDCOM-Export anonymisieren
-  gedExportVersion: '5.5.1',    // GEDCOM-7-2: '5.5.1' | '7.0' (IDB: ged_export_version)
 };
 
 const UIState = {

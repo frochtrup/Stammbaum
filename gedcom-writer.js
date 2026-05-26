@@ -694,8 +694,8 @@ function writeNOTERecord(lines, n) {
  * @param {boolean} [updateHeadDate=false] - true = HEAD/DATE auf jetzt setzen
  * @returns {string}
  */
-function writeGEDCOM(updateHeadDate = false) {
-  _ged7 = AppState.gedExportVersion === '7.0';
+function writeGEDCOM(updateHeadDate = false, forceGed7 = false) {
+  _ged7 = forceGed7;
   const lines = [];
   const d = new Date();
   const fname = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';

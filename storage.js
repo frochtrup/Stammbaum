@@ -214,8 +214,6 @@ window.addEventListener('load', async () => {
 
   // Datenschutz: Anonymisierungs-Flag laden
   AppState.privacyAnon = !!(await idbGet('privacy_anon').catch(() => null));
-  // GEDCOM-7-2: Export-Version laden
-  AppState.gedExportVersion = (await idbGet('ged_export_version').catch(() => null)) || '5.5.1';
 
   // Warten falls OAuth-Callback noch läuft (Rückkehr von Login-Redirect)
   if (window._odCallbackPromise) await window._odCallbackPromise;

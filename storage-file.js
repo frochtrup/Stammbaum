@@ -205,20 +205,19 @@ function _downloadBlob(content, filename) {
 // ─────────────────────────────────────
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
-async function exportGEDCOM(forceGEDCOM = false) {
+async function exportGEDCOM(forceGEDCOM = false, forceGed7 = false) {
   const isAnon  = AppState.privacyAnon;
-  const isGed7  = AppState.gedExportVersion === '7.0';
-  if (!forceGEDCOM && !isAnon && !isGed7 && AppState.db?._grampsMaster) return exportGRAMPS(true);
+  if (!forceGEDCOM && !isAnon && !forceGed7 && AppState.db?._grampsMaster) return exportGRAMPS(true);
   let content;
-  try { content = writeGEDCOM(true); }
+  try { content = writeGEDCOM(true, forceGed7); }
   catch(e) { showToast('⚠ Fehler beim Schreiben: ' + e.message, 'error'); return; }
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const basename = filename.replace(/\.ged$/i, '');
   // GED7 und Anon: nie Originaldatei überschreiben — immer Download mit Suffix
-  const exportFilename = isAnon ? `${basename}_anon.ged`
-                       : isGed7 ? `${basename}_ged7.ged`
+  const exportFilename = isAnon    ? `${basename}_anon.ged`
+                       : forceGed7 ? `${basename}_ged7.ged`
                        : filename;
-  const _forceDownload = isAnon || isGed7;
+  const _forceDownload = isAnon || forceGed7;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // iOS Safari: Share Sheet (Hauptdatei + Zeitstempel-Backup)
@@ -274,8 +273,8 @@ async function exportGEDCOM(forceGEDCOM = false) {
     AppState.changed = false; updateChangedIndicator();
     idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   }
-  const _dlLabel = isAnon ? `✓ ${exportFilename} heruntergeladen (anonymisiert)`
-                 : isGed7 ? `✓ ${exportFilename} heruntergeladen (GEDCOM 7.0)`
+  const _dlLabel = isAnon    ? `✓ ${exportFilename} heruntergeladen (anonymisiert)`
+                 : forceGed7 ? `✓ ${exportFilename} heruntergeladen (GEDCOM 7.0)`
                  : '✓ ' + exportFilename + ' heruntergeladen';
   showToast(_dlLabel);
 }

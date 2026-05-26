@@ -245,6 +245,7 @@ const _CLICK_MAP = {
   menuSettings:            ()  => { closeModal('modalMenu'); openSettings(); },
   menuOpenFile:            ()  => { closeModal('modalMenu'); openFileOrDir(); },
   menuExport:              ()  => { closeModal('modalMenu'); exportGEDCOM(); },
+  menuExportGed7:          ()  => { closeModal('modalMenu'); exportGEDCOM(true, true); },
   menuFormatConvert:       ()  => { closeModal('modalMenu'); AppState.db?._grampsMaster ? exportGEDCOM(true) : exportGRAMPS(); },
 menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuLoadDemo:            ()  => { closeModal('modalMenu'); loadDemo(); },
@@ -393,11 +394,6 @@ document.addEventListener('change', e => {
     AppState.privacyAnon = el.checked;
     idbPut('privacy_anon', el.checked).catch(() => {});
     showToast(el.checked ? 'Anonymisierung beim Export aktiviert' : 'Anonymisierung deaktiviert', 'info');
-  }
-  else if (action === 'ged7ExportChange') {
-    AppState.gedExportVersion = el.checked ? '7.0' : '5.5.1';
-    idbPut('ged_export_version', AppState.gedExportVersion).catch(() => {});
-    showToast(el.checked ? 'GEDCOM-Export: 7.0 aktiviert' : 'GEDCOM-Export: 5.5.1 (Standard)', 'info');
   }
   else if (action === 'efCamChange') {
     _efCamChange(el.files[0]);
