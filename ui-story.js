@@ -255,18 +255,23 @@
     if (!educs.length) return '';
     const sorted = [...educs].sort((a, b) =>
       (_yearFromDate(a.date) ?? Infinity) - (_yearFromDate(b.date) ?? Infinity));
+    // Ort weglassen wenn er bereits im Institutionsnamen enthalten ist
+    function _educPlace(val, place) {
+      if (!place) return '';
+      if (val && val.toLowerCase().includes(place.toLowerCase())) return '';
+      return ' in ' + _esc(place);
+    }
     if (sorted.length === 1) {
       const ev = sorted[0];
-      const val = ev.value ? _esc(_stripQuotes(ev.value)) : '';
-      return `${pr.Er} besuchte${val ? ' ' + val : ''}${_atPlace(ev)}${_atDate(ev)}.`;
+      const val   = ev.value ? _esc(_stripQuotes(ev.value)) : '';
+      const place = _shortPlace(ev.place);
+      return `${pr.Er} besuchte${val ? ' ' + val : ''}${_educPlace(val, place)}${_atDate(ev)}.`;
     }
     const parts = sorted.map(ev => {
       const period = _occuPeriod(ev.date);
       const place  = _shortPlace(ev.place);
       const val    = ev.value ? _esc(_stripQuotes(ev.value)) : 'Bildungseinrichtung';
-      return val
-        + (place ? ' in ' + _esc(place) : '')
-        + (period ? ` (${period})` : '');
+      return val + _educPlace(val, place) + (period ? ` (${period})` : '');
     });
     const last = parts.slice(-1)[0];
     const rest = parts.slice(0, -1);

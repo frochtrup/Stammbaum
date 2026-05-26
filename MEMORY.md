@@ -62,7 +62,7 @@
 ## Aktueller Stand — zuletzt aktualisiert: 2026-05-25
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v717** / Cache: `stammbaum-v717`
+- **Aktuelle sw-Version: v718** / Cache: `stammbaum-v718`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
 **Abgeschlossene Sprints (v8-dev, Auswahl — vollständig: CHANGELOG.md):**
@@ -84,6 +84,7 @@
 - **STORY-TEXT-1 (sw v715):** Story-Texte flüssiger: `_mergeOccuSentence` „war als X tätig" → „war X" (kein Ort ohne Datum); Mehrfach-OCCU „arbeitete als … und später als" → „war … und später"; Geschwister „hatte X" → „wuchs mit X Geschwistern auf"; FamStory-Eltern-Geburt Jahr-only → „kam zur Welt"
 - **STORY-TEXT-2 (sw v716):** `_isEmployer()` erkennt Fa./Gebr./GmbH/AG etc. → „arbeitete bei X" statt „war X"; `_mergeGradSentence` Datum vor Ort + Artikel „die"; `_mergeEducSentence`/`_mergeGradSentence` multiple: Doppelpunkt nach Verb entfernt; `_EV_TPL.GRAD` analog
 - **STORY-TEXT-3 (sw v717):** `_isEmployer` Regex-Fix: `\b` nach `.` entfernt (Gebr./Fa. wurden nicht erkannt); `_trimVal()` entfernt trailing Komma/Semikolon aus GEDCOM-Werten in `_eventSentence`
+- **STORY-TEXT-4 (sw v718):** `_educPlace()` in `_mergeEducSentence`: Ort wird unterdrückt wenn er bereits im Institutionsnamen enthalten ist (z. B. „Höhere Töchterschule Ochtrup in Ochtrup" → „Höhere Töchterschule Ochtrup")
 - **MEDI-CALN (sw v545):** `s.repoCallMedi`; `3 MEDI` unter `2 CALN`; Select im Quellen-Formular
 - **SOUR-DATA (sw v546):** `s.dataEvens[]` mit `{evens,date,plac}`; Deckungsbereich im Quellen-Detail + Formular
 - **REFN (sw v548):** `refns[]` mit `{val,type}` auf INDI/FAM/SOUR; read-only Detail
