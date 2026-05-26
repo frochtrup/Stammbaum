@@ -433,8 +433,10 @@ async function showStartView() {
 // ─────────────────────────────────────
 //  VIEW DISPATCH
 // ─────────────────────────────────────
+const _TAB_LABELS = { persons:'Personen', families:'Familien', sources:'Quellen', places:'Orte', stats:'Statistik', search:'Suche', tasks:'Aufgaben' };
 function switchTab(tab) {
   AppState.currentTab = tab;
+  _announceList(_TAB_LABELS[tab] || tab);
   if (tab !== 'places') {
     document.body.classList.remove('places-karte');
     document.getElementById('mapContainer')?.style.setProperty('display', 'none');

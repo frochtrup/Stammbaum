@@ -3065,13 +3065,14 @@ html[data-theme="dark"] {
 
 /* ── Sections ── */
 .story-section {
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.6rem;
 }
 .story-section p { margin: 0; }
+.story-intro > p { font-size: 1.03rem; line-height: 1.82; }
 
 /* ── Epoch — Zitat-Block ── */
 .story-epoch {
-  border-left: 3px solid var(--gold, #c8b97a);
+  border-left: 2px solid var(--border, #d8ceb8);
   padding: .6rem 1rem;
   background: var(--surface2);
   border-radius: 0 6px 6px 0;
@@ -3088,11 +3089,11 @@ html[data-theme="dark"] {
   content: '◆';
   position: absolute;
   left: 0;
-  top: .38em;
+  top: .3em;
   color: var(--gold, #c8b97a);
-  font-size: .42rem;
+  font-size: .58rem;
   line-height: 1;
-  opacity: .85;
+  opacity: .9;
 }
 .story-ev { color: var(--text); margin: 0; }
 
@@ -3126,10 +3127,10 @@ html[data-theme="dark"] {
 .story-section-title {
   font-size: .75rem;
   font-weight: 700;
-  letter-spacing: .08em;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  color: var(--text2);
-  margin: 0 0 .45rem;
+  color: var(--gold, #6e4e18);
+  margin: 0 0 .6rem;
   font-family: system-ui, sans-serif;
 }
 
@@ -3338,3 +3339,58 @@ html[data-theme="dark"] {
 /* Import-Quelle Modal */
 .cmp-no-src-lbl { display:flex; align-items:center; gap:8px; margin-top:10px; cursor:pointer; }
 .cmp-person-btn { white-space: nowrap; flex-shrink: 0; }
+
+/* ═══════════════════════════════════════
+   ACCESSIBILITY
+═══════════════════════════════════════ */
+
+/* A11Y-1: Skip-Link */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 8px;
+  z-index: 9999;
+  background: var(--gold);
+  color: var(--bg);
+  padding: 8px 18px;
+  border-radius: 0 0 8px 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s;
+}
+.skip-link:focus { top: 0; outline: 2px solid var(--bg); outline-offset: 2px; }
+
+/* A11Y-5: Focus-visible — einheitlicher goldener Rahmen für Tastatur-Navigation */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.tree-card:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--gold-dim);
+}
+/* Eingabefelder behalten ihren eigenen Fokus-Stil */
+.form-input:focus, .form-select:focus, .search-input:focus {
+  outline: none;
+  border-color: var(--gold-dim);
+}
+
+/* A11Y-6: aria-invalid auf Formularfeldern */
+.form-input[aria-invalid="true"],
+.form-select[aria-invalid="true"] {
+  border-color: var(--red, #c04040);
+  background: color-mix(in srgb, var(--red, #c04040) 8%, var(--surface));
+}
+
+/* A11Y-7: Reduzierte Bewegung */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

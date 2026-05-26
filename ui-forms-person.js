@@ -153,10 +153,14 @@ function showPersonForm(id) {
   const surnameEl = document.getElementById('pf-surname');
   givenEl.classList.remove('field-invalid');
   surnameEl.classList.remove('field-invalid');
+  givenEl.removeAttribute('aria-invalid');
+  surnameEl.removeAttribute('aria-invalid');
   const _checkNameBlur = () => {
     const empty = !givenEl.value.trim() && !surnameEl.value.trim();
     givenEl.classList.toggle('field-invalid', empty);
     surnameEl.classList.toggle('field-invalid', empty);
+    givenEl.setAttribute('aria-invalid', empty ? 'true' : 'false');
+    surnameEl.setAttribute('aria-invalid', empty ? 'true' : 'false');
     if (errEl) { if (empty) errEl.removeAttribute('hidden'); else errEl.setAttribute('hidden', ''); }
   };
   givenEl.onblur = _checkNameBlur;
@@ -256,8 +260,10 @@ function savePerson(openNew = false) {
   if (!given && !surname) {
     const errEl = document.getElementById('pf-name-err');
     if (errEl) { errEl.textContent = 'Bitte mindestens Vor- oder Nachname eingeben'; errEl.removeAttribute('hidden'); }
-    document.getElementById('pf-given').classList.add('field-invalid');
-    document.getElementById('pf-surname').classList.add('field-invalid');
+    const gEl = document.getElementById('pf-given');
+    const sEl = document.getElementById('pf-surname');
+    gEl.classList.add('field-invalid'); gEl.setAttribute('aria-invalid', 'true');
+    sEl.classList.add('field-invalid'); sEl.setAttribute('aria-invalid', 'true');
     return;
   }
 

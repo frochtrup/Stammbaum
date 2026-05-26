@@ -608,7 +608,11 @@ function showTree(personId, addToHistory = true) {
       (isHalf ? `<div class="tree-half-badge">½</div>` : '') +
       (multiMarr ? `<div class="tree-half-badge tree-half-badge--right">⚭ ${spouseFamsEarly.length}</div>` : '') +
       extraBadge;
-    div.addEventListener('click', onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id)));
+    const _handler = onClick !== null ? onClick : (isCenter ? () => showDetail(id) : () => showTree(id));
+    div.setAttribute('tabindex', '0');
+    div.setAttribute('role', 'button');
+    div.addEventListener('click', _handler);
+    div.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _handler(); } });
     wrap.appendChild(div);
   }
 

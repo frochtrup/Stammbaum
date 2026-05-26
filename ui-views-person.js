@@ -662,6 +662,7 @@ function showDetail(id, pushHistory = true) {
   }
 
   document.getElementById('detailTopTitle').textContent = p.name || id;
+  _announceList((p.name || id) + ' — Details');
   document.getElementById('editBtn').style.display = '';
   document.getElementById('treeBtn').hidden = false;
   document.getElementById('treeBtn').dataset.id = id;

@@ -21,19 +21,20 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip-link" href="#v-main">Zum Hauptinhalt springen</a>
 
 <!-- ══════════════════════════════════════
      LANDING VIEW
 ══════════════════════════════════════ -->
 <div id="v-landing" class="view active">
   <div class="brand">
-    <div class="ornament">✦  ✦  ✦</div>
+    <div class="ornament" aria-hidden="true">✦  ✦  ✦</div>
     <h1>Stammbaum</h1>
     <p>GEDCOM · Viewer &amp; Editor</p>
   </div>
 
   <div class="upload-box" id="uploadBox">
-    <div class="ub-icon">📜</div>
+    <div class="ub-icon" aria-hidden="true">📜</div>
     <h3>Stammbaum-Datei öffnen</h3>
     <p>Tippen oder Datei hierher ziehen</p>
     <p class="ub-formats">.ged (Ancestry, MacFamilyTree, Ahnenblatt) · .gramps</p>
@@ -134,7 +135,7 @@
         <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="family" title="Familien">⚭</button>
         <button class="media-ctx-chip"        data-action="filterMedia" data-ctx="source" title="Quellen">📖</button>
         <button class="media-ctx-chip" id="mediaSortBtn" data-action="cycleMediaSort" title="Sortierung">⇅ Kontext</button>
-        <button class="media-view-toggle" id="mediaViewToggle" data-action="toggleMediaView" title="Listenansicht">☰</button>
+        <button class="media-view-toggle" id="mediaViewToggle" data-action="toggleMediaView" title="Listenansicht" aria-label="Medien-Ansicht wechseln"><span aria-hidden="true">☰</span></button>
       </div>
     </div>
     <div id="sourceList" role="list"></div>
@@ -577,15 +578,15 @@
       <!-- KERN: immer sichtbar -->
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Vorname</label>
-          <input class="form-input" id="pf-given" placeholder="Anna">
+          <label class="form-label" for="pf-given">Vorname</label>
+          <input class="form-input" id="pf-given" placeholder="Anna" aria-describedby="pf-name-err">
         </div>
         <div class="form-group">
-          <label class="form-label">Nachname</label>
-          <input class="form-input" id="pf-surname" placeholder="Müller">
+          <label class="form-label" for="pf-surname">Nachname</label>
+          <input class="form-input" id="pf-surname" placeholder="Müller" aria-describedby="pf-name-err">
         </div>
       </div>
-      <p class="form-error" id="pf-name-err" hidden></p>
+      <p class="form-error" id="pf-name-err" hidden aria-live="assertive"></p>
       <div class="form-group">
         <label class="form-label">Geschlecht</label>
         <select class="form-select" id="pf-sex">
