@@ -206,14 +206,19 @@ function _downloadBlob(content, filename) {
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
 async function exportGEDCOM(forceGEDCOM = false) {
-  const isAnon = AppState.privacyAnon;
-  if (!forceGEDCOM && !isAnon && AppState.db?._grampsMaster) return exportGRAMPS(true);
+  const isAnon  = AppState.privacyAnon;
+  const isGed7  = AppState.gedExportVersion === '7.0';
+  if (!forceGEDCOM && !isAnon && !isGed7 && AppState.db?._grampsMaster) return exportGRAMPS(true);
   let content;
   try { content = writeGEDCOM(true); }
   catch(e) { showToast('⚠ Fehler beim Schreiben: ' + e.message, 'error'); return; }
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const basename = filename.replace(/\.ged$/i, '');
-  const exportFilename = isAnon ? `${basename}_anon.ged` : filename;
+  // GED7 und Anon: nie Originaldatei überschreiben — immer Download mit Suffix
+  const exportFilename = isAnon ? `${basename}_anon.ged`
+                       : isGed7 ? `${basename}_ged7.ged`
+                       : filename;
+  const _forceDownload = isAnon || isGed7;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // iOS Safari: Share Sheet (Hauptdatei + Zeitstempel-Backup)
@@ -229,8 +234,8 @@ async function exportGEDCOM(forceGEDCOM = false) {
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
           // des Share-Dialogs gemacht wurden — und nur wenn nicht anonymisiert
-          if (!isAnon && writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
-          showToast(isAnon ? '✓ Anonymisierte Kopie geteilt' : '✓ Gespeichert');
+          if (!_forceDownload && writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
+          showToast(_forceDownload ? `✓ ${exportFilename} geteilt` : '✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
       return;
@@ -238,8 +243,8 @@ async function exportGEDCOM(forceGEDCOM = false) {
   }
 
   // Chrome Desktop: Direkt speichern via gespeichertem File Handle
-  // Bei Anonymisierung immer Download (nie Originaldatei überschreiben)
-  if (!isAnon) {
+  // Bei Anonymisierung/GED7 immer Download (nie Originaldatei überschreiben)
+  if (!_forceDownload) {
     if (!AppState._fileHandle) {
       try {
         const stored = await idbGet('fileHandle');
@@ -263,13 +268,16 @@ async function exportGEDCOM(forceGEDCOM = false) {
     }
   }
 
-  // Download (Safari Mac, Firefox, kein File Handle, oder Anon-Modus)
+  // Download (Safari Mac, Firefox, kein File Handle, Anon- oder GED7-Modus)
   _downloadBlob(content, exportFilename);
-  if (!isAnon) {
+  if (!_forceDownload) {
     AppState.changed = false; updateChangedIndicator();
     idbPut('stammbaum_ged', content).catch(() => showToast('⚠ Offline-Speicher nicht verfügbar'));
   }
-  showToast(isAnon ? `✓ ${exportFilename} heruntergeladen (anonymisiert)` : '✓ ' + exportFilename + ' heruntergeladen');
+  const _dlLabel = isAnon ? `✓ ${exportFilename} heruntergeladen (anonymisiert)`
+                 : isGed7 ? `✓ ${exportFilename} heruntergeladen (GEDCOM 7.0)`
+                 : '✓ ' + exportFilename + ' heruntergeladen';
+  showToast(_dlLabel);
 }
 
 // GRAMPS XML Export/Speichern (.gramps = gzip) — immer Download/Share (kein File Handle)
