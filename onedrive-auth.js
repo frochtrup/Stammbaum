@@ -24,14 +24,16 @@ function _odUpdateUI() {
   if (ob)  ob.hidden  = !conn;
   if (sb)  sb.hidden  = !conn;
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
-  const gb = document.getElementById('formatConvertBtn');
+  const gb  = document.getElementById('formatConvertBtn');
+  const g7b = document.getElementById('ged7ExportBtn');
   if (gb) {
     gb.hidden = !AppState.db;
     if (AppState.db) {
       const sp = gb.querySelector('span');
-      if (sp) sp.textContent = AppState.db._grampsMaster ? 'Als GEDCOM exportieren' : 'Als GRAMPS exportieren';
+      if (sp) sp.textContent = AppState.db._grampsMaster ? 'Als GEDCOM 5.5.1 exportieren' : 'Als GRAMPS exportieren';
     }
   }
+  if (g7b) g7b.hidden = !AppState.db;
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');
