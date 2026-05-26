@@ -30,10 +30,12 @@ function _odUpdateUI() {
     gb.hidden = !AppState.db;
     if (AppState.db) {
       const sp = gb.querySelector('span');
-      if (sp) sp.textContent = AppState.db._grampsMaster ? 'Als GEDCOM 5.5.1 exportieren' : 'Als GRAMPS exportieren';
+      const _altFmt = AppState.db._grampsMaster || AppState.db.gedVersion === '7.0';
+      if (sp) sp.textContent = _altFmt ? 'Als GEDCOM 5.5.1 exportieren' : 'Als GRAMPS exportieren';
     }
   }
-  if (g7b) g7b.hidden = !AppState.db;
+  // GED7-Button: ausblenden wenn keine Datei geladen oder GED7 bereits aktives Format
+  if (g7b) g7b.hidden = !AppState.db || AppState.db.gedVersion === '7.0';
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');
