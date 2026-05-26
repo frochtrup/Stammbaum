@@ -154,9 +154,40 @@ ${lifespan}
     }
 
     if (!sentences.length) return '';
-    return `<section class="story-section">
+    return `<section class="story-section story-intro">
 <p>${sentences.join(' ')}</p>
 </section>`;
+  }
+
+  // EDUC + GRAD zu einem Satz zusammenführen (1 EDUC + 1 GRAD)
+  function _mergeEducGrad(educ, grad, pr) {
+    const val    = educ.value ? _esc(_stripQuotes(educ.value)) : 'eine Schule';
+    const ePlace = _shortPlace(educ.place);
+    const gPlace = _shortPlace(grad.place);
+
+    const eLoc = (ePlace && !(val && val.toLowerCase().includes(ePlace.toLowerCase())))
+      ? ' in ' + _esc(ePlace) : '';
+    const educDate = _atDate(educ);
+
+    const samePlace = !gPlace || (ePlace && ePlace.toLowerCase() === gPlace.toLowerCase());
+
+    // GRAD-Jahr nur anzeigen wenn nicht schon am Ende der EDUC-Periode
+    const gradYr    = _yearFromDate(grad.date);
+    const educEndYr = educ.date ? (() => {
+      const m = educ.date.match(/(?:TO|AND)\s+(\d{4})/i);
+      return m ? parseInt(m[1], 10) : _yearFromDate(educ.date);
+    })() : null;
+    const gradDateStr = (gradYr && gradYr !== educEndYr) ? ' ' + gradYr : '';
+
+    const gLoc = (samePlace && eLoc) ? ' dort'
+               : (!samePlace && gPlace) ? ' in ' + _esc(gPlace) : '';
+
+    const gradVal  = grad.value ? _esc(_stripQuotes(grad.value)) : '';
+    const gradPart = gradVal
+      ? `erlangte${gradDateStr}${gLoc} die ${gradVal}`
+      : `erlangte${gradDateStr}${gLoc} einen Abschluss`;
+
+    return `${pr.Er} besuchte ${val}${eLoc}${educDate} und ${gradPart}.`;
   }
 
   function _sectionEvents(p, pr) {
@@ -182,9 +213,19 @@ ${lifespan}
 
     const parts = [];
 
-    // Reihenfolge: Bildung → Beruf → Wohnorte → Abschlüsse → Rest
-    const educSent = _mergeEducSentence(educs, pr);
-    if (educSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${educSent}</p></div>`);
+    // Reihenfolge: Bildung+Abschluss → Beruf (OCCU) → Beschäftigungen (CAREER) → Wohnorte → Rest
+    const educGradMerged = educs.length === 1 && grads.length === 1;
+    if (educGradMerged) {
+      parts.push(`<div class="story-ev-wrap"><p class="story-ev">${_mergeEducGrad(educs[0], grads[0], pr)}</p></div>`);
+    } else {
+      const educSent = _mergeEducSentence(educs, pr);
+      if (educSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${educSent}</p></div>`);
+      // GRAD direkt nach EDUC (falls beides vorhanden, aber nicht 1:1 merge)
+      if (educs.length > 0) {
+        const gradSent = _mergeGradSentence(grads, pr);
+        if (gradSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${gradSent}</p></div>`);
+      }
+    }
 
     const occuSent = _mergeOccuSentence(occus, pr);
     if (occuSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${occuSent}</p></div>`);
@@ -195,8 +236,11 @@ ${lifespan}
     const resiSent = _mergeResiSentence(resis, pr);
     if (resiSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${resiSent}</p></div>`);
 
-    const gradSent = _mergeGradSentence(grads, pr);
-    if (gradSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${gradSent}</p></div>`);
+    // GRAD nur wenn noch nicht ausgegeben (kein EDUC vorhanden)
+    if (!educGradMerged && educs.length === 0) {
+      const gradSent = _mergeGradSentence(grads, pr);
+      if (gradSent) parts.push(`<div class="story-ev-wrap"><p class="story-ev">${gradSent}</p></div>`);
+    }
 
     if (!otherEvs.length && !parts.length) return '';
 
@@ -375,21 +419,25 @@ ${lifespan}
 
     if (!hasParents && !hasChildren) return '';
 
-    const firstFam  = p.fams?.length ? getFamily(p.fams[0]) : null;
-    const partnerId = firstFam ? (p.id === firstFam.husb ? firstFam.wife : firstFam.husb) : null;
-    const partner   = partnerId ? getPerson(partnerId) : null;
+    // Alle Ehepartner/Lebenspartner sammeln
+    const allPartners = (p.fams || []).map(famId => {
+      const f = getFamily(famId);
+      if (!f) return null;
+      const pid2 = p.id === f.husb ? f.wife : f.husb;
+      return pid2 ? getPerson(pid2) : null;
+    }).filter(Boolean);
 
     // ── Layout ────────────────────────────────────────────────────────────────
-    const svgW = M + 3 * (CW + HG) + CW + BIGAP + M; // 484 px
-
+    const PG       = 28;             // Proband ↔ Partner Abstand
     const gpL  = [M, M+CW+HG, M+2*(CW+HG)+BIGAP, M+3*(CW+HG)+BIGAP];
     const gpCx = gpL.map(l => l + CW / 2);
     const fCx  = (gpCx[0] + gpCx[1]) / 2;  // 121
     const mCx  = (gpCx[2] + gpCx[3]) / 2;  // 353
-    const pCx  = hasParents ? (fCx + mCx) / 2 : svgW / 2;
-    const PG   = 28;             // Proband ↔ Partner Abstand
+    const svgWBase = M + 3 * (CW + HG) + CW + BIGAP + M; // 484 px
+    const pCx  = hasParents ? (fCx + mCx) / 2 : svgWBase / 2;
     const pL   = pCx - PW / 2;
-    const partL = pL + PW + PG;
+    // Breite ggf. für mehrere Partner über 484 px hinaus erweitern
+    const svgW = Math.max(svgWBase, pL + PW + allPartners.length * (PG + CW) + M);
 
     let svgH = M;
     const gpY  = hasGP      ? svgH : -1; if (hasGP)      svgH += CH + VG;
@@ -485,13 +533,15 @@ ${lifespan}
     // Proband
     elems.push([1, mkCard(pL, pY, PW, PH, p, true)]);
 
-    // Partner
-    if (partner) {
-      elems.push([0, hln(pL+PW, pY+PH/2, partL, GLD, true)]);
-      const mpX = +(pL + PW + PG/2).toFixed(1);
+    // Partner — alle Ehen in einer Reihe
+    allPartners.forEach((pt, i) => {
+      const lineX = pL + PW + i * (PG + CW);
+      const cardX = lineX + PG;
+      elems.push([0, hln(lineX, pY+PH/2, cardX, GLD, true)]);
+      const mpX = +(lineX + PG/2).toFixed(1);
       elems.push([0, `<text x="${mpX}" y="${+(pY+PH/2+0.5).toFixed(1)}" font-size="11" font-weight="bold" fill="${GLD}" text-anchor="middle" dominant-baseline="middle">⚭</text>`]);
-      elems.push([1, mkCard(partL, pY, CW, PH, partner, false)]);
-    }
+      elems.push([1, mkCard(cardX, pY, CW, PH, pt, false)]);
+    });
 
     // Kinder
     if (hasChildren) {
@@ -590,11 +640,12 @@ body{padding:2rem 2rem 4rem;max-width:740px;margin:0 auto;font-family:Georgia,se
 .story-gallery-img{width:84px;height:84px;object-fit:cover;border-radius:6px;border:1px solid #ddd;box-shadow:0 1px 5px rgba(0,0,0,.1)}
 .story-section{margin-bottom:1.4rem}
 .story-section p{margin:0}
-.story-section-title{font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#666;margin:0 0 .55rem;font-family:system-ui,sans-serif}
-.story-epoch{border-left:3px solid #c8b97a;padding:.6rem 1rem;background:#f2ede0;border-radius:0 6px 6px 0}
+.story-section-title{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8a6914;margin:0 0 .6rem;font-family:system-ui,sans-serif}
+.story-epoch{border-left:2px solid #c8b97a;padding:.6rem 1rem;background:#f2ede0;border-radius:0 6px 6px 0}
 .story-epoch-ctx{color:#6b5c2a;font-style:italic;font-size:.91rem;line-height:1.65;margin:0}
 .story-ev-wrap{position:relative;padding-left:1.15rem;margin:.45rem 0}
-.story-ev-wrap::before{content:'◆';position:absolute;left:0;top:.38em;color:#c8b97a;font-size:.42rem;line-height:1;opacity:.85}
+.story-ev-wrap::before{content:'◆';position:absolute;left:0;top:.3em;color:#c8b97a;font-size:.58rem;line-height:1;opacity:.9}
+.story-intro>p{font-size:1.03rem;line-height:1.82}
 .story-ev{margin:0}
 .story-ev-imgs{display:flex;gap:.3rem;flex-wrap:wrap;margin:.35rem 0 .1rem}
 .story-ev-img{width:72px;height:72px;object-fit:cover;border-radius:5px;border:1px solid #ddd}

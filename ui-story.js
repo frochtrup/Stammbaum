@@ -265,12 +265,12 @@
       const ev = sorted[0];
       const val   = ev.value ? _esc(_stripQuotes(ev.value)) : '';
       const place = _shortPlace(ev.place);
-      return `${pr.Er} besuchte${val ? ' ' + val : ''}${_educPlace(val, place)}${_atDate(ev)}.`;
+      return `${pr.Er} besuchte${val ? ' ' + val : ' eine Schule'}${_educPlace(val, place)}${_atDate(ev)}.`;
     }
     const parts = sorted.map(ev => {
       const period = _occuPeriod(ev.date);
       const place  = _shortPlace(ev.place);
-      const val    = ev.value ? _esc(_stripQuotes(ev.value)) : 'Bildungseinrichtung';
+      const val    = ev.value ? _esc(_stripQuotes(ev.value)) : 'eine Schule';
       return val + _educPlace(val, place) + (period ? ` (${period})` : '');
     });
     const last = parts.slice(-1)[0];
