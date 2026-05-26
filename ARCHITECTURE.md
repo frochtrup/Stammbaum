@@ -579,6 +579,158 @@ Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAM
 
 ---
 
+### ADR-018: GEDCOM 7.0 Evaluierung — Go/No-Go (sw v724, GEDCOM-7-EVAL)
+
+**Kontext:** GEDCOM 7.0 ist seit April 2021 der aktuelle Standard (FamilySearch). Neue Tools (z. B. neuere GRAMPS-Versionen, FamilySearch-Export, Ancestry) generieren zunehmend GEDCOM 7.0-Dateien. Evaluierung: welche Änderungen sind nötig, welche Roundtrip-Garantien brechen?
+
+---
+
+#### Analyse — Was ändert sich in GEDCOM 7.0?
+
+**1. CONC entfernt (Breaking — Writer)**
+`CONC` (Zeilen-Fortsetzung ohne Zeilenumbruch bei >248-Zeichen-Zeilen) existiert in 7.0 nicht mehr. Nur `CONT` (mit Zeilenumbruch) bleibt erhalten.
+
+*Auswirkung im Code:* `pushCont()` in `gedcom-writer.js:13` emittiert `CONC` bei langen Zeilen. Der Parser liest `CONC` an ~15 Stellen (`gedcom-parser.js:113, 130, 173, 225, ...`). **Writer muss geändert werden; Parser darf `CONC` weiterhin lesen** (Rückwärtskompatibilität mit vorhandenen 5.5.1-Dateien).
+
+**2. CHAR-Tag entfernt (Minor — Writer)**
+`1 CHAR UTF-8` existiert in 7.0 nicht (Encoding ist implizit UTF-8). Der Fallback-HEAD in `gedcom-writer.js:649` schreibt diesen Tag noch — muss entfernt werden.
+
+**3. GEDC-Struktur geändert (Minor — Writer)**
+`2 VERS 5.5.1` → `2 VERS 7.0`; `2 FORM LINEAGE-LINKED` entfällt in 7.0.
+
+**4. HEAD.SCHMA — Neue Extension-Deklaration (Aufwand — Writer)**
+Alle `_`-Tags (`_TASK`, `_RLOG`, `_UID`, `_RUFNAME`, `_STAT`, `_SCBK`, `_PRIM`, `_DATE`, `_DONE`, `_CAT`, `_ID`, `_QUERY`, `_RESULT`, `_GRAMPS_ID`) müssen in einem `1 SCHMA`-Block deklariert werden:
+```
+1 SCHMA
+2 TAG _TASK https://stammbaum-pwa.example/gedcom-ext
+2 TAG _RLOG https://stammbaum-pwa.example/gedcom-ext
+...
+```
+Ohne SCHMA sind undeklarte `_`-Tags technisch ungültig in 7.0. Für eigene Dateien lösbar; bei Fremd-Dateien landen undeklarte Extensions bereits heute im Passthrough.
+
+**5. SNOTE — Shared Note Record (Parser — kein Breaking)**
+`0 NOTE @xref@` ist in 7.0 durch `0 SNOTE @xref@` ersetzt. Inline-Notes (`1 NOTE text`) bleiben unverändert. Beim *Lesen* einer GEDCOM-7-Datei mit `SNOTE` landet das Record im `_extraRecords[]`-Passthrough — der Inhalt geht nicht verloren, aber er wird beim Schreiben als unbekanntes Record ausgegeben. Kein Datenverlust, aber kein roundtrip-stabiler SNOTE-Roundtrip.
+
+**6. ASSO.RELA → ASSO.ROLE (Parser + Writer)**
+5.5.1 nutzte `2 RELA` (Freitext) unter `1 ASSO`. GEDCOM 7.0 nutzt `2 ROLE` mit enumerierter Liste (`GODP`, `WITN`, `CHIL`, `HUSB`, `WIFE`, `MOTH`, `FATH`, `SPOU` + `OTHER`). Parser aktuell: `x._curAsso.rela = val` — würde ROLE-Tag ignorieren (landet im event-`_extra`). Mapping nötig.
+
+**7. NO-Tag — Explizites Fehlen eines Ereignisses (Parser — kein Breaking)**
+`1 NO BIRT` bedeutet "diese Person hat keine Geburt" (z. B. für Daten-Qualitätssicherung). Aktuell: landet im Passthrough, wird roundtrip-stabil übertragen. Kein Datenverlust, keine UI-Darstellung.
+
+**8. Datum-Format — größtenteils kompatibel**
+GEDCOM 7.0 formalisiert Kalender-Präfixe (`GREGORIAN`, `JULIAN`, `HEBREW`, `FRENCH_R`) als optionale Präfixe vor dem Datum. Aktueller Parser speichert `date`-Felder als Rohstring → 7.0-Datumstrings werden korrekt preserved. Kein Breaking.
+
+**9. SEX X (Intersex) — Minor**
+GEDCOM 7.0 fügt `SEX X` für Intersex hinzu. Parser: `cur.sex = val` → 'X' wird korrekt gespeichert und geschrieben. UI zeigt nur M/F/U an — akzeptabler Darstellungsgap.
+
+**10. INDI.ALIA — Format-Änderung**
+5.5.1: `1 ALIA @xref@` (Zeiger auf andere INDI). GEDCOM 7.0: `ALIA` ist ein Name-String. Aktueller Parser in `gedcom-parser.js:71` verarbeitet nur `@`-Zeiger. Name-Strings landen im Passthrough. Kein Datenverlust, aber kein Roundtrip.
+
+**11. EXID — Neuer External Identifier**
+Ersetzt viele `REFN`-Verwendungen. Landet aktuell im Passthrough. Read-only roundtrip-stabil.
+
+---
+
+#### Roundtrip-Garantien: Was bricht?
+
+| Szenario | Status | Details |
+|---|---|---|
+| GEDCOM 5.5.1 lesen → schreiben | ✅ Stabil | Keine Änderung |
+| GEDCOM 7.0 lesen → schreiben | ⚠ Teilweise | `SNOTE`, `NO`, `ROLE`, `EXID`, `ALIA`-Strings im Passthrough — preserved, aber nicht semantisch verarbeitet |
+| GEDCOM 5.5.1 aus App → Import in 7.0-Tool | ⚠ Validierungswarnungen | `CONC`, `CHAR`, `_`-Tags ohne SCHMA, `RELA` statt `ROLE` |
+| GEDCOM 7.0 aus App schreiben | ❌ Nicht implementiert | Erfordert Writer-Update |
+
+---
+
+#### Entscheidung: **Conditional Go**
+
+**Empfehlung:** GEDCOM 7.0 als opt-in Exportmodus implementieren (analog zu F6 Strict GEDCOM Export). GEDCOM 5.5.1 bleibt der Standard für alle bestehenden Workflows. Der Parser liest GEDCOM 7.0-Dateien bereits weitgehend korrekt über den Passthrough-Mechanismus.
+
+**Begründung:**
+- Primäre Workflow-Dateien (Ancestris 5.5.1, GRAMPS XML) nutzen kein GEDCOM 7.0
+- FamilySearch, Ancestry erzeugen zunehmend GEDCOM 7.0 — für den Import-Pfad ist der Parser bereits ausreichend
+- Vollständiger 7.0-Writer würde 2–3 Sprints erfordern; als opt-in-Export kann es inkrementell eingeführt werden
+
+---
+
+#### Umsetzungsplan (Go beschlossen — ROADMAP-Einträge GEDCOM-7-1 bis GEDCOM-7-4)
+
+**Phase 1 — Datenmodell + Parser (GEDCOM-7-1, M):**
+
+*Neue Felder:*
+- `p.noEvents: Set<string>` — GED7 `NO`-Tag (bestätigtes Fehlen eines Ereignisses)
+- `p.exids: [{value, type}]` — GED7 `EXID` (External Identifier, analog `refns[]`)
+- `p.createdDate: string` — GED7 `CREA / DATE`
+- `p.aliaNames: string[]` — GED7 `ALIA` als Name-String (neben `aliases[]` für @xref@)
+- `ev.datePhrase: string` — GED7 `DATE / PHRASE` auf allen Event-Typen
+- `ev.placTrans: [{lang, value}]` — mehrsprachige Ortsalternative
+- `en.nameTrans: [{lang, nameRaw, given, surname}]` — mehrsprachige Namensvarianten
+- `m.crop: {top, left, width, height} | null` — GED7 `CROP` unter Media
+- `db.snotes: {}` — GED7 `SNOTE`-Records (eigener Slot neben `db.notes`)
+- `db.ged7Mode: boolean` — Flag: wurde aus GED7 geladen
+
+*Parser-Ergänzungen (`gedcom-parser.js`):*
+- GED7 erkennen: `HEAD / GEDC / VERS === '7.0'` → `db.ged7Mode = true`
+- `curType === 'SNOTE'` wie `'NOTE'`, Ablage in `db.snotes{}`
+- `_parseINDILine` lv=1: `NO` → `noEvents.add(val)`; `EXID` → `exids[]`; `CREA` → Context-Flag; `ALIA` ohne `@` → `aliaNames[]`
+- Unter ASSO: `ROLE` → `_curAsso.rela = val` (gleicher Slot wie RELA)
+- Unter DATE: lv+1 `PHRASE` → `ev.datePhrase`
+- Unter PLAC: lv+1 `_TRAN` (GED5-Compat) + lv+1 `TRAN` (GED7 nativ) → `ev.placTrans[]`
+- Unter NAME: `TRAN` → `en.nameTrans[]`
+- `RELA_LABELS` in `gedcom.js` um GED7-Enum-Werte ergänzen: `GODP`, `WITN`, `CHIL`, `HUSB`, `WIFE`, `MOTH`, `FATH`, `SPOU`, `OTHER`
+
+**Phase 2 — Writer GED7 (GEDCOM-7-2, M):**
+- `AppState.gedExportVersion: '5.5.1' | '7.0'` (IDB: `ged_export_version`)
+- `pushCont()` im 7.0-Pfad: `CONC`-Zweig entfernen — GED7 hat kein Zeilenlimit
+- HEAD 7.0: `VERS 7.0`, kein `CHAR`, kein `FORM LINEAGE-LINKED`, `SCHMA`-Block für alle `_`-Extensions
+- `db.snotes` → `0 SNOTE @xref@`
+- `ASSO`: `2 ROLE` statt `2 RELA`
+- Neue Felder schreiben: `1 NO`, `1 EXID / 2 TYPE`, `1 CREA / 2 DATE`, `2 PHRASE`, `PLAC / 3 TRAN / 4 LANG`, `NAME / 2 TRAN / 3 LANG`
+- Export-Version-Toggle in modalSettings
+
+**Phase 3 — Cross-Transfer-Adapter (GEDCOM-7-3, M):**
+
+*Kerndesign: `_TRAN` als Vendor-Extension für Übersetzungen*
+
+Mehrsprachige Orts- und Namensvarianten (`placTrans[]`, `nameTrans[]`) sind besonders für Grenzregionen relevant (Breslau/Wrocław, Königsberg/Kaliningrad, Pressburg/Bratislava etc.). In GED7 sind sie native `TRAN`-Substrukturen. In GED5 und GRAMPS werden sie als `_TRAN`-Vendor-Tags geschrieben — strukturgleich mit GED7, überleben den Passthrough in `_extra[]` und werden beim Re-Import erkannt:
+
+```
+2 PLAC Breslau
+3 _TRAN Wrocław
+4 LANG pl
+3 _TRAN Vratislav
+4 LANG cs
+```
+
+Der Parser erkennt beim Lesen von GED5-Dateien `_TRAN` unter PLAC/NAME aus `_extra[]` und befüllt `placTrans[]`/`nameTrans[]` zurück. In GED7-Output wird `_TRAN` transparent zu `TRAN`. Semantisch schwach (kein standardisierter Lookup), aber roundtrip-stabil und verlustfrei.
+
+*GED5-Downgrade (GED7-Quelldaten → GED5-Ausgabe):*
+- `exids[]` → `1 REFN value; 2 TYPE type`
+- `noEvents` → optional `1 NOTE Kein bekannter {EVENT}-Eintrag.` oder silent drop
+- `SNOTE` → `0 NOTE @xref@`
+- `placTrans[]`/`nameTrans[]` → `_TRAN`-Vendor-Tags (s. o.)
+- `datePhrase` → silent drop (GED5 kennt kein PHRASE)
+- `createdDate` → silent drop (GED5 kennt kein CREA)
+
+*GRAMPS-Adapter:*
+- `noEvents` → `<attribute type="No_{EVENT}" value="confirmed"/>`
+- `exids[]` → `<url type="EXID" href="{value}" description="{type}"/>`
+- `datePhrase` → GRAMPS `datestr`-Attribut auf dem Datums-Element
+- `SNOTE` → GRAMPS `<note>`-Record
+- GED7 → GRAMPS: GRAMPS Notes → `SNOTE`; non-Primary eventref → `ASSO / ROLE WITN`
+
+**Phase 4 — UI (GEDCOM-7-4, S):**
+- `datePhrase` kursiv unter codiertem Datum im Event-Detail
+- „Kein Eintrag bekannt (NO)"-Checkbox auf Event-Karte (setzt/löscht `noEvents`)
+- EXID read-only Panel neben REFN in Personen-Detail
+- `aliaNames[]` im Personen-Detail neben @xref@-Aliases
+- Übersetzungs-Editor für `placTrans[]`/`nameTrans[]`: Sprach-Chip + Wert-Input auf Ort-/Namen-Formular
+- Export-Version-Toggle in modalSettings
+
+**Gesamtaufwand: L (5–7 Sprints)**
+
+---
+
 ## Bekannte Einschränkungen
 
 | Problem | Ursache | Status |
