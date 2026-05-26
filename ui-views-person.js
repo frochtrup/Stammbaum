@@ -531,7 +531,7 @@ function _pdetLifeData(p, id) {
     const geoBtn = evGeoLink(p.birth.lati, p.birth.long);
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${_placeHierHtml(p.birth.placeId)}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
-  const _chrGodparents = (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
+  const _chrGodparents = (p.associations || []).filter(a => a.role === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
   if (p.chr.date || p.chr.place || _chrGodparents.length) {
     const _godparents = _chrGodparents;
     const _gpHtml = _godparents.length
@@ -707,18 +707,18 @@ function showDetail(id, pushHistory = true) {
   // Assoziationen (alle außer Godparent — der steht bereits unter der Taufe-Zeile)
   // Patenkinder werden dynamisch berechnet: alle Personen, die diesen als 'Godparent' führen
   const _computedGodchildren = Object.entries(AppState.db.individuals)
-    .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.rela === 'Godparent' && a.xref === id))
+    .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.role === 'Godparent' && a.xref === id))
     .map(([cid]) => ({ xref: cid, rela: 'Godchild', _derived: true }));
-  const _storedNonGp = (p.associations || []).filter(a => a.rela !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
+  const _storedNonGp = (p.associations || []).filter(a => a.role !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
   // Gespeicherte Godchild-Einträge deduplizieren (könnten schon via UI-Sync da sein)
   const _gcXrefs = new Set(_computedGodchildren.map(a => a.xref));
-  const _storedGc = _storedNonGp.filter(a => a.rela === 'Godchild' && !_gcXrefs.has(a.xref) && AppState.db.individuals[a.xref]);
-  const _displayAssos = [..._storedNonGp.filter(a => a.rela !== 'Godchild'), ..._storedGc, ..._computedGodchildren];
+  const _storedGc = _storedNonGp.filter(a => a.role === 'Godchild' && !_gcXrefs.has(a.xref) && AppState.db.individuals[a.xref]);
+  const _displayAssos = [..._storedNonGp.filter(a => a.role !== 'Godchild'), ..._storedGc, ..._computedGodchildren];
   if (_displayAssos.length) {
     const _assoByRela = {};
     for (const a of _displayAssos) {
-      if (!_assoByRela[a.rela]) _assoByRela[a.rela] = [];
-      _assoByRela[a.rela].push(a);
+      if (!_assoByRela[a.role]) _assoByRela[a.role] = [];
+      _assoByRela[a.role].push(a);
     }
     html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Assoziationen</div></div><div class="section-body">`;
     for (const [rela, assos] of Object.entries(_assoByRela)) {

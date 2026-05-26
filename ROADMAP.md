@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v724 · Cache: `stammbaum-v724`
+**sw-Version:** v725 · Cache: `stammbaum-v725`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -131,16 +131,16 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ASSO-EDIT | **ASSO-Beziehungen editierbar** | Person als Zeuge/Pate/Informant zu einem Ereignis zuordnen; `1 ASSO`-Block schreiben + Roundtrip-stabil. ADR erforderlich. | M |
+| ASSO-EDIT | **ASSO-Beziehungen editierbar** | Person als Zeuge/Pate/Informant zu einem Ereignis zuordnen; `1 ASSO`-Block schreiben + Roundtrip-stabil. ADR erforderlich. ⚠ **Voraussetzung für GEDCOM-7-4** (ROLE-Enum-Auswahl im Edit-Formular). | M |
 | F6 | **Strict GEDCOM Export** | Alle `_`-Tags entfernen oder auf Standard-Tags mappen; Export-Modus im Einstellungs-Modal. ADR + Test erforderlich. | M |
 | GRAMPS-EDIT | **GRAMPS-Attribute editierbar** | `_grampsAttrs[]` in Personen-/Familien-Formular anzeigen + editieren; `grampId` sichtbar. | M |
 | GRAMPS-RT | **GRAMPS-Writer vollständig + Roundtrip-Test** | Automatisierter Test: GRAMPS laden → exportieren → reimportieren → Delta=0. Besonderes Augenmerk: `_TASK`/`_RLOG`. | M |
 | OBJE-TYPE | **Medien-Typ strukturiert** ⚠ | `m._type` als Vendor-Extension (`2 _TYPE`); ADR erforderlich vor Umsetzung. | S |
 | ~~GEDCOM-7-EVAL~~ | ~~**GEDCOM 7.0 Evaluierung**~~ | ✅ Abgeschlossen sw v724 — ADR-018 in ARCHITECTURE.md. Ergebnis: Conditional Go; opt-in Exportmodus; Vollplan in 4 Phasen. | ~~M~~ |
-| GEDCOM-7-1 | **GED7: Datenmodell + Parser** | Neue Felder auf Person/Event/Media: `noEvents` (Set), `exids[]`, `createdDate`, `datePhrase`, `placTrans[]`, `nameTrans[]`, `crop`. Parser: `SNOTE`-Record-Typ → `db.snotes{}`; `ASSO/ROLE` → `associations[].rela`; `ALIA` Name-String → `p.aliaNames[]`; `NO`-Tag → `p.noEvents`; `EXID` → `p.exids[]`; `DATE/PHRASE` → `ev.datePhrase`; `PLAC/_TRAN`, `NAME/_TRAN` lesen. `RELA_LABELS` um GED7-Enum-Werte erweitern (GODP, WITN, CHIL, HUSB, WIFE, MOTH, FATH, SPOU, OTHER). ADR-018 aktualisieren. | M |
+| GEDCOM-7-1 | **GED7: Datenmodell + Parser** | Neue Felder: `p.noEvents` (Set), `p.exids[]`, `p.createdDate`, `p.aliaNames[]`, `p.nameTrans[]`, `ev.datePhrase`, `extraPlaces[name].trans[]` (zentraler Orts-Registry statt per-Event), `en.nameTrans[]`, `m.crop`, `db.gedVersion`, `n.type`. `associations[].rela` → `.role`. Parser: `SNOTE` → `db.notes` mit `type:'SNOTE'`; `NO/EXID/CREA/ALIA/ROLE/PHRASE/TRAN/_TRAN/LANG` Handler; `_parsedPlaceTrans` Kontext-Map → Merge in `extraPlaces` nach Load. `RELA_LABELS` +9 GED7-Werte. ADR-018 finalisiert. | M |
 | GEDCOM-7-2 | **GED7: Writer (opt-in Export)** | `AppState.gedExportVersion` ('5.5.1'/'7.0', IDB: `ged_export_version`). Im 7.0-Pfad: `pushCont()` ohne CONC (GED7 hat kein Zeilenlimit); HEAD mit `VERS 7.0`, kein `CHAR`, kein `FORM LINEAGE-LINKED`, dafür `SCHMA`-Block für alle `_`-Extensions; `db.snotes` → `0 SNOTE`; `ASSO.rela` → `2 ROLE`; neue Felder schreiben (`1 NO`, `1 EXID`, `1 CREA`, `2 PHRASE`, `PLAC/TRAN`, `NAME/TRAN`). Toggle in modalSettings. | M |
 | GEDCOM-7-3 | **GED7: Cross-Transfer-Adapter** | **Übersetzungen als `_TRAN`-Vendor-Extension**: `placTrans[]` und `nameTrans[]` werden in GED5 und GRAMPS als `_TRAN`-Tags unter PLAC/NAME geschrieben (`3 _TRAN Wrocław; 4 LANG pl`) — strukturgleich mit GED7-TRAN, überlebt GED5-Passthrough (`_extra[]`), lesbar bei Re-Import. Semantisch schwach aber roundtrip-stabil; sinnvoll für Grenzorte mit mehrsprachigen Namen (Breslau/Wrocław, Königsberg/Kaliningrad etc.). **GED5-Downgrade**: `exids[]` → `REFN`; `noEvents` → optional NOTE; `SNOTE` → `NOTE`. **GRAMPS-Adapter**: `noEvents` → `<attribute type="No {EVENT}"/>`; `exids[]` → `<url>`; `datePhrase` → GRAMPS `datestr`-Attribut; `SNOTE` → GRAMPS Note-Record; GED7→GRAMPS: GRAMPS Notes → `SNOTE`, non-Primary eventref → `ASSO/ROLE WITN`. | M |
-| GEDCOM-7-4 | **GED7: UI** | `datePhrase` kursiv unter codiertem Datum in Event-Detail. Checkbox „Kein Eintrag bekannt (NO)" auf Event-Karte. EXID read-only Panel neben REFN. `aliaNames[]` im Personen-Detail. Übersetzungs-Editor für `placTrans[]`/`nameTrans[]`: Sprach-Chip + Wert-Input direkt auf dem Ort-/Namen-Formular. Export-Version-Toggle in modalSettings. | S |
+| GEDCOM-7-4 | **GED7: UI** | ⚠ **Voraussetzung: ASSO-EDIT** (ROLE-Enum-Auswahl). `datePhrase` kursiv unter codiertem Datum in Event-Detail. Checkbox „Kein Eintrag bekannt (NO)" auf Event-Karte. EXID read-only Panel neben REFN. `aliaNames[]` im Personen-Detail. Übersetzungs-Editor für `extraPlaces[].trans[]`/`nameTrans[]`: Sprach-Chip + Wert-Input. Export-Version-Toggle in modalSettings. | S |
 
 ---
 

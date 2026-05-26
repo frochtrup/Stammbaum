@@ -655,37 +655,59 @@ Ersetzt viele `REFN`-Verwendungen. Landet aktuell im Passthrough. Read-only roun
 
 #### Umsetzungsplan (Go beschlossen — ROADMAP-Einträge GEDCOM-7-1 bis GEDCOM-7-4)
 
-**Phase 1 — Datenmodell + Parser (GEDCOM-7-1, M):**
+**Phase 1 — Datenmodell + Parser (GEDCOM-7-1, M) — implementiert sw v725:**
 
-*Neue Felder:*
-- `p.noEvents: Set<string>` — GED7 `NO`-Tag (bestätigtes Fehlen eines Ereignisses)
-- `p.exids: [{value, type}]` — GED7 `EXID` (External Identifier, analog `refns[]`)
+*Finale Design-Entscheidungen nach Modell-Review:*
+
+**A) `placTrans` gehört in `extraPlaces`, nicht auf Events.**
+`extraPlaces[placeName].trans = [{lang, value}]` — ein Eintrag pro Ortsname, nicht 50 Kopien für 50 Events. Schreibmuster identisch mit `extraPlaces[place].lati` (vgl. `geoLines()` in `gedcom-writer.js`). Parsing: `_parsedPlaceTrans` temporäre Map im Parser, Merge nach `loadExtraPlaces()` in `_finishLoad()`.
+
+**B) `db.notes` unified mit Typ-Diskriminator.**
+Kein separater `db.snotes`-Slot. Alle NOTE- und SNOTE-Records in `db.notes{}`, unterschieden durch `n.type: 'NOTE' | 'SNOTE'`. Writer gibt `0 NOTE` bzw. `0 SNOTE` je nach `n.type` aus.
+
+**C) `associations[].rela` → `.role` umbenannt.**
+Alle drei Quellen (GED5 `RELA`, GRAMPS `rel`, GED7 `ROLE`) landen im Feld `.role`. Umbenennung in: `gedcom-parser.js`, `gramps-parser.js`, `gedcom-writer.js`, `gramps-writer.js`, `ui-views-person.js`, `ui-forms-event.js`.
+
+**D) `p.nameTrans[]` auf Person-Ebene (Primärname) + `en.nameTrans[]` auf ExtraName.**
+ExtraName-only war asymmetrisch — Personen mit nur einem Namen hatten kein Translations-Feld.
+
+**E) `_TRAN`-Deduplication im Parser.**
+`_TRAN`/`TRAN` unter PLAC werden direkt in `_parsedPlaceTrans` geschrieben (nicht in `_extra[]`), um Re-Import-Duplikate zu vermeiden.
+
+**F) `db.gedVersion: 'unknown' | '5.5.1' | '7.0'` statt `db.ged7Mode: boolean`.**
+Robuster bei gemischten Dateien; steuert nur den Writer, nicht den Parser.
+
+*Neue Felder nach Korrektur:*
+- `p.noEvents: Set<string>` — GED7 `NO`-Tag (bestätigtes Fehlen)
+- `p.exids: [{value, type}]` — GED7 `EXID` (analog `refns[]`)
 - `p.createdDate: string` — GED7 `CREA / DATE`
 - `p.aliaNames: string[]` — GED7 `ALIA` als Name-String (neben `aliases[]` für @xref@)
+- `p.nameTrans: [{lang, nameRaw, given, surname}]` — Primärname-Übersetzungen
 - `ev.datePhrase: string` — GED7 `DATE / PHRASE` auf allen Event-Typen
-- `ev.placTrans: [{lang, value}]` — mehrsprachige Ortsalternative
-- `en.nameTrans: [{lang, nameRaw, given, surname}]` — mehrsprachige Namensvarianten
-- `m.crop: {top, left, width, height} | null` — GED7 `CROP` unter Media
-- `db.snotes: {}` — GED7 `SNOTE`-Records (eigener Slot neben `db.notes`)
-- `db.ged7Mode: boolean` — Flag: wurde aus GED7 geladen
+- `extraPlaces[name].trans: [{lang, value}]` — mehrsprachige Ortsalternativen (zentraler Registry-Eintrag)
+- `en.nameTrans: [{lang, nameRaw, given, surname}]` — Namensvarianten auf ExtraName
+- `m.crop: {top, left, width, height} | null` — GED7 `CROP` (Prozentangaben 0–100)
+- `db.gedVersion: string` — erkannte Quell-GEDCOM-Version
+- `n.type: 'NOTE' | 'SNOTE'` auf Note-Records
 
 *Parser-Ergänzungen (`gedcom-parser.js`):*
-- GED7 erkennen: `HEAD / GEDC / VERS === '7.0'` → `db.ged7Mode = true`
-- `curType === 'SNOTE'` wie `'NOTE'`, Ablage in `db.snotes{}`
+- Pre-Scan: GED-Version aus `2 VERS`-Zeile → `db.gedVersion`
+- Hauptschleife: `SNOTE`-Record → `notes[tag]` mit `type:'SNOTE'`
 - `_parseINDILine` lv=1: `NO` → `noEvents.add(val)`; `EXID` → `exids[]`; `CREA` → Context-Flag; `ALIA` ohne `@` → `aliaNames[]`
-- Unter ASSO: `ROLE` → `_curAsso.rela = val` (gleicher Slot wie RELA)
-- Unter DATE: lv+1 `PHRASE` → `ev.datePhrase`
-- Unter PLAC: lv+1 `_TRAN` (GED5-Compat) + lv+1 `TRAN` (GED7 nativ) → `ev.placTrans[]`
-- Unter NAME: `TRAN` → `en.nameTrans[]`
-- `RELA_LABELS` in `gedcom.js` um GED7-Enum-Werte ergänzen: `GODP`, `WITN`, `CHIL`, `HUSB`, `WIFE`, `MOTH`, `FATH`, `SPOU`, `OTHER`
+- Unter ASSO: `RELA` oder `ROLE` → `_curAsso.role`
+- Kontext `x._curDateTarget`: bei DATE gesetzt → lv+1 `PHRASE` abfangen vor Passthrough
+- Kontext `x._parsedPlaceTrans` (in `x`): lv=3 `TRAN`/`_TRAN` unter PLAC → Eintrag anlegen; lv=4 `LANG` → `lang` setzen; kein `_extra[]`-Push
+- Unter NAME lv=2: `TRAN` → `p.nameTrans[]` oder `en.nameTrans[]`; `x._curNameTrans` als Kontext; lv=3 `LANG`/`GIVN`/`SURN` → Felder befüllen
+- Return: `parsedPlaceTrans: x._parsedPlaceTrans`, `gedVersion`
+- `RELA_LABELS` in `gedcom.js` um GED7-Werte ergänzt: `GODP`, `WITN`, `CHIL`, `HUSB`, `WIFE`, `MOTH`, `FATH`, `SPOU`, `OTHER`
 
 **Phase 2 — Writer GED7 (GEDCOM-7-2, M):**
 - `AppState.gedExportVersion: '5.5.1' | '7.0'` (IDB: `ged_export_version`)
 - `pushCont()` im 7.0-Pfad: `CONC`-Zweig entfernen — GED7 hat kein Zeilenlimit
 - HEAD 7.0: `VERS 7.0`, kein `CHAR`, kein `FORM LINEAGE-LINKED`, `SCHMA`-Block für alle `_`-Extensions
-- `db.snotes` → `0 SNOTE @xref@`
-- `ASSO`: `2 ROLE` statt `2 RELA`
-- Neue Felder schreiben: `1 NO`, `1 EXID / 2 TYPE`, `1 CREA / 2 DATE`, `2 PHRASE`, `PLAC / 3 TRAN / 4 LANG`, `NAME / 2 TRAN / 3 LANG`
+- `db.notes[].type === 'SNOTE'` → `0 SNOTE @xref@`
+- `ASSO`: `2 ROLE` statt `2 RELA` (Feld heißt seit GEDCOM-7-1 `.role`)
+- Neue Felder schreiben: `1 NO`, `1 EXID / 2 TYPE`, `1 CREA / 2 DATE`, `2 PHRASE`, `extraPlaces[place].trans[] → PLAC / 3 TRAN / 4 LANG`, `p.nameTrans[] → NAME / 2 TRAN / 3 LANG`
 - Export-Version-Toggle in modalSettings
 
 **Phase 3 — Cross-Transfer-Adapter (GEDCOM-7-3, M):**
@@ -702,13 +724,13 @@ Mehrsprachige Orts- und Namensvarianten (`placTrans[]`, `nameTrans[]`) sind beso
 4 LANG cs
 ```
 
-Der Parser erkennt beim Lesen von GED5-Dateien `_TRAN` unter PLAC/NAME aus `_extra[]` und befüllt `placTrans[]`/`nameTrans[]` zurück. In GED7-Output wird `_TRAN` transparent zu `TRAN`. Semantisch schwach (kein standardisierter Lookup), aber roundtrip-stabil und verlustfrei.
+Der Parser erkennt beim Lesen von GED5-Dateien `_TRAN` unter PLAC/NAME direkt (nicht aus `_extra[]` — Deduplication by design) und schreibt in `extraPlaces[place].trans[]` bzw. `nameTrans[]`. In GED7-Output wird `_TRAN` transparent zu `TRAN`. Semantisch schwach (kein standardisierter Lookup), aber roundtrip-stabil und verlustfrei.
 
 *GED5-Downgrade (GED7-Quelldaten → GED5-Ausgabe):*
 - `exids[]` → `1 REFN value; 2 TYPE type`
 - `noEvents` → optional `1 NOTE Kein bekannter {EVENT}-Eintrag.` oder silent drop
-- `SNOTE` → `0 NOTE @xref@`
-- `placTrans[]`/`nameTrans[]` → `_TRAN`-Vendor-Tags (s. o.)
+- `db.notes type='SNOTE'` → `0 NOTE @xref@`
+- `extraPlaces[place].trans[]`/`nameTrans[]` → `_TRAN`-Vendor-Tags (s. o.)
 - `datePhrase` → silent drop (GED5 kennt kein PHRASE)
 - `createdDate` → silent drop (GED5 kennt kein CREA)
 

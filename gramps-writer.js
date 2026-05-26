@@ -495,12 +495,12 @@ async function writeGRAMPS(db) {
         .filter(Boolean);
       const aNoteHandle = a.note ? _noteHandle(a.note, 'Association Note') : null;
       if (aCitHandles.length || aNoteHandle) {
-        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.rela || '')}">`);
+        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.role || '')}">`);
         for (const ch of aCitHandles) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
         if (aNoteHandle) L.push(`        <noteref hlink="${_esc(aNoteHandle)}"/>`);
         L.push(`      </personref>`);
       } else {
-        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.rela || '')}"/>`);
+        L.push(`      <personref hlink="${_esc(aH)}" rel="${_esc(a.role || '')}"/>`);
       }
     }
 

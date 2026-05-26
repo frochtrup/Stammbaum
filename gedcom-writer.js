@@ -383,7 +383,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
   for (const a of (p.associations || [])) {
     if (!a.xref) continue;
     lines.push(`1 ASSO ${a.xref}`);
-    if (a.rela) lines.push(`2 RELA ${a.rela}`);
+    if (a.role) lines.push(`2 RELA ${a.role}`);
     if (a.note) pushCont(lines, 2, 'NOTE', a.note);
     _writeSourCits(lines, 2, a);
   }

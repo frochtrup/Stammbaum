@@ -6,7 +6,7 @@
 // sodass bestehende Aufrufer ohne Änderung weiter funktionieren.
 
 const AppState = {
-  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [] },
+  db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [], gedVersion: 'unknown' },
   changed:          false,
   idCounter:        1000,
   currentPersonId:  null,
@@ -118,8 +118,9 @@ const EVENT_LABELS = {
 // GEDCOM-Typ → Person-Property-Name für die 4 Sonder-Ereignisse (BIRT/CHR/DEAT/BURI)
 const SPECIAL_EVENT_KEYS = { BIRT:'birth', CHR:'chr', DEAT:'death', BURI:'buri' };
 
-// Label-Map für ASSO RELA-Werte (GEDCOM) / rel-Attribut (GRAMPS <personref>)
+// Label-Map für ASSO .role-Werte (GED5 RELA-Freitext, GRAMPS rel, GED7 ROLE-Enum)
 const RELA_LABELS = {
+  // GED5 / GRAMPS Freitext
   'Godparent':  'Taufpate/-mutter',
   'Godchild':   'Patenkind',
   'Witness':    'Zeuge/Zeugin',
@@ -129,6 +130,16 @@ const RELA_LABELS = {
   'Employer':   'Arbeitgeber',
   'Employee':   'Arbeitnehmer',
   'Landlord':   'Vermieter',
+  // GED7 ROLE-Enum-Werte
+  'GODP':  'Taufpate/-mutter',
+  'WITN':  'Zeuge/Zeugin',
+  'CHIL':  'Kind',
+  'HUSB':  'Ehemann',
+  'WIFE':  'Ehefrau',
+  'MOTH':  'Mutter',
+  'FATH':  'Vater',
+  'SPOU':  'Ehepartner',
+  'OTHER': 'Sonstige',
 };
 
 // Label-Map für GEDCOM NAME TYPE-Werte
@@ -149,7 +160,7 @@ const NAME_TYPE_LABELS = {
 
 /** @typedef {{ sourceId:string, page?:string, quay?:string, text?:string, media?:Object }} Citation */
 
-/** @typedef {{ file:string, titl?:string, note?:string, date?:string, prim?:boolean, scbk?:boolean }} MediaRef */
+/** @typedef {{ file:string, titl?:string, note?:string, date?:string, prim?:boolean, scbk?:boolean, crop?:{top:number,left:number,width:number,height:number}|null }} MediaRef */
 
 /**
  * @typedef {Object} SpecialEvent  Sonder-Ereignis (BIRT/CHR/DEAT/BURI) direkt auf der Person.
@@ -159,6 +170,7 @@ const NAME_TYPE_LABELS = {
  * @property {number|null}  long
  * @property {string}       value
  * @property {string}       note
+ * @property {string}       datePhrase   GED7: lesbare Datumsalternative (DATE/PHRASE)
  * @property {string[]}     noteRefs
  * @property {Citation[]}   citations
  * @property {Object[]}     _extra
@@ -171,6 +183,7 @@ const NAME_TYPE_LABELS = {
  * @property {string}     type
  * @property {string}     [value]
  * @property {string}     [date]
+ * @property {string}     [datePhrase]  GED7: lesbare Datumsalternative (DATE/PHRASE)
  * @property {string}     [place]
  * @property {number|null} [lati]
  * @property {number|null} [long]
@@ -196,7 +209,7 @@ const NAME_TYPE_LABELS = {
  * @property {string}          nick
  * @property {string}          prefix
  * @property {string}          suffix
- * @property {'M'|'F'|'U'}    sex
+ * @property {'M'|'F'|'U'|'X'} sex
  * @property {string}          uid
  * @property {string}          grampId
  * @property {string}          resn
@@ -223,8 +236,13 @@ const NAME_TYPE_LABELS = {
  * @property {string}          noteText
  * @property {Object[]}        extraNames
  * @property {Object[]}        aliases
+ * @property {string[]}        aliaNames    GED7: ALIA als Namens-String (neben aliases[] für @xref@)
  * @property {Object[]}        refns
- * @property {Object[]}        associations
+ * @property {{value:string,type:string}[]} exids  GED7: EXID External Identifiers
+ * @property {Object[]}        associations         Feld .role (ehem. .rela)
+ * @property {{lang:string,nameRaw:string,given:string,surname:string}[]} nameTrans  GED7: Primärname-Übersetzungen
+ * @property {Set<string>}     noEvents     GED7: bestätigtes Fehlen (NO BIRT, NO DEAT …)
+ * @property {string}          createdDate  GED7: CREA/DATE Anlagedatum
  * @property {MediaRef[]}      media
  * @property {Task[]}          _tasks
  * @property {RlogEntry[]}     _rlog

@@ -794,7 +794,7 @@ async function parseGRAMPS(file) {
         _applyCit(atgt, cr.getAttribute('hlink'), citMap, srcHandleToId);
       const aNote = _byTag(pref, 'noteref')
         .map(nr => noteMap[nr.getAttribute('hlink')]?.text || '').filter(Boolean).join('\n');
-      p.associations.push({ xref: aXref, _grampsHlink: aHlink, rela: aRel, note: aNote, citations: atgt.citations });
+      p.associations.push({ xref: aXref, _grampsHlink: aHlink, role: aRel, note: aNote, citations: atgt.citations });
     }
 
     // Family links (resolved in families pass)

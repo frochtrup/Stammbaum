@@ -209,7 +209,7 @@ function showEventForm(personId, evIdx, defaultType) {
     initSrcWidget('ef', obj.citations || []);
     // Taufpaten laden
     _efGodparents = evIdx === 'CHR'
-      ? (p.associations || []).filter(a => a.rela === 'Godparent' && a.xref).map(a => a.xref)
+      ? (p.associations || []).filter(a => a.role === 'Godparent' && a.xref).map(a => a.xref)
       : [];
     _renderEfGodparents();
     const gSearch = document.getElementById('ef-godparent-search');
@@ -333,10 +333,10 @@ function saveEvent() {
     // Taufpaten: non-Godparent-Assoziationen behalten, Godparent-Einträge neu setzen
     if (type === 'CHR') {
       if (!p.associations) p.associations = [];
-      const _oldGpXrefs = new Set(p.associations.filter(a => a.rela === 'Godparent').map(a => a.xref));
+      const _oldGpXrefs = new Set(p.associations.filter(a => a.role === 'Godparent').map(a => a.xref));
       const _newGpXrefs = new Set(_efGodparents || []);
       p.associations = [
-        ...p.associations.filter(a => a.rela !== 'Godparent'),
+        ...p.associations.filter(a => a.role !== 'Godparent'),
         ...(_efGodparents || []).map(xref => ({
           xref, _grampsHlink: null, rela: 'Godparent',
           note: '', citations: []
@@ -346,13 +346,13 @@ function saveEvent() {
       for (const gpId of _oldGpXrefs) {
         if (_newGpXrefs.has(gpId)) continue;
         const gp = AppState.db.individuals[gpId];
-        if (gp) gp.associations = (gp.associations || []).filter(a => !(a.rela === 'Godchild' && a.xref === pid));
+        if (gp) gp.associations = (gp.associations || []).filter(a => !(a.role === 'Godchild' && a.xref === pid));
       }
       for (const gpId of _newGpXrefs) {
         const gp = AppState.db.individuals[gpId];
         if (!gp) continue;
         if (!gp.associations) gp.associations = [];
-        if (!gp.associations.some(a => a.rela === 'Godchild' && a.xref === pid)) {
+        if (!gp.associations.some(a => a.role === 'Godchild' && a.xref === pid)) {
           gp.associations.push({ xref: pid, _grampsHlink: null, rela: 'Godchild',
             note: '', citations: [] });
         }

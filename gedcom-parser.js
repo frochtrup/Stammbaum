@@ -43,7 +43,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
               'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB',
               'DSCR','IDNO','SSN'].includes(tag)) {
-      cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:[], media:[], _extra:[] });
+      cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:[], media:[], _extra:[], datePhrase:'' });
       x.evIdx = cur.events.length - 1;
     }
     else if (tag === 'OBJE') {
@@ -69,8 +69,13 @@ function _parseINDILine(cur, x, lv, tag, val) {
     }
     else if (tag === 'ALIA') {
       if (val && val.startsWith('@')) cur.aliases.push(val);
+      else if (val) cur.aliaNames.push(val);
     }
     else if (tag === 'REFN') { cur.refns.push({val:val||'', type:''}); }
+    // GED7: NO (bestätigtes Fehlen), EXID, CREA
+    else if (tag === 'NO')   { if (val) cur.noEvents.add(val); }
+    else if (tag === 'EXID') { cur.exids.push({ value: val || '', type: '' }); }
+    else if (tag === 'CREA') { x._inCrea = true; }
     else {
       cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
       x._ptDepth = 1;
@@ -94,7 +99,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
       else if (tag === 'NOTE')    _rl.note   = val;
     }
     else if (x.lv1tag === 'ASSO' && x._curAsso) {
-      if      (tag === 'RELA') x._curAsso.rela = val;
+      if      (tag === 'RELA' || tag === 'ROLE') x._curAsso.role = val;
       else if (tag === 'NOTE') x._curAsso.note = (val || '');
       else if (tag === 'SOUR' && val.startsWith('@')) {
         const _ns = val.replace(/^@@/,'@').replace(/@@$/,'@');
@@ -133,14 +138,14 @@ function _parseINDILine(cur, x, lv, tag, val) {
       }
     }
     else if (x.lv1tag === 'BIRT') {
-      if      (tag==='DATE') { cur.birth.date=val; x._ptDepth=2; x._ptTarget=cur.birth._extra; }
+      if      (tag==='DATE') { cur.birth.date=val; x._ptDepth=2; x._ptTarget=cur.birth._extra; x._curDateTarget=cur.birth; }
       else if (tag==='PLAC') cur.birth.place=val;
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.birth.noteRefs.push(val); else cur.birth.note=val; }
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.birth.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else { cur.birth._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur.birth._extra; }
     }
     else if (x.lv1tag === 'DEAT') {
-      if      (tag==='DATE') { cur.death.date=val; x._ptDepth=2; x._ptTarget=cur.death._extra; }
+      if      (tag==='DATE') { cur.death.date=val; x._ptDepth=2; x._ptTarget=cur.death._extra; x._curDateTarget=cur.death; }
       else if (tag==='PLAC') cur.death.place=val;
       else if (tag==='CAUS') { cur.death.cause=val; x._ptDepth=2; x._ptTarget=cur.death._extra; }
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.death.noteRefs.push(val); else cur.death.note=val; }
@@ -148,14 +153,14 @@ function _parseINDILine(cur, x, lv, tag, val) {
       else { cur.death._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur.death._extra; }
     }
     else if (x.lv1tag === 'CHR') {
-      if      (tag==='DATE') { cur.chr.date=val; x._ptDepth=2; x._ptTarget=cur.chr._extra; }
+      if      (tag==='DATE') { cur.chr.date=val; x._ptDepth=2; x._ptTarget=cur.chr._extra; x._curDateTarget=cur.chr; }
       else if (tag==='PLAC') cur.chr.place=val;
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.chr.noteRefs.push(val); else cur.chr.note=val; }
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.chr.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
       else { cur.chr._extra.push('2 ' + tag + (val ? ' ' + val : '')); x._ptDepth=2; x._ptTarget=cur.chr._extra; }
     }
     else if (x.lv1tag === 'BURI') {
-      if      (tag==='DATE') { cur.buri.date=val; x._ptDepth=2; x._ptTarget=cur.buri._extra; }
+      if      (tag==='DATE') { cur.buri.date=val; x._ptDepth=2; x._ptTarget=cur.buri._extra; x._curDateTarget=cur.buri; }
       else if (tag==='PLAC') cur.buri.place=val;
       else if (tag==='NOTE') { if (val.startsWith('@')) cur.buri.noteRefs.push(val); else cur.buri.note=val; }
       else if (tag==='SOUR') { x._curCit=citationObj(val); cur.buri.citations.push(x._curCit); if (val.startsWith('@')) cur.sourceRefs.add(val); }
@@ -163,7 +168,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     }
     else if (x.evIdx >= 0 && cur.events[x.evIdx]) {
       const ev = cur.events[x.evIdx];
-      if      (tag==='DATE')  { ev.date = val; x._ptDepth=2; x._ptTarget=ev._extra; }
+      if      (tag==='DATE')  { ev.date = val; x._ptDepth=2; x._ptTarget=ev._extra; x._curDateTarget=ev; }
       else if (tag==='PLAC')  ev.place = val;
       else if (tag==='TYPE')  ev.eventType = val;
       else if (tag==='NOTE') { if (val.startsWith('@')) ev.noteRefs.push(val); else ev.note += (ev.note ? '\n' : '') + val; }
@@ -212,10 +217,45 @@ function _parseINDILine(cur, x, lv, tag, val) {
       x._ptDepth = 2; x._ptTarget = cur.noteRefExtras[x.lastNoteRef];
     }
     if (x.lv1tag === 'REFN' && tag === 'TYPE' && cur.refns.length) cur.refns[cur.refns.length-1].type = val;
+    // GED7: EXID/TYPE, CREA/DATE, NAME/TRAN
+    if (x.lv1tag === 'EXID' && tag === 'TYPE' && cur.exids.length) cur.exids[cur.exids.length-1].type = val;
+    if (x.lv1tag === 'CREA' && tag === 'DATE') { cur.createdDate = val; x._inCrea = false; }
+    if (x.lv1tag === 'NAME' && tag === 'TRAN') {
+      const _nt = { lang:'', nameRaw: val||'', given:'', surname:'' };
+      if (x._curExtraNameIdx >= 0 && cur.extraNames[x._curExtraNameIdx]) {
+        if (!cur.extraNames[x._curExtraNameIdx].nameTrans) cur.extraNames[x._curExtraNameIdx].nameTrans = [];
+        cur.extraNames[x._curExtraNameIdx].nameTrans.push(_nt);
+      } else {
+        cur.nameTrans.push(_nt);
+      }
+      x._curNameTrans = _nt;
+    }
     if (tag === 'SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
   }
 
   else if (lv === 3) {
+    // GED7: PLAC/TRAN+_TRAN → _parsedPlaceTrans (nicht in _extra[], Dedup by design)
+    if (x.lv2tag === 'PLAC' && (tag === 'TRAN' || tag === '_TRAN')) {
+      const _place = x.lv1tag === 'BIRT' ? cur.birth.place :
+                     x.lv1tag === 'DEAT' ? cur.death.place :
+                     x.lv1tag === 'CHR'  ? cur.chr.place   :
+                     x.lv1tag === 'BURI' ? cur.buri.place  :
+                     x.evIdx >= 0        ? cur.events[x.evIdx]?.place : null;
+      if (_place) {
+        if (!x._parsedPlaceTrans[_place]) x._parsedPlaceTrans[_place] = [];
+        const _te = { lang:'', value: val||'' };
+        x._parsedPlaceTrans[_place].push(_te);
+        x._curTranEntry = _te;
+      }
+      return; // nicht in _extra[]
+    }
+    // GED7: NAME/TRAN Sub-Tags (LANG, GIVN, SURN)
+    if (x.lv2tag === 'TRAN' && x.lv1tag === 'NAME' && x._curNameTrans) {
+      if      (tag === 'LANG') x._curNameTrans.lang    = val;
+      else if (tag === 'GIVN') x._curNameTrans.given   = val;
+      else if (tag === 'SURN') x._curNameTrans.surname = val;
+      return;
+    }
     if (x.lv1tag === 'OBJE' && x.lv2tag === 'FILE' && tag === 'TITL' && cur.media.length)
       cur.media[cur.media.length-1].title = val;
     if (x.lv1tag === 'OBJE' && tag === 'TITL' && cur.media.length)
@@ -270,6 +310,11 @@ function _parseINDILine(cur, x, lv, tag, val) {
   }
 
   else if (lv === 4) {
+    // GED7: LANG unter TRAN/_TRAN (PLAC-Übersetzungen)
+    if ((x.lv3tag === 'TRAN' || x.lv3tag === '_TRAN') && tag === 'LANG' && x._curTranEntry) {
+      x._curTranEntry.lang = val;
+      return;
+    }
     if (x._smEntry !== null && x.lv3tag === 'OBJE' && x.lv2tag === 'SOUR') {
       if      (tag==='FILE')  { x._smEntry.file=val; x._ptDepth=4; x._ptTarget=x._smEntry._extra; }
       else if (tag==='_SCBK') x._smEntry.scbk=val;
@@ -728,9 +773,11 @@ function parseGEDCOM(text, parseErrors, onProgress) {
   text = text.replace(/^﻿/, '');
   const lines = text.split(/\r?\n/);
 
-  // Pre-scan: extract PLAC.FORM from HEAD (unique: "1 PLAC\n2 FORM ...")
+  // Pre-scan: PLAC.FORM + GEDCOM-Version aus HEAD
   let placForm = 'Dorf, Stadt, PLZ, Landkreis, Bundesland, Staat';
   { const mPF = text.match(/^1 PLAC\s*[\r\n]+\s*2 FORM (.+)$/m); if (mPF) placForm = mPF[1].trim(); }
+  let gedVersion = 'unknown';
+  { const mGV = text.match(/^2 VERS (7\.0|5\.5\.1|5\.5)\s*$/m); if (mGV) gedVersion = mGV[1]; }
 
   const individuals = {}, families = {}, sources = {}, notes = {}, repositories = {};
   const _extraRecords = [];
@@ -747,7 +794,13 @@ function parseGEDCOM(text, parseErrors, onProgress) {
     _curCit: null, lastSourVal: '', lastNoteRef: '',
     _curNoteIsInline: false, _curExtraNameIdx: -1,
     _ptDepth: 0, _ptTarget: null,
-    _smEntry: null, _curTask: null, _curAsso: null
+    _smEntry: null, _curTask: null, _curAsso: null,
+    // GED7-Kontext-Felder
+    _curDateTarget: null,   // aktuelles Event-Objekt bei DATE → PHRASE abfangen
+    _parsedPlaceTrans: {},  // { placeName: [{lang, value}] } → nach Load in extraPlaces mergen
+    _curTranEntry: null,    // aktueller TRAN-Eintrag für LANG-Befüllung
+    _curNameTrans: null,    // aktueller nameTrans-Eintrag
+    _inCrea: false,         // CREA-Kontext für DATE-Unterzeile
   };
 
   const _total = lines.length;
@@ -787,13 +840,14 @@ function parseGEDCOM(text, parseErrors, onProgress) {
           id: tag, _passthrough: [], _nameParsed: false,
           name:'', nameRaw:'', surname:'', given:'', nick:'', _rufname:'', prefix:'', suffix:'',
           sex:'U', uid:'', topSources:[],
-          birth:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
-          death:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'', noteRefs:[] },
-          chr:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
-          buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[] },
+          birth:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[], datePhrase:'' },
+          death:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], cause:'', value:'', seen:false, note:'', noteRefs:[], datePhrase:'' },
+          chr:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[], datePhrase:'' },
+          buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[], datePhrase:'' },
           events:[], famc:[], fams:[],
           noteRefs:[], noteRefExtras:{}, noteTexts:[], noteText:'',
-          extraNames:[], _tasks:[], _rlog:[], associations:[], aliases:[], refns:[],
+          extraNames:[], _tasks:[], _rlog:[], associations:[], aliases:[], aliaNames:[], refns:[],
+          exids:[], noEvents: new Set(), createdDate:'', nameTrans:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'', chanNote:'',
           nameCitations:[], _hasGivn:false, _hasSurn:false,
           topSourcePages:{}, topSourceQUAY:{}, topSourceExtra:{}, sourceRefs: new Set()
@@ -806,9 +860,13 @@ function parseGEDCOM(text, parseErrors, onProgress) {
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCalns:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'', chanNote:'' };
         sources[tag] = cur; curType = 'SOUR';
+      } else if (tag.startsWith('@') && /^SNOTE\b/.test(val.trim())) {
+        const _snoteinit = val.slice(val.startsWith('SNOTE ') ? 6 : 5);
+        cur = { id:tag, text: _snoteinit, type:'SNOTE', _passthrough: [], lastChanged:'', lastChangedTime:'', chanNote:'' };
+        notes[tag] = cur; curType = 'NOTE';
       } else if (tag.startsWith('@') && /^NOTE\b/.test(val.trim())) {
         const _noteinit = val.slice(val.startsWith('NOTE ') ? 5 : 4);
-        cur = { id:tag, text: _noteinit, _passthrough: [], lastChanged:'', lastChangedTime:'', chanNote:'' };
+        cur = { id:tag, text: _noteinit, type:'NOTE', _passthrough: [], lastChanged:'', lastChangedTime:'', chanNote:'' };
         notes[tag] = cur; curType = 'NOTE';
       } else if (tag.startsWith('@') && val.trim() === 'REPO') {
         cur = { id:tag, _passthrough:[], name:'', addr:'', phon:'', www:'', email:'', lastChanged:'', lastChangedTime:'', chanNote:'' };
@@ -838,6 +896,12 @@ function parseGEDCOM(text, parseErrors, onProgress) {
     if (lv === 2) { x.lv2tag = tag; x.lv3tag = ''; if (tag !== 'MAP') x.inMap = false; if (tag !== 'SOUR') x._curCit = null; x._smEntry = null; }
     if (lv === 3) { x.lv3tag = tag; if (tag === 'MAP') { x.inMap = true; x.mapParent = x.lv1tag; } else { x.inMap = false; } x._smEntry = null; }
 
+    // ── GED7: PHRASE unter DATE (lv=3, _ptDepth=2) vor Passthrough abfangen ──
+    if (x._ptDepth === 2 && lv === 3 && tag === 'PHRASE' && x._curDateTarget) {
+      x._curDateTarget.datePhrase = val;
+      continue;
+    }
+
     // ── Verbatim Passthrough ──
     if (x._ptDepth > 0) {
       if (lv > x._ptDepth) {
@@ -845,7 +909,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
         if (_ptArr) _ptArr.push(lv + ' ' + tag + (val ? ' ' + val : ''));
         continue;
       } else {
-        x._ptDepth = 0; x._ptTarget = null;
+        x._ptDepth = 0; x._ptTarget = null; x._curDateTarget = null;
       }
     }
 
@@ -922,7 +986,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
   }
   for (const s of Object.values(sources)) _primSort(s.media);
 
-  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors, eventTypesByTag };
+  return { individuals, families, sources, notes, repositories, placForm, extraRecords: _extraRecords, headLines: _headLines, parseErrors: _errors, eventTypesByTag, gedVersion, parsedPlaceTrans: x._parsedPlaceTrans };
 }
 
 

@@ -361,6 +361,12 @@ function _finishLoad(db, text, filename) {
     }
     AppState._currentFilename = filename;
     AppState.db.extraPlaces = loadExtraPlaces();
+    { const _ppt = AppState.db.parsedPlaceTrans || {};
+      for (const [_pp, _tt] of Object.entries(_ppt)) {
+        if (!AppState.db.extraPlaces[_pp]) AppState.db.extraPlaces[_pp] = { name: _pp, lati: null, long: null };
+        if (_tt.length) AppState.db.extraPlaces[_pp].trans = _tt;
+      }
+    }
     applyAllExtraPlaceCoords();
     AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
     { let maxUsed = 0;
