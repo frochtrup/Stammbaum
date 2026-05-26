@@ -26,6 +26,7 @@ function _odUpdateUI() {
   // Settings-Button immer sichtbar (enthält auch lokale Pfade)
   const gb  = document.getElementById('formatConvertBtn');
   const g7b = document.getElementById('ged7ExportBtn');
+  const ggb = document.getElementById('grampsExportBtn');
   if (gb) {
     gb.hidden = !AppState.db;
     if (AppState.db) {
@@ -36,6 +37,8 @@ function _odUpdateUI() {
   }
   // GED7-Button: ausblenden wenn keine Datei geladen oder GED7 bereits aktives Format
   if (g7b) g7b.hidden = !AppState.db || AppState.db.gedVersion === '7.0';
+  // GRAMPS-Button: nur sichtbar wenn GED7-Datei geladen (zusätzliche Cross-Export-Option)
+  if (ggb) ggb.hidden = !AppState.db || AppState.db.gedVersion !== '7.0';
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');

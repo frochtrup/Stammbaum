@@ -246,6 +246,7 @@ const _CLICK_MAP = {
   menuOpenFile:            ()  => { closeModal('modalMenu'); openFileOrDir(); },
   menuExport:              ()  => { closeModal('modalMenu'); exportGEDCOM(); },
   menuExportGed7:          ()  => { closeModal('modalMenu'); exportGEDCOM(true, true); },
+  menuExportGramps:        ()  => { closeModal('modalMenu'); exportGRAMPS(); },
   menuFormatConvert:       ()  => { closeModal('modalMenu'); AppState.db?._grampsMaster ? exportGEDCOM(true) : exportGRAMPS(); },
 menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuLoadDemo:            ()  => { closeModal('modalMenu'); loadDemo(); },
