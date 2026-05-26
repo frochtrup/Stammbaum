@@ -9,6 +9,28 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-26 — A11Y: Accessibility-Grundhärtung WCAG 2.1 AA (sw v724)
+
+- **sw v724** `feat(a11y)`: Vollständige Accessibility-Grundhärtung (7 Items):
+  - **A11Y-1 Skip-Link + Landmarks:** `<a class="skip-link" href="#v-main">` im `<body>` (Tab-Fokus macht ihn sichtbar); `aria-hidden="true"` auf dekorative Elemente (`.ornament`, `.ub-icon`, `.ph-icon`); `aria-label` auf Media-View-Toggle
+  - **A11Y-2 ARIA-Live Navigation:** `_announceList()` in `showDetail()` (Personenname) + `switchTab()` (Tab-Label via `_TAB_LABELS`); bestehende `#list-announce` + `#toast` (beide `role=status aria-live=polite`) bleiben Fundament
+  - **A11Y-3 Baum-Kacheln:** alle `.tree-card`-Divs erhalten `tabindex="0"`, `role="button"`, `keydown`-Handler für Enter/Space (löst Click aus); `aria-label` mit Name + Geschlecht + Jahr war bereits vorhanden
+  - **A11Y-4 Formular-Labels:** `label[for="pf-given/pf-surname"]`; `aria-describedby="pf-name-err"` auf beide Namensfelder; `#pf-name-err` erhält `aria-live="assertive"`
+  - **A11Y-5 `:focus-visible`:** Global 2px gold outline (`var(--gold)`), `outline-offset: 2px`; `.tree-card:focus-visible` zusätzlich mit `box-shadow`; Eingabefelder behalten eigenen Fokus-Stil
+  - **A11Y-6 `aria-invalid`:** `aria-invalid="true/false"` in `_checkNameBlur()` + `savePerson()`-Validierung; `aria-invalid` wird bei Formular-Reset gelöscht
+  - **A11Y-7 `prefers-reduced-motion`:** `@media (prefers-reduced-motion: reduce)` — alle `transition-duration` + `animation-duration` auf 0.01ms; `animation-iteration-count: 1`
+
+---
+
+### Session 2026-05-26 — Baum: Geschwisterzähler + Preview-Infrastruktur (sw v722–v723)
+
+- **sw v722–v723** `fix(tree)` + `chore(dev)`:
+  - **Geschwisterzähler** im Peek-Stapel-Modus verschoben: Badge lag oben-rechts auf oberstem Geschwister (`.tree-half-badge--sib`, `top:3px; right:4px`) und überlagerte CSS-`::after` Geschlechtssymbol (`top:2px; right:4px`). Fix: Badge jetzt auf Fokusperson unten-links (`.tree-half-badge--sib-count`, `bottom:3px; left:4px`); Bedingung `!useHorizSibs && nSibs > 1`
+  - **`serve.py`** erweitert um `NoCacheHandler`: sendet `Cache-Control: no-store, no-cache, must-revalidate` für `.js`/`.css` — verhindert Browser-Caching von Entwicklungsdateien
+  - **`.claude/launch.json`**: zweite Konfiguration `stammbaum-fresh` (autoPort) — bei laufendem `stammbaum`-Server erhält `fresh` einen anderen Port → frischer Browser-Cache-Namespace für zuverlässige Preview-Verifikation
+
+---
+
 ### Session 2026-05-25 — T0-LINTER + T0-TYPES: .editorconfig + JSDoc-Typen (sw v698)
 
 - **sw v698** `refactor(types)`: T0-TYPES + T0-LINTER-Ersatz:

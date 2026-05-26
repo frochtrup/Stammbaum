@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v718 · Cache: `stammbaum-v718`
+**sw-Version:** v724 · Cache: `stammbaum-v724`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -37,7 +37,7 @@ Fünf Dimensionen leiten die Priorisierung:
 |---|---|---|
 | Architektur | 7/10 | Klare Schichtung, aber globaler Namespace + keine ES-Module = wachsende Schuld |
 | Sicherheit | 8/10 | Starke CSP, konsequentes `esc()`, aber keine strukturelle Escaping-Garantie |
-| Design / UX | 8.5/10 | Hochwertige Ästhetik, Mobile-First — Accessibility-Lücken |
+| Design / UX | 9/10 | Hochwertige Ästhetik, Mobile-First — WCAG 2.1 AA Grundhärtung ✓ (v724) |
 | Funktionsstand | 8/10 | Starke Kernfunktionen; DSGVO-Export ✓; Lücken: GEDCOM 7.0, editierbare ASSO |
 | Code-Qualität | 7.5/10 | Lesbar, kein Overengineering; JSDoc-Typen + .editorconfig ✓; kein Test-Framework; einige Dateien >800 Z. |
 | Performance | 7.5/10 | Gute Optimierungen; 44 HTTP-Requests ohne Bundling |
@@ -113,7 +113,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; keine Layout-Änderung nötig. | XS |
-| ACCESSIBILITY | **Accessibility-Audit + Grundhärtung** | WCAG 2.1 AA für die vier häufigsten Flows. Korrekte `role`/`aria-label` auf allen interaktiven Elementen. | M |
+| ~~ACCESSIBILITY~~ | ~~**Accessibility-Audit + Grundhärtung**~~ | ✅ **Abgeschlossen sw v724** — Skip-Link, ARIA-Live, Baum tabindex/role=button, :focus-visible, aria-invalid, prefers-reduced-motion | ~~M~~ |
 
 ---
 
@@ -142,7 +142,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v715** (frisch aktualisiert)
+**Handbuch-Stand: sw v724** (frisch aktualisiert)
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -190,7 +190,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 **Einzigartige Stärken:** Offline-PWA + Story-Modus + animierter Migrationspfad + GRAMPS-Brücke + Forschungsprotokoll + Mehrpersonen-Zeitleiste + DSGVO-Anonymisierung + vollständig lokal ohne Datamining.
 
-**Verbleibende Lücken:** GEDCOM 7.0, editierbare ASSO-Beziehungen, Accessibility.
+**Verbleibende Lücken:** GEDCOM 7.0, editierbare ASSO-Beziehungen.
 
 ---
 
