@@ -683,15 +683,16 @@ function showTree(personId, addToHistory = true) {
     siblings.forEach((sid, i) => {
       const y = ry(0) + i * PEEK;
       const z = nSibs - i + 5;
-      const badge = (i === 0 && nSibs > 1)
-        ? `<div class="tree-half-badge tree-half-badge--sib">${nSibs}</div>`
-        : '';
-      mkCard(sid, sibColX, y, false, false, z, i > 0, null, badge + kbadge(sid));
+      mkCard(sid, sibColX, y, false, false, z, i > 0, null, kbadge(sid));
     });
   }
 
   // ── Zentrumsperson ──
-  mkCard(personId, personX, ry(0), true, false, null, false, null, kbadge(personId));
+  // Im Peek-Stapel-Modus: Geschwisterzähler unten-links (kein Konflikt mit ♂/♀ oben-rechts)
+  const sibCountBadge = (!useHorizSibs && nSibs > 1)
+    ? `<div class="tree-half-badge tree-half-badge--sib-count" title="${nSibs} Geschwister">${nSibs}</div>`
+    : '';
+  mkCard(personId, personX, ry(0), true, false, null, false, null, sibCountBadge + kbadge(personId));
 
   // ── Ehepartner: horizontal rechts ──
   // Aktiver Ehepartner (Index aus _activeSpouseMap) steht links (nächste am Probanden).
