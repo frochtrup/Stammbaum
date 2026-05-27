@@ -734,29 +734,49 @@ function showDetail(id, pushHistory = true) {
 
   html += _pdetLifeData(p, id);
 
-  // Assoziationen (alle außer Godparent — der steht bereits unter der Taufe-Zeile)
-  // Patenkinder werden dynamisch berechnet: alle Personen, die diesen als 'Godparent' führen
-  const _computedGodchildren = Object.entries(AppState.db.individuals)
-    .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.role === 'Godparent' && a.xref === id))
-    .map(([cid]) => ({ xref: cid, rela: 'Godchild', _derived: true }));
-  const _storedNonGp = (p.associations || []).filter(a => a.role !== 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
-  // Gespeicherte Godchild-Einträge deduplizieren (könnten schon via UI-Sync da sein)
-  const _gcXrefs = new Set(_computedGodchildren.map(a => a.xref));
-  const _storedGc = _storedNonGp.filter(a => a.role === 'Godchild' && !_gcXrefs.has(a.xref) && AppState.db.individuals[a.xref]);
-  const _displayAssos = [..._storedNonGp.filter(a => a.role !== 'Godchild'), ..._storedGc, ..._computedGodchildren];
-  if (_displayAssos.length) {
-    const _assoByRela = {};
-    for (const a of _displayAssos) {
-      if (!_assoByRela[a.role]) _assoByRela[a.role] = [];
-      _assoByRela[a.role].push(a);
+  // Assoziationen — editierbar (alle gespeicherten + abgeleitete Patenkinder read-only)
+  {
+    const _storedAssos = (p.associations || []).filter(a => a.xref && AppState.db.individuals[a.xref]);
+    // Patenkinder: Personen, die diesen als 'Godparent' führen (read-only, abgeleitet)
+    const _gcXrefs = new Set(_storedAssos.filter(a => a.role === 'Godchild').map(a => a.xref));
+    const _computedGodchildren = Object.entries(AppState.db.individuals)
+      .filter(([cid, cp]) => cid !== id && (cp.associations || []).some(a => a.role === 'Godparent' && a.xref === id) && !_gcXrefs.has(cid))
+      .map(([cid]) => ({ xref: cid, role: 'Godchild', _derived: true }));
+
+    html += `<div class="section fade-up">
+      <div class="section-head">
+        <div class="section-title">Assoziationen</div>
+        <button class="section-add" data-action="showAddAssoFlow" data-pid="${id}">+ Hinzufügen</button>
+      </div>`;
+
+    if (!_storedAssos.length && !_computedGodchildren.length) {
+      html += `<div class="no-data-pad">Keine Assoziationen eingetragen</div>`;
+    } else {
+      for (let _ai = 0; _ai < _storedAssos.length; _ai++) {
+        const a = _storedAssos[_ai];
+        const label = (typeof RELA_LABELS !== 'undefined' && RELA_LABELS[a.role]) || a.role || '?';
+        const aName = AppState.db.individuals[a.xref]?.name || a.xref;
+        html += `<div class="fact-row" style="align-items:flex-start">
+          <span class="fact-lbl">${esc(label)}</span>
+          <span class="fact-val" style="flex:1">
+            <span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(aName)}</span>
+            ${a.note ? `<div class="ev-note">${esc(a.note)}</div>` : ''}
+          </span>
+          <span style="display:flex;gap:4px;align-items:center;margin-left:6px">
+            <button class="edit-media-btn" data-action="editAsso" data-pid="${id}" data-aidx="${_ai}" title="Bearbeiten">✎</button>
+            <button class="unlink-btn" data-action="deleteAsso" data-pid="${id}" data-aidx="${_ai}" title="Entfernen">×</button>
+          </span>
+        </div>`;
+      }
+      for (const a of _computedGodchildren) {
+        const aName = AppState.db.individuals[a.xref]?.name || a.xref;
+        html += `<div class="fact-row">
+          <span class="fact-lbl">Patenkind</span>
+          <span class="fact-val"><span class="asso-chip asso-chip--derived" data-action="showDetail" data-id="${a.xref}" title="Abgeleitet">${esc(aName)}</span></span>
+        </div>`;
+      }
     }
-    html += `<div class="section fade-up"><div class="section-head"><div class="section-title">Assoziationen</div></div><div class="section-body">`;
-    for (const [rela, assos] of Object.entries(_assoByRela)) {
-      const label = (typeof RELA_LABELS !== 'undefined' && RELA_LABELS[rela]) || rela;
-      const chips = assos.map(a => `<span class="asso-chip${a._derived ? ' asso-chip--derived' : ''}" data-action="showDetail" data-id="${a.xref}" title="${a._derived ? 'Abgeleitet (nicht im Datenmodell gespeichert)' : ''}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('');
-      html += `<div class="fact-row"><span class="fact-lbl">${esc(label)}</span><span class="fact-val"><div class="event-godparents">${chips}</div></span></div>`;
-    }
-    html += `</div></div>`;
+    html += `</div>`;
   }
 
   // Verwandtschaft
@@ -1039,4 +1059,71 @@ function showAddAliasFlow(pid) {
   document.getElementById('relPickerSearch').value = '';
   renderRelPicker('');
   openModal('modalRelPicker');
+}
+
+// ─── Assoziationen (ASSO) ────────────────────────────────────────────────────
+function showAddAssoFlow(pid) {
+  UIState._relMode = 'asso'; UIState._relAnchorId = pid;
+  document.getElementById('relPickerTitle').textContent = 'Person für Assoziation wählen';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
+}
+
+function showAssoRoleStep(anchorPid, assoPid, editIdx = -1) {
+  const assoP = AppState.db.individuals[assoPid];
+  document.getElementById('asso-anchor-pid').value = anchorPid;
+  document.getElementById('asso-target-pid').value = assoPid;
+  document.getElementById('asso-edit-idx').value   = String(editIdx);
+  document.getElementById('asso-target-name').textContent = assoP?.name || assoPid;
+  const existing = editIdx >= 0 ? (AppState.db.individuals[anchorPid]?.associations?.[editIdx] || null) : null;
+  const role = existing?.role || 'Witness';
+  const knownRoles = ['Godparent', 'Witness', 'Informant', 'Friend', 'Associate'];
+  const sel = document.getElementById('asso-role-select');
+  sel.value = knownRoles.includes(role) ? role : '_custom';
+  const customEl = document.getElementById('asso-role-custom');
+  if (sel.value === '_custom') { customEl.style.display = ''; customEl.value = role; }
+  else customEl.style.display = 'none';
+  document.getElementById('asso-note').value = existing?.note || '';
+  openModal('modalAsso');
+}
+
+function assoRoleChange() {
+  const sel = document.getElementById('asso-role-select');
+  const customEl = document.getElementById('asso-role-custom');
+  if (sel.value === '_custom') { customEl.style.display = ''; customEl.focus(); }
+  else customEl.style.display = 'none';
+}
+
+function saveAsso() {
+  const anchorPid = document.getElementById('asso-anchor-pid').value;
+  const assoPid   = document.getElementById('asso-target-pid').value;
+  const editIdx   = parseInt(document.getElementById('asso-edit-idx').value, 10);
+  const sel       = document.getElementById('asso-role-select');
+  const role      = sel.value === '_custom'
+    ? (document.getElementById('asso-role-custom').value.trim() || 'Associate')
+    : sel.value;
+  const note = document.getElementById('asso-note').value.trim();
+  const p = AppState.db.individuals[anchorPid];
+  if (!p) return;
+  if (!p.associations) p.associations = [];
+  if (editIdx >= 0 && p.associations[editIdx]) {
+    p.associations[editIdx].role = role;
+    p.associations[editIdx].note = note;
+  } else {
+    p.associations.push({ xref: assoPid, role, note, citations: [] });
+  }
+  closeModal('modalAsso');
+  markChanged();
+  showToast('✓ Assoziation gespeichert');
+  showDetail(anchorPid, false);
+}
+
+async function deleteAsso(pid, idx) {
+  if (!await confirmModal('Assoziation wirklich entfernen?', 'Entfernen')) return;
+  const p = AppState.db.individuals[pid];
+  if (!p?.associations) return;
+  p.associations.splice(idx, 1);
+  markChanged();
+  showDetail(pid, false);
 }

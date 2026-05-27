@@ -1302,6 +1302,43 @@
   </div>
 </div>
 
+<!-- Assoziation bearbeiten -->
+<div class="modal-overlay" id="modalAsso" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAsso">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalAsso">Assoziation</div>
+    <div class="sheet-body">
+      <input type="hidden" id="asso-anchor-pid">
+      <input type="hidden" id="asso-target-pid">
+      <input type="hidden" id="asso-edit-idx">
+      <div class="form-group">
+        <label class="form-label">Person</label>
+        <div id="asso-target-name" class="form-hint"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rolle</label>
+        <select class="form-input" id="asso-role-select" data-change="assoRoleChange">
+          <option value="Godparent">Taufpate/-mutter</option>
+          <option value="Witness">Zeuge / Zeugin</option>
+          <option value="Informant">Informant</option>
+          <option value="Friend">Freund / Freundin</option>
+          <option value="Associate">Bekannte(r)</option>
+          <option value="_custom">Eigene Rolle …</option>
+        </select>
+        <input class="form-input mt-4" id="asso-role-custom" placeholder="Rolle eingeben" style="display:none">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz (optional)</label>
+        <textarea class="form-input" id="asso-note" rows="2" placeholder="z.B. Trauzeuge bei Heirat 1887"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAsso">Abbrechen</button>
+        <button class="btn btn-save" data-action="saveAsso">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Archiv-Formular -->
 <div class="modal-overlay" id="modalRepo" role="dialog" aria-modal="true" aria-labelledby="repoFormTitle">
   <div class="sheet">

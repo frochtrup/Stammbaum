@@ -59,10 +59,10 @@
 - `MEMORY.md` — dieses Dokument
 - `.claude/launch.json` — Dev-Server: `python3 -m http.server 8080`
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-26
+## Aktueller Stand — zuletzt aktualisiert: 2026-05-27
 
 **Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v727** / Cache: `stammbaum-v730`
+- **Aktuelle sw-Version: v734** / Cache: `stammbaum-v734`
 - Vollständige Phasen-Geschichte: ROADMAP.md + CHANGELOG.md
 
 **Abgeschlossene Sprints (v8-dev, Auswahl — vollständig: CHANGELOG.md):**
@@ -98,6 +98,9 @@
 - **SOUR-TMPL (sw v586):** `_SOUR_TEMPLATES` (10 Einträge); Select-Dropdown im Quellen-Formular bei Neuanlage; befüllt ABBR, TITL, AUTH, PUBL, MEDI; Cursor vor `…`
 - **VAL-EXTEND (sw v590):** +10 neue Validierungsregeln (EVENT_AFTER_DEATH, CHILD_BEFORE_PARENT, MARR_AFTER_DEATH u. a.); Config-UI automatisch
 - **Diagramm-Topbars + Proband-Navigation (sw v591–v595):** einheitliches Topbar-Muster für alle vier Diagramme `[⌂][⤢] | [Diagramm-Wechsel][☰]`; Zeitleiste vollwertiges Diagramm; `tlShowProband()` Action; Familie-Topbar blendet Timeline/Story/Proband-Buttons aus; Person-Detail-Topbar: zwei ⌂-Buttons — `probandBtn` (navigiert zum Probanden) + `probandSetBtn` (`.proband-set-btn`, CSS-Rahmen, setzt/hebt Proband, direkt vor `✎`)
+- **GEDCOM-7-3 (sw v732):** `_writePlacTrans()` unified GED5/GED7; `nameTrans[]` als `2 _TRAN` in GED5; GED5-Downgrade: `exids[]`→REFN, `noEvents`→NOTE; GRAMPS: `noEvents`→`<attribute>`, `exids[]`→`<url>`, `datePhrase`→`datestr`
+- **GEDCOM-7-4 (sw v733):** `datePhrase` kursiv in allen Event-Zeilen; `noEvents` ✗-Badges; `exids[]` Panel; `aliaNames[]`/`nameTrans[]` read-only; Übersetzungs-Editor in Ort-Detail
+- **ASSO-EDIT (sw v734):** `modalAsso` Bottom-Sheet (Rolle + Notiz); 'asso'-Modus in `renderRelPicker`/`relPickerSelect`; `showAddAssoFlow`/`showAssoRoleStep`/`saveAsso`/`deleteAsso`/`assoRoleChange`; Assoziationen-Section vollständig editierbar mit ✎ × Buttons; abgeleitete Patenkinder weiterhin read-only
 
 Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
 Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
