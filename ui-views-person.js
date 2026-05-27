@@ -503,6 +503,16 @@ function _pdetLifeData(p, id) {
       </div>
     </div>`;
 
+  // GED7: nameTrans[] als read-only Chips
+  if (p.nameTrans?.length) {
+    const chips = p.nameTrans.map(nt => {
+      const val = nt.nameRaw ? nt.nameRaw.replace(/\/([^/]*)\//g,'$1').trim() : [nt.given, nt.surname].filter(Boolean).join(' ');
+      const langTag = nt.lang ? `<em class="tran-lang">${esc(nt.lang)}</em>` : '';
+      return `<span class="tran-chip">${esc(val)}${langTag}</span>`;
+    }).join('');
+    html += `<div class="fact-row"><span class="fact-lbl">Namensübers.</span><span class="fact-val">${chips}</span></div>`;
+  }
+
   (p.extraNames || []).forEach((en, enIdx) => {
     const enLabel = en.type ? (NAME_TYPE_LABELS[en.type] || en.type) : 'Weiterer Name';
     const enVal = en.nameRaw
@@ -523,13 +533,19 @@ function _pdetLifeData(p, id) {
       <button class="unlink-btn" data-action="removeAlias" data-pid="${id}" data-aliasid="${aliasXref}">×</button>
     </div>`;
   });
+  // GED7: aliaNames (Textaliase, nicht @xref@)
+  (p.aliaNames || []).forEach(name => {
+    html += `<div class="fact-row"><span class="fact-lbl">Alias-Name</span><span class="fact-val">${esc(name)}</span></div>`;
+  });
 
   // Referenzdatum für Altersberechnung: Geburt, Proxy Taufe
   const _refDate = p.birth.date || p.chr.date || '';
+  // GED7: datePhrase (menschenlesbares Datum) kursiv unter dem codierten Datum
+  const _dpHtml = (obj) => (obj?.datePhrase) ? `<em class="date-phrase">${esc(obj.datePhrase)}</em>` : '';
 
   if (p.birth.date || p.birth.place) {
     const geoBtn = evGeoLink(p.birth.lati, p.birth.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${_placeHierHtml(p.birth.placeId)}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${_dpHtml(p.birth)}${_placeHierHtml(p.birth.placeId)}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
   const _chrGodparents = (p.associations || []).filter(a => a.role === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
   if (p.chr.date || p.chr.place || _chrGodparents.length) {
@@ -539,15 +555,15 @@ function _pdetLifeData(p, id) {
       : '';
     // Alter bei Taufe nur wenn Geburtsdatum bekannt (nicht wenn Taufe selbst der Proxy ist)
     const _chrAge = p.birth.date ? _ageAt(p.birth.date, p.chr.date) : '';
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_placeHierHtml(p.chr.placeId)}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_dpHtml(p.chr)}${_placeHierHtml(p.chr.placeId)}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = evGeoLink(p.death.lati, p.death.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_placeHierHtml(p.death.placeId)}${_ageAt(_refDate, p.death.date)}${geoBtn}${citTagsHtml(p.death.citations || [])}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_dpHtml(p.death)}${_placeHierHtml(p.death.placeId)}${_ageAt(_refDate, p.death.date)}${geoBtn}${citTagsHtml(p.death.citations || [])}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
     const geoBtn = evGeoLink(p.buri.lati, p.buri.long);
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_placeHierHtml(p.buri.placeId)}${_ageAt(_refDate, p.buri.date)}${geoBtn}${citTagsHtml(p.buri.citations || [])}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_dpHtml(p.buri)}${_placeHierHtml(p.buri.placeId)}${_ageAt(_refDate, p.buri.date)}${geoBtn}${citTagsHtml(p.buri.citations || [])}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
   // Alle Quick-Add-Chips in einer Zeile: fehlende Sonder-Events + generische Shortcuts
@@ -625,15 +641,29 @@ function _pdetLifeData(p, id) {
         if (_evNoteKey && _showEvNote) _shownAddrNotes.add(_evNoteKey);
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${_placeHierHtml(ev.placeId)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_combinedNote)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${_dpHtml(ev)}${_placeHierHtml(ev.placeId)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_combinedNote)}</span>` : ''}</span>
         </div>`;
       }
     }
+
+  // GED7: NO-Ereignisse (bestätigtes Fehlen)
+  if (p.noEvents?.size) {
+    const noBadges = [...p.noEvents].map(tag => {
+      const lbl = EVENT_LABELS[tag] || tag;
+      return `<span class="no-ev-badge">✗ ${esc(lbl)}</span>`;
+    }).join('');
+    html += `<div class="fact-row fact-row--no-ev"><span class="fact-lbl">Kein Eintrag</span><span class="fact-val">${noBadges}</span></div>`;
+  }
 
   if (p.titl) html += factRow('Titel', p.titl);
   if (p.reli) html += factRow('Religion', p.reli);
   if (p.resn)  html += factRow('Beschränkung', p.resn);
   if (p.refns && p.refns.length) for (const r of p.refns) html += factRow(r.type ? `Ref (${esc(r.type)})` : 'Ref', r.val);
+  // GED7: EXID (externe Kennungen, z.B. FamilySearch, WikiTree)
+  if (p.exids?.length) for (const ex of p.exids) {
+    const lbl = ex.type ? `EXID (${esc(ex.type)})` : 'EXID';
+    html += factRow(lbl, ex.value);
+  }
   if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" class="person-email-link">${esc(p.email)}</a></span></div>`;
   if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(p.www)}" target="_blank" rel="noopener" class="person-www-link">${esc(p.www)}</a></span></div>`;
   if (p._grampsTags?.length) html += `<div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${p._grampsTags.map(t => `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div>`;

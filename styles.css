@@ -2213,6 +2213,16 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .place-hier { display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
 .no-data   { color: var(--text-muted); font-style: italic; font-size: 0.85rem; }
 
+/* GED7-UI: datePhrase / NO-Events / Übersetzungen */
+.date-phrase { display: block; font-size: 0.77rem; color: var(--text-dim); font-style: italic; margin-top: 1px; }
+.fact-row--no-ev .fact-lbl { color: var(--text-muted); font-style: italic; }
+.fact-row--no-ev .fact-val { color: var(--text-muted); }
+.no-ev-badge { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; font-size: 0.75rem; color: var(--text-muted); margin-right: 4px; }
+.tran-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 2px 9px; font-size: 0.78rem; color: var(--text-dim); margin: 2px 4px 2px 0; }
+.tran-lang { font-size: 0.72rem; background: var(--surface); border-radius: 3px; padding: 0 3px; color: var(--text-muted); font-family: monospace; font-style: normal; }
+.tran-add-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.tran-add-row .form-input { flex: 1; min-width: 80px; padding: 5px 9px; font-size: 0.85rem; }
+
 /* ── Geo-Link (📍 Apple Maps) ── */
 .geo-link {
   color: var(--gold-dim); font-size: 0.75rem;

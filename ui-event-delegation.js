@@ -65,6 +65,8 @@ const _CLICK_MAP = {
   openMapPersonPicker:     ()  => openMapPersonPicker(),
   selectMapPerson:         el => selectMapPerson(el.dataset.pid),
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
+  addPlaceTrans:           ()  => addPlaceTrans(),
+  deletePlaceTrans:        el  => deletePlaceTrans(+el.dataset.idx),
   treeShowProband:         ()  => {
     const id = getProbandId();
     if (!id) return;

@@ -222,6 +222,28 @@ function showPlaceDetail(placeName, pushHistory = true) {
     </div>`;
   }
 
+  // GED7: Übersetzungs-Editor (extraPlaces.trans[])
+  const _ep = AppState.db.extraPlaces[placeName];
+  const _transList = _ep?.trans || [];
+  const _transHtml = _transList.length
+    ? _transList.map((t, i) => `
+      <div class="fact-row" style="align-items:center">
+        <span class="fact-val" style="flex:1"><span class="tran-chip">${esc(t.value)}${t.lang ? `<em class="tran-lang">${esc(t.lang)}</em>` : ''}</span></span>
+        <button class="unlink-btn" data-action="deletePlaceTrans" data-idx="${i}">×</button>
+      </div>`).join('')
+    : '';
+  html += `<div class="section fade-up">
+    <div class="section-head">
+      <div class="section-title">Übersetzungen</div>
+    </div>
+    ${_transHtml || '<div class="no-data-pad">Keine Übersetzungen eingetragen</div>'}
+    <div class="tran-add-row">
+      <input class="form-input" id="pl-tran-val" placeholder="Übersetzung (z.B. Wrocław)">
+      <input class="form-input" id="pl-tran-lang" placeholder="Sprache" style="max-width:100px">
+      <button class="btn btn-save" style="padding:5px 14px" data-action="addPlaceTrans">+</button>
+    </div>
+  </div>`;
+
   // Build detailed list: person + which event connects them to this place
   const entries = [];
   for (const p of Object.values(AppState.db.individuals)) {
@@ -259,4 +281,33 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
+}
+
+// ─── Übersetzungs-Editor ──────────────────────────────────────────────────────
+function addPlaceTrans() {
+  const placeName = AppState.currentPlaceName;
+  if (!placeName) return;
+  const val = document.getElementById('pl-tran-val')?.value.trim();
+  if (!val) { showToast('⚠ Übersetzung darf nicht leer sein'); return; }
+  const lang = document.getElementById('pl-tran-lang')?.value.trim() || '';
+  if (!AppState.db.extraPlaces[placeName])
+    AppState.db.extraPlaces[placeName] = { name: placeName, lati: null, long: null };
+  if (!AppState.db.extraPlaces[placeName].trans)
+    AppState.db.extraPlaces[placeName].trans = [];
+  AppState.db.extraPlaces[placeName].trans.push({ value: val, lang });
+  saveExtraPlaces();
+  markChanged();
+  showToast('✓ Übersetzung gespeichert');
+  showPlaceDetail(placeName, false);
+}
+
+function deletePlaceTrans(idx) {
+  const placeName = AppState.currentPlaceName;
+  if (!placeName) return;
+  const ep = AppState.db.extraPlaces[placeName];
+  if (!ep?.trans) return;
+  ep.trans.splice(idx, 1);
+  saveExtraPlaces();
+  markChanged();
+  showPlaceDetail(placeName, false);
 }
