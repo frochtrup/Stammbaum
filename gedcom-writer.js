@@ -10,13 +10,15 @@ function _g7WriteSchma(lines) {
     lines.push(`2 TAG ${t} ${_base}/${t}`);
 }
 
-// GED7: PLAC/TRAN-Einträge aus extraPlaces-Registry
+// PLAC/TRAN-Einträge aus extraPlaces-Registry
+// GED7: standard TRAN; GED5: _TRAN vendor extension (überlebt Passthrough, lesbar bei Re-Import)
 function _writePlacTrans(lines, placeName, indent) {
   const ep = AppState.db?.extraPlaces?.[placeName];
   if (!ep?.trans?.length) return;
+  const tag = _ged7 ? 'TRAN' : '_TRAN';
   for (const t of ep.trans) {
     if (!t.value) continue;
-    lines.push(`${indent} TRAN ${t.value}`);
+    lines.push(`${indent} ${tag} ${t.value}`);
     if (t.lang) lines.push(`${indent+1} LANG ${t.lang}`);
   }
 }
@@ -145,7 +147,7 @@ function eventBlock(lines, tag, obj, lv) {
   if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
   if (obj.place !== null && obj.place !== undefined) {
     lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
-    if (_ged7) _writePlacTrans(lines, obj.place, lv+2);
+    _writePlacTrans(lines, obj.place, lv+2);
     geoLines(lines, obj, lv+2);
   }
   const _origNote = obj._noteOrig !== undefined ? obj._noteOrig : obj.note;
@@ -255,9 +257,10 @@ function writeINDIRecord(lines, p, livingSet = null) {
   while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
   for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
 
-  // GED7: NAME/TRAN
-  if (_ged7) for (const nt of (p.nameTrans || [])) {
-    lines.push(`2 TRAN${nt.nameRaw ? ' ' + nt.nameRaw : ''}`);
+  // NAME/TRAN (GED7) / NAME/_TRAN vendor extension (GED5)
+  for (const nt of (p.nameTrans || [])) {
+    const _ntTag = _ged7 ? 'TRAN' : '_TRAN';
+    lines.push(`2 ${_ntTag}${nt.nameRaw ? ' ' + nt.nameRaw : ''}`);
     if (nt.lang)    lines.push(`3 LANG ${nt.lang}`);
     if (nt.given)   lines.push(`3 GIVN ${nt.given}`);
     if (nt.surname) lines.push(`3 SURN ${nt.surname}`);
@@ -305,7 +308,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
     const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
     if (ev.place !== null && ev.place !== undefined) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
-      if (_ged7) _writePlacTrans(lines, ev.place, 3);
+      _writePlacTrans(lines, ev.place, 3);
       geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
     } else if (ev.addr) {
       // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
@@ -439,7 +442,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
   for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
   for (const r of (p.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
 
-  // GED7: NO / EXID / CREA
+  // GED7: NO / EXID / CREA — GED5-Downgrade: EXID→REFN, NO→NOTE
   if (_ged7) {
     for (const ev of (p.noEvents || [])) lines.push(`1 NO ${ev}`);
     for (const ex of (p.exids || [])) {
@@ -447,6 +450,14 @@ function writeINDIRecord(lines, p, livingSet = null) {
       if (ex.type) lines.push(`2 TYPE ${ex.type}`);
     }
     if (p.createdDate) { lines.push('1 CREA'); lines.push(`2 DATE ${p.createdDate}`); }
+  } else {
+    // GED5-Downgrade: exids als REFN erhalten; noEvents als NOTE-Hinweis
+    for (const ex of (p.exids || [])) {
+      lines.push(`1 REFN ${ex.value || ''}`);
+      if (ex.type) lines.push(`2 TYPE ${ex.type}`);
+    }
+    for (const ev of (p.noEvents || []))
+      lines.push(`1 NOTE Kein bekanntes Ereignis: ${ev}`);
   }
 
   // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
@@ -513,7 +524,7 @@ function writeFAMRecord(lines, f) {
     }
     if (ev.place !== null && ev.place !== undefined) {
       lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
-      if (_ged7) _writePlacTrans(lines, ev.place, 3);
+      _writePlacTrans(lines, ev.place, 3);
       geoLines(lines, ev, 3);
     }
     const _famEvNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;

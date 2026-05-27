@@ -257,7 +257,7 @@ async function writeGRAMPS(db) {
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
     // addr → <attribute type="Address" value="..."/>  (prepend, before _grampsAttrs)
     const addrAttr = evObj.addr ? [{ type: 'Address', value: evObj.addr }] : [];
-    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: [...addrAttr, ...(evObj._grampsAttrs||[])], citHandles, noteHandle, _priv: evObj._grampsEvPriv||null, _extra: evObj._grampsEvExtra||[] });
+    evRecs.push({ handle, id, type: grampsType, date: evObj.date||'', datePhrase: evObj.datePhrase||'', plHandle, desc: evObj.value||'', cause: evObj.cause||'', attrs: [...addrAttr, ...(evObj._grampsAttrs||[])], citHandles, noteHandle, _priv: evObj._grampsEvPriv||null, _extra: evObj._grampsEvExtra||[] });
     return { handle, role: role||'Primary' };
   };
 
@@ -403,7 +403,7 @@ async function writeGRAMPS(db) {
     for (const ev of evRecs) {
       L.push(`    <event handle="${_esc(ev.handle)}" id="${_esc(ev.id)}"${ev._priv ? ` priv="${_esc(ev._priv)}"` : ''}>`);
       L.push(`      <type>${_esc(ev.type)}</type>`);
-      const dateXML = _gedToGrampsDateXML(ev.date);
+      const dateXML = _gedToGrampsDateXML(ev.date) || (ev.datePhrase ? `<datestr val="${_esc(ev.datePhrase)}"/>` : '');
       if (dateXML) L.push(`      ${dateXML}`);
       if (ev.plHandle) L.push(`      <place hlink="${_esc(ev.plHandle)}"/>`);
       if (ev.desc)    L.push(`      <description>${_esc(ev.desc)}</description>`);
@@ -482,6 +482,12 @@ async function writeGRAMPS(db) {
     if (p.resn)  L.push(`      <attribute type="RESN" value="${_esc(p.resn)}"/>`);
     if (p.email) L.push(`      <attribute type="E-MAIL" value="${_esc(p.email)}"/>`);
     for (const a of p._grampsAttrs||[]) _attrXML('      ', a);
+    // GED7-Adapter: NO-Events als Attribute, EXID als URLs
+    for (const ev of p.noEvents || [])
+      L.push(`      <attribute type="No ${_esc(ev)}" value="Y"/>`);
+    for (const ex of p.exids || []) {
+      if (ex.value) L.push(`      <url href="${_esc(ex.value)}" type="${_esc(ex.type || 'Unknown')}"/>`);
+    }
     for (const t of (p._tasks||[])) {
       L.push(`      <attribute type="_TASK" value="${_esc(JSON.stringify(t))}"/>`);
     }

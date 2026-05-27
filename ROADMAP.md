@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v730 · Cache: `stammbaum-v730`
+**sw-Version:** v732 · Cache: `stammbaum-v732`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -139,7 +139,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | ~~GEDCOM-7-EVAL~~ | ~~**GEDCOM 7.0 Evaluierung**~~ | ✅ Abgeschlossen sw v724 — ADR-018 in ARCHITECTURE.md. Ergebnis: Conditional Go; opt-in Exportmodus; Vollplan in 4 Phasen. | ~~M~~ |
 | ~~GEDCOM-7-1~~ | ~~**GED7: Datenmodell + Parser**~~ | ✅ Abgeschlossen sw v725 — Parser-Handler NO/EXID/CREA/SNOTE/PHRASE/TRAN; `_parsedPlaceTrans`→`extraPlaces`; `.rela`→`.role`; Typedefs + RELA_LABELS. | ~~M~~ |
 | ~~GEDCOM-7-2~~ | ~~**GED7: Writer (opt-in Export)**~~ | ✅ Abgeschlossen sw v726 — `gedExportVersion` ('5.5.1'/'7.0', IDB); `pushCont()` ohne CONC; HEAD `VERS 7.0` + SCHMA; SNOTE/ROLE/PHRASE/NO/EXID/CREA/PLAC·TRAN/NAME·TRAN; Toggle in modalSettings. | ~~M~~ |
-| GEDCOM-7-3 | **GED7: Cross-Transfer-Adapter** | **Übersetzungen als `_TRAN`-Vendor-Extension**: `placTrans[]` und `nameTrans[]` werden in GED5 und GRAMPS als `_TRAN`-Tags unter PLAC/NAME geschrieben (`3 _TRAN Wrocław; 4 LANG pl`) — strukturgleich mit GED7-TRAN, überlebt GED5-Passthrough (`_extra[]`), lesbar bei Re-Import. Semantisch schwach aber roundtrip-stabil; sinnvoll für Grenzorte mit mehrsprachigen Namen (Breslau/Wrocław, Königsberg/Kaliningrad etc.). **GED5-Downgrade**: `exids[]` → `REFN`; `noEvents` → optional NOTE; `SNOTE` → `NOTE`. **GRAMPS-Adapter**: `noEvents` → `<attribute type="No {EVENT}"/>`; `exids[]` → `<url>`; `datePhrase` → GRAMPS `datestr`-Attribut; `SNOTE` → GRAMPS Note-Record; GED7→GRAMPS: GRAMPS Notes → `SNOTE`, non-Primary eventref → `ASSO/ROLE WITN`. | M |
+| ~~GEDCOM-7-3~~ | ~~**GED7: Cross-Transfer-Adapter**~~ | ✅ Abgeschlossen sw v732 — `_writePlacTrans()` GED5/GED7 unified (`_TRAN`/`TRAN`); `nameTrans[]` als `2 _TRAN` in GED5; Re-Import-Parser erkennt `_TRAN` unter PLAC+NAME; GED5-Downgrade: `exids[]`→REFN, `noEvents`→NOTE, SNOTE→NOTE; GRAMPS-Adapter: `noEvents`→`<attribute>`, `exids[]`→`<url>`, `datePhrase`→`datestr`-Fallback. | ~~M~~ |
 | GEDCOM-7-4 | **GED7: UI** | ⚠ **Voraussetzung: ASSO-EDIT** (ROLE-Enum-Auswahl). `datePhrase` kursiv unter codiertem Datum in Event-Detail. Checkbox „Kein Eintrag bekannt (NO)" auf Event-Karte. EXID read-only Panel neben REFN. `aliaNames[]` im Personen-Detail. Übersetzungs-Editor für `extraPlaces[].trans[]`/`nameTrans[]`: Sprach-Chip + Wert-Input. Export-Version-Toggle in modalSettings. | S |
 
 ---

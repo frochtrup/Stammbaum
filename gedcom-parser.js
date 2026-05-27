@@ -220,7 +220,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     // GED7: EXID/TYPE, CREA/DATE, NAME/TRAN
     if (x.lv1tag === 'EXID' && tag === 'TYPE' && cur.exids.length) cur.exids[cur.exids.length-1].type = val;
     if (x.lv1tag === 'CREA' && tag === 'DATE') { cur.createdDate = val; x._inCrea = false; }
-    if (x.lv1tag === 'NAME' && tag === 'TRAN') {
+    if (x.lv1tag === 'NAME' && (tag === 'TRAN' || tag === '_TRAN')) {
       const _nt = { lang:'', nameRaw: val||'', given:'', surname:'' };
       if (x._curExtraNameIdx >= 0 && cur.extraNames[x._curExtraNameIdx]) {
         if (!cur.extraNames[x._curExtraNameIdx].nameTrans) cur.extraNames[x._curExtraNameIdx].nameTrans = [];
@@ -250,7 +250,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
       return; // nicht in _extra[]
     }
     // GED7: NAME/TRAN Sub-Tags (LANG, GIVN, SURN)
-    if (x.lv2tag === 'TRAN' && x.lv1tag === 'NAME' && x._curNameTrans) {
+    if ((x.lv2tag === 'TRAN' || x.lv2tag === '_TRAN') && x.lv1tag === 'NAME' && x._curNameTrans) {
       if      (tag === 'LANG') x._curNameTrans.lang    = val;
       else if (tag === 'GIVN') x._curNameTrans.given   = val;
       else if (tag === 'SURN') x._curNameTrans.surname = val;
