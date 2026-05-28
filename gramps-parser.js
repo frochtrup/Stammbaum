@@ -533,7 +533,7 @@ async function parseGRAMPS(file) {
   }
 
   // ─── Persons (second pass: build full objects) ─────────────────────────────
-  const _PERSON_MODELLED = new Set(['gender','name','eventref','objref','attribute','childof','parentin','noteref','citationref','personref','address']);
+  const _PERSON_MODELLED = new Set(['gender','name','eventref','objref','attribute','childof','parentin','noteref','citationref','personref','address','url']);
   for (const person of _byTag(doc, 'person')) {
     const h   = person.getAttribute('handle');
     if (!h) continue;
@@ -609,6 +609,9 @@ async function parseGRAMPS(file) {
       lastChanged: '', lastChangedTime: '',
       sourceRefs: new Set(),
       priv, _extra: pExtra, _grampsTags: pTags,
+      // GED7-Felder: werden ggf. bei Attribut-/URL-Parsing befüllt
+      noEvents: new Set(), exids: [], aliaNames: [], nameTrans: [], createdDate: '',
+      refns: [], aliases: [],
     };
 
     // Attributes
@@ -622,7 +625,16 @@ async function parseGRAMPS(file) {
       .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
       .filter(t => t && t.text);
     p._grampsAttrs = _byTag(person, 'attribute')
-      .filter(a => !_HANDLED_P_ATTRS.has(a.getAttribute('type') || ''))
+      .filter(a => {
+        const t = a.getAttribute('type') || '';
+        // GED7 noEvents: attribute type="No BIRT" value="Y" → p.noEvents
+        if (t.startsWith('No ') && (a.getAttribute('value') || '').toUpperCase() === 'Y') {
+          const evTag = t.slice(3).trim();
+          if (evTag) p.noEvents.add(evTag);
+          return false; // aus _grampsAttrs herausnehmen
+        }
+        return !_HANDLED_P_ATTRS.has(t);
+      })
       .map(a => {
         const atgt = { citations: [] };
         for (const cr of _byTag(a, 'citationref'))
@@ -633,6 +645,13 @@ async function parseGRAMPS(file) {
         if (aNote) obj.note = aNote;
         return obj;
       });
+
+    // GED7 EXID: <url> Elemente (vom GRAMPS-Writer für exids[] geschrieben) → p.exids[]
+    for (const urlEl of _byTag(person, 'url')) {
+      const href = urlEl.getAttribute('href') || '';
+      const type = urlEl.getAttribute('type') || '';
+      if (href) p.exids.push({ value: href, type });
+    }
 
     // Event refs
     for (const evRef of _byTag(person, 'eventref')) {
