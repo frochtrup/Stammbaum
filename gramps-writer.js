@@ -491,6 +491,9 @@ async function writeGRAMPS(db) {
     for (const t of (p._tasks||[])) {
       L.push(`      <attribute type="_TASK" value="${_esc(JSON.stringify(t))}"/>`);
     }
+    for (const rl of (p._rlog||[])) {
+      L.push(`      <attribute type="_RLOG" value="${_esc(JSON.stringify(rl))}"/>`);
+    }
 
     // Person associations (GEDCOM ASSO ↔ GRAMPS <personref>)
     for (const a of p.associations || []) {
@@ -564,6 +567,12 @@ async function writeGRAMPS(db) {
     }
 
     for (const a of f._grampsAttrs||[]) _attrXML('      ', a);
+    for (const t of (f._tasks||[])) {
+      L.push(`      <attribute type="_TASK" value="${_esc(JSON.stringify(t))}"/>`);
+    }
+    for (const rl of (f._rlog||[])) {
+      L.push(`      <attribute type="_RLOG" value="${_esc(JSON.stringify(rl))}"/>`);
+    }
 
     for (const nh of famNoteRefs[fId]||[]) {
       L.push(`      <noteref hlink="${_esc(nh)}"/>`);

@@ -85,6 +85,7 @@ const _PF_PILLS = [
   { field: 'www',           label: 'Website' },
 ];
 let _pfActivePills = new Set();
+let _pfGrampsAttrs = [];
 
 function _renderPills() {
   const container = document.getElementById('pf-field-pills');
@@ -192,6 +193,28 @@ function showPersonForm(id) {
   const saveNewBtn = document.getElementById('pfSaveNewBtn');
   if (saveNewBtn) saveNewBtn.hidden = !isNew;
 
+  // GRAMPS-Sektion: nur wenn grampId oder _grampsAttrs vorhanden (nie bei neuer Person)
+  _pfGrampsAttrs = (p?._grampsAttrs || []).map(a => ({ ...a }));
+  const grampsSection = document.getElementById('pf-gramps-section');
+  const hasGrampsData = !isNew && !!(p?.grampId || _pfGrampsAttrs.length > 0);
+  if (grampsSection) {
+    grampsSection.hidden = !hasGrampsData;
+    if (hasGrampsData) {
+      const gidEl = document.getElementById('pf-gramps-id');
+      if (gidEl) gidEl.value = p?.grampId || '';
+      const tagsRow = document.getElementById('pf-gramps-tags-row');
+      const tagsEl  = document.getElementById('pf-gramps-tags');
+      const tags = p?._grampsTags || [];
+      if (tagsRow && tagsEl) {
+        tagsRow.hidden = tags.length === 0;
+        tagsEl.innerHTML = tags.map(t =>
+          `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`
+        ).join('');
+      }
+      _renderPfGrampsAttrs();
+    }
+  }
+
   openModal('modalPerson');
 }
 
@@ -230,6 +253,49 @@ function _renderPfExtraNames() {
     row.appendChild(del);
     list.appendChild(row);
   });
+}
+
+function _renderPfGrampsAttrs() {
+  const list = document.getElementById('pf-gramps-attrs-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!_pfGrampsAttrs.length) {
+    const empty = document.createElement('div');
+    empty.className = 'tasks-empty';
+    empty.style.cssText = 'font-size:0.85em;padding:4px 0';
+    empty.textContent = 'Keine Attribute';
+    list.appendChild(empty);
+    return;
+  }
+  _pfGrampsAttrs.forEach((a, idx) => {
+    const row = document.createElement('div');
+    row.className = 'gramps-attr-row';
+    const typeEl = document.createElement('input');
+    typeEl.className = 'form-input';
+    typeEl.placeholder = 'Typ';
+    typeEl.value = a.type || '';
+    typeEl.addEventListener('input', () => { _pfGrampsAttrs[idx].type = typeEl.value; });
+    const valEl = document.createElement('input');
+    valEl.className = 'form-input';
+    valEl.placeholder = 'Wert';
+    valEl.value = a.value || '';
+    valEl.addEventListener('input', () => { _pfGrampsAttrs[idx].value = valEl.value; });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'padding:4px 10px;flex-shrink:0';
+    del.addEventListener('click', () => { _pfGrampsAttrs.splice(idx, 1); _renderPfGrampsAttrs(); });
+    row.appendChild(typeEl);
+    row.appendChild(valEl);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+function addPfGrampsAttr() {
+  _pfGrampsAttrs.push({ type: '', value: '', citations: [] });
+  _renderPfGrampsAttrs();
 }
 
 function addPfExtraName() {
@@ -350,6 +416,7 @@ function savePerson(openNew = false) {
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date()),
     nameCitations,
+    _grampsAttrs: _pfGrampsAttrs.filter(a => a.type || a.value),
     sourceRefs: new Set()
   };
   _rebuildPersonSourceRefs(AppState.db.individuals[id]);

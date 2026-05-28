@@ -615,7 +615,7 @@ async function parseGRAMPS(file) {
     };
 
     // Attributes
-    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL','_TASK']);
+    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL','_TASK','_RLOG']);
     const uidA   = _attr(person, '_UID');   if (uidA)  p.uid   = uidA.getAttribute('value')  || '';
     const statA  = _attr(person, '_STAT');  if (statA) p._stat = statA.getAttribute('value') || null;
     const resnA  = _attr(person, 'RESN');   if (resnA) p.resn  = resnA.getAttribute('value') || '';
@@ -624,6 +624,10 @@ async function parseGRAMPS(file) {
       .filter(a => a.getAttribute('type') === '_TASK')
       .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
       .filter(t => t && t.text);
+    p._rlog = _byTag(person, 'attribute')
+      .filter(a => a.getAttribute('type') === '_RLOG')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(r => r && (r.query || r.note));
     p._grampsAttrs = _byTag(person, 'attribute')
       .filter(a => {
         const t = a.getAttribute('type') || '';
@@ -930,7 +934,17 @@ async function parseGRAMPS(file) {
     f.noteText = f.noteTexts.join('\n\n');
 
     // Extra attributes (all <attribute> on family, with optional citations/notes)
+    const _HANDLED_F_ATTRS = new Set(['_TASK', '_RLOG']);
+    f._tasks = _byTag(fam, 'attribute')
+      .filter(a => a.getAttribute('type') === '_TASK')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(t => t && t.text);
+    f._rlog = _byTag(fam, 'attribute')
+      .filter(a => a.getAttribute('type') === '_RLOG')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(r => r && (r.query || r.note));
     f._grampsAttrs = _byTag(fam, 'attribute')
+      .filter(a => !_HANDLED_F_ATTRS.has(a.getAttribute('type') || ''))
       .map(a => {
         const atgt = { citations: [] };
         for (const cr of _byTag(a, 'citationref'))

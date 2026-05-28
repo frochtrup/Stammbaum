@@ -179,6 +179,29 @@ async function _grampsDeepTest() {
   }
   console.log(`  Familien: ${Object.keys(db1.families).length} geprüft, ${fFail} mit Delta`);
 
+  // ── 3b. _TASK / _RLOG ───────────────────────────────────────────────────────
+  let pT1=0,pT2=0,pR1=0,pR2=0, fT1=0,fT2=0,fR1=0,fR2=0, trFail=0;
+  for (const [id, p1] of Object.entries(db1.individuals)) {
+    const p2 = db2.individuals[id];
+    if (!p2) continue;
+    pT1 += p1._tasks?.length||0; pT2 += p2._tasks?.length||0;
+    pR1 += p1._rlog?.length||0;  pR2 += p2._rlog?.length||0;
+    if (!chkN(`${id}._tasks`, p1._tasks?.length||0, p2._tasks?.length||0)) trFail++;
+    if (!chkN(`${id}._rlog`,  p1._rlog?.length||0,  p2._rlog?.length||0))  trFail++;
+  }
+  for (const [id, f1] of Object.entries(db1.families)) {
+    const f2 = db2.families[id];
+    if (!f2) continue;
+    fT1 += f1._tasks?.length||0; fT2 += f2._tasks?.length||0;
+    fR1 += f1._rlog?.length||0;  fR2 += f2._rlog?.length||0;
+    if (!chkN(`${id}._tasks`, f1._tasks?.length||0, f2._tasks?.length||0)) trFail++;
+    if (!chkN(`${id}._rlog`,  f1._rlog?.length||0,  f2._rlog?.length||0))  trFail++;
+  }
+  console.log(`  _TASK  Personen: ${pT1}→${pT2} ${pT1===pT2?'✓':'✗'}   Familien: ${fT1}→${fT2} ${fT1===fT2?'✓':'✗'}`);
+  console.log(`  _RLOG  Personen: ${pR1}→${pR2} ${pR1===pR2?'✓':'✗'}   Familien: ${fR1}→${fR2} ${fR1===fR2?'✓':'✗'}`);
+  if (trFail) console.log(`  Δ _TASK/_RLOG: ${trFail} Einträge`);
+  else        console.log(`  _TASK/_RLOG: alle Zählungen OK`);
+
   // ── 4. Quellen ──────────────────────────────────────────────────────────────
   let sFail = 0;
   for (const [id, s1] of Object.entries(db1.sources)) {
@@ -451,6 +474,29 @@ async function _grampsDeepRoundtrip() {
   if (!sFail.length) console.log('  Alle Quellen OK');
   else console.warn(`  ${[...new Set(sFail)].length} Quellen mit Deltas`);
 
+  // ── _TASK / _RLOG ─────────────────────────────────────────────────────────
+  sec('_TASK / _RLOG');
+  let pT1=0,pT2=0,pR1=0,pR2=0, fT1=0,fT2=0,fR1=0,fR2=0, trFail=0;
+  for (const [id, p1] of Object.entries(db1.individuals)) {
+    const p2 = db2.individuals[id];
+    if (!p2) continue;
+    pT1 += p1._tasks?.length||0; pT2 += p2._tasks?.length||0;
+    pR1 += p1._rlog?.length||0;  pR2 += p2._rlog?.length||0;
+    if ((p1._tasks?.length||0) !== (p2._tasks?.length||0)) { chk(`${id}._tasks`, p1._tasks?.length||0, p2._tasks?.length||0); trFail++; }
+    if ((p1._rlog?.length||0)  !== (p2._rlog?.length||0))  { chk(`${id}._rlog`,  p1._rlog?.length||0,  p2._rlog?.length||0);  trFail++; }
+  }
+  for (const [id, f1] of Object.entries(db1.families)) {
+    const f2 = db2.families[id];
+    if (!f2) continue;
+    fT1 += f1._tasks?.length||0; fT2 += f2._tasks?.length||0;
+    fR1 += f1._rlog?.length||0;  fR2 += f2._rlog?.length||0;
+    if ((f1._tasks?.length||0) !== (f2._tasks?.length||0)) { chk(`${id}._tasks`, f1._tasks?.length||0, f2._tasks?.length||0); trFail++; }
+    if ((f1._rlog?.length||0)  !== (f2._rlog?.length||0))  { chk(`${id}._rlog`,  f1._rlog?.length||0,  f2._rlog?.length||0);  trFail++; }
+  }
+  console.log(`  _TASK  Personen: ${pT1}→${pT2} ${pT1===pT2?'✓':'✗'}   Familien: ${fT1}→${fT2} ${fT1===fT2?'✓':'✗'}`);
+  console.log(`  _RLOG  Personen: ${pR1}→${pR2} ${pR1===pR2?'✓':'✗'}   Familien: ${fR1}→${fR2} ${fR1===fR2?'✓':'✗'}`);
+  if (!trFail) console.log('  Alle OK');
+
   // ── Media ─────────────────────────────────────────────────────────────────
   sec('Medien (Stichprobe erste 20)');
   const allMedia1 = Object.values(db1.individuals).flatMap(p => p.media||[]);
@@ -576,6 +622,28 @@ async function runGrampsRoundtripTest() {
       if (!chk(`tag.${t1.name}.color`, t1.color, t2.color)) tFail++;
     }
     if (!tFail) log('  Alle OK');
+
+    log('\n── _TASK / _RLOG ──');
+    let pT1=0,pT2=0,pR1=0,pR2=0, fT1=0,fT2=0,fR1=0,fR2=0, trFail=0;
+    for (const [id, p1] of Object.entries(db1.individuals)) {
+      const p2 = db2.individuals[id];
+      if (!p2) continue;
+      pT1 += p1._tasks?.length||0; pT2 += p2._tasks?.length||0;
+      pR1 += p1._rlog?.length||0;  pR2 += p2._rlog?.length||0;
+      if ((p1._tasks?.length||0) !== (p2._tasks?.length||0)) { chk(`${id}._tasks`, p1._tasks?.length||0, p2._tasks?.length||0); trFail++; }
+      if ((p1._rlog?.length||0)  !== (p2._rlog?.length||0))  { chk(`${id}._rlog`,  p1._rlog?.length||0,  p2._rlog?.length||0);  trFail++; }
+    }
+    for (const [id, f1] of Object.entries(db1.families)) {
+      const f2 = db2.families[id];
+      if (!f2) continue;
+      fT1 += f1._tasks?.length||0; fT2 += f2._tasks?.length||0;
+      fR1 += f1._rlog?.length||0;  fR2 += f2._rlog?.length||0;
+      if ((f1._tasks?.length||0) !== (f2._tasks?.length||0)) { chk(`${id}._tasks`, f1._tasks?.length||0, f2._tasks?.length||0); trFail++; }
+      if ((f1._rlog?.length||0)  !== (f2._rlog?.length||0))  { chk(`${id}._rlog`,  f1._rlog?.length||0,  f2._rlog?.length||0);  trFail++; }
+    }
+    log(`  _TASK  Personen: ${pT1}→${pT2} ${pT1===pT2?'✓':'✗'}   Familien: ${fT1}→${fT2} ${fT1===fT2?'✓':'✗'}`);
+    log(`  _RLOG  Personen: ${pR1}→${pR2} ${pR1===pR2?'✓':'✗'}   Familien: ${fR1}→${fR2} ${fR1===fR2?'✓':'✗'}`);
+    if (!trFail) log('  Alle OK');
 
     const total = pass + fail;
     log(`\n${'─'.repeat(50)}`);

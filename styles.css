@@ -1133,6 +1133,16 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   border-radius: 3px; padding: 1px 7px; color: #fff;
   margin: 2px 4px 2px 0; vertical-align: middle;
 }
+.gramps-section-hd {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--gold); border-top: 1px solid var(--border);
+  padding-top: 10px; margin: 14px 0 10px;
+}
+.gramps-attr-row {
+  display: flex; gap: 6px; margin-bottom: 6px; align-items: center;
+}
+.gramps-attr-row .form-input { flex: 1; min-width: 0; }
+.gramps-id-input { opacity: 0.65; cursor: default; font-family: monospace; font-size: 0.9em; }
 .changed-dot {
   display: inline-block; width: 7px; height: 7px;
   border-radius: 50%; background: var(--gold);

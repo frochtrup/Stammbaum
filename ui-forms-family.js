@@ -2,6 +2,50 @@
 //  FORMS: FAMILY
 // ─────────────────────────────────────
 let _pendingAddChild = null;
+let _ffGrampsAttrs   = [];
+
+function _renderFfGrampsAttrs() {
+  const list = document.getElementById('ff-gramps-attrs-list');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!_ffGrampsAttrs.length) {
+    const empty = document.createElement('div');
+    empty.className = 'tasks-empty';
+    empty.style.cssText = 'font-size:0.85em;padding:4px 0';
+    empty.textContent = 'Keine Attribute';
+    list.appendChild(empty);
+    return;
+  }
+  _ffGrampsAttrs.forEach((a, idx) => {
+    const row = document.createElement('div');
+    row.className = 'gramps-attr-row';
+    const typeEl = document.createElement('input');
+    typeEl.className = 'form-input';
+    typeEl.placeholder = 'Typ';
+    typeEl.value = a.type || '';
+    typeEl.addEventListener('input', () => { _ffGrampsAttrs[idx].type = typeEl.value; });
+    const valEl = document.createElement('input');
+    valEl.className = 'form-input';
+    valEl.placeholder = 'Wert';
+    valEl.value = a.value || '';
+    valEl.addEventListener('input', () => { _ffGrampsAttrs[idx].value = valEl.value; });
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.textContent = '×';
+    del.className = 'btn btn-danger';
+    del.style.cssText = 'padding:4px 10px;flex-shrink:0';
+    del.addEventListener('click', () => { _ffGrampsAttrs.splice(idx, 1); _renderFfGrampsAttrs(); });
+    row.appendChild(typeEl);
+    row.appendChild(valEl);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+function addFfGrampsAttr() {
+  _ffGrampsAttrs.push({ type: '', value: '', citations: [] });
+  _renderFfGrampsAttrs();
+}
 
 function showFamilyForm(id, ctx) {
   closeModal('modalAdd');
@@ -37,6 +81,28 @@ function showFamilyForm(id, ctx) {
     if (ctx.wife !== undefined) document.getElementById('ff-wife').value = ctx.wife || '';
     if (ctx.addChild) {
       _pendingAddChild = ctx.addChild;
+    }
+  }
+
+  // GRAMPS-Sektion: nur wenn grampId oder _grampsAttrs vorhanden
+  _ffGrampsAttrs = (f?._grampsAttrs || []).map(a => ({ ...a }));
+  const ffGrampsSection = document.getElementById('ff-gramps-section');
+  const ffHasGramps = !!(f?.grampId || _ffGrampsAttrs.length > 0);
+  if (ffGrampsSection) {
+    ffGrampsSection.hidden = !ffHasGramps;
+    if (ffHasGramps) {
+      const gidEl = document.getElementById('ff-gramps-id');
+      if (gidEl) gidEl.value = f?.grampId || '';
+      const tagsRow = document.getElementById('ff-gramps-tags-row');
+      const tagsEl  = document.getElementById('ff-gramps-tags');
+      const tags = f?._grampsTags || [];
+      if (tagsRow && tagsEl) {
+        tagsRow.hidden = tags.length === 0;
+        tagsEl.innerHTML = tags.map(t =>
+          `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`
+        ).join('');
+      }
+      _renderFfGrampsAttrs();
     }
   }
 
@@ -77,6 +143,7 @@ function saveFamily() {
       return t;
     })(),
     media: _readMediaList('ff', existingFam.media || []),
+    _grampsAttrs: _ffGrampsAttrs.filter(a => a.type || a.value),
     sourceRefs: new Set(),
     lastChanged: gedcomDate(new Date()),
     lastChangedTime: gedcomTime(new Date())
