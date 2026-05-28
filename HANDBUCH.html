@@ -3256,8 +3256,10 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 <p>Stammbaum PWA unterstützt seit Version 8 auch <strong>GEDCOM 7.0</strong> — den seit 2021 gültigen aktuellen FamilySearch-Standard. Die Unterstützung ist zweigeteilt:</p>
 
 <ul>
-  <li><strong>Lesen:</strong> GEDCOM 7.0-Dateien werden automatisch erkannt und vollständig eingelesen — inklusive aller GED7-spezifischen Tags (NO, EXID, PHRASE, SNOTE, TRAN, ROLE). Ein lila <em>GED7</em>-Badge erscheint in der Topbar.</li>
-  <li><strong>Schreiben (opt-in):</strong> In den Einstellungen (☰ → Einstellungen → GEDCOM-Version) können Sie auf „7.0" umschalten. Die App exportiert dann GEDCOM 7.0-konforme Dateien — ohne <code>CONC</code>, ohne <code>CHAR UTF-8</code>, mit <code>ROLE</code> statt <code>RELA</code> und einem <code>SCHMA</code>-Deklarationsblock für alle Erweiterungen.</li>
+  <li><strong>Lesen:</strong> GEDCOM 7.0-Dateien werden automatisch erkannt und vollständig eingelesen — inklusive aller GED7-spezifischen Tags (<code>NO</code>, <code>EXID</code>, <code>PHRASE</code>, <code>SNOTE</code>, <code>TRAN</code>, <code>ROLE</code>). Ein lila <em>GED7</em>-Badge erscheint in der Topbar.</li>
+  <li><strong>Schreiben als GED7 (opt-in):</strong> In den Einstellungen (<span class="button-label">☰ → Einstellungen → GEDCOM-Version</span>) können Sie auf „7.0" umschalten. Die App exportiert dann GEDCOM 7.0-konforme Dateien — ohne <code>CONC</code>, ohne <code>CHAR UTF-8</code>, mit <code>ROLE</code> statt <code>RELA</code> und einem <code>SCHMA</code>-Deklarationsblock für alle Erweiterungen.</li>
+  <li><strong>Schreiben als GED5 (Downgrade):</strong> Bleibt die GEDCOM-Version auf 5.5.1, werden GED7-spezifische Felder automatisch umgewandelt: Externe IDs (<code>EXID</code>) → <code>REFN</code>; bestätigte Nicht-Ereignisse (<code>NO BIRT</code> etc.) → Notiz; Shared Notes (<code>SNOTE</code>) → <code>NOTE</code>. Kein Datenverlust — nur Formatwechsel.</li>
+  <li><strong>Export als GRAMPS (Adapter):</strong> Beim GRAMPS-Export werden GED7-Felder entsprechend umgewandelt: <code>NO</code>-Ereignisse → <code>&lt;attribute&gt;</code>; <code>EXID</code>-IDs → <code>&lt;url&gt;</code>; Datums-Beschreibung (<code>PHRASE</code>) → <code>datestr</code>-Feld. Vollständig roundtrip-fähig.</li>
 </ul>
 
 <h3>GED7-spezifische Felder in der Detailansicht</h3>
@@ -3271,6 +3273,7 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
   <tr><td>Externe IDs</td><td><code>EXID</code></td><td>Leseonly-Panel (FamilySearch ARK, WikiTree ID etc.)</td></tr>
   <tr><td>Alias-Namen</td><td><code>ALIA</code> (String)</td><td>Klartext-Aliase neben den @xref@-Verknüpfungen</td></tr>
   <tr><td>Namensübersetzungen</td><td><code>NAME / TRAN</code></td><td>Farbige Chips mit Sprachkürzel (z. B. <em>Jan Kováč <small>cs</small></em>)</td></tr>
+  <tr><td>Gemeinsame Notiz</td><td><code>SNOTE</code></td><td>Shared Note — wird beim Lesen als normale Notiz angezeigt; beim GED7-Export als <code>SNOTE</code> erhalten, beim GED5-Export als <code>NOTE</code> ausgegeben</td></tr>
 </table>
 
 <h3>Ortsübersetzungen</h3>
