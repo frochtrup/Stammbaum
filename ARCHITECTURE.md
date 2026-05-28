@@ -9,90 +9,40 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│          Stammbaum PWA v8.0 (v8-dev, sw v741)            │
-│  Keine externen Dependencies · Kein Build-Step           │
-│  Keine Frameworks · Kein Server                          │
+│      Stammbaum PWA v8.0 · vollständige Dateiliste:       │
+│      README.md  ·  sw-Version: ROADMAP.md                │
+│  Vanilla JS · Kein Framework · Kein Build-Step           │
+│  ~52 JS-Dateien · ~30 000 Zeilen                         │
 │                                                          │
-│  ── App-Shell ──────────────────────────────────────     │
-│  index.html              — HTML-Struktur, Script-Tags    │
-│  styles.css              — alle App-Styles               │
-│  offline.html            — Offline-Fallback              │
-│  manifest.json           — PWA-Manifest                  │
+│  ── App-Shell ───── index.html, styles.css,              │
+│                      offline.html, manifest.json         │
 │                                                          │
-│  ── Kern ───────────────────────────────────────────     │
-│  gedcom.js               — AppState/UIState, Labels,     │
-│                             Getter/Setter, JSDoc-Typen   │
-│  gedcom-parser.js        — parseGEDCOM() (5 Sub-Parser)  │
-│  gedcom-writer.js        — writeGEDCOM(), pushCont()     │
-│  gedcom-worker.js        — Web Worker (GEDCOM-Parse)     │
-│  gedcom-validator.js     — runValidation() (RAM-only)    │
-│  gramps-parser.js        — parseGRAMPS() async           │
-│  gramps-writer.js        — writeGRAMPS() → gzip Blob    │
+│  ── Kern ─────────── State/Labels/Typen (gedcom.js)      │
+│                       GEDCOM Parser · Writer · Worker    │
+│                       GRAMPS Parser · Writer             │
+│                       Validator (gedcom-validator.js)    │
 │                                                          │
-│  ── Speicher ───────────────────────────────────────     │
-│  storage-file.js         — IDB-Helfer, File System API,  │
-│                             Export, Import               │
-│  storage.js              — Auto-Load, Demo, Backup       │
+│  ── Speicher ──────── IDB + File System API              │
+│                        (storage-file.js, storage.js)    │
 │                                                          │
-│  ── Views ─────────────────────────────────────────     │
-│  ui-views.js             — gemeinsame Hilfsfunktionen    │
-│  ui-views-nav.js         — History-Navigation            │
-│  ui-views-undo.js        — Undo/Redo-Stack               │
-│  ui-views-person.js      — Personen-Detailansicht + List │
-│  ui-views-family.js      — Familien-Detailansicht + List │
-│  ui-views-source.js      — Quellen-Detailansicht + List  │
-│  ui-views-place.js       — Orte-Ansicht                  │
-│  ui-views-hof.js         — Höfe-Ansicht                  │
-│  ui-views-map.js         — Kartenansicht (3 Modi)        │
-│  ui-views-stats.js       — Statistik-Dashboard           │
-│  ui-views-tree.js        — Sanduhr-Baum + Tastatur-Nav   │
-│  ui-views-tasks.js       — Forschungsaufgaben            │
-│  ui-views-rlog.js        — Forschungsprotokoll           │
-│  ui-views-val.js         — Validierungspanel + Config    │
-│  ui-views-note.js        — Notizen                       │
-│  ui-views-search.js      — Suche                         │
-│  ui-event-delegation.js  — _CLICK_MAP, document-Listener │
+│  ── Views ─────────── ~22 Dateien:                       │
+│                        Listen + Detail (Pers/Fam/Quell)  │
+│                        Baum: Sanduhr + Nachkommen        │
+│                        Fan Chart · Zeitleiste · Karte    │
+│                        Story · Statistik · Suche         │
+│                        Aufgaben · RLOG · Validierung     │
+│                        Nav · Undo · Event-Delegation     │
 │                                                          │
-│  ── Diagramme ─────────────────────────────────────     │
-│  ui-fanchart.js          — Fan Chart (SVG)               │
-│  ui-desc-tree.js         — Nachkommen-Baum (SVG)         │
-│  ui-timeline.js          — Zeitleiste (Swim-Lane)        │
-│  ui-chart-export.js      — Diagramm-Export als PNG       │
-│  timeline-hist-events.js — Historische Ereignisse        │
+│  ── Formulare ──────── Person · Familie · Ereignis       │
+│                         Archiv · Medien (5 Dateien)      │
 │                                                          │
-│  ── Story ─────────────────────────────────────────     │
-│  ui-story.js             — Story-Kern, Shared Core       │
-│  ui-story-person.js      — Personen-Story                │
-│  ui-story-fam.js         — Familien-Story                │
-│  story-epochs.js         — Epochen-Tabelle               │
+│  ── Tools ─────────── Duplikat-Erkennung · Import-Merge  │
+│                        Druck · Buchgenerator · Debug     │
 │                                                          │
-│  ── Formulare ─────────────────────────────────────     │
-│  ui-forms.js             — Source-Widget, Utils          │
-│  ui-forms-person.js      — Person-Formular               │
-│  ui-forms-family.js      — Familie-Formular              │
-│  ui-forms-event.js       — Event-Formular                │
-│  ui-forms-repo.js        — Archiv-Formular + Picker      │
-│  ui-media.js             — Medien Add/Edit/Delete        │
+│  ── OneDrive ──────── OAuth PKCE · Import · File-I/O     │
 │                                                          │
-│  ── Tools ─────────────────────────────────────────     │
-│  ui-dedup.js             — Duplikat-Erkennung + Merge    │
-│  compare-engine.js       — Datei-Vergleichs-Engine       │
-│  ui-import-compare.js    — Merge-Assistent (2-Panel)     │
-│  ui-print.js             — Ahnenliste + Familienbogen    │
-│  ui-book.js              — Buchgenerator                 │
-│  ui-debug.js             — Debug-Hilfsfunktionen         │
-│  debug-activate.js       — lädt debug-gramps.js bei ?debug=1│
-│  debug-gramps.js         — GRAMPS-Roundtrip-Tests        │
-│                                                          │
-│  ── OneDrive ──────────────────────────────────────     │
-│  onedrive-auth.js        — OAuth2 PKCE                   │
-│  onedrive-import.js      — Foto-Import, Ordner-Browser   │
-│  onedrive.js             — Media-URL, Upload, File-I/O   │
-│                                                          │
-│  ── Service Worker / Assets ───────────────────────     │
-│  sw.js                   — Service Worker (Cache v741)   │
-│  leaflet.js / leaflet.css — Karte (lokal, kein CDN)      │
-│  demo.ged                — Demo-GEDCOM (12 Pers.)        │
+│  ── Service Worker ── sw.js (Network-first + 4s Timeout) │
+│  ── Assets ────────── Leaflet · demo.ged                 │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -145,16 +95,7 @@ markChanged(); renderTab();
 
 **Entscheidung:** GEDCOM-Text primär in IndexedDB gecacht. localStorage ist stiller Fallback.
 
-```
-IDB-Keys: 'stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename'
-          'img:<filePath>'     ← Medien-Cache (base64 Data-URL), pfad-basiert
-          'od_base_path'       ← absoluter OneDrive-Pfad des GED-Ordners
-          'od_photo_folder'    ← { id, name, relPath }
-          'od_docs_folder'     ← { id, name, relPath }
-          'privacy_anon'       ← DSGVO-Anonymisierung aktiv
-          'ged_export_version' ← '5.5.1' | '7.0'
-          — LEGACY (Fallback): od_default_folder, od_doc_folder, od_filemap, od_doc_filemap
-```
+**Vollständige IDB-Key-Tabelle:** → `DATAMODEL.md` → IDB-Keys
 
 **Warum IDB:** localStorage-Limit ~5–10 MB; MeineDaten.ged ≈ 5 MB war grenzwertig. Es wird der GEDCOM-Text gecacht, **nicht** das `db`-Objekt — `Set`-Objekte (`sourceRefs`) lassen sich nicht mit `JSON.stringify` serialisieren.
 
@@ -454,4 +395,3 @@ restoreFileHandle() (bei Seitenreload):
 | Cmd+Z = „Revert to Saved" | Keyboard-Shortcut löst IDB-Restore aus, nicht den Undo-Stack (`pushUndo`/`applyUndo`) | Backlog |
 | Mehrere inline INDI-Notes beim Editieren zusammengeführt | `ui-forms.js` joind `noteTexts[]` beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit; Toast-Warnung wenn voll | Bekannt |
-| `gedcom-validator.js` / `timeline-hist-events.js` fehlen in SW PRECACHE | Dateien nicht in `sw.js` PRECACHE → offline nicht verfügbar | Bug |

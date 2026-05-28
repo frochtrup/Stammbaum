@@ -61,7 +61,7 @@
 | `_MREL` | 2 | `famc[].mrel` + `famc[].mrelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
 | `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
 | `ALIA` | 1 | `aliases[]` / `aliaNames[]` | @xref@-Zeiger → `aliases[]`; Name-String (GED7) → `aliaNames[]` |
-| `ASSO` | 1 | `associations[].{xref,role,note,citations[]}` | Assoziationsbeziehung (Pate, Zeuge …); read+write; editierbar seit ASSO-EDIT v734 |
+| `ASSO` | 1 | `associations[].{xref,_grampsHlink,role,note,sources[],sourcePages{},sourceQUAY{}}` | Assoziationsbeziehung (Pate, Zeuge …); read+write; editierbar seit ASSO-EDIT v734 |
 | `RELA` | 2 | `associations[].role` | GED5-Beziehungsrolle (Freitext, z. B. „Godparent") |
 | `ROLE` | 2 | `associations[].role` | GED7-Beziehungsrolle (Enum: GODP, WITN …); Parser liest beide → `.role` |
 | `NO` | 1 | `noEvents: Set<string>` | GED7: bestätigtes Fehlen eines Ereignisses (z. B. `NO BIRT`) |

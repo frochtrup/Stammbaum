@@ -93,7 +93,7 @@ let changed = false;  // Ungespeicherte Änderungen?
   associations: [{
     xref:         '@I002@',     // GEDCOM-Xref der verknüpften Person (null bei GRAMPS-only-Herkunft)
     _grampsHlink: 'h1a2b3c',   // GRAMPS-Handle (null bei GEDCOM-Herkunft; für Roundtrip-Fidelity)
-    rela:         'Witness',    // RELA-Wert / GRAMPS rel-Attribut
+    role:         'Witness',    // RELA (GED5) / rel (GRAMPS) / ROLE (GED7) — unified per ADR-018
     note:         '',           // optionale Notiz (2 NOTE / GRAMPS noteref)
     sources:      [],           // SOUR-Xrefs (2 SOUR)
     sourcePages:  {},           // PAGE je Quelle
@@ -268,33 +268,53 @@ birth.sourceMedia['@S4@'] = [
 
 ## JavaScript-Sektionen
 
-Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → `storage-file.js` → `storage.js` → `ui-views.js` → `ui-views-person.js` → … → `ui-forms.js` → …
+Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → `storage-file.js` → `storage.js` → `ui-views.js` → … → `ui-forms.js` → … → `ui-event-delegation.js` (muss letztes `<script>` sein).
 
 | Sektion | Datei | Hauptfunktionen |
 |---|---|---|
-| State & IDs | gedcom.js | `nextId(prefix)`, AppState/UIState |
-| GEDCOM Parser | gedcom-parser.js | `parseGEDCOM(text)`, `parseGeoCoord(val)`, `parseGedDate()` |
+| State & IDs | gedcom.js | `nextId(prefix)`, AppState/UIState, JSDoc-Typen (12 Typen) |
+| GEDCOM Parser | gedcom-parser.js | `parseGEDCOM(text)`, `parseGeoCoord(val)`, 5 Sub-Parser |
 | GEDCOM Writer | gedcom-writer.js | `writeGEDCOM()`, `writeINDIRecord()`, `writeFAMRecord()`, `eventBlock()`, `geoLines()` |
-| IndexedDB + File I/O | storage-file.js | `_getIDB()`, `idbGet()`, `idbPut()`, `idbDel()`, `exportGEDCOM()`, `saveToFileHandle()`, `readFile()` |
+| GRAMPS Parser | gramps-parser.js | `parseGRAMPS(file)` async |
+| GRAMPS Writer | gramps-writer.js | `writeGRAMPS(db)` → gzip Blob |
+| Validierungsengine | gedcom-validator.js | `runValidation(db, config)` → RAM-Befundbericht (25 Regeln) |
+| Web Worker | gedcom-worker.js | GEDCOM-Parse im Worker mit `onProgress`-Callback (5 %-Schritte) |
+| IndexedDB + File I/O | storage-file.js | `idbGet()`, `idbPut()`, `idbDel()`, `exportGEDCOM()`, `saveToFileHandle()`, `readFile()` |
 | Demo / Backup / Init | storage.js | `loadDemo()`, `tryAutoLoad()`, `fotoExport()` |
-| Navigation + Event-Delegation | ui-views.js | `showView()`, `showMain()`, `showTree()`, `goBack()`, `setBnavActive()`, `_CLICK_MAP` |
-| Personen-Liste + Detail | ui-views-person.js | `renderPersonList()`, `filterPersons()`, `showDetail()` |
-| Familien-Liste + Detail | ui-views-family.js | `renderFamilyList()`, `filterFamilies()`, `showFamilyDetail()` |
+| Gemeinsame Hilfsfunktionen | ui-views.js | `showView()`, `showMain()`, `setBnavActive()`, `factRow()`, `srcNum()`, `esc()`, `showToast()`, `evGeoLink()` |
+| History-Navigation | ui-views-nav.js | `goBack()`, `goForward()`, `_captureCurrentNavState()`, `openDetailHistory()` |
+| Undo/Redo | ui-views-undo.js | `pushUndo()`, `applyUndo()`, `applyRedo()` |
+| Event-Delegation | ui-event-delegation.js | `_CLICK_MAP` (~100 Einträge), document-Listener (click/change/input/blur) |
+| Personen-Liste + Detail | ui-views-person.js | `renderPersonList()`, `filterPersons()`, `showDetail()`, `exportPersonsCsv()` |
+| Familien-Liste + Detail | ui-views-family.js | `renderFamilyList()`, `filterFamilies()`, `showFamilyDetail()`, `exportFamiliesCsv()` |
 | Quellen-Liste + Detail + Archiv | ui-views-source.js | `renderSourceList()`, `filterSources()`, `showSourceDetail()`, `showRepoDetail()` |
-| Stammbaum | ui-views-tree.js | `showTree()`, `mkCard()`, `line()`, `_treeShortName()`, `treeNavBack()` |
+| Orte-System | ui-views-place.js | `collectPlaces()`, `renderPlaceList()`, `showPlaceDetail()`, `savePlace()` |
+| Höfe-Ansicht | ui-views-hof.js | `buildHofIndex()`, `renderHofList()`, `showHofDetail()` |
+| Kartenansicht | ui-views-map.js | `initOrRefreshPlaceMap()`, `switchMapMode()`, `showPersonOnMap()` |
+| Forschungsaufgaben | ui-views-tasks.js | `bnavTasks()`, `renderTaskList()`, `saveTask()`, `exportTasksMd()` |
+| Forschungsprotokoll | ui-views-rlog.js | `showAddRlogForm()`, `_saveRlog()`, `exportRlogMd()` |
+| Validierungspanel | ui-views-val.js | `_renderValidationPanel()`, `openValConfig()`, `saveValConfig()` |
+| Statistik-Dashboard | ui-views-stats.js | `showStats()` |
+| Globale Suche | ui-views-search.js | `renderSearchResults()` |
+| Notizen | ui-views-note.js | `showNoteDetail()` |
+| Sanduhr-Baum | ui-views-tree.js | `showTree()`, `mkCard()`, `_treeShortName()` |
+| Nachkommen-Baum | ui-desc-tree.js | `showDescTree()`, `toggleDescTree()`, `setDescTreeGens()` |
 | Fan Chart | ui-fanchart.js | `showFanChart()` |
-| Orte-System | ui-views.js | `collectPlaces()`, `renderPlaceList()`, `showPlaceDetail()`, `savePlace()` |
-| Render-Helfer | ui-views.js | `factRow()`, `srcNum()`, `sourceTagsHtml()`, `relRow()` |
+| Zeitleiste | ui-timeline.js | `showTimeline()`, `_renderTlH()`, `_renderTlV()` |
+| Diagramm-Export | ui-chart-export.js | `exportChartAsPng()` |
+| Story (Kern + Person + Familie) | ui-story.js, ui-story-person.js, ui-story-fam.js | `showStory()`, `downloadStory()`, `showFamilyStory()` |
 | Person-Formular | ui-forms-person.js | `showPersonForm()`, `savePerson()` |
 | Familie-Formular | ui-forms-family.js | `showFamilyForm()`, `saveFamily()` |
-| Quellen-Formular + Widget | ui-forms.js | `showSourceForm()`, `saveSource()`, `initSrcWidget()`, `renderSrcTags()`, `toggleSrc()`, `updateSrcPage()` |
+| Quellen-Formular + Widget | ui-forms.js | `showSourceForm()`, `saveSource()`, `initSrcWidget()`, `renderSrcTags()` |
 | Event-Formular | ui-forms-event.js | `showEventForm()`, `saveEvent()`, `deleteEvent()` |
 | Archiv-Formular + Picker | ui-forms-repo.js | `showRepoForm()`, `saveRepo()`, `showRepoPicker()` |
 | Medien | ui-media.js | `openAddMediaDialog()`, `confirmAddMedia()`, `deletePersonMedia()` |
+| Duplikat-Erkennung | ui-dedup.js | `showDedupPanel()`, `mergePersons()` |
+| Import-Vergleich | compare-engine.js, ui-import-compare.js | `cmpLoadFile()`, `cmpMatchPersons()`, `showImportCompare()` |
+| Druck + Buchgenerator | ui-print.js, ui-book.js | `printAhnenliste()`, `printFamilienbogen()` |
 | OneDrive Auth | onedrive-auth.js | `_odConnect()`, `_odLogout()`, `_odRefreshTokenSilent()` |
 | OneDrive Import | onedrive-import.js | `_odShowFolder()`, `_odPickSelectFile()` |
 | OneDrive File I/O | onedrive.js | `_odGetMediaUrlByPath()`, `_odSaveFile()`, `openSettings()` |
-| Utils | ui-views.js / ui-forms.js | `esc()`, `showToast()`, `openModal()`, `closeModal()` |
 
 ---
 

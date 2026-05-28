@@ -68,6 +68,7 @@ stammbaum/
 ├── gramps-parser.js    ← parseGRAMPS() — GRAMPS XML-Import (read-only)
 ├── gramps-writer.js    ← writeGRAMPS() — GRAMPS XML-Export (gzip Blob)
 ├── debug-gramps.js     ← Debug-Tools für GRAMPS-Roundtrip (nur bei ?debug=1)
+├── debug-activate.js   ← lädt debug-gramps.js dynamisch nur bei ?debug=1
 ├── gedcom-worker.js    ← Web Worker: parseGEDCOM() mit onProgress-Callback (5%-Schritte)
 ├── ui-views-map.js     ← Kartenansicht (Leaflet, Orte- und Personen-Modus, Animation)
 ├── ui-views-place.js   ← Orte-Ansicht: collectPlaces(), renderPlaceList(), showPlaceDetail()
@@ -85,10 +86,10 @@ stammbaum/
 ├── leaflet.css         ← Leaflet CSS
 ├── demo.ged            ← Demo-GEDCOM (12 Pers., 6 Fam., 3 Quellen, 4 Medien)
 ├── offline.html        ← Offline-Fallback (self-contained, kein ext. CSS/JS)
-├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v715)
+├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v742)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── test.html           ← Standalone GEDCOM Roundtrip-Tester (kein UI, Drag-Drop .ged)
-├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v715)
+├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v741)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
@@ -96,7 +97,8 @@ stammbaum/
 ├── GEDCOM.md           ← Parser/Writer-Referenz, alle unterstützten Tags
 ├── ROADMAP.md          ← Phasen-Übersicht, offene Features, bekannte Probleme
 ├── CHANGELOG.md        ← vollständige Sprint-Geschichte v1.0–v8.0
-└── MEMORY.md           ← Projekt-Memory für KI-Kontext
+├── MEMORY.md           ← Projekt-Memory für KI-Kontext
+└── specs/              ← Feature-Specs für Backlog-Items (F11-OCR.md etc.)
 ```
 
 ---
@@ -287,7 +289,7 @@ stammbaum/
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
 **GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
-**Version 8.0** — Mai 2026 — `v8-dev` · sw v715
+**Version 8.0** — Mai 2026 — `v8-dev` · sw v742
 
 ---
 
