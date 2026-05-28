@@ -636,9 +636,9 @@ Ersetzt viele `REFN`-Verwendungen. Landet aktuell im Passthrough. Read-only roun
 | Szenario | Status | Details |
 |---|---|---|
 | GEDCOM 5.5.1 lesen → schreiben | ✅ Stabil | Keine Änderung |
-| GEDCOM 7.0 lesen → schreiben | ⚠ Teilweise | `SNOTE`, `NO`, `ROLE`, `EXID`, `ALIA`-Strings im Passthrough — preserved, aber nicht semantisch verarbeitet |
-| GEDCOM 5.5.1 aus App → Import in 7.0-Tool | ⚠ Validierungswarnungen | `CONC`, `CHAR`, `_`-Tags ohne SCHMA, `RELA` statt `ROLE` |
-| GEDCOM 7.0 aus App schreiben | ❌ Nicht implementiert | Erfordert Writer-Update |
+| GEDCOM 7.0 lesen → schreiben | ✅ Stabil (ab v725) | `NO`/`EXID`/`ROLE`/`PHRASE`/`TRAN`/`ALIA`-Strings semantisch verarbeitet; `SNOTE` in `db.notes` |
+| GEDCOM 5.5.1 aus App → Import in 7.0-Tool | ⚠ Validierungswarnungen | `CONC`, `CHAR`, `_`-Tags ohne SCHMA (geplant: F6 Strict Export) |
+| GEDCOM 7.0 aus App schreiben | ✅ Implementiert (opt-in ab v726) | Toggle in modalSettings; kein CONC, kein CHAR, SCHMA-Block, ROLE statt RELA |
 
 ---
 
@@ -741,15 +741,16 @@ Der Parser erkennt beim Lesen von GED5-Dateien `_TRAN` unter PLAC/NAME direkt (n
 - `SNOTE` → GRAMPS `<note>`-Record
 - GED7 → GRAMPS: GRAMPS Notes → `SNOTE`; non-Primary eventref → `ASSO / ROLE WITN`
 
-**Phase 4 — UI (GEDCOM-7-4, S):**
-- `datePhrase` kursiv unter codiertem Datum im Event-Detail
-- „Kein Eintrag bekannt (NO)"-Checkbox auf Event-Karte (setzt/löscht `noEvents`)
-- EXID read-only Panel neben REFN in Personen-Detail
-- `aliaNames[]` im Personen-Detail neben @xref@-Aliases
-- Übersetzungs-Editor für `placTrans[]`/`nameTrans[]`: Sprach-Chip + Wert-Input auf Ort-/Namen-Formular
-- Export-Version-Toggle in modalSettings
+**Phase 4 — UI (GEDCOM-7-4, S) — implementiert sw v733:**
+- `datePhrase` kursiv unter codiertem Datum in allen Event-Zeilen (BIRT/CHR/DEAT/BURI + Array)
+- `noEvents` als ✗-Badges (`no-ev-badge`) in `fact-row--no-ev`
+- `exids[]` read-only Panel neben REFN in Personen-Detail
+- `aliaNames[]` Textaliase in Personen-Detail
+- `nameTrans[]` read-only Chips (`tran-chip` / `tran-lang`) in Personen-Detail
+- Übersetzungs-Editor für `extraPlaces[].trans[]` inline in Ort-Detail (`addPlaceTrans`/`deletePlaceTrans`)
+- GED7-Exportmenü: `grampsExportBtn` wenn GED7-Datei geladen
 
-**Gesamtaufwand: L (5–7 Sprints)**
+**Gesamtaufwand: L — ABGESCHLOSSEN (sw v725–v733)**
 
 ---
 

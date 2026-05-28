@@ -60,9 +60,13 @@
 | `_FREL` | 2 | `famc[].frel` + `famc[].frelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
 | `_MREL` | 2 | `famc[].mrel` + `famc[].mrelSeen` | Legacy (Ancestris-Format) — wird beim Lesen alter Dateien erkannt; Writer gibt PEDI aus |
 | `FAMS` | 1 | `fams[]` | Elternteil-in-Familie |
-| `ALIA` | 1 | `aliases[]` | Verweis auf identische/gleichnamige Person (@xref@); nur @-Referenzen geparst |
-| `ASSO` | 1 | `associations[].{xref,rela,note,sources,sourcePages,sourceQUAY}` | Assoziationsbeziehung (Pate, Zeuge, Informant …); read+write; Anzeige in Detailansicht (ASSO-DISP v698); Editieren noch nicht möglich (ASSO-EDIT in Roadmap) |
-| `RELA` | 2 | `associations[].rela` | Beziehungstyp unter ASSO (z. B. „Godparent", „Witness") |
+| `ALIA` | 1 | `aliases[]` / `aliaNames[]` | @xref@-Zeiger → `aliases[]`; Name-String (GED7) → `aliaNames[]` |
+| `ASSO` | 1 | `associations[].{xref,role,note,citations[]}` | Assoziationsbeziehung (Pate, Zeuge …); read+write; editierbar seit ASSO-EDIT v734 |
+| `RELA` | 2 | `associations[].role` | GED5-Beziehungsrolle (Freitext, z. B. „Godparent") |
+| `ROLE` | 2 | `associations[].role` | GED7-Beziehungsrolle (Enum: GODP, WITN …); Parser liest beide → `.role` |
+| `NO` | 1 | `noEvents: Set<string>` | GED7: bestätigtes Fehlen eines Ereignisses (z. B. `NO BIRT`) |
+| `EXID` | 1 | `exids[].{value, type}` | GED7: externe ID (FamilySearch ARK, WikiTree …); TYPE als Unterfeld |
+| `CREA` | 1 | `createdDate` | GED7: Erstellungsdatum des Records |
 | `CHAN` | 1 | `lastChanged` | Letztes Änderungsdatum |
 
 ### FAM (Familie)
@@ -105,8 +109,46 @@
 | `EMAIL` | 1 | `email` | E-Mail-Adresse |
 | `CHAN` | 1 | `lastChanged` | via `2 DATE` |
 
-### NOTE (Notiz-Record)
-Werden beim Parsen in `notes`-Map gespeichert und beim Anzeigen über `noteRefs` aufgelöst. Werden beim Export als Inline-NOTE zurückgeschrieben (Record-Struktur geht verloren).
+### NOTE / SNOTE (Notiz-Record)
+Werden beim Parsen in `notes`-Map gespeichert (`n.type: 'NOTE'|'SNOTE'`) und beim Anzeigen über `noteRefs` aufgelöst. Werden beim Export als Inline-NOTE zurückgeschrieben (Record-Struktur geht verloren). Writer gibt `0 NOTE` oder `0 SNOTE` je nach `n.type` aus.
+
+---
+
+## GEDCOM 7.0 — Unterstützung
+
+Stammbaum PWA kann GEDCOM 7.0-Dateien lesen und (opt-in) als GEDCOM 7.0 exportieren (`db.gedVersion === '7.0'`). Standardformat für neue Dateien bleibt GEDCOM 5.5.1.
+
+### Neue/geänderte Tags in GED7
+
+| Tag | Kontext | Feld | Verhalten |
+|---|---|---|---|
+| `NO` | INDI lv=1 | `p.noEvents: Set<string>` | Explizites Fehlen eines Ereignisses; GED5-Downgrade: `1 NOTE Kein bekanntes Ereignis: TAG` |
+| `EXID` | INDI lv=1 | `p.exids[].{value, type}` | Externe IDs; GED5-Downgrade: `1 REFN` + `2 TYPE` |
+| `CREA` | INDI lv=1 | `p.createdDate` | Erstellungsdatum; nur im GED7-Writer ausgegeben |
+| `SNOTE` | lv=0 Record | `db.notes[id]` mit `type:'SNOTE'` | Geteilte Notizen; Writer gibt `0 SNOTE` statt `0 NOTE` aus |
+| `PHRASE` | unter `DATE` | `ev.datePhrase` | Freitext-Datumsangabe; dargestellt als kursiver Block neben dem Strukturdatum |
+| `ROLE` | unter `ASSO` | `associations[].role` | GED7-Enum; Parser liest `RELA` (GED5) und `ROLE` (GED7) → beide in `.role` |
+| `TRAN` | unter `NAME` | `p.nameTrans[]` | Namensübersetzung; GED5-Writer gibt `2 _TRAN` aus |
+| `TRAN` / `_TRAN` | unter `PLAC` | `extraPlaces[name].trans[]` | Ortsübersetzung; zentraler Registry-Eintrag (nicht auf Event-Ebene) |
+| `ALIA` (String) | INDI lv=1 | `p.aliaNames[]` | GED7 Name-String (kein @xref@); GED5 ALIA waren ausschließlich @xref@-Zeiger |
+
+### Writer: GED5 vs. GED7 Unterschiede
+
+| Feature | GED5 (Standard) | GED7 (opt-in) |
+|---|---|---|
+| Ortsübersetzungen | `3 _TRAN value` / `4 LANG lang` | `3 TRAN value` / `4 LANG lang` |
+| Namensübersetzungen | `2 _TRAN` / `3 LANG` / `3 GIVN` / `3 SURN` | `2 TRAN` / `3 LANG` / `3 GIVN` / `3 SURN` |
+| Externe IDs | `1 REFN value` + `2 TYPE type` | `1 EXID value` + `2 TYPE type` |
+| Fehlendes Ereignis | `1 NOTE Kein bekanntes Ereignis: BIRT` | `1 NO BIRT` |
+| Geteilte Notizen | `0 NOTE @xref@` | `0 SNOTE @xref@` |
+| CONC | erlaubt bei langen Zeilen | nicht erlaubt (nur CONT) |
+| CHAR UTF-8 | `1 CHAR UTF-8` im HEAD | nicht mehr vorhanden |
+| GEDC/VERS | `2 VERS 5.5.1` | `2 VERS 7.0` |
+| SCHMA | nicht vorhanden | `1 SCHMA` mit `2 TAG _xyz https://...` für alle `_`-Tags |
+
+### GED7-Export aktivieren
+
+In **Einstellungen** (☰ → Einstellungen): Toggle „GEDCOM-Version: 7.0" aktivieren. Der Export-Button im Menü wechselt auf „Als GEDCOM 7.0 exportieren". Wenn eine GED7-Datei geladen ist, erscheint zusätzlich der Button „Als GRAMPS exportieren".
 
 ---
 

@@ -9,6 +9,42 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-27 — ASSO-EDIT: Assoziationen editierbar (sw v734)
+
+- **sw v734** `feat(asso)`: ASSO-EDIT — Assoziationen in der Personen-Detailansicht vollständig editierbar:
+  - **`modalAsso`** (index.html): neues Bottom-Sheet mit Rollen-Select (Godparent / Witness / Informant / Friend / Associate / Eigene Rolle) + Notiz-Textfeld + Hidden-Fields für anchor-pid, target-pid, edit-idx
+  - **Person-Picker**: neuer `'asso'`-Modus in `renderRelPicker()` und `relPickerSelect()` (ui-views-family.js); filtert nur die Ankerperson heraus
+  - **Neue Funktionen** (ui-views-person.js): `showAddAssoFlow(pid)`, `showAssoRoleStep(anchorPid, assoPid, editIdx)`, `assoRoleChange()`, `saveAsso()`, `deleteAsso(pid, idx)`
+  - **Assoziationen-Section** komplett überarbeitet: jeder gespeicherte Eintrag mit ✎ (Bearbeiten) + × (Entfernen); Notiz unterhalb des Personen-Chips; abgeleitete Patenkinder bleiben read-only (`asso-chip--derived`); `+ Hinzufügen`-Button im Section-Header
+  - **`ui-event-delegation.js`**: neue Actions `showAddAssoFlow`, `editAsso`, `deleteAsso`, `saveAsso`, `assoRoleChange`
+  - Roundtrip unverändert stabil (ASSO-Writer war bereits korrekt)
+
+---
+
+### Session 2026-05-27 — GEDCOM-7-4: GED7-UI-Elemente (sw v733)
+
+- **sw v733** `feat(ged7)`: GEDCOM-7-4 — Darstellung GED7-spezifischer Felder in der Personen-Detailansicht:
+  - **`datePhrase`** kursiv: `_dpHtml(obj)` → `<em class="date-phrase">` unterhalb der strukturierten Datumszeile in allen Event-Reihen (BIRT, CHR, DEAT, BURI, Array-Events)
+  - **`noEvents`** als ✗-Badges: alle Tags in `p.noEvents` als `<span class="no-ev-badge">✗ Ereignis</span>` in einer `fact-row--no-ev`-Zeile
+  - **`exids[]` Panel**: externer ID-Block neben `refns[]`; Label `EXID (Typ)` oder `EXID`; read-only
+  - **`aliaNames[]`**: Text-Aliase als plain `fact-row` (ohne @xref@-Verlinkung)
+  - **`nameTrans[]`**: read-only Namensübersetzungs-Chips mit `tran-chip` + `tran-lang`-Stil
+  - **Übersetzungs-Editor für Orte** (ui-views-place.js): in `showPlaceDetail()` inline-Editor für `extraPlaces[].trans[]`; Funktionen `addPlaceTrans()` / `deletePlaceTrans(idx)` via `AppState.currentPlaceName`; Actions in ui-event-delegation.js
+  - **`styles.css`**: neue Klassen `.date-phrase`, `.fact-row--no-ev`, `.no-ev-badge`, `.tran-chip`, `.tran-lang`, `.tran-add-row`
+
+---
+
+### Session 2026-05-27 — GEDCOM-7-3: Cross-Transfer-Adapter (sw v732)
+
+- **sw v732** `feat(ged7)`: GEDCOM-7-3 — GED5/GED7-Adapter für Tag-Namensräume und Format-Downgrade:
+  - **`_writePlacTrans()`** (gedcom-writer.js): unified für GED5 (`2 _TRAN`) und GED7 (`2 TRAN`) — Tag-Auswahl via `_ged7 ? 'TRAN' : '_TRAN'`; wird in `eventBlock()` und allen Array-Event-Pfaden aufgerufen (kein `if (_ged7)`-Guard mehr)
+  - **`nameTrans[]` in GED5**: Writer gibt `2 _TRAN` / `3 LANG` / `3 GIVN` / `3 SURN` in GED5-Modus aus (vorher nur GED7); Parser erkennt `_TRAN` und `TRAN` symmetrisch unter PLAC und NAME
+  - **GED5-Downgrade-Block**: wenn `!_ged7` → `p.exids[]` → `1 REFN` + `2 TYPE`; `p.noEvents[]` → `1 NOTE Kein bekanntes Ereignis: TAG`
+  - **GRAMPS-Adapter** (gramps-writer.js): `noEvents` → `<attribute type="No EVENT" value="Y"/>`; `exids[]` → `<url href="..." type="..."/>`; `datePhrase` → `<datestr val="..."/>` als Fallback wenn kein strukturiertes Datum parsbar
+  - **GED7-Exportmenü**: `grampsExportBtn` in modalMenu (index.html) — sichtbar nur wenn `db.gedVersion === '7.0'`; `menuExportGramps`-Action; `_odUpdateUI()` aktualisiert Sichtbarkeit und Button-Label
+
+---
+
 ### Session 2026-05-26 — A11Y: Accessibility-Grundhärtung WCAG 2.1 AA (sw v724)
 
 - **sw v724** `feat(a11y)`: Vollständige Accessibility-Grundhärtung (7 Items):

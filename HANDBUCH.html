@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v715</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v734</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -590,6 +590,7 @@
         <li>Eine neue Person anlegen</li>
         <li>Ereignisse eintragen</li>
         <li>Beziehungsrechner</li>
+        <li>Assoziationen — Zeugen, Paten und mehr</li>
       </ul>
     </li>
     <li><a href="#kap5">Familien</a>
@@ -693,6 +694,7 @@
         <li>Unterstützte Datensätze</li>
         <li>Roundtrip und Passthrough</li>
         <li>Proprietäre Tags</li>
+        <li>GEDCOM 7.0 — Lesen und opt-in-Export</li>
       </ul>
     </li>
     <li><a href="#kap22">Anhang B: GRAMPS-Dateiformat</a>
@@ -1412,6 +1414,38 @@ Besonders praktisch: auf dem Friedhof Grabsteine fotografieren oder im Archiv di
 
 <div class="info">
 Der Beziehungsrechner nutzt eine BFS-Breitensuche (Breadth-First Search) im Familiengraphen. Er findet immer den <em>nächsten</em> gemeinsamen Vorfahren — bei komplexen Stammbäumen (Pedigree-Collapse) kann es mehrere gleichwertige Pfade geben.
+</div>
+
+<h2>Assoziationen — Zeugen, Paten und mehr</h2>
+
+<p>Eine <strong>Assoziation</strong> verknüpft eine Person mit einer anderen, ohne eine direkte Familienbindung herzustellen — zum Beispiel als Trauzeuge, Taufpate, Informant oder Freund. Assoziationen erscheinen in der Detailansicht der Person im Abschnitt <strong>Assoziationen</strong>.</p>
+
+<p>Tippen Sie auf <span class="button-label">+ Hinzufügen</span> im Abschnitt Assoziationen, um eine neue Assoziation anzulegen:</p>
+
+<ol>
+  <li>Ein <strong>Personenpicker</strong> öffnet sich. Wählen Sie die zugehörige Person aus.</li>
+  <li>Ein zweites Formular erscheint. Wählen Sie die <strong>Rolle</strong> aus:
+    <ul>
+      <li><em>Taufpate/-mutter</em> — erscheint auch unter der Taufe der Zielperson</li>
+      <li><em>Zeuge / Zeugin</em></li>
+      <li><em>Informant</em> — häufig bei Sterbeurkunden</li>
+      <li><em>Freund / Freundin</em></li>
+      <li><em>Bekannte(r)</em></li>
+      <li><em>Eigene Rolle …</em> — Freitext für andere Beziehungstypen</li>
+    </ul>
+  </li>
+  <li>Optional: eine kurze <strong>Notiz</strong> (z. B. „Trauzeuge bei Heirat 1887").</li>
+  <li>Tippen Sie auf <span class="button-label">Speichern</span>.</li>
+</ol>
+
+<p>Bestehende Einträge können über das <span class="button-label">✎</span>-Symbol bearbeitet oder über <span class="button-label">×</span> entfernt werden.</p>
+
+<div class="info">
+<strong>Patenkinder</strong> werden automatisch berechnet: Wenn Sie bei Person A „Taufpate von Person B" eingetragen haben, erscheint Person B als <em>Patenkind</em> in der Detailansicht von Person A — ohne einen zweiten manuellen Eintrag. Berechnete Einträge sind mit einem abgedunkelten Chip dargestellt und können nicht direkt gelöscht werden (nur der Ursprungseintrag bei Person B).
+</div>
+
+<div class="tip">
+Assoziationen werden als GEDCOM-Standard-Tag <code>1 ASSO</code> mit <code>2 RELA</code> (GEDCOM 5.5.1) bzw. <code>2 ROLE</code> (GEDCOM 7.0) gespeichert — kompatibel mit allen gängigen Genealogie-Programmen.
 </div>
 
 <!-- ====================================================== -->
@@ -3132,8 +3166,10 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
     <tr><td style="padding:4px 8px;"><strong>Sanduhr-Baum</strong></td><td style="padding:4px 8px;">Baumansicht: Person in der Mitte, Vorfahren oben, Nachkommen unten</td></tr>
     <tr><td style="padding:4px 8px;"><strong>Swim-Lane</strong></td><td style="padding:4px 8px;">Horizontales Zeitleisten-Layout mit mehreren parallelen Spuren</td></tr>
     <tr><td style="padding:4px 8px;"><strong>IDB / IndexedDB</strong></td><td style="padding:4px 8px;">Lokaler Browser-Speicher — hier cacht die App Stammbaumdaten und Fotos für den Offline-Betrieb</td></tr>
-    <tr><td style="padding:4px 8px;"><strong>GEDCOM 5.5.1</strong></td><td style="padding:4px 8px;">Aktueller Genealogie-Dateistandard (1999/2019) — unterstützt von fast allen Programmen</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>GEDCOM 5.5.1</strong></td><td style="padding:4px 8px;">Genealogie-Dateistandard (1999/2019) — unterstützt von fast allen Programmen; Standard-Export in Stammbaum PWA</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>GEDCOM 7.0</strong></td><td style="padding:4px 8px;">Aktuellster Genealogie-Dateistandard (FamilySearch, seit 2021) — vollständig lesbar; opt-in-Export über Einstellungen</td></tr>
     <tr><td style="padding:4px 8px;"><strong>Gramps XML</strong></td><td style="padding:4px 8px;">Dateiformat des Open-Source-Programms Gramps (.gramps) — von Stammbaum PWA nativ unterstützt</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Assoziation</strong></td><td style="padding:4px 8px;">Nicht-familiäre Beziehung zwischen Personen (Zeuge, Taufpate, Informant …) — in GEDCOM als <code>ASSO</code>-Tag gespeichert</td></tr>
   </tbody>
 </table>
 
@@ -3213,6 +3249,36 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 <div class="info">
   Ein geplanter <strong>Strict-Export-Modus</strong> (ROADMAP: F6) wird alle proprietären <code>_</code>-Tags entfernen oder auf Standard-Tags mappen, um maximale Kompatibilität mit anderen Programmen zu erreichen.
+</div>
+
+<h2>GEDCOM 7.0</h2>
+
+<p>Stammbaum PWA unterstützt seit Version 8 auch <strong>GEDCOM 7.0</strong> — den seit 2021 gültigen aktuellen FamilySearch-Standard. Die Unterstützung ist zweigeteilt:</p>
+
+<ul>
+  <li><strong>Lesen:</strong> GEDCOM 7.0-Dateien werden automatisch erkannt und vollständig eingelesen — inklusive aller GED7-spezifischen Tags (NO, EXID, PHRASE, SNOTE, TRAN, ROLE). Ein lila <em>GED7</em>-Badge erscheint in der Topbar.</li>
+  <li><strong>Schreiben (opt-in):</strong> In den Einstellungen (☰ → Einstellungen → GEDCOM-Version) können Sie auf „7.0" umschalten. Die App exportiert dann GEDCOM 7.0-konforme Dateien — ohne <code>CONC</code>, ohne <code>CHAR UTF-8</code>, mit <code>ROLE</code> statt <code>RELA</code> und einem <code>SCHMA</code>-Deklarationsblock für alle Erweiterungen.</li>
+</ul>
+
+<h3>GED7-spezifische Felder in der Detailansicht</h3>
+
+<p>Wenn eine GED7-Datei geladen ist, zeigt die App zusätzliche Informationen in der Personen-Detailansicht:</p>
+
+<table style="font-size:0.86em;">
+  <tr><th>Feld</th><th>GEDCOM-Tag</th><th>Darstellung</th></tr>
+  <tr><td>Datumsbeschreibung</td><td><code>DATE / PHRASE</code></td><td>Kursiver Text unterhalb des strukturierten Datums (z. B. <em>„kurz nach Ostern 1847"</em>)</td></tr>
+  <tr><td>Kein Eintrag</td><td><code>NO BIRT</code></td><td>Grauer Badge ✗ Geburt — bestätigtes Fehlen eines Ereignisses</td></tr>
+  <tr><td>Externe IDs</td><td><code>EXID</code></td><td>Leseonly-Panel (FamilySearch ARK, WikiTree ID etc.)</td></tr>
+  <tr><td>Alias-Namen</td><td><code>ALIA</code> (String)</td><td>Klartext-Aliase neben den @xref@-Verknüpfungen</td></tr>
+  <tr><td>Namensübersetzungen</td><td><code>NAME / TRAN</code></td><td>Farbige Chips mit Sprachkürzel (z. B. <em>Jan Kováč <small>cs</small></em>)</td></tr>
+</table>
+
+<h3>Ortsübersetzungen</h3>
+
+<p>In der Orts-Detailansicht (Tab <span class="button-label">Orte</span>) können Sie für jeden Ort mehrsprachige Bezeichnungen hinterlegen. Tippen Sie in der Karte auf <span class="button-label">+ Übersetzung</span> und geben Sie den Ortsnamen in der Zielsprache sowie das Sprachkürzel ein (z. B. <em>Wrocław</em> / <em>pl</em>). Diese Übersetzungen werden als <code>3 TRAN</code> (GED7) bzw. <code>3 _TRAN</code> (GED5/GRAMPS) gespeichert.</p>
+
+<div class="tip">
+Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>Breslau / Wrocław</em>, <em>Königsberg / Kaliningrad</em>, <em>Pressburg / Bratislava</em> — alle Bezeichnungen bleiben erhalten und werden beim Roundtrip nicht verändert.
 </div>
 
 
@@ -3382,7 +3448,7 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Mai 2026 · sw v724<br>
+  Stammbaum PWA · Version 8 · Mai 2026 · sw v734<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 
