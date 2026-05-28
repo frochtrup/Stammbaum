@@ -148,7 +148,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v724** *(veraltet — v725–v739 noch nicht dokumentiert)*
+**Handbuch-Stand: sw v741** *(aktuell)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
