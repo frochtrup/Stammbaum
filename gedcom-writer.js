@@ -439,7 +439,12 @@ function writeINDIRecord(lines, p, livingSet = null) {
     _writeSourCits(lines, 2, a);
   }
 
-  for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
+  // GED7: ALIA ist ein Namens-String (1 ALIA name); GED5: ALIA ist ein @xref@-Zeiger — beide Felder getrennt
+  if (_ged7) {
+    for (const an of (p.aliaNames || [])) lines.push(`1 ALIA ${an}`);
+  } else {
+    for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
+  }
   for (const r of (p.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
 
   // GED7: NO / EXID / CREA — GED5-Downgrade: EXID→REFN, NO→NOTE

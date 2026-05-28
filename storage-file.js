@@ -470,6 +470,20 @@ async function _loadGRAMPS(file) {
     setDb(parsed);
     AppState._currentFilename = file.name;
     AppState.db.extraPlaces = loadExtraPlaces();
+    // GRAMPS placeObject pnames (mehrsprachige Ortsnamen) → extraPlaces[].trans[]
+    // Nur hinzufügen wenn extraPlaces[name].trans noch nicht user-definiert ist
+    for (const pl of Object.values(AppState.db.placeObjects || {})) {
+      const pTitle = pl.title;
+      if (!pTitle) continue;
+      const grampsTrans = (pl.pnames || [])
+        .filter(pn => pn.lang && pn.value && pn.value !== pTitle)
+        .map(pn => ({ value: pn.value, lang: pn.lang }));
+      if (!grampsTrans.length) continue;
+      if (!AppState.db.extraPlaces[pTitle])
+        AppState.db.extraPlaces[pTitle] = { name: pTitle, lati: pl.lat ?? null, long: pl.long ?? null };
+      if (!AppState.db.extraPlaces[pTitle].trans)
+        AppState.db.extraPlaces[pTitle].trans = grampsTrans;
+    }
     applyAllExtraPlaceCoords();
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
     // Nur gespeicherte Koordinaten für Adressen dieser Datei übernehmen (kein Leck aus anderen Dateien).
