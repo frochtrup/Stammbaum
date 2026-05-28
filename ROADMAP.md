@@ -38,14 +38,14 @@ Fünf Dimensionen leiten die Priorisierung:
 | Architektur | 7/10 | Klare Schichtung, aber globaler Namespace + keine ES-Module = wachsende Schuld |
 | Sicherheit | 8/10 | Starke CSP, konsequentes `esc()`, aber keine strukturelle Escaping-Garantie |
 | Design / UX | 9/10 | Hochwertige Ästhetik, Mobile-First — WCAG 2.1 AA Grundhärtung ✓ (v724) |
-| Funktionsstand | 8/10 | Starke Kernfunktionen; DSGVO-Export ✓; Lücken: GEDCOM 7.0, editierbare ASSO |
+| Funktionsstand | 9/10 | Starke Kernfunktionen; DSGVO-Export ✓; GED7-Export ✓ (opt-in v726–v733); ASSO-Edit ✓ (v734) |
 | Code-Qualität | 7.5/10 | Lesbar, kein Overengineering; JSDoc-Typen + .editorconfig ✓; kein Test-Framework; einige Dateien >800 Z. |
 | Performance | 7.5/10 | Gute Optimierungen; 44 HTTP-Requests ohne Bundling |
 | GEDCOM-Konformität | 9/10 | Roundtrip-Integrität auf hohem Niveau — beste GEDCOM-Treue unter Web-Tools |
 | Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt |
 | PWA / Offline | 9/10 | Eines der besten Beispiele für ernsthaftes PWA-Design |
 | Datenschutz | 8/10 | Lokal-First ✓ · Lebende-Anonymisierung ✓ (v715) |
-| **∅ Gesamt** | **8.2/10** | |
+| **∅ Gesamt** | **8.5/10** | |
 
 ---
 
@@ -148,7 +148,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v724** (frisch aktualisiert)
+**Handbuch-Stand: sw v724** *(veraltet — v725–v739 noch nicht dokumentiert)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -178,7 +178,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | Plattform | Web/PWA/iOS/Desktop | Mac/iOS | Web | Desktop | Windows |
 | Offline | ✅ vollständig | ✅ | ❌ | ✅ | ✅ |
 | GEDCOM Roundtrip | ✅ exzellent | ✅ gut | ⚠ verlustbehaftet | ✅ gut | ✅ gut |
-| GEDCOM 7.0 | ❌ (geplant) | ⚠ | ❌ | ⚠ | ❌ |
+| GEDCOM 7.0 | ⚠ opt-in Export | ⚠ | ❌ | ⚠ | ❌ |
 | GRAMPS XML | ✅ (read+write) | ❌ | ❌ | ✅ nativ | ❌ |
 | Karte + Animation | ✅ | ✅ | ✅ | ⚠ | ⚠ |
 | Zeitleiste (hist. Ereignisse) | ✅ | ✅ | ⚠ | ⚠ | ⚠ |
@@ -196,7 +196,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 **Einzigartige Stärken:** Offline-PWA + Story-Modus + animierter Migrationspfad + GRAMPS-Brücke + Forschungsprotokoll + Mehrpersonen-Zeitleiste + DSGVO-Anonymisierung + vollständig lokal ohne Datamining.
 
-**Verbleibende Lücken:** GEDCOM 7.0, editierbare ASSO-Beziehungen.
+**Verbleibende Lücken:** F6 Strict GEDCOM Export (alle `_`-Tags entfernen).
 
 ---
 
