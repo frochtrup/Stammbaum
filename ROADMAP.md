@@ -31,21 +31,21 @@ Fünf Dimensionen leiten die Priorisierung:
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
-### Gesamtbewertung (Mai 2026)
+### Gesamtbewertung (Mai 2026) — verifiziert nach Code-Audit
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
-| Architektur | 7/10 | Klare Schichtung, aber globaler Namespace + keine ES-Module = wachsende Schuld |
-| Sicherheit | 8/10 | Starke CSP, konsequentes `esc()`, aber keine strukturelle Escaping-Garantie |
-| Design / UX | 9/10 | Hochwertige Ästhetik, Mobile-First — WCAG 2.1 AA Grundhärtung ✓ (v724) |
-| Funktionsstand | 9/10 | Starke Kernfunktionen; DSGVO-Export ✓; GED7-Export ✓ (opt-in v726–v733); ASSO-Edit ✓ (v734) |
-| Code-Qualität | 7.5/10 | Lesbar, kein Overengineering; JSDoc-Typen + .editorconfig ✓; kein Test-Framework; einige Dateien >800 Z. |
-| Performance | 7.5/10 | Gute Optimierungen; 44 HTTP-Requests ohne Bundling |
-| GEDCOM-Konformität | 9/10 | Roundtrip-Integrität auf hohem Niveau — beste GEDCOM-Treue unter Web-Tools |
-| Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt |
-| PWA / Offline | 9/10 | Eines der besten Beispiele für ernsthaftes PWA-Design |
-| Datenschutz | 8/10 | Lokal-First ✓ · Lebende-Anonymisierung ✓ (v715) |
-| **∅ Gesamt** | **8.5/10** | |
+| Architektur | 7.0/10 | Klare Schichtung, aber globaler Namespace + keine ES-Module = wachsende Schuld |
+| Sicherheit | 7.5/10 | Starke CSP, konsequentes `esc()`, aber keine strukturelle Escaping-Garantie (166 innerHTML-Assignments ohne Linter) |
+| Design / UX | 8.7/10 | Hochwertige Ästhetik, Mobile-First, WCAG 2.1 AA ✓ (v724); Migrationspfad-Animation ✓; kein Onboarding |
+| Funktionsstand | 9.2/10 | Undo/Redo ✓ · Karten-Animation ✓ · Mehrfachzitierungen ✓ · GED7 ✓ · GRAMPS ✓ · ASSO-Edit ✓ |
+| Code-Qualität | 7.5/10 | Lesbar, kein Overengineering; JSDoc-Typen + .editorconfig ✓; kein automatisiertes Test-Framework |
+| Performance | 7.0/10 | Virtuelles Scrollen + Web Worker ✓; SW-Cache macht Warm-Start instant; 51 Cold-Start-Requests + 133 KB CSS; `debug-gramps.js` bereits lazy-geladen (Vorbild für LAZY-LOAD) |
+| GEDCOM-Konformität | 9.5/10 | net_delta=0 auf 83k-Zeilen-Datei — beste GEDCOM-Roundtrip-Treue unter Web-Tools |
+| Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt; Handbuch noch mit Mockups statt Screenshots |
+| PWA / Offline | 9.0/10 | Eines der besten Beispiele für ernsthaftes PWA-Design; SW-Install ohne Fehlertoleranz bei 404 |
+| Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining |
+| **∅ Gesamt** | **8.4/10** | *(Vorversion 8.5/10 — nach Audit korrigiert: Performance −0.5, Sicherheit −0.5, Funktionsstand +0.2, GEDCOM +0.5, Datenschutz +0.5)* |
 
 ---
 
@@ -86,11 +86,14 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ---
 
-## T0 — Technische Schulden *(Fundament)*
+## T0 — Technische Schulden *(Fundament — in dieser Reihenfolge)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| **T0-STORAGE** | **localStorage / IDB-Strategie Phase 3** | `stammbaum_extraplaces_*` + `stammbaum_hofobjects` (4 Calls in `ui-forms.js`) → async IDB; `loadExtraPlaces()`/`loadHofObjects()` + `await` im Ladepfad nötig. | S |
+| **T0-SW** | **SW Install-Robustness** | `cache.addAll()` schlägt atomar fehl wenn 1 von ~50 Assets einen 404 liefert. Kern-Assets atomar behalten; Fonts + leaflet via `Promise.allSettled()` einzeln cachen. | **XS** |
+| **T0-XSS** | **innerHTML-Audit** | 166 `innerHTML`-Assignments ohne strukturelle `esc()`-Garantie. Scan aller Template-Literals auf nicht-escapte User-Daten; Ausnahmen explizit dokumentieren. Kein ESLint nötig — manueller Review reicht. | **S** |
+| **T0-STORAGE** | **localStorage / IDB-Strategie Phase 3** | `stammbaum_extraplaces_*` + `stammbaum_hofobjects` (4 Calls in `ui-forms.js`) → async IDB; `loadExtraPlaces()`/`loadHofObjects()` + `await` im Ladepfad nötig. | **S** |
+| **T0-TEST** | **Roundtrip-Test-Automation** | Größtes strukturelles Risiko: kein CI, kein Regressionsschutz für das wichtigste Feature. Ziel: Node-Script `node test-roundtrip.js MeineDaten.ged` → assertiert `net_delta=0` + GRAMPS-Roundtrip-Checks + Snapshot-Vergleich. Ohne Browser lauffähig. | **M** |
 
 ---
 
@@ -98,23 +101,27 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| **CAM** | **Kamera-Integration** | `<input accept="image/*" capture="environment">` → Foto direkt als Medienreferenz zur Person oder Quelle anhängen; kein OneDrive erforderlich; funktioniert iOS + Android PWA nativ. Konkrete Lücke vs. MacFamilyTree iOS. | **S** |
 | QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich dem Quellentyp an: Taufbuch → Geburt + Taufe als Chips mit separaten Datumsfeldern. Konfiguration als `quickAddTemplates[]` JSON, analog SOUR-TMPL. | M |
 
 ---
 
-## P2 — Forschungsqualität
+## P2 — Onboarding & Forschungsqualität
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| **ONBOARDING** | **Onboarding für Erstnutzer** | *(hochgestuft von P4)* Dismissibler Overlay nach Demo-Load: 3–4 Schritte (Person klicken, Baum öffnen, Ereignis bearbeiten). Ohne das bleibt die App für jeden neuen Nutzer undurchdringlich. Einmalig, localStorage-Flag. | **S** |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional. Voraussetzung: BFS-Algorithmus aus REL-CALC nutzen. | M |
 
 ---
 
-## P3 — Desktop-Auswertung
+## P3 — Desktop-Auswertung & Performance
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| FAN-COLOR | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; keine Layout-Änderung nötig. | XS |
+| **FAN-COLOR** | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; keine Layout-Änderung nötig. | **XS** |
+| **CSS-PURGE** | **CSS aufräumen** | 133 KB `styles.css` — tote Regeln via PurgeCSS dry-run identifizieren, manuell bereinigen. Kein Build-Step nötig, einmaliger Analyse-Lauf. | **S** |
+| **LAZY-LOAD** | **Lazy-Loading optionaler Module** | Cold-Start-Optimierung ohne Build-Step. Vorbild: `debug-activate.js` lädt `debug-gramps.js` bereits jetzt nur bei `?debug=1`. Dasselbe Muster auf 3 Modul-Gruppen anwenden: (1) `ui-book.js` + `ui-print.js` (Buchgenerator/Druck), (2) `ui-dedup.js` + `ui-import-compare.js` + `compare-engine.js` (Merge-Tools), (3) `onedrive-auth.js` + `onedrive-import.js` + `onedrive.js` (nur bei OneDrive-Nutzung). Entfernt ~250 KB JS aus dem initialen Load. SW-Cache + HTTP/2 machen Warm-Start bereits jetzt instant — dieser Fix wirkt nur beim allerersten Besuch (Cold Start). | **M** |
 | ~~ACCESSIBILITY~~ | ~~**Accessibility-Audit + Grundhärtung**~~ | ✅ **Abgeschlossen sw v724** — Skip-Link, ARIA-Live, Baum tabindex/role=button, :focus-visible, aria-invalid, prefers-reduced-motion | ~~M~~ |
 
 ---
@@ -125,7 +132,6 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 |---|---|---|---|
 | MAP-HIST-A | **Vintage-Kartenstil** | CSS-Filter (`sepia/brightness/contrast`) auf OSM-Kacheln; Toggle Modern/Historisch; UIState-Persistenz; kein API-Key. | S |
 | MAP-HIST-B | **Historischer Kartenhintergrund (Swisstopo)** | Swisstopo Siegfriedkarte (1883–1949, WMTS) als Layer + Jahres-Dropdown. Coverage: Schweiz + Grenzregionen. Nur sinnvoll nach MAP-HIST-A. | M |
-| ONBOARDING | **Onboarding für Erstnutzer** | Dismissibler Overlay nach Demo-Load: 3–4 Schritte (Person klicken, Baum öffnen, Ereignis bearbeiten). Einmalig, localStorage-Flag. | S |
 
 ---
 
@@ -162,12 +168,12 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| LLM-STORY | **LLM-gestützte Story-Verbesserung** | Opt-in API-Call zum Umschreiben des Story-Textes in natürlicheres Deutsch. Privacy: nur anonymisierte Daten senden. | M |
 | F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X — Netzwerk-Graph oder Liste. | L |
+| BUNDLING | **Bundling für Erstladezeit** | Nur sinnvoll nach LAZY-LOAD + ES-MODULE. Mit LAZY-LOAD sind die größten Cold-Start-Gewinne bereits ohne Build-Step realisiert; vollständiges Bundling (esbuild/Rollup) bringt danach nur noch marginale Verbesserung. | L |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend als Opt-in. | XL |
 | COLLAB | **Kollaboratives Editieren** | Konflikt-freies Merge zweier GEDCOM-Dateien. Grundlage: IMPORT-CMP + DUP-DETECT. Erfordert Server oder CRDTs. | XL |
-| ES-MODULE | **Echtes ES-Modul-System** | Umstieg von 44 globalen Script-Tags auf `import`/`export`. Aufwand enorm — Entscheidung erst wenn Codebase stabil. | XL |
-| BUNDLING | **Bundling für Erstladezeit** | 44 HTTP-Requests ohne SW-Cache. esbuild oder Rollup. Bedingt ES-MODULE oder IIFE-Bundles. | L |
-| LLM-STORY | **LLM-gestützte Story-Verbesserung** | Opt-in API-Call zum Umschreiben des Story-Textes in natürlicheres Deutsch. Privacy: nur anonymisierte Daten senden. | M |
+| ES-MODULE | **Echtes ES-Modul-System** | Umstieg von 44 globalen Script-Tags auf `import`/`export`. Aufwand enorm — Voraussetzung für BUNDLING; Entscheidung erst wenn Codebase stabil. | XL |
 
 ---
 

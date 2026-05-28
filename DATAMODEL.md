@@ -46,24 +46,20 @@ let changed = false;  // Ungespeicherte Änderungen?
   // date/place: null = Tag nicht vorhanden; '' = Tag vorhanden aber leer; 'Wert' = Wert
   birth: {
     date:'8 JAN 1872', place:'München', lati:48.1, long:11.5,
-    sources:['@S1@'], sourcePages:{'@S1@':'47'}, sourceQUAY:{},
-    sourceExtra:{},    // verbatim lv=3 unter 2 SOUR (außer PAGE/QUAY/NOTE/OBJE)
-    sourceNote:{},     // NOTE unter 2 SOUR: {sId: 'text'}
-    sourceMedia:{},    // OBJE unter 2 SOUR: {sId: [{file,scbk,prim,titl,note,_extra[]}]}
+    citations: [{ sid:'@S1@', page:'47', quay:'2', note:null, extra:[], media:[] }],
+    // citations[i]: { sid, page, quay, note, extra[], media[] }  — F4b-Datenmodell (gedcom.js:citationObj)
     _extra:[],         // unbekannte lv=2 Tags im BIRT-Block
     value:'', seen:true
   },
-  chr:   { date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[], value:'', seen:false },
-  death: { date:'15 APR 1940', place:'München', lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[], cause:'Herzversagen', value:'', seen:true },
-  buri:  { date:null, place:null, lati:null, long:null, sources:[], sourcePages:{}, sourceQUAY:{}, sourceExtra:{}, sourceNote:{}, sourceMedia:{}, _extra:[], value:'', seen:false },
+  chr:   { date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false },
+  death: { date:'15 APR 1940', place:'München', lati:null, long:null, citations:[], _extra:[], cause:'Herzversagen', value:'', seen:true },
+  buri:  { date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false },
 
   // Weitere Ereignisse
   events: [
     {
       type:'OCCU', value:'Kaufmann', date:null, place:null, lati:null, long:null,
-      sources:[], sourcePages:{}, sourceQUAY:{},
-      sourceExtra:{},    // verbatim lv=3 unter 2 SOUR
-      sourceMedia:{},    // OBJE unter 2 SOUR: {sId: [{file,...}]}
+      citations:[],      // [{sid, page, quay, note, extra[], media[]}]
       note:'', addr:'', addrExtra:[], eventType:'',
       media:[],          // 2 OBJE direkt unter Event
       _extra:[]          // unbekannte lv=2 Tags im Event-Block
@@ -76,15 +72,10 @@ let changed = false;  // Ungespeicherte Änderungen?
   topSourcePages:    {},                     // PAGE unter lv=1 SOUR
   topSourceQUAY:     {},                     // QUAY unter lv=1 SOUR
   topSourceExtra:    {},                     // verbatim lv=2 unter lv=1 SOUR
-  nameSources:       ['@S2@'],              // SOUR unter NAME
-  nameSourcePages:   {},
-  nameSourceQUAY:    {},
-  nameSourceExtra:   {},                    // OBJE etc. unter NAME>SOUR
-  nameSourceMedia:   {},                    // OBJE-Struktur unter NAME>SOUR
+  nameCitations:     [],                    // SOUR unter NAME → [{sid, page, quay, note, extra[], media[]}]
   extraNames:        [],                    // zweite+ NAME-Einträge (v4-dev strukturiert)
-  // extraNames[i]: { given, surname, prefix, suffix, nick, type,
-  //                  sources[], sourcePages{}, sourceQUAY{},
-  //                  sourceExtra{}, sourceMedia{}, _extra[] }
+  // extraNames[i]: { nameRaw, given, surname, prefix, suffix, type,
+  //                  citations:[], _extra:[], _hasGivn, _hasSurn }
 
   aliases: ['@I002@'],  // 1 ALIA @xref@ — Verweise auf identische/gleichnamige Personen
   refns:   [{val:'https://...', type:''}],  // 1 REFN + 2 TYPE; read-only (sw v548)
@@ -95,11 +86,7 @@ let changed = false;  // Ungespeicherte Änderungen?
     _grampsHlink: 'h1a2b3c',   // GRAMPS-Handle (null bei GEDCOM-Herkunft; für Roundtrip-Fidelity)
     role:         'Witness',    // RELA (GED5) / rel (GRAMPS) / ROLE (GED7) — unified per ADR-018
     note:         '',           // optionale Notiz (2 NOTE / GRAMPS noteref)
-    sources:      [],           // SOUR-Xrefs (2 SOUR)
-    sourcePages:  {},           // PAGE je Quelle
-    sourceQUAY:   {},           // QUAY je Quelle
-    sourceNote:   {},           // NOTE je Quelle (selten)
-    sourceExtra:  {},           // verbatim Extras je Quelle (selten)
+    citations:    [],           // [{sid, page, quay, note, extra[], media[]}]
   }],
   // _grampsWitnessRefs[] (nur GRAMPS-Import, kein GEDCOM-Äquivalent):
   // Zeugen-Eventreferenzen (eventref role != Primary) — Phase-F-Brücke
@@ -150,15 +137,12 @@ let changed = false;  // Ungespeicherte Änderungen?
 
   marr: {
     date:'5 APR 1898', place:'München', lati:null, long:null,
-    sources:[], sourcePages:{}, sourceQUAY:{},
-    sourceExtra:{},    // OBJE etc. verbatim unter 2 SOUR
-    sourceMedia:{},    // OBJE-Struktur unter 2 SOUR: {sId: [{file,...}]}
+    citations:[],      // [{sid, page, quay, note, extra[], media[]}]
     value:'', seen:true, addr:'', _extra:[]
   },
   engag: {
     date:null, place:null, lati:null, long:null,
-    sources:[], sourcePages:{}, sourceQUAY:{},
-    sourceExtra:{}, sourceMedia:{},
+    citations:[],
     value:'', seen:false, _extra:[]
   },
 
@@ -166,8 +150,7 @@ let changed = false;  // Ungespeicherte Änderungen?
   events: [
     {
       type:'EVEN', value:'', date:null, place:null, lati:null, long:null,
-      sources:[], sourcePages:{}, sourceQUAY:{},
-      sourceExtra:{}, sourceMedia:{},
+      citations:[],
       note:'', addr:'', addrExtra:[], eventType:'', _extra:[]
     }
   ],
@@ -180,9 +163,7 @@ let changed = false;  // Ungespeicherte Änderungen?
       frelSeen:false, mrelSeen:false,
       frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[],
       mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[],
-      sourIds:[], sourPages:{}, sourQUAY:{},
-      sourExtra:{},   // verbatim lv=3 unter 2 SOUR in CHIL-Kontext
-      sourMedia:{}    // OBJE-Struktur unter 2 SOUR in CHIL-Kontext
+      citations:[]    // [{sid, page, quay, note, extra[], media[]}] — 2 SOUR in CHIL-Kontext
     }
   },
 

@@ -87,7 +87,7 @@ markChanged(); renderTab();
 
 **Undo/Redo:** `pushUndo(label, snapshot)` in `ui-views-undo.js` speichert Zustand-Snapshots (bis 30 Einträge). `applyUndo()`/`applyRedo()` stellt Datensätze wieder her. Snapshot enthält `personIds`/`familyIds` der betroffenen Datensätze — keine komplette DB-Kopie.
 
-**Einschränkung:** Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus IDB). Cmd+Z löst noch „Revert to Saved" aus statt den Undo-Stack. Details: `DATAMODEL.md`.
+**Einschränkung:** Bei Seitenreload sind ungespeicherte Änderungen weg (außer Auto-Load aus IDB). Cmd+Z löst `applyUndo()` aus wenn der Stack befüllt ist; bei leerem Stack (z.B. direkt nach Load) Fallback auf `revertToSaved()`. Details: `DATAMODEL.md`.
 
 ---
 
@@ -392,6 +392,6 @@ restoreFileHandle() (bei Seitenreload):
 
 | Problem | Ursache | Status |
 |---|---|---|
-| Cmd+Z = „Revert to Saved" | Keyboard-Shortcut löst IDB-Restore aus, nicht den Undo-Stack (`pushUndo`/`applyUndo`) | Backlog |
+| Cmd+Z mit leerem Stack = „Revert to Saved" | Wenn `_undoStack` leer ist (z.B. direkt nach Load), fällt Cmd+Z auf `revertToSaved()` zurück — korrekt so | Bekannt |
 | Mehrere inline INDI-Notes beim Editieren zusammengeführt | `ui-forms.js` joind `noteTexts[]` beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit; Toast-Warnung wenn voll | Bekannt |
