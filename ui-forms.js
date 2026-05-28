@@ -190,9 +190,9 @@ function _appendDataEvenRow(container, evens, date, plac) {
   const row = document.createElement('div');
   row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;padding:4px 0;border-bottom:1px solid var(--border)';
   row.innerHTML = `
-    <input class="form-input" placeholder="BIRT, MARR, DEAT" value="${(evens||'').replace(/"/g,'&quot;')}" data-de="evens">
-    <input class="form-input" placeholder="FROM 1750 TO 1850" value="${(date||'').replace(/"/g,'&quot;')}" data-de="date">
-    <input class="form-input" placeholder="Ort" value="${(plac||'').replace(/"/g,'&quot;')}" data-de="plac">
+    <input class="form-input" placeholder="BIRT, MARR, DEAT" value="${esc(evens||'')}" data-de="evens">
+    <input class="form-input" placeholder="FROM 1750 TO 1850" value="${esc(date||'')}" data-de="date">
+    <input class="form-input" placeholder="Ort" value="${esc(plac||'')}" data-de="plac">
     <button type="button" class="btn btn-danger" style="padding:2px 8px">×</button>`;
   row.querySelector('.btn-danger').addEventListener('click', () => row.remove());
   container.appendChild(row);

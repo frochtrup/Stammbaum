@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v743 · Cache: `stammbaum-v743`
+**sw-Version:** v744 · Cache: `stammbaum-v744`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -91,7 +91,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~T0-SW~~ | ~~**SW Install-Robustness**~~ | ✅ **Abgeschlossen sw v743** — `PRECACHE_CRITICAL` (atomar) + `PRECACHE_OPTIONAL` (Fonts, leaflet, debug-gramps, Anna.png) via `Promise.allSettled()` | ~~XS~~ |
-| **T0-XSS** | **innerHTML-Audit** | 166 `innerHTML`-Assignments ohne strukturelle `esc()`-Garantie. Scan aller Template-Literals auf nicht-escapte User-Daten; Ausnahmen explizit dokumentieren. Kein ESLint nötig — manueller Review reicht. | **S** |
+| ~~T0-XSS~~ | ~~**innerHTML-Audit**~~ | ✅ **Abgeschlossen sw v744** — Vollständiger Scan aller 166 `innerHTML`-Assignments: kein echter XSS-Vektor gefunden. Einzige Inkonsistenz (`ui-forms.js`: `.replace(/"/g,'&quot;')` → `esc()`) behoben. Befund: `esc()` wird konsequent eingesetzt; `data-*`-Attribute mit GEDCOM-IDs sind safe; `title=`-Attribute mit User-Daten alle via `_esc()`/`esc()` abgesichert. | ~~S~~ |
 | **T0-STORAGE** | **localStorage / IDB-Strategie Phase 3** | `stammbaum_extraplaces_*` + `stammbaum_hofobjects` (4 Calls in `ui-forms.js`) → async IDB; `loadExtraPlaces()`/`loadHofObjects()` + `await` im Ladepfad nötig. | **S** |
 | **T0-TEST** | **Roundtrip-Test-Automation** | Größtes strukturelles Risiko: kein CI, kein Regressionsschutz für das wichtigste Feature. Ziel: Node-Script `node test-roundtrip.js MeineDaten.ged` → assertiert `net_delta=0` + GRAMPS-Roundtrip-Checks + Snapshot-Vergleich. Ohne Browser lauffähig. | **M** |
 
