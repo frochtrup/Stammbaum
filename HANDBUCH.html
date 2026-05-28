@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v734</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v739</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -3298,7 +3298,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 </ul>
 
 <h2>Roundtrip-Verhalten</h2>
-<p>Der GRAMPS-Roundtrip wird mit einer 2894-Personen-Testdatei geprüft: 60 034 Einzelprüfungen, alle bestanden. Öffnen, ohne Änderung speichern und erneut öffnen ergibt dieselben Daten.</p>
+<p>Der GRAMPS-Roundtrip wird mit einer 2894-Personen-Testdatei geprüft: 60 034 Einzelprüfungen, alle bestanden. Öffnen, ohne Änderung speichern und erneut öffnen ergibt dieselben Daten — einschließlich Forschungsprotokoll-Einträge (<code>_RLOG</code>) und Forschungsaufgaben (<code>_TASK</code>) auf Personen und Familien.</p>
 
 <h2>Orte (Place Objects)</h2>
 <p>GRAMPS verwaltet Orte als eigene Datensätze (<em>Place Objects</em>) mit interner ID, Typ (Ort, Gemeinde, Kreis, Land …) und hierarchischer Verschachtelung (z. B. „München" → Einbettung in „Bayern" → „Deutschland"). Stammbaum PWA:</p>
@@ -3349,7 +3349,14 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 </div>
 
 <h2>Attribute</h2>
-<p>Gramps speichert zusätzliche Felder als <em>Attribute</em> (z. B. „Beruf", „Wohnort", benutzerdefinierte Felder). Diese erscheinen in Stammbaum PWA in der Personen- und Familiendetailansicht als eigenständige Zeilen und werden im Roundtrip vollständig erhalten. Eine direkte Bearbeitung über die App ist noch nicht möglich.</p>
+<p>Gramps speichert zusätzliche Felder als <em>Attribute</em> (z. B. „Beruf", „Wohnort", benutzerdefinierte Felder). Diese erscheinen in Stammbaum PWA in der Personen- und Familiendetailansicht als eigenständige Zeilen und werden im Roundtrip vollständig erhalten.</p>
+<p>Wenn eine Person oder Familie GRAMPS-Daten enthält (erkennbar an einer <strong>Gramps-ID</strong> wie <em>I0042</em> oder vorhandenen Attributen), erscheint im Bearbeitungsformular ein eigener Abschnitt <strong>GRAMPS-Daten</strong>:</p>
+<ul>
+  <li><strong>GRAMPS-ID</strong> — wird schreibgeschützt angezeigt (z. B. <em>I0042</em>); sie identifiziert den Datensatz eindeutig in Gramps und darf nicht verändert werden.</li>
+  <li><strong>Tags</strong> — farbige Markierungen aus Gramps werden als Chips angezeigt (nur Lesezugriff).</li>
+  <li><strong>Attribute</strong> — Typ und Wert jedes Attributs sind bearbeitbar. Mit dem <span class="button-label">+ Attribut</span>-Button lassen sich neue Attribute hinzufügen, mit <span class="button-label">×</span> löschen. Zitierungen und interne Metadaten bleiben dabei erhalten.</li>
+</ul>
+<p>Der GRAMPS-Daten-Abschnitt erscheint nur, wenn tatsächlich GRAMPS-Daten vorhanden sind — bei rein GEDCOM-basierten Personen bleibt er ausgeblendet.</p>
 
 <h2>Passthrough-Unterschiede zu GEDCOM</h2>
 <p>GRAMPS XML ist strukturell anders aufgebaut als GEDCOM. Die Passthrough-Logik ist separat implementiert:</p>
@@ -3371,7 +3378,6 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <h2>Bekannte Einschränkungen</h2>
 <ul>
   <li>GRAMPS-Tags können nicht bearbeitet werden (nur Anzeige).</li>
-  <li>GRAMPS-Attribute können nicht bearbeitet werden (nur Anzeige).</li>
   <li>Place Objects können über den Orts-Picker ausgewählt, aber nicht neu angelegt werden.</li>
   <li>Gramps-spezifische Beziehungstypen (über GEDCOM ASSO hinaus) werden als Passthrough erhalten, aber nicht angezeigt.</li>
 </ul>
@@ -3448,7 +3454,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Mai 2026 · sw v734<br>
+  Stammbaum PWA · Version 8 · Mai 2026 · sw v739<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 
