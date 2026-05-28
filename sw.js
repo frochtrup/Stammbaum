@@ -2,35 +2,49 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v742';
-const PRECACHE = [
+const CACHE_NAME = 'stammbaum-v743';
+
+// Kern-Assets: atomar — Install schlägt fehl wenn eines fehlt
+const PRECACHE_CRITICAL = [
   './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
   './fonts/fonts.css',
-  './fonts/playfair-display-normal-latin.woff2', './fonts/playfair-display-normal-latin-ext.woff2',
-  './fonts/playfair-display-italic-latin.woff2', './fonts/playfair-display-italic-latin-ext.woff2',
-  './fonts/source-serif-4-normal-latin.woff2', './fonts/source-serif-4-normal-latin-ext.woff2',
-  './fonts/source-serif-4-italic-latin.woff2', './fonts/source-serif-4-italic-latin-ext.woff2',
-  './leaflet.js', './leaflet.css',
   './gedcom.js', './gedcom-parser.js', './gedcom-worker.js', './gedcom-writer.js', './gedcom-validator.js', './gramps-parser.js', './gramps-writer.js',
   './storage-file.js', './storage.js',
   './ui-views.js', './ui-views-nav.js', './ui-views-undo.js', './ui-views-note.js', './ui-views-search.js',
   './ui-views-tree.js', './ui-views-tasks.js', './ui-views-rlog.js', './ui-views-val.js', './ui-views-person.js', './ui-views-family.js',
   './ui-views-source.js', './ui-views-place.js', './ui-views-hof.js', './ui-views-map.js', './ui-views-stats.js', './ui-dedup.js', './ui-chart-export.js',
-  './debug-activate.js', './debug-gramps.js',
+  './debug-activate.js',
   './ui-book.js', './ui-print.js', './story-epochs.js', './timeline-hist-events.js',
   './ui-fanchart.js', './ui-desc-tree.js', './ui-timeline.js', './ui-story.js', './ui-story-person.js', './ui-story-fam.js', './ui-forms.js', './ui-forms-person.js', './ui-forms-family.js', './ui-forms-repo.js', './ui-forms-event.js', './ui-debug.js', './ui-media.js',
   './onedrive-auth.js', './onedrive-import.js', './onedrive.js',
   './ui-import-compare.js', './compare-engine.js', './ui-event-delegation.js',
-  './Anna.png'
+];
+
+// Optionale Assets: einzeln gecacht — Einzelfehler bricht Install nicht ab
+// App bleibt ohne diese Assets funktionsfähig (Systemschriften, kein Kartenview)
+const PRECACHE_OPTIONAL = [
+  './fonts/playfair-display-normal-latin.woff2', './fonts/playfair-display-normal-latin-ext.woff2',
+  './fonts/playfair-display-italic-latin.woff2', './fonts/playfair-display-italic-latin-ext.woff2',
+  './fonts/source-serif-4-normal-latin.woff2', './fonts/source-serif-4-normal-latin-ext.woff2',
+  './fonts/source-serif-4-italic-latin.woff2', './fonts/source-serif-4-italic-latin-ext.woff2',
+  './leaflet.js', './leaflet.css',
+  './debug-gramps.js',
+  './Anna.png',
 ];
 
 // Absolute Pfade für schnellen Cache-first-Lookup
-const PRECACHE_PATHS = new Set(PRECACHE.map(p => new URL(p, self.location.href).pathname));
+const PRECACHE_PATHS = new Set(
+  [...PRECACHE_CRITICAL, ...PRECACHE_OPTIONAL].map(p => new URL(p, self.location.href).pathname)
+);
 
-// Install: Dateien vorab cachen
+// Install: kritische Dateien atomar, optionale fehlertolerant
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE))
+    caches.open(CACHE_NAME).then(cache =>
+      cache.addAll(PRECACHE_CRITICAL).then(() =>
+        Promise.allSettled(PRECACHE_OPTIONAL.map(url => cache.add(url).catch(() => {})))
+      )
+    )
   );
   self.skipWaiting();
 });
@@ -60,7 +74,7 @@ self.addEventListener('fetch', event => {
       caches.open(CACHE_NAME).then(cache =>
         cache.match(event.request).then(cached => {
           if (cached) return cached;
-          // Noch nicht im Cache (z.B. erster SW-Install läuft noch): Netz
+          // Noch nicht im Cache (z.B. optionales Asset nicht gecacht): Netz
           return fetch(event.request).then(response => {
             if (response.ok) cache.put(event.request, response.clone());
             return response;
