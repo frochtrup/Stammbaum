@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — T0-UNIT: 87 Unit-Tests für Kern-Logik (kein sw-Bump)
+
+- `test(core)`: **`test-unit.js`** — abhängigkeitsfreies Unit-Test-Harness (JXA/Node, `vm`/`eval`, CI-Exit-Code), 87 Tests:
+  - **(a) Parser-Edge-Cases:** CONC/CONT-Notes, leeres BIRT-Tag mit Sub-DATE, Nur-Nachname → leerer Vorname, unbekanntes `_CUSTOM` → `_passthrough[]`, lv>4-Zeile bricht Passthrough nicht ab (ADR-012).
+  - **(b) Validator:** alle **25 Regeln** je 1 Positiv-/Negativfall (13 Personen- + 12 Familien-Regeln); konstruiert minimale `db`-Fixtures, prüft `runValidation()`-Resultate per Regel-Code.
+  - **(c) BFS-Anonymisierung** (`_buildLivingSet`, DSGVO-kritisch): kürzlich geboren→lebend, vor 100 J.→tot, mit Sterbedatum→tot, Ehepartner/Kind einer Lebenden ohne Daten→lebend (BFS), **toter Vorfahr bleibt tot trotz lebendem Kind**, Person ohne Daten→konservativ lebend.
+  - **(d) Datums-Helfer:** `normMonth` (Zahl/Name/dt./en./ungültig), `buildGedDate` (ABT/BET/FROM + Leerfälle), `readDatePartFromFields`/`buildGedDateFromFields` über konfigurierbaren `document`-Stub.
+  - Kein Produktionscode geändert → kein sw-Bump (test-unit.js nicht im SW-Cache).
+
+---
+
 ### Session 2026-05-30 — T0-TEST-2: GRAMPS-Roundtrip automatisiert + Repo-`<type>`-Bug (sw v750)
 
 - **sw v750** `test(interop)` + `fix(gramps)`: GRAMPS-Roundtrip headless automatisiert; dabei echten Roundtrip-Bug gefunden+behoben.

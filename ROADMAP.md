@@ -44,11 +44,11 @@ Fünf Dimensionen leiten die Priorisierung:
 | Funktionsstand | 8.8/10 | Undo/Redo · Karten-Animation · Mehrfachzitate · GED7 · GRAMPS · ASSO-Edit ✓. Lücken bewusst out-of-scope: DNA, Online-Matching, Multi-User. |
 | Performance | 8.0/10 | Web Worker + virtuelles Scrollen (O(log n)) + LAZY-LOAD (−119 KB Cold-Start) + SW-Cache. Ohne Bundling ~45 Cold-Start-Requests (durch HTTP/2 + SW gemildert). |
 | GEDCOM-Konformität | 9.3/10 | **Real verifiziert:** net_delta=0 + out1===out2 auf 83k-Zeilen-Produktionsdatei, automatisiert. Strict-5.5.1 + GED7-opt-in + GRAMPS-Brücke. GRAMPS-Roundtrip seit v750 ebenfalls automatisiert (T0-TEST-2). *(+0.3)* |
-| **Tests** | **6.5/10** | GEDCOM- **und** GRAMPS-Roundtrip jetzt automatisiert headless (T0-TEST-2, sw v750 — fand+behob beim ersten Lauf einen echten Repo-`<type>`-Duplikations-Bug, den der In-Browser-Feldvergleich übersah). **Verbleibend:** keine Unit-Tests für Parser-Edge-Cases, Validator, BFS-Anonymisierung, UI. *(+1.0 nach T0-TEST-2)* |
+| **Tests** | **7.5/10** | GEDCOM- **und** GRAMPS-Roundtrip automatisiert headless (T0-TEST-2). **T0-UNIT**: `test-unit.js` — 87 dep-freie Unit-Tests: alle 25 Validator-Regeln (je Positiv-/Negativfall), Parser-Edge-Cases (CONC/CONT, lv>4, leere Tags, Passthrough), BFS-Anonymisierung (DSGVO), Datums-Helfer. **Verbleibend:** keine UI-Logik-Tests; eigenes Harness statt Framework. *(+1.0 nach T0-UNIT)* |
 | Dokumentation | 9.0/10 | Außergewöhnlich für ein Solo-Projekt (19 ADRs, Datamodel, 151-KB-Changelog). **Abzug:** Selbstbenotung war Marketing; Handbuch-Screenshots offen. |
 | PWA / Offline | 9.0/10 | Eines der ernsthaftesten PWA-Designs: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout. |
 | Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.0/10** | *(Nach Audit 8.5 → 7.9 korrigiert; nach T0-TEST-2 [sw v750] wieder 7.9 → 8.0: Tests +1.0, GEDCOM +0.3. Zwei Disziplinen — GEDCOM/GRAMPS-Treue [verifiziert] und Sicherheitshärtung — auf professionellem Niveau; Test-Abdeckung und Modul-Architektur bleiben die nächsten Hebel.)* |
+| **∅ Gesamt** | **≈ 8.1/10** | *(Nach Audit 8.5 → 7.9 korrigiert; nach T0-TEST-2 [sw v750] → 8.0; nach T0-UNIT [87 Tests] → 8.1: Tests gesamt +2.0, GEDCOM +0.3. Zwei Disziplinen — GEDCOM/GRAMPS-Treue [verifiziert] und Sicherheitshärtung — auf professionellem Niveau; Modul-Architektur [T0-MODULE] bleibt der nächste Hebel.)* |
 
 ---
 
@@ -94,8 +94,8 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern das Sicherheitsnetz und das Fundament sind jetzt der Engpass.** Begründung — die Codebase ist stabil und funktionsreich (∅ Funktion 8.8), aber ihre *Qualitätssicherung* (Tests 5.5) und ihre *strukturelle Skalierbarkeit* (Architektur 6.5) hinken hinterher. Jedes weitere Feature erhöht das Risiko, das diese beiden Achsen nicht mehr abfedern.
 
 **Reihenfolge:**
-1. **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): Voraussetzung, damit alle weiteren Änderungen ohne Regressionsangst möglich sind.
-2. **P0 — Architektur-Fundament** (T0-MODULE als *Plan*, nicht sofortige Umsetzung): die „erst wenn stabil"-Bedingung ist erfüllt; Aufschub erhöht nur die Migrationskosten.
+1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): **erledigt** — GEDCOM+GRAMPS-Roundtrip automatisiert + 87 Unit-Tests. Weitere Änderungen jetzt regressionsabgesichert.
+2. **P0 — Architektur-Fundament** (T0-MODULE als *Plan + Pilot*, nicht Big-Bang): **nächster Schritt**. Die „erst wenn stabil"-Bedingung ist erfüllt; Aufschub erhöht nur die Migrationskosten.
 3. **P1+** — Restliche Schulden + Features wie bisher.
 
 ---
@@ -105,7 +105,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~T0-TEST-2~~ | ~~**GRAMPS-Roundtrip automatisieren**~~ | ✅ **Abgeschlossen sw v750** — `test-roundtrip.js` um GRAMPS erweitert; **abhängigkeitsfreier** Mini-DOMParser (kein npm, kein `linkedom`) + `_gunzip` (Node `zlib` / JXA `gzip -dc`). Test-Seams `_grampsBuildXMLText()` / `_grampsParseXMLText()` (umgehen gzip/Blob/CompressionStream). Assertion: `xml1===xml2` + Kern-Record-Counts (person/family/source/repository) gegen Original. **Fand sofort einen echten Bug:** Repo-`<type>` wurde in `_extra` durchgereicht *und* hartcodiert erneut geschrieben → wuchs +1 pro Roundtrip; behoben (`_REPO_MODELLED` + `r.rtype`-Erhalt). | ~~M~~ |
-| **T0-UNIT** | **Unit-Tests für Kern-Logik** | Über die zwei Integrationstests hinaus: gezielte Tests für (a) Parser-Edge-Cases (lv>4, CONC/CONT, leere Tags), (b) `gedcom-validator.js` (25 Regeln, je 1 Positiv-/Negativfall), (c) BFS-Anonymisierung (`_buildLivingSet` — DSGVO-kritisch!), (d) Datums-Helfer (`normMonth`, `buildGedDateFromFields`). Gleiches dep-freies `vm`/`eval`-Harness wie `test-roundtrip.js`. | **M** |
+| ~~T0-UNIT~~ | ~~**Unit-Tests für Kern-Logik**~~ | ✅ **Abgeschlossen** — `test-unit.js`, 87 dep-freie Tests (JXA/Node), CI-Exit-Code: (a) Parser-Edge-Cases (CONC/CONT, lv>4, leere Tags, Passthrough), (b) alle 25 Validator-Regeln je Positiv-/Negativfall, (c) BFS-Anonymisierung `_buildLivingSet` (6 DSGVO-Fälle inkl. „toter Vorfahr bleibt tot"), (d) Datums-Helfer (`normMonth`, `buildGedDate`, `readDatePartFromFields`, `buildGedDateFromFields` via konfigurierbarem `document`-Stub). | ~~M~~ |
 | **T0-MODULE** | **ES-Modul-Migration — Plan + Pilot** | *Nicht* sofort vollständig migrieren. Stattdessen: ADR-020 mit Migrationsstrategie schreiben + **einen** klar abgegrenzten Cluster (z. B. GRAMPS-Parser/Writer) als `import/export`-Pilot umstellen, um Aufwand/Risiko real zu messen. Beseitigt schrittweise die 762-globale-Funktionen-Schuld. Voraussetzung-Entkopplung von BUNDLING. | **L (Plan: M)** |
 
 ---
