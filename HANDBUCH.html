@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v741</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v749</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -3247,8 +3247,26 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 
 <p>Diese Tags werden von anderen Programmen in der Regel ignoriert — die Daten sind dort nicht sichtbar, gehen aber beim Zurücklesen in Stammbaum PWA nicht verloren.</p>
 
+<h3>Strict GEDCOM 5.5.1 — Export ohne Vendor-Tags</h3>
+
+<p>Wenn Sie Ihren Stammbaum in ein Programm importieren möchten, das keine proprietären Tags versteht, nutzen Sie den <strong>Strict-Export</strong>: <span class="button-label">☰ → Als Strict GEDCOM 5.5.1 exportieren</span>. Die erzeugte Datei trägt den Suffix <code>_strict.ged</code> und enthält ausschließlich Standard-GEDCOM-5.5.1-Tags.</p>
+
+<p>Was passiert mit den Vendor-Tags:</p>
+
+<table style="font-size:0.86em;">
+  <tr><th>Tag</th><th>Behandlung im Strict-Export</th></tr>
+  <tr><td><code>_UID</code></td><td>→ <code>1 REFN &lt;uuid&gt;</code> + <code>2 TYPE UID</code> — UUID bleibt erhalten</td></tr>
+  <tr><td><code>_RUFNAME</code></td><td>→ <code>2 NICK</code> — Standard-Tag für Rufname</td></tr>
+  <tr><td><code>_TRAN</code> (Orte/Namen)</td><td>→ <code>NOTE [lang] übersetzung</code> — lesbar, aber nicht strukturiert</td></tr>
+  <tr><td><code>_FREL</code> / <code>_MREL</code> (gleich)</td><td>→ <code>PEDI</code> — verlustfrei</td></tr>
+  <tr><td><code>_FREL</code> / <code>_MREL</code> (verschieden)</td><td>→ <code>PEDI adopted</code> gewinnt + <code>NOTE</code> mit Originalwerten</td></tr>
+  <tr><td><code>_GRAMPS_ID</code>, <code>_STAT</code></td><td>Weggelassen</td></tr>
+  <tr><td><code>_TASK</code>, <code>_RLOG</code></td><td>Weggelassen (App-interne Daten)</td></tr>
+  <tr><td><code>_SCBK</code>, <code>_PRIM</code>, <code>_DATE</code> an Medien</td><td>Weggelassen</td></tr>
+</table>
+
 <div class="info">
-  Ein geplanter <strong>Strict-Export-Modus</strong> (ROADMAP: F6) wird alle proprietären <code>_</code>-Tags entfernen oder auf Standard-Tags mappen, um maximale Kompatibilität mit anderen Programmen zu erreichen.
+  Der Strict-Export ist für den <strong>einmaligen Transfer</strong> in Fremdsoftware gedacht. Für die weitere Arbeit in Stammbaum PWA nutzen Sie den normalen GEDCOM-Export — er erhält alle Daten vollständig.
 </div>
 
 <h2>GEDCOM 7.0</h2>

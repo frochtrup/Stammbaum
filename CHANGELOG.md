@@ -9,6 +9,86 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-29 — F6 STRICT GEDCOM: Strict GEDCOM 5.5.1 Export (sw v749)
+
+- **sw v749** `feat(interop)`: F6 STRICT GEDCOM — opt-in Export ohne alle `_`-prefixed Vendor-Tags, als Menü-Button (analog zu GED7/GRAMPS):
+  - **`_strictGed`-Flag** in `gedcom-writer.js` (analog zu `_ged7`); neuer dritter Parameter `writeGEDCOM(updateHeadDate, forceGed7, forceStrict)`
+  - **`_ptLines(arr)`** Hilfsfunktion filtert `_`-Tags (`/^[0-9]+ _[A-Z]/`) aus allen Passthrough- und Extra-Arrays (10+ Stellen: `_passthrough[]`, `_extra[]`, `c.extra[]`, `rc.extra[]`, `addrExtra[]`, `noteRefExtras`, `topSourceExtra`, `frelSourExtra`, `mrelSourExtra`, `dataExtra`, `rec._lines`)
+  - **Tag-Mapping:** `_UID` → `1 REFN <uuid>` + `2 TYPE UID`; `_RUFNAME` → `2 NICK`; `_TRAN` PLAC/NAME → `NOTE [lang] value`; `_FREL`/`_MREL` in INDI/FAMC → `PEDI` (adopted gewinnt bei Konflikt + `NOTE Stammbaum: _FREL=… _MREL=…`); `_FREL`/`_MREL` in FAM/CHIL → weggelassen (PEDI steht korrekt im INDI-FAMC)
+  - **Weggelassen:** `_GRAMPS_ID`, `_STAT`, `_TASK`/`_RLOG`-Blöcke, `_SCBK`, `_PRIM`, `_DATE` an Medien
+  - **Menü-Button** `strictExportBtn` (index.html): sichtbar wenn Datei geladen; `menuExportStrict`-Action → `exportGEDCOM(true, false, true)`; Suffix `_strict.ged`; immer Download
+  - **`_odUpdateUI()`** (onedrive-auth.js): `strictExportBtn` sichtbar wenn `AppState.db` gesetzt
+  - **Strict-Roundtrip-Test** (test-roundtrip.js): `runStrictTest()` prüft kein `_`-Tag im Output + Stabilität (out1===out2); läuft nach normalem Roundtrip-Test
+  - **ADR-019** (ARCHITECTURE.md): vollständige Dokumentation der Tag-Behandlung
+
+---
+
+### Session 2026-05-29 — ONBOARDING: Spotlight-Intro nach Demo-Load (sw v748)
+
+- **sw v748** `feat(ux)`: ONBOARDING — 4-Schritte-Spotlight-Overlay nach erstem Demo-Load:
+  - **`ui-onboarding.js`**: `showOnboarding()` — 4 Schritte (Personenliste, Baum-Button, FAB, eigene Datei laden); Spotlight-Overlay mit `#onboarding-overlay`, `#onboarding-box`; `data-ob-step` als Fortschrittsanzeige
+  - Einmalig pro Gerät: Flag `stammbaum_onboarding_done` in localStorage
+  - Trigger: nach `_finishLoad()` wenn Demo-Datei geladen + Flag noch nicht gesetzt
+
+---
+
+### Session 2026-05-29 — LAZY-LOAD: 119 KB aus Cold-Start entfernt (sw v747)
+
+- **sw v747** `feat(perf)`: LAZY-LOAD — 5 Dateien on-demand statt beim Start:
+  - **`lazy-loader.js`**: `_lazyScript(url)` / `_lazyScripts(urls)` — dynamisches `<script>`-Laden mit Promise; Deduplication via `_lazyLoaded` Set
+  - **Lazy-Entry-Points** (ui-event-delegation.js): `menuBook`, `menuPrint`, `generateBook` → laden `ui-book.js` + `ui-print.js` (37 KB); `menuDedup` → `ui-dedup.js` (24 KB); `menuImportCompare` → `ui-import-compare.js` + `compare-engine.js` (57 KB)
+  - `index.html`: 5 `<script>`-Tags entfernt; `lazy-loader.js` eingefügt
+  - `sw.js`: lazy Module in `PRECACHE_OPTIONAL` (kein Startup-Block bei Fehler)
+  - Ergebnis: −119 KB Cold-Start-Last; gemessen 321ms → Roundtrip-Test unverändert
+
+---
+
+### Session 2026-05-29 — T0-TEST: Automatisierter GEDCOM-Roundtrip-Test (sw v746)
+
+- **sw v746** `feat(test)`: T0-TEST — `test-roundtrip.js` — GEDCOM-Roundtrip direkt via osascript ohne Browser:
+  - Läuft via JavaScriptCore (macOS built-in): `osascript -l JavaScript test-roundtrip.js datei.ged`
+  - Node.js-Pfad: `vm.runInContext` — alle drei Skripte (`gedcom.js`, `gedcom-parser.js`, `gedcom-writer.js`) in isoliertem Kontext mit Browser-Stubs
+  - JXA-Pfad (osascript): `eval(_combined)` — Funktionen im globalen Scope; `window=this`-Trick
+  - `runRoundtrip()`: Parse → Write (out1) → Parse → Write (out2); prüft `out1 === out2` + `normDelta === 0`; Snapshot-Vergleich (Update via `--update`); farbige Ausgabe
+  - Ergebnis: 2811 Personen, net_delta=0, stable in ~330ms bestätigt
+
+---
+
+### Session 2026-05-29 — CSS-PURGE: 21 tote Klassen entfernt (sw v745)
+
+- **sw v745** `refactor(css)`: CSS-PURGE — systematischer Scan aller 796 CSS-Klassen:
+  - Entfernt: 17 Utility-Klassen (`d-block`, `d-inline-flex`, `flex-shrink-0`, `ai-fe`, `jc-c`, `jc-sb`, `w-54`, `w-72`, `ta-c`, `ta-l`, `bg-s2`, `br-sm`, `br-md`, `wb-all`, `max-h-280`, `va-mid`, `lh-17`) + `src-tag-x`, `tpl-btn`, `btn-gold-text`, `c-red`
+  - Leaflet-Overrides + dynamische Klassen (`tl-pc${idx}` etc.) korrekt behalten
+  - `styles.css`: 3416 → 3385 Zeilen (−31)
+
+---
+
+### Session 2026-05-28 — T0-XSS: innerHTML-Sicherheitsaudit (sw v744)
+
+- **sw v744** `fix(security)`: T0-XSS — vollständiger Audit aller 166 `innerHTML`-Assignments:
+  - Kein echter XSS-Vektor gefunden; alle Pfade verwenden `esc()` oder schreiben nur statisches HTML
+  - Einzige Inkonsistenz behoben: `ui-forms.js` `_appendDataEvenRow` — `value=`-Attribute von `.replace(/"/g,'&quot;')` auf `esc()` umgestellt (`evens`, `date`, `plac`)
+  - Sicherheits-Bewertung: +0.2 → 7.7/10
+
+---
+
+### Session 2026-05-28 — T0-SW: Service Worker Install-Robustness (sw v743)
+
+- **sw v743** `fix(sw)`: T0-SW — PRECACHE_CRITICAL + PRECACHE_OPTIONAL Split:
+  - **`PRECACHE_CRITICAL`** (Promise.all, atomar): alle JS/HTML/CSS-Kern-Assets — Install schlägt fehl wenn eines fehlt
+  - **`PRECACHE_OPTIONAL`** (Promise.allSettled, fehlertolerant): 8 Fonts-woff2, `leaflet.js/css`, `debug-gramps.js`, `Anna.png` — Einzelfehler bricht SW-Install nicht mehr ab
+  - Behebt: fehlende `gedcom-validator.js` + `timeline-hist-events.js` offline (in PRECACHE ergänzt, v742)
+
+---
+
+### Session 2026-05-28 — ARCHITECTURE + PRECACHE-Fix (sw v742)
+
+- **sw v742** `docs+fix`: ARCHITECTURE.md vollständige Überarbeitung + PRECACHE-Bugfix:
+  - ARCHITECTURE.md: Übersicht auf ~52 Dateien aktuell; ADRs kondensiert; Bekannte Einschränkungen bereinigt
+  - `fix(sw)`: `gedcom-validator.js` + `timeline-hist-events.js` in PRECACHE ergänzt (fehlten → offline nicht verfügbar)
+
+---
+
 ### Session 2026-05-27 — ASSO-EDIT: Assoziationen editierbar (sw v734)
 
 - **sw v734** `feat(asso)`: ASSO-EDIT — Assoziationen in der Personen-Detailansicht vollständig editierbar:
