@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v751 · Cache: `stammbaum-v751`
+**sw-Version:** v752 · Cache: `stammbaum-v752`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -106,7 +106,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 |---|---|---|---|
 | ~~T0-TEST-2~~ | ~~**GRAMPS-Roundtrip automatisieren**~~ | ✅ **Abgeschlossen sw v750** — `test-roundtrip.js` um GRAMPS erweitert; **abhängigkeitsfreier** Mini-DOMParser (kein npm, kein `linkedom`) + `_gunzip` (Node `zlib` / JXA `gzip -dc`). Test-Seams `_grampsBuildXMLText()` / `_grampsParseXMLText()` (umgehen gzip/Blob/CompressionStream). Assertion: `xml1===xml2` + Kern-Record-Counts (person/family/source/repository) gegen Original. **Fand sofort einen echten Bug:** Repo-`<type>` wurde in `_extra` durchgereicht *und* hartcodiert erneut geschrieben → wuchs +1 pro Roundtrip; behoben (`_REPO_MODELLED` + `r.rtype`-Erhalt). | ~~M~~ |
 | ~~T0-UNIT~~ | ~~**Unit-Tests für Kern-Logik**~~ | ✅ **Abgeschlossen** — `test-unit.js`, 87 dep-freie Tests (JXA/Node), CI-Exit-Code: (a) Parser-Edge-Cases (CONC/CONT, lv>4, leere Tags, Passthrough), (b) alle 25 Validator-Regeln je Positiv-/Negativfall, (c) BFS-Anonymisierung `_buildLivingSet` (6 DSGVO-Fälle inkl. „toter Vorfahr bleibt tot"), (d) Datums-Helfer (`normMonth`, `buildGedDate`, `readDatePartFromFields`, `buildGedDateFromFields` via konfigurierbarem `document`-Stub). | ~~M~~ |
-| **T0-MODULE** | **ES-Modul-Migration — Plan + Pilot** | ✅ **Phase 1 abgeschlossen (sw v751)** — **ADR-020** (Strategie + gemessene Erkenntnisse + 4-Phasen-Plan). **Pilot:** GRAMPS-Cluster auf `export` umgestellt; `gramps.bridge.js` (`type="module"`) legt Public-API auf `window` für klassische Konsumenten. Verifiziert: 2 Headless-Suiten grün + Browser (Boot fehlerfrei, End-to-End Parse→Build, Modul liest `AppState`/`citationObj` zur Laufzeit). Schlüsselbefund: **Kern muss NICHT zuerst migriert werden** (Module lesen klassische Globals). **Offen:** Phasen 2–4 (Konsumenten → Kern → UI), siehe ES-MODULE im Backlog. | **L (Phase 1: M ✓)** |
+| **T0-MODULE** | **ES-Modul-Migration — Plan + saubere Cluster** | ✅ **Phase 1+2 abgeschlossen (sw v751/v752)** — **ADR-020** (Strategie + gemessene Erkenntnisse + Phasenplan). **Phase 1:** GRAMPS-Cluster → `export` + `gramps.bridge.js`. **Phase 2:** Validator-Cluster → `export` + `validator.bridge.js`. Beide Browser-verifiziert (Boot fehlerfrei, Globals gesetzt, End-to-End-Aufrufe, Module lesen `gedcom.js`-Globals zur Laufzeit). **Gemessener Befund:** GRAMPS-*Konsumenten* sind nicht billig migrierbar (z. B. `idbGet` von 13 Dateien genutzt) → Brücke schrumpft erst nach Kern-Migration; daher zuerst alle sauberen Leaf-Cluster. **Offen:** Phase 3 (Kern) + Phase 4 (UI/Bundling). | **L (Phase 1+2: M ✓)** |
 
 ---
 
@@ -180,7 +180,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v749** *(aktuell — v750/v751 nur Test-Automation, interner GRAMPS-Fix + ESM-Pilot, nicht handbuchrelevant)*
+**Handbuch-Stand: sw v749** *(aktuell — v750–v752 nur Test-Automation, interner GRAMPS-Fix + ESM-Migration, nicht handbuchrelevant)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -199,7 +199,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 | BUNDLING | **Bundling für Erstladezeit** | Nur sinnvoll nach LAZY-LOAD + ES-MODULE. Mit LAZY-LOAD sind die größten Cold-Start-Gewinne bereits ohne Build-Step realisiert; vollständiges Bundling (esbuild/Rollup) bringt danach nur noch marginale Verbesserung. | L |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend als Opt-in. | XL |
 | COLLAB | **Kollaboratives Editieren** | Konflikt-freies Merge zweier GEDCOM-Dateien. Grundlage: IMPORT-CMP + DUP-DETECT. Erfordert Server oder CRDTs. | XL |
-| ES-MODULE | **Vollständige ES-Modul-Migration (Phasen 2–4)** | Pilot (Phase 1) erledigt → ADR-020. Verbleibend: Phase 2 GRAMPS-Konsumenten → `import`; Phase 3 Kern (`gedcom.js` + GEDCOM-Parser/Writer/Validator) → echte Module (größter Schritt, adressiert 762 Globals); Phase 4 UI-Cluster, dann BUNDLING. Brücken-Pattern aus ADR-020 ist wiederverwendbar. | XL |
+| ES-MODULE | **Vollständige ES-Modul-Migration (Phasen 3–4)** | Phase 1+2 erledigt (GRAMPS + Validator, ADR-020). Verbleibend: **Phase 3 Kern** — `gedcom.js` + GEDCOM-Parser/Writer + I/O-Schicht (`storage-file.js`/`idbGet`) → echte Module (größter Schritt; löst erst danach die GRAMPS-Konsumenten + Gros der 762 Globals); **Phase 4** UI-Cluster, dann BUNDLING. Brücken-Pattern wiederverwendbar. | XL |
 
 ---
 

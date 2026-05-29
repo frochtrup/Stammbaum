@@ -9,6 +9,19 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — T0-MODULE Phase 2: ES-Modul Validator-Cluster (sw v752)
+
+- **sw v752** `refactor(arch)`: zweiter ES-Modul-Cluster nach demselben Brücken-Pattern (ADR-020).
+  - **`gedcom-validator.js`** → ES-Modul: `export` auf `runValidation`, `VAL_RULES`, `VAL_CONFIG_DEFAULTS`.
+  - **`validator.bridge.js`** (neu, `<script type="module">`): legt die 3 Symbole auf `window` für die klassischen Konsumenten (ui-views-val.js, ui-views-tasks.js, ui-event-delegation.js).
+  - **`index.html`**: `<script src="gedcom-validator.js">` → Modul-Brücke. **`sw.js`**: `validator.bridge.js` in `PRECACHE_CRITICAL`.
+  - **`test-unit.js`**: `_stripMod()` + `_readSrc()` strippen `export` der Validator-Datei vor flachem `eval`/`vm` (87 Tests weiter grün — sichern `runValidation` + alle 25 Regeln ab).
+  - **Verifiziert:** beide Headless-Suiten grün; Browser (preview): `window.runValidation` (function), `VAL_RULES` (array[25]), echter Validierungslauf feuert `DEATH_BEFORE_BIRTH`/`MISSING_SEX` (Modul liest `parseGedDate`/`gedDatePartToISO` zur Laufzeit), `parseGRAMPS` weiter intakt.
+  - **Re-Scoping (ADR-020):** ursprüngliche „Phase 2 = GRAMPS-Konsumenten migrieren" verworfen — gemessen: Konsumenten sind tief eingebettet (`idbGet` aus storage-file.js von 13 Dateien genutzt), Lazy-Geladene als klassische Skripte injiziert → Kaskade. Brücke schrumpft erst nach Kern-Migration (Phase 3). Strategie: zuerst alle sauberen Leaf-Cluster (GRAMPS ✓, Validator ✓).
+  - **Betriebs-Hinweis:** ESM-Umstellung erfordert `CACHE_NAME`-Bump — sonst lädt ein alter SW die gecachte index.html mit der Datei als klassischem `<script>` → `SyntaxError`.
+
+---
+
 ### Session 2026-05-30 — T0-MODULE Phase 1: ES-Modul-Pilot GRAMPS-Cluster (sw v751)
 
 - **sw v751** `refactor(arch)`: Inkrementelle ES-Modul-Migration gestartet — GRAMPS-Cluster als Pilot (ADR-020).

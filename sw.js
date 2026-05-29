@@ -2,13 +2,13 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v751';
+const CACHE_NAME = 'stammbaum-v752';
 
 // Kern-Assets: atomar — Install schlägt fehl wenn eines fehlt
 const PRECACHE_CRITICAL = [
   './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
   './fonts/fonts.css',
-  './gedcom.js', './gedcom-parser.js', './gedcom-worker.js', './gedcom-writer.js', './gedcom-validator.js', './gramps-parser.js', './gramps-writer.js', './gramps.bridge.js',
+  './gedcom.js', './gedcom-parser.js', './gedcom-worker.js', './gedcom-writer.js', './gedcom-validator.js', './validator.bridge.js', './gramps-parser.js', './gramps-writer.js', './gramps.bridge.js',
   './storage-file.js', './storage.js',
   './ui-views.js', './ui-views-nav.js', './ui-views-undo.js', './ui-views-note.js', './ui-views-search.js',
   './ui-views-tree.js', './ui-views-tasks.js', './ui-views-rlog.js', './ui-views-val.js', './ui-views-person.js', './ui-views-family.js',

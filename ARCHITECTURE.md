@@ -357,11 +357,13 @@ Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAM
 - **Kein Cross-Dep** zwischen Parser und Writer → Pilot ohne gegenseitige Imports.
 - **Test-Harness:** `test-roundtrip.js` lädt flach via `eval`/`vm` (kein Modul-Loader) → `_stripMod()` entfernt `export`/`import` vor dem Eval. `test-unit.js` unberührt (lädt keine GRAMPS-Dateien).
 
-**Phasenplan:**
+**Phasenplan (nach Messung re-skaliert):**
 1. ✅ **Pilot (sw v751):** GRAMPS-Cluster → `export`; `gramps.bridge.js` als Modul-Brücke. Verifiziert: 2 Headless-Suiten grün + Browser (Boot fehlerfrei, Globals gesetzt, End-to-End Parse→Build, `AppState`/`citationObj` zur Laufzeit lesbar).
-2. **Konsumenten migrieren:** storage-file/onedrive/compare-engine/ui-debug/debug-gramps → `import` aus GRAMPS-Modulen; Brücke schrumpfen.
-3. **Kern migrieren:** `gedcom.js` + GEDCOM-Parser/Writer/Validator → echte Module mit `export` (größter Schritt — adressiert die 762 Globals).
+2. ✅ **Saubere Leaf-Cluster (sw v752):** Validator (`gedcom-validator.js` → `export`, `validator.bridge.js`). **Gemessener Befund, der die ursprüngliche Phase-2-Idee verwirft:** die GRAMPS-*Konsumenten* (storage-file, onedrive, ui-debug) sind **nicht** billig migrierbar — sie sind tief eingebettete Kern-Skripte mit vielen *eigenen* globalen Abhängern (z. B. `idbGet` aus storage-file.js wird von 13 Dateien genutzt), und die Lazy-Geladenen (compare-engine, debug-gramps) werden als klassische Skripte injiziert. Sie zu Modulen zu machen kaskadiert. → **Brücke kann erst schrumpfen, wenn der Kern koordiniert migriert ist.** Strategie daher: zuerst alle *sauber isolierten* Cluster migrieren (GRAMPS, Validator — beide leaf, ohne externe Nutzer ihrer Interna).
+3. **Kern migrieren (der große Schritt):** `gedcom.js` + GEDCOM-Parser/Writer + die geteilte I/O-Schicht (`storage-file.js` mit `idbGet` etc.) → echte Module. Erst hiernach lösen sich die GRAMPS-Konsumenten + die meisten der 762 Globals.
 4. **UI-Cluster + Bundling:** restliche Views/Forms; danach wird BUNDLING (esbuild/Rollup) sinnvoll.
+
+**Betriebs-Hinweis (gemessen):** Beim Migrieren einer Datei auf `export` muss der Service-Worker-Cache invalidiert werden (`CACHE_NAME`-Bump). Sonst liefert ein alter SW eine gecachte `index.html`, die die Datei noch als klassisches `<script>` lädt → `SyntaxError` (`export` außerhalb Modul) → Symbol fehlt. Der Versionsbump pro Migrationsschritt löst das für Nutzer; in der Dev-Preview einmal SW abmelden + Cache leeren.
 
 **Trade-off:** In der Brücken-Phase sind Kern-Abhängigkeiten *implizit* (global-lexical Reads statt expliziter Imports). Bewusst akzeptiert; der volle Nutzen (explizite Deps, Tree-Shaking) entsteht erst nach Phase 3–4.
 

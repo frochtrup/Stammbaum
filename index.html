@@ -2076,7 +2076,8 @@
 <script src="gedcom.js"></script>
 <script src="gedcom-parser.js"></script>
 <script src="gedcom-writer.js"></script>
-<script src="gedcom-validator.js"></script>
+<!-- Validator-Cluster: ES-Modul (T0-MODULE Phase 2, ADR-020). Brücke legt runValidation/VAL_* auf window. -->
+<script type="module" src="validator.bridge.js"></script>
 <!-- GRAMPS-Cluster: ES-Module (T0-MODULE Pilot, ADR-020). Brücke legt parseGRAMPS/writeGRAMPS auf window. -->
 <script type="module" src="gramps.bridge.js"></script>
 <script src="storage-file.js"></script>

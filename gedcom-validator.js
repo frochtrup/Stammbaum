@@ -5,7 +5,7 @@
 //  Nutzer befördert einzelne Befunde manuell in echte Tasks (_addTaskToDb).
 // ─────────────────────────────────────────────────────────────────────────────
 
-const VAL_CONFIG_DEFAULTS = {
+export const VAL_CONFIG_DEFAULTS = {
   disabled: new Set(),
   thresholds: {
     maxAge:        110,
@@ -20,7 +20,7 @@ const VAL_CONFIG_DEFAULTS = {
 };
 
 // Alle Regeln mit Beschreibung und Standardschwellenwert (für die Config-UI)
-const VAL_RULES = [
+export const VAL_RULES = [
   // ── Bestehend ──
   { key: 'MISSING_SURNAME',          label: 'Nachname fehlt',                        severity: 'warn',  threshold: null },
   { key: 'MISSING_SEX',              label: 'Geschlecht unbekannt',                  severity: 'warn',  threshold: null },
@@ -92,7 +92,7 @@ function _hasSources(p) {
 // severity: 'error' | 'warn' | 'info'
 // category: 'kirchenbuch' | 'urkunde' | 'online'
 // familyId: null bei Personen-Befunden, FAM-ID bei Familien-Befunden
-function runValidation(db, config) {
+export function runValidation(db, config) {
   if (!db?.individuals) return [];
   const cfg = config || VAL_CONFIG_DEFAULTS;
   const disabled = cfg.disabled instanceof Set ? cfg.disabled : new Set(cfg.disabled || []);

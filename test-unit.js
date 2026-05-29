@@ -45,6 +45,18 @@ var _docStub = {
   createElement:  function()   { return { style: {}, options: [], appendChild: function() {} }; },
 };
 
+// ── ESM-Syntax für flachen eval/vm entfernen ────────────────────────────────
+// gedcom-validator.js ist auf ES-Module umgestellt (T0-MODULE Phase 2). Dieses
+// Harness lädt flach (kein Modul-Loader) → `export`/`import` entfernen.
+function _stripMod(s) {
+  return s
+    .replace(/^export\s+(?=(async\s+)?function\b|const\b|let\b|var\b|class\b)/gm, '')
+    .replace(/^export\s*\{[^}]*\}\s*;?\s*$/gm, '')
+    .replace(/^import\b[^\n]*$/gm, '');
+}
+var _MODFILES = { 'gedcom-validator.js': 1 };
+function _readSrc(f) { var s = _read(_dir + '/' + f); return _MODFILES[f] ? _stripMod(s) : s; }
+
 // ── Module laden ──────────────────────────────────────────────────────────────
 var API = {};
 if (IS_NODE) {
@@ -57,7 +69,7 @@ if (IS_NODE) {
   });
   _ctx.window = _ctx;
   ['gedcom.js', 'gedcom-parser.js', 'gedcom-writer.js', 'gedcom-validator.js']
-    .forEach(function(f) { _vm.runInContext(_read(_dir + '/' + f), _ctx, { filename: f }); });
+    .forEach(function(f) { _vm.runInContext(_readSrc(f), _ctx, { filename: f }); });
   API = _ctx;
 } else {
   window       = this;
@@ -65,10 +77,10 @@ if (IS_NODE) {
   performance  = { now: function() { return Date.now(); } };
   document     = _docStub;
   var _combined =
-    _read(_dir + '/gedcom.js')          + '\n' +
-    _read(_dir + '/gedcom-parser.js')   + '\n' +
-    _read(_dir + '/gedcom-writer.js')   + '\n' +
-    _read(_dir + '/gedcom-validator.js')+ '\n' +
+    _readSrc('gedcom.js')          + '\n' +
+    _readSrc('gedcom-parser.js')   + '\n' +
+    _readSrc('gedcom-writer.js')   + '\n' +
+    _readSrc('gedcom-validator.js')+ '\n' +
     'window._api = { parseGEDCOM: parseGEDCOM, runValidation: runValidation, ' +
     '_buildLivingSet: _buildLivingSet, normMonth: normMonth, buildGedDate: buildGedDate, ' +
     'buildGedDateFromFields: buildGedDateFromFields, readDatePartFromFields: readDatePartFromFields };';
