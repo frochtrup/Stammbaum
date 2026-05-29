@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v746';
+const CACHE_NAME = 'stammbaum-v747';
 
 // Kern-Assets: atomar — Install schlägt fehl wenn eines fehlt
 const PRECACHE_CRITICAL = [
@@ -12,12 +12,12 @@ const PRECACHE_CRITICAL = [
   './storage-file.js', './storage.js',
   './ui-views.js', './ui-views-nav.js', './ui-views-undo.js', './ui-views-note.js', './ui-views-search.js',
   './ui-views-tree.js', './ui-views-tasks.js', './ui-views-rlog.js', './ui-views-val.js', './ui-views-person.js', './ui-views-family.js',
-  './ui-views-source.js', './ui-views-place.js', './ui-views-hof.js', './ui-views-map.js', './ui-views-stats.js', './ui-dedup.js', './ui-chart-export.js',
-  './debug-activate.js',
-  './ui-book.js', './ui-print.js', './story-epochs.js', './timeline-hist-events.js',
+  './ui-views-source.js', './ui-views-place.js', './ui-views-hof.js', './ui-views-map.js', './ui-views-stats.js', './ui-chart-export.js',
+  './debug-activate.js', './lazy-loader.js',
+  './story-epochs.js', './timeline-hist-events.js',
   './ui-fanchart.js', './ui-desc-tree.js', './ui-timeline.js', './ui-story.js', './ui-story-person.js', './ui-story-fam.js', './ui-forms.js', './ui-forms-person.js', './ui-forms-family.js', './ui-forms-repo.js', './ui-forms-event.js', './ui-debug.js', './ui-media.js',
   './onedrive-auth.js', './onedrive-import.js', './onedrive.js',
-  './ui-import-compare.js', './compare-engine.js', './ui-event-delegation.js',
+  './ui-event-delegation.js',
 ];
 
 // Optionale Assets: einzeln gecacht — Einzelfehler bricht Install nicht ab
@@ -30,6 +30,8 @@ const PRECACHE_OPTIONAL = [
   './leaflet.js', './leaflet.css',
   './debug-gramps.js',
   './Anna.png',
+  './ui-book.js', './ui-print.js', './ui-dedup.js',
+  './ui-import-compare.js', './compare-engine.js',
 ];
 
 // Absolute Pfade für schnellen Cache-first-Lookup

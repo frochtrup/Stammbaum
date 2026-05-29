@@ -263,14 +263,14 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuHelp:                ()  => { closeModal('modalMenu'); openModal('modalHelp'); },
   menuRoundtrip:           ()  => { closeModal('modalMenu'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
   menuGrampsRoundtrip:     ()  => { closeModal('modalMenu'); if (typeof runGrampsRoundtripTest === 'function') runGrampsRoundtripTest(); },
-  menuBook:                ()  => { closeModal('modalMenu'); openBookModal(); },
-  menuPrintAhnenliste:    ()  => { closeModal('modalMenu'); downloadAhnenliste(); },
-  menuPrintFamilienbogen: ()  => { closeModal('modalMenu'); downloadFamilienbogen(); },
+  menuBook:                ()  => { closeModal('modalMenu'); _lazyScripts(['ui-book.js', 'ui-print.js']).then(() => openBookModal()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
+  menuPrintAhnenliste:    ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadAhnenliste()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
+  menuPrintFamilienbogen: ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadFamilienbogen()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   generateBook:            ()  => {
     const mode      = document.querySelector('#book-mode-seg button.active')?.dataset.bookMode || 'ancestors';
     const title     = document.getElementById('book-title')?.value.trim() || 'Familienbuch';
     const withPhotos = document.getElementById('book-photos')?.checked ?? true;
-    downloadBook({ title, mode, withPhotos });
+    _lazyScripts(['ui-book.js', 'ui-print.js']).then(() => downloadBook({ title, mode, withPhotos })).catch(() => showToast('⚠ Modul nicht ladbar', 'error'));
   },
   themeAuto:               ()  => setThemePref('auto'),
   themeLight:              ()  => setThemePref('light'),
@@ -293,8 +293,8 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   confirmDeleteMedia:      ()  => confirmDeleteMedia(),
   confirmEditMedia:        ()  => confirmEditMedia(),
   helpRoundtrip:           ()  => { closeModal('modalHelp'); if (typeof runRoundtripTest === 'function') runRoundtripTest(); },
-  menuImportCompare:       ()  => openImportCompare(),
-  menuDedup:               ()  => { closeModal('modalMenu'); openDedupModal(); },
+  menuImportCompare:       ()  => { _lazyScript('ui-import-compare.js').then(() => openImportCompare()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
+  menuDedup:               ()  => { closeModal('modalMenu'); _lazyScript('ui-dedup.js').then(() => openDedupModal()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   menuRepairDb:            ()  => { closeModal('modalMenu'); repairDatabase(); },
   menuStats:               ()  => { closeModal('modalMenu'); bnavTab('stats'); },
   dedupRunScan:            ()  => dedupRunScan(),
