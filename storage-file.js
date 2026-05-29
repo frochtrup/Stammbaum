@@ -205,19 +205,21 @@ function _downloadBlob(content, filename) {
 // ─────────────────────────────────────
 //  EXPORT / SPEICHERN
 // ─────────────────────────────────────
-async function exportGEDCOM(forceGEDCOM = false, forceGed7 = false) {
-  const isAnon  = AppState.privacyAnon;
-  if (!forceGEDCOM && !isAnon && !forceGed7 && AppState.db?._grampsMaster) return exportGRAMPS(true);
+async function exportGEDCOM(forceGEDCOM = false, forceGed7 = false, forceStrict = false) {
+  const isAnon   = AppState.privacyAnon;
+  const isStrict = forceStrict || AppState.strictGed;
+  if (!forceGEDCOM && !isAnon && !forceGed7 && !isStrict && AppState.db?._grampsMaster) return exportGRAMPS(true);
   let content;
-  try { content = writeGEDCOM(true, forceGed7); }
+  try { content = writeGEDCOM(true, forceGed7, isStrict); }
   catch(e) { showToast('⚠ Fehler beim Schreiben: ' + e.message, 'error'); return; }
   const filename = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
   const basename = filename.replace(/\.ged$/i, '');
-  // GED7 und Anon: nie Originaldatei überschreiben — immer Download mit Suffix
+  // Anon/GED7/Strict: nie Originaldatei überschreiben — immer Download mit Suffix
   const exportFilename = isAnon    ? `${basename}_anon.ged`
                        : forceGed7 ? `${basename}_ged7.ged`
+                       : isStrict  ? `${basename}_strict.ged`
                        : filename;
-  const _forceDownload = isAnon || forceGed7;
+  const _forceDownload = isAnon || forceGed7 || isStrict;
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // iOS Safari: Share Sheet (Hauptdatei + Zeitstempel-Backup)
@@ -233,7 +235,7 @@ async function exportGEDCOM(forceGEDCOM = false, forceGed7 = false) {
         .then(() => {
           // Nur als gespeichert markieren wenn keine neuen Änderungen während
           // des Share-Dialogs gemacht wurden — und nur wenn nicht anonymisiert
-          if (!_forceDownload && writeGEDCOM(true) === content) { AppState.changed = false; updateChangedIndicator(); }
+          if (!_forceDownload && writeGEDCOM(true, false, false) === content) { AppState.changed = false; updateChangedIndicator(); }
           showToast(_forceDownload ? `✓ ${exportFilename} geteilt` : '✓ Gespeichert');
         })
         .catch(err => { if (err.name !== 'AbortError') showToast('⚠ Fehler beim Teilen'); });
@@ -275,6 +277,7 @@ async function exportGEDCOM(forceGEDCOM = false, forceGed7 = false) {
   }
   const _dlLabel = isAnon    ? `✓ ${exportFilename} heruntergeladen (anonymisiert)`
                  : forceGed7 ? `✓ ${exportFilename} heruntergeladen (GEDCOM 7.0)`
+                 : isStrict  ? `✓ ${exportFilename} heruntergeladen (Strict GEDCOM 5.5.1)`
                  : '✓ ' + exportFilename + ' heruntergeladen';
   showToast(_dlLabel);
 }

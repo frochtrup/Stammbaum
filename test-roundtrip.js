@@ -89,7 +89,7 @@ var SNAP_DIR = _dir + '/test-roundtrip.snap';
 // Node: vm.runInContext (isolierter Kontext mit Polyfills)
 // JXA:  indirektes eval → Funktionen landen im globalen Scope
 
-var _parseGEDCOM, _writeGEDCOM, _setDb;
+var _parseGEDCOM, _writeGEDCOM, _writeGEDCOMStrict, _setDb;
 
 if (IS_NODE) {
 
@@ -111,9 +111,10 @@ if (IS_NODE) {
   _loadNode('gedcom-parser.js');
   _loadNode('gedcom-writer.js');
 
-  _parseGEDCOM = function(t, e) { return _ctx.parseGEDCOM(t, e); };
-  _writeGEDCOM = function()     { return _ctx.writeGEDCOM(false); };
-  _setDb       = function(db)   { return _ctx.setDb(db); };
+  _parseGEDCOM      = function(t, e) { return _ctx.parseGEDCOM(t, e); };
+  _writeGEDCOM      = function()     { return _ctx.writeGEDCOM(false); };
+  _writeGEDCOMStrict = function()    { return _ctx.writeGEDCOM(false, false, true); };
+  _setDb            = function(db)   { return _ctx.setDb(db); };
 
 } else {
 
@@ -130,12 +131,13 @@ if (IS_NODE) {
     _read(_dir + '/gedcom.js')         + '\n' +
     _read(_dir + '/gedcom-parser.js')  + '\n' +
     _read(_dir + '/gedcom-writer.js')  + '\n' +
-    'window._rt = { parse: parseGEDCOM, write: function() { return writeGEDCOM(false); }, setDb: setDb };';
+    'window._rt = { parse: parseGEDCOM, write: function() { return writeGEDCOM(false); }, writeStrict: function() { return writeGEDCOM(false, false, true); }, setDb: setDb };';
   eval(_combined);
 
-  _parseGEDCOM = function(t, e) { return window._rt.parse(t, e); };
-  _writeGEDCOM = function()     { return window._rt.write(); };
-  _setDb       = function(db)   { return window._rt.setDb(db); };
+  _parseGEDCOM       = function(t, e) { return window._rt.parse(t, e); };
+  _writeGEDCOM       = function()     { return window._rt.write(); };
+  _writeGEDCOMStrict = function()     { return window._rt.writeStrict(); };
+  _setDb             = function(db)   { return window._rt.setDb(db); };
 
 }
 
@@ -292,6 +294,49 @@ function printResult(r, filename) {
     log('  ' + YELLOW + '⚠ ' + r.errs1 + ' Parse-Warnung(en)' + RESET);
 }
 
+// ── Strict-Test ────────────────────────────────────────────────────────────
+
+function runStrictTest(filename) {
+  var fullPath = (filename[0] === '/') ? filename : _dir + '/' + filename;
+  if (!_exists(fullPath)) return { ok: false, msg: 'Datei nicht gefunden: ' + filename };
+
+  var origText = _read(fullPath);
+  var t0 = Date.now();
+
+  var errs1 = [];
+  _setDb(_parseGEDCOM(origText, errs1));
+  var out1 = _writeGEDCOMStrict();
+
+  // Prüfen: kein _-prefixed Tag im Output
+  var underscoreMatch = out1.match(/\n([0-9]+ _[A-Z_]+)[^\n]*/);
+  if (underscoreMatch) {
+    return { ok: false, msg: 'Vendor-Tag gefunden: ' + underscoreMatch[1].trim(), ms: Date.now() - t0 };
+  }
+
+  // Stabilität: Parse→Write nochmals
+  var errs2 = [];
+  _setDb(_parseGEDCOM(out1, errs2));
+  var out2 = _writeGEDCOMStrict();
+  var stable = out1 === out2;
+  var ms = Date.now() - t0;
+
+  return { ok: stable, stable: stable, ms: ms, errs1: errs1.length, diff: stable ? null : firstDiffs(out1, out2) };
+}
+
+function printStrictResult(r, filename) {
+  if (!r.ok && r.msg) { log(RED + '✗ strict:' + filename + RESET + '  ' + r.msg); return; }
+  var icon = r.ok ? GREEN + '✓' + RESET : RED + '✗' + RESET;
+  var sStr = r.stable ? GREEN + 'stable' + RESET : RED + 'INSTABIL' + RESET;
+  log(icon + ' strict:' + filename + '  no _-tags  ' + sStr + '  ' + DIM + r.ms + 'ms' + RESET);
+  if (!r.stable && r.diff) {
+    log('  ' + RED + 'Pass1→Pass2 Instabilität:' + RESET);
+    r.diff.forEach(function(h) {
+      h.del.forEach(function(l) { log('    ' + RED + '- [' + h.lineA + '] ' + l + RESET); });
+      h.ins.forEach(function(l) { log('    ' + GREEN + '+ [' + h.lineB + '] ' + l + RESET); });
+    });
+  }
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 log(DIM + 'Lade Parser/Writer…' + RESET);
@@ -304,6 +349,13 @@ for (var i = 0; i < testFiles.length; i++) {
   var r = runRoundtrip(testFiles[i]);
   printResult(r, testFiles[i]);
   if (!r.ok) allOk = false;
+}
+
+log('');
+for (var j = 0; j < testFiles.length; j++) {
+  var rs = runStrictTest(testFiles[j]);
+  printStrictResult(rs, testFiles[j]);
+  if (!rs.ok) allOk = false;
 }
 
 log('');

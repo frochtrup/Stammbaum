@@ -257,6 +257,8 @@ async function openSettings() {
   if (odSection) odSection.style.display = _odIsConnected() ? '' : 'none';
   const privacyAnonEl = document.getElementById('set-privacy-anon');
   if (privacyAnonEl) privacyAnonEl.checked = AppState.privacyAnon;
+  const strictGedEl = document.getElementById('set-strict-ged');
+  if (strictGedEl) strictGedEl.checked = AppState.strictGed;
   const privacyYearEl = document.getElementById('set-privacy-year');
   if (privacyYearEl) privacyYearEl.textContent = new Date().getFullYear() - 100;
   const basePath = await _odGetBasePath();

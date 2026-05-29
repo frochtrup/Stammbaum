@@ -314,6 +314,35 @@ Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAM
 
 ---
 
+### ADR-019: Strict GEDCOM 5.5.1 Export (sw v749)
+
+**Entscheidung:** Opt-in Exportmodus ohne alle `_`-prefixed Vendor-Tags. Ziel: maximale Kompatibilität mit Fremdsoftware (Ancestry, MacFamilyTree, Ahnenblatt).
+
+**Implementierung:**
+- `_strictGed`-Flag in `gedcom-writer.js`, analog zu `_ged7`
+- `writeGEDCOM(updateHeadDate, forceGed7, forceStrict)` — neuer dritter Parameter
+- IDB-Key `strict_ged`; `AppState.strictGed`; Toggle in modalSettings
+- Dateiname erhält Suffix `_strict.ged`; nie direkt speichern
+
+**Tag-Behandlung:**
+
+| Tag(s) | Behandlung |
+|--------|-----------|
+| `_UID` | → `1 REFN <uuid>` + `2 TYPE UID` |
+| `_RUFNAME` | → `2 NICK <rufname>` |
+| `_TRAN` (PLAC/NAME) | → `NOTE [lang] value` je Übersetzung (informativ, nicht re-importierbar) |
+| `_FREL`/`_MREL` in INDI/FAMC gleich | → `PEDI` (kein Verlust) |
+| `_FREL`/`_MREL` in INDI/FAMC verschieden | → `PEDI adopted` gewinnt + `NOTE Stammbaum: _FREL=… _MREL=…` |
+| `_FREL`/`_MREL` in FAM/CHIL | → weglassen (PEDI steht korrekt im INDI-FAMC) |
+| `_GRAMPS_ID`, `_STAT` | → weglassen |
+| `_TASK`/`_RLOG` | → weglassen (App-interne Daten) |
+| `_SCBK`, `_PRIM`, `_DATE` an Medien | → weglassen |
+| Passthrough/Extra-Arrays | → `_ptLines()` filtert `_`-Tags heraus |
+
+**Roundtrip:** Strict-Modus ist stabil (out1 === out2), aber nicht verlustfrei — einige App-Daten werden nicht re-importiert.
+
+---
+
 ## Passthrough-Mechanismen — Vollständige Analyse
 
 10 distinkte Mechanismen sichern GEDCOM-Daten die der Parser nicht strukturiert verarbeitet:

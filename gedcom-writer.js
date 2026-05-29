@@ -1,5 +1,7 @@
 // GED7-Modus-Flag — wird zu Beginn von writeGEDCOM() gesetzt
 let _ged7 = false;
+// Strict-GEDCOM-5.5.1-Flag — alle _-Tags weglassen oder auf Standard mappen
+let _strictGed = false;
 
 // GED7: SCHMA-Block für alle _-Extension-Tags
 function _g7WriteSchma(lines) {
@@ -11,10 +13,17 @@ function _g7WriteSchma(lines) {
 }
 
 // PLAC/TRAN-Einträge aus extraPlaces-Registry
-// GED7: standard TRAN; GED5: _TRAN vendor extension (überlebt Passthrough, lesbar bei Re-Import)
+// GED7: standard TRAN; GED5: _TRAN vendor extension; Strict: NOTE [lang] value
 function _writePlacTrans(lines, placeName, indent) {
   const ep = AppState.db?.extraPlaces?.[placeName];
   if (!ep?.trans?.length) return;
+  if (_strictGed) {
+    for (const t of ep.trans) {
+      if (!t.value) continue;
+      lines.push(`${indent} NOTE ${t.lang ? '[' + t.lang + '] ' : ''}${t.value}`);
+    }
+    return;
+  }
   const tag = _ged7 ? 'TRAN' : '_TRAN';
   for (const t of ep.trans) {
     if (!t.value) continue;
@@ -51,6 +60,12 @@ function pushCont(lines, lv, tag, text) {
   if (!rawLines.length) lines.push(`${lv} ${tag} `);
 }
 
+// Filtert _-Tags aus Passthrough-Zeilen wenn Strict-Modus aktiv
+function _ptLines(arr) {
+  if (!_strictGed || !arr) return arr || [];
+  return arr.filter(l => !/^[0-9]+ _[A-Z]/.test(l));
+}
+
 // Mappt _FREL/_MREL-Werte (auch deutsch) auf GEDCOM-5.5.1-PEDI-Enum
 function _toPedi(v) {
   const m = { birth:'birth', leiblich:'birth', biologisch:'birth', natürlich:'birth',
@@ -75,7 +90,7 @@ function _writeSourCits(lines, lv, obj) {
     if (c.quay)  lines.push(`${lv+1} QUAY ${c.quay}`);
     if (c.note !== null && c.note !== undefined)
       pushCont(lines, lv+1, 'NOTE', c.note || '');
-    for (const l of (c.extra || [])) lines.push(l);
+    for (const l of _ptLines(c.extra)) lines.push(l);
     if (db._grampsMaster && c._citExtra?.length) {
       for (const xml of c._citExtra) {
         const mt = xml.match(/noteref[^>]+hlink="([^"]+)"/);
@@ -84,9 +99,9 @@ function _writeSourCits(lines, lv, obj) {
     }
     for (const m of (c.media || [])) {
       lines.push(`${lv+1} OBJE`);
-      if (m.file) { lines.push(`${lv+2} FILE ${m.file}`); for (const l of (m._extra||[])) lines.push(l); }
-      if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
-      if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
+      if (m.file) { lines.push(`${lv+2} FILE ${m.file}`); for (const l of _ptLines(m._extra)) lines.push(l); }
+      if (!_strictGed && m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
+      if (!_strictGed && m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
       if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
       if (m.note) pushCont(lines, lv+2, 'NOTE', m.note);
     }
@@ -160,14 +175,14 @@ function eventBlock(lines, tag, obj, lv) {
     if (m.file) {
       lines.push(`${lv+2} FILE ${m.file}`);
       if (m.form) lines.push(`${lv+3} FORM ${m.form}`);
-      for (const l of (m._extra || [])) lines.push(l);
+      for (const l of _ptLines(m._extra)) lines.push(l);
     }
     if (m.note) pushCont(lines, lv+2, 'NOTE', m.note);
-    if (m.date) lines.push(`${lv+2} _DATE ${m.date}`);
-    if (m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
-    if (m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
+    if (!_strictGed && m.date) lines.push(`${lv+2} _DATE ${m.date}`);
+    if (!_strictGed && m.scbk) lines.push(`${lv+2} _SCBK ${m.scbk}`);
+    if (!_strictGed && m.prim) lines.push(`${lv+2} _PRIM ${m.prim}`);
   }
-  if (obj._extra && obj._extra.length) for (const l of obj._extra) lines.push(l);
+  if (obj._extra && obj._extra.length) for (const l of _ptLines(obj._extra)) lines.push(l);
 }
 
 // Phase F: eventHandle → primary person ID (populated by writeGEDCOM for witness→ASSO bridge)
@@ -246,7 +261,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
   if (p._hasGivn) lines.push(`2 GIVN ${p.given || ''}`);
   if (p._hasSurn) lines.push(`2 SURN ${p.surname || ''}`);
   if (p.nick)     lines.push(`2 NICK ${p.nick}`);
-  if (p._rufname) lines.push(`2 _RUFNAME ${p._rufname}`);
+  if (p._rufname) lines.push(_strictGed ? `2 NICK ${p._rufname}` : `2 _RUFNAME ${p._rufname}`);
   if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
   if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
   _writeSourCits(lines, 2, { citations: p.nameCitations });
@@ -255,15 +270,20 @@ function writeINDIRecord(lines, p, livingSet = null) {
   const _pt = p._passthrough || [];
   let _ptNameEnd = 0;
   while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
-  for (let i = 0; i < _ptNameEnd; i++) lines.push(_pt[i]);
+  for (let i = 0; i < _ptNameEnd; i++) { if (!_strictGed || !/^[0-9]+ _[A-Z]/.test(_pt[i])) lines.push(_pt[i]); }
 
-  // NAME/TRAN (GED7) / NAME/_TRAN vendor extension (GED5)
+  // NAME/TRAN (GED7) / NAME/_TRAN vendor extension (GED5) / NOTE (Strict)
   for (const nt of (p.nameTrans || [])) {
-    const _ntTag = _ged7 ? 'TRAN' : '_TRAN';
-    lines.push(`2 ${_ntTag}${nt.nameRaw ? ' ' + nt.nameRaw : ''}`);
-    if (nt.lang)    lines.push(`3 LANG ${nt.lang}`);
-    if (nt.given)   lines.push(`3 GIVN ${nt.given}`);
-    if (nt.surname) lines.push(`3 SURN ${nt.surname}`);
+    if (_strictGed) {
+      const _ntVal = nt.nameRaw || [nt.given, nt.surname ? '/' + nt.surname + '/' : ''].filter(Boolean).join(' ');
+      if (_ntVal) lines.push(`2 NOTE ${nt.lang ? '[' + nt.lang + '] ' : ''}${_ntVal}`);
+    } else {
+      const _ntTag = _ged7 ? 'TRAN' : '_TRAN';
+      lines.push(`2 ${_ntTag}${nt.nameRaw ? ' ' + nt.nameRaw : ''}`);
+      if (nt.lang)    lines.push(`3 LANG ${nt.lang}`);
+      if (nt.given)   lines.push(`3 GIVN ${nt.given}`);
+      if (nt.surname) lines.push(`3 SURN ${nt.surname}`);
+    }
   }
 
   // Extra NAME-Einträge (Geburtsname etc.)
@@ -275,7 +295,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
     if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
     if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
     _writeSourCits(lines, 2, en);
-    for (const l of (en._extra || [])) lines.push(l);
+    for (const l of _ptLines(en._extra)) lines.push(l);
   }
 
   if (p.titl)    lines.push(`1 TITL ${p.titl}`);
@@ -288,7 +308,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
     lines.push(`1 SOUR ${s}`);
     if (p.topSourcePages?.[s]) lines.push(`2 PAGE ${p.topSourcePages[s]}`);
     if (p.topSourceQUAY?.[s])  lines.push(`2 QUAY ${p.topSourceQUAY[s]}`);
-    if (p.topSourceExtra?.[s]) for (const l of p.topSourceExtra[s]) lines.push(l);
+    if (p.topSourceExtra?.[s]) for (const l of _ptLines(p.topSourceExtra[s])) lines.push(l);
   }
 
   eventBlock(lines, 'BIRT', p.birth, 1);
@@ -339,7 +359,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
       const _inlineNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
       if (_inlineNote) pushCont(lines, 2, 'NOTE', _inlineNote);
     }
-    if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of ev.addrExtra) lines.push(l); }
+    if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of _ptLines(ev.addrExtra)) lines.push(l); }
     for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
     for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
     _writeSourCits(lines, 2, ev);
@@ -350,14 +370,14 @@ function writeINDIRecord(lines, p, livingSet = null) {
         lines.push(`3 FILE ${m.file}`);
         if (m.form) lines.push(`4 FORM ${m.form}`);
       }
-      for (const l of (m._extra || [])) lines.push(l);
+      for (const l of _ptLines(m._extra)) lines.push(l);
     }
-    if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
+    if (ev._extra && ev._extra.length) for (const l of _ptLines(ev._extra)) lines.push(l);
   }
 
   for (const ref of (p.noteRefs || [])) {
     lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
-    for (const l of (p.noteRefExtras?.[ref] || [])) lines.push(l);
+    for (const l of _ptLines(p.noteRefExtras?.[ref])) lines.push(l);
   }
   for (const nt of (p.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
 
@@ -370,8 +390,12 @@ function writeINDIRecord(lines, p, livingSet = null) {
         const mv = fref.mrel || fref.pedi || '';
         const fp = _toPedi(fv);
         const mp = _toPedi(mv);
-        if (fp === mp) {
-          lines.push(`2 PEDI ${fp}`);
+        if (fp === mp || _strictGed) {
+          const pediVal = _strictGed && fp !== mp
+            ? ((fp === 'adopted' || mp === 'adopted') ? 'adopted' : fp)
+            : fp;
+          lines.push(`2 PEDI ${pediVal}`);
+          if (_strictGed && fp !== mp) lines.push(`2 NOTE Stammbaum: _FREL=${fv} _MREL=${mv}`);
         } else {
           // Vater/Mutter-Verhältnis verschieden — _FREL/_MREL als Erweiterung beibehalten
           lines.push(`2 _FREL ${fv}`);
@@ -402,32 +426,37 @@ function writeINDIRecord(lines, p, livingSet = null) {
       if (form) { lines.push(`3 FORM ${form}`); if (m.medi) lines.push(`4 MEDI ${m.medi}`); }
     }
     if (!m.titleIsLv2 && m.title) lines.push(`3 TITL ${m.title}`);
-    for (const l of (m._extra || [])) lines.push(l);
+    for (const l of _ptLines(m._extra)) lines.push(l);
     if (m.note)  pushCont(lines, 2, 'NOTE', m.note);
-    if (m.date)  lines.push(`2 _DATE ${m.date}`);
-    if (m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
-    if (m.prim)  lines.push(`2 _PRIM ${m.prim}`);
+    if (!_strictGed && m.date)  lines.push(`2 _DATE ${m.date}`);
+    if (!_strictGed && m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
+    if (!_strictGed && m.prim)  lines.push(`2 _PRIM ${m.prim}`);
   }
 
-  if (p.uid)      lines.push(`1 _UID ${p.uid}`);
-  if (p.grampId)  lines.push(`1 _GRAMPS_ID ${p.grampId}`);
-  if (p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
-
-  for (const t of (p._tasks || [])) {
-    lines.push(`1 _TASK ${t.text || ''}`);
-    if (t.category) lines.push(`2 _CAT ${t.category}`);
-    lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
-    if (t.created)  lines.push(`2 _DATE ${t.created}`);
-    if (t.id)       lines.push(`2 _ID ${t.id}`);
+  if (p.uid) {
+    if (_strictGed) { lines.push(`1 REFN ${p.uid}`); lines.push(`2 TYPE UID`); }
+    else lines.push(`1 _UID ${p.uid}`);
   }
-  for (const rl of (p._rlog || [])) {
-    lines.push(`1 _RLOG`);
-    if (rl.date)    lines.push(`2 DATE ${rl.date}`);
-    if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
-    if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
-    if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
-    if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
-    if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
+  if (!_strictGed && p.grampId)  lines.push(`1 _GRAMPS_ID ${p.grampId}`);
+  if (!_strictGed && p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
+
+  if (!_strictGed) {
+    for (const t of (p._tasks || [])) {
+      lines.push(`1 _TASK ${t.text || ''}`);
+      if (t.category) lines.push(`2 _CAT ${t.category}`);
+      lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+      if (t.created)  lines.push(`2 _DATE ${t.created}`);
+      if (t.id)       lines.push(`2 _ID ${t.id}`);
+    }
+    for (const rl of (p._rlog || [])) {
+      lines.push(`1 _RLOG`);
+      if (rl.date)    lines.push(`2 DATE ${rl.date}`);
+      if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
+      if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
+      if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
+      if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
+      if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
+    }
   }
 
   // ASSO: native associations (GEDCOM↔GRAMPS <personref> roundtrip)
@@ -478,7 +507,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
 
   writeCHAN(lines, p, 1);
 
-  for (let i = _ptNameEnd; i < _pt.length; i++) lines.push(_pt[i]);
+  for (let i = _ptNameEnd; i < _pt.length; i++) { if (!_strictGed || !/^[0-9]+ _[A-Z]/.test(_pt[i])) lines.push(_pt[i]); }
 }
 
 // ─── FAM-Record ───────────────────────────────────────────────────────────────
@@ -492,22 +521,26 @@ function writeFAMRecord(lines, f) {
     if (_cr) {
       _writeSourCits(lines, 2, _cr);
       // _FREL/_MREL mit verschachteltem SOUR (z.B. Ancestris-Format: 2 _FREL → 3 SOUR @@Sxx@@ → 4 PAGE/QUAY)
-      if (_cr.frelSeen) {
-        lines.push(`2 _FREL ${_cr.frel}`);
-        if (_cr.frelSour) {
-          lines.push(`3 SOUR ${_cr.frelSour}`);
-          if (_cr.frelPage) lines.push(`4 PAGE ${_cr.frelPage}`);
-          if (_cr.frelQUAY) lines.push(`4 QUAY ${_cr.frelQUAY}`);
-          for (const l of (_cr.frelSourExtra || [])) lines.push(l);
+      if (_strictGed) {
+        // In GED5.5.1 steht PEDI nur unter INDI/FAMC — hier weglassen
+      } else {
+        if (_cr.frelSeen) {
+          lines.push(`2 _FREL ${_cr.frel}`);
+          if (_cr.frelSour) {
+            lines.push(`3 SOUR ${_cr.frelSour}`);
+            if (_cr.frelPage) lines.push(`4 PAGE ${_cr.frelPage}`);
+            if (_cr.frelQUAY) lines.push(`4 QUAY ${_cr.frelQUAY}`);
+            for (const l of _ptLines(_cr.frelSourExtra)) lines.push(l);
+          }
         }
-      }
-      if (_cr.mrelSeen) {
-        lines.push(`2 _MREL ${_cr.mrel}`);
-        if (_cr.mrelSour) {
-          lines.push(`3 SOUR ${_cr.mrelSour}`);
-          if (_cr.mrelPage) lines.push(`4 PAGE ${_cr.mrelPage}`);
-          if (_cr.mrelQUAY) lines.push(`4 QUAY ${_cr.mrelQUAY}`);
-          for (const l of (_cr.mrelSourExtra || [])) lines.push(l);
+        if (_cr.mrelSeen) {
+          lines.push(`2 _MREL ${_cr.mrel}`);
+          if (_cr.mrelSour) {
+            lines.push(`3 SOUR ${_cr.mrelSour}`);
+            if (_cr.mrelPage) lines.push(`4 PAGE ${_cr.mrelPage}`);
+            if (_cr.mrelQUAY) lines.push(`4 QUAY ${_cr.mrelQUAY}`);
+            for (const l of _ptLines(_cr.mrelSourExtra)) lines.push(l);
+          }
         }
       }
     }
@@ -536,31 +569,33 @@ function writeFAMRecord(lines, f) {
     if (_famEvNote) pushCont(lines, 2, 'NOTE', _famEvNote);
     for (const r of (ev.noteRefs || [])) lines.push(`2 NOTE ${_noteXref[r]||r}`);
     _writeSourCits(lines, 2, ev);
-    if (ev._extra && ev._extra.length) for (const l of ev._extra) lines.push(l);
+    if (ev._extra && ev._extra.length) for (const l of _ptLines(ev._extra)) lines.push(l);
   }
 
   for (const r of (f.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
-  if (f.grampId)  lines.push(`1 _GRAMPS_ID ${f.grampId}`);
-  if (f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
-  for (const t of (f._tasks || [])) {
-    lines.push(`1 _TASK ${t.text || ''}`);
-    if (t.category) lines.push(`2 _CAT ${t.category}`);
-    lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
-    if (t.created)  lines.push(`2 _DATE ${t.created}`);
-    if (t.id)       lines.push(`2 _ID ${t.id}`);
-  }
-  for (const rl of (f._rlog || [])) {
-    lines.push(`1 _RLOG`);
-    if (rl.date)    lines.push(`2 DATE ${rl.date}`);
-    if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
-    if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
-    if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
-    if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
-    if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
+  if (!_strictGed && f.grampId)  lines.push(`1 _GRAMPS_ID ${f.grampId}`);
+  if (!_strictGed && f._stat !== null && f._stat !== undefined) lines.push(`1 _STAT${f._stat ? ' ' + f._stat : ''}`);
+  if (!_strictGed) {
+    for (const t of (f._tasks || [])) {
+      lines.push(`1 _TASK ${t.text || ''}`);
+      if (t.category) lines.push(`2 _CAT ${t.category}`);
+      lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+      if (t.created)  lines.push(`2 _DATE ${t.created}`);
+      if (t.id)       lines.push(`2 _ID ${t.id}`);
+    }
+    for (const rl of (f._rlog || [])) {
+      lines.push(`1 _RLOG`);
+      if (rl.date)    lines.push(`2 DATE ${rl.date}`);
+      if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
+      if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
+      if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
+      if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
+      if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
+    }
   }
   for (const ref of (f.noteRefs || [])) {
     lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
-    for (const l of (f.noteRefExtras?.[ref] || [])) lines.push(l);
+    for (const l of _ptLines(f.noteRefExtras?.[ref])) lines.push(l);
   }
   for (const nt of (f.noteTexts || [])) if (nt) pushCont(lines, 1, 'NOTE', nt);
 
@@ -576,17 +611,18 @@ function writeFAMRecord(lines, f) {
     } else if (m.title && !m.titleIsLv2) {
       lines.push(`2 TITL ${m.title}`);
     }
-    for (const l of (m._extra || [])) lines.push(l);
+    for (const l of _ptLines(m._extra)) lines.push(l);
     if (m.note)  pushCont(lines, 2, 'NOTE', m.note);
-    if (m.date)  lines.push(`2 _DATE ${m.date}`);
-    if (m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
-    if (m.prim)  lines.push(`2 _PRIM ${m.prim}`);
+    if (!_strictGed && m.date)  lines.push(`2 _DATE ${m.date}`);
+    if (!_strictGed && m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
+    if (!_strictGed && m.prim)  lines.push(`2 _PRIM ${m.prim}`);
   }
 
   writeCHAN(lines, f, 1);
 
   for (const l of (f._passthrough || [])) {
     if (/^1 (DIV|DIVF|ENG|ENGA)\b/.test(l)) continue; // jetzt strukturiert
+    if (_strictGed && /^[0-9]+ _[A-Z]/.test(l)) continue;
     lines.push(l);
   }
 }
@@ -606,12 +642,12 @@ function writeSOURRecord(lines, s) {
         if (!rc.num) continue;
         lines.push(`2 CALN ${rc.num}`);
         if (rc.medi) lines.push(`3 MEDI ${rc.medi}`);
-        for (const l of (rc.extra || [])) lines.push(l);
+        for (const l of _ptLines(rc.extra)) lines.push(l);
       }
     } else if (s.repoCallNum) {
       lines.push(`2 CALN ${s.repoCallNum}`);
       if (s.repoCallMedi) lines.push(`3 MEDI ${s.repoCallMedi}`);
-      for (const l of (s.repoCallNumExtra || [])) lines.push(l);
+      for (const l of _ptLines(s.repoCallNumExtra)) lines.push(l);
     }
   }
   if (s._textSeen) pushCont(lines, 1, 'TEXT', s.text || '');
@@ -623,7 +659,7 @@ function writeSOURRecord(lines, s) {
       if (de.date) lines.push(`3 DATE ${de.date}`);
       if (de.plac) lines.push(`3 PLAC ${de.plac}`);
     }
-    for (const l of (s.dataExtra || [])) lines.push(l);
+    for (const l of _ptLines(s.dataExtra)) lines.push(l);
   }
   for (const m of (s.media || [])) {
     if (!m.file && !m.title) continue;
@@ -637,19 +673,19 @@ function writeSOURRecord(lines, s) {
     } else if (m.title && !m.titleIsLv2) {
       lines.push(`2 TITL ${m.title}`);
     }
-    for (const l of (m._extra || [])) lines.push(l);
+    for (const l of _ptLines(m._extra)) lines.push(l);
     if (m.note)  pushCont(lines, 2, 'NOTE', m.note);
-    if (m.date)  lines.push(`2 _DATE ${m.date}`);
-    if (m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
-    if (m.prim)  lines.push(`2 _PRIM ${m.prim}`);
+    if (!_strictGed && m.date)  lines.push(`2 _DATE ${m.date}`);
+    if (!_strictGed && m.scbk)  lines.push(`2 _SCBK ${m.scbk}`);
+    if (!_strictGed && m.prim)  lines.push(`2 _PRIM ${m.prim}`);
   }
   for (const ref of (s.noteRefs || [])) lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
   if (s.note) pushCont(lines, 1, 'NOTE', s.note);
-  if (s._date)   lines.push(`1 _DATE ${s._date}`);
+  if (!_strictGed && s._date)   lines.push(`1 _DATE ${s._date}`);
   for (const r of (s.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
-  if (s.grampId) lines.push(`1 _GRAMPS_ID ${s.grampId}`);
+  if (!_strictGed && s.grampId) lines.push(`1 _GRAMPS_ID ${s.grampId}`);
   writeCHAN(lines, s, 1);
-  for (const l of (s._passthrough || [])) lines.push(l);
+  for (const l of _ptLines(s._passthrough)) lines.push(l);
 }
 
 // ─── REPO-Record ──────────────────────────────────────────────────────────────
@@ -660,12 +696,12 @@ function writeREPORecord(lines, r) {
     const al = r.addr ? r.addr.split('\n') : [];
     lines.push(`1 ADDR${al[0] ? ' ' + al[0] : ''}`);
     for (let i = 1; i < al.length; i++) lines.push(`2 CONT ${al[i]}`);
-    if (r.addrExtra && r.addrExtra.length) for (const l of r.addrExtra) lines.push(l);
+    if (r.addrExtra && r.addrExtra.length) for (const l of _ptLines(r.addrExtra)) lines.push(l);
   }
   if (r.phon)  lines.push(`1 PHON ${r.phon}`);
   if (r.www)   lines.push(`1 WWW ${r.www}`);
   if (r.email) lines.push(`1 EMAIL ${r.email}`);
-  for (const l of (r._passthrough || [])) lines.push(l);
+  for (const l of _ptLines(r._passthrough)) lines.push(l);
   writeCHAN(lines, r, 1);
 }
 
@@ -699,7 +735,7 @@ function writeNOTERecord(lines, n) {
     if (!rawLines.length) lines.push(`0 ${_xref} ${_tag} `);
   }
   writeCHAN(lines, n, 1);
-  for (const l of (n._passthrough || [])) lines.push(l);
+  for (const l of _ptLines(n._passthrough)) lines.push(l);
 }
 
 // ─────────────────────────────────────
@@ -710,8 +746,9 @@ function writeNOTERecord(lines, n) {
  * @param {boolean} [updateHeadDate=false] - true = HEAD/DATE auf jetzt setzen
  * @returns {string}
  */
-function writeGEDCOM(updateHeadDate = false, forceGed7 = false) {
+function writeGEDCOM(updateHeadDate = false, forceGed7 = false, forceStrict = false) {
   _ged7 = forceGed7;
+  _strictGed = forceStrict;
   const lines = [];
   const d = new Date();
   const fname = localStorage.getItem('stammbaum_filename') || 'stammbaum.ged';
@@ -807,7 +844,7 @@ function writeGEDCOM(updateHeadDate = false, forceGed7 = false) {
 
   // Unknown lv=0 records (SUBM etc.) — verbatim passthrough
   for (const rec of (db.extraRecords || [])) {
-    for (const l of rec._lines) lines.push(l);
+    for (const l of _ptLines(rec._lines)) lines.push(l);
   }
 
   lines.push('0 TRLR');
