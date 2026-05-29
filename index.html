@@ -345,6 +345,25 @@
 </nav>
 
 <!-- ══════════════════════════════════════
+     ONBOARDING OVERLAY
+══════════════════════════════════════ -->
+<div id="ob-overlay" hidden aria-hidden="true">
+  <div id="ob-top"></div>
+  <div id="ob-left"></div>
+  <div id="ob-right"></div>
+  <div id="ob-bottom"></div>
+  <div id="ob-card" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+    <p id="ob-step-counter" class="ob-counter"></p>
+    <h2 id="ob-title"></h2>
+    <p id="ob-text"></p>
+    <div class="ob-actions">
+      <button id="ob-skip" data-action="obSkip">Überspringen</button>
+      <button id="ob-next" data-action="obNext" class="btn">Weiter →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      MODALS
 ══════════════════════════════════════ -->
 
@@ -2096,6 +2115,7 @@
 <script src="onedrive-import.js"></script>
 <script src="onedrive.js"></script>
 <script src="lazy-loader.js"></script>
+<script src="ui-onboarding.js"></script>
 <script src="ui-event-delegation.js"></script>
 <input type="file" id="cit-cam-input" accept="image/*" capture="environment" data-action="citCamChange" hidden>
 </body>

@@ -3383,3 +3383,23 @@ html[data-theme="dark"] {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ─────────────────────────────────────
+   ONBOARDING SPOTLIGHT
+───────────────────────────────────── */
+#ob-overlay { position: fixed; inset: 0; z-index: 800; pointer-events: none; }
+#ob-overlay:not([hidden]) { pointer-events: all; }
+#ob-top, #ob-left, #ob-right, #ob-bottom {
+  position: fixed; background: rgba(0,0,0,0.72);
+  transition: top .2s, left .2s, right .2s, bottom .2s, width .2s, height .2s;
+}
+#ob-card {
+  position: fixed; z-index: 850; background: var(--surface2);
+  border-radius: 12px; padding: 20px; max-width: 320px; width: calc(100vw - 32px);
+  box-shadow: 0 4px 24px rgba(0,0,0,.5);
+}
+.ob-counter { font-size: .8rem; color: var(--muted); margin: 0 0 4px; }
+#ob-title { font-size: 1.1rem; margin: 0 0 8px; }
+#ob-text { margin: 0; line-height: 1.5; }
+.ob-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+#ob-skip { background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px 10px; font-size: .9rem; }

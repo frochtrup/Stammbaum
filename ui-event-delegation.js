@@ -145,6 +145,8 @@ const _CLICK_MAP = {
   showLightbox:            el => showLightbox(el.src || el.dataset.src),
   // Statische index.html-Handler (P1-Migration)
   loadDemo:                ()  => loadDemo(),
+  obNext:                  ()  => typeof obAdvance  === 'function' && obAdvance(),
+  obSkip:                  ()  => typeof obDismiss  === 'function' && obDismiss(),
   openModal:               el => openModal(el.dataset.modal),
   closeModal:              el => closeModal(el.dataset.modal),
   bnavSearch:              ()  => bnavSearch(),

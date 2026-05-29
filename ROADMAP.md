@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v747 · Cache: `stammbaum-v747`
+**sw-Version:** v748 · Cache: `stammbaum-v748`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -110,7 +110,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| **ONBOARDING** | **Onboarding für Erstnutzer** | *(hochgestuft von P4)* Dismissibler Overlay nach Demo-Load: 3–4 Schritte (Person klicken, Baum öffnen, Ereignis bearbeiten). Ohne das bleibt die App für jeden neuen Nutzer undurchdringlich. Einmalig, localStorage-Flag. | **S** |
+| ~~ONBOARDING~~ | ~~**Onboarding für Erstnutzer**~~ | ✅ **Abgeschlossen sw v748** — Spotlight-Overlay, 4 Schritte (Personenliste, Baum-Button, FAB, eigene Datei laden). Einmalig nach Demo-Load, localStorage-Flag `stammbaum_onboarding_done`. `ui-onboarding.js` neu. | ~~S~~ |
 | F3 | **Pedigree-Collapse** | Mehrfach-Vorfahren im Sanduhr-Baum erkennen + visuell zusammenführen; Inzucht-Koeffizient optional. Voraussetzung: BFS-Algorithmus aus REL-CALC nutzen. | M |
 
 ---

@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v747';
+const CACHE_NAME = 'stammbaum-v748';
 
 // Kern-Assets: atomar — Install schlägt fehl wenn eines fehlt
 const PRECACHE_CRITICAL = [
@@ -13,7 +13,7 @@ const PRECACHE_CRITICAL = [
   './ui-views.js', './ui-views-nav.js', './ui-views-undo.js', './ui-views-note.js', './ui-views-search.js',
   './ui-views-tree.js', './ui-views-tasks.js', './ui-views-rlog.js', './ui-views-val.js', './ui-views-person.js', './ui-views-family.js',
   './ui-views-source.js', './ui-views-place.js', './ui-views-hof.js', './ui-views-map.js', './ui-views-stats.js', './ui-chart-export.js',
-  './debug-activate.js', './lazy-loader.js',
+  './debug-activate.js', './lazy-loader.js', './ui-onboarding.js',
   './story-epochs.js', './timeline-hist-events.js',
   './ui-fanchart.js', './ui-desc-tree.js', './ui-timeline.js', './ui-story.js', './ui-story-person.js', './ui-story-fam.js', './ui-forms.js', './ui-forms-person.js', './ui-forms-family.js', './ui-forms-repo.js', './ui-forms-event.js', './ui-debug.js', './ui-media.js',
   './onedrive-auth.js', './onedrive-import.js', './onedrive.js',

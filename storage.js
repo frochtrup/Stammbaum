@@ -110,6 +110,7 @@ async function loadDemo() {
     await _loadDemoPhotos();  // Foto in IDB bevor Detail gerendert wird
     showStartView();
     showToast('✓ Demo geladen');
+    if (typeof maybeStartOnboarding === 'function') maybeStartOnboarding();
   } catch(e) {
     showToast('Demo konnte nicht geladen werden: ' + e.message);
   } finally {
