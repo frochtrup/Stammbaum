@@ -31,21 +31,21 @@ Fünf Dimensionen leiten die Priorisierung:
 **Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
-### Gesamtbewertung (Mai 2026) — verifiziert nach Code-Audit
+### Gesamtbewertung (Mai 2026) — aktualisiert nach v742–v748
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
 | Architektur | 7.0/10 | Klare Schichtung, aber globaler Namespace + keine ES-Module = wachsende Schuld |
-| Sicherheit | 7.5/10 | Starke CSP, konsequentes `esc()`, aber keine strukturelle Escaping-Garantie (166 innerHTML-Assignments ohne Linter) |
-| Design / UX | 8.7/10 | Hochwertige Ästhetik, Mobile-First, WCAG 2.1 AA ✓ (v724); Migrationspfad-Animation ✓; kein Onboarding |
+| Sicherheit | 7.7/10 | Starke CSP, konsequentes `esc()`. T0-XSS (v744): alle 166 `innerHTML`-Assignments auditiert — kein echter XSS-Vektor; letztes Inkonsistenz-Beispiel (`ui-forms.js`) behoben. *(+0.2 vs. Vorversion)* |
+| Design / UX | 8.9/10 | Hochwertige Ästhetik, Mobile-First, WCAG 2.1 AA ✓; Migrationspfad-Animation ✓; Onboarding ✓ (v748, Spotlight 4 Schritte). *(+0.2)* |
 | Funktionsstand | 9.2/10 | Undo/Redo ✓ · Karten-Animation ✓ · Mehrfachzitierungen ✓ · GED7 ✓ · GRAMPS ✓ · ASSO-Edit ✓ |
-| Code-Qualität | 7.5/10 | Lesbar, kein Overengineering; JSDoc-Typen + .editorconfig ✓; kein automatisiertes Test-Framework |
-| Performance | 7.0/10 | Virtuelles Scrollen + Web Worker ✓; SW-Cache macht Warm-Start instant; 51 Cold-Start-Requests + 133 KB CSS; `debug-gramps.js` bereits lazy-geladen (Vorbild für LAZY-LOAD) |
-| GEDCOM-Konformität | 9.5/10 | net_delta=0 auf 83k-Zeilen-Datei — beste GEDCOM-Roundtrip-Treue unter Web-Tools |
-| Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt; Handbuch noch mit Mockups statt Screenshots |
-| PWA / Offline | 9.0/10 | Eines der besten Beispiele für ernsthaftes PWA-Design; SW-Install ohne Fehlertoleranz bei 404 |
+| Code-Qualität | 7.7/10 | Lesbar, kein Overengineering; JSDoc-Typen ✓; CSS-PURGE (v745, 21 tote Klassen entfernt); GEDCOM-Roundtrip-Test-Automation (v746, Node.js ohne Browser). *(+0.2)* |
+| Performance | 7.5/10 | Virtuelles Scrollen + Web Worker ✓; LAZY-LOAD (v747, −119 KB Cold-Start: 5 Module on-demand); SW-Cache instant Warm-Start; PRECACHE-Split (v743). *(+0.5)* |
+| GEDCOM-Konformität | 9.6/10 | net_delta=0 auf 83k-Zeilen-Datei; Roundtrip durch automatisierten Node.js-Test abgesichert (v746). *(+0.1)* |
+| Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt; Handbuch veraltet (v742–v748 undokumentiert) |
+| PWA / Offline | 9.2/10 | Eines der besten Beispiele für ernsthaftes PWA-Design; T0-SW (v743): PRECACHE_CRITICAL atomar + PRECACHE_OPTIONAL fehlertoleranz. *(+0.2)* |
 | Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining |
-| **∅ Gesamt** | **8.4/10** | *(Vorversion 8.5/10 — nach Audit korrigiert: Performance −0.5, Sicherheit −0.5, Funktionsstand +0.2, GEDCOM +0.5, Datenschutz +0.5)* |
+| **∅ Gesamt** | **8.5/10** | *(Vorversion 8.4/10 — nach v742–v748: Performance +0.5, Sicherheit +0.2, Design/UX +0.2, Code-Qualität +0.2, GEDCOM +0.1, PWA +0.2)* |
 
 ---
 
@@ -154,7 +154,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v741** *(veraltet — v742–v745 noch nicht dokumentiert)*
+**Handbuch-Stand: sw v741** *(veraltet — v742–v748 noch nicht dokumentiert)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
