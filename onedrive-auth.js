@@ -39,6 +39,9 @@ function _odUpdateUI() {
   if (g7b) g7b.hidden = !AppState.db || AppState.db.gedVersion === '7.0';
   // GRAMPS-Button: nur sichtbar wenn GED7-Datei geladen (zusätzliche Cross-Export-Option)
   if (ggb) ggb.hidden = !AppState.db || AppState.db.gedVersion !== '7.0';
+  // Strict-Button: sichtbar wenn Datei geladen (immer verfügbar)
+  const gsb = document.getElementById('strictExportBtn');
+  if (gsb) gsb.hidden = !AppState.db;
   // SW-Version aus aktivem Cache-Namen auslesen
   const swVerEl   = document.getElementById('menuSwVersion');
   const swStateEl = document.getElementById('menuSwState');

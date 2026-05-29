@@ -257,6 +257,7 @@ const _CLICK_MAP = {
   menuOpenFile:            ()  => { closeModal('modalMenu'); openFileOrDir(); },
   menuExport:              ()  => { closeModal('modalMenu'); exportGEDCOM(); },
   menuExportGed7:          ()  => { closeModal('modalMenu'); exportGEDCOM(true, true); },
+  menuExportStrict:        ()  => { closeModal('modalMenu'); exportGEDCOM(true, false, true); },
   menuExportGramps:        ()  => { closeModal('modalMenu'); exportGRAMPS(); },
   menuFormatConvert:       ()  => { closeModal('modalMenu'); AppState.db?._grampsMaster ? exportGEDCOM(true) : exportGRAMPS(); },
 menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
@@ -407,11 +408,7 @@ document.addEventListener('change', e => {
     idbPut('privacy_anon', el.checked).catch(() => {});
     showToast(el.checked ? 'Anonymisierung beim Export aktiviert' : 'Anonymisierung deaktiviert', 'info');
   }
-  else if (action === 'strictGedChange') {
-    AppState.strictGed = el.checked;
-    idbPut('strict_ged', el.checked).catch(() => {});
-    showToast(el.checked ? 'Strict GEDCOM 5.5.1 aktiviert — Export als _strict.ged' : 'Strict-Modus deaktiviert', 'info');
-  }
+
   else if (action === 'efCamChange') {
     _efCamChange(el.files[0]);
     el.value = '';

@@ -207,7 +207,7 @@ function _downloadBlob(content, filename) {
 // ─────────────────────────────────────
 async function exportGEDCOM(forceGEDCOM = false, forceGed7 = false, forceStrict = false) {
   const isAnon   = AppState.privacyAnon;
-  const isStrict = forceStrict || AppState.strictGed;
+  const isStrict = forceStrict;
   if (!forceGEDCOM && !isAnon && !forceGed7 && !isStrict && AppState.db?._grampsMaster) return exportGRAMPS(true);
   let content;
   try { content = writeGEDCOM(true, forceGed7, isStrict); }
