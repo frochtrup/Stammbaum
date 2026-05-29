@@ -108,7 +108,7 @@ function _toGrampsSrc(file) {
 // ─────────────────────────────────────
 // Baut den vollständigen GRAMPS-XML-String (synchron, ohne gzip/Blob).
 // Test-Seam: erlaubt headless Roundtrip-Tests ohne CompressionStream/Blob (test-roundtrip.js).
-function _grampsBuildXMLText(db) {
+export function _grampsBuildXMLText(db) {
   if (!db || !db.individuals) throw new Error('Kein db vorhanden');
 
   // ── Counter + handle generation ──────────────────────────────────────────
@@ -826,7 +826,7 @@ function _grampsBuildXMLText(db) {
 // ─────────────────────────────────────
 //  MAIN WRITER — gzip-Wrapper um _grampsBuildXMLText
 // ─────────────────────────────────────
-async function writeGRAMPS(db) {
+export async function writeGRAMPS(db) {
   // ── Compress to gzip ──────────────────────────────────────────────────────
   const xmlText = _grampsBuildXMLText(db);
   const encoded = new TextEncoder().encode(xmlText);

@@ -230,6 +230,18 @@ function _makeMiniDOMParser() {
 }
 var _MiniDOMParser = _makeMiniDOMParser();
 
+// ── ESM-Syntax für flachen eval/vm entfernen ────────────────────────────────
+// Der GRAMPS-Cluster ist auf ES-Module umgestellt (T0-MODULE, ADR-020). Dieses
+// Harness lädt die Dateien aber flach (eval/vm, kein Modul-Loader) → `export`/
+// `import` müssen entfernt werden. Die Funktionen landen dann als normale
+// Deklarationen im gemeinsamen Scope (wie zuvor).
+function _stripMod(s) {
+  return s
+    .replace(/^export\s+(?=(async\s+)?function\b|const\b|let\b|var\b|class\b)/gm, '')
+    .replace(/^export\s*\{[^}]*\}\s*;?\s*$/gm, '')
+    .replace(/^import\b[^\n]*$/gm, '');
+}
+
 // ── Skripte laden ──────────────────────────────────────────────────────────
 // Node: vm.runInContext (isolierter Kontext mit Polyfills)
 // JXA:  indirektes eval → Funktionen landen im globalen Scope
@@ -251,14 +263,15 @@ if (IS_NODE) {
   });
   _ctx.window = _ctx;
 
-  function _loadNode(rel) {
-    _vm.runInContext(_read(_dir + '/' + rel), _ctx, { filename: rel });
+  function _loadNode(rel, strip) {
+    var src = _read(_dir + '/' + rel);
+    _vm.runInContext(strip ? _stripMod(src) : src, _ctx, { filename: rel });
   }
   _loadNode('gedcom.js');
   _loadNode('gedcom-parser.js');
   _loadNode('gedcom-writer.js');
-  _loadNode('gramps-parser.js');
-  _loadNode('gramps-writer.js');
+  _loadNode('gramps-parser.js', true);
+  _loadNode('gramps-writer.js', true);
 
   _parseGEDCOM      = function(t, e) { return _ctx.parseGEDCOM(t, e); };
   _writeGEDCOM      = function()     { return _ctx.writeGEDCOM(false); };
@@ -283,8 +296,8 @@ if (IS_NODE) {
     _read(_dir + '/gedcom.js')         + '\n' +
     _read(_dir + '/gedcom-parser.js')  + '\n' +
     _read(_dir + '/gedcom-writer.js')  + '\n' +
-    _read(_dir + '/gramps-parser.js')  + '\n' +
-    _read(_dir + '/gramps-writer.js')  + '\n' +
+    _stripMod(_read(_dir + '/gramps-parser.js'))  + '\n' +
+    _stripMod(_read(_dir + '/gramps-writer.js'))  + '\n' +
     'window._rt = { parse: parseGEDCOM, write: function() { return writeGEDCOM(false); }, writeStrict: function() { return writeGEDCOM(false, false, true); }, setDb: setDb, grampsParse: _grampsParseXMLText, grampsBuild: _grampsBuildXMLText };';
   eval(_combined);
 

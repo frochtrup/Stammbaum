@@ -343,6 +343,30 @@ Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAM
 
 ---
 
+### ADR-020: Inkrementelle ES-Modul-Migration via Brücken-Pattern (sw v751)
+
+**Kontext:** ADR-001 (alle Funktionen global, kein Build-Step) hat bei ~34.000 Zeilen / 762 globalen Funktionen die Skalierungsgrenze erreicht (Namenskollisionsrisiko, fragile `<script>`-Ladereihenfolge, kein Tree-Shaking). Ein „Big-Bang"-Umstieg aller ~50 Dateien ist zu riskant.
+
+**Entscheidung:** Schrittweise Migration auf echte ES-Module, ein Cluster nach dem anderen, mit einer **Brücke** je migriertem Cluster. **GRAMPS-Cluster** (`gramps-parser.js` + `gramps-writer.js`) als Pilot.
+
+**Gemessene technische Erkenntnisse (Pilot):**
+- **Module lesen klassische Globals.** Funktionsdeklarationen klassischer Skripte landen auf `window`, top-level `const`/`let` im *global lexical environment* — **beide aus ES-Modulen lesbar** (zur Laufzeit verifiziert: `citationObj` via `window`, `AppState` via global-lexical). → **Der Kern (`gedcom.js`) muss NICHT zuerst migriert werden**; Blattcluster können sofort umgestellt werden und lesen Kern-Globals weiter.
+- **Ladereihenfolge bleibt erhalten.** `<script type="module">` ist implizit *deferred* → läuft nach allen klassischen Skripten, aber vor `DOMContentLoaded`. Die Brücke setzt `window.parseGRAMPS`/`writeGRAMPS` also vor jedem nutzerausgelösten Aufruf.
+- **Brücken-Pattern:** Genau eine `type="module"`-Einstiegsdatei je Cluster (`gramps.bridge.js`) importiert die Public-API und legt sie via `Object.assign(window, …)` für die noch klassischen Konsumenten ab (storage-file, onedrive, compare-engine, ui-debug, debug-gramps — rufen unverändert global auf). Entfällt, sobald die Konsumenten selbst Module sind.
+- **CSP unverändert:** `script-src 'self'` erlaubt Modul-Skripte ohne Anpassung.
+- **Kein Cross-Dep** zwischen Parser und Writer → Pilot ohne gegenseitige Imports.
+- **Test-Harness:** `test-roundtrip.js` lädt flach via `eval`/`vm` (kein Modul-Loader) → `_stripMod()` entfernt `export`/`import` vor dem Eval. `test-unit.js` unberührt (lädt keine GRAMPS-Dateien).
+
+**Phasenplan:**
+1. ✅ **Pilot (sw v751):** GRAMPS-Cluster → `export`; `gramps.bridge.js` als Modul-Brücke. Verifiziert: 2 Headless-Suiten grün + Browser (Boot fehlerfrei, Globals gesetzt, End-to-End Parse→Build, `AppState`/`citationObj` zur Laufzeit lesbar).
+2. **Konsumenten migrieren:** storage-file/onedrive/compare-engine/ui-debug/debug-gramps → `import` aus GRAMPS-Modulen; Brücke schrumpfen.
+3. **Kern migrieren:** `gedcom.js` + GEDCOM-Parser/Writer/Validator → echte Module mit `export` (größter Schritt — adressiert die 762 Globals).
+4. **UI-Cluster + Bundling:** restliche Views/Forms; danach wird BUNDLING (esbuild/Rollup) sinnvoll.
+
+**Trade-off:** In der Brücken-Phase sind Kern-Abhängigkeiten *implizit* (global-lexical Reads statt expliziter Imports). Bewusst akzeptiert; der volle Nutzen (explizite Deps, Tree-Shaking) entsteht erst nach Phase 3–4.
+
+---
+
 ## Passthrough-Mechanismen — Vollständige Analyse
 
 10 distinkte Mechanismen sichern GEDCOM-Daten die der Parser nicht strukturiert verarbeitet:

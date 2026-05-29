@@ -9,6 +9,19 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — T0-MODULE Phase 1: ES-Modul-Pilot GRAMPS-Cluster (sw v751)
+
+- **sw v751** `refactor(arch)`: Inkrementelle ES-Modul-Migration gestartet — GRAMPS-Cluster als Pilot (ADR-020).
+  - **`gramps-parser.js` / `gramps-writer.js`** → echte ES-Module: `export` auf `parseGRAMPS`, `writeGRAMPS`, `_grampsParseXMLText`, `_grampsBuildXMLText`.
+  - **`gramps.bridge.js`** (neu, `<script type="module">`): importiert die Public-API + `Object.assign(window, …)` → klassische Konsumenten (storage-file, onedrive, compare-engine, ui-debug, debug-gramps) laufen unverändert global weiter.
+  - **`index.html`**: zwei klassische `<script>`-Tags durch eine Modul-Brücke ersetzt.
+  - **`sw.js`**: `gramps.bridge.js` in `PRECACHE_CRITICAL`.
+  - **`test-roundtrip.js`**: `_stripMod()` entfernt `export`/`import` vor flachem `eval`/`vm` (kein Modul-Loader im Harness). `test-unit.js` unberührt.
+  - **Verifiziert:** beide Headless-Suiten grün; Browser (preview): Boot fehlerfrei, `window.parseGRAMPS`/`writeGRAMPS` gesetzt, End-to-End Parse→Build stabil, Modul liest `AppState` (global-lexical) + `citationObj` (window) zur Laufzeit, Repo-Typ „Archive" erhalten.
+  - **Schlüsselbefund (ADR-020):** Kern (`gedcom.js`) muss NICHT zuerst migriert werden — ES-Module lesen klassische Globals; deferred Modul-Load erhält Reihenfolge. Phasen 2–4 (Konsumenten → Kern → UI) im Backlog.
+
+---
+
 ### Session 2026-05-30 — T0-UNIT: 87 Unit-Tests für Kern-Logik (kein sw-Bump)
 
 - `test(core)`: **`test-unit.js`** — abhängigkeitsfreies Unit-Test-Harness (JXA/Node, `vm`/`eval`, CI-Exit-Code), 87 Tests:

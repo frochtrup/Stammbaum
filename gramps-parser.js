@@ -179,7 +179,7 @@ function _child(el, tag) {
  * @param {File} file
  * @returns {Promise<AppDb>}
  */
-async function parseGRAMPS(file) {
+export async function parseGRAMPS(file) {
   // 1. Read and decompress .gramps file (gzip)
   const buf = await file.arrayBuffer();
   let xmlText;
@@ -210,7 +210,7 @@ async function parseGRAMPS(file) {
 
 // Parst GRAMPS-XML aus einem fertigen String (synchron, ohne gzip/File).
 // Test-Seam: erlaubt headless Roundtrip-Tests ohne DecompressionStream (test-roundtrip.js).
-function _grampsParseXMLText(xmlText) {
+export function _grampsParseXMLText(xmlText) {
   // 2. Parse XML
   const domParser = new DOMParser();
   const doc       = domParser.parseFromString(xmlText, 'application/xml');

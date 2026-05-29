@@ -2077,8 +2077,8 @@
 <script src="gedcom-parser.js"></script>
 <script src="gedcom-writer.js"></script>
 <script src="gedcom-validator.js"></script>
-<script src="gramps-parser.js"></script>
-<script src="gramps-writer.js"></script>
+<!-- GRAMPS-Cluster: ES-Module (T0-MODULE Pilot, ADR-020). Brücke legt parseGRAMPS/writeGRAMPS auf window. -->
+<script type="module" src="gramps.bridge.js"></script>
 <script src="storage-file.js"></script>
 <script src="storage.js"></script>
 <script src="ui-views.js"></script>

@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v750 · Cache: `stammbaum-v750`
+**sw-Version:** v751 · Cache: `stammbaum-v751`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -37,7 +37,7 @@ Fünf Dimensionen leiten die Priorisierung:
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
-| Architektur | 6.5/10 | Saubere Schichtung + 19 ADRs + Passthrough-Fundament. **Aber:** 762 globale Funktionen / 187 globale Variablen in flachem Namespace; fragile `<script>`-Ladereihenfolge. Fehlendes Modulsystem ist *strukturelle Schuld*, kein Backlog-Item — die „erst wenn stabil"-Bedingung ist längst erfüllt. |
+| Architektur | 6.8/10 | Saubere Schichtung + 20 ADRs + Passthrough-Fundament. 762 globale Funktionen / 187 globale Variablen in flachem Namespace bleiben die Hauptschuld — **aber** ein de-risktes Migrationspfad ist jetzt belegt: ADR-020 + GRAMPS-Pilot auf ES-Module (sw v751, Brücken-Pattern). *(+0.3 nach T0-MODULE-Pilot)* |
 | Code-Qualität | 7.0/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare mit sw-Regressionsbezug, JSDoc-Typen, 151 `.catch()`. **Abzug:** Monsterfunktionen (`_parseINDILine` 365, `showDetail` 290, `writeINDIRecord` 270 Zeilen); `_esc`/`esc` 4× dupliziert (Folge des fehlenden Modulsystems). |
 | Sicherheit | 8.0/10 | **Überdurchschnittlich** für serverlose PWA: CSP ohne `unsafe-inline/eval`, `object-src 'none'`, enge Allowlist; OAuth PKCE S256 + CSRF-`state` + URL-Code-Cleanup lehrbuchhaft; kein `eval` im App-Code. **Restrisiko:** Refresh-Token in `sessionStorage` (XSS-lesbar) — bewusste, ohne Backend alternativlose Wahl, aber als Restrisiko zu führen. |
 | Design / UX | 8.5/10 | Hochwertige Ästhetik (Playfair/Source Serif, Dark/Light-Parität), Mobile-First, Onboarding, Skip-Link/ARIA/`prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" ist *Selbstzertifizierung ohne axe-Audit*; Handbuch noch mit Mockups statt Screenshots. |
@@ -48,7 +48,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Dokumentation | 9.0/10 | Außergewöhnlich für ein Solo-Projekt (19 ADRs, Datamodel, 151-KB-Changelog). **Abzug:** Selbstbenotung war Marketing; Handbuch-Screenshots offen. |
 | PWA / Offline | 9.0/10 | Eines der ernsthaftesten PWA-Designs: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout. |
 | Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.1/10** | *(Nach Audit 8.5 → 7.9 korrigiert; nach T0-TEST-2 [sw v750] → 8.0; nach T0-UNIT [87 Tests] → 8.1: Tests gesamt +2.0, GEDCOM +0.3. Zwei Disziplinen — GEDCOM/GRAMPS-Treue [verifiziert] und Sicherheitshärtung — auf professionellem Niveau; Modul-Architektur [T0-MODULE] bleibt der nächste Hebel.)* |
+| **∅ Gesamt** | **≈ 8.2/10** | *(Nach Audit 8.5 → 7.9; T0-TEST-2 → 8.0; T0-UNIT → 8.1; T0-MODULE-Pilot → 8.2: Tests +2.0, GEDCOM +0.3, Architektur +0.3. Drei Disziplinen — GEDCOM/GRAMPS-Treue, Sicherheitshärtung, Testabsicherung — auf solidem Niveau; vollständige Modul-Migration [ADR-020 Phasen 2–4] bleibt der größte verbleibende Hebel.)* |
 
 ---
 
@@ -95,7 +95,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 
 **Reihenfolge:**
 1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): **erledigt** — GEDCOM+GRAMPS-Roundtrip automatisiert + 87 Unit-Tests. Weitere Änderungen jetzt regressionsabgesichert.
-2. **P0 — Architektur-Fundament** (T0-MODULE als *Plan + Pilot*, nicht Big-Bang): **nächster Schritt**. Die „erst wenn stabil"-Bedingung ist erfüllt; Aufschub erhöht nur die Migrationskosten.
+2. ✅ **P0 — Architektur-Fundament** (T0-MODULE Phase 1: Plan + Pilot): **erledigt** — ADR-020 + GRAMPS-Cluster als ES-Modul-Pilot (sw v751). Belegt: Migration ist inkrementell + de-riskt möglich (Brücken-Pattern, Kern muss nicht zuerst). Phasen 2–4 = laufende Schuld-Reduktion.
 3. **P1+** — Restliche Schulden + Features wie bisher.
 
 ---
@@ -106,7 +106,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 |---|---|---|---|
 | ~~T0-TEST-2~~ | ~~**GRAMPS-Roundtrip automatisieren**~~ | ✅ **Abgeschlossen sw v750** — `test-roundtrip.js` um GRAMPS erweitert; **abhängigkeitsfreier** Mini-DOMParser (kein npm, kein `linkedom`) + `_gunzip` (Node `zlib` / JXA `gzip -dc`). Test-Seams `_grampsBuildXMLText()` / `_grampsParseXMLText()` (umgehen gzip/Blob/CompressionStream). Assertion: `xml1===xml2` + Kern-Record-Counts (person/family/source/repository) gegen Original. **Fand sofort einen echten Bug:** Repo-`<type>` wurde in `_extra` durchgereicht *und* hartcodiert erneut geschrieben → wuchs +1 pro Roundtrip; behoben (`_REPO_MODELLED` + `r.rtype`-Erhalt). | ~~M~~ |
 | ~~T0-UNIT~~ | ~~**Unit-Tests für Kern-Logik**~~ | ✅ **Abgeschlossen** — `test-unit.js`, 87 dep-freie Tests (JXA/Node), CI-Exit-Code: (a) Parser-Edge-Cases (CONC/CONT, lv>4, leere Tags, Passthrough), (b) alle 25 Validator-Regeln je Positiv-/Negativfall, (c) BFS-Anonymisierung `_buildLivingSet` (6 DSGVO-Fälle inkl. „toter Vorfahr bleibt tot"), (d) Datums-Helfer (`normMonth`, `buildGedDate`, `readDatePartFromFields`, `buildGedDateFromFields` via konfigurierbarem `document`-Stub). | ~~M~~ |
-| **T0-MODULE** | **ES-Modul-Migration — Plan + Pilot** | *Nicht* sofort vollständig migrieren. Stattdessen: ADR-020 mit Migrationsstrategie schreiben + **einen** klar abgegrenzten Cluster (z. B. GRAMPS-Parser/Writer) als `import/export`-Pilot umstellen, um Aufwand/Risiko real zu messen. Beseitigt schrittweise die 762-globale-Funktionen-Schuld. Voraussetzung-Entkopplung von BUNDLING. | **L (Plan: M)** |
+| **T0-MODULE** | **ES-Modul-Migration — Plan + Pilot** | ✅ **Phase 1 abgeschlossen (sw v751)** — **ADR-020** (Strategie + gemessene Erkenntnisse + 4-Phasen-Plan). **Pilot:** GRAMPS-Cluster auf `export` umgestellt; `gramps.bridge.js` (`type="module"`) legt Public-API auf `window` für klassische Konsumenten. Verifiziert: 2 Headless-Suiten grün + Browser (Boot fehlerfrei, End-to-End Parse→Build, Modul liest `AppState`/`citationObj` zur Laufzeit). Schlüsselbefund: **Kern muss NICHT zuerst migriert werden** (Module lesen klassische Globals). **Offen:** Phasen 2–4 (Konsumenten → Kern → UI), siehe ES-MODULE im Backlog. | **L (Phase 1: M ✓)** |
 
 ---
 
@@ -180,7 +180,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v749** *(aktuell — v750 nur Test-Automation + interner GRAMPS-Roundtrip-Fix, nicht handbuchrelevant)*
+**Handbuch-Stand: sw v749** *(aktuell — v750/v751 nur Test-Automation, interner GRAMPS-Fix + ESM-Pilot, nicht handbuchrelevant)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -199,7 +199,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 | BUNDLING | **Bundling für Erstladezeit** | Nur sinnvoll nach LAZY-LOAD + ES-MODULE. Mit LAZY-LOAD sind die größten Cold-Start-Gewinne bereits ohne Build-Step realisiert; vollständiges Bundling (esbuild/Rollup) bringt danach nur noch marginale Verbesserung. | L |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend als Opt-in. | XL |
 | COLLAB | **Kollaboratives Editieren** | Konflikt-freies Merge zweier GEDCOM-Dateien. Grundlage: IMPORT-CMP + DUP-DETECT. Erfordert Server oder CRDTs. | XL |
-| ES-MODULE | **Vollständige ES-Modul-Migration** | Kompletter Umstieg aller ~50 globalen Script-Tags auf `import`/`export`. Voraussetzung für BUNDLING. **→ jetzt als P0-Pilot `T0-MODULE` gestartet** (Plan + 1 Cluster zuerst, statt Big-Bang); vollständige Migration bleibt im Backlog bis Pilot-Erkenntnisse vorliegen. | XL |
+| ES-MODULE | **Vollständige ES-Modul-Migration (Phasen 2–4)** | Pilot (Phase 1) erledigt → ADR-020. Verbleibend: Phase 2 GRAMPS-Konsumenten → `import`; Phase 3 Kern (`gedcom.js` + GEDCOM-Parser/Writer/Validator) → echte Module (größter Schritt, adressiert 762 Globals); Phase 4 UI-Cluster, dann BUNDLING. Brücken-Pattern aus ADR-020 ist wiederverwendbar. | XL |
 
 ---
 
