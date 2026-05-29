@@ -106,7 +106,9 @@ function _toGrampsSrc(file) {
 // ─────────────────────────────────────
 //  MAIN WRITER
 // ─────────────────────────────────────
-async function writeGRAMPS(db) {
+// Baut den vollständigen GRAMPS-XML-String (synchron, ohne gzip/Blob).
+// Test-Seam: erlaubt headless Roundtrip-Tests ohne CompressionStream/Blob (test-roundtrip.js).
+function _grampsBuildXMLText(db) {
   if (!db || !db.individuals) throw new Error('Kein db vorhanden');
 
   // ── Counter + handle generation ──────────────────────────────────────────
@@ -780,7 +782,7 @@ async function writeGRAMPS(db) {
       const gid    = rId.replace(/^@|@$/g, '');
       L.push(`    <repository handle="${_esc(handle)}" id="${_esc(gid)}"${r.priv ? ` priv="${_esc(r.priv)}"` : ''}>`);
       L.push(`      <rname>${_esc(r.name)}</rname>`);
-      L.push('      <type>Library</type>');
+      L.push(`      <type>${_esc(r.rtype || 'Library')}</type>`);
       if (r.addr) {
         L.push('      <address>');
         L.push(`        <street>${_esc(r.addr)}</street>`);
@@ -818,8 +820,15 @@ async function writeGRAMPS(db) {
 
   L.push('</database>');
 
+  return L.join('\n');
+}
+
+// ─────────────────────────────────────
+//  MAIN WRITER — gzip-Wrapper um _grampsBuildXMLText
+// ─────────────────────────────────────
+async function writeGRAMPS(db) {
   // ── Compress to gzip ──────────────────────────────────────────────────────
-  const xmlText = L.join('\n');
+  const xmlText = _grampsBuildXMLText(db);
   const encoded = new TextEncoder().encode(xmlText);
 
   const cs     = new CompressionStream('gzip');

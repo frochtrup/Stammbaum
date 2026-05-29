@@ -205,6 +205,12 @@ async function parseGRAMPS(file) {
     xmlText = new TextDecoder().decode(new Uint8Array(buf));
   }
 
+  return _grampsParseXMLText(xmlText);
+}
+
+// Parst GRAMPS-XML aus einem fertigen String (synchron, ohne gzip/File).
+// Test-Seam: erlaubt headless Roundtrip-Tests ohne DecompressionStream (test-roundtrip.js).
+function _grampsParseXMLText(xmlText) {
   // 2. Parse XML
   const domParser = new DOMParser();
   const doc       = domParser.parseFromString(xmlText, 'application/xml');
@@ -416,7 +422,7 @@ async function parseGRAMPS(file) {
 
   // ─── Repositories ────────────────────────────────────────────────────────
   const repoHandleToId = {};
-  const _REPO_MODELLED = new Set(['rname', 'address', 'url']);
+  const _REPO_MODELLED = new Set(['rname', 'type', 'address', 'url']);
   for (const repo of _byTag(doc, 'repository')) {
     const h   = repo.getAttribute('handle');
     if (!h) continue;
@@ -439,6 +445,7 @@ async function parseGRAMPS(file) {
     repositories[rId] = {
       id: rId,
       name: _child(repo, 'rname'),
+      rtype: _child(repo, 'type') || 'Library',
       addr, phon: '', www: urlEl ? (urlEl.getAttribute('href') || '') : '', email: '',
       lastChanged: '', lastChangedTime: '',
       grampId: gid, _grampsHandle: h, priv, _extra: repoExtra

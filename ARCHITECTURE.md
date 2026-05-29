@@ -424,3 +424,6 @@ restoreFileHandle() (bei Seitenreload):
 | Cmd+Z mit leerem Stack = „Revert to Saved" | Wenn `_undoStack` leer ist (z.B. direkt nach Load), fällt Cmd+Z auf `revertToSaved()` zurück — korrekt so | Bekannt |
 | Mehrere inline INDI-Notes beim Editieren zusammengeführt | `ui-forms.js` joind `noteTexts[]` beim Laden; speichert als einzelne Note — Roundtrip ohne Edit stabil | Backlog |
 | localStorage-Limit | ~5 MB Limit; Toast-Warnung wenn voll | Bekannt |
+| GRAMPS-Export: weniger `<note>`/`<citation>` als Original | Writer dedupliziert Notizen per Text-Key und Zitierungen per (Quelle, Seite, …)-Key; Referenzen zeigen auf gemeinsame Handles → kein Datenverlust, stabil über Roundtrip (analog PEDI-Delta bei GEDCOM). Vom Headless-Test (T0-TEST-2) als Warnung ausgewiesen, nicht als Fehler | Bekannt / by design |
+
+**Test-Seams (T0-TEST-2, sw v750):** `_grampsBuildXMLText(db)` (synchron, ohne gzip/Blob) und `_grampsParseXMLText(xmlText)` (synchron, ohne `DecompressionStream`/`File`) erlauben den headless GRAMPS-Roundtrip-Test ohne Web-Plattform-APIs. `writeGRAMPS`/`parseGRAMPS` sind dünne async-Wrapper darum — Verhalten unverändert. Der Mini-DOMParser im Test ist abhängigkeitsfrei (kein npm).

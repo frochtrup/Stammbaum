@@ -26,26 +26,29 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v749 · Cache: `stammbaum-v749`
-**Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓
-**Roundtrip GRAMPS:** 60034 Checks ✓ (2894 Pers.)
+**sw-Version:** v750 · Cache: `stammbaum-v750`
+**Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
+**Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
-### Gesamtbewertung (Mai 2026) — aktualisiert nach v742–v749
+### Gesamtbewertung (Mai 2026) — überarbeitet nach unabhängigem Audit (Code/CSP/OAuth/Roundtrip real verifiziert)
+
+> **Methodik-Hinweis:** Diese Tabelle ist eine *nüchterne Standortbestimmung*, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung, nicht auf Doku-Behauptungen. Wo eine Behauptung nicht *automatisiert belegbar* ist (z. B. WCAG-AA, GRAMPS-Roundtrip), ist die Note entsprechend gedeckelt. Die frühere Selbstbewertung (∅ 8.5) war ~0.6 zu optimistisch — sie überschätzte die organisatorische Reife der Architektur und führte die Test-Lücke gar nicht.
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
-| Architektur | 7.0/10 | Klare Schichtung, aber globaler Namespace + keine ES-Module = wachsende Schuld |
-| Sicherheit | 7.7/10 | Starke CSP, konsequentes `esc()`. T0-XSS (v744): alle 166 `innerHTML`-Assignments auditiert — kein echter XSS-Vektor; letztes Inkonsistenz-Beispiel (`ui-forms.js`) behoben. *(+0.2 vs. Vorversion)* |
-| Design / UX | 8.9/10 | Hochwertige Ästhetik, Mobile-First, WCAG 2.1 AA ✓; Migrationspfad-Animation ✓; Onboarding ✓ (v748, Spotlight 4 Schritte). *(+0.2)* |
-| Funktionsstand | 9.2/10 | Undo/Redo ✓ · Karten-Animation ✓ · Mehrfachzitierungen ✓ · GED7 ✓ · GRAMPS ✓ · ASSO-Edit ✓ |
-| Code-Qualität | 7.7/10 | Lesbar, kein Overengineering; JSDoc-Typen ✓; CSS-PURGE (v745, 21 tote Klassen entfernt); GEDCOM-Roundtrip-Test-Automation (v746, Node.js ohne Browser). *(+0.2)* |
-| Performance | 7.5/10 | Virtuelles Scrollen + Web Worker ✓; LAZY-LOAD (v747, −119 KB Cold-Start: 5 Module on-demand); SW-Cache instant Warm-Start; PRECACHE-Split (v743). *(+0.5)* |
-| GEDCOM-Konformität | 9.6/10 | net_delta=0 auf 83k-Zeilen-Datei; Roundtrip durch automatisierten Node.js-Test abgesichert (v746). *(+0.1)* |
-| Dokumentation | 9.5/10 | Außergewöhnlich vollständig für ein Einzelprojekt; Handbuch veraltet (v742–v748 undokumentiert) |
-| PWA / Offline | 9.2/10 | Eines der besten Beispiele für ernsthaftes PWA-Design; T0-SW (v743): PRECACHE_CRITICAL atomar + PRECACHE_OPTIONAL fehlertoleranz. *(+0.2)* |
-| Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining |
-| **∅ Gesamt** | **8.5/10** | *(Vorversion 8.4/10 — nach v742–v748: Performance +0.5, Sicherheit +0.2, Design/UX +0.2, Code-Qualität +0.2, GEDCOM +0.1, PWA +0.2)* |
+| Architektur | 6.5/10 | Saubere Schichtung + 19 ADRs + Passthrough-Fundament. **Aber:** 762 globale Funktionen / 187 globale Variablen in flachem Namespace; fragile `<script>`-Ladereihenfolge. Fehlendes Modulsystem ist *strukturelle Schuld*, kein Backlog-Item — die „erst wenn stabil"-Bedingung ist längst erfüllt. |
+| Code-Qualität | 7.0/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare mit sw-Regressionsbezug, JSDoc-Typen, 151 `.catch()`. **Abzug:** Monsterfunktionen (`_parseINDILine` 365, `showDetail` 290, `writeINDIRecord` 270 Zeilen); `_esc`/`esc` 4× dupliziert (Folge des fehlenden Modulsystems). |
+| Sicherheit | 8.0/10 | **Überdurchschnittlich** für serverlose PWA: CSP ohne `unsafe-inline/eval`, `object-src 'none'`, enge Allowlist; OAuth PKCE S256 + CSRF-`state` + URL-Code-Cleanup lehrbuchhaft; kein `eval` im App-Code. **Restrisiko:** Refresh-Token in `sessionStorage` (XSS-lesbar) — bewusste, ohne Backend alternativlose Wahl, aber als Restrisiko zu führen. |
+| Design / UX | 8.5/10 | Hochwertige Ästhetik (Playfair/Source Serif, Dark/Light-Parität), Mobile-First, Onboarding, Skip-Link/ARIA/`prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" ist *Selbstzertifizierung ohne axe-Audit*; Handbuch noch mit Mockups statt Screenshots. |
+| Funktionsstand | 8.8/10 | Undo/Redo · Karten-Animation · Mehrfachzitate · GED7 · GRAMPS · ASSO-Edit ✓. Lücken bewusst out-of-scope: DNA, Online-Matching, Multi-User. |
+| Performance | 8.0/10 | Web Worker + virtuelles Scrollen (O(log n)) + LAZY-LOAD (−119 KB Cold-Start) + SW-Cache. Ohne Bundling ~45 Cold-Start-Requests (durch HTTP/2 + SW gemildert). |
+| GEDCOM-Konformität | 9.3/10 | **Real verifiziert:** net_delta=0 + out1===out2 auf 83k-Zeilen-Produktionsdatei, automatisiert. Strict-5.5.1 + GED7-opt-in + GRAMPS-Brücke. GRAMPS-Roundtrip seit v750 ebenfalls automatisiert (T0-TEST-2). *(+0.3)* |
+| **Tests** | **6.5/10** | GEDCOM- **und** GRAMPS-Roundtrip jetzt automatisiert headless (T0-TEST-2, sw v750 — fand+behob beim ersten Lauf einen echten Repo-`<type>`-Duplikations-Bug, den der In-Browser-Feldvergleich übersah). **Verbleibend:** keine Unit-Tests für Parser-Edge-Cases, Validator, BFS-Anonymisierung, UI. *(+1.0 nach T0-TEST-2)* |
+| Dokumentation | 9.0/10 | Außergewöhnlich für ein Solo-Projekt (19 ADRs, Datamodel, 151-KB-Changelog). **Abzug:** Selbstbenotung war Marketing; Handbuch-Screenshots offen. |
+| PWA / Offline | 9.0/10 | Eines der ernsthaftesten PWA-Designs: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout. |
+| Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Cloud-Zwang. |
+| **∅ Gesamt** | **≈ 8.0/10** | *(Nach Audit 8.5 → 7.9 korrigiert; nach T0-TEST-2 [sw v750] wieder 7.9 → 8.0: Tests +1.0, GEDCOM +0.3. Zwei Disziplinen — GEDCOM/GRAMPS-Treue [verifiziert] und Sicherheitshärtung — auf professionellem Niveau; Test-Abdeckung und Modul-Architektur bleiben die nächsten Hebel.)* |
 
 ---
 
@@ -86,14 +89,37 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ---
 
-## T0 — Technische Schulden *(Fundament — in dieser Reihenfolge)*
+## Priorisierung nach Audit (Mai 2026)
+
+Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern das Sicherheitsnetz und das Fundament sind jetzt der Engpass.** Begründung — die Codebase ist stabil und funktionsreich (∅ Funktion 8.8), aber ihre *Qualitätssicherung* (Tests 5.5) und ihre *strukturelle Skalierbarkeit* (Architektur 6.5) hinken hinterher. Jedes weitere Feature erhöht das Risiko, das diese beiden Achsen nicht mehr abfedern.
+
+**Reihenfolge:**
+1. **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): Voraussetzung, damit alle weiteren Änderungen ohne Regressionsangst möglich sind.
+2. **P0 — Architektur-Fundament** (T0-MODULE als *Plan*, nicht sofortige Umsetzung): die „erst wenn stabil"-Bedingung ist erfüllt; Aufschub erhöht nur die Migrationskosten.
+3. **P1+** — Restliche Schulden + Features wie bisher.
+
+---
+
+## P0 — Sicherheitsnetz & Fundament *(neu priorisiert nach Audit)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| ~~T0-SW~~ | ~~**SW Install-Robustness**~~ | ✅ **Abgeschlossen sw v743** — `PRECACHE_CRITICAL` (atomar) + `PRECACHE_OPTIONAL` (Fonts, leaflet, debug-gramps, Anna.png) via `Promise.allSettled()` | ~~XS~~ |
-| ~~T0-XSS~~ | ~~**innerHTML-Audit**~~ | ✅ **Abgeschlossen sw v744** — Vollständiger Scan aller 166 `innerHTML`-Assignments: kein echter XSS-Vektor gefunden. Einzige Inkonsistenz (`ui-forms.js`: `.replace(/"/g,'&quot;')` → `esc()`) behoben. Befund: `esc()` wird konsequent eingesetzt; `data-*`-Attribute mit GEDCOM-IDs sind safe; `title=`-Attribute mit User-Daten alle via `_esc()`/`esc()` abgesichert. | ~~S~~ |
+| ~~T0-TEST-2~~ | ~~**GRAMPS-Roundtrip automatisieren**~~ | ✅ **Abgeschlossen sw v750** — `test-roundtrip.js` um GRAMPS erweitert; **abhängigkeitsfreier** Mini-DOMParser (kein npm, kein `linkedom`) + `_gunzip` (Node `zlib` / JXA `gzip -dc`). Test-Seams `_grampsBuildXMLText()` / `_grampsParseXMLText()` (umgehen gzip/Blob/CompressionStream). Assertion: `xml1===xml2` + Kern-Record-Counts (person/family/source/repository) gegen Original. **Fand sofort einen echten Bug:** Repo-`<type>` wurde in `_extra` durchgereicht *und* hartcodiert erneut geschrieben → wuchs +1 pro Roundtrip; behoben (`_REPO_MODELLED` + `r.rtype`-Erhalt). | ~~M~~ |
+| **T0-UNIT** | **Unit-Tests für Kern-Logik** | Über die zwei Integrationstests hinaus: gezielte Tests für (a) Parser-Edge-Cases (lv>4, CONC/CONT, leere Tags), (b) `gedcom-validator.js` (25 Regeln, je 1 Positiv-/Negativfall), (c) BFS-Anonymisierung (`_buildLivingSet` — DSGVO-kritisch!), (d) Datums-Helfer (`normMonth`, `buildGedDateFromFields`). Gleiches dep-freies `vm`/`eval`-Harness wie `test-roundtrip.js`. | **M** |
+| **T0-MODULE** | **ES-Modul-Migration — Plan + Pilot** | *Nicht* sofort vollständig migrieren. Stattdessen: ADR-020 mit Migrationsstrategie schreiben + **einen** klar abgegrenzten Cluster (z. B. GRAMPS-Parser/Writer) als `import/export`-Pilot umstellen, um Aufwand/Risiko real zu messen. Beseitigt schrittweise die 762-globale-Funktionen-Schuld. Voraussetzung-Entkopplung von BUNDLING. | **L (Plan: M)** |
+
+---
+
+## T0 — Restliche technische Schulden
+
+| ID | Aufgabe | Details | Aufwand |
+|---|---|---|---|
+| ~~T0-SW~~ | ~~**SW Install-Robustness**~~ | ✅ **Abgeschlossen sw v743** — `PRECACHE_CRITICAL` (atomar) + `PRECACHE_OPTIONAL` via `Promise.allSettled()` | ~~XS~~ |
+| ~~T0-XSS~~ | ~~**innerHTML-Audit**~~ | ✅ **Abgeschlossen sw v744** — alle 166 `innerHTML`-Assignments auditiert; kein echter XSS-Vektor; `esc()` konsequent. | ~~S~~ |
+| **T0-TOKEN** | **Refresh-Token-Restrisiko dokumentieren** | OAuth-Refresh-Token liegt in `sessionStorage` (XSS-lesbar). Ohne Backend alternativlos, aber bewusst zu führen: als ADR festhalten; prüfen ob Token-Scope (`Files.ReadWrite`) auf `Files.ReadWrite.AppFolder` einschränkbar ist (Schadensbegrenzung bei Kompromittierung). | **S** |
 | **T0-STORAGE** | **localStorage / IDB-Strategie Phase 3** | `stammbaum_extraplaces_*` + `stammbaum_hofobjects` (4 Calls in `ui-forms.js`) → async IDB; `loadExtraPlaces()`/`loadHofObjects()` + `await` im Ladepfad nötig. | **S** |
-| ~~T0-TEST~~ | ~~**Roundtrip-Test-Automation**~~ | ✅ **Abgeschlossen sw v746** — `test-roundtrip.js`: Node-Script ohne Browser, ohne externe Deps (`vm.runInContext`). GEDCOM-Roundtrip: parse→write→parse→write, assertiert `net_delta=0` + `out1===out2`. Snapshot-Modus (`--update`). CI-Exit-Code. GRAMPS-Roundtrip → Phase 2 (braucht DOMParser-Polyfill). | ~~M~~ |
+| **T0-DRY** | **`_esc`/`esc`-Duplikat + Monsterfunktionen** | `esc`/`_esc` 4× definiert (gedcom.js, gramps-writer.js, ui-timeline.js, ui-story.js) → nach T0-MODULE konsolidieren. `showDetail` (290 Z.) in Teilrenderer zerlegen. Niedrige Priorität, aber bei Modul-Migration mitnehmen. | **S** |
+| ~~T0-TEST~~ | ~~**Roundtrip-Test-Automation (GEDCOM)**~~ | ✅ **Abgeschlossen sw v746** — `test-roundtrip.js`: Node ohne Deps (`vm.runInContext`); `net_delta=0` + `out1===out2`; CI-Exit-Code. *(GRAMPS-Teil → T0-TEST-2)* | ~~M~~ |
 
 ---
 
@@ -154,7 +180,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v749** *(aktuell)*
+**Handbuch-Stand: sw v749** *(aktuell — v750 nur Test-Automation + interner GRAMPS-Roundtrip-Fix, nicht handbuchrelevant)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -173,36 +199,43 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | BUNDLING | **Bundling für Erstladezeit** | Nur sinnvoll nach LAZY-LOAD + ES-MODULE. Mit LAZY-LOAD sind die größten Cold-Start-Gewinne bereits ohne Build-Step realisiert; vollständiges Bundling (esbuild/Rollup) bringt danach nur noch marginale Verbesserung. | L |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend als Opt-in. | XL |
 | COLLAB | **Kollaboratives Editieren** | Konflikt-freies Merge zweier GEDCOM-Dateien. Grundlage: IMPORT-CMP + DUP-DETECT. Erfordert Server oder CRDTs. | XL |
-| ES-MODULE | **Echtes ES-Modul-System** | Umstieg von 44 globalen Script-Tags auf `import`/`export`. Aufwand enorm — Voraussetzung für BUNDLING; Entscheidung erst wenn Codebase stabil. | XL |
+| ES-MODULE | **Vollständige ES-Modul-Migration** | Kompletter Umstieg aller ~50 globalen Script-Tags auf `import`/`export`. Voraussetzung für BUNDLING. **→ jetzt als P0-Pilot `T0-MODULE` gestartet** (Plan + 1 Cluster zuerst, statt Big-Bang); vollständige Migration bleibt im Backlog bis Pilot-Erkenntnisse vorliegen. | XL |
 
 ---
 
-## Vergleich mit kommerziellen Tools
+## Vergleich mit etablierten Tools *(faire Einordnung — Stärken der Konkurrenz benannt)*
 
-| Feature | Stammbaum PWA | MacFamilyTree | Ancestry | GRAMPS | Ahnenblatt |
-|---|---|---|---|---|---|
-| Plattform | Web/PWA/iOS/Desktop | Mac/iOS | Web | Desktop | Windows |
-| Offline | ✅ vollständig | ✅ | ❌ | ✅ | ✅ |
-| GEDCOM Roundtrip | ✅ exzellent | ✅ gut | ⚠ verlustbehaftet | ✅ gut | ✅ gut |
-| GEDCOM 7.0 | ⚠ opt-in Export | ⚠ | ❌ | ⚠ | ❌ |
-| GRAMPS XML | ✅ (read+write) | ❌ | ❌ | ✅ nativ | ❌ |
-| Karte + Animation | ✅ | ✅ | ✅ | ⚠ | ⚠ |
-| Zeitleiste (hist. Ereignisse) | ✅ | ✅ | ⚠ | ⚠ | ⚠ |
-| Diagramm-Export | ✅ PNG | ✅ PDF/PNG | ⚠ | ✅ | ✅ |
-| Story-Modus | ✅ einzigartig | ⚠ Reports | ❌ | ❌ | ❌ |
-| Duplikat-Erkennung | ✅ | ✅ | ✅ | ✅ | ⚠ |
-| Datei-Merge | ✅ | ✅ | ⚠ | ✅ | ⚠ |
-| Validierungsregeln | ✅ 25 Regeln | ⚠ | ⚠ | ✅ | ⚠ |
-| CSV-Export | ✅ | ✅ | ✅ | ✅ | ✅ |
-| DNA-Integration | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Multi-User | ❌ | ❌ | ✅ | ❌ | ❌ |
-| Datenschutz (lokal-first) | ✅ | ✅ | ❌ | ✅ | ✅ |
-| Lebende anonymisieren | ✅ (v715) | ✅ | ⚠ | ✅ | ✅ |
-| Kosten | gratis | kostenpflichtig | Abo | gratis | gratis |
+> Frühere Version dieser Tabelle war parteiisch (sich selbst durchgehend ✅, Konkurrenz ⚠). Hier ehrlicher: wo etabliert Tools führen, steht es da.
 
-**Einzigartige Stärken:** Offline-PWA + Story-Modus + animierter Migrationspfad + GRAMPS-Brücke + Forschungsprotokoll + Mehrpersonen-Zeitleiste + DSGVO-Anonymisierung + vollständig lokal ohne Datamining.
+| Dimension | Stammbaum PWA | MacFamilyTree | GRAMPS | Ancestry |
+|---|---|---|---|---|
+| Plattform-Reichweite | **✅ PWA = überall** | Apple-only | Desktop | Web/Abo |
+| Offline | ✅ vollständig | ✅ | ✅ | ❌ Cloud-Zwang |
+| GEDCOM-Treue | **✅ exzellent (verifiziert net_delta=0)** | ✅ gut | ✅ gut | ⚠ verlustbehaftet |
+| GEDCOM 7.0 | ⚠ opt-in Export | ⚠ | ⚠ | ❌ |
+| GRAMPS XML | ✅ read+write | ❌ | ✅ nativ | ❌ |
+| Quellenverwaltung | ✅ gut (Mehrfachzitate, Templates) | ✅ sehr gut | **✅ exzellent (quellenzentriert)** | ⚠ mittel |
+| Reports / Bücher | ⚠ HTML/Print | **✅ exzellent (PDF-Bücher)** | ✅ sehr gut | ⚠ mittel |
+| Visualisierung | ✅ sehr gut + Story einzigartig | **✅ exzellent (3D/VR)** | ⚠ mittel | ✅ gut |
+| Forschungsworkflow | ✅ gut (RLOG, Tasks, Dedup) | ⚠ mittel | **✅ exzellent** | ✅ Online-Hints stark |
+| Karte + Zeitleiste | ✅ (hist. Ereignisse) | ✅ | ⚠ | ⚠ |
+| Validierungsregeln | ✅ 25 Regeln | ⚠ | ✅ | ⚠ |
+| Duplikat-Erkennung + Merge | ✅ | ✅ | ✅ | ⚠ |
+| DNA-Integration | ❌ | ❌ | ⚠ Plugin | **✅ Kernfeature** |
+| Online-Matching / Records | ❌ | ⚠ | ❌ | **✅ Killer-Feature** |
+| Multi-User / Kollaboration | ❌ | ❌ | ❌ | ✅ |
+| Datenschutz (lokal-first) | **✅ kein Tracking** | ✅ | ✅ | ❌ |
+| Lebende anonymisieren | ✅ (v715, BFS) | ✅ | ✅ | ⚠ |
+| Kosten | **gratis** | €€ einmalig | gratis | €€€ Abo |
 
-**Verbleibende Lücken:** keine bekannten größeren Standards-Lücken mehr.
+**Einzigartige Stärken (real konkurrenzlos):** kostenlose plattformübergreifende Offline-PWA + Story-Modus + GRAMPS-Brücke + DSGVO-Anonymisierung + verifizierte GEDCOM-Treue + kein Datamining. Für die Zielgruppe (mobil + Desktop, datenschutzbewusst) besetzt das eine Nische, die kein kommerzielles Tool exakt abdeckt.
+
+**Ehrliche Lücken vs. Konkurrenz:**
+- vs. **MacFamilyTree:** reichhaltige PDF-Buch-Reports, 3D/VR-Visualisierung.
+- vs. **GRAMPS:** Tiefe im professionellen Quellen-/Forschungsworkflow.
+- vs. **Ancestry:** DNA + Online-Matching + Milliarden Records — *kategoriefremd und bewusst out-of-scope* (eine lokale App kann das prinzipbedingt nicht liefern und will es laut Zielbild nicht).
+
+*Keine größeren offenen **Standards**-Lücken mehr (GEDCOM/GRAMPS abgedeckt). Die Lücken liegen bei Ausgabe-Reichtum (Bücher) und bei netzwerk-/datenbankgebundenen Features — Letztere sind Designziel, kein Defizit.*
 
 ---
 

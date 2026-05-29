@@ -9,6 +9,21 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — T0-TEST-2: GRAMPS-Roundtrip automatisiert + Repo-`<type>`-Bug (sw v750)
+
+- **sw v750** `test(interop)` + `fix(gramps)`: GRAMPS-Roundtrip headless automatisiert; dabei echten Roundtrip-Bug gefunden+behoben.
+  - **`test-roundtrip.js`** um GRAMPS-Pfad erweitert (Routing per `.gramps`-Endung):
+    - **Abhängigkeitsfreier Mini-DOMParser** (`_makeMiniDOMParser`) — implementiert die von `gramps-parser.js` genutzte DOM-Teilmenge (getAttribute, localName/tagName, children/childNodes, textContent, attributes, nodeType, getElementsByTagName(NS), querySelector, documentElement). Kein npm, kein `linkedom`.
+    - **`_gunzip(path)`** env-abhängig: Node `zlib.gunzipSync`, JXA `gzip -dc` in Temp-Datei (umgeht stdout-Limit bei 5,7 MB); nicht-gzip Dateien als Rohtext.
+    - **Assertion:** `xml1===xml2` (Stabilität, analog GEDCOM `out1===out2`) + Kern-Record-Counts (person/family/source/repository) gegen Original (`grampsCounts()` per Regex → unabhängig vom Mini-DOMParser). note/citation/placeobj/event/object dürfen abweichen (Dedup/Regeneration, analog PEDI-Delta) → nur Warnung.
+  - **Test-Seams** (Produktionscode, verhaltensneutral):
+    - `gramps-writer.js`: Body → synchrone **`_grampsBuildXMLText(db)`** (gibt XML-String zurück); `writeGRAMPS(db)` ist dünner gzip/Blob-Wrapper darum.
+    - `gramps-parser.js`: Teil nach Dekompression → synchrone **`_grampsParseXMLText(xmlText)`**; `parseGRAMPS(file)` dekomprimiert + delegiert.
+  - **`fix(gramps)` — Repo-`<type>`-Duplikation:** `_REPO_MODELLED` enthielt `'type'` nicht → `<type>Library</type>` landete in `r._extra` **und** wurde vom Writer hartcodiert erneut ausgegeben → wuchs +1 pro Roundtrip (Instabilität). Behoben: `'type'` zu `_REPO_MODELLED` hinzugefügt, Parser liest `r.rtype` (statt zu verwerfen), Writer schreibt `r.rtype || 'Library'` (erhält jetzt auch Nicht-Library-Typen wie Archive/Collection). Vom In-Browser-Feldvergleich (60034 Checks) übersehen, weil dieser `repo._extra` nicht prüfte.
+  - **Ergebnis:** `✓ gramps:Unsere Familie.gramps  stable  2894 Pers` · GEDCOM-Tests unverändert grün.
+
+---
+
 ### Session 2026-05-29 — F6 STRICT GEDCOM: Strict GEDCOM 5.5.1 Export (sw v749)
 
 - **sw v749** `feat(interop)`: F6 STRICT GEDCOM — opt-in Export ohne alle `_`-prefixed Vendor-Tags, als Menü-Button (analog zu GED7/GRAMPS):

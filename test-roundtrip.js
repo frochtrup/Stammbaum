@@ -21,13 +21,14 @@ if (!IS_NODE && !IS_JXA)
 
 // ── I/O-Abstraktionsschicht ────────────────────────────────────────────────
 
-var _dir, _read, _exists, _mkdir, _write, _args, _exit;
+var _dir, _read, _exists, _mkdir, _write, _args, _exit, _gunzip;
 
 if (IS_NODE) {
 
   var _fs   = require('fs');
   var _path = require('path');
   var _vm   = require('vm');
+  var _zlib = require('zlib');
 
   _dir    = _path.dirname(_path.resolve(__filename));
   _read   = function(p) { return _fs.readFileSync(p, 'utf8'); };
@@ -36,6 +37,13 @@ if (IS_NODE) {
   _write  = function(p, t) { _fs.writeFileSync(p, t, 'utf8'); };
   _args   = process.argv.slice(2);
   _exit   = function(code) { process.exit(code); };
+  // gunzip → UTF-8-String; bei nicht-gzip Datei (dev) Rohtext zurückgeben
+  _gunzip = function(p) {
+    var raw = _fs.readFileSync(p);
+    if (raw.length >= 2 && raw[0] === 0x1f && raw[1] === 0x8b)
+      return _zlib.gunzipSync(raw).toString('utf8');
+    return raw.toString('utf8');
+  };
 
 } else {
 
@@ -73,6 +81,23 @@ if (IS_NODE) {
   _exit   = function(code) {
     if (code !== 0) throw new Error('FAIL');
   };
+  // gunzip via Shell in Temp-Datei (umgeht stdout-Limit bei großen .gramps);
+  // bei nicht-gzip Datei (dev) Rohtext zurückgeben
+  _gunzip = function(p) {
+    var app = Application.currentApplication();
+    app.includeStandardAdditions = true;
+    var q   = function(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; };
+    var tmp = _dir + '/.test-gramps-tmp.xml';
+    try {
+      app.doShellScript('gzip -dc ' + q(p) + ' > ' + q(tmp));
+      var xml = _read(tmp);
+      app.doShellScript('rm -f ' + q(tmp));
+      return xml;
+    } catch (e) {
+      // kein gzip → als Rohtext lesen
+      return _read(p);
+    }
+  };
 
 }
 
@@ -85,11 +110,132 @@ if (!testFiles.length) testFiles = ['demo.ged'];
 
 var SNAP_DIR = _dir + '/test-roundtrip.snap';
 
+// ── Mini-DOMParser (abhängigkeitsfrei) ──────────────────────────────────────
+// Implementiert die DOM-Teilmenge, die gramps-parser.js nutzt: getAttribute,
+// localName, tagName, children, childNodes, textContent, attributes, nodeType,
+// getElementsByTagName(NS), querySelector, documentElement. GRAMPS-XML ist
+// maschinengeneriert + wohlgeformt → ein schlanker Tokenizer genügt.
+function _makeMiniDOMParser() {
+  function decodeEnt(s) {
+    return s.replace(/&(#x?[0-9a-fA-F]+|amp|lt|gt|quot|apos);/g, function(m, e) {
+      if (e === 'amp')  return '&';
+      if (e === 'lt')   return '<';
+      if (e === 'gt')   return '>';
+      if (e === 'quot') return '"';
+      if (e === 'apos') return "'";
+      if (e.charAt(0) === '#') {
+        var code = e.charAt(1) === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+        return String.fromCodePoint(code);
+      }
+      return m;
+    });
+  }
+  function textOf(node) {
+    var out = '';
+    var ch = node.childNodes;
+    for (var i = 0; i < ch.length; i++) {
+      if (ch[i].nodeType === 3) out += ch[i].textContent;
+      else if (ch[i].nodeType === 1) out += textOf(ch[i]);
+    }
+    return out;
+  }
+  function makeEl(tag) {
+    var colon = tag.indexOf(':');
+    var el = {
+      nodeType:     1,
+      tagName:      tag,
+      localName:    colon >= 0 ? tag.slice(colon + 1) : tag,
+      namespaceURI: null,
+      _attrs:       {},
+      attributes:   [],
+      childNodes:   [],
+    };
+    el.getAttribute = function(n) { return (n in this._attrs) ? this._attrs[n] : null; };
+    Object.defineProperty(el, 'children', { get: function() {
+      return this.childNodes.filter(function(c) { return c.nodeType === 1; });
+    } });
+    Object.defineProperty(el, 'textContent', { get: function() { return textOf(this); } });
+    el.getElementsByTagName = function(t) {
+      var res = [];
+      (function walk(n) {
+        for (var i = 0; i < n.childNodes.length; i++) {
+          var c = n.childNodes[i];
+          if (c.nodeType === 1) { if (t === '*' || c.tagName === t) res.push(c); walk(c); }
+        }
+      })(this);
+      return res;
+    };
+    el.getElementsByTagNameNS = function(ns, t) {
+      var res = [];
+      (function walk(n) {
+        for (var i = 0; i < n.childNodes.length; i++) {
+          var c = n.childNodes[i];
+          if (c.nodeType === 1) {
+            if ((t === '*' || c.localName === t) && (ns === '*' || c.namespaceURI === ns)) res.push(c);
+            walk(c);
+          }
+        }
+      })(this);
+      return res;
+    };
+    el.querySelector = function(sel) { return this.getElementsByTagName(sel)[0] || null; };
+    return el;
+  }
+  function parse(xml) {
+    xml = String(xml).replace(/^﻿/, '');
+    var n = xml.length, i = 0;
+    var doc = makeEl('#document'); doc.documentElement = null;
+    var stack = [doc];
+    function curNS() {
+      for (var s = stack.length - 1; s >= 0; s--) if (stack[s].namespaceURI) return stack[s].namespaceURI;
+      return null;
+    }
+    while (i < n) {
+      if (xml.charAt(i) === '<') {
+        if (xml.substr(i, 4) === '<!--')       { var e = xml.indexOf('-->', i); i = e < 0 ? n : e + 3; continue; }
+        if (xml.substr(i, 9) === '<![CDATA[')  { var e = xml.indexOf(']]>', i); var d = xml.slice(i + 9, e < 0 ? n : e); stack[stack.length - 1].childNodes.push({ nodeType: 3, textContent: d }); i = e < 0 ? n : e + 3; continue; }
+        if (xml.charAt(i + 1) === '?')          { var e = xml.indexOf('?>', i); i = e < 0 ? n : e + 2; continue; }
+        if (xml.charAt(i + 1) === '!')          { var e = xml.indexOf('>', i);  i = e < 0 ? n : e + 1; continue; }  // DOCTYPE
+        if (xml.charAt(i + 1) === '/')          { var e = xml.indexOf('>', i); stack.pop(); i = e + 1; continue; }
+        var e   = xml.indexOf('>', i);
+        var raw = xml.slice(i + 1, e);
+        var self = raw.charAt(raw.length - 1) === '/';
+        if (self) raw = raw.slice(0, -1);
+        var nameM = raw.match(/^([^\s/>]+)/);
+        var el    = makeEl(nameM[1]);
+        var attrRe = /([^\s=]+)\s*=\s*("([^"]*)"|'([^']*)')/g, am, rest = raw.slice(nameM[1].length);
+        while ((am = attrRe.exec(rest))) {
+          var av = decodeEnt(am[3] !== undefined ? am[3] : am[4]);
+          el._attrs[am[1]] = av;
+          el.attributes.push({ name: am[1], value: av });
+        }
+        el.namespaceURI = (el._attrs.xmlns !== undefined) ? el._attrs.xmlns : curNS();
+        var parent = stack[stack.length - 1];
+        parent.childNodes.push(el);
+        if (parent === doc && !doc.documentElement) doc.documentElement = el;
+        if (!self) stack.push(el);
+        i = e + 1;
+      } else {
+        var lt = xml.indexOf('<', i);
+        var txt = xml.slice(i, lt < 0 ? n : lt);
+        if (txt) stack[stack.length - 1].childNodes.push({ nodeType: 3, textContent: decodeEnt(txt) });
+        i = lt < 0 ? n : lt;
+      }
+    }
+    return doc;
+  }
+  return function MiniDOMParser() {
+    this.parseFromString = function(xml, _type) { return parse(xml); };
+  };
+}
+var _MiniDOMParser = _makeMiniDOMParser();
+
 // ── Skripte laden ──────────────────────────────────────────────────────────
 // Node: vm.runInContext (isolierter Kontext mit Polyfills)
 // JXA:  indirektes eval → Funktionen landen im globalen Scope
 
 var _parseGEDCOM, _writeGEDCOM, _writeGEDCOMStrict, _setDb;
+var _grampsParseXML, _grampsBuildXML;
 
 if (IS_NODE) {
 
@@ -101,6 +247,7 @@ if (IS_NODE) {
     console:      console,
     setTimeout:   setTimeout,
     clearTimeout: clearTimeout,
+    DOMParser:    _MiniDOMParser,
   });
   _ctx.window = _ctx;
 
@@ -110,11 +257,15 @@ if (IS_NODE) {
   _loadNode('gedcom.js');
   _loadNode('gedcom-parser.js');
   _loadNode('gedcom-writer.js');
+  _loadNode('gramps-parser.js');
+  _loadNode('gramps-writer.js');
 
   _parseGEDCOM      = function(t, e) { return _ctx.parseGEDCOM(t, e); };
   _writeGEDCOM      = function()     { return _ctx.writeGEDCOM(false); };
   _writeGEDCOMStrict = function()    { return _ctx.writeGEDCOM(false, false, true); };
   _setDb            = function(db)   { return _ctx.setDb(db); };
+  _grampsParseXML   = function(xml)  { return _ctx._grampsParseXMLText(xml); };
+  _grampsBuildXML   = function(db)   { return _ctx._grampsBuildXMLText(db); };
 
 } else {
 
@@ -123,17 +274,22 @@ if (IS_NODE) {
   localStorage = { getItem: function() { return null; }, setItem: function() {}, removeItem: function() {} };
   performance  = { now: function() { return Date.now(); } };
   document     = { getElementById: function() { return null; }, createElement: function() { return {}; } };
+  DOMParser    = _MiniDOMParser;
 
-  // Alle drei Skripte in EINEM eval-Aufruf → teilen denselben Scope.
+  // Alle Skripte in EINEM eval-Aufruf → teilen denselben Scope.
   // Nötig weil `const AppState` (gedcom.js) sonst für gedcom-writer.js unsichtbar bleibt.
   // Am Ende exportieren wir die benötigten Funktionen über window._rt.
   var _combined =
     _read(_dir + '/gedcom.js')         + '\n' +
     _read(_dir + '/gedcom-parser.js')  + '\n' +
     _read(_dir + '/gedcom-writer.js')  + '\n' +
-    'window._rt = { parse: parseGEDCOM, write: function() { return writeGEDCOM(false); }, writeStrict: function() { return writeGEDCOM(false, false, true); }, setDb: setDb };';
+    _read(_dir + '/gramps-parser.js')  + '\n' +
+    _read(_dir + '/gramps-writer.js')  + '\n' +
+    'window._rt = { parse: parseGEDCOM, write: function() { return writeGEDCOM(false); }, writeStrict: function() { return writeGEDCOM(false, false, true); }, setDb: setDb, grampsParse: _grampsParseXMLText, grampsBuild: _grampsBuildXMLText };';
   eval(_combined);
 
+  _grampsParseXML    = function(xml) { return window._rt.grampsParse(xml); };
+  _grampsBuildXML    = function(db)  { return window._rt.grampsBuild(db); };
   _parseGEDCOM       = function(t, e) { return window._rt.parse(t, e); };
   _writeGEDCOM       = function()     { return window._rt.write(); };
   _writeGEDCOMStrict = function()     { return window._rt.writeStrict(); };
@@ -337,6 +493,91 @@ function printStrictResult(r, filename) {
   }
 }
 
+// ── GRAMPS-Roundtrip ─────────────────────────────────────────────────────────
+// Analog zum GEDCOM-Test, aber XML statt GEDCOM-Zeilen:
+//   .gramps → gunzip → XML0 → parse → db1 → build → XML1 → parse → db2 → build → XML2
+// Assertions: stabil (XML1===XML2) + Record-Counts(XML0)===Counts(XML1).
+// Die Count-Prüfung läuft per Regex direkt auf den XML-Strings → unabhängig vom
+// Mini-DOMParser (fängt also auch Parser-Fehler des Test-Harnesses ab).
+
+var GRAMPS_RECORDS = ['person', 'family', 'source', 'placeobj', 'event', 'note', 'repository', 'object', 'citation'];
+
+function grampsCounts(xml) {
+  var c = {};
+  for (var i = 0; i < GRAMPS_RECORDS.length; i++) {
+    var tag = GRAMPS_RECORDS[i];
+    var re  = new RegExp('<' + tag + '[\\s>]', 'g');
+    c[tag]  = (xml.match(re) || []).length;
+  }
+  return c;
+}
+
+function runGrampsRoundtrip(filename) {
+  var fullPath = (filename[0] === '/') ? filename : _dir + '/' + filename;
+  if (!_exists(fullPath)) return { ok: false, msg: 'Datei nicht gefunden: ' + filename };
+
+  var t0 = Date.now();
+  var xml0, db1, xml1, db2, xml2;
+  try {
+    xml0 = _gunzip(fullPath);
+    db1  = _grampsParseXML(xml0);
+    xml1 = _grampsBuildXML(db1);
+    db2  = _grampsParseXML(xml1);
+    xml2 = _grampsBuildXML(db2);
+  } catch (e) {
+    return { ok: false, msg: 'Exception: ' + (e && e.message ? e.message : e), ms: Date.now() - t0 };
+  }
+
+  var stable = xml1 === xml2;
+  var c0 = grampsCounts(xml0), c1 = grampsCounts(xml1);
+  var countDiffs = [];
+  for (var i = 0; i < GRAMPS_RECORDS.length; i++) {
+    var tag = GRAMPS_RECORDS[i];
+    if (c0[tag] !== c1[tag]) countDiffs.push({ tag: tag, orig: c0[tag], out: c1[tag] });
+  }
+  // Kern-Records sind per id 1:1 → müssen exakt erhalten bleiben.
+  // note/citation/object/placeobj werden bewusst dedupliziert (Text-/Datei-/
+  // Orts-Key), event-Records werden aus Personen-/Familiendaten regeneriert →
+  // legitime Abweichung gegenüber Original (analog PEDI-Delta bei GEDCOM) → nur Warnung.
+  var coreBroken = countDiffs.some(function(d) { return CORE_TAG(d.tag); });
+
+  return {
+    ok:         stable && !coreBroken,
+    stable:     stable,
+    persons:    c1.person,
+    countDiffs: countDiffs,
+    coreBroken: coreBroken,
+    ms:         Date.now() - t0,
+    diff:       stable ? null : firstDiffs(xml1, xml2),
+  };
+}
+
+function printGrampsResult(r, filename) {
+  if (!r.ok && r.msg) { log(RED + '✗ gramps:' + filename + RESET + '  ' + r.msg); return; }
+
+  var icon  = r.ok ? GREEN + '✓' + RESET : RED + '✗' + RESET;
+  var sStr  = r.stable ? GREEN + 'stable' + RESET : RED + 'INSTABIL' + RESET;
+  var cStr  = r.countDiffs.length === 0
+    ? GREEN + 'counts=ok' + RESET
+    : (r.coreBroken ? RED : YELLOW) + 'counts≠' + RESET;
+  log(icon + ' gramps:' + filename + '  ' + cStr + '  ' + sStr + '  ' + DIM + r.persons + ' Pers · ' + r.ms + 'ms' + RESET);
+
+  if (r.countDiffs.length) {
+    r.countDiffs.forEach(function(d) {
+      var col = CORE_TAG(d.tag) ? RED : YELLOW;
+      log('    ' + col + (CORE_TAG(d.tag) ? '✗' : '⚠') + ' ' + d.tag + ': orig=' + d.orig + ' → out=' + d.out + ' (Δ' + (d.out - d.orig > 0 ? '+' : '') + (d.out - d.orig) + ')' + RESET);
+    });
+  }
+  if (!r.stable && r.diff) {
+    log('  ' + RED + 'Pass1→Pass2 Instabilität:' + RESET);
+    r.diff.forEach(function(h) {
+      h.del.forEach(function(l) { log('    ' + RED + '- [' + h.lineA + '] ' + l + RESET); });
+      h.ins.forEach(function(l) { log('    ' + GREEN + '+ [' + h.lineB + '] ' + l + RESET); });
+    });
+  }
+}
+function CORE_TAG(t) { return ['person','family','source','repository'].indexOf(t) >= 0; }
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 log(DIM + 'Lade Parser/Writer…' + RESET);
@@ -345,17 +586,33 @@ log(DIM + 'bereit.' + RESET + '\n');
 
 var allOk = true;
 
-for (var i = 0; i < testFiles.length; i++) {
-  var r = runRoundtrip(testFiles[i]);
-  printResult(r, testFiles[i]);
+var isGramps = function(f) { return /\.gramps$/i.test(f); };
+var gedFiles    = testFiles.filter(function(f) { return !isGramps(f); });
+var grampsFiles = testFiles.filter(isGramps);
+
+// GEDCOM-Roundtrip + Strict
+for (var i = 0; i < gedFiles.length; i++) {
+  var r = runRoundtrip(gedFiles[i]);
+  printResult(r, gedFiles[i]);
   if (!r.ok) allOk = false;
 }
+if (gedFiles.length) {
+  log('');
+  for (var j = 0; j < gedFiles.length; j++) {
+    var rs = runStrictTest(gedFiles[j]);
+    printStrictResult(rs, gedFiles[j]);
+    if (!rs.ok) allOk = false;
+  }
+}
 
-log('');
-for (var j = 0; j < testFiles.length; j++) {
-  var rs = runStrictTest(testFiles[j]);
-  printStrictResult(rs, testFiles[j]);
-  if (!rs.ok) allOk = false;
+// GRAMPS-Roundtrip (T0-TEST-2)
+if (grampsFiles.length) {
+  log('');
+  for (var g = 0; g < grampsFiles.length; g++) {
+    var rg = runGrampsRoundtrip(grampsFiles[g]);
+    printGrampsResult(rg, grampsFiles[g]);
+    if (!rg.ok) allOk = false;
+  }
 }
 
 log('');
@@ -366,5 +623,3 @@ if (allOk) {
   log(RED + 'Tests fehlgeschlagen.' + RESET);
   _exit(1);
 }
-
-// TODO Phase 2: GRAMPS-Roundtrip (braucht DOMParser-Polyfill)
