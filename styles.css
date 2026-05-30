@@ -224,9 +224,8 @@ body.tree-active #treeGenOverlay { display: flex; }
 /* ── Detail-Topbar: Mobile Komprimierung ── */
 /* Action Bar (v569) ersetzt durch Bottom-Nav */
 #detailNavBar { display: none !important; }
-/* Baum-Button in Detail-Topbar: auf Mobile über Bottom-Nav erreichbar */
-#v-detail #treeBtn { display: none; }
-body.desktop-mode #v-detail #treeBtn { display: inline-flex; }
+/* Baum-Button in Detail-Topbar: in beiden Modi sichtbar (detailNavBar deaktiviert) */
+#v-detail #treeBtn:not([hidden]) { display: inline-flex; }
 /* Proband-Buttons: global display:none; in v-detail zeigen wenn aktiv */
 #v-detail #probandBtn:not([hidden])    { display: inline-flex; }
 #v-detail #probandSetBtn:not([hidden]) { display: inline-flex; }
