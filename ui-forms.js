@@ -3,6 +3,9 @@
 //  srcWidgetState[prefix] = { mode:'new', citations:[{sid,page,quay,...}] }
 // ─────────────────────────────────────
 const srcWidgetState = {};
+// RES-EVAL 2b: Aufklapp-Zustand der Bewertungszeile je Widget (prefix → Set<citIdx>).
+// Bewusst NICHT am Zitat-Objekt (würde via {...c} beim Speichern in db leaken).
+const _srcEvalOpen = {};
 
 function updateSrcPage(prefix, citIdx, value) {
   const s = srcWidgetState[prefix];
@@ -14,6 +17,67 @@ function updateSrcQuay(prefix, citIdx, value) {
   const s = srcWidgetState[prefix];
   const i = +citIdx;
   if (s?.citations[i]) s.citations[i].quay = value;
+}
+
+// ─── RES-EVAL 2b: Evidenzbewertung pro Zitat (ADR-022) ────────────────────────
+function toggleSrcEval(prefix, citIdx) {
+  const i = +citIdx;
+  if (!_srcEvalOpen[prefix]) _srcEvalOpen[prefix] = new Set();
+  const set = _srcEvalOpen[prefix];
+  set.has(i) ? set.delete(i) : set.add(i);
+  renderSrcTags(prefix);
+}
+
+function updateSrcEval(prefix, citIdx, axis, value) {
+  const c = srcWidgetState[prefix]?.citations[+citIdx];
+  if (!c) return;
+  if (!c.eval) c.eval = _newEval();
+  if (axis in c.eval) c.eval[axis] = value;
+  if (evalIsEmpty(c.eval)) c.eval = null;
+  renderSrcTags(prefix);   // aktualisiert QUAY-Vorschlag + ⚖-Markierung
+}
+
+function updateSrcInformant(prefix, citIdx, value) {
+  const c = srcWidgetState[prefix]?.citations[+citIdx];
+  if (!c) return;
+  if (!c.eval) c.eval = _newEval();
+  c.eval.informant = value;
+  if (evalIsEmpty(c.eval)) c.eval = null;
+  // kein Re-Render: würde den Tippfokus im Informant-Feld verlieren
+}
+
+function applyEvalQuay(prefix, citIdx) {
+  const c = srcWidgetState[prefix]?.citations[+citIdx];
+  if (!c) return;
+  const q = _evalToQuay(c.eval);
+  if (q === '') { showToast('Keine Bewertung gesetzt', 'warn'); return; }
+  c.quay = q;
+  renderSrcTags(prefix);
+  showToast(`QUAY ${q} aus Bewertung übernommen`, 'success');
+}
+
+// Bewertungszeile (3 Achsen-Selects + Informant + QUAY-Übernahme)
+function _srcEvalRowHtml(prefix, idx, c) {
+  const e = c.eval || {};
+  let selects = '';
+  for (const axis of Object.keys(EVAL_AXES)) {
+    const def = EVAL_AXES[axis];
+    const cur = e[axis] || '';
+    let opts = `<option value="">${esc(def.label)} –</option>`;
+    for (const [v, lbl] of def.values)
+      opts += `<option value="${v}" ${cur === v ? 'selected' : ''}>${esc(lbl)}</option>`;
+    selects += `<select class="src-eval-select" data-change="updateSrcEval" data-prefix="${prefix}" data-citidx="${idx}" data-axis="${axis}" title="${esc(def.label)} — ${esc(def.hint)}">${opts}</select>`;
+  }
+  const sug    = _evalToQuay(c.eval);
+  const sugBtn = sug !== ''
+    ? `<button type="button" class="src-eval-applyq" data-action="applyEvalQuay" data-prefix="${prefix}" data-citidx="${idx}" title="QUAY-Vorschlag ${sug} übernehmen">→Q${sug}</button>`
+    : '';
+  return `<div class="src-eval-row">
+    ${selects}
+    <input type="text" class="src-eval-informant" value="${esc(e.informant || '')}" placeholder="Informant…"
+      data-input="updateSrcInformant" data-prefix="${prefix}" data-citidx="${idx}">
+    ${sugBtn}
+  </div>`;
 }
 
 function updateSrcUrl(prefix, citIdx, value) {
@@ -34,9 +98,10 @@ function updateSrcUrl(prefix, citIdx, value) {
 
 function initSrcWidget(prefix, citationsOrIds) {
   const arr = Array.isArray(citationsOrIds) ? citationsOrIds : [];
+  delete _srcEvalOpen[prefix];   // RES-EVAL 2b: Aufklapp-Zustand für frisches Formular zurücksetzen
   srcWidgetState[prefix] = { mode:'new', citations: arr.map(c =>
     (c && typeof c === 'object' && 'sid' in c)
-      ? { ...c, extra: [...(c.extra||[])], media: [...(c.media||[])] }
+      ? { ...c, extra: [...(c.extra||[])], media: [...(c.media||[])], eval: c.eval ? { ...c.eval } : null }
       : citationObj(String(c))
   )};
   renderSrcTags(prefix);
@@ -65,6 +130,8 @@ function renderSrcTags(prefix) {
     // URL aus erstem media-Entry (OBJE/FILE) lesen
     const urlVal  = (Array.isArray(c.media) && c.media[0] && /^https?:\/\//.test(c.media[0].file || ''))
       ? (c.media[0].file || '') : '';
+    const hasEval  = !evalIsEmpty(c.eval);   // RES-EVAL 2b
+    const evalOpen = _srcEvalOpen[prefix]?.has(idx);
     return `<span class="src-tag">
       <span class="src-tag-row">
         <span class="src-tag-label">${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}</span>
@@ -77,6 +144,9 @@ function renderSrcTags(prefix) {
           <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
           <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
         </select>
+        <button type="button" data-action="toggleSrcEval" data-prefix="${prefix}" data-citidx="${idx}"
+          title="Quellenbewertung (Evidenz)" aria-expanded="${evalOpen ? 'true' : 'false'}"
+          class="src-tag-icon-btn src-eval-toggle${hasEval ? ' src-eval-active' : ''}">⚖</button>
         <button type="button" data-action="citCamCapture" data-prefix="${prefix}" data-citidx="${idx}"
           title="Foto zur Quelle" class="src-tag-icon-btn">📷</button>
         <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-citidx="${idx}"
@@ -84,6 +154,7 @@ function renderSrcTags(prefix) {
       </span>
       <input type="url" class="src-url-input" value="${esc(urlVal)}" placeholder="↗ URL (Scan/Fundstelle)…"
         data-input="updateSrcUrl" data-prefix="${prefix}" data-citidx="${idx}">
+      ${evalOpen ? _srcEvalRowHtml(prefix, idx, c) : ''}
     </span>`;
   }).join('');
   const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">⧉</button>`;
@@ -127,6 +198,7 @@ function removeSrc(prefix, citIdx) {
   if (!s) return;
   const i = parseInt(citIdx);
   if (!isNaN(i)) s.citations.splice(i, 1);
+  delete _srcEvalOpen[prefix];   // RES-EVAL 2b: Indizes verschieben sich → Aufklapp-Zustand verwerfen
   renderSrcTags(prefix);
   renderSrcPicker(prefix);
 }

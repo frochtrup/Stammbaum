@@ -99,6 +99,8 @@ const _CLICK_MAP = {
   openSourceMediaView:     el => openSourceMediaView(el.dataset.sid, +el.dataset.idx),
   showChildRelDialog:      el => showChildRelDialog(el.dataset.fid, el.dataset.cid),
   removeSrc:               el => removeSrc(el.dataset.prefix, +el.dataset.citidx),
+  toggleSrcEval:           el => toggleSrcEval(el.dataset.prefix, +el.dataset.citidx),
+  applyEvalQuay:           el => applyEvalQuay(el.dataset.prefix, +el.dataset.citidx),
   addSrc:                  el => addSrc(el.dataset.prefix, el.dataset.sid),
   'copy-cit':              el => copyCitations(el.dataset.prefix),
   'paste-cit':             el => pasteCitations(el.dataset.prefix),
@@ -403,6 +405,7 @@ document.addEventListener('change', e => {
   if      (action === 'applyPersonFilter') applyPersonFilter();
   else if (action === 'savePedi')          savePedi(el.dataset.fid, el.dataset.cid, el.value);
   else if (action === 'updateSrcQuay')     updateSrcQuay(el.dataset.prefix, +el.dataset.citidx, el.value);
+  else if (action === 'updateSrcEval')     updateSrcEval(el.dataset.prefix, +el.dataset.citidx, el.dataset.axis, el.value);
   else if (action === 'onEventTypeChange')    onEventTypeChange();
   else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
@@ -449,6 +452,7 @@ document.addEventListener('input', e => {
   const action = el.dataset.input;
   if      (action === 'updateSrcPage')   updateSrcPage(el.dataset.prefix, +el.dataset.citidx, el.value);
   else if (action === 'updateSrcUrl')    updateSrcUrl(el.dataset.prefix, +el.dataset.citidx, el.value);
+  else if (action === 'updateSrcInformant') updateSrcInformant(el.dataset.prefix, +el.dataset.citidx, el.value);
   else if (action === 'applyPersonFilter') applyPersonFilter();
   else if (action === 'filterFamilies')  filterFamiliesDebounced(el.value);
   else if (action === 'filterSources')   filterSourcesDebounced(el.value);
