@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v752 · Cache: `stammbaum-v752`
+**sw-Version:** v753 · Cache: `stammbaum-v753`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -128,7 +128,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | **CAM** | **Kamera-Integration** | `<input accept="image/*" capture="environment">` → Foto direkt als Medienreferenz zur Person oder Quelle anhängen; kein OneDrive erforderlich; funktioniert iOS + Android PWA nativ. Konkrete Lücke vs. MacFamilyTree iOS. | **S** |
-| QUICK-TPL | **Konfigurierbares QuickAdd (Quellen-Templates)** | QuickAdd-Formular passt sich dem Quellentyp an: Taufbuch → Geburt + Taufe als Chips mit separaten Datumsfeldern. Konfiguration als `quickAddTemplates[]` JSON, analog SOUR-TMPL. | M |
+| QUICK-TPL | **Quellengebundene Eingabe-Templates** | **Konzept erarbeitet** (2026-05-30): generischer schema-getriebener Erfassungs-Motor. Template = impliziter Kontext (Quelle/Ort/QUAY/URL-Muster) + geordneter Feld-Fluss (Datum→Nachname→Vorname, abhängigkeits-gefiltertes Personen-Autocomplete) + `produces`-Mapping (z.B. FAM+2 INDI+MARR voll verquellt). Verallgemeinert `modalQuickAdd` + `_SOUR_TEMPLATES`; nutzt `initAutocomplete`, `citationObj`, `runValidation` (Inline-Plausi). Basismuster (Code) ↔ konkrete Templates (Nutzerdaten, „aus aktueller Quelle erstellen"). **Persistenz:** portable JSON-Config-Datei als Quelle der Wahrheit + IDB-Cache (nicht in GED). Phasen A–D. Deeplinks → `citations[].media[]` statt PAGE (s. PAGE-URL-Migration `migratePageUrls`, sw v753). | L |
 
 ---
 
@@ -180,7 +180,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v749** *(aktuell — v750–v752 nur Test-Automation, interner GRAMPS-Fix + ESM-Migration, nicht handbuchrelevant)*
+**Handbuch-Stand: sw v749** *(aktuell — v750–v753 nur Test-Automation, interner GRAMPS-Fix, ESM-Migration + PAGE-URL-Migrationsfunktion, nicht handbuchrelevant)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

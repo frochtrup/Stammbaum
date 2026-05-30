@@ -83,7 +83,8 @@ if (IS_NODE) {
     _readSrc('gedcom-validator.js')+ '\n' +
     'window._api = { parseGEDCOM: parseGEDCOM, runValidation: runValidation, ' +
     '_buildLivingSet: _buildLivingSet, normMonth: normMonth, buildGedDate: buildGedDate, ' +
-    'buildGedDateFromFields: buildGedDateFromFields, readDatePartFromFields: readDatePartFromFields };';
+    'buildGedDateFromFields: buildGedDateFromFields, readDatePartFromFields: readDatePartFromFields, ' +
+    '_splitPageUrl: _splitPageUrl, migratePageUrls: migratePageUrls };';
   eval(_combined);
   API = window._api;
 }
@@ -382,6 +383,57 @@ lacksRule(valF({ '@H@': P({ birth: { date: '1880' } }), '@K@': P({ birth: { date
 // CHILD_AFTER_FATHER_DEATH (>1 Jahr nach Tod)
 hasRule (valF({ '@H@': P({ birth: { date: '1850' }, death: { date: '1880' } }), '@K@': P({ birth: { date: '1885' } }) }, { '@F@': fam({ husb: '@H@', children: ['@K@'] }) }), 'CHILD_AFTER_FATHER_DEATH', 'CHILD_AFTER_FATHER_DEATH feuert (Kind 1885, Tod 1880)');
 lacksRule(valF({ '@H@': P({ birth: { date: '1850' }, death: { date: '1890' } }), '@K@': P({ birth: { date: '1885' } }) }, { '@F@': fam({ husb: '@H@', children: ['@K@'] }) }), 'CHILD_AFTER_FATHER_DEATH', 'CHILD_AFTER_FATHER_DEATH schweigt (Kind vor Tod)');
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (e) PAGE→MEDIA/NOTE-MIGRATION (Deeplink aus PAGE lösen)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(e) PAGE→Media/Note-Migration');
+
+// _splitPageUrl (rein)
+eq(API._splitPageUrl('fol. 12r'),                                  { page:'fol. 12r', urls:[] },                                  '_splitPageUrl ohne URL');
+eq(API._splitPageUrl('https://data.matricula-online.eu/a?pg=12'),  { page:'', urls:['https://data.matricula-online.eu/a?pg=12'] }, '_splitPageUrl nur URL → page leer');
+eq(API._splitPageUrl('fol. 12 https://x/y'),                       { page:'fol. 12', urls:['https://x/y'] },                      '_splitPageUrl Lokator + URL getrennt');
+eq(API._splitPageUrl('S. 5; https://x/y)'),                        { page:'S. 5', urls:['https://x/y'] },                         '_splitPageUrl Satzzeichen bereinigt');
+eq(API._splitPageUrl(''),                                          { page:'', urls:[] },                                          '_splitPageUrl leer');
+
+// migratePageUrls → media (Default), Lokator bleibt
+(function() {
+  var cit = { sid:'@S1@', page:'fol. 12 https://m.eu/scan?pg=12', quay:'3', note:null, extra:[], media:[] };
+  var p = P(); p.birth = { date:'1800', citations:[cit] };
+  var rep = API.migratePageUrls(DB({ '@1@': p }));
+  eq(cit.page, 'fol. 12',                       'migrate: page bereinigt (Lokator bleibt)');
+  eq(cit.media.length, 1,                       'migrate: 1 media-Item erzeugt');
+  eq(cit.media[0].file, 'https://m.eu/scan?pg=12', 'migrate: URL in media[].file');
+  eq(rep.migrated, 1,                           'migrate: report.migrated=1');
+})();
+
+// idempotent
+(function() {
+  var cit = { sid:'@S1@', page:'https://m.eu/x', quay:'', note:null, extra:[], media:[] };
+  var db = DB({ '@1@': Object.assign(P(), { birth:{ date:'1800', citations:[cit] } }) });
+  API.migratePageUrls(db);
+  var rep2 = API.migratePageUrls(db);
+  eq(rep2.migrated, 0,    'migrate: zweiter Lauf no-op (idempotent)');
+  eq(cit.media.length, 1, 'migrate: keine Dublette');
+})();
+
+// note-Ziel + Event-Host (verschachtelt)
+(function() {
+  var cit = { sid:'@S1@', page:'Nr. 4 https://m.eu/y', quay:'', note:null, extra:[], media:[] };
+  var p = P(); p.events = [{ type:'OCCU', date:'', place:'', citations:[cit] }];
+  API.migratePageUrls(DB({ '@1@': p }), { target:'note' });
+  eq(cit.page, 'Nr. 4',           'migrate(note): page bereinigt im Event-Host');
+  eq(cit.note, 'https://m.eu/y',  'migrate(note): URL in note');
+  eq(cit.media.length, 0,         'migrate(note): media unverändert');
+})();
+
+// ohne URL → unangetastet
+(function() {
+  var cit = { sid:'@S1@', page:'fol. 7', quay:'', note:null, extra:[], media:[] };
+  var rep = API.migratePageUrls(DB({ '@1@': Object.assign(P(), { birth:{ date:'1800', citations:[cit] } }) }));
+  eq(rep.migrated, 0,        'migrate: ohne URL nichts migriert');
+  eq(cit.page, 'fol. 7',     'migrate: page unverändert');
+})();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');

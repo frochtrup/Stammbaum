@@ -9,6 +9,18 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — PAGE→Media/Note-Migration + QUICK-TPL-Konzept (sw v753)
+
+- **sw v753** `feat(data)`: Fundstellen-URLs aus `citation.page` lösbar (reine, getestete Funktion; opt-in, nicht auto beim Laden).
+  - **`_splitPageUrl(page)`** (gedcom.js, rein): trennt URL(s) vom menschenlesbaren Lokator → `{ page, urls[] }`; bereinigt angehängte Satzzeichen.
+  - **`_forEachCitation(root, fn)`**: host-unabhängiger Walk über alle Citation-Objekte (birth/death/…, events[], marr/engag, nameCitations, extraNames, childRelations) — erkennt Citation per Form (`page`+`sid`+`media`).
+  - **`migratePageUrls(db, {target,titl})`**: verschiebt URLs `page` → `media[]` (Default, GEDCOM-`OBJE/FILE`) oder `note`; Lokator („fol. 12r") bleibt in `page`; idempotent; gibt Report (für Vorschau).
+  - **16 Unit-Tests** (`test-unit.js`, jetzt 103): `_splitPageUrl`-Fälle + Migration (media/note/idempotent/Event-Host/ohne-URL).
+  - **Hintergrund/Review:** URL in `PAGE` ist gültig aber semantisch falsch (PAGE = Lokator); GEDCOM-konformer Träger für Deeplinks ist `OBJE/FILE` (Digitalisat) bzw. `NOTE` — beides round-trip-sicher + strict-export-fest. Writer schreibt `citations[].media[]` bereits.
+- **QUICK-TPL-Konzept** (Doku, ROADMAP): schema-getriebener Erfassungs-Motor; portable JSON-Config-Datei + IDB-Cache (nicht in GED); Deeplinks via `citations[].media[]`.
+
+---
+
 ### Session 2026-05-30 — T0-MODULE Phase 2: ES-Modul Validator-Cluster (sw v752)
 
 - **sw v752** `refactor(arch)`: zweiter ES-Modul-Cluster nach demselben Brücken-Pattern (ADR-020).

@@ -767,6 +767,77 @@ function _migrateLegacyCitations(obj) {
 }
 
 // ─────────────────────────────────────
+//  PAGE→Media/Note-Migration (Deeplink aus PAGE lösen)
+// ─────────────────────────────────────
+// Hintergrund: Früher landeten Fundstellen-URLs (z.B. Matrikula-Scan) im
+// citation.page-Feld. Korrekter GEDCOM-Träger ist OBJE/FILE (Digitalisat) bzw.
+// NOTE. Diese Migration verschiebt URLs aus page → media[] (Default) oder note,
+// und lässt den menschenlesbaren Lokator ("fol. 12r") in page stehen.
+
+// Rein + testbar: trennt URL(s) vom Lokator-Text.
+// → { page: <Rest ohne URL>, urls: [<bereinigte URLs>] }
+function _splitPageUrl(page) {
+  const s = String(page == null ? '' : page);
+  const re = /\bhttps?:\/\/[^\s]+/g;
+  const found = s.match(re);
+  if (!found) return { page: s, urls: [] };
+  const urls = found.map(u => u.replace(/[).,;]+$/, ''));   // angehängte Satzzeichen weg
+  const rest = s.replace(re, ' ')
+                .replace(/\s{2,}/g, ' ')
+                .replace(/^[\s,;–-]+/, '')
+                .replace(/[\s,;–-]+$/, '')
+                .trim();
+  return { page: rest, urls };
+}
+
+// Besucht jedes Citation-Objekt im db-Graphen (host-unabhängig: birth/death/…,
+// events[], marr/engag, nameCitations, extraNames, childRelations, associations).
+// Citation = Objekt mit string `page` + `sid` + array `media`.
+function _forEachCitation(root, fn) {
+  const seen = new Set();
+  (function walk(node) {
+    if (!node || typeof node !== 'object' || seen.has(node) || node instanceof Set) return;
+    seen.add(node);
+    if (Array.isArray(node)) { for (const v of node) walk(v); return; }
+    if (typeof node.page === 'string' && 'sid' in node && Array.isArray(node.media)) fn(node);
+    for (const k in node) {
+      if (!Object.prototype.hasOwnProperty.call(node, k)) continue;
+      const v = node[k];
+      if (v && typeof v === 'object') walk(v);
+    }
+  })(root);
+}
+
+// Verschiebt URLs aus allen citation.page → media[] (Default) oder note.
+// opts: { target:'media'|'note', titl }. Idempotent. Gibt Report (für Vorschau).
+function migratePageUrls(db, opts = {}) {
+  const target = opts.target === 'note' ? 'note' : 'media';
+  const report = { scanned: 0, migrated: 0, urls: 0, samples: [] };
+  if (!db) return report;
+  _forEachCitation(db, c => {
+    report.scanned++;
+    const { page, urls } = _splitPageUrl(c.page);
+    if (!urls.length) return;
+    const before = c.page;
+    c.page = page;
+    if (target === 'note') {
+      const add = urls.join('\n');
+      c.note = c.note ? (c.note + '\n' + add) : add;
+    } else {
+      if (!Array.isArray(c.media)) c.media = [];
+      for (const u of urls) {
+        if (c.media.some(m => m && m.file === u)) continue;   // idempotent
+        c.media.push({ file: u, titl: opts.titl || '', _extra: [] });
+      }
+    }
+    report.migrated++;
+    report.urls += urls.length;
+    if (report.samples.length < 5) report.samples.push({ before, after: c.page, urls });
+  });
+  return report;
+}
+
+// ─────────────────────────────────────
 //  sourceRefs-Rebuild (nach Event-Saves)
 // ─────────────────────────────────────
 
