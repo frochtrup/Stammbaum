@@ -191,15 +191,29 @@ function _qtEditTemplate(id) {
 
 function _qtInitSourceAutocomplete() {
   if (typeof initAutocomplete !== 'function') return;
+  // Init-Guard: verhindert mehrfache Event-Listener bei wiederholtem _qtEditTemplate.
+  const el = document.getElementById('qt-f-src');
+  if (!el || el.dataset.qtAcInit) return;
+  el.dataset.qtAcInit = '1';
   initAutocomplete('qt-f-src', 'qt-f-src-dd', {
-    showAllOnFocus: true, useFixed: true, limit: 30,
+    showAllOnFocus: true, useFixed: true, limit: 50,
+    // Suche in BEIDEN Feldern (abbr UND title), nicht nur im ersten vorhandenen.
     getItems: q => Object.values(AppState.db.sources || {})
-      .filter(s => !q || (s.abbr || s.title || '').toLowerCase().includes(q))
+      .filter(s => !q ||
+        (s.abbr  || '').toLowerCase().includes(q) ||
+        (s.title || '').toLowerCase().includes(q))
       .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de')),
-    formatLabel: s => s.abbr || s.title || s.id,
+    // Zeige Kürzel + vollständigen Titel für sichere Identifikation.
+    formatLabel: s => (s.abbr && s.title && s.abbr !== s.title)
+      ? `${s.abbr} — ${s.title}`
+      : (s.abbr || s.title || s.id),
     onSelect: (s, input) => {
       document.getElementById('qt-f-src-sid').value = s.id;
       input.value = s.abbr || s.title || s.id;
+    },
+    // SID löschen wenn Textfeld manuell geleert wird (SID/Text bleibt sonst asynchron).
+    onInput: inp => {
+      if (!inp.value.trim()) document.getElementById('qt-f-src-sid').value = '';
     },
   });
 }
