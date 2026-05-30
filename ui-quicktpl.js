@@ -29,6 +29,36 @@ const QT_BASE_PATTERNS = {
       { role: 'w', sex: 'F', label: 'Ehefrau', surnKey: 'wSurn', givenKey: 'wGiven' },
     ],
   },
+  // ── Phase C: Einzelperson-Muster ─────────────────────────────────────────────
+  baptism: {
+    label: 'Taufe (Taufbuch)',
+    icon: '✝',
+    produces: 'person',
+    fields: [
+      { key: 'bdate',  label: 'Taufdatum',       type: 'date'    },
+      { key: 'surn',   label: 'Nachname',         type: 'surname' },
+      { key: 'given',  label: 'Vorname',          type: 'given'   },
+      { key: 'page',   label: 'Seite / Eintrag',  type: 'page'    },
+    ],
+    persons: [
+      { role: 'p', sex: 'U', label: 'Täufling', surnKey: 'surn', givenKey: 'given' },
+    ],
+  },
+  burial: {
+    label: 'Sterbefall (Sterberegister)',
+    icon: '✞',
+    produces: 'person',
+    fields: [
+      { key: 'ddate',  label: 'Sterbedatum',      type: 'date'    },
+      { key: 'bdate',  label: 'Beerdigungsdatum', type: 'date'    },
+      { key: 'surn',   label: 'Nachname',          type: 'surname' },
+      { key: 'given',  label: 'Vorname',           type: 'given'   },
+      { key: 'page',   label: 'Seite / Eintrag',  type: 'page'    },
+    ],
+    persons: [
+      { role: 'p', sex: 'U', label: 'Verstorbene/r', surnKey: 'surn', givenKey: 'given' },
+    ],
+  },
 };
 
 // ── State + Persistenz ───────────────────────────────────────────────────────
@@ -404,34 +434,54 @@ function _qtNewPerson(id, given, surname, sex) {
   };
 }
 
+// ── Wiederverwendbare Erfassungs-Helfer (Phase C) ────────────────────────────
+// Aus _qtSaveMarriage ausgelagert; nutzen baptism + burial direkt.
+function _qtResolvePerson(role, given, surname, sex) {
+  const mid = _qtMatchSel[role];
+  if (mid && AppState.db.individuals[mid]) {
+    return { id: mid, person: AppState.db.individuals[mid], isNew: false };
+  }
+  if (!given && !surname) return null;
+  const id = nextId('I');
+  return { id, person: _qtNewPerson(id, given, surname, sex), isNew: true };
+}
+
+function _qtAfterSave(tpl, hintText, focusKey) {
+  for (const f of QT_BASE_PATTERNS[tpl.base].fields) {
+    const el = document.getElementById('qt-e-' + f.key); if (el) el.value = '';
+  }
+  _qtMatchSel = {};
+  for (const pr of (QT_BASE_PATTERNS[tpl.base].persons || [])) _qtUpdateMatches(pr.role);
+  const h = document.getElementById('qt-entry-hint');
+  h.textContent = `${hintText} (${_qtSession.length} in dieser Session)`;
+  h.hidden = false;
+  document.getElementById('qt-e-' + focusKey)?.focus();
+}
+
+// Zitat an Ereignis anhängen — Duplikat-Schutz via sid.
+function _qtAddCitToEvent(ev, cit) {
+  if (!Array.isArray(ev.citations)) ev.citations = [];
+  if (!ev.citations.some(c => c.sid === cit.sid)) ev.citations.push(cit);
+  ev.seen = true;
+}
+
 function qtSaveEntry() {
   const tpl = _qtActiveTpl;
   if (!tpl) return;
   const base = QT_BASE_PATTERNS[tpl.base];
   const v = {};
   for (const f of base.fields) v[f.key] = (document.getElementById('qt-e-' + f.key)?.value || '').trim();
-  if (tpl.base === 'marriage') _qtSaveMarriage(tpl, v);
+  if      (tpl.base === 'marriage') _qtSaveMarriage(tpl, v);
+  else if (tpl.base === 'baptism')  _qtSaveBaptism(tpl, v);
+  else if (tpl.base === 'burial')   _qtSaveBurial(tpl, v);
 }
 
 function _qtSaveMarriage(tpl, v) {
   const ctx = tpl.context || {};
-  // Je Rolle: bestehenden Treffer verknüpfen ODER neu anlegen (Phase B).
-  const newPersonIds = [], involvedPersonIds = [];
-  function _qtResolvePerson(role, given, surname, sex) {
-    const mid = _qtMatchSel[role];
-    if (mid && AppState.db.individuals[mid]) {
-      involvedPersonIds.push(mid);
-      return { id: mid, person: AppState.db.individuals[mid], isNew: false };
-    }
-    if (!given && !surname) return null;
-    const id = nextId('I');
-    const person = _qtNewPerson(id, given, surname, sex);
-    newPersonIds.push(id); involvedPersonIds.push(id);
-    return { id, person, isNew: true };
-  }
   const H = _qtResolvePerson('h', v.hGiven, v.hSurn, 'M');
   const W = _qtResolvePerson('w', v.wGiven, v.wSurn, 'F');
   if (!H && !W) { showToast('Mindestens eine Person (Name oder Treffer) erforderlich', 'warn'); return; }
+  const involvedPersonIds = [H?.id, W?.id].filter(Boolean);
 
   const pageStr = (ctx.pagePattern && v.page) ? ctx.pagePattern.replace('{v}', v.page) : v.page;
   const url     = (ctx.urlPattern && v.page)  ? ctx.urlPattern.replace('{v}', v.page)  : '';
@@ -447,8 +497,6 @@ function _qtSaveMarriage(tpl, v) {
     engag: {}, div: {}, divf: {}, noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
     lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
   };
-  // pushUndo vor Mutation: neue IDs sind im Snapshot abwesend (Undo löscht),
-  // verknüpfte Personen vorhanden (Undo stellt fams wieder her).
   pushUndo('Heirat erfasst (Template)', { familyIds: [fId], personIds: involvedPersonIds });
 
   for (const P of [H, W]) {
@@ -465,20 +513,74 @@ function _qtSaveMarriage(tpl, v) {
   markChanged();
   renderTab();
 
-  // Felder + Treffer-Auswahl leeren, Kontext bleibt, Fokus auf erstes Feld
-  for (const f of QT_BASE_PATTERNS[tpl.base].fields) {
-    const el = document.getElementById('qt-e-' + f.key); if (el) el.value = '';
-  }
-  _qtMatchSel = {};
-  for (const pr of (QT_BASE_PATTERNS[tpl.base].persons || [])) _qtUpdateMatches(pr.role);
-
   const lblH = H ? (H.isNew ? ([v.hGiven, v.hSurn].filter(Boolean).join(' ') || '?') : _qtPersonLabel(H.person) + ' 🔗') : '—';
   const lblW = W ? (W.isNew ? ([v.wGiven, v.wSurn].filter(Boolean).join(' ') || '?') : _qtPersonLabel(W.person) + ' 🔗') : '—';
-  const h = document.getElementById('qt-entry-hint');
-  const n = _qtSession.length;
-  h.textContent = `✓ ${lblH} ⚭ ${lblW} (${n} in dieser Session)`;
-  h.hidden = false;
-  document.getElementById('qt-e-mdate')?.focus();
+  _qtAfterSave(tpl, `✓ ${lblH} ⚭ ${lblW}`, 'mdate');
+}
+
+function _qtSaveBaptism(tpl, v) {
+  const ctx = tpl.context || {};
+  const P = _qtResolvePerson('p', v.given, v.surn, 'U');
+  if (!P) { showToast('Name oder Treffer erforderlich', 'warn'); return; }
+
+  const pageStr = (ctx.pagePattern && v.page) ? ctx.pagePattern.replace('{v}', v.page) : v.page;
+  const url     = (ctx.urlPattern && v.page)  ? ctx.urlPattern.replace('{v}', v.page)  : '';
+  const cit     = citationObj(ctx.sid, pageStr, ctx.quay || '', null, [],
+    url ? [{ file: url, titl: '', _extra: [] }] : []);
+  const bdate   = (typeof _normQuickDate === 'function') ? _normQuickDate(v.bdate) : v.bdate;
+
+  pushUndo('Taufe erfasst (Template)', { personIds: [P.id] });
+
+  const p = P.person;
+  if (P.isNew) AppState.db.individuals[P.id] = p;
+  if (!p.chr || typeof p.chr !== 'object') p.chr = _qtEv();
+  if (!p.chr.date  && bdate)     p.chr.date  = bdate;
+  if (!p.chr.place && ctx.place) p.chr.place = ctx.place;
+  _qtAddCitToEvent(p.chr, cit);
+  _rebuildPersonSourceRefs(p);
+  _qtSession.push(P.id);
+  markChanged();
+  renderTab();
+
+  const lbl = P.isNew ? ([v.given, v.surn].filter(Boolean).join(' ') || '?')
+                      : _qtPersonLabel(p) + ' 🔗';
+  _qtAfterSave(tpl, `✓ ✝ ${lbl}`, 'bdate');
+}
+
+function _qtSaveBurial(tpl, v) {
+  const ctx = tpl.context || {};
+  const P = _qtResolvePerson('p', v.given, v.surn, 'U');
+  if (!P) { showToast('Name oder Treffer erforderlich', 'warn'); return; }
+
+  const pageStr = (ctx.pagePattern && v.page) ? ctx.pagePattern.replace('{v}', v.page) : v.page;
+  const url     = (ctx.urlPattern && v.page)  ? ctx.urlPattern.replace('{v}', v.page)  : '';
+  const cit     = citationObj(ctx.sid, pageStr, ctx.quay || '', null, [],
+    url ? [{ file: url, titl: '', _extra: [] }] : []);
+  const ddate   = (typeof _normQuickDate === 'function') ? _normQuickDate(v.ddate) : v.ddate;
+  const bdate   = (typeof _normQuickDate === 'function') ? _normQuickDate(v.bdate) : v.bdate;
+
+  pushUndo('Sterbefall erfasst (Template)', { personIds: [P.id] });
+
+  const p = P.person;
+  if (P.isNew) AppState.db.individuals[P.id] = p;
+  if (!p.death || typeof p.death !== 'object') p.death = _qtEv();
+  if (!p.buri  || typeof p.buri  !== 'object') p.buri  = _qtEv();
+  if (!p.death.date  && ddate)     p.death.date  = ddate;
+  if (!p.death.place && ctx.place) p.death.place = ctx.place;
+  _qtAddCitToEvent(p.death, cit);
+  if (bdate) {
+    if (!p.buri.date)  p.buri.date  = bdate;
+    if (!p.buri.place && ctx.place) p.buri.place = ctx.place;
+    _qtAddCitToEvent(p.buri, cit);
+  }
+  _rebuildPersonSourceRefs(p);
+  _qtSession.push(P.id);
+  markChanged();
+  renderTab();
+
+  const lbl = P.isNew ? ([v.given, v.surn].filter(Boolean).join(' ') || '?')
+                      : _qtPersonLabel(p) + ' 🔗';
+  _qtAfterSave(tpl, `✓ ✞ ${lbl}`, 'ddate');
 }
 
 function qtEntryDone() {
