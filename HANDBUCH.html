@@ -589,6 +589,7 @@
         <li>Eine Person bearbeiten</li>
         <li>Eine neue Person anlegen</li>
         <li>Ereignisse eintragen</li>
+        <li><a href="#quicktpl">Eingabe-Templates (quellengebundene Schnellerfassung)</a></li>
         <li>Beziehungsrechner</li>
         <li>Assoziationen — Zeugen, Paten und mehr</li>
       </ul>
@@ -1388,6 +1389,38 @@ Sie können das Datum auch nur teilweise eingeben: z. B. nur das Jahr, oder Mona
 
 <div class="tip">
 Der Schnellerfassungs-Modus eignet sich besonders gut für die Arbeit im Archiv: Tragen Sie alle Personen aus einem Kirchenbuch ein, tragen Sie dieselbe Quelle und Seite vorab ein, und hangeln Sie sich Eintrag für Eintrag durch — ohne Unterbrechung.
+</div>
+
+<h2 id="quicktpl">Eingabe-Templates: dieselbe Quelle, viele Einträge ⚡</h2>
+
+<p>Wenn Sie viele Einträge aus <em>derselben</em> Quelle erfassen — etwa ein ganzes Heiratsbuch oder Taufregister — sparen <strong>Eingabe-Templates</strong> noch mehr Zeit als die Schnellerfassung. Ein Template merkt sich den festen Rahmen (Quelle, Ort, Beleg-Qualität, Seiten- und Scan-URL-Muster). Beim Erfassen tippen Sie nur noch die wechselnden Felder (Namen, Datum, Seite) ein — jeder neue Datensatz wird dabei <strong>automatisch vollständig mit der Quelle belegt</strong>.</p>
+
+<p>Sie öffnen die Verwaltung über das <span class="button-label">+</span>-Menü → <span class="button-label">Eingabe-Templates</span>. Aus einer geöffneten Quelle können Sie über <span class="button-label">⚡ Quick-Template erstellen</span> direkt ein Template mit dieser Quelle anlegen.</p>
+
+<h3>Fertige Vorlagen</h3>
+<ul>
+  <li><strong>⚭ Heirat (Heiratsbuch):</strong> legt zwei Personen (Mann/Frau) und eine Familie mit Heiratsdatum an.</li>
+  <li><strong>✝ Taufe (Taufbuch):</strong> legt eine Person mit Taufeintrag an.</li>
+  <li><strong>✞ Sterbefall (Sterberegister):</strong> legt eine Person mit Sterbe- und optionalem Beerdigungsdatum an.</li>
+</ul>
+
+<h3>Doppelte Personen vermeiden</h3>
+<p>Während Sie einen Namen eintippen, sucht die App laufend nach bereits vorhandenen, passenden Personen und zeigt sie als Treffer an. Mit einem Tipp <strong>verknüpfen</strong> Sie den Eintrag mit der bestehenden Person, statt ein Duplikat anzulegen — die neue Quelle wird dann einfach an die vorhandene Person angehängt.</p>
+
+<h3>Sofortige Plausibilitätsprüfung</h3>
+<p>Nach jedem Speichern zeigt das Template direkt unter dem Eingabeformular kurze Hinweise an, falls die Prüfung etwas Auffälliges findet (z. B. ein unplausibles Datum) — so können Sie Fehler sofort an der Quelle korrigieren.</p>
+
+<h3>Eigene Templates frei zusammenstellen 🛠</h3>
+<p>Über die fertigen Vorlagen hinaus können Sie mit dem Typ <strong>🛠 Frei konfigurierbar</strong> ein eigenes Template bauen. Sie wählen selbst, welche Felder in welcher Reihenfolge erfasst werden — das Eingabeformular wird daraus automatisch erzeugt.</p>
+<ul>
+  <li><strong>Rollen:</strong> Jedes Feld gehört zu einer Person — <em>Person</em> (die Hauptperson), <em>Vater</em>/<em>Mutter</em> (werden automatisch als Elternfamilie verknüpft) oder <em>Ehepartner</em> (wird als Ehe verknüpft).</li>
+  <li><strong>Feldtypen:</strong> Nachname, Vorname, Geschlecht, Datum &amp; Ort (für Geburt, Taufe, Tod, Beerdigung oder Heirat), Beruf, Wohnort sowie Seite/Eintrag.</li>
+  <li><strong>Reihenfolge:</strong> Felder lassen sich mit ↑/↓ ordnen und mit ✕ entfernen.</li>
+  <li><strong>Komfort:</strong> Der Nachname des Vaters wird mit dem der Hauptperson vorbelegt (und bleibt überschreibbar). Treffer-Verknüpfung und Sofort-Prüfung funktionieren wie bei den fertigen Vorlagen.</li>
+</ul>
+
+<div class="tip">
+Ihre Templates werden geräte­lokal gespeichert (unabhängig von der geöffneten Datei). Über <span class="button-label">⤓ Export</span> / <span class="button-label">⤒ Import</span> sichern Sie sie als portable <em>.json</em>-Datei oder übertragen sie auf ein anderes Gerät.
 </div>
 
 
@@ -3475,7 +3508,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Mai 2026 · sw v739<br>
+  Stammbaum PWA · Version 8 · Mai 2026 · sw v769<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 
