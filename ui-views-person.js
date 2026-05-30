@@ -697,6 +697,7 @@ function showDetail(id, pushHistory = true) {
   _announceList((p.name || id) + ' — Details');
   document.getElementById('editBtn').style.display = '';
   document.getElementById('treeBtn').hidden = false;
+  document.getElementById('treeBtn').style.display = '';
   document.getElementById('treeBtn').dataset.id = id;
   const tlBtn = document.getElementById('timelineBtn');
   if (tlBtn) { tlBtn.hidden = false; tlBtn.dataset.id = id; }
