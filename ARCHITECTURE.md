@@ -371,6 +371,31 @@ Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAM
 
 ---
 
+### ADR-021: OAuth-Token-Speicherung — Restrisiko-Dokumentation (T0-TOKEN)
+
+**Kontext:** Die PWA nutzt OAuth 2.0 PKCE (ohne Backend) für OneDrive-Zugriff. Access-Token, Refresh-Token und Ablaufzeit werden in `sessionStorage` gehalten (`onedrive-auth.js`).
+
+**Risiko:** `sessionStorage` ist aus JavaScript lesbar. Ein XSS-Angriff könnte Tokens exfiltrieren.
+
+**Warum `sessionStorage` statt sichererer Alternativen:**
+- **Kein Backend** → kein sicherer HttpOnly-Cookie möglich; Token muss clientseitig liegen.
+- **`sessionStorage` ist bewusste Wahl** gegenüber `localStorage`: Tokens leben nur für die Tab-Session, überleben keinen Browser-Neustart, sind nicht origin-übergreifend zugänglich.
+- **`sessionStorage` ist nicht gegen XSS immun** — aber XSS ist bereits durch ADR-015 (CSP ohne `unsafe-inline`) + T0-XSS-Audit (166 `innerHTML`-Stellen, kein Vektor, `esc()` konsequent) auf ein sehr niedriges Restrisiko reduziert.
+- **Alternativen ohne Backend nicht praktikabel:** Memory-only (Token verloren bei Reload, schlechte UX) · Service-Worker-Proxy (SW hat keinen sicheren Speicher, der für den Hauptthread unsichtbar ist) · IDB/localStorage (schlechter als `sessionStorage`, da persistent).
+
+**Scope-Analyse — `Files.ReadWrite` vs. `Files.ReadWrite.AppFolder`:**
+- `Files.ReadWrite.AppFolder` würde den Schadenradius bei Token-Kompromittierung auf `/Apps/{AppName}/` begrenzen.
+- **Nicht umsetzbar ohne Azure-Portal-Änderung:** erfordert separate App-Registrierung mit expliziter `Files.ReadWrite.AppFolder`-Permission. Die aktuelle App-Registrierung ist auf `Files.ReadWrite` ausgestellt. Ein Wechsel würde alle bestehenden Nutzer-Autorisierungen invalidieren und erfordert Zugriff auf das Azure-Portal.
+- **Keine Verbesserung für Stammbaum-Zugriff:** die App liest/schreibt `.ged`- und `.gramps`-Dateien aus dem vom Nutzer gewählten Ordner — dieser liegt i.d.R. nicht im App-Folder. AppFolder-Scope würde die Kernfunktionalität brechen.
+
+**Entscheidung:** Verbleib bei `Files.ReadWrite` + `sessionStorage`. Das Restrisiko ist akzeptiert und bewusst geführt. Mitigationen:
+1. CSP `script-src 'self'` verhindert inline Scripts und externe Script-Injection (ADR-015).
+2. `esc()` konsequent auf allen vom Nutzer stammenden Strings (T0-XSS-Audit).
+3. Token-Scope ist auf OneDrive (`Files.ReadWrite` + `User.Read`) begrenzt — kein Zugriff auf andere Microsoft-Dienste.
+4. Refresh-Token erneuert sich bei jedem Token-Refresh (Rotation via Microsoft Identity Platform).
+
+---
+
 ## Passthrough-Mechanismen — Vollständige Analyse
 
 10 distinkte Mechanismen sichern GEDCOM-Daten die der Parser nicht strukturiert verarbeitet:
