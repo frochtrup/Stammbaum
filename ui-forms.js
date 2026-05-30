@@ -16,6 +16,22 @@ function updateSrcQuay(prefix, citIdx, value) {
   if (s?.citations[i]) s.citations[i].quay = value;
 }
 
+function updateSrcUrl(prefix, citIdx, value) {
+  const s = srcWidgetState[prefix];
+  const i = +citIdx;
+  if (!s?.citations[i]) return;
+  const c = s.citations[i];
+  if (!Array.isArray(c.media)) c.media = [];
+  const url = value.trim();
+  // Erstes media-Entry ist der Deeplink (OBJE/FILE); ggf. anlegen oder entfernen
+  if (url) {
+    if (c.media[0]) c.media[0].file = url;
+    else c.media.push({ file: url, titl: '', _extra: [] });
+  } else {
+    if (c.media[0] && /^https?:\/\//.test(c.media[0].file || '')) c.media.splice(0, 1);
+  }
+}
+
 function initSrcWidget(prefix, citationsOrIds) {
   const arr = Array.isArray(citationsOrIds) ? citationsOrIds : [];
   srcWidgetState[prefix] = { mode:'new', citations: arr.map(c =>
@@ -46,9 +62,12 @@ function renderSrcTags(prefix) {
     const label = src ? (src.abbr || src.title || c.sid) : c.sid;
     const pageVal = c.page || '';
     const quayVal = String(c.quay ?? '');
+    // URL aus erstem media-Entry (OBJE/FILE) lesen
+    const urlVal  = (Array.isArray(c.media) && c.media[0] && /^https?:\/\//.test(c.media[0].file || ''))
+      ? (c.media[0].file || '') : '';
     return `<span class="src-tag">
       ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
-      <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite…"
+      <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite/Folio…"
         data-input="updateSrcPage" data-prefix="${prefix}" data-citidx="${idx}">
       <select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-citidx="${idx}"
         style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
@@ -62,6 +81,9 @@ function renderSrcTags(prefix) {
         style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
       <button type="button" data-action="citCamCapture" data-prefix="${prefix}" data-citidx="${idx}"
         title="Foto zur Quelle" style="background:none;border:none;cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">📷</button>
+      <input type="url" class="src-url-input" value="${esc(urlVal)}" placeholder="URL (Scan/Fundstelle)…"
+        data-input="updateSrcUrl" data-prefix="${prefix}" data-citidx="${idx}"
+        style="display:block;width:100%;margin-top:4px;font-size:0.78rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);box-sizing:border-box">
     </span>`;
   }).join('');
   const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">⧉</button>`;

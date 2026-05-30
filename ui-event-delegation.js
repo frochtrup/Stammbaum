@@ -427,6 +427,7 @@ document.addEventListener('input', e => {
   if (!el) return;
   const action = el.dataset.input;
   if      (action === 'updateSrcPage')   updateSrcPage(el.dataset.prefix, +el.dataset.citidx, el.value);
+  else if (action === 'updateSrcUrl')    updateSrcUrl(el.dataset.prefix, +el.dataset.citidx, el.value);
   else if (action === 'applyPersonFilter') applyPersonFilter();
   else if (action === 'filterFamilies')  filterFamiliesDebounced(el.value);
   else if (action === 'filterSources')   filterSourcesDebounced(el.value);
