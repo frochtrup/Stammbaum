@@ -9,6 +9,20 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — QUICK-TPL Phase A: quellengebundene Eingabe-Templates (sw v759/v760)
+
+- **sw v759 (A1)** `feat(quicktpl)`: Datenmodell + Template-Verwaltung + Persistenz.
+  - **`ui-quicktpl.js`** (neu): `QT_BASE_PATTERNS` (Code-definierte Feld-Flüsse, Phase A = `marriage`); `AppState.quickTemplates`; `loadQuickTemplates`/`saveQuickTemplates` (IDB `quick_templates`); `exportQuickTemplates`/`importQuickTemplatesFile` (portable JSON-Config-Datei, Quelle der Wahrheit + IDB-Cache).
+  - **Manager-Modal** (`modalQtManager`): Liste + Erstellen/Bearbeiten/Löschen. Template = Name + Basismuster + **Kontext** (Quelle/Ort/QUAY/Seiten-Muster/URL-Muster `{v}`/Zeitraum). Quellen- + Orts-Autocomplete im Formular.
+  - Einstieg „⚭ Aus Quelle erfassen (Templates)" in modalAdd.
+- **sw v760 (A2)** `feat(quicktpl)`: Erfassungs-Engine.
+  - **`qtStartEntry`** → dynamisch gerendertes Formular aus dem Basismuster: **Kontext-Kopf** (📖 Quelle · 📍 Ort · QUAY · Zeitraum als Chips) + geordneter Feld-Fluss (Datum → Nachname ♂ → Vorname ♂ → Nachname ♀ → Vorname ♀ → Seite). Namens-Autocomplete über vorhandene Personen.
+  - **`qtSaveEntry`/`_qtSaveMarriage`**: erzeugt **FAM + 2 INDI + MARR**, voll verquellt — eine `citationObj` (sid + Seiten-Muster + QUAY + **URL-Deeplink als `media[0].file`**) am Heiratsereignis; Datum via `_normQuickDate`; Ort aus Kontext. Session-Modus (Felder leeren, Kontext bleibt, Zähler) wie QuickAdd.
+  - **Browser-verifiziert:** Template anlegen → persistiert (IDB) → Erfassung „Johann Decker ⚭ Maria Rust, fol. 88" → FAM+2 INDI, MARR `12 MAY 1801`, Zitat `@S99@`/`fol. 88`/Q3/Matrikula-URL.
+  - **Offen (Phase B+):** Personen-Matching (Dedup-aware), weitere Basismuster (baptism/burial/census), Inline-Plausi via Validator, „aus aktueller Quelle Template erstellen".
+
+---
+
 ### Session 2026-05-30 — FEAT: INDI-Level-Quellen in Person-Detail (klickbar) (sw v756)
 
 - **sw v756** `feat(ui)`: Person-Detail zeigt jetzt eine **„Quellen"-Zeile** mit den INDI-Level-Quellen (`topSources`, gelten für die ganze Person) als §-Badges — inkl. klickbarem ↗-Link.

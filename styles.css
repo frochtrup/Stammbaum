@@ -938,6 +938,16 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 /* Source widget */
 .src-widget { margin-bottom: 16px; }
 .src-tags { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-bottom: 8px; }
+/* QUICK-TPL Kontext-Kopf (Erfassung) */
+.qt-ctx-head {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
+}
+.qt-ctx-chip {
+  background: var(--surface3); border: 1px solid var(--gold-dim);
+  border-radius: 14px; padding: 3px 10px; font-size: 0.78rem; color: var(--gold);
+}
+
 /* QUICK-TPL Template-Liste */
 .qt-item {
   display: flex; align-items: stretch; gap: 4px; margin-bottom: 6px;
