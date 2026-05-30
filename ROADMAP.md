@@ -94,9 +94,27 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern das Sicherheitsnetz und das Fundament sind jetzt der Engpass.** Begründung — die Codebase ist stabil und funktionsreich (∅ Funktion 8.8), aber ihre *Qualitätssicherung* (Tests 5.5) und ihre *strukturelle Skalierbarkeit* (Architektur 6.5) hinken hinterher. Jedes weitere Feature erhöht das Risiko, das diese beiden Achsen nicht mehr abfedern.
 
 **Reihenfolge:**
-1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): **erledigt** — GEDCOM+GRAMPS-Roundtrip automatisiert + 87 Unit-Tests. Weitere Änderungen jetzt regressionsabgesichert.
-2. ✅ **P0 — Architektur-Fundament** (T0-MODULE Phase 1: Plan + Pilot): **erledigt** — ADR-020 + GRAMPS-Cluster als ES-Modul-Pilot (sw v751). Belegt: Migration ist inkrementell + de-riskt möglich (Brücken-Pattern, Kern muss nicht zuerst). Phasen 2–4 = laufende Schuld-Reduktion.
+1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): **erledigt** — GEDCOM+GRAMPS-Roundtrip automatisiert + 105 Unit-Tests. Weitere Änderungen jetzt regressionsabgesichert.
+2. ✅ **P0 — Architektur-Fundament** (T0-MODULE Phase 1+2: Plan + Pilot + zweiter Cluster): **erledigt** — ADR-020 + GRAMPS- und Validator-Cluster als ES-Module (sw v751/v752). Phasen 3–4 **bewusst zurückgestellt** — Begründung siehe Entscheidung unten.
 3. **P1+** — Restliche Schulden + Features wie bisher.
+
+### Architektur-Entscheidung: ES-Modul-Phasen 3–4 zurückgestellt (Mai 2026)
+
+**Kontext:** Nach Phase 1+2 (GRAMPS + Validator) standen als nächste Schritte Kern-Migration (`gedcom.js` + GEDCOM-Parser/Writer + `storage-file.js`) und danach UI-Cluster + Bundling.
+
+**Gemessene Blocker für Phase 3:**
+- `gedcom-worker.js` lädt den Parser via **`importScripts()`** — das kann keine ES-Module laden. Ohne Web-Worker-Umbau (`{type:'module'}` + Refactoring) kann `gedcom-parser.js` nicht auf `export` umgestellt werden.
+- `idbGet` aus `storage-file.js` wird von **13 Dateien** genutzt — Kern zu Modul machen erzeugt Kaskade durch fast alle Konsumenten.
+- `gedcom.js` hat **59 top-level Symbole** — eine handgeschriebene Brücke mit ~59 Einträgen ist fragil.
+
+**Kernfrage: lohnt ein Build-Step (esbuild/Rollup)?**
+Analysiert auf zwei Ebenen:
+- **Nutzer-Seite:** kaum spürbar. PWA-Cache macht den Warmstart sofort; LAZY-LOAD hat die größten Kaltstart-Gewinne bereits geholt. Offline-PWA, lokal-first, kein Datamining — all das ist Laufzeit, unberührt vom Build.
+- **Entwickler-Seite:** der eigentliche Handel. Ein Build-Step beseitigt die 762-Globals-Schuld und ermöglicht Tree-Shaking — aber er bricht **ADR-001/002** (kein npm, kein Build, Datei editieren & neu laden, vom iPad editierbar). Mit npm + `node` + Build/Watch-Prozess entfällt die bewusst gewählte „edit-anywhere"-Eigenschaft.
+
+**Entscheidung:** Build-Step wird **nicht eingeführt**. Begründung: Das Projekt ist stabil und funktionsreich (∅ 8.2). Die Schulden sind *entschärft* — `_`-Konventionen + Testabsicherung (Roundtrip + 105 Unit-Tests) fangen die Risiken ab, gegen die Module schützen würden. Den größten verbleibenden Gewinn (explizite Imports, Wegfall der Brücken) gibt es erst *mit* Bundler — zu diesem Preis ist er für dieses Solo-Projekt nicht rechtfertigbar.
+
+**Phasen 3–4 im Backlog** (ES-MODULE-Eintrag). Trigger für Wiederaufnahme: Codebase wächst stark (neue Cluster, weitere Mitwirkende) oder Namespace-Kollisionen treten konkret auf. Die zwei vorhandenen Brücken (GRAMPS, Validator) sind stabil und harmlos.
 
 ---
 
@@ -196,10 +214,11 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 |---|---|---|---|
 | LLM-STORY | **LLM-gestützte Story-Verbesserung** | Opt-in API-Call zum Umschreiben des Story-Textes in natürlicheres Deutsch. Privacy: nur anonymisierte Daten senden. | M |
 | F8 | **Cluster-Ansicht** | Alle Personen in denselben Orten/Quellen wie Person X — Netzwerk-Graph oder Liste. | L |
-| BUNDLING | **Bundling für Erstladezeit** | Nur sinnvoll nach LAZY-LOAD + ES-MODULE. Mit LAZY-LOAD sind die größten Cold-Start-Gewinne bereits ohne Build-Step realisiert; vollständiges Bundling (esbuild/Rollup) bringt danach nur noch marginale Verbesserung. | L |
+| ES-MODULE | **Vollständige ES-Modul-Migration (Phasen 3–4)** | Phase 1+2 erledigt (GRAMPS + Validator, ADR-020). **Phasen 3–4 bewusst zurückgestellt** — Kern-Migration (Worker-`importScripts`-Blocker, `idbGet`-Kaskade, 59 Brücken-Symbole) lohnt sich ohne Build-Step kaum; vollständiger Nutzen erst mit Bundler. Brücken-Pattern aus ADR-020 wiederverwendbar wenn Trigger eintritt (s. Entscheidung im Priorisierungs-Abschnitt). | XL |
+| BUILD-STEP | **Build-Step (esbuild/Rollup) einführen** | Voraussetzung für vollen Nutzen von ES-MODULE-Phase 3–4 + BUNDLING. Analysiert Mai 2026: bringt für Nutzer kaum Mehrwert (PWA-Cache + LAZY-LOAD dominieren); bricht für Entwickler die bewusste „edit-anywhere ohne Toolchain"-Eigenschaft (ADR-001/002). **Entscheidung: zurückgestellt.** Trigger: Codebase wächst stark oder Namespace-Kollisionen treten konkret auf. | XL |
+| BUNDLING | **Bundling für Erstladezeit** | Nur sinnvoll nach BUILD-STEP + ES-MODULE vollständig. Mit LAZY-LOAD sind die größten Cold-Start-Gewinne bereits ohne Build-Step realisiert; Bundling bringt danach nur noch marginale Verbesserung (~40–60 % Größenreduktion, aber Warmstart via SW-Cache schon sofortig). | L |
 | F11 | **OCR** | Urkunden-Scan → Text; WASM-Tesseract oder LLM-Backend als Opt-in. | XL |
 | COLLAB | **Kollaboratives Editieren** | Konflikt-freies Merge zweier GEDCOM-Dateien. Grundlage: IMPORT-CMP + DUP-DETECT. Erfordert Server oder CRDTs. | XL |
-| ES-MODULE | **Vollständige ES-Modul-Migration (Phasen 3–4)** | Phase 1+2 erledigt (GRAMPS + Validator, ADR-020). Verbleibend: **Phase 3 Kern** — `gedcom.js` + GEDCOM-Parser/Writer + I/O-Schicht (`storage-file.js`/`idbGet`) → echte Module (größter Schritt; löst erst danach die GRAMPS-Konsumenten + Gros der 762 Globals); **Phase 4** UI-Cluster, dann BUNDLING. Brücken-Pattern wiederverwendbar. | XL |
 
 ---
 

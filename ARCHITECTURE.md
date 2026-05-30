@@ -367,6 +367,8 @@ Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAM
 
 **Trade-off:** In der Brücken-Phase sind Kern-Abhängigkeiten *implizit* (global-lexical Reads statt expliziter Imports). Bewusst akzeptiert; der volle Nutzen (explizite Deps, Tree-Shaking) entsteht erst nach Phase 3–4.
 
+**Entscheidung Phase 3–4 (Mai 2026): zurückgestellt.** Kern-Migration hat drei harte Blocker: (1) `gedcom-worker.js` nutzt `importScripts()` — inkompatibel mit ES-Modulen ohne Worker-Umbau; (2) `idbGet` aus `storage-file.js` wird von 13 Dateien genutzt — Kaskade; (3) `gedcom.js` hat 59 top-level Symbole — fragile Brücke. Ein Build-Step (esbuild) würde den Nutzen erst vollständig erschließen, bricht aber die bewusst gewählte „edit-anywhere ohne Toolchain"-Eigenschaft (ADR-001/002). Für ein Solo-Projekt mit stabilem Testfundament (105 Unit-Tests + automatisierte Roundtrips) ist der Trade-off nicht rechtfertigbar. Trigger für Wiederaufnahme: starkes Codebase-Wachstum oder konkrete Namespace-Kollisionen. Die zwei vorhandenen Brücken (GRAMPS, Validator) bleiben stabil und harmlos.
+
 ---
 
 ## Passthrough-Mechanismen — Vollständige Analyse
