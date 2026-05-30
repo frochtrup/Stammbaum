@@ -66,24 +66,24 @@ function renderSrcTags(prefix) {
     const urlVal  = (Array.isArray(c.media) && c.media[0] && /^https?:\/\//.test(c.media[0].file || ''))
       ? (c.media[0].file || '') : '';
     return `<span class="src-tag">
-      ${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}
-      <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite/Folio…"
-        data-input="updateSrcPage" data-prefix="${prefix}" data-citidx="${idx}">
-      <select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-citidx="${idx}"
-        style="font-size:0.78rem;padding:2px 4px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);margin-left:4px">
-        <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
-        <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
-        <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
-        <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
-        <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
-      </select>
-      <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-citidx="${idx}"
-        style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">✕</button>
-      <button type="button" data-action="citCamCapture" data-prefix="${prefix}" data-citidx="${idx}"
-        title="Foto zur Quelle" style="background:none;border:none;cursor:pointer;padding:0 0 0 4px;font-size:0.85rem">📷</button>
-      <input type="url" class="src-url-input" value="${esc(urlVal)}" placeholder="URL (Scan/Fundstelle)…"
-        data-input="updateSrcUrl" data-prefix="${prefix}" data-citidx="${idx}"
-        style="display:block;width:100%;margin-top:4px;font-size:0.78rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);box-sizing:border-box">
+      <span class="src-tag-row">
+        <span class="src-tag-label">${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}</span>
+        <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite/Folio…"
+          data-input="updateSrcPage" data-prefix="${prefix}" data-citidx="${idx}">
+        <select class="src-quay-select" data-change="updateSrcQuay" data-prefix="${prefix}" data-citidx="${idx}">
+          <option value="" ${quayVal==='' ? 'selected' : ''}>Q–</option>
+          <option value="0" ${quayVal==='0' ? 'selected' : ''}>0 unbelegt</option>
+          <option value="1" ${quayVal==='1' ? 'selected' : ''}>1 fragwürdig</option>
+          <option value="2" ${quayVal==='2' ? 'selected' : ''}>2 plausibel</option>
+          <option value="3" ${quayVal==='3' ? 'selected' : ''}>3 direkt</option>
+        </select>
+        <button type="button" data-action="citCamCapture" data-prefix="${prefix}" data-citidx="${idx}"
+          title="Foto zur Quelle" class="src-tag-icon-btn">📷</button>
+        <button type="button" data-action="removeSrc" data-prefix="${prefix}" data-citidx="${idx}"
+          class="src-tag-icon-btn src-tag-remove" title="Quelle entfernen">✕</button>
+      </span>
+      <input type="url" class="src-url-input" value="${esc(urlVal)}" placeholder="↗ URL (Scan/Fundstelle)…"
+        data-input="updateSrcUrl" data-prefix="${prefix}" data-citidx="${idx}">
     </span>`;
   }).join('');
   const copyBtn = `<button type="button" class="src-cit-btn" data-action="copy-cit" data-prefix="${prefix}" title="Quellenbezüge kopieren">⧉</button>`;
