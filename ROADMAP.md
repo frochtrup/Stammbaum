@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v753 · Cache: `stammbaum-v753`
+**sw-Version:** v754 · Cache: `stammbaum-v754`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -180,7 +180,7 @@ Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v749** *(aktuell — v750–v753 nur Test-Automation, interner GRAMPS-Fix, ESM-Migration + PAGE-URL-Migrationsfunktion, nicht handbuchrelevant)*
+**Handbuch-Stand: sw v749** *(aktuell — v750–v754 nur Test-Automation, interne Fixes (GRAMPS, INDI-Quellen-Dedup), ESM-Migration + PAGE-URL-Migration, nicht handbuchrelevant)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

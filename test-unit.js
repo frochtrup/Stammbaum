@@ -205,6 +205,16 @@ group('(a) Parser Edge-Cases');
   ok(/_CUSTOM Wert/.test(pt), 'Unbekanntes _CUSTOM in _passthrough[]');
 })();
 
+(function() {  // INDI-Level dieselbe Quelle mehrfach → Dedup (verhindert N²-Verdopplung, MyHeritage)
+  var ged = ['0 HEAD','1 SOUR T','0 @I1@ INDI','1 NAME A /B/',
+             '1 SOUR @S1@','2 PAGE p1','2 EVEN Smart Matching',
+             '1 SOUR @S1@','2 PAGE p2','2 EVEN Smart Matching','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  var p = db.individuals['@I1@'];
+  eq(p.topSources.length, 1,            'Parser: INDI-Quelle 2× → topSources dedup auf 1');
+  eq(p.topSourcePages['@S1@'], 'p1',    'Parser: keep-first PAGE bei INDI-Quellen-Dedup');
+})();
+
 (function() {  // lv>4 darf den Passthrough nicht abbrechen (ADR-012)
   var ged = ['0 HEAD','1 SOUR T','0 @I1@ INDI','1 NAME A /B/',
              '1 OBJE','2 FILE bild.jpg','3 FORM jpg','4 TYPE photo','5 _X tief','0 TRLR'].join('\n');

@@ -32,7 +32,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     }
     else if (tag === '_UID') cur.uid = val;
     else if (tag === '_GRAMPS_ID') cur.grampId = val;
-    else if (tag === 'SOUR' && val.startsWith('@')) { const _ns1 = val.replace(/^@@/,'@').replace(/@@$/,'@'); cur.topSources.push(_ns1); cur.sourceRefs.add(_ns1); x.lastSourVal = _ns1; }
+    else if (tag === 'SOUR' && val.startsWith('@')) { const _ns1 = val.replace(/^@@/,'@').replace(/@@$/,'@'); if (!cur.topSources.includes(_ns1)) cur.topSources.push(_ns1); cur.sourceRefs.add(_ns1); x.lastSourVal = _ns1; }  // dedup: INDI-Level-Quelle max. 1× (Modell ist SID-gekeyt — wie GRAMPS-Parser); verhindert N²-Verdopplung bei MyHeritage-Mehrfachzitaten
     else if (tag === 'RESN')  cur.resn  = val;
     else if (tag === 'EMAIL') cur.email = val;
     else if (tag === 'WWW')   cur.www   = val;
@@ -203,8 +203,8 @@ function _parseINDILine(cur, x, lv, tag, val) {
     if (x.lv1tag === 'CHAN' && tag==='DATE') cur.lastChanged = val;
     if (x.lv1tag === 'CHAN' && tag==='NOTE') cur.chanNote = val || '';
     if (x.lv1tag === 'SOUR' && x.lastSourVal) {
-      if      (tag === 'PAGE') cur.topSourcePages[x.lastSourVal] = val;
-      else if (tag === 'QUAY') cur.topSourceQUAY[x.lastSourVal] = val;
+      if      (tag === 'PAGE') { if (cur.topSourcePages[x.lastSourVal] === undefined) cur.topSourcePages[x.lastSourVal] = val; }  // keep-first bei Mehrfachzitat (s. Dedup oben)
+      else if (tag === 'QUAY') { if (cur.topSourceQUAY[x.lastSourVal]  === undefined) cur.topSourceQUAY[x.lastSourVal]  = val; }
       else {
         if (!cur.topSourceExtra[x.lastSourVal]) cur.topSourceExtra[x.lastSourVal] = [];
         cur.topSourceExtra[x.lastSourVal].push('2 ' + tag + (val ? ' ' + val : ''));

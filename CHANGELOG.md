@@ -9,6 +9,15 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — FIX: INDI-Level-Quellen-Dedup (MyHeritage N²-Verdopplung) (sw v754)
+
+- **sw v754** `fix(parser)`: INDI-Level-`1 SOUR @ref@`-Zitierungen werden jetzt **dedupliziert** (max. 1× pro Quelle/Person) — wie der GRAMPS-Parser es bereits tut.
+  - **Befund:** Ancestris-Dateien mit MyHeritage „Smart Matching" zitieren dieselbe Meta-Quelle (`@S500010–29@`) mehrfach auf INDI-Ebene. Das SID-gekeyte topSources-Modell (`topSourcePages`/`QUAY`/`Extra` pro SID) mischte alle Zitate unter einem Key; der Writer gab den gemischten Block **einmal pro topSources-Vorkommen** aus → **N²-Verdopplung** der `EVEN/ROLE/DATA/TEXT`-Blöcke. Auf „Unsere Familie neu.ged": **net_delta +36864 → −27, jetzt stabil**.
+  - **Fix (parser-only, kein Konsument berührt):** `gedcom-parser.js:35` `if (!cur.topSources.includes(_ns1))`; PAGE/QUAY keep-first. topSources bleibt Array eindeutiger SIDs (Modell-Invariante, die alle Konsumenten + GRAMPS bereits annehmen).
+  - **Regression:** demo + MeineDaten_ancestris weiter `net_delta=0` (kein Multi-Zitat → No-op). +2 Unit-Tests (test-unit.js: 103→105).
+
+---
+
 ### Session 2026-05-30 — PAGE→Media/Note-Migration + QUICK-TPL-Konzept (sw v753)
 
 - **sw v753** `feat(data)`: Fundstellen-URLs aus `citation.page` lösbar (reine, getestete Funktion; opt-in, nicht auto beim Laden).
