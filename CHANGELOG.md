@@ -9,6 +9,15 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — FIX: Zitat-Medien-URLs klickbar (↗ aus OBJE/FILE) (sw v755)
+
+- **sw v755** `fix(ui)`: `citTagsHtml` (ui-views.js) zeigt den ↗-Link jetzt auch, wenn die URL in einem **Zitat-Medium** (`citations[].media[].file`) steckt — nicht nur bei URL in `PAGE`.
+  - **Hintergrund:** Die UI rendert den klickbaren ↗ bisher nur, wenn `c.page` eine URL ist. Nach der PAGE→OBJE/FILE-Migration steht die Fundstellen-URL im strukturierten `media[]` → Link wurde nicht mehr angezeigt. Fix: zusätzlich `media[].file` auf URL prüfen (`linkHref = page-URL ?? media-URL`). Rückwärtskompatibel (Altdaten mit URL-in-PAGE weiter klickbar).
+  - **Browser-verifiziert** (preview): event-level `2 SOUR / 3 OBJE / 4 FILE <url>` → Parser strukturiert nach `cit.media[].file` (kein Passthrough), `citTagsHtml` rendert `src-badge-link` mit `data-href=<url>`.
+  - **Bekannte Grenze:** INDI-Level-Quellen (`1 SOUR`, topSources) haben kein Medien-Modell → dort gewanderte URLs (v.a. MyHeritage-Profil-Links) bleiben Passthrough/nicht klickbar; betrifft nicht die Fundstellen (event-level).
+
+---
+
 ### Session 2026-05-30 — FIX: INDI-Level-Quellen-Dedup (MyHeritage N²-Verdopplung) (sw v754)
 
 - **sw v754** `fix(parser)`: INDI-Level-`1 SOUR @ref@`-Zitierungen werden jetzt **dedupliziert** (max. 1× pro Quelle/Person) — wie der GRAMPS-Parser es bereits tut.

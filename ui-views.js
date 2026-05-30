@@ -678,9 +678,12 @@ function citTagsHtml(citations) {
       page ? `S. ${page}` : '',
       quay !== '' ? `Q${quay} – ${_QUAY_LABELS[quay] || quay}` : ''
     ].filter(Boolean);
-    const isUrl = /^https?:\/\//i.test(page);
-    const linkBtn = isUrl
-      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(page)}" title="${esc(page)}">↗</span>`
+    // Klickbarer ↗-Link: URL in PAGE (Altdaten) ODER in einem Zitat-Medium (OBJE/FILE)
+    const isUrl    = /^https?:\/\//i.test(page);
+    const mediaUrl = (c.media || []).map(m => m && m.file).find(f => /^https?:\/\//i.test(f || '')) || '';
+    const linkHref = isUrl ? page : mediaUrl;
+    const linkBtn = linkHref
+      ? `<span class="src-badge-link" data-action="openCitLink" data-href="${esc(linkHref)}" title="${esc(linkHref)}">↗</span>`
       : '';
     return `<span class="src-badge${qClass}" data-action="showSourceDetail" data-sid="${c.sid}" title="${esc(tipParts.join(' · '))}">§${srcNum(c.sid)}${pageSuffix}</span>${linkBtn}`;
   }).filter(Boolean).join('');
