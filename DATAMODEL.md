@@ -275,6 +275,7 @@ Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → 
 | Forschungsaufgaben | ui-views-tasks.js | `bnavTasks()`, `renderTaskList()`, `saveTask()`, `exportTasksMd()` |
 | Forschungsprotokoll | ui-views-rlog.js | `showAddRlogForm()`, `_saveRlog()`, `exportRlogMd()` |
 | Validierungspanel | ui-views-val.js | `_renderValidationPanel()`, `openValConfig()`, `saveValConfig()` |
+| Qualitäts-Dashboard | ui-views-dashboard.js | `_renderDashboardView()` (3. Modus im Aufgaben-Tab), Ampel + Lückenradar + Brennpunkte, `_handleDashPromoteAll()` |
 | Statistik-Dashboard | ui-views-stats.js | `showStats()` |
 | Globale Suche | ui-views-search.js | `renderSearchResults()` |
 | Notizen | ui-views-note.js | `showNoteDetail()` |

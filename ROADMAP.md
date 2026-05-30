@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v771 · Cache: `stammbaum-v771`
+**sw-Version:** v772 · Cache: `stammbaum-v772`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -118,6 +118,32 @@ Analysiert auf zwei Ebenen:
 
 ---
 
+## Forschungstiefe — Ausbauplan (Mai 2026)
+
+**Ziel:** die Dimension *Forschungsqualität* (s. App-Ziel) vom „gut" (RLOG, Tasks, Validierung, Dedup) zum *durchgängigen Forschungs-Workflow* ausbauen — die ehrliche Lücke vs. GRAMPS im professionellen Quellen-/Forschungsworkflow schließen, **ohne** die Kernstärke (verifizierte GEDCOM-Treue, lokal-first) zu opfern.
+
+**Leitender Constraint (s. Design-Constraint):** Jede neue persistierte Struktur ist *entweder* ein `_`-Tag mit Writer-Support (reist mit der Datei, GEDCOM+GRAMPS — Muster `_RLOG`/`_TASK`) *oder* ein App-privater IDB-Store + JSON-Export (Muster `quick_templates`, kein Roundtrip-Risiko). Diese Wahl wird pro Feld explizit getroffen.
+
+**Kern-Einsicht:** Die Features sind keine Inseln, sondern eine Pipeline:
+`Dashboard (Lücke) → Aufgabe → Protokoll + Foto → Quelle + Bewertung → Hypothese → Auflösung → Dashboard (grün)`.
+Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem anderen Bedeutung geben.
+
+| Phase | ID | Inhalt | Speicherung | Status |
+|---|---|---|---|---|
+| **1** | **RES-DASH** | **Konflikt- & Qualitätsdashboard + Lückenradar** — Ampel pro Person (Validator-Aggregat), Vollständigkeits-Score, 6 Lückenradar-Balken, Brennpunkt-Liste, Lücke→Aufgabe (einzeln + „+ alle") | *(keine — reine Präsentation)* | ✅ **Abgeschlossen sw v772** |
+| **2** | **RES-EVAL** | **Quellenbewertung (Evidenzmodell)** — 3 Achsen je Zitat: Quellentyp (Original/Abschrift/Autorenwerk) · Information (primär/sekundär) · Evidenz (direkt/indirekt/negativ); „Informant" via ASSO-Rolle. **+ Repository-Rest:** Archivtyp, mehrere Signaturen, Findbuch-URL. Speist Dashboard (Schwach-Quellen-Flag). | `citation.eval` als `_`-Tag (ADR nötig) | offen — **nächster Schritt** |
+| **3** | **RES-PROJ** | **Forschungsprojekte + Kanban + Research-Timeline** — Projekte gruppieren Tasks/Log/Hypothesen (Scope: Linie/Ort/Zeitraum); Tasks `status` statt nur `done` → Kanban; `_rlog` nach Datum als Aktivitäts-Timeline | Projekte: IDB+JSON · Task-`status`: am `_TASK` | offen |
+| **4** | **RES-HYPO** | **Hypothesen-System (leichte Variante)** — statusbehaftete Annotation (offen/verworfen/bestätigt) an Person/Familie, verlinkt auf Evidenz, mit Gewichtung. **Bewusst KEIN** Alternativ-Baum-/Zwei-Schichten-Modell (wäre v9-Neuarchitektur, bricht Roundtrip-Einfachheit). | `_HYPO` als `_`-Tag (ADR nötig) | offen |
+
+**Ergänzungen (in die Phasen eingebettet):**
+- **GPS-/Beweisführungs-Notiz** pro Person (Genealogical Proof Standard) — bündelt Quellen + Hypothesen zum Argument; natürliches Ziel von Phase 4.
+- **Zitat-Gesundheit** („braucht Arbeit"-Flag, z. B. Bewertung fehlt) → fließt ins Dashboard (Phase 2).
+- **Citation-Text-Generierung** (Evidence-Explained-Stil) — später auf QUICK-TPL-Infrastruktur (Backlog).
+
+**Bewusst draußen:** echtes Zwei-Schichten-Evidenzmodell + Alternativ-Baum-Motor (opfert die verifizierte Roundtrip-Treue — Kernstärke) · Multi-User/Kollaboration (lokal-first, s. Backlog COLLAB).
+
+---
+
 ## P0 — Sicherheitsnetz & Fundament *(neu priorisiert nach Audit)*
 
 | ID | Aufgabe | Details | Aufwand |
@@ -198,7 +224,7 @@ Analysiert auf zwei Ebenen:
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v769** *(aktuell — QUICK-TPL/Eingabe-Templates Phasen A–E dokumentiert. v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
+**Handbuch-Stand: sw v769** *(veraltet — v770–v772 [QUICK-TPL age-Feldtyp, Qualitäts-Dashboard RES-DASH] noch nicht dokumentiert. v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

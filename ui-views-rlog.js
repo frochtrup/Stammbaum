@@ -255,13 +255,8 @@ function _renderRlogView() {
   ].map(b => `<button id="rlog-filter-${b.k}" class="flt-btn${_rlogViewFilter === b.k ? ' active' : ''}"
     data-action="switchRlogFilter" data-filter="${b.k}" title="${b.l}">${b.s}</button>`).join('');
 
-  const modeBar = `<div class="tab-bar">
-    <button class="tab-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
-    <button class="tab-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
-  </div>`;
-
   let html = `<div class="tasks-sticky-header">
-    ${modeBar}
+    ${_tasksModeBar()}
     <div class="filter-action-bar">
       <div class="filter-chips">${filterBtns}</div>
       <div class="action-btns">

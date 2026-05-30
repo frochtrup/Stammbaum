@@ -76,6 +76,7 @@ stammbaum/
 ├── ui-views-tasks.js   ← Forschungsaufgaben: IDB-Persistenz, Badge, Tab, Click-Handler
 ├── ui-views-rlog.js    ← Forschungsprotokoll (RLOG): Add/Edit/Delete, Filter, MD-Export
 ├── ui-views-val.js     ← Validierungspanel + Val-Config-Modal
+├── ui-views-dashboard.js ← Qualitäts-Dashboard (RES-DASH): Ampel + Lückenradar + Brennpunkte, Lücke→Aufgabe
 ├── ui-views-nav.js     ← History-Navigation: goBack/goForward, _navHistory, Verlaufs-Picker
 ├── ui-views-undo.js    ← Undo/Redo: pushUndo, applyUndo, applyRedo
 ├── ui-event-delegation.js ← _CLICK_MAP (~100 Einträge), document-Listener (click/change/input)

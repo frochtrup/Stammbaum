@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v771';
+const CACHE_NAME = 'stammbaum-v772';
 
 // Kern-Assets: atomar — Install schlägt fehl wenn eines fehlt
 const PRECACHE_CRITICAL = [
@@ -11,7 +11,7 @@ const PRECACHE_CRITICAL = [
   './gedcom.js', './gedcom-parser.js', './gedcom-worker.js', './gedcom-writer.js', './gedcom-validator.js', './validator.bridge.js', './gramps-parser.js', './gramps-writer.js', './gramps.bridge.js',
   './storage-file.js', './storage.js',
   './ui-views.js', './ui-views-nav.js', './ui-views-undo.js', './ui-views-note.js', './ui-views-search.js',
-  './ui-views-tree.js', './ui-views-tasks.js', './ui-views-rlog.js', './ui-views-val.js', './ui-views-person.js', './ui-views-family.js',
+  './ui-views-tree.js', './ui-views-tasks.js', './ui-views-rlog.js', './ui-views-val.js', './ui-views-dashboard.js', './ui-views-person.js', './ui-views-family.js',
   './ui-views-source.js', './ui-views-place.js', './ui-views-hof.js', './ui-views-map.js', './ui-views-stats.js', './ui-chart-export.js',
   './debug-activate.js', './lazy-loader.js', './ui-onboarding.js', './ui-quicktpl.js',
   './story-epochs.js', './timeline-hist-events.js',

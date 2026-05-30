@@ -337,6 +337,14 @@ function switchTasksMode(mode) {
   renderTasksView();
 }
 
+// 3-Modi-Leiste (Aufgaben | Protokoll | Dashboard) — gemeinsam genutzt von
+// renderTasksView, _renderRlogView (ui-views-rlog.js) und _renderDashboardView (ui-views-dashboard.js)
+function _tasksModeBar() {
+  const btn = (mode, label) =>
+    `<button class="tab-btn${_tasksViewMode === mode ? ' active' : ''}" data-action="switchTasksMode" data-mode="${mode}">${label}</button>`;
+  return `<div class="tab-bar">${btn('tasks', 'Aufgaben')}${btn('log', 'Protokoll')}${btn('dashboard', 'Dashboard')}</div>`;
+}
+
 function switchTasksFilter(f) {
   _tasksViewFilter = f;
   ['all', 'open', 'done'].forEach(k => {
@@ -346,7 +354,8 @@ function switchTasksFilter(f) {
 }
 
 function renderTasksView() {
-  if (_tasksViewMode === 'log') { _renderRlogView(); return; }
+  if (_tasksViewMode === 'log')       { _renderRlogView(); return; }
+  if (_tasksViewMode === 'dashboard') { _renderDashboardView(); return; }
   const container = document.getElementById('tasksList');
   if (!container) return;
 
@@ -381,10 +390,7 @@ function renderTasksView() {
   const totalVisible = Object.values(byCat).reduce((s, arr) => s + arr.length, 0);
 
   let html = `<div class="tasks-sticky-header">
-    <div class="tab-bar">
-      <button class="tab-btn${_tasksViewMode === 'tasks' ? ' active' : ''}" data-action="switchTasksMode" data-mode="tasks">Aufgaben</button>
-      <button class="tab-btn${_tasksViewMode === 'log'   ? ' active' : ''}" data-action="switchTasksMode" data-mode="log">Protokoll</button>
-    </div>
+    ${_tasksModeBar()}
     <div class="filter-action-bar">
       <div class="filter-chips">
         <button id="tasks-filter-all"  class="flt-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all"  title="Alle Aufgaben">≡</button>
