@@ -84,7 +84,8 @@ if (IS_NODE) {
     'window._api = { parseGEDCOM: parseGEDCOM, runValidation: runValidation, ' +
     '_buildLivingSet: _buildLivingSet, normMonth: normMonth, buildGedDate: buildGedDate, ' +
     'buildGedDateFromFields: buildGedDateFromFields, readDatePartFromFields: readDatePartFromFields, ' +
-    '_splitPageUrl: _splitPageUrl, migratePageUrls: migratePageUrls };';
+    '_splitPageUrl: _splitPageUrl, migratePageUrls: migratePageUrls, ' +
+    '_evalToQuay: _evalToQuay, evalIsEmpty: evalIsEmpty };';
   eval(_combined);
   API = window._api;
 }
@@ -443,6 +444,51 @@ eq(API._splitPageUrl(''),                                          { page:'', ur
   var rep = API.migratePageUrls(DB({ '@1@': Object.assign(P(), { birth:{ date:'1800', citations:[cit] } }) }));
   eq(rep.migrated, 0,        'migrate: ohne URL nichts migriert');
   eq(cit.page, 'fol. 7',     'migrate: page unverändert');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (e) RES-EVAL — Evidenzmodell (ADR-022)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(e) RES-EVAL Evidenzmodell');
+
+// _evalToQuay — abgeleiteter QUAY-Vorschlag
+eq(API._evalToQuay({ srcType:'original',  infoQual:'primary',      evidence:'direct'   }), '3', 'eval Original+primär+direkt → QUAY 3');
+eq(API._evalToQuay({ srcType:'original',  infoQual:'primary',      evidence:''         }), '3', 'eval Original+primär (ohne Evidenzachse) → QUAY 3');
+eq(API._evalToQuay({ srcType:'original',  infoQual:'primary',      evidence:'indirect' }), '1', 'eval Original+primär+indirekt → QUAY 1');
+eq(API._evalToQuay({ srcType:'derivative',infoQual:'secondary',    evidence:''         }), '2', 'eval Abschrift+sekundär → QUAY 2');
+eq(API._evalToQuay({ srcType:'authored',  infoQual:'undetermined', evidence:'indirect' }), '1', 'eval Autorenwerk+unbestimmt+indirekt → QUAY 1');
+eq(API._evalToQuay({ srcType:'',          infoQual:'',             evidence:'negative' }), '0', 'eval Negativ-Evidenz → QUAY 0');
+eq(API._evalToQuay({}), '', 'eval leer → ""');
+
+// evalIsEmpty
+ok(API.evalIsEmpty({ srcType:'', infoQual:'', evidence:'', informant:'' }), 'evalIsEmpty true bei leer');
+ok(API.evalIsEmpty(null),                                                   'evalIsEmpty true bei null');
+ok(!API.evalIsEmpty({ srcType:'original', infoQual:'', evidence:'', informant:'' }), 'evalIsEmpty false bei gesetzt');
+
+// Parser: _EVAL wird modelliert in citation.eval extrahiert — NICHT in extra (kein Doppel-Schreiben)
+(function() {
+  var ged = ['0 HEAD','1 SOUR T','0 @S1@ SOUR','1 TITL Q','0 @I1@ INDI','1 NAME A /B/',
+    '1 BIRT','2 DATE 1850','2 SOUR @S1@','3 PAGE 5','3 QUAY 3',
+    '3 _EVAL','4 _STYP original','4 _INFO primary','4 _EVID direct','4 _INFM @I9@','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  var c = db.individuals['@I1@'].birth.citations[0];
+  ok(c.eval, 'Zitat hat eval-Objekt');
+  eq(c.eval && c.eval.srcType,   'original', '_STYP → eval.srcType');
+  eq(c.eval && c.eval.infoQual,  'primary',  '_INFO → eval.infoQual');
+  eq(c.eval && c.eval.evidence,  'direct',   '_EVID → eval.evidence');
+  eq(c.eval && c.eval.informant, '@I9@',     '_INFM → eval.informant');
+  var ex = (c.extra || []).join('|');
+  ok(ex.indexOf('_EVAL') < 0, '_EVAL nicht in extra (kein Doppel-Schreiben)');
+  ok(ex.indexOf('_STYP') < 0, '_STYP-Achse nicht in extra');
+})();
+
+// Parser: Zitat ohne _EVAL behält eval=null (keine Strukturänderung)
+(function() {
+  var ged = ['0 HEAD','1 SOUR T','0 @S1@ SOUR','1 TITL Q','0 @I1@ INDI','1 NAME A /B/',
+    '1 BIRT','2 DATE 1850','2 SOUR @S1@','3 PAGE 5','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  var c = db.individuals['@I1@'].birth.citations[0];
+  ok(!c.eval, 'Zitat ohne _EVAL → eval bleibt leer/null');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

@@ -396,6 +396,46 @@ Anonymisierte INDI-Records enthalten nur: `NAME Lebende Person` · `SEX` · `FAM
 
 ---
 
+### ADR-022: Quellenbewertung — 3-Achsen-Evidenzmodell pro Zitat (RES-EVAL, sw v773)
+
+**Kontext:** GEDCOM kennt für die Quellenqualität nur `QUAY` (0–3) — einen *einzelnen* Wert. Die professionelle Genealogie (Genealogical Proof Standard / Elizabeth Shown Mills, *Evidence Explained*) trennt drei *unabhängige* Dimensionen, die `QUAY` vermischt. Diese Trennung ist der Kern von „Forschungstiefe" (Phase 2 des Forschungstiefe-Ausbauplans) und die ehrliche Lücke vs. GRAMPS.
+
+**Modell — drei Achsen + Informant, je Zitat (`citation.eval`):**
+
+| Achse | Werte | GEDCOM-Tag |
+|---|---|---|
+| **Quellentyp** (Originalität) | `original` · `derivative` (Abschrift) · `authored` (Autorenwerk) | `_STYP` |
+| **Information** (Nähe zum Ereignis) | `primary` · `secondary` · `undetermined` | `_INFO` |
+| **Evidenz** (zur konkreten Aussage) | `direct` · `indirect` · `negative` | `_EVID` |
+| **Informant** *(optional)* | Freitext oder Person-Xref | `_INFM` |
+
+`QUAY` **bleibt erhalten** (Interop/Roundtrip) und ist unabhängig editierbar; `_evalToQuay()` leitet einen *Vorschlag* (0–3) aus dem Modell ab (an die QUAY-Semantik angelehnt: `original`+`primary` → 3; `negative` → 0; `authored`/`undetermined`/`indirect` → 1; sonst 2). „Informant" verbindet sich semantisch mit der bestehenden ASSO-Rolle `Informant` (ADR-018).
+
+**Speicherung — `_`-Tag-Subtree unter SOUR (modelliert, nicht verbatim):**
+```
+2 SOUR @S1@
+3 PAGE 47
+3 QUAY 3
+3 _EVAL
+4 _STYP original
+4 _INFO primary
+4 _EVID direct
+4 _INFM Pfarrer Schmidt
+```
+Die Daten *reisen mit der Datei* (sie gehören zum Zitat) → `_`-Tag mit Writer-Support (Faustregel des Ausbauplans, analog `_RLOG`/`_TASK`), **nicht** ein App-privater IDB-Store.
+
+**Roundtrip-Mechanik (die kritische Entscheidung):** Unbekannte lv-3-Tags unter `SOUR` landen heute bereits als verbatim-`citation.extra[]` (Passthrough-Mechanismus 6) — `_EVAL` würde also *ohne jede Änderung* roundtripen. Beim *Modellieren* gilt jedoch die `_REPO_MODELLED`-Lehre aus T0-TEST-2: **der Parser muss `_EVAL` aus `extra[]` herauslösen**, sonst Doppel-Schreibung (+1 Subtree pro Roundtrip).
+- **Parser** (`gedcom-parser.js`): `3 _EVAL` (in beiden Zitat-Handlern, INDI + FAM) erzeugt `citation.eval = _newEval()` ohne extra-Push; die lv-4-Achsen werden im Treiber **vor** dem Passthrough-Block abgefangen (Muster identisch zu GED7-`PHRASE` unter `DATE`), via `x._ptDepth===3 && lv===4 && x.lv3tag==='_EVAL'`. Unbekannte `_EVAL`-Kinder fallen verbatim in `extra`.
+- **Writer** (`gedcom-writer.js`, `_writeSourCits`): **ein** Hook nach `QUAY` deckt *alle* Zitat-Kontexte ab (birth/chr/death/buri/events/marr/engag/div/asso/name/famc/childRelations — alle nutzen `_writeSourCits`). Da der Parser `_EVAL` aus `extra` zieht → keine Doppel-Schreibung.
+
+**Strict / GED7:** In Strict-5.5.1 (ADR-019) wird `_EVAL` weggelassen (`!_strictGed`-Gate). In GED7 (ADR-018) werden `_EVAL/_STYP/_INFO/_EVID/_INFM` im `SCHMA`-Block deklariert. GED7 hat kein Standard-Äquivalent — der Extension-Tag bleibt erhalten.
+
+**GRAMPS:** Citation mappt bereits `QUAY → confidence`. Das 3-Achsen-Modell als GRAMPS-Citation-`<attribute>` zu schreiben/zurückzulesen ist **Phase 2d** (separat), damit `xml1===xml2` grün bleibt — nicht Teil von 2a.
+
+**Entscheidung:** 3-Achsen-Modell als modellierter `_EVAL`-Subtree, QUAY bleibt unabhängig + ableitbar. Verifiziert: `net_delta=0` + `out1===out2` auf `_EVAL`-Fixture; Strict strippt sauber; +18 Unit-Tests (`_evalToQuay`, Parser-Extraktion ohne Doppel-Schreibung). **Phase 2a (GEDCOM-Kern) abgeschlossen; offen: 2b UI, 2c Validator/Dashboard, 2d GRAMPS, 2e Repository-Rest.**
+
+---
+
 ## Passthrough-Mechanismen — Vollständige Analyse
 
 10 distinkte Mechanismen sichern GEDCOM-Daten die der Parser nicht strukturiert verarbeitet:

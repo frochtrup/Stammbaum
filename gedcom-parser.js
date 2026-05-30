@@ -287,6 +287,10 @@ function _parseINDILine(cur, x, lv, tag, val) {
       else if (tag === 'OBJE' && !val?.startsWith('@')) {
         const _sm = { file:'', scbk:'', prim:'', titl:'', note:'', _extra:[] };
         x._curCit.media.push(_sm); x._smEntry = _sm;
+      } else if (tag === '_EVAL') {
+        // RES-EVAL (ADR-022): Evidenzmodell — Achsen (lv=4) im Treiber abgefangen, nicht via extra
+        if (!x._curCit.eval) x._curCit.eval = _newEval();
+        x._ptDepth = 3; x._ptTarget = x._curCit.extra;
       } else {
         // Includes '3 SOUR @ref@' (source for CAUS via passthrough → reattaches to citation for stable roundtrip)
         x._curCit.extra.push('3 ' + tag + (val ? ' ' + val : ''));
@@ -534,6 +538,10 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag === 'OBJE' && !val?.startsWith('@')) {
         const _sm = { file:'', scbk:'', prim:'', titl:'', note:'', _extra:[] };
         x._curCit.media.push(_sm); x._smEntry = _sm;
+      } else if (tag === '_EVAL') {
+        // RES-EVAL (ADR-022): Evidenzmodell — Achsen (lv=4) im Treiber abgefangen, nicht via extra
+        if (!x._curCit.eval) x._curCit.eval = _newEval();
+        x._ptDepth = 3; x._ptTarget = x._curCit.extra;
       } else {
         // Includes '3 SOUR @ref@' (source for CAUS via passthrough → reattaches to citation for stable roundtrip)
         x._curCit.extra.push('3 ' + tag + (val ? ' ' + val : ''));
@@ -899,6 +907,16 @@ function parseGEDCOM(text, parseErrors, onProgress) {
     // ── GED7: PHRASE unter DATE (lv=3, _ptDepth=2) vor Passthrough abfangen ──
     if (x._ptDepth === 2 && lv === 3 && tag === 'PHRASE' && x._curDateTarget) {
       x._curDateTarget.datePhrase = val;
+      continue;
+    }
+
+    // ── RES-EVAL (ADR-022): _EVAL-Achsen (lv=4 unter Zitat-_EVAL) vor Passthrough abfangen ──
+    if (x._ptDepth === 3 && lv === 4 && x.lv3tag === '_EVAL' && x._curCit?.eval) {
+      if      (tag === '_STYP') x._curCit.eval.srcType   = val || '';
+      else if (tag === '_INFO') x._curCit.eval.infoQual  = val || '';
+      else if (tag === '_EVID') x._curCit.eval.evidence  = val || '';
+      else if (tag === '_INFM') x._curCit.eval.informant = val || '';
+      else x._curCit.extra.push(lv + ' ' + tag + (val ? ' ' + val : ''));  // unbekanntes _EVAL-Kind: verbatim
       continue;
     }
 

@@ -46,8 +46,10 @@ let changed = false;  // Ungespeicherte Änderungen?
   // date/place: null = Tag nicht vorhanden; '' = Tag vorhanden aber leer; 'Wert' = Wert
   birth: {
     date:'8 JAN 1872', place:'München', lati:48.1, long:11.5,
-    citations: [{ sid:'@S1@', page:'47', quay:'2', note:null, extra:[], media:[] }],
-    // citations[i]: { sid, page, quay, note, extra[], media[] }  — F4b-Datenmodell (gedcom.js:citationObj)
+    citations: [{ sid:'@S1@', page:'47', quay:'2', note:null, extra:[], media:[], eval:null }],
+    // citations[i]: { sid, page, quay, note, extra[], media[], eval }  — F4b-Datenmodell (gedcom.js:citationObj)
+    // eval (RES-EVAL/ADR-022): null | { srcType, infoQual, evidence, informant } — 3-Achsen-Evidenzmodell,
+    //   serialisiert als _EVAL/_STYP/_INFO/_EVID/_INFM unter SOUR; QUAY-Vorschlag via _evalToQuay()
     _extra:[],         // unbekannte lv=2 Tags im BIRT-Block
     value:'', seen:true
   },

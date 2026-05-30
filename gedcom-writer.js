@@ -8,7 +8,8 @@ function _g7WriteSchma(lines) {
   const _base = 'https://github.com/frochtrup/Stammbaum/ext';
   lines.push('1 SCHMA');
   for (const t of ['_UID','_GRAMPS_ID','_STAT','_TASK','_CAT','_DONE','_DATE','_ID',
-                   '_RLOG','_QUERY','_RESULT','_RUFNAME','_FREL','_MREL','_SCBK','_PRIM'])
+                   '_RLOG','_QUERY','_RESULT','_RUFNAME','_FREL','_MREL','_SCBK','_PRIM',
+                   '_EVAL','_STYP','_INFO','_EVID','_INFM'])
     lines.push(`2 TAG ${t} ${_base}/${t}`);
 }
 
@@ -88,6 +89,14 @@ function _writeSourCits(lines, lv, obj) {
     lines.push(`${lv} SOUR ${c.sid}`);
     if (c.page)  lines.push(`${lv+1} PAGE ${c.page}`);
     if (c.quay)  lines.push(`${lv+1} QUAY ${c.quay}`);
+    // RES-EVAL (ADR-022): Evidenzmodell als _-Tag-Subtree; in Strict-5.5.1 weggelassen
+    if (!_strictGed && c.eval && !evalIsEmpty(c.eval)) {
+      lines.push(`${lv+1} _EVAL`);
+      if (c.eval.srcType)   lines.push(`${lv+2} _STYP ${c.eval.srcType}`);
+      if (c.eval.infoQual)  lines.push(`${lv+2} _INFO ${c.eval.infoQual}`);
+      if (c.eval.evidence)  lines.push(`${lv+2} _EVID ${c.eval.evidence}`);
+      if (c.eval.informant) lines.push(`${lv+2} _INFM ${c.eval.informant}`);
+    }
     if (c.note !== null && c.note !== undefined)
       pushCont(lines, lv+1, 'NOTE', c.note || '');
     for (const l of _ptLines(c.extra)) lines.push(l);

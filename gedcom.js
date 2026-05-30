@@ -743,7 +743,41 @@ function initPlaceAutocomplete(placeInputId, ddId, placeIdFieldId) {
 
 // Factory für ein einzelnes Citation-Objekt (neues Datenmodell)
 function citationObj(sid = '', page = '', quay = '', note = null, extra = [], media = []) {
-  return { sid, page, quay, note, extra: [...extra], media: [...media] };
+  return { sid, page, quay, note, extra: [...extra], media: [...media], eval: null };
+}
+
+// ─── RES-EVAL (ADR-022): 3-Achsen-Evidenzmodell pro Zitat ──────────────────────
+// Speicherung als _-Tag-Subtree unter SOUR (_EVAL/_STYP/_INFO/_EVID/_INFM),
+// vom Parser modelliert herausgelöst (kein Doppel-Schreiben, vgl. _REPO_MODELLED, T0-TEST-2).
+const EVAL_AXES = {
+  srcType:  { tag: '_STYP', label: 'Quellentyp',  hint: 'Originalität',
+    values: [['original', 'Original'], ['derivative', 'Abschrift/Transkript'], ['authored', 'Autorenwerk']] },
+  infoQual: { tag: '_INFO', label: 'Information',  hint: 'Nähe zum Ereignis',
+    values: [['primary', 'primär'], ['secondary', 'sekundär'], ['undetermined', 'unbestimmt']] },
+  evidence: { tag: '_EVID', label: 'Evidenz',      hint: 'zur Aussage',
+    values: [['direct', 'direkt'], ['indirect', 'indirekt'], ['negative', 'negativ']] },
+};
+
+function _newEval() { return { srcType: '', infoQual: '', evidence: '', informant: '' }; }
+
+function evalIsEmpty(e) {
+  return !e || (!e.srcType && !e.infoQual && !e.evidence && !e.informant);
+}
+
+// Abgeleiteter QUAY-Vorschlag (0–3) aus dem Evidenzmodell, an die GEDCOM-QUAY-
+// Semantik angelehnt. Nur Vorschlag — QUAY bleibt unabhängig editierbar.
+// '' = keine Aussage möglich.
+function _evalToQuay(e) {
+  if (evalIsEmpty(e)) return '';
+  // 3 = direkte Primärevidenz: Original + primär (sofern nicht indirekt/negativ)
+  if (e.srcType === 'original' && e.infoQual === 'primary'
+      && e.evidence !== 'indirect' && e.evidence !== 'negative') return '3';
+  // 0 = Negativ-Evidenz (Abwesenheit)
+  if (e.evidence === 'negative') return '0';
+  // 1 = schwach: Autorenwerk / unbestimmte Information / indirekte Evidenz
+  if (e.srcType === 'authored' || e.infoQual === 'undetermined' || e.evidence === 'indirect') return '1';
+  // 2 = dazwischen (Abschrift, sekundär, primär ohne Original …)
+  return '2';
 }
 
 // Konvertiert Altformat (sources[]+sourcePages{}+...) in-place zu citations[]
