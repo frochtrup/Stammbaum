@@ -163,6 +163,7 @@ const _CLICK_MAP = {
   showAddSheet:            ()  => showAddSheet(),
   showQuickAdd:            ()  => showQuickAdd(),
   showQtManager:           ()  => showQtManager(),
+  qtNewTemplateFromSource: el  => qtNewTemplateFromSource(el.dataset.sid),
   qtNewTemplate:           ()  => qtNewTemplate(),
   qtEditTemplate:          (el) => qtEditTemplate(el.dataset.tid),
   qtDeleteTemplate:        (el) => qtDeleteTemplate(el.dataset.tid),

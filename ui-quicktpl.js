@@ -455,6 +455,8 @@ function _qtAfterSave(tpl, hintText, focusKey) {
   const h = document.getElementById('qt-entry-hint');
   h.textContent = `${hintText} (${_qtSession.length} in dieser Session)`;
   h.hidden = false;
+  const pb = document.getElementById('qt-plausi-box');
+  if (pb) { pb.innerHTML = ''; pb.hidden = true; }
   document.getElementById('qt-e-' + focusKey)?.focus();
 }
 
@@ -463,6 +465,41 @@ function _qtAddCitToEvent(ev, cit) {
   if (!Array.isArray(ev.citations)) ev.citations = [];
   if (!ev.citations.some(c => c.sid === cit.sid)) ev.citations.push(cit);
   ev.seen = true;
+}
+
+// ── Phase D: Inline-Plausi + „aus aktueller Quelle erstellen" ────────────────
+// Validator-Ergebnisse für die gerade gespeicherten Entitäten anzeigen (max 5).
+function _qtShowInlinePlausi(personIds, familyIds) {
+  const box = document.getElementById('qt-plausi-box');
+  if (!box) return;
+  if (typeof runValidation !== 'function') { box.hidden = true; return; }
+  const all = runValidation(AppState.db);
+  const pSet = new Set(personIds || []), fSet = new Set(familyIds || []);
+  const issues = all.filter(r =>
+    (r.personId && pSet.has(r.personId)) || (r.familyId && fSet.has(r.familyId))
+  ).slice(0, 5);
+  if (!issues.length) { box.hidden = true; return; }
+  const ic  = { error: '⚠', warn: '⚡', info: 'ℹ' };
+  const col = { error: 'var(--val-error,#c0392b)', warn: 'var(--val-warn,#e67e22)', info: 'var(--text-muted,#888)' };
+  box.innerHTML = '<div style="font-size:.78rem;color:var(--text-muted,#888);margin-bottom:3px">Hinweise:</div>' +
+    issues.map(r => {
+      const sev = r.severity || 'warn';
+      return `<div style="font-size:.8rem;color:${col[sev]||col.warn};padding:1px 0">${ic[sev]||'⚡'} ${esc(r.text)}</div>`;
+    }).join('');
+  box.hidden = false;
+}
+
+// Aus Quellen-Detail heraus ein neues Template anlegen (Quelle vorbelegt).
+function qtNewTemplateFromSource(sid) {
+  _qtShowList();
+  openModal('modalQtManager');
+  _qtEditTemplate(null);
+  const src = AppState.db.sources?.[sid];
+  if (!src) return;
+  document.getElementById('qt-f-src-sid').value = sid;
+  document.getElementById('qt-f-src').value = src.abbr || src.title || sid;
+  document.getElementById('qt-f-name').value = src.abbr || src.title || '';
+  document.getElementById('qt-f-name').focus();
 }
 
 function qtSaveEntry() {
@@ -516,6 +553,7 @@ function _qtSaveMarriage(tpl, v) {
   const lblH = H ? (H.isNew ? ([v.hGiven, v.hSurn].filter(Boolean).join(' ') || '?') : _qtPersonLabel(H.person) + ' 🔗') : '—';
   const lblW = W ? (W.isNew ? ([v.wGiven, v.wSurn].filter(Boolean).join(' ') || '?') : _qtPersonLabel(W.person) + ' 🔗') : '—';
   _qtAfterSave(tpl, `✓ ${lblH} ⚭ ${lblW}`, 'mdate');
+  _qtShowInlinePlausi(involvedPersonIds, [fId]);
 }
 
 function _qtSaveBaptism(tpl, v) {
@@ -545,6 +583,7 @@ function _qtSaveBaptism(tpl, v) {
   const lbl = P.isNew ? ([v.given, v.surn].filter(Boolean).join(' ') || '?')
                       : _qtPersonLabel(p) + ' 🔗';
   _qtAfterSave(tpl, `✓ ✝ ${lbl}`, 'bdate');
+  _qtShowInlinePlausi([P.id], []);
 }
 
 function _qtSaveBurial(tpl, v) {
@@ -581,6 +620,7 @@ function _qtSaveBurial(tpl, v) {
   const lbl = P.isNew ? ([v.given, v.surn].filter(Boolean).join(' ') || '?')
                       : _qtPersonLabel(p) + ' 🔗';
   _qtAfterSave(tpl, `✓ ✞ ${lbl}`, 'ddate');
+  _qtShowInlinePlausi([P.id], []);
 }
 
 function qtEntryDone() {
