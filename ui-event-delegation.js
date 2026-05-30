@@ -165,6 +165,10 @@ const _CLICK_MAP = {
   showQtManager:           ()  => showQtManager(),
   qtNewTemplateFromSource: el  => qtNewTemplateFromSource(el.dataset.sid),
   qtNewTemplate:           ()  => qtNewTemplate(),
+  qtFieldAdd:              ()  => qtFieldAdd(),
+  qtFieldDel:              el  => qtFieldDel(el.dataset.idx),
+  qtFieldUp:               el  => qtFieldUp(el.dataset.idx),
+  qtFieldDown:             el  => qtFieldDown(el.dataset.idx),
   qtEditTemplate:          (el) => qtEditTemplate(el.dataset.tid),
   qtDeleteTemplate:        (el) => qtDeleteTemplate(el.dataset.tid),
   qtSaveTemplate:          ()  => qtSaveTemplate(),
@@ -402,6 +406,8 @@ document.addEventListener('change', e => {
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
   else if (action === 'applySourceTemplate') _applySourceTemplate(el.value);
   else if (action === 'qtImportFile')      importQuickTemplatesFile(el);
+  else if (action === 'qtBaseChange')      _qtSyncBaseUI();
+  else if (action === 'qtFieldEdit')       _qtFieldEdit(el);
   else if (action === 'amCamChange') {
     (async () => {
       const f = el.files[0];
@@ -454,6 +460,7 @@ document.addEventListener('input', e => {
   else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
   else if (action === 'dedupSearch')     dedupSearchChange(el.value);
   else if (action === 'dedupThreshold')  dedupThresholdChange(el.value);
+  else if (action === 'qtFieldEdit')     _qtFieldEdit(el);
 });
 
 document.addEventListener('blur', e => {

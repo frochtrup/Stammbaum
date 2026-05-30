@@ -61,6 +61,86 @@ const QT_BASE_PATTERNS = {
   },
 };
 
+// ── Phase E: Frei konfigurierbare Templates (base === 'custom') ───────────────
+// Rollen-Katalog mit eingebauter Beziehungssemantik (Nutzer definiert keine
+// Relationen — main/Vater/Mutter/Ehepartner haben feste FAMC/FAMS-Bedeutung).
+const QT_ROLE_CATALOG = {
+  main:   { sex: 'U', label: 'Person',     icon: '👤' },
+  father: { sex: 'M', label: 'Vater',      icon: '👨' },
+  mother: { sex: 'F', label: 'Mutter',     icon: '👩' },
+  spouse: { sex: 'U', label: 'Ehepartner', icon: '💑' },
+};
+const QT_FIELD_TYPES = [
+  ['surname', 'Nachname'], ['given', 'Vorname'], ['sex', 'Geschlecht'],
+  ['date', 'Datum'], ['place', 'Ort'], ['occu', 'Beruf'], ['resi', 'Wohnort'],
+  ['page', 'Seite/Eintrag'],
+];
+const QT_TARGETS = [
+  ['birth', 'Geburt'], ['chr', 'Taufe'], ['death', 'Tod'], ['buri', 'Beerdigung'],
+  ['marr', 'Heirat'],
+];
+const _QT_TYPE_LBL = Object.fromEntries(QT_FIELD_TYPES);
+const _QT_TGT_LBL  = Object.fromEntries(QT_TARGETS);
+
+// Liefert ein normalisiertes Schema {fields:[{key,type,label,role,target}], persons:[…]}
+// — für Code-Muster direkt, für custom aus tpl.schema.fields aufgebaut.
+function _qtSchema(tpl) {
+  if (tpl.base === 'custom') return _qtBuildCustomSchema(tpl.schema || { fields: [] });
+  return QT_BASE_PATTERNS[tpl.base];
+}
+
+function _qtDefaultLabel(f) {
+  const t = _QT_TYPE_LBL[f.type] || f.type;
+  const g = f.target ? (_QT_TGT_LBL[f.target] || '') : '';
+  const base = t + (g ? ' ' + g : '');
+  return f.role === 'main' ? base : base + ' ' + (QT_ROLE_CATALOG[f.role]?.label || f.role);
+}
+
+function _qtBuildCustomSchema(schema) {
+  const fields = (schema.fields || []).map((f, i) => ({
+    key: 'c' + i, type: f.type, role: f.role || 'main',
+    target: (f.type === 'date' || f.type === 'place') ? (f.target || 'birth') : null,
+    label: f.label || _qtDefaultLabel(f),
+  }));
+  const persons = [];
+  for (const role of Object.keys(QT_ROLE_CATALOG)) {
+    const rf = fields.filter(f => f.role === role);
+    const surnF = rf.find(f => f.type === 'surname');
+    const givenF = rf.find(f => f.type === 'given');
+    if (!surnF && !givenF) continue;   // ohne Namensfeld kein Personen-Slot/Matching
+    persons.push({
+      role, sex: QT_ROLE_CATALOG[role].sex, label: QT_ROLE_CATALOG[role].label,
+      surnKey: surnF ? surnF.key : null, givenKey: givenF ? givenF.key : null,
+    });
+  }
+  return { fields, persons, custom: true };
+}
+
+function _qtPatternMeta(base) {
+  if (base === 'custom') return { icon: '🛠', label: 'Frei konfigurierbar' };
+  const p = QT_BASE_PATTERNS[base];
+  return { icon: p?.icon || '⚡', label: p?.label || base };
+}
+
+function _qtNormDate(s) {
+  return (typeof _normQuickDate === 'function') ? _normQuickDate(s) : s;
+}
+
+// Vollständiges PersonEvent-Init (spiegelt gedcom-parser.js:46) — für OCCU/RESI.
+function _qtGenEvent(type, over) {
+  return Object.assign({
+    type, value: '', date: '', place: '', lati: null, long: null, eventType: '',
+    note: '', noteRefs: [], addr: '', phon: [], email: [], citations: [], media: [],
+    _extra: [], datePhrase: '',
+  }, over || {});
+}
+
+// Leeres Familien-Ereignis (spiegelt gedcom-parser.js:857 _famEv) — für Eltern-FAMC ohne MARR.
+function _qtFamEv() {
+  return { date: null, place: null, lati: null, long: null, citations: [], value: '',
+    seen: false, note: '', noteRefs: [], _extra: [], media: [] };
+}
+
 // ── State + Persistenz ───────────────────────────────────────────────────────
 // AppState.quickTemplates wird in gedcom.js AppState NICHT vorab deklariert;
 // hier lazy initialisiert (Array von Template-Objekten).
@@ -140,15 +220,15 @@ function qtRenderManagerList() {
     return;
   }
   list.innerHTML = tpls.map(t => {
-    const base = QT_BASE_PATTERNS[t.base];
+    const meta = _qtPatternMeta(t.base);
     const src = AppState.db.sources?.[t.context?.sid];
     const srcLabel = src ? (src.abbr || src.title || t.context.sid) : (t.context?.sid || '—');
     return `<div class="qt-item">
       <button type="button" class="qt-item-run" data-action="qtStartEntry" data-tid="${esc(t.id)}" title="Erfassung starten">
-        <span class="qt-item-icon">${esc(base?.icon || '⚡')}</span>
+        <span class="qt-item-icon">${esc(meta.icon)}</span>
         <span class="qt-item-text">
           <span class="qt-item-name">${esc(t.name || '(ohne Name)')}</span>
-          <span class="qt-item-sub">${esc((base?.label || t.base) + ' · ' + srcLabel)}</span>
+          <span class="qt-item-sub">${esc(meta.label + ' · ' + srcLabel)}</span>
         </span>
       </button>
       <button type="button" class="qt-item-edit" data-action="qtEditTemplate" data-tid="${esc(t.id)}" title="Bearbeiten">✎</button>
@@ -183,11 +263,89 @@ function _qtEditTemplate(id) {
   document.getElementById('qt-f-from').value        = ctx.dateRange?.[0] || '';
   document.getElementById('qt-f-to').value          = ctx.dateRange?.[1] || '';
 
+  // Custom-Builder: Felder-Entwurf laden (Klon) bzw. sinnvolle Default-Liste
+  if (t?.base === 'custom' && Array.isArray(t.schema?.fields)) {
+    _qtDraftFields = t.schema.fields.map(f => ({ ...f }));
+  } else {
+    _qtDraftFields = _qtDefaultDraftFields();
+  }
+  _qtSyncBaseUI();
+
   // Quellen-Autocomplete + Orts-Autocomplete einrichten
   _qtInitSourceAutocomplete();
   if (typeof initPlaceAutocomplete === 'function') initPlaceAutocomplete('qt-f-place', 'qt-f-place-dd');
   document.getElementById('qt-f-name').focus();
 }
+
+// ── Phase E: Builder-UI für custom-Templates ─────────────────────────────────
+let _qtDraftFields = [];   // Arbeits-Array beim Bearbeiten eines custom-Templates
+
+function _qtDefaultDraftFields() {
+  return [
+    { role: 'main', type: 'surname', label: '' },
+    { role: 'main', type: 'given',   label: '' },
+    { role: 'main', type: 'sex',     label: '' },
+    { role: 'main', type: 'date',  target: 'birth', label: '' },
+    { role: 'main', type: 'place', target: 'birth', label: '' },
+    { role: 'main', type: 'page',    label: '' },
+  ];
+}
+
+// Felder-Sektion nur bei base==='custom' zeigen + Builder rendern.
+function _qtSyncBaseUI() {
+  const isCustom = document.getElementById('qt-f-base')?.value === 'custom';
+  const sec = document.getElementById('qt-fields-section');
+  if (sec) sec.hidden = !isCustom;
+  if (isCustom) _qtRenderFieldBuilder();
+}
+
+function _qtRoleOptions(sel) {
+  return Object.entries(QT_ROLE_CATALOG)
+    .map(([k, r]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(r.label)}</option>`).join('');
+}
+function _qtTypeOptions(sel) {
+  return QT_FIELD_TYPES
+    .map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
+}
+function _qtTargetOptions(sel) {
+  return QT_TARGETS
+    .map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
+}
+
+function _qtRenderFieldBuilder() {
+  const list = document.getElementById('qt-fields-list');
+  if (!list) return;
+  list.innerHTML = _qtDraftFields.map((f, i) => {
+    const needsTarget = (f.type === 'date' || f.type === 'place');
+    return `<div class="qt-fb-row" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
+      <select class="form-input" style="flex:none;width:100px" data-change="qtFieldEdit" data-idx="${i}" data-prop="role">${_qtRoleOptions(f.role || 'main')}</select>
+      <select class="form-input" style="flex:none;width:115px" data-change="qtFieldEdit" data-idx="${i}" data-prop="type">${_qtTypeOptions(f.type || 'given')}</select>
+      ${needsTarget ? `<select class="form-input" style="flex:none;width:95px" data-change="qtFieldEdit" data-idx="${i}" data-prop="target">${_qtTargetOptions(f.target || 'birth')}</select>` : ''}
+      <input class="form-input" style="flex:1;min-width:70px" data-input="qtFieldEdit" data-idx="${i}" data-prop="label" value="${esc(f.label || '')}" placeholder="${esc(_qtDefaultLabel(f))}" autocomplete="off">
+      <button type="button" class="qt-fb-btn" data-action="qtFieldUp"   data-idx="${i}" title="Hoch"  style="cursor:pointer">↑</button>
+      <button type="button" class="qt-fb-btn" data-action="qtFieldDown" data-idx="${i}" title="Runter" style="cursor:pointer">↓</button>
+      <button type="button" class="qt-fb-btn" data-action="qtFieldDel"  data-idx="${i}" title="Löschen" style="cursor:pointer">✕</button>
+    </div>`;
+  }).join('') || '<p class="form-hint">Noch keine Felder. „＋ Feld" hinzufügen.</p>';
+}
+
+function _qtFieldEdit(el) {
+  const i = +el.dataset.idx, prop = el.dataset.prop;
+  const f = _qtDraftFields[i];
+  if (!f) return;
+  f[prop] = el.value;
+  if (prop === 'type') {
+    if (f.type === 'date' || f.type === 'place') { if (!f.target) f.target = 'birth'; }
+    else delete f.target;
+  }
+  // Strukturänderung (Rolle/Typ) → neu rendern (Ziel-Select ein/aus); Label nicht (Fokus halten).
+  if (prop === 'role' || prop === 'type') _qtRenderFieldBuilder();
+}
+
+function qtFieldAdd()      { _qtDraftFields.push({ role: 'main', type: 'given', label: '' }); _qtRenderFieldBuilder(); }
+function qtFieldDel(idx)   { _qtDraftFields.splice(+idx, 1); _qtRenderFieldBuilder(); }
+function qtFieldUp(idx)    { idx = +idx; if (idx > 0) { [_qtDraftFields[idx-1], _qtDraftFields[idx]] = [_qtDraftFields[idx], _qtDraftFields[idx-1]]; _qtRenderFieldBuilder(); } }
+function qtFieldDown(idx)  { idx = +idx; if (idx < _qtDraftFields.length - 1) { [_qtDraftFields[idx+1], _qtDraftFields[idx]] = [_qtDraftFields[idx], _qtDraftFields[idx+1]]; _qtRenderFieldBuilder(); } }
 
 function _qtInitSourceAutocomplete() {
   if (typeof initAutocomplete !== 'function') return;
@@ -225,10 +383,11 @@ function qtSaveTemplate() {
   if (!sid)   { showToast('Quelle wählen', 'warn'); return; }
   const from = parseInt(document.getElementById('qt-f-from').value) || null;
   const to   = parseInt(document.getElementById('qt-f-to').value) || null;
+  const base = document.getElementById('qt-f-base').value || 'marriage';
   const tpl = {
     id:   _qtEditId || ('qt-' + Date.now().toString(36)),
     name,
-    base: document.getElementById('qt-f-base').value || 'marriage',
+    base,
     context: {
       sid,
       quay:        document.getElementById('qt-f-quay').value || '',
@@ -238,6 +397,19 @@ function qtSaveTemplate() {
       dateRange:   (from || to) ? [from, to] : null,
     },
   };
+  if (base === 'custom') {
+    const fields = _qtDraftFields
+      .filter(f => f.type)
+      .map(f => {
+        const o = { role: f.role || 'main', type: f.type };
+        if (f.type === 'date' || f.type === 'place') o.target = f.target || 'birth';
+        if ((f.label || '').trim()) o.label = f.label.trim();
+        return o;
+      });
+    const hasMainName = fields.some(f => f.role === 'main' && (f.type === 'surname' || f.type === 'given'));
+    if (!hasMainName) { showToast('Mind. ein Namensfeld (Vor- oder Nachname) für „Person" nötig', 'warn'); return; }
+    tpl.schema = { fields };
+  }
   const list = _qtList();
   const idx = list.findIndex(x => x.id === tpl.id);
   if (idx >= 0) list[idx] = tpl; else list.push(tpl);
@@ -282,7 +454,7 @@ function qtStartEntry(tplId) {
 
 function _qtRenderEntryForm() {
   const tpl  = _qtActiveTpl;
-  const base = QT_BASE_PATTERNS[tpl.base];
+  const schema = _qtSchema(tpl);
   const ctx  = tpl.context || {};
   const src  = AppState.db.sources?.[ctx.sid];
   const srcLabel  = src ? (src.abbr || src.title || ctx.sid) : ctx.sid;
@@ -295,37 +467,81 @@ function _qtRenderEntryForm() {
     ${ctx.dateRange ? `<span class="qt-ctx-chip">${esc((ctx.dateRange[0]||'?')+'–'+(ctx.dateRange[1]||'?'))}</span>` : ''}
   </div>`;
 
-  const persons = base.persons || [];
-  const givenToRole = {}, keyToRole = {};
-  persons.forEach(pr => { givenToRole[pr.givenKey] = pr.role; keyToRole[pr.surnKey] = pr.role; keyToRole[pr.givenKey] = pr.role; });
+  const persons = schema.persons || [];
+  const keyToRole = {};        // Namensfeld-key → role (für AC + Matching)
+  persons.forEach(pr => { if (pr.surnKey) keyToRole[pr.surnKey] = pr.role; if (pr.givenKey) keyToRole[pr.givenKey] = pr.role; });
+  // Treffer-Box nach dem LETZTEN Namensfeld der jeweiligen Rolle platzieren.
+  const boxAfterKey = {};
+  schema.fields.forEach(f => { if (keyToRole[f.key]) boxAfterKey[keyToRole[f.key]] = f.key; });
+  const roleByBoxKey = {};
+  Object.entries(boxAfterKey).forEach(([role, key]) => { roleByBoxKey[key] = role; });
 
-  html += base.fields.map(f => {
-    const isName = f.type === 'surname' || f.type === 'given';
-    const ph = f.type === 'date' ? 'TT.MM.JJJJ'
-      : f.type === 'page' ? (ctx.pagePattern ? ctx.pagePattern.replace('{v}', '…') : 'Seite/Eintrag')
-      : '';
-    let fh = `<label class="form-label" style="position:relative">${esc(f.label)}
-      <input class="form-input" id="qt-e-${f.key}" type="text" placeholder="${esc(ph)}" autocomplete="off">
-      ${isName ? `<div class="place-dropdown" id="qt-e-${f.key}-dd" style="display:none;z-index:600"></div>` : ''}</label>`;
-    // Personen-Matching: Treffer-Box direkt nach dem Vornamen der Person (Phase B)
-    if (givenToRole[f.key]) fh += `<div class="qt-match" id="qt-match-${givenToRole[f.key]}" style="margin:-2px 0 8px"></div>`;
+  html += schema.fields.map(f => {
+    const id = 'qt-e-' + f.key;
+    let fh;
+    if (f.type === 'sex') {
+      fh = `<label class="form-label">${esc(f.label)}
+        <select class="form-input" id="${id}">
+          <option value="U">unbekannt</option>
+          <option value="M">männlich</option>
+          <option value="F">weiblich</option>
+        </select></label>`;
+    } else {
+      const isName  = f.type === 'surname' || f.type === 'given';
+      const isPlace = f.type === 'place'   || f.type === 'resi';
+      const ph = f.type === 'date' ? 'TT.MM.JJJJ'
+        : f.type === 'page' ? (ctx.pagePattern ? ctx.pagePattern.replace('{v}', '…') : 'Seite/Eintrag')
+        : '';
+      fh = `<label class="form-label" style="position:relative">${esc(f.label)}
+        <input class="form-input" id="${id}" type="text" placeholder="${esc(ph)}" autocomplete="off">
+        ${(isName || isPlace) ? `<div class="place-dropdown" id="${id}-dd" style="display:none;z-index:600"></div>` : ''}</label>`;
+    }
+    // Personen-Matching: Treffer-Box nach dem letzten Namensfeld der Rolle (Phase B)
+    if (roleByBoxKey[f.key]) fh += `<div class="qt-match" id="qt-match-${roleByBoxKey[f.key]}" style="margin:-2px 0 8px"></div>`;
     return fh;
   }).join('');
 
   document.getElementById('qt-entry-body').innerHTML = html;
 
-  for (const f of base.fields) {
-    const role = keyToRole[f.key];
-    if      (f.type === 'surname') _qtInitNameAC('qt-e-' + f.key, 'surname', role);
-    else if (f.type === 'given')   _qtInitNameAC('qt-e-' + f.key, 'given', role);
+  // Geschlecht-Default je Rolle setzen
+  for (const f of schema.fields) {
+    if (f.type !== 'sex') continue;
+    const pr = persons.find(p => p.role === f.role);
+    const sel = document.getElementById('qt-e-' + f.key);
+    if (sel && pr) sel.value = pr.sex || 'U';
+  }
+  // Autocompletes verdrahten
+  for (const f of schema.fields) {
+    const id = 'qt-e-' + f.key;
+    if      (f.type === 'surname') _qtInitNameAC(id, 'surname', keyToRole[f.key]);
+    else if (f.type === 'given')   _qtInitNameAC(id, 'given',   keyToRole[f.key]);
+    else if ((f.type === 'place' || f.type === 'resi') && typeof initPlaceAutocomplete === 'function')
+      initPlaceAutocomplete(id, id + '-dd');
   }
   // Live-Matching: bei Eingabe in Namensfeldern Treffer neu berechnen
   for (const pr of persons) {
     for (const k of [pr.surnKey, pr.givenKey]) {
-      document.getElementById('qt-e-' + k)?.addEventListener('input', () => _qtUpdateMatches(pr.role));
+      if (k) document.getElementById('qt-e-' + k)?.addEventListener('input', () => _qtUpdateMatches(pr.role));
     }
     _qtUpdateMatches(pr.role);
   }
+  // Verknüpfte Vorbelegung: Vater-Nachname erbt main-Nachname (editierbar).
+  _qtLinkSurnameDefault(schema, 'main', 'father');
+}
+
+// Vater-Nachnamenfeld erbt main-Nachnamen, solange nicht manuell geändert (qtAuto-Flag).
+function _qtLinkSurnameDefault(schema, fromRole, toRole) {
+  const from = (schema.persons || []).find(p => p.role === fromRole)?.surnKey;
+  const to   = (schema.persons || []).find(p => p.role === toRole)?.surnKey;
+  if (!from || !to) return;
+  const fromEl = document.getElementById('qt-e-' + from);
+  const toEl   = document.getElementById('qt-e-' + to);
+  if (!fromEl || !toEl) return;
+  toEl.dataset.qtAuto = '1';
+  fromEl.addEventListener('input', () => {
+    if (toEl.dataset.qtAuto === '1') { toEl.value = fromEl.value; _qtUpdateMatches(toRole); }
+  });
+  toEl.addEventListener('input', () => { toEl.dataset.qtAuto = '0'; });
 }
 
 function _qtInitNameAC(inputId, kind, role) {
@@ -394,8 +610,8 @@ function _qtPersonLabel(p) {
 function _qtUpdateMatches(role) {
   const box = document.getElementById('qt-match-' + role);
   if (!box || !_qtActiveTpl) return;
-  const base = QT_BASE_PATTERNS[_qtActiveTpl.base];
-  const pr = (base.persons || []).find(x => x.role === role);
+  const schema = _qtSchema(_qtActiveTpl);
+  const pr = (schema.persons || []).find(x => x.role === role);
   if (!pr) return;
 
   // Bereits verknüpft → kompakte Anzeige, Suche pausiert bis „lösen".
@@ -461,11 +677,15 @@ function _qtResolvePerson(role, given, surname, sex) {
 }
 
 function _qtAfterSave(tpl, hintText, focusKey) {
-  for (const f of QT_BASE_PATTERNS[tpl.base].fields) {
-    const el = document.getElementById('qt-e-' + f.key); if (el) el.value = '';
+  const schema = _qtSchema(tpl);
+  for (const f of schema.fields) {
+    const el = document.getElementById('qt-e-' + f.key);
+    if (el) el.value = (f.type === 'sex') ? 'U' : '';
+    // Verknüpfte Vorbelegung wieder „scharf" stellen (Listener bleiben bestehen).
+    if (el && el.dataset && 'qtAuto' in el.dataset) el.dataset.qtAuto = '1';
   }
   _qtMatchSel = {};
-  for (const pr of (QT_BASE_PATTERNS[tpl.base].persons || [])) _qtUpdateMatches(pr.role);
+  for (const pr of (schema.persons || [])) _qtUpdateMatches(pr.role);
   const h = document.getElementById('qt-entry-hint');
   h.textContent = `${hintText} (${_qtSession.length} in dieser Session)`;
   h.hidden = false;
@@ -519,12 +739,13 @@ function qtNewTemplateFromSource(sid) {
 function qtSaveEntry() {
   const tpl = _qtActiveTpl;
   if (!tpl) return;
-  const base = QT_BASE_PATTERNS[tpl.base];
+  const schema = _qtSchema(tpl);
   const v = {};
-  for (const f of base.fields) v[f.key] = (document.getElementById('qt-e-' + f.key)?.value || '').trim();
+  for (const f of schema.fields) v[f.key] = (document.getElementById('qt-e-' + f.key)?.value || '').trim();
   if      (tpl.base === 'marriage') _qtSaveMarriage(tpl, v);
   else if (tpl.base === 'baptism')  _qtSaveBaptism(tpl, v);
   else if (tpl.base === 'burial')   _qtSaveBurial(tpl, v);
+  else if (tpl.base === 'custom')   _qtSaveCustom(tpl, v);
 }
 
 function _qtSaveMarriage(tpl, v) {
@@ -635,6 +856,116 @@ function _qtSaveBurial(tpl, v) {
                       : _qtPersonLabel(p) + ' 🔗';
   _qtAfterSave(tpl, `✓ ✞ ${lbl}`, 'ddate');
   _qtShowInlinePlausi([P.id], []);
+}
+
+// ── Phase E: Speichern frei konfigurierter Templates ─────────────────────────
+function _qtSaveCustom(tpl, v) {
+  const ctx = tpl.context || {};
+  const schema = _qtSchema(tpl);
+
+  // Quelle/Seite/URL aus optionalem page-Feld
+  const pageFld = schema.fields.find(f => f.type === 'page');
+  const pageVal = pageFld ? (v[pageFld.key] || '') : '';
+  const pageStr = (ctx.pagePattern && pageVal) ? ctx.pagePattern.replace('{v}', pageVal) : pageVal;
+  const url     = (ctx.urlPattern && pageVal)  ? ctx.urlPattern.replace('{v}', pageVal)  : '';
+  const mkCit = () => citationObj(ctx.sid, pageStr, ctx.quay || '', null, [],
+    url ? [{ file: url, titl: '', _extra: [] }] : []);
+
+  // Personen je aktiver Rolle auflösen (Treffer verknüpfen oder neu)
+  const persons = {};            // role -> {id, person, isNew}
+  const involvedPersonIds = [];
+  for (const pr of (schema.persons || [])) {
+    const surn  = pr.surnKey  ? (v[pr.surnKey]  || '') : '';
+    const given = pr.givenKey ? (v[pr.givenKey] || '') : '';
+    const sexFld = schema.fields.find(f => f.role === pr.role && f.type === 'sex');
+    const sex = sexFld ? (v[sexFld.key] || pr.sex) : pr.sex;
+    const P = _qtResolvePerson(pr.role, given, surn, sex);
+    if (P) { persons[pr.role] = P; involvedPersonIds.push(P.id); }
+  }
+  if (!persons.main) { showToast('Hauptperson (Name oder Treffer) erforderlich', 'warn'); return; }
+
+  // Felder anwenden
+  let marrDate = '';
+  for (const f of schema.fields) {
+    const val = (v[f.key] || '').trim();
+    if (f.type === 'date' && f.target === 'marr') { if (val) marrDate = _qtNormDate(val); continue; }
+    const P = persons[f.role];
+    if (!P) continue;                       // Rolle ohne Namen → inaktiv, Daten verwerfen
+    const p = P.person;
+    if (f.type === 'sex') { if (val) p.sex = val; continue; }
+    if (f.type === 'date' || f.type === 'place') {
+      const tgt = f.target || 'birth';
+      if (!['birth', 'chr', 'death', 'buri'].includes(tgt)) continue;
+      if (!p[tgt] || typeof p[tgt] !== 'object') p[tgt] = _qtEv();
+      if (f.type === 'date'  && val && !p[tgt].date)  p[tgt].date  = _qtNormDate(val);
+      if (f.type === 'place' && val && !p[tgt].place) p[tgt].place = val;
+      if (val) _qtAddCitToEvent(p[tgt], mkCit());
+    } else if (f.type === 'occu') {
+      if (val) p.events.push(_qtGenEvent('OCCU', { value: val, citations: [mkCit()] }));
+    } else if (f.type === 'resi') {
+      if (val) p.events.push(_qtGenEvent('RESI', { place: val, addr: val, citations: [mkCit()] }));
+    }
+  }
+
+  const main = persons.main, father = persons.father, mother = persons.mother, spouse = persons.spouse;
+  const famIds = [];
+  let parentFam = null, spouseFam = null;
+  if (father || mother) {
+    parentFam = {
+      id: nextId('F'), husb: father ? father.id : '', wife: mother ? mother.id : '',
+      children: [main.id], marr: _qtFamEv(), engag: {}, div: {}, divf: {},
+      noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
+      lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+    };
+    famIds.push(parentFam.id);
+  }
+  if (spouse) {
+    let husb = main.id, wife = spouse.id;
+    if (main.person.sex === 'F' || spouse.person.sex === 'M') { husb = spouse.id; wife = main.id; }
+    spouseFam = {
+      id: nextId('F'), husb, wife, children: [],
+      marr: { date: marrDate, place: ctx.place || '', placeId: null, lati: null, long: null,
+        citations: [mkCit()], _extra: [], value: '', seen: true, note: '', noteRefs: [], media: [] },
+      engag: {}, div: {}, divf: {}, noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
+      lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+    };
+    famIds.push(spouseFam.id);
+  }
+
+  pushUndo('Erfasst (Template)', { personIds: involvedPersonIds, familyIds: famIds });
+
+  for (const role in persons) {
+    const P = persons[role];
+    if (P.isNew) AppState.db.individuals[P.id] = P.person;
+    if (!Array.isArray(P.person.fams)) P.person.fams = [];
+    if (!Array.isArray(P.person.famc)) P.person.famc = [];
+  }
+  if (parentFam) {
+    AppState.db.families[parentFam.id] = parentFam;
+    if (!main.person.famc.includes(parentFam.id)) main.person.famc.push(parentFam.id);
+    for (const par of [father, mother]) {
+      if (par && !par.person.fams.includes(parentFam.id)) par.person.fams.push(parentFam.id);
+    }
+  }
+  if (spouseFam) {
+    AppState.db.families[spouseFam.id] = spouseFam;
+    for (const P of [main, spouse]) {
+      if (!P.person.fams.includes(spouseFam.id)) P.person.fams.push(spouseFam.id);
+    }
+  }
+
+  for (const role in persons) _rebuildPersonSourceRefs(persons[role].person);
+  if (parentFam) _rebuildFamilySourceRefs(parentFam);
+  if (spouseFam) _rebuildFamilySourceRefs(spouseFam);
+  _qtSession.push(main.id);
+  markChanged();
+  renderTab();
+
+  const extra = [father, mother, spouse].filter(Boolean).length;
+  const lbl = (main.isNew ? _qtPersonLabel(main.person) : _qtPersonLabel(main.person) + ' 🔗')
+    + (extra ? ` (+${extra})` : '');
+  _qtAfterSave(tpl, `✓ ${lbl}`, schema.fields[0]?.key);
+  _qtShowInlinePlausi(involvedPersonIds, famIds);
 }
 
 function qtEntryDone() {

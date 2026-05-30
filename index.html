@@ -472,10 +472,11 @@
           <input class="form-input" id="qt-f-name" type="text" placeholder="z.B. Heiratsbuch Ochtrup 1780–1820" autocomplete="off">
         </label>
         <label class="form-label">Typ
-          <select class="form-input" id="qt-f-base">
+          <select class="form-input" id="qt-f-base" data-change="qtBaseChange">
             <option value="marriage">⚭ Heirat (Heiratsbuch)</option>
             <option value="baptism">✝ Taufe (Taufbuch)</option>
             <option value="burial">✞ Sterbefall (Sterberegister)</option>
+            <option value="custom">🛠 Frei konfigurierbar</option>
           </select>
         </label>
         <label class="form-label" style="position:relative">Quelle (impliziter Beleg)
@@ -513,6 +514,13 @@
           <input class="form-input" id="qt-f-urlpat" type="text" placeholder="https://data.matricula-online.eu/…/?pg={v}" autocomplete="off">
         </label>
         <p class="form-hint">{v} wird beim Erfassen durch deine Seiten-/Eintragseingabe ersetzt.</p>
+        <!-- Phase E: Felder-Builder (nur bei base=custom sichtbar) -->
+        <div id="qt-fields-section" hidden style="margin-top:10px;border-top:1px solid var(--border,#ccd);padding-top:10px">
+          <div class="form-label" style="margin-bottom:4px">Felder <span class="form-hint">(Reihenfolge = Formular)</span></div>
+          <div id="qt-fields-list"></div>
+          <button type="button" class="btn btn-dim" data-action="qtFieldAdd" style="margin-top:4px">＋ Feld</button>
+          <p class="form-hint">Rollen: Person (Hauptperson) · Vater/Mutter → Elternfamilie · Ehepartner → Ehe. Nachname des Vaters wird mit dem der Person vorbelegt (überschreibbar).</p>
+        </div>
       </div>
     </div>
     <div class="btn-row">
