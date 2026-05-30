@@ -375,6 +375,7 @@
     <div class="sheet-body">
       <div class="btn-row btn-row-col">
         <button class="btn btn-save" data-action="showQuickAdd">⚡ Neue Person (Schnell)</button>
+        <button class="btn btn-save btn-dim" data-action="showQtManager">⚭ Aus Quelle erfassen (Templates)</button>
         <button class="btn btn-save btn-dim" data-action="addPerson">👤 Neue Person (Vollformular)</button>
         <button class="btn btn-save btn-dim" data-action="addFamily">👨‍👩‍👧 Neue Familie</button>
         <button class="btn btn-save btn-dim" data-action="addSource">📖 Neue Quelle</button>
@@ -443,6 +444,79 @@
       <button class="btn btn-cancel" data-action="closeModal" data-modal="modalQuickAdd">Abbrechen</button>
       <button class="btn btn-dim" id="qa-done-btn" data-action="quickAddDone" hidden>Fertig</button>
       <button class="btn btn-save" data-action="saveQuickAdd">Speichern ＋</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK-TPL: Template-Verwaltung -->
+<div class="modal-overlay" id="modalQtManager" role="dialog" aria-modal="true" aria-labelledby="lbl-modalQtManager">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalQtManager">Eingabe-Templates</div>
+    <div class="sheet-body">
+      <!-- Listen-Ansicht -->
+      <div id="qt-list-view">
+        <div id="qt-list"></div>
+        <div class="btn-row btn-row-col" style="margin-top:12px">
+          <button class="btn btn-save" data-action="qtNewTemplate">＋ Neues Template</button>
+          <div class="form-row" style="gap:8px">
+            <button class="btn btn-dim" data-action="qtExport" style="flex:1">⤓ Export (.json)</button>
+            <button class="btn btn-dim" data-action="qtImportClick" style="flex:1">⤒ Import</button>
+            <input type="file" id="qt-import-file" accept="application/json,.json" hidden data-change="qtImportFile">
+          </div>
+        </div>
+      </div>
+      <!-- Bearbeiten-Ansicht -->
+      <div id="qt-edit-view" hidden>
+        <label class="form-label">Name
+          <input class="form-input" id="qt-f-name" type="text" placeholder="z.B. Heiratsbuch Ochtrup 1780–1820" autocomplete="off">
+        </label>
+        <label class="form-label">Typ
+          <select class="form-input" id="qt-f-base">
+            <option value="marriage">⚭ Heirat (Heiratsbuch)</option>
+          </select>
+        </label>
+        <label class="form-label" style="position:relative">Quelle (impliziter Beleg)
+          <input class="form-input" id="qt-f-src" type="text" placeholder="Quelle suchen…" autocomplete="off">
+          <input type="hidden" id="qt-f-src-sid">
+          <div class="place-dropdown" id="qt-f-src-dd" style="display:none;z-index:600"></div>
+        </label>
+        <div class="form-row">
+          <label class="form-label" style="flex:2;position:relative">Ort (implizit)
+            <input class="form-input" id="qt-f-place" type="text" placeholder="z.B. Ochtrup" autocomplete="off">
+            <div class="place-dropdown" id="qt-f-place-dd" style="display:none;z-index:600"></div>
+          </label>
+          <label class="form-label" style="flex:none;width:130px">Qualität (QUAY)
+            <select class="form-input" id="qt-f-quay">
+              <option value="">—</option>
+              <option value="0">0 unbelegt</option>
+              <option value="1">1 fragwürdig</option>
+              <option value="2">2 plausibel</option>
+              <option value="3" selected>3 direkt</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="form-label" style="flex:1">Seiten-Muster
+            <input class="form-input" id="qt-f-pagepat" type="text" placeholder="fol. {v}" autocomplete="off">
+          </label>
+          <label class="form-label" style="flex:none;width:90px">Zeitraum
+            <input class="form-input" id="qt-f-from" type="number" placeholder="1780" style="width:100%">
+          </label>
+          <label class="form-label" style="flex:none;width:90px">bis
+            <input class="form-input" id="qt-f-to" type="number" placeholder="1820" style="width:100%">
+          </label>
+        </div>
+        <label class="form-label">URL-Muster (Scan-Deeplink, {v} = Seite)
+          <input class="form-input" id="qt-f-urlpat" type="text" placeholder="https://data.matricula-online.eu/…/?pg={v}" autocomplete="off">
+        </label>
+        <p class="form-hint">{v} wird beim Erfassen durch deine Seiten-/Eintragseingabe ersetzt.</p>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-cancel" id="qt-mgr-close" data-action="closeModal" data-modal="modalQtManager">Schließen</button>
+      <button class="btn btn-dim" id="qt-edit-cancel" data-action="qtCancelEdit" hidden>Zurück</button>
+      <button class="btn btn-save" id="qt-edit-save" data-action="qtSaveTemplate" hidden>Template speichern</button>
     </div>
   </div>
 </div>
@@ -2120,6 +2194,7 @@
 <script src="onedrive.js"></script>
 <script src="lazy-loader.js"></script>
 <script src="ui-onboarding.js"></script>
+<script src="ui-quicktpl.js"></script>
 <script src="ui-event-delegation.js"></script>
 <input type="file" id="cit-cam-input" accept="image/*" capture="environment" data-action="citCamChange" hidden>
 </body>

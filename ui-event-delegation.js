@@ -162,6 +162,15 @@ const _CLICK_MAP = {
   menuMediaBrowser:        ()  => { closeModal('modalMenu'); showMediaBrowser(); },
   showAddSheet:            ()  => showAddSheet(),
   showQuickAdd:            ()  => showQuickAdd(),
+  showQtManager:           ()  => showQtManager(),
+  qtNewTemplate:           ()  => qtNewTemplate(),
+  qtEditTemplate:          (el) => qtEditTemplate(el.dataset.tid),
+  qtDeleteTemplate:        (el) => qtDeleteTemplate(el.dataset.tid),
+  qtSaveTemplate:          ()  => qtSaveTemplate(),
+  qtCancelEdit:            ()  => qtCancelEdit(),
+  qtExport:                ()  => exportQuickTemplates(),
+  qtImportClick:           ()  => document.getElementById('qt-import-file').click(),
+  qtStartEntry:            (el) => qtStartEntry(el.dataset.tid),
   saveQuickAdd:            ()  => saveQuickAdd(),
   quickAddDone:            ()  => quickAddDone(),
   qaCopySrc:               ()  => qaCopySrc(),
@@ -389,6 +398,7 @@ document.addEventListener('change', e => {
   else if (action === 'onFamEventTypeChange') onFamEventTypeChange();
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
   else if (action === 'applySourceTemplate') _applySourceTemplate(el.value);
+  else if (action === 'qtImportFile')      importQuickTemplatesFile(el);
   else if (action === 'amCamChange') {
     (async () => {
       const f = el.files[0];
