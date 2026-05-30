@@ -689,6 +689,18 @@ function citTagsHtml(citations) {
   }).filter(Boolean).join('');
 }
 
+// INDI-Level-Quellen (topSources, gilt für die ganze Person) als Zitat-Badges.
+// URL ggf. aus topSourceExtra (OBJE/FILE-Passthrough) → wird über citTagsHtml als ↗ klickbar.
+function topSourceCitsHtml(p) {
+  if (!p?.topSources?.length) return '';
+  const cits = p.topSources.map(sid => {
+    const urls = (p.topSourceExtra?.[sid] || [])
+      .map(l => (String(l).match(/\bhttps?:\/\/\S+/) || [])[0]).filter(Boolean);
+    return { sid, page: p.topSourcePages?.[sid] || '', quay: p.topSourceQUAY?.[sid], media: urls.map(u => ({ file: u })) };
+  });
+  return citTagsHtml(cits);
+}
+
 // Gibt Eltern-Hierarchiekette als HTML zurück (z.B. "Rhein-Sieg-Kreis → NRW").
 // Leer wenn kein placeObjects-Modus oder keine Eltern vorhanden.
 function _placeHierHtml(placeId) {

@@ -9,6 +9,15 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — FEAT: INDI-Level-Quellen in Person-Detail (klickbar) (sw v756)
+
+- **sw v756** `feat(ui)`: Person-Detail zeigt jetzt eine **„Quellen"-Zeile** mit den INDI-Level-Quellen (`topSources`, gelten für die ganze Person) als §-Badges — inkl. klickbarem ↗-Link.
+  - **`topSourceCitsHtml(p)`** (ui-views.js): baut Pseudo-Zitate aus `topSources`/`topSourcePages`/`topSourceQUAY`; **URL ggf. aus `topSourceExtra`** (OBJE/FILE-Passthrough) extrahiert → über `citTagsHtml` als ↗ klickbar. Rückwärtskompatibel (URL noch in PAGE → ebenfalls ↗).
+  - **Hintergrund:** INDI-Level-Quellen wurden in der Person-Detail bisher gar nicht angezeigt (nur Event-Zitate). Nach der PAGE→OBJE/FILE-Migration lagen ihre URLs im Passthrough → unsichtbar. Befund: von 337 INDI-Level-URLs sind **121 echte Funde** (85 Online-OFB, 21 Matrikula, 15 Wigbold), nur 216 MyHeritage-Profile.
+  - **Browser-verifiziert** (preview): Person mit `1 SOUR/2 OBJE/3 FILE <ofb-url>` → „Quellen §1 ↗"-Zeile, `data-href` mit OFB-URL.
+
+---
+
 ### Session 2026-05-30 — FIX: Zitat-Medien-URLs klickbar (↗ aus OBJE/FILE) (sw v755)
 
 - **sw v755** `fix(ui)`: `citTagsHtml` (ui-views.js) zeigt den ↗-Link jetzt auch, wenn die URL in einem **Zitat-Medium** (`citations[].media[].file`) steckt — nicht nur bei URL in `PAGE`.

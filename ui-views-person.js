@@ -659,6 +659,8 @@ function _pdetLifeData(p, id) {
   if (p.reli) html += factRow('Religion', p.reli);
   if (p.resn)  html += factRow('Beschränkung', p.resn);
   if (p.refns && p.refns.length) for (const r of p.refns) html += factRow(r.type ? `Ref (${esc(r.type)})` : 'Ref', r.val);
+  const _topSrcHtml = topSourceCitsHtml(p);   // INDI-Level-Quellen (ganze Person) mit ↗-Link
+  if (_topSrcHtml) html += `<div class="fact-row"><span class="fact-lbl">Quellen</span><span class="fact-val">${_topSrcHtml}</span></div>`;
   // GED7: EXID (externe Kennungen, z.B. FamilySearch, WikiTree)
   if (p.exids?.length) for (const ex of p.exids) {
     const lbl = ex.type ? `EXID (${esc(ex.type)})` : 'EXID';
