@@ -155,13 +155,13 @@ function _qtCalcBirthFromAge(deathDateGed, ageY, ageM, ageD) {
     dt.setFullYear(dt.getFullYear() - y);
     dt.setMonth(dt.getMonth() - m);
     dt.setDate(dt.getDate() - d);
-    return `ABT ${dt.getDate()} ${MON_OUT[dt.getMonth()]} ${dt.getFullYear()}`;
+    return `CAL ${dt.getDate()} ${MON_OUT[dt.getMonth()]} ${dt.getFullYear()}`;
   } else if (dMon !== null) {
     let bM = dMon - m, bY = dYear - y;
     while (bM < 0) { bM += 12; bY--; }
-    return `ABT ${MON_OUT[bM]} ${bY}`;
+    return `CAL ${MON_OUT[bM]} ${bY}`;
   } else {
-    return `ABT ${dYear - y}`;
+    return `CAL ${dYear - y}`;
   }
 }
 
