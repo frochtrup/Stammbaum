@@ -369,7 +369,8 @@ function showFamilyDetail(id, pushHistory = true) {
   document.getElementById('editBtn').style.display = '';
   const _famTreeTarget = f.husb || f.wife || null;
   const tb = document.getElementById('treeBtn');
-  tb.style.display = _famTreeTarget ? '' : 'none';
+  tb.hidden = !_famTreeTarget;
+  tb.style.display = '';
   if (_famTreeTarget) tb.dataset.id = _famTreeTarget;
   const _tlBtn  = document.getElementById('timelineBtn');   if (_tlBtn)  _tlBtn.hidden  = true;
   const _stBtn = document.getElementById('storyBtn');
