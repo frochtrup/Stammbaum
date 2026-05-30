@@ -73,7 +73,7 @@ const QT_ROLE_CATALOG = {
 const QT_FIELD_TYPES = [
   ['surname', 'Nachname'], ['given', 'Vorname'], ['sex', 'Geschlecht'],
   ['date', 'Datum'], ['place', 'Ort'], ['occu', 'Beruf'], ['resi', 'Wohnort'],
-  ['page', 'Seite/Eintrag'],
+  ['age', 'Alter (J/M/T)'], ['page', 'Seite/Eintrag'],
 ];
 const QT_TARGETS = [
   ['birth', 'Geburt'], ['chr', 'Taufe'], ['death', 'Tod'], ['buri', 'Beerdigung'],
@@ -90,6 +90,11 @@ function _qtSchema(tpl) {
 }
 
 function _qtDefaultLabel(f) {
+  if (f.type === 'age') {
+    const evLbl = f.target ? (_QT_TGT_LBL[f.target] || f.target) : 'Tod';
+    const base = `Alter beim ${evLbl}`;
+    return f.role === 'main' ? base : `${base} (${QT_ROLE_CATALOG[f.role]?.label || f.role})`;
+  }
   const t = _QT_TYPE_LBL[f.type] || f.type;
   const g = f.target ? (_QT_TGT_LBL[f.target] || '') : '';
   const base = t + (g ? ' ' + g : '');
@@ -99,7 +104,9 @@ function _qtDefaultLabel(f) {
 function _qtBuildCustomSchema(schema) {
   const fields = (schema.fields || []).map((f, i) => ({
     key: 'c' + i, type: f.type, role: f.role || 'main',
-    target: (f.type === 'date' || f.type === 'place') ? (f.target || 'birth') : null,
+    target: (f.type === 'date' || f.type === 'place') ? (f.target || 'birth')
+           : f.type === 'age' ? (f.target || 'death')
+           : null,
     label: f.label || _qtDefaultLabel(f),
   }));
   const persons = [];
@@ -124,6 +131,38 @@ function _qtPatternMeta(base) {
 
 function _qtNormDate(s) {
   return (typeof _normQuickDate === 'function') ? _normQuickDate(s) : s;
+}
+
+// Geburtsdatum aus Sterbedatum + Alter berechnen → GEDCOM ABT-Datum.
+// deathDateGed: GEDCOM-Datumsstring (auch nach _qtNormDate), ageY/M/D: Zahlen (0 erlaubt).
+function _qtCalcBirthFromAge(deathDateGed, ageY, ageM, ageD) {
+  if (!deathDateGed) return null;
+  const MON_IDX = { JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11 };
+  const MON_OUT = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  // GEDCOM-Qualifier (ABT/BEF/AFT/CAL/EST/INT/FROM/TO/BET + Leerzeichen) entfernen.
+  // WICHTIG: Monats-Kürzel (JAN/FEB/…) NICHT entfernen → explizite Whitelist.
+  const s = String(deathDateGed).trim().replace(/^(?:ABT|CAL|EST|BEF|AFT|INT|FROM|TO|BET|AND)\s+/i, '');
+  let dDay = null, dMon = null, dYear = null;
+  for (const part of s.split(/\s+/)) {
+    const n = parseInt(part, 10);
+    if (!isNaN(n) && String(n) === part) { if (n > 31) dYear = n; else dDay = n; }
+    else if (MON_IDX[part.toUpperCase()] !== undefined) dMon = MON_IDX[part.toUpperCase()];
+  }
+  if (!dYear) return null;
+  const y = +ageY || 0, m = +ageM || 0, d = +ageD || 0;
+  if (dDay !== null && dMon !== null) {
+    const dt = new Date(dYear, dMon, dDay);
+    dt.setFullYear(dt.getFullYear() - y);
+    dt.setMonth(dt.getMonth() - m);
+    dt.setDate(dt.getDate() - d);
+    return `ABT ${dt.getDate()} ${MON_OUT[dt.getMonth()]} ${dt.getFullYear()}`;
+  } else if (dMon !== null) {
+    let bM = dMon - m, bY = dYear - y;
+    while (bM < 0) { bM += 12; bY--; }
+    return `ABT ${MON_OUT[bM]} ${bY}`;
+  } else {
+    return `ABT ${dYear - y}`;
+  }
 }
 
 // Vollständiges PersonEvent-Init (spiegelt gedcom-parser.js:46) — für OCCU/RESI.
@@ -312,15 +351,23 @@ function _qtTargetOptions(sel) {
     .map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
 }
 
+function _qtTargetOptionsFor(type, sel) {
+  const opts = type === 'age'
+    ? [['death', 'Tod'], ['buri', 'Beerdigung']]
+    : QT_TARGETS;
+  return opts.map(([k, l]) => `<option value="${k}"${k === sel ? ' selected' : ''}>${esc(l)}</option>`).join('');
+}
+
 function _qtRenderFieldBuilder() {
   const list = document.getElementById('qt-fields-list');
   if (!list) return;
   list.innerHTML = _qtDraftFields.map((f, i) => {
-    const needsTarget = (f.type === 'date' || f.type === 'place');
+    const needsTarget = (f.type === 'date' || f.type === 'place' || f.type === 'age');
+    const tgtDef = f.type === 'age' ? 'death' : 'birth';
     return `<div class="qt-fb-row" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
       <select class="form-input" style="flex:none;width:100px" data-change="qtFieldEdit" data-idx="${i}" data-prop="role">${_qtRoleOptions(f.role || 'main')}</select>
       <select class="form-input" style="flex:none;width:115px" data-change="qtFieldEdit" data-idx="${i}" data-prop="type">${_qtTypeOptions(f.type || 'given')}</select>
-      ${needsTarget ? `<select class="form-input" style="flex:none;width:95px" data-change="qtFieldEdit" data-idx="${i}" data-prop="target">${_qtTargetOptions(f.target || 'birth')}</select>` : ''}
+      ${needsTarget ? `<select class="form-input" style="flex:none;width:95px" data-change="qtFieldEdit" data-idx="${i}" data-prop="target">${_qtTargetOptionsFor(f.type, f.target || tgtDef)}</select>` : ''}
       <input class="form-input" style="flex:1;min-width:70px" data-input="qtFieldEdit" data-idx="${i}" data-prop="label" value="${esc(f.label || '')}" placeholder="${esc(_qtDefaultLabel(f))}" autocomplete="off">
       <button type="button" class="qt-fb-btn" data-action="qtFieldUp"   data-idx="${i}" title="Hoch"  style="cursor:pointer">↑</button>
       <button type="button" class="qt-fb-btn" data-action="qtFieldDown" data-idx="${i}" title="Runter" style="cursor:pointer">↓</button>
@@ -336,6 +383,7 @@ function _qtFieldEdit(el) {
   f[prop] = el.value;
   if (prop === 'type') {
     if (f.type === 'date' || f.type === 'place') { if (!f.target) f.target = 'birth'; }
+    else if (f.type === 'age') { if (!f.target || !['death','buri'].includes(f.target)) f.target = 'death'; }
     else delete f.target;
   }
   // Strukturänderung (Rolle/Typ) → neu rendern (Ziel-Select ein/aus); Label nicht (Fokus halten).
@@ -486,6 +534,16 @@ function _qtRenderEntryForm() {
           <option value="M">männlich</option>
           <option value="F">weiblich</option>
         </select></label>`;
+    } else if (f.type === 'age') {
+      fh = `<div style="margin-bottom:6px"><div class="form-label" style="margin-bottom:3px">${esc(f.label)}</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input class="form-input" id="${id}-y" type="number" min="0" max="130" placeholder="Jahre" style="width:68px" autocomplete="off">
+          <span style="font-size:.8rem;color:var(--text-muted,#888)">J.</span>
+          <input class="form-input" id="${id}-m" type="number" min="0" max="11" placeholder="Mon." style="width:58px" autocomplete="off">
+          <span style="font-size:.8rem;color:var(--text-muted,#888)">M.</span>
+          <input class="form-input" id="${id}-d" type="number" min="0" max="31" placeholder="Tage" style="width:58px" autocomplete="off">
+          <span style="font-size:.8rem;color:var(--text-muted,#888)">T.</span>
+        </div></div>`;
     } else {
       const isName  = f.type === 'surname' || f.type === 'given';
       const isPlace = f.type === 'place'   || f.type === 'resi';
@@ -679,6 +737,13 @@ function _qtResolvePerson(role, given, surname, sex) {
 function _qtAfterSave(tpl, hintText, focusKey) {
   const schema = _qtSchema(tpl);
   for (const f of schema.fields) {
+    if (f.type === 'age') {
+      for (const s of ['y','m','d']) {
+        const sub = document.getElementById('qt-e-' + f.key + '-' + s);
+        if (sub) sub.value = '';
+      }
+      continue;
+    }
     const el = document.getElementById('qt-e-' + f.key);
     if (el) el.value = (f.type === 'sex') ? 'U' : '';
     // Verknüpfte Vorbelegung wieder „scharf" stellen (Listener bleiben bestehen).
@@ -741,7 +806,17 @@ function qtSaveEntry() {
   if (!tpl) return;
   const schema = _qtSchema(tpl);
   const v = {};
-  for (const f of schema.fields) v[f.key] = (document.getElementById('qt-e-' + f.key)?.value || '').trim();
+  for (const f of schema.fields) {
+    if (f.type === 'age') {
+      v[f.key] = {
+        y: parseInt(document.getElementById('qt-e-' + f.key + '-y')?.value) || 0,
+        m: parseInt(document.getElementById('qt-e-' + f.key + '-m')?.value) || 0,
+        d: parseInt(document.getElementById('qt-e-' + f.key + '-d')?.value) || 0,
+      };
+    } else {
+      v[f.key] = (document.getElementById('qt-e-' + f.key)?.value || '').trim();
+    }
+  }
   if      (tpl.base === 'marriage') _qtSaveMarriage(tpl, v);
   else if (tpl.base === 'baptism')  _qtSaveBaptism(tpl, v);
   else if (tpl.base === 'burial')   _qtSaveBurial(tpl, v);
@@ -884,9 +959,10 @@ function _qtSaveCustom(tpl, v) {
   }
   if (!persons.main) { showToast('Hauptperson (Name oder Treffer) erforderlich', 'warn'); return; }
 
-  // Felder anwenden
+  // Felder anwenden (Pass 1: alle außer age — age benötigt bereits gesetztes Sterbedatum)
   let marrDate = '';
   for (const f of schema.fields) {
+    if (f.type === 'age') continue;            // age: zweiter Pass unten
     const val = (v[f.key] || '').trim();
     if (f.type === 'date' && f.target === 'marr') { if (val) marrDate = _qtNormDate(val); continue; }
     const P = persons[f.role];
@@ -904,6 +980,30 @@ function _qtSaveCustom(tpl, v) {
       if (val) p.events.push(_qtGenEvent('OCCU', { value: val, citations: [mkCit()] }));
     } else if (f.type === 'resi') {
       if (val) p.events.push(_qtGenEvent('RESI', { place: val, addr: val, citations: [mkCit()] }));
+    }
+  }
+  // Zweiter Pass: age-Felder — benötigt bereits gesetztes Sterbedatum der Rolle.
+  for (const f of schema.fields) {
+    if (f.type !== 'age') continue;
+    const P = persons[f.role];
+    if (!P) continue;
+    const age = v[f.key];
+    if (!age || (!age.y && !age.m && !age.d)) continue;   // nichts eingegeben
+    const p = P.person;
+    // Sterbedatum aus dem Formular (als normierter GEDCOM-String) oder bereits gesetztem Wert
+    const tgt = f.target || 'death';
+    const deathFld = schema.fields.find(df => df.role === f.role && df.type === 'date' && df.target === tgt);
+    const deathDate = (deathFld ? _qtNormDate(v[deathFld.key] || '') : '')
+                   || p[tgt]?.date || '';
+    const calcDate = _qtCalcBirthFromAge(deathDate, age.y, age.m, age.d);
+    if (calcDate) {
+      if (!p.birth || typeof p.birth !== 'object') p.birth = _qtEv();
+      if (!p.birth.date) {
+        p.birth.date = calcDate;
+        _qtAddCitToEvent(p.birth, mkCit());
+      }
+    } else if (age.y || age.m || age.d) {
+      showToast(`Altersberechnung: Sterbedatum fehlt oder ungültig`, 'info');
     }
   }
 
