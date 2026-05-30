@@ -9,6 +9,18 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-05-30 — QUICK-TPL Phasen B–E: Matching, neue Muster, Inline-Plausi, Custom-Builder (sw v765–v769)
+
+Ausbau der Eingabe-Templates (`ui-quicktpl.js`). Alle Phasen browser-/headless-verifiziert, Doku in `HANDBUCH.html` (Abschnitt „Eingabe-Templates").
+
+- **Phase B (sw v765)** `feat(quicktpl)`: **Personen-Matching (Dedup-aware).** `_qtFindMatches` (Nachname+Vorname normalisiert, Geschlecht-Tiebreaker, Geburtsjahr-Anzeige) zeigt Live-Treffer je Person; „verknüpfen statt neu anlegen" hängt die neue Quelle an die bestehende INDI an (`fams` gepusht, nicht überschrieben) statt ein Duplikat zu erzeugen. Undo-fest (alle beteiligten IDs im Snapshot), einseitige Heirat erlaubt.
+- **Phase C (sw v766)** `feat(quicktpl)`: **Neue Basismuster `baptism` (chr-Ereignis) + `burial` (death+buri).** Helfer `_qtResolvePerson`/`_qtAfterSave`/`_qtAddCitToEvent` aus `_qtSaveMarriage` extrahiert (DRY). `qt-f-base`-Select um beide Optionen erweitert.
+- **Phase D (sw v767)** `feat(quicktpl)`: **Inline-Plausi** (`_qtShowInlinePlausi`: `runValidation` nach jedem Speichern, gefiltert auf die betroffenen IDs, max. 5 Hinweise im Modal) + **„aus aktueller Quelle erstellen"** (`qtNewTemplateFromSource`, Button ⚡ im Quellen-Detail, öffnet Editor mit vorbelegter Quelle).
+- **Fix (sw v768)** `fix(quicktpl)`: **Quellenauswahl im Template-Editor vollständig** — Suche in Kürzel **und** Titel (vorher nur erstes vorhandenes Feld), Label „Kürzel — Titel", SID-Feld wird beim Leeren des Textfelds geleert, Init-Guard gegen doppelte Event-Listener, Limit 30→50.
+- **Phase E (sw v769)** `feat(quicktpl)`: **Frei konfigurierbare Templates (`base:'custom'`).** Das Template trägt sein eigenes Feld-Schema (`tpl.schema.fields[]`); Engine schema-getrieben via `_qtSchema`/`_qtBuildCustomSchema`. Rollen-Katalog `QT_ROLE_CATALOG` (Person/Vater/Mutter/Ehepartner mit fester FAMC/FAMS-Semantik); Feldtypen Name/Geschlecht/Datum+Ort (birth/chr/death/buri/marr)/Beruf (OCCU)/Wohnort (RESI)/Seite. Builder-UI im Editor (`_qtRenderFieldBuilder`: Rolle/Typ/Ziel/Label + ↑↓✕). `_qtSaveCustom` baut INDI + Eltern-FAMC + Ehe-FAMS inkl. Dedup-Matching und Zitat je Ereignis, Undo-fest; `_qtGenEvent` spiegelt das vollständige PersonEvent-Init. Vater-Nachname erbt main-Nachname (`_qtLinkSurnameDefault`, überschreibbar). Schema fließt durch JSON-Export/Import + IDB — kein GEDCOM-Delta.
+
+---
+
 ### Session 2026-05-30 — QUICK-TPL Phase A: quellengebundene Eingabe-Templates (sw v759/v760)
 
 - **sw v759 (A1)** `feat(quicktpl)`: Datenmodell + Template-Verwaltung + Persistenz.

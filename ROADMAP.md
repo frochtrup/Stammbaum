@@ -198,7 +198,7 @@ Analysiert auf zwei Ebenen:
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v749** *(aktuell — v750–v754 nur Test-Automation, interne Fixes (GRAMPS, INDI-Quellen-Dedup), ESM-Migration + PAGE-URL-Migration, nicht handbuchrelevant)*
+**Handbuch-Stand: sw v769** *(aktuell — QUICK-TPL/Eingabe-Templates Phasen A–E dokumentiert. v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
