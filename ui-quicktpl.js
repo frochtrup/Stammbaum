@@ -23,6 +23,11 @@ const QT_BASE_PATTERNS = {
       { key: 'wGiven', label: 'Vorname ♀',    type: 'given'   },
       { key: 'page',   label: 'Seite / Eintrag', type: 'page' },
     ],
+    // Personen-Rollen für Dedup-Matching (Phase B): Treffer-Box nach dem Vornamen.
+    persons: [
+      { role: 'h', sex: 'M', label: 'Ehemann', surnKey: 'hSurn', givenKey: 'hGiven' },
+      { role: 'w', sex: 'F', label: 'Ehefrau', surnKey: 'wSurn', givenKey: 'wGiven' },
+    ],
   },
 };
 
@@ -214,6 +219,7 @@ function qtCancelEdit() { _qtShowList(); }
 // ─────────────────────────────────────────────────────────────
 let _qtActiveTpl = null;
 let _qtSession   = [];   // erfasste IDs dieser Session
+let _qtMatchSel  = {};   // role -> bestehende Person-ID (verknüpfen statt neu anlegen)
 
 function qtStartEntry(tplId) {
   const tpl = _qtList().find(t => t.id === tplId);
@@ -221,6 +227,7 @@ function qtStartEntry(tplId) {
   if (!AppState.db?.sources?.[tpl.context?.sid]) { showToast('Quelle des Templates fehlt in dieser Datei', 'warn'); return; }
   _qtActiveTpl = tpl;
   _qtSession = [];
+  _qtMatchSel = {};
   closeModal('modalQtManager');
   document.getElementById('lbl-modalQtEntry').textContent = tpl.name || 'Erfassung';
   _qtRenderEntryForm();
@@ -244,25 +251,40 @@ function _qtRenderEntryForm() {
     ${ctx.dateRange ? `<span class="qt-ctx-chip">${esc((ctx.dateRange[0]||'?')+'–'+(ctx.dateRange[1]||'?'))}</span>` : ''}
   </div>`;
 
+  const persons = base.persons || [];
+  const givenToRole = {}, keyToRole = {};
+  persons.forEach(pr => { givenToRole[pr.givenKey] = pr.role; keyToRole[pr.surnKey] = pr.role; keyToRole[pr.givenKey] = pr.role; });
+
   html += base.fields.map(f => {
     const isName = f.type === 'surname' || f.type === 'given';
     const ph = f.type === 'date' ? 'TT.MM.JJJJ'
       : f.type === 'page' ? (ctx.pagePattern ? ctx.pagePattern.replace('{v}', '…') : 'Seite/Eintrag')
       : '';
-    return `<label class="form-label" style="position:relative">${esc(f.label)}
+    let fh = `<label class="form-label" style="position:relative">${esc(f.label)}
       <input class="form-input" id="qt-e-${f.key}" type="text" placeholder="${esc(ph)}" autocomplete="off">
       ${isName ? `<div class="place-dropdown" id="qt-e-${f.key}-dd" style="display:none;z-index:600"></div>` : ''}</label>`;
+    // Personen-Matching: Treffer-Box direkt nach dem Vornamen der Person (Phase B)
+    if (givenToRole[f.key]) fh += `<div class="qt-match" id="qt-match-${givenToRole[f.key]}" style="margin:-2px 0 8px"></div>`;
+    return fh;
   }).join('');
 
   document.getElementById('qt-entry-body').innerHTML = html;
 
   for (const f of base.fields) {
-    if      (f.type === 'surname') _qtInitNameAC('qt-e-' + f.key, 'surname');
-    else if (f.type === 'given')   _qtInitNameAC('qt-e-' + f.key, 'given');
+    const role = keyToRole[f.key];
+    if      (f.type === 'surname') _qtInitNameAC('qt-e-' + f.key, 'surname', role);
+    else if (f.type === 'given')   _qtInitNameAC('qt-e-' + f.key, 'given', role);
+  }
+  // Live-Matching: bei Eingabe in Namensfeldern Treffer neu berechnen
+  for (const pr of persons) {
+    for (const k of [pr.surnKey, pr.givenKey]) {
+      document.getElementById('qt-e-' + k)?.addEventListener('input', () => _qtUpdateMatches(pr.role));
+    }
+    _qtUpdateMatches(pr.role);
   }
 }
 
-function _qtInitNameAC(inputId, kind) {
+function _qtInitNameAC(inputId, kind, role) {
   if (typeof initAutocomplete !== 'function') return;
   initAutocomplete(inputId, inputId + '-dd', {
     showAllOnFocus: false, useFixed: true, limit: 15,
@@ -276,7 +298,92 @@ function _qtInitNameAC(inputId, kind) {
       return [...set].sort((a, b) => a.localeCompare(b, 'de')).slice(0, 15);
     },
     formatLabel: s => s,
-    onSelect: (s, input) => { input.value = s; },
+    // Programmatisches Setzen feuert kein 'input' → Matching hier anstoßen.
+    onSelect: (s, input) => { input.value = s; if (role) _qtUpdateMatches(role); },
+  });
+}
+
+// ── Personen-Matching (Phase B): Dedup-aware Verknüpfung statt Neuanlage ──────
+function _qtBirthYear(p) {
+  const d = (p.birth && p.birth.date) || (p.chr && p.chr.date) || '';
+  const m = String(d).match(/\b(\d{4})\b/);
+  return m ? +m[1] : null;
+}
+
+// Kandidaten-Suche: Nachname + Vorname (normalisiert), Geschlecht als schwacher Tiebreaker.
+function _qtFindMatches(surname, given, sex) {
+  const sn = (surname || '').trim().toLowerCase();
+  const gn = (given   || '').trim().toLowerCase();
+  if (!sn && !gn) return [];
+  const gTok = gn.split(/\s+/).filter(Boolean);
+  const res = [];
+  for (const p of Object.values(AppState.db.individuals || {})) {
+    const ps = (p.surname || '').toLowerCase();
+    const pg = (p.given   || '').toLowerCase();
+    if (!ps && !pg) continue;
+    let snScore = 0, snOk = !sn;
+    if (sn) {
+      if (ps === sn) { snScore = 3; snOk = true; }
+      else if (ps && (ps.includes(sn) || sn.includes(ps))) { snScore = 1.5; snOk = true; }
+    }
+    let gnScore = 0, gnOk = !gn;
+    if (gn) {
+      const pgTok = pg.split(/\s+/).filter(Boolean);
+      if (pg === gn) { gnScore = 3; gnOk = true; }
+      else if (gTok[0] && pgTok.includes(gTok[0])) { gnScore = 2; gnOk = true; }
+      else if (gTok.some(t => pgTok.includes(t))) { gnScore = 1; gnOk = true; }
+    }
+    if (!snOk || !gnOk) continue;          // beide angegebenen Felder müssen passen
+    if (!snScore && !gnScore) continue;    // mind. eine echte Übereinstimmung
+    let score = snScore + gnScore;
+    if (sex && p.sex && p.sex !== 'U' && p.sex !== sex) score -= 1;
+    res.push({ id: p.id, p, score, by: _qtBirthYear(p) });
+  }
+  res.sort((a, b) => b.score - a.score || (a.p.name || '').localeCompare(b.p.name || '', 'de'));
+  return res.slice(0, 6);
+}
+
+function _qtPersonLabel(p) {
+  return p.name || [p.given, p.surname].filter(Boolean).join(' ') || p.id;
+}
+
+function _qtUpdateMatches(role) {
+  const box = document.getElementById('qt-match-' + role);
+  if (!box || !_qtActiveTpl) return;
+  const base = QT_BASE_PATTERNS[_qtActiveTpl.base];
+  const pr = (base.persons || []).find(x => x.role === role);
+  if (!pr) return;
+
+  // Bereits verknüpft → kompakte Anzeige, Suche pausiert bis „lösen".
+  const selId = _qtMatchSel[role];
+  if (selId) {
+    const p = AppState.db.individuals[selId];
+    if (p) {
+      const by = _qtBirthYear(p);
+      box.innerHTML = `<div class="qt-linked" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;background:var(--accent-soft,#e8f0ff);font-size:.85rem">
+        <span>🔗 verknüpft: <strong>${esc(_qtPersonLabel(p))}</strong>${by ? ` (*${by})` : ''}</span>
+        <button type="button" class="qt-unlink" style="margin-left:auto;cursor:pointer;background:none;border:none;color:inherit;font-size:.85rem">✕ lösen</button>
+      </div>`;
+      box.querySelector('.qt-unlink')?.addEventListener('click', () => { delete _qtMatchSel[role]; _qtUpdateMatches(role); });
+      return;
+    }
+    delete _qtMatchSel[role];
+  }
+
+  const surn  = document.getElementById('qt-e-' + pr.surnKey)?.value || '';
+  const given = document.getElementById('qt-e-' + pr.givenKey)?.value || '';
+  const matches = _qtFindMatches(surn, given, pr.sex);
+  if (!matches.length) { box.innerHTML = ''; return; }
+
+  box.innerHTML = `<div class="qt-match-head" style="font-size:.78rem;color:var(--text-muted,#888);margin:2px 0 4px">
+      ${matches.length} möglicher Treffer — verknüpfen statt neu anlegen?</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">` +
+    matches.map(m => `<button type="button" class="qt-match-cand" data-pid="${esc(m.id)}"
+        style="cursor:pointer;border:1px solid var(--border,#ccd);border-radius:14px;padding:3px 10px;background:var(--bg-soft,#f4f6fa);color:inherit;font-size:.82rem">
+        ${esc(_qtPersonLabel(m.p))}${m.by ? ` <span style="opacity:.6">*${m.by}</span>` : ''}</button>`).join('') +
+    `</div>`;
+  box.querySelectorAll('.qt-match-cand').forEach(btn => {
+    btn.addEventListener('click', () => { _qtMatchSel[role] = btn.getAttribute('data-pid'); _qtUpdateMatches(role); });
   });
 }
 
@@ -307,44 +414,69 @@ function qtSaveEntry() {
 }
 
 function _qtSaveMarriage(tpl, v) {
-  if (!v.hSurn && !v.hGiven && !v.wSurn && !v.wGiven) { showToast('Mindestens ein Name erforderlich', 'warn'); return; }
   const ctx = tpl.context || {};
+  // Je Rolle: bestehenden Treffer verknüpfen ODER neu anlegen (Phase B).
+  const newPersonIds = [], involvedPersonIds = [];
+  function _qtResolvePerson(role, given, surname, sex) {
+    const mid = _qtMatchSel[role];
+    if (mid && AppState.db.individuals[mid]) {
+      involvedPersonIds.push(mid);
+      return { id: mid, person: AppState.db.individuals[mid], isNew: false };
+    }
+    if (!given && !surname) return null;
+    const id = nextId('I');
+    const person = _qtNewPerson(id, given, surname, sex);
+    newPersonIds.push(id); involvedPersonIds.push(id);
+    return { id, person, isNew: true };
+  }
+  const H = _qtResolvePerson('h', v.hGiven, v.hSurn, 'M');
+  const W = _qtResolvePerson('w', v.wGiven, v.wSurn, 'F');
+  if (!H && !W) { showToast('Mindestens eine Person (Name oder Treffer) erforderlich', 'warn'); return; }
+
   const pageStr = (ctx.pagePattern && v.page) ? ctx.pagePattern.replace('{v}', v.page) : v.page;
   const url     = (ctx.urlPattern && v.page)  ? ctx.urlPattern.replace('{v}', v.page)  : '';
   const mkCit = () => citationObj(ctx.sid, pageStr, ctx.quay || '', null, [],
     url ? [{ file: url, titl: '', _extra: [] }] : []);
   const mdate = (typeof _normQuickDate === 'function') ? _normQuickDate(v.mdate) : v.mdate;
 
-  const hId = nextId('I'), wId = nextId('I'), fId = nextId('F');
-  const husb = _qtNewPerson(hId, v.hGiven, v.hSurn, 'M');
-  const wife = _qtNewPerson(wId, v.wGiven, v.wSurn, 'F');
-  husb.fams = [fId]; wife.fams = [fId];
+  const fId = nextId('F');
   const fam = {
-    id: fId, husb: hId, wife: wId, children: [],
+    id: fId, husb: H ? H.id : '', wife: W ? W.id : '', children: [],
     marr: { date: mdate, place: ctx.place || '', placeId: null, lati:null, long:null,
       citations: [mkCit()], _extra: [], value: '', seen: true, note: '', noteRefs: [], media: [] },
     engag: {}, div: {}, divf: {}, noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
     lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
   };
-  pushUndo('Heirat erfasst (Template)', { familyIds: [fId], personIds: [hId, wId] });
-  AppState.db.individuals[hId] = husb;
-  AppState.db.individuals[wId] = wife;
-  AppState.db.families[fId]    = fam;
-  _rebuildPersonSourceRefs(husb);
-  _rebuildPersonSourceRefs(wife);
+  // pushUndo vor Mutation: neue IDs sind im Snapshot abwesend (Undo löscht),
+  // verknüpfte Personen vorhanden (Undo stellt fams wieder her).
+  pushUndo('Heirat erfasst (Template)', { familyIds: [fId], personIds: involvedPersonIds });
+
+  for (const P of [H, W]) {
+    if (!P) continue;
+    if (P.isNew) AppState.db.individuals[P.id] = P.person;
+    if (!Array.isArray(P.person.fams)) P.person.fams = [];
+    if (!P.person.fams.includes(fId)) P.person.fams.push(fId);
+  }
+  AppState.db.families[fId] = fam;
+  if (H) _rebuildPersonSourceRefs(H.person);
+  if (W) _rebuildPersonSourceRefs(W.person);
   _rebuildFamilySourceRefs(fam);
   _qtSession.push(fId);
   markChanged();
   renderTab();
 
-  // Felder leeren, Kontext bleibt, Fokus auf erstes Feld
+  // Felder + Treffer-Auswahl leeren, Kontext bleibt, Fokus auf erstes Feld
   for (const f of QT_BASE_PATTERNS[tpl.base].fields) {
     const el = document.getElementById('qt-e-' + f.key); if (el) el.value = '';
   }
+  _qtMatchSel = {};
+  for (const pr of (QT_BASE_PATTERNS[tpl.base].persons || [])) _qtUpdateMatches(pr.role);
+
+  const lblH = H ? (H.isNew ? ([v.hGiven, v.hSurn].filter(Boolean).join(' ') || '?') : _qtPersonLabel(H.person) + ' 🔗') : '—';
+  const lblW = W ? (W.isNew ? ([v.wGiven, v.wSurn].filter(Boolean).join(' ') || '?') : _qtPersonLabel(W.person) + ' 🔗') : '—';
   const h = document.getElementById('qt-entry-hint');
   const n = _qtSession.length;
-  const label = [v.hGiven, v.hSurn].filter(Boolean).join(' ') + ' ⚭ ' + [v.wGiven, v.wSurn].filter(Boolean).join(' ');
-  h.textContent = `✓ ${label.trim()} angelegt (${n} in dieser Session)`;
+  h.textContent = `✓ ${lblH} ⚭ ${lblW} (${n} in dieser Session)`;
   h.hidden = false;
   document.getElementById('qt-e-mdate')?.focus();
 }
