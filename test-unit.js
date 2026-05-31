@@ -610,6 +610,37 @@ eq(API._hypoStatus({ status:'bogus' }),     'open',      '_hypoStatus fängt Ung
   lacksRule(val({ '@1@': open }), 'OPEN_HYPO', 'OPEN_HYPO default-deaktiviert (kein Befund ohne Opt-in)');
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  (h) PLACE-HIST — datierte pname/placeref (ADR-024)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(h) PLACE-HIST Ortshistorie');
+
+var _PLHIST_XML = '<?xml version="1.0"?>\n<database xmlns="http://gramps-project.org/xml/1.7.1/">\n<places>\n'
+  + '<placeobj handle="_pP" id="P0001" type="Region"><ptitle>Fürstbistum Münster</ptitle><pname value="Fürstbistum Münster"/></placeobj>\n'
+  + '<placeobj handle="_pL" id="P0002" type="Village"><ptitle>Sassenberg</ptitle>'
+  + '<pname value="Sassenberg"/>'
+  + '<pname value="Sassenbergk" lang=""><daterange start="1650" stop="1802"/></pname>'
+  + '<coord lat="N51.99" long="E8.04"/>'
+  + '<placeref hlink="_pP"><dateval val="1500-01-01" type="from"/></placeref>'
+  + '</placeobj>\n</places>\n</database>';
+
+(function() {
+  var db  = API.grampsParse(_PLHIST_XML);
+  var pl  = db.placeObjects['@P0002@'];
+  var pn  = (pl.pnames || []).filter(function(p) { return p.value === 'Sassenbergk'; })[0] || {};
+  eq(pn.dateFrom + '/' + pn.dateTo, '1650/1802', 'datierter pname (daterange) → dateFrom/dateTo geparst');
+  eq(pn.dateType, 'range', 'pname dateType = range');
+  var enc = (pl.enclosedBy || [])[0] || {};
+  eq(enc.placeId + '|' + enc.dateFrom, '@P0001@|1500-01-01', 'datierter placeref → enclosedBy mit placeId + Datum');
+
+  var out = API.grampsBuild(db);
+  ok(/<pname value="Sassenbergk"[^>]*>\s*<daterange start="1650" stop="1802"\/>\s*<\/pname>/.test(out), 'datierter pname roundtrip (write erzeugt daterange-Kind)');
+  ok(/<dateval val="1500-01-01" type="from"\/>/.test(out), 'placeref verbatim-Attribut type="from" überlebt (via _dateRaw)');
+
+  var out2 = API.grampsBuild(API.grampsParse(out));
+  eq(out === out2 ? 'stable' : 'drift', 'stable', 'place-date idempotent ((build∘parse)² stabil)');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {
