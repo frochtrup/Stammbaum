@@ -317,15 +317,22 @@ function showNewPlaceForm() {
 function saveNewPlace() {
   const name = document.getElementById('np-name').value.trim();
   if (!name) { showToast('⚠ Ortsname erforderlich'); return; }
-  if (collectPlaces().has(name)) { showToast('⚠ Ort bereits vorhanden'); return; }
   const _pc2 = parseCoordInput(document.getElementById('np-lati').value, document.getElementById('np-long').value);
   const lati = isNaN(_pc2.lat) ? null : _pc2.lat;
   const long = isNaN(_pc2.lon) ? null : _pc2.lon;
+  // extraPlaces für bestehende Consumer (Koordinaten-Propagierung etc.)
   AppState.db.extraPlaces[name] = { name, lati, long };
   saveExtraPlaces();
-  UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
+  // Sofort placeObject anlegen damit er in enclosedBy-Selects erscheint (P2-UI)
+  const _pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  if (!_placeObjForName(name)) {
+    const id = (typeof _epId === 'function') ? _epId(name) : ('_ep_' + Date.now());
+    _pos[id] = { id, title: name, type: 'Unknown', lat: lati, long, pnames: [], enclosedBy: [], parentId: null };
+    UIState._placeRegistry = null;
+  }
+  UIState._placesCache = null;
   closeModal('modalNewPlace');
-  showToast('✓ Ort hinzugefügt');
+  showToast('✓ Ort hinzugefügt — Typ und Hierarchie im ✎-Editor setzen');
   renderTab();
 }
 
