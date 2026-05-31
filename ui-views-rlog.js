@@ -214,12 +214,18 @@ function _deleteFamRlogEntry(famId, idx) {
 // ─── Globale Log-Liste ───────────────────────────────────────────────────────
 
 let _rlogViewFilter = 'all';
+let _rlogViewMode   = 'list';   // RES-PROJ 3c: 'list' | 'timeline'
 
 function switchRlogFilter(f) {
   _rlogViewFilter = f;
   ['all', 'found', 'partial', 'not-found', 'pending'].forEach(k => {
     document.getElementById('rlog-filter-' + k)?.classList.toggle('active', k === f);
   });
+  _renderRlogView();
+}
+
+function toggleRlogTimeline() {
+  _rlogViewMode = _rlogViewMode === 'timeline' ? 'list' : 'timeline';
   _renderRlogView();
 }
 
@@ -263,6 +269,7 @@ function _renderRlogView() {
     <div class="filter-action-bar">
       <div class="filter-chips">${filterBtns}</div>
       <div class="action-btns">
+        <button class="act-btn-icon${_rlogViewMode === 'timeline' ? ' active' : ''}" data-action="toggleRlogTimeline" title="${_rlogViewMode === 'timeline' ? 'Listenansicht' : 'Zeitstrahl'}">${_rlogViewMode === 'timeline' ? '☰' : '🕒'}</button>
         <button class="act-btn-icon" data-action="exportRlogMd" title="Als Markdown exportieren">↓</button>
       </div>
     </div>
@@ -274,6 +281,9 @@ function _renderRlogView() {
     return;
   }
 
+  // RES-PROJ 3c: Research-Timeline
+  if (_rlogViewMode === 'timeline') { _renderRlogTimeline(container, html, entries); return; }
+
   for (const { kind, entity, id, rl, idx } of entries) {
     const entityName = kind === 'person'
       ? (entity.name || id)
@@ -284,6 +294,42 @@ function _renderRlogView() {
     html += _rlogRowHtml(rl, idx, ctxAttr);
   }
 
+  container.innerHTML = html;
+}
+
+// ─── Research-Timeline (RES-PROJ 3c) ─────────────────────────────────────────
+// Forschungsaktivitäten chronologisch (Protokoll-Einträge nach Datum gruppiert).
+// entries sind bereits projekt-skopiert + neueste-zuerst sortiert (_renderRlogView).
+function _renderRlogTimeline(container, headerHtml, entries) {
+  const db = AppState.db;
+  let html = headerHtml + '<div class="rtl">';
+  let lastDate = null;
+  for (const { kind, entity, id, rl } of entries) {
+    const dateLabel = rl.date || 'Ohne Datum';
+    if (dateLabel !== lastDate) {
+      html += `<div class="rtl-date">${esc(dateLabel)}</div>`;
+      lastDate = dateLabel;
+    }
+    const entityName = kind === 'person' ? (entity.name || id) : 'Familie: ' + _famDisplayName(id);
+    const nav  = kind === 'person' ? `data-action="showDetail" data-pid="${id}"` : `data-action="showFamilyDetail" data-fid="${id}"`;
+    const repo = rl.repoRef && db.repositories?.[rl.repoRef];
+    const sour = rl.sourRef && db.sources?.[rl.sourRef];
+    const meta = [repo?.name, sour?.title].filter(Boolean).join(' · ');
+    const resultCls = 'rtl-node rtl-node-' + (rl.result || 'pending').replace(/[^a-z-]/g, '');
+    html += `<div class="rtl-item">
+      <span class="${resultCls}"></span>
+      <div class="rtl-card">
+        <div class="rtl-card-head">
+          <span class="rtl-entity" ${nav}>${esc(entityName)} ›</span>
+          ${_rlogBadgeHtml(rl.result)}
+        </div>
+        ${meta ? `<div class="rtl-meta">${esc(meta)}</div>` : ''}
+        ${rl.query ? `<div class="rtl-query">${esc(rl.query)}</div>` : ''}
+        ${rl.note  ? `<div class="rtl-note">${esc(rl.note)}</div>`  : ''}
+      </div>
+    </div>`;
+  }
+  html += '</div>';
   container.innerHTML = html;
 }
 
