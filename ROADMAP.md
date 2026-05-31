@@ -26,29 +26,31 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v794 · Cache: `stammbaum-v794`
+**sw-Version:** v794 · Cache: `stammbaum-v794` · `test-unit.js` = 161 Tests grün
+**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · **Eltern-Suchpicker im Familiendialog (v794)** — `<select>`+tote `onclick`-Buttons → relPicker-Logik wie „+ Elternteil".
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
-### Gesamtbewertung (Mai 2026) — überarbeitet nach unabhängigem Audit (Code/CSP/OAuth/Roundtrip real verifiziert)
+### Gesamtbewertung — überarbeitet 2026-05-31 nach unabhängiger Re-Verifikation (Tests/Roundtrip/CSP/OAuth live im Browser geprüft)
 
-> **Methodik-Hinweis:** Diese Tabelle ist eine *nüchterne Standortbestimmung*, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung, nicht auf Doku-Behauptungen. Wo eine Behauptung nicht *automatisiert belegbar* ist (z. B. WCAG-AA, GRAMPS-Roundtrip), ist die Note entsprechend gedeckelt. Die frühere Selbstbewertung (∅ 8.5) war ~0.6 zu optimistisch — sie überschätzte die organisatorische Reife der Architektur und führte die Test-Lücke gar nicht.
+> **Methodik-Hinweis:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung, nicht auf Doku-Behauptungen. **Re-Verifikation 2026-05-31:** 161 Unit-Tests + GEDCOM-Roundtrip selbst ausgeführt (grün); CSP/OAuth/XSS im laufenden Browser getestet. **Korrektur ggü. Selbstbild:** Die Behauptung „CSP-FINAL: alle Inline-Handler entfernt" war **falsch** — 2 inline-`onclick` (jetzt v794 behoben) + ~48 inline-`style=` werden von der strikten CSP still verworfen (empirisch bestätigt). Architektur-Schuld größer als berichtet (844 statt 762 top-level Funktionen; längste Funktion `_attr` 486 Z.). ∅ daher 8.2 → **8.0**.
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
-| Architektur | 6.8/10 | Saubere Schichtung + 20 ADRs + Passthrough-Fundament. 762 globale Funktionen / 187 globale Variablen in flachem Namespace bleiben die Hauptschuld — **aber** ein de-risktes Migrationspfad ist jetzt belegt: ADR-020 + GRAMPS-Pilot auf ES-Module (sw v751, Brücken-Pattern). *(+0.3 nach T0-MODULE-Pilot)* |
-| Code-Qualität | 7.0/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare mit sw-Regressionsbezug, JSDoc-Typen, 151 `.catch()`. **Abzug:** Monsterfunktionen (`_parseINDILine` 365, `showDetail` 290, `writeINDIRecord` 270 Zeilen); `_esc`/`esc` 4× dupliziert (Folge des fehlenden Modulsystems). |
-| Sicherheit | 8.0/10 | **Überdurchschnittlich** für serverlose PWA: CSP ohne `unsafe-inline/eval`, `object-src 'none'`, enge Allowlist; OAuth PKCE S256 + CSRF-`state` + URL-Code-Cleanup lehrbuchhaft; kein `eval` im App-Code. **Restrisiko:** Refresh-Token in `sessionStorage` (XSS-lesbar) — bewusste, ohne Backend alternativlose Wahl, aber als Restrisiko zu führen. |
-| Design / UX | 8.5/10 | Hochwertige Ästhetik (Playfair/Source Serif, Dark/Light-Parität), Mobile-First, Onboarding, Skip-Link/ARIA/`prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" ist *Selbstzertifizierung ohne axe-Audit*; Handbuch noch mit Mockups statt Screenshots. |
-| Funktionsstand | 8.8/10 | Undo/Redo · Karten-Animation · Mehrfachzitate · GED7 · GRAMPS · ASSO-Edit ✓. Lücken bewusst out-of-scope: DNA, Online-Matching, Multi-User. |
+| Architektur | 6.5/10 | Saubere Schichtung + 23 ADRs + Passthrough-Fundament. **844 top-level Funktionen** (gemessen, nicht 762) in flachem Namespace bleiben die Hauptschuld; Modul-Migration faktisch überfällig. De-riskter Pfad belegt (ADR-020 + 2 Brücken). |
+| Code-Qualität | 7.0/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare, JSDoc, 155 `.catch()`. **Abzug:** Monsterfunktionen größer als dokumentiert (`_attr` 486, `_parseINDILine` 388, `showDetail` 294, `writeINDIRecord` 269 Z.); `_esc`/`esc` 4–6× dupliziert. |
+| Sicherheit | 8.0/10 | **Überdurchschnittlich** für serverlose PWA: CSP ohne `unsafe-inline/eval`, `object-src 'none'`, enge Allowlist; OAuth PKCE S256 + CSRF-`state` + kein `client_secret` (live verifiziert); kein `eval` im App-Code; `esc()` pervasiv. **Abzug:** CSP nicht lückenlos *durchgesetzt* (tote inline-`on*`/`style=`); Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos). |
+| Design / UX | 8.5/10 | Hochwertige Ästhetik (Playfair/Source Serif, Dark/Light-Parität, Screenshot-bestätigt), Mobile-First, Onboarding, Skip-Link/ARIA/`prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" *ohne axe-Audit*; Handbuch noch mit Mockups; tote inline-`style=` (Befund). |
+| Funktionsstand | 8.5/10 | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · **Verwandtschaftsrechner** (BFS, Cousin-Grade) · Eltern-Suchpicker (v794) ✓. **Abzug:** Orts-Geocoding-DB fehlt; Ausgabe-Reichtum < MFT; Lücken bewusst out-of-scope: DNA, Online-Matching, Multi-User. |
+| Funktions-Qualität | 8.0/10 | GEDCOM/GRAMPS-Treue exzellent; UI-Flows robust (Browser-verifiziert). **Abzug:** Skalierung >10k Personen ungetestet. |
 | Performance | 8.0/10 | Web Worker + virtuelles Scrollen (O(log n)) + LAZY-LOAD (−119 KB Cold-Start) + SW-Cache. Ohne Bundling ~45 Cold-Start-Requests (durch HTTP/2 + SW gemildert). |
-| GEDCOM-Konformität | 9.3/10 | **Real verifiziert:** net_delta=0 + out1===out2 auf 83k-Zeilen-Produktionsdatei, automatisiert. Strict-5.5.1 + GED7-opt-in + GRAMPS-Brücke. GRAMPS-Roundtrip seit v750 ebenfalls automatisiert (T0-TEST-2). *(+0.3)* |
-| **Tests** | **7.5/10** | GEDCOM- **und** GRAMPS-Roundtrip automatisiert headless (T0-TEST-2). **T0-UNIT**: `test-unit.js` — 87 dep-freie Unit-Tests: alle 25 Validator-Regeln (je Positiv-/Negativfall), Parser-Edge-Cases (CONC/CONT, lv>4, leere Tags, Passthrough), BFS-Anonymisierung (DSGVO), Datums-Helfer. **Verbleibend:** keine UI-Logik-Tests; eigenes Harness statt Framework. *(+1.0 nach T0-UNIT)* |
-| Dokumentation | 9.0/10 | Außergewöhnlich für ein Solo-Projekt (19 ADRs, Datamodel, 151-KB-Changelog). **Abzug:** Selbstbenotung war Marketing; Handbuch-Screenshots offen. |
-| PWA / Offline | 9.0/10 | Eines der ernsthaftesten PWA-Designs: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout. |
+| GEDCOM-Konformität | 9.3/10 | **Real reproduziert (2026-05-31):** `net_delta=0` + `out1===out2` auf 83k-Zeilen-Produktionsdatei, Strict-5.5.1 sauber. + GED7-opt-in + GRAMPS-Roundtrip automatisiert (T0-TEST-2). |
+| **Tests** | **7.5/10** | GEDCOM- **und** GRAMPS-Roundtrip headless automatisiert. **161 dep-freie Unit-Tests** (alle 28 Validator-Regeln je Positiv-/Negativfall, Parser-Edge-Cases, BFS-Anonymisierung, Evidenz/Hypothesen, Datums-Helfer). **Verbleibend:** keine UI-Logik-Tests; eigenes Harness statt Framework. |
+| Dokumentation | 8.5/10 | Außergewöhnlich für Solo-Projekt (23 ADRs, Datamodel, ~2k-Z.-Changelog). **Abzug:** Doku überholte Code (CSP-Claim falsch; Handbuch-Stand hinkt v786–794 nach); Screenshots offen. |
+| PWA / Offline | 9.0/10 | Eines der ernsthaftesten PWA-Designs: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout; Offline-Fallback. |
 | Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.2/10** | *(Nach Audit 8.5 → 7.9; T0-TEST-2 → 8.0; T0-UNIT → 8.1; T0-MODULE-Pilot → 8.2: Tests +2.0, GEDCOM +0.3, Architektur +0.3. Drei Disziplinen — GEDCOM/GRAMPS-Treue, Sicherheitshärtung, Testabsicherung — auf solidem Niveau; vollständige Modul-Migration [ADR-020 Phasen 2–4] bleibt der größte verbleibende Hebel.)* |
+| **∅ Gesamt** | **≈ 8.0/10** | *Solide, funktionsreich; drei Disziplinen — GEDCOM/GRAMPS-Treue, Sicherheitshärtung, Testabsicherung — auf wirklich gutem Niveau. Größte verbleibende Hebel: (1) CSP-Durchsetzung lückenlos machen + verifizierbar (CI), (2) Architektur-Schuld (Monsterfunktionen) entschärfen, (3) ggü. MacFamilyTree: Ausgabe-Reichtum + Skalierung.* |
 
 ---
 
@@ -89,14 +91,18 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ---
 
-## Priorisierung nach Audit (Mai 2026)
+## Priorisierung — überarbeitet 2026-05-31 (nach Re-Verifikation)
 
-Der unabhängige Audit hat die Reihenfolge verschoben: **Nicht Features, sondern das Sicherheitsnetz und das Fundament sind jetzt der Engpass.** Begründung — die Codebase ist stabil und funktionsreich (∅ Funktion 8.8), aber ihre *Qualitätssicherung* (Tests 5.5) und ihre *strukturelle Skalierbarkeit* (Architektur 6.5) hinken hinterher. Jedes weitere Feature erhöht das Risiko, das diese beiden Achsen nicht mehr abfedern.
+Das Test-Sicherheitsnetz und das Modul-Fundament (Pilot) sind erledigt; die Re-Verifikation 2026-05-31 hat **zwei neue, konkrete Engpässe** sichtbar gemacht, die jetzt vor neuen Features stehen:
+- **CSP-Durchsetzung ist lückenhaft** (Doku behauptete „vollständig"). Tote inline-`on*`/`style=` → CSP-DURCHSETZUNG (s. P0).
+- **Architektur-Schuld größer als berichtet** (844 Funktionen, 486-Z.-Funktion) → die Monsterfunktionen sind der konkrete Hebel, nicht die Voll-Modul-Migration.
 
 **Reihenfolge:**
-1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): **erledigt** — GEDCOM+GRAMPS-Roundtrip automatisiert + 105 Unit-Tests. Weitere Änderungen jetzt regressionsabgesichert.
-2. ✅ **P0 — Architektur-Fundament** (T0-MODULE Phase 1+2: Plan + Pilot + zweiter Cluster): **erledigt** — ADR-020 + GRAMPS- und Validator-Cluster als ES-Module (sw v751/v752). Phasen 3–4 **bewusst zurückgestellt** — Begründung siehe Entscheidung unten.
-3. **P1+** — Restliche Schulden + Features wie bisher.
+1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): GEDCOM+GRAMPS-Roundtrip automatisiert + 161 Unit-Tests. Regressionsabgesichert.
+2. ✅ **P0 — Modul-Fundament-Pilot** (T0-MODULE Phase 1+2): ADR-020 + GRAMPS-/Validator-Cluster als ES-Module. Phasen 3–4 **bewusst zurückgestellt** (Begründung unten).
+3. **P0 — CSP-Durchsetzung verifizierbar machen** *(neu 2026-05-31)*: ① ✅ inline-`onclick` entfernt (v794); ② tote inline-`style=` → CSS-Klassen (CSP-DURCHSETZUNG); ③ CSP-Report-Only-Selbsttest, damit „CSP vollständig" *belegt* statt behauptet ist. **Kleiner Aufwand, schließt einen echten Funktions-/Robustheits-Bug-Typ.**
+4. **P1 — gezielte Architektur-Entschärfung**: die 3–4 größten Funktionen (`_attr`, `_parseINDILine`, `showDetail`, `writeINDIRecord`) zerlegen — unabhängig vom Modulsystem, größter Wartungs-Hebel.
+5. **P2+** — Features. **Zielgruppen-Hebel ggü. MacFamilyTree** (s. Vergleich): Ausgabe-Reichtum (PDF-Bücher/Poster), Skalierungstest >10k, Orts-Geocoding, Kamera (mobil).
 
 ### Architektur-Entscheidung: ES-Modul-Phasen 3–4 zurückgestellt (Mai 2026)
 
@@ -112,7 +118,7 @@ Analysiert auf zwei Ebenen:
 - **Nutzer-Seite:** kaum spürbar. PWA-Cache macht den Warmstart sofort; LAZY-LOAD hat die größten Kaltstart-Gewinne bereits geholt. Offline-PWA, lokal-first, kein Datamining — all das ist Laufzeit, unberührt vom Build.
 - **Entwickler-Seite:** der eigentliche Handel. Ein Build-Step beseitigt die 762-Globals-Schuld und ermöglicht Tree-Shaking — aber er bricht **ADR-001/002** (kein npm, kein Build, Datei editieren & neu laden, vom iPad editierbar). Mit npm + `node` + Build/Watch-Prozess entfällt die bewusst gewählte „edit-anywhere"-Eigenschaft.
 
-**Entscheidung:** Build-Step wird **nicht eingeführt**. Begründung: Das Projekt ist stabil und funktionsreich (∅ 8.2). Die Schulden sind *entschärft* — `_`-Konventionen + Testabsicherung (Roundtrip + 105 Unit-Tests) fangen die Risiken ab, gegen die Module schützen würden. Den größten verbleibenden Gewinn (explizite Imports, Wegfall der Brücken) gibt es erst *mit* Bundler — zu diesem Preis ist er für dieses Solo-Projekt nicht rechtfertigbar.
+**Entscheidung:** Build-Step wird **nicht eingeführt**. Begründung: Das Projekt ist stabil und funktionsreich (∅ 8.0). Die Schulden sind *entschärft* — `_`-Konventionen + Testabsicherung (Roundtrip + 161 Unit-Tests) fangen die Risiken ab, gegen die Module schützen würden. *(Re-Verifikation 2026-05-31: Entscheidung bestätigt; konkreter Hebel ist T0-FUNC-SPLIT, nicht die Voll-Migration.)* Den größten verbleibenden Gewinn (explizite Imports, Wegfall der Brücken) gibt es erst *mit* Bundler — zu diesem Preis ist er für dieses Solo-Projekt nicht rechtfertigbar.
 
 **Phasen 3–4 im Backlog** (ES-MODULE-Eintrag). Trigger für Wiederaufnahme: Codebase wächst stark (neue Cluster, weitere Mitwirkende) oder Namespace-Kollisionen treten konkret auf. Die zwei vorhandenen Brücken (GRAMPS, Validator) sind stabil und harmlos.
 
@@ -133,13 +139,14 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | **1** | **RES-DASH** | **Konflikt- & Qualitätsdashboard + Lückenradar** — Ampel pro Person (Validator-Aggregat), Vollständigkeits-Score, 6 Lückenradar-Balken, Brennpunkt-Liste, Lücke→Aufgabe (einzeln + „+ alle") | *(keine — reine Präsentation)* | ✅ **Abgeschlossen sw v772** |
 | **2** | **RES-EVAL** | **Quellenbewertung (Evidenzmodell)** — 3 Achsen je Zitat: Quellentyp (Original/Abschrift/Autorenwerk) · Information (primär/sekundär) · Evidenz (direkt/indirekt/negativ); „Informant" via ASSO-Rolle. **+ Repository-Rest:** Archivtyp, Findbuch-URL. Speist Dashboard (Schwach-Quellen-Flag). | `citation.eval` als `_EVAL`-Tag (ADR-022) | **✅ vollständig sw v777 (2a–2e)** |
 
-**RES-EVAL Teilschritte:** **2a Kern (GEDCOM) ✅ sw v773** — `citation.eval`+`EVAL_AXES`/`_newEval`/`evalIsEmpty`/`_evalToQuay` (gedcom.js), Parser-Extraktion `_EVAL` (modelliert, kein Doppel-Schreiben — ADR-022), Writer-Hook in `_writeSourCits` (deckt alle Zitat-Kontexte), GED7-SCHMA-Deklaration, Strict-Strip. Verifiziert: `net_delta=0`+`out1===out2` auf `_EVAL`-Fixture, +18 Unit-Tests (123 total). **2b UI ✅ sw v774** — `⚖`-Aufklapper pro Zitat-Tag in `renderSrcTags` (3 Achsen-Selects aus `EVAL_AXES` + Informant-Feld + „→Q"-Übernahme via `_evalToQuay`); Handler `toggleSrcEval`/`updateSrcEval`/`updateSrcInformant`/`applyEvalQuay`; Aufklapp-Zustand `_srcEvalOpen` separat vom Zitat (kein Leak via `{...c}`), `eval` in `initSrcWidget` deep-kopiert. Browser-verifiziert: Writer emittiert exakten `_EVAL`-Block, Write→Parse symmetrisch, QUAY-Übernahme + ⚖-Markierung, bestehendes eval überlebt unbezogene Edits. **2c Validator/Dashboard ✅ sw v775** — Regel `MISSING_EVAL` (info, analog `MISSING_QUAY`) via `_hasAnyEval`; **bewusst default-deaktiviert** (`VAL_CONFIG_DEFAULTS.disabled`) → Opt-in, sonst flutet ein Dauer-Hinweis jede unbewertete Quelle und drückt den Score auf 0 %. Dashboard-Lückenradar-Balken „Quellen mit Evidenzbewertung" (`_dashHasEval`, unabhängig vom Validator → informiert ohne zu strafen). **Config-Migration:** `_saveValConfig` merkt `known`-Regelstand; `_loadValConfig` lässt neue default-aus-Regeln ihren Default erben (Bestandsnutzer), ohne explizite Aktivierungen zu überschreiben. +3 Unit-Tests (127 total), 3 Migrationsfälle browser-verifiziert. **2d GRAMPS ✅ sw v776** — Evidenzmodell als Citation-`<attribute>` (`_STYP/_INFO/_EVID/_INFM`, zwischen `<sourceref>` und `_extra`); Parser löst sie via `_GR_EVAL_ATTR` modelliert heraus (nicht in `_citExtra` → kein Doppeln); `eval` durch `_citHandle(…,evalObj)`+`_applyCit`. Verifiziert: Write→Parse erhält eval, Re-Write stabil (Count 1→1), automatisierte GRAMPS-Regression (2894 Pers.) grün. **2e Repository-Rest ✅ sw v777** — Archivtyp-Select (`REPO_TYPES`, GRAMPS-`<type>`/GEDCOM-`_RTYPE`) + Findbuch-URL (`r.findingAid`, GEDCOM-`_FAURL` + GRAMPS-`<url type="Web Search">`, mehrere `<url>` im Parser unterschieden) in ui-forms-repo.js; beide modelliert (kein Doppel-Schreiben), Strict strippt. **Nebenfix:** `saveRepo` erhielt Bestandsfelder nicht (Objekt-Neuaufbau) → `_grampsHandle`/`_extra`/`addrExtra`/`priv` gingen beim Edit verloren; jetzt `{...existing}`. Verifiziert: GEDCOM- (`net_delta=0`, Strict-Strip) + GRAMPS-Roundtrip (rtype/findingAid/www getrennt erhalten), Felderhalt browser-bestätigt. **RES-EVAL damit vollständig (2a–2e).**
+**RES-EVAL Teilschritte (2a–2e ✅ sw v773–v777):** Evidenzmodell `citation.eval` (3 Achsen) als `_EVAL`-Tag (ADR-022, modelliert/kein Doppel-Schreiben) · `⚖`-UI je Zitat + „→Q"-QUAY-Übernahme · Regel `MISSING_EVAL` (default-aus, opt-in) + Dashboard-Balken · GRAMPS-`<attribute>`-Serialisierung · Repository-Rest (Archivtyp + Findbuch-URL). Verifiziert: GEDCOM `net_delta=0` + GRAMPS-Roundtrip + Unit-Tests. *(Voll-Detail: CHANGELOG + ADR-022.)*
 | **3** | **RES-PROJ** | **Forschungsprojekte + Kanban + Research-Timeline** — Projekte gruppieren Tasks/Log (Scope: Linie/Ort/Zeitraum); Tasks `status` statt nur `done` → Kanban; `_rlog` nach Datum als Aktivitäts-Timeline | Projekte: IDB+JSON · Task-`status`: am `_TASK` | **✅ vollständig sw v780 (3a–3c)** |
 
-**RES-PROJ Teilschritte:** **3a Task-Status + Kanban ✅ sw v778** — `_tasks[i].status ∈ {todo,doing,done}` (TASK_STATUSES), **Invariante `done === status==='done'`** (`_taskStatus`/`_setTaskStatus`, ~18 `t.done`-Nutzungen unberührt); Migration lazy (`done→status`). Serialisierung GEDCOM `2 _TSTAT` (Parser+Writer, Person+Familie, GED7-SCHMA, Strict strippt) + GRAMPS gratis (Task als ganzes JSON). **Kanban-Board:** Liste⇄Board-Toggle (`▦`) im Aufgaben-Modus, 3 Spalten (Offen/In Arbeit/Erledigt), **mobil tap-to-advance** (`_advanceTaskStatus` zyklisch, synct done+Badge), kein DnD-Lib. +5 Unit-Tests (132 total). Browser-verifiziert: Advance todo→doing→done hält Invariante, Badge-Sync, GRAMPS write→parse erhält status. **3b Projekte ✅ sw v779** — `ui-views-projects.js`: IDB-Store `projects` + JSON-Export/Import (Muster `quick_templates`, Boot-Load), Projekt=`{id,name,color,scope{surnames,places,yearFrom,yearTo,personIds},note}`. Membership **berechnet** (`_projectMatches`: personIds∨leer=alle, sonst UND zwischen gesetzten Achsen — surname/place substring, year-range) → kein Dangling, kein File-Tag. Chip-Selektor (`_projectChipBar`) in allen Modi (Aufgaben/Protokoll/Dashboard/Kanban); `setActiveProject` skopiert Task-Sammlung + rlog + Dashboard-`ids` → **projekt-skopiertes Dashboard** (Phase-1-Payoff: Score/Radar/Brennpunkte je Linie/Ort). Manager-Modal (CRUD + Editor + Export/Import). **CSP-Lehre:** Farben als feste Paletten-Klassen `pc0–pc5` (CSP ohne unsafe-inline blockt `style=""` → ADR-015; Muster wie `tl-pc${idx}`). Browser-verifiziert: Scope 11/25, Persistenz über Reload, projekt-skopiertes Dashboard. **3c Research-Timeline ✅ sw v780** — `_renderRlogTimeline` (ui-views-rlog.js): Protokoll-Einträge chronologisch (nach `date` gruppiert, neueste zuerst), vertikale Schiene mit farbcodierten Ergebnis-Knoten (found/partial/not-found/pending), Karten mit Entity-Link + Badge + Suchbegriff + Notiz; Toggle `🕒` (`toggleRlogTimeline`) im Protokoll-Modus, projekt-skopiert (nutzt dieselben `entries`). CSS `.rtl-*`. **RES-PROJ damit vollständig.**
+**RES-PROJ Teilschritte (3a–3c ✅ sw v778–v780):** Task-`status ∈ {todo,doing,done}` (Invariante `done===status==='done'`) + Kanban-Board (mobil tap-to-advance, kein DnD-Lib), `_TSTAT`-Serialisierung · Projekte (IDB+JSON, Membership **berechnet** via `_projectMatches` → kein Dangling) mit projekt-skopiertem Dashboard/RLOG · Research-Timeline (`_renderRlogTimeline`, farbcodierte Ergebnis-Knoten). **CSP-Lehre:** Farben als feste Paletten-Klassen `pc0–pc5`, kein `style=""` (ADR-015). *(Voll-Detail: CHANGELOG.)*
 | **4** | **RES-HYPO** | **Hypothesen-System (leichte Variante)** — statusbehaftete Annotation (offen/verworfen/bestätigt) an Person/Familie, verlinkt auf Evidenz, mit Gewichtung. **Bewusst KEIN** Alternativ-Baum-/Zwei-Schichten-Modell (wäre v9-Neuarchitektur, bricht Roundtrip-Einfachheit). | `_HYPO` als `_`-Tag (ADR-023) | **✅ vollständig sw v784 (4a–4e)** |
 
-**RES-HYPO Teilschritte:** **4a Kern (Daten) ✅ sw v781 (ADR-023)** — `_hypotheses[]` auf INDI/FAM: `{id,text,status,weight,rationale,conclusion,evidence[],created}`. `HYPO_STATUSES` (open/confirmed/rejected) + `HYPO_WEIGHTS` (low/medium/high, *Forscher-Konfidenz*, getrennt von QUAY/eval) + `_newHypo`/`hypoIsEmpty`/`_hypoStatus` in gedcom.js. **Evidenz = SID-Ref** `{sid,page}` (Muster `_RLOG.sourRef`, kein eigener Zitatkörper → kein Dangling). Serialisierung GEDCOM `_HYPO`-Subtree (`_HSTAT/_HWGT/_DATE/2 SOUR @S@+3 PAGE/_RATIO/_CONCL`, CONC/CONT mehrzeilig) — **modelliert herausgelöst** (Parser INDI+FAM, kein Passthrough-Doppel), Writer `_writeHypos`, GED7-SCHMA, Strict strippt. GRAMPS `<attribute type="_HYPO" value=JSON>` (ganzes JSON, Person+Familie). Verifiziert: `net_delta=0`+`out1===out2` auf `_HYPO`-Fixture, Strict-Strip, GRAMPS-Regression (2894 Pers.) grün, +23 Unit-Tests (155 total). **4b UI ✅ sw v782** — `ui-views-hypo.js`: Hypothesen-Sektion in Person- **und** Familiendetail (Karten mit Status-Badge `hs-open/confirmed/rejected`, Konfidenz-Badge, Begründung/Schluss, Evidenz-Chips). Modal `modalAddHypo` (Text/Status/Konfidenz/Begründung/Schluss + dynamische Evidenz-Zeilen mit Quellen-Select + Seite). Persistenz via `markChanged` (Muster `_tasks`); Edit via `Object.assign` (erhält id/created). **CSP-Lehre beachtet:** Status-Farben als feste Klassen (`hs-*`), kein `style=""` (ADR-015). Browser-verifiziert: Karte rendert (Badge-Farbe = Gold, **nicht** CSP-Buttonface), Modal-Flow, Persistenz, Write→Parse erhält alle Felder (mehrzeilig+Evidenz), Living-Anonymisierung strippt korrekt. **4c Validator/Dashboard ✅ sw v783** — Regel `OPEN_HYPO` (info) feuert bei offenen Hypothesen an Person/Familie (alles außer confirmed/rejected = offen); **bewusst default-deaktiviert** (`VAL_CONFIG_DEFAULTS.disabled`, Opt-in — offene Hypothesen sind normaler Forschungszustand, kein Mangel). Dashboard-Lückenradar-Balken „Hypothesen aufgelöst" (`_dashOpenHypoCount`, Basis = nur Personen mit Hypothesen → **nur eingeblendet wenn welche existieren**, informiert ohne zu strafen). +6 Unit-Tests (161 total). Browser-verifiziert: Regel default-still/opt-in-feuert mit korrektem Befundtext, Dashboard-Balken „50 % (von 2)". **4d GRAMPS *(in 4a vorgezogen)*. 4e GPS-Beweisführungsnotiz ✅ sw v784** — eingebettetes, aufklappbares Read-Panel „Beweisführung (GPS)" im Personendetail (nur bei ≥1 Hypothese; Reife-Indikator „X% aufgelöst"). Synthetisiert nach Genealogical Proof Standard: ① Quellenlage & Evidenz (Zitat-Zähler: gesamt/evidenzbewertet/QUAY via `_personCitStats`), ② Bestätigte Schlüsse (confirmed + Evidenz-Refs + Schluss), ③ Offene Fragen/Konflikte (open + Begründung), ④ Verworfene Annahmen. Aufklapp-Zustand `_gpsOpen` getrennt vom Modell; refresht synchron bei Hypothesen-Save/Delete. Browser-verifiziert: Panel rendert/togglet, Synthese korrekt (Quellenlage „1/1/1", bestätigt+offen gruppiert), keine Konsolenfehler. **RES-HYPO damit vollständig (4a–4e) — Forschungstiefe-Ausbauplan P1–P4 abgeschlossen.**
+**RES-HYPO Teilschritte (4a–4e ✅ sw v781–v784, ADR-023):** `_hypotheses[]` auf INDI/FAM (`{id,text,status,weight,rationale,conclusion,evidence[],created}`, **Evidenz = SID-Ref** → kein Dangling) als `_HYPO`-Subtree (modelliert) + GRAMPS-JSON-`<attribute>` · UI-Sektion + `modalAddHypo` in Person- und Familiendetail · Regel `OPEN_HYPO` (default-aus) + Dashboard-Balken · **GPS-Beweisführungs-Panel** (Genealogical Proof Standard: Quellenlage/bestätigte Schlüsse/offene Fragen/verworfene Annahmen). **Bewusst KEIN** Alternativ-Baum (wäre v9, bräche Roundtrip-Treue). Verifiziert: GEDCOM `net_delta=0` + GRAMPS-Roundtrip + 161 Unit-Tests. *(Voll-Detail: CHANGELOG + ADR-023.)*
+**Forschungstiefe-Ausbauplan P1–P4 damit vollständig abgeschlossen.**
 
 **Ergänzungen (in die Phasen eingebettet):**
 - **GPS-/Beweisführungs-Notiz** pro Person (Genealogical Proof Standard) — bündelt Quellen + Hypothesen zum Argument; natürliches Ziel von Phase 4.
@@ -155,7 +162,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | ~~T0-TEST-2~~ | ~~**GRAMPS-Roundtrip automatisieren**~~ | ✅ **Abgeschlossen sw v750** — `test-roundtrip.js` um GRAMPS erweitert; **abhängigkeitsfreier** Mini-DOMParser (kein npm, kein `linkedom`) + `_gunzip` (Node `zlib` / JXA `gzip -dc`). Test-Seams `_grampsBuildXMLText()` / `_grampsParseXMLText()` (umgehen gzip/Blob/CompressionStream). Assertion: `xml1===xml2` + Kern-Record-Counts (person/family/source/repository) gegen Original. **Fand sofort einen echten Bug:** Repo-`<type>` wurde in `_extra` durchgereicht *und* hartcodiert erneut geschrieben → wuchs +1 pro Roundtrip; behoben (`_REPO_MODELLED` + `r.rtype`-Erhalt). | ~~M~~ |
-| ~~T0-UNIT~~ | ~~**Unit-Tests für Kern-Logik**~~ | ✅ **Abgeschlossen** — `test-unit.js`, 87 dep-freie Tests (JXA/Node), CI-Exit-Code: (a) Parser-Edge-Cases (CONC/CONT, lv>4, leere Tags, Passthrough), (b) alle 25 Validator-Regeln je Positiv-/Negativfall, (c) BFS-Anonymisierung `_buildLivingSet` (6 DSGVO-Fälle inkl. „toter Vorfahr bleibt tot"), (d) Datums-Helfer (`normMonth`, `buildGedDate`, `readDatePartFromFields`, `buildGedDateFromFields` via konfigurierbarem `document`-Stub). | ~~M~~ |
+| ~~T0-UNIT~~ | ~~**Unit-Tests für Kern-Logik**~~ | ✅ **Abgeschlossen** — `test-unit.js`, **161** dep-freie Tests (JXA/Node), CI-Exit-Code: (a) Parser-Edge-Cases (CONC/CONT, lv>4, leere Tags, Passthrough), (b) alle **28** Validator-Regeln je Positiv-/Negativfall, (c) BFS-Anonymisierung `_buildLivingSet` (6 DSGVO-Fälle), (d) Datums-Helfer, (e) Evidenzmodell + Hypothesen (`_EVAL`/`_HYPO`). | ~~M~~ |
 | **T0-MODULE** | **ES-Modul-Migration — Plan + saubere Cluster** | ✅ **Phase 1+2 abgeschlossen (sw v751/v752)** — **ADR-020** (Strategie + gemessene Erkenntnisse + Phasenplan). **Phase 1:** GRAMPS-Cluster → `export` + `gramps.bridge.js`. **Phase 2:** Validator-Cluster → `export` + `validator.bridge.js`. Beide Browser-verifiziert (Boot fehlerfrei, Globals gesetzt, End-to-End-Aufrufe, Module lesen `gedcom.js`-Globals zur Laufzeit). **Gemessener Befund:** GRAMPS-*Konsumenten* sind nicht billig migrierbar (z. B. `idbGet` von 13 Dateien genutzt) → Brücke schrumpft erst nach Kern-Migration; daher zuerst alle sauberen Leaf-Cluster. **Offen:** Phase 3 (Kern) + Phase 4 (UI/Bundling). | **L (Phase 1+2: M ✓)** |
 
 ---
@@ -164,6 +171,8 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| **CSP-DURCHSETZUNG** | **CSP lückenlos durchsetzen + verifizierbar** ⚠ *(neu 2026-05-31)* | Befund (live verifiziert): strikte CSP verwirft inline-`on*` UND inline-`style=` still. ① ✅ 2 tote `onclick` entfernt (v794, Eltern-Picker). ② ~48 inline-`style=` in index.html durch CSS-Klassen ersetzen (Chip offen). ③ CSP-Report-Only-Selbsttest in `test-unit.js` o. ä., der inline-`on*`/`style=` in index.html fängt → „CSP vollständig" wird belegbar statt behauptet. | **S** |
+| **T0-FUNC-SPLIT** | **Größte Funktionen zerlegen** *(neu 2026-05-31)* | Die 3–4 längsten Funktionen (`_attr` 486, `_parseINDILine` 388, `showDetail` 294, `writeINDIRecord` 269 Z.) in benannte Teilschritte gliedern. Unabhängig vom Modulsystem (anders als T0-DRY-`_esc`). Roundtrip- + Unit-Tests decken die Risiken. Größter konkreter Wartungs-Hebel. | M |
 | ~~T0-SW~~ | ~~**SW Install-Robustness**~~ | ✅ **Abgeschlossen sw v743** — `PRECACHE_CRITICAL` (atomar) + `PRECACHE_OPTIONAL` via `Promise.allSettled()` | ~~XS~~ |
 | ~~T0-XSS~~ | ~~**innerHTML-Audit**~~ | ✅ **Abgeschlossen sw v744** — alle 166 `innerHTML`-Assignments auditiert; kein echter XSS-Vektor; `esc()` konsequent. | ~~S~~ |
 | ~~T0-TOKEN~~ | ~~**Refresh-Token-Restrisiko dokumentieren**~~ | ✅ **Abgeschlossen** — ADR-021 in `ARCHITECTURE.md`. Restrisiko bewusst geführt: `sessionStorage` ist bewusste Wahl (kein Backend, Tab-scoped, keine Persistenz). `Files.ReadWrite.AppFolder`-Scope geprüft und abgelehnt (bricht Kernfunktionalität + erfordert Azure-Portal-Änderung). Mitigationen: CSP `script-src 'self'` + `esc()`-Audit (T0-XSS) + Refresh-Token-Rotation. | ~~S~~ |
@@ -178,7 +187,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | **CAM** | **Kamera-Integration** | `<input accept="image/*" capture="environment">` → Foto direkt als Medienreferenz zur Person oder Quelle anhängen; kein OneDrive erforderlich; funktioniert iOS + Android PWA nativ. Konkrete Lücke vs. MacFamilyTree iOS. | **S** |
-| QUICK-TPL | **Quellengebundene Eingabe-Templates** | ✅ **Phase A abgeschlossen (sw v759/v760)** — `ui-quicktpl.js`: Datenmodell + Template-Verwaltung (IDB + JSON-Export/Import) + Erfassungs-Engine `marriage` (Kontext-Kopf + geordneter Feld-Fluss + FAM+2 INDI+MARR voll verquellt inkl. URL-Deeplink in `media[]`). ✅ **Phase B abgeschlossen (sw v765)** — Personen-Matching (Dedup-aware): `persons[]`-Rollen je Basismuster, Live-Trefferbox je Person unter dem Vornamen (`_qtFindMatches` Nachname+Vorname normalisiert, Geschlecht-Tiebreaker, Geburtsjahr-Anzeige), „verknüpfen statt neu anlegen" → bestehende INDI wird FAM zugeordnet (fams gepusht, nicht überschrieben) statt Duplikat; Undo-fest (involvedPersonIds im Snapshot); einseitige Heirat (nur ein Partner) erlaubt. ✅ **Phase C abgeschlossen (sw v766)** — Neue Basismuster `baptism` + `burial` in `QT_BASE_PATTERNS` (Taufdatum/Sterbedatum+Beerdigungsdatum, je 1 Personen-Rolle für Matching). `_qtResolvePerson`/`_qtAfterSave`/`_qtAddCitToEvent` aus `_qtSaveMarriage` extrahiert (DRY). `_qtSaveBaptism`: INDI + `chr`-Ereignis (bei Link: ergänzen falls leer, Zitat sid-dedup). `_qtSaveBurial`: INDI + `death`+`buri` (Beerdigungsdatum optional). `qt-f-base`-Select um beide Optionen erweitert. ✅ **Phase D abgeschlossen (sw v767)** — Inline-Plausi (`_qtShowInlinePlausi`: läuft `runValidation` nach jedem Speichern, filtert auf betroffene IDs, zeigt max. 5 Hinweise im Modal); „aus aktueller Quelle erstellen" (`qtNewTemplateFromSource`: Button ⚡ in Quellen-Detail, öffnet Template-Editor mit vorgebelegter Quelle + Name). **Census zurückgestellt** (zu komplex für geordneten Feld-Fluss ohne variable Personenanzahl). ✅ **Phase E abgeschlossen (sw v769)** — Frei konfigurierbare Templates (`base:'custom'`): Schema im Template selbst (`tpl.schema.fields[]`), Engine schema-getrieben via `_qtSchema`/`_qtBuildCustomSchema`. Rollen-Katalog `QT_ROLE_CATALOG` (main/Vater/Mutter/Ehepartner mit fester FAMC/FAMS-Semantik); Feldtypen Name/Geschlecht/Datum+Ort(birth/chr/death/buri/marr)/Beruf(OCCU)/Wohnort(RESI)/Seite. Builder-UI im Editor (`_qtRenderFieldBuilder`: Rolle/Typ/Ziel/Label + ↑↓✕), `_qtSaveCustom` baut INDI + Eltern-FAMC + Ehe-FAMS inkl. Dedup-Matching, Zitat je Ereignis, Undo-fest. Vater-Nachname erbt main-Nachname (`_qtLinkSurnameDefault`, überschreibbar). Schema fließt durch JSON-Export/Import + IDB. **Konzept** (2026-05-30): generischer schema-getriebener Erfassungs-Motor. Template = impliziter Kontext (Quelle/Ort/QUAY/URL-Muster) + geordneter Feld-Fluss (Datum→Nachname→Vorname, abhängigkeits-gefiltertes Personen-Autocomplete) + `produces`-Mapping (z.B. FAM+2 INDI+MARR voll verquellt). Verallgemeinert `modalQuickAdd` + `_SOUR_TEMPLATES`; nutzt `initAutocomplete`, `citationObj`, `runValidation` (Inline-Plausi). Basismuster (Code) ↔ konkrete Templates (Nutzerdaten, „aus aktueller Quelle erstellen"). **Persistenz:** portable JSON-Config-Datei als Quelle der Wahrheit + IDB-Cache (nicht in GED). Phasen A–D. Deeplinks → `citations[].media[]` statt PAGE (s. PAGE-URL-Migration `migratePageUrls`, sw v753). | L |
+| ~~QUICK-TPL~~ | ~~**Quellengebundene Eingabe-Templates**~~ | ✅ **Phasen A–E abgeschlossen (sw v759–v769)** — `ui-quicktpl.js`: schema-getriebener, quellengebundener Erfassungs-Motor. Basismuster `marriage/baptism/burial` + frei konfigurierbare `base:'custom'`-Templates (`tpl.schema.fields[]`, Rollen-Katalog `QT_ROLE_CATALOG` mit FAMC/FAMS-Semantik). Dedup-aware Personen-Matching („verknüpfen statt neu anlegen"), Inline-Plausi nach Speichern, „aus aktueller Quelle erstellen" (⚡), Undo-fest. Persistenz: portable JSON-Config + IDB-Cache (nicht in GED); Deeplinks → `citations[].media[]`. **Census zurückgestellt.** *(Voll-Detail: CHANGELOG.)* | ~~L~~ |
 
 ---
 
@@ -195,6 +204,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
+| **SCALE-TEST** | **Skalierungstest >10k Personen** *(neu 2026-05-31)* | Größte spürbare Lücke ggü. MacFamilyTree/GRAMPS (getestet nur ~2.800). Synthetisches 20k-GEDCOM erzeugen, Cold-Start/Listen-Scroll/Baum-Render/Roundtrip messen, Engpässe identifizieren (virtuelles Scrollen prüfen, ggf. weitere O(n)-Stellen). Liefert belastbare Skalierungs-Aussage statt Vermutung. | M |
 | **FAN-COLOR** | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; keine Layout-Änderung nötig. | **XS** |
 | ~~CSS-PURGE~~ | ~~**CSS aufräumen**~~ | ✅ **Abgeschlossen sw v745** — 796 CSS-Klassen gegen index.html + *.js geprüft; 21 tote Klassen entfernt (17 ungenuzte Utility-Klassen + `src-tag-x`, `tpl-btn`, `btn-gold-text`, `c-red`); Leaflet-Overrides + dynamisch gebaute Klassen (`tl-pc${idx}` etc.) korrekt behalten. 3416 → 3385 Zeilen (−31). | ~~S~~ |
 | ~~LAZY-LOAD~~ | ~~**Lazy-Loading optionaler Module**~~ | ✅ **Abgeschlossen sw v747** — `lazy-loader.js` (`_lazyScript`/`_lazyScripts`). 5 Dateien (~119 KB) aus Cold-Start entfernt: `ui-book.js` + `ui-print.js` (Buch/Druck), `ui-dedup.js` (Dedup), `ui-import-compare.js` + `compare-engine.js` (Datei-Vergleich). Entry-Points in `ui-event-delegation.js` gewrappt. PRECACHE_OPTIONAL im SW. OneDrive-Gruppe skip (tief integriert). | ~~M~~ |
@@ -230,7 +240,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v785** *(veraltet — v786 noch nicht dokumentiert)*
+**Handbuch-Stand: sw v785** *(veraltet — v786–v794 noch nicht dokumentiert: dedup-Doppelnamen, MULTI_FAMC/OPEN_HYPO-Opt-in, Eltern-Suchpicker im Familiendialog)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
@@ -254,39 +264,44 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ---
 
-## Vergleich mit etablierten Tools *(faire Einordnung — Stärken der Konkurrenz benannt)*
+## Vergleich mit etablierten Tools *(faire Einordnung — Stärken der Konkurrenz benannt; überarbeitet 2026-05-31)*
 
-> Frühere Version dieser Tabelle war parteiisch (sich selbst durchgehend ✅, Konkurrenz ⚠). Hier ehrlicher: wo etabliert Tools führen, steht es da.
+> Frühere Version dieser Tabelle war parteiisch (sich selbst durchgehend ✅, Konkurrenz ⚠). Hier ehrlicher: wo etablierte Tools führen, steht es da. **MacFamilyTree (MFT)** ist der *direkteste* Vergleich — Synium Software, nativ macOS+iOS, deutscher Markt, visuell-first, gleiche Zielgruppe (Hobby, mobil+Desktop). Genau deshalb sind die Lücken zu MFT die aussagekräftigsten.
 
 | Dimension | Stammbaum PWA | MacFamilyTree | GRAMPS | Ancestry |
 |---|---|---|---|---|
-| Plattform-Reichweite | **✅ PWA = überall** | Apple-only | Desktop | Web/Abo |
+| Plattform-Reichweite | **✅ PWA = überall (auch Android/Windows)** | ⚠ Apple-only | Desktop (3 OS) | Web/Abo |
 | Offline | ✅ vollständig | ✅ | ✅ | ❌ Cloud-Zwang |
-| GEDCOM-Treue | **✅ exzellent (verifiziert net_delta=0)** | ✅ gut | ✅ gut | ⚠ verlustbehaftet |
-| GEDCOM 7.0 | ⚠ opt-in Export | ⚠ | ⚠ | ❌ |
+| GEDCOM-Treue (Roundtrip) | **✅ exzellent — verifiziert `net_delta=0`** | ⚠ verlustbehaftet (re-ordert, droppt Custom-Tags) | ✅ gut | ⚠ verlustbehaftet |
+| GEDCOM 7.0 | ⚠ opt-in Export | ⚠ teilw. | ⚠ | ❌ |
 | GRAMPS XML | ✅ read+write | ❌ | ✅ nativ | ❌ |
-| Quellenverwaltung | ✅ gut (Mehrfachzitate, Templates) | ✅ sehr gut | **✅ exzellent (quellenzentriert)** | ⚠ mittel |
-| Reports / Bücher | ⚠ HTML/Print | **✅ exzellent (PDF-Bücher)** | ✅ sehr gut | ⚠ mittel |
-| Visualisierung | ✅ sehr gut + Story einzigartig | **✅ exzellent (3D/VR)** | ⚠ mittel | ✅ gut |
-| Forschungsworkflow | ✅ gut (RLOG, Tasks, Dedup) | ⚠ mittel | **✅ exzellent** | ✅ Online-Hints stark |
-| Karte + Zeitleiste | ✅ (hist. Ereignisse) | ✅ | ⚠ | ⚠ |
-| Validierungsregeln | ✅ 25 Regeln | ⚠ | ✅ | ⚠ |
-| Duplikat-Erkennung + Merge | ✅ | ✅ | ✅ | ⚠ |
+| Quellenverwaltung | ✅ gut (Mehrfachzitate, Evidenzmodell, Templates) | ✅ gut | **✅ exzellent (quellenzentriert)** | ⚠ mittel |
+| Forschungsworkflow | **✅ stark (RLOG · Kanban · Projekte · Hypothesen/GPS · Dashboard)** | ⚠ mittel (visualisierungs-first) | **✅ exzellent** | ✅ Online-Hints stark |
+| Reports / Bücher / Poster | ⚠ HTML/Print (begrenzt) | **✅ exzellent (PDF-Bücher, Großposter)** | ✅ sehr gut | ⚠ mittel |
+| Visualisierung | ✅ sehr gut + Story-Modus einzigartig | **✅ exzellent (3D „Virtual Tree", Charts)** | ⚠ mittel | ✅ gut |
+| Orts-Geocoding / Gazetteer | ❌ (Leaflet-Karte, keine Orts-DB) | **✅ (Geocoding + Heatmaps)** | ✅ | ✅ |
+| Geräte-Sync | ⚠ manuell (OneDrive-Datei) | **✅ nahtlos (CloudKit FamilySync)** | ❌ | ✅ Cloud |
+| Karte + Zeitleiste | ✅ (hist. Ereignisse, Mehrpersonen-TL) | ✅ | ⚠ | ⚠ |
+| Validierungsregeln | ✅ 28 Regeln, konfigurierbar | ⚠ | ✅ | ⚠ |
+| Duplikat-Erkennung + Merge | ✅ (Scoring, Gegenüberstellung) | ✅ | ✅ | ⚠ |
+| Verwandtschaftsrechner | ✅ (BFS, Cousin-Grade + „entfernt") | ✅ | ✅ | ✅ |
 | DNA-Integration | ❌ | ❌ | ⚠ Plugin | **✅ Kernfeature** |
-| Online-Matching / Records | ❌ | ⚠ | ❌ | **✅ Killer-Feature** |
+| Online-Matching / Records | ❌ | ⚠ (FamilySearch-Anbindung) | ❌ | **✅ Killer-Feature** |
 | Multi-User / Kollaboration | ❌ | ❌ | ❌ | ✅ |
-| Datenschutz (lokal-first) | **✅ kein Tracking** | ✅ | ✅ | ❌ |
-| Lebende anonymisieren | ✅ (v715, BFS) | ✅ | ✅ | ⚠ |
+| Skalierung (getestet) | ⚠ ~2.800 Pers. (>10k ungetestet) | ✅ groß erprobt | ✅ 100k+ | Millionen |
+| Datenschutz (lokal-first) | **✅ kein Tracking, kein Cloud-Zwang** | ✅ (aber CloudKit-Default) | ✅ | ❌ |
+| Lebende anonymisieren | ✅ (v715, BFS beim Export) | ⚠ | ✅ | ⚠ |
+| Reife / Politur | ⚠ Solo-Projekt | **✅ 20-J.-Produkt** | ✅ etabliert | ✅ |
 | Kosten | **gratis** | €€ einmalig | gratis | €€€ Abo |
 
-**Einzigartige Stärken (real konkurrenzlos):** kostenlose plattformübergreifende Offline-PWA + Story-Modus + GRAMPS-Brücke + DSGVO-Anonymisierung + verifizierte GEDCOM-Treue + kein Datamining. Für die Zielgruppe (mobil + Desktop, datenschutzbewusst) besetzt das eine Nische, die kein kommerzielles Tool exakt abdeckt.
+**Einzigartige Stärken (real konkurrenzlos):** kostenlose plattformübergreifende Offline-PWA *ohne Installation* + Story-Modus + GRAMPS-Brücke + DSGVO-Anonymisierung + **verifizierte GEDCOM-Treue** + expliziter GPS-Forschungsprozess + kein Datamining. Für die Zielgruppe (mobil + Desktop, datenschutzbewusst, nicht Apple-gebunden) besetzt das eine Nische, die kein kommerzielles Tool exakt abdeckt.
 
-**Ehrliche Lücken vs. Konkurrenz:**
-- vs. **MacFamilyTree:** reichhaltige PDF-Buch-Reports, 3D/VR-Visualisierung.
-- vs. **GRAMPS:** Tiefe im professionellen Quellen-/Forschungsworkflow.
-- vs. **Ancestry:** DNA + Online-Matching + Milliarden Records — *kategoriefremd und bewusst out-of-scope* (eine lokale App kann das prinzipbedingt nicht liefern und will es laut Zielbild nicht).
+**Ehrliche Lücken vs. Konkurrenz (priorisiert nach Relevanz für die Zielgruppe):**
+- vs. **MacFamilyTree** *(der direkte Maßstab)*: ① Ausgabe-Reichtum (PDF-Bücher, Großposter, 3D-Tree) · ② Orts-Geocoding/Heatmaps · ③ nahtloser Multi-Device-Sync (CloudKit) · ④ Reife/Politur. **Dafür schlägt Stammbaum MFT bei:** GEDCOM-Treue, Forschungsprozess-Rigorosität (GPS/Hypothesen/Kanban), Plattform-Reichweite, Privacy, Preis.
+- vs. **GRAMPS:** Tiefe im professionellen Quellen-/Forschungsworkflow; Skalierung; Report-Vielfalt.
+- vs. **Ancestry:** DNA + Online-Matching + Milliarden Records — *kategoriefremd und bewusst out-of-scope*.
 
-*Keine größeren offenen **Standards**-Lücken mehr (GEDCOM/GRAMPS abgedeckt). Die Lücken liegen bei Ausgabe-Reichtum (Bücher) und bei netzwerk-/datenbankgebundenen Features — Letztere sind Designziel, kein Defizit.*
+*Keine offenen **Standards**-Lücken mehr (GEDCOM/GRAMPS abgedeckt). Die spürbarsten Lücken liegen — gemessen am direkten Konkurrenten MFT — bei **Ausgabe-Reichtum**, **Orts-Geocoding** und **Skalierung >10k**; die netzwerk-/datenbankgebundenen Features (DNA/Records) sind Designziel, kein Defizit.*
 
 ---
 
