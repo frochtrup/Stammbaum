@@ -935,6 +935,9 @@ function showDetail(id, pushHistory = true) {
   // Forschungsprotokoll
   if (typeof _rlogSectionHtml === 'function') html += _rlogSectionHtml(id);
 
+  // Hypothesen (RES-HYPO, ADR-023)
+  if (typeof _hypoSectionHtml === 'function') html += _hypoSectionHtml(id);
+
   document.getElementById('detailContent').innerHTML = html;
   _injectJumpBar();
   showView('v-detail');

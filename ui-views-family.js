@@ -550,6 +550,7 @@ function showFamilyDetail(id, pushHistory = true) {
 
   html += _famTasksSectionHtml(id);
   if (typeof _famRlogSectionHtml === 'function') html += _famRlogSectionHtml(id);
+  if (typeof _famHypoSectionHtml === 'function') html += _famHypoSectionHtml(id);
 
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');

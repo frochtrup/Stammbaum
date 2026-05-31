@@ -1887,6 +1887,39 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .rtl-meta  { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
 .rtl-query { font-size: 0.85rem; color: var(--text-primary); margin-top: 3px; }
 .rtl-note  { font-size: 0.8rem; color: var(--text-dim); margin-top: 3px; font-style: italic; }
+
+/* ── Hypothesen (RES-HYPO 4b, ADR-023) ───────────────────────────────────── */
+.hypo-card {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 8px 10px; margin: 0 0 8px;
+}
+.hypo-card-head { display: flex; align-items: center; gap: 6px; }
+.hypo-status {
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  padding: 1px 7px; border-radius: 10px; color: #1a1400;
+}
+.hs-open      { background: var(--gold); }
+.hs-confirmed { background: #4caf50; }
+.hs-rejected  { background: #c0392b; color: #fff; }
+.hypo-weight {
+  font-size: 0.68rem; font-weight: 600; padding: 1px 6px; border-radius: 10px;
+  border: 1px solid var(--border); color: var(--text-muted);
+}
+.hw-high   { color: var(--gold-lt); border-color: var(--gold-dim); }
+.hypo-actions { margin-left: auto; display: flex; gap: 2px; }
+.hypo-text { font-size: 0.9rem; color: var(--text-primary); margin-top: 5px; white-space: pre-wrap; }
+.hypo-ratio, .hypo-concl { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; white-space: pre-wrap; }
+.hypo-lbl { color: var(--text-muted); font-weight: 600; }
+.hypo-evidence { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.hypo-ev-chip {
+  font-size: 0.72rem; background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 1px 8px; color: var(--text-dim);
+}
+.hypo-ev-page { color: var(--text-muted); }
+.hypo-ev-head { display: flex; align-items: center; justify-content: space-between; }
+.hypo-ev-row { display: flex; gap: 6px; align-items: center; }
+.hypo-ev-row .hypo-ev-src { flex: 2; min-width: 0; }
+.hypo-ev-row .hypo-ev-pg  { flex: 1; min-width: 0; }
 /* Prüfregeln-Config-Modal */
 /* Scroll-Fix für modalValConfig: sheet-body scrollt, sheet-Container bleibt fixiert */
 #modalValConfig .sheet { display: flex; flex-direction: column; overflow: hidden; }

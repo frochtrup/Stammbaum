@@ -646,6 +646,37 @@
   </div>
 </div>
 
+<!-- RES-HYPO: Hypothese hinzufügen/bearbeiten -->
+<div class="modal-overlay" id="modalAddHypo" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddHypo">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalAddHypo">Hypothese hinzufügen</div>
+    <div class="sheet-body">
+      <div class="d-flex flex-col gap-12">
+        <textarea id="hypoText" rows="2" placeholder="Behauptung, z. B. „Johann *1650 ist Sohn des Peter Decker"…"
+          class="form-input w-full"></textarea>
+        <div class="btn-row gap-8">
+          <select id="hypoStatus" class="form-select w-full" aria-label="Status"></select>
+          <select id="hypoWeight" class="form-select w-full" aria-label="Konfidenz"></select>
+        </div>
+        <textarea id="hypoRationale" rows="3" placeholder="Begründung / Beweisführung (optional)…"
+          class="form-input w-full"></textarea>
+        <textarea id="hypoConclusion" rows="2" placeholder="Schlussfolgerung / Auflösung (optional)…"
+          class="form-input w-full"></textarea>
+        <div class="hypo-ev-head">
+          <span class="hypo-lbl">Evidenz (Quellen)</span>
+          <button type="button" class="section-add" data-action="addHypoEvidence">+ Quelle</button>
+        </div>
+        <div id="hypoEvidenceList" class="d-flex flex-col gap-8"></div>
+        <div class="btn-row gap-8">
+          <button class="btn btn-cancel" data-action="closeModal" data-modal="modalAddHypo">Abbrechen</button>
+          <button class="btn btn-save" data-action="saveAddHypo">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Forschungsprotokoll: Log-Eintrag hinzufügen/bearbeiten -->
 <div class="modal-overlay" id="modalAddRlog" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAddRlog">
   <div class="sheet">
@@ -2214,6 +2245,7 @@
 <script src="ui-views-tree.js"></script>
 <script src="ui-views-tasks.js"></script>
 <script src="ui-views-rlog.js"></script>
+<script src="ui-views-hypo.js"></script>
 <script src="ui-views-val.js"></script>
 <script src="ui-views-dashboard.js"></script>
 <script src="ui-views-projects.js"></script>
