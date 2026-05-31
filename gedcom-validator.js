@@ -6,7 +6,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const VAL_CONFIG_DEFAULTS = {
-  disabled: new Set(),
+  // MISSING_EVAL standardmäßig AUS: Evidenzbewertung (RES-EVAL/ADR-022) ist eine
+  // fortgeschrittene Opt-in-Disziplin; sonst flutet ein Dauer-Hinweis jede noch
+  // nicht bewertete Quelle. Der Dashboard-Lückenradar zeigt die Abdeckung trotzdem.
+  disabled: new Set(['MISSING_EVAL']),
   thresholds: {
     maxAge:        110,
     staStAera:     1876,  // Geburt ab diesem Jahr → Standesamtsurkunde suchen
@@ -50,6 +53,7 @@ export const VAL_RULES = [
   // ── P4: Datenqualität ──
   { key: 'PLACE_INCONSISTENCY',      label: 'Ortsname-Varianten erkannt',            severity: 'info',  threshold: null },
   { key: 'MISSING_QUAY',             label: 'Quellen ohne QUAY-Bewertung',           severity: 'info',  threshold: null },
+  { key: 'MISSING_EVAL',             label: 'Quellen ohne Evidenzbewertung',         severity: 'info',  threshold: null },
   { key: 'MANY_CHILDREN',            label: 'Ungewöhnlich viele Kinder',             severity: 'warn',  threshold: 'maxChildren' },
 ];
 
@@ -66,6 +70,20 @@ function _valYear(dateStr) {
 function _hasAnyQuay(p) {
   const ok = cits => cits?.some(c => c.quay !== undefined && c.quay !== '');
   if (ok(p.nameSources)) return true;
+  for (const key of ['birth', 'chr', 'death', 'buri']) {
+    if (ok(p[key]?.citations)) return true;
+  }
+  for (const ev of (p.events || [])) {
+    if (ok(ev.citations)) return true;
+  }
+  return false;
+}
+
+// Gibt true zurück wenn mind. eine Quellenangabe eine Evidenzbewertung trägt (RES-EVAL/ADR-022)
+function _hasAnyEval(p) {
+  const hasEval = e => !!e && (e.srcType || e.infoQual || e.evidence || e.informant);
+  const ok = cits => cits?.some(c => hasEval(c.eval));
+  if (ok(p.nameCitations)) return true;
   for (const key of ['birth', 'chr', 'death', 'buri']) {
     if (ok(p[key]?.citations)) return true;
   }
@@ -209,6 +227,11 @@ export function runValidation(db, config) {
     if (_hasSources(p) && !_hasAnyQuay(p))
       push(pid, 'MISSING_QUAY', 'info',
         'Quellenangaben ohne Qualitätsbewertung (kein QUAY)', 'online');
+
+    // P14 — Quellen ohne Evidenzbewertung (RES-EVAL/ADR-022)
+    if (_hasSources(p) && !_hasAnyEval(p))
+      push(pid, 'MISSING_EVAL', 'info',
+        'Quellenangaben ohne Evidenzbewertung (Quellentyp/Information/Evidenz)', 'online');
   }
 
   // ─── Familien-Regeln ────────────────────────────────────────────────────────

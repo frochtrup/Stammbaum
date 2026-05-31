@@ -13,13 +13,20 @@ async function _loadValConfig() {
   if (_valConfig) return _valConfig;
   const stored = await idbGet('val_config').catch(() => null);
   if (stored) {
+    const disabled = new Set(stored.disabled || []);
+    // Migration: Regeln, die die gespeicherte Config noch nicht kannte (z.B. später
+    // ergänztes MISSING_EVAL), erben ihren Default — sonst wären neue Opt-in-Regeln
+    // bei Bestandsnutzern ungewollt aktiv. `known` = Regelstand zum Speicherzeitpunkt.
+    const known = new Set(stored.known || []);
+    for (const rule of VAL_CONFIG_DEFAULTS.disabled)
+      if (!known.has(rule)) disabled.add(rule);
     _valConfig = {
-      disabled:   new Set(stored.disabled || []),
+      disabled,
       thresholds: { ...VAL_CONFIG_DEFAULTS.thresholds, ...(stored.thresholds || {}) },
     };
   } else {
     _valConfig = {
-      disabled:   new Set(),
+      disabled:   new Set(VAL_CONFIG_DEFAULTS.disabled),   // Default-Deaktivierte übernehmen (z.B. MISSING_EVAL)
       thresholds: { ...VAL_CONFIG_DEFAULTS.thresholds },
     };
   }
@@ -31,6 +38,7 @@ async function _saveValConfig(cfg) {
   await idbPut('val_config', {
     disabled:   [...cfg.disabled],
     thresholds: { ...cfg.thresholds },
+    known:      VAL_RULES.map(r => r.key),   // Regelstand merken → korrekte Migration neuer Regeln
   }).catch(() => null);
 }
 
@@ -154,7 +162,7 @@ function valcfgNone() {
 
 async function resetValConfig() {
   await _saveValConfig({
-    disabled:   new Set(),
+    disabled:   new Set(VAL_CONFIG_DEFAULTS.disabled),
     thresholds: { ...VAL_CONFIG_DEFAULTS.thresholds },
   });
   _valConfig = null; // force reload

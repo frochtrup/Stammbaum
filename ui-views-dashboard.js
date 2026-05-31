@@ -32,6 +32,15 @@ function _dashHasQuay(p) {
   return false;
 }
 
+function _dashHasEval(p) {                          // RES-EVAL 2c / ADR-022
+  const ok = cits => cits?.some(c => c.eval && !evalIsEmpty(c.eval));
+  for (const key of ['birth', 'chr', 'death', 'buri'])
+    if (ok(p[key]?.citations)) return true;
+  for (const ev of (p.events || [])) if (ok(ev.citations)) return true;
+  if (ok(p.nameCitations)) return true;
+  return false;
+}
+
 function _dashYear(dateStr) {
   if (!dateStr) return null;
   const m = String(dateStr).match(/\b(\d{3,4})\b/);
@@ -118,14 +127,14 @@ function _paintDashboard(cfg) {
   const cleanPct = Math.round((green / total) * 100);
 
   // ── Lückenradar (direkt aus db) ──
-  let cBirth = 0, cBPlace = 0, cDeath = 0, cSex = 0, cSrc = 0, cQuay = 0;
+  let cBirth = 0, cBPlace = 0, cDeath = 0, cSex = 0, cSrc = 0, cQuay = 0, cEval = 0;
   for (const pid of ids) {
     const p = persons[pid];
     if (p.birth?.date || p.chr?.date)   cBirth++;
     if (p.birth?.place || p.chr?.place) cBPlace++;
     if (p.death?.date || p.buri?.date)  cDeath++;
     if (p.sex === 'M' || p.sex === 'F') cSex++;
-    if (_dashHasSources(p)) { cSrc++; if (_dashHasQuay(p)) cQuay++; }
+    if (_dashHasSources(p)) { cSrc++; if (_dashHasQuay(p)) cQuay++; if (_dashHasEval(p)) cEval++; }
   }
   const radar = [
     { label: 'Geburts-/Taufdatum', n: cBirth },
@@ -134,6 +143,7 @@ function _paintDashboard(cfg) {
     { label: 'Geschlecht bestimmt', n: cSex },
     { label: 'mind. 1 Quelle',      n: cSrc },
     { label: 'Quellen mit Bewertung (QUAY)', n: cQuay, base: cSrc },
+    { label: 'Quellen mit Evidenzbewertung', n: cEval, base: cSrc },
   ];
 
   // ── HTML zusammensetzen ──

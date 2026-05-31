@@ -432,7 +432,13 @@ Die Daten *reisen mit der Datei* (sie gehören zum Zitat) → `_`-Tag mit Writer
 
 **GRAMPS:** Citation mappt bereits `QUAY → confidence`. Das 3-Achsen-Modell als GRAMPS-Citation-`<attribute>` zu schreiben/zurückzulesen ist **Phase 2d** (separat), damit `xml1===xml2` grün bleibt — nicht Teil von 2a.
 
-**Entscheidung:** 3-Achsen-Modell als modellierter `_EVAL`-Subtree, QUAY bleibt unabhängig + ableitbar. Verifiziert: `net_delta=0` + `out1===out2` auf `_EVAL`-Fixture; Strict strippt sauber; +18 Unit-Tests (`_evalToQuay`, Parser-Extraktion ohne Doppel-Schreibung). **Phase 2a (GEDCOM-Kern) abgeschlossen; offen: 2b UI, 2c Validator/Dashboard, 2d GRAMPS, 2e Repository-Rest.**
+**Entscheidung:** 3-Achsen-Modell als modellierter `_EVAL`-Subtree, QUAY bleibt unabhängig + ableitbar. Verifiziert: `net_delta=0` + `out1===out2` auf `_EVAL`-Fixture; Strict strippt sauber; +18 Unit-Tests (`_evalToQuay`, Parser-Extraktion ohne Doppel-Schreibung).
+
+**UI (2b, sw v774):** `⚖`-Aufklapper pro Zitat-Tag im Quellen-Widget (`renderSrcTags`): 3 Achsen-Selects schema-getrieben aus `EVAL_AXES` + Informant-Feld + „→Q"-Button (`_evalToQuay`-Vorschlag in QUAY übernehmen). Aufklapp-Zustand bewusst getrennt vom Zitat (`_srcEvalOpen[prefix]`-Set), `eval` in `initSrcWidget` deep-kopiert (kein Referenz-Leak vor Save).
+
+**Validator + Dashboard (2c, sw v775):** Regel `MISSING_EVAL` (info) feuert, wenn eine Person Quellen, aber keine Evidenzbewertung hat — analog `MISSING_QUAY`. **Bewusst `default-disabled`** (`VAL_CONFIG_DEFAULTS.disabled`): Evidenzbewertung ist eine Opt-in-Disziplin; sonst flutet ein Dauer-Hinweis jede noch nicht bewertete Quelle und drückt den „befundfrei"-Score auf 0 % für jede Bestandsdatei. Der Dashboard-Lückenradar-Balken „Quellen mit Evidenzbewertung" zeigt die Abdeckung **unabhängig vom Validator** (direkt aus `db` via `_dashHasEval`) — informiert also ohne zu strafen. **Config-Migration:** `_saveValConfig` merkt sich `known` (Regelstand zum Speicherzeitpunkt); `_loadValConfig` lässt default-deaktivierte Regeln, die eine gespeicherte Config noch nicht kannte, ihren Default erben — so erhalten Bestandsnutzer neue Opt-in-Regeln korrekt deaktiviert, ohne dass explizite Aktivierungen überschrieben werden. Verifiziert: frisch/alt → off, explizit aktiviert → übersteht Reload.
+
+**Offen: 2d GRAMPS, 2e Repository-Rest.**
 
 ---
 

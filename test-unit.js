@@ -281,6 +281,21 @@ lacksRule(val({ '@1@': withSource(P()) }),   'NO_SOURCES_AT_ALL', 'NO_SOURCES_AT
   lacksRule(val({ '@1@': q }), 'MISSING_QUAY', 'MISSING_QUAY schweigt (QUAY gesetzt)');
 })();
 
+// MISSING_EVAL (Quelle vorhanden, aber keine Evidenzbewertung) — RES-EVAL 2c
+// Regel ist default-AUS (opt-in) → Tests mit explizit aktivierender Config (leeres disabled-Set)
+(function() {
+  var ON = { disabled: new Set() };
+  var evalRules = function(inds) { return rulesOf(API.runValidation(DB(inds), ON)); };
+  var p = P(); p.birth = { date: '1850', citations: [{ sid: '@S1@', page: 'p', quay: '3' }] }; // ohne eval
+  ok(evalRules({ '@1@': p }).indexOf('MISSING_EVAL') >= 0, 'MISSING_EVAL feuert (Quelle ohne Evidenzbewertung)');
+  var q = P(); q.birth = { date: '1850', citations: [{ sid: '@S1@', page: 'p', eval: { srcType: 'original' } }] };
+  ok(evalRules({ '@1@': q }).indexOf('MISSING_EVAL') < 0, 'MISSING_EVAL schweigt (eval gesetzt)');
+  var n = P();  // ohne Quelle → MISSING_EVAL schweigt (NO_SOURCES greift)
+  ok(evalRules({ '@1@': n }).indexOf('MISSING_EVAL') < 0, 'MISSING_EVAL schweigt ohne Quelle');
+  // default-AUS: ohne explizite Config kein MISSING_EVAL
+  lacksRule(val({ '@1@': p }), 'MISSING_EVAL', 'MISSING_EVAL default-deaktiviert (kein Befund ohne Opt-in)');
+})();
+
 // PLACE_INCONSISTENCY (zwei Schreibweisen desselben Ortes)
 (function() {
   var a = P({ birth: { date: '1850', place: 'München' } });
