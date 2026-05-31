@@ -197,8 +197,18 @@ function applyGovText() {
   const parsed = _parseGovText(raw);
   if (!parsed?.govId) { showToast('⚠ GOV-ID nicht erkannt', 'warn'); return; }
 
-  const po = _currentPoFromModal();
-  if (!po) { showToast('⚠ Erst Grunddaten speichern', 'warn'); return; }
+  let po = _currentPoFromModal();
+  if (!po) {
+    // Kein placeObject vorhanden → direkt anlegen (wie savePlace(), aber ohne Formular zu schließen)
+    const nameVal = document.getElementById('pl-name')?.value.trim() || document.getElementById('pl-old')?.value.trim();
+    if (!nameVal) { showToast('⚠ Erst Ortsname eingeben und speichern', 'warn'); return; }
+    const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+    const newId = (typeof _epId === 'function') ? _epId(nameVal) : ('_epg_' + Date.now().toString(36));
+    pos[newId] = { id: newId, title: nameVal, type: 'Unknown', lat: null, long: null, pnames: [], enclosedBy: [], parentId: null };
+    if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = newId;
+    UIState._placeRegistry = null;
+    po = pos[newId];
+  }
 
   let changes = 0;
 
