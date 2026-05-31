@@ -357,7 +357,7 @@ document.getElementById('fileInput2').addEventListener('change', e => {
 });
 
 // Post-parse: db-Objekt einbauen + UI auffrischen (Worker- und Sync-Pfad)
-function _finishLoad(db, text, filename) {
+async function _finishLoad(db, text, filename) {
   try {
     setDb(db);
     if (AppState.db.parseErrors && AppState.db.parseErrors.length > 0) {
@@ -379,7 +379,7 @@ function _finishLoad(db, text, filename) {
     }
     applyAllExtraPlaceCoords();
     if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
-    if (typeof loadPlaceObjectsFromIDB === 'function') loadPlaceObjectsFromIDB(); // IDB-Persistenz (async, kein await nötig)
+    if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
     AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
     { let maxUsed = 0;
       const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
@@ -491,7 +491,7 @@ async function _loadGRAMPS(file) {
     }
     applyAllExtraPlaceCoords();
     if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
-    if (typeof loadPlaceObjectsFromIDB === 'function') loadPlaceObjectsFromIDB(); // IDB-Persistenz (async, kein await nötig)
+    if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
     // Nur gespeicherte Koordinaten für Adressen dieser Datei übernehmen (kein Leck aus anderen Dateien).
     AppState.db.hofObjects = _mergeHofObjects(parsed.hofObjects || {}, loadHofObjects());
