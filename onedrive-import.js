@@ -389,6 +389,7 @@ async function odImportPhotosFromFolder(folderId, folderName) {
     if (missing) msg += ` · ${missing} nicht gefunden`;
     showToast(msg);
     _odUpdateUI();
+    openSettings();
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 
@@ -430,6 +431,7 @@ async function odScanDocFolder(folderId, folderName) {
     Object.keys(_odPhotoCache).filter(k => k.startsWith('src_')).forEach(k => delete _odPhotoCache[k]);
     if (AppState.currentSourceId) showSourceDetail(AppState.currentSourceId, false);
     showToast(`✓ ${Object.keys(docMap).length} Dateien indiziert — "${folderName}"`);
+    openSettings();
   } catch(e) { showToast('OneDrive: ' + e.message); }
 }
 

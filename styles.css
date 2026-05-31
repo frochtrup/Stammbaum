@@ -2343,6 +2343,11 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .btn-choice       { text-align: left; padding: 14px 16px; }
 
 /* Settings card inner sections */
+/* Alle d-flex-Zeilen in Settings-Sektionen: volle Breite → Buttons rechts bündig */
+.settings-section-top .d-flex,
+.settings-section-mid .d-flex,
+.settings-section-bot .d-flex { width: 100%; }
+
 .settings-section-top {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
