@@ -230,7 +230,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v769** *(veraltet — v770–v785 [QUICK-TPL age-Feldtyp, Qualitäts-Dashboard RES-DASH (+ v785 Radar-Balken-Breite CSP-Fix), Evidenzmodell RES-EVAL 2a–2e, RES-PROJ 3a–3c (Kanban + Projekte + Timeline), RES-HYPO 4a–4e (Hypothesen + GPS-Beweisführung)] noch nicht dokumentiert. v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
+**Handbuch-Stand: sw v785** *(aktuell — Forschungspipeline dokumentiert: Evidenzmodell RES-EVAL (⚖, Kap 6), Hypothesen + GPS-Beweisführung RES-HYPO (Kap 4), Forschungspipeline-Übersicht + Kanban + Projekte + Qualitäts-Dashboard RES-DASH/RES-PROJ (Kap 13), Research-Timeline (Kap 14), Genealogical-Proof-Standard-Best-Practice (Kap 17). v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

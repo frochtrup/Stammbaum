@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v769</p>
+  <p class="version">Version 8 · Mai 2026 · Stand: sw v785</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -592,6 +592,8 @@
         <li><a href="#quicktpl">Eingabe-Templates (quellengebundene Schnellerfassung)</a></li>
         <li>Beziehungsrechner</li>
         <li>Assoziationen — Zeugen, Paten und mehr</li>
+        <li><a href="#hypothesen">Hypothesen — Annahmen festhalten und prüfen</a></li>
+        <li><a href="#gps-note">Beweisführung (GPS) — die Argumentation bündeln</a></li>
       </ul>
     </li>
     <li><a href="#kap5">Familien</a>
@@ -606,6 +608,7 @@
         <li>Wozu brauche ich Quellen?</li>
         <li>Eine Quelle anlegen</li>
         <li>Quellen mit Ereignissen verknüpfen</li>
+        <li><a href="#evidenzmodell">Quellen bewerten — das Evidenzmodell (⚖)</a></li>
       </ul>
     </li>
     <li><a href="#kap7">Orte und Karte</a></li>
@@ -644,8 +647,19 @@
         <li>Datensicherung</li>
       </ul>
     </li>
-    <li><a href="#kap13">Forschungsaufgaben</a></li>
-    <li><a href="#kap14">Forschungsprotokoll</a></li>
+    <li><a href="#kap13">Forschungsaufgaben &amp; Pipeline</a>
+      <ul class="sub">
+        <li><a href="#pipeline">Die Forschungspipeline auf einen Blick</a></li>
+        <li><a href="#kanban">Kanban-Board: Aufgaben nach Status</a></li>
+        <li><a href="#projekte">Forschungsprojekte: nach Linie, Ort, Zeitraum</a></li>
+        <li><a href="#dashboard">Qualitäts-Dashboard: Lücken &amp; Konflikte</a></li>
+      </ul>
+    </li>
+    <li><a href="#kap14">Forschungsprotokoll</a>
+      <ul class="sub">
+        <li><a href="#timeline">Research-Timeline: Aktivitäten als Zeitstrahl</a></li>
+      </ul>
+    </li>
     <li><a href="#kap15">Höfe und Wohnorte</a></li>
     <li><a href="#kap18">Fotos und Medien organisieren</a>
       <ul class="sub">
@@ -658,6 +672,7 @@
       <ul class="sub">
         <li>Quellen konsequent erfassen</li>
         <li>Daten prüfen und bereinigen</li>
+        <li><a href="#gps-standard">Forschungs-Best-Practice: der Genealogical Proof Standard</a></li>
         <li>Backup-Strategie</li>
         <li><a href="#kap19-dsgvo">Lebende Personen schützen (DSGVO-Export)</a></li>
       </ul>
@@ -1481,6 +1496,73 @@ Der Beziehungsrechner nutzt eine BFS-Breitensuche (Breadth-First Search) im Fami
 Assoziationen werden als GEDCOM-Standard-Tag <code>1 ASSO</code> mit <code>2 RELA</code> (GEDCOM 5.5.1) bzw. <code>2 ROLE</code> (GEDCOM 7.0) gespeichert — kompatibel mit allen gängigen Genealogie-Programmen.
 </div>
 
+
+<h2 id="hypothesen">Hypothesen — Annahmen festhalten und prüfen</h2>
+
+<p>Familienforschung ist selten eindeutig. Oft haben Sie einen begründeten <strong>Verdacht</strong> — „Dieser Johann Decker aus dem Nachbardorf ist vermutlich der Vater" —, der noch nicht bewiesen ist. Früher landeten solche Annahmen als lose Notiz oder gar nur im Kopf. Mit <strong>Hypothesen</strong> halten Sie sie strukturiert fest, verknüpfen sie mit Belegen und verfolgen, ob sie sich am Ende bestätigen oder verwerfen lassen.</p>
+
+<div class="info">
+Wichtig: Eine Hypothese verändert <strong>nicht</strong> Ihren Stammbaum. Sie legt keine zweite, alternative Abstammung an, sondern ist eine <em>Annotation</em> an einer Person oder Familie. So bleibt Ihr Baum eindeutig, während Sie die offene Frage daneben dokumentieren.
+</div>
+
+<h3>Eine Hypothese anlegen</h3>
+<ol class="steps">
+  <li><div class="step-text">Öffnen Sie die Detailansicht einer Person oder Familie und scrollen Sie zum Abschnitt <strong>Hypothesen</strong>.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">+ Hypothese</span>.</div></li>
+  <li><div class="step-text">Formulieren Sie die <strong>Annahme</strong> als klaren Satz (z. B. „Johann Decker (*1790 Aichach) ist der Vater von Maria Decker").</div></li>
+  <li><div class="step-text">Wählen Sie <strong>Status</strong> und <strong>Konfidenz</strong>, ergänzen Sie Begründung, Schluss und Belege (siehe unten).</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
+</ol>
+
+<h3>Die Felder einer Hypothese</h3>
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.5em 0 1em 0;">
+  <thead>
+    <tr style="background:var(--app-card);text-align:left;">
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Feld</th>
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Bedeutung</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:4px 8px;"><strong>Annahme</strong></td><td style="padding:4px 8px;">Die These selbst, als überprüfbarer Satz formuliert.</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Status</strong></td><td style="padding:4px 8px;"><span style="color:var(--gold);">offen</span> · <span style="color:#4caf50;">bestätigt</span> · <span style="color:#f44336;">verworfen</span> — wo steht die Prüfung?</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Konfidenz</strong></td><td style="padding:4px 8px;">niedrig · mittel · hoch — wie sicher <em>Sie</em> sich aktuell sind (Ihre Einschätzung, getrennt von der Quellen-Beweiskraft QUAY).</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Begründung</strong></td><td style="padding:4px 8px;">Warum halten Sie das für plausibel? (Indizien, Wohnort, Namensgebung …)</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Schluss</strong></td><td style="padding:4px 8px;">Das Fazit, sobald die Hypothese bestätigt oder verworfen ist.</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Evidenz</strong></td><td style="padding:4px 8px;">Verknüpfung zu einer oder mehreren Quellen (Quellen-Auswahl + Seitenangabe).</td></tr>
+  </tbody>
+</table>
+
+<p>In der Detailansicht erscheint jede Hypothese als Karte mit farbigem <strong>Status-Badge</strong> und <strong>Konfidenz-Badge</strong>. Die Abschnitts-Überschrift zeigt zudem, wie viele Hypothesen noch <em>offen</em> sind. Über <span class="button-label">✎</span> bearbeiten und <span class="button-label">✕</span> löschen Sie eine Hypothese.</p>
+
+<div class="tip">
+<strong>Best Practice — Konfidenz ≠ Beweiskraft:</strong> Die <em>Konfidenz</em> ist Ihr Bauchgefühl als Forscher. Die <em>Evidenz</em>-Verknüpfung und deren ⚖-Bewertung (Kapitel 6) sind der objektive Beleg. Eine seriöse Schlussfolgerung stützt eine „hohe" Konfidenz immer auf mehrere unabhängige, gut bewertete Quellen — nicht umgekehrt.
+</div>
+
+<div class="tip">
+Nutzen Sie den Status als Arbeitsfluss: Tragen Sie eine Annahme zunächst als <strong>offen</strong> mit niedriger Konfidenz ein, sammeln Sie über das Forschungsprotokoll (Kapitel 14) Belege, und setzen Sie sie erst auf <strong>bestätigt</strong>, wenn die Evidenz den Schluss wirklich trägt. Auch ein bewusstes <strong>verworfen</strong> ist ein Forschungsergebnis — es verhindert, dass Sie die widerlegte Spur später erneut verfolgen.
+</div>
+
+
+<h2 id="gps-note">Beweisführung (GPS) — die Argumentation bündeln</h2>
+
+<p>Sobald eine Person mindestens eine Hypothese trägt, blendet die App im Personendetail den aufklappbaren Abschnitt <strong>Beweisführung (GPS)</strong> ein. Er fasst Quellenlage und Hypothesen automatisch zu einem zusammenhängenden Argument im Sinne des <strong>Genealogical Proof Standard</strong> zusammen — der anerkannten Methodik für belastbare Abstammungsnachweise (mehr dazu in Kapitel 17).</p>
+
+<p>Neben der Überschrift zeigt ein Reife-Indikator <strong>„X % aufgelöst"</strong> an, welcher Anteil der Hypothesen schon bestätigt oder verworfen ist. Aufgeklappt gliedert sich die Notiz in vier Blöcke:</p>
+
+<ol style="margin: 0.5em 0 0.5em 1.5em; line-height: 1.9em;">
+  <li><strong>① Quellenlage &amp; Evidenz</strong> — wie viele Quellenangaben die Person hat, wie viele davon evidenzbewertet sind und wie viele einen QUAY-Wert tragen.</li>
+  <li><strong>② Bestätigte Schlüsse</strong> — die bewiesenen Hypothesen mit ihrer Evidenz und dem gezogenen Schluss.</li>
+  <li><strong>③ Offene Fragen / Konflikte</strong> — noch ungeklärte Hypothesen mit Begründung: Ihre To-do-Liste für die Beweisführung.</li>
+  <li><strong>④ Verworfene Annahmen</strong> — widerlegte Thesen mit Grund, damit nachvollziehbar bleibt, was bereits ausgeschlossen wurde.</li>
+</ol>
+
+<p>Die Beweisführungsnotiz ist eine reine <strong>Lese-Ansicht</strong>: Sie schreiben nichts direkt hinein, sondern pflegen Quellen, Evidenzbewertungen und Hypothesen — die Notiz aktualisiert sich daraus automatisch. So sehen Sie auf einen Blick, ob ein Schluss bereits hält oder wo noch Lücken klaffen.</p>
+
+<div class="tip">
+Die Beweisführungsnotiz eignet sich hervorragend als <strong>Argumentationsgerüst</strong>, wenn Sie eine strittige Abstammung gegenüber anderen Forschern begründen oder in einem Aufsatz dokumentieren wollen. Steht der Indikator bei „100 % aufgelöst" und stützen mehrere direkte Primärquellen (⚖) den Schluss, ist der Nachweis nach GPS belastbar.
+</div>
+
+
 <!-- ====================================================== -->
 <!-- KAPITEL 5: FAMILIEN -->
 <!-- ====================================================== -->
@@ -1676,6 +1758,62 @@ Assoziationen werden als GEDCOM-Standard-Tag <code>1 ASSO</code> mit <code>2 REL
 
 <div class="info">
 Vorlagen sind nur bei der Neuanlage einer Quelle aktiv. Bereits ausgefüllte Felder werden nicht überschrieben.
+</div>
+
+
+<h2 id="evidenzmodell">Quellen bewerten — das Evidenzmodell (⚖)</h2>
+
+<p>Nicht jede Quelle ist gleich verlässlich. Ein Taufeintrag, den der Pfarrer am Tag der Taufe selbst geschrieben hat, wiegt schwerer als die Jahrzehnte später aus dem Gedächtnis erstellte Ahnentafel eines Verwandten. Damit Sie diese <strong>Beweiskraft</strong> festhalten — und nicht nur im Kopf behalten — können Sie jede einzelne Quellenangabe nach dem international etablierten Evidenzmodell (nach Elizabeth Shown Mills / Genealogical Proof Standard) bewerten.</p>
+
+<p>Die Bewertung sitzt nicht an der Quelle selbst, sondern an der konkreten <strong>Verknüpfung</strong> zwischen Quelle und Ereignis — denn dieselbe Quelle kann für die eine Aussage ein direkter Originalbeleg, für eine andere nur ein beiläufiger Hinweis sein.</p>
+
+<h3>Bewertung öffnen</h3>
+<ol class="steps">
+  <li><div class="step-text">Öffnen Sie eine Person und bearbeiten Sie ein Ereignis (z. B. Geburt), das bereits mit einer Quelle verknüpft ist.</div></li>
+  <li><div class="step-text">Neben dem Quellen-Tag finden Sie das Symbol <span class="button-label">⚖</span>. Tippen Sie es an, um die Bewertungszeile aufzuklappen.</div></li>
+  <li><div class="step-text">Füllen Sie die drei Achsen aus (siehe unten). Ist eine Quelle bewertet, bleibt das <span class="button-label">⚖</span> dauerhaft hervorgehoben.</div></li>
+</ol>
+
+<h3>Die drei Achsen</h3>
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.5em 0 1em 0;">
+  <thead>
+    <tr style="background:var(--app-card);text-align:left;">
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Achse</th>
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Frage</th>
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Werte</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:4px 8px;"><strong>Quellentyp</strong></td><td style="padding:4px 8px;">Wie nah am Original?</td><td style="padding:4px 8px;">Original · Abschrift/Transkript · Autorenwerk</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Information</strong></td><td style="padding:4px 8px;">Wie nah am Ereignis stand der, der die Angabe machte?</td><td style="padding:4px 8px;">primär · sekundär · unbestimmt</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Evidenz</strong></td><td style="padding:4px 8px;">Wie direkt belegt die Quelle die Aussage?</td><td style="padding:4px 8px;">direkt · indirekt · negativ</td></tr>
+  </tbody>
+</table>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 1.9em;">
+  <li><strong>Quellentyp</strong> — <em>Original</em> = das Originaldokument (Kirchenbuch, Standesamtsregister). <em>Abschrift</em> = Transkript, Fotokopie, Verkartung. <em>Autorenwerk</em> = ein Buch oder eine Datenbank, die Schlüsse anderer wiedergibt.</li>
+  <li><strong>Information</strong> — <em>primär</em> = vom Augenzeugen zeitnah berichtet (Pfarrer beim Taufakt). <em>sekundär</em> = aus zweiter Hand oder aus der Erinnerung (Sterbealter, das ein Angehöriger angibt).</li>
+  <li><strong>Evidenz</strong> — <em>direkt</em> = die Quelle beantwortet die Frage unmittelbar. <em>indirekt</em> = nur in Kombination mit anderen Belegen. <em>negativ</em> = das Fehlen eines Eintrags ist hier die Aussage (z. B. „kein Taufeintrag in diesem Buch").</li>
+</ul>
+
+<h3>Informant</h3>
+<p>Im Feld <span class="button-label">Informant…</span> notieren Sie, <em>wer</em> die Angabe geliefert hat — etwa „Hebamme", „Ehemann" oder „Schwester der Verstorbenen". Das ist gerade bei Sterbe- und Heiratseinträgen entscheidend, um die Verlässlichkeit einzuschätzen.</p>
+
+<h3>Beweiskraft automatisch in QUAY übernehmen</h3>
+<p>Aus den drei Achsen errechnet die App einen Vorschlag für den klassischen GEDCOM-Beweiskraft-Wert <strong>QUAY</strong> (0–3). Tippen Sie auf den Button <span class="button-label">→Q3</span> (die Ziffer wechselt je nach Bewertung), um den Vorschlag zu übernehmen:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 1.9em;">
+  <li><strong>3</strong> — direkte Primärevidenz (Original + primär)</li>
+  <li><strong>2</strong> — solide, aber nicht erstklassig (Abschrift, sekundär …)</li>
+  <li><strong>1</strong> — schwach (Autorenwerk, unbestimmte Information oder indirekte Evidenz)</li>
+  <li><strong>0</strong> — negative Evidenz / fragwürdig</li>
+</ul>
+
+<div class="tip">
+Bewerten Sie zumindest Ihre <strong>Schlüsselbelege</strong> — die Quellen, auf denen eine strittige Abstammung ruht. Das Qualitäts-Dashboard (Kapitel 13) zeigt Ihnen anschließend, welcher Anteil Ihrer Quellen schon eine Evidenzbewertung trägt, und die Beweisführungsnotiz (GPS, Kapitel 4) fasst alles zu einem Argument zusammen.
+</div>
+
+<div class="info">
+Die Bewertung reist mit Ihrer Datei: in GEDCOM als Zusatzfelder (<code>_STYP/_INFO/_EVID</code>), in Gramps als Citation-Attribute. Beim Export als „striktes GEDCOM 5.5.1" werden sie automatisch entfernt, damit fremde Programme nicht stolpern.
 </div>
 
 
@@ -2345,9 +2483,35 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
 <!-- ====================================================== -->
 <!-- KAPITEL 13: FORSCHUNGSAUFGABEN -->
 <!-- ====================================================== -->
-<h1 class="chapter" id="kap13">13. Forschungsaufgaben</h1>
+<h1 class="chapter" id="kap13">13. Forschungsaufgaben &amp; Forschungspipeline</h1>
 
-<p>In der Familienforschung gibt es immer offene Fragen: Welches Kirchenbuch muss ich noch durchsuchen? Welche Urkunde fehlt noch? Die App hilft Ihnen, diese Aufgaben zu verwalten.</p>
+<p>In der Familienforschung gibt es immer offene Fragen: Welches Kirchenbuch muss ich noch durchsuchen? Welche Urkunde fehlt noch? Die App hilft Ihnen nicht nur, diese Aufgaben zu verwalten — sie führt Sie durch einen vollständigen Forschungskreislauf: vom erkannten Befund über die geplante Suche bis zum belegten Schluss.</p>
+
+<h2 id="pipeline">Die Forschungspipeline auf einen Blick</h2>
+
+<p>Die Forschungswerkzeuge der App greifen ineinander wie die Stationen eines Kreislaufs. Statt isolierter Funktionen ergeben sie zusammen einen wiederholbaren Arbeitsfluss nach den Prinzipien seriöser Genealogie:</p>
+
+<div style="background:var(--app-card);border:2px solid var(--gold);border-radius:12px;padding:1.2em 1.5em;margin:1.2em 0;">
+  <div style="text-align:center;font-weight:bold;color:var(--gold);line-height:2.1em;">
+    🎯 Lücke erkennen → ☑ Aufgabe planen → 🔍 suchen &amp; protokollieren →<br>
+    📖 Quelle erfassen &amp; ⚖ bewerten → 💡 Hypothese prüfen → ⚖ Beweis führen →<br>
+    🎯 Dashboard wieder grün
+  </div>
+</div>
+
+<ol style="margin: 0.5em 0 0.5em 1.5em; line-height: 1.95em;">
+  <li><strong>🎯 Befund erkennen</strong> — das <a href="#dashboard">Qualitäts-Dashboard</a> zeigt Lücken, Fehler und Schwachstellen Ihres Stammbaums. Ein fehlender Beleg oder Widerspruch ist der Startpunkt.</li>
+  <li><strong>☑ Aufgabe planen</strong> — überführen Sie den Befund mit einem Tipp in eine <strong>Forschungsaufgabe</strong>, und ordnen Sie diese im <a href="#kanban">Kanban-Board</a> und in <a href="#projekte">Projekten</a> nach Linie, Ort oder Zeitraum.</li>
+  <li><strong>🔍 Suchen &amp; protokollieren</strong> — was Sie wo gesucht haben (auch erfolglos!), halten Sie im <a href="#kap14">Forschungsprotokoll</a> und seiner <a href="#timeline">Timeline</a> fest.</li>
+  <li><strong>📖 Quelle erfassen &amp; bewerten</strong> — den Fund hängen Sie als Quelle an das Ereignis und bewerten seine Beweiskraft mit dem <a href="#evidenzmodell">Evidenzmodell (⚖)</a>.</li>
+  <li><strong>💡 Hypothese prüfen</strong> — strittige Annahmen verfolgen Sie als <a href="#hypothesen">Hypothese</a> und setzen sie auf <em>bestätigt</em> oder <em>verworfen</em>, sobald die Evidenz trägt.</li>
+  <li><strong>⚖ Beweis führen</strong> — die <a href="#gps-note">Beweisführungsnotiz (GPS)</a> bündelt Quellen und Hypothesen zu einem belastbaren Argument.</li>
+  <li><strong>🎯 Kreis schließen</strong> — der ergänzte Beleg lässt den Befund im Dashboard verschwinden. Der nächste rückt nach.</li>
+</ol>
+
+<div class="tip">
+Sie müssen die Pipeline nicht starr von Schritt 1 bis 7 durchlaufen — die Stationen sind verlinkt und jederzeit erreichbar. Der Kreislauf ist als <em>Denkmodell</em> gemeint: Jeder Befund verdient eine geplante Suche, jede Suche ein Protokoll, jeder Fund eine bewertete Quelle, jede Annahme einen Beleg.
+</div>
 
 <h2>Aufgabe hinzufügen</h2>
 
@@ -2362,7 +2526,7 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
 
 <h2>Aufgaben verwalten</h2>
 
-<p>Der Tab <span class="button-label">☑ Aufgaben</span> in der unteren Navigation zeigt alle Aufgaben in einer Gesamtliste — gegliedert nach Kategorie, mit klickbaren Personen- und Familien-Namen.</p>
+<p>Der Tab <span class="button-label">☑ Aufgaben</span> in der unteren Navigation ist die Schaltzentrale Ihrer Forschung. Oben schalten Sie über eine Leiste zwischen drei Modi um: <strong>Aufgaben</strong> · <strong>Protokoll</strong> · <strong>Dashboard</strong>. Im Aufgaben-Modus sehen Sie alle Aufgaben in einer Gesamtliste — gegliedert nach Kategorie, mit klickbaren Personen- und Familien-Namen.</p>
 
 <div class="mockup-wrapper" style="margin-top:1em;">
   <div class="phone-frame">
@@ -2407,7 +2571,7 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
     </div>
   </div>
   <div class="explanation">
-    <p>Mit dem Umschalter <strong>Aufgaben / Protokoll</strong> oben wechseln Sie zur Forschungsprotokoll-Ansicht (Kapitel 14).</p>
+    <p>Mit der Modus-Leiste <strong>Aufgaben / Protokoll / Dashboard</strong> oben wechseln Sie zur Forschungsprotokoll-Ansicht (Kapitel 14) bzw. zum Qualitäts-Dashboard (weiter unten in diesem Kapitel).</p>
     <p style="margin-top:0.6em;">Die Filter <strong>Offen · Erledigt · Alle</strong> gelten jeweils für den aktiven Modus.</p>
     <p style="margin-top:0.6em;"><span class="button-label">✓ Daten prüfen</span> analysiert den gesamten Stammbaum automatisch auf Fehler.</p>
     <p style="margin-top:0.6em;"><span class="button-label">↓ MD</span> exportiert die gefilterte Liste als Markdown-Datei.</p>
@@ -2445,6 +2609,58 @@ Auf dem iPhone gibt es keinen Undo-Knopf. Speichern Sie deshalb vor größeren �
 
 <div class="tip">
 Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim nächsten Sitzen sofort, wo Sie aufgehört hatten.
+</div>
+
+<h2 id="kanban">Kanban-Board: Aufgaben nach Bearbeitungsstatus</h2>
+
+<p>Eine bloße Erledigt-Checkbox unterscheidet nur „offen" und „fertig". In der Praxis hat eine Aufgabe aber oft einen Zwischenzustand — Sie haben die Suche begonnen, warten auf eine Archivauskunft oder sind mittendrin. Dafür gibt es im Aufgaben-Modus das <strong>Kanban-Board</strong> mit drei Spalten:</p>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong>Offen</strong> — noch nicht begonnen</li>
+  <li><strong>In Arbeit</strong> — gerade in Bearbeitung</li>
+  <li><strong>Erledigt</strong> — abgeschlossen</li>
+</ul>
+
+<p>Mit dem Symbol <span class="button-label">▦</span> oben rechts im Aufgaben-Modus schalten Sie von der Liste auf das Board um; <span class="button-label">☰</span> bringt Sie zurück zur Liste. Eine Aufgabe schieben Sie nicht per Drag-and-drop (das wäre auf dem iPhone fummelig), sondern Sie <strong>tippen die Karte an</strong> — sie rückt eine Spalte weiter: Offen → In Arbeit → Erledigt → wieder Offen. Der Erledigt-Status bleibt dabei immer synchron mit der Checkbox in der Listenansicht.</p>
+
+<div class="tip">
+Das Board verschafft Ihnen vor jeder Forschungssitzung einen Überblick: Was liegt in „In Arbeit" und sollte zuerst abgeschlossen werden, bevor Sie Neues beginnen? So zerfasert Ihre Forschung nicht in viele halbfertige Spuren.
+</div>
+
+<h2 id="projekte">Forschungsprojekte: nach Linie, Ort und Zeitraum bündeln</h2>
+
+<p>Bei großen Stammbäumen verlieren Sie schnell den Fokus. Ein <strong>Forschungsprojekt</strong> bündelt Aufgaben, Protokoll und Dashboard auf einen bestimmten Ausschnitt Ihres Baums — etwa „Linie Decker", „Auswanderer nach Amerika" oder „Kirchspiel Aichach 1700–1800".</p>
+
+<p>Das Besondere: Die Zugehörigkeit zu einem Projekt wird <strong>automatisch berechnet</strong>, nicht manuell gepflegt. Sie definieren einen <em>Scope</em> (Geltungsbereich), und die App entscheidet selbst, welche Personen hineinfallen. So gibt es keine veralteten Zuordnungen.</p>
+
+<h3>Ein Projekt anlegen</h3>
+<ol class="steps">
+  <li><div class="step-text">Im Aufgaben-Tab finden Sie oben eine Projekt-Leiste mit dem Eintrag <span class="button-label">Alle</span> und einem Symbol zum <span class="button-label">Projekte verwalten</span>.</div></li>
+  <li><div class="step-text">Öffnen Sie die Verwaltung und tippen Sie auf <span class="button-label">+ Neues Projekt</span>.</div></li>
+  <li><div class="step-text">Geben Sie einen <strong>Namen</strong> und eine <strong>Farbe</strong> ein und legen Sie den Scope über eine oder mehrere Achsen fest:</div></li>
+</ol>
+
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.5em 0 1em 0;">
+  <thead>
+    <tr style="background:var(--app-card);text-align:left;">
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Scope-Achse</th>
+      <th style="padding:5px 8px;border-bottom:2px solid var(--app-border);">Beispiel</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:4px 8px;"><strong>Nachnamen (Linie)</strong></td><td style="padding:4px 8px;">Decker, Frochtrup</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Orte</strong></td><td style="padding:4px 8px;">Aichach, München</td></tr>
+    <tr><td style="padding:4px 8px;"><strong>Zeitraum (Geburtsjahr)</strong></td><td style="padding:4px 8px;">1700 bis 1800</td></tr>
+  </tbody>
+</table>
+
+<p>Mehrere gesetzte Achsen wirken <strong>zusammen</strong> (UND): „Nachname Decker <em>und</em> Geburtsjahr 1700–1800" trifft nur Personen, auf die beides zutrifft. Lassen Sie eine Achse leer, schränkt sie nicht ein. Sie können das Projekt jederzeit per <strong>Notiz</strong> dokumentieren und über <span class="button-label">↓ Export</span> als JSON sichern bzw. importieren.</p>
+
+<h3>Ein Projekt aktivieren</h3>
+<p>Tippen Sie in der Projekt-Leiste auf einen Projekt-Chip, um ihn zu aktivieren. Von da an sind <strong>alle drei Modi</strong> — Aufgaben, Protokoll <em>und</em> Dashboard — auf diesen Ausschnitt eingeschränkt. Der vielleicht größte Gewinn: ein <strong>projektbezogenes Dashboard</strong>, das Vollständigkeits-Score, Lückenradar und Brennpunkte nur für diese Linie oder diesen Ort berechnet. <span class="button-label">Alle</span> hebt die Einschränkung wieder auf.</p>
+
+<div class="tip">
+Forschen Sie immer linien- oder ortsweise statt „über den ganzen Baum". Ein Projekt-Dashboard, das von 60 % auf 90 % steigt, ist ein sichtbarer, motivierender Fortschritt — während der Gesamt-Score eines großen Baums kaum spürbar reagiert.
 </div>
 
 <h2>Daten prüfen und Aufgaben automatisch erstellen</h2>
@@ -2510,6 +2726,45 @@ Nutzen Sie die Aufgaben konsequent als Forschungsprotokoll. So sehen Sie beim n�
 <p>Jedes gefundene Problem lässt sich mit einem Tipp auf <span class="button-label">→ Als Aufgabe übernehmen</span> direkt in Ihre persönliche Aufgabenliste überführen.</p>
 
 
+<h2 id="dashboard">Qualitäts-Dashboard: Lücken und Konflikte auf einen Blick</h2>
+
+<p>Wo die Prüfung eine lange Befundliste liefert, verdichtet das <strong>Qualitäts-Dashboard</strong> denselben Datenbestand zu einer Übersicht: Wie gesund ist mein Stammbaum, und wo lohnt sich der nächste Forschungsaufwand am meisten? Es ist der dritte Modus im Aufgaben-Tab — wechseln Sie oben in der Modus-Leiste auf <span class="button-label">Dashboard</span>.</p>
+
+<h3>Vollständigkeits-Score</h3>
+<p>Ganz oben steht eine große Prozent-Kachel: der Anteil der Personen, die <strong>befundfrei</strong> sind (keine Fehler, Warnungen oder Hinweise aus der aktiven Prüfregel-Konfiguration). Sie färbt sich grün ab 80 %, gelb ab 50 % und rot darunter — Ihr Gesundheits-Barometer auf einen Blick.</p>
+
+<h3>Ampel-Verteilung</h3>
+<p>Darunter zeigen vier Chips, wie sich Ihre Personen aufteilen:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong style="color:#f44336;">Fehler</strong> — mindestens ein logischer Fehler</li>
+  <li><strong style="color:#ff9800;">Warnungen</strong> — unwahrscheinliche Angaben</li>
+  <li><strong style="color:#888;">nur Hinweise</strong> — kleinere Lücken</li>
+  <li><strong style="color:#4caf50;">sauber</strong> — ohne Befund</li>
+</ul>
+
+<h3>Lückenradar</h3>
+<p>Der <strong>Lückenradar</strong> misst mit Balken, wie vollständig zentrale Felder über alle Personen erfasst sind:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 1.9em;">
+  <li>Geburts-/Taufdatum · Geburtsort · Sterbedatum · Geschlecht bestimmt</li>
+  <li>mind. 1 Quelle</li>
+  <li>Quellen mit Beweiskraft (QUAY)</li>
+  <li>Quellen mit Evidenzbewertung (⚖, siehe Kapitel 6)</li>
+  <li>Hypothesen aufgelöst <em>(nur sichtbar, wenn überhaupt Hypothesen existieren)</em></li>
+</ul>
+<p>Die letzten drei Balken schlagen direkt die Brücke zur Quellen- und Hypothesen-Arbeit: Sie sehen sofort, ob Ihre Belege nicht nur vorhanden, sondern auch <em>bewertet</em> sind — der Kern seriöser Beweisführung.</p>
+
+<h3>Brennpunkte</h3>
+<p>Schließlich listet das Dashboard die <strong>Brennpunkte</strong>: die Personen mit den meisten bzw. schwersten Befunden, nach Dringlichkeit sortiert (Fehler vor Warnungen vor Hinweisen). Das ist Ihre priorisierte Arbeitsliste. Zu jeder Person können Sie den Befund mit <span class="button-label">Als Aufgabe anlegen</span> direkt in eine Forschungsaufgabe verwandeln — oder über <span class="button-label">Alle … Befunde als Aufgaben anlegen</span> gleich die ganze Liste.</p>
+
+<div class="tip">
+<strong>So schließt sich der Kreis:</strong> Das Dashboard markiert die Lücke (🎯), der Button macht daraus eine Aufgabe (☑), die Sie über Protokoll, Quelle und Bewertung abarbeiten — bis der Befund verschwindet und der Score steigt. Aktivieren Sie zuvor ein Projekt (oben), bezieht sich das gesamte Dashboard nur auf diese Linie oder diesen Ort.
+</div>
+
+<div class="info">
+Das Dashboard nutzt dieselbe Prüf-Engine und Konfiguration wie <span class="button-label">✓ Daten prüfen</span>. Schalten Sie über <span class="button-label">⚙ Konfigurieren</span> eine Regel ab, verschwindet ihr Befund auch aus Score und Ampel. Die Hinweis-Regeln „Quellen mit Evidenzbewertung" und „offene Hypothesen" sind bewusst ab Werk <strong>deaktiviert</strong> — sie informieren über den Lückenradar, ohne Ihren Score zu drücken, solange Sie sie nicht selbst einschalten.
+</div>
+
+
 <!-- ====================================================== -->
 <!-- KAPITEL 14: FORSCHUNGSPROTOKOLL -->
 <!-- ====================================================== -->
@@ -2563,6 +2818,20 @@ Aus einer Forschungsaufgabe heraus können Sie direkt einen Protokolleintrag anl
 
 <div class="tip">
 Tragen Sie auch negative Ergebnisse ein. „Kirchenbuch München 1855 durchsucht — kein Treffer" ist eine wertvolle Information: Sie müssen diese Suche nicht nochmals durchführen.
+</div>
+
+<h2 id="timeline">Research-Timeline: Suchaktivitäten als Zeitstrahl</h2>
+
+<p>Während die Protokoll-Liste nach Personen gruppiert, beantwortet die <strong>Research-Timeline</strong> eine andere Frage: <em>Was habe ich wann getan?</em> Sie ordnet alle Protokolleinträge chronologisch auf einer vertikalen Schiene an — neueste zuerst — und macht so Ihren Forschungsverlauf sichtbar.</p>
+
+<p>Im Protokoll-Modus schalten Sie mit dem Symbol <span class="button-label">🕒</span> zwischen der nach Personen gegliederten Ansicht und der Timeline um. Jeder Eintrag erscheint als Karte mit einem farbcodierten Ergebnis-Knoten:</p>
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
+  <li><strong style="color:#4caf50;">Gefunden</strong> · <strong style="color:#ff9800;">Teilweise</strong> · <strong style="color:#f44336;">Nicht gefunden</strong> · <strong style="color:#888;">Ausstehend</strong></li>
+</ul>
+<p>Die Karte verlinkt die zugehörige Person oder Familie und zeigt Suchbegriff und Notiz. Ist ein Projekt aktiv (Kapitel 13), ist auch die Timeline auf dessen Ausschnitt eingeschränkt.</p>
+
+<div class="tip">
+Die Timeline ist ideal, um nach einer Pause wieder anzuknüpfen oder um einer Forschungsanfrage einen nachvollziehbaren Tätigkeitsnachweis beizulegen: „Diese Archive habe ich in dieser Reihenfolge mit diesem Ergebnis durchsucht."
 </div>
 
 
@@ -2800,6 +3069,44 @@ Für bäuerliche Genealogie empfiehlt sich folgende Konvention: Beim Übergabeve
 <h2>Forschungsprotokoll führen</h2>
 <p>Notieren Sie <strong>jede Recherche</strong> im Forschungsprotokoll — auch wenn sie ohne Ergebnis war. „Kirchenbuch Landsberg 1780–1800 durchsucht — kein Eintrag" ist eine wertvolle Information: Sie müssen diese Suche nie wiederholen.</p>
 <p>Das Protokoll ist unter <strong>☑ Aufgaben → Protokoll</strong> erreichbar. Ein Eintrag dauert 30 Sekunden.</p>
+
+<h2 id="gps-standard">Forschungs-Best-Practice: der Genealogical Proof Standard</h2>
+
+<p>Die einzelnen Forschungswerkzeuge der App (Kapitel 13/14) sind kein Selbstzweck — sie sind die praktische Umsetzung des <strong>Genealogical Proof Standard (GPS)</strong>, der weltweit anerkannten Methodik für belastbare Abstammungsnachweise. Wer ihn beherzigt, baut keinen Stammbaum aus Vermutungen, sondern aus begründeten Schlüssen. Der GPS verlangt fünf Dinge — und für jedes hält die App ein Werkzeug bereit:</p>
+
+<table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
+  <thead>
+    <tr style="background:var(--app-card);text-align:left;">
+      <th style="padding:6px 8px;border-bottom:2px solid var(--app-border);">GPS-Grundsatz</th>
+      <th style="padding:6px 8px;border-bottom:2px solid var(--app-border);">Werkzeug in der App</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td style="padding:5px 8px;"><strong>1. Möglichst vollständige Recherche</strong> in allen relevanten Quellen</td><td style="padding:5px 8px;">Qualitäts-Dashboard (Lücken) → Aufgaben &amp; Projekte</td></tr>
+    <tr><td style="padding:5px 8px;"><strong>2. Vollständige, präzise Quellenangaben</strong></td><td style="padding:5px 8px;">Quellen + Archive, Zitat mit Seite/Signatur (Kapitel 6)</td></tr>
+    <tr><td style="padding:5px 8px;"><strong>3. Analyse &amp; Bewertung</strong> der Beweiskraft jeder Quelle</td><td style="padding:5px 8px;">Evidenzmodell ⚖ (Quellentyp · Information · Evidenz)</td></tr>
+    <tr><td style="padding:5px 8px;"><strong>4. Auflösung von Widersprüchen</strong> zwischen Quellen</td><td style="padding:5px 8px;">Hypothesen (offen/bestätigt/verworfen) + Datenprüfung</td></tr>
+    <tr><td style="padding:5px 8px;"><strong>5. Schlüssig begründete Schlussfolgerung</strong></td><td style="padding:5px 8px;">Beweisführungsnotiz (GPS) im Personendetail</td></tr>
+  </tbody>
+</table>
+
+<p>In der Praxis bedeutet das einen wiederkehrenden Kreislauf — die <strong>Forschungspipeline</strong> aus Kapitel 13:</p>
+<ol style="margin: 0.5em 0 0.5em 1.5em; line-height: 1.95em;">
+  <li>Das <strong>Dashboard</strong> deckt eine Lücke oder einen Widerspruch auf.</li>
+  <li>Sie machen daraus eine <strong>Aufgabe</strong>, ordnen sie einem <strong>Projekt</strong> (Linie/Ort) zu.</li>
+  <li>Sie suchen gezielt und halten jede Suche — auch erfolglose — im <strong>Protokoll</strong> fest.</li>
+  <li>Den Fund erfassen Sie als <strong>Quelle</strong> und bewerten ihn mit dem <strong>Evidenzmodell ⚖</strong>.</li>
+  <li>Strittige Annahmen führen Sie als <strong>Hypothese</strong>, bis die Evidenz sie trägt oder widerlegt.</li>
+  <li>Die <strong>Beweisführungsnotiz</strong> bündelt alles zu einem nachvollziehbaren Argument.</li>
+</ol>
+
+<div class="tip">
+<strong>Die goldene Regel:</strong> Jede Aussage in Ihrem Stammbaum sollte auf mindestens einer Quelle ruhen — und die wichtigsten (strittige Abstammungen, Schlüsselereignisse) auf mehreren <em>unabhängigen</em>, jeweils ⚖-bewerteten Quellen. Eine einzelne Sekundärquelle „beweist" nichts; erst das Zusammenspiel mehrerer guter Belege trägt einen Schluss. Genau das macht die Beweisführungsnotiz sichtbar.
+</div>
+
+<div class="info">
+Der GPS ersetzt nicht Ihr Urteil — er strukturiert es. Auch ein als „bestätigt" markierter Schluss bleibt revidierbar, wenn neue Quellen auftauchen. Halten Sie darum die verworfenen Annahmen und das Protokoll gepflegt: Sie sind das Gedächtnis Ihrer Beweisführung.
+</div>
 
 <h2>Backup-Strategie</h2>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
@@ -3508,7 +3815,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Mai 2026 · sw v769<br>
+  Stammbaum PWA · Version 8 · Mai 2026 · sw v785<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 
