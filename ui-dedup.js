@@ -351,26 +351,43 @@ function _dedupRenderMergeBody(pair) {
 
   const wIsA = winner.id === pA.id;
 
-  // Klickbare, selektierbare Zeile (Feldwahl A/B)
+  // Normalisierter Vergleich (Leerzeichen, Gro\u00df-/Kleinschreibung ignorieren)
+  const _eq = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+
+  // Selektierbare Zeile: gleich \u2192 einfache Anzeige; unterschiedlich \u2192 Auswahl A/B
   const _selRow = (label, field, aVal, bVal) => {
+    if (_eq(aVal, bVal)) {
+      return `<tr class="dedup-row-equal">
+        <td class="dedup-merge-td-label">${esc(label)}</td>
+        <td class="dedup-td-equal" colspan="2">${esc(aVal || '\u2013')}<span class="dedup-eq-badge">= gleich</span></td>
+      </tr>`;
+    }
     const selA = _dedupSelections[field] === 'A';
     const selB = _dedupSelections[field] === 'B';
-    return `<tr data-sel-field="${field}">
-      <td class="dedup-merge-td-label">${esc(label)}</td>
+    return `<tr class="dedup-row-diff" data-sel-field="${field}">
+      <td class="dedup-merge-td-label">${esc(label)}<span class="dedup-diff-badge">\u2260</span></td>
       <td class="dedup-merge-td${selA ? ' selected' : ''}" data-sel-side="A">${esc(aVal || '\u2013')}</td>
       <td class="dedup-merge-td${selB ? ' selected' : ''}" data-sel-side="B">${esc(bVal || '\u2013')}</td>
     </tr>`;
   };
-  // Nicht-selektierbare Zeile (Referenz-Felder)
-  const _row = (label, aVal, bVal) =>
-    `<tr><td class="dedup-merge-td-label">${esc(label)}</td>
+  // Nicht-selektierbare Referenz-Zeile (Eltern, Partner, ID)
+  const _row = (label, aVal, bVal) => {
+    if (_eq(aVal, bVal)) {
+      return `<tr class="dedup-row-equal">
+        <td class="dedup-merge-td-label">${esc(label)}</td>
+        <td class="dedup-td-equal" colspan="2">${esc(aVal || '\u2013')}<span class="dedup-eq-badge">= gleich</span></td>
+      </tr>`;
+    }
+    return `<tr class="dedup-row-diff">
+      <td class="dedup-merge-td-label">${esc(label)}<span class="dedup-diff-badge">\u2260</span></td>
       <td class="dedup-merge-td${wIsA ? ' winner' : ''}">${esc(aVal || '\u2013')}</td>
       <td class="dedup-merge-td${!wIsA ? ' winner' : ''}">${esc(bVal || '\u2013')}</td>
     </tr>`;
+  };
 
   el.innerHTML = `
     <div class="dedup-merge-info">Score: <strong>${score}</strong> \u2014 ${esc(reasons.join(', '))}</div>
-    <p class="dedup-sel-hint">Klick auf eine Zelle w\u00e4hlt den \u00fcbernommenen Wert.</p>
+    <p class="dedup-sel-hint">Gleiche Felder sind gr\u00fcn markiert \u2014 bei Unterschieden (orange) den gew\u00fcnschten Wert anklicken.</p>
     <table class="dedup-merge-table">
       <thead><tr>
         <th class="dedup-merge-th">Feld</th>
