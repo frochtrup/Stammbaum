@@ -430,7 +430,7 @@ Die Daten *reisen mit der Datei* (sie gehören zum Zitat) → `_`-Tag mit Writer
 
 **Strict / GED7:** In Strict-5.5.1 (ADR-019) wird `_EVAL` weggelassen (`!_strictGed`-Gate). In GED7 (ADR-018) werden `_EVAL/_STYP/_INFO/_EVID/_INFM` im `SCHMA`-Block deklariert. GED7 hat kein Standard-Äquivalent — der Extension-Tag bleibt erhalten.
 
-**GRAMPS:** Citation mappt bereits `QUAY → confidence`. Das 3-Achsen-Modell als GRAMPS-Citation-`<attribute>` zu schreiben/zurückzulesen ist **Phase 2d** (separat), damit `xml1===xml2` grün bleibt — nicht Teil von 2a.
+**GRAMPS (2d, sw v776):** Citation mappt bereits `QUAY → confidence`. Das 3-Achsen-Modell wird zusätzlich als Citation-`<attribute>` geschrieben (`_STYP/_INFO/_EVID/_INFM`, deterministisch zwischen `<sourceref>` und `_extra`) und vom Parser modelliert herausgelöst (`_GR_EVAL_ATTR`-Mapping in der Citation-Schleife, statt verbatim in `_citExtra` → kein Doppel-Schreiben, gleiche `_REPO_MODELLED`-Lehre). `eval` fließt durch `_citHandle(…, evalObj)` und `_applyCit`. Browser-verifiziert: Write→Parse erhält eval, Re-Write stabil (1 `_STYP` bleibt 1, kein Doppeln); automatisierte GRAMPS-Roundtrip-Regression (2894 Personen) grün.
 
 **Entscheidung:** 3-Achsen-Modell als modellierter `_EVAL`-Subtree, QUAY bleibt unabhängig + ableitbar. Verifiziert: `net_delta=0` + `out1===out2` auf `_EVAL`-Fixture; Strict strippt sauber; +18 Unit-Tests (`_evalToQuay`, Parser-Extraktion ohne Doppel-Schreibung).
 
@@ -438,7 +438,7 @@ Die Daten *reisen mit der Datei* (sie gehören zum Zitat) → `_`-Tag mit Writer
 
 **Validator + Dashboard (2c, sw v775):** Regel `MISSING_EVAL` (info) feuert, wenn eine Person Quellen, aber keine Evidenzbewertung hat — analog `MISSING_QUAY`. **Bewusst `default-disabled`** (`VAL_CONFIG_DEFAULTS.disabled`): Evidenzbewertung ist eine Opt-in-Disziplin; sonst flutet ein Dauer-Hinweis jede noch nicht bewertete Quelle und drückt den „befundfrei"-Score auf 0 % für jede Bestandsdatei. Der Dashboard-Lückenradar-Balken „Quellen mit Evidenzbewertung" zeigt die Abdeckung **unabhängig vom Validator** (direkt aus `db` via `_dashHasEval`) — informiert also ohne zu strafen. **Config-Migration:** `_saveValConfig` merkt sich `known` (Regelstand zum Speicherzeitpunkt); `_loadValConfig` lässt default-deaktivierte Regeln, die eine gespeicherte Config noch nicht kannte, ihren Default erben — so erhalten Bestandsnutzer neue Opt-in-Regeln korrekt deaktiviert, ohne dass explizite Aktivierungen überschrieben werden. Verifiziert: frisch/alt → off, explizit aktiviert → übersteht Reload.
 
-**Offen: 2d GRAMPS, 2e Repository-Rest.**
+**Offen: 2e Repository-Rest.**
 
 ---
 

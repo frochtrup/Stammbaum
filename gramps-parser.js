@@ -117,6 +117,9 @@ function _confToQuay(conf) {
   return ([0, 0, 1, 2, 3])[Math.min(4, Math.max(0, +conf || 0))];
 }
 
+// RES-EVAL 2d (ADR-022): GRAMPS-Citation-<attribute>-Typ → Evidenzmodell-Achse
+const _GR_EVAL_ATTR = { _STYP: 'srcType', _INFO: 'infoQual', _EVID: 'evidence', _INFM: 'informant' };
+
 // Strip common OneDrive prefix from GRAMPS media src paths
 // '../OneDrive/Privat/Ahnen/...' → 'Privat/Ahnen/...'
 function _grampsMediaPath(src) {
@@ -158,6 +161,7 @@ function _applyCit(target, citHandle, citMap, srcHandleToId) {
     const obj = citationObj(srcId, cit.page || '', String(_confToQuay(cit.confidence)));
     obj._grampsCitHandle = cit._grampsHandle || null;
     obj._citExtra        = cit._extra        || [];
+    obj.eval             = cit.eval ? { ...cit.eval } : null;   // RES-EVAL 2d
     target.citations.push(obj);
   }
 }
@@ -280,12 +284,20 @@ export function _grampsParseXMLText(xmlText) {
     const conf = _child(cit, 'confidence');
     const sr   = _byTag(cit, 'sourceref')[0] || null;
     const citExtra = [];
+    let citEval = null;
     for (const nr  of _byTag(cit, 'noteref'))   citExtra.push(_xmlEl(nr));
     for (const obj of _byTag(cit, 'objref'))     citExtra.push(_xmlEl(obj));
-    for (const a   of _byTag(cit, 'attribute'))  citExtra.push(_xmlEl(a));
+    for (const a   of _byTag(cit, 'attribute')) {
+      // RES-EVAL 2d: Evidenz-Achsen modelliert herauslösen (nicht verbatim → kein Doppel-Schreiben)
+      const axis = _GR_EVAL_ATTR[a.getAttribute('type')];
+      if (axis) {
+        if (!citEval) citEval = { srcType: '', infoQual: '', evidence: '', informant: '' };
+        citEval[axis] = a.getAttribute('value') || '';
+      } else citExtra.push(_xmlEl(a));
+    }
     const citChange = _byTag(cit, 'change')[0];
     if (citChange) citExtra.push(_xmlEl(citChange));
-    citMap[h] = { sourceHandle: sr ? sr.getAttribute('hlink') : null, confidence: +conf || 0, page, _grampsHandle: h, _extra: citExtra };
+    citMap[h] = { sourceHandle: sr ? sr.getAttribute('hlink') : null, confidence: +conf || 0, page, eval: citEval, _grampsHandle: h, _extra: citExtra };
   }
 
   // Objects: handle → {src, mime, desc, priv, _extra[]}

@@ -166,7 +166,7 @@ export function _grampsBuildXMLText(db) {
     hofAddrToHandle[trimmed] = handle;
   }
 
-  const _citHandle = (srcId, page, quay, grampsHandle, extra) => {
+  const _citHandle = (srcId, page, quay, grampsHandle, extra, evalObj) => {
     const srcH = idToHandle[srcId];
     if (!srcH) return null;
     const key = grampsHandle || `${srcH}|${page||''}|${quay||0}`;
@@ -177,6 +177,7 @@ export function _grampsBuildXMLText(db) {
         sourceHandle: srcH,
         confidence: _QUAY_TO_CONF[Math.min(3, Math.max(0, +quay || 0))],
         page: page || '',
+        eval: evalObj || null,        // RES-EVAL 2d (ADR-022)
         _extra: extra || [],
       };
     }
@@ -230,7 +231,7 @@ export function _grampsBuildXMLText(db) {
     }
     L.push(`${indent}<attribute type="${_esc(a.type)}" value="${_esc(a.value)}">`);
     for (const c of a.citations || []) {
-      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra);
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval);
       if (ch) L.push(`${indent}  <citationref hlink="${_esc(ch)}"/>`);
     }
     if (a.note) {
@@ -254,7 +255,7 @@ export function _grampsBuildXMLText(db) {
         ? hofAddrToHandle[evObj.addr.trim()]
         : _plHandle(evObj.place || null, evObj.lati, evObj.long);
     const citHandles = (evObj.citations || [])
-      .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra))
+      .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval))
       .filter(Boolean);
     const noteHandle = _noteHandle(evObj.note || null, 'Event Note');
     // addr → <attribute type="Address" value="..."/>  (prepend, before _grampsAttrs)
@@ -448,7 +449,7 @@ export function _grampsBuildXMLText(db) {
     if (suffix)  L.push(`        <suffix>${_esc(suffix)}</suffix>`);
     // Name citations
     for (const c of p.nameCitations||[]) {
-      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra);
+      const ch = _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval);
       if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
     }
     L.push('      </name>');
@@ -462,7 +463,7 @@ export function _grampsBuildXMLText(db) {
       if (en.surname) L.push(`        <surname>${_esc(en.surname)}</surname>`);
       if (en.nick)    L.push(`        <nick>${_esc(en.nick)}</nick>`);
       for (const c of en.citations||[]) {
-        const ch = _citHandle(c.sid, c.page||'', c.quay??0, c._grampsCitHandle, c._citExtra);
+        const ch = _citHandle(c.sid, c.page||'', c.quay??0, c._grampsCitHandle, c._citExtra, c.eval);
         if (ch) L.push(`        <citationref hlink="${_esc(ch)}"/>`);
       }
       L.push('      </name>');
@@ -502,7 +503,7 @@ export function _grampsBuildXMLText(db) {
       const aH = a._grampsHlink || (a.xref ? _entityHandle(a.xref, 'pe') : null);
       if (!aH) continue;
       const aCitHandles = (a.citations || [])
-        .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra))
+        .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval))
         .filter(Boolean);
       const aNoteHandle = a.note ? _noteHandle(a.note, 'Association Note') : null;
       if (aCitHandles.length || aNoteHandle) {
@@ -594,6 +595,14 @@ export function _grampsBuildXMLText(db) {
       if (cit.page) L.push(`      <page>${_esc(cit.page)}</page>`);
       L.push(`      <confidence>${cit.confidence}</confidence>`);
       L.push(`      <sourceref hlink="${_esc(cit.sourceHandle)}"/>`);
+      // RES-EVAL 2d (ADR-022): Evidenzmodell als <attribute> (analog _STYP/_INFO/_EVID/_INFM in GEDCOM)
+      const _ev = cit.eval;
+      if (_ev && (_ev.srcType || _ev.infoQual || _ev.evidence || _ev.informant)) {
+        if (_ev.srcType)   L.push(`      <attribute type="_STYP" value="${_esc(_ev.srcType)}"/>`);
+        if (_ev.infoQual)  L.push(`      <attribute type="_INFO" value="${_esc(_ev.infoQual)}"/>`);
+        if (_ev.evidence)  L.push(`      <attribute type="_EVID" value="${_esc(_ev.evidence)}"/>`);
+        if (_ev.informant) L.push(`      <attribute type="_INFM" value="${_esc(_ev.informant)}"/>`);
+      }
       for (const x of cit._extra||[]) L.push(`      ${x}`);
       L.push('    </citation>');
     }
