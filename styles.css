@@ -3743,3 +3743,14 @@ html[data-theme="dark"] {
 #ob-text { margin: 0; line-height: 1.5; }
 .ob-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
 #ob-skip { background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px 10px; font-size: .9rem; }
+
+/* ── PLACE-HIST P0b-2b: Orts-Dubletten-Merge ───────────────────────────── */
+.modal-hint { font-size: 13px; color: var(--text-muted, #888); margin: 0 0 12px; line-height: 1.4; }
+.place-merge-group { border: 1px solid var(--border, #e0d8c8); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.place-merge-title { font-weight: 600; font-size: 13px; margin-bottom: 8px; color: var(--text, #333); }
+.place-merge-opt { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; border-radius: 6px; }
+.place-merge-opt:hover { background: var(--surface-2, #f5f0e6); }
+.place-merge-opt input { margin: 0; flex: 0 0 auto; }
+.place-merge-name { flex: 1 1 auto; font-size: 14px; }
+.place-merge-meta { flex: 0 0 auto; font-size: 12px; color: var(--text-muted, #888); }
+.place-merge-btn { margin-top: 8px; width: 100%; }

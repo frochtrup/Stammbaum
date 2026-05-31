@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v799 · Cache: `stammbaum-v799` · `test-unit.js` = 198 Tests grün
+**sw-Version:** v800 · Cache: `stammbaum-v800` · `test-unit.js` = 198 Tests grün
 **Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · **Eltern-Suchpicker im Familiendialog (v794)** — `<select>`+tote `onclick`-Buttons → relPicker-Logik wie „+ Elternteil".
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
@@ -171,14 +171,14 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | **P0a-2** | **`PlaceRegistry`** ✅ *(sw v797)* — `getPlaceRegistry()` in gedcom.js (`byId`/`byNorm`/`findByName`/`resolveAsOf`/`enclosureChainAsOf`, `_normPlaceName` NFC+casefold nur fürs Matching → verlustfrei) + `_migratePlaceObjects` (`parentId→enclosedBy` für Altdaten, idempotent, in `setDb` verdrahtet + Cache-Invalidierung). +13 Unit-Tests (180 total); Roundtrip net_delta=0/stable unverändert. | reine App-Logik | ✅ erledigt |
 | **P0b-1** | **Entität-Verknüpfung (additiv)** ✅ *(sw v798)* — `collectPlaces()` mischt je String-Ort additiv `placeId` (via `PlaceRegistry.findByName`) + `type` + fehlende Koordinaten aus dem `placeObject` ein; **String-Key unverändert** → kein Ripple bei den 8 Consumern. Ort-Detail zeigt **Typ**, **Zugehörigkeitskette** (`enclosureChainAsOf`) und **frühere Namen** (datierte `pnames`). Render-/roundtrip-neutral für GEDCOM-Daten ohne placeObjects. +5 Unit-Tests (185). | reine App-Logik | ✅ erledigt |
 | **P0b-2a** | **Dubletten-Erkennung + Merge-Kern** ✅ *(sw v799)* — `findPlaceDuplicates()` (Fold-Key `_placeFold` Umlaut-Faltung + Koordinaten-Nähe via Haversine, union-find-Cluster) + `mergePlaceObjects(winner, losers[])` (Schreibweisen→`pnames[]` verlustfrei, `enclosedBy` vereinigt, **alle `ev.placeId` + parent/enclosedBy umgehängt**, Verlierer gelöscht). Headless, +13 Unit-Tests (198). | reine App-Logik | ✅ erledigt |
-| **P0b-2b** | **Merge-Dialog (UI)** — Orte-Tab: Dubletten-Vorschläge, Gewinner-Wahl, Merge-Bestätigung (Muster `ui-dedup.js`). | UI | 🔜 geplant |
+| **P0b-2b** | **Merge-Dialog (UI)** ✅ *(sw v800)* — Orte-Tab: ⇉-Button öffnet `modalPlaceMerge`; pro Dublettengruppe Radio-Auswahl des Hauptorts (Vorschlag = meiste Event-Verwendungen, dann meiste pnames) + „Zusammenführen". Ruft `findPlaceDuplicates`/`mergePlaceObjects` (P0b-2a); CSP-safe (data-action). **Browser-verifiziert** (Modal rendert, Merge: Verlierer gelöscht, Schreibweise als pname erhalten, ev.placeId umgehängt, Liste neu, keine Console-Errors). | UI | ✅ erledigt |
 | **P0b-3** | **`extraPlaces` → `placeObjects`** (T0-STORAGE-Abbau); GEDCOM-PLAC/TRAN-Schreibpfad umbiegen, net_delta=0 wahren. | GRAMPS-Standard | 🔜 geplant |
 | **P2-UI** | **Historische UI** — Ort-Editor mit datierter Namens- + Zugehörigkeits-Historie (von–bis, übergeordneter Ort, Picker); Anzeige/Export via `resolveAsOf`. | — | angedacht |
 | **P3** | **Kirchen & typisierte Event-Orte** — Typ-Taxonomie (Dorf…Land, Kirche/Pfarrei/Friedhof, Hof) → GRAMPS-Standardtypen; Ort-**Suchpicker** im Event-Formular (Muster Eltern-Picker v794); Kirche↔Kirchenbuch (Repository/Source); Höfe als Filter der generischen Ort-Sicht. | `type` (vorhanden) | angedacht |
 | **P4** | **Geocoding & Gazetteer** — **GOV** (gov.genealogy.net) priorisiert (historische Zugehörigkeit über Zeit, ideal westfälisch) → speist `enclosedBy[]`/`pnames[]`; GeoNames/Wikidata alternativ; Batch-Geocoding + Dedup. CSP `connect-src` whitelisten + `test-csp.js`. | `authority` → GRAMPS `<url>` | angedacht |
 | **P5** | **Auswertungen** — Ort-Steckbrief (Events/Personen/Quellen/Karte/Namens-Timeline); Karten-**Zeitschieber** (Name/Zugehörigkeit zum Jahr); **Pfarrei-Rekonstruktion** (alle Taufen/Trauungen einer Kirche); Geo-Plausibilitäts-Validator; Orts-Hypothesen (`_HYPO`); Orts-Kontextsatz in Story/Buch. | gemischt | angedacht |
 
-**Reihenfolge:** §3.0 Verifikation ✅ → P0a-1 ✅ → P0a-2 ✅ → P0b-1 ✅ → P0b-2a ✅ → P0b-2b/P0b-3 → Review → P2-UI → P3 → P4 → P5.
+**Reihenfolge:** §3.0 Verifikation ✅ → P0a-1 ✅ → P0a-2 ✅ → P0b-1 ✅ → P0b-2a ✅ → P0b-2b ✅ → P0b-3 → Review → P2-UI → P3 → P4 → P5.
 
 ---
 
