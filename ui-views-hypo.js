@@ -224,6 +224,7 @@ function _saveAddHypo() {
   }
   _hypoEditId = null;
   _refreshHypoSection(_hypoCtxKind, _hypoCtxId);
+  if (_hypoCtxKind === 'p') _refreshGpsSection(_hypoCtxId);   // GPS-Notiz synchron
 }
 
 function _deleteHypo(kind, ownerId, hid) {
@@ -232,7 +233,107 @@ function _deleteHypo(kind, ownerId, hid) {
   owner._hypotheses = owner._hypotheses.filter(h => h.id !== hid);
   markChanged();
   _refreshHypoSection(kind, ownerId);
+  if (kind === 'p') _refreshGpsSection(ownerId);   // GPS-Notiz synchron
   showToast('Hypothese gelöscht', 'success');
+}
+
+// ─── GPS-Beweisführungsnotiz (RES-HYPO 4e) ───────────────────────────────────
+// Bündelt Quellen + Hypothesen zu einem Argument nach Genealogical Proof
+// Standard. Eingebettetes, aufklappbares Read-Panel — nur wenn ≥1 Hypothese.
+
+const _gpsOpen = new Set();   // Aufklapp-Zustand je personId (getrennt vom Modell)
+
+// Zähle Zitate der Person + wie viele evidenzbewertet / mit QUAY
+function _personCitStats(p) {
+  let total = 0, evaluated = 0, quay = 0;
+  const scan = cits => {
+    for (const c of (cits || [])) {
+      total++;
+      if (c.eval && (c.eval.srcType || c.eval.infoQual || c.eval.evidence || c.eval.informant)) evaluated++;
+      if (c.quay !== undefined && c.quay !== '') quay++;
+    }
+  };
+  for (const key of ['birth', 'chr', 'death', 'buri']) scan(p[key]?.citations);
+  for (const ev of (p.events || [])) scan(ev.citations);
+  scan(p.nameCitations);
+  return { total, evaluated, quay };
+}
+
+function _gpsEvidenceListHtml(h) {
+  const ev = (h.evidence || []).filter(e => e && e.sid);
+  if (!ev.length) return '<span class="gps-noev">(keine Evidenz verknüpft)</span>';
+  return ev.map(e => {
+    const src = AppState.db.sources?.[e.sid];
+    const label = src ? esc(src.abbr || src.title || e.sid) : esc(e.sid);
+    return `${label}${e.page ? ` (${esc(e.page)})` : ''}`;
+  }).join('; ');
+}
+
+function _gpsNoteHtml(personId) {
+  const hypos = _getPersonHypos(personId);
+  if (!hypos.length) return '';   // GPS-Notiz nur bei vorhandener Argumentation
+  const p = AppState.db.individuals[personId];
+  const cs = _personCitStats(p);
+  const open      = hypos.filter(h => _hypoStatus(h) === 'open');
+  const confirmed = hypos.filter(h => _hypoStatus(h) === 'confirmed');
+  const rejected  = hypos.filter(h => _hypoStatus(h) === 'rejected');
+  const isOpen = _gpsOpen.has(personId);
+
+  // Reife-Indikator: Anteil aufgelöster Hypothesen
+  const resolvedPct = hypos.length ? Math.round(((confirmed.length + rejected.length) / hypos.length) * 100) : 0;
+
+  let body = '';
+  if (isOpen) {
+    body += `<div class="gps-block">
+      <div class="gps-h">① Quellenlage &amp; Evidenz</div>
+      <div class="gps-line">${cs.total} Quellenangabe${cs.total !== 1 ? 'n' : ''} · ${cs.evaluated} evidenzbewertet · ${cs.quay} mit QUAY</div>
+    </div>`;
+    if (confirmed.length) body += `<div class="gps-block">
+      <div class="gps-h">② Bestätigte Schlüsse</div>
+      ${confirmed.map(h => `<div class="gps-arg"><span class="gps-claim">${esc(h.text || '')}</span>
+        <div class="gps-sub">Evidenz: ${_gpsEvidenceListHtml(h)}</div>
+        ${h.conclusion ? `<div class="gps-sub">Schluss: ${esc(h.conclusion)}</div>` : ''}</div>`).join('')}
+    </div>`;
+    if (open.length) body += `<div class="gps-block">
+      <div class="gps-h">③ Offene Fragen / Konflikte</div>
+      ${open.map(h => `<div class="gps-arg"><span class="gps-claim">${esc(h.text || '')}</span>
+        <div class="gps-sub">Evidenz: ${_gpsEvidenceListHtml(h)}</div>
+        ${h.rationale ? `<div class="gps-sub">Begründung: ${esc(h.rationale)}</div>` : ''}</div>`).join('')}
+    </div>`;
+    if (rejected.length) body += `<div class="gps-block">
+      <div class="gps-h">④ Verworfene Annahmen</div>
+      ${rejected.map(h => `<div class="gps-arg gps-rej"><span class="gps-claim">${esc(h.text || '')}</span>
+        ${h.conclusion ? `<div class="gps-sub">Grund: ${esc(h.conclusion)}</div>` : ''}</div>`).join('')}
+    </div>`;
+  }
+
+  return `<div class="section fade-up" id="gps-section-${personId}" data-jump-id="pdet-gps">
+    <div class="section-head gps-head" data-action="toggleGpsNote" data-pid="${esc(personId)}">
+      <div class="section-title">Beweisführung (GPS)
+        <span class="tasks-open-cnt">${resolvedPct}% aufgelöst</span></div>
+      <button class="section-add gps-toggle" aria-expanded="${isOpen}">${isOpen ? '▾' : '▸'}</button>
+    </div>
+    ${body}
+  </div>`;
+}
+
+function _refreshGpsSection(personId) {
+  const sec  = document.getElementById('gps-section-' + personId);
+  const html = _gpsNoteHtml(personId);
+  if (!html) { if (sec) sec.remove(); return; }
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const node = tmp.firstElementChild;
+  if (sec) { sec.replaceWith(node); return; }
+  // Section fehlt (z. B. erste Hypothese) → hinter Hypothesen-Sektion einfügen
+  const hypoSec = document.getElementById('hypo-section-' + personId);
+  if (hypoSec) hypoSec.after(node);
+}
+
+function toggleGpsNote(personId) {
+  if (_gpsOpen.has(personId)) _gpsOpen.delete(personId);
+  else _gpsOpen.add(personId);
+  _refreshGpsSection(personId);
 }
 
 // ─── Delegations-Handler ─────────────────────────────────────────────────────

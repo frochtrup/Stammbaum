@@ -1920,6 +1920,23 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .hypo-ev-row { display: flex; gap: 6px; align-items: center; }
 .hypo-ev-row .hypo-ev-src { flex: 2; min-width: 0; }
 .hypo-ev-row .hypo-ev-pg  { flex: 1; min-width: 0; }
+
+/* GPS-Beweisführungsnotiz (RES-HYPO 4e) */
+.gps-head { cursor: pointer; }
+.gps-toggle { min-width: 28px; }
+.gps-block { padding: 6px 12px 2px; }
+.gps-h {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--gold); margin: 6px 0 3px;
+}
+.gps-line { font-size: 0.84rem; color: var(--text-dim); }
+.gps-arg {
+  border-left: 3px solid var(--border); padding: 2px 0 2px 9px; margin: 4px 0;
+}
+.gps-arg.gps-rej { opacity: 0.7; }
+.gps-claim { font-size: 0.88rem; color: var(--text-primary); font-weight: 600; }
+.gps-sub   { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+.gps-noev  { color: var(--text-muted); font-style: italic; }
 /* Prüfregeln-Config-Modal */
 /* Scroll-Fix für modalValConfig: sheet-body scrollt, sheet-Container bleibt fixiert */
 #modalValConfig .sheet { display: flex; flex-direction: column; overflow: hidden; }

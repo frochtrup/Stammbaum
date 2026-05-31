@@ -937,6 +937,8 @@ function showDetail(id, pushHistory = true) {
 
   // Hypothesen (RES-HYPO, ADR-023)
   if (typeof _hypoSectionHtml === 'function') html += _hypoSectionHtml(id);
+  // GPS-Beweisführungsnotiz (RES-HYPO 4e) — nur bei vorhandenen Hypothesen
+  if (typeof _gpsNoteHtml === 'function') html += _gpsNoteHtml(id);
 
   document.getElementById('detailContent').innerHTML = html;
   _injectJumpBar();
