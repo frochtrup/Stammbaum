@@ -843,11 +843,19 @@ function mergePlaceObjects(winnerId, loserIds) {
 }
 
 // ─── String-Orts-Dubletten (GEDCOM ohne placeObjects) ────────────────────────
-// Normiert den ersten Namensteil: alles nach dem ersten Komma entfernen,
-// "?" und Ziffern-Blöcke entfernen, dann _placeFold.
+// Normiert den ersten Namensteil für Dubletten-Vergleich:
+//   • alles nach erstem Komma entfernen
+//   • Klammer-Zusätze:  "Gronau (Westf.)" → "Gronau"
+//   • Slash-Suffixe:    "Emsdetten/Westf" → "Emsdetten"
+//   • Abkürzungen:      "Rheine i.W."     → "Rheine"
+//   • "?", Ziffernblöcke, dann _placeFold
 function _placeStringCoreFold(name) {
-  const core = String(name).split(',')[0].replace(/[?]/g, '').replace(/\b\d+\b/g, '').trim();
-  return _placeFold(core);
+  let s = String(name).split(',')[0];
+  s = s.replace(/\(.*?\)/g, '');          // (Westf.) entfernen
+  s = s.replace(/\/.*/, '');              // /Westf entfernen
+  s = s.replace(/\s+\S*\.\S*\.?\s*$/, ''); // i.W. o.ä. am Ende entfernen
+  s = s.replace(/[?]/g, '').replace(/\b\d+\b/g, '').trim();
+  return _placeFold(s);
 }
 
 // Gruppiert String-Orte aus collectPlaces() nach _placeStringCoreFold.
