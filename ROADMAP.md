@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v784 · Cache: `stammbaum-v784`
+**sw-Version:** v785 · Cache: `stammbaum-v785`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -230,7 +230,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v769** *(veraltet — v770–v784 [QUICK-TPL age-Feldtyp, Qualitäts-Dashboard RES-DASH, Evidenzmodell RES-EVAL 2a–2e, RES-PROJ 3a–3c (Kanban + Projekte + Timeline), RES-HYPO 4a–4e (Hypothesen + GPS-Beweisführung)] noch nicht dokumentiert. v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
+**Handbuch-Stand: sw v769** *(veraltet — v770–v785 [QUICK-TPL age-Feldtyp, Qualitäts-Dashboard RES-DASH (+ v785 Radar-Balken-Breite CSP-Fix), Evidenzmodell RES-EVAL 2a–2e, RES-PROJ 3a–3c (Kanban + Projekte + Timeline), RES-HYPO 4a–4e (Hypothesen + GPS-Beweisführung)] noch nicht dokumentiert. v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

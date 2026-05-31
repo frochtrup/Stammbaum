@@ -186,7 +186,7 @@ function _paintDashboard(cfg) {
     const sub  = m.base !== undefined ? ` <span class="dash-bar-base">(von ${base})</span>` : '';
     html += `<div class="dash-bar-row">
       <div class="dash-bar-label">${esc(m.label)}${sub}</div>
-      <div class="dash-bar"><div class="dash-bar-fill dash-bar-${cls}" style="width:${pct}%"></div></div>
+      <div class="dash-bar"><div class="dash-bar-fill dash-bar-${cls}" data-pct="${pct}"></div></div>
       <div class="dash-bar-pct">${pct}%</div>
     </div>`;
   }
@@ -211,6 +211,7 @@ function _paintDashboard(cfg) {
   if (!focus.length) {
     html += `<div class="tasks-list-empty">Keine Personen mit ${_dashFilter === 'red' ? 'Fehlern' : 'Befunden'} in dieser Auswahl 🎉</div>`;
     container.innerHTML = html;
+    _applyDashBarWidths(container);
     return;
   }
 
@@ -246,6 +247,15 @@ function _paintDashboard(cfg) {
     html += `<div class="dash-more">… und ${focus.length - CAP} weitere Personen</div>`;
 
   container.innerHTML = html;
+  _applyDashBarWidths(container);
+}
+
+// CSP (style-src ohne unsafe-inline, ADR-015) blockt inline width:X% stumm →
+// Balken-Breite nach dem Paint per JS-CSSOM setzen (erlaubt).
+function _applyDashBarWidths(container) {
+  container.querySelectorAll('.dash-bar-fill[data-pct]').forEach(el => {
+    el.style.width = el.dataset.pct + '%';
+  });
 }
 
 function _dashAmpelChip(kind, n, label) {
