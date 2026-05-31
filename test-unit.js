@@ -160,7 +160,8 @@ if (IS_NODE) {
     'hypoIsEmpty: hypoIsEmpty, _hypoStatus: _hypoStatus, ' +
     'grampsParse: _grampsParseXMLText, grampsBuild: _grampsBuildXMLText, ' +
     'setDb: setDb, getPlaceRegistry: getPlaceRegistry, _normPlaceName: _normPlaceName, ' +
-    '_migratePlaceObjects: _migratePlaceObjects };';
+    '_migratePlaceObjects: _migratePlaceObjects, _placeFold: _placeFold, ' +
+    'findPlaceDuplicates: findPlaceDuplicates, mergePlaceObjects: mergePlaceObjects };';
   eval(_combined);
   API = window._api;
 }
@@ -791,6 +792,58 @@ group('(j) PLACE-HIST collectPlaces-Entität');
   var dated = (po.pnames || []).filter(function(p){ return p.dateFrom || p.dateTo; });
   eq(dated.length, 1, 'P0b-1: datierte Namensvariante für „Frühere Namen"');
   eq(dated[0].value, 'Monasterium', 'P0b-1: frühere Schreibweise gelesen');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (k) PLACE-HIST — Dubletten-Erkennung + Merge (ADR-024 P0b-2a)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(k) PLACE-HIST Dubletten + Merge');
+
+// _placeFold: aggressive Normalisierung (Umlaut-Faltung) für Kandidatensuche
+eq(API._placeFold('München'),  'munchen',  '_placeFold faltet ü→u');
+eq(API._placeFold('Muenchen'), 'munchen',  '_placeFold faltet ue→u (= München)');
+eq(API._placeFold('  Köln '),  'koln',     '_placeFold ö→o + trim');
+
+(function() {
+  // Dublette per Schreibweise: "München" vs "Muenchen" (gleicher Fold-Key)
+  var db = {
+    individuals: {}, families: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'München', type:'City', pnames:[{value:'München'}], enclosedBy:[], lat:48.14, long:11.58 },
+      '@P2@': { id:'@P2@', title:'Muenchen', type:'City', pnames:[{value:'Muenchen'}], enclosedBy:[] },
+      '@P3@': { id:'@P3@', title:'Hamburg',  type:'City', pnames:[{value:'Hamburg'}],  enclosedBy:[] },
+    },
+  };
+  API.setDb(db);
+  var dups = API.findPlaceDuplicates();
+  eq(dups.length, 1, 'findPlaceDuplicates: genau 1 Dublettengruppe (München/Muenchen)');
+  eq(dups[0].ids.length, 2, 'Gruppe hat 2 Mitglieder');
+  ok(dups[0].ids.indexOf('@P1@') >= 0 && dups[0].ids.indexOf('@P2@') >= 0, 'Gruppe enthält @P1@ + @P2@');
+  ok(dups[0].ids.indexOf('@P3@') < 0, 'Hamburg ist NICHT in der Gruppe');
+})();
+
+(function() {
+  // Merge: Verlierer-Schreibweise wird zu pname des Gewinners; ev.placeId umgehängt
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Muenchen', placeId:'@P2@' }, chr:{}, death:{}, buri:{}, events:[] },
+      '@I2@': { id:'@I2@', birth:{}, chr:{}, death:{ place:'München', placeId:'@P1@' }, buri:{}, events:[] },
+    },
+    families: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'München', type:'City', pnames:[{value:'München'}], enclosedBy:[], lat:48.14, long:11.58 },
+      '@P2@': { id:'@P2@', title:'Muenchen', type:'City', pnames:[{value:'Muenchen'}], enclosedBy:[] },
+    },
+  };
+  API.setDb(db);
+  var res = API.mergePlaceObjects('@P1@', ['@P2@']);
+  eq(res.merged, 1, 'merge: 1 Verlierer zusammengeführt');
+  eq(res.repointed, 1, 'merge: 1 ev.placeId umgehängt (@P2@→@P1@)');
+  ok(!API.getPlaceRegistry().byId['@P2@'], 'merge: Verlierer-placeObject gelöscht');
+  var w = API.getPlaceRegistry().byId['@P1@'];
+  ok((w.pnames || []).some(function(p){ return p.value === 'Muenchen'; }), 'merge: Verlierer-Schreibweise als pname erhalten (verlustfrei)');
+  eq(db.individuals['@I1@'].birth.placeId, '@P1@', 'merge: INDI birth.placeId zeigt auf Gewinner');
+  eq(API.getPlaceRegistry().findByName('Muenchen'), '@P1@', 'merge: alte Schreibweise findet jetzt den Gewinner');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
