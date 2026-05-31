@@ -54,8 +54,73 @@ function _stripMod(s) {
     .replace(/^export\s*\{[^}]*\}\s*;?\s*$/gm, '')
     .replace(/^import\b[^\n]*$/gm, '');
 }
-var _MODFILES = { 'gedcom-validator.js': 1 };
+// gramps-parser.js + gramps-writer.js sind ESM (T0-MODULE) → ebenfalls strippen.
+var _MODFILES = { 'gedcom-validator.js': 1, 'gramps-parser.js': 1, 'gramps-writer.js': 1 };
 function _readSrc(f) { var s = _read(_dir + '/' + f); return _MODFILES[f] ? _stripMod(s) : s; }
+
+// ── Mini-DOMParser (abhängigkeitsfrei) — für GRAMPS-Parser-Tests ─────────────
+// Schlanke DOM-Teilmenge die gramps-parser.js nutzt. GRAMPS-XML ist
+// maschinengeneriert + wohlgeformt → ein Tokenizer genügt. (Spiegel des
+// Parsers in test-roundtrip.js; bewusst dupliziert, damit beide Harnesse
+// abhängigkeitsfrei einzeln lauffähig bleiben.)
+function _makeMiniDOMParser() {
+  function decodeEnt(s) {
+    return s.replace(/&(#x?[0-9a-fA-F]+|amp|lt|gt|quot|apos);/g, function(m, e) {
+      if (e === 'amp')  return '&'; if (e === 'lt') return '<'; if (e === 'gt') return '>';
+      if (e === 'quot') return '"'; if (e === 'apos') return "'";
+      if (e.charAt(0) === '#') { var code = e.charAt(1) === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return String.fromCodePoint(code); }
+      return m;
+    });
+  }
+  function textOf(node) {
+    var out = '', ch = node.childNodes;
+    for (var i = 0; i < ch.length; i++) { if (ch[i].nodeType === 3) out += ch[i].textContent; else if (ch[i].nodeType === 1) out += textOf(ch[i]); }
+    return out;
+  }
+  function makeEl(tag) {
+    var colon = tag.indexOf(':');
+    var el = { nodeType: 1, tagName: tag, localName: colon >= 0 ? tag.slice(colon + 1) : tag, namespaceURI: null, _attrs: {}, attributes: [], childNodes: [] };
+    el.getAttribute = function(n) { return (n in this._attrs) ? this._attrs[n] : null; };
+    Object.defineProperty(el, 'children', { get: function() { return this.childNodes.filter(function(c) { return c.nodeType === 1; }); } });
+    Object.defineProperty(el, 'textContent', { get: function() { return textOf(this); } });
+    el.getElementsByTagName = function(t) { var res = []; (function walk(n) { for (var i = 0; i < n.childNodes.length; i++) { var c = n.childNodes[i]; if (c.nodeType === 1) { if (t === '*' || c.tagName === t) res.push(c); walk(c); } } })(this); return res; };
+    el.getElementsByTagNameNS = function(ns, t) { var res = []; (function walk(n) { for (var i = 0; i < n.childNodes.length; i++) { var c = n.childNodes[i]; if (c.nodeType === 1) { if ((t === '*' || c.localName === t) && (ns === '*' || c.namespaceURI === ns)) res.push(c); walk(c); } } })(this); return res; };
+    el.querySelector = function(sel) { return this.getElementsByTagName(sel)[0] || null; };
+    return el;
+  }
+  function parse(xml) {
+    xml = String(xml).replace(/^﻿/, '');
+    var n = xml.length, i = 0, doc = makeEl('#document'); doc.documentElement = null;
+    var stack = [doc];
+    function curNS() { for (var s = stack.length - 1; s >= 0; s--) if (stack[s].namespaceURI) return stack[s].namespaceURI; return null; }
+    while (i < n) {
+      if (xml.charAt(i) === '<') {
+        if (xml.substr(i, 4) === '<!--')      { var e = xml.indexOf('-->', i); i = e < 0 ? n : e + 3; continue; }
+        if (xml.substr(i, 9) === '<![CDATA[') { var e = xml.indexOf(']]>', i); var d = xml.slice(i + 9, e < 0 ? n : e); stack[stack.length - 1].childNodes.push({ nodeType: 3, textContent: d }); i = e < 0 ? n : e + 3; continue; }
+        if (xml.charAt(i + 1) === '?')         { var e = xml.indexOf('?>', i); i = e < 0 ? n : e + 2; continue; }
+        if (xml.charAt(i + 1) === '!')         { var e = xml.indexOf('>', i);  i = e < 0 ? n : e + 1; continue; }
+        if (xml.charAt(i + 1) === '/')         { var e = xml.indexOf('>', i); stack.pop(); i = e + 1; continue; }
+        var e = xml.indexOf('>', i), raw = xml.slice(i + 1, e), self = raw.charAt(raw.length - 1) === '/';
+        if (self) raw = raw.slice(0, -1);
+        var nameM = raw.match(/^([^\s/>]+)/), el = makeEl(nameM[1]);
+        var attrRe = /([^\s=]+)\s*=\s*("([^"]*)"|'([^']*)')/g, am, rest = raw.slice(nameM[1].length);
+        while ((am = attrRe.exec(rest))) { var av = decodeEnt(am[3] !== undefined ? am[3] : am[4]); el._attrs[am[1]] = av; el.attributes.push({ name: am[1], value: av }); }
+        el.namespaceURI = (el._attrs.xmlns !== undefined) ? el._attrs.xmlns : curNS();
+        var parent = stack[stack.length - 1]; parent.childNodes.push(el);
+        if (parent === doc && !doc.documentElement) doc.documentElement = el;
+        if (!self) stack.push(el);
+        i = e + 1;
+      } else {
+        var lt = xml.indexOf('<', i), txt = xml.slice(i, lt < 0 ? n : lt);
+        if (txt) stack[stack.length - 1].childNodes.push({ nodeType: 3, textContent: decodeEnt(txt) });
+        i = lt < 0 ? n : lt;
+      }
+    }
+    return doc;
+  }
+  return function MiniDOMParser() { this.parseFromString = function(xml, _t) { return parse(xml); }; };
+}
+var _MiniDOMParser = _makeMiniDOMParser();
 
 // ── Module laden ──────────────────────────────────────────────────────────────
 var API = {};
@@ -65,28 +130,35 @@ if (IS_NODE) {
     localStorage: { getItem: function() { return null; }, setItem: function() {}, removeItem: function() {} },
     performance:  { now: function() { return Date.now(); } },
     document:     _docStub,
+    DOMParser:    _MiniDOMParser,
     setTimeout: setTimeout, clearTimeout: clearTimeout,
   });
   _ctx.window = _ctx;
-  ['gedcom.js', 'gedcom-parser.js', 'gedcom-writer.js', 'gedcom-validator.js']
+  ['gedcom.js', 'gedcom-parser.js', 'gedcom-writer.js', 'gedcom-validator.js', 'gramps-parser.js', 'gramps-writer.js']
     .forEach(function(f) { _vm.runInContext(_readSrc(f), _ctx, { filename: f }); });
   API = _ctx;
+  API.grampsParse = _ctx._grampsParseXMLText;
+  API.grampsBuild = _ctx._grampsBuildXMLText;
 } else {
   window       = this;
   localStorage = { getItem: function() { return null; }, setItem: function() {}, removeItem: function() {} };
   performance  = { now: function() { return Date.now(); } };
   document     = _docStub;
+  DOMParser    = _MiniDOMParser;
   var _combined =
     _readSrc('gedcom.js')          + '\n' +
     _readSrc('gedcom-parser.js')   + '\n' +
     _readSrc('gedcom-writer.js')   + '\n' +
     _readSrc('gedcom-validator.js')+ '\n' +
+    _readSrc('gramps-parser.js')   + '\n' +
+    _readSrc('gramps-writer.js')   + '\n' +
     'window._api = { parseGEDCOM: parseGEDCOM, runValidation: runValidation, ' +
     '_buildLivingSet: _buildLivingSet, normMonth: normMonth, buildGedDate: buildGedDate, ' +
     'buildGedDateFromFields: buildGedDateFromFields, readDatePartFromFields: readDatePartFromFields, ' +
     '_splitPageUrl: _splitPageUrl, migratePageUrls: migratePageUrls, ' +
     '_evalToQuay: _evalToQuay, evalIsEmpty: evalIsEmpty, ' +
-    'hypoIsEmpty: hypoIsEmpty, _hypoStatus: _hypoStatus };';
+    'hypoIsEmpty: hypoIsEmpty, _hypoStatus: _hypoStatus, ' +
+    'grampsParse: _grampsParseXMLText, grampsBuild: _grampsBuildXMLText };';
   eval(_combined);
   API = window._api;
 }
