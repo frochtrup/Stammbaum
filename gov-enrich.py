@@ -1,24 +1,31 @@
 #!/usr/bin/env python3
 """
-gov-enrich.py — Offline-Anreicherung exportierter placeObjects mit Wikidata.
+gov-enrich.py — Offline-Anreicherung exportierter placeObjects.
 
-Liefert für jeden Ort:
-  • Koordinaten (P625)
-  • Typ (P31 → Village/Town/City/Parish/Church/Farm/Cemetery/County/State/Country)
-  • enclosedBy[] mit historischen Datumsgrenzen aus P131 (inkl. P580/P582-Qualifikatoren)
+Zwei Modi:
 
-GOV (gov.genealogy.net) hat keine nutzbare JSON/SPARQL-API.
-Wikidata deckt westeuropäische Orte sehr gut ab und enthält häufig
-historische Verwaltungszugehörigkeiten mit Datumsgrenzen.
+1. WIKIDATA-Modus (Standard):
+   Liest exportierte placeObjects.json, fragt Wikidata SPARQL je Ort,
+   befüllt Koordinaten + Typ. enclosedBy[] wird NICHT befüllt
+   (Wikidata liefert nur heutigen Verwaltungsstand).
 
-Verwendung:
-  python3 gov-enrich.py <placeObjects.json> [--out enriched.json] [--dry-run]
+   python3 gov-enrich.py placeObjects.json [--out enriched.json] [--dry-run]
 
-  placeObjects.json  = exportiert via Orte-Tab → ↓-Button
-  --out              = Ausgabedatei (default: <input>_enriched.json)
-  --dry-run          = nur ausgeben, nicht schreiben
-  --only-missing     = nur Orte ohne Koordinaten/Typ verarbeiten (default: an)
-  --overwrite        = bestehende Werte überschreiben
+2. GOV-TEXT-Modus (historisch, empfohlen für deutsche Orte):
+   Liest eine .txt-Datei mit kopierten GOV-Textzusammenfassungen
+   (gov.genealogy.net → Ort aufrufen → Text kopieren, mehrere Einträge
+   hintereinander in eine Datei einfügen).
+   Löst object_XXXXX-Eltern-IDs via GOV-HTML auf.
+   Kombiniert mit placeObjects.json für Titel-Abgleich.
+
+   python3 gov-enrich.py placeObjects.json --gov-text gov_texte.txt [--out enriched.json]
+
+Optionen:
+  --out          Ausgabedatei (default: <input>_enriched.json)
+  --dry-run      Nur ausgeben, nicht schreiben
+  --only-missing Nur Orte ohne Koordinaten/Typ (default: an)
+  --overwrite    Bestehende Werte überschreiben
+  --gov-text     GOV-Textzusammenfassungen (.txt, mehrere Blöcke)
 """
 
 import sys, json, time, urllib.request, urllib.parse, argparse, re
@@ -198,6 +205,167 @@ def find_or_create_po(pos, title, po_type):
     }
     return new_id
 
+# ─── GOV-Text-Modus ──────────────────────────────────────────────────────────
+
+GOV_TYPE_MAP = {
+    'Landgemeinde':'Municipality', 'Gemeinde':'Municipality', 'Verbandsgemeinde':'Municipality',
+    'Samtgemeinde':'Municipality', 'Verwaltungsgemeinschaft':'Municipality', 'Amt':'Municipality',
+    'Stadt':'Town', 'Stadt (Gebietskörperschaft)':'Town', 'Stadtgemeinde':'Town',
+    'Wigbold':'Town', 'Flecken':'Town', 'Marktgemeinde':'Town',
+    'Dorf':'Village', 'Kirchdorf':'Village',
+    'Weiler':'Hamlet', 'Einöde':'Hamlet',
+    'Kirchspiel':'Parish', 'Kirchengemeinde':'Parish', 'Pfarrei':'Parish',
+    'Bistum':'Parish', 'Erzbistum':'Parish',
+    'Landkreis':'County', 'Kreis':'County', 'Stadtkreis':'County',
+    'Regierungsbezirk':'District', 'Bezirk':'District',
+    'Provinz':'State', 'Bundesland':'State', 'Land':'State', 'Freistaat':'State',
+    'Staat':'Country', 'Königreich':'Country', 'Großherzogtum':'Country',
+    'Herzogtum':'Country', 'Fürstentum':'Country', 'Kurfürstentum':'Country',
+    'Freie Stadt':'City', 'Kirche':'Church', 'Friedhof':'Cemetery', 'Hof':'Farm',
+}
+
+def _extract_date(s):
+    if not s: return None
+    m = re.search(r'(\d{4}(?:-\d{2}(?:-\d{2})?)?)', s)
+    return m.group(1) if m else None
+
+def parse_gov_block(raw_block):
+    """Parst einen GOV-Textblock → dict mit govId, title, types, names, parents, extIds."""
+    lines = [l.strip().rstrip(',;').strip() for l in raw_block.split('\n') if l.strip()]
+    if not lines: return None
+    result = {'govId': lines[0], 'title': None, 'types': [], 'names': [], 'parents': [], 'extIds': {}}
+    for line in lines[1:]:
+        # gehört [ab DATE] [bis DATE] zu object_XXX / GOVID
+        m = re.match(r'gehört(?:\s+ab\s+(\S+))?(?:\s+bis\s+(\S+))?\s+(?:\S+\s+)?zu\s+(\S+)', line)
+        if m:
+            result['parents'].append({'govObjId': m.group(3), 'dateFrom': _extract_date(m.group(1)), 'dateTo': _extract_date(m.group(2))})
+            continue
+        m2 = re.match(r'gehört\s+(\S+)\s+zu\s+(\S+)', line)
+        if m2:
+            d = _extract_date(m2.group(1))
+            result['parents'].append({'govObjId': m2.group(2), 'dateFrom': d, 'dateTo': d})
+            continue
+        # ist [ab DATE] [bis DATE] (auf deu) TYPE
+        m3 = re.match(r'ist(?:\s+ab\s+(\S+))?(?:\s+bis\s+(\S+))?\s+\(auf \w+\)\s+(.+?)(?:\s+sagt|$)', line)
+        if m3:
+            rt = m3.group(3).strip()
+            result['types'].append({'rawType': rt, 'type': GOV_TYPE_MAP.get(rt, 'Unknown'), 'dateFrom': _extract_date(m3.group(1)), 'dateTo': _extract_date(m3.group(2))})
+            continue
+        # heißt (auf LANG) NAME
+        m4 = re.match(r'heißt\s+(?:\S+\s+)?\(auf (\w+)\)\s+(.+?)(?:\s+sagt|$)', line)
+        if m4:
+            result['names'].append({'lang': m4.group(1), 'value': m4.group(2).strip()})
+            if result['title'] is None and m4.group(1) in ('deu', 'de'):
+                result['title'] = m4.group(2).strip()
+            continue
+        # hat externe Kennung
+        m5 = re.match(r'hat externe Kennung\s+(\w+):(\S+)', line)
+        if m5: result['extIds'][m5.group(1)] = m5.group(2)
+    return result
+
+def fetch_gov_name(gov_obj_id, cache={}):
+    """Holt den Namen eines GOV-Objekts via HTML-Scraping."""
+    if gov_obj_id in cache: return cache[gov_obj_id]
+    url = f"https://gov.genealogy.net/item/show/{gov_obj_id}"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'StammbaumPWA-enrich/1.0'})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            html = r.read().decode('utf-8', errors='replace')
+        m = re.search(r'<title>([^<]+)\s*-\s*GOV</title>', html)
+        name = m.group(1).strip() if m else None
+        cache[gov_obj_id] = name
+        time.sleep(0.5)
+        return name
+    except Exception as e:
+        print(f"  ⚠ GOV-Fetch fehlgeschlagen für {gov_obj_id}: {e}", file=sys.stderr)
+        cache[gov_obj_id] = None
+        return None
+
+def apply_gov_text_mode(pos, gov_text_path, overwrite=False):
+    """Verarbeitet GOV-Textblöcke: parst, löst Eltern auf, schreibt in pos."""
+    with open(gov_text_path, encoding='utf-8') as f:
+        raw = f.read()
+
+    # Blöcke trennen: jeder Block beginnt mit einer Zeile ohne führende Tabs
+    blocks_raw = re.split(r'\n(?=\S)', raw.strip())
+    blocks = [parse_gov_block(b) for b in blocks_raw if b.strip()]
+    blocks = [b for b in blocks if b and b['govId']]
+    print(f"📄 {len(blocks)} GOV-Blöcke gefunden in {gov_text_path}")
+
+    # Index: govId → block (für interne Auflösung)
+    gov_index = {b['govId']: b for b in blocks}
+
+    # Für jeden Block das passende placeObject in pos finden
+    changed = 0
+    for block in blocks:
+        # Passendes placeObject suchen: via _govId oder Titel-Match
+        po = next((p for p in pos.values() if p.get('_govId') == block['govId']), None)
+        if not po and block['title']:
+            lc = block['title'].lower()
+            po = next((p for p in pos.values() if (p.get('title') or '').lower() == lc), None)
+        if not po:
+            # Neues placeObject anlegen
+            title = block['title'] or block['govId']
+            pid = epid(title)
+            po = {'id': pid, 'title': title, 'type': 'Unknown', 'lat': None, 'long': None,
+                  'pnames': [], 'enclosedBy': [], 'parentId': None}
+            pos[pid] = po
+
+        po['_govId'] = block['govId']
+
+        # Typ (neuester ohne dateTo)
+        current_type = next((t for t in reversed(block['types']) if not t['dateTo']), None) \
+                    or (block['types'][-1] if block['types'] else None)
+        if current_type and current_type['type'] != 'Unknown' and (overwrite or not po.get('type') or po['type'] == 'Unknown'):
+            po['type'] = current_type['type']
+
+        # Namen
+        if not isinstance(po.get('pnames'), list): po['pnames'] = []
+        for n in block['names']:
+            if not any(p['value'] == n['value'] and p.get('lang') == n['lang'] for p in po['pnames']):
+                po['pnames'].append({'value': n['value'], 'lang': n['lang'], 'dateFrom': None, 'dateTo': None, 'dateType': None, '_dateRaw': None})
+
+        # Eltern-Referenzen auflösen
+        if overwrite: po['enclosedBy'] = []
+        if not isinstance(po.get('enclosedBy'), list): po['enclosedBy'] = []
+
+        for parent in block['parents']:
+            obj_id = parent['govObjId']
+            # 1) Im selben Datei-Index nachschlagen
+            parent_block = gov_index.get(obj_id)
+            parent_title = parent_block['title'] if parent_block else None
+            # 2) In pos nachschlagen
+            if not parent_title:
+                existing = next((p for p in pos.values() if p.get('_govId') == obj_id), None)
+                parent_title = existing['title'] if existing else None
+            # 3) Hinweis: GOV-HTML-Scraping durch Bot-Schutz blockiert.
+            #    Lösung: GOV-Text des Eltern-Objekts ebenfalls in die .txt-Datei kopieren.
+            if not parent_title:
+                print(f"    ⚠ Unaufgelöst: {obj_id} — GOV-Text des Eltern-Ortes zur Datei hinzufügen")
+
+            title = parent_title or obj_id
+            parent_id = find_or_create_po(pos, title, None)
+            if parent_block:
+                ct = next((t for t in reversed(parent_block['types']) if not t['dateTo']), None)
+                if ct and ct['type'] != 'Unknown':
+                    pos[parent_id]['type'] = ct['type']
+            pos[parent_id]['_govId'] = obj_id
+
+            already = any(e['placeId'] == parent_id and e.get('dateFrom') == parent['dateFrom']
+                          and e.get('dateTo') == parent['dateTo'] for e in po['enclosedBy'])
+            if not already:
+                po['enclosedBy'].append({'placeId': parent_id, 'dateFrom': parent['dateFrom'],
+                                         'dateTo': parent['dateTo'], 'dateType': None, '_dateRaw': None})
+
+        if po['enclosedBy'] and not po.get('parentId'):
+            po['parentId'] = po['enclosedBy'][0]['placeId']
+        changed += 1
+        print(f"  ✓ {po['title']} ({po.get('type','?')}) — {len(po['enclosedBy'])} enclosedBy")
+
+    return changed
+
+# ─── main ─────────────────────────────────────────────────────────────────────
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input",           help="Exportierte placeObjects.json")
@@ -206,6 +374,7 @@ def main():
     ap.add_argument("--only-missing",  action="store_true", default=True,
                     help="Nur Orte ohne Koordinaten/Typ verarbeiten (default)")
     ap.add_argument("--overwrite",     action="store_true", help="Bestehende Werte überschreiben")
+    ap.add_argument("--gov-text",      help="GOV-Textzusammenfassungen (.txt, mehrere Blöcke)")
     args = ap.parse_args()
 
     out_path = args.out or args.input.replace(".json", "_enriched.json")
@@ -217,6 +386,19 @@ def main():
     pos = data.get("placeObjects", data) if isinstance(data, dict) else data
     print(f"📂 {len(pos)} placeObjects geladen aus {args.input}")
 
+    # GOV-Text-Modus: parsen und direkt schreiben
+    if args.gov_text:
+        n = apply_gov_text_mode(pos, args.gov_text, overwrite=args.overwrite)
+        print(f"\n✅ {n} placeObjects via GOV-Text angereichert")
+        if not args.dry_run:
+            out_data = pos if not data.get("placeObjects") else {**data, "placeObjects": pos}
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(out_data, f, ensure_ascii=False, indent=2)
+            print(f"💾 Gespeichert: {out_path}")
+            print(f"   → Im Stammbaum: Orte-Tab → ↑ Ortsdaten importieren")
+        return
+
+    # Wikidata-Modus (Standard)
     to_process = []
     for po in pos.values():
         if args.overwrite:

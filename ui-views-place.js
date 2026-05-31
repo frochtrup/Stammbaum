@@ -117,6 +117,148 @@ function filterPlaces(q) {
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
 }
 
+// ─── P4: GOV-Text-Parser ─────────────────────────────────────────────────────
+
+const _GOV_TYPE_MAP = {
+  'Landgemeinde':'Municipality', 'Gemeinde':'Municipality', 'Verbandsgemeinde':'Municipality',
+  'Samtgemeinde':'Municipality', 'Verwaltungsgemeinschaft':'Municipality', 'Amt':'Municipality',
+  'Stadt':'Town', 'Stadt (Gebietskörperschaft)':'Town', 'Stadtgemeinde':'Town',
+  'Wigbold':'Town', 'Flecken':'Town', 'Marktgemeinde':'Town',
+  'Dorf':'Village', 'Kirchdorf':'Village',
+  'Weiler':'Hamlet', 'Einöde':'Hamlet',
+  'Kirchspiel':'Parish', 'Kirchengemeinde':'Parish', 'Pfarrei':'Parish',
+  'Bistum':'Parish', 'Erzbistum':'Parish',
+  'Landkreis':'County', 'Kreis':'County', 'Stadtkreis':'County',
+  'Regierungsbezirk':'District', 'Bezirk':'District',
+  'Provinz':'State', 'Bundesland':'State', 'Land':'State', 'Freistaat':'State',
+  'Staat':'Country', 'Königreich':'Country', 'Großherzogtum':'Country',
+  'Herzogtum':'Country', 'Fürstentum':'Country', 'Kurfürstentum':'Country',
+  'Freie Stadt':'City',
+  'Kirche':'Church', 'Friedhof':'Cemetery', 'Hof':'Farm',
+};
+
+// Parst GOV-Textzusammenfassung → strukturiertes Objekt
+function _parseGovText(raw) {
+  const lines = raw.split(/\n/).map(l => l.replace(/^\s+/, '').replace(/[,;]\s*$/, '').trim()).filter(Boolean);
+  if (!lines.length) return null;
+
+  const result = { govId: lines[0], types: [], names: [], parents: [], extIds: {}, description: '' };
+
+  // Datum aus "ab DATE bis DATE" / "DATE" extrahieren
+  const _date = s => {
+    if (!s) return null;
+    const m = s.match(/(\d{4}(?:-\d{2}(?:-\d{2})?)?)/);
+    return m ? m[1] : null;
+  };
+
+  for (const line of lines.slice(1)) {
+    // TEXT:...:TEXT
+    if (line.startsWith('TEXT:')) {
+      result.description = line.replace(/^TEXT:/, '').replace(/:TEXT$/, '').trim();
+      continue;
+    }
+    // gehört [ab DATE] [bis DATE] zu object_XXX
+    const mGeh = line.match(/^gehört(?:\s+ab\s+(\S+))?(?:\s+bis\s+(\S+))?\s+(?:\S+\s+)?zu\s+(object_\S+|[A-Z0-9]+)\s+/);
+    if (mGeh) {
+      result.parents.push({ govObjId: mGeh[3], dateFrom: _date(mGeh[1]), dateTo: _date(mGeh[2]) });
+      continue;
+    }
+    // gehört DATE zu object_XXX (Stichtag ohne ab/bis)
+    const mGeh2 = line.match(/^gehört\s+(\S+)\s+zu\s+(object_\S+|[A-Z0-9]+)/);
+    if (mGeh2) {
+      result.parents.push({ govObjId: mGeh2[2], dateFrom: _date(mGeh2[1]), dateTo: _date(mGeh2[1]) });
+      continue;
+    }
+    // ist [ab DATE] [bis DATE] (auf deu) TYPE
+    const mIst = line.match(/^ist(?:\s+ab\s+(\S+))?(?:\s+bis\s+(\S+))?\s+\(auf \w+\)\s+(.+?)(?:\s+sagt|$)/);
+    if (mIst) {
+      const raw_type = mIst[3].trim();
+      result.types.push({ rawType: raw_type, type: _GOV_TYPE_MAP[raw_type] || 'Unknown', dateFrom: _date(mIst[1]), dateTo: _date(mIst[2]) });
+      continue;
+    }
+    // heißt [DATE] (auf LANG) NAME
+    const mName = line.match(/^heißt\s+(?:\S+\s+)?\(auf (\w+)\)\s+(.+?)(?:\s+sagt|$)/);
+    if (mName) {
+      result.names.push({ lang: mName[1], value: mName[2].trim() });
+      continue;
+    }
+    // hat externe Kennung geonames:XXX
+    const mExt = line.match(/^hat externe Kennung\s+(\w+):(\S+)/);
+    if (mExt) { result.extIds[mExt[1]] = mExt[2]; continue; }
+  }
+  return result;
+}
+
+// Wendet geparste GOV-Daten auf das aktuelle placeObject im Edit-Modal an
+function applyGovText() {
+  const raw = document.getElementById('pl-gov-text')?.value?.trim();
+  if (!raw) { showToast('⚠ Kein GOV-Text eingefügt', 'warn'); return; }
+
+  const parsed = _parseGovText(raw);
+  if (!parsed?.govId) { showToast('⚠ GOV-ID nicht erkannt', 'warn'); return; }
+
+  const po = _currentPoFromModal();
+  if (!po) { showToast('⚠ Erst Grunddaten speichern', 'warn'); return; }
+
+  let changes = 0;
+
+  // GOV-ID speichern
+  if (!po._govId) { po._govId = parsed.govId; changes++; }
+
+  // Typ: neueste Eintrag ohne dateTo (oder letzter insgesamt)
+  const currentType = parsed.types.find(t => !t.dateTo) || parsed.types[parsed.types.length - 1];
+  if (currentType && currentType.type !== 'Unknown' && (!po.type || po.type === 'Unknown')) {
+    po.type = currentType.type;
+    // Typ-Dropdown synchronisieren
+    const sel = document.getElementById('pl-type');
+    if (sel) sel.value = po.type;
+    changes++;
+  }
+
+  // Namen: nur neue hinzufügen
+  if (!Array.isArray(po.pnames)) po.pnames = [];
+  for (const n of parsed.names) {
+    const exists = po.pnames.some(p => p.value === n.value && p.lang === n.lang);
+    if (!exists) { po.pnames.push({ value: n.value, lang: n.lang, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }); changes++; }
+  }
+
+  // Eltern-Referenzen: Platzhalter-placeObjects anlegen
+  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  if (!Array.isArray(po.enclosedBy)) po.enclosedBy = [];
+
+  for (const parent of parsed.parents) {
+    // Schon vorhanden?
+    const existsInEnc = po.enclosedBy.some(e => {
+      const parentPo = pos[e.placeId];
+      return parentPo?._govId === parent.govObjId || parentPo?.title === parent.govObjId;
+    });
+    if (existsInEnc) continue;
+
+    // Platzhalter suchen oder anlegen
+    let parentId = Object.values(pos).find(p => p._govId === parent.govObjId || p.title === parent.govObjId)?.id;
+    if (!parentId) {
+      parentId = _epId ? _epId(parent.govObjId) : ('_govp_' + parent.govObjId.replace(/\W/g,'_'));
+      pos[parentId] = { id: parentId, title: parent.govObjId, type: 'Unknown',
+        lat: null, long: null, pnames: [], enclosedBy: [], parentId: null,
+        _govId: parent.govObjId, _govUnresolved: true };
+    }
+    po.enclosedBy.push({ placeId: parentId, dateFrom: parent.dateFrom, dateTo: parent.dateTo, dateType: null, _dateRaw: null });
+    changes++;
+  }
+
+  if (!po.parentId && po.enclosedBy.length) po.parentId = po.enclosedBy[0].placeId;
+
+  UIState._placeRegistry = null;
+  markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+
+  // Textarea leeren + Listen neu rendern
+  document.getElementById('pl-gov-text').value = '';
+  _renderPlaceNamesList(po);
+  _renderEnclosedByList(po);
+  showToast(`✓ GOV-Daten übernommen (${changes} Änderungen) — unaufgelöste Eltern-IDs via gov-enrich.py auflösen`);
+}
+
 // ─── P4: Geocoding UI ────────────────────────────────────────────────────────
 
 async function geocodeCurrentPlace() {

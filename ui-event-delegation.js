@@ -271,6 +271,7 @@ const _CLICK_MAP = {
   deleteEvent:             ()  => deleteEvent(),
   savePlace:               ()  => savePlace(),
   saveNewPlace:            ()  => saveNewPlace(),
+  applyGovText:            ()  => applyGovText(),
   geocodeCurrentPlace:     ()  => geocodeCurrentPlace(),
   startBatchGeocode:       ()  => startBatchGeocode(),
   abortBatchGeocode:       ()  => abortBatchGeocode(),
