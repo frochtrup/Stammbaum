@@ -9,6 +9,30 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-01 — PLACE-HIST P3 + P4: Typ-Filter, Ort-Picker, Geocoding, GOV-Import (sw v818–v819+)
+
+Vollständiger Abschluss des PLACE-HIST-Ausbauplans (ADR-024). Alle Features browser-verifiziert (0 Console-Errors). Offline-Script `gov-enrich.py` mit Wikidata- und GOV-Text-Modus; Handbuch aktualisiert.
+
+#### P3 — Typisierte Event-Orte (sw v818)
+
+- **`feat(places)` sw v818:** Typ-Filter `<select>` im Orte-Tab (Alle / Dorf / Stadt / Pfarrei / Kirche / Friedhof / Hof); kombiniert mit Textsuche via `setPlaceTypeFilter()`. **Typ-Badge** in Listenzeilen (⛪/⚰/🏡/…) aus `PLACE_TYPE_ICON`-Map.
+- **Ort-Suchpicker** im Event-Formular: 📍-Button neben `ef-place`/`fev-place` → `modalPlacePicker` (Bottom-Sheet, Suchfeld, alle Event-Orte mit Typ-Icon). Auswahl setzt Input + hidden `placeId`. Suche inkl. `pname.lang`-Varianten (Sprachvarianten, nicht historische Ketten).
+- **Kirche↔Kirchenbuch** (light): Place-Detail für Church/Parish/Cemetery-Typen zeigt Sektion „Verknüpfte Kirchenbücher" — alle Repos + Quellen deren Titel den Ortsnamen enthält (keine Datenmodell-Änderung).
+- **`fix`:** Picker-Quelle auf `collectPlaces()` vereinheitlicht (war: placeObjects-Dict → kürzer als Ortsliste).
+- **`fix`:** Picker-Suche erweitert auf `pname.lang`-Varianten (Bsp.: „Lemberg" findet „Lviv").
+
+#### P4 — Geocoding & GOV-Import (sw v819+)
+
+- **`feat(places)` sw v819:** `geocoding.js` (neues Modul, PRECACHE_CRITICAL) — `geocodeSinglePlace(name)` + `batchGeocodePlaces(onProgress)` via Nominatim (OpenStreetMap), Rate-Limit 1 req/sec. Befüllt `lat/lon` + `type`; **`enclosedBy[]` bewusst nicht** (Nominatim = heutiger Verwaltungsstand, falsch für Genealogie 1700–1900). CSP `connect-src` um `nominatim.openstreetmap.org` + `gov.genealogy.net` erweitert.
+- **Geocoding-UI:** 📍-Button im Place-Detail (ohne Koordinaten) / ↻-Button (neu geocodieren); 🌐-Batch-Button im Orte-Tab → `modalBatchGeocode` mit Fortschrittsbalken.
+- **`fix`:** `enclosedBy[]` aus Nominatim-Geocoder entfernt (war fehlerhafter heutiger Verwaltungsbaum).
+- **`feat` GOV-Text-Parser (Browser):** `_parseGovText()` + `applyGovText()` in `ui-views-place.js`. GOV-Textzusammenfassung aus gov.genealogy.net direkt in `modalPlace` einfügen → Typ-Historie, Namen (`pnames[]`), `enclosedBy[]` mit historischen Datumsgrenzen. Unaufgelöste `object_XXXXX`-Eltern als Platzhalter (iterativ durch weiteres Einfügen auflösbar). placeObject wird on-the-fly angelegt wenn noch nicht vorhanden.
+- **`feat` gov-enrich.py:** Python-Script (kein pip nötig) in zwei Modi:
+  - **Wikidata-Modus** (Standard): `python3 gov-enrich.py placeObjects.json` — fragt Wikidata SPARQL je Ort (P31=Typ, P625=Koordinaten). `enclosedBy[]` nicht befüllt (P131 = heutiger Stand).
+  - **GOV-Text-Modus**: `python3 gov-enrich.py placeObjects.json --gov-text gov_texte.txt` — liest .txt mit mehreren GOV-Blöcken, löst `object_XXXXX`-Referenzen intern auf, schreibt `enclosedBy[]` mit echten Datumsgrenzen. GOV-HTML-Scraping entfernt (Bot-Schutz). Ausgabe importierbar via Orte-Tab ↑-Button.
+
+---
+
 ### Session 2026-05-30 — QUICK-TPL Phasen B–E: Matching, neue Muster, Inline-Plausi, Custom-Builder (sw v765–v769)
 
 Ausbau der Eingabe-Templates (`ui-quicktpl.js`). Alle Phasen browser-/headless-verifiziert, Doku in `HANDBUCH.html` (Abschnitt „Eingabe-Templates").

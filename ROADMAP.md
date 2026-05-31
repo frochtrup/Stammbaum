@@ -27,7 +27,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 8.0 | `v8-dev` | **Aktiv** |
 
 **sw-Version:** v819 · Cache: `stammbaum-v819` · `test-unit.js` = 198 Tests grün
-**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · **Eltern-Suchpicker im Familiendialog (v794)** — `<select>`+tote `onclick`-Buttons → relPicker-Logik wie „+ Elternteil". · **v802: String-Orts-Dubletten** — `findStringPlaceDuplicates`/`mergeStringPlaces` (gedcom.js); Modal erkennt jetzt auch GEDCOM-String-Varianten wie „Ochtrup", „Ochtrup ?", „Ochtrup, Germany". · **v818: PLACE-HIST P3** — Typ-Filter im Orte-Tab, Ort-Suchpicker im Event-Formular (📍-Button → `modalPlacePicker`), Kirche↔Kirchenbuch-Sektion im Place-Detail.
+**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819).
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -42,7 +42,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Code-Qualität | 7.0/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare, JSDoc, 155 `.catch()`. **Abzug:** Monsterfunktionen größer als dokumentiert (`_attr` 486, `_parseINDILine` 388, `showDetail` 294, `writeINDIRecord` 269 Z.); `_esc`/`esc` 4–6× dupliziert. |
 | Sicherheit | 8.0/10 | **Überdurchschnittlich** für serverlose PWA: CSP ohne `unsafe-inline/eval`, `object-src 'none'`, enge Allowlist; OAuth PKCE S256 + CSRF-`state` + kein `client_secret` (live verifiziert); kein `eval` im App-Code; `esc()` pervasiv. **Abzug:** CSP nicht lückenlos *durchgesetzt* (tote inline-`on*`/`style=`); Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos). |
 | Design / UX | 8.5/10 | Hochwertige Ästhetik (Playfair/Source Serif, Dark/Light-Parität, Screenshot-bestätigt), Mobile-First, Onboarding, Skip-Link/ARIA/`prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" *ohne axe-Audit*; Handbuch noch mit Mockups; tote inline-`style=` (Befund). |
-| Funktionsstand | 8.5/10 | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · **Verwandtschaftsrechner** (BFS, Cousin-Grade) · Eltern-Suchpicker (v794) ✓. **Abzug:** Orts-Geocoding-DB fehlt; Ausgabe-Reichtum < MFT; Lücken bewusst out-of-scope: DNA, Online-Matching, Multi-User. |
+| Funktionsstand | 8.7/10 | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · Verwandtschaftsrechner · Eltern-Suchpicker · **Nominatim-Geocoding + GOV-Text-Import (v819)** ✓. **Abzug:** Ausgabe-Reichtum < MFT; Lücken out-of-scope: DNA, Online-Matching, Multi-User. |
 | Funktions-Qualität | 8.0/10 | GEDCOM/GRAMPS-Treue exzellent; UI-Flows robust (Browser-verifiziert). **Abzug:** Skalierung >10k Personen ungetestet. |
 | Performance | 8.0/10 | Web Worker + virtuelles Scrollen (O(log n)) + LAZY-LOAD (−119 KB Cold-Start) + SW-Cache. Ohne Bundling ~45 Cold-Start-Requests (durch HTTP/2 + SW gemildert). |
 | GEDCOM-Konformität | 9.3/10 | **Real reproduziert (2026-05-31):** `net_delta=0` + `out1===out2` auf 83k-Zeilen-Produktionsdatei, Strict-5.5.1 sauber. + GED7-opt-in + GRAMPS-Roundtrip automatisiert (T0-TEST-2). |
@@ -265,7 +265,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v785** *(veraltet — v786–v794 noch nicht dokumentiert: dedup-Doppelnamen, MULTI_FAMC/OPEN_HYPO-Opt-in, Eltern-Suchpicker im Familiendialog)*
+**Handbuch-Stand: sw v819** *(aktuell)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

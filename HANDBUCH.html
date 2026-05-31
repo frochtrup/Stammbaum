@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Mai 2026 · Stand: sw v785</p>
+  <p class="version">Version 8 · Juni 2026 · Stand: sw v819</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -1884,6 +1884,9 @@ Die Bewertung reist mit Ihrer Datei: in GEDCOM als Zusatzfelder (<code>_STYP/_IN
     <p>Das <strong>📍-Symbol</strong> vor einem Ort bedeutet, dass für diesen Ort geografische Koordinaten (GPS-Koordinaten) hinterlegt sind — solche Orte können auf der Karte angezeigt werden.</p>
     <p style="margin-top:0.7em;">Ein einfacher <strong>·</strong> Punkt bedeutet: keine Koordinaten vorhanden.</p>
 
+    <h3>Typ-Filter und Typ-Badges (ab sw v818)</h3>
+    <p>Über das Dropdown <span class="button-label">Alle Typen</span> oberhalb der Ortsliste filtern Sie nach Ortstyp: Dorf, Stadt, Pfarrei, Kirche, Friedhof, Hof u. a. Der Filter kombiniert sich mit der Textsuche. Orte mit hinterlegtem Typ zeigen ein Typ-Badge (⛪ Kirche, ⚰ Friedhof, 🏡 Hof …) direkt in der Zeile. Typen werden entweder manuell im ✎-Dialog gesetzt, per Geocodierung (s. u.) ermittelt oder via GOV-Import übernommen.</p>
+
     <h3>Ort bearbeiten und Koordinaten eingeben</h3>
     <ol class="steps" style="margin-top:0.4em;">
       <li><div class="step-text">Tippen Sie auf einen Ort in der Liste.</div></li>
@@ -1896,10 +1899,49 @@ Die Bewertung reist mit Ihrer Datei: in GEDCOM als Zusatzfelder (<code>_STYP/_IN
       Koordinaten finden Sie einfach in Google Maps: Tippen Sie auf einen Ort, dann erscheinen die Koordinaten unten am Bildschirm.
     </div>
 
+    <h3>Automatisch geocodieren — Koordinaten + Typ via Nominatim (ab sw v819)</h3>
+    <p>Die App kann Koordinaten und den Ortstyp automatisch über <strong>Nominatim (OpenStreetMap)</strong> ermitteln — kostenlos, kein API-Schlüssel nötig.</p>
+    <ul>
+      <li><strong>Einzelner Ort:</strong> Öffnen Sie die Ortsdetailansicht. Im Abschnitt „Standort" erscheint der Button <span class="button-label">📍 Geocodieren</span> (ohne Koordinaten) bzw. <span class="button-label">↻ Neu geocodieren</span> (mit vorhandenen Koordinaten). Ein Tipp startet die Abfrage.</li>
+      <li><strong>Alle Orte auf einmal:</strong> Im Orte-Tab auf 🌐 tippen → <strong>Batch-Geocoding</strong>-Dialog mit Fortschrittsbalken. Alle Orte ohne Koordinaten werden nacheinander abgefragt (1 Sekunde Pause je Anfrage, Nominatim-Bedingung).</li>
+    </ul>
+    <div class="tip">Nominatim liefert den <em>heutigen</em> Verwaltungsstand — für historische Zugehörigkeit (Amt, Kreis, Provinz zur Zeit der Ereignisse) nutzen Sie den GOV-Import (s. u.).</div>
+
     <h3>Karte anzeigen</h3>
     <p>Tippen Sie in der Ortsliste auf <span class="button-label">Karte</span> (rechts in der Topbar), um alle Orte mit Koordinaten auf einer Landkarte zu sehen. Tippen Sie auf einen Marker, um alle Personen zu sehen, die mit diesem Ort verbunden sind. Über den Schalter in der Karten-Topbar wechseln Sie zwischen drei Modi: <strong>Orte</strong> (alle Orte), <strong>Personen</strong> (Personen-Cluster nach Geburtsort) und <strong>Migrationen</strong> (Lebenswege als farbige Linien, nach Epoche eingefärbt).</p>
   </div>
 </div>
+
+<h2>Historische Verwaltungszugehörigkeit — GOV-Import (ab sw v819)</h2>
+
+<p>Für deutsche Orte bietet <a href="https://gov.genealogy.net" target="_blank">gov.genealogy.net (GOV)</a> datierte Verwaltungszugehörigkeiten: ein Ort gehörte ab 1818 zu Kreis X, ab 1890 bis 1969 zu Amt Y usw. Diese historischen Ketten sind für die Genealogie wertvoller als heutige Kreiszugehörigkeiten.</p>
+
+<h3>Methode 1: Direkt im App — GOV-Text einfügen</h3>
+<ol class="steps">
+  <li><div class="step-text">Rufen Sie auf <strong>gov.genealogy.net</strong> den gewünschten Ort auf und kopieren Sie die Textzusammenfassung (das strukturierte Textformat unter dem Ort).</div></li>
+  <li><div class="step-text">Tippen Sie im Stammbaum auf den Ort → ✎ Bearbeiten.</div></li>
+  <li><div class="step-text">Scrollen Sie im Bearbeitungsdialog nach unten zum Abschnitt <strong>„GOV-Daten importieren"</strong>. Fügen Sie den kopierten Text in das Textfeld ein.</div></li>
+  <li><div class="step-text">Tippen Sie auf <span class="button-label">GOV-Daten übernehmen</span>.</div></li>
+</ol>
+<p>Die App übernimmt sofort: <strong>Ortstyp</strong> (aktuellste Einstufung), <strong>alternative Namen</strong> (pnames) und <strong>Verwaltungszugehörigkeiten</strong> mit Datumsgrenzen. Übergeordnete Orte (<code>object_XXXXX</code>) erscheinen zunächst als Platzhalter — fügen Sie deren GOV-Texte ebenfalls ein, um die Kette vollständig aufzulösen.</p>
+
+<div class="tip">Mehrere Orte auf einmal anlegen: Kopieren Sie alle GOV-Texte (Hauptort + Amt + Kreis + Provinz) hintereinander in eine <code>.txt</code>-Datei und nutzen Sie das Offline-Script (Methode 2).</div>
+
+<h3>Methode 2: Offline-Script gov-enrich.py (Batch)</h3>
+<p>Das mitgelieferte Python-Script <code>gov-enrich.py</code> verarbeitet mehrere GOV-Texte auf einmal und löst Elternreferenzen intern auf.</p>
+<ol class="steps">
+  <li><div class="step-text">Im Stammbaum: Orte-Tab → ↓ <strong>Ortsdaten exportieren</strong> → <code>placeObjects.json</code> speichern.</div></li>
+  <li><div class="step-text">GOV-Texte für alle relevanten Orte (Hauptort + Eltern-Einheiten) in eine Textdatei <code>gov_texte.txt</code> kopieren.</div></li>
+  <li><div class="step-text">Terminal öffnen, im Projektordner ausführen:<br><code>python3 gov-enrich.py placeObjects.json --gov-text gov_texte.txt</code></div></li>
+  <li><div class="step-text">Die erzeugte <code>placeObjects_enriched.json</code> im Stammbaum importieren: Orte-Tab → ↑ <strong>Ortsdaten importieren</strong>.</div></li>
+</ol>
+<p>Das Script löst <code>object_XXXXX</code>-Referenzen intern auf, wenn alle betroffenen GOV-Blöcke in der Datei vorhanden sind. Ergebnis: <code>enclosedBy[]</code>-Einträge mit echten historischen Datumsgrenzen.</p>
+
+<h2>Ort-Suchpicker im Ereignis-Formular (ab sw v818)</h2>
+
+<p>In allen Ereignis-Formularen (Geburts-, Tod-, Tauf-, Beerdigung- und benutzerdefinierte Ereignisse) gibt es neben dem Ort-Eingabefeld einen <span class="button-label">📍</span>-Button. Ein Tipp öffnet einen Suchpicker mit allen bekannten Orten — inklusive Typ-Icon und Badge. Tippen auf einen Eintrag übernimmt Ortsname <em>und</em> die verknüpfte Orts-ID (placeId) ins Formular.</p>
+
+<p>Die Suche im Picker berücksichtigt auch <strong>Sprachvarianten</strong> (z. B. findet „Breslau" den Ort „Wrocław" wenn dieser als deutsche Namensalternative hinterlegt ist).</p>
 
 <h2>Migrations-Modus</h2>
 
