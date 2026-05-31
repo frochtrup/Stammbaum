@@ -320,9 +320,12 @@ function saveNewPlace() {
   const _pc2 = parseCoordInput(document.getElementById('np-lati').value, document.getElementById('np-long').value);
   const lati = isNaN(_pc2.lat) ? null : _pc2.lat;
   const long = isNaN(_pc2.lon) ? null : _pc2.lon;
-  // extraPlaces für bestehende Consumer (Koordinaten-Propagierung etc.)
-  AppState.db.extraPlaces[name] = { name, lati, long };
-  saveExtraPlaces();
+  // extraPlaces nur wenn Koordinaten vorhanden — reine Hierarchie-Orte bleiben
+  // aus extraPlaces heraus und erscheinen damit nicht in der Ortsliste (P2-UI)
+  if (lati != null) {
+    AppState.db.extraPlaces[name] = { name, lati, long };
+    saveExtraPlaces();
+  }
   // Sofort placeObject anlegen damit er in enclosedBy-Selects erscheint (P2-UI)
   const _pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
   if (!_placeObjForName(name)) {
