@@ -63,17 +63,6 @@ function _findOrCreatePO(title, type) {
   return id;
 }
 
-// Verknüpft enclosedBy-Kette der übergeordneten placeObjects (falls noch leer)
-function _linkChain(pos, parentIds) {
-  for (let i = 0; i < parentIds.length - 1; i++) {
-    const po = pos[parentIds[i]];
-    if (po && !po.enclosedBy?.length) {
-      po.enclosedBy = [{ placeId: parentIds[i + 1], dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }];
-      po.parentId = parentIds[i + 1];
-    }
-  }
-}
-
 /**
  * Geocodiert einen Ortsnamen via Nominatim.
  * Legt placeObject an / aktualisiert es (Koordinaten, Typ, enclosedBy-Kette).
@@ -101,14 +90,9 @@ async function geocodeSinglePlace(placeName) {
 
   if (!po.lat)                              { po.lat = lat; po.long = lon; }
   if (!po.type || po.type === 'Unknown')    { po.type = type; }
-
-  // enclosedBy-Kette nur setzen wenn noch leer
-  if (!po.enclosedBy?.length && parents.length) {
-    const parentIds = parents.map(p => _findOrCreatePO(p.title, p.type));
-    po.enclosedBy = [{ placeId: parentIds[0], dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }];
-    po.parentId   = parentIds[0];
-    _linkChain(pos, parentIds);
-  }
+  // enclosedBy[] wird bewusst NICHT gesetzt — Nominatim liefert nur den heutigen
+  // Verwaltungsstand, nicht die historische Zugehörigkeit. Historische Ketten
+  // kommen via manueller Eingabe (P2-UI) oder GOV-Offline-Script.
 
   // Koordinaten in Event-Objekte propagieren
   if (typeof _propagateCoordsToEvents === 'function') _propagateCoordsToEvents(placeName, lat, lon);
