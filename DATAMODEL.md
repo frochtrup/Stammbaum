@@ -121,6 +121,11 @@ let changed = false;  // Ungespeicherte Änderungen?
   }],
   fams: ['@F2@'],                        // Elternteil in Familie
 
+  // Forschung (reisen mit der Datei: GEDCOM _TASK/_RLOG, GRAMPS <attribute> JSON)
+  _tasks: [{ id, text, category, done, status, created }],
+  //   status (RES-PROJ 3a): 'todo'|'doing'|'done' (Kanban); GEDCOM _TSTAT; Invariante done===status==='done'
+  _rlog:  [{ date, repoRef, sourRef, query, result, note }],  // Forschungsprotokoll
+
   // Metadaten
   lastChanged: '15 FEB 2024',
   _passthrough: [],   // verbatim unbekannte lv=1 Tags + Sub-Trees (ADR-012)

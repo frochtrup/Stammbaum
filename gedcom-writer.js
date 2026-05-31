@@ -7,7 +7,7 @@ let _strictGed = false;
 function _g7WriteSchma(lines) {
   const _base = 'https://github.com/frochtrup/Stammbaum/ext';
   lines.push('1 SCHMA');
-  for (const t of ['_UID','_GRAMPS_ID','_STAT','_TASK','_CAT','_DONE','_DATE','_ID',
+  for (const t of ['_UID','_GRAMPS_ID','_STAT','_TASK','_CAT','_DONE','_TSTAT','_DATE','_ID',
                    '_RLOG','_QUERY','_RESULT','_RUFNAME','_FREL','_MREL','_SCBK','_PRIM',
                    '_EVAL','_STYP','_INFO','_EVID','_INFM','_RTYPE','_FAURL'])
     lines.push(`2 TAG ${t} ${_base}/${t}`);
@@ -454,6 +454,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
       lines.push(`1 _TASK ${t.text || ''}`);
       if (t.category) lines.push(`2 _CAT ${t.category}`);
       lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+      if (t.status)   lines.push(`2 _TSTAT ${t.status}`);   // RES-PROJ 3a: Kanban-Status
       if (t.created)  lines.push(`2 _DATE ${t.created}`);
       if (t.id)       lines.push(`2 _ID ${t.id}`);
     }
@@ -589,6 +590,7 @@ function writeFAMRecord(lines, f) {
       lines.push(`1 _TASK ${t.text || ''}`);
       if (t.category) lines.push(`2 _CAT ${t.category}`);
       lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+      if (t.status)   lines.push(`2 _TSTAT ${t.status}`);   // RES-PROJ 3a
       if (t.created)  lines.push(`2 _DATE ${t.created}`);
       if (t.id)       lines.push(`2 _ID ${t.id}`);
     }

@@ -506,6 +506,34 @@ ok(!API.evalIsEmpty({ srcType:'original', infoQual:'', evidence:'', informant:''
   ok(!c.eval, 'Zitat ohne _EVAL → eval bleibt leer/null');
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  (f) RES-PROJ — Task-Status (Kanban)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(f) RES-PROJ Task-Status');
+
+// _TSTAT wird geparst (Person + Familie)
+(function() {
+  var ged = ['0 HEAD','1 SOUR T','0 @I1@ INDI','1 NAME A /B/',
+    '1 _TASK Sterbeurkunde suchen','2 _CAT urkunde','2 _DONE 0','2 _TSTAT doing','2 _ID t1',
+    '0 @F1@ FAM','1 _TASK Heiratseintrag','2 _DONE 1','2 _TSTAT done','2 _ID t2','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  var pt = db.individuals['@I1@']._tasks[0];
+  eq(pt.status, 'doing', '_TSTAT → task.status (doing)');
+  eq(pt.done,   false,   '_DONE 0 bleibt erhalten neben _TSTAT');
+  var ft = db.families['@F1@']._tasks[0];
+  eq(ft.status, 'done', '_TSTAT → Familien-task.status (done)');
+})();
+
+// Task ohne _TSTAT → status leer (UI migriert lazy aus done)
+(function() {
+  var ged = ['0 HEAD','1 SOUR T','0 @I1@ INDI','1 NAME A /B/',
+    '1 _TASK Alt','2 _DONE 1','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  var t = db.individuals['@I1@']._tasks[0];
+  ok(!t.status, 'Bestandstask ohne _TSTAT → status leer (kein Roundtrip-Delta)');
+  eq(t.done, true, 'done bleibt true');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {

@@ -10,6 +10,25 @@ const TASK_CATEGORIES = [
   { key: 'online',      label: 'Online-Recherche' },
 ];
 
+// RES-PROJ 3a: Kanban-Status. Invariante: done === (status === 'done').
+const TASK_STATUSES = [
+  { key: 'todo',  label: 'Offen' },
+  { key: 'doing', label: 'In Arbeit' },
+  { key: 'done',  label: 'Erledigt' },
+];
+const _TASK_STATUS_NEXT = { todo: 'doing', doing: 'done', done: 'todo' };
+
+// Status lesen — migriert Bestandstasks ohne status[] aus done
+function _taskStatus(t) {
+  if (t.status === 'todo' || t.status === 'doing' || t.status === 'done') return t.status;
+  return t.done ? 'done' : 'todo';
+}
+// Status setzen + done synchron halten (Invariante)
+function _setTaskStatus(t, status) {
+  t.status = status;
+  t.done   = (status === 'done');
+}
+
 // ─── Personen-Tasks ───────────────────────────────────────────────────────────
 
 function _getPersonTasks(personId) {
@@ -28,6 +47,7 @@ function _addTaskToDb(personId, text, category) {
     text:     text.trim(),
     category: category || TASK_CATEGORIES[0].key,
     done:     false,
+    status:   'todo',
     created:  new Date().toISOString().slice(0, 10),
   });
   markChanged();
@@ -38,7 +58,7 @@ function _toggleTaskInDb(personId, taskId) {
   const tasks = _getPersonTasks(personId);
   const t = tasks.find(t => t.id === taskId);
   if (!t) return;
-  t.done = !t.done;
+  _setTaskStatus(t, t.done ? 'todo' : 'done');   // Checkbox ↔ Status synchron
   markChanged();
   _updateTasksBadge();
 }
@@ -69,6 +89,7 @@ function _addFamTaskToDb(famId, text, category) {
     text:     text.trim(),
     category: category || TASK_CATEGORIES[0].key,
     done:     false,
+    status:   'todo',
     created:  new Date().toISOString().slice(0, 10),
   });
   markChanged();
@@ -79,7 +100,7 @@ function _toggleFamTaskInDb(famId, taskId) {
   const tasks = _getFamTasks(famId);
   const t = tasks.find(t => t.id === taskId);
   if (!t) return;
-  t.done = !t.done;
+  _setTaskStatus(t, t.done ? 'todo' : 'done');
   markChanged();
   _updateTasksBadge();
 }
@@ -353,6 +374,73 @@ function switchTasksFilter(f) {
   renderTasksView();
 }
 
+// RES-PROJ 3a: Liste ⇄ Kanban-Board im Aufgaben-Modus
+let _tasksListMode = 'list';   // 'list' | 'board'
+function toggleTaskBoard() {
+  _tasksListMode = _tasksListMode === 'board' ? 'list' : 'board';
+  renderTasksView();
+}
+
+function _collectAllTasks() {
+  const out = [];
+  for (const [pid, p] of Object.entries(AppState.db.individuals || {}))
+    for (const t of (p._tasks || [])) out.push({ kind: 'person', entity: p, id: pid, t });
+  for (const [fid, f] of Object.entries(AppState.db.families || {}))
+    for (const t of (f._tasks || [])) out.push({ kind: 'family', entity: f, id: fid, t });
+  return out;
+}
+
+function _kbName(item) {
+  return item.kind === 'person'
+    ? (item.entity?.surname || item.entity?.name || '')
+    : _famDisplayName(item.id);
+}
+
+// Kanban-Board: 3 Spalten (Offen/In Arbeit/Erledigt), tap-to-advance
+function _renderTaskBoard(container, headerHtml) {
+  const cols = { todo: [], doing: [], done: [] };
+  for (const item of _collectAllTasks()) (cols[_taskStatus(item.t)] || cols.todo).push(item);
+
+  let html = headerHtml + '<div class="kanban">';
+  for (const st of TASK_STATUSES) {
+    const list = cols[st.key].sort((a, b) => _kbName(a).localeCompare(_kbName(b), 'de'));
+    html += `<div class="kanban-col kanban-col-${st.key}">
+      <div class="kanban-col-head">${esc(st.label)} <span class="kanban-count">${list.length}</span></div>
+      <div class="kanban-col-body">`;
+    for (const { kind, entity, id, t } of list) {
+      const nav   = kind === 'person' ? `data-action="showDetail" data-pid="${id}"` : `data-action="showFamilyDetail" data-fid="${id}"`;
+      const ctx   = kind === 'person' ? `data-pid="${id}"` : `data-fid="${id}"`;
+      const ename = kind === 'person' ? (entity.name || id) : ('Fam. ' + _famDisplayName(id));
+      const catLabel  = TASK_CATEGORIES.find(c => c.key === t.category)?.label || t.category;
+      const next      = _TASK_STATUS_NEXT[_taskStatus(t)];
+      const nextLabel = TASK_STATUSES.find(s => s.key === next)?.label || next;
+      html += `<div class="kanban-card">
+        <div class="kanban-card-entity" ${nav}>${esc(ename)} ›</div>
+        <div class="kanban-card-text">${esc(t.text)}</div>
+        <div class="kanban-card-foot">
+          <span class="kanban-cat">${esc(catLabel)}</span>
+          <button class="kanban-advance" data-action="advanceTask" ${ctx} data-tid="${t.id}" title="Weiter: ${esc(nextLabel)}">→ ${esc(nextLabel)}</button>
+        </div>
+      </div>`;
+    }
+    if (!list.length) html += `<div class="kanban-empty">–</div>`;
+    html += `</div></div>`;
+  }
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function _advanceTaskStatus(el) {
+  const { pid, fid, tid } = el.dataset;
+  const tasks = pid ? _getPersonTasks(pid) : _getFamTasks(fid);
+  const t = tasks.find(x => x.id === tid);
+  if (!t) return;
+  _setTaskStatus(t, _TASK_STATUS_NEXT[_taskStatus(t)]);
+  markChanged();
+  _updateTasksBadge();
+  renderTasksView();
+}
+
 function renderTasksView() {
   if (_tasksViewMode === 'log')       { _renderRlogView(); return; }
   if (_tasksViewMode === 'dashboard') { _renderDashboardView(); return; }
@@ -398,6 +486,7 @@ function renderTasksView() {
         <button id="tasks-filter-done" class="flt-btn${_tasksViewFilter === 'done' ? ' active' : ''}" data-action="switchTasksFilter" data-filter="done" title="Erledigt">✓</button>
       </div>
       <div class="action-btns">
+        <button class="act-btn-icon${_tasksListMode === 'board' ? ' active' : ''}" data-action="toggleTaskBoard" title="${_tasksListMode === 'board' ? 'Listenansicht' : 'Kanban-Board'}">${_tasksListMode === 'board' ? '☰' : '▦'}</button>
         <button class="act-btn-text" data-action="runValidation" title="Daten prüfen">Prüfen</button>
         <button class="act-btn-icon" data-action="openValConfig" title="Prüfregeln konfigurieren">⚙</button>
         <button class="act-btn-icon" data-action="exportTasksMd" title="Als Markdown exportieren">↓</button>
@@ -406,6 +495,9 @@ function renderTasksView() {
   </div>`;
 
   html += _renderValidationPanel();
+
+  // RES-PROJ 3a: Kanban-Board statt Liste
+  if (_tasksListMode === 'board') { _renderTaskBoard(container, html); return; }
 
   if (!totalVisible) {
     const msg = _tasksViewFilter === 'open' ? 'Keine offenen Aufgaben'

@@ -56,7 +56,7 @@ function _parseINDILine(cur, x, lv, tag, val) {
     else if (tag === 'CHAN') { /* context-only, handled via lv2 */ }
     else if (tag === '_STAT') { cur._stat = val; }
     else if (tag === '_TASK') {
-      x._curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
+      x._curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, status: '', created: '' };
       cur._tasks.push(x._curTask);
     }
     else if (tag === '_RLOG') {
@@ -84,10 +84,11 @@ function _parseINDILine(cur, x, lv, tag, val) {
 
   else if (lv === 2) {
     if (x.lv1tag === '_TASK' && x._curTask) {
-      if      (tag === '_CAT')  x._curTask.category = val;
-      else if (tag === '_DONE') x._curTask.done = val === '1';
-      else if (tag === '_DATE') x._curTask.created = val;
-      else if (tag === '_ID')   x._curTask.id = val;
+      if      (tag === '_CAT')   x._curTask.category = val;
+      else if (tag === '_DONE')  x._curTask.done = val === '1';
+      else if (tag === '_TSTAT') x._curTask.status = val;   // RES-PROJ 3a
+      else if (tag === '_DATE')  x._curTask.created = val;
+      else if (tag === '_ID')    x._curTask.id = val;
     }
     else if (x.lv1tag === '_RLOG' && cur._rlog.length) {
       const _rl = cur._rlog[cur._rlog.length - 1];
@@ -399,7 +400,7 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       }
     }
     else if (tag === '_TASK') {
-      x._curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, created: '' };
+      x._curTask = { id: '', text: val || '', category: 'kirchenbuch', done: false, status: '', created: '' };
       cur._tasks.push(x._curTask);
     }
     else if (tag === '_RLOG') {
@@ -414,10 +415,11 @@ function _parseFAMLine(cur, x, lv, tag, val) {
   }
   else if (lv === 2) {
     if (x.lv1tag === '_TASK' && x._curTask) {
-      if      (tag === '_CAT')  x._curTask.category = val;
-      else if (tag === '_DONE') x._curTask.done = val === '1';
-      else if (tag === '_DATE') x._curTask.created = val;
-      else if (tag === '_ID')   x._curTask.id = val;
+      if      (tag === '_CAT')   x._curTask.category = val;
+      else if (tag === '_DONE')  x._curTask.done = val === '1';
+      else if (tag === '_TSTAT') x._curTask.status = val;   // RES-PROJ 3a
+      else if (tag === '_DATE')  x._curTask.created = val;
+      else if (tag === '_ID')    x._curTask.id = val;
     }
     else if (x.lv1tag === '_RLOG' && cur._rlog.length) {
       const _rl = cur._rlog[cur._rlog.length - 1];
