@@ -421,14 +421,22 @@ function savePerson(openNew = false) {
   };
   _rebuildPersonSourceRefs(AppState.db.individuals[id]);
 
-  // _pendingRelation vor closeModal sichern — closeModal löscht es sonst
+  // _pendingRelation / _pendingFfState vor closeModal sichern — closeModal löscht es sonst
   const _pendingRel = UIState._pendingRelation;
   UIState._pendingRelation = null;
+  const _pendingFf = UIState._pendingFfState;
+  UIState._pendingFfState = null;
   closeModal('modalPerson');
 
   markChanged();
   renderTab();
 
+  if (_pendingFf) {
+    showToast('✓ Person erstellt');
+    const ctx = { ..._pendingFf, [_pendingFf.slot]: id, addChild: _pendingFf.addChild || null };
+    setTimeout(() => showFamilyForm(_pendingFf.id, ctx), 80);
+    return;
+  }
   if (_pendingRel) {
     showToast('✓ Person erstellt');
     setTimeout(() => openRelFamilyForm(_pendingRel.anchorId, id, _pendingRel.mode), 80);

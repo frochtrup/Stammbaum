@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v785 · Cache: `stammbaum-v785`
+**sw-Version:** v786 · Cache: `stammbaum-v786`
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -230,7 +230,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v785** *(aktuell — Forschungspipeline dokumentiert: Evidenzmodell RES-EVAL (⚖, Kap 6), Hypothesen + GPS-Beweisführung RES-HYPO (Kap 4), Forschungspipeline-Übersicht + Kanban + Projekte + Qualitäts-Dashboard RES-DASH/RES-PROJ (Kap 13), Research-Timeline (Kap 14), Genealogical-Proof-Standard-Best-Practice (Kap 17). v750–v758 [Test-Automation, GRAMPS-/Parser-Fixes, ESM-Migration, PAGE-URL-Migration] sind Infrastruktur ohne nutzersichtbare Bedienung und bewusst nicht im Endnutzer-Handbuch.)*
+**Handbuch-Stand: sw v785** *(veraltet — v786 noch nicht dokumentiert)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

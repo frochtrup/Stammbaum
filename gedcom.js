@@ -32,6 +32,7 @@ const UIState = {
   _relAnchorId:     '',          // personId (spouse/parent) oder famId (child)
   _pendingRelation: null,        // { mode, anchorId } — gesetzt vor showPersonForm()
   _pendingRepoLink: null,        // { sourceId } — gesetzt vor showRepoForm(null)
+  _pendingFfState:  null,        // { slot, id, husb, wife, … } — gesetzt vor showPersonForm() aus Familienformular
   _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
   _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
   _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden

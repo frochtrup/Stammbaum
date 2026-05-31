@@ -56,9 +56,12 @@ function showFamilyForm(id, ctx) {
 
   // Populate person selects
   const persons = Object.values(AppState.db.individuals).sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
-  const optionsAll = '<option value="">– keine –</option>' + persons.map(p =>
-    `<option value="${p.id}">${esc(p.name || p.id)}</option>`
-  ).join('');
+  const optionsAll = '<option value="">– keine –</option>' + persons.map(p => {
+    const by = p.birth?.date ? (p.birth.date.match(/\d{4}/)||[])[0] : '';
+    const dy = p.death?.date ? (p.death.date.match(/\d{4}/)||[])[0] : '';
+    const dates = (by || dy) ? ` (${by ? '* ' + by : ''}${by && dy ? '  ' : ''}${dy ? '† ' + dy : ''})` : '';
+    return `<option value="${p.id}">${esc(p.name || p.id)}${dates}</option>`;
+  }).join('');
   document.getElementById('ff-husb').innerHTML = optionsAll;
   document.getElementById('ff-wife').innerHTML = optionsAll;
 
@@ -79,9 +82,10 @@ function showFamilyForm(id, ctx) {
   if (ctx) {
     if (ctx.husb !== undefined) document.getElementById('ff-husb').value = ctx.husb || '';
     if (ctx.wife !== undefined) document.getElementById('ff-wife').value = ctx.wife || '';
-    if (ctx.addChild) {
-      _pendingAddChild = ctx.addChild;
-    }
+    if (ctx.mdate)     { document.getElementById('ff-mdate-qual').value = ctx.mdateQual || ''; document.getElementById('ff-mdate').value = ctx.mdate; }
+    if (ctx.mplace)    { document.getElementById('ff-mplace').value = ctx.mplace; document.getElementById('ff-mplace-id').value = ctx.mplaceId || ''; }
+    if (ctx.note)      document.getElementById('ff-note').value = ctx.note;
+    if (ctx.addChild)  _pendingAddChild = ctx.addChild;
   }
 
   // GRAMPS-Sektion: nur wenn grampId oder _grampsAttrs vorhanden
@@ -197,3 +201,21 @@ async function deleteFamily() {
 }
 
 initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd', 'ff-mplace-id');
+
+function ffNewPerson(slot) {
+  // Formularstatus sichern, Person-Formular öffnen; nach Speichern zurück ins Familien-Formular
+  UIState._pendingFfState = {
+    slot,
+    id:       document.getElementById('ff-id').value || null,
+    husb:     document.getElementById('ff-husb').value || null,
+    wife:     document.getElementById('ff-wife').value || null,
+    mdateQual: document.getElementById('ff-mdate-qual').value,
+    mdate:    document.getElementById('ff-mdate').value,
+    mplace:   document.getElementById('ff-mplace').value,
+    mplaceId: document.getElementById('ff-mplace-id').value,
+    note:     document.getElementById('ff-note').value,
+    addChild: _pendingAddChild,
+  };
+  closeModal('modalFamily');
+  showPersonForm(null);
+}

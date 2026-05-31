@@ -513,7 +513,7 @@ function closeModal(id) {
   if (_trapHandler) { document.removeEventListener('keydown', _trapHandler); _trapHandler = null; }
   if (_trapPrevFocus?.focus) { _trapPrevFocus.focus(); _trapPrevFocus = null; }
   // Pending-Flows zurücksetzen wenn ihr Modal geschlossen wird (Cancel, Backdrop, Escape)
-  if (id === 'modalPerson')  UIState._pendingRelation = null;
+  if (id === 'modalPerson')  { UIState._pendingRelation = null; UIState._pendingFfState = null; }
   if (id === 'modalRepo')    UIState._pendingRepoLink  = null;
   // confirmModal-Promise mit false auflösen (Escape / Backdrop / Cancel)
   if (id === 'modalConfirm') { _confirmResolve?.(false); _confirmResolve = null; }
