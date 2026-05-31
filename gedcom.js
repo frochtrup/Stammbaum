@@ -1059,14 +1059,20 @@ function _dedupScorePair(pA, pB) {
   const reasons = [];
   let score = 0;
 
-  // Nachname (max 24)
+  // Nachname (max 24) — Doppelnamen (Bindestrich/Leerzeichen) komponentenweise vergleichen
   const snA = _dedupNormName(pA.surname || '');
   const snB = _dedupNormName(pB.surname || '');
   if (snA && snB) {
-    const r = _dedupLevenshtein(snA, snB);
-    score += r * 24;
-    if (r >= 0.9) reasons.push('Nachname identisch');
-    else if (r >= 0.7) reasons.push('Nachname ähnlich');
+    const partsA = snA.split(/[-\s]+/).filter(Boolean);
+    const partsB = snB.split(/[-\s]+/).filter(Boolean);
+    let bestR = _dedupLevenshtein(snA, snB);
+    for (const a of partsA) for (const b of partsB) {
+      const r = _dedupLevenshtein(a, b);
+      if (r > bestR) bestR = r;
+    }
+    score += bestR * 24;
+    if (bestR >= 0.9) reasons.push('Nachname identisch');
+    else if (bestR >= 0.7) reasons.push('Nachname ähnlich');
   }
 
   // Vorname (max 20)
