@@ -2,6 +2,24 @@
 //  FORMS: REPO (Archive) + DETAIL-ANSICHT
 // ─────────────────────────────────────
 
+// RES-EVAL 2e: Archivtypen — [GRAMPS-Wert (en, für <type>), Anzeige (de)].
+// GRAMPS-kompatible Standardwerte; freie Strings ebenfalls erlaubt.
+const REPO_TYPES = [
+  ['Library',    'Bibliothek'],
+  ['Archive',    'Archiv'],
+  ['Church',     'Kirche / Pfarramt'],
+  ['Cemetery',   'Friedhof'],
+  ['Registry',   'Standesamt'],
+  ['Collection', 'Sammlung'],
+  ['Website',    'Webseite / Online'],
+  ['Private',    'Privatbesitz'],
+  ['Unknown',    'Sonstige'],
+];
+function _repoTypeLabel(v) {
+  const hit = REPO_TYPES.find(t => t[0] === v);
+  return hit ? hit[1] : (v || '');
+}
+
 function sfRepoUpdateDisplay() {
   const repoId  = (document.getElementById('sf-repo').value || '').trim();
   const display = document.getElementById('sf-repo-display');
@@ -91,11 +109,13 @@ function showRepoDetail(id, pushHistory = true) {
     <div class="detail-id">${r.lastChanged ? 'Geändert ' + r.lastChanged : ''}</div>
   </div>
   <div class="section fade-up"><div class="section-title">Details</div>`;
+  if (r.rtype) html += factRow('Typ', _repoTypeLabel(r.rtype));
   if (r.addr)  html += factRow('Adresse', r.addr.replace(/\n/g, ', '));
   if (r.phon)  html += factRow('Telefon', r.phon);
   if (r.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(r.www)}" target="_blank" rel="noopener">${esc(r.www)}</a></span></div>`;
+  if (r.findingAid) html += `<div class="fact-row"><span class="fact-lbl">Findbuch</span><span class="fact-val"><a href="${safeLinkHref(r.findingAid)}" target="_blank" rel="noopener">${esc(r.findingAid)}</a></span></div>`;
   if (r.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span></div>`;
-  if (!r.addr && !r.phon && !r.www && !r.email)
+  if (!r.rtype && !r.addr && !r.phon && !r.www && !r.findingAid && !r.email)
     html += `<div class="c-muted italic fs-sm">Keine Details eingetragen</div>`;
   html += `</div>`;
   if (linkedSources.length) {
@@ -123,6 +143,16 @@ function showRepoForm(id) {
   document.getElementById('rf-phon').value  = r?.phon  || '';
   document.getElementById('rf-www').value   = r?.www   || '';
   document.getElementById('rf-email').value = r?.email || '';
+  // RES-EVAL 2e: Archivtyp-Select + Findbuch-URL
+  const sel = document.getElementById('rf-rtype');
+  if (sel) {
+    const cur = r?.rtype || '';
+    let opts = REPO_TYPES.map(([v, l]) => `<option value="${esc(v)}"${v === cur ? ' selected' : ''}>${esc(l)}</option>`).join('');
+    // unbekannter Bestandswert (freier String aus GRAMPS) → als Option ergänzen
+    if (cur && !REPO_TYPES.some(t => t[0] === cur)) opts += `<option value="${esc(cur)}" selected>${esc(cur)}</option>`;
+    sel.innerHTML = opts;
+  }
+  document.getElementById('rf-findingaid').value = r?.findingAid || '';
   document.getElementById('deleteRepoBtn').style.display = r ? 'block' : 'none';
   openModal('modalRepo');
 }
@@ -132,12 +162,17 @@ function saveRepo() {
   const name = document.getElementById('rf-name').value.trim();
   if (!name) { showToast('⚠ Name erforderlich'); return; }
   const _now = new Date();
+  const existing = AppState.db.repositories[id] || {};   // RES-EVAL 2e: Bestandsfelder erhalten
+  // (_grampsHandle, _extra, priv, grampId, addrExtra, _passthrough … gingen sonst beim Edit verloren)
   AppState.db.repositories[id] = {
+    ...existing,
     id, name,
     addr:  document.getElementById('rf-addr').value.trim(),
     phon:  document.getElementById('rf-phon').value.trim(),
     www:   document.getElementById('rf-www').value.trim(),
     email: document.getElementById('rf-email').value.trim(),
+    rtype:      (document.getElementById('rf-rtype')?.value || '').trim(),
+    findingAid: document.getElementById('rf-findingaid').value.trim(),
     lastChanged:     gedcomDate(_now),
     lastChangedTime: gedcomTime(_now)
   };

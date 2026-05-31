@@ -207,10 +207,12 @@ let changed = false;  // Ungespeicherte Änderungen?
 {
   id:          '@R1@',
   name:        'Stadtarchiv München',
+  rtype:       'Archive',     // RES-EVAL 2e: Archivtyp (REPO_TYPES); GRAMPS <type> / GEDCOM _RTYPE
   addr:        'Winzererstr. 68\n80797 München',
   addrExtra:   [],            // CITY, POST, _STYLE etc.
   phon:        '+49 89 233-30010',
   www:         'https://www.stadtarchiv.muenchen.de',
+  findingAid:  'https://...', // RES-EVAL 2e: Findbuch/Online-Katalog; GEDCOM _FAURL / GRAMPS <url type="Web Search">
   email:       'stadtarchiv@muenchen.de',
   lastChanged: '1 MAR 2026',
 }

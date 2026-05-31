@@ -449,7 +449,13 @@ export function _grampsParseXMLText(xmlText) {
       addr = ['street','city','state','country']
         .map(t => _child(addrEl, t)).filter(Boolean).join(', ');
     }
-    const urlEl = _byTag(repo, 'url')[0] || null;
+    // RES-EVAL 2e: mehrere <url> — "Web Search" → Findbuch, sonst → Website
+    let www = '', findingAid = '';
+    for (const u of _byTag(repo, 'url')) {
+      const href = u.getAttribute('href') || '';
+      if ((u.getAttribute('type') || '') === 'Web Search') { if (!findingAid) findingAid = href; }
+      else if (!www) www = href;
+    }
     const repoExtra = [];
     for (const ch of repo.children) {
       if (!_REPO_MODELLED.has(ch.localName)) repoExtra.push(_xmlEl(ch));
@@ -458,7 +464,7 @@ export function _grampsParseXMLText(xmlText) {
       id: rId,
       name: _child(repo, 'rname'),
       rtype: _child(repo, 'type') || 'Library',
-      addr, phon: '', www: urlEl ? (urlEl.getAttribute('href') || '') : '', email: '',
+      addr, phon: '', www, findingAid, email: '',
       lastChanged: '', lastChangedTime: '',
       grampId: gid, _grampsHandle: h, priv, _extra: repoExtra
     };

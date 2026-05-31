@@ -798,6 +798,7 @@ export function _grampsBuildXMLText(db) {
         L.push('      </address>');
       }
       if (r.www) L.push(`      <url href="${_esc(r.www)}" type="Web Home"/>`);
+      if (r.findingAid) L.push(`      <url href="${_esc(r.findingAid)}" type="Web Search"/>`);   // RES-EVAL 2e
       for (const x of r._extra||[]) L.push(`      ${x}`);
       L.push('    </repository>');
     }

@@ -438,7 +438,9 @@ Die Daten *reisen mit der Datei* (sie gehören zum Zitat) → `_`-Tag mit Writer
 
 **Validator + Dashboard (2c, sw v775):** Regel `MISSING_EVAL` (info) feuert, wenn eine Person Quellen, aber keine Evidenzbewertung hat — analog `MISSING_QUAY`. **Bewusst `default-disabled`** (`VAL_CONFIG_DEFAULTS.disabled`): Evidenzbewertung ist eine Opt-in-Disziplin; sonst flutet ein Dauer-Hinweis jede noch nicht bewertete Quelle und drückt den „befundfrei"-Score auf 0 % für jede Bestandsdatei. Der Dashboard-Lückenradar-Balken „Quellen mit Evidenzbewertung" zeigt die Abdeckung **unabhängig vom Validator** (direkt aus `db` via `_dashHasEval`) — informiert also ohne zu strafen. **Config-Migration:** `_saveValConfig` merkt sich `known` (Regelstand zum Speicherzeitpunkt); `_loadValConfig` lässt default-deaktivierte Regeln, die eine gespeicherte Config noch nicht kannte, ihren Default erben — so erhalten Bestandsnutzer neue Opt-in-Regeln korrekt deaktiviert, ohne dass explizite Aktivierungen überschrieben werden. Verifiziert: frisch/alt → off, explizit aktiviert → übersteht Reload.
 
-**Offen: 2e Repository-Rest.**
+**Repository-Rest (2e, sw v777):** Archivtyp (`r.rtype`, Select `REPO_TYPES` — GRAMPS-`<type>` existierte schon, GEDCOM neu als `_RTYPE`) + Findbuch-/Online-Katalog-URL (`r.findingAid`, GEDCOM `_FAURL`, GRAMPS `<url type="Web Search">` neben `www`=`<url type="Web Home">`; GRAMPS-Parser unterscheidet jetzt mehrere `<url>` nach Typ). Beide GEDCOM-`_`-Tags modelliert geparst (kein Passthrough-Doppel), Strict strippt. **Nebenfix:** `saveRepo` baute das Repo-Objekt neu auf und verlor dabei Bestandsfelder (`_grampsHandle`/`_extra`/`addrExtra`/`priv`) bei jedem Edit — jetzt `{...existing}`-Merge. Verifiziert: GEDCOM-Roundtrip `net_delta=0` + Strict-Strip auf `_RTYPE`/`_FAURL`-Fixture, GRAMPS-Roundtrip (rtype/findingAid/www getrennt), Felderhalt browser-bestätigt.
+
+**RES-EVAL vollständig (2a–2e).**
 
 ---
 

@@ -9,7 +9,7 @@ function _g7WriteSchma(lines) {
   lines.push('1 SCHMA');
   for (const t of ['_UID','_GRAMPS_ID','_STAT','_TASK','_CAT','_DONE','_DATE','_ID',
                    '_RLOG','_QUERY','_RESULT','_RUFNAME','_FREL','_MREL','_SCBK','_PRIM',
-                   '_EVAL','_STYP','_INFO','_EVID','_INFM'])
+                   '_EVAL','_STYP','_INFO','_EVID','_INFM','_RTYPE','_FAURL'])
     lines.push(`2 TAG ${t} ${_base}/${t}`);
 }
 
@@ -701,6 +701,7 @@ function writeSOURRecord(lines, s) {
 function writeREPORecord(lines, r) {
   lines.push(`0 ${r.id} REPO`);
   if (r.name) lines.push(`1 NAME ${r.name}`);
+  if (!_strictGed && r.rtype) lines.push(`1 _RTYPE ${r.rtype}`);   // RES-EVAL 2e
   if (r.addr || (r.addrExtra && r.addrExtra.length)) {
     const al = r.addr ? r.addr.split('\n') : [];
     lines.push(`1 ADDR${al[0] ? ' ' + al[0] : ''}`);
@@ -709,6 +710,7 @@ function writeREPORecord(lines, r) {
   }
   if (r.phon)  lines.push(`1 PHON ${r.phon}`);
   if (r.www)   lines.push(`1 WWW ${r.www}`);
+  if (!_strictGed && r.findingAid) lines.push(`1 _FAURL ${r.findingAid}`);   // RES-EVAL 2e: Findbuch-URL
   if (r.email) lines.push(`1 EMAIL ${r.email}`);
   for (const l of _ptLines(r._passthrough)) lines.push(l);
   writeCHAN(lines, r, 1);

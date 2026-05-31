@@ -754,6 +754,8 @@ function _parseREPOLine(cur, x, lv, tag, val) {
     else if (tag==='PHON')  cur.phon  = val;
     else if (tag==='WWW')   cur.www   = val;
     else if (tag==='EMAIL') cur.email = val;
+    else if (tag==='_RTYPE') cur.rtype      = val;   // RES-EVAL 2e: Archivtyp (modelliert, kein Passthrough)
+    else if (tag==='_FAURL') cur.findingAid = val;   // RES-EVAL 2e: Findbuch/Online-Katalog-URL
     else if (tag==='CHAN') { /* context-only */ }
     else { cur._passthrough.push('1 '+tag+(val?' '+val:'')); x._ptDepth=1; x._ptTarget=cur._passthrough; }
   } else if (lv === 2) {
