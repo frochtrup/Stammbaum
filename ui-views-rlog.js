@@ -230,6 +230,7 @@ function _renderRlogView() {
 
   const entries = [];
   for (const [pid, p] of Object.entries(db.individuals || {})) {
+    if (!_projectMatches(pid)) continue;                       // RES-PROJ 3b
     for (let i = 0; i < (p._rlog || []).length; i++) {
       const rl = p._rlog[i];
       if (_rlogViewFilter !== 'all' && rl.result !== _rlogViewFilter) continue;
@@ -237,6 +238,7 @@ function _renderRlogView() {
     }
   }
   for (const [fid, f] of Object.entries(db.families || {})) {
+    if (!_projectMatchesEntity('family', fid)) continue;
     for (let i = 0; i < (f._rlog || []).length; i++) {
       const rl = f._rlog[i];
       if (_rlogViewFilter !== 'all' && rl.result !== _rlogViewFilter) continue;
@@ -257,6 +259,7 @@ function _renderRlogView() {
 
   let html = `<div class="tasks-sticky-header">
     ${_tasksModeBar()}
+    ${_projectChipBar()}
     <div class="filter-action-bar">
       <div class="filter-chips">${filterBtns}</div>
       <div class="action-btns">

@@ -1809,6 +1809,52 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 .kanban-advance:active { background: var(--gold); color: #1a1400; }
 .kanban-empty { padding: 12px 4px; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+
+/* ── Forschungsprojekte (RES-PROJ 3b) ────────────────────────────────────── */
+/* Feste Palette als Klassen (CSP ohne unsafe-inline → keine style=""-Attribute) */
+.pc0 { --proj-color: #b8860b; }
+.pc1 { --proj-color: #4caf50; }
+.pc2 { --proj-color: #c0392b; }
+.pc3 { --proj-color: #2980b9; }
+.pc4 { --proj-color: #8e44ad; }
+.pc5 { --proj-color: #d68910; }
+.proj-bar {
+  display: flex; gap: 6px; padding: 6px 12px 2px; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; align-items: center;
+}
+.proj-chip {
+  flex: 0 0 auto; padding: 3px 10px; border-radius: 12px; cursor: pointer;
+  font-size: 0.78rem; font-family: 'Source Serif 4', serif; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface2); color: var(--text-dim);
+  border-left: 3px solid var(--proj-color, var(--border));
+}
+.proj-chip.active {
+  background: var(--proj-color, var(--gold)); color: #1a1400; border-color: var(--proj-color, var(--gold));
+  font-weight: 600;
+}
+.proj-chip-add { border-left-color: var(--border); color: var(--text-muted); padding: 3px 8px; }
+
+/* Manager-Modal */
+.proj-mgr-list { display: flex; flex-direction: column; gap: 2px; }
+.proj-mgr-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 4px; border-bottom: 1px solid var(--border-faint, var(--border));
+}
+.proj-mgr-name { flex: 1; cursor: pointer; color: var(--link, var(--gold-lt)); font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.proj-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; background: var(--proj-color, var(--text-muted)); }
+.proj-mgr-del {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface2); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
+}
+.proj-editor { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.proj-editor-title { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.proj-swatches { display: flex; gap: 8px; }
+.proj-swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; -webkit-appearance: none; appearance: none; padding: 0; background: var(--proj-color, #ccc); }
+.proj-swatch.active { border-color: var(--text-primary); }
+.proj-year-row { display: flex; align-items: center; gap: 8px; }
+.proj-year-row .form-input { width: 90px; }
+.proj-mgr-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
+.proj-mgr-foot .src-cit-btn { cursor: pointer; }
 /* Prüfregeln-Config-Modal */
 /* Scroll-Fix für modalValConfig: sheet-body scrollt, sheet-Container bleibt fixiert */
 #modalValConfig .sheet { display: flex; flex-direction: column; overflow: hidden; }

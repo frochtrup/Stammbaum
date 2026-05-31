@@ -77,6 +77,7 @@ stammbaum/
 ├── ui-views-rlog.js    ← Forschungsprotokoll (RLOG): Add/Edit/Delete, Filter, MD-Export
 ├── ui-views-val.js     ← Validierungspanel + Val-Config-Modal
 ├── ui-views-dashboard.js ← Qualitäts-Dashboard (RES-DASH): Ampel + Lückenradar + Brennpunkte, Lücke→Aufgabe
+├── ui-views-projects.js ← Forschungsprojekte (RES-PROJ 3b): IDB+JSON, Scope-Filter, Chip-Selektor, Manager
 ├── ui-views-nav.js     ← History-Navigation: goBack/goForward, _navHistory, Verlaufs-Picker
 ├── ui-views-undo.js    ← Undo/Redo: pushUndo, applyUndo, applyRedo
 ├── ui-event-delegation.js ← _CLICK_MAP (~100 Einträge), document-Listener (click/change/input)

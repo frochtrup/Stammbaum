@@ -383,10 +383,14 @@ function toggleTaskBoard() {
 
 function _collectAllTasks() {
   const out = [];
-  for (const [pid, p] of Object.entries(AppState.db.individuals || {}))
+  for (const [pid, p] of Object.entries(AppState.db.individuals || {})) {
+    if (!_projectMatches(pid)) continue;                       // RES-PROJ 3b
     for (const t of (p._tasks || [])) out.push({ kind: 'person', entity: p, id: pid, t });
-  for (const [fid, f] of Object.entries(AppState.db.families || {}))
+  }
+  for (const [fid, f] of Object.entries(AppState.db.families || {})) {
+    if (!_projectMatchesEntity('family', fid)) continue;
     for (const t of (f._tasks || [])) out.push({ kind: 'family', entity: f, id: fid, t });
+  }
   return out;
 }
 
@@ -451,9 +455,10 @@ function renderTasksView() {
   const families = AppState.db.families    || {};
   const catOrder = TASK_CATEGORIES.map(c => c.key);
 
-  // Personen-Tasks nach Kategorie
+  // Personen-Tasks nach Kategorie (RES-PROJ 3b: Scope-Filter)
   const byCat = {};
   for (const [pid, p] of Object.entries(persons)) {
+    if (!_projectMatches(pid)) continue;
     for (const t of (p._tasks || [])) {
       if (_tasksViewFilter === 'open' && t.done)  continue;
       if (_tasksViewFilter === 'done' && !t.done) continue;
@@ -463,6 +468,7 @@ function renderTasksView() {
   }
   // Familien-Tasks nach Kategorie
   for (const [fid, f] of Object.entries(families)) {
+    if (!_projectMatchesEntity('family', fid)) continue;
     for (const t of (f._tasks || [])) {
       if (_tasksViewFilter === 'open' && t.done)  continue;
       if (_tasksViewFilter === 'done' && !t.done) continue;
@@ -479,6 +485,7 @@ function renderTasksView() {
 
   let html = `<div class="tasks-sticky-header">
     ${_tasksModeBar()}
+    ${_projectChipBar()}
     <div class="filter-action-bar">
       <div class="filter-chips">
         <button id="tasks-filter-all"  class="flt-btn${_tasksViewFilter === 'all'  ? ' active' : ''}" data-action="switchTasksFilter" data-filter="all"  title="Alle Aufgaben">≡</button>

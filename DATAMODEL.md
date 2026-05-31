@@ -285,6 +285,7 @@ Alle Dateien laden global, kein import/export. Ladereihenfolge: `gedcom.js` → 
 | Forschungsprotokoll | ui-views-rlog.js | `showAddRlogForm()`, `_saveRlog()`, `exportRlogMd()` |
 | Validierungspanel | ui-views-val.js | `_renderValidationPanel()`, `openValConfig()`, `saveValConfig()` |
 | Qualitäts-Dashboard | ui-views-dashboard.js | `_renderDashboardView()` (3. Modus im Aufgaben-Tab), Ampel + Lückenradar + Brennpunkte, `_handleDashPromoteAll()` |
+| Forschungsprojekte | ui-views-projects.js | `loadProjects()`/`saveProjects()` (IDB+JSON), `_projectMatches()`, `_projectChipBar()`, `setActiveProject()`, Manager-Modal |
 | Statistik-Dashboard | ui-views-stats.js | `showStats()` |
 | Globale Suche | ui-views-search.js | `renderSearchResults()` |
 | Notizen | ui-views-note.js | `showNoteDetail()` |
@@ -355,6 +356,9 @@ UIState = {
 'theme_pref'             — Dark/Light-Mode ('dark'|'light'|null)
 'privacy_anon'           — Lebende-Anonymisierung aktiv (boolean, F5/ADR-017)
 'dedup_ignored'          — Set ignorierter Duplikat-Paare ('id1|id2'-Strings)
+'quick_templates'        — Eingabe-Templates (JSON, QUICK-TPL); app-privat, reist nicht mit Datei
+'val_config'             — Validierungs-Config { disabled[], thresholds{}, known[] } (RES-EVAL 2c)
+'projects'               — Forschungsprojekte (JSON, RES-PROJ 3b): [{id,name,color,scope{surnames,places,yearFrom,yearTo,personIds},note,created}]; app-privat
 
 // Medien (pfad-basiert seit sw v105)
 'img:<relPath>'          — Foto-Cache (base64 Data-URL), relativer Pfad ab od_base_path

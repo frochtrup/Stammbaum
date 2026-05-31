@@ -343,6 +343,15 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   switchTasksMode:         el  => switchTasksMode(el.dataset.mode),
   toggleTaskBoard:         ()  => toggleTaskBoard(),
   advanceTask:             el  => _advanceTaskStatus(el),
+  setActiveProject:        el  => setActiveProject(el.dataset.proj),
+  showProjectManager:      ()  => showProjectManager(),
+  newProject:              ()  => newProject(),
+  editProject:             el  => editProject(el.dataset.proj),
+  deleteProject:           el  => deleteProject(el.dataset.proj),
+  cancelProjectEdit:       ()  => cancelProjectEdit(),
+  saveProject:             ()  => saveProject(),
+  pickProjColor:           el  => pickProjColor(el.dataset.color),
+  exportProjects:          ()  => exportProjects(),
   showAddTaskForm:         el  => showAddTaskForm(el.dataset.pid),
   showAddFamTaskForm:      el  => showAddFamTaskForm(el.dataset.fid),
   saveAddTask:             ()  => _saveAddTask(),
@@ -413,6 +422,7 @@ document.addEventListener('change', e => {
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
   else if (action === 'applySourceTemplate') _applySourceTemplate(el.value);
   else if (action === 'qtImportFile')      importQuickTemplatesFile(el);
+  else if (action === 'importProjects')    importProjectsFile(el);
   else if (action === 'qtBaseChange')      _qtSyncBaseUI();
   else if (action === 'qtFieldEdit')       _qtFieldEdit(el);
   else if (action === 'amCamChange') {

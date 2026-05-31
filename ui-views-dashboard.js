@@ -78,7 +78,7 @@ function _paintDashboard(cfg) {
   if (!container) return;
   const db      = AppState.db;
   const persons = db.individuals || {};
-  const ids     = Object.keys(persons);
+  const ids     = Object.keys(persons).filter(_projectMatches);   // RES-PROJ 3b: projekt-skopiert
   const total   = ids.length;
 
   const fltChips = `<div class="filter-chips">
@@ -87,6 +87,7 @@ function _paintDashboard(cfg) {
       <button id="dash-flt-all" class="flt-btn${_dashFilter === 'all' ? ' active' : ''}" data-action="setDashFilter" data-filter="all" title="Alle (inkl. Hinweise)">≡</button>
     </div>`;
   const header = `<div class="tasks-sticky-header">${_tasksModeBar()}
+    ${_projectChipBar()}
     <div class="filter-action-bar">
       ${fltChips}
       <div class="action-btns">
