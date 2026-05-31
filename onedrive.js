@@ -269,7 +269,7 @@ async function openSettings() {
   const cntEl   = document.getElementById('set-photo-count');
   if (nameEl) nameEl.textContent = photoFolder
     ? (photoFolder.relPath || photoFolder.name || '.') : 'nicht konfiguriert';
-  if (clearEl) clearEl.style.display = photoFolder ? '' : 'none';
+  if (clearEl) clearEl.hidden = !photoFolder;
   if (cntEl) {
     let pCount = 0, fCount = 0;
     Object.values(AppState.db?.individuals || {}).forEach(p => { if (p.media?.length) pCount++; });
@@ -283,7 +283,7 @@ async function openSettings() {
   const dCntEl   = document.getElementById('set-doc-count');
   if (dNameEl) dNameEl.textContent = docFolder
     ? (docFolder.relPath || docFolder.name || '.') : 'nicht konfiguriert';
-  if (dClearEl) dClearEl.style.display = docFolder ? '' : 'none';
+  if (dClearEl) dClearEl.hidden = !docFolder;
   if (dCntEl) dCntEl.textContent = '';
   // Konfig-Ordner
   const cfgFolder = await idbGet('od_config_folder').catch(() => null);

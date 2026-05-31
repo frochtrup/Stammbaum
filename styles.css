@@ -2275,7 +2275,8 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 #sf-repo-clear  { padding: 6px 10px; font-size: 0.85rem; }
 #sf-more-btn    { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); font-size: 0.9rem; }
 #set-photo-name,
-#set-doc-name   { flex: 1; font-size: 0.9rem; color: var(--text); }
+#set-doc-name,
+#set-config-name { flex: 1; font-size: 0.9rem; color: var(--text); }
 #set-photo-count,
 #set-doc-count  { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; }
 #set-base-path  {

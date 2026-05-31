@@ -428,11 +428,37 @@ async function odSetupConfigFolder() {
   _odPickMode = false; _odDocScanMode = false; _odBasePathMode = false;
   _odFolderStack = [];
   closeModal('modalSettings');
-  await _odGetBasePath();
+  const basePath = await _odGetBasePath();
   const folder = await idbGet('od_config_folder').catch(() => null);
-  const folderId = folder?.id;
-  if (folderId) await _odNavigateToParentOf(folderId);
-  else await _odShowFolder('root', 'OneDrive');
+  if (folder?.id) {
+    // bereits konfiguriert → Parent anzeigen
+    await _odNavigateToParentOf(folder.id);
+  } else if (basePath) {
+    // Vorbelegung: "Config"-Unterordner im GED-Ordner suchen
+    const token = await _odGetToken().catch(() => null);
+    if (token) {
+      try {
+        const encoded = (basePath + '/Config').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+        const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name`, { headers: { Authorization: 'Bearer ' + token } });
+        if (res.ok) {
+          const item = await res.json();
+          if (item.id) { await _odNavigateToParentOf(item.id); return; }
+        }
+      } catch(e) { /* Config-Ordner existiert noch nicht → GED-Ordner zeigen */ }
+    }
+    // GED-Ordner als Startpunkt
+    const encoded = basePath.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    const token2 = await _odGetToken().catch(() => null);
+    if (token2) {
+      try {
+        const res2 = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}?$select=id`, { headers: { Authorization: 'Bearer ' + token2 } });
+        if (res2.ok) { const { id } = await res2.json(); if (id) { await _odShowFolder(id, basePath.split('/').pop()); return; } }
+      } catch(e) {}
+    }
+    await _odShowFolder('root', 'OneDrive');
+  } else {
+    await _odShowFolder('root', 'OneDrive');
+  }
 }
 
 async function odScanConfigFolder(folderId, folderName) {
