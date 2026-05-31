@@ -163,7 +163,6 @@ const _CLICK_MAP = {
   showMediaBrowser:        ()  => showMediaBrowser(),
   menuMediaBrowser:        ()  => { closeModal('modalMenu'); showMediaBrowser(); },
   showAddSheet:            ()  => showAddSheet(),
-  showQuickAdd:            ()  => showQuickAdd(),
   showQtManager:           ()  => showQtManager(),
   qtNewTemplateFromSource: el  => qtNewTemplateFromSource(el.dataset.sid),
   qtNewTemplate:           ()  => qtNewTemplate(),

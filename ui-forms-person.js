@@ -2,7 +2,7 @@
 //  FORMS: PERSON
 // ─────────────────────────────────────
 function showAddSheet() {
-  if (AppState.currentTab === 'persons') { showQuickAdd(); return; }
+  if (AppState.currentTab === 'persons') { showPersonForm(null); return; }
   openModal('modalAdd');
 }
 function showEditSheet() {
