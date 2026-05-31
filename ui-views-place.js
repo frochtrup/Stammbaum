@@ -145,7 +145,12 @@ function renderPlacePickerList(q) {
     rows = [...collectPlaces().values()].map(pl => ({ name: pl.name, placeId: pl.placeId || '', type: pl.type || '' }));
   }
 
-  if (lower) rows = rows.filter(r => r.name.toLowerCase().includes(lower));
+  if (lower) rows = rows.filter(r => {
+    if (r.name.toLowerCase().includes(lower)) return true;
+    // Sprachvarianten (pname.lang gesetzt) als zusätzliche Suchbegriffe
+    const po = AppState.db.placeObjects?.[r.placeId];
+    return (po?.pnames || []).some(pn => pn.lang && pn.value.toLowerCase().includes(lower));
+  });
   rows.sort((a, b) => a.name.localeCompare(b.name, 'de'));
 
   if (!rows.length) { list.innerHTML = '<div class="empty">Keine Orte gefunden</div>'; return; }
