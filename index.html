@@ -1423,9 +1423,30 @@
     <div class="sheet-title" id="lbl-modalPlace">Ort bearbeiten</div>
     <div class="sheet-body">
       <input type="hidden" id="pl-old">
+      <input type="hidden" id="pl-placeId">
       <div class="form-group">
         <label class="form-label">Ortsname</label>
         <input class="form-input" id="pl-name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Typ</label>
+        <select class="form-input" id="pl-type">
+          <option value="Unknown">—</option>
+          <option value="Village">Dorf</option>
+          <option value="Town">Kleinstadt</option>
+          <option value="City">Stadt</option>
+          <option value="Municipality">Gemeinde</option>
+          <option value="County">Kreis</option>
+          <option value="District">Bezirk</option>
+          <option value="Region">Region</option>
+          <option value="Province">Provinz</option>
+          <option value="State">Bundesland</option>
+          <option value="Country">Land</option>
+          <option value="Parish">Pfarrei</option>
+          <option value="Building">Gebäude</option>
+          <option value="Cemetery">Friedhof</option>
+          <option value="Farm">Hof</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label">Breite (Lat) — oder Apple Maps-Koordinaten hier einfügen</label>
@@ -1437,6 +1458,31 @@
       <div class="btn-row">
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalPlace">Abbrechen</button>
         <button class="btn btn-save" data-action="savePlace">Speichern</button>
+      </div>
+
+      <!-- P2-UI: Historische Dimension — nur sichtbar wenn placeObject vorhanden -->
+      <div class="place-edit-section" id="pl-pnames-section">
+        <div class="place-edit-section-title">Alternative / frühere Namen</div>
+        <div id="pl-pnames-list"></div>
+        <div class="place-edit-add-row">
+          <input class="form-input" id="pl-pname-val" placeholder="Name">
+          <input class="form-input pl-field-sm" id="pl-pname-lang" placeholder="Sprache">
+          <input class="form-input pl-field-sm" id="pl-pname-from" placeholder="von">
+          <input class="form-input pl-field-sm" id="pl-pname-to" placeholder="bis">
+          <button class="btn btn-save pl-add-btn" data-action="addPlaceName">+</button>
+        </div>
+        <div class="form-hint-sm">Sprache z.B. "de" · Jahr z.B. "1850"</div>
+      </div>
+
+      <div class="place-edit-section" id="pl-enclosed-section">
+        <div class="place-edit-section-title">Teil von (übergeordneter Ort)</div>
+        <div id="pl-enclosed-list"></div>
+        <div class="place-edit-add-row">
+          <select class="form-input" id="pl-enclosed-sel"></select>
+          <input class="form-input pl-field-sm" id="pl-enclosed-from" placeholder="von">
+          <input class="form-input pl-field-sm" id="pl-enclosed-to" placeholder="bis">
+          <button class="btn btn-save pl-add-btn" data-action="addEnclosedBy">+</button>
+        </div>
       </div>
     </div>
   </div>

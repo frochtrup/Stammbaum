@@ -91,17 +91,81 @@ function filterPlaces(q) {
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
 }
 
+// Gibt das placeObject für einen Ortsnamen zurück (via Registry), oder null.
+function _placeObjForName(name) {
+  if (typeof getPlaceRegistry !== 'function') return null;
+  const reg = getPlaceRegistry();
+  const id = reg.findByName(name);
+  return id ? reg.byId[id] : null;
+}
+
 function showPlaceForm(placeName) {
-  document.getElementById('pl-old').value  = placeName;
-  document.getElementById('pl-name').value = placeName;
-  // Bestehende Koordinaten laden — aus extraPlaces oder aus collectPlaces-Cache
-  const ep = AppState.db.extraPlaces[placeName];
-  const pl = collectPlaces().get(placeName);
-  const lati = ep?.lati ?? pl?.lati ?? null;
-  const long = ep?.long ?? pl?.long ?? null;
+  const po = _placeObjForName(placeName);
+  document.getElementById('pl-old').value     = placeName;
+  document.getElementById('pl-placeId').value = po ? po.id : '';
+  document.getElementById('pl-name').value    = po ? po.title : placeName;
+  document.getElementById('pl-type').value    = po?.type || 'Unknown';
+
+  // Koordinaten: placeObject hat Vorrang vor extraPlaces-Cache
+  const ep   = AppState.db.extraPlaces[placeName];
+  const pl   = collectPlaces().get(placeName);
+  const lati = po?.lat ?? ep?.lati ?? pl?.lati ?? null;
+  const long = po?.long ?? ep?.long ?? pl?.long ?? null;
   document.getElementById('pl-lati').value = lati != null ? String(lati) : '';
   document.getElementById('pl-long').value = long != null ? String(long) : '';
+
+  _renderPlaceNamesList(po);
+  _renderEnclosedByList(po);
   openModal('modalPlace');
+}
+
+function _renderPlaceNamesList(po) {
+  const sec  = document.getElementById('pl-pnames-section');
+  const list = document.getElementById('pl-pnames-list');
+  if (!sec || !list) return;
+  if (!po) { sec.hidden = true; return; }
+  sec.hidden = false;
+  const pnames = po.pnames || [];
+  const dated  = pnames.filter(pn => !pn.dateFrom && !pn.dateTo && pn.lang
+    ? true : true); // alle zeigen
+  list.innerHTML = pnames.length ? pnames.map((pn, i) => {
+    const span = [pn.dateFrom, pn.dateTo].filter(Boolean).join('–');
+    return `<div class="pname-row">
+      <span class="pname-val">${esc(pn.value)}${pn.lang ? ` <em class="tran-lang">${esc(pn.lang)}</em>` : ''}</span>
+      ${span ? `<span class="pname-span">${esc(span)}</span>` : ''}
+      <button class="unlink-btn" data-action="removePlaceName" data-idx="${i}">×</button>
+    </div>`;
+  }).join('') : '<div class="no-data-pad">Keine alternativen Namen</div>';
+}
+
+function _renderEnclosedByList(po) {
+  const sec  = document.getElementById('pl-enclosed-section');
+  const list = document.getElementById('pl-enclosed-list');
+  const sel  = document.getElementById('pl-enclosed-sel');
+  if (!sec || !list || !sel) return;
+  if (!po) { sec.hidden = true; return; }
+  sec.hidden = false;
+
+  const reg = getPlaceRegistry();
+  // Eltern-Liste
+  const enc = po.enclosedBy || [];
+  list.innerHTML = enc.length ? enc.map((e, i) => {
+    const parent = reg.byId[e.placeId];
+    const title  = parent?.title || e.placeId;
+    const span   = [e.dateFrom, e.dateTo].filter(Boolean).join('–');
+    return `<div class="pname-row">
+      <span class="pname-val">${esc(title)}</span>
+      ${span ? `<span class="pname-span">${esc(span)}</span>` : ''}
+      <button class="unlink-btn" data-action="removeEnclosedBy" data-idx="${i}">×</button>
+    </div>`;
+  }).join('') : '<div class="no-data-pad">Nicht zugeordnet</div>';
+
+  // Select mit allen placeObjects befüllen (außer sich selbst)
+  const opts = Object.values(AppState.db.placeObjects || {})
+    .filter(p => p.id !== po.id)
+    .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'de'));
+  sel.innerHTML = `<option value="">— Ort wählen —</option>`
+    + opts.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('');
 }
 
 function _propagateCoordsToEvents(placeName, lati, long) {
@@ -150,19 +214,25 @@ function savePlace() {
   AppState.db.extraPlaces[newName] = updated;
   saveExtraPlaces();
 
-  // Bug #7: passendes placeObject synchron halten (P0b-3)
-  const _pos = AppState.db.placeObjects;
-  if (_pos && typeof _normPlaceName === 'function') {
-    const _norm = _normPlaceName(oldName);
-    for (const po of Object.values(_pos)) {
-      if (_normPlaceName(po.title) === _norm) {
-        if (lati != null) { po.lat = lati; po.long = long; }
-        if (newName !== oldName) po.title = newName;
-        break;
-      }
+  // P2-UI: placeObject anlegen (falls neu) oder aktualisieren
+  const _pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  const _type = document.getElementById('pl-type')?.value || 'Unknown';
+  let _poId = document.getElementById('pl-placeId')?.value || '';
+  if (!_poId) {
+    // Neues placeObject (erstmaliges Speichern eines String-Ortes)
+    _poId = (typeof _epId === 'function') ? _epId(newName) : ('_ep_' + Date.now());
+    _pos[_poId] = { id: _poId, title: newName, type: _type,
+      lat: lati, long: long, pnames: [], enclosedBy: [], parentId: null };
+    if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = _poId;
+  } else {
+    const _po = _pos[_poId];
+    if (_po) {
+      if (newName !== oldName) _po.title = newName;
+      _po.type = _type;
+      if (lati != null) { _po.lat = lati; _po.long = long; }
     }
-    UIState._placeRegistry = null;
   }
+  UIState._placeRegistry = null;
 
   // Koordinaten sofort in alle passenden Event-Objekte übernehmen
   _propagateCoordsToEvents(newName, lati, long);
@@ -171,6 +241,70 @@ function savePlace() {
   markChanged();
   showToast('✓ Ort gespeichert');
   showPlaceDetail(newName);
+}
+
+// ─── P2-UI: pnames / enclosedBy inline-Editor ────────────────────────────────
+function _currentPoFromModal() {
+  const id = document.getElementById('pl-placeId')?.value;
+  return id ? (AppState.db.placeObjects || {})[id] : null;
+}
+
+function addPlaceName() {
+  const po = _currentPoFromModal();
+  if (!po) { showToast('⚠ Erst Grunddaten speichern'); return; }
+  const val  = document.getElementById('pl-pname-val')?.value.trim();
+  if (!val) { showToast('⚠ Name darf nicht leer sein'); return; }
+  const lang = document.getElementById('pl-pname-lang')?.value.trim() || '';
+  const from = document.getElementById('pl-pname-from')?.value.trim() || null;
+  const to   = document.getElementById('pl-pname-to')?.value.trim()   || null;
+  if (!Array.isArray(po.pnames)) po.pnames = [];
+  po.pnames.push({ value: val, lang, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
+  UIState._placeRegistry = null;
+  markChanged();
+  ['pl-pname-val','pl-pname-lang','pl-pname-from','pl-pname-to'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  _renderPlaceNamesList(po);
+}
+
+function removePlaceName(idx) {
+  const po = _currentPoFromModal();
+  if (!po?.pnames) return;
+  po.pnames.splice(parseInt(idx), 1);
+  UIState._placeRegistry = null;
+  markChanged();
+  _renderPlaceNamesList(po);
+}
+
+function addEnclosedBy() {
+  const po = _currentPoFromModal();
+  if (!po) { showToast('⚠ Erst Grunddaten speichern'); return; }
+  const sel  = document.getElementById('pl-enclosed-sel');
+  const pid  = sel?.value;
+  if (!pid) { showToast('⚠ Bitte einen Ort wählen'); return; }
+  const from = document.getElementById('pl-enclosed-from')?.value.trim() || null;
+  const to   = document.getElementById('pl-enclosed-to')?.value.trim()   || null;
+  if (!Array.isArray(po.enclosedBy)) po.enclosedBy = [];
+  if (po.enclosedBy.some(e => e.placeId === pid)) { showToast('⚠ Bereits eingetragen'); return; }
+  po.enclosedBy.push({ placeId: pid, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
+  po.parentId = po.enclosedBy[0].placeId; // erstes Element als parentId-Fallback
+  UIState._placeRegistry = null;
+  markChanged();
+  if (sel) sel.value = '';
+  ['pl-enclosed-from','pl-enclosed-to'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  _renderEnclosedByList(po);
+}
+
+function removeEnclosedBy(idx) {
+  const po = _currentPoFromModal();
+  if (!po?.enclosedBy) return;
+  po.enclosedBy.splice(parseInt(idx), 1);
+  po.parentId = po.enclosedBy[0]?.placeId || null;
+  UIState._placeRegistry = null;
+  markChanged();
+  _renderEnclosedByList(po);
 }
 
 function showNewPlaceForm() {

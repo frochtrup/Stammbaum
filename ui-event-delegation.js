@@ -69,6 +69,10 @@ const _CLICK_MAP = {
   deletePlaceTrans:        el  => deletePlaceTrans(+el.dataset.idx),
   openPlaceMergeModal:     ()  => openPlaceMergeModal(),
   placeMergeGroup:         el  => placeMergeGroup(el.dataset.gidx),
+  addPlaceName:            ()  => addPlaceName(),
+  removePlaceName:         el  => removePlaceName(el.dataset.idx),
+  addEnclosedBy:           ()  => addEnclosedBy(),
+  removeEnclosedBy:        el  => removeEnclosedBy(el.dataset.idx),
   treeShowProband:         ()  => {
     const id = getProbandId();
     if (!id) return;
