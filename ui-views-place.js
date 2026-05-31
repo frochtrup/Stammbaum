@@ -132,18 +132,9 @@ function renderPlacePickerList(q) {
   if (!list) return;
   const lower = q.toLowerCase().trim();
 
-  // Alle bekannten Orte (placeObjects + string-Orte)
-  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
-  let rows = [];
-
-  if (reg && Object.keys(AppState.db.placeObjects || {}).length) {
-    // GRAMPS-Daten: placeObjects als primäre Quelle
-    rows = Object.values(AppState.db.placeObjects)
-      .map(po => ({ name: po.title, placeId: po.id, type: po.type || '' }));
-  } else {
-    // GEDCOM: string-Orte
-    rows = [...collectPlaces().values()].map(pl => ({ name: pl.name, placeId: pl.placeId || '', type: pl.type || '' }));
-  }
+  // Dieselbe Quelle wie die Ortsliste: alle Event-Orte, angereichert mit placeId/type
+  let rows = [...collectPlaces().values()]
+    .map(pl => ({ name: pl.name, placeId: pl.placeId || '', type: pl.type || '' }));
 
   if (lower) rows = rows.filter(r => {
     if (r.name.toLowerCase().includes(lower)) return true;
