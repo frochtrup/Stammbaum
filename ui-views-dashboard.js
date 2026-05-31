@@ -41,6 +41,11 @@ function _dashHasEval(p) {                          // RES-EVAL 2c / ADR-022
   return false;
 }
 
+// RES-HYPO 4c / ADR-023: offene Hypothesen einer Person (alles außer confirmed/rejected)
+function _dashOpenHypoCount(p) {
+  return (p._hypotheses || []).filter(h => h && h.status !== 'confirmed' && h.status !== 'rejected').length;
+}
+
 function _dashYear(dateStr) {
   if (!dateStr) return null;
   const m = String(dateStr).match(/\b(\d{3,4})\b/);
@@ -129,6 +134,7 @@ function _paintDashboard(cfg) {
 
   // ── Lückenradar (direkt aus db) ──
   let cBirth = 0, cBPlace = 0, cDeath = 0, cSex = 0, cSrc = 0, cQuay = 0, cEval = 0;
+  let cHypoBase = 0, cHypoResolved = 0;   // RES-HYPO 4c: nur Personen mit Hypothesen
   for (const pid of ids) {
     const p = persons[pid];
     if (p.birth?.date || p.chr?.date)   cBirth++;
@@ -136,6 +142,7 @@ function _paintDashboard(cfg) {
     if (p.death?.date || p.buri?.date)  cDeath++;
     if (p.sex === 'M' || p.sex === 'F') cSex++;
     if (_dashHasSources(p)) { cSrc++; if (_dashHasQuay(p)) cQuay++; if (_dashHasEval(p)) cEval++; }
+    if ((p._hypotheses || []).length) { cHypoBase++; if (_dashOpenHypoCount(p) === 0) cHypoResolved++; }
   }
   const radar = [
     { label: 'Geburts-/Taufdatum', n: cBirth },
@@ -146,6 +153,10 @@ function _paintDashboard(cfg) {
     { label: 'Quellen mit Bewertung (QUAY)', n: cQuay, base: cSrc },
     { label: 'Quellen mit Evidenzbewertung', n: cEval, base: cSrc },
   ];
+  // Hypothesen-Balken nur einblenden, wenn überhaupt Hypothesen existieren
+  // (informiert ohne zu strafen — RES-HYPO/ADR-023)
+  if (cHypoBase > 0)
+    radar.push({ label: 'Hypothesen aufgelöst', n: cHypoResolved, base: cHypoBase });
 
   // ── HTML zusammensetzen ──
   let html = header;

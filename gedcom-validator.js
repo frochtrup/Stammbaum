@@ -9,7 +9,9 @@ export const VAL_CONFIG_DEFAULTS = {
   // MISSING_EVAL standardmäßig AUS: Evidenzbewertung (RES-EVAL/ADR-022) ist eine
   // fortgeschrittene Opt-in-Disziplin; sonst flutet ein Dauer-Hinweis jede noch
   // nicht bewertete Quelle. Der Dashboard-Lückenradar zeigt die Abdeckung trotzdem.
-  disabled: new Set(['MISSING_EVAL']),
+  // OPEN_HYPO ebenfalls AUS: offene Hypothesen (RES-HYPO/ADR-023) sind ein
+  // normaler Forschungszustand, kein Mangel — Opt-in für gezielte Durchsicht.
+  disabled: new Set(['MISSING_EVAL', 'OPEN_HYPO']),
   thresholds: {
     maxAge:        110,
     staStAera:     1876,  // Geburt ab diesem Jahr → Standesamtsurkunde suchen
@@ -54,8 +56,14 @@ export const VAL_RULES = [
   { key: 'PLACE_INCONSISTENCY',      label: 'Ortsname-Varianten erkannt',            severity: 'info',  threshold: null },
   { key: 'MISSING_QUAY',             label: 'Quellen ohne QUAY-Bewertung',           severity: 'info',  threshold: null },
   { key: 'MISSING_EVAL',             label: 'Quellen ohne Evidenzbewertung',         severity: 'info',  threshold: null },
+  { key: 'OPEN_HYPO',                label: 'Offene Hypothesen',                     severity: 'info',  threshold: null },
   { key: 'MANY_CHILDREN',            label: 'Ungewöhnlich viele Kinder',             severity: 'warn',  threshold: 'maxChildren' },
 ];
+
+// Zählt offene Hypothesen (RES-HYPO/ADR-023: alles außer confirmed/rejected = offen)
+function _openHypoCount(obj) {
+  return (obj?._hypotheses || []).filter(h => h && h.status !== 'confirmed' && h.status !== 'rejected').length;
+}
 
 // Extrahiert eine 4-stellige Jahreszahl aus einem GEDCOM-Datumsstring.
 function _valYear(dateStr) {
@@ -232,6 +240,12 @@ export function runValidation(db, config) {
     if (_hasSources(p) && !_hasAnyEval(p))
       push(pid, 'MISSING_EVAL', 'info',
         'Quellenangaben ohne Evidenzbewertung (Quellentyp/Information/Evidenz)', 'online');
+
+    // P15 — Offene Hypothesen (RES-HYPO/ADR-023)
+    const _openH = _openHypoCount(p);
+    if (_openH > 0)
+      push(pid, 'OPEN_HYPO', 'info',
+        `${_openH} offene Hypothese${_openH > 1 ? 'n' : ''} — Evidenz prüfen/auflösen`, 'online');
   }
 
   // ─── Familien-Regeln ────────────────────────────────────────────────────────
@@ -307,6 +321,15 @@ export function runValidation(db, config) {
       if (anchor)
         push(anchor, 'MANY_CHILDREN', 'warn',
           `Ungewöhnlich viele Kinder: ${f.children.length} (Grenze: ${thr.maxChildren})`, 'kirchenbuch', fid);
+    }
+
+    // F11 — Offene Hypothesen an der Familie (RES-HYPO/ADR-023)
+    const _openFH = _openHypoCount(f);
+    if (_openFH > 0) {
+      const anchor = f.husb || f.wife;
+      if (anchor)
+        push(anchor, 'OPEN_HYPO', 'info',
+          `${_openFH} offene Hypothese${_openFH > 1 ? 'n' : ''} an dieser Familie`, 'online', fid);
     }
 
     // F6 / F7 / F8 — Elternalter bei Kindsgeburt

@@ -592,6 +592,24 @@ eq(API._hypoStatus({ status:'bogus' }),     'open',      '_hypoStatus fängt Ung
   eq(db.individuals['@I1@']._hypotheses.length, 0, 'keine Hypothese → leeres Array');
 })();
 
+// Validator OPEN_HYPO — default-AUS (opt-in), feuert nur bei offenen Hypothesen
+(function() {
+  var ON = { disabled: new Set() };
+  var hRules = function(inds) { return rulesOf(API.runValidation(DB(inds), ON)); };
+  var open = P({ _hypotheses: [{ id:'h1', text:'X', status:'open' }] });
+  ok(hRules({ '@1@': open }).indexOf('OPEN_HYPO') >= 0, 'OPEN_HYPO feuert bei offener Hypothese');
+  var noStatus = P({ _hypotheses: [{ id:'h2', text:'Y' }] });   // leer → gilt als offen
+  ok(hRules({ '@1@': noStatus }).indexOf('OPEN_HYPO') >= 0, 'OPEN_HYPO feuert bei Hypothese ohne Status (= offen)');
+  var done = P({ _hypotheses: [{ id:'h3', text:'Z', status:'confirmed' }] });
+  ok(hRules({ '@1@': done }).indexOf('OPEN_HYPO') < 0, 'OPEN_HYPO schweigt bei bestätigt');
+  var rej = P({ _hypotheses: [{ id:'h4', text:'W', status:'rejected' }] });
+  ok(hRules({ '@1@': rej }).indexOf('OPEN_HYPO') < 0, 'OPEN_HYPO schweigt bei verworfen');
+  var none = P();
+  ok(hRules({ '@1@': none }).indexOf('OPEN_HYPO') < 0, 'OPEN_HYPO schweigt ohne Hypothesen');
+  // default-AUS: ohne Opt-in kein Befund
+  lacksRule(val({ '@1@': open }), 'OPEN_HYPO', 'OPEN_HYPO default-deaktiviert (kein Befund ohne Opt-in)');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {
