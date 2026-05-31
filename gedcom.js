@@ -984,9 +984,34 @@ function mergeStringPlaces(winnerName, loserNames) {
     _fix(f.marr); _fix(f.engag); _fix(f.div); _fix(f.divf);
     for (const ev of f.events || []) _fix(ev);
   }
-  // extraPlaces-Einträge für die Verlierer entfernen (Winner behält seinen)
-  for (const loser of loserNames) delete (AppState.db.extraPlaces || {})[loser];
-  UIState._placesCache = null;
+  const ep  = AppState.db.extraPlaces || {};
+  const pos = AppState.db.placeObjects;
+  const loserNorms = loserNames.map(_normPlaceName);
+
+  // Koordinaten aus Verlierer-extraPlaces auf Winner übertragen BEVOR gelöscht wird (Bug #9)
+  if (pos) {
+    const winnerNorm = _normPlaceName(winnerName);
+    const winnerPo = Object.values(pos).find(po => _normPlaceName(po.title) === winnerNorm);
+    if (winnerPo && winnerPo.lat == null) {
+      for (const loser of loserNames) {
+        const lep = ep[loser];
+        if (lep?.lati != null) { winnerPo.lat = lep.lati; winnerPo.long = lep.long; break; }
+      }
+    }
+  }
+
+  // extraPlaces-Einträge der Verlierer entfernen
+  for (const loser of loserNames) delete ep[loser];
+
+  // _ep_-generierte placeObjects der Verlierer entfernen (Bug #9)
+  if (pos) {
+    for (const [id, po] of Object.entries(pos)) {
+      if (id.startsWith('_ep_') && loserNorms.includes(_normPlaceName(po.title))) delete pos[id];
+    }
+  }
+
+  UIState._placesCache  = null;
+  UIState._placeRegistry = null; // Bug #2: Registry nach placeObjects-Änderung invalidieren
   return { repointed };
 }
 

@@ -150,6 +150,20 @@ function savePlace() {
   AppState.db.extraPlaces[newName] = updated;
   saveExtraPlaces();
 
+  // Bug #7: passendes placeObject synchron halten (P0b-3)
+  const _pos = AppState.db.placeObjects;
+  if (_pos && typeof _normPlaceName === 'function') {
+    const _norm = _normPlaceName(oldName);
+    for (const po of Object.values(_pos)) {
+      if (_normPlaceName(po.title) === _norm) {
+        if (lati != null) { po.lat = lati; po.long = long; }
+        if (newName !== oldName) po.title = newName;
+        break;
+      }
+    }
+    UIState._placeRegistry = null;
+  }
+
   // Koordinaten sofort in alle passenden Event-Objekte übernehmen
   _propagateCoordsToEvents(newName, lati, long);
 
