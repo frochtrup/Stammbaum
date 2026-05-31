@@ -3754,3 +3754,4 @@ html[data-theme="dark"] {
 .place-merge-name { flex: 1 1 auto; font-size: 14px; }
 .place-merge-meta { flex: 0 0 auto; font-size: 12px; color: var(--text-muted, #888); }
 .place-merge-btn { margin-top: 8px; width: 100%; }
+.place-merge-hint { font-size: 11px; color: var(--text-muted, #888); margin-bottom: 6px; }

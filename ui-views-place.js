@@ -442,6 +442,7 @@ function _renderPlaceMergeList() {
     });
   } else {
     // String-Modus (GEDCOM)
+    // Radio = Hauptort (Winner); Checkbox = in diesen Merge einschließen (Standard: alle an)
     _placeDupGroups.forEach((g, gi) => {
       const suggested = [...g.names].sort((a, b) =>
         (g.counts[b] || 0) - (g.counts[a] || 0)
@@ -449,14 +450,16 @@ function _renderPlaceMergeList() {
       let opts = '';
       for (const name of g.names) {
         const n = g.counts[name] || 0;
-        opts += `<label class="place-merge-opt">
+        opts += `<div class="place-merge-opt">
+          <input type="checkbox" name="pmc-${gi}" value="${esc(name)}" checked>
           <input type="radio" name="pmw-${gi}" value="${esc(name)}"${name === suggested ? ' checked' : ''}>
           <span class="place-merge-name">${esc(name)}</span>
           <span class="place-merge-meta">${n} Person${n !== 1 ? 'en' : ''}</span>
-        </label>`;
+        </div>`;
       }
       html += `<div class="place-merge-group">
         <div class="place-merge-title">${g.names.length} mögliche Schreibweisen desselben Ortes</div>
+        <div class="place-merge-hint">☑ = einschließen · ◉ = Hauptort</div>
         ${opts}
         <button class="btn btn-save place-merge-btn" data-action="placeMergeGroup" data-gidx="${gi}">Zusammenführen</button>
       </div>`;
@@ -485,7 +488,11 @@ function placeMergeGroup(gidx) {
       if (typeof renderPlaceList === 'function') renderPlaceList();
     }
   } else {
-    const losers = g.names.filter(n => n !== winner);
+    // Nur angehakte Einträge (Checkboxen) zusammenführen; Winner immer dabei
+    const checked = new Set([...document.querySelectorAll(`input[name="pmc-${gi}"]:checked`)].map(cb => cb.value));
+    checked.add(winner); // Winner ist immer Ziel, auch wenn Checkbox abgehakt
+    const losers = [...checked].filter(n => n !== winner);
+    if (!losers.length) { showToast('⚠ Mindestens einen weiteren Ort einschließen'); return; }
     const res = mergeStringPlaces(winner, losers);
     markChanged();
     showToast(`✓ ${losers.length} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}`);
