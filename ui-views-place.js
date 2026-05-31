@@ -367,3 +367,84 @@ function deletePlaceTrans(idx) {
   markChanged();
   showPlaceDetail(placeName, false);
 }
+
+// ─── PLACE-HIST (ADR-024, P0b-2b): Orts-Dubletten-Merge UI ──────────────────
+// Setzt auf findPlaceDuplicates()/mergePlaceObjects() (gedcom.js, P0b-2a).
+// Nur sinnvoll bei GRAMPS-Daten mit placeObjects (sonst keine Dubletten).
+let _placeDupGroups = [];
+
+// Zählt Event-Referenzen je placeId (für den Gewinner-Vorschlag).
+function _placeUsageCounts() {
+  const c = {};
+  const bump = id => { if (id) c[id] = (c[id] || 0) + 1; };
+  for (const p of Object.values(AppState.db.individuals || {})) {
+    bump(p.birth?.placeId); bump(p.chr?.placeId); bump(p.death?.placeId); bump(p.buri?.placeId);
+    for (const ev of p.events || []) bump(ev.placeId);
+  }
+  for (const f of Object.values(AppState.db.families || {})) {
+    bump(f.marr?.placeId); bump(f.engag?.placeId); bump(f.div?.placeId); bump(f.divf?.placeId);
+  }
+  return c;
+}
+
+function openPlaceMergeModal() {
+  if (typeof findPlaceDuplicates !== 'function') { showToast('⚠ Keine Orts-Entitäten (nur GRAMPS-Dateien)'); return; }
+  _placeDupGroups = findPlaceDuplicates();
+  _renderPlaceMergeList();
+  openModal('modalPlaceMerge');
+}
+
+function _renderPlaceMergeList() {
+  const el = document.getElementById('placeMergeList');
+  if (!el) return;
+  if (!_placeDupGroups.length) {
+    el.innerHTML = '<div class="dedup-empty">Keine Orts-Dubletten gefunden</div>';
+    return;
+  }
+  const reg = getPlaceRegistry();
+  const usage = _placeUsageCounts();
+  let html = '';
+  _placeDupGroups.forEach((g, gi) => {
+    // Gewinner-Vorschlag: meiste Event-Referenzen, dann meiste pnames
+    const ranked = [...g.ids].sort((a, b) =>
+      (usage[b] || 0) - (usage[a] || 0)
+      || ((reg.byId[b]?.pnames?.length || 0) - (reg.byId[a]?.pnames?.length || 0)));
+    const suggested = ranked[0];
+    let opts = '';
+    for (const id of g.ids) {
+      const po = reg.byId[id]; if (!po) continue;
+      const n = usage[id] || 0;
+      const geo = (po.lat != null) ? ' · 📍' : '';
+      opts += `<label class="place-merge-opt">
+        <input type="radio" name="pmw-${gi}" value="${esc(id)}"${id === suggested ? ' checked' : ''}>
+        <span class="place-merge-name">${esc(po.title)}</span>
+        <span class="place-merge-meta">${n} Verwendung${n !== 1 ? 'en' : ''}${geo}</span>
+      </label>`;
+    }
+    html += `<div class="place-merge-group">
+      <div class="place-merge-title">${g.ids.length} mögliche Schreibweisen desselben Ortes</div>
+      ${opts}
+      <button class="btn btn-save place-merge-btn" data-action="placeMergeGroup" data-gidx="${gi}">Zusammenführen</button>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function placeMergeGroup(gidx) {
+  const gi = parseInt(gidx, 10);
+  const g = _placeDupGroups[gi];
+  if (!g) return;
+  const sel = document.querySelector(`input[name="pmw-${gi}"]:checked`);
+  if (!sel) { showToast('⚠ Bitte einen Hauptort wählen'); return; }
+  const winner = sel.value;
+  const losers = g.ids.filter(id => id !== winner);
+  const res = mergePlaceObjects(winner, losers);
+  if (res.merged) {
+    markChanged();
+    UIState._placesCache = null;
+    showToast(`✓ ${res.merged} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}`);
+    _placeDupGroups = findPlaceDuplicates();   // verbleibende Dubletten neu berechnen
+    _renderPlaceMergeList();
+    if (typeof renderPlaceList === 'function') renderPlaceList();
+  }
+}
