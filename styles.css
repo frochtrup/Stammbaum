@@ -2656,19 +2656,14 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
   font-weight: 600;
 }
 /* Gleich/Unterschied-Kennzeichnung */
-.dedup-row-equal td { background: color-mix(in srgb, #4a9 12%, transparent); }
+.dedup-row-equal td { background: color-mix(in srgb, #4a9 10%, transparent); }
 .dedup-row-equal .dedup-merge-td-label { color: var(--text-muted); }
 .dedup-td-equal { font-size: 0.82rem; padding: 5px 8px; color: var(--text); }
-.dedup-eq-badge {
-  font-size: 0.68rem; margin-left: 6px; padding: 1px 5px;
-  border-radius: 4px; background: #4a9; color: #fff;
-  vertical-align: middle; font-weight: 500;
-}
-.dedup-row-diff td { background: color-mix(in srgb, #c74 10%, transparent); }
-.dedup-diff-badge {
-  font-size: 0.68rem; margin-left: 4px; padding: 1px 4px;
-  border-radius: 4px; background: color-mix(in srgb, #c74 60%, transparent);
-  color: #fff; vertical-align: middle; font-weight: 500;
+.dedup-row-diff td { background: color-mix(in srgb, #c74 8%, transparent); }
+/* ≠-Spalte zwischen A und B */
+.dedup-neq-col {
+  width: 18px; text-align: center; padding: 0 2px;
+  font-size: 0.7rem; color: var(--text-muted);
 }
 
 /* ── OneDrive-Ordnerliste ── */
