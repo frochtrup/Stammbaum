@@ -734,17 +734,25 @@ function saveExtraPlaces() {
 // werden nie überschrieben.
 async function loadPlaceObjectsFromIDB() {
   try {
+    // 1) IDB (lokal, schnell)
     const raw = await idbGet('stammbaum_placeobjects');
-    if (!raw) return;
-    const stored = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    if (!stored || typeof stored !== 'object') return;
+    const stored = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
+    // 2) OneDrive Konfig-Ordner (falls verbunden — überschreibt ältere IDB-Daten)
+    let odData = null;
+    if (typeof _odReadAppData === 'function') {
+      odData = await _odReadAppData('stammbaum-orte.json').catch(() => null);
+    }
+    const source = odData || stored; // OneDrive hat Vorrang (aktuellste Version)
+    if (!source || typeof source !== 'object') return;
     const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
     let added = 0;
-    for (const [id, po] of Object.entries(stored)) {
+    for (const [id, po] of Object.entries(source)) {
       if (pos[id]) continue; // vorhandene (GRAMPS-native) nicht überschreiben
       pos[id] = po;
       added++;
     }
+    // OneDrive-Daten auch in IDB sichern (Offline-Fallback aktuell halten)
+    if (odData) idbPut('stammbaum_placeobjects', JSON.stringify(odData)).catch(() => {});
     if (added) UIState._placeRegistry = null;
   } catch(e) { console.warn('loadPlaceObjectsFromIDB:', e); }
 }
@@ -758,6 +766,8 @@ function savePlaceObjects() {
       if (id.startsWith('_ep_')) toSave[id] = po;
     }
     idbPut('stammbaum_placeobjects', JSON.stringify(toSave)).catch(() => {});
+    // OneDrive-Sync in Konfig-Ordner (fire-and-forget)
+    if (typeof _odWriteAppData === 'function') _odWriteAppData('stammbaum-orte.json', toSave).catch(() => {});
   } catch(e) {}
 }
 

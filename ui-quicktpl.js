@@ -191,13 +191,23 @@ function _qtList() {
 async function loadQuickTemplates() {
   try {
     const raw = await idbGet('quick_templates');
-    AppState.quickTemplates = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
+    const idbData = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : [];
+    // OneDrive Konfig-Ordner hat Vorrang (aktuellste Version über Geräte)
+    let odData = null;
+    if (typeof _odReadAppData === 'function') {
+      odData = await _odReadAppData('stammbaum-templates.json').catch(() => null);
+    }
+    const data = Array.isArray(odData) ? odData : idbData;
+    AppState.quickTemplates = Array.isArray(data) ? data : [];
+    if (odData) idbPut('quick_templates', JSON.stringify(AppState.quickTemplates)).catch(() => {});
   } catch (e) { AppState.quickTemplates = []; }
   return _qtList();
 }
 
 function saveQuickTemplates() {
-  idbPut('quick_templates', JSON.stringify(_qtList())).catch(() => {});
+  const data = _qtList();
+  idbPut('quick_templates', JSON.stringify(data)).catch(() => {});
+  if (typeof _odWriteAppData === 'function') _odWriteAppData('stammbaum-templates.json', data).catch(() => {});
 }
 
 // Portable Config-Datei (Quelle der Wahrheit; IDB ist Cache)

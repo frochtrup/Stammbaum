@@ -285,6 +285,12 @@ async function openSettings() {
     ? (docFolder.relPath || docFolder.name || '.') : 'nicht konfiguriert';
   if (dClearEl) dClearEl.style.display = docFolder ? '' : 'none';
   if (dCntEl) dCntEl.textContent = '';
+  // Konfig-Ordner
+  const cfgFolder = await idbGet('od_config_folder').catch(() => null);
+  const cfgNameEl  = document.getElementById('set-config-name');
+  const cfgClearEl = document.getElementById('set-config-clear');
+  if (cfgNameEl)  cfgNameEl.textContent  = cfgFolder ? (cfgFolder.relPath || cfgFolder.name || '.') : 'nicht konfiguriert';
+  if (cfgClearEl) cfgClearEl.hidden      = !cfgFolder;
 }
 
 async function odSetBasePath(val) {
@@ -353,6 +359,50 @@ async function odClearDocFolder() {
   _odPhotoCache.clearByPrefix('src_');
   showToast('Dokumente-Ordner zurückgesetzt');
   openSettings();
+}
+
+async function odClearConfigFolder() {
+  await idbDel('od_config_folder').catch(() => {});
+  showToast('Konfig-Ordner zurückgesetzt');
+  openSettings();
+}
+
+// ── App-Datendateien im Konfig-Ordner lesen/schreiben ────────────────────────
+async function _odGetConfigFolder() {
+  return idbGet('od_config_folder').catch(() => null);
+}
+
+async function _odWriteAppData(filename, data) {
+  if (!_odIsConnected()) return false;
+  const token  = await _odGetToken().catch(() => null);
+  if (!token) return false;
+  const folder = await _odGetConfigFolder();
+  if (!folder?.relPath) return false;
+  const fullPath = folder.relPath + '/' + filename;
+  try {
+    const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    const blob    = new Blob([content], { type: 'application/json' });
+    const encoded = fullPath.split('/').map(s => encodeURIComponent(s)).join('/');
+    const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
+      { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob });
+    return res.ok;
+  } catch(e) { console.warn('[OD] _odWriteAppData:', filename, e); return false; }
+}
+
+async function _odReadAppData(filename) {
+  if (!_odIsConnected()) return null;
+  const token  = await _odGetToken().catch(() => null);
+  if (!token) return null;
+  const folder = await _odGetConfigFolder();
+  if (!folder?.relPath) return null;
+  const fullPath = folder.relPath + '/' + filename;
+  try {
+    const encoded = fullPath.split('/').map(s => encodeURIComponent(s)).join('/');
+    const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch(e) { return null; }
 }
 
 // ── File I/O ──────────────────────────────────────────────────────────────────
