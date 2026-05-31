@@ -154,8 +154,20 @@ async function odImportPhotos() {
   const folder = await idbGet('od_photo_folder').catch(() => null)
               || await idbGet('od_default_folder').catch(() => null);
   const folderId = folder?.id || folder?.folderId;
-  if (folderId) await _odNavigateToParentOf(folderId);
-  else await _odShowFolder('root', 'OneDrive');
+  if (folderId) {
+    await _odNavigateToParentOf(folderId);
+  } else {
+    // Vorbelegung: "Pictures" im OneDrive-Root suchen
+    const token = await _odGetToken().catch(() => null);
+    if (token) {
+      try {
+        const res = await fetch(`${OD_GRAPH}/me/drive/root:/Pictures?$select=id,name`,
+          { headers: { Authorization: 'Bearer ' + token } });
+        if (res.ok) { const item = await res.json(); if (item.id) { await _odShowFolder(item.id, item.name); return; } }
+      } catch(e) {}
+    }
+    await _odShowFolder('root', 'OneDrive');
+  }
 }
 
 async function _odShowFolder(folderId, folderName) {
