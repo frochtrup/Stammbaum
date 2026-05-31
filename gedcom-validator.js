@@ -11,7 +11,7 @@ export const VAL_CONFIG_DEFAULTS = {
   // nicht bewertete Quelle. Der Dashboard-Lückenradar zeigt die Abdeckung trotzdem.
   // OPEN_HYPO ebenfalls AUS: offene Hypothesen (RES-HYPO/ADR-023) sind ein
   // normaler Forschungszustand, kein Mangel — Opt-in für gezielte Durchsicht.
-  disabled: new Set(['MISSING_EVAL', 'OPEN_HYPO', 'MULTI_FAMC']),
+  disabled: new Set(['MISSING_EVAL', 'OPEN_HYPO']),
   thresholds: {
     maxAge:        110,
     staStAera:     1876,  // Geburt ab diesem Jahr → Standesamtsurkunde suchen
