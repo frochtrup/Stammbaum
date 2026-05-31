@@ -180,4 +180,10 @@ PlaceRegistry = {
 ---
 
 ## 7. Reihenfolge
-**§3.0 Verifikation → P0 (Modell+Parser+Writer+Registry+Tests) → P1 (collectPlaces+Merge+extraPlaces-Migration) → Review → P2 → P3 → P4 → P5.**
+**§3.0 Verifikation ✅ → P0a-1 ✅ (Zeitachse Parser/Writer, sw v796) → P0a-2 ✅ (PlaceRegistry, sw v797) → P0b-1 ✅ (collectPlaces↔Entität + Ort-Detail-Historie, sw v798) → P0b-2a ✅ (Dubletten-Erkennung + Merge-Kern, sw v799) → P0b-2b (Merge-Dialog UI) → P0b-3 (extraPlaces→placeObjects) → Review → P2-UI → P3 → P4 → P5.**
+
+**Stand (Implementierung, sw v799, test-unit 198 grün):**
+- **P0a-1** `gramps-parser.js`/`gramps-writer.js`: datierte `<pname>`/`<placeref>` → `pnames[].{dateFrom,dateTo,dateType,_dateRaw}` + `enclosedBy[]` (HYBRID strukturiert + `_dateRaw` verbatim).
+- **P0a-2** `gedcom.js`: `getPlaceRegistry()` (`byId`/`byNorm`/`findByName`/`resolveAsOf`/`enclosureChainAsOf`, `_normPlaceName` nur Matching) + `_migratePlaceObjects` (`parentId→enclosedBy`, in `setDb`).
+- **P0b-1** `ui-views-place.js`: `collectPlaces()` mischt `placeId`+`type`+Koords additiv ein (String-Key unverändert); Ort-Detail-Abschnitt „Ort (historisch)" (Typ/Zugehörigkeitskette/frühere Namen).
+- **P0b-2a** `gedcom.js`: `findPlaceDuplicates()` (Fold-Key `_placeFold` + Haversine `_placeDistKm`, union-find) + `mergePlaceObjects()` (verlustfrei: Schreibweisen→`pnames`, `ev.placeId`/parent/enclosedBy umgehängt, Verlierer gelöscht).
