@@ -271,6 +271,8 @@ const _CLICK_MAP = {
   deleteEvent:             ()  => deleteEvent(),
   savePlace:               ()  => savePlace(),
   saveNewPlace:            ()  => saveNewPlace(),
+  openPlacePicker:         el  => openPlacePicker(el.dataset.target),
+  placePickerSelect:       el  => placePickerSelect(el.dataset.id, el.dataset.name),
   relPickerCreateNew:      ()  => relPickerCreateNew(),
   saveRepo:                ()  => saveRepo(),
   deleteRepo:              ()  => deleteRepo(),
@@ -442,6 +444,7 @@ document.addEventListener('change', e => {
   else if (action === 'applySourceTemplate') _applySourceTemplate(el.value);
   else if (action === 'qtImportFile')      importQuickTemplatesFile(el);
   else if (action === 'importPlaceDataFile') importPlaceDataFile(el);
+  else if (action === 'setPlaceTypeFilter')  setPlaceTypeFilter(el.value);
   else if (action === 'importProjects')    importProjectsFile(el);
   else if (action === 'qtBaseChange')      _qtSyncBaseUI();
   else if (action === 'qtFieldEdit')       _qtFieldEdit(el);
@@ -492,8 +495,9 @@ document.addEventListener('input', e => {
   else if (action === 'filterHoefe')     filterHoefeDebounced(el.value);
   else if (action === 'runGlobalSearch') runGlobalSearchDebounced(el.value);
   else if (action === 'filterMapPersonList') filterMapPersonList();
-  else if (action === 'renderRelPicker') renderRelPicker(el.value);
-  else if (action === 'renderRepoPicker') renderRepoPicker(el.value);
+  else if (action === 'renderRelPicker')       renderRelPicker(el.value);
+  else if (action === 'renderRepoPicker')      renderRepoPicker(el.value);
+  else if (action === 'renderPlacePickerList') renderPlacePickerList(el.value);
   else if (action === 'mdFilterLinkPanel') _mdFilterLinkPanel(el.value);
   else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
   else if (action === 'dedupSearch')     dedupSearchChange(el.value);

@@ -1,6 +1,28 @@
 // ─────────────────────────────────────
 //  PLACE LIST
 // ─────────────────────────────────────
+
+// P3: Typ-Labels (DE) + Icons
+const PLACE_TYPE_LBL = {
+  Country:'Land', State:'Bundesland', Region:'Region', Province:'Provinz',
+  County:'Kreis', District:'Bezirk', Municipality:'Gemeinde', City:'Stadt',
+  Town:'Stadt', Village:'Dorf', Hamlet:'Weiler', Parish:'Pfarrei',
+  Borough:'Stadtteil', Locality:'Ortslage', Neighborhood:'Nachbarschaft',
+  Building:'Gebäude', Farm:'Hof', Cemetery:'Friedhof', Church:'Kirche', Unknown:'',
+};
+const PLACE_TYPE_ICON = {
+  Church:'⛪', Parish:'⛪', Cemetery:'⚰', Farm:'🏡',
+  Village:'🏘', Town:'🏘', City:'🏙', Country:'🌍',
+};
+
+let _placeTypeFilter = '';
+
+function setPlaceTypeFilter(val) {
+  _placeTypeFilter = val || '';
+  const q = document.getElementById('searchPlaces')?.value || '';
+  filterPlaces(q);
+}
+
 function collectPlaces() {
   if (UIState._placesCache) return UIState._placesCache;
   const places = new Map();
@@ -71,12 +93,15 @@ function renderPlaceList(sorted) {
     if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
     const count = place.personIds.size;
     const hasGeo = place.lati !== null;
-    const geoIcon = hasGeo ? '📍' : '·';
+    const typeIcon = (place.type && PLACE_TYPE_ICON[place.type]) ? PLACE_TYPE_ICON[place.type]
+                   : hasGeo ? '📍' : '·';
+    const typeLbl  = place.type ? (PLACE_TYPE_LBL[place.type] || place.type) : '';
+    const typeBadge = typeLbl ? `<span class="place-type-badge">${esc(typeLbl)}</span>` : '';
     html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.name)}">
-      <div class="p-avatar p-avatar--md">${geoIcon}</div>
+      <div class="p-avatar p-avatar--md">${typeIcon}</div>
       <div class="p-info">
-        <div class="p-name">${esc(compactPlace(place.name))}</div>
-        <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte verfügbar' : ''}</div>
+        <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}</div>
+        <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte' : ''}</div>
       </div>
       <span class="p-arrow">›</span>
     </div>`;
@@ -86,9 +111,62 @@ function renderPlaceList(sorted) {
 
 function filterPlaces(q) {
   const lower = q.toLowerCase().trim();
-  const all = [...collectPlaces().values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
+  let all = [...collectPlaces().values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
+  if (_placeTypeFilter) all = all.filter(pl => pl.type === _placeTypeFilter);
   if (!lower) { renderPlaceList(all); return; }
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
+}
+
+// ─── P3: Ort-Suchpicker ───────────────────────────────────────────────────────
+// Öffnet den modalPlacePicker für das Ziel-Eingabefeld (z.B. 'ef-place').
+function openPlacePicker(targetFieldId) {
+  UIState._placePickerTarget = targetFieldId || 'ef-place';
+  const el = document.getElementById('placePickerSearch');
+  if (el) el.value = '';
+  renderPlacePickerList('');
+  openModal('modalPlacePicker');
+}
+
+function renderPlacePickerList(q) {
+  const list = document.getElementById('placePickerList');
+  if (!list) return;
+  const lower = q.toLowerCase().trim();
+
+  // Alle bekannten Orte (placeObjects + string-Orte)
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  let rows = [];
+
+  if (reg && Object.keys(AppState.db.placeObjects || {}).length) {
+    // GRAMPS-Daten: placeObjects als primäre Quelle
+    rows = Object.values(AppState.db.placeObjects)
+      .map(po => ({ name: po.title, placeId: po.id, type: po.type || '' }));
+  } else {
+    // GEDCOM: string-Orte
+    rows = [...collectPlaces().values()].map(pl => ({ name: pl.name, placeId: pl.placeId || '', type: pl.type || '' }));
+  }
+
+  if (lower) rows = rows.filter(r => r.name.toLowerCase().includes(lower));
+  rows.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+  if (!rows.length) { list.innerHTML = '<div class="empty">Keine Orte gefunden</div>'; return; }
+  list.innerHTML = rows.slice(0, 120).map(r => {
+    const icon  = PLACE_TYPE_ICON[r.type] || '📍';
+    const lbl   = r.type ? (PLACE_TYPE_LBL[r.type] || r.type) : '';
+    const badge = lbl ? `<span class="place-type-badge">${esc(lbl)}</span>` : '';
+    return `<div class="person-row" data-action="placePickerSelect" data-id="${esc(r.placeId)}" data-name="${esc(r.name)}">
+      <div class="p-avatar p-avatar--sm">${icon}</div>
+      <div class="p-info"><div class="p-name">${esc(r.name)}${badge}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function placePickerSelect(placeId, placeName) {
+  const target = UIState._placePickerTarget || 'ef-place';
+  const inp = document.getElementById(target);
+  const idInp = document.getElementById(target + '-id');
+  if (inp) inp.value = placeName || '';
+  if (idInp) idInp.value = placeId || '';
+  closeModal('modalPlacePicker');
 }
 
 // Gibt das placeObject für einen Ortsnamen zurück (via Registry), oder null.
@@ -437,6 +515,38 @@ function showPlaceDetail(placeName, pushHistory = true) {
           <div class="section-title">Ort (historisch)</div>
           ${histHtml}
           ${namesHtml ? `<div class="fact-sub-title">Frühere Namen</div>${namesHtml}` : ''}
+        </div>`;
+      }
+    }
+  }
+
+  // P3: Kirchenbuch-Sektion — für Church/Parish/Cemetery Orte verknüpfte Repos + Quellen anzeigen
+  if (place.placeId) {
+    const reg2 = getPlaceRegistry();
+    const po2  = reg2?.byId[place.placeId];
+    if (po2 && (po2.type === 'Church' || po2.type === 'Parish' || po2.type === 'Cemetery')) {
+      const lowerTitle = (po2.title || '').toLowerCase();
+      // Repos deren Name den Ortsnamen enthält (oder umgekehrt)
+      const matchedRepos = Object.values(AppState.db.repositories || {})
+        .filter(r => {
+          const rn = (r.name || '').toLowerCase();
+          return rn.includes(lowerTitle) || lowerTitle.includes(rn.slice(0, 5));
+        });
+      if (matchedRepos.length) {
+        let kirchHtml = '';
+        for (const repo of matchedRepos) {
+          const repoSrcs = Object.values(AppState.db.sources || {}).filter(s => s.repo === repo.id);
+          const srcLinks = repoSrcs.map(s =>
+            `<div class="fact-row" style="cursor:pointer" data-action="showSourceDetail" data-id="${esc(s.id)}">
+              <span class="fact-val">${esc(s.title || s.id)}</span><span class="p-arrow">›</span>
+            </div>`).join('');
+          kirchHtml += `<div class="fact-row"><span class="fact-key">Archiv</span>
+            <span class="fact-val">${esc(repo.name)}${repo.www ? ` <a class="place-maps-link" href="${esc(repo.www)}" target="_blank">🔗</a>` : ''}</span></div>`;
+          if (srcLinks) kirchHtml += `<div class="fact-sub-title">Kirchenbücher</div>${srcLinks}`;
+        }
+        html += `<div class="section fade-up">
+          <div class="section-title">Verknüpfte Kirchenbücher</div>
+          ${kirchHtml}
         </div>`;
       }
     }

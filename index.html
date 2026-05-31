@@ -156,6 +156,19 @@
       </div>
       <div id="place-search-orte" class="search-wrap">
         <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
+        <select class="place-type-filter-sel" id="placeTypeFilter" data-change="setPlaceTypeFilter" title="Nach Typ filtern">
+          <option value="">Alle Typen</option>
+          <option value="Village">Dorf</option>
+          <option value="Town">Stadt</option>
+          <option value="City">Stadt (groß)</option>
+          <option value="Municipality">Gemeinde</option>
+          <option value="Parish">Pfarrei</option>
+          <option value="Church">Kirche</option>
+          <option value="Cemetery">Friedhof</option>
+          <option value="Farm">Hof</option>
+          <option value="Country">Land</option>
+          <option value="County">Kreis</option>
+        </select>
         <button type="button" class="icon-btn" id="placeMergeBtn" data-action="openPlaceMergeModal" title="Orts-Dubletten zusammenführen" aria-label="Orts-Dubletten zusammenführen">⇉</button>
         <button type="button" class="icon-btn" data-action="exportPlaceData" title="Ortsdaten exportieren (JSON)" aria-label="Ortsdaten exportieren">↓</button>
         <label class="icon-btn icon-btn--file" title="Ortsdaten importieren (JSON)" aria-label="Ortsdaten importieren">↑<input type="file" accept=".json" class="sr-only" data-change="importPlaceDataFile"></label>
@@ -1134,7 +1147,7 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Ort <button type="button" id="fev-place-toggle" data-action="togglePlaceMode" data-placeid="fev-place" class="place-toggle-btn">⊞</button></label>
+        <label class="form-label">Ort <button type="button" id="fev-place-toggle" data-action="togglePlaceMode" data-placeid="fev-place" class="place-toggle-btn">⊞</button> <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="fev-place" title="Ort aus Liste wählen">📍</button></label>
         <div id="fev-place-free">
           <div class="place-input-wrap">
             <input class="form-input" id="fev-place" placeholder="München" autocomplete="off">
@@ -1371,7 +1384,7 @@
           <p class="form-error" id="ef-date-err"></p>
         </div>
         <div class="form-group">
-          <label class="form-label">Ort <button type="button" id="ef-place-toggle" data-action="togglePlaceMode" data-placeid="ef-place" class="place-toggle-btn">⊞</button></label>
+          <label class="form-label">Ort <button type="button" id="ef-place-toggle" data-action="togglePlaceMode" data-placeid="ef-place" class="place-toggle-btn">⊞</button> <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="ef-place" title="Ort aus Liste wählen">📍</button></label>
           <div id="ef-place-free">
             <div class="place-input-wrap">
               <input class="form-input" id="ef-place" placeholder="München" autocomplete="off">
@@ -1550,6 +1563,23 @@
         <button class="btn btn-cancel" data-action="closeModal" data-modal="modalRelPicker">
           Abbrechen
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- P3: Ort-Suchpicker -->
+<div class="modal-overlay" id="modalPlacePicker" role="dialog" aria-modal="true" aria-labelledby="placePickerTitle">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="placePickerTitle">Ort wählen</div>
+    <div class="sheet-body">
+      <input class="form-input" id="placePickerSearch"
+             placeholder="Ortsname suchen…" autocomplete="off"
+             data-input="renderPlacePickerList">
+      <div id="placePickerList" class="list-scroll-inner"></div>
+      <div class="btn-row mt-12">
+        <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalPlacePicker">Abbrechen</button>
       </div>
     </div>
   </div>
