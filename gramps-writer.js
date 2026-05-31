@@ -93,6 +93,21 @@ function _decToGrampsCoord(lat, long) {
   };
 }
 
+// PLACE-HIST (ADR-024): baut das GRAMPS-Date-Element für pname/placeref. HYBRID — _dateRaw
+// (verbatim aus dem Parser) hat Vorrang → EXAKTER Roundtrip inkl. Zusatz-Attribute (type="from"
+// etc.). Nur bei App-erzeugten/-editierten Daten ohne _dateRaw wird aus {dateFrom,dateTo,dateType}
+// neu gebaut: 'val'→<dateval>, 'span'→<datespan>, sonst <daterange>. '' = kein Datum.
+function _grampsPlaceDateXML(d) {
+  if (!d) return '';
+  if (d._dateRaw) return d._dateRaw;
+  if (!d.dateFrom && !d.dateTo) return '';
+  if (d.dateType === 'val' || (d.dateFrom && !d.dateTo)) {
+    return `<dateval val="${_esc(d.dateFrom || d.dateTo)}"/>`;
+  }
+  const tag = d.dateType === 'span' ? 'datespan' : 'daterange';
+  return `<${tag} start="${_esc(d.dateFrom || '')}" stop="${_esc(d.dateTo || '')}"/>`;
+}
+
 // Media path: reverse of _grampsMediaPath in parser
 function _toGrampsSrc(file) {
   if (!file) return '';
@@ -655,13 +670,24 @@ export function _grampsBuildXMLText(db) {
       for (const pn of pl.pnames || []) {
         let attrs = ` value="${_esc(pn.value)}"`;
         if (pn.lang) attrs += ` lang="${_esc(pn.lang)}"`;
-        L.push(`      <pname${attrs}/>`);
+        const dxml = _grampsPlaceDateXML(pn);
+        if (dxml) { L.push(`      <pname${attrs}>`); L.push(`        ${dxml}`); L.push('      </pname>'); }
+        else L.push(`      <pname${attrs}/>`);
       }
       if (pl.lat != null && pl.long != null) {
         const coord = _decToGrampsCoord(pl.lat, pl.long);
         if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
       }
-      if (pl.parentId) {
+      if (pl.enclosedBy && pl.enclosedBy.length) {
+        // PLACE-HIST: ALLE (evtl. datierten) Zugehörigkeiten schreiben
+        for (const enc of pl.enclosedBy) {
+          if (!enc.placeId) continue;
+          const parentH = _entityHandle(enc.placeId, 'pl');
+          const dxml = _grampsPlaceDateXML(enc);
+          if (dxml) { L.push(`      <placeref hlink="${_esc(parentH)}">`); L.push(`        ${dxml}`); L.push('      </placeref>'); }
+          else L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
+        }
+      } else if (pl.parentId) {
         const parentH = _entityHandle(pl.parentId, 'pl');
         L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
       }

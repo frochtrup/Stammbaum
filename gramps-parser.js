@@ -362,6 +362,25 @@ export function _grampsParseXMLText(xmlText) {
 
   const _PLACE_MODELLED = new Set(['ptitle', 'pname', 'coord', 'placeref']);
 
+  // PLACE-HIST (ADR-024): liest das GRAMPS-Date-Kind (<daterange>/<datespan>/<dateval>) eines
+  // pname/placeref-Elements. HYBRID: strukturierte Felder {dateFrom,dateTo,dateType} für App-Logik
+  // (resolveAsOf etc.) + _dateRaw = verbatim-Serialisierung des Date-Elements für EXAKTEN Roundtrip
+  // (erhält Zusatz-Attribute wie type="from"/quality/cformat, die das strukturierte Modell nicht kennt).
+  // dateType erhält die GRAMPS-Form: 'range' (daterange) | 'span' (datespan) | 'val' (dateval).
+  const _grampsPlaceDateOf = (el) => {
+    const dr = _byTag(el, 'daterange')[0] || _byTag(el, 'datespan')[0] || _byTag(el, 'dateval')[0] || null;
+    if (!dr) return { dateFrom: null, dateTo: null, dateType: null, _dateRaw: null };
+    const dtag = dr.localName || dr.tagName || '';
+    const _dateRaw = _xmlEl(dr);
+    if (dtag === 'dateval') return { dateFrom: dr.getAttribute('val') || null, dateTo: null, dateType: 'val', _dateRaw };
+    return {
+      dateFrom: dr.getAttribute('start') || null,
+      dateTo:   dr.getAttribute('stop')  || null,
+      dateType: dtag === 'datespan' ? 'span' : 'range',
+      _dateRaw,
+    };
+  };
+
   for (const pl of _byTag(doc, 'placeobj')) {
     const h   = pl.getAttribute('handle');
     if (!h) continue;
@@ -377,7 +396,7 @@ export function _grampsParseXMLText(xmlText) {
     const pnames = [];
     for (const pn of _byTag(pl, 'pname')) {
       const val = pn.getAttribute('value') || '';
-      if (val) pnames.push({ value: val, lang: pn.getAttribute('lang') || '' });
+      if (val) pnames.push({ value: val, lang: pn.getAttribute('lang') || '', ..._grampsPlaceDateOf(pn) });
     }
 
     // Coordinates
@@ -388,9 +407,13 @@ export function _grampsParseXMLText(xmlText) {
       long = _parseDeg(coord.getAttribute('long') || '');
     }
 
-    // Parent place ref (hierarchy)
-    const placerefEl    = _byTag(pl, 'placeref')[0] || null;
-    const _parentHandle = placerefEl ? placerefEl.getAttribute('hlink') : null;
+    // Parent place refs (hierarchy) — PLACE-HIST: ALLE placerefs mit Datum sammeln (nicht nur [0])
+    const _enclosedRaw = [];
+    for (const ref of _byTag(pl, 'placeref')) {
+      const hl = ref.getAttribute('hlink');
+      if (hl) _enclosedRaw.push({ handle: hl, ..._grampsPlaceDateOf(ref) });
+    }
+    const _parentHandle = _enclosedRaw[0] ? _enclosedRaw[0].handle : null;
 
     // Sub-elements not explicitly modelled → passthrough
     const plExtra = [];
@@ -404,18 +427,22 @@ export function _grampsParseXMLText(xmlText) {
     _placeObjsTemp[pId] = {
       id: pId, _grampsHandle: h,
       title: primaryTitle, type, pnames, lat, long,
-      _parentHandle, _extra: plExtra,
+      _parentHandle, _enclosedRaw, _extra: plExtra,
     };
   }
 
   // Resolve parent handles → IDs (second pass after all places are known)
   const placeObjects = {};
   for (const [pId, pl] of Object.entries(_placeObjsTemp)) {
+    const enclosedBy = (pl._enclosedRaw || [])
+      .map(e => ({ placeId: placeHandleToId[e.handle] || null, dateFrom: e.dateFrom, dateTo: e.dateTo, dateType: e.dateType, _dateRaw: e._dateRaw }))
+      .filter(e => e.placeId);
     placeObjects[pId] = {
       id: pl.id, grampId: pl.id.replace(/^@|@$/g, ''), _grampsHandle: pl._grampsHandle,
       title: pl.title, type: pl.type, pnames: pl.pnames,
       lat: pl.lat, long: pl.long,
       parentId: pl._parentHandle ? (placeHandleToId[pl._parentHandle] || null) : null,
+      enclosedBy,
       _extra: pl._extra || [],
     };
   }

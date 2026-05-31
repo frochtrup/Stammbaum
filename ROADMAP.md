@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v795 · Cache: `stammbaum-v795` · `test-unit.js` = 161 Tests grün
+**sw-Version:** v796 · Cache: `stammbaum-v796` · `test-unit.js` = 166 Tests grün
 **Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · **Eltern-Suchpicker im Familiendialog (v794)** — `<select>`+tote `onclick`-Buttons → relPicker-Logik wie „+ Elternteil".
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
@@ -167,14 +167,15 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 | Phase | Inhalt | Speicherung | Status |
 |---|---|---|---|
-| **P0a** | **Zeitachse Parser/Writer** — datierte `<pname>` → `pnames[].dateFrom/To/_dateRaw`; **mehrere** datierte `<placeref>` → `enclosedBy[]` (neben `parentId`). `_grampsDateOf`/`_grampsDateXML`-Helfer. **`PlaceRegistry`** in gedcom.js (`byId`/`byNorm`/`resolveAsOf`/`enclosureChainAsOf`/`findByName`, `_normPlaceName` nur fürs Matching). + Roundtrip-/Unit-Tests. | GRAMPS-Standard (kein `_`-Tag) | 🔜 geplant |
+| **P0a-1** | **Zeitachse Parser/Writer** ✅ *(sw v796)* — datierte `<pname>` → `pnames[].{dateFrom,dateTo,dateType,_dateRaw}`; **mehrere** datierte `<placeref>` → `enclosedBy[]` (neben `parentId`). HYBRID: strukturierte Felder + `_dateRaw` verbatim (erhält Zusatz-Attribute wie `type="from"`). `_grampsPlaceDateOf`/`_grampsPlaceDateXML`-Helfer. **Verifiziert:** real `Unsere Familie.gramps` 29/29 Orts-Datumselemente + 8/8 verbatim-Attrs erhalten, counts=ok/stable; GEDCOM net_delta=0; +5 Unit-Tests (166 total). | GRAMPS-Standard (kein `_`-Tag) | ✅ erledigt |
+| **P0a-2** | **`PlaceRegistry`** in gedcom.js (`byId`/`byNorm`/`resolveAsOf`/`enclosureChainAsOf`/`findByName`, `_normPlaceName` nur fürs Matching) + Migration `parentId→enclosedBy` für Altdaten. | reine App-Logik | 🔜 als Nächstes |
 | **P0b** | **Normalisierung** — `collectPlaces()` über `placeId` statt String; lazy-Promote; **Dubletten-Merge** (Schreibweisen → `pnames[]`); **`extraPlaces` → `placeObjects`** (T0-STORAGE-Abbau). | GRAMPS-Standard | 🔜 geplant |
 | **P2-UI** | **Historische UI** — Ort-Editor mit datierter Namens- + Zugehörigkeits-Historie (von–bis, übergeordneter Ort, Picker); Anzeige/Export via `resolveAsOf`. | — | angedacht |
 | **P3** | **Kirchen & typisierte Event-Orte** — Typ-Taxonomie (Dorf…Land, Kirche/Pfarrei/Friedhof, Hof) → GRAMPS-Standardtypen; Ort-**Suchpicker** im Event-Formular (Muster Eltern-Picker v794); Kirche↔Kirchenbuch (Repository/Source); Höfe als Filter der generischen Ort-Sicht. | `type` (vorhanden) | angedacht |
 | **P4** | **Geocoding & Gazetteer** — **GOV** (gov.genealogy.net) priorisiert (historische Zugehörigkeit über Zeit, ideal westfälisch) → speist `enclosedBy[]`/`pnames[]`; GeoNames/Wikidata alternativ; Batch-Geocoding + Dedup. CSP `connect-src` whitelisten + `test-csp.js`. | `authority` → GRAMPS `<url>` | angedacht |
 | **P5** | **Auswertungen** — Ort-Steckbrief (Events/Personen/Quellen/Karte/Namens-Timeline); Karten-**Zeitschieber** (Name/Zugehörigkeit zum Jahr); **Pfarrei-Rekonstruktion** (alle Taufen/Trauungen einer Kirche); Geo-Plausibilitäts-Validator; Orts-Hypothesen (`_HYPO`); Orts-Kontextsatz in Story/Buch. | gemischt | angedacht |
 
-**Reihenfolge:** §3.0 Verifikation → P0a → P0b → Review → P2-UI → P3 → P4 → P5.
+**Reihenfolge:** §3.0 Verifikation ✅ → P0a-1 ✅ → P0a-2 → P0b → Review → P2-UI → P3 → P4 → P5.
 
 ---
 

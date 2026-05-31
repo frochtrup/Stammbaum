@@ -50,6 +50,10 @@ Das Fundament existiert bereits — Orte sind **nicht** nur Strings:
 > Da `pname` und `placeref` **in** `_PLACE_MODELLED` stehen, baut der Writer sie aus dem Modell neu auf. Wenn der Parser die Datums-Kinder **nicht** liest, werden sie beim Schreiben **nicht** reproduziert → **stiller Datenverlust** (kein net_delta=0, falls eine Test-Datei datierte pnames enthält).
 > **Test:** Mini-`.gramps` mit `<pname value="Alt" lang=""><daterange start="1700" stop="1800"/></pname>` durch `test-roundtrip.js` schicken. Ergebnis bestimmt, ob P0 ein *Bugfix* (Verlust heute) oder eine *Erweiterung* (heute via Passthrough erhalten) ist. **Design unten gilt für beide Fälle** — es macht die Daten in jedem Fall *zugänglich*.
 
+> **✅ ERGEBNIS (2026-05-31, empirisch verifiziert):**
+> **Vorher (Baseline):** datierte `<pname>`/`<placeref>` wurden **still verworfen** — `pname`/`placeref` ∈ `_PLACE_MODELLED` → Writer baut sie aus dem Modell neu; Parser las die Date-Kinder nicht → Passthrough griff nicht (nur Nicht-modellierte placeobj-Kinder landen in `_extra`). Bestätigung, dass P0a ein **Bugfix** (Datenverlust-Vermeidung) ist, nicht nur eine Erweiterung.
+> **Nachher (P0a-1 implementiert, sw v796):** instrumentierter `test-roundtrip.js` auf der **realen** `Unsere Familie_2026-04-11.gramps` (2894 Pers.): Orts-Datumselemente `input=29 → xml1=29` (**alle erhalten**), verbatim `dateval type="…"`-Attribute `input=8 → xml1=8` (**alle erhalten** via `_dateRaw`-Hybrid), Event-Dates `2230→2230` (keine Kollateralschäden), `counts=ok`, `stable` (xml1===xml2). GEDCOM-Roundtrip `MeineDaten_ancestris.ged` net_delta=0/stable unverändert. +5 gezielte Unit-Tests (`test-unit.js` 161→166). **Akzeptanzkriterium erfüllt.**
+
 ### 3.1 Datenmodell-Erweiterung `db.placeObjects[id]`
 
 ```js
