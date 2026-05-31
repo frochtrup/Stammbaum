@@ -14,20 +14,32 @@ function _g7WriteSchma(lines) {
     lines.push(`2 TAG ${t} ${_base}/${t}`);
 }
 
-// PLAC/TRAN-Einträge aus extraPlaces-Registry
+// PLAC/TRAN-Einträge aus extraPlaces (primär) oder placeObjects (P0b-3-Fallback).
 // GED7: standard TRAN; GED5: _TRAN vendor extension; Strict: NOTE [lang] value
 function _writePlacTrans(lines, placeName, indent) {
   const ep = AppState.db?.extraPlaces?.[placeName];
-  if (!ep?.trans?.length) return;
+  let trans = ep?.trans;
+  // Fallback: placeObjects-pnames (P0b-3 — wenn extraPlaces leer aber placeObject vorhanden)
+  if (!trans?.length && typeof getPlaceRegistry === 'function') {
+    const reg = getPlaceRegistry();
+    const pid = reg.findByName(placeName);
+    if (pid) {
+      const po = reg.byId[pid];
+      trans = (po?.pnames || [])
+        .filter(pn => pn.lang && pn.value && pn.value !== placeName)
+        .map(pn => ({ value: pn.value, lang: pn.lang }));
+    }
+  }
+  if (!trans?.length) return;
   if (_strictGed) {
-    for (const t of ep.trans) {
+    for (const t of trans) {
       if (!t.value) continue;
       lines.push(`${indent} NOTE ${t.lang ? '[' + t.lang + '] ' : ''}${t.value}`);
     }
     return;
   }
   const tag = _ged7 ? 'TRAN' : '_TRAN';
-  for (const t of ep.trans) {
+  for (const t of trans) {
     if (!t.value) continue;
     lines.push(`${indent} ${tag} ${t.value}`);
     if (t.lang) lines.push(`${indent+1} LANG ${t.lang}`);
@@ -159,10 +171,15 @@ function geoLines(lines, obj, indent, useExtraPlaces = true) {
     const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
     if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
   }
-  // 2. Ortsregister (nur für strukturierte Events)
-  if (lati === null && useExtraPlaces && obj?.place && AppState.db?.extraPlaces?.[obj.place]) {
-    const ep = AppState.db.extraPlaces[obj.place];
-    if (ep.lati != null) { lati = ep.lati; long = ep.long; }
+  // 2. Ortsregister (nur für strukturierte Events): extraPlaces primär, placeObjects Fallback (P0b-3)
+  if (lati === null && useExtraPlaces && obj?.place) {
+    const ep = AppState.db?.extraPlaces?.[obj.place];
+    if (ep?.lati != null) { lati = ep.lati; long = ep.long; }
+    if (lati === null && typeof getPlaceRegistry === 'function') {
+      const reg = getPlaceRegistry();
+      const pid = reg.findByName(obj.place);
+      if (pid) { const po = reg.byId[pid]; if (po?.lat != null) { lati = po.lat; long = po.long; } }
+    }
   }
   // 3. Explizite Event-Koordinaten (aus Parser) — immer als letzter Fallback.
   //    extraPlaces wird nur für strukturierte Events genutzt (Schritt 2), aber direkte

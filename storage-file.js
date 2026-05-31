@@ -378,6 +378,7 @@ function _finishLoad(db, text, filename) {
       }
     }
     applyAllExtraPlaceCoords();
+    if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
     AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
     { let maxUsed = 0;
       const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
@@ -488,6 +489,7 @@ async function _loadGRAMPS(file) {
         AppState.db.extraPlaces[pTitle].trans = grampsTrans;
     }
     applyAllExtraPlaceCoords();
+    if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
     // Nur gespeicherte Koordinaten für Adressen dieser Datei übernehmen (kein Leck aus anderen Dateien).
     AppState.db.hofObjects = _mergeHofObjects(parsed.hofObjects || {}, loadHofObjects());

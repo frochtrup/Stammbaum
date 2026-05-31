@@ -66,8 +66,9 @@ Object.defineProperty(window, 'db', {
 function setDb(newDb) {
   for (const k of Object.keys(AppState.db)) delete AppState.db[k];
   Object.assign(AppState.db, newDb);
-  _migratePlaceObjects(AppState.db);     // PLACE-HIST (ADR-024): Altdaten parentId→enclosedBy
-  UIState._placeRegistry = null;         // Registry beim DB-Wechsel invalidieren
+  _migratePlaceObjects(AppState.db);              // PLACE-HIST (ADR-024): Altdaten parentId→enclosedBy
+  _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3: extraPlaces→placeObjects (idempotent)
+  UIState._placeRegistry = null;                  // Registry beim DB-Wechsel invalidieren
 }
 
 // Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
@@ -628,6 +629,82 @@ function _migratePlaceObjects(db) {
         : [];
     }
   }
+}
+
+// ─── P0b-3: extraPlaces → placeObjects Migration ─────────────────────────────
+// Erzeugt aus jedem extraPlaces-Eintrag mit Koordinaten oder Übersetzungen ein
+// placeObject (idempotent via stabiler _epId-Hash). Bestehende placeObjects werden
+// additiv ergänzt (Koordinaten nur wenn fehlend; pnames dedupliziert).
+// Aufruf NACH loadExtraPlaces() + parsedPlaceTrans-Merge in storage-file.js.
+function _epId(name) {
+  // Stabiler djb2-Hash: gleicher Name → gleiche ID über Sessions
+  let h = 5381;
+  const s = String(name);
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return '_ep_' + h.toString(16).padStart(8, '0');
+}
+
+function _migrateExtraPlacesToPlaceObjects(db) {
+  const ep = db && db.extraPlaces;
+  if (!ep || !Object.keys(ep).length) return;
+  if (!db.placeObjects) db.placeObjects = {};
+  const pos = db.placeObjects;
+  let changed = false;
+
+  for (const epEntry of Object.values(ep)) {
+    const name = epEntry.name || '';
+    if (!name) continue;
+    const hasCoords = epEntry.lati != null;
+    const hasTrans  = Array.isArray(epEntry.trans) && epEntry.trans.length > 0;
+    if (!hasCoords && !hasTrans) continue;
+
+    // Vorhandenes placeObject suchen (direkt, ohne Registry-Cache)
+    let existingId = null;
+    const norm = _normPlaceName(name);
+    for (const [id, po] of Object.entries(pos)) {
+      if (_normPlaceName(po.title) === norm
+        || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm)) {
+        existingId = id; break;
+      }
+    }
+
+    if (existingId) {
+      const po = pos[existingId];
+      if (po.lat == null && hasCoords) { po.lat = epEntry.lati; po.long = epEntry.long; changed = true; }
+      if (hasTrans) {
+        if (!Array.isArray(po.pnames)) po.pnames = [];
+        const have = new Set(po.pnames.map(pn => _normPlaceName(pn.value)));
+        have.add(_normPlaceName(po.title));
+        for (const t of epEntry.trans) {
+          if (!t.value || have.has(_normPlaceName(t.value))) continue;
+          have.add(_normPlaceName(t.value));
+          po.pnames.push({ value: t.value, lang: t.lang || '', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+          changed = true;
+        }
+      }
+    } else {
+      // Neues placeObject anlegen
+      const id = _epId(name);
+      if (pos[id]) continue; // Hash-Kollision — Eintrag existiert bereits
+      const pnames = [];
+      if (hasTrans) {
+        const have = new Set([_normPlaceName(name)]);
+        for (const t of epEntry.trans) {
+          if (!t.value || have.has(_normPlaceName(t.value))) continue;
+          have.add(_normPlaceName(t.value));
+          pnames.push({ value: t.value, lang: t.lang || '', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+        }
+      }
+      pos[id] = {
+        id, title: name, type: null,
+        lat:  hasCoords ? epEntry.lati : null,
+        long: hasCoords ? epEntry.long : null,
+        pnames, enclosedBy: [], parentId: null,
+      };
+      changed = true;
+    }
+  }
+  if (changed) UIState._placeRegistry = null;
 }
 
 // Baut (lazy, gecacht) die PlaceRegistry über AppState.db.placeObjects:
