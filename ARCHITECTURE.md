@@ -489,6 +489,29 @@ Reist mit der Datei (gehört zur Person) → `_`-Tag mit Writer-Support (Faustre
 
 ---
 
+### ADR-024: Orts-Entität & historische Dimension — `placeObjects` als Ort-Master (PLACE-HIST, geplant)
+
+**Kontext:** Orte sollen die **historische Dimension** tragen (Name & Verwaltungszugehörigkeit *über Zeit*), **verlustfrei normalisiert** werden (gleiche Orte in verschiedenen Schreibweisen = eine Identität, ohne Schreibweisen zu verlieren) und **typisierte Event-Orte** (z. B. Kirchen, Pfarreien, Friedhöfe) nutzbar machen — neben der bereits vorhandenen RESI/PROP-Hof-Historie. Anforderung: **keine userspezifischen Tags**, um GEDCOM- und GRAMPS-Roundtrips nicht zu gefährden. Detail-Design + Phasenplan: `PLACE-REDESIGN.md`.
+
+**Ausgangslage (bereits vorhanden):** Erstklassige Place-Entität `db.placeObjects[id] = {title, type, pnames[], lat, long, parentId, _extra}` roundtript nativ über GRAMPS `<placeobj>` (`gramps-parser.js:404-420`, `gramps-writer.js:647-669`); Event→Ort-Link via `ev.placeId`; Koordinaten-Roundtrip GEDCOM `PLAC.MAP.LATI/LONG` + GRAMPS `<coord>`; Hof-Historie als typisierte Orte (`_HOF_PLACE_TYPES`). Die Anzeige (`collectPlaces`, `ui-views-place.js`) aggregiert aber noch über den **getrimmten String**, nicht über `placeId`.
+
+**Entscheidung:** `placeObjects` zum durchgängigen **Ort-Master** ausbauen, **ohne neue Custom-Tags** — ausschließlich über Standard-GRAMPS-Konstrukte:
+- **Zeitachse:** datierte `<pname>` (historische Schreibweisen) und **mehrere** datierte `<placeref>` (wechselnde Zugehörigkeit) — GRAMPS erlaubt an beiden ein `<daterange>/<datespan>/<dateval>`. Modell: `pnames[].{dateFrom,dateTo,_dateRaw}` und neu `enclosedBy[]={placeId,dateFrom,dateTo,_dateRaw}` (neben `parentId` als undatierter Fallback).
+- **Normalisierung:** `PlaceRegistry` in `gedcom.js` (`byId`/`byNorm`/`resolveAsOf`/`enclosureChainAsOf`/`findByName`). `_normPlaceName()` **nur** fürs Matching, nie für Speicherung/Anzeige → verlustfrei. Dubletten-Merge führt alte Schreibweisen in `pnames[]` zusammen.
+- **Typisierte Orte:** vorhandenes `type`-Feld auf eine Taxonomie (Dorf…Land, **Kirche/Pfarrei/Friedhof**, Hof) mappen → GRAMPS-Standardtypen; Event-Formular bekommt Ort-Suchpicker (Muster Eltern-Picker v794). Höfe werden Spezialfilter der generischen Ort-Sicht.
+
+**GEDCOM-Degradierung (by design):** GEDCOM 5.5.1/7 kann die Zeitachse nicht abbilden → Export kollabiert zum **periodenkorrekten** PLAC-String (`resolveAsOf(placeId, eventYear)`) + Koordinaten. GRAMPS bleibt vollständig (Master). Dokumentierter, bewusster Informationsverlust nur im GEDCOM-Zweig.
+
+**Roundtrip-Sicherung:** `pname`/`placeref` stehen in `_PLACE_MODELLED` (`gramps-parser.js:363`) → werden vom Writer aus dem Modell neu gebaut. Liest der Parser die Date-Kinder nicht, gingen sie verloren. Daher: **zuerst** empirisch prüfen, ob heute datierte pname/placeref via Passthrough erhalten bleiben (`test-roundtrip.js` mit Mini-Fixture); `_dateRaw`-Verbatim als Absicherung; net_delta=0 auf `Unsere Familie.gramps` ist Pflicht-Akzeptanzkriterium.
+
+**Begründung:** Baut auf existierender Infrastruktur auf (keine neue Persistenzebene), nutzt ausschließlich Standard-Konstrukte (kein `_`-Tag → kein Roundtrip-Risiko wie bei ADR-023), und löst alle drei Nutzerziele (Historie, Normalisierung, typisierte Event-Orte) mit einem kohärenten Modell. Konsolidiert nebenbei die `extraPlaces`-localStorage-Schuld (T0-STORAGE) in `placeObjects`.
+
+**Alternativen erwogen:** (a) Custom-Tag `_PLACEHIST` analog `_HYPO` — verworfen, Roundtrip-Risiko + GRAMPS kann es nativ; (b) Alt-Namen nur als undatierte `pname` (Status quo) — verworfen, verliert die Zeitdimension; (c) eigener Zeit-Ortsbaum — zu schwer, bricht „GRAMPS = Master".
+
+**Status:** 🔜 geplant. Phasen P0 (Zeitachse Parser/Writer + PlaceRegistry + Tests) → P1 (Normalisierung/Merge/extraPlaces-Migration) → P2 (historische UI) → P3 (Kirchen/typisierte Event-Orte) → P4 (GOV/GeoNames-Geocoding) → P5 (Ort-Steckbrief, Karten-Zeitschieber, Pfarrei-Rekonstruktion, Geo-Validator). Detail: `PLACE-REDESIGN.md` / `ROADMAP.md`.
+
+---
+
 ## Passthrough-Mechanismen — Vollständige Analyse
 
 10 distinkte Mechanismen sichern GEDCOM-Daten die der Parser nicht strukturiert verarbeitet:

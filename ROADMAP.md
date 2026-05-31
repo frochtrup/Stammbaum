@@ -157,6 +157,27 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ---
 
+## Ortstiefe — Ausbauplan (PLACE-HIST, Mai 2026)
+
+**Ziel (Nutzer):** Geocoding/Ortshandling verbessern — **historische Dimension** von Orten erfassen (Name & Verwaltungszugehörigkeit über Zeit), Orte **verlustfrei normalisieren**, **typisierte Event-Orte** (Kirchen/Pfarreien/Friedhöfe) neben der RESI/PROP-Hof-Historie nutzbar machen, ortsbezogene Auswertungen erweitern. **Harte Vorgabe: keine userspezifischen Tags** (Roundtrip-Schutz). Architektur-Entscheidung: **ADR-024** · technisches Detail-Design: **`PLACE-REDESIGN.md`**.
+
+**Leitidee:** `db.placeObjects` (existiert, roundtript nativ über GRAMPS `<placeobj>`) zum durchgängigen **Ort-Master** ausbauen — ausschließlich über **Standard-GRAMPS-Konstrukte** (datierte `<pname>`/`<placeref>` mit `<daterange>`, `<url>`), kein `_`-Tag. GEDCOM-Export kollabiert die Zeitachse verlustig zum periodenkorrekten PLAC-String (`resolveAsOf`) + Koordinaten (by design, GRAMPS = Master). Konsolidiert nebenbei `extraPlaces` (localStorage) in `placeObjects`.
+
+**Roundtrip-Risiko #1 (vor Code klären):** `pname`/`placeref` stehen in `_PLACE_MODELLED` → Writer baut sie aus dem Modell neu. Liest der Parser die `<daterange>`-Kinder nicht, gehen sie verloren. Daher zuerst Mini-`.gramps`-Fixture mit datiertem pname durch `test-roundtrip.js` (PLACE-REDESIGN.md §3.0); `_dateRaw`-Verbatim als Absicherung; **net_delta=0 auf `Unsere Familie.gramps` = Pflicht-Akzeptanz.**
+
+| Phase | Inhalt | Speicherung | Status |
+|---|---|---|---|
+| **P0a** | **Zeitachse Parser/Writer** — datierte `<pname>` → `pnames[].dateFrom/To/_dateRaw`; **mehrere** datierte `<placeref>` → `enclosedBy[]` (neben `parentId`). `_grampsDateOf`/`_grampsDateXML`-Helfer. **`PlaceRegistry`** in gedcom.js (`byId`/`byNorm`/`resolveAsOf`/`enclosureChainAsOf`/`findByName`, `_normPlaceName` nur fürs Matching). + Roundtrip-/Unit-Tests. | GRAMPS-Standard (kein `_`-Tag) | 🔜 geplant |
+| **P0b** | **Normalisierung** — `collectPlaces()` über `placeId` statt String; lazy-Promote; **Dubletten-Merge** (Schreibweisen → `pnames[]`); **`extraPlaces` → `placeObjects`** (T0-STORAGE-Abbau). | GRAMPS-Standard | 🔜 geplant |
+| **P2-UI** | **Historische UI** — Ort-Editor mit datierter Namens- + Zugehörigkeits-Historie (von–bis, übergeordneter Ort, Picker); Anzeige/Export via `resolveAsOf`. | — | angedacht |
+| **P3** | **Kirchen & typisierte Event-Orte** — Typ-Taxonomie (Dorf…Land, Kirche/Pfarrei/Friedhof, Hof) → GRAMPS-Standardtypen; Ort-**Suchpicker** im Event-Formular (Muster Eltern-Picker v794); Kirche↔Kirchenbuch (Repository/Source); Höfe als Filter der generischen Ort-Sicht. | `type` (vorhanden) | angedacht |
+| **P4** | **Geocoding & Gazetteer** — **GOV** (gov.genealogy.net) priorisiert (historische Zugehörigkeit über Zeit, ideal westfälisch) → speist `enclosedBy[]`/`pnames[]`; GeoNames/Wikidata alternativ; Batch-Geocoding + Dedup. CSP `connect-src` whitelisten + `test-csp.js`. | `authority` → GRAMPS `<url>` | angedacht |
+| **P5** | **Auswertungen** — Ort-Steckbrief (Events/Personen/Quellen/Karte/Namens-Timeline); Karten-**Zeitschieber** (Name/Zugehörigkeit zum Jahr); **Pfarrei-Rekonstruktion** (alle Taufen/Trauungen einer Kirche); Geo-Plausibilitäts-Validator; Orts-Hypothesen (`_HYPO`); Orts-Kontextsatz in Story/Buch. | gemischt | angedacht |
+
+**Reihenfolge:** §3.0 Verifikation → P0a → P0b → Review → P2-UI → P3 → P4 → P5.
+
+---
+
 ## P0 — Sicherheitsnetz & Fundament *(neu priorisiert nach Audit)*
 
 | ID | Aufgabe | Details | Aufwand |
