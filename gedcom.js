@@ -690,6 +690,158 @@ function getPlaceRegistry() {
   return reg;
 }
 
+// ─── PLACE-HIST (ADR-024, P0b-2): Dubletten-Erkennung + Merge ────────────────
+// Aggressive Normalisierung NUR für die Dubletten-KANDIDATEN-Suche (faltet
+// Umlaute/ae-oe-ue zusammen, wie der Validator _placeNorm). Strenger als
+// _normPlaceName (das nur fürs exakte Alias-Matching dient) → bewusst getrennt.
+function _placeFold(s) {
+  if (!s) return '';
+  return String(s).toLowerCase().trim()
+    .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 's')
+    .replace(/ae(?=[a-z])/g, 'a').replace(/oe(?=[a-z])/g, 'o').replace(/ue(?=[a-z])/g, 'u')
+    .replace(/\s+/g, ' ');
+}
+
+// Haversine-Distanz in km (für Koordinaten-Nähe-Heuristik).
+function _placeDistKm(aLat, aLon, bLat, bLon) {
+  if (aLat == null || aLon == null || bLat == null || bLon == null) return Infinity;
+  const R = 6371, rad = d => d * Math.PI / 180;
+  const dLat = rad(bLat - aLat), dLon = rad(bLon - aLon);
+  const x = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(aLat)) * Math.cos(rad(bLat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(x)));
+}
+
+// Findet Gruppen wahrscheinlich identischer placeObjects.
+// Kriterien (ODER): gleicher Fold-Key von title ODER irgendeinem pname;
+// oder Koordinaten < toleranceKm voneinander (nur bei vorhandenen Koords).
+// Liefert [{ key, ids:[…], titles:[…] }] mit ≥2 Mitgliedern. Rein lesend.
+function findPlaceDuplicates(toleranceKm = 1) {
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  const entries = Object.values(pos);
+  // 1) Gruppierung über Fold-Key (title + alle pnames)
+  const byKey = new Map();   // foldKey → Set(id)
+  for (const pl of entries) {
+    const keys = new Set();
+    keys.add(_placeFold(pl.title));
+    for (const pn of pl.pnames || []) keys.add(_placeFold(pn.value));
+    for (const k of keys) {
+      if (!k) continue;
+      if (!byKey.has(k)) byKey.set(k, new Set());
+      byKey.get(k).add(pl.id);
+    }
+  }
+  // union-find über Fold-Key-Kollisionen + Koordinaten-Nähe
+  const parent = {};
+  const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  const union = (a, b) => { parent[find(a)] = find(b); };
+  for (const pl of entries) parent[pl.id] = pl.id;
+  for (const set of byKey.values()) {
+    const ids = [...set];
+    for (let i = 1; i < ids.length; i++) union(ids[0], ids[i]);
+  }
+  // Koordinaten-Nähe (O(n²) — placeObjects sind typ. wenige hundert)
+  for (let i = 0; i < entries.length; i++) {
+    for (let j = i + 1; j < entries.length; j++) {
+      const a = entries[i], b = entries[j];
+      if (find(a.id) === find(b.id)) continue;
+      if (a.lat != null && b.lat != null
+        && _placeDistKm(a.lat, a.long, b.lat, b.long) <= toleranceKm
+        && _placeFold(a.title).split(',')[0] === _placeFold(b.title).split(',')[0]) {
+        union(a.id, b.id);
+      }
+    }
+  }
+  // Cluster sammeln
+  const clusters = new Map();
+  for (const pl of entries) {
+    const root = find(pl.id);
+    if (!clusters.has(root)) clusters.set(root, []);
+    clusters.get(root).push(pl);
+  }
+  const out = [];
+  for (const members of clusters.values()) {
+    if (members.length < 2) continue;
+    out.push({
+      key: _placeFold(members[0].title),
+      ids: members.map(m => m.id),
+      titles: members.map(m => m.title),
+    });
+  }
+  return out;
+}
+
+// Führt loserIds in winnerId zusammen — VERLUSTFREI:
+//   • Titel + pnames der Verlierer werden zu winner.pnames (dedupliziert per
+//     _normPlaceName; behält Datierung/lang/_dateRaw der ersten Fundstelle).
+//   • enclosedBy der Verlierer werden ergänzt (dedupliziert per placeId).
+//   • Koordinaten: nur übernehmen wenn der Gewinner noch keine hat.
+//   • Jede ev.placeId-Referenz (INDI birth/chr/death/buri/events, FAM marr/
+//     engag/div/divf) wird vom Verlierer auf den Gewinner umgehängt.
+//   • Verlierer-placeObjects werden gelöscht.
+// Gibt { merged, repointed } zurück. Invalidiert die Registry.
+function mergePlaceObjects(winnerId, loserIds) {
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  const winner = pos[winnerId];
+  if (!winner) return { merged: 0, repointed: 0 };
+  if (!Array.isArray(winner.pnames)) winner.pnames = [];
+  if (!Array.isArray(winner.enclosedBy)) winner.enclosedBy = [];
+  const haveName = new Set(winner.pnames.map(p => _normPlaceName(p.value)));
+  haveName.add(_normPlaceName(winner.title));
+  const haveEnc = new Set(winner.enclosedBy.map(e => e.placeId));
+
+  let merged = 0, repointed = 0;
+  const losers = loserIds.filter(id => id !== winnerId && pos[id]);
+
+  for (const lid of losers) {
+    const loser = pos[lid];
+    // Namen sammeln: Titel + pnames des Verlierers
+    const cand = [{ value: loser.title }].concat(loser.pnames || []);
+    for (const pn of cand) {
+      const k = _normPlaceName(pn.value);
+      if (!k || haveName.has(k)) continue;
+      haveName.add(k);
+      winner.pnames.push({
+        value: pn.value, lang: pn.lang || '',
+        dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+        dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null,
+      });
+    }
+    // Zugehörigkeit ergänzen
+    for (const e of loser.enclosedBy || []) {
+      if (e.placeId && e.placeId !== winnerId && !haveEnc.has(e.placeId)) {
+        haveEnc.add(e.placeId);
+        winner.enclosedBy.push({ ...e });
+      }
+    }
+    // Koordinaten nur wenn Gewinner keine hat
+    if (winner.lat == null && loser.lat != null) { winner.lat = loser.lat; winner.long = loser.long; }
+    delete pos[lid];
+    merged++;
+  }
+
+  if (merged) {
+    const loserSet = new Set(losers);
+    const _fix = obj => { if (obj && obj.placeId && loserSet.has(obj.placeId)) { obj.placeId = winnerId; repointed++; } };
+    for (const p of Object.values(AppState.db.individuals || {})) {
+      _fix(p.birth); _fix(p.chr); _fix(p.death); _fix(p.buri);
+      for (const ev of p.events || []) _fix(ev);
+    }
+    for (const f of Object.values(AppState.db.families || {})) {
+      _fix(f.marr); _fix(f.engag); _fix(f.div); _fix(f.divf);
+      for (const ev of f.events || []) _fix(ev);
+    }
+    // andere placeObjects, die auf einen Verlierer als parent/enclosedBy zeigen, umhängen
+    for (const pl of Object.values(pos)) {
+      if (pl.parentId && loserSet.has(pl.parentId)) pl.parentId = winnerId;
+      for (const e of pl.enclosedBy || []) if (e.placeId && loserSet.has(e.placeId)) e.placeId = winnerId;
+    }
+    UIState._placeRegistry = null;
+    UIState._placesCache = null;
+  }
+  return { merged, repointed };
+}
+
 // Parst Koordinaten-Eingabe — unterstützt:
 //   Apple Maps (deutsch): "52,22779° N, 7,17310° O" → ganzer String ins erste Feld
 //   Dezimalgrad:          "52.2073" / "52,2073"
