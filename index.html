@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Stammbaum">
 <meta name="theme-color" content="#c8a84a" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#8a6420" media="(prefers-color-scheme: light)">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.microsoftpersonalcontent.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://*.sharepoint.com https://*.blob.core.windows.net https://*.files.1drv.com https://storage.live.com https://*.onedrive.com https://*.live.com https://*.microsoftpersonalcontent.com https://nominatim.openstreetmap.org https://gov.genealogy.net; form-action 'self' https://login.microsoftonline.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none';">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <title>Stammbaum</title>
@@ -169,6 +169,7 @@
           <option value="Country">Land</option>
           <option value="County">Kreis</option>
         </select>
+        <button type="button" class="icon-btn" data-action="startBatchGeocode" title="Alle Orte ohne Koordinaten geocodieren (Nominatim)" aria-label="Batch-Geocoding">🌐</button>
         <button type="button" class="icon-btn" id="placeMergeBtn" data-action="openPlaceMergeModal" title="Orts-Dubletten zusammenführen" aria-label="Orts-Dubletten zusammenführen">⇉</button>
         <button type="button" class="icon-btn" data-action="exportPlaceData" title="Ortsdaten exportieren (JSON)" aria-label="Ortsdaten exportieren">↓</button>
         <label class="icon-btn icon-btn--file" title="Ortsdaten importieren (JSON)" aria-label="Ortsdaten importieren">↑<input type="file" accept=".json" class="sr-only" data-change="importPlaceDataFile"></label>
@@ -1585,6 +1586,27 @@
   </div>
 </div>
 
+<!-- P4: Batch-Geocoding-Fortschritt -->
+<div class="modal-overlay" id="modalBatchGeocode" role="dialog" aria-modal="true" aria-labelledby="lbl-modalBatchGeocode">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalBatchGeocode">Batch-Geocoding</div>
+    <div class="sheet-body">
+      <div class="c-muted fs-sm mb-8">Orte ohne Koordinaten werden via Nominatim (OpenStreetMap) geocodiert — inklusive Typ und Verwaltungshierarchie.</div>
+      <div class="batch-geo-bar-wrap">
+        <div class="batch-geo-bar" id="batchGeocodeBar"></div>
+      </div>
+      <div class="c-muted fs-sm mt-8" id="batchGeocodeProgress">Bereit</div>
+      <div class="btn-row btn-row-col mt-12">
+        <div id="batchGeocodeDone" hidden>
+          <button class="btn btn-save w-full" data-action="closeModal" data-modal="modalBatchGeocode">Schließen</button>
+        </div>
+        <button class="btn btn-cancel w-full" id="batchGeocodeAbortBtn" data-action="abortBatchGeocode">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Assoziation bearbeiten -->
 <div class="modal-overlay" id="modalAsso" role="dialog" aria-modal="true" aria-labelledby="lbl-modalAsso">
   <div class="sheet">
@@ -2360,6 +2382,7 @@
 <script src="ui-views-family.js"></script>
 <script src="ui-views-source.js"></script>
 <script src="ui-views-place.js"></script>
+<script src="geocoding.js"></script>
 <script src="ui-views-hof.js"></script>
 <script src="ui-views-map.js"></script>
 <script src="ui-views-stats.js"></script>

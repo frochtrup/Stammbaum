@@ -117,6 +117,58 @@ function filterPlaces(q) {
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
 }
 
+// ─── P4: Geocoding UI ────────────────────────────────────────────────────────
+
+async function geocodeCurrentPlace() {
+  const name = AppState.currentPlaceName;
+  if (!name) return;
+  showToast('⏳ Geocodiere…', 'info');
+  try {
+    const res = await geocodeSinglePlace(name);
+    if (!res) { showToast('⚠ Kein Ergebnis von Nominatim', 'warn'); return; }
+    const typeLbl = PLACE_TYPE_LBL[res.type] || res.type;
+    showToast(`✓ ${typeLbl} · ${res.lat.toFixed(4)}, ${res.lon.toFixed(4)}`, 'success');
+    showPlaceDetail(name, false);
+  } catch (e) {
+    showToast('⚠ Geocoding-Fehler: ' + e.message, 'error');
+  }
+}
+
+let _batchAbort = false;
+
+async function startBatchGeocode() {
+  const modal = document.getElementById('modalBatchGeocode');
+  if (!modal) return;
+  _batchAbort = false;
+  document.getElementById('batchGeocodeProgress').textContent = 'Starte…';
+  document.getElementById('batchGeocodeBar').style.width = '0%';
+  document.getElementById('batchGeocodeDone').hidden = true;
+  document.getElementById('batchGeocodeAbortBtn').hidden = false;
+  openModal('modalBatchGeocode');
+
+  const ok = await batchGeocodePlaces((done, total, name) => {
+    if (_batchAbort) return;
+    if (name === 'done') {
+      document.getElementById('batchGeocodeProgress').textContent = `Fertig — ${done} Orte verarbeitet.`;
+      document.getElementById('batchGeocodeBar').style.width = '100%';
+      document.getElementById('batchGeocodeDone').hidden = false;
+      document.getElementById('batchGeocodeAbortBtn').hidden = true;
+      UIState._placesCache = null;
+      renderPlaceList();
+      return;
+    }
+    const pct = total ? Math.round(done / total * 100) : 0;
+    document.getElementById('batchGeocodeProgress').textContent = `${done}/${total} · ${name.slice(0,40)}`;
+    document.getElementById('batchGeocodeBar').style.width = pct + '%';
+  });
+}
+
+function abortBatchGeocode() {
+  _batchAbort = true;
+  closeModal('modalBatchGeocode');
+  showToast('Batch-Geocoding abgebrochen');
+}
+
 // ─── P3: Ort-Suchpicker ───────────────────────────────────────────────────────
 // Öffnet den modalPlacePicker für das Ziel-Eingabefeld (z.B. 'ef-place').
 function openPlacePicker(targetFieldId) {
@@ -461,7 +513,8 @@ function showPlaceDetail(placeName, pushHistory = true) {
     </div>`;
   }
 
-  // Map link if geo available
+  // Standort-Sektion (Karte + Geocode-Button)
+  const _geoAvail = typeof geocodeSinglePlace === 'function';
   if (place.lati !== null) {
     html += `<div class="section fade-up">
       <div class="section-title">Standort</div>
@@ -471,6 +524,12 @@ function showPlaceDetail(placeName, pushHistory = true) {
         🗺 In Apple Maps öffnen
         <span class="c-muted fs-xs">${place.lati.toFixed(4)}, ${place.long.toFixed(4)}</span>
       </a>
+      ${_geoAvail ? `<button class="btn btn-cancel mt-8 w-full" data-action="geocodeCurrentPlace" title="Koordinaten + Typ via Nominatim neu abrufen">↻ Neu geocodieren</button>` : ''}
+    </div>`;
+  } else if (_geoAvail) {
+    html += `<div class="section fade-up">
+      <div class="section-title">Standort</div>
+      <button class="btn btn-save w-full" data-action="geocodeCurrentPlace">📍 Geocodieren (Nominatim)</button>
     </div>`;
   }
 
