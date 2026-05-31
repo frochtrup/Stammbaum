@@ -1950,9 +1950,9 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 }
 .valcfg-toggle-links { display: flex; align-items: center; gap: 2px; }
 .valcfg-rules-grid {
-  display: grid; grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(13, auto); grid-auto-flow: column; gap: 4px 16px;
+  columns: 2; column-gap: 16px;
 }
+.valcfg-rule-row { break-inside: avoid; }
 .valcfg-rule-row {
   display: flex; align-items: center; gap: 8px;
   font-size: 0.85rem; cursor: pointer; padding: 2px 0;
