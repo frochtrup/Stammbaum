@@ -59,7 +59,7 @@
     </div>
   </div>
 
-  <div id="tab-tasks" style="display:none">
+  <div id="tab-tasks">
     <div id="tasksList"></div>
   </div>
 
@@ -93,16 +93,16 @@
           </select>
           <input type="search" id="birthPlaceFilter" placeholder="Geburtsort…" data-input="applyPersonFilter"
             class="filter-input flex-1 min-w-100">
-          <span class="fs-xs nowrap" style="padding-left:4px;font-weight:700">∅:</span>
+          <span class="fs-xs nowrap">∅:</span>
           <label class="adv-flag-lbl" title="Kein Sterbedatum"><input type="checkbox" id="fltrNoDeathDate" data-change="applyPersonFilter"> †</label>
           <label class="adv-flag-lbl" title="Keine Quellen"><input type="checkbox" id="fltrNoSources" data-change="applyPersonFilter"> 📖</label>
           <label class="adv-flag-lbl" title="Keine Eltern"><input type="checkbox" id="fltrNoParents" data-change="applyPersonFilter"> ↑</label>
         </div>
       </div>
     </div>
-    <div id="qa-session-banner" hidden style="display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:0.85rem">
-      <span id="qa-session-label" style="flex:1;color:var(--gold)"></span>
-      <button type="button" class="src-add-btn" data-action="clearQaFilter" style="margin:0">✕ Alle anzeigen</button>
+    <div id="qa-session-banner" hidden>
+      <span id="qa-session-label"></span>
+      <button type="button" class="src-add-btn" data-action="clearQaFilter">✕ Alle anzeigen</button>
     </div>
     <div id="personList" role="list"></div>
     </div><!-- /persons-list-section -->
@@ -392,16 +392,16 @@
     <div class="sheet-title" id="lbl-modalQuickAdd">Neue Person — Schnellerfassung</div>
     <div class="sheet-body">
       <div class="form-row">
-        <label class="form-label" style="flex:1">Vorname
+        <label class="form-label">Vorname
           <input class="form-input" id="qa-given" type="text" placeholder="Vorname" autocomplete="off">
         </label>
-        <label class="form-label" style="flex:1">Nachname
+        <label class="form-label">Nachname
           <input class="form-input" id="qa-surname" type="text" placeholder="Nachname" autocomplete="off">
         </label>
       </div>
       <div class="form-row">
-        <label class="form-label" style="width:100%">Ereignisse
-          <div id="qa-ev-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        <label class="form-label">Ereignisse
+          <div id="qa-ev-chips">
             <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="BIRT">Geburt</button>
             <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="CHR">Taufe</button>
             <button type="button" class="quick-chip" data-action="qaToggleEv" data-ev="DEAT">Tod</button>
@@ -413,28 +413,28 @@
       </div>
       <div id="qa-ev-fields" hidden>
         <div class="form-row">
-          <label class="form-label" style="flex:1">Datum
+          <label class="form-label">Datum
             <input class="form-input" id="qa-date" type="text" placeholder="TT.MM.JJJJ">
           </label>
-          <label class="form-label" style="flex:2;position:relative">Ort
+          <label class="form-label">Ort
             <input class="form-input" id="qa-place" type="text" placeholder="Ort" autocomplete="off">
-            <div class="place-dropdown" id="qa-place-dd" style="display:none;z-index:600"></div>
+            <div class="place-dropdown" id="qa-place-dd"></div>
           </label>
         </div>
       </div>
       <div class="form-row">
-        <label class="form-label" style="flex:1">Quelle (optional)
-          <div style="position:relative">
+        <label class="form-label">Quelle (optional)
+          <div>
             <input class="form-input" id="qa-src-input" type="text" placeholder="Quelle suchen…" autocomplete="off">
-            <div class="place-dropdown" id="qa-src-dd" style="display:none;z-index:600"></div>
+            <div class="place-dropdown" id="qa-src-dd"></div>
           </div>
         </label>
-        <label class="form-label" style="flex:none;width:90px">Seite
+        <label class="form-label">Seite
           <input class="form-input" id="qa-page" type="text" placeholder="z.B. 12">
         </label>
-        <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:4px;padding-bottom:2px">
-          <button type="button" class="btn btn-dim" id="qa-src-copy-btn" data-action="qaCopySrc" title="Quelle in Zwischenablage kopieren" style="padding:4px 8px;font-size:12px">⧉</button>
-          <button type="button" class="btn btn-dim" id="qa-src-paste-btn" data-action="qaPasteSrc" title="Quelle aus Zwischenablage einfügen" style="padding:4px 8px;font-size:12px" hidden>📋</button>
+        <div>
+          <button type="button" class="btn btn-dim" id="qa-src-copy-btn" data-action="qaCopySrc" title="Quelle in Zwischenablage kopieren">⧉</button>
+          <button type="button" class="btn btn-dim" id="qa-src-paste-btn" data-action="qaPasteSrc" title="Quelle aus Zwischenablage einfügen" hidden>📋</button>
         </div>
       </div>
       <p id="qa-hint" class="form-hint" hidden></p>
@@ -456,11 +456,11 @@
       <!-- Listen-Ansicht -->
       <div id="qt-list-view">
         <div id="qt-list"></div>
-        <div class="btn-row btn-row-col" style="margin-top:12px">
+        <div class="btn-row btn-row-col">
           <button class="btn btn-save" data-action="qtNewTemplate">＋ Neues Template</button>
-          <div class="form-row" style="gap:8px">
-            <button class="btn btn-dim" data-action="qtExport" style="flex:1">⤓ Export (.json)</button>
-            <button class="btn btn-dim" data-action="qtImportClick" style="flex:1">⤒ Import</button>
+          <div class="form-row">
+            <button class="btn btn-dim" data-action="qtExport">⤓ Export (.json)</button>
+            <button class="btn btn-dim" data-action="qtImportClick">⤒ Import</button>
             <input type="file" id="qt-import-file" accept="application/json,.json" hidden data-change="qtImportFile">
           </div>
         </div>
@@ -478,17 +478,17 @@
             <option value="custom">🛠 Frei konfigurierbar</option>
           </select>
         </label>
-        <label class="form-label" style="position:relative">Quelle (impliziter Beleg)
+        <label class="form-label">Quelle (impliziter Beleg)
           <input class="form-input" id="qt-f-src" type="text" placeholder="Quelle suchen…" autocomplete="off">
           <input type="hidden" id="qt-f-src-sid">
-          <div class="place-dropdown" id="qt-f-src-dd" style="display:none;z-index:600"></div>
+          <div class="place-dropdown" id="qt-f-src-dd"></div>
         </label>
         <div class="form-row">
-          <label class="form-label" style="flex:2;position:relative">Ort (implizit)
+          <label class="form-label">Ort (implizit)
             <input class="form-input" id="qt-f-place" type="text" placeholder="z.B. Ochtrup" autocomplete="off">
-            <div class="place-dropdown" id="qt-f-place-dd" style="display:none;z-index:600"></div>
+            <div class="place-dropdown" id="qt-f-place-dd"></div>
           </label>
-          <label class="form-label" style="flex:none;width:130px">Qualität (QUAY)
+          <label class="form-label">Qualität (QUAY)
             <select class="form-input" id="qt-f-quay">
               <option value="">—</option>
               <option value="0">0 unbelegt</option>
@@ -499,14 +499,14 @@
           </label>
         </div>
         <div class="form-row">
-          <label class="form-label" style="flex:1">Seiten-Muster
+          <label class="form-label">Seiten-Muster
             <input class="form-input" id="qt-f-pagepat" type="text" placeholder="fol. {v}" autocomplete="off">
           </label>
-          <label class="form-label" style="flex:none;width:90px">Zeitraum
-            <input class="form-input" id="qt-f-from" type="number" placeholder="1780" style="width:100%">
+          <label class="form-label">Zeitraum
+            <input class="form-input" id="qt-f-from" type="number" placeholder="1780">
           </label>
-          <label class="form-label" style="flex:none;width:90px">bis
-            <input class="form-input" id="qt-f-to" type="number" placeholder="1820" style="width:100%">
+          <label class="form-label">bis
+            <input class="form-input" id="qt-f-to" type="number" placeholder="1820">
           </label>
         </div>
         <label class="form-label">URL-Muster (Scan-Deeplink, {v} = Seite)
@@ -514,10 +514,10 @@
         </label>
         <p class="form-hint">{v} wird beim Erfassen durch deine Seiten-/Eintragseingabe ersetzt.</p>
         <!-- Phase E: Felder-Builder (nur bei base=custom sichtbar) -->
-        <div id="qt-fields-section" hidden style="margin-top:10px;border-top:1px solid var(--border,#ccd);padding-top:10px">
-          <div class="form-label" style="margin-bottom:4px">Felder <span class="form-hint">(Reihenfolge = Formular)</span></div>
+        <div id="qt-fields-section" hidden>
+          <div class="form-label">Felder <span class="form-hint">(Reihenfolge = Formular)</span></div>
           <div id="qt-fields-list"></div>
-          <button type="button" class="btn btn-dim" data-action="qtFieldAdd" style="margin-top:4px">＋ Feld</button>
+          <button type="button" class="btn btn-dim" data-action="qtFieldAdd">＋ Feld</button>
           <p class="form-hint">Rollen: Person (Hauptperson) · Vater/Mutter → Elternfamilie · Ehepartner → Ehe. Nachname des Vaters wird mit dem der Person vorbelegt (überschreibbar).</p>
         </div>
       </div>
@@ -538,7 +538,7 @@
     <div class="sheet-body">
       <div id="qt-entry-body"></div>
       <p id="qt-entry-hint" class="form-hint" hidden></p>
-      <div id="qt-plausi-box" hidden style="margin-top:4px"></div>
+      <div id="qt-plausi-box" hidden></div>
     </div>
     <div class="btn-row">
       <button class="btn btn-cancel" data-action="qtEntryDone">Fertig</button>
@@ -1226,7 +1226,7 @@
       <div class="form-group" id="sf-caln-group" hidden>
         <label class="form-label">Signatur / Bestellnummer (CALN)</label>
         <input class="form-input" id="sf-caln" placeholder="IV/342">
-        <label class="form-label" style="margin-top:6px">Medientyp (MEDI)</label>
+        <label class="form-label">Medientyp (MEDI)</label>
         <select class="form-input" id="sf-medi">
           <option value="">– kein Medientyp –</option>
           <option value="audio">audio</option>
@@ -1402,7 +1402,7 @@
         <label class="form-label">Medien</label>
         <input type="file" id="ef-cam-input" accept="image/*" capture="environment" data-action="efCamChange" hidden>
         <button type="button" class="src-add-btn" data-action="efCamCapture">📷 Foto aufnehmen</button>
-        <div id="ef-media-list" style="margin-top:6px"></div>
+        <div id="ef-media-list"></div>
         <button type="button" class="src-add-btn mt-6" data-action="addEfMedia">＋ Medium hinzufügen</button>
       </div>
       <div class="btn-row">
@@ -1514,7 +1514,7 @@
           <option value="Associate">Bekannte(r)</option>
           <option value="_custom">Eigene Rolle …</option>
         </select>
-        <input class="form-input mt-4" id="asso-role-custom" placeholder="Rolle eingeben" style="display:none">
+        <input class="form-input mt-4" id="asso-role-custom" placeholder="Rolle eingeben">
       </div>
       <div class="form-group">
         <label class="form-label">Notiz (optional)</label>
@@ -1728,7 +1728,7 @@
       </div>
 
       <div class="d-flex ai-c gap-8 mb-16">
-        <input type="checkbox" id="book-photos" checked style="width:18px;height:18px;accent-color:var(--gold)">
+        <input type="checkbox" id="book-photos" checked>
         <label for="book-photos" class="fs-090">Hauptfoto pro Person einbetten</label>
       </div>
 
@@ -1795,7 +1795,7 @@
       <!-- Datenschutz -->
       <div class="fs-075 fw-600 c-muted mb-8 text-upper mt-16">Datenschutz</div>
       <div class="settings-card">
-        <label class="d-flex ai-c gap-8 settings-section-top" style="cursor:pointer">
+        <label class="d-flex ai-c gap-8 settings-section-top">
           <input type="checkbox" id="set-privacy-anon" data-change="privacyAnonChange">
           <span>Lebende beim GEDCOM-Export anonymisieren</span>
         </label>
@@ -1937,9 +1937,9 @@
         <p class="mb-12"><strong class="c-gold-lt">Baum (Sanduhr)</strong><br>
         Der Baum-Tab zeigt einen Sanduhr-Baum mit bis zu 4 Ahnen-Ebenen und 2 Nachkommen-Ebenen. Tippen auf eine Karte öffnet die Detailansicht oder wechselt den Probanden. Tastaturnavigation: Pfeiltasten wechseln zwischen Personen, Enter öffnet die Detailansicht.<br><br>
         <strong>Vollständigkeits-Heatmap:</strong> Personenkarten erhalten einen farbigen Ring, wenn Daten fehlen —
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#c9a820;vertical-align:middle"></span> goldgelb: 1 Feld fehlt ·
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#c05812;vertical-align:middle"></span> orange: 2 Felder fehlen ·
-        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#b01a1a;vertical-align:middle"></span> rot: alle 3 fehlen.
+        <span></span> goldgelb: 1 Feld fehlt ·
+        <span></span> orange: 2 Felder fehlen ·
+        <span></span> rot: alle 3 fehlen.
         Geprüft werden: Geburtsdatum · Quellenangabe · mind. 1 Zitat mit Qualitätsstufe QUAY ≥ 2.
         Auf dem Desktop zeigt ein Hover-Tooltip, welche Felder konkret fehlen.</p>
         <p class="mb-12"><strong class="c-gold-lt">Beziehungsrechner</strong><br>

@@ -25,3 +25,5 @@ fi
 URL="${BASE}?files=${FILES}"
 echo "Öffne: ${URL}"
 open "$URL"
+echo "--- CSP-Selbsttest ---"
+osascript -l JavaScript test-csp.js

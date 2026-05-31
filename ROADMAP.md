@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v794 · Cache: `stammbaum-v794` · `test-unit.js` = 161 Tests grün
+**sw-Version:** v795 · Cache: `stammbaum-v795` · `test-unit.js` = 161 Tests grün
 **Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · **Eltern-Suchpicker im Familiendialog (v794)** — `<select>`+tote `onclick`-Buttons → relPicker-Logik wie „+ Elternteil".
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
@@ -171,7 +171,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| **CSP-DURCHSETZUNG** | **CSP lückenlos durchsetzen + verifizierbar** ⚠ *(neu 2026-05-31)* | Befund (live verifiziert): strikte CSP verwirft inline-`on*` UND inline-`style=` still. ① ✅ 2 tote `onclick` entfernt (v794, Eltern-Picker). ② ~48 inline-`style=` in index.html durch CSS-Klassen ersetzen (Chip offen). ③ CSP-Report-Only-Selbsttest in `test-unit.js` o. ä., der inline-`on*`/`style=` in index.html fängt → „CSP vollständig" wird belegbar statt behauptet. | **S** |
+| ~~CSP-DURCHSETZUNG~~ | **CSP lückenlos durchsetzen + verifizierbar** ✅ *(v795, 2026-05-31)* | Befund (live verifiziert): strikte CSP verwirft inline-`on*` UND inline-`style=` still. ① ✅ 2 tote `onclick` entfernt (v794, Eltern-Picker). ② ✅ 45 tote inline-`style=` aus index.html entfernt (v795; CSP-inert → 0 Render-Änderung, empirisch belegt). ③ ✅ `test-csp.js` (headless, in run-tests.sh) prüft index.html auf inline-`on*`/`style=` → „CSP vollständig" belegt. | **S** |
 | **T0-FUNC-SPLIT** | **Größte Funktionen zerlegen** *(neu 2026-05-31)* | Die 3–4 längsten Funktionen (`_attr` 486, `_parseINDILine` 388, `showDetail` 294, `writeINDIRecord` 269 Z.) in benannte Teilschritte gliedern. Unabhängig vom Modulsystem (anders als T0-DRY-`_esc`). Roundtrip- + Unit-Tests decken die Risiken. Größter konkreter Wartungs-Hebel. | M |
 | ~~T0-SW~~ | ~~**SW Install-Robustness**~~ | ✅ **Abgeschlossen sw v743** — `PRECACHE_CRITICAL` (atomar) + `PRECACHE_OPTIONAL` via `Promise.allSettled()` | ~~XS~~ |
 | ~~T0-XSS~~ | ~~**innerHTML-Audit**~~ | ✅ **Abgeschlossen sw v744** — alle 166 `innerHTML`-Assignments auditiert; kein echter XSS-Vektor; `esc()` konsequent. | ~~S~~ |
