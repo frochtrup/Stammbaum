@@ -158,7 +158,9 @@ if (IS_NODE) {
     '_splitPageUrl: _splitPageUrl, migratePageUrls: migratePageUrls, ' +
     '_evalToQuay: _evalToQuay, evalIsEmpty: evalIsEmpty, ' +
     'hypoIsEmpty: hypoIsEmpty, _hypoStatus: _hypoStatus, ' +
-    'grampsParse: _grampsParseXMLText, grampsBuild: _grampsBuildXMLText };';
+    'grampsParse: _grampsParseXMLText, grampsBuild: _grampsBuildXMLText, ' +
+    'setDb: setDb, getPlaceRegistry: getPlaceRegistry, _normPlaceName: _normPlaceName, ' +
+    '_migratePlaceObjects: _migratePlaceObjects };';
   eval(_combined);
   API = window._api;
 }
@@ -711,6 +713,54 @@ var _PLHIST_XML = '<?xml version="1.0"?>\n<database xmlns="http://gramps-project
 
   var out2 = API.grampsBuild(API.grampsParse(out));
   eq(out === out2 ? 'stable' : 'drift', 'stable', 'place-date idempotent ((build∘parse)² stabil)');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (i) PLACE-HIST — PlaceRegistry (ADR-024 P0a-2)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(i) PLACE-HIST PlaceRegistry');
+
+// _normPlaceName — nur Matching, verlustfrei (kein Speicher-/Anzeigewert)
+eq(API._normPlaceName('  Münster '), 'münster', '_normPlaceName trimmt + casefold');
+eq(API._normPlaceName('Bad   Bentheim'), 'bad bentheim', '_normPlaceName kollabiert Spaces');
+eq(API._normPlaceName(''), '', '_normPlaceName leer → ""');
+
+(function() {
+  // DB mit datiertem Ort: Sassenberg (1650–1802 "Sassenbergk"), eingebettet in P0001
+  var db = {
+    individuals: {}, families: {},
+    placeObjects: {
+      '@P0001@': { id:'@P0001@', title:'Fürstbistum Münster', type:'Region', pnames:[{value:'Fürstbistum Münster'}], enclosedBy:[] },
+      '@P0002@': { id:'@P0002@', title:'Sassenberg', type:'Village',
+        pnames:[ {value:'Sassenberg'}, {value:'Sassenbergk', dateFrom:'1650', dateTo:'1802', dateType:'range'} ],
+        enclosedBy:[ {placeId:'@P0001@', dateFrom:'1500', dateTo:'1803', dateType:'span'} ] },
+    },
+  };
+  API.setDb(db);
+  var reg = API.getPlaceRegistry();
+  eq(reg.findByName('sassenberg'), '@P0002@', 'findByName (Haupttitel, normalisiert)');
+  eq(reg.findByName('Sassenbergk'), '@P0002@', 'findByName (historische Schreibweise als Alias)');
+  eq(reg.findByName('unbekannt'), null, 'findByName unbekannt → null');
+  eq(reg.resolveAsOf('@P0002@', 1700), 'Sassenbergk', 'resolveAsOf 1700 → periodenkorrekter Name');
+  eq(reg.resolveAsOf('@P0002@', 1900), 'Sassenberg', 'resolveAsOf 1900 → Haupttitel (kein passender pname)');
+  eq(reg.resolveAsOf('@P0002@', null), 'Sassenberg', 'resolveAsOf ohne Jahr → Haupttitel');
+  eq(reg.enclosureChainAsOf('@P0002@', 1700), ['Sassenbergk', 'Fürstbistum Münster'], 'enclosureChainAsOf 1700 (Kette periodenkorrekt)');
+})();
+
+(function() {
+  // Migration: Alt-Ort nur mit parentId (undatiert) → enclosedBy[] abgeleitet
+  var db = {
+    individuals: {}, families: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Land', type:'Country', pnames:[{value:'Land'}] },
+      '@P2@': { id:'@P2@', title:'Dorf', type:'Village', pnames:[{value:'Dorf'}], parentId:'@P1@' },
+    },
+  };
+  API.setDb(db);            // setDb ruft _migratePlaceObjects auf
+  var pl = API.getPlaceRegistry().byId['@P2@'];
+  eq(pl.enclosedBy.length, 1, 'Migration: parentId → enclosedBy[] (1 Eintrag)');
+  eq(pl.enclosedBy[0].placeId, '@P1@', 'Migration: enclosedBy[0].placeId aus parentId');
+  eq(API.getPlaceRegistry().enclosureChainAsOf('@P2@', 1800), ['Dorf', 'Land'], 'Migration: Kette via abgeleitetes enclosedBy');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

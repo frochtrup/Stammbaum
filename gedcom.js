@@ -34,6 +34,7 @@ const UIState = {
   _pendingRepoLink: null,        // { sourceId } — gesetzt vor showRepoForm(null)
   _pendingFfState:  null,        // { slot, id, husb, wife, … } — gesetzt vor showPersonForm() aus Familienformular
   _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
+  _placeRegistry:     null,      // PLACE-HIST (ADR-024): Cache für getPlaceRegistry(); in setDb geleert
   _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
   _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
   _soundexMode:       false,     // Soundex-Suche: phonetische Namens-Varianten
@@ -65,6 +66,8 @@ Object.defineProperty(window, 'db', {
 function setDb(newDb) {
   for (const k of Object.keys(AppState.db)) delete AppState.db[k];
   Object.assign(AppState.db, newDb);
+  _migratePlaceObjects(AppState.db);     // PLACE-HIST (ADR-024): Altdaten parentId→enclosedBy
+  UIState._placeRegistry = null;         // Registry beim DB-Wechsel invalidieren
 }
 
 // Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
@@ -595,6 +598,96 @@ function joinPlaceParts(placeId, keepAll = false) {
 function compactPlace(place) {
   if (!place) return '';
   return place.split(',').map(s => s.trim()).filter(Boolean).join(', ');
+}
+
+// ─── PLACE-HIST (ADR-024): Orts-Entität — Registry + Auflösung über Zeit ─────
+// Normalisiert einen Ortsnamen NUR fürs Matching (NFC, casefold, Spaces).
+// NIE für Anzeige/Speicherung verwenden → bleibt verlustfrei.
+function _normPlaceName(s) {
+  if (!s) return '';
+  return String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Erste 3–4-stellige Jahreszahl aus einem GEDCOM/ISO/Freitext-Datum.
+function _placeYear(d) {
+  if (d == null) return null;
+  const m = String(d).match(/\d{3,4}/);
+  return m ? parseInt(m[0], 10) : null;
+}
+
+// Migriert Alt-placeObjects (vor ADR-024 P0a-1): undatiertes parentId → enclosedBy[];
+// stellt pnames/enclosedBy als Arrays sicher. Idempotent.
+function _migratePlaceObjects(db) {
+  const pos = db && db.placeObjects;
+  if (!pos) return;
+  for (const pl of Object.values(pos)) {
+    if (!Array.isArray(pl.pnames)) pl.pnames = [];
+    if (!Array.isArray(pl.enclosedBy)) {
+      pl.enclosedBy = pl.parentId
+        ? [{ placeId: pl.parentId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }]
+        : [];
+    }
+  }
+}
+
+// Baut (lazy, gecacht) die PlaceRegistry über AppState.db.placeObjects:
+//   byId   : placeId → placeObject
+//   byNorm : normalisierter Name (title + alle pnames) → placeId (erste gewinnt)
+//   findByName(str)              → placeId | null
+//   resolveAsOf(placeId, year)   → periodenkorrekter Name (pname gültig im Jahr, sonst title)
+//   enclosureChainAsOf(id, year) → [Ort, übergeordnet, …] als Namen zum Jahr
+function getPlaceRegistry() {
+  if (UIState._placeRegistry) return UIState._placeRegistry;
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  const byId = {}, byNorm = {};
+  for (const [id, pl] of Object.entries(pos)) {
+    byId[id] = pl;
+    const names = [pl.title].concat((pl.pnames || []).map(p => p.value));
+    for (const nm of names) {
+      const k = _normPlaceName(nm);
+      if (k && !(k in byNorm)) byNorm[k] = id;
+    }
+  }
+  const _yearOf = y => (typeof y === 'number' ? y : _placeYear(y));
+  const _dateMatches = (from, to, y) =>
+    (from == null && to == null) ? false
+    : (from == null || y >= from) && (to == null || y <= to);
+  const reg = {
+    byId, byNorm,
+    findByName(str) {
+      const k = _normPlaceName(str);
+      return (k && k in byNorm) ? byNorm[k] : null;
+    },
+    resolveAsOf(placeId, year) {
+      const pl = byId[placeId];
+      if (!pl) return null;
+      const y = _yearOf(year);
+      if (y != null) {
+        for (const pn of pl.pnames || [])
+          if (_dateMatches(_placeYear(pn.dateFrom), _placeYear(pn.dateTo), y)) return pn.value;
+      }
+      return pl.title || (pl.pnames && pl.pnames[0] && pl.pnames[0].value) || '';
+    },
+    enclosureChainAsOf(placeId, year) {
+      const out = [], seen = new Set();
+      const y = _yearOf(year);
+      let curId = placeId;
+      while (curId && byId[curId] && !seen.has(curId)) {
+        seen.add(curId);
+        out.push(reg.resolveAsOf(curId, year));
+        const encs = byId[curId].enclosedBy || [];
+        let next = null;
+        if (y != null)
+          for (const e of encs)
+            if (_dateMatches(_placeYear(e.dateFrom), _placeYear(e.dateTo), y)) { next = e.placeId; break; }
+        if (!next) next = (encs[0] && encs[0].placeId) || byId[curId].parentId || null;
+        curId = next;
+      }
+      return out;
+    },
+  };
+  UIState._placeRegistry = reg;
+  return reg;
 }
 
 // Parst Koordinaten-Eingabe — unterstützt:
