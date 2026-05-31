@@ -1470,6 +1470,21 @@
   </div>
 </div>
 
+<!-- PLACE-HIST P0b-2b: Orts-Dubletten zusammenführen -->
+<div class="modal-overlay" id="modalPlaceMerge" role="dialog" aria-modal="true" aria-labelledby="lbl-modalPlaceMerge">
+  <div class="sheet sheet-tall-90 d-flex flex-col">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalPlaceMerge">Orts-Dubletten</div>
+    <div class="sheet-body flex-1 ov-y-auto">
+      <p class="modal-hint">Gleiche Orte in verschiedenen Schreibweisen werden zusammengeführt. Der gewählte Hauptort behält Titel und Koordinaten; abweichende Schreibweisen bleiben als historische Namen erhalten.</p>
+      <div id="placeMergeList"></div>
+    </div>
+    <div class="sheet-footer-safe">
+      <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalPlaceMerge">Schließen</button>
+    </div>
+  </div>
+</div>
+
 <!-- Beziehungs-Picker: Ehepartner / Kind / Elternteil verknüpfen -->
 <div class="modal-overlay" id="modalRelPicker" role="dialog" aria-modal="true" aria-labelledby="relPickerTitle">
   <div class="sheet">
