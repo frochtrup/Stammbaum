@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v797 · Cache: `stammbaum-v797` · `test-unit.js` = 180 Tests grün
+**sw-Version:** v798 · Cache: `stammbaum-v798` · `test-unit.js` = 185 Tests grün
 **Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · **Eltern-Suchpicker im Familiendialog (v794)** — `<select>`+tote `onclick`-Buttons → relPicker-Logik wie „+ Elternteil".
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
@@ -175,7 +175,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | **P4** | **Geocoding & Gazetteer** — **GOV** (gov.genealogy.net) priorisiert (historische Zugehörigkeit über Zeit, ideal westfälisch) → speist `enclosedBy[]`/`pnames[]`; GeoNames/Wikidata alternativ; Batch-Geocoding + Dedup. CSP `connect-src` whitelisten + `test-csp.js`. | `authority` → GRAMPS `<url>` | angedacht |
 | **P5** | **Auswertungen** — Ort-Steckbrief (Events/Personen/Quellen/Karte/Namens-Timeline); Karten-**Zeitschieber** (Name/Zugehörigkeit zum Jahr); **Pfarrei-Rekonstruktion** (alle Taufen/Trauungen einer Kirche); Geo-Plausibilitäts-Validator; Orts-Hypothesen (`_HYPO`); Orts-Kontextsatz in Story/Buch. | gemischt | angedacht |
 
-**Reihenfolge:** §3.0 Verifikation ✅ → P0a-1 ✅ → P0a-2 ✅ → P0b → Review → P2-UI → P3 → P4 → P5.
+**Reihenfolge:** §3.0 Verifikation ✅ → P0a-1 ✅ → P0a-2 ✅ → P0b-1 ✅ → P0b-2/P0b-3 → Review → P2-UI → P3 → P4 → P5.
 
 ---
 

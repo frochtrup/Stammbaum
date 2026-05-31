@@ -37,6 +37,20 @@ function collectPlaces() {
       pl.long = ep.long;
     }
   }
+  // PLACE-HIST (ADR-024, P0b-1): jeden String-Ort additiv mit seiner Place-Entität
+  // verknüpfen (placeId + type) und fehlende Koordinaten aus dem placeObject ziehen.
+  // String-Key bleibt unverändert → keine Auswirkung auf bestehende Consumer.
+  const _reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  if (_reg) {
+    for (const pl of places.values()) {
+      const id = _reg.findByName(pl.name);
+      if (!id) continue;
+      const po = _reg.byId[id];
+      pl.placeId = id;
+      pl.type    = po.type || null;
+      if (pl.lati === null && po.lat != null) { pl.lati = po.lat; pl.long = po.long; }
+    }
+  }
   UIState._placesCache = places;
   return places;
 }
@@ -220,6 +234,48 @@ function showPlaceDetail(placeName, pushHistory = true) {
         <span class="c-muted fs-xs">${place.lati.toFixed(4)}, ${place.long.toFixed(4)}</span>
       </a>
     </div>`;
+  }
+
+  // PLACE-HIST (ADR-024, P0b-1): historische Dimension der Place-Entität anzeigen
+  // (Typ, datierte Namensvarianten, Zugehörigkeitskette). Nur wenn placeObject verknüpft.
+  if (place.placeId) {
+    const reg = getPlaceRegistry();
+    const po  = reg.byId[place.placeId];
+    if (po) {
+      const TYPE_LBL = {
+        Country:'Land', State:'Bundesland', Region:'Region', Province:'Provinz',
+        County:'Kreis', District:'Bezirk', Municipality:'Gemeinde', City:'Stadt',
+        Town:'Stadt', Village:'Dorf', Hamlet:'Weiler', Parish:'Pfarrei',
+        Borough:'Stadtteil', Locality:'Ortslage', Neighborhood:'Nachbarschaft',
+        Building:'Gebäude', Farm:'Hof', Cemetery:'Friedhof', Church:'Kirche', Unknown:'',
+      };
+      const typeLbl = TYPE_LBL[po.type] != null ? TYPE_LBL[po.type] : po.type;
+      // Datierte Namensvarianten (nur solche mit Datum — der Haupttitel steht im Hero)
+      const datedNames = (po.pnames || []).filter(pn => pn.dateFrom || pn.dateTo);
+      const _span = pn => {
+        const f = pn.dateFrom || '', t = pn.dateTo || '';
+        if (f && t) return `${f}–${t}`;
+        if (f) return `ab ${f}`;
+        if (t) return `bis ${t}`;
+        return '';
+      };
+      const namesHtml = datedNames.map(pn =>
+        `<div class="fact-row"><span class="fact-key">${esc(_span(pn))}</span>`
+        + `<span class="fact-val">${esc(pn.value)}${pn.lang ? ` <em class="tran-lang">${esc(pn.lang)}</em>` : ''}</span></div>`
+      ).join('');
+      // Zugehörigkeitskette (heute = ohne Jahr → erste/aktuelle Zuordnung)
+      const chain = reg.enclosureChainAsOf(place.placeId, null).slice(1);
+      let histHtml = '';
+      if (typeLbl) histHtml += `<div class="fact-row"><span class="fact-key">Typ</span><span class="fact-val">${esc(typeLbl)}</span></div>`;
+      if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
+      if (histHtml || namesHtml) {
+        html += `<div class="section fade-up">
+          <div class="section-title">Ort (historisch)</div>
+          ${histHtml}
+          ${namesHtml ? `<div class="fact-sub-title">Frühere Namen</div>${namesHtml}` : ''}
+        </div>`;
+      }
+    }
   }
 
   // GED7: Übersetzungs-Editor (extraPlaces.trans[])

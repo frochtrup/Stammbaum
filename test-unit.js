@@ -763,6 +763,36 @@ eq(API._normPlaceName(''), '', '_normPlaceName leer → ""');
   eq(API.getPlaceRegistry().enclosureChainAsOf('@P2@', 1800), ['Dorf', 'Land'], 'Migration: Kette via abgeleitetes enclosedBy');
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  (j) PLACE-HIST — collectPlaces↔Entität-Verknüpfung (ADR-024 P0b-1)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(j) PLACE-HIST collectPlaces-Entität');
+
+// collectPlaces lebt in ui-views-place.js (UI-Schicht, nicht im Unit-Harness geladen).
+// Wir testen daher die zugrundeliegende Verknüpfungslogik direkt über die Registry:
+// findByName liefert die placeId, byId trägt type + Koordinaten, die collectPlaces
+// additiv einmischt. Das ist die exakt selbe Operation wie in collectPlaces P0b-1.
+(function() {
+  var db = {
+    individuals: {}, families: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Münster', type:'City',
+        pnames:[{value:'Münster'}, {value:'Monasterium', dateFrom:'1500', dateTo:'1800', dateType:'range'}],
+        lat:51.96, long:7.62, enclosedBy:[] },
+    },
+  };
+  API.setDb(db);
+  var reg = API.getPlaceRegistry();
+  var id  = reg.findByName('Münster');
+  eq(id, '@P1@', 'P0b-1: String-Ort → placeId (findByName)');
+  var po  = reg.byId[id];
+  eq(po.type, 'City', 'P0b-1: Entität liefert type für Anzeige');
+  ok(po.lat === 51.96 && po.long === 7.62, 'P0b-1: Koordinaten aus placeObject übernehmbar');
+  var dated = (po.pnames || []).filter(function(p){ return p.dateFrom || p.dateTo; });
+  eq(dated.length, 1, 'P0b-1: datierte Namensvariante für „Frühere Namen"');
+  eq(dated[0].value, 'Monasterium', 'P0b-1: frühere Schreibweise gelesen');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {
