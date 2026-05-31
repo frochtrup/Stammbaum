@@ -842,6 +842,60 @@ function mergePlaceObjects(winnerId, loserIds) {
   return { merged, repointed };
 }
 
+// ─── String-Orts-Dubletten (GEDCOM ohne placeObjects) ────────────────────────
+// Normiert den ersten Namensteil: alles nach dem ersten Komma entfernen,
+// "?" und Ziffern-Blöcke entfernen, dann _placeFold.
+function _placeStringCoreFold(name) {
+  const core = String(name).split(',')[0].replace(/[?]/g, '').replace(/\b\d+\b/g, '').trim();
+  return _placeFold(core);
+}
+
+// Gruppiert String-Orte aus collectPlaces() nach _placeStringCoreFold.
+// Gibt [{ key, names:[…], counts:{name→personCount} }] mit ≥2 Mitgliedern zurück.
+// Rein lesend — kein Zustand.
+function findStringPlaceDuplicates() {
+  if (typeof collectPlaces !== 'function') return [];
+  const places = collectPlaces();
+  const byKey = new Map();   // coreFold → [name, …]
+  for (const [name, pl] of places) {
+    const k = _placeStringCoreFold(name);
+    if (!k) continue;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push({ name, count: pl.personIds.size });
+  }
+  const out = [];
+  for (const [key, arr] of byKey) {
+    if (arr.length < 2) continue;
+    const counts = {};
+    arr.forEach(e => { counts[e.name] = e.count; });
+    out.push({ key, names: arr.map(e => e.name), counts });
+  }
+  return out;
+}
+
+// Ersetzt alle Vorkommen der loserNames durch winnerName in INDI/FAM-Events.
+// Gibt { repointed } zurück. Invalidiert _placesCache.
+function mergeStringPlaces(winnerName, loserNames) {
+  if (!loserNames.length) return { repointed: 0 };
+  const loserSet = new Set(loserNames);
+  let repointed = 0;
+  const _fix = obj => {
+    if (obj && loserSet.has(obj.place)) { obj.place = winnerName; repointed++; }
+  };
+  for (const p of Object.values(AppState.db.individuals || {})) {
+    _fix(p.birth); _fix(p.chr); _fix(p.death); _fix(p.buri);
+    for (const ev of p.events || []) _fix(ev);
+  }
+  for (const f of Object.values(AppState.db.families || {})) {
+    _fix(f.marr); _fix(f.engag); _fix(f.div); _fix(f.divf);
+    for (const ev of f.events || []) _fix(ev);
+  }
+  // extraPlaces-Einträge für die Verlierer entfernen (Winner behält seinen)
+  for (const loser of loserNames) delete (AppState.db.extraPlaces || {})[loser];
+  UIState._placesCache = null;
+  return { repointed };
+}
+
 // Parst Koordinaten-Eingabe — unterstützt:
 //   Apple Maps (deutsch): "52,22779° N, 7,17310° O" → ganzer String ins erste Feld
 //   Dezimalgrad:          "52.2073" / "52,2073"

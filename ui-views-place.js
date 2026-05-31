@@ -387,9 +387,22 @@ function _placeUsageCounts() {
   return c;
 }
 
+// _placeDupMode: 'objects' (GRAMPS placeObjects) | 'strings' (GEDCOM Strings)
+let _placeDupMode = 'objects';
+
 function openPlaceMergeModal() {
-  if (typeof findPlaceDuplicates !== 'function') { showToast('⚠ Keine Orts-Entitäten (nur GRAMPS-Dateien)'); return; }
-  _placeDupGroups = findPlaceDuplicates();
+  const hasObjects = typeof findPlaceDuplicates === 'function'
+    && Object.keys((AppState.db && AppState.db.placeObjects) || {}).length > 0;
+  if (hasObjects) {
+    _placeDupMode = 'objects';
+    _placeDupGroups = findPlaceDuplicates();
+  } else if (typeof findStringPlaceDuplicates === 'function') {
+    _placeDupMode = 'strings';
+    _placeDupGroups = findStringPlaceDuplicates();
+  } else {
+    showToast('⚠ Keine Ortsdaten vorhanden');
+    return;
+  }
   _renderPlaceMergeList();
   openModal('modalPlaceMerge');
 }
@@ -401,32 +414,54 @@ function _renderPlaceMergeList() {
     el.innerHTML = '<div class="dedup-empty">Keine Orts-Dubletten gefunden</div>';
     return;
   }
-  const reg = getPlaceRegistry();
-  const usage = _placeUsageCounts();
   let html = '';
-  _placeDupGroups.forEach((g, gi) => {
-    // Gewinner-Vorschlag: meiste Event-Referenzen, dann meiste pnames
-    const ranked = [...g.ids].sort((a, b) =>
-      (usage[b] || 0) - (usage[a] || 0)
-      || ((reg.byId[b]?.pnames?.length || 0) - (reg.byId[a]?.pnames?.length || 0)));
-    const suggested = ranked[0];
-    let opts = '';
-    for (const id of g.ids) {
-      const po = reg.byId[id]; if (!po) continue;
-      const n = usage[id] || 0;
-      const geo = (po.lat != null) ? ' · 📍' : '';
-      opts += `<label class="place-merge-opt">
-        <input type="radio" name="pmw-${gi}" value="${esc(id)}"${id === suggested ? ' checked' : ''}>
-        <span class="place-merge-name">${esc(po.title)}</span>
-        <span class="place-merge-meta">${n} Verwendung${n !== 1 ? 'en' : ''}${geo}</span>
-      </label>`;
-    }
-    html += `<div class="place-merge-group">
-      <div class="place-merge-title">${g.ids.length} mögliche Schreibweisen desselben Ortes</div>
-      ${opts}
-      <button class="btn btn-save place-merge-btn" data-action="placeMergeGroup" data-gidx="${gi}">Zusammenführen</button>
-    </div>`;
-  });
+  if (_placeDupMode === 'objects') {
+    const reg = getPlaceRegistry();
+    const usage = _placeUsageCounts();
+    _placeDupGroups.forEach((g, gi) => {
+      const ranked = [...g.ids].sort((a, b) =>
+        (usage[b] || 0) - (usage[a] || 0)
+        || ((reg.byId[b]?.pnames?.length || 0) - (reg.byId[a]?.pnames?.length || 0)));
+      const suggested = ranked[0];
+      let opts = '';
+      for (const id of g.ids) {
+        const po = reg.byId[id]; if (!po) continue;
+        const n = usage[id] || 0;
+        const geo = (po.lat != null) ? ' · 📍' : '';
+        opts += `<label class="place-merge-opt">
+          <input type="radio" name="pmw-${gi}" value="${esc(id)}"${id === suggested ? ' checked' : ''}>
+          <span class="place-merge-name">${esc(po.title)}</span>
+          <span class="place-merge-meta">${n} Verwendung${n !== 1 ? 'en' : ''}${geo}</span>
+        </label>`;
+      }
+      html += `<div class="place-merge-group">
+        <div class="place-merge-title">${g.ids.length} mögliche Schreibweisen desselben Ortes</div>
+        ${opts}
+        <button class="btn btn-save place-merge-btn" data-action="placeMergeGroup" data-gidx="${gi}">Zusammenführen</button>
+      </div>`;
+    });
+  } else {
+    // String-Modus (GEDCOM)
+    _placeDupGroups.forEach((g, gi) => {
+      const suggested = [...g.names].sort((a, b) =>
+        (g.counts[b] || 0) - (g.counts[a] || 0)
+        || a.length - b.length)[0];
+      let opts = '';
+      for (const name of g.names) {
+        const n = g.counts[name] || 0;
+        opts += `<label class="place-merge-opt">
+          <input type="radio" name="pmw-${gi}" value="${esc(name)}"${name === suggested ? ' checked' : ''}>
+          <span class="place-merge-name">${esc(name)}</span>
+          <span class="place-merge-meta">${n} Person${n !== 1 ? 'en' : ''}</span>
+        </label>`;
+      }
+      html += `<div class="place-merge-group">
+        <div class="place-merge-title">${g.names.length} mögliche Schreibweisen desselben Ortes</div>
+        ${opts}
+        <button class="btn btn-save place-merge-btn" data-action="placeMergeGroup" data-gidx="${gi}">Zusammenführen</button>
+      </div>`;
+    });
+  }
   el.innerHTML = html;
 }
 
@@ -437,13 +472,24 @@ function placeMergeGroup(gidx) {
   const sel = document.querySelector(`input[name="pmw-${gi}"]:checked`);
   if (!sel) { showToast('⚠ Bitte einen Hauptort wählen'); return; }
   const winner = sel.value;
-  const losers = g.ids.filter(id => id !== winner);
-  const res = mergePlaceObjects(winner, losers);
-  if (res.merged) {
+
+  if (_placeDupMode === 'objects') {
+    const losers = g.ids.filter(id => id !== winner);
+    const res = mergePlaceObjects(winner, losers);
+    if (res.merged) {
+      markChanged();
+      UIState._placesCache = null;
+      showToast(`✓ ${res.merged} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}`);
+      _placeDupGroups = findPlaceDuplicates();
+      _renderPlaceMergeList();
+      if (typeof renderPlaceList === 'function') renderPlaceList();
+    }
+  } else {
+    const losers = g.names.filter(n => n !== winner);
+    const res = mergeStringPlaces(winner, losers);
     markChanged();
-    UIState._placesCache = null;
-    showToast(`✓ ${res.merged} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}`);
-    _placeDupGroups = findPlaceDuplicates();   // verbleibende Dubletten neu berechnen
+    showToast(`✓ ${losers.length} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}`);
+    _placeDupGroups = findStringPlaceDuplicates();
     _renderPlaceMergeList();
     if (typeof renderPlaceList === 'function') renderPlaceList();
   }
