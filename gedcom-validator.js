@@ -58,6 +58,7 @@ export const VAL_RULES = [
   { key: 'MISSING_EVAL',             label: 'Quellen ohne Evidenzbewertung',         severity: 'info',  threshold: null },
   { key: 'OPEN_HYPO',                label: 'Offene Hypothesen',                     severity: 'info',  threshold: null },
   { key: 'MANY_CHILDREN',            label: 'Ungewöhnlich viele Kinder',             severity: 'warn',  threshold: 'maxChildren' },
+  { key: 'MULTI_FAMC',              label: 'Mehr als eine Herkunftsfamilie',         severity: 'warn',  threshold: null },
 ];
 
 // Zählt offene Hypothesen (RES-HYPO/ADR-023: alles außer confirmed/rejected = offen)
@@ -246,6 +247,11 @@ export function runValidation(db, config) {
     if (_openH > 0)
       push(pid, 'OPEN_HYPO', 'info',
         `${_openH} offene Hypothese${_openH > 1 ? 'n' : ''} — Evidenz prüfen/auflösen`, 'online');
+
+    // P16 — Mehr als eine Herkunftsfamilie (FAMC)
+    if ((p.famc?.length || 0) > 1)
+      push(pid, 'MULTI_FAMC', 'warn',
+        `${p.famc.length} Herkunftsfamilien eingetragen (erwartet: max. 1)`, 'online');
   }
 
   // ─── Familien-Regeln ────────────────────────────────────────────────────────
