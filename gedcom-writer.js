@@ -9,7 +9,8 @@ function _g7WriteSchma(lines) {
   lines.push('1 SCHMA');
   for (const t of ['_UID','_GRAMPS_ID','_STAT','_TASK','_CAT','_DONE','_TSTAT','_DATE','_ID',
                    '_RLOG','_QUERY','_RESULT','_RUFNAME','_FREL','_MREL','_SCBK','_PRIM',
-                   '_EVAL','_STYP','_INFO','_EVID','_INFM','_RTYPE','_FAURL'])
+                   '_EVAL','_STYP','_INFO','_EVID','_INFM','_RTYPE','_FAURL',
+                   '_HYPO','_HSTAT','_HWGT','_RATIO','_CONCL'])
     lines.push(`2 TAG ${t} ${_base}/${t}`);
 }
 
@@ -114,6 +115,24 @@ function _writeSourCits(lines, lv, obj) {
       if (m.titl) lines.push(`${lv+2} TITL ${m.titl}`);
       if (m.note) pushCont(lines, lv+2, 'NOTE', m.note);
     }
+  }
+}
+
+// RES-HYPO (ADR-023): Hypothesen-Subtree (_HYPO). Nur Nicht-Strict (Aufrufer gated).
+function _writeHypos(lines, obj) {
+  for (const h of (obj._hypotheses || [])) {
+    lines.push(`1 _HYPO ${h.text || ''}`);
+    if (h.id)      lines.push(`2 _ID ${h.id}`);
+    if (h.status)  lines.push(`2 _HSTAT ${h.status}`);
+    if (h.weight)  lines.push(`2 _HWGT ${h.weight}`);
+    if (h.created) lines.push(`2 _DATE ${h.created}`);
+    for (const ev of (h.evidence || [])) {
+      if (!ev || !ev.sid) continue;
+      lines.push(`2 SOUR ${ev.sid}`);
+      if (ev.page) lines.push(`3 PAGE ${ev.page}`);
+    }
+    if (h.rationale)  pushCont(lines, 2, '_RATIO', h.rationale);
+    if (h.conclusion) pushCont(lines, 2, '_CONCL', h.conclusion);
   }
 }
 
@@ -467,6 +486,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
       if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
       if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
     }
+    _writeHypos(lines, p);   // RES-HYPO (ADR-023)
   }
 
   // ASSO: native associations (GEDCOM↔GRAMPS <personref> roundtrip)
@@ -603,6 +623,7 @@ function writeFAMRecord(lines, f) {
       if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
       if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
     }
+    _writeHypos(lines, f);   // RES-HYPO (ADR-023)
   }
   for (const ref of (f.noteRefs || [])) {
     lines.push(`1 NOTE ${_noteXref[ref]||ref}`);

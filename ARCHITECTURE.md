@@ -444,6 +444,51 @@ Die Daten *reisen mit der Datei* (sie gehören zum Zitat) → `_`-Tag mit Writer
 
 ---
 
+### ADR-023: Hypothesen-System — leichte statusbehaftete Annotation (RES-HYPO, sw v781)
+
+**Kontext:** Forschungstiefe-Ausbauplan Phase 4. Genealogische Schlussfolgerungen sind oft *Hypothesen* („Johann *1650 ist vermutlich Sohn des Peter"), die einen Status durchlaufen (offen → bestätigt/verworfen), auf Evidenz gestützt sind und unterschiedlich sicher gelten. GRAMPS/professionelle Tools kennen dafür den Genealogical-Proof-Standard-Workflow; die PWA hatte bislang keine strukturierte Stelle dafür (nur Freitext-Notizen).
+
+**Bewusste Abgrenzung (Kern-Entscheidung):** *Leichte* Variante — eine **statusbehaftete Annotation an Person/Familie**, KEIN Alternativ-Baum / Zwei-Schichten-Evidenzmodell. Letzteres (parallele, widersprüchliche Tatsachen-Versionen mit Auflösungs-Motor) wäre eine v9-Neuarchitektur und bräche die verifizierte GEDCOM/GRAMPS-Roundtrip-Treue — die Kernstärke der App. Die Hypothese ist Metadaten *über* die Person, sie ändert die Fakten nicht.
+
+**Modell — `_hypotheses[]` auf INDI/FAM:**
+
+| Feld | Werte | GEDCOM-Tag |
+|---|---|---|
+| **text** | die Behauptung (Freitext) | `_HYPO` (Tag-Wert) |
+| **status** | `open` (offen) · `confirmed` (bestätigt) · `rejected` (verworfen) | `_HSTAT` |
+| **weight** | `low` · `medium` · `high` — *Forscher-Konfidenz* | `_HWGT` |
+| **evidence[]** | SID-Referenzen `@S1@` (+ optional Seite) | `2 SOUR @S1@` / `3 PAGE` |
+| **rationale** | Beweisführung (GPS-Argument, mehrzeilig) | `_RATIO` (CONC/CONT) |
+| **conclusion** | Auflösungsnotiz bei confirmed/rejected | `_CONCL` (CONC/CONT) |
+| **id / created** | | `_ID` / `_DATE` |
+
+**Evidenz-Verknüpfung (Entscheidung):** als **SID-Referenz** (`{sid,page}`), NICHT als eigener Zitatkörper. Begründung: leichteste roundtrip-sichere Kopplung (Muster `_RLOG.sourRef`/`topSources`), kein Dangling, keine Duplizierung der Quelldaten. Die Quellqualität bleibt am Zitat (`citation.eval`/QUAY, ADR-022); `weight` ist davon **getrennt** = wie sicher der Forscher die *Hypothese* hält (nicht wie gut die Quelle ist).
+
+**Speicherung — `_HYPO`-Subtree (modelliert, nicht verbatim):**
+```
+1 _HYPO Johann ist Sohn des Peter Decker
+2 _ID h1
+2 _HSTAT open
+2 _HWGT medium
+2 _DATE 2026-05-31
+2 SOUR @S1@
+3 PAGE Taufbuch fol. 12
+2 SOUR @S2@
+2 _RATIO Der Taufeintrag nennt einen Paten gleichen Namens.
+2 _CONCL Noch offen bis Heiratseintrag gefunden.
+```
+Reist mit der Datei (gehört zur Person) → `_`-Tag mit Writer-Support (Faustregel des Ausbauplans, analog `_TASK`/`_RLOG`/`_EVAL`), nicht IDB.
+
+**Roundtrip-Mechanik:** `_REPO_MODELLED`-Lehre — Parser löst `_HYPO` **modelliert** aus `_passthrough` heraus (lv1-Handler INDI **und** FAM), sonst Doppel-Schreibung. lv2-Sub-Tags unter `x.lv1tag==='_HYPO'`; `2 SOUR @S1@` → Evidenz-Eintrag (`x._curHypoEvid`), `3 PAGE` setzt dessen Seite; `_RATIO`/`_CONCL` mehrzeilig via `3 CONC/CONT` (lv3 früh abgefangen mit `return`, vor dem generischen lv3-Block — Muster wie RES-EVAL). Writer: **ein** `_writeHypos(lines, obj)` für Person + Familie, `pushCont` für Begründung/Schluss.
+
+**Strict / GED7:** Strict-5.5.1 lässt `_HYPO` & Sub-Tags weg (`!_strictGed`-Gate); GED7 deklariert `_HYPO/_HSTAT/_HWGT/_RATIO/_CONCL` im SCHMA-Block.
+
+**GRAMPS:** Hypothese als Person-/Familien-`<attribute type="_HYPO" value="JSON">` (ganzes Objekt JSON-serialisiert — „neue Felder gratis", gleiche Strategie wie `_TASK`/`_RLOG`); Parser liest aus `_HANDLED_*_ATTRS` heraus.
+
+**Entscheidung:** leichtes Hypothesen-Modell als modellierter `_HYPO`-Subtree, Evidenz als SID-Ref, `weight` getrennt von Quellqualität. Verifiziert: `net_delta=0` + `out1===out2` auf `_HYPO`-Fixture (Person + Familie, mehrzeilig, 2 Evidenz-Refs); Strict strippt sauber; GRAMPS-Roundtrip-Regression (2894 Pers.) grün; +23 Unit-Tests (155 total).
+
+---
+
 ## Passthrough-Mechanismen — Vollständige Analyse
 
 10 distinkte Mechanismen sichern GEDCOM-Daten die der Parser nicht strukturiert verarbeitet:

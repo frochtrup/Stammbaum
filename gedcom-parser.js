@@ -63,6 +63,11 @@ function _parseINDILine(cur, x, lv, tag, val) {
       const _rl = { date:'', repoRef:'', sourRef:'', query:'', result:'pending', note:'' };
       cur._rlog.push(_rl);
     }
+    else if (tag === '_HYPO') {   // RES-HYPO (ADR-023): modelliert herausgelöst, kein Passthrough
+      x._curHypo = { id:'', text: val || '', status:'open', weight:'', rationale:'', conclusion:'', evidence:[], created:'' };
+      x._curHypoEvid = null;
+      cur._hypotheses.push(x._curHypo);
+    }
     else if (tag === 'ASSO') {
       x._curAsso = { xref: val, rela: '', note: '', citations: [] };
       cur.associations.push(x._curAsso);
@@ -98,6 +103,15 @@ function _parseINDILine(cur, x, lv, tag, val) {
       else if (tag === '_QUERY')  _rl.query  = val;
       else if (tag === '_RESULT') _rl.result = val;
       else if (tag === 'NOTE')    _rl.note   = val;
+    }
+    else if (x.lv1tag === '_HYPO' && x._curHypo) {   // RES-HYPO (ADR-023)
+      if      (tag === '_ID')    x._curHypo.id     = val;
+      else if (tag === '_HSTAT') x._curHypo.status = val;
+      else if (tag === '_HWGT')  x._curHypo.weight = val;
+      else if (tag === '_DATE')  x._curHypo.created = val;
+      else if (tag === '_RATIO') x._curHypo.rationale  = val || '';
+      else if (tag === '_CONCL') x._curHypo.conclusion = val || '';
+      else if (tag === 'SOUR') { x._curHypoEvid = { sid: val || '', page: '' }; x._curHypo.evidence.push(x._curHypoEvid); }
     }
     else if (x.lv1tag === 'ASSO' && x._curAsso) {
       if      (tag === 'RELA' || tag === 'ROLE') x._curAsso.role = val;
@@ -235,6 +249,13 @@ function _parseINDILine(cur, x, lv, tag, val) {
   }
 
   else if (lv === 3) {
+    // RES-HYPO (ADR-023): Evidenz-Seite + mehrzeilige Begründung/Schlussfolgerung
+    if (x.lv1tag === '_HYPO' && x._curHypo) {
+      if (x.lv2tag === 'SOUR' && tag === 'PAGE' && x._curHypoEvid) x._curHypoEvid.page = val;
+      else if (x.lv2tag === '_RATIO' && (tag === 'CONC' || tag === 'CONT')) x._curHypo.rationale  += (tag === 'CONT' ? '\n' : '') + val;
+      else if (x.lv2tag === '_CONCL' && (tag === 'CONC' || tag === 'CONT')) x._curHypo.conclusion += (tag === 'CONT' ? '\n' : '') + val;
+      return;
+    }
     // GED7: PLAC/TRAN+_TRAN → _parsedPlaceTrans (nicht in _extra[], Dedup by design)
     if (x.lv2tag === 'PLAC' && (tag === 'TRAN' || tag === '_TRAN')) {
       const _place = x.lv1tag === 'BIRT' ? cur.birth.place :
@@ -407,6 +428,11 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       const _rl = { date:'', repoRef:'', sourRef:'', query:'', result:'pending', note:'' };
       cur._rlog.push(_rl);
     }
+    else if (tag === '_HYPO') {   // RES-HYPO (ADR-023)
+      x._curHypo = { id:'', text: val || '', status:'open', weight:'', rationale:'', conclusion:'', evidence:[], created:'' };
+      x._curHypoEvid = null;
+      cur._hypotheses.push(x._curHypo);
+    }
     else if (tag === 'REFN') { cur.refns.push({val:val||'', type:''}); }
     else {
       cur._passthrough.push('1 ' + tag + (val ? ' ' + val : ''));
@@ -429,6 +455,15 @@ function _parseFAMLine(cur, x, lv, tag, val) {
       else if (tag === '_QUERY')  _rl.query  = val;
       else if (tag === '_RESULT') _rl.result = val;
       else if (tag === 'NOTE')    _rl.note   = val;
+    }
+    else if (x.lv1tag === '_HYPO' && x._curHypo) {   // RES-HYPO (ADR-023)
+      if      (tag === '_ID')    x._curHypo.id     = val;
+      else if (tag === '_HSTAT') x._curHypo.status = val;
+      else if (tag === '_HWGT')  x._curHypo.weight = val;
+      else if (tag === '_DATE')  x._curHypo.created = val;
+      else if (tag === '_RATIO') x._curHypo.rationale  = val || '';
+      else if (tag === '_CONCL') x._curHypo.conclusion = val || '';
+      else if (tag === 'SOUR') { x._curHypoEvid = { sid: val || '', page: '' }; x._curHypo.evidence.push(x._curHypoEvid); }
     }
     else if (x.lv1tag==='MARR') {
       if (tag==='DATE') { cur.marr.date=val; x._ptDepth=2; x._ptTarget=cur.marr._extra; }
@@ -514,6 +549,13 @@ function _parseFAMLine(cur, x, lv, tag, val) {
     }
   }
   else if (lv === 3) {
+    // RES-HYPO (ADR-023): Evidenz-Seite + mehrzeilige Begründung/Schlussfolgerung
+    if (x.lv1tag === '_HYPO' && x._curHypo) {
+      if (x.lv2tag === 'SOUR' && tag === 'PAGE' && x._curHypoEvid) x._curHypoEvid.page = val;
+      else if (x.lv2tag === '_RATIO' && (tag === 'CONC' || tag === 'CONT')) x._curHypo.rationale  += (tag === 'CONT' ? '\n' : '') + val;
+      else if (x.lv2tag === '_CONCL' && (tag === 'CONC' || tag === 'CONT')) x._curHypo.conclusion += (tag === 'CONT' ? '\n' : '') + val;
+      return;
+    }
     if (tag==='SOUR' && val.startsWith('@')) cur.sourceRefs.add(val);
     if (x.lv2tag === 'NOTE' && (tag==='CONC'||tag==='CONT')) {
       const _sfx = (tag==='CONT'?'\n':'') + val;
@@ -858,7 +900,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
           buri:{ date:null, place:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:false, note:'', noteRefs:[], datePhrase:'' },
           events:[], famc:[], fams:[],
           noteRefs:[], noteRefExtras:{}, noteTexts:[], noteText:'',
-          extraNames:[], _tasks:[], _rlog:[], associations:[], aliases:[], aliaNames:[], refns:[],
+          extraNames:[], _tasks:[], _rlog:[], _hypotheses:[], associations:[], aliases:[], aliaNames:[], refns:[],
           exids:[], noEvents: new Set(), createdDate:'', nameTrans:[],
           media:[], titl:'', reli:'', resn:'', email:'', www:'', _stat:null, grampId:'', lastChanged:'', lastChangedTime:'', chanNote:'',
           nameCitations:[], _hasGivn:false, _hasSurn:false,
@@ -867,7 +909,7 @@ function parseGEDCOM(text, parseErrors, onProgress) {
         individuals[tag] = cur; curType = 'INDI';
       } else if (tag.startsWith('@') && val.trim() === 'FAM') {
         const _famEv = () => ({date:null,place:null,lati:null,long:null,citations:[],value:'',seen:false,note:'',noteRefs:[],_extra:[],media:[]});
-        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteRefExtras:{}, noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], refns:[], lastChanged:'', lastChangedTime:'', chanNote:'' };
+        cur = { id:tag, _passthrough: [], husb:null, wife:null, children:[], childRelations:{}, _lastChil:null, marr:{..._famEv(),addr:''}, engag:_famEv(), div:_famEv(), divf:_famEv(), events:[], _stat:null, grampId:'', noteRefs:[], noteRefExtras:{}, noteTexts:[], noteText:'', sourceRefs: new Set(), media:[], _tasks:[], _rlog:[], _hypotheses:[], refns:[], lastChanged:'', lastChangedTime:'', chanNote:'' };
         families[tag] = cur; curType = 'FAM';
       } else if (tag.startsWith('@') && val.trim() === 'SOUR') {
         cur = { id:tag, _passthrough: [], title:'', abbr:'', author:'', date:'', publ:'', repo:'', repoCalns:[], text:'', _textSeen:false, note:'', noteRefs:[], agnc:'', grampId:'', dataEvens:[], dataExtra:[], refns:[], media:[], _date:'', lastChanged:'', lastChangedTime:'', chanNote:'' };

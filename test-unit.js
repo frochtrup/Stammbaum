@@ -85,7 +85,8 @@ if (IS_NODE) {
     '_buildLivingSet: _buildLivingSet, normMonth: normMonth, buildGedDate: buildGedDate, ' +
     'buildGedDateFromFields: buildGedDateFromFields, readDatePartFromFields: readDatePartFromFields, ' +
     '_splitPageUrl: _splitPageUrl, migratePageUrls: migratePageUrls, ' +
-    '_evalToQuay: _evalToQuay, evalIsEmpty: evalIsEmpty };';
+    '_evalToQuay: _evalToQuay, evalIsEmpty: evalIsEmpty, ' +
+    'hypoIsEmpty: hypoIsEmpty, _hypoStatus: _hypoStatus };';
   eval(_combined);
   API = window._api;
 }
@@ -532,6 +533,63 @@ group('(f) RES-PROJ Task-Status');
   var t = db.individuals['@I1@']._tasks[0];
   ok(!t.status, 'Bestandstask ohne _TSTAT → status leer (kein Roundtrip-Delta)');
   eq(t.done, true, 'done bleibt true');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (g) RES-HYPO — Hypothesen-System (ADR-023)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(g) RES-HYPO Hypothesen');
+
+// Helfer
+ok(API.hypoIsEmpty({ text:'', rationale:'', conclusion:'', evidence:[] }), 'hypoIsEmpty true bei leer');
+ok(API.hypoIsEmpty(null),                                                  'hypoIsEmpty true bei null');
+ok(!API.hypoIsEmpty({ text:'X', evidence:[] }),                            'hypoIsEmpty false bei Text');
+ok(!API.hypoIsEmpty({ text:'', evidence:[{sid:'@S1@'}] }),                 'hypoIsEmpty false bei Evidenz');
+eq(API._hypoStatus({ status:'confirmed' }), 'confirmed', '_hypoStatus liest status');
+eq(API._hypoStatus({}),                     'open',      '_hypoStatus migriert leer → open');
+eq(API._hypoStatus({ status:'bogus' }),     'open',      '_hypoStatus fängt Ungültiges → open');
+
+// Parser: _HYPO wird modelliert extrahiert (Person), inkl. Evidenz + mehrzeilig
+(function() {
+  var ged = ['0 HEAD','1 SOUR T','0 @S1@ SOUR','1 TITL Q','0 @S2@ SOUR','1 TITL R',
+    '0 @I1@ INDI','1 NAME A /B/','1 SEX M',
+    '1 _HYPO Johann ist Sohn des Peter','2 _ID h1','2 _HSTAT open','2 _HWGT medium','2 _DATE 2026-05-31',
+    '2 SOUR @S1@','3 PAGE fol. 12','2 SOUR @S2@',
+    '2 _RATIO Erste Zeile.','3 CONT Zweite Zeile.','2 _CONCL Noch offen.','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  var h = db.individuals['@I1@']._hypotheses[0];
+  ok(h, 'Person hat Hypothese');
+  eq(h.text,   'Johann ist Sohn des Peter', '_HYPO-Wert → text');
+  eq(h.id,     'h1',     '_ID → id');
+  eq(h.status, 'open',   '_HSTAT → status');
+  eq(h.weight, 'medium', '_HWGT → weight');
+  eq(h.evidence.length, 2,        'zwei Evidenz-Refs');
+  eq(h.evidence[0].sid,  '@S1@',  'Evidenz 1 sid');
+  eq(h.evidence[0].page, 'fol. 12','Evidenz 1 page (lv3 PAGE)');
+  eq(h.evidence[1].sid,  '@S2@',  'Evidenz 2 sid (ohne page)');
+  eq(h.rationale, 'Erste Zeile.\nZweite Zeile.', '_RATIO + CONT mehrzeilig');
+  eq(h.conclusion,'Noch offen.', '_CONCL → conclusion');
+  // _HYPO nicht im Passthrough (kein Doppel-Schreiben)
+  var pt = (db.individuals['@I1@']._passthrough || []).join('|');
+  ok(pt.indexOf('_HYPO') < 0, '_HYPO nicht im Passthrough (modelliert)');
+})();
+
+// Parser: _HYPO an Familie
+(function() {
+  var ged = ['0 HEAD','1 SOUR T','0 @S1@ SOUR','1 TITL Q','0 @F1@ FAM','1 HUSB @I1@',
+    '1 _HYPO Ehe vermutlich 1675','2 _HSTAT confirmed','2 _HWGT high','2 SOUR @S1@','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  var h = db.families['@F1@']._hypotheses[0];
+  ok(h, 'Familie hat Hypothese');
+  eq(h.status, 'confirmed', 'Familien-_HSTAT → status');
+  eq(h.evidence[0].sid, '@S1@', 'Familien-Evidenz sid');
+})();
+
+// Person ohne _HYPO → leeres Array (keine Strukturänderung)
+(function() {
+  var ged = ['0 HEAD','1 SOUR T','0 @I1@ INDI','1 NAME A /B/','1 SEX M','0 TRLR'].join('\n');
+  var errs = [], db = API.parseGEDCOM(ged, errs);
+  eq(db.individuals['@I1@']._hypotheses.length, 0, 'keine Hypothese → leeres Array');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

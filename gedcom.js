@@ -780,6 +780,46 @@ function _evalToQuay(e) {
   return '2';
 }
 
+// ─── RES-HYPO (ADR-023): Hypothesen-System (leichte Variante) ──────────────────
+// Statusbehaftete Annotation (offen/verworfen/bestätigt) an Person/Familie, mit
+// Forscher-Konfidenz (weight) + Evidenz-Verknüpfung (SID-Ref, kein eigener
+// Zitatkörper). Bewusst KEIN Alternativ-Baum / Zwei-Schichten-Modell.
+// Speicherung als _HYPO-Subtree (modelliert herausgelöst, vgl. _REPO_MODELLED).
+const HYPO_STATUSES = [
+  ['open',      'offen'],
+  ['confirmed', 'bestätigt'],
+  ['rejected',  'verworfen'],
+];
+// weight = Forscher-Konfidenz in die Hypothese (NICHT Quellqualität/QUAY/eval, ADR-022)
+const HYPO_WEIGHTS = [
+  ['low',    'gering'],
+  ['medium', 'mittel'],
+  ['high',   'hoch'],
+];
+
+function _newHypo() {
+  return { id: '', text: '', status: 'open', weight: '', rationale: '',
+           conclusion: '', evidence: [], created: '' };
+}
+
+// Status lesen — migriert Bestands-Hypothesen ohne status auf 'open'
+function _hypoStatus(h) {
+  if (h && (h.status === 'open' || h.status === 'confirmed' || h.status === 'rejected')) return h.status;
+  return 'open';
+}
+
+function hypoIsEmpty(h) {
+  return !h || (!h.text && !h.rationale && !h.conclusion
+    && (!Array.isArray(h.evidence) || h.evidence.length === 0));
+}
+
+function _hypoStatusLabel(s) {
+  const f = HYPO_STATUSES.find(x => x[0] === s); return f ? f[1] : s;
+}
+function _hypoWeightLabel(w) {
+  const f = HYPO_WEIGHTS.find(x => x[0] === w); return f ? f[1] : w;
+}
+
 // Konvertiert Altformat (sources[]+sourcePages{}+...) in-place zu citations[]
 // Idempotent: kein sources[] vorhanden → nichts tun
 function _migrateLegacyCitations(obj) {

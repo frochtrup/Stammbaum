@@ -497,6 +497,9 @@ export function _grampsBuildXMLText(db) {
     for (const rl of (p._rlog||[])) {
       L.push(`      <attribute type="_RLOG" value="${_esc(JSON.stringify(rl))}"/>`);
     }
+    for (const h of (p._hypotheses||[])) {   // RES-HYPO (ADR-023): ganzes JSON → neue Felder gratis
+      L.push(`      <attribute type="_HYPO" value="${_esc(JSON.stringify(h))}"/>`);
+    }
 
     // Person associations (GEDCOM ASSO ↔ GRAMPS <personref>)
     for (const a of p.associations || []) {
@@ -575,6 +578,9 @@ export function _grampsBuildXMLText(db) {
     }
     for (const rl of (f._rlog||[])) {
       L.push(`      <attribute type="_RLOG" value="${_esc(JSON.stringify(rl))}"/>`);
+    }
+    for (const h of (f._hypotheses||[])) {   // RES-HYPO (ADR-023)
+      L.push(`      <attribute type="_HYPO" value="${_esc(JSON.stringify(h))}"/>`);
     }
 
     for (const nh of famNoteRefs[fId]||[]) {

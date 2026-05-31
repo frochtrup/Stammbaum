@@ -640,7 +640,7 @@ export function _grampsParseXMLText(xmlText) {
     };
 
     // Attributes
-    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL','_TASK','_RLOG']);
+    const _HANDLED_P_ATTRS = new Set(['_UID','_STAT','RESN','E-MAIL','_TASK','_RLOG','_HYPO']);
     const uidA   = _attr(person, '_UID');   if (uidA)  p.uid   = uidA.getAttribute('value')  || '';
     const statA  = _attr(person, '_STAT');  if (statA) p._stat = statA.getAttribute('value') || null;
     const resnA  = _attr(person, 'RESN');   if (resnA) p.resn  = resnA.getAttribute('value') || '';
@@ -653,6 +653,10 @@ export function _grampsParseXMLText(xmlText) {
       .filter(a => a.getAttribute('type') === '_RLOG')
       .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
       .filter(r => r && (r.query || r.note));
+    p._hypotheses = _byTag(person, 'attribute')   // RES-HYPO (ADR-023)
+      .filter(a => a.getAttribute('type') === '_HYPO')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(h => h && (h.text || h.rationale));
     p._grampsAttrs = _byTag(person, 'attribute')
       .filter(a => {
         const t = a.getAttribute('type') || '';
@@ -959,7 +963,7 @@ export function _grampsParseXMLText(xmlText) {
     f.noteText = f.noteTexts.join('\n\n');
 
     // Extra attributes (all <attribute> on family, with optional citations/notes)
-    const _HANDLED_F_ATTRS = new Set(['_TASK', '_RLOG']);
+    const _HANDLED_F_ATTRS = new Set(['_TASK', '_RLOG', '_HYPO']);
     f._tasks = _byTag(fam, 'attribute')
       .filter(a => a.getAttribute('type') === '_TASK')
       .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
@@ -968,6 +972,10 @@ export function _grampsParseXMLText(xmlText) {
       .filter(a => a.getAttribute('type') === '_RLOG')
       .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
       .filter(r => r && (r.query || r.note));
+    f._hypotheses = _byTag(fam, 'attribute')   // RES-HYPO (ADR-023)
+      .filter(a => a.getAttribute('type') === '_HYPO')
+      .map(a => { try { return JSON.parse(a.getAttribute('value') || '{}'); } catch(e) { return null; } })
+      .filter(h => h && (h.text || h.rationale));
     f._grampsAttrs = _byTag(fam, 'attribute')
       .filter(a => !_HANDLED_F_ATTRS.has(a.getAttribute('type') || ''))
       .map(a => {
