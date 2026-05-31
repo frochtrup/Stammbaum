@@ -887,10 +887,17 @@ function findStringPlaceDuplicates() {
 // Gibt { repointed } zurück. Invalidiert _placesCache.
 function mergeStringPlaces(winnerName, loserNames) {
   if (!loserNames.length) return { repointed: 0 };
+  // loserSet enthält getrimte Namen (aus collectPlaces-Keys); obj.place ist Roh-String
   const loserSet = new Set(loserNames);
+  // Winner selbst auch in den Replace-Set damit abweichende Whitespace-Varianten
+  // des Winners (z.B. " Ochtrup " statt "Ochtrup") ebenfalls auf winnerName normiert werden
+  const allReplace = new Set([...loserNames, winnerName]);
   let repointed = 0;
   const _fix = obj => {
-    if (obj && loserSet.has(obj.place)) { obj.place = winnerName; repointed++; }
+    if (!obj || obj.place == null) return;
+    const trimmed = String(obj.place).trim();
+    if (loserSet.has(trimmed)) { obj.place = winnerName; repointed++; }
+    else if (trimmed !== obj.place && allReplace.has(trimmed)) { obj.place = trimmed; } // Whitespace normieren
   };
   for (const p of Object.values(AppState.db.individuals || {})) {
     _fix(p.birth); _fix(p.chr); _fix(p.death); _fix(p.buri);
