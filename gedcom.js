@@ -850,7 +850,9 @@ function mergePlaceObjects(winnerId, loserIds) {
 //   • Abkürzungen:      "Rheine i.W."     → "Rheine"
 //   • "?", Ziffernblöcke, dann _placeFold
 function _placeStringCoreFold(name) {
-  let s = String(name).split(',')[0];
+  // Ersten nicht-leeren Teil nehmen (GEDCOM-Orte können führende Leerfelder haben: ", Ochtrup, , ,")
+  const parts = String(name).split(',');
+  let s = (parts.find(p => p.trim()) || parts[0]);
   s = s.replace(/\(.*?\)/g, '');          // (Westf.) entfernen
   s = s.replace(/\/.*/, '');              // /Westf entfernen
   s = s.replace(/\s+\S*\.\S*\.?\s*$/, ''); // i.W. o.ä. am Ende entfernen
