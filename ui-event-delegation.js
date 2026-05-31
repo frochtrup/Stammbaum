@@ -73,6 +73,7 @@ const _CLICK_MAP = {
   removePlaceName:         el  => removePlaceName(el.dataset.idx),
   addEnclosedBy:           ()  => addEnclosedBy(),
   removeEnclosedBy:        el  => removeEnclosedBy(el.dataset.idx),
+  exportPlaceData:         ()  => exportPlaceData(),
   treeShowProband:         ()  => {
     const id = getProbandId();
     if (!id) return;
@@ -437,6 +438,7 @@ document.addEventListener('change', e => {
   else if (action === 'onDateQualChange')  onDateQualChange(el, el.dataset.target);
   else if (action === 'applySourceTemplate') _applySourceTemplate(el.value);
   else if (action === 'qtImportFile')      importQuickTemplatesFile(el);
+  else if (action === 'importPlaceDataFile') importPlaceDataFile(el);
   else if (action === 'importProjects')    importProjectsFile(el);
   else if (action === 'qtBaseChange')      _qtSyncBaseUI();
   else if (action === 'qtFieldEdit')       _qtFieldEdit(el);

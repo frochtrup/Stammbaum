@@ -728,6 +728,81 @@ function saveExtraPlaces() {
   try { localStorage.setItem(_extraPlacesKey(), JSON.stringify(Object.values(AppState.db.extraPlaces))); } catch(e) {}
 }
 
+// ── PlaceObjects-Persistenz (IDB-Cache + JSON-Export, Muster quickTemplates) ──
+// IDB-Key global (wie quickTemplates): Ortshierarchie ist appweit, nicht dateigebunden.
+// Beim Laden werden nur _ep_-Einträge (user-erzeugte) gemergt — GRAMPS-native IDs
+// werden nie überschrieben.
+async function loadPlaceObjectsFromIDB() {
+  try {
+    const raw = await idbGet('stammbaum_placeobjects');
+    if (!raw) return;
+    const stored = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (!stored || typeof stored !== 'object') return;
+    const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+    let added = 0;
+    for (const [id, po] of Object.entries(stored)) {
+      if (pos[id]) continue; // vorhandene (GRAMPS-native) nicht überschreiben
+      pos[id] = po;
+      added++;
+    }
+    if (added) UIState._placeRegistry = null;
+  } catch(e) { console.warn('loadPlaceObjectsFromIDB:', e); }
+}
+
+function savePlaceObjects() {
+  try {
+    // Nur _ep_-Einträge persistieren (user-erzeugte); GRAMPS-native roundtrippen über .gramps
+    const pos = AppState.db.placeObjects || {};
+    const toSave = {};
+    for (const [id, po] of Object.entries(pos)) {
+      if (id.startsWith('_ep_')) toSave[id] = po;
+    }
+    idbPut('stammbaum_placeobjects', JSON.stringify(toSave)).catch(() => {});
+  } catch(e) {}
+}
+
+function exportPlaceData() {
+  const pos = AppState.db.placeObjects || {};
+  const ep  = AppState.db.extraPlaces  || {};
+  const blob = new Blob([JSON.stringify({ version: 1, placeObjects: pos, extraPlaces: ep }, null, 2)],
+    { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stammbaum-orte.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast('Ortsdaten exportiert', 'success');
+}
+
+function importPlaceDataFile(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      const pos  = data.placeObjects || {};
+      const ep   = data.extraPlaces  || {};
+      const dbPos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+      const dbEp  = AppState.db.extraPlaces  || (AppState.db.extraPlaces  = {});
+      let addedP = 0, addedE = 0;
+      for (const [id, po] of Object.entries(pos)) {
+        if (!dbPos[id]) { dbPos[id] = po; addedP++; }
+      }
+      for (const [name, epEntry] of Object.entries(ep)) {
+        if (!dbEp[name]) { dbEp[name] = epEntry; addedE++; }
+      }
+      savePlaceObjects();
+      saveExtraPlaces();
+      UIState._placeRegistry = null;
+      UIState._placesCache   = null;
+      markChanged();
+      showToast(`${addedP} Ort-Entitäten + ${addedE} Koordinaten importiert`, 'success');
+    } catch(e) { showToast('⚠ Fehler beim Import: ' + e.message, 'error'); }
+  };
+  r.readAsText(file);
+}
+
 // ── Hof-Objects Persistenz ──────────
 function loadHofObjects() {
   try {

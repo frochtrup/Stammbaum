@@ -239,6 +239,7 @@ function savePlace() {
 
   UIState._placesCache = null;
   markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
   showToast('✓ Ort gespeichert');
   showPlaceDetail(newName);
 }
@@ -261,6 +262,7 @@ function addPlaceName() {
   po.pnames.push({ value: val, lang, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
   UIState._placeRegistry = null;
   markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
   ['pl-pname-val','pl-pname-lang','pl-pname-from','pl-pname-to'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -273,6 +275,7 @@ function removePlaceName(idx) {
   po.pnames.splice(parseInt(idx), 1);
   UIState._placeRegistry = null;
   markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
   _renderPlaceNamesList(po);
 }
 
@@ -290,6 +293,7 @@ function addEnclosedBy() {
   po.parentId = po.enclosedBy[0].placeId; // erstes Element als parentId-Fallback
   UIState._placeRegistry = null;
   markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
   if (sel) sel.value = '';
   ['pl-enclosed-from','pl-enclosed-to'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
@@ -304,6 +308,7 @@ function removeEnclosedBy(idx) {
   po.parentId = po.enclosedBy[0]?.placeId || null;
   UIState._placeRegistry = null;
   markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
   _renderEnclosedByList(po);
 }
 
@@ -332,6 +337,7 @@ function saveNewPlace() {
     const id = (typeof _epId === 'function') ? _epId(name) : ('_ep_' + Date.now());
     _pos[id] = { id, title: name, type: 'Unknown', lat: lati, long, pnames: [], enclosedBy: [], parentId: null };
     UIState._placeRegistry = null;
+    if (typeof savePlaceObjects === 'function') savePlaceObjects();
   }
   UIState._placesCache = null;
   closeModal('modalNewPlace');
