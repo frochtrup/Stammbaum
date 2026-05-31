@@ -911,6 +911,9 @@ body.desktop-mode.places-karte #mapContainer {
   -webkit-appearance: none; appearance: none;
 }
 .form-input:focus, .form-select:focus { border-color: var(--gold-dim); }
+.ff-parent-pick { text-align: left; cursor: pointer; }
+.ff-parent-pick.is-empty { color: var(--text-muted); }
+.ff-parent-pick::after { content: '›'; float: right; color: var(--text-muted); }
 .form-input::placeholder { color: var(--text-muted); }
 .form-row { display: flex; gap: 10px; }
 .form-row .form-group { flex: 1; }

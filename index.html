@@ -1000,17 +1000,13 @@
       <input type="hidden" id="ff-mplace-id">
       <div class="form-group">
         <label class="form-label">Ehemann / Vater</label>
-        <div class="d-flex gap-4">
-          <select class="form-select" id="ff-husb" style="flex:1"><option value="">– keiner –</option></select>
-          <button type="button" class="btn btn-dim" style="flex-shrink:0;padding:6px 10px" onclick="ffNewPerson('husb')" title="Neue Person anlegen">＋</button>
-        </div>
+        <input type="hidden" id="ff-husb">
+        <button type="button" class="form-select ff-parent-pick is-empty" id="ff-husb-pick" data-action="ffPickParent" data-slot="husb">– keiner –</button>
       </div>
       <div class="form-group">
         <label class="form-label">Ehefrau / Mutter</label>
-        <div class="d-flex gap-4">
-          <select class="form-select" id="ff-wife" style="flex:1"><option value="">– keine –</option></select>
-          <button type="button" class="btn btn-dim" style="flex-shrink:0;padding:6px 10px" onclick="ffNewPerson('wife')" title="Neue Person anlegen">＋</button>
-        </div>
+        <input type="hidden" id="ff-wife">
+        <button type="button" class="form-select ff-parent-pick is-empty" id="ff-wife-pick" data-action="ffPickParent" data-slot="wife">– keine –</button>
       </div>
       <div class="form-row">
         <div class="form-group">

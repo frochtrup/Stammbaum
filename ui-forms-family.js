@@ -54,19 +54,9 @@ function showFamilyForm(id, ctx) {
   document.getElementById('familyFormTitle').textContent = f ? 'Familie bearbeiten' : 'Neue Familie';
   document.getElementById('ff-id').value = id || '';
 
-  // Populate person selects
-  const persons = Object.values(AppState.db.individuals).sort((a,b) => (a.name||'').localeCompare(b.name||'','de'));
-  const optionsAll = '<option value="">– keine –</option>' + persons.map(p => {
-    const by = p.birth?.date ? (p.birth.date.match(/\d{4}/)||[])[0] : '';
-    const dy = p.death?.date ? (p.death.date.match(/\d{4}/)||[])[0] : '';
-    const dates = (by || dy) ? ` (${by ? '* ' + by : ''}${by && dy ? '  ' : ''}${dy ? '† ' + dy : ''})` : '';
-    return `<option value="${p.id}">${esc(p.name || p.id)}${dates}</option>`;
-  }).join('');
-  document.getElementById('ff-husb').innerHTML = optionsAll;
-  document.getElementById('ff-wife').innerHTML = optionsAll;
-
-  document.getElementById('ff-husb').value = f?.husb || '';
-  document.getElementById('ff-wife').value = f?.wife || '';
+  // Eltern-Slots: versteckte IDs + klickbare Suchpicker-Labels (kein <select> mehr — Auswahl via ffPickParent)
+  _ffSetParent('husb', f?.husb || '');
+  _ffSetParent('wife', f?.wife || '');
   fillDateFields('ff-mdate-qual', 'ff-mdate', null, f?.marr?.date  || '');
   initPlaceMode('ff-mplace');
   document.getElementById('ff-mplace').value    = f?.marr?.place   || '';
@@ -78,11 +68,11 @@ function showFamilyForm(id, ctx) {
   _renderMediaList('ff', f?.media || []);
   document.getElementById('ff-media-add-file').value = '';
 
-  // Vorausfüllung aus Beziehungs-Picker-Kontext
+  // Vorausfüllung aus Beziehungs-Picker-Kontext bzw. zurückgekehrtem Familien-Formularstand
   if (ctx) {
-    if (ctx.husb !== undefined) document.getElementById('ff-husb').value = ctx.husb || '';
-    if (ctx.wife !== undefined) document.getElementById('ff-wife').value = ctx.wife || '';
-    if (ctx.mdate)     { document.getElementById('ff-mdate-qual').value = ctx.mdateQual || ''; document.getElementById('ff-mdate').value = ctx.mdate; }
+    if (ctx.husb !== undefined) _ffSetParent('husb', ctx.husb || '');
+    if (ctx.wife !== undefined) _ffSetParent('wife', ctx.wife || '');
+    if (ctx.mdate !== undefined) fillDateFields('ff-mdate-qual', 'ff-mdate', null, ctx.mdate || '');
     if (ctx.mplace)    { document.getElementById('ff-mplace').value = ctx.mplace; document.getElementById('ff-mplace-id').value = ctx.mplaceId || ''; }
     if (ctx.note)      document.getElementById('ff-note').value = ctx.note;
     if (ctx.addChild)  _pendingAddChild = ctx.addChild;
@@ -202,15 +192,36 @@ async function deleteFamily() {
 
 initPlaceAutocomplete('ff-mplace', 'ff-mplace-dd', 'ff-mplace-id');
 
+// Eltern-Slot setzen: versteckte ID + sichtbares Picker-Label
+function _ffSetParent(slot, id) {
+  const hid = document.getElementById('ff-' + slot);
+  if (hid) hid.value = id || '';
+  const btn = document.getElementById('ff-' + slot + '-pick');
+  if (!btn) return;
+  const p = id ? AppState.db.individuals[id] : null;
+  btn.textContent = p ? (p.name || p.id) : (slot === 'wife' ? '– keine –' : '– keiner –');
+  btn.classList.toggle('is-empty', !p);
+}
+
+// Eltern-Slot wählen: Suchpicker (gleiche Logik wie "+ Elternteil") über dem Familienformular öffnen
+function ffPickParent(slot) {
+  UIState._relMode = (slot === 'wife') ? 'ffWife' : 'ffHusb';
+  document.getElementById('relPickerTitle').textContent =
+    (slot === 'wife') ? 'Ehefrau / Mutter wählen' : 'Ehemann / Vater wählen';
+  document.getElementById('relPickerSearch').value = '';
+  renderRelPicker('');
+  openModal('modalRelPicker');
+}
+
+// Neue Person für einen Eltern-Slot: Formularstand sichern, Person-Formular öffnen;
+// nach Speichern führt der _pendingFfState-Rücksprung (ui-forms-person.js) zurück ins Familien-Formular.
 function ffNewPerson(slot) {
-  // Formularstatus sichern, Person-Formular öffnen; nach Speichern zurück ins Familien-Formular
   UIState._pendingFfState = {
     slot,
     id:       document.getElementById('ff-id').value || null,
     husb:     document.getElementById('ff-husb').value || null,
     wife:     document.getElementById('ff-wife').value || null,
-    mdateQual: document.getElementById('ff-mdate-qual').value,
-    mdate:    document.getElementById('ff-mdate').value,
+    mdate:    buildGedDateFromFields('ff-mdate-qual', 'ff-mdate', null),
     mplace:   document.getElementById('ff-mplace').value,
     mplaceId: document.getElementById('ff-mplace-id').value,
     note:     document.getElementById('ff-note').value,

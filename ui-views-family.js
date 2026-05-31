@@ -216,6 +216,10 @@ function renderRelPicker(q) {
     persons = persons.filter(x => !excl.has(x.id));
   } else if (UIState._relMode === 'asso') {
     persons = persons.filter(x => x.id !== UIState._relAnchorId);
+  } else if (UIState._relMode === 'ffHusb' || UIState._relMode === 'ffWife') {
+    // Familienformular: die im anderen Slot gewählte Person ausschließen
+    const otherId = document.getElementById(UIState._relMode === 'ffHusb' ? 'ff-wife' : 'ff-husb')?.value;
+    if (otherId) persons = persons.filter(x => x.id !== otherId);
   }
 
   if (q) {
@@ -226,8 +230,24 @@ function renderRelPicker(q) {
   persons = persons.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de')).slice(0, 60);
 
   list.innerHTML = '';
+
+  // Familienformular-Picker: "entfernen"-Zeile, wenn der Slot belegt ist
+  if (UIState._relMode === 'ffHusb' || UIState._relMode === 'ffWife') {
+    const cur = document.getElementById(UIState._relMode === 'ffWife' ? 'ff-wife' : 'ff-husb')?.value;
+    if (cur) {
+      const r = document.createElement('div');
+      r.className = 'person-row';
+      r.innerHTML = `<div class="person-row-info"><div class="person-row-name">– entfernen –</div></div><div class="row-arrow">×</div>`;
+      r.addEventListener('click', () => relPickerSelect(''));
+      list.appendChild(r);
+    }
+  }
+
   if (!persons.length) {
-    list.innerHTML = '<div class="rel-picker-no-result">Keine Treffer</div>';
+    const nr = document.createElement('div');
+    nr.className = 'rel-picker-no-result';
+    nr.textContent = 'Keine Treffer';
+    list.appendChild(nr);
     return;
   }
   for (const p of persons) {
@@ -246,6 +266,11 @@ function renderRelPicker(q) {
 
 function relPickerSelect(selectedId) {
   closeModal('modalRelPicker');
+  if (UIState._relMode === 'ffHusb' || UIState._relMode === 'ffWife') {
+    // Familienformular bleibt offen darunter → Slot direkt setzen
+    _ffSetParent(UIState._relMode === 'ffWife' ? 'wife' : 'husb', selectedId || '');
+    return;
+  }
   if (UIState._relMode === 'alias') {
     addAlias(UIState._relAnchorId, selectedId);
   } else if (UIState._relMode === 'relcalc') {
@@ -279,6 +304,13 @@ function removeAlias(pid, aliasId) {
 }
 
 function relPickerCreateNew() {
+  if (UIState._relMode === 'ffHusb' || UIState._relMode === 'ffWife') {
+    // Familienformular-Slot: Formularstand sichern und neue Person anlegen (Rücksprung via _pendingFfState)
+    const slot = (UIState._relMode === 'ffWife') ? 'wife' : 'husb';
+    closeModal('modalRelPicker');
+    ffNewPerson(slot);
+    return;
+  }
   closeModal('modalRelPicker');
   UIState._pendingRelation = { mode: UIState._relMode, anchorId: UIState._relAnchorId };
   showPersonForm(null);

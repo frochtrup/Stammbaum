@@ -93,6 +93,7 @@ const _CLICK_MAP = {
   showAddSpouseFlow:       el => showAddSpouseFlow(el.dataset.pid),
   showAddChildFlow:        el => showAddChildFlow(el.dataset.fid),
   showAddParentFlow:       el => showAddParentFlow(el.dataset.pid),
+  ffPickParent:            el => ffPickParent(el.dataset.slot),
   openAddMediaDialog:      el => openAddMediaDialog(el.dataset.ctx, el.dataset.id),
   openMediaPhoto:          el => openMediaPhoto(el.dataset.mediaFile, el.dataset.hero, el.dataset.avatar),
   openEditMediaDialog:     el => openEditMediaDialog(el.dataset.ctx, el.dataset.id, +el.dataset.idx),
