@@ -25,6 +25,25 @@ function setPlaceTypeFilter(val) {
   filterPlaces(q);
 }
 
+// Befüllt den Typ-Filter-Select dynamisch mit tatsächlich vorhandenen Typen.
+function _refreshPlaceTypeFilter() {
+  const sel = document.getElementById('placeTypeFilter');
+  if (!sel) return;
+  const usedTypes = new Set();
+  for (const pl of collectPlaces().values()) {
+    if (pl.type) usedTypes.add(pl.type);
+  }
+  if (!usedTypes.size) return;
+  // Reihenfolge: PLACE_TYPE_LBL-Schlüsselreihenfolge (geografisch grob von groß→klein)
+  const ordered = Object.keys(PLACE_TYPE_LBL).filter(t => usedTypes.has(t));
+  // Unbekannte Typen (nicht in PLACE_TYPE_LBL) ans Ende
+  for (const t of usedTypes) if (!PLACE_TYPE_LBL[t]) ordered.push(t);
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Alle Typen</option>'
+    + ordered.map(t => `<option value="${esc(t)}">${esc(PLACE_TYPE_LBL[t] || t)}</option>`).join('');
+  sel.value = usedTypes.has(prev) ? prev : '';
+}
+
 function togglePlaceGroupMode() {
   _placeGroupMode = !_placeGroupMode;
   const btn = document.getElementById('placeGroupBtn');
@@ -140,6 +159,7 @@ function renderPlaceList(sorted) {
     const places = collectPlaces();
     if (!places.size) { el.innerHTML = '<div class="empty">Keine Orte in den Daten gefunden</div>'; return; }
     sorted = [...places.values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
+    _refreshPlaceTypeFilter();
   }
   if (!sorted.length) { el.innerHTML = '<div class="empty">Keine Orte gefunden</div>'; return; }
 
