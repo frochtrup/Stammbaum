@@ -306,8 +306,9 @@ function applyGovText() {
 
   let changes = 0;
 
-  // GOV-ID speichern
+  // GOV-ID speichern + Platzhalter auflösen
   if (!po._govId) { po._govId = parsed.govId; changes++; }
+  if (po._govUnresolved) { delete po._govUnresolved; changes++; }
 
   // Typ: neueste Eintrag ohne dateTo (oder letzter insgesamt)
   const currentType = parsed.types.find(t => !t.dateTo) || parsed.types[parsed.types.length - 1];
@@ -324,6 +325,18 @@ function applyGovText() {
   for (const n of parsed.names) {
     const exists = po.pnames.some(p => p.value === n.value && p.lang === n.lang);
     if (!exists) { po.pnames.push({ value: n.value, lang: n.lang, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }); changes++; }
+  }
+
+  // Titel aktualisieren wenn Platzhalter (Titel = GOV-ID) oder leer:
+  // bevorzugt undatierten deutschen Namen, sonst ersten Namen in der Liste
+  if (po.title === parsed.govId || !po.title) {
+    const primary = parsed.names.find(n => n.lang === 'deu') || parsed.names[0];
+    if (primary?.value) {
+      po.title = primary.value;
+      const inp = document.getElementById('pl-name');
+      if (inp) inp.value = po.title;
+      changes++;
+    }
   }
 
   // Eltern-Referenzen: Platzhalter-placeObjects anlegen
