@@ -661,7 +661,9 @@ function _placeNamesSvg(pnames) {
   for (const pn of dated) {
     const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
     if (f) { minY = Math.min(minY, f); maxY = Math.max(maxY, f); }
-    if (t) { minY = Math.min(minY, t); maxY = Math.max(maxY, t); }
+    // Offene Einträge (dateTo=null) bis heute einbeziehen
+    const tEff = t || (f ? cur : null);
+    if (tEff) { minY = Math.min(minY, tEff); maxY = Math.max(maxY, tEff); }
   }
   if (minY === Infinity) return '';
   if (maxY <= minY) maxY = minY + 10;
