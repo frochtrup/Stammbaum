@@ -73,6 +73,19 @@ function collectPlaces() {
       pl.type    = po.type || null;
       if (pl.lati === null && po.lat != null) { pl.lati = po.lat; pl.long = po.long; }
     }
+    // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
+    // (analog extraPlaces — damit manuell importierte Orte sichtbar sind).
+    for (const po of Object.values(AppState.db.placeObjects || {})) {
+      const key = po.title;
+      if (!key) continue;
+      if (!places.has(key)) {
+        places.set(key, {
+          name: key, personIds: new Set(), eventTypes: new Set(),
+          lati: po.lat ?? null, long: po.long ?? null,
+          placeId: po.id, type: po.type || null,
+        });
+      }
+    }
   }
   UIState._placesCache = places;
   return places;

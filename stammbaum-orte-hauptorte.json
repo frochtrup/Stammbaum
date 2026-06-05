@@ -1,0 +1,525 @@
+{
+  "version": 1,
+  "description": "Historische Orte: Ochtrup, Lehrte, Vechta – GOV-tiefe Verwaltungshierarchie mit Ämtern, Regierungsbezirken, napoleonischen Départements und Kirchspielen",
+  "placeObjects": {
+
+    "_po_de": {
+      "id": "_po_de",
+      "title": "Deutschland",
+      "type": "Country",
+      "lat": 51.1657,
+      "long": 10.4515,
+      "pnames": [
+        { "value": "Heiliges Römisches Reich Deutscher Nation", "lang": "deu", "dateFrom": "800",  "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "value": "Rheinbund",                                 "lang": "deu", "dateFrom": "1806", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "value": "Deutscher Bund",                            "lang": "deu", "dateFrom": "1815", "dateTo": "1866", "dateType": null, "_dateRaw": null },
+        { "value": "Norddeutscher Bund",                        "lang": "deu", "dateFrom": "1866", "dateTo": "1871", "dateType": null, "_dateRaw": null },
+        { "value": "Deutsches Reich",                           "lang": "deu", "dateFrom": "1871", "dateTo": "1945", "dateType": null, "_dateRaw": null },
+        { "value": "Deutschland",                               "lang": "deu", "dateFrom": "1945", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [],
+      "parentId": null
+    },
+
+    "_po_nrw": {
+      "id": "_po_nrw",
+      "title": "Nordrhein-Westfalen",
+      "type": "State",
+      "lat": 51.4332,
+      "long": 7.6616,
+      "pnames": [
+        { "value": "Nordrhein-Westfalen", "lang": "deu", "dateFrom": "1946", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de", "dateFrom": "1946", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_de"
+    },
+
+    "_po_nds": {
+      "id": "_po_nds",
+      "title": "Niedersachsen",
+      "type": "State",
+      "lat": 52.6368,
+      "long": 9.8451,
+      "pnames": [
+        { "value": "Niedersachsen", "lang": "deu", "dateFrom": "1946", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de", "dateFrom": "1946", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_de"
+    },
+
+    "_po_frankreich": {
+      "id": "_po_frankreich",
+      "title": "Kaiserreich Frankreich",
+      "type": "Country",
+      "lat": 46.23,
+      "long": 2.21,
+      "pnames": [
+        { "value": "Kaiserreich Frankreich (Napoleon I.)", "lang": "deu", "dateFrom": "1804", "dateTo": "1814", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [],
+      "parentId": null
+    },
+
+    "_po_kgr_westfalen": {
+      "id": "_po_kgr_westfalen",
+      "title": "Königreich Westfalen",
+      "type": "Region",
+      "lat": 51.5,
+      "long": 9.5,
+      "pnames": [
+        { "value": "Königreich Westfalen (Jérôme Bonaparte)", "lang": "deu", "dateFrom": "1807", "dateTo": "1813", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_frankreich", "dateFrom": "1807", "dateTo": "1813", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_frankreich"
+    },
+
+    "_po_kgr_holland": {
+      "id": "_po_kgr_holland",
+      "title": "Königreich Holland",
+      "type": "Region",
+      "lat": 52.3,
+      "long": 5.3,
+      "pnames": [
+        { "value": "Königreich Holland (Louis Bonaparte)", "lang": "deu", "dateFrom": "1806", "dateTo": "1810", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_frankreich", "dateFrom": "1806", "dateTo": "1810", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_frankreich"
+    },
+
+    "_po_bistum_muenster": {
+      "id": "_po_bistum_muenster",
+      "title": "Hochstift Münster",
+      "type": "Region",
+      "lat": 51.9607,
+      "long": 7.6261,
+      "pnames": [
+        { "value": "Hochstift Münster",   "lang": "deu", "dateFrom": "1180", "dateTo": "1803", "dateType": null, "_dateRaw": null },
+        { "value": "Fürstbistum Münster", "lang": "deu", "dateFrom": "1180", "dateTo": "1803", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de", "dateFrom": "1180", "dateTo": "1803", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_de"
+    },
+
+    "_po_bist_muenster_kirche": {
+      "id": "_po_bist_muenster_kirche",
+      "title": "Bistum Münster (kirchlich)",
+      "type": "Region",
+      "lat": 51.9607,
+      "long": 7.6261,
+      "pnames": [
+        { "value": "Bistum Münster", "lang": "deu", "dateFrom": "800", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de", "dateFrom": "800", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_de"
+    },
+
+    "_po_bist_hildesheim": {
+      "id": "_po_bist_hildesheim",
+      "title": "Bistum Hildesheim (kirchlich)",
+      "type": "Region",
+      "lat": 52.15,
+      "long": 9.95,
+      "pnames": [
+        { "value": "Bistum Hildesheim", "lang": "deu", "dateFrom": "815", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de", "dateFrom": "815", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_de"
+    },
+
+    "_po_prov_westfalen": {
+      "id": "_po_prov_westfalen",
+      "title": "Provinz Westfalen",
+      "type": "Province",
+      "lat": 51.7,
+      "long": 7.9,
+      "pnames": [
+        { "value": "Provinz Westfalen",    "lang": "deu", "dateFrom": "1815", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "value": "Land Westfalen-Lippe", "lang": "deu", "dateFrom": "1946", "dateTo": "1946", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de", "dateFrom": "1815", "dateTo": "1946", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_de"
+    },
+
+    "_po_regbez_muenster": {
+      "id": "_po_regbez_muenster",
+      "title": "Regierungsbezirk Münster",
+      "type": "District",
+      "lat": 51.96,
+      "long": 7.63,
+      "pnames": [
+        { "value": "Regierungsbezirk Münster", "lang": "deu", "dateFrom": "1815", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_prov_westfalen", "dateFrom": "1815", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_nrw",            "dateFrom": "1946", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nrw"
+    },
+
+    "_po_dep_lippe": {
+      "id": "_po_dep_lippe",
+      "title": "Département de la Lippe",
+      "type": "Province",
+      "lat": 51.9,
+      "long": 7.5,
+      "pnames": [
+        { "value": "Département de la Lippe", "lang": "fra", "dateFrom": "1811", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "value": "Lippe-Departement",       "lang": "deu", "dateFrom": "1811", "dateTo": "1813", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_frankreich", "dateFrom": "1811", "dateTo": "1813", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_frankreich"
+    },
+
+    "_po_grafschaft_steinfurt": {
+      "id": "_po_grafschaft_steinfurt",
+      "title": "Grafschaft Steinfurt",
+      "type": "County",
+      "lat": 52.1469,
+      "long": 7.3397,
+      "pnames": [
+        { "value": "Grafschaft Steinfurt",                   "lang": "deu", "dateFrom": "1150", "dateTo": "1804", "dateType": null, "_dateRaw": null },
+        { "value": "Fürstentum Bentheim-Steinfurt",          "lang": "deu", "dateFrom": "1804", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "value": "Grafschaft Bentheim-Steinfurt (Rheinb.)", "lang": "deu", "dateFrom": "1806", "dateTo": "1810", "dateType": null, "_dateRaw": null },
+        { "value": "Grafschaft Bentheim (Königr. Westfalen)","lang": "deu", "dateFrom": "1810", "dateTo": "1811", "dateType": null, "_dateRaw": null },
+        { "value": "Arrondissement Münster / Kanton Burgsteinfurt", "lang": "deu", "dateFrom": "1811", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "value": "Grafschaft Bentheim-Steinfurt (Restaur.)","lang": "deu", "dateFrom": "1813", "dateTo": "1815", "dateType": null, "_dateRaw": null },
+        { "value": "Kreis Steinfurt (Preußen)",               "lang": "deu", "dateFrom": "1816", "dateTo": "1974", "dateType": null, "_dateRaw": null },
+        { "value": "Kreis Steinfurt (nach Kreisreform)",      "lang": "deu", "dateFrom": "1975", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de",             "dateFrom": "1150", "dateTo": "1810", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_dep_lippe",       "dateFrom": "1811", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_de",             "dateFrom": "1813", "dateTo": "1815", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_prov_westfalen",  "dateFrom": "1815", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_nrw",            "dateFrom": "1946", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nrw"
+    },
+
+    "_po_amt_ochtrup": {
+      "id": "_po_amt_ochtrup",
+      "title": "Amt Ochtrup",
+      "type": "District",
+      "lat": 52.21,
+      "long": 7.19,
+      "pnames": [
+        { "value": "Kirchspiel Ochtrup / Amt Ochtrup (Grafschaft Steinfurt)", "lang": "deu", "dateFrom": "1300", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "value": "Amt Ochtrup (Preußen)",                                   "lang": "deu", "dateFrom": "1816", "dateTo": "1934", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_grafschaft_steinfurt", "dateFrom": "1300", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_grafschaft_steinfurt", "dateFrom": "1816", "dateTo": "1934", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_grafschaft_steinfurt"
+    },
+
+    "_po_kirchspiel_ochtrup": {
+      "id": "_po_kirchspiel_ochtrup",
+      "title": "Kirchspiel Ochtrup (St. Lambertus)",
+      "type": "Parish",
+      "lat": 52.2047,
+      "long": 7.1867,
+      "pnames": [
+        { "value": "Kirchspiel Ochtrup", "lang": "deu", "dateFrom": "1200", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_bist_muenster_kirche", "dateFrom": "1200", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_bist_muenster_kirche"
+    },
+
+    "_po_ochtrup": {
+      "id": "_po_ochtrup",
+      "title": "Ochtrup, Kreis Steinfurt, Nordrhein-Westfalen",
+      "type": "Town",
+      "lat": 52.2047,
+      "long": 7.1867,
+      "pnames": [
+        { "value": "Ochtdorp",  "lang": "deu", "dateFrom": "1050", "dateTo": "1400", "dateType": null, "_dateRaw": null },
+        { "value": "Ochtrop",   "lang": "deu", "dateFrom": "1250", "dateTo": "1600", "dateType": null, "_dateRaw": null },
+        { "value": "Ochtorf",   "lang": "deu", "dateFrom": "1400", "dateTo": "1700", "dateType": null, "_dateRaw": null },
+        { "value": "Ochtrup",   "lang": "deu", "dateFrom": "1700", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_amt_ochtrup",          "dateFrom": "1300", "dateTo": "1810", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_dep_lippe",             "dateFrom": "1811", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_amt_ochtrup",           "dateFrom": "1816", "dateTo": "1934", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_grafschaft_steinfurt",  "dateFrom": "1934", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_grafschaft_steinfurt"
+    },
+
+    "_po_prov_hannover": {
+      "id": "_po_prov_hannover",
+      "title": "Provinz Hannover",
+      "type": "Province",
+      "lat": 52.37,
+      "long": 9.73,
+      "pnames": [
+        { "value": "Kurfürstentum Braunschweig-Lüneburg", "lang": "deu", "dateFrom": "1692", "dateTo": "1714", "dateType": null, "_dateRaw": null },
+        { "value": "Kurfürstentum Hannover",              "lang": "deu", "dateFrom": "1714", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "value": "Königreich Hannover",                  "lang": "deu", "dateFrom": "1814", "dateTo": "1866", "dateType": null, "_dateRaw": null },
+        { "value": "Provinz Hannover (Preußen)",           "lang": "deu", "dateFrom": "1866", "dateTo": "1946", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de",             "dateFrom": "1692", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_kgr_westfalen",  "dateFrom": "1807", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_de",             "dateFrom": "1814", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_nds",            "dateFrom": "1946", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nds"
+    },
+
+    "_po_regbez_hannover": {
+      "id": "_po_regbez_hannover",
+      "title": "Regierungsbezirk Hannover",
+      "type": "District",
+      "lat": 52.37,
+      "long": 9.73,
+      "pnames": [
+        { "value": "Regierungsbezirk Hannover", "lang": "deu", "dateFrom": "1866", "dateTo": "1978", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_prov_hannover", "dateFrom": "1866", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_nds",           "dateFrom": "1946", "dateTo": "1978", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nds"
+    },
+
+    "_po_dep_aller": {
+      "id": "_po_dep_aller",
+      "title": "Département de l'Aller",
+      "type": "Province",
+      "lat": 52.5,
+      "long": 9.8,
+      "pnames": [
+        { "value": "Département de l'Aller", "lang": "fra", "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "value": "Aller-Departement",      "lang": "deu", "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_frankreich", "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_frankreich"
+    },
+
+    "_po_amt_burgdorf": {
+      "id": "_po_amt_burgdorf",
+      "title": "Amt Burgdorf",
+      "type": "District",
+      "lat": 52.45,
+      "long": 10.01,
+      "pnames": [
+        { "value": "Amt Burgdorf (Hannover)",        "lang": "deu", "dateFrom": "1600", "dateTo": "1859", "dateType": null, "_dateRaw": null },
+        { "value": "Amt Burgdorf (Königreich Hannover)", "lang": "deu", "dateFrom": "1814", "dateTo": "1859", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_prov_hannover", "dateFrom": "1600", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_dep_aller",     "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_prov_hannover", "dateFrom": "1814", "dateTo": "1859", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_prov_hannover"
+    },
+
+    "_po_kreis_burgdorf": {
+      "id": "_po_kreis_burgdorf",
+      "title": "Kreis Burgdorf",
+      "type": "County",
+      "lat": 52.45,
+      "long": 10.01,
+      "pnames": [
+        { "value": "Kreis Burgdorf",           "lang": "deu", "dateFrom": "1859", "dateTo": "1974", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_prov_hannover",    "dateFrom": "1859", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_regbez_hannover",  "dateFrom": "1866", "dateTo": "1974", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_nds",              "dateFrom": "1946", "dateTo": "1974", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nds"
+    },
+
+    "_po_region_hannover": {
+      "id": "_po_region_hannover",
+      "title": "Region Hannover",
+      "type": "District",
+      "lat": 52.37,
+      "long": 9.73,
+      "pnames": [
+        { "value": "Landkreis Hannover", "lang": "deu", "dateFrom": "1974", "dateTo": "2001", "dateType": null, "_dateRaw": null },
+        { "value": "Region Hannover",    "lang": "deu", "dateFrom": "2001", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_nds", "dateFrom": "1974", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nds"
+    },
+
+    "_po_kirchspiel_lehrte": {
+      "id": "_po_kirchspiel_lehrte",
+      "title": "Kirchspiel Lehrte (evangelisch-lutherisch)",
+      "type": "Parish",
+      "lat": 52.3728,
+      "long": 9.9775,
+      "pnames": [
+        { "value": "Kirchspiel Lehrte", "lang": "deu", "dateFrom": "1200", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_bist_hildesheim", "dateFrom": "1200", "dateTo": "1568", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_prov_hannover",   "dateFrom": "1568", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_prov_hannover"
+    },
+
+    "_po_lehrte": {
+      "id": "_po_lehrte",
+      "title": "Lehrte, Region Hannover, Niedersachsen",
+      "type": "Town",
+      "lat": 52.3728,
+      "long": 9.9775,
+      "pnames": [
+        { "value": "Lerte",    "lang": "deu", "dateFrom": "1146", "dateTo": "1500", "dateType": null, "_dateRaw": null },
+        { "value": "Lehrdte",  "lang": "deu", "dateFrom": "1500", "dateTo": "1800", "dateType": null, "_dateRaw": null },
+        { "value": "Lehrte",   "lang": "deu", "dateFrom": "1800", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_amt_burgdorf",     "dateFrom": "1146", "dateTo": "1809", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_dep_aller",        "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_amt_burgdorf",     "dateFrom": "1814", "dateTo": "1859", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_kreis_burgdorf",   "dateFrom": "1859", "dateTo": "1974", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_region_hannover",  "dateFrom": "1974", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_region_hannover"
+    },
+
+    "_po_hztm_oldenburg": {
+      "id": "_po_hztm_oldenburg",
+      "title": "Herzogtum Oldenburg",
+      "type": "Region",
+      "lat": 53.1439,
+      "long": 8.2139,
+      "pnames": [
+        { "value": "Grafschaft Oldenburg",   "lang": "deu", "dateFrom": "1100", "dateTo": "1776", "dateType": null, "_dateRaw": null },
+        { "value": "Herzogtum Oldenburg",    "lang": "deu", "dateFrom": "1776", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "value": "Fürstentum Oldenburg",   "lang": "deu", "dateFrom": "1806", "dateTo": "1810", "dateType": null, "_dateRaw": null },
+        { "value": "Herzogtum Oldenburg",    "lang": "deu", "dateFrom": "1813", "dateTo": "1918", "dateType": null, "_dateRaw": null },
+        { "value": "Freistaat Oldenburg",    "lang": "deu", "dateFrom": "1918", "dateTo": "1946", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_de",           "dateFrom": "1100", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_kgr_holland",  "dateFrom": "1806", "dateTo": "1810", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_frankreich",   "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_de",           "dateFrom": "1813", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_nds",          "dateFrom": "1946", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nds"
+    },
+
+    "_po_dep_bouches_ems": {
+      "id": "_po_dep_bouches_ems",
+      "title": "Département des Bouches-de-l'Ems",
+      "type": "Province",
+      "lat": 52.8,
+      "long": 8.0,
+      "pnames": [
+        { "value": "Département des Bouches-de-l'Ems", "lang": "fra", "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "value": "Department der Emsmündungen",       "lang": "deu", "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "value": "Departement Zuider-Zee (Zuyderzee)", "lang": "deu", "dateFrom": "1807", "dateTo": "1810", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_kgr_holland",  "dateFrom": "1807", "dateTo": "1810", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_frankreich",   "dateFrom": "1810", "dateTo": "1813", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_frankreich"
+    },
+
+    "_po_amt_vechta": {
+      "id": "_po_amt_vechta",
+      "title": "Amt Vechta",
+      "type": "District",
+      "lat": 52.73,
+      "long": 8.28,
+      "pnames": [
+        { "value": "Amt Vechta (Hochstift Münster)", "lang": "deu", "dateFrom": "1235", "dateTo": "1803", "dateType": null, "_dateRaw": null },
+        { "value": "Amt Vechta (Oldenburg)",          "lang": "deu", "dateFrom": "1803", "dateTo": "1858", "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_bistum_muenster",   "dateFrom": "1235", "dateTo": "1803", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_dep_bouches_ems",   "dateFrom": "1807", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_hztm_oldenburg",    "dateFrom": "1803", "dateTo": "1858", "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_hztm_oldenburg"
+    },
+
+    "_po_lkr_vechta": {
+      "id": "_po_lkr_vechta",
+      "title": "Landkreis Vechta",
+      "type": "County",
+      "lat": 52.73,
+      "long": 8.29,
+      "pnames": [
+        { "value": "Kreis Vechta (Oldenburg)",  "lang": "deu", "dateFrom": "1858", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "value": "Landkreis Vechta",          "lang": "deu", "dateFrom": "1946", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_hztm_oldenburg", "dateFrom": "1858", "dateTo": "1946", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_nds",            "dateFrom": "1946", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_nds"
+    },
+
+    "_po_kirchspiel_vechta": {
+      "id": "_po_kirchspiel_vechta",
+      "title": "Kirchspiel Vechta (St. Georg, katholisch)",
+      "type": "Parish",
+      "lat": 52.7264,
+      "long": 8.2864,
+      "pnames": [
+        { "value": "Kirchspiel Vechta / Pfarrei St. Georg", "lang": "deu", "dateFrom": "1200", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_bist_muenster_kirche", "dateFrom": "1200", "dateTo": null, "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_bist_muenster_kirche"
+    },
+
+    "_po_vechta": {
+      "id": "_po_vechta",
+      "title": "Vechta, Landkreis Vechta, Niedersachsen",
+      "type": "Town",
+      "lat": 52.7264,
+      "long": 8.2864,
+      "pnames": [
+        { "value": "Veghte",   "lang": "deu", "dateFrom": "1160", "dateTo": "1350", "dateType": null, "_dateRaw": null },
+        { "value": "Vehte",    "lang": "deu", "dateFrom": "1200", "dateTo": "1500", "dateType": null, "_dateRaw": null },
+        { "value": "Vechtae",  "lang": "lat", "dateFrom": "1235", "dateTo": "1700", "dateType": null, "_dateRaw": null },
+        { "value": "Vechta",   "lang": "deu", "dateFrom": "1500", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "enclosedBy": [
+        { "placeId": "_po_amt_vechta",       "dateFrom": "1160", "dateTo": "1806", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_dep_bouches_ems",  "dateFrom": "1807", "dateTo": "1813", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_amt_vechta",       "dateFrom": "1813", "dateTo": "1858", "dateType": null, "_dateRaw": null },
+        { "placeId": "_po_lkr_vechta",       "dateFrom": "1858", "dateTo": null,   "dateType": null, "_dateRaw": null }
+      ],
+      "parentId": "_po_lkr_vechta"
+    }
+
+  },
+  "extraPlaces": {}
+}
