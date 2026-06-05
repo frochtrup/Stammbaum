@@ -2218,7 +2218,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   text-overflow: ellipsis; white-space: nowrap;
 }
 
-.btn-row-col { flex-direction: column; gap: 10px; }
+.btn-row-col { flex-direction: column; gap: 10px; align-items: stretch; }
 
 .empty-hint {
   padding: 24px 16px; text-align: center;
