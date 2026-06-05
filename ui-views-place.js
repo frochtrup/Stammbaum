@@ -28,27 +28,28 @@ function collectPlaces() {
   if (UIState._placesCache) return UIState._placesCache;
   const places = new Map();
 
-  function addPlace(placeName, personId, eventType, lati, long) {
+  function addPlace(placeName, personId, eventType, lati, long, placeId) {
     if (!placeName || !placeName.trim()) return;
     const key = placeName.trim();
     if (!places.has(key)) places.set(key, { name: key, personIds: new Set(), eventTypes: new Set(), lati: null, long: null });
     const pl = places.get(key);
     if (personId) pl.personIds.add(personId);
     if (eventType) pl.eventTypes.add(eventType);
-    // Store first found geo coords
     if (pl.lati === null && lati !== null && lati !== undefined) { pl.lati = lati; pl.long = long; }
+    // placeId direkt aus ev.placeId — Vorrang vor findByName (deckt periodengerechte Hierarchie-Strings ab)
+    if (placeId && !pl.placeId) pl.placeId = placeId;
   }
 
   for (const p of Object.values(AppState.db.individuals)) {
-    addPlace(p.birth.place, p.id, 'Geburt', p.birth.lati, p.birth.long);
-    addPlace(p.death.place, p.id, 'Tod', p.death.lati, p.death.long);
-    addPlace(p.chr.place,   p.id, 'Taufe', p.chr.lati, p.chr.long);
-    addPlace(p.buri.place,  p.id, 'Beerdigung', p.buri.lati, p.buri.long);
-    for (const ev of p.events) addPlace(ev.place, p.id, ev.eventType || ev.type, ev.lati, ev.long);
+    addPlace(p.birth.place, p.id, 'Geburt',     p.birth.lati, p.birth.long, p.birth.placeId);
+    addPlace(p.death.place, p.id, 'Tod',        p.death.lati, p.death.long, p.death.placeId);
+    addPlace(p.chr.place,   p.id, 'Taufe',      p.chr.lati,   p.chr.long,   p.chr.placeId);
+    addPlace(p.buri.place,  p.id, 'Beerdigung', p.buri.lati,  p.buri.long,  p.buri.placeId);
+    for (const ev of p.events) addPlace(ev.place, p.id, ev.eventType || ev.type, ev.lati, ev.long, ev.placeId);
   }
   for (const f of Object.values(AppState.db.families)) {
-    addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long);
-    addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long);
+    addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long, f.marr.placeId);
+    addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long, f.marr.placeId);
   }
   // Manuell gesetzte Koordinaten (extraPlaces) einmischen — haben Vorrang vor GEDCOM-Werten
   for (const ep of Object.values(AppState.db.extraPlaces)) {
@@ -66,11 +67,13 @@ function collectPlaces() {
   const _reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
   if (_reg) {
     for (const pl of places.values()) {
-      const id = _reg.findByName(pl.name);
+      // placeId aus ev.placeId hat Vorrang; findByName als Fallback für reine String-Orte
+      const id = pl.placeId || _reg.findByName(pl.name);
       if (!id) continue;
       const po = _reg.byId[id];
+      if (!po) continue;
       pl.placeId = id;
-      pl.type    = po.type || null;
+      if (!pl.type) pl.type = po.type || null;
       if (pl.lati === null && po.lat != null) { pl.lati = po.lat; pl.long = po.long; }
     }
     // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
