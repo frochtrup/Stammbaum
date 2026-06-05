@@ -26,8 +26,8 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v821 · Cache: `stammbaum-v821` · `test-unit.js` = 198 Tests grün
-**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819). · **v820: PLACE-HIST P5a** — Ort-Steckbrief: Ereignisse gruppiert nach Typ + placeId-Matching (P5a-1), Quellen-Sektion (P5a-3), Namens-Timeline SVG (P5a-4), Mini-Karte Leaflet (P5a-5). · **v821: PLACE-HIST P5d** — Geo-Plausibilitäts-Validator (⚠-Button im Orte-Tab): Koordinaten-BBox, Zeitachsen-Konsistenz, enclosedBy-Zirkel.
+**sw-Version:** v822 · Cache: `stammbaum-v822` · `test-unit.js` = 198 Tests grün
+**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819). · **v820: PLACE-HIST P5a** — Ort-Steckbrief: Ereignisse gruppiert nach Typ + placeId-Matching (P5a-1), Quellen-Sektion (P5a-3), Namens-Timeline SVG (P5a-4), Mini-Karte Leaflet (P5a-5). · **v821: PLACE-HIST P5d** — Geo-Plausibilitäts-Validator (⚠-Button). · **v822: PLACE-HIST P5e** — Geo-Plausibilitäts-Validator (⚠-Button im Orte-Tab): Koordinaten-BBox, Zeitachsen-Konsistenz, enclosedBy-Zirkel.
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -219,12 +219,12 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | P5d-3 | **Event-Ort-Mismatch** — `resolveAsOf(birthYear)` vs. PLAC-String. | angedacht |
 | P5d-4 | **UI** — ⚠-Button im Orte-Tab-Header; kollabierbare Warnliste mit Typ-Code + Direktsprung. | ✅ |
 
-#### P5e — Orts-Kontextsatz in Story/Buch *(angedacht)*
+#### P5e — Orts-Kontextsatz in Story/Buch ✅ *(sw v822)*
 
-| Sub | Inhalt | Aufwand |
+| Sub | Inhalt | Status |
 |---|---|---|
-| P5e-1 | **`buildPlaceContextSentence(placeId, year)`** — „{Name} war {year} ein {Typ} in {enclosureChain}." | S |
-| P5e-2 | **Story-Integration** — bei BIRT/DEAT/MARR mit `ev.placeId` → Kontextsatz anhängen. | S |
+| P5e-1 | **`buildPlaceContextSentence(placeId, year)`** — „{Name} ({year}) war — ein {Typ} in {enclosureChain}." Nutzt `resolveAsOf` + `enclosureChainAsOf`. | ✅ |
+| P5e-2 | **Story-Integration** — bei BIRT/CHR/DEAT/BURI mit `ev.placeId` → Kontextsatz nach dem Event-Satz; CSP-safe via `_esc()`. | ✅ |
 
 #### P5f — Orts-Hypothesen (`_HYPO`) *(angedacht)*
 

@@ -1096,6 +1096,44 @@ function placeMergeGroup(gidx) {
 }
 
 // ─────────────────────────────────────
+//  P5e — ORTS-KONTEXTSATZ
+// ─────────────────────────────────────
+
+// Gibt einen deutschen Kontextsatz zurück: „{Name} war im Jahr {year} ein {Typ} in {enclosureChain}."
+// Gibt '' zurück wenn kein placeObject oder keine hilfreichen Daten vorhanden.
+function buildPlaceContextSentence(placeId, year) {
+  if (!placeId || typeof getPlaceRegistry !== 'function') return '';
+  const reg = getPlaceRegistry();
+  const po  = reg?.byId?.[placeId];
+  if (!po) return '';
+
+  const TYPE_DE = {
+    Country:'ein Land', State:'ein Bundesland', Region:'eine Region', Province:'eine Provinz',
+    County:'ein Kreis', District:'ein Bezirk', Municipality:'eine Gemeinde', City:'eine Stadt',
+    Town:'eine Stadt', Village:'ein Dorf', Hamlet:'ein Weiler', Parish:'eine Pfarrei',
+    Borough:'ein Stadtteil', Locality:'eine Ortslage', Neighborhood:'eine Nachbarschaft',
+    Building:'ein Gebäude', Farm:'ein Hof', Cemetery:'ein Friedhof', Church:'eine Kirche',
+  };
+  const typePart = TYPE_DE[po.type] ? ` ${TYPE_DE[po.type]}` : '';
+
+  // Name zum Zeitpunkt des Events (resolveAsOf), Fallback auf title
+  const rawName = (typeof year === 'number' && reg.resolveAsOf)
+    ? (reg.resolveAsOf(placeId, year) || po.title || '')
+    : (po.title || '');
+  // Nur ersten Teil des vollständigen Namens (vor dem ersten Komma)
+  const name = rawName.split(',')[0].trim();
+  if (!name) return '';
+
+  // Zugehörigkeitskette (ohne den Ort selbst)
+  const chain = reg.enclosureChainAsOf ? reg.enclosureChainAsOf(placeId, year ?? null).slice(1) : [];
+  const chainPart = chain.length ? ` in ${chain.join(', ')}` : '';
+
+  if (!typePart && !chainPart) return '';
+  const yearStr = year ? ` ${year}` : '';
+  return `${name} war${yearStr}${typePart}${chainPart}.`;
+}
+
+// ─────────────────────────────────────
 //  P5d — GEO-PLAUSIBILITÄTS-VALIDATOR
 // ─────────────────────────────────────
 

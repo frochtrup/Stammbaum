@@ -124,12 +124,22 @@ ${lifespan}
         const bDate = _atDate({ date: bRaw });
         sentences.push(`${_esc(p.name || pr.Er)} wurde${bDate}${bPlace} geboren.`);
       }
+      // P5e: Orts-Kontextsatz
+      if (p.birth?.placeId && typeof buildPlaceContextSentence === 'function') {
+        const ctx = buildPlaceContextSentence(p.birth.placeId, _yearFromDate(bRaw));
+        if (ctx) sentences.push(_esc(ctx));
+      }
     }
 
     if (p.chr?.seen) {
       const cDate  = _atDate({ date: p.chr?.date });
       const cPlace = p.chr.place ? ' in ' + _esc(_shortPlace(p.chr.place)) : '';
       sentences.push(`${pr.Er} wurde${cDate}${cPlace} getauft.`);
+      // P5e: Orts-Kontextsatz
+      if (p.chr?.placeId && typeof buildPlaceContextSentence === 'function') {
+        const ctx = buildPlaceContextSentence(p.chr.placeId, _yearFromDate(p.chr?.date));
+        if (ctx) sentences.push(_esc(ctx));
+      }
     }
 
     const { father, mother } = _getParents(p);
@@ -320,11 +330,21 @@ ${lifespan}
         ? (p.death.cause.length > 30 ? ' (' + _esc(p.death.cause) + ')' : ' an ' + _esc(p.death.cause))
         : '';
       sentences.push(`${_esc(p.name || pr.Er)} verstarb${dDate}${dPlace}${causeFull}.`);
+      // P5e: Orts-Kontextsatz
+      if (p.death?.placeId && typeof buildPlaceContextSentence === 'function') {
+        const ctx = buildPlaceContextSentence(p.death.placeId, _yearFromDate(p.death.date));
+        if (ctx) sentences.push(_esc(ctx));
+      }
     }
     if (p.buri?.seen || p.buri?.place) {
       const bDate  = _atDate({ date: p.buri.date });
       const bPlace = p.buri.place ? ' in ' + _esc(_shortPlace(p.buri.place))  : '';
       sentences.push(`${pr.Er} wurde${bDate}${bPlace} begraben.`);
+      // P5e: Orts-Kontextsatz
+      if (p.buri?.placeId && typeof buildPlaceContextSentence === 'function') {
+        const ctx = buildPlaceContextSentence(p.buri.placeId, _yearFromDate(p.buri.date));
+        if (ctx) sentences.push(_esc(ctx));
+      }
     }
     if (!sentences.length) return '';
     return `<section class="story-section story-death"><p>${sentences.join(' ')}</p></section>`;
