@@ -3765,6 +3765,7 @@ html[data-theme="dark"] {
 
 .icon-btn--active { background: var(--accent, #6a8f3c) !important; color: #fff !important; }
 .place-var-badge { background: var(--accent-muted, #d4e6b5); color: var(--accent-dark, #3a5c1a); }
+.place-gov-badge { background: #fff3cd; color: #856404; border-color: #ffc107; }
 
 /* String→PlaceObject Link-Modal */
 .slink-section { margin-bottom: 16px; }

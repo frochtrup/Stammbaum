@@ -68,6 +68,7 @@ const _CLICK_MAP = {
   addPlaceTrans:           ()  => addPlaceTrans(),
   deletePlaceTrans:        el  => deletePlaceTrans(+el.dataset.idx),
   togglePlaceGroupMode:    ()  => togglePlaceGroupMode(),
+  togglePlaceGovFilter:    ()  => togglePlaceGovFilter(),
   openPlaceMergeModal:     ()  => openPlaceMergeModal(),
   placeMergeGroup:         el  => placeMergeGroup(el.dataset.gidx),
   openPlaceStringLinkModal: el => openPlaceStringLinkModal(el?.dataset?.preselect || null),

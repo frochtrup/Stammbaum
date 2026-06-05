@@ -15,8 +15,9 @@ const PLACE_TYPE_ICON = {
   Village:'🏘', Town:'🏘', City:'🏙', Country:'🌍',
 };
 
-let _placeTypeFilter  = '';
-let _placeGroupMode   = false; // true = nach PlaceObject gruppiert (aktueller Titel)
+let _placeTypeFilter   = '';
+let _placeGroupMode    = false; // true = nach PlaceObject gruppiert (aktueller Titel)
+let _placeGovFilter    = false; // true = nur unaufgelöste GOV-Platzhalter
 let _placeDetailMap   = null;  // P5a-5: Leaflet-Instanz für Mini-Karte im Steckbrief
 
 function setPlaceTypeFilter(val) {
@@ -48,6 +49,14 @@ function togglePlaceGroupMode() {
   _placeGroupMode = !_placeGroupMode;
   const btn = document.getElementById('placeGroupBtn');
   if (btn) btn.classList.toggle('icon-btn--active', _placeGroupMode);
+  const q = document.getElementById('searchPlaces')?.value || '';
+  filterPlaces(q);
+}
+
+function togglePlaceGovFilter() {
+  _placeGovFilter = !_placeGovFilter;
+  const btn = document.getElementById('placeGovFilterBtn');
+  if (btn) btn.classList.toggle('icon-btn--active', _placeGovFilter);
   const q = document.getElementById('searchPlaces')?.value || '';
   filterPlaces(q);
 }
@@ -134,6 +143,7 @@ function collectPlaces() {
       pl.placeId = id;
       if (!pl.type) pl.type = po.type || null;
       if (pl.lati === null && po.lat != null) { pl.lati = po.lat; pl.long = po.long; }
+      if (po._govUnresolved) pl._govUnresolved = true;
     }
     // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
     // (analog extraPlaces — damit manuell importierte Orte sichtbar sind).
@@ -145,6 +155,7 @@ function collectPlaces() {
           name: key, personIds: new Set(), eventTypes: new Set(),
           lati: po.lat ?? null, long: po.long ?? null,
           placeId: po.id, type: po.type || null,
+          _govUnresolved: po._govUnresolved || false,
         });
       }
     }
@@ -176,10 +187,12 @@ function renderPlaceList(sorted) {
     const typeBadge = typeLbl ? `<span class="place-type-badge">${esc(typeLbl)}</span>` : '';
     const varBadge  = (place._variantCount > 1)
       ? `<span class="place-type-badge place-var-badge">${place._variantCount} Varianten</span>` : '';
+    const govBadge  = place._govUnresolved
+      ? `<span class="place-type-badge place-gov-badge">GOV?</span>` : '';
     html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.name)}">
       <div class="p-avatar p-avatar--md">${typeIcon}</div>
       <div class="p-info">
-        <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}${varBadge}</div>
+        <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}${varBadge}${govBadge}</div>
         <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte' : ''}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -192,6 +205,7 @@ function filterPlaces(q) {
   const lower = q.toLowerCase().trim();
   let all = [...collectPlaces().values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
   if (_placeTypeFilter) all = all.filter(pl => pl.type === _placeTypeFilter);
+  if (_placeGovFilter)  all = all.filter(pl => pl._govUnresolved);
   if (_placeGroupMode) all = _groupPlacesByObject(all);
   if (!lower) { renderPlaceList(all); return; }
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
