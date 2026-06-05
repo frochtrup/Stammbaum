@@ -26,8 +26,8 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v820 · Cache: `stammbaum-v820` · `test-unit.js` = 198 Tests grün
-**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819). · **v820: PLACE-HIST P5a** — Ort-Steckbrief: Ereignisse gruppiert nach Typ + placeId-Matching (P5a-1), Quellen-Sektion (P5a-3), Namens-Timeline SVG (P5a-4), Mini-Karte Leaflet (P5a-5).
+**sw-Version:** v821 · Cache: `stammbaum-v821` · `test-unit.js` = 198 Tests grün
+**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819). · **v820: PLACE-HIST P5a** — Ort-Steckbrief: Ereignisse gruppiert nach Typ + placeId-Matching (P5a-1), Quellen-Sektion (P5a-3), Namens-Timeline SVG (P5a-4), Mini-Karte Leaflet (P5a-5). · **v821: PLACE-HIST P5d** — Geo-Plausibilitäts-Validator (⚠-Button im Orte-Tab): Koordinaten-BBox, Zeitachsen-Konsistenz, enclosedBy-Zirkel.
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -210,14 +210,14 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | P5c-2 | **Ereignis-Tabelle** — Taufen/Trauungen/Bestattungen der gewählten Pfarrei + untergeordnete Orte (enclosureChainAsOf); sortierbar. | M |
 | P5c-3 | **Export** — CSV-Download. | S |
 
-#### P5d — Geo-Plausibilitäts-Validator *(angedacht)*
+#### P5d — Geo-Plausibilitäts-Validator ✅ *(sw v821)*
 
-| Sub | Inhalt | Aufwand |
+| Sub | Inhalt | Status |
 |---|---|---|
-| P5d-1 | **Koordinaten-Plausibilität** — außerhalb D/Europa-Bounding-Box flaggen. | S |
-| P5d-2 | **Zeitachsen-Konsistenz** — `dateFrom > dateTo`; überlappende pnames-Perioden; enclosedBy-Zirkel. | S |
-| P5d-3 | **Event-Ort-Mismatch** — `resolveAsOf(birthYear)` weicht von gespeichertem PLAC-String ab. | M |
-| P5d-4 | **UI** — Warnliste unter Orte-Tab-Header; Direktsprung zum betroffenen placeObject. | S |
+| P5d-1 | **Koordinaten-Plausibilität** — außerhalb Europa-BBox (27–72°N, 25°W–50°O) flaggen. | ✅ |
+| P5d-2 | **Zeitachsen-Konsistenz** — `dateFrom > dateTo` in pnames[]; überlappende Perioden gleicher Sprache; enclosedBy-Zirkel. | ✅ |
+| P5d-3 | **Event-Ort-Mismatch** — `resolveAsOf(birthYear)` vs. PLAC-String. | angedacht |
+| P5d-4 | **UI** — ⚠-Button im Orte-Tab-Header; kollabierbare Warnliste mit Typ-Code + Direktsprung. | ✅ |
 
 #### P5e — Orts-Kontextsatz in Story/Buch *(angedacht)*
 

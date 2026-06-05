@@ -1094,3 +1094,124 @@ function placeMergeGroup(gidx) {
     if (typeof renderPlaceList === 'function') renderPlaceList();
   }
 }
+
+// ─────────────────────────────────────
+//  P5d — GEO-PLAUSIBILITÄTS-VALIDATOR
+// ─────────────────────────────────────
+
+// Bounding-Box für „plausible" Koordinaten (Europa + angrenzende Regionen)
+const _GEO_BBOX = { minLat: 27, maxLat: 72, minLon: -25, maxLon: 50 };
+
+// Liefert Array von { placeId, title, code, msg } Warnungen
+function validatePlaces() {
+  const warnings = [];
+  const pos = AppState.db?.placeObjects;
+  if (!pos) return warnings;
+
+  const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+
+  for (const po of Object.values(pos)) {
+    const title = po.title || po.id;
+
+    // P5d-1: Koordinaten außerhalb Bounding-Box
+    if (po.lat != null && po.long != null) {
+      if (po.lat < _GEO_BBOX.minLat || po.lat > _GEO_BBOX.maxLat ||
+          po.long < _GEO_BBOX.minLon || po.long > _GEO_BBOX.maxLon) {
+        warnings.push({ placeId: po.id, title, code: 'BBOX',
+          msg: `Koordinaten außerhalb Europa: ${po.lat.toFixed(3)}, ${po.long.toFixed(3)}` });
+      }
+    }
+
+    // P5d-2a: dateFrom > dateTo in pnames[]
+    for (const pn of (po.pnames || [])) {
+      const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
+      if (f && t && f > t) {
+        warnings.push({ placeId: po.id, title, code: 'PNAME_DATE',
+          msg: `Name „${pn.value}": Startjahr ${f} > Endjahr ${t}` });
+      }
+    }
+
+    // P5d-2b: Überlappende Perioden gleicher Sprache in pnames[]
+    const byLang = {};
+    for (const pn of (po.pnames || [])) {
+      const lang = pn.lang || '';
+      const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
+      if (!f && !t) continue;
+      if (!byLang[lang]) byLang[lang] = [];
+      byLang[lang].push({ f: f || 0, t: t || 9999, val: pn.value });
+    }
+    for (const [lang, spans] of Object.entries(byLang)) {
+      for (let i = 0; i < spans.length; i++) {
+        for (let j = i + 1; j < spans.length; j++) {
+          if (spans[i].f < spans[j].t && spans[j].f < spans[i].t) {
+            warnings.push({ placeId: po.id, title, code: 'PNAME_OVERLAP',
+              msg: `Namen „${spans[i].val}" und „${spans[j].val}"${lang ? ` (${lang})` : ''} überlappen zeitlich` });
+          }
+        }
+      }
+    }
+
+    // P5d-2c: enclosedBy-Zirkel (A → … → A)
+    const _visited = new Set([po.id]);
+    const _checkCycle = (pid, depth) => {
+      if (depth > 10) return false;
+      const parent = pos[pid];
+      if (!parent) return false;
+      for (const enc of (parent.enclosedBy || [])) {
+        if (!enc.placeId) continue;
+        if (_visited.has(enc.placeId)) return true;
+        _visited.add(enc.placeId);
+        if (_checkCycle(enc.placeId, depth + 1)) return true;
+      }
+      return false;
+    };
+    for (const enc of (po.enclosedBy || [])) {
+      if (!enc.placeId) continue;
+      if (_visited.has(enc.placeId) || _checkCycle(enc.placeId, 0)) {
+        warnings.push({ placeId: po.id, title, code: 'CYCLE',
+          msg: `Zirkelreferenz in „Teil von"-Kette` });
+        break;
+      }
+    }
+  }
+
+  return warnings;
+}
+
+let _placeValidatorOpen = false;
+
+function togglePlaceValidator() {
+  _placeValidatorOpen = !_placeValidatorOpen;
+  _renderPlaceValidator();
+  const btn = document.getElementById('placeValidatorBtn');
+  if (btn) btn.classList.toggle('icon-btn--active', _placeValidatorOpen);
+}
+
+function _renderPlaceValidator() {
+  const panel = document.getElementById('placeValidatorPanel');
+  if (!panel) return;
+  if (!_placeValidatorOpen) { panel.hidden = true; return; }
+
+  const warnings = validatePlaces();
+  if (warnings.length === 0) {
+    panel.innerHTML = `<div class="place-validator-ok">✓ Keine Plausibilitätsprobleme gefunden</div>`;
+  } else {
+    const CODE_LBL = { BBOX: '🌍 Koordinaten', PNAME_DATE: '📅 Datumsfeld', PNAME_OVERLAP: '📅 Überlappung', CYCLE: '🔄 Zirkel' };
+    let rows = warnings.map(w =>
+      `<div class="place-validator-row fact-row--clickable" data-action="showPlaceByIdValidator" data-pid="${esc(w.placeId)}">
+        <span class="place-validator-code">${CODE_LBL[w.code] || w.code}</span>
+        <span class="place-validator-title">${esc(w.title)}</span>
+        <span class="place-validator-msg">${esc(w.msg)}</span>
+        <span class="p-arrow">›</span>
+      </div>`
+    ).join('');
+    panel.innerHTML = `<div class="place-validator-header">⚠ ${warnings.length} Hinweis${warnings.length !== 1 ? 'e' : ''}</div>${rows}`;
+  }
+  panel.hidden = false;
+}
+
+function showPlaceByIdValidator(placeId) {
+  const po = AppState.db?.placeObjects?.[placeId];
+  if (!po) return;
+  showPlaceDetail(po.title || placeId);
+}

@@ -3778,6 +3778,14 @@ html[data-theme="dark"] {
 .place-map-coords { margin-top: 4px; font-size: 11px; color: var(--text-muted, #888); }
 .place-event-section { margin-top: 6px; }
 .place-src-repo { font-size: 11px; color: var(--text-muted, #888); }
+/* P5d: Geo-Plausibilitäts-Validator */
+.place-validator-header { padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--c-warn, #b8860b); background: var(--bg-warn, #fff8e1); border-bottom: 1px solid var(--border, #e0d8c8); }
+.place-validator-ok { padding: 8px 16px; font-size: 13px; color: var(--c-ok, #2e7d32); background: var(--bg-ok, #f1f8e9); border-bottom: 1px solid var(--border, #e0d8c8); }
+.place-validator-row { display: flex; align-items: baseline; gap: 6px; padding: 7px 16px; border-bottom: 1px solid var(--border, #e0d8c8); font-size: 12px; }
+.place-validator-code { flex-shrink: 0; font-weight: 600; color: var(--c-warn, #b8860b); min-width: 100px; }
+.place-validator-title { font-weight: 500; flex-shrink: 0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-validator-msg { flex: 1; color: var(--text-muted, #888); font-size: 11px; }
+.icon-btn--active { color: var(--c-gold, #b8860b) !important; }
 .place-edit-add-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .pl-field-sm { max-width: 72px; min-width: 0; }
 .pl-add-btn { padding: 5px 14px; flex-shrink: 0; }

@@ -171,6 +171,7 @@
         </select>
         <button type="button" class="icon-btn" data-action="startBatchGeocode" title="Alle Orte ohne Koordinaten geocodieren (Nominatim)" aria-label="Batch-Geocoding">🌐</button>
         <button type="button" class="icon-btn" id="placeMergeBtn" data-action="openPlaceMergeModal" title="Orts-Dubletten zusammenführen" aria-label="Orts-Dubletten zusammenführen">⇉</button>
+        <button type="button" class="icon-btn" id="placeValidatorBtn" data-action="togglePlaceValidator" title="Geo-Plausibilitäts-Validator" aria-label="Geo-Validator">⚠</button>
         <button type="button" class="icon-btn" data-action="exportPlaceData" title="Ortsdaten exportieren (JSON)" aria-label="Ortsdaten exportieren">↓</button>
         <label class="icon-btn icon-btn--file" title="Ortsdaten importieren (JSON)" aria-label="Ortsdaten importieren">↑<input type="file" accept=".json" class="sr-only" data-change="importPlaceDataFile"></label>
       </div>
@@ -178,6 +179,7 @@
         <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
       </div>
     </div>
+    <div id="placeValidatorPanel" hidden></div>
     <div id="placeList"></div>
     <div id="hofList" hidden></div>
   </div>

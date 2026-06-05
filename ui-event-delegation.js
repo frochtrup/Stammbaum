@@ -74,6 +74,8 @@ const _CLICK_MAP = {
   addEnclosedBy:           ()  => addEnclosedBy(),
   removeEnclosedBy:        el  => removeEnclosedBy(el.dataset.idx),
   exportPlaceData:         ()  => exportPlaceData(),
+  togglePlaceValidator:    ()  => togglePlaceValidator(),
+  showPlaceByIdValidator:  el  => showPlaceByIdValidator(el.dataset.pid),
   treeShowProband:         ()  => {
     const id = getProbandId();
     if (!id) return;
