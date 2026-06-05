@@ -759,12 +759,11 @@ async function loadPlaceObjectsFromIDB() {
 
 function savePlaceObjects() {
   try {
-    // Nur _ep_-Einträge persistieren (user-erzeugte); GRAMPS-native roundtrippen über .gramps
-    const pos = AppState.db.placeObjects || {};
-    const toSave = {};
-    for (const [id, po] of Object.entries(pos)) {
-      if (id.startsWith('_ep_')) toSave[id] = po;
-    }
+    // Alle placeObjects persistieren (GRAMPS-native + _ep_-user-erzeugte).
+    // Beim späteren GRAMPS-Load schützt loadPlaceObjectsFromIDB via "if (pos[id]) continue"
+    // davor, dass JSON-Einträge frisch geparste GRAMPS-Daten überschreiben.
+    // Beim GEDCOM-Load stehen so auch GRAMPS-native Einträge (enclosedBy[], pnames[]) zur Verfügung.
+    const toSave = AppState.db.placeObjects || {};
     idbPut('stammbaum_placeobjects', JSON.stringify(toSave)).catch(() => {});
     // OneDrive-Sync in Konfig-Ordner (fire-and-forget)
     if (typeof _odWriteAppData === 'function') _odWriteAppData('stammbaum-orte.json', toSave).catch(() => {});
