@@ -1249,9 +1249,13 @@ function selectSlinkTarget(id, title) {
 }
 
 function _updateSlinkSources() {
-  _slinkSources = new Set(
-    [...document.querySelectorAll('.slink-src-cb:checked')].map(cb => cb.value)
-  );
+  // Im Preselect-Modus ist die Source-Sektion ausgeblendet → _slinkSources bleibt wie gesetzt
+  const srcSec = document.getElementById('slinkSourceSection');
+  if (srcSec && !srcSec.hidden) {
+    _slinkSources = new Set(
+      [...document.querySelectorAll('.slink-src-cb:checked')].map(cb => cb.value)
+    );
+  }
 }
 
 function _renderSlinkGroups() {
