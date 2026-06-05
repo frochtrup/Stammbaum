@@ -709,13 +709,18 @@ function _migrateExtraPlacesToPlaceObjects(db) {
 
 // Baut periodenkorrekten, FORM-kompatiblen PLAC-String via enclosureChainAsOf (ADR-024).
 // Gibt "Ort, Amt, Fürstbistum" zurück (spezifisch→allgemein, keine Leer-Slots).
+// Wichtig: pro Knoten nur das erste Komma-Segment von resolveAsOf verwenden —
+// GRAMPS ptitle ist bereits hierarchisch ("Ochtrup, Kreis Steinfurt, NRW"), würde
+// sonst mit der enclosedBy-Kette doppelt erscheinen.
 // Fallback: resolveAsOf (atomarer Name) wenn keine enclosedBy-Kette vorhanden.
 function _buildFormString(placeId, year) {
   if (!placeId || typeof getPlaceRegistry !== 'function') return null;
   const reg = getPlaceRegistry();
-  const chain = reg.enclosureChainAsOf(placeId, year).filter(Boolean);
+  const _atomic = s => s ? s.split(',')[0].trim() : '';
+  const chain = reg.enclosureChainAsOf(placeId, year)
+    .map(_atomic).filter(Boolean);
   if (chain.length) return chain.join(', ');
-  return reg.resolveAsOf(placeId, year) || null;
+  return _atomic(reg.resolveAsOf(placeId, year)) || null;
 }
 
 // Berechnet Ergebnis-Gruppen für den String→PlaceObject Link-Dialog.
