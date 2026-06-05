@@ -717,6 +717,8 @@ function _buildFormString(placeId, year) {
   if (!placeId || typeof getPlaceRegistry !== 'function') return null;
   const reg = getPlaceRegistry();
   const _atomic = s => s ? s.split(',')[0].trim() : '';
+  // Ohne Datum: kein Periode bestimmbar → nur atomarer Name, keine Hierarchie
+  if (year == null) return _atomic(reg.resolveAsOf(placeId, null)) || null;
   const chain = reg.enclosureChainAsOf(placeId, year)
     .map(_atomic).filter(Boolean);
   if (chain.length) return chain.join(', ');
