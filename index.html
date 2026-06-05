@@ -171,6 +171,7 @@
         </select>
         <button type="button" class="icon-btn" data-action="startBatchGeocode" title="Alle Orte ohne Koordinaten geocodieren (Nominatim)" aria-label="Batch-Geocoding">🌐</button>
         <button type="button" class="icon-btn" id="placeMergeBtn" data-action="openPlaceMergeModal" title="Orts-Dubletten zusammenführen" aria-label="Orts-Dubletten zusammenführen">⇉</button>
+        <button type="button" class="icon-btn" data-action="openPlaceStringLinkModal" title="GEDCOM-Ortsstrings mit PlaceObject verknüpfen" aria-label="Ortsstrings verknüpfen">🔗</button>
         <button type="button" class="icon-btn" id="placeValidatorBtn" data-action="togglePlaceValidator" title="Geo-Plausibilitäts-Validator" aria-label="Geo-Validator">⚠</button>
         <button type="button" class="icon-btn" data-action="exportPlaceData" title="Ortsdaten exportieren (JSON)" aria-label="Ortsdaten exportieren">↓</button>
         <label class="icon-btn icon-btn--file" title="Ortsdaten importieren (JSON)" aria-label="Ortsdaten importieren">↑<input type="file" accept=".json" class="sr-only" data-change="importPlaceDataFile"></label>
@@ -1552,6 +1553,42 @@
     </div>
     <div class="sheet-footer-safe">
       <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalPlaceMerge">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<!-- String→PlaceObject Link-Modal -->
+<div class="modal-overlay" id="modalPlaceStringLink" role="dialog" aria-modal="true" aria-labelledby="lbl-modalPlaceStringLink">
+  <div class="sheet sheet-tall-90 d-flex flex-col">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalPlaceStringLink">Ortsstrings verknüpfen</div>
+    <div class="sheet-body flex-1 ov-y-auto">
+      <p class="modal-hint">Wähle einen oder mehrere GEDCOM-Ortsstrings und das Ziel-PlaceObject. Jedes Event erhält periodengerecht den korrekten Hierarchie-String.</p>
+
+      <div class="slink-section">
+        <div class="slink-section-title">1 · Quell-Ortsstrings <button class="slink-refresh-btn" data-action="refreshSlinkGroups" title="Vorschau aktualisieren">↺</button></div>
+        <div id="slinkSourceList"></div>
+      </div>
+
+      <div class="slink-section">
+        <div class="slink-section-title">2 · Ziel-PlaceObject</div>
+        <input class="form-input" id="slinkTargetSearch"
+               placeholder="PlaceObject suchen…" autocomplete="off"
+               data-input="renderSlinkTargetList">
+        <div id="slinkTargetList" class="list-scroll-inner slink-target-list"></div>
+        <div id="slinkTargetSelected" class="slink-target-selected" hidden></div>
+      </div>
+
+      <div class="slink-section" id="slinkGroupsSection" hidden>
+        <div class="slink-section-title">3 · Ergebnis-Gruppen <span class="slink-hint">(☑ = übernehmen)</span></div>
+        <div id="slinkGroupsList"></div>
+      </div>
+    </div>
+    <div class="sheet-footer-safe">
+      <div class="btn-row">
+        <button class="btn btn-save flex-1" id="slinkConfirmBtn" data-action="confirmStringPlaceLink" disabled>Verknüpfen</button>
+        <button class="btn btn-cancel flex-1" data-action="closeModal" data-modal="modalPlaceStringLink">Abbrechen</button>
+      </div>
     </div>
   </div>
 </div>

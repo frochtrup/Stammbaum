@@ -69,6 +69,10 @@ const _CLICK_MAP = {
   deletePlaceTrans:        el  => deletePlaceTrans(+el.dataset.idx),
   openPlaceMergeModal:     ()  => openPlaceMergeModal(),
   placeMergeGroup:         el  => placeMergeGroup(el.dataset.gidx),
+  openPlaceStringLinkModal: el => openPlaceStringLinkModal(el?.dataset?.preselect || null),
+  selectSlinkTarget:       el  => selectSlinkTarget(el.dataset.id, el.dataset.title),
+  confirmStringPlaceLink:  ()  => confirmStringPlaceLink(),
+  refreshSlinkGroups:      ()  => _renderSlinkGroups(),
   addPlaceName:            ()  => addPlaceName(),
   removePlaceName:         el  => removePlaceName(el.dataset.idx),
   addEnclosedBy:           ()  => addEnclosedBy(),
@@ -505,6 +509,7 @@ document.addEventListener('input', e => {
   else if (action === 'renderRelPicker')       renderRelPicker(el.value);
   else if (action === 'renderRepoPicker')      renderRepoPicker(el.value);
   else if (action === 'renderPlacePickerList') renderPlacePickerList(el.value);
+  else if (action === 'renderSlinkTargetList') renderSlinkTargetList(el.value);
   else if (action === 'mdFilterLinkPanel') _mdFilterLinkPanel(el.value);
   else if (action === 'odSetBasePath')   odSetBasePath(el.value.trim());
   else if (action === 'dedupSearch')     dedupSearchChange(el.value);

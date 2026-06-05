@@ -14,6 +14,21 @@ function _g7WriteSchma(lines) {
     lines.push(`2 TAG ${t} ${_base}/${t}`);
 }
 
+// Periodenkorrekter Ortsname für GEDCOM-Export (ADR-024 resolveAsOf).
+// Nur aktiv wenn ev.placeId gesetzt (GRAMPS-Quelle); GEDCOM-Roundtrip unberührt (kein placeId).
+function _resolvedPlaceName(obj) {
+  if (obj.placeId && typeof getPlaceRegistry === 'function') {
+    const year = typeof _placeYear === 'function' ? _placeYear(obj.date) : null;
+    if (typeof _buildFormString === 'function') {
+      const fs = _buildFormString(obj.placeId, year);
+      if (fs) return fs;
+    }
+    const resolved = getPlaceRegistry().resolveAsOf(obj.placeId, year);
+    if (resolved) return resolved;
+  }
+  return obj.place;
+}
+
 // PLAC/TRAN-Einträge aus extraPlaces (primär) oder placeObjects (P0b-3-Fallback).
 // GED7: standard TRAN; GED5: _TRAN vendor extension; Strict: NOTE [lang] value
 function _writePlacTrans(lines, placeName, indent) {
@@ -206,8 +221,9 @@ function eventBlock(lines, tag, obj, lv) {
   }
   if (obj.cause) lines.push(`${lv+1} CAUS ${obj.cause}`);
   if (obj.place !== null && obj.place !== undefined) {
-    lines.push(`${lv+1} PLAC${obj.place ? ' ' + obj.place : ''}`);
-    _writePlacTrans(lines, obj.place, lv+2);
+    const _plac = _resolvedPlaceName(obj);
+    lines.push(`${lv+1} PLAC${_plac ? ' ' + _plac : ''}`);
+    _writePlacTrans(lines, _plac || obj.place, lv+2);
     geoLines(lines, obj, lv+2);
   }
   const _origNote = obj._noteOrig !== undefined ? obj._noteOrig : obj.note;
@@ -372,8 +388,9 @@ function writeINDIRecord(lines, p, livingSet = null) {
     }
     const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
     if (ev.place !== null && ev.place !== undefined) {
-      lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
-      _writePlacTrans(lines, ev.place, 3);
+      const _plac = _resolvedPlaceName(ev);
+      lines.push(`2 PLAC${_plac ? ' ' + _plac : ''}`);
+      _writePlacTrans(lines, _plac || ev.place, 3);
       geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
     } else if (ev.addr) {
       // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
@@ -608,8 +625,9 @@ function writeFAMRecord(lines, f) {
       if (_ged7 && ev.datePhrase) lines.push(`3 PHRASE ${ev.datePhrase}`);
     }
     if (ev.place !== null && ev.place !== undefined) {
-      lines.push(`2 PLAC${ev.place ? ' ' + ev.place : ''}`);
-      _writePlacTrans(lines, ev.place, 3);
+      const _plac = _resolvedPlaceName(ev);
+      lines.push(`2 PLAC${_plac ? ' ' + _plac : ''}`);
+      _writePlacTrans(lines, _plac || ev.place, 3);
       geoLines(lines, ev, 3);
     }
     const _famEvNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;

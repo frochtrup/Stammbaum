@@ -765,10 +765,10 @@ function showDetail(id, pushHistory = true) {
             <span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(aName)}</span>
             ${a.note ? `<div class="ev-note">${esc(a.note)}</div>` : ''}
           </span>
-          <span style="display:flex;gap:4px;align-items:center;margin-left:6px">
+          <div class="btn-row" style="margin-left:6px">
             <button class="edit-media-btn" data-action="editAsso" data-pid="${id}" data-aidx="${_ai}" title="Bearbeiten">✎</button>
             <button class="unlink-btn" data-action="deleteAsso" data-pid="${id}" data-aidx="${_ai}" title="Entfernen">×</button>
-          </span>
+          </div>
         </div>`;
       }
       for (const a of _computedGodchildren) {

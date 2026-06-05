@@ -380,6 +380,7 @@ async function _finishLoad(db, text, filename) {
     applyAllExtraPlaceCoords();
     if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
     if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
+    if (typeof _linkGedcomEventsToPlaceObjects === 'function') _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass
     AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
     { let maxUsed = 0;
       const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),

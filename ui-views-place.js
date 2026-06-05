@@ -1150,6 +1150,139 @@ function placeMergeGroup(gidx) {
 }
 
 // ─────────────────────────────────────
+//  String→PlaceObject Link-Modal
+// ─────────────────────────────────────
+let _slinkSources  = new Set();  // aktuell gewählte Quell-Strings
+let _slinkTargetId = null;       // gewähltes Ziel-PlaceObject
+let _slinkGroups   = [];         // Ergebnis-Gruppen (von _buildLinkGroups)
+
+function openPlaceStringLinkModal(preselect) {
+  // Alle String-only-Orte (kein placeId) als Kandidaten
+  const all = [...collectPlaces().values()].filter(pl => !pl.placeId)
+    .sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
+  if (!all.length) { showToast('Keine unverlinkten GEDCOM-Ortsstrings vorhanden'); return; }
+
+  _slinkSources  = new Set(preselect ? [preselect] : []);
+  _slinkTargetId = null;
+  _slinkGroups   = [];
+
+  // Quell-Checkliste rendern
+  const listEl = document.getElementById('slinkSourceList');
+  if (listEl) {
+    listEl.innerHTML = all.map(pl => {
+      const n = pl.personIds.size;
+      const sel = _slinkSources.has(pl.name);
+      return `<label class="place-merge-opt">
+        <input type="checkbox" class="slink-src-cb" value="${esc(pl.name)}"${sel ? ' checked' : ''}>
+        <span class="place-merge-name">${esc(compactPlace(pl.name))}</span>
+        <span class="place-merge-meta">${n} Ereignis${n !== 1 ? 'se' : ''}</span>
+      </label>`;
+    }).join('');
+  }
+
+  // Ziel zurücksetzen
+  const tsel = document.getElementById('slinkTargetSelected');
+  const tlist = document.getElementById('slinkTargetList');
+  const gsec  = document.getElementById('slinkGroupsSection');
+  const conf  = document.getElementById('slinkConfirmBtn');
+  const tinp  = document.getElementById('slinkTargetSearch');
+  if (tsel)  { tsel.hidden = true; tsel.textContent = ''; }
+  if (tlist) tlist.innerHTML = '';
+  if (gsec)  gsec.hidden = true;
+  if (conf)  conf.disabled = true;
+  if (tinp)  tinp.value = '';
+
+  openModal('modalPlaceStringLink');
+}
+
+function renderSlinkTargetList(q) {
+  const el = document.getElementById('slinkTargetList');
+  if (!el) return;
+  const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+  if (!reg) return;
+  const lower = (q || '').toLowerCase().trim();
+  const hits = Object.values(reg.byId)
+    .filter(po => !lower || po.title.toLowerCase().includes(lower)
+      || (po.pnames || []).some(pn => pn.value.toLowerCase().includes(lower)))
+    .slice(0, 40);
+  if (!hits.length) { el.innerHTML = '<div class="no-data-pad">Kein PlaceObject gefunden</div>'; return; }
+  el.innerHTML = hits.map(po =>
+    `<div class="person-row slink-target-row" data-action="selectSlinkTarget"
+         data-id="${esc(po.id)}" data-title="${esc(po.title)}">
+      <span class="place-merge-name">${esc(po.title)}</span>
+      <span class="place-merge-meta">${(po.enclosedBy||[]).length ? '⛓' : ''}${po.lat != null ? ' 📍' : ''}</span>
+    </div>`).join('');
+}
+
+function selectSlinkTarget(id, title) {
+  _slinkTargetId = id;
+  const tsel  = document.getElementById('slinkTargetSelected');
+  const tlist = document.getElementById('slinkTargetList');
+  const tinp  = document.getElementById('slinkTargetSearch');
+  if (tsel)  { tsel.textContent = `✓ ${title}`; tsel.hidden = false; }
+  if (tlist) tlist.innerHTML = '';
+  if (tinp)  tinp.value = '';
+  _updateSlinkSources();
+  _renderSlinkGroups();
+}
+
+function _updateSlinkSources() {
+  _slinkSources = new Set(
+    [...document.querySelectorAll('.slink-src-cb:checked')].map(cb => cb.value)
+  );
+}
+
+function _renderSlinkGroups() {
+  _updateSlinkSources();
+  const gsec = document.getElementById('slinkGroupsSection');
+  const gel  = document.getElementById('slinkGroupsList');
+  const conf = document.getElementById('slinkConfirmBtn');
+  if (!gsec || !gel || !conf) return;
+  if (!_slinkTargetId || !_slinkSources.size) {
+    gsec.hidden = true; conf.disabled = true; return;
+  }
+  _slinkGroups = typeof _buildLinkGroups === 'function'
+    ? _buildLinkGroups([..._slinkSources], _slinkTargetId) : [];
+  if (!_slinkGroups.length) {
+    gel.innerHTML = '<div class="no-data-pad">Keine passenden Events gefunden</div>';
+    gsec.hidden = false; conf.disabled = true; return;
+  }
+  gel.innerHTML = _slinkGroups.map((g, i) => {
+    const span = g.yearMin !== Infinity
+      ? `${g.yearMin}${g.yearMax !== g.yearMin ? '–' + g.yearMax : ''}`
+      : '';
+    const nodate = g.noDate ? ` · ${g.noDate} ohne Datum` : '';
+    return `<label class="place-merge-opt slink-group-row">
+      <input type="checkbox" class="slink-grp-cb" value="${i}" checked>
+      <span class="place-merge-name slink-result-str">${esc(g.str)}</span>
+      <span class="place-merge-meta">${g.count} Ereignis${g.count !== 1 ? 'se' : ''}${span ? ' · ' + span : ''}${nodate}</span>
+    </label>`;
+  }).join('');
+  gsec.hidden = false;
+  conf.disabled = false;
+}
+
+function confirmStringPlaceLink() {
+  _updateSlinkSources();
+  if (!_slinkTargetId || !_slinkSources.size) {
+    showToast('⚠ Bitte Quell-Strings und Ziel-PlaceObject wählen'); return;
+  }
+  const confirmed = [...document.querySelectorAll('.slink-grp-cb:checked')]
+    .map(cb => _slinkGroups[+cb.value]?.str).filter(Boolean);
+  if (!confirmed.length) { showToast('⚠ Mindestens eine Gruppe auswählen'); return; }
+  const linked = typeof applyStringPlaceLink === 'function'
+    ? applyStringPlaceLink([..._slinkSources], _slinkTargetId, confirmed) : 0;
+  if (linked) {
+    markChanged();
+    closeModal('modalPlaceStringLink');
+    showToast(`✓ ${linked} Ereignis${linked !== 1 ? 'se' : ''} verknüpft`);
+    if (typeof renderPlaceList === 'function') renderPlaceList();
+  } else {
+    showToast('⚠ Keine Ereignisse verknüpft — Quell-Strings oder Gruppen prüfen');
+  }
+}
+
+// ─────────────────────────────────────
 //  P5e — ORTS-KONTEXTSATZ
 // ─────────────────────────────────────
 

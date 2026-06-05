@@ -707,6 +707,104 @@ function _migrateExtraPlacesToPlaceObjects(db) {
   if (changed) UIState._placeRegistry = null;
 }
 
+// Baut periodenkorrekten, FORM-kompatiblen PLAC-String via enclosureChainAsOf (ADR-024).
+// Gibt "Ort, Amt, Fürstbistum" zurück (spezifisch→allgemein, keine Leer-Slots).
+// Fallback: resolveAsOf (atomarer Name) wenn keine enclosedBy-Kette vorhanden.
+function _buildFormString(placeId, year) {
+  if (!placeId || typeof getPlaceRegistry !== 'function') return null;
+  const reg = getPlaceRegistry();
+  const chain = reg.enclosureChainAsOf(placeId, year).filter(Boolean);
+  if (chain.length) return chain.join(', ');
+  return reg.resolveAsOf(placeId, year) || null;
+}
+
+// Berechnet Ergebnis-Gruppen für den String→PlaceObject Link-Dialog.
+// Gruppiert alle betroffenen Events nach ihrem resultierenden _buildFormString-Wert.
+// Gibt [{str, count, yearMin, yearMax, noDate}] sortiert nach Jahresminimum zurück.
+function _buildLinkGroups(sourceNames, targetPlaceId) {
+  if (!targetPlaceId || typeof getPlaceRegistry !== 'function') return [];
+  const reg = getPlaceRegistry();
+  const srcSet = new Set(sourceNames.map(n => n.trim()));
+  const groups = new Map();
+  const _visit = ev => {
+    if (!ev || ev.place == null) return;
+    const t = ev.place.trim();
+    if (!srcSet.has(t)) return;
+    const year = _placeYear(ev.date);
+    const str  = _buildFormString(targetPlaceId, year) || reg.resolveAsOf(targetPlaceId, year) || '';
+    if (!groups.has(str)) groups.set(str, { str, count: 0, yearMin: Infinity, yearMax: -Infinity, noDate: 0 });
+    const g = groups.get(str);
+    g.count++;
+    if (year != null) { g.yearMin = Math.min(g.yearMin, year); g.yearMax = Math.max(g.yearMax, year); }
+    else g.noDate++;
+  };
+  const db = AppState.db;
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_visit); (p.events || []).forEach(_visit);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_visit); (f.events || []).forEach(_visit);
+  }
+  return [...groups.values()].sort((a, b) =>
+    (a.yearMin === Infinity ? 1 : 0) - (b.yearMin === Infinity ? 1 : 0) || a.yearMin - b.yearMin);
+}
+
+// Wendet den String→PlaceObject Link an (nur Gruppen in confirmedStrs).
+// Setzt ev.place = periodenkorrekter String + ev.placeId = targetPlaceId.
+// net_delta=0: ev.place wird auf exakt den String gesetzt, den der Writer beim Export reproduziert.
+function applyStringPlaceLink(sourceNames, targetPlaceId, confirmedStrs) {
+  if (!targetPlaceId || typeof getPlaceRegistry !== 'function') return 0;
+  const reg = getPlaceRegistry();
+  const srcSet = new Set(sourceNames.map(n => n.trim()));
+  const confirmed = new Set(confirmedStrs);
+  let linked = 0;
+  const _fix = ev => {
+    if (!ev || ev.place == null) return;
+    const t = ev.place.trim();
+    if (!srcSet.has(t)) return;
+    const year = _placeYear(ev.date);
+    const str  = _buildFormString(targetPlaceId, year) || reg.resolveAsOf(targetPlaceId, year) || '';
+    if (!confirmed.has(str)) return;
+    ev.place = str; ev.placeId = targetPlaceId; linked++;
+  };
+  const db = AppState.db;
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_fix); (p.events || []).forEach(_fix);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_fix); (f.events || []).forEach(_fix);
+  }
+  if (linked) { UIState._placesCache = null; UIState._placeRegistry = null; }
+  return linked;
+}
+
+// Verknüpft GEDCOM-Events mit placeObjects (ADR-024 Link-Pass).
+// Aufruf nach loadPlaceObjectsFromIDB() — nur im GEDCOM-Pfad (GRAMPS setzt placeId via Parser).
+// Sicherheitsbedingung: resolveAsOf(placeId, eventYear) muss exakt ev.place ergeben,
+// sonst kein Link → GEDCOM net_delta=0 garantiert.
+function _linkGedcomEventsToPlaceObjects(db) {
+  if (!db) return;
+  const reg = getPlaceRegistry();
+  if (!reg || !Object.keys(reg.byId).length) return;
+  let linked = 0;
+  const _link = ev => {
+    if (!ev || ev.placeId || !ev.place) return;
+    const pid = reg.findByName(ev.place);
+    if (!pid) return;
+    const year = _placeYear(ev.date);
+    if (reg.resolveAsOf(pid, year) === ev.place) { ev.placeId = pid; linked++; }
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_link);
+    (p.events || []).forEach(_link);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_link);
+    (f.events || []).forEach(_link);
+  }
+  if (linked) console.info(`[PLACE] ${linked} GEDCOM-Events mit placeObject verknüpft`);
+}
+
 // Baut (lazy, gecacht) die PlaceRegistry über AppState.db.placeObjects:
 //   byId   : placeId → placeObject
 //   byNorm : normalisierter Name (title + alle pnames) → placeId (erste gewinnt)
