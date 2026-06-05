@@ -16,6 +16,7 @@ const PLACE_TYPE_ICON = {
 };
 
 let _placeTypeFilter = '';
+let _placeDetailMap = null; // P5a-5: Leaflet-Instanz für Mini-Karte im Steckbrief
 
 function setPlaceTypeFilter(val) {
   _placeTypeFilter = val || '';
@@ -634,6 +635,57 @@ async function deleteExtraPlace(name) {
 }
 
 // ─────────────────────────────────────
+//  P5a HELPERS
+// ─────────────────────────────────────
+
+// P5a-4: Namens-Timeline als inline SVG (pnames[] mit Datumsbereich)
+function _placeNamesSvg(pnames) {
+  const dated = (pnames || []).filter(pn => pn.dateFrom || pn.dateTo);
+  if (!dated.length) return '';
+  const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+  const cur = new Date().getFullYear();
+  let minY = Infinity, maxY = -Infinity;
+  for (const pn of dated) {
+    const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
+    if (f) { minY = Math.min(minY, f); maxY = Math.max(maxY, f); }
+    if (t) { minY = Math.min(minY, t); maxY = Math.max(maxY, t); }
+  }
+  if (minY === Infinity) return '';
+  if (maxY <= minY) maxY = minY + 10;
+  const W = 260, BAR = 18, PAD = 4, H = dated.length * (BAR + PAD) + 26;
+  const toX = y => Math.max(0, Math.min(W, (y - minY) / (maxY - minY) * W));
+  const COLS = ['#5b9bd5','#4aaa8a','#e8a33a','#e07050','#9b7aaa','#a0a8b0'];
+  let bars = '', axis = '';
+  dated.forEach((pn, i) => {
+    const f = parseY(pn.dateFrom) || minY, t = parseY(pn.dateTo) || cur;
+    const x1 = toX(f), x2 = toX(t), y = 22 + i * (BAR + PAD);
+    const col = COLS[i % COLS.length], w = Math.max(3, x2 - x1);
+    const lbl = esc((pn.value || '') + (pn.lang ? ` (${pn.lang})` : '')).substring(0, 24);
+    bars += `<rect x="${x1.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${BAR}" rx="3" fill="${col}" opacity="0.85"/>`;
+    bars += `<text x="${(x1 + 4).toFixed(1)}" y="${(y + 13).toFixed(1)}" font-size="10" fill="#fff">${lbl}</text>`;
+  });
+  const step = Math.max(1, Math.ceil((maxY - minY) / 4));
+  for (let y = Math.ceil(minY / step) * step; y <= maxY; y += step) {
+    const x = toX(y);
+    axis += `<text x="${x.toFixed(1)}" y="14" font-size="9" fill="var(--c-muted)" text-anchor="middle">${y}</text>`;
+  }
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:8px;overflow:visible">${axis}${bars}</svg>`;
+}
+
+// P5a-5: Mini-Karte (Leaflet) im Standort-Abschnitt initialisieren
+function _initPlaceDetailMap(lat, lon, title) {
+  if (typeof L === 'undefined') return;
+  const el = document.getElementById('place-mini-map');
+  if (!el) return;
+  if (_placeDetailMap) { try { _placeDetailMap.remove(); } catch(_) {} _placeDetailMap = null; }
+  _placeDetailMap = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, tap: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_placeDetailMap);
+  _placeDetailMap.setView([lat, lon], 12);
+  L.marker([lat, lon]).addTo(_placeDetailMap);
+  setTimeout(() => _placeDetailMap?.invalidateSize(), 150);
+}
+
+// ─────────────────────────────────────
 //  DETAIL: ORT
 // ─────────────────────────────────────
 function showPlaceDetail(placeName, pushHistory = true) {
@@ -670,12 +722,16 @@ function showPlaceDetail(placeName, pushHistory = true) {
   if (place.lati !== null) {
     html += `<div class="section fade-up">
       <div class="section-title">Standort</div>
-      <a href="https://maps.apple.com/?ll=${place.lati},${place.long}&q=${encodeURIComponent(placeName)}"
-         target="_blank"
-         class="place-maps-link">
-        🗺 In Apple Maps öffnen
-        <span class="c-muted fs-xs">${place.lati.toFixed(4)}, ${place.long.toFixed(4)}</span>
-      </a>
+      <div class="place-map-wrap">
+        <div id="place-mini-map"></div>
+      </div>
+      <div class="place-map-links">
+        <a href="https://maps.apple.com/?ll=${place.lati},${place.long}&q=${encodeURIComponent(placeName)}"
+           target="_blank" class="place-maps-link">🗺 Apple Maps</a>
+        <a href="https://www.openstreetmap.org/?mlat=${place.lati}&mlon=${place.long}#map=12/${place.lati}/${place.long}"
+           target="_blank" class="place-maps-link">🌐 OpenStreetMap</a>
+      </div>
+      <div class="place-map-coords">${place.lati.toFixed(5)}, ${place.long.toFixed(5)}</div>
       ${_geoAvail ? `<button class="btn btn-cancel mt-8 w-full" data-action="geocodeCurrentPlace" title="Koordinaten + Typ via Nominatim neu abrufen">↻ Neu geocodieren</button>` : ''}
     </div>`;
   } else if (_geoAvail) {
@@ -717,11 +773,13 @@ function showPlaceDetail(placeName, pushHistory = true) {
       let histHtml = '';
       if (typeLbl) histHtml += `<div class="fact-row"><span class="fact-key">Typ</span><span class="fact-val">${esc(typeLbl)}</span></div>`;
       if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
+      const svgTimeline = _placeNamesSvg(po.pnames);
       if (histHtml || namesHtml) {
         html += `<div class="section fade-up">
           <div class="section-title">Ort (historisch)</div>
           ${histHtml}
           ${namesHtml ? `<div class="fact-sub-title">Frühere Namen</div>${namesHtml}` : ''}
+          ${svgTimeline}
         </div>`;
       }
     }
@@ -781,43 +839,97 @@ function showPlaceDetail(placeName, pushHistory = true) {
     </div>
   </div>`;
 
-  // Build detailed list: person + which event connects them to this place
-  const entries = [];
+  // P5a-1: Ereignisse nach Typ gruppiert, placeId-aware
+  const _byType = new Map();
+  const _evSeen = new Set();
+  const _addEv = (typeLabel, person, date) => {
+    const dk = `${person.id}|${typeLabel}|${date||''}`;
+    if (_evSeen.has(dk)) return;
+    _evSeen.add(dk);
+    if (!_byType.has(typeLabel)) _byType.set(typeLabel, []);
+    _byType.get(typeLabel).push({ person, date: date || '' });
+  };
+  const _matchPlace = ev => {
+    if (ev && ev.place && ev.place.trim() === placeName) return true;
+    if (place.placeId && ev && ev.placeId && ev.placeId === place.placeId) return true;
+    return false;
+  };
   for (const p of Object.values(AppState.db.individuals)) {
-    if (p.birth.place && p.birth.place.trim() === placeName)
-      entries.push({ person: p, role: 'Geburt' + (p.birth.date ? ' · ' + p.birth.date : '') });
-    if (p.death.place && p.death.place.trim() === placeName)
-      entries.push({ person: p, role: 'Tod' + (p.death.date ? ' · ' + p.death.date : '') });
-    if (p.chr.place && p.chr.place.trim() === placeName)
-      entries.push({ person: p, role: 'Taufe' + (p.chr.date ? ' · ' + p.chr.date : '') });
-    if (p.buri.place && p.buri.place.trim() === placeName)
-      entries.push({ person: p, role: 'Beerdigung' + (p.buri.date ? ' · ' + p.buri.date : '') });
+    if (_matchPlace(p.birth))  _addEv('Geburt',     p, p.birth.date);
+    if (_matchPlace(p.death))  _addEv('Tod',        p, p.death.date);
+    if (_matchPlace(p.chr))    _addEv('Taufe',      p, p.chr.date);
+    if (_matchPlace(p.buri))   _addEv('Beerdigung', p, p.buri.date);
     for (const ev of p.events) {
-      if (ev.place && ev.place.trim() === placeName)
-        entries.push({ person: p, role: (ev.eventType || EVENT_LABELS[ev.type] || ev.type) + (ev.date ? ' · ' + ev.date : '') });
+      if (_matchPlace(ev)) _addEv(ev.eventType || EVENT_LABELS[ev.type] || ev.type, p, ev.date);
     }
   }
   for (const f of Object.values(AppState.db.families)) {
-    if (f.marr.place && f.marr.place.trim() === placeName) {
+    if (_matchPlace(f.marr)) {
       for (const pid of [f.husb, f.wife]) {
         if (!pid) continue;
         const p = AppState.db.individuals[pid];
-        if (p) entries.push({ person: p, role: 'Heirat' + (f.marr.date ? ' · ' + f.marr.date : '') });
+        if (p) _addEv('Heirat', p, f.marr.date);
+      }
+    }
+    for (const ev of (f.events || [])) {
+      if (_matchPlace(ev)) {
+        for (const pid of [f.husb, f.wife]) {
+          if (!pid) continue;
+          const p = AppState.db.individuals[pid];
+          if (p) _addEv(ev.eventType || EVENT_LABELS[ev.type] || ev.type, p, ev.date);
+        }
       }
     }
   }
-
-  entries.sort((a, b) => (a.person.name || '').localeCompare(b.person.name || '', 'de'));
-
+  const _totalPersons = new Set([..._byType.values()].flatMap(arr => arr.map(e => e.person.id))).size;
+  const _TYPE_ORDER = ['Geburt','Taufe','Konfirmation','Heirat','Beerdigung','Tod'];
+  const _orderedTypes = [
+    ..._TYPE_ORDER.filter(t => _byType.has(t)),
+    ...[..._byType.keys()].filter(t => !_TYPE_ORDER.includes(t)).sort(),
+  ];
   html += `<div class="section fade-up">
-    <div class="section-title">Personen an diesem Ort</div>`;
-  for (const e of entries) {
-    html += relRow(e.person, e.role);
+    <div class="section-title">Ereignisse (${_totalPersons} Person${_totalPersons !== 1 ? 'en' : ''})</div>`;
+  if (_orderedTypes.length === 0) {
+    html += '<div class="no-data-pad">Keine Ereignisse erfasst</div>';
+  }
+  for (const typeLabel of _orderedTypes) {
+    const evs = _byType.get(typeLabel);
+    evs.sort((a, b) => (a.date).localeCompare(b.date));
+    html += `<div class="fact-sub-title">${esc(typeLabel)}</div>`;
+    for (const e of evs) {
+      html += relRow(e.person, e.date);
+    }
   }
   html += `</div>`;
 
+  // P5a-3: Quellen zu diesem Ort
+  const _namesToCheck = [placeName.toLowerCase()];
+  if (place.placeId) {
+    const _po3 = getPlaceRegistry().byId[place.placeId];
+    for (const pn of (_po3?.pnames || [])) {
+      if (pn.value) _namesToCheck.push(pn.value.toLowerCase());
+    }
+  }
+  const _matchedSrcs = Object.values(AppState.db.sources || {})
+    .filter(s => _namesToCheck.some(n => n.length > 3 && (s.title || '').toLowerCase().includes(n)));
+  if (_matchedSrcs.length) {
+    let _srcHtml = '';
+    for (const s of _matchedSrcs) {
+      const _repoName = s.repo ? (AppState.db.repositories?.[s.repo]?.name || s.repo) : '';
+      _srcHtml += `<div class="fact-row fact-row--clickable" data-action="showSourceDetail" data-id="${esc(s.id)}">
+        <span class="fact-val">${esc(s.title || s.id)}${_repoName ? `<span class="place-src-repo"> · ${esc(_repoName)}</span>` : ''}</span>
+        <span class="p-arrow">›</span>
+      </div>`;
+    }
+    html += `<div class="section fade-up">
+      <div class="section-title">Quellen zu diesem Ort</div>
+      ${_srcHtml}
+    </div>`;
+  }
+
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
+  if (place.lati !== null) _initPlaceDetailMap(place.lati, place.long, compactPlace(placeName));
 }
 
 // ─── Übersetzungs-Editor ──────────────────────────────────────────────────────

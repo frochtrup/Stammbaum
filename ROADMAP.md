@@ -26,8 +26,8 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v819 · Cache: `stammbaum-v819` · `test-unit.js` = 198 Tests grün
-**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819).
+**sw-Version:** v820 · Cache: `stammbaum-v820` · `test-unit.js` = 198 Tests grün
+**Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819). · **v820: PLACE-HIST P5a** — Ort-Steckbrief: Ereignisse gruppiert nach Typ + placeId-Matching (P5a-1), Quellen-Sektion (P5a-3), Namens-Timeline SVG (P5a-4), Mini-Karte Leaflet (P5a-5).
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
@@ -176,9 +176,66 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | **P2-UI** | **Historische UI** ✅ *(sw v809)* — `modalPlace` erweitert: Typ-Dropdown (Village/City/Parish/…), Sektion „Alternative/frühere Namen" (pnames[] mit Sprache + von–bis inline editierbar, sofort wirksam), Sektion „Teil von" (enclosedBy[] via Select aller placeObjects + Datumsbereich). `showPlaceForm` lädt placeObject-Daten; `savePlace` legt placeObject bei erstem Speichern an (`_epId`) oder aktualisiert es (title/type/coords). Neue Actions: `addPlaceName`/`removePlaceName`/`addEnclosedBy`/`removeEnclosedBy` in CLICK_MAP. CSS-Klassen `.place-edit-section`, `.pname-row`, `.pname-span`. **Browser-verifiziert:** Typ korrekt vorbelegt, pnames mit Datum+Sprache, enclosedBy mit Datumsspanne, 0 Console-Errors. | UI | ✅ erledigt |
 | **P3** | **Kirchen & typisierte Event-Orte** ✅ *(sw v818)* — **Typ-Filter** im Orte-Tab (`<select>` Alle/Dorf/Stadt/Pfarrei/Kirche/Friedhof/Hof; kombiniert mit Textsuche). **Typ-Badge** in Listenzeilen (⛪/⚰/🏡/…). **Ort-Suchpicker** im Event-Formular (📍-Button neben `ef-place`/`fev-place` → `modalPlacePicker`; zeigt alle placeObjects mit Typ-Icon; Auswahl setzt Input + hidden placeId). **Kirche↔Kirchenbuch** (light): Place-Detail für Church/Parish/Cemetery-Typen zeigt Sektion „Verknüpfte Kirchenbücher" mit Repos + Quellen die den Ortsnamen enthalten. | `type` (vorhanden) | ✅ erledigt |
 | **P4** | **Geocoding & Gazetteer** ✅ *(sw v819)* — **Nominatim (OSM)** als primäre API (GOV: keine CORS-fähige JSON-API vorhanden). `geocoding.js`: `geocodeSinglePlace()` + `batchGeocodePlaces()` mit 1-req/sec Rate-Limit; befüllt `lat/lon`, `type`, `enclosedBy[]`-Kette (bis Country). CSP `connect-src` um `nominatim.openstreetmap.org` + `gov.genealogy.net` erweitert. **UI:** 📍-Button im Place-Detail + 🌐-Batch-Button im Orte-Tab mit Fortschrittsbalken-Modal. | `geocoding.js` | ✅ erledigt |
-| **P5** | **Auswertungen** — Ort-Steckbrief (Events/Personen/Quellen/Karte/Namens-Timeline); Karten-**Zeitschieber** (Name/Zugehörigkeit zum Jahr); **Pfarrei-Rekonstruktion** (alle Taufen/Trauungen einer Kirche); Geo-Plausibilitäts-Validator; Orts-Hypothesen (`_HYPO`); Orts-Kontextsatz in Story/Buch. | gemischt | angedacht |
+| **P5** | **Auswertungen** — Details s. u. | gemischt | in Arbeit |
 
 **Reihenfolge:** §3.0 Verifikation ✅ → P0a-1 ✅ → P0a-2 ✅ → P0b-1 ✅ → P0b-2a ✅ → P0b-2b ✅ → P0b-3 ✅ → Review → P2-UI → P3 → P4 → P5.
+
+### PLACE-HIST P5 — Auswertungen (Detail-Plan)
+
+**Ziel:** Den aufgebauten Ort-Master (`db.placeObjects`, `PlaceRegistry`, Geocoordinaten, Typ, historische enclosedBy-Ketten) für den Nutzer sichtbar nutzbar machen — als Steckbrief, Karte, Plausibilitäts-Check und narrative Einbettung.
+
+#### P5a — Ort-Steckbrief ✅ *(sw v820)*
+
+| Sub | Inhalt | Status |
+|---|---|---|
+| P5a-1 | **Events-Liste nach Typ gruppiert** — placeId-aware Matching (String + `ev.placeId`); gruppiert nach Geburt/Taufe/Heirat/Beerdigung/Tod/…; Personenzähler im Titel. | ✅ |
+| P5a-2 | **Personen-Zähler** — dedupliziert aus den gesammelten Events. | ✅ |
+| P5a-3 | **Quellen-Liste** — Quellen, deren Titel Ort-Name oder pnames-Alias enthält; mit Repo-Name + Direktlink. | ✅ |
+| P5a-4 | **Namens-Timeline SVG** — horizontale Balken für pnames[] mit Datumsbereich; Jahres-Achse; nur wenn datierte Einträge vorhanden. | ✅ |
+| P5a-5 | **Mini-Karte** — kleiner Leaflet-Container im Standort-Abschnitt (160 px); Marker + Links zu Apple Maps + OSM. | ✅ |
+
+#### P5b — Karten-Zeitschieber (Orte-Tab) *(angedacht)*
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| P5b-1 | **Karten-Panel** — Leaflet + OSM-Tiles; alle placeObjects mit Koordinaten als Marker; Popup = Ort-Name + Typ + Steckbrief-Link. | M |
+| P5b-2 | **Zeitschieber** — `<input type="range">` (ca. 1600–heute); beim Verschieben: `resolveAsOf(year)` → Popup-Name + Marker-Farbe nach Typ. | M |
+| P5b-3 | **Zugehörigkeits-Layer** — enclosedBy-Beziehungen als Linien (child → parent) zum gewählten Jahr. | L |
+
+#### P5c — Pfarrei-Rekonstruktion *(angedacht)*
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| P5c-1 | **Pfarrei-Picker** — Dropdown aller Church/Parish-Orte. | XS |
+| P5c-2 | **Ereignis-Tabelle** — Taufen/Trauungen/Bestattungen der gewählten Pfarrei + untergeordnete Orte (enclosureChainAsOf); sortierbar. | M |
+| P5c-3 | **Export** — CSV-Download. | S |
+
+#### P5d — Geo-Plausibilitäts-Validator *(angedacht)*
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| P5d-1 | **Koordinaten-Plausibilität** — außerhalb D/Europa-Bounding-Box flaggen. | S |
+| P5d-2 | **Zeitachsen-Konsistenz** — `dateFrom > dateTo`; überlappende pnames-Perioden; enclosedBy-Zirkel. | S |
+| P5d-3 | **Event-Ort-Mismatch** — `resolveAsOf(birthYear)` weicht von gespeichertem PLAC-String ab. | M |
+| P5d-4 | **UI** — Warnliste unter Orte-Tab-Header; Direktsprung zum betroffenen placeObject. | S |
+
+#### P5e — Orts-Kontextsatz in Story/Buch *(angedacht)*
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| P5e-1 | **`buildPlaceContextSentence(placeId, year)`** — „{Name} war {year} ein {Typ} in {enclosureChain}." | S |
+| P5e-2 | **Story-Integration** — bei BIRT/DEAT/MARR mit `ev.placeId` → Kontextsatz anhängen. | S |
+
+#### P5f — Orts-Hypothesen (`_HYPO`) *(angedacht)*
+
+| Sub | Inhalt | Aufwand |
+|---|---|---|
+| P5f-1 | **`hypo`-Feld in placeObject** — `{status, confidence, evidenceSids[]}`; Roundtrip via GRAMPS `<url type="_hypo">`. | M |
+| P5f-2 | **UI** — Hypothesen-Badge im Steckbrief; Filter im Orte-Tab. | S |
+
+#### Reihenfolge P5
+
+**Empfohlen:** P5a ✅ → P5d → P5e → P5b → P5c → P5f
 
 ---
 
