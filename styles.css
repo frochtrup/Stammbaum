@@ -3763,6 +3763,9 @@ html[data-theme="dark"] {
 .place-merge-btn { margin-top: 8px; width: 100%; }
 .place-merge-hint { font-size: 11px; color: var(--text-muted, #888); margin-bottom: 6px; }
 
+.icon-btn--active { background: var(--accent, #6a8f3c) !important; color: #fff !important; }
+.place-var-badge { background: var(--accent-muted, #d4e6b5); color: var(--accent-dark, #3a5c1a); }
+
 /* String→PlaceObject Link-Modal */
 .slink-section { margin-bottom: 16px; }
 .slink-section-title { font-weight: 600; font-size: 13px; color: var(--text, #333); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }

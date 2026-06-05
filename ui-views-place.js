@@ -15,13 +15,53 @@ const PLACE_TYPE_ICON = {
   Village:'🏘', Town:'🏘', City:'🏙', Country:'🌍',
 };
 
-let _placeTypeFilter = '';
-let _placeDetailMap = null; // P5a-5: Leaflet-Instanz für Mini-Karte im Steckbrief
+let _placeTypeFilter  = '';
+let _placeGroupMode   = false; // true = nach PlaceObject gruppiert (aktueller Titel)
+let _placeDetailMap   = null;  // P5a-5: Leaflet-Instanz für Mini-Karte im Steckbrief
 
 function setPlaceTypeFilter(val) {
   _placeTypeFilter = val || '';
   const q = document.getElementById('searchPlaces')?.value || '';
   filterPlaces(q);
+}
+
+function togglePlaceGroupMode() {
+  _placeGroupMode = !_placeGroupMode;
+  const btn = document.getElementById('placeGroupBtn');
+  if (btn) btn.classList.toggle('icon-btn--active', _placeGroupMode);
+  const q = document.getElementById('searchPlaces')?.value || '';
+  filterPlaces(q);
+}
+
+// Fasst alle place-Einträge mit derselben placeId unter dem PlaceObject-Titel zusammen.
+// Einträge ohne placeId bleiben einzeln erhalten.
+function _groupPlacesByObject(entries) {
+  const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+  if (!reg) return entries;
+  const grouped = new Map(); // placeId → merged entry
+  const ungrouped = [];
+  for (const pl of entries) {
+    if (!pl.placeId) { ungrouped.push(pl); continue; }
+    const po = reg.byId[pl.placeId];
+    if (!po) { ungrouped.push(pl); continue; }
+    const key = pl.placeId;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        name: po.title, placeId: pl.placeId,
+        personIds: new Set(), eventTypes: new Set(),
+        lati: po.lat ?? pl.lati, long: po.long ?? pl.long,
+        type: po.type || pl.type || null,
+        _variantCount: 0,
+      });
+    }
+    const g = grouped.get(key);
+    for (const id of pl.personIds) g.personIds.add(id);
+    for (const t of pl.eventTypes) g.eventTypes.add(t);
+    if (g.lati === null && pl.lati !== null) { g.lati = pl.lati; g.long = pl.long; }
+    g._variantCount++;
+  }
+  return [...grouped.values(), ...ungrouped]
+    .sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
 }
 
 function collectPlaces() {
@@ -114,10 +154,12 @@ function renderPlaceList(sorted) {
                    : hasGeo ? '📍' : '·';
     const typeLbl  = place.type ? (PLACE_TYPE_LBL[place.type] || place.type) : '';
     const typeBadge = typeLbl ? `<span class="place-type-badge">${esc(typeLbl)}</span>` : '';
+    const varBadge  = (place._variantCount > 1)
+      ? `<span class="place-type-badge place-var-badge">${place._variantCount} Varianten</span>` : '';
     html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.name)}">
       <div class="p-avatar p-avatar--md">${typeIcon}</div>
       <div class="p-info">
-        <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}</div>
+        <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}${varBadge}</div>
         <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte' : ''}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -130,6 +172,7 @@ function filterPlaces(q) {
   const lower = q.toLowerCase().trim();
   let all = [...collectPlaces().values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
   if (_placeTypeFilter) all = all.filter(pl => pl.type === _placeTypeFilter);
+  if (_placeGroupMode) all = _groupPlacesByObject(all);
   if (!lower) { renderPlaceList(all); return; }
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
 }
