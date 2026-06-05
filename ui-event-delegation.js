@@ -76,6 +76,7 @@ const _CLICK_MAP = {
   exportPlaceData:         ()  => exportPlaceData(),
   togglePlaceValidator:    ()  => togglePlaceValidator(),
   showPlaceByIdValidator:  el  => showPlaceByIdValidator(el.dataset.pid),
+  showPlaceByTitle:        el  => { const po = Object.values(AppState.db.placeObjects||{}).find(p=>p.title===el.dataset.title); if(po) showPlaceDetail(po.title); },
   treeShowProband:         ()  => {
     const id = getProbandId();
     if (!id) return;

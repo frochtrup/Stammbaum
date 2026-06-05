@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v824 · Cache: `stammbaum-v824` · `test-unit.js` = 198 Tests grün
+**sw-Version:** v825 · Cache: `stammbaum-v825` · `test-unit.js` = 198 Tests grün
 **Seit v785:** dedup-Doppelnamen (v793) · MULTI_FAMC/OPEN_HYPO-Opt-in (v790–v792) · Eltern-Suchpicker im Familiendialog (v794) · String-Orts-Dubletten (v802) · Settings-Fixes (v815–v817) · **v818–v819: PLACE-HIST P3+P4 vollständig** — Typ-Filter + Ort-Suchpicker + Kirche↔Kirchenbuch (v818); Nominatim-Geocoding + GOV-Text-Parser (Browser + `gov-enrich.py`) (v819). · **v820: PLACE-HIST P5a** — Ort-Steckbrief: Ereignisse gruppiert nach Typ + placeId-Matching (P5a-1), Quellen-Sektion (P5a-3), Namens-Timeline SVG (P5a-4), Mini-Karte Leaflet (P5a-5). · **v821: PLACE-HIST P5d** — Geo-Plausibilitäts-Validator (⚠-Button). · **v822: PLACE-HIST P5e** — Geo-Plausibilitäts-Validator (⚠-Button im Orte-Tab): Koordinaten-BBox, Zeitachsen-Konsistenz, enclosedBy-Zirkel. · **v823:** Assoziationen-Buttons (Bearbeiten + Entfernen) nebeneinander statt gestapelt.
 **Roundtrip GEDCOM:** stabil, net_delta=0, out1===out2 ✓ — *automatisiert* (`test-roundtrip.js`, CI-tauglich)
 **Roundtrip GRAMPS:** stabil, xml1===xml2 ✓, Kern-Records (person/family/source/repository) erhalten ✓ — **automatisiert** (T0-TEST-2, sw v750). Note/Citation deduplizieren bewusst (−116 / −782, analog PEDI). In-Browser-Deep-Test (60034 Checks) bleibt ergänzend.

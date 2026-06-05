@@ -781,11 +781,49 @@ function showPlaceDetail(placeName, pushHistory = true) {
         `<div class="fact-row"><span class="fact-key">${esc(_span(pn))}</span>`
         + `<span class="fact-val">${esc(pn.value)}${pn.lang ? ` <em class="tran-lang">${esc(pn.lang)}</em>` : ''}</span></div>`
       ).join('');
-      // Zugehörigkeitskette (heute = ohne Jahr → erste/aktuelle Zuordnung)
-      const chain = reg.enclosureChainAsOf(place.placeId, null).slice(1);
+      // Verwaltungsgeschichte: alle enclosedBy[]-Einträge chronologisch mit Zeitspanne
       let histHtml = '';
       if (typeLbl) histHtml += `<div class="fact-row"><span class="fact-key">Typ</span><span class="fact-val">${esc(typeLbl)}</span></div>`;
-      if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
+
+      const enclosedBy = po.enclosedBy || [];
+      if (enclosedBy.length) {
+        // Sortieren: Einträge ohne Datum zuletzt (= aktuell), sonst nach dateFrom
+        const sorted = [...enclosedBy].sort((a, b) => {
+          if (!a.dateFrom && !a.dateTo) return 1;
+          if (!b.dateFrom && !b.dateTo) return -1;
+          return (a.dateFrom || '0').localeCompare(b.dateFrom || '0');
+        });
+        let encHtml = '';
+        for (const enc of sorted) {
+          const parent = reg.byId[enc.placeId];
+          if (!parent) continue;
+          // Zeitspanne des Eintrags
+          const f = enc.dateFrom || '', t = enc.dateTo || '';
+          let span = '';
+          if (f && t) span = `${f}–${t}`;
+          else if (f)  span = `ab ${f}`;
+          else if (t)  span = `bis ${t}`;
+          else         span = 'aktuell';
+          // Elterntitel: resolveAsOf zum Startjahr → historisch korrekter Name
+          const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+          const refYear = parseY(f) || parseY(t) || null;
+          const parentName = refYear && reg.resolveAsOf
+            ? (reg.resolveAsOf(enc.placeId, refYear) || parent.title)
+            : parent.title;
+          encHtml += `<div class="fact-row fact-row--clickable" data-action="showPlaceByTitle" data-title="${esc(parent.title)}">
+            <span class="fact-key place-enc-span">${esc(span)}</span>
+            <span class="fact-val">${esc(parentName)}</span>
+            <span class="p-arrow">›</span>
+          </div>`;
+        }
+        if (encHtml) {
+          histHtml += `<div class="fact-sub-title">Verwaltungsgeschichte</div>${encHtml}`;
+        }
+      } else {
+        // Fallback: aktuelle Kette wenn kein enclosedBy[]
+        const chain = reg.enclosureChainAsOf(place.placeId, null).slice(1);
+        if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
+      }
       const svgTimeline = _placeNamesSvg(po.pnames);
       if (histHtml || namesHtml) {
         html += `<div class="section fade-up">
