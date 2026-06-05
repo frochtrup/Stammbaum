@@ -780,8 +780,11 @@ function applyStringPlaceLink(sourceNames, targetPlaceId, confirmedStrs) {
 
 // Verknüpft GEDCOM-Events mit placeObjects (ADR-024 Link-Pass).
 // Aufruf nach loadPlaceObjectsFromIDB() — nur im GEDCOM-Pfad (GRAMPS setzt placeId via Parser).
-// Sicherheitsbedingung: resolveAsOf(placeId, eventYear) muss exakt ev.place ergeben,
-// sonst kein Link → GEDCOM net_delta=0 garantiert.
+// Sicherheitsbedingung: _buildFormString oder resolveAsOf muss exakt ev.place ergeben
+// → GEDCOM net_delta=0 garantiert. Zweistufige Suche:
+//   1. exakter findByName(ev.place) — einfache Strings + historische pnames
+//   2. Fallback: findByName(erstes Komma-Segment) + buildFormString-Vergleich
+//      → erkennt periodengerecht exportierte Komma-Hierarchie-Strings beim Reimport
 function _linkGedcomEventsToPlaceObjects(db) {
   if (!db) return;
   const reg = getPlaceRegistry();
@@ -789,10 +792,23 @@ function _linkGedcomEventsToPlaceObjects(db) {
   let linked = 0;
   const _link = ev => {
     if (!ev || ev.placeId || !ev.place) return;
-    const pid = reg.findByName(ev.place);
-    if (!pid) return;
     const year = _placeYear(ev.date);
-    if (reg.resolveAsOf(pid, year) === ev.place) { ev.placeId = pid; linked++; }
+    // Schritt 1: exakter Match (title, pnames[], historische Strings)
+    let pid = reg.findByName(ev.place);
+    // Schritt 2: erstes Komma-Segment → buildFormString-Vergleich (Reimport-Pfad)
+    if (!pid && ev.place.includes(',')) {
+      const first = ev.place.split(',')[0].trim();
+      const cand  = reg.findByName(first);
+      if (cand) {
+        const built = (typeof _buildFormString === 'function' && _buildFormString(cand, year))
+          || reg.resolveAsOf(cand, year);
+        if (built === ev.place) pid = cand;
+      }
+    }
+    if (!pid) return;
+    const check = (typeof _buildFormString === 'function' && _buildFormString(pid, year))
+      || reg.resolveAsOf(pid, year);
+    if (check === ev.place) { ev.placeId = pid; linked++; }
   };
   for (const p of Object.values(db.individuals || {})) {
     [p.birth, p.chr, p.death, p.buri].forEach(_link);
