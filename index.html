@@ -154,17 +154,21 @@
         <button type="button" id="toggle-hoefe" class="tab-btn"        data-action="switchPlacesSubTab" data-subtab="hoefe">Höfe</button>
         <button type="button" id="toggle-karte" class="tab-btn"        data-action="switchPlacesSubTab" data-subtab="karte">Karte</button>
       </div>
-      <div id="place-search-orte" class="search-wrap">
+      <div id="place-search-orte" class="search-wrap search-wrap--place">
         <input class="search-input" type="search" id="searchPlaces" placeholder="Ortsname…" data-input="filterPlaces">
-        <select class="place-type-filter-sel" id="placeTypeFilter" data-change="setPlaceTypeFilter" title="Nach Typ filtern">
-          <option value="">Alle Typen</option>
-        </select>
-        <button type="button" class="icon-btn" data-action="startBatchGeocode" title="Alle Orte ohne Koordinaten geocodieren (Nominatim)" aria-label="Batch-Geocoding">🌐</button>
-        <button type="button" class="icon-btn" id="placeGroupBtn" data-action="togglePlaceGroupMode" title="Nach PlaceObject gruppieren (historische Varianten zusammenfassen)" aria-label="Nach PlaceObject gruppieren">⊙</button>
-        <button type="button" class="icon-btn" id="placeMergeBtn" data-action="openPlaceMergeModal" title="Orts-Dubletten zusammenführen" aria-label="Orts-Dubletten zusammenführen">⇉</button>
-        <button type="button" class="icon-btn" id="placeValidatorBtn" data-action="togglePlaceValidator" title="Geo-Plausibilitäts-Validator" aria-label="Geo-Validator">⚠</button>
-        <button type="button" class="icon-btn" data-action="exportPlaceData" title="Ortsdaten exportieren (JSON)" aria-label="Ortsdaten exportieren">↓</button>
-        <label class="icon-btn icon-btn--file" title="Ortsdaten importieren (JSON)" aria-label="Ortsdaten importieren">↑<input type="file" accept=".json" class="sr-only" data-change="importPlaceDataFile"></label>
+        <div class="place-toolbar-row">
+          <select class="place-type-filter-sel" id="placeTypeFilter" data-change="setPlaceTypeFilter" title="Nach Typ filtern">
+            <option value="">Alle Typen</option>
+          </select>
+          <div class="place-toolbar-btns">
+            <button type="button" class="icon-btn" id="placeGroupBtn" data-action="togglePlaceGroupMode" title="Nach PlaceObject gruppieren" aria-label="Nach PlaceObject gruppieren">⊙</button>
+            <button type="button" class="icon-btn" id="placeMergeBtn" data-action="openPlaceMergeModal" title="Orts-Dubletten zusammenführen" aria-label="Orts-Dubletten zusammenführen">⇉</button>
+            <button type="button" class="icon-btn" id="placeValidatorBtn" data-action="togglePlaceValidator" title="Geo-Plausibilitäts-Validator" aria-label="Geo-Validator">⚠</button>
+            <button type="button" class="icon-btn" data-action="startBatchGeocode" title="Koordinaten via Nominatim" aria-label="Batch-Geocoding">🌐</button>
+            <button type="button" class="icon-btn" data-action="exportPlaceData" title="Ortsdaten exportieren (JSON)" aria-label="Ortsdaten exportieren">↓</button>
+            <label class="icon-btn icon-btn--file" title="Ortsdaten importieren (JSON)" aria-label="Ortsdaten importieren">↑<input type="file" accept=".json" class="sr-only" data-change="importPlaceDataFile"></label>
+          </div>
+        </div>
       </div>
       <div id="place-search-hoefe" class="search-wrap" hidden>
         <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
