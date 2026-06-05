@@ -696,7 +696,8 @@ function _initPlaceDetailMap(lat, lon, title) {
   _placeDetailMap = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, tap: false });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_placeDetailMap);
   _placeDetailMap.setView([lat, lon], 12);
-  L.marker([lat, lon]).addTo(_placeDetailMap);
+  L.circleMarker([lat, lon], { radius: 9, color: '#c8793a', fillColor: '#c8793a', fillOpacity: 0.85, weight: 2 })
+    .bindPopup(title).addTo(_placeDetailMap);
   setTimeout(() => _placeDetailMap?.invalidateSize(), 150);
 }
 
