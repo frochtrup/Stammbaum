@@ -3772,6 +3772,9 @@ html[data-theme="dark"] {
 .slink-target-row { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
 .slink-target-row:hover { background: var(--surface-2, #f5f0e6); }
 .slink-target-selected { font-size: 13px; color: var(--accent, #6a8f3c); margin-top: 6px; font-weight: 600; padding: 4px 0; }
+.slink-preselect-bar { display: flex; align-items: center; gap: 8px; background: var(--surface-2, #f5f0e6); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.slink-preselect-label { font-size: 12px; color: var(--text-muted, #888); flex-shrink: 0; }
+.slink-preselect-name { font-size: 14px; font-weight: 600; color: var(--text, #333); }
 .slink-group-row { align-items: flex-start; flex-wrap: wrap; gap: 4px; }
 .slink-result-str { font-family: var(--font-mono, monospace); font-size: 12px; word-break: break-all; flex: 1 1 200px; }
 

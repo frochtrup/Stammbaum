@@ -725,6 +725,16 @@ function showPlaceDetail(placeName, pushHistory = true) {
     <div class="detail-id">${place.personIds.size} Person${place.personIds.size !== 1 ? 'en' : ''}</div>
   </div>`;
 
+  // Verknüpfungs-Button: wenn Ort kein placeObject hat → mit PlaceObject verknüpfen
+  if (!place.placeId && typeof getPlaceRegistry === 'function'
+      && Object.keys(getPlaceRegistry().byId).length > 0) {
+    html += `<div class="py-8">
+      <button class="btn btn-save w-full"
+        data-action="openPlaceStringLinkModal"
+        data-preselect="${placeName.replace(/"/g,'&quot;')}">🔗 Mit PlaceObject verknüpfen</button>
+    </div>`;
+  }
+
   // Lösch-Button für manuell hinzugefügte Orte ohne verknüpfte Personen
   if (place.personIds.size === 0 && AppState.db.extraPlaces[placeName]) {
     html += `<div class="py-8">
@@ -1157,27 +1167,39 @@ let _slinkTargetId = null;       // gewähltes Ziel-PlaceObject
 let _slinkGroups   = [];         // Ergebnis-Gruppen (von _buildLinkGroups)
 
 function openPlaceStringLinkModal(preselect) {
-  // Alle String-only-Orte (kein placeId) als Kandidaten
-  const all = [...collectPlaces().values()].filter(pl => !pl.placeId)
-    .sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
-  if (!all.length) { showToast('Keine unverlinkten GEDCOM-Ortsstrings vorhanden'); return; }
+  const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+  if (!reg || !Object.keys(reg.byId).length) {
+    showToast('Keine PlaceObjects vorhanden — erst orte.json laden oder GRAMPS-Datei importieren');
+    return;
+  }
 
   _slinkSources  = new Set(preselect ? [preselect] : []);
   _slinkTargetId = null;
   _slinkGroups   = [];
 
-  // Quell-Checkliste rendern
+  // Schritt 1: Quell-Sektion — nur zeigen wenn kein preselect (allgemeiner Aufruf)
+  const srcSec = document.getElementById('slinkSourceSection');
   const listEl = document.getElementById('slinkSourceList');
-  if (listEl) {
-    listEl.innerHTML = all.map(pl => {
-      const n = pl.personIds.size;
-      const sel = _slinkSources.has(pl.name);
-      return `<label class="place-merge-opt">
-        <input type="checkbox" class="slink-src-cb" value="${esc(pl.name)}"${sel ? ' checked' : ''}>
-        <span class="place-merge-name">${esc(compactPlace(pl.name))}</span>
-        <span class="place-merge-meta">${n} Ereignis${n !== 1 ? 'se' : ''}</span>
-      </label>`;
-    }).join('');
+  const headEl = document.getElementById('slinkPreselectedName');
+  if (preselect) {
+    if (srcSec)  srcSec.hidden = true;
+    if (headEl) { headEl.textContent = compactPlace(preselect); headEl.closest('.slink-preselect-bar').hidden = false; }
+  } else {
+    if (srcSec)  srcSec.hidden = false;
+    if (headEl) headEl.closest('.slink-preselect-bar').hidden = true;
+    const all = [...collectPlaces().values()].filter(pl => !pl.placeId)
+      .sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
+    if (!all.length) { showToast('Keine unverlinkten GEDCOM-Ortsstrings vorhanden'); return; }
+    if (listEl) {
+      listEl.innerHTML = all.map(pl => {
+        const n = pl.personIds.size;
+        return `<label class="place-merge-opt">
+          <input type="checkbox" class="slink-src-cb" value="${esc(pl.name)}">
+          <span class="place-merge-name">${esc(compactPlace(pl.name))}</span>
+          <span class="place-merge-meta">${n} Ereignis${n !== 1 ? 'se' : ''}</span>
+        </label>`;
+      }).join('');
+    }
   }
 
   // Ziel zurücksetzen
