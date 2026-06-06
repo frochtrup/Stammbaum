@@ -730,30 +730,104 @@ function saveExtraPlaces() {
 
 // ── PlaceObjects-Persistenz (IDB-Cache + JSON-Export, Muster quickTemplates) ──
 // IDB-Key global (wie quickTemplates): Ortshierarchie ist appweit, nicht dateigebunden.
-// Beim Laden werden nur _ep_-Einträge (user-erzeugte) gemergt — GRAMPS-native IDs
-// werden nie überschrieben.
+//
+// Item 10: Wrapper-Format mit Revision + Geräte-ID für Konflikt-Erkennung.
+//   { schemaVersion: 1, _rev: N, _device: '<id>', _ts: ISO, placeObjects: {...} }
+// Beim Laden: lokales _rev gegen remote vergleichen. Gleiche _rev + andere
+// _device + abweichender Content → Konflikt (Toast).
+//
+// Backwards-kompat: stored/odData ohne schemaVersion = altes Format
+// (nacktes placeObjects-Object) → unwrap als schemaVersion=0, _rev=0.
+const PLACES_SCHEMA_VERSION = 1;
+
+function _placeDeviceId() {
+  let id = null;
+  try { id = localStorage.getItem('stammbaum_device_id'); } catch(_) {}
+  if (!id) {
+    id = 'd_' + Math.random().toString(36).slice(2, 10) + '_' + Date.now().toString(36);
+    try { localStorage.setItem('stammbaum_device_id', id); } catch(_) {}
+  }
+  return id;
+}
+
+// Unwrappt das gespeicherte Format. Gibt { wrapper, pos } zurück.
+// wrapper = {schemaVersion, _rev, _device, _ts}; pos = placeObjects.
+function _unwrapPlacesData(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  if (raw.schemaVersion === PLACES_SCHEMA_VERSION && raw.placeObjects && typeof raw.placeObjects === 'object') {
+    return {
+      wrapper: { schemaVersion: raw.schemaVersion, _rev: raw._rev || 0,
+        _device: raw._device || null, _ts: raw._ts || null },
+      pos: raw.placeObjects,
+    };
+  }
+  // Altes Format: nacktes Object {id1: po1, id2: po2, ...}
+  return { wrapper: { schemaVersion: 0, _rev: 0, _device: null, _ts: null }, pos: raw };
+}
+
+// Track local revision in-memory (loaded from IDB at startup, bumped on save)
+let _placesLocalRev = 0;
+
 async function loadPlaceObjectsFromIDB() {
   try {
     // 1) IDB (lokal, schnell)
     const raw = await idbGet('stammbaum_placeobjects');
-    const stored = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : {};
-    // 2) OneDrive Konfig-Ordner (falls verbunden — überschreibt ältere IDB-Daten)
-    let odData = null;
+    const stored = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+    const localUnwrapped = _unwrapPlacesData(stored);
+    // 2) OneDrive Konfig-Ordner (falls verbunden)
+    let odRaw = null;
     if (typeof _odReadAppData === 'function') {
-      odData = await _odReadAppData('stammbaum-orte.json').catch(() => null);
+      odRaw = await _odReadAppData('stammbaum-orte.json').catch(() => null);
     }
-    const source = odData || stored; // OneDrive hat Vorrang (aktuellste Version)
-    if (!source || typeof source !== 'object') return;
+    const remoteUnwrapped = _unwrapPlacesData(odRaw);
+
+    // Konflikt-Erkennung: beide existieren, gleiche _rev, verschiedene _device
+    // mit abweichendem Content → mehrere Geräte haben unabhängig geändert.
+    let conflict = false;
+    if (localUnwrapped && remoteUnwrapped
+        && localUnwrapped.wrapper._rev === remoteUnwrapped.wrapper._rev
+        && localUnwrapped.wrapper._rev > 0
+        && localUnwrapped.wrapper._device && remoteUnwrapped.wrapper._device
+        && localUnwrapped.wrapper._device !== remoteUnwrapped.wrapper._device) {
+      try {
+        const a = JSON.stringify(localUnwrapped.pos);
+        const b = JSON.stringify(remoteUnwrapped.pos);
+        if (a !== b) conflict = true;
+      } catch(_) {}
+    }
+
+    // Entscheidung: höhere _rev gewinnt. Bei Konflikt verwenden wir den Union-Merge
+    // (alles aus beiden Quellen einlesen, kein Datenverlust) und melden den Konflikt.
+    let primary = localUnwrapped, secondary = remoteUnwrapped;
+    if (remoteUnwrapped && (!localUnwrapped
+        || (remoteUnwrapped.wrapper._rev > localUnwrapped.wrapper._rev))) {
+      primary = remoteUnwrapped; secondary = localUnwrapped;
+    }
+
     const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
-    let added = 0;
-    for (const [id, po] of Object.entries(source)) {
-      if (pos[id]) continue; // vorhandene (GRAMPS-native) nicht überschreiben
-      pos[id] = po;
-      added++;
+    // Primary first
+    if (primary) {
+      for (const [id, po] of Object.entries(primary.pos)) {
+        if (!pos[id]) pos[id] = po;
+      }
+      _placesLocalRev = primary.wrapper._rev || 0;
     }
+    // Konflikt: secondary auch einlesen (Union-Merge)
+    if (conflict && secondary) {
+      for (const [id, po] of Object.entries(secondary.pos)) {
+        if (!pos[id]) pos[id] = po;
+      }
+      setTimeout(() => {
+        if (typeof showToast === 'function')
+          showToast('⚠ Orts-Daten: Konflikt zwischen Geräten erkannt — beide Stände wurden zusammengeführt. Bei Bedarf Orte-Tab prüfen.', 'warn');
+      }, 1800);
+    }
+
     // OneDrive-Daten auch in IDB sichern (Offline-Fallback aktuell halten)
-    if (odData) idbPut('stammbaum_placeobjects', JSON.stringify(odData)).catch(() => {});
-    if (added) UIState._placeRegistry = null;
+    if (remoteUnwrapped && remoteUnwrapped.wrapper._rev >= (localUnwrapped?.wrapper._rev || 0)) {
+      idbPut('stammbaum_placeobjects', JSON.stringify(odRaw)).catch(() => {});
+    }
+    UIState._placeRegistry = null;
   } catch(e) { console.warn('loadPlaceObjectsFromIDB:', e); }
 }
 
@@ -762,14 +836,18 @@ async function loadPlaceObjectsFromIDB() {
 let _savePoIDBErrored = false;
 let _savePoODErrored  = false;
 function savePlaceObjects() {
-  let serialized;
+  let payload;
   try {
-    // Alle placeObjects persistieren (GRAMPS-native + _ep_-user-erzeugte).
-    // Beim späteren GRAMPS-Load schützt loadPlaceObjectsFromIDB via "if (pos[id]) continue"
-    // davor, dass JSON-Einträge frisch geparste GRAMPS-Daten überschreiben.
-    // Beim GEDCOM-Load stehen so auch GRAMPS-native Einträge (enclosedBy[], pnames[]) zur Verfügung.
     const toSave = AppState.db.placeObjects || {};
-    serialized = JSON.stringify(toSave);
+    _placesLocalRev = (_placesLocalRev || 0) + 1;
+    // Item 10: Wrapper-Format mit Rev+Device für Konflikt-Erkennung
+    payload = {
+      schemaVersion: PLACES_SCHEMA_VERSION,
+      _rev: _placesLocalRev,
+      _device: _placeDeviceId(),
+      _ts: new Date().toISOString(),
+      placeObjects: toSave,
+    };
   } catch(e) {
     if (!_savePoIDBErrored) {
       _savePoIDBErrored = true;
@@ -778,15 +856,15 @@ function savePlaceObjects() {
     }
     return;
   }
+  const serialized = JSON.stringify(payload);
   idbPut('stammbaum_placeobjects', serialized).catch(err => {
     if (_savePoIDBErrored) return;
     _savePoIDBErrored = true;
     if (typeof showToast === 'function')
       showToast('⚠ Orts-Daten lokal nicht speicherbar (IDB): ' + (err?.message || err), 'error');
   });
-  // OneDrive-Sync in Konfig-Ordner — Fehler einmalig melden
   if (typeof _odWriteAppData === 'function') {
-    _odWriteAppData('stammbaum-orte.json', JSON.parse(serialized)).catch(err => {
+    _odWriteAppData('stammbaum-orte.json', payload).catch(err => {
       if (_savePoODErrored) return;
       _savePoODErrored = true;
       if (typeof showToast === 'function')
