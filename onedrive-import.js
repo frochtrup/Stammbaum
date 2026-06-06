@@ -115,8 +115,23 @@ async function odImportFromDefaultFolder() {
   await odImportPhotosFromFolder(folder.id || folder.folderId, folder.name || folder.folderName);
 }
 
+// Baut FolderStack aus parentReference auf — letzter Eintrag erhält echte ID,
+// Zwischenebenen nutzen 'root' als Fallback für ← Zurück.
+// parentRef = { path: '/drive/root:/Privat/Ahnen', id: ahnen_id }
+// → [{ id:'root', name:'OneDrive' }, { id:'root', name:'Privat' }, { id:ahnen_id, name:'Ahnen' }]
+function _odBuildStack(parentRef) {
+  const path = parentRef?.path || '';
+  const id   = parentRef?.id   || 'root';
+  if (!/\/drive\/root:.+/.test(path)) return [{ id: 'root', name: 'OneDrive' }];
+  const segs  = path.replace(/.*\/drive\/root:\//, '').split('/').filter(Boolean).map(decodeURIComponent);
+  const stack = [{ id: 'root', name: 'OneDrive' }];
+  for (let i = 0; i < segs.length; i++) {
+    stack.push({ id: i === segs.length - 1 ? id : 'root', name: segs[i] });
+  }
+  return stack;
+}
+
 // Zum Eltern-Ordner eines bekannten Ordners navigieren (Ordner-Auswahl-Dialoge)
-// → parallele Ordner sofort sichtbar, Navigation mit ← Zurück
 async function _odNavigateToParentOf(folderId) {
   const token = await _odGetToken().catch(() => null);
   if (!token) { _odFolderStack = []; await _odShowFolder('root', 'OneDrive'); return; }
@@ -126,15 +141,15 @@ async function _odNavigateToParentOf(folderId) {
       { headers: { Authorization: 'Bearer ' + token } }
     );
     if (!res.ok) throw new Error('Ordner nicht gefunden');
-    const data = await res.json();
-    const parentId   = data.parentReference?.id;
+    const data       = await res.json();
     const parentPath = data.parentReference?.path || '';
+    const parentId   = data.parentReference?.id;
     const parentIsRoot = !/\/drive\/root:.+/.test(parentPath);
     if (parentId && !parentIsRoot) {
-      const parentName = decodeURIComponent(
-        parentPath.replace(/.*\/drive\/root:\//, '').split('/').pop() || 'OneDrive'
-      );
-      _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
+      // Parent-Ordner anzeigen; Stack = Vorfahren des Parents (ohne Parent selbst)
+      const parentName = decodeURIComponent(parentPath.replace(/.*\/drive\/root:\//, '').split('/').pop() || 'OneDrive');
+      const grandParentPath = parentPath.replace(/\/[^/]*$/, ''); // letztes Segment entfernen
+      _odFolderStack = _odBuildStack({ path: grandParentPath, id: null });
       await _odShowFolder(parentId, parentName);
     } else {
       // Parent ist Root → Ordner selbst anzeigen, Root im Stack für ← Zurück
@@ -462,17 +477,17 @@ async function odSetupConfigFolder() {
         }
       } catch(e) { /* Config-Ordner existiert noch nicht → GED-Ordner zeigen */ }
     }
-    // GED-Ordner als Startpunkt — Stack mit Root vorbelegen damit ← Zurück funktioniert
+    // GED-Ordner als Startpunkt — Stack aus parentReference aufbauen
     const encoded = basePath.split('/').filter(Boolean).map(encodeURIComponent).join('/');
     const token2 = await _odGetToken().catch(() => null);
     if (token2) {
       try {
-        const res2 = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}?$select=id`, { headers: { Authorization: 'Bearer ' + token2 } });
+        const res2 = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name,parentReference`, { headers: { Authorization: 'Bearer ' + token2 } });
         if (res2.ok) {
-          const { id } = await res2.json();
-          if (id) {
-            _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
-            await _odShowFolder(id, basePath.split('/').pop());
+          const data2 = await res2.json();
+          if (data2.id) {
+            _odFolderStack = _odBuildStack(data2.parentReference);
+            await _odShowFolder(data2.id, data2.name || basePath.split('/').pop());
             return;
           }
         }

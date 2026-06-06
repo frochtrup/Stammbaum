@@ -301,7 +301,7 @@ async function odSetBasePath(val) {
 }
 
 // Ordner-Browser für GED-Startpfad öffnen
-// Startet am Parent des aktuellen Basis-Pfads, damit parallel liegende Ordner sichtbar sind
+// Startet im konfigurierten GED-Ordner selbst (← Zurück führt zum Parent)
 async function odBrowseBasePath() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
   _odResetModes();
@@ -313,15 +313,18 @@ async function odBrowseBasePath() {
 
   if (token && _odCurrentBasePath) {
     try {
-      // Pfad → Ordner-ID auflösen, dann über gemeinsamen Helper zum Parent navigieren
       const encoded = _odCurrentBasePath.split('/').filter(Boolean).map(encodeURIComponent).join('/');
       const res = await fetch(
-        `${OD_GRAPH}/me/drive/root:/${encoded}?$select=id`,
+        `${OD_GRAPH}/me/drive/root:/${encoded}?$select=id,name,parentReference`,
         { headers: { Authorization: 'Bearer ' + token } }
       );
       if (res.ok) {
-        const { id } = await res.json();
-        if (id) { await _odNavigateToParentOf(id); return; }
+        const data = await res.json();
+        if (data.id) {
+          _odFolderStack = _odBuildStack(data.parentReference);
+          await _odShowFolder(data.id, data.name || _odCurrentBasePath.split('/').pop());
+          return;
+        }
       }
     } catch(e) { console.warn('[OD] Browse base path:', e); }
   }

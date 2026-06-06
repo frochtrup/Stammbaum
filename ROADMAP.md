@@ -26,7 +26,8 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v848 · Cache: `stammbaum-v848` · `test-unit.js` = 198 Tests grün
+**sw-Version:** v849 · Cache: `stammbaum-v849` · `test-unit.js` = 198 Tests grün
+**v849: fix(onedrive): Ordner-Picker startet im GED-Ordner + korrekter Breadcrumb** — `_odBuildStack(parentRef)` neu: baut FolderStack aus `parentReference` auf (voller Pfad, letzter Eintrag mit echter ID). `odBrowseBasePath` zeigt jetzt GED-Ordner selbst (nicht Parent). `_odNavigateToParentOf` baut Breadcrumb mit vollständigem Pfad. Config-Picker-Fallback ebenfalls auf `_odBuildStack` umgestellt.
 **v848: fix(onedrive): Mode-Flags konsistent zurücksetzen** — `_odConfigScanMode` jetzt deklariert; `_odResetModes()` Helper; alle Picker-Einstiegspunkte (`odImportPhotos`, `odSetupDocFolder`, `odSetupConfigFolder`, `odBrowseBasePath`, `odPickFileForMedia`, `odPickFileForEditMedia`) rufen `_odResetModes()` als erstes auf → kein staler Mode aus vorheriger Sitzung kann mehr Titel/Buttons des OD-Browsers verfälschen.
 **v847: fix(places): Typ-Filter nach Orte-JSON-Import befüllen** — `importPlaceDataFile` ruft jetzt `renderTab()` auf, damit `_refreshPlaceTypeFilter()` die neu importierten Typen sofort in das Select übernimmt.
 **v846: fix(onedrive): Ordner-Picker nie bei OneDrive-Root starten** — `_odNavigateToParentOf`: wenn der Parent-Ordner direkt im Root liegt (`parentIsRoot`), wird jetzt der Ordner selbst mit Root im Stack angezeigt statt dem Root mit dem Ordner als Kind-Element. Betrifft alle drei Settings-Picker (GED-Startpfad, Dokumente, Konfig).
