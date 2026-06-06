@@ -2538,6 +2538,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .tran-lang { font-size: 0.72rem; background: var(--surface); border-radius: 3px; padding: 0 3px; color: var(--text-muted); font-family: monospace; font-style: normal; }
 .tran-add-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .tran-add-row .form-input { flex: 1; min-width: 80px; padding: 5px 9px; font-size: 0.85rem; }
+.tran-add-btn { padding: 5px 14px !important; font-size: 0.9rem !important; flex-shrink: 0; }
 
 /* ── Geo-Link (📍 Apple Maps) ── */
 .geo-link {
@@ -3816,6 +3817,10 @@ html[data-theme="dark"] {
 .place-map-links { display: flex; gap: 8px; flex-wrap: wrap; }
 .place-map-links .place-maps-link { flex: 1; }
 .place-map-coords { margin-top: 4px; font-size: 11px; color: var(--text-muted, #888); }
+.place-action-row { display: flex; justify-content: flex-start; padding: 6px 0 2px; }
+.place-delete-row { display: flex; justify-content: center; padding: 24px 16px 12px; border-top: 1px solid var(--border); margin-top: 8px; }
+.btn-ghost-danger { color: var(--red, #8b1a1a) !important; border-color: var(--red, #8b1a1a) !important; opacity: 0.75; }
+.btn-ghost-danger:active { opacity: 1; }
 .place-event-section { margin-top: 6px; }
 .place-src-repo { font-size: 11px; color: var(--text-muted, #888); }
 .place-enc-span { min-width: 90px; color: var(--text-muted, #888); font-size: 12px; }

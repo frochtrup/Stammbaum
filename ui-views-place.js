@@ -824,21 +824,10 @@ function showPlaceDetail(placeName, pushHistory = true) {
   // Verknüpfungs-Button: wenn Ort kein placeObject hat → mit PlaceObject verknüpfen
   if (!place.placeId && typeof getPlaceRegistry === 'function'
       && Object.keys(getPlaceRegistry().byId).length > 0) {
-    html += `<div class="py-8">
-      <button class="btn btn-save w-full"
+    html += `<div class="place-action-row">
+      <button class="btn-ghost"
         data-action="openPlaceStringLinkModal"
         data-preselect="${placeName.replace(/"/g,'&quot;')}">🔗 Mit PlaceObject verknüpfen</button>
-    </div>`;
-  }
-
-  // Lösch-Button für Orte ohne verknüpfte Personen (extraPlaces oder reines placeObject)
-  const _canDelete = place.personIds.size === 0
-    && (AppState.db.extraPlaces?.[placeName]
-        || (place.placeId && (AppState.db.placeObjects || {})[place.placeId]));
-  if (_canDelete) {
-    html += `<div class="py-8">
-      <button class="btn btn-danger w-full"
-        data-action="deleteExtraPlace" data-pname="${placeName.replace(/"/g,'&quot;')}">Ort entfernen</button>
     </div>`;
   }
 
@@ -857,14 +846,19 @@ function showPlaceDetail(placeName, pushHistory = true) {
            target="_blank" class="place-maps-link">🌐 OpenStreetMap</a>
       </div>
       <div class="place-map-coords">${place.lati.toFixed(5)}, ${place.long.toFixed(5)}</div>
-      ${_geoAvail ? `<button class="btn btn-cancel mt-8 w-full" data-action="geocodeCurrentPlace" title="Koordinaten + Typ via Nominatim neu abrufen">↻ Neu geocodieren</button>` : ''}
+      ${_geoAvail ? `<div class="place-action-row mt-8"><button class="btn-ghost" data-action="geocodeCurrentPlace" title="Koordinaten + Typ via Nominatim neu abrufen">↻ Neu geocodieren</button></div>` : ''}
     </div>`;
   } else if (_geoAvail) {
     html += `<div class="section fade-up">
       <div class="section-title">Standort</div>
-      <button class="btn btn-save w-full" data-action="geocodeCurrentPlace">📍 Geocodieren (Nominatim)</button>
+      <div class="place-action-row"><button class="btn-ghost" data-action="geocodeCurrentPlace">📍 Geocodieren</button></div>
     </div>`;
   }
+
+  // Lösch-Button: am Ende des Steckbriefs, nur für Orte ohne verknüpfte Personen
+  const _canDelete = place.personIds.size === 0
+    && (AppState.db.extraPlaces?.[placeName]
+        || (place.placeId && (AppState.db.placeObjects || {})[place.placeId]));
 
   // PLACE-HIST (ADR-024, P0b-1): historische Dimension der Place-Entität anzeigen
   // (Typ, datierte Namensvarianten, Zugehörigkeitskette). Nur wenn placeObject verknüpft.
@@ -1011,7 +1005,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
     <div class="tran-add-row">
       <input class="form-input" id="pl-tran-val" placeholder="Übersetzung (z.B. Wrocław)">
       <input class="form-input" id="pl-tran-lang" placeholder="Sprache" style="max-width:100px">
-      <button class="btn btn-save" style="padding:5px 14px" data-action="addPlaceTrans">+</button>
+      <button class="btn-ghost tran-add-btn" data-action="addPlaceTrans">+</button>
     </div>
   </div>`;
 
@@ -1100,6 +1094,14 @@ function showPlaceDetail(placeName, pushHistory = true) {
     html += `<div class="section fade-up">
       <div class="section-title">Quellen zu diesem Ort</div>
       ${_srcHtml}
+    </div>`;
+  }
+
+  // Lösch-Button ganz am Ende — diskret, nicht dominant
+  if (_canDelete) {
+    html += `<div class="place-delete-row">
+      <button class="btn-ghost btn-ghost-danger"
+        data-action="deleteExtraPlace" data-pname="${placeName.replace(/"/g,'&quot;')}">Ort entfernen</button>
     </div>`;
   }
 
