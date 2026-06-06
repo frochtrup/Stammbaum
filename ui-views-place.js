@@ -734,7 +734,13 @@ async function deleteExtraPlace(name) {
   if (!await confirmModal('Ort wirklich entfernen?', 'Entfernen')) return;
   delete AppState.db.extraPlaces[name];
   saveExtraPlaces();
-  UIState._placesCache = null; // markChanged() wird hier nicht aufgerufen, daher manuell
+  // Auch das zugehörige placeObject entfernen (z.B. GOV-Kaskaden-Orte)
+  const pos = AppState.db.placeObjects || {};
+  for (const [id, po] of Object.entries(pos)) {
+    if (po.title === name) { delete pos[id]; break; }
+  }
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  UIState._placesCache = null;
   goBack();
   showToast('✓ Ort entfernt');
   renderTab();
@@ -828,8 +834,11 @@ function showPlaceDetail(placeName, pushHistory = true) {
     </div>`;
   }
 
-  // Lösch-Button für manuell hinzugefügte Orte ohne verknüpfte Personen
-  if (place.personIds.size === 0 && AppState.db.extraPlaces[placeName]) {
+  // Lösch-Button für Orte ohne verknüpfte Personen (extraPlaces oder reines placeObject)
+  const _canDelete = place.personIds.size === 0
+    && (AppState.db.extraPlaces?.[placeName]
+        || (place.placeId && (AppState.db.placeObjects || {})[place.placeId]));
+  if (_canDelete) {
     html += `<div class="py-8">
       <button class="btn btn-danger w-full"
         data-action="deleteExtraPlace" data-pname="${placeName.replace(/"/g,'&quot;')}">Ort entfernen</button>

@@ -377,13 +377,11 @@ async function _odWriteAppData(filename, data) {
   const token  = await _odGetToken().catch(() => null);
   if (!token) return false;
   const folder = await _odGetConfigFolder();
-  if (!folder?.relPath) return false;
-  const fullPath = folder.relPath + '/' + filename;
+  if (!folder?.id) return false;
   try {
     const content = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
     const blob    = new Blob([content], { type: 'application/json' });
-    const encoded = fullPath.split('/').map(s => encodeURIComponent(s)).join('/');
-    const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${folder.id}:/${encodeURIComponent(filename)}:/content`,
       { method: 'PUT', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: blob });
     return res.ok;
   } catch(e) { console.warn('[OD] _odWriteAppData:', filename, e); return false; }
@@ -394,11 +392,9 @@ async function _odReadAppData(filename) {
   const token  = await _odGetToken().catch(() => null);
   if (!token) return null;
   const folder = await _odGetConfigFolder();
-  if (!folder?.relPath) return null;
-  const fullPath = folder.relPath + '/' + filename;
+  if (!folder?.id) return null;
   try {
-    const encoded = fullPath.split('/').map(s => encodeURIComponent(s)).join('/');
-    const res = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}:/content`,
+    const res = await fetch(`${OD_GRAPH}/me/drive/items/${folder.id}:/${encodeURIComponent(filename)}:/content`,
       { headers: { Authorization: 'Bearer ' + token } });
     if (!res.ok) return null;
     return await res.json();

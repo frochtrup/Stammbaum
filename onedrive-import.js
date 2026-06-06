@@ -460,13 +460,20 @@ async function odSetupConfigFolder() {
         }
       } catch(e) { /* Config-Ordner existiert noch nicht → GED-Ordner zeigen */ }
     }
-    // GED-Ordner als Startpunkt
+    // GED-Ordner als Startpunkt — Stack mit Root vorbelegen damit ← Zurück funktioniert
     const encoded = basePath.split('/').filter(Boolean).map(encodeURIComponent).join('/');
     const token2 = await _odGetToken().catch(() => null);
     if (token2) {
       try {
         const res2 = await fetch(`${OD_GRAPH}/me/drive/root:/${encoded}?$select=id`, { headers: { Authorization: 'Bearer ' + token2 } });
-        if (res2.ok) { const { id } = await res2.json(); if (id) { await _odShowFolder(id, basePath.split('/').pop()); return; } }
+        if (res2.ok) {
+          const { id } = await res2.json();
+          if (id) {
+            _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
+            await _odShowFolder(id, basePath.split('/').pop());
+            return;
+          }
+        }
       } catch(e) {}
     }
     await _odShowFolder('root', 'OneDrive');
