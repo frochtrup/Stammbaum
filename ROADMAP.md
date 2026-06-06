@@ -26,7 +26,8 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v849 · Cache: `stammbaum-v849` · `test-unit.js` = 198 Tests grün
+**sw-Version:** v850 · Cache: `stammbaum-v850` · `test-unit.js` = 198 Tests grün
+**v850: fix(topbar): storyBtn/timelineBtn/probandBtn in Quellen/Ort/Hof/Archiv-Detail ausblenden** — alle vier Non-Person-Detail-Views setzen jetzt `storyBtn`, `timelineBtn`, `probandBtn`, `probandSetBtn` auf `hidden=true`, damit das Lebensgeschichte-Symbol nicht aus vorheriger Personen-/Familienansicht übrig bleibt.
 **v849: fix(onedrive): Ordner-Picker startet im GED-Ordner + korrekter Breadcrumb** — `_odBuildStack(parentRef)` neu: baut FolderStack aus `parentReference` auf (voller Pfad, letzter Eintrag mit echter ID). `odBrowseBasePath` zeigt jetzt GED-Ordner selbst (nicht Parent). `_odNavigateToParentOf` baut Breadcrumb mit vollständigem Pfad. Config-Picker-Fallback ebenfalls auf `_odBuildStack` umgestellt.
 **v848: fix(onedrive): Mode-Flags konsistent zurücksetzen** — `_odConfigScanMode` jetzt deklariert; `_odResetModes()` Helper; alle Picker-Einstiegspunkte (`odImportPhotos`, `odSetupDocFolder`, `odSetupConfigFolder`, `odBrowseBasePath`, `odPickFileForMedia`, `odPickFileForEditMedia`) rufen `_odResetModes()` als erstes auf → kein staler Mode aus vorheriger Sitzung kann mehr Titel/Buttons des OD-Browsers verfälschen.
 **v847: fix(places): Typ-Filter nach Orte-JSON-Import befüllen** — `importPlaceDataFile` ruft jetzt `renderTab()` auf, damit `_refreshPlaceTypeFilter()` die neu importierten Typen sofort in das Select übernimmt.

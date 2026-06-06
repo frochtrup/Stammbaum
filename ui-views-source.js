@@ -14,7 +14,11 @@ function showSourceDetail(id, pushHistory = true) {
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden = true;
+  document.getElementById('treeBtn').hidden        = true;
+  document.getElementById('timelineBtn').hidden    = true;
+  document.getElementById('storyBtn').hidden       = true;
+  document.getElementById('probandBtn').hidden     = true;
+  document.getElementById('probandSetBtn').hidden  = true;
   document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
 
   // Collect all persons and families referencing this source

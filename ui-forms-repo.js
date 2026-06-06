@@ -100,7 +100,11 @@ function showRepoDetail(id, pushHistory = true) {
   AppState.currentPlaceName = null;
   document.getElementById('detailTopTitle').textContent = 'Archiv';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden = true;
+  document.getElementById('treeBtn').hidden        = true;
+  document.getElementById('timelineBtn').hidden    = true;
+  document.getElementById('storyBtn').hidden       = true;
+  document.getElementById('probandBtn').hidden     = true;
+  document.getElementById('probandSetBtn').hidden  = true;
 
   const linkedSources = Object.values(AppState.db.sources).filter(s => s.repo === id);
   let html = `<div class="detail-hero fade-up">

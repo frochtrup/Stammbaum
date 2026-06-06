@@ -816,7 +816,11 @@ function showPlaceDetail(placeName, pushHistory = true) {
   (UIState._lastTabSel || (UIState._lastTabSel = {})).places = placeName;
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden = true;
+  document.getElementById('treeBtn').hidden        = true;
+  document.getElementById('timelineBtn').hidden    = true;
+  document.getElementById('storyBtn').hidden       = true;
+  document.getElementById('probandBtn').hidden     = true;
+  document.getElementById('probandSetBtn').hidden  = true;
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar place">📍</div>

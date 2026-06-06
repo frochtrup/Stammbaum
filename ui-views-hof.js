@@ -318,7 +318,11 @@ function showHofDetail(addr, pushHistory = true) {
 
   document.getElementById('detailTopTitle').textContent = 'Hof';
   document.getElementById('editBtn').style.display = 'none';
-  document.getElementById('treeBtn').hidden = true;
+  document.getElementById('treeBtn').hidden        = true;
+  document.getElementById('timelineBtn').hidden    = true;
+  document.getElementById('storyBtn').hidden       = true;
+  document.getElementById('probandBtn').hidden     = true;
+  document.getElementById('probandSetBtn').hidden  = true;
   document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
 
   const addrDisplay = esc(addr).replace(/\n/g, '<br>');
