@@ -304,8 +304,8 @@ async function odSetBasePath(val) {
 // Startet am Parent des aktuellen Basis-Pfads, damit parallel liegende Ordner sichtbar sind
 async function odBrowseBasePath() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odBasePathMode = true;
-  _odPickMode = false; _odDocScanMode = false; _odEditPickMode = false;
   _odFolderStack = [];
   closeModal('modalSettings');
   await _odGetBasePath();

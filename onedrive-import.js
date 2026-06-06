@@ -150,6 +150,7 @@ async function _odNavigateToParentOf(folderId) {
 
 async function odImportPhotos() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odFolderStack = [];
   await _odGetBasePath(); // Basis-Pfad vorladen
   const folder = await idbGet('od_photo_folder').catch(() => null)
@@ -397,8 +398,8 @@ async function odImportPhotosFromFolder(folderId, folderName) {
 // Dokumente-Ordner scannen (Dateiname → fileId, für Quellenmedien aus GEDCOM-Pfad)
 async function odSetupDocFolder() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odDocScanMode = true;
-  _odPickMode    = false;
   _odFolderStack = [];
   await _odGetBasePath(); // Basis-Pfad vorladen
   const folder = await idbGet('od_docs_folder').catch(() => null)
@@ -439,8 +440,8 @@ async function odScanDocFolder(folderId, folderName) {
 // Konfig-Ordner wählen (für App-Datendateien: orte.json, templates.json)
 async function odSetupConfigFolder() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odConfigScanMode = true;
-  _odPickMode = false; _odDocScanMode = false; _odBasePathMode = false;
   _odFolderStack = [];
   closeModal('modalSettings');
   const basePath = await _odGetBasePath();
@@ -498,11 +499,19 @@ let _odPickMode               = false;
 let _odEditPickMode           = false; // true wenn OD-Picker aus Edit-Modal geöffnet
 let _odDocScanMode            = false; // true wenn Dokumente-Ordner gewählt wird
 let _odBasePathMode           = false; // true wenn GED-Startpfad gewählt wird
+let _odConfigScanMode         = false; // true wenn Konfig-Ordner gewählt wird
 let _odPickStartedFromSubfolder = false; // true wenn Picker aus konfiguriertem Unterordner gestartet
 let _odPickStartFolderId      = '';    // ID des konfigurierten Start-Ordners (für Parent-Navigation)
 
+// Alle Modus-Flags auf false zurücksetzen
+function _odResetModes() {
+  _odPickMode = false; _odEditPickMode = false; _odDocScanMode = false;
+  _odBasePathMode = false; _odConfigScanMode = false;
+}
+
 async function odPickFileForEditMedia() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odEditPickMode = true;
   _odFolderStack = [];
   closeModal('modalEditMedia');
@@ -545,6 +554,7 @@ async function _clearIdbPhotoKeys(prefix, upTo) {
 
 async function odPickFileForMedia() {
   if (!_odIsConnected()) { showToast('Zuerst OneDrive verbinden'); return; }
+  _odResetModes();
   _odPickMode = true;
   _odFolderStack = [];
   closeModal('modalAddMedia');
