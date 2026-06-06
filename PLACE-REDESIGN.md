@@ -180,7 +180,7 @@ PlaceRegistry = {
 ---
 
 ## 7. Reihenfolge
-**§3.0 Verifikation ✅ → P0a-1 ✅ (Zeitachse Parser/Writer, sw v796) → P0a-2 ✅ (PlaceRegistry, sw v797) → P0b-1 ✅ (collectPlaces↔Entität + Ort-Detail-Historie, sw v798) → P0b-2a ✅ (Dubletten-Erkennung + Merge-Kern, sw v799) → P0b-2b ✅ (Merge-Dialog UI, sw v801) → P0b-3 (extraPlaces→placeObjects) → Review → P2-UI → P3 → P4 → P5.**
+**§3.0 Verifikation ✅ → P0a-1 ✅ (Zeitachse Parser/Writer, sw v796) → P0a-2 ✅ (PlaceRegistry, sw v797) → P0b-1 ✅ (collectPlaces↔Entität + Ort-Detail-Historie, sw v798) → P0b-2a ✅ (Dubletten-Erkennung + Merge-Kern, sw v799) → P0b-2b ✅ (Merge-Dialog UI, sw v801) → P0b-3 ✅ (extraPlaces→placeObjects-Migration, in `setDb`) → P2 ✅ (Inline-Editor pnames/enclosedBy) → P3 ✅ (sw v818, Typ-Filter+Suchpicker+Kirchenbuch) → P4 ✅ (sw v819, Nominatim+GOV-Text) → P5a/d/e ✅ (sw v820–v822, Steckbrief+Validator+Kontextsatz) → String-Link ✅ (sw v829–v833) → Robustheit-Block ✅ (sw v851, P1 aus Review). Status-Detail in `ARCHITECTURE.md` ADR-024.**
 
 **Stand (Implementierung, sw v801, test-unit 198 grün):**
 - **P0a-1** `gramps-parser.js`/`gramps-writer.js`: datierte `<pname>`/`<placeref>` → `pnames[].{dateFrom,dateTo,dateType,_dateRaw}` + `enclosedBy[]` (HYBRID strukturiert + `_dateRaw` verbatim).

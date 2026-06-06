@@ -602,7 +602,9 @@ function compactPlace(place) {
 }
 
 // ─── PLACE-HIST (ADR-024): Orts-Entität — Registry + Auflösung über Zeit ─────
-// Normalisiert einen Ortsnamen NUR fürs Matching (NFC, casefold, Spaces).
+// KANONISCHES Identity-Matching für Ortsnamen. NFC + casefold + Whitespace.
+// Anwenden überall, wo zwei Ortsnamen auf „gleiche Identität" geprüft werden
+// (Registry-Lookup, Propagation, Lösch-Suche, Geocoder-Cache, JSON-Import-Dedup).
 // NIE für Anzeige/Speicherung verwenden → bleibt verlustfrei.
 function _normPlaceName(s) {
   if (!s) return '';
@@ -684,8 +686,23 @@ function _migrateExtraPlacesToPlaceObjects(db) {
       }
     } else {
       // Neues placeObject anlegen
-      const id = _epId(name);
-      if (pos[id]) continue; // Hash-Kollision — Eintrag existiert bereits
+      let id = _epId(name);
+      if (pos[id]) {
+        // 32-bit djb2-Kollision: anderer Name landet auf demselben Hash.
+        // Statt stillem `continue` (Eintrag verschwindet) → Suffix-Fallback.
+        let suf = 2;
+        while (pos[id + '_' + suf] && suf < 16) suf++;
+        const candidate = id + '_' + suf;
+        const _warn = (typeof console !== 'undefined' && console.warn) ? console.warn
+                    : (typeof console !== 'undefined' && console.log) ? console.log : null;
+        if (pos[candidate]) {
+          _warn && _warn('[PLACE] _epId-Kollision unauflösbar — Ort übersprungen:', name);
+          continue;
+        }
+        _warn && _warn('[PLACE] _epId-Kollision für', JSON.stringify(name),
+          '→ Suffix-Fallback', candidate);
+        id = candidate;
+      }
       const pnames = [];
       if (hasTrans) {
         const have = new Set([_normPlaceName(name)]);
@@ -1090,12 +1107,50 @@ function mergeStringPlaces(winnerName, loserNames) {
   // Winner selbst auch in den Replace-Set damit abweichende Whitespace-Varianten
   // des Winners (z.B. " Ochtrup " statt "Ochtrup") ebenfalls auf winnerName normiert werden
   const allReplace = new Set([...loserNames, winnerName]);
+  const ep  = AppState.db.extraPlaces || {};
+  const pos = AppState.db.placeObjects;
+  const loserNorms = loserNames.map(_normPlaceName);
+  const loserNormSet = new Set(loserNorms);
+
+  // Welche placeObject-IDs werden gleich gelöscht? Diese müssen wir ev.placeId-seitig
+  // umhängen (oder, falls kein Winner-PO existiert, nullen) — sonst Leiche.
+  // Subtilität: Winner-Name und Loser-Name können zur GLEICHEN _normPlaceName-Form
+  // kollabieren (z.B. "Berlin" vs "Berlin "). Der Winner-PO muss daher zuerst
+  // identifiziert und vom Lösch-Set ausgeschlossen werden.
+  const losingIds = new Set();
+  let winnerPoId = null;
+  if (pos) {
+    const winnerNorm = _normPlaceName(winnerName);
+    // Pass 1: Winner-PO (exakter Titel bevorzugt vor normalisiertem Match)
+    for (const [id, po] of Object.entries(pos)) {
+      if (po.title === winnerName) { winnerPoId = id; break; }
+    }
+    if (!winnerPoId) {
+      for (const [id, po] of Object.entries(pos)) {
+        if (_normPlaceName(po.title) === winnerNorm) { winnerPoId = id; break; }
+      }
+    }
+    // Pass 2: Verlierer (außer winnerPoId)
+    for (const [id, po] of Object.entries(pos)) {
+      if (id === winnerPoId) continue;
+      if (id.startsWith('_ep_') && loserNormSet.has(_normPlaceName(po.title))) losingIds.add(id);
+    }
+  }
+
   let repointed = 0;
   const _fix = obj => {
-    if (!obj || obj.place == null) return;
-    const trimmed = String(obj.place).trim();
-    if (loserSet.has(trimmed)) { obj.place = winnerName; repointed++; }
-    else if (trimmed !== obj.place && allReplace.has(trimmed)) { obj.place = trimmed; } // Whitespace normieren
+    if (!obj) return;
+    if (obj.place != null) {
+      const trimmed = String(obj.place).trim();
+      if (loserSet.has(trimmed)) { obj.place = winnerName; repointed++; }
+      else if (trimmed !== obj.place && allReplace.has(trimmed)) { obj.place = trimmed; } // Whitespace normieren
+    }
+    // ev.placeId mit-repointen (Bug B2): zeigt der Event auf ein gleich gelöschtes
+    // Verlierer-placeObject, dann auf Winner umhängen — oder, falls Winner keinen
+    // placeObject-Eintrag hat, auf null setzen (sonst Leiche → Render-Fehler).
+    if (obj.placeId && losingIds.has(obj.placeId)) {
+      obj.placeId = winnerPoId || null;
+    }
   };
   for (const p of Object.values(AppState.db.individuals || {})) {
     _fix(p.birth); _fix(p.chr); _fix(p.death); _fix(p.buri);
@@ -1105,19 +1160,12 @@ function mergeStringPlaces(winnerName, loserNames) {
     _fix(f.marr); _fix(f.engag); _fix(f.div); _fix(f.divf);
     for (const ev of f.events || []) _fix(ev);
   }
-  const ep  = AppState.db.extraPlaces || {};
-  const pos = AppState.db.placeObjects;
-  const loserNorms = loserNames.map(_normPlaceName);
 
   // Koordinaten aus Verlierer-extraPlaces auf Winner übertragen BEVOR gelöscht wird (Bug #9)
-  if (pos) {
-    const winnerNorm = _normPlaceName(winnerName);
-    const winnerPo = Object.values(pos).find(po => _normPlaceName(po.title) === winnerNorm);
-    if (winnerPo && winnerPo.lat == null) {
-      for (const loser of loserNames) {
-        const lep = ep[loser];
-        if (lep?.lati != null) { winnerPo.lat = lep.lati; winnerPo.long = lep.long; break; }
-      }
+  if (pos && winnerPoId && pos[winnerPoId] && pos[winnerPoId].lat == null) {
+    for (const loser of loserNames) {
+      const lep = ep[loser];
+      if (lep?.lati != null) { pos[winnerPoId].lat = lep.lati; pos[winnerPoId].long = lep.long; break; }
     }
   }
 
@@ -1126,9 +1174,7 @@ function mergeStringPlaces(winnerName, loserNames) {
 
   // _ep_-generierte placeObjects der Verlierer entfernen (Bug #9)
   if (pos) {
-    for (const [id, po] of Object.entries(pos)) {
-      if (id.startsWith('_ep_') && loserNorms.includes(_normPlaceName(po.title))) delete pos[id];
-    }
+    for (const id of losingIds) delete pos[id];
   }
 
   UIState._placesCache  = null;

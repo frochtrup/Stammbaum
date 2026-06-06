@@ -26,7 +26,8 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v850 · Cache: `stammbaum-v850` · `test-unit.js` = 198 Tests grün
+**sw-Version:** v851 · Cache: `stammbaum-v851` · `test-unit.js` = 210 Tests grün
+**v851: refactor(places): Robustheit-Block (P1 aus Review)** — Identity-Matching zentralisiert auf `_normPlaceName` (geocoding `_findOrCreatePO`, `_propagateCoordsToEvents`, `deleteExtraPlace`). `_placeUsageCounts` zählt jetzt auch `f.events[]` (Bug B1). `mergeStringPlaces` hängt `ev.placeId` der Verlierer auf Winner-PO um (oder null), statt Leichen zu hinterlassen (Bug B2) — Winner/Loser-Identifikation in 2 Pässen, da Norm-Form kollabieren kann. Toter `dated`-Filter in `_renderPlaceNamesList` entfernt (Bug B3). `_epId`-Kollision in `_migrateExtraPlacesToPlaceObjects` → Suffix-Fallback `_ep_<hash>_2` + Warnung statt stillem `continue` (Bug B11). +12 Unit-Tests Gruppe (l). GEDCOM net_delta=0, GRAMPS stable.
 **v850: fix(topbar): storyBtn/timelineBtn/probandBtn in Quellen/Ort/Hof/Archiv-Detail ausblenden** — alle vier Non-Person-Detail-Views setzen jetzt `storyBtn`, `timelineBtn`, `probandBtn`, `probandSetBtn` auf `hidden=true`, damit das Lebensgeschichte-Symbol nicht aus vorheriger Personen-/Familienansicht übrig bleibt.
 **v849: fix(onedrive): Ordner-Picker startet im GED-Ordner + korrekter Breadcrumb** — `_odBuildStack(parentRef)` neu: baut FolderStack aus `parentReference` auf (voller Pfad, letzter Eintrag mit echter ID). `odBrowseBasePath` zeigt jetzt GED-Ordner selbst (nicht Parent). `_odNavigateToParentOf` baut Breadcrumb mit vollständigem Pfad. Config-Picker-Fallback ebenfalls auf `_odBuildStack` umgestellt.
 **v848: fix(onedrive): Mode-Flags konsistent zurücksetzen** — `_odConfigScanMode` jetzt deklariert; `_odResetModes()` Helper; alle Picker-Einstiegspunkte (`odImportPhotos`, `odSetupDocFolder`, `odSetupConfigFolder`, `odBrowseBasePath`, `odPickFileForMedia`, `odPickFileForEditMedia`) rufen `_odResetModes()` als erstes auf → kein staler Mode aus vorheriger Sitzung kann mehr Titel/Buttons des OD-Browsers verfälschen.
@@ -329,7 +330,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v819** *(aktuell)*
+**Handbuch-Stand: sw v819** *(veraltet — v820–v851 noch nicht dokumentiert: PLACE-HIST P5a/d/e, Orts-Robustheit-Fixes, OneDrive-Picker-Verbesserungen, Topbar-Fix)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

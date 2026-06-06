@@ -511,8 +511,6 @@ function _renderPlaceNamesList(po) {
   if (!po) { sec.hidden = true; return; }
   sec.hidden = false;
   const pnames = po.pnames || [];
-  const dated  = pnames.filter(pn => !pn.dateFrom && !pn.dateTo && pn.lang
-    ? true : true); // alle zeigen
   list.innerHTML = pnames.length ? pnames.map((pn, i) => {
     const span = [pn.dateFrom, pn.dateTo].filter(Boolean).join('–');
     return `<div class="pname-row">
@@ -554,15 +552,19 @@ function _renderEnclosedByList(po) {
 }
 
 function _propagateCoordsToEvents(placeName, lati, long) {
-  const key = placeName.trim();
+  // Identity-Matching via _normPlaceName — fängt Whitespace-/Unicode-Varianten
+  // ("  Ochtrup ", "Ochtrup", "ochtrup") als selben Ort.
+  const _id = s => (typeof _normPlaceName === 'function') ? _normPlaceName(s) : (s || '').trim();
+  const key = _id(placeName);
+  if (!key) return;
   for (const p of Object.values(AppState.db.individuals)) {
     for (const ev of [p.birth, p.chr, p.death, p.buri, ...(p.events || [])]) {
-      if (ev && ev.place?.trim() === key) { ev.lati = lati; ev.long = long; }
+      if (ev && _id(ev.place) === key) { ev.lati = lati; ev.long = long; }
     }
   }
   for (const f of Object.values(AppState.db.families)) {
-    if (f.marr?.place?.trim()  === key) { f.marr.lati  = lati; f.marr.long  = long; }
-    if (f.engag?.place?.trim() === key) { f.engag.lati = lati; f.engag.long = long; }
+    if (f.marr  && _id(f.marr.place)  === key) { f.marr.lati  = lati; f.marr.long  = long; }
+    if (f.engag && _id(f.engag.place) === key) { f.engag.lati = lati; f.engag.long = long; }
   }
 }
 
@@ -735,9 +737,13 @@ async function deleteExtraPlace(name) {
   delete AppState.db.extraPlaces[name];
   saveExtraPlaces();
   // Auch das zugehörige placeObject entfernen (z.B. GOV-Kaskaden-Orte)
+  // Identity-Matching via _normPlaceName, damit Whitespace/Casing-Drift nicht
+  // verhindert, dass der zugehörige placeObject-Eintrag gefunden wird.
+  const _id = s => (typeof _normPlaceName === 'function') ? _normPlaceName(s) : (s || '').trim().toLowerCase();
+  const key = _id(name);
   const pos = AppState.db.placeObjects || {};
   for (const [id, po] of Object.entries(pos)) {
-    if (po.title === name) { delete pos[id]; break; }
+    if (_id(po.title) === key) { delete pos[id]; break; }
   }
   if (typeof savePlaceObjects === 'function') savePlaceObjects();
   UIState._placesCache = null;
@@ -1146,6 +1152,7 @@ function _placeUsageCounts() {
   }
   for (const f of Object.values(AppState.db.families || {})) {
     bump(f.marr?.placeId); bump(f.engag?.placeId); bump(f.div?.placeId); bump(f.divf?.placeId);
+    for (const ev of f.events || []) bump(ev.placeId);
   }
   return c;
 }

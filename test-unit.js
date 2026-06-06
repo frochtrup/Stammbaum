@@ -161,7 +161,9 @@ if (IS_NODE) {
     'grampsParse: _grampsParseXMLText, grampsBuild: _grampsBuildXMLText, ' +
     'setDb: setDb, getPlaceRegistry: getPlaceRegistry, _normPlaceName: _normPlaceName, ' +
     '_migratePlaceObjects: _migratePlaceObjects, _placeFold: _placeFold, ' +
-    'findPlaceDuplicates: findPlaceDuplicates, mergePlaceObjects: mergePlaceObjects };';
+    'findPlaceDuplicates: findPlaceDuplicates, mergePlaceObjects: mergePlaceObjects, ' +
+    'mergeStringPlaces: mergeStringPlaces, _migrateExtraPlacesToPlaceObjects: _migrateExtraPlacesToPlaceObjects, ' +
+    '_epId: _epId };';
   eval(_combined);
   API = window._api;
 }
@@ -845,6 +847,79 @@ eq(API._placeFold('  Köln '),  'koln',     '_placeFold ö→o + trim');
   eq(db.individuals['@I1@'].birth.placeId, '@P1@', 'merge: INDI birth.placeId zeigt auf Gewinner');
   eq(API.getPlaceRegistry().findByName('Muenchen'), '@P1@', 'merge: alte Schreibweise findet jetzt den Gewinner');
 })();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (l) PLACE-HIST — Robustheit-Fixes (B2 mergeStringPlaces, B11 _epId-Kollision)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(l) PLACE-HIST Robustheit (sw v851)');
+
+// B2: mergeStringPlaces muss ev.placeId mit-repointen (vorher: Leiche nach Delete)
+// Realistischer Mock: zwei Schreibweisen, die trim()-verschieden sind ("München"/"Muenchen").
+(function() {
+  var winnerId = API._epId('München');
+  var loserId  = API._epId('Muenchen');
+  ok(winnerId !== loserId, 'B2-pre: _epId verschiedener Inputs → verschiedene IDs');
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Muenchen', placeId: loserId },  chr:{}, death:{}, buri:{}, events:[] },
+      '@I2@': { id:'@I2@', birth:{ place:'München',  placeId: winnerId }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    extraPlaces: {},
+    placeObjects: {},
+  };
+  db.placeObjects[winnerId] = { id:winnerId, title:'München',  type:'City', pnames:[], enclosedBy:[], parentId:null };
+  db.placeObjects[loserId]  = { id:loserId,  title:'Muenchen', type:'City', pnames:[], enclosedBy:[], parentId:null };
+  API.setDb(db);
+
+  var res = API.mergeStringPlaces('München', ['Muenchen']);
+  ok(res.repointed >= 1, 'B2: mindestens 1 ev.place umbenannt');
+  eq(db.individuals['@I1@'].birth.place, 'München', 'B2: ev.place auf Winner-String normiert');
+  eq(db.individuals['@I1@'].birth.placeId, winnerId, 'B2: ev.placeId auf Winner-PO umgehängt (vorher: Leiche)');
+  ok(!db.placeObjects[loserId], 'B2: Verlierer-_ep_-placeObject gelöscht');
+  ok(!!db.placeObjects[winnerId], 'B2: Winner-placeObject erhalten');
+})();
+
+// B2b: mergeStringPlaces ohne Winner-PO → ev.placeId auf null setzen, nicht Leiche lassen
+(function() {
+  var loserId = API._epId('Hamburg loser');
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Hamburg loser', placeId: loserId }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    extraPlaces: {},
+    placeObjects: {},
+  };
+  db.placeObjects[loserId] = { id:loserId, title:'Hamburg loser', type:'City', pnames:[], enclosedBy:[], parentId:null };
+  API.setDb(db);
+  API.mergeStringPlaces('Hamburg', ['Hamburg loser']);
+  eq(db.individuals['@I1@'].birth.placeId, null, 'B2b: kein Winner-PO → ev.placeId auf null gesetzt (statt Leiche)');
+})();
+
+// B11: _epId-Kollision → Suffix-Fallback, kein stilles continue
+(function() {
+  var name = 'Wuppertal-Elberfeld';
+  var collidingId = API._epId(name); // gleicher Name → gleiche ID, simuliert Kollisions-Position
+  var db = {
+    individuals: {}, families: {},
+    extraPlaces: {},
+    placeObjects: {},
+  };
+  // Hash-Slot belegen mit einem völlig anderen Eintrag → erzwingt Kollision in der Migration
+  db.placeObjects[collidingId] = { id: collidingId, title: 'Belegt-Anderer-Ort', type:'City',
+    pnames:[], enclosedBy:[], parentId:null, lat:50.0, long:7.0 };
+  db.extraPlaces[name] = { name: name, lati: 51.25, long: 7.15 };
+  API.setDb(db);
+  API._migrateExtraPlacesToPlaceObjects(db);
+  ok(!!db.placeObjects[collidingId + '_2'], 'B11: Kollision → Suffix _2 angelegt');
+  eq(db.placeObjects[collidingId + '_2'].title, name, 'B11: Suffix-PO hat korrekten Titel (Ort nicht verschluckt)');
+  eq(db.placeObjects[collidingId].title, 'Belegt-Anderer-Ort', 'B11: bestehendes PO unangetastet');
+})();
+
+// P1.1: _normPlaceName ist kanonisch — gleiche Identität trotz Whitespace + Casing
+ok(API._normPlaceName(' Berlin ') === API._normPlaceName('berlin'), 'P1.1: _normPlaceName Whitespace+Case identisch');
+ok(API._normPlaceName('München') === API._normPlaceName('münchen'), 'P1.1: _normPlaceName casefold');
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
