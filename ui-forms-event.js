@@ -283,6 +283,8 @@ function applyClipboardEventToPerson(pid) {
   p.events.push(ev);
   if (ev.citations.length) _rebuildPersonSourceRefs(p);
   markChanged();
+  // P0-K3: Liste refresh (neue Geb-/Sterbedaten in der Listenzeile)
+  renderTab();
   showToast('Ereignis übernommen');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -385,6 +387,8 @@ function saveEvent() {
   _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged();
+  // P0-K3: Liste refresh
+  renderTab();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -402,6 +406,8 @@ function deleteEvent() {
   if (_deletedHadSrc) _rebuildPersonSourceRefs(p);
   closeModal('modalEvent');
   markChanged();
+  // P0-K3: Liste refresh
+  renderTab();
   showToast('Ereignis gelöscht');
   if (AppState.currentPersonId === pid) showDetail(pid);
 }
@@ -534,6 +540,8 @@ function saveFamEvent() {
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged();
+  // P0-K3: Familienliste refresh
+  renderTab();
   showToast('✓ Ereignis gespeichert');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }
@@ -554,6 +562,8 @@ function deleteFamEvent() {
   _rebuildFamilySourceRefs(f);
   closeModal('modalFamEvent');
   markChanged();
+  // P0-K3: Familienliste refresh
+  renderTab();
   showToast('Ereignis gelöscht');
   if (AppState.currentFamilyId === famId) showFamilyDetail(famId);
 }

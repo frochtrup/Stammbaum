@@ -121,6 +121,9 @@ function _personRowHtml(p, isCurrent, pos, total) {
 }
 
 let _lastFilteredPersons = null;
+// P0-R5: Cache-Invalidierung von markChanged() in ui-views.js — exportPersonsCsv
+// soll nach Edit nicht die alte gefilterte Liste benutzen.
+function _invalidatePersonListCache() { _lastFilteredPersons = null; }
 
 function exportPersonsCsv() {
   const persons = _lastFilteredPersons || Object.values(AppState.db.individuals);

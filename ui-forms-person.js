@@ -443,6 +443,8 @@ function savePerson(openNew = false) {
     return;
   }
   showToast('✓ Person gespeichert');
+  // P0-K3: Liste refresh damit Name/Geb-Jahr/Counts ohne Tab-Wechsel aktuell sind
+  renderTab();
   if (openNew) { showPersonForm(null); return; }
   if (AppState.currentPersonId === id) showDetail(id);
 }

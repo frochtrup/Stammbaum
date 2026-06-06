@@ -91,7 +91,12 @@ function showView(id) {
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
-    if (id === 'v-detail') _initDetailSwipe();
+    if (id === 'v-detail') {
+      // P0-K1: scrollTop-Reset auch mobile — verhindert „Void"-Artefakt
+      // bei kürzerem neuem Detail-Inhalt (vorher nur im Desktop-Zweig gesetzt).
+      const _det = document.getElementById('v-detail'); if (_det) _det.scrollTop = 0;
+      _initDetailSwipe();
+    }
     const showNav = (id === 'v-main' || id === 'v-tree' || id === 'v-detail');
     document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
     document.getElementById('fabBtn').style.display = (id === 'v-main') ? '' : 'none';
@@ -500,7 +505,15 @@ function _syncBannerSave() {
   if (canOD) odSaveFile(); else exportGEDCOM();
 }
 
-function markChanged() { AppState.changed = true; UIState._placesCache = null; UIState._hofCache = null; UIState._searchIndexDirty = true; updateChangedIndicator(); }
+function markChanged() {
+  AppState.changed = true;
+  UIState._placesCache = null;
+  UIState._hofCache = null;
+  UIState._searchIndexDirty = true;
+  // P0-R5: Personenliste-Cache nach Edit invalidieren (sonst CSV-Export mit Vor-Edit-Stand)
+  if (typeof _invalidatePersonListCache === 'function') _invalidatePersonListCache();
+  updateChangedIndicator();
+}
 
 function _setOfflineIndicator(offline) {
   const el = document.getElementById('offlineIndicator');
@@ -514,6 +527,19 @@ async function _checkCacheStatus() {
     showToast('Cache fehlt — bitte einmal online öffnen für Offline-Funktion', 'warn');
   }
 }
+
+// P0-K2: bei PWA-Resume (iOS Hintergrund→Vordergrund) defensive aufräumen —
+// stehengebliebener v-detail.scrollTop + stale Liste erzeugen sonst „Void"-Artefakt
+// + nicht-aktualisierte Counts/Namen. visibilitychange ist auf iOS Safari der
+// zuverlässigste Resume-Trigger (pageshow feuert nur bei BFCache-Restore).
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  if (AppState && AppState._detailActive) {
+    const _det = document.getElementById('v-detail');
+    if (_det) _det.scrollTop = 0;
+  }
+  if (typeof renderTab === 'function') renderTab();
+});
 
 function _initOfflineDiag() {
   if (!navigator.onLine) { _setOfflineIndicator(true); _checkCacheStatus(); }

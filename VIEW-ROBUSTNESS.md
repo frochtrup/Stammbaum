@@ -1,6 +1,6 @@
 # View-Robustheit — Technisches Detail-Design & Roadmap
 
-> Status: **Geplant** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v860
+> Status: **P0 ✅ · P1–P5 offen** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v861
 > Ergebnis eines gesamthaften Reviews der View-Switching-Architektur. Behebt 4 vom Nutzer reproduzierbare Bugs und schließt strukturelle Lücken in State-Modell und Lifecycle.
 > Kern-Architektur-Entscheidungen werden nach Abschluss in `ARCHITECTURE.md` (ADR-025 vorgesehen) überführt; dieses File dokumentiert Befunde, Maßnahmen und Reihenfolge bis dahin.
 
@@ -98,19 +98,19 @@ async function showStartView() {
 
 ## 4. Priorisierte Roadmap
 
-### P0 — Schnellbehebung der akut schmerzenden Bugs *(~1 h, 1 Commit, sw-Bump um 1)*
+### P0 — Schnellbehebung der akut schmerzenden Bugs ✅ *(sw v861, 2026-06-06)*
 
-| ID | Aufgabe | File:Line | Aufwand |
+| ID | Aufgabe | File:Line | Status |
 |---|---|---|---|
-| **K1** | `_det.scrollTop = 0` auch im Mobile-Zweig von `showView('v-detail')` | ui-views.js:91-99 | 5 min |
-| **K2** | `visibilitychange`-Handler: bei `visible` → `if (AppState._detailActive) v-detail.scrollTop=0; renderTab();` | neu, in ui-views.js oder neue `ui-lifecycle.js` | 15 min |
-| **K3** | Form-Save-Handler: nach erfolgreichem Save zusätzlich `renderTab()` rufen | ui-forms-person.js:447, ui-forms-event.js:287/389/406/538/558, ui-forms-family.js:170, ui-forms.js:461 | 30 min |
-| **R5** | `markChanged()` invalidiert auch `_lastFilteredPersons` | ui-views.js:503 + ui-views-person.js:123 | 5 min |
+| **K1** | `_det.scrollTop = 0` auch im Mobile-Zweig von `showView('v-detail')` | ui-views.js:94-99 | ✅ |
+| **K2** | `visibilitychange`-Handler: bei `visible` → `if (AppState._detailActive) v-detail.scrollTop=0; renderTab();` | ui-views.js (vor `_initOfflineDiag`) | ✅ |
+| **K3** | Form-Save-Handler: nach erfolgreichem Save zusätzlich `renderTab()` rufen — Family-Save (ui-forms-family.js:168) und Source-Save (ui-forms.js:459) hatten es bereits | ui-forms-person.js (savePerson) + ui-forms-event.js (transferEvent/saveEvent/deleteEvent/saveFamEvent/deleteFamEvent) | ✅ 6/6 |
+| **R5** | `markChanged()` invalidiert auch `_lastFilteredPersons` via Helper `_invalidatePersonListCache()` | ui-views.js (markChanged) + ui-views-person.js (Helper) | ✅ |
 
-**Akzeptanzkriterien:**
-- Mobile: nach Tab-/App-Wechsel keine Void-Artefakte mehr.
-- Nach Save (Person/Familie/Quelle): die Liste zeigt sofort die neuen Daten (Geb-Jahr, Name, Counts) — kein manueller Tab-Switch nötig.
-- `test-unit.js` weiter grün, GEDCOM-Roundtrip `net_delta=0`.
+**Akzeptanzkriterien — Verifikation:**
+- Mobile: nach Tab-/App-Wechsel keine Void-Artefakte mehr — durch K1 (Mobile-`scrollTop`-Reset) + K2 (visibilitychange-Resume-Reset).
+- Nach Save (Person/Familie/Quelle): die Liste zeigt sofort die neuen Daten (Geb-Jahr, Name, Counts) — kein manueller Tab-Switch nötig (K3).
+- `test-unit.js` weiter grün, GEDCOM-Roundtrip `net_delta=0` (kein Logik-Eingriff, nur zusätzliche UI-Refreshes).
 
 ### P1 — Selektions-Persistenz & Erstanwahl *(~1.5 h, 1 Commit, sw-Bump)*
 

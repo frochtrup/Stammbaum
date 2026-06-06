@@ -26,12 +26,14 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v858 · Cache: `stammbaum-v858` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v861 · Cache: `stammbaum-v861` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v858) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v861) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v861 | **View-Robustheit P0** — Mobile `v-detail.scrollTop=0`-Reset (K1); `visibilitychange`-Handler für PWA-Resume (K2); `renderTab()` in 6 Form-Save-Pfaden (savePerson/transferEvent/saveEvent/deleteEvent/saveFamEvent/deleteFamEvent) (K3); `_lastFilteredPersons` in `markChanged()` invalidiert (R5). | Behebt „Void/Artefakt nach iOS-Tab/App-Wechsel" + „Listen-Stale nach Edit". Detail-Plan: VIEW-ROBUSTNESS.md |
+| v859–v860 | **UX-Polish Orte-Tab** — Lösch-Button vom Anfang ans Ende der Detail-Steckbrief verschoben; Geocodieren/Verknüpfen auf `btn-ghost`-Style umgestellt; neue CSS-Klassen `.place-action-row`/`.place-delete-row`/`.btn-ghost-danger`/`.tran-add-btn`. | Steckbrief-UX dezenter — primärer Lese-Fluss steht im Vordergrund |
 | v858 | **OneDrive Konflikterkennung** — `stammbaum-orte.json` mit Wrapper `{schemaVersion,_rev,_device}`; Union-Merge + Warn-Toast bei Gerätekollision; backwards-kompat. (Item 10) | Kein last-write-wins-Datenverlust bei Multi-Device |
 | v857 | **Koords Single Source of Truth** — `_eventCoords(ev)` primär aus placeObjects; `_propagateCoordsToEvents` gelöscht; +8 Tests (s) | po.lat-Änderung sofort überall sichtbar |
 | v856 | **UX-Quickwins** (Items 11–14) — Validator-Badge auf ⚠, Toast-once bei Speicherfehlern, GOV-Platzhalter-Toast, Merge-Modal Origin-Pille | |
@@ -264,7 +266,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 | Phase | Inhalt | Aufwand | Status |
 |---|---|---|---|
-| **P0** | K1 Mobile-`scrollTop`-Reset + K2 `visibilitychange`-Handler + K3 `renderTab()` aus Save-Handlern + R5 `_lastFilteredPersons` invalidieren. Behebt Bugs 1+2. | ~1 h | offen |
+| **P0** | K1 Mobile-`scrollTop`-Reset + K2 `visibilitychange`-Handler + K3 `renderTab()` aus 6 Save-Pfaden + R5 `_lastFilteredPersons` invalidieren. Behebt Bugs 1+2. | ~1 h | ✅ *(sw v861)* |
 | **P1** | K4 Mobile-Selektions-Restore + K5 `_lastTabSel`-Validierung + K6 `_lastTabSel` IDB-persistieren + K7 `showStartView` AutoSelect + R6 `showDetail`-Fallback. Behebt Bugs 3+4. | ~1.5 h | offen |
 | **P2** | A1 zentraler `ViewState.setCurrent/getCurrent` mit IDB-Persistenz + ID-Validierung + `viewstate-change`-Event. Ersetzt parallele Buchführung. | ~3 h | offen |
 | **P3** | A2 `data-dirty`-Bit pro Tab + A3 `ui-lifecycle.js` (visibilitychange/pageshow/pagehide). | ~2 h | offen |
@@ -361,7 +363,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(aktuell)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v861 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
