@@ -1,7 +1,7 @@
 # Orts-Redesign — Technisches Detail-Design (P0/P1)
 
-> Status: **Entwurf zum Review** · erstellt 2026-05-31 · Branch `v8-dev`
-> Vorstufe zu **ADR-024 (Orts-Entität & historische Dimension)**. Sobald reviewt → Kern in `ARCHITECTURE.md` (ADR-024) + Feature-Detail/Phasen in `ROADMAP.md` überführen, dieses File kann dann bestehen bleiben oder gelöscht werden.
+> Status: **🟢 Vollständig implementiert** (ADR-024) · erstellt 2026-05-31 · Stand: sw v858 · Branch `v8-dev`
+> Kern in `ARCHITECTURE.md` (ADR-024) dokumentiert; Phasen-Übersicht in `ROADMAP.md`. Dieses File enthält das technische Detail-Design und bleibt als Referenz erhalten.
 
 Ziel des Nutzers (wörtlich): Geocoding/Ortshandling verbessern, **historische Dimension von Orten** erfassen und Orte **verlustfrei normalisieren**; neben RESI/PROP-Historie auch andere wesentliche Plätze für Events nutzbar machen (z. B. **Kirchen**); ortsbezogene Auswertungen erweitern. **Möglichst ohne userspezifische Tags**, um Roundtrips nicht zu gefährden.
 

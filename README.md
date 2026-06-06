@@ -91,7 +91,7 @@ stammbaum/
 ├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v742)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── test.html           ← Standalone GEDCOM Roundtrip-Tester (kein UI, Drag-Drop .ged)
-├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v769)
+├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v858)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
@@ -194,12 +194,19 @@ stammbaum/
 - **Archive-Sektion**: alle REPO-Records mit Quellen-Zähler; Sprungbutton „🏛 Archive"
 
 ### Orte-Tab
-- **Suche** nach Ortsname
-- Automatisch aus allen Ereignissen gesammelt (Geburt, Taufe, Tod, Beerdigung, weitere)
-- Alphabetisch mit 📍 bei vorhandenen Koordinaten
-- Detail: Apple Maps Link + alle Personen dieses Ortes
-- **Ort bearbeiten**: Name umbenennen (wirkt auf alle Personen/Familien) + Koordinaten editieren (Dezimalgrad oder GEDCOM-Format)
-- **Kartenansicht**: interaktive Karte (Leaflet) mit Orte-Modus (alle geokodierten Orte) und Personen-Modus (Personen-Cluster)
+- **Suche** nach Ortsname + **Typ-Filter** (Dorf / Stadt / Pfarrei / Kirche / Friedhof / Hof …)
+- Automatisch aus allen Ereignissen gesammelt; Typ-Badge (⛪/⚰/🏡/…) in der Listenzeile; 📍 bei vorhandenen Koordinaten
+- **Gruppen-Modus** (⊙): fasst String-Varianten eines Ortes unter dem PlaceObject-Titel zusammen
+- **Ort-Steckbrief**: Ereignisse nach Typ gruppiert · Quellen-Sektion · SVG-Namens-Zeitstrahl (historische Schreibweisen) · Mini-Karte
+- **Ort bearbeiten**: Name, Koordinaten, Typ, alternative Namen mit Datumsgrenzen (`pnames[]`), übergeordnete Orte (`enclosedBy[]`)
+- **Orte verknüpfen** (🔗): String-Einträge mit PlaceObject verbinden; Re-Import-Erkennung erhält placeId beim GEDCOM-Roundtrip
+- **Nominatim-Geocoding**: 📍-Button (Einzelort) + 🌐-Batch mit Fortschrittsbalken; befüllt lat/lon + Typ automatisch
+- **GOV-Import**: historische Verwaltungszugehörigkeiten mit Datumsgrenzen aus gov.genealogy.net (Browser + `gov-enrich.py`)
+- **Geo-Plausibilitäts-Validator** (⚠-Badge): BBox, Zeitachsen-Konsistenz, enclosedBy-Zirkel
+- **Dubletten-Merge** (⇉): Radio-Wahl mit Herkunfts-Pille (GRAMPS/lokal/JSON-Import/GOV-Platzhalter); verlustfreier Merge
+- **JSON-Import/Export**: `stammbaum-orte.json` (OneDrive); Import mit Dedup-Erkennung (kein Doppel-Anlegen beim Re-Import)
+- **Multi-Device-Konflikterkennung** (v858): `_rev`+`_device` in JSON; Union-Merge + Warn-Toast bei Gerätekollision
+- **Kartenansicht**: interaktive Karte (Leaflet) mit 3 Modi: Orte · Personen-Cluster · Migrationen (nach Epoche eingefärbt, animiert)
 
 ### Höfe-Tab
 - Listet alle Hofnamen aus den Ereignissen (RESI, EVEN, FACT)
@@ -291,7 +298,7 @@ stammbaum/
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
 **GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
-**Version 8.0** — Mai 2026 — `v8-dev` · sw v769
+**Version 8.0** — Juni 2026 — `v8-dev` · sw v858
 
 ---
 

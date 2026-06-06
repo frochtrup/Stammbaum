@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Juni 2026 · Stand: sw v819</p>
+  <p class="version">Version 8 · Juni 2026 · Stand: sw v858</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -2054,6 +2054,71 @@ Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Mar
 </table>
 
 <div class="tip">Der <span class="button-label">🗺</span>-Button ist eine Abkürzung — er ersetzt nicht den Karten-Tab, sondern wechselt schnell vom Diagramm zur Karte für dieselbe Person.</div>
+
+<h2>Ort-Steckbrief (ab sw v820)</h2>
+
+<p>Wenn Sie auf einen Ort tippen, öffnet sich die <strong>Ortsdetailansicht</strong> — der Ort-Steckbrief. Er gliedert alle verknüpften Informationen übersichtlich:</p>
+<ul>
+  <li><strong>Ereignisse nach Typ gruppiert:</strong> Geburt, Taufe, Heirat, Tod usw. werden jeweils als eigene Gruppe angezeigt, mit den zugehörigen Personen.</li>
+  <li><strong>Quellen-Sektion:</strong> Alle Quellen, die mit Ereignissen an diesem Ort belegt sind, erscheinen am Ende des Steckbriefs.</li>
+  <li><strong>Namens-Zeitstrahl (SVG):</strong> Hat ein Ort mehrere historische Schreibweisen mit Datumsgrenzen (aus GOV-Import), zeigt ein horizontaler Zeitstrahl, welcher Name in welcher Periode gültig war.</li>
+  <li><strong>Mini-Karte:</strong> Sind Koordinaten vorhanden, wird direkt im Steckbrief ein kleiner Kartenausschnitt eingeblendet — ohne extra Klick in den Karten-Tab.</li>
+</ul>
+
+<h2>Geo-Plausibilitäts-Validator (ab sw v821)</h2>
+
+<p>Die App prüft automatisch die geografischen Daten aller Orte auf Plausibilität. Erkannte Probleme:</p>
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Prüfung</th><th>Beschreibung</th></tr>
+  <tr><td>Bounding-Box</td><td>Koordinaten liegen weit außerhalb des erwarteten Landes oder der Region</td></tr>
+  <tr><td>Datumsgrenzen</td><td>Verwaltungszugehörigkeiten mit überlappenden oder widersprüchlichen Zeiträumen</td></tr>
+  <tr><td>Zirkelreferenz</td><td>Ein Ort ist (direkt oder indirekt) sich selbst als übergeordneter Ort zugewiesen</td></tr>
+</table>
+<p>Im Orte-Tab erscheint ein <span class="button-label">⚠</span>-Button mit einem Badge, das die Anzahl der Warnungen anzeigt. Ein Tipp öffnet die Liste der betroffenen Orte — so können Sie gezielt korrigieren.</p>
+
+<h2>Ortskontext in Lebensgeschichten (ab sw v822)</h2>
+
+<p>In der automatisch generierten <strong>Lebensgeschichte</strong> einer Person (Story-Ansicht) ergänzt die App einen kontextuellen Satz zum jeweiligen Ort — z. B. die historische Verwaltungszugehörigkeit zum Zeitpunkt des Ereignisses. So wird aus „geboren in Landsberg" ein „geboren in Landsberg, das damals zum Landgericht Landsberg im Königreich Bayern gehörte".</p>
+<div class="tip">Die Kontextsätze erscheinen nur, wenn für den Ort GOV-Daten mit Datumsgrenzen importiert wurden.</div>
+
+<h2>Ort-Verknüpfung über Namenssuche (ab sw v829)</h2>
+
+<p>Wenn Sie in einem Ereignis-Formular einen Ortsnamen eintippen (ohne den 📍-Picker zu nutzen), erkennt die App beim Speichern automatisch, ob ein passender <em>placeObject</em> mit diesem Namen (oder einer bekannten Sprachvariante) existiert — und verknüpft das Ereignis mit diesem Ort. Die Verknüpfung erfolgt dabei periodengerecht: Bei historischen Komma-Strings (z. B. „Landsberg, Bayern") wird die passendste Schreibweise aus den hinterlegten pnames ausgewählt.</p>
+<p>Beim Re-Import einer GEDCOM-Datei bleiben so bestehende Orts-IDs erhalten — Koordinaten und GOV-Daten gehen nicht verloren.</p>
+
+<h2>JSON-Import: Duplikat-Erkennung (ab sw v855)</h2>
+
+<p>Beim Importieren einer <code>placeObjects.json</code> (Orte-Tab → ↑ <strong>Ortsdaten importieren</strong>) erkennt die App automatisch, welche Orte bereits vorhanden sind, und führt sie zusammen statt sie doppelt anzulegen:</p>
+<ul>
+  <li>Gleicher logischer Ort mit abweichendem internen Handle → wird in das bestehende placeObject gemergt (alternative Namen, übergeordnete Orte, Koordinaten, GOV-ID werden ergänzt, falls fehlend).</li>
+  <li>Echte ID-Kollision mit anderem Ortsnamen → erhält automatisch ein Suffix, um Konflikte zu vermeiden.</li>
+</ul>
+<div class="tip">So können Sie GOV-angereicherte JSON-Dateien wiederholt importieren, ohne Duplikate zu erzeugen.</div>
+
+<h2>Orte zusammenführen — Herkunfts-Kennzeichnung (ab sw v856)</h2>
+
+<p>Im <strong>Zusammenführen-Dialog</strong> (Orte-Tab → zwei Orte wählen → Zusammenführen) zeigt jede Option eine farbige Herkunfts-Pille:</p>
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Pille</th><th>Bedeutung</th></tr>
+  <tr><td><strong>GRAMPS</strong></td><td>Ort stammt aus einem GRAMPS-Import</td></tr>
+  <tr><td><strong>lokal</strong></td><td>Manuell in der App angelegt oder bearbeitet</td></tr>
+  <tr><td><strong>JSON-Import</strong></td><td>Über „Ortsdaten importieren" hinzugekommen</td></tr>
+  <tr><td><strong>GOV-Platzhalter</strong></td><td>Automatisch als übergeordneter Platzhalter aus einem GOV-Import erstellt, noch nicht aufgelöst</td></tr>
+</table>
+<p>So wissen Sie auf einen Blick, welcher der beiden Orte die „führende" Datenquelle ist — und können die richtige Ziel-Option wählen.</p>
+
+<h2>Multi-Gerät: OneDrive-Konflikterkennung (ab sw v858)</h2>
+
+<p>Wenn Sie den Stammbaum auf mehreren Geräten gleichzeitig bearbeiten (z. B. iPhone + iPad, beide über denselben OneDrive-Ordner), kann es passieren, dass beide Geräte gleichzeitig Ortsänderungen speichern. Bisher führte das zum <em>last-write-wins</em>-Problem: das zuletzt speichernde Gerät überschrieb die Änderungen des anderen.</p>
+
+<p>Ab sw v858 erkennt die App solche Konflikte automatisch:</p>
+<ul>
+  <li>Jedes Gerät erhält eine eindeutige <strong>Geräte-ID</strong> (einmalig generiert, im lokalen Speicher hinterlegt).</li>
+  <li>Die Ortsdaten-Datei (<code>stammbaum-orte.json</code>) enthält eine <strong>Revisionsnummer</strong>. Beim Laden vergleicht die App Revisionsnummer und Geräte-ID.</li>
+  <li>Erkennt die App, dass eine andere Revision von einem anderen Gerät stammt und inhaltliche Unterschiede vorliegen, führt sie einen <strong>Union-Merge</strong> durch: Alle Orte beider Versionen bleiben erhalten — kein Datenverlust.</li>
+  <li>Ein <strong>Warn-Toast</strong> informiert Sie über den erkannten Konflikt und die durchgeführte Zusammenführung.</li>
+</ul>
+<div class="tip">Der Union-Merge ist konservativ — er fügt zusammen, löscht nie. Prüfen Sie danach kurz, ob Duplikate entstanden sind, und nutzen Sie ggf. den Zusammenführen-Dialog.</div>
 
 
 <!-- ====================================================== -->
