@@ -256,6 +256,27 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ---
 
+## View-Robustheit — Ausbauplan (Juni 2026)
+
+**Ziel (Nutzer):** Stabiler Ansichtenwechsel auf iOS-PWA + Desktop — keine „Void"-Artefakte nach Tab-/App-Wechsel, Listen aktualisieren sich nach Edits ohne manuellen Eingriff, zuletzt gewählte Person/Familie/Ort/Quelle bleibt pro Tab stabil und überlebt PWA-Resume, keine leeren Seiten bei Erstanwahl. Technisches Detail-Design: **`VIEW-ROBUSTNESS.md`**.
+
+**Befund-Kern (drei strukturelle Quellen, nicht synchronisiert):** `AppState.currentX`-IDs (nur eine je gesetzt), `UIState._lastTabSel` (nicht validiert, nicht persistent, mobile ignoriert), `UIState._navHistory` (orthogonal). Zusätzlich **0 PWA-Lifecycle-Handler** (`visibilitychange`/`pageshow`/`pagehide`), `renderTab()` wird aus keinem Form-Save-Pfad gerufen, `_det.scrollTop=0` nur im Desktop-Zweig von `showView`.
+
+| Phase | Inhalt | Aufwand | Status |
+|---|---|---|---|
+| **P0** | K1 Mobile-`scrollTop`-Reset + K2 `visibilitychange`-Handler + K3 `renderTab()` aus Save-Handlern + R5 `_lastFilteredPersons` invalidieren. Behebt Bugs 1+2. | ~1 h | offen |
+| **P1** | K4 Mobile-Selektions-Restore + K5 `_lastTabSel`-Validierung + K6 `_lastTabSel` IDB-persistieren + K7 `showStartView` AutoSelect + R6 `showDetail`-Fallback. Behebt Bugs 3+4. | ~1.5 h | offen |
+| **P2** | A1 zentraler `ViewState.setCurrent/getCurrent` mit IDB-Persistenz + ID-Validierung + `viewstate-change`-Event. Ersetzt parallele Buchführung. | ~3 h | offen |
+| **P3** | A2 `data-dirty`-Bit pro Tab + A3 `ui-lifecycle.js` (visibilitychange/pageshow/pagehide). | ~2 h | offen |
+| **P4** | Hygiene: R1 (Layout-Flash) + R2 (`_vsP`-Teardown) + R3 (`_navHistory`-Cap) + R4 (`_initDetailSwipe` idempotent) + R7 (`setTimeout` → `_afterLayout`) + SW (lazy-Module aus `PRECACHE_CRITICAL` raus). | ~1 h | offen |
+| **P5** | A4 Detail-View als 4 separate Container (per-Entität-Scroll-State) + A5 `data-view-init`-Flag. | ~5 h | angedacht |
+
+**Reihenfolge:** P0 → P1 → (P2 ∥ P3 ∥ P4) → P5. P2 ist Voraussetzung für P5; P4 jederzeit.
+
+**Architektur-Folge:** nach P2-Abschluss → **ADR-025** in `ARCHITECTURE.md` (zentraler ViewState-Helper + PWA-Lifecycle-Kontrakt).
+
+---
+
 ## P0 — Sicherheitsnetz & Fundament *(neu priorisiert nach Audit)*
 
 | ID | Aufgabe | Details | Aufwand |
