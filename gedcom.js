@@ -630,6 +630,10 @@ function _migratePlaceObjects(db) {
         ? [{ placeId: pl.parentId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }]
         : [];
     }
+    // Koord-Paar-Invariante: halbe Paare (lat ohne long o.ä.) entstanden in alten
+    // savePlace-Pfaden, wenn User Koords als DMS ohne Direction eintippte (NaN auf
+    // einer Achse). Würden showPlaceDetail crashen — beide auf null setzen.
+    if ((pl.lat == null) !== (pl.long == null)) { pl.lat = null; pl.long = null; }
   }
 }
 
@@ -656,7 +660,9 @@ function _migrateExtraPlacesToPlaceObjects(db) {
   for (const epEntry of Object.values(ep)) {
     const name = epEntry.name || '';
     if (!name) continue;
-    const hasCoords = epEntry.lati != null;
+    // Paar-Invariante: nur als vollständiges Paar — halbe Werte führen sonst zu
+    // place.long.toFixed-Crash in showPlaceDetail
+    const hasCoords = epEntry.lati != null && epEntry.long != null;
     const hasTrans  = Array.isArray(epEntry.trans) && epEntry.trans.length > 0;
     if (!hasCoords && !hasTrans) continue;
 

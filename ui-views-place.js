@@ -101,10 +101,15 @@ function _groupPlacesByObject(entries) {
     if (!po) { ungrouped.push(pl); continue; }
     const key = pl.placeId;
     if (!grouped.has(key)) {
+      // Koord-Paar-Invariante: nur als vollständiges Paar (lat+long) übernehmen,
+      // sonst beide null. Halbe Werte aus historischen Daten würden sonst
+      // showPlaceDetail crashen (place.long.toFixed auf null).
+      const _gLat = po.lat ?? pl.lati, _gLong = po.long ?? pl.long;
+      const _gPair = (_gLat != null && _gLong != null);
       grouped.set(key, {
         name: po.title, placeId: pl.placeId,
         personIds: new Set(), eventTypes: new Set(),
-        lati: po.lat ?? pl.lati, long: po.long ?? pl.long,
+        lati: _gPair ? _gLat : null, long: _gPair ? _gLong : null,
         type: po.type || pl.type || null,
         _variantCount: 0,
       });
@@ -112,7 +117,7 @@ function _groupPlacesByObject(entries) {
     const g = grouped.get(key);
     for (const id of pl.personIds) g.personIds.add(id);
     for (const t of pl.eventTypes) g.eventTypes.add(t);
-    if (g.lati === null && pl.lati !== null) { g.lati = pl.lati; g.long = pl.long; }
+    if (g.lati === null && pl.lati !== null && pl.long !== null) { g.lati = pl.lati; g.long = pl.long; }
     g._variantCount++;
   }
   return [...grouped.values(), ...ungrouped]
@@ -130,7 +135,8 @@ function collectPlaces() {
     const pl = places.get(key);
     if (personId) pl.personIds.add(personId);
     if (eventType) pl.eventTypes.add(eventType);
-    if (pl.lati === null && lati !== null && lati !== undefined) { pl.lati = lati; pl.long = long; }
+    // Koord-Paar-Invariante: nur als vollständiges Paar übernehmen
+    if (pl.lati === null && lati != null && long != null) { pl.lati = lati; pl.long = long; }
     // placeId direkt aus ev.placeId — Vorrang vor findByName (deckt periodengerechte Hierarchie-Strings ab)
     if (placeId && !pl.placeId) pl.placeId = placeId;
   }
@@ -166,7 +172,8 @@ function collectPlaces() {
       if (!pl.type) pl.type = po.type || null;
       // Item 9: placeObjects ist single source of truth — po.lat überschreibt ev.lati
       // (vorher: ev.lati gewann; nach savePlace blieb die Liste auf alten Koords)
-      if (po.lat != null) { pl.lati = po.lat; pl.long = po.long; }
+      // Koord-Paar-Invariante: nur als vollständiges Paar — sonst Render-Crash auf null.toFixed
+      if (po.lat != null && po.long != null) { pl.lati = po.lat; pl.long = po.long; }
       if (po._govUnresolved) pl._govUnresolved = true;
     }
     // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
@@ -175,9 +182,12 @@ function collectPlaces() {
       const key = po.title;
       if (!key) continue;
       if (!places.has(key)) {
+        // Koord-Paar-Invariante: nur als vollständiges Paar — halbe Werte (lat ohne long
+        // o.ä., z.B. aus alten Save-Pfaden) sonst Render-Crash auf null.toFixed
+        const _pPair = (po.lat != null && po.long != null);
         places.set(key, {
           name: key, personIds: new Set(), eventTypes: new Set(),
-          lati: po.lat ?? null, long: po.long ?? null,
+          lati: _pPair ? po.lat : null, long: _pPair ? po.long : null,
           placeId: po.id, type: po.type || null,
           _govUnresolved: po._govUnresolved || false,
         });
@@ -206,7 +216,7 @@ function renderPlaceList(sorted) {
     const fl = (compactPlace(place.name) || place.name)[0].toUpperCase();
     if (fl !== lastLetter) { html += `<div class="alpha-sep">${fl}</div>`; lastLetter = fl; }
     const count = place.personIds.size;
-    const hasGeo = place.lati !== null;
+    const hasGeo = place.lati !== null && place.long !== null;
     const typeIcon = (place.type && PLACE_TYPE_ICON[place.type]) ? PLACE_TYPE_ICON[place.type]
                    : hasGeo ? '📍' : '·';
     const typeLbl  = place.type ? (PLACE_TYPE_LBL[place.type] || place.type) : '';
@@ -579,8 +589,14 @@ function savePlace() {
   const latiRaw = document.getElementById('pl-lati').value.trim();
   const longRaw = document.getElementById('pl-long').value.trim();
   const _pc = latiRaw ? parseCoordInput(latiRaw, longRaw) : { lat: NaN, lon: NaN };
-  const lati = isNaN(_pc.lat) ? null : _pc.lat;
-  const long = isNaN(_pc.lon) ? null : _pc.lon;
+  let lati = isNaN(_pc.lat) ? null : _pc.lat;
+  let long = isNaN(_pc.lon) ? null : _pc.lon;
+  // Koord-Paar-Invariante: nur als vollständiges Paar — sonst Render-Crash auf null.toFixed.
+  // Häufige Ursache: User gibt DMS in nur ein Feld ein (h min sec) → eine Zahl parst, andere NaN.
+  if ((lati == null) !== (long == null)) {
+    showToast('⚠ Koordinaten unvollständig — lat UND long nötig (Dezimalgrad)', 'warn');
+    lati = null; long = null;
+  }
   closeModal('modalPlace');
 
   // Ortsnamen in allen Einträgen umbenennen
@@ -701,8 +717,13 @@ function saveNewPlace() {
   const name = document.getElementById('np-name').value.trim();
   if (!name) { showToast('⚠ Ortsname erforderlich'); return; }
   const _pc2 = parseCoordInput(document.getElementById('np-lati').value, document.getElementById('np-long').value);
-  const lati = isNaN(_pc2.lat) ? null : _pc2.lat;
-  const long = isNaN(_pc2.lon) ? null : _pc2.lon;
+  let lati = isNaN(_pc2.lat) ? null : _pc2.lat;
+  let long = isNaN(_pc2.lon) ? null : _pc2.lon;
+  // Koord-Paar-Invariante: nur als vollständiges Paar — halbe Werte sonst Render-Crash.
+  if ((lati == null) !== (long == null)) {
+    showToast('⚠ Koordinaten unvollständig — lat UND long nötig (Dezimalgrad)', 'warn');
+    lati = null; long = null;
+  }
   // P2 Item 7: nur placeObjects als single source of truth — kein extraPlaces-Schreibziel.
   const existingPo = _placeObjForName(name);
   if (existingPo) {
@@ -832,8 +853,9 @@ function showPlaceDetail(placeName, pushHistory = true) {
   }
 
   // Standort-Sektion (Karte + Geocode-Button)
+  // Beide Koords nötig — halbe Paare (lat ohne long o.ä.) sonst Crash auf null.toFixed
   const _geoAvail = typeof geocodeSinglePlace === 'function';
-  if (place.lati !== null) {
+  if (place.lati !== null && place.long !== null) {
     html += `<div class="section fade-up">
       <div class="section-title">Standort</div>
       <div class="place-map-wrap">
@@ -1107,7 +1129,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
   document.getElementById('detailContent').innerHTML = html;
   showView('v-detail');
-  if (place.lati !== null) _initPlaceDetailMap(place.lati, place.long, compactPlace(placeName));
+  if (place.lati !== null && place.long !== null) _initPlaceDetailMap(place.lati, place.long, compactPlace(placeName));
 }
 
 // ─── Übersetzungs-Editor (P2 Item 7: schreibt in placeObjects.pnames) ────────

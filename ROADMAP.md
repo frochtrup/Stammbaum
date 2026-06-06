@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v861 · Cache: `stammbaum-v861` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v862 · Cache: `stammbaum-v862` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v861) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v862) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v862 | **Koord-Paar-Invariante** — savePlace/saveNewPlace verhindern halbe Koord-Paare (lat ohne long) durch Toast + beide null; showPlaceDetail/collectPlaces/renderPlaceList prüfen beide Achsen; einmalige Migration in `_migratePlaceObjects` setzt halbe Bestands-Paare auf null. | Behebt „Ort in Liste nicht klickbar" — `place.long.toFixed` crashte auf null wenn User Koords in DMS ohne Direction eingab |
 | v861 | **View-Robustheit P0** — Mobile `v-detail.scrollTop=0`-Reset (K1); `visibilitychange`-Handler für PWA-Resume (K2); `renderTab()` in 6 Form-Save-Pfaden (savePerson/transferEvent/saveEvent/deleteEvent/saveFamEvent/deleteFamEvent) (K3); `_lastFilteredPersons` in `markChanged()` invalidiert (R5). | Behebt „Void/Artefakt nach iOS-Tab/App-Wechsel" + „Listen-Stale nach Edit". Detail-Plan: VIEW-ROBUSTNESS.md |
 | v859–v860 | **UX-Polish Orte-Tab** — Lösch-Button vom Anfang ans Ende der Detail-Steckbrief verschoben; Geocodieren/Verknüpfen auf `btn-ghost`-Style umgestellt; neue CSS-Klassen `.place-action-row`/`.place-delete-row`/`.btn-ghost-danger`/`.tran-add-btn`. | Steckbrief-UX dezenter — primärer Lese-Fluss steht im Vordergrund |
 | v858 | **OneDrive Konflikterkennung** — `stammbaum-orte.json` mit Wrapper `{schemaVersion,_rev,_device}`; Union-Merge + Warn-Toast bei Gerätekollision; backwards-kompat. (Item 10) | Kein last-write-wins-Datenverlust bei Multi-Device |
@@ -363,7 +364,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v861 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v862 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0 + Koord-Paar-Invariante)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
