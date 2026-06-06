@@ -180,7 +180,8 @@ if (IS_NODE) {
     '_migratePlaceObjects: _migratePlaceObjects, _placeFold: _placeFold, ' +
     'findPlaceDuplicates: findPlaceDuplicates, mergePlaceObjects: mergePlaceObjects, ' +
     'mergeStringPlaces: mergeStringPlaces, _migrateExtraPlacesToPlaceObjects: _migrateExtraPlacesToPlaceObjects, ' +
-    '_epId: _epId, _findOrCreatePO: _findOrCreatePO };';
+    '_epId: _epId, _findOrCreatePO: _findOrCreatePO, ' +
+    'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject };';
   eval(_combined);
   API = window._api;
 }
@@ -1145,6 +1146,71 @@ ok(/^_ep_[0-9a-f]{8}/.test(API._epId('Test')), 'o._epId: Format _ep_<8 hex>');
   API.setDb(db);
   API._migrateExtraPlacesToPlaceObjects(db);
   eq(Object.keys(db.placeObjects).length, 0, 'o.skip-empty: kein PO für leere extraPlaces');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (p) PLACE-HIST — mutatePlaceObject / upsertPlaceObject (P2 Item 8)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(p) PLACE-HIST mutatePlaceObject (sw v853)');
+
+// mutatePlaceObject: mutiert, invalidiert Registry+Cache, gibt true zurück
+(function() {
+  var db = {
+    individuals:{}, families:{},
+    extraPlaces:{},
+    placeObjects: { '@P_M@': { id:'@P_M@', title:'Test', type:'City', pnames:[], enclosedBy:[], parentId:null } },
+  };
+  API.setDb(db);
+  // Registry vorab cachen, damit wir Invalidation sehen
+  var reg1 = API.getPlaceRegistry();
+  ok(reg1.byId['@P_M@'].type === 'City', 'p.pre: Registry-Cache vor Mutation');
+
+  var ret = API.mutatePlaceObject('@P_M@', function(po) {
+    po.type = 'Village';
+    po.pnames.push({ value:'Alt-Test', lang:'', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null });
+  });
+  eq(ret, true, 'p.mutate: return true bei existierendem placeObject');
+  eq(db.placeObjects['@P_M@'].type, 'Village', 'p.mutate: Mutation angewendet (type)');
+  eq(db.placeObjects['@P_M@'].pnames.length, 1, 'p.mutate: Mutation angewendet (pname push)');
+
+  // Registry-Cache muss invalidiert worden sein → neuer Aufruf liefert frische Daten
+  var reg2 = API.getPlaceRegistry();
+  ok(reg1 !== reg2, 'p.mutate: Registry-Cache invalidiert (neuer Registry-Instance-Bezug)');
+  eq(reg2.byId['@P_M@'].type, 'Village', 'p.mutate: neue Registry zeigt mutierten type');
+})();
+
+// mutatePlaceObject: false zurück bei unbekannter id, keine Anlage
+(function() {
+  var db = { individuals:{}, families:{}, extraPlaces:{}, placeObjects:{} };
+  API.setDb(db);
+  var ret = API.mutatePlaceObject('@NOPE@', function(po) { po.touched = true; });
+  eq(ret, false, 'p.mutate-missing: return false bei unbekannter id');
+  eq(Object.keys(db.placeObjects).length, 0, 'p.mutate-missing: kein PO angelegt');
+})();
+
+// upsertPlaceObject: legt an wenn id fehlt, mutiert wenn da
+(function() {
+  var db = { individuals:{}, families:{}, extraPlaces:{}, placeObjects:{} };
+  API.setDb(db);
+  // upsert auf nicht-existierender id → makeNew wird aufgerufen
+  var id = API.upsertPlaceObject('@P_U@', function() {
+    return { id:'@P_U@', title:'Neu', type:'City', pnames:[], enclosedBy:[], parentId:null };
+  }, function(po) {
+    po.type = 'Village'; // weiter mutieren nach Anlage
+  });
+  eq(id, '@P_U@', 'p.upsert-new: gibt placeId zurück');
+  ok(!!db.placeObjects['@P_U@'], 'p.upsert-new: placeObject angelegt');
+  eq(db.placeObjects['@P_U@'].type, 'Village', 'p.upsert-new: fn nach Anlage angewendet');
+
+  // upsert auf existierender id → makeNew NICHT aufgerufen
+  var makeNewCalled = false;
+  API.upsertPlaceObject('@P_U@', function() {
+    makeNewCalled = true;
+    return { id:'@P_U@', title:'Sollte nicht', type:'Country', pnames:[], enclosedBy:[], parentId:null };
+  }, function(po) { po.title = 'Geändert'; });
+  eq(makeNewCalled, false, 'p.upsert-existing: makeNew NICHT aufgerufen wenn id existiert');
+  eq(db.placeObjects['@P_U@'].title, 'Geändert', 'p.upsert-existing: fn angewendet');
+  eq(db.placeObjects['@P_U@'].type,  'Village', 'p.upsert-existing: bestehende Felder erhalten');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

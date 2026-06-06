@@ -905,6 +905,43 @@ function getPlaceRegistry() {
   return reg;
 }
 
+// ─── PLACE-HIST (ADR-024, P2): zentraler Mutations-Helper ───────────────────
+// Wendet fn auf das placeObject mit der gegebenen id an, invalidiert beide
+// UIState-Caches und persistiert. Ersetzt das 4-Schritt-Ritual
+//   <po mutieren>; UIState._placeRegistry=null; UIState._placesCache=null;
+//   markChanged(); savePlaceObjects();
+// das vorher an ~20 Stellen wiederholt war (mit Vergesser-Risiko, vgl. v847).
+// Gibt true zurück wenn fn ausgeführt wurde, false wenn placeObject fehlt.
+function mutatePlaceObject(id, fn) {
+  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  if (!pos[id]) return false;
+  fn(pos[id]);
+  UIState._placeRegistry = null;
+  UIState._placesCache   = null;
+  if (typeof markChanged       === 'function') markChanged();
+  if (typeof savePlaceObjects  === 'function') savePlaceObjects();
+  return true;
+}
+
+// Pendant für Anlegen (oder Update) — wenn id schon existiert, wie mutatePlaceObject;
+// sonst legt es ein neues placeObject an und übergibt es an fn. Gibt die placeId zurück.
+// Sinnvoll für Pfade wie applyGovText/saveNewPlace, die je nach Zustand anlegen ODER mutieren.
+function upsertPlaceObject(id, makeNew, fn) {
+  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  let po = pos[id];
+  if (!po) {
+    po = makeNew ? makeNew() : { id, title:'', type:'Unknown', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null };
+    pos[po.id || id] = po;
+    if (!po.id) po.id = id;
+  }
+  if (typeof fn === 'function') fn(po);
+  UIState._placeRegistry = null;
+  UIState._placesCache   = null;
+  if (typeof markChanged      === 'function') markChanged();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  return po.id;
+}
+
 // ─── PLACE-HIST (ADR-024, P0b-2): Dubletten-Erkennung + Merge ────────────────
 // Aggressive Normalisierung NUR für die Dubletten-KANDIDATEN-Suche (faltet
 // Umlaute/ae-oe-ue zusammen, wie der Validator _placeNorm). Strenger als

@@ -291,88 +291,83 @@ function applyGovText() {
   const parsed = _parseGovText(raw);
   if (!parsed?.govId) { showToast('⚠ GOV-ID nicht erkannt', 'warn'); return; }
 
-  let po = _currentPoFromModal();
-  if (!po) {
-    // Kein placeObject vorhanden → direkt anlegen (wie savePlace(), aber ohne Formular zu schließen)
+  // Ziel-placeObject identifizieren — anlegen wenn noch nicht im Modal
+  let poId = document.getElementById('pl-placeId')?.value || '';
+  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  if (!poId || !pos[poId]) {
     const nameVal = document.getElementById('pl-name')?.value.trim() || document.getElementById('pl-old')?.value.trim();
     if (!nameVal) { showToast('⚠ Erst Ortsname eingeben und speichern', 'warn'); return; }
-    const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
-    const newId = (typeof _epId === 'function') ? _epId(nameVal) : ('_epg_' + Date.now().toString(36));
-    pos[newId] = { id: newId, title: nameVal, type: 'Unknown', lat: null, long: null, pnames: [], enclosedBy: [], parentId: null };
-    if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = newId;
-    UIState._placeRegistry = null;
-    po = pos[newId];
+    poId = (typeof _epId === 'function') ? _epId(nameVal) : ('_epg_' + Date.now().toString(36));
   }
 
   let changes = 0;
+  let newType = null, newTitle = null; // für UI-Sync außerhalb der Mutation
 
-  // GOV-ID speichern + Platzhalter auflösen
-  if (!po._govId) { po._govId = parsed.govId; changes++; }
-  if (po._govUnresolved) { delete po._govUnresolved; changes++; }
+  upsertPlaceObject(
+    poId,
+    () => ({ id: poId,
+      title: document.getElementById('pl-name')?.value.trim()
+          || document.getElementById('pl-old')?.value.trim() || '',
+      type: 'Unknown', lat: null, long: null,
+      pnames: [], enclosedBy: [], parentId: null }),
+    po => {
+      if (!po._govId) { po._govId = parsed.govId; changes++; }
+      if (po._govUnresolved) { delete po._govUnresolved; changes++; }
 
-  // Typ: neueste Eintrag ohne dateTo (oder letzter insgesamt)
-  const currentType = parsed.types.find(t => !t.dateTo) || parsed.types[parsed.types.length - 1];
-  if (currentType && currentType.type !== 'Unknown' && (!po.type || po.type === 'Unknown')) {
-    po.type = currentType.type;
-    // Typ-Dropdown synchronisieren
-    const sel = document.getElementById('pl-type');
-    if (sel) sel.value = po.type;
-    changes++;
-  }
+      // Typ: neuester Eintrag ohne dateTo (oder letzter insgesamt)
+      const currentType = parsed.types.find(t => !t.dateTo) || parsed.types[parsed.types.length - 1];
+      if (currentType && currentType.type !== 'Unknown' && (!po.type || po.type === 'Unknown')) {
+        po.type = currentType.type;
+        newType = po.type;
+        changes++;
+      }
 
-  // Namen: nur neue hinzufügen
-  if (!Array.isArray(po.pnames)) po.pnames = [];
-  for (const n of parsed.names) {
-    const exists = po.pnames.some(p => p.value === n.value && p.lang === n.lang);
-    if (!exists) { po.pnames.push({ value: n.value, lang: n.lang, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }); changes++; }
-  }
+      // Namen: nur neue hinzufügen
+      if (!Array.isArray(po.pnames)) po.pnames = [];
+      for (const n of parsed.names) {
+        const exists = po.pnames.some(p => p.value === n.value && p.lang === n.lang);
+        if (!exists) {
+          po.pnames.push({ value: n.value, lang: n.lang, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+          changes++;
+        }
+      }
 
-  // Titel aktualisieren wenn Platzhalter (Titel = GOV-ID) oder leer:
-  // bevorzugt undatierten deutschen Namen, sonst ersten Namen in der Liste
-  if (po.title === parsed.govId || !po.title) {
-    const primary = parsed.names.find(n => n.lang === 'deu') || parsed.names[0];
-    if (primary?.value) {
-      po.title = primary.value;
-      const inp = document.getElementById('pl-name');
-      if (inp) inp.value = po.title;
-      changes++;
+      // Titel aktualisieren wenn Platzhalter (Titel = GOV-ID) oder leer
+      if (po.title === parsed.govId || !po.title) {
+        const primary = parsed.names.find(n => n.lang === 'deu') || parsed.names[0];
+        if (primary?.value) { po.title = primary.value; newTitle = po.title; changes++; }
+      }
+
+      // Eltern-Referenzen: Platzhalter-placeObjects anlegen
+      if (!Array.isArray(po.enclosedBy)) po.enclosedBy = [];
+      for (const parent of parsed.parents) {
+        const existsInEnc = po.enclosedBy.some(e => {
+          const parentPo = pos[e.placeId];
+          return parentPo?._govId === parent.govObjId || parentPo?.title === parent.govObjId;
+        });
+        if (existsInEnc) continue;
+        let parentId = Object.values(pos).find(p => p._govId === parent.govObjId || p.title === parent.govObjId)?.id;
+        if (!parentId) {
+          parentId = _epId ? _epId(parent.govObjId) : ('_govp_' + parent.govObjId.replace(/\W/g,'_'));
+          pos[parentId] = { id: parentId, title: parent.govObjId, type: 'Unknown',
+            lat: null, long: null, pnames: [], enclosedBy: [], parentId: null,
+            _govId: parent.govObjId, _govUnresolved: true };
+        }
+        po.enclosedBy.push({ placeId: parentId, dateFrom: parent.dateFrom, dateTo: parent.dateTo, dateType: null, _dateRaw: null });
+        changes++;
+      }
+      if (!po.parentId && po.enclosedBy.length) po.parentId = po.enclosedBy[0].placeId;
     }
-  }
+  );
 
-  // Eltern-Referenzen: Platzhalter-placeObjects anlegen
-  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
-  if (!Array.isArray(po.enclosedBy)) po.enclosedBy = [];
-
-  for (const parent of parsed.parents) {
-    // Schon vorhanden?
-    const existsInEnc = po.enclosedBy.some(e => {
-      const parentPo = pos[e.placeId];
-      return parentPo?._govId === parent.govObjId || parentPo?.title === parent.govObjId;
-    });
-    if (existsInEnc) continue;
-
-    // Platzhalter suchen oder anlegen
-    let parentId = Object.values(pos).find(p => p._govId === parent.govObjId || p.title === parent.govObjId)?.id;
-    if (!parentId) {
-      parentId = _epId ? _epId(parent.govObjId) : ('_govp_' + parent.govObjId.replace(/\W/g,'_'));
-      pos[parentId] = { id: parentId, title: parent.govObjId, type: 'Unknown',
-        lat: null, long: null, pnames: [], enclosedBy: [], parentId: null,
-        _govId: parent.govObjId, _govUnresolved: true };
-    }
-    po.enclosedBy.push({ placeId: parentId, dateFrom: parent.dateFrom, dateTo: parent.dateTo, dateType: null, _dateRaw: null });
-    changes++;
-  }
-
-  if (!po.parentId && po.enclosedBy.length) po.parentId = po.enclosedBy[0].placeId;
-
-  UIState._placeRegistry = null;
-  markChanged();
-  if (typeof savePlaceObjects === 'function') savePlaceObjects();
-
-  // Textarea leeren + Listen neu rendern
+  // UI-Sync außerhalb der Mutation (Modal noch offen)
+  const poFinal = pos[poId];
+  if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = poId;
+  if (newType) { const sel = document.getElementById('pl-type'); if (sel) sel.value = newType; }
+  if (newTitle) { const inp = document.getElementById('pl-name'); if (inp) inp.value = newTitle; }
   document.getElementById('pl-gov-text').value = '';
-  _renderPlaceNamesList(po);
-  _renderEnclosedByList(po);
+  _renderPlaceNamesList(poFinal);
+  _renderEnclosedByList(poFinal);
   showToast(`✓ GOV-Daten übernommen (${changes} Änderungen) — unaufgelöste Eltern-IDs via gov-enrich.py auflösen`);
 }
 
@@ -645,11 +640,10 @@ function addPlaceName() {
   const lang = document.getElementById('pl-pname-lang')?.value.trim() || '';
   const from = document.getElementById('pl-pname-from')?.value.trim() || null;
   const to   = document.getElementById('pl-pname-to')?.value.trim()   || null;
-  if (!Array.isArray(po.pnames)) po.pnames = [];
-  po.pnames.push({ value: val, lang, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
-  UIState._placeRegistry = null;
-  markChanged();
-  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  mutatePlaceObject(po.id, p => {
+    if (!Array.isArray(p.pnames)) p.pnames = [];
+    p.pnames.push({ value: val, lang, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
+  });
   ['pl-pname-val','pl-pname-lang','pl-pname-from','pl-pname-to'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
@@ -659,10 +653,7 @@ function addPlaceName() {
 function removePlaceName(idx) {
   const po = _currentPoFromModal();
   if (!po?.pnames) return;
-  po.pnames.splice(parseInt(idx), 1);
-  UIState._placeRegistry = null;
-  markChanged();
-  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  mutatePlaceObject(po.id, p => { p.pnames.splice(parseInt(idx, 10), 1); });
   _renderPlaceNamesList(po);
 }
 
@@ -672,15 +663,16 @@ function addEnclosedBy() {
   const sel  = document.getElementById('pl-enclosed-sel');
   const pid  = sel?.value;
   if (!pid) { showToast('⚠ Bitte einen Ort wählen'); return; }
+  if (Array.isArray(po.enclosedBy) && po.enclosedBy.some(e => e.placeId === pid)) {
+    showToast('⚠ Bereits eingetragen'); return;
+  }
   const from = document.getElementById('pl-enclosed-from')?.value.trim() || null;
   const to   = document.getElementById('pl-enclosed-to')?.value.trim()   || null;
-  if (!Array.isArray(po.enclosedBy)) po.enclosedBy = [];
-  if (po.enclosedBy.some(e => e.placeId === pid)) { showToast('⚠ Bereits eingetragen'); return; }
-  po.enclosedBy.push({ placeId: pid, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
-  po.parentId = po.enclosedBy[0].placeId; // erstes Element als parentId-Fallback
-  UIState._placeRegistry = null;
-  markChanged();
-  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  mutatePlaceObject(po.id, p => {
+    if (!Array.isArray(p.enclosedBy)) p.enclosedBy = [];
+    p.enclosedBy.push({ placeId: pid, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
+    p.parentId = p.enclosedBy[0].placeId; // erstes Element als parentId-Fallback
+  });
   if (sel) sel.value = '';
   ['pl-enclosed-from','pl-enclosed-to'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
@@ -691,11 +683,10 @@ function addEnclosedBy() {
 function removeEnclosedBy(idx) {
   const po = _currentPoFromModal();
   if (!po?.enclosedBy) return;
-  po.enclosedBy.splice(parseInt(idx), 1);
-  po.parentId = po.enclosedBy[0]?.placeId || null;
-  UIState._placeRegistry = null;
-  markChanged();
-  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  mutatePlaceObject(po.id, p => {
+    p.enclosedBy.splice(parseInt(idx, 10), 1);
+    p.parentId = p.enclosedBy[0]?.placeId || null;
+  });
   _renderEnclosedByList(po);
 }
 

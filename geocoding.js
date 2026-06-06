@@ -92,26 +92,23 @@ async function geocodeSinglePlace(placeName) {
   const { ownKey, type } = _detectLevel(best);
   const parents = _parentChain(addr, ownKey);
 
-  const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
   const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
   let placeId = reg?.findByName(placeName);
   if (!placeId) placeId = _findOrCreatePO(placeName, type);
 
-  const po = pos[placeId];
-  if (!po) return null;
+  if (!AppState.db.placeObjects?.[placeId]) return null;
 
-  if (!po.lat)                              { po.lat = lat; po.long = lon; }
-  if (!po.type || po.type === 'Unknown')    { po.type = type; }
-  // enclosedBy[] wird bewusst NICHT gesetzt — Nominatim liefert nur den heutigen
-  // Verwaltungsstand, nicht die historische Zugehörigkeit. Historische Ketten
-  // kommen via manueller Eingabe (P2-UI) oder GOV-Offline-Script.
+  // Mutation transaktional über mutatePlaceObject (sorgt für beide Cache-Invalidations + save + markChanged)
+  mutatePlaceObject(placeId, po => {
+    if (!po.lat)                              { po.lat = lat; po.long = lon; }
+    if (!po.type || po.type === 'Unknown')    { po.type = type; }
+    // enclosedBy[] wird bewusst NICHT gesetzt — Nominatim liefert nur den heutigen
+    // Verwaltungsstand, nicht die historische Zugehörigkeit. Historische Ketten
+    // kommen via manueller Eingabe (P2-UI) oder GOV-Offline-Script.
+  });
 
-  // Koordinaten in Event-Objekte propagieren
+  // Koordinaten in Event-Objekte propagieren (außerhalb — kein placeObject-Touch)
   if (typeof _propagateCoordsToEvents === 'function') _propagateCoordsToEvents(placeName, lat, lon);
-
-  if (typeof UIState !== 'undefined') { UIState._placesCache = null; UIState._placeRegistry = null; }
-  if (typeof savePlaceObjects === 'function') savePlaceObjects();
-  if (typeof markChanged === 'function') markChanged();
 
   return { lat, lon, type, hierarchy: parents };
 }
