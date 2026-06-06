@@ -181,7 +181,8 @@ if (IS_NODE) {
     'findPlaceDuplicates: findPlaceDuplicates, mergePlaceObjects: mergePlaceObjects, ' +
     'mergeStringPlaces: mergeStringPlaces, _migrateExtraPlacesToPlaceObjects: _migrateExtraPlacesToPlaceObjects, ' +
     '_epId: _epId, _findOrCreatePO: _findOrCreatePO, ' +
-    'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject };';
+    'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject, ' +
+    '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport };';
   eval(_combined);
   API = window._api;
 }
@@ -1234,6 +1235,130 @@ group('(q) PLACE-HIST TRAN aus pnames (sw v854)');
   ok(trans.some(function(t){return t.value==='Vratislavia' && t.lang==='lat';}), 'q.filter: Vratislavia/lat enthalten');
   ok(!trans.some(function(t){return t.value==='Wratislavia';}), 'q.filter: datierte historische Namen NICHT als TRAN');
   ok(!trans.some(function(t){return t.value==='Wrocław';}),     'q.filter: Haupttitel NICHT als TRAN');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (r) PLACE-HIST — JSON-Import-Dedup (Item 15/B6, sw v855)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(r) PLACE-HIST JSON-Import Dedup');
+
+// Title-Match → Merge in vorhandenes PO, kein Duplikat
+(function() {
+  var db = {
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@TARGET@': { id:'@TARGET@', title:'München', type:'City', lat:48.14, long:11.58,
+        pnames:[], enclosedBy:[], parentId:null },
+    },
+  };
+  API.setDb(db);
+  var imported = {
+    '_ep_xyz12345': { id:'_ep_xyz12345', title:'München', type:'City', lat:null, long:null,
+      pnames:[{value:'Munchen', lang:'eng', dateFrom:null, dateTo:null}],
+      enclosedBy:[], parentId:null, _govId:'object_999' },
+  };
+  var stats = API._mergePlaceObjectsFromImport(db, imported);
+  eq(stats.added,  0, 'r.title-match: kein neues PO angelegt');
+  eq(stats.merged, 1, 'r.title-match: 1 ins bestehende gemerged');
+  eq(Object.keys(db.placeObjects).length, 1, 'r.title-match: Anzahl POs unverändert');
+  ok(db.placeObjects['@TARGET@'].pnames.some(function(p){return p.value==='Munchen';}),
+    'r.title-match: imported pname übernommen');
+  eq(db.placeObjects['@TARGET@']._govId, 'object_999',
+    'r.title-match: imported _govId übernommen (fehlte vorher)');
+  eq(db.placeObjects['@TARGET@'].lat, 48.14,
+    'r.title-match: bestehende Koords NICHT überschrieben');
+})();
+
+// Kein Title-Match → mit eigener id einfügen
+(function() {
+  var db = {
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Hamburg', type:'City', pnames:[], enclosedBy:[], parentId:null, lat:null, long:null },
+    },
+  };
+  API.setDb(db);
+  var imported = {
+    '_ep_neu1234': { id:'_ep_neu1234', title:'Berlin', type:'City', lat:52.5, long:13.4,
+      pnames:[], enclosedBy:[], parentId:null },
+  };
+  var stats = API._mergePlaceObjectsFromImport(db, imported);
+  eq(stats.added,  1, 'r.no-match: 1 neu hinzugefügt');
+  eq(stats.merged, 0, 'r.no-match: 0 gemerged');
+  ok(!!db.placeObjects['_ep_neu1234'], 'r.no-match: mit eigener id eingefügt');
+  eq(db.placeObjects['_ep_neu1234'].title, 'Berlin', 'r.no-match: Titel übernommen');
+})();
+
+// Verschiedene Schreibweisen kollabieren (case+whitespace)
+(function() {
+  var db = {
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@T@': { id:'@T@', title:'Köln', pnames:[], enclosedBy:[], parentId:null, lat:null, long:null, type:'City' },
+    },
+  };
+  API.setDb(db);
+  var imported = {
+    '_a': { id:'_a', title:'  KÖLN ',   pnames:[{value:'Colonia', lang:'lat'}], enclosedBy:[], parentId:null },
+    '_b': { id:'_b', title:'köln',      pnames:[{value:'Cologne', lang:'eng'}], enclosedBy:[], parentId:null },
+  };
+  var stats = API._mergePlaceObjectsFromImport(db, imported);
+  eq(stats.added,  0, 'r.case-fold: kein neuer PO (Title-Norm kollabiert)');
+  eq(stats.merged, 2, 'r.case-fold: beide ins bestehende gemerged');
+  eq(Object.keys(db.placeObjects).length, 1, 'r.case-fold: nur 1 PO insgesamt');
+  var pnames = db.placeObjects['@T@'].pnames;
+  ok(pnames.some(function(p){return p.value==='Colonia';}), 'r.case-fold: Colonia/lat übernommen');
+  ok(pnames.some(function(p){return p.value==='Cologne';}), 'r.case-fold: Cologne/eng übernommen');
+})();
+
+// enclosedBy-Remap: import_id → final_id
+(function() {
+  var db = {
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      // Eltern existiert bereits unter anderem Handle
+      '@PARENT@': { id:'@PARENT@', title:'Kreis Steinfurt', type:'County',
+        pnames:[], enclosedBy:[], parentId:null, lat:null, long:null },
+    },
+  };
+  API.setDb(db);
+  var imported = {
+    // Eltern im Import (anderer id, gleicher Titel)
+    '_imp_parent': { id:'_imp_parent', title:'Kreis Steinfurt', type:'County',
+      pnames:[], enclosedBy:[], parentId:null },
+    // Kind referenziert Eltern-import-id
+    '_imp_child': { id:'_imp_child', title:'Ochtrup', type:'Town',
+      pnames:[], enclosedBy:[{placeId:'_imp_parent', dateFrom:null, dateTo:null}],
+      parentId:'_imp_parent' },
+  };
+  API._mergePlaceObjectsFromImport(db, imported);
+  var child = db.placeObjects['_imp_child'];
+  ok(!!child, 'r.remap: Kind eingefügt');
+  eq(child.enclosedBy[0].placeId, '@PARENT@',
+    'r.remap: enclosedBy[0].placeId auf existierende Parent-id remapped');
+  eq(child.parentId, '@PARENT@', 'r.remap: parentId auf existierende Parent-id remapped');
+  ok(!db.placeObjects['_imp_parent'], 'r.remap: Import-Parent nicht als Duplikat angelegt');
+})();
+
+// ID-Kollision bei verschiedenen Titeln → Suffix
+(function() {
+  var db = {
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '_ep_abc12345': { id:'_ep_abc12345', title:'Original', type:'City',
+        pnames:[], enclosedBy:[], parentId:null, lat:null, long:null },
+    },
+  };
+  API.setDb(db);
+  var imported = {
+    '_ep_abc12345': { id:'_ep_abc12345', title:'Anderer Ort', type:'Village',
+      pnames:[], enclosedBy:[], parentId:null, lat:null, long:null },
+  };
+  var stats = API._mergePlaceObjectsFromImport(db, imported);
+  eq(stats.added, 1, 'r.id-collision: trotz id-Kollision (anderer Titel) als neu eingefügt');
+  ok(!!db.placeObjects['_ep_abc12345_imp2'], 'r.id-collision: Suffix _imp2 verwendet');
+  eq(db.placeObjects['_ep_abc12345'].title, 'Original',
+    'r.id-collision: bestehender PO unangetastet');
 })();
 
 // upsertPlaceObject: legt an wenn id fehlt, mutiert wenn da

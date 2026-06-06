@@ -1094,6 +1094,116 @@ function mergePlaceObjects(winnerId, loserIds) {
   return { merged, repointed };
 }
 
+// ─── PLACE-HIST (ADR-024, Item 15/B6): JSON-Import-Dedup ────────────────────
+// Importiert Place-Entitäten aus einem Fremdbestand (z.B. orte.json-Export eines
+// anderen Geräts) verlustfrei in db.placeObjects. Identity-Matching via
+// _normPlaceName(title) — gleicher logischer Ort mit anderem Handle (z.B.
+// GRAMPS @P0017@ vs lokales _ep_<hash>) wird zusammengeführt statt dupliziert.
+//
+// Strategie:
+//   1. Remap-Tabelle bauen: jedes import_id auf final_id mappen
+//        — Title-Match → vorhandenes target_id (Merge-Ziel)
+//        — Sonst → eigenes import_id (oder Suffix bei id-Kollision mit anderem Titel)
+//   2. Apply: Nicht-Matches einfügen (enclosedBy/parentId remappen), Matches
+//      verlustfrei mergen (pnames-Dedup, enclosedBy union, fehlende Felder ergänzen).
+//
+// Gibt { added, merged } zurück. Mutiert targetDb.placeObjects. Lässt _placeRegistry
+// dem Aufrufer (der die übliche Invalidation+Save fährt).
+function _mergePlaceObjectsFromImport(targetDb, importedPos) {
+  if (!targetDb || !importedPos) return { added: 0, merged: 0 };
+  const pos = targetDb.placeObjects || (targetDb.placeObjects = {});
+
+  // Index: norm(title) → target_id (existierend)
+  const byTitleNorm = {};
+  for (const [tid, po] of Object.entries(pos)) {
+    const k = _normPlaceName(po.title);
+    if (k && !(k in byTitleNorm)) byTitleNorm[k] = tid;
+  }
+
+  // Pass 1: Remap-Tabelle
+  const remap = {}; // import_id → final_id
+  for (const [iid, ipo] of Object.entries(importedPos)) {
+    const k = _normPlaceName(ipo.title);
+    let target = k && byTitleNorm[k];
+    if (!target) {
+      // Title nicht vorhanden — eigenes iid behalten, außer Kollision mit anderem Titel
+      target = iid;
+      if (pos[target]) {
+        // ID-Kollision: existierendes pos[iid] hat anderen Titel → Suffix
+        let suf = 2;
+        while (pos[target + '_imp' + suf] && suf < 32) suf++;
+        target = target + '_imp' + suf;
+      }
+      // In den byTitleNorm-Index aufnehmen, damit nachfolgende Importe mit gleichem Titel
+      // (importierte Datei kann interne Dubletten haben) auf denselben target zeigen
+      if (k) byTitleNorm[k] = target;
+    }
+    remap[iid] = target;
+  }
+
+  // Helfer: enclosedBy[] mit Remap rewriten
+  const _remapEnc = (encArr) => (encArr || []).map(e => ({
+    ...e,
+    placeId: remap[e.placeId] || e.placeId,
+  }));
+
+  let added = 0, merged = 0;
+  for (const [iid, ipo] of Object.entries(importedPos)) {
+    const tid = remap[iid];
+    const existing = pos[tid];
+    if (!existing) {
+      // Neu einfügen — mit remapptem enclosedBy/parentId und tid als finaler id
+      pos[tid] = {
+        ...ipo,
+        id: tid,
+        enclosedBy: _remapEnc(ipo.enclosedBy),
+        parentId: ipo.parentId ? (remap[ipo.parentId] || ipo.parentId) : null,
+        pnames: Array.isArray(ipo.pnames) ? ipo.pnames.slice() : [],
+      };
+      added++;
+      continue;
+    }
+    // Merge in bestehenden PO — verlustfrei
+    if (!Array.isArray(existing.pnames))    existing.pnames    = [];
+    if (!Array.isArray(existing.enclosedBy)) existing.enclosedBy = [];
+    const haveName = new Set(existing.pnames.map(p => _normPlaceName(p.value)));
+    haveName.add(_normPlaceName(existing.title));
+    // Auch der Importtitel ist eine potenzielle Schreibweise (falls anders als existing.title)
+    const titleKey = _normPlaceName(ipo.title);
+    if (titleKey && !haveName.has(titleKey)) {
+      haveName.add(titleKey);
+      existing.pnames.push({ value: ipo.title, lang: '',
+        dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+    }
+    for (const pn of (ipo.pnames || [])) {
+      const k = _normPlaceName(pn.value);
+      if (!k || haveName.has(k)) continue;
+      haveName.add(k);
+      existing.pnames.push({
+        value: pn.value, lang: pn.lang || '',
+        dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+        dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null,
+      });
+    }
+    const haveEnc = new Set(existing.enclosedBy.map(e => e.placeId));
+    for (const e of _remapEnc(ipo.enclosedBy)) {
+      if (!e.placeId || e.placeId === tid || haveEnc.has(e.placeId)) continue;
+      haveEnc.add(e.placeId);
+      existing.enclosedBy.push(e);
+    }
+    if (existing.lat == null && ipo.lat != null) { existing.lat = ipo.lat; existing.long = ipo.long; }
+    if ((!existing.type || existing.type === 'Unknown') && ipo.type && ipo.type !== 'Unknown') existing.type = ipo.type;
+    if (!existing._govId   && ipo._govId)   existing._govId   = ipo._govId;
+    if (!existing.parentId && ipo.parentId) existing.parentId = remap[ipo.parentId] || ipo.parentId;
+    // Übernahme _govUnresolved nur wenn existing keinen GovId und Import-PO noch ungelöst ist
+    if (ipo._govUnresolved && existing._govUnresolved !== false && !existing._govId) {
+      existing._govUnresolved = true;
+    }
+    merged++;
+  }
+  return { added, merged };
+}
+
 // ─── String-Orts-Dubletten (GEDCOM ohne placeObjects) ────────────────────────
 // Normiert den ersten Namensteil für Dubletten-Vergleich:
 //   • alles nach erstem Komma entfernen

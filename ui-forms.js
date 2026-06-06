@@ -790,24 +790,33 @@ function importPlaceDataFile(input) {
   r.onload = () => {
     try {
       const data = JSON.parse(r.result);
-      const pos  = data.placeObjects || {};
-      const ep   = data.extraPlaces  || {};
-      const dbPos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
-      const dbEp  = AppState.db.extraPlaces  || (AppState.db.extraPlaces  = {});
-      let addedP = 0, addedE = 0;
-      for (const [id, po] of Object.entries(pos)) {
-        if (!dbPos[id]) { dbPos[id] = po; addedP++; }
+      // P2 Item 15/B6: Dedup über _normPlaceName(title) statt nur id —
+      // gleicher Ort mit anderem Handle (z.B. GRAMPS @P0017@ vs lokales _ep_<hash>)
+      // wird in vorhandenes PO gemerged statt dupliziert.
+      const stats = _mergePlaceObjectsFromImport(AppState.db, data.placeObjects || {});
+
+      // extraPlaces: title-basierte Dedup (Legacy-Pfad; nach Item 7 nur noch
+      // Migrationsquelle — wird beim nächsten setDb in placeObjects gezogen).
+      const dbEp = AppState.db.extraPlaces || (AppState.db.extraPlaces = {});
+      const epByNorm = {};
+      for (const k of Object.keys(dbEp)) epByNorm[_normPlaceName(k)] = k;
+      let addedE = 0;
+      for (const [name, epEntry] of Object.entries(data.extraPlaces || {})) {
+        const norm = _normPlaceName(name);
+        if (!epByNorm[norm]) { dbEp[name] = epEntry; epByNorm[norm] = name; addedE++; }
       }
-      for (const [name, epEntry] of Object.entries(ep)) {
-        if (!dbEp[name]) { dbEp[name] = epEntry; addedE++; }
-      }
+
       savePlaceObjects();
       saveExtraPlaces();
       UIState._placeRegistry = null;
       UIState._placesCache   = null;
       markChanged();
       if (typeof renderTab === 'function') renderTab();
-      showToast(`${addedP} Ort-Entitäten + ${addedE} Koordinaten importiert`, 'success');
+      const parts = [];
+      if (stats.added)  parts.push(`${stats.added} Ort${stats.added !== 1 ? 'e' : ''} hinzugefügt`);
+      if (stats.merged) parts.push(`${stats.merged} mit bestehenden zusammengeführt`);
+      if (addedE)       parts.push(`${addedE} Koord${addedE !== 1 ? 'inaten' : 'inate'}`);
+      showToast(parts.length ? '✓ ' + parts.join(', ') : 'Nichts zu importieren', 'success');
     } catch(e) { showToast('⚠ Fehler beim Import: ' + e.message, 'error'); }
   };
   r.readAsText(file);
