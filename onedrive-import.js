@@ -137,8 +137,9 @@ async function _odNavigateToParentOf(folderId) {
       _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
       await _odShowFolder(parentId, parentName);
     } else {
-      _odFolderStack = [];
-      await _odShowFolder('root', 'OneDrive');
+      // Parent ist Root → Ordner selbst anzeigen, Root im Stack für ← Zurück
+      _odFolderStack = [{ id: 'root', name: 'OneDrive' }];
+      await _odShowFolder(data.id || folderId, data.name || 'Ordner');
     }
   } catch(e) {
     console.warn('[OD] Navigate to parent:', e);
