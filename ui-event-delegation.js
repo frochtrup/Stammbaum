@@ -67,6 +67,7 @@ const _CLICK_MAP = {
   deleteExtraPlace:        el => deleteExtraPlace(el.dataset.pname || el.dataset.name),
   addPlaceTrans:           ()  => addPlaceTrans(),
   deletePlaceTrans:        el  => deletePlaceTrans(+el.dataset.idx),
+  deletePlacePname:        el  => deletePlacePname(+el.dataset.idx),
   togglePlaceGroupMode:    ()  => togglePlaceGroupMode(),
   togglePlaceGovFilter:    ()  => togglePlaceGovFilter(),
   openPlaceMergeModal:     ()  => openPlaceMergeModal(),

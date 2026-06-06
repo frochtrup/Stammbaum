@@ -119,16 +119,11 @@ function collectPlaces() {
     addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long, f.marr.placeId);
     addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long, f.marr.placeId);
   }
-  // Manuell gesetzte Koordinaten (extraPlaces) einmischen — haben Vorrang vor GEDCOM-Werten
-  for (const ep of Object.values(AppState.db.extraPlaces)) {
-    if (!places.has(ep.name)) {
-      places.set(ep.name, { name: ep.name, personIds: new Set(), eventTypes: new Set(), lati: ep.lati ?? null, long: ep.long ?? null });
-    } else if (ep.lati !== null && ep.lati !== undefined) {
-      const pl = places.get(ep.name);
-      pl.lati = ep.lati;
-      pl.long = ep.long;
-    }
-  }
+  // P2 Item 7: extraPlaces wird NICHT mehr eingemischt — `_migrateExtraPlacesToPlaceObjects`
+  // bringt Altbestände bei jedem setDb in placeObjects, von wo der untenstehende
+  // PlaceRegistry-Pass alles abdeckt (Koords, Titel, Aliase). Sollte je ein neuer
+  // extraPlaces-Eintrag dazwischenrutschen (sollte nach P2 nicht passieren), zeigt er
+  // beim nächsten Reload via Migration in placeObjects auf — kein Daten-Verlust.
   // PLACE-HIST (ADR-024, P0b-1): jeden String-Ort additiv mit seiner Place-Entität
   // verknüpfen (placeId + type) und fehlende Koordinaten aus dem placeObject ziehen.
   // String-Key bleibt unverändert → keine Auswirkung auf bestehende Consumer.
@@ -589,39 +584,32 @@ function savePlace() {
     }
   }
 
-  // Koordinaten in extraPlaces speichern (Eintrag anlegen wenn noch nicht vorhanden)
-  const existing = AppState.db.extraPlaces[oldName] || {};
-  const updated = { ...existing, name: newName, lati, long };
-  if (newName !== oldName) delete AppState.db.extraPlaces[oldName];
-  AppState.db.extraPlaces[newName] = updated;
+  // P2 Item 7: extraPlaces nicht mehr beschreiben — single source of truth ist placeObject.
+  // Legacy-Eintrag wegräumen falls vorhanden, damit kein stale-Wert in collectPlaces auftaucht.
+  if (AppState.db.extraPlaces[oldName]) delete AppState.db.extraPlaces[oldName];
+  if (newName !== oldName && AppState.db.extraPlaces[newName]) delete AppState.db.extraPlaces[newName];
   saveExtraPlaces();
 
-  // P2-UI: placeObject anlegen (falls neu) oder aktualisieren
-  const _pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+  // placeObject anlegen (falls neu) oder aktualisieren — single source of truth
   const _type = document.getElementById('pl-type')?.value || 'Unknown';
   let _poId = document.getElementById('pl-placeId')?.value || '';
-  if (!_poId) {
-    // Neues placeObject (erstmaliges Speichern eines String-Ortes)
-    _poId = (typeof _epId === 'function') ? _epId(newName) : ('_ep_' + Date.now());
-    _pos[_poId] = { id: _poId, title: newName, type: _type,
-      lat: lati, long: long, pnames: [], enclosedBy: [], parentId: null };
-    if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = _poId;
-  } else {
-    const _po = _pos[_poId];
-    if (_po) {
-      if (newName !== oldName) _po.title = newName;
-      _po.type = _type;
-      if (lati != null) { _po.lat = lati; _po.long = long; }
+  if (!_poId) _poId = (typeof _epId === 'function') ? _epId(newName) : ('_ep_' + Date.now());
+  upsertPlaceObject(
+    _poId,
+    () => ({ id: _poId, title: newName, type: _type, lat: lati, long,
+             pnames: [], enclosedBy: [], parentId: null }),
+    p => {
+      if (newName !== oldName) p.title = newName;
+      p.type = _type;
+      if (lati != null) { p.lat = lati; p.long = long; }
     }
-  }
-  UIState._placeRegistry = null;
+  );
+  if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = _poId;
 
-  // Koordinaten sofort in alle passenden Event-Objekte übernehmen
-  _propagateCoordsToEvents(newName, lati, long);
+  // Koordinaten sofort in alle passenden Event-Objekte übernehmen (Cache für ev.lati/long
+  // bleibt für Render-Pfade ohne placeId-Auflösung relevant — Item 9 würde diese Schicht entfernen)
+  if (lati != null) _propagateCoordsToEvents(newName, lati, long);
 
-  UIState._placesCache = null;
-  markChanged();
-  if (typeof savePlaceObjects === 'function') savePlaceObjects();
   showToast('✓ Ort gespeichert');
   showPlaceDetail(newName);
 }
@@ -703,21 +691,17 @@ function saveNewPlace() {
   const _pc2 = parseCoordInput(document.getElementById('np-lati').value, document.getElementById('np-long').value);
   const lati = isNaN(_pc2.lat) ? null : _pc2.lat;
   const long = isNaN(_pc2.lon) ? null : _pc2.lon;
-  // extraPlaces nur wenn Koordinaten vorhanden — reine Hierarchie-Orte bleiben
-  // aus extraPlaces heraus und erscheinen damit nicht in der Ortsliste (P2-UI)
-  if (lati != null) {
-    AppState.db.extraPlaces[name] = { name, lati, long };
-    saveExtraPlaces();
-  }
-  // Sofort placeObject anlegen damit er in enclosedBy-Selects erscheint (P2-UI)
-  const _pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
-  if (!_placeObjForName(name)) {
+  // P2 Item 7: nur placeObjects als single source of truth — kein extraPlaces-Schreibziel.
+  const existingPo = _placeObjForName(name);
+  if (existingPo) {
+    mutatePlaceObject(existingPo.id, p => {
+      if (lati != null) { p.lat = lati; p.long = long; }
+    });
+  } else {
     const id = (typeof _epId === 'function') ? _epId(name) : ('_ep_' + Date.now());
-    _pos[id] = { id, title: name, type: 'Unknown', lat: lati, long, pnames: [], enclosedBy: [], parentId: null };
-    UIState._placeRegistry = null;
-    if (typeof savePlaceObjects === 'function') savePlaceObjects();
+    upsertPlaceObject(id, () => ({ id, title: name, type: 'Unknown',
+      lat: lati, long, pnames: [], enclosedBy: [], parentId: null }));
   }
-  UIState._placesCache = null;
   closeModal('modalNewPlace');
   showToast('✓ Ort hinzugefügt — Typ und Hierarchie im ✎-Editor setzen');
   renderTab();
@@ -984,15 +968,28 @@ function showPlaceDetail(placeName, pushHistory = true) {
     }
   }
 
-  // GED7: Übersetzungs-Editor (extraPlaces.trans[])
+  // GED7: Übersetzungs-Editor — P2 Item 7: liest aus placeObjects.pnames (undatierte
+  // mit Sprache/abweichendem Wert = TRAN-Kandidaten). Legacy-Fallback extraPlaces.trans
+  // für Altbestände, die noch keine Migration durchlaufen haben.
+  const _poTrans = place.placeId
+    ? (AppState.db.placeObjects?.[place.placeId]?.pnames || [])
+        .map((pn, idx) => ({ pn, idx }))
+        .filter(({ pn }) => pn.value && pn.value !== placeName && !pn.dateFrom && !pn.dateTo)
+    : [];
   const _ep = AppState.db.extraPlaces[placeName];
-  const _transList = _ep?.trans || [];
-  const _transHtml = _transList.length
-    ? _transList.map((t, i) => `
+  const _legacyTrans = (_ep?.trans || []).map((t, i) => ({ value:t.value, lang:t.lang, _legacy:true, _idx:i }));
+  const _allTrans = _poTrans.map(({ pn, idx }) => ({ value: pn.value, lang: pn.lang || '', _pnIdx: idx }))
+                            .concat(_legacyTrans);
+  const _transHtml = _allTrans.length
+    ? _allTrans.map(t => {
+        const action = t._legacy ? 'deletePlaceTrans' : 'deletePlacePname';
+        const dataIdx = t._legacy ? t._idx : t._pnIdx;
+        return `
       <div class="fact-row" style="align-items:center">
         <span class="fact-val" style="flex:1"><span class="tran-chip">${esc(t.value)}${t.lang ? `<em class="tran-lang">${esc(t.lang)}</em>` : ''}</span></span>
-        <button class="unlink-btn" data-action="deletePlaceTrans" data-idx="${i}">×</button>
-      </div>`).join('')
+        <button class="unlink-btn" data-action="${action}" data-idx="${dataIdx}">×</button>
+      </div>`;
+      }).join('')
     : '';
   html += `<div class="section fade-up">
     <div class="section-head">
@@ -1099,32 +1096,50 @@ function showPlaceDetail(placeName, pushHistory = true) {
   if (place.lati !== null) _initPlaceDetailMap(place.lati, place.long, compactPlace(placeName));
 }
 
-// ─── Übersetzungs-Editor ──────────────────────────────────────────────────────
+// ─── Übersetzungs-Editor (P2 Item 7: schreibt in placeObjects.pnames) ────────
 function addPlaceTrans() {
   const placeName = AppState.currentPlaceName;
   if (!placeName) return;
   const val = document.getElementById('pl-tran-val')?.value.trim();
   if (!val) { showToast('⚠ Übersetzung darf nicht leer sein'); return; }
   const lang = document.getElementById('pl-tran-lang')?.value.trim() || '';
-  if (!AppState.db.extraPlaces[placeName])
-    AppState.db.extraPlaces[placeName] = { name: placeName, lati: null, long: null };
-  if (!AppState.db.extraPlaces[placeName].trans)
-    AppState.db.extraPlaces[placeName].trans = [];
-  AppState.db.extraPlaces[placeName].trans.push({ value: val, lang });
-  saveExtraPlaces();
-  markChanged();
+  // PlaceObject finden oder erzeugen (extraPlaces wird NICHT mehr beschrieben)
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  let poId = reg?.findByName(placeName);
+  if (!poId) {
+    poId = (typeof _epId === 'function') ? _epId(placeName) : ('_ep_' + Date.now());
+    upsertPlaceObject(poId, () => ({ id: poId, title: placeName, type: 'Unknown',
+      lat: null, long: null, pnames: [], enclosedBy: [], parentId: null }));
+  }
+  mutatePlaceObject(poId, p => {
+    if (!Array.isArray(p.pnames)) p.pnames = [];
+    p.pnames.push({ value: val, lang, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+  });
   showToast('✓ Übersetzung gespeichert');
   showPlaceDetail(placeName, false);
 }
 
+// Legacy: Übersetzung aus extraPlaces.trans löschen (Altbestände vor Item 7)
 function deletePlaceTrans(idx) {
   const placeName = AppState.currentPlaceName;
   if (!placeName) return;
   const ep = AppState.db.extraPlaces[placeName];
   if (!ep?.trans) return;
-  ep.trans.splice(idx, 1);
+  ep.trans.splice(parseInt(idx, 10), 1);
   saveExtraPlaces();
   markChanged();
+  UIState._placesCache = null;
+  showPlaceDetail(placeName, false);
+}
+
+// Neue Übersetzung in placeObjects.pnames löschen (Index in pnames-Array)
+function deletePlacePname(idx) {
+  const placeName = AppState.currentPlaceName;
+  if (!placeName) return;
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  const poId = reg?.findByName(placeName);
+  if (!poId) return;
+  mutatePlaceObject(poId, p => { (p.pnames || []).splice(parseInt(idx, 10), 1); });
   showPlaceDetail(placeName, false);
 }
 

@@ -29,21 +29,29 @@ function _resolvedPlaceName(obj) {
   return obj.place;
 }
 
-// PLAC/TRAN-Einträge aus extraPlaces (primär) oder placeObjects (P0b-3-Fallback).
+// PLAC/TRAN-Einträge aus placeObjects.pnames (single source of truth, P2 Item 7).
+// Filter: undatierte pnames (dateFrom+dateTo beide null) — datierte = historische
+// Schreibweisen für GRAMPS, gehören NICHT als TRAN ins GEDCOM; der Haupttitel
+// wird ausgeschlossen (sonst doppelt zur PLAC-Zeile).
+// Legacy-Fallback: extraPlaces.trans für Altbestände, die noch nicht migriert
+// wurden — wird beim nächsten Load via _migrateExtraPlacesToPlaceObjects gelöst.
 // GED7: standard TRAN; GED5: _TRAN vendor extension; Strict: NOTE [lang] value
 function _writePlacTrans(lines, placeName, indent) {
-  const ep = AppState.db?.extraPlaces?.[placeName];
-  let trans = ep?.trans;
-  // Fallback: placeObjects-pnames (P0b-3 — wenn extraPlaces leer aber placeObject vorhanden)
-  if (!trans?.length && typeof getPlaceRegistry === 'function') {
+  let trans = null;
+  if (typeof getPlaceRegistry === 'function') {
     const reg = getPlaceRegistry();
     const pid = reg.findByName(placeName);
     if (pid) {
       const po = reg.byId[pid];
       trans = (po?.pnames || [])
-        .filter(pn => pn.lang && pn.value && pn.value !== placeName)
-        .map(pn => ({ value: pn.value, lang: pn.lang }));
+        .filter(pn => pn.value && pn.value !== placeName && !pn.dateFrom && !pn.dateTo)
+        .map(pn => ({ value: pn.value, lang: pn.lang || '' }));
     }
+  }
+  // Legacy-Fallback: extraPlaces.trans (nur falls noch keine Migration gelaufen)
+  if (!trans?.length) {
+    const ep = AppState.db?.extraPlaces?.[placeName];
+    trans = ep?.trans;
   }
   if (!trans?.length) return;
   if (_strictGed) {
@@ -186,14 +194,17 @@ function geoLines(lines, obj, indent, useExtraPlaces = true) {
     const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
     if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
   }
-  // 2. Ortsregister (nur für strukturierte Events): extraPlaces primär, placeObjects Fallback (P0b-3)
+  // 2. Ortsregister (nur für strukturierte Events): placeObjects primär (P2 Item 7),
+  //    extraPlaces als Legacy-Fallback für Altbestände vor erster Migration.
   if (lati === null && useExtraPlaces && obj?.place) {
-    const ep = AppState.db?.extraPlaces?.[obj.place];
-    if (ep?.lati != null) { lati = ep.lati; long = ep.long; }
-    if (lati === null && typeof getPlaceRegistry === 'function') {
+    if (typeof getPlaceRegistry === 'function') {
       const reg = getPlaceRegistry();
       const pid = reg.findByName(obj.place);
       if (pid) { const po = reg.byId[pid]; if (po?.lat != null) { lati = po.lat; long = po.long; } }
+    }
+    if (lati === null) {
+      const ep = AppState.db?.extraPlaces?.[obj.place];
+      if (ep?.lati != null) { lati = ep.lati; long = ep.long; }
     }
   }
   // 3. Explizite Event-Koordinaten (aus Parser) — immer als letzter Fallback.

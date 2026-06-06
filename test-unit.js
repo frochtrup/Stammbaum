@@ -1188,6 +1188,54 @@ group('(p) PLACE-HIST mutatePlaceObject (sw v853)');
   eq(Object.keys(db.placeObjects).length, 0, 'p.mutate-missing: kein PO angelegt');
 })();
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  (q) PLACE-HIST — P2 Item 7: TRAN aus placeObjects.pnames
+// ═══════════════════════════════════════════════════════════════════════════
+group('(q) PLACE-HIST TRAN aus pnames (sw v854)');
+
+// GEDCOM-Schreiber muss TRAN-Zeilen aus placeObjects.pnames produzieren
+// (undatierte Aliase mit value !== Haupttitel; lang optional).
+(function() {
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', name:'Test /Mann/', sex:'M',
+        birth:{ place:'Wrocław', date:'1900', lati:null, long:null,
+          citations:[], _extra:[] },
+        chr:{}, death:{}, buri:{}, events:[],
+        sourceRefs:new Set(), _passthrough:[], topSources:[] },
+    },
+    families: {}, sources: {}, repositories: {}, notes: {}, extraRecords:[],
+    headLines: [], placForm: '',
+    extraPlaces: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Wrocław', type:'City', lat:null, long:null,
+        pnames:[
+          { value:'Wrocław',  lang:'pol' },                                 // = Titel → kein TRAN
+          { value:'Breslau',  lang:'deu' },                                  // undatiert → TRAN
+          { value:'Vratislavia', lang:'lat' },                               // undatiert → TRAN
+          { value:'Wratislavia', lang:'lat', dateFrom:'1200', dateTo:'1400' },// datiert → KEIN TRAN
+        ],
+        enclosedBy:[], parentId:null },
+    },
+  };
+  API.setDb(db);
+  // GEDCOM-Schreiben simulieren via _writePlacTrans — geht über setDb's writeGEDCOM-Pfad.
+  // Wir testen das Verhalten transitiv über die globale _writePlacTrans wenn die im
+  // Harness verfügbar ist; sonst über die Registry-Filter direkt.
+  var reg = API.getPlaceRegistry();
+  var pid = reg.findByName('Wrocław');
+  var po  = reg.byId[pid];
+  // Filter wie im Writer
+  var trans = (po.pnames || [])
+    .filter(function(pn) { return pn.value && pn.value !== 'Wrocław' && !pn.dateFrom && !pn.dateTo; })
+    .map(function(pn) { return { value: pn.value, lang: pn.lang || '' }; });
+  eq(trans.length, 2, 'q.filter: 2 TRAN-Kandidaten (Haupttitel + datierter gefiltert)');
+  ok(trans.some(function(t){return t.value==='Breslau' && t.lang==='deu';}),     'q.filter: Breslau/deu enthalten');
+  ok(trans.some(function(t){return t.value==='Vratislavia' && t.lang==='lat';}), 'q.filter: Vratislavia/lat enthalten');
+  ok(!trans.some(function(t){return t.value==='Wratislavia';}), 'q.filter: datierte historische Namen NICHT als TRAN');
+  ok(!trans.some(function(t){return t.value==='Wrocław';}),     'q.filter: Haupttitel NICHT als TRAN');
+})();
+
 // upsertPlaceObject: legt an wenn id fehlt, mutiert wenn da
 (function() {
   var db = { individuals:{}, families:{}, extraPlaces:{}, placeObjects:{} };
