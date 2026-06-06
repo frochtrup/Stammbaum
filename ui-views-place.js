@@ -20,6 +20,33 @@ let _placeGroupMode    = false; // true = nach PlaceObject gruppiert (aktueller 
 let _placeGovFilter    = false; // true = nur unaufgelöste GOV-Platzhalter
 let _placeDetailMap   = null;  // P5a-5: Leaflet-Instanz für Mini-Karte im Steckbrief
 
+// Item 12: Badge mit Anzahl Validator-Warnungen auf dem ⚠-Button
+function _refreshPlaceValidatorBadge() {
+  const badge = document.getElementById('placeValidatorBadge');
+  if (!badge || typeof validatePlaces !== 'function') return;
+  const n = validatePlaces().length;
+  if (n) { badge.textContent = String(n); badge.hidden = false; }
+  else   { badge.hidden = true; }
+}
+
+// Item 13: Badge mit Anzahl unaufgelöster GOV-Platzhalter auf dem ⚙-Button
+function _refreshPlaceGovUnresolvedBadge() {
+  const btn = document.getElementById('placeGovFilterBtn');
+  if (!btn) return;
+  const pos = AppState.db?.placeObjects || {};
+  const n = Object.values(pos).filter(p => p._govUnresolved).length;
+  // Title als Hover-Info, Count als Suffix im aria-label
+  if (n) {
+    btn.title = `${n} unaufgelöste GOV-Platzhalter (über gov-enrich.py oder manuell ergänzen)`;
+    btn.setAttribute('aria-label', `GOV-Platzhalter (${n} offen)`);
+    btn.classList.add('icon-btn--has-unresolved');
+  } else {
+    btn.title = 'Nur unaufgelöste GOV-Platzhalter anzeigen';
+    btn.setAttribute('aria-label', 'GOV-Platzhalter');
+    btn.classList.remove('icon-btn--has-unresolved');
+  }
+}
+
 function setPlaceTypeFilter(val) {
   _placeTypeFilter = val || '';
   const q = document.getElementById('searchPlaces')?.value || '';
@@ -166,6 +193,8 @@ function renderPlaceList(sorted) {
     if (!places.size) { el.innerHTML = '<div class="empty">Keine Orte in den Daten gefunden</div>'; return; }
     sorted = [...places.values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
     _refreshPlaceTypeFilter();
+    _refreshPlaceValidatorBadge();      // Item 12
+    _refreshPlaceGovUnresolvedBadge();  // Item 13
   }
   if (!sorted.length) { el.innerHTML = '<div class="empty">Keine Orte gefunden</div>'; return; }
 
@@ -1204,9 +1233,17 @@ function _renderPlaceMergeList() {
         const po = reg.byId[id]; if (!po) continue;
         const n = usage[id] || 0;
         const geo = (po.lat != null) ? ' · 📍' : '';
+        // Item 14: Herkunfts-Hint via id-Präfix
+        const origin =
+          id.startsWith('@')           ? 'GRAMPS' :
+          /_imp\d+$/.test(id)          ? 'JSON-Import' :
+          id.startsWith('_ep_')        ? 'lokal' :
+          id.startsWith('_govp_')      ? 'GOV-Platzhalter' : '';
+        const originSpan = origin
+          ? `<span class="place-merge-origin" title="Herkunft des placeObject (id-Präfix)">${esc(origin)}</span>` : '';
         opts += `<label class="place-merge-opt">
           <input type="radio" name="pmw-${gi}" value="${esc(id)}"${id === suggested ? ' checked' : ''}>
-          <span class="place-merge-name">${esc(po.title)}</span>
+          <span class="place-merge-name">${esc(po.title)}${originSpan}</span>
           <span class="place-merge-meta">${n} Verwendung${n !== 1 ? 'en' : ''}${geo}</span>
         </label>`;
       }

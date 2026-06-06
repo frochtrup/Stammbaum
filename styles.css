@@ -3760,6 +3760,9 @@ html[data-theme="dark"] {
 .place-merge-opt input { margin: 0; flex: 0 0 auto; }
 .place-merge-name { flex: 1 1 auto; font-size: 14px; }
 .place-merge-meta { flex: 0 0 auto; font-size: 12px; color: var(--text-muted, #888); }
+/* Item 14: Herkunfts-Tag im Merge-Modal — kleine kursive Pille hinter dem Title */
+.place-merge-origin { display: inline-block; margin-left: 6px; padding: 1px 6px; font-size: 10px; line-height: 1.4;
+  font-style: italic; color: var(--text-muted, #888); border: 1px solid var(--border, #e0d8c8); border-radius: 8px; }
 .place-merge-btn { margin-top: 8px; width: 100%; }
 .place-merge-hint { font-size: 11px; color: var(--text-muted, #888); margin-bottom: 6px; }
 
@@ -3823,6 +3826,16 @@ html[data-theme="dark"] {
 .place-validator-code { flex-shrink: 0; font-weight: 600; color: var(--c-warn, #b8860b); min-width: 100px; }
 .place-validator-title { font-weight: 500; flex-shrink: 0; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .place-validator-msg { flex: 1; color: var(--text-muted, #888); font-size: 11px; }
+/* Item 12: Badge auf dem ⚠-Button — Anzahl Validator-Warnungen sofort sichtbar */
+.place-validator-btn { position: relative; }
+.place-validator-btn-badge {
+  position: absolute; top: -3px; right: -3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  background: var(--c-warn, #b8860b); color: #fff;
+  font-size: 0.62rem; font-weight: 700; line-height: 1;
+  border-radius: 8px;
+}
 .icon-btn--active { color: var(--c-gold, #b8860b) !important; }
 .place-edit-add-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .pl-field-sm { max-width: 72px; min-width: 0; }

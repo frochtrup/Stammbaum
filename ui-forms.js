@@ -757,17 +757,42 @@ async function loadPlaceObjectsFromIDB() {
   } catch(e) { console.warn('loadPlaceObjectsFromIDB:', e); }
 }
 
+// Item 11: Toast-Once-Flags — verhindern Spam bei wiederholten Fehlern (z.B. IDB-Quota).
+// Reset bei jedem Page-Reload (per Definition Session-scoped).
+let _savePoIDBErrored = false;
+let _savePoODErrored  = false;
 function savePlaceObjects() {
+  let serialized;
   try {
     // Alle placeObjects persistieren (GRAMPS-native + _ep_-user-erzeugte).
     // Beim späteren GRAMPS-Load schützt loadPlaceObjectsFromIDB via "if (pos[id]) continue"
     // davor, dass JSON-Einträge frisch geparste GRAMPS-Daten überschreiben.
     // Beim GEDCOM-Load stehen so auch GRAMPS-native Einträge (enclosedBy[], pnames[]) zur Verfügung.
     const toSave = AppState.db.placeObjects || {};
-    idbPut('stammbaum_placeobjects', JSON.stringify(toSave)).catch(() => {});
-    // OneDrive-Sync in Konfig-Ordner (fire-and-forget)
-    if (typeof _odWriteAppData === 'function') _odWriteAppData('stammbaum-orte.json', toSave).catch(() => {});
-  } catch(e) {}
+    serialized = JSON.stringify(toSave);
+  } catch(e) {
+    if (!_savePoIDBErrored) {
+      _savePoIDBErrored = true;
+      if (typeof showToast === 'function')
+        showToast('⚠ Orts-Daten nicht serialisierbar: ' + (e?.message || e), 'error');
+    }
+    return;
+  }
+  idbPut('stammbaum_placeobjects', serialized).catch(err => {
+    if (_savePoIDBErrored) return;
+    _savePoIDBErrored = true;
+    if (typeof showToast === 'function')
+      showToast('⚠ Orts-Daten lokal nicht speicherbar (IDB): ' + (err?.message || err), 'error');
+  });
+  // OneDrive-Sync in Konfig-Ordner — Fehler einmalig melden
+  if (typeof _odWriteAppData === 'function') {
+    _odWriteAppData('stammbaum-orte.json', JSON.parse(serialized)).catch(err => {
+      if (_savePoODErrored) return;
+      _savePoODErrored = true;
+      if (typeof showToast === 'function')
+        showToast('⚠ OneDrive-Sync der Orts-Daten fehlgeschlagen: ' + (err?.message || err), 'warn');
+    });
+  }
 }
 
 function exportPlaceData() {

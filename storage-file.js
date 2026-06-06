@@ -1,4 +1,21 @@
 // ─────────────────────────────────────
+//  Item 13: GOV-Platzhalter-Toast nach Load
+// ─────────────────────────────────────
+// Wenn placeObjects unaufgelöste GOV-IDs enthalten, User informieren.
+// Delayed (1.5s), damit andere Load-Toasts nicht überschrieben werden.
+function _toastUnresolvedGov() {
+  const pos = AppState.db?.placeObjects;
+  if (!pos) return;
+  let n = 0;
+  for (const po of Object.values(pos)) if (po._govUnresolved) n++;
+  if (!n) return;
+  setTimeout(() => {
+    if (typeof showToast === 'function')
+      showToast(`ℹ ${n} Ort${n !== 1 ? 'e' : ''} mit offener GOV-ID — im Orte-Tab via ⚙-Filter sehen, dann GOV-Text einfügen oder gov-enrich.py nutzen`, 'info');
+  }, 1500);
+}
+
+// ─────────────────────────────────────
 //  INDEXEDDB HELPERS (für Dir-Handle)
 // ─────────────────────────────────────
 let _idb = null;
@@ -381,6 +398,7 @@ async function _finishLoad(db, text, filename) {
     if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
     if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
     if (typeof _linkGedcomEventsToPlaceObjects === 'function') _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass
+    _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen
     AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
     { let maxUsed = 0;
       const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
@@ -481,6 +499,7 @@ async function _loadGRAMPS(file) {
     applyAllExtraPlaceCoords();
     if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
     if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
+    _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen
     // hofObjects: GRAMPS-Parser liefert bereits aus placeObjects abgeleitete Einträge;
     // Nur gespeicherte Koordinaten für Adressen dieser Datei übernehmen (kein Leck aus anderen Dateien).
     AppState.db.hofObjects = _mergeHofObjects(parsed.hofObjects || {}, loadHofObjects());
