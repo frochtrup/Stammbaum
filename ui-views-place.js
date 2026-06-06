@@ -170,10 +170,13 @@ function collectPlaces() {
       if (!po) continue;
       pl.placeId = id;
       if (!pl.type) pl.type = po.type || null;
-      // Item 9: placeObjects ist single source of truth — po.lat überschreibt ev.lati
-      // (vorher: ev.lati gewann; nach savePlace blieb die Liste auf alten Koords)
-      // Koord-Paar-Invariante: nur als vollständiges Paar — sonst Render-Crash auf null.toFixed
+      // Item 9: placeObjects ist single source of truth — po gewinnt IMMER (auch null).
+      // Sonst bleibt ev.lati/long stehen, wenn User die Koord am po löscht (Bug:
+      // „beide Felder geleert + Save → trotzdem Koord sichtbar"), weil addPlace()
+      // mit ev.lati gefüttert wurde und der null-po-Update den Block übersprang.
+      // Koord-Paar-Invariante: nur als vollständiges Paar — sonst null.toFixed-Crash.
       if (po.lat != null && po.long != null) { pl.lati = po.lat; pl.long = po.long; }
+      else                                    { pl.lati = null;  pl.long = null;  }
       if (po._govUnresolved) pl._govUnresolved = true;
     }
     // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
