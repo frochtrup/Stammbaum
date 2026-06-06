@@ -136,6 +136,15 @@ if (IS_NODE) {
   _ctx.window = _ctx;
   ['gedcom.js', 'gedcom-parser.js', 'gedcom-writer.js', 'gedcom-validator.js', 'gramps-parser.js', 'gramps-writer.js']
     .forEach(function(f) { _vm.runInContext(_readSrc(f), _ctx, { filename: f }); });
+  // geocoding.js: nur _findOrCreatePO testbar (sync); async-fetch-Pfad wird nicht aufgerufen.
+  // Stubs für globale Bezüge, die geocoding.js erwartet.
+  _ctx.fetch = function() { throw new Error('fetch not stubbed for tests'); };
+  _ctx.markChanged = function() {};
+  _ctx.savePlaceObjects = function() {};
+  _ctx.showToast = function() {};
+  _ctx._propagateCoordsToEvents = function() {};
+  _ctx.collectPlaces = function() { return new Map(); };
+  _vm.runInContext(_readSrc('geocoding.js'), _ctx, { filename: 'geocoding.js' });
   API = _ctx;
   API.grampsParse = _ctx._grampsParseXMLText;
   API.grampsBuild = _ctx._grampsBuildXMLText;
@@ -145,6 +154,13 @@ if (IS_NODE) {
   performance  = { now: function() { return Date.now(); } };
   document     = _docStub;
   DOMParser    = _MiniDOMParser;
+  // Stubs für geocoding.js-Bezüge (async-fetch-Pfad wird nicht aufgerufen, nur _findOrCreatePO sync getestet)
+  window.fetch = function() { throw new Error('fetch not stubbed for tests'); };
+  window.markChanged = function() {};
+  window.savePlaceObjects = function() {};
+  window.showToast = function() {};
+  window._propagateCoordsToEvents = function() {};
+  window.collectPlaces = function() { return new Map(); };
   var _combined =
     _readSrc('gedcom.js')          + '\n' +
     _readSrc('gedcom-parser.js')   + '\n' +
@@ -152,6 +168,7 @@ if (IS_NODE) {
     _readSrc('gedcom-validator.js')+ '\n' +
     _readSrc('gramps-parser.js')   + '\n' +
     _readSrc('gramps-writer.js')   + '\n' +
+    _readSrc('geocoding.js')       + '\n' +
     'window._api = { parseGEDCOM: parseGEDCOM, runValidation: runValidation, ' +
     '_buildLivingSet: _buildLivingSet, normMonth: normMonth, buildGedDate: buildGedDate, ' +
     'buildGedDateFromFields: buildGedDateFromFields, readDatePartFromFields: readDatePartFromFields, ' +
@@ -163,7 +180,7 @@ if (IS_NODE) {
     '_migratePlaceObjects: _migratePlaceObjects, _placeFold: _placeFold, ' +
     'findPlaceDuplicates: findPlaceDuplicates, mergePlaceObjects: mergePlaceObjects, ' +
     'mergeStringPlaces: mergeStringPlaces, _migrateExtraPlacesToPlaceObjects: _migrateExtraPlacesToPlaceObjects, ' +
-    '_epId: _epId };';
+    '_epId: _epId, _findOrCreatePO: _findOrCreatePO };';
   eval(_combined);
   API = window._api;
 }
@@ -920,6 +937,215 @@ group('(l) PLACE-HIST Robustheit (sw v851)');
 // P1.1: _normPlaceName ist kanonisch — gleiche Identität trotz Whitespace + Casing
 ok(API._normPlaceName(' Berlin ') === API._normPlaceName('berlin'), 'P1.1: _normPlaceName Whitespace+Case identisch');
 ok(API._normPlaceName('München') === API._normPlaceName('münchen'), 'P1.1: _normPlaceName casefold');
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (m) PLACE-HIST — Identity Cross-Path Vertrag
+//  Gleicher logischer Ort, fünf Schreibweisen → eine placeId in ALLEN Pfaden.
+//  Verriegelt _normPlaceName als KANONISCHE Identitätsfunktion.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(m) PLACE-HIST Identity Cross-Path');
+
+(function() {
+  var db = {
+    individuals: {}, families: {},
+    extraPlaces: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Münster', type:'City',
+        pnames:[{value:'Münster'}, {value:'Monasterium', lang:'lat'}],
+        enclosedBy:[], parentId:null },
+    },
+  };
+  API.setDb(db);
+  var reg = API.getPlaceRegistry();
+  var truth = '@P1@';
+  var variants = ['Münster', 'münster', 'MÜNSTER', '  Münster ', 'Münster\t', 'münster '];
+  variants.forEach(function(v) {
+    eq(reg.findByName(v), truth, 'm.findByName: "' + v + '" → @P1@');
+  });
+  // Alias via pname (Monasterium) muss ebenfalls auf @P1@ zeigen
+  eq(reg.findByName('monasterium'), truth, 'm.findByName: pname-Alias casefold → @P1@');
+  eq(reg.findByName('  Monasterium '), truth, 'm.findByName: pname-Alias + Whitespace → @P1@');
+
+  // Cross-Path: _findOrCreatePO darf KEIN neues PO erzeugen, sondern @P1@ liefern
+  var before = Object.keys(db.placeObjects).length;
+  var id1 = API._findOrCreatePO('  MÜNSTER ', 'City');
+  var id2 = API._findOrCreatePO('münster', 'City');
+  var id3 = API._findOrCreatePO('Monasterium', 'City');
+  var after = Object.keys(db.placeObjects).length;
+  eq(id1, truth, 'm._findOrCreatePO: "  MÜNSTER " findet bestehendes @P1@ (kein Neu-Anlegen)');
+  eq(id2, truth, 'm._findOrCreatePO: "münster" findet bestehendes @P1@');
+  eq(id3, truth, 'm._findOrCreatePO: pname-Alias "Monasterium" findet @P1@');
+  eq(after, before, 'm.Cross-Path: kein neues PO angelegt (Identity zentral korrekt)');
+})();
+
+// Cross-Path: mergeStringPlaces Winner-Lookup nutzt _normPlaceName
+(function() {
+  var winnerId = API._epId('Köln');
+  var loserId  = API._epId('Koeln');
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Koeln', placeId: loserId }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    extraPlaces: {},
+    placeObjects: {},
+  };
+  db.placeObjects[winnerId] = { id:winnerId, title:'Köln',  type:'City', pnames:[], enclosedBy:[], parentId:null };
+  db.placeObjects[loserId]  = { id:loserId,  title:'Koeln', type:'City', pnames:[], enclosedBy:[], parentId:null };
+  API.setDb(db);
+  // Winner-Name in anderer Casing/Whitespace → muss trotzdem das richtige Winner-PO finden
+  var res = API.mergeStringPlaces(' köln ', ['Koeln']);
+  eq(db.individuals['@I1@'].birth.placeId, winnerId,
+    'm.mergeStringPlaces: Winner-Lookup via _normPlaceName findet PO trotz Whitespace+Case');
+  ok(!db.placeObjects[loserId], 'm.mergeStringPlaces: Verlierer-PO trotzdem gelöscht');
+  ok(!!db.placeObjects[winnerId], 'm.mergeStringPlaces: Winner-PO erhalten');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (n) PLACE-HIST — mergeStringPlaces Edge-Cases
+// ═══════════════════════════════════════════════════════════════════════════
+group('(n) PLACE-HIST mergeStringPlaces Edge-Cases');
+
+// Leere loserNames → no-op
+(function() {
+  API.setDb({ individuals:{}, families:{}, extraPlaces:{}, placeObjects:{} });
+  var res = API.mergeStringPlaces('Berlin', []);
+  eq(res.repointed, 0, 'n.leer: leere loserNames → 0 repointed');
+})();
+
+// Mehrere Verlierer in einem Aufruf
+(function() {
+  var wId = API._epId('Hamburg');
+  var l1  = API._epId('Hamborg');
+  var l2  = API._epId('Hambourg');
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Hamborg',  placeId: l1 }, chr:{}, death:{}, buri:{}, events:[] },
+      '@I2@': { id:'@I2@', birth:{ place:'Hambourg', placeId: l2 }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    extraPlaces: {},
+    placeObjects: {},
+  };
+  db.placeObjects[wId] = { id:wId, title:'Hamburg',  type:'City', pnames:[], enclosedBy:[], parentId:null };
+  db.placeObjects[l1]  = { id:l1,  title:'Hamborg',  type:'City', pnames:[], enclosedBy:[], parentId:null };
+  db.placeObjects[l2]  = { id:l2,  title:'Hambourg', type:'City', pnames:[], enclosedBy:[], parentId:null };
+  API.setDb(db);
+  var res = API.mergeStringPlaces('Hamburg', ['Hamborg', 'Hambourg']);
+  ok(res.repointed >= 2, 'n.multi: ≥2 Events umbenannt');
+  eq(db.individuals['@I1@'].birth.placeId, wId, 'n.multi: I1.placeId auf Winner umgehängt');
+  eq(db.individuals['@I2@'].birth.placeId, wId, 'n.multi: I2.placeId auf Winner umgehängt');
+  ok(!db.placeObjects[l1] && !db.placeObjects[l2], 'n.multi: beide Verlierer-POs gelöscht');
+  ok(!!db.placeObjects[wId], 'n.multi: Winner-PO erhalten');
+})();
+
+// Verlierer-String OHNE placeObject (reiner GEDCOM-Fall) → kein Crash, kein Repoint-Fehler
+(function() {
+  var wId = API._epId('Bremen');
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Brema', placeId:null }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    extraPlaces: { 'Brema': { name:'Brema', lati:null, long:null } },
+    placeObjects: {},
+  };
+  db.placeObjects[wId] = { id:wId, title:'Bremen', type:'City', pnames:[], enclosedBy:[], parentId:null };
+  API.setDb(db);
+  var res = API.mergeStringPlaces('Bremen', ['Brema']);
+  eq(db.individuals['@I1@'].birth.place, 'Bremen', 'n.no-loser-PO: ev.place auf Winner-String normiert');
+  ok(!db.extraPlaces['Brema'], 'n.no-loser-PO: extraPlaces-Eintrag des Verlierers entfernt');
+  ok(!!db.placeObjects[wId], 'n.no-loser-PO: Winner-PO unangetastet');
+})();
+
+// Verlierer hat Koordinaten in extraPlaces — Winner-PO ohne Koords erbt sie
+(function() {
+  var wId = API._epId('Dresden');
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Drezno', placeId:null }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    extraPlaces: { 'Drezno': { name:'Drezno', lati:51.05, long:13.74 } },
+    placeObjects: {},
+  };
+  db.placeObjects[wId] = { id:wId, title:'Dresden', type:'City', pnames:[], enclosedBy:[], parentId:null, lat:null, long:null };
+  API.setDb(db);
+  API.mergeStringPlaces('Dresden', ['Drezno']);
+  eq(db.placeObjects[wId].lat,  51.05, 'n.coord-inherit: Winner-PO erbt lat aus Verlierer-extraPlaces');
+  eq(db.placeObjects[wId].long, 13.74, 'n.coord-inherit: Winner-PO erbt long aus Verlierer-extraPlaces');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (o) PLACE-HIST — _migrateExtraPlacesToPlaceObjects + _epId
+// ═══════════════════════════════════════════════════════════════════════════
+group('(o) PLACE-HIST extraPlaces-Migration + _epId');
+
+// _epId: gleicher Input → gleiche ID
+eq(API._epId('Münster'), API._epId('Münster'), 'o._epId: deterministisch (gleicher Input)');
+ok(API._epId('Münster') !== API._epId('Muenster'), 'o._epId: andere Inputs → andere IDs (typisch)');
+ok(/^_ep_[0-9a-f]{8}/.test(API._epId('Test')), 'o._epId: Format _ep_<8 hex>');
+
+// Migration: extraPlaces mit Koords → neues placeObject
+(function() {
+  var db = {
+    individuals:{}, families:{},
+    extraPlaces: { 'Görlitz': { name:'Görlitz', lati:51.15, long:14.99 } },
+    placeObjects: {},
+  };
+  API.setDb(db);
+  API._migrateExtraPlacesToPlaceObjects(db);
+  var newId = API._epId('Görlitz');
+  ok(!!db.placeObjects[newId], 'o.migrate: neues placeObject angelegt');
+  eq(db.placeObjects[newId].title, 'Görlitz', 'o.migrate: Titel korrekt');
+  eq(db.placeObjects[newId].lat, 51.15, 'o.migrate: lat übernommen');
+})();
+
+// Migration: existierendes placeObject ohne Koords → ergänzt
+(function() {
+  var existingId = '@P_X@';
+  var db = {
+    individuals:{}, families:{},
+    extraPlaces: { 'Lübeck': { name:'Lübeck', lati:53.87, long:10.69, trans:[{value:'Lubeca', lang:'lat'}] } },
+    placeObjects: {},
+  };
+  db.placeObjects[existingId] = { id:existingId, title:'Lübeck', type:'City',
+    pnames:[], enclosedBy:[], parentId:null, lat:null, long:null };
+  API.setDb(db);
+  API._migrateExtraPlacesToPlaceObjects(db);
+  eq(db.placeObjects[existingId].lat, 53.87, 'o.merge-into-existing: Koords ergänzt');
+  ok(db.placeObjects[existingId].pnames.some(function(p){ return p.value === 'Lubeca'; }),
+    'o.merge-into-existing: trans als pname übernommen');
+  var newId = API._epId('Lübeck');
+  ok(!db.placeObjects[newId] || newId === existingId, 'o.merge-into-existing: KEIN Duplikat angelegt');
+})();
+
+// Migration: idempotent (2× hintereinander = stabil)
+(function() {
+  var db = {
+    individuals:{}, families:{},
+    extraPlaces: { 'Erfurt': { name:'Erfurt', lati:50.98, long:11.03 } },
+    placeObjects: {},
+  };
+  API.setDb(db);
+  API._migrateExtraPlacesToPlaceObjects(db);
+  var count1 = Object.keys(db.placeObjects).length;
+  API._migrateExtraPlacesToPlaceObjects(db);
+  var count2 = Object.keys(db.placeObjects).length;
+  eq(count1, count2, 'o.idempotent: zweiter Aufruf legt nichts Neues an');
+})();
+
+// Migration: extraPlaces ohne Koords UND ohne trans → übersprungen
+(function() {
+  var db = {
+    individuals:{}, families:{},
+    extraPlaces: { 'Nichts': { name:'Nichts', lati:null, long:null } },
+    placeObjects: {},
+  };
+  API.setDb(db);
+  API._migrateExtraPlacesToPlaceObjects(db);
+  eq(Object.keys(db.placeObjects).length, 0, 'o.skip-empty: kein PO für leere extraPlaces');
+})();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');

@@ -50,18 +50,28 @@ function _parentChain(addr, ownKey) {
 }
 
 // Findet oder legt ein placeObject an; gibt die ID zurück
-// Identity-Matching via _normPlaceName (NFC+casefold+ws) — kanonisch, vgl. gedcom.js:_normPlaceName
+// Identity-Lookup primär via PlaceRegistry.findByName (deckt title + ALLE pnames-Aliase
+// ab); Fallback: _normPlaceName-Title-Vergleich, falls Registry nicht verfügbar.
 function _findOrCreatePO(title, type) {
   const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
-  const norm = (typeof _normPlaceName === 'function') ? _normPlaceName(title) : title.toLowerCase();
-  const existing = Object.values(pos).find(po =>
-    (typeof _normPlaceName === 'function' ? _normPlaceName(po.title) : (po.title || '').toLowerCase()) === norm);
+  let existing = null;
+  if (typeof getPlaceRegistry === 'function') {
+    const reg = getPlaceRegistry();
+    const id  = reg && reg.findByName(title);
+    if (id && pos[id]) existing = pos[id];
+  }
+  if (!existing) {
+    const norm = (typeof _normPlaceName === 'function') ? _normPlaceName(title) : title.toLowerCase();
+    existing = Object.values(pos).find(po =>
+      (typeof _normPlaceName === 'function' ? _normPlaceName(po.title) : (po.title || '').toLowerCase()) === norm);
+  }
   if (existing) {
     if (!existing.type || existing.type === 'Unknown') existing.type = type;
     return existing.id;
   }
   const id = (typeof _epId === 'function') ? _epId(title) : ('_epg_' + Date.now().toString(36));
   pos[id] = { id, title, type, lat: null, long: null, pnames: [], enclosedBy: [], parentId: null };
+  if (typeof UIState !== 'undefined') { UIState._placeRegistry = null; }
   return id;
 }
 
