@@ -384,25 +384,30 @@
       if (lati == null || long == null) return;
       pts.push({ lati, long, year: _yearFromDate(date), label: label || '', type });
     }
+    // Item 9: Koords via _eventCoords (placeObjects single source of truth)
+    const _ec = ev => (typeof _eventCoords === 'function') ? _eventCoords(ev) : { lati: ev?.lati, long: ev?.long };
+    const _addEv = (ev, label, type) => { const c = _ec(ev); add(c.lati, c.long, ev?.date, label, type); };
 
-    add(p.birth?.lati, p.birth?.long, p.birth?.date, _shortPlace(p.birth?.place) || 'Geburt', 'birth');
-    add(p.chr?.lati,   p.chr?.long,   p.chr?.date,   _shortPlace(p.chr?.place)   || 'Taufe',  'chr');
+    _addEv(p.birth, _shortPlace(p.birth?.place) || 'Geburt', 'birth');
+    _addEv(p.chr,   _shortPlace(p.chr?.place)   || 'Taufe',  'chr');
 
     for (const ev of (p.events || [])) {
-      if (ev.lati == null) continue;
+      const c = _ec(ev);
+      if (c.lati == null) continue;
       const label = _shortPlace(ev.place) || ev.eventType ||
         (typeof EVENT_LABELS !== 'undefined' && EVENT_LABELS[ev.type]) || ev.type || '';
-      add(ev.lati, ev.long, ev.date, label, 'event');
+      add(c.lati, c.long, ev.date, label, 'event');
     }
 
     for (const famId of (p.fams || [])) {
       const f = getFamily(famId);
-      if (f?.marr?.lati != null)
-        add(f.marr.lati, f.marr.long, f.marr.date, _shortPlace(f.marr.place) || 'Heirat', 'marr');
+      if (!f?.marr) continue;
+      const c = _ec(f.marr);
+      if (c.lati != null) add(c.lati, c.long, f.marr.date, _shortPlace(f.marr.place) || 'Heirat', 'marr');
     }
 
-    add(p.death?.lati, p.death?.long, p.death?.date, _shortPlace(p.death?.place) || 'Tod',       'death');
-    add(p.buri?.lati,  p.buri?.long,  p.buri?.date,  _shortPlace(p.buri?.place)  || 'Begräbnis', 'buri');
+    _addEv(p.death, _shortPlace(p.death?.place) || 'Tod',       'death');
+    _addEv(p.buri,  _shortPlace(p.buri?.place)  || 'Begräbnis', 'buri');
 
     // Chronologisch sortieren, undatierte ans Ende
     pts.sort((a, b) => {

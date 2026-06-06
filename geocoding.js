@@ -107,9 +107,8 @@ async function geocodeSinglePlace(placeName) {
     // kommen via manueller Eingabe (P2-UI) oder GOV-Offline-Script.
   });
 
-  // Koordinaten in Event-Objekte propagieren (außerhalb — kein placeObject-Touch)
-  if (typeof _propagateCoordsToEvents === 'function') _propagateCoordsToEvents(placeName, lat, lon);
-
+  // Item 9: keine Propagation in Event-Objekte mehr — Render-Pfade lesen via _eventCoords
+  // direkt aus dem placeObject (single source of truth).
   return { lat, lon, type, hierarchy: parents };
 }
 

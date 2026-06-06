@@ -182,7 +182,8 @@ if (IS_NODE) {
     'mergeStringPlaces: mergeStringPlaces, _migrateExtraPlacesToPlaceObjects: _migrateExtraPlacesToPlaceObjects, ' +
     '_epId: _epId, _findOrCreatePO: _findOrCreatePO, ' +
     'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject, ' +
-    '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport };';
+    '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport, ' +
+    '_eventCoords: _eventCoords };';
   eval(_combined);
   API = window._api;
 }
@@ -1384,6 +1385,67 @@ group('(r) PLACE-HIST JSON-Import Dedup');
   eq(makeNewCalled, false, 'p.upsert-existing: makeNew NICHT aufgerufen wenn id existiert');
   eq(db.placeObjects['@P_U@'].title, 'Geändert', 'p.upsert-existing: fn angewendet');
   eq(db.placeObjects['@P_U@'].type,  'Village', 'p.upsert-existing: bestehende Felder erhalten');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (s) PLACE-HIST — _eventCoords (P2 Item 9: single source of truth)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(s) PLACE-HIST _eventCoords (sw v857)');
+
+// ev.placeId zeigt auf po mit lat → po.lat hat Vorrang
+(function() {
+  var db = {
+    individuals: {}, families: {}, extraPlaces: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'München', type:'City', lat:48.14, long:11.58,
+        pnames:[], enclosedBy:[], parentId:null },
+    },
+  };
+  API.setDb(db);
+  var c1 = API._eventCoords({ placeId:'@P1@', place:'München', lati:99, long:99 });
+  eq(c1.lati, 48.14, 's.placeId-priority: po.lat überschreibt ev.lati');
+  eq(c1.long, 11.58, 's.placeId-priority: po.long überschreibt ev.long');
+})();
+
+// Kein ev.placeId aber ev.place findet po via findByName
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Hamburg', lat:53.55, long:9.99,
+        pnames:[], enclosedBy:[], parentId:null },
+    },
+  });
+  var c = API._eventCoords({ placeId:null, place:'Hamburg', lati:null, long:null });
+  eq(c.lati, 53.55, 's.findByName: ev ohne placeId aber mit place → po.lat via findByName');
+})();
+
+// Kein po → ev.lati fallback
+(function() {
+  API.setDb({ individuals:{}, families:{}, extraPlaces:{}, placeObjects:{} });
+  var c = API._eventCoords({ place:'Unknown', lati:55.5, long:13.5 });
+  eq(c.lati, 55.5, 's.fallback: kein po → ev.lati');
+  eq(c.long, 13.5, 's.fallback: kein po → ev.long');
+})();
+
+// po existiert aber ohne Koords → ev.lati fallback
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'NoCoord', lat:null, long:null,
+        pnames:[], enclosedBy:[], parentId:null },
+    },
+  });
+  var c = API._eventCoords({ placeId:'@P1@', place:'NoCoord', lati:7.7, long:8.8 });
+  eq(c.lati, 7.7, 's.po-empty: po ohne lat → ev.lati');
+})();
+
+// ev=null → {null, null}
+(function() {
+  var c = API._eventCoords(null);
+  eq(c.lati, null, 's.null: null-Event → lati null');
+  eq(c.long, null, 's.null: null-Event → long null');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

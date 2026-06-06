@@ -164,7 +164,9 @@ function collectPlaces() {
       if (!po) continue;
       pl.placeId = id;
       if (!pl.type) pl.type = po.type || null;
-      if (pl.lati === null && po.lat != null) { pl.lati = po.lat; pl.long = po.long; }
+      // Item 9: placeObjects ist single source of truth — po.lat überschreibt ev.lati
+      // (vorher: ev.lati gewann; nach savePlace blieb die Liste auf alten Koords)
+      if (po.lat != null) { pl.lati = po.lat; pl.long = po.long; }
       if (po._govUnresolved) pl._govUnresolved = true;
     }
     // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
@@ -570,23 +572,6 @@ function _renderEnclosedByList(po) {
     + opts.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('');
 }
 
-function _propagateCoordsToEvents(placeName, lati, long) {
-  // Identity-Matching via _normPlaceName — fängt Whitespace-/Unicode-Varianten
-  // ("  Ochtrup ", "Ochtrup", "ochtrup") als selben Ort.
-  const _id = s => (typeof _normPlaceName === 'function') ? _normPlaceName(s) : (s || '').trim();
-  const key = _id(placeName);
-  if (!key) return;
-  for (const p of Object.values(AppState.db.individuals)) {
-    for (const ev of [p.birth, p.chr, p.death, p.buri, ...(p.events || [])]) {
-      if (ev && _id(ev.place) === key) { ev.lati = lati; ev.long = long; }
-    }
-  }
-  for (const f of Object.values(AppState.db.families)) {
-    if (f.marr  && _id(f.marr.place)  === key) { f.marr.lati  = lati; f.marr.long  = long; }
-    if (f.engag && _id(f.engag.place) === key) { f.engag.lati = lati; f.engag.long = long; }
-  }
-}
-
 function savePlace() {
   const oldName = document.getElementById('pl-old').value;
   const newName = document.getElementById('pl-name').value.trim();
@@ -635,10 +620,8 @@ function savePlace() {
   );
   if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = _poId;
 
-  // Koordinaten sofort in alle passenden Event-Objekte übernehmen (Cache für ev.lati/long
-  // bleibt für Render-Pfade ohne placeId-Auflösung relevant — Item 9 würde diese Schicht entfernen)
-  if (lati != null) _propagateCoordsToEvents(newName, lati, long);
-
+  // Item 9: KEINE eager Propagation mehr — Render-Pfade lesen Koords via _eventCoords
+  // direkt aus dem placeObject. Single source of truth.
   showToast('✓ Ort gespeichert');
   showPlaceDetail(newName);
 }

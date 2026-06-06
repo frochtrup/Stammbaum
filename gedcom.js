@@ -724,6 +724,26 @@ function _migrateExtraPlacesToPlaceObjects(db) {
   if (changed) UIState._placeRegistry = null;
 }
 
+// ─── P2 Item 9: Event-Koordinaten — placeObjects als single source of truth ──
+// Liest Koordinaten eines Events: erst placeObjects via ev.placeId, dann via
+// findByName(ev.place), Fallback ev.lati/long. Damit zeigt nach savePlace die
+// neue Koordinate überall sofort, ohne dass _propagateCoordsToEvents sie eager
+// in alle Events kopieren muss.
+function _eventCoords(ev) {
+  if (!ev) return { lati: null, long: null };
+  if (typeof getPlaceRegistry === 'function') {
+    const reg = getPlaceRegistry();
+    let pid = ev.placeId;
+    if (!pid && ev.place) pid = reg.findByName(ev.place);
+    if (pid) {
+      const po = reg.byId[pid];
+      if (po && po.lat != null) return { lati: po.lat, long: po.long };
+    }
+  }
+  // Fallback: Event-eigene Koords (aus GEDCOM-Parser oder Altbeständen)
+  return { lati: ev.lati ?? null, long: ev.long ?? null };
+}
+
 // Baut periodenkorrekten, FORM-kompatiblen PLAC-String via enclosureChainAsOf (ADR-024).
 // Gibt "Ort, Amt, Fürstbistum" zurück (spezifisch→allgemein, keine Leer-Slots).
 // Wichtig: pro Knoten nur das erste Komma-Segment von resolveAsOf verwenden —

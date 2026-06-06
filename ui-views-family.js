@@ -437,7 +437,7 @@ function showFamilyDetail(id, pushHistory = true) {
       const ev = f[key];
       if (!ev?.date && !ev?.place && !ev?.seen) continue;
       _hasAnyEv = true;
-      const geoBtn = evGeoLink(ev.lati, ev.long);
+      const geoBtn = evGeoLink(ev);
       const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
       html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}">
         <span class="fact-lbl">${label}</span>

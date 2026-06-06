@@ -490,8 +490,9 @@ function _ageAt(refDateStr, evDateStr) {
   return `<span class="age-tag">${approx}${age} J.</span>`;
 }
 function _pdetLifeData(p, id) {
+  // Item 9: Koords via _eventCoords — auch ohne ev.lati true wenn placeObject Koords hat
   const _hasGeo = [p.birth, p.chr, p.death, p.buri, ...p.events]
-    .some(ev => ev && _validCoord(ev.lati, ev.long));
+    .some(ev => { if (!ev) return false; const c = _eventCoords(ev); return _validCoord(c.lati, c.long); });
   let html = `<div class="section fade-up" id="pdet-life">
     <div class="section-head">
       <div class="section-title">Lebensdaten</div>
@@ -544,7 +545,7 @@ function _pdetLifeData(p, id) {
   const _dpHtml = (obj) => (obj?.datePhrase) ? `<em class="date-phrase">${esc(obj.datePhrase)}</em>` : '';
 
   if (p.birth.date || p.birth.place) {
-    const geoBtn = evGeoLink(p.birth.lati, p.birth.long);
+    const geoBtn = evGeoLink(p.birth);
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${_dpHtml(p.birth)}${_placeHierHtml(p.birth.placeId)}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
   const _chrGodparents = (p.associations || []).filter(a => a.role === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
@@ -558,11 +559,11 @@ function _pdetLifeData(p, id) {
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_dpHtml(p.chr)}${_placeHierHtml(p.chr.placeId)}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
   }
   if (p.death.date || p.death.place) {
-    const geoBtn = evGeoLink(p.death.lati, p.death.long);
+    const geoBtn = evGeoLink(p.death);
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="DEAT"><span class="fact-lbl">Tod</span><span class="fact-val">${esc([p.death.date, compactPlace(p.death.place), p.death.cause].filter(Boolean).join(', '))}${_dpHtml(p.death)}${_placeHierHtml(p.death.placeId)}${_ageAt(_refDate, p.death.date)}${geoBtn}${citTagsHtml(p.death.citations || [])}${p.death.note ? `<span class="ev-note">${esc(p.death.note)}</span>` : ''}</span></div>`;
   }
   if (p.buri.date || p.buri.place) {
-    const geoBtn = evGeoLink(p.buri.lati, p.buri.long);
+    const geoBtn = evGeoLink(p.buri);
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BURI"><span class="fact-lbl">Beerdigung</span><span class="fact-val">${esc([p.buri.date, compactPlace(p.buri.place)].filter(Boolean).join(', '))}${_dpHtml(p.buri)}${_placeHierHtml(p.buri.placeId)}${_ageAt(_refDate, p.buri.date)}${geoBtn}${citTagsHtml(p.buri.citations || [])}${p.buri.note ? `<span class="ev-note">${esc(p.buri.note)}</span>` : ''}</span></div>`;
   }
 
@@ -612,7 +613,7 @@ function _pdetLifeData(p, id) {
         const label = (ev.eventType && (ev.type === 'EVEN' || ev.type === 'FACT'))
           ? ev.eventType
           : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
-        const geoBtn = evGeoLink(ev.lati, ev.long);
+        const geoBtn = evGeoLink(ev);
         const parts = [ev.value, ev.addr, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';

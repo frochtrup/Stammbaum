@@ -619,7 +619,16 @@ function _validCoord(lat, lon) {
   return isFinite(la) && isFinite(lo) && la >= -90 && la <= 90 && lo >= -180 && lo <= 180;
 }
 
-function evGeoLink(lati, long) {
+// Item 9: bevorzugt Event-Objekt (placeObjects als single source of truth via _eventCoords).
+// Backwards-kompat: erste Signatur (lati, long) bleibt als Fallback.
+function evGeoLink(arg1, arg2) {
+  let lati, long;
+  if (arg1 && typeof arg1 === 'object') {
+    const c = (typeof _eventCoords === 'function') ? _eventCoords(arg1) : { lati: arg1.lati, long: arg1.long };
+    lati = c.lati; long = c.long;
+  } else {
+    lati = arg1; long = arg2;
+  }
   return _validCoord(lati, long)
     ? `<a href="https://maps.apple.com/?ll=${lati},${long}" target="_blank" data-action="stop" class="geo-link">📍</a>` : '';
 }

@@ -545,11 +545,15 @@ function _personGeoEvents(p) {
     evs.push({ place, lat, lng, date: date || '', role, note: note || '', addr: addr || '', desc: desc || '' });
   }
 
-  addEv(p.birth.place, p.birth.lati, p.birth.long, p.birth.date, 'Geburt',     p.birth.note);
-  addEv(p.chr.place,   p.chr.lati,   p.chr.long,   p.chr.date,   'Taufe',      p.chr.note);
+  // Item 9: Koords via _eventCoords (placeObjects single source of truth)
+  const _ec = ev => (typeof _eventCoords === 'function') ? _eventCoords(ev) : { lati: ev?.lati, long: ev?.long };
+  let c;
+  c = _ec(p.birth); addEv(p.birth.place, c.lati, c.long, p.birth.date, 'Geburt',     p.birth.note);
+  c = _ec(p.chr);   addEv(p.chr.place,   c.lati, c.long, p.chr.date,   'Taufe',      p.chr.note);
   for (const ev of p.events) {
+    const cc = _ec(ev);
+    let lati = cc.lati, long = cc.long;
     // RESI/PROP ohne Koordinaten: hofObjects als Fallback
-    let lati = ev.lati, long = ev.long;
     if ((!lati || !long) && ev.addr) {
       const hm = AppState.db.hofObjects?.[ev.addr.trim()];
       if (hm?.lat && hm?.long) { lati = hm.lat; long = hm.long; }
@@ -559,8 +563,8 @@ function _personGeoEvents(p) {
           ev.note, ev.addr,
           ev.value || '');
   }
-  addEv(p.death.place, p.death.lati, p.death.long, p.death.date, 'Tod',        p.death.note);
-  addEv(p.buri.place,  p.buri.lati,  p.buri.long,  p.buri.date,  'Beerdigung', p.buri.note);
+  c = _ec(p.death); addEv(p.death.place, c.lati, c.long, p.death.date, 'Tod',        p.death.note);
+  c = _ec(p.buri);  addEv(p.buri.place,  c.lati, c.long, p.buri.date,  'Beerdigung', p.buri.note);
 
   evs.sort((a, b) => {
     const ya = a.date.match(/\b(\d{4})\b/)?.[1] || '9999';
