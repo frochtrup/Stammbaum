@@ -806,6 +806,7 @@ function importPlaceDataFile(input) {
       UIState._placeRegistry = null;
       UIState._placesCache   = null;
       markChanged();
+      if (typeof renderTab === 'function') renderTab();
       showToast(`${addedP} Ort-Entitäten + ${addedE} Koordinaten importiert`, 'success');
     } catch(e) { showToast('⚠ Fehler beim Import: ' + e.message, 'error'); }
   };

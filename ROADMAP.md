@@ -26,7 +26,8 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v846 · Cache: `stammbaum-v846` · `test-unit.js` = 198 Tests grün
+**sw-Version:** v847 · Cache: `stammbaum-v847` · `test-unit.js` = 198 Tests grün
+**v847: fix(places): Typ-Filter nach Orte-JSON-Import befüllen** — `importPlaceDataFile` ruft jetzt `renderTab()` auf, damit `_refreshPlaceTypeFilter()` die neu importierten Typen sofort in das Select übernimmt.
 **v846: fix(onedrive): Ordner-Picker nie bei OneDrive-Root starten** — `_odNavigateToParentOf`: wenn der Parent-Ordner direkt im Root liegt (`parentIsRoot`), wird jetzt der Ordner selbst mit Root im Stack angezeigt statt dem Root mit dem Ordner als Kind-Element. Betrifft alle drei Settings-Picker (GED-Startpfad, Dokumente, Konfig).
 **v845: fix(places): Ort entfernen löscht auch placeObject** — `deleteExtraPlace` entfernt jetzt auch den zugehörigen `placeObjects`-Eintrag (Titelabgleich), damit GOV-Kaskaden-Orte nicht als Zombie in der Liste verbleiben. Lösch-Button auch für reine `placeObjects`-Einträge ohne verknüpfte Personen sichtbar.
 **v844: fix(onedrive): Config-Ordner-Pfad** — `_odWriteAppData`/`_odReadAppData` nutzen jetzt `folder.id` (Items-API) statt `folder.relPath` als Root-Pfad → `stammbaum-orte.json` landet korrekt im konfigurierten Config-Ordner statt in OneDrive-Root/Config. `odSetupConfigFolder` befüllt `_odFolderStack` mit Root-Eintrag → Breadcrumb und ← Zurück-Button korrekt wenn GED-Ordner als Startpunkt gewählt wird.
