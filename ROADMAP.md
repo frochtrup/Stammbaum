@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v862 · Cache: `stammbaum-v862` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v863 · Cache: `stammbaum-v863` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v862) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v863) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v863 | **Koord-Löschen via leeren Feldern** — savePlace/saveNewPlace Tri-State: beide Felder leer → Koord wird auf null gesetzt (löschen); gültiges Paar → setzen; unvollständig → bestehende Koord unverändert + Warntoast. | Behebt „Koordinate eines Ortes lässt sich nicht mehr löschen" — bisheriger `if (lati != null)`-Update überschrieb null nicht |
 | v862 | **Koord-Paar-Invariante** — savePlace/saveNewPlace verhindern halbe Koord-Paare (lat ohne long) durch Toast + beide null; showPlaceDetail/collectPlaces/renderPlaceList prüfen beide Achsen; einmalige Migration in `_migratePlaceObjects` setzt halbe Bestands-Paare auf null. | Behebt „Ort in Liste nicht klickbar" — `place.long.toFixed` crashte auf null wenn User Koords in DMS ohne Direction eingab |
 | v861 | **View-Robustheit P0** — Mobile `v-detail.scrollTop=0`-Reset (K1); `visibilitychange`-Handler für PWA-Resume (K2); `renderTab()` in 6 Form-Save-Pfaden (savePerson/transferEvent/saveEvent/deleteEvent/saveFamEvent/deleteFamEvent) (K3); `_lastFilteredPersons` in `markChanged()` invalidiert (R5). | Behebt „Void/Artefakt nach iOS-Tab/App-Wechsel" + „Listen-Stale nach Edit". Detail-Plan: VIEW-ROBUSTNESS.md |
 | v859–v860 | **UX-Polish Orte-Tab** — Lösch-Button vom Anfang ans Ende der Detail-Steckbrief verschoben; Geocodieren/Verknüpfen auf `btn-ghost`-Style umgestellt; neue CSS-Klassen `.place-action-row`/`.place-delete-row`/`.btn-ghost-danger`/`.tran-add-btn`. | Steckbrief-UX dezenter — primärer Lese-Fluss steht im Vordergrund |
@@ -364,7 +365,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v862 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0 + Koord-Paar-Invariante)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v863 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0 + Koord-Paar-Invariante + Koord-Löschen)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

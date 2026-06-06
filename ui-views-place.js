@@ -591,11 +591,14 @@ function savePlace() {
   const _pc = latiRaw ? parseCoordInput(latiRaw, longRaw) : { lat: NaN, lon: NaN };
   let lati = isNaN(_pc.lat) ? null : _pc.lat;
   let long = isNaN(_pc.lon) ? null : _pc.lon;
-  // Koord-Paar-Invariante: nur als vollständiges Paar — sonst Render-Crash auf null.toFixed.
-  // Häufige Ursache: User gibt DMS in nur ein Feld ein (h min sec) → eine Zahl parst, andere NaN.
-  if ((lati == null) !== (long == null)) {
+  // Tri-State: 'clear' = beide Felder leer → Koord löschen; 'set' = gültiges Paar
+  // setzen; 'keep' = unvollständig/ungültig → bestehende Koord unverändert lassen.
+  let _coordOp;
+  if (!latiRaw && !longRaw) _coordOp = 'clear';
+  else if (lati != null && long != null) _coordOp = 'set';
+  else {
     showToast('⚠ Koordinaten unvollständig — lat UND long nötig (Dezimalgrad)', 'warn');
-    lati = null; long = null;
+    _coordOp = 'keep';
   }
   closeModal('modalPlace');
 
@@ -626,12 +629,15 @@ function savePlace() {
   if (!_poId) _poId = (typeof _epId === 'function') ? _epId(newName) : ('_ep_' + Date.now());
   upsertPlaceObject(
     _poId,
-    () => ({ id: _poId, title: newName, type: _type, lat: lati, long,
+    () => ({ id: _poId, title: newName, type: _type,
+             lat: _coordOp === 'set' ? lati : null,
+             long: _coordOp === 'set' ? long : null,
              pnames: [], enclosedBy: [], parentId: null }),
     p => {
       if (newName !== oldName) p.title = newName;
       p.type = _type;
-      if (lati != null) { p.lat = lati; p.long = long; }
+      if (_coordOp === 'set')        { p.lat = lati; p.long = long; }
+      else if (_coordOp === 'clear') { p.lat = null; p.long = null; }
     }
   );
   if (document.getElementById('pl-placeId')) document.getElementById('pl-placeId').value = _poId;
@@ -716,24 +722,32 @@ function showNewPlaceForm() {
 function saveNewPlace() {
   const name = document.getElementById('np-name').value.trim();
   if (!name) { showToast('⚠ Ortsname erforderlich'); return; }
-  const _pc2 = parseCoordInput(document.getElementById('np-lati').value, document.getElementById('np-long').value);
+  const latiRaw = (document.getElementById('np-lati').value || '').trim();
+  const longRaw = (document.getElementById('np-long').value || '').trim();
+  const _pc2 = parseCoordInput(latiRaw, longRaw);
   let lati = isNaN(_pc2.lat) ? null : _pc2.lat;
   let long = isNaN(_pc2.lon) ? null : _pc2.lon;
-  // Koord-Paar-Invariante: nur als vollständiges Paar — halbe Werte sonst Render-Crash.
-  if ((lati == null) !== (long == null)) {
+  // Tri-State analog savePlace: 'clear'/'set'/'keep'
+  let _coordOp;
+  if (!latiRaw && !longRaw) _coordOp = 'clear';
+  else if (lati != null && long != null) _coordOp = 'set';
+  else {
     showToast('⚠ Koordinaten unvollständig — lat UND long nötig (Dezimalgrad)', 'warn');
-    lati = null; long = null;
+    _coordOp = 'keep';
   }
   // P2 Item 7: nur placeObjects als single source of truth — kein extraPlaces-Schreibziel.
   const existingPo = _placeObjForName(name);
   if (existingPo) {
     mutatePlaceObject(existingPo.id, p => {
-      if (lati != null) { p.lat = lati; p.long = long; }
+      if (_coordOp === 'set')        { p.lat = lati; p.long = long; }
+      else if (_coordOp === 'clear') { p.lat = null; p.long = null; }
     });
   } else {
     const id = (typeof _epId === 'function') ? _epId(name) : ('_ep_' + Date.now());
     upsertPlaceObject(id, () => ({ id, title: name, type: 'Unknown',
-      lat: lati, long, pnames: [], enclosedBy: [], parentId: null }));
+      lat: _coordOp === 'set' ? lati : null,
+      long: _coordOp === 'set' ? long : null,
+      pnames: [], enclosedBy: [], parentId: null }));
   }
   closeModal('modalNewPlace');
   showToast('✓ Ort hinzugefügt — Typ und Hierarchie im ✎-Editor setzen');
