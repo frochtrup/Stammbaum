@@ -1294,17 +1294,23 @@ function showPlaceDetail(placeName, pushHistory = true) {
     const _topGiven = Object.entries(_givenMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
     if (_topSurn.length) {
       const _maxSurn = _topSurn[0][1];
-      const _surnBars = _topSurn.map(([name, cnt]) =>
-        `<div class="or-bar-row">
-          <span class="or-bar-name">${esc(name)}</span>
-          <span class="or-bar-track"><span class="or-bar-fill" style="width:${(cnt/_maxSurn*100).toFixed(0)}%"></span></span>
-          <span class="or-bar-cnt">${cnt}</span>
-        </div>`).join('');
+      // SVG-Balken (CSP-sicher: Presentation-Attribute statt inline style)
+      const _NW = 120, _BW = 160, _CW = 28, _RH = 22, _W = _NW + _BW + _CW;
+      const _surnH = _topSurn.length * _RH + 4;
+      let _surnSvg = '';
+      _topSurn.forEach(([name, cnt], i) => {
+        const y = i * _RH + 4;
+        const bw = Math.round(cnt / _maxSurn * _BW);
+        _surnSvg += `<text x="0" y="${y+14}" font-size="11" fill="var(--text,#3a3028)">${esc(name.substring(0,18))}</text>`;
+        _surnSvg += `<rect x="${_NW}" y="${y+8}" width="${_BW}" height="8" rx="3" fill="var(--surface2,#ede8e0)"/>`;
+        _surnSvg += `<rect x="${_NW}" y="${y+8}" width="${bw}" height="8" rx="3" fill="var(--gold,#c8793a)" opacity="0.8"/>`;
+        _surnSvg += `<text x="${_NW+_BW+4}" y="${y+14}" font-size="10" fill="var(--text-muted,#8a7a6a)">${cnt}</text>`;
+      });
       const _givenChips = _topGiven.map(([name, cnt]) =>
         `<span class="or-chip">${esc(name)} <em>${cnt}</em></span>`).join('');
       html += `<div class="section fade-up">
         <div class="section-title">Häufigste Familiennamen</div>
-        <div class="or-bars">${_surnBars}</div>
+        <svg width="${_W}" height="${_surnH}" viewBox="0 0 ${_W} ${_surnH}" overflow="visible">${_surnSvg}</svg>
         ${_topGiven.length ? `<div class="fact-sub-title">Häufigste Vornamen</div><div class="or-chips">${_givenChips}</div>` : ''}
       </div>`;
     }
@@ -1346,18 +1352,25 @@ function showPlaceDetail(placeName, pushHistory = true) {
         return `<span class="ev-meta"><span class="ev-meta-n">${evs.length}</span><span class="ev-meta-sep">·</span><span class="ev-meta-p">${persons} P</span></span><span class="ev-arrow">▾</span>`;
       };
 
-      // Balken-Visualisierung
-      const _barHtml = [..._buckets.entries()].map(([, {label, evs}]) => {
-        const pct = evs.length > 0 ? (evs.length / _maxBucket * 100).toFixed(0) : 0;
-        return `<div class="or-tb-col" title="${esc(label)}: ${evs.length} Ereignisse">
-          <div class="or-tb-bar" style="height:${pct}%"></div>
-          <div class="or-tb-lbl">${Math.floor(label) || label.split('–')[0]}</div>
-        </div>`;
-      }).join('');
+      // SVG-Balken-Visualisierung (chronologisch, CSP-sicher)
+      const _TB_BARW = 22, _TB_GAP = 4, _TB_MAXH = 44, _TB_LBLH = 28;
+      const _tbCols = [..._buckets.entries()];
+      const _tbW = _tbCols.length * (_TB_BARW + _TB_GAP) - _TB_GAP;
+      const _tbH = _TB_MAXH + _TB_LBLH;
+      let _tbSvg = `<line x1="0" y1="${_TB_MAXH}" x2="${_tbW}" y2="${_TB_MAXH}" stroke="var(--border,#ccc)" stroke-width="0.8"/>`;
+      _tbCols.forEach(([, {label, evs}], i) => {
+        const x = i * (_TB_BARW + _TB_GAP);
+        const bh = evs.length > 0 ? Math.max(2, Math.round(evs.length / _maxBucket * _TB_MAXH)) : 0;
+        const yr = label.split('–')[0];
+        if (bh > 0) _tbSvg += `<rect x="${x}" y="${_TB_MAXH - bh}" width="${_TB_BARW}" height="${bh}" rx="2" fill="var(--gold,#c8793a)" opacity="0.75"><title>${esc(label)}: ${evs.length}</title></rect>`;
+        _tbSvg += `<text x="${x + _TB_BARW/2}" y="${_TB_MAXH + 10}" font-size="8" fill="var(--text-muted,#8a7a6a)" text-anchor="middle" transform="rotate(90,${x + _TB_BARW/2},${_TB_MAXH + 10})">${yr}</text>`;
+      });
+      const _barHtml = `<svg width="${_tbW}" height="${_tbH}" viewBox="0 0 ${_tbW} ${_tbH}" overflow="visible" class="or-timebar-svg">${_tbSvg}</svg>`;
 
-      // Ausklappbare Detaillisten
+      // Ausklappbare Detaillisten — sortiert nach Häufigkeit absteigend
       const _detailHtml = [..._buckets.entries()]
         .filter(([, {evs}]) => evs.length > 0)
+        .sort(([, a], [, b]) => b.evs.length - a.evs.length)
         .map(([, {label, evs}]) =>
           `<details class="ev-group">
             <summary class="ev-group-summary"><span class="ev-label">${esc(label)}</span>${_evMeta3(evs)}</summary>
@@ -1374,7 +1387,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
       html += `<div class="section fade-up">
         <div class="section-title">Zeitraumverteilung <span class="ev-total">${_bSize}-Jahres-Perioden</span></div>
-        <div class="or-timebar">${_barHtml}</div>
+        <div class="or-timebar-wrap">${_barHtml}</div>
         ${_detailHtml}${_undatedHtml}
       </div>`;
     }
