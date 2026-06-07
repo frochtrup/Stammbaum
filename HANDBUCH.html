@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Juni 2026 · Stand: sw v858</p>
+  <p class="version">Version 8 · Juni 2026 · Stand: sw v915</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -691,9 +691,14 @@
     </li>
     <li><a href="#kap-print">Druckausgaben</a>
       <ul class="sub">
-        <li>Familienbuch</li>
+        <li>Familienbuch (mit Cover &amp; Glossar)</li>
         <li>Ahnenliste (Kekule-Tabelle)</li>
+        <li>Nachkommentafel (d'Aboville)</li>
         <li>Familienbogen</li>
+        <li>Quellenverzeichnis</li>
+        <li>Forschungsprotokoll-Export</li>
+        <li>Statistik-Report</li>
+        <li>Verwandtschaftsnachweis</li>
       </ul>
     </li>
     <li><a href="#kap16">Häufige Fragen und Tipps</a></li>
@@ -2378,6 +2383,19 @@ Tipp: Drehen Sie das Gerät ins Querformat, um die Swim-Lane-Ansicht zu aktivier
 Tipp: Der Mehrpersonen-Modus eignet sich besonders gut, um die Lebensspannen von Geschwistern oder Ehepartnern direkt nebeneinander zu sehen.
 </div>
 
+<h2>Diagramm herunterladen — als Bild oder Großposter</h2>
+
+<p>Jedes Diagramm (Fächer-Chart, Nachkommen-Baum, Sanduhr-Baum) lässt sich exportieren. In der oberen Leiste der Diagrammansicht finden Sie dazu zwei Schaltflächen:</p>
+
+<ul>
+  <li><span class="button-label">↓</span> — Export als <strong>PNG-Bild</strong> in hoher Auflösung. Ideal zum schnellen Teilen oder Einbinden in Dokumente.</li>
+  <li><span class="button-label">⬡</span> — Export als <strong>Vektor-SVG</strong> für den <strong>Großposter-Druck</strong>. Die Datei ist verlustfrei beliebig skalierbar: Sie wird seitenverhältnistreu auf DIN-A1-Größe voreingestellt, kann von einer Druckerei aber problemlos auf A0 oder größer gezogen werden — perfekt als Wandposter für ein Familientreffen.</li>
+</ul>
+
+<div class="tip">
+Tipp: Geben Sie die SVG-Datei bei einem Copyshop ab und lassen Sie sie auf A1 oder A0 drucken. Da es sich um eine Vektorgrafik handelt, bleiben Linien und Schrift in jeder Größe gestochen scharf.
+</div>
+
 
 <!-- ====================================================== -->
 <!-- KAPITEL STATISTIK: STATISTIK & AUSWERTUNG -->
@@ -3344,28 +3362,52 @@ Tipp: Der Assistent eignet sich besonders gut, um Daten aus Gramps (Desktop) mit
 <!-- ====================================================== -->
 <h1 class="chapter" id="kap-print">20. Druckausgaben</h1>
 
-<p>Stammbaum PWA bietet drei strukturierte Ausgaben, die Sie alle über <span class="button-label">☰ → Ausgaben</span> erreichen. Die Dokumente werden als HTML-Dateien heruntergeladen und im Browser gedruckt.</p>
+<p>Stammbaum PWA bietet eine ganze Reihe strukturierter Ausgaben, die Sie über <span class="button-label">☰ → Ausgaben</span> erreichen. Alle Dokumente werden als eigenständige HTML-Dateien heruntergeladen und im Browser gedruckt (<strong>⌘P / Strg+P</strong>) — bei Bedarf direkt als PDF. Es wird kein Server und keine zusätzliche Software benötigt; die Dateien sind in sich abgeschlossen und können weitergegeben werden.</p>
 
 <h2>Familienbuch</h2>
 
 <p>Das <strong>Familienbuch</strong> ist die umfangreichste Ausgabe: Es erzeugt ein mehrseitiges Dokument für die gewählte Person mit Lebenslauf, Ahnen- und Nachkommentabellen, Quellen sowie einem Namensindex. Öffnen Sie die Ausgabe über <span class="button-label">☰ → Ausgaben → Familienbuch erstellen</span>. Im Einstellungsdialog können Sie Titel, Untertitel, die Anzahl der Ahnengenerationen und den Umfang der Inhalte festlegen.</p>
 
+<p>Das Buch ist buchreif aufbereitet: Das <strong>Titelblatt</strong> zeigt — sofern vorhanden — das Primärfoto des Probanden als Cover. Am Ende steht ein <strong>Glossar</strong>, das die verwendeten Zeichen (* geboren, ~ getauft, † gestorben, ⚰ beerdigt, ⚭ verheiratet) und die GEDCOM-Ereigniskürzel erklärt; im Ahnen-Modus wird zusätzlich die Kekulé-Nummerierung erläutert. Für den Druck sind A4-Seitenränder gesetzt und an den Kapiteln saubere Seitenumbrüche definiert.</p>
+
 <div class="tip">
-Tipp: Das Familienbuch eignet sich besonders gut als Geburtstagsgeschenk oder zur Weitergabe an Familienmitglieder ohne Stammbaum-Software — es ist eine vollständig eigenständige HTML-Datei.
+Tipp: Das Familienbuch eignet sich besonders gut als Geburtstagsgeschenk oder zur Weitergabe an Familienmitglieder ohne Stammbaum-Software — es ist eine vollständig eigenständige HTML-Datei. Aktivieren Sie im Druckdialog Ihres Browsers die Option „Kopf- und Fußzeilen", um automatische Seitenzahlen zu erhalten.
 </div>
 
 <h2>Ahnenliste (Kekule-Tabelle)</h2>
 
 <p>Die <strong>Ahnenliste</strong> listet alle direkten Vorfahren der gewählten Person in der klassischen Kekule-Nummerierung auf: Die Person selbst trägt die Nummer 1, Vater = 2, Mutter = 3, Großvater väterlicherseits = 4 usw. (ungerade Nummern = Väter, gerade = Mütter).</p>
 
-<p>Die Tabelle zeigt für jede Person: Kekule-Nummer, Name, Geburts- und Sterbedatum mit Ort. Tippen Sie auf <span class="button-label">↓ Ahnenliste</span>, um die Datei herunterzuladen und im Browser zu drucken.</p>
+<p>Die Tabelle zeigt für jede Person: Kekule-Nummer, Name, Geburts- und Sterbedatum mit Ort. Tippen Sie auf <span class="button-label">⒈ Ahnenliste (PDF)</span>, um die Datei herunterzuladen und im Browser zu drucken.</p>
+
+<h2>Nachkommentafel</h2>
+
+<p>Die <strong>Nachkommentafel</strong> ist das Gegenstück zur Ahnenliste: Sie listet alle <em>Nachkommen</em> der gewählten Person auf. Die Nummerierung folgt dem genealogischen <strong>d'Aboville-System</strong> — die Ziffern geben den Abstammungspfad an: 1 = Proband, 1.1 = erstes Kind, 1.1.2 = zweites Enkelkind dieser Linie. Die Kinder werden über alle Ehen einer Person fortlaufend durchnummeriert.</p>
+
+<p>Der Bericht ist nach Generationen gruppiert (I., II., III. Generation …). Pro Person erscheinen eine Kurzbiografie (Geburt/Tod mit Ort), die Ehepartner mit Heiratsangabe und Verweise auf die Nummern der Kinder. Aufrufen über <span class="button-label">☰ → Ausgaben → Nachkommentafel (PDF)</span> — ausgehend von der zuletzt geöffneten Person.</p>
 
 <h2>Familienbogen</h2>
 
-<p>Der <strong>Familienbogen</strong> zeigt die gewählte Person mit Eltern, Geschwistern und eigenen Kindern in einer übersichtlichen Tabelle — ideal für Archiv-Besuche oder zur Weitergabe an Verwandte. Tippen Sie auf <span class="button-label">↓ Familienbogen</span>.</p>
+<p>Der <strong>Familienbogen</strong> zeigt die gewählte Person mit Eltern, Geschwistern und eigenen Kindern in einer übersichtlichen Tabelle — ideal für Archiv-Besuche oder zur Weitergabe an Verwandte. Tippen Sie auf <span class="button-label">⒈ Familienbogen (PDF)</span>.</p>
+
+<h2>Quellenverzeichnis</h2>
+
+<p>Das <strong>Quellenverzeichnis</strong> (Bibliografie) listet alle Quellen Ihres Stammbaums alphabetisch nach Autor-Nachnamen auf — im bibliografischen Stil <em>Autor. Titel. Verlag. Datum.</em> mit Aufbewahrungsort und Signatur. Zu jeder Quelle wird angezeigt, wie viele Personen und Familien sie belegt. Quellen <strong>ohne jeden Beleg</strong> werden eigens markiert (⚠ kein Beleg) — so erkennen Sie verwaiste Einträge auf einen Blick. Ein Summen-Kopf nennt Quellenzahl, Belegverweise und die Zahl unbelegter Quellen. Aufrufen über <span class="button-label">☰ → Ausgaben → Quellenverzeichnis</span>.</p>
+
+<h2>Forschungsprotokoll-Export</h2>
+
+<p>Dieser Export bündelt alle <strong>Forschungsaufgaben</strong> und <strong>Protokoll-Einträge</strong> (siehe Kapitel 13 und 14) aller Personen und Familien in einem druckbaren Arbeitsbericht — gruppiert nach Person/Familie. Aufgaben tragen einen Status (offen / in Arbeit / erledigt) und ihre Kategorie, Protokoll-Einträge ihr Ergebnis (gefunden / teilweise / nicht gefunden / ausstehend) samt Archiv, Quelle, Datum und Notiz. Ideal als Vorbereitung oder Mitnahme für einen Archivbesuch. Aufrufen über <span class="button-label">☰ → Ausgaben → Forschungsprotokoll</span>.</p>
+
+<h2>Statistik-Report</h2>
+
+<p>Der <strong>Statistik-Report</strong> fasst die Kennzahlen Ihres Stammbaums als druckbares Dokument zusammen: Übersichtszahlen (Personen, Familien, Quellen, Orte, Archive, Medien), Geschlechterverteilung und Datenvollständigkeit, Lebens- und Heiratsalter, Kinderzahl je Familie, Ereignisse pro Jahrzehnt sowie die häufigsten Nach- und Vornamen und Geburts-/Sterbeorte. Aufrufen über <span class="button-label">☰ → Ausgaben → Statistik-Report (PDF)</span>. (Die interaktive Fassung dieser Auswertung finden Sie in Kapitel 9.)</p>
+
+<h2>Verwandtschaftsnachweis</h2>
+
+<p>Der <strong>Verwandtschaftsnachweis</strong> dokumentiert, wie zwei Personen miteinander verwandt sind — als druckfertiges A4-Zertifikat. Es nennt beide Personen, das Verwandtschaftsverhältnis im Klartext (z. B. „Cousine 1. Grades"), den gemeinsamen Vorfahren und den vollständigen Verwandtschaftspfad (mit ⬡ am gemeinsamen Vorfahren). Sie erzeugen ihn über den <strong>Beziehungsrechner</strong> (siehe Kapitel 4): Berechnen Sie eine Verwandtschaft und tippen Sie im Ergebnis-Dialog auf <span class="button-label">📜 Verwandtschaftsnachweis (PDF)</span>. Nützlich z. B. als Nachweis für Behörden oder als Beigabe zum Familientreffen.</p>
 
 <div class="tip">
-Tipp: Öffnen Sie die heruntergeladene HTML-Datei im Browser und drucken Sie mit <strong>⌘P / Strg+P</strong>. Beide Ausgaben sind für A4-Druck optimiert.
+Tipp: Öffnen Sie jede heruntergeladene HTML-Datei im Browser und drucken Sie mit <strong>⌘P / Strg+P</strong>. Alle Ausgaben sind für A4-Druck optimiert; zum Speichern als PDF wählen Sie im Druckdialog „Als PDF sichern".
 </div>
 
 
@@ -3922,7 +3964,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Mai 2026 · sw v785<br>
+  Stammbaum PWA · Version 8 · Juni 2026 · sw v915<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 

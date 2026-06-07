@@ -9,6 +9,29 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-08 — OUTPUT-RICHNESS Tier A+B (sw v911–v915)
+
+Größter fachlicher Abstand zu MacFamilyTree (Hebel #3 aus Review 2026-06-07) geschlossen: sieben neue, eigenständige Ausgabe-Formate. Alle als standalone-HTML-Download (Browser-Druck → PDF), kein Server, keine PDF-Lib. ROADMAP-Abschnitt P4 vorab in 10 konkrete Items A2–C3 aufgegliedert (Quellen: MacFamilyTree, Gramps, RootsMagic, Legacy, Ancestris, Ahnenblatt).
+
+#### Tier A — Listen-/Daten-Reports (`ui-print.js`)
+
+- **A2 Quellenverzeichnis (v911):** `_buildBibliographieHtml`/`downloadBibliographie`. Alle Quellen alphabetisch nach Autor-Nachname, bibliografischer Eintrag (Autor. Titel. Verlag. Datum.) + Aufbewahrungsort/Signatur + Belegzählung (Personen/Familien via `sourceRefs`). Quellen ohne Beleg markiert (⚠), Summary-Kopf. Menü „Quellenverzeichnis".
+- **A3 Forschungsprotokoll-Export (v912):** `_buildForschungHtml`/`downloadForschungsProtokoll`. Aufgaben (`_tasks`) + Protokoll (`_rlog`) aller Personen/Familien, gruppiert nach Entität, Status-/Ergebnis-Badges, Repo/Quelle/Datum/Query/Notiz. Menü „Forschungsprotokoll".
+- **A4 Statistik-Report (v913):** `_buildStatistikHtml`/`downloadStatistik`. Übersichts-Kacheln, Geschlecht + Datenvollständigkeit, Lebens-/Heiratsalter, Kinderzahl, Ereignisse/Jahrzehnt, Top-15 Nach-/Vornamen + Top-12 Geburts-/Sterbeorte. Reuse `_yearFrom`/`_statsTop`/`compactPlace`; `collectPlaces` defensiv gewrappt. Menü „Statistik-Report (PDF)".
+
+#### Tier B — Erweiterte Ausgaben
+
+- **B1 Nachkommentafel (v914, `ui-print.js`):** `_buildNachkommenHtml`/`downloadNachkommentafel`. d'Aboville-Nummerierung (1, 1.1, 1.1.2) via DFS über `p.fams`→`fam.children` mit Zyklus-Guard, kontinuierlich über Mehrfach-Ehen. Register-Stil generationsweise gruppiert (röm. Header), Kurzbiografie + Ehe(n) + Kinder-Verweise. Root = `currentPersonId`. Menü „Nachkommentafel (PDF)".
+- **B2 Familienbuch-Buchreife (v915, `ui-book.js`):** Titelblatt-Coverfoto (Primärfoto Proband), `@page { size:A4; margin:2cm }` + `@bottom-right counter(page)` (best-effort), Glossar (Zeichen */~/†/⚰/⚭ + GEDCOM-Kürzel + Kekulé-Erklärung) mit `page-break-before`.
+- **B3 Großposter-SVG (v915, `ui-chart-export.js`):** `_svgToVectorFile`/`exportChartSvgVector`. Aktuelles Diagramm (Fächer/Nachkommen/Sanduhr) als `.svg`, `var(--*)` aufgelöst, width/height seitenverhältnistreu auf A1-Fit in mm, viewBox bleibt → beliebig auf A0 skalierbar. Topbar-Button ⬡ neben PNG-Export (CSS-Sichtbarkeit synchron).
+- **B4 Verwandtschaftsnachweis (v915, `ui-print.js`):** `_buildRelCertHtml`/`downloadRelCertificate` via `calcRelationship` — Verdikt + gemeinsamer Vorfahre + nummerierter Pfad (⬡ am Common Node) als A4-Zertifikat. Button im `modalRelPath`, ids via `UIState._relCertA/B`.
+
+#### Doku
+
+HANDBUCH.html Kap. 20 „Druckausgaben" um alle neuen Reports erweitert + Kap. 8 um Diagramm-Export (PNG/SVG-Großposter); beide Versionsfelder → v915; TOC ergänzt. ROADMAP Bewertung (Funktionsstand 8.8→9.0, ∅ 8.5→8.6), Vergleichstabelle (Reports/Bücher/Poster ⚠→✅), Priorisierung (#3 ✅), Handbuch-Stand v915 (Ausgaben aktuell, Backend-Features v859–v909 offen).
+
+---
+
 ### Session 2026-06-07 — UI-Logik-Tests T0-UI (sw v891)
 
 Strukturelle Bug-Klassen aus den P0–P6-View-Robustheits-Sprints (v861–v890) wurden bisher nur manuell im Preview oder gar nicht abgesichert — kein Unit-Test erfasste UI-Logik. Diese Session schließt die Lücke mit **9 neuen Test-Blöcken (t)–(ab), +124 Tests, 296→420 total**.
