@@ -391,6 +391,19 @@ function _vsSetup(listEl, st) {
   (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
 }
 
+// Scroll-Listener nach Tab-Rückkehr neu registrieren ohne DOM/Scroll-Reset.
+// Nur aufrufen wenn st.top existiert (VS war aufgebaut) und !st.active (Listener weg).
+function _vsReattach(listEl, st) {
+  if (st.active || !st.top) return;
+  st.sc = _vsScrollEl();
+  st.active = true;
+  st.r = null; // force re-render für aktuellen Scroll-Stand
+  _normalizeWheel(st.sc);
+  _vsRender(listEl, st);
+  st.fn = () => _vsRender(listEl, st);
+  (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
+}
+
 function _vsTeardown(st) {
   if (!st.active) return;
   if (st.fn) { (st.sc || window).removeEventListener('scroll', st.fn); st.fn = null; }
@@ -588,19 +601,19 @@ function switchTab(tab) {
   document.getElementById('tab-search').style.display   = tab === 'search'   ? 'block' : 'none';
   document.getElementById('tab-tasks').style.display    = tab === 'tasks'    ? 'block' : 'none';
   document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats' || tab === 'tasks') ? 'none' : '';
-  // R2: VS-Teardown für inaktive Listen — Scroll-Listener-Leak verhindern.
-  // Beim Teardown Tab als dirty markieren, damit _vsSetup beim Zurückwechseln
-  // den Scroll-Listener neu registriert (sonst bleibt die Liste nach scroll eingefroren).
-  if (tab !== 'persons'  && typeof _vsP !== 'undefined' && _vsP.active) {
-    _vsTeardown(_vsP);
-    UIState._dirty = { ...(UIState._dirty || {}), persons: true };
-  }
-  if (tab !== 'families' && typeof _vsF !== 'undefined' && _vsF.active) {
-    _vsTeardown(_vsF);
-    UIState._dirty = { ...(UIState._dirty || {}), families: true };
-  }
-  // P3-A2: nur rendern wenn dirty oder noch nie für diesen Tab gerendert (undefined ≠ false)
-  if ((UIState._dirty || {})[tab] !== false) {
+  // R2: VS-Teardown für inaktive Listen — Scroll-Listener-Leak verhindern
+  if (tab !== 'persons'  && typeof _vsP !== 'undefined') _vsTeardown(_vsP);
+  if (tab !== 'families' && typeof _vsF !== 'undefined') _vsTeardown(_vsF);
+  // P3-A2: nur rendern wenn dirty oder noch nie für diesen Tab gerendert (undefined ≠ false).
+  // Sonderfall: VS war aufgebaut (st.top vorhanden) aber Listener fehlt → _vsReattach
+  // statt vollem Re-Render, damit Scroll-Position + Auswahl erhalten bleiben.
+  if (tab === 'persons' && typeof _vsP !== 'undefined' && !_vsP.active && _vsP.top
+      && (UIState._dirty || {}).persons === false) {
+    _vsReattach(document.getElementById('personList'), _vsP);
+  } else if (tab === 'families' && typeof _vsF !== 'undefined' && !_vsF.active && _vsF.top
+      && (UIState._dirty || {}).families === false) {
+    _vsReattach(document.getElementById('familyList'), _vsF);
+  } else if ((UIState._dirty || {})[tab] !== false) {
     renderTab();
     UIState._dirty = { ...(UIState._dirty || {}), [tab]: false };
   }
