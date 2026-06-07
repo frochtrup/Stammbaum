@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v865 · Cache: `stammbaum-v865` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v866 · Cache: `stammbaum-v866` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v865) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v866) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v866 | **View-Robustheit P2** — `ViewState` IIFE (A1, ADR-025): `setCurrent(tab,id)` (IDB-persistent, exklusiver Fokus, `viewstate-change`-Event) + `getCurrent(tab)` (Existenz-Validierung). Alle 4 `show*Detail`-Funktionen: 5-Zeiler (AppState.currentX + _lastTabSel + persist) → `ViewState.setCurrent`. `_desktopAutoSelect` + `_mobileSelectionRestore` → `ViewState.getCurrent`. | Parallele Buchführung `AppState.currentX` + `UIState._lastTabSel` konsolidiert. Basis für ADR-025 + P3. |
 | v865 | **View-Robustheit P1** — K4 Mobile-Selektions-Restore (`_mobileSelectionRestore`); K5 `_desktopAutoSelect`-Validierung (verlorene IDs → Fallback); K6 `_lastTabSel` IDB-persistent (`idbPut/idbGet 'last_tab_sel'`); K7 `showStartView` lädt savedSel + ruft `_desktopAutoSelect('persons')`; R6 `showDetail`/`showFamilyDetail`/`showPlaceDetail`/`showSourceDetail` bei fehlendem Entity → `showMain()` statt lautlosem `return`. | Behebt Bugs 3+4: Mobile-Highlight nach Tab-Tipp; verlorene ID nach Merge/Delete = leere View; `_lastTabSel` überlebt iOS-Process-Kill; Desktop-Startansicht nicht leer. |
 | v864 | **collectPlaces po-Pass: po gewinnt IMMER (auch null)** — Item-9-Konsequenz vollständig: wenn placeId vorhanden, überschreibt po.lat/long *auch wenn null* die ev.lati/long aus `addPlace()`. | Behebt Folgebug von v863: trotz erfolgreichem Koord-Löschen blieb in der Detail-Anzeige die alte Koord stehen (kam aus dem Event-Datensatz, nicht aus dem po). |
 | v863 | **Koord-Löschen via leeren Feldern** — savePlace/saveNewPlace Tri-State: beide Felder leer → Koord wird auf null gesetzt (löschen); gültiges Paar → setzen; unvollständig → bestehende Koord unverändert + Warntoast. | Behebt „Koordinate eines Ortes lässt sich nicht mehr löschen" — bisheriger `if (lati != null)`-Update überschrieb null nicht |
@@ -272,7 +273,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 |---|---|---|---|
 | **P0** | K1 Mobile-`scrollTop`-Reset + K2 `visibilitychange`-Handler + K3 `renderTab()` aus 6 Save-Pfaden + R5 `_lastFilteredPersons` invalidieren. Behebt Bugs 1+2. | ~1 h | ✅ *(sw v861)* |
 | **P1** | K4 Mobile-Selektions-Restore + K5 `_lastTabSel`-Validierung + K6 `_lastTabSel` IDB-persistieren + K7 `showStartView` AutoSelect + R6 `showDetail`-Fallback. Behebt Bugs 3+4. | ~1.5 h | ✅ *(sw v865)* |
-| **P2** | A1 zentraler `ViewState.setCurrent/getCurrent` mit IDB-Persistenz + ID-Validierung + `viewstate-change`-Event. Ersetzt parallele Buchführung. | ~3 h | offen |
+| **P2** | A1 zentraler `ViewState.setCurrent/getCurrent` mit IDB-Persistenz + ID-Validierung + `viewstate-change`-Event. Ersetzt parallele Buchführung. | ~3 h | ✅ *(sw v866)* |
 | **P3** | A2 `data-dirty`-Bit pro Tab + A3 `ui-lifecycle.js` (visibilitychange/pageshow/pagehide). | ~2 h | offen |
 | **P4** | Hygiene: R1 (Layout-Flash) + R2 (`_vsP`-Teardown) + R3 (`_navHistory`-Cap) + R4 (`_initDetailSwipe` idempotent) + R7 (`setTimeout` → `_afterLayout`) + SW (lazy-Module aus `PRECACHE_CRITICAL` raus). | ~1 h | offen |
 | **P5** | A4 Detail-View als 4 separate Container (per-Entität-Scroll-State) + A5 `data-view-init`-Flag. | ~5 h | angedacht |
@@ -367,7 +368,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v865 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0+P1 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v866 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P2 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

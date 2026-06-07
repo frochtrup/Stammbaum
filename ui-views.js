@@ -408,21 +408,19 @@ function _firstPlaceName() {
 
 // Mobile: nach Tab-Tipp zur letzten Auswahl scrollen + highlighten (kein showDetail)
 function _mobileSelectionRestore(tab) {
-  const sel = UIState._lastTabSel;
-  if (!sel) return;
   if (tab === 'persons') {
-    const id = sel.persons;
-    if (id && AppState.db.individuals[id]) _updatePersonListCurrent(id);
+    const id = ViewState.getCurrent('persons');
+    if (id) _updatePersonListCurrent(id);
   } else if (tab === 'families') {
-    const id = sel.families;
-    if (id && AppState.db.families[id]) _updateFamilyListCurrent(id);
+    const id = ViewState.getCurrent('families');
+    if (id) _updateFamilyListCurrent(id);
   } else if (tab === 'sources') {
-    const id = sel.sources;
+    const id = ViewState.getCurrent('sources');
     if (!id) return;
     const el = document.querySelector(`#sourceList [data-sid="${CSS.escape(id)}"]`);
     if (el) { el.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), el); }
   } else if (tab === 'places') {
-    const name = sel.places;
+    const name = ViewState.getCurrent('places');
     if (!name) return;
     const target = document.querySelector(`#placeList [data-name="${CSS.escape(name)}"]`);
     if (target) { target.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), target); }
@@ -433,30 +431,76 @@ function _persistLastTabSel() {
   idbPut('last_tab_sel', UIState._lastTabSel).catch(() => {});
 }
 
+// ─────────────────────────────────────
+//  ViewState — zentraler View-Selektion-Helper (A1, ADR-025)
+// ─────────────────────────────────────
+// Garantien: ① IDB-persistent, ② validiert gegen AppState.db, ③ viewstate-change-Event.
+// Ersetzt die parallele Buchführung AppState.currentX + UIState._lastTabSel.
+// AppState.currentX bleibt als Read-Convenience (wird von setCurrent synchron gesetzt).
+const ViewState = (() => {
+  // Mapping tab → AppState-Feld
+  const _FIELD = {
+    persons:  'currentPersonId',
+    families: 'currentFamilyId',
+    sources:  'currentSourceId',
+    places:   'currentPlaceName',
+  };
+  // Alle exklusiven Fokus-Felder (werden beim Setzen eines Tabs auf null zurückgesetzt)
+  const _ALL_FIELDS = ['currentPersonId', 'currentFamilyId', 'currentSourceId', 'currentRepoId', 'currentPlaceName'];
+
+  /**
+   * Setzt aktuelle Auswahl für einen Tab.
+   * - Schreibt in UIState._lastTabSel (IDB-persistent via _persistLastTabSel)
+   * - Setzt AppState.currentX (exklusiver Fokus: alle anderen → null)
+   * - Dispatcht 'viewstate-change' CustomEvent
+   */
+  function setCurrent(tab, id) {
+    // Per-Tab-Persistenz
+    (UIState._lastTabSel || (UIState._lastTabSel = {}))[tab] = id;
+    _persistLastTabSel();
+    // Exklusiver Fokus: alle currentX-Felder löschen, dann dieses setzen
+    _ALL_FIELDS.forEach(f => { AppState[f] = null; });
+    const field = _FIELD[tab];
+    if (field) AppState[field] = id;
+    // Event für spätere Listener (P3, ADR-025)
+    document.dispatchEvent(new CustomEvent('viewstate-change', { detail: { tab, id } }));
+  }
+
+  /**
+   * Gibt aktuelle Auswahl für einen Tab zurück; validiert Existenz gegen AppState.db.
+   * Gibt null zurück wenn ID nicht mehr existiert.
+   */
+  function getCurrent(tab) {
+    const sel = UIState._lastTabSel;
+    if (!sel) return null;
+    const id = sel[tab];
+    if (!id) return null;
+    if (tab === 'persons')  return AppState.db?.individuals?.[id] ? id : null;
+    if (tab === 'families') return AppState.db?.families?.[id] ? id : null;
+    if (tab === 'sources')  return (typeof getSource === 'function' && getSource(id)) ? id : null;
+    if (tab === 'places')   return id; // Existenz bei Verwendung prüfen (collectPlaces)
+    return id;
+  }
+
+  return { setCurrent, getCurrent };
+})();
+
 // Desktop: rechtes Panel beim Tab-Wechsel automatisch befüllen
 function _desktopAutoSelect(tab) {
   if (!document.body.classList.contains('desktop-mode')) return;
-  const sel = UIState._lastTabSel || (UIState._lastTabSel = {});
   if (tab === 'persons') {
-    const saved = sel.persons && AppState.db.individuals[sel.persons] ? sel.persons : null;
-    const id = saved || smallestPersonId();
-    if (!saved) delete sel.persons;
+    const id = ViewState.getCurrent('persons') || smallestPersonId();
     if (id) showDetail(id, false);
   } else if (tab === 'families') {
-    const saved = sel.families && AppState.db.families[sel.families] ? sel.families : null;
-    const id = saved || _smallestId(AppState.db.families);
-    if (!saved) delete sel.families;
+    const id = ViewState.getCurrent('families') || _smallestId(AppState.db.families);
     if (id && typeof showFamilyDetail === 'function') showFamilyDetail(id, false);
   } else if (tab === 'sources') {
-    const saved = sel.sources && getSource(sel.sources) ? sel.sources : null;
-    const id = saved || _smallestId(AppState.db.sources);
-    if (!saved) delete sel.sources;
+    const id = ViewState.getCurrent('sources') || _smallestId(AppState.db.sources);
     if (id && typeof showSourceDetail === 'function') showSourceDetail(id, false);
   } else if (tab === 'places') {
     const places = typeof collectPlaces === 'function' ? collectPlaces() : null;
-    const saved = sel.places && places?.has(sel.places) ? sel.places : null;
-    const name = saved || _firstPlaceName();
-    if (!saved) delete sel.places;
+    const saved  = ViewState.getCurrent('places');
+    const name   = (saved && places?.has(saved)) ? saved : _firstPlaceName();
     if (name && typeof showPlaceDetail === 'function') showPlaceDetail(name, false);
   }
   // tasks / search / stats: kein Detail-View

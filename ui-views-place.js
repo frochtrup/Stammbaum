@@ -839,13 +839,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   const place = places.get(placeName);
   if (!place) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentPersonId  = null;
-  AppState.currentFamilyId  = null;
-  AppState.currentSourceId  = null;
-  AppState.currentRepoId    = null;
-  AppState.currentPlaceName = placeName;
-  (UIState._lastTabSel || (UIState._lastTabSel = {})).places = placeName;
-  _persistLastTabSel();
+  ViewState.setCurrent('places', placeName);
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('treeBtn').hidden        = true;

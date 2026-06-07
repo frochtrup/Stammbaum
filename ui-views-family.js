@@ -382,13 +382,7 @@ function showFamilyDetail(id, pushHistory = true) {
   const f = AppState.db.families[id];
   if (!f) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentFamilyId  = id;
-  AppState.currentPersonId  = null;
-  AppState.currentSourceId  = null;
-  AppState.currentRepoId    = null;
-  AppState.currentPlaceName = null;
-  (UIState._lastTabSel || (UIState._lastTabSel = {})).families = id;
-  _persistLastTabSel();
+  ViewState.setCurrent('families', id);
   if (document.body.classList.contains('desktop-mode')) {
     if (AppState.currentTab === 'families') _updateFamilyListCurrent(id); else _updateFamilyListCurrent(null);
     _updatePersonListCurrent(null);

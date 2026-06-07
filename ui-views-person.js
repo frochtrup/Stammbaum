@@ -686,13 +686,7 @@ function showDetail(id, pushHistory = true) {
   const p = AppState.db.individuals[id];
   if (!p) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
-  AppState.currentPersonId  = id;
-  AppState.currentFamilyId  = null;
-  AppState.currentSourceId  = null;
-  AppState.currentRepoId    = null;
-  AppState.currentPlaceName = null;
-  (UIState._lastTabSel || (UIState._lastTabSel = {})).persons = id;
-  _persistLastTabSel();
+  ViewState.setCurrent('persons', id);
   if (document.body.classList.contains('desktop-mode')) {
     if (AppState.currentTab === 'persons') _updatePersonListCurrent(id); else _updatePersonListCurrent(null);
     _updateFamilyListCurrent(null);
