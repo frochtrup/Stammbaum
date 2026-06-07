@@ -1043,13 +1043,11 @@ function showPlaceDetail(placeName, pushHistory = true) {
         const chain = reg.enclosureChainAsOf(place.placeId, null).slice(1);
         if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
       }
-      const svgTimeline = _placeNamesSvg(po.pnames);
       if (histHtml || namesHtml) {
         html += `<div class="section fade-up">
           <div class="section-title">Ort (historisch)</div>
           ${histHtml}
           ${namesHtml ? `<div class="fact-sub-title">Frühere Namen</div>${namesHtml}` : ''}
-          ${svgTimeline}
         </div>`;
       }
     }
