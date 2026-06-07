@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v870 · Cache: `stammbaum-v870` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v871 · Cache: `stammbaum-v871` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 ### Zuletzt abgeschlossen (v851–v869) — vollständige Details: CHANGELOG.md
 

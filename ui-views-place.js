@@ -859,30 +859,39 @@ function _placeNamesSvg(pnames) {
   for (const pn of dated) {
     const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
     if (f) { minY = Math.min(minY, f); maxY = Math.max(maxY, f); }
-    // Offene Einträge (dateTo=null) bis heute einbeziehen
     const tEff = t || (f ? cur : null);
     if (tEff) { minY = Math.min(minY, tEff); maxY = Math.max(maxY, tEff); }
   }
   if (minY === Infinity) return '';
   if (maxY <= minY) maxY = minY + 10;
-  const W = 260, BAR = 18, PAD = 4, H = dated.length * (BAR + PAD) + 26;
+  // Layout: label-Zeile (13px) + Balken-Zeile (6px) + Abstand (8px) pro Eintrag
+  const W = 260, LROW = 13, BAR = 6, GAP = 10, ROW = LROW + BAR + GAP;
+  const AXIS_H = 16, H = AXIS_H + dated.length * ROW;
   const toX = y => Math.max(0, Math.min(W, (y - minY) / (maxY - minY) * W));
-  const COLS = ['#5b9bd5','#4aaa8a','#e8a33a','#e07050','#9b7aaa','#a0a8b0'];
-  let bars = '', axis = '';
+  // Farben: dezente Töne passend zur Palette (keine Signalfarben)
+  const COLS = ['#b07a4a','#6a8fa8','#7a9a6a','#8a6a9a','#a08060','#6a9090'];
+  let bars = '', axis = '', labels = '';
   dated.forEach((pn, i) => {
     const f = parseY(pn.dateFrom) || minY, t = parseY(pn.dateTo) || cur;
-    const x1 = toX(f), x2 = toX(t), y = 22 + i * (BAR + PAD);
-    const col = COLS[i % COLS.length], w = Math.max(3, x2 - x1);
-    const lbl = esc((pn.value || '') + (pn.lang ? ` (${pn.lang})` : '')).substring(0, 24);
-    bars += `<rect x="${x1.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="${BAR}" rx="3" fill="${col}" opacity="0.85"/>`;
-    bars += `<text x="${(x1 + 4).toFixed(1)}" y="${(y + 13).toFixed(1)}" font-size="10" fill="#fff">${lbl}</text>`;
+    const x1 = toX(f), x2 = toX(t), barW = Math.max(4, x2 - x1);
+    const col = COLS[i % COLS.length];
+    const labelY = AXIS_H + i * ROW + LROW - 2;
+    const barY   = AXIS_H + i * ROW + LROW + 1;
+    const lbl = esc((pn.value || '') + (pn.lang ? ` (${pn.lang})` : '')).substring(0, 28);
+    const spanTxt = pn.dateFrom || pn.dateTo
+      ? esc([pn.dateFrom, pn.dateTo].filter(Boolean).join('–'))
+      : '';
+    labels += `<text x="${x1.toFixed(1)}" y="${labelY}" font-size="10" fill="var(--text,#3a3028)">${lbl}</text>`;
+    if (spanTxt) labels += `<text x="${(x1 + barW + 3).toFixed(1)}" y="${(barY + 5).toFixed(1)}" font-size="9" fill="var(--text-muted,#8a7a6a)">${spanTxt}</text>`;
+    bars += `<rect x="${x1.toFixed(1)}" y="${barY}" width="${barW.toFixed(1)}" height="${BAR}" rx="2" fill="${col}" opacity="0.55"/>`;
   });
   const step = Math.max(1, Math.ceil((maxY - minY) / 4));
   for (let y = Math.ceil(minY / step) * step; y <= maxY; y += step) {
     const x = toX(y);
-    axis += `<text x="${x.toFixed(1)}" y="14" font-size="9" fill="var(--c-muted)" text-anchor="middle">${y}</text>`;
+    axis += `<line x1="${x.toFixed(1)}" y1="${AXIS_H - 4}" x2="${x.toFixed(1)}" y2="${H}" stroke="var(--border,#ddd)" stroke-width="1"/>`;
+    axis += `<text x="${x.toFixed(1)}" y="${AXIS_H - 5}" font-size="9" fill="var(--text-muted,#8a7a6a)" text-anchor="middle">${y}</text>`;
   }
-  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:8px;overflow:visible">${axis}${bars}</svg>`;
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:6px;overflow:visible">${axis}${labels}${bars}</svg>`;
 }
 
 // P5a-5: Mini-Karte (Leaflet) im Standort-Abschnitt initialisieren
