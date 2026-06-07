@@ -90,6 +90,32 @@ function _printCss() {
     .bib-note { display: block; font-size: 0.85rem; color: #6a584a;
                 margin-top: 2px; white-space: pre-wrap; }
 
+    /* ── Forschungsprotokoll ──────────────────────────────────── */
+    .fr-entity { margin: 14px 0 4px; page-break-inside: avoid; }
+    .fr-entity h2 { margin-bottom: 4px; }
+    .fr-life { font-weight: 400; font-size: 0.85rem; color: #8a7050; }
+    .fr-sub { font-size: 0.8rem; font-weight: 700; color: #6a4a20;
+              text-transform: uppercase; letter-spacing: 0.03em;
+              margin: 8px 0 3px; }
+    ul.fr-tasks, ul.fr-logs { list-style: none; }
+    ul.fr-tasks li, ul.fr-logs li { padding: 3px 0 3px 4px; font-size: 10pt;
+                     line-height: 1.4; border-bottom: 1px solid #f0e9d8; }
+    .fr-badge { display: inline-block; font-size: 0.72rem; font-weight: 700;
+                border-radius: 3px; padding: 0 6px; margin-right: 6px;
+                vertical-align: 1px; white-space: nowrap; }
+    .fr-todo  { background: #f0e6cf; color: #6a4a20; }
+    .fr-doing { background: #e2ecf6; color: #1a4a7a; }
+    .fr-done  { background: #dcefd8; color: #2a6a20; }
+    .fr-cat   { color: #7a5010; font-size: 0.85rem; }
+    .fr-date  { color: #a09070; font-size: 0.8rem; }
+    .fr-found     { background: #dcefd8; color: #2a6a20; }
+    .fr-partial   { background: #f6efd0; color: #7a6010; }
+    .fr-notfound  { background: #f6e2d8; color: #9a3010; }
+    .fr-pending   { background: #ece6da; color: #6a584a; }
+    .fr-query { font-style: italic; color: #3a2810; }
+    .fr-lognote { display: block; color: #5a4326; font-size: 0.88rem;
+                  margin-top: 1px; white-space: pre-wrap; }
+
     @media print {
       @page { size: A4 portrait; margin: 2cm; }
       body { max-width: 100%; padding: 0; }
@@ -833,5 +859,150 @@ function downloadBibliographie() {
   } catch (err) {
     console.error('downloadBibliographie:', err);
     showToast('⚠ Quellenverzeichnis: ' + err.message, 'error');
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+//  5. FORSCHUNGSPROTOKOLL  (A3 — OUTPUT-RICHNESS)
+//     Alle Aufgaben (_tasks) + Protokoll-Einträge (_rlog), gruppiert
+//     nach Person/Familie. Arbeitsbericht für Archivbesuche.
+// ═════════════════════════════════════════════════════════════════
+
+// Anzeige-Name einer Person (Vorname Nachname)
+function _frPersonName(p) {
+  if (!p) return '?';
+  const n = (p.given ? `${p.given} ${p.surname || ''}`.trim() : (p.surname || p.name || '')).trim();
+  return n || '(unbenannt)';
+}
+
+// Paar-Label einer Familie
+function _frFamName(f) {
+  const db = AppState.db;
+  const h = f.husb ? _frPersonName(db.individuals[f.husb]) : '?';
+  const w = f.wife ? _frPersonName(db.individuals[f.wife]) : '?';
+  return `${h} ⚭ ${w}`;
+}
+
+// Tasks-Liste einer Entität
+function _frTasksHtml(tasks) {
+  if (!tasks || !tasks.length) return '';
+  const statusCls = { todo: 'fr-todo', doing: 'fr-doing', done: 'fr-done' };
+  const statusLbl = { todo: 'Offen', doing: 'In Arbeit', done: 'Erledigt' };
+  const cat = key => (typeof TASK_CATEGORIES !== 'undefined'
+    ? (TASK_CATEGORIES.find(c => c.key === key)?.label || key) : key);
+  const items = tasks.map(t => {
+    const st = (t.status === 'todo' || t.status === 'doing' || t.status === 'done')
+      ? t.status : (t.done ? 'done' : 'todo');
+    const catTxt = t.category ? `<span class="fr-cat">[${esc(cat(t.category))}]</span> ` : '';
+    const created = t.created ? `<span class="fr-date"> · ${esc(t.created)}</span>` : '';
+    return `<li><span class="fr-badge ${statusCls[st]}">${statusLbl[st]}</span>${catTxt}${esc(t.text || '')}${created}</li>`;
+  }).join('\n');
+  return `<div class="fr-sub">Aufgaben</div><ul class="fr-tasks">\n${items}\n</ul>`;
+}
+
+// Protokoll-Liste einer Entität
+function _frLogsHtml(logs) {
+  if (!logs || !logs.length) return '';
+  const db = AppState.db;
+  const resCls = { 'found':'fr-found', 'partial':'fr-partial', 'not-found':'fr-notfound', 'pending':'fr-pending' };
+  const resLbl = { 'found':'Gefunden', 'partial':'Teilweise', 'not-found':'Nicht gefunden', 'pending':'Ausstehend' };
+  const items = logs.map(rl => {
+    const repo = rl.repoRef && db.repositories?.[rl.repoRef];
+    const sour = rl.sourRef && db.sources?.[rl.sourRef];
+    const meta = [rl.date, repo?.name, sour?.title || sour?.abbr].filter(Boolean).map(esc).join(' · ');
+    const res = rl.result || 'pending';
+    return `<li><span class="fr-badge ${resCls[res] || 'fr-pending'}">${resLbl[res] || esc(res)}</span>${
+      meta ? `<span class="fr-date">${meta}</span>` : ''}${
+      rl.query ? ` <span class="fr-query">${esc(rl.query)}</span>` : ''}${
+      rl.note ? `<span class="fr-lognote">${esc(rl.note)}</span>` : ''}</li>`;
+  }).join('\n');
+  return `<div class="fr-sub">Protokoll</div><ul class="fr-logs">\n${items}\n</ul>`;
+}
+
+function _buildForschungHtml() {
+  const db = AppState.db;
+  const dateStr   = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const fileLabel = (db._sourceFile || '').replace(/\.[^.]+$/, '');
+
+  // Entitäten mit Aufgaben oder Protokoll sammeln
+  const entities = [];
+  Object.entries(db.individuals || {}).forEach(([id, p]) => {
+    const tasks = p._tasks || [], logs = p._rlog || [];
+    if (tasks.length || logs.length)
+      entities.push({ id, name: _frPersonName(p), life: _poLifeYears(p), tasks, logs, kind: 'p' });
+  });
+  Object.entries(db.families || {}).forEach(([id, f]) => {
+    const tasks = f._tasks || [], logs = f._rlog || [];
+    if (tasks.length || logs.length)
+      entities.push({ id, name: _frFamName(f), life: '', tasks, logs, kind: 'f' });
+  });
+  if (!entities.length) throw new Error('Keine Aufgaben oder Protokoll-Einträge vorhanden');
+
+  entities.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+  // Summen
+  let open = 0, doing = 0, done = 0, logCount = 0;
+  entities.forEach(e => {
+    e.tasks.forEach(t => {
+      const st = (t.status === 'todo' || t.status === 'doing' || t.status === 'done')
+        ? t.status : (t.done ? 'done' : 'todo');
+      if (st === 'done') done++; else if (st === 'doing') doing++; else open++;
+    });
+    logCount += e.logs.length;
+  });
+
+  const summary = `<div class="bib-summary">
+    <strong>${open}</strong> offen · <strong>${doing}</strong> in Arbeit · <strong>${done}</strong> erledigt ·
+    <strong>${logCount}</strong> Protokoll-Eintr${logCount === 1 ? 'ag' : 'äge'} ·
+    <strong>${entities.length}</strong> betroffene Personen/Familien
+  </div>`;
+
+  const body = entities.map(e => `<div class="fr-entity">
+    <h2>${esc(e.name)}${e.life ? ` <span class="fr-life">${esc(e.life)}</span>` : ''}</h2>
+    ${_frTasksHtml(e.tasks)}
+    ${_frLogsHtml(e.logs)}
+  </div>`).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forschungsprotokoll${fileLabel ? ' — ' + esc(fileLabel) : ''}</title>
+<style>${_printCss()}</style>
+</head>
+<body>
+<h1>Forschungsprotokoll</h1>
+<p class="meta">${fileLabel ? esc(fileLabel) + ' · ' : ''}erstellt am ${dateStr}</p>
+${summary}
+${body}
+</body>
+</html>`;
+}
+
+function downloadForschungsProtokoll() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.individuals || {}).length) {
+    showToast('⚠ Keine Daten geladen', 'warn');
+    return;
+  }
+  try {
+    const html    = _buildForschungHtml();
+    const blob    = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    const srcName = (db._sourceFile || 'Stammbaum')
+      .replace(/\.[^.]+$/, '').replace(/[^\w\-äöüÄÖÜß ]/g,'').trim().replace(/ /g,'_');
+    a.href     = url;
+    a.download = srcName + '_Forschungsprotokoll.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadForschungsProtokoll:', err);
+    showToast('⚠ Forschungsprotokoll: ' + err.message, 'error');
   }
 }
