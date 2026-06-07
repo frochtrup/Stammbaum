@@ -131,6 +131,25 @@ function _printCss() {
     .st-bar { height: 10px; background: #c0a878; border-radius: 2px; min-width: 1px; }
     .st-section-sub { page-break-inside: avoid; }
 
+    /* ── Nachkommentafel (d'Aboville) ─────────────────────────── */
+    .nk-gen-head { font-size: 0.82rem; font-weight: 700; color: #5a3e0e;
+                   text-transform: uppercase; letter-spacing: 0.04em;
+                   margin: 16px 0 4px; border-bottom: 1.5px solid #c0a878;
+                   padding-bottom: 2px; }
+    .nk-entry { margin: 5px 0; padding-left: 4px; page-break-inside: avoid;
+                font-size: 10pt; line-height: 1.45; }
+    .nk-num { font-weight: 700; color: #8a6420; margin-right: 5px;
+              font-variant-numeric: tabular-nums; }
+    .nk-name { font-weight: 700; color: #2a1d08; }
+    .nk-life { color: #6a4a20; font-size: 0.9rem; }
+    .nk-bio { color: #3a2810; }
+    .nk-spouse { display: block; margin-left: 18px; color: #5a4326;
+                 font-size: 0.92rem; }
+    .nk-spouse-mark { color: #8a6420; }
+    .nk-children { display: block; margin-left: 18px; font-size: 0.85rem;
+                   color: #7a6248; margin-top: 1px; }
+    .nk-dup { color: #8a7050; font-style: italic; }
+
     @media print {
       @page { size: A4 portrait; margin: 2cm; }
       body { max-width: 100%; padding: 0; }
@@ -1230,5 +1249,154 @@ function downloadStatistik() {
   } catch (err) {
     console.error('downloadStatistik:', err);
     showToast('⚠ Statistik: ' + err.message, 'error');
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+//  7. NACHKOMMENTAFEL-REPORT  (B1 — OUTPUT-RICHNESS)
+//     Nummerierter Descendant-Bericht (d'Aboville: 1, 1.1, 1.1.2 …).
+//     Gegenpart zur Ahnenliste (zeigt nur Vorfahren).
+// ═════════════════════════════════════════════════════════════════
+
+// Kompakte Biografie-Zeile: geboren … gestorben …
+function _nkBio(p) {
+  const parts = [];
+  const birth = _poEvLine(p.birth) || _poEvLine(p.chr);
+  const death = _poEvLine(p.death) || _poEvLine(p.buri);
+  if (birth) parts.push('* ' + esc(birth));
+  if (death) parts.push('† ' + esc(death));
+  return parts.join(', ');
+}
+
+function _buildNachkommenHtml(rootId) {
+  const db   = AppState.db;
+  const root = db.individuals[rootId];
+  if (!root) throw new Error('Person nicht gefunden: ' + rootId);
+
+  const dateStr = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const rootName = root.given ? `${root.given} ${root.surname || ''}`.trim() : (root.surname || root.name || '');
+
+  const entries = [];
+  const visited = new Set();
+  let genMax = 1, total = 0;
+
+  (function walk(pid, num, gen) {
+    const p = db.individuals[pid];
+    if (!p) return;
+    if (visited.has(pid)) { entries.push({ num, p, gen, dup: true }); return; }
+    visited.add(pid);
+    total++;
+    if (gen > genMax) genMax = gen;
+
+    const fams = (p.fams || []).map(fid => db.families[fid]).filter(Boolean);
+    entries.push({ num, p, gen, fams });
+
+    let ci = 0;
+    fams.forEach(fam => {
+      (fam.children || []).forEach(cid => {
+        ci++;
+        walk(cid, num + '.' + ci, gen + 1);
+      });
+    });
+  })(rootId, '1', 1);
+
+  // Generationsweise Gruppierung (Register-Stil): stabil nach gen sortieren,
+  // d'Aboville-Reihenfolge innerhalb einer Generation bleibt durch stabile Sortierung erhalten.
+  entries.sort((a, b) => a.gen - b.gen);
+
+  // Römische Generationszahl
+  const roman = (g) => ['', 'I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX'][g] || g;
+
+  let lastGen = 0;
+  const body = entries.map(e => {
+    let head = '';
+    if (e.gen !== lastGen) {
+      head = `<div class="nk-gen-head">${roman(e.gen)}. Generation</div>`;
+      lastGen = e.gen;
+    }
+    const p = e.p;
+    const name = p.given ? `${p.given} ${p.surname || ''}`.trim() : (p.surname || p.name || '(unbenannt)');
+    const indent = ` style="margin-left:${Math.min((e.gen - 1) * 1.2, 12)}em"`;
+
+    if (e.dup) {
+      return `${head}<div class="nk-entry"${indent}><span class="nk-num">${e.num}</span><span class="nk-name">${esc(name)}</span> <span class="nk-dup">(bereits aufgeführt)</span></div>`;
+    }
+
+    const life = _poLifeYears(p);
+    const bio  = _nkBio(p);
+
+    // Ehen + Kinder-Verweise. Partner = der andere von husb/wife (per Objekt-Identität).
+    let spouseHtml = '';
+    let childRefs = [];
+    (e.fams || []).forEach(fam => {
+      const otherId = (fam.husb && db.individuals[fam.husb] === p) ? fam.wife : fam.husb;
+      const spouse  = otherId ? db.individuals[otherId] : null;
+      const spouseName = spouse
+        ? (spouse.given ? `${spouse.given} ${spouse.surname || ''}`.trim() : (spouse.surname || spouse.name || 'unbekannt'))
+        : 'unbekannte Person';
+      const marrLine = [fam.marr?.date, compactPlace(fam.marr?.place)].filter(Boolean).join(', ');
+      spouseHtml += `<span class="nk-spouse"><span class="nk-spouse-mark">&#x26AD;</span> ${esc(spouseName)} ${esc(_poLifeYears(spouse))}${marrLine ? ` — Heirat ${esc(marrLine)}` : ''}</span>`;
+    });
+    // Kinder-Nummern (kontinuierlich über alle Ehen)
+    const kidCount = (e.fams || []).reduce((s, fam) => s + (fam.children || []).length, 0);
+    if (kidCount) {
+      const nums = [];
+      for (let i = 1; i <= kidCount; i++) nums.push(e.num + '.' + i);
+      childRefs.push(`<span class="nk-children">${kidCount} Kind${kidCount === 1 ? '' : 'er'}: Nr. ${nums.join(', ')}</span>`);
+    }
+
+    return `${head}<div class="nk-entry"${indent}>
+      <span class="nk-num">${e.num}</span><span class="nk-name">${esc(name)}</span>${life ? ` <span class="nk-life">${esc(life)}</span>` : ''}${bio ? ` — <span class="nk-bio">${bio}</span>` : ''}
+      ${spouseHtml}${childRefs.join('')}
+    </div>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nachkommen von ${esc(rootName)}</title>
+<style>${_printCss()}</style>
+</head>
+<body>
+<h1>Nachkommentafel</h1>
+<p class="ahnen-title">Nachkommen von ${esc(rootName)} ${esc(_poLifeYears(root))}</p>
+<p class="meta">${Math.max(total - 1, 0).toLocaleString('de-DE')} Nachkommen · ${genMax} Generationen · erstellt am ${dateStr}</p>
+<p class="meta">Nummerierung nach d'Aboville: Die Ziffern geben den Abstammungspfad an (1 = Proband, 1.1 = erstes Kind, 1.1.2 = zweites Enkelkind dieser Linie).</p>
+${body}
+</body>
+</html>`;
+}
+
+function downloadNachkommentafel() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.individuals || {}).length) {
+    showToast('⚠ Keine Daten geladen', 'warn');
+    return;
+  }
+  const rootId = AppState.currentPersonId
+    || AppState._probandId
+    || Object.keys(db.individuals).sort((a, b) =>
+         a.localeCompare(b, undefined, { numeric: true }))[0];
+  try {
+    const html    = _buildNachkommenHtml(rootId);
+    const blob    = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    const root    = db.individuals[rootId];
+    const safeName = (root?.name || (root?.given ? `${root.given} ${root.surname || ''}` : '') || 'Nachkommen')
+      .replace(/[^\w\-äöüÄÖÜß ]/g, '').trim().replace(/ /g, '_');
+    a.href     = url;
+    a.download = safeName + '_Nachkommen.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadNachkommentafel:', err);
+    showToast('⚠ Nachkommentafel: ' + err.message, 'error');
   }
 }
