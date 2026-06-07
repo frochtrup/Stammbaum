@@ -68,9 +68,12 @@ window._activateDetailContainer = function _activateDetailContainer(cid, entityI
 
 function showView(id) {
   const desktop = window.innerWidth >= 900 && id !== 'v-landing';
-  // R1: direkter Swap (nur 2 DOM-Ops statt N) — reduziert Layout-Flash auf iOS
-  const _prevView = document.querySelector('.view.active');
-  if (_prevView && _prevView.id !== id) _prevView.classList.remove('active');
+  // R1+P6-B1: alle anderen aktiven Views deaktivieren — Desktop hält v-main + v-detail/v-tree
+  // gleichzeitig active (ADR-009). querySelector lieferte nur das erste, was beim Wechsel
+  // v-tree→v-main den Baum sichtbar stehen ließ (links: 360px, fixed → überdeckt Detail).
+  document.querySelectorAll('.view.active').forEach(v => {
+    if (v.id !== id) v.classList.remove('active');
+  });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   // Vollbild-Zustand zwischen Views übertragen oder beenden
@@ -562,6 +565,31 @@ function _dcAlreadyShows(tab, entityId) {
   if (el.dataset.currentId !== String(entityId)) return false;
   if ((UIState._dirty || {})[tab]) return false; // Daten geändert → immer neu rendern
   _activateDetailContainer(cid, entityId);
+  // P6-B3: Skip-Pfad muss die LINKE Liste trotzdem synchronisieren — andernfalls behält
+  // die zuvor aktive Tab-Liste die .current-Klasse, und Scroll-Position zeigt nicht auf
+  // den ausgewählten Eintrag. _activateDetailContainer kümmert sich nur um den Detail-
+  // Container, nicht um die Listen-Highlight/Scroll-Synchronisation.
+  if (tab === 'persons') {
+    _updatePersonListCurrent(entityId);
+    _updateFamilyListCurrent(null);
+  } else if (tab === 'families') {
+    _updateFamilyListCurrent(entityId);
+    _updatePersonListCurrent(null);
+  } else if (tab === 'sources') {
+    const list = document.getElementById('sourceList');
+    if (list) {
+      list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
+      const cur = list.querySelector(`[data-sid="${CSS.escape(String(entityId))}"]`);
+      if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
+    }
+  } else if (tab === 'places') {
+    const list = document.getElementById('placeList');
+    if (list) {
+      list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
+      const cur = list.querySelector(`[data-name="${CSS.escape(String(entityId))}"]`);
+      if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
+    }
+  }
   return true;
 }
 
@@ -627,10 +655,12 @@ function switchTab(tab) {
   // statt vollem Re-Render, damit Scroll-Position + Auswahl erhalten bleiben.
   if (tab === 'persons' && typeof _vsP !== 'undefined' && !_vsP.active && _vsP.top
       && (UIState._dirty || {}).persons === false) {
-    _vsReattach(document.getElementById('personList'), _vsP, AppState.currentPersonId);
+    // P6-B3: ViewState.getCurrent statt AppState.currentX — Letzteres wird durch
+    // ViewState.setCurrent exklusiv genullt wenn ein anderer Tab aktiv war.
+    _vsReattach(document.getElementById('personList'), _vsP, ViewState.getCurrent('persons'));
   } else if (tab === 'families' && typeof _vsF !== 'undefined' && !_vsF.active && _vsF.top
       && (UIState._dirty || {}).families === false) {
-    _vsReattach(document.getElementById('familyList'), _vsF, AppState.currentFamilyId);
+    _vsReattach(document.getElementById('familyList'), _vsF, ViewState.getCurrent('families'));
   } else if ((UIState._dirty || {})[tab] !== false) {
     renderTab();
     UIState._dirty = { ...(UIState._dirty || {}), [tab]: false };

@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v885 · Cache: `stammbaum-v885` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v886 · Cache: `stammbaum-v886` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v869) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v886) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v886 | **View-Robustheit P6** — drei Tab-Wechsel-Konsistenz-Bugs nachgezogen, die das P0–P5-Refactoring strukturell offengelassen hatte. B1: `showView` nutzt `querySelectorAll('.view.active')` statt `querySelector` — Desktop hält v-main + v-tree/v-detail gleichzeitig active (ADR-009), der R1-Direkt-Swap deaktivierte aber nur die *erste* aktive View → v-tree blieb nach Tab-Wechsel sichtbar. B2: `showTree`/`showDescTree` schreiben jetzt via `ViewState.setCurrent('persons', personId)` statt direkt `AppState.currentPersonId` — Baum-Navigation ist implizite Personen-Selektion, P2-A1 hatte diesen Schreibpfad übersehen. B3: `_dcAlreadyShows` synchronisiert die linke Liste auch im Skip-Pfad (`_updatePersonListCurrent`/`_updateFamilyListCurrent`/Source+Place-Highlight) — P5-A5 hatte den Listen-Sync zusammen mit dem Detail-Re-Render herausoptimiert. `_vsReattach` liest `ViewState.getCurrent` statt `AppState.currentX` (Letzteres ist exklusiv genullt). | Drei Klassen von Tab-Wechsel-Glitches behoben: Baum bleibt sichtbar bei Wechsel in andere Tabs (Desktop), falscher Fokus nach Baum-Navigation, Liste an falscher Position nach Skip-Re-Render. |
 | v869 | **View-Robustheit P5** — A4: 5 separate Detail-Container (`detailPerson/Family/Place/Source/Media`) statt einem `#detailContent`; `_activateDetailContainer(cid, entityId)` mit Scroll-Save/Restore (per-Entität-Scroll-State auf Desktop). A5: `data-view-init`-Flag — `_desktopAutoSelect` überspringt Re-Render wenn Container bereits die richtige Entität zeigt und Tab nicht dirty. | Tab-Wechsel (Person→Familie→zurück) ohne innerHTML-Reset; Scroll-Position pro Entität erhalten; Bug-4-Klasse strukturell beseitigt. |
 | v868 | **View-Robustheit P4** — R1: `showView` direkter View-Swap (1–2 DOM-Ops statt N, weniger Layout-Flash iOS); R2: `switchTab` ruft `_vsTeardown` für inaktive VS-Listen (_vsP/_vsF); R3: `_navHistoryCap()` — `_navHistory` auf 50 Einträge begrenzt; R4: `_initDetailSwipe` bereits idempotent; R7: alle `setTimeout`-Magic-Delays → `_afterLayout` (2× rAF). SW: `ui-book/print/dedup.js` bereits in PRECACHE_OPTIONAL. | Scroll-Listener-Leak bei Tab-Wechsel behoben; unbegrenztes navHistory-Wachstum gestoppt; Layout-Konsistenz verbessert. |
 | v867 | **View-Robustheit P3** — A2: `markChanged()` setzt `UIState._dirty` für alle Daten-Tabs; `switchTab()` rendert nur wenn `_dirty[tab] !== false` (dirty oder nie besucht). A3: neues `ui-lifecycle.js` — `visibilitychange` mit >60-s-Heuristik (alle Tabs dirty), `pageshow` mit BFCache-Reload-Guard, `pagehide` mit `_persistLastTabSel`-Flush. | Unnötige Re-Renders bei Tab-Wechsel ohne Edit eliminiert; BFCache-Inkonsistenz verhindert; saubere Trennung Lifecycle vs. View-Routing. |
@@ -371,7 +372,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v869 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P5 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v886 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

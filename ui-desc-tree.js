@@ -75,7 +75,8 @@ window.showDescTree = function (personId, addToHistory = true) {
     UIState._navFwdStack = [];
   }
 
-  AppState.currentPersonId = personId;
+  // P6-B2: Baum-Navigation ist implizite Personen-Selektion (analog showTree).
+  ViewState.setCurrent('persons', personId);
   currentTreeId = personId;
   _updateTreeBackBtn();
   setBnavActive('tree');

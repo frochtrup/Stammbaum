@@ -348,7 +348,10 @@ function _treeNameHtml(p, isCenter) {
 function showTree(personId, addToHistory = true) {
   const p = AppState.db.individuals[personId];
   if (!p) return;
-  AppState.currentPersonId = personId;
+  // P6-B2: Baum-Navigation ist implizite Personen-Selektion. ViewState statt direkter
+  // AppState-Zuweisung — sonst bleibt UIState._lastTabSel.persons stale und der spätere
+  // Tab-Wechsel auf „Personen" landet auf der alten ID.
+  ViewState.setCurrent('persons', personId);
   currentTreeId   = personId;
 
   // ── Navigations-History ──

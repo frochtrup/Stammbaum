@@ -9,6 +9,42 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — View-Robustheit P6: Tab-Wechsel-Konsistenz (sw v886)
+
+Drei Tab-Wechsel-Glitches nachgezogen, die das P0–P5-Refactoring strukturell offen gelassen hatte. Direkt aus Nutzerbericht „inkonsistentes Verhalten beim Tab-Wechsel" abgeleitet — alle drei Bugs sind Korrekturen je einer Annahme aus R1, P2-A1 und P5-A5. Volldetail: `VIEW-ROBUSTNESS.md` § P6.
+
+#### B1 — `showView` Multi-Active (ui-views.js:72-77)
+
+`showView` deaktivierte nur die *erste* `.view.active`-View (`querySelector`). Auf Desktop sind v-main + v-detail/v-tree per Design (ADR-009) gleichzeitig aktiv — `querySelector` liefert v-main als erstes DOM-Element, das wird mit sich selbst verglichen → kein Remove → v-tree bleibt sichtbar nach `bnavTab('places')`. Behebt: „Baum bleibt auch beim Wechsel in den Orte-Tab sichtbar".
+
+Fix: `querySelectorAll('.view.active').forEach(v => { if (v.id !== id) v.classList.remove('active'); })`. R1-Optimierung (1–2 DOM-Ops, Layout-Flash-Reduktion) bleibt erhalten — bei den typischen 2 aktiven Views statt N.
+
+#### B2 — `showTree`/`showDescTree` über ViewState (ui-views-tree.js:351, ui-desc-tree.js:78)
+
+P2-A1 (ADR-025) hatte alle 4 `show*Detail`-Funktionen auf `ViewState.setCurrent(tab, id)` umgestellt, aber `showTree`/`showDescTree` als Hauptansichten ausgespart. Sie setzten weiter direkt `AppState.currentPersonId = personId`. Folge: `UIState._lastTabSel.persons` (IDB-persistent) blieb stale nach Baum-Navigation → Tab-Wechsel auf „Personen" fokussierte die alte ID.
+
+Fix: Baum-Navigation als implizite Personen-Selektion modelliert — `ViewState.setCurrent('persons', personId)` ersetzt die direkte Zuweisung. ViewState nullt dabei exklusiv alle anderen `currentX` (gewollt: Familie/Quelle/Ort sind nicht mehr „aktiv" wenn man im Baum ist).
+
+#### B3 — `_dcAlreadyShows` Listen-Sync + `_vsReattach` via ViewState (ui-views.js:557-590, 630-635)
+
+P5-A5 hatte den Skip-Re-Render-Pfad eingebaut (`_dcAlreadyShows` → `_activateDetailContainer` ohne `innerHTML`-Reset wenn Container bereits korrekt steht und Tab nicht dirty). Die Listen-Sync-Aufrufe (`_updatePersonListCurrent` etc.) standen vorher in den `show*Detail`-Funktionen und wurden bei der A5-Umstellung nicht in den Skip-Pfad kopiert → linke Liste behielt `.current`-Klasse der zuvor aktiven Tab-Liste und scrollte nicht zur aktuellen Auswahl.
+
+Fix: `_dcAlreadyShows` ruft jetzt im Skip-Pfad `_updatePersonListCurrent` / `_updateFamilyListCurrent` / Source+Place-Highlight + `_scrollListToCurrent` für die jeweilige Liste. Zusätzlich `_vsReattach` in `switchTab` liest `ViewState.getCurrent(tab)` statt `AppState.currentPersonId`/`currentFamilyId` — Letztere werden durch `ViewState.setCurrent` in anderen Tabs exklusiv genullt, sodass `_vsReattach(_, _, null)` keinen Scroll-Restore mehr machen konnte.
+
+#### Warum trotz umfangreichen P0–P5-Refactorings nötig
+
+P0–P5 lösten die 4 vom Nutzer berichteten Symptome (Void-Artefakte, stale Listen, Selektions-Drift, leere Erstanwahl). Drei strukturelle Bereiche blieben offen:
+
+1. **Tab/View-Choreografie** — kein zentrales Invariant „welche `.view`-Elemente dürfen wann gleichzeitig `.active` sein" (B1).
+2. **Tree als impliziter Personen-Selektor** — `showTree` ist semantisch eine Personen-Selektion, im State-Modell aber nicht (B2).
+3. **Skip-Pfade** — A5-Optimierung modellierte den Skip als „nichts zu tun", übersah Liste-Highlight + Scroll als unabhängige Seiteneffekte (B3).
+
+#### Tests
+
+`test-unit.js` 296/296 grün; GEDCOM-Roundtrip `net_delta=0` stabil. Reine UI-Logik-Korrektur, keine Modell-Änderung.
+
+---
+
 ### Session 2026-06-07 — View-Robustheit P5: Separate Detail-Container (sw v869)
 
 Abschluss der View-Robustheit P0–P5. ADR-025 und VIEW-ROBUSTNESS.md vollständig abgeschlossen.
