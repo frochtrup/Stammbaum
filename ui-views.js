@@ -391,19 +391,31 @@ function _vsSetup(listEl, st) {
   (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
 }
 
-// Scroll-Listener nach Tab-Rückkehr neu registrieren ohne DOM/Scroll-Reset.
-// scrollTo: gespeicherter scrollTop dieses Tabs — wird VOR _vsRender gesetzt,
-// damit der Render sofort den richtigen Viewport berechnet (kein zweiter Pass nötig).
-// getBoundingClientRect() in _vsRender erzwingt Reflow → display:block-Änderung wirkt.
-function _vsReattach(listEl, st, scrollTo) {
+// Scroll-Listener nach Tab-Rückkehr neu registrieren ohne DOM-Reset.
+// curId: aktuell ausgewählte Entität (Person- oder Familie-ID) — die Scroll-Position
+// wird daraus berechnet, identisch zur Logik im initialen Render von renderPersonList /
+// renderFamilyList. getBoundingClientRect() erzwingt den Reflow nach display:block.
+// lstAbs (= Abstand Listenkopf vom Scroll-Container-Anfang) ist unabhängig von
+// scrollTop — korrekte Berechnung auch wenn sc.scrollTop noch vom anderen Tab stammt.
+function _vsReattach(listEl, st, curId) {
   if (st.active || !st.top) return;
   st.sc = _vsScrollEl();
   st.active = true;
   st.r = null;
   _normalizeWheel(st.sc);
-  if (scrollTo !== undefined) {
-    if (st.sc) st.sc.scrollTop = scrollTo;
-    else window.scrollTo(0, scrollTo);
+  // Scroll zur aktuellen Auswahl berechnen und setzen, VOR _vsRender
+  if (curId) {
+    const idx = st.items.findIndex(it => it.id === curId);
+    if (idx >= 0) {
+      const sc = st.sc;
+      const scTop  = sc ? sc.scrollTop : window.scrollY;
+      const viewH  = sc ? sc.clientHeight : window.innerHeight;
+      const lr     = listEl.getBoundingClientRect(); // erzwingt Reflow
+      const sr     = sc ? sc.getBoundingClientRect().top : 0;
+      const lstAbs = scTop + lr.top - sr; // Listenkopf in Scroll-Koordinaten (≈ topbar-Höhe)
+      const target = Math.max(0, lstAbs + st.offsets[idx] - viewH / 2 + _VS_ROW / 2);
+      if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
+    }
   }
   _vsRender(listEl, st);
   st.fn = () => _vsRender(listEl, st);
@@ -593,15 +605,6 @@ async function showStartView() {
 // ─────────────────────────────────────
 const _TAB_LABELS = { persons:'Personen', families:'Familien', sources:'Quellen', places:'Orte', stats:'Statistik', search:'Suche', tasks:'Aufgaben' };
 function switchTab(tab) {
-  // S1 (ADR-025): Scroll-Position des verlassenden Tabs sichern.
-  // #v-main ist auf Desktop ein gemeinsamer Scroll-Container — ohne Sicherung
-  // zeigt jeder Tab-Rückkehr eine andere Position.
-  const _leavingTab = AppState.currentTab;
-  if (_leavingTab && _leavingTab !== tab) {
-    if (!UIState._tabScrollPos) UIState._tabScrollPos = {};
-    UIState._tabScrollPos[_leavingTab] = _getListScroll();
-  }
-
   AppState.currentTab = tab;
   _announceList(_TAB_LABELS[tab] || tab);
   if (tab !== 'places') {
@@ -624,16 +627,13 @@ function switchTab(tab) {
   // statt vollem Re-Render, damit Scroll-Position + Auswahl erhalten bleiben.
   if (tab === 'persons' && typeof _vsP !== 'undefined' && !_vsP.active && _vsP.top
       && (UIState._dirty || {}).persons === false) {
-    _vsReattach(document.getElementById('personList'), _vsP, (UIState._tabScrollPos || {})[tab]);
+    _vsReattach(document.getElementById('personList'), _vsP, AppState.currentPersonId);
   } else if (tab === 'families' && typeof _vsF !== 'undefined' && !_vsF.active && _vsF.top
       && (UIState._dirty || {}).families === false) {
-    _vsReattach(document.getElementById('familyList'), _vsF, (UIState._tabScrollPos || {})[tab]);
+    _vsReattach(document.getElementById('familyList'), _vsF, AppState.currentFamilyId);
   } else if ((UIState._dirty || {})[tab] !== false) {
     renderTab();
     UIState._dirty = { ...(UIState._dirty || {}), [tab]: false };
-    // Bei echtem Re-Render (Datenänderung) gespeicherte Position verwerfen —
-    // renderTab() scrollt selbst zur aktuellen Auswahl.
-    if (UIState._tabScrollPos) UIState._tabScrollPos[tab] = undefined;
   }
 }
 
