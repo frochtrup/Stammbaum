@@ -916,7 +916,11 @@ function getPlaceRegistry() {
       }
       return pl.title || (pl.pnames && pl.pnames[0] && pl.pnames[0].value) || '';
     },
-    enclosureChainAsOf(placeId, year) {
+    // opts.meta (optional): wird mit { truncated: true } befüllt wenn die Kette
+    // bei einem Knoten abbricht, der bekannte Eltern hat (encs.length > 0) aber
+    // keiner davon zum angefragten Jahr passt. Erlaubt dem Aufrufer, eine
+    // unvollständige Kette von einer legitim-obersten Kette zu unterscheiden.
+    enclosureChainAsOf(placeId, year, opts) {
       const out = [], seen = new Set();
       const y = _yearOf(year);
       let curId = placeId;
@@ -942,6 +946,8 @@ function getPlaceRegistry() {
             }
           }
           next = bestEnc?.placeId ?? null;
+          // Hat Eltern-Einträge, aber keiner passt zum Jahr → Kette truncated
+          if (!next && encs.length > 0 && opts?.meta) opts.meta.truncated = true;
         }
         // Bei spezifischem Jahr kein Fallback auf encs[0]/parentId — beides wäre ein Guess.
         // parentId == enclosedBy[0].placeId (wird so gesetzt), also würde der Fallback

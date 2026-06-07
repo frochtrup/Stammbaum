@@ -1163,19 +1163,46 @@ function showPlaceDetail(placeName, pushHistory = true) {
         // Anzeigebereich auf Existenzdaten des Ortes selbst klemmen
         const _exFrom = po?.existsFrom ? +po.existsFrom.match(/\d{4}/)?.[0] : null;
         const _exTo   = po?.existsTo   ? +po.existsTo.match(/\d{4}/)?.[0]   : null;
+        // Dokumentierten Bereich aus eigenen enclosedBy-Einträgen ableiten:
+        // Jahre vor dem frühesten dateFrom und nach dem letzten dateTo (falls alle
+        // Einträge ein Ende haben) liegen außerhalb der belegten Zeitspanne.
+        const _parseYr = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+        const _encsWithFrom = enclosedBy.filter(e => e.dateFrom);
+        const _docStart = _encsWithFrom.length
+          ? Math.min(..._encsWithFrom.map(e => _parseYr(e.dateFrom) ?? Infinity)) : null;
+        const _hasOpenEnd = enclosedBy.some(e => !e.dateTo);
+        const _docEnd = _hasOpenEnd ? null
+          : (enclosedBy.length ? Math.max(...enclosedBy.map(e => _parseYr(e.dateTo) ?? 0)) : null);
+
         const _keyYears = [..._chainYears].sort((a,b)=>a-b)
-          .filter(y => (_exFrom == null || y >= _exFrom) && (_exTo == null || y <= _exTo));
-        if (_keyYears.length >= 2) {
-          // Duplikate herausfiltern: nur Zeilen zeigen, wo sich die Kette tatsächlich ändert
-          let _lastChain = '';
-          const _rows = _keyYears.map(yr => {
-            const chain = reg.enclosureChainAsOf(place.placeId, yr).slice(1);
-            if (!chain.length) return '';
-            const chainStr = chain.join(' › ');
-            if (chainStr === _lastChain) return '';
+          .filter(y =>
+            (_exFrom   == null || y >= _exFrom)   && (_exTo   == null || y <= _exTo) &&
+            (_docStart == null || y >= _docStart) && (_docEnd == null || y <= _docEnd)
+          );
+        if (_keyYears.length >= 1) {
+          // Duplikate herausfiltern: nur Zeilen wenn Kette sich ändert.
+          // Lücken (Jahr im belegten Bereich, aber kein passender Eintrag) → "unbekannt".
+          // Abgebrochene Ketten (Eltern-Knoten hat Einträge, keiner passt) → › ? Suffix.
+          let _lastChain = null; // null = noch keine Zeile ausgegeben
+          let _inGap = false;
+          const _rows = [];
+          for (const yr of _keyYears) {
+            const meta = {};
+            const chain = reg.enclosureChainAsOf(place.placeId, yr, meta).slice(1);
+            if (!chain.length) {
+              if (!_inGap) {
+                _rows.push(`<div class="fact-row fact-row--gap"><span class="place-enc-span">${yr}</span><span class="fact-val place-gap-marker">unbekannt</span></div>`);
+                _inGap = true;
+              }
+              _lastChain = null;
+              continue;
+            }
+            _inGap = false;
+            const chainStr = chain.join(' › ') + (meta.truncated ? ' › ?' : '');
+            if (chainStr === _lastChain) continue;
             _lastChain = chainStr;
-            return `<div class="fact-row"><span class="fact-key">${yr}</span><span class="fact-val">${esc(chainStr)}</span></div>`;
-          }).filter(Boolean);
+            _rows.push(`<div class="fact-row"><span class="place-enc-span">${yr}</span><span class="fact-val">${esc(chainStr)}</span></div>`);
+          }
           if (_rows.length) {
             hierTimelineHtml = `<div class="fact-sub-title">Zugehörigkeit nach Jahr</div>${_rows.join('')}`;
           }
