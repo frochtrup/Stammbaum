@@ -374,7 +374,8 @@ function showHofDetail(addr, pushHistory = true) {
   html += _renderAddBewohnerForm(addr);
   html += _renderAddPropForm(addr);
 
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailPlace').innerHTML = html;
+  _activateDetailContainer('detailPlace', addr);
   _initHofFormEvents();
   showView('v-detail');
 }

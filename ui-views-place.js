@@ -1139,7 +1139,8 @@ function showPlaceDetail(placeName, pushHistory = true) {
     </div>`;
   }
 
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailPlace').innerHTML = html;
+  _activateDetailContainer('detailPlace', placeName);
   showView('v-detail');
   if (place.lati !== null && place.long !== null) _initPlaceDetailMap(place.lati, place.long, compactPlace(placeName));
 }

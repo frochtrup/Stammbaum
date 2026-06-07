@@ -1007,7 +1007,8 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
     </div>
   </div>`;
 
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailMedia').innerHTML = html;
+  _activateDetailContainer('detailMedia', ctxId + ':' + idx);
   showView('v-detail');
 
   // Load preview async

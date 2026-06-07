@@ -36,6 +36,36 @@ window._afterLayout = function (fn) {
   requestAnimationFrame(() => requestAnimationFrame(fn));
 };
 
+// A4/A5 (P5): 5 separate Detail-Container — per-Entität-Scroll-State + data-view-init
+const _DC_IDS = ['detailPerson','detailFamily','detailPlace','detailSource','detailMedia'];
+
+window._activateDetailContainer = function _activateDetailContainer(cid, entityId) {
+  const vdet = document.getElementById('v-detail');
+  const isDesktop = document.body.classList.contains('desktop-mode');
+  // Scroll der aktuell aktiven Fläche sichern
+  if (isDesktop && vdet) {
+    const cur = _DC_IDS.find(id => document.getElementById(id)?.classList.contains('dc-active'));
+    if (cur && cur !== cid) {
+      const curEl = document.getElementById(cur);
+      if (curEl) curEl.dataset.savedScroll = String(vdet.scrollTop);
+    }
+  }
+  // Aktiven Container umschalten
+  _DC_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('dc-active', id === cid);
+  });
+  const el = document.getElementById(cid);
+  if (!el || entityId === undefined) return;
+  const key = String(entityId);
+  const changed = el.dataset.currentId !== key;
+  el.dataset.currentId = key;
+  el.dataset.viewInit = 'true';
+  if (isDesktop && vdet) {
+    vdet.scrollTop = changed ? 0 : (parseInt(el.dataset.savedScroll, 10) || 0);
+  }
+};
+
 function showView(id) {
   const desktop = window.innerWidth >= 900 && id !== 'v-landing';
   // R1: direkter Swap (nur 2 DOM-Ops statt N) — reduziert Layout-Flash auf iOS
@@ -89,14 +119,13 @@ function showView(id) {
     document.body.classList.toggle('has-detail', id === 'v-detail');
     document.body.classList.toggle('timeline-active', id === 'v-timeline');
     document.body.classList.toggle('story-active', id === 'v-story');
-    if (id === 'v-detail') { const _det = document.getElementById('v-detail'); _det.scrollTop = 0; _normalizeWheel(_det); _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
+    if (id === 'v-detail') { const _det = document.getElementById('v-detail'); _normalizeWheel(_det); _initDetailSwipe(); requestAnimationFrame(_updateDetailHistBtn); }
   } else {
     document.body.classList.remove('desktop-mode', 'has-detail');
     AppState._detailActive = (id === 'v-detail');
     if (id === 'v-detail') {
       // P0-K1: scrollTop-Reset auch mobile — verhindert „Void"-Artefakt
       // bei kürzerem neuem Detail-Inhalt (vorher nur im Desktop-Zweig gesetzt).
-      const _det = document.getElementById('v-detail'); if (_det) _det.scrollTop = 0;
       _initDetailSwipe();
     }
     const showNav = (id === 'v-main' || id === 'v-tree' || id === 'v-detail');
@@ -199,15 +228,18 @@ function switchPlacesSubTab(sub) {
     document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
   });
   if (sub === 'hoefe') {
-    document.getElementById('detailContent').innerHTML = '';
+    document.getElementById('detailPlace').innerHTML = '';
+    document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     renderHofList();
   } else if (sub === 'orte') {
-    document.getElementById('detailContent').innerHTML = '';
+    document.getElementById('detailPlace').innerHTML = '';
+    document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     renderPlaceList();
   } else if (sub === 'karte') {
-    document.getElementById('detailContent').innerHTML = '';
+    document.getElementById('detailPlace').innerHTML = '';
+    document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     if (isDesktop) renderPlaceList(); // linkes Panel: Orte-Navigation
     if (typeof initOrRefreshPlaceMap === 'function') initOrRefreshPlaceMap();
@@ -488,22 +520,36 @@ const ViewState = (() => {
 })();
 
 // Desktop: rechtes Panel beim Tab-Wechsel automatisch befüllen
+// A5 (P5): Container-Map für Skip-Re-Render-Check
+const _DC_TAB_MAP = { persons: 'detailPerson', families: 'detailFamily', sources: 'detailSource', places: 'detailPlace' };
+
+function _dcAlreadyShows(tab, entityId) {
+  const cid = _DC_TAB_MAP[tab];
+  if (!cid) return false;
+  const el = document.getElementById(cid);
+  if (!el || el.dataset.viewInit !== 'true') return false;
+  if (el.dataset.currentId !== String(entityId)) return false;
+  if ((UIState._dirty || {})[tab]) return false; // Daten geändert → immer neu rendern
+  _activateDetailContainer(cid, entityId);
+  return true;
+}
+
 function _desktopAutoSelect(tab) {
   if (!document.body.classList.contains('desktop-mode')) return;
   if (tab === 'persons') {
     const id = ViewState.getCurrent('persons') || smallestPersonId();
-    if (id) showDetail(id, false);
+    if (id && !_dcAlreadyShows('persons', id)) showDetail(id, false);
   } else if (tab === 'families') {
     const id = ViewState.getCurrent('families') || _smallestId(AppState.db.families);
-    if (id && typeof showFamilyDetail === 'function') showFamilyDetail(id, false);
+    if (id && !_dcAlreadyShows('families', id) && typeof showFamilyDetail === 'function') showFamilyDetail(id, false);
   } else if (tab === 'sources') {
     const id = ViewState.getCurrent('sources') || _smallestId(AppState.db.sources);
-    if (id && typeof showSourceDetail === 'function') showSourceDetail(id, false);
+    if (id && !_dcAlreadyShows('sources', id) && typeof showSourceDetail === 'function') showSourceDetail(id, false);
   } else if (tab === 'places') {
     const places = typeof collectPlaces === 'function' ? collectPlaces() : null;
     const saved  = ViewState.getCurrent('places');
     const name   = (saved && places?.has(saved)) ? saved : _firstPlaceName();
-    if (name && typeof showPlaceDetail === 'function') showPlaceDetail(name, false);
+    if (name && !_dcAlreadyShows('places', name) && typeof showPlaceDetail === 'function') showPlaceDetail(name, false);
   }
   // tasks / search / stats: kein Detail-View
 }

@@ -939,8 +939,9 @@ function showDetail(id, pushHistory = true) {
   // GPS-Beweisführungsnotiz (RES-HYPO 4e) — nur bei vorhandenen Hypothesen
   if (typeof _gpsNoteHtml === 'function') html += _gpsNoteHtml(id);
 
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailPerson').innerHTML = html;
   _injectJumpBar();
+  _activateDetailContainer('detailPerson', id);
   showView('v-detail');
   if (typeof _renderTasksSectionAsync === 'function') _renderTasksSectionAsync(id);
 
@@ -1044,7 +1045,7 @@ function _injectJumpBar() {
   bar.innerHTML = present.map(s =>
     `<button class="jump-chip" data-action="jumpToSection" data-jump="${s.id}">${s.lbl}</button>`
   ).join('');
-  document.getElementById('detailContent').prepend(bar);
+  document.getElementById('detailPerson').prepend(bar);
 }
 
 // ── Familien-Reihenfolge ändern ──

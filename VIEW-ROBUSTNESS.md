@@ -1,6 +1,6 @@
 # View-Robustheit — Technisches Detail-Design & Roadmap
 
-> Status: **P0 ✅ · P1 ✅ · P2 ✅ · P3 ✅ · P4 ✅ · P5 offen** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v868
+> Status: **P0 ✅ · P1 ✅ · P2 ✅ · P3 ✅ · P4 ✅ · P5 ✅** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v869
 > Ergebnis eines gesamthaften Reviews der View-Switching-Architektur. Behebt 4 vom Nutzer reproduzierbare Bugs und schließt strukturelle Lücken in State-Modell und Lifecycle.
 > Kern-Architektur-Entscheidungen werden nach Abschluss in `ARCHITECTURE.md` (ADR-025 vorgesehen) überführt; dieses File dokumentiert Befunde, Maßnahmen und Reihenfolge bis dahin.
 
@@ -156,12 +156,14 @@ async function showStartView() {
 | **R7** | `setTimeout`-Magic durchgängig auf `_afterLayout` umstellen | ui-views.js:62, :236, :373 | S |
 | **SW** | `ui-book.js`/`ui-print.js`/`ui-dedup.js` aus `PRECACHE_CRITICAL` raus, in `PRECACHE_OPTIONAL`. Falsche Klassifizierung — sie sind lazy-Load (ui-event-delegation.js:310-344); Fehlen einer Datei darf nicht den ganzen `addAll` killen. | sw.js:33 | XS |
 
-### P5 — Mittelfristige Struktur *(~5 h, größerer Refactor)*
+### P5 — Mittelfristige Struktur ✅ *(sw v869)*
 
-| ID | Aufgabe | Detail | Aufwand |
+| ID | Aufgabe | Detail | Status |
 |---|---|---|---|
-| **A4** | Detail-View als 4 separate Container statt Single `#detailContent` (Person/Familie/Ort/Quelle/Hof) | Vorteile: per-Entität-Scroll-State, schnellerer Switch-Back, nativer Browser-Scroll-Restore. Nachteil: mehr DOM. | L |
-| **A5** | `data-view-init` pro View — Unterscheidung „echt leer" vs. „noch nicht initialisiert" | Beseitigt Bug-4-Klasse strukturell. | S (im Zuge von A4) |
+| **A4** | 5 separate Detail-Container statt Single `#detailContent` | `detailPerson/Family/Place/Source/Media`; `.detail-container`/`.dc-active`-CSS; `_activateDetailContainer(cid, entityId)` mit Scroll-Save/Restore (`data-saved-scroll`). Hof+Ort teilen `detailPlace`, Repo+Quelle `detailSource`. | ✅ |
+| **A5** | `data-view-init` pro Container + Skip-Re-Render | `_dcAlreadyShows(tab, entityId)` in `_desktopAutoSelect`: Container bereits aktuell + Tab nicht dirty → `_activateDetailContainer` ohne innerHTML-Reset. | ✅ |
+
+**Implementierung:** `index.html` (5 Container), `styles.css` (`.detail-container`), `ui-views.js` (`_DC_IDS`, `_activateDetailContainer`, `_DC_TAB_MAP`, `_dcAlreadyShows`, `_desktopAutoSelect`), alle 7 `show*Detail`-Funktionen umgestellt (`showDetail`, `showFamilyDetail`, `showPlaceDetail`, `showHofDetail`, `showSourceDetail`, `showRepoDetail`, `showMediaDetail`). `showView` entfernt `scrollTop = 0` (übernommen von `_activateDetailContainer`).
 
 ---
 

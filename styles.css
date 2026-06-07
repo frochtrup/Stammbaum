@@ -230,8 +230,9 @@ body.tree-active #treeGenOverlay { display: flex; }
 #v-detail #probandBtn:not([hidden])    { display: inline-flex; }
 #v-detail #probandSetBtn:not([hidden]) { display: inline-flex; }
 /* Bottom-Nav Clearance für Detail-Content */
-#detailContent { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
-body.desktop-mode #detailContent { padding-bottom: 0; }
+.detail-container { display: none; padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+.detail-container.dc-active { display: block; }
+body.desktop-mode .detail-container { padding-bottom: 0; }
 
 /* Topbar: Proband-Button + Trennlinie vor Darstellungsarten */
 #treeProbandBtn              { display: none; }

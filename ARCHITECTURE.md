@@ -510,7 +510,7 @@ Reist mit der Datei (gehört zur Person) → `_`-Tag mit Writer-Support (Faustre
 
 **Status:** 🟢 P0a–P5 abgeschlossen, fortlaufende Robustheits-Fixes. **P0a-1 ✅ (sw v796):** Zeitachse Parser/Writer implementiert — datierte `<pname>`/`<placeref>` → `pnames[].{dateFrom,dateTo,dateType,_dateRaw}` + `enclosedBy[]`; HYBRID (strukturiert + `_dateRaw` verbatim) erhält Zusatz-Attribute wie `type="from"`. Verifiziert auf realer `Unsere Familie.gramps`: 29/29 Orts-Datumselemente + 8/8 verbatim-Attrs erhalten, counts=ok/stable; GEDCOM net_delta=0; +6 Unit-Tests (167). **P0a-2 ✅ (sw v797):** `getPlaceRegistry()` (`byId`/`byNorm`/`findByName`/`resolveAsOf`/`enclosureChainAsOf`, `_normPlaceName` nur fürs Matching) + `_migratePlaceObjects` (`parentId→enclosedBy`, in `setDb`), +13 Unit-Tests (180). **P0b-1 ✅ (sw v798):** `collectPlaces()` verknüpft jeden String-Ort additiv mit seiner Entität (`placeId`+`type`+Koordinaten, String-Key unverändert → kein Consumer-Ripple); Ort-Detail zeigt Typ/Zugehörigkeitskette/frühere Namen. +5 Unit-Tests (185). **P0b-2a ✅ (sw v799):** `findPlaceDuplicates()` (Fold-Key `_placeFold` + Koordinaten-Nähe Haversine, union-find) + `mergePlaceObjects()` (verlustfrei: Schreibweisen→`pnames[]`, `ev.placeId`/parent/enclosedBy umgehängt, Verlierer gelöscht); +13 Unit-Tests (198). **P0b-2b ✅ (sw v801):** Merge-Dialog im Orte-Tab (⇉-Button → `modalPlaceMerge`, Radio-Gewinnerwahl mit Vorschlag nach Event-Verwendung, `_CLICK_MAP`-Dispatch CSP-safe); browser-verifiziert (Render + Merge + Repointing + keine Console-Errors). **P0b-3 ✅:** `_migrateExtraPlacesToPlaceObjects` (gedcom.js) — extraPlaces mit Koords/trans → placeObjects, idempotent via stabilem `_epId(name)` djb2-Hash, Suffix-Fallback `_ep_<hash>_2` bei Hash-Kollision (sw v851). **P2 ✅:** pnames/enclosedBy Inline-Editor im Orts-Modal (`_renderPlaceNamesList`, `_renderEnclosedByList`, `addPlaceName`/`addEnclosedBy`). **P3 ✅ (sw v818):** Typ-Filter dynamisch, Ort-Suchpicker `modalPlacePicker` (Suche inkl. pnames-Sprachvarianten), Kirche↔Kirchenbuch-Sektion (Repository-Match). **P4 ✅ (sw v819):** `geocoding.js` Nominatim (Koordinaten+Typ, keine enclosedBy via Nominatim), Batch-Modal mit Fortschritt, GOV-Text-Parser (Browser `applyGovText()` + `gov-enrich.py --gov-text`) für historische `enclosedBy[]`. **P5a ✅ (sw v820):** Ort-Steckbrief — Ereignisse nach Typ, Quellen-Sektion, SVG-Namens-Timeline, Mini-Leaflet-Karte. **P5d ✅ (sw v821):** Geo-Plausibilitäts-Validator (BBox/Datumsfeld/Überlappung/enclosedBy-Zirkel). **P5e ✅ (sw v822):** `buildPlaceContextSentence` für Story/Buch. **String→PlaceObject Link (sw v829–v833):** `_buildFormString` + `applyStringPlaceLink` + Reimport-Erkennung. **Robustheit-Block (sw v851):** Identity-Matching auf `_normPlaceName` zentralisiert (geocoding, `_propagateCoordsToEvents`, `deleteExtraPlace`); `_placeUsageCounts` zählt jetzt auch `f.events[]`; `mergeStringPlaces` hängt `ev.placeId` der Verlierer auf Winner-PO um statt Leiche; `_epId`-Hash-Kollision → Suffix-Fallback statt stillem `continue`; +5 Unit-Tests (203 grün). Detail: `PLACE-REDESIGN.md` / `ROADMAP.md`.
 
-### ADR-025: Zentraler ViewState-Helper + PWA-Lifecycle-Kontrakt (View-Robustheit, sw v865–v868)
+### ADR-025: Zentraler ViewState-Helper + PWA-Lifecycle-Kontrakt (View-Robustheit, sw v865–v869)
 
 **Kontext:** Die View-Selektion wurde an drei Orten parallel geführt: `AppState.currentX`-IDs (exklusiv, eine je gesetzt), `UIState._lastTabSel` (per Tab, nicht validiert, nicht IDB-persistent), `UIState._navHistory` (orthogonal). Dazu: 0 PWA-Lifecycle-Handler, kein Dirty-Tracking, kein definiertes Resume-Verhalten.
 
@@ -531,15 +531,20 @@ Reist mit der Datei (gehört zur Person) → `_`-Tag mit Writer-Support (Faustre
 
 **P4 — Hygiene:** `showView` direkter View-Swap (2 DOM-Ops statt N); `switchTab` teardown inaktiver VS-Listen; `_navHistory` cap 50; alle `setTimeout`-Magic → `_afterLayout`.
 
+**P5 — Separate Detail-Container (sw v869):**
+- A4: `#detailContent` (ein globaler Container) → 5 separate `div.detail-container` (`detailPerson/Family/Place/Source/Media`). `.dc-active`-CSS schaltet sichtbaren Container um. `_activateDetailContainer(cid, entityId)` sichert Scroll-Position des scheidenden Containers in `data-saved-scroll` und stellt sie beim Zurückwechseln wieder her (Desktop).
+- A5: `data-view-init`-Flag + `_dcAlreadyShows(tab, entityId)`: `_desktopAutoSelect` überprüft vor dem Aufruf von `show*Detail`, ob der Container bereits die richtige Entität anzeigt und der Tab nicht dirty ist — überspringt dann den Re-Render (nur `_activateDetailContainer` + `return`).
+- Hof-Detail teilt `detailPlace`; Repo-Detail teilt `detailSource`.
+
 **Konsequenzen:**
 - `viewstate-change` CustomEvent ist Erweiterungspunkt für künftige Listener (URL-Hash-Sync, Analytics, Deep-Link-Restore).
 - `UIState._dirty` ermöglicht künftig präziseres Dirty-Tracking per Edit-Typ (statt globaler Invalidierung).
 - `ui-lifecycle.js` ist der einzige Ort für PWA-Resume-Logik — keine Listener mehr in View-Modulen.
-- P5 (separate Detail-Container per Entität) kann auf diesem Fundament aufbauen.
+- Per-Entität-Scroll-State auf Desktop: Tab-Wechsel Person→Familie→Person stellt Scroll-Position wieder her.
 
 **Alternativen erwogen:** (a) Vollständiger `AppState.currentX`-Getter-Shim via `Object.defineProperty` — zu invasiv, alle 50+ Lesestellen unveränderter Code; (b) URL-Hash als primäre Persistenz — bricht iOS-PWA-Standalone-Modus; (c) SessionStorage statt IDB — würde Process-Kill-Szenario nicht überleben.
 
-**Status:** ✅ P0–P4 abgeschlossen (sw v861–v868). P5 (A4/A5, separate Detail-Container) angedacht.
+**Status:** ✅ P0–P5 abgeschlossen (sw v861–v869).
 
 ---
 

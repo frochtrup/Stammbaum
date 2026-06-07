@@ -9,6 +9,20 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — View-Robustheit P5: Separate Detail-Container (sw v869)
+
+Abschluss der View-Robustheit P0–P5. ADR-025 und VIEW-ROBUSTNESS.md vollständig abgeschlossen.
+
+#### P5 — 5 separate Detail-Container + Skip-Re-Render (sw v869)
+
+- **A4** `_activateDetailContainer(cid, entityId)`: globaler `#detailContent` aufgelöst → 5 separate `div.detail-container` (`detailPerson`, `detailFamily`, `detailPlace`, `detailSource`, `detailMedia`). CSS: `.detail-container { display:none }` / `.dc-active { display:block }`. Scroll-Save/Restore via `data-saved-scroll` pro Container (Desktop).
+- **A5** `_dcAlreadyShows(tab, entityId)` + `_DC_TAB_MAP`: `_desktopAutoSelect` übersprigt Re-Render wenn Container bereits aktuell ist und Tab nicht dirty.
+- **Umgestellt:** alle 7 `show*Detail`-Funktionen (`showDetail`, `showFamilyDetail`, `showPlaceDetail`, `showHofDetail`, `showSourceDetail`, `showRepoDetail`, `showMediaDetail`) + `_injectJumpBar` + `switchPlacesSubTab`.
+- **`showView`:** `v-detail.scrollTop = 0` entfernt (übernommen von `_activateDetailContainer`).
+- **Browser-verifiziert:** 5 Container korrekt im DOM, `detailPerson` → `dc-active` + `viewInit=true` nach `showDetail`, Person-HTML bleibt beim Familien-Wechsel erhalten, A5-Skip greift korrekt. 0 Console-Errors.
+
+---
+
 ### Session 2026-06-07 — View-Robustheit P1–P4: Selektions-Persistenz, ViewState, dirty-bit, Lifecycle (sw v865–v868)
 
 Vollständiger Abschluss der View-Robustheit P0–P4 (Details: `VIEW-ROBUSTNESS.md`). Behebt vier strukturelle Bugs (Void-Artefakte, stale Listen, fehlende IDB-Persistenz, leere Startansicht). Neue Architektur: `ViewState`-Helper + `ui-lifecycle.js`. ADR-025 in `ARCHITECTURE.md` ergänzt.

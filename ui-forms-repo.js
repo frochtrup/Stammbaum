@@ -134,7 +134,8 @@ function showRepoDetail(id, pushHistory = true) {
   } else {
     html += `<div class="section fade-up"><div class="empty empty-compact">Keine verknüpften Quellen</div></div>`;
   }
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailSource').innerHTML = html;
+  _activateDetailContainer('detailSource', id);
   showView('v-detail');
 }
 

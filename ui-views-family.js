@@ -579,7 +579,8 @@ function showFamilyDetail(id, pushHistory = true) {
   if (typeof _famRlogSectionHtml === 'function') html += _famRlogSectionHtml(id);
   if (typeof _famHypoSectionHtml === 'function') html += _famHypoSectionHtml(id);
 
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailFamily').innerHTML = html;
+  _activateDetailContainer('detailFamily', id);
   showView('v-detail');
 
   // Foto async — Pfad (m.file) direkt; IDB path-basiert als Offline-Fallback

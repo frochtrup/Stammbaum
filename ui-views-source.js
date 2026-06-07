@@ -178,7 +178,8 @@ function showSourceDetail(id, pushHistory = true) {
     html += `<div class="section fade-up"><div class="empty no-ref-pad">Keine Referenzen gefunden</div></div>`;
   }
 
-  document.getElementById('detailContent').innerHTML = html;
+  document.getElementById('detailSource').innerHTML = html;
+  _activateDetailContainer('detailSource', id);
   showView('v-detail');
 
   // Quellenmedien async laden — IDB zuerst (Kamera-Aufnahmen), dann OneDrive

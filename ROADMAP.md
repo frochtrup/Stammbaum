@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v868 · Cache: `stammbaum-v868` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v869 · Cache: `stammbaum-v869` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v868) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v869) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v869 | **View-Robustheit P5** — A4: 5 separate Detail-Container (`detailPerson/Family/Place/Source/Media`) statt einem `#detailContent`; `_activateDetailContainer(cid, entityId)` mit Scroll-Save/Restore (per-Entität-Scroll-State auf Desktop). A5: `data-view-init`-Flag — `_desktopAutoSelect` überspringt Re-Render wenn Container bereits die richtige Entität zeigt und Tab nicht dirty. | Tab-Wechsel (Person→Familie→zurück) ohne innerHTML-Reset; Scroll-Position pro Entität erhalten; Bug-4-Klasse strukturell beseitigt. |
 | v868 | **View-Robustheit P4** — R1: `showView` direkter View-Swap (1–2 DOM-Ops statt N, weniger Layout-Flash iOS); R2: `switchTab` ruft `_vsTeardown` für inaktive VS-Listen (_vsP/_vsF); R3: `_navHistoryCap()` — `_navHistory` auf 50 Einträge begrenzt; R4: `_initDetailSwipe` bereits idempotent; R7: alle `setTimeout`-Magic-Delays → `_afterLayout` (2× rAF). SW: `ui-book/print/dedup.js` bereits in PRECACHE_OPTIONAL. | Scroll-Listener-Leak bei Tab-Wechsel behoben; unbegrenztes navHistory-Wachstum gestoppt; Layout-Konsistenz verbessert. |
 | v867 | **View-Robustheit P3** — A2: `markChanged()` setzt `UIState._dirty` für alle Daten-Tabs; `switchTab()` rendert nur wenn `_dirty[tab] !== false` (dirty oder nie besucht). A3: neues `ui-lifecycle.js` — `visibilitychange` mit >60-s-Heuristik (alle Tabs dirty), `pageshow` mit BFCache-Reload-Guard, `pagehide` mit `_persistLastTabSel`-Flush. | Unnötige Re-Renders bei Tab-Wechsel ohne Edit eliminiert; BFCache-Inkonsistenz verhindert; saubere Trennung Lifecycle vs. View-Routing. |
 | v866 | **View-Robustheit P2** — `ViewState` IIFE (A1, ADR-025): `setCurrent(tab,id)` (IDB-persistent, exklusiver Fokus, `viewstate-change`-Event) + `getCurrent(tab)` (Existenz-Validierung). Alle 4 `show*Detail`-Funktionen: 5-Zeiler (AppState.currentX + _lastTabSel + persist) → `ViewState.setCurrent`. `_desktopAutoSelect` + `_mobileSelectionRestore` → `ViewState.getCurrent`. | Parallele Buchführung `AppState.currentX` + `UIState._lastTabSel` konsolidiert. Basis für ADR-025 + P3. |
@@ -60,7 +61,7 @@ Fünf Dimensionen leiten die Priorisierung:
 
 ### Gesamtbewertung — zuletzt überarbeitet 2026-06-06
 
-> **Methodik:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung und Browser-Verifikation. **Baseline 2026-05-31:** 161 Unit-Tests + GEDCOM-Roundtrip + CSP/OAuth live getestet. **Fortschritt bis 2026-06-07:** PLACE-HIST vollständig (ADR-024 🟢), View-Robustheit P0–P4 ✅ (ADR-025 🟢), 296 Unit-Tests, CSP lückenlos.
+> **Methodik:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung und Browser-Verifikation. **Baseline 2026-05-31:** 161 Unit-Tests + GEDCOM-Roundtrip + CSP/OAuth live getestet. **Fortschritt bis 2026-06-07:** PLACE-HIST vollständig (ADR-024 🟢), View-Robustheit P0–P5 ✅ (ADR-025 🟢), 296 Unit-Tests, CSP lückenlos.
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
@@ -69,14 +70,14 @@ Fünf Dimensionen leiten die Priorisierung:
 | Sicherheit | 8.5/10 | CSP ohne `unsafe-inline/eval` + `test-csp.js` ✅; OAuth PKCE S256 + CSRF-`state`; kein `eval`; `esc()` pervasiv. **Abzug:** Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos). |
 | Design / UX | 8.5/10 | Hochwertige Ästhetik (Playfair/Source Serif, Dark/Light-Parität), Mobile-First, Onboarding, Skip-Link/ARIA/`prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" ohne axe-Audit; Handbuch noch mit Mockups. |
 | Funktionsstand | 9.0/10 | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · Verwandtschaftsrechner · Nominatim-Geocoding · GOV-Import (historisch datiert) · Ort-Steckbrief + Validator · Multi-Device-Konflikterkennung. **Abzug:** Ausgabe-Reichtum < MFT; DNA/Online-Matching bewusst out-of-scope. |
-| Funktions-Qualität | 8.2/10 | GEDCOM/GRAMPS-Treue exzellent; UI-Flows Browser-verifiziert. View-Robustheit P0–P4 behebt iOS-PWA-Bugs (Void-Artefakte, stale Listen, leere Starts). **Abzug:** Skalierung >10k Personen ungetestet. |
+| Funktions-Qualität | 8.2/10 | GEDCOM/GRAMPS-Treue exzellent; UI-Flows Browser-verifiziert. View-Robustheit P0–P5 behebt iOS-PWA-Bugs (Void-Artefakte, stale Listen, leere Starts) + per-Entität-Scroll-State. **Abzug:** Skalierung >10k Personen ungetestet. |
 | Performance | 8.0/10 | Web Worker + virtuelles Scrollen O(log n) + LAZY-LOAD (−119 KB) + SW-Cache. dirty-bit verhindert unnötige Re-Renders. ~45 Cold-Start-Requests (HTTP/2 + SW gemildert). |
 | GEDCOM-Konformität | 9.3/10 | `net_delta=0` + `out1===out2` auf 83k-Zeilen-Produktionsdatei, Strict-5.5.1 sauber. GED7-opt-in + GRAMPS-Roundtrip automatisiert. |
 | **Tests** | **8.0/10** | GEDCOM + GRAMPS-Roundtrip headless automatisiert. **296 dep-freie Unit-Tests** (Validator, Parser, BFS-Anonymisierung, Evidenz/Hypothesen, Datums-Helfer, PlaceRegistry, Geocoding, Merge, Migration). **Verbleibend:** keine UI-Logik-Tests; eigenes Harness statt Framework. |
-| Dokumentation | 9.0/10 | **25 ADRs** + Datamodel + ~2.2k-Z.-Changelog + Handbuch (sw v858, veraltet). **Abzug:** Screenshots noch Mockups; Handbuch v859–v868 ausstehend. |
+| Dokumentation | 9.0/10 | **25 ADRs** + Datamodel + ~2.2k-Z.-Changelog + Handbuch (sw v858, veraltet). **Abzug:** Screenshots noch Mockups; Handbuch v859–v869 ausstehend. |
 | PWA / Offline | 9.2/10 | PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout; `ui-lifecycle.js` mit BFCache-Guard + >60-s-Resume-Heuristik. |
 | Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.4/10** | *Solide, funktionsreich; GEDCOM/GRAMPS-Treue, Sicherheit, Testabsicherung und Orts-Handling auf gutem Niveau. View-Robustheit P0–P4 schließt iOS-PWA-Lifecycle-Lücken. Größte verbleibende Hebel: (1) Monsterfunktionen zerlegen, (2) ggü. MacFamilyTree: Ausgabe-Reichtum + Skalierung >10k.* |
+| **∅ Gesamt** | **≈ 8.4/10** | *Solide, funktionsreich; GEDCOM/GRAMPS-Treue, Sicherheit, Testabsicherung und Orts-Handling auf gutem Niveau. View-Robustheit P0–P5 schließt iOS-PWA-Lifecycle-Lücken + per-Entität-Scroll-State. Größte verbleibende Hebel: (1) Monsterfunktionen zerlegen, (2) ggü. MacFamilyTree: Ausgabe-Reichtum + Skalierung >10k.* |
 
 ---
 
@@ -278,7 +279,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | **P2** | A1 zentraler `ViewState.setCurrent/getCurrent` mit IDB-Persistenz + ID-Validierung + `viewstate-change`-Event. Ersetzt parallele Buchführung. | ~3 h | ✅ *(sw v866)* |
 | **P3** | A2 `data-dirty`-Bit pro Tab + A3 `ui-lifecycle.js` (visibilitychange/pageshow/pagehide). | ~2 h | ✅ *(sw v867)* |
 | **P4** | Hygiene: R1 (Layout-Flash) + R2 (`_vsP`-Teardown) + R3 (`_navHistory`-Cap) + R4 (`_initDetailSwipe` idempotent) + R7 (`setTimeout` → `_afterLayout`) + SW (lazy-Module aus `PRECACHE_CRITICAL` raus). | ~1 h | ✅ *(sw v868)* |
-| **P5** | A4 Detail-View als 4 separate Container (per-Entität-Scroll-State) + A5 `data-view-init`-Flag. | ~5 h | angedacht |
+| **P5** | A4: 5 separate Container (`detailPerson/Family/Place/Source/Media`) + `_activateDetailContainer` mit Scroll-Save/Restore. A5: `data-view-init`-Flag + Skip-Re-Render in `_desktopAutoSelect`. | ~5 h | ✅ *(sw v869)* |
 
 **Reihenfolge:** P0 → P1 → (P2 ∥ P3 ∥ P4) → P5. P2 ist Voraussetzung für P5; P4 jederzeit.
 
@@ -370,7 +371,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v868 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P4 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v869 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P5 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
