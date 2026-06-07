@@ -9,6 +9,54 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — UI-Logik-Tests T0-UI (sw v891)
+
+Strukturelle Bug-Klassen aus den P0–P6-View-Robustheits-Sprints (v861–v890) wurden bisher nur manuell im Preview oder gar nicht abgesichert — kein Unit-Test erfasste UI-Logik. Diese Session schließt die Lücke mit **9 neuen Test-Blöcken (t)–(ab), +124 Tests, 296→420 total**.
+
+#### Harness-Erweiterung
+
+- **`_makeMiniDOM()`** (~250 LOC) in `test-unit.js`: schlankes DOM-Subset, das die UI-Module ohne Browser ausführbar macht. Element-Mock mit `classList` (add/remove/toggle/contains), `dataset` (direkte Property), `addEventListener`/`dispatchEvent` mit Listener-Bag, `closest`/`querySelector`/`querySelectorAll` mit eigenem Selektor-Matcher (`[attr=val]`, `tag[attr=val]`, `.class`, `#id`, `tag.class`). `document.getElementById` mit Tripel-Fallback: `_idMap` → `_fields` (Date-Tests) → Tree-Walk (dynamische createElement+appendChild-Elemente). `_dom.ensureId(id, tag)`, `_dom.fireDoc/fireWin`, `_dom.reset`.
+- **`_loadUI()`** lädt `ui-views-person.js`/`ui-views.js`/`ui-event-delegation.js`/`ui-lifecycle.js` + extrahierten Slice von `savePlaceObjects` aus `ui-forms.js` in einem zweiten Eval-Pass mit `_UI_STUBS` + `_UI_SUFFIX`. Brücken: `const AppState`/`UIState` aus erstem Eval auf `window.X` kopiert, im UI-Eval als `var X = window.X` wieder eingehängt. Funktions-Decls in `ui-views-person.js` (`showDetail`, `showFamilyDetail`, `_vsReattach`, `_vsTeardown`, `applyPersonFilter`, `renderTab`) werden nach Hoisting via `_UI_SUFFIX`-IIFE als Spy-Wrapper überschrieben (sonst gewinnt die letzte Decl gegen den Stub).
+- **`_uiReset()`** löscht IDs + body-children + viewstate-change-Listener, behält aber die UI-installierten click/change/input-Handler (sonst muss `_loadUI` pro Block neu laufen).
+- **Block (z) Toast-Once-Setup:** synchron-rejizierender Thenable (`_syncReject(err)`) ersetzt `Promise.reject().catch()`, da JXA keinen Event-Loop-Pulse hat → Microtask läuft nie ohne `await`. `ui._setIdbPut(fn)` reassigniert `idbPut` im Eval-Scope.
+
+#### Test-Blöcke
+
+| Block | Tests | Verriegelt |
+|---|---|---|
+| (t) ViewState | 17 | `setCurrent` exklusiver Fokus (alle anderen `currentX` → null), `viewstate-change`-Event mit `{tab,id}`-Detail, `_persistLastTabSel` schreibt nach IDB, `getCurrent` validiert gegen `AppState.db` (gelöschte IDs → null), places ungeprüft (Existenz erst in `collectPlaces`), Re-Set überschreibt. |
+| (u) `_activateDetailContainer` | 18 | 5 separate Detail-Container (dc-active exklusiv); Desktop Scroll-Save/Restore per-Entität via `dataset.savedScroll`; gleiche entityId → scrollTop=savedScroll; andere entityId → scrollTop=0; `dataset.viewInit='true'` + `dataset.currentId`; Mobile-Pfad (kein desktop-mode) ändert nichts am Scroll; entityId=undefined → früher Return nach Toggle. |
+| (v) ClickMap | 13 | `_CLICK_MAP[action]`-Dispatch, `dataset.pid \|\| dataset.id`-Fallback in showDetail, dataset.fid/sid/name, `data-action="stop"` → e.stopPropagation + return (kein Dispatch), unbekannte Action → kein Throw, `closest('[data-action]')` findet Action auch bei Klick auf inneres Span. |
+| (w) switchTab DirtyBit | 11 | `_dirty[tab]=true` → renderTab gerufen + dirty=false danach; `_dirty[tab]=false` + `vsP.top` truthy → `_vsReattach` (kein Re-Render); `_dirty[tab]=false` + kein vs.top → nichts; `_dirty[tab]=undefined` → renderTab; `AppState.currentTab` gesetzt. |
+| (x) Lifecycle | 10 | `visibilitychange` mit <60s-Pause → `_dirty` unverändert; mit >60s (Date.now-Monkeypatch) → alle 4 Tabs dirty; visible + `AppState._detailActive` → `v-detail.scrollTop=0` (Void-Artefakt-Fix); `pageshow {persisted:true}` → `location.reload()`; `pagehide` → `idbPut('last_tab_sel', _lastTabSel)`. |
+| (y) ListSync | 14 | `_updatePersonListCurrent` setzt `.current` auf neuem `[data-pid=X]`, entfernt von altem; null → alle entfernt; analog für Family/Place/Source; fehlende Liste → kein Throw. |
+| (z) Toast-Once | 8 | `savePlaceObjects` OK → kein Toast, IDB-Eintrag geschrieben; 1× IDB-Fehler → 1 Toast (Typ=error, enthält „IDB"); 3× Fehler → noch immer 1 Toast (`_savePoIDBErrored`-Once-Flag); nach `_resetToastFlags()` → erneut 1 Toast (Session-Reset-Simulation). |
+| (aa) PLAC-Mode | 11 | `initPlaceMode('birth')` → `_placeModes.birth='free'`, free sichtbar/parts versteckt/Toggle-Text; `togglePlaceMode` wechselt free↔parts; `getPlaceFromForm` in free → Input.value (getrimmt); in parts → `joinPlaceParts` ohne trailing leere Teile. |
+| (ab) FormSaveMerge | 14 | `_buildFormString(placeId, year)` periodengerecht (Sassenbergk 1700, Sassenberg 1900, atomar bei null); enclosure-Kette „Sassenberg, Fürstbistum Münster"; `applyStringPlaceLink` setzt `ev.placeId` + `ev.place` auf konfirmierten String; nicht-konfirmierter String → 0 Links; invalidiert `_placesCache` + `_placeRegistry`; null targetPlaceId → 0. |
+
+#### Stolperfallen + Lehren (durable)
+
+- **Function-Decl-Hoisting im Stub-Pattern:** `function showDetail(){stub}` in `_UI_STUBS` wird von `function showDetail(){real}` in `ui-views-person.js` durch Hoisting überschrieben (letzte Decl gewinnt). Lösung: Stub-Spy erst nach UI-Eval per Reassignment in `_UI_SUFFIX`-IIFE installieren — `var` und `function`-Bindings sind in sloppy-Mode neuzuweisbar.
+- **`const` aus erstem Eval leakt nicht in zweiten Eval:** `const AppState` ist block-scoped zum jeweiligen Eval. Lösung: am Ende des ersten Evals `window.AppState = AppState` schreiben, am Anfang des zweiten Evals `var AppState = window.AppState` lesen — beide Branches teilen sich denselben Object-Bezug.
+- **`CSS.escape`-Identity statt Real-Escape:** der reale `CSS.escape` würde non-ASCII (z.B. ü) backslash-escapen → der MiniDOM-Selektor-Match `dataset.name === val` würde gegen die nicht-escapeten Originale fehlschlagen. Im Test ist Identity korrekt; CSS-Parsing existiert dort gar nicht.
+- **JXA hat keinen Event-Loop-Pulse:** `Promise.reject().catch(fn)` queued `fn` als Microtask, der ohne `await` nie läuft. Im savePlaceObjects-Test sind synchron-rejizierende Thenables (`{then(_,fn){fn(err)}; catch(fn){fn(err)}}`) der saubere Workaround.
+- **`_uiReset` darf UI-installierte Listener nicht löschen:** click/change/input/DOMContentLoaded werden einmal beim UI-Load registriert; `_uiReset` zwischen Tests darf nur die test-spezifischen Listener (viewstate-change) leeren — sonst muss `_loadUI` pro Block neu laufen.
+- **`getElementById`-Tree-Walk-Fallback:** dynamisch via `document.createElement(input)` + `container.appendChild(input)` angelegte Elemente sind im DOM-Tree, aber nicht in `_idMap`. Ohne Tree-Walk-Fallback findet `getElementById` sie nicht (PLAC-Mode parts-Inputs).
+- **`renderTab` als Spy mit Original-Call, `applyPersonFilter` ohne:** Spy-Wrapper für renderTab ruft `_origRender()` — die echte renderTab läuft, ruft `applyPersonFilter()` (Spy, no-op). Bei `applyPersonFilter` rufen wir das Original **nicht**, da es `_applyPersonFilterDebounced` (nicht im Harness) braucht.
+
+#### Verifikation
+
+```
+$ osascript -l JavaScript test-unit.js
+Alle 420 Unit-Tests bestanden.
+$ osascript -l JavaScript test-csp.js
+OK: index.html frei von inline-on*= und inline-style=
+$ osascript -l JavaScript test-roundtrip.js MeineDaten_ancestris.ged
+✓ MeineDaten_ancestris.ged  net_delta=0  stable
+```
+
+---
+
 ### Session 2026-06-07 — View-Robustheit P6: B7 showStartView Render-Reihenfolge (sw v890)
 
 Nutzerbericht: „Beim Erstaufruf der Personenliste gibt es immer noch einen Glitch — springt zur Top-Liste, danach funktioniert es scheinbar."

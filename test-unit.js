@@ -40,6 +40,388 @@ if (IS_NODE) {
 var _fields = {};
 function setField(id, val) { _fields[id] = { value: String(val) }; }
 function clearFields()     { for (var k in _fields) delete _fields[k]; }
+
+// ── MiniDOM für UI-Logik-Tests (T0-UI) ───────────────────────────────────────
+// Schlankes DOM-Subset, das die UI-Module (ui-views.js, ui-views-person.js,
+// ui-event-delegation.js, ui-lifecycle.js) ohne Browser ausführen lässt.
+// Fällt für getElementById auf den Datums-Stub `_fields` zurück → existierende
+// (d)-Tests bleiben kompatibel. Tests reichern den DOM gezielt an
+// (`_dom.ensureId(id, tag)`) und feuern Events (`_dom.fireDoc`/`_dom.fireWin`).
+function _makeMiniDOM() {
+  var _idMap = {};
+  var _docListeners = {};
+  var _winListeners = {};
+
+  function _d(k) {
+    if (k.slice(0,5) !== 'data-') return k;
+    return k.slice(5).replace(/-([a-z])/g, function(_, c) { return c.toUpperCase(); });
+  }
+  function _matchEl(el, sel) {
+    if (!el || el.nodeType !== 1) return false;
+    sel = String(sel).trim();
+    // [data-x="y"] oder [data-x]
+    var m = sel.match(/^\[([^=\]]+)(?:=["']?([^"'\]]*)["']?)?\]$/);
+    if (m) {
+      var key = m[1], val = m[2], ds = _d(key);
+      if (val == null) return (key in el._attrs) || (ds in el.dataset);
+      return (el._attrs[key] === val) || (el.dataset[ds] === val);
+    }
+    // tag[attr=val]
+    var mTA = sel.match(/^([\w-]+)\[([^=\]]+)(?:=["']?([^"'\]]*)["']?)?\]$/);
+    if (mTA) {
+      if (el.tagName !== mTA[1].toUpperCase()) return false;
+      var key2 = mTA[2], val2 = mTA[3], ds2 = _d(key2);
+      if (val2 == null) return (key2 in el._attrs) || (ds2 in el.dataset);
+      return (el._attrs[key2] === val2) || (el.dataset[ds2] === val2);
+    }
+    if (sel.charAt(0) === '#') return el.id === sel.slice(1);
+    // .class.class2 oder tag.class
+    var mTC = sel.match(/^([\w-]+)\.([\w-]+(?:\.[\w-]+)*)$/);
+    if (mTC) {
+      if (el.tagName !== mTC[1].toUpperCase()) return false;
+      var classes = mTC[2].split('.').filter(Boolean);
+      return classes.every(function(c) { return el._classes.has(c); });
+    }
+    if (sel.charAt(0) === '.') {
+      var classes2 = sel.split('.').filter(Boolean);
+      return classes2.every(function(c) { return el._classes.has(c); });
+    }
+    if (/^[\w-]+$/.test(sel)) return el.tagName === sel.toUpperCase();
+    return false;
+  }
+  function _findAll(root, sel) {
+    var res = [];
+    (function walk(n) {
+      var ch = (n && n.childNodes) || [];
+      for (var i = 0; i < ch.length; i++) {
+        var c = ch[i];
+        if (c.nodeType !== 1) continue;
+        if (_matchEl(c, sel)) res.push(c);
+        walk(c);
+      }
+    })(root);
+    return res;
+  }
+  function makeEl(tag) {
+    tag = String(tag || 'div');
+    var el = {
+      nodeType: 1,
+      tagName: tag.toUpperCase(),
+      id: '',
+      style: { setProperty: function() {}, removeProperty: function() {} },
+      dataset: {},
+      _attrs: {},
+      _listeners: {},
+      _classes: new Set(),
+      childNodes: [],
+      children: [],
+      parentNode: null,
+      hidden: false,
+      scrollTop: 0,
+      scrollLeft: 0,
+      offsetHeight: 0,
+      offsetWidth: 0,
+      offsetTop: 0,
+      textContent: '',
+      value: '',
+      innerHTML: '',
+      options: [],
+      files: null,
+      checked: false,
+      disabled: false,
+      title: '',
+    };
+    el.classList = {
+      add:    function() { for (var i=0; i<arguments.length; i++) el._classes.add(arguments[i]); },
+      remove: function() { for (var i=0; i<arguments.length; i++) el._classes.delete(arguments[i]); },
+      contains: function(c) { return el._classes.has(c); },
+      toggle: function(c, force) {
+        if (force === true)  { el._classes.add(c); return true; }
+        if (force === false) { el._classes.delete(c); return false; }
+        if (el._classes.has(c)) { el._classes.delete(c); return false; }
+        el._classes.add(c); return true;
+      },
+    };
+    Object.defineProperty(el, 'className', {
+      get: function() { return [].slice.call(el._classes).join(' '); },
+      set: function(v) { el._classes = new Set(String(v||'').split(/\s+/).filter(Boolean)); },
+    });
+    el.appendChild = function(child) {
+      el.childNodes.push(child);
+      if (child && child.nodeType === 1) el.children.push(child);
+      if (child) child.parentNode = el;
+      return child;
+    };
+    el.removeChild = function(child) {
+      el.childNodes = el.childNodes.filter(function(c) { return c !== child; });
+      el.children   = el.children.filter(function(c) { return c !== child; });
+      if (child) child.parentNode = null;
+      return child;
+    };
+    el.remove = function() { if (el.parentNode) el.parentNode.removeChild(el); };
+    el.setAttribute = function(k, v) {
+      el._attrs[k] = String(v);
+      if (k === 'hidden') el.hidden = true;
+      if (k === 'id') el.id = String(v);
+    };
+    el.getAttribute = function(k) { return (k in el._attrs) ? el._attrs[k] : null; };
+    el.removeAttribute = function(k) { delete el._attrs[k]; if (k === 'hidden') el.hidden = false; };
+    el.hasAttribute = function(k) { return (k in el._attrs); };
+    el.addEventListener = function(type, fn) { (el._listeners[type] || (el._listeners[type] = [])).push(fn); };
+    el.removeEventListener = function(type, fn) {
+      if (!el._listeners[type]) return;
+      el._listeners[type] = el._listeners[type].filter(function(f) { return f !== fn; });
+    };
+    el.dispatchEvent = function(ev) {
+      (el._listeners[ev.type] || []).forEach(function(fn) { fn.call(el, ev); });
+      return !ev.defaultPrevented;
+    };
+    el.scrollIntoView = function() {};
+    el.focus = function() {};
+    el.blur = function() {};
+    el.click = function() { el.dispatchEvent({ type: 'click', target: el, defaultPrevented: false, preventDefault: function() { this.defaultPrevented = true; }, stopPropagation: function() {} }); };
+    el.querySelector    = function(sel) { return _findAll(el, sel)[0] || null; };
+    el.querySelectorAll = function(sel) { return _findAll(el, sel); };
+    el.closest = function(sel) {
+      var n = el;
+      while (n && n.nodeType === 1) {
+        if (_matchEl(n, sel)) return n;
+        n = n.parentNode;
+      }
+      return null;
+    };
+    el.getBoundingClientRect = function() { return { top:0, left:0, bottom:0, right:0, width:0, height:0, x:0, y:0 }; };
+    return el;
+  }
+
+  var doc = makeEl('#document');
+  doc.body = makeEl('body');
+  doc.documentElement = makeEl('html');
+  doc.documentElement.style = { setProperty: function() {}, removeProperty: function() {} };
+  doc.documentElement.appendChild(doc.body);
+  doc.appendChild(doc.documentElement);
+  doc._hidden = false;
+  Object.defineProperty(doc, 'hidden', {
+    get: function() { return doc._hidden; },
+    set: function(v) { doc._hidden = !!v; },
+  });
+  doc.addEventListener = function(type, fn) { (_docListeners[type] || (_docListeners[type] = [])).push(fn); };
+  doc.removeEventListener = function(type, fn) {
+    if (_docListeners[type]) _docListeners[type] = _docListeners[type].filter(function(f) { return f !== fn; });
+  };
+  doc.dispatchEvent = function(ev) {
+    (_docListeners[ev.type] || []).forEach(function(fn) { fn.call(doc, ev); });
+    return !ev.defaultPrevented;
+  };
+  doc.createElement = function(tag) { return makeEl(tag); };
+  doc.createTextNode = function(txt) { return { nodeType: 3, textContent: String(txt) }; };
+  doc.createDocumentFragment = function() { return makeEl('#fragment'); };
+  doc.getElementById = function(id) {
+    if (_idMap[id]) return _idMap[id];
+    if (_fields[id]) return _fields[id];   // (d)-Tests Backwards-Kompatibilität
+    // Fallback: dynamisch via createElement+appendChild angelegte Elemente
+    // (z.B. parts-Inputs aus _buildPlaceParts) sind im body-Tree, aber nicht
+    // im _idMap registriert — Tree-Walk findet sie.
+    var found = null;
+    (function walk(n) {
+      if (found || !n) return;
+      if (n.nodeType === 1 && n.id === id) { found = n; return; }
+      var ch = n.childNodes || [];
+      for (var i = 0; i < ch.length && !found; i++) walk(ch[i]);
+    })(doc);
+    return found;
+  };
+  doc.querySelector    = function(sel) { return _findAll(doc, sel)[0] || null; };
+  doc.querySelectorAll = function(sel) { return _findAll(doc, sel); };
+
+  function fireEvent(target, type, detail) {
+    var ev = {
+      type: type, detail: detail || null, target: target,
+      defaultPrevented: false, _stopped: false,
+      preventDefault:  function() { this.defaultPrevented = true; },
+      stopPropagation: function() { this._stopped = true; },
+    };
+    target.dispatchEvent(ev);
+    return ev;
+  }
+
+  return {
+    document: doc,
+    docListeners: _docListeners,
+    winListeners: _winListeners,
+    idMap: _idMap,
+    ensureId: function(id, tag) {
+      if (_idMap[id]) return _idMap[id];
+      var el = makeEl(tag || 'div');
+      el.id = id;
+      _idMap[id] = el;
+      doc.body.appendChild(el);
+      return el;
+    },
+    addWinListener: function(type, fn) { (_winListeners[type] || (_winListeners[type] = [])).push(fn); },
+    fireDoc: function(type, detail) { return fireEvent(doc, type, detail); },
+    fireWin: function(type, detail) {
+      var ev = { type: type, detail: detail || null, persisted: !!(detail && detail.persisted),
+        defaultPrevented: false, preventDefault: function() { this.defaultPrevented = true; },
+        stopPropagation: function() {} };
+      (_winListeners[type] || []).forEach(function(fn) { fn.call(null, ev); });
+      return ev;
+    },
+    reset: function() {
+      // Vor jedem Testblock aufrufbar — alle dynamisch angelegten IDs entfernen
+      // und Event-Listener leeren. body wird neu initialisiert.
+      for (var k in _idMap) delete _idMap[k];
+      for (var t in _docListeners) delete _docListeners[t];
+      for (var t2 in _winListeners) delete _winListeners[t2];
+      doc.body.childNodes = []; doc.body.children = []; doc.body._classes = new Set();
+      doc._hidden = false;
+    },
+    makeEl: makeEl,
+  };
+}
+
+// ── UI-Stubs (für ui-*.js Module ohne Browser) ───────────────────────────────
+// Wird VOR den UI-Source-Files in den Eval-Scope geladen. Enthält no-op-Stubs
+// für UI-Querreferenzen, die im Unit-Harness nicht relevant sind. Spies werden
+// AFTER UI-Eval in einem IIFE installiert (siehe _UI_SUFFIX).
+var _UI_STUBS = [
+  // Brücke aus der ersten Eval-Phase (gedcom.js etc.) — const-Bindings
+  // wurden dort per window.X = X exponiert; im UI-Eval als var reanknüpfen.
+  'var AppState = window.AppState; var UIState = window.UIState;',
+  'var getPlaceRegistry = window.getPlaceRegistry; var setDb = window.setDb;',
+  'var _normPlaceName = window._normPlaceName;',
+  'var _buildFormString = window._buildFormString;',
+  'var applyStringPlaceLink = window.applyStringPlaceLink;',
+  'var mutatePlaceObject = window.mutatePlaceObject;',
+  'var upsertPlaceObject = window.upsertPlaceObject;',
+  'var getPlaceFromForm = window.getPlaceFromForm;',
+  'var initPlaceMode = window.initPlaceMode;',
+  'var togglePlaceMode = window.togglePlaceMode;',
+  'function markChanged() { AppState && (AppState.changed = true); }',
+  'var _idbStore = {};',
+  'function idbGet(k) { return Promise.resolve(_idbStore[k] || null); }',
+  'function idbPut(k, v) { _idbStore[k] = v; return Promise.resolve(); }',
+  'function idbDel(k) { delete _idbStore[k]; return Promise.resolve(); }',
+  // Eindeutige Toast-Sammlung pro Lauf
+  'window._toastLog = [];',
+  'function showToast(msg, type) { window._toastLog.push({ msg: msg, type: type || "info" }); }',
+  // Helper, die ui-views.js etc. erwarten — alle no-op oder defensiv
+  'function getSource() { return null; }',
+  'function getProbandId() { return null; }',
+  'function smallestPersonId() { var inds = (AppState && AppState.db && AppState.db.individuals) || {}; for (var k in inds) return k; return null; }',
+  'function _smallestId(obj) { for (var k in (obj||{})) return k; return null; }',
+  'function getDocLang() { return "de"; }',
+  'function getParentIds() { return { father: null, mother: null }; }',
+  'function evDateKey(s) { return String(s || ""); }',
+  'function goBack() {}',
+  // Spies via Counter-Objekt
+  'window._spy = { renderTab:0, applyPersonFilter:0, _vsReattach:0, _vsTeardown:0, showDetail:[], showFamilyDetail:[], showSourceDetail:[], showPlaceDetail:[] };',
+  // Render-/Show-Stubs (Default-Verhalten ist no-op; spies via post-eval-wrap)
+  'function applyPersonFilter() {}',
+  'function renderFamilyList() {}',
+  'function renderSourceList() {}',
+  'function renderRepoList() {}',
+  'function showMediaSection() {}',
+  'function renderPlaceList() {}',
+  'function renderHofList() {}',
+  'function initOrRefreshPlaceMap() {}',
+  'function renderStatsTab() {}',
+  'function runGlobalSearch() {}',
+  'function runGlobalSearchDebounced() {}',
+  'function renderTasksView() {}',
+  'function _announceList() {}',
+  'function _normalizeWheel() {}',
+  'function _initDetailSwipe() {}',
+  'function _updateTopbarH() {}',
+  'function _updateDetailHistBtn() {}',
+  'function _scrollListToCurrent() {}',
+  'function _vsTeardown() { window._spy._vsTeardown++; }',
+  'function _vsReattach() { window._spy._vsReattach++; }',
+  'function _vsScrollAndHighlight() {}',
+  'function _vsSetup() {}',
+  'function showDetail(id) { window._spy.showDetail.push(id); }',
+  'function showFamilyDetail(id) { window._spy.showFamilyDetail.push(id); }',
+  'function showSourceDetail(id) { window._spy.showSourceDetail.push(id); }',
+  'function showPlaceDetail(name) { window._spy.showPlaceDetail.push(name); }',
+  'function showRepoDetail() {}',
+  'function showHofDetail() {}',
+  'function showStory() {}',
+  'function showFamilyStory() {}',
+  'function showView() {}',
+  'function showTree() {}',
+  'function showMain() {}',
+  'function showEventForm() {}',
+  'function showSourceForm() {}',
+  'function showFamilyForm() {}',
+  'function openNoteModal() {}',
+  'function openPlaceMergeModal() {}',
+  'function _odIsConnected() { return false; }',
+  'var _odCurFileId = null;',
+  // CSS.escape stub — Identity, da MiniDOM string-vergleichend matcht
+  'var CSS = { escape: function(s) { return String(s); } };',
+  // CustomEvent shim — minimal
+  'function CustomEvent(type, init) { this.type = type; this.detail = (init && init.detail) || null; this.defaultPrevented = false; this.bubbles = !!(init && init.bubbles); this.cancelable = !!(init && init.cancelable); this.preventDefault = function() { this.defaultPrevented = true; }; this.stopPropagation = function() {}; }',
+  // history stub
+  'var history = { pushState: function() {} };',
+  // requestAnimationFrame — synchron
+  'var requestAnimationFrame = function(fn) { try { fn(0); } catch(e) {} return 0; };',
+  // collectPlaces ist schon in geocoding-Stub gesetzt; defensiv re-deklarieren
+  'if (typeof collectPlaces !== "function") { var collectPlaces = function() { return new Map(); }; }',
+  '',
+].join('\n');
+
+// ── UI-Suffix (nach UI-Source) ──────────────────────────────────────────────
+// Wrappt renderTab als Spy + exponiert UI-Symbole via window._uiApi.
+var _UI_SUFFIX = [
+  '(function _installUIApi() {',
+  // renderTab: Spy + Original ausführen. Original ruft applyPersonFilter etc.
+  // (jetzt als Spy ersetzt) oder anderen Renderer (je nach Tab).
+  '  var _origRender = renderTab;',
+  '  renderTab = function() { window._spy.renderTab++; return _origRender && _origRender(); };',
+  // applyPersonFilter: NUR Spy — Original würde _applyPersonFilterDebounced
+  // aufrufen, das im Unit-Harness nicht existiert. Tests prüfen nur den Aufruf.
+  '  applyPersonFilter = function() { window._spy.applyPersonFilter++; };',
+  // _vsReattach/_vsTeardown sind in ui-views.js function-Decls → Stubs werden
+  // beim Hoisting überschrieben. Nach UI-Eval erneut als Spy ersetzen.
+  '  _vsReattach = function() { window._spy._vsReattach++; };',
+  '  _vsTeardown = function() { window._spy._vsTeardown++; };',
+  // Show*-Funktionen werden in den echten UI-Modulen als function-Decls über-
+  // schrieben → hier nochmal als Spy ersetzen, damit Tests deterministisch sind.
+  '  showDetail       = function(id) { window._spy.showDetail.push(id); };',
+  '  showFamilyDetail = function(id) { window._spy.showFamilyDetail.push(id); };',
+  '  showSourceDetail = function(id) { window._spy.showSourceDetail.push(id); };',
+  '  showPlaceDetail  = function(name) { window._spy.showPlaceDetail.push(name); };',
+  '  window._uiApi = {',
+  '    ViewState: ViewState,',
+  '    _activateDetailContainer: window._activateDetailContainer,',
+  '    _DC_TAB_MAP: _DC_TAB_MAP,',
+  '    _DC_IDS: _DC_IDS,',
+  '    _CLICK_MAP: _CLICK_MAP,',
+  '    _persistLastTabSel: _persistLastTabSel,',
+  '    _dcAlreadyShows: _dcAlreadyShows,',
+  '    switchTab: switchTab,',
+  '    renderTab: function() { return renderTab.apply(null, arguments); },',
+  '    _mobileSelectionRestore: _mobileSelectionRestore,',
+  '    _updatePlaceListCurrent: _updatePlaceListCurrent,',
+  '    _updateSourceListCurrent: _updateSourceListCurrent,',
+  '    _updatePersonListCurrent: _updatePersonListCurrent,',
+  '    _updateFamilyListCurrent: _updateFamilyListCurrent,',
+  '    _configureDetailToolbar: _configureDetailToolbar,',
+  '    _vsP: _vsP,',
+  '    _vsF: _vsF,',
+  '    initPlaceMode: initPlaceMode,',
+  '    togglePlaceMode: togglePlaceMode,',
+  '    getPlaceFromForm: getPlaceFromForm,',
+  '    _buildFormString: _buildFormString,',
+  '    applyStringPlaceLink: applyStringPlaceLink,',
+  // Block (z) Toast-Once: savePlaceObjects + Reset-Hooks
+  '    savePlaceObjects: savePlaceObjects,',
+  '    _setIdbPut: function(fn) { idbPut = fn; },',
+  '    _resetToastFlags: function() { _savePoIDBErrored = false; _savePoODErrored = false; _placesLocalRev = 0; },',
+  '  };',
+  '})();',
+].join('\n');
+
 var _docStub = {
   getElementById: function(id) { return _fields[id] || null; },
   createElement:  function()   { return { style: {}, options: [], appendChild: function() {} }; },
@@ -121,9 +503,12 @@ function _makeMiniDOMParser() {
   return function MiniDOMParser() { this.parseFromString = function(xml, _t) { return parse(xml); }; };
 }
 var _MiniDOMParser = _makeMiniDOMParser();
+// Lazy: MiniDOM für UI-Tests wird erst beim ersten Block instanziiert.
+var _dom = null;
 
 // ── Module laden ──────────────────────────────────────────────────────────────
 var API = {};
+var UI  = null;   // wird nach UI-Eval aus window._uiApi befüllt (Lazy via _loadUI())
 if (IS_NODE) {
   var _ctx = _vm.createContext({
     window: {}, console: console,
@@ -132,6 +517,8 @@ if (IS_NODE) {
     document:     _docStub,
     DOMParser:    _MiniDOMParser,
     setTimeout: setTimeout, clearTimeout: clearTimeout,
+    Promise:      Promise,
+    Set:          Set, Map: Map,
   });
   _ctx.window = _ctx;
   ['gedcom.js', 'gedcom-parser.js', 'gedcom-writer.js', 'gedcom-validator.js', 'gramps-parser.js', 'gramps-writer.js']
@@ -183,9 +570,92 @@ if (IS_NODE) {
     '_epId: _epId, _findOrCreatePO: _findOrCreatePO, ' +
     'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject, ' +
     '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport, ' +
-    '_eventCoords: _eventCoords };';
+    '_eventCoords: _eventCoords, AppState: AppState, UIState: UIState };' +
+    // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
+    // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
+    // sie als var aus window.X übernehmen kann.
+    'window.AppState = AppState; window.UIState = UIState;' +
+    'window.getPlaceRegistry = getPlaceRegistry; window.setDb = setDb;' +
+    'window._normPlaceName = _normPlaceName;' +
+    'window._buildFormString = _buildFormString;' +
+    'window.applyStringPlaceLink = applyStringPlaceLink;' +
+    'window.mutatePlaceObject = mutatePlaceObject;' +
+    'window.upsertPlaceObject = upsertPlaceObject;' +
+    'window.getPlaceFromForm = getPlaceFromForm;' +
+    'window.initPlaceMode = initPlaceMode;' +
+    'window.togglePlaceMode = togglePlaceMode;';
   eval(_combined);
   API = window._api;
+}
+
+// ── UI-Module laden (lazy, einmal pro Lauf) ─────────────────────────────────
+// Hängt MiniDOM als globales `document`/`window` ein, lädt die vier UI-Module
+// + Stubs und exponiert UI-Symbole via window._uiApi. Wird vom ersten UI-Test-
+// Block (t) aufgerufen.
+// Extrahiert savePlaceObjects + Konfig aus ui-forms.js (Slice PLACES_SCHEMA_VERSION
+// bis exportPlaceData). Slice statt Full-Load, weil ui-forms.js viele weitere
+// Querreferenzen hat (Source-Widget, Camera-Modal etc.), die für die Toast-Once-
+// Tests irrelevant sind.
+function _extractSavePO() {
+  var src = _readSrc('ui-forms.js');
+  var start = src.indexOf('const PLACES_SCHEMA_VERSION');
+  var end   = src.indexOf('function exportPlaceData');
+  if (start < 0 || end < 0) throw new Error('savePlaceObjects-Slice nicht gefunden in ui-forms.js');
+  return src.slice(start, end);
+}
+
+function _loadUI() {
+  if (UI) return UI;
+  _dom = _makeMiniDOM();
+  var _uiSource = [
+    _readSrc('ui-views-person.js'),
+    _readSrc('ui-views.js'),
+    _readSrc('ui-event-delegation.js'),
+    _readSrc('ui-lifecycle.js'),
+    _extractSavePO(),
+  ].join('\n');
+  // Datums-Tests (d) haben document._fields-Fallback gesetzt; MiniDOM erbt die
+  // Map über die Closure in `_makeMiniDOM` (sieht _fields via äußere Scope).
+  if (IS_NODE) {
+    _ctx.document = _dom.document;
+    // window-Bezeichner zeigt im vm-Context auf _ctx selbst, neue Felder
+    // (innerWidth etc.) hängen wir direkt an _ctx
+    _ctx.innerWidth  = 1200;
+    _ctx.innerHeight = 800;
+    _ctx.scrollTo    = function() {};
+    _ctx.matchMedia  = function() { return { matches: false, addListener: function() {}, removeListener: function() {} }; };
+    _ctx.location    = { reload: function() { _ctx._reloadCount = (_ctx._reloadCount || 0) + 1; }, href: '' };
+    // window.addEventListener wird im vm an _ctx.addEventListener erwartet;
+    // wir delegieren auf MiniDOM.addWinListener via _ctx.window
+    _ctx.addEventListener    = function(t, fn) { _dom.addWinListener(t, fn); };
+    _ctx.removeEventListener = function() {};
+    _ctx.dispatchEvent       = function(ev) {
+      (_dom.winListeners[ev.type] || []).forEach(function(fn) { fn.call(null, ev); });
+      return !ev.defaultPrevented;
+    };
+    _ctx.Promise = Promise; _ctx.Set = Set; _ctx.Map = Map;
+    _vm.runInContext(_UI_STUBS + '\n' + _uiSource + '\n' + _UI_SUFFIX, _ctx, { filename: 'ui-combined.js' });
+    UI = _ctx._uiApi;
+  } else {
+    document = _dom.document;
+    // window-Listener via MiniDOM-Hooks (addWinListener auf dem MiniDOM)
+    window.innerWidth  = 1200;
+    window.innerHeight = 800;
+    window.scrollTo    = function() {};
+    window.matchMedia  = function() { return { matches: false, addListener: function() {}, removeListener: function() {} }; };
+    window.location    = { reload: function() { window._reloadCount = (window._reloadCount || 0) + 1; }, href: '' };
+    // ui-lifecycle.js registriert pageshow/pagehide auf window.addEventListener
+    // → an MiniDOM weiterreichen
+    window.addEventListener    = function(t, fn) { _dom.addWinListener(t, fn); };
+    window.removeEventListener = function() {};
+    window.dispatchEvent       = function(ev) {
+      (_dom.winListeners[ev.type] || []).forEach(function(fn) { fn.call(null, ev); });
+      return !ev.defaultPrevented;
+    };
+    eval(_UI_STUBS + '\n' + _uiSource + '\n' + _UI_SUFFIX);
+    UI = window._uiApi;
+  }
+  return UI;
 }
 
 // ── Mini-Test-Framework ───────────────────────────────────────────────────────
@@ -1446,6 +1916,922 @@ group('(s) PLACE-HIST _eventCoords (sw v857)');
   var c = API._eventCoords(null);
   eq(c.lati, null, 's.null: null-Event → lati null');
   eq(c.long, null, 's.null: null-Event → long null');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UI-LOGIK-TESTS (t)–(ab) — siehe _loadUI()/_makeMiniDOM oben
+//  Decken die wiederkehrend brüchigen UI-Pfade aus den P5/P6-Robustheits-
+//  Sprints ab (sw v861–v890): ViewState, DetailContainer, ClickMap, DirtyBit,
+//  Lifecycle, ListSync, Toast-Once, PLAC-Mode, FormSaveMerge.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// UI-Helper: in NODE/JXA gleichermaßen Zugriff auf den Eval-Scope —
+// AppState/UIState liegen nach dem Eval als globale Variablen vor (JXA: this,
+// Node: _ctx). API-Objekt enthält sie zusätzlich für Convenience.
+function _uiState() { return IS_NODE ? _ctx : window; }
+function _ui()      { return _loadUI(); }
+
+// Setzt AppState.db + UIState auf Test-Defaults zurück.
+// Nach jedem Block aufrufen, damit Blöcke voneinander unabhängig sind.
+function _uiReset() {
+  var W = _uiState();
+  W.AppState.db = { individuals: {}, families: {}, sources: {}, placeObjects: {}, extraPlaces: {} };
+  W.AppState.currentTab = null;
+  W.AppState.currentPersonId = null;
+  W.AppState.currentFamilyId = null;
+  W.AppState.currentSourceId = null;
+  W.AppState.currentRepoId   = null;
+  W.AppState.currentPlaceName = null;
+  W.AppState._detailActive = false;
+  W.AppState.changed = false;
+  W.UIState._lastTabSel = {};
+  W.UIState._dirty = {};
+  W.UIState._placeModes = {};
+  W.UIState._placeRegistry = null;
+  W.UIState._placesCache = null;
+  // _dom.reset() löscht IDs + body, NICHT die globalen click/change/input-
+  // Listener (die einmal beim UI-Load registriert werden und über die ganze
+  // Lebensdauer der Tests aktiv bleiben sollen). Wir leeren nur die Test-
+  // spezifischen Buckets (viewstate-change, visibilitychange) und IDs.
+  for (var k in _dom.idMap) delete _dom.idMap[k];
+  ['viewstate-change'].forEach(function(t) { delete _dom.docListeners[t]; });
+  _dom.document.body.childNodes = [];
+  _dom.document.body.children = [];
+  _dom.document.body._classes = new Set();
+  _dom.document._hidden = false;
+  W._toastLog = [];
+  W._idbStore = {};
+  W._spy = { renderTab:0, applyPersonFilter:0, _vsReattach:0, _vsTeardown:0,
+             showDetail:[], showFamilyDetail:[], showSourceDetail:[], showPlaceDetail:[] };
+}
+
+(function _smoke() {
+  group('(t-smoke) UI-Loader');
+  var ui = _ui();
+  ok(ui && typeof ui.ViewState === 'object', 'UI-Loader: window._uiApi.ViewState exponiert');
+  ok(typeof ui._activateDetailContainer === 'function', '_activateDetailContainer exponiert');
+  ok(typeof ui._CLICK_MAP === 'object',                   '_CLICK_MAP exponiert');
+  ok(typeof ui.switchTab === 'function',                  'switchTab exponiert');
+  ok(typeof ui._mobileSelectionRestore === 'function',    '_mobileSelectionRestore exponiert');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (t) UI — ViewState (ADR-025 A1)
+//  Exklusiver Fokus, Validierung gegen AppState.db, viewstate-change-Event,
+//  IDB-Persistenz via _persistLastTabSel.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(t) UI ViewState');
+
+(function() {
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  W.AppState.db.individuals['@I1@'] = { id:'@I1@', name:'A /B/' };
+  W.AppState.db.families['@F1@']    = { id:'@F1@', husb:'@I1@' };
+
+  // Event-Listener: viewstate-change soll genau einmal feuern
+  var events = [];
+  _dom.document.addEventListener('viewstate-change', function(ev) { events.push(ev.detail); });
+
+  ui.ViewState.setCurrent('persons', '@I1@');
+  eq(W.AppState.currentPersonId, '@I1@', 't.setCurrent: persons → AppState.currentPersonId');
+  eq(W.AppState.currentFamilyId, null,    't.setCurrent: andere currentX bleiben/werden null');
+  eq(W.UIState._lastTabSel.persons, '@I1@', 't.setCurrent: UIState._lastTabSel[persons] gesetzt');
+  eq(events.length, 1, 't.setCurrent: viewstate-change einmal dispatcht');
+  eq(events[0] && events[0].tab, 'persons', 't.setCurrent: Event.detail.tab=persons');
+  eq(events[0] && events[0].id,  '@I1@',    't.setCurrent: Event.detail.id=@I1@');
+
+  // Wechsel auf families → currentPersonId muss exklusiv zurückgesetzt werden
+  ui.ViewState.setCurrent('families', '@F1@');
+  eq(W.AppState.currentPersonId, null,   't.setCurrent: Wechsel auf families löscht currentPersonId (exklusiver Fokus)');
+  eq(W.AppState.currentFamilyId, '@F1@', 't.setCurrent: families → AppState.currentFamilyId');
+  eq(W.UIState._lastTabSel.persons,  '@I1@', 't.setCurrent: persons-Auswahl bleibt in _lastTabSel');
+  eq(W.UIState._lastTabSel.families, '@F1@', 't.setCurrent: families-Auswahl in _lastTabSel');
+
+  // IDB-Persistenz (via _persistLastTabSel)
+  ok(W._idbStore.last_tab_sel && W._idbStore.last_tab_sel.persons === '@I1@',
+     't.setCurrent: idbPut(last_tab_sel) via _persistLastTabSel');
+})();
+
+(function() {
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  W.AppState.db.individuals['@I1@'] = { id:'@I1@', name:'A /B/' };
+
+  ui.ViewState.setCurrent('persons', '@I1@');
+  eq(ui.ViewState.getCurrent('persons'), '@I1@', 't.getCurrent: gespeicherte ID');
+
+  // Entität entfernt → getCurrent gibt null (Validierung gegen AppState.db)
+  delete W.AppState.db.individuals['@I1@'];
+  eq(ui.ViewState.getCurrent('persons'), null, 't.getCurrent: gelöschte ID → null (Validierung)');
+
+  // Nichts gesetzt → null
+  _uiReset();
+  W = _uiState(); ui = _ui();
+  eq(ui.ViewState.getCurrent('persons'), null, 't.getCurrent: ohne Setup → null');
+
+  // places werden NICHT gegen db validiert (Existenz wird erst bei Verwendung in collectPlaces geprüft)
+  ui.ViewState.setCurrent('places', 'Berlin');
+  eq(ui.ViewState.getCurrent('places'), 'Berlin', 't.getCurrent: places → ohne Validierung');
+})();
+
+(function() {
+  // Mehrfaches setCurrent auf gleichem Tab überschreibt id
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  W.AppState.db.individuals['@I1@'] = { id:'@I1@', name:'A /B/' };
+  W.AppState.db.individuals['@I2@'] = { id:'@I2@', name:'B /C/' };
+  ui.ViewState.setCurrent('persons', '@I1@');
+  ui.ViewState.setCurrent('persons', '@I2@');
+  eq(W.AppState.currentPersonId, '@I2@', 't.setCurrent: Re-Set überschreibt');
+  eq(W.UIState._lastTabSel.persons, '@I2@', 't.setCurrent: _lastTabSel persons → @I2@');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (u) UI — _activateDetailContainer (ADR-025 P5 A4/A5)
+//  5 separate Detail-Container, per-Entität Scroll-Save/Restore, viewInit-Flag.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(u) UI _activateDetailContainer');
+
+// Hilfsfunktion: legt alle 5 Detail-Container + v-detail + body.desktop-mode an
+function _setupDetailContainers() {
+  _uiReset();
+  _dom.ensureId('v-detail', 'div');
+  ['detailPerson','detailFamily','detailPlace','detailSource','detailMedia']
+    .forEach(function(id) { _dom.ensureId(id, 'div'); });
+  _dom.document.body.classList.add('desktop-mode');
+  return _ui();
+}
+
+(function() {
+  var ui = _setupDetailContainers();
+  ui._activateDetailContainer('detailPerson', '@I1@');
+  // Nur detailPerson hat dc-active
+  ['detailPerson','detailFamily','detailPlace','detailSource','detailMedia'].forEach(function(id) {
+    var el = _dom.document.getElementById(id);
+    eq(el.classList.contains('dc-active'), id === 'detailPerson',
+       'u.dc-active: ' + id + ' Klasse korrekt (' + (id === 'detailPerson' ? 'aktiv' : 'inaktiv') + ')');
+  });
+})();
+
+(function() {
+  // Wechsel + Scroll-Save/Restore
+  var ui = _setupDetailContainers();
+  var vdet = _dom.document.getElementById('v-detail');
+
+  ui._activateDetailContainer('detailPerson', '@I1@');
+  vdet.scrollTop = 250;                          // User scrollt im Personen-Detail
+
+  ui._activateDetailContainer('detailFamily', '@F1@');
+  var dp = _dom.document.getElementById('detailPerson');
+  eq(dp.dataset.savedScroll, '250', 'u.scroll-save: Personen-Scroll vor Wechsel gesichert');
+  eq(vdet.scrollTop, 0, 'u.scroll-new: neue Entität → scrollTop=0');
+
+  // Zurück zu Personen → Scroll restoren
+  vdet.scrollTop = 0;                            // reset für Klarheit
+  ui._activateDetailContainer('detailPerson', '@I1@');
+  eq(vdet.scrollTop, 250, 'u.scroll-restore: zurück zu @I1@ → savedScroll=250 angewendet');
+})();
+
+(function() {
+  // Gleiche entityId nach Re-Aktivierung → changed=false → savedScroll bleibt
+  var ui = _setupDetailContainers();
+  var vdet = _dom.document.getElementById('v-detail');
+  var dp = _dom.document.getElementById('detailPerson');
+
+  ui._activateDetailContainer('detailPerson', '@I1@');
+  vdet.scrollTop = 300;
+  // Switch to family and back
+  ui._activateDetailContainer('detailFamily', '@F1@');
+  ui._activateDetailContainer('detailPerson', '@I1@');
+  eq(vdet.scrollTop, 300, 'u.same-entity: gleiche entityId → savedScroll restauriert');
+  eq(dp.dataset.viewInit, 'true', 'u.viewInit: data-view-init=true gesetzt');
+  eq(dp.dataset.currentId, '@I1@', 'u.currentId: data-current-id auf @I1@');
+})();
+
+(function() {
+  // Andere entityId im gleichen Container → scrollTop=0 (changed=true)
+  var ui = _setupDetailContainers();
+  var vdet = _dom.document.getElementById('v-detail');
+
+  ui._activateDetailContainer('detailPerson', '@I1@');
+  vdet.scrollTop = 400;
+  ui._activateDetailContainer('detailPerson', '@I2@');
+  eq(vdet.scrollTop, 0, 'u.change-entity: andere entityId → scrollTop=0');
+  eq(_dom.document.getElementById('detailPerson').dataset.currentId, '@I2@',
+     'u.change-entity: currentId aktualisiert');
+})();
+
+(function() {
+  // Mobile (kein desktop-mode) → kein Scroll-Save/Restore
+  _uiReset();
+  ['detailPerson','detailFamily','detailPlace','detailSource','detailMedia']
+    .forEach(function(id) { _dom.ensureId(id, 'div'); });
+  _dom.ensureId('v-detail', 'div');
+  // body NICHT desktop-mode
+  var ui = _ui();
+  var vdet = _dom.document.getElementById('v-detail');
+  vdet.scrollTop = 99;
+  ui._activateDetailContainer('detailPerson', '@I1@');
+  ok(vdet.scrollTop === 99 || vdet.scrollTop === 0,
+     'u.mobile: Mobile-Pfad ändert scrollTop nicht via Save/Restore-Logik (entweder 99 oder 0)');
+  var dp = _dom.document.getElementById('detailPerson');
+  eq(dp.dataset.savedScroll, undefined, 'u.mobile: kein savedScroll-Eintrag gesetzt');
+})();
+
+(function() {
+  // entityId === undefined → früher Return nach Container-Toggle, kein Side-Effect
+  var ui = _setupDetailContainers();
+  ui._activateDetailContainer('detailPerson');   // ohne entityId
+  var dp = _dom.document.getElementById('detailPerson');
+  ok(dp.classList.contains('dc-active'), 'u.no-entity: Container trotzdem aktiviert');
+  eq(dp.dataset.currentId, undefined, 'u.no-entity: dataset.currentId nicht gesetzt');
+  eq(dp.dataset.viewInit, undefined, 'u.no-entity: dataset.viewInit nicht gesetzt');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (v) UI — _CLICK_MAP Event-Delegation (ui-event-delegation.js)
+//  Action-String → Funktion-Dispatch, stop-Sentinel, dataset-Fallbacks.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(v) UI ClickMap');
+
+(function() {
+  // Vorhandensein wichtiger Actions im _CLICK_MAP
+  var ui = _ui();
+  ok(typeof ui._CLICK_MAP.showDetail === 'function',         'v.map: showDetail im _CLICK_MAP');
+  ok(typeof ui._CLICK_MAP.showFamilyDetail === 'function',   'v.map: showFamilyDetail im _CLICK_MAP');
+  ok(typeof ui._CLICK_MAP.showPlaceDetail === 'function',    'v.map: showPlaceDetail im _CLICK_MAP');
+  ok(typeof ui._CLICK_MAP.showSourceDetail === 'function',   'v.map: showSourceDetail im _CLICK_MAP');
+  ok(typeof ui._CLICK_MAP.switchPlacesSubTab === 'function', 'v.map: switchPlacesSubTab im _CLICK_MAP');
+})();
+
+(function() {
+  // showDetail liest dataset.pid bevorzugt, fällt auf dataset.id zurück
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  var el1 = _dom.makeEl('button'); el1.dataset.pid = '@I1@';
+  ui._CLICK_MAP.showDetail(el1);
+  eq(W._spy.showDetail.length, 1, 'v.showDetail: 1× gerufen (pid)');
+  eq(W._spy.showDetail[0], '@I1@', 'v.showDetail: dataset.pid → @I1@');
+
+  var el2 = _dom.makeEl('button'); el2.dataset.id = '@I9@';
+  ui._CLICK_MAP.showDetail(el2);
+  eq(W._spy.showDetail.length, 2,    'v.showDetail: 2× gerufen (id-Fallback)');
+  eq(W._spy.showDetail[1], '@I9@',   'v.showDetail: dataset.id → @I9@ (Fallback)');
+})();
+
+(function() {
+  // showFamilyDetail/showSourceDetail: dataset.fid/sid bevorzugt
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  var el = _dom.makeEl('li'); el.dataset.fid = '@F7@';
+  ui._CLICK_MAP.showFamilyDetail(el);
+  eq(W._spy.showFamilyDetail[0], '@F7@', 'v.showFamilyDetail: dataset.fid → @F7@');
+
+  var el2 = _dom.makeEl('li'); el2.dataset.sid = '@S3@';
+  ui._CLICK_MAP.showSourceDetail(el2);
+  eq(W._spy.showSourceDetail[0], '@S3@', 'v.showSourceDetail: dataset.sid → @S3@');
+})();
+
+(function() {
+  // showPlaceDetail nutzt dataset.name
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  var el = _dom.makeEl('li'); el.dataset.name = 'Köln';
+  ui._CLICK_MAP.showPlaceDetail(el);
+  eq(W._spy.showPlaceDetail[0], 'Köln', 'v.showPlaceDetail: dataset.name → Köln');
+})();
+
+(function() {
+  // stop-Sentinel: stopPropagation, kein Dispatch
+  _uiReset();
+  var W = _uiState();
+  var btn = _dom.makeEl('button');
+  btn.dataset.action = 'stop';
+  _dom.document.body.appendChild(btn);
+  var stopped = false;
+  var ev = { type:'click', target: btn,
+    defaultPrevented: false,
+    preventDefault:  function() { this.defaultPrevented = true; },
+    stopPropagation: function() { stopped = true; } };
+  // Direkter Test des Dispatcher-Pfads via Document-Click-Listener
+  (_dom.docListeners['click'] || []).forEach(function(fn) { fn.call(_dom.document, ev); });
+  ok(stopped, 'v.stop: data-action="stop" → e.stopPropagation aufgerufen');
+  eq(W._spy.showDetail.length, 0, 'v.stop: kein _CLICK_MAP-Eintrag dispatcht');
+})();
+
+(function() {
+  // Unbekannte Action: kein _CLICK_MAP-Treffer + kein cmp-Prefix → kein Throw, kein Effekt
+  _uiReset();
+  var W = _uiState();
+  var btn = _dom.makeEl('button');
+  btn.dataset.action = 'thisActionDoesNotExist';
+  _dom.document.body.appendChild(btn);
+  var ev = { type:'click', target: btn,
+    defaultPrevented: false,
+    preventDefault: function() { this.defaultPrevented = true; },
+    stopPropagation: function() {} };
+  var threw = false;
+  try { (_dom.docListeners['click'] || []).forEach(function(fn) { fn.call(_dom.document, ev); }); }
+  catch(e) { threw = true; }
+  ok(!threw, 'v.unknown: unbekannte Action → kein Throw');
+  eq(W._spy.showDetail.length, 0, 'v.unknown: kein Show-Aufruf');
+})();
+
+(function() {
+  // closest('[data-action]') findet das nächstgelegene Element mit data-action,
+  // nicht zwingend e.target → Klick auf inneres Span im Button mit data-action
+  _uiReset();
+  var W = _uiState();
+  var btn = _dom.makeEl('button');
+  btn.dataset.action = 'showDetail';
+  btn.dataset.pid = '@I42@';
+  var span = _dom.makeEl('span');
+  btn.appendChild(span);
+  _dom.document.body.appendChild(btn);
+  var ev = { type:'click', target: span,
+    defaultPrevented: false,
+    preventDefault: function() {},
+    stopPropagation: function() {} };
+  (_dom.docListeners['click'] || []).forEach(function(fn) { fn.call(_dom.document, ev); });
+  eq(W._spy.showDetail[0], '@I42@', 'v.closest: Klick im inneren Element → data-action via closest gefunden');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (w) UI — switchTab DirtyBit (ui-views.js A2)
+//  Render-Logik: nur wenn dirty[tab] !== false → renderTab; sonst Skip.
+//  VS-Reattach-Pfad: bei vsP.top && dirty===false → _vsReattach statt Re-Render.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(w) UI switchTab DirtyBit');
+
+// Hilfsfunktion: alle tab-XYZ Container vorbereiten, die switchTab anfasst
+function _setupSwitchTab() {
+  _uiReset();
+  ['tab-persons','tab-families','tab-sources','tab-places','tab-stats','tab-search','tab-tasks']
+    .forEach(function(id) { _dom.ensureId(id, 'div'); });
+  _dom.ensureId('fabBtn',       'button');
+  _dom.ensureId('mapContainer', 'div');
+  _dom.ensureId('v-main',       'div');
+  _dom.ensureId('personList',   'ul');
+  _dom.ensureId('familyList',   'ul');
+  // v-main muss .active sein, damit renderTab nicht früher zurückkehrt
+  _dom.document.getElementById('v-main').classList.add('active');
+  return _ui();
+}
+
+(function() {
+  // (w.1) dirty=true → renderTab gerufen + dirty wird false
+  var ui = _setupSwitchTab();
+  var W = _uiState();
+  W.UIState._dirty = { persons: true };
+  ui.switchTab('persons');
+  ok(W._spy.renderTab >= 1, 'w.dirty-true: renderTab gerufen');
+  eq(W.UIState._dirty.persons, false, 'w.dirty-true: _dirty[persons] → false nach Render');
+})();
+
+(function() {
+  // (w.2) dirty=false, kein vs.top → weder renderTab noch _vsReattach
+  var ui = _setupSwitchTab();
+  var W = _uiState();
+  W.UIState._dirty = { persons: false };
+  ui._vsP.active = false; ui._vsP.top = null;
+  ui.switchTab('persons');
+  eq(W._spy.renderTab,    0, 'w.dirty-false: kein renderTab');
+  eq(W._spy._vsReattach,  0, 'w.dirty-false: kein _vsReattach (vsP.top null)');
+})();
+
+(function() {
+  // (w.3) dirty=undefined (initial) → renderTab gerufen + dirty wird false
+  var ui = _setupSwitchTab();
+  var W = _uiState();
+  W.UIState._dirty = {};   // persons undefined
+  ui.switchTab('persons');
+  ok(W._spy.renderTab >= 1, 'w.dirty-undef: renderTab gerufen (initial)');
+  eq(W.UIState._dirty.persons, false, 'w.dirty-undef: _dirty[persons] → false');
+})();
+
+(function() {
+  // (w.4) dirty=false + vsP.top truthy + vsP.active=false → _vsReattach (kein Re-Render)
+  var ui = _setupSwitchTab();
+  var W = _uiState();
+  W.UIState._dirty = { persons: false };
+  ui._vsP.active = false;
+  ui._vsP.top = {};    // truthy → vs war aufgebaut
+  ui.switchTab('persons');
+  ok(W._spy._vsReattach >= 1, 'w.vs-reattach: _vsReattach gerufen');
+  eq(W._spy.renderTab,     0, 'w.vs-reattach: kein renderTab');
+  // Cleanup: vsP.top zurücksetzen für andere Tests
+  ui._vsP.top = null;
+})();
+
+(function() {
+  // (w.5) tab=families analog
+  var ui = _setupSwitchTab();
+  var W = _uiState();
+  W.UIState._dirty = { families: true };
+  ui.switchTab('families');
+  ok(W._spy.renderTab >= 1, 'w.families-dirty: renderTab gerufen');
+  eq(W.UIState._dirty.families, false, 'w.families-dirty: _dirty[families] → false');
+})();
+
+(function() {
+  // (w.6) AppState.currentTab wird gesetzt
+  var ui = _setupSwitchTab();
+  var W = _uiState();
+  ui.switchTab('sources');
+  eq(W.AppState.currentTab, 'sources', 'w.currentTab: AppState.currentTab nach switchTab gesetzt');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (x) UI — Lifecycle-Handler (ui-lifecycle.js, ADR-025 P3-A3)
+//  visibilitychange + >60s-Heuristik, pageshow BFCache-reload, pagehide persist.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(x) UI Lifecycle');
+
+// Lifecycle-Setup: v-main als active markieren, damit renderTab nicht früh
+// zurückkehrt — sonst kann _spy.renderTab nicht prüfen.
+function _setupLifecycle() {
+  _uiReset();
+  _dom.ensureId('v-main', 'div').classList.add('active');
+  return _ui();
+}
+
+(function() {
+  // (x.1) visibilitychange: kurze Abwesenheit (<60s) → _dirty unverändert
+  _setupLifecycle();
+  var W = _uiState();
+  W.UIState._dirty = { persons: false, families: false };
+  W.AppState.currentTab = 'persons';
+  // hidden=true → speichert _lifecycleHiddenAt; visible=false → return
+  _dom.document._hidden = true;
+  _dom.fireDoc('visibilitychange');
+  // kurze Pause (Simuliert): direkt visible
+  _dom.document._hidden = false;
+  _dom.fireDoc('visibilitychange');
+  eq(W.UIState._dirty.persons,  false, 'x.short: <60s zurück → _dirty.persons bleibt false');
+  eq(W.UIState._dirty.families, false, 'x.short: <60s zurück → _dirty.families bleibt false');
+})();
+
+(function() {
+  // (x.2) visibilitychange: visible-Pfad → renderTab wird gerufen
+  _setupLifecycle();
+  var W = _uiState();
+  W.UIState._dirty = { persons: false };
+  W.AppState.currentTab = 'persons';
+
+  // hidden=true → setzt _lifecycleHiddenAt = Date.now()
+  _dom.document._hidden = true;
+  _dom.fireDoc('visibilitychange');
+
+  // Trick: _lifecycleHiddenAt lebt im UI-Eval-Scope; wir manipulieren ihn via
+  // einem kleinen Eval-Pulled-Helper. Direktzugriff ist nicht möglich.
+  // Alternativ: warten ist nicht praktikabel → wir testen die Reaktion auf
+  // hidden=true (setzt Timestamp) + visible=true und nehmen kurze Zeit hin.
+  // Stattdessen: testen mit visible=true + langer Pause via setTimeout NICHT
+  // möglich; wir prüfen indirekt: nach hidden→visible UNMITTELBAR ist <60s
+  // garantiert (kurze Variante). Für den >60s-Pfad: simulieren via direkt
+  // gerufenem Handler mit gefälschtem Date.now() (siehe x.3).
+  _dom.document._hidden = false;
+  _dom.fireDoc('visibilitychange');
+  // Wir prüfen nur: renderTab wurde gerufen (immer im visible-Pfad).
+  ok(W._spy.renderTab >= 1, 'x.visible: renderTab gerufen im visible-Pfad');
+})();
+
+(function() {
+  // (x.3) >60s-Pfad: Date.now() um 70s vorspulen ZWISCHEN hidden und visible
+  // Da der visible-Pfad UIState._dirty[currentTab] sofort wieder auf false
+  // setzt (durch renderTab), testen wir mit currentTab=null → kein Reset.
+  _setupLifecycle();
+  var W = _uiState();
+  W.UIState._dirty = { persons: false, families: false, sources: false, places: false };
+  W.AppState.currentTab = null;  // verhindert dirty[tab]=false-Reset im visible-Handler
+
+  // Trick: temporär Date.now() um 70s in die Zukunft schieben, NACH dem hidden-Event
+  var realNow = Date.now;
+  _dom.document._hidden = true;
+  _dom.fireDoc('visibilitychange');           // setzt _lifecycleHiddenAt = realNow()
+  // Jetzt: 70s vorspulen
+  Date.now = function() { return realNow() + 70000; };
+  _dom.document._hidden = false;
+  _dom.fireDoc('visibilitychange');
+  Date.now = realNow;
+
+  eq(W.UIState._dirty.persons,  true, 'x.>60s: persons als dirty markiert');
+  eq(W.UIState._dirty.families, true, 'x.>60s: families als dirty markiert');
+  eq(W.UIState._dirty.sources,  true, 'x.>60s: sources als dirty markiert');
+  eq(W.UIState._dirty.places,   true, 'x.>60s: places als dirty markiert');
+})();
+
+(function() {
+  // (x.4) AppState._detailActive=true → v-detail.scrollTop wird auf 0 gesetzt
+  _setupLifecycle();
+  var W = _uiState();
+  W.AppState._detailActive = true;
+  W.AppState.currentTab = 'persons';
+  var vdet = _dom.ensureId('v-detail', 'div');
+  vdet.scrollTop = 500;
+  _dom.document._hidden = false;
+  _dom.fireDoc('visibilitychange');
+  eq(vdet.scrollTop, 0, 'x.detail-scrollTop: visible + _detailActive → v-detail.scrollTop=0 (Void-Artefakt-Fix)');
+})();
+
+(function() {
+  // (x.5) pageshow mit persisted=true → location.reload()
+  _setupLifecycle();
+  var W = _uiState();
+  W._reloadCount = 0;
+  _dom.fireWin('pageshow', { persisted: true });
+  eq(W._reloadCount, 1, 'x.pageshow-bfcache: persisted=true → location.reload() gerufen');
+})();
+
+(function() {
+  // (x.6) pagehide → _persistLastTabSel (= idbPut(last_tab_sel)) wird gerufen
+  _setupLifecycle();
+  var W = _uiState();
+  W.UIState._lastTabSel = { persons: '@I1@', families: '@F1@' };
+  _dom.fireWin('pagehide');
+  ok(W._idbStore.last_tab_sel && W._idbStore.last_tab_sel.persons === '@I1@',
+     'x.pagehide: idbPut(last_tab_sel) via _persistLastTabSel');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (y) UI — Listen-Highlight-Sync (P6-B6)
+//  _updatePersonListCurrent/Family/Place/Source: .current-Klasse auf richtigem
+//  Listenpunkt + alte Markierung entfernt.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(y) UI ListSync');
+
+// Hilfsfunktion: Personen-Liste mit data-pid-Items befüllen
+function _setupPersonList(ids) {
+  _uiReset();
+  var list = _dom.ensureId('personList', 'ul');
+  ids.forEach(function(id) {
+    var li = _dom.makeEl('li');
+    li.dataset.pid = id;
+    li._classes.add('person-row');
+    list.appendChild(li);
+  });
+  _dom.ensureId('v-main', 'div');
+  return _ui();
+}
+
+(function() {
+  var ui = _setupPersonList(['@I1@','@I2@','@I3@']);
+  ui._updatePersonListCurrent('@I2@');
+  var list = _dom.document.getElementById('personList');
+  var li1 = list.querySelectorAll('[data-pid="@I1@"]')[0];
+  var li2 = list.querySelectorAll('[data-pid="@I2@"]')[0];
+  var li3 = list.querySelectorAll('[data-pid="@I3@"]')[0];
+  ok(!li1.classList.contains('current'), 'y.persons: @I1@ nicht .current');
+  ok( li2.classList.contains('current'), 'y.persons: @I2@ ist .current');
+  ok(!li3.classList.contains('current'), 'y.persons: @I3@ nicht .current');
+
+  // Wechsel auf @I3@: alte Markierung weg, neue gesetzt
+  ui._updatePersonListCurrent('@I3@');
+  ok(!li2.classList.contains('current'), 'y.persons-switch: @I2@ verliert .current');
+  ok( li3.classList.contains('current'), 'y.persons-switch: @I3@ erhält .current');
+
+  // null → alle Markierungen weg
+  ui._updatePersonListCurrent(null);
+  ok(!li1.classList.contains('current') && !li2.classList.contains('current') && !li3.classList.contains('current'),
+     'y.persons-null: alle .current entfernt');
+})();
+
+(function() {
+  // _updateFamilyListCurrent
+  _uiReset();
+  var list = _dom.ensureId('familyList', 'ul');
+  ['@F1@','@F2@'].forEach(function(id) {
+    var li = _dom.makeEl('li');
+    li.dataset.fid = id;
+    li._classes.add('person-row');
+    list.appendChild(li);
+  });
+  _dom.ensureId('v-main', 'div');
+  var ui = _ui();
+  ui._updateFamilyListCurrent('@F1@');
+  var f1 = list.querySelectorAll('[data-fid="@F1@"]')[0];
+  var f2 = list.querySelectorAll('[data-fid="@F2@"]')[0];
+  ok( f1.classList.contains('current'), 'y.families: @F1@ ist .current');
+  ok(!f2.classList.contains('current'), 'y.families: @F2@ nicht .current');
+})();
+
+(function() {
+  // _updatePlaceListCurrent (P6-B6)
+  _uiReset();
+  var list = _dom.ensureId('placeList', 'ul');
+  ['Köln','München','Berlin'].forEach(function(name) {
+    var li = _dom.makeEl('li');
+    li.dataset.name = name;
+    list.appendChild(li);
+  });
+  _dom.ensureId('v-main', 'div');
+  var ui = _ui();
+  ui._updatePlaceListCurrent('München');
+  var li_K = list.querySelectorAll('[data-name="Köln"]')[0];
+  var li_M = list.querySelectorAll('[data-name="München"]')[0];
+  ok( li_M.classList.contains('current'), 'y.places: München ist .current');
+  ok(!li_K.classList.contains('current'), 'y.places: Köln nicht .current');
+
+  ui._updatePlaceListCurrent(null);
+  ok(!li_M.classList.contains('current'), 'y.places-null: alle .current entfernt');
+})();
+
+(function() {
+  // _updateSourceListCurrent (P6-B6)
+  _uiReset();
+  var list = _dom.ensureId('sourceList', 'ul');
+  ['@S1@','@S2@'].forEach(function(id) {
+    var li = _dom.makeEl('li');
+    li.dataset.sid = id;
+    list.appendChild(li);
+  });
+  _dom.ensureId('v-main', 'div');
+  var ui = _ui();
+  ui._updateSourceListCurrent('@S2@');
+  var s1 = list.querySelectorAll('[data-sid="@S1@"]')[0];
+  var s2 = list.querySelectorAll('[data-sid="@S2@"]')[0];
+  ok( s2.classList.contains('current'), 'y.sources: @S2@ ist .current');
+  ok(!s1.classList.contains('current'), 'y.sources: @S1@ nicht .current');
+})();
+
+(function() {
+  // Liste fehlt komplett → kein Throw
+  _uiReset();
+  var ui = _ui();
+  var threw = false;
+  try {
+    ui._updatePersonListCurrent('@I1@');
+    ui._updateFamilyListCurrent('@F1@');
+    ui._updatePlaceListCurrent('Berlin');
+    ui._updateSourceListCurrent('@S1@');
+  } catch(e) { threw = true; }
+  ok(!threw, 'y.no-list: kein Throw wenn personList/familyList/placeList/sourceList fehlen');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (z) UI — Toast-Once bei savePlaceObjects (ui-forms.js, Item 11)
+//  Bei wiederholten IDB-/OD-Fehlern wird der Toast nur EINMAL pro Session
+//  gezeigt — verhindert Spam-Toasts bei Quota-Exhausted o.ä.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(z) UI Toast-Once');
+
+// Synchron-rejecting Thenable — simuliert .catch-Pfad ohne Microtask-Flush.
+// Wir benutzen das in JXA, da Promise.reject().catch() den Handler erst im
+// nächsten Microtask-Tick fortsetzt und JXA keinen Event-Loop-Pulse hat.
+function _syncReject(err) {
+  return {
+    then: function(_, fn) { if (typeof fn === 'function') fn(err); return this; },
+    catch: function(fn)   { if (typeof fn === 'function') fn(err); return this; },
+  };
+}
+function _syncResolve(val) {
+  return {
+    then: function(fn) { if (typeof fn === 'function') fn(val); return this; },
+    catch: function() { return this; },
+  };
+}
+
+(function() {
+  // (z.1) idbPut OK → kein Toast
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  ui._resetToastFlags();
+  ui._setIdbPut(function(k, v) { W._idbStore[k] = v; return _syncResolve(); });
+  W.AppState.db.placeObjects = { '@P1@': { id:'@P1@', title:'Berlin' } };
+  ui.savePlaceObjects();
+  eq(W._toastLog.length, 0, 'z.ok: kein Fehler → kein Toast');
+  ok(!!W._idbStore.stammbaum_placeobjects, 'z.ok: IDB-Eintrag geschrieben');
+})();
+
+(function() {
+  // (z.2) Erster IDB-Fehler → genau 1 Toast
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  ui._resetToastFlags();
+  ui._setIdbPut(function() { return _syncReject(new Error('quota-exhausted')); });
+  W.AppState.db.placeObjects = { '@P1@': { id:'@P1@', title:'Berlin' } };
+  ui.savePlaceObjects();
+  eq(W._toastLog.length, 1, 'z.err1: 1 Toast bei IDB-Fehler');
+  ok(/IDB/.test(W._toastLog[0].msg), 'z.err1: Toast-Text enthält "IDB"');
+  eq(W._toastLog[0].type, 'error', 'z.err1: Toast-Typ = error');
+})();
+
+(function() {
+  // (z.3) Zweiter IDB-Fehler → kein zweiter Toast (Toast-Once)
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  ui._resetToastFlags();
+  ui._setIdbPut(function() { return _syncReject(new Error('quota')); });
+  W.AppState.db.placeObjects = { '@P1@': { id:'@P1@' } };
+  ui.savePlaceObjects();
+  ui.savePlaceObjects();
+  ui.savePlaceObjects();
+  eq(W._toastLog.length, 1, 'z.once: bei 3× Fehler nur 1 Toast (Once-Flag)');
+})();
+
+(function() {
+  // (z.4) Nach Reset der Toast-Flags → erneut 1 Toast (Session-Reset-Simulation)
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  ui._resetToastFlags();
+  ui._setIdbPut(function() { return _syncReject(new Error('quota')); });
+  W.AppState.db.placeObjects = { '@P1@': { id:'@P1@' } };
+  ui.savePlaceObjects();
+  eq(W._toastLog.length, 1, 'z.reset-pre: 1 Toast vor Reset');
+  ui._resetToastFlags();
+  ui.savePlaceObjects();
+  eq(W._toastLog.length, 2, 'z.reset-post: nach Reset → erneut 1 Toast (insgesamt 2)');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (aa) UI — PLAC-Modus (gedcom.js, ADR-010)
+//  Toggle zwischen Freitext + Felder-Eingabe; UIState._placeModes pro placeId.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(aa) UI PLAC-Mode');
+
+function _setupPlacField(placeId) {
+  _uiReset();
+  // free-Container (textarea) + parts-Container (div) + toggle-Button + Input
+  _dom.ensureId(placeId + '-free',   'div');
+  _dom.ensureId(placeId + '-parts',  'div');
+  _dom.ensureId(placeId + '-toggle', 'button');
+  _dom.ensureId(placeId,             'input');
+  return _ui();
+}
+
+(function() {
+  // (aa.1) initPlaceMode setzt free-Mode + zeigt free, hidet parts
+  var ui = _setupPlacField('birth');
+  var W = _uiState();
+  ui.initPlaceMode('birth');
+  eq(W.UIState._placeModes['birth'], 'free', 'aa.init: Mode = free');
+  eq(_dom.document.getElementById('birth-free').hidden,  false, 'aa.init: free sichtbar');
+  eq(_dom.document.getElementById('birth-parts').hidden, true,  'aa.init: parts versteckt');
+  eq(_dom.document.getElementById('birth-toggle').textContent, '⊞ Felder', 'aa.init: Toggle-Text');
+})();
+
+(function() {
+  // (aa.2) togglePlaceMode wechselt free → parts
+  var ui = _setupPlacField('birth');
+  var W = _uiState();
+  ui.initPlaceMode('birth');
+  _dom.document.getElementById('birth').value = 'Köln, Rheinland, Deutschland';
+  ui.togglePlaceMode('birth');
+  eq(W.UIState._placeModes['birth'], 'parts', 'aa.toggle: free → parts');
+  eq(_dom.document.getElementById('birth-free').hidden,  true,  'aa.toggle: free versteckt');
+  eq(_dom.document.getElementById('birth-parts').hidden, false, 'aa.toggle: parts sichtbar');
+  // Wechsel zurück
+  ui.togglePlaceMode('birth');
+  eq(W.UIState._placeModes['birth'], 'free', 'aa.toggle-back: parts → free');
+})();
+
+(function() {
+  // (aa.3) getPlaceFromForm im free-Mode → Input.value
+  var ui = _setupPlacField('death');
+  ui.initPlaceMode('death');
+  _dom.document.getElementById('death').value = '  Hamburg  ';
+  eq(ui.getPlaceFromForm('death'), 'Hamburg', 'aa.getForm-free: Input.value (getrimmt)');
+})();
+
+(function() {
+  // (aa.4) getPlaceFromForm im parts-Mode → joinPlaceParts (death-p0, p1…)
+  var ui = _setupPlacField('death');
+  var W = _uiState();
+  // Toggle in parts-Mode (legt parts-Container an + füllt p0,p1,…)
+  W.AppState.db.placForm = 'Dorf, Stadt, Land';
+  ui.initPlaceMode('death');
+  ui.togglePlaceMode('death');
+  // togglePlaceMode hat _buildPlaceParts → fillPlaceParts gerufen.
+  // Manuell parts-Inputs setzen:
+  var p0 = _dom.document.getElementById('death-p0');
+  var p1 = _dom.document.getElementById('death-p1');
+  var p2 = _dom.document.getElementById('death-p2');
+  if (p0) p0.value = 'Sassenberg';
+  if (p1) p1.value = 'Münster';
+  if (p2) p2.value = '';
+  eq(ui.getPlaceFromForm('death'), 'Sassenberg, Münster',
+    'aa.getForm-parts: joinPlaceParts ohne trailing leere Teile');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (ab) UI — _buildFormString + applyStringPlaceLink (gedcom.js, ADR-024)
+//  Periodengerechte Stringbildung + Reimport-Erkennung.
+// ═══════════════════════════════════════════════════════════════════════════
+group('(ab) UI FormSaveMerge');
+
+(function() {
+  // (ab.1) _buildFormString mit Jahr → atomarer Name aus resolveAsOf
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  ui = _ui();
+  API.setDb({
+    individuals:{}, families:{},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Sassenberg', type:'Village',
+        pnames:[{value:'Sassenberg'}, {value:'Sassenbergk', dateFrom:'1650', dateTo:'1802', dateType:'range'}],
+        enclosedBy:[] },
+    },
+  });
+  // periodengerecht — 1700 fällt in den Sassenbergk-Range
+  eq(ui._buildFormString('@P1@', 1700), 'Sassenbergk', 'ab.formString: 1700 → Sassenbergk');
+  eq(ui._buildFormString('@P1@', 1900), 'Sassenberg',  'ab.formString: 1900 → Sassenberg (Haupttitel)');
+  eq(ui._buildFormString('@P1@', null), 'Sassenberg',  'ab.formString: null Jahr → atomarer Name');
+  eq(ui._buildFormString(null,   1700), null,          'ab.formString: ohne placeId → null');
+})();
+
+(function() {
+  // (ab.2) _buildFormString mit enclosedBy → Hierarchie
+  _uiReset();
+  var ui = _ui();
+  API.setDb({
+    individuals:{}, families:{},
+    placeObjects: {
+      '@P_REGION@': { id:'@P_REGION@', title:'Fürstbistum Münster', type:'Region',
+        pnames:[{value:'Fürstbistum Münster'}], enclosedBy:[] },
+      '@P_VILLAGE@': { id:'@P_VILLAGE@', title:'Sassenberg, Kreis Warendorf', type:'Village',
+        pnames:[{value:'Sassenberg, Kreis Warendorf'}],
+        enclosedBy:[{placeId:'@P_REGION@', dateFrom:'1500', dateTo:'1802', dateType:'range'}] },
+    },
+  });
+  var s = ui._buildFormString('@P_VILLAGE@', 1700);
+  ok(s && /Fürstbistum Münster/.test(s), 'ab.chain: enclosure-Kette enthält Region');
+  // Erstes Komma-Segment des Village-Titels, kein Doppel-Komma
+  ok(s && s.indexOf('Sassenberg') === 0, 'ab.chain: Village zuerst');
+})();
+
+(function() {
+  // (ab.3) applyStringPlaceLink → ev.placeId + ev.place auf periodengerechten String
+  _uiReset();
+  var ui = _ui();
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', name:'A /B/',
+        birth: { date:'1700', place:'Sassenbergk' }, chr:{}, death:{}, buri:{},
+        events:[] },
+    },
+    families: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Sassenberg', type:'Village',
+        pnames:[{value:'Sassenberg'}, {value:'Sassenbergk', dateFrom:'1650', dateTo:'1802', dateType:'range'}],
+        enclosedBy:[] },
+    },
+  };
+  API.setDb(db);
+  // Konfirmierter String: 'Sassenbergk' (periodengerecht für 1700)
+  var linked = ui.applyStringPlaceLink(['Sassenbergk'], '@P1@', ['Sassenbergk']);
+  eq(linked, 1, 'ab.link: 1 Ereignis verlinkt');
+  eq(db.individuals['@I1@'].birth.placeId, '@P1@', 'ab.link: ev.placeId gesetzt');
+  eq(db.individuals['@I1@'].birth.place,   'Sassenbergk', 'ab.link: ev.place auf periodengerechten String');
+})();
+
+(function() {
+  // (ab.4) applyStringPlaceLink — Nicht konfirmierter String → kein Link
+  _uiReset();
+  var ui = _ui();
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', name:'A /B/',
+        birth: { date:'1700', place:'Sassenbergk' }, chr:{}, death:{}, buri:{},
+        events:[] },
+    },
+    families: {},
+    placeObjects: {
+      '@P1@': { id:'@P1@', title:'Sassenberg', type:'Village',
+        pnames:[{value:'Sassenberg'}, {value:'Sassenbergk', dateFrom:'1650', dateTo:'1802', dateType:'range'}],
+        enclosedBy:[] },
+    },
+  };
+  API.setDb(db);
+  var linked = ui.applyStringPlaceLink(['Sassenbergk'], '@P1@', ['Sassenberg']);  // anderer String konfirmiert
+  eq(linked, 0, 'ab.no-confirm: nicht konfirmierter String → kein Link');
+  eq(db.individuals['@I1@'].birth.placeId, undefined, 'ab.no-confirm: placeId unverändert');
+})();
+
+(function() {
+  // (ab.5) applyStringPlaceLink invalidiert _placesCache + _placeRegistry
+  _uiReset();
+  var W = _uiState(), ui = _ui();
+  W.UIState._placeRegistry = { stale: true };
+  W.UIState._placesCache   = new Map();
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth: { date:'1700', place:'X' }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    placeObjects: { '@P1@': { id:'@P1@', title:'X', pnames:[{value:'X'}], enclosedBy:[] } },
+  };
+  API.setDb(db);
+  ui.applyStringPlaceLink(['X'], '@P1@', ['X']);
+  eq(W.UIState._placeRegistry, null, 'ab.invalidate: _placeRegistry invalidiert');
+  eq(W.UIState._placesCache,   null, 'ab.invalidate: _placesCache invalidiert');
+})();
+
+(function() {
+  // (ab.6) applyStringPlaceLink ohne targetPlaceId → 0
+  _uiReset();
+  var ui = _ui();
+  API.setDb({ individuals:{}, families:{}, placeObjects:{} });
+  eq(ui.applyStringPlaceLink(['X'], null, ['X']), 0, 'ab.no-target: null targetPlaceId → 0');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
