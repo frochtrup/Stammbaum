@@ -888,7 +888,7 @@ function _placeNamesSvg(pnames) {
   const step = Math.max(1, Math.ceil((maxY - minY) / 4));
   for (let y = Math.ceil(minY / step) * step; y <= maxY; y += step) {
     const x = toX(y);
-    axis += `<line x1="${x.toFixed(1)}" y1="${AXIS_H - 4}" x2="${x.toFixed(1)}" y2="${H}" stroke="var(--border,#ddd)" stroke-width="1"/>`;
+    axis += `<line x1="${x.toFixed(1)}" y1="${AXIS_H - 4}" x2="${x.toFixed(1)}" y2="${AXIS_H + 4}" stroke="var(--border,#ccc)" stroke-width="1"/>`;
     axis += `<text x="${x.toFixed(1)}" y="${AXIS_H - 5}" font-size="9" fill="var(--text-muted,#8a7a6a)" text-anchor="middle">${y}</text>`;
   }
   return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:6px;overflow:visible">${axis}${labels}${bars}</svg>`;
