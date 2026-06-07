@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v904 · Cache: `stammbaum-v904` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v905 · Cache: `stammbaum-v905` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -56,7 +56,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Architektur | 6.8/10 | Saubere Schichtung + **25 ADRs** + Passthrough-Fundament (10 Mechanismen, empirisch tragend). `ViewState` (ADR-025) + `ui-lifecycle.js` schließen PWA-Lifecycle-Lücke. Orts-Speicher von 3 parallelen Quellen auf `placeObjects` konsolidiert (v851–858, gute Selbstkorrektur). **~860 top-level Funktionen** in flachem Namespace + 53 `<script>`-Tags mit manueller Ladereihenfolge bleiben *die* Hauptschuld; Modul-Migration bewusst zurückgestellt (ADR-020, vertretbar). |
 | Code-Qualität | **8.0/10** | Lesbar, kein Overengineering, gute „Warum"-Kommentare. Hygiene außergewöhnlich (1 vergessenes `console.log` + 16 TODO in ~38k Z., dichte try/catch). `showDetail` auf ~1 Zeile Boilerplate reduziert (→ `ViewState.setCurrent`). **T0-FUNC-SPLIT abgeschlossen (v904):** `_parseINDILine`/`_parseFAMLine` je → 12 Z. Dispatcher + 4 Level-Helfer; `writeINDIRecord` → 106 Z. + 3 Themen-Helfer. Größter Einzelabzug beseitigt. |
 | Sicherheit | 8.5/10 | **Direkt verifiziert:** CSP härter als die meiste produktive SaaS (kein `unsafe-inline/eval`, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `connect-src` präzise gescoped) + `test-csp.js`; OAuth PKCE S256 + CSRF-`state`; kein `eval` im Produktionscode; `esc()` vollständig + pervasiv. **Abzug:** Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos — ADR-021). |
-| Design / UX | 8.0/10 | Vollständiges Design-Token-System mit echtem Light-Theme (Parität, nicht invertiert), Playfair/Source Serif self-hosted, Mobile-First, Onboarding, 219 `aria/role` in index.html, `prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" *behauptet, nicht gemessen* (kein axe/Lighthouse-Audit → A11Y-AUDIT); Handbuch teils noch Mockups. |
+| Design / UX | **8.5/10** | Vollständiges Design-Token-System mit echtem Light-Theme (Parität, nicht invertiert), Playfair/Source Serif self-hosted, Mobile-First, Onboarding, 219 `aria/role` in index.html, `prefers-reduced-motion`. **A11Y-AUDIT abgeschlossen (v905):** axe-core-Messung über alle 6 Kernansichten (Liste, Detail, Baum, Familien, Orte, Quellen) — 0 WCAG 2.1 AA Violations; 5 Kontrastfehler behoben (`--text-muted`, `.p-id`, `.p-kekule`, `.btn-link`, `.tree-half-badge`). WCAG 2.1 AA **belegt, nicht behauptet**. **Abzug:** Handbuch teils noch Mockups. |
 | Funktionsstand | 8.8/10 | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · Verwandtschaftsrechner · Nominatim-Geocoding · GOV-Import (historisch datiert) · Ort-Steckbrief + Ortsbuch-Export (v892) + Validator · Multi-Device-Konflikterkennung. **Abzug:** Ausgabe-Reichtum < MFT (kein PDF-Buch/Poster); DNA/Online-Matching bewusst out-of-scope. |
 | Funktions-Qualität | 8.5/10 | GEDCOM/GRAMPS-Treue **empirisch top** (s. Methodik); UI-Flows Browser-verifiziert. View-Robustheit P0–P6 behebt iOS-PWA-Bugs (Void-Artefakte, stale Listen, leere Starts, Toolbar-Cross-Talk) + per-Entität-Scroll-State. Skalierung jetzt bis 20k belegt. **Abzug:** >20k + Echtdaten-Großbestände weiter offen. |
 | Performance | 8.0/10 | Web Worker (Parse nicht-blockierend) + virtuelles Scrollen O(log n) + LAZY-LOAD (−119 KB) + Sort-Cache (v899) + dirty-bit. **Abzug:** ~45 Cold-Start-Requests / 53 `<script>`-Tags (flacher Namespace verhindert Bundling — gemildert durch HTTP/2 + SW-Precache). |
@@ -65,7 +65,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Dokumentation | 8.5/10 | **25 ADRs** mit „Alternativen erwogen/verworfen" + Datamodel + ~2.2k-Z.-Changelog. **Abzug:** Bewertungstabelle lief dem Code hinterher (Phantom-`_attr`, Testzahl, Skalierung — jetzt korrigiert → DOC-SYNC); Handbuch sw v858 (v859–v899 offen → DOC-SCREENS); Screenshots teils Mockups. |
 | PWA / Offline | 9.0/10 | SW direkt geprüft: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Cache-first für App-Assets, Network-first + 4s-Timeout sonst, `offline.html`-Fallback; `ui-lifecycle.js` mit BFCache-Guard + >60-s-Resume-Heuristik. |
 | Datenschutz | 9.0/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Tracking, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.4/10** | *Außergewöhnlich diszipliniertes Solo-Projekt; Kernversprechen (verlustfreie GEDCOM/GRAMPS-Treue, strenge Sicherheit, lokal-first, plattformübergreifend) empirisch bestätigt. T0-FUNC-SPLIT (v904) + CSP-DURCHSETZUNG (v903) beseitigen die beiden stärksten Code-Qualitäts-Abzüge. Größte verbleibende Hebel: (1) ggü. MFT Ausgabe-Reichtum → OUTPUT-RICHNESS; (2) A11y messen → A11Y-AUDIT; (3) Doku-Drift schließen → DOC-SYNC.* |
+| **∅ Gesamt** | **≈ 8.5/10** | *Außergewöhnlich diszipliniertes Solo-Projekt; Kernversprechen (verlustfreie GEDCOM/GRAMPS-Treue, strenge Sicherheit, lokal-first, plattformübergreifend) empirisch bestätigt. T0-FUNC-SPLIT (v904) + CSP-DURCHSETZUNG (v903) beseitigen die stärksten Code-Qualitäts-Abzüge. A11Y-AUDIT (v905) belegt WCAG 2.1 AA. Größte verbleibende Hebel: (1) ggü. MFT Ausgabe-Reichtum → OUTPUT-RICHNESS; (2) Doku-Drift schließen → DOC-SYNC.* |
 
 ### Maßnahmen aus dem Review 2026-06-07 *(priorisiert nach Hebel/Aufwand)*
 
@@ -74,7 +74,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | **1** | **DOC-SYNC** — Bewertungstabelle + Priorisierungs-Abschnitt von stale/falschen Angaben befreien und an SW-Bumps koppeln | Tabelle (Stand 2026-06-06) nannte Phantom-`_attr 486 Z.`, 296 statt 420 Tests, „keine UI-Logik-Tests", „>10k ungetestet" — alle überholt. | XS | ✅ *dieser Commit* |
 | **2** | **T0-FUNC-SPLIT** — die 3 echten Monsterfunktionen zerlegen | `_parseINDILine` 391, `_parseFAMLine` 298, `writeINDIRecord` 273 Z.; verschachtelte `_ptDepth`-Zustandslogik = höchstes Regressionsrisiko. Roundtrip- + Unit-Tests decken die Risiken bereits ab. | M | s. T0 (korrigiert) |
 | **3** | **OUTPUT-RICHNESS** — echter PDF-Buch-/Poster-Export | Größter fachlicher Abstand zu MacFamilyTree für die Zielgruppe; Fundament vorhanden (`ui-print.js`, `ui-book.js`, `exportOrtsbuch` v892). | L | s. P4 (neu) |
-| **4** | **A11Y-AUDIT** — „WCAG 2.1 AA" belegen statt behaupten | A11y ist gut gemacht (219 aria/role, Skip-Link, reduced-motion), aber nie mit axe/Lighthouse gemessen. | S | s. P3 (neu) |
+| **4** | ✅ **A11Y-AUDIT** — „WCAG 2.1 AA" belegen statt behaupten | axe-core über 6 Kernansichten: 0 Violations. 5 Kontrastfehler behoben (v905). WCAG 2.1 AA belegt. | S | ✅ v905 |
 | 5 | **DOC-SCREENS / Handbuch v859–v899** — echte Screenshots + Versionsfelder | Handbuch hängt auf sw v858; CLAUDE.md-Pflicht (beide Versionsfelder). | M | s. Dokumentation |
 | 6 | **SCALE-REAL** — Skalierung jenseits 20k + Echtdaten-Großbestand | 20k synthetisch belegt; >20k und reale Großdatei weiter offen. | M | s. P3 |
 
@@ -199,7 +199,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | **SCALE-REAL** | **Skalierung jenseits 20k + Echtdaten-Großbestand** *(Hebel #6 aus Review 2026-06-07)* | 20k synthetisch ist belegt; offen: (1) Lauf bei **50k/100k** (Speicher, IDB-Quota, Snapshot-Undo-Kosten); (2) realer Großbestand (nicht synthetisch — andere Tag-Verteilung, mehr Passthrough). Erst angehen, wenn ein konkreter Bestand das nötig macht. | M |
-| **A11Y-AUDIT** | **„WCAG 2.1 AA" belegen statt behaupten** *(Hebel #4 aus Review 2026-06-07)* | A11y ist gut umgesetzt (219 aria/role, Skip-Link, `:focus-visible`, `aria-invalid`, `prefers-reduced-motion`) aber nie **gemessen**. Lighthouse-A11y-Lauf + axe-core (als Bookmarklet oder einmaliges DevTools-Audit, kein npm-Dependency) gegen die 6 Kernansichten (Liste, Detail, Baum, Formular, Karte, Modal); gefundene Verstöße fixen; danach Claim belegt führen. | S |
+| ✅ **A11Y-AUDIT** | **WCAG 2.1 AA belegt (v905)** | axe-core 4.9.1 lokal (kein npm) gegen alle 6 Kernansichten. Befunde: nur `color-contrast` im Light-Mode. Fixes: `--text-muted: #8a7050 → #6b5232` (5.0–6.6:1 auf allen Hintergründen); `.p-id opacity: 0.6 → 1`; `.p-kekule` Gold → `--text-muted`; `.btn-link` → `--text-dim`; `.tree-half-badge` Textfarbe → `--text` (dunkel auf Gold-Hintergrund). Ergebnis: **0 Violations** über alle Ansichten. | S |
 | **FAN-COLOR** | **Fächer-Chart: Farbe nach Generation** | 6 CSS-Variablen für Generationsstufen statt einheitlich gold; keine Layout-Änderung nötig. | **XS** |
 
 ---

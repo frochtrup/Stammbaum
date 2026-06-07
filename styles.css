@@ -2924,7 +2924,7 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
     --gold-glow: rgba(110,78,24,0.12);
     --text:      #1a1208;
     --text-dim:  #4a3418;
-    --text-muted:#8a7050;
+    --text-muted:#6b5232;
     --blue:      #1a4e90;
     --blue-dim:  #a8c0e0;
     --pink:      #8a1e40;
@@ -2936,6 +2936,12 @@ textarea.form-input { resize: vertical; box-sizing: border-box; font-family: inh
     --warn:      #7a4800;
     --warn-dim:  #c08020;
   }
+  /* A11Y: light-mode element overrides (contrast fixes) */
+  .p-id     { opacity: 1; }
+  .p-kekule { color: var(--text-muted); opacity: 1; }
+  .btn-link { color: var(--text-dim); }
+  .tree-half-badge--right,
+  .tree-half-badge--sib-count { color: var(--text); }
   .history-picker          { box-shadow: 0 6px 28px rgba(0,0,0,.18); }
   .leaflet-popup-content-wrapper { box-shadow: 0 4px 16px rgba(0,0,0,.15) !important; }
   .leaflet-tooltip         { box-shadow: 0 2px 6px rgba(0,0,0,.15); }
@@ -2956,7 +2962,7 @@ html[data-theme="light"] {
   --gold-glow: rgba(110,78,24,0.12);
   --text:      #1a1208;
   --text-dim:  #4a3418;
-  --text-muted:#8a7050;
+  --text-muted:#6b5232;
   --blue:      #1a4e90;
   --blue-dim:  #a8c0e0;
   --pink:      #8a1e40;
@@ -2972,6 +2978,12 @@ html[data-theme="light"] .history-picker          { box-shadow: 0 6px 28px rgba(
 html[data-theme="light"] .leaflet-popup-content-wrapper { box-shadow: 0 4px 16px rgba(0,0,0,.15) !important; }
 html[data-theme="light"] .leaflet-tooltip         { box-shadow: 0 2px 6px rgba(0,0,0,.15); }
 html[data-theme="light"] #syncBanner              { box-shadow: 0 2px 12px rgba(0,0,0,.2); }
+/* A11Y: manual light theme — same contrast overrides as media-query block */
+html[data-theme="light"] .p-id     { opacity: 1; }
+html[data-theme="light"] .p-kekule { color: var(--text-muted); opacity: 1; }
+html[data-theme="light"] .btn-link { color: var(--text-dim); }
+html[data-theme="light"] .tree-half-badge--right,
+html[data-theme="light"] .tree-half-badge--sib-count { color: var(--text); }
 /* Manuell Dunkel — überschreibt OS-Hell */
 html[data-theme="dark"] {
   --topbar-bg:    rgba(24,20,15,0.96);
@@ -3612,7 +3624,7 @@ html[data-theme="dark"] {
 .cmp-load-hint  { color:var(--text-muted); font-size:0.88rem; text-align:center; max-width:320px; }
 .cmp-file-btn   { display:inline-block; cursor:pointer; }
 .cmp-progress   { width:100%; max-width:280px; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
-.cmp-progress-bar { height:100%; background:var(--blue); transition:width 0.2s; }
+.cmp-progress-bar { height:100%; width:0; background:var(--blue); transition:width 0.2s; }
 
 /* Modal-Container: Sheet + Body als feste Flex-Säule, kein Sheet-eigenes Scrollen */
 #modalImportCompare .sheet      { overflow: hidden; }
@@ -3902,3 +3914,87 @@ html[data-theme="dark"] {
 .pname-val { flex: 1 1 auto; font-size: 14px; }
 .pname-span { flex: 0 0 auto; font-size: 11px; color: var(--text-muted, #888); white-space: nowrap; }
 .icon-btn--file { cursor: pointer; }
+
+/* ── CSP-DURCHSETZUNG: Klassen für inline-style= in Template-Strings (v901) ─ */
+.hidden { display: none; }
+
+/* fact-row / fact-val Varianten */
+.fact-row--center { align-items: center; }
+.fact-row--top    { align-items: flex-start; }
+.fact-val--flex   { flex: 1; }
+.btn-row--ml      { margin-left: 6px; }
+
+/* Quick-Template: Field-Builder */
+.qt-fb-row       { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-bottom: 5px; }
+.qt-fb-btn       { cursor: pointer; }
+.qt-fb-sel-role  { flex: none; width: 100px; }
+.qt-fb-sel-type  { flex: none; width: 115px; }
+.qt-fb-sel-tgt   { flex: none; width: 95px; }
+.qt-fb-lbl-inp   { flex: 1; min-width: 70px; }
+
+/* Quick-Template: Alters-Eingabe */
+.qt-age-block  { margin-bottom: 6px; }
+.qt-age-lbl    { margin-bottom: 3px; }
+.qt-age-row    { display: flex; gap: 6px; align-items: center; }
+.qt-age-unit   { font-size: .8rem; color: var(--text-muted, #888); }
+.qt-age-inp-y  { width: 68px; }
+.qt-age-inp-sm { width: 58px; }
+
+/* Quick-Template: Entry-Form */
+.qt-label-rel  { position: relative; }
+.qt-match-box  { margin: -2px 0 8px; }
+
+/* Quick-Template: Person-Matching */
+.qt-linked     { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px; background: var(--accent-soft, #e8f0ff); font-size: .85rem; }
+.qt-unlink     { margin-left: auto; cursor: pointer; background: none; border: none; color: inherit; font-size: .85rem; }
+.qt-match-head { font-size: .78rem; color: var(--text-muted, #888); margin: 2px 0 4px; }
+.qt-match-cands { display: flex; flex-wrap: wrap; gap: 6px; }
+.qt-match-cand { cursor: pointer; border: 1px solid var(--border, #ccd); border-radius: 14px; padding: 3px 10px; background: var(--bg-soft, #f4f6fa); color: inherit; font-size: .82rem; }
+.qt-match-year { opacity: .6; }
+
+/* Quick-Template: Validierungs-Hinweise */
+.qt-hint-head        { font-size: .78rem; color: var(--text-muted, #888); margin-bottom: 3px; }
+.qt-hint-item        { font-size: .8rem; padding: 1px 0; }
+.qt-hint-item--error { color: var(--val-error, #c0392b); }
+.qt-hint-item--warn  { color: var(--val-warn, #e67e22); }
+.qt-hint-item--info  { color: var(--text-muted, #888); }
+
+/* Quick-Template: leerer Zustand */
+.form-hint--pt { padding: 8px 0; }
+
+/* Source-Picker: Verwendungsanzahl */
+.src-cnt { font-size: .75rem; opacity: .6; margin-left: 4px; }
+
+/* Source-Detail: Quick-Template-Shortcut */
+.src-qt-action { padding: 0 0 6px; }
+
+/* Book: Namensindex-Überschrift */
+.book-idx-head { margin-top: 40px; border-top: 2px solid #c0a878; padding-top: 12px; }
+
+/* Dedup: Pfeil-Spalte */
+.dedup-merge-th--arrow { width: 18px; }
+
+/* btn-danger: schmal (Event-Filter-Zeilen) */
+.btn-danger--sm { padding: 2px 8px; }
+
+/* Media: leerer Zustand */
+.media-empty { padding: 32px; text-align: center; color: var(--text-muted); }
+
+/* Stats: Gesamt-Hinweis */
+.stats-total-lbl { font-size: .75rem; margin-top: .25rem; }
+
+/* Place: Sprach-Input */
+.pl-tran-lang { max-width: 100px; }
+
+/* Place: SVG-Timeline */
+.pl-svg-tl { display: block; margin-top: 4px; overflow: hidden; }
+
+/* Story: Karten-Export-Bild */
+.story-map-img { width: 100%; max-height: 280px; border-radius: 6px; border: 1px solid #ccc; display: block; object-fit: cover; }
+
+/* SVG: klickbare Knoten */
+.svg-nav { cursor: pointer; }
+
+/* Print: Ahnentafel-Spaltenbreiten */
+.ahnen-col-nr  { width: 3em; }
+.ahnen-col-par { width: 3.2em; }
