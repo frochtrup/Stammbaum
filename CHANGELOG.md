@@ -9,6 +9,49 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — View-Robustheit P6: B6 Place/Source-Listen-Sync (sw v889)
+
+Nutzerbericht: „Ich wähle in einer Ortsliste einen neuen Ort aus, Detail wechselt — in der Liste bleibt der alte Ort markiert. Erst beim nochmaligen Orte-Tab wechselt die Anzeige."
+
+#### Ursache
+
+`showDetail` (Person, ui-views-person.js:690-693) und `showFamilyDetail` (ui-views-family.js:386-389) hatten schon immer einen Listen-Sync-Block:
+```js
+if (document.body.classList.contains('desktop-mode')) {
+  if (AppState.currentTab === '...') _updateXListCurrent(id); else _updateXListCurrent(null);
+  ...
+}
+```
+
+`showPlaceDetail` und `showSourceDetail` hatten diesen Block **nie**. Folge: Full-Render-Pfad (User klickt anderen Ort in der Liste → entityId ändert sich → `_dcAlreadyShows` returnt false → `showPlaceDetail` läuft komplett) rendert Detail neu, aktualisiert aber `.current` in der placeList nicht. Erst beim nochmaligen Tab-Klick greift der B3-Skip-Pfad (P6) und synchronisiert die Liste.
+
+#### Fix
+
+Neue Helper [ui-views.js](ui-views.js):
+
+```js
+function _updatePlaceListCurrent(name) { ... data-name + .current + _scrollListToCurrent }
+function _updateSourceListCurrent(id)  { ... data-sid  + .current + _scrollListToCurrent }
+```
+
+Aufgerufen aus:
+- [ui-views-place.js:925](ui-views-place.js:925) — neu (B6 Hauptfix)
+- [ui-views-source.js:9](ui-views-source.js:9) — neu (B6 Hauptfix)
+- [ui-views.js](ui-views.js) `_dcAlreadyShows` Skip-Pfad — Dedup, ersetzt B3-Inline-Pattern
+- [ui-views.js](ui-views.js) `_mobileSelectionRestore` — Dedup, ersetzt vorher-Inline-Code
+
+#### Architektonische Einordnung
+
+B6 ist **keine** Folge der P5-A5-Skip-Optimierung (anders als B3/B4/B5). Es ist eine eigenständige, ältere Lücke: der Listen-Sync-Block fehlte schon vor P5 in `showPlaceDetail`/`showSourceDetail`. Wurde durch das B3-Inline-Pattern im Skip-Pfad zufällig kaschiert (Tab-Klick → Skip → Sync) und durch den Nutzerbericht „erst beim Tab-Re-Klick wird's korrekt" sichtbar.
+
+Lehre: bei jeder `show*Detail`-Funktion muss der Listen-Sync-Block analog zu `showDetail`/`showFamilyDetail` aufgerufen werden. Helper machen das aus „muss man dran denken" zu „ein Aufruf in jeder show*Detail".
+
+#### Tests
+
+`test-unit.js` 296/296 grün; isolierter Preview-Test pro Tab; GEDCOM-Roundtrip `net_delta=0` unverändert.
+
+---
+
 ### Session 2026-06-07 — View-Robustheit P6: B5 Detail-Toolbar zentral (sw v888)
 
 Folge-Fix zu B3/B4 — dieselbe Bug-Klasse: P5-A5-Skip umging weitere Seiteneffekte der `show*Detail`-Funktionen. B5 betrifft die **Detail-Toolbar** (TopTitle + 8 Buttons), die im Skip-Pfad noch den Zustand der vorigen Entität anzeigte. Funktional kritisch, nicht nur kosmetisch — `storyBtn`-Klick rief nach Skip die falsche Action mit falscher Entity-ID auf.

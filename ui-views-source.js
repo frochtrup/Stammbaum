@@ -6,7 +6,10 @@ function showSourceDetail(id, pushHistory = true) {
   if (!s) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
   ViewState.setCurrent('sources', id);
-
+  // P6-B6: Listen-Sync analog showDetail/showFamilyDetail
+  if (document.body.classList.contains('desktop-mode')) {
+    if (AppState.currentTab === 'sources') _updateSourceListCurrent(id); else _updateSourceListCurrent(null);
+  }
   // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
   _configureDetailToolbar('sources', id);
 

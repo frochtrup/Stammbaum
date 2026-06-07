@@ -921,6 +921,12 @@ function showPlaceDetail(placeName, pushHistory = true) {
   if (!place) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
   ViewState.setCurrent('places', placeName);
+  // P6-B6: Listen-Sync — sonst bleibt der alte Ort in der placeList markiert wenn
+  // der User in der Liste auf einen anderen Ort klickt. showDetail/showFamilyDetail
+  // hatten dieses Muster schon; showPlaceDetail/showSourceDetail fehlten.
+  if (document.body.classList.contains('desktop-mode')) {
+    if (AppState.currentTab === 'places') _updatePlaceListCurrent(placeName); else _updatePlaceListCurrent(null);
+  }
   // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
   _configureDetailToolbar('places', placeName);
 

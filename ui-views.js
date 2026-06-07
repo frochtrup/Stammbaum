@@ -484,14 +484,10 @@ function _mobileSelectionRestore(tab) {
     if (id) _updateFamilyListCurrent(id);
   } else if (tab === 'sources') {
     const id = ViewState.getCurrent('sources');
-    if (!id) return;
-    const el = document.querySelector(`#sourceList [data-sid="${CSS.escape(id)}"]`);
-    if (el) { el.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), el); }
+    if (id) _updateSourceListCurrent(id);
   } else if (tab === 'places') {
     const name = ViewState.getCurrent('places');
-    if (!name) return;
-    const target = document.querySelector(`#placeList [data-name="${CSS.escape(name)}"]`);
-    if (target) { target.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), target); }
+    if (name) _updatePlaceListCurrent(name);
   }
 }
 
@@ -556,6 +552,28 @@ const ViewState = (() => {
 // Desktop: rechtes Panel beim Tab-Wechsel automatisch befüllen
 // A5 (P5): Container-Map für Skip-Re-Render-Check
 const _DC_TAB_MAP = { persons: 'detailPerson', families: 'detailFamily', sources: 'detailSource', places: 'detailPlace' };
+
+// P6-B6: Place- und Source-Listen-Highlight zentral (analog zu
+// _updatePersonListCurrent/_updateFamilyListCurrent in ui-views-person.js).
+// Aufgerufen aus show*Detail (Full-Render-Pfad), _dcAlreadyShows (Skip-Pfad) und
+// _mobileSelectionRestore — sonst bleibt der alte Listen-Eintrag markiert, wenn der
+// User in der Liste auf einen anderen Eintrag klickt (Detail wechselt, .current nicht).
+function _updatePlaceListCurrent(name) {
+  const list = document.getElementById('placeList');
+  if (!list) return;
+  list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
+  if (!name) return;
+  const cur = list.querySelector(`[data-name="${CSS.escape(String(name))}"]`);
+  if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
+}
+function _updateSourceListCurrent(id) {
+  const list = document.getElementById('sourceList');
+  if (!list) return;
+  list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
+  if (!id) return;
+  const cur = list.querySelector(`[data-sid="${CSS.escape(String(id))}"]`);
+  if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
+}
 
 // P6-B5: gemeinsame Detail-Toolbar (TopTitle + 8 Buttons) auf den passenden Entity-Typ
 // konfigurieren. Aufgerufen aus den show*Detail-Funktionen UND dem Skip-Pfad in
@@ -658,19 +676,9 @@ function _dcAlreadyShows(tab, entityId) {
     _updateFamilyListCurrent(entityId);
     _updatePersonListCurrent(null);
   } else if (tab === 'sources') {
-    const list = document.getElementById('sourceList');
-    if (list) {
-      list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
-      const cur = list.querySelector(`[data-sid="${CSS.escape(String(entityId))}"]`);
-      if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
-    }
+    _updateSourceListCurrent(entityId);
   } else if (tab === 'places') {
-    const list = document.getElementById('placeList');
-    if (list) {
-      list.querySelectorAll('.current').forEach(e => e.classList.remove('current'));
-      const cur = list.querySelector(`[data-name="${CSS.escape(String(entityId))}"]`);
-      if (cur) { cur.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), cur); }
-    }
+    _updatePlaceListCurrent(entityId);
   }
   return true;
 }
