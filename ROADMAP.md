@@ -60,23 +60,23 @@ Fünf Dimensionen leiten die Priorisierung:
 
 ### Gesamtbewertung — zuletzt überarbeitet 2026-06-06
 
-> **Methodik:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung und Browser-Verifikation. **Baseline 2026-05-31:** 161 Unit-Tests + GEDCOM-Roundtrip + CSP/OAuth live getestet. **Fortschritt bis 2026-06-06:** PLACE-HIST vollständig (ADR-024 🟢), 296 Unit-Tests, CSP lückenlos (`test-csp.js`), Handbuch aktuell.
+> **Methodik:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung und Browser-Verifikation. **Baseline 2026-05-31:** 161 Unit-Tests + GEDCOM-Roundtrip + CSP/OAuth live getestet. **Fortschritt bis 2026-06-07:** PLACE-HIST vollständig (ADR-024 🟢), View-Robustheit P0–P4 ✅ (ADR-025 🟢), 296 Unit-Tests, CSP lückenlos.
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
-| Architektur | 6.5/10 | Saubere Schichtung + 24 ADRs + Passthrough-Fundament. **~860 top-level Funktionen** in flachem Namespace bleiben die Hauptschuld; Modul-Migration bewusst zurückgestellt (ADR-020). De-riskter Pfad belegt (2 Brücken). |
-| Code-Qualität | 7.0/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare, JSDoc. **Abzug:** Monsterfunktionen (`_attr` 486, `_parseINDILine` 388, `showDetail` 294, `writeINDIRecord` 269 Z.); `_esc`/`esc` 4–6× dupliziert. |
-| Sicherheit | 8.5/10 | CSP ohne `unsafe-inline/eval` + `test-csp.js` (headless verifiziert ✅); OAuth PKCE S256 + CSRF-`state`; kein `eval`; `esc()` pervasiv. **Abzug:** Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos). |
+| Architektur | 6.8/10 | Saubere Schichtung + **25 ADRs** + Passthrough-Fundament. `ViewState` (ADR-025) + `ui-lifecycle.js` schließen PWA-Lifecycle-Lücke. **~860 top-level Funktionen** in flachem Namespace bleiben die Hauptschuld; Modul-Migration bewusst zurückgestellt (ADR-020). |
+| Code-Qualität | 7.2/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare. `showDetail` von ~294 auf ~1 Zeile Boilerplate reduziert (→ `ViewState.setCurrent`). **Abzug:** `_attr` 486 Z., `_parseINDILine` 388 Z. bleiben. |
+| Sicherheit | 8.5/10 | CSP ohne `unsafe-inline/eval` + `test-csp.js` ✅; OAuth PKCE S256 + CSRF-`state`; kein `eval`; `esc()` pervasiv. **Abzug:** Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos). |
 | Design / UX | 8.5/10 | Hochwertige Ästhetik (Playfair/Source Serif, Dark/Light-Parität), Mobile-First, Onboarding, Skip-Link/ARIA/`prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" ohne axe-Audit; Handbuch noch mit Mockups. |
 | Funktionsstand | 9.0/10 | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · Verwandtschaftsrechner · Nominatim-Geocoding · GOV-Import (historisch datiert) · Ort-Steckbrief + Validator · Multi-Device-Konflikterkennung. **Abzug:** Ausgabe-Reichtum < MFT; DNA/Online-Matching bewusst out-of-scope. |
-| Funktions-Qualität | 8.0/10 | GEDCOM/GRAMPS-Treue exzellent; UI-Flows Browser-verifiziert. **Abzug:** Skalierung >10k Personen ungetestet. |
-| Performance | 8.0/10 | Web Worker + virtuelles Scrollen O(log n) + LAZY-LOAD (−119 KB) + SW-Cache. ~45 Cold-Start-Requests (HTTP/2 + SW gemildert). |
+| Funktions-Qualität | 8.2/10 | GEDCOM/GRAMPS-Treue exzellent; UI-Flows Browser-verifiziert. View-Robustheit P0–P4 behebt iOS-PWA-Bugs (Void-Artefakte, stale Listen, leere Starts). **Abzug:** Skalierung >10k Personen ungetestet. |
+| Performance | 8.0/10 | Web Worker + virtuelles Scrollen O(log n) + LAZY-LOAD (−119 KB) + SW-Cache. dirty-bit verhindert unnötige Re-Renders. ~45 Cold-Start-Requests (HTTP/2 + SW gemildert). |
 | GEDCOM-Konformität | 9.3/10 | `net_delta=0` + `out1===out2` auf 83k-Zeilen-Produktionsdatei, Strict-5.5.1 sauber. GED7-opt-in + GRAMPS-Roundtrip automatisiert. |
 | **Tests** | **8.0/10** | GEDCOM + GRAMPS-Roundtrip headless automatisiert. **296 dep-freie Unit-Tests** (Validator, Parser, BFS-Anonymisierung, Evidenz/Hypothesen, Datums-Helfer, PlaceRegistry, Geocoding, Merge, Migration). **Verbleibend:** keine UI-Logik-Tests; eigenes Harness statt Framework. |
-| Dokumentation | 9.0/10 | 24 ADRs + Datamodel + ~2k-Z.-Changelog + **Handbuch aktuell (sw v858)**. **Abzug:** Screenshots noch Mockups. |
-| PWA / Offline | 9.0/10 | PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout; Offline-Fallback. |
+| Dokumentation | 9.0/10 | **25 ADRs** + Datamodel + ~2.2k-Z.-Changelog + Handbuch (sw v858, veraltet). **Abzug:** Screenshots noch Mockups; Handbuch v859–v868 ausstehend. |
+| PWA / Offline | 9.2/10 | PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Network-first + 4s-Timeout; `ui-lifecycle.js` mit BFCache-Guard + >60-s-Resume-Heuristik. |
 | Datenschutz | 8.5/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.3/10** | *Solide, funktionsreich; GEDCOM/GRAMPS-Treue, Sicherheit, Testabsicherung und Orts-Handling auf gutem Niveau. Größte verbleibende Hebel: (1) Architektur-Schuld (Monsterfunktionen), (2) ggü. MacFamilyTree: Ausgabe-Reichtum + Skalierung >10k.* |
+| **∅ Gesamt** | **≈ 8.4/10** | *Solide, funktionsreich; GEDCOM/GRAMPS-Treue, Sicherheit, Testabsicherung und Orts-Handling auf gutem Niveau. View-Robustheit P0–P4 schließt iOS-PWA-Lifecycle-Lücken. Größte verbleibende Hebel: (1) Monsterfunktionen zerlegen, (2) ggü. MacFamilyTree: Ausgabe-Reichtum + Skalierung >10k.* |
 
 ---
 

@@ -9,6 +9,47 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — View-Robustheit P1–P4: Selektions-Persistenz, ViewState, dirty-bit, Lifecycle (sw v865–v868)
+
+Vollständiger Abschluss der View-Robustheit P0–P4 (Details: `VIEW-ROBUSTNESS.md`). Behebt vier strukturelle Bugs (Void-Artefakte, stale Listen, fehlende IDB-Persistenz, leere Startansicht). Neue Architektur: `ViewState`-Helper + `ui-lifecycle.js`. ADR-025 in `ARCHITECTURE.md` ergänzt.
+
+#### P1 — Selektions-Persistenz & Erstanwahl (sw v865)
+
+- **K4** `_mobileSelectionRestore(tab)`: Mobile scrollt + highlightet beim Tab-Tipp zur letzten Auswahl (kein `showDetail` — Mobile-Konvention).
+- **K5** `_desktopAutoSelect`-Validierung: gespeicherte IDs gegen `AppState.db` validiert; verlorene ID (Merge/Delete) → Fallback auf `smallestPersonId` / `_firstPlaceName`.
+- **K6** `_lastTabSel` IDB-persistent: `_persistLastTabSel()` nach jeder Detailansicht schreibt `last_tab_sel` in IDB → überlebt iOS-Process-Kill.
+- **K7** `showStartView`: lädt `last_tab_sel` aus IDB + ruft `_desktopAutoSelect('persons')` → Desktop-Startansicht nicht mehr leer.
+- **R6** `showDetail` / `showFamilyDetail` / `showPlaceDetail` / `showSourceDetail`: fehlendes Entity → `showMain()` statt lautlosem `return`.
+
+#### P2 — Zentraler ViewState-Helper (sw v866, ADR-025)
+
+- **`ViewState` IIFE** in `ui-views.js`:
+  - `setCurrent(tab, id)`: schreibt `UIState._lastTabSel[tab]`, setzt `AppState.currentX` (exklusiver Fokus), ruft `_persistLastTabSel()`, dispatcht `viewstate-change` CustomEvent.
+  - `getCurrent(tab)`: liest `_lastTabSel[tab]` mit Existenzvalidierung gegen `AppState.db`.
+- Alle 4 `show*Detail`-Funktionen: 5-Zeiler (currentX-Assignments + `_lastTabSel` + persist) → einzeiliges `ViewState.setCurrent(tab, id)`.
+- `_desktopAutoSelect` + `_mobileSelectionRestore` → `ViewState.getCurrent` statt direktem `_lastTabSel`-Zugriff.
+- Keine direkten `_lastTabSel.X = …`-Schreibstellen mehr außerhalb von `ViewState.setCurrent`.
+
+#### P3 — Lifecycle & dirty-bit (sw v867)
+
+- **A2 (dirty-bit):** `markChanged()` setzt `UIState._dirty = {persons,families,sources,places: true}`; `switchTab()` rendert nur wenn `_dirty[tab] !== false` (dirty oder erster Besuch).
+- **A3 (`ui-lifecycle.js`, neues File ~60 Z.):**
+  - `visibilitychange`: >60-s-Heuristik (`_lifecycleHiddenAt`) → alle Tabs dirty → safety re-render; scrollTop-Reset wenn Detail aktiv.
+  - `pageshow`: `e.persisted` (BFCache-Restore) → `location.reload()` — kein veralteter AppState.
+  - `pagehide`: `_persistLastTabSel()` — kein Datenverlust beim iOS-Kill.
+  - Ersetzt P0-K2-Handler in `ui-views.js`.
+
+#### P4 — Hygiene-Fixes (sw v868)
+
+- **R1** `showView`: direkter View-Swap (`prev.remove + new.add`, 2 DOM-Ops statt N) → weniger Layout-Flash auf iOS.
+- **R2** `switchTab` ruft `_vsTeardown(_vsP/_vsF)` für inaktive Listen → Scroll-Listener-Leak behoben.
+- **R3** `_navHistoryCap()` (max 50) nach jedem push in `_beforeDetailNavigate` → kein unbegrenztes `_navHistory`-Wachstum.
+- **R4** `_initDetailSwipe` bereits idempotent (`_swipeInit`-Flag) — kein Handlungsbedarf.
+- **R7** Alle 3× `setTimeout`-Magic in `ui-views.js` → `_afterLayout` (Fullscreen-resize, searchGlobal-focus, `_setListScroll`).
+- **SW** `ui-book/print/dedup.js` bereits in PRECACHE_OPTIONAL — kein Handlungsbedarf.
+
+---
+
 ### Session 2026-06-01 — PLACE-HIST P3 + P4: Typ-Filter, Ort-Picker, Geocoding, GOV-Import (sw v818–v819+)
 
 Vollständiger Abschluss des PLACE-HIST-Ausbauplans (ADR-024). Alle Features browser-verifiziert (0 Console-Errors). Offline-Script `gov-enrich.py` mit Wikidata- und GOV-Text-Modus; Handbuch aktualisiert.

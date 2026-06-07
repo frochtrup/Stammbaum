@@ -510,6 +510,37 @@ Reist mit der Datei (gehört zur Person) → `_`-Tag mit Writer-Support (Faustre
 
 **Status:** 🟢 P0a–P5 abgeschlossen, fortlaufende Robustheits-Fixes. **P0a-1 ✅ (sw v796):** Zeitachse Parser/Writer implementiert — datierte `<pname>`/`<placeref>` → `pnames[].{dateFrom,dateTo,dateType,_dateRaw}` + `enclosedBy[]`; HYBRID (strukturiert + `_dateRaw` verbatim) erhält Zusatz-Attribute wie `type="from"`. Verifiziert auf realer `Unsere Familie.gramps`: 29/29 Orts-Datumselemente + 8/8 verbatim-Attrs erhalten, counts=ok/stable; GEDCOM net_delta=0; +6 Unit-Tests (167). **P0a-2 ✅ (sw v797):** `getPlaceRegistry()` (`byId`/`byNorm`/`findByName`/`resolveAsOf`/`enclosureChainAsOf`, `_normPlaceName` nur fürs Matching) + `_migratePlaceObjects` (`parentId→enclosedBy`, in `setDb`), +13 Unit-Tests (180). **P0b-1 ✅ (sw v798):** `collectPlaces()` verknüpft jeden String-Ort additiv mit seiner Entität (`placeId`+`type`+Koordinaten, String-Key unverändert → kein Consumer-Ripple); Ort-Detail zeigt Typ/Zugehörigkeitskette/frühere Namen. +5 Unit-Tests (185). **P0b-2a ✅ (sw v799):** `findPlaceDuplicates()` (Fold-Key `_placeFold` + Koordinaten-Nähe Haversine, union-find) + `mergePlaceObjects()` (verlustfrei: Schreibweisen→`pnames[]`, `ev.placeId`/parent/enclosedBy umgehängt, Verlierer gelöscht); +13 Unit-Tests (198). **P0b-2b ✅ (sw v801):** Merge-Dialog im Orte-Tab (⇉-Button → `modalPlaceMerge`, Radio-Gewinnerwahl mit Vorschlag nach Event-Verwendung, `_CLICK_MAP`-Dispatch CSP-safe); browser-verifiziert (Render + Merge + Repointing + keine Console-Errors). **P0b-3 ✅:** `_migrateExtraPlacesToPlaceObjects` (gedcom.js) — extraPlaces mit Koords/trans → placeObjects, idempotent via stabilem `_epId(name)` djb2-Hash, Suffix-Fallback `_ep_<hash>_2` bei Hash-Kollision (sw v851). **P2 ✅:** pnames/enclosedBy Inline-Editor im Orts-Modal (`_renderPlaceNamesList`, `_renderEnclosedByList`, `addPlaceName`/`addEnclosedBy`). **P3 ✅ (sw v818):** Typ-Filter dynamisch, Ort-Suchpicker `modalPlacePicker` (Suche inkl. pnames-Sprachvarianten), Kirche↔Kirchenbuch-Sektion (Repository-Match). **P4 ✅ (sw v819):** `geocoding.js` Nominatim (Koordinaten+Typ, keine enclosedBy via Nominatim), Batch-Modal mit Fortschritt, GOV-Text-Parser (Browser `applyGovText()` + `gov-enrich.py --gov-text`) für historische `enclosedBy[]`. **P5a ✅ (sw v820):** Ort-Steckbrief — Ereignisse nach Typ, Quellen-Sektion, SVG-Namens-Timeline, Mini-Leaflet-Karte. **P5d ✅ (sw v821):** Geo-Plausibilitäts-Validator (BBox/Datumsfeld/Überlappung/enclosedBy-Zirkel). **P5e ✅ (sw v822):** `buildPlaceContextSentence` für Story/Buch. **String→PlaceObject Link (sw v829–v833):** `_buildFormString` + `applyStringPlaceLink` + Reimport-Erkennung. **Robustheit-Block (sw v851):** Identity-Matching auf `_normPlaceName` zentralisiert (geocoding, `_propagateCoordsToEvents`, `deleteExtraPlace`); `_placeUsageCounts` zählt jetzt auch `f.events[]`; `mergeStringPlaces` hängt `ev.placeId` der Verlierer auf Winner-PO um statt Leiche; `_epId`-Hash-Kollision → Suffix-Fallback statt stillem `continue`; +5 Unit-Tests (203 grün). Detail: `PLACE-REDESIGN.md` / `ROADMAP.md`.
 
+### ADR-025: Zentraler ViewState-Helper + PWA-Lifecycle-Kontrakt (View-Robustheit, sw v865–v868)
+
+**Kontext:** Die View-Selektion wurde an drei Orten parallel geführt: `AppState.currentX`-IDs (exklusiv, eine je gesetzt), `UIState._lastTabSel` (per Tab, nicht validiert, nicht IDB-persistent), `UIState._navHistory` (orthogonal). Dazu: 0 PWA-Lifecycle-Handler, kein Dirty-Tracking, kein definiertes Resume-Verhalten.
+
+**Entscheidung (4 Phasen):**
+
+**P1 — Selektions-Persistenz:** `_lastTabSel` wird via `idbPut('last_tab_sel', …)` nach jeder Detailauswahl in IDB geschrieben; `showStartView` lädt sie beim Start. `_desktopAutoSelect` validiert gespeicherte IDs gegen `AppState.db`. `_mobileSelectionRestore` scrollt + highlightet die letzte Auswahl auf Mobile. Alle 4 `show*Detail`-Fallbacks bei fehlendem Entity → `showMain()` statt lautlosem `return`.
+
+**P2 — `ViewState` IIFE** (`ui-views.js`):
+- `ViewState.setCurrent(tab, id)`: ① schreibt `UIState._lastTabSel[tab]` + IDB-persist, ② setzt `AppState.currentX` (exklusiver Fokus, alle anderen → null), ③ dispatcht `viewstate-change` CustomEvent.
+- `ViewState.getCurrent(tab)`: liest `_lastTabSel[tab]` mit Existenzvalidierung gegen `AppState.db`.
+- Alle 4 `show*Detail`-Funktionen und alle Konsumenten (`_desktopAutoSelect`, `_mobileSelectionRestore`) gehen über `ViewState`. Keine direkten `_lastTabSel.X = …`-Schreibstellen mehr.
+- `AppState.currentX` bleibt als Read-Convenience (wird synchron von `setCurrent` gesetzt) — kein Breaking Change für bestehende Konsumenten.
+
+**P3 — dirty-bit + `ui-lifecycle.js`:**
+- `markChanged()` setzt `UIState._dirty = {persons,families,sources,places: true}` für alle Daten-Tabs.
+- `switchTab()` rendert nur wenn `_dirty[tab] !== false` (dirty oder erster Besuch) → keine unnötigen Re-Renders.
+- `ui-lifecycle.js` (~60 Z.) zentralisiert alle PWA-Lifecycle-Handler: `visibilitychange` (>60-s-Heuristik → alle Tabs dirty), `pageshow` (BFCache-Reload-Guard), `pagehide` (`_persistLastTabSel`-Flush). Ersetzt den P0-K2-Handler in `ui-views.js`.
+
+**P4 — Hygiene:** `showView` direkter View-Swap (2 DOM-Ops statt N); `switchTab` teardown inaktiver VS-Listen; `_navHistory` cap 50; alle `setTimeout`-Magic → `_afterLayout`.
+
+**Konsequenzen:**
+- `viewstate-change` CustomEvent ist Erweiterungspunkt für künftige Listener (URL-Hash-Sync, Analytics, Deep-Link-Restore).
+- `UIState._dirty` ermöglicht künftig präziseres Dirty-Tracking per Edit-Typ (statt globaler Invalidierung).
+- `ui-lifecycle.js` ist der einzige Ort für PWA-Resume-Logik — keine Listener mehr in View-Modulen.
+- P5 (separate Detail-Container per Entität) kann auf diesem Fundament aufbauen.
+
+**Alternativen erwogen:** (a) Vollständiger `AppState.currentX`-Getter-Shim via `Object.defineProperty` — zu invasiv, alle 50+ Lesestellen unveränderter Code; (b) URL-Hash als primäre Persistenz — bricht iOS-PWA-Standalone-Modus; (c) SessionStorage statt IDB — würde Process-Kill-Szenario nicht überleben.
+
+**Status:** ✅ P0–P4 abgeschlossen (sw v861–v868). P5 (A4/A5, separate Detail-Container) angedacht.
+
 ---
 
 ## Passthrough-Mechanismen — Vollständige Analyse
