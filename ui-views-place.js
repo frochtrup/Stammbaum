@@ -356,10 +356,21 @@ function applyGovText() {
 
       // _govTypes[]: alle ist-Einträge mit Zeitraum speichern (wie pnames für Typ-Geschichte)
       if (!Array.isArray(po._govTypes)) po._govTypes = [];
+      if (!Array.isArray(po.pnames)) po.pnames = [];
+      const _baseTitle = po.title || '';
       for (const t of parsed.types) {
         const exists = po._govTypes.some(g =>
           g.rawType === t.rawType && g.dateFrom === t.dateFrom && g.dateTo === t.dateTo);
         if (!exists) { po._govTypes.push({ rawType: t.rawType, type: t.type, dateFrom: t.dateFrom || null, dateTo: t.dateTo || null }); changes++; }
+        // Als datierter pname spiegeln: "Königreich Preußen" mit Zeitraum → GRAMPS + Steckbrief
+        if (_baseTitle) {
+          const fullName = `${t.rawType} ${_baseTitle}`;
+          const pnExists = po.pnames.some(p => p.value === fullName && p.dateFrom === (t.dateFrom || null) && p.dateTo === (t.dateTo || null));
+          if (!pnExists) {
+            po.pnames.push({ value: fullName, lang: t.lang || 'deu', dateFrom: t.dateFrom || null, dateTo: t.dateTo || null, dateType: null, _dateRaw: null });
+            changes++;
+          }
+        }
       }
 
       // Typ: open-ended bevorzugt, sonst neuester Eintrag (höchstes dateFrom)
