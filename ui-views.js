@@ -540,7 +540,11 @@ function switchTab(tab) {
   document.getElementById('tab-search').style.display   = tab === 'search'   ? 'block' : 'none';
   document.getElementById('tab-tasks').style.display    = tab === 'tasks'    ? 'block' : 'none';
   document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats' || tab === 'tasks') ? 'none' : '';
-  renderTab();
+  // P3-A2: nur rendern wenn dirty oder noch nie für diesen Tab gerendert (undefined ≠ false)
+  if ((UIState._dirty || {})[tab] !== false) {
+    renderTab();
+    UIState._dirty = { ...(UIState._dirty || {}), [tab]: false };
+  }
 }
 
 function renderTab() {
@@ -598,6 +602,8 @@ function markChanged() {
   UIState._searchIndexDirty = true;
   // P0-R5: Personenliste-Cache nach Edit invalidieren (sonst CSV-Export mit Vor-Edit-Stand)
   if (typeof _invalidatePersonListCache === 'function') _invalidatePersonListCache();
+  // P3-A2: alle Daten-Tabs als dirty markieren → switchTab rendert bei nächstem Besuch
+  UIState._dirty = { persons: true, families: true, sources: true, places: true };
   updateChangedIndicator();
 }
 
@@ -614,18 +620,7 @@ async function _checkCacheStatus() {
   }
 }
 
-// P0-K2: bei PWA-Resume (iOS Hintergrund→Vordergrund) defensive aufräumen —
-// stehengebliebener v-detail.scrollTop + stale Liste erzeugen sonst „Void"-Artefakt
-// + nicht-aktualisierte Counts/Namen. visibilitychange ist auf iOS Safari der
-// zuverlässigste Resume-Trigger (pageshow feuert nur bei BFCache-Restore).
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) return;
-  if (AppState && AppState._detailActive) {
-    const _det = document.getElementById('v-detail');
-    if (_det) _det.scrollTop = 0;
-  }
-  if (typeof renderTab === 'function') renderTab();
-});
+// Lifecycle-Handler → ausgelagert in ui-lifecycle.js (P3-A3)
 
 function _initOfflineDiag() {
   if (!navigator.onLine) { _setOfflineIndicator(true); _checkCacheStatus(); }

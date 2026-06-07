@@ -1,6 +1,6 @@
 # View-Robustheit — Technisches Detail-Design & Roadmap
 
-> Status: **P0 ✅ · P1 ✅ · P2 ✅ · P3–P5 offen** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v866
+> Status: **P0 ✅ · P1 ✅ · P2 ✅ · P3 ✅ · P4–P5 offen** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v867
 > Ergebnis eines gesamthaften Reviews der View-Switching-Architektur. Behebt 4 vom Nutzer reproduzierbare Bugs und schließt strukturelle Lücken in State-Modell und Lifecycle.
 > Kern-Architektur-Entscheidungen werden nach Abschluss in `ARCHITECTURE.md` (ADR-025 vorgesehen) überführt; dieses File dokumentiert Befunde, Maßnahmen und Reihenfolge bis dahin.
 
