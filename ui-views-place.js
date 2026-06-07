@@ -354,12 +354,19 @@ function applyGovText() {
       if (!po._govId) { po._govId = parsed.govId; changes++; }
       if (po._govUnresolved) { delete po._govUnresolved; changes++; }
 
-      // Typ: neuester Eintrag ohne dateTo (oder letzter insgesamt)
-      const currentType = parsed.types.find(t => !t.dateTo) || parsed.types[parsed.types.length - 1];
-      if (currentType && currentType.type !== 'Unknown' && (!po.type || po.type === 'Unknown')) {
-        po.type = currentType.type;
-        newType = po.type;
-        changes++;
+      // Typ: open-ended bevorzugt, sonst neuester Eintrag (höchstes dateFrom)
+      const _typByRecent = parsed.types.slice().sort((a, b) => {
+        const ay = a.dateFrom ? parseInt(a.dateFrom) : 0;
+        const by = b.dateFrom ? parseInt(b.dateFrom) : 0;
+        return by - ay;
+      });
+      const currentType = parsed.types.find(t => !t.dateTo) || _typByRecent[0];
+      if (currentType && currentType.type !== 'Unknown') {
+        if (!po.type || po.type === 'Unknown' || po.type !== currentType.type) {
+          po.type = currentType.type;
+          newType = po.type;
+          changes++;
+        }
       }
 
       // Namen: nur neue hinzufügen
