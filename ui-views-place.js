@@ -855,9 +855,11 @@ async function deleteExtraPlace(name) {
 
 // P5a-4: Namens-Timeline als inline SVG (pnames[] mit Datumsbereich)
 function _placeNamesSvg(pnames) {
-  const dated = (pnames || []).filter(pn => pn.dateFrom || pn.dateTo);
-  if (!dated.length) return '';
   const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+  const _sk = pn => pn.dateFrom || pn.dateTo || '9999';
+  const dated = (pnames || []).filter(pn => pn.dateFrom || pn.dateTo)
+    .slice().sort((a, b) => _sk(a).localeCompare(_sk(b)));
+  if (!dated.length) return '';
   const cur = new Date().getFullYear();
   let minY = Infinity, maxY = -Infinity;
   for (const pn of dated) {
@@ -868,9 +870,9 @@ function _placeNamesSvg(pnames) {
   }
   if (minY === Infinity) return '';
   if (maxY <= minY) maxY = minY + 10;
-  // Layout: feste Breite 320 — Label immer x=0, Balken im Zeitstrahl darunter
-  const W = 320, LBL_H = 13, BAR_H = 4, ROW = LBL_H + BAR_H + 9;
-  const AXIS_H = 13, H = AXIS_H + dated.length * ROW;
+  // Feste Pixel-Breite: kein Hochskalieren auf breitem Container
+  const W = 300, LBL_H = 12, BAR_H = 4, ROW = LBL_H + BAR_H + 8;
+  const AXIS_H = 12, H = AXIS_H + dated.length * ROW;
   const toX = y => Math.max(0, Math.min(W, (y - minY) / (maxY - minY) * W));
   const COLS = ['#b07a4a','#6a8fa8','#7a9a6a','#8a6a9a','#a08060','#6a9090'];
   let bars = '', axis = '', labels = '';
@@ -882,8 +884,8 @@ function _placeNamesSvg(pnames) {
     // Label: Name + Datum zusammen, immer linksbündig bei x=0
     const name = esc((pn.value || '').substring(0, 22) + (pn.lang ? ` (${pn.lang})` : ''));
     const span = esc([pn.dateFrom, pn.dateTo].filter(Boolean).join('–'));
-    labels += `<text x="0" y="${rowY + LBL_H - 2}" font-size="11" fill="var(--text,#3a3028)">${name}</text>`;
-    if (span) labels += `<text x="0" y="${rowY + LBL_H + BAR_H + 6}" font-size="9" fill="var(--text-muted,#8a7a6a)">${span}</text>`;
+    labels += `<text x="0" y="${rowY + LBL_H - 2}" font-size="10" fill="var(--text,#3a3028)">${name}</text>`;
+    if (span) labels += `<text x="0" y="${rowY + LBL_H + BAR_H + 5}" font-size="8" fill="var(--text-muted,#8a7a6a)">${span}</text>`;
     bars += `<rect x="${x1.toFixed(1)}" y="${rowY + LBL_H}" width="${barW.toFixed(1)}" height="${BAR_H}" rx="1" fill="${col}" opacity="0.6"/>`;
   });
   // Achsen-Ticks oben
@@ -893,7 +895,7 @@ function _placeNamesSvg(pnames) {
     axis += `<line x1="${x.toFixed(1)}" y1="${AXIS_H - 4}" x2="${x.toFixed(1)}" y2="${AXIS_H + 2}" stroke="var(--border,#ccc)" stroke-width="0.8"/>`;
     axis += `<text x="${x.toFixed(1)}" y="${AXIS_H - 5}" font-size="8" fill="var(--text-muted,#8a7a6a)" text-anchor="middle">${y}</text>`;
   }
-  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:4px;overflow:hidden;max-width:${W}px">${axis}${labels}${bars}</svg>`;
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:4px;overflow:hidden">${axis}${labels}${bars}</svg>`;
 }
 
 // P5a-5: Mini-Karte (Leaflet) im Standort-Abschnitt initialisieren
