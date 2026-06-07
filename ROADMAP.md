@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v900 · Cache: `stammbaum-v900` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v903 · Cache: `stammbaum-v903` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -34,6 +34,7 @@ Fünf Dimensionen leiten die Priorisierung:
 
 **Letzte Highlights** (vollständige Tabelle + ältere Sprints: CHANGELOG.md):
 
+- **v901–v903 — CSP-DURCHSETZUNG vollständig:** 62 statische inline-`style=` → CSS-Klassen (~55 neue Klassen); dynamische gramps-tag-Farben via `data-il-style` + `_applyDynStyles()`; `test-csp.js` JS-Template-Scanner → **0 Fundstellen** — CSP belegt statt behauptet.
 - **v899 — SCALE-TEST + SORT-CACHE:** 20k-GEDCOM Roundtrip net_delta=0; `UIState._personSortCache` → 0 ms Sort-Overhead nach Erstrender. Detail: SCALE-TEST-BEFUNDE.md.
 - **v892 — Ortsreport + Ortsbuch-Export:** Steckbrief mit Namenshäufigkeiten/Zeitverteilung/Hierarchie-Timeline; `exportOrtsbuch()` standalone-HTML.
 - **v891 — UI-Logik-Tests (T0-UI):** MiniDOM-Harness, +124 Tests (296→420), Blöcke t–ab verriegeln die P0–P6-Bugklassen.
@@ -93,13 +94,13 @@ Vollständige Liste der abgeschlossenen v8-dev-Features (STORY-OPT, WW-PARSER, T
 ## Priorisierung — überarbeitet 2026-05-31 (nach Re-Verifikation)
 
 Das Test-Sicherheitsnetz und das Modul-Fundament (Pilot) sind erledigt; die Re-Verifikation 2026-05-31 hat **zwei neue, konkrete Engpässe** sichtbar gemacht, die jetzt vor neuen Features stehen:
-- **CSP-Durchsetzung ist lückenhaft** (Doku behauptete „vollständig"). Tote inline-`on*`/`style=` → CSP-DURCHSETZUNG (s. P0).
+- ✅ **CSP-Durchsetzung vollständig** (v901–v903): `test-csp.js` JS-Template-Scanner bestätigt 0 inline-`style=`-Fundstellen.
 - **Architektur-Schuld** (~860 top-level Funktionen, flacher Namespace) → die Monsterfunktionen sind der konkrete Hebel, nicht die Voll-Modul-Migration. *(Korrektur 2026-06-07: die früher hier genannte „486-Z.-Funktion" `_attr` ist ein Phantom — existiert nicht; echte Längsten s. T0-FUNC-SPLIT.)*
 
 **Reihenfolge:**
 1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): GEDCOM+GRAMPS-Roundtrip automatisiert + 161 Unit-Tests. Regressionsabgesichert.
 2. ✅ **P0 — Modul-Fundament-Pilot** (T0-MODULE Phase 1+2): ADR-020 + GRAMPS-/Validator-Cluster als ES-Module. Phasen 3–4 **bewusst zurückgestellt** (Begründung unten).
-3. **P0 — CSP-Durchsetzung verifizierbar machen** *(neu 2026-05-31)*: ① ✅ inline-`onclick` entfernt (v794); ② tote inline-`style=` → CSS-Klassen (CSP-DURCHSETZUNG); ③ CSP-Report-Only-Selbsttest, damit „CSP vollständig" *belegt* statt behauptet ist. **Kleiner Aufwand, schließt einen echten Funktions-/Robustheits-Bug-Typ.**
+3. ✅ **P0 — CSP-Durchsetzung verifizierbar machen** *(abgeschlossen v903)*: ① inline-`onclick` entfernt (v794); ② statische inline-`style=` → CSS-Klassen (v902, 10 Dateien, ~50 neue Klassen); ③ dynamische `gramps-tag`-Farben via `data-il-style` + `_applyDynStyles()` (v903); `test-csp.js` JS-Scanner Ergebnis: **0 Fundstellen** — CSP vollständig *belegt* statt behauptet.
 4. **P1 — gezielte Architektur-Entschärfung**: die 3 echten Monsterfunktionen (`_parseINDILine` 391, `_parseFAMLine` 298, `writeINDIRecord` 273 Z.) zerlegen — unabhängig vom Modulsystem, größter Wartungs-Hebel (T0-FUNC-SPLIT).
 5. **P2+** — Features. **Verbleibender Zielgruppen-Hebel ggü. MacFamilyTree** (s. Vergleich): **Ausgabe-Reichtum (PDF-Bücher/Poster → OUTPUT-RICHNESS)** als größter fachlicher Abstand; Kamera (mobil → CAM). *(Erledigt seit 2026-05-31: Skalierungstest 20k, Orts-Geocoding Nominatim/GOV.)*
 
@@ -226,7 +227,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v900 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v903 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900 + CSP-Durchsetzung v901–v903)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
