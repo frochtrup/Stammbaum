@@ -698,6 +698,7 @@
         <li>Quellenverzeichnis</li>
         <li>Forschungsprotokoll-Export</li>
         <li>Statistik-Report</li>
+        <li>Ortsbuch</li>
         <li>Verwandtschaftsnachweis</li>
       </ul>
     </li>
@@ -2065,6 +2066,9 @@ Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Mar
 <p>Wenn Sie auf einen Ort tippen, öffnet sich die <strong>Ortsdetailansicht</strong> — der Ort-Steckbrief. Er gliedert alle verknüpften Informationen übersichtlich:</p>
 <ul>
   <li><strong>Ereignisse nach Typ gruppiert:</strong> Geburt, Taufe, Heirat, Tod usw. werden jeweils als eigene Gruppe angezeigt, mit den zugehörigen Personen.</li>
+  <li><strong>Freie Notiz:</strong> Sie können zu jedem Ort eine eigene Notiz erfassen (z. B. „Pfarrei zuständig ab 1650" oder Hinweise zur Quellenlage). Tippen Sie den Ort zum Bearbeiten an und tragen Sie den Text im Feld <span class="button-label">Notiz</span> ein; im Steckbrief erscheint er als eigener Abschnitt. Die Notiz wird in der Ortsdatei (<em>stammbaum-orte.json</em>) gespeichert und ist geräteübergreifend verfügbar.</li>
+  <li><strong>Zugehörigkeit nach Jahr:</strong> Hat ein Ort datierte Verwaltungszugehörigkeiten (aus GOV-Import), zeigt eine Liste, welche übergeordnete Kette (Amt › Kreis › Provinz …) in welchem Jahr galt — passend zu den tatsächlich vorhandenen Ereignisjahren. Zeiträume ohne bekannte Zuordnung werden als <em>unbekannt</em> markiert, unvollständige Ketten mit einem <em>› ?</em> gekennzeichnet — so sehen Sie auf einen Blick, wo noch Recherche fehlt.</li>
+  <li><strong>Zeitraumverteilung:</strong> Ein kleines Balkendiagramm zeigt, in welchen Perioden (automatisch gewählte Jahresspannen) die meisten Ereignisse an diesem Ort stattfanden. Die Perioden sind chronologisch geordnet und lassen sich aufklappen, um die einzelnen Ereignisse zu sehen.</li>
   <li><strong>Quellen-Sektion:</strong> Alle Quellen, die mit Ereignissen an diesem Ort belegt sind, erscheinen am Ende des Steckbriefs.</li>
   <li><strong>Namens-Zeitstrahl (SVG):</strong> Hat ein Ort mehrere historische Schreibweisen mit Datumsgrenzen (aus GOV-Import), zeigt ein horizontaler Zeitstrahl, welcher Name in welcher Periode gültig war.</li>
   <li><strong>Mini-Karte:</strong> Sind Koordinaten vorhanden, wird direkt im Steckbrief ein kleiner Kartenausschnitt eingeblendet — ohne extra Klick in den Karten-Tab.</li>
@@ -3402,6 +3406,10 @@ Tipp: Das Familienbuch eignet sich besonders gut als Geburtstagsgeschenk oder zu
 
 <p>Der <strong>Statistik-Report</strong> fasst die Kennzahlen Ihres Stammbaums als druckbares Dokument zusammen: Übersichtszahlen (Personen, Familien, Quellen, Orte, Archive, Medien), Geschlechterverteilung und Datenvollständigkeit, Lebens- und Heiratsalter, Kinderzahl je Familie, Ereignisse pro Jahrzehnt sowie die häufigsten Nach- und Vornamen und Geburts-/Sterbeorte. Aufrufen über <span class="button-label">☰ → Ausgaben → Statistik-Report (PDF)</span>. (Die interaktive Fassung dieser Auswertung finden Sie in Kapitel 9.)</p>
 
+<h2>Ortsbuch</h2>
+
+<p>Das <strong>Ortsbuch</strong> erzeugt ein ortssortiertes Nachschlagewerk Ihres Stammbaums: Jeder Ort erscheint mit seinen historischen Namensvarianten, der Verwaltungszugehörigkeit und allen dort verzeichneten Ereignissen samt Personen. Ein Inhaltsverzeichnis verlinkt alle Orte. Sie starten den Export über das Buch-Symbol <span class="button-label">📖</span> in der Kopfzeile der Ortsliste (Tab <span class="button-label">Orte</span>). Ideal, um auf einen Blick zu sehen, welche Familien an einem bestimmten Ort gelebt haben — etwa zur Vorbereitung eines Archivbesuchs vor Ort.</p>
+
 <h2>Verwandtschaftsnachweis</h2>
 
 <p>Der <strong>Verwandtschaftsnachweis</strong> dokumentiert, wie zwei Personen miteinander verwandt sind — als druckfertiges A4-Zertifikat. Es nennt beide Personen, das Verwandtschaftsverhältnis im Klartext (z. B. „Cousine 1. Grades"), den gemeinsamen Vorfahren und den vollständigen Verwandtschaftspfad (mit ⬡ am gemeinsamen Vorfahren). Sie erzeugen ihn über den <strong>Beziehungsrechner</strong> (siehe Kapitel 4): Berechnen Sie eine Verwandtschaft und tippen Sie im Ergebnis-Dialog auf <span class="button-label">📜 Verwandtschaftsnachweis (PDF)</span>. Nützlich z. B. als Nachweis für Behörden oder als Beigabe zum Familientreffen.</p>
@@ -3494,12 +3502,15 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 </ul>
 
 <h2>Die App ist langsam bei großen Dateien</h2>
-<p>Ab ca. 5 000 Personen kann das erste Laden etwas dauern. Danach ist alles gecacht. Tipps:</p>
+<p>Die App ist auf große Bestände ausgelegt und wurde mit einem synthetischen Stammbaum von <strong>20 000 Personen</strong> getestet. Das Einlesen läuft im Hintergrund (die Oberfläche bleibt bedienbar), und die Personenliste wird nur einmal sortiert und danach zwischengespeichert — Tab-Wechsel sind daher ohne Verzögerung. Ab ca. 5 000 Personen kann das <em>erste</em> Laden etwas dauern; danach ist alles gecacht. Weitere Tipps:</p>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
   <li>Filter in der Personenliste nutzen — reduziert die angezeigte Menge sofort</li>
   <li>Baumansicht: weniger Generationen wählen (2–3 statt 5–6)</li>
   <li>Zeitleiste und Fächer-Diagramm: auf einem schwachen Gerät langsamer — Vollbild vermeiden</li>
 </ul>
+
+<h2>Ist die App barrierefrei nutzbar?</h2>
+<p>Ja. Die App ist mit der Tastatur vollständig bedienbar (siehe Tastaturkürzel weiter unten), alle Schaltflächen und Listen sind für Screenreader beschriftet, und Bewegungs­effekte respektieren die System­einstellung „Bewegung reduzieren". Light- und Dark-Modus erfüllen die Kontrast­anforderungen der Richtlinie <strong>WCAG 2.1 AA</strong> — überprüft über alle sechs Hauptansichten.</p>
 
 <h2>OneDrive-Verbindung schlägt fehl</h2>
 <ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 2em;">
