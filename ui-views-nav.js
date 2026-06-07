@@ -127,6 +127,13 @@ function _captureCurrentNavState() {
   return null;
 }
 
+// R3: navHistory auf max. 50 Einträge begrenzen (älteste entfernen)
+const _NAV_HISTORY_CAP = 50;
+function _navHistoryCap() {
+  if (UIState._navHistory.length > _NAV_HISTORY_CAP)
+    UIState._navHistory.splice(0, UIState._navHistory.length - _NAV_HISTORY_CAP);
+}
+
 // Muss am Anfang jeder showDetail/showFamilyDetail/showSourceDetail/showPlaceDetail stehen.
 function _beforeDetailNavigate() {
   if (AppState._detailActive) {
@@ -134,20 +141,24 @@ function _beforeDetailNavigate() {
     const cur = _captureCurrentNavState();
     if (cur) UIState._navHistory.push(cur);
     UIState._navFwdStack = [];
+    _navHistoryCap();
   } else if (document.getElementById('v-tree').classList.contains('active') && currentTreeId) {
     // Baum → Detail
     const _type = document.body.classList.contains('fc-mode')       ? 'fanchart'  :
                   document.body.classList.contains('desc-tree-mode') ? 'desctree' : 'tree';
     UIState._navHistory.push({ type: _type, id: currentTreeId });
     UIState._navFwdStack = [];
+    _navHistoryCap();
   } else if (document.getElementById('v-story')?.classList.contains('active') && UIState._storyPid) {
     // Story → Detail
     UIState._navHistory.push({ type: 'story', id: UIState._storyPid });
     UIState._navFwdStack = [];
+    _navHistoryCap();
   } else if (document.getElementById('v-timeline')?.classList.contains('active') && UIState._timelinePid) {
     // Zeitleiste → Detail
     UIState._navHistory.push({ type: 'timeline', id: UIState._timelinePid });
     UIState._navFwdStack = [];
+    _navHistoryCap();
   } else {
     // Liste → Detail: History neu starten + Scroll-Position sichern
     UIState._navHistory.length = 0;

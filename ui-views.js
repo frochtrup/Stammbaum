@@ -38,7 +38,9 @@ window._afterLayout = function (fn) {
 
 function showView(id) {
   const desktop = window.innerWidth >= 900 && id !== 'v-landing';
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  // R1: direkter Swap (nur 2 DOM-Ops statt N) — reduziert Layout-Flash auf iOS
+  const _prevView = document.querySelector('.view.active');
+  if (_prevView && _prevView.id !== id) _prevView.classList.remove('active');
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   // Vollbild-Zustand zwischen Views übertragen oder beenden
@@ -59,7 +61,7 @@ function showView(id) {
       if (b) { b.textContent = '⤡'; b.title = 'Sidebar einblenden'; }
     } else {
       // Vollbild beendet — linke Seite neu kalibrieren
-      setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+      _afterLayout(() => window.dispatchEvent(new Event('resize')));
     }
   }
   // Buttons der verlassenen View zurücksetzen
@@ -239,7 +241,7 @@ function bnavSearch() {
   setBnavActive('search');
   showView('v-main');
   switchTab('search');
-  setTimeout(() => document.getElementById('searchGlobal')?.focus(), 80);
+  _afterLayout(() => document.getElementById('searchGlobal')?.focus());
 }
 
 // Bottom-Nav: Proband (nur noch aus Menü erreichbar)
@@ -375,8 +377,8 @@ function showMain() {
   renderTab();
   if (typeof _updateTasksBadge === 'function') _updateTasksBadge();
   if (saved && saved.tab === AppState.currentTab) {
-    // setTimeout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
-    setTimeout(() => _setListScroll(saved.pos), 0);
+    // _afterLayout läuft nach rAF-Callbacks (z.B. _scrollListToCurrent)
+    _afterLayout(() => _setListScroll(saved.pos));
   }
 }
 
@@ -540,6 +542,9 @@ function switchTab(tab) {
   document.getElementById('tab-search').style.display   = tab === 'search'   ? 'block' : 'none';
   document.getElementById('tab-tasks').style.display    = tab === 'tasks'    ? 'block' : 'none';
   document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats' || tab === 'tasks') ? 'none' : '';
+  // R2: VS-Teardown für inaktive Listen — Scroll-Listener-Leak verhindern
+  if (tab !== 'persons'  && typeof _vsP !== 'undefined') _vsTeardown(_vsP);
+  if (tab !== 'families' && typeof _vsF !== 'undefined') _vsTeardown(_vsF);
   // P3-A2: nur rendern wenn dirty oder noch nie für diesen Tab gerendert (undefined ≠ false)
   if ((UIState._dirty || {})[tab] !== false) {
     renderTab();

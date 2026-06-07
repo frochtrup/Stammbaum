@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v867 · Cache: `stammbaum-v867` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v868 · Cache: `stammbaum-v868` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v867) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v868) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v868 | **View-Robustheit P4** — R1: `showView` direkter View-Swap (1–2 DOM-Ops statt N, weniger Layout-Flash iOS); R2: `switchTab` ruft `_vsTeardown` für inaktive VS-Listen (_vsP/_vsF); R3: `_navHistoryCap()` — `_navHistory` auf 50 Einträge begrenzt; R4: `_initDetailSwipe` bereits idempotent; R7: alle `setTimeout`-Magic-Delays → `_afterLayout` (2× rAF). SW: `ui-book/print/dedup.js` bereits in PRECACHE_OPTIONAL. | Scroll-Listener-Leak bei Tab-Wechsel behoben; unbegrenztes navHistory-Wachstum gestoppt; Layout-Konsistenz verbessert. |
 | v867 | **View-Robustheit P3** — A2: `markChanged()` setzt `UIState._dirty` für alle Daten-Tabs; `switchTab()` rendert nur wenn `_dirty[tab] !== false` (dirty oder nie besucht). A3: neues `ui-lifecycle.js` — `visibilitychange` mit >60-s-Heuristik (alle Tabs dirty), `pageshow` mit BFCache-Reload-Guard, `pagehide` mit `_persistLastTabSel`-Flush. | Unnötige Re-Renders bei Tab-Wechsel ohne Edit eliminiert; BFCache-Inkonsistenz verhindert; saubere Trennung Lifecycle vs. View-Routing. |
 | v866 | **View-Robustheit P2** — `ViewState` IIFE (A1, ADR-025): `setCurrent(tab,id)` (IDB-persistent, exklusiver Fokus, `viewstate-change`-Event) + `getCurrent(tab)` (Existenz-Validierung). Alle 4 `show*Detail`-Funktionen: 5-Zeiler (AppState.currentX + _lastTabSel + persist) → `ViewState.setCurrent`. `_desktopAutoSelect` + `_mobileSelectionRestore` → `ViewState.getCurrent`. | Parallele Buchführung `AppState.currentX` + `UIState._lastTabSel` konsolidiert. Basis für ADR-025 + P3. |
 | v865 | **View-Robustheit P1** — K4 Mobile-Selektions-Restore (`_mobileSelectionRestore`); K5 `_desktopAutoSelect`-Validierung (verlorene IDs → Fallback); K6 `_lastTabSel` IDB-persistent (`idbPut/idbGet 'last_tab_sel'`); K7 `showStartView` lädt savedSel + ruft `_desktopAutoSelect('persons')`; R6 `showDetail`/`showFamilyDetail`/`showPlaceDetail`/`showSourceDetail` bei fehlendem Entity → `showMain()` statt lautlosem `return`. | Behebt Bugs 3+4: Mobile-Highlight nach Tab-Tipp; verlorene ID nach Merge/Delete = leere View; `_lastTabSel` überlebt iOS-Process-Kill; Desktop-Startansicht nicht leer. |
@@ -276,7 +277,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 | **P1** | K4 Mobile-Selektions-Restore + K5 `_lastTabSel`-Validierung + K6 `_lastTabSel` IDB-persistieren + K7 `showStartView` AutoSelect + R6 `showDetail`-Fallback. Behebt Bugs 3+4. | ~1.5 h | ✅ *(sw v865)* |
 | **P2** | A1 zentraler `ViewState.setCurrent/getCurrent` mit IDB-Persistenz + ID-Validierung + `viewstate-change`-Event. Ersetzt parallele Buchführung. | ~3 h | ✅ *(sw v866)* |
 | **P3** | A2 `data-dirty`-Bit pro Tab + A3 `ui-lifecycle.js` (visibilitychange/pageshow/pagehide). | ~2 h | ✅ *(sw v867)* |
-| **P4** | Hygiene: R1 (Layout-Flash) + R2 (`_vsP`-Teardown) + R3 (`_navHistory`-Cap) + R4 (`_initDetailSwipe` idempotent) + R7 (`setTimeout` → `_afterLayout`) + SW (lazy-Module aus `PRECACHE_CRITICAL` raus). | ~1 h | offen |
+| **P4** | Hygiene: R1 (Layout-Flash) + R2 (`_vsP`-Teardown) + R3 (`_navHistory`-Cap) + R4 (`_initDetailSwipe` idempotent) + R7 (`setTimeout` → `_afterLayout`) + SW (lazy-Module aus `PRECACHE_CRITICAL` raus). | ~1 h | ✅ *(sw v868)* |
 | **P5** | A4 Detail-View als 4 separate Container (per-Entität-Scroll-State) + A5 `data-view-init`-Flag. | ~5 h | angedacht |
 
 **Reihenfolge:** P0 → P1 → (P2 ∥ P3 ∥ P4) → P5. P2 ist Voraussetzung für P5; P4 jederzeit.
@@ -369,7 +370,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v867 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P3 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v868 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P4 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
