@@ -557,6 +557,75 @@ const ViewState = (() => {
 // A5 (P5): Container-Map für Skip-Re-Render-Check
 const _DC_TAB_MAP = { persons: 'detailPerson', families: 'detailFamily', sources: 'detailSource', places: 'detailPlace' };
 
+// P6-B5: gemeinsame Detail-Toolbar (TopTitle + 8 Buttons) auf den passenden Entity-Typ
+// konfigurieren. Aufgerufen aus den show*Detail-Funktionen UND dem Skip-Pfad in
+// _dcAlreadyShows — sonst zeigte die Toolbar nach Tab-Wechsel-Skip noch die Werte
+// der vorigen Entität (TopTitle „Familie" über Personen-Detail, storyBtn dataset.action
+// auf showFamilyStory mit falscher fid usw. — funktionale Fehlverdrahtung, kein Kosmetikum).
+function _configureDetailToolbar(tab, entityId) {
+  const top      = document.getElementById('detailTopTitle');
+  const editBtn  = document.getElementById('editBtn');
+  const treeBtn  = document.getElementById('treeBtn');
+  const tlBtn    = document.getElementById('timelineBtn');
+  const stBtn    = document.getElementById('storyBtn');
+  const pbBtn    = document.getElementById('probandBtn');
+  const pbsBtn   = document.getElementById('probandSetBtn');
+  const mapBtn   = document.getElementById('detailMapBtn');
+
+  if (tab === 'persons') {
+    const p = AppState.db.individuals[entityId];
+    if (!p) return;
+    if (top) top.textContent = p.name || entityId;
+    if (editBtn) editBtn.style.display = '';
+    if (treeBtn) { treeBtn.hidden = false; treeBtn.style.display = ''; treeBtn.dataset.id = entityId; }
+    if (tlBtn)   { tlBtn.hidden = false; tlBtn.dataset.id = entityId; }
+    if (stBtn)   { stBtn.hidden = false; stBtn.dataset.action = 'showStory'; stBtn.dataset.id = entityId; delete stBtn.dataset.fid; }
+    if (mapBtn)  mapBtn.hidden = false;
+    if (pbBtn)   pbBtn.hidden = false;
+    if (pbsBtn) {
+      pbsBtn.hidden = false;
+      pbsBtn.dataset.id = entityId;
+      const isProband = typeof getProbandId === 'function' && getProbandId() === entityId;
+      pbsBtn.classList.toggle('proband-active', isProband);
+      pbsBtn.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
+    }
+  } else if (tab === 'families') {
+    const f = AppState.db.families[entityId];
+    if (!f) return;
+    if (top) top.textContent = 'Familie';
+    if (editBtn) editBtn.style.display = '';
+    const _famTreeTarget = f.husb || f.wife || null;
+    if (treeBtn) {
+      treeBtn.hidden = !_famTreeTarget;
+      treeBtn.style.display = '';
+      if (_famTreeTarget) treeBtn.dataset.id = _famTreeTarget;
+    }
+    if (tlBtn)   tlBtn.hidden = true;
+    if (stBtn)   { stBtn.hidden = false; stBtn.dataset.action = 'showFamilyStory'; stBtn.dataset.fid = entityId; delete stBtn.dataset.id; }
+    if (pbBtn)   pbBtn.hidden = true;
+    if (pbsBtn)  pbsBtn.hidden = true;
+    if (mapBtn)  mapBtn.hidden = true;
+  } else if (tab === 'sources') {
+    if (top) top.textContent = 'Quelle';
+    if (editBtn) editBtn.style.display = '';
+    if (treeBtn) treeBtn.hidden = true;
+    if (tlBtn)   tlBtn.hidden = true;
+    if (stBtn)   stBtn.hidden = true;
+    if (pbBtn)   pbBtn.hidden = true;
+    if (pbsBtn)  pbsBtn.hidden = true;
+    if (mapBtn)  mapBtn.setAttribute('hidden', '');
+  } else if (tab === 'places') {
+    if (top) top.textContent = '📍 Ort';
+    if (editBtn) editBtn.style.display = '';
+    if (treeBtn) treeBtn.hidden = true;
+    if (tlBtn)   tlBtn.hidden = true;
+    if (stBtn)   stBtn.hidden = true;
+    if (pbBtn)   pbBtn.hidden = true;
+    if (pbsBtn)  pbsBtn.hidden = true;
+    // detailMapBtn: kein expliziter Reset (showPlaceDetail-Verhalten unverändert)
+  }
+}
+
 function _dcAlreadyShows(tab, entityId) {
   const cid = _DC_TAB_MAP[tab];
   if (!cid) return false;
@@ -571,6 +640,13 @@ function _dcAlreadyShows(tab, entityId) {
   // bleibt und das eigentliche Detail erst beim Runterscrollen erscheint.
   document.body.classList.add('has-detail');
   AppState._detailActive = true;
+  // P6-B5: Detail-Toolbar auf den passenden Entity-Typ konfigurieren — sonst zeigt
+  // TopTitle/Buttons noch den State der vorigen Entität (z.B. „Familie" über Personen-
+  // Detail, storyBtn mit showFamilyStory + fid). Funktionale Fehlverdrahtung der
+  // Toolbar-Klicks, nicht nur Kosmetikum.
+  _configureDetailToolbar(tab, entityId);
+  // Hist-Picker-Button-Zustand aktualisieren (analog showView('v-detail') desktop-Branch)
+  if (typeof _updateDetailHistBtn === 'function') requestAnimationFrame(_updateDetailHistBtn);
   // P6-B3: Skip-Pfad muss die LINKE Liste trotzdem synchronisieren — andernfalls behält
   // die zuvor aktive Tab-Liste die .current-Klasse, und Scroll-Position zeigt nicht auf
   // den ausgewählten Eintrag. _activateDetailContainer kümmert sich nur um den Detail-

@@ -7,14 +7,8 @@ function showSourceDetail(id, pushHistory = true) {
   if (pushHistory) _beforeDetailNavigate();
   ViewState.setCurrent('sources', id);
 
-  document.getElementById('detailTopTitle').textContent = 'Quelle';
-  document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden        = true;
-  document.getElementById('timelineBtn').hidden    = true;
-  document.getElementById('storyBtn').hidden       = true;
-  document.getElementById('probandBtn').hidden     = true;
-  document.getElementById('probandSetBtn').hidden  = true;
-  document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+  // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
+  _configureDetailToolbar('sources', id);
 
   // Collect all persons and families referencing this source
   const refPersons = Object.values(AppState.db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(id));

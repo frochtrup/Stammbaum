@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v887 · Cache: `stammbaum-v887` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v888 · Cache: `stammbaum-v888` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v887) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v888) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v888 | **View-Robustheit P6 — B5 Detail-Toolbar zentral** — `_configureDetailToolbar(tab, entityId)` neu in ui-views.js (~75 Z.): konfiguriert TopTitle + 8 Buttons (`editBtn`, `treeBtn`, `timelineBtn`, `storyBtn`, `probandBtn`, `probandSetBtn`, `detailMapBtn`) für jeden der 4 Skip-Pfad-Tabs (persons/families/sources/places). Die bisher in jeder `show*Detail` inline duplizierte Toolbar-Konfig (Z. 695-716 person, 395-407 family, 10-17 source, 924-930 place) → ein Helper-Aufruf. `_dcAlreadyShows` ruft den Helper jetzt auch im Skip-Pfad + `requestAnimationFrame(_updateDetailHistBtn)`. Architektonisch: A4-Container-Trennung + A5-Skip waren auf innerHTML-Re-Render-Vermeidung optimiert; Toolbar-State ist aber ein **Cross-Cutting-Effekt** zwischen allen Detail-Typen, der zentralisiert werden muss. | **Funktional kritischer** Fix: vorher zeigte die Toolbar nach Tab-Wechsel-Skip noch den State der vorigen Entität — `storyBtn`-Klick auf Personen-Detail rief `showFamilyStory(F1)` statt `showStory(I123)` etc. Jetzt sind alle 8 Buttons + TopTitle nach Skip korrekt verdrahtet. |
 | v887 | **View-Robustheit P6 — B4 has-detail im Skip-Pfad** — direkter Folge-Fix zu v886: `_dcAlreadyShows` setzt jetzt zusätzlich `body.has-detail = true` + `AppState._detailActive = true` im Skip-Pfad. `showDetail`/`showFamilyDetail`/etc. rufen am Ende `showView('v-detail')` auf, was diese Flags setzt — der CSS-Schalter für den `desktopPlaceholder` ("Eintrag in der Liste auswählen"). Im Skip-Pfad entfällt dieser Aufruf, sodass der Placeholder oben im scrollbaren v-detail sichtbar blieb und das eigentliche Detail erst beim Runterscrollen erschien. Gleiche Bug-Klasse wie B3 (vergessenes Seiteneffekt-Mitziehen bei A5-Skip), nur für body-Klassen statt Liste. | Detail-Inhalt erscheint direkt sichtbar nach Tab-Wechsel zurück; kein "Void"-Placeholder-Artefakt mehr im Detail-Fenster. |
 | v886 | **View-Robustheit P6** — drei Tab-Wechsel-Konsistenz-Bugs nachgezogen, die das P0–P5-Refactoring strukturell offengelassen hatte. B1: `showView` nutzt `querySelectorAll('.view.active')` statt `querySelector` — Desktop hält v-main + v-tree/v-detail gleichzeitig active (ADR-009), der R1-Direkt-Swap deaktivierte aber nur die *erste* aktive View → v-tree blieb nach Tab-Wechsel sichtbar. B2: `showTree`/`showDescTree` schreiben jetzt via `ViewState.setCurrent('persons', personId)` statt direkt `AppState.currentPersonId` — Baum-Navigation ist implizite Personen-Selektion, P2-A1 hatte diesen Schreibpfad übersehen. B3: `_dcAlreadyShows` synchronisiert die linke Liste auch im Skip-Pfad (`_updatePersonListCurrent`/`_updateFamilyListCurrent`/Source+Place-Highlight) — P5-A5 hatte den Listen-Sync zusammen mit dem Detail-Re-Render herausoptimiert. `_vsReattach` liest `ViewState.getCurrent` statt `AppState.currentX` (Letzteres ist exklusiv genullt). | Drei Klassen von Tab-Wechsel-Glitches behoben: Baum bleibt sichtbar bei Wechsel in andere Tabs (Desktop), falscher Fokus nach Baum-Navigation, Liste an falscher Position nach Skip-Re-Render. |
 | v869 | **View-Robustheit P5** — A4: 5 separate Detail-Container (`detailPerson/Family/Place/Source/Media`) statt einem `#detailContent`; `_activateDetailContainer(cid, entityId)` mit Scroll-Save/Restore (per-Entität-Scroll-State auf Desktop). A5: `data-view-init`-Flag — `_desktopAutoSelect` überspringt Re-Render wenn Container bereits die richtige Entität zeigt und Tab nicht dirty. | Tab-Wechsel (Person→Familie→zurück) ohne innerHTML-Reset; Scroll-Position pro Entität erhalten; Bug-4-Klasse strukturell beseitigt. |
@@ -373,7 +374,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v887 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v888 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

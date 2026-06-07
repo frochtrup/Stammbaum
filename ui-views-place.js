@@ -921,13 +921,8 @@ function showPlaceDetail(placeName, pushHistory = true) {
   if (!place) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
   ViewState.setCurrent('places', placeName);
-  document.getElementById('detailTopTitle').textContent = '📍 Ort';
-  document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden        = true;
-  document.getElementById('timelineBtn').hidden    = true;
-  document.getElementById('storyBtn').hidden       = true;
-  document.getElementById('probandBtn').hidden     = true;
-  document.getElementById('probandSetBtn').hidden  = true;
+  // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
+  _configureDetailToolbar('places', placeName);
 
   let html = `<div class="detail-hero fade-up">
     <div class="detail-avatar place">📍</div>

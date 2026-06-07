@@ -9,6 +9,57 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — View-Robustheit P6: B5 Detail-Toolbar zentral (sw v888)
+
+Folge-Fix zu B3/B4 — dieselbe Bug-Klasse: P5-A5-Skip umging weitere Seiteneffekte der `show*Detail`-Funktionen. B5 betrifft die **Detail-Toolbar** (TopTitle + 8 Buttons), die im Skip-Pfad noch den Zustand der vorigen Entität anzeigte. Funktional kritisch, nicht nur kosmetisch — `storyBtn`-Klick rief nach Skip die falsche Action mit falscher Entity-ID auf.
+
+#### Bug-Szenario
+
+1. Person Maria öffnen → `detailTopTitle='Maria'`, `storyBtn.dataset.action='showStory'`, `storyBtn.dataset.id=I123`, `treeBtn.dataset.id=I123`, `probandBtn` sichtbar
+2. Familien-Tab → `showFamilyDetail(F1)` → TopTitle='Familie', `storyBtn.dataset.action='showFamilyStory'`, `storyBtn.dataset.fid=F1`, `treeBtn.dataset.id=husb(I100)`, `probandBtn` hidden
+3. Personen-Tab → `_dcAlreadyShows('persons', 'I123')` true → **Skip** → Personen-Detail-HTML aktiv, aber Toolbar zeigt noch Familien-State:
+   - TopTitle weiter „Familie"
+   - storyBtn-Klick → `showFamilyStory(F1)` statt `showStory(I123)` (funktional falsch verdrahtet)
+   - treeBtn-Klick → Baum von I100 statt I123
+   - probandBtn / probandSetBtn / detailMapBtn bleiben hidden
+
+#### Refactor
+
+Neue Funktion `_configureDetailToolbar(tab, entityId)` in [ui-views.js](ui-views.js) (~75 Z.) — konfiguriert die gesamte gemeinsame Toolbar für 4 Tab-Typen:
+
+| Tab | TopTitle | editBtn | treeBtn | timelineBtn | storyBtn | probandBtn | probandSetBtn | detailMapBtn |
+|---|---|---|---|---|---|---|---|---|
+| persons | `p.name` | sichtbar | sichtbar+`dataset.id=id` | sichtbar+`dataset.id=id` | `showStory`+id | sichtbar | sichtbar+id+`proband-active` | sichtbar |
+| families | 'Familie' | sichtbar | abh. von `husb\|wife` | hidden | `showFamilyStory`+fid | hidden | hidden | hidden |
+| sources | 'Quelle' | sichtbar | hidden | hidden | hidden | hidden | hidden | hidden |
+| places | '📍 Ort' | sichtbar | hidden | hidden | hidden | hidden | hidden | unverändert |
+
+Die 4 `show*Detail`-Funktionen rufen ihn statt vorher 8-20 Zeilen Inline-Setup. `_dcAlreadyShows` ruft ihn auch im Skip-Pfad zusätzlich zu B3-Listen-Sync und B4-body-Klassen, dazu `requestAnimationFrame(_updateDetailHistBtn)` (analog `showView('v-detail')` desktop-Branch).
+
+#### Geänderte Dateien
+
+- [ui-views.js](ui-views.js) — `_configureDetailToolbar` definiert + `_dcAlreadyShows` erweitert
+- [ui-views-person.js:695](ui-views-person.js:695) — 22 Z. Inline → 2 Z. (Helper + `_announceList`)
+- [ui-views-family.js:395](ui-views-family.js:395) — 13 Z. Inline → 1 Z.
+- [ui-views-source.js:10](ui-views-source.js:10) — 8 Z. Inline → 1 Z.
+- [ui-views-place.js:924](ui-views-place.js:924) — 7 Z. Inline → 1 Z.
+
+#### Architektonische Lehre
+
+`_activateDetailContainer` schaltet nur die `.dc-active`-Klasse. Aber `show*Detail` führt **drei Klassen von Seiteneffekten** durch, die alle im Skip-Pfad gebraucht werden:
+
+1. **Listen-Highlight + Scroll** (vorher B3, jetzt im Skip-Pfad)
+2. **body-Klassen + AppState._detailActive** (vorher B4)
+3. **Detail-Toolbar-State** (jetzt B5)
+
+A4/A5 (P5) hatten nur den innerHTML-Re-Render-Skip als Optimierungs-Ziel; die anderen Seiteneffekte wurden als „passieren halt auch" implizit angenommen. P6 macht aus dem impliziten Vertrag ein explizites Muster: alles was eine Detail-Ansicht „funktional aktiv" macht, läuft entweder durch `show*Detail` ODER durch den Skip-Pfad — beide Pfade müssen identische Seiteneffekt-Garantien geben.
+
+#### Tests
+
+`test-unit.js` 296/296 grün; isolierter Preview-Test pro Tab; GEDCOM-Roundtrip `net_delta=0` unverändert (UI-Refactor, kein Modell-Eingriff).
+
+---
+
 ### Session 2026-06-07 — View-Robustheit P6: B4 has-detail im Skip-Pfad (sw v887)
 
 Folge-Fix zu v886, gleiche Bug-Klasse wie B3. Nutzerbericht: nach Tab-Wechsel zurück (z. B. Personen → Familien → Personen) erschien im Detail-Bereich kurzzeitig der `desktopPlaceholder` („Eintrag in der Liste auswählen"); der eigentliche Detail-Inhalt war erst beim Runterscrollen sichtbar.

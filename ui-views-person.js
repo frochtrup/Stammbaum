@@ -692,28 +692,10 @@ function showDetail(id, pushHistory = true) {
     _updateFamilyListCurrent(null);
   }
 
-  document.getElementById('detailTopTitle').textContent = p.name || id;
+  // P6-B5: Toolbar-Konfig zentral in _configureDetailToolbar (ui-views.js) — gleiche
+  // Helper-Funktion wird auch im _dcAlreadyShows-Skip-Pfad aufgerufen.
+  _configureDetailToolbar('persons', id);
   _announceList((p.name || id) + ' — Details');
-  document.getElementById('editBtn').style.display = '';
-  document.getElementById('treeBtn').hidden = false;
-  document.getElementById('treeBtn').style.display = '';
-  document.getElementById('treeBtn').dataset.id = id;
-  const tlBtn = document.getElementById('timelineBtn');
-  if (tlBtn) { tlBtn.hidden = false; tlBtn.dataset.id = id; }
-  const stBtn = document.getElementById('storyBtn');
-  if (stBtn) { stBtn.hidden = false; stBtn.dataset.action = 'showStory'; stBtn.dataset.id = id; delete stBtn.dataset.fid; }
-  const mapBtn = document.getElementById('detailMapBtn');
-  if (mapBtn) mapBtn.hidden = false;
-  const pb = document.getElementById('probandBtn');
-  if (pb) { pb.hidden = false; }
-  const pbSet = document.getElementById('probandSetBtn');
-  if (pbSet) {
-    pbSet.hidden = false;
-    pbSet.dataset.id = id;
-    const isProband = getProbandId() === id;
-    pbSet.classList.toggle('proband-active', isProband);
-    pbSet.title = isProband ? 'Ist Proband (klicken zum Zurücksetzen)' : 'Als Proband setzen';
-  }
 
 
   const sc = p.sex === 'M' ? 'm' : p.sex === 'F' ? 'f' : '';

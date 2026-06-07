@@ -392,19 +392,8 @@ function showFamilyDetail(id, pushHistory = true) {
   const wife = f.wife ? AppState.db.individuals[f.wife] : null;
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || id;
 
-  document.getElementById('detailTopTitle').textContent = 'Familie';
-  document.getElementById('editBtn').style.display = '';
-  const _famTreeTarget = f.husb || f.wife || null;
-  const tb = document.getElementById('treeBtn');
-  tb.hidden = !_famTreeTarget;
-  tb.style.display = '';
-  if (_famTreeTarget) tb.dataset.id = _famTreeTarget;
-  const _tlBtn  = document.getElementById('timelineBtn');   if (_tlBtn)  _tlBtn.hidden  = true;
-  const _stBtn = document.getElementById('storyBtn');
-  if (_stBtn) { _stBtn.hidden = false; _stBtn.dataset.action = 'showFamilyStory'; _stBtn.dataset.fid = id; delete _stBtn.dataset.id; }
-  const _pbBtn  = document.getElementById('probandBtn');    if (_pbBtn)  _pbBtn.hidden  = true;
-  const _pbsBtn = document.getElementById('probandSetBtn'); if (_pbsBtn) _pbsBtn.hidden = true;
-  const _mapBtn = document.getElementById('detailMapBtn');  if (_mapBtn) _mapBtn.hidden = true;
+  // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
+  _configureDetailToolbar('families', id);
 
   let html = `<div class="detail-hero fade-up">
     <div id="det-fam-photo-${id}" class="det-photo-wrap"></div>
