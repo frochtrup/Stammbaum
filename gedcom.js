@@ -918,9 +918,18 @@ function getPlaceRegistry() {
         out.push(reg.resolveAsOf(curId, year));
         const encs = byId[curId].enclosedBy || [];
         let next = null;
-        if (y != null)
-          for (const e of encs)
-            if (_dateMatches(_placeYear(e.dateFrom), _placeYear(e.dateTo), y)) { next = e.placeId; break; }
+        if (y != null) {
+          // Bei Überlappung am Grenzdatum (z.B. bis=1946 und ab=1946) gewinnt der
+          // Eintrag mit dem höchsten dateFrom — er "tritt in Kraft" und hat Vorrang.
+          let bestFrom = -Infinity, bestEnc = null;
+          for (const e of encs) {
+            if (_dateMatches(_placeYear(e.dateFrom), _placeYear(e.dateTo), y)) {
+              const ef = _placeYear(e.dateFrom) ?? -Infinity;
+              if (ef > bestFrom) { bestFrom = ef; bestEnc = e; }
+            }
+          }
+          next = bestEnc?.placeId ?? null;
+        }
         if (!next) next = (encs[0] && encs[0].placeId) || byId[curId].parentId || null;
         curId = next;
       }
