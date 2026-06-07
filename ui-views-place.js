@@ -550,6 +550,7 @@ function _renderPlaceNamesList(po) {
     return `<div class="pname-row">
       <span class="pname-val">${esc(pn.value)}${pn.lang ? ` <em class="tran-lang">${esc(pn.lang)}</em>` : ''}</span>
       ${span ? `<span class="pname-span">${esc(span)}</span>` : ''}
+      <button class="edit-btn" data-action="editPlaceName" data-idx="${i}" title="Bearbeiten">✎</button>
       <button class="unlink-btn" data-action="removePlaceName" data-idx="${i}">×</button>
     </div>`;
   }).join('') : '<div class="no-data-pad">Keine alternativen Namen</div>';
@@ -573,6 +574,7 @@ function _renderEnclosedByList(po) {
     return `<div class="pname-row">
       <span class="pname-val">${esc(title)}</span>
       ${span ? `<span class="pname-span">${esc(span)}</span>` : ''}
+      <button class="edit-btn" data-action="editEnclosedBy" data-idx="${i}" title="Bearbeiten">✎</button>
       <button class="unlink-btn" data-action="removeEnclosedBy" data-idx="${i}">×</button>
     </div>`;
   }).join('') : '<div class="no-data-pad">Nicht zugeordnet</div>';
@@ -657,6 +659,20 @@ function _currentPoFromModal() {
   return id ? (AppState.db.placeObjects || {})[id] : null;
 }
 
+let _editPnameIdx     = null; // null = Add-Modus, Zahl = Edit-Modus
+let _editEnclosedIdx  = null;
+
+function _setPnameAddMode() {
+  _editPnameIdx = null;
+  const btn = document.getElementById('pl-pname-add-btn');
+  if (btn) { btn.textContent = '+'; btn.title = 'Hinzufügen'; }
+}
+function _setEnclosedAddMode() {
+  _editEnclosedIdx = null;
+  const btn = document.getElementById('pl-enclosed-add-btn');
+  if (btn) { btn.textContent = '+'; btn.title = 'Hinzufügen'; }
+}
+
 function addPlaceName() {
   const po = _currentPoFromModal();
   if (!po) { showToast('⚠ Erst Grunddaten speichern'); return; }
@@ -665,21 +681,48 @@ function addPlaceName() {
   const lang = document.getElementById('pl-pname-lang')?.value.trim() || '';
   const from = document.getElementById('pl-pname-from')?.value.trim() || null;
   const to   = document.getElementById('pl-pname-to')?.value.trim()   || null;
-  mutatePlaceObject(po.id, p => {
-    if (!Array.isArray(p.pnames)) p.pnames = [];
-    p.pnames.push({ value: val, lang, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
-  });
+  if (_editPnameIdx !== null) {
+    const i = parseInt(_editPnameIdx, 10);
+    mutatePlaceObject(po.id, p => {
+      if (p.pnames[i]) Object.assign(p.pnames[i], { value: val, lang, dateFrom: from, dateTo: to });
+    });
+    _setPnameAddMode();
+  } else {
+    mutatePlaceObject(po.id, p => {
+      if (!Array.isArray(p.pnames)) p.pnames = [];
+      p.pnames.push({ value: val, lang, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
+    });
+  }
   ['pl-pname-val','pl-pname-lang','pl-pname-from','pl-pname-to'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  _renderPlaceNamesList(po);
+  _renderPlaceNamesList(_currentPoFromModal());
+}
+
+function editPlaceName(idx) {
+  const po = _currentPoFromModal();
+  const pn = po?.pnames?.[parseInt(idx, 10)];
+  if (!pn) return;
+  const fVal  = document.getElementById('pl-pname-val');
+  const fLang = document.getElementById('pl-pname-lang');
+  const fFrom = document.getElementById('pl-pname-from');
+  const fTo   = document.getElementById('pl-pname-to');
+  if (fVal)  fVal.value  = pn.value || '';
+  if (fLang) fLang.value = pn.lang  || '';
+  if (fFrom) fFrom.value = pn.dateFrom || '';
+  if (fTo)   fTo.value   = pn.dateTo   || '';
+  _editPnameIdx = idx;
+  const btn = document.getElementById('pl-pname-add-btn');
+  if (btn) { btn.textContent = '✓'; btn.title = 'Änderung speichern'; }
+  fVal?.focus();
 }
 
 function removePlaceName(idx) {
   const po = _currentPoFromModal();
   if (!po?.pnames) return;
   mutatePlaceObject(po.id, p => { p.pnames.splice(parseInt(idx, 10), 1); });
-  _renderPlaceNamesList(po);
+  if (_editPnameIdx === idx) _setPnameAddMode();
+  _renderPlaceNamesList(_currentPoFromModal());
 }
 
 function addEnclosedBy() {
@@ -688,21 +731,45 @@ function addEnclosedBy() {
   const sel  = document.getElementById('pl-enclosed-sel');
   const pid  = sel?.value;
   if (!pid) { showToast('⚠ Bitte einen Ort wählen'); return; }
-  if (Array.isArray(po.enclosedBy) && po.enclosedBy.some(e => e.placeId === pid)) {
-    showToast('⚠ Bereits eingetragen'); return;
-  }
   const from = document.getElementById('pl-enclosed-from')?.value.trim() || null;
   const to   = document.getElementById('pl-enclosed-to')?.value.trim()   || null;
-  mutatePlaceObject(po.id, p => {
-    if (!Array.isArray(p.enclosedBy)) p.enclosedBy = [];
-    p.enclosedBy.push({ placeId: pid, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
-    p.parentId = p.enclosedBy[0].placeId; // erstes Element als parentId-Fallback
-  });
+  if (_editEnclosedIdx !== null) {
+    const i = parseInt(_editEnclosedIdx, 10);
+    mutatePlaceObject(po.id, p => {
+      if (p.enclosedBy[i]) Object.assign(p.enclosedBy[i], { placeId: pid, dateFrom: from, dateTo: to });
+      p.parentId = p.enclosedBy[0]?.placeId || null;
+    });
+    _setEnclosedAddMode();
+  } else {
+    if (Array.isArray(po.enclosedBy) && po.enclosedBy.some(e => e.placeId === pid)) {
+      showToast('⚠ Bereits eingetragen'); return;
+    }
+    mutatePlaceObject(po.id, p => {
+      if (!Array.isArray(p.enclosedBy)) p.enclosedBy = [];
+      p.enclosedBy.push({ placeId: pid, dateFrom: from, dateTo: to, dateType: null, _dateRaw: null });
+      p.parentId = p.enclosedBy[0].placeId;
+    });
+  }
   if (sel) sel.value = '';
   ['pl-enclosed-from','pl-enclosed-to'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
-  _renderEnclosedByList(po);
+  _renderEnclosedByList(_currentPoFromModal());
+}
+
+function editEnclosedBy(idx) {
+  const po = _currentPoFromModal();
+  const enc = po?.enclosedBy?.[parseInt(idx, 10)];
+  if (!enc) return;
+  const sel  = document.getElementById('pl-enclosed-sel');
+  const fFrom = document.getElementById('pl-enclosed-from');
+  const fTo   = document.getElementById('pl-enclosed-to');
+  if (sel)   sel.value   = enc.placeId  || '';
+  if (fFrom) fFrom.value = enc.dateFrom || '';
+  if (fTo)   fTo.value   = enc.dateTo   || '';
+  _editEnclosedIdx = idx;
+  const btn = document.getElementById('pl-enclosed-add-btn');
+  if (btn) { btn.textContent = '✓'; btn.title = 'Änderung speichern'; }
 }
 
 function removeEnclosedBy(idx) {
@@ -712,7 +779,8 @@ function removeEnclosedBy(idx) {
     p.enclosedBy.splice(parseInt(idx, 10), 1);
     p.parentId = p.enclosedBy[0]?.placeId || null;
   });
-  _renderEnclosedByList(po);
+  if (_editEnclosedIdx === idx) _setEnclosedAddMode();
+  _renderEnclosedByList(_currentPoFromModal());
 }
 
 function showNewPlaceForm() {

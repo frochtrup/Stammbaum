@@ -822,6 +822,15 @@ body.desktop-mode.places-karte #mapContainer {
   content: ''; position: absolute; inset: -10px; /* 44px Tap-Target */
 }
 .unlink-btn:active { border-color: var(--red); color: var(--red); }
+.edit-btn {
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  border-radius: 50%; width: 24px; height: 24px; font-size: 0.82rem;
+  cursor: pointer; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; transition: all 0.15s; line-height: 1;
+  position: relative;
+}
+.edit-btn::after { content: ''; position: absolute; inset: -10px; }
+.edit-btn:active { border-color: var(--accent); color: var(--accent); }
 .edit-media-btn {
   background: none; border: 1px solid var(--border); color: var(--text-muted);
   border-radius: 50%; width: 28px; height: 28px; font-size: 1rem;
