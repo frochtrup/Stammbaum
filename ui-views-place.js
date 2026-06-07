@@ -893,7 +893,7 @@ function _placeNamesSvg(pnames) {
     axis += `<line x1="${x.toFixed(1)}" y1="${AXIS_H - 4}" x2="${x.toFixed(1)}" y2="${AXIS_H + 2}" stroke="var(--border,#ccc)" stroke-width="0.8"/>`;
     axis += `<text x="${x.toFixed(1)}" y="${AXIS_H - 5}" font-size="8" fill="var(--text-muted,#8a7a6a)" text-anchor="middle">${y}</text>`;
   }
-  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:4px;overflow:hidden">${axis}${labels}${bars}</svg>`;
+  return `<svg width="100%" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:4px;overflow:hidden;max-width:${W}px">${axis}${labels}${bars}</svg>`;
 }
 
 // P5a-5: Mini-Karte (Leaflet) im Standort-Abschnitt initialisieren
@@ -988,7 +988,9 @@ function showPlaceDetail(placeName, pushHistory = true) {
       };
       const typeLbl = TYPE_LBL[po.type] != null ? TYPE_LBL[po.type] : po.type;
       // Datierte Namensvarianten (nur solche mit Datum — der Haupttitel steht im Hero)
-      const datedNames = (po.pnames || []).filter(pn => pn.dateFrom || pn.dateTo);
+      const _sortKey = item => item.dateFrom || item.dateTo || '9999';
+      const datedNames = (po.pnames || []).filter(pn => pn.dateFrom || pn.dateTo)
+        .slice().sort((a, b) => _sortKey(a).localeCompare(_sortKey(b)));
       const _span = pn => {
         const f = pn.dateFrom || '', t = pn.dateTo || '';
         if (f && t) return `${f}–${t}`;
@@ -1007,11 +1009,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
       const enclosedBy = po.enclosedBy || [];
       if (enclosedBy.length) {
         // Sortieren: Einträge ohne Datum zuletzt (= aktuell), sonst nach dateFrom
-        const sorted = [...enclosedBy].sort((a, b) => {
-          if (!a.dateFrom && !a.dateTo) return 1;
-          if (!b.dateFrom && !b.dateTo) return -1;
-          return (a.dateFrom || '0').localeCompare(b.dateFrom || '0');
-        });
+        const sorted = [...enclosedBy].sort((a, b) => _sortKey(a).localeCompare(_sortKey(b)));
         let encHtml = '';
         for (const enc of sorted) {
           const parent = reg.byId[enc.placeId];
