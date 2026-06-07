@@ -587,6 +587,15 @@ async function showStartView() {
 // ─────────────────────────────────────
 const _TAB_LABELS = { persons:'Personen', families:'Familien', sources:'Quellen', places:'Orte', stats:'Statistik', search:'Suche', tasks:'Aufgaben' };
 function switchTab(tab) {
+  // S1 (ADR-025): Scroll-Position des verlassenden Tabs sichern.
+  // #v-main ist auf Desktop ein gemeinsamer Scroll-Container — ohne Sicherung
+  // zeigt jeder Tab-Rückkehr eine andere Position.
+  const _leavingTab = AppState.currentTab;
+  if (_leavingTab && _leavingTab !== tab) {
+    if (!UIState._tabScrollPos) UIState._tabScrollPos = {};
+    UIState._tabScrollPos[_leavingTab] = _getListScroll();
+  }
+
   AppState.currentTab = tab;
   _announceList(_TAB_LABELS[tab] || tab);
   if (tab !== 'places') {
@@ -610,12 +619,20 @@ function switchTab(tab) {
   if (tab === 'persons' && typeof _vsP !== 'undefined' && !_vsP.active && _vsP.top
       && (UIState._dirty || {}).persons === false) {
     _vsReattach(document.getElementById('personList'), _vsP);
+    // S2: Scroll-Position wiederherstellen — nach doppeltem rAF damit VS-Render durch ist
+    const _rp = (UIState._tabScrollPos || {})[tab];
+    if (_rp !== undefined) _afterLayout(() => _setListScroll(_rp));
   } else if (tab === 'families' && typeof _vsF !== 'undefined' && !_vsF.active && _vsF.top
       && (UIState._dirty || {}).families === false) {
     _vsReattach(document.getElementById('familyList'), _vsF);
+    const _rp = (UIState._tabScrollPos || {})[tab];
+    if (_rp !== undefined) _afterLayout(() => _setListScroll(_rp));
   } else if ((UIState._dirty || {})[tab] !== false) {
     renderTab();
     UIState._dirty = { ...(UIState._dirty || {}), [tab]: false };
+    // Bei echtem Re-Render (Datenänderung) gespeicherte Position verwerfen —
+    // renderTab() scrollt selbst zur aktuellen Auswahl.
+    if (UIState._tabScrollPos) UIState._tabScrollPos[tab] = undefined;
   }
 }
 
