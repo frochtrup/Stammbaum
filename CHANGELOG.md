@@ -9,6 +9,22 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — View-Robustheit P6: B4 has-detail im Skip-Pfad (sw v887)
+
+Folge-Fix zu v886, gleiche Bug-Klasse wie B3. Nutzerbericht: nach Tab-Wechsel zurück (z. B. Personen → Familien → Personen) erschien im Detail-Bereich kurzzeitig der `desktopPlaceholder` („Eintrag in der Liste auswählen"); der eigentliche Detail-Inhalt war erst beim Runterscrollen sichtbar.
+
+Ursache: `showDetail`/`showFamilyDetail`/etc. rufen am Ende `showView('v-detail')` auf — dort wird `body.has-detail = true` gesetzt (CSS-Schalter für `body.desktop-mode.has-detail #desktopPlaceholder { display: none }`). Im Skip-Pfad (`_dcAlreadyShows`, eingeführt P5-A5) entfällt dieser Aufruf, weil `_activateDetailContainer` nur den `.dc-active`-Container-Switch macht. Folge: `has-detail` blieb auf `false` aus dem vorherigen `showView('v-main')` in `bnavTab`, Placeholder mit voller Höhe stand oben im scrollbaren `#v-detail`, Detail darunter.
+
+Fix: `_dcAlreadyShows` (ui-views.js:564-571) setzt jetzt im Skip-Pfad direkt:
+- `document.body.classList.add('has-detail')`
+- `AppState._detailActive = true`
+
+Architektonisch dieselbe Klasse wie B3: A5-Optimierung hat `showDetail` durch `_activateDetailContainer` ersetzt, dabei wurden Seiteneffekte aus dem letzten `showView('v-detail')`-Aufruf nicht mitgezogen. B3 hat die Listen-Sync nachgezogen, B4 die body-Klasse/_detailActive.
+
+Verifiziert: Preview `_dcAlreadyShows('persons','I1')` → `has-detail: false → true`, `_detailActive: true`; `test-unit.js` 296/296 grün; 0 Console-Errors.
+
+---
+
 ### Session 2026-06-07 — View-Robustheit P6: Tab-Wechsel-Konsistenz (sw v886)
 
 Drei Tab-Wechsel-Glitches nachgezogen, die das P0–P5-Refactoring strukturell offen gelassen hatte. Direkt aus Nutzerbericht „inkonsistentes Verhalten beim Tab-Wechsel" abgeleitet — alle drei Bugs sind Korrekturen je einer Annahme aus R1, P2-A1 und P5-A5. Volldetail: `VIEW-ROBUSTNESS.md` § P6.

@@ -565,6 +565,12 @@ function _dcAlreadyShows(tab, entityId) {
   if (el.dataset.currentId !== String(entityId)) return false;
   if ((UIState._dirty || {})[tab]) return false; // Daten geändert → immer neu rendern
   _activateDetailContainer(cid, entityId);
+  // P6-B4: showDetail/showFamilyDetail/etc. rufen am Ende showView('v-detail') auf, was
+  // body.has-detail setzt — der CSS-Schalter für den desktopPlaceholder. Im Skip-Pfad
+  // entfällt dieser Aufruf, sodass der Placeholder oben im scrollbaren v-detail sichtbar
+  // bleibt und das eigentliche Detail erst beim Runterscrollen erscheint.
+  document.body.classList.add('has-detail');
+  AppState._detailActive = true;
   // P6-B3: Skip-Pfad muss die LINKE Liste trotzdem synchronisieren — andernfalls behält
   // die zuvor aktive Tab-Liste die .current-Klasse, und Scroll-Position zeigt nicht auf
   // den ausgewählten Eintrag. _activateDetailContainer kümmert sich nur um den Detail-

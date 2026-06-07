@@ -1,6 +1,6 @@
 # View-Robustheit — Technisches Detail-Design & Roadmap
 
-> Status: **P0 ✅ · P1 ✅ · P2 ✅ · P3 ✅ · P4 ✅ · P5 ✅ · P6 ✅** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v886
+> Status: **P0 ✅ · P1 ✅ · P2 ✅ · P3 ✅ · P4 ✅ · P5 ✅ · P6 ✅** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v887
 > Ergebnis eines gesamthaften Reviews der View-Switching-Architektur. Behebt 4 vom Nutzer reproduzierbare Bugs und schließt strukturelle Lücken in State-Modell und Lifecycle.
 > Kern-Architektur-Entscheidungen werden nach Abschluss in `ARCHITECTURE.md` (ADR-025 vorgesehen) überführt; dieses File dokumentiert Befunde, Maßnahmen und Reihenfolge bis dahin.
 
@@ -156,15 +156,16 @@ async function showStartView() {
 | **R7** | `setTimeout`-Magic durchgängig auf `_afterLayout` umstellen | ui-views.js:62, :236, :373 | S |
 | **SW** | `ui-book.js`/`ui-print.js`/`ui-dedup.js` aus `PRECACHE_CRITICAL` raus, in `PRECACHE_OPTIONAL`. Falsche Klassifizierung — sie sind lazy-Load (ui-event-delegation.js:310-344); Fehlen einer Datei darf nicht den ganzen `addAll` killen. | sw.js:33 | XS |
 
-### P6 — Tab-Wechsel-Konsistenz (Nachgang zu P0–P5) ✅ *(sw v886)*
+### P6 — Tab-Wechsel-Konsistenz (Nachgang zu P0–P5) ✅ *(sw v886–v887)*
 
-Drei strukturelle Lücken, die P0–P5 offen gelassen hatten — alle direkt aus Nutzerbericht „inkonsistentes Tab-Wechsel-Verhalten" abgeleitet. Konsistent mit ADR-025 und A4/A5; korrigiert je eine Annahme aus R1, P2 und P5.
+Vier strukturelle Lücken, die P0–P5 offen gelassen hatten — alle direkt aus Nutzerbericht „inkonsistentes Tab-Wechsel-Verhalten" abgeleitet. Konsistent mit ADR-025 und A4/A5; korrigiert je eine Annahme aus R1, P2 und P5.
 
 | ID | Aufgabe | File:Line | Status |
 |---|---|---|---|
 | **B1** | `showView` deaktiviert **alle** anderen `.view.active`-Elemente, nicht nur die erste — Desktop hält v-main + v-detail/v-tree gleichzeitig aktiv (ADR-009); R1-Optimierung mit `querySelector('.view.active')` deaktivierte den Baum nicht beim Tab-Wechsel | ui-views.js:72-77 | ✅ |
 | **B2** | `showTree` + `showDescTree` schreiben Personen-Selektion via `ViewState.setCurrent('persons', personId)` statt direkt `AppState.currentPersonId` — sonst bleibt `UIState._lastTabSel.persons` stale nach Baum-Navigation, und der nachfolgende Tab-Wechsel fokussiert die alte ID | ui-views-tree.js:351, ui-desc-tree.js:78 | ✅ |
 | **B3** | `_dcAlreadyShows` synchronisiert die linke Liste auch im Skip-Pfad (`_updatePersonListCurrent`/`_updateFamilyListCurrent` + Source/Place-Highlight + Scroll); `_vsReattach` liest `ViewState.getCurrent(tab)` statt `AppState.currentX` (Letzteres ist exklusiv genullt durch ViewState.setCurrent in anderen Tabs) | ui-views.js:557-590 + :630-635 | ✅ |
+| **B4** | `_dcAlreadyShows` setzt zusätzlich `body.has-detail = true` + `AppState._detailActive = true` im Skip-Pfad — `showDetail`/`showFamilyDetail`/etc. rufen am Ende `showView('v-detail')` auf, was diese Flags setzt; im Skip-Pfad entfiel dieser Aufruf, sodass `desktopPlaceholder` („Eintrag in der Liste auswählen") sichtbar blieb und der Detail-Inhalt erst beim Runterscrollen erschien. Gleiche Bug-Klasse wie B3 — vergessenes Seiteneffekt-Mitziehen bei der A5-Skip-Optimierung. | ui-views.js:564-571 | ✅ |
 
 **Warum trotz umfangreichen P0–P5-Refactorings nötig:**
 
