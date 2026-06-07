@@ -354,6 +354,14 @@ function applyGovText() {
       if (!po._govId) { po._govId = parsed.govId; changes++; }
       if (po._govUnresolved) { delete po._govUnresolved; changes++; }
 
+      // _govTypes[]: alle ist-Einträge mit Zeitraum speichern (wie pnames für Typ-Geschichte)
+      if (!Array.isArray(po._govTypes)) po._govTypes = [];
+      for (const t of parsed.types) {
+        const exists = po._govTypes.some(g =>
+          g.rawType === t.rawType && g.dateFrom === t.dateFrom && g.dateTo === t.dateTo);
+        if (!exists) { po._govTypes.push({ rawType: t.rawType, type: t.type, dateFrom: t.dateFrom || null, dateTo: t.dateTo || null }); changes++; }
+      }
+
       // Typ: open-ended bevorzugt, sonst neuester Eintrag (höchstes dateFrom)
       const _typByRecent = parsed.types.slice().sort((a, b) => {
         const ay = a.dateFrom ? parseInt(a.dateFrom) : 0;
@@ -1075,6 +1083,22 @@ function showPlaceDetail(placeName, pushHistory = true) {
       // Schlüsseljahre rekursiv aus der gesamten Kette sammeln — sonst bleiben
       // Änderungen auf höheren Ebenen (Eltern, Großeltern) unsichtbar.
       let hierTimelineHtml = '';
+      // _govTypes[]: historische Verwaltungstypen mit Zeitraum anzeigen
+      if (po && Array.isArray(po._govTypes) && po._govTypes.length > 1) {
+        const _sorted = po._govTypes.slice().sort((a, b) => {
+          const ay = a.dateFrom ? parseInt(a.dateFrom) : 0;
+          const by = b.dateFrom ? parseInt(b.dateFrom) : 0;
+          return ay - by; // chronologisch
+        });
+        const _typeRows = _sorted.map(g => {
+          const von = g.dateFrom ? g.dateFrom.replace(/-\d{2}-\d{2}$/, '') : '–';
+          const bis = g.dateTo   ? g.dateTo.replace(/-\d{2}-\d{2}$/, '')   : '–';
+          const span = von === '–' && bis === '–' ? '' : von === '–' ? `bis ${bis}` : bis === '–' ? `ab ${von}` : `${von}–${bis}`;
+          return `<div class="fact-row"><span class="fact-key">${span || '?'}</span><span class="fact-val">${esc(g.rawType)}</span></div>`;
+        }).join('');
+        histHtml += `<div class="fact-sub-title">Verwaltungstyp (historisch)</div>${_typeRows}`;
+      }
+
       if (enclosedBy.length && reg.enclosureChainAsOf) {
         const _chainYears = new Set();
         const _visited = new Set();
