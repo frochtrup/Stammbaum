@@ -1118,10 +1118,16 @@ function showPlaceDetail(placeName, pushHistory = true) {
           _visited.add(pid);
           const p = reg.byId[pid];
           if (!p) return;
+          // enclosedBy-Grenzen: Zugehörigkeitswechsel
           for (const enc of (p.enclosedBy || [])) {
             if (enc.dateFrom) { const y = enc.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
             if (enc.dateTo)   { const y = enc.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
             _collectYears(enc.placeId);
+          }
+          // pnames-Grenzen: Namenswechsel in übergelagerten Einheiten
+          for (const pn of (p.pnames || [])) {
+            if (pn.dateFrom) { const y = pn.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
+            if (pn.dateTo)   { const y = pn.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
           }
         };
         _collectYears(place.placeId);

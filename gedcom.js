@@ -904,8 +904,14 @@ function getPlaceRegistry() {
       if (!pl) return null;
       const y = _yearOf(year);
       if (y != null) {
-        for (const pn of pl.pnames || [])
-          if (_dateMatches(_placeYear(pn.dateFrom), _placeYear(pn.dateTo), y)) return pn.value;
+        // Bei Überlappungen: neuester Eintrag (höchstes dateFrom) bevorzugen — analog enclosureChainAsOf
+        let bestFrom = -Infinity, bestVal = null;
+        for (const pn of pl.pnames || []) {
+          if (!_dateMatches(_placeYear(pn.dateFrom), _placeYear(pn.dateTo), y)) continue;
+          const f = _placeYear(pn.dateFrom) ?? -Infinity;
+          if (f > bestFrom) { bestFrom = f; bestVal = pn.value; }
+        }
+        if (bestVal) return bestVal;
       }
       return pl.title || (pl.pnames && pl.pnames[0] && pl.pnames[0].value) || '';
     },
