@@ -319,6 +319,7 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuForschungsprotokoll: ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadForschungsProtokoll()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   menuStatistikReport:     ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadStatistik()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   menuNachkommentafel:     ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadNachkommentafel()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
+  downloadRelCert:         ()  => { _lazyScript('ui-print.js').then(() => downloadRelCertificate(UIState._relCertA, UIState._relCertB)).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   generateBook:            ()  => {
     const mode      = document.querySelector('#book-mode-seg button.active')?.dataset.bookMode || 'ancestors';
     const title     = document.getElementById('book-title')?.value.trim() || 'Familienbuch';
@@ -364,6 +365,7 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
     else if (document.body.classList.contains('desc-tree-mode')) exportDescTreePng();
     else                                                         exportSandUhrPng();
   },
+  exportChartSvg:          ()  => exportChartSvgVector(),
   openNoteModal:           el  => openNoteModal(el.dataset.ntype, el.dataset.nid),
   saveNoteModal:           ()  => saveNoteModal(),
   saveChildRelDialog:      ()  => saveChildRelDialog(),

@@ -78,6 +78,58 @@ function _svgToPng(svgEl, filename, scale) {
   img.src = url;
 }
 
+// ── SVG-Element → Vektor-Datei (.svg) für Großposter A1/A0 ─────
+// var(--*) werden aufgelöst; width/height werden auf eine in A1
+// passende physische mm-Größe gesetzt (seitenverhältnistreu), damit
+// die Datei beim Öffnen/Drucken als Poster erscheint — durch das
+// viewBox bleibt sie beliebig skalierbar (Druckerei kann A0 wählen).
+function _svgToVectorFile(svgEl, filename) {
+  let svgStr = new XMLSerializer().serializeToString(svgEl);
+  svgStr = _resolveVars(svgStr);
+  if (!svgStr.includes('xmlns=')) {
+    svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  // width/height auf A1-Fit setzen (mm), Aspekt aus viewBox
+  const vb = (svgEl.getAttribute('viewBox') || '').split(' ').map(Number);
+  if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) {
+    const W = vb[2], H = vb[3];
+    const A1 = W >= H ? { w: 841, h: 594 } : { w: 594, h: 841 }; // Quer/Hoch
+    const scale = Math.min(A1.w / W, A1.h / H);
+    const mmW = (W * scale).toFixed(1), mmH = (H * scale).toFixed(1);
+    svgStr = svgStr
+      .replace(/(<svg[^>]*?)\swidth="[^"]*"/,  '$1')
+      .replace(/(<svg[^>]*?)\sheight="[^"]*"/, '$1')
+      .replace('<svg', `<svg width="${mmW}mm" height="${mmH}mm"`);
+  }
+  const blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + svgStr],
+    { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = filename; a.href = url;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  showToast('✓ ' + filename + ' (Vektor) exportiert', 'success');
+}
+
+// ── Großposter-Export: aktuelles Diagramm als Vektor-SVG ──────
+window.exportChartSvgVector = function () {
+  if (document.body.classList.contains('fc-mode')) {
+    const svg = document.getElementById('fcSvg');
+    if (!svg || !svg.getAttribute('viewBox')) { showToast('Kein Fächer-Diagramm vorhanden', 'warn'); return; }
+    _svgToVectorFile(svg.cloneNode(true), _chartFilename('faecher').replace(/\.png$/, '.svg'));
+    return;
+  }
+  const wrap    = document.getElementById('treeWrap');
+  const lineSvg = document.getElementById('treeSvg');
+  if (!wrap || !lineSvg) { showToast('Kein Baum vorhanden', 'warn'); return; }
+  const isDesc = document.body.classList.contains('desc-tree-mode');
+  const outSvg = _buildTreeSvg(wrap, lineSvg,
+    parseFloat(wrap.style.width) || 800, parseFloat(wrap.style.height) || 600,
+    isDesc ? { zSort: false, badgeFull: false, unstack: false }
+           : { zSort: true,  badgeFull: true,  unstack: true });
+  _svgToVectorFile(outSvg, _chartFilename(isDesc ? 'nachkommen' : 'sanduhr').replace(/\.png$/, '.svg'));
+};
+
 // ── Dateiname aus aktueller Person ───────────────────
 function _chartFilename(prefix) {
   const pid  = AppState.currentPersonId;

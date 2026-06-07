@@ -278,6 +278,7 @@
       <button class="topbar-btn" id="treeProbandBtn" data-action="treeShowProband" title="Proband" aria-label="Proband">⌂</button>
       <button class="topbar-btn" id="treeFsBtn" data-action="toggleTreeFullscreen" title="Vollbild" aria-label="Vollbild" hidden>⤢</button>
       <button class="topbar-btn" id="treeExportBtn" data-action="exportChartPng" title="Als PNG herunterladen" aria-label="Diagramm als PNG exportieren" hidden>↓</button>
+      <button class="topbar-btn" id="treeExportSvgBtn" data-action="exportChartSvg" title="Als Vektor-SVG für Großposter (A1/A0) herunterladen" aria-label="Diagramm als Vektor-SVG exportieren" hidden>⬡</button>
       <span class="topbar-sep" aria-hidden="true"></span>
       <button class="topbar-btn" id="treeFcToggle" data-action="toggleFanChart" title="Fächer-Diagramm" aria-label="Fächer-Diagramm">◠</button>
       <button class="topbar-btn" id="treeDescToggle" data-action="toggleDescTree" title="Nachkommen-Baum" aria-label="Nachkommen-Baum">⇩</button>
@@ -2382,6 +2383,7 @@
     <div class="sheet-title" id="relPathTitle">Verwandtschaft</div>
     <div class="sheet-body">
       <div id="relPathBody"></div>
+      <button class="btn mt-8" data-action="downloadRelCert">📜 &nbsp; Verwandtschaftsnachweis (PDF)</button>
       <button class="btn btn-cancel mt-8" data-action="closeModal" data-modal="modalRelPath">Schließen</button>
     </div>
   </div>

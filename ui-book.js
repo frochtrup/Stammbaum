@@ -251,10 +251,19 @@ function _bookCss() {
     a:hover { text-decoration: underline; }
 
     /* Titelseite */
-    .title-page { text-align: center; padding: 80px 20px 60px; border-bottom: 2px solid #c0a878; margin-bottom: 40px; }
+    .title-page { text-align: center; padding: 70px 20px 60px; border-bottom: 2px solid #c0a878; margin-bottom: 40px; }
     .title-page h1 { font-size: 2.4rem; margin-bottom: 12px; }
     .title-page .subtitle { font-size: 1rem; color: #6a4a20; margin-bottom: 6px; }
     .title-page .meta { font-size: 0.85rem; color: #8a7050; margin-top: 20px; }
+    .cover-photo { width: 180px; height: 232px; object-fit: cover; display: block;
+                   margin: 0 auto 22px; border: 2px solid #c0a878; border-radius: 6px;
+                   box-shadow: 0 2px 10px rgba(0,0,0,0.18); }
+
+    /* Glossar */
+    .glossary { margin: 30px 0; font-size: 0.88rem; }
+    .glossary dl { display: grid; grid-template-columns: 90px 1fr; gap: 3px 12px; margin-top: 10px; }
+    .glossary dt { font-weight: 700; color: #6a4a20; }
+    .glossary dd { margin: 0; color: #3a2810; }
 
     /* Inhaltsverzeichnis */
     .toc { margin-bottom: 40px; }
@@ -301,11 +310,16 @@ function _bookCss() {
     .name-index a { display: block; padding: 1px 0; color: #1a1208; }
 
     @media print {
+      @page { size: A4 portrait; margin: 2cm; }
+      /* Seitenzahl (von paged-media-Druckengines genutzt; Browser ignorieren es
+         harmlos — dort liefert der Druckdialog Kopf-/Fußzeilen). */
+      @page { @bottom-right { content: "Seite " counter(page); font-family: Georgia, serif; font-size: 9pt; color: #8a7050; } }
       body { max-width: 100%; padding: 0; }
       .person-section { page-break-inside: avoid; }
       .person-section + .person-section { page-break-before: auto; }
       .title-page { page-break-after: always; }
       .toc { page-break-after: always; }
+      .glossary { page-break-before: always; }
     }
   `;
 }
@@ -347,6 +361,12 @@ async function _buildBookHtml(opts) {
       const src = await _primPhotoSrc(p);
       if (src) photos[id] = src;
     }
+  }
+
+  // Titelblatt-Coverfoto (Primärfoto des Probanden)
+  let coverSrc = null;
+  if (withPhotos && db.individuals[probandId]) {
+    coverSrc = photos[probandId] || await _primPhotoSrc(db.individuals[probandId]).catch(() => null);
   }
 
   const personCount = sortedIds.length;
@@ -398,6 +418,7 @@ async function _buildBookHtml(opts) {
 <body>
 
 <div class="title-page">
+  ${coverSrc ? `<img class="cover-photo" src="${coverSrc}" alt="${esc(title)}">` : ''}
   <h1>${esc(title)}</h1>
   <div class="subtitle">${esc(filename)}</div>
   <div class="subtitle">${modeLabel}</div>
@@ -408,6 +429,22 @@ ${tocHtml}
 
 <div class="persons">
 ${sectionsHtml}
+</div>
+
+<div class="glossary">
+  <h3>Glossar &amp; Zeichenerklärung</h3>
+  <dl>
+    <dt>*</dt><dd>geboren</dd>
+    <dt>~</dt><dd>getauft</dd>
+    <dt>&#8224;</dt><dd>gestorben</dd>
+    <dt>&#9760;</dt><dd>beerdigt / begraben</dd>
+    <dt>&#x26AD;</dt><dd>verheiratet (Heirat)</dd>
+    <dt>Geburt</dt><dd>Geburtsereignis (GEDCOM BIRT)</dd>
+    <dt>Taufe</dt><dd>Taufereignis (GEDCOM CHR)</dd>
+    <dt>Tod</dt><dd>Sterbeereignis (GEDCOM DEAT)</dd>
+    <dt>Beerdigung</dt><dd>Bestattungsereignis (GEDCOM BURI)</dd>
+    ${mode === 'ancestors' ? `<dt>Kekulé-Nr.</dt><dd>Ahnennummer nach Kekulé von Stradonitz: Proband = 1, Vater = 2&times;Nr., Mutter = 2&times;Nr.+1</dd>` : ''}
+  </dl>
 </div>
 
 <h3 class="book-idx-head">Namenindex</h3>

@@ -150,6 +150,30 @@ function _printCss() {
                    color: #7a6248; margin-top: 1px; }
     .nk-dup { color: #8a7050; font-style: italic; }
 
+    /* ── Verwandtschafts-Zertifikat ───────────────────────────── */
+    .rc-frame { border: 2px solid #c0a878; border-radius: 6px; padding: 26px 30px;
+                margin-top: 10px; }
+    .rc-persons { display: flex; justify-content: center; align-items: center;
+                  gap: 18px; margin: 6px 0 18px; text-align: center; flex-wrap: wrap; }
+    .rc-person { font-size: 1.05rem; font-weight: 700; color: #2a1d08; }
+    .rc-person .rc-life { display: block; font-size: 0.82rem; font-weight: 400; color: #6a4a20; }
+    .rc-amp { font-size: 1.3rem; color: #8a6420; }
+    .rc-verdict { text-align: center; font-size: 1.15rem; color: #5a3e0e;
+                  background: #faf4e8; border: 1px solid #e8dfc8; border-radius: 5px;
+                  padding: 10px 14px; margin: 12px 0; font-weight: 700; }
+    .rc-common { text-align: center; font-size: 0.92rem; color: #6a4a20; margin-bottom: 16px; }
+    ol.rc-path { list-style: none; counter-reset: rcp; max-width: 460px; margin: 0 auto; }
+    ol.rc-path li { counter-increment: rcp; position: relative; padding: 4px 0 4px 30px;
+                    font-size: 10pt; }
+    ol.rc-path li::before { content: counter(rcp) "."; position: absolute; left: 2px;
+                    color: #8a6420; font-weight: 700; font-size: 0.85rem; }
+    ol.rc-path li.rc-common-node { font-weight: 700; color: #5a3e0e; }
+    ol.rc-path li.rc-common-node::before { content: "⬡"; }
+    .rc-pname { font-weight: 600; }
+    .rc-pyr { color: #8a7050; font-size: 0.85rem; }
+    .rc-foot { margin-top: 20px; font-size: 0.78rem; color: #8a7050; text-align: center;
+               border-top: 1px solid #ddd0b8; padding-top: 8px; }
+
     @media print {
       @page { size: A4 portrait; margin: 2cm; }
       body { max-width: 100%; padding: 0; }
@@ -1398,5 +1422,101 @@ function downloadNachkommentafel() {
   } catch (err) {
     console.error('downloadNachkommentafel:', err);
     showToast('⚠ Nachkommentafel: ' + err.message, 'error');
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+//  8. VERWANDTSCHAFTS-ZERTIFIKAT  (B4 — OUTPUT-RICHNESS)
+//     Druckbarer Nachweis wie Person A und B verwandt sind.
+//     Nutzt calcRelationship (ui-views-person.js).
+// ═════════════════════════════════════════════════════════════════
+
+function _rcName(p, id) {
+  if (!p) return id || '?';
+  return p.given ? `${p.given} ${p.surname || ''}`.trim() : (p.surname || p.name || id || '?');
+}
+
+function _buildRelCertHtml(idA, idB) {
+  const db = AppState.db;
+  const pA = db.individuals[idA];
+  const pB = db.individuals[idB];
+  if (!pA || !pB) throw new Error('Person nicht gefunden');
+  if (typeof calcRelationship !== 'function') throw new Error('Verwandtschaftsrechner nicht geladen');
+
+  const rel = calcRelationship(idA, idB);
+  const dateStr = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const nameA = _rcName(pA, idA), nameB = _rcName(pB, idB);
+  const verdict = rel?.label || 'Nicht verwandt';
+
+  let common = '';
+  if (rel?.commonId && db.individuals[rel.commonId]) {
+    const c = db.individuals[rel.commonId];
+    const cy = (c.birth?.date || '').match(/\d{4}/)?.[0];
+    common = `Gemeinsamer Vorfahre: ${esc(_rcName(c, rel.commonId))}${cy ? ' *' + cy : ''}`;
+  }
+
+  let pathHtml = '';
+  if (rel?.path?.length) {
+    pathHtml = `<ol class="rc-path">` + rel.path.map(pid => {
+      const p = db.individuals[pid];
+      const isCommon = pid === rel.commonId;
+      return `<li class="${isCommon ? 'rc-common-node' : ''}"><span class="rc-pname">${esc(_rcName(p, pid))}</span> <span class="rc-pyr">${esc(_poLifeYears(p))}</span></li>`;
+    }).join('\n') + `</ol>`;
+  }
+
+  const multiNote = rel?.multiPath
+    ? `<div class="rc-common">Mehrere Verwandtschaftspfade möglich – der kürzeste ist dargestellt.</div>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verwandtschaftsnachweis — ${esc(nameA)} & ${esc(nameB)}</title>
+<style>${_printCss()}</style>
+</head>
+<body>
+<h1>Verwandtschaftsnachweis</h1>
+<p class="meta">erstellt am ${dateStr}</p>
+<div class="rc-frame">
+  <div class="rc-persons">
+    <span class="rc-person">${esc(nameA)}<span class="rc-life">${esc(_poLifeYears(pA))}</span></span>
+    <span class="rc-amp">&#x26AD;&#xFE0E;</span>
+    <span class="rc-person">${esc(nameB)}<span class="rc-life">${esc(_poLifeYears(pB))}</span></span>
+  </div>
+  <div class="rc-verdict">${esc(verdict)}</div>
+  ${common ? `<div class="rc-common">${common}</div>` : ''}
+  ${multiNote}
+  ${pathHtml ? `<div class="st-section-sub">${pathHtml}</div>` : ''}
+  <div class="rc-foot">Verwandtschaftspfad mit ⬡ am gemeinsamen Vorfahren · automatisch berechnet</div>
+</div>
+</body>
+</html>`;
+}
+
+function downloadRelCertificate(idA, idB) {
+  const db = AppState.db;
+  if (!db?.individuals?.[idA] || !db?.individuals?.[idB]) {
+    showToast('⚠ Personen nicht gefunden', 'warn');
+    return;
+  }
+  try {
+    const html    = _buildRelCertHtml(idA, idB);
+    const blob    = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    const slug    = (s) => (s || '').replace(/[^\w\-äöüÄÖÜß ]/g, '').trim().replace(/ /g, '_').slice(0, 30);
+    a.href     = url;
+    a.download = `Verwandtschaft_${slug(_rcName(db.individuals[idA], idA))}_${slug(_rcName(db.individuals[idB], idB))}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadRelCertificate:', err);
+    showToast('⚠ Zertifikat: ' + err.message, 'error');
   }
 }

@@ -983,6 +983,10 @@ function showRelPath(idA, targetId) {
   const rel = calcRelationship(idA, bId);
   if (!rel) return;
 
+  // Für Verwandtschafts-Zertifikat-Export (B4) merken
+  UIState._relCertA = idA;
+  UIState._relCertB = bId;
+
   const pA = AppState.db.individuals[idA];
   const pB = AppState.db.individuals[bId];
   document.getElementById('relPathTitle').textContent =

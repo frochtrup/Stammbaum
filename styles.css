@@ -195,6 +195,9 @@ body.fc-mode #treeFsBtn            { display: none !important; }
 body.fc-mode #treeExportBtn                                    { display: inline-flex; }
 body.desc-tree-mode #treeExportBtn                             { display: inline-flex; }
 body.tree-active:not(.fc-mode):not(.desc-tree-mode) #treeExportBtn { display: inline-flex; }
+body.fc-mode #treeExportSvgBtn                                 { display: inline-flex; }
+body.desc-tree-mode #treeExportSvgBtn                          { display: inline-flex; }
+body.tree-active:not(.fc-mode):not(.desc-tree-mode) #treeExportSvgBtn { display: inline-flex; }
 #treeFcToggle                      { display: none; }
 body.tree-active #treeFcToggle     { display: inline-flex; }
 body.fc-mode #treeFcToggle         { display: inline-flex; }
