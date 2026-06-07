@@ -1162,24 +1162,63 @@ function showPlaceDetail(placeName, pushHistory = true) {
       }
     }
   }
+  const _totalEvs = [..._byType.values()].reduce((s, a) => s + a.length, 0);
   const _totalPersons = new Set([..._byType.values()].flatMap(arr => arr.map(e => e.person.id))).size;
   const _TYPE_ORDER = ['Geburt','Taufe','Konfirmation','Heirat','Beerdigung','Tod'];
   const _orderedTypes = [
     ..._TYPE_ORDER.filter(t => _byType.has(t)),
     ...[..._byType.keys()].filter(t => !_TYPE_ORDER.includes(t)).sort(),
   ];
-  html += `<div class="section fade-up">
-    <div class="section-title">Ereignisse (${_totalPersons} Person${_totalPersons !== 1 ? 'en' : ''})</div>`;
+  // Alle Ereignisse als flache Liste für Zeitraum-Ansicht
+  const _allEvs = [];
+  for (const [typeLabel, evs] of _byType) {
+    for (const e of evs) _allEvs.push({ typeLabel, person: e.person, date: e.date });
+  }
+  _allEvs.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  const _placeEvMode = UIState._placeEvMode || 'type'; // 'type' | 'date'
+  const _evSectionId = `place-ev-${Date.now()}`;
+
+  const _renderEvGroups = () => {
+    if (_placeEvMode === 'date') {
+      // Gruppierung nach Jahrhundert/Dekade
+      const byPeriod = new Map();
+      for (const e of _allEvs) {
+        const yr = e.date && e.date.match(/\d{4}/) ? Math.floor(+e.date.match(/\d{4}/)[0] / 10) * 10 : null;
+        const key = yr ? `${yr}er` : 'Ohne Datum';
+        if (!byPeriod.has(key)) byPeriod.set(key, []);
+        byPeriod.get(key).push(e);
+      }
+      return [...byPeriod.entries()].map(([period, evs]) =>
+        `<details class="ev-group" open>
+          <summary class="fact-sub-title ev-group-summary">${esc(period)} <span class="ev-count">${evs.length}</span></summary>
+          ${evs.map(e => `<div class="ev-group-row"><span class="ev-type-chip">${esc(e.typeLabel)}</span>${relRow(e.person, e.date)}</div>`).join('')}
+        </details>`
+      ).join('');
+    }
+    // Standard: nach Typ
+    return _orderedTypes.map(typeLabel => {
+      const evs = _byType.get(typeLabel).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      return `<details class="ev-group" open>
+        <summary class="fact-sub-title ev-group-summary">${esc(typeLabel)} <span class="ev-count">${evs.length}</span></summary>
+        ${evs.map(e => relRow(e.person, e.date)).join('')}
+      </details>`;
+    }).join('');
+  };
+
+  html += `<div class="section fade-up" id="${_evSectionId}">
+    <div class="section-head">
+      <div class="section-title">Ereignisse <span class="ev-total">${_totalEvs} · ${_totalPersons} Person${_totalPersons !== 1 ? 'en' : ''}</span></div>
+      <div class="ev-toolbar">
+        <button class="btn-ghost btn-xs${_placeEvMode === 'type' ? ' active' : ''}" data-action="placeEvMode" data-mode="type">nach Typ</button>
+        <button class="btn-ghost btn-xs${_placeEvMode === 'date' ? ' active' : ''}" data-action="placeEvMode" data-mode="date">nach Zeit</button>
+        <button class="btn-ghost btn-xs" data-action="placeEvToggleAll" data-section="${_evSectionId}">alle ±</button>
+      </div>
+    </div>`;
   if (_orderedTypes.length === 0) {
     html += '<div class="no-data-pad">Keine Ereignisse erfasst</div>';
-  }
-  for (const typeLabel of _orderedTypes) {
-    const evs = _byType.get(typeLabel);
-    evs.sort((a, b) => (a.date).localeCompare(b.date));
-    html += `<div class="fact-sub-title">${esc(typeLabel)}</div>`;
-    for (const e of evs) {
-      html += relRow(e.person, e.date);
-    }
+  } else {
+    html += _renderEvGroups();
   }
   html += `</div>`;
 

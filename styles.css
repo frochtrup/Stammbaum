@@ -2576,6 +2576,25 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 
 /* ── Verwandtschaft-Detail ── */
 .fact-row--clickable { cursor: pointer; }
+
+/* Ereignis-Gruppen im Ort-Steckbrief */
+.ev-toolbar { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.btn-xs { padding: 3px 10px !important; font-size: 0.72rem !important; border-radius: 12px !important; }
+.btn-xs.active { border-color: var(--gold-dim) !important; color: var(--gold-dim) !important; }
+.ev-total { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+.ev-group { border: none; margin: 0; padding: 0; }
+.ev-group summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--text-muted); padding: 8px 0 4px; border-bottom: 1px solid var(--border); user-select: none; }
+.ev-group summary::-webkit-details-marker { display: none; }
+.ev-group summary::after { content: '▾'; font-size: 0.8rem; color: var(--text-muted); transition: transform 0.15s; }
+.ev-group:not([open]) summary::after { transform: rotate(-90deg); }
+.ev-count { background: var(--bg-soft, #f0ebe3); color: var(--text-muted);
+  border-radius: 8px; padding: 1px 6px; font-size: 0.68rem; margin-left: 6px; }
+.ev-group-row { display: flex; align-items: flex-start; gap: 0; }
+.ev-type-chip { font-size: 0.68rem; color: var(--text-muted); min-width: 72px;
+  padding-top: 10px; flex-shrink: 0; }
+
 .rel-val-italic { font-style: italic; }
 .rel-path-item {
   cursor: pointer; display: flex; align-items: center; gap: 8px;
