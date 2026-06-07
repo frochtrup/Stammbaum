@@ -26,12 +26,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v889 · Cache: `stammbaum-v889` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v890 · Cache: `stammbaum-v890` · `test-unit.js` = 296 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
-### Zuletzt abgeschlossen (v851–v889) — vollständige Details: CHANGELOG.md
+### Zuletzt abgeschlossen (v851–v890) — vollständige Details: CHANGELOG.md
 
 | sw | Feature | Auswirkung |
 |---|---|---|
+| v890 | **View-Robustheit P6 — B7 showStartView Render-Reihenfolge** — Nutzerbericht: „Beim Erstaufruf der Personenliste springt sie zur Top-Liste, danach funktioniert es". Ursache: `showStartView` rief `showMain()` (= `renderTab` → `_vsSetup` mit `scrollTop=0`) **vor** dem `await Promise.all([idbGet, idbGet])`. Im await-Microtask paintete der Browser die Liste oben; erst nach dem await scrollte `_desktopAutoSelect` → `showDetail` → `_updatePersonListCurrent` zur Auswahl — zwei Paints sichtbar als Sprung. Fix: `showMain()` nach dem await ausführen, sodass showMain + showTree + `_desktopAutoSelect` alle synchron im selben Microtask laufen → genau ein Paint mit korrekter Position. | Personenliste erscheint beim App-Start direkt an der gespeicherten Auswahl-Position (kein Top-Flash + Sprung mehr). |
 | v889 | **View-Robustheit P6 — B6 Place/Source-Listen-Sync** — `showPlaceDetail` und `showSourceDetail` hatten — im Gegensatz zu `showDetail`/`showFamilyDetail` — **keinen** Listen-Highlight-Sync im Full-Render-Pfad. Folge: Klick auf einen anderen Ort in der placeList wechselt das Detail, aber `.current` blieb auf dem alten Eintrag stehen, bis der User den Tab erneut wechselte (dann griff der B3-Skip-Pfad). Neue Helper `_updatePlaceListCurrent(name)` + `_updateSourceListCurrent(id)` in ui-views.js (analog `_updatePersonListCurrent`); aufgerufen in `show*Detail` (Full-Render), `_dcAlreadyShows` (Skip-Pfad, ersetzt das vorige Inline-Pattern aus B3) und `_mobileSelectionRestore` (Dedup). | Listen-Highlight synchron zur Detail-Ansicht in allen 4 Tabs — sofort beim ersten Klick, nicht erst nach Tab-Re-Klick. |
 | v888 | **View-Robustheit P6 — B5 Detail-Toolbar zentral** — `_configureDetailToolbar(tab, entityId)` neu in ui-views.js (~75 Z.): konfiguriert TopTitle + 8 Buttons (`editBtn`, `treeBtn`, `timelineBtn`, `storyBtn`, `probandBtn`, `probandSetBtn`, `detailMapBtn`) für jeden der 4 Skip-Pfad-Tabs (persons/families/sources/places). Die bisher in jeder `show*Detail` inline duplizierte Toolbar-Konfig (Z. 695-716 person, 395-407 family, 10-17 source, 924-930 place) → ein Helper-Aufruf. `_dcAlreadyShows` ruft den Helper jetzt auch im Skip-Pfad + `requestAnimationFrame(_updateDetailHistBtn)`. Architektonisch: A4-Container-Trennung + A5-Skip waren auf innerHTML-Re-Render-Vermeidung optimiert; Toolbar-State ist aber ein **Cross-Cutting-Effekt** zwischen allen Detail-Typen, der zentralisiert werden muss. | **Funktional kritischer** Fix: vorher zeigte die Toolbar nach Tab-Wechsel-Skip noch den State der vorigen Entität — `storyBtn`-Klick auf Personen-Detail rief `showFamilyStory(F1)` statt `showStory(I123)` etc. Jetzt sind alle 8 Buttons + TopTitle nach Skip korrekt verdrahtet. |
 | v887 | **View-Robustheit P6 — B4 has-detail im Skip-Pfad** — direkter Folge-Fix zu v886: `_dcAlreadyShows` setzt jetzt zusätzlich `body.has-detail = true` + `AppState._detailActive = true` im Skip-Pfad. `showDetail`/`showFamilyDetail`/etc. rufen am Ende `showView('v-detail')` auf, was diese Flags setzt — der CSS-Schalter für den `desktopPlaceholder` ("Eintrag in der Liste auswählen"). Im Skip-Pfad entfällt dieser Aufruf, sodass der Placeholder oben im scrollbaren v-detail sichtbar blieb und das eigentliche Detail erst beim Runterscrollen erschien. Gleiche Bug-Klasse wie B3 (vergessenes Seiteneffekt-Mitziehen bei A5-Skip), nur für body-Klassen statt Liste. | Detail-Inhalt erscheint direkt sichtbar nach Tab-Wechsel zurück; kein "Void"-Placeholder-Artefakt mehr im Detail-Fenster. |
@@ -375,7 +376,7 @@ Deshalb zuerst die Pipeline-Endpunkte (Dashboard + Quellenbewertung), die allem 
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v889 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v890 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

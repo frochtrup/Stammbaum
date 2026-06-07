@@ -9,6 +9,61 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-07 — View-Robustheit P6: B7 showStartView Render-Reihenfolge (sw v890)
+
+Nutzerbericht: „Beim Erstaufruf der Personenliste gibt es immer noch einen Glitch — springt zur Top-Liste, danach funktioniert es scheinbar."
+
+#### Ursache (Async-Microtask-Lücke)
+
+`showStartView` führte vorher folgende Reihenfolge aus:
+
+```js
+async function showStartView() {
+  AppState.currentTab = 'persons';
+  showMain();                       // 1. sync: renderTab → _vsSetup mit scrollTop=0
+  const [savedProband, savedSel] = await Promise.all([
+    idbGet('proband_id'),           // 2. await → Kontrolle an Browser → PAINT
+    idbGet('last_tab_sel'),
+  ]);
+  // ...
+  if (startId) showTree(startId);   // 3. nach await: synchron
+  _desktopAutoSelect('persons');    // 4. _updatePersonListCurrent → scrollt zur Person → PAINT
+}
+```
+
+Zwischen Schritt 1 und Schritt 3 gibt das `await` die Kontrolle an den Browser ab. Der Browser nutzt diese Microtask-Pause für einen Paint — und zeigt die Personenliste mit `scrollTop=0` (Top-Items). Nach dem await scrollt `_desktopAutoSelect` → `showDetail` → `_updatePersonListCurrent` zur gespeicherten Auswahl. Der User sieht zwei Paints: Top-Items, dann Sprung.
+
+#### Fix
+
+`showMain()` nach dem `await` aufrufen:
+
+```js
+async function showStartView() {
+  AppState.currentTab = 'persons';
+  const [savedProband, savedSel] = await Promise.all([...]);   // 1. State zuerst laden
+  if (savedSel) UIState._lastTabSel = savedSel;
+  UIState._probandId = ...;
+  showMain();                       // 2. sync
+  const startId = getProbandId();
+  if (startId) showTree(startId);   // 3. sync
+  _desktopAutoSelect('persons');    // 4. sync
+}                                    // → ein Browser-Paint mit korrekter Position
+```
+
+Alle DOM-Manipulationen laufen jetzt synchron im selben Microtask nach dem await. Der Browser paint kommt erst am Ende → genau ein Paint mit der Liste an der richtigen Scroll-Position.
+
+#### Architektonische Einordnung
+
+B7 ist **weder** P5-A5-Skip-bedingt (anders als B3/B4/B5) **noch** eine fehlende `show*Detail`-Konsistenz (anders als B6). Es ist eine pure Async-Reihenfolge-Falle: synchroner Render vor await zeigt einen Zwischenzustand. Lehre: **State-Load (IDB) vor Initial-Render**, sodass keine Microtask-Lücke zwischen Render und State-Anwendung entsteht.
+
+Vorher v865 (P1-K7) hatte `showStartView` zwar schon `_desktopAutoSelect('persons')` ergänzt, aber den `showMain()`-Call vor dem await belassen. Die Microtask-Lücke war damals als unkritisch eingestuft (Desktop-Detail wird ja gefüllt). Mit dem heutigen Listen-Highlight-Verhalten (B3/B6) wird der Initial-Render-Zustand stärker sichtbar — was den Glitch jetzt erst zum Beanstandungs-Niveau hebt.
+
+#### Tests
+
+`test-unit.js` 296/296 grün; Preview-Verifikation per `showStartView`-Simulation; GEDCOM-Roundtrip `net_delta=0` unverändert.
+
+---
+
 ### Session 2026-06-07 — View-Robustheit P6: B6 Place/Source-Listen-Sync (sw v889)
 
 Nutzerbericht: „Ich wähle in einer Ortsliste einen neuen Ort aus, Detail wechselt — in der Liste bleibt der alte Ort markiert. Erst beim nochmaligen Orte-Tab wechselt die Anzeige."

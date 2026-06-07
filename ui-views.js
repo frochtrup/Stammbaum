@@ -706,13 +706,20 @@ function _desktopAutoSelect(tab) {
 // Startansicht nach Datei-Load: Tree des Probanden (oder kleinste ID)
 async function showStartView() {
   AppState.currentTab = 'persons';
-  showMain();
+  // P6-B7: IDB-State VOR dem ersten Listen-Render laden. Vorher rief showStartView
+  // showMain() (sync) → renderTab() → _vsSetup mit scrollTop=0, dann KAM das `await`
+  // → Browser paint mit Liste oben (sichtbar), dann nach await scrollte
+  // _desktopAutoSelect zur gespeicherten Auswahl. Der User sah zwei Paints: Top-Items,
+  // dann Sprung zur Auswahl. Nach Reihenfolge-Tausch laufen showMain + showTree +
+  // _desktopAutoSelect alle synchron im selben Microtask → genau ein Paint mit
+  // korrekter Position.
   const [savedProband, savedSel] = await Promise.all([
     idbGet('proband_id').catch(() => null),
     idbGet('last_tab_sel').catch(() => null),
   ]);
   if (savedSel && typeof savedSel === 'object') UIState._lastTabSel = savedSel;
   UIState._probandId = (savedProband && AppState.db.individuals[savedProband]) ? savedProband : null;
+  showMain();
   const startId = getProbandId();
   if (startId) showTree(startId);
   _desktopAutoSelect('persons');
