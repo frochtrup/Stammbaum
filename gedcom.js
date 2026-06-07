@@ -943,7 +943,9 @@ function getPlaceRegistry() {
           }
           next = bestEnc?.placeId ?? null;
         }
-        if (!next) next = (encs[0] && encs[0].placeId) || byId[curId].parentId || null;
+        // encs[0]-Fallback nur wenn kein Jahr angegeben (y==null); bei spezifischem Jahr
+        // kein Guess-Fallback — sonst werden zeitlich nicht passende Eltern zurückgegeben.
+        if (!next) next = (y == null ? (encs[0]?.placeId ?? null) : null) || byId[curId].parentId || null;
         curId = next;
       }
       return out;
