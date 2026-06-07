@@ -36,6 +36,7 @@ const UIState = {
   _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
   _placeRegistry:     null,      // PLACE-HIST (ADR-024): Cache für getPlaceRegistry(); in setDb geleert
   _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
+  _personSortCache:   null,      // { mode, count, sorted } — ungefilterte Personenliste sortiert; in markChanged() + _finishLoad geleert
   _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
   _soundexMode:       false,     // Soundex-Suche: phonetische Namens-Varianten
   _placesSubTab:    'orte',      // 'orte' | 'hoefe'

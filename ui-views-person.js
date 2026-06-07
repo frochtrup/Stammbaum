@@ -123,7 +123,7 @@ function _personRowHtml(p, isCurrent, pos, total) {
 let _lastFilteredPersons = null;
 // P0-R5: Cache-Invalidierung von markChanged() in ui-views.js — exportPersonsCsv
 // soll nach Edit nicht die alte gefilterte Liste benutzen.
-function _invalidatePersonListCache() { _lastFilteredPersons = null; }
+function _invalidatePersonListCache() { _lastFilteredPersons = null; UIState._personSortCache = null; }
 
 function exportPersonsCsv() {
   const persons = _lastFilteredPersons || Object.values(AppState.db.individuals);
@@ -148,15 +148,26 @@ function exportPersonsCsv() {
 function renderPersonList(persons) {
   _lastFilteredPersons = persons;
   _buildKekuleMap();
-  const sorted = [...persons].sort((a, b) => {
-    if (_personSort === 'date') {
-      const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
-      if (ka !== kb) return (ka || 99999999) - (kb || 99999999);
+
+  const allCount = Object.keys(AppState.db.individuals || {}).length;
+  const sc = UIState._personSortCache;
+  let sorted;
+  if (sc && sc.mode === _personSort && sc.count === allCount && persons.length === allCount) {
+    sorted = sc.sorted;
+  } else {
+    sorted = [...persons].sort((a, b) => {
+      if (_personSort === 'date') {
+        const ka = gedDateSortKey(a.birth.date), kb = gedDateSortKey(b.birth.date);
+        if (ka !== kb) return (ka || 99999999) - (kb || 99999999);
+      }
+      const c = (a.surname || '').localeCompare(b.surname || '', 'de');
+      if (c !== 0) return c;
+      return (a.given || '').localeCompare(b.given || '', 'de');
+    });
+    if (persons.length === allCount) {
+      UIState._personSortCache = { mode: _personSort, count: allCount, sorted };
     }
-    const c = (a.surname || '').localeCompare(b.surname || '', 'de');
-    if (c !== 0) return c;
-    return (a.given || '').localeCompare(b.given || '', 'de');
-  });
+  }
   const listEl = document.getElementById('personList');
   if (!sorted.length) {
     _vsTeardown(_vsP);

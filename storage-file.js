@@ -414,6 +414,7 @@ async function _finishLoad(db, text, filename) {
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
     UIState._hofCache = null;
     UIState._placesCache = null;
+    UIState._personSortCache = null;
     Promise.all([
       idbPut('stammbaum_ged', text),
       idbPut('stammbaum_ged_backup', text),
@@ -510,6 +511,7 @@ async function _loadGRAMPS(file) {
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
     UIState._hofCache = null;
     UIState._placesCache = null;
+    UIState._personSortCache = null;
     AppState._canDirectSave   = false;
     // Persist filename in localStorage for display
     const filename = file.name;
