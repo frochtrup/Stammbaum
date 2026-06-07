@@ -394,7 +394,7 @@ function _dedupRenderMergeBody(pair) {
       <thead><tr>
         <th class="dedup-merge-th">Feld</th>
         <th class="dedup-merge-th${wIsA ? ' winner' : ''}">A: ${esc(pA.name || pA.id)}</th>
-        <th class="dedup-merge-th" style="width:18px"></th>
+        <th class="dedup-merge-th dedup-merge-th--arrow"></th>
         <th class="dedup-merge-th${!wIsA ? ' winner' : ''}">B: ${esc(pB.name || pB.id)}</th>
       </tr></thead>
       <tbody>

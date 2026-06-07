@@ -1,19 +1,25 @@
 /*
- * test-csp.js — CSP-Durchsetzungs-Selbsttest (CSP-DURCHSETZUNG, sw v795)
+ * test-csp.js — CSP-Durchsetzungs-Selbsttest (CSP-DURCHSETZUNG, sw v795+)
  *
- * Belegt statt behauptet: die strikte CSP (script-src/style-src 'self',
- * kein 'unsafe-inline') verwirft inline-`on*=`-Handler UND inline-`style=`
- * still. Solche Attribute in index.html sind toter, irreführender Code.
+ * Zwei Scan-Stufen:
  *
- * Dieser Test scannt index.html und schlägt fehl, sobald ein inline-Event-
- * Handler (on*=) oder ein inline-style= auftaucht. So bleibt „CSP vollständig"
- * dauerhaft verifizierbar.
+ * A) HARD-FAIL — index.html:
+ *    Kein inline-on*=-Handler und kein inline-style= erlaubt.
+ *    Der Browser verwirft diese still; solche Attribute wären toter,
+ *    irreführender Code.
+ *
+ * B) INFO-REPORT — ui-*.js-Template-Strings:
+ *    style="..." in innerHTML-Strings werden vom Browser ebenfalls durch
+ *    style-src 'self' blockiert. Dieser Block meldet verbleibende Fundstellen
+ *    (Ziel: 0), schlägt aber noch nicht fehl — Bereinigung läuft schrittweise.
+ *    Ausnahmen: Regex-Sanitizer-Zeilen (suchen style=, injizieren es nicht).
  *
  * Lauf (headless, kein Browser/User nötig):
  *   osascript -l JavaScript test-csp.js      (macOS JXA)
  *   node test-csp.js                          (falls node vorhanden)
  *
- * Exit 0 = sauber, Exit 1 = inline-Attribute gefunden.
+ * Exit 0 = index.html sauber (JS-Fundstellen sind INFO, kein Fail)
+ * Exit 1 = inline-Attribute in index.html gefunden
  */
 (function () {
   'use strict';
@@ -94,9 +100,79 @@
 
   if (ok) {
     console.log('OK: index.html frei von inline-on*= und inline-style= — CSP lückenlos durchsetzbar.');
-    done(0);
   } else {
     console.log('CSP-Selbsttest fehlgeschlagen: inline-Attribute → Event-Delegation (data-action) bzw. CSS-Klassen verwenden.');
     done(1, (onHits.length + styleHits.length) + ' inline-Attribute in index.html');
   }
+
+  // -------------------------------------------------------------------
+  // B) INFO-REPORT: style="..." in JS-Template-Strings
+  //    Browser blockiert diese genauso wie index.html-Attribute (style-src
+  //    'self' ohne 'unsafe-inline'). Ziel: 0. Kein FAIL während Bereinigung.
+  //    Ausnahmen (Regex-Sanitizer, kein echter Inject):
+  //      ui-story-person.js  style="[^"]*"  (strip-Regex)
+  //      ui-story-fam.js     style="[^"]*"  (strip-Regex)
+  // -------------------------------------------------------------------
+  function listJsFiles(dir) {
+    var result = [];
+    if (typeof ObjC !== 'undefined') {
+      ObjC.import('Foundation');
+      var fm = $.NSFileManager.defaultManager;
+      var contents = fm.contentsOfDirectoryAtPathError(dir, null);
+      if (!contents) return result;
+      for (var i = 0; i < contents.count; i++) {
+        var name = contents.objectAtIndex(i).js;
+        if (/^ui-.*\.js$/.test(name)) result.push(dir + '/' + name);
+      }
+    } else if (typeof require === 'function') {
+      var fs = require('fs');
+      fs.readdirSync(dir).forEach(function (name) {
+        if (/^ui-.*\.js$/.test(name)) result.push(dir + '/' + name);
+      });
+    }
+    return result;
+  }
+
+  var jsFiles = listJsFiles(base);
+  var jsTotal = 0;
+  var jsReport = [];
+
+  jsFiles.forEach(function (fpath) {
+    var src = readFile(fpath);
+    if (!src) return;
+    var fname = fpath.replace(/.*\//, '');
+    var lines = src.split('\n');
+    var fileHits = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      if (line.indexOf('style="') === -1) continue;
+      var trimmed = line.trim();
+      // Kommentarzeilen überspringen
+      if (trimmed.indexOf('//') === 0) continue;
+      // data-il-style-Zeilen ohne echtes style= überspringen
+      if (trimmed.indexOf('data-il-style') !== -1 && trimmed.indexOf(' style="') === -1) continue;
+      // Regex-Sanitizer: style= als Suchmuster in .replace(/<...style=.../) — kein Inject
+      if (trimmed.indexOf('.replace(') !== -1 && trimmed.indexOf('/') !== -1) continue;
+      // Export-Only-Strings: werden als Download-HTML gebaut, nie per innerHTML in den DOM
+      // injiziert (z.B. Story-Export mit inline-CSS für Standalone-HTML-Datei)
+      if (trimmed.indexOf('_storyAsHTML') !== -1) continue;
+      if (trimmed.indexOf('mapUrl') !== -1 && trimmed.indexOf('story-map') !== -1) continue;
+      fileHits.push('  ' + (i + 1) + ': ' + trimmed.slice(0, 110));
+      jsTotal++;
+    }
+    if (fileHits.length) {
+      jsReport.push(fname + ' (' + fileHits.length + '):');
+      fileHits.forEach(function (h) { jsReport.push(h); });
+    }
+  });
+
+  if (jsTotal === 0) {
+    console.log('INFO JS: Alle ui-*.js frei von inline-style= in Template-Strings — CSP vollständig.');
+  } else {
+    console.log('INFO JS: ' + jsTotal + ' inline-style= in JS-Template-Strings (style-src blockiert diese zur Laufzeit):');
+    jsReport.forEach(function (l) { console.log(l); });
+    console.log('INFO JS: Ziel = 0. Bereinigung läuft (CSS-Klassen / setProperty / CSS Custom Props).');
+  }
+
+  done(ok ? 0 : 1);
 })();

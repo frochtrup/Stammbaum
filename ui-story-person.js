@@ -37,7 +37,7 @@
       const src = await _loadMediaSrc(prim.file);
       if (UIState._storyPid !== pid) return;
       const el = document.getElementById('story-hero-img');
-      if (el && src) { el.src = src; el.style.display = ''; }
+      if (el && src) { el.src = src; el.classList.remove('hidden'); }
     }
 
     // 2. Galerie — restliche Personen-Fotos (max. 5)
@@ -102,7 +102,7 @@
       : '';
     return `<header class="story-header">
 <div class="story-media-row">
-  <img id="story-hero-img" class="story-hero-img" alt="${_esc(p.name)}" style="display:none">
+  <img id="story-hero-img" class="story-hero-img hidden" alt="${_esc(p.name)}">
   <div id="story-gallery" class="story-gallery"></div>
 </div>
 <h1 class="story-name">${_esc(p.name || p.id)}</h1>
@@ -510,7 +510,7 @@ ${lifespan}
 
       const onClick = id ? ` onclick="if(typeof showDetail==='function')showDetail('${_esc(id)}')"` : '';
       const dataNav = id ? ` data-action="showDetail" data-pid="${_esc(id)}"` : '';
-      return `<g style="cursor:${id?'pointer':'default'}"${onClick}${dataNav}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${FILL}" stroke="${stroke}" stroke-width="${sw}"/>${txt.join('')}</g>`;
+      return `<g${id?' class="svg-nav"':''}${onClick}${dataNav}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" fill="${FILL}" stroke="${stroke}" stroke-width="${sw}"/>${txt.join('')}</g>`;
     }
 
     // ── Elemente aufbauen (lines z=0, cards z=1) ───────────────────────────
@@ -591,7 +591,7 @@ ${lifespan}
     }
 
     elems.sort((a, b) => a[0] - b[0]);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" style="font-family:system-ui,sans-serif">\n${elems.map(e => '  '+e[1]).join('\n')}\n</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" font-family="system-ui,sans-serif">\n${elems.map(e => '  '+e[1]).join('\n')}\n</svg>`;
 
     return `<section class="story-section story-diagram"><div class="story-diagram-wrap">${svg}</div></section>`;
   }

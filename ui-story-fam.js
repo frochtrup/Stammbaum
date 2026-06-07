@@ -29,7 +29,7 @@
       const src = await _loadMediaSrc(prim.file);
       if (UIState._storyFamId !== famId) return;
       const el = document.getElementById(elId);
-      if (el && src) { el.src = src; el.style.display = ''; }
+      if (el && src) { el.src = src; el.classList.remove('hidden'); }
     }
     const marrDivs = document.querySelectorAll('#storyBody [data-marr-files]');
     for (const div of marrDivs) {
@@ -77,8 +77,8 @@
     }
     return `<header class="story-header">
 <div class="story-media-row">
-  <img id="story-fam-hero-husb" class="story-hero-img" alt="${n1}" style="display:none">
-  <img id="story-fam-hero-wife" class="story-hero-img" alt="${n2}" style="display:none">
+  <img id="story-fam-hero-husb" class="story-hero-img hidden" alt="${n1}">
+  <img id="story-fam-hero-wife" class="story-hero-img hidden" alt="${n2}">
 </div>
 <h1 class="story-name">Familie ${n1} &amp; ${n2}</h1>
 ${marrSub}${lifespan}
@@ -281,7 +281,7 @@ ${marrSub}${lifespan}
       if (nm)  txt.push(`<text x="${cx}" y="${+(y+CH*(yrs?.35:.5)).toFixed(1)}" font-size="10" font-weight="600" fill="${TXT}" text-anchor="middle" dominant-baseline="middle">${nm}</text>`);
       if (yrs) txt.push(`<text x="${cx}" y="${+(y+CH*.72).toFixed(1)}" font-size="9" fill="${DIM}" text-anchor="middle" dominant-baseline="middle">${_esc(yrs)}</text>`);
       const nav = person.id ? ` onclick="if(typeof showDetail==='function')showDetail('${_esc(person.id)}')"` : '';
-      return `<g style="cursor:${person.id ? 'pointer' : 'default'}"${nav}><rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="5" fill="${FILL}" stroke="${stroke}" stroke-width="${sw}"/>${txt.join('')}</g>`;
+      return `<g${person.id ? ' class="svg-nav"' : ''}${nav}><rect x="${x}" y="${y}" width="${CW}" height="${CH}" rx="5" fill="${FILL}" stroke="${stroke}" stroke-width="${sw}"/>${txt.join('')}</g>`;
     }
     function fvln(x, y1, y2, col) {
       return `<line x1="${+x.toFixed(1)}" y1="${y1}" x2="${+x.toFixed(1)}" y2="${y2}" stroke="${col}" stroke-width="1.5"/>`;
@@ -320,7 +320,7 @@ ${marrSub}${lifespan}
         elems.push(`<text x="${+mCxN.toFixed(1)}" y="${+(cY + CH / 2).toFixed(1)}" font-size="12" fill="${DIM}" text-anchor="middle" dominant-baseline="middle">+${children.length - MAX_C}</text>`);
       }
     }
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" style="font-family:system-ui,sans-serif">\n${elems.filter(Boolean).map(e => '  ' + e).join('\n')}\n</svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" font-family="system-ui,sans-serif">\n${elems.filter(Boolean).map(e => '  ' + e).join('\n')}\n</svg>`;
     return `<section class="story-section story-diagram"><div class="story-diagram-wrap">${svg}</div></section>`;
   }
 

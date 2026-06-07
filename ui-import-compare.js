@@ -57,7 +57,7 @@ function _cmpRenderLoadPanel() {
       <p class="cmp-load-hint">Wähle eine zweite GEDCOM- oder GRAMPS-Datei zum Vergleich mit der geladenen Datei.</p>
       <label class="btn btn-primary cmp-file-btn">
         📂 &nbsp; Vergleichsdatei wählen …
-        <input type="file" id="cmpFileInput" accept=".ged,.gedcom,.gramps" style="display:none">
+        <input type="file" id="cmpFileInput" accept=".ged,.gedcom,.gramps" class="hidden">
       </label>
     </div>`;
   document.getElementById('cmpFileInput').onchange = e => {
@@ -71,7 +71,7 @@ function _cmpRenderLoadPanel() {
 
 async function _cmpStartLoad(file) {
   const body = document.getElementById('cmp-body');
-  if (body) body.innerHTML = `<div class="cmp-load-panel"><p class="c-muted">Lade ${esc(file.name)} …</p><div class="cmp-progress"><div class="cmp-progress-bar" id="cmpProgressBar" style="width:0%"></div></div></div>`;
+  if (body) body.innerHTML = `<div class="cmp-load-panel"><p class="c-muted">Lade ${esc(file.name)} …</p><div class="cmp-progress"><div class="cmp-progress-bar" id="cmpProgressBar"></div></div></div>`;
 
   const origProgress = typeof updateLoadingProgress === 'function' ? updateLoadingProgress : null;
   window.updateLoadingProgress = pct => {

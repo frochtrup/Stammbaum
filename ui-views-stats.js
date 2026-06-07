@@ -267,7 +267,7 @@ function renderStatsTab() {
             <div class="stats-tl-lbl">${lbl}</div>
           </div>`).join('')}
       </div>
-      <div class="c-muted" style="font-size:.75rem;margin-top:.25rem;">${totalFam} Familien gesamt</div>`);
+      <div class="c-muted stats-total-lbl">${totalFam} Familien gesamt</div>`);
   }
 
   // Top Nachnamen

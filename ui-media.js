@@ -778,7 +778,7 @@ function _renderMedia() {
 
   if (!filtered.length) {
     container.className = 'media-grid';
-    container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-muted)">Keine Medien vorhanden</div>';
+    container.innerHTML = '<div class="media-empty">Keine Medien vorhanden</div>';
     return;
   }
 

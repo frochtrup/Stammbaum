@@ -933,7 +933,7 @@ function _placeNamesSvg(pnames) {
     axis += `<line x1="${x.toFixed(1)}" y1="${AXIS_H - 4}" x2="${x.toFixed(1)}" y2="${AXIS_H + 2}" stroke="var(--border,#ccc)" stroke-width="0.8"/>`;
     axis += `<text x="${x.toFixed(1)}" y="${AXIS_H - 5}" font-size="8" fill="var(--text-muted,#8a7a6a)" text-anchor="middle">${y}</text>`;
   }
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:4px;overflow:hidden">${axis}${labels}${bars}</svg>`;
+  return `<svg class="pl-svg-tl" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${axis}${labels}${bars}</svg>`;
 }
 
 // ─── Ortsreport-Helfer ────────────────────────────────────────────────────────
@@ -1210,7 +1210,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
         for (const repo of matchedRepos) {
           const repoSrcs = Object.values(AppState.db.sources || {}).filter(s => s.repo === repo.id);
           const srcLinks = repoSrcs.map(s =>
-            `<div class="fact-row" style="cursor:pointer" data-action="showSourceDetail" data-id="${esc(s.id)}">
+            `<div class="fact-row fact-row--clickable" data-action="showSourceDetail" data-id="${esc(s.id)}">
               <span class="fact-val">${esc(s.title || s.id)}</span><span class="p-arrow">›</span>
             </div>`).join('');
           kirchHtml += `<div class="fact-row"><span class="fact-key">Archiv</span>
@@ -1242,8 +1242,8 @@ function showPlaceDetail(placeName, pushHistory = true) {
         const action = t._legacy ? 'deletePlaceTrans' : 'deletePlacePname';
         const dataIdx = t._legacy ? t._idx : t._pnIdx;
         return `
-      <div class="fact-row" style="align-items:center">
-        <span class="fact-val" style="flex:1"><span class="tran-chip">${esc(t.value)}${t.lang ? `<em class="tran-lang">${esc(t.lang)}</em>` : ''}</span></span>
+      <div class="fact-row fact-row--center">
+        <span class="fact-val fact-val--flex"><span class="tran-chip">${esc(t.value)}${t.lang ? `<em class="tran-lang">${esc(t.lang)}</em>` : ''}</span></span>
         <button class="unlink-btn" data-action="${action}" data-idx="${dataIdx}">×</button>
       </div>`;
       }).join('')
@@ -1255,7 +1255,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
     ${_transHtml || '<div class="no-data-pad">Keine Übersetzungen eingetragen</div>'}
     <div class="tran-add-row">
       <input class="form-input" id="pl-tran-val" placeholder="Übersetzung (z.B. Wrocław)">
-      <input class="form-input" id="pl-tran-lang" placeholder="Sprache" style="max-width:100px">
+      <input class="form-input pl-tran-lang" id="pl-tran-lang" placeholder="Sprache">
       <button class="btn-ghost tran-add-btn" data-action="addPlaceTrans">+</button>
     </div>
   </div>`;

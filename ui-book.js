@@ -410,7 +410,7 @@ ${tocHtml}
 ${sectionsHtml}
 </div>
 
-<h3 style="margin-top:40px;border-top:2px solid #c0a878;padding-top:12px;">Namenindex</h3>
+<h3 class="book-idx-head">Namenindex</h3>
 <div class="name-index">${indexEntries.join('')}</div>
 
 </body>

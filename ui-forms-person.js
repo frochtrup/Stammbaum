@@ -208,8 +208,9 @@ function showPersonForm(id) {
       if (tagsRow && tagsEl) {
         tagsRow.hidden = tags.length === 0;
         tagsEl.innerHTML = tags.map(t =>
-          `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`
+          `<span class="gramps-tag" data-il-style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`
         ).join('');
+        _applyDynStyles(tagsEl);
       }
       _renderPfGrampsAttrs();
     }

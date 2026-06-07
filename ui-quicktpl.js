@@ -265,7 +265,7 @@ function qtRenderManagerList() {
   if (!list) return;
   const tpls = _qtList();
   if (!tpls.length) {
-    list.innerHTML = '<p class="form-hint" style="padding:8px 0">Noch keine Templates. „+ Neues Template" anlegen.</p>';
+    list.innerHTML = '<p class="form-hint form-hint--pt">Noch keine Templates. „+ Neues Template" anlegen.</p>';
     return;
   }
   list.innerHTML = tpls.map(t => {
@@ -374,14 +374,14 @@ function _qtRenderFieldBuilder() {
   list.innerHTML = _qtDraftFields.map((f, i) => {
     const needsTarget = (f.type === 'date' || f.type === 'place' || f.type === 'age');
     const tgtDef = f.type === 'age' ? 'death' : 'birth';
-    return `<div class="qt-fb-row" style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
-      <select class="form-input" style="flex:none;width:100px" data-change="qtFieldEdit" data-idx="${i}" data-prop="role">${_qtRoleOptions(f.role || 'main')}</select>
-      <select class="form-input" style="flex:none;width:115px" data-change="qtFieldEdit" data-idx="${i}" data-prop="type">${_qtTypeOptions(f.type || 'given')}</select>
-      ${needsTarget ? `<select class="form-input" style="flex:none;width:95px" data-change="qtFieldEdit" data-idx="${i}" data-prop="target">${_qtTargetOptionsFor(f.type, f.target || tgtDef)}</select>` : ''}
-      <input class="form-input" style="flex:1;min-width:70px" data-input="qtFieldEdit" data-idx="${i}" data-prop="label" value="${esc(f.label || '')}" placeholder="${esc(_qtDefaultLabel(f))}" autocomplete="off">
-      <button type="button" class="qt-fb-btn" data-action="qtFieldUp"   data-idx="${i}" title="Hoch"  style="cursor:pointer">↑</button>
-      <button type="button" class="qt-fb-btn" data-action="qtFieldDown" data-idx="${i}" title="Runter" style="cursor:pointer">↓</button>
-      <button type="button" class="qt-fb-btn" data-action="qtFieldDel"  data-idx="${i}" title="Löschen" style="cursor:pointer">✕</button>
+    return `<div class="qt-fb-row">
+      <select class="form-input qt-fb-sel-role" data-change="qtFieldEdit" data-idx="${i}" data-prop="role">${_qtRoleOptions(f.role || 'main')}</select>
+      <select class="form-input qt-fb-sel-type" data-change="qtFieldEdit" data-idx="${i}" data-prop="type">${_qtTypeOptions(f.type || 'given')}</select>
+      ${needsTarget ? `<select class="form-input qt-fb-sel-tgt" data-change="qtFieldEdit" data-idx="${i}" data-prop="target">${_qtTargetOptionsFor(f.type, f.target || tgtDef)}</select>` : ''}
+      <input class="form-input qt-fb-lbl-inp" data-input="qtFieldEdit" data-idx="${i}" data-prop="label" value="${esc(f.label || '')}" placeholder="${esc(_qtDefaultLabel(f))}" autocomplete="off">
+      <button type="button" class="qt-fb-btn" data-action="qtFieldUp"   data-idx="${i}" title="Hoch">↑</button>
+      <button type="button" class="qt-fb-btn" data-action="qtFieldDown" data-idx="${i}" title="Runter">↓</button>
+      <button type="button" class="qt-fb-btn" data-action="qtFieldDel"  data-idx="${i}" title="Löschen">✕</button>
     </div>`;
   }).join('') || '<p class="form-hint">Noch keine Felder. „＋ Feld" hinzufügen.</p>';
 }
@@ -545,14 +545,14 @@ function _qtRenderEntryForm() {
           <option value="F">weiblich</option>
         </select></label>`;
     } else if (f.type === 'age') {
-      fh = `<div style="margin-bottom:6px"><div class="form-label" style="margin-bottom:3px">${esc(f.label)}</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input class="form-input" id="${id}-y" type="number" min="0" max="130" placeholder="Jahre" style="width:68px" autocomplete="off">
-          <span style="font-size:.8rem;color:var(--text-muted,#888)">J.</span>
-          <input class="form-input" id="${id}-m" type="number" min="0" max="11" placeholder="Mon." style="width:58px" autocomplete="off">
-          <span style="font-size:.8rem;color:var(--text-muted,#888)">M.</span>
-          <input class="form-input" id="${id}-d" type="number" min="0" max="31" placeholder="Tage" style="width:58px" autocomplete="off">
-          <span style="font-size:.8rem;color:var(--text-muted,#888)">T.</span>
+      fh = `<div class="qt-age-block"><div class="form-label qt-age-lbl">${esc(f.label)}</div>
+        <div class="qt-age-row">
+          <input class="form-input qt-age-inp-y" id="${id}-y" type="number" min="0" max="130" placeholder="Jahre" autocomplete="off">
+          <span class="qt-age-unit">J.</span>
+          <input class="form-input qt-age-inp-sm" id="${id}-m" type="number" min="0" max="11" placeholder="Mon." autocomplete="off">
+          <span class="qt-age-unit">M.</span>
+          <input class="form-input qt-age-inp-sm" id="${id}-d" type="number" min="0" max="31" placeholder="Tage" autocomplete="off">
+          <span class="qt-age-unit">T.</span>
         </div></div>`;
     } else {
       const isName  = f.type === 'surname' || f.type === 'given';
@@ -560,12 +560,12 @@ function _qtRenderEntryForm() {
       const ph = f.type === 'date' ? 'TT.MM.JJJJ'
         : f.type === 'page' ? (ctx.pagePattern ? ctx.pagePattern.replace('{v}', '…') : 'Seite/Eintrag')
         : '';
-      fh = `<label class="form-label" style="position:relative">${esc(f.label)}
+      fh = `<label class="form-label qt-label-rel">${esc(f.label)}
         <input class="form-input" id="${id}" type="text" placeholder="${esc(ph)}" autocomplete="off">
-        ${(isName || isPlace) ? `<div class="place-dropdown" id="${id}-dd" style="display:none;z-index:600"></div>` : ''}</label>`;
+        ${(isName || isPlace) ? `<div class="place-dropdown" id="${id}-dd"></div>` : ''}</label>`;
     }
     // Personen-Matching: Treffer-Box nach dem letzten Namensfeld der Rolle (Phase B)
-    if (roleByBoxKey[f.key]) fh += `<div class="qt-match" id="qt-match-${roleByBoxKey[f.key]}" style="margin:-2px 0 8px"></div>`;
+    if (roleByBoxKey[f.key]) fh += `<div class="qt-match qt-match-box" id="qt-match-${roleByBoxKey[f.key]}"></div>`;
     return fh;
   }).join('');
 
@@ -688,9 +688,9 @@ function _qtUpdateMatches(role) {
     const p = AppState.db.individuals[selId];
     if (p) {
       const by = _qtBirthYear(p);
-      box.innerHTML = `<div class="qt-linked" style="display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;background:var(--accent-soft,#e8f0ff);font-size:.85rem">
+      box.innerHTML = `<div class="qt-linked">
         <span>🔗 verknüpft: <strong>${esc(_qtPersonLabel(p))}</strong>${by ? ` (*${by})` : ''}</span>
-        <button type="button" class="qt-unlink" style="margin-left:auto;cursor:pointer;background:none;border:none;color:inherit;font-size:.85rem">✕ lösen</button>
+        <button type="button" class="qt-unlink">✕ lösen</button>
       </div>`;
       box.querySelector('.qt-unlink')?.addEventListener('click', () => { delete _qtMatchSel[role]; _qtUpdateMatches(role); });
       return;
@@ -703,12 +703,11 @@ function _qtUpdateMatches(role) {
   const matches = _qtFindMatches(surn, given, pr.sex);
   if (!matches.length) { box.innerHTML = ''; return; }
 
-  box.innerHTML = `<div class="qt-match-head" style="font-size:.78rem;color:var(--text-muted,#888);margin:2px 0 4px">
+  box.innerHTML = `<div class="qt-match-head">
       ${matches.length} möglicher Treffer — verknüpfen statt neu anlegen?</div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px">` +
-    matches.map(m => `<button type="button" class="qt-match-cand" data-pid="${esc(m.id)}"
-        style="cursor:pointer;border:1px solid var(--border,#ccd);border-radius:14px;padding:3px 10px;background:var(--bg-soft,#f4f6fa);color:inherit;font-size:.82rem">
-        ${esc(_qtPersonLabel(m.p))}${m.by ? ` <span style="opacity:.6">*${m.by}</span>` : ''}</button>`).join('') +
+    <div class="qt-match-cands">` +
+    matches.map(m => `<button type="button" class="qt-match-cand" data-pid="${esc(m.id)}">
+        ${esc(_qtPersonLabel(m.p))}${m.by ? ` <span class="qt-match-year">*${m.by}</span>` : ''}</button>`).join('') +
     `</div>`;
   box.querySelectorAll('.qt-match-cand').forEach(btn => {
     btn.addEventListener('click', () => { _qtMatchSel[role] = btn.getAttribute('data-pid'); _qtUpdateMatches(role); });
@@ -788,12 +787,11 @@ function _qtShowInlinePlausi(personIds, familyIds) {
     (r.personId && pSet.has(r.personId)) || (r.familyId && fSet.has(r.familyId))
   ).slice(0, 5);
   if (!issues.length) { box.hidden = true; return; }
-  const ic  = { error: '⚠', warn: '⚡', info: 'ℹ' };
-  const col = { error: 'var(--val-error,#c0392b)', warn: 'var(--val-warn,#e67e22)', info: 'var(--text-muted,#888)' };
-  box.innerHTML = '<div style="font-size:.78rem;color:var(--text-muted,#888);margin-bottom:3px">Hinweise:</div>' +
+  const ic = { error: '⚠', warn: '⚡', info: 'ℹ' };
+  box.innerHTML = '<div class="qt-hint-head">Hinweise:</div>' +
     issues.map(r => {
       const sev = r.severity || 'warn';
-      return `<div style="font-size:.8rem;color:${col[sev]||col.warn};padding:1px 0">${ic[sev]||'⚡'} ${esc(r.text)}</div>`;
+      return `<div class="qt-hint-item qt-hint-item--${sev}">${ic[sev]||'⚡'} ${esc(r.text)}</div>`;
     }).join('');
   box.hidden = false;
 }

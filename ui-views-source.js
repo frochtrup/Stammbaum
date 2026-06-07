@@ -27,7 +27,7 @@ function showSourceDetail(id, pushHistory = true) {
   </div>`;
 
   // Quick-Template-Shortcut: Template direkt aus dieser Quelle anlegen (Phase D)
-  html += `<div style="padding:0 0 6px"><button type="button" class="btn-link" data-action="qtNewTemplateFromSource" data-sid="${esc(id)}">⚡ Quick-Template erstellen</button></div>`;
+  html += `<div class="src-qt-action"><button type="button" class="btn-link" data-action="qtNewTemplateFromSource" data-sid="${esc(id)}">⚡ Quick-Template erstellen</button></div>`;
 
   // Source details
   html += `<div class="section fade-up"><div class="section-title">Details</div>`;

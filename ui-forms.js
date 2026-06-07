@@ -175,7 +175,7 @@ function renderSrcPicker(prefix) {
     const label = src.abbr || src.title || src.id;
     const cnt = counts[src.id] || 0;
     return `<div class="src-picker-item" data-action="addSrc" data-prefix="${prefix}" data-sid="${src.id}">
-      + ${esc(label)}${cnt ? `<span style="font-size:0.75rem;opacity:0.6;margin-left:4px">(${cnt}×)</span>` : ''}
+      + ${esc(label)}${cnt ? `<span class="src-cnt">(${cnt}×)</span>` : ''}
     </div>`;
   }).join('');
 }
@@ -287,7 +287,7 @@ function _appendDataEvenRow(container, evens, date, plac) {
     <input class="form-input" placeholder="BIRT, MARR, DEAT" value="${esc(evens||'')}" data-de="evens">
     <input class="form-input" placeholder="FROM 1750 TO 1850" value="${esc(date||'')}" data-de="date">
     <input class="form-input" placeholder="Ort" value="${esc(plac||'')}" data-de="plac">
-    <button type="button" class="btn btn-danger" style="padding:2px 8px">×</button>`;
+    <button type="button" class="btn btn-danger btn-danger--sm">&times;</button>`;
   row.querySelector('.btn-danger').addEventListener('click', () => row.remove());
   container.appendChild(row);
 }

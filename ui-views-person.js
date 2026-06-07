@@ -542,9 +542,9 @@ function _pdetLifeData(p, id) {
   (p.aliases || []).forEach(aliasXref => {
     const aliasP = AppState.db.individuals[aliasXref];
     if (!aliasP) return;
-    html += `<div class="fact-row fact-row--alias" style="align-items:center">
+    html += `<div class="fact-row fact-row--alias fact-row--center">
       <span class="fact-lbl">Selbe Person?</span>
-      <span class="fact-val" style="flex:1"><span class="alias-name-link" data-action="showDetail" data-id="${aliasXref}">${esc(aliasP.name)}</span></span>
+      <span class="fact-val fact-val--flex"><span class="alias-name-link" data-action="showDetail" data-id="${aliasXref}">${esc(aliasP.name)}</span></span>
       <button class="unlink-btn" data-action="removeAlias" data-pid="${id}" data-aliasid="${aliasXref}">×</button>
     </div>`;
   });
@@ -683,7 +683,7 @@ function _pdetLifeData(p, id) {
   }
   if (p.email) html += `<div class="fact-row"><span class="fact-lbl">E-Mail</span><span class="fact-val"><a href="mailto:${esc(p.email)}" class="person-email-link">${esc(p.email)}</a></span></div>`;
   if (p.www)   html += `<div class="fact-row"><span class="fact-lbl">Website</span><span class="fact-val"><a href="${safeLinkHref(p.www)}" target="_blank" rel="noopener" class="person-www-link">${esc(p.www)}</a></span></div>`;
-  if (p._grampsTags?.length) html += `<div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${p._grampsTags.map(t => `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div>`;
+  if (p._grampsTags?.length) html += `<div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${p._grampsTags.map(t => `<span class="gramps-tag" data-il-style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div>`;
   if (p._grampsAttrs?.length) html += p._grampsAttrs.map(a => `<div class="fact-row"><span class="fact-lbl">${esc(a.type)}</span><span class="fact-val">${esc(a.value)}${a.note ? `<div class="note-text">${esc(a.note)}</div>` : ''}</span></div>`).join('');
 
   if (!p.birth.date && !p.death.date && !p.events.length && !p.chr.date && !p.buri.date)
@@ -751,13 +751,13 @@ function showDetail(id, pushHistory = true) {
         const a = _storedAssos[_ai];
         const label = (typeof RELA_LABELS !== 'undefined' && RELA_LABELS[a.role]) || a.role || '?';
         const aName = AppState.db.individuals[a.xref]?.name || a.xref;
-        html += `<div class="fact-row" style="align-items:flex-start">
+        html += `<div class="fact-row fact-row--top">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val" style="flex:1">
+          <span class="fact-val fact-val--flex">
             <span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(aName)}</span>
             ${a.note ? `<div class="ev-note">${esc(a.note)}</div>` : ''}
           </span>
-          <div class="btn-row" style="margin-left:6px">
+          <div class="btn-row btn-row--ml">
             <button class="edit-media-btn" data-action="editAsso" data-pid="${id}" data-aidx="${_ai}" title="Bearbeiten">✎</button>
             <button class="unlink-btn" data-action="deleteAsso" data-pid="${id}" data-aidx="${_ai}" title="Entfernen">×</button>
           </div>
@@ -932,7 +932,9 @@ function showDetail(id, pushHistory = true) {
   // GPS-Beweisführungsnotiz (RES-HYPO 4e) — nur bei vorhandenen Hypothesen
   if (typeof _gpsNoteHtml === 'function') html += _gpsNoteHtml(id);
 
-  document.getElementById('detailPerson').innerHTML = html;
+  const _dpEl = document.getElementById('detailPerson');
+  _dpEl.innerHTML = html;
+  _applyDynStyles(_dpEl);
   _injectJumpBar();
   _activateDetailContainer('detailPerson', id);
   showView('v-detail');

@@ -177,12 +177,12 @@ function _buildAhnenlisteHtml(probandId) {
 <table class="ahnen">
 <thead>
 <tr>
-  <th style="width:3em">Nr.</th>
+  <th class="ahnen-col-nr">Nr.</th>
   <th>Name</th>
   <th>* Geburt / Taufe</th>
   <th>† Tod / Beerdigung</th>
-  <th style="width:3.2em">Vater</th>
-  <th style="width:3.2em">Mutter</th>
+  <th class="ahnen-col-par">Vater</th>
+  <th class="ahnen-col-par">Mutter</th>
 </tr>
 </thead>
 <tbody>

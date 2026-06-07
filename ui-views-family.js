@@ -561,14 +561,16 @@ function showFamilyDetail(id, pushHistory = true) {
     html += `</div>`;
   }
 
-  if (f._grampsTags?.length) html += `<div class="section fade-up"><div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${f._grampsTags.map(t => `<span class="gramps-tag" style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div></div>`;
+  if (f._grampsTags?.length) html += `<div class="section fade-up"><div class="fact-row"><span class="fact-lbl">Tags</span><span class="fact-val">${f._grampsTags.map(t => `<span class="gramps-tag" data-il-style="background:${esc(t.color||'#888')}">${esc(t.name)}</span>`).join('')}</span></div></div>`;
   if (f._grampsAttrs?.length) html += `<div class="section fade-up">${f._grampsAttrs.map(a => `<div class="fact-row"><span class="fact-lbl">${esc(a.type)}</span><span class="fact-val">${esc(a.value)}${a.note ? `<div class="note-text">${esc(a.note)}</div>` : ''}</span></div>`).join('')}</div>`;
 
   html += _famTasksSectionHtml(id);
   if (typeof _famRlogSectionHtml === 'function') html += _famRlogSectionHtml(id);
   if (typeof _famHypoSectionHtml === 'function') html += _famHypoSectionHtml(id);
 
-  document.getElementById('detailFamily').innerHTML = html;
+  const _dfEl = document.getElementById('detailFamily');
+  _dfEl.innerHTML = html;
+  _applyDynStyles(_dfEl);
   _activateDetailContainer('detailFamily', id);
   showView('v-detail');
 
