@@ -44,7 +44,7 @@ function renderStatsTab() {
 
   // ── Top Vornamen (erster Token) ──
   const givenMap = {};
-  persons.forEach(p => { const g = (p.given || '').trim().split(/\s+/)[0]; if (g) givenMap[g] = (givenMap[g] || 0) + 1; });
+  persons.forEach(p => { const g = (p.given || '').trim().split(/\s+/)[0].replace(/[,;.]+$/, ''); if (g) givenMap[g] = (givenMap[g] || 0) + 1; });
   const topGiven = _statsTop(givenMap, 10);
 
   // ── Top Geburtsorte ──

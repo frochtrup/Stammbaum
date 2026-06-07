@@ -1410,7 +1410,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
         if (_seenP.has(person.id)) continue;
         _seenP.add(person.id);
         if (person.surname) _surnMap[person.surname] = (_surnMap[person.surname]||0)+1;
-        const g = (person.given||'').trim().split(/\s+/)[0];
+        const g = (person.given||'').trim().split(/\s+/)[0].replace(/[,;.]+$/, '');
         if (g) _givenMap[g] = (_givenMap[g]||0)+1;
       }
     }

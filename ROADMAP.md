@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v908 · Cache: `stammbaum-v908` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v909 · Cache: `stammbaum-v909` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -47,7 +47,7 @@ Fünf Dimensionen leiten die Priorisierung:
 **Roundtrip:** GEDCOM net_delta=0, out1===out2 ✓ · GRAMPS xml1===xml2 ✓ · beide headless automatisiert (`test-roundtrip.js`)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
-### Gesamtbewertung — zuletzt überarbeitet 2026-06-07 (unabhängiges Review, v899)
+### Gesamtbewertung — zuletzt überarbeitet 2026-06-07 (unabhängiges Review, v899; Tabelle aktualisiert auf v909)
 
 > **Methodik:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung und Browser-Verifikation. **Review 2026-06-07 (v899):** Kernversprechen empirisch nachgeprüft statt aus Doku übernommen — `test-unit.js` **420/420 grün** ausgeführt; GEDCOM-Roundtrip `MeineDaten_ancestris.ged` (83k Z.) **net_delta=0 / stable** (+622 PEDI by design); Strict-5.5.1 strippt sauber; GRAMPS (2894 Pers.) stable (note Δ−116 / citation Δ−782 Dedup, by design); CSP-Header direkt geprüft (kein `unsafe-inline/eval`, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`); `esc()` korrekt (5 Zeichen); SCALE-TEST 20k synthetisch belegt. **Korrekturen ggü. der 2026-06-06-Tabelle:** (1) `_attr 486 Z.` war ein Phantom — die Funktion existiert nicht (einziges `_attr` = 3-Zeilen-Helfer); echte Monsterfunktionen: `_parseINDILine` 391, `_parseFAMLine` 298, `writeINDIRecord` 273. (2) Tests 296→**420** + UI-Logik-Tests existieren (v891 Blöcke t–ab). (3) Skalierung „>10k ungetestet" → bis **20k** gemessen (v899).
 
@@ -72,7 +72,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Prio | Maßnahme | Befund aus Review | Aufwand | Verweis |
 |---|---|---|---|---|
 | **1** | **DOC-SYNC** — Bewertungstabelle + Priorisierungs-Abschnitt von stale/falschen Angaben befreien und an SW-Bumps koppeln | Tabelle (Stand 2026-06-06) nannte Phantom-`_attr 486 Z.`, 296 statt 420 Tests, „keine UI-Logik-Tests", „>10k ungetestet" — alle überholt. | XS | ✅ *dieser Commit* |
-| **2** | **T0-FUNC-SPLIT** — die 3 echten Monsterfunktionen zerlegen | `_parseINDILine` 391, `_parseFAMLine` 298, `writeINDIRecord` 273 Z.; verschachtelte `_ptDepth`-Zustandslogik = höchstes Regressionsrisiko. Roundtrip- + Unit-Tests decken die Risiken bereits ab. | M | s. T0 (korrigiert) |
+| **2** | ✅ **T0-FUNC-SPLIT** — die 3 echten Monsterfunktionen zerlegen | `_parseINDILine` 389→12 Z., `_parseFAMLine` 296→12 Z., `writeINDIRecord` 271→106 Z. in Level-/Themen-Helfer zerlegt. Roundtrip net_delta=0 + 420 Tests grün. | M | ✅ v904 |
 | **3** | **OUTPUT-RICHNESS** — echter PDF-Buch-/Poster-Export | Größter fachlicher Abstand zu MacFamilyTree für die Zielgruppe; Fundament vorhanden (`ui-print.js`, `ui-book.js`, `exportOrtsbuch` v892). | L | s. P4 (neu) |
 | **4** | ✅ **A11Y-AUDIT** — „WCAG 2.1 AA" belegen statt behaupten | axe-core über 6 Kernansichten: 0 Violations. 5 Kontrastfehler behoben (v905). WCAG 2.1 AA belegt. | S | ✅ v905 |
 | 5 | **DOC-SCREENS / Handbuch v859–v899** — echte Screenshots + Versionsfelder | Handbuch hängt auf sw v858; CLAUDE.md-Pflicht (beide Versionsfelder). | M | s. Dokumentation |
@@ -154,14 +154,13 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ## T0 — Restliche technische Schulden
 
-**✅ Erledigt:** CSP-DURCHSETZUNG (v795, `test-csp.js`) · T0-SW (v743) · T0-XSS (v744, 166 innerHTML auditiert) · T0-TOKEN (**ADR-021**) · T0-TEST/T0-TEST-2 (Roundtrip GEDCOM+GRAMPS) · T0-UNIT (420 Tests).
+**✅ Erledigt:** CSP-DURCHSETZUNG (v795, `test-csp.js`) · T0-SW (v743) · T0-XSS (v744, 166 innerHTML auditiert) · T0-TOKEN (**ADR-021**) · T0-TEST/T0-TEST-2 (Roundtrip GEDCOM+GRAMPS) · T0-UNIT (420 Tests) · **T0-FUNC-SPLIT** (v904): `_parseINDILine` 389→12 Z., `_parseFAMLine` 296→12 Z., `writeINDIRecord` 271→106 Z. in Level-/Themen-Helfer zerlegt.
 **⛔ Wontfix:** T0-STORAGE (extraPlaces/hofObjects <50 KB, Quota-Risiko theoretisch) · T0-DRY `_esc`-Konsolidierung (erst nach ADR-020 Phase 3 sauber möglich; `showDetail` bereits gegliedert).
 
 **Offen:**
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| **T0-FUNC-SPLIT** ✅ | **Größte Funktionen zerlegt** *(abgeschlossen v904)* | `_parseINDILine` 389→**12 Z.** Dispatcher + 4 Level-Helfer; `_parseFAMLine` 296→**12 Z.** + 4 Level-Helfer + `_parseFamEvMediaLv3`; `writeINDIRecord` 271→**106 Z.** + `_writeINDIName`/`_writeINDIEventBody`/`_writeINDIExt`; geteilter `_parseSourCitSub`. Roundtrip net_delta=0 + 420 Tests grün. | M | ✅ v904 |
 | **T0-EXTRAPLACES-CLEANUP** | **`stammbaum_extraplaces_*` localStorage aufräumen** *(neu 2026-06-06)* | **Hintergrund:** `extraPlaces` war das ursprüngliche Koordinaten-/Übersetzungssystem vor `placeObjects`. Seit v854 ist es als Schreibziel eingefroren — alle Saves gehen in `placeObjects` (IDB + OneDrive). `loadExtraPlaces()` wird noch aufgerufen, damit `_migrateExtraPlacesToPlaceObjects()` Altdaten einmalig überführt. `saveExtraPlaces()` (ui-forms.js:913) schreibt noch in localStorage, ist aber toter Write. **Cleanup-Schritte:** ① `saveExtraPlaces()`-Call in `savePlace` entfernen. ② `_migrateExtraPlacesToPlaceObjects` nach erfolgreichem Durchlauf `localStorage.removeItem(_extraPlacesKey())` aufrufen lassen (idempotent, da Migration selbst idempotent). ③ Wenn alle Instanzen sicher migriert: `loadExtraPlaces()` + `_extraPlacesKey()` + `saveExtraPlaces()` aus ui-forms.js löschen; `db.extraPlaces`-Feld aus AppState entfernen. **Voraussetzung:** mindestens einmaliger App-Start mit v854+ auf allen genutzten Geräten (bei Eigennutzung sofort möglich). **Risiko bei zu frühem Cleanup:** Nutzer mit Altdaten (nie v854+ gestartet) verlieren Koordinaten, die noch nicht in placeObjects migriert wurden. | S |
 
 ---
@@ -228,7 +227,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v903 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900 + CSP-Durchsetzung v901–v903)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v909 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900 + CSP-Durchsetzung v901–v903 + T0-FUNC-SPLIT v904 + A11Y-AUDIT/WCAG-2.1-AA v905 + Lücken-Ketten Zugehörigkeit v908 + Vorname-Normalisierung v909)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
