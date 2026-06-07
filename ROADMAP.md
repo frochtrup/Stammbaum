@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v912 · Cache: `stammbaum-v912` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v913 · Cache: `stammbaum-v913` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -210,7 +210,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 | **OUTPUT-RICHNESS** | **Ausgabe-Reichtum — 10 Items** *(Hebel #3 aus Review 2026-06-07 — größter fachlicher Abstand zu MacFamilyTree)* | Fundament: `ui-print.js` (Ahnenliste/Familienbogen/Ortsbuch), `ui-book.js`, `ui-story-person.js`, `ui-chart-export.js` (PNG). Kein Server, kein PDF-Lib — Browser-Druck → PDF. Details s. Unter-Items. | — |
 | ✅ **A2** | **Quellenbibliografie (v911)** *(Gramps, RootsMagic, Legacy)* | `_buildBibliographieHtml`/`downloadBibliographie` in `ui-print.js`. Alle Quellen alphabetisch nach Autor-Nachname, bibliografischer Eintrag (Autor. Titel. Verlag. Datum.) + Aufbewahrungsort/Signatur + Belegzählung (Personen/Familien via `sourceRefs`). Orphan-Quellen ohne Beleg markiert; Summary-Kopf. Menü „Quellenverzeichnis". | **S** |
 | ✅ **A3** | **Forschungsprotokoll-Export (v912)** *(Gramps, Legacy Family Tree)* | `_buildForschungHtml`/`downloadForschungsProtokoll` in `ui-print.js`. Aufgaben (`_tasks`) + Protokoll (`_rlog`) aller Personen/Familien, gruppiert nach Entität (alphabetisch), Status-Badges (offen/in Arbeit/erledigt) + Kategorie, Protokoll-Ergebnis-Badges (gefunden/teilweise/…) + Repo/Quelle/Datum/Query/Notiz. Summary-Kopf. Menü „Forschungsprotokoll". | **S** |
-| **A4** | **Statistik-Report** *(Gramps Statistics Gramplet, MacFamilyTree)* | Häufigste Vornamen/Nachnamen/Geburtsorte/Sterbeorte (Top-10-Tabellen), Altersverteilung (SVG-Histogramm oder Tabelle), Zeitachsen-Dichte der Ereignisse, Männer/Frauen-Verhältnis, Kinderzahl-Verteilung. Identifiziert Datenlücken. Basis: `db.persons`-Iteration. | **M** |
+| ✅ **A4** | **Statistik-Report (v913)** *(Gramps Statistics Gramplet, MacFamilyTree)* | `_buildStatistikHtml`/`downloadStatistik` in `ui-print.js`. Übersichts-Kacheln, Geschlecht + Datenvollständigkeit (Balken-Tabelle), Lebens-/Heiratsalter-Kennzahlen, Kinderzahl-Verteilung, Ereignisse pro Jahrzehnt, Top-15 Nachnamen/Vornamen + Top-12 Geburts-/Sterbeorte. Reuse `_yearFrom`/`_statsTop`/`compactPlace`. Menü „Statistik-Report (PDF)". | **M** |
 | **B1** | **Nachkommentafel-Report** *(Gramps „Descendant Report", RootsMagic, Legacy)* | Nummerierter Bericht im d'Aboville-System (`1`, `1.1`, `1.1.2` …). Pro Person: Kurzbiografie als Fließtext + Kinderliste. Druckbares HTML. Gegenpart zur Ahnenliste (Ahnenliste zeigt nur Vorfahren); Standardformat Genealogischer Gesellschaften. Basis: Descendant-Logik aus `ui-chart-descendant.js` + Story-Texte aus `ui-story-person.js`. | **M** |
 | **B2** | **Familienbuch-Upgrade: Buchreife** *(MacFamilyTree, Legacy, Family Tree Maker)* | Ausbau `ui-book.js`: ① Titelblatt mit Cover-Foto (Primärfoto Proband), Titel, Erstelldatum; ② CSS `@page { margin: 2cm }` + `counter(page)` in Fußzeilen; ③ `page-break-before: always` an Kapiteln + Kapitelheader; ④ Glossar (BIRT/CHR/DEAT/BURI-Kürzel). Buchreifes Druckergebnis ohne externe Lib. | **M** |
 | **B3** | **Großposter SVG (A1/A0 Vektor-Export)** *(MacFamilyTree, Ancestris)* | Nachkommen- oder Sanduhr-Baum als `.svg`-Download (Vektor — Druckerei skaliert beliebig). Basis: `ui-chart-export.js` `_buildTreeSvg`; Zielgröße A1 (594×841 mm) oder A0. Wandposter für Familientreffen. | **M** |
@@ -237,7 +237,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v909 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900 + CSP-Durchsetzung v901–v903 + T0-FUNC-SPLIT v904 + A11Y-AUDIT/WCAG-2.1-AA v905 + Lücken-Ketten Zugehörigkeit v908 + Vorname-Normalisierung v909 + Quellenverzeichnis-Export v911 + Forschungsprotokoll-Export v912)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v909 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900 + CSP-Durchsetzung v901–v903 + T0-FUNC-SPLIT v904 + A11Y-AUDIT/WCAG-2.1-AA v905 + Lücken-Ketten Zugehörigkeit v908 + Vorname-Normalisierung v909 + Quellenverzeichnis-Export v911 + Forschungsprotokoll-Export v912 + Statistik-Report v913)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

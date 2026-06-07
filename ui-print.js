@@ -116,6 +116,21 @@ function _printCss() {
     .fr-lognote { display: block; color: #5a4326; font-size: 0.88rem;
                   margin-top: 1px; white-space: pre-wrap; }
 
+    /* ── Statistik-Report ─────────────────────────────────────── */
+    .st-tiles { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 6px; }
+    .st-tile { flex: 1 1 90px; text-align: center; background: #faf4e8;
+               border: 1px solid #e8dfc8; border-radius: 5px; padding: 8px 6px; }
+    .st-tile-num { font-size: 1.4rem; font-weight: 700; color: #6a4a20; }
+    .st-tile-lbl { font-size: 0.78rem; color: #8a7050; }
+    table.st { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin-top: 2px; }
+    table.st th { background: #f5eedf; color: #5a3e0e; font-weight: 700;
+                  text-align: left; padding: 3px 6px; border: 1px solid #ddd0b8; }
+    table.st td { padding: 2px 6px; border: 1px solid #e8dfc8; vertical-align: middle; }
+    table.st td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    table.st td.barcell { width: 45%; padding: 2px 6px; }
+    .st-bar { height: 10px; background: #c0a878; border-radius: 2px; min-width: 1px; }
+    .st-section-sub { page-break-inside: avoid; }
+
     @media print {
       @page { size: A4 portrait; margin: 2cm; }
       body { max-width: 100%; padding: 0; }
@@ -1004,5 +1019,216 @@ function downloadForschungsProtokoll() {
   } catch (err) {
     console.error('downloadForschungsProtokoll:', err);
     showToast('⚠ Forschungsprotokoll: ' + err.message, 'error');
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+//  6. STATISTIK-REPORT  (A4 — OUTPUT-RICHNESS)
+//     Demografische Kennzahlen als druckbares Standalone-HTML.
+//     Nutzt globale Helfer _yearFrom, _statsTop, compactPlace.
+// ═════════════════════════════════════════════════════════════════
+
+// Top-N-Häufigkeitsmap als Tabelle mit Balken
+function _stTopTable(entries, total, headLabel) {
+  if (!entries.length) return '';
+  const max = entries[0][1] || 1;
+  const rows = entries.map(([lbl, cnt], i) => {
+    const pct = total ? Math.round(cnt / total * 100) : 0;
+    const w   = Math.round(cnt / max * 100);
+    return `<tr>
+      <td class="num">${i + 1}.</td>
+      <td>${esc(lbl)}</td>
+      <td class="barcell"><div class="st-bar" style="width:${w}%"></div></td>
+      <td class="num">${cnt}${total ? ` <span class="nd">(${pct}%)</span>` : ''}</td>
+    </tr>`;
+  }).join('\n');
+  return `<table class="st"><thead><tr>
+    <th style="width:34px">#</th><th>${esc(headLabel)}</th><th>Verteilung</th><th style="width:90px">Anzahl</th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function _buildStatistikHtml() {
+  const db       = AppState.db;
+  const persons  = Object.values(db.individuals || {});
+  const families = Object.values(db.families   || {});
+  const sources  = Object.values(db.sources    || {});
+  const repos    = Object.values(db.repositories || {});
+  const n = persons.length;
+  if (!n) throw new Error('Keine Personen vorhanden');
+
+  const dateStr   = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const fileLabel = (db._sourceFile || '').replace(/\.[^.]+$/, '');
+
+  // Basiswerte
+  const nM = persons.filter(p => p.sex === 'M').length;
+  const nF = persons.filter(p => p.sex === 'F').length;
+  const nU = n - nM - nF;
+  const mediaSet = new Set();
+  persons.forEach(p => (p.media || []).forEach(m => m.file && mediaSet.add(m.file)));
+  families.forEach(f => (f.marr?.media || []).forEach(m => m.file && mediaSet.add(m.file)));
+  sources.forEach(s => (s.media || []).forEach(m => m.file && mediaSet.add(m.file)));
+  let nPlaces = 0;
+  try {
+    const placesMap = (typeof collectPlaces === 'function') ? collectPlaces() : new Map();
+    nPlaces = placesMap instanceof Map ? placesMap.size : (placesMap.length || 0);
+  } catch (e) { nPlaces = 0; }
+
+  // Vollständigkeit
+  const hasBirth = persons.filter(p => p.birth?.date || p.birth?.place).length;
+  const hasDeath = persons.filter(p => p.death?.date || p.death?.place).length;
+  const hasSrc = persons.filter(p =>
+    (p.topSources?.length || 0) + (p.nameSources?.length || 0) +
+    (p.birth?.citations?.length || 0) + (p.death?.citations?.length || 0) +
+    (p.events?.some(ev => ev.citations?.length > 0) ? 1 : 0) > 0).length;
+  const hasPhoto = persons.filter(p => (p.media || []).some(m => /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(m.file || ''))).length;
+
+  // Häufigkeitsmaps
+  const surnMap = {}, givenMap = {}, bplMap = {}, dplMap = {};
+  persons.forEach(p => {
+    if (p.surname) surnMap[p.surname] = (surnMap[p.surname] || 0) + 1;
+    const g = (p.given || '').trim().split(/\s+/)[0].replace(/[,;.]+$/, ''); if (g) givenMap[g] = (givenMap[g] || 0) + 1;
+    const bp = compactPlace(p.birth?.place); if (bp) bplMap[bp] = (bplMap[bp] || 0) + 1;
+    const dp = compactPlace(p.death?.place); if (dp) dplMap[dp] = (dplMap[dp] || 0) + 1;
+  });
+
+  // Lebensspannen
+  const lifespans = [];
+  persons.forEach(p => {
+    const by = _yearFrom(p.birth?.date || p.chr?.date);
+    const dy = _yearFrom(p.death?.date || p.buri?.date);
+    if (by && dy && dy > by && (dy - by) < 120) lifespans.push(dy - by);
+  });
+  lifespans.sort((a, b) => a - b);
+
+  // Heiratsalter
+  const marrM = [], marrF = [];
+  families.forEach(f => {
+    const my = _yearFrom(f.marr?.date); if (!my) return;
+    const husb = f.husb ? db.individuals[f.husb] : null;
+    const wife = f.wife ? db.individuals[f.wife] : null;
+    const hby = husb ? _yearFrom(husb.birth?.date || husb.chr?.date) : null;
+    const wby = wife ? _yearFrom(wife.birth?.date || wife.chr?.date) : null;
+    if (hby && my - hby >= 10 && my - hby <= 80) marrM.push(my - hby);
+    if (wby && my - wby >= 10 && my - wby <= 80) marrF.push(my - wby);
+  });
+
+  // Kinderzahl
+  const childCountMap = {};
+  families.forEach(f => {
+    const c = (f.children || []).length;
+    childCountMap[c >= 10 ? '10+' : String(c)] = (childCountMap[c >= 10 ? '10+' : String(c)] || 0) + 1;
+  });
+  const childEntries = Object.entries(childCountMap).sort((a, b) =>
+    (a[0] === '10+' ? 10 : +a[0]) - (b[0] === '10+' ? 10 : +b[0]));
+
+  // Ereignisse pro Jahrzehnt
+  const decBirth = {}, decDeath = {}, decMarr = {};
+  persons.forEach(p => { const y = _yearFrom(p.birth?.date || p.chr?.date); if (y) { const d = Math.floor(y / 10) * 10; decBirth[d] = (decBirth[d] || 0) + 1; } });
+  persons.forEach(p => { const y = _yearFrom(p.death?.date); if (y) { const d = Math.floor(y / 10) * 10; decDeath[d] = (decDeath[d] || 0) + 1; } });
+  families.forEach(f => { const y = _yearFrom(f.marr?.date); if (y) { const d = Math.floor(y / 10) * 10; decMarr[d] = (decMarr[d] || 0) + 1; } });
+  const decKeys = [...new Set([...Object.keys(decBirth), ...Object.keys(decDeath), ...Object.keys(decMarr)])].map(Number).sort((a, b) => a - b);
+
+  const avg = arr => arr.length ? Math.round(arr.reduce((s, v) => s + v, 0) / arr.length) : null;
+
+  // ── Render-Sektionen ──
+  let html = '';
+
+  // Übersicht-Kacheln
+  html += `<h2>Übersicht</h2><div class="st-tiles">
+    ${[[n,'Personen'],[families.length,'Familien'],[sources.length,'Quellen'],[nPlaces,'Orte'],[repos.length,'Archive'],[mediaSet.size,'Medien']]
+      .map(([num,lbl]) => `<div class="st-tile"><div class="st-tile-num">${num.toLocaleString('de-DE')}</div><div class="st-tile-lbl">${lbl}</div></div>`).join('')}
+  </div>`;
+
+  // Geschlecht + Vollständigkeit
+  const pct = (k) => n ? Math.round(k / n * 100) : 0;
+  html += `<h2>Geschlecht &amp; Datenvollständigkeit</h2><div class="st-section-sub"><table class="st"><tbody>
+    <tr><td>♂ Männlich</td><td class="barcell"><div class="st-bar" style="width:${pct(nM)}%"></div></td><td class="num">${nM} (${pct(nM)}%)</td></tr>
+    <tr><td>♀ Weiblich</td><td class="barcell"><div class="st-bar" style="width:${pct(nF)}%"></div></td><td class="num">${nF} (${pct(nF)}%)</td></tr>
+    <tr><td>◇ Unbekannt</td><td class="barcell"><div class="st-bar" style="width:${pct(nU)}%"></div></td><td class="num">${nU} (${pct(nU)}%)</td></tr>
+    <tr><td>Geburtsdatum/-ort</td><td class="barcell"><div class="st-bar" style="width:${pct(hasBirth)}%"></div></td><td class="num">${hasBirth} (${pct(hasBirth)}%)</td></tr>
+    <tr><td>Sterbedatum/-ort</td><td class="barcell"><div class="st-bar" style="width:${pct(hasDeath)}%"></div></td><td class="num">${hasDeath} (${pct(hasDeath)}%)</td></tr>
+    <tr><td>Mind. 1 Quelle</td><td class="barcell"><div class="st-bar" style="width:${pct(hasSrc)}%"></div></td><td class="num">${hasSrc} (${pct(hasSrc)}%)</td></tr>
+    <tr><td>Foto vorhanden</td><td class="barcell"><div class="st-bar" style="width:${pct(hasPhoto)}%"></div></td><td class="num">${hasPhoto} (${pct(hasPhoto)}%)</td></tr>
+  </tbody></table></div>`;
+
+  // Lebensspannen / Heiratsalter Kennzahlen
+  const lsAvg = avg(lifespans);
+  if (lsAvg != null || marrM.length || marrF.length) {
+    const lsMed = lifespans.length ? lifespans[Math.floor(lifespans.length / 2)] : null;
+    html += `<h2>Lebens- &amp; Heiratsalter</h2><div class="st-section-sub"><table class="st"><tbody>
+      ${lsAvg != null ? `<tr><td>Ø Lebensspanne (${lifespans.length} Pers.)</td><td class="num">${lsAvg} Jahre</td></tr>
+        <tr><td>Median Lebensspanne</td><td class="num">${lsMed} Jahre</td></tr>
+        <tr><td>Min / Max Lebensspanne</td><td class="num">${lifespans[0]} / ${lifespans[lifespans.length-1]} Jahre</td></tr>` : ''}
+      ${marrM.length ? `<tr><td>Ø Heiratsalter Mann (${marrM.length})</td><td class="num">${avg(marrM)} Jahre</td></tr>` : ''}
+      ${marrF.length ? `<tr><td>Ø Heiratsalter Frau (${marrF.length})</td><td class="num">${avg(marrF)} Jahre</td></tr>` : ''}
+    </tbody></table></div>`;
+  }
+
+  // Kinderzahl
+  if (childEntries.length >= 2) {
+    html += `<h2>Kinderzahl pro Familie</h2><div class="st-section-sub">${
+      _stTopTable(childEntries, families.length, 'Kinder')}</div>`;
+  }
+
+  // Ereignisse pro Jahrzehnt
+  if (decKeys.length >= 3) {
+    const decMax = Math.max(...decKeys.map(d => Math.max(decBirth[d]||0, decDeath[d]||0, decMarr[d]||0)));
+    const rows = decKeys.map(d => {
+      const b = decBirth[d]||0, dt = decDeath[d]||0, m = decMarr[d]||0;
+      return `<tr><td class="num">${d}er</td>
+        <td class="num">${b}</td><td class="num">${dt}</td><td class="num">${m}</td>
+        <td class="barcell"><div class="st-bar" style="width:${Math.round((b+dt+m)/(decMax*3||1)*100)}%"></div></td></tr>`;
+    }).join('\n');
+    html += `<h2>Ereignisse pro Jahrzehnt</h2><div class="st-section-sub"><table class="st"><thead><tr>
+      <th>Jahrzehnt</th><th style="width:70px">Geburten</th><th style="width:70px">Sterbef.</th><th style="width:70px">Heiraten</th><th>Summe</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  // Top-Listen
+  html += `<h2>Häufigste Nachnamen</h2><div class="st-section-sub">${_stTopTable(_statsTop(surnMap, 15), n, 'Nachname')}</div>`;
+  html += `<h2>Häufigste Vornamen</h2><div class="st-section-sub">${_stTopTable(_statsTop(givenMap, 15), n, 'Vorname')}</div>`;
+  if (Object.keys(bplMap).length) html += `<h2>Häufigste Geburtsorte</h2><div class="st-section-sub">${_stTopTable(_statsTop(bplMap, 12), null, 'Ort')}</div>`;
+  if (Object.keys(dplMap).length) html += `<h2>Häufigste Sterbeorte</h2><div class="st-section-sub">${_stTopTable(_statsTop(dplMap, 12), null, 'Ort')}</div>`;
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Statistik${fileLabel ? ' — ' + esc(fileLabel) : ''}</title>
+<style>${_printCss()}</style>
+</head>
+<body>
+<h1>Statistik-Report</h1>
+<p class="meta">${fileLabel ? esc(fileLabel) + ' · ' : ''}${n.toLocaleString('de-DE')} Personen · erstellt am ${dateStr}</p>
+${html}
+</body>
+</html>`;
+}
+
+function downloadStatistik() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.individuals || {}).length) {
+    showToast('⚠ Keine Daten geladen', 'warn');
+    return;
+  }
+  try {
+    const html    = _buildStatistikHtml();
+    const blob    = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    const srcName = (db._sourceFile || 'Stammbaum')
+      .replace(/\.[^.]+$/, '').replace(/[^\w\-äöüÄÖÜß ]/g,'').trim().replace(/ /g,'_');
+    a.href     = url;
+    a.download = srcName + '_Statistik.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadStatistik:', err);
+    showToast('⚠ Statistik: ' + err.message, 'error');
   }
 }

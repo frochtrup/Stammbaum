@@ -317,6 +317,7 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuPrintFamilienbogen: ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadFamilienbogen()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   menuBibliographie:       ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadBibliographie()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   menuForschungsprotokoll: ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadForschungsProtokoll()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
+  menuStatistikReport:     ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadStatistik()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   generateBook:            ()  => {
     const mode      = document.querySelector('#book-mode-seg button.active')?.dataset.bookMode || 'ancestors';
     const title     = document.getElementById('book-title')?.value.trim() || 'Familienbuch';
