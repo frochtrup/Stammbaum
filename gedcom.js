@@ -921,6 +921,12 @@ function getPlaceRegistry() {
       let curId = placeId;
       while (curId && byId[curId] && !seen.has(curId)) {
         seen.add(curId);
+        // Existenzgrenzen prüfen: Knoten nicht in Kette aufnehmen wenn außerhalb
+        const _pl = byId[curId];
+        if (y != null && (_pl.existsFrom || _pl.existsTo)) {
+          const ef = _placeYear(_pl.existsFrom), et = _placeYear(_pl.existsTo);
+          if ((ef != null && y < ef) || (et != null && y > et)) break;
+        }
         out.push(reg.resolveAsOf(curId, year));
         const encs = byId[curId].enclosedBy || [];
         let next = null;

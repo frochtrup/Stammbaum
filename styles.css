@@ -3895,6 +3895,8 @@ html[data-theme="dark"] {
 .place-edit-add-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .pl-field-sm { max-width: 72px; min-width: 0; }
 .pl-add-btn { padding: 5px 14px; flex-shrink: 0; }
+.place-date-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pl-date-lbl { font-size: 12px; color: var(--text-muted, #8a7a6a); white-space: nowrap; }
 .pname-row { display: flex; align-items: center; gap: 8px; padding: 5px 2px; border-bottom: 1px solid var(--border, #e0d8c8); }
 .pname-val { flex: 1 1 auto; font-size: 14px; }
 .pname-span { flex: 0 0 auto; font-size: 11px; color: var(--text-muted, #888); white-space: nowrap; }

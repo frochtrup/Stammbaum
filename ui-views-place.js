@@ -551,6 +551,8 @@ function showPlaceForm(placeName) {
   document.getElementById('pl-placeId').value = po ? po.id : '';
   document.getElementById('pl-name').value    = po ? po.title : placeName;
   document.getElementById('pl-type').value    = po?.type || 'Unknown';
+  document.getElementById('pl-exists-from').value = po?.existsFrom || '';
+  document.getElementById('pl-exists-to').value   = po?.existsTo   || '';
 
   // Koordinaten: placeObject hat Vorrang vor extraPlaces-Cache
   const ep   = AppState.db.extraPlaces[placeName];
@@ -661,6 +663,8 @@ function savePlace() {
 
   // placeObject anlegen (falls neu) oder aktualisieren — single source of truth
   const _type = document.getElementById('pl-type')?.value || 'Unknown';
+  const _exFrom = document.getElementById('pl-exists-from')?.value.trim() || null;
+  const _exTo   = document.getElementById('pl-exists-to')?.value.trim()   || null;
   let _poId = document.getElementById('pl-placeId')?.value || '';
   if (!_poId) _poId = (typeof _epId === 'function') ? _epId(newName) : ('_ep_' + Date.now());
   upsertPlaceObject(
@@ -668,10 +672,13 @@ function savePlace() {
     () => ({ id: _poId, title: newName, type: _type,
              lat: _coordOp === 'set' ? lati : null,
              long: _coordOp === 'set' ? long : null,
+             existsFrom: _exFrom, existsTo: _exTo,
              pnames: [], enclosedBy: [], parentId: null }),
     p => {
       if (newName !== oldName) p.title = newName;
       p.type = _type;
+      p.existsFrom = _exFrom;
+      p.existsTo   = _exTo;
       if (_coordOp === 'set')        { p.lat = lati; p.long = long; }
       else if (_coordOp === 'clear') { p.lat = null; p.long = null; }
     }
@@ -1054,6 +1061,12 @@ function showPlaceDetail(placeName, pushHistory = true) {
       // Verwaltungsgeschichte: alle enclosedBy[]-Einträge chronologisch mit Zeitspanne
       let histHtml = '';
       if (typeLbl) histHtml += `<div class="fact-row"><span class="fact-key">Typ</span><span class="fact-val">${esc(typeLbl)}</span></div>`;
+      // Existenzdaten anzeigen
+      if (po.existsFrom || po.existsTo) {
+        const _exSpan = po.existsFrom && po.existsTo ? `${po.existsFrom}–${po.existsTo}`
+          : po.existsFrom ? `ab ${po.existsFrom}` : `bis ${po.existsTo}`;
+        histHtml += `<div class="fact-row"><span class="fact-key">Existiert</span><span class="fact-val">${esc(_exSpan)}</span></div>`;
+      }
 
       const enclosedBy = po.enclosedBy || [];
       if (enclosedBy.length) {
@@ -1129,9 +1142,16 @@ function showPlaceDetail(placeName, pushHistory = true) {
             if (pn.dateFrom) { const y = pn.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
             if (pn.dateTo)   { const y = pn.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
           }
+          // Existenzgrenzen des Knotens selbst einsammeln
+          if (p.existsFrom) { const y = p.existsFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
+          if (p.existsTo)   { const y = p.existsTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
         };
         _collectYears(place.placeId);
-        const _keyYears = [..._chainYears].sort((a,b)=>a-b);
+        // Anzeigebereich auf Existenzdaten des Ortes selbst klemmen
+        const _exFrom = po?.existsFrom ? +po.existsFrom.match(/\d{4}/)?.[0] : null;
+        const _exTo   = po?.existsTo   ? +po.existsTo.match(/\d{4}/)?.[0]   : null;
+        const _keyYears = [..._chainYears].sort((a,b)=>a-b)
+          .filter(y => (_exFrom == null || y >= _exFrom) && (_exTo == null || y <= _exTo));
         if (_keyYears.length >= 2) {
           // Duplikate herausfiltern: nur Zeilen zeigen, wo sich die Kette tatsächlich ändert
           let _lastChain = '';
