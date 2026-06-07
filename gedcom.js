@@ -943,9 +943,10 @@ function getPlaceRegistry() {
           }
           next = bestEnc?.placeId ?? null;
         }
-        // encs[0]-Fallback nur wenn kein Jahr angegeben (y==null); bei spezifischem Jahr
-        // kein Guess-Fallback — sonst werden zeitlich nicht passende Eltern zurückgegeben.
-        if (!next) next = (y == null ? (encs[0]?.placeId ?? null) : null) || byId[curId].parentId || null;
+        // Bei spezifischem Jahr kein Fallback auf encs[0]/parentId — beides wäre ein Guess.
+        // parentId == enclosedBy[0].placeId (wird so gesetzt), also würde der Fallback
+        // zeitlich nicht passende Eltern liefern. Kette nur fortsetzen wenn y==null.
+        if (!next) next = y == null ? (encs[0]?.placeId || byId[curId].parentId || null) : null;
         curId = next;
       }
       return out;
