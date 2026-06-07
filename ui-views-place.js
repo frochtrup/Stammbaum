@@ -1491,10 +1491,10 @@ function showPlaceDetail(placeName, pushHistory = true) {
       });
       const _barHtml = `<svg width="${_tbW}" height="${_tbH}" viewBox="0 0 ${_tbW} ${_tbH}" overflow="visible" class="or-timebar-svg">${_tbSvg}</svg>`;
 
-      // Ausklappbare Detaillisten — sortiert nach Häufigkeit absteigend
+      // Ausklappbare Detaillisten — sortiert nach Jahr aufsteigend
       const _detailHtml = [..._buckets.entries()]
         .filter(([, {evs}]) => evs.length > 0)
-        .sort(([, a], [, b]) => b.evs.length - a.evs.length)
+        .sort(([a], [b]) => a - b)
         .map(([, {label, evs}]) =>
           `<details class="ev-group">
             <summary class="ev-group-summary"><span class="ev-label">${esc(label)}</span>${_evMeta3(evs)}</summary>
