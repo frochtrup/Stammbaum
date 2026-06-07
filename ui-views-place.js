@@ -545,7 +545,9 @@ function _renderPlaceNamesList(po) {
   if (!po) { sec.hidden = true; return; }
   sec.hidden = false;
   const pnames = po.pnames || [];
-  list.innerHTML = pnames.length ? pnames.map((pn, i) => {
+  const pnSorted = pnames.map((pn, i) => ({ pn, i }))
+    .sort((a, b) => (a.pn.dateFrom || '9999').localeCompare(b.pn.dateFrom || '9999'));
+  list.innerHTML = pnSorted.length ? pnSorted.map(({ pn, i }) => {
     const span = [pn.dateFrom, pn.dateTo].filter(Boolean).join('–');
     return `<div class="pname-row">
       <span class="pname-val">${esc(pn.value)}${pn.lang ? ` <em class="tran-lang">${esc(pn.lang)}</em>` : ''}</span>
@@ -567,7 +569,9 @@ function _renderEnclosedByList(po) {
   const reg = getPlaceRegistry();
   // Eltern-Liste
   const enc = po.enclosedBy || [];
-  list.innerHTML = enc.length ? enc.map((e, i) => {
+  const encSorted = enc.map((e, i) => ({ e, i }))
+    .sort((a, b) => (a.e.dateFrom || '9999').localeCompare(b.e.dateFrom || '9999'));
+  list.innerHTML = encSorted.length ? encSorted.map(({ e, i }) => {
     const parent = reg.byId[e.placeId];
     const title  = parent?.title || e.placeId;
     const span   = [e.dateFrom, e.dateTo].filter(Boolean).join('–');
