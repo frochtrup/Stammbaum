@@ -898,6 +898,25 @@ function _placeNamesSvg(pnames) {
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;margin-top:4px;overflow:hidden">${axis}${labels}${bars}</svg>`;
 }
 
+// ─── Ortsreport-Helfer ────────────────────────────────────────────────────────
+
+// Adaptiver Bucket-Größen-Berechner für Zeitraumverteilung
+function _adaptiveBucketSize(yearMin, yearMax, evCount) {
+  const span = yearMax - yearMin;
+  if (evCount < 5 || span > 600) return 100;
+  if (evCount < 12 || span > 300) return 50;
+  return 25;
+}
+
+// Tile-URL-Berechnung für statischen OSM-Export (Zoom 10)
+function _osmTileCoords(lat, lon, zoom) {
+  const n = Math.pow(2, zoom);
+  const x = Math.floor((lon + 180) / 360 * n);
+  const latRad = lat * Math.PI / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+  return { x, y, z: zoom };
+}
+
 // P5a-5: Mini-Karte (Leaflet) im Standort-Abschnitt initialisieren
 function _initPlaceDetailMap(lat, lon, title) {
   if (typeof L === 'undefined') return;
@@ -1044,10 +1063,33 @@ function showPlaceDetail(placeName, pushHistory = true) {
         const chain = reg.enclosureChainAsOf(place.placeId, null).slice(1);
         if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
       }
-      if (histHtml || namesHtml) {
+      // Hierarchie-Timeline: vollständige Kette zu Schlüsseljahren anzeigen
+      let hierTimelineHtml = '';
+      if (enclosedBy.length > 1 && reg.enclosureChainAsOf) {
+        // Schlüsseljahre aus enclosedBy-Zeitspannen ermitteln
+        const _chainYears = new Set();
+        for (const enc of enclosedBy) {
+          if (enc.dateFrom) { const y = enc.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
+          if (enc.dateTo)   { const y = enc.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
+        }
+        const _keyYears = [..._chainYears].sort((a,b)=>a-b);
+        if (_keyYears.length >= 2) {
+          const _rows = _keyYears.map(yr => {
+            const chain = reg.enclosureChainAsOf(place.placeId, yr).slice(1);
+            if (!chain.length) return '';
+            return `<div class="fact-row"><span class="fact-key">${yr}</span><span class="fact-val">${esc(chain.join(' › '))}</span></div>`;
+          }).filter(Boolean);
+          if (_rows.length) {
+            hierTimelineHtml = `<div class="fact-sub-title">Zugehörigkeit nach Jahr</div>${_rows.join('')}`;
+          }
+        }
+      }
+
+      if (histHtml || namesHtml || hierTimelineHtml) {
         html += `<div class="section fade-up">
           <div class="section-title">Ort (historisch)</div>
           ${histHtml}
+          ${hierTimelineHtml}
           ${namesHtml ? `<div class="fact-sub-title">Frühere Namen</div>${namesHtml}` : ''}
         </div>`;
       }
@@ -1234,6 +1276,109 @@ function showPlaceDetail(placeName, pushHistory = true) {
     html += _renderEvGroups();
   }
   html += `</div>`;
+
+  // ─── Ortsreport: Häufigste Familiennamen ─────────────────────────────────
+  if (_totalEvs > 0) {
+    const _seenP = new Set();
+    const _surnMap = {}, _givenMap = {};
+    for (const [, evs] of _byType) {
+      for (const {person} of evs) {
+        if (_seenP.has(person.id)) continue;
+        _seenP.add(person.id);
+        if (person.surname) _surnMap[person.surname] = (_surnMap[person.surname]||0)+1;
+        const g = (person.given||'').trim().split(/\s+/)[0];
+        if (g) _givenMap[g] = (_givenMap[g]||0)+1;
+      }
+    }
+    const _topSurn  = Object.entries(_surnMap).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const _topGiven = Object.entries(_givenMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if (_topSurn.length) {
+      const _maxSurn = _topSurn[0][1];
+      const _surnBars = _topSurn.map(([name, cnt]) =>
+        `<div class="or-bar-row">
+          <span class="or-bar-name">${esc(name)}</span>
+          <span class="or-bar-track"><span class="or-bar-fill" style="width:${(cnt/_maxSurn*100).toFixed(0)}%"></span></span>
+          <span class="or-bar-cnt">${cnt}</span>
+        </div>`).join('');
+      const _givenChips = _topGiven.map(([name, cnt]) =>
+        `<span class="or-chip">${esc(name)} <em>${cnt}</em></span>`).join('');
+      html += `<div class="section fade-up">
+        <div class="section-title">Häufigste Familiennamen</div>
+        <div class="or-bars">${_surnBars}</div>
+        ${_topGiven.length ? `<div class="fact-sub-title">Häufigste Vornamen</div><div class="or-chips">${_givenChips}</div>` : ''}
+      </div>`;
+    }
+  }
+
+  // ─── Ortsreport: Zeitraumverteilung ──────────────────────────────────────
+  if (_allEvs.length > 0) {
+    const _evYears = _allEvs.map(e => {
+      const m = e.date && e.date.match(/\d{4}/);
+      return m ? +m[0] : null;
+    }).filter(y => y !== null);
+
+    if (_evYears.length > 0) {
+      const _yMin = Math.min(..._evYears);
+      const _yMax = Math.max(..._evYears);
+      const _bSize = _adaptiveBucketSize(_yMin, _yMax, _evYears.length);
+      const _bStart = Math.floor(_yMin / _bSize) * _bSize;
+      const _bEnd   = Math.floor(_yMax / _bSize) * _bSize;
+
+      // Buckets aufbauen
+      const _buckets = new Map();
+      for (let y = _bStart; y <= _bEnd; y += _bSize) {
+        _buckets.set(y, { label: `${y}–${y+_bSize-1}`, evs: [] });
+      }
+      const _undated = [];
+      for (const e of _allEvs) {
+        const m = e.date && e.date.match(/\d{4}/);
+        if (m) {
+          const bk = Math.floor(+m[0] / _bSize) * _bSize;
+          _buckets.get(bk)?.evs.push(e);
+        } else {
+          _undated.push(e);
+        }
+      }
+
+      const _maxBucket = Math.max(...[..._buckets.values()].map(b => b.evs.length), 1);
+      const _evMeta3 = evs => {
+        const persons = new Set(evs.map(e => e.person.id)).size;
+        return `<span class="ev-meta"><span class="ev-meta-n">${evs.length}</span><span class="ev-meta-sep">·</span><span class="ev-meta-p">${persons} P</span></span><span class="ev-arrow">▾</span>`;
+      };
+
+      // Balken-Visualisierung
+      const _barHtml = [..._buckets.entries()].map(([, {label, evs}]) => {
+        const pct = evs.length > 0 ? (evs.length / _maxBucket * 100).toFixed(0) : 0;
+        return `<div class="or-tb-col" title="${esc(label)}: ${evs.length} Ereignisse">
+          <div class="or-tb-bar" style="height:${pct}%"></div>
+          <div class="or-tb-lbl">${Math.floor(label) || label.split('–')[0]}</div>
+        </div>`;
+      }).join('');
+
+      // Ausklappbare Detaillisten
+      const _detailHtml = [..._buckets.entries()]
+        .filter(([, {evs}]) => evs.length > 0)
+        .map(([, {label, evs}]) =>
+          `<details class="ev-group">
+            <summary class="ev-group-summary"><span class="ev-label">${esc(label)}</span>${_evMeta3(evs)}</summary>
+            ${evs.map(e => `<div class="ev-group-row"><span class="ev-type-chip">${esc(e.typeLabel)}</span>${relRow(e.person, e.date)}</div>`).join('')}
+          </details>`
+        ).join('');
+
+      const _undatedHtml = _undated.length
+        ? `<details class="ev-group">
+            <summary class="ev-group-summary"><span class="ev-label">Ohne Datum</span>${_evMeta3(_undated)}</summary>
+            ${_undated.map(e => `<div class="ev-group-row"><span class="ev-type-chip">${esc(e.typeLabel)}</span>${relRow(e.person, e.date)}</div>`).join('')}
+          </details>`
+        : '';
+
+      html += `<div class="section fade-up">
+        <div class="section-title">Zeitraumverteilung <span class="ev-total">${_bSize}-Jahres-Perioden</span></div>
+        <div class="or-timebar">${_barHtml}</div>
+        ${_detailHtml}${_undatedHtml}
+      </div>`;
+    }
+  }
 
   // P5a-3: Quellen zu diesem Ort
   const _namesToCheck = [placeName.toLowerCase()];

@@ -428,3 +428,266 @@ function downloadFamilienbogen() {
     showToast('⚠ Familienbogen: ' + err.message, 'error');
   }
 }
+
+
+// ═════════════════════════════════════════════════════════════════
+//  3. ORTSBUCH
+// ═════════════════════════════════════════════════════════════════
+
+function _buildOrtsbuchHtml() {
+  const db = AppState.db;
+  const places = typeof collectPlaces === 'function' ? collectPlaces() : new Map();
+  const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+
+  // Alle Orte sammeln (aus collectPlaces + standalone placeObjects)
+  const allPlaces = new Map(places);
+  if (reg) {
+    for (const [id, po] of Object.entries(reg.byId || {})) {
+      if (!allPlaces.has(po.title)) {
+        allPlaces.set(po.title, { name: po.title, personIds: new Set(), eventTypes: new Set(),
+          lati: po.lat, long: po.long, placeId: id, type: po.type });
+      }
+    }
+  }
+
+  const TYPE_LBL = {
+    Country:'Land', State:'Bundesland', Region:'Region', Province:'Provinz',
+    County:'Kreis', District:'Bezirk', Municipality:'Gemeinde', City:'Stadt',
+    Town:'Stadt', Village:'Dorf', Hamlet:'Weiler', Parish:'Pfarrei',
+    Borough:'Stadtteil', Locality:'Ortslage', Neighborhood:'Nachbarschaft',
+    Building:'Gebäude', Farm:'Hof', Cemetery:'Friedhof', Church:'Kirche', Unknown:'',
+  };
+
+  const _esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const _safeId = s => s.replace(/[^a-zA-Z0-9]/g,'_');
+
+  // Hilfsfunktion: Ereignisse für einen Ort sammeln
+  const _eventsForPlace = (placeName, placeId) => {
+    const evs = [];
+    const seen = new Set();
+    const match = ev => ev && (ev.place?.trim() === placeName || (placeId && ev.placeId === placeId));
+    const add = (type, person, date) => {
+      const k = `${person.id}|${type}|${date||''}`;
+      if (seen.has(k)) return;
+      seen.add(k);
+      evs.push({ type, person, date: date || '' });
+    };
+    const EVENT_LBL = typeof EVENT_LABELS !== 'undefined' ? EVENT_LABELS : {};
+    for (const p of Object.values(db.individuals || {})) {
+      if (match(p.birth))  add('Geburt',     p, p.birth.date);
+      if (match(p.death))  add('Tod',        p, p.death.date);
+      if (match(p.chr))    add('Taufe',      p, p.chr.date);
+      if (match(p.buri))   add('Beerdigung', p, p.buri.date);
+      for (const ev of p.events || []) if (match(ev)) add(ev.eventType || EVENT_LBL[ev.type] || ev.type, p, ev.date);
+    }
+    for (const f of Object.values(db.families || {})) {
+      if (match(f.marr)) {
+        for (const pid of [f.husb, f.wife]) {
+          const p = pid && db.individuals[pid];
+          if (p) add('Heirat', p, f.marr.date);
+        }
+      }
+    }
+    evs.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    return evs;
+  };
+
+  // Sortierte Ortsliste (mit Ereignissen, absteigend nach Häufigkeit)
+  const sorted = [...allPlaces.values()].sort((a,b) =>
+    (b.personIds?.size||0) - (a.personIds?.size||0) || a.name.localeCompare(b.name, 'de'));
+
+  // TOC
+  let toc = '<ul class="ob-toc">';
+  for (const pl of sorted) {
+    toc += `<li><a href="#ort-${_safeId(pl.name)}">${_esc(pl.name)}</a>`;
+    if (pl.personIds?.size) toc += ` <em>${pl.personIds.size}</em>`;
+    toc += '</li>';
+  }
+  toc += '</ul>';
+
+  // Pro-Ort-Sektionen
+  let body = '';
+  for (const pl of sorted) {
+    const po = pl.placeId && reg ? reg.byId[pl.placeId] : null;
+    const typeLbl = po ? (TYPE_LBL[po.type] ?? po.type) : '';
+    const evs = _eventsForPlace(pl.name, pl.placeId);
+    const sid = _safeId(pl.name);
+
+    // Koordinaten / Karte
+    let mapHtml = '';
+    if (pl.lati !== null && pl.long !== null && pl.lati !== undefined) {
+      const tc = typeof _osmTileCoords === 'function' ? _osmTileCoords(pl.lati, pl.long, 10) : null;
+      const tileUrl = tc ? `https://tile.openstreetmap.org/${tc.z}/${tc.x}/${tc.y}.png` : '';
+      const osmHref = `https://www.openstreetmap.org/?mlat=${pl.lati}&mlon=${pl.long}#map=12/${pl.lati}/${pl.long}`;
+      mapHtml = `<div class="ob-map">
+        ${tileUrl ? `<a href="${osmHref}" target="_blank"><img src="${tileUrl}" alt="Karte" loading="lazy" class="ob-tile"></a>` : ''}
+        <div class="ob-coords">${pl.lati.toFixed(4)}, ${pl.long.toFixed(4)} — <a href="${osmHref}" target="_blank">OpenStreetMap</a></div>
+      </div>`;
+    }
+
+    // Hierarchie
+    let hierHtml = '';
+    if (po && reg && reg.enclosureChainAsOf) {
+      const chain = reg.enclosureChainAsOf(pl.placeId, null).slice(1);
+      if (chain.length) hierHtml = `<div class="ob-hier">${_esc(chain.join(' › '))}</div>`;
+    }
+
+    // Historische Namen
+    let namesHtml = '';
+    if (po?.pnames?.length) {
+      const dated = po.pnames.filter(pn => pn.dateFrom || pn.dateTo || pn.lang);
+      if (dated.length) {
+        namesHtml = '<table class="ob-table"><tr><th>Zeitraum</th><th>Name</th><th>Sprache</th></tr>';
+        for (const pn of dated) {
+          const span = pn.dateFrom && pn.dateTo ? `${pn.dateFrom}–${pn.dateTo}` : pn.dateFrom ? `ab ${pn.dateFrom}` : pn.dateTo ? `bis ${pn.dateTo}` : '–';
+          namesHtml += `<tr><td>${_esc(span)}</td><td>${_esc(pn.value)}</td><td>${_esc(pn.lang||'')}</td></tr>`;
+        }
+        namesHtml += '</table>';
+      }
+    }
+
+    // Häufigste Familiennamen
+    let surnHtml = '';
+    if (evs.length) {
+      const seenP = new Set(), surnMap = {};
+      for (const e of evs) {
+        if (seenP.has(e.person.id)) continue;
+        seenP.add(e.person.id);
+        if (e.person.surname) surnMap[e.person.surname] = (surnMap[e.person.surname]||0)+1;
+      }
+      const topSurn = Object.entries(surnMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      if (topSurn.length) {
+        surnHtml = '<div class="ob-surns">' + topSurn.map(([n,c]) =>
+          `<span class="ob-surn-chip">${_esc(n)} <em>${c}</em></span>`).join('') + '</div>';
+      }
+    }
+
+    // Ereignisse nach adaptiven Zeiträumen
+    let evHtml = '';
+    if (evs.length) {
+      const years = evs.map(e => { const m = e.date?.match(/\d{4}/); return m ? +m[0] : null; }).filter(y=>y!==null);
+      if (years.length) {
+        const yMin = Math.min(...years), yMax = Math.max(...years);
+        const bSize = typeof _adaptiveBucketSize === 'function' ? _adaptiveBucketSize(yMin, yMax, years.length) : 25;
+        const bStart = Math.floor(yMin/bSize)*bSize, bEnd = Math.floor(yMax/bSize)*bSize;
+        const buckets = new Map();
+        for (let y = bStart; y <= bEnd; y += bSize) buckets.set(y, []);
+        const undated = [];
+        for (const e of evs) {
+          const m = e.date?.match(/\d{4}/);
+          if (m) { const bk = Math.floor(+m[0]/bSize)*bSize; buckets.get(bk)?.push(e); }
+          else undated.push(e);
+        }
+        evHtml = '<table class="ob-table"><tr><th>Zeitraum</th><th>Ereignisse</th><th>Personen</th></tr>';
+        for (const [y, bevs] of buckets) {
+          if (!bevs.length) continue;
+          const pCnt = new Set(bevs.map(e=>e.person.id)).size;
+          const sample = bevs.slice(0,3).map(e => `${_esc(e.type)}: ${_esc(e.person.name||'?')}${e.date ? ` (${_esc(e.date)})` : ''}`).join('; ');
+          evHtml += `<tr><td>${y}–${y+bSize-1}</td><td title="${_esc(sample)}">${bevs.length}</td><td>${pCnt}</td></tr>`;
+        }
+        if (undated.length) evHtml += `<tr><td>Ohne Datum</td><td>${undated.length}</td><td>${new Set(undated.map(e=>e.person.id)).size}</td></tr>`;
+        evHtml += '</table>';
+      } else {
+        evHtml = `<p>${evs.length} Ereignisse (keine Jahreszahlen erfasst)</p>`;
+      }
+    }
+
+    body += `<section class="ob-place" id="ort-${sid}">
+      <h2>${_esc(pl.name)}</h2>
+      <div class="ob-meta">${typeLbl ? `<span class="ob-badge">${_esc(typeLbl)}</span>` : ''}${po?._govId ? ` <span class="ob-badge ob-badge--gov">GOV: ${_esc(po._govId)}</span>` : ''} <span class="ob-badge ob-badge--cnt">${pl.personIds?.size||0} Personen · ${evs.length} Ereignisse</span></div>
+      ${mapHtml}
+      ${hierHtml}
+      ${namesHtml ? `<h3>Historische Namen</h3>${namesHtml}` : ''}
+      ${surnHtml ? `<h3>Häufigste Familiennamen</h3>${surnHtml}` : ''}
+      ${evHtml ? `<h3>Ereignisse nach Zeitraum</h3>${evHtml}` : ''}
+    </section>`;
+  }
+
+  const fileLabel = db._sourceFile ? `— ${_esc(db._sourceFile)}` : '';
+  const dateStr = new Date().toLocaleDateString('de-DE', {year:'numeric',month:'long',day:'numeric'});
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ortsbuch ${fileLabel}</title>
+<style>
+body { font-family: -apple-system, system-ui, sans-serif; font-size: 14px; color: #2a2018; background: #faf8f5; margin: 0; padding: 0; }
+.ob-header { background: #2a2018; color: #f5e6c8; padding: 20px 32px; }
+.ob-header h1 { margin: 0 0 4px; font-size: 1.5rem; }
+.ob-header p  { margin: 0; font-size: 0.85rem; opacity: .7; }
+.ob-toc-wrap { background: #f0ebe3; border-bottom: 1px solid #ddd4c5; padding: 16px 32px; }
+.ob-toc-wrap h2 { margin: 0 0 10px; font-size: 1rem; color: #8a7060; }
+.ob-toc { columns: 3; column-gap: 24px; list-style: none; margin: 0; padding: 0; font-size: 0.82rem; }
+.ob-toc li { padding: 2px 0; break-inside: avoid; }
+.ob-toc a  { color: #c8793a; text-decoration: none; }
+.ob-toc em { color: #8a7060; font-style: normal; font-size: 0.75rem; }
+.ob-content { max-width: 900px; margin: 0 auto; padding: 0 32px 48px; }
+.ob-place { border-top: 2px solid #ddd4c5; padding: 28px 0 12px; }
+.ob-place h2 { margin: 0 0 6px; font-size: 1.2rem; color: #2a2018; }
+.ob-place h3 { margin: 16px 0 6px; font-size: 0.88rem; color: #8a7060; text-transform: uppercase; letter-spacing: .04em; }
+.ob-meta { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.ob-badge { background: #f0ebe3; border: 1px solid #ddd4c5; border-radius: 10px; padding: 2px 8px; font-size: 0.75rem; color: #5a4a3a; }
+.ob-badge--gov { background: #e8f0f8; border-color: #b0c8e0; }
+.ob-badge--cnt { background: #f5ede0; border-color: #e0c8a0; color: #6a4a20; }
+.ob-map { margin: 8px 0 12px; }
+.ob-tile { width: 256px; height: 256px; border-radius: 8px; border: 1px solid #ddd4c5; display: block; }
+.ob-coords { font-size: 0.78rem; color: #8a7060; margin-top: 4px; }
+.ob-coords a { color: #c8793a; }
+.ob-hier { font-size: 0.85rem; color: #5a4a3a; margin: 6px 0; }
+.ob-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: 4px 0; }
+.ob-table th { text-align: left; padding: 4px 8px; background: #f0ebe3; color: #8a7060; font-weight: 600; border-bottom: 1px solid #ddd4c5; }
+.ob-table td { padding: 4px 8px; border-bottom: 1px solid #f0ebe3; }
+.ob-surns { display: flex; flex-wrap: wrap; gap: 5px; margin: 4px 0; }
+.ob-surn-chip { background: #f0ebe3; border: 1px solid #ddd4c5; border-radius: 10px; padding: 2px 9px; font-size: 0.8rem; }
+.ob-surn-chip em { font-style: normal; color: #8a7060; margin-left: 3px; }
+@media print {
+  @page { size: A4 portrait; margin: 2cm; }
+  .ob-place { page-break-inside: avoid; }
+  .ob-toc-wrap { break-after: page; }
+}
+@media (max-width: 600px) { .ob-toc { columns: 2; } .ob-tile { width: 180px; height: 180px; } }
+</style>
+</head>
+<body>
+<div class="ob-header">
+  <h1>Ortsbuch ${fileLabel}</h1>
+  <p>${sorted.length} Orte · erstellt am ${dateStr}</p>
+</div>
+<div class="ob-toc-wrap">
+  <h2>Inhaltsverzeichnis</h2>
+  ${toc}
+</div>
+<div class="ob-content">
+${body}
+</div>
+</body>
+</html>`;
+}
+
+function exportOrtsbuch() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.individuals || {}).length) {
+    showToast('⚠ Keine Daten geladen', 'warn');
+    return;
+  }
+  try {
+    const html    = _buildOrtsbuchHtml();
+    const blob    = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    const srcName = (db._sourceFile || 'Stammbaum')
+      .replace(/\.[^.]+$/, '').replace(/[^\w\-äöüÄÖÜß ]/g,'').trim().replace(/ /g,'_');
+    a.href     = url;
+    a.download = srcName + '_Ortsbuch.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('exportOrtsbuch:', err);
+    showToast('⚠ Ortsbuch: ' + err.message, 'error');
+  }
+}

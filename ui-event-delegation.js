@@ -83,6 +83,7 @@ const _CLICK_MAP = {
   editEnclosedBy:          el  => editEnclosedBy(el.dataset.idx),
   removeEnclosedBy:        el  => removeEnclosedBy(el.dataset.idx),
   exportPlaceData:         ()  => exportPlaceData(),
+  exportOrtsbuch:          ()  => { _lazyScript('ui-print.js').then(() => exportOrtsbuch()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   togglePlaceValidator:    ()  => togglePlaceValidator(),
   showPlaceByIdValidator:  el  => showPlaceByIdValidator(el.dataset.pid),
   showPlaceByTitle:        el  => { const po = Object.values(AppState.db.placeObjects||{}).find(p=>p.title===el.dataset.title); if(po) showPlaceDetail(po.title); },
