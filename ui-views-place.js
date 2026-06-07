@@ -291,13 +291,14 @@ function _parseGovText(raw) {
       continue;
     }
     // gehört [ab DATE] [bis DATE] zu object_XXX
-    const mGeh = line.match(/^gehört(?:\s+ab\s+(\S+))?(?:\s+bis\s+(\S+))?\s+(?:\S+\s+)?zu\s+(object_\S+|[A-Z0-9]+)\s+/);
+    // Achtung: kein trailing \s+ — Zeile endet nach dem object-ID (Komma/Semikolon schon abgeschnitten)
+    const mGeh = line.match(/^gehört(?:\s+ab\s+(\S+))?(?:\s+bis\s+(\S+))?\s+zu\s+(object_\S+|\S+)/);
     if (mGeh) {
       result.parents.push({ govObjId: mGeh[3], dateFrom: _date(mGeh[1]), dateTo: _date(mGeh[2]) });
       continue;
     }
-    // gehört DATE zu object_XXX (Stichtag ohne ab/bis)
-    const mGeh2 = line.match(/^gehört\s+(\S+)\s+zu\s+(object_\S+|[A-Z0-9]+)/);
+    // gehört DATE zu object_XXX (Stichtag ohne ab/bis, Legacy-Format)
+    const mGeh2 = line.match(/^gehört\s+(\d\S+)\s+zu\s+(object_\S+|\S+)/);
     if (mGeh2) {
       result.parents.push({ govObjId: mGeh2[2], dateFrom: _date(mGeh2[1]), dateTo: _date(mGeh2[1]) });
       continue;
