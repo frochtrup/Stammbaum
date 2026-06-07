@@ -392,13 +392,19 @@ function _vsSetup(listEl, st) {
 }
 
 // Scroll-Listener nach Tab-Rückkehr neu registrieren ohne DOM/Scroll-Reset.
-// Nur aufrufen wenn st.top existiert (VS war aufgebaut) und !st.active (Listener weg).
-function _vsReattach(listEl, st) {
+// scrollTo: gespeicherter scrollTop dieses Tabs — wird VOR _vsRender gesetzt,
+// damit der Render sofort den richtigen Viewport berechnet (kein zweiter Pass nötig).
+// getBoundingClientRect() in _vsRender erzwingt Reflow → display:block-Änderung wirkt.
+function _vsReattach(listEl, st, scrollTo) {
   if (st.active || !st.top) return;
   st.sc = _vsScrollEl();
   st.active = true;
-  st.r = null; // force re-render für aktuellen Scroll-Stand
+  st.r = null;
   _normalizeWheel(st.sc);
+  if (scrollTo !== undefined) {
+    if (st.sc) st.sc.scrollTop = scrollTo;
+    else window.scrollTo(0, scrollTo);
+  }
   _vsRender(listEl, st);
   st.fn = () => _vsRender(listEl, st);
   (st.sc || window).addEventListener('scroll', st.fn, { passive: true });
@@ -618,15 +624,10 @@ function switchTab(tab) {
   // statt vollem Re-Render, damit Scroll-Position + Auswahl erhalten bleiben.
   if (tab === 'persons' && typeof _vsP !== 'undefined' && !_vsP.active && _vsP.top
       && (UIState._dirty || {}).persons === false) {
-    _vsReattach(document.getElementById('personList'), _vsP);
-    // S2: Scroll-Position wiederherstellen — nach doppeltem rAF damit VS-Render durch ist
-    const _rp = (UIState._tabScrollPos || {})[tab];
-    if (_rp !== undefined) _afterLayout(() => _setListScroll(_rp));
+    _vsReattach(document.getElementById('personList'), _vsP, (UIState._tabScrollPos || {})[tab]);
   } else if (tab === 'families' && typeof _vsF !== 'undefined' && !_vsF.active && _vsF.top
       && (UIState._dirty || {}).families === false) {
-    _vsReattach(document.getElementById('familyList'), _vsF);
-    const _rp = (UIState._tabScrollPos || {})[tab];
-    if (_rp !== undefined) _afterLayout(() => _setListScroll(_rp));
+    _vsReattach(document.getElementById('familyList'), _vsF, (UIState._tabScrollPos || {})[tab]);
   } else if ((UIState._dirty || {})[tab] !== false) {
     renderTab();
     UIState._dirty = { ...(UIState._dirty || {}), [tab]: false };
