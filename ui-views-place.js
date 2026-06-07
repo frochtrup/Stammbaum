@@ -837,7 +837,7 @@ function _initPlaceDetailMap(lat, lon, title) {
 function showPlaceDetail(placeName, pushHistory = true) {
   const places = collectPlaces();
   const place = places.get(placeName);
-  if (!place) return;
+  if (!place) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
   AppState.currentPersonId  = null;
   AppState.currentFamilyId  = null;
@@ -845,6 +845,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = placeName;
   (UIState._lastTabSel || (UIState._lastTabSel = {})).places = placeName;
+  _persistLastTabSel();
   document.getElementById('detailTopTitle').textContent = '📍 Ort';
   document.getElementById('editBtn').style.display = '';
   document.getElementById('treeBtn').hidden        = true;

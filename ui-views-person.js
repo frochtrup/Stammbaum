@@ -684,7 +684,7 @@ function _pdetLifeData(p, id) {
 
 function showDetail(id, pushHistory = true) {
   const p = AppState.db.individuals[id];
-  if (!p) return;
+  if (!p) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
   AppState.currentPersonId  = id;
   AppState.currentFamilyId  = null;
@@ -692,6 +692,7 @@ function showDetail(id, pushHistory = true) {
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = null;
   (UIState._lastTabSel || (UIState._lastTabSel = {})).persons = id;
+  _persistLastTabSel();
   if (document.body.classList.contains('desktop-mode')) {
     if (AppState.currentTab === 'persons') _updatePersonListCurrent(id); else _updatePersonListCurrent(null);
     _updateFamilyListCurrent(null);

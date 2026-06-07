@@ -3,7 +3,7 @@
 // ─────────────────────────────────────
 function showSourceDetail(id, pushHistory = true) {
   const s = getSource(id);
-  if (!s) return;
+  if (!s) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
   AppState.currentSourceId  = id;
   AppState.currentPersonId  = null;
@@ -11,6 +11,7 @@ function showSourceDetail(id, pushHistory = true) {
   AppState.currentRepoId    = null;
   AppState.currentPlaceName = null;
   (UIState._lastTabSel || (UIState._lastTabSel = {})).sources = id;
+  _persistLastTabSel();
 
   document.getElementById('detailTopTitle').textContent = 'Quelle';
   document.getElementById('editBtn').style.display = '';

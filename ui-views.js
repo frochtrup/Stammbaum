@@ -231,6 +231,7 @@ function bnavTab(name) {
   showView('v-main');
   switchTab(name);
   _desktopAutoSelect(name);
+  if (!document.body.classList.contains('desktop-mode')) _mobileSelectionRestore(name);
 }
 
 // Bottom-Nav: Globale Suche
@@ -405,21 +406,57 @@ function _firstPlaceName() {
   return [...places.keys()].sort((a, b) => a.localeCompare(b, 'de'))[0] || null;
 }
 
+// Mobile: nach Tab-Tipp zur letzten Auswahl scrollen + highlighten (kein showDetail)
+function _mobileSelectionRestore(tab) {
+  const sel = UIState._lastTabSel;
+  if (!sel) return;
+  if (tab === 'persons') {
+    const id = sel.persons;
+    if (id && AppState.db.individuals[id]) _updatePersonListCurrent(id);
+  } else if (tab === 'families') {
+    const id = sel.families;
+    if (id && AppState.db.families[id]) _updateFamilyListCurrent(id);
+  } else if (tab === 'sources') {
+    const id = sel.sources;
+    if (!id) return;
+    const el = document.querySelector(`#sourceList [data-sid="${CSS.escape(id)}"]`);
+    if (el) { el.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), el); }
+  } else if (tab === 'places') {
+    const name = sel.places;
+    if (!name) return;
+    const target = document.querySelector(`#placeList [data-name="${CSS.escape(name)}"]`);
+    if (target) { target.classList.add('current'); _scrollListToCurrent(document.getElementById('v-main'), target); }
+  }
+}
+
+function _persistLastTabSel() {
+  idbPut('last_tab_sel', UIState._lastTabSel).catch(() => {});
+}
+
 // Desktop: rechtes Panel beim Tab-Wechsel automatisch befüllen
 function _desktopAutoSelect(tab) {
   if (!document.body.classList.contains('desktop-mode')) return;
   const sel = UIState._lastTabSel || (UIState._lastTabSel = {});
   if (tab === 'persons') {
-    const id = sel.persons || smallestPersonId();
+    const saved = sel.persons && AppState.db.individuals[sel.persons] ? sel.persons : null;
+    const id = saved || smallestPersonId();
+    if (!saved) delete sel.persons;
     if (id) showDetail(id, false);
   } else if (tab === 'families') {
-    const id = sel.families || _smallestId(AppState.db.families);
+    const saved = sel.families && AppState.db.families[sel.families] ? sel.families : null;
+    const id = saved || _smallestId(AppState.db.families);
+    if (!saved) delete sel.families;
     if (id && typeof showFamilyDetail === 'function') showFamilyDetail(id, false);
   } else if (tab === 'sources') {
-    const id = sel.sources || _smallestId(AppState.db.sources);
+    const saved = sel.sources && getSource(sel.sources) ? sel.sources : null;
+    const id = saved || _smallestId(AppState.db.sources);
+    if (!saved) delete sel.sources;
     if (id && typeof showSourceDetail === 'function') showSourceDetail(id, false);
   } else if (tab === 'places') {
-    const name = sel.places || _firstPlaceName();
+    const places = typeof collectPlaces === 'function' ? collectPlaces() : null;
+    const saved = sel.places && places?.has(sel.places) ? sel.places : null;
+    const name = saved || _firstPlaceName();
+    if (!saved) delete sel.places;
     if (name && typeof showPlaceDetail === 'function') showPlaceDetail(name, false);
   }
   // tasks / search / stats: kein Detail-View
@@ -429,10 +466,15 @@ function _desktopAutoSelect(tab) {
 async function showStartView() {
   AppState.currentTab = 'persons';
   showMain();
-  const saved = await idbGet('proband_id').catch(() => null);
-  UIState._probandId = (saved && AppState.db.individuals[saved]) ? saved : null;
+  const [savedProband, savedSel] = await Promise.all([
+    idbGet('proband_id').catch(() => null),
+    idbGet('last_tab_sel').catch(() => null),
+  ]);
+  if (savedSel && typeof savedSel === 'object') UIState._lastTabSel = savedSel;
+  UIState._probandId = (savedProband && AppState.db.individuals[savedProband]) ? savedProband : null;
   const startId = getProbandId();
   if (startId) showTree(startId);
+  _desktopAutoSelect('persons');
 }
 
 // ─────────────────────────────────────
