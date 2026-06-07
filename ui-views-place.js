@@ -1063,21 +1063,36 @@ function showPlaceDetail(placeName, pushHistory = true) {
         const chain = reg.enclosureChainAsOf(place.placeId, null).slice(1);
         if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
       }
-      // Hierarchie-Timeline: vollständige Kette zu Schlüsseljahren anzeigen
+      // Hierarchie-Timeline: vollständige Kette zu Schlüsseljahren anzeigen.
+      // Schlüsseljahre rekursiv aus der gesamten Kette sammeln — sonst bleiben
+      // Änderungen auf höheren Ebenen (Eltern, Großeltern) unsichtbar.
       let hierTimelineHtml = '';
-      if (enclosedBy.length > 1 && reg.enclosureChainAsOf) {
-        // Schlüsseljahre aus enclosedBy-Zeitspannen ermitteln
+      if (enclosedBy.length && reg.enclosureChainAsOf) {
         const _chainYears = new Set();
-        for (const enc of enclosedBy) {
-          if (enc.dateFrom) { const y = enc.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
-          if (enc.dateTo)   { const y = enc.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
-        }
+        const _visited = new Set();
+        const _collectYears = (pid) => {
+          if (!pid || _visited.has(pid)) return;
+          _visited.add(pid);
+          const p = reg.byId[pid];
+          if (!p) return;
+          for (const enc of (p.enclosedBy || [])) {
+            if (enc.dateFrom) { const y = enc.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
+            if (enc.dateTo)   { const y = enc.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
+            _collectYears(enc.placeId);
+          }
+        };
+        _collectYears(place.placeId);
         const _keyYears = [..._chainYears].sort((a,b)=>a-b);
         if (_keyYears.length >= 2) {
+          // Duplikate herausfiltern: nur Zeilen zeigen, wo sich die Kette tatsächlich ändert
+          let _lastChain = '';
           const _rows = _keyYears.map(yr => {
             const chain = reg.enclosureChainAsOf(place.placeId, yr).slice(1);
             if (!chain.length) return '';
-            return `<div class="fact-row"><span class="fact-key">${yr}</span><span class="fact-val">${esc(chain.join(' › '))}</span></div>`;
+            const chainStr = chain.join(' › ');
+            if (chainStr === _lastChain) return '';
+            _lastChain = chainStr;
+            return `<div class="fact-row"><span class="fact-key">${yr}</span><span class="fact-val">${esc(chainStr)}</span></div>`;
           }).filter(Boolean);
           if (_rows.length) {
             hierTimelineHtml = `<div class="fact-sub-title">Zugehörigkeit nach Jahr</div>${_rows.join('')}`;
