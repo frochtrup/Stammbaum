@@ -313,6 +313,182 @@ function _buildLivingSet(db) {
 }
 
 // ─── INDI-Record ──────────────────────────────────────────────────────────────
+function _writeINDIName(lines, p) {
+// Name mit Sub-Tags
+const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
+lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
+if (p._hasGivn) lines.push(`2 GIVN ${p.given || ''}`);
+if (p._hasSurn) lines.push(`2 SURN ${p.surname || ''}`);
+if (p.nick)     lines.push(`2 NICK ${p.nick}`);
+if (p._rufname) lines.push(_strictGed ? `2 NICK ${p._rufname}` : `2 _RUFNAME ${p._rufname}`);
+if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
+if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
+_writeSourCits(lines, 2, { citations: p.nameCitations });
+
+// NAME-context passthrough (2-level items at start of _passthrough, e.g. 2 NICK)
+const _pt = p._passthrough || [];
+let _ptNameEnd = 0;
+while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
+for (let i = 0; i < _ptNameEnd; i++) { if (!_strictGed || !/^[0-9]+ _[A-Z]/.test(_pt[i])) lines.push(_pt[i]); }
+
+// NAME/TRAN (GED7) / NAME/_TRAN vendor extension (GED5) / NOTE (Strict)
+for (const nt of (p.nameTrans || [])) {
+  if (_strictGed) {
+    const _ntVal = nt.nameRaw || [nt.given, nt.surname ? '/' + nt.surname + '/' : ''].filter(Boolean).join(' ');
+    if (_ntVal) lines.push(`2 NOTE ${nt.lang ? '[' + nt.lang + '] ' : ''}${_ntVal}`);
+  } else {
+    const _ntTag = _ged7 ? 'TRAN' : '_TRAN';
+    lines.push(`2 ${_ntTag}${nt.nameRaw ? ' ' + nt.nameRaw : ''}`);
+    if (nt.lang)    lines.push(`3 LANG ${nt.lang}`);
+    if (nt.given)   lines.push(`3 GIVN ${nt.given}`);
+    if (nt.surname) lines.push(`3 SURN ${nt.surname}`);
+  }
+}
+
+// Extra NAME-Einträge (Geburtsname etc.)
+for (const en of (p.extraNames || [])) {
+  lines.push(`1 NAME${en.nameRaw ? ' ' + en.nameRaw : ''}`);
+  if (en.type)    lines.push(`2 TYPE ${en.type}`);
+  if (en._hasGivn) lines.push(`2 GIVN ${en.given || ''}`);
+  if (en._hasSurn) lines.push(`2 SURN ${en.surname || ''}`);
+  if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
+  if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
+  _writeSourCits(lines, 2, en);
+  for (const l of _ptLines(en._extra)) lines.push(l);
+}
+
+  return { _pt, _ptNameEnd };
+}
+
+function _writeINDIEventBody(lines, ev, p, writtenHofNotes) {
+lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
+if (ev._grampsEvPriv) lines.push(`2 RESN confidential`);
+if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
+if (ev.date !== null && ev.date !== undefined) {
+  lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
+  if (_ged7 && ev.datePhrase) lines.push(`3 PHRASE ${ev.datePhrase}`);
+}
+const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
+if (ev.place !== null && ev.place !== undefined) {
+  const _plac = _resolvedPlaceName(ev);
+  lines.push(`2 PLAC${_plac ? ' ' + _plac : ''}`);
+  _writePlacTrans(lines, _plac || ev.place, 3);
+  geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
+} else if (ev.addr) {
+  // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
+  if (_hofMeta?.lat != null) {
+    lines.push(`2 PLAC ${ev.addr.replace(/\n/g, ', ')}`);
+    geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
+  }
+}
+// Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse,
+// und nur wenn das Event selbst ursprünglich eine Note hatte.
+const _addrKey = ev.addr?.trim();
+const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
+const _evHadNote = !!(ev._noteOrig || ev.noteRefs?.length);
+for (const r of (ev.noteRefs || [])) {
+  // HOF-Notiz-Refs überspringen — werden über _hofNoteIds separat als @N_HOF_n@ geschrieben
+  if (_hofMeta?.note && AppState.db.notes?.[r]?.text === _hofMeta.note) continue;
+  lines.push(`2 NOTE ${_noteXref[r]||r}`);
+}
+if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
+  if (_evHadNote && !writtenHofNotes.has(_addrKey)) {
+    lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
+    writtenHofNotes.add(_addrKey);
+  }
+} else if (_hofMeta?.note && _evHadNote && (!ev.note || _evNoteIsHofNote) && !writtenHofNotes.has(_addrKey)) {
+  pushCont(lines, 2, 'NOTE', _hofMeta.note);
+  writtenHofNotes.add(_addrKey);
+} else if (!_evNoteIsHofNote) {
+  const _inlineNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
+  if (_inlineNote) pushCont(lines, 2, 'NOTE', _inlineNote);
+}
+if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of _ptLines(ev.addrExtra)) lines.push(l); }
+for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
+for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
+_writeSourCits(lines, 2, ev);
+for (const m of (ev.media || [])) {
+  lines.push('2 OBJE');
+  if (m.title) lines.push(`3 TITL ${m.title}`);
+  if (m.file) {
+    lines.push(`3 FILE ${m.file}`);
+    if (m.form) lines.push(`4 FORM ${m.form}`);
+  }
+  for (const l of _ptLines(m._extra)) lines.push(l);
+}
+if (ev._extra && ev._extra.length) for (const l of _ptLines(ev._extra)) lines.push(l);
+}
+
+function _writeINDIExt(lines, p) {
+if (!_strictGed) {
+  for (const t of (p._tasks || [])) {
+    lines.push(`1 _TASK ${t.text || ''}`);
+    if (t.category) lines.push(`2 _CAT ${t.category}`);
+    lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
+    if (t.status)   lines.push(`2 _TSTAT ${t.status}`);   // RES-PROJ 3a: Kanban-Status
+    if (t.created)  lines.push(`2 _DATE ${t.created}`);
+    if (t.id)       lines.push(`2 _ID ${t.id}`);
+  }
+  for (const rl of (p._rlog || [])) {
+    lines.push(`1 _RLOG`);
+    if (rl.date)    lines.push(`2 DATE ${rl.date}`);
+    if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
+    if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
+    if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
+    if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
+    if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
+  }
+  _writeHypos(lines, p);   // RES-HYPO (ADR-023)
+}
+
+// ASSO: native associations (GEDCOM↔GRAMPS <personref> roundtrip)
+for (const a of (p.associations || [])) {
+  if (!a.xref) continue;
+  lines.push(`1 ASSO ${a.xref}`);
+  if (a.role) lines.push(_ged7 ? `2 ROLE ${a.role}` : `2 RELA ${a.role}`);
+  if (a.note) pushCont(lines, 2, 'NOTE', a.note);
+  _writeSourCits(lines, 2, a);
+}
+
+// GED7: ALIA ist ein Namens-String (1 ALIA name); GED5: ALIA ist ein @xref@-Zeiger — beide Felder getrennt
+if (_ged7) {
+  for (const an of (p.aliaNames || [])) lines.push(`1 ALIA ${an}`);
+} else {
+  for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
+}
+for (const r of (p.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
+
+// GED7: NO / EXID / CREA — GED5-Downgrade: EXID→REFN, NO→NOTE
+if (_ged7) {
+  for (const ev of (p.noEvents || [])) lines.push(`1 NO ${ev}`);
+  for (const ex of (p.exids || [])) {
+    lines.push(`1 EXID ${ex.value || ''}`);
+    if (ex.type) lines.push(`2 TYPE ${ex.type}`);
+  }
+  if (p.createdDate) { lines.push('1 CREA'); lines.push(`2 DATE ${p.createdDate}`); }
+} else {
+  // GED5-Downgrade: exids als REFN erhalten; noEvents als NOTE-Hinweis
+  for (const ex of (p.exids || [])) {
+    lines.push(`1 REFN ${ex.value || ''}`);
+    if (ex.type) lines.push(`2 TYPE ${ex.type}`);
+  }
+  for (const ev of (p.noEvents || []))
+    lines.push(`1 NOTE Kein bekanntes Ereignis: ${ev}`);
+}
+
+// Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
+for (const wr of (p._grampsWitnessRefs || [])) {
+  const primaryId = _witnessEvMap[wr._origHlink];
+  if (!primaryId) continue;
+  lines.push(`1 ASSO ${primaryId}`);
+  lines.push(_ged7 ? `2 ROLE ${wr.role || 'WITN'}` : `2 RELA ${wr.role || 'Witness'}`);
+  const evInfo = [wr.type, wr.date, wr.place].filter(Boolean).join(', ');
+  if (evInfo) lines.push(`2 NOTE GRAMPS event: ${evInfo}`);
+  _writeSourCits(lines, 2, wr);
+}
+
+}
+
 function writeINDIRecord(lines, p, livingSet = null) {
   if (livingSet?.has(p.id)) {
     lines.push(`0 ${p.id} INDI`);
@@ -327,49 +503,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
   }
   lines.push(`0 ${p.id} INDI`);
 
-  // Name mit Sub-Tags
-  const nameStr = (p.given || '') + (p.surname ? ' /' + p.surname + '/' : '');
-  lines.push(`1 NAME ${p.nameRaw !== undefined && p.nameRaw !== '' ? p.nameRaw : nameStr.trim()}`);
-  if (p._hasGivn) lines.push(`2 GIVN ${p.given || ''}`);
-  if (p._hasSurn) lines.push(`2 SURN ${p.surname || ''}`);
-  if (p.nick)     lines.push(`2 NICK ${p.nick}`);
-  if (p._rufname) lines.push(_strictGed ? `2 NICK ${p._rufname}` : `2 _RUFNAME ${p._rufname}`);
-  if (p.prefix)  lines.push(`2 NPFX ${p.prefix}`);
-  if (p.suffix)  lines.push(`2 NSFX ${p.suffix}`);
-  _writeSourCits(lines, 2, { citations: p.nameCitations });
-
-  // NAME-context passthrough (2-level items at start of _passthrough, e.g. 2 NICK)
-  const _pt = p._passthrough || [];
-  let _ptNameEnd = 0;
-  while (_ptNameEnd < _pt.length && /^[2-9] /.test(_pt[_ptNameEnd])) _ptNameEnd++;
-  for (let i = 0; i < _ptNameEnd; i++) { if (!_strictGed || !/^[0-9]+ _[A-Z]/.test(_pt[i])) lines.push(_pt[i]); }
-
-  // NAME/TRAN (GED7) / NAME/_TRAN vendor extension (GED5) / NOTE (Strict)
-  for (const nt of (p.nameTrans || [])) {
-    if (_strictGed) {
-      const _ntVal = nt.nameRaw || [nt.given, nt.surname ? '/' + nt.surname + '/' : ''].filter(Boolean).join(' ');
-      if (_ntVal) lines.push(`2 NOTE ${nt.lang ? '[' + nt.lang + '] ' : ''}${_ntVal}`);
-    } else {
-      const _ntTag = _ged7 ? 'TRAN' : '_TRAN';
-      lines.push(`2 ${_ntTag}${nt.nameRaw ? ' ' + nt.nameRaw : ''}`);
-      if (nt.lang)    lines.push(`3 LANG ${nt.lang}`);
-      if (nt.given)   lines.push(`3 GIVN ${nt.given}`);
-      if (nt.surname) lines.push(`3 SURN ${nt.surname}`);
-    }
-  }
-
-  // Extra NAME-Einträge (Geburtsname etc.)
-  for (const en of (p.extraNames || [])) {
-    lines.push(`1 NAME${en.nameRaw ? ' ' + en.nameRaw : ''}`);
-    if (en.type)    lines.push(`2 TYPE ${en.type}`);
-    if (en._hasGivn) lines.push(`2 GIVN ${en.given || ''}`);
-    if (en._hasSurn) lines.push(`2 SURN ${en.surname || ''}`);
-    if (en.prefix)  lines.push(`2 NPFX ${en.prefix}`);
-    if (en.suffix)  lines.push(`2 NSFX ${en.suffix}`);
-    _writeSourCits(lines, 2, en);
-    for (const l of _ptLines(en._extra)) lines.push(l);
-  }
-
+  const { _pt, _ptNameEnd } = _writeINDIName(lines, p);
   if (p.titl)    lines.push(`1 TITL ${p.titl}`);
   if (p.resn)    lines.push(`1 RESN ${p.resn}`);
   if (p.email)   lines.push(`1 EMAIL ${p.email}`);
@@ -389,65 +523,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
   eventBlock(lines, 'BURI', p.buri,  1);
 
   const _writtenHofNotes = new Set();
-  for (const ev of p.events) {
-    lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
-    if (ev._grampsEvPriv) lines.push(`2 RESN confidential`);
-    if (ev.eventType) lines.push(`2 TYPE ${ev.eventType}`);
-    if (ev.date !== null && ev.date !== undefined) {
-      lines.push(`2 DATE${ev.date ? ' ' + normGedDate(ev.date) : ''}`);
-      if (_ged7 && ev.datePhrase) lines.push(`3 PHRASE ${ev.datePhrase}`);
-    }
-    const _hofMeta = ev.addr ? AppState.db?.hofObjects?.[ev.addr.trim()] : null;
-    if (ev.place !== null && ev.place !== undefined) {
-      const _plac = _resolvedPlaceName(ev);
-      lines.push(`2 PLAC${_plac ? ' ' + _plac : ''}`);
-      _writePlacTrans(lines, _plac || ev.place, 3);
-      geoLines(lines, ev, 3, false); // kein extraPlaces-Fallback für Array-Events
-    } else if (ev.addr) {
-      // Kein PLAC vorhanden: hofObjects-Koordinaten als PLAC+MAP schreiben (für Ancestris/andere)
-      if (_hofMeta?.lat != null) {
-        lines.push(`2 PLAC ${ev.addr.replace(/\n/g, ', ')}`);
-        geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
-      }
-    }
-    // Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse,
-    // und nur wenn das Event selbst ursprünglich eine Note hatte.
-    const _addrKey = ev.addr?.trim();
-    const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
-    const _evHadNote = !!(ev._noteOrig || ev.noteRefs?.length);
-    for (const r of (ev.noteRefs || [])) {
-      // HOF-Notiz-Refs überspringen — werden über _hofNoteIds separat als @N_HOF_n@ geschrieben
-      if (_hofMeta?.note && AppState.db.notes?.[r]?.text === _hofMeta.note) continue;
-      lines.push(`2 NOTE ${_noteXref[r]||r}`);
-    }
-    if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
-      if (_evHadNote && !_writtenHofNotes.has(_addrKey)) {
-        lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
-        _writtenHofNotes.add(_addrKey);
-      }
-    } else if (_hofMeta?.note && _evHadNote && (!ev.note || _evNoteIsHofNote) && !_writtenHofNotes.has(_addrKey)) {
-      pushCont(lines, 2, 'NOTE', _hofMeta.note);
-      _writtenHofNotes.add(_addrKey);
-    } else if (!_evNoteIsHofNote) {
-      const _inlineNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
-      if (_inlineNote) pushCont(lines, 2, 'NOTE', _inlineNote);
-    }
-    if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of _ptLines(ev.addrExtra)) lines.push(l); }
-    for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
-    for (const em of (ev.email || [])) lines.push(`2 EMAIL ${em}`);
-    _writeSourCits(lines, 2, ev);
-    for (const m of (ev.media || [])) {
-      lines.push('2 OBJE');
-      if (m.title) lines.push(`3 TITL ${m.title}`);
-      if (m.file) {
-        lines.push(`3 FILE ${m.file}`);
-        if (m.form) lines.push(`4 FORM ${m.form}`);
-      }
-      for (const l of _ptLines(m._extra)) lines.push(l);
-    }
-    if (ev._extra && ev._extra.length) for (const l of _ptLines(ev._extra)) lines.push(l);
-  }
-
+  for (const ev of p.events) _writeINDIEventBody(lines, ev, p, _writtenHofNotes);
   for (const ref of (p.noteRefs || [])) {
     lines.push(`1 NOTE ${_noteXref[ref]||ref}`);
     for (const l of _ptLines(p.noteRefExtras?.[ref])) lines.push(l);
@@ -513,73 +589,7 @@ function writeINDIRecord(lines, p, livingSet = null) {
   if (!_strictGed && p.grampId)  lines.push(`1 _GRAMPS_ID ${p.grampId}`);
   if (!_strictGed && p._stat !== null && p._stat !== undefined) lines.push(`1 _STAT${p._stat ? ' ' + p._stat : ''}`);
 
-  if (!_strictGed) {
-    for (const t of (p._tasks || [])) {
-      lines.push(`1 _TASK ${t.text || ''}`);
-      if (t.category) lines.push(`2 _CAT ${t.category}`);
-      lines.push(`2 _DONE ${t.done ? '1' : '0'}`);
-      if (t.status)   lines.push(`2 _TSTAT ${t.status}`);   // RES-PROJ 3a: Kanban-Status
-      if (t.created)  lines.push(`2 _DATE ${t.created}`);
-      if (t.id)       lines.push(`2 _ID ${t.id}`);
-    }
-    for (const rl of (p._rlog || [])) {
-      lines.push(`1 _RLOG`);
-      if (rl.date)    lines.push(`2 DATE ${rl.date}`);
-      if (rl.repoRef) lines.push(`2 REPO ${rl.repoRef}`);
-      if (rl.sourRef) lines.push(`2 SOUR ${rl.sourRef}`);
-      if (rl.query)   lines.push(`2 _QUERY ${rl.query}`);
-      if (rl.result)  lines.push(`2 _RESULT ${rl.result}`);
-      if (rl.note)    pushCont(lines, 2, 'NOTE', rl.note);
-    }
-    _writeHypos(lines, p);   // RES-HYPO (ADR-023)
-  }
-
-  // ASSO: native associations (GEDCOM↔GRAMPS <personref> roundtrip)
-  for (const a of (p.associations || [])) {
-    if (!a.xref) continue;
-    lines.push(`1 ASSO ${a.xref}`);
-    if (a.role) lines.push(_ged7 ? `2 ROLE ${a.role}` : `2 RELA ${a.role}`);
-    if (a.note) pushCont(lines, 2, 'NOTE', a.note);
-    _writeSourCits(lines, 2, a);
-  }
-
-  // GED7: ALIA ist ein Namens-String (1 ALIA name); GED5: ALIA ist ein @xref@-Zeiger — beide Felder getrennt
-  if (_ged7) {
-    for (const an of (p.aliaNames || [])) lines.push(`1 ALIA ${an}`);
-  } else {
-    for (const alias of (p.aliases || [])) lines.push(`1 ALIA ${alias}`);
-  }
-  for (const r of (p.refns || [])) { lines.push(`1 REFN ${r.val}`); if (r.type) lines.push(`2 TYPE ${r.type}`); }
-
-  // GED7: NO / EXID / CREA — GED5-Downgrade: EXID→REFN, NO→NOTE
-  if (_ged7) {
-    for (const ev of (p.noEvents || [])) lines.push(`1 NO ${ev}`);
-    for (const ex of (p.exids || [])) {
-      lines.push(`1 EXID ${ex.value || ''}`);
-      if (ex.type) lines.push(`2 TYPE ${ex.type}`);
-    }
-    if (p.createdDate) { lines.push('1 CREA'); lines.push(`2 DATE ${p.createdDate}`); }
-  } else {
-    // GED5-Downgrade: exids als REFN erhalten; noEvents als NOTE-Hinweis
-    for (const ex of (p.exids || [])) {
-      lines.push(`1 REFN ${ex.value || ''}`);
-      if (ex.type) lines.push(`2 TYPE ${ex.type}`);
-    }
-    for (const ev of (p.noEvents || []))
-      lines.push(`1 NOTE Kein bekanntes Ereignis: ${ev}`);
-  }
-
-  // Phase F: GRAMPS witness event refs → ASSO (event context in NOTE; primary person via _witnessEvMap)
-  for (const wr of (p._grampsWitnessRefs || [])) {
-    const primaryId = _witnessEvMap[wr._origHlink];
-    if (!primaryId) continue;
-    lines.push(`1 ASSO ${primaryId}`);
-    lines.push(_ged7 ? `2 ROLE ${wr.role || 'WITN'}` : `2 RELA ${wr.role || 'Witness'}`);
-    const evInfo = [wr.type, wr.date, wr.place].filter(Boolean).join(', ');
-    if (evInfo) lines.push(`2 NOTE GRAMPS event: ${evInfo}`);
-    _writeSourCits(lines, 2, wr);
-  }
-
+  _writeINDIExt(lines, p);
   writeCHAN(lines, p, 1);
 
   for (let i = _ptNameEnd; i < _pt.length; i++) { if (!_strictGed || !/^[0-9]+ _[A-Z]/.test(_pt[i])) lines.push(_pt[i]); }

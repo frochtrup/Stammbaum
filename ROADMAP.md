@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v903 · Cache: `stammbaum-v903` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v904 · Cache: `stammbaum-v904` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -34,6 +34,7 @@ Fünf Dimensionen leiten die Priorisierung:
 
 **Letzte Highlights** (vollständige Tabelle + ältere Sprints: CHANGELOG.md):
 
+- **v904 — T0-FUNC-SPLIT:** `_parseINDILine` (389→12 Z.), `_parseFAMLine` (296→12 Z.), `writeINDIRecord` (271→106 Z.) in Level-/Themen-Helfer zerlegt; `_parseSourCitSub` + `_parseFamEvMediaLv3` als geteilte Helfer. Roundtrip net_delta=0 + 420 Tests grün.
 - **v901–v903 — CSP-DURCHSETZUNG vollständig:** 62 statische inline-`style=` → CSS-Klassen (~55 neue Klassen); dynamische gramps-tag-Farben via `data-il-style` + `_applyDynStyles()`; `test-csp.js` JS-Template-Scanner → **0 Fundstellen** — CSP belegt statt behauptet.
 - **v899 — SCALE-TEST + SORT-CACHE:** 20k-GEDCOM Roundtrip net_delta=0; `UIState._personSortCache` → 0 ms Sort-Overhead nach Erstrender. Detail: SCALE-TEST-BEFUNDE.md.
 - **v892 — Ortsreport + Ortsbuch-Export:** Steckbrief mit Namenshäufigkeiten/Zeitverteilung/Hierarchie-Timeline; `exportOrtsbuch()` standalone-HTML.
@@ -53,7 +54,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Bereich | Note | Kernbefund |
 |---|---|---|
 | Architektur | 6.8/10 | Saubere Schichtung + **25 ADRs** + Passthrough-Fundament (10 Mechanismen, empirisch tragend). `ViewState` (ADR-025) + `ui-lifecycle.js` schließen PWA-Lifecycle-Lücke. Orts-Speicher von 3 parallelen Quellen auf `placeObjects` konsolidiert (v851–858, gute Selbstkorrektur). **~860 top-level Funktionen** in flachem Namespace + 53 `<script>`-Tags mit manueller Ladereihenfolge bleiben *die* Hauptschuld; Modul-Migration bewusst zurückgestellt (ADR-020, vertretbar). |
-| Code-Qualität | 7.0/10 | Lesbar, kein Overengineering, gute „Warum"-Kommentare. Hygiene außergewöhnlich (1 vergessenes `console.log` + 16 TODO in ~38k Z., dichte try/catch). `showDetail` auf ~1 Zeile Boilerplate reduziert (→ `ViewState.setCurrent`). **Abzug:** echte Monsterfunktionen `_parseINDILine` 391 Z., `_parseFAMLine` 298 Z., `writeINDIRecord` 273 Z. (Parser-Dispatch mit `_ptDepth`-Zustand = höchstes Regressionsrisiko-pro-Zeile). |
+| Code-Qualität | **8.0/10** | Lesbar, kein Overengineering, gute „Warum"-Kommentare. Hygiene außergewöhnlich (1 vergessenes `console.log` + 16 TODO in ~38k Z., dichte try/catch). `showDetail` auf ~1 Zeile Boilerplate reduziert (→ `ViewState.setCurrent`). **T0-FUNC-SPLIT abgeschlossen (v904):** `_parseINDILine`/`_parseFAMLine` je → 12 Z. Dispatcher + 4 Level-Helfer; `writeINDIRecord` → 106 Z. + 3 Themen-Helfer. Größter Einzelabzug beseitigt. |
 | Sicherheit | 8.5/10 | **Direkt verifiziert:** CSP härter als die meiste produktive SaaS (kein `unsafe-inline/eval`, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `connect-src` präzise gescoped) + `test-csp.js`; OAuth PKCE S256 + CSRF-`state`; kein `eval` im Produktionscode; `esc()` vollständig + pervasiv. **Abzug:** Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos — ADR-021). |
 | Design / UX | 8.0/10 | Vollständiges Design-Token-System mit echtem Light-Theme (Parität, nicht invertiert), Playfair/Source Serif self-hosted, Mobile-First, Onboarding, 219 `aria/role` in index.html, `prefers-reduced-motion`. **Abzug:** „WCAG 2.1 AA" *behauptet, nicht gemessen* (kein axe/Lighthouse-Audit → A11Y-AUDIT); Handbuch teils noch Mockups. |
 | Funktionsstand | 8.8/10 | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · Verwandtschaftsrechner · Nominatim-Geocoding · GOV-Import (historisch datiert) · Ort-Steckbrief + Ortsbuch-Export (v892) + Validator · Multi-Device-Konflikterkennung. **Abzug:** Ausgabe-Reichtum < MFT (kein PDF-Buch/Poster); DNA/Online-Matching bewusst out-of-scope. |
@@ -64,7 +65,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Dokumentation | 8.5/10 | **25 ADRs** mit „Alternativen erwogen/verworfen" + Datamodel + ~2.2k-Z.-Changelog. **Abzug:** Bewertungstabelle lief dem Code hinterher (Phantom-`_attr`, Testzahl, Skalierung — jetzt korrigiert → DOC-SYNC); Handbuch sw v858 (v859–v899 offen → DOC-SCREENS); Screenshots teils Mockups. |
 | PWA / Offline | 9.0/10 | SW direkt geprüft: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Cache-first für App-Assets, Network-first + 4s-Timeout sonst, `offline.html`-Fallback; `ui-lifecycle.js` mit BFCache-Guard + >60-s-Resume-Heuristik. |
 | Datenschutz | 9.0/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Tracking, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.3/10** | *Außergewöhnlich diszipliniertes Solo-Projekt; Kernversprechen (verlustfreie GEDCOM/GRAMPS-Treue, strenge Sicherheit, lokal-first, plattformübergreifend) empirisch bestätigt. Keine unkorrigierte Fehlentscheidung der Vergangenheit gefunden. Größte verbleibende Hebel: (1) Monsterfunktionen zerlegen → T0-FUNC-SPLIT; (2) ggü. MFT Ausgabe-Reichtum → OUTPUT-RICHNESS; (3) A11y messen → A11Y-AUDIT; (4) Doku-Drift schließen → DOC-SYNC.* |
+| **∅ Gesamt** | **≈ 8.4/10** | *Außergewöhnlich diszipliniertes Solo-Projekt; Kernversprechen (verlustfreie GEDCOM/GRAMPS-Treue, strenge Sicherheit, lokal-first, plattformübergreifend) empirisch bestätigt. T0-FUNC-SPLIT (v904) + CSP-DURCHSETZUNG (v903) beseitigen die beiden stärksten Code-Qualitäts-Abzüge. Größte verbleibende Hebel: (1) ggü. MFT Ausgabe-Reichtum → OUTPUT-RICHNESS; (2) A11y messen → A11Y-AUDIT; (3) Doku-Drift schließen → DOC-SYNC.* |
 
 ### Maßnahmen aus dem Review 2026-06-07 *(priorisiert nach Hebel/Aufwand)*
 
@@ -101,7 +102,7 @@ Das Test-Sicherheitsnetz und das Modul-Fundament (Pilot) sind erledigt; die Re-V
 1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): GEDCOM+GRAMPS-Roundtrip automatisiert + 161 Unit-Tests. Regressionsabgesichert.
 2. ✅ **P0 — Modul-Fundament-Pilot** (T0-MODULE Phase 1+2): ADR-020 + GRAMPS-/Validator-Cluster als ES-Module. Phasen 3–4 **bewusst zurückgestellt** (Begründung unten).
 3. ✅ **P0 — CSP-Durchsetzung verifizierbar machen** *(abgeschlossen v903)*: ① inline-`onclick` entfernt (v794); ② statische inline-`style=` → CSS-Klassen (v902, 10 Dateien, ~50 neue Klassen); ③ dynamische `gramps-tag`-Farben via `data-il-style` + `_applyDynStyles()` (v903); `test-csp.js` JS-Scanner Ergebnis: **0 Fundstellen** — CSP vollständig *belegt* statt behauptet.
-4. **P1 — gezielte Architektur-Entschärfung**: die 3 echten Monsterfunktionen (`_parseINDILine` 391, `_parseFAMLine` 298, `writeINDIRecord` 273 Z.) zerlegen — unabhängig vom Modulsystem, größter Wartungs-Hebel (T0-FUNC-SPLIT).
+4. ✅ **P1 — gezielte Architektur-Entschärfung** *(abgeschlossen v904)*: `_parseINDILine` (389→12 Z.), `_parseFAMLine` (296→12 Z.), `writeINDIRecord` (271→106 Z.) in Level-/Themen-Helfer zerlegt (T0-FUNC-SPLIT).
 5. **P2+** — Features. **Verbleibender Zielgruppen-Hebel ggü. MacFamilyTree** (s. Vergleich): **Ausgabe-Reichtum (PDF-Bücher/Poster → OUTPUT-RICHNESS)** als größter fachlicher Abstand; Kamera (mobil → CAM). *(Erledigt seit 2026-05-31: Skalierungstest 20k, Orts-Geocoding Nominatim/GOV.)*
 
 ### Architektur-Entscheidung: ES-Modul-Phasen 3–4 + Build-Step zurückgestellt
@@ -160,7 +161,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
-| **T0-FUNC-SPLIT** | **Größte Funktionen zerlegen** *(Hebel #2 aus Review 2026-06-07)* | Die 3 längsten Funktionen — `_parseINDILine` **391**, `_parseFAMLine` **298**, `writeINDIRecord` **273** Z. (gemessen 2026-06-07; das früher gelistete `_attr` 486 ist ein Phantom, `showDetail` ist bereits auf ~1 Z. Boilerplate reduziert) — in benannte Teilschritte gliedern. Parser-Dispatch mit verschachtelter `_ptDepth`-Zustandslogik = höchstes Regressionsrisiko-pro-Zeile. Unabhängig vom Modulsystem. Roundtrip- (`net_delta=0`) + Unit-Tests (420) decken die Risiken. Größter konkreter Wartungs-Hebel. | M |
+| **T0-FUNC-SPLIT** ✅ | **Größte Funktionen zerlegt** *(abgeschlossen v904)* | `_parseINDILine` 389→**12 Z.** Dispatcher + 4 Level-Helfer; `_parseFAMLine` 296→**12 Z.** + 4 Level-Helfer + `_parseFamEvMediaLv3`; `writeINDIRecord` 271→**106 Z.** + `_writeINDIName`/`_writeINDIEventBody`/`_writeINDIExt`; geteilter `_parseSourCitSub`. Roundtrip net_delta=0 + 420 Tests grün. | M | ✅ v904 |
 | **T0-EXTRAPLACES-CLEANUP** | **`stammbaum_extraplaces_*` localStorage aufräumen** *(neu 2026-06-06)* | **Hintergrund:** `extraPlaces` war das ursprüngliche Koordinaten-/Übersetzungssystem vor `placeObjects`. Seit v854 ist es als Schreibziel eingefroren — alle Saves gehen in `placeObjects` (IDB + OneDrive). `loadExtraPlaces()` wird noch aufgerufen, damit `_migrateExtraPlacesToPlaceObjects()` Altdaten einmalig überführt. `saveExtraPlaces()` (ui-forms.js:913) schreibt noch in localStorage, ist aber toter Write. **Cleanup-Schritte:** ① `saveExtraPlaces()`-Call in `savePlace` entfernen. ② `_migrateExtraPlacesToPlaceObjects` nach erfolgreichem Durchlauf `localStorage.removeItem(_extraPlacesKey())` aufrufen lassen (idempotent, da Migration selbst idempotent). ③ Wenn alle Instanzen sicher migriert: `loadExtraPlaces()` + `_extraPlacesKey()` + `saveExtraPlaces()` aus ui-forms.js löschen; `db.extraPlaces`-Feld aus AppState entfernen. **Voraussetzung:** mindestens einmaliger App-Start mit v854+ auf allen genutzten Geräten (bei Eigennutzung sofort möglich). **Risiko bei zu frühem Cleanup:** Nutzer mit Altdaten (nie v854+ gestartet) verlieren Koordinaten, die noch nicht in placeObjects migriert wurden. | S |
 
 ---
