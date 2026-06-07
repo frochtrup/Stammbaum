@@ -12,7 +12,7 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 │      Stammbaum PWA v8.0 · vollständige Dateiliste:       │
 │      README.md  ·  sw-Version: ROADMAP.md                │
 │  Vanilla JS · Kein Framework · Kein Build-Step           │
-│  ~52 JS-Dateien · ~30 000 Zeilen                         │
+│  ~52 JS-Dateien · ~38 000 Zeilen                         │
 │                                                          │
 │  ── App-Shell ───── index.html, styles.css,              │
 │                      offline.html, manifest.json         │
@@ -46,7 +46,7 @@ Datenmodell: `DATAMODEL.md` · UI/CSS/Layout: `UI-DESIGN.md` · Sprint-Geschicht
 └──────────────────────────────────────────────────────────┘
 ```
 
-**Größe gesamt:** ~52 JS-Dateien · ~30 000 Zeilen
+**Größe gesamt:** ~52 JS-Dateien · ~38 000 Zeilen
 
 ---
 

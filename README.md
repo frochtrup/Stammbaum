@@ -298,7 +298,7 @@ stammbaum/
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
 **GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
-**Version 8.0** — Juni 2026 — `v8-dev` · sw v858
+**Version 8.0** — Juni 2026 — `v8-dev` · sw v899 · 420 Unit-Tests grün
 
 ---
 

@@ -2,7 +2,7 @@
 
 > Status: **P0 ✅ · P1 ✅ · P2 ✅ · P3 ✅ · P4 ✅ · P5 ✅ · P6 ✅** · erstellt 2026-06-06 · Branch `v8-dev` · Stand-Code: sw v890
 > Ergebnis eines gesamthaften Reviews der View-Switching-Architektur. Behebt 4 vom Nutzer reproduzierbare Bugs und schließt strukturelle Lücken in State-Modell und Lifecycle.
-> Kern-Architektur-Entscheidungen werden nach Abschluss in `ARCHITECTURE.md` (ADR-025 vorgesehen) überführt; dieses File dokumentiert Befunde, Maßnahmen und Reihenfolge bis dahin.
+> Kern-Architektur-Entscheidungen sind in `ARCHITECTURE.md` (**ADR-025**) dokumentiert; dieses File bleibt als technisches Detail-Design (Befunde, Maßnahmen, File:Line) als Referenz erhalten. Strukturelle Test-Verriegelung: UI-Logik-Tests (v891).
 
 ---
 

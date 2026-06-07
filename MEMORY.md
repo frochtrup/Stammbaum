@@ -1,57 +1,39 @@
-# Stammbaum PWA — Projekt-Memory
+# Stammbaum PWA — Projekt-Memory (KI-Kontext)
 
-## Projekt-Überblick
-- **Was:** Genealogie-Editor als PWA (Multi-File: index.html + JS-Module)
-- **Ziel:** iPhone/iPad + Desktop, GEDCOM 5.5.1, kein Server, kein Build-Step
-- **Stack:** Vanilla JS, kein Framework, kein npm
-- **Pfad:** `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
-- **Dateien:** vollständige Liste → `README.md`
+Kurzorientierung für Entwickler/KI beim Einstieg. **Keine Detail-Duplikate** — diese Datei verweist nur; die Wahrheit steht in den Spezialdocs (s. Doku-Landkarte).
 
-## Aktueller Stand — zuletzt aktualisiert: 2026-05-28
+## Projekt in einem Absatz
+Genealogie-Editor als **PWA**, Vanilla JS, **kein Framework, kein npm, kein Build-Step** (bewusst, ADR-001/002 — „edit-anywhere ohne Toolchain"). Ziel: iPhone/iPad + Desktop, **GEDCOM 5.5.1/7.0 + GRAMPS** verlustfrei, kein Server, kein Tracking. ~52 JS-Dateien / ~38k Zeilen, alle Funktionen global (flacher Namespace).
+Pfad: `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogie/AppDev/files/`
 
-**Version 8.0 aktiv — Branch `v8-dev`**
-- **Aktuelle sw-Version: v742** / Cache: `stammbaum-v742`
-- Sprint-Geschichte vollständig: `CHANGELOG.md` | Offene Features + Planung: `ROADMAP.md`
+## Doku-Landkarte (wer hält was)
+| Datei | Inhalt |
+|---|---|
+| **README.md** | Einstieg, vollständige Dateiliste, Feature-Übersicht, Deployment |
+| **ARCHITECTURE.md** | **25 ADRs** (alle Architektur-Entscheidungen), Passthrough-System (10 Mechanismen), Roundtrip-Verlauf, Speicher-/Backup-Architektur |
+| **DATAMODEL.md** | Datenstrukturen (Person/Familie/Quelle/Archiv), JS-Sektionen, State, IDB-Keys |
+| **GEDCOM.md** | Parser/Writer-Referenz, alle unterstützten Tags, `_`-Tag-Analyse |
+| **UI-DESIGN.md** | HTML-Struktur, Navigationsmodell, CSS-Design-System, Baum-Layout-Algorithmen |
+| **ROADMAP.md** | Offene Maßnahmen, Gesamtbewertung, Vergleich mit etablierten Tools |
+| **CHANGELOG.md** | Vollständige Sprint-Geschichte v1.0–v8.0 (Quelle für „was wurde wann gemacht") |
+| **PLACE-REDESIGN.md** · **VIEW-ROBUSTNESS.md** · **SCALE-TEST-BEFUNDE.md** | Technische Detail-Designs abgeschlossener Arbeitspakete (Referenz/Archiv) |
 
-Testdaten: MeineDaten_ancestris.ged — 2811 Personen, 880 Familien, 130 Quellen, 4 Archive (83152 Zeilen)
-Testdaten: Unsere Familie.gramps — 2894 Personen, 910 Familien, 138 Quellen, 139 Orte
+## Aktueller Stand
+**v8.0 · Branch `v8-dev` · sw v899 / Cache `stammbaum-v899`.**
+- `test-unit.js` = **420 Tests** grün · `test-csp.js` grün · GEDCOM-Roundtrip `net_delta=0` · GRAMPS stable. Verifiziert 2026-06-07.
+- Gesamtbewertung ≈ **8.3/10** (unabhängiges Review 2026-06-07 → ROADMAP).
+- Größte offene Hebel: **T0-FUNC-SPLIT** (Monsterfunktionen), **OUTPUT-RICHNESS** (PDF-Buch/Poster), **A11Y-AUDIT** (s. ROADMAP).
 
----
+## Pflichtregeln bei Code-Änderungen (s. CLAUDE.md)
+- `sw.js CACHE_NAME` + `ROADMAP.md` sw-Version bei jeder Code-Änderung hochzählen; reine Doku-Commits ohne Bump.
+- Bewertungsrelevante Zahlen (Testanzahl, größte Funktion, Skalierung) → ROADMAP-Bewertungstabelle mitziehen (DOC-SYNC).
+- Jede neue Datenstruktur: GEDCOM-Roundtrip `out1===out2`/`net_delta=0` stabil halten (Passthrough oder dokumentierte ADR-Abweichung).
 
-## Roundtrip-Status (stabil seit v4)
+## Test-Infrastruktur (dep-frei, kein npm, `node` nicht installiert → `osascript -l JavaScript`)
+- `osascript -l JavaScript test-unit.js` — 420 Unit-Tests · `test-roundtrip.js [datei]` — GEDCOM+GRAMPS Roundtrip · `test-scale.js` — Performance · `generate-scale-test.js` — 20k-Synthetik.
 
-`roundtrip_stable=true`, `net_delta=0` — CONC/CONT by design, HEAD-Datum nur bei echtem Speichern.
-Passthrough-System (10 Mechanismen) + vollständige Details: `ARCHITECTURE.md` ADR-012.
-
----
-
-## Architektur-Schlüsselentscheidungen
-- Multi-File HTML (ADR-001) · Vanilla JS (ADR-002) · Globales `db` via AppState (ADR-003)
-- **IndexedDB** cacht GEDCOM-Text primär; localStorage stiller Fallback (ADR-004); vollständige IDB-Keys → `DATAMODEL.md`
-- iOS `accept="*/*"` (ADR-005) · Desktop Chrome: `showOpenFilePicker()` + `requestPermission({mode:'readwrite'})` (ADR-007)
-- BIRT/CHR/DEAT/BURI als Sonder-Objekte via `SPECIAL_EVENT_KEYS` (gedcom.js); `_SPECIAL_OBJ` in ui-forms-event.js ist Alias darauf (ADR-008)
-- Globale Bottom-Nav außerhalb Views, z-index 400 (ADR-009) · 6 Tabs
-- PLAC-Toggle: `_placeModes[placeId]` = 'free'|'parts' (ADR-010)
-- 3-Felder-Datum: `normMonth()`, `writeDatePartToFields()`, `readDatePartFromFields()` (ADR-011)
-- Verbatim Passthrough: `_ptDepth`/`_passthrough[]` auf INDI/FAM/SOUR (ADR-012)
-- **od_base_path-Architektur** (ADR-013): absoluter OneDrive-Pfad des GED-Ordners (auto via `parentReference.path`); `m.file` relativ dazu
-- **CSP ohne `unsafe-inline`** (ADR-015): alle inline styles entfernt; dynamische Werte via `_applyDynStyles()`
-- **associations[].role**: unified für GED5 `RELA`, GRAMPS `rel`, GED7 `ROLE` (ADR-018)
-- **GEDCOM 7.0**: opt-in Export (sw v724–v733, ADR-018); Standard bleibt 5.5.1; Parser liest beide
-- **sourceMedia{}**: OBJE unter SOUR-Zitierungen strukturiert (nicht verbatim)
-- **Event-Delegation**: `_CLICK_MAP`, `data-action`/`data-change`/`data-input`; `ui-event-delegation.js` muss letztes `<script>` in index.html sein
-- **Navigation History (unified)**: `_navHistory[]` in UIState — Baum und Detail teilen einen Stack
-- **State-Management**: `AppState` (db, currentPersonId, changed…) + `UIState` (_treeScale, _navHistory…) in gedcom.js
-- **showToast(msg, type)**: type = 'success'|'error'|'warn'|'info'; typabhängige Dauer
-- **Virtuelles Scrollen**: `_VS_ROW=69`, `_VS_BUF=600`, `_VS_MIN=500`, Binary-Search O(log n)
-- **Einheitliche Diagramm-Topbar**: `[⌂ Proband][⤢ Vollbild] | [Diagramm-Wechsel][☰]` (v591)
-- **Zwei Proband-Buttons in Person-Detail**: `probandBtn` (plain ⌂) + `probandSetBtn` (`.proband-set-btn`, direkt vor `✎`); Familie-Topbar blendet beide aus (v595)
-- **Familien-OBJE**: `f.marr.media[]` mit Feld `titl` (nicht `title`) — NICHT in `f.marr._extra`
-
-## Version 7 — Schwerpunkt (abgeschlossen)
-GRAMPS als Desktop-Master, PWA als iOS-Companion. `gramps-parser.js` + `gramps-writer.js` vollständig inkl. Roundtrip-Tests (sw v737–v738).
-
-## Offene Architektur-Schulden
-- Cmd+Z = „Revert to Saved" (nicht granulares Undo) — Backlog
-- `stammbaum_extraplaces_*` + `stammbaum_hofobjects` noch in localStorage (T0-STORAGE Phase 3, ~S)
-- `sources[]+sourcePages{}` Zitierungen: Mehrfachzitierungen nicht darstellbar — Backlog F4b (XL)
+## Wenige nicht-offensichtliche Fakten
+- **Roundtrip-Deltas „by design":** GEDCOM +PEDI (wo `_FREL==_MREL`); GRAMPS weniger note/citation (Dedup per Text-/Tupel-Key, keine Datenverluste). Beide stabil über Re-Roundtrip.
+- **`extraPlaces` ist seit v854 read-only** — `placeObjects` ist single source of truth (Migration via `_migrateExtraPlacesToPlaceObjects`). localStorage-Cleanup offen (T0-EXTRAPLACES-CLEANUP).
+- **`ui-event-delegation.js` muss letztes `<script>`** in index.html sein.
+- **Cmd+Z** = „Revert to Saved" bei leerem Undo-Stack (korrekt so).
