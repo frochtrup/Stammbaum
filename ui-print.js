@@ -66,6 +66,30 @@ function _printCss() {
                   border-top: 1px solid #ddd0b8; padding-top: 6px; }
     .no-data { color: #aaa; font-style: italic; font-size: 0.88rem; }
 
+    /* ── Quellenbibliografie ──────────────────────────────────── */
+    .bib-summary { font-size: 0.9rem; color: #5a3e0e; background: #faf4e8;
+                   border: 1px solid #e8dfc8; border-radius: 4px;
+                   padding: 8px 12px; margin-bottom: 18px; }
+    .bib-summary strong { color: #6a4a20; }
+    ol.bib-list { list-style: none; counter-reset: bib; }
+    ol.bib-list li { counter-increment: bib; position: relative;
+                     padding: 8px 8px 8px 38px; border-bottom: 1px solid #eee4cf;
+                     font-size: 10pt; line-height: 1.4; }
+    ol.bib-list li::before { content: counter(bib) "."; position: absolute;
+                     left: 4px; top: 8px; font-weight: 700; color: #8a6420;
+                     font-size: 0.85rem; }
+    .bib-title { font-weight: 700; color: #2a1d08; }
+    .bib-detail { color: #5a4326; }
+    .bib-refs { display: inline-block; margin-left: 6px; font-size: 0.8rem;
+                color: #6a4a20; background: #f0e6cf; border-radius: 3px;
+                padding: 0 6px; white-space: nowrap; }
+    .bib-orphan { display: inline-block; margin-left: 6px; font-size: 0.8rem;
+                  color: #9a3010; background: #f6e2d8; border-radius: 3px;
+                  padding: 0 6px; white-space: nowrap; }
+    .bib-repo { font-size: 0.85rem; color: #7a5010; }
+    .bib-note { display: block; font-size: 0.85rem; color: #6a584a;
+                margin-top: 2px; white-space: pre-wrap; }
+
     @media print {
       @page { size: A4 portrait; margin: 2cm; }
       body { max-width: 100%; padding: 0; }
@@ -689,5 +713,125 @@ function exportOrtsbuch() {
   } catch (err) {
     console.error('exportOrtsbuch:', err);
     showToast('⚠ Ortsbuch: ' + err.message, 'error');
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+//  4. QUELLENBIBLIOGRAFIE  (A2 — OUTPUT-RICHNESS)
+//     Alle Quellen alphabetisch, mit Belegzählung (INDI + FAM)
+// ═════════════════════════════════════════════════════════════════
+
+// Sortier-Schlüssel: Autor-Nachname → Titel → Kurzname
+function _bibSortKey(s) {
+  const author = (s.author || '').trim();
+  const surn   = author.includes(',') ? author.split(',')[0] : author.split(/\s+/).pop() || '';
+  return (surn || s.title || s.abbr || s.id || '').toLowerCase();
+}
+
+// Zählt wie viele Personen + Familien die Quelle referenzieren
+function _bibRefCounts(sid) {
+  const db = AppState.db;
+  const persons  = Object.values(db.individuals).filter(p => p.sourceRefs && p.sourceRefs.has(sid)).length;
+  const families = Object.values(db.families   ).filter(f => f.sourceRefs && f.sourceRefs.has(sid)).length;
+  return { persons, families, total: persons + families };
+}
+
+function _buildBibliographieHtml() {
+  const db   = AppState.db;
+  const srcs = Object.values(db.sources || {});
+  if (!srcs.length) throw new Error('Keine Quellen vorhanden');
+
+  const dateStr   = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const fileLabel = (db._sourceFile || '').replace(/\.[^.]+$/, '');
+
+  const sorted = [...srcs].sort((a, b) =>
+    _bibSortKey(a).localeCompare(_bibSortKey(b), 'de'));
+
+  let orphanCount = 0;
+  let refTotal    = 0;
+
+  const items = sorted.map(s => {
+    const rc = _bibRefCounts(s.id);
+    refTotal += rc.total;
+    if (rc.total === 0) orphanCount++;
+
+    // Bibliografischer Titel: Autor. Titel. Verlag. Datum.
+    const titleTxt = s.title || s.abbr || s.id;
+    const head = `<span class="bib-title">${esc(titleTxt)}</span>`;
+    const detailParts = [];
+    if (s.author) detailParts.unshift(esc(s.author));
+    if (s.publ)   detailParts.push(esc(s.publ));
+    if (s.date)   detailParts.push(esc(s.date));
+    const detail = detailParts.length
+      ? `<span class="bib-detail"> — ${detailParts.join('. ')}</span>` : '';
+
+    // Aufbewahrungsort
+    let repoHtml = '';
+    const repo = s.repo && /^@[^@]+@$/.test(s.repo) ? db.repositories?.[s.repo] : null;
+    if (repo) {
+      const rc0 = s.repoCalns?.[0] || (s.repoCallNum ? { num: s.repoCallNum } : null);
+      const callNum = rc0?.num ? `, Sign. ${esc(rc0.num)}` : '';
+      repoHtml = `<span class="bib-note bib-repo">🏛 ${esc(repo.name || s.repo)}${callNum}</span>`;
+    } else if (s.repo && !/^@[^@]+@$/.test(s.repo)) {
+      repoHtml = `<span class="bib-note bib-repo">🏛 ${esc(s.repo)}</span>`;
+    }
+
+    // Belege-Badge
+    const refBadge = rc.total
+      ? `<span class="bib-refs">${rc.persons ? rc.persons + ' Pers.' : ''}${rc.persons && rc.families ? ' · ' : ''}${rc.families ? rc.families + ' Fam.' : ''}</span>`
+      : `<span class="bib-orphan">⚠ kein Beleg</span>`;
+
+    return `<li>${head}${detail}${refBadge}${repoHtml}</li>`;
+  }).join('\n');
+
+  const summary = `<div class="bib-summary">
+    <strong>${sorted.length}</strong> Quelle${sorted.length === 1 ? '' : 'n'} ·
+    <strong>${refTotal}</strong> Belegverweis${refTotal === 1 ? '' : 'e'} (Personen + Familien)${
+    orphanCount ? ` · <strong>${orphanCount}</strong> ohne Beleg ⚠` : ''}
+  </div>`;
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quellenverzeichnis${fileLabel ? ' — ' + esc(fileLabel) : ''}</title>
+<style>${_printCss()}</style>
+</head>
+<body>
+<h1>Quellenverzeichnis</h1>
+<p class="meta">${fileLabel ? esc(fileLabel) + ' · ' : ''}erstellt am ${dateStr}</p>
+${summary}
+<ol class="bib-list">
+${items}
+</ol>
+</body>
+</html>`;
+}
+
+function downloadBibliographie() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.sources || {}).length) {
+    showToast('⚠ Keine Quellen vorhanden', 'warn');
+    return;
+  }
+  try {
+    const html    = _buildBibliographieHtml();
+    const blob    = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    const srcName = (db._sourceFile || 'Stammbaum')
+      .replace(/\.[^.]+$/, '').replace(/[^\w\-äöüÄÖÜß ]/g,'').trim().replace(/ /g,'_');
+    a.href     = url;
+    a.download = srcName + '_Quellenverzeichnis.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadBibliographie:', err);
+    showToast('⚠ Quellenverzeichnis: ' + err.message, 'error');
   }
 }

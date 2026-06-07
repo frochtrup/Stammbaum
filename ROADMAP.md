@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v910 · Cache: `stammbaum-v910` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v911 · Cache: `stammbaum-v911` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -208,7 +208,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
 | **OUTPUT-RICHNESS** | **Ausgabe-Reichtum — 10 Items** *(Hebel #3 aus Review 2026-06-07 — größter fachlicher Abstand zu MacFamilyTree)* | Fundament: `ui-print.js` (Ahnenliste/Familienbogen/Ortsbuch), `ui-book.js`, `ui-story-person.js`, `ui-chart-export.js` (PNG). Kein Server, kein PDF-Lib — Browser-Druck → PDF. Details s. Unter-Items. | — |
-| **A2** | **Quellenbibliografie** *(Gramps, RootsMagic, Legacy)* | Alle Quellen sortiert nach Typ/Autor mit Belegzählung (wie viele INDI/FAM jede Quelle verwenden). Als eigener Download + optional als Buchkapitel in `ui-book.js`. Basis: `db.sources`, `db.persons[].citations`, `db.families[].marr.citations`. Deckt Quellenlücken auf; wissenschaftliche Dokumentation. | **S** |
+| ✅ **A2** | **Quellenbibliografie (v911)** *(Gramps, RootsMagic, Legacy)* | `_buildBibliographieHtml`/`downloadBibliographie` in `ui-print.js`. Alle Quellen alphabetisch nach Autor-Nachname, bibliografischer Eintrag (Autor. Titel. Verlag. Datum.) + Aufbewahrungsort/Signatur + Belegzählung (Personen/Familien via `sourceRefs`). Orphan-Quellen ohne Beleg markiert; Summary-Kopf. Menü „Quellenverzeichnis". | **S** |
 | **A3** | **Forschungsprotokoll-Export** *(Gramps, Legacy Family Tree)* | Tasks + Research Log (`ui-views-tasks.js`, `ui-views-rlog.js`) als druckbares A4-HTML. Sortierung nach Person / Datum / Priorität wählbar. Erweiterung `ui-print.js` → `downloadForschungsProtokoll()`. Arbeitsbericht für Archivbesuche; teilbar mit anderen Forschern. | **S** |
 | **A4** | **Statistik-Report** *(Gramps Statistics Gramplet, MacFamilyTree)* | Häufigste Vornamen/Nachnamen/Geburtsorte/Sterbeorte (Top-10-Tabellen), Altersverteilung (SVG-Histogramm oder Tabelle), Zeitachsen-Dichte der Ereignisse, Männer/Frauen-Verhältnis, Kinderzahl-Verteilung. Identifiziert Datenlücken. Basis: `db.persons`-Iteration. | **M** |
 | **B1** | **Nachkommentafel-Report** *(Gramps „Descendant Report", RootsMagic, Legacy)* | Nummerierter Bericht im d'Aboville-System (`1`, `1.1`, `1.1.2` …). Pro Person: Kurzbiografie als Fließtext + Kinderliste. Druckbares HTML. Gegenpart zur Ahnenliste (Ahnenliste zeigt nur Vorfahren); Standardformat Genealogischer Gesellschaften. Basis: Descendant-Logik aus `ui-chart-descendant.js` + Story-Texte aus `ui-story-person.js`. | **M** |
@@ -237,7 +237,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v858** *(veraltet — v859–v909 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900 + CSP-Durchsetzung v901–v903 + T0-FUNC-SPLIT v904 + A11Y-AUDIT/WCAG-2.1-AA v905 + Lücken-Ketten Zugehörigkeit v908 + Vorname-Normalisierung v909)*
+**Handbuch-Stand: sw v858** *(veraltet — v859–v909 noch nicht dokumentiert: UX-Polish Orte-Steckbrief + View-Robustheit P0–P6 + Koord-Paar-Invariante + Koord-Löschen + po-gewinnt-immer + Ereignisliste/-gruppen + VS-Scroll-Reattach + UI-Logik-Tests T0-UI + Ortsreport/Ortsbuch v892 + SCALE/SORT-CACHE v899 + Orts-Notiz v900 + CSP-Durchsetzung v901–v903 + T0-FUNC-SPLIT v904 + A11Y-AUDIT/WCAG-2.1-AA v905 + Lücken-Ketten Zugehörigkeit v908 + Vorname-Normalisierung v909 + Quellenverzeichnis-Export v911)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|
