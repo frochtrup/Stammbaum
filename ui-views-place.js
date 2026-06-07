@@ -1193,18 +1193,26 @@ function showPlaceDetail(placeName, pushHistory = true) {
       }
       const sorted = [...byPeriod.entries()]
         .sort(([a], [b]) => a === null ? 1 : b === null ? -1 : +a - +b);
+      const _evMeta = (evs) => {
+        const persons = new Set(evs.map(e => e.person.id)).size;
+        return `<span class="ev-meta"><span class="ev-meta-n">${evs.length}</span><span class="ev-meta-sep">·</span><span class="ev-meta-p">${persons} P</span></span><span class="ev-arrow">▾</span>`;
+      };
       return sorted.map(([, { label, evs }]) =>
         `<details class="ev-group">
-          <summary class="ev-group-summary"><span>${esc(label)}</span><span class="ev-count">${evs.length}</span></summary>
+          <summary class="ev-group-summary"><span class="ev-label">${esc(label)}</span>${_evMeta(evs)}</summary>
           ${evs.map(e => `<div class="ev-group-row"><span class="ev-type-chip">${esc(e.typeLabel)}</span>${relRow(e.person, e.date)}</div>`).join('')}
         </details>`
       ).join('');
     }
     // Standard: nach Typ
+    const _evMeta2 = (evs) => {
+      const persons = new Set(evs.map(e => e.person.id)).size;
+      return `<span class="ev-meta"><span class="ev-meta-n">${evs.length}</span><span class="ev-meta-sep">·</span><span class="ev-meta-p">${persons} P</span></span><span class="ev-arrow">▾</span>`;
+    };
     return _orderedTypes.map(typeLabel => {
       const evs = _byType.get(typeLabel).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
       return `<details class="ev-group">
-        <summary class="ev-group-summary"><span>${esc(typeLabel)}</span><span class="ev-count">${evs.length}</span></summary>
+        <summary class="ev-group-summary"><span class="ev-label">${esc(typeLabel)}</span>${_evMeta2(evs)}</summary>
         ${evs.map(e => relRow(e.person, e.date)).join('')}
       </details>`;
     }).join('');
