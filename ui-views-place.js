@@ -1181,17 +1181,21 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
   const _renderEvGroups = () => {
     if (_placeEvMode === 'date') {
-      // Gruppierung nach Jahrhundert/Dekade
+      // Gruppierung nach Dekade, chronologisch sortiert, "Ohne Datum" ans Ende
       const byPeriod = new Map();
       for (const e of _allEvs) {
-        const yr = e.date && e.date.match(/\d{4}/) ? Math.floor(+e.date.match(/\d{4}/)[0] / 10) * 10 : null;
-        const key = yr ? `${yr}er` : 'Ohne Datum';
-        if (!byPeriod.has(key)) byPeriod.set(key, []);
-        byPeriod.get(key).push(e);
+        const m = e.date && e.date.match(/\d{4}/);
+        const yr = m ? Math.floor(+m[0] / 10) * 10 : null;
+        const key = yr !== null ? String(yr) : null;
+        const label = yr !== null ? `${yr}er` : 'Ohne Datum';
+        if (!byPeriod.has(key)) byPeriod.set(key, { label, evs: [] });
+        byPeriod.get(key).evs.push(e);
       }
-      return [...byPeriod.entries()].map(([period, evs]) =>
-        `<details class="ev-group" open>
-          <summary class="fact-sub-title ev-group-summary">${esc(period)} <span class="ev-count">${evs.length}</span></summary>
+      const sorted = [...byPeriod.entries()]
+        .sort(([a], [b]) => a === null ? 1 : b === null ? -1 : +a - +b);
+      return sorted.map(([, { label, evs }]) =>
+        `<details class="ev-group">
+          <summary class="ev-group-summary"><span>${esc(label)}</span><span class="ev-count">${evs.length}</span></summary>
           ${evs.map(e => `<div class="ev-group-row"><span class="ev-type-chip">${esc(e.typeLabel)}</span>${relRow(e.person, e.date)}</div>`).join('')}
         </details>`
       ).join('');
@@ -1199,8 +1203,8 @@ function showPlaceDetail(placeName, pushHistory = true) {
     // Standard: nach Typ
     return _orderedTypes.map(typeLabel => {
       const evs = _byType.get(typeLabel).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-      return `<details class="ev-group" open>
-        <summary class="fact-sub-title ev-group-summary">${esc(typeLabel)} <span class="ev-count">${evs.length}</span></summary>
+      return `<details class="ev-group">
+        <summary class="ev-group-summary"><span>${esc(typeLabel)}</span><span class="ev-count">${evs.length}</span></summary>
         ${evs.map(e => relRow(e.person, e.date)).join('')}
       </details>`;
     }).join('');
