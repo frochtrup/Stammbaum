@@ -553,6 +553,7 @@ function showPlaceForm(placeName) {
   document.getElementById('pl-type').value    = po?.type || 'Unknown';
   document.getElementById('pl-exists-from').value = po?.existsFrom || '';
   document.getElementById('pl-exists-to').value   = po?.existsTo   || '';
+  document.getElementById('pl-note').value        = po?.note       || '';
 
   // Koordinaten: placeObject hat Vorrang vor extraPlaces-Cache
   const ep   = AppState.db.extraPlaces[placeName];
@@ -665,6 +666,7 @@ function savePlace() {
   const _type = document.getElementById('pl-type')?.value || 'Unknown';
   const _exFrom = document.getElementById('pl-exists-from')?.value.trim() || null;
   const _exTo   = document.getElementById('pl-exists-to')?.value.trim()   || null;
+  const _note   = document.getElementById('pl-note')?.value.trim()        || '';
   let _poId = document.getElementById('pl-placeId')?.value || '';
   if (!_poId) _poId = (typeof _epId === 'function') ? _epId(newName) : ('_ep_' + Date.now());
   upsertPlaceObject(
@@ -673,12 +675,14 @@ function savePlace() {
              lat: _coordOp === 'set' ? lati : null,
              long: _coordOp === 'set' ? long : null,
              existsFrom: _exFrom, existsTo: _exTo,
+             note: _note || undefined,
              pnames: [], enclosedBy: [], parentId: null }),
     p => {
       if (newName !== oldName) p.title = newName;
       p.type = _type;
       p.existsFrom = _exFrom;
       p.existsTo   = _exTo;
+      if (_note) p.note = _note; else delete p.note;
       if (_coordOp === 'set')        { p.lat = lati; p.long = long; }
       else if (_coordOp === 'clear') { p.lat = null; p.long = null; }
     }
@@ -996,6 +1000,15 @@ function showPlaceDetail(placeName, pushHistory = true) {
       <button class="btn-ghost"
         data-action="openPlaceStringLinkModal"
         data-preselect="${placeName.replace(/"/g,'&quot;')}">🔗 Mit PlaceObject verknüpfen</button>
+    </div>`;
+  }
+
+  // Notiz-Sektion — freie Notiz aus dem placeObject (lebt in der JSON)
+  const _notePo = place.placeId ? (AppState.db.placeObjects || {})[place.placeId] : null;
+  if (_notePo && _notePo.note) {
+    html += `<div class="section fade-up">
+      <div class="section-title">Notiz</div>
+      <div class="place-note-text">${esc(_notePo.note).replace(/\n/g, '<br>')}</div>
     </div>`;
   }
 

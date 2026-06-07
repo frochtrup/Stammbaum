@@ -3867,6 +3867,7 @@ html[data-theme="dark"] {
 .place-map-links { display: flex; gap: 8px; flex-wrap: wrap; }
 .place-map-links .place-maps-link { flex: 1; }
 .place-map-coords { margin-top: 4px; font-size: 11px; color: var(--text-muted, #888); }
+.place-note-text { font-size: 0.9rem; line-height: 1.5; color: var(--text, #222); white-space: pre-wrap; word-break: break-word; }
 .place-action-row { display: flex; justify-content: flex-start; padding: 6px 0 2px; }
 .place-delete-row { display: flex; justify-content: center; padding: 24px 16px 12px; border-top: 1px solid var(--border); margin-top: 8px; }
 .btn-ghost-danger { color: var(--red, #8b1a1a) !important; border-color: var(--red, #8b1a1a) !important; opacity: 0.75; }
