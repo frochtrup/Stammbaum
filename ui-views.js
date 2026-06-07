@@ -588,9 +588,17 @@ function switchTab(tab) {
   document.getElementById('tab-search').style.display   = tab === 'search'   ? 'block' : 'none';
   document.getElementById('tab-tasks').style.display    = tab === 'tasks'    ? 'block' : 'none';
   document.getElementById('fabBtn').style.display = (tab === 'search' || tab === 'stats' || tab === 'tasks') ? 'none' : '';
-  // R2: VS-Teardown für inaktive Listen — Scroll-Listener-Leak verhindern
-  if (tab !== 'persons'  && typeof _vsP !== 'undefined') _vsTeardown(_vsP);
-  if (tab !== 'families' && typeof _vsF !== 'undefined') _vsTeardown(_vsF);
+  // R2: VS-Teardown für inaktive Listen — Scroll-Listener-Leak verhindern.
+  // Beim Teardown Tab als dirty markieren, damit _vsSetup beim Zurückwechseln
+  // den Scroll-Listener neu registriert (sonst bleibt die Liste nach scroll eingefroren).
+  if (tab !== 'persons'  && typeof _vsP !== 'undefined' && _vsP.active) {
+    _vsTeardown(_vsP);
+    UIState._dirty = { ...(UIState._dirty || {}), persons: true };
+  }
+  if (tab !== 'families' && typeof _vsF !== 'undefined' && _vsF.active) {
+    _vsTeardown(_vsF);
+    UIState._dirty = { ...(UIState._dirty || {}), families: true };
+  }
   // P3-A2: nur rendern wenn dirty oder noch nie für diesen Tab gerendert (undefined ≠ false)
   if ((UIState._dirty || {})[tab] !== false) {
     renderTab();
