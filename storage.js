@@ -46,6 +46,8 @@ async function revertToSaved() {
     AppState._redoStack = [];
     UIState._placesCache = null;
     UIState._hofCache = null;
+    UIState._personSortCache = null;
+    UIState._searchIndexDirty = true;   // neu geparste Daten → Such-Index neu aufbauen
     if (typeof invalidatePlacePersonIndex === 'function') invalidatePlacePersonIndex();
     if (typeof _clearNavState === 'function') _clearNavState();
     updateChangedIndicator();

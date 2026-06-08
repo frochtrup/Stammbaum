@@ -415,6 +415,7 @@ async function _finishLoad(db, text, filename) {
     UIState._hofCache = null;
     UIState._placesCache = null;
     UIState._personSortCache = null;
+    UIState._searchIndexDirty = true;   // neue Daten → Such-Index (p._searchStr) neu aufbauen
     Promise.all([
       idbPut('stammbaum_ged', text),
       idbPut('stammbaum_ged_backup', text),
@@ -512,6 +513,7 @@ async function _loadGRAMPS(file) {
     UIState._hofCache = null;
     UIState._placesCache = null;
     UIState._personSortCache = null;
+    UIState._searchIndexDirty = true;   // neue Daten → Such-Index (p._searchStr) neu aufbauen
     AppState._canDirectSave   = false;
     // Persist filename in localStorage for display
     const filename = file.name;
