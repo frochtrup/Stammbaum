@@ -847,9 +847,9 @@ function _linkGedcomEventsToPlaceObjects(db) {
     const year = _placeYear(ev.date);
     // Schritt 1: exakter Match (title, pnames[], historische Strings)
     let pid = reg.findByName(ev.place);
-    // Schritt 2: erstes Komma-Segment → buildFormString-Vergleich (Reimport-Pfad)
+    // Schritt 2: erstes nicht-leeres Komma-Segment → buildFormString-Vergleich (Reimport-Pfad)
     if (!pid && ev.place.includes(',')) {
-      const first = ev.place.split(',')[0].trim();
+      const first = ev.place.split(',').map(s => s.trim()).find(s => s) || '';
       const cand  = reg.findByName(first);
       if (cand) {
         const built = (typeof _buildFormString === 'function' && _buildFormString(cand, year))
@@ -1046,8 +1046,8 @@ function findPlaceDuplicates(toleranceKm = 1) {
   const byKey = new Map();   // foldKey → Set(id)
   for (const pl of entries) {
     const keys = new Set();
-    keys.add(_placeFold(pl.title));
-    for (const pn of pl.pnames || []) keys.add(_placeFold(pn.value));
+    keys.add(_placeStringCoreFold(pl.title));
+    for (const pn of pl.pnames || []) keys.add(_placeStringCoreFold(pn.value));
     for (const k of keys) {
       if (!k) continue;
       if (!byKey.has(k)) byKey.set(k, new Set());
@@ -1070,7 +1070,7 @@ function findPlaceDuplicates(toleranceKm = 1) {
       if (find(a.id) === find(b.id)) continue;
       if (a.lat != null && b.lat != null
         && _placeDistKm(a.lat, a.long, b.lat, b.long) <= toleranceKm
-        && _placeFold(a.title).split(',')[0] === _placeFold(b.title).split(',')[0]) {
+        && _placeStringCoreFold(a.title) === _placeStringCoreFold(b.title)) {
         union(a.id, b.id);
       }
     }

@@ -2,7 +2,7 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v923';
+const CACHE_NAME = 'stammbaum-v924';
 
 // Kern-Assets: atomar — Install schlägt fehl wenn eines fehlt
 const PRECACHE_CRITICAL = [
