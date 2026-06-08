@@ -1047,13 +1047,15 @@ function _placeHierHtml(placeId) {
 }
 
 // Periodenkorrekter, vollständiger Hierarchiestring für die Detail-Ansicht.
-// Bei gesetzter placeId: _buildFormString (enclosureChainAsOf) → "Ort, Amt, Land".
-// Fallback: compactPlace(ev.place).
+// Bei gesetzter placeId + modellierter enclosedBy-Kette: _buildFormString liefert
+// "Ort, Amt, Land" periodengerecht. Nur nutzen wenn das Ergebnis tatsächlich eine
+// Hierarchie enthält (Komma) — sonst ist die enclosedBy-Kette nicht modelliert und
+// compactPlace(ev.place) liefert mehr Information.
 function _evFullPlace(ev) {
   if (ev.placeId && typeof _buildFormString === 'function') {
     const year = typeof _placeYear === 'function' ? _placeYear(ev.date) : null;
     const full = _buildFormString(ev.placeId, year);
-    if (full) return full;
+    if (full && full.includes(',')) return full;
   }
   return compactPlace(ev.place);
 }

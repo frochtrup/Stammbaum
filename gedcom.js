@@ -603,11 +603,13 @@ function compactPlace(place) {
   return place.split(',').map(s => s.trim()).filter(Boolean).join(', ');
 }
 
-// Kurzname für Listen: bei gesetzter placeId → po.title, sonst erstes nicht-leeres Segment.
+// Kurzname für Listen: erstes nicht-leeres Segment von po.title (bei placeId)
+// oder von placeStr. po.title kann selbst ein Hierarchiestring sein → nur [0].
 function shortPlace(placeStr, placeId) {
   if (placeId && typeof getPlaceRegistry === 'function') {
     const reg = getPlaceRegistry();
-    if (reg && reg.byId[placeId]) return reg.byId[placeId].title || '';
+    const title = reg && reg.byId[placeId] && (reg.byId[placeId].title || '');
+    if (title) return title.split(',')[0].trim() || title;
   }
   if (!placeStr) return '';
   return placeStr.split(',').map(s => s.trim()).find(s => s) || '';
