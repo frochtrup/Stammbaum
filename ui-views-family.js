@@ -422,20 +422,20 @@ function showFamilyDetail(id, pushHistory = true) {
       if (!ev?.date && !ev?.place && !ev?.seen) continue;
       _hasAnyEv = true;
       const geoBtn = evGeoLink(ev);
-      const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
+      const parts = [ev.date, _evFullPlace(ev)].filter(Boolean).join(', ');
       html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="${key}">
         <span class="fact-lbl">${label}</span>
-        <span class="fact-val">${esc(parts || '–')}${_placeHierHtml(ev.placeId)}${geoBtn}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+        <span class="fact-val">${esc(parts || '–')}${_evPlaceNavBtn(ev)}${geoBtn}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     for (let _ei = 0; _ei < (f.events || []).length; _ei++) {
       const ev = f.events[_ei];
       _hasAnyEv = true;
       const label = (ev.eventType && ev.type === 'EVEN') ? ev.eventType : (EVENT_LABELS[ev.type] || ev.type);
-      const parts = [ev.value, ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
+      const parts = [ev.value, ev.date, _evFullPlace(ev)].filter(Boolean).join(', ');
       html += `<div class="fact-row fact-row--clickable" data-action="showFamEventForm" data-fid="${id}" data-evkey="ev" data-evidx="${_ei}">
         <span class="fact-lbl">${esc(label)}</span>
-        <span class="fact-val">${esc(parts || '–')}${_placeHierHtml(ev.placeId)}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
+        <span class="fact-val">${esc(parts || '–')}${_evPlaceNavBtn(ev)}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}</span>
       </div>`;
     }
     if (!_hasAnyEv) {

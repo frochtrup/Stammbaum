@@ -2558,6 +2558,11 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   color: var(--gold-dim); font-size: 0.75rem;
   text-decoration: none; margin-left: 5px;
 }
+.place-nav-btn {
+  background: none; border: none; padding: 0; margin-left: 5px;
+  font-size: 0.75rem; cursor: pointer; color: var(--gold-dim);
+  vertical-align: middle;
+}
 
 /* ── Detail-Hero Hof ── */
 .detail-avatar.hof { font-size: 1.8rem; border-color: var(--gold-dim); }
