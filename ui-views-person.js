@@ -554,7 +554,7 @@ function _pdetLifeData(p, id) {
   });
 
   // Referenzdatum für Altersberechnung: Geburt, Proxy Taufe
-  const _refDate = p.birth.date || p.chr.date || '';
+  const _refDate = p.birth.date || p.chr.date || p.events.find(e => e.type === 'BAPM')?.date || '';
   // GED7: datePhrase (menschenlesbares Datum) kursiv unter dem codierten Datum
   const _dpHtml = (obj) => (obj?.datePhrase) ? `<em class="date-phrase">${esc(obj.datePhrase)}</em>` : '';
 
@@ -563,14 +563,21 @@ function _pdetLifeData(p, id) {
     html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="BIRT"><span class="fact-lbl">Geburt</span><span class="fact-val">${esc([p.birth.date, compactPlace(p.birth.place)].filter(Boolean).join(', '))}${_dpHtml(p.birth)}${_placeHierHtml(p.birth.placeId)}${geoBtn}${citTagsHtml(p.birth.citations || [])}${p.birth.note ? `<span class="ev-note">${esc(p.birth.note)}</span>` : ''}</span></div>`;
   }
   const _chrGodparents = (p.associations || []).filter(a => a.role === 'Godparent' && a.xref && AppState.db.individuals[a.xref]);
-  if (p.chr.date || p.chr.place || _chrGodparents.length) {
-    const _godparents = _chrGodparents;
-    const _gpHtml = _godparents.length
-      ? `<div class="event-godparents">${_godparents.map(a => `<span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('')}</div>`
-      : '';
-    // Alter bei Taufe nur wenn Geburtsdatum bekannt (nicht wenn Taufe selbst der Proxy ist)
+  const _bapms = p.events.map((ev, idx) => ({ev, idx})).filter(({ev}) => ev.type === 'BAPM');
+  // Paten auf CHR zeigen wenn CHR vorhanden, sonst auf BAPM
+  const _hasChr = p.chr.date || p.chr.place || _chrGodparents.length;
+  const _gpHtmlFor = (showGodparents) => (showGodparents && _chrGodparents.length)
+    ? `<div class="event-godparents">${_chrGodparents.map(a => `<span class="asso-chip" data-action="showDetail" data-id="${a.xref}">${esc(AppState.db.individuals[a.xref].name)}</span>`).join('')}</div>`
+    : '';
+  if (_hasChr) {
     const _chrAge = p.birth.date ? _ageAt(p.birth.date, p.chr.date) : '';
-    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_dpHtml(p.chr)}${_placeHierHtml(p.chr.placeId)}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtml}</span></div>`;
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="CHR"><span class="fact-lbl">Taufe</span><span class="fact-val">${esc([p.chr.date, compactPlace(p.chr.place)].filter(Boolean).join(', '))}${_dpHtml(p.chr)}${_placeHierHtml(p.chr.placeId)}${_chrAge}${citTagsHtml(p.chr.citations || [])}${p.chr.note ? `<span class="ev-note">${esc(p.chr.note)}</span>` : ''}${_gpHtmlFor(true)}</span></div>`;
+  }
+  for (const {ev, idx} of _bapms) {
+    const _bapAge = p.birth.date ? _ageAt(p.birth.date, ev.date) : '';
+    const geoBtn = evGeoLink(ev);
+    const parts = [ev.date, compactPlace(ev.place)].filter(Boolean).join(', ');
+    html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}"><span class="fact-lbl">Taufe (BAPM)</span><span class="fact-val">${esc(parts)}${_dpHtml(ev)}${_placeHierHtml(ev.placeId)}${_bapAge}${geoBtn}${citTagsHtml(ev.citations || [])}${ev.note ? `<span class="ev-note">${esc(ev.note)}</span>` : ''}${_gpHtmlFor(!_hasChr)}</span></div>`;
   }
   if (p.death.date || p.death.place) {
     const geoBtn = evGeoLink(p.death);
@@ -585,6 +592,7 @@ function _pdetLifeData(p, id) {
   const _quickChips = [
     !(p.birth.date || p.birth.place)                         && { ev: 'BIRT', lbl: '+ Geburt' },
     !(p.chr.date  || p.chr.place  || _chrGodparents.length)  && { ev: 'CHR',  lbl: '+ Taufe' },
+    !_bapms.length                                            && { ev: 'BAPM', lbl: '+ Taufe (BAPM)', generic: true },
     !(p.death.date || p.death.place)                         && { ev: 'DEAT', lbl: '+ Tod' },
     !(p.buri.date  || p.buri.place)                          && { ev: 'BURI', lbl: '+ Beerdigung' },
     { ev: 'RESI', lbl: '+ Wohnort', generic: true },
@@ -610,6 +618,7 @@ function _pdetLifeData(p, id) {
   // type → Map(eventType → [{ev,idx}])
   const _evGroups = new Map();
   p.events.forEach((ev, idx) => {
+    if (ev.type === 'BAPM') return; // oben als Kerndatum gerendert
     if (!_evTypeSet.has(ev.type)) { _evTypeOrder.push(ev.type); _evTypeSet.add(ev.type); }
     if (!_evGroups.has(ev.type)) _evGroups.set(ev.type, new Map());
     const subKey = ev.eventType || '';
