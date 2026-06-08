@@ -1520,3 +1520,464 @@ function downloadRelCertificate(idA, idB) {
     showToast('⚠ Zertifikat: ' + err.message, 'error');
   }
 }
+
+
+// ═════════════════════════════════════════════════════════════════
+//  9. STAMMTAFEL WALL CHART  (C1 — OUTPUT-RICHNESS)
+//     Vorfahren + Nachkommen kombiniert (Sanduhr) als eigenständiges
+//     SVG, direkt aus der DB berechnet (unabhängig vom Live-Baum).
+//     Druckbar (A4 quer) + per ⬡ als A1-Vektor verfügbar.
+// ═════════════════════════════════════════════════════════════════
+
+function _wcName(p) {
+  if (!p) return '?';
+  return (p.given ? `${p.given} ${p.surname || ''}`.trim() : (p.surname || p.name || '')) || '?';
+}
+function _wcYears(p) {
+  const b = (p?.birth?.date || p?.chr?.date || '').match(/\d{4}/)?.[0] || '';
+  const d = (p?.death?.date || p?.buri?.date || '').match(/\d{4}/)?.[0] || '';
+  if (!b && !d) return '';
+  return `${b ? '*' + b : ''}${b && d ? ' ' : ''}${d ? '†' + d : ''}`;
+}
+
+function _buildWallChartHtml(rootId, upGen, downGen) {
+  const db = AppState.db;
+  const root = db.individuals[rootId];
+  if (!root) throw new Error('Person nicht gefunden: ' + rootId);
+  upGen   = upGen   || 4;
+  downGen = downGen || 4;
+
+  const BOX_W = 128, BOX_H = 38, COL = BOX_W + 16, ROW = BOX_H + 40;
+  const nodes = []; // {id,p,x,y,sex}
+  const links = []; // {x1,y1,x2,y2}
+
+  // ── Vorfahren (Pedigree, Kekulé) ──
+  // gen 1..upGen oberhalb des Probanden; Position rekursiv: Kind = Mittelwert der Eltern.
+  const ancPos = {}; // kekule -> {x,y,id}
+  // Kekulé-Map aufbauen
+  const kek = {}; // kekule -> id
+  (function walkUp(id, k, g) {
+    if (!id || !db.individuals[id] || g > upGen) return;
+    kek[k] = id;
+    const famcId = db.individuals[id].famc?.[0]?.famId;
+    const fam = famcId ? db.families[famcId] : null;
+    if (fam) {
+      if (fam.husb) walkUp(fam.husb, 2 * k, g + 1);
+      if (fam.wife) walkUp(fam.wife, 2 * k + 1, g + 1);
+    }
+  })(rootId, 1, 0);
+
+  // Top-Generation horizontal verteilen, dann nach unten mitteln
+  const rootX = 0; // vorläufig; wird später normalisiert
+  const topCount = Math.pow(2, upGen);
+  // x je Kekulé bestimmen: oberste Gen gleichmäßig, sonst Mittel der (vorhandenen) Eltern
+  for (let g = upGen; g >= 1; g--) {
+    const base = Math.pow(2, g);
+    for (let i = 0; i < base; i++) {
+      const k = base + i;
+      if (!kek[k]) continue;
+      let x;
+      if (g === upGen) {
+        x = (i - (base - 1) / 2) * COL;
+      } else {
+        const cx = [];
+        if (ancPos[2 * k]) cx.push(ancPos[2 * k].x);
+        if (ancPos[2 * k + 1]) cx.push(ancPos[2 * k + 1].x);
+        x = cx.length ? cx.reduce((s, v) => s + v, 0) / cx.length
+                      : (i - (base - 1) / 2) * COL * (topCount / base);
+      }
+      ancPos[k] = { x, y: -(g) * ROW, id: kek[k] };
+    }
+  }
+
+  // ── Nachkommen (rekursiv, Blatt-basiert) ──
+  let leafX = 0;
+  const visited = new Set([rootId]);
+  function layoutDown(id, depth) {
+    const p = db.individuals[id];
+    let kids = [];
+    if (depth < downGen) {
+      (p.fams || []).forEach(fid => {
+        const fam = db.families[fid];
+        (fam?.children || []).forEach(cid => {
+          if (db.individuals[cid] && !visited.has(cid)) { visited.add(cid); kids.push(cid); }
+        });
+      });
+    }
+    let x;
+    if (!kids.length) { x = leafX * COL; leafX++; }
+    else {
+      const cxs = kids.map(cid => layoutDown(cid, depth + 1));
+      x = (cxs[0] + cxs[cxs.length - 1]) / 2;
+    }
+    if (depth > 0) {
+      nodes.push({ id, p, x, y: depth * ROW, sex: p.sex });
+    }
+    return x;
+  }
+  const descRootX = layoutDown(rootId, 0);
+
+  // ── Vorfahren-Block auf descRootX zentrieren ──
+  const probX = descRootX;
+  const ancShift = probX - (ancPos[1] ? ancPos[1].x : 0); // ancPos[1] existiert nicht (wir starten bei k>=2); stattdessen Mittel der Eltern
+  // Proband-x in Vorfahren-Koordinaten = Mittel von Vater/Mutter (k=2,3) falls vorhanden
+  let ancRootX = 0;
+  { const cx = []; if (ancPos[2]) cx.push(ancPos[2].x); if (ancPos[3]) cx.push(ancPos[3].x); ancRootX = cx.length ? cx.reduce((s,v)=>s+v,0)/cx.length : 0; }
+  const shift = probX - ancRootX;
+  Object.values(ancPos).forEach(a => { nodes.push({ id: a.id, p: db.individuals[a.id], x: a.x + shift, y: a.y, sex: db.individuals[a.id].sex }); });
+
+  // Proband-Knoten
+  nodes.push({ id: rootId, p: root, x: probX, y: 0, sex: root.sex, isRoot: true });
+
+  // ── Verbindungslinien ──
+  // Vorfahren: Kind → Eltern
+  for (let k = 1; k <= Math.pow(2, upGen) * 2; k++) {
+    if (!kek[k] && k !== 1) continue;
+    const childPos = (k === 1) ? { x: probX, y: 0 } : (ancPos[k] ? { x: ancPos[k].x + shift, y: ancPos[k].y } : null);
+    if (!childPos) continue;
+    [2 * k, 2 * k + 1].forEach(pk => {
+      if (ancPos[pk]) links.push({ x1: childPos.x, y1: childPos.y, x2: ancPos[pk].x + shift, y2: ancPos[pk].y });
+    });
+  }
+  // Nachkommen: Eltern → Kind
+  (function linkDown(id, depth, px) {
+    const p = db.individuals[id];
+    if (depth >= downGen) return;
+    (p.fams || []).forEach(fid => {
+      const fam = db.families[fid];
+      (fam?.children || []).forEach(cid => {
+        const child = nodes.find(n => n.id === cid && n.y === (depth + 1) * ROW);
+        if (child) { links.push({ x1: px, y1: depth * ROW, x2: child.x, y2: child.y }); linkDown(cid, depth + 1, child.x); }
+      });
+    });
+  })(rootId, 0, probX);
+
+  // ── Normalisieren auf positive Koordinaten ──
+  const PAD = 30;
+  const xs = nodes.map(n => n.x);
+  const ys = nodes.map(n => n.y);
+  const minX = Math.min(...xs) - BOX_W / 2, maxX = Math.max(...xs) + BOX_W / 2;
+  const minY = Math.min(...ys) - BOX_H / 2, maxY = Math.max(...ys) + BOX_H / 2;
+  const W = (maxX - minX) + 2 * PAD, H = (maxY - minY) + 2 * PAD;
+  const nx = x => x - minX + PAD, ny = y => y - minY + PAD;
+
+  const COLS = { M: '#bcd2ea', F: '#ecc6d4', U: '#e6ddc8' };
+  const STK  = { M: '#5a7aa5', F: '#a8617e', U: '#b0a070' };
+
+  let svgParts = [];
+  links.forEach(l => {
+    const x1 = nx(l.x1), y1 = ny(l.y1), x2 = nx(l.x2), y2 = ny(l.y2);
+    const my = (y1 + y2) / 2;
+    svgParts.push(`<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} V${my.toFixed(1)} H${x2.toFixed(1)} V${y2.toFixed(1)}" fill="none" stroke="#b8a578" stroke-width="1"/>`);
+  });
+  nodes.forEach(n => {
+    const x = nx(n.x) - BOX_W / 2, y = ny(n.y) - BOX_H / 2;
+    const fill = COLS[n.sex] || COLS.U, stroke = STK[n.sex] || STK.U;
+    svgParts.push(`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${BOX_W}" height="${BOX_H}" rx="5" fill="${fill}" stroke="${stroke}" stroke-width="${n.isRoot ? 2.5 : 1}"/>`);
+    const cx = nx(n.x);
+    const nm = _wcName(n.p), yr = _wcYears(n.p);
+    svgParts.push(`<text x="${cx}" y="${(y + (yr ? 15 : 22)).toFixed(1)}" text-anchor="middle" font-family="Georgia,serif" font-size="10" font-weight="${n.isRoot ? '700' : '600'}" fill="#2a1d08">${esc(nm.length > 22 ? nm.slice(0, 21) + '…' : nm)}</text>`);
+    if (yr) svgParts.push(`<text x="${cx}" y="${(y + 28).toFixed(1)}" text-anchor="middle" font-family="Georgia,serif" font-size="8.5" fill="#6a4a20">${esc(yr)}</text>`);
+  });
+
+  const dateStr = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const rootName = _wcName(root);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" width="100%" style="max-width:100%;height:auto">
+<rect width="${W.toFixed(0)}" height="${H.toFixed(0)}" fill="#fffdf8"/>
+${svgParts.join('\n')}
+</svg>`;
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stammtafel — ${esc(rootName)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;color:#1a1208;background:#fff;padding:18px}
+  h1{font-size:1.6rem;margin-bottom:2px}
+  .meta{font-size:0.82rem;color:#8a7050;margin-bottom:12px}
+  .wc-legend{font-size:0.8rem;color:#6a4a20;margin-bottom:10px}
+  .wc-legend span{display:inline-block;margin-right:14px}
+  .wc-dot{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:4px;border:1px solid #999}
+  .wc-chart{width:100%;overflow:auto}
+  @media print{ @page{ size:A4 landscape; margin:1cm; } body{padding:0} }
+</style>
+</head>
+<body>
+<h1>Stammtafel</h1>
+<p class="meta">${esc(rootName)} ${esc(_wcYears(root))} · ${upGen} Generationen Vorfahren + ${downGen} Generationen Nachkommen · erstellt am ${dateStr}</p>
+<div class="wc-legend">
+  <span><span class="wc-dot" style="background:#bcd2ea"></span>männlich</span>
+  <span><span class="wc-dot" style="background:#ecc6d4"></span>weiblich</span>
+  <span><span class="wc-dot" style="background:#e6ddc8"></span>unbekannt</span>
+  <span>— Proband mit dicker Umrandung</span>
+</div>
+<div class="wc-chart">${svg}</div>
+</body>
+</html>`;
+}
+
+function downloadWallChart() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.individuals || {}).length) { showToast('⚠ Keine Daten geladen', 'warn'); return; }
+  const rootId = AppState.currentPersonId || AppState._probandId
+    || Object.keys(db.individuals).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))[0];
+  try {
+    const html = _buildWallChartHtml(rootId, 4, 4);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safe = _wcName(db.individuals[rootId]).replace(/[^\w\-äöüÄÖÜß ]/g, '').trim().replace(/ /g, '_');
+    a.href = url; a.download = (safe || 'Stammtafel') + '_Stammtafel.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadWallChart:', err);
+    showToast('⚠ Stammtafel: ' + err.message, 'error');
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+//  10. ORTSSIPPENBUCH + NARRATIVE  (C2 — OUTPUT-RICHNESS)
+//     Familien nach Ort gruppiert, je Familie ein erzählender Kurztext.
+// ═════════════════════════════════════════════════════════════════
+
+function _osbFamNarrative(fam) {
+  const db = AppState.db;
+  const husb = fam.husb ? db.individuals[fam.husb] : null;
+  const wife = fam.wife ? db.individuals[fam.wife] : null;
+  const hn = husb ? `${_wcName(husb)}${_wcYears(husb) ? ' (' + _wcYears(husb) + ')' : ''}` : 'unbekannt';
+  const wn = wife ? `${_wcName(wife)}${_wcYears(wife) ? ' (' + _wcYears(wife) + ')' : ''}` : 'unbekannt';
+  let txt = `<strong>${esc(hn)}</strong> und <strong>${esc(wn)}</strong>`;
+  const marrParts = [fam.marr?.date, compactPlace(fam.marr?.place)].filter(Boolean).join(' in ');
+  txt += marrParts ? ` heirateten ${esc(marrParts)}.` : ` bildeten eine Familie.`;
+  const kids = (fam.children || []).map(c => db.individuals[c]).filter(Boolean);
+  if (kids.length) {
+    const names = kids.map(c => {
+      const yr = (c.birth?.date || c.chr?.date || '').match(/\d{4}/)?.[0];
+      return esc(_wcName(c)) + (yr ? ` *${yr}` : '');
+    });
+    txt += ` Aus der Verbindung ${kids.length === 1 ? 'ging 1 Kind' : 'gingen ' + kids.length + ' Kinder'} hervor: ${names.join(', ')}.`;
+  }
+  return txt;
+}
+
+function _buildOrtssippenbuchHtml() {
+  const db = AppState.db;
+  const dateStr = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const fileLabel = (db._sourceFile || '').replace(/\.[^.]+$/, '');
+
+  // Familien einem Ort zuordnen: Heiratsort, sonst Geburtsort des Mannes, sonst der Frau.
+  const _famPlace = (fam) => {
+    const cand = [fam.marr?.place,
+      fam.husb && db.individuals[fam.husb]?.birth?.place,
+      fam.wife && db.individuals[fam.wife]?.birth?.place];
+    for (const c of cand) { const cp = compactPlace(c); if (cp) return cp; }
+    return null;
+  };
+
+  const byPlace = new Map(); // placeName -> fam[]
+  for (const fam of Object.values(db.families || {})) {
+    const pl = _famPlace(fam);
+    if (!pl) continue;
+    if (!byPlace.has(pl)) byPlace.set(pl, []);
+    byPlace.get(pl).push(fam);
+  }
+  if (!byPlace.size) throw new Error('Keine Familien mit Ortsbezug gefunden');
+
+  const places = [...byPlace.keys()].sort((a, b) => a.localeCompare(b, 'de'));
+  const _safeId = s => s.replace(/[^a-zA-Z0-9]/g, '_');
+
+  let toc = '<ul class="osb-toc">';
+  for (const pl of places) {
+    toc += `<li><a href="#osb-${_safeId(pl)}">${esc(pl)}</a> <em>${byPlace.get(pl).length}</em></li>`;
+  }
+  toc += '</ul>';
+
+  let body = '';
+  for (const pl of places) {
+    const fams = byPlace.get(pl).slice().sort((a, b) =>
+      (a.marr?.date || '').localeCompare(b.marr?.date || ''));
+    body += `<section class="osb-place" id="osb-${_safeId(pl)}">
+      <h2>${esc(pl)} <span class="osb-cnt">${fams.length} Familie${fams.length === 1 ? '' : 'n'}</span></h2>`;
+    fams.forEach(fam => {
+      body += `<p class="osb-fam">${_osbFamNarrative(fam)}</p>`;
+    });
+    body += `</section>`;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ortssippenbuch${fileLabel ? ' — ' + esc(fileLabel) : ''}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;color:#1a1208;background:#fff;max-width:800px;margin:0 auto;padding:24px 28px}
+  h1{font-size:1.8rem;margin-bottom:4px}
+  .meta{font-size:0.82rem;color:#8a7050;margin-bottom:18px}
+  .osb-toc{list-style:none;columns:2;gap:14px;margin-bottom:26px;font-size:0.9rem}
+  .osb-toc li{padding:2px 0}
+  .osb-toc a{color:#5a3e0e;text-decoration:none}
+  .osb-toc em{color:#8a6420;font-style:normal;font-size:0.82rem}
+  .osb-place{margin-bottom:22px;page-break-inside:avoid}
+  .osb-place h2{font-size:1.15rem;color:#5a3e0e;border-bottom:1.5px solid #c0a878;padding-bottom:3px;margin-bottom:8px}
+  .osb-cnt{font-size:0.78rem;font-weight:400;color:#8a7050}
+  .osb-fam{font-size:10pt;line-height:1.5;margin:6px 0;padding-left:10px;border-left:2px solid #e8dfc8}
+  @media print{ @page{size:A4 portrait;margin:2cm} body{max-width:100%;padding:0} }
+</style>
+</head>
+<body>
+<h1>Ortssippenbuch</h1>
+<p class="meta">${fileLabel ? esc(fileLabel) + ' · ' : ''}${places.length} Orte · erstellt am ${dateStr}</p>
+<div class="osb-toc-wrap"><h2 style="font-size:1.05rem;color:#5a3e0e;margin-bottom:6px">Orte</h2>${toc}</div>
+${body}
+</body>
+</html>`;
+}
+
+function downloadOrtssippenbuch() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.families || {}).length) { showToast('⚠ Keine Familien geladen', 'warn'); return; }
+  try {
+    const html = _buildOrtssippenbuchHtml();
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const srcName = (db._sourceFile || 'Stammbaum').replace(/\.[^.]+$/, '').replace(/[^\w\-äöüÄÖÜß ]/g, '').trim().replace(/ /g, '_');
+    a.href = url; a.download = srcName + '_Ortssippenbuch.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadOrtssippenbuch:', err);
+    showToast('⚠ Ortssippenbuch: ' + err.message, 'error');
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════
+//  11. PERIODISIERTER ZEITSTRAHL-AUSDRUCK  (C3 — OUTPUT-RICHNESS)
+//     Ereignisse von Person + Familie auf horizontaler Zeitachse,
+//     überlagert mit historischen Epochen (_STORY_EPOCHS).
+// ═════════════════════════════════════════════════════════════════
+
+function _buildZeitstrahlHtml(personId) {
+  const db = AppState.db;
+  const p = db.individuals[personId];
+  if (!p) throw new Error('Person nicht gefunden: ' + personId);
+
+  const yOf = s => { const m = (s || '').match(/\d{4}/); const y = m ? +m[0] : null; return (y > 1000 && y < 2200) ? y : null; };
+  const ev = [];
+  const add = (year, label, who) => { if (year != null) ev.push({ year, label, who }); };
+
+  // Proband-Ereignisse
+  add(yOf(p.birth?.date), 'Geburt', _wcName(p));
+  add(yOf(p.chr?.date), 'Taufe', _wcName(p));
+  add(yOf(p.death?.date), 'Tod', _wcName(p));
+  add(yOf(p.buri?.date), 'Beerdigung', _wcName(p));
+  (p.events || []).forEach(e => add(yOf(e.date), (typeof EVENT_LABELS !== 'undefined' ? EVENT_LABELS[e.type] : null) || e.eventType || e.type, _wcName(p)));
+  // Familien: Heirat + Partner + Kinder
+  (p.fams || []).forEach(fid => {
+    const fam = db.families[fid]; if (!fam) return;
+    const otherId = (fam.husb && db.individuals[fam.husb] === p) ? fam.wife : fam.husb;
+    const sp = otherId ? db.individuals[otherId] : null;
+    add(yOf(fam.marr?.date), 'Heirat', sp ? `${_wcName(p)} ⚭ ${_wcName(sp)}` : _wcName(p));
+    (fam.children || []).forEach(cid => { const c = db.individuals[cid]; if (c) add(yOf(c.birth?.date || c.chr?.date), 'Geburt Kind', _wcName(c)); });
+  });
+
+  if (!ev.length) throw new Error('Keine datierten Ereignisse vorhanden');
+  ev.sort((a, b) => a.year - b.year);
+
+  const yMin = ev[0].year - 5, yMax = ev[ev.length - 1].year + 5;
+  const span = Math.max(yMax - yMin, 10);
+  const PLOT_W = Math.max(900, span * 6); // 6px/Jahr, min 900
+  const LEFT = 20, RIGHT = 20, AXIS_Y = 90, ROW_H = 22;
+  const xOf = y => LEFT + (y - yMin) / span * PLOT_W;
+
+  // Epochen
+  const epochs = (typeof _STORY_EPOCHS !== 'undefined' ? _STORY_EPOCHS : [])
+    .filter(e => e.to >= yMin && e.from <= yMax);
+  const EP_COLORS = ['#efe6d2', '#e4ecf2', '#f1e6e9', '#e7efe4', '#efeae0'];
+
+  let bands = '', bandLabels = '';
+  epochs.forEach((e, i) => {
+    const x1 = xOf(Math.max(e.from, yMin)), x2 = xOf(Math.min(e.to, yMax));
+    bands += `<rect x="${x1.toFixed(1)}" y="${AXIS_Y - 60}" width="${Math.max(x2 - x1, 1).toFixed(1)}" height="${AXIS_Y - 30 + ev.length * ROW_H}" fill="${EP_COLORS[i % EP_COLORS.length]}" opacity="0.7"/>`;
+    bandLabels += `<text x="${((x1 + x2) / 2).toFixed(1)}" y="${(AXIS_Y - 66).toFixed(1)}" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#7a5a28">${esc(e.label)}</text>`;
+  });
+
+  // Achse + Dekaden-Ticks
+  const totalH = AXIS_Y + ev.length * ROW_H + 30;
+  let axis = `<line x1="${LEFT}" y1="${AXIS_Y}" x2="${(LEFT + PLOT_W).toFixed(1)}" y2="${AXIS_Y}" stroke="#8a6420" stroke-width="1.5"/>`;
+  const firstDec = Math.ceil(yMin / 10) * 10;
+  for (let yr = firstDec; yr <= yMax; yr += 10) {
+    const x = xOf(yr);
+    axis += `<line x1="${x.toFixed(1)}" y1="${AXIS_Y - 4}" x2="${x.toFixed(1)}" y2="${AXIS_Y + 4}" stroke="#8a6420" stroke-width="1"/>`;
+    axis += `<text x="${x.toFixed(1)}" y="${(AXIS_Y + 16).toFixed(1)}" text-anchor="middle" font-family="Georgia,serif" font-size="9" fill="#6a4a20">${yr}</text>`;
+  }
+
+  // Ereignis-Marker (gestaffelt nach unten)
+  let markers = '';
+  ev.forEach((e, i) => {
+    const x = xOf(e.year), y = AXIS_Y + 34 + i * ROW_H;
+    markers += `<line x1="${x.toFixed(1)}" y1="${AXIS_Y}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#c8b48a" stroke-width="0.8" stroke-dasharray="2 2"/>`;
+    markers += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#8a6420"/>`;
+    markers += `<text x="${(x + 7).toFixed(1)}" y="${(y + 3.5).toFixed(1)}" font-family="Georgia,serif" font-size="9.5" fill="#2a1d08"><tspan font-weight="600">${e.year} ${esc(e.label)}</tspan> — ${esc(e.who)}</text>`;
+  });
+
+  const W = LEFT + PLOT_W + RIGHT, H = totalH;
+  const dateStr = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(0)} ${H.toFixed(0)}" width="100%" style="min-width:${W.toFixed(0)}px;height:auto">
+<rect width="${W.toFixed(0)}" height="${H.toFixed(0)}" fill="#fffdf8"/>
+${bands}${bandLabels}${axis}${markers}
+</svg>`;
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zeitstrahl — ${esc(_wcName(p))}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;color:#1a1208;background:#fff;padding:18px}
+  h1{font-size:1.6rem;margin-bottom:2px}
+  .meta{font-size:0.82rem;color:#8a7050;margin-bottom:12px}
+  .zs-wrap{width:100%;overflow-x:auto}
+  @media print{ @page{size:A4 landscape;margin:1cm} body{padding:0} }
+</style>
+</head>
+<body>
+<h1>Zeitstrahl</h1>
+<p class="meta">${esc(_wcName(p))} ${esc(_wcYears(p))} · ${ev.length} Ereignisse · historische Epochen hinterlegt · erstellt am ${dateStr}</p>
+<div class="zs-wrap">${svg}</div>
+</body>
+</html>`;
+}
+
+function downloadZeitstrahl() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.individuals || {}).length) { showToast('⚠ Keine Daten geladen', 'warn'); return; }
+  const personId = AppState.currentPersonId || AppState._probandId
+    || Object.keys(db.individuals).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))[0];
+  try {
+    const html = _buildZeitstrahlHtml(personId);
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safe = _wcName(db.individuals[personId]).replace(/[^\w\-äöüÄÖÜß ]/g, '').trim().replace(/ /g, '_');
+    a.href = url; a.download = (safe || 'Zeitstrahl') + '_Zeitstrahl.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadZeitstrahl:', err);
+    showToast('⚠ Zeitstrahl: ' + err.message, 'error');
+  }
+}
