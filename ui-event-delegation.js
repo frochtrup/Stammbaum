@@ -322,6 +322,8 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   menuWallChart:           ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadWallChart()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   menuOrtssippenbuch:      ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadOrtssippenbuch()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   menuZeitstrahl:          ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadZeitstrahl()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
+  menuHofchronik:          ()  => { closeModal('modalMenu'); _lazyScript('ui-print.js').then(() => downloadHofchronik()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
+  exportHofchronik:        ()  => { _lazyScript('ui-print.js').then(() => downloadHofchronik()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   downloadRelCert:         ()  => { _lazyScript('ui-print.js').then(() => downloadRelCertificate(UIState._relCertA, UIState._relCertB)).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   generateBook:            ()  => {
     const mode      = document.querySelector('#book-mode-seg button.active')?.dataset.bookMode || 'ancestors';

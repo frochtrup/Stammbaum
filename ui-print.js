@@ -1981,3 +1981,216 @@ function downloadZeitstrahl() {
     showToast('⚠ Zeitstrahl: ' + err.message, 'error');
   }
 }
+
+
+// ═════════════════════════════════════════════════════════════════
+//  12. HOFCHRONIK  (Hofgeschichten — Ort › Hof › Eigentümer/Bewohner)
+//     Nutzt buildHofIndex (gedcom.js): propEntries=Eigentümer (PROP),
+//     entries=Bewohner (RESI). Zu-/Wegzug aus der Stations-Kette.
+// ═════════════════════════════════════════════════════════════════
+
+// Chronologische Adress-/Hof-Stationen einer Person (RESI + PROP)
+function _hofPersonStations(pid) {
+  const p = AppState.db.individuals[pid];
+  if (!p) return [];
+  const st = [];
+  (p.events || []).forEach(ev => {
+    if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.addr.trim()) {
+      st.push({
+        addr: ev.addr.trim(), place: ev.place || '', type: ev.type,
+        year: (ev.date || '').match(/\d{4}/)?.[0] || '',
+        key: (typeof evDateKey === 'function' ? evDateKey(ev.date || '') : (ev.date || '')),
+      });
+    }
+  });
+  st.sort((a, b) => (a.key || '').localeCompare(b.key || ''));
+  return st;
+}
+
+// Zu-/Wegzug-Zeile für eine Person an einem bestimmten Hof (addr)
+function _hofMoveLine(pid, addr) {
+  const st = _hofPersonStations(pid);
+  const at = [];
+  st.forEach((s, i) => { if (s.addr === addr) at.push(i); });
+  if (!at.length) return '';
+  const first = at[0], last = at[at.length - 1];
+  let prev = null, next = null;
+  for (let i = first - 1; i >= 0; i--) { if (st[i].addr !== addr) { prev = st[i]; break; } }
+  for (let i = last + 1; i < st.length; i++) { if (st[i].addr !== addr) { next = st[i]; break; } }
+  const placeOf = s => compactPlace(s.place) || s.addr.split('\n')[0];
+  const parts = [];
+  if (prev) parts.push(`zugezogen aus ${esc(placeOf(prev))}${prev.year ? ` (${prev.year})` : ''}`);
+  if (next) parts.push(`weiter nach ${esc(placeOf(next))}${next.year ? ` (${next.year})` : ''}`);
+  return parts.join(' · ');
+}
+
+// Kompakte Familienzeile (Partner + Kinder)
+function _hofFamilyBrief(p) {
+  const db = AppState.db;
+  const out = [];
+  (p.fams || []).map(f => db.families[f]).filter(Boolean).forEach(fam => {
+    const otherId = (fam.husb && db.individuals[fam.husb] === p) ? fam.wife : fam.husb;
+    const sp = otherId ? db.individuals[otherId] : null;
+    const marr = [fam.marr?.date, compactPlace(fam.marr?.place)].filter(Boolean).join(', ');
+    let s = sp ? `&#x26AD; ${esc(_wcName(sp))}${_wcYears(sp) ? ' ' + esc(_wcYears(sp)) : ''}` : '&#x26AD; unbekannt';
+    if (marr) s += ` (${esc(marr)})`;
+    const kids = (fam.children || []).map(c => db.individuals[c]).filter(Boolean);
+    if (kids.length) {
+      s += ` — Kinder: ` + kids.map(c => {
+        const y = (c.birth?.date || c.chr?.date || '').match(/\d{4}/)?.[0];
+        return esc(_wcName(c)) + (y ? ` *${y}` : '');
+      }).join(', ');
+    }
+    out.push(s);
+  });
+  return out.length ? `<div class="hc-fam">${out.join('<br>')}</div>` : '';
+}
+
+// Einträge nach pid deduplizieren (Datums-Spanne zusammenfassen, Reihenfolge erhalten)
+function _hofDedupByPid(entries) {
+  const byPid = new Map();
+  (entries || []).forEach(e => {
+    if (!byPid.has(e.pid)) byPid.set(e.pid, { pid: e.pid, dates: [], desc: e.desc || '' });
+    const r = byPid.get(e.pid);
+    if (e.date) r.dates.push(e.date);
+    if (!r.desc && e.desc) r.desc = e.desc;
+  });
+  return [...byPid.values()];
+}
+
+function _hofPersonBlock(row, addr, roleLabel) {
+  const p = AppState.db.individuals[row.pid];
+  if (!p) return '';
+  const span = row.dates.length ? row.dates.join(', ') : '';
+  const desc = row.desc ? ` — ${esc(row.desc)}` : '';
+  const move = _hofMoveLine(row.pid, addr);
+  return `<div class="hc-person">
+    <div class="hc-pname"><span class="hc-role">${roleLabel}</span> <strong>${esc(_wcName(p))}</strong>${_wcYears(p) ? ` <span class="hc-yrs">${esc(_wcYears(p))}</span>` : ''}${span ? ` <span class="hc-span">${esc(span)}</span>` : ''}${desc}</div>
+    ${_hofFamilyBrief(p)}
+    ${move ? `<div class="hc-move">&#8618; ${move}</div>` : ''}
+  </div>`;
+}
+
+function _buildHofchronikHtml() {
+  const db = AppState.db;
+  const idx = (typeof buildHofIndex === 'function') ? buildHofIndex() : new Map();
+  if (!idx.size) throw new Error('Keine Höfe (RESI-/PROP-Adressen) gefunden');
+
+  const dateStr = new Date().toLocaleDateString('de-DE', { year: 'numeric', month: 'long', day: 'numeric' });
+  const fileLabel = (db._sourceFile || '').replace(/\.[^.]+$/, '');
+  const _safeId = s => s.replace(/[^a-zA-Z0-9]/g, '_');
+  const firstPart = (typeof _placeFirstPart === 'function') ? _placeFirstPart : (s => s || '');
+  const sortFn = (typeof _hofSortFn === 'function') ? _hofSortFn : (() => 0);
+
+  // Nach Ort gruppieren
+  const byPlace = new Map();
+  for (const hof of idx.values()) {
+    const key = firstPart(hof.place) || 'Ohne Ortsangabe';
+    if (!byPlace.has(key)) byPlace.set(key, []);
+    byPlace.get(key).push(hof);
+  }
+  const places = [...byPlace.keys()].sort((a, b) =>
+    a === 'Ohne Ortsangabe' ? 1 : b === 'Ohne Ortsangabe' ? -1 : a.localeCompare(b, 'de'));
+
+  let nHoefe = 0;
+  byPlace.forEach(v => nHoefe += v.length);
+
+  // TOC
+  let toc = '<ul class="hc-toc">';
+  for (const pl of places) {
+    toc += `<li><a href="#hc-ort-${_safeId(pl)}">${esc(pl)}</a> <em>${byPlace.get(pl).length}</em></li>`;
+  }
+  toc += '</ul>';
+
+  // Body
+  let body = '';
+  for (const pl of places) {
+    body += `<section class="hc-place" id="hc-ort-${_safeId(pl)}"><h2>${esc(pl)}</h2>`;
+    const hoefe = byPlace.get(pl).slice().sort(sortFn);
+    for (const hof of hoefe) {
+      const meta = db.hofObjects?.[hof.addr] || null;
+      const addrLines = hof.addr.split('\n').map(s => s.trim()).filter(Boolean);
+      const title = addrLines[0] || '(ohne Adresse)';
+      const sub = addrLines.slice(1).join(' · ');
+      body += `<div class="hc-hof">`;
+      body += `<h3>${esc(title)}</h3>`;
+      if (sub) body += `<div class="hc-hof-sub">${esc(sub)}</div>`;
+      if (meta?.lat && meta?.long) body += `<div class="hc-hof-geo">📍 ${(+meta.lat).toFixed(4)}, ${(+meta.long).toFixed(4)}</div>`;
+      if (meta?.note) body += `<div class="hc-hof-note">${esc(meta.note).replace(/\n/g, '<br>')}</div>`;
+
+      const owners = _hofDedupByPid(hof.propEntries);
+      const resids = _hofDedupByPid(hof.entries);
+      if (owners.length) {
+        body += `<div class="hc-sub">Eigentümer</div>`;
+        owners.forEach(r => { body += _hofPersonBlock(r, hof.addr, 'Eigentümer'); });
+      }
+      if (resids.length) {
+        body += `<div class="hc-sub">Bewohner</div>`;
+        resids.forEach(r => { body += _hofPersonBlock(r, hof.addr, 'Bewohner'); });
+      }
+      if (!owners.length && !resids.length) body += `<div class="hc-empty">Keine Personen verknüpft</div>`;
+      body += `</div>`;
+    }
+    body += `</section>`;
+  }
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hofchronik${fileLabel ? ' — ' + esc(fileLabel) : ''}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Times New Roman',serif;font-size:11pt;color:#1a1208;background:#fff;max-width:800px;margin:0 auto;padding:24px 28px}
+  h1{font-size:1.8rem;margin-bottom:4px}
+  .meta{font-size:0.82rem;color:#8a7050;margin-bottom:18px}
+  .hc-toc{list-style:none;columns:2;gap:14px;margin-bottom:26px;font-size:0.9rem}
+  .hc-toc li{padding:2px 0}.hc-toc a{color:#5a3e0e;text-decoration:none}
+  .hc-toc em{color:#8a6420;font-style:normal;font-size:0.82rem}
+  .hc-place{margin-bottom:24px}
+  .hc-place>h2{font-size:1.3rem;color:#5a3e0e;border-bottom:2px solid #c0a878;padding-bottom:3px;margin-bottom:10px}
+  .hc-hof{margin:0 0 16px;padding:10px 14px;border:1px solid #e0d4b8;border-radius:5px;background:#fdfaf3;page-break-inside:avoid}
+  .hc-hof h3{font-size:1.05rem;color:#6a4a20;margin-bottom:1px}
+  .hc-hof-sub{font-size:0.85rem;color:#8a7050;margin-bottom:4px}
+  .hc-hof-geo{font-size:0.8rem;color:#7a6248;margin-bottom:4px}
+  .hc-hof-note{font-size:0.88rem;color:#3a2810;white-space:pre-wrap;border-left:3px solid #c0a878;padding:4px 8px;margin:4px 0 8px;background:#fff}
+  .hc-sub{font-size:0.78rem;font-weight:700;color:#5a3e0e;text-transform:uppercase;letter-spacing:0.04em;margin:10px 0 4px;border-bottom:1px solid #e8dfc8;padding-bottom:2px}
+  .hc-person{margin:5px 0 8px;padding-left:6px}
+  .hc-pname{font-size:10pt}
+  .hc-role{display:inline-block;font-size:0.7rem;font-weight:700;color:#7a5010;background:#f0e6cf;border-radius:3px;padding:0 5px;vertical-align:1px;margin-right:4px}
+  .hc-yrs{color:#6a4a20;font-size:0.9rem}
+  .hc-span{color:#8a7050;font-size:0.82rem}
+  .hc-fam{font-size:0.9rem;color:#3a2810;margin:1px 0 0 16px}
+  .hc-move{font-size:0.85rem;color:#7a5a28;margin:1px 0 0 16px;font-style:italic}
+  .hc-empty{font-size:0.85rem;color:#aaa;font-style:italic}
+  @media print{ @page{size:A4 portrait;margin:2cm} body{max-width:100%;padding:0} .hc-hof{page-break-inside:avoid} }
+</style>
+</head>
+<body>
+<h1>Hofchronik</h1>
+<p class="meta">${fileLabel ? esc(fileLabel) + ' · ' : ''}${places.length} Orte · ${nHoefe} Höfe · erstellt am ${dateStr}</p>
+<div class="hc-toc-wrap"><h2 style="font-size:1.05rem;color:#5a3e0e;margin-bottom:6px">Orte</h2>${toc}</div>
+${body}
+</body>
+</html>`;
+}
+
+function downloadHofchronik() {
+  const db = AppState.db;
+  if (!db || !Object.keys(db.individuals || {}).length) { showToast('⚠ Keine Daten geladen', 'warn'); return; }
+  try {
+    const html = _buildHofchronikHtml();
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const srcName = (db._sourceFile || 'Stammbaum').replace(/\.[^.]+$/, '').replace(/[^\w\-äöüÄÖÜß ]/g, '').trim().replace(/ /g, '_');
+    a.href = url; a.download = srcName + '_Hofchronik.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    showToast(`✓ ${a.download} heruntergeladen`);
+  } catch (err) {
+    console.error('downloadHofchronik:', err);
+    showToast('⚠ Hofchronik: ' + err.message, 'error');
+  }
+}
