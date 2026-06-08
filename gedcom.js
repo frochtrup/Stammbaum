@@ -115,6 +115,7 @@ const EVENT_LABELS = {
   FCOM:'Erstkommunion',  ORDN:'Ordination',     RETI:'Pensionierung',
   PROP:'Eigentum',       WILL:'Testament',      PROB:'Testamentseröffnung',
   DSCR:'Beschreibung',   IDNO:'ID-Nummer',      SSN:'Sozialversicherungs-Nr.',
+  BAPM:'Taufe (BAPM)',   BARM:'Bar-Mizwa',      BASM:'Bat-Mizwa',      CREM:'Einäscherung',
   // GEDCOM FAM-Ereignisse (können in events-Array landen)
   ENGA:'Verlobung',      DIV:'Scheidung',       DIVF:'Scheidungsantrag',
   MARR:'Heirat',         BIRT:'Geburt',         DEAT:'Tod',

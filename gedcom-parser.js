@@ -42,7 +42,7 @@ function _parseINDILv1(cur, x, tag, val) {
   else if (tag === 'BURI') { cur.buri.value  = val; cur.buri.seen  = true; }
   else if (['OCCU','RESI','EDUC','EMIG','IMMI','NATU','EVEN','GRAD','ADOP','FACT','MILI','RELI',
             'CENS','CONF','FCOM','ORDN','RETI','PROP','WILL','PROB',
-            'DSCR','IDNO','SSN'].includes(tag)) {
+            'DSCR','IDNO','SSN','BAPM','BARM','BASM','CREM'].includes(tag)) {
     cur.events.push({ type:tag, value:val, date:null, place:null, lati:null, long:null, eventType:'', note:'', noteRefs:[], addr:'', phon:[], email:[], citations:[], media:[], _extra:[], datePhrase:'' });
     x.evIdx = cur.events.length - 1;
   }
