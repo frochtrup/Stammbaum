@@ -2017,10 +2017,17 @@ function _hofMoveLine(pid, addr) {
   let prev = null, next = null;
   for (let i = first - 1; i >= 0; i--) { if (st[i].addr !== addr) { prev = st[i]; break; } }
   for (let i = last + 1; i < st.length; i++) { if (st[i].addr !== addr) { next = st[i]; break; } }
-  const placeOf = s => compactPlace(s.place) || s.addr.split('\n')[0];
+  // Umzüge sind oft innerhalb desselben Ortes — daher die konkrete Adresse
+  // (Hof/Straße) zeigen, Ort nur ergänzend in Klammern, wenn er nicht schon
+  // in der Adresszeile steckt.
+  const stationLabel = s => {
+    const a = (s.addr.split('\n')[0] || '').trim();
+    const pl = compactPlace(s.place);
+    return (pl && a && !a.toLowerCase().includes(pl.toLowerCase())) ? `${a} (${pl})` : (a || pl || '?');
+  };
   const parts = [];
-  if (prev) parts.push(`zugezogen aus ${esc(placeOf(prev))}${prev.year ? ` (${prev.year})` : ''}`);
-  if (next) parts.push(`weiter nach ${esc(placeOf(next))}${next.year ? ` (${next.year})` : ''}`);
+  if (prev) parts.push(`zugezogen von ${esc(stationLabel(prev))}${prev.year ? ` (${prev.year})` : ''}`);
+  if (next) parts.push(`weiter nach ${esc(stationLabel(next))}${next.year ? ` (${next.year})` : ''}`);
   return parts.join(' · ');
 }
 
