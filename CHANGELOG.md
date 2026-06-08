@@ -26,9 +26,17 @@ Größter fachlicher Abstand zu MacFamilyTree (Hebel #3 aus Review 2026-06-07) g
 - **B3 Großposter-SVG (v915, `ui-chart-export.js`):** `_svgToVectorFile`/`exportChartSvgVector`. Aktuelles Diagramm (Fächer/Nachkommen/Sanduhr) als `.svg`, `var(--*)` aufgelöst, width/height seitenverhältnistreu auf A1-Fit in mm, viewBox bleibt → beliebig auf A0 skalierbar. Topbar-Button ⬡ neben PNG-Export (CSS-Sichtbarkeit synchron).
 - **B4 Verwandtschaftsnachweis (v915, `ui-print.js`):** `_buildRelCertHtml`/`downloadRelCertificate` via `calcRelationship` — Verdikt + gemeinsamer Vorfahre + nummerierter Pfad (⬡ am Common Node) als A4-Zertifikat. Button im `modalRelPath`, ids via `UIState._relCertA/B`.
 
+#### Tier C — Großformate & Narrative (`ui-print.js`, v916)
+
+- **C1 Stammtafel Wall Chart:** `_buildWallChartHtml`/`downloadWallChart`. Vorfahren (Pedigree/Kekulé, rekursive Mittelung) + Nachkommen (rekursiv, Blatt-basiert) als kombinierte Sanduhr-SVG, direkt aus der DB berechnet (unabhängig vom Live-Baum), Zyklus-Guard, auf descRootX zentriert, A4-quer-Druck. Root = `currentPersonId`.
+- **C2 Ortssippenbuch + Narrative:** `_buildOrtssippenbuchHtml`/`downloadOrtssippenbuch`. Familien nach Ort gruppiert (Heirats-, sonst Geburtsort), je Familie ein erzählender Kurztext (Paar + Heirat + Kinder), TOC.
+- **C3 Periodisierter Zeitstrahl:** `_buildZeitstrahlHtml`/`downloadZeitstrahl`. Ereignisse von Person + Familie (Heirat, Partner, Kinder) auf horizontaler Zeitachse-SVG, überlagert mit historischen Epochen (`_STORY_EPOCHS`), Dekaden-Ticks, A4-quer.
+
+Damit ist OUTPUT-RICHNESS vollständig (Tier A+B+C, 11 Ausgabe-Formate).
+
 #### Doku
 
-HANDBUCH.html Kap. 20 „Druckausgaben" um alle neuen Reports erweitert + Kap. 8 um Diagramm-Export (PNG/SVG-Großposter); beide Versionsfelder → v915; TOC ergänzt. ROADMAP Bewertung (Funktionsstand 8.8→9.0, ∅ 8.5→8.6), Vergleichstabelle (Reports/Bücher/Poster ⚠→✅), Priorisierung (#3 ✅), Handbuch-Stand v915 (Ausgaben aktuell, Backend-Features v859–v909 offen).
+HANDBUCH.html Kap. 20 „Druckausgaben" um alle 11 Reports erweitert (inkl. Stammtafel, Ortssippenbuch, Zeitstrahl) + Kap. 8 um Diagramm-Export (PNG/SVG-Großposter); zusätzlich user-relevante v859–v909-Features nachgezogen (Orts-Notiz, Zugehörigkeit-nach-Jahr, Zeitraumverteilung, Ortsbuch, Skalierung-FAQ, Barrierefreiheit-FAQ); beide Versionsfelder → v916; TOC ergänzt. ROADMAP Bewertung (Funktionsstand 8.8→9.1, Doku 8.5→8.7, ∅ 8.5→8.7), Vergleichstabelle (Reports/Bücher/Poster ⚠→✅ sehr gut), Priorisierung (#3 Tier A+B+C ✅), Handbuch-Stand v916 (aktuell).
 
 ---
 
