@@ -12,7 +12,7 @@ function _famRowHtml(f, isCurrent, pos, total) {
   const title = [husb?.name, wife?.name].filter(Boolean).join(' & ') || f.id;
   let meta = '';
   if (f.marr.date) meta += '⚭ ' + f.marr.date;
-  if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + compactPlace(f.marr.place);
+  if (f.marr.place) meta += (meta ? ', ' : '⚭ ') + shortPlace(f.marr.place, f.marr.placeId);
   if (f.children.length) meta += (meta ? '  ' : '') + f.children.length + ' Kind' + (f.children.length > 1 ? 'er' : '');
   const fMediaCount = (f.media || []).filter(m => m.file || m.title).length
                     + (f.marr?.media || []).filter(m => m.file || m.titl).length

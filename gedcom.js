@@ -603,6 +603,16 @@ function compactPlace(place) {
   return place.split(',').map(s => s.trim()).filter(Boolean).join(', ');
 }
 
+// Kurzname für Listen: bei gesetzter placeId → po.title, sonst erstes nicht-leeres Segment.
+function shortPlace(placeStr, placeId) {
+  if (placeId && typeof getPlaceRegistry === 'function') {
+    const reg = getPlaceRegistry();
+    if (reg && reg.byId[placeId]) return reg.byId[placeId].title || '';
+  }
+  if (!placeStr) return '';
+  return placeStr.split(',').map(s => s.trim()).find(s => s) || '';
+}
+
 // ─── PLACE-HIST (ADR-024): Orts-Entität — Registry + Auflösung über Zeit ─────
 // KANONISCHES Identity-Matching für Ortsnamen. NFC + casefold + Whitespace.
 // Anwenden überall, wo zwei Ortsnamen auf „gleiche Identität" geprüft werden

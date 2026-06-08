@@ -102,7 +102,7 @@ function _personRowHtml(p, isCurrent, pos, total) {
   const ic = p.sex === 'M' ? '♂' : p.sex === 'F' ? '♀' : '◇';
   let meta = '';
   if (p.birth.date) meta += '* ' + p.birth.date;
-  if (p.birth.place) meta += (meta ? ', ' : '') + compactPlace(p.birth.place);
+  if (p.birth.place) meta += (meta ? ', ' : '') + shortPlace(p.birth.place, p.birth.placeId);
   if (p.death.date) meta += (meta ? '  † ' : '† ') + p.death.date;
   const pMediaCount = (p.media || []).filter(m => m.file || m.title).length
                     + (p._passthrough || []).filter(l => /^1 OBJE @/.test(l)).length;
