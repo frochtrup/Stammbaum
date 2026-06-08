@@ -962,6 +962,19 @@ function getPlaceRegistry() {
   return reg;
 }
 
+// Kanonischer Ortsname für Aggregation (Statistik): bildet historische
+// Namensvarianten (placeObject-pnames) auf den Haupttitel des Orts ab, damit
+// derselbe Ort nicht mehrfach gezählt wird. Auflösung über ev.placeId, sonst
+// findByName(place) (matcht Titel + alle pnames). Fallback: compactPlace(place).
+function canonicalPlaceLabel(place, placeId) {
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  let pid = placeId || (reg && place ? reg.findByName(place) : null);
+  if (pid && reg && reg.byId[pid] && reg.byId[pid].title) {
+    return compactPlace(reg.byId[pid].title);
+  }
+  return compactPlace(place);
+}
+
 // ─── PLACE-HIST (ADR-024, P2): zentraler Mutations-Helper ───────────────────
 // Wendet fn auf das placeObject mit der gegebenen id an, invalidiert beide
 // UIState-Caches und persistiert. Ersetzt das 4-Schritt-Ritual

@@ -47,14 +47,15 @@ function renderStatsTab() {
   persons.forEach(p => { const g = (p.given || '').trim().split(/\s+/)[0].replace(/[,;.]+$/, ''); if (g) givenMap[g] = (givenMap[g] || 0) + 1; });
   const topGiven = _statsTop(givenMap, 10);
 
-  // ── Top Geburtsorte ──
+  // ── Top Geburts-/Sterbeorte — historische Namensvarianten zusammenfassen ──
+  const _cpl = (typeof canonicalPlaceLabel === 'function')
+    ? canonicalPlaceLabel : (pl => compactPlace(pl));
   const bplMap = {};
-  persons.forEach(p => { const pl = compactPlace(p.birth?.place); if (pl) bplMap[pl] = (bplMap[pl] || 0) + 1; });
+  persons.forEach(p => { const pl = _cpl(p.birth?.place, p.birth?.placeId); if (pl) bplMap[pl] = (bplMap[pl] || 0) + 1; });
   const topBpl = _statsTop(bplMap, 8);
 
-  // ── Top Sterbeorte (STATS-2) ──
   const dplMap = {};
-  persons.forEach(p => { const pl = compactPlace(p.death?.place); if (pl) dplMap[pl] = (dplMap[pl] || 0) + 1; });
+  persons.forEach(p => { const pl = _cpl(p.death?.place, p.death?.placeId); if (pl) dplMap[pl] = (dplMap[pl] || 0) + 1; });
   const topDpl = _statsTop(dplMap, 8);
 
   // ── Zeitliche Verteilung (50-Jahres-Bins, Geburten) ──

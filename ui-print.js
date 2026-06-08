@@ -1127,12 +1127,16 @@ function _buildStatistikHtml() {
   const hasPhoto = persons.filter(p => (p.media || []).some(m => /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(m.file || ''))).length;
 
   // Häufigkeitsmaps
+  // Orte über canonicalPlaceLabel aggregieren → historische Namensvarianten
+  // desselben Ortes werden als ein Ort gezählt.
+  const _cpl = (typeof canonicalPlaceLabel === 'function')
+    ? canonicalPlaceLabel : (pl => compactPlace(pl));
   const surnMap = {}, givenMap = {}, bplMap = {}, dplMap = {};
   persons.forEach(p => {
     if (p.surname) surnMap[p.surname] = (surnMap[p.surname] || 0) + 1;
     const g = (p.given || '').trim().split(/\s+/)[0].replace(/[,;.]+$/, ''); if (g) givenMap[g] = (givenMap[g] || 0) + 1;
-    const bp = compactPlace(p.birth?.place); if (bp) bplMap[bp] = (bplMap[bp] || 0) + 1;
-    const dp = compactPlace(p.death?.place); if (dp) dplMap[dp] = (dplMap[dp] || 0) + 1;
+    const bp = _cpl(p.birth?.place, p.birth?.placeId); if (bp) bplMap[bp] = (bplMap[bp] || 0) + 1;
+    const dp = _cpl(p.death?.place, p.death?.placeId); if (dp) dplMap[dp] = (dplMap[dp] || 0) + 1;
   });
 
   // Lebensspannen

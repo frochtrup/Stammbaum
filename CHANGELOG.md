@@ -38,6 +38,11 @@ Damit ist OUTPUT-RICHNESS vollständig (Tier A+B+C, 11 Ausgabe-Formate).
 
 - **Hofgeschichten-Buch** (`_buildHofchronikHtml`/`downloadHofchronik`, `ui-print.js`): Ort › Hof › Eigentümer (PROP) + Bewohner (RESI) mit Familie + Zu-/Wegzug. Nutzt `buildHofIndex` (gedcom.js) + `hofObjects` (Notiz/Koordinaten). Zu-/Wegzug aus `_hofPersonStations` (chronologische RESI/PROP-Kette → voriger/nächster Ort). Familie kompakt (`_hofFamilyBrief`: Partner + Kinder). Dedup pro Abschnitt nach pid mit Datums-Spanne. Gruppierung nach Ort (`_placeFirstPart`), Höfe je Ort via `_hofSortFn`. Zugang: Menü „Hofchronik" + 📖-Button im Höfe-Tab (`#place-search-hoefe`). → 12 Ausgabe-Formate gesamt.
 
+#### Nachträge
+
+- **Hofchronik-Umzug zeigt Adresse (v918):** `_hofMoveLine` zeigt die konkrete Hof-/Adresszeile statt nur den Ort (Umzüge sind oft innerorts), Ort nur ergänzend in Klammern.
+- **Statistik: historische Ortsvarianten zusammenfassen (v919):** neuer Helfer `canonicalPlaceLabel(place, placeId)` in `gedcom.js` bildet historische Namensvarianten (placeObject-pnames) auf den Haupttitel ab. Eingesetzt in Geburts-/Sterbeort-Aggregation des Statistik-Reports (`_buildStatistikHtml`, ui-print.js) **und** des Statistik-Dashboards (`renderStatsTab`, ui-views-stats.js) → derselbe Ort wird nicht mehr mehrfach gezählt (z. B. „Sassenbergk" + „Sassenberg" = 1 Ort).
+
 #### Doku
 
 HANDBUCH.html Kap. 20 „Druckausgaben" um alle 11 Reports erweitert (inkl. Stammtafel, Ortssippenbuch, Zeitstrahl) + Kap. 8 um Diagramm-Export (PNG/SVG-Großposter); zusätzlich user-relevante v859–v909-Features nachgezogen (Orts-Notiz, Zugehörigkeit-nach-Jahr, Zeitraumverteilung, Ortsbuch, Skalierung-FAQ, Barrierefreiheit-FAQ); beide Versionsfelder → v916; TOC ergänzt. ROADMAP Bewertung (Funktionsstand 8.8→9.1, Doku 8.5→8.7, ∅ 8.5→8.7), Vergleichstabelle (Reports/Bücher/Poster ⚠→✅ sehr gut), Priorisierung (#3 Tier A+B+C ✅), Handbuch-Stand v916 (aktuell).
