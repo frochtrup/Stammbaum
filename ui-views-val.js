@@ -118,10 +118,12 @@ function _renderValidationPanel() {
 
 async function openValConfig() {
   const cfg = await _loadValConfig();
-  // Regeln
-  for (const rule of VAL_RULES) {
-    const cb = document.getElementById('valcfg-rule-' + rule.key);
-    if (cb) cb.checked = !cfg.disabled.has(rule.key);
+  // Regeln dynamisch rendern (aus VAL_RULES — kein manuelles Pflegen in index.html nötig)
+  const grid = document.getElementById('valcfg-rules-grid');
+  if (grid) {
+    grid.innerHTML = VAL_RULES.map(rule =>
+      `<label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-${rule.key}"${!cfg.disabled.has(rule.key) ? ' checked' : ''}> ${rule.label}</label>`
+    ).join('');
   }
   // Schwellenwerte
   for (const [key, val] of Object.entries(cfg.thresholds)) {

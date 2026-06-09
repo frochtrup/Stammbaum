@@ -583,37 +583,8 @@
           <button class="btn-link fs-085" data-action="valcfgNone">Keine</button>
         </span>
       </div>
-      <div class="valcfg-rules-grid mb-16">
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_SURNAME"> Nachname fehlt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_SEX"> Geschlecht unbekannt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_GIVEN"> Vorname fehlt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_BIRTH"> Geburtsdatum/-taufe fehlt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_BIRTHPLACE"> Geburtsort fehlt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_DEATHPLACE"> Sterbeort fehlt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_MARRDATE"> Heiratsdatum fehlt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-NO_SOURCES_AT_ALL"> Keine Quellenangabe (Person)</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-NO_FAM_SOURCES"> Keine Quellenangabe (Familie)</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-BIRTH_AFTER_STAERA"> Geburt nach Standesamt-Jahr, keine Q.</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-DEATH_BEFORE_BIRTH"> Sterbejahr vor Geburtsjahr</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-EVENT_AFTER_DEATH"> Ereignis nach Sterbedatum</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-AGE_OVER_MAX"> Unrealistisches Alter</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MARR_BEFORE_BIRTH"> Heirat vor eigener Geburt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MARR_AFTER_DEATH"> Heirat nach Tod eines Gatten</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MARR_TOO_YOUNG"> Heiratsalter zu jung</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MOTHER_TOO_YOUNG"> Mutter zu jung bei Geburt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MOTHER_TOO_OLD"> Mutter zu alt bei Geburt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-FATHER_TOO_YOUNG"> Vater zu jung bei Geburt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-FATHER_TOO_OLD"> Vater zu alt bei Geburt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-CHILD_BEFORE_PARENT"> Kind nicht jünger als Elternteil</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-CHILD_AFTER_FATHER_DEATH"> Kind &gt;1 J. nach Tod des Vaters</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MANY_CHILDREN"> Ungewöhnlich viele Kinder</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MULTI_FAMC"> Mehr als eine Herkunftsfamilie</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-PLACE_INCONSISTENCY"> Ortsname-Varianten erkannt</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_QUAY"> Quellen ohne QUAY-Bewertung</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-MISSING_EVAL"> Quellen ohne Evidenzbewertung</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-OPEN_HYPO"> Offene Hypothesen</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-ISOLATED_PERSON"> Person ohne Familienbezug</label>
-        <label class="valcfg-rule-row"><input type="checkbox" id="valcfg-rule-DISCONNECTED_FROM_ROOT"> Nicht mit Kernbaum verbunden</label>
+      <div class="valcfg-rules-grid mb-16" id="valcfg-rules-grid">
+        <!-- dynamisch befüllt von openValConfig() aus VAL_RULES -->
       </div>
       <div class="fs-075 fw-600 c-muted mb-8 text-upper">Schwellenwerte</div>
       <div class="d-flex flex-col gap-8 mb-16">
