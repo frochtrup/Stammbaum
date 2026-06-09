@@ -640,13 +640,10 @@ function _pdetLifeData(p, id) {
         const parts = [ev.value, ev.addr, ev.date, _evFullPlace(ev)].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';
-        // Hof-Notiz: nur zeigen wenn dieses konkrete Event via noteRefs auf die Hof-Notiz verweist
+        // Hof-Notiz: bei jedem RESI-Event mit passendem addr anzeigen (einmal pro Adresse)
         const _addrKey = ev.addr?.trim() || null;
         const _hofNote = _addrKey ? (AppState.db.hofObjects?.[_addrKey]?.note || null) : null;
-        const _evRefersToHofNote = _hofNote && (ev.noteRefs || []).some(
-          r => AppState.db.notes?.[r]?.text === _hofNote
-        );
-        const _showHofNote = _evRefersToHofNote && !_shownAddrNotes.has(_addrKey);
+        const _showHofNote = !!_hofNote && !_shownAddrNotes.has(_addrKey);
         if (_showHofNote) _shownAddrNotes.add(_addrKey);
         // Anzuzeigende Notiz aus den Einzelteilen rekonstruieren — ev.note ist
         // nach _resolveNoteRefs eine Konkatenation aller Refs inkl. aller Hof-Notizen,
