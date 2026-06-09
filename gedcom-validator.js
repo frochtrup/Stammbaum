@@ -144,8 +144,8 @@ export function runValidation(db, config) {
     while (_bfsQueue.length) {
       const pid = _bfsQueue.shift();
       const p   = db.individuals[pid]; if (!p) continue;
-      // über alle Familien traversieren (famc + fams)
-      const famIds = [...(p.famc || []), ...(p.fams || [])];
+      // über alle Familien traversieren (famc = [{famId,...}], fams = [id,...])
+      const famIds = [...(p.famc || []).map(e => e.famId || e), ...(p.fams || [])];
       for (const fid of famIds) {
         const f = db.families?.[fid]; if (!f) continue;
         const members = [f.husb, f.wife, ...(f.children || [])].filter(Boolean);
