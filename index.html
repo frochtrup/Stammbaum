@@ -1361,6 +1361,10 @@
             </div>
           </div>
           <p class="form-error" id="ef-date-err"></p>
+          <div id="ef-date-hints" hidden class="d-flex gap-4 mt-6 flex-wrap">
+            <button type="button" class="quick-chip" id="ef-hint-birth" data-action="efFillDateHint" data-hint="birth" title="Geburtsdatum übernehmen">🎂 Geburt</button>
+            <button type="button" class="quick-chip" id="ef-hint-marr"  data-action="efFillDateHint" data-hint="marr"  title="Heiratsdatum übernehmen">⚭ Heirat</button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Ort <button type="button" id="ef-place-toggle" data-action="togglePlaceMode" data-placeid="ef-place" class="place-toggle-btn">⊞</button> <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="ef-place" title="Ort aus Liste wählen">📍</button></label>

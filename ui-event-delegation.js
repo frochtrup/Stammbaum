@@ -282,6 +282,7 @@ const _CLICK_MAP = {
   efCamCapture:            ()  => document.getElementById('ef-cam-input').click(),
   saveEvent:               ()  => saveEvent(),
   saveAndCopyEvent:        ()  => saveAndCopyEvent(),
+  efFillDateHint:          el  => efFillDateHint(el),
   applyClipboardEvent:     el  => applyClipboardEventToPerson(el.dataset.pid),
   deleteEvent:             ()  => deleteEvent(),
   savePlace:               ()  => savePlace(),

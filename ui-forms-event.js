@@ -105,6 +105,45 @@ function _registerEventType(tag, val) {
   }
 }
 
+// ── RESI-Datums-Schnellhilfe ──────────────────────────────────────────────────
+
+function _updateResiDateHints(personId) {
+  const p = personId && AppState.db?.individuals?.[personId];
+  const birthBtn = document.getElementById('ef-hint-birth');
+  const marrBtn  = document.getElementById('ef-hint-marr');
+  if (!birthBtn || !marrBtn) return;
+
+  // Geburtsdatum: birth oder chr als Fallback
+  const birthDate = p?.birth?.date || p?.chr?.date || '';
+  if (birthDate) {
+    birthBtn.dataset.date = birthDate;
+    birthBtn.textContent  = '🎂 ' + birthDate;
+    birthBtn.hidden = false;
+  } else {
+    birthBtn.hidden = true;
+  }
+
+  // Heiratsdatum: erstes fams mit Heiratsdatum
+  let marrDate = '';
+  for (const famId of (p?.fams || [])) {
+    const f = AppState.db?.families?.[famId];
+    if (f?.marr?.date) { marrDate = f.marr.date; break; }
+  }
+  if (marrDate) {
+    marrBtn.dataset.date = marrDate;
+    marrBtn.textContent  = '⚭ ' + marrDate;
+    marrBtn.hidden = false;
+  } else {
+    marrBtn.hidden = true;
+  }
+}
+
+function efFillDateHint(el) {
+  const date = el.dataset.date;
+  if (!date) return;
+  fillDateFields('ef-date-qual', 'ef-date', 'ef-date2', date);
+}
+
 function onEventTypeChange() {
   const t = document.getElementById('ef-type').value;
   document.getElementById('ef-val-group').style.display   = (t in _SPECIAL_OBJ || t === 'RESI') ? 'none' : '';
@@ -121,6 +160,9 @@ function onEventTypeChange() {
   const addrLabel = document.querySelector('#ef-addr-group .form-label');
   if (addrLabel) addrLabel.textContent = (t === 'PROP') ? 'Adresse (optional)' : 'Adresse';
   document.getElementById('ef-godparents-group').hidden = t !== 'CHR';
+  // Datums-Schnellhilfe nur bei RESI anzeigen
+  const hintsEl = document.getElementById('ef-date-hints');
+  if (hintsEl) hintsEl.hidden = (t !== 'RESI');
   // Reset dropdown on type change; content rebuilt on focus/input
   const dd = document.getElementById('ef-etype-dd');
   if (dd) { dd.innerHTML = ''; dd.style.display = 'none'; }
@@ -235,6 +277,8 @@ function showEventForm(personId, evIdx, defaultType) {
     document.getElementById('saveEventBtn').textContent = ev ? 'Speichern' : 'Hinzufügen';
   }
   onEventTypeChange();  // already calls _updateEventTypeDatalist for current tag
+  // Datums-Schnellhilfe: Buttons mit Geburts-/Heiratsdatum der Person befüllen
+  _updateResiDateHints(personId);
   document.getElementById('deleteEventBtn').hidden = !isExisting;
   const dateErrEl = document.getElementById('ef-date-err');
   if (dateErrEl) { dateErrEl.textContent = ''; dateErrEl.style.display = 'none'; }
