@@ -59,6 +59,8 @@ export const VAL_RULES = [
   { key: 'OPEN_HYPO',                label: 'Offene Hypothesen',                     severity: 'info',  threshold: null },
   { key: 'MANY_CHILDREN',            label: 'Ungewöhnlich viele Kinder',             severity: 'warn',  threshold: 'maxChildren' },
   { key: 'MULTI_FAMC',              label: 'Mehr als eine Herkunftsfamilie',         severity: 'warn',  threshold: null },
+  // ── P5: Verknüpfung ──
+  { key: 'ISOLATED_PERSON',         label: 'Keine Familienverknüpfung',              severity: 'warn',  threshold: null },
 ];
 
 // Zählt offene Hypothesen (RES-HYPO/ADR-023: alles außer confirmed/rejected = offen)
@@ -252,6 +254,11 @@ export function runValidation(db, config) {
     if ((p.famc?.length || 0) > 1)
       push(pid, 'MULTI_FAMC', 'warn',
         `${p.famc.length} Herkunftsfamilien eingetragen (erwartet: max. 1)`, 'online');
+
+    // P17 — Keine Familienverknüpfung (weder famc noch fams)
+    if (!(p.famc?.length) && !(p.fams?.length))
+      push(pid, 'ISOLATED_PERSON', 'warn',
+        'Person ist mit keiner Familie verknüpft (weder Eltern- noch eigene Familie)', 'online');
   }
 
   // ─── Familien-Regeln ────────────────────────────────────────────────────────
