@@ -951,16 +951,20 @@ function getPlaceRegistry() {
         if (y != null) {
           // Bei Überlappung am Grenzdatum (z.B. bis=1946 und ab=1946) gewinnt der
           // Eintrag mit dem höchsten dateFrom — er "tritt in Kraft" und hat Vorrang.
-          let bestFrom = -Infinity, bestEnc = null;
+          let bestFrom = -Infinity, bestEnc = null, undatedEnc = null;
           for (const e of encs) {
-            if (_dateMatches(_placeYear(e.dateFrom), _placeYear(e.dateTo), y)) {
-              const ef = _placeYear(e.dateFrom) ?? -Infinity;
-              if (ef > bestFrom) { bestFrom = ef; bestEnc = e; }
+            const ef = _placeYear(e.dateFrom), et = _placeYear(e.dateTo);
+            if (ef == null && et == null) { undatedEnc = e; continue; } // undatiert = Fallback (Migration parentId)
+            if (_dateMatches(ef, et, y)) {
+              const efVal = ef ?? -Infinity;
+              if (efVal > bestFrom) { bestFrom = efVal; bestEnc = e; }
             }
           }
-          next = bestEnc?.placeId ?? null;
-          // Hat Eltern-Einträge, aber keiner passt zum Jahr → Kette truncated
-          if (!next && encs.length > 0 && opts?.meta) opts.meta.truncated = true;
+          // Undatierter Eintrag gilt als "immer gültig", aber nur als Fallback wenn kein datierter passt
+          next = (bestEnc ?? undatedEnc)?.placeId ?? null;
+          // Hat datierte Eltern-Einträge, aber keiner passt → Kette truncated
+          const hasDated = encs.some(e => _placeYear(e.dateFrom) != null || _placeYear(e.dateTo) != null);
+          if (!next && hasDated && opts?.meta) opts.meta.truncated = true;
         }
         // Bei spezifischem Jahr kein Fallback auf encs[0]/parentId — beides wäre ein Guess.
         // parentId == enclosedBy[0].placeId (wird so gesetzt), also würde der Fallback
