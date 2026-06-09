@@ -61,6 +61,7 @@ export const VAL_RULES = [
   { key: 'MULTI_FAMC',              label: 'Mehr als eine Herkunftsfamilie',         severity: 'warn',  threshold: null },
   // ── P5: Verknüpfung ──
   { key: 'ISOLATED_PERSON',         label: 'Keine Familienverknüpfung',              severity: 'warn',  threshold: null },
+  { key: 'DISCONNECTED_FROM_ROOT',  label: 'Nicht mit Kernbaum verbunden',           severity: 'warn',  threshold: null },
 ];
 
 // Zählt offene Hypothesen (RES-HYPO/ADR-023: alles außer confirmed/rejected = offen)
@@ -131,6 +132,28 @@ export function runValidation(db, config) {
   function push(personId, rule, severity, text, category, familyId = null) {
     if (disabled.has(rule)) return;
     results.push({ personId, familyId, rule, severity, text, category });
+  }
+
+  // ─── Kernbaum-Erreichbarkeit (BFS über alle Familien-Links) ────────────────
+  // probandId aus config oder kleinste INDI-ID als Fallback
+  const _rootId = cfg.probandId || Object.keys(db.individuals).sort()[0];
+  const _reachable = new Set();
+  if (_rootId && db.individuals[_rootId]) {
+    const _bfsQueue = [_rootId];
+    _reachable.add(_rootId);
+    while (_bfsQueue.length) {
+      const pid = _bfsQueue.shift();
+      const p   = db.individuals[pid]; if (!p) continue;
+      // über alle Familien traversieren (famc + fams)
+      const famIds = [...(p.famc || []), ...(p.fams || [])];
+      for (const fid of famIds) {
+        const f = db.families?.[fid]; if (!f) continue;
+        const members = [f.husb, f.wife, ...(f.children || [])].filter(Boolean);
+        for (const mid of members) {
+          if (!_reachable.has(mid)) { _reachable.add(mid); _bfsQueue.push(mid); }
+        }
+      }
+    }
   }
 
   // ─── Orts-Varianten-Index (einmalig vor den Schleifen) ──────────────────────
@@ -259,6 +282,11 @@ export function runValidation(db, config) {
     if (!(p.famc?.length) && !(p.fams?.length))
       push(pid, 'ISOLATED_PERSON', 'warn',
         'Person ist mit keiner Familie verknüpft (weder Eltern- noch eigene Familie)', 'online');
+
+    // P18 — Nicht mit Kernbaum verbunden (BFS vom Probanden)
+    if (_reachable.size > 0 && pid !== _rootId && !_reachable.has(pid))
+      push(pid, 'DISCONNECTED_FROM_ROOT', 'warn',
+        'Person ist nicht mit dem Kernbaum (Probanden) verbunden', 'online');
   }
 
   // ─── Familien-Regeln ────────────────────────────────────────────────────────

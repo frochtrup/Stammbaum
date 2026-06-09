@@ -51,6 +51,7 @@ async function _handleRunValidation() {
   const db = AppState.db;
   if (!db?.individuals) { showToast('Keine Daten geladen', 'warn'); return; }
   const cfg = await _loadValConfig();
+  cfg.probandId = AppState._probandId || null;
   const raw = runValidation(db, cfg);
   // Befunde herausfiltern, für die bereits eine Task mit gleichem Text existiert
   _validationResults = raw.filter(r => {
