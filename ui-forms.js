@@ -827,6 +827,9 @@ async function loadPlaceObjectsFromIDB() {
     if (remoteUnwrapped && remoteUnwrapped.wrapper._rev >= (localUnwrapped?.wrapper._rev || 0)) {
       idbPut('stammbaum_placeobjects', JSON.stringify(odRaw)).catch(() => {});
     }
+    // Migration + pname-Dedup nach dem Laden ausführen (setDb läuft VOR diesem Aufruf,
+    // daher muss _migratePlaceObjects hier nochmals laufen um Altdaten aus der JSON zu bereinigen).
+    if (typeof _migratePlaceObjects === 'function') _migratePlaceObjects(AppState.db);
     UIState._placeRegistry = null;
   } catch(e) { console.warn('loadPlaceObjectsFromIDB:', e); }
 }
