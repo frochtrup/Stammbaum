@@ -1085,8 +1085,20 @@ function showPlaceDetail(placeName, pushHistory = true) {
       if (enclosedBy.length) {
         // Sortieren: Einträge ohne Datum zuletzt (= aktuell), sonst nach dateFrom
         const sorted = [...enclosedBy].sort((a, b) => _sortKey(a).localeCompare(_sortKey(b)));
+        const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+        // Überlappungs-Erkennung: für jedes Jahr prüfen ob >1 Eintrag zutrifft
+        const _overlaps = new Set();
+        for (let i = 0; i < enclosedBy.length; i++) {
+          for (let j = i + 1; j < enclosedBy.length; j++) {
+            const a = enclosedBy[i], b = enclosedBy[j];
+            const af = parseY(a.dateFrom) ?? -Infinity, at = parseY(a.dateTo) ?? Infinity;
+            const bf = parseY(b.dateFrom) ?? -Infinity, bt = parseY(b.dateTo) ?? Infinity;
+            if (af <= bt && bf <= at) { _overlaps.add(i); _overlaps.add(j); }
+          }
+        }
         let encHtml = '';
-        for (const enc of sorted) {
+        for (let si = 0; si < sorted.length; si++) {
+          const { e: enc, i: origIdx } = sorted[si];
           const parent = reg.byId[enc.placeId];
           if (!parent) continue;
           // Zeitspanne des Eintrags
@@ -1096,14 +1108,17 @@ function showPlaceDetail(placeName, pushHistory = true) {
           else if (f)  span = `ab ${f}`;
           else if (t)  span = `bis ${t}`;
           else         span = 'aktuell';
-          // Elterntitel: resolveAsOf zum Startjahr → historisch korrekter Name
-          const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
-          const refYear = parseY(f) || parseY(t) || null;
-          const parentName = refYear && reg.resolveAsOf
+          // Elterntitel: resolveAsOf zum Mittelpunkt des Zeitraums (konsistent mit Writer)
+          const fy = parseY(f), ty = parseY(t);
+          const refYear = fy != null && ty != null ? Math.round((fy + ty) / 2)
+                        : fy ?? ty ?? null;
+          const parentName = refYear != null && reg.resolveAsOf
             ? (reg.resolveAsOf(enc.placeId, refYear) || parent.title)
             : parent.title;
+          const overlapWarn = _overlaps.has(origIdx)
+            ? ` <span class="place-overlap-warn" title="Dieser Zeitraum überschneidet sich mit einem anderen Eintrag — der Writer verwendet ›höchstes Startjahr gewinnt‹">⚠</span>` : '';
           encHtml += `<div class="fact-row fact-row--clickable" data-action="showPlaceByTitle" data-title="${esc(parent.title)}">
-            <span class="fact-key place-enc-span">${esc(span)}</span>
+            <span class="fact-key place-enc-span">${esc(span)}${overlapWarn}</span>
             <span class="fact-val">${esc(parentName)}</span>
             <span class="p-arrow">›</span>
           </div>`;
