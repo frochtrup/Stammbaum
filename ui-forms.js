@@ -991,46 +991,104 @@ function updateLoadingProgress(pct) {
 // ─────────────────────────────────────
 //  PLACE AUTOCOMPLETE
 // ─────────────────────────────────────
-function initPlaceAutocomplete(inputId, ddId) {
+
+// Liest eine Jahreszahl aus einem Datumsfeld (Freitext oder separates JJJJ-Feld)
+function _yearFromDateField(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!el) return null;
+  const y = parseInt(el.value);
+  return (!isNaN(y) && y > 0) ? y : null;
+}
+
+// placeIdFieldId: optionales Hidden-Input für placeId
+// getDateYear:    optionale Funktion () → Jahreszahl (für periodengerechte Auflösung)
+function initPlaceAutocomplete(inputId, ddId, placeIdFieldId, getDateYear) {
   initAutocomplete(inputId, ddId, {
-    getItems: q => [...collectPlaces().values()]
-      .map(p => p.name)
-      .filter(n => n.toLowerCase().includes(q))
-      .sort((a, b) => {
-        const aS = a.toLowerCase().startsWith(q), bS = b.toLowerCase().startsWith(q);
+    getItems: q => {
+      const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+      const seen = new Set();
+      const items = [];
+      for (const pl of collectPlaces().values()) {
+        // PlaceObjects: einmalig per placeId, nur po.title anbieten
+        if (pl.placeId && reg) {
+          if (seen.has(pl.placeId)) continue;
+          seen.add(pl.placeId);
+          const title = reg.byId[pl.placeId]?.title || pl.name;
+          if (!title.toLowerCase().includes(q)) continue;
+          items.push({ label: title, placeId: pl.placeId });
+        } else {
+          // Reine String-Orte ohne PlaceObject
+          if (!pl.name.toLowerCase().includes(q)) continue;
+          items.push({ label: pl.name, placeId: null });
+        }
+      }
+      return items.sort((a, b) => {
+        const aS = a.label.toLowerCase().startsWith(q), bS = b.label.toLowerCase().startsWith(q);
         if (aS !== bS) return aS ? -1 : 1;
-        return a.localeCompare(b, 'de');
-      }),
-    formatLabel: name => name,
-    onSelect:    (name, input) => { input.value = name; },
+        return a.label.localeCompare(b.label, 'de');
+      });
+    },
+    formatLabel: item => item.label,
+    onSelect: (item, input) => {
+      const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+      if (item.placeId && reg) {
+        const year = typeof getDateYear === 'function' ? getDateYear() : null;
+        input.value = reg.resolveAsOf(item.placeId, year) || item.label;
+      } else {
+        input.value = item.label;
+      }
+      // placeId ins Hidden-Feld schreiben
+      const pidEl = placeIdFieldId && document.getElementById(placeIdFieldId);
+      if (pidEl) pidEl.value = item.placeId || '';
+    },
   });
 }
 
 // Autocomplete für alle Ortsfelder einmalig initialisieren
-initPlaceAutocomplete('ef-place',        'ef-place-dd');
-initPlaceAutocomplete('ff-mplace',       'ff-mplace-dd');
-initPlaceAutocomplete('fev-place',       'fev-place-dd');
-initPlaceAutocomplete('pf-birth-place',  'pf-birth-place-dd');
-initPlaceAutocomplete('pf-death-place',  'pf-death-place-dd');
-initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd');
-initPlaceAutocomplete('pf-buri-place',   'pf-buri-place-dd');
-initPlaceAutocomplete('pf-wohnort-place','pf-wohnort-place-dd');
-initPlaceAutocomplete('np-name',   'np-name-dd');
+// Ortsfeld-Autocomplete: ui-forms-event.js registriert ef-place + fev-place mit getDateYear
+// Hier: alle übrigen Ortsfelder (Personen-/Familien-Formular)
+initPlaceAutocomplete('ff-mplace',        'ff-mplace-dd',        'ff-mplace-id',
+  () => _yearFromDateField('ff-mdate-y'));
+initPlaceAutocomplete('pf-birth-place',   'pf-birth-place-dd',   null,
+  () => _yearFromDateField('pf-birth-date'));
+initPlaceAutocomplete('pf-death-place',   'pf-death-place-dd',   null,
+  () => _yearFromDateField('pf-death-date'));
+initPlaceAutocomplete('pf-chr-place',     'pf-chr-place-dd',     null,
+  () => _yearFromDateField('pf-chr-date'));
+initPlaceAutocomplete('pf-buri-place',    'pf-buri-place-dd',    null,
+  () => _yearFromDateField('pf-buri-date'));
+initPlaceAutocomplete('pf-wohnort-place', 'pf-wohnort-place-dd', null,
+  () => _yearFromDateField('pf-wohnort-date'));
+initPlaceAutocomplete('np-name',          'np-name-dd');
 initAutocomplete('qa-place', 'qa-place-dd', {
   showAllOnFocus: true,
   useFixed: true,
-  getItems: q => [...collectPlaces().values()]
-    .map(p => p.name)
-    .filter(n => !q || n.toLowerCase().includes(q))
-    .sort((a, b) => {
+  getItems: q => {
+    const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
+    const seen = new Set();
+    const items = [];
+    for (const pl of collectPlaces().values()) {
+      if (pl.placeId && reg) {
+        if (seen.has(pl.placeId)) continue;
+        seen.add(pl.placeId);
+        const title = reg.byId[pl.placeId]?.title || pl.name;
+        if (q && !title.toLowerCase().includes(q)) continue;
+        items.push({ label: title, placeId: pl.placeId });
+      } else {
+        if (q && !pl.name.toLowerCase().includes(q)) continue;
+        items.push({ label: pl.name, placeId: null });
+      }
+    }
+    return items.sort((a, b) => {
       if (q) {
-        const aS = a.toLowerCase().startsWith(q), bS = b.toLowerCase().startsWith(q);
+        const aS = a.label.toLowerCase().startsWith(q), bS = b.label.toLowerCase().startsWith(q);
         if (aS !== bS) return aS ? -1 : 1;
       }
-      return a.localeCompare(b, 'de');
-    }),
-  formatLabel: name => name,
-  onSelect: (name, input) => { input.value = name; },
+      return a.label.localeCompare(b.label, 'de');
+    });
+  },
+  formatLabel: item => item.label,
+  onSelect: (item, input) => { input.value = item.label; },
 });
 
 initAutocomplete('qa-src-input', 'qa-src-dd', {
