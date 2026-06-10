@@ -361,7 +361,13 @@ function saveEvent() {
   pushUndo('Ereignis gespeichert', { personIds: [pid] });
   const _resolvedPlaceId = (fieldId, place) => {
     const id = document.getElementById(fieldId)?.value || null;
-    return (id && AppState.db.placeObjects?.[id]?.title === place) ? id : null;
+    if (!id) return null;
+    const po = AppState.db.placeObjects?.[id];
+    if (!po) return null;
+    // title-Match oder pname-Match (Autocomplete kann historischen pname ins Feld schreiben)
+    if (po.title === place) return id;
+    if ((po.pnames || []).some(pn => pn.value === place)) return id;
+    return null;
   };
 
   if (type in _SPECIAL_OBJ) {
@@ -537,7 +543,7 @@ function saveFamEvent() {
   const date  = buildGedDateFromFields('fev-date-qual', 'fev-date', null);
   const place = getPlaceFromForm('fev-place');
   const _fpid = document.getElementById('fev-place-id')?.value || null;
-  const placeId = (_fpid && AppState.db.placeObjects?.[_fpid]?.title === place) ? _fpid : null;
+  const placeId = (() => { const po = _fpid && AppState.db.placeObjects?.[_fpid]; return po && (po.title === place || (po.pnames||[]).some(pn=>pn.value===place)) ? _fpid : null; })();
   const note  = document.getElementById('fev-note').value.trim();
   const etype = document.getElementById('fev-etype').value.trim();
   _registerEventType(type, etype);

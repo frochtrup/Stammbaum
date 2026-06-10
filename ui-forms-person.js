@@ -357,7 +357,8 @@ function savePerson(openNew = false) {
 
   const _keepPlaceId = (existing, newPlace) => {
     const id = existing?.placeId || null;
-    return (id && AppState.db.placeObjects?.[id]?.title === newPlace) ? id : null;
+    const po = id && AppState.db.placeObjects?.[id];
+    return (po && (po.title === newPlace || (po.pnames||[]).some(pn=>pn.value===newPlace))) ? id : null;
   };
 
   const nameCitations = [...(srcWidgetState['pf']?.citations || [])];

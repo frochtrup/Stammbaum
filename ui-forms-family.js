@@ -112,7 +112,7 @@ function saveFamily() {
   const mdate   = buildGedDateFromFields('ff-mdate-qual', 'ff-mdate', null);
   const mplace  = getPlaceFromForm('ff-mplace');
   const _fmpid  = document.getElementById('ff-mplace-id')?.value || null;
-  const mplaceId = (_fmpid && AppState.db.placeObjects?.[_fmpid]?.title === mplace) ? _fmpid : null;
+  const mplaceId = (() => { const po = _fmpid && AppState.db.placeObjects?.[_fmpid]; return po && (po.title === mplace || (po.pnames||[]).some(pn=>pn.value===mplace)) ? _fmpid : null; })();
   const note = document.getElementById('ff-note').value.trim();
   const existingFam = getFamily(id) || {};
   const children = [...(existingFam.children || [])];
