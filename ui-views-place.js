@@ -1083,42 +1083,75 @@ function showPlaceDetail(placeName, pushHistory = true) {
 
       const enclosedBy = po.enclosedBy || [];
       if (enclosedBy.length) {
-        // Sortieren: Einträge ohne Datum zuletzt (= aktuell), sonst nach dateFrom
-        const sorted = [...enclosedBy].sort((a, b) => _sortKey(a).localeCompare(_sortKey(b)));
         const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
-        // Überlappungs-Erkennung: für jedes Jahr prüfen ob >1 Eintrag zutrifft
-        const _overlaps = new Set();
-        for (let i = 0; i < enclosedBy.length; i++) {
-          for (let j = i + 1; j < enclosedBy.length; j++) {
-            const a = enclosedBy[i], b = enclosedBy[j];
-            const af = parseY(a.dateFrom) ?? -Infinity, at = parseY(a.dateTo) ?? Infinity;
-            const bf = parseY(b.dateFrom) ?? -Infinity, bt = parseY(b.dateTo) ?? Infinity;
-            if (af <= bt && bf <= at) { _overlaps.add(i); _overlaps.add(j); }
+
+        // Aufgelöste Zeitlinie: dieselbe Logik wie enclosureChainAsOf
+        // (höchstes dateFrom gewinnt bei Überschneidung) — WYSIWYG zum Writer.
+        const _resolveTimeline = encs => {
+          // Grenzen aller Einträge sammeln
+          const bounds = new Set();
+          for (const e of encs) {
+            if (e.dateFrom) bounds.add(parseY(e.dateFrom));
+            if (e.dateTo)   { const y = parseY(e.dateTo); if (y != null) bounds.add(y + 1); }
           }
-        }
+          const sortedB = [...bounds].filter(y => y != null).sort((a, b) => a - b);
+
+          // Gewinner-Funktion: identisch zu enclosureChainAsOf-Logik
+          const winner = y => {
+            let bestFrom = -Infinity, bestEnc = null, undated = null;
+            for (const e of encs) {
+              const ef = parseY(e.dateFrom), et = parseY(e.dateTo);
+              if (ef == null && et == null) { undated = e; continue; }
+              const matches = (ef == null || y >= ef) && (et == null || y <= et);
+              if (matches) {
+                const fv = ef ?? -Infinity;
+                if (fv > bestFrom) { bestFrom = fv; bestEnc = e; }
+              }
+            }
+            return bestEnc ?? undated ?? null;
+          };
+
+          const segments = [];
+          for (let i = 0; i < sortedB.length; i++) {
+            const y = sortedB[i];
+            const w = winner(y);
+            if (!w) continue;
+            const nextY = sortedB[i + 1] ?? null;
+            // Mit vorherigem Segment zusammenführen wenn selber Gewinner
+            if (segments.length && segments[segments.length - 1].enc === w) {
+              segments[segments.length - 1].toY = nextY ? nextY - 1 : null;
+            } else {
+              segments.push({ fromY: y, toY: nextY ? nextY - 1 : null, enc: w });
+            }
+          }
+          // Rein undatierte Einträge (keine Grenzen)
+          if (!sortedB.length) {
+            const u = encs.find(e => !e.dateFrom && !e.dateTo);
+            if (u) segments.push({ fromY: null, toY: null, enc: u });
+          }
+          return segments;
+        };
+
+        const timeline = _resolveTimeline(enclosedBy);
         let encHtml = '';
-        for (let si = 0; si < sorted.length; si++) {
-          const { e: enc, i: origIdx } = sorted[si];
-          const parent = reg.byId[enc.placeId];
+        for (const seg of timeline) {
+          const parent = reg.byId[seg.enc.placeId];
           if (!parent) continue;
-          // Zeitspanne des Eintrags
-          const f = enc.dateFrom || '', t = enc.dateTo || '';
+          // Span-Label
           let span = '';
-          if (f && t) span = `${f}–${t}`;
-          else if (f)  span = `ab ${f}`;
-          else if (t)  span = `bis ${t}`;
-          else         span = 'aktuell';
-          // Elterntitel: resolveAsOf zum Mittelpunkt des Zeitraums (konsistent mit Writer)
-          const fy = parseY(f), ty = parseY(t);
-          const refYear = fy != null && ty != null ? Math.round((fy + ty) / 2)
-                        : fy ?? ty ?? null;
-          const parentName = refYear != null && reg.resolveAsOf
-            ? (reg.resolveAsOf(enc.placeId, refYear) || parent.title)
+          if (seg.fromY != null && seg.toY != null) span = `${seg.fromY}–${seg.toY}`;
+          else if (seg.fromY != null) span = `ab ${seg.fromY}`;
+          else if (seg.toY  != null) span = `bis ${seg.toY}`;
+          else span = 'aktuell';
+          // Elterntitel zum Mitteljahr → identisch mit Writer-Ausgabe
+          const refYear = seg.fromY != null && seg.toY != null
+            ? Math.round((seg.fromY + seg.toY) / 2)
+            : seg.fromY ?? seg.toY ?? null;
+          const parentName = refYear != null
+            ? (reg.resolveAsOf(seg.enc.placeId, refYear) || parent.title)
             : parent.title;
-          const overlapWarn = _overlaps.has(origIdx)
-            ? ` <span class="place-overlap-warn" title="Dieser Zeitraum überschneidet sich mit einem anderen Eintrag — der Writer verwendet ›höchstes Startjahr gewinnt‹">⚠</span>` : '';
           encHtml += `<div class="fact-row fact-row--clickable" data-action="showPlaceByTitle" data-title="${esc(parent.title)}">
-            <span class="fact-key place-enc-span">${esc(span)}${overlapWarn}</span>
+            <span class="fact-key place-enc-span">${esc(span)}</span>
             <span class="fact-val">${esc(parentName)}</span>
             <span class="p-arrow">›</span>
           </div>`;
