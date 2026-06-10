@@ -1056,6 +1056,34 @@ function _evFullPlace(ev) {
     const year = typeof _placeYear === 'function' ? _placeYear(ev.date) : null;
     const full = _buildFormString(ev.placeId, year);
     if (full && full.includes(',')) return full;
+    // Fallback bei Datengap: nächstgelegene Zugehörigkeit suchen
+    if (year != null && typeof getPlaceRegistry === 'function') {
+      const reg = getPlaceRegistry();
+      const po  = reg?.byId[ev.placeId];
+      const encs = po?.enclosedBy || [];
+      if (encs.length) {
+        const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+        // Kandidaten: Einträge mit mindestens einem Datum, nach Abstand zum Ereignisjahr sortiert
+        const datable = encs.filter(e => e.dateFrom || e.dateTo);
+        if (datable.length) {
+          datable.sort((a, b) => {
+            const dist = e => {
+              const ef = parseY(e.dateFrom), et = parseY(e.dateTo);
+              if (ef != null && et != null) return Math.min(Math.abs(year - ef), Math.abs(year - et));
+              if (ef != null) return Math.abs(year - ef);
+              if (et != null) return Math.abs(year - et);
+              return Infinity;
+            };
+            return dist(a) - dist(b);
+          });
+          // Jahr des nächstgelegenen Eintrags als Referenzjahr
+          const nearest = datable[0];
+          const refY = parseY(nearest.dateFrom) ?? parseY(nearest.dateTo);
+          const fallback = refY != null ? _buildFormString(ev.placeId, refY) : null;
+          if (fallback && fallback.includes(',')) return fallback;
+        }
+      }
+    }
   }
   return compactPlace(ev.place);
 }
