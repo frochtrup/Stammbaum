@@ -534,6 +534,9 @@ function placePickerSelect(placeId, placeName) {
   const idInp = document.getElementById(target + '-id');
   if (inp) inp.value = placeName || '';
   if (idInp) idInp.value = placeId || '';
+  // input-Event feuern, damit delegierte input-Listener (z.B. Template-Builder qtFieldEdit) den
+  // neuen Wert + die zugehörige placeId aus dem Hidden-Input einlesen.
+  if (inp) inp.dispatchEvent(new Event('input', { bubbles: true }));
   closeModal('modalPlacePicker');
 }
 

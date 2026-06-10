@@ -3940,6 +3940,11 @@ html[data-theme="dark"] {
 .qt-fb-sel-type  { flex: none; width: 115px; }
 .qt-fb-sel-tgt   { flex: none; width: 95px; }
 .qt-fb-lbl-inp   { flex: 1; min-width: 70px; }
+.qt-fb-val-inp   { flex: 1; min-width: 70px; }
+
+/* Implizite Werte: Chip im Erfassungs-Kontext-Kopf + Lock-Marker an vorbelegten Feldern */
+.qt-ctx-chip--implicit { background: var(--surface2, #f4ecd8); color: var(--text-dim, #6b6155); border-style: dashed; }
+.qt-prefill-lock { font-size: 0.78rem; color: var(--text-muted, #888); margin-left: 4px; }
 
 /* Quick-Template: Alters-Eingabe */
 .qt-age-block  { margin-bottom: 6px; }

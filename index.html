@@ -506,8 +506,9 @@
           <div class="place-dropdown" id="qt-f-src-dd"></div>
         </label>
         <div class="form-row">
-          <label class="form-label">Ort (implizit)
+          <label class="form-label">Ort (implizit) <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="qt-f-place" title="Ort aus Liste wählen">📍</button>
             <input class="form-input" id="qt-f-place" type="text" placeholder="z.B. Ochtrup" autocomplete="off">
+            <input type="hidden" id="qt-f-place-id">
             <div class="place-dropdown" id="qt-f-place-dd"></div>
           </label>
           <label class="form-label">Qualität (QUAY)
@@ -537,9 +538,15 @@
         <p class="form-hint">{v} wird beim Erfassen durch deine Seiten-/Eintragseingabe ersetzt.</p>
         <!-- Phase E: Felder-Builder (nur bei base=custom sichtbar) -->
         <div id="qt-fields-section" hidden>
-          <div class="form-label">Felder <span class="form-hint">(Reihenfolge = Formular)</span></div>
+          <div class="form-label">Felder <span class="form-hint">(Reihenfolge = Formular · Wert ausgefüllt = implizit gesetzt)</span></div>
           <div id="qt-fields-list"></div>
           <button type="button" class="btn btn-dim" data-action="qtFieldAdd">＋ Feld</button>
+          <label class="form-label" style="margin-top:8px;">Implizite Felder im Erfassungs-Formular
+            <select class="form-input" id="qt-f-implicit-mode">
+              <option value="hidden">verstecken (nur Chip im Kopf)</option>
+              <option value="prefill">vorbelegt + editierbar (🔒)</option>
+            </select>
+          </label>
           <p class="form-hint">Rollen: Person (Hauptperson) · Vater/Mutter → Elternfamilie · Ehepartner → Ehe. Nachname des Vaters wird mit dem der Person vorbelegt (überschreibbar).</p>
         </div>
       </div>
