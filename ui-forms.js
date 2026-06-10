@@ -1033,7 +1033,10 @@ function initPlaceAutocomplete(inputId, ddId, placeIdFieldId, getDateYear) {
       const reg = typeof getPlaceRegistry === 'function' ? getPlaceRegistry() : null;
       if (item.placeId && reg) {
         const year = typeof getDateYear === 'function' ? getDateYear() : null;
-        input.value = reg.resolveAsOf(item.placeId, year) || item.label;
+        const resolved = reg.resolveAsOf(item.placeId, year) || '';
+        // Nur Atom-Namen übernehmen — Hierarchie-Strings (mit Komma) niemals als ev.place
+        // schreiben, da sie beim nächsten Roundtrip als neue pnames auftauchen
+        input.value = (resolved && !resolved.includes(',')) ? resolved : item.label;
       } else {
         input.value = item.label;
       }

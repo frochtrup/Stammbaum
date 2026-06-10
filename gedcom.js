@@ -648,6 +648,17 @@ function _migratePlaceObjects(db) {
     // savePlace-Pfaden, wenn User Koords als DMS ohne Direction eintippte (NaN auf
     // einer Achse). Würden showPlaceDetail crashen — beide auf null setzen.
     if ((pl.lat == null) !== (pl.long == null)) { pl.lat = null; pl.long = null; }
+    // pnames-Dedup: Duplikate (selber normalisierter Name + selbe Daten) entfernen.
+    // Entstanden wenn volle Hierarchie-Strings als pnames eingetragen wurden.
+    if (pl.pnames.length > 1) {
+      const seen = new Set();
+      seen.add(_normPlaceName(pl.title));
+      pl.pnames = pl.pnames.filter(pn => {
+        const k = `${_normPlaceName(pn.value)}|${pn.dateFrom||''}|${pn.dateTo||''}`;
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+      });
+    }
   }
 }
 
