@@ -648,8 +648,12 @@ function _migratePlaceObjects(db) {
     // savePlace-Pfaden, wenn User Koords als DMS ohne Direction eintippte (NaN auf
     // einer Achse). Würden showPlaceDetail crashen — beide auf null setzen.
     if ((pl.lat == null) !== (pl.long == null)) { pl.lat = null; pl.long = null; }
-    // pnames-Dedup: Duplikate (selber normalisierter Name + selbe Daten) entfernen.
-    // Entstanden wenn volle Hierarchie-Strings als pnames eingetragen wurden.
+    // pnames-Bereinigung:
+    // 1) Hierarchie-Strings (Komma im Wert) sind niemals valide Atom-pnames → entfernen
+    // 2) Duplikate (selber normalisierter Wert + selbe Daten) → entfernen
+    // Entstanden durch alte Autocomplete-Bugs (Hierarchie-String als ev.place) oder
+    // wiederholte _migrateExtraPlacesToPlaceObjects-Läufe.
+    pl.pnames = pl.pnames.filter(pn => pn.value && !pn.value.includes(','));
     if (pl.pnames.length > 1) {
       const seen = new Set();
       seen.add(_normPlaceName(pl.title));
