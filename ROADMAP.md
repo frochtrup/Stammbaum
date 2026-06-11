@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v946 · Cache: `stammbaum-v946` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v947 · Cache: `stammbaum-v947` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -238,7 +238,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v921 *(veraltet — v922–v946 noch nicht dokumentiert: u.a. Template-Generator-Erweiterung v945/v946 mit Ortspicker + impliziten Default-Werten + Hidden/Prefill-Toggle + Wohnort=Adresse-Trennung)*** — Versionsfelder auf v917 gesetzt. **Dokumentiert:** OUTPUT-RICHNESS Tier A+B+C + Hofchronik (Kap. 20 Druckausgaben: A2 Quellenverzeichnis, A3 Forschungsprotokoll, A4 Statistik-Report, B1 Nachkommentafel, B2 Familienbuch-Buchreife, B4 Verwandtschaftsnachweis, Ortsbuch v892, C1 Stammtafel, C2 Ortssippenbuch, C3 Zeitstrahl, Hofchronik v917; Kap. 8 Diagramm-Export PNG + B3 Großposter-SVG); Ort-Steckbrief-Erweiterungen (Orts-Notiz v900, Zugehörigkeit-nach-Jahr inkl. Lücken v908, Zeitraumverteilung); Skalierung/Performance + Barrierefreiheit (WCAG 2.1 AA v905) in FAQ. *Bewusst ohne Handbuch-Eintrag (rein interne Änderungen, keine User-Sichtbarkeit):* View-Robustheit-Internals P0–P6, Koord-Single-Source/-Paar-Invariante, VS-Scroll-Reattach, UI-Logik-Tests T0-UI, CSP-Durchsetzung v901–v903, T0-FUNC-SPLIT v904, Vorname-Normalisierung v909. *(Offen für später: echte Screenshots statt Mockups → DOC-SCREENS.)*
+**Handbuch-Stand: sw v921 *(veraltet — v922–v947 noch nicht dokumentiert: u.a. Template-Generator-Erweiterung v945–v947 mit Ortspicker + impliziten Default-Werten + Hidden/Prefill-Toggle + Wohnort=Adresse-Trennung + Familien-Dedup bei verknüpften Eltern/Ehepartnern)*** — Versionsfelder auf v917 gesetzt. **Dokumentiert:** OUTPUT-RICHNESS Tier A+B+C + Hofchronik (Kap. 20 Druckausgaben: A2 Quellenverzeichnis, A3 Forschungsprotokoll, A4 Statistik-Report, B1 Nachkommentafel, B2 Familienbuch-Buchreife, B4 Verwandtschaftsnachweis, Ortsbuch v892, C1 Stammtafel, C2 Ortssippenbuch, C3 Zeitstrahl, Hofchronik v917; Kap. 8 Diagramm-Export PNG + B3 Großposter-SVG); Ort-Steckbrief-Erweiterungen (Orts-Notiz v900, Zugehörigkeit-nach-Jahr inkl. Lücken v908, Zeitraumverteilung); Skalierung/Performance + Barrierefreiheit (WCAG 2.1 AA v905) in FAQ. *Bewusst ohne Handbuch-Eintrag (rein interne Änderungen, keine User-Sichtbarkeit):* View-Robustheit-Internals P0–P6, Koord-Single-Source/-Paar-Invariante, VS-Scroll-Reattach, UI-Logik-Tests T0-UI, CSP-Durchsetzung v901–v903, T0-FUNC-SPLIT v904, Vorname-Normalisierung v909. *(Offen für später: echte Screenshots statt Mockups → DOC-SCREENS.)*
 
 | ID | Aufgabe | Details | Aufwand |
 |---|---|---|---|

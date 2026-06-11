@@ -1122,25 +1122,44 @@ function _qtSaveCustom(tpl, v) {
   const main = persons.main, father = persons.father, mother = persons.mother, spouse = persons.spouse;
   const famIds = [];
   let parentFam = null, spouseFam = null;
+  let parentFamReused = false, spouseFamReused = false;
+
+  // Eltern-Familie: bei beidseitiger Verknüpfung gemeinsame fams-Schnittmenge wiederverwenden.
+  // Edge-Cases (nur ein Elternteil verknüpft, einer/beide neu) → neu anlegen.
   if (father || mother) {
-    parentFam = {
-      id: nextId('F'), husb: father ? father.id : '', wife: mother ? mother.id : '',
-      children: [main.id], marr: _qtFamEv(), engag: {}, div: {}, divf: {},
-      noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
-      lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
-    };
+    if (father && mother && !father.isNew && !mother.isNew) {
+      const fa = father.person.fams || [], ma = mother.person.fams || [];
+      const common = fa.find(fid => ma.includes(fid));
+      if (common && AppState.db.families[common]) { parentFam = AppState.db.families[common]; parentFamReused = true; }
+    }
+    if (!parentFam) {
+      parentFam = {
+        id: nextId('F'), husb: father ? father.id : '', wife: mother ? mother.id : '',
+        children: [main.id], marr: _qtFamEv(), engag: {}, div: {}, divf: {},
+        noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
+        lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+      };
+    }
     famIds.push(parentFam.id);
   }
+  // Ehe-Familie: bei beidseitiger Verknüpfung gemeinsame Familie wiederverwenden.
   if (spouse) {
-    let husb = main.id, wife = spouse.id;
-    if (main.person.sex === 'F' || spouse.person.sex === 'M') { husb = spouse.id; wife = main.id; }
-    spouseFam = {
-      id: nextId('F'), husb, wife, children: [],
-      marr: { date: marrDate, place: ctx.place || '', placeId: ctx.placeId || null, lati: null, long: null,
-        citations: [mkCit()], _extra: [], value: '', seen: true, note: '', noteRefs: [], media: [] },
-      engag: {}, div: {}, divf: {}, noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
-      lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
-    };
+    if (!main.isNew && !spouse.isNew) {
+      const ma = main.person.fams || [], sa = spouse.person.fams || [];
+      const common = ma.find(fid => sa.includes(fid));
+      if (common && AppState.db.families[common]) { spouseFam = AppState.db.families[common]; spouseFamReused = true; }
+    }
+    if (!spouseFam) {
+      let husb = main.id, wife = spouse.id;
+      if (main.person.sex === 'F' || spouse.person.sex === 'M') { husb = spouse.id; wife = main.id; }
+      spouseFam = {
+        id: nextId('F'), husb, wife, children: [],
+        marr: { date: marrDate, place: ctx.place || '', placeId: ctx.placeId || null, lati: null, long: null,
+          citations: [mkCit()], _extra: [], value: '', seen: true, note: '', noteRefs: [], media: [] },
+        engag: {}, div: {}, divf: {}, noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
+        lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+      };
+    }
     famIds.push(spouseFam.id);
   }
 
@@ -1153,14 +1172,44 @@ function _qtSaveCustom(tpl, v) {
     if (!Array.isArray(P.person.famc)) P.person.famc = [];
   }
   if (parentFam) {
-    AppState.db.families[parentFam.id] = parentFam;
+    if (!parentFamReused) {
+      AppState.db.families[parentFam.id] = parentFam;
+    } else {
+      // Existierende Eltern-Familie: main als zusätzliches Kind anhängen + Beleg auf childRelation.
+      if (!Array.isArray(parentFam.children)) parentFam.children = [];
+      if (!parentFam.children.includes(main.id)) parentFam.children.push(main.id);
+      if (!parentFam.childRelations || typeof parentFam.childRelations !== 'object') parentFam.childRelations = {};
+      if (!parentFam.childRelations[main.id]) {
+        parentFam.childRelations[main.id] = { frel:'', mrel:'', frelSeen:false, mrelSeen:false,
+          frelSour:'', frelPage:'', frelQUAY:'', frelSourExtra:[],
+          mrelSour:'', mrelPage:'', mrelQUAY:'', mrelSourExtra:[], citations: [] };
+      }
+      const cr = parentFam.childRelations[main.id];
+      if (!Array.isArray(cr.citations)) cr.citations = [];
+      if (!cr.citations.some(c => c.sid === ctx.sid)) cr.citations.push(mkCit());
+      parentFam.lastChanged = gedcomDate(new Date());
+      parentFam.lastChangedTime = gedcomTime(new Date());
+    }
     if (!main.person.famc.includes(parentFam.id)) main.person.famc.push(parentFam.id);
     for (const par of [father, mother]) {
       if (par && !par.person.fams.includes(parentFam.id)) par.person.fams.push(parentFam.id);
     }
   }
   if (spouseFam) {
-    AppState.db.families[spouseFam.id] = spouseFam;
+    if (!spouseFamReused) {
+      AppState.db.families[spouseFam.id] = spouseFam;
+    } else {
+      // Existierende Ehe: Datum/Beleg ergänzen, vorhandene Werte nicht überschreiben.
+      if (!spouseFam.marr || typeof spouseFam.marr !== 'object') spouseFam.marr = _qtFamEv();
+      if (marrDate && !spouseFam.marr.date) spouseFam.marr.date = marrDate;
+      if (ctx.place && !spouseFam.marr.place) {
+        spouseFam.marr.place = ctx.place;
+        if (ctx.placeId && !spouseFam.marr.placeId) spouseFam.marr.placeId = ctx.placeId;
+      }
+      _qtAddCitToEvent(spouseFam.marr, mkCit());
+      spouseFam.lastChanged = gedcomDate(new Date());
+      spouseFam.lastChangedTime = gedcomTime(new Date());
+    }
     for (const P of [main, spouse]) {
       if (!P.person.fams.includes(spouseFam.id)) P.person.fams.push(spouseFam.id);
     }
@@ -1174,8 +1223,10 @@ function _qtSaveCustom(tpl, v) {
   renderTab();
 
   const extra = [father, mother, spouse].filter(Boolean).length;
+  const reused = [parentFamReused && 'Eltern-Fam', spouseFamReused && 'Ehe-Fam'].filter(Boolean).join('+');
   const lbl = (main.isNew ? _qtPersonLabel(main.person) : _qtPersonLabel(main.person) + ' 🔗')
-    + (extra ? ` (+${extra})` : '');
+    + (extra ? ` (+${extra})` : '')
+    + (reused ? ` · 🔗 ${reused}` : '');
   _qtAfterSave(tpl, `✓ ${lbl}`, schema.fields[0]?.key);
   _qtShowInlinePlausi(involvedPersonIds, famIds);
 }
