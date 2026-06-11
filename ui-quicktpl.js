@@ -379,8 +379,10 @@ function _qtRenderFieldBuilder() {
   list.innerHTML = _qtDraftFields.map((f, i) => {
     const needsTarget = (f.type === 'date' || f.type === 'place' || f.type === 'age');
     const tgtDef = f.type === 'age' ? 'death' : 'birth';
-    const isPlace = (f.type === 'place' || f.type === 'resi');
-    const isSex = (f.type === 'sex');
+    const isPlace = (f.type === 'place');                  // echtes Ortsfeld → Picker
+    const isAddr  = (f.type === 'resi');                   // Wohnort = Adresse; Ort kommt aus ctx
+    const isSex   = (f.type === 'sex');
+    const valPh = isAddr ? 'Adresse (leer = abfragen)' : 'Wert (leer = abfragen)';
     const valInput = isSex
       ? `<select class="form-input qt-fb-val-inp" data-change="qtFieldEdit" data-idx="${i}" data-prop="value">
            <option value=""${!f.value ? ' selected' : ''}>(abfragen)</option>
@@ -388,7 +390,7 @@ function _qtRenderFieldBuilder() {
            <option value="M"${f.value==='M'?' selected':''}>männlich</option>
            <option value="F"${f.value==='F'?' selected':''}>weiblich</option>
          </select>`
-      : `<input class="form-input qt-fb-val-inp" id="qt-fb-val-${i}" data-input="qtFieldEdit" data-idx="${i}" data-prop="value" value="${esc(f.value || '')}" placeholder="Wert (leer = abfragen)" autocomplete="off">
+      : `<input class="form-input qt-fb-val-inp" id="qt-fb-val-${i}" data-input="qtFieldEdit" data-idx="${i}" data-prop="value" value="${esc(f.value || '')}" placeholder="${esc(valPh)}" autocomplete="off">
          ${isPlace ? `<input type="hidden" id="qt-fb-val-${i}-id" value="${esc(f.placeId || '')}">` : ''}`;
     const placeBtn = isPlace
       ? `<button type="button" class="qt-fb-btn" data-action="openPlacePicker" data-target="qt-fb-val-${i}" title="Ort wählen">📍</button>`
@@ -420,8 +422,9 @@ function _qtFieldEdit(el) {
     delete f.placeId;
     if (f.type === 'sex' && !['', 'U', 'M', 'F'].includes(f.value || '')) f.value = '';
   }
-  // value-Eingabe bei place/resi: picker-getragenen placeId mit übernehmen oder löschen, wenn Text manuell weicht
-  if (prop === 'value' && (f.type === 'place' || f.type === 'resi')) {
+  // value-Eingabe bei place: picker-getragenen placeId mit übernehmen
+  // (resi = Adresse, ohne Picker — der Ort kommt implizit aus ctx.place)
+  if (prop === 'value' && f.type === 'place') {
     const idEl = document.getElementById('qt-fb-val-' + i + '-id');
     if (idEl) f.placeId = idEl.value || '';
   }
@@ -496,7 +499,7 @@ function qtSaveTemplate() {
         if ((f.label || '').trim()) o.label = f.label.trim();
         const val = (f.value || '').trim();
         if (val) o.value = val;
-        if ((f.type === 'place' || f.type === 'resi') && f.placeId) o.placeId = f.placeId;
+        if (f.type === 'place' && f.placeId) o.placeId = f.placeId;
         return o;
       });
     const hasMainName = fields.some(f => f.role === 'main' && (f.type === 'surname' || f.type === 'given'));
@@ -604,9 +607,11 @@ function _qtRenderEntryForm() {
         </div></div>`;
     } else {
       const isName  = f.type === 'surname' || f.type === 'given';
-      const isPlace = f.type === 'place'   || f.type === 'resi';
+      const isPlace = f.type === 'place';
+      const isAddr  = f.type === 'resi';
       const ph = f.type === 'date' ? 'TT.MM.JJJJ'
         : f.type === 'page' ? (ctx.pagePattern ? ctx.pagePattern.replace('{v}', '…') : 'Seite/Eintrag')
+        : isAddr ? 'Adresse'
         : '';
       const placeBtn = isPlace
         ? ` <button type="button" class="place-toggle-btn" data-action="openPlacePicker" data-target="${id}" title="Ort wählen">📍</button>`
@@ -614,7 +619,7 @@ function _qtRenderEntryForm() {
       fh = `<label class="form-label qt-label-rel">${esc(f.label)}${lockMark}${placeBtn}
         <input class="form-input" id="${id}" type="text" placeholder="${esc(ph)}" autocomplete="off">
         ${isPlace ? `<input type="hidden" id="${id}-id">` : ''}
-        ${(isName || isPlace) ? `<div class="place-dropdown" id="${id}-dd"></div>` : ''}</label>`;
+        ${(isName || isPlace || isAddr) ? `<div class="place-dropdown" id="${id}-dd"></div>` : ''}</label>`;
     }
     // Personen-Matching: Treffer-Box nach dem letzten Namensfeld der Rolle (Phase B)
     if (roleByBoxKey[f.key]) fh += `<div class="qt-match qt-match-box" id="qt-match-${roleByBoxKey[f.key]}"></div>`;
@@ -649,8 +654,10 @@ function _qtRenderEntryForm() {
     if (!document.getElementById(id)) continue;             // versteckte Felder überspringen
     if      (f.type === 'surname') _qtInitNameAC(id, 'surname', keyToRole[f.key]);
     else if (f.type === 'given')   _qtInitNameAC(id, 'given',   keyToRole[f.key]);
-    else if ((f.type === 'place' || f.type === 'resi') && typeof initPlaceAutocomplete === 'function')
+    else if (f.type === 'place' && typeof initPlaceAutocomplete === 'function')
       initPlaceAutocomplete(id, id + '-dd', id + '-id');
+    else if (f.type === 'resi'  && typeof _initAddrAutocompleteFor === 'function')
+      _initAddrAutocompleteFor(id, id + '-dd', null);       // Ort kommt implizit aus ctx
   }
   // Live-Matching: bei Eingabe in Namensfeldern Treffer neu berechnen
   for (const pr of persons) {
@@ -828,7 +835,7 @@ function _qtAfterSave(tpl, hintText, focusKey) {
       if (f.value) el.value = f.value;
       else el.value = (f.type === 'sex') ? 'U' : '';
     }
-    if ((f.type === 'place' || f.type === 'resi')) {
+    if (f.type === 'place') {
       const idEl = document.getElementById('qt-e-' + f.key + '-id');
       if (idEl) idEl.value = f.placeId || '';
     }
@@ -903,10 +910,11 @@ function qtSaveEntry() {
       const el = document.getElementById('qt-e-' + f.key);
       const raw = el ? el.value : (f.value || '');
       v[f.key] = (raw || '').trim();
-      if (f.type === 'place' || f.type === 'resi') {
+      if (f.type === 'place') {
         const idEl = document.getElementById('qt-e-' + f.key + '-id');
         v[f.key + '__pid'] = idEl ? idEl.value : (f.placeId || '');
       }
+      // resi (Wohnort = Adresse) hat keine placeId — Ort/PID kommen aus ctx.
     }
   }
   if      (tpl.base === 'marriage') _qtSaveMarriage(tpl, v);
@@ -1075,11 +1083,13 @@ function _qtSaveCustom(tpl, v) {
     } else if (f.type === 'occu') {
       if (val) p.events.push(_qtGenEvent('OCCU', { value: val, citations: [mkCit()] }));
     } else if (f.type === 'resi') {
+      // Wohnort = Adresse; Ort + placeId stammen implizit aus ctx (z.B. „Ochtrup")
       if (val) {
-        const pid = (v[f.key + '__pid'] || '').trim();
         p.events.push(_qtGenEvent('RESI', {
-          place: val, addr: val, citations: [mkCit()],
-          placeId: pid || null,
+          place:   ctx.place   || '',
+          placeId: ctx.placeId || null,
+          addr:    val,
+          citations: [mkCit()],
         }));
       }
     }
