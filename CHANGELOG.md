@@ -9,6 +9,70 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-13 — SHOWPLACE-SPLIT (schmale Variante) (sw v949)
+
+**Auslöser:** Re-Review v948 hatte `showPlaceDetail` (631 Z., länger als alle drei T0-FUNC-SPLIT-Opfer zusammen) als nächste konkrete Code-Qualitäts-Schuld identifiziert. Plan-Selbstkritik schlug die *schmale* Variante vor: erst Snapshot-Schutz, dann nur die zwei echten Logik-Sektionen + 4 triviale extrahieren — 30 % des ursprünglichen Aufwands für 80 % des Gewinns.
+
+#### Snapshot-Harness (`test-snapshot-place.js`)
+
+- JXA-Standalone-Skript, lädt `gedcom.js` + `gedcom-parser.js` + `ui-views-place.js` mit aggressiven Stubs (`_configureDetailToolbar`, `_beforeDetailNavigate`, `_updatePlaceListCurrent`, `_activateDetailContainer`, `showView`, `_initPlaceDetailMap`, `showMain`, `ViewState.setCurrent`, `relRow` als Nachbau aus ui-views.js).
+- Setup-Falle (durable): `const`-Bindings (`AppState`, `UIState`) leaken nicht aus dem JXA-Eval — Brücke `window._snapApi = { … }` muss **innerhalb** desselben Eval-Strings angehängt werden, nicht außerhalb (gleiches Muster wie test-unit.js).
+- Test-Datei: `demo.ged` (im Repo, reproduzierbar). Synthetisches PlaceObject `Test-Sassenberg` + Eltern `Test-Hochstift` injiziert nach `setDb`, deckt alle Phase-A-Sub-Sektionen ab (Verwaltungsgeschichte mit `winner()` / Verwaltungstyp historisch / Zugehörigkeit-nach-Jahr / Frühere Namen).
+- Deterministik-Falle (durable): `_evSectionId = 'place-ev-' + Date.now()` → `Date.now` global stubben (`return 1234567890000`), sonst non-deterministischer Snapshot pro Run.
+- Goldfile-Vergleich byte-genau, `--update` regeneriert. 240 ms Laufzeit.
+- Zwei Goldfiles getrackt (`test-snapshot-place.snap/standard_M_nchen…html` 31937 chars + `withHistory_Test-Sassenberg.html` 4126 chars).
+
+#### Phase A — zwei Logik-Helfer
+
+- **`_placeHistEnclosureTimeline(po, reg, placeId)`** (78 Z.) — Verwaltungsgeschichte aus `enclosedBy[]` als aufgelöste Zeitlinie. Enthält die `winner()`-Funktion, die *identisch zu `enclosureChainAsOf`* in gedcom.js ist (höchstes `dateFrom` gewinnt bei Überschneidung). Diese Identität ist die **WYSIWYG-Invariante v940**: Was der Ort-Steckbrief zeigt, schreibt der GEDCOM-Writer 1:1. Fallback ohne `enclosedBy`: aktuelle Kette als „Teil von"-Zeile.
+- **`_placeHistHierarchyTimeline(po, placeId, reg)`** (64 Z.) — „Zugehörigkeit nach Jahr". BFS-Schlüsseljahre rekursiv aus der Eltern-Kette, Klemmen auf Existenzdaten + dokumentierten enclosedBy-Bereich, Duplikat-Filter (gleiche Kette), Lücken als „unbekannt", abgebrochene Ketten mit „› ?"-Suffix.
+
+#### Phase B — vier triviale string-Helfer
+
+- `_placeDetailHero(place, placeName)` — Avatar + Name + Personen-Counter
+- `_placeDetailLinkButton(place, placeName)` — „🔗 Mit PlaceObject verknüpfen" wenn kein placeId
+- `_placeDetailNote(place)` — Notiz aus placeObject.note
+- `_placeDetailMapSection(place, placeName)` — Karte + Apple/OSM-Links + Geocode-Button (umbenannt von `_placeDetailMap`, weil `_placeDetailMap` schon als Leaflet-Map-Variable existiert — Namenskollision-Falle)
+- `_placeDetailDeleteRow(place, placeName)` — Lösch-Button am Ende (Bedingung intern)
+
+#### Bilanz
+
+| Vor | Nach Phase A | Nach Phase B |
+|---|---|---|
+| `showPlaceDetail` 631 Z. | 479 Z. (−152) | **423 Z. (−208 ges., −33 %)** |
+| 0 Helfer | 2 Logik-Helfer (78 + 64) | + 4 triviale (~58 Z.) |
+
+#### Pre-Commit-Gate erweitert
+
+`.git/hooks/pre-commit` + `setup-hooks.sh` führen jetzt **drei** Tests aus: `test-csp.js` + `test-unit.js` + `test-snapshot-place.js`. Das Snapshot-Gate verriegelt strukturell gegen UI-Drift in `showPlaceDetail` — Phase-A-Logik (WYSIWYG-Invariante v940) wird bit-genau geschützt. Bei beabsichtigter UI-Änderung: `osascript -l JavaScript test-snapshot-place.js --update` → Goldfile-Diff in den Commit nehmen.
+
+#### Lehren (durable)
+
+- **„Schmal vor breit":** der originale Plan (10 Helfer in 6 Phasen, M+ Aufwand) wurde durch Selbstkritik auf die zwei *echten* Logik-Sektionen reduziert. Phase B (triviale Helfer) ist trotzdem mitgenommen worden, weil sie nach Phase A noch billig waren und das Top-Level weiter aufräumen. Pure Funktionen mit klaren Argumenten — keine State-Magic, kein Closure-Tricks.
+- **Snapshot ist die *richtige* Antwort** auf „WYSIWYG-Invariante schützen". Pre-Refactor-Test → Goldfile → Refactor → byte-genaue Re-Verifikation. Manuelles Klicken nach 4 h Konzentration ist unzuverlässig; ein 240-ms-Test ist deterministisch.
+- **Namens-Hygiene matters:** `_placeDetailMap` schon vergeben (Leaflet-Variable seit P5a-5) → Helfer heißt `_placeDetailMapSection`. JXA-Eval bricht mit klarer Fehlermeldung („Cannot declare a function that shadows…").
+- **JXA-Eval-Brücke:** `const`-Bindings müssen *innerhalb* desselben eval-Strings auf `window.X` kopiert werden; das ist seit MEMORY („`const`-Eval-Leak", test-unit.js-Lehre) bekannt, aber leicht zu vergessen.
+
+#### Verifikation (live)
+
+```
+$ osascript -l JavaScript test-csp.js
+OK: index.html frei von inline-on*= und inline-style= — CSP lückenlos durchsetzbar.
+
+$ osascript -l JavaScript test-unit.js
+Alle 420 Unit-Tests bestanden.
+
+$ osascript -l JavaScript test-snapshot-place.js
+✓ standard / München, Bayern, Deutschland  (31937 chars)
+✓ withHistory / Test-Sassenberg  (4126 chars)
+✓ 2 Snapshots OK
+
+$ osascript -l JavaScript test-roundtrip.js MeineDaten_ancestris.ged
+✓ MeineDaten_ancestris.ged  net_delta=0  stable
+```
+
+---
+
 ### Session 2026-06-13 — CSP-Regress-Fix + Pre-Commit-Gate (sw v948)
 
 **Auslöser:** Komplette Re-Bewertung (Architektur/Code/Sicherheit) deckte auf, dass `test-csp.js` seit v945 (vor 3 Tagen) rot ist — `index.html:544` enthielt eine inline-`style="margin-top:8px;"`, die mit dem Template-Builder-Erweiterungsblock („Implizite Felder"-Select) eingeschleust wurde. Die ROADMAP-Aussage „CSP belegt statt behauptet — 0 Fundstellen" stimmte aktuell nicht. **Strukturelle Ursache:** kein automatisches Pre-Commit-Gate für die Test-Suite.

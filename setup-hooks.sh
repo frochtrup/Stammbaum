@@ -51,7 +51,20 @@ if ! osascript -l JavaScript test-unit.js > /tmp/stammbaum-unit.out 2>&1; then
   exit 1
 fi
 
-echo "✓ Pre-Commit-Gate grün (test-csp + test-unit)."
+# test-snapshot-place: verriegelt showPlaceDetail-Output gegen Refactor-Drift
+# (SHOWPLACE-SPLIT, sw v949). Nutzt demo.ged + synthetisches PlaceObject —
+# reproduzierbar auf jedem Worktree.
+echo "→ Pre-Commit: test-snapshot-place.js"
+if ! osascript -l JavaScript test-snapshot-place.js > /tmp/stammbaum-snap.out 2>&1; then
+  echo "✗ test-snapshot-place.js fehlgeschlagen — Commit abgebrochen." >&2
+  tail -30 /tmp/stammbaum-snap.out >&2
+  echo "" >&2
+  echo "Bei beabsichtigter UI-Änderung: --update neu erzeugen und Goldfile-Diff in den Commit nehmen:" >&2
+  echo "  osascript -l JavaScript test-snapshot-place.js --update" >&2
+  exit 1
+fi
+
+echo "✓ Pre-Commit-Gate grün (test-csp + test-unit + test-snapshot-place)."
 HOOK_EOF
 
 chmod +x "$HOOK_PATH"

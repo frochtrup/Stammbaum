@@ -973,6 +973,234 @@ function _initPlaceDetailMap(lat, lon, title) {
 }
 
 // ─────────────────────────────────────
+//  DETAIL: ORT — Helfer (SHOWPLACE-SPLIT Phasen A+B)
+// ─────────────────────────────────────
+
+// Phase B — triviale string-Helfer (pure, kein State, kein Side-Effect).
+function _placeDetailHero(place, placeName) {
+  const n = place.personIds.size;
+  return `<div class="detail-hero fade-up">
+    <div class="detail-avatar place">📍</div>
+    <div class="detail-name">${esc(compactPlace(placeName))}</div>
+    <div class="detail-id">${n} Person${n !== 1 ? 'en' : ''}</div>
+  </div>`;
+}
+
+function _placeDetailLinkButton(place, placeName) {
+  if (place.placeId || typeof getPlaceRegistry !== 'function') return '';
+  if (Object.keys(getPlaceRegistry().byId).length === 0) return '';
+  return `<div class="place-action-row">
+      <button class="btn-ghost"
+        data-action="openPlaceStringLinkModal"
+        data-preselect="${placeName.replace(/"/g,'&quot;')}">🔗 Mit PlaceObject verknüpfen</button>
+    </div>`;
+}
+
+function _placeDetailNote(place) {
+  const po = place.placeId ? (AppState.db.placeObjects || {})[place.placeId] : null;
+  if (!po || !po.note) return '';
+  return `<div class="section fade-up">
+      <div class="section-title">Notiz</div>
+      <div class="place-note-text">${esc(po.note).replace(/\n/g, '<br>')}</div>
+    </div>`;
+}
+
+// Beide Koords nötig — halbe Paare (lat ohne long o.ä.) sonst Crash auf null.toFixed
+function _placeDetailMapSection(place, placeName) {
+  const geoAvail = typeof geocodeSinglePlace === 'function';
+  if (place.lati !== null && place.long !== null) {
+    return `<div class="section fade-up">
+      <div class="section-title">Standort</div>
+      <div class="place-map-wrap">
+        <div id="place-mini-map"></div>
+      </div>
+      <div class="place-map-links">
+        <a href="https://maps.apple.com/?ll=${place.lati},${place.long}&q=${encodeURIComponent(placeName)}"
+           target="_blank" class="place-maps-link">🗺 Apple Maps</a>
+        <a href="https://www.openstreetmap.org/?mlat=${place.lati}&mlon=${place.long}#map=12/${place.lati}/${place.long}"
+           target="_blank" class="place-maps-link">🌐 OpenStreetMap</a>
+      </div>
+      <div class="place-map-coords">${place.lati.toFixed(5)}, ${place.long.toFixed(5)}</div>
+      ${geoAvail ? `<div class="place-action-row mt-8"><button class="btn-ghost" data-action="geocodeCurrentPlace" title="Koordinaten + Typ via Nominatim neu abrufen">↻ Neu geocodieren</button></div>` : ''}
+    </div>`;
+  }
+  if (geoAvail) {
+    return `<div class="section fade-up">
+      <div class="section-title">Standort</div>
+      <div class="place-action-row"><button class="btn-ghost" data-action="geocodeCurrentPlace">📍 Geocodieren</button></div>
+    </div>`;
+  }
+  return '';
+}
+
+// Nur Orte ohne verknüpfte Personen löschbar (extraPlaces oder placeObjects).
+function _placeDetailDeleteRow(place, placeName) {
+  const canDelete = place.personIds.size === 0
+    && (AppState.db.extraPlaces?.[placeName]
+        || (place.placeId && (AppState.db.placeObjects || {})[place.placeId]));
+  if (!canDelete) return '';
+  return `<div class="place-delete-row">
+      <button class="btn-ghost btn-ghost-danger"
+        data-action="deleteExtraPlace" data-pname="${placeName.replace(/"/g,'&quot;')}">Ort entfernen</button>
+    </div>`;
+}
+
+
+// Verwaltungsgeschichte als aufgelöste Zeitlinie (WYSIWYG zum GEDCOM-Writer).
+// `winner()` ist identisch zur enclosureChainAsOf-Logik in gedcom.js — höchstes
+// dateFrom gewinnt bei Überschneidung. Diese Identität ist die kritische
+// Invariante (v940): Was hier angezeigt wird, landet exakt so im Export.
+// Fallback ohne enclosedBy: aktuelle Kette als "Teil von"-Zeile.
+function _placeHistEnclosureTimeline(po, reg, placeId) {
+  const enclosedBy = po.enclosedBy || [];
+  if (!enclosedBy.length) {
+    const chain = reg.enclosureChainAsOf(placeId, null).slice(1);
+    return chain.length
+      ? `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`
+      : '';
+  }
+
+  const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+
+  const _resolveTimeline = encs => {
+    const bounds = new Set();
+    for (const e of encs) {
+      if (e.dateFrom) bounds.add(parseY(e.dateFrom));
+      if (e.dateTo)   { const y = parseY(e.dateTo); if (y != null) bounds.add(y + 1); }
+    }
+    const sortedB = [...bounds].filter(y => y != null).sort((a, b) => a - b);
+
+    // Gewinner-Funktion: identisch zu enclosureChainAsOf-Logik
+    const winner = y => {
+      let bestFrom = -Infinity, bestEnc = null, undated = null;
+      for (const e of encs) {
+        const ef = parseY(e.dateFrom), et = parseY(e.dateTo);
+        if (ef == null && et == null) { undated = e; continue; }
+        const matches = (ef == null || y >= ef) && (et == null || y <= et);
+        if (matches) {
+          const fv = ef ?? -Infinity;
+          if (fv > bestFrom) { bestFrom = fv; bestEnc = e; }
+        }
+      }
+      return bestEnc ?? undated ?? null;
+    };
+
+    const segments = [];
+    for (let i = 0; i < sortedB.length; i++) {
+      const y = sortedB[i];
+      const w = winner(y);
+      if (!w) continue;
+      const nextY = sortedB[i + 1] ?? null;
+      if (segments.length && segments[segments.length - 1].enc === w) {
+        segments[segments.length - 1].toY = nextY ? nextY - 1 : null;
+      } else {
+        segments.push({ fromY: y, toY: nextY ? nextY - 1 : null, enc: w });
+      }
+    }
+    if (!sortedB.length) {
+      const u = encs.find(e => !e.dateFrom && !e.dateTo);
+      if (u) segments.push({ fromY: null, toY: null, enc: u });
+    }
+    return segments;
+  };
+
+  const timeline = _resolveTimeline(enclosedBy);
+  let encHtml = '';
+  for (const seg of timeline) {
+    const parent = reg.byId[seg.enc.placeId];
+    if (!parent) continue;
+    let span = '';
+    if (seg.fromY != null && seg.toY != null) span = `${seg.fromY}–${seg.toY}`;
+    else if (seg.fromY != null) span = `ab ${seg.fromY}`;
+    else if (seg.toY  != null) span = `bis ${seg.toY}`;
+    else span = 'aktuell';
+    // Elterntitel zum Mitteljahr → identisch mit Writer-Ausgabe
+    const refYear = seg.fromY != null && seg.toY != null
+      ? Math.round((seg.fromY + seg.toY) / 2)
+      : seg.fromY ?? seg.toY ?? null;
+    const parentName = refYear != null
+      ? (reg.resolveAsOf(seg.enc.placeId, refYear) || parent.title)
+      : parent.title;
+    encHtml += `<div class="fact-row fact-row--clickable" data-action="showPlaceByTitle" data-title="${esc(parent.title)}">
+            <span class="fact-key place-enc-span">${esc(span)}</span>
+            <span class="fact-val">${esc(parentName)}</span>
+            <span class="p-arrow">›</span>
+          </div>`;
+  }
+  return encHtml ? `<div class="fact-sub-title">Verwaltungsgeschichte</div>${encHtml}` : '';
+}
+
+// Hierarchie-Timeline: vollständige Kette zu Schlüsseljahren ("Zugehörigkeit
+// nach Jahr"). Schlüsseljahre rekursiv aus der gesamten Eltern-Kette sammeln
+// (BFS), Anzeige auf Existenzdaten + dokumentierten enclosedBy-Zeitraum
+// klemmen, Duplikate (gleiche Kette) zusammenfassen, Lücken als "unbekannt"
+// markieren, abgebrochene Ketten mit "› ?" suffixen.
+function _placeHistHierarchyTimeline(po, placeId, reg) {
+  const enclosedBy = po.enclosedBy || [];
+  if (!enclosedBy.length || !reg.enclosureChainAsOf) return '';
+
+  const _chainYears = new Set();
+  const _visited = new Set();
+  const _collectYears = (pid) => {
+    if (!pid || _visited.has(pid)) return;
+    _visited.add(pid);
+    const p = reg.byId[pid];
+    if (!p) return;
+    for (const enc of (p.enclosedBy || [])) {
+      if (enc.dateFrom) { const y = enc.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
+      if (enc.dateTo)   { const y = enc.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
+      _collectYears(enc.placeId);
+    }
+    for (const pn of (p.pnames || [])) {
+      if (pn.dateFrom) { const y = pn.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
+      if (pn.dateTo)   { const y = pn.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
+    }
+    if (p.existsFrom) { const y = p.existsFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
+    if (p.existsTo)   { const y = p.existsTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
+  };
+  _collectYears(placeId);
+
+  const _exFrom = po?.existsFrom ? +po.existsFrom.match(/\d{4}/)?.[0] : null;
+  const _exTo   = po?.existsTo   ? +po.existsTo.match(/\d{4}/)?.[0]   : null;
+  const _parseYr = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+  const _encsWithFrom = enclosedBy.filter(e => e.dateFrom);
+  const _docStart = _encsWithFrom.length
+    ? Math.min(..._encsWithFrom.map(e => _parseYr(e.dateFrom) ?? Infinity)) : null;
+  const _hasOpenEnd = enclosedBy.some(e => !e.dateTo);
+  const _docEnd = _hasOpenEnd ? null
+    : (enclosedBy.length ? Math.max(...enclosedBy.map(e => _parseYr(e.dateTo) ?? 0)) : null);
+
+  const _keyYears = [..._chainYears].sort((a,b)=>a-b)
+    .filter(y =>
+      (_exFrom   == null || y >= _exFrom)   && (_exTo   == null || y <= _exTo) &&
+      (_docStart == null || y >= _docStart) && (_docEnd == null || y <= _docEnd)
+    );
+  if (_keyYears.length < 1) return '';
+
+  let _lastChain = null;
+  let _inGap = false;
+  const _rows = [];
+  for (const yr of _keyYears) {
+    const meta = {};
+    const chain = reg.enclosureChainAsOf(placeId, yr, meta).slice(1);
+    if (!chain.length) {
+      if (!_inGap) {
+        _rows.push(`<div class="fact-row fact-row--gap"><span class="place-enc-span">${yr}</span><span class="fact-val place-gap-marker">unbekannt</span></div>`);
+        _inGap = true;
+      }
+      _lastChain = null;
+      continue;
+    }
+    _inGap = false;
+    const chainStr = chain.join(' › ') + (meta.truncated ? ' › ?' : '');
+    if (chainStr === _lastChain) continue;
+    _lastChain = chainStr;
+    _rows.push(`<div class="fact-row"><span class="place-enc-span">${yr}</span><span class="fact-val">${esc(chainStr)}</span></div>`);
+  }
+  return _rows.length ? `<div class="fact-sub-title">Zugehörigkeit nach Jahr</div>${_rows.join('')}` : '';
+}
+
+// ─────────────────────────────────────
 //  DETAIL: ORT
 // ─────────────────────────────────────
 function showPlaceDetail(placeName, pushHistory = true) {
@@ -990,60 +1218,10 @@ function showPlaceDetail(placeName, pushHistory = true) {
   // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
   _configureDetailToolbar('places', placeName);
 
-  let html = `<div class="detail-hero fade-up">
-    <div class="detail-avatar place">📍</div>
-    <div class="detail-name">${esc(compactPlace(placeName))}</div>
-    <div class="detail-id">${place.personIds.size} Person${place.personIds.size !== 1 ? 'en' : ''}</div>
-  </div>`;
-
-  // Verknüpfungs-Button: wenn Ort kein placeObject hat → mit PlaceObject verknüpfen
-  if (!place.placeId && typeof getPlaceRegistry === 'function'
-      && Object.keys(getPlaceRegistry().byId).length > 0) {
-    html += `<div class="place-action-row">
-      <button class="btn-ghost"
-        data-action="openPlaceStringLinkModal"
-        data-preselect="${placeName.replace(/"/g,'&quot;')}">🔗 Mit PlaceObject verknüpfen</button>
-    </div>`;
-  }
-
-  // Notiz-Sektion — freie Notiz aus dem placeObject (lebt in der JSON)
-  const _notePo = place.placeId ? (AppState.db.placeObjects || {})[place.placeId] : null;
-  if (_notePo && _notePo.note) {
-    html += `<div class="section fade-up">
-      <div class="section-title">Notiz</div>
-      <div class="place-note-text">${esc(_notePo.note).replace(/\n/g, '<br>')}</div>
-    </div>`;
-  }
-
-  // Standort-Sektion (Karte + Geocode-Button)
-  // Beide Koords nötig — halbe Paare (lat ohne long o.ä.) sonst Crash auf null.toFixed
-  const _geoAvail = typeof geocodeSinglePlace === 'function';
-  if (place.lati !== null && place.long !== null) {
-    html += `<div class="section fade-up">
-      <div class="section-title">Standort</div>
-      <div class="place-map-wrap">
-        <div id="place-mini-map"></div>
-      </div>
-      <div class="place-map-links">
-        <a href="https://maps.apple.com/?ll=${place.lati},${place.long}&q=${encodeURIComponent(placeName)}"
-           target="_blank" class="place-maps-link">🗺 Apple Maps</a>
-        <a href="https://www.openstreetmap.org/?mlat=${place.lati}&mlon=${place.long}#map=12/${place.lati}/${place.long}"
-           target="_blank" class="place-maps-link">🌐 OpenStreetMap</a>
-      </div>
-      <div class="place-map-coords">${place.lati.toFixed(5)}, ${place.long.toFixed(5)}</div>
-      ${_geoAvail ? `<div class="place-action-row mt-8"><button class="btn-ghost" data-action="geocodeCurrentPlace" title="Koordinaten + Typ via Nominatim neu abrufen">↻ Neu geocodieren</button></div>` : ''}
-    </div>`;
-  } else if (_geoAvail) {
-    html += `<div class="section fade-up">
-      <div class="section-title">Standort</div>
-      <div class="place-action-row"><button class="btn-ghost" data-action="geocodeCurrentPlace">📍 Geocodieren</button></div>
-    </div>`;
-  }
-
-  // Lösch-Button: am Ende des Steckbriefs, nur für Orte ohne verknüpfte Personen
-  const _canDelete = place.personIds.size === 0
-    && (AppState.db.extraPlaces?.[placeName]
-        || (place.placeId && (AppState.db.placeObjects || {})[place.placeId]));
+  let html = _placeDetailHero(place, placeName)
+           + _placeDetailLinkButton(place, placeName)
+           + _placeDetailNote(place)
+           + _placeDetailMapSection(place, placeName);
 
   // PLACE-HIST (ADR-024, P0b-1): historische Dimension der Place-Entität anzeigen
   // (Typ, datierte Namensvarianten, Zugehörigkeitskette). Nur wenn placeObject verknüpft.
@@ -1085,88 +1263,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
       }
 
       const enclosedBy = po.enclosedBy || [];
-      if (enclosedBy.length) {
-        const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
-
-        // Aufgelöste Zeitlinie: dieselbe Logik wie enclosureChainAsOf
-        // (höchstes dateFrom gewinnt bei Überschneidung) — WYSIWYG zum Writer.
-        const _resolveTimeline = encs => {
-          // Grenzen aller Einträge sammeln
-          const bounds = new Set();
-          for (const e of encs) {
-            if (e.dateFrom) bounds.add(parseY(e.dateFrom));
-            if (e.dateTo)   { const y = parseY(e.dateTo); if (y != null) bounds.add(y + 1); }
-          }
-          const sortedB = [...bounds].filter(y => y != null).sort((a, b) => a - b);
-
-          // Gewinner-Funktion: identisch zu enclosureChainAsOf-Logik
-          const winner = y => {
-            let bestFrom = -Infinity, bestEnc = null, undated = null;
-            for (const e of encs) {
-              const ef = parseY(e.dateFrom), et = parseY(e.dateTo);
-              if (ef == null && et == null) { undated = e; continue; }
-              const matches = (ef == null || y >= ef) && (et == null || y <= et);
-              if (matches) {
-                const fv = ef ?? -Infinity;
-                if (fv > bestFrom) { bestFrom = fv; bestEnc = e; }
-              }
-            }
-            return bestEnc ?? undated ?? null;
-          };
-
-          const segments = [];
-          for (let i = 0; i < sortedB.length; i++) {
-            const y = sortedB[i];
-            const w = winner(y);
-            if (!w) continue;
-            const nextY = sortedB[i + 1] ?? null;
-            // Mit vorherigem Segment zusammenführen wenn selber Gewinner
-            if (segments.length && segments[segments.length - 1].enc === w) {
-              segments[segments.length - 1].toY = nextY ? nextY - 1 : null;
-            } else {
-              segments.push({ fromY: y, toY: nextY ? nextY - 1 : null, enc: w });
-            }
-          }
-          // Rein undatierte Einträge (keine Grenzen)
-          if (!sortedB.length) {
-            const u = encs.find(e => !e.dateFrom && !e.dateTo);
-            if (u) segments.push({ fromY: null, toY: null, enc: u });
-          }
-          return segments;
-        };
-
-        const timeline = _resolveTimeline(enclosedBy);
-        let encHtml = '';
-        for (const seg of timeline) {
-          const parent = reg.byId[seg.enc.placeId];
-          if (!parent) continue;
-          // Span-Label
-          let span = '';
-          if (seg.fromY != null && seg.toY != null) span = `${seg.fromY}–${seg.toY}`;
-          else if (seg.fromY != null) span = `ab ${seg.fromY}`;
-          else if (seg.toY  != null) span = `bis ${seg.toY}`;
-          else span = 'aktuell';
-          // Elterntitel zum Mitteljahr → identisch mit Writer-Ausgabe
-          const refYear = seg.fromY != null && seg.toY != null
-            ? Math.round((seg.fromY + seg.toY) / 2)
-            : seg.fromY ?? seg.toY ?? null;
-          const parentName = refYear != null
-            ? (reg.resolveAsOf(seg.enc.placeId, refYear) || parent.title)
-            : parent.title;
-          encHtml += `<div class="fact-row fact-row--clickable" data-action="showPlaceByTitle" data-title="${esc(parent.title)}">
-            <span class="fact-key place-enc-span">${esc(span)}</span>
-            <span class="fact-val">${esc(parentName)}</span>
-            <span class="p-arrow">›</span>
-          </div>`;
-        }
-        if (encHtml) {
-          histHtml += `<div class="fact-sub-title">Verwaltungsgeschichte</div>${encHtml}`;
-        }
-      } else {
-        // Fallback: aktuelle Kette wenn kein enclosedBy[]
-        const chain = reg.enclosureChainAsOf(place.placeId, null).slice(1);
-        if (chain.length) histHtml += `<div class="fact-row"><span class="fact-key">Teil von</span><span class="fact-val">${esc(chain.join(' · '))}</span></div>`;
-      }
+      histHtml += _placeHistEnclosureTimeline(po, reg, place.placeId);
       // Hierarchie-Timeline: vollständige Kette zu Schlüsseljahren anzeigen.
       // Schlüsseljahre rekursiv aus der gesamten Kette sammeln — sonst bleiben
       // Änderungen auf höheren Ebenen (Eltern, Großeltern) unsichtbar.
@@ -1187,78 +1284,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
         histHtml += `<div class="fact-sub-title">Verwaltungstyp (historisch)</div>${_typeRows}`;
       }
 
-      if (enclosedBy.length && reg.enclosureChainAsOf) {
-        const _chainYears = new Set();
-        const _visited = new Set();
-        const _collectYears = (pid) => {
-          if (!pid || _visited.has(pid)) return;
-          _visited.add(pid);
-          const p = reg.byId[pid];
-          if (!p) return;
-          // enclosedBy-Grenzen: Zugehörigkeitswechsel
-          for (const enc of (p.enclosedBy || [])) {
-            if (enc.dateFrom) { const y = enc.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
-            if (enc.dateTo)   { const y = enc.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
-            _collectYears(enc.placeId);
-          }
-          // pnames-Grenzen: Namenswechsel in übergelagerten Einheiten
-          for (const pn of (p.pnames || [])) {
-            if (pn.dateFrom) { const y = pn.dateFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
-            if (pn.dateTo)   { const y = pn.dateTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
-          }
-          // Existenzgrenzen des Knotens selbst einsammeln
-          if (p.existsFrom) { const y = p.existsFrom.match(/\d{4}/); if (y) _chainYears.add(+y[0]); }
-          if (p.existsTo)   { const y = p.existsTo.match(/\d{4}/);   if (y) _chainYears.add(+y[0]); }
-        };
-        _collectYears(place.placeId);
-        // Anzeigebereich auf Existenzdaten des Ortes selbst klemmen
-        const _exFrom = po?.existsFrom ? +po.existsFrom.match(/\d{4}/)?.[0] : null;
-        const _exTo   = po?.existsTo   ? +po.existsTo.match(/\d{4}/)?.[0]   : null;
-        // Dokumentierten Bereich aus eigenen enclosedBy-Einträgen ableiten:
-        // Jahre vor dem frühesten dateFrom und nach dem letzten dateTo (falls alle
-        // Einträge ein Ende haben) liegen außerhalb der belegten Zeitspanne.
-        const _parseYr = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
-        const _encsWithFrom = enclosedBy.filter(e => e.dateFrom);
-        const _docStart = _encsWithFrom.length
-          ? Math.min(..._encsWithFrom.map(e => _parseYr(e.dateFrom) ?? Infinity)) : null;
-        const _hasOpenEnd = enclosedBy.some(e => !e.dateTo);
-        const _docEnd = _hasOpenEnd ? null
-          : (enclosedBy.length ? Math.max(...enclosedBy.map(e => _parseYr(e.dateTo) ?? 0)) : null);
-
-        const _keyYears = [..._chainYears].sort((a,b)=>a-b)
-          .filter(y =>
-            (_exFrom   == null || y >= _exFrom)   && (_exTo   == null || y <= _exTo) &&
-            (_docStart == null || y >= _docStart) && (_docEnd == null || y <= _docEnd)
-          );
-        if (_keyYears.length >= 1) {
-          // Duplikate herausfiltern: nur Zeilen wenn Kette sich ändert.
-          // Lücken (Jahr im belegten Bereich, aber kein passender Eintrag) → "unbekannt".
-          // Abgebrochene Ketten (Eltern-Knoten hat Einträge, keiner passt) → › ? Suffix.
-          let _lastChain = null; // null = noch keine Zeile ausgegeben
-          let _inGap = false;
-          const _rows = [];
-          for (const yr of _keyYears) {
-            const meta = {};
-            const chain = reg.enclosureChainAsOf(place.placeId, yr, meta).slice(1);
-            if (!chain.length) {
-              if (!_inGap) {
-                _rows.push(`<div class="fact-row fact-row--gap"><span class="place-enc-span">${yr}</span><span class="fact-val place-gap-marker">unbekannt</span></div>`);
-                _inGap = true;
-              }
-              _lastChain = null;
-              continue;
-            }
-            _inGap = false;
-            const chainStr = chain.join(' › ') + (meta.truncated ? ' › ?' : '');
-            if (chainStr === _lastChain) continue;
-            _lastChain = chainStr;
-            _rows.push(`<div class="fact-row"><span class="place-enc-span">${yr}</span><span class="fact-val">${esc(chainStr)}</span></div>`);
-          }
-          if (_rows.length) {
-            hierTimelineHtml = `<div class="fact-sub-title">Zugehörigkeit nach Jahr</div>${_rows.join('')}`;
-          }
-        }
-      }
+      hierTimelineHtml = _placeHistHierarchyTimeline(po, place.placeId, reg);
 
       if (histHtml || namesHtml || hierTimelineHtml) {
         html += `<div class="section fade-up">
@@ -1593,13 +1619,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
     </div>`;
   }
 
-  // Lösch-Button ganz am Ende — diskret, nicht dominant
-  if (_canDelete) {
-    html += `<div class="place-delete-row">
-      <button class="btn-ghost btn-ghost-danger"
-        data-action="deleteExtraPlace" data-pname="${placeName.replace(/"/g,'&quot;')}">Ort entfernen</button>
-    </div>`;
-  }
+  html += _placeDetailDeleteRow(place, placeName);
 
   document.getElementById('detailPlace').innerHTML = html;
   _activateDetailContainer('detailPlace', placeName);
