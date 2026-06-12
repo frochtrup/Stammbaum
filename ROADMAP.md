@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v947 · Cache: `stammbaum-v947` · `test-unit.js` = 420 Tests grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil
+**sw-Version:** v948 · Cache: `stammbaum-v948` · `test-unit.js` = 420 Tests grün · `test-csp.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit)
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
@@ -34,6 +34,11 @@ Fünf Dimensionen leiten die Priorisierung:
 
 **Letzte Highlights** (vollständige Tabelle + ältere Sprints: CHANGELOG.md):
 
+- **v948 — CSP-Regress-Fix + Pre-Commit-Gate:** Eine inline-`style="margin-top:8px;"` (eingeschleust mit v945-Template-Builder) → Utility-Klasse `.mt-8`; `test-csp.js` zeigt wieder „OK". Neuer `.git/hooks/pre-commit` führt `test-csp.js` + `test-unit.js` vor jedem Commit aus, bricht bei Rot ab; versionierter `setup-hooks.sh` als idempotenter Installer. Strukturelle Lehre: das CSP-/Unit-Test-Sicherheitsnetz war inhaltlich da, lief aber nicht als Gate — die v945-Regression ist 3 Tage geschlüpft. Jetzt verriegelt.
+- **v945–v947 — Template-Generator (Frei-konfigurierbar):** Builder erlaubt pro Feld einen Vorbelegungs-Wert (ausgefüllt = implizit gesetzt, leer = abgefragt); `context.implicitMode` schaltet zwischen Chip-im-Kopf (`hidden`) und Vorbelegung mit 🔒 (`prefill`); Ortspicker für `place`/`resi` mit `placeId`-Persistenz in allen vier Save-Pfaden. v946 trennt Wohnort=Adresse vom Ort (`addr=val`, `place`/`placeId` aus ctx). v947 erkennt verknüpfte Eltern/Ehepartner und reused die bestehende Familie (Kind anhängen, Beleg auf `childRelations.citations`/`marr.citations`).
+- **v937–v941 — Ortspicker periodengerecht + Verwaltungs-Zeitlinie:** Picker zeigt nur den Haupttitel (`po.title`), trägt aber den damaligen Namen ein (`resolveAsOf(placeId, year)`); `pname`-Duplikate durch Hierarchie-Strings beseitigt (Atomname-Whitelist im Select, `_migratePlaceObjects` auch nach `loadPlaceObjectsFromIDB`); Ort-Steckbrief zeigt Verwaltungs-Zeitlinie identisch zum GEDCOM-Writer (Mittelpunkt-`refYear`, Gewinner-Auflösung, Überlappungs-Badge); `_evFullPlace` Datengap-Fallback auf nächstgelegene Zugehörigkeit.
+- **v929–v936 — Validator P17/P18 + UI-Politur:** `ISOLATED_PERSON` (kein famc/fams, Hinweis) + `DISCONNECTED_FROM_ROOT` (BFS vom Probanden, warn) inkl. dynamischem Render der Prüfregel-Checkboxen aus `VAL_RULES`; RESI-Datums-Schnellhilfe (🎂/⚭); Hof-Notiz direkt bei RESI-Events mit passender Adresse.
+- **v921–v928 — Ortsdarstellung periodengerecht:** Listen zeigen Kurzname (`shortPlace`), Detail-Zeilen den vollen Hierarchiestring zum Ereigniszeitpunkt (`_evFullPlace`), 🏘-Button springt in den Ort-Steckbrief; BAPM wie CHR als Kerndatum; Such-Index nach File-Open neu aufgebaut; Leer-Segment-Robustheit (`', Ochtrup, , , ,'` und Hierarchiestring-als-Titel).
 - **v904 — T0-FUNC-SPLIT:** `_parseINDILine` (389→12 Z.), `_parseFAMLine` (296→12 Z.), `writeINDIRecord` (271→106 Z.) in Level-/Themen-Helfer zerlegt; `_parseSourCitSub` + `_parseFamEvMediaLv3` als geteilte Helfer. Roundtrip net_delta=0 + 420 Tests grün.
 - **v901–v903 — CSP-DURCHSETZUNG vollständig:** 62 statische inline-`style=` → CSS-Klassen (~55 neue Klassen); dynamische gramps-tag-Farben via `data-il-style` + `_applyDynStyles()`; `test-csp.js` JS-Template-Scanner → **0 Fundstellen** — CSP belegt statt behauptet.
 - **v899 — SCALE-TEST + SORT-CACHE:** 20k-GEDCOM Roundtrip net_delta=0; `UIState._personSortCache` → 0 ms Sort-Overhead nach Erstrender. Detail: SCALE-TEST-BEFUNDE.md.
@@ -47,36 +52,55 @@ Fünf Dimensionen leiten die Priorisierung:
 **Roundtrip:** GEDCOM net_delta=0, out1===out2 ✓ · GRAMPS xml1===xml2 ✓ · beide headless automatisiert (`test-roundtrip.js`)
 **Testdaten:** MeineDaten_ancestris.ged (2811 Pers.) · Unsere Familie.gramps (2894 Pers.)
 
-### Gesamtbewertung — zuletzt überarbeitet 2026-06-07 (unabhängiges Review, v899; Tabelle aktualisiert auf v909)
+### Gesamtbewertung — zuletzt überarbeitet 2026-06-13 (unabhängiges Re-Review, v948)
 
-> **Methodik:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung und Browser-Verifikation. **Review 2026-06-07 (v899):** Kernversprechen empirisch nachgeprüft statt aus Doku übernommen — `test-unit.js` **420/420 grün** ausgeführt; GEDCOM-Roundtrip `MeineDaten_ancestris.ged` (83k Z.) **net_delta=0 / stable** (+622 PEDI by design); Strict-5.5.1 strippt sauber; GRAMPS (2894 Pers.) stable (note Δ−116 / citation Δ−782 Dedup, by design); CSP-Header direkt geprüft (kein `unsafe-inline/eval`, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`); `esc()` korrekt (5 Zeichen); SCALE-TEST 20k synthetisch belegt. **Korrekturen ggü. der 2026-06-06-Tabelle:** (1) `_attr 486 Z.` war ein Phantom — die Funktion existiert nicht (einziges `_attr` = 3-Zeilen-Helfer); echte Monsterfunktionen: `_parseINDILine` 391, `_parseFAMLine` 298, `writeINDIRecord` 273. (2) Tests 296→**420** + UI-Logik-Tests existieren (v891 Blöcke t–ab). (3) Skalierung „>10k ungetestet" → bis **20k** gemessen (v899).
+> **Methodik:** Nüchterne Standortbestimmung, kein Verkaufsprospekt. Noten basieren auf direkter Code-Prüfung und Browser-Verifikation, keine Übernahme stehengebliebener Doku-Aussagen.
+>
+> **Re-Review 2026-06-13 (v948):** Kernversprechen direkt nachgeprüft — `test-unit.js` **420/420 grün**; GEDCOM-Roundtrip `MeineDaten_ancestris.ged` (83k Z.) **net_delta=0 / stable / 329 ms** (+622 PEDI by design); Strict-5.5.1 sauber; GRAMPS-Roundtrip (2894 Pers., 2167 ms) stable (note Δ−116 / citation Δ−782 Dedup, by design); `test-csp.js` **grün** (`index.html` frei von inline-`on*=`/`style=`); SCALE-TEST 20k synthetisch belegt (Parse 721 ms cold, Sort-Cache greift ab Erstrender). Architektur-Vermessung: 69 JS-Dateien · 40 178 LOC · 53 Script-Tags · 84 top-level-Funktionen allein in `gedcom.js` · 25 ADRs.
+>
+> **Drei reale Befunde der Re-Review:**
+> 1. **CSP-Regression seit v945 lebte 3 Tage unentdeckt** — ein `style="margin-top:8px;"` im Template-Builder-Block (`index.html:544`). **Behoben in v948** (Utility-Klasse `.mt-8`) + **strukturell verriegelt** durch Pre-Commit-Hook (`test-csp.js` + `test-unit.js`); idempotenter Setup-Hook im `setup-hooks.sh`. Lehre: das Sicherheitsnetz war *inhaltlich* da, aber nicht als *Gate* angebunden.
+> 2. **Neue Monsterfunktion im View-Layer entstanden:** `showPlaceDetail` (ui-views-place.js) ist **631 Zeilen** — länger als alle drei T0-FUNC-SPLIT-Opfer (`_parseINDILine` 391 + `_parseFAMLine` 298 + `writeINDIRecord` 273) zusammen. T0-FUNC-SPLIT hat die Parser/Writer beseitigt, im View-Layer ist parallel dasselbe Anti-Pattern gewachsen. **Neuer Hebel: SHOWPLACE-SPLIT** (s. Maßnahmen).
+> 3. **`_qtSaveCustom` auf 196 Z. gewachsen** (Familien-Dedup v947) — noch lesbar, aber Grenz-Kandidat für nächste Aufteilung.
 
 | Bereich | Note | Kernbefund |
 |---|---|---|
-| Architektur | 6.8/10 | Saubere Schichtung + **25 ADRs** + Passthrough-Fundament (10 Mechanismen, empirisch tragend). `ViewState` (ADR-025) + `ui-lifecycle.js` schließen PWA-Lifecycle-Lücke. Orts-Speicher von 3 parallelen Quellen auf `placeObjects` konsolidiert (v851–858, gute Selbstkorrektur). **~860 top-level Funktionen** in flachem Namespace + 53 `<script>`-Tags mit manueller Ladereihenfolge bleiben *die* Hauptschuld; Modul-Migration bewusst zurückgestellt (ADR-020, vertretbar). |
-| Code-Qualität | **8.0/10** | Lesbar, kein Overengineering, gute „Warum"-Kommentare. Hygiene außergewöhnlich (1 vergessenes `console.log` + 16 TODO in ~38k Z., dichte try/catch). `showDetail` auf ~1 Zeile Boilerplate reduziert (→ `ViewState.setCurrent`). **T0-FUNC-SPLIT abgeschlossen (v904):** `_parseINDILine`/`_parseFAMLine` je → 12 Z. Dispatcher + 4 Level-Helfer; `writeINDIRecord` → 106 Z. + 3 Themen-Helfer. Größter Einzelabzug beseitigt. |
-| Sicherheit | 8.5/10 | **Direkt verifiziert:** CSP härter als die meiste produktive SaaS (kein `unsafe-inline/eval`, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `connect-src` präzise gescoped) + `test-csp.js`; OAuth PKCE S256 + CSRF-`state`; kein `eval` im Produktionscode; `esc()` vollständig + pervasiv. **Abzug:** Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos — ADR-021). |
-| Design / UX | **8.5/10** | Vollständiges Design-Token-System mit echtem Light-Theme (Parität, nicht invertiert), Playfair/Source Serif self-hosted, Mobile-First, Onboarding, 219 `aria/role` in index.html, `prefers-reduced-motion`. **A11Y-AUDIT abgeschlossen (v905):** axe-core-Messung über alle 6 Kernansichten (Liste, Detail, Baum, Familien, Orte, Quellen) — 0 WCAG 2.1 AA Violations; 5 Kontrastfehler behoben (`--text-muted`, `.p-id`, `.p-kekule`, `.btn-link`, `.tree-half-badge`). WCAG 2.1 AA **belegt, nicht behauptet**. **Abzug:** Handbuch teils noch Mockups. |
-| Funktionsstand | **9.1/10** | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · Verwandtschaftsrechner · Nominatim-Geocoding · GOV-Import (historisch datiert) · Ort-Steckbrief + Ortsbuch-Export (v892) + Validator · Multi-Device-Konflikterkennung. **OUTPUT-RICHNESS Tier A+B+C komplett (v911–v916) + Hofchronik (v917):** Quellenverzeichnis, Forschungsprotokoll-Export, Statistik-Report, Nachkommentafel (d'Aboville), Familienbuch-Buchreife (Cover/Glossar/@page), Großposter-SVG (A1/A0-Vektor), Verwandtschaftsnachweis, Stammtafel-Wall-Chart (Sanduhr-SVG), Ortssippenbuch (narrativ), periodisierter Zeitstrahl (Epochen), Hofchronik (Ort›Hof›Eigentümer/Bewohner+Umzug). **Abzug:** 3D-Tree + DNA/Online-Matching bewusst out-of-scope. |
-| Funktions-Qualität | 8.5/10 | GEDCOM/GRAMPS-Treue **empirisch top** (s. Methodik); UI-Flows Browser-verifiziert. View-Robustheit P0–P6 behebt iOS-PWA-Bugs (Void-Artefakte, stale Listen, leere Starts, Toolbar-Cross-Talk) + per-Entität-Scroll-State. Skalierung jetzt bis 20k belegt. **Abzug:** >20k + Echtdaten-Großbestände weiter offen. |
-| Performance | 8.0/10 | Web Worker (Parse nicht-blockierend) + virtuelles Scrollen O(log n) + LAZY-LOAD (−119 KB) + Sort-Cache (v899) + dirty-bit. **Abzug:** ~45 Cold-Start-Requests / 53 `<script>`-Tags (flacher Namespace verhindert Bundling — gemildert durch HTTP/2 + SW-Precache). |
-| GEDCOM-Konformität | 9.3/10 | `net_delta=0` + `out1===out2` auf 83k-Zeilen-Produktionsdatei (direkt nachgeprüft), Strict-5.5.1 sauber. GED7-opt-in + GRAMPS-Roundtrip automatisiert. Echte, verteidigbare Alleinstellung ggü. MFT/Ancestry. |
-| **Tests** | **8.5/10** | GEDCOM + GRAMPS-Roundtrip headless automatisiert. **420 dep-freie Unit-Tests** (Validator, Parser, BFS-Anonymisierung, Evidenz/Hypothesen, Datums-Helfer, PlaceRegistry, Geocoding, Merge, Migration) **+ UI-Logik-Tests** (v891, MiniDOM-Harness, Blöcke t–ab) + `test-scale.js`. **Abzug:** eigenes Harness statt Framework; kein CI-Server (lokal via `osascript`). |
-| Dokumentation | **8.7/10** | **25 ADRs** mit „Alternativen erwogen/verworfen" + Datamodel + ~2.2k-Z.-Changelog. Handbuch inhaltlich auf v915 — alle user-relevanten Features dokumentiert (OUTPUT-RICHNESS, Ort-Steckbrief-Erweiterungen, Skalierung, Barrierefreiheit); rein interne Änderungen bewusst ausgespart. **Abzug:** Screenshots teils noch Mockups (→ DOC-SCREENS). |
-| PWA / Offline | 9.0/10 | SW direkt geprüft: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Cache-first für App-Assets, Network-first + 4s-Timeout sonst, `offline.html`-Fallback; `ui-lifecycle.js` mit BFCache-Guard + >60-s-Resume-Heuristik. |
+| Architektur | 6.8/10 | Saubere Schichtung + **25 ADRs** + Passthrough-Fundament (10 Mechanismen, empirisch tragend). `ViewState` (ADR-025) + `ui-lifecycle.js` schließen PWA-Lifecycle-Lücke. Orts-Speicher von 3 parallelen Quellen auf `placeObjects` konsolidiert (v851–858, gute Selbstkorrektur). **84 top-level-Funktionen allein in `gedcom.js`** + 53 `<script>`-Tags mit manueller Ladereihenfolge bleiben *die* Hauptschuld; Modul-Migration bewusst zurückgestellt (ADR-020, vertretbar). |
+| Code-Qualität | **7.8/10** ↓ | Hygiene außergewöhnlich (**1 vergessenes `console.log` + 1 TODO in 40k LOC**, 122 try-Blöcke, 213 innerHTML / 746 esc-Aufrufe ≈ 3.5× pro innerHTML). `showDetail` schlank (→ `ViewState.setCurrent`). T0-FUNC-SPLIT (v904) hat die Parser/Writer-Monster beseitigt — **aber im View-Layer ist `showPlaceDetail` parallel auf 631 Z. gewachsen** (s. Befund 2). Weitere >100-Z.-Funktionen: `showDetail` 275, `_pdetLifeData` 195, `_qtSaveCustom` 196 (NEU v947), `applyGovText` 112. Die `_build*Html`-Familie (162–213 Z., HTML-Templates) ist deklarativ akzeptabel. |
+| Sicherheit | **8.5/10** | **Direkt verifiziert** (Re-Review): CSP härter als die meiste produktive SaaS (kein `unsafe-inline/eval`, `object-src 'none'`, `base-uri 'self'`, `frame-ancestors 'none'`, `connect-src` präzise gescoped); OAuth PKCE S256 + CSRF-`state`; kein `eval`/`new Function` im Produktionscode; `esc()` 5-Zeichen-korrekt + pervasiv. **`test-csp.js` jetzt als Pre-Commit-Gate** verriegelt (v948) — die v945-Regression kann sich strukturell nicht wiederholen. **Abzug:** Refresh-Token in `sessionStorage` (Restrisiko, ohne Backend alternativlos — ADR-021). |
+| Design / UX | 8.5/10 | Vollständiges Design-Token-System mit echtem Light-Theme (Parität, nicht invertiert), Playfair/Source Serif self-hosted, Mobile-First, Onboarding, **117 `aria/role` + 297 `data-action`** in index.html, `prefers-reduced-motion`. **A11Y-AUDIT abgeschlossen (v905):** axe-core über alle 6 Kernansichten — 0 WCAG 2.1 AA Violations; 5 Kontrastfehler behoben. **Abzug:** Handbuch teils noch Mockups (→ DOC-SCREENS). |
+| Funktionsstand | **9.1/10** | Undo/Redo · Karten-Animation · Evidenzmodell · GPS-Hypothesen · GED7 · GRAMPS · ASSO-Edit · Verwandtschaftsrechner · Nominatim-Geocoding · GOV-Import (historisch datiert) · Ort-Steckbrief + Ortsbuch-Export + **30 Validator-Regeln** (inkl. P17/P18 Vernetzungs-Gruppe v929/v930) · Multi-Device-Konflikterkennung · **Periodengerechte Ortsanzeige in allen Ansichten** (v921–v941, einzigartig im Markt) · **Template-Generator mit impliziten Default-Werten + Familien-Dedup** (v945–v947). **OUTPUT-RICHNESS komplett (v911–v917): 12 Druckausgaben** von Quellenverzeichnis über Stammtafel-Wall-Chart bis Hofchronik. **Abzug:** 3D-Tree + DNA/Online-Matching bewusst out-of-scope. |
+| Funktions-Qualität | 8.5/10 | GEDCOM/GRAMPS-Treue **empirisch top** (s. Methodik); UI-Flows Browser-verifiziert. View-Robustheit P0–P6 behebt iOS-PWA-Bugs (Void-Artefakte, stale Listen, leere Starts, Toolbar-Cross-Talk) + per-Entität-Scroll-State. Skalierung bis 20k belegt. **Abzug:** >20k + Echtdaten-Großbestände offen (→ SCALE-REAL). |
+| Performance | 8.0/10 | Web Worker (Parse nicht-blockierend) + virtuelles Scrollen O(log n) + LAZY-LOAD (−119 KB) + Sort-Cache (v899) + dirty-bit. **Abzug:** ~45 Cold-Start-Requests / 53 `<script>`-Tags (flacher Namespace verhindert Bundling — gemildert durch HTTP/2 + SW-Precache); erster Sort von 20k bleibt 1 s. |
+| GEDCOM-Konformität | 9.3/10 | `net_delta=0` + `out1===out2` auf 83k-Zeilen-Produktionsdatei (Re-Review direkt nachgeprüft, 329 ms), Strict-5.5.1 sauber. GED7-opt-in + GRAMPS-Roundtrip automatisiert. Echte, verteidigbare Alleinstellung ggü. MFT/Ancestry. |
+| **Tests** | **8.6/10** ↑ | GEDCOM + GRAMPS-Roundtrip headless. **420 dep-freie Unit-Tests** (Validator/Parser/BFS-Anonymisierung/Evidenz/Hypothesen/Datums-Helfer/PlaceRegistry/Geocoding/Merge/Migration + UI-Logik T0-UI Blöcke t–ab) + `test-scale.js` + `test-csp.js`. **Pre-Commit-Gate (v948)** koppelt `test-csp.js` + `test-unit.js` an jeden Commit — Regressionen werden vor dem Push erkannt. **Abzug:** eigenes Harness statt Framework; kein CI-Server (lokal via `osascript`); Roundtrip bewusst nicht im Hook (~2 s + Datei-Abhängigkeit). |
+| Dokumentation | 8.7/10 | **25 ADRs** mit „Alternativen erwogen/verworfen" + Datamodel + ~2.5k-Z.-Changelog. **Handbuch inhaltlich auf v948** (alle user-relevanten Features dokumentiert, beide Versionsfelder gesetzt). **Abzug:** Screenshots teils noch Mockups (→ DOC-SCREENS). |
+| PWA / Offline | 9.0/10 | SW (`sw.js` 116 Z.) direkt geprüft: PRECACHE_CRITICAL (atomar) + PRECACHE_OPTIONAL (`allSettled`); Cache-first für App-Assets, Network-first + 4s-Timeout sonst, `offline.html`-Fallback; `ui-lifecycle.js` mit BFCache-Guard + >60-s-Resume-Heuristik. |
 | Datenschutz | 9.0/10 | Lokal-First ✓ · DSGVO-Anonymisierung BFS ✓ (v715) · kein Datamining, kein Tracking, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.7/10** | *Außergewöhnlich diszipliniertes Solo-Projekt; Kernversprechen (verlustfreie GEDCOM/GRAMPS-Treue, strenge Sicherheit, lokal-first, plattformübergreifend) empirisch bestätigt. T0-FUNC-SPLIT (v904) + CSP-DURCHSETZUNG (v903) beseitigen die stärksten Code-Qualitäts-Abzüge. A11Y-AUDIT (v905) belegt WCAG 2.1 AA. OUTPUT-RICHNESS Tier A+B+C komplett (v911–v916) schließt den größten fachlichen Abstand zu MFT (11 Ausgabe-Formate von Quellenverzeichnis bis Stammtafel-Wall-Chart, Ortssippenbuch und periodisiertem Zeitstrahl). Größte verbleibende Hebel: (1) echte Screenshots statt Mockups im Handbuch → DOC-SCREENS; (2) Skalierung > 20k / Echtdaten → SCALE-REAL.* |
+| **∅ Gesamt** | **≈ 8.5/10** | *Außergewöhnlich diszipliniertes Solo-Projekt (1383 Commits, 709 v8-Sprints in 4 Wochen, 25 ADRs, 420 Tests). Kernversprechen empirisch bestätigt. T0-FUNC-SPLIT (v904) + CSP-Durchsetzung (v903) + CSP-Pre-Commit-Gate (v948) + A11Y-Audit (v905) + OUTPUT-RICHNESS Tier A+B+C (v911–v917) sind das Gerüst dieser v8-Phase. **Ehrlicher Rückgang gegenüber Voreinschätzung 8.7 (v909):** das Re-Review hat die CSP-Regression v945, die neue Monsterfunktion `showPlaceDetail` (631 Z.) und das fehlende Test-Gate aufgedeckt — Hebel #1 + #2 sind sofort behoben (→ 8.5), Hebel #3 SHOWPLACE-SPLIT bleibt offen. Größte verbleibende Hebel: (1) SHOWPLACE-SPLIT (M); (2) DOC-SCREENS — echte Screenshots statt Mockups (M); (3) SCALE-REAL — Skalierung > 20k / Echtdaten (M); (4) ONEDRIVE-AUTO — nahtloser Sync ohne manuellen Trigger (L).* |
 
-### Maßnahmen aus dem Review 2026-06-07 *(priorisiert nach Hebel/Aufwand)*
+### Maßnahmen aus den Reviews *(konsolidiert 2026-06-13)*
 
-| Prio | Maßnahme | Befund aus Review | Aufwand | Verweis |
+#### ✅ Erledigt seit Review 2026-06-07
+
+| Maßnahme | Ergebnis | Verweis |
+|---|---|---|
+| **T0-FUNC-SPLIT** — die 3 Parser/Writer-Monster zerlegen | `_parseINDILine` 389→12 Z., `_parseFAMLine` 296→12 Z., `writeINDIRecord` 271→106 Z. in Level-/Themen-Helfer | v904 |
+| **OUTPUT-RICHNESS Tier A+B+C** — Reports/Buch/Poster | Größter fachlicher Abstand zu MFT geschlossen — 11 neue Druckausgaben + Hofchronik | v911–v917 |
+| **A11Y-AUDIT** — WCAG 2.1 AA belegen | axe-core über 6 Kernansichten: 0 Violations; 5 Kontrastfehler behoben | v905 |
+| **DOC-SYNC laufend** — Doku an sw-Bumps koppeln | Memory-Regel etabliert; HANDBUCH v948 inhaltlich aktuell | dieser Commit |
+| **Hebel #1 CSP-Regress-Fix** *(aus Re-Review 2026-06-13)* | `style="margin-top:8px;"` → `.mt-8`; `test-csp.js` wieder grün | v948 |
+| **Hebel #2 Pre-Commit-Gate** *(aus Re-Review 2026-06-13)* | `.git/hooks/pre-commit` (test-csp + test-unit) + `setup-hooks.sh` | v948 |
+
+#### Offen — priorisiert nach Hebel/Aufwand
+
+| Prio | Maßnahme | Befund | Aufwand | Verweis |
 |---|---|---|---|---|
-| **1** | **DOC-SYNC** — Bewertungstabelle + Priorisierungs-Abschnitt von stale/falschen Angaben befreien und an SW-Bumps koppeln | Tabelle (Stand 2026-06-06) nannte Phantom-`_attr 486 Z.`, 296 statt 420 Tests, „keine UI-Logik-Tests", „>10k ungetestet" — alle überholt. | XS | ✅ *dieser Commit* |
-| **2** | ✅ **T0-FUNC-SPLIT** — die 3 echten Monsterfunktionen zerlegen | `_parseINDILine` 389→12 Z., `_parseFAMLine` 296→12 Z., `writeINDIRecord` 271→106 Z. in Level-/Themen-Helfer zerlegt. Roundtrip net_delta=0 + 420 Tests grün. | M | ✅ v904 |
-| **3** | ✅ **OUTPUT-RICHNESS Tier A+B+C komplett** — Reports/Buch/Poster-Export | Größter fachlicher Abstand zu MacFamilyTree geschlossen. Tier A (Quellenverzeichnis, Forschungsprotokoll, Statistik) + Tier B (Nachkommentafel, Familienbuch-Buchreife, Großposter-SVG, Verwandtschaftsnachweis) + Tier C (Stammtafel-Wall-Chart, Ortssippenbuch, Zeitstrahl) erledigt v911–v916. | L | ✅ v911–v916, s. P4 |
-| **4** | ✅ **A11Y-AUDIT** — „WCAG 2.1 AA" belegen statt behaupten | axe-core über 6 Kernansichten: 0 Violations. 5 Kontrastfehler behoben (v905). WCAG 2.1 AA belegt. | S | ✅ v905 |
-| 5 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v915 (alle user-relevanten Features dokumentiert, Versionsfelder gesetzt). Verbleibend: Mockups durch echte Screenshots ersetzen. | M | s. Dokumentation |
-| 6 | **SCALE-REAL** — Skalierung jenseits 20k + Echtdaten-Großbestand | 20k synthetisch belegt; >20k und reale Großdatei weiter offen. | M | s. P3 |
+| **1** | **SHOWPLACE-SPLIT** — `showPlaceDetail` (631 Z.) auf 5–8 Helfer aufteilen | Im Re-Review 2026-06-13 aufgedeckt: T0-FUNC-SPLIT hat die Parser/Writer-Monster beseitigt, im View-Layer ist `showPlaceDetail` parallel auf **631 Zeilen** gewachsen (länger als die 3 ursprünglichen T0-FUNC-SPLIT-Opfer zusammen). Vorschlag: Steckbrief-Kopf, Ereignis-Gruppen, Verwaltungs-Zeitlinie, Mini-Karte, Quellen-Sektion, Namens-Timeline als getrennte Helfer; zudem `_qtSaveCustom` (196 Z., NEU v947) als Grenz-Kandidat beobachten. | M | s. Code-Qualität |
+| 2 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v948. Verbleibend: Mockups durch echte Screenshots ersetzen. Priorität: Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste, Karte (alle 3 Modi), Personen-Detail, Orts-Steckbrief. | M | s. Dokumentation |
+| 3 | **SCALE-REAL** — Skalierung jenseits 20k + Echtdaten-Großbestand | 20k synthetisch belegt; >20k und reale Großdatei (z. B. 50k-MyHeritage-Smart-Match-Export) offen. | M | s. Forschung |
+| 4 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikt-Erkennung (v858) löst Datenverlust, aber Sync ist weiter manuell — verbleibende Lücke ggü. MFT/CloudKit. Idee: `visibilitychange`+Heuristik + Pull-Indikator. | L | s. Vergleich |
+| 5 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only; Migration in placeObjects steht. Schritte: write-Pfad aus `savePlace` entfernen, post-Migration `localStorage.removeItem`, Helfer löschen. **Voraussetzung:** alle Geräte mindestens 1× mit v854+ gestartet (Eigennutzung erfüllt). | S | s. T0 |
 
 ---
 
@@ -92,22 +116,31 @@ Vollständige Liste der abgeschlossenen v8-dev-Features (STORY-OPT, WW-PARSER, T
 
 ---
 
-## Priorisierung — überarbeitet 2026-05-31 (nach Re-Verifikation)
+## Priorisierung — konsolidiert 2026-06-13
 
-Das Test-Sicherheitsnetz und das Modul-Fundament (Pilot) sind erledigt; die Re-Verifikation 2026-05-31 hat **zwei neue, konkrete Engpässe** sichtbar gemacht, die jetzt vor neuen Features stehen:
-- ✅ **CSP-Durchsetzung vollständig** (v901–v903): `test-csp.js` JS-Template-Scanner bestätigt 0 inline-`style=`-Fundstellen.
-- **Architektur-Schuld** (~860 top-level Funktionen, flacher Namespace) → die Monsterfunktionen sind der konkrete Hebel, nicht die Voll-Modul-Migration. *(Korrektur 2026-06-07: die früher hier genannte „486-Z.-Funktion" `_attr` ist ein Phantom — existiert nicht; echte Längsten s. T0-FUNC-SPLIT.)*
+**Erledigt (P0+P1, in dieser Reihenfolge angegangen):**
 
-**Reihenfolge:**
-1. ✅ **P0 — Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT): GEDCOM+GRAMPS-Roundtrip automatisiert + 161 Unit-Tests. Regressionsabgesichert.
-2. ✅ **P0 — Modul-Fundament-Pilot** (T0-MODULE Phase 1+2): ADR-020 + GRAMPS-/Validator-Cluster als ES-Module. Phasen 3–4 **bewusst zurückgestellt** (Begründung unten).
-3. ✅ **P0 — CSP-Durchsetzung verifizierbar machen** *(abgeschlossen v903)*: ① inline-`onclick` entfernt (v794); ② statische inline-`style=` → CSS-Klassen (v902, 10 Dateien, ~50 neue Klassen); ③ dynamische `gramps-tag`-Farben via `data-il-style` + `_applyDynStyles()` (v903); `test-csp.js` JS-Scanner Ergebnis: **0 Fundstellen** — CSP vollständig *belegt* statt behauptet.
-4. ✅ **P1 — gezielte Architektur-Entschärfung** *(abgeschlossen v904)*: `_parseINDILine` (389→12 Z.), `_parseFAMLine` (296→12 Z.), `writeINDIRecord` (271→106 Z.) in Level-/Themen-Helfer zerlegt (T0-FUNC-SPLIT).
-5. **P2+** — Features. **Verbleibender Zielgruppen-Hebel ggü. MacFamilyTree** (s. Vergleich): **Ausgabe-Reichtum (PDF-Bücher/Poster → OUTPUT-RICHNESS)** als größter fachlicher Abstand; Kamera (mobil → CAM). *(Erledigt seit 2026-05-31: Skalierungstest 20k, Orts-Geocoding Nominatim/GOV.)*
+1. ✅ **Test-Sicherheitsnetz** (T0-TEST-2, T0-UNIT) — GEDCOM+GRAMPS-Roundtrip headless + 420 Unit-Tests. Regressionsabgesichert.
+2. ✅ **Modul-Fundament-Pilot** (T0-MODULE Phase 1+2) — ADR-020 + GRAMPS-/Validator-Cluster als ES-Module. Phasen 3–4 bewusst zurückgestellt (Begründung unten).
+3. ✅ **CSP-Durchsetzung** (v901–v903) — statische inline-`style=` → CSS-Klassen, dynamische `gramps-tag`-Farben via `data-il-style` + `_applyDynStyles()`; `test-csp.js` bestätigt 0 Fundstellen in `index.html`.
+4. ✅ **T0-FUNC-SPLIT** (v904) — `_parseINDILine` 389→12, `_parseFAMLine` 296→12, `writeINDIRecord` 271→106 Z.
+5. ✅ **OUTPUT-RICHNESS Tier A+B+C** (v911–v917) — 12 Druckausgaben; größter fachlicher Abstand zu MFT geschlossen.
+6. ✅ **A11Y-AUDIT** (v905) — WCAG 2.1 AA belegt (axe-core, 0 Violations).
+7. ✅ **PLACE-HIST** (v796–v858, ADR-024) — historisch datierte Orte; **periodengerechte UI-Ausgabe** (v921–v941) folgt.
+8. ✅ **CSP-Pre-Commit-Gate** (v948) — `test-csp.js` + `test-unit.js` als Pre-Commit-Hook, idempotenter `setup-hooks.sh`. Strukturelle Antwort auf die v945-CSP-Regression.
+
+**Aktive Engpässe (Priorisierung der offenen Maßnahmen siehe oben):**
+
+- **Code-Qualität im View-Layer** — `showPlaceDetail` (631 Z., neue Monsterfunktion) ist der Top-Hebel; `_qtSaveCustom` (196 Z.) als Grenz-Kandidat beobachten. → SHOWPLACE-SPLIT.
+- **Handbuch-Politur** — Mockups durch echte Screenshots ersetzen. → DOC-SCREENS.
+- **Skalierung jenseits 20k auf Echtdaten** — Synth-Test belegt, Echtdaten offen. → SCALE-REAL.
+- **Multi-Device-Sync ohne manuellen Trigger** — verbleibende ggü.-MFT-Lücke. → ONEDRIVE-AUTO.
+
+**Architektur-Schuld** (~860 top-level-Funktionen über 69 JS-Dateien, davon 84 in `gedcom.js`, flacher Namespace) bleibt — der konkrete Hebel sind die Monsterfunktionen (s. SHOWPLACE-SPLIT), nicht die Voll-Modul-Migration. *(Korrektur 2026-06-07: die früher hier genannte „486-Z.-Funktion" `_attr` war ein Phantom — existiert nicht.)*
 
 ### Architektur-Entscheidung: ES-Modul-Phasen 3–4 + Build-Step zurückgestellt
 
-Kern-Migration + Bundler bringen für Nutzer kaum Mehrwert (PWA-Cache + LAZY-LOAD dominieren) und brechen die bewusst gewählte „edit-anywhere ohne Toolchain"-Eigenschaft (ADR-001/002). Harte Blocker: Worker-`importScripts()`, `idbGet` von 13 Dateien, 59 Brücken-Symbole in `gedcom.js`. **Entscheidung: nicht einführen** — konkreter Wartungs-Hebel ist T0-FUNC-SPLIT, nicht die Voll-Migration. Vollständige Begründung + Phasenplan: **ARCHITECTURE.md ADR-020**. Trigger für Wiederaufnahme: starkes Codebase-Wachstum oder konkrete Namespace-Kollisionen.
+Kern-Migration + Bundler bringen für Nutzer kaum Mehrwert (PWA-Cache + LAZY-LOAD dominieren) und brechen die bewusst gewählte „edit-anywhere ohne Toolchain"-Eigenschaft (ADR-001/002). Harte Blocker: Worker-`importScripts()`, `idbGet` von 13 Dateien, 59 Brücken-Symbole in `gedcom.js`. **Entscheidung: nicht einführen** — konkreter Wartungs-Hebel ist Monsterfunktions-Split, nicht die Voll-Migration. Vollständige Begründung + Phasenplan: **ARCHITECTURE.md ADR-020**. Trigger für Wiederaufnahme: starkes Codebase-Wachstum oder konkrete Namespace-Kollisionen.
 
 ---
 
@@ -238,12 +271,11 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v921 *(veraltet — v922–v947 noch nicht dokumentiert: u.a. Template-Generator-Erweiterung v945–v947 mit Ortspicker + impliziten Default-Werten + Hidden/Prefill-Toggle + Wohnort=Adresse-Trennung + Familien-Dedup bei verknüpften Eltern/Ehepartnern)*** — Versionsfelder auf v917 gesetzt. **Dokumentiert:** OUTPUT-RICHNESS Tier A+B+C + Hofchronik (Kap. 20 Druckausgaben: A2 Quellenverzeichnis, A3 Forschungsprotokoll, A4 Statistik-Report, B1 Nachkommentafel, B2 Familienbuch-Buchreife, B4 Verwandtschaftsnachweis, Ortsbuch v892, C1 Stammtafel, C2 Ortssippenbuch, C3 Zeitstrahl, Hofchronik v917; Kap. 8 Diagramm-Export PNG + B3 Großposter-SVG); Ort-Steckbrief-Erweiterungen (Orts-Notiz v900, Zugehörigkeit-nach-Jahr inkl. Lücken v908, Zeitraumverteilung); Skalierung/Performance + Barrierefreiheit (WCAG 2.1 AA v905) in FAQ. *Bewusst ohne Handbuch-Eintrag (rein interne Änderungen, keine User-Sichtbarkeit):* View-Robustheit-Internals P0–P6, Koord-Single-Source/-Paar-Invariante, VS-Scroll-Reattach, UI-Logik-Tests T0-UI, CSP-Durchsetzung v901–v903, T0-FUNC-SPLIT v904, Vorname-Normalisierung v909. *(Offen für später: echte Screenshots statt Mockups → DOC-SCREENS.)*
+**Handbuch-Stand: sw v948 *(inhaltlich aktuell)*** — beide Versionsfelder auf v948 gesetzt. Alle user-relevanten Features dokumentiert: 12 Druckausgaben (Kap. 20), Ort-Steckbrief inkl. Verwaltungs-Zeitlinie WYSIWYG (Kap. 7), 30 Validator-Regeln inkl. Vernetzungs-Gruppe (Kap. 13), Template-Generator mit impliziten Defaults + Familien-Dedup (Kap. 4), periodengerechte Ortsanzeige in Personendetail mit 🏘-Sprung (Kap. 4), RESI-Datums-Schnellhilfe + Hof-Notiz-Automatik (Kap. 15), Skalierung/Barrierefreiheit in FAQ. *Bewusst ohne Handbuch-Eintrag (rein interne Änderungen):* View-Robustheit-Internals P0–P6, Koord-Single-Source, T0-UI-Tests, CSP-Durchsetzung + Pre-Commit-Gate, T0-FUNC-SPLIT, Vorname-Normalisierung. *(Offen: echte Screenshots statt Mockups → DOC-SCREENS.)*
 
-| ID | Aufgabe | Details | Aufwand |
-|---|---|---|---|
-| **DOC-SYNC** | **Bewertungs- + Priorisierungs-Doku synchron halten** *(Hebel #1 aus Review 2026-06-07 — ✅ Erst-Durchlauf in diesem Commit)* | Die Gesamtbewertungstabelle lief dem Code hinterher (Phantom-`_attr 486`, 296 statt 420 Tests, „keine UI-Logik-Tests", „>10k ungetestet"). **Regel ab jetzt:** bei jedem `CACHE_NAME`-Bump, der eine bewertungsrelevante Zahl ändert (Testanzahl, größte Funktion, Skalierungsgrenze, Feature-Status), die Bewertungstabelle + Vergleichstabelle + Priorisierung mitziehen — analog zur bestehenden sw-Versions-Pflichtregel (CLAUDE.md). Verhindert erneute Drift. | XS (laufend) |
-| DOC-SCREENS | **Handbuch: echte Screenshots statt Mockups** | Handbuch inhaltlich auf v915 (alle user-relevanten Features dokumentiert, beide Versionsfelder gesetzt). Verbleibend: alle Mockups durch echte Screenshots ersetzen. Priorität: Sanduhr-Baum, Fächer, Nachkommen-Baum, Zeitleiste, Karte (alle 3 Modi), Personen-Detail, Orts-Steckbrief. | M |
+**DOC-SYNC** *(laufende Regel seit Review 2026-06-07)*: bei jedem `CACHE_NAME`-Bump, der eine bewertungsrelevante Zahl ändert (Testanzahl, größte Funktion, Skalierungsgrenze, Feature-Status), die Bewertungstabelle + Vergleichstabelle + Priorisierung mitziehen — analog zur bestehenden sw-Versions-Pflichtregel (CLAUDE.md). Verhindert Drift wie die 2026-06-06-Tabelle (Phantom-`_attr 486`, 296 statt 420 Tests).
+
+**DOC-SCREENS** (offen, M-Aufwand) → in der Maßnahmen-Tabelle oben.
 
 ---
 
@@ -263,7 +295,7 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 
 ---
 
-## Vergleich mit etablierten Tools *(faire Einordnung — Stärken der Konkurrenz benannt; überarbeitet 2026-05-31)*
+## Vergleich mit etablierten Tools *(faire Einordnung — Stärken der Konkurrenz benannt; aktualisiert 2026-06-13)*
 
 > Frühere Version dieser Tabelle war parteiisch (sich selbst durchgehend ✅, Konkurrenz ⚠). Hier ehrlicher: wo etablierte Tools führen, steht es da. **MacFamilyTree (MFT)** ist der *direkteste* Vergleich — Synium Software, nativ macOS+iOS, deutscher Markt, visuell-first, gleiche Zielgruppe (Hobby, mobil+Desktop). Genau deshalb sind die Lücken zu MFT die aussagekräftigsten.
 
@@ -281,7 +313,8 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 | Orts-Geocoding / Gazetteer | ✅ Nominatim + GOV (historisch datiert) | **✅ (Geocoding + Heatmaps)** | ✅ | ✅ |
 | Geräte-Sync | ⚠ OneDrive-Datei + Konflikterkennung (v858) | **✅ nahtlos (CloudKit FamilySync)** | ❌ | ✅ Cloud |
 | Karte + Zeitleiste | ✅ (hist. Ereignisse, Mehrpersonen-TL) | ✅ | ⚠ | ⚠ |
-| Validierungsregeln | ✅ 28 Regeln, konfigurierbar | ⚠ | ✅ | ⚠ |
+| Validierungsregeln | ✅ **30 Regeln**, konfigurierbar (inkl. Vernetzungs-Gruppe ISOLATED_PERSON / DISCONNECTED_FROM_ROOT v929/v930) | ⚠ | ✅ | ⚠ |
+| Historisch datierte Ortsdarstellung | **✅ einzigartig** — `placeObjects` als single-source, Picker zeigt `po.title` und füllt periodengerechten Namen ein (v937), Verwaltungs-Zeitlinie WYSIWYG zum Writer (v940) | ⚠ Aktualname | ⚠ Place-Hierarchy ja, Zeitachse nein | ⚠ Aktualname |
 | Duplikat-Erkennung + Merge | ✅ (Scoring, Gegenüberstellung) | ✅ | ✅ | ⚠ |
 | Verwandtschaftsrechner | ✅ (BFS, Cousin-Grade + „entfernt") | ✅ | ✅ | ✅ |
 | DNA-Integration | ❌ | ❌ | ⚠ Plugin | **✅ Kernfeature** |
@@ -293,14 +326,14 @@ Test-Sicherheitsnetz + Modul-Fundament stehen: **GEDCOM- + GRAMPS-Roundtrip** he
 | Reife / Politur | ⚠ Solo-Projekt | **✅ 20-J.-Produkt** | ✅ etabliert | ✅ |
 | Kosten | **gratis** | €€ einmalig | gratis | €€€ Abo |
 
-**Einzigartige Stärken (real konkurrenzlos):** kostenlose plattformübergreifende Offline-PWA *ohne Installation* + Story-Modus + GRAMPS-Brücke + DSGVO-Anonymisierung + **verifizierte GEDCOM-Treue** + expliziter GPS-Forschungsprozess + kein Datamining. Für die Zielgruppe (mobil + Desktop, datenschutzbewusst, nicht Apple-gebunden) besetzt das eine Nische, die kein kommerzielles Tool exakt abdeckt.
+**Einzigartige Stärken (real konkurrenzlos):** kostenlose plattformübergreifende Offline-PWA *ohne Installation* + Story-Modus + GRAMPS-Brücke + DSGVO-Anonymisierung + **verifizierte GEDCOM-Treue** (`net_delta=0` auf 83k-Zeilen-Datei, direkt nachgeprüft) + expliziter GPS-Forschungsprozess + **historisch datierte Ortsdarstellung mit periodengerechter Auflösung** (v937–v940 — keine andere Software macht das) + kein Datamining. Für die Zielgruppe (mobil + Desktop, datenschutzbewusst, nicht Apple-gebunden) besetzt das eine Nische, die kein kommerzielles Tool exakt abdeckt.
 
 **Ehrliche Lücken vs. Konkurrenz (priorisiert nach Relevanz für die Zielgruppe):**
-- vs. **MacFamilyTree** *(der direkte Maßstab)*: ① 3D-Tree (out-of-scope; klassischer Ausgabe-Reichtum mit OUTPUT-RICHNESS Tier A+B+C v911–v916 aufgeholt) · ② nahtloser Multi-Device-Sync (CloudKit — Stammbaum hat Konflikterkennung, aber manuellen Sync) · ③ Reife/Politur. **Dafür schlägt Stammbaum MFT bei:** GEDCOM-Treue, Forschungsprozess-Rigorosität (GPS/Hypothesen/Kanban), historisches Orts-Handling (datierte GOV-Ketten), Plattform-Reichweite, Privacy, Preis.
-- vs. **GRAMPS:** Tiefe im professionellen Quellen-/Forschungsworkflow; Skalierung; Report-Vielfalt.
-- vs. **Ancestry:** DNA + Online-Matching + Milliarden Records — *kategoriefremd und bewusst out-of-scope*.
+- vs. **MacFamilyTree** *(der direkte Maßstab)*: ① 3D-Tree (out-of-scope; klassischer Ausgabe-Reichtum mit OUTPUT-RICHNESS Tier A+B+C v911–v917 aufgeholt) · ② **nahtloser Multi-Device-Sync** (CloudKit — Stammbaum hat Konflikterkennung, aber manuellen Sync → Hebel ONEDRIVE-AUTO offen) · ③ Reife/Politur (MFT 20 Jahre vs. v8-dev 18 Monate). **Dafür schlägt Stammbaum MFT bei:** GEDCOM-Treue, Forschungsprozess-Rigorosität (GPS/Hypothesen/Kanban), **periodengerechtes Orts-Handling** (datierte GOV-Ketten + Picker-Auflösung), Plattform-Reichweite, Privacy, Preis.
+- vs. **GRAMPS:** Tiefe im professionellen Quellen-/Forschungsworkflow; Skalierung 100k+; Report-Vielfalt. **Dafür schlägt Stammbaum GRAMPS bei:** PWA-Plattform (mobil!), Story-Modus, Hofchronik, iOS-PWA-Lifecycle-Robustheit (ADR-025).
+- vs. **Ancestry / MyHeritage:** DNA + Online-Matching + Milliarden Records — *kategoriefremd und bewusst out-of-scope*. Dafür macht Stammbaum das, was diese SaaS nicht können: **lokal bleiben**.
 
-*Keine offenen **Standards**-Lücken mehr (GEDCOM/GRAMPS abgedeckt). **Ausgabe-Reichtum** ist mit OUTPUT-RICHNESS Tier A+B+C (v911–v916, 11 Formate) aufgeholt — verbleibend nur 3D-Tree (out-of-scope). Skalierung bis 20k ist seit v899 belegt (>20k/Echtdaten offen). Die netzwerk-/datenbankgebundenen Features (DNA/Records) sind Designziel, kein Defizit.*
+*Keine offenen **Standards**-Lücken mehr (GEDCOM/GRAMPS abgedeckt). **Ausgabe-Reichtum** ist mit OUTPUT-RICHNESS Tier A+B+C + Hofchronik (v911–v917, 12 Formate) aufgeholt — verbleibend nur 3D-Tree (out-of-scope). Skalierung bis 20k ist seit v899 belegt (>20k/Echtdaten offen → SCALE-REAL). Die netzwerk-/datenbankgebundenen Features (DNA/Records) sind Designziel, kein Defizit.*
 
 ---
 

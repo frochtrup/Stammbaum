@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Juni 2026 · Stand: sw v921</p>
+  <p class="version">Version 8 · Juni 2026 · Stand: sw v947</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -1292,7 +1292,7 @@ Tipp: Kombinieren Sie den „Keine Quellen"-Filter mit dem CSV-Export, um schnel
 
     <h3 style="margin-top:1em;">Abschnitte in der Detailansicht</h3>
     <ul style="margin: 0.5em 0 0 1.2em; font-size:0.88em; line-height:2em;">
-      <li><strong>Lebensdaten</strong> — Geburt, Taufe, Tod, Beerdigung, weitere Ereignisse</li>
+      <li><strong>Lebensdaten</strong> — Geburt, Taufe, Firmung/Konfirmation (BAPM), Tod, Beerdigung, weitere Ereignisse</li>
       <li><strong>Medien</strong> — Fotos und Dokumente</li>
       <li><strong>Ehepartner &amp; Kinder</strong> — die Familie dieser Person</li>
       <li><strong>Eltern</strong> — Elternfamilie</li>
@@ -1300,6 +1300,12 @@ Tipp: Kombinieren Sie den „Keine Quellen"-Filter mit dem CSV-Export, um schnel
       <li><strong>Verwandtschaft</strong> — Beziehung zum Probanden</li>
       <li><strong>Aufgaben</strong> — offene Forschungsaufgaben</li>
     </ul>
+
+    <h3 style="margin-top:1em;">Ortsanzeige in der Detailansicht (ab sw v925/v927)</h3>
+    <p style="font-size:0.88em;">In den Ereigniszeilen erscheint der <strong>volle Hierarchiestring</strong> in der Schreibweise, die zum Ereigniszeitpunkt gültig war (z. B. „Sassenbergk, Hochstift Münster, Heiliges Römisches Reich" für eine Geburt 1750). Hinter jedem Ort steht ein <span class="button-label">🏘</span>-Button, der direkt in den Ort-Steckbrief springt — praktisch, um schnell auf weitere Personen mit demselben Ereignisort zu wechseln. Die Personenliste selbst zeigt aus Platzgründen nur den <em>Kurznamen</em> (Haupttitel des Ortes).</p>
+
+    <h3 style="margin-top:1em;">Taufe/Firmung als Kerndatum (ab sw v923)</h3>
+    <p style="font-size:0.88em;">Direkt nach der Taufe (CHR) erscheint — falls vorhanden — auch eine <strong>Firmung/Konfirmation (BAPM)</strong> als eigene Hauptzeile mit Altersberechnung und Paten-Anzeige. Wenn weder Geburts- noch Taufdatum bekannt sind, nutzt die App die BAPM als Ersatz-Referenzdatum für Altersangaben.</p>
   </div>
 </div>
 
@@ -1442,6 +1448,30 @@ Der Schnellerfassungs-Modus eignet sich besonders gut für die Arbeit im Archiv:
   <li><strong>Reihenfolge:</strong> Felder lassen sich mit ↑/↓ ordnen und mit ✕ entfernen.</li>
   <li><strong>Komfort:</strong> Der Nachname des Vaters wird mit dem der Hauptperson vorbelegt (und bleibt überschreibbar). Treffer-Verknüpfung und Sofort-Prüfung funktionieren wie bei den fertigen Vorlagen.</li>
 </ul>
+
+<h3>Vorbelegte Werte: „immer gleich" einmal eintragen (ab sw v945)</h3>
+<p>Bei vielen Quellen sind ein paar Felder bei jedem Eintrag <em>identisch</em> — der Ort des Kirchenbuchs zum Beispiel, oder der Beruf der Eltern. Im Builder hat jedes Feld dafür rechts eine zusätzliche Wert-Spalte:</p>
+<ul>
+  <li><strong>Wert leer lassen</strong> → das Feld wird beim Erfassen jedes Mal abgefragt (wie bisher).</li>
+  <li><strong>Wert eintragen</strong> → das Feld wird beim Erfassen automatisch mit diesem Wert vorbelegt. Bei Ortsfeldern (<em>Geburtsort, Taufort, Heiratsort, Wohnort</em>) steht zusätzlich ein <span class="button-label">📍</span>-Button, der den Ortspicker (Kapitel 7) öffnet — der periodengerechte Name <em>und</em> die Orts-ID werden mitgespeichert.</li>
+</ul>
+
+<p>Pro Template stellen Sie ein, wie die vorbelegten Felder in der Erfassungs-Maske erscheinen sollen — der Schalter <strong>Implizite Felder</strong> bietet zwei Optionen:</p>
+<ul>
+  <li><strong>Versteckt (Chip im Kopf):</strong> die vorbelegten Felder erscheinen <em>nicht</em> mehr im Formular — stattdessen sehen Sie oben einen Zusammenfassungs-Chip („📍 Ochtrup · 👤 Bauer"). Maximal aufgeräumtes Erfassungs-Formular, ideal wenn die Werte wirklich nie variieren.</li>
+  <li><strong>Vorbelegt + 🔒:</strong> die Felder erscheinen wie gewohnt, sind aber bereits ausgefüllt und mit einem 🔒-Symbol gekennzeichnet. Sie können den Wert für einzelne Einträge bei Bedarf überschreiben.</li>
+</ul>
+
+<div class="tip">
+Für ein Taufbuch eines Dorfes ist <strong>Versteckt</strong> die richtige Wahl: Quelle, Taufort und Pfarrei sind immer gleich. Für ein Trauungs­register, in dem die Bräute aus verschiedenen Nachbargemeinden kommen, ist <strong>Vorbelegt + 🔒</strong> besser — Sie überschreiben das Ortsfeld nur in den Ausnahmefällen.
+</div>
+
+<h3>Wohnort = Adresse + Ort (ab sw v946)</h3>
+<p>Der Feldtyp <strong>Wohnort (RESI)</strong> trennt jetzt sauber zwischen Adresse und Ort: Sie tragen im Eingabefeld nur die <em>Hof-/Hausadresse</em> ein (z. B. „Oster 12"). Der Ort kommt aus dem Template-Kontext (z. B. „Ochtrup") und wird automatisch ergänzt — so erscheint der Eintrag korrekt in der Hofchronik (Kapitel 20) und im Höfe-Tab (Kapitel 15). Das Adress-Feld unterstützt Autovervollständigung anhand bereits erfasster Adressen.</p>
+
+<h3>Bestehende Familien automatisch wiederverwenden (ab sw v947)</h3>
+<p>Wenn Sie beim Erfassen <strong>Vater und Mutter beide</strong> über die Treffer-Box mit bestehenden Personen verknüpfen und beide bereits eine gemeinsame Familie haben, legt die App <em>keine</em> zweite Familie an: die Hauptperson wird stattdessen als weiteres Kind an die bestehende Familie angehängt, und der Quellenbeleg landet bei der Kind-Eltern-Verknüpfung. Analog wird bei Ehe-Templates die bestehende Ehe-Familie wiederverwendet, wenn Hauptperson und Ehepartner beide verknüpft sind — Heiratsdatum und -ort werden ergänzt, falls noch leer, der Beleg an das Heiratsereignis angehängt.</p>
+<p>Im Hinweis-Text unterhalb des Speichern-Buttons sehen Sie „🔗 Eltern-Fam" bzw. „🔗 Ehe-Fam", wenn eine bestehende Familie wiederverwendet wurde. So vermeiden Sie die typischen „zwei Familien für dasselbe Paar"-Dubletten, die sonst beim Abarbeiten eines Kirchenbuchs Geschwister-für-Geschwister entstehen.</p>
 
 <div class="tip">
 Ihre Templates werden geräte­lokal gespeichert (unabhängig von der geöffneten Datei). Über <span class="button-label">⤓ Export</span> / <span class="button-label">⤒ Import</span> sichern Sie sie als portable <em>.json</em>-Datei oder übertragen sie auf ein anderes Gerät.
@@ -1952,6 +1982,12 @@ Die Bewertung reist mit Ihrer Datei: in GEDCOM als Zusatzfelder (<code>_STYP/_IN
 
 <p>Die Suche im Picker berücksichtigt auch <strong>Sprachvarianten</strong> (z. B. findet „Breslau" den Ort „Wrocław" wenn dieser als deutsche Namensalternative hinterlegt ist).</p>
 
+<p><strong>Periodengerechte Namen (ab sw v937).</strong> Der Picker listet jeden Ort nur noch einmal — mit seinem heutigen Haupttitel. Bei der Auswahl trägt die App automatisch den <em>zur Zeit des Ereignisses gültigen Namen</em> ins Feld ein: für ein Ereignis im Jahr 1750 erscheint z. B. „Sassenbergk", für ein Ereignis im Jahr 1900 „Sassenberg" — vorausgesetzt, Sie haben die historischen Schreibweisen mit Datumsspannen am Ort-Steckbrief hinterlegt (Kapitel 7). Die App liest das Jahr automatisch aus dem zugehörigen Datumsfeld des Formulars; ändern Sie das Datum nachträglich, wählen Sie den Ort einfach erneut aus, damit der Name neu aufgelöst wird.</p>
+
+<div class="tip">
+Sehen Sie in der Ereigniszeile später den vollen Hierarchiestring „Sassenbergk, Hochstift Münster, …", obwohl im Eingabefeld nur „Sassenbergk" stand? Das ist gewollt — die App ergänzt die zum Ereignisjahr gültige Verwaltungs-Zugehörigkeit beim Anzeigen automatisch (siehe Kapitel 7, Verwaltungszugehörigkeit).
+</div>
+
 <h2>Migrations-Modus</h2>
 
 <p>Im Migrations-Modus zeichnet die App für jede Person mit mindestens zwei bekannten Orten eine Linie auf der Karte. Die Farbe richtet sich nach dem <strong>Geburtsjahr</strong> — so sehen Sie sofort, aus welcher Epoche eine Wanderungsbewegung stammt. Tippen Sie auf eine Linie oder einen Marker, um die zugehörigen Personen zu sehen.</p>
@@ -2071,6 +2107,7 @@ Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Mar
   <li><strong>Ereignisse nach Typ gruppiert:</strong> Geburt, Taufe, Heirat, Tod usw. werden jeweils als eigene Gruppe angezeigt, mit den zugehörigen Personen.</li>
   <li><strong>Freie Notiz:</strong> Sie können zu jedem Ort eine eigene Notiz erfassen (z. B. „Pfarrei zuständig ab 1650" oder Hinweise zur Quellenlage). Tippen Sie den Ort zum Bearbeiten an und tragen Sie den Text im Feld <span class="button-label">Notiz</span> ein; im Steckbrief erscheint er als eigener Abschnitt. Die Notiz wird in der Ortsdatei (<em>stammbaum-orte.json</em>) gespeichert und ist geräteübergreifend verfügbar.</li>
   <li><strong>Zugehörigkeit nach Jahr:</strong> Hat ein Ort datierte Verwaltungszugehörigkeiten (aus GOV-Import), zeigt eine Liste, welche übergeordnete Kette (Amt › Kreis › Provinz …) in welchem Jahr galt — passend zu den tatsächlich vorhandenen Ereignisjahren. Zeiträume ohne bekannte Zuordnung werden als <em>unbekannt</em> markiert, unvollständige Ketten mit einem <em>› ?</em> gekennzeichnet — so sehen Sie auf einen Blick, wo noch Recherche fehlt.</li>
+  <li><strong>Verwaltungs-Zeitlinie (ab sw v940):</strong> Statt einer Liste aus rohen Zugehörigkeits-Einträgen (die sich überlappen können) zeigt der Steckbrief eine aufgelöste Zeitlinie — klare Perioden „ab JJJJ: X". Bei zeitlich überschneidenden Einträgen erscheint ein ⚠-Badge mit dem Tooltip „höchstes Startjahr gewinnt"; so sehen Sie sofort, welche Regel die App angewendet hat. Diese Darstellung entspricht <em>exakt</em> dem, was beim GEDCOM-Export geschrieben wird — was Sie hier sehen, landet identisch in der Datei.</li>
   <li><strong>Zeitraumverteilung:</strong> Ein kleines Balkendiagramm zeigt, in welchen Perioden (automatisch gewählte Jahresspannen) die meisten Ereignisse an diesem Ort stattfanden. Die Perioden sind chronologisch geordnet und lassen sich aufklappen, um die einzelnen Ereignisse zu sehen.</li>
   <li><strong>Quellen-Sektion:</strong> Alle Quellen, die mit Ereignissen an diesem Ort belegt sind, erscheinen am Ende des Steckbriefs.</li>
   <li><strong>Namens-Zeitstrahl (SVG):</strong> Hat ein Ort mehrere historische Schreibweisen mit Datumsgrenzen (aus GOV-Import), zeigt ein horizontaler Zeitstrahl, welcher Name in welcher Periode gültig war.</li>
@@ -2809,7 +2846,7 @@ Forschen Sie immer linien- oder ortsweise statt „über den ganzen Baum". Ein P
   <li><strong>ℹ Hinweis</strong> — fehlende Angaben, die die Forschung verbessern würden</li>
 </ul>
 
-<p>Die Validierungsengine prüft 22 Regeln in vier Gruppen:</p>
+<p>Die Validierungsengine prüft 24 Regeln in fünf Gruppen:</p>
 
 <table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
   <thead>
@@ -2845,8 +2882,13 @@ Forschen Sie immer linien- oder ortsweise statt „über den ganzen Baum". Ein P
     <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">QUELLEN</td></tr>
     <tr><td style="padding:3px 8px;">Geburt nach Standesamt-Ära, keine Quelle</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
     <tr><td style="padding:3px 8px;">Keine Quellenangabe (Familie)</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">VERNETZUNG <span style="font-weight:normal;">(ab sw v929/v930)</span></td></tr>
+    <tr><td style="padding:3px 8px;">Person ist mit keiner Familie verknüpft</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Person ist nicht mit dem Kernbaum (Probanden) verbunden</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
   </tbody>
 </table>
+
+<p>Die beiden Vernetzungsregeln helfen, „verwaiste" Datensätze zu finden — Personen, die Sie einmal angelegt, aber später nicht mit ihrer Familie verknüpft haben, oder ganze Familien-Inseln, die aus der Sicht des Probanden gar nicht erreichbar sind (z. B. nach einem GEDCOM-Import-Fehler). Die App findet den Kernbaum über die Probanden-Person (siehe Kapitel 12 zum Setzen des Probanden) und folgt allen Eltern- und Ehe-Verknüpfungen — alles, was nicht erreicht wird, taucht in dieser Gruppe auf.</p>
 
 <h2>Prüfregeln konfigurieren</h2>
 
@@ -3012,6 +3054,14 @@ Die Timeline ist ideal, um nach einer Pause wieder anzuknüpfen oder um einer Fo
 
 <div class="info">
 Das Speichern legt ein <strong>RESI-Ereignis</strong> direkt auf der Person an — mit der Hof-Adresse als Wohnort. Der Eintrag ist damit vollständig GEDCOM-kompatibel und erscheint auch in der Personen-Detailansicht unter „Ereignisse".
+</div>
+
+<div class="tip">
+<strong>Datums-Schnellhilfe für Wohnort (ab sw v935).</strong> Wenn Sie bei einer Person ein Wohnort-Ereignis (RESI) bearbeiten, erscheinen unter dem Datumsfeld zwei Schnell-Chips: <span class="button-label">🎂 Geburt</span> und <span class="button-label">⚭ Heirat</span> mit dem tatsächlichen Datum der Person. Ein Tipp übernimmt das Datum direkt — ideal, um den Wohnort „ab Geburt bis Heirat" und „ab Heirat" mit zwei Klicks korrekt zu datieren. Chips ohne hinterlegtes Datum werden ausgeblendet.
+</div>
+
+<div class="tip">
+<strong>Hof-Notiz erscheint automatisch bei passenden Wohnorten (ab sw v936).</strong> Tragen Sie im Höfe-Tab eine Notiz zu einem Hof ein (siehe unten), erscheint sie in der Personen-Detailansicht automatisch bei jedem RESI-Ereignis mit derselben Adresse — ohne dass Sie die Notiz manuell mit den einzelnen Ereignissen verknüpfen müssen. Mehrere RESI-Einträge an derselben Adresse zeigen die Notiz dabei nur einmal.
 </div>
 
 <h2>Eigentum eintragen</h2>
@@ -4005,7 +4055,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Juni 2026 · sw v921<br>
+  Stammbaum PWA · Version 8 · Juni 2026 · sw v947<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 

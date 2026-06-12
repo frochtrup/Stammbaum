@@ -22,10 +22,11 @@ Kein cherry-pick, keine Konflikte.
 
 ## Pflichtregeln bei Code-Änderungen
 
-- `sw.js`: `CACHE_NAME` bei jeder Änderung hochzählen (aktuell: `stammbaum-v930`)
+- `sw.js`: `CACHE_NAME` bei jeder Änderung hochzählen (aktuell: `stammbaum-v948`)
 - `ROADMAP.md`: sw-Version im Abschnitt "Aktueller Stand" synchron halten
 - `ROADMAP.md` Handbuch-Stand: bei Code-Änderungen ohne Handbuch-Update → `*(veraltet — vXXX–vYYY noch nicht dokumentiert)*` setzen
 - `HANDBUCH.html`: wenn aktualisiert, BEIDE Versionsfelder (`<p class="version">` + Footer) auf die **aktuelle** sw-Version setzen; gleichzeitig `ROADMAP.md` Handbuch-Stand auf `*(aktuell)*` korrigieren
+- **Pre-Commit-Gate:** `.git/hooks/pre-commit` führt `test-csp.js` + `test-unit.js` aus; bricht den Commit ab, falls einer rot ist. Setup auf neuem Worktree/Gerät: `./setup-hooks.sh`. Notfall-Skip: `git commit --no-verify` (nur mit Begründung).
 
 ## Projektpfad
 

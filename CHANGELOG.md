@@ -9,6 +9,154 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-13 — CSP-Regress-Fix + Pre-Commit-Gate (sw v948)
+
+**Auslöser:** Komplette Re-Bewertung (Architektur/Code/Sicherheit) deckte auf, dass `test-csp.js` seit v945 (vor 3 Tagen) rot ist — `index.html:544` enthielt eine inline-`style="margin-top:8px;"`, die mit dem Template-Builder-Erweiterungsblock („Implizite Felder"-Select) eingeschleust wurde. Die ROADMAP-Aussage „CSP belegt statt behauptet — 0 Fundstellen" stimmte aktuell nicht. **Strukturelle Ursache:** kein automatisches Pre-Commit-Gate für die Test-Suite.
+
+#### v948 — Hebel #1: CSP-Regression beseitigt
+
+- `index.html:544`: `<label class="form-label" style="margin-top:8px;">` → `<label class="form-label mt-8">` (Utility-Klasse `.mt-8` existiert bereits in `styles.css:2136`).
+- `test-csp.js` → **OK: index.html frei von inline-on*= und inline-style= — CSP lückenlos durchsetzbar.**
+- Die 19 INFO-Treffer in `ui-print.js` bleiben — sie landen in standalone-HTML-Druckdokumenten (Statistik-Report, Ortssippenbuch, Hofchronik), die in eigenen Browser-Fenstern ohne CSP-Header öffnen; sie sind kein Fail.
+
+#### v948 — Hebel #2: Pre-Commit-Test-Gate eingerichtet
+
+- Neuer Pre-Commit-Hook `.git/hooks/pre-commit` führt vor jedem Commit aus:
+  - `osascript -l JavaScript test-csp.js` (~0.5 s)
+  - `osascript -l JavaScript test-unit.js` (~5 s)
+- **Schlägt einer fehl, wird der Commit abgebrochen.**
+- Skip-Mechanismus für Notfälle: `git commit --no-verify` (bewusst, aber dokumentiert).
+- Hook ist nicht in Git versioniert (`.git/hooks/` ist nicht im Repo) — neue Worktrees / neue Geräte müssen ihn selbst installieren. Setup-Hilfe: `setup-hooks.sh` im Repo-Root (versioniert, idempotent: legt den Hook neu an, falls fehlend).
+
+#### Verifikation
+
+```
+$ ./setup-hooks.sh
+✓ Pre-Commit-Hook installiert.
+
+$ osascript -l JavaScript test-csp.js
+OK: index.html frei von inline-on*= und inline-style= — CSP lückenlos durchsetzbar.
+
+$ osascript -l JavaScript test-unit.js
+Alle 420 Unit-Tests bestanden.
+
+$ osascript -l JavaScript test-roundtrip.js MeineDaten_ancestris.ged
+✓ MeineDaten_ancestris.ged  net_delta=0  stable  332ms  (+622 PEDI)
+```
+
+**Lehre (durable):** `test-csp.js` muss als Gate laufen, nicht als gelegentlicher Lauf. v945 hat gezeigt: ein einzelnes inline-`style=` schlüpft durch, wenn nichts es vor dem Commit prüft. Roundtrip-Test bleibt bewusst außerhalb des Hooks (~1 s + Datei-Abhängigkeit von `MeineDaten_ancestris.ged`); er wird vor sw-Bumps / Release-Commits manuell ausgeführt.
+
+---
+
+### Session 2026-06-11 — Template-Generator: Ortspicker, implizite Defaults, Familien-Dedup (sw v945–v947)
+
+Drei Ausbaustufen am Frei-konfigurierbaren Template (Eingabe-Templates 🛠) — der Builder wird zu einem vollwertigen Erfassungs-Werkzeug für ortsfeste Quellen.
+
+#### v945 — Ortspicker + implizite Default-Werte mit hidden/prefill-Toggle
+
+- **Builder, pro Feld eine zusätzliche Wert-Spalte** (+ 📍-Button für Feldtyp `place`/`resi`): ausgefüllte Werte werden beim späteren Erfassen <em>implizit gesetzt</em>, leere weiterhin abgefragt.
+- **Per-Template-Schalter `context.implicitMode`** mit zwei Optionen:
+  - `hidden` — implizite Felder erscheinen als Chip im Kopfbereich der Erfassungs-Maske (Standardpfad für „immer gleich" wie Quelle/Ort eines Kirchenbuchs).
+  - `prefill` — implizite Felder erscheinen vorbelegt + 🔒 (überschreibbar, falls einzelne Einträge abweichen).
+- **Ortspicker zusätzlich für `qt-f-place` (Builder) und für place/resi-Inputs in der Erfassungs-Maske**; `placePickerSelect` feuert nun ein `input`-Event, damit der delegierte Listener (`qtFieldEdit`) Text **und** `placeId` aus dem versteckten Hidden-Input liest.
+- `ctx.placeId` und per-Feld-`placeId` fließen in alle vier Save-Pfade.
+
+#### v946 — Wohnort = Adresse, Ort kommt aus ctx (impliziter Beleg)
+
+- **Feldtyp `resi`** (Wohnort) verliert seinen Ortspicker: Builder-Placeholder „Adresse (leer = abfragen)", Erfassungs-Placeholder „Adresse" + bestehendes Adress-Autocomplete (`_initAddrAutocompleteFor`).
+- `_qtSaveCustom` schreibt RESI-Events nun korrekt mit `addr=val` (z. B. „Oster 12") und `place`/`placeId` aus dem Template-Kontext (z. B. „Ochtrup"); vorher wurde der Wert irrtümlich gleichzeitig in `place` UND `addr` geschrieben.
+- `qtSaveEntry`/`_qtAfterSave` führen kein `__pid` mehr für resi.
+
+#### v947 — Familien-Dedup bei verknüpften Eltern/Ehepartnern
+
+- **`_qtSaveCustom`** erkennt: wenn Vater UND Mutter beide via Treffer-Box mit einer bestehenden Person verknüpft sind und beide eine gemeinsame `fams`-Schnittmenge haben, wird die **bestehende Familie wiederverwendet** — die Hauptperson wird als zusätzliches Kind angehängt, der Beleg landet in `family.childRelations[main.id].citations`.
+- Analog für die Ehe-Familie (Hauptperson + Ehepartner beide verknüpft): bestehende Familie behalten, `marr`-Datum/Ort ergänzen falls leer, Beleg auf `marr.citations` anhängen.
+- Edge-Cases (nur einer verknüpft, beide oder einer neu) → neue Familie wie bisher. Der Hinweis-Text zeigt „🔗 Eltern-Fam"/„🔗 Ehe-Fam" bei Reuse.
+
+---
+
+### Session 2026-06-10 — Ortspicker periodengerecht + Verwaltungs-Zeitlinie (sw v937–v941)
+
+#### v937 — Ortspicker zeigt nur `po.title`, füllt periodengerechten Namen per resolveAsOf
+
+- Bisher wurden alle historischen Schreibweisen (`pnames`) als separate Einträge im Picker angeboten — bei einem Ort mit 4 Varianten 4 fast identische Zeilen.
+- Neu: **Deduplizierung nach `placeId`**, im Dropdown erscheint nur der Haupttitel (`po.title`).
+- **Bei Auswahl wird der periodengerechte Name eingesetzt**: `resolveAsOf(placeId, year)` schreibt für ein 1750er-Ereignis den damaligen Namen ins Feld (z. B. „Sassenbergk"), für ein 1900er-Ereignis den heutigen („Sassenberg"); `placeId` landet im Hidden-Feld.
+- `year` kommt aus dem zugehörigen Datumsfeld der aktuellen Maske (`ef-date-y`, `fev-date-y`, `ff-mdate-y`, `pf-*-date`); Helfer `_yearFromDateField()`.
+
+#### v938 — pname-Duplikate durch Hierarchie-Strings im Ortspicker beseitigen
+
+Zwei Ursachen einer hartnäckigen Duplikat-Schleife im Ortsregister behoben:
+
+1. **`onSelect`** schreibt nur noch Atom-Namen ins Feld — Hierarchie-Strings (mit Komma) werden abgelehnt, Fallback auf `po.title`. Verhindert, dass beim nächsten Roundtrip „Ochtrup, Grafschaft Salm-Horstmar, …" als neuer `pname` ankommt.
+2. **`_migratePlaceObjects`** (gedcom.js) räumt beim Laden `pnames` dedup-bereinigt auf (selber normalisierter Name + selbe Datumsgrenzen → nur erster Eintrag bleibt).
+
+Nachzug — Robustheit am Lade-Pfad:
+- `_migratePlaceObjects` wird jetzt zusätzlich am Ende von `loadPlaceObjectsFromIDB` aufgerufen (vorher lief setDb() vor dem JSON-Laden, deshalb wurden aus `stammbaum-orte.json` geladene PlaceObjects nie migriert → Duplikate blieben im Speicher).
+- Hierarchie-Strings mit Komma werden aus `pnames` jetzt unabhängig von Datumsvarianten entfernt (alter Dedup reagierte nur auf exakt gleiche `dateFrom`/`dateTo`-Kombination).
+
+Außerdem: `_resolvedPlaceId` (saveEvent, Person-Events, Familien-Events) prüfte nur `po.title === place`. Wenn `resolveAsOf()` einen historischen `pname`-Wert ins Feld geschrieben hatte (≠ Titel), wurde `placeId=null` gesetzt → die Detailansicht zeigte nur den Atom-Namen statt der Hierarchie. Alle drei Save-Pfade (Event, Familien-Event, Person-Form) prüfen jetzt zusätzlich `po.pnames[].value === place`.
+
+#### v939 — Ortsdetail-Verwaltungsgeschichte konsistent mit Writer-Auflösung
+
+Zwei Inkonsistenzen behoben:
+
+1. **`refYear`**: statt `dateFrom` jetzt Mittelpunkt `(dateFrom+dateTo)/2` → gleiche Basis wie der GEDCOM-Writer, der das Ereignisjahr nutzt.
+2. **Überlappungs-Erkennung**: bei mehreren zeitlich überschneidenden `enclosedBy`-Einträgen ein ⚠-Badge mit Tooltip „höchstes Startjahr gewinnt" — macht die Writer-Regel (`enclosureChainAsOf` `bestFrom`-Logik) sichtbar.
+
+#### v940 — Verwaltungsgeschichte als aufgelöste Zeitlinie (WYSIWYG zum Writer)
+
+Statt roher `enclosedBy`-Einträge (mit potenziellen Überschneidungen) zeigt der Ort-Steckbrief jetzt eine **aufgelöste Zeitlinie**: dieselbe Gewinner-Logik wie `enclosureChainAsOf` (höchstes `dateFrom` gewinnt). Überlappende Einträge werden zu klaren Perioden zusammengeführt — „ab JJJJ: X". Was die Detailansicht zeigt, entspricht exakt dem, was der GEDCOM-Writer ausgibt.
+
+#### v941 — `_evFullPlace`: Datengap-Fallback auf nächstgelegene Zugehörigkeit
+
+Wenn `enclosureChainAsOf` für das Ereignisjahr keinen Hierarchiestring liefert (Datenlücke zwischen zwei `enclosedBy`-Einträgen), wird der zeitlich nächste datierbare Eintrag als Referenzjahr verwendet. So zeigt auch ein Beruf-Event im Gap-Jahr den historischen Hierarchiestring statt nur „Vechta".
+
+Außerdem: **`enclosureChainAsOf`** wurde robuster — `_dateMatches(null,null,y)` war bewusst `false`, aber migrierte `parentId`→`enclosedBy[]`-Einträge sind „immer gültig". Undatierte Einträge greifen jetzt als Fallback, wenn kein datierter passt; datierte behalten weiterhin Vorrang.
+
+---
+
+### Session 2026-06-09 — Validator P17/P18 + UI-Politur (sw v929–v936)
+
+#### Validator: zwei neue Strukturregeln
+
+- **v929 — P17 `ISOLATED_PERSON`** *(Hinweis)*: Person hat weder `famc` (Herkunftsfamilie) noch `fams` (eigene Familie) — Hinweis auf nicht vernetzte Datensätze.
+- **v930 — P18 `DISCONNECTED_FROM_ROOT`** *(warn)*: BFS vom Probanden (`AppState._probandId`, Fallback kleinste ID) über alle `famc`/`fams`-Familien-Links. Personen außerhalb der erreichbaren Menge werden geflaggt.
+- **v931** ergänzt die Checkboxen für beide neuen Regeln im Konfigurations-Modal (`index.html`).
+- **v932** rendert die Prüfregel-Checkboxen **dynamisch aus `VAL_RULES`**: `openValConfig()` baut das `valcfg-rules-grid` per JS auf — neue Regeln in `gedcom-validator.js` erscheinen ab sofort automatisch im Konfig-Modal, kein Hardcode in `index.html` mehr.
+- **v934 — Fix BFS-Bug**: `p.famc` enthält Objekte `{famId, pedi, …}`, keine direkten IDs. BFS las deshalb keine Familien-IDs → die erreichbare Menge blieb leer → die Regel flaggte alle Personen. `.map(e => e.famId || e)` extrahiert die ID korrekt.
+
+#### v933 — `enclosureChainAsOf`: undatierte `enclosedBy`-Einträge als Fallback
+
+`_dateMatches(null, null, y)` war bewusst `false` (zeitlich begrenzte Einträge). Migrierte `parentId`→`enclosedBy[]`-Einträge sind aber „immer gültig". Fix: undatierte Einträge werden als Fallback genommen, wenn kein datierter Eintrag passt; datierte behalten weiterhin Vorrang.
+
+#### UX
+
+- **v935 — RESI-Datums-Schnellhilfe**: Bei Ereignistyp RESI erscheinen unter dem Datumsfeld zwei Quick-Chips (🎂 Geburt, ⚭ Heirat) mit den tatsächlichen Daten der Person. Ein Tipp übernimmt das Datum direkt — Buttons werden ausgeblendet, wenn das jeweilige Datum fehlt.
+- **v936 — Hof-Notiz immer bei RESI-Events mit passender Adresse**: Bisher war eine `noteRefs`-Verknüpfung nötig — neu/geänderte Hof-Notizen wurden deshalb bei bestehenden RESI-Events nicht angezeigt. Fix: Hof-Notiz wird für jedes RESI-Event mit passendem `ev.addr` direkt aus `hofObjects` gelesen; `_shownAddrNotes`-Dedup verhindert Mehrfachanzeige.
+
+---
+
+### Session 2026-06-08 — Ortsdarstellung periodengerecht in allen Ansichten (sw v921–v928)
+
+Roter Faden der Session: ein Ort hat **einen** Haupttitel (`po.title`) und beliebig viele historische Schreibweisen (`pnames`) mit Datumsspanne. Listen zeigen den Kurzname, Detail-Zeilen den vollen Hierarchiestring zum Ereigniszeitpunkt, ein 🏘-Button springt direkt in den Ort-Steckbrief.
+
+- **v921 — Such-Index nach Datei-Laden/Reset neu aufbauen** (`storage.js`, `storage-file.js`): nach jedem Reset/Open wurde der globale Such-Index nicht invalidiert → veraltete Treffer.
+- **v922 — Parser akzeptiert BAPM/BARM/BASM/CREM als INDI-Events** (vorher: stille Verluste bei Mormonen-/Konfirmations-Daten).
+- **v923 — BAPM wie CHR als Kerndatum in Personendetail**: direkt nach CHR gerendert (nicht im generischen Events-Block), mit Altersberechnung, Paten-Anzeige und Quick-Chip; `_refDate` nutzt BAPM als Proxy, wenn weder Geburtsdatum noch CHR vorhanden.
+- **v924 — Führende-Leer-Segment-Bug bei `', Ochtrup, , , ,'`-Strings**: `_linkGedcomEventsToPlaceObjects` Step 2 nahm `split(',')[0]` → leer bei führendem Komma → kein PlaceObject-Link möglich. Fix: erstes nicht-leeres Segment. `findPlaceDuplicates` nutzte den falschen Fold-Key → Dubletten unsichtbar; jetzt `_placeStringCoreFold`.
+- **v925 — periodengerechter Ortsname in der Personen-Detailansicht**: `_evPlaceName(ev)` → bei gesetzter `placeId` `resolveAsOf(placeId, year)` statt `compactPlace(ev.place)`; gilt für BIRT/CHR/BAPM/DEAT/BURI und alle generischen Events.
+- **v926 — Ortskurzname in Personen- und Familien­listen**: `shortPlace(placeStr, placeId)` → bei gesetzter `placeId` `po.title`, sonst erstes nicht-leeres Komma-Segment. Verhindert, dass der volle GEDCOM-Hierarchiestring in den Listenzeilen erscheint.
+- **v927 — voller Hierarchiestring + 🏘-Orts-Button in Detailansichten**: `_evFullPlace(ev)` nutzt `_buildFormString(placeId, year)` statt `compactPlace(ev.place)` → periodenkorrekter voller Hierarchiestring direkt in der Ereigniszeile; `_evPlaceNavBtn(ev)` → 🏘-Button → `showPlaceByTitle`, nur wenn `placeId` gesetzt. `_placeHierHtml`-Fineprint-Zeile entfernt (in Person + Familie redundant).
+- **v928 — `shortPlace` + `_evFullPlace` Leer-Segment-Handling**: `shortPlace` nimmt erstes Segment von `po.title` statt vollen String — verhindert „Burgsteinfurt, , , , Deutschland" in Listen, wenn `po.title` selbst ein Hierarchiestring ist. `_evFullPlace`: `_buildFormString` nur nutzen, wenn das Ergebnis ein Komma enthält (enclosedBy modelliert); sonst `compactPlace(ev.place)` als Fallback — verhindert Kurzname in Detail, wenn keine Hierarchie im PlaceObject hinterlegt ist.
+
+#### Nachträge zur OUTPUT-RICHNESS
+
+- **v919 — Statistik fasst historische Ortsvarianten zusammen** (s. unten Session 2026-06-08 OUTPUT-RICHNESS Tier A+B).
+- **v920 — Familienbogen + Ahnenliste laden `ui-book.js` mit**: ohne diesen Mit-Lade-Pfad fehlte die Kekulé-Berechnung in den Ausgaben.
+
+---
+
 ### Session 2026-06-08 — OUTPUT-RICHNESS Tier A+B (sw v911–v915)
 
 Größter fachlicher Abstand zu MacFamilyTree (Hebel #3 aus Review 2026-06-07) geschlossen: sieben neue, eigenständige Ausgabe-Formate. Alle als standalone-HTML-Download (Browser-Druck → PDF), kein Server, keine PDF-Lib. ROADMAP-Abschnitt P4 vorab in 10 konkrete Items A2–C3 aufgegliedert (Quellen: MacFamilyTree, Gramps, RootsMagic, Legacy, Ancestris, Ahnenblatt).
