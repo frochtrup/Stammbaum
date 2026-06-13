@@ -242,23 +242,35 @@ function renderPersonList(persons) {
   }
   _vsP.total = offset;
 
+  // Desktop: Scroll-Position VOR _vsSetup berechnen und setzen (analog _vsReattach),
+  // damit _vsRender beim ersten Aufbau bereits die richtige Position zeigt (kein Flicker).
+  if (curId) {
+    const sc = _vsScrollEl();
+    if (sc) {
+      const idx = _vsP.items.findIndex(it => it.id === curId);
+      if (idx >= 0) {
+        const iOff  = _vsP.offsets[idx];
+        const viewH = sc.clientHeight;
+        const lr    = listEl.getBoundingClientRect();
+        const lstAbs = sc.scrollTop + lr.top - sc.getBoundingClientRect().top;
+        sc.scrollTop = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
+      }
+    }
+  }
+
   _vsSetup(listEl, _vsP);
   _announceList(sorted.length + (sorted.length === 1 ? ' Person' : ' Personen'));
 
-  // Zum aktuellen Eintrag scrollen
-  if (curId) {
+  // Mobile (sc===null): window.scrollTo braucht rAF nach display:block
+  if (curId && !_vsP.sc) {
     const idx = _vsP.items.findIndex(it => it.id === curId);
     if (idx >= 0) {
       requestAnimationFrame(() => {
-        const sc  = _vsP.sc;
-        const iOff = _vsP.offsets[idx];
-        const viewH = sc ? sc.clientHeight : window.innerHeight;
-        const scTop = sc ? sc.scrollTop : window.scrollY;
-        const lr  = listEl.getBoundingClientRect();
-        const sr  = sc ? sc.getBoundingClientRect().top : 0;
-        const lstAbs = scTop + lr.top - sr;
-        const target = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
-        if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
+        const iOff   = _vsP.offsets[idx];
+        const viewH  = window.innerHeight;
+        const lr     = listEl.getBoundingClientRect();
+        const lstAbs = window.scrollY + lr.top;
+        window.scrollTo(0, Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2));
       });
     }
   }
