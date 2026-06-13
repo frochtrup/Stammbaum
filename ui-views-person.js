@@ -589,9 +589,11 @@ function _pdetLifeData(p, id) {
     { ev: 'RESI', lbl: '+ Wohnort', generic: true },
     { ev: 'OCCU', lbl: '+ Beruf',   generic: true },
     { ev: 'CENS', lbl: '+ Zählung', generic: true },
+    { ev: 'RELI', lbl: '+ röm.-kath.', val: 'röm.-kath.', generic: true },
+    { ev: 'RELI', lbl: '+ evang.',     val: 'evang.',     generic: true },
   ].filter(Boolean);
   html += `<div class="missing-events-row">${_quickChips.map(m =>
-    `<button class="quick-chip${m.generic ? ' quick-chip--generic' : ''}" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}">${m.lbl}</button>`
+    `<button class="quick-chip${m.generic ? ' quick-chip--generic' : ''}" data-action="showEventFormTyped" data-pid="${id}" data-evtype="${m.ev}"${m.val ? ` data-evval="${m.val}"` : ''}>${m.lbl}</button>`
   ).join('')}</div>`;
 
   // Alle bekannten Hof-Notiztexte vorberechnen — verhindert Anzeige von HOF-Notiztexten

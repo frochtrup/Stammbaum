@@ -25,7 +25,7 @@ function _sortedChildren(children) {
 
 const _CLICK_MAP = {
   // Dynamisch generierte Einträge (bereits vorhanden)
-  showEventFormTyped:      el => showEventForm(el.dataset.pid, undefined, el.dataset.evtype),
+  showEventFormTyped:      el => showEventForm(el.dataset.pid, undefined, el.dataset.evtype, el.dataset.evval || ''),
   newSourceForm:           ()  => showSourceForm(null),
   newFamilyForm:           ()  => showFamilyForm(null),
   removeNoteRef:           el  => el.closest('[data-ref-section]')?.remove(),
