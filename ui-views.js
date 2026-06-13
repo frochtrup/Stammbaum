@@ -733,7 +733,9 @@ async function showStartView() {
   showMain();
   const startId = getProbandId();
   if (startId) showTree(startId);
-  _desktopAutoSelect('persons');
+  // Proband vorhanden → Baum ist der Start-Rechts-View; _desktopAutoSelect würde ihn
+  // sofort mit showDetail überschreiben. Ohne Probanden → Detail auto-selektieren.
+  else _desktopAutoSelect('persons');
 }
 
 // ─────────────────────────────────────
