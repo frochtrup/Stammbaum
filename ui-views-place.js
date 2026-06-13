@@ -2049,22 +2049,29 @@ function validatePlaces() {
     }
 
     // P5d-2c: enclosedBy-Zirkel (A → … → A)
-    const _visited = new Set([po.id]);
-    const _checkCycle = (pid, depth) => {
-      if (depth > 10) return false;
-      const parent = pos[pid];
-      if (!parent) return false;
-      for (const enc of (parent.enclosedBy || [])) {
-        if (!enc.placeId) continue;
-        if (_visited.has(enc.placeId)) return true;
-        _visited.add(enc.placeId);
-        if (_checkCycle(enc.placeId, depth + 1)) return true;
+    // Prüft ob man von enc.placeId aus den Startknoten po.id wieder erreichen
+    // kann — nur dann liegt ein echter Zirkel vor. Visited-Set verhindert
+    // Endlosschleifen, aber doppelte placeIds in verschiedenen Zeiträumen
+    // und gemeinsame Vorfahren lösen keinen false-positive mehr aus.
+    const _canReach = (startId, targetId) => {
+      const stack = [[startId, 0]];
+      const seen = new Set();
+      while (stack.length) {
+        const [pid, depth] = stack.pop();
+        if (pid === targetId) return true;
+        if (depth >= 15 || seen.has(pid)) continue;
+        seen.add(pid);
+        const p = pos[pid];
+        if (!p) continue;
+        for (const e of (p.enclosedBy || [])) {
+          if (e.placeId) stack.push([e.placeId, depth + 1]);
+        }
       }
       return false;
     };
     for (const enc of (po.enclosedBy || [])) {
       if (!enc.placeId) continue;
-      if (_visited.has(enc.placeId) || _checkCycle(enc.placeId, 0)) {
+      if (enc.placeId === po.id || _canReach(enc.placeId, po.id)) {
         warnings.push({ placeId: po.id, title, code: 'CYCLE',
           msg: `Zirkelreferenz in „Teil von"-Kette` });
         break;
