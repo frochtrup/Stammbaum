@@ -2,12 +2,13 @@
 // Strategie: Network-first → bei Offline aus Cache bedienen
 // Nur same-origin Requests werden gecacht (keine Google Fonts etc.)
 
-const CACHE_NAME = 'stammbaum-v950';
+const CACHE_NAME = 'stammbaum-v951';
 
 // Kern-Assets: atomar — Install schlägt fehl wenn eines fehlt
 const PRECACHE_CRITICAL = [
   './index.html', './offline.html', './styles.css', './manifest.json', './icon.svg',
   './fonts/fonts.css',
+  './boot-loader.js',
   './gedcom.js', './gedcom-parser.js', './gedcom-worker.js', './gedcom-writer.js', './gedcom-validator.js', './validator.bridge.js', './gramps-parser.js', './gramps-writer.js', './gramps.bridge.js',
   './storage-file.js', './storage.js',
   './ui-views.js', './ui-lifecycle.js', './ui-views-nav.js', './ui-views-undo.js', './ui-views-note.js', './ui-views-search.js',

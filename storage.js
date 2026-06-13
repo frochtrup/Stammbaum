@@ -142,9 +142,15 @@ function _loadDemoPhotos() {
 async function tryAutoLoad() {
   // IDB zuerst (kein Größenlimit)
   try {
+    if (typeof bootStage === 'function') bootStage('read');
     const saved = await idbGet('stammbaum_ged');
     if (saved && saved.length > 10) {
       const fname = (await idbGet('stammbaum_filename')) || localStorage.getItem('stammbaum_filename') || 'gespeicherte Datei';
+      if (typeof bootStage === 'function') {
+        bootStage('parse');
+        // Yield, damit der Browser das Stage-Update zeichnet, bevor parseGEDCOM blockiert
+        await new Promise(r => setTimeout(r, 0));
+      }
       setDb(parseGEDCOM(saved));
       if (AppState.db.parseErrors?.length) {
         console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
@@ -154,10 +160,12 @@ async function tryAutoLoad() {
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
+      if (typeof bootStage === 'function') bootStage('render');
       showStartView();
       if (typeof _restoreNavState === 'function') _restoreNavState();
       updateTopbarTitle(fname);
       showToast('✓ ' + fname + ' automatisch geladen');
+      if (typeof bootHide === 'function') bootHide();
       return true;
     }
   } catch(e) { /* IDB nicht verfügbar */ }
@@ -176,6 +184,7 @@ async function tryAutoLoad() {
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
+      if (typeof bootStage === 'function') bootStage('render');
       showStartView();
       if (typeof _restoreNavState === 'function') _restoreNavState();
       updateTopbarTitle(fname);
@@ -184,6 +193,7 @@ async function tryAutoLoad() {
       idbPut('stammbaum_ged', saved).catch(() => {});
       idbPut('stammbaum_ged_backup', AppState._originalGedText).catch(() => {});
       idbPut('stammbaum_filename', fname).catch(() => {});
+      if (typeof bootHide === 'function') bootHide();
       return true;
     }
   } catch(e) { /* kein Storage */ }
@@ -208,6 +218,7 @@ async function _startupChoiceOneDrive() {
 }
 
 window.addEventListener('load', async () => {
+  if (typeof bootStage === 'function') bootStage('init');
   const urlFile = new URLSearchParams(location.search).get('datei');
   if (urlFile) updateTopbarTitle(urlFile);
 
@@ -255,7 +266,9 @@ window.addEventListener('load', async () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
-
+  // Loader ausblenden, falls keiner der Auto-Load-Pfade ihn bereits geschlossen hat
+  // (z. B. kein gespeicherter Stammbaum → Landing-Ansicht)
+  if (typeof bootHide === 'function') bootHide();
 });
 
 // Multi-Tab-Erkennung: warnt wenn ein anderer Tab die Datei lädt oder speichert

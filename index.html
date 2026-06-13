@@ -24,6 +24,20 @@
 <a class="skip-link" href="#v-main">Zum Hauptinhalt springen</a>
 
 <!-- ══════════════════════════════════════
+     BOOT-LOADER (sichtbar bis erste Ansicht steht)
+     CSP-konform: kein Inline-Style; CSS in styles.css, Logik in boot-loader.js
+══════════════════════════════════════ -->
+<div id="bootLoader" role="status" aria-live="polite" aria-label="App wird geladen">
+  <div class="bootLoader-card">
+    <div class="bootLoader-ornament" aria-hidden="true">✦  ✦  ✦</div>
+    <div class="bootLoader-title">Stammbaum</div>
+    <div class="bootLoader-spinner" aria-hidden="true"></div>
+    <div id="bootLoaderLabel" class="bootLoader-label">Stammbaum wird geladen …</div>
+    <div class="bootLoader-bar"><div id="bootLoaderFill" class="bootLoader-fill"></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      LANDING VIEW
 ══════════════════════════════════════ -->
 <div id="v-landing" class="view active">
@@ -2433,6 +2447,7 @@
 <!-- ══════════════════════════════════════
      JAVASCRIPT
 ══════════════════════════════════════ -->
+<script src="boot-loader.js"></script>
 <script src="leaflet.js"></script>
 <script src="gedcom.js"></script>
 <script src="gedcom-parser.js"></script>
