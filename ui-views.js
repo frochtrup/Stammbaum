@@ -711,30 +711,22 @@ function _desktopAutoSelect(tab) {
   // tasks / search / stats: kein Detail-View
 }
 
-// Startansicht nach Datei-Load: Tree des Probanden (oder kleinste ID)
+// Startansicht nach Datei-Load: letzten gewählte Person (Fallback: Proband/kleinste ID)
 async function showStartView() {
   AppState.currentTab = 'persons';
-  // P6-B7: IDB-State VOR dem ersten Listen-Render laden. Vorher rief showStartView
-  // showMain() (sync) → renderTab() → _vsSetup mit scrollTop=0, dann KAM das `await`
-  // → Browser paint mit Liste oben (sichtbar), dann nach await scrollte
-  // _desktopAutoSelect zur gespeicherten Auswahl. Der User sah zwei Paints: Top-Items,
-  // dann Sprung zur Auswahl. Nach Reihenfolge-Tausch laufen showMain + showTree +
-  // _desktopAutoSelect alle synchron im selben Microtask → genau ein Paint mit
-  // korrekter Position.
+  // P6-B7: IDB-State VOR dem ersten Listen-Render laden (Details s. git-log).
   const [savedProband, savedSel] = await Promise.all([
     idbGet('proband_id').catch(() => null),
     idbGet('last_tab_sel').catch(() => null),
   ]);
   if (savedSel && typeof savedSel === 'object') UIState._lastTabSel = savedSel;
   UIState._probandId = (savedProband && AppState.db.individuals[savedProband]) ? savedProband : null;
-  // currentPersonId vor renderPersonList vorbelegen → scroll-to-current greift beim Erstrender
-  const _preId = ViewState.getCurrent('persons') || smallestPersonId();
-  if (_preId && AppState.db.individuals[_preId]) AppState.currentPersonId = _preId;
+  // Zuletzt gewählte Person hat Vorrang vor Probanden — App setzt dort fort wo der User
+  // aufgehört hat. Proband / smallestPersonId dienen als Fallback ohne Vorauswahl.
+  const startId = ViewState.getCurrent('persons') || getProbandId();
+  if (startId) AppState.currentPersonId = startId;
   showMain();
-  const startId = getProbandId();
   if (startId) showTree(startId);
-  // Kein _desktopAutoSelect: getProbandId() liefert immer einen Wert (UIState._probandId
-  // oder smallestPersonId), showTree setzt rechten Panel + Listmarkierung bereits korrekt.
 }
 
 // ─────────────────────────────────────
