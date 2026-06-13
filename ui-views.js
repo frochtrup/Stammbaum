@@ -733,9 +733,8 @@ async function showStartView() {
   showMain();
   const startId = getProbandId();
   if (startId) showTree(startId);
-  // Proband vorhanden → Baum ist der Start-Rechts-View; _desktopAutoSelect würde ihn
-  // sofort mit showDetail überschreiben. Ohne Probanden → Detail auto-selektieren.
-  else _desktopAutoSelect('persons');
+  // Kein _desktopAutoSelect: getProbandId() liefert immer einen Wert (UIState._probandId
+  // oder smallestPersonId), showTree setzt rechten Panel + Listmarkierung bereits korrekt.
 }
 
 // ─────────────────────────────────────
