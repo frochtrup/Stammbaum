@@ -109,22 +109,34 @@ function renderFamilyList(fams) {
   }
   _vsF.total = offset;
 
+  // Desktop: Scroll-Position VOR _vsSetup setzen (analog _vsReattach) → kein Flicker
+  if (curId) {
+    const sc = _vsScrollEl();
+    if (sc) {
+      const idx = _vsF.items.findIndex(it => it.id === curId);
+      if (idx >= 0) {
+        const iOff  = _vsF.offsets[idx];
+        const viewH = sc.clientHeight;
+        const lr    = listEl.getBoundingClientRect();
+        const lstAbs = sc.scrollTop + lr.top - sc.getBoundingClientRect().top;
+        sc.scrollTop = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
+      }
+    }
+  }
+
   _vsSetup(listEl, _vsF);
   _announceList(fams.length + (fams.length === 1 ? ' Familie' : ' Familien'));
 
-  if (curId) {
+  // Mobile (sc===null): rAF nötig nach display:block
+  if (curId && !_vsF.sc) {
     const idx = _vsF.items.findIndex(it => it.id === curId);
     if (idx >= 0) {
       requestAnimationFrame(() => {
-        const sc    = _vsF.sc;
-        const iOff  = _vsF.offsets[idx];
-        const viewH = sc ? sc.clientHeight : window.innerHeight;
-        const scTop = sc ? sc.scrollTop : window.scrollY;
-        const lr    = listEl.getBoundingClientRect();
-        const sr    = sc ? sc.getBoundingClientRect().top : 0;
-        const lstAbs = scTop + lr.top - sr;
-        const target = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
-        if (sc) sc.scrollTop = target; else window.scrollTo(0, target);
+        const iOff   = _vsF.offsets[idx];
+        const viewH  = window.innerHeight;
+        const lr     = listEl.getBoundingClientRect();
+        const lstAbs = window.scrollY + lr.top;
+        window.scrollTo(0, Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2));
       });
     }
   }
