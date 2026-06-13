@@ -391,9 +391,12 @@ function _vsSetup(listEl, st, initScrollTop) {
   _normalizeWheel(st.sc);
   // initScrollTop: st.top bekommt temporär die Gesamthöhe damit der Browser scrollTop
   // nicht auf 0 klemmt (innerHTML='' hat scrollHeight auf ~clientHeight reduziert).
-  // _vsRender überschreibt st.top danach mit dem korrekten Fenster-Wert.
+  // getBoundingClientRect() erzwingt den Reflow — ohne ihn bleibt scrollHeight klein
+  // und der Browser klemmt scrollTop trotz gesetzter height. _vsRender überschreibt
+  // st.top danach mit dem korrekten Fenster-Wert.
   if (initScrollTop != null && initScrollTop > 0 && st.sc) {
     st.top.style.height = st.total + 'px';
+    void st.top.getBoundingClientRect(); // erzwingt Reflow → scrollHeight aktuell
     st.sc.scrollTop = initScrollTop;
   }
   _vsRender(listEl, st);

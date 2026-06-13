@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v956 · Cache: `stammbaum-v956` · `test-unit.js` = **438 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün (2 Goldfiles) · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
+**sw-Version:** v957 · Cache: `stammbaum-v957` · `test-unit.js` = **438 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün (2 Goldfiles) · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
 
 **SCALE-TEST (2026-06-07):** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort (Name) 938 ms · **SORT-CACHE implementiert (v899)** · Parser-Worker bereits vorhanden · Details: SCALE-TEST-BEFUNDE.md
 
