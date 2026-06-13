@@ -69,8 +69,28 @@ function _writePlacTrans(lines, placeName, indent) {
   }
 }
 
-// Schreibt Text als GEDCOM-Zeile: CONT für Zeilenumbrüche, CONC für Zeichenlimit-Splits
-// GED7: kein CONC (kein Zeilenlimit), nur CONT für echte Umbrüche
+// Gibt die Anzahl JS-Zeichen zurück, die in maxBytes UTF-8-Bytes passen.
+// Verhindert, dass multi-byte Zeichen (dt. Umlaute, Sonderzeichen) die 255-Byte-Grenze sprengen.
+function _sliceByteLen(s, maxBytes) {
+  let bytes = 0, i = 0;
+  while (i < s.length) {
+    const c = s.charCodeAt(i);
+    let b, step;
+    if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
+      b = 4; step = 2;    // Surrogate-Paar → 4 UTF-8-Bytes
+    } else {
+      b = c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+      step = 1;
+    }
+    if (bytes + b > maxBytes) break;
+    bytes += b; i += step;
+  }
+  return i || (s.length ? 1 : 0);  // Mindestens 1, damit die Schleife terminiert
+}
+
+// Schreibt Text als GEDCOM-Zeile: CONT für Zeilenumbrüche, CONC für Byte-Limit-Splits.
+// GED7: kein CONC (kein Zeilenlimit), nur CONT für echte Umbrüche.
+// 5.5.1: 255 Bytes/Zeile (Overhead = Level + Space + Tag + Space).
 function pushCont(lines, lv, tag, text) {
   const rawLines = (text || '').split('\n');
   if (_ged7) {
@@ -81,13 +101,18 @@ function pushCont(lines, lv, tag, text) {
     if (!rawLines.length) lines.push(`${lv} ${tag} `);
     return;
   }
-  const MAX = 248;
+  // Overhead-Bytes: "N TAG " (Level immer 1 Stelle in GEDCOM 5.5.1, Tag variabel)
+  const lvStr   = String(lv),   contStr = String(lv + 1);
+  const maxFirst = 255 - (lvStr.length   + 1 + tag.length + 1);   // erste Zeile: echtes Tag
+  const maxCont  = 255 - (contStr.length + 1 + 4          + 1);   // CONT/CONC: immer 4 Zeichen
   for (let li = 0; li < rawLines.length; li++) {
     let s = rawLines[li];
     let firstChunk = true;
     do {
-      const chunk = s.slice(0, MAX);
-      s = s.slice(MAX);
+      const maxB = firstChunk ? maxFirst : maxCont;
+      const take = _sliceByteLen(s, maxB);
+      const chunk = s.slice(0, take);
+      s = s.slice(take);
       if (li === 0 && firstChunk) lines.push(`${lv} ${tag} ${chunk}`);
       else if (firstChunk)        lines.push(`${lv+1} CONT ${chunk}`);
       else                        lines.push(`${lv+1} CONC ${chunk}`);
@@ -808,14 +833,18 @@ function writeNOTERecord(lines, n) {
     }
     if (!rawLines.length) lines.push(`0 ${_xref} ${_tag} `);
   } else {
-    const MAX = 248;
+    // "0 @xref@ NOTE " hat variablen Overhead — xref-Länge fließt in maxBytes ein.
+    const maxFirst = 255 - (2 + _xref.length + 1 + _tag.length + 1);
+    const maxCont  = 248;   // "1 CONT " / "1 CONC " = 7 Bytes Overhead
     const rawLines = (n.text || '').split('\n');
     for (let li = 0; li < rawLines.length; li++) {
       let s = rawLines[li];
       let firstChunk = true;
       do {
-        const chunk = s.slice(0, MAX);
-        s = s.slice(MAX);
+        const maxB = (li === 0 && firstChunk) ? maxFirst : maxCont;
+        const take = _sliceByteLen(s, maxB);
+        const chunk = s.slice(0, take);
+        s = s.slice(take);
         if (li === 0 && firstChunk) lines.push(`0 ${_xref} ${_tag} ${chunk}`);
         else if (firstChunk)        lines.push(`1 CONT ${chunk}`);
         else                        lines.push(`1 CONC ${chunk}`);

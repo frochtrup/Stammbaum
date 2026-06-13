@@ -570,7 +570,8 @@ if (IS_NODE) {
     '_epId: _epId, _findOrCreatePO: _findOrCreatePO, ' +
     'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject, ' +
     '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport, ' +
-    '_eventCoords: _eventCoords, AppState: AppState, UIState: UIState };' +
+    '_eventCoords: _eventCoords, AppState: AppState, UIState: UIState,' +
+    '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
     // sie als var aus window.X übernehmen kann.
@@ -584,6 +585,9 @@ if (IS_NODE) {
     'window.getPlaceFromForm = getPlaceFromForm;' +
     'window.initPlaceMode = initPlaceMode;' +
     'window.togglePlaceMode = togglePlaceMode;' +
+    // Brücke für QT-Tests (ui-quicktpl.js nutzt diese gedcom.js-Funktionen)
+    // Brücke für Writer-Tests
+    'window._sliceByteLen = _sliceByteLen; window.pushCont = pushCont; window.writeGEDCOM = writeGEDCOM;' +
     // Brücke für QT-Tests (ui-quicktpl.js nutzt diese gedcom.js-Funktionen)
     'window.nextId = nextId; window.citationObj = citationObj;' +
     'window.gedcomDate = gedcomDate; window.gedcomTime = gedcomTime;' +
@@ -2941,6 +2945,112 @@ group('(ab) UI FormSaveMerge');
   var ui = _ui();
   API.setDb({ individuals:{}, families:{}, placeObjects:{} });
   eq(ui.applyStringPlaceLink(['X'], null, ['X']), 0, 'ab.no-target: null targetPlaceId → 0');
+})();
+
+// ── Hilfsfunktion: UTF-8-Byte-Länge einer JS-Zeichenkette ────────────────────
+function _utf8ByteLen(s) {
+  var n = 0;
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charCodeAt(i);
+    if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) { n += 4; i++; }
+    else n += c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
+  }
+  return n;
+}
+
+group('(ad) Writer _sliceByteLen + pushCont 255-Byte-Limit');
+
+(function() {
+  // (ad.1) _sliceByteLen — reine ASCII: 248 Zeichen → 248 Bytes
+  var s = 'A'.repeat(300);
+  var take = API._sliceByteLen(s, 248);
+  eq(take, 248, 'ad.1: ASCII 300→nimmt 248');
+  eq(_utf8ByteLen(s.slice(0, take)), 248, 'ad.1: ASCII Byte-Länge exakt 248');
+})();
+
+(function() {
+  // (ad.2) _sliceByteLen — Umlaute (2 Bytes je Zeichen): 248 Byte-Limit → ≤124 Zeichen
+  var s = 'ä'.repeat(200);
+  var take = API._sliceByteLen(s, 248);
+  eq(take, 124, 'ad.2: Umlaut-String 200→124 Zeichen (248 Bytes)');
+  eq(_utf8ByteLen(s.slice(0, take)), 248, 'ad.2: Byte-Länge exakt 248');
+})();
+
+(function() {
+  // (ad.3) _sliceByteLen — leerer String
+  eq(API._sliceByteLen('', 248), 0, 'ad.3: leerer String → 0');
+})();
+
+(function() {
+  // (ad.4) _sliceByteLen — Schnitt genau an Byte-Grenze (kein halber Multi-Byte-Char)
+  var s = 'A'.repeat(247) + 'ä';   // 247 + 2 = 249 Bytes
+  var take = API._sliceByteLen(s, 248);
+  eq(take, 247, 'ad.4: Schnitt vor Umlaut der nicht mehr passt');
+  eq(_utf8ByteLen(s.slice(0, take)), 247, 'ad.4: Byte-Länge 247 ≤ 248');
+})();
+
+(function() {
+  // (ad.5) pushCont — ASCII-Text: erste CONC-Zeile max 255 Bytes
+  var lines = [];
+  API.pushCont(lines, 1, 'NOTE', 'X'.repeat(600));
+  // Erste Zeile: "1 NOTE " (7 Bytes) + chunk
+  var firstBytes = _utf8ByteLen(lines[0]);
+  ok(firstBytes <= 255, 'ad.5: erste NOTE-Zeile ≤ 255 Bytes (war ' + firstBytes + ')');
+  // Alle Folgezeilen: "2 CONC " (7 Bytes) + chunk
+  var allOk = lines.every(function(l) { return _utf8ByteLen(l) <= 255; });
+  ok(allOk, 'ad.5: alle Zeilen ≤ 255 Bytes');
+  ok(lines.length > 1, 'ad.5: Text wurde gesplittet');
+})();
+
+(function() {
+  // (ad.6) pushCont — Umlaut-Text: alle Zeilen ≤ 255 Bytes
+  var s = 'ö'.repeat(300);   // 600 Bytes — würde mit alter MAX=248-Zeichen-Logik Zeilen >255 Bytes erzeugen
+  var lines = [];
+  API.pushCont(lines, 1, 'NOTE', s);
+  var allOk = lines.every(function(l) { return _utf8ByteLen(l) <= 255; });
+  ok(allOk, 'ad.6: Umlaut-Text — alle Zeilen ≤ 255 Bytes');
+  // Roundtrip: alle Chunks zusammengesetzt ergeben den Originaltext
+  var reconstructed = '';
+  lines.forEach(function(l) {
+    if (l.startsWith('1 NOTE '))      reconstructed += l.slice(7);
+    else if (l.startsWith('2 CONC ')) reconstructed += l.slice(7);
+    else if (l.startsWith('2 CONT ')) reconstructed += '\n' + l.slice(7);
+  });
+  eq(reconstructed, s, 'ad.6: Roundtrip — kein Datenverlust');
+})();
+
+(function() {
+  // (ad.7) pushCont — gemischter Text mit CONT (Zeilenumbrüchen) + Umlaut-Overflow
+  var s = 'Hä'.repeat(100) + '\n' + 'Bö'.repeat(100);
+  var lines = [];
+  API.pushCont(lines, 1, 'NOTE', s);
+  var allOk = lines.every(function(l) { return _utf8ByteLen(l) <= 255; });
+  ok(allOk, 'ad.7: gemischter Text — alle Zeilen ≤ 255 Bytes');
+  var contLines = lines.filter(function(l) { return l.startsWith('2 CONT '); });
+  ok(contLines.length >= 1, 'ad.7: mindestens eine CONT-Zeile für Zeilenumbruch');
+})();
+
+(function() {
+  // (ad.8) writeGEDCOM — NOTE-Record erste Zeile ≤ 255 Bytes auch bei langem xref
+  var db = {
+    individuals: {}, families: {}, sources: {}, repositories: {},
+    placeObjects: {}, hofObjects: {},
+    notes: {
+      '@NRANSMANN@': {
+        id: '@NRANSMANN@', type: 'NOTE', grampId: null,
+        text: 'ä'.repeat(300),   // Umlaut-Text, würde ohne Fix erste Zeile sprengen
+        lastChanged: '', lastChangedTime: '', chanNote: '', _passthrough: [],
+      }
+    },
+    head: { charset: 'UTF-8', lang: '', source: '', vers: '5.5.1', gedcVers: '5.5.1',
+      copyrightTexts: [], coprNote: '', place: '', _extra: [] },
+    _idCounters: {}, _gedVersion: '5.5.1',
+  };
+  API.setDb(db);
+  var ged = API.writeGEDCOM(false, false, false);
+  var noteLines = ged.split(/\r?\n/).filter(function(l) { return l.length > 0; });
+  var allOk = noteLines.every(function(l) { return _utf8ByteLen(l) <= 255; });
+  ok(allOk, 'ad.8: writeGEDCOM — keine Zeile > 255 Bytes (auch bei @NRANSMANN@)');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────
