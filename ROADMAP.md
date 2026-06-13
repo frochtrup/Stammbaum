@@ -143,9 +143,53 @@ Vollständige Liste der abgeschlossenen v8-dev-Features (STORY-OPT, WW-PARSER, T
 
 **Architektur-Schuld** (~860 top-level-Funktionen über 69 JS-Dateien, davon 84 in `gedcom.js`, flacher Namespace) bleibt — der konkrete Hebel sind die Monsterfunktionen (s. SHOWPLACE-SPLIT), nicht die Voll-Modul-Migration. *(Korrektur 2026-06-07: die früher hier genannte „486-Z.-Funktion" `_attr` war ein Phantom — existiert nicht.)*
 
-### Architektur-Entscheidung: ES-Modul-Phasen 3–4 + Build-Step zurückgestellt
+### Architektur & Startup — konsolidierte Lösungsbewertung 2026-06-13
 
-Kern-Migration + Bundler bringen für Nutzer kaum Mehrwert (PWA-Cache + LAZY-LOAD dominieren) und brechen die bewusst gewählte „edit-anywhere ohne Toolchain"-Eigenschaft (ADR-001/002). Harte Blocker: Worker-`importScripts()`, `idbGet` von 13 Dateien, 59 Brücken-Symbole in `gedcom.js`. **Entscheidung: nicht einführen** — konkreter Wartungs-Hebel ist Monsterfunktions-Split, nicht die Voll-Migration. Vollständige Begründung + Phasenplan: **ARCHITECTURE.md ADR-020**. Trigger für Wiederaufnahme: starkes Codebase-Wachstum oder konkrete Namespace-Kollisionen.
+**Zwei gekoppelte Probleme mit gemeinsamem Wurzelmechanismus** (Multi-File no-Build, ADR-001/002):
+
+1. **Architektur-Schuld:** ~860 Globals über 69 Dateien; ESM-Brücken-Migration stagniert nach 2 Brücken in ~10 Monaten (GRAMPS v751, Validator v752, keine Folgemigration). ADR-020-Phase 3 hat drei harte Blocker: `gedcom-worker.js` `importScripts()`, `idbGet` von 13 Dateien genutzt, 59 Top-Level-Symbole in `gedcom.js`.
+2. **Startup-Perf grenzwertig:** ~50 sequenzielle Script-Requests bei Cold-Load, ~1–2 MB Roh-JS-Parse vor App-Boot, jeder `CACHE_NAME`-Bump invalidiert *alle* Assets gleichzeitig.
+
+**Sofort-Maßnahme** (unabhängig von der Architektur, ✅ **v951 erledigt**): **Boot-Loader** (`#bootLoader` in `index.html`, `boot-loader.js`) entkoppelt „perceived" von „actual performance". Die Architektur-Entscheidung muss damit nur noch die *tatsächliche* Ladezeit rechtfertigen, nicht zusätzlich das Stillstandsgefühl.
+
+**Sechs evaluierte Lösungspfade**
+
+| # | Pfad | Architektur | Startup kalt | Startup warm | SW-Bump | Verdikt |
+|---|---|---|---|---|---|---|
+| 1 | Namespace-Hygiene (IIFE + 1 Namespace pro Datei) | + | 0 | 0 | 0 | Backlog (disziplinär, nicht verriegelt) |
+| 2 | Module Worker (`gedcom-worker.js` → `type:'module'`) | + | 0 | 0 | 0 | **Mittelfristig** — räumt einen ADR-020-Blocker |
+| 3 | Import Maps statt Bundler | ++ | **–** | 0 | 0 | **Verworfen** — mehr Cold-Load-Requests |
+| 4 | Hybrid Source + Bundle parallel | ++ | + | 0 | + | Verworfen — Wartungsfalle, Bundle rottet |
+| 5 | Voll-Bundler (esbuild, ADR-001/002 ablösen) | +++ | +++ | + | +++ | **Trigger-basiert** — größter Hebel, höchster ADR-Bruch |
+| 6 | Boot-Splitting ohne Bundler (kritisches Shell + Lazy-Inject) | + | + | 0 | + | **Kurz** — Startup-Gewinn ohne ADR-Bruch |
+
+**Detail-Bewertung**
+
+- **Pfad 1 — Namespace-Hygiene:** kosmetisch, keine strukturelle Verriegelung. Wird nur durchgehalten solang die Disziplin trägt. Adressiert nicht die ~860 Alt-Globals.
+- **Pfad 2 — Module Worker:** lokaler, klar abgegrenzter Schritt (1–2 Sprints). Beseitigt explizit den ersten der drei ADR-020-Phase-3-Blocker, ohne weitere Migration zu erzwingen. iOS-Safari Module-Worker stabil ab 15+ — Versions-Floor verträglich.
+- **Pfad 3 — Import Maps:** liefert echte explizite Deps ohne Bundler, ADR-001/002 unverletzt. **Aber:** ~50 native Module-Requests beim Cold-Load (Discovery-Kaskade) machen genau das schlechter, was wir gerade nicht verschlechtern wollen. Wenn ESM, dann mit Bundler (Pfad 5).
+- **Pfad 4 — Hybrid Source + Bundle:** zwei Lade-Pfade synchron zu halten verdoppelt die Wartung; `test-unit.js` Mini-DOM-Harness müsste entscheiden was es testet. Sobald das Bundle einmal „kaputt" geht, weicht man auf Source aus und das Bundle verrottet. Kompromiss-Antwort, die in der Praxis nichts entscheidet.
+- **Pfad 5 — Voll-Bundler:** vollständigste Lösung mit Tree-Shaking, Source-Maps, Hot-Reload. Bricht die Gründungs-Entscheidung ADR-001/002 (mobile iCloud-Edit ohne Toolchain) explizit. Solo-Dev mit aktuell hoher Velocity (709 Sprints in 4 Wochen) verliert mehr durch Toolchain-Last als gewonnen wird, **solang** Pfad 6 trägt.
+- **Pfad 6 — Boot-Splitting ohne Bundler:** `index.html` lädt im ersten Pass nur das *kritische Shell* (~10–15 Dateien: `gedcom.js`, `storage-file`, `storage`, `ui-views`, `ui-views-person`, das Nötigste). Der Rest wird per `<script>`-Injection nach dem ersten Paint nachgeladen, getriggert vom Boot-Loader-Hook (v951). Komplett ohne Bundler, edit-anywhere bleibt. Manuelle Pflege der Kritisch-Liste ist die offene Frage — kann als zweiter Trigger für Pfad 5 dienen.
+
+**Sequenzierte Empfehlung**
+
+1. ✅ **Sofort:** Boot-Loader (v951, erledigt) — perceived performance entkoppelt
+2. 🟡 **Kurz (nächster Sprint-Block):** Pfad 6 — Boot-Splitting ohne Bundler. Vorarbeit: Dependency-Graph der ~50 Dateien einmal exakt vermessen (welche Datei nutzt welches Global vor erstem Paint?)
+3. 🟡 **Mittel (parallelisierbar, niedrige Dringlichkeit):** Pfad 2 — Module Worker. Räumt einen ADR-020-Blocker, nicht dringend (Parser läuft im Hintergrund, blockiert nicht Boot)
+4. 🔵 **Lang (Trigger-basiert):** Pfad 5 — Voll-Bundler. **Erweiterte Trigger** gegenüber ADR-020-Original („Codebase-Wachstum / Namespace-Kollisionen"): zusätzlich (a) **Boot-Splitting-Manifest pflegt sich nicht mehr von selbst** (Pfad 6 trägt nicht mehr) oder (b) **SW-Bump-Schmerz wird user-sichtbar gemeldet** (Cold-Load nach jedem Update zu lang)
+
+**Verworfen**
+
+- **Pfad 3 (Import Maps):** Architektur-Vorteile real, aber Cold-Load wird messbar schlechter — falsche Richtung für die aktuelle Startup-Sorge.
+- **Pfad 4 (Hybrid):** kein klarer Endzustand, Wartungs-Verdoppelung ohne Veriegelung gegen Rotting des Bundle-Pfads.
+
+**Bezug zu bestehenden ADRs**
+
+- **ADR-001/002** („Multi-File HTML + Vanilla JS, kein Build-Step") bleibt **gültig**, solang Pfad 6 die Startup-Perf trägt. Pfad-5-Trigger sind eine *explizite Ausstiegsklausel*.
+- **ADR-020** („ESM-Brücken-Pattern, Phasen 3–4 zurückgestellt") bleibt gültig; die Phase-3-Blocker werden durch Pfad 2 (Worker-Blocker) einzeln und billig adressiert, ohne Phase 3 zu starten.
+
+Voll-Detail Phasenplan + Pilot-Befunde: **ARCHITECTURE.md ADR-020** · v951-Sprint: **CHANGELOG.md**.
 
 ---
 
