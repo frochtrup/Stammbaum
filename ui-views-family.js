@@ -109,36 +109,12 @@ function renderFamilyList(fams) {
   }
   _vsF.total = offset;
 
-  let _initScrollTop = null;
-  if (curId) {
-    const sc = _vsScrollEl();
-    if (sc) {
-      const idx = _vsF.items.findIndex(it => it.id === curId);
-      if (idx >= 0) {
-        const iOff   = _vsF.offsets[idx];
-        const viewH  = sc.clientHeight;
-        const lr     = listEl.getBoundingClientRect();
-        const lstAbs = sc.scrollTop + lr.top - sc.getBoundingClientRect().top;
-        _initScrollTop = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
-      }
-    }
-  }
-
-  _vsSetup(listEl, _vsF, _initScrollTop);
+  _vsSetup(listEl, _vsF);
   _announceList(fams.length + (fams.length === 1 ? ' Familie' : ' Familien'));
 
-  // Mobile (sc===null): rAF nötig nach display:block
-  if (curId && !_vsF.sc) {
+  if (curId) {
     const idx = _vsF.items.findIndex(it => it.id === curId);
-    if (idx >= 0) {
-      requestAnimationFrame(() => {
-        const iOff   = _vsF.offsets[idx];
-        const viewH  = window.innerHeight;
-        const lr     = listEl.getBoundingClientRect();
-        const lstAbs = window.scrollY + lr.top;
-        window.scrollTo(0, Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2));
-      });
-    }
+    if (idx >= 0) _vsScrollAndHighlight(_vsF, listEl, idx, 'data-fid', curId);
   }
 }
 

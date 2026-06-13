@@ -242,39 +242,14 @@ function renderPersonList(persons) {
   }
   _vsP.total = offset;
 
-  // initScrollTop: Desktop vor _vsSetup berechnen, damit _vsRender beim ersten Aufbau
-  // bereits das richtige Fenster zeigt. scrollTop wird IN _vsSetup gesetzt (nach Append
-  // der Spacer-Divs), damit der Browser scrollTop nicht auf 0 klemmt.
-  let _initScrollTop = null;
-  if (curId) {
-    const sc = _vsScrollEl();
-    if (sc) {
-      const idx = _vsP.items.findIndex(it => it.id === curId);
-      if (idx >= 0) {
-        const iOff   = _vsP.offsets[idx];
-        const viewH  = sc.clientHeight;
-        const lr     = listEl.getBoundingClientRect();
-        const lstAbs = sc.scrollTop + lr.top - sc.getBoundingClientRect().top;
-        _initScrollTop = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
-      }
-    }
-  }
-
-  _vsSetup(listEl, _vsP, _initScrollTop);
+  _vsSetup(listEl, _vsP);
   _announceList(sorted.length + (sorted.length === 1 ? ' Person' : ' Personen'));
 
-  // Mobile (sc===null): window.scrollTo braucht rAF nach display:block
-  if (curId && !_vsP.sc) {
+  // Nach _vsSetup hat st.bot die volle Restliste als Spacer → scrollHeight groß genug.
+  // _vsScrollAndHighlight scrollt synchron zur aktuellen Person und rendert neu.
+  if (curId) {
     const idx = _vsP.items.findIndex(it => it.id === curId);
-    if (idx >= 0) {
-      requestAnimationFrame(() => {
-        const iOff   = _vsP.offsets[idx];
-        const viewH  = window.innerHeight;
-        const lr     = listEl.getBoundingClientRect();
-        const lstAbs = window.scrollY + lr.top;
-        window.scrollTo(0, Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2));
-      });
-    }
+    if (idx >= 0) _vsScrollAndHighlight(_vsP, listEl, idx, 'data-pid', curId);
   }
 }
 
