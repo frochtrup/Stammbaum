@@ -109,22 +109,22 @@ function renderFamilyList(fams) {
   }
   _vsF.total = offset;
 
-  // Desktop: Scroll-Position VOR _vsSetup setzen (analog _vsReattach) → kein Flicker
+  let _initScrollTop = null;
   if (curId) {
     const sc = _vsScrollEl();
     if (sc) {
       const idx = _vsF.items.findIndex(it => it.id === curId);
       if (idx >= 0) {
-        const iOff  = _vsF.offsets[idx];
-        const viewH = sc.clientHeight;
-        const lr    = listEl.getBoundingClientRect();
+        const iOff   = _vsF.offsets[idx];
+        const viewH  = sc.clientHeight;
+        const lr     = listEl.getBoundingClientRect();
         const lstAbs = sc.scrollTop + lr.top - sc.getBoundingClientRect().top;
-        sc.scrollTop = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
+        _initScrollTop = Math.max(0, lstAbs + iOff - viewH / 2 + _VS_ROW / 2);
       }
     }
   }
 
-  _vsSetup(listEl, _vsF);
+  _vsSetup(listEl, _vsF, _initScrollTop);
   _announceList(fams.length + (fams.length === 1 ? ' Familie' : ' Familien'));
 
   // Mobile (sc===null): rAF nötig nach display:block
