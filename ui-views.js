@@ -438,7 +438,13 @@ function showMain() {
   _closeHistoryPicker();
   _updateNavBtns();
   document.body.classList.remove('tree-active', 'fc-mode');
-  setBnavActive(AppState.currentTab || 'persons');
+  const _activeTab = AppState.currentTab || 'persons';
+  setBnavActive(_activeTab);
+  // Tab-Divs: nur aktiven sichtbar — Schutz gegen Erstload ohne vorigen switchTab-Aufruf
+  ['persons','families','sources','places','stats','search','tasks'].forEach(t => {
+    const el = document.getElementById('tab-' + t);
+    if (el) el.style.display = (t === _activeTab) ? 'block' : 'none';
+  });
   showView('v-main');
   renderTab();
   if (typeof _updateTasksBadge === 'function') _updateTasksBadge();
@@ -719,6 +725,9 @@ async function showStartView() {
   ]);
   if (savedSel && typeof savedSel === 'object') UIState._lastTabSel = savedSel;
   UIState._probandId = (savedProband && AppState.db.individuals[savedProband]) ? savedProband : null;
+  // currentPersonId vor renderPersonList vorbelegen → scroll-to-current greift beim Erstrender
+  const _preId = ViewState.getCurrent('persons') || smallestPersonId();
+  if (_preId && AppState.db.individuals[_preId]) AppState.currentPersonId = _preId;
   showMain();
   const startId = getProbandId();
   if (startId) showTree(startId);
