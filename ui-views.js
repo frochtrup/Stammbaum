@@ -71,8 +71,10 @@ function showView(id) {
   // R1+P6-B1: alle anderen aktiven Views deaktivieren — Desktop hält v-main + v-detail/v-tree
   // gleichzeitig active (ADR-009). querySelector lieferte nur das erste, was beim Wechsel
   // v-tree→v-main den Baum sichtbar stehen ließ (links: 360px, fixed → überdeckt Detail).
+  // v959: v-main auf Desktop niemals active entfernen — .view{display:none} würde scrollTop
+  // auf 0 zurücksetzen, weil der Browser beim display:none→block übergang den Scroll vergisst.
   document.querySelectorAll('.view.active').forEach(v => {
-    if (v.id !== id) v.classList.remove('active');
+    if (v.id !== id && !(desktop && v.id === 'v-main')) v.classList.remove('active');
   });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
