@@ -1047,11 +1047,11 @@ function _placeDetailDeleteRow(place, placeName) {
 
 
 // Verwaltungsgeschichte als aufgelöste Zeitlinie (WYSIWYG zum GEDCOM-Writer).
-// `winner()` ist identisch zur enclosureChainAsOf-Logik in gedcom.js — höchstes
-// dateFrom gewinnt bei Überschneidung. Diese Identität ist die kritische
-// Invariante (v940): Was hier angezeigt wird, landet exakt so im Export.
+// Gewinner-Auswahl pro Jahr delegiert an reg.enclosureWinnerAsOf — *dieselbe*
+// Funktion, die der Writer (via enclosureChainAsOf) nutzt. Damit ist die
+// Invariante (v940) strukturell verriegelt, nicht nur per Konvention.
 // Fallback ohne enclosedBy: aktuelle Kette als "Teil von"-Zeile.
-function _placeHistEnclosureTimeline(po, reg, placeId) {
+function _placeDetailEnclosureTimeline(po, reg, placeId) {
   const enclosedBy = po.enclosedBy || [];
   if (!enclosedBy.length) {
     const chain = reg.enclosureChainAsOf(placeId, null).slice(1);
@@ -1062,6 +1062,7 @@ function _placeHistEnclosureTimeline(po, reg, placeId) {
 
   const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
 
+  // Jahresgrenzen aus allen Einträgen sammeln — pro Grenze nach Gewinner segmentieren.
   const _resolveTimeline = encs => {
     const bounds = new Set();
     for (const e of encs) {
@@ -1070,33 +1071,20 @@ function _placeHistEnclosureTimeline(po, reg, placeId) {
     }
     const sortedB = [...bounds].filter(y => y != null).sort((a, b) => a - b);
 
-    // Gewinner-Funktion: identisch zu enclosureChainAsOf-Logik
-    const winner = y => {
-      let bestFrom = -Infinity, bestEnc = null, undated = null;
-      for (const e of encs) {
-        const ef = parseY(e.dateFrom), et = parseY(e.dateTo);
-        if (ef == null && et == null) { undated = e; continue; }
-        const matches = (ef == null || y >= ef) && (et == null || y <= et);
-        if (matches) {
-          const fv = ef ?? -Infinity;
-          if (fv > bestFrom) { bestFrom = fv; bestEnc = e; }
-        }
-      }
-      return bestEnc ?? undated ?? null;
-    };
-
     const segments = [];
     for (let i = 0; i < sortedB.length; i++) {
       const y = sortedB[i];
-      const w = winner(y);
+      const w = reg.enclosureWinnerAsOf(placeId, y).enc;
       if (!w) continue;
       const nextY = sortedB[i + 1] ?? null;
+      // Mit vorherigem Segment zusammenführen wenn selber Gewinner-Eintrag
       if (segments.length && segments[segments.length - 1].enc === w) {
         segments[segments.length - 1].toY = nextY ? nextY - 1 : null;
       } else {
         segments.push({ fromY: y, toY: nextY ? nextY - 1 : null, enc: w });
       }
     }
+    // Rein undatierte Einträge (keine Grenzen) — Registry liefert sie als Fallback.
     if (!sortedB.length) {
       const u = encs.find(e => !e.dateFrom && !e.dateTo);
       if (u) segments.push({ fromY: null, toY: null, enc: u });
@@ -1135,7 +1123,7 @@ function _placeHistEnclosureTimeline(po, reg, placeId) {
 // (BFS), Anzeige auf Existenzdaten + dokumentierten enclosedBy-Zeitraum
 // klemmen, Duplikate (gleiche Kette) zusammenfassen, Lücken als "unbekannt"
 // markieren, abgebrochene Ketten mit "› ?" suffixen.
-function _placeHistHierarchyTimeline(po, placeId, reg) {
+function _placeDetailHierarchyTimeline(po, placeId, reg) {
   const enclosedBy = po.enclosedBy || [];
   if (!enclosedBy.length || !reg.enclosureChainAsOf) return '';
 
@@ -1263,7 +1251,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
       }
 
       const enclosedBy = po.enclosedBy || [];
-      histHtml += _placeHistEnclosureTimeline(po, reg, place.placeId);
+      histHtml += _placeDetailEnclosureTimeline(po, reg, place.placeId);
       // Hierarchie-Timeline: vollständige Kette zu Schlüsseljahren anzeigen.
       // Schlüsseljahre rekursiv aus der gesamten Kette sammeln — sonst bleiben
       // Änderungen auf höheren Ebenen (Eltern, Großeltern) unsichtbar.
@@ -1284,7 +1272,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
         histHtml += `<div class="fact-sub-title">Verwaltungstyp (historisch)</div>${_typeRows}`;
       }
 
-      hierTimelineHtml = _placeHistHierarchyTimeline(po, place.placeId, reg);
+      hierTimelineHtml = _placeDetailHierarchyTimeline(po, place.placeId, reg);
 
       if (histHtml || namesHtml || hierTimelineHtml) {
         html += `<div class="section fade-up">

@@ -1257,6 +1257,110 @@ eq(API._normPlaceName(''), '', '_normPlaceName leer → ""');
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  (i2) enclosureWinnerAsOf — Kernel der WYSIWYG-Invariante v940/v949
+// ═══════════════════════════════════════════════════════════════════════════
+// Die Registry-Methode liefert den *gewinnenden* enclosedBy-Eintrag eines
+// Knotens zum Stichjahr. Dieselbe Funktion wird von enclosureChainAsOf (Writer)
+// und _placeDetailEnclosureTimeline (View) genutzt → strukturelle Verriegelung
+// statt Code-Duplikat (v949-Verbesserung gegenüber dem ursprünglichen Split).
+group('(i2) PlaceRegistry.enclosureWinnerAsOf');
+
+(function() {
+  var P_PA  = { id:'@PA@',  title:'Parent-A', type:'Region', pnames:[{value:'Parent-A'}], enclosedBy: [] };
+  var P_PB  = { id:'@PBP@', title:'Parent-B', type:'Region', pnames:[{value:'Parent-B'}], enclosedBy: [] };
+
+  function _setupDb(encs) {
+    API.setDb({ individuals:{}, families:{}, placeObjects: {
+      '@PB@':  { id:'@PB@',  title:'Basis', type:'Village', pnames:[{value:'Basis'}], enclosedBy: encs },
+      '@PA@':  P_PA,
+      '@PBP@': P_PB,
+    } });
+    return API.getPlaceRegistry();
+  }
+
+  // (1) Keine Eltern-Einträge → enc=null + truncated=false
+  var r = _setupDb([]);
+  var w = r.enclosureWinnerAsOf('@PB@', 1800);
+  eq(w.enc, null,        '(1) leer: enc=null');
+  eq(w.truncated, false, '(1) leer: truncated=false');
+
+  // (2) Nur undatierter Eintrag → wird als Fallback zurückgegeben
+  r = _setupDb([{ placeId:'@PA@' }]);
+  w = r.enclosureWinnerAsOf('@PB@', 1800);
+  eq(w.enc && w.enc.placeId, '@PA@', '(2) undatiert: als Fallback');
+  eq(w.truncated, false,             '(2) undatiert: nicht truncated (gilt als immer-gültig)');
+
+  // (3) Datierter Eintrag, Jahr innerhalb → dieser Eintrag gewinnt
+  r = _setupDb([{ placeId:'@PA@', dateFrom:'1500', dateTo:'1799' }]);
+  w = r.enclosureWinnerAsOf('@PB@', 1700);
+  eq(w.enc && w.enc.placeId, '@PA@', '(3) inside range: gewinnt');
+  eq(w.truncated, false,             '(3) inside range: nicht truncated');
+
+  // (4) Datierter Eintrag, Jahr außerhalb → null + truncated=true
+  r = _setupDb([{ placeId:'@PA@', dateFrom:'1500', dateTo:'1799' }]);
+  w = r.enclosureWinnerAsOf('@PB@', 1850);
+  eq(w.enc, null,       '(4) outside range: enc=null');
+  eq(w.truncated, true, '(4) outside range: truncated=true (datierte Eltern vorhanden, keiner passt)');
+
+  // (5) Überlappung am Grenzdatum: bis=1802 + ab=1802 → höchstes dateFrom gewinnt
+  r = _setupDb([
+    { placeId:'@PA@',  dateFrom:'1500', dateTo:'1802' },
+    { placeId:'@PBP@', dateFrom:'1802', dateTo:'' },
+  ]);
+  w = r.enclosureWinnerAsOf('@PB@', 1802);
+  eq(w.enc && w.enc.placeId, '@PBP@', '(5) Überlappung: höchstes dateFrom gewinnt (Parent-B "tritt in Kraft")');
+
+  // (6) Datiert + undatiert, Jahr im datierten Bereich → datierter gewinnt
+  r = _setupDb([
+    { placeId:'@PA@',  dateFrom:'1500', dateTo:'1800' },
+    { placeId:'@PBP@' },
+  ]);
+  w = r.enclosureWinnerAsOf('@PB@', 1700);
+  eq(w.enc && w.enc.placeId, '@PA@', '(6) datiert+undatiert, im Bereich: datiert gewinnt');
+
+  // (7) Datiert + undatiert, Jahr außerhalb → undatiert als Fallback
+  r = _setupDb([
+    { placeId:'@PA@',  dateFrom:'1500', dateTo:'1800' },
+    { placeId:'@PBP@' },
+  ]);
+  w = r.enclosureWinnerAsOf('@PB@', 1900);
+  eq(w.enc && w.enc.placeId, '@PBP@', '(7) datiert+undatiert, außerhalb: undatiert als Fallback');
+  eq(w.truncated, false,              '(7) undatierter Fallback verhindert truncated');
+
+  // (8) year=null → null + truncated=false (kein Jahres-Constraint)
+  r = _setupDb([{ placeId:'@PA@', dateFrom:'1500', dateTo:'1799' }]);
+  w = r.enclosureWinnerAsOf('@PB@', null);
+  eq(w.enc, null,        '(8) year=null: enc=null');
+  eq(w.truncated, false, '(8) year=null: truncated=false');
+
+  // (9) Unbekannte placeId → defensive null, kein Crash
+  r = _setupDb([{ placeId:'@PA@' }]);
+  w = r.enclosureWinnerAsOf('@DOES_NOT_EXIST@', 1800);
+  eq(w.enc, null,        '(9) unbekannter Knoten: enc=null');
+  eq(w.truncated, false, '(9) unbekannter Knoten: truncated=false');
+
+  // (10) Verschachtelte überlappende datierte Einträge: höchstes dateFrom gewinnt
+  r = _setupDb([
+    { placeId:'@PA@',  dateFrom:'1500', dateTo:'1900' },
+    { placeId:'@PBP@', dateFrom:'1700', dateTo:'1800' },
+  ]);
+  w = r.enclosureWinnerAsOf('@PB@', 1750);
+  eq(w.enc && w.enc.placeId, '@PBP@', '(10) verschachtelte Überlappung: jüngerer (höchstes dateFrom) gewinnt');
+
+  // (11) Regression: enclosureChainAsOf nutzt jetzt enclosureWinnerAsOf
+  // → Sassenberg-Beispiel aus Block (i) muss weiter Bit-genau funktionieren.
+  API.setDb({ individuals:{}, families:{}, placeObjects: {
+    '@P0001@': { id:'@P0001@', title:'Fürstbistum Münster', type:'Region', pnames:[{value:'Fürstbistum Münster'}], enclosedBy:[] },
+    '@P0002@': { id:'@P0002@', title:'Sassenberg', type:'Village',
+      pnames:[{value:'Sassenberg'}, {value:'Sassenbergk', dateFrom:'1650', dateTo:'1802'}],
+      enclosedBy:[{placeId:'@P0001@', dateFrom:'1500', dateTo:'1803'}] },
+  } });
+  eq(API.getPlaceRegistry().enclosureChainAsOf('@P0002@', 1700),
+     ['Sassenbergk', 'Fürstbistum Münster'],
+     '(11) enclosureChainAsOf nach Refaktor: Sassenberg-Kette unverändert');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  (j) PLACE-HIST — collectPlaces↔Entität-Verknüpfung (ADR-024 P0b-1)
 // ═══════════════════════════════════════════════════════════════════════════
 group('(j) PLACE-HIST collectPlaces-Entität');

@@ -20,7 +20,7 @@ Pfad: `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogi
 
 ## Aktueller Stand
 **v8.0 · Branch `v8-dev` · sw v899 / Cache `stammbaum-v899`.**
-- `test-unit.js` = **420 Tests** grün · `test-csp.js` grün · GEDCOM-Roundtrip `net_delta=0` · GRAMPS stable. Verifiziert 2026-06-07.
+- `test-unit.js` = **438 Tests** grün · `test-csp.js` grün · GEDCOM-Roundtrip `net_delta=0` · GRAMPS stable. Verifiziert 2026-06-07.
 - Gesamtbewertung ≈ **8.3/10** (unabhängiges Review 2026-06-07 → ROADMAP).
 - Größte offene Hebel: **T0-FUNC-SPLIT** (Monsterfunktionen), **OUTPUT-RICHNESS** (PDF-Buch/Poster), **A11Y-AUDIT** (s. ROADMAP).
 
@@ -30,7 +30,7 @@ Pfad: `/Users/franzdecker/Library/Mobile Documents/com~apple~CloudDocs/Genealogi
 - Jede neue Datenstruktur: GEDCOM-Roundtrip `out1===out2`/`net_delta=0` stabil halten (Passthrough oder dokumentierte ADR-Abweichung).
 
 ## Test-Infrastruktur (dep-frei, kein npm, `node` nicht installiert → `osascript -l JavaScript`)
-- `osascript -l JavaScript test-unit.js` — 420 Unit-Tests · `test-roundtrip.js [datei]` — GEDCOM+GRAMPS Roundtrip · `test-scale.js` — Performance · `generate-scale-test.js` — 20k-Synthetik.
+- `osascript -l JavaScript test-unit.js` — 438 Unit-Tests · `test-roundtrip.js [datei]` — GEDCOM+GRAMPS Roundtrip · `test-scale.js` — Performance · `generate-scale-test.js` — 20k-Synthetik.
 
 ## Wenige nicht-offensichtliche Fakten
 - **Roundtrip-Deltas „by design":** GEDCOM +PEDI (wo `_FREL==_MREL`); GRAMPS weniger note/citation (Dedup per Text-/Tupel-Key, keine Datenverluste). Beide stabil über Re-Roundtrip.

@@ -9,6 +9,21 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-13 — Refaktor-Härtung nach Selbstkritik (sw v950)
+
+Selbstkritische Bewertung des v949-Splits hatte 4 konkrete Schwächen benannt: `winner()`-Logik im View-Helper dupliziert (Invariante nur per Konvention geschützt), Naming inkonsistent (`_placeHist*` vs. `_placeDetail*`), Helfer nicht direkt testbar, Doku grandios. Behoben:
+
+- **Neue Registry-Methode `enclosureWinnerAsOf(placeId, year)`** in `gedcom.js` (Z. 951–971). Liefert den gewinnenden enclosedBy-Eintrag eines Knotens zum Stichjahr — die kanonische Auswahl-Logik (höchstes dateFrom gewinnt, undatiert als Fallback, truncated-Flag wenn datierte Eltern aber keiner passt). `enclosureChainAsOf` (Writer) ruft die Methode jetzt statt die Logik zu inlinen; `_placeDetailEnclosureTimeline` (View) ebenfalls. **WYSIWYG-Invariante strukturell verriegelt** statt per Doc-Comment.
+- **+18 Unit-Tests** (Block (i2), `test-unit.js`): 11 Szenarien (leer / undatiert / inside / outside-with-truncated / Grenzdatum-Überlappung / datiert+undatiert / year=null / unbekannter Knoten / verschachtelte Überlappung / Regression Sassenberg-Kette). Total **420 → 438** Tests grün.
+- **Helfer-Naming einheitlich `_placeDetail*`** (vorher `_placeHist*` für Phase A + `_placeDetail*` für Phase B). `sed`-Rename in `ui-views-place.js`, Snapshot unverändert.
+- **`_placeDetailEnclosureTimeline` schrumpft 78 → 66 Z.** durch Wegfall der lokalen `winner()`-Kopie.
+
+Verifikation: `test-csp.js` OK · `test-unit.js` 438/438 · `test-snapshot-place.js` 2/2 byte-identisch · `test-roundtrip.js MeineDaten_ancestris.ged` net_delta=0 stable.
+
+**Lehre:** Refactor-Selbstkritik *vor* dem Push hätte v949 direkt in diese Form gebracht. Künftig bei Helfer-Extraktion immer fragen: „Ist die Logik *kopiert* oder *aufgerufen*?" Kopie = schlecht. Aufruf = gut.
+
+---
+
 ### Session 2026-06-13 — SHOWPLACE-SPLIT (schmale Variante) (sw v949)
 
 **Auslöser:** Re-Review v948 hatte `showPlaceDetail` (631 Z., länger als alle drei T0-FUNC-SPLIT-Opfer zusammen) als nächste konkrete Code-Qualitäts-Schuld identifiziert. Plan-Selbstkritik schlug die *schmale* Variante vor: erst Snapshot-Schutz, dann nur die zwei echten Logik-Sektionen + 4 triviale extrahieren — 30 % des ursprünglichen Aufwands für 80 % des Gewinns.
