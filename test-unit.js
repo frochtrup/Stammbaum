@@ -583,7 +583,12 @@ if (IS_NODE) {
     'window.upsertPlaceObject = upsertPlaceObject;' +
     'window.getPlaceFromForm = getPlaceFromForm;' +
     'window.initPlaceMode = initPlaceMode;' +
-    'window.togglePlaceMode = togglePlaceMode;';
+    'window.togglePlaceMode = togglePlaceMode;' +
+    // Brücke für QT-Tests (ui-quicktpl.js nutzt diese gedcom.js-Funktionen)
+    'window.nextId = nextId; window.citationObj = citationObj;' +
+    'window.gedcomDate = gedcomDate; window.gedcomTime = gedcomTime;' +
+    'window._rebuildPersonSourceRefs = _rebuildPersonSourceRefs;' +
+    'window._rebuildFamilySourceRefs = _rebuildFamilySourceRefs;';
   eval(_combined);
   API = window._api;
 }
@@ -2936,6 +2941,206 @@ group('(ab) UI FormSaveMerge');
   var ui = _ui();
   API.setDb({ individuals:{}, families:{}, placeObjects:{} });
   eq(ui.applyStringPlaceLink(['X'], null, ['X']), 0, 'ab.no-target: null targetPlaceId → 0');
+})();
+
+// ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────
+// Extrahiert _qtSaveCustom + Helfer aus ui-quicktpl.js ohne UI/DOM-Bezug.
+var _QT = null;
+function _loadQT() {
+  if (_QT) return _QT;
+  var src = _readSrc('ui-quicktpl.js');
+  var p1End   = src.indexOf('\nfunction _qtList(');
+  var p2Start = src.indexOf('\nlet _qtActiveTpl = null;');
+  var p2End   = src.indexOf('\nfunction _qtAfterSave(');
+  var p3Start = src.indexOf('\nfunction _qtAddCitToEvent(');
+  var p3End   = src.indexOf('\nfunction _qtShowInlinePlausi(');
+  // Nach Refactor: Helfer stehen vor _qtSaveCustom → früheren Marker nehmen
+  var p4Start = src.indexOf('\nfunction _qtApplyPersonFields(');
+  if (p4Start < 0) p4Start = src.indexOf('\nfunction _qtSaveCustom(');
+  var p4End   = src.indexOf('\nfunction qtEntryDone(');
+  if ([p1End, p2Start, p2End, p3Start, p3End, p4Start, p4End].some(function(x) { return x < 0; })) {
+    throw new Error('_loadQT: Marker in ui-quicktpl.js nicht gefunden — Refactor prüfen');
+  }
+  var qtSlice = [
+    src.slice(0, p1End),
+    src.slice(p2Start, p2End),
+    src.slice(p3Start, p3End),
+    src.slice(p4Start, p4End),
+    // Brücke: Globals aus _combined reanknüpfen (für JXA-Eval-Isolation)
+    'var AppState                 = window.AppState;',
+    'var nextId                   = window.nextId;',
+    'var citationObj              = window.citationObj;',
+    'var gedcomDate               = window.gedcomDate;',
+    'var gedcomTime               = window.gedcomTime;',
+    'var _rebuildPersonSourceRefs = window._rebuildPersonSourceRefs;',
+    'var _rebuildFamilySourceRefs = window._rebuildFamilySourceRefs;',
+    // Stubs (DOM-schwer oder nicht im gedcom-Kern)
+    'function _normQuickDate(s) { return s || ""; }',
+    'function _qtAfterSave() {}',
+    'function _qtShowInlinePlausi() {}',
+    'function pushUndo() {}',
+    'function markChanged() { if (window.AppState) window.AppState.changed = true; }',
+    'function renderTab() {}',
+    // Exponiere für Tests
+    'window._qtApi = {',
+    '  _qtSaveCustom: _qtSaveCustom,',
+    '  _getSession:   function() { return _qtSession; },',
+    '  _setMatchSel:  function(v) { _qtMatchSel = v; },',
+    '  _resetState:   function() { _qtSession = []; _qtMatchSel = {}; },',
+    '};',
+  ].join('\n');
+  if (IS_NODE) {
+    _vm.runInContext(qtSlice, _ctx, { filename: 'ui-quicktpl-core.js' });
+    _QT = _ctx._qtApi;
+  } else {
+    eval(qtSlice);
+    _QT = window._qtApi;
+  }
+  return _QT;
+}
+
+function _qtReset(dbOverride) {
+  API.setDb(dbOverride || { individuals: {}, families: {}, placeObjects: {} });
+  var qt = _loadQT();
+  qt._resetState();
+  return qt;
+}
+
+group('(ac) QT _qtSaveCustom');
+
+(function() {
+  // (ac.1) Neue Hauptperson mit Geburtsort — Person landet in db, keine Familie
+  var qt = _qtReset();
+  var tpl = { base: 'custom', context: { sid: '@S1@', quay: '3' },
+    schema: { fields: [
+      { role: 'main', type: 'surname' },
+      { role: 'main', type: 'given'   },
+      { role: 'main', type: 'date',  target: 'birth' },
+      { role: 'main', type: 'place', target: 'birth' },
+    ]}};
+  qt._qtSaveCustom(tpl, { c0: 'Müller', c1: 'Hans', c2: '1 JAN 1900', c3: 'Münster' });
+  var inds = API.AppState.db.individuals;
+  var fams = API.AppState.db.families;
+  var ids = Object.keys(inds);
+  eq(ids.length, 1, 'ac.1: genau 1 Person angelegt');
+  var p = inds[ids[0]];
+  eq(p.surname, 'Müller', 'ac.1: Nachname korrekt');
+  eq(p.given,   'Hans',   'ac.1: Vorname korrekt');
+  eq(p.birth && p.birth.date, '1 JAN 1900', 'ac.1: Geburtsdatum gesetzt');
+  eq(p.birth && p.birth.place, 'Münster', 'ac.1: Geburtsort gesetzt');
+  eq(Object.keys(fams).length, 0, 'ac.1: keine Familie angelegt');
+  eq(qt._getSession().length, 1, 'ac.1: Session enthält 1 ID');
+})();
+
+(function() {
+  // (ac.2) Hauptperson + Vater + Mutter (alle neu) → neue Eltern-Familie
+  var qt = _qtReset();
+  var tpl = { base: 'custom', context: { sid: '@S1@', quay: '2' },
+    schema: { fields: [
+      { role: 'main',   type: 'surname' }, { role: 'main',   type: 'given' },
+      { role: 'father', type: 'surname' }, { role: 'father', type: 'given' },
+      { role: 'mother', type: 'surname' }, { role: 'mother', type: 'given' },
+    ]}};
+  qt._qtSaveCustom(tpl, { c0:'Kind',  c1:'Anna', c2:'Vater', c3:'Fritz', c4:'Mutter', c5:'Lisa' });
+  var inds = API.AppState.db.individuals;
+  var fams = API.AppState.db.families;
+  eq(Object.keys(inds).length, 3, 'ac.2: 3 Personen angelegt');
+  eq(Object.keys(fams).length, 1, 'ac.2: 1 Familie angelegt');
+  var fam = fams[Object.keys(fams)[0]];
+  ok(fam.children && fam.children.length === 1, 'ac.2: Kind in Familie.children');
+  // Hauptperson hat famc-Eintrag
+  var main = Object.values(inds).find(function(p) { return p.surname === 'Kind'; });
+  ok(main && Array.isArray(main.famc) && main.famc.length === 1, 'ac.2: main.famc gesetzt');
+})();
+
+(function() {
+  // (ac.3) Hauptperson + bestehende Eltern (bereits verknüpft) → Familie wiederverwenden
+  var fa = { id: '@I1@', lastName: 'Alt', firstName: 'Vater', sex: 'M',
+    birth:{}, chr:{}, death:{}, buri:{}, events:[], fams:['@F1@'], famc:[], citations:[] };
+  var mo = { id: '@I2@', lastName: 'Alt', firstName: 'Mutter', sex: 'F',
+    birth:{}, chr:{}, death:{}, buri:{}, events:[], fams:['@F1@'], famc:[], citations:[] };
+  var existFam = { id: '@F1@', husb: '@I1@', wife: '@I2@', children: [],
+    marr:{}, engag:{}, div:{}, divf:{}, noteTexts:[], noteText:'', media:[], sourceRefs: new Set(),
+    lastChanged:'', lastChangedTime:'', childRelations: {} };
+  var db = { individuals: { '@I1@': fa, '@I2@': mo }, families: { '@F1@': existFam }, placeObjects: {} };
+  var qt = _qtReset(db);
+  qt._setMatchSel({ father: '@I1@', mother: '@I2@' });
+  var tpl = { base: 'custom', context: { sid: '@S1@', quay: '2' },
+    schema: { fields: [
+      { role: 'main',   type: 'surname' }, { role: 'main',   type: 'given' },
+      { role: 'father', type: 'surname' }, { role: 'father', type: 'given' },
+      { role: 'mother', type: 'surname' }, { role: 'mother', type: 'given' },
+    ]}};
+  qt._qtSaveCustom(tpl, { c0:'Kind', c1:'Eva', c2:'', c3:'', c4:'', c5:'' });
+  var inds = API.AppState.db.individuals;
+  var fams = API.AppState.db.families;
+  eq(Object.keys(fams).length, 1, 'ac.3: keine neue Familie angelegt (Reuse)');
+  ok(existFam.children.includes(Object.keys(inds).find(function(id) { return id !== '@I1@' && id !== '@I2@'; })),
+    'ac.3: neues Kind in bestehender Familie.children');
+})();
+
+(function() {
+  // (ac.4) Hauptperson + Ehepartner (beide neu) → neue Ehe-Familie, fams gesetzt
+  var qt = _qtReset();
+  var tpl = { base: 'custom', context: { sid: '@S1@', quay: '3', place: 'Münster', placeId: null },
+    schema: { fields: [
+      { role: 'main',  type: 'surname' }, { role: 'main',  type: 'given' }, { role: 'main',  type: 'sex' },
+      { role: 'spouse',type: 'surname' }, { role: 'spouse',type: 'given' }, { role: 'spouse',type: 'sex' },
+      { role: 'main',  type: 'date', target: 'marr' },
+    ]}};
+  qt._qtSaveCustom(tpl, { c0:'Bauer', c1:'Klaus', c2:'M', c3:'Schmitt', c4:'Eva', c5:'F', c6:'15 MAR 1950' });
+  var inds = API.AppState.db.individuals;
+  var fams = API.AppState.db.families;
+  eq(Object.keys(inds).length, 2, 'ac.4: 2 Personen angelegt');
+  eq(Object.keys(fams).length, 1, 'ac.4: 1 Ehe-Familie angelegt');
+  var fam = fams[Object.keys(fams)[0]];
+  eq(fam.marr && fam.marr.date, '15 MAR 1950', 'ac.4: Heiratsdatum gesetzt');
+  var main = Object.values(inds).find(function(p) { return p.surname === 'Bauer'; });
+  ok(main && Array.isArray(main.fams) && main.fams.length === 1, 'ac.4: main.fams gesetzt');
+})();
+
+(function() {
+  // (ac.5) Bestehende Ehe → Reuse: Datum + Beleg ergänzen, keine zweite Familie
+  var m  = { id: '@I1@', lastName: 'A', firstName: 'M', sex: 'M',
+    birth:{}, chr:{}, death:{}, buri:{}, events:[], fams:['@F1@'], famc:[], citations:[] };
+  var sp = { id: '@I2@', lastName: 'B', firstName: 'S', sex: 'F',
+    birth:{}, chr:{}, death:{}, buri:{}, events:[], fams:['@F1@'], famc:[], citations:[] };
+  var existFam = { id: '@F1@', husb: '@I1@', wife: '@I2@', children: [],
+    marr:{ date:'', place:'', placeId:null, lati:null, long:null, citations:[], _extra:[], value:'', seen:true, note:'', noteRefs:[], media:[] },
+    engag:{}, div:{}, divf:{}, noteTexts:[], noteText:'', media:[], sourceRefs: new Set(),
+    lastChanged:'', lastChangedTime:'' };
+  var db = { individuals: { '@I1@': m, '@I2@': sp }, families: { '@F1@': existFam }, placeObjects: {} };
+  var qt = _qtReset(db);
+  qt._setMatchSel({ main: '@I1@', spouse: '@I2@' });
+  var tpl = { base: 'custom', context: { sid: '@S1@', quay: '3' },
+    schema: { fields: [
+      { role: 'main',   type: 'surname' }, { role: 'main',   type: 'given' },
+      { role: 'spouse', type: 'surname' }, { role: 'spouse', type: 'given' },
+      { role: 'main',   type: 'date', target: 'marr' },
+    ]}};
+  qt._qtSaveCustom(tpl, { c0:'', c1:'', c2:'', c3:'', c4:'10 JUN 1960' });
+  var fams = API.AppState.db.families;
+  eq(Object.keys(fams).length, 1, 'ac.5: keine neue Familie, Reuse');
+  eq(existFam.marr.date, '10 JUN 1960', 'ac.5: Heiratsdatum in bestehender Familie ergänzt');
+  ok(existFam.marr.citations && existFam.marr.citations.some(function(c) { return c.sid === '@S1@'; }),
+    'ac.5: Beleg an Heirat angehängt');
+})();
+
+(function() {
+  // (ac.6) Age-Feld → Geburtsdatum aus Sterbedatum + Alter berechnet
+  var qt = _qtReset();
+  var tpl = { base: 'custom', context: { sid: '@S1@', quay: '2' },
+    schema: { fields: [
+      { role: 'main', type: 'surname' },
+      { role: 'main', type: 'given'  },
+      { role: 'main', type: 'date',  target: 'death' },
+      { role: 'main', type: 'age',   target: 'death' },
+    ]}};
+  qt._qtSaveCustom(tpl, { c0:'Test', c1:'Max', c2:'1 JAN 1900', c3: { y:'40', m:'0', d:'0' } });
+  var inds = API.AppState.db.individuals;
+  var p = inds[Object.keys(inds)[0]];
+  eq(p.death && p.death.date, '1 JAN 1900', 'ac.6: Sterbedatum gesetzt');
+  ok(p.birth && p.birth.date && p.birth.date.indexOf('1860') >= 0, 'ac.6: Geburtsjahr ~1860 berechnet');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

@@ -1034,39 +1034,16 @@ function _qtSaveBurial(tpl, v) {
 }
 
 // ── Phase E: Speichern frei konfigurierter Templates ─────────────────────────
-function _qtSaveCustom(tpl, v) {
-  const ctx = tpl.context || {};
-  const schema = _qtSchema(tpl);
-
-  // Quelle/Seite/URL aus optionalem page-Feld
-  const pageFld = schema.fields.find(f => f.type === 'page');
-  const pageVal = pageFld ? (v[pageFld.key] || '') : '';
-  const pageStr = (ctx.pagePattern && pageVal) ? ctx.pagePattern.replace('{v}', pageVal) : pageVal;
-  const url     = (ctx.urlPattern && pageVal)  ? ctx.urlPattern.replace('{v}', pageVal)  : '';
-  const mkCit = () => citationObj(ctx.sid, pageStr, ctx.quay || '', null, [],
-    url ? [{ file: url, titl: '', _extra: [] }] : []);
-
-  // Personen je aktiver Rolle auflösen (Treffer verknüpfen oder neu)
-  const persons = {};            // role -> {id, person, isNew}
-  const involvedPersonIds = [];
-  for (const pr of (schema.persons || [])) {
-    const surn  = pr.surnKey  ? (v[pr.surnKey]  || '') : '';
-    const given = pr.givenKey ? (v[pr.givenKey] || '') : '';
-    const sexFld = schema.fields.find(f => f.role === pr.role && f.type === 'sex');
-    const sex = sexFld ? (v[sexFld.key] || pr.sex) : pr.sex;
-    const P = _qtResolvePerson(pr.role, given, surn, sex);
-    if (P) { persons[pr.role] = P; involvedPersonIds.push(P.id); }
-  }
-  if (!persons.main) { showToast('Hauptperson (Name oder Treffer) erforderlich', 'warn'); return; }
-
-  // Felder anwenden (Pass 1: alle außer age — age benötigt bereits gesetztes Sterbedatum)
+// Pass 1 + 2: Formularfelder auf bereits aufgelöste Personen anwenden.
+// Gibt das normierte Heiratsdatum zurück (für Ehe-Familie).
+function _qtApplyPersonFields(persons, schema, v, ctx, mkCit) {
   let marrDate = '';
   for (const f of schema.fields) {
-    if (f.type === 'age') continue;            // age: zweiter Pass unten
+    if (f.type === 'age') continue;
     const val = (v[f.key] || '').trim();
     if (f.type === 'date' && f.target === 'marr') { if (val) marrDate = _qtNormDate(val); continue; }
     const P = persons[f.role];
-    if (!P) continue;                       // Rolle ohne Namen → inaktiv, Daten verwerfen
+    if (!P) continue;
     const p = P.person;
     if (f.type === 'sex') { if (val) p.sex = val; continue; }
     if (f.type === 'date' || f.type === 'place') {
@@ -1094,74 +1071,108 @@ function _qtSaveCustom(tpl, v) {
       }
     }
   }
-  // Zweiter Pass: age-Felder — benötigt bereits gesetztes Sterbedatum der Rolle.
+  // Pass 2: age-Felder — benötigt bereits gesetztes Sterbedatum der Rolle.
   for (const f of schema.fields) {
     if (f.type !== 'age') continue;
     const P = persons[f.role];
     if (!P) continue;
     const age = v[f.key];
-    if (!age || (!age.y && !age.m && !age.d)) continue;   // nichts eingegeben
+    if (!age || (!age.y && !age.m && !age.d)) continue;
     const p = P.person;
-    // Sterbedatum aus dem Formular (als normierter GEDCOM-String) oder bereits gesetztem Wert
     const tgt = f.target || 'death';
     const deathFld = schema.fields.find(df => df.role === f.role && df.type === 'date' && df.target === tgt);
-    const deathDate = (deathFld ? _qtNormDate(v[deathFld.key] || '') : '')
-                   || p[tgt]?.date || '';
+    const deathDate = (deathFld ? _qtNormDate(v[deathFld.key] || '') : '') || p[tgt]?.date || '';
     const calcDate = _qtCalcBirthFromAge(deathDate, age.y, age.m, age.d);
     if (calcDate) {
       if (!p.birth || typeof p.birth !== 'object') p.birth = _qtEv();
-      if (!p.birth.date) {
-        p.birth.date = calcDate;
-        _qtAddCitToEvent(p.birth, mkCit());
-      }
+      if (!p.birth.date) { p.birth.date = calcDate; _qtAddCitToEvent(p.birth, mkCit()); }
     } else if (age.y || age.m || age.d) {
       showToast(`Altersberechnung: Sterbedatum fehlt oder ungültig`, 'info');
     }
   }
+  return marrDate;
+}
+
+// Findet oder legt die Eltern-Familie an.
+// Beide Eltern verknüpft + nicht neu → gemeinsame fams-Schnittmenge wiederverwenden.
+// Edge-Cases (nur ein Elternteil, einer/beide neu) → neue Familie.
+// Gibt {fam, reused} zurück oder null wenn weder Vater noch Mutter vorhanden.
+function _qtReuseParentFam(father, mother, mainId) {
+  if (!father && !mother) return null;
+  if (father && mother && !father.isNew && !mother.isNew) {
+    const fa = father.person.fams || [], ma = mother.person.fams || [];
+    const common = fa.find(fid => ma.includes(fid));
+    if (common && AppState.db.families[common]) return { fam: AppState.db.families[common], reused: true };
+  }
+  return {
+    fam: {
+      id: nextId('F'), husb: father ? father.id : '', wife: mother ? mother.id : '',
+      children: [mainId], marr: _qtFamEv(), engag: {}, div: {}, divf: {},
+      noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
+      lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+    },
+    reused: false,
+  };
+}
+
+// Findet oder legt die Ehe-Familie an.
+// Beide Eheleute verknüpft + nicht neu → gemeinsame fams-Schnittmenge wiederverwenden.
+// Gibt {fam, reused} zurück.
+function _qtReuseSpouseFam(main, spouse, marrDate, ctx, mkCit) {
+  if (!main.isNew && !spouse.isNew) {
+    const ma = main.person.fams || [], sa = spouse.person.fams || [];
+    const common = ma.find(fid => sa.includes(fid));
+    if (common && AppState.db.families[common]) return { fam: AppState.db.families[common], reused: true };
+  }
+  let husb = main.id, wife = spouse.id;
+  if (main.person.sex === 'F' || spouse.person.sex === 'M') { husb = spouse.id; wife = main.id; }
+  return {
+    fam: {
+      id: nextId('F'), husb, wife, children: [],
+      marr: { date: marrDate, place: ctx.place || '', placeId: ctx.placeId || null, lati: null, long: null,
+        citations: [mkCit()], _extra: [], value: '', seen: true, note: '', noteRefs: [], media: [] },
+      engag: {}, div: {}, divf: {}, noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
+      lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
+    },
+    reused: false,
+  };
+}
+
+function _qtSaveCustom(tpl, v) {
+  const ctx = tpl.context || {};
+  const schema = _qtSchema(tpl);
+
+  const pageFld = schema.fields.find(f => f.type === 'page');
+  const pageVal = pageFld ? (v[pageFld.key] || '') : '';
+  const pageStr = (ctx.pagePattern && pageVal) ? ctx.pagePattern.replace('{v}', pageVal) : pageVal;
+  const url     = (ctx.urlPattern && pageVal)  ? ctx.urlPattern.replace('{v}', pageVal)  : '';
+  const mkCit = () => citationObj(ctx.sid, pageStr, ctx.quay || '', null, [],
+    url ? [{ file: url, titl: '', _extra: [] }] : []);
+
+  const persons = {};
+  const involvedPersonIds = [];
+  for (const pr of (schema.persons || [])) {
+    const surn  = pr.surnKey  ? (v[pr.surnKey]  || '') : '';
+    const given = pr.givenKey ? (v[pr.givenKey] || '') : '';
+    const sexFld = schema.fields.find(f => f.role === pr.role && f.type === 'sex');
+    const sex = sexFld ? (v[sexFld.key] || pr.sex) : pr.sex;
+    const P = _qtResolvePerson(pr.role, given, surn, sex);
+    if (P) { persons[pr.role] = P; involvedPersonIds.push(P.id); }
+  }
+  if (!persons.main) { showToast('Hauptperson (Name oder Treffer) erforderlich', 'warn'); return; }
+
+  const marrDate = _qtApplyPersonFields(persons, schema, v, ctx, mkCit);
 
   const main = persons.main, father = persons.father, mother = persons.mother, spouse = persons.spouse;
   const famIds = [];
-  let parentFam = null, spouseFam = null;
-  let parentFamReused = false, spouseFamReused = false;
-
-  // Eltern-Familie: bei beidseitiger Verknüpfung gemeinsame fams-Schnittmenge wiederverwenden.
-  // Edge-Cases (nur ein Elternteil verknüpft, einer/beide neu) → neu anlegen.
-  if (father || mother) {
-    if (father && mother && !father.isNew && !mother.isNew) {
-      const fa = father.person.fams || [], ma = mother.person.fams || [];
-      const common = fa.find(fid => ma.includes(fid));
-      if (common && AppState.db.families[common]) { parentFam = AppState.db.families[common]; parentFamReused = true; }
-    }
-    if (!parentFam) {
-      parentFam = {
-        id: nextId('F'), husb: father ? father.id : '', wife: mother ? mother.id : '',
-        children: [main.id], marr: _qtFamEv(), engag: {}, div: {}, divf: {},
-        noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
-        lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
-      };
-    }
-    famIds.push(parentFam.id);
-  }
-  // Ehe-Familie: bei beidseitiger Verknüpfung gemeinsame Familie wiederverwenden.
-  if (spouse) {
-    if (!main.isNew && !spouse.isNew) {
-      const ma = main.person.fams || [], sa = spouse.person.fams || [];
-      const common = ma.find(fid => sa.includes(fid));
-      if (common && AppState.db.families[common]) { spouseFam = AppState.db.families[common]; spouseFamReused = true; }
-    }
-    if (!spouseFam) {
-      let husb = main.id, wife = spouse.id;
-      if (main.person.sex === 'F' || spouse.person.sex === 'M') { husb = spouse.id; wife = main.id; }
-      spouseFam = {
-        id: nextId('F'), husb, wife, children: [],
-        marr: { date: marrDate, place: ctx.place || '', placeId: ctx.placeId || null, lati: null, long: null,
-          citations: [mkCit()], _extra: [], value: '', seen: true, note: '', noteRefs: [], media: [] },
-        engag: {}, div: {}, divf: {}, noteTexts: [], noteText: '', media: [], sourceRefs: new Set(),
-        lastChanged: gedcomDate(new Date()), lastChangedTime: gedcomTime(new Date()),
-      };
-    }
-    famIds.push(spouseFam.id);
-  }
+  const parentResult = _qtReuseParentFam(father, mother, main.id);
+  const parentFam    = parentResult ? parentResult.fam     : null;
+  const parentReused = parentResult ? parentResult.reused  : false;
+  if (parentFam) famIds.push(parentFam.id);
+  const spouseResult = spouse ? _qtReuseSpouseFam(main, spouse, marrDate, ctx, mkCit) : null;
+  const spouseFam    = spouseResult ? spouseResult.fam    : null;
+  const spouseReused = spouseResult ? spouseResult.reused : false;
+  if (spouseFam) famIds.push(spouseFam.id);
 
   pushUndo('Erfasst (Template)', { personIds: involvedPersonIds, familyIds: famIds });
 
@@ -1172,10 +1183,9 @@ function _qtSaveCustom(tpl, v) {
     if (!Array.isArray(P.person.famc)) P.person.famc = [];
   }
   if (parentFam) {
-    if (!parentFamReused) {
+    if (!parentReused) {
       AppState.db.families[parentFam.id] = parentFam;
     } else {
-      // Existierende Eltern-Familie: main als zusätzliches Kind anhängen + Beleg auf childRelation.
       if (!Array.isArray(parentFam.children)) parentFam.children = [];
       if (!parentFam.children.includes(main.id)) parentFam.children.push(main.id);
       if (!parentFam.childRelations || typeof parentFam.childRelations !== 'object') parentFam.childRelations = {};
@@ -1196,10 +1206,9 @@ function _qtSaveCustom(tpl, v) {
     }
   }
   if (spouseFam) {
-    if (!spouseFamReused) {
+    if (!spouseReused) {
       AppState.db.families[spouseFam.id] = spouseFam;
     } else {
-      // Existierende Ehe: Datum/Beleg ergänzen, vorhandene Werte nicht überschreiben.
       if (!spouseFam.marr || typeof spouseFam.marr !== 'object') spouseFam.marr = _qtFamEv();
       if (marrDate && !spouseFam.marr.date) spouseFam.marr.date = marrDate;
       if (ctx.place && !spouseFam.marr.place) {
@@ -1223,7 +1232,7 @@ function _qtSaveCustom(tpl, v) {
   renderTab();
 
   const extra = [father, mother, spouse].filter(Boolean).length;
-  const reused = [parentFamReused && 'Eltern-Fam', spouseFamReused && 'Ehe-Fam'].filter(Boolean).join('+');
+  const reused = [parentReused && 'Eltern-Fam', spouseReused && 'Ehe-Fam'].filter(Boolean).join('+');
   const lbl = (main.isNew ? _qtPersonLabel(main.person) : _qtPersonLabel(main.person) + ' 🔗')
     + (extra ? ` (+${extra})` : '')
     + (reused ? ` · 🔗 ${reused}` : '');
