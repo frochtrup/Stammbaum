@@ -462,8 +462,10 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '', flags = {
   });
 
   renderPersonList(filtered);
+  // Zum Anfang scrollen nur wenn aktuelle Person nicht im Ergebnis — renderPersonList
+  // hat via _vsScrollAndHighlight bereits gescrollt falls curId in der Liste liegt.
   const sc = document.getElementById('v-main');
-  if (sc) sc.scrollTop = 0;
+  if (sc && !_vsP.items.some(it => it.id === AppState.currentPersonId)) sc.scrollTop = 0;
 }
 
 // ─────────────────────────────────────
