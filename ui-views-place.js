@@ -29,6 +29,21 @@ function _refreshPlaceValidatorBadge() {
   else   { badge.hidden = true; }
 }
 
+// Badge mit Anzahl Orts-Dubletten-Gruppen auf dem ⇉-Button. Macht stale/divergente
+// Ortsstrings (z.B. nach Ortsmodell-Anreicherung) proaktiv sichtbar — auflösbar per Merge.
+// Modus-Wahl analog openPlaceMergeModal: placeObjects bevorzugt, sonst String-Dedup.
+function _refreshPlaceMergeBadge() {
+  const badge = document.getElementById('placeMergeBadge');
+  if (!badge) return;
+  let n = 0;
+  const hasObjects = typeof findPlaceDuplicates === 'function'
+    && Object.keys(AppState.db?.placeObjects || {}).length > 0;
+  if (hasObjects) n = findPlaceDuplicates().length;
+  else if (typeof findStringPlaceDuplicates === 'function') n = findStringPlaceDuplicates().length;
+  if (n) { badge.textContent = String(n); badge.hidden = false; }
+  else   { badge.hidden = true; }
+}
+
 // Item 13: Badge mit Anzahl unaufgelöster GOV-Platzhalter auf dem ⚙-Button
 function _refreshPlaceGovUnresolvedBadge() {
   const btn = document.getElementById('placeGovFilterBtn');
@@ -208,6 +223,7 @@ function renderPlaceList(sorted) {
     _refreshPlaceTypeFilter();
     _refreshPlaceValidatorBadge();
     _refreshPlaceGovUnresolvedBadge();
+    _refreshPlaceMergeBadge();
     const q = document.getElementById('searchPlaces')?.value || '';
     filterPlaces(q);
     return;
