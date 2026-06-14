@@ -128,6 +128,7 @@ const _CLICK_MAP = {
   'copy-cit':              el => copyCitations(el.dataset.prefix),
   'paste-cit':             el => pasteCitations(el.dataset.prefix),
   openCitLink:             (el, e) => { e.stopPropagation(); window.open(el.dataset.href, '_blank', 'noopener'); },
+  removeOrphanCitBySid:   (el, e) => { e.stopPropagation(); _removeOrphanCitBySid(el.dataset.sid); },
   odLoadFile:              el => odLoadFile(el.dataset.odid, el.dataset.odname),
   odFolderBack:            ()  => _odFolderBack(),
   odPickCancel:            ()  => _odPickCancel(),

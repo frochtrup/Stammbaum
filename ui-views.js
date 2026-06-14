@@ -1005,7 +1005,7 @@ function citTagsHtml(citations) {
   if (!citations?.length) return '';
   return citations.map(c => {
     const s = AppState.db.sources[c.sid];
-    if (!s) return `<span class="src-badge src-badge--orphan" title="Quelle nicht vorhanden (${esc(c.sid || '?')}) — bitte in der Bearbeitungsansicht entfernen">⚠ ${esc(c.sid || '?')}</span>`;
+    if (!s) return `<span class="src-badge src-badge--orphan" title="Quelle nicht vorhanden (${esc(c.sid || '?')})" style="cursor:default">⚠ ${esc(c.sid || '?')}<button type="button" class="src-badge-orphan-rm" data-action="removeOrphanCitBySid" data-sid="${esc(c.sid || '')}" title="Quellbezug entfernen">✕</button></span>`;
     const page  = c.page || '';
     const quay  = c.quay != null ? String(c.quay) : '';
     const qClass = quay !== '' ? ` src-badge--q${quay}` : '';

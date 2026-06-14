@@ -508,6 +508,20 @@ function _removeSourceRefs(id, db) {
   }
 }
 
+// Entfernt einen einzelnen verwaisten Quellbezug (sid) aus der aktuellen Person/Familie
+// und re-rendert die Detailansicht. Wird vom ✕-Button im citTagsHtml-Badge aufgerufen.
+function _removeOrphanCitBySid(sid) {
+  if (!sid || !AppState.db) return;
+  _removeSourceRefs(sid, AppState.db);
+  markChanged();
+  // Detail-Ansicht neu rendern (je nach aktivem Tab)
+  if (AppState.currentTab === 'persons' && AppState.currentPersonId)
+    showPersonDetail(AppState.currentPersonId);
+  else if (AppState.currentTab === 'families' && AppState.currentFamilyId)
+    showFamilyDetail(AppState.currentFamilyId);
+  showToast('✓ Verwaister Quellbezug entfernt');
+}
+
 // (Archiv-Formular + Picker + Detail: ui-forms-repo.js)
 // (Event-Formular: ui-forms-event.js)
 
