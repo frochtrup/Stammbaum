@@ -204,12 +204,13 @@ function collectPlaces() {
 function renderPlaceList(sorted) {
   const el = document.getElementById('placeList');
   if (!sorted) {
-    const places = collectPlaces();
-    if (!places.size) { el.innerHTML = '<div class="empty">Keine Orte in den Daten gefunden</div>'; return; }
-    sorted = [...places.values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
+    // Filter-State (Typ, GOV, Gruppierung, Suchtext) beibehalten — via filterPlaces statt direkt rendern
     _refreshPlaceTypeFilter();
-    _refreshPlaceValidatorBadge();      // Item 12
-    _refreshPlaceGovUnresolvedBadge();  // Item 13
+    _refreshPlaceValidatorBadge();
+    _refreshPlaceGovUnresolvedBadge();
+    const q = document.getElementById('searchPlaces')?.value || '';
+    filterPlaces(q);
+    return;
   }
   if (!sorted.length) { el.innerHTML = '<div class="empty">Keine Orte gefunden</div>'; return; }
 
