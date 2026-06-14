@@ -1188,8 +1188,9 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .src-badge-link {
   display: inline-block; font-size: 0.62rem; vertical-align: middle;
   color: var(--gold-dim); text-decoration: none; margin-left: 1px;
-  line-height: 1.6; padding: 0 2px;
+  line-height: 1.6; padding: 0 2px; cursor: pointer;
 }
+.src-badge-link:hover  { color: var(--gold); }
 .src-badge-link:active { color: var(--gold); }
 /* QUAY-Qualitätsstufen */
 .src-badge--q3 { color: #52a878; border-color: #52a878; }   /* direkt/primär */
