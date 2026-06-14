@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Juni 2026 · Stand: sw v947</p>
+  <p class="version">Version 8 · Juni 2026 · Stand: sw v986</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -878,6 +878,10 @@ Die App arbeitet vollständig <strong>ohne Internet</strong>. Ihre Daten verlass
 
 <div class="tip">
 Der Demo-Stammbaum enthält eine fiktive Familie (Müller, Bauer, Fischer, Huber) mit 12 Personen und 6 Familien. Er ist ideal, um alle Funktionen kennenzulernen — Ihre Änderungen daran gehen beim Schließen des Browsers verloren.
+</div>
+
+<div class="info">
+<strong>Start-Anzeige (ab sw v951):</strong> Beim Öffnen der App erscheint kurz ein Ladebildschirm mit Fortschrittsstufen (Code laden → Initialisieren → Daten lesen → Verarbeiten → Anzeigen). Gerade bei großen Stammbäumen sehen Sie so, dass die App arbeitet, und nicht einen leeren Bildschirm. Er blendet sich automatisch aus, sobald die erste Ansicht bereitsteht.
 </div>
 
 <h2>Eigene GEDCOM-Datei öffnen</h2>
@@ -1855,6 +1859,22 @@ Bewerten Sie zumindest Ihre <strong>Schlüsselbelege</strong> — die Quellen, a
 Die Bewertung reist mit Ihrer Datei: in GEDCOM als Zusatzfelder (<code>_STYP/_INFO/_EVID</code>), in Gramps als Citation-Attribute. Beim Export als „striktes GEDCOM 5.5.1" werden sie automatisch entfernt, damit fremde Programme nicht stolpern.
 </div>
 
+<h2 id="verwaiste-quellen">Quelle löschen — verwaiste Quellbezüge (ab sw v975)</h2>
+
+<p>Wenn Sie eine Quelle löschen, entfernt die App <strong>automatisch alle Verknüpfungen</strong> zu dieser Quelle aus sämtlichen Personen und Familien (Ereignis-Belege, Namens-Belege, Zeugen-Belege, Quellenangaben auf Personen-Ebene). Sie hinterlassen also keine ins Leere zeigenden Belege.</p>
+
+<p>Falls aus einem Import dennoch ein <strong>verwaister Quellbezug</strong> übrig bleibt — ein Beleg, dessen Quelle nicht (mehr) existiert —, macht die App ihn sichtbar statt ihn stillschweigend zu verschlucken:</p>
+
+<ul style="margin: 0.5em 0 0.5em 1.5em; line-height: 1.9em;">
+  <li>In der Personen-Detailansicht und im Bearbeitungsformular erscheint der Beleg <strong>orange mit ⚠-Symbol</strong> und einem Hinweis-Tooltip.</li>
+  <li>Über den <span class="button-label">✕</span> direkt am Beleg entfernen Sie ihn — die App räumt den Bezug dann in der gesamten Datei weg.</li>
+  <li>Die Datenprüfung (Kapitel 13) meldet verwaiste Bezüge zusätzlich mit der Regel <strong>„Quellbezug ohne vorhandene Quelle"</strong>.</li>
+</ul>
+
+<div class="tip">
+Verwaiste Bezüge entstehen meist beim Zusammenführen oder Importieren von Dateien, in denen ein Beleg eine Quelle referenziert, die nicht mitgeliefert wurde. Das ⚠-Symbol hilft Ihnen, solche Lücken gezielt zu bereinigen.
+</div>
+
 
 <!-- ====================================================== -->
 <!-- KAPITEL 7: ORTE UND KARTE -->
@@ -2155,6 +2175,10 @@ Pausieren Sie die Animation mit ⏸ und tippen Sie auf eine Linie oder einen Mar
   <tr><td><strong>GOV-Platzhalter</strong></td><td>Automatisch als übergeordneter Platzhalter aus einem GOV-Import erstellt, noch nicht aufgelöst</td></tr>
 </table>
 <p>So wissen Sie auf einen Blick, welcher der beiden Orte die „führende" Datenquelle ist — und können die richtige Ziel-Option wählen.</p>
+
+<div class="tip">
+<strong>Dubletten-Zähler am ⇉-Button (ab sw v986):</strong> Die Symbolleiste der Ortsliste zeigt auf dem Zusammenführen-Button <span class="button-label">⇉</span> eine kleine Zahl, sobald mögliche Orts-Dubletten erkannt werden. So sehen Sie schon ohne Öffnen des Dialogs, dass es etwas zusammenzuführen gibt — etwa wenn nach einer Anreicherung der Verwaltungsgeschichte ältere Ortsschreibweisen neben dem aktualisierten Ort auftauchen.
+</div>
 
 <h2>Multi-Gerät: OneDrive-Konflikterkennung (ab sw v858)</h2>
 
@@ -2694,6 +2718,7 @@ Sie müssen die Pipeline nicht starr von Schritt 1 bis 7 durchlaufen — die Sta
   <li><div class="step-text">Tippen Sie auf <span class="button-label">+ Aufgabe</span>.</div></li>
   <li><div class="step-text">Schreiben Sie die Aufgabe (z. B. „Taufeintrag im Kirchenbuch München 1855 suchen").</div></li>
   <li><div class="step-text">Wählen Sie eine Kategorie: <em>Kirchenbuch</em>, <em>Urkunde / Standesamt</em> oder <em>Online-Recherche</em>.</div></li>
+  <li><div class="step-text">Optional: Wählen Sie im Quellen-Auswahlfeld eine <strong>zugehörige Quelle</strong> (ab sw v981). Die Liste ist nach Kurzname alphabetisch sortiert; „– Keine Quelle –" lässt das Feld leer.</div></li>
   <li><div class="step-text">Tippen Sie auf <span class="button-label">Speichern</span>.</div></li>
 </ol>
 
@@ -2846,7 +2871,7 @@ Forschen Sie immer linien- oder ortsweise statt „über den ganzen Baum". Ein P
   <li><strong>ℹ Hinweis</strong> — fehlende Angaben, die die Forschung verbessern würden</li>
 </ul>
 
-<p>Die Validierungsengine prüft 24 Regeln in fünf Gruppen:</p>
+<p>Die Validierungsengine prüft 31 Regeln in fünf Gruppen:</p>
 
 <table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:0.8em 0;">
   <thead>
@@ -2882,6 +2907,7 @@ Forschen Sie immer linien- oder ortsweise statt „über den ganzen Baum". Ein P
     <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">QUELLEN</td></tr>
     <tr><td style="padding:3px 8px;">Geburt nach Standesamt-Ära, keine Quelle</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
     <tr><td style="padding:3px 8px;">Keine Quellenangabe (Familie)</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
+    <tr><td style="padding:3px 8px;">Quellbezug ohne vorhandene Quelle <span style="font-weight:normal;color:var(--app-muted);">(ab sw v975)</span></td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
     <tr><td colspan="2" style="padding:4px 8px;font-weight:bold;color:var(--gold);font-size:0.8em;letter-spacing:0.5px;">VERNETZUNG <span style="font-weight:normal;">(ab sw v929/v930)</span></td></tr>
     <tr><td style="padding:3px 8px;">Person ist mit keiner Familie verknüpft</td><td style="padding:3px 8px;">ℹ Hinweis</td></tr>
     <tr><td style="padding:3px 8px;">Person ist nicht mit dem Kernbaum (Probanden) verbunden</td><td style="padding:3px 8px;">⚠ Warnung</td></tr>
@@ -4055,7 +4081,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Juni 2026 · sw v947<br>
+  Stammbaum PWA · Version 8 · Juni 2026 · sw v986<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 
