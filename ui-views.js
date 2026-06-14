@@ -990,7 +990,7 @@ function sourceTagsHtml(sourceIds, pageMap, quayMap) {
     const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
     const tipParts = [
       (s.title || s.abbr || sid).substring(0, 50),
-      page ? `S.\u202f${page}` : '',
+      page || '',
       quay !== '' ? `Q${quay}\u202f–\u202f${_QUAY_LABELS[quay] || quay}` : ''
     ].filter(Boolean);
     const isUrl = /^https?:\/\//i.test(page);
@@ -1012,7 +1012,7 @@ function citTagsHtml(citations) {
     const pageSuffix = page && page.length <= 5 ? `·${page}` : '';
     const tipParts = [
       (s.title || s.abbr || c.sid).substring(0, 50),
-      page ? `S. ${page}` : '',
+      page || '',
       quay !== '' ? `Q${quay} – ${_QUAY_LABELS[quay] || quay}` : ''
     ].filter(Boolean);
     // Klickbarer ↗-Link: URL in PAGE (Altdaten) ODER in einem Zitat-Medium (OBJE/FILE)
