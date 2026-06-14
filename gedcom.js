@@ -887,7 +887,16 @@ function _linkGedcomEventsToPlaceObjects(db) {
     if (!pid) return;
     const check = (typeof _buildFormString === 'function' && _buildFormString(pid, year))
       || reg.resolveAsOf(pid, year);
-    if (check === ev.place) { ev.placeId = pid; linked++; }
+    if (check === ev.place) { ev.placeId = pid; linked++; return; }
+    // Schritt 3: ev.place ist ein Einzel-Name (kein Komma) der via findByName gefunden wurde,
+    // aber _buildFormString liefert jetzt eine reichere Hierarchie (enclosedBy nachträglich
+    // hinzugefügt). resolveAsOf muss für das Ereignisjahr auf ev.place zeigen — dann ist die
+    // Verknüpfung korrekt. ev.place wird NICHT geändert; Writer schreibt beim nächsten
+    // Speichern den angereicherten String (_resolvedPlaceName → _buildFormString).
+    if (!ev.place.includes(',')) {
+      const resolved = reg.resolveAsOf(pid, year);
+      if (resolved && resolved === ev.place) { ev.placeId = pid; linked++; }
+    }
   };
   for (const p of Object.values(db.individuals || {})) {
     [p.birth, p.chr, p.death, p.buri].forEach(_link);
