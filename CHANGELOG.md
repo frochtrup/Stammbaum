@@ -9,6 +9,40 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-14 — Quellen-Integrität + historische Ortsanzeige (sw v968–v986)
+
+#### Historische Ortsanzeige — Projektions-Invariante (v983–v986)
+
+Ausgelöst durch RESI-Events, die `"Ochtrup (Westf.)"` statt des historischen Hierarchie-Strings zeigten. Tiefe Design-Sitzung zum Ortskonzept (ADR-024):
+
+- **Invariante geklärt:** Bei gesetztem `ev.placeId` ist `ev.place` **keine eigene Wahrheit**, sondern die zwischengespeicherte periodengerechte Projektion `_buildFormString(placeId, year)`. Anzeige (`_evFullPlace`) und Writer (`_resolvedPlaceName`) leiten beide live aus dem Modell ab — `ev.place` ist für verknüpfte Events faktisch nur Cache.
+- **v984 war falsch** (verworfen): setzte `placeId`, ließ `ev.place` aber divergent → Invarianten-Bruch + stille Massen-Mutation beim nächsten beliebigen Save.
+- **v985 — Link-Pass A1** (`_linkGedcomEventsToPlaceObjects`): (1) Atomarer Cache-String (kein Komma) → Identitäts-Match via `findByName`, dann `ev.place` auf die Projektion neu kollabieren; weicht sie ab (enclosedBy nachträglich ergänzt) → überschreiben + `markChanged`. (2) Hierarchie-String (mit Komma) → nur bei exaktem Projektions-Match verknüpfen; fremde/manuelle Hierarchien NIE überschreiben. Erklärender Info-Toast in `storage-file.js`. Roundtrip net_delta=0 stabil, 475 Tests grün.
+- **v986 — Auffindbarkeit:** Dubletten-Zähler-Badge auf ⇉ (`_refreshPlaceMergeBadge`, analog Validator-/GOV-Badge). Stale Strings erscheinen ohnehin automatisch in der Ortsliste (`collectPlaces`) und werden von der String-Dedup (`_placeStringCoreFold` foldet erstes Komma-Segment) mit dem placeObject gruppiert → per Merge lösbar. Keine separate Validator-Regel nötig.
+- **v983** — `_evFullPlace`: historischer pname auch ohne Hierarchie-Komma auflösen (Zwischenschritt, durch A1 abgelöst).
+- **Lehre:** `net_delta=0` gilt nur für *unveränderte* Modelle. Orts-Anreicherung IST eine Änderung; dass Events neu kollabieren + Datei dirty wird, ist korrekt. Durable Lehren in Memory `place_hist`.
+
+#### Quellen-Integrität — verwaiste Quellbezüge (v975–v980)
+
+- **v975** — `deleteSource` ruft `_removeSourceRefs(id, db)`: entfernt alle Zitate der SID aus `citations[]` (birth/chr/death/buri/events), `nameCitations`, `extraNames[].citations`, `associations[].citations`, `topSources`(+`topSourcePages/QUAY/Extra`), FAM-Events, `childRelations[].citations`. Neue Validator-Regel `ORPHAN_CITATION` (warn) für Bezüge auf nicht-vorhandene Quellen (INDI + FAM).
+- **v976/v977** — verwaiste Bezüge visuell markiert: `.src-tag--orphan` (Form) + `.src-badge--orphan` (Detail/`citTagsHtml`), oranges ⚠ mit Tooltip.
+- **v978** — ✕-Button direkt im Orphan-Badge → `_removeOrphanCitBySid` (entfernt SID DB-weit + re-render).
+- **v979** — Fix: `showDetail()` statt nicht-existentem `showPersonDetail()`.
+- **v980** — Fix: `db.individuals` statt `db.persons` in `_removeSourceRefs` (vorher lief die Schleife ins Leere).
+
+#### Quellen-Darstellung + Selects (v969–v973, v981–v982)
+
+- **v970/v971** — `nameCitations` in Quellen-Zeile mitanzeigen, Quellen-Chips ins Hero-Banner verlagert.
+- **v969/v973** — „S."-Prefix bei Seitenangabe + Tooltip entfernt. **v972** — `src-badge-link` `cursor:pointer` + Hover-Farbe.
+- **v981/v982** — Quellen-Selects in Aufgabe-Modal (neues `addTaskSrcSid`, gespeichert als `t.sid`) + Forschungsprotokoll nach Kurzname (`abbr || title`) sortiert.
+
+#### Weitere Fixes
+
+- **v974** — Ortsliste-Filter persistent: `renderPlaceList()` (no-arg) delegiert an `filterPlaces()` mit aktuellem Suchtext → Typ-/GOV-Filter, Gruppierung + Suche überleben Tab-Wechsel und Datenänderungen.
+- **v968** — GEDCOM-Writer: CONC/NOTE byte-sichere 255-Byte-Grenze (Mehrbyte-UTF-8).
+
+---
+
 ### Session 2026-06-13 — Refaktor-Härtung nach Selbstkritik (sw v950)
 
 Selbstkritische Bewertung des v949-Splits hatte 4 konkrete Schwächen benannt: `winner()`-Logik im View-Helper dupliziert (Invariante nur per Konvention geschützt), Naming inkonsistent (`_placeHist*` vs. `_placeDetail*`), Helfer nicht direkt testbar, Doku grandios. Behoben:
