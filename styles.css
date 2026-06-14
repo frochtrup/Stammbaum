@@ -1006,6 +1006,11 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   padding: 0 2px; font-size: 0.85rem; line-height: 1; flex-shrink: 0;
 }
 .src-tag-remove { color: var(--text-muted); }
+.src-tag--orphan {
+  border-color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--surface2));
+  color: var(--warn);
+}
+.src-orphan-icon { font-size: 0.9rem; flex-shrink: 0; }
 .src-page-input {
   width: 72px; font-size: 0.7rem; font-family: 'Source Serif 4', serif;
   background: var(--surface3); border: 1px solid var(--border);

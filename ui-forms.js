@@ -124,7 +124,8 @@ function renderSrcTags(prefix) {
   }
   const tags = cits.map((c, idx) => {
     const src = AppState.db.sources[c.sid];
-    const label = src ? (src.abbr || src.title || c.sid) : c.sid;
+    const orphan = !src && !!c.sid;
+    const label = src ? (src.abbr || src.title || c.sid) : (c.sid || '?');
     const pageVal = c.page || '';
     const quayVal = String(c.quay ?? '');
     // URL aus erstem media-Entry (OBJE/FILE) lesen
@@ -132,8 +133,10 @@ function renderSrcTags(prefix) {
       ? (c.media[0].file || '') : '';
     const hasEval  = !evalIsEmpty(c.eval);   // RES-EVAL 2b
     const evalOpen = _srcEvalOpen[prefix]?.has(idx);
-    return `<span class="src-tag">
+    const orphanAttrs = orphan ? ` src-tag--orphan" title="Quelle nicht vorhanden (${esc(c.sid)}) — bitte entfernen` : '';
+    return `<span class="src-tag${orphanAttrs}">
       <span class="src-tag-row">
+        ${orphan ? '<span class="src-orphan-icon" title="Quelle fehlt">⚠</span>' : ''}
         <span class="src-tag-label">${esc(label.length > 25 ? label.slice(0,23)+'…' : label)}</span>
         <input type="text" class="src-page-input" value="${esc(pageVal)}" placeholder="Seite/Folio…"
           data-input="updateSrcPage" data-prefix="${prefix}" data-citidx="${idx}">
