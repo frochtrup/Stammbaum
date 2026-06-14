@@ -481,7 +481,7 @@ function _removeSourceRefs(id, db) {
   const rmCits = arr => { if (arr) { const i = arr.filter(c => c.sid !== id); arr.length = 0; arr.push(...i); } };
   const rmEv   = ev  => { if (ev) rmCits(ev.citations); };
 
-  for (const p of Object.values(db.persons || {})) {
+  for (const p of Object.values(db.individuals || {})) {
     rmEv(p.birth); rmEv(p.chr); rmEv(p.death); rmEv(p.buri);
     (p.events || []).forEach(rmEv);
     rmCits(p.nameCitations);
