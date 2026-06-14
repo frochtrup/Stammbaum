@@ -516,7 +516,7 @@ function _removeOrphanCitBySid(sid) {
   markChanged();
   // Detail-Ansicht neu rendern (je nach aktivem Tab)
   if (AppState.currentTab === 'persons' && AppState.currentPersonId)
-    showPersonDetail(AppState.currentPersonId);
+    showDetail(AppState.currentPersonId);
   else if (AppState.currentTab === 'families' && AppState.currentFamilyId)
     showFamilyDetail(AppState.currentFamilyId);
   showToast('✓ Verwaister Quellbezug entfernt');
