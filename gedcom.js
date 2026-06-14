@@ -859,43 +859,44 @@ function applyStringPlaceLink(sourceNames, targetPlaceId, confirmedStrs) {
 
 // Verknüpft GEDCOM-Events mit placeObjects (ADR-024 Link-Pass).
 // Aufruf nach loadPlaceObjectsFromIDB() — nur im GEDCOM-Pfad (GRAMPS setzt placeId via Parser).
-// Sicherheitsbedingung: _buildFormString oder resolveAsOf muss exakt ev.place ergeben
-// → GEDCOM net_delta=0 garantiert. Zweistufige Suche:
-//   1. exakter findByName(ev.place) — einfache Strings + historische pnames
-//   2. Fallback: findByName(erstes Komma-Segment) + buildFormString-Vergleich
-//      → erkennt periodengerecht exportierte Komma-Hierarchie-Strings beim Reimport
+//
+// Modell-Invariante: placeId = Wahrheit, ev.place = periodengerechte Projektion des
+// placeObjects (_buildFormString). In GEDCOM kollabiert das placeObject auf genau diesen
+// einen String. Zwei Fälle:
+//   1. Atomarer Cache-String (kein Komma) → Identitäts-Match via findByName. ev.place wird
+//      zur Projektion neu kollabiert. Weicht sie vom Cache ab (enclosedBy nachträglich
+//      ergänzt), wird ev.place überschrieben + markChanged (ehrliche Konsequenz: das
+//      angereicherte Ortsmodell ist jetzt in der Datei angekommen).
+//   2. Bereits ein Hierarchie-String (mit Komma) → nur verknüpfen wenn die Projektion exakt
+//      passt (Reimport unseres eigenen Exports). Fremde/manuelle Hierarchien werden NICHT
+//      überschrieben → keine ungewollte Datenmutation.
+// Rückgabe: Anzahl neu kollabierter Events (für die Lade-Meldung).
 function _linkGedcomEventsToPlaceObjects(db) {
-  if (!db) return;
+  if (!db) return 0;
   const reg = getPlaceRegistry();
-  if (!reg || !Object.keys(reg.byId).length) return;
-  let linked = 0;
+  if (!reg || !Object.keys(reg.byId).length) return 0;
+  let linked = 0, recollapsed = 0;
+  const _project = (pid, year) =>
+    (typeof _buildFormString === 'function' && _buildFormString(pid, year))
+    || reg.resolveAsOf(pid, year) || null;
   const _link = ev => {
     if (!ev || ev.placeId || !ev.place) return;
     const year = _placeYear(ev.date);
-    // Schritt 1: exakter Match (title, pnames[], historische Strings)
-    let pid = reg.findByName(ev.place);
-    // Schritt 2: erstes nicht-leeres Komma-Segment → buildFormString-Vergleich (Reimport-Pfad)
-    if (!pid && ev.place.includes(',')) {
+    if (!ev.place.includes(',')) {
+      // Fall 1: atomarer Cache-String → placeObject per Identität, dann kollabieren.
+      const pid = reg.findByName(ev.place);
+      if (!pid) return;
+      const proj = _project(pid, year);
+      if (!proj) return;
+      ev.placeId = pid; linked++;
+      if (proj !== ev.place) { ev.place = proj; recollapsed++; }
+    } else {
+      // Fall 2: bereits Hierarchie-String → nur bei exaktem Projektions-Match verknüpfen.
       const first = ev.place.split(',').map(s => s.trim()).find(s => s) || '';
       const cand  = reg.findByName(first);
-      if (cand) {
-        const built = (typeof _buildFormString === 'function' && _buildFormString(cand, year))
-          || reg.resolveAsOf(cand, year);
-        if (built === ev.place) pid = cand;
-      }
-    }
-    if (!pid) return;
-    const check = (typeof _buildFormString === 'function' && _buildFormString(pid, year))
-      || reg.resolveAsOf(pid, year);
-    if (check === ev.place) { ev.placeId = pid; linked++; return; }
-    // Schritt 3: ev.place ist ein Einzel-Name (kein Komma) der via findByName gefunden wurde,
-    // aber _buildFormString liefert jetzt eine reichere Hierarchie (enclosedBy nachträglich
-    // hinzugefügt). resolveAsOf muss für das Ereignisjahr auf ev.place zeigen — dann ist die
-    // Verknüpfung korrekt. ev.place wird NICHT geändert; Writer schreibt beim nächsten
-    // Speichern den angereicherten String (_resolvedPlaceName → _buildFormString).
-    if (!ev.place.includes(',')) {
-      const resolved = reg.resolveAsOf(pid, year);
-      if (resolved && resolved === ev.place) { ev.placeId = pid; linked++; }
+      if (!cand) return;
+      const proj = _project(cand, year);
+      if (proj && proj === ev.place) { ev.placeId = cand; linked++; }
     }
   };
   for (const p of Object.values(db.individuals || {})) {
@@ -906,7 +907,12 @@ function _linkGedcomEventsToPlaceObjects(db) {
     [f.marr, f.engag, f.div, f.divf].forEach(_link);
     (f.events || []).forEach(_link);
   }
-  if (linked) console.info(`[PLACE] ${linked} GEDCOM-Events mit placeObject verknüpft`);
+  if (linked) console.info(`[PLACE] ${linked} GEDCOM-Events verknüpft, ${recollapsed} neu kollabiert`);
+  if (recollapsed) {
+    UIState._placesCache = null; UIState._placeRegistry = null;
+    if (typeof markChanged === 'function') markChanged();
+  }
+  return recollapsed;
 }
 
 // Baut (lazy, gecacht) die PlaceRegistry über AppState.db.placeObjects:

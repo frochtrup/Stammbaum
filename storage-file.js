@@ -397,7 +397,14 @@ async function _finishLoad(db, text, filename) {
     applyAllExtraPlaceCoords();
     if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
     if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
-    if (typeof _linkGedcomEventsToPlaceObjects === 'function') _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass
+    if (typeof _linkGedcomEventsToPlaceObjects === 'function') {
+      const _recollapsed = _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass
+      // Ortsmodell war reicher als die gecachten GEDCOM-Strings → Events neu kollabiert.
+      // Erklärende Meldung, damit der "ungespeichert"-Status nicht verwirrt.
+      if (_recollapsed > 0) setTimeout(() => showToast(
+        `🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst — bitte speichern, um die Historie in der Datei zu sichern.`,
+        'info'), 2000);
+    }
     _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen
     AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
     { let maxUsed = 0;
