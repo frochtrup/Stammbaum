@@ -1198,6 +1198,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .src-badge-link:hover  { color: var(--gold); }
 .src-badge-link:active { color: var(--gold); }
 /* QUAY-Qualitätsstufen */
+.src-badge--orphan { color: var(--warn); border-color: var(--warn); cursor: default; }
 .src-badge--q3 { color: #52a878; border-color: #52a878; }   /* direkt/primär */
 .src-badge--q2 { color: #5b9bd4; border-color: #5b9bd4; }   /* plausibel */
 .src-badge--q1 { color: #e07830; border-color: #e07830; }   /* fragwürdig */
