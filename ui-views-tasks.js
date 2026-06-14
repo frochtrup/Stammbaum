@@ -38,18 +38,20 @@ function _getPersonTasks(personId) {
   return p._tasks;
 }
 
-function _addTaskToDb(personId, text, category) {
+function _addTaskToDb(personId, text, category, sid = '') {
   const p = AppState.db.individuals[personId];
   if (!p) return;
   if (!p._tasks) p._tasks = [];
-  p._tasks.push({
+  const t = {
     id:       _newTaskId(),
     text:     text.trim(),
     category: category || TASK_CATEGORIES[0].key,
     done:     false,
     status:   'todo',
     created:  new Date().toISOString().slice(0, 10),
-  });
+  };
+  if (sid) t.sid = sid;
+  p._tasks.push(t);
   markChanged();
   _updateTasksBadge();
 }
@@ -80,18 +82,20 @@ function _getFamTasks(famId) {
   return f._tasks;
 }
 
-function _addFamTaskToDb(famId, text, category) {
+function _addFamTaskToDb(famId, text, category, sid = '') {
   const f = AppState.db.families[famId];
   if (!f) return;
   if (!f._tasks) f._tasks = [];
-  f._tasks.push({
+  const t = {
     id:       _newTaskId(),
     text:     text.trim(),
     category: category || TASK_CATEGORIES[0].key,
     done:     false,
     status:   'todo',
     created:  new Date().toISOString().slice(0, 10),
-  });
+  };
+  if (sid) t.sid = sid;
+  f._tasks.push(t);
   markChanged();
   _updateTasksBadge();
 }
@@ -286,7 +290,7 @@ function showEditTaskForm(personId, taskId) {
   _addTaskPersonId = personId;
   _addTaskFamId    = null;
   _editTaskId      = taskId;
-  _openAddTaskModal('Aufgabe bearbeiten', t.text, t.category);
+  _openAddTaskModal('Aufgabe bearbeiten', t.text, t.category, t.sid || '');
 }
 
 function showEditFamTaskForm(famId, taskId) {
@@ -295,10 +299,10 @@ function showEditFamTaskForm(famId, taskId) {
   _addTaskPersonId = null;
   _addTaskFamId    = famId;
   _editTaskId      = taskId;
-  _openAddTaskModal('Aufgabe bearbeiten', t.text, t.category);
+  _openAddTaskModal('Aufgabe bearbeiten', t.text, t.category, t.sid || '');
 }
 
-function _openAddTaskModal(title, text, category) {
+function _openAddTaskModal(title, text, category, sid = '') {
   const sel = document.getElementById('addTaskCategory');
   if (sel) {
     sel.innerHTML = TASK_CATEGORIES.map(c => `<option value="${c.key}">${esc(c.label)}</option>`).join('');
@@ -308,6 +312,15 @@ function _openAddTaskModal(title, text, category) {
   if (inp) inp.value = text;
   const titleEl = document.querySelector('#modalAddTask .sheet-title');
   if (titleEl) titleEl.textContent = title;
+  // Quellen-Select befüllen
+  const srcSel = document.getElementById('addTaskSrcSid');
+  if (srcSel) {
+    const sources = Object.values(AppState.db?.sources || {})
+      .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de'));
+    srcSel.innerHTML = `<option value="">– Keine Quelle –</option>` +
+      sources.map(s => `<option value="${esc(s.id)}">${esc(s.abbr || s.title || s.id)}</option>`).join('');
+    srcSel.value = sid || '';
+  }
   openModal('modalAddTask');
   setTimeout(() => inp?.focus(), 80);
 }
@@ -315,28 +328,27 @@ function _openAddTaskModal(title, text, category) {
 function _saveAddTask() {
   const text = document.getElementById('addTaskText')?.value || '';
   const cat  = document.getElementById('addTaskCategory')?.value || TASK_CATEGORIES[0].key;
+  const sid  = document.getElementById('addTaskSrcSid')?.value || '';
   if (!text.trim()) { showToast('Bitte Aufgabe eingeben', 'warn'); return; }
   closeModal('modalAddTask');
 
   if (_addTaskFamId) {
-    // Familien-Kontext
     if (_editTaskId) {
       const t = _getFamTasks(_addTaskFamId).find(t => t.id === _editTaskId);
-      if (t) { t.text = text.trim(); t.category = cat; markChanged(); }
+      if (t) { t.text = text.trim(); t.category = cat; if (sid) t.sid = sid; else delete t.sid; markChanged(); }
       showToast('Aufgabe aktualisiert', 'success');
     } else {
-      _addFamTaskToDb(_addTaskFamId, text, cat);
+      _addFamTaskToDb(_addTaskFamId, text, cat, sid);
       showToast('Aufgabe gespeichert', 'success');
     }
     _refreshFamTasksSection(_addTaskFamId);
   } else {
-    // Personen-Kontext
     if (_editTaskId) {
       const t = _getPersonTasks(_addTaskPersonId).find(t => t.id === _editTaskId);
-      if (t) { t.text = text.trim(); t.category = cat; markChanged(); }
+      if (t) { t.text = text.trim(); t.category = cat; if (sid) t.sid = sid; else delete t.sid; markChanged(); }
       showToast('Aufgabe aktualisiert', 'success');
     } else {
-      _addTaskToDb(_addTaskPersonId, text, cat);
+      _addTaskToDb(_addTaskPersonId, text, cat, sid);
       showToast('Aufgabe gespeichert', 'success');
     }
     _refreshTasksSection(_addTaskPersonId);
