@@ -176,7 +176,7 @@ function _collectSourceMeta(entity, sid) {
   if (!pairs.size) return '';
   return [...pairs.entries()].map(([page, quay]) => {
     const parts = [];
-    if (page && page !== '\x00') parts.push('S.' + page);
+    if (page && page !== '\x00') parts.push(page);
     if (quay !== undefined && quay !== '') parts.push('Q' + quay);
     return parts.join('\u202f') || '–';
   }).join(', ');
