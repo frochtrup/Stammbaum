@@ -62,6 +62,8 @@ export const VAL_RULES = [
   // ── P5: Verknüpfung ──
   { key: 'ISOLATED_PERSON',         label: 'Keine Familienverknüpfung',              severity: 'warn',  threshold: null },
   { key: 'DISCONNECTED_FROM_ROOT',  label: 'Nicht mit Kernbaum verbunden',           severity: 'warn',  threshold: null },
+  // ── Quellen-Integrität ──
+  { key: 'ORPHAN_CITATION',         label: 'Quellbezug ohne vorhandene Quelle',      severity: 'warn',  threshold: null },
 ];
 
 // Zählt offene Hypothesen (RES-HYPO/ADR-023: alles außer confirmed/rejected = offen)
@@ -416,6 +418,44 @@ export function runValidation(db, config) {
             `Kind ${cname} (${cy}) mehr als 1 Jahr nach Tod des Vaters (${hd})`, 'kirchenbuch', fid);
       }
     }
+  }
+
+  // ── Quellen-Integrität: verwaiste Quellbezüge ──
+  const _knownSids = new Set(Object.keys(db.sources || {}));
+  const _citSids = (arr) => (arr || []).map(c => c.sid).filter(Boolean);
+  const _checkCits = (pid, arr) => {
+    for (const sid of _citSids(arr)) {
+      if (!_knownSids.has(sid))
+        push(pid, 'ORPHAN_CITATION', 'warn', `Quellbezug auf nicht vorhandene Quelle: ${sid}`, 'online');
+    }
+  };
+  for (const [pid, p] of Object.entries(db.individuals || {})) {
+    _checkCits(pid, p.birth?.citations);
+    _checkCits(pid, p.chr?.citations);
+    _checkCits(pid, p.death?.citations);
+    _checkCits(pid, p.buri?.citations);
+    (p.events || []).forEach(ev => _checkCits(pid, ev.citations));
+    _checkCits(pid, p.nameCitations);
+    (p.extraNames || []).forEach(en => _checkCits(pid, en.citations));
+    (p.associations || []).forEach(a => _checkCits(pid, a.citations));
+    for (const sid of (p.topSources || [])) {
+      if (!_knownSids.has(sid))
+        push(pid, 'ORPHAN_CITATION', 'warn', `INDI-Quellbezug auf nicht vorhandene Quelle: ${sid}`, 'online');
+    }
+  }
+  for (const [fid, f] of Object.entries(db.families || {})) {
+    const anchor = f.husb || f.wife;
+    if (!anchor) continue;
+    const _checkF = (arr) => {
+      for (const sid of _citSids(arr)) {
+        if (!_knownSids.has(sid))
+          push(anchor, 'ORPHAN_CITATION', 'warn', `Quellbezug auf nicht vorhandene Quelle: ${sid}`, 'online', fid);
+      }
+    };
+    _checkF(f.marr?.citations); _checkF(f.engag?.citations);
+    _checkF(f.div?.citations);  _checkF(f.divf?.citations);
+    (f.events || []).forEach(ev => _checkF(ev.citations));
+    for (const cref of Object.values(f.childRelations || {})) _checkF(cref.citations);
   }
 
   return results;

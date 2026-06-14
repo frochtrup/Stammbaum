@@ -467,9 +467,42 @@ async function deleteSource() {
   if (!await confirmModal('Quelle wirklich löschen?', 'Löschen')) return;
   pushUndo('Quelle gelöscht', { sourceIds: [id] });
   delete AppState.db.sources[id];
+  _removeSourceRefs(id, AppState.db);
   closeModal('modalSource');
   markChanged();
   showMain(); showToast('✓ Quelle gelöscht');
+}
+
+// Entfernt alle Zitate mit sid===id aus der gesamten DB (Personen + Familien).
+function _removeSourceRefs(id, db) {
+  const rmCits = arr => { if (arr) { const i = arr.filter(c => c.sid !== id); arr.length = 0; arr.push(...i); } };
+  const rmEv   = ev  => { if (ev) rmCits(ev.citations); };
+
+  for (const p of Object.values(db.persons || {})) {
+    rmEv(p.birth); rmEv(p.chr); rmEv(p.death); rmEv(p.buri);
+    (p.events || []).forEach(rmEv);
+    rmCits(p.nameCitations);
+    (p.extraNames || []).forEach(en => rmCits(en.citations));
+    (p.associations || []).forEach(a => rmCits(a.citations));
+    // topSources (SID-Array + keyed Dicts)
+    if (p.topSources) {
+      const idx = p.topSources.indexOf(id);
+      if (idx !== -1) {
+        p.topSources.splice(idx, 1);
+        delete p.topSourcePages?.[id];
+        delete p.topSourceQUAY?.[id];
+        delete p.topSourceExtra?.[id];
+      }
+    }
+    p.sourceRefs?.delete(id);
+  }
+
+  for (const f of Object.values(db.families || {})) {
+    rmEv(f.marr); rmEv(f.engag); rmEv(f.div); rmEv(f.divf);
+    (f.events || []).forEach(rmEv);
+    for (const cref of Object.values(f.childRelations || {})) rmCits(cref.citations);
+    f.sourceRefs?.delete(id);
+  }
 }
 
 // (Archiv-Formular + Picker + Detail: ui-forms-repo.js)
