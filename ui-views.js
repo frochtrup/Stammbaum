@@ -1075,7 +1075,6 @@ function _evFullPlace(ev) {
       const encs = po?.enclosedBy || [];
       if (encs.length) {
         const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
-        // Kandidaten: Einträge mit mindestens einem Datum, nach Abstand zum Ereignisjahr sortiert
         const datable = encs.filter(e => e.dateFrom || e.dateTo);
         if (datable.length) {
           datable.sort((a, b) => {
@@ -1088,13 +1087,20 @@ function _evFullPlace(ev) {
             };
             return dist(a) - dist(b);
           });
-          // Jahr des nächstgelegenen Eintrags als Referenzjahr
           const nearest = datable[0];
           const refY = parseY(nearest.dateFrom) ?? parseY(nearest.dateTo);
           const fallback = refY != null ? _buildFormString(ev.placeId, refY) : null;
           if (fallback && fallback.includes(',')) return fallback;
         }
       }
+    }
+    // Kein Komma-String aus der Hierarchie — aber _buildFormString liefert ggf. den
+    // historisch aufgelösten Ortsnamen (pname zum Jahr). Diesen als erstes Segment
+    // verwenden und mit restlicher Hierarchie aus ev.place kombinieren.
+    if (full) {
+      const evParts = (ev.place || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (evParts.length > 1) return [full, ...evParts.slice(1)].join(', ');
+      return full;
     }
   }
   return compactPlace(ev.place);
