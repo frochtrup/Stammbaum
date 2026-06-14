@@ -1026,15 +1026,23 @@ function citTagsHtml(citations) {
   }).filter(Boolean).join('');
 }
 
-// INDI-Level-Quellen (topSources, gilt für die ganze Person) als Zitat-Badges.
+// INDI-Level-Quellen (topSources + nameCitations) als Zitat-Badges, dedupliziert nach SID.
 // URL ggf. aus topSourceExtra (OBJE/FILE-Passthrough) → wird über citTagsHtml als ↗ klickbar.
 function topSourceCitsHtml(p) {
-  if (!p?.topSources?.length) return '';
-  const cits = p.topSources.map(sid => {
+  const seen = new Set();
+  const cits = [];
+  for (const sid of (p?.topSources || [])) {
+    if (seen.has(sid)) continue;
+    seen.add(sid);
     const urls = (p.topSourceExtra?.[sid] || [])
       .map(l => (String(l).match(/\bhttps?:\/\/\S+/) || [])[0]).filter(Boolean);
-    return { sid, page: p.topSourcePages?.[sid] || '', quay: p.topSourceQUAY?.[sid], media: urls.map(u => ({ file: u })) };
-  });
+    cits.push({ sid, page: p.topSourcePages?.[sid] || '', quay: p.topSourceQUAY?.[sid], media: urls.map(u => ({ file: u })) });
+  }
+  for (const c of (p?.nameCitations || [])) {
+    if (!c?.sid || seen.has(c.sid)) continue;
+    seen.add(c.sid);
+    cits.push(c);
+  }
   return citTagsHtml(cits);
 }
 
