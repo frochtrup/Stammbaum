@@ -119,9 +119,10 @@ function _openRlogModal(title, rl) {
   // SOUR dropdown
   const sourSel = document.getElementById('rlogSour');
   if (sourSel) {
-    const sources = Object.entries(db.sources || {});
+    const sources = Object.values(db.sources || {})
+      .sort((a, b) => (a.abbr || a.title || '').localeCompare(b.abbr || b.title || '', 'de'));
     sourSel.innerHTML = '<option value="">(keine Quelle)</option>'
-      + sources.map(([id, s]) => `<option value="${esc(id)}">${esc(s.title || id)}</option>`).join('');
+      + sources.map(s => `<option value="${esc(s.id)}">${esc(s.abbr || s.title || s.id)}</option>`).join('');
     sourSel.value = rl?.sourRef || '';
   }
   const titleEl = document.querySelector('#modalAddRlog .sheet-title');
