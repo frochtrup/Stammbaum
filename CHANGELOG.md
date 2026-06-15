@@ -9,6 +9,17 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-15 — Hof-Notiz vs. Event-Notiz + RESI-Notiz-Anzeige (sw v987–v988)
+
+**Auslöser:** Beim Eintippen einer Notiz an einem RESI-Event wurde sie zur Hof-Notiz — keine getrennte Behandlung von adressbezogener Hof-Notiz und event-spezifischer Notiz.
+
+- **v987 — RESI-Event-Notiz verschwand bei Streu-Hof.** `_derivedHofObjectsFromDb` leitet Hof-Notizen aus RESI-Notizen ab → Notiztext landete in `_allHofNoteTexts`. Eine Event-eigene Inline-Notiz wurde **global** unterdrückt, sobald *irgendein* hofObject (auch unter abweichendem Adress-Key) denselben Text trug, während für die eigene Adresse keine Hof-Notiz angezeigt wurde → Notiz verschwand ganz. Fix: Inline-Notiz (`ev._noteOrig`) nur noch gegen die für DIESE Adresse geltende Hof-Notiz dedupliziert (`!== _hofNote`), nicht global. Gleiche Korrektur in `ui-book.js`.
+- **v988 — Saubere Trennung per GEDCOM-konformem `[Hof] `-Marker.** Hof-Notiz = normale `NOTE` mit Text-Präfix `[Hof] ` (kein Custom-Tag, in jedem Programm lesbar, deterministisch routbar). `HOF_NOTE_PREFIX` + `_isHofNoteText`/`_stripHofPrefix` in `gedcom.js`. **Parser** (`_derivedHofObjectsFromDb`): leitet `hof.note` nur noch aus `[Hof]`-präfixierten Notizen ab (Präfix gestrippt) → getippte Event-Notizen bleiben Event-Notizen. **Writer**: Hof-Notiz als `[Hof]`-präfixierter `@N_HOF@`-Record; event-eigene Inline-Notiz präfixlos; Dedup per Präfix-Form. **Anzeige** (Personendetail + Buch): präfixierte Teile aus der Event-eigenen Notiz ausgeschlossen, Hof-Notiz separat (clean ohne Präfix in der UI). **Hof-Editor** speichert Klartext, Präfix nur beim Schreiben. Verifiziert in laufender App: Event-Notiz bleibt event-spezifisch; explizite Hof-Notiz round-trippt als `[Hof] …`; beide koexistieren; Round-Trip stabil (o1=o2=o3); demo.ged net_delta=0; 475 Tests grün.
+
+**Lehre:** GEDCOM kennt keine Hof-Entität — ein lesbares Text-Präfix in einer Standard-`NOTE` trennt zwei logisch verschiedene Notiz-Arten konform und ohne proprietäre Tags. Durable Detail: Memory `place_hist`.
+
+---
+
 ### Session 2026-06-14 — Quellen-Integrität + historische Ortsanzeige (sw v968–v986)
 
 #### Historische Ortsanzeige — Projektions-Invariante (v983–v986)
