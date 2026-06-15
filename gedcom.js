@@ -102,6 +102,14 @@ function nextId(prefix) {
   return `@${prefix}${AppState.idCounter}@`;
 }
 
+// Hof-Notiz-Marker: GEDCOM-konformes Text-Präfix in einer normalen NOTE. Trennt die
+// hof-/adressbezogene Notiz (gilt für alle Bewohner/Eigentümer der Adresse) deterministisch
+// von der event-spezifischen RESI/PROP-Notiz — ohne Custom-Tag, in jedem Programm lesbar.
+// Parser routet [Hof]-präfixierte Notizen → hofObjects; Writer schreibt hof.note mit Präfix.
+const HOF_NOTE_PREFIX = '[Hof] ';
+function _isHofNoteText(t)   { return typeof t === 'string' && t.startsWith(HOF_NOTE_PREFIX); }
+function _stripHofPrefix(t)  { return _isHofNoteText(t) ? t.slice(HOF_NOTE_PREFIX.length) : t; }
+
 // Globale Label-Map für GEDCOM-Ereignis-Typen (DRY: wird in showDetail + showPlaceDetail genutzt)
 const EVENT_LABELS = {
   // Spezial-Schlüssel (intern)

@@ -648,10 +648,10 @@ function _pdetLifeData(p, id) {
         // DIESE Adresse geltende Hof-Notiz dedupliziert. NoteRefs behalten die globale
         // Unterdrückung (Schutz gegen über geteilte NOTE-Records hereingeblutete Hof-Notizen).
         const _nonHofParts = [
-          (ev._noteOrig && ev._noteOrig !== _hofNote) ? ev._noteOrig : null,
+          (ev._noteOrig && !_isHofNoteText(ev._noteOrig) && ev._noteOrig !== _hofNote) ? ev._noteOrig : null,
           ...(ev.noteRefs || []).map(r => {
             const t = AppState.db.notes?.[r]?.text;
-            return (t && !_allHofNoteTexts.has(t)) ? t : null;
+            return (t && !_isHofNoteText(t) && !_allHofNoteTexts.has(t)) ? t : null;
           }),
         ].filter(Boolean);
         const _combinedNote = _nonHofParts.join('\n') || null;

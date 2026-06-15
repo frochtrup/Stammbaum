@@ -406,27 +406,22 @@ if (ev.place !== null && ev.place !== undefined) {
     geoLines(lines, { lati: _hofMeta.lat, long: _hofMeta.long }, 3);
   }
 }
-// Hof-Notiz schreiben — nur beim ersten Event mit dieser Adresse,
-// und nur wenn das Event selbst ursprünglich eine Note hatte.
+// Notizen: event-eigene Notiz vs. adressbezogene Hof-Notiz sauber getrennt.
+// Hof-Notiz = GEDCOM-konforme NOTE mit Text-Präfix "[Hof] " (geteilter Record @N_HOF@),
+// einmal pro Adresse. Event-eigene Notiz = gewöhnliche NOTE ohne Präfix.
 const _addrKey = ev.addr?.trim();
-const _evNoteIsHofNote = _hofMeta?.note && ev.note === _hofMeta.note;
-const _evHadNote = !!(ev._noteOrig || ev.noteRefs?.length);
 for (const r of (ev.noteRefs || [])) {
-  // HOF-Notiz-Refs überspringen — werden über _hofNoteIds separat als @N_HOF_n@ geschrieben
-  if (_hofMeta?.note && AppState.db.notes?.[r]?.text === _hofMeta.note) continue;
+  // [Hof]-Notiz-Ref überspringen — wird separat über _hofNoteIds als @N_HOF_n@ geschrieben
+  if (_isHofNoteText(AppState.db.notes?.[r]?.text)) continue;
   lines.push(`2 NOTE ${_noteXref[r]||r}`);
 }
-if (_hofMeta?.note && _hofNoteIds[_addrKey]) {
-  if (_evHadNote && !writtenHofNotes.has(_addrKey)) {
-    lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
-    writtenHofNotes.add(_addrKey);
-  }
-} else if (_hofMeta?.note && _evHadNote && (!ev.note || _evNoteIsHofNote) && !writtenHofNotes.has(_addrKey)) {
-  pushCont(lines, 2, 'NOTE', _hofMeta.note);
+// Event-eigene Inline-Notiz (ohne [Hof]-Präfix → wirklich event-spezifisch)
+const _ownInline = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
+if (_ownInline && !_isHofNoteText(_ownInline)) pushCont(lines, 2, 'NOTE', _ownInline);
+// Hof-Notiz einmal pro Adresse (geteilter [Hof]-Record)
+if (_hofMeta?.note && _hofNoteIds[_addrKey] && !writtenHofNotes.has(_addrKey)) {
+  lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
   writtenHofNotes.add(_addrKey);
-} else if (!_evNoteIsHofNote) {
-  const _inlineNote = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
-  if (_inlineNote) pushCont(lines, 2, 'NOTE', _inlineNote);
 }
 if (ev.addr || (ev.addrExtra && ev.addrExtra.length)) { pushCont(lines, 2, 'ADDR', ev.addr || ''); if (ev.addrExtra && ev.addrExtra.length) for (const l of _ptLines(ev.addrExtra)) lines.push(l); }
 for (const ph of (ev.phon  || [])) lines.push(`2 PHON ${ph}`);
@@ -954,12 +949,14 @@ function writeGEDCOM(updateHeadDate = false, forceGed7 = false, forceStrict = fa
   for (const f of Object.values(db.families))     writeFAMRecord(lines, f);
   for (const s of Object.values(db.sources))      writeSOURRecord(lines, s);
   for (const r of Object.values(db.repositories)) writeREPORecord(lines, r);
-  // HOF-Notiz-Texte die über _hofNoteIds geschrieben werden — nicht doppelt aus db.notes schreiben
-  const _hofNoteTexts = new Set(Object.keys(_hofNoteIds).map(addr => db.hofObjects[addr].note));
+  // HOF-Notiz-Texte die über _hofNoteIds geschrieben werden — nicht doppelt aus db.notes schreiben.
+  // Hof-Notizen werden mit [Hof]-Präfix geschrieben; db.notes kann den präfixierten Text aus
+  // einem früheren Import enthalten → ebenfalls per Präfix-Form deduplizieren.
+  const _hofNoteTexts = new Set(Object.keys(_hofNoteIds).map(addr => HOF_NOTE_PREFIX + db.hofObjects[addr].note));
   for (const n of Object.values(db.notes || {}))
     if (!_hofNoteTexts.has(n.text)) writeNOTERecord(lines, n);
   for (const [addr, id] of Object.entries(_hofNoteIds))
-    writeNOTERecord(lines, { id, text: db.hofObjects[addr].note, _passthrough: [] });
+    writeNOTERecord(lines, { id, text: HOF_NOTE_PREFIX + db.hofObjects[addr].note, _passthrough: [] });
 
   // Unknown lv=0 records (SUBM etc.) — verbatim passthrough
   for (const rec of (db.extraRecords || [])) {

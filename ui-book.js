@@ -97,10 +97,10 @@ function _eventsTableHtml(p) {
     // (sonst verschluckt ein Streu-hofObject unter abweichendem Adress-Key sie). NoteRefs
     // behalten die globale Unterdrückung gegen hereingeblutete Hof-Notizen.
     const _nonHofParts = [
-      (ev._noteOrig && ev._noteOrig !== _hofNote) ? ev._noteOrig : null,
+      (ev._noteOrig && !_isHofNoteText(ev._noteOrig) && ev._noteOrig !== _hofNote) ? ev._noteOrig : null,
       ...(ev.noteRefs || []).map(r => {
         const t = db.notes?.[r]?.text;
-        return (t && !_allHofNoteTexts.has(t)) ? t : null;
+        return (t && !_isHofNoteText(t) && !_allHofNoteTexts.has(t)) ? t : null;
       }),
     ].filter(Boolean);
     const noteText = _nonHofParts.join('\n') || null;

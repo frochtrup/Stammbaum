@@ -1048,13 +1048,16 @@ function _derivedHofObjectsFromDb(db) {
     for (const ev of p.events || []) {
       if ((ev.type !== 'RESI' && ev.type !== 'PROP') || !ev.addr) continue;
       const _hasCoords = ev.lati != null && ev.long != null;
-      const _refNote = (ev.noteRefs || []).map(r => db.notes?.[r]?.text).find(t => t);
-      const _evNote = _refNote || ev._noteOrig || '';
-      if (!_hasCoords && !_evNote) continue;
+      // Hof-Notiz NUR aus [Hof]-präfixierten Notizen ableiten (Präfix gestrippt). Eine
+      // gewöhnliche, getippte Event-Notiz wird NICHT mehr zur Hof-Notiz (Trennung).
+      const _noteParts = [ev._noteOrig, ...(ev.noteRefs || []).map(r => db.notes?.[r]?.text)].filter(Boolean);
+      const _hofPart = _noteParts.find(_isHofNoteText);
+      const _hofNote = _hofPart ? _stripHofPrefix(_hofPart) : '';
+      if (!_hasCoords && !_hofNote) continue;
       const addr = ev.addr.trim();
       if (!hof[addr]) hof[addr] = { addr };
       if (_hasCoords && hof[addr].lat == null) { hof[addr].lat = ev.lati; hof[addr].long = ev.long; }
-      if (!hof[addr].note && _evNote) hof[addr].note = _evNote;
+      if (!hof[addr].note && _hofNote) hof[addr].note = _hofNote;
     }
   }
   return hof;
