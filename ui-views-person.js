@@ -642,8 +642,13 @@ function _pdetLifeData(p, id) {
         // nach _resolveNoteRefs eine Konkatenation aller Refs inkl. aller Hof-Notizen,
         // daher ungeeignet für Vergleiche. Stattdessen: ev._noteOrig (Inline-Anteil)
         // + alle noteRefs deren Text KEINE bekannte Hof-Notiz ist.
+        // Inline-Notiz (ev._noteOrig) ist IMMER die eigene Notiz des Events — sie darf
+        // NICHT durch das globale _allHofNoteTexts verschwinden (Bug: Streu-hofObject
+        // unter abweichendem Adress-Key verschluckte sie). Sie wird nur gegen die für
+        // DIESE Adresse geltende Hof-Notiz dedupliziert. NoteRefs behalten die globale
+        // Unterdrückung (Schutz gegen über geteilte NOTE-Records hereingeblutete Hof-Notizen).
         const _nonHofParts = [
-          (ev._noteOrig && !_allHofNoteTexts.has(ev._noteOrig)) ? ev._noteOrig : null,
+          (ev._noteOrig && ev._noteOrig !== _hofNote) ? ev._noteOrig : null,
           ...(ev.noteRefs || []).map(r => {
             const t = AppState.db.notes?.[r]?.text;
             return (t && !_allHofNoteTexts.has(t)) ? t : null;

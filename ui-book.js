@@ -92,9 +92,12 @@ function _eventsTableHtml(p) {
     const showHofNote = _evRefersToHofNote && !shownHofAddrs.has(_addrKey);
     if (showHofNote) shownHofAddrs.add(_addrKey);
 
-    // Persönliche Notiz: aus ev._noteOrig + noteRefs ohne Hof-Texte rekonstruieren
+    // Persönliche Notiz: Inline-Notiz (ev._noteOrig) ist immer die eigene Notiz des Events —
+    // nur gegen die für DIESE Adresse geltende Hof-Notiz dedupliziert, nicht global
+    // (sonst verschluckt ein Streu-hofObject unter abweichendem Adress-Key sie). NoteRefs
+    // behalten die globale Unterdrückung gegen hereingeblutete Hof-Notizen.
     const _nonHofParts = [
-      (ev._noteOrig && !_allHofNoteTexts.has(ev._noteOrig)) ? ev._noteOrig : null,
+      (ev._noteOrig && ev._noteOrig !== _hofNote) ? ev._noteOrig : null,
       ...(ev.noteRefs || []).map(r => {
         const t = db.notes?.[r]?.text;
         return (t && !_allHofNoteTexts.has(t)) ? t : null;
