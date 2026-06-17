@@ -571,6 +571,8 @@ if (IS_NODE) {
     'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject, ' +
     '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport, ' +
     '_eventCoords: _eventCoords, AppState: AppState, UIState: UIState,' +
+    'buildHofIndex: buildHofIndex, _derivedHofObjectsFromDb: _derivedHofObjectsFromDb, ' +
+    '_isHofNoteText: _isHofNoteText, _stripHofPrefix: _stripHofPrefix, HOF_NOTE_PREFIX: HOF_NOTE_PREFIX, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -3051,6 +3053,134 @@ group('(ad) Writer _sliceByteLen + pushCont 255-Byte-Limit');
   var noteLines = ged.split(/\r?\n/).filter(function(l) { return l.length > 0; });
   var allOk = noteLines.every(function(l) { return _utf8ByteLen(l) <= 255; });
   ok(allOk, 'ad.8: writeGEDCOM — keine Zeile > 255 Bytes (auch bei @NRANSMANN@)');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (ae) HOF-DOMÄNE  (buildHofIndex · _derivedHofObjectsFromDb · [Hof]-Roundtrip)
+//  Verriegelt die Hof-Logik strukturell — Bugklassen v987 (Notiz verschwand
+//  bei Streu-Hof) + v988 (Hof-/Event-Notiz-Trennung via [Hof]-Marker).
+// ═══════════════════════════════════════════════════════════════════════════
+group('(ae) HOF-Domäne (sw v988)');
+
+// ── [Hof]-Marker-Helfer ──
+ok(API._isHofNoteText('[Hof] Erbhof seit 1700'), 'ae.1: [Hof]-Präfix erkannt');
+ok(!API._isHofNoteText('Erbhof seit 1700'),      'ae.1: gewöhnliche Notiz ist keine Hof-Notiz');
+ok(!API._isHofNoteText(''),                      'ae.1: leerer String ist keine Hof-Notiz');
+ok(!API._isHofNoteText(null),                    'ae.1: null ist keine Hof-Notiz');
+eq(API._stripHofPrefix('[Hof] Erbhof'), 'Erbhof', 'ae.1: Präfix gestrippt');
+eq(API._stripHofPrefix('Erbhof'),       'Erbhof', 'ae.1: ohne Präfix unverändert');
+
+// ── buildHofIndex: RESI (Bewohner) + PROP (Eigentümer) nach addr aggregiert ──
+(function() {
+  API.setDb({ individuals: {
+    '@I1@': P({ id:'@I1@', name:'Hans Müller',
+      events:[ { type:'RESI', addr:'Hof Schulze 1', place:'Ochtrup', date:'1850' } ] }),
+    '@I2@': P({ id:'@I2@', name:'Anna Müller', events:[
+      { type:'RESI', addr:'Hof Schulze 1', place:'Ochtrup', date:'1855' },
+      { type:'PROP', addr:'Hof Schulze 1', value:'Mühle',   date:'1860' },
+    ] }),
+  }, families:{} });
+  API.UIState._hofCache = null;
+  var idx = API.buildHofIndex();
+  eq(idx.size, 1, 'ae.2: gleiche Adresse → 1 Hof aggregiert');
+  var hof = idx.get('Hof Schulze 1');
+  eq(hof.entries.length,     2,         'ae.2: 2 RESI-Bewohner');
+  eq(hof.propEntries.length, 1,         'ae.2: 1 PROP-Eigentümer');
+  eq(hof.place,              'Ochtrup', 'ae.2: Ort aus erstem RESI übernommen');
+  eq(hof.propEntries[0].desc,'Mühle',   'ae.2: PROP-Beschreibung aus ev.value');
+})();
+
+// ── buildHofIndex: addr.trim() vereint führenden/folgenden Whitespace ──
+(function() {
+  API.setDb({ individuals: {
+    '@I1@': P({ id:'@I1@', events:[ { type:'RESI', addr:'  Hof A  ', place:'X' } ] }),
+    '@I2@': P({ id:'@I2@', events:[ { type:'RESI', addr:'Hof A',     place:'X' } ] }),
+  }, families:{} });
+  API.UIState._hofCache = null;
+  var idx = API.buildHofIndex();
+  eq(idx.size, 1, 'ae.3: "  Hof A  " und "Hof A" trimmen auf denselben Key');
+  eq(idx.get('Hof A').entries.length, 2, 'ae.3: beide Bewohner unter getrimmtem Key');
+})();
+
+// ── buildHofIndex: RESI ohne addr erzeugt keinen Hof ──
+(function() {
+  API.setDb({ individuals: {
+    '@I1@': P({ id:'@I1@', events:[ { type:'RESI', addr:'', place:'X' } ] }),
+  }, families:{} });
+  API.UIState._hofCache = null;
+  eq(API.buildHofIndex().size, 0, 'ae.4: RESI ohne Adresse → kein Hof');
+})();
+
+// ── _derivedHofObjectsFromDb: Koords + [Hof]-Notiz ja, gewöhnliche Notiz nein (v988) ──
+(function() {
+  var der = API._derivedHofObjectsFromDb({ individuals: {
+    '@I1@': { events:[ { type:'RESI', addr:'Hof B', lati:52.1, long:7.2,
+      _noteOrig:'[Hof] Erbhof seit 1700', noteRefs:[] } ] },
+    '@I2@': { events:[ { type:'RESI', addr:'Hof C', lati:null, long:null,
+      _noteOrig:'private Notiz der Person', noteRefs:[] } ] },
+  }, notes:{} });
+  eq(der['Hof B'].lat,  52.1,               'ae.5: Koordinaten aus RESI-Event abgeleitet');
+  eq(der['Hof B'].note, 'Erbhof seit 1700', 'ae.5: [Hof]-Notiz abgeleitet + Präfix gestrippt');
+  ok(!der['Hof C'], 'ae.5: gewöhnliche Event-Notiz ohne Koords → KEIN Hof (v988-Trennung)');
+})();
+
+// ── _derivedHofObjectsFromDb: [Hof]-Notiz aus geteiltem NOTE-Record (noteRefs) ──
+(function() {
+  var der = API._derivedHofObjectsFromDb({ individuals: {
+    '@I1@': { events:[ { type:'RESI', addr:'Hof D', lati:null, long:null,
+      _noteOrig:'', noteRefs:['@N1@'] } ] },
+  }, notes: { '@N1@': { text:'[Hof] Vierständerhof' } } });
+  eq(der['Hof D'].note, 'Vierständerhof', 'ae.6: [Hof]-Notiz aus geteiltem NOTE-Record (noteRefs)');
+})();
+
+// ── GEDCOM-Roundtrip: Hof-Notiz überlebt write→parse, Präfix korrekt (v987/v988) ──
+(function() {
+  API.setDb({
+    individuals: {
+      '@I1@': P({ id:'@I1@', given:'Hans', surname:'Schulze', name:'Hans Schulze', media:[], events:[
+        { type:'RESI', value:'', date:'1850', place:'Ochtrup', addr:'Hof Schulze 1',
+          eventType:'', note:'', lati:null, long:null, phon:[], email:[],
+          sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{},
+          media:[], _extra:[], noteRefs:[] } ] }),
+    },
+    families:{}, sources:{}, repositories:{}, notes:{}, extraPlaces:{}, placeObjects:{},
+    hofObjects: { 'Hof Schulze 1': { addr:'Hof Schulze 1', lat:52.2, long:7.1, note:'Erbhof seit 1700' } },
+    head: { charset:'UTF-8', lang:'', source:'', vers:'5.5.1', gedcVers:'5.5.1',
+      copyrightTexts:[], coprNote:'', place:'', _extra:[] },
+    _idCounters:{}, _gedVersion:'5.5.1',
+  });
+  var ged = API.writeGEDCOM(false, false, false);
+  ok(/\[Hof\] Erbhof seit 1700/.test(ged), 'ae.7: Hof-Notiz mit [Hof]-Präfix in GEDCOM geschrieben');
+  var prefixCount = (ged.match(/\[Hof\] Erbhof seit 1700/g) || []).length;
+  eq(prefixCount, 1, 'ae.7: [Hof]-Notiz-Record genau einmal geschrieben (kein Doppel)');
+  var errs = [];
+  var rdb = API.parseGEDCOM(ged, errs);
+  var der = API._derivedHofObjectsFromDb(rdb);
+  eq(der['Hof Schulze 1'].note, 'Erbhof seit 1700',
+     'ae.7: Hof-Notiz überlebt Roundtrip, Präfix beim Reimport gestrippt');
+})();
+
+// ── GEDCOM-Roundtrip: Hof-Koordinaten überleben write→parse (PLAC+MAP, Event ohne place) ──
+(function() {
+  API.setDb({
+    individuals: {
+      '@I1@': P({ id:'@I1@', given:'Anna', surname:'Hof', name:'Anna Hof', media:[], events:[
+        { type:'RESI', value:'', date:'1870', place:null, addr:'Kotten 3',
+          eventType:'', note:'', lati:null, long:null, phon:[], email:[],
+          sources:[], sourcePages:{}, sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{},
+          media:[], _extra:[], noteRefs:[] } ] }),
+    },
+    families:{}, sources:{}, repositories:{}, notes:{}, extraPlaces:{}, placeObjects:{},
+    hofObjects: { 'Kotten 3': { addr:'Kotten 3', lat:51.5, long:6.9 } },
+    head: { charset:'UTF-8', lang:'', source:'', vers:'5.5.1', gedcVers:'5.5.1',
+      copyrightTexts:[], coprNote:'', place:'', _extra:[] },
+    _idCounters:{}, _gedVersion:'5.5.1',
+  });
+  var ged = API.writeGEDCOM(false, false, false);
+  var errs = [];
+  var rdb = API.parseGEDCOM(ged, errs);
+  var der = API._derivedHofObjectsFromDb(rdb);
+  eq(der['Kotten 3'].lat, 51.5, 'ae.8: Hof-Koordinaten überleben Roundtrip (PLAC+MAP, Event ohne PLAC)');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────
