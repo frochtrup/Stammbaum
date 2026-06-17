@@ -767,6 +767,124 @@ function _migrateExtraPlacesToPlaceObjects(db) {
   if (changed) UIState._placeRegistry = null;
 }
 
+// ─── ADR-026 Phase 1: Höfe → erstklassige Farm-placeObjects ──────────────────
+// Wandelt db.hofObjects[addr] (localStorage-Sidecar) in placeObjects vom Typ
+// 'Farm' um: enclosedBy = Dorf des Hofs, eigene lat/long/note. RESI/PROP-Events
+// mit dieser Adresse werden auf den Farm-Ort umgehängt (ev.placeId); ev.addr
+// bleibt als Postdetail erhalten. Pure + idempotent (gleicher Lauf zweimal =
+// keine Dubletten). NOCH NICHT in setDb verdrahtet — Verdrahtung + Writer-
+// Anpassung erfolgen gemeinsam in Phase 2, damit der GEDCOM-PLAC-Übergang
+// (Ochtrup → "Hof…, Ochtrup") koordiniert + idempotent-stabil verifizierbar ist.
+
+// Dorf-placeObject-ID zu einer Hof-Adresse: häufigster Nicht-Farm-Ort der
+// RESI/PROP-Events mit dieser addr (über ev.placeId oder ev.place-Namensmatch).
+function _hofVillageId(db, addr) {
+  const isVillage = po => po && po.type !== 'Farm' && po.type !== 'Building';
+  const counts = {};
+  for (const p of Object.values(db.individuals || {})) {
+    for (const ev of (p.events || [])) {
+      if ((ev.type !== 'RESI' && ev.type !== 'PROP') || (ev.addr || '').trim() !== addr) continue;
+      let vid = null;
+      if (ev.placeId && isVillage(db.placeObjects?.[ev.placeId])) {
+        vid = ev.placeId;
+      } else if (ev.place && ev.place.trim()) {
+        const norm = _normPlaceName(ev.place.trim());
+        for (const [id, po] of Object.entries(db.placeObjects || {})) {
+          if (!isVillage(po)) continue;
+          if (_normPlaceName(po.title) === norm
+            || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm)) { vid = id; break; }
+        }
+      }
+      if (vid) counts[vid] = (counts[vid] || 0) + 1;
+    }
+  }
+  const e = Object.entries(counts);
+  return e.length ? e.sort((a, b) => b[1] - a[1])[0][0] : null;
+}
+
+// Existierendes Farm-placeObject mit gleichem Blatt-Namen UND gleichem Dorf
+// (Scope-Trennung: "Hof Schulze" in Ochtrup ≠ in Borghorst).
+function _findFarmPO(pos, leaf, villageId) {
+  const norm = _normPlaceName(leaf);
+  for (const [id, po] of Object.entries(pos)) {
+    if (po.type !== 'Farm' && po.type !== 'Building') continue;
+    const nameMatch = _normPlaceName(po.title) === norm
+      || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm);
+    if (!nameMatch) continue;
+    const encIds = (po.enclosedBy || []).map(en => en.placeId);
+    if (villageId ? encIds.includes(villageId) : encIds.length === 0) return id;
+  }
+  return null;
+}
+
+function _migrateHofObjectsToPlaceObjects(db) {
+  const hof = db && db.hofObjects;
+  if (!hof || !Object.keys(hof).length) return;
+  if (!db.placeObjects) db.placeObjects = {};
+  const pos = db.placeObjects;
+  let changed = false;
+
+  for (const [rawAddr, hm] of Object.entries(hof)) {
+    const addr = (rawAddr || '').trim();
+    if (!addr) continue;
+    const hasCoords = hm.lat != null && hm.long != null;
+    const hasNote   = !!hm.note;
+    if (!hasCoords && !hasNote) continue;  // nur echte Höfe (Geodaten/Notiz)
+
+    const villageId = _hofVillageId(db, addr);
+    const leaf = addr.split('\n')[0].trim() || addr;
+
+    let farmId = _findFarmPO(pos, leaf, villageId);
+    if (farmId) {
+      const po = pos[farmId];
+      if (po.lat == null && hasCoords) { po.lat = hm.lat; po.long = hm.long; changed = true; }
+      if (!po.note && hasNote) { po.note = hm.note; changed = true; }
+      if (villageId && !(po.enclosedBy || []).some(en => en.placeId === villageId)) {
+        (po.enclosedBy = po.enclosedBy || []).push(
+          { placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+        changed = true;
+      }
+    } else {
+      let id = _epId('hof:' + leaf + '|' + (villageId || ''));
+      if (pos[id]) {
+        let suf = 2;
+        while (pos[id + '_' + suf] && suf < 16) suf++;
+        const candidate = id + '_' + suf;
+        const _warn = (typeof console !== 'undefined' && console.warn) ? console.warn
+                    : (typeof console !== 'undefined' && console.log) ? console.log : null;
+        if (pos[candidate]) { _warn && _warn('[HOF] _epId-Kollision unauflösbar — Hof übersprungen:', leaf); continue; }
+        id = candidate;
+      }
+      pos[id] = {
+        id, title: leaf, type: 'Farm',
+        lat:  hasCoords ? hm.lat  : null,
+        long: hasCoords ? hm.long : null,
+        note: hasNote ? hm.note : '',
+        pnames: [],
+        enclosedBy: villageId
+          ? [{ placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }]
+          : [],
+        parentId: null,
+      };
+      farmId = id;
+      changed = true;
+    }
+
+    // RESI/PROP-Events dieser Adresse auf den Farm-Ort umhängen (addr behalten).
+    // ev.placeId !== farmId → idempotent: zweiter Lauf überspringt bereits Migrierte.
+    for (const p of Object.values(db.individuals || {})) {
+      for (const ev of (p.events || [])) {
+        if ((ev.type === 'RESI' || ev.type === 'PROP') && (ev.addr || '').trim() === addr
+            && ev.placeId !== farmId) {
+          ev.placeId = farmId;
+          changed = true;
+        }
+      }
+    }
+  }
+  if (changed) UIState._placeRegistry = null;
+}
+
 // ─── P2 Item 9: Event-Koordinaten — placeObjects als single source of truth ──
 // Liest Koordinaten eines Events: erst placeObjects via ev.placeId, dann via
 // findByName(ev.place), Fallback ev.lati/long. Damit zeigt nach savePlace die

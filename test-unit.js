@@ -573,6 +573,7 @@ if (IS_NODE) {
     '_eventCoords: _eventCoords, AppState: AppState, UIState: UIState,' +
     'buildHofIndex: buildHofIndex, _derivedHofObjectsFromDb: _derivedHofObjectsFromDb, ' +
     '_isHofNoteText: _isHofNoteText, _stripHofPrefix: _stripHofPrefix, HOF_NOTE_PREFIX: HOF_NOTE_PREFIX, ' +
+    '_migrateHofObjectsToPlaceObjects: _migrateHofObjectsToPlaceObjects, _hofVillageId: _hofVillageId, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -3181,6 +3182,140 @@ eq(API._stripHofPrefix('Erbhof'),       'Erbhof', 'ae.1: ohne Präfix unverände
   var rdb = API.parseGEDCOM(ged, errs);
   var der = API._derivedHofObjectsFromDb(rdb);
   eq(der['Kotten 3'].lat, 51.5, 'ae.8: Hof-Koordinaten überleben Roundtrip (PLAC+MAP, Event ohne PLAC)');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (af) ADR-026 PHASE 1 — _migrateHofObjectsToPlaceObjects
+//  Höfe (hofObjects[addr]) → Farm-placeObjects (enclosedBy Dorf, eigene Koords).
+//  Pure + idempotent; noch NICHT in setDb verdrahtet (Verdrahtung = Phase 2).
+// ═══════════════════════════════════════════════════════════════════════════
+group('(af) ADR-026 Hof→Farm-Migration');
+
+// Hilfs-Konstruktor für Dorf-/Farm-placeObjects
+function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:null, long:null, note:'', pnames:[], enclosedBy:[], parentId:null }, o); }
+
+// ── Basis: Farm angelegt, Koords/Notiz/Enclosure übernommen, Events umgehängt ──
+(function() {
+  var db = {
+    individuals: {
+      '@I1@': { events:[ { type:'RESI', addr:'Hof Schulze', place:'Ochtrup', placeId:null } ] },
+      '@I2@': { events:[ { type:'RESI', addr:'Hof Schulze', place:'Ochtrup', placeId:null },
+                         { type:'PROP', addr:'Hof Schulze', place:'Ochtrup', placeId:null } ] },
+    },
+    placeObjects: { '@V_OCH@': _PO({ id:'@V_OCH@', title:'Ochtrup', type:'City', lat:52.20, long:7.18 }) },
+    hofObjects: { 'Hof Schulze': { addr:'Hof Schulze', lat:52.213, long:7.165, note:'Erbhof seit 1700' } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  var farms = Object.values(db.placeObjects).filter(po => po.type === 'Farm');
+  eq(farms.length, 1,                  'af.1: 1 Farm-placeObject angelegt');
+  var farm = farms[0];
+  eq(farm.title, 'Hof Schulze',        'af.1: Farm-Titel = Adress-Blatt');
+  eq(farm.lat,   52.213,               'af.1: Hof-Koordinaten übernommen');
+  eq(farm.note,  'Erbhof seit 1700',   'af.1: Hof-Notiz übernommen');
+  eq(farm.enclosedBy[0].placeId, '@V_OCH@', 'af.1: enclosedBy = Dorf Ochtrup');
+  var allEv = db.individuals['@I1@'].events.concat(db.individuals['@I2@'].events);
+  ok(allEv.every(ev => ev.placeId === farm.id), 'af.1: alle RESI/PROP-Events auf Farm umgehängt');
+  ok(allEv.every(ev => ev.addr === 'Hof Schulze'), 'af.1: ev.addr als Postdetail erhalten');
+})();
+
+// ── Wiederverwendung: existierendes Farm-Objekt (Name+Dorf) wird gemerged, nicht dupliziert ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Hof Schulze', place:'Ochtrup' } ] } },
+    placeObjects: {
+      '@V_OCH@':   _PO({ id:'@V_OCH@', title:'Ochtrup', type:'City' }),
+      '@F_EXIST@': _PO({ id:'@F_EXIST@', title:'Hof Schulze', type:'Farm', enclosedBy:[{ placeId:'@V_OCH@' }] }),
+    },
+    hofObjects: { 'Hof Schulze': { addr:'Hof Schulze', lat:52.213, long:7.165, note:'Erbhof' } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  eq(Object.values(db.placeObjects).filter(po => po.type === 'Farm').length, 1,
+     'af.2: existierendes Farm-Objekt wiederverwendet (keine Dublette)');
+  eq(db.placeObjects['@F_EXIST@'].lat,  52.213, 'af.2: Koordinaten ins existierende Farm-Objekt gemerged');
+  eq(db.placeObjects['@F_EXIST@'].note, 'Erbhof', 'af.2: Notiz gemerged');
+  eq(db.individuals['@I1@'].events[0].placeId, '@F_EXIST@', 'af.2: Event auf existierendes Farm-Objekt umgehängt');
+})();
+
+// ── Scope-Trennung: gleicher Farm-Name, anderes Dorf → richtiges Objekt getroffen ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Hof Meyer', place:'Borghorst' } ] } },
+    placeObjects: {
+      '@V_A@': _PO({ id:'@V_A@', title:'Ochtrup',   type:'City' }),
+      '@V_B@': _PO({ id:'@V_B@', title:'Borghorst', type:'City' }),
+      '@F_A@': _PO({ id:'@F_A@', title:'Hof Meyer', type:'Farm', enclosedBy:[{ placeId:'@V_A@' }] }),
+      '@F_B@': _PO({ id:'@F_B@', title:'Hof Meyer', type:'Farm', enclosedBy:[{ placeId:'@V_B@' }] }),
+    },
+    hofObjects: { 'Hof Meyer': { addr:'Hof Meyer', lat:52.1, long:7.3, note:'' } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  eq(db.placeObjects['@F_B@'].lat, 52.1, 'af.3: Koords ins Borghorster Farm-Objekt (richtiger Scope)');
+  eq(db.placeObjects['@F_A@'].lat, null, 'af.3: Ochtruper gleichnamiges Farm-Objekt unberührt');
+  eq(db.individuals['@I1@'].events[0].placeId, '@F_B@', 'af.3: Event auf Borghorster Farm umgehängt');
+})();
+
+// ── Idempotenz: zweiter Lauf erzeugt keine Dubletten, placeId stabil ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Hof Idem', place:'Ochtrup', placeId:null } ] } },
+    placeObjects: { '@V_OCH@': _PO({ id:'@V_OCH@', title:'Ochtrup', type:'City' }) },
+    hofObjects: { 'Hof Idem': { addr:'Hof Idem', lat:52.0, long:7.0, note:'N' } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  var idAfter1 = db.individuals['@I1@'].events[0].placeId;
+  var cnt1 = Object.values(db.placeObjects).filter(po => po.type === 'Farm').length;
+  API._migrateHofObjectsToPlaceObjects(db);
+  var cnt2 = Object.values(db.placeObjects).filter(po => po.type === 'Farm').length;
+  eq(cnt1, 1, 'af.4: nach 1. Lauf genau 1 Farm');
+  eq(cnt2, 1, 'af.4: nach 2. Lauf weiterhin 1 Farm (idempotent)');
+  eq(db.individuals['@I1@'].events[0].placeId, idAfter1, 'af.4: ev.placeId über Läufe stabil');
+})();
+
+// ── Reine Adresse ohne Koords/Notiz → keine Migration ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Nur Adresse', place:'Ochtrup', placeId:null } ] } },
+    placeObjects: { '@V_OCH@': _PO({ id:'@V_OCH@', title:'Ochtrup', type:'City' }) },
+    hofObjects: { 'Nur Adresse': { addr:'Nur Adresse' } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  eq(Object.values(db.placeObjects).filter(po => po.type === 'Farm').length, 0,
+     'af.5: hofObjects ohne Koords/Notiz → kein Farm-Objekt');
+  eq(db.individuals['@I1@'].events[0].placeId, null, 'af.5: ev.placeId bleibt null');
+})();
+
+// ── Kein auflösbares Dorf → Farm mit leerem enclosedBy ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Einödhof', place:'', placeId:null } ] } },
+    placeObjects: {},
+    hofObjects: { 'Einödhof': { addr:'Einödhof', lat:51.9, long:6.8 } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  var farm = Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0];
+  ok(!!farm, 'af.6: Farm auch ohne Dorf angelegt');
+  eq(farm.enclosedBy.length, 0, 'af.6: enclosedBy leer (kein Dorf auflösbar)');
+})();
+
+// ── _hofVillageId: häufigstes Dorf gewinnt + village→farm-Repointing ──
+(function() {
+  var db = {
+    individuals: {
+      '@I1@': { events:[ { type:'RESI', addr:'X', place:'Ochtrup',   placeId:'@V_OCH@' } ] },
+      '@I2@': { events:[ { type:'RESI', addr:'X', place:'Ochtrup',   placeId:'@V_OCH@' } ] },
+      '@I3@': { events:[ { type:'RESI', addr:'X', place:'Borghorst', placeId:'@V_BOR@' } ] },
+    },
+    placeObjects: {
+      '@V_OCH@': _PO({ id:'@V_OCH@', title:'Ochtrup',   type:'City' }),
+      '@V_BOR@': _PO({ id:'@V_BOR@', title:'Borghorst', type:'City' }),
+    },
+    hofObjects: { 'X': { addr:'X', lat:52.0, long:7.0 } },
+  };
+  eq(API._hofVillageId(db, 'X'), '@V_OCH@', 'af.7: häufigstes Dorf gewinnt (2× Ochtrup vs 1× Borghorst)');
+  API._migrateHofObjectsToPlaceObjects(db);
+  var farm = Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0];
+  eq(farm.enclosedBy[0].placeId, '@V_OCH@', 'af.7: Farm enclosedBy = häufigstes Dorf');
+  ok(db.individuals['@I1@'].events[0].placeId === farm.id, 'af.7: Event mit Dorf-placeId → auf Farm umgehängt');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────
