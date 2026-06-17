@@ -546,6 +546,54 @@ Reist mit der Datei (gehört zur Person) → `_`-Tag mit Writer-Support (Faustre
 
 **Status:** ✅ P0–P5 abgeschlossen (sw v861–v869).
 
+### ADR-026: Höfe als geokodierte Orts-Objekte — eigenständige Hof-Koordinaten (HOF-GEO, geplant)
+
+**Kontext:** Höfe sollen **geräteübergreifend eigene Geokoordinaten** tragen, damit **Binnenmigration** (Umzug zwischen Höfen innerhalb desselben Dorfes) auf Karte, Zeitstrahl und Story als distinkte Punkte sichtbar wird. Heute scheitert das an drei Stellen:
+- Hof-Identität = `ev.addr`-String; Koordinaten/Notiz in `db.hofObjects[addr]` → **nur localStorage**, kein Sync (im Gegensatz zu `placeObjects`, die seit Item 10/v858 über IDB + OneDrive + Konflikt-Erkennung synchronisieren).
+- Hof-Koordinaten landen nur dann im GEDCOM, wenn das RESI-Event **kein** `PLAC` hat (`gedcom-writer.js` `_writeINDIEventBody`); hat das Event einen Dorf-Ort, gewinnt dessen Koordinate → Hof-Koords sind dateiunabhängig verloren.
+- Notiz-Trennung über `[Hof] `-Textpräfix in einer NOTE (ADR-Vorläufer sw v988) = leaky Workaround.
+
+**GEDCOM-Zwang:** `MAP`/`LATI`/`LONG` und `NOTE` sind in der `PLACE_STRUCTURE` **nur unter `PLAC`** erlaubt, **nie unter `ADDR`**. Eigenständige Hof-Koordinaten sind also nur GEDCOM-konform persistierbar, wenn der Hof das **spezifischste Glied (Blatt, leaf-first) der Orts-Hierarchie** ist.
+
+**Entscheidung:** Ein Hof wird ein vollwertiges `placeObject` vom Typ `Farm`/`Building`, das via `enclosedBy` von seinem Dorf umschlossen wird und **eigene `lat`/`long`/`note`** trägt. RESI/PROP-Events referenzieren ihn über `ev.placeId`. Keine neue Persistenzebene — Wiederverwendung der gesamten ADR-024-Infrastruktur (`placeObjects`-Sync, `PlaceRegistry`, `_normPlaceName`-Dedup, `_buildFormString`, `_eventCoords`).
+
+```
+placeObjects:
+  @P_HOFA@ { type:'Farm', title:'Hof Große Schulze', lat:52.213, long:7.165,
+             enclosedBy:[{placeId:'@P_OCHTRUP@'}], note:'Erbhof seit 1700' }
+  @P_HOFB@ { type:'Farm', title:'Kotten Meyer',      lat:52.198, long:7.201,
+             enclosedBy:[{placeId:'@P_OCHTRUP@'}] }
+ev (RESI): { type:'RESI', placeId:'@P_HOFA@', addr:'Hof Große Schulze 1', date:'1850' }
+ev (RESI): { type:'RESI', placeId:'@P_HOFB@', addr:'Kotten Meyer 3',      date:'1872' }
+```
+
+**GEDCOM-Mapping (5.5.1):**
+- **Schreiben:** `_resolvedPlaceName(ev)` → `_buildFormString(placeId, year)` liefert bereits den periodengerechten Hierarchie-String mit Hof als Blatt (`2 PLAC Hof Große Schulze, Ochtrup, Kreis Steinfurt`); `geoLines` zieht `po.lat/long` des Hofs unter `3 MAP`/`4 LATI N…`/`4 LONG E…`. Hofnotiz als `3 NOTE @Nx@` **unter PLAC** (ein geteilter Record pro Hof) — **ohne** `[Hof]`-Präfix, da die GEDCOM-Position (unter PLAC) das Signal ist. `ADDR` bleibt für echte Postdetails (Hausnummer/Zusatz) erhalten, trägt aber keine Geodaten.
+- **Lesen:** Jeder distinkte PLAC-Blattname + MAP → `placeObject`; `_mergePlaceObjectsFromImport`/`_normPlaceName` dedupliziert; `enclosedBy` aus der Komma-Hierarchie; `NOTE` unter PLAC → `po.note` (eindeutig durch Position, kein Präfix).
+- **GED7:** identisch + `TRAN`/`LANG`/`EXID` (vorhanden). **GRAMPS:** 1:1 — `type=Building/Farm` + `placeref`-Enclosure + `noteref` ist bereits implementiert (`gramps-writer.js`), liest künftig direkt aus `placeObjects` statt aus `hofObjects` querzusteuern.
+
+**Übergang (harter Schnitt):** `db.hofObjects` (localStorage `stammbaum_hofobjects`), `_derivedHofObjectsFromDb`, `_mergeHofObjects`, `HOF_NOTE_PREFIX`/`_isHofNoteText`/`_stripHofPrefix` und der Koords-nur-ohne-PLAC-Sonderzweig im Writer entfallen vollständig. Einmalige Migration in `setDb` (idempotent, analog `_migrateExtraPlacesToPlaceObjects`): pro `hofObjects[addr]` → Dorf-Ort aus den RESI/PROP-Events bestimmen, `placeObject` Typ `Farm` (`title=addr`-Blatt, `enclosedBy=[Dorf]`, `lat/long/note` übernehmen) via `upsertPlaceObject` + `_normPlaceName`-Dedup, `ev.placeId` auf allen betroffenen Events setzen, `ev.addr` als Postdetail behalten.
+
+**Konsequenzen:**
+- **Binnenmigration sichtbar:** distinkte `placeId` → distinkte Koords → distinkte Kartenpunkte + distinkte PLAC-Strings; `_eventCoords` (ADR-024/v857) und `_hofMoveLine` (Hofchronik) liefern den Migrationspfad ohne Zusatzcode.
+- **Geräteübergreifend:** Hof-Koords/-Notizen synchronisieren über den bestehenden `placeObjects`-Kanal (schließt T0-STORAGE-Schuld `stammbaum_hofobjects`).
+- **Hof-Sicht:** `buildHofIndex` keyt nach `placeId` (Typ Farm/Building) statt addr-String → behebt die fehlende Identitäts-Normalisierung; Karten-Hof-Marker entfallen als Sondersystem (kein Doppel-Plotten Ort vs. Hof).
+- **`[Hof]`-Präfix verschwindet** — die Notiz ist strukturell eine Orts-Notiz.
+
+**Event-Eingabe — Ort/Hof-Trennung (Zwei-Felder-Modell):** Heute ist die Eingabe asymmetrisch — `ef-place` ist placeObject-gebunden (`ev.place` + `ev.placeId`, `initPlaceAutocomplete`), `ef-addr` ist Freitext (`ev.addr`, `_initAddrAutocompleteFor` gegen `collectAddresses()`, Auto-Ort via `_addrToPlace`). Wenn künftig **beide** placeObjects sind, trennt das Formular sie über **Typ-Bindung + Enclosure-Scope**, nicht über Konvention:
+
+| Feld | Bindung | schreibt | Rolle |
+|---|---|---|---|
+| **Ort** (Dorf-Picker) | placeObjects **ohne** `Farm`/`Building` | Enclosure-Anker | „wo" grob |
+| **Hof** (Farm-Picker, scoped) | placeObjects **nur** `Farm`/`Building`, `enclosedBy` = gewählter Ort | **`ev.placeId`** (geokodiertes Blatt) | „welcher Hof" |
+| **Adresse/Zusatz** (Freitext, optional) | — | `ev.addr` | Postdetail (Hausnr.), **keine** Geodaten |
+
+Drei Mechanismen sichern die saubere Trennung: (1) **`type` trennt die Picker-Inhalte** — Ort-Picker zeigt keine Höfe, Hof-Picker nur Höfe; keine vermischte Liste (ersetzt das Freitext-`collectAddresses` durch typgefilterten placeObject-Picker). (2) **`enclosedBy` begrenzt den Hof-Scope** — der Hof-Picker listet nur Höfe innerhalb des gewählten Orts + „+ neuer Hof hier anlegen"; „Hof Schulze" in Ochtrup ≠ in Borghorst (verschiedene Enclosure → verschiedene placeId → verschiedene Koords; löst zugleich die fehlende Normalisierung). (3) **`ev.placeId` zeigt immer aufs Spezifischste** — Hof gewählt → placeId=Hof (Koords vom Hof, `_resolvedPlaceName` baut Hierarchie aus `enclosedBy`); nur Ort → placeId=Ort; nie zwei konkurrierende Geo-Quellen pro Event. Neuer Hof im Picker → `upsertPlaceObject` Typ `Farm`, `enclosedBy=[Ort]`, optional gleich Koordinaten → jeder Hof hängt ab Anlage korrekt unter seinem Dorf (Voraussetzung für sichtbare Binnenmigration). Fehleingabe-Schutz: Treffer-Badges 🏘 Ort / 🏠 Hof + Pfad; Hofname im Ort-Feld → sanftes Routing-Hint „ins Hof-Feld?".
+
+**Alternativen erwogen:** (a) `ev.addr` als Hof-Identität behalten + verstecktes paralleles PLAC-Blatt nur für Koords — verworfen, zwei Quellen, löst Sync nicht; (b) Koordinaten an `ADDR` via `_MAP`/`_LATI` (Custom-Tags, Legacy-Ancestris) — verworfen, nicht 5.5.1-konform, Roundtrip-Risiko, von anderen Tools ignoriert; (c) Parallelbetrieb hofObjects-Fallback statt hartem Schnitt — verworfen zugunsten eines sauberen Endzustands (Voraussetzung: Migration + Roundtrip-Gate grün); (d) **ein** vereinheitlichter typisierter Ort-Picker (Dörfer + Höfe gemeinsam durchsuchbar, Hierarchie im Treffer) statt zwei Feldern — verworfen zugunsten des Zwei-Felder-Modells, das das heutige Layout (Ort + Adresse) spiegelt, die Enclosure-Beziehung beim Anlegen explizit macht und Vermischung schon visuell verhindert.
+
+**Status:** 📋 geplant — Konzept beschlossen (ADDR behalten · harter Schnitt). Pflicht-Akzeptanzkriterium: GEDCOM `net_delta=0` + GRAMPS stable nach Migration; `(ae)`-Hof-Unit-Tests auf placeId-Modell umstellen.
+
 ---
 
 ## Passthrough-Mechanismen — Vollständige Analyse
