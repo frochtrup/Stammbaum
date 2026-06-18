@@ -574,7 +574,7 @@ if (IS_NODE) {
     'buildHofIndex: buildHofIndex, _derivedHofObjectsFromDb: _derivedHofObjectsFromDb, ' +
     '_isHofNoteText: _isHofNoteText, _stripHofPrefix: _stripHofPrefix, HOF_NOTE_PREFIX: HOF_NOTE_PREFIX, ' +
     '_migrateHofObjectsToPlaceObjects: _migrateHofObjectsToPlaceObjects, _hofVillageId: _hofVillageId, ' +
-    '_hofVillageString: _hofVillageString, _findVillagePO: _findVillagePO, ' +
+    '_hofVillageString: _hofVillageString, _findVillagePO: _findVillagePO, _buildFormString: _buildFormString, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -3378,6 +3378,46 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   eq(byTitle['Bayern'].enclosedBy[0].placeId,  byTitle['Deutschland'].id, 'af.11: Bayern enclosedBy Deutschland');
   eq(byTitle['Deutschland'].enclosedBy.length, 0,                         'af.11: Deutschland = oberstes Level');
   eq(byTitle['Sonnenstr 12'].enclosedBy[0].placeId, byTitle['München'].id, 'af.11: Farm enclosedBy feinstes Level (München)');
+})();
+
+// ── REGRESSION: Ortshistorie bleibt erhalten (ADR-024 ∩ ADR-026) ──
+// Gleicher Hof über verschiedene historische Ortsstrings → selbe Identität;
+// periodengerechte Ortsnamen lösen weiterhin korrekt auf (durch die Farm-Kette).
+(function() {
+  var db = {
+    individuals: {
+      '@I1@': { events:[
+        { type:'RESI', addr:'Hof Meyer', place:'Sassenbergk', date:'1700', placeId:null },
+        { type:'RESI', addr:'Hof Meyer', place:'Sassenberg',  date:'1850', placeId:null },
+      ] },
+    },
+    families: {}, extraPlaces: {},
+    placeObjects: {
+      '@P0001@': { id:'@P0001@', title:'Fürstbistum Münster', type:'Region',
+        pnames:[{value:'Fürstbistum Münster'}], enclosedBy:[], lat:null, long:null },
+      '@P0002@': { id:'@P0002@', title:'Sassenberg', type:'Village',
+        pnames:[ {value:'Sassenberg'}, {value:'Sassenbergk', dateFrom:'1650', dateTo:'1802', dateType:'range'} ],
+        enclosedBy:[ {placeId:'@P0001@', dateFrom:'1500', dateTo:'1803', dateType:'span'} ], lat:null, long:null },
+    },
+    hofObjects: { 'Hof Meyer': { addr:'Hof Meyer', lat:51.9, long:8.0 } },
+  };
+  API.setDb(db);
+  API._migrateHofObjectsToPlaceObjects(API.AppState.db);
+  var D = API.AppState.db, evs = D.individuals['@I1@'].events;
+  ok(evs[0].placeId && evs[0].placeId === evs[1].placeId,
+     'af.12: gleicher Hof über versch. historische Ortsstrings (Sassenbergk/Sassenberg) → selbe placeId');
+  var farm = D.placeObjects[evs[0].placeId];
+  eq(farm.type, 'Farm', 'af.12: Event zeigt auf Farm-PO');
+  eq(farm.enclosedBy[0].placeId, '@P0002@',
+     'af.12: Farm enclosedBy EXISTIERENDES Sassenberg-PO (per pname-Match erkannt, keine Dublette)');
+  eq(Object.values(D.placeObjects).filter(p => p.type !== 'Farm' && API._normPlaceName(p.title) === 'sassenberg').length, 1,
+     'af.12: kein doppeltes Sassenberg-PO angelegt');
+  eq(API._buildFormString(farm.id, 1700), 'Hof Meyer, Sassenbergk, Fürstbistum Münster',
+     'af.12: 1700 → historischer Ortsname Sassenbergk löst durch die Farm-Kette korrekt auf');
+  // 1850: enclosedBy Fürstbistum Münster endet 1803 (Säkularisation) → Parent fällt
+  // korrekt weg. Beweist: datierte Zugehörigkeit wirkt durch die Farm-Kette hindurch.
+  eq(API._buildFormString(farm.id, 1850), 'Hof Meyer, Sassenberg',
+     'af.12: 1850 → moderner Name Sassenberg, Parent (bis 1803 datiert) korrekt entfallen');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────
