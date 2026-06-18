@@ -881,6 +881,83 @@ function _findFarmPO(pos, leaf, villageId) {
   return null;
 }
 
+// Stellt das Farm-placeObject für eine Hof-Adresse sicher (find-or-create) und
+// hängt alle RESI/PROP-Events dieser Adresse darauf um (ev.placeId). Löst das
+// Dorf auf (existierend oder neue Enclosure-Kette). Setzt KEINE Koords/Notiz —
+// das tun die Aufrufer (Migration aus hofObjects, upsertHofPO aus dem UI).
+// Gibt die Farm-placeId zurück (oder null bei unauflösbarer Hash-Kollision).
+function _ensureHofFarmPO(db, addr) {
+  addr = (addr || '').trim();
+  if (!addr) return null;
+  const pos = db.placeObjects || (db.placeObjects = {});
+
+  // Dorf: erst existierendes placeObject, sonst aus ev.place eine Enclosure-Kette.
+  // Typ neuer Glieder bewusst 'Unknown'; existierende (GRAMPS-)Orte unverändert.
+  let villageId = _hofVillageId(db, addr);
+  if (!villageId) {
+    const vStr = _hofVillageString(db, addr);
+    if (vStr) villageId = _ensureVillageChain(pos, vStr);
+  }
+  const leaf = addr.split('\n')[0].trim() || addr;
+
+  let farmId = _findFarmPO(pos, leaf, villageId);
+  if (farmId) {
+    const po = pos[farmId];
+    if (villageId && !(po.enclosedBy || []).some(en => en.placeId === villageId)) {
+      (po.enclosedBy = po.enclosedBy || []).push(
+        { placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+    }
+  } else {
+    let id = _epId('hof:' + leaf + '|' + (villageId || ''));
+    if (pos[id]) {
+      let suf = 2;
+      while (pos[id + '_' + suf] && suf < 16) suf++;
+      const candidate = id + '_' + suf;
+      const _warn = (typeof console !== 'undefined' && console.warn) ? console.warn
+                  : (typeof console !== 'undefined' && console.log) ? console.log : null;
+      if (pos[candidate]) { _warn && _warn('[HOF] _epId-Kollision unauflösbar — Hof übersprungen:', leaf); return null; }
+      id = candidate;
+    }
+    pos[id] = {
+      id, title: leaf, type: 'Farm', lat: null, long: null, note: '',
+      pnames: [],
+      enclosedBy: villageId
+        ? [{ placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }]
+        : [],
+      parentId: null,
+    };
+    farmId = id;
+  }
+
+  // RESI/PROP-Events dieser Adresse auf den Farm-Ort umhängen (addr behalten).
+  for (const p of Object.values(db.individuals || {})) {
+    for (const ev of (p.events || [])) {
+      if ((ev.type === 'RESI' || ev.type === 'PROP') && (ev.addr || '').trim() === addr
+          && ev.placeId !== farmId) {
+        ev.placeId = farmId;
+      }
+    }
+  }
+  return farmId;
+}
+
+// UI-Schreibweg (ADR-026 Phase 2C/2b): Hof-Koords/Notiz in das Farm-placeObject
+// schreiben (geräteübergreifend via savePlaceObjects). Legt das PO bei Bedarf an.
+function upsertHofPO(addr, patch) {
+  const farmId = _ensureHofFarmPO(AppState.db, addr);
+  if (!farmId) return null;
+  const po = AppState.db.placeObjects[farmId];
+  if (patch && patch.lat  !== undefined) po.lat  = patch.lat;
+  if (patch && patch.long !== undefined) po.long = patch.long;
+  if (patch && patch.note !== undefined) po.note = patch.note;
+  UIState._placeRegistry = null;
+  UIState._placesCache   = null;
+  UIState._hofCache      = null;
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  if (typeof markChanged      === 'function') markChanged();
+  return farmId;
+}
+
 function _migrateHofObjectsToPlaceObjects(db) {
   const hof = db && db.hofObjects;
   if (!hof || !Object.keys(hof).length) return;
@@ -895,65 +972,12 @@ function _migrateHofObjectsToPlaceObjects(db) {
     const hasNote   = !!hm.note;
     if (!hasCoords && !hasNote) continue;  // nur echte Höfe (Geodaten/Notiz)
 
-    // Dorf bestimmen: erst existierendes placeObject, sonst aus ev.place eine
-    // Enclosure-Kette anlegen — sonst verlöre der Hof-PLAC das Dorf bzw. dessen
-    // übergeordnete Ebenen (GEDCOM hat keine Dorf-placeObjects). Typ neuer Glieder
-    // bewusst 'Unknown' (Stadt/Dorf/Kreis aus nacktem String nicht ableitbar);
-    // existierende (GRAMPS-)Orte werden wiederverwendet, nie umstrukturiert.
-    let villageId = _hofVillageId(db, addr);
-    if (!villageId) {
-      const vStr = _hofVillageString(db, addr);
-      if (vStr) { villageId = _ensureVillageChain(pos, vStr); if (villageId) changed = true; }
-    }
-    const leaf = addr.split('\n')[0].trim() || addr;
-
-    let farmId = _findFarmPO(pos, leaf, villageId);
-    if (farmId) {
-      const po = pos[farmId];
-      if (po.lat == null && hasCoords) { po.lat = hm.lat; po.long = hm.long; changed = true; }
-      if (!po.note && hasNote) { po.note = hm.note; changed = true; }
-      if (villageId && !(po.enclosedBy || []).some(en => en.placeId === villageId)) {
-        (po.enclosedBy = po.enclosedBy || []).push(
-          { placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
-        changed = true;
-      }
-    } else {
-      let id = _epId('hof:' + leaf + '|' + (villageId || ''));
-      if (pos[id]) {
-        let suf = 2;
-        while (pos[id + '_' + suf] && suf < 16) suf++;
-        const candidate = id + '_' + suf;
-        const _warn = (typeof console !== 'undefined' && console.warn) ? console.warn
-                    : (typeof console !== 'undefined' && console.log) ? console.log : null;
-        if (pos[candidate]) { _warn && _warn('[HOF] _epId-Kollision unauflösbar — Hof übersprungen:', leaf); continue; }
-        id = candidate;
-      }
-      pos[id] = {
-        id, title: leaf, type: 'Farm',
-        lat:  hasCoords ? hm.lat  : null,
-        long: hasCoords ? hm.long : null,
-        note: hasNote ? hm.note : '',
-        pnames: [],
-        enclosedBy: villageId
-          ? [{ placeId: villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }]
-          : [],
-        parentId: null,
-      };
-      farmId = id;
-      changed = true;
-    }
-
-    // RESI/PROP-Events dieser Adresse auf den Farm-Ort umhängen (addr behalten).
-    // ev.placeId !== farmId → idempotent: zweiter Lauf überspringt bereits Migrierte.
-    for (const p of Object.values(db.individuals || {})) {
-      for (const ev of (p.events || [])) {
-        if ((ev.type === 'RESI' || ev.type === 'PROP') && (ev.addr || '').trim() === addr
-            && ev.placeId !== farmId) {
-          ev.placeId = farmId;
-          changed = true;
-        }
-      }
-    }
+    const farmId = _ensureHofFarmPO(db, addr);
+    if (!farmId) continue;
+    const po = pos[farmId];
+    if (po.lat == null && hasCoords) { po.lat = hm.lat; po.long = hm.long; }
+    if (!po.note && hasNote) po.note = hm.note;
+    changed = true;
   }
 
   // ev.place an die placeId-Projektion angleichen (ADR-024-Invariante): sonst

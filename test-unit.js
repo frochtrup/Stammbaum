@@ -575,7 +575,7 @@ if (IS_NODE) {
     '_isHofNoteText: _isHofNoteText, _stripHofPrefix: _stripHofPrefix, HOF_NOTE_PREFIX: HOF_NOTE_PREFIX, ' +
     '_migrateHofObjectsToPlaceObjects: _migrateHofObjectsToPlaceObjects, _hofVillageId: _hofVillageId, ' +
     '_hofVillageString: _hofVillageString, _findVillagePO: _findVillagePO, _buildFormString: _buildFormString, ' +
-    'hofMeta: hofMeta, _isFarmPlaceId: _isFarmPlaceId, ' +
+    'hofMeta: hofMeta, _isFarmPlaceId: _isFarmPlaceId, upsertHofPO: upsertHofPO, _ensureHofFarmPO: _ensureHofFarmPO, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -3452,6 +3452,26 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   API.UIState._hofCache = null;
   var hof = API.buildHofIndex().get('Hof B');
   eq(hof.placeId, '@F2@', 'af.14: buildHofIndex übernimmt Farm-placeId aus dem Event');
+})();
+
+// ── upsertHofPO: UI-Schreibweg legt Farm-PO an + verknüpft Events ──
+(function() {
+  API.setDb({
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Neuer Hof', place:'Greven', placeId:null } ] } },
+    families: {}, extraPlaces: {}, placeObjects: {}, hofObjects: {},
+  });
+  var fid = API.upsertHofPO('Neuer Hof', { lat: 52.1, long: 7.6, note: 'frisch' });
+  ok(!!fid, 'af.15: upsertHofPO liefert Farm-placeId');
+  var po = API.AppState.db.placeObjects[fid];
+  eq(po.type, 'Farm',   'af.15: neues PO ist Typ Farm');
+  eq(po.lat,  52.1,     'af.15: Koordinaten gesetzt');
+  eq(po.note, 'frisch', 'af.15: Notiz gesetzt');
+  ok((po.enclosedBy || []).length === 1, 'af.15: Dorf (Greven) als Enclosure angelegt');
+  eq(API.AppState.db.individuals['@I1@'].events[0].placeId, fid, 'af.15: Event auf Farm-PO verknüpft');
+  // Idempotent: zweiter Aufruf aktualisiert dasselbe PO
+  var fid2 = API.upsertHofPO('Neuer Hof', { note: 'aktualisiert' });
+  eq(fid2, fid, 'af.15: zweiter Aufruf → selbes Farm-PO (keine Dublette)');
+  eq(API.AppState.db.placeObjects[fid].note, 'aktualisiert', 'af.15: Notiz aktualisiert');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────

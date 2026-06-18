@@ -116,6 +116,8 @@ function saveNoteModal() {
     s.text = inlineVal;
     markChanged(); closeModal('modalNote'); showSourceDetail(id);
   } else if (type === 'hof') {
+    // Primär: Farm-placeObject-Notiz (geräteübergreifend); Dual-write Sidecar.
+    if (typeof upsertHofPO === 'function') upsertHofPO(id, { note: inlineVal });
     if (!AppState.db.hofObjects[id]) AppState.db.hofObjects[id] = { addr: id };
     AppState.db.hofObjects[id].note = inlineVal;
     if (!inlineVal && !AppState.db.hofObjects[id].lat) delete AppState.db.hofObjects[id];

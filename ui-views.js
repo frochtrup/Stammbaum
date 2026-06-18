@@ -795,7 +795,8 @@ function renderTab() {
 
 function updateChangedIndicator() {
   const show = AppState.changed;
-  document.getElementById('changedIndicator').style.display = show ? 'inline-block' : 'none';
+  const ind = document.getElementById('changedIndicator');
+  if (ind) ind.style.display = show ? 'inline-block' : 'none';
   const banner = document.getElementById('syncBanner');
   if (!banner) return;
   if (show) {

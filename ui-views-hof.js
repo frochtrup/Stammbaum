@@ -383,9 +383,9 @@ function showHofDetail(addr, pushHistory = true) {
 // ── Koordinaten-Sektion ──────────────────────────────────────────────────────
 
 function _renderHofCoordSection(addr) {
-  const m    = AppState.db.hofObjects?.[addr];
-  const lat  = m?.lat ?? '';
-  const long = m?.long ?? '';
+  const m    = hofMeta(buildHofIndex().get(addr) || { addr });  // Farm-PO primär, Sidecar Fallback
+  const lat  = m.lat  ?? '';
+  const long = m.long ?? '';
   const addrAttr = esc(addr);
 
   let body = '';
@@ -443,6 +443,9 @@ function saveHofCoord(addr) {
     showToast('⚠ Ungültige Koordinaten (Breite -90–90, Länge -180–180)');
     return;
   }
+  // Primär: Farm-placeObject (geräteübergreifend). Dual-write Sidecar für
+  // Reload-Überleben (placeObjects laden nicht auf allen Pfaden aus IDB).
+  upsertHofPO(addr, { lat, long: lon });
   if (!AppState.db.hofObjects[addr]) AppState.db.hofObjects[addr] = { addr };
   AppState.db.hofObjects[addr].lat  = lat;
   AppState.db.hofObjects[addr].long = lon;
@@ -454,13 +457,14 @@ function saveHofCoord(addr) {
 }
 
 function deleteHofCoord(addr) {
+  // Farm-placeObject-Koords löschen (primär)
+  const hof = (typeof buildHofIndex === 'function') ? buildHofIndex().get(addr) : null;
+  const fpo = hof && hof.placeId ? AppState.db.placeObjects?.[hof.placeId] : null;
+  if (fpo) { fpo.lat = null; fpo.long = null; if (typeof savePlaceObjects === 'function') savePlaceObjects(); }
+  // Sidecar (dual-write): Eintrag bewusst behalten, nur Koords entfernen.
   const m = AppState.db.hofObjects[addr];
-  if (!m) return;
-  delete m.lat;
-  delete m.long;
-  // Eintrag bewusst behalten (auch ohne Note): beim Reload überschreibt er
-  // _derivedHofObjectsFromDb(), sonst kommen die Koordinaten aus den Events zurück.
-  saveHofObjects();
+  if (m) { delete m.lat; delete m.long; saveHofObjects(); }
+  UIState._hofCache = null;
   invalidatePlacePersonIndex?.();
   markChanged();
   showHofDetail(addr, false);
@@ -469,8 +473,7 @@ function deleteHofCoord(addr) {
 // ── Notiz-Sektion ─────────────────────────────────────────────────────────────
 
 function _renderHofNoteSection(addr) {
-  const m    = AppState.db.hofObjects?.[addr];
-  const note = m?.note || '';
+  const note = hofMeta(buildHofIndex().get(addr) || { addr }).note || '';  // Farm-PO primär
   const addrAttr = esc(addr);
   const body = note
     ? `<div class="hof-note-body">${esc(note)}</div>`
