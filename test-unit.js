@@ -574,6 +574,7 @@ if (IS_NODE) {
     'buildHofIndex: buildHofIndex, _derivedHofObjectsFromDb: _derivedHofObjectsFromDb, ' +
     '_isHofNoteText: _isHofNoteText, _stripHofPrefix: _stripHofPrefix, HOF_NOTE_PREFIX: HOF_NOTE_PREFIX, ' +
     '_migrateHofObjectsToPlaceObjects: _migrateHofObjectsToPlaceObjects, _hofVillageId: _hofVillageId, ' +
+    '_hofVillageString: _hofVillageString, _findVillagePO: _findVillagePO, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -3316,6 +3317,49 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   var farm = Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0];
   eq(farm.enclosedBy[0].placeId, '@V_OCH@', 'af.7: Farm enclosedBy = häufigstes Dorf');
   ok(db.individuals['@I1@'].events[0].placeId === farm.id, 'af.7: Event mit Dorf-placeId → auf Farm umgehängt');
+})();
+
+// ── Dorf-Promotion: kein Dorf-placeObject (GEDCOM) → aus ev.place anlegen ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Hof Neu', place:'Ochtrup', placeId:null } ] } },
+    placeObjects: {},
+    hofObjects: { 'Hof Neu': { addr:'Hof Neu', lat:52.2, long:7.1 } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  var farm = Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0];
+  var vil  = Object.values(db.placeObjects).filter(po => po.type === 'City')[0];
+  ok(!!vil, 'af.8: Dorf-placeObject aus ev.place promoviert (GEDCOM ohne Dorf-PO)');
+  eq(vil.title, 'Ochtrup', 'af.8: Dorf-Titel = ev.place');
+  eq(farm.enclosedBy[0].placeId, vil.id, 'af.8: Farm enclosedBy promoviertes Dorf');
+})();
+
+// ── ev.place == Adresse → KEIN gleichnamiges Dorf (Idempotenz-Bug-Schutz) ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Regerplatz 3', place:'Regerplatz 3', placeId:null } ] } },
+    placeObjects: {},
+    hofObjects: { 'Regerplatz 3': { addr:'Regerplatz 3', lat:52, long:7 } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  eq(Object.values(db.placeObjects).filter(po => po.type === 'City').length, 0,
+     'af.9: ev.place == Adresse → kein gleichnamiges Dorf angelegt');
+  eq(Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0].enclosedBy.length, 0,
+     'af.9: Farm ohne Enclosure');
+})();
+
+// ── Leaf-Strip: ev.place="Hof, Dorf" (Reimport-Form) → Dorf="Dorf" ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Hof Schulze', place:'Hof Schulze, Ochtrup', placeId:null } ] } },
+    placeObjects: {},
+    hofObjects: { 'Hof Schulze': { addr:'Hof Schulze', lat:52, long:7 } },
+  };
+  eq(API._hofVillageString(db, 'Hof Schulze'), 'Ochtrup',
+     'af.10: führendes Hof-Blatt aus ev.place gestrippt (Reimport-Idempotenz)');
+  API._migrateHofObjectsToPlaceObjects(db);
+  eq(Object.values(db.placeObjects).filter(po => po.type === 'City')[0].title, 'Ochtrup',
+     'af.10: Dorf = Ochtrup (nicht "Hof Schulze, Ochtrup")');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────

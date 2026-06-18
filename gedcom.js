@@ -802,6 +802,41 @@ function _hofVillageId(db, addr) {
   return e.length ? e.sort((a, b) => b[1] - a[1])[0][0] : null;
 }
 
+// Dorf-NAME zu einer Hof-Adresse (Fallback wenn kein placeObject existiert —
+// GEDCOM-Modus hat i.d.R. keine Dorf-placeObjects). Häufigste ev.place der
+// RESI/PROP-Events dieser addr; führender Hof-Blatt-Teil wird entfernt, damit
+// nach Reimport (PLAC="Hof Schulze, Ochtrup") wieder "Ochtrup" herauskommt →
+// idempotente Dorf-Bestimmung über den GEDCOM-Roundtrip hinweg.
+function _hofVillageString(db, addr) {
+  const leafNorm = _normPlaceName(addr.split('\n')[0].trim());
+  const counts = {};
+  for (const p of Object.values(db.individuals || {})) {
+    for (const ev of (p.events || [])) {
+      if ((ev.type !== 'RESI' && ev.type !== 'PROP') || (ev.addr || '').trim() !== addr) continue;
+      let pl = (ev.place || '').trim();
+      if (!pl) continue;
+      const segs = pl.split(',').map(s => s.trim());
+      if (segs.length > 1 && _normPlaceName(segs[0]) === leafNorm) pl = segs.slice(1).join(', ');
+      // ev.place == Hof-Blatt → kein eigenständiges Dorf (Adresse IST der Ort)
+      if (!pl || _normPlaceName(pl) === leafNorm) continue;
+      counts[pl] = (counts[pl] || 0) + 1;
+    }
+  }
+  const e = Object.entries(counts);
+  return e.length ? e.sort((a, b) => b[1] - a[1])[0][0] : '';
+}
+
+// Existierendes Nicht-Farm-placeObject per Name finden (für Dorf-Dedup).
+function _findVillagePO(pos, name) {
+  const norm = _normPlaceName(name);
+  for (const [id, po] of Object.entries(pos)) {
+    if (po.type === 'Farm' || po.type === 'Building') continue;
+    if (_normPlaceName(po.title) === norm
+      || (po.pnames || []).some(pn => _normPlaceName(pn.value) === norm)) return id;
+  }
+  return null;
+}
+
 // Existierendes Farm-placeObject mit gleichem Blatt-Namen UND gleichem Dorf
 // (Scope-Trennung: "Hof Schulze" in Ochtrup ≠ in Borghorst).
 function _findFarmPO(pos, leaf, villageId) {
@@ -831,7 +866,30 @@ function _migrateHofObjectsToPlaceObjects(db) {
     const hasNote   = !!hm.note;
     if (!hasCoords && !hasNote) continue;  // nur echte Höfe (Geodaten/Notiz)
 
-    const villageId = _hofVillageId(db, addr);
+    // Dorf bestimmen: erst existierendes placeObject, sonst aus ev.place
+    // (Dorf-String) ein neues Dorf-placeObject anlegen — sonst verlöre der
+    // Hof-PLAC beim Export das Dorf (GEDCOM hat keine Dorf-placeObjects).
+    let villageId = _hofVillageId(db, addr);
+    if (!villageId) {
+      const vStr = _hofVillageString(db, addr);
+      if (vStr) {
+        villageId = _findVillagePO(pos, vStr);
+        if (!villageId) {
+          let vid = _epId('vil:' + _normPlaceName(vStr));
+          if (pos[vid]) {
+            let suf = 2;
+            while (pos[vid + '_' + suf] && suf < 16) suf++;
+            vid = pos[vid + '_' + suf] ? null : vid + '_' + suf;
+          }
+          if (vid) {
+            pos[vid] = { id: vid, title: vStr, type: 'City', lat: null, long: null,
+              note: '', pnames: [], enclosedBy: [], parentId: null };
+            villageId = vid;
+            changed = true;
+          }
+        }
+      }
+    }
     const leaf = addr.split('\n')[0].trim() || addr;
 
     let farmId = _findFarmPO(pos, leaf, villageId);

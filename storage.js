@@ -37,6 +37,7 @@ async function revertToSaved() {
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
     AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
+    if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
     if (AppState.db.parseErrors?.length) {
       console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
       showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
