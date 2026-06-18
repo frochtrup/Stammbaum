@@ -575,6 +575,7 @@ if (IS_NODE) {
     '_isHofNoteText: _isHofNoteText, _stripHofPrefix: _stripHofPrefix, HOF_NOTE_PREFIX: HOF_NOTE_PREFIX, ' +
     '_migrateHofObjectsToPlaceObjects: _migrateHofObjectsToPlaceObjects, _hofVillageId: _hofVillageId, ' +
     '_hofVillageString: _hofVillageString, _findVillagePO: _findVillagePO, _buildFormString: _buildFormString, ' +
+    'hofMeta: hofMeta, _isFarmPlaceId: _isFarmPlaceId, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -3421,6 +3422,36 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   // korrekt weg. Beweist: datierte Zugehörigkeit wirkt durch die Farm-Kette hindurch.
   eq(API._buildFormString(farm.id, 1850), 'Hof Meyer, Sassenberg',
      'af.12: 1850 → moderner Name Sassenberg, Parent (bis 1803 datiert) korrekt entfallen');
+})();
+
+// ── hofMeta: Lese-Single-Source — Farm-PO primär, hofObjects-Sidecar Fallback ──
+(function() {
+  API.setDb({
+    individuals: {}, families: {}, extraPlaces: {},
+    placeObjects: { '@F1@': { id:'@F1@', title:'Hof A', type:'Farm', lat:52.5, long:7.7, note:'aus PO', pnames:[], enclosedBy:[] } },
+    hofObjects: { 'Hof A': { addr:'Hof A', lat:11.1, long:22.2, note:'aus Sidecar' } },
+  });
+  // Hof mit placeId → Farm-PO gewinnt
+  eq(API.hofMeta({ addr:'Hof A', placeId:'@F1@' }).lat,  52.5,     'af.13: hofMeta — Farm-PO-Koordinaten haben Vorrang');
+  eq(API.hofMeta({ addr:'Hof A', placeId:'@F1@' }).note, 'aus PO', 'af.13: hofMeta — Farm-PO-Notiz hat Vorrang');
+  // Hof ohne placeId → Sidecar-Fallback
+  eq(API.hofMeta({ addr:'Hof A', placeId:null }).lat,  11.1,        'af.13: hofMeta — ohne Farm-PO Fallback auf Sidecar');
+  eq(API.hofMeta({ addr:'Hof A', placeId:null }).note, 'aus Sidecar','af.13: hofMeta — Sidecar-Notiz als Fallback');
+  ok(API._isFarmPlaceId('@F1@'),  'af.13: _isFarmPlaceId erkennt Farm-PO');
+  ok(!API._isFarmPlaceId(null),   'af.13: _isFarmPlaceId(null) → false');
+})();
+
+// ── buildHofIndex führt die Farm-placeId aus den Events mit ──
+(function() {
+  API.setDb({
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Hof B', place:'Dorf', placeId:'@F2@' } ] } },
+    families: {}, extraPlaces: {},
+    placeObjects: { '@F2@': { id:'@F2@', title:'Hof B', type:'Farm', lat:50, long:8, note:'', pnames:[], enclosedBy:[] } },
+    hofObjects: {},
+  });
+  API.UIState._hofCache = null;
+  var hof = API.buildHofIndex().get('Hof B');
+  eq(hof.placeId, '@F2@', 'af.14: buildHofIndex übernimmt Farm-placeId aus dem Event');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────

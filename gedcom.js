@@ -2045,6 +2045,25 @@ function evDateKey(d) {
 
 // Aggregiert RESI- und PROP-Ereignisse nach Adresse → Map<addr, {addr, entries[], propEntries[]}>
 // Cache in UIState._hofCache; wird von markChanged() geleert.
+// True, wenn placeId auf ein Farm/Building-placeObject zeigt (ADR-026 Hof-Ort).
+function _isFarmPlaceId(placeId) {
+  const po = placeId && AppState.db.placeObjects?.[placeId];
+  return !!po && (po.type === 'Farm' || po.type === 'Building');
+}
+
+// Koordinaten/Notiz eines Hofs: primär aus dem Farm-placeObject (hof.placeId,
+// geräteübergreifend via placeObjects-Sync), sonst aus dem hofObjects-Sidecar
+// (Legacy/localStorage). ADR-026 Phase 2C — Lese-Single-Source.
+function hofMeta(hof) {
+  const po   = hof && _isFarmPlaceId(hof.placeId) ? AppState.db.placeObjects[hof.placeId] : null;
+  const side = hof && AppState.db.hofObjects?.[hof.addr];
+  return {
+    lat:  po && po.lat  != null ? po.lat  : (side && side.lat  != null ? side.lat  : null),
+    long: po && po.long != null ? po.long : (side && side.long != null ? side.long : null),
+    note: po && po.note ? po.note : (side && side.note ? side.note : ''),
+  };
+}
+
 function buildHofIndex() {
   if (UIState._hofCache) return UIState._hofCache;
   const hoefe = new Map(); // addr → { addr, place, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
@@ -2052,11 +2071,13 @@ function buildHofIndex() {
     for (const ev of (p.events || [])) {
       if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
         const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', placeId: null, entries: [], propEntries: [] });
         const hof = hoefe.get(addr);
         if (!hof.propEntries) hof.propEntries = [];
         // Ersten nicht-leeren Ort aus RESI-Events übernehmen
         if (!hof.place && ev.place) hof.place = ev.place.trim();
+        // Farm-placeObject-ID (ADR-026): aus dem Event übernehmen, falls migriert
+        if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
         hof.entries.push({
           pid:     p.id,
           name:    p.name || p.id,
@@ -2066,10 +2087,11 @@ function buildHofIndex() {
       }
       if (ev.type === 'PROP' && ev.addr && ev.addr.trim()) {
         const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', entries: [], propEntries: [] });
+        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', placeId: null, entries: [], propEntries: [] });
         const hof = hoefe.get(addr);
         if (!hof.propEntries) hof.propEntries = [];
         if (!hof.place && ev.place) hof.place = ev.place.trim();
+        if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
         hof.propEntries.push({
           pid:     p.id,
           name:    p.name || p.id,

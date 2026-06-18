@@ -203,15 +203,15 @@ function _renderOrteModus() {
     bounds.push([lat, lng]);
   }
 
-  // Höfe mit Koordinaten als eigene Marker-Ebene
-  for (const hm of Object.values(AppState.db.hofObjects || {})) {
-    const lat = parseFloat(hm.lat);
-    const lng = parseFloat(hm.long);
+  // Höfe als eigene Marker-Ebene — Koordinaten primär aus dem Farm-placeObject
+  // (ADR-026, geräteübergreifend), hofObjects-Sidecar als Fallback (via hofMeta).
+  for (const hof of buildHofIndex().values()) {
+    const meta = hofMeta(hof);
+    const lat = parseFloat(meta.lat);
+    const lng = parseFloat(meta.long);
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) continue;
 
-    const hofIndex = buildHofIndex();
-    const hof      = hofIndex.get(hm.addr);
-    const count    = hof ? new Set(hof.entries.map(e => e.pid)).size : 0;
+    const count = new Set(hof.entries.map(e => e.pid)).size;
 
     const marker = L.marker([lat, lng], {
       icon: L.divIcon({
@@ -223,10 +223,10 @@ function _renderOrteModus() {
     });
 
     marker.on('click', () => {
-      if (hof) _showExplorationPanel(hm.addr, (hof.entries || []).map(e => ({ personId: e.pid, role: 'Wohnort', date: e.date })));
+      _showExplorationPanel(hof.addr, (hof.entries || []).map(e => ({ personId: e.pid, role: 'Wohnort', date: e.date })));
     });
     marker.bindTooltip(
-      `${_mesc(compactPlace(hm.addr))}${count ? ' · ' + count + ' Person' + (count !== 1 ? 'en' : '') : ''}`,
+      `${_mesc(compactPlace(hof.addr))}${count ? ' · ' + count + ' Person' + (count !== 1 ? 'en' : '') : ''}`,
       { direction: 'top', offset: [0, -6] }
     );
     marker.addTo(_mapMarkerLayer);

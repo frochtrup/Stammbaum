@@ -56,9 +56,9 @@ function renderHofList(sorted) {
     const minYr  = dates.length ? dates[0].slice(0,4)  : '';
     const maxYr  = dates.length ? dates[dates.length-1].slice(0,4) : '';
     const range  = minYr && maxYr && minYr !== maxYr ? `${minYr}–${maxYr}` : (minYr || '');
-    const hofMeta   = AppState.db.hofObjects?.[hof.addr];
-    const hasCoords = hofMeta?.lat && hofMeta?.long;
-    const hasNote   = !!hofMeta?.note;
+    const meta      = hofMeta(hof);   // Farm-placeObject primär, hofObjects-Sidecar Fallback
+    const hasCoords = meta.lat != null && meta.long != null;
+    const hasNote   = !!meta.note;
     const addrLine  = (hasCoords ? '<span class="c-gold mr-4">📍</span>' : '')
                     + (hasNote   ? '<span class="c-dim  mr-4">📝</span>' : '')
                     + esc(hof.addr).replace(/\n/g, ' · ');
