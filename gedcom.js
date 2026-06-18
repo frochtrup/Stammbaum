@@ -895,9 +895,6 @@ function _migrateHofObjectsToPlaceObjects(db) {
     const hasNote   = !!hm.note;
     if (!hasCoords && !hasNote) continue;  // nur echte Höfe (Geodaten/Notiz)
 
-    // Dorf bestimmen: erst existierendes placeObject, sonst aus ev.place
-    // (Dorf-String) ein neues Dorf-placeObject anlegen — sonst verlöre der
-    // Hof-PLAC beim Export das Dorf (GEDCOM hat keine Dorf-placeObjects).
     // Dorf bestimmen: erst existierendes placeObject, sonst aus ev.place eine
     // Enclosure-Kette anlegen — sonst verlöre der Hof-PLAC das Dorf bzw. dessen
     // übergeordnete Ebenen (GEDCOM hat keine Dorf-placeObjects). Typ neuer Glieder
@@ -954,6 +951,24 @@ function _migrateHofObjectsToPlaceObjects(db) {
             && ev.placeId !== farmId) {
           ev.placeId = farmId;
           changed = true;
+        }
+      }
+    }
+  }
+
+  // ev.place an die placeId-Projektion angleichen (ADR-024-Invariante): sonst
+  // mischt collectPlaces den alten Dorf-String mit dem Farm-Typ (Dorf-Name mit
+  // 🏡-Badge). Nur im Live-Pfad (db === AppState.db), wo getPlaceRegistry() die
+  // gerade angelegten POs sieht; im Unit-Harness (lokales db) ist es no-op.
+  if (changed && typeof getPlaceRegistry === 'function' && typeof _buildFormString === 'function'
+      && typeof AppState !== 'undefined' && db === AppState.db) {
+    UIState._placeRegistry = null;
+    for (const p of Object.values(db.individuals || {})) {
+      for (const ev of (p.events || [])) {
+        if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.placeId
+            && db.placeObjects[ev.placeId] && db.placeObjects[ev.placeId].type === 'Farm') {
+          const proj = _buildFormString(ev.placeId, typeof _placeYear === 'function' ? _placeYear(ev.date) : null);
+          if (proj) ev.place = proj;
         }
       }
     }

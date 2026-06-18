@@ -3412,6 +3412,9 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
      'af.12: Farm enclosedBy EXISTIERENDES Sassenberg-PO (per pname-Match erkannt, keine Dublette)');
   eq(Object.values(D.placeObjects).filter(p => p.type !== 'Farm' && API._normPlaceName(p.title) === 'sassenberg').length, 1,
      'af.12: kein doppeltes Sassenberg-PO angelegt');
+  // Reprojektion (db === AppState.db via setDb): ev.place an placeId-Projektion angeglichen
+  eq(evs[0].place, 'Hof Meyer, Sassenbergk, Fürstbistum Münster',
+     'af.12: ev.place reprojiziert auf Farm-Hierarchie (ADR-024-Invariante, keine stale Mischung)');
   eq(API._buildFormString(farm.id, 1700), 'Hof Meyer, Sassenbergk, Fürstbistum Münster',
      'af.12: 1700 → historischer Ortsname Sassenbergk löst durch die Farm-Kette korrekt auf');
   // 1850: enclosedBy Fürstbistum Münster endet 1803 (Säkularisation) → Parent fällt

@@ -509,6 +509,7 @@ function abortBatchGeocode() {
 // ─── P3: Ort-Suchpicker ───────────────────────────────────────────────────────
 // Öffnet den modalPlacePicker für das Ziel-Eingabefeld (z.B. 'ef-place').
 function openPlacePicker(targetFieldId) {
+  UIState._placePickerMode   = 'place';
   UIState._placePickerTarget = targetFieldId || 'ef-place';
   const el = document.getElementById('placePickerSearch');
   if (el) el.value = '';
@@ -516,7 +517,51 @@ function openPlacePicker(targetFieldId) {
   openModal('modalPlacePicker');
 }
 
+// ADR-026 Teil C: Hof-Picker — listet Farm/Building-placeObjects (mit Dorf-
+// Kontext) statt Orte, optional auf den im Event gewählten Ort eingegrenzt.
+// Auswahl füllt das Adressfeld (ev.addr); die Migration verknüpft beim Laden.
+function openHofPicker() {
+  UIState._placePickerMode   = 'hof';
+  UIState._placePickerTarget = 'ef-addr';
+  let ortId = document.getElementById('ef-place-id')?.value || '';
+  if (!ortId) {
+    const v = document.getElementById('ef-place')?.value?.trim();
+    if (v && typeof getPlaceRegistry === 'function') ortId = getPlaceRegistry().findByName(v) || '';
+  }
+  UIState._hofPickerOrtId = ortId;
+  const el = document.getElementById('placePickerSearch');
+  if (el) el.value = '';
+  renderPlacePickerList('');
+  openModal('modalPlacePicker');
+}
+
+function _renderHofPickerList(q) {
+  const list = document.getElementById('placePickerList');
+  if (!list) return;
+  const lower = q.toLowerCase().trim();
+  const ortId = UIState._hofPickerOrtId;
+  const pos   = AppState.db.placeObjects || {};
+  let farms = Object.values(pos).filter(po => po.type === 'Farm' || po.type === 'Building');
+  if (ortId) farms = farms.filter(po => (po.enclosedBy || []).some(en => en.placeId === ortId));
+  if (lower) farms = farms.filter(po => po.title.toLowerCase().includes(lower));
+  farms.sort((a, b) => a.title.localeCompare(b.title, 'de'));
+  if (!farms.length) {
+    list.innerHTML = `<div class="empty">Keine Höfe${ortId ? ' in diesem Ort' : ''} angelegt — Adresse einfach eintippen</div>`;
+    return;
+  }
+  list.innerHTML = farms.slice(0, 120).map(po => {
+    const enc  = (po.enclosedBy || [])[0];
+    const vill = enc && pos[enc.placeId] ? pos[enc.placeId].title : '';
+    const badge = vill ? `<span class="place-type-badge">${esc(vill)}</span>` : '';
+    return `<div class="person-row" data-action="placePickerSelect" data-id="${esc(po.id)}" data-name="${esc(po.title)}">
+      <div class="p-avatar p-avatar--sm">🏡</div>
+      <div class="p-info"><div class="p-name">${esc(po.title)}${badge}</div></div>
+    </div>`;
+  }).join('');
+}
+
 function renderPlacePickerList(q) {
+  if (UIState._placePickerMode === 'hof') return _renderHofPickerList(q);
   const list = document.getElementById('placePickerList');
   if (!list) return;
   const lower = q.toLowerCase().trim();
@@ -524,6 +569,12 @@ function renderPlacePickerList(q) {
   // Dieselbe Quelle wie die Ortsliste: alle Event-Orte, angereichert mit placeId/type
   let rows = [...collectPlaces().values()]
     .map(pl => ({ name: pl.name, placeId: pl.placeId || '', type: pl.type || '' }));
+
+  // Höfe (Farm/Building) gehören in den Hof-Picker, nicht in die Ort-Auswahl (ADR-026).
+  rows = rows.filter(r => {
+    const po = AppState.db.placeObjects?.[r.placeId];
+    return !(po && (po.type === 'Farm' || po.type === 'Building'));
+  });
 
   if (lower) rows = rows.filter(r => {
     if (r.name.toLowerCase().includes(lower)) return true;
@@ -554,6 +605,7 @@ function placePickerSelect(placeId, placeName) {
   // input-Event feuern, damit delegierte input-Listener (z.B. Template-Builder qtFieldEdit) den
   // neuen Wert + die zugehörige placeId aus dem Hidden-Input einlesen.
   if (inp) inp.dispatchEvent(new Event('input', { bubbles: true }));
+  UIState._placePickerMode = 'place';   // Modus zurücksetzen (Hof-Picker → Ort-Picker)
   closeModal('modalPlacePicker');
 }
 

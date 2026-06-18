@@ -293,6 +293,7 @@ const _CLICK_MAP = {
   startBatchGeocode:       ()  => startBatchGeocode(),
   abortBatchGeocode:       ()  => abortBatchGeocode(),
   openPlacePicker:         el  => openPlacePicker(el.dataset.target),
+  openHofPicker:           ()  => openHofPicker(),
   placePickerSelect:       el  => placePickerSelect(el.dataset.id, el.dataset.name),
   relPickerCreateNew:      ()  => relPickerCreateNew(),
   saveRepo:                ()  => saveRepo(),
