@@ -837,6 +837,35 @@ function _findVillagePO(pos, name) {
   return null;
 }
 
+// Aus einem Komma-Ortsstring ("München, Bayern, Deutschland") eine echte
+// Enclosure-Kette einzelner placeObjects bauen (München ← Bayern ← Deutschland)
+// und die ID des feinsten Levels zurückgeben. Sonst nähme _buildFormString nur
+// das erste Komma-Segment (_atomic) → "Bayern, Deutschland" ginge verloren.
+// Existierende Orte (GRAMPS, schon typisiert) werden wiederverwendet und NICHT
+// umstrukturiert; nur neu angelegte Glieder bekommen die enclosedBy-Verknüpfung.
+function _ensureVillageChain(pos, villageStr) {
+  const segs = (villageStr || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!segs.length) return null;
+  let parentId = null;  // gröberes (übergeordnetes) Level
+  for (let i = segs.length - 1; i >= 0; i--) {
+    const name = segs[i];
+    let id = _findVillagePO(pos, name), created = false;
+    if (!id) {
+      id = _epId('vil:' + _normPlaceName(name));
+      if (pos[id]) { let suf = 2; while (pos[id + '_' + suf] && suf < 16) suf++; id = pos[id + '_' + suf] ? null : id + '_' + suf; }
+      if (!id) continue;
+      pos[id] = { id, title: name, type: 'Unknown', lat: null, long: null,
+        note: '', pnames: [], enclosedBy: [], parentId: null };
+      created = true;
+    }
+    if (created && parentId && !(pos[id].enclosedBy || []).some(en => en.placeId === parentId)) {
+      pos[id].enclosedBy.push({ placeId: parentId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+    }
+    parentId = id;
+  }
+  return parentId;  // feinstes Level (vorderstes Segment)
+}
+
 // Existierendes Farm-placeObject mit gleichem Blatt-Namen UND gleichem Dorf
 // (Scope-Trennung: "Hof Schulze" in Ochtrup ≠ in Borghorst).
 function _findFarmPO(pos, leaf, villageId) {
@@ -869,26 +898,15 @@ function _migrateHofObjectsToPlaceObjects(db) {
     // Dorf bestimmen: erst existierendes placeObject, sonst aus ev.place
     // (Dorf-String) ein neues Dorf-placeObject anlegen — sonst verlöre der
     // Hof-PLAC beim Export das Dorf (GEDCOM hat keine Dorf-placeObjects).
+    // Dorf bestimmen: erst existierendes placeObject, sonst aus ev.place eine
+    // Enclosure-Kette anlegen — sonst verlöre der Hof-PLAC das Dorf bzw. dessen
+    // übergeordnete Ebenen (GEDCOM hat keine Dorf-placeObjects). Typ neuer Glieder
+    // bewusst 'Unknown' (Stadt/Dorf/Kreis aus nacktem String nicht ableitbar);
+    // existierende (GRAMPS-)Orte werden wiederverwendet, nie umstrukturiert.
     let villageId = _hofVillageId(db, addr);
     if (!villageId) {
       const vStr = _hofVillageString(db, addr);
-      if (vStr) {
-        villageId = _findVillagePO(pos, vStr);
-        if (!villageId) {
-          let vid = _epId('vil:' + _normPlaceName(vStr));
-          if (pos[vid]) {
-            let suf = 2;
-            while (pos[vid + '_' + suf] && suf < 16) suf++;
-            vid = pos[vid + '_' + suf] ? null : vid + '_' + suf;
-          }
-          if (vid) {
-            pos[vid] = { id: vid, title: vStr, type: 'City', lat: null, long: null,
-              note: '', pnames: [], enclosedBy: [], parentId: null };
-            villageId = vid;
-            changed = true;
-          }
-        }
-      }
+      if (vStr) { villageId = _ensureVillageChain(pos, vStr); if (villageId) changed = true; }
     }
     const leaf = addr.split('\n')[0].trim() || addr;
 

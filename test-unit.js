@@ -3328,9 +3328,10 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   };
   API._migrateHofObjectsToPlaceObjects(db);
   var farm = Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0];
-  var vil  = Object.values(db.placeObjects).filter(po => po.type === 'City')[0];
+  var vil  = Object.values(db.placeObjects).filter(po => po.type === 'Unknown')[0];
   ok(!!vil, 'af.8: Dorf-placeObject aus ev.place promoviert (GEDCOM ohne Dorf-PO)');
   eq(vil.title, 'Ochtrup', 'af.8: Dorf-Titel = ev.place');
+  eq(vil.type, 'Unknown', 'af.8: promovierter Ort = Typ Unknown (kein falsches City-Label)');
   eq(farm.enclosedBy[0].placeId, vil.id, 'af.8: Farm enclosedBy promoviertes Dorf');
 })();
 
@@ -3342,8 +3343,8 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
     hofObjects: { 'Regerplatz 3': { addr:'Regerplatz 3', lat:52, long:7 } },
   };
   API._migrateHofObjectsToPlaceObjects(db);
-  eq(Object.values(db.placeObjects).filter(po => po.type === 'City').length, 0,
-     'af.9: ev.place == Adresse → kein gleichnamiges Dorf angelegt');
+  eq(Object.values(db.placeObjects).filter(po => po.type !== 'Farm').length, 0,
+     'af.9: ev.place == Adresse → kein gleichnamiger Ort angelegt (nur Farm existiert)');
   eq(Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0].enclosedBy.length, 0,
      'af.9: Farm ohne Enclosure');
 })();
@@ -3358,8 +3359,25 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   eq(API._hofVillageString(db, 'Hof Schulze'), 'Ochtrup',
      'af.10: führendes Hof-Blatt aus ev.place gestrippt (Reimport-Idempotenz)');
   API._migrateHofObjectsToPlaceObjects(db);
-  eq(Object.values(db.placeObjects).filter(po => po.type === 'City')[0].title, 'Ochtrup',
+  eq(Object.values(db.placeObjects).filter(po => po.type === 'Unknown')[0].title, 'Ochtrup',
      'af.10: Dorf = Ochtrup (nicht "Hof Schulze, Ochtrup")');
+})();
+
+// ── Mehrstufiger Ort → echte Enclosure-Kette (kein Komma-Titel-Verlust) ──
+(function() {
+  var db = {
+    individuals: { '@I1@': { events:[ { type:'RESI', addr:'Sonnenstr 12', place:'München, Bayern, Deutschland', placeId:null } ] } },
+    placeObjects: {},
+    hofObjects: { 'Sonnenstr 12': { addr:'Sonnenstr 12', lat:48, long:11 } },
+  };
+  API._migrateHofObjectsToPlaceObjects(db);
+  var byTitle = {}; Object.values(db.placeObjects).forEach(po => byTitle[po.title] = po);
+  ok(byTitle['München'] && byTitle['Bayern'] && byTitle['Deutschland'],
+     'af.11: Enclosure-Kette München←Bayern←Deutschland angelegt (3 Glieder)');
+  eq(byTitle['München'].enclosedBy[0].placeId, byTitle['Bayern'].id,      'af.11: München enclosedBy Bayern');
+  eq(byTitle['Bayern'].enclosedBy[0].placeId,  byTitle['Deutschland'].id, 'af.11: Bayern enclosedBy Deutschland');
+  eq(byTitle['Deutschland'].enclosedBy.length, 0,                         'af.11: Deutschland = oberstes Level');
+  eq(byTitle['Sonnenstr 12'].enclosedBy[0].placeId, byTitle['München'].id, 'af.11: Farm enclosedBy feinstes Level (München)');
 })();
 
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────

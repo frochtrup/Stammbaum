@@ -27,6 +27,16 @@ function applyAllExtraPlaceCoords() {
 // ─────────────────────────────────────
 //  REVERT / NEW FILE
 // ─────────────────────────────────────
+
+// Leitet hofObjects aus den geladenen Events ab (+ gespeicherte Koords/Notizen)
+// und migriert Höfe → Farm-placeObjects (ADR-026). Für ALLE GEDCOM-Lade-Pfade
+// (Datei, Demo, IDB-/localStorage-Restore) — sonst fehlten Hof-Koords/Notizen
+// nach Reload und die Migration liefe nur bei explizitem Datei-Öffnen.
+function _deriveHofAndMigrate() {
+  AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
+  if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
+}
+
 async function revertToSaved() {
   const orig = _getOriginalText();
   if (!orig) { showToast('Kein gespeicherter Stand verfügbar'); return; }
@@ -36,8 +46,7 @@ async function revertToSaved() {
     setDb(parseGEDCOM(orig));
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
-    AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
-    if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
+    _deriveHofAndMigrate();
     if (AppState.db.parseErrors?.length) {
       console.warn('[GEDCOM] ' + AppState.db.parseErrors.length + ' ungültige Zeile(n) übersprungen:', AppState.db.parseErrors);
       showToast('⚠ ' + AppState.db.parseErrors.length + ' ungültige GEDCOM-Zeile(n) übersprungen — Datei wurde trotzdem vollständig geladen');
@@ -108,6 +117,7 @@ async function loadDemo() {
     AppState._currentFilename = 'demo.ged';
     AppState.db.extraPlaces = loadExtraPlaces();
     applyAllExtraPlaceCoords();
+    _deriveHofAndMigrate();
     AppState._originalGedText = text;
     if (typeof clearValidationResults === 'function') clearValidationResults();
     await _loadDemoPhotos();  // Foto in IDB bevor Detail gerendert wird
@@ -160,6 +170,7 @@ async function tryAutoLoad() {
       AppState._currentFilename = fname;
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
+      _deriveHofAndMigrate();
       AppState._originalGedText = (await idbGet('stammbaum_ged_backup')) || saved;
       if (typeof bootStage === 'function') bootStage('render');
       showStartView();
@@ -184,6 +195,7 @@ async function tryAutoLoad() {
       AppState._currentFilename = fname;
       AppState.db.extraPlaces = loadExtraPlaces();
       applyAllExtraPlaceCoords();
+      _deriveHofAndMigrate();
       AppState._originalGedText = localStorage.getItem('stammbaum_ged_backup') || saved;
       if (typeof bootStage === 'function') bootStage('render');
       showStartView();
