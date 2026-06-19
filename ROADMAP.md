@@ -67,13 +67,13 @@ Fünf Dimensionen leiten die Priorisierung:
 | Design / UX | **8.5/10** | Design-Token-System, Mobile-First, 0 WCAG 2.1 AA Violations (v905). Abzug: Handbuch teils Mockups (→ DOC-SCREENS). |
 | Funktionsstand | **9.1/10** | Undo/Redo, Karten, Evidenzmodell, GPS-Hypothesen, GED7, GRAMPS, Geocoding, GOV (historisch), **12 Druckausgaben**, **31 Validator-Regeln**, **periodengerechte Ortsanzeige** (v921–v941, einzigartig), **ADR-026 Höfe** (v989–v998). Abzug: 3D-Tree + DNA out-of-scope. |
 | Funktions-Qualität | **8.5/10** | GEDCOM/GRAMPS-Treue empirisch top; Browser-verifizierte UI-Flows. Skalierung bis 20k belegt. Abzug: >20k Echtdaten offen (→ SCALE-REAL). |
-| Performance | **8.0/10** | Web Worker + virtuelles Scrollen + LAZY-LOAD (−119 KB) + Sort-Cache + dirty-bit. Abzug: ~50 Cold-Start-Requests; erster Sort 20k bleibt ~1 s. |
+| Performance | **8.2/10** | Web Worker + virtuelles Scrollen + LAZY-LOAD (−119 KB) + Sort-Cache + dirty-bit. *(2026-06-19: „~50 Cold-Start-Requests"-Abzug entfällt — Produktion auf HTTP/2 gemessen, kein Round-Trip-Problem; Boot-Zeit dominiert vom GEDCOM-Parse.)* Rest-Abzug: erster Sort 20k ~1 s; >20k unbelegt (SCALE-REAL). |
 | GEDCOM-Konformität | **9.3/10** | `net_delta=0` + `out1===out2` auf 83k-Zeilen-Produktionsdatei, Strict-5.5.1, GED7 opt-in, GRAMPS headless. |
 | Tests | **8.7/10** | 558 Unit-Tests + `test-roundtrip.js` + `test-csp.js` + `test-snapshot-place.js` (Goldfile `showPlaceDetail`). Pre-Commit-Gate koppelt alle drei. Abzug: kein CI-Server; Roundtrip bewusst außerhalb des Hooks. |
 | Dokumentation | **8.7/10** | 26 ADRs, ~2.5k-Z.-Changelog. Handbuch auf v998 (beide Versionsfelder). Abzug: Screenshots teils Mockups (→ DOC-SCREENS). |
 | PWA / Offline | **9.0/10** | SW: PRECACHE_CRITICAL atomar, Cache-first/Network-first, `offline.html`, `ui-lifecycle.js` BFCache-Guard. |
 | Datenschutz | **9.0/10** | Lokal-First, DSGVO-Anonymisierung BFS (v715), kein Tracking, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.6/10** (Selbst) · **≈ 8.4/10** (unabh. Review 2026-06-19) | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948) → 8.6 (v950+v967). Unabhängiges Review (`REVIEW-2026-06-19.md`) bestätigt Code/Sicherheit/Konformität, sieht Architektur (6.5) + Design/UX (8.0) tiefer. CAM-Schnellzugriff (v999) erledigt; BUILD-SPIKE nach HTTP/2-Messung verworfen. Größte Hebel: SCALE-REAL (M) · DOC-SCREENS (M) · GEDCOM-SPLIT (M).* |
+| **∅ Gesamt** | **≈ 8.6/10** (Selbst) · **≈ 8.4/10** (unabh. Review 2026-06-19) | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948) → 8.6 (v950+v967). Unabhängiges Review (`REVIEW-2026-06-19.md`) bestätigt Code/Sicherheit/Konformität, sieht Architektur (6.8) + Design/UX (8.0) tiefer. CAM-Schnellzugriff (v999) erledigt; BUILD-SPIKE nach HTTP/2-Messung verworfen (Architektur 6.5→6.8 + Performance 8.0→8.2 dadurch leicht hoch). Größte Hebel: SCALE-REAL (M) · DOC-SCREENS (M) · GEDCOM-SPLIT (M).* |
 
 ### Offene Maßnahmen *(priorisiert — nach unabhängigem Review 2026-06-19, Detail: `REVIEW-2026-06-19.md`)*
 
