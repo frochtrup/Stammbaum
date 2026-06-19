@@ -345,6 +345,12 @@ menuRevert:              ()  => { closeModal('modalMenu'); revertToSaved(); },
   settingsChangeDoc:       ()  => { closeModal('modalSettings'); odSetupDocFolder(); },
   odClearDocFolder:        ()  => odClearDocFolder(),
   odCancelOrClose:         ()  => _odCancelOrClose(),
+  quickCamCapture:         async el => {
+    const pid = el.dataset.id || AppState.currentPersonId;
+    if (!pid) return;
+    await openAddMediaDialog('person', pid);
+    document.getElementById('am-cam-input')?.click();
+  },
   camCapture:              ()  => document.getElementById('am-cam-input').click(),
   camGallery:              ()  => {
     const inp = document.getElementById('am-cam-input');

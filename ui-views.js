@@ -597,12 +597,14 @@ function _configureDetailToolbar(tab, entityId) {
   const pbBtn    = document.getElementById('probandBtn');
   const pbsBtn   = document.getElementById('probandSetBtn');
   const mapBtn   = document.getElementById('detailMapBtn');
+  const camBtn   = document.getElementById('quickCamBtn');
 
   if (tab === 'persons') {
     const p = AppState.db.individuals[entityId];
     if (!p) return;
     if (top) top.textContent = p.name || entityId;
     if (editBtn) editBtn.style.display = '';
+    if (camBtn)  { camBtn.hidden = false; camBtn.dataset.id = entityId; }
     if (treeBtn) { treeBtn.hidden = false; treeBtn.style.display = ''; treeBtn.dataset.id = entityId; }
     if (tlBtn)   { tlBtn.hidden = false; tlBtn.dataset.id = entityId; }
     if (stBtn)   { stBtn.hidden = false; stBtn.dataset.action = 'showStory'; stBtn.dataset.id = entityId; delete stBtn.dataset.fid; }
@@ -631,9 +633,11 @@ function _configureDetailToolbar(tab, entityId) {
     if (pbBtn)   pbBtn.hidden = true;
     if (pbsBtn)  pbsBtn.hidden = true;
     if (mapBtn)  mapBtn.hidden = true;
+    if (camBtn)  camBtn.hidden = true;
   } else if (tab === 'sources') {
     if (top) top.textContent = 'Quelle';
     if (editBtn) editBtn.style.display = '';
+    if (camBtn)  camBtn.hidden = true;
     if (treeBtn) treeBtn.hidden = true;
     if (tlBtn)   tlBtn.hidden = true;
     if (stBtn)   stBtn.hidden = true;
@@ -643,6 +647,7 @@ function _configureDetailToolbar(tab, entityId) {
   } else if (tab === 'places') {
     if (top) top.textContent = '📍 Ort';
     if (editBtn) editBtn.style.display = '';
+    if (camBtn)  camBtn.hidden = true;
     if (treeBtn) treeBtn.hidden = true;
     if (tlBtn)   tlBtn.hidden = true;
     if (stBtn)   stBtn.hidden = true;

@@ -913,6 +913,7 @@ function showMediaDetail(mediaType, ctxId, idx, pushHistory = true) {
   document.getElementById('editBtn').style.display      = 'none';
   document.getElementById('treeBtn').hidden              = true;
   document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+  document.getElementById('quickCamBtn')?.setAttribute('hidden', '');
 
   const file  = m.file  || '';
   const ext   = file.split('.').pop().toLowerCase();

@@ -324,6 +324,7 @@ function showHofDetail(addr, pushHistory = true) {
   document.getElementById('probandBtn').hidden     = true;
   document.getElementById('probandSetBtn').hidden  = true;
   document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+  document.getElementById('quickCamBtn')?.setAttribute('hidden', '');
 
   const addrDisplay = esc(addr).replace(/\n/g, '<br>');
   const allEntries = [

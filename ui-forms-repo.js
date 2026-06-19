@@ -105,6 +105,7 @@ function showRepoDetail(id, pushHistory = true) {
   document.getElementById('storyBtn').hidden       = true;
   document.getElementById('probandBtn').hidden     = true;
   document.getElementById('probandSetBtn').hidden  = true;
+  document.getElementById('quickCamBtn')?.setAttribute('hidden', '');
 
   const linkedSources = Object.values(AppState.db.sources).filter(s => s.repo === id);
   let html = `<div class="detail-hero fade-up">

@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v998 · Cache: `stammbaum-v998` · `test-unit.js` = **558 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
+**sw-Version:** v999 · Cache: `stammbaum-v999` · `test-unit.js` = **558 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
 
 **SCALE-TEST:** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort-Cache (v899) · Details: SCALE-TEST-BEFUNDE.md
 
@@ -34,6 +34,7 @@ Fünf Dimensionen leiten die Priorisierung:
 
 | Version(en) | Feature |
 |---|---|
+| v999 | **CAM-Schnellzugriff:** direkter 📷-Button im Personen-Detail-Header → öffnet Kamera in 1 Tap (vorher 3). CAM-Basis (📷/🖼, Resize, IDB lokal ohne OneDrive) war bereits seit v59 vorhanden — Review-Korrektur |
 | v998 | Zwei Geo-Validierungsregeln für Höfe: `HOF_NO_COORD` + `HOF_FAR` (Haversine, 25 km) |
 | v997 | ADR-026 Hof-Notiz single-source: Writer aus Farm-PO-Notiz, `hofObjects`-Sidecar write-frozen |
 | v995–v996 | Hof-Koords single-source (Sidecar-Write-Stopp); placeObjects-Reload-Persistenz (T0-STORAGE-Fix) |
@@ -72,20 +73,19 @@ Fünf Dimensionen leiten die Priorisierung:
 | Dokumentation | **8.7/10** | 26 ADRs, ~2.5k-Z.-Changelog. Handbuch auf v998 (beide Versionsfelder). Abzug: Screenshots teils Mockups (→ DOC-SCREENS). |
 | PWA / Offline | **9.0/10** | SW: PRECACHE_CRITICAL atomar, Cache-first/Network-first, `offline.html`, `ui-lifecycle.js` BFCache-Guard. |
 | Datenschutz | **9.0/10** | Lokal-First, DSGVO-Anonymisierung BFS (v715), kein Tracking, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.6/10** (Selbst) · **≈ 8.4/10** (unabh. Review 2026-06-19) | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948) → 8.6 (v950+v967). Unabhängiges Review (`REVIEW-2026-06-19.md`) bestätigt Code/Sicherheit/Konformität, sieht Architektur (6.5) + Design/UX (8.0) tiefer. Größte Hebel neu: CAM (S) · BUILD-SPIKE (M) · SCALE-REAL (M).* |
+| **∅ Gesamt** | **≈ 8.6/10** (Selbst) · **≈ 8.4/10** (unabh. Review 2026-06-19) | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948) → 8.6 (v950+v967). Unabhängiges Review (`REVIEW-2026-06-19.md`) bestätigt Code/Sicherheit/Konformität, sieht Architektur (6.5) + Design/UX (8.0) tiefer. CAM-Schnellzugriff (v999) erledigt. Größte Hebel: BUILD-SPIKE (M) · SCALE-REAL (M) · DOC-SCREENS (M).* |
 
 ### Offene Maßnahmen *(priorisiert — nach unabhängigem Review 2026-06-19, Detail: `REVIEW-2026-06-19.md`)*
 
-> Unabhängiges Review (Code gelesen, Tests selbst ausgeführt): ∅ **≈ 8.4/10** (vs. Selbst 8.6). Zwei strategische Befunde leiten die Neu-Priorisierung: (a) **CAM fehlt trotz Kernziel „mobile Feldarbeit"** — Table-Stakes blockiert das Kernversprechen; (b) **ADR-020-Bundler-Trigger faktisch erreicht** — ESM-Brücken-Migration nach 2 Brücken tot, God-Module `gedcom.js` (2.339 Z./96 Fn) wächst weiter.
+> Unabhängiges Review (Code gelesen, Tests selbst ausgeführt): ∅ **≈ 8.4/10** (vs. Selbst 8.6). **Review-Korrektur (v999):** CAM war NICHT offen — die Kamera-Direkterfassung (📷/🖼, Resize, IDB lokal ohne OneDrive) existiert seit v59 und wurde browser-verifiziert. Verbleibende reale CAM-Lücke (Schnellzugriff) ist mit v999 geschlossen (📷-Button im Detail-Header). Strategischer Hauptbefund bleibt: **ADR-020-Bundler-Trigger faktisch erreicht** — ESM-Brücken-Migration nach 2 Brücken tot, God-Module `gedcom.js` (2.339 Z./96 Fn) wächst weiter.
 
 | Prio | Maßnahme | Befund | Aufwand |
 |---|---|---|---|
-| 1 | **CAM** — Kamera-Direkterfassung (`<input capture>`) | schließt die Lücke zwischen erklärtem Kernziel „mobile Feldarbeit" und Realität; sofort spürbar. Hochgezogen aus P1-Backlog. | S |
-| 2 | **BUILD-SPIKE** — esbuild-Proof-of-Concept | beweisen, dass ein Bundler „edit-anywhere" (ADR-001/002) nicht bricht → entriegelt God-Module-Split + Ladereihenfolge + ~860 Globals gemeinsam. ADR-020-Trigger faktisch erreicht. | M (Spike) / XL (Vollzug) |
-| 3 | **SCALE-REAL** — Skalierung >20k + Echtdaten-Großbestand | 20k synthetisch belegt; reale Großdatei (50k+) = letzter unbewiesener Stabilitäts-Claim | M |
-| 4 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v998; belegt „einsteigerfreundlich" (Kernziel) und hebt Design/UX-Note. Ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
-| 5 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikterkennung (v858) löst Datenverlust; Sync selbst noch manuell — klarste reale Lücke ggü. CloudKit/Ancestry | L |
-| 6 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. Nach BUILD-SPIKE `gedcom.js` splitten. | S–M |
+| 1 | **BUILD-SPIKE** — esbuild-Proof-of-Concept | beweisen, dass ein Bundler „edit-anywhere" (ADR-001/002) nicht bricht → entriegelt God-Module-Split + Ladereihenfolge + ~860 Globals gemeinsam. ADR-020-Trigger faktisch erreicht. | M (Spike) / XL (Vollzug) |
+| 2 | **SCALE-REAL** — Skalierung >20k + Echtdaten-Großbestand | 20k synthetisch belegt; reale Großdatei (50k+) = letzter unbewiesener Stabilitäts-Claim | M |
+| 3 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v999; belegt „einsteigerfreundlich" (Kernziel) und hebt Design/UX-Note. Ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
+| 4 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikterkennung (v858) löst Datenverlust; Sync selbst noch manuell — klarste reale Lücke ggü. CloudKit/Ancestry | L |
+| 5 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. Nach BUILD-SPIKE `gedcom.js` splitten. | S–M |
 
 ---
 
@@ -143,9 +143,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ### P1 — Mobile Feldarbeit
 
-| ID | Aufgabe | Details | Aufwand |
-|---|---|---|---|
-| **CAM** | **Kamera-Integration** | `<input accept="image/*" capture="environment">` → Foto direkt als Medienreferenz; kein OneDrive nötig; iOS + Android PWA nativ. Lücke vs. MacFamilyTree iOS. | S |
+*CAM (Kamera-Integration) ✅ erledigt — Basis seit v59 (📷/🖼, Resize, IDB lokal ohne OneDrive), Schnellzugriff im Detail-Header seit v999.*
 
 ### P2 — Forschungsqualität
 
@@ -193,7 +191,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v998 *(aktuell)*** — beide Versionsfelder gesetzt (Header + Footer). Zuletzt dokumentiert: Geo-Validierung HOF_NO_COORD/HOF_FAR (Kap. 7); Hof-Picker + Ort/Hof-Trennung, geräteübergreifende Hof-Koordinaten (Kap. 15). Bewusst ohne Handbuch-Eintrag (intern/transparent): Farm-PO-Migration, Sidecar-Dual-write→single-source, Projektions-Invariante, Enclosure-Ketten, placeObjects-Reload-Fix. Offen: echte Screenshots statt Mockups → **DOC-SCREENS** (M).
+**Handbuch-Stand: sw v998 *(veraltet — v999 CAM-Schnellzugriff noch nicht dokumentiert)*** — beide Versionsfelder auf v998. Nachzutragen: 📷-Schnellzugriff-Button im Personen-Detail-Header (1-Tap-Kamera) in Kap. 15 (Medien). Zuletzt dokumentiert: Geo-Validierung HOF_NO_COORD/HOF_FAR (Kap. 7); Hof-Picker + Ort/Hof-Trennung, geräteübergreifende Hof-Koordinaten (Kap. 15). Bewusst ohne Handbuch-Eintrag (intern/transparent): Farm-PO-Migration, Sidecar-Dual-write→single-source, Projektions-Invariante, Enclosure-Ketten, placeObjects-Reload-Fix. Offen: echte Screenshots statt Mockups → **DOC-SCREENS** (M).
 
 **DOC-SYNC** *(Pflicht bei jedem sw-Bump)*: Bewertungstabelle + Testanzahl + Priorisierung mitziehen, analog zur CLAUDE.md-Pflicht-Regel.
 
