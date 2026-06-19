@@ -23,9 +23,14 @@ let _odCurrentBasePath = null; // null = nicht geladen; '' = kein Basis-Pfad
 // Datei-ID und -Name der zuletzt geladenen Datei (IDB-primär, sync-cached)
 let _odCurFileId   = null;
 let _odCurFileName = null;
+// TREE-CONFLICT: eTag der Datei zum Lade-/Speicher-Zeitpunkt. Beim Speichern als
+// If-Match gesendet → Graph antwortet 412, wenn die Remote-Datei seither (von einem
+// anderen Gerät) geändert wurde → kein lautloses Überschreiben (last-write-wins).
+let _odCurEtag     = null;
 (async () => {
   _odCurFileId   = await idbGet('od_file_id').catch(() => null);
   _odCurFileName = await idbGet('od_file_name').catch(() => null);
+  _odCurEtag     = await idbGet('od_etag').catch(() => null);
   if (_odCurFileId === null) {
     const ls = localStorage.getItem('od_file_id');
     if (ls) { _odCurFileId = ls; idbPut('od_file_id', ls).catch(() => {}); localStorage.removeItem('od_file_id'); }
@@ -35,6 +40,26 @@ let _odCurFileName = null;
     if (ls) { _odCurFileName = ls; idbPut('od_file_name', ls).catch(() => {}); localStorage.removeItem('od_file_name'); }
   }
 })();
+
+// eTag merken (in-memory + IDB). null löscht den gespeicherten Wert.
+function _odSetEtag(tag) {
+  _odCurEtag = tag || null;
+  if (_odCurEtag) idbPut('od_etag', _odCurEtag).catch(() => {});
+  else idbDel('od_etag').catch(() => {});
+}
+
+// eTag der DriveItem-Metadaten holen (ein kleiner Request; /content liefert nur den
+// CDN-eTag des Downloads, nicht den DriveItem-eTag — daher Metadaten-GET).
+async function _odFetchItemEtag(fileId, token) {
+  if (!fileId || !token) return null;
+  try {
+    const r = await fetch(`${OD_GRAPH}/me/drive/items/${fileId}?select=id,eTag,cTag`,
+      { headers: { Authorization: 'Bearer ' + token } });
+    if (!r.ok) return null;
+    const m = await r.json();
+    return m.eTag || m.cTag || null;
+  } catch (e) { return null; }
+}
 
 async function _odGetBasePath() {
   if (_odCurrentBasePath !== null) return _odCurrentBasePath;
@@ -504,6 +529,7 @@ async function odLoadFile(itemId, fileName) {
       });
       if (metaRes.ok) {
         const meta = await metaRes.json();
+        _odSetEtag(meta.eTag || meta.cTag); // TREE-CONFLICT: Lade-eTag merken
         const rawPath = meta.parentReference?.path || '';
         const match   = rawPath.match(/\/drive\/root:\/(.*)/);
         const basePath = match ? decodeURIComponent(match[1]) : '';
@@ -515,8 +541,8 @@ async function odLoadFile(itemId, fileName) {
   } catch(e) { showToast('OneDrive: Laden fehlgeschlagen — ' + e.message); }
 }
 
-async function odSaveFile() {
-  if (AppState.db?._grampsMaster) return _odSaveGramps();
+async function odSaveFile(force = false) {
+  if (AppState.db?._grampsMaster) return _odSaveGramps(force);
   showToast('Verbinde mit OneDrive…');
   const token = await _odGetToken();
   if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
@@ -524,30 +550,45 @@ async function odSaveFile() {
   const fileName = _odCurFileName || 'stammbaum.ged';
   let text;
   try { text = writeGEDCOM(true); } catch(e) { showToast('Fehler beim Schreiben: ' + e.message); return; }
+  // TREE-CONFLICT: eTag nachholen, falls Datei vor diesem Feature geladen wurde
+  if (fileId && !_odCurEtag && !force) _odSetEtag(await _odFetchItemEtag(fileId, token));
   showToast('Speichere in OneDrive… (' + Math.round(text.length/1024) + ' KB)');
   try {
     const url = fileId
       ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
       : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
+    const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain;charset=utf-8' };
+    if (fileId && _odCurEtag && !force) headers['If-Match'] = _odCurEtag;
     const ctrl = new AbortController();
     const _to = setTimeout(() => ctrl.abort(), 30000);
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'text/plain;charset=utf-8' },
-      body: text,
-      signal: ctrl.signal
-    });
+    const res = await fetch(url, { method: 'PUT', headers, body: text, signal: ctrl.signal });
     clearTimeout(_to);
+    if (res.status === 412) return _odHandleSaveConflict(() => odSaveFile(true));
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
     const saved = await res.json().catch(() => ({}));
     if (!fileId && saved.id) { _odCurFileId = saved.id; idbPut('od_file_id', saved.id).catch(() => {}); }
+    _odSetEtag(saved.eTag || saved.cTag); // TREE-CONFLICT: neuen eTag übernehmen
     AppState.changed = false; updateChangedIndicator();
     const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
     showToast('✓ In OneDrive gespeichert: ' + _loc);
   } catch(e) { showToast('OneDrive: Speichern fehlgeschlagen — ' + (e.name === 'AbortError' ? 'Timeout (30s)' : e.message)); }
 }
 
-async function _odSaveGramps() {
+// TREE-CONFLICT: Remote-Datei hat sich seit dem Laden geändert (412). Statt lautlos
+// zu überschreiben → informierte Entscheidung. confirm() wie sonst im Projekt (CSP-safe).
+function _odHandleSaveConflict(forceSaveFn) {
+  showToast('⚠ OneDrive-Konflikt erkannt', 'warn');
+  const ok = confirm(
+    'Die Datei in OneDrive wurde seit dem Öffnen geändert — vermutlich von einem anderen Gerät.\n\n' +
+    'Wenn du jetzt speicherst, überschreibst du diese Remote-Änderungen mit deiner lokalen Version.\n\n' +
+    'OK = trotzdem mit lokaler Version überschreiben\n' +
+    'Abbrechen = nicht speichern (Remote-Version zuerst prüfen, z. B. Menü → Aus OneDrive öffnen)'
+  );
+  if (ok) return forceSaveFn();
+  showToast('Speichern abgebrochen — Remote-Version unverändert', 'info');
+}
+
+async function _odSaveGramps(force = false) {
   showToast('Verbinde mit OneDrive…');
   const token = await _odGetToken();
   if (!token) { showToast('OneDrive: Anmeldung erforderlich'); return; }
@@ -556,23 +597,23 @@ async function _odSaveGramps() {
   showToast('GRAMPS-Datei wird erstellt …');
   let blob;
   try { blob = await writeGRAMPS(AppState.db); } catch(e) { showToast('Fehler: ' + e.message); return; }
+  if (fileId && !_odCurEtag && !force) _odSetEtag(await _odFetchItemEtag(fileId, token));
   showToast('Speichere in OneDrive… (' + Math.round(blob.size/1024) + ' KB)');
   try {
     const url = fileId
       ? `${OD_GRAPH}/me/drive/items/${fileId}/content`
       : `${OD_GRAPH}/me/drive/root:/Stammbaum/${encodeURIComponent(fileName)}:/content`;
+    const headers = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/octet-stream' };
+    if (fileId && _odCurEtag && !force) headers['If-Match'] = _odCurEtag;
     const ctrl = new AbortController();
     const _to = setTimeout(() => ctrl.abort(), 30000);
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/octet-stream' },
-      body: blob,
-      signal: ctrl.signal
-    });
+    const res = await fetch(url, { method: 'PUT', headers, body: blob, signal: ctrl.signal });
     clearTimeout(_to);
+    if (res.status === 412) return _odHandleSaveConflict(() => _odSaveGramps(true));
     if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + (await res.text().catch(()=>'')));
     const saved = await res.json().catch(() => ({}));
     if (!fileId && saved.id) { _odCurFileId = saved.id; idbPut('od_file_id', saved.id).catch(() => {}); }
+    _odSetEtag(saved.eTag || saved.cTag);
     AppState.changed = false; updateChangedIndicator();
     const _loc = saved.parentReference?.path ? saved.parentReference.path.replace('/drive/root:','') + '/' + saved.name : (saved.name || fileName);
     showToast('✓ In OneDrive gespeichert: ' + _loc);
@@ -602,6 +643,8 @@ async function odAutoLoadFromOneDrive() {
       _processLoadedText(await res.text(), fileName);
       showToast('☁ ' + fileName + ' von OneDrive geladen');
     }
+    // TREE-CONFLICT: Lade-eTag erfassen (eigener Metadaten-GET, /content liefert ihn nicht)
+    _odSetEtag(await _odFetchItemEtag(fileId, token));
     _odUpdateUI();
     return true;
   } catch(e) {

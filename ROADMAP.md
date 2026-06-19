@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v999 · Cache: `stammbaum-v999` · `test-unit.js` = **558 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
+**sw-Version:** v1000 · Cache: `stammbaum-v1000` · `test-unit.js` = **558 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
 
 **SCALE-TEST:** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort-Cache (v899) · Details: SCALE-TEST-BEFUNDE.md
 
@@ -34,6 +34,7 @@ Fünf Dimensionen leiten die Priorisierung:
 
 | Version(en) | Feature |
 |---|---|
+| v1000 | **TREE-CONFLICT:** OneDrive-Baum-Save mit `If-Match`-eTag → 412-Konflikterkennung statt lautlosem last-write-wins. eTag bei Load/Save erfasst (`od_etag`), bei Remote-Änderung Überschreib-/Abbruch-Dialog. GEDCOM + GRAMPS. Schließt die Konflikt-Lücke, die placeObjects schon seit v858 hatten. |
 | v999 | **CAM-Schnellzugriff:** direkter 📷-Button im Personen-Detail-Header → öffnet Kamera in 1 Tap (vorher 3). CAM-Basis (📷/🖼, Resize, IDB lokal ohne OneDrive) war bereits seit v59 vorhanden — Review-Korrektur |
 | v998 | Zwei Geo-Validierungsregeln für Höfe: `HOF_NO_COORD` + `HOF_FAR` (Haversine, 25 km) |
 | v997 | ADR-026 Hof-Notiz single-source: Writer aus Farm-PO-Notiz, `hofObjects`-Sidecar write-frozen |
@@ -82,10 +83,12 @@ Fünf Dimensionen leiten die Priorisierung:
 | Prio | Maßnahme | Befund | Aufwand |
 |---|---|---|---|
 | 1 | **SCALE-REAL** — Skalierung >20k + Echtdaten-Großbestand | 20k synthetisch belegt; reale Großdatei (50k+) = letzter unbewiesener Stabilitäts-Claim | M |
-| 2 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v999; belegt „einsteigerfreundlich" (Kernziel) und hebt Design/UX-Note. Ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
-| 3 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikterkennung (v858) löst Datenverlust; Sync selbst noch manuell — klarste reale Lücke ggü. CloudKit/Ancestry | L |
+| 2 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v1000; belegt „einsteigerfreundlich" (Kernziel) und hebt Design/UX-Note. Ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
+| 3 | **TREE-AUTOSAVE** — Baum auto-speichern (Convenience) | debounced Auto-Save bei `visibilitychange→hidden` + Idle, Offline-fest, Status-Indikator. **Baut auf TREE-CONFLICT (v1000) auf.** Convenience-Hälfte des früheren ONEDRIVE-AUTO; „manuelles Speichern" ist teils ein Feature (bewusste Commits) → bewusst nachrangig. | M |
 | 4 | **GEDCOM-SPLIT** — `gedcom.js` (2.339 Z./96 Fn) manuell entflechten | God-Module per `<script>`-Splitting reduzieren (z. B. Orts-Logik → `places-core.js`). **Kein** Build-Step, kein Bundler nötig — ADR-001/002 bleiben gültig. Ersetzt das verworfene BUILD-SPIKE als Architektur-Hebel. | M |
 | 5 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. | S–M |
+
+> **ONEDRIVE-AUTO aufgeteilt (v1000):** Code-Prüfung ergab — Auto-**Load** läuft längst, nur das **Speichern des Baums** war manuell, und zwar **ohne Konfliktschutz** (reines PUT, last-write-wins; placeObjects hatten ihn seit v858, der Baum nicht). Naives Auto-Save hätte den Datenverlust *verschärft*. Daher: Korrektheit zuerst → **TREE-CONFLICT (v1000, ✅ `If-Match`/412)**; Komfort danach → **TREE-AUTOSAVE (#3, offen)**.
 
 ---
 
@@ -192,7 +195,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v998 *(veraltet — v999 CAM-Schnellzugriff noch nicht dokumentiert)*** — beide Versionsfelder auf v998. Nachzutragen: 📷-Schnellzugriff-Button im Personen-Detail-Header (1-Tap-Kamera) in Kap. 15 (Medien). Zuletzt dokumentiert: Geo-Validierung HOF_NO_COORD/HOF_FAR (Kap. 7); Hof-Picker + Ort/Hof-Trennung, geräteübergreifende Hof-Koordinaten (Kap. 15). Bewusst ohne Handbuch-Eintrag (intern/transparent): Farm-PO-Migration, Sidecar-Dual-write→single-source, Projektions-Invariante, Enclosure-Ketten, placeObjects-Reload-Fix. Offen: echte Screenshots statt Mockups → **DOC-SCREENS** (M).
+**Handbuch-Stand: sw v998 *(veraltet — v999 CAM-Schnellzugriff + v1000 OneDrive-Konfliktdialog noch nicht dokumentiert)*** — beide Versionsfelder auf v998. Nachzutragen: 📷-Schnellzugriff-Button im Personen-Detail-Header (1-Tap-Kamera) in Kap. 15 (Medien); OneDrive-Konflikt-Hinweis beim Speichern (Datei extern geändert → Überschreiben/Abbrechen) in Kap. 14 (OneDrive). Zuletzt dokumentiert: Geo-Validierung HOF_NO_COORD/HOF_FAR (Kap. 7); Hof-Picker + Ort/Hof-Trennung, geräteübergreifende Hof-Koordinaten (Kap. 15). Bewusst ohne Handbuch-Eintrag (intern/transparent): Farm-PO-Migration, Sidecar-Dual-write→single-source, Projektions-Invariante, Enclosure-Ketten, placeObjects-Reload-Fix. Offen: echte Screenshots statt Mockups → **DOC-SCREENS** (M).
 
 **DOC-SYNC** *(Pflicht bei jedem sw-Bump)*: Bewertungstabelle + Testanzahl + Priorisierung mitziehen, analog zur CLAUDE.md-Pflicht-Regel.
 
@@ -212,7 +215,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 | Reports / Bücher / Poster | **✅ sehr gut (12 Formate — v911–v917)** | **✅ exzellent (PDF-Bücher, Großposter)** | ✅ sehr gut | ⚠ mittel |
 | Visualisierung | ✅ sehr gut + Story-Modus einzigartig | **✅ exzellent (3D „Virtual Tree")** | ⚠ mittel | ✅ gut |
 | Orts-Geocoding / Gazetteer | ✅ Nominatim + GOV (historisch datiert) | **✅ Geocoding + Heatmaps** | ✅ | ✅ |
-| Geräte-Sync | ⚠ OneDrive-Datei + Konflikterkennung (v858) | **✅ nahtlos (CloudKit FamilySync)** | ❌ | ✅ Cloud |
+| Geräte-Sync | ⚠ OneDrive-Datei + Konflikterkennung (Orte v858, **Baum v1000 `If-Match`/412**); Auto-Save offen (TREE-AUTOSAVE) | **✅ nahtlos (CloudKit FamilySync)** | ❌ | ✅ Cloud |
 | Karte + Zeitleiste | ✅ (hist. Ereignisse, Mehrpersonen-TL) | ✅ | ⚠ | ⚠ |
 | Validierungsregeln | ✅ **31 Regeln**, konfigurierbar | ⚠ | ✅ | ⚠ |
 | Historisch datierte Ortsdarstellung | **✅ einzigartig** — periodengerechter Picker, Verwaltungs-Zeitlinie WYSIWYG, ADR-026 Höfe | ⚠ Aktualname | ⚠ Place-Hierarchy ja, Zeitachse nein | ⚠ Aktualname |
@@ -229,7 +232,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 **Einzigartige Stärken:** kostenlose plattformübergreifende Offline-PWA + Story-Modus + GRAMPS-Brücke + DSGVO-Anonymisierung + **verifizierte GEDCOM-Treue** (`net_delta=0`) + GPS-Forschungsprozess + **historisch datierte Ortsdarstellung** (periodengerechter Picker + Verwaltungs-Zeitlinie, einzigartig im Markt) + Höfe als geokodierte Farm-placeObjects + kein Datamining.
 
-**Ehrliche Lücken:** vs. MFT: ① 3D-Tree (out-of-scope) · ② nahtloser Multi-Device-Sync (→ ONEDRIVE-AUTO) · ③ Reife (20 Jahre vs. 18 Monate). vs. GRAMPS: professionelle Quellentiefe + 100k+-Skalierung. vs. Ancestry/MyHeritage: DNA + Online-Records — kategoriefremd, bewusst out-of-scope.
+**Ehrliche Lücken:** vs. MFT: ① 3D-Tree (out-of-scope) · ② Auto-Save des Baums (→ TREE-AUTOSAVE; Konfliktschutz + Auto-Load existieren, nur der Push ist noch manuell) · ③ Reife (20 Jahre vs. 18 Monate). vs. GRAMPS: professionelle Quellentiefe + 100k+-Skalierung. vs. Ancestry/MyHeritage: DNA + Online-Records — kategoriefremd, bewusst out-of-scope.
 
 ---
 
