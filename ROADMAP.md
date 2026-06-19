@@ -65,7 +65,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | Architektur | **6.9/10** | Saubere Schichtung, 26 ADRs, Passthrough-Fundament. `ViewState` (ADR-025) + `ui-lifecycle.js` schließen PWA-Lifecycle-Lücke. Orts-Speicher auf `placeObjects` konsolidiert. `enclosureWinnerAsOf` — View + Writer rufen dieselbe Funktion. **84 top-level-Funktionen in `gedcom.js`** + 53 `<script>`-Tags bleiben Hauptschuld; Modul-Migration bewusst zurückgestellt (ADR-020). |
 | Code-Qualität | **8.0/10** | 1 `console.log` + 1 TODO in 40k LOC. T0-FUNC-SPLIT (v904), SHOWPLACE-SPLIT (v949/v950, 631→423 Z.), QT-SPLIT (v967, 196→75 Z.) haben Monsterfunktionen beseitigt. Verbleibend: `showDetail` 275 Z., `_pdetLifeData` 195 Z. |
 | Sicherheit | **8.5/10** | CSP ohne `unsafe-inline/eval`, OAuth PKCE S256, `esc()` pervasiv, `test-csp.js` als Pre-Commit-Gate. Abzug: Refresh-Token in `sessionStorage` (alternativlos ohne Backend, ADR-021). |
-| Design / UX | **8.5/10** | Design-Token-System, Mobile-First, 0 WCAG 2.1 AA Violations (v905). Abzug: Handbuch teils Mockups (→ DOC-SCREENS). |
+| Design / UX | **8.5/10** | Design-Token-System, Mobile-First, 0 WCAG 2.1 AA Violations (v905). Abzug: Handbuch teils Mockups (→ DOC-SCREENS); **UX-Audit 2026-06-20** (Browser-verifiziert) fand 10 konkrete Defekte → eigener UX-AUDIT-Block (Hoch: Aktiv-Tab unsichtbar, `Unknown`-Badge, Dev-Tools im Menü). |
 | Funktionsstand | **9.1/10** | Undo/Redo, Karten, Evidenzmodell, GPS-Hypothesen, GED7, GRAMPS, Geocoding, GOV (historisch), **12 Druckausgaben**, **31 Validator-Regeln**, **periodengerechte Ortsanzeige** (v921–v941, einzigartig), **ADR-026 Höfe** (v989–v998). Abzug: 3D-Tree + DNA out-of-scope. |
 | Funktions-Qualität | **8.5/10** | GEDCOM/GRAMPS-Treue empirisch top; Browser-verifizierte UI-Flows. Skalierung bis 20k belegt. Abzug: >20k Echtdaten offen (→ SCALE-REAL). |
 | Performance | **8.2/10** | Web Worker + virtuelles Scrollen + LAZY-LOAD (−119 KB) + Sort-Cache + dirty-bit. *(2026-06-19: „~50 Cold-Start-Requests"-Abzug entfällt — Produktion auf HTTP/2 gemessen, kein Round-Trip-Problem; Boot-Zeit dominiert vom GEDCOM-Parse.)* Rest-Abzug: erster Sort 20k ~1 s; >20k unbelegt (SCALE-REAL). |
@@ -89,6 +89,27 @@ Fünf Dimensionen leiten die Priorisierung:
 | 5 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. | S–M |
 
 > **ONEDRIVE-AUTO aufgeteilt (v1000):** Code-Prüfung ergab — Auto-**Load** läuft längst, nur das **Speichern des Baums** war manuell, und zwar **ohne Konfliktschutz** (reines PUT, last-write-wins; placeObjects hatten ihn seit v858, der Baum nicht). Naives Auto-Save hätte den Datenverlust *verschärft*. Daher: Korrektheit zuerst → **TREE-CONFLICT (v1000, ✅ `If-Match`/412)**; Komfort danach → **TREE-AUTOSAVE (#3, offen)**.
+
+---
+
+## UX-Audit 2026-06-20 *(Browser-verifiziert, Mobile 375 px, sw v1000, Demo-Daten)*
+
+> Usability-Durchlauf der Kern-Flows (Baum → Person-Detail → Personen-Liste/Suche → Person anlegen → Orte → Menü). Jeder Befund am laufenden Stand verifiziert (computed styles / Screenshot / DOM). Zwei Erstverdächte beim Nachprüfen **verworfen**: „aktiver Tab falsch verdrahtet" (`.active`-Tracking korrekt) und „GRAMPS-Export doppelt im Menü" (zweiter Button ausgeblendet). Trifft die Dimension **Design/UX** (Kernziel „einsteigerfreundlich").
+
+| Prio | ID | Befund | Verifikation | Aufwand |
+|---|---|---|---|---|
+| **Hoch** | **UX-NAV-ACTIVE** | Aktiver Bottom-Nav-Tab visuell kaum erkennbar: aktiv `rgb(110,78,24)` vs. inaktiv `rgb(107,82,50)` — beides Braun, **kein** Fettdruck/Hintergrund/Balken/Icon-Farbwechsel. Verstößt gegen „nicht nur Farbe" (WCAG 1.4.1). Fix: Akzentfarbe + Top-Balken oder Fettdruck. | computed styles + `::before/::after` geprüft | XS |
+| **Hoch** | **UX-I18N-UNKNOWN** | Englisches Typ-Badge `Unknown` im deutschen UI (6 Vorkommen) in der Orte-Liste. → „Unbekannt" oder ausblenden. | DOM-Zählung = 6 | XS |
+| **Hoch** | **UX-DEVTOOLS-HIDE** | QA-Werkzeuge im Endnutzer-Menü: „🔁 Roundtrip-Test" + „🔁 GRAMPS Roundtrip-Test" zwischen echten Nutzerfunktionen — für Endnutzer verwirrend. → hinter Dev-Flag/Einstellung. | Menü-Listing | S |
+| **Mittel** | **UX-WOHNORT-FMT** | Wohnort-Zeile in Person-Detail redundant + roh: „Sonnenstraße 12, **FROM 1985 TO 2005**, Sonnenstraße 12, München, …" — Adresse doppelt, GEDCOM-Rohwörter `FROM…TO` unübersetzt. Betrifft alle Wohnort-Zeilen. → `_pdetLifeData`/Projektion entdoppeln + Datumsbereich lokalisieren. | Screenshot Anna Muster | S |
+| **Mittel** | **UX-ORTE-DEDUP** | Orte-Liste vermischt Verwaltungs-Ebenen (Bayern/Deutschland, je 0 Personen) und scheinbare Dubletten („Augsburg" `[Unknown]` 0 Pers. **vs.** „Augsburg, Bayern, Deutschland" 7 Pers.; „Leopoldstraße 44" Hof doppelt) ungefiltert. **Erst klären:** echte Dublette oder legitimer `enclosedBy`-Parent? → nach Ebene gruppieren / leere Verwaltungsebenen einklappen / echte Dubletten mergen. | Screenshot Orte-Tab | S–M |
+| **Mittel** | **UX-DETAIL-SCROLL** | Horizontal scrollende Button-Reihen in Person-Detail (LEBENSDATEN: `Karte/+Alias/+E…`; `+Wohnort/+B…`) am rechten Rand abgeschnitten ohne Scroll-Hinweis → versteckte Aktionen. → Umbruch oder Scroll-Schatten/Chevron. | Screenshot | S |
+| Niedrig | **UX-ICON-LABELS** | Reine Icon-Leisten ohne sichtbare Labels: Baum-Topbar (`↓ ⬡ ◠ ⇩ ⟷ 🌐`) + Orte-Toolbar (8 Glyphen). aria-labels vorhanden, visuell kryptisch. → Tooltip/Long-Press-Hint oder Mini-Labels. | Screenshot | M |
+| Niedrig | **UX-FAB-OVERLAP** | FAB „+" überlappt das Chevron der letzten Listenzeile (Personen/Orte). → unteres Listen-Padding. | Screenshot | XS |
+| Niedrig | **UX-SEARCH-CLEAR** | Suchfeld ohne sichtbaren Lösch-Button (×); Trefferzahl nur in aria-live, visuell unauffällig. | Screenshot + Snapshot | XS |
+| Niedrig | **UX-INTERNAL-IDS** | Interne GEDCOM-IDs (`@I1@`…) prominent in Liste + Detail-Header; „Geändert **20240525**" unformatiert. Für Genealogen evtl. gewollt → optional dezenter/abschaltbar. | Screenshot | XS |
+
+**Empfohlene Reihenfolge:** Quick-Wins-Bündel **UX-NAV-ACTIVE + UX-I18N-UNKNOWN + UX-FAB-OVERLAP** (zusammen < 1 Tag, je CSS/String) → **UX-DEVTOOLS-HIDE** → **UX-WOHNORT-FMT** + **UX-ORTE-DEDUP** (gleicher Orts-/Projektions-Code). Alle GEDCOM-Roundtrip-neutral (reine Anzeige/UI). Positiv bestätigt: fokussierte Bottom-Sheet-Formulare mit Progressive Disclosure, Sofort-Suche + Filter + CSV, alphabetische Gruppierung, Quellen-Badges, Kamera-/Karten-Schnellzugriffe.
 
 ---
 
