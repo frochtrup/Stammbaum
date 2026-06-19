@@ -213,9 +213,18 @@ function writeCHAN(lines, obj, lv = 1) {
 //   damit _derivedHofObjectsFromDb() keine Ortskoordinaten als Hofkoordinaten
 //   zurückliest.
 function geoLines(lines, obj, indent, useExtraPlaces = true) {
-  let lati = null, long = null;
+  let lati = null, long = null, fromModel = false;
+  // 0. placeId → placeObject-Koordinaten (ADR-026: Farm-/Orts-PO ist single source).
+  //    Nur wenn sie von obj.lati ABWEICHEN (editierte Koord) oder obj.lati fehlt —
+  //    bei Gleichheit fällt es auf Schritt 3 durch (byte-genauer _latiStr-Roundtrip).
+  if (obj?.placeId && AppState.db?.placeObjects?.[obj.placeId]) {
+    const po = AppState.db.placeObjects[obj.placeId];
+    if (po.lat != null && (obj.lati == null || po.lat !== obj.lati || po.long !== obj.long)) {
+      lati = po.lat; long = po.long; fromModel = true;
+    }
+  }
   // 1. Hof-Koordinaten (spezifischer als Ortsregister)
-  if (obj?.addr) {
+  if (lati === null && obj?.addr) {
     const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
     if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
   }
@@ -239,8 +248,11 @@ function geoLines(lines, obj, indent, useExtraPlaces = true) {
   if (lati === null && obj?.lati != null) { lati = obj.lati; long = obj.long; }
   if (lati !== null && long !== null) {
     lines.push(`${indent} MAP`);
-    const latStr = obj?._latiStr || ((lati >= 0 ? 'N' : 'S') + Math.abs(lati));
-    const lonStr = obj?._longStr || ((long >= 0 ? 'E' : 'W') + Math.abs(long));
+    // _latiStr/_longStr sind die verbatim Form von obj.lati/long — nur nutzen, wenn die
+    // Koord NICHT aus dem Modell (placeId) kommt (sonst würde ein veralteter String die
+    // editierte Koordinate überschreiben). Modell-Koords → frisch aus dem Float bilden.
+    const latStr = (!fromModel && obj?._latiStr) ? obj._latiStr : ((lati >= 0 ? 'N' : 'S') + Math.abs(lati));
+    const lonStr = (!fromModel && obj?._longStr) ? obj._longStr : ((long >= 0 ? 'E' : 'W') + Math.abs(long));
     lines.push(`${indent+1} LATI ${latStr}`);
     lines.push(`${indent+1} LONG ${lonStr}`);
   }

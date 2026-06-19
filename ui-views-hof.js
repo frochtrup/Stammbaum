@@ -443,15 +443,11 @@ function saveHofCoord(addr) {
     showToast('⚠ Ungültige Koordinaten (Breite -90–90, Länge -180–180)');
     return;
   }
-  // Primär: Farm-placeObject (geräteübergreifend). Dual-write Sidecar für
-  // Reload-Überleben (placeObjects laden nicht auf allen Pfaden aus IDB).
-  upsertHofPO(addr, { lat, long: lon });
-  if (!AppState.db.hofObjects[addr]) AppState.db.hofObjects[addr] = { addr };
-  AppState.db.hofObjects[addr].lat  = lat;
-  AppState.db.hofObjects[addr].long = lon;
-  saveHofObjects();
+  // Single source of truth: Farm-placeObject (geräteübergreifend via savePlaceObjects,
+  // überlebt Reload aus IDB seit v995). Sidecar wird NICHT mehr geschrieben (read-only
+  // Legacy: die Migration liest ihn weiter für unmigrierte Altbestände).
+  upsertHofPO(addr, { lat, long: lon });   // ruft savePlaceObjects + markChanged
   invalidatePlacePersonIndex?.();
-  markChanged();
   showToast('✓ Koordinaten gespeichert');
   showHofDetail(addr, false);
 }
@@ -631,6 +627,11 @@ function saveHofRename(oldAddr) {
   if (!newAddr) { showToast('Adresse darf nicht leer sein', 'warn'); return; }
   if (newAddr === oldAddr) { cancelHofRename(); return; }
 
+  // Alte Hof-Meta (Farm-PO bevorzugt) sichern, BEVOR die Events umgehängt werden.
+  const oldHof   = buildHofIndex().get(oldAddr);
+  const oldMeta  = oldHof ? hofMeta(oldHof) : { lat: null, long: null, note: '' };
+  const oldFarmId = oldHof && oldHof.placeId || null;
+
   // Alle RESI/PROP-Ereignisse aller Personen aktualisieren
   let count = 0;
   for (const p of Object.values(AppState.db.individuals)) {
@@ -642,11 +643,21 @@ function saveHofRename(oldAddr) {
     }
   }
 
-  // hofObjects-Key migrieren
+  // hofObjects-Sidecar-Key migrieren (Legacy-read bleibt konsistent)
   if (AppState.db.hofObjects?.[oldAddr]) {
     AppState.db.hofObjects[newAddr] = { ...AppState.db.hofObjects[oldAddr], addr: newAddr };
     delete AppState.db.hofObjects[oldAddr];
     saveHofObjects();
+  }
+
+  UIState._hofCache = null;   // buildHofIndex/_ensureHofFarmPO sollen die neuen addr sehen
+  // Farm-PO für neue Adresse anlegen + Koords/Notiz übertragen, Events umhängen
+  upsertHofPO(newAddr, { lat: oldMeta.lat, long: oldMeta.long, note: oldMeta.note || '' });
+  // Altes Farm-PO entfernen, wenn verwaist (kein Event zeigt mehr darauf)
+  if (oldFarmId && AppState.db.placeObjects[oldFarmId]) {
+    const stillUsed = Object.values(AppState.db.individuals)
+      .some(p => (p.events || []).some(ev => ev.placeId === oldFarmId));
+    if (!stillUsed) { delete AppState.db.placeObjects[oldFarmId]; if (typeof savePlaceObjects === 'function') savePlaceObjects(); }
   }
 
   UIState._hofCache = null;

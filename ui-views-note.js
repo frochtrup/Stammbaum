@@ -116,11 +116,13 @@ function saveNoteModal() {
     s.text = inlineVal;
     markChanged(); closeModal('modalNote'); showSourceDetail(id);
   } else if (type === 'hof') {
-    // Primär: Farm-placeObject-Notiz (geräteübergreifend); Dual-write Sidecar.
+    // Farm-placeObject-Notiz (geräteübergreifend, primäre Anzeige-Quelle).
     if (typeof upsertHofPO === 'function') upsertHofPO(id, { note: inlineVal });
+    // Notiz-Dual-write Sidecar: der GEDCOM-Notiz-Export läuft noch über den
+    // [Hof]-Record (liest db.hofObjects) — bleibt bis 2c (Notiz-Export auf Farm-PO).
     if (!AppState.db.hofObjects[id]) AppState.db.hofObjects[id] = { addr: id };
     AppState.db.hofObjects[id].note = inlineVal;
-    if (!inlineVal && !AppState.db.hofObjects[id].lat) delete AppState.db.hofObjects[id];
+    if (!inlineVal && AppState.db.hofObjects[id].lat == null) delete AppState.db.hofObjects[id];
     saveHofObjects();
     markChanged(); closeModal('modalNote'); showHofDetail(id, false);
   }
