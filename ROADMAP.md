@@ -73,19 +73,19 @@ Fünf Dimensionen leiten die Priorisierung:
 | Dokumentation | **8.7/10** | 26 ADRs, ~2.5k-Z.-Changelog. Handbuch auf v998 (beide Versionsfelder). Abzug: Screenshots teils Mockups (→ DOC-SCREENS). |
 | PWA / Offline | **9.0/10** | SW: PRECACHE_CRITICAL atomar, Cache-first/Network-first, `offline.html`, `ui-lifecycle.js` BFCache-Guard. |
 | Datenschutz | **9.0/10** | Lokal-First, DSGVO-Anonymisierung BFS (v715), kein Tracking, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.6/10** (Selbst) · **≈ 8.4/10** (unabh. Review 2026-06-19) | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948) → 8.6 (v950+v967). Unabhängiges Review (`REVIEW-2026-06-19.md`) bestätigt Code/Sicherheit/Konformität, sieht Architektur (6.5) + Design/UX (8.0) tiefer. CAM-Schnellzugriff (v999) erledigt. Größte Hebel: BUILD-SPIKE (M) · SCALE-REAL (M) · DOC-SCREENS (M).* |
+| **∅ Gesamt** | **≈ 8.6/10** (Selbst) · **≈ 8.4/10** (unabh. Review 2026-06-19) | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948) → 8.6 (v950+v967). Unabhängiges Review (`REVIEW-2026-06-19.md`) bestätigt Code/Sicherheit/Konformität, sieht Architektur (6.5) + Design/UX (8.0) tiefer. CAM-Schnellzugriff (v999) erledigt; BUILD-SPIKE nach HTTP/2-Messung verworfen. Größte Hebel: SCALE-REAL (M) · DOC-SCREENS (M) · GEDCOM-SPLIT (M).* |
 
 ### Offene Maßnahmen *(priorisiert — nach unabhängigem Review 2026-06-19, Detail: `REVIEW-2026-06-19.md`)*
 
-> Unabhängiges Review (Code gelesen, Tests selbst ausgeführt): ∅ **≈ 8.4/10** (vs. Selbst 8.6). **Review-Korrektur (v999):** CAM war NICHT offen — die Kamera-Direkterfassung (📷/🖼, Resize, IDB lokal ohne OneDrive) existiert seit v59 und wurde browser-verifiziert. Verbleibende reale CAM-Lücke (Schnellzugriff) ist mit v999 geschlossen (📷-Button im Detail-Header). Strategischer Hauptbefund bleibt: **ADR-020-Bundler-Trigger faktisch erreicht** — ESM-Brücken-Migration nach 2 Brücken tot, God-Module `gedcom.js` (2.339 Z./96 Fn) wächst weiter.
+> Unabhängiges Review (Code gelesen, Tests selbst ausgeführt): ∅ **≈ 8.4/10** (vs. Selbst 8.6). **Zwei Review-Korrekturen (v999):** (1) CAM war NICHT offen — Kamera-Direkterfassung existiert seit v59, verbleibende Schnellzugriff-Lücke mit v999 geschlossen. (2) **BUILD-SPIKE verworfen** — die Cold-Load-Begründung war ein HTTP/1.1-Mentalmodell, angewandt auf eine **HTTP/2-Produktion** (GitHub Pages, `curl`-verifiziert: HTTP/2 + gzip + ETag). Bei HTTP/2-Multiplexing existiert das „57-Round-Trips"-Problem nicht; gemessener Bundle-Gewinn = wenige ms, für User nicht wahrnehmbar (Boot-Zeit dominiert vom GEDCOM-Parse, nicht vom Script-Laden). Bundling hat zudem **nie** das God-Module gelöst (zweite Verwechslung). Architektur-Schuld bleibt — aber per fortgesetztem manuellem `<script>`-Splitten lösbar, ohne Build-Step.
 
 | Prio | Maßnahme | Befund | Aufwand |
 |---|---|---|---|
-| 1 | **BUILD-SPIKE** — esbuild-Proof-of-Concept | beweisen, dass ein Bundler „edit-anywhere" (ADR-001/002) nicht bricht → entriegelt God-Module-Split + Ladereihenfolge + ~860 Globals gemeinsam. ADR-020-Trigger faktisch erreicht. | M (Spike) / XL (Vollzug) |
-| 2 | **SCALE-REAL** — Skalierung >20k + Echtdaten-Großbestand | 20k synthetisch belegt; reale Großdatei (50k+) = letzter unbewiesener Stabilitäts-Claim | M |
-| 3 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v999; belegt „einsteigerfreundlich" (Kernziel) und hebt Design/UX-Note. Ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
-| 4 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikterkennung (v858) löst Datenverlust; Sync selbst noch manuell — klarste reale Lücke ggü. CloudKit/Ancestry | L |
-| 5 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. Nach BUILD-SPIKE `gedcom.js` splitten. | S–M |
+| 1 | **SCALE-REAL** — Skalierung >20k + Echtdaten-Großbestand | 20k synthetisch belegt; reale Großdatei (50k+) = letzter unbewiesener Stabilitäts-Claim | M |
+| 2 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v999; belegt „einsteigerfreundlich" (Kernziel) und hebt Design/UX-Note. Ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
+| 3 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikterkennung (v858) löst Datenverlust; Sync selbst noch manuell — klarste reale Lücke ggü. CloudKit/Ancestry | L |
+| 4 | **GEDCOM-SPLIT** — `gedcom.js` (2.339 Z./96 Fn) manuell entflechten | God-Module per `<script>`-Splitting reduzieren (z. B. Orts-Logik → `places-core.js`). **Kein** Build-Step, kein Bundler nötig — ADR-001/002 bleiben gültig. Ersetzt das verworfene BUILD-SPIKE als Architektur-Hebel. | M |
+| 5 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. | S–M |
 
 ---
 
@@ -95,20 +95,21 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ---
 
-## Architektur & Startup — Lösungsbewertung *(konsolidiert 2026-06-13)*
+## Architektur & Startup — Lösungsbewertung *(konsolidiert 2026-06-13 · Startup-Teil revidiert 2026-06-19)*
 
-**Zwei gekoppelte Probleme** (Multi-File no-Build, ADR-001/002): (1) ~860 Globals über 69 Dateien, ESM-Brücken-Migration nach 2 Brücken stagniert. (2) ~50 sequenzielle Script-Requests beim Cold-Load.
+**Befund-Revision (2026-06-19):** Das angenommene zweite Problem — „~50 sequenzielle Script-Requests beim Cold-Load" — ist auf der **Produktion (GitHub Pages = HTTP/2 + gzip + ETag, `curl`-verifiziert)** **kein** relevantes Problem. HTTP/2 multiplext alle 57 JS-Dateien über eine Verbindung; gemessener Bundle-Gewinn = wenige ms, für User nicht wahrnehmbar (Boot-Zeit dominiert vom GEDCOM-Parse). Damit bleibt **nur ein** echtes Architektur-Problem: ~860 Globals + God-Module `gedcom.js`, ESM-Brücken nach 2 Clustern stagniert. Der „Startup"-Bewertungsweg entfällt.
 
 | # | Pfad | Architektur | Startup | Verdikt |
 |---|---|---|---|---|
 | 1 | Namespace-Hygiene (IIFE) | + | 0 | Backlog |
-| 2 | Module Worker | + | 0 | **Mittelfristig** — räumt ADR-020-Blocker |
-| 3 | Import Maps | ++ | **–** | **Verworfen** — mehr Cold-Load-Requests |
-| 4 | Hybrid Source + Bundle | ++ | + | **Verworfen** — Wartungsfalle |
-| 5 | Voll-Bundler (esbuild) | +++ | +++ | **Trigger-basiert** (s. ADR-020) |
+| 2 | Module Worker | + | 0 | **Mittelfristig** — räumt ADR-020-Blocker (rein Architektur, nicht Startup) |
+| 3 | Import Maps | ++ | **–** | **Verworfen** |
+| 4 | Hybrid Source + Bundle | ++ | 0 | **Verworfen** — Wartungsfalle, kein Startup-Nutzen auf HTTP/2 |
+| 5 | Voll-Bundler (esbuild) | +++ | **0** | **Verworfen (2026-06-19)** — Startup-Nutzen auf HTTP/2 widerlegt; Bundling löst das God-Module ohnehin nicht |
 | 6 | Boot-Splitting ohne Bundler | + | + | ✅ **v951 erledigt** (Boot-Loader) |
+| 7 | **Manuelles `<script>`-Splitting** (GEDCOM-SPLIT) | ++ | 0 | **Empfohlen** — God-Module entflechten ohne Build-Step, ADR-001/002 intakt |
 
-**Sequenzierung:** ✅ Boot-Loader (v951) · 🟡 Pfad 6 Boot-Splitting (nächster Sprint-Block) · 🟡 Pfad 2 Module Worker (parallelisierbar) · 🔵 Pfad 5 Bundler (Trigger: Boot-Splitting trägt nicht mehr oder SW-Bump-Schmerz user-sichtbar). ADR-001/002 + ADR-020 bleiben gültig. Detail: ARCHITECTURE.md ADR-020.
+**Sequenzierung (revidiert):** ✅ Boot-Loader (v951) · 🟡 Pfad 7 GEDCOM-SPLIT (`gedcom.js` manuell entflechten, kein Bundler) · 🟡 Pfad 2 Module Worker (parallelisierbar, räumt ADR-020-Worker-Blocker). **Pfad 5 Bundler verworfen** (HTTP/2-Messung). ADR-001/002 + ADR-020 bleiben gültig. Detail: ARCHITECTURE.md ADR-020.
 
 ---
 
