@@ -298,6 +298,7 @@ function eventBlock(lines, tag, obj, lv) {
 let _witnessEvMap = {};
 // Phase F12: hofAddress → NOTE record ID (populated by writeGEDCOM)
 let _hofNoteIds = {};
+let _hofNoteText = {};   // addr → Hof-Notiztext (Farm-PO/Sidecar), pro writeGEDCOM neu
 // Cross-mode: GRAMPS handle → GEDCOM XREF (populated by writeGEDCOM before write functions)
 let _noteXref = {};
 
@@ -397,6 +398,18 @@ for (const en of (p.extraNames || [])) {
   return { _pt, _ptNameEnd };
 }
 
+// Hof-Notiz für eine Adresse: primär aus dem Farm-placeObject (single source seit
+// ADR-026 2c), hofObjects-Sidecar als Fallback (unmigrierte Altbestände).
+function _hofNoteFor(addr) {
+  const a = (addr || '').trim();
+  if (!a) return '';
+  const hof = (typeof buildHofIndex === 'function') ? buildHofIndex().get(a) : null;
+  const po  = hof && hof.placeId && AppState.db?.placeObjects?.[hof.placeId];
+  if (po && po.note) return po.note;
+  const side = AppState.db?.hofObjects?.[a];
+  return (side && side.note) || '';
+}
+
 function _writeINDIEventBody(lines, ev, p, writtenHofNotes) {
 lines.push(`1 ${ev.type}${ev.value ? ' ' + ev.value : ''}`);
 if (ev._grampsEvPriv) lines.push(`2 RESN confidential`);
@@ -430,8 +443,9 @@ for (const r of (ev.noteRefs || [])) {
 // Event-eigene Inline-Notiz (ohne [Hof]-Präfix → wirklich event-spezifisch)
 const _ownInline = ev._noteOrig !== undefined ? ev._noteOrig : ev.note;
 if (_ownInline && !_isHofNoteText(_ownInline)) pushCont(lines, 2, 'NOTE', _ownInline);
-// Hof-Notiz einmal pro Adresse (geteilter [Hof]-Record)
-if (_hofMeta?.note && _hofNoteIds[_addrKey] && !writtenHofNotes.has(_addrKey)) {
+// Hof-Notiz einmal pro Adresse (geteilter [Hof]-Record). _hofNoteIds[_addrKey]
+// existiert genau dann, wenn _hofNoteFor(addr) eine Notiz lieferte (Farm-PO/Sidecar).
+if (_hofNoteIds[_addrKey] && !writtenHofNotes.has(_addrKey)) {
   lines.push(`2 NOTE ${_hofNoteIds[_addrKey]}`);
   writtenHofNotes.add(_addrKey);
 }
@@ -943,12 +957,23 @@ function writeGEDCOM(updateHeadDate = false, forceGed7 = false, forceStrict = fa
     }
   }
 
-  // Phase F12: HOF NOTE-IDs aufbauen (stabil sortiert nach Adresse)
+  // Phase F12 / ADR-026 2c: HOF NOTE-Texte aus dem Farm-placeObject (single source),
+  // Sidecar als Fallback. Adressen aus buildHofIndex (Event-abgeleitet) + Sidecar-Keys
+  // (unmigrierte Altbestände). _hofNoteText: addr → Notiztext.
+  _hofNoteText = {};
+  const _collectHofNote = (addr) => {
+    const a = (addr || '').trim();
+    if (!a || _hofNoteText[a] != null) return;
+    const note = _hofNoteFor(a);
+    if (note) _hofNoteText[a] = note;
+  };
+  if (typeof buildHofIndex === 'function') for (const a of buildHofIndex().keys()) _collectHofNote(a);
+  for (const a of Object.keys(db.hofObjects || {})) _collectHofNote(a);
+
   _hofNoteIds = {};
-  Object.entries(db.hofObjects || {})
-    .filter(([, h]) => h.note)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .forEach(([addr], i) => { _hofNoteIds[addr] = `@N_HOF_${i + 1}@`; });
+  Object.keys(_hofNoteText)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((addr, i) => { _hofNoteIds[addr] = `@N_HOF_${i + 1}@`; });
 
   // Cross-mode: GRAMPS handle → GEDCOM XREF (grampId → @N0001@; GEDCOM ids sind schon @…@)
   _noteXref = {};
@@ -964,11 +989,11 @@ function writeGEDCOM(updateHeadDate = false, forceGed7 = false, forceStrict = fa
   // HOF-Notiz-Texte die über _hofNoteIds geschrieben werden — nicht doppelt aus db.notes schreiben.
   // Hof-Notizen werden mit [Hof]-Präfix geschrieben; db.notes kann den präfixierten Text aus
   // einem früheren Import enthalten → ebenfalls per Präfix-Form deduplizieren.
-  const _hofNoteTexts = new Set(Object.keys(_hofNoteIds).map(addr => HOF_NOTE_PREFIX + db.hofObjects[addr].note));
+  const _hofNoteTexts = new Set(Object.values(_hofNoteText).map(note => HOF_NOTE_PREFIX + note));
   for (const n of Object.values(db.notes || {}))
     if (!_hofNoteTexts.has(n.text)) writeNOTERecord(lines, n);
   for (const [addr, id] of Object.entries(_hofNoteIds))
-    writeNOTERecord(lines, { id, text: HOF_NOTE_PREFIX + db.hofObjects[addr].note, _passthrough: [] });
+    writeNOTERecord(lines, { id, text: HOF_NOTE_PREFIX + _hofNoteText[addr], _passthrough: [] });
 
   // Unknown lv=0 records (SUBM etc.) — verbatim passthrough
   for (const rec of (db.extraRecords || [])) {

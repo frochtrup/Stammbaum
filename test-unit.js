@@ -3474,6 +3474,33 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   eq(API.AppState.db.placeObjects[fid].note, 'aktualisiert', 'af.15: Notiz aktualisiert');
 })();
 
+// ── 2c-Gate: Hof-Notiz aus Farm-PO (Sidecar leer) → [Hof]-Record → Roundtrip ──
+(function() {
+  API.setDb({
+    individuals: { '@I1@': P({ id:'@I1@', given:'Hans', surname:'Meyer', name:'Hans Meyer', media:[], events:[
+      { type:'RESI', value:'', date:'1850', place:'Hof Meyer, Ochtrup', addr:'Hof Meyer', placeId:'@F1@',
+        eventType:'', note:'', lati:null, long:null, phon:[], email:[], sources:[], sourcePages:{},
+        sourceQUAY:{}, sourceNote:{}, sourceExtra:{}, sourceMedia:{}, media:[], _extra:[], noteRefs:[] } ] }) },
+    families:{}, sources:{}, repositories:{}, notes:{}, extraPlaces:{},
+    placeObjects: {
+      '@V@':  { id:'@V@', title:'Ochtrup', type:'City', lat:null, long:null, note:'', pnames:[], enclosedBy:[] },
+      '@F1@': { id:'@F1@', title:'Hof Meyer', type:'Farm', lat:52, long:7, note:'Erbhof seit 1700',
+                pnames:[], enclosedBy:[{ placeId:'@V@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }] },
+    },
+    hofObjects: {},   // KEINE Sidecar-Notiz → Notiz muss aus dem Farm-PO kommen
+    head:{ charset:'UTF-8', lang:'', source:'', vers:'5.5.1', gedcVers:'5.5.1', copyrightTexts:[], coprNote:'', place:'', _extra:[] },
+    _idCounters:{}, _gedVersion:'5.5.1',
+  });
+  API.UIState._hofCache = null;
+  var ged = API.writeGEDCOM(false, false, false);
+  ok(/\[Hof\] Erbhof seit 1700/.test(ged), 'af.16: Hof-Notiz aus Farm-PO als [Hof]-Record geschrieben (Sidecar leer)');
+  var errs = [];
+  var rdb = API.parseGEDCOM(ged, errs);
+  var der = API._derivedHofObjectsFromDb(rdb);
+  eq(der['Hof Meyer'] && der['Hof Meyer'].note, 'Erbhof seit 1700',
+     'af.16: Farm-PO-Notiz überlebt write→parse→derive (Roundtrip-Gate für Notiz-Hartschnitt)');
+})();
+
 // ── QT-Kern laden (lazy, einmal pro Lauf) ─────────────────────────────────────
 // Extrahiert _qtSaveCustom + Helfer aus ui-quicktpl.js ohne UI/DOM-Bezug.
 var _QT = null;
