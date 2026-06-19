@@ -2067,6 +2067,9 @@ function buildPlaceContextSentence(placeId, year) {
 
 // Bounding-Box für „plausible" Koordinaten (Europa + angrenzende Regionen)
 const _GEO_BBOX = { minLat: 27, maxLat: 72, minLon: -25, maxLon: 50 };
+// Max. plausible Distanz Hof ↔ umschließender Ort (ADR-026). Großzügig, damit
+// nur grobe Fehler (vertauschte lat/long, Zahlendreher, falscher Ort) anschlagen.
+const _HOF_MAX_DIST_KM = 25;
 
 // Liefert Array von { placeId, title, code, msg } Warnungen
 function validatePlaces() {
@@ -2085,6 +2088,27 @@ function validatePlaces() {
           po.long < _GEO_BBOX.minLon || po.long > _GEO_BBOX.maxLon) {
         warnings.push({ placeId: po.id, title, code: 'BBOX',
           msg: `Koordinaten außerhalb Europa: ${po.lat.toFixed(3)}, ${po.long.toFixed(3)}` });
+      }
+    }
+
+    // ADR-026 HOF-1: Hof/Gebäude ohne Koordinaten → auf der Karte nicht sichtbar
+    if ((po.type === 'Farm' || po.type === 'Building') && (po.lat == null || po.long == null)) {
+      warnings.push({ placeId: po.id, title, code: 'HOF_NO_COORD',
+        msg: `Hof ohne Koordinaten — auf der Karte nicht sichtbar` });
+    }
+
+    // ADR-026 HOF-2: Hof-Koordinaten zu weit vom umschließenden Ort entfernt
+    if ((po.type === 'Farm' || po.type === 'Building') && po.lat != null && po.long != null
+        && typeof _placeDistKm === 'function') {
+      for (const enc of (po.enclosedBy || [])) {
+        const parent = enc.placeId && pos[enc.placeId];
+        if (!parent || parent.lat == null || parent.long == null) continue;
+        const km = _placeDistKm(po.lat, po.long, parent.lat, parent.long);
+        if (km > _HOF_MAX_DIST_KM) {
+          warnings.push({ placeId: po.id, title, code: 'HOF_FAR',
+            msg: `Hof ${km.toFixed(0)} km vom Ort „${parent.title || parent.id}" entfernt — evtl. vertauschte/falsche Koordinaten` });
+        }
+        break;   // erster umschließender Ort mit Koordinaten genügt
       }
     }
 
@@ -2169,7 +2193,8 @@ function _renderPlaceValidator() {
   if (warnings.length === 0) {
     panel.innerHTML = `<div class="place-validator-ok">✓ Keine Plausibilitätsprobleme gefunden</div>`;
   } else {
-    const CODE_LBL = { BBOX: '🌍 Koordinaten', PNAME_DATE: '📅 Datumsfeld', PNAME_OVERLAP: '📅 Überlappung', CYCLE: '🔄 Zirkel' };
+    const CODE_LBL = { BBOX: '🌍 Koordinaten', PNAME_DATE: '📅 Datumsfeld', PNAME_OVERLAP: '📅 Überlappung', CYCLE: '🔄 Zirkel',
+      HOF_NO_COORD: '🏡 Ohne Koordinaten', HOF_FAR: '🏡 Zu weit entfernt' };
     let rows = warnings.map(w =>
       `<div class="place-validator-row fact-row--clickable" data-action="showPlaceByIdValidator" data-pid="${esc(w.placeId)}">
         <span class="place-validator-code">${CODE_LBL[w.code] || w.code}</span>
