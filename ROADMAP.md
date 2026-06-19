@@ -72,16 +72,20 @@ Fünf Dimensionen leiten die Priorisierung:
 | Dokumentation | **8.7/10** | 26 ADRs, ~2.5k-Z.-Changelog. Handbuch auf v998 (beide Versionsfelder). Abzug: Screenshots teils Mockups (→ DOC-SCREENS). |
 | PWA / Offline | **9.0/10** | SW: PRECACHE_CRITICAL atomar, Cache-first/Network-first, `offline.html`, `ui-lifecycle.js` BFCache-Guard. |
 | Datenschutz | **9.0/10** | Lokal-First, DSGVO-Anonymisierung BFS (v715), kein Tracking, kein Cloud-Zwang. |
-| **∅ Gesamt** | **≈ 8.6/10** | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948, 3 reale Befunde) → 8.6 (v950+v967, Hebel #1–#4 ✅). Größte verbleibende Hebel: DOC-SCREENS (M) · SCALE-REAL (M) · ONEDRIVE-AUTO (L).* |
+| **∅ Gesamt** | **≈ 8.6/10** (Selbst) · **≈ 8.4/10** (unabh. Review 2026-06-19) | *Außergewöhnlich diszipliniertes Solo-Projekt. Kernversprechen empirisch bestätigt. Verlauf: 8.7 (stale) → 8.5 (Re-Review v948) → 8.6 (v950+v967). Unabhängiges Review (`REVIEW-2026-06-19.md`) bestätigt Code/Sicherheit/Konformität, sieht Architektur (6.5) + Design/UX (8.0) tiefer. Größte Hebel neu: CAM (S) · BUILD-SPIKE (M) · SCALE-REAL (M).* |
 
-### Offene Maßnahmen *(priorisiert)*
+### Offene Maßnahmen *(priorisiert — nach unabhängigem Review 2026-06-19, Detail: `REVIEW-2026-06-19.md`)*
+
+> Unabhängiges Review (Code gelesen, Tests selbst ausgeführt): ∅ **≈ 8.4/10** (vs. Selbst 8.6). Zwei strategische Befunde leiten die Neu-Priorisierung: (a) **CAM fehlt trotz Kernziel „mobile Feldarbeit"** — Table-Stakes blockiert das Kernversprechen; (b) **ADR-020-Bundler-Trigger faktisch erreicht** — ESM-Brücken-Migration nach 2 Brücken tot, God-Module `gedcom.js` (2.339 Z./96 Fn) wächst weiter.
 
 | Prio | Maßnahme | Befund | Aufwand |
 |---|---|---|---|
-| 1 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v998; Mockups ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
-| 2 | **SCALE-REAL** — Skalierung >20k + Echtdaten-Großbestand | 20k synthetisch belegt; >20k und reale Großdatei (50k+) offen | M |
-| 3 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikterkennung (v858) löst Datenverlust; Sync selbst noch manuell — Lücke ggü. CloudKit | L |
-| 4 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. | S |
+| 1 | **CAM** — Kamera-Direkterfassung (`<input capture>`) | schließt die Lücke zwischen erklärtem Kernziel „mobile Feldarbeit" und Realität; sofort spürbar. Hochgezogen aus P1-Backlog. | S |
+| 2 | **BUILD-SPIKE** — esbuild-Proof-of-Concept | beweisen, dass ein Bundler „edit-anywhere" (ADR-001/002) nicht bricht → entriegelt God-Module-Split + Ladereihenfolge + ~860 Globals gemeinsam. ADR-020-Trigger faktisch erreicht. | M (Spike) / XL (Vollzug) |
+| 3 | **SCALE-REAL** — Skalierung >20k + Echtdaten-Großbestand | 20k synthetisch belegt; reale Großdatei (50k+) = letzter unbewiesener Stabilitäts-Claim | M |
+| 4 | **DOC-SCREENS** — echte Screenshots statt Mockups | Handbuch inhaltlich auf v998; belegt „einsteigerfreundlich" (Kernziel) und hebt Design/UX-Note. Ersetzen: Sanduhr-Baum, Fächer, Karte (3 Modi), Orts-Steckbrief, Personen-Detail | M |
+| 5 | **ONEDRIVE-AUTO** — nahtloser Sync ohne manuellen Trigger | Konflikterkennung (v858) löst Datenverlust; Sync selbst noch manuell — klarste reale Lücke ggü. CloudKit/Ancestry | L |
+| 6 | **T0-EXTRAPLACES-CLEANUP** — `stammbaum_extraplaces_*` localStorage entfernen | extraPlaces seit v854 read-only. Schritte: `saveExtraPlaces()`-Call entfernen → `localStorage.removeItem` nach Migration → Helfer löschen. Voraussetzung: alle Geräte einmal mit v854+ gestartet. Nach BUILD-SPIKE `gedcom.js` splitten. | S–M |
 
 ---
 
