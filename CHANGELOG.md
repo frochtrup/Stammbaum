@@ -9,6 +9,28 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-19 — ADR-026: Höfe als geokodierte Orts-Objekte (sw v989–v998)
+
+**Auslöser:** Höfe sollen **geräteübergreifend eigene Geokoordinaten** haben, damit **Binnenwanderung** (Umzug zwischen Höfen im selben Ort) auf der Karte sichtbar wird. Bisher: Hof-Identität = `ev.addr`-String, Koords/Notiz im localStorage-Sidecar `hofObjects` (kein Sync); Koords nur ins GEDCOM, wenn das Event kein PLAC hatte.
+
+**Konzept (ADR-026, ARCHITECTURE.md):** Ein Hof wird ein `placeObject` vom Typ `Farm`, `enclosedBy` seinem Dorf, mit eigenen `lat/long/note`. GEDCOM-Zwang: `MAP`/`NOTE` nur unter `PLAC` → der Hof ist das spezifischste Glied der Orts-Hierarchie. Entscheidungen: ADDR als Postdetail behalten · harter Schnitt · Zwei-Felder-Eingabe.
+
+- **Phase 1 (v989):** `_migrateHofObjectsToPlaceObjects` + Helfer, unverdrahtet, +24 Tests.
+- **Phase 2A (v990):** Migration verdrahtet (Storage-Schicht, nach hofObjects-Ableitung). **Empirischer Befund:** GEDCOM hat keine Dorf-placeObjects → `_hofVillageString` promoviert das Dorf aus `ev.place` (führendes Hof-Blatt gestrippt → Reimport-idempotent). Kein Dorf bei `ev.place==Adresse`.
+- **Phase 2B (v991):** alle 5 Lade-Pfade via zentralem `_deriveHofAndMigrate`; echte Enclosure-Kette `_ensureVillageChain`; Typ neuer Orte `Unknown` (nicht „Stadt").
+- **Phase 2C/1 (v992):** scoped **Hof-Picker** (🏡) im Event-Formular (Farm-POs, auf gewählten Ort eingegrenzt); Ort-Picker filtert Höfe aus → saubere Eingabetrennung; `ev.place`-Reprojektion (ADR-024-Invariante).
+- **Phase 2C/2a (v993):** `buildHofIndex` führt Farm-`placeId` mit; `hofMeta` liest Koords/Notiz primär aus Farm-PO; Karte + Listen-Badges umgestellt.
+- **placeObjects-Reload-Persistenz (v995, T0-STORAGE-Fix):** `loadPlaceObjectsFromIDB` läuft jetzt auf **allen** Reload-Pfaden (vorher nur Datei-Laden) — behebt Pre-existing-Bug, entriegelt den Hartschnitt.
+- **Phase 2C/2b–2d (v994/v996):** Hof-Schreibwege + Detail auf Farm-PO; **Koords single-source** — `geoLines` exportiert über `ev.placeId` (nur bei Abweichung von `obj.lati` → `net_delta=0` erhalten); `saveHofRename` überträgt Koords + entfernt Orphan.
+- **Phase 2C/2c (v997):** **Notiz single-source** — `[Hof]`-Notiz-Writer aus Farm-PO gespeist (`_hofNoteFor`/`_hofNoteText`); bewährter `[Hof]`-Lesepfad unverändert (kein Parser-Risiko). Gate: af.16 (Notiz bei leerem Sidecar überlebt Roundtrip).
+- **Validierung (v998):** zwei Geo-Regeln in `validatePlaces()` — `HOF_NO_COORD` (Hof ohne Koordinaten) + `HOF_FAR` (Hof > 25 km vom Ort, `_placeDistKm`).
+
+**Ergebnis:** Koords + Notizen single-source im Farm-`placeObject` (geräteübergreifend); Binnenwanderung sichtbar; saubere Ort/Hof-Eingabetrennung; `hofObjects`-Sidecar write-frozen (nur noch Read für Altbestände). Verifiziert: Ort-Koord-Änderung lässt Hof-Koord unberührt (unabhängige placeObjects). **558 Unit-Tests** (Gruppen (ae)+(af), +38), GEDCOM `net_delta=0`, GRAMPS stable, browser-verifiziert an `demo.ged`.
+
+**Lehre:** Verifikation deckte mehrere verdeckte Fallen auf (Dorf-Verlust ohne Promotion, ev.place-Stale-Mischung, placeObjects-Reload-Lücke, geoLines-placeId-Lücke, Notiz-Export am Sidecar). Jede Entfernung eines Legacy-Stores erst nach Roundtrip-/Reload-Beweis. Durable Detail: Memory `place_hist`.
+
+---
+
 ### Session 2026-06-15 — Hof-Notiz vs. Event-Notiz + RESI-Notiz-Anzeige (sw v987–v988)
 
 **Auslöser:** Beim Eintippen einer Notiz an einem RESI-Event wurde sie zur Hof-Notiz — keine getrennte Behandlung von adressbezogener Hof-Notiz und event-spezifischer Notiz.

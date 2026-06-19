@@ -91,7 +91,7 @@ stammbaum/
 ├── sw.js               ← Service Worker (Network-first + 4s Timeout, Cache v742)
 ├── manifest.json       ← PWA-Manifest (Icons, standalone)
 ├── test.html           ← Standalone GEDCOM Roundtrip-Tester (kein UI, Drag-Drop .ged)
-├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v858)
+├── HANDBUCH.html       ← Benutzer-Handbuch (Stand: sw v998)
 ├── README.md           ← dieses Dokument
 ├── ARCHITECTURE.md     ← ADRs, Passthrough-System, Roundtrip-Verlauf
 ├── DATAMODEL.md        ← Datenstrukturen (Person/Familie/Quelle), JS-Sektionen, Variablen
@@ -298,7 +298,7 @@ stammbaum/
 
 **GEDCOM-Roundtrip:** Parse → Edit → Write → Parse: **STABIL · net_delta=0** (CONC/CONT-Neuformatierung akzeptiert; HEAD verbatim bei idempotenten Schreibvorgängen)
 **GRAMPS-Roundtrip:** Parse → Write → Parse: **STABIL** (vollständiger Passthrough aller nicht-modellierten Felder; 60034+ Checks)
-**Version 8.0** — Juni 2026 — `v8-dev` · sw v899 · 420 Unit-Tests grün
+**Version 8.0** — Juni 2026 — `v8-dev` · sw v998 · 558 Unit-Tests grün
 
 ---
 

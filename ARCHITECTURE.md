@@ -610,6 +610,8 @@ Drei Mechanismen sichern die saubere Trennung: (1) **`type` trennt die Picker-In
 
 **Hartschnitt funktional komplett:** Koords **und** Notizen sind single-source im Farm-`placeObject` (geräteübergreifend via placeObjects-Sync). Der `hofObjects`-Sidecar (`stammbaum_hofobjects`) ist **write-frozen** — die Migration liest ihn nur noch für unmigrierte Altbestände, kein UI-Pfad schreibt ihn mehr (Ausnahme: Bereinigung beim Löschen, gegen Resurrektion). **Optionaler Rest:** den localStorage-Key endgültig löschen — erst sinnvoll, wenn alle Geräte-Altbestände durch die Migration in Farm-POs überführt sind (sonst Verlust auf Geräten mit Daten nur im Sidecar). Das ist reine Aufräum-Polish ohne Funktionswert; der Sidecar ist read-only harmlos.
 
+**QA (sw v998):** Zwei Geo-Validierungsregeln in `validatePlaces()` flankieren das Feature — `HOF_NO_COORD` (Hof ohne Koordinaten → auf der Karte unsichtbar) und `HOF_FAR` (Hof > 25 km vom umschließenden Ort, `_placeDistKm`-Haversine → vertauschte/falsche Koordinaten). Anzeige im Orte-Tab-Validator (⚠) + Badge-Zähler.
+
 ---
 
 ## Passthrough-Mechanismen — Vollständige Analyse
