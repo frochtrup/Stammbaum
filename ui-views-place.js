@@ -278,10 +278,8 @@ function renderPlaceList(sorted) {
 
 function filterPlaces(q) {
   const lower = q.toLowerCase().trim();
-  // Verwaltungsgebiete = placeObjects ohne direkten Ereignisbezug (nur enclosedBy-Parent)
-  const _ADMIN_TYPES = new Set(['State','Country','District','County']);
-  const _isAdminOnly = pl => !pl._directRef && pl.personIds.size === 0
-    && (_ADMIN_TYPES.has(pl.type) || (!pl.type || pl.type === 'Unknown'));
+  // Verwaltungsgebiete / unverknüpfte POs = kein direkter Ereignisbezug + 0 Personen
+  const _isAdminOnly = pl => !pl._directRef && pl.personIds.size === 0;
 
   let all = [...collectPlaces().values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
   if (_placeTypeFilter) all = all.filter(pl => pl.type === _placeTypeFilter);
