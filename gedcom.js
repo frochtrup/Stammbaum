@@ -1184,17 +1184,65 @@ function _linkGedcomEventsToPlaceObjects(db) {
       // Link. Behebt den bare-vs-reich-Fall: GEDCOM-String trägt moderne Verwaltung
       // („Ort, Stadt Sehnde, Region Hannover, NDS"), die nicht in die historische
       // enclosedBy-Kette passt, aber der Leitname trifft eindeutig den reichen PO.
+      // Drei Schutzschichten gegen Fehlzuordnung:
+      //   1. Mehrdeutigkeit blockiert (cands.length === 1) — kein Raten
+      //   2. Existenz-Spanne (existsFrom/existsTo) muss Event-Jahr umfassen
+      //   3. Hierarchie-Anker: mind. EIN weiteres Segment des Event-Strings muss
+      //      in der Ahnen-Hierarchie des Kandidaten als Norm-Match auftauchen.
+      //      Beispiel: "Oldenburg, Franklin County, Indiana, USA" + _po_oldenburg_nds
+      //      → keiner von "Franklin", "Indiana", "USA" matcht die deutsche Kette
+      //      → BLOCKIERT (kein USA-Oldenburg vorhanden, aber nicht raten).
       // Mutation: ev.place wird auf die periodengerechte Projektion neu kollabiert
       // (Projektions-Invariante ADR-024), markChanged signalisiert das ehrlich.
-      // Existenz-Check schützt vor Anachronismen.
       else if (cands.length === 1) {
         const cand = cands[0], po = reg.byId[cand];
         if (po) {
           let ok = true;
+          // (2) Existenz-Check
           if (year != null) {
             const ef = _placeYear(po.existsFrom), et = _placeYear(po.existsTo);
             if (ef != null && year < ef) ok = false;
             else if (et != null && year > et) ok = false;
+          }
+          // (3) Hierarchie-Anker-Check (nur wenn der Event-String weitere Segmente
+          //     enthält — atomare Leitname-Strings würden Fall 1 treffen, nicht hier)
+          const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
+          if (ok && segs.length > 1) {
+            // Token-Set aus Titel + pnames aller Vorfahren des Kandidaten zum Stichjahr.
+            const tokens = new Set();
+            const _addPo = pid => {
+              const _po = reg.byId[pid]; if (!_po) return;
+              if (_po.title) tokens.add(_normPlaceName(_po.title));
+              for (const pn of _po.pnames || []) {
+                if (pn.value) tokens.add(_normPlaceName(pn.value));
+              }
+            };
+            // Ahnen-Kette (ohne den Kandidaten selbst — Leitname matcht eh)
+            const seen = new Set([cand]);
+            let curId = cand;
+            let hops = 0;
+            while (hops++ < 12) {
+              const _po = reg.byId[curId]; if (!_po) break;
+              let nextId = null;
+              if (year != null) {
+                const w = reg.enclosureWinnerAsOf(curId, year);
+                nextId = w.enc && w.enc.placeId;
+              }
+              if (!nextId) {
+                const encs = _po.enclosedBy || [];
+                nextId = (encs[0] && encs[0].placeId) || _po.parentId || null;
+              }
+              if (!nextId || seen.has(nextId)) break;
+              seen.add(nextId);
+              _addPo(nextId);
+              curId = nextId;
+            }
+            // Mind. ein weiteres Segment muss in den Tokens stehen
+            let anchorMatch = false;
+            for (let i = 1; i < segs.length; i++) {
+              if (tokens.has(_normPlaceName(segs[i]))) { anchorMatch = true; break; }
+            }
+            if (!anchorMatch) ok = false;
           }
           if (ok) {
             const proj = _project(cand, year);

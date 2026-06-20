@@ -3906,20 +3906,56 @@ group('(ah) PLACE-HIST Stufe 2 Disambiguierung (sw v1006)');
       '@SE@': { id:'@SE@', title:'Stadt Sehnde', type:'Municipality', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
     },
     individuals: {
-      '@I1@': { id:'@I1@', birth:{ date:'1850', place:'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', placeId:null },
-                chr:{}, death:{}, buri:{}, events:[] },
+      '@I1@': { id:'@I1@', birth:{ date:'1980', place:'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] }, // 1980: Stadt Sehnde ist in Kette → Anker matcht
       '@I2@': { id:'@I2@', birth:{ date:'1200', place:'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', placeId:null },
                 chr:{}, death:{}, buri:{}, events:[] }, // vor existsFrom=1300 → NICHT linken
+      '@I3@': { id:'@I3@', birth:{ date:'1850', place:'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] }, // 1850: Stadt Sehnde existiert noch nicht → Anker NICHT in Kette → BLOCKIERT (anachronistisch)
     },
   };
   API.setDb(db);
   API._linkGedcomEventsToPlaceObjects(db);
   eq(db.individuals['@I1@'].birth.placeId, '@DOL@',
-     'ah-2: bare-Hierarchie 1850 → @DOL@ (Leitname eindeutig, in Existenzspanne)');
+     'ah-2: bare-Hierarchie 1980 → @DOL@ (Stadt Sehnde matcht als Hierarchie-Anker)');
   eq(db.individuals['@I1@'].birth.place !== 'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', true,
      'ah-2: ev.place auf periodengerechte Projektion neu kollabiert (Projektions-Invariante)');
   eq(db.individuals['@I2@'].birth.placeId, null,
      'ah-2: 1200 außerhalb existsFrom=1300 → NICHT verlinkt (Anachronismus-Schutz)');
+  eq(db.individuals['@I3@'].birth.placeId, null,
+     'ah-2: 1850 mit moderner Hierarchie → kein Anker in zeitgenössischer Kette → BLOCKIERT (User-Merge nötig)');
+})();
+
+// (ah-2b) Hierarchie-Anker-Check (sw v1015): einziger Leitname-Kandidat darf NICHT
+// verlinken, wenn KEINES der weiteren Event-Segmente in der Ahnen-Hierarchie
+// des Kandidaten auftaucht. Schützt vor falscher Cross-Country-Zuordnung
+// (z.B. "Oldenburg, …, USA" zu deutschem _po_oldenburg_nds).
+(function() {
+  var db = {
+    extraPlaces:{}, families:{},
+    placeObjects: {
+      '@OLDN@': { id:'@OLDN@', title:'Oldenburg', type:'Town', lat:53.14, long:8.21,
+                  pnames:[{ value:'Oldenburg', lang:'deu', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
+                  enclosedBy:[{ placeId:'@HZG@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
+                  parentId:'@HZG@' },
+      '@HZG@': { id:'@HZG@', title:'Herzogtum Oldenburg', type:'Region', lat:null, long:null,
+                  pnames:[], enclosedBy:[{ placeId:'@DE@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
+                  parentId:'@DE@' },
+      '@DE@':  { id:'@DE@', title:'Deutschland', type:'Country', lat:51, long:10, pnames:[], enclosedBy:[], parentId:null },
+    },
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ date:'1850', place:'Oldenburg, Franklin County, Indiana, USA', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] },
+      '@I2@': { id:'@I2@', birth:{ date:'1850', place:'Oldenburg, Herzogtum Oldenburg, Deutschland', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] },
+    },
+  };
+  API.setDb(db);
+  API._linkGedcomEventsToPlaceObjects(db);
+  eq(db.individuals['@I1@'].birth.placeId, null,
+     'ah-2b: USA-Oldenburg → kein Anker-Match in deutscher Kette → BLOCKIERT (kein Falsch-Link)');
+  eq(db.individuals['@I2@'].birth.placeId, '@OLDN@',
+     'ah-2b: deutscher Oldenburg → "Herzogtum Oldenburg"/"Deutschland" matchen → verlinkt');
 })();
 
 // (ah-3) Link-Pass-Toleranz: Mehrdeutigkeit blockiert tolerantes Linken.
