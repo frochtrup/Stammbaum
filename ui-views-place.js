@@ -1944,6 +1944,7 @@ function placeMergeGroup(gidx) {
     const res = mergePlaceObjects(winner, losers);
     if (res.merged) {
       markChanged();
+      if (typeof savePlaceObjects === 'function') savePlaceObjects(); // Merge-Ergebnis (pnames-Aliase) in IDB sichern
       UIState._placesCache = null;
       showToast(`✓ ${res.merged} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}${res.farmsMerged ? `, ${res.farmsMerged} Hof-Dublette${res.farmsMerged !== 1 ? 'n' : ''} konsolidiert` : ''}`);
       _placeDupGroups = findPlaceDuplicates();
