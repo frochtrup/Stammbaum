@@ -1874,16 +1874,47 @@ function _renderPlaceMergeList() {
   if (_placeDupMode === 'objects') {
     const reg = getPlaceRegistry();
     const usage = _placeUsageCounts();
+    // Reichtums-Score: gewichtet Strukturtiefe. Schützt vor bare-vs-reich-Fehlwahl,
+    // wo der bare PO viele Events hat, aber der reiche PO die ganze Historie trägt.
+    const richness = po => {
+      const enc = (po.enclosedBy || []).length;
+      const pn  = (po.pnames    || []).length;
+      return enc * 2 + pn
+        + (po.note ? 3 : 0)
+        + (po._govId ? 3 : 0)
+        + (po.lat != null ? 1 : 0)
+        + (po.existsFrom || po.existsTo ? 1 : 0)
+        + (po.type && po.type !== 'Unknown' ? 1 : 0);
+    };
     _placeDupGroups.forEach((g, gi) => {
-      const ranked = [...g.ids].sort((a, b) =>
-        (usage[b] || 0) - (usage[a] || 0)
-        || ((reg.byId[b]?.pnames?.length || 0) - (reg.byId[a]?.pnames?.length || 0)));
+      // Ranking: Reichtum > Nutzung > Stable-ID. Reichtum dominiert, damit der
+      // strukturell vollständigere PO als Hauptort vorgeschlagen wird.
+      const ranked = [...g.ids].sort((a, b) => {
+        const pa = reg.byId[a], pb = reg.byId[b];
+        if (!pa || !pb) return 0;
+        return richness(pb) - richness(pa)
+          || (usage[b] || 0) - (usage[a] || 0)
+          || a.localeCompare(b);
+      });
       const suggested = ranked[0];
       let opts = '';
       for (const id of g.ids) {
         const po = reg.byId[id]; if (!po) continue;
         const n = usage[id] || 0;
-        const geo = (po.lat != null) ? ' · 📍' : '';
+        // Reichtums-Indikatoren (Badges nur wenn vorhanden — Bare-PO bleibt leer)
+        const encN = (po.enclosedBy || []).length;
+        const pnN  = (po.pnames || []).length;
+        const badges = [
+          pnN  ? `<span class="place-merge-badge" title="${pnN} historische Namensform${pnN!==1?'en':''}">🏷 ${pnN}</span>` : '',
+          encN ? `<span class="place-merge-badge" title="${encN} Zugehörigkeit${encN!==1?'en':''} (enclosedBy)">⛓ ${encN}</span>` : '',
+          (po.lat != null) ? `<span class="place-merge-badge" title="Koordinaten gesetzt">📍</span>` : '',
+          po.note   ? `<span class="place-merge-badge" title="Notiz vorhanden">📝</span>` : '',
+          po._govId ? `<span class="place-merge-badge" title="GOV-ID: ${esc(po._govId)}">🌐</span>` : '',
+          (po.existsFrom || po.existsTo) ? `<span class="place-merge-badge" title="Existenz: ${esc(po.existsFrom||'?')} – ${esc(po.existsTo||'?')}">⏳</span>` : '',
+          (po.type && po.type !== 'Unknown') ? `<span class="place-merge-badge" title="Typ: ${esc(po.type)}">${esc(po.type)}</span>` : '',
+        ].filter(Boolean).join(' ');
+        const bareHint = (!encN && !pnN && !po.note && !po._govId)
+          ? '<span class="place-merge-badge place-merge-bare" title="Strukturell leer — vermutlich Auto-Anlage aus GEDCOM-String">∅ bare</span>' : '';
         // Item 14: Herkunfts-Hint via id-Präfix
         const origin =
           id.startsWith('@')           ? 'GRAMPS' :
@@ -1896,7 +1927,8 @@ function _renderPlaceMergeList() {
           <input type="checkbox" name="pmc-${gi}" value="${esc(id)}" checked>
           <input type="radio" name="pmw-${gi}" value="${esc(id)}"${id === suggested ? ' checked' : ''}>
           <span class="place-merge-name">${esc(po.title)}${originSpan}</span>
-          <span class="place-merge-meta">${n} Verwendung${n !== 1 ? 'en' : ''}${geo}</span>
+          <span class="place-merge-meta">${n} Verwendung${n !== 1 ? 'en' : ''}</span>
+          <span class="place-merge-rich">${badges}${bareHint}</span>
         </div>`;
       }
       html += `<div class="place-merge-group">

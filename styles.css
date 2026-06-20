@@ -3891,6 +3891,12 @@ html[data-theme="dark"] {
   font-style: italic; color: var(--text-muted, #888); border: 1px solid var(--border, #e0d8c8); border-radius: 8px; }
 .place-merge-btn { margin-top: 8px; width: 100%; }
 .place-merge-hint { font-size: 11px; color: var(--text-muted, #888); margin-bottom: 6px; }
+/* Reichtums-Badges im Merge-Modal: zeigen Strukturtiefe pro PO an, damit der User
+   den vollständigeren Eintrag als Hauptort erkennt (bare-vs-reich-Unterstützung). */
+.place-merge-rich { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.place-merge-badge { display: inline-block; padding: 1px 5px; font-size: 10px; line-height: 1.4;
+  color: var(--text-muted, #666); background: var(--surface-2, #f5f0e6); border: 1px solid var(--border, #e0d8c8); border-radius: 8px; }
+.place-merge-bare { color: #8a6d3b; background: #fcf3d8; border-color: #f0d878; }
 
 .icon-btn--active { background: var(--accent, #6a8f3c) !important; color: #fff !important; }
 .place-var-badge   { background: var(--accent-muted, #d4e6b5); color: var(--accent-dark, #3a5c1a); }
