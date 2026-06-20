@@ -196,9 +196,15 @@ function collectPlaces() {
     }
     // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
     // (analog extraPlaces — damit manuell importierte Orte sichtbar sind).
+    // ADR-026: Farm-Einträge (Höfe) die via RESI/PROP-Events reingekommen sind,
+    // aus der Ortsliste entfernen — Höfe erscheinen im Höfe-Tab, nicht hier.
+    for (const [k, pl] of places) {
+      if (pl.type === 'Farm' || pl.type === 'Building') places.delete(k);
+    }
     for (const po of Object.values(AppState.db.placeObjects || {})) {
       const key = po.title;
       if (!key) continue;
+      if (po.type === 'Farm' || po.type === 'Building') continue;
       if (!places.has(key)) {
         // Koord-Paar-Invariante: nur als vollständiges Paar — halbe Werte (lat ohne long
         // o.ä., z.B. aus alten Save-Pfaden) sonst Render-Crash auf null.toFixed
