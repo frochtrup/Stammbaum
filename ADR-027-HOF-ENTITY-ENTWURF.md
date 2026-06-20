@@ -174,18 +174,78 @@ Sonderfälle bleiben bewusster User-Aktion vorbehalten:
 - **`ev.addr` mit Tippfehler / Schreibvariante** ggü. dem hofObject — Modal bietet „match per Norm-Fold" oder „neue addrs-Bezeichnung an Hof hinzufügen".
 - **Hof noch nicht modelliert** — Modal bietet „neuen Hof aus diesem Event anlegen", übernimmt addr/coords/villageId.
 
+## Tab-Trennung — Orte-Tab vs. Höfe-Tab
+
+Unter ADR-027 sind `placeObjects` (Verwaltungseinheiten) und `hofObjects` (Höfe) zwei orthogonale Domänen. Beide Tabs haben eigene Listen, eigene Validatoren, eigene Merge- und Link-UIs. Buttons sind tab-spezifisch — keine vermischten Funktionen mehr.
+
+| Funktion | **Orte-Tab** | **Höfe-Tab** |
+|---|---|---|
+| Liste | `placeObjects` (nur Verwaltungseinheiten: Country/State/County/District/Town/Parish/Region) | `hofObjects` (gruppierbar nach Dorf-villageId) |
+| Validator | `validatePlaces()` — bestehende PLACE_*-Regeln | `validateHofs()` — HOF_NO_COORD, HOF_FAR (aus v998 übernommen, jetzt auf hofObjects operierend) |
+| Merge | `findPlaceDuplicates` + `mergePlaceObjects` (existiert) | `findHofDuplicates` + `mergeHofObjects` (neu, gleiches Pattern) |
+| String/Adress-Link | `openPlaceStringLinkModal` für `ev.place` ohne placeId | `openHofAddrLinkModal` für `ev.addr` mit Dorf-placeId, aber ohne hofId |
+| Filter-Toggles | Admin-Filter, GOV-unresolved, Typ-Filter (Verwaltungstypen) | „nur ohne Koords", „nur ohne Adress-Historie", Dorf-Auswahl |
+| Detail-View | Steckbrief mit pnames-Historie, enclosedBy-Kette, Mini-Karte, Ereignisse | Steckbrief mit addrs-Historie, villageId-Link (klickt rüber in Orte-Tab), Mini-Karte, Bewohner/Eigentümer, Vorgänger/Nachfolger, Existenzspanne |
+| **Review-Funktion** | (nicht im Orte-Tab) | **„Unklare Hof-Zuweisungen prüfen" mit Badge-Zähler** — siehe nächster Abschnitt |
+| Querverweis | Klick auf einen Hof in einer Dorf-Detail → Höfe-Tab vorgefiltert | Klick auf villageId-Link → Orte-Tab beim Dorf |
+
+Konsequenzen für bestehende Buttons:
+- Der heutige `🗂 Admin-Filter` (v1010) im Orte-Tab bleibt im Orte-Tab. Höfe sind dort gar nicht mehr listbar (kein Farm/Building-Typ in placeObjects nach Phase 4), also entfällt der Bedarf, sie auszublenden.
+- Validator-Badge `⚠` ist tab-lokal: jeder Tab zeigt nur seine eigenen Warnungen. Gesamt-Header („Datei-Validator") aggregiert beide für die Gesamt-Health.
+- Hof-Karte-Marker und Orts-Marker werden auf der Hauptkarte visuell unterschiedlich gerendert (verschiedene Icons), aber beide Layer sind unabhängig zu-/abschaltbar.
+
 ## Anreicherung über bewusste User-Aktion (Restfälle)
 
-Der überwiegende Teil der Hof-Identifikation passiert automatisch durch den Link-Pass (siehe Wire-Mapping). Bewusste User-Aktion ist für die Restklassen vorgesehen, die nicht eindeutig auflösbar sind:
+Der überwiegende Teil der Hof-Identifikation passiert automatisch durch den Link-Pass. Für die Rest-Klassen sind drei UI-Pfade vorgesehen — **alle im Höfe-Tab gebündelt**, kein verstreutes Modal-Konfetti.
 
-1. **Hof-Tab** (neu oder erweitert): zeigt alle hofObjects sortiert nach Dorf. Pro Hof: Adress-Historie (chronologisch), Koords auf Mini-Karte, Eigentümer/Bewohner (aus PROP/RESI-Events aggregiert über `hofId`), Notiz, Existenzspanne, Vorgänger/Nachfolger. Editor erlaubt Hinzufügen neuer Adress-Bezeichnungen mit Datum.
-2. **Event-Detail „Hof zuweisen"-Modal** (analog String→PlaceObject-Link in `openPlaceStringLinkModal`): aktiv für Events ohne `ev.hofId`, mit `ev.addr` oder PLAC-Leitsegment und aufgelöstem Dorf-`ev.placeId`. Bietet je nach Kontext:
-   - **Mehrdeutigkeit:** Liste aller passenden hofObjects im selben Dorf zur Auswahl.
-   - **Schreibvariante / Tippfehler:** „match per Norm-Fold" (z.B. „Wall33" ↔ „Wall 33") + Option „diese Schreibweise als neue undatierte addrs-Bezeichnung am Hof speichern" → künftige Events mit dieser Variante linken automatisch.
-   - **Neuer Hof:** „aus diesem Event Hof anlegen" — übernimmt `ev.addr` als initiale addrs-Bezeichnung, `ev.placeId` als villageId, Koords (falls vorhanden) als Hof-Koords.
-3. **Dubletten-Erkennung** `findHofDuplicates` (Pendant zu `findPlaceDuplicates`/v1014): zwei hofObjects im selben Dorf mit fold-gleichen addrs → Merge-Vorschlag. Konsolidierung verlustfrei (Adress-Historien werden zusammengeführt, analog `mergePlaceObjects`/v1010).
+### 1. „Hof-Zuweisungen prüfen"-Review im Höfe-Tab (permanent, badge-getrieben)
 
-Prinzip — verfeinert ggü. Erstentwurf: **eindeutiger Quell-Bezug (PLAC-Präfix oder ADDR im Dorf-Kontext) → automatischer Auto-Link mit Toast + `markChanged`. Mehrdeutigkeit oder fehlende Modellierung → bewusste User-Aktion über das Hof-Zuweisen-Modal.** Symmetrisch zur ADR-024-Welt für Orte.
+Der ursprünglich als „Sammel-Modal nach Import" konzipierte Workflow wird zur **permanenten Datenqualitäts-Funktion** im Höfe-Tab — analog der Validator-Badge im Orte-Tab. Ein Button mit Zähler-Badge zeigt jederzeit die Anzahl ungelöster Fälle:
+
+> **`🔗 Hof-Zuweisungen prüfen [12]`**
+
+Klick öffnet eine Tabelle aller Events, die der Link-Pass nicht auto-lösen konnte. Pro Zeile:
+
+| Event | Person | Datum | Adresse | Dorf | Auflösung |
+|---|---|---|---|---|---|
+| RESI | Schulze, Hermann | 1845 | Heideweg | Welbergen | [Hof wählen ▾] [+ neu anlegen] |
+| RESI | Meyer, Anna | 1847 | Heideweg | Welbergen | [Hof wählen ▾] [+ neu anlegen] |
+
+Funktionen:
+- **Sortier-/Filterleiste:** nach Dorf, nach Adresse, nach Person, nach Datum. Filter „nur mehrdeutige", „nur ohne hofObject", „nur Tippfehler-Verdacht" (per Norm-Fold-Score).
+- **Batch-Auflösung:** „alle Events mit Adresse X im Dorf Y → Hof Z" als ein Vorgang (typischer Fall C: vier Heideweg-Höfe, der User weist die meisten Events bewusst zu, basierend auf Familienzugehörigkeit aus dem Kontext).
+- **Pro Zeile entscheidbar:** Hof aus existierenden Kandidaten wählen, oder neuen Hof anlegen (übernimmt `ev.addr` als initiale undatierte addrs-Bezeichnung, `ev.placeId` als villageId, Koords falls vorhanden).
+- **Tippfehler-Pfad:** Vorschlag „diese Adress-Schreibweise als neuen `addrs[]`-Eintrag am Hof speichern" — künftige Events mit dieser Variante linken dann automatisch.
+- **„Ignorieren"-Option** pro Zeile: User markiert Event als bewusst nicht-Hof-gebunden (z.B. Briefkasten-Adresse, Krankenhaus). Wird im Badge-Zähler nicht mehr mitgezählt.
+
+Die Badge-Zahl reflektiert ungelöste + nicht-ignorierte Fälle. Damit ist die Review-Funktion **kein einmaliges Import-Ereignis**, sondern eine kontinuierliche Datenqualitäts-Sicht — User kann sie jederzeit besuchen, in Etappen abarbeiten, ignorierte Fälle revidieren.
+
+### 2. Hof-Detail-View (Editor pro Hof)
+
+Klick auf einen Hof in der Höfe-Liste → Steckbrief mit:
+- Adress-Historie (chronologisch, editierbar — neue Bezeichnungen mit Datum hinzufügen)
+- Koords + Mini-Karte
+- Bewohner/Eigentümer-Liste (aggregiert über PROP/RESI-Events am `hofId`)
+- Notiz, Existenzspanne (existsFrom/To)
+- Vorgänger/Nachfolger-Links (Phase 5)
+- Verknüpfungs-Statistik („verlinkt mit N Events")
+
+### 3. Event-Detail-Fallback (passiv)
+
+Im Event-Detail-View ein dezenter Indikator, wenn ein Event in der Review-Liste steht: kleines ⚠-Symbol neben dem ADRESSE-Feld, klickbar, öffnet **direkt das Review für diese eine Zeile**. Damit übersieht der User die Mehrdeutigkeit auch dann nicht, wenn er die Review-Liste nicht aktiv besucht.
+
+### Was als „mehrdeutig" beim Auto-Link gilt
+
+Präzisiert ggü. Vor-Version: ein Auto-Link via Pfad A oder Pfad B blockiert nur, wenn **mehrere hofObjects** im selben Dorf eine zum Event-Jahr matchende Adresse haben **und** ihre Existenzspannen (`existsFrom`/`existsTo`) das Event-Jahr **gleichzeitig** umfassen. Damit fällt Adress-Wiederverwendung über Zeit (Hof A bis 1900, Hof B ab 1910) aus dem Mehrdeutigkeits-Block heraus — der Auto-Link löst über die Existenzspanne automatisch.
+
+Echte Mehrdeutigkeit verbleibt nur bei:
+- **Hof-Aufteilung mit pname-Erbe** (Erbteilung, beide Erben aliasieren den alten Hofnamen)
+- **Sammeladresse** (Wegname, Bauerschaft vor Hausnummer-Einführung — typisch Pre-1880 Westfalen)
+- **Adress-Identität mehrerer gleichzeitig existierender Höfe** (Funktionsbezeichnung wie „Schmiede" bei zwei Schmieden im Dorf)
+
+Diese Fälle sind real, aber Minderheit — die Review-Funktion ist gezielt dafür da, nicht der Haupt-Workflow.
+
+Prinzip — endgültig: **eindeutiger Quell-Bezug (PLAC-Präfix oder ADDR im Dorf-Kontext, disambiguiert per Existenzspanne) → automatischer Auto-Link mit Toast + `markChanged`. Echte Mehrdeutigkeit oder fehlende Modellierung → permanenter Review-Pfad im Höfe-Tab.** Symmetrisch zur ADR-024-Welt für Orte, aber UI-zentriert statt modal-zentriert.
 
 ## Migrationsplan
 
@@ -250,14 +310,16 @@ Erst nach Phase 3 ausführen, sonst Test-Brüche.
 - **Tests:** alle bisherigen ADR-026-Tests entweder auf hofObjects umgestellt oder ersatzlos entfernt (wenn sie Sonderfall-Verhalten testeten, das wegfällt).
 - **Gate:** alle Tests grün; `includeAddrLeaf` als String im Repo nicht mehr existent (`grep` als CI-Check); Pre-Commit-Gate grün.
 
-### Phase 5 — UI-Anreicherung
+### Phase 5 — UI-Trennung + Anreicherung
 
-- **Hof-Tab überarbeiten:** Listenansicht aller hofObjects gruppiert nach Dorf. Pro Hof: Detail-Sheet mit Adress-Historie, Koords, Eigentümer/Bewohner, Notiz, Vorgänger/Nachfolger-Links.
-- **Event-Detail „Hof zuweisen"-Modal:** für Events mit `ev.addr` ohne `ev.hofId` im gewählten Dorf. Listet bestehende Höfe + Option „neu anlegen". `markChanged` zeigt die Anreicherung.
-- **Adress-Editor**: am hofObject-Detail kann der User neue undatierte oder datierte addrs hinzufügen. Existierende Events mit altem `ev.addr`-Wortlaut greifen automatisch die neue zeitgenössische Schreibweise beim nächsten Save.
-- **Dubletten-Erkennung** Erweiterung von `findPlaceDuplicates`: hofObjects-Pendant `findHofDuplicates` (gleicher Algorithmus, addrs statt pnames).
-- **Tests:** UI-Logik via T0-UI-Harness (`_uiReset`, ClickMap-Dispatch).
-- **Gate:** Browser-verifiziert an Realdaten; alle Tests grün; Handbuch-Stand nachgezogen.
+- **Höfe-Tab als eigenständige Domäne ausbauen** (siehe Tab-Trennungs-Tabelle): hofObjects-Liste gruppiert nach Dorf, Tab-lokaler Validator, Filter-Toggles, Merge-Modal (`findHofDuplicates`/`mergeHofObjects`), Adress-Link-Modal (`openHofAddrLinkModal`), Detail-View mit Adress-Historie/Bewohner/Vorgänger-Nachfolger.
+- **„Hof-Zuweisungen prüfen"-Review im Höfe-Tab** als permanente Datenqualitäts-Funktion (Badge mit Zähler, Tabellenansicht mit Sortier-/Filter-/Batch-Funktionen, „Ignorieren"-Pfad pro Zeile). Zählt nach Link-Pass automatisch alle nicht-gelösten Fälle; bleibt sichtbar, bis Liste auf 0 abgearbeitet.
+- **Event-Detail-Indikator:** dezentes ⚠ neben ADRESSE-Feld, wenn Event in Review-Liste → klickt direkt in die entsprechende Review-Zeile.
+- **Orte-Tab bereinigen:** Filter/Buttons, die nur für Höfe relevant waren, entfernen oder in den Höfe-Tab überführen. `🗂 Admin-Filter` (v1010) bleibt als Verwaltungs-spezifisches Toggle.
+- **Adress-Editor** am hofObject-Detail: undatierte oder datierte addrs-Einträge hinzufügen/bearbeiten. Existierende Events mit altem `ev.addr`-Wortlaut greifen automatisch die neue zeitgenössische Schreibweise beim nächsten Save (via `resolveAddrAsOf`).
+- **Karten-Layer-Trennung:** Hof-Marker und Orts-Marker visuell unterschiedlich, beide Layer unabhängig zu-/abschaltbar.
+- **Tests:** UI-Logik via T0-UI-Harness (`_uiReset`, ClickMap-Dispatch); Browser-verifizierte Review-Tabelle mit Batch-Auflösung an Realdaten.
+- **Gate:** Browser-verifiziert an Realdaten; alle Tests grün; Handbuch-Stand nachgezogen (Tab-Trennung explizit dokumentieren).
 
 ### Phase 6 — Legacy entfernen
 
@@ -332,5 +394,7 @@ Bei Abnahme nach Phase 6: Status auf 🟢 (abgeschlossen).
 5. **Reverse-Migrator als Snapshot-basierter App-Schalter im Debug-Bereich**, sichtbar für 2 Versionen nach Phase 3. Plus CLI-Skript als Notfall-Fallback („App startet nicht"-Szenario). Variante A (algorithmischer Reverse) und C (beides) verworfen.
 6. **Auto-Reload + Schema-Refusal-Mechanik** als Vorbedingung in sw v1019 ausgerollt — der ursprünglich angedachte v1-Reader-Passthrough für `hofObjects` entfällt ersatzlos.
 7. **Auto-Link auch für Konvention 2** (PLAC ohne Adress-Präfix + ADDR vorhanden): zweiter Link-Pass-Pfad „ADDR-basiert" über den Dorf-Kontext, gleiche Eindeutigkeits-Regel. Häufiger Import-Fall (MyHeritage, GRAMPS) wird strukturell aufgelöst statt manuell. Toast + `markChanged` machen die Anreicherung sichtbar; Re-Save vollzieht den Konvention-2→1-Übergang einmalig, danach idempotent (`out2===out3`).
+8. **Tab-Trennung Orte ↔ Höfe** als Erstklassen-Architekturentscheidung: zwei orthogonale Domänen mit eigenen Listen, Validatoren, Merge-Modals, Link-Modals, Detail-Views, Filter-Toggles. Querverweise (Hof zeigt sein Dorf, Dorf zeigt seine Höfe) explizit verlinkt. Keine vermischten Buttons mehr.
+9. **„Hof-Zuweisungen prüfen" als permanente Review-Funktion im Höfe-Tab** statt einmaligem Import-Modal. Badge-Zähler, Tabellen-View mit Batch-Auflösung + „Ignorieren"-Pfad. Datenqualitäts-Sicht, in Etappen abarbeitbar. Mehrdeutigkeit präzisiert: nur wenn mehrere hofObjects gleichzeitig (per existsFrom/To) im selben Dorf eine matchende Adresse haben — Adress-Wiederverwendung über Zeit löst automatisch.
 
 — Ende des Entwurfs —
