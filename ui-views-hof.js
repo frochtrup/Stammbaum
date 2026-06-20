@@ -3,6 +3,21 @@
 // ─────────────────────────────────────
 // buildHofIndex() → gedcom.js (Domain-Logik)
 
+let _hofDetailMap = null;
+
+function _initHofDetailMap(lat, lon, title) {
+  if (typeof L === 'undefined') return;
+  const el = document.getElementById('hof-mini-map');
+  if (!el) return;
+  if (_hofDetailMap) { try { _hofDetailMap.remove(); } catch(_) {} _hofDetailMap = null; }
+  _hofDetailMap = L.map(el, { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, tap: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(_hofDetailMap);
+  _hofDetailMap.setView([lat, lon], 14);
+  L.circleMarker([lat, lon], { radius: 9, color: '#c8793a', fillColor: '#c8793a', fillOpacity: 0.85, weight: 2 })
+    .bindPopup(title).addTo(_hofDetailMap);
+  setTimeout(() => _hofDetailMap?.invalidateSize(), 150);
+}
+
 // Ersten nicht-leeren Teil einer Ortsangabe extrahieren (ignoriert Hierarchie-Prefix)
 // ", Ochtrup" → "Ochtrup"  |  "Ochtrup, Steinfurt" → "Ochtrup"  |  "Ochtrup" → "Ochtrup"
 function _placeFirstPart(place) {
@@ -379,6 +394,8 @@ function showHofDetail(addr, pushHistory = true) {
   _activateDetailContainer('detailPlace', addr);
   _initHofFormEvents();
   showView('v-detail');
+  const meta = hofMeta(hof);
+  if (meta.lat != null && meta.long != null) _initHofDetailMap(meta.lat, meta.long, addr.split('\n')[0]);
 }
 
 // ── Koordinaten-Sektion ──────────────────────────────────────────────────────
@@ -392,10 +409,13 @@ function _renderHofCoordSection(addr) {
   let body = '';
   if (lat && long) {
     const mapsUrl = `https://maps.apple.com/?ll=${encodeURIComponent(lat)},${encodeURIComponent(long)}&q=${encodeURIComponent(compactPlace(addr))}`;
-    body = `<div class="hof-coord-body">
-      <span class="hof-coord-val">${esc(String(lat))}° N &nbsp; ${esc(String(long))}° E</span>
-      <a href="${mapsUrl}" target="_blank" class="hof-map-link">Karte öffnen</a>
-    </div>`;
+    const osmUrl  = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${long}#map=14/${lat}/${long}`;
+    body = `<div class="place-map-wrap"><div id="hof-mini-map"></div></div>
+    <div class="place-map-links">
+      <a href="${mapsUrl}" target="_blank" class="place-maps-link">🗺 Apple Maps</a>
+      <a href="${osmUrl}"  target="_blank" class="place-maps-link">🌐 OpenStreetMap</a>
+    </div>
+    <div class="place-map-coords">${esc(String(lat))}, ${esc(String(long))}</div>`;
   } else {
     body = `<div class="hof-coord-no-data">Keine Koordinaten hinterlegt</div>`;
   }
