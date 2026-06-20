@@ -113,13 +113,26 @@ function buildPlacForGedcom(ev, year):
 **Lesen** (`gedcom-parser.js` + Link-Pass):
 
 1. Parser füllt `ev.place`, `ev.addr`, `ev.lati/long` wie heute. Kein `ev.hofId`/`ev.placeId` gesetzt.
-2. **Link-Pass-Erweiterung** (sw v???, neu unter ADR-027):
-   - Segmentiere `ev.place` per Komma in `[lead, ...rest]`.
-   - **Eindeutiger Hof-Match:** Wenn `lead` exakt oder per `_normPlaceName` gegen `hofObjects.addrs[].value` zum Stichjahr matcht UND der Match eindeutig ist (genau ein hofId) UND der `rest` die Dorf-Hierarchie der `hof.villageId` matcht (analog ADR-024-Anker-Check aus v1015), dann: `ev.hofId = hofId`, `ev.placeId = hof.villageId`.
-   - **Sonst** (kein Hof-Match, oder mehrdeutig, oder rest-Hierarchie passt nicht): `ev.hofId` bleibt null; `ev.placeId` wird wie ADR-024 über `_linkGedcomEventsToPlaceObjects` aus der vollen PLAC-Kette aufgelöst.
-3. **`ev.place` bleibt unverändert** (Wire-Treue) — der Writer rekonstruiert beim nächsten Save aus `(placeId, hofId, year)`.
+2. **Link-Pass-Erweiterung** (zwei Eingabe-Pfade, beide unter derselben Eindeutigkeits-Regel):
 
-**Konventions-Erhalt (zentrale Regel):** `ev.hofId` wird vom Link-Pass *nur* gesetzt, wenn die Quelle einen tatsächlichen Hof-Bezug im PLAC trug. Wenn die Quelle PLAC ohne Adress-Präfix schrieb (ev.addr existiert, aber nicht als PLAC-Leitsegment), bleibt `ev.hofId` null — der Writer schreibt dann PLAC ohne Präfix, identisch zur Quelle. **Anreicherung um einen Hof-Bezug erfolgt nur über bewusste User-Aktion** im Detail-UI („Hof zuweisen"), nicht über stille Heuristik. Dieselbe Regel, die wir in ADR-024 Stufe 2b (Anker-Check) für Orte etabliert haben.
+   **Pfad A — PLAC-basiert** (Konvention 1 + 3, „Adresse als Leitsegment im PLAC"):
+   - Segmentiere `ev.place` per Komma in `[lead, ...rest]`.
+   - Wenn `lead` per `_normPlaceName` eindeutig gegen `hofObjects.addrs[].value` zum Stichjahr matcht UND `rest` die Dorf-Hierarchie der `hof.villageId` matcht (Anker-Check analog ADR-024 v1015) → `ev.hofId = hofId`, `ev.placeId = hof.villageId`. Hof gilt als „aus PLAC erkannt".
+
+   **Pfad B — ADDR-basiert** (Konvention 2, „PLAC ist nur Dorfhierarchie, ADDR trägt die Adresse"):
+   - Nur ausgeführt, wenn Pfad A keinen Hof-Match lieferte UND `ev.addr` gesetzt ist.
+   - Zuerst Dorf auflösen: `ev.placeId` wird über `_linkGedcomEventsToPlaceObjects` aus der vollen PLAC-Kette gesetzt (existierender Mechanismus).
+   - Dann im Hof-Index nach `hofObjects` mit `villageId === ev.placeId` filtern, und ein eindeutiges `addrs[].value`-Match (per `_normPlaceName`, zum Stichjahr) auf `ev.addr` suchen.
+   - Eindeutiger Treffer → `ev.hofId = hofId`. Hof gilt als „aus ADDR erkannt".
+   - Mehrdeutig (mehrere Höfe gleicher Adresse im selben Dorf), kein hofObject vorhanden, oder Adress-Match scheitert (Tippfehler/Schreibvariante) → `ev.hofId` bleibt null; bewusste User-Aktion erforderlich.
+
+3. **`ev.place` bleibt unverändert** beim Linken (Wire-Treue). Der Writer rekonstruiert beim nächsten Save aus `(placeId, hofId, year)`. Bei Pfad-B-Treffern enthält der rekonstruierte PLAC dann das Adress-Präfix → bewusster Roundtrip-Bruch ggü. der Original-Quelle (Konvention 1 → Konvention 1, Konvention 2 → Konvention 1). Genau analog zum bestehenden ADR-024-Verhalten (`ev.place`-Re-Kollaps auf periodengerechte Projektion).
+
+4. **Toast + `markChanged` beim Load:** eine einzige Meldung summiert beide Pfade — z.B. *„N Orte verknüpft, M Höfe aus PLAC erkannt, K Höfe aus ADDR erkannt"*. `markChanged` aktiv, damit der User die strukturelle Anreicherung sieht und bewusst speichert. Analog zum heutigen ADR-024-Link-Pass-Toast (`recollapsed`).
+
+**Konventions-Erhalt — präziser:** `ev.hofId` wird automatisch gesetzt **wenn und nur wenn** die Quelle eine eindeutige Hof-Identifikation trägt — sei es im PLAC (Pfad A) oder in ADDR + Dorf-Kontext (Pfad B). „Eindeutig" meint: genau ein Match im hofObjects-Index. Mehrdeutigkeit, fehlende Hof-Modellierung oder Schreibvarianten blockieren den Auto-Link → der User entscheidet im Hof-Zuweisen-Modal.
+
+Damit bleiben Konvention 1 + 3 byte-identisch im Roundtrip (`net_delta=0` ggü. Original). Konvention 2 wird beim ersten Save in Konvention 1 transformiert (Adress-Präfix kommt in PLAC) — ehrlicher Roundtrip-Bruch als Konsequenz der strukturellen Anreicherung, sichtbar in Toast + `markChanged`, danach idempotent (`out2===out3`).
 
 ### GRAMPS XML
 
@@ -138,25 +151,41 @@ ADR-027 setzt voraus, dass alle aktiv genutzten Geräte zeitnah auf die neue App
 
 Diese Kombination ersetzt den ursprünglich angedachten v1-Reader-Passthrough für `hofObjects`. Der Passthrough-Code entfällt — Schutz erfolgt nicht durch Toleranz auf der Lese-Seite, sondern durch garantierte App-Aktualität + harten Schreibstopp bei Versions-Mismatch.
 
-### Edge Case: PLAC-Konventions-Vielfalt
+### PLAC-Konventions-Vielfalt — alle drei automatisch auflösbar
 
-Drei Quellkonventionen in der freien Wildbahn (alle drei kommen vor):
+Drei Quellkonventionen in der freien Wildbahn:
 
 1. **MIT Adress-Präfix:** `2 PLAC Wall 33, Ochtrup, …` + `2 ADDR Wall 33` — Ancestris-Standard.
-2. **OHNE Adress-Präfix:** `2 PLAC Ochtrup, …` + `2 ADDR Wall 33` — MyHeritage, manche GRAMPS-Exports.
-3. **Nur Adresse als PLAC:** `2 PLAC Wall 33` (kein ADDR) — sehr alte oder schlampige Quellen.
+2. **OHNE Adress-Präfix:** `2 PLAC Ochtrup, …` + `2 ADDR Wall 33` — MyHeritage, viele GRAMPS-Exports. **Häufiger Import-Fall.**
+3. **Nur Adresse als PLAC:** `2 PLAC Wall 33` (kein ADDR) — alte oder schlampige Quellen.
 
-Unter ADR-027 wird (1) und (3) als Hof-Bezug erkannt (sofern eindeutig matchbar); (2) wird *nicht* automatisch als Hof verlinkt — der User entscheidet bewusst. Beim Re-Write wird die Quelle der Konvention treu gespiegelt: Fall (1)/(3) schreibt mit Präfix, Fall (2) ohne. Damit bleibt **net_delta=0 pro Event**.
+Unter ADR-027 werden **alle drei** vom Link-Pass automatisch als Hof-Bezug erkannt, sofern eindeutig auflösbar:
 
-## Anreicherung über bewusste User-Aktion
+- (1) + (3) → Pfad A (PLAC-Leitsegment matcht `hofObjects.addrs`)
+- (2) → Pfad B (`ev.addr` matcht `hofObjects.addrs` im Kontext des aufgelösten Dorfs)
 
-Drei UI-Pfade machen die Modell-Klarheit für den User nutzbar:
+Roundtrip-Konsequenz:
+- (1) → (1) bit-identisch (`net_delta=0` ggü. Original).
+- (3) → (1) ist möglich (Writer fügt fortan den Komma-Hierarchie-Rest hinzu) — analog dem heutigen `ev.place`-Re-Kollaps in ADR-024 ein gewollter Anreicherungs-Schritt, sichtbar in Toast + `markChanged`.
+- (2) → (1) wird auf Save vollzogen: Adress-Präfix kommt in PLAC dazu. Idempotent ab Iteration 2 (`out2===out3`).
+
+Sonderfälle bleiben bewusster User-Aktion vorbehalten:
+- **Mehrere Höfe gleicher Adresse im selben Dorf** (selten, aber möglich) — Modal listet alle Kandidaten.
+- **`ev.addr` mit Tippfehler / Schreibvariante** ggü. dem hofObject — Modal bietet „match per Norm-Fold" oder „neue addrs-Bezeichnung an Hof hinzufügen".
+- **Hof noch nicht modelliert** — Modal bietet „neuen Hof aus diesem Event anlegen", übernimmt addr/coords/villageId.
+
+## Anreicherung über bewusste User-Aktion (Restfälle)
+
+Der überwiegende Teil der Hof-Identifikation passiert automatisch durch den Link-Pass (siehe Wire-Mapping). Bewusste User-Aktion ist für die Restklassen vorgesehen, die nicht eindeutig auflösbar sind:
 
 1. **Hof-Tab** (neu oder erweitert): zeigt alle hofObjects sortiert nach Dorf. Pro Hof: Adress-Historie (chronologisch), Koords auf Mini-Karte, Eigentümer/Bewohner (aus PROP/RESI-Events aggregiert über `hofId`), Notiz, Existenzspanne, Vorgänger/Nachfolger. Editor erlaubt Hinzufügen neuer Adress-Bezeichnungen mit Datum.
-2. **Event-Detail „Hof zuweisen"** (analog String→PlaceObject-Link in `openPlaceStringLinkModal`): zeigt für ein Event ohne `hofId`, aber mit `ev.addr` und Dorf-`ev.placeId`, alle Höfe im selben Dorf + „neuer Hof hier anlegen". User-Aktion setzt `hofId`. Beim nächsten Save wird PLAC mit Präfix geschrieben (Roundtrip-Bruch ggü. der Quelle, aber **gewollte Anreicherung**, sichtbar in `markChanged`).
-3. **Dubletten-Erkennung** (Erweiterung von `findPlaceDuplicates`/v1014): wenn zwei hofObjects im selben Dorf dieselbe Adress-Bezeichnung haben (ggf. mit Norm-Fold), werden sie als Merge-Vorschlag gelistet. Merge konsolidiert verlustfrei (analog `mergePlaceObjects`/v1010).
+2. **Event-Detail „Hof zuweisen"-Modal** (analog String→PlaceObject-Link in `openPlaceStringLinkModal`): aktiv für Events ohne `ev.hofId`, mit `ev.addr` oder PLAC-Leitsegment und aufgelöstem Dorf-`ev.placeId`. Bietet je nach Kontext:
+   - **Mehrdeutigkeit:** Liste aller passenden hofObjects im selben Dorf zur Auswahl.
+   - **Schreibvariante / Tippfehler:** „match per Norm-Fold" (z.B. „Wall33" ↔ „Wall 33") + Option „diese Schreibweise als neue undatierte addrs-Bezeichnung am Hof speichern" → künftige Events mit dieser Variante linken automatisch.
+   - **Neuer Hof:** „aus diesem Event Hof anlegen" — übernimmt `ev.addr` als initiale addrs-Bezeichnung, `ev.placeId` als villageId, Koords (falls vorhanden) als Hof-Koords.
+3. **Dubletten-Erkennung** `findHofDuplicates` (Pendant zu `findPlaceDuplicates`/v1014): zwei hofObjects im selben Dorf mit fold-gleichen addrs → Merge-Vorschlag. Konsolidierung verlustfrei (Adress-Historien werden zusammengeführt, analog `mergePlaceObjects`/v1010).
 
-Das Prinzip ist symmetrisch zur ADR-024-Welt für Orte: **automatischer Link nur bei eindeutigem Quell-Bezug, Anreicherung über bewusste User-Aktion.**
+Prinzip — verfeinert ggü. Erstentwurf: **eindeutiger Quell-Bezug (PLAC-Präfix oder ADDR im Dorf-Kontext) → automatischer Auto-Link mit Toast + `markChanged`. Mehrdeutigkeit oder fehlende Modellierung → bewusste User-Aktion über das Hof-Zuweisen-Modal.** Symmetrisch zur ADR-024-Welt für Orte.
 
 ## Migrationsplan
 
@@ -180,7 +209,10 @@ ADR vom Maintainer abgenickt. Section „Entscheidung" eingefroren. Implementati
 ### Phase 2 — Mapping-Layer (Parser + Writer)
 
 - **Writer**: `buildPlacForGedcom(ev, year)` — siehe Wire-Mapping oben. `_resolvedPlaceName` ruft `buildPlacForGedcom` statt direkt `_buildFormString`. `geoLines` wählt Koord-Quelle (`hofObjects[hofId]` oder `placeObjects[placeId]`).
-- **Link-Pass**: erweitert um Hof-Match-Versuch *vor* dem heutigen Place-Link-Pfad. Eindeutigkeit + Hierarchie-Anker-Check (analog ADR-024 v1015). Bei Treffer: `ev.hofId` setzen, `ev.placeId = hof.villageId`. Sonst Fallthrough zu bestehender Logik.
+- **Link-Pass**: erweitert um die zwei Hof-Match-Pfade aus dem Wire-Mapping-Abschnitt.
+  - **Pfad A (PLAC-basiert):** läuft *vor* dem heutigen Place-Link, weil ein PLAC-Hof-Match das Dorf automatisch mit setzt.
+  - **Pfad B (ADDR-basiert):** läuft *nach* dem Place-Link (braucht aufgelöstes `ev.placeId` für den Dorf-Scope).
+  - Beide unter derselben Eindeutigkeits-Regel (genau ein Match im hofObjects-Index). Summierter Toast „N Orte, M Höfe (PLAC), K Höfe (ADDR)" + `markChanged`.
 - **GRAMPS-Parser**: `<placeobj type="Building"|"Farm">` → `db.hofObjects`. `<pname>` → `addrs[]`. `<placeref type="predecessor"|"successor">` → entsprechende Felder.
 - **GRAMPS-Writer**: hofObjects als `<placeobj type="Building">` mit allen Feldern.
 - **Tests:** PLAC-Roundtrip mit/ohne Präfix (Konvention pro Event erhalten), Hof-Match eindeutig/mehrdeutig/anker-fehlend, GRAMPS-Serialisierung.
@@ -271,8 +303,12 @@ Erst nach Phase 3 ausführen, sonst Test-Brüche.
 
 Vor Phase 6 (Legacy entfernen) muss gelten:
 
-1. **Wire-Treue:** GEDCOM-Roundtrip `net_delta=0` und `out1===out2` auf `MeineDaten_ancestris.ged` (83k Zeilen). GRAMPS `xml1===xml2` auf `Unsere Familie.gramps`.
-2. **Konventions-Erhalt pro Event:** Fixture-Test mit drei parallelen RESI-Events derselben Person am selben Hof in den drei Wire-Konventionen (mit Präfix / ohne Präfix / nur Adresse) → jeder schreibt sich nach Re-Save bit-identisch zur Quelle.
+1. **Wire-Treue Konvention 1:** GEDCOM-Roundtrip `net_delta=0` und `out1===out2` auf `MeineDaten_ancestris.ged` (83k Zeilen, Ancestris-Konvention mit PLAC-Präfix). GRAMPS `xml1===xml2` auf `Unsere Familie.gramps`.
+2. **Auto-Link-Auflösung Konvention 2 + 3:** Fixture-Test mit drei parallelen RESI-Events derselben Person am selben Hof in den drei Wire-Konventionen.
+   - Konvention 1 (mit Präfix): `ev.hofId` aus Pfad A gesetzt, Re-Save bit-identisch.
+   - Konvention 2 (ohne Präfix, ADDR vorhanden): `ev.hofId` aus Pfad B gesetzt, Toast + `markChanged` aktiv, Re-Save fügt Präfix in PLAC ein, `out2===out3` (Idempotenz ab Iteration 2).
+   - Konvention 3 (nur PLAC-Adresse): `ev.hofId` aus Pfad A gesetzt, ggf. Komma-Hierarchie-Anreicherung im Re-Save (analog ADR-024 `ev.place`-Re-Kollaps), `out2===out3`.
+   - **Negativ-Test:** zwei Höfe gleicher Adresse im selben Dorf → `ev.hofId` bleibt null (Mehrdeutigkeit blockiert Auto-Link), Modal-Pfad erforderlich.
 3. **Idempotenz der Migration:** zweimaliges Ausführen von `_migrateFarmPOsToHofObjects` ergibt denselben DB-Zustand wie einmalige Ausführung.
 4. **Anreicherung über User-Aktion verifizierbar:** Browser-Test, in dem ein Event aus Konvention (b) per UI manuell einem Hof zugewiesen wird → `markChanged` aktiv → Re-Save schreibt PLAC mit Präfix (gewollter Roundtrip-Bruch ggü. Original).
 5. **`includeAddrLeaf` als String im Repo nicht mehr existent** (Code-Hygiene-Gate via `grep`).
@@ -295,5 +331,6 @@ Bei Abnahme nach Phase 6: Status auf 🟢 (abgeschlossen).
 4. **Migrations-Backup sichtbar** im Daten-Verzeichnis als `orte-backup-pre-ADR027-YYYYMMDD.json` + `events-backup-pre-ADR027-YYYYMMDD.json` (zwei Dateien für verlustfreien Snapshot-Restore).
 5. **Reverse-Migrator als Snapshot-basierter App-Schalter im Debug-Bereich**, sichtbar für 2 Versionen nach Phase 3. Plus CLI-Skript als Notfall-Fallback („App startet nicht"-Szenario). Variante A (algorithmischer Reverse) und C (beides) verworfen.
 6. **Auto-Reload + Schema-Refusal-Mechanik** als Vorbedingung in sw v1019 ausgerollt — der ursprünglich angedachte v1-Reader-Passthrough für `hofObjects` entfällt ersatzlos.
+7. **Auto-Link auch für Konvention 2** (PLAC ohne Adress-Präfix + ADDR vorhanden): zweiter Link-Pass-Pfad „ADDR-basiert" über den Dorf-Kontext, gleiche Eindeutigkeits-Regel. Häufiger Import-Fall (MyHeritage, GRAMPS) wird strukturell aufgelöst statt manuell. Toast + `markChanged` machen die Anreicherung sichtbar; Re-Save vollzieht den Konvention-2→1-Übergang einmalig, danach idempotent (`out2===out3`).
 
 — Ende des Entwurfs —
