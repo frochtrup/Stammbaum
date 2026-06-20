@@ -3476,14 +3476,16 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
      'af.12: Farm enclosedBy EXISTIERENDES Sassenberg-PO (per pname-Match erkannt, keine Dublette)');
   eq(Object.values(D.placeObjects).filter(p => p.type !== 'Farm' && API._normPlaceName(p.title) === 'sassenberg').length, 1,
      'af.12: kein doppeltes Sassenberg-PO angelegt');
-  // Reprojektion (db === AppState.db via setDb): ev.place an placeId-Projektion angeglichen
-  eq(evs[0].place, 'Hof Meyer, Sassenbergk, Fürstbistum Münster',
-     'af.12: ev.place reprojiziert auf Farm-Hierarchie (ADR-024-Invariante, keine stale Mischung)');
-  eq(API._buildFormString(farm.id, 1700), 'Hof Meyer, Sassenbergk, Fürstbistum Münster',
-     'af.12: 1700 → historischer Ortsname Sassenbergk löst durch die Farm-Kette korrekt auf');
+  // Reprojektion (db === AppState.db via setDb): ev.place ist die Hierarchie AB dem
+  // umschließenden Dorf — der Hof-Titel "Hof Meyer" lebt in ev.addr (ADDR), nicht in
+  // PLAC. Sonst doppelt sichtbar in Adresse + Ort (v1017, ADR-026-Trennung).
+  eq(evs[0].place, 'Sassenbergk, Fürstbistum Münster',
+     'af.12: ev.place ohne Farm-Blatt (Hof-Titel ist Adresse → ev.addr, nicht PLAC)');
+  eq(API._buildFormString(farm.id, 1700), 'Sassenbergk, Fürstbistum Münster',
+     'af.12: 1700 → historischer Ortsname Sassenbergk, ohne Farm-Blatt');
   // 1850: enclosedBy Fürstbistum Münster endet 1803 (Säkularisation) → Parent fällt
   // korrekt weg. Beweist: datierte Zugehörigkeit wirkt durch die Farm-Kette hindurch.
-  eq(API._buildFormString(farm.id, 1850), 'Hof Meyer, Sassenberg',
+  eq(API._buildFormString(farm.id, 1850), 'Sassenberg',
      'af.12: 1850 → moderner Name Sassenberg, Parent (bis 1803 datiert) korrekt entfallen');
 })();
 
@@ -3924,6 +3926,50 @@ group('(ah) PLACE-HIST Stufe 2 Disambiguierung (sw v1006)');
      'ah-2: 1200 außerhalb existsFrom=1300 → NICHT verlinkt (Anachronismus-Schutz)');
   eq(db.individuals['@I3@'].birth.placeId, null,
      'ah-2: 1850 mit moderner Hierarchie → kein Anker in zeitgenössischer Kette → BLOCKIERT (User-Merge nötig)');
+})();
+
+// (ah-2c) _buildFormString schließt Farm/Building-Blatt aus (sw v1017): der Hof-Titel
+// IS die Adresse (ev.addr) und gehört nicht doppelt als 1. Segment in den PLAC-String.
+// PLAC trägt die geographische Hierarchie ab dem umschließenden Dorf.
+(function() {
+  var db = {
+    extraPlaces:{}, families:{}, individuals:{},
+    placeObjects: {
+      '@HOF@': { id:'@HOF@', title:'Wall 33', type:'Farm', lat:52.2, long:7.2, pnames:[],
+                 enclosedBy:[{ placeId:'@OCH@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
+                 parentId:'@OCH@' },
+      '@OCH@': { id:'@OCH@', title:'Ochtrup', type:'Town', lat:52.2, long:7.18, pnames:[],
+                 enclosedBy:[{ placeId:'@KR@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
+                 parentId:'@KR@' },
+      '@KR@':  { id:'@KR@', title:'Kreis Steinfurt', type:'County', lat:null, long:null, pnames:[],
+                 enclosedBy:[], parentId:null },
+      '@BLD@': { id:'@BLD@', title:'Rathaus', type:'Building', lat:52.2, long:7.18, pnames:[],
+                 enclosedBy:[{ placeId:'@OCH@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
+                 parentId:'@OCH@' },
+      '@ORPHAN@': { id:'@ORPHAN@', title:'Verwaister Hof', type:'Farm', lat:null, long:null, pnames:[],
+                    enclosedBy:[], parentId:null },
+    },
+  };
+  API.setDb(db);
+  // Hof als Blatt → PLAC startet beim Dorf, NICHT mit "Wall 33"
+  eq(API._buildFormString('@HOF@', 1819),
+     'Ochtrup, Kreis Steinfurt',
+     'ah-2c: Farm-Blatt aus PLAC ausgeschlossen (Hof-Titel wäre Duplikat zu ev.addr)');
+  // Building gleich behandeln
+  eq(API._buildFormString('@BLD@', 1819),
+     'Ochtrup, Kreis Steinfurt',
+     'ah-2c: Building-Blatt ebenfalls ausgeschlossen');
+  // Dorf direkt → komplette Kette ab Dorf
+  eq(API._buildFormString('@OCH@', 1819),
+     'Ochtrup, Kreis Steinfurt',
+     'ah-2c: Dorf-Blatt unverändert (kein Farm/Building → in Kette)');
+  // Ohne Jahr: Adress-Blatt → atomarer Name des Eltern-Dorfs
+  eq(API._buildFormString('@HOF@', null),
+     'Ochtrup',
+     'ah-2c: ohne Jahr → Farm-Blatt liefert atomares Eltern-Dorf, nicht Hof-Titel');
+  // Verwaister Hof ohne enclosedBy → null (lieber leer als Adresse als PLAC schreiben)
+  eq(API._buildFormString('@ORPHAN@', 1819), null,
+     'ah-2c: verwaister Farm ohne enclosedBy → null (kein Datenfehler-Workaround)');
 })();
 
 // (ah-2b) Hierarchie-Anker-Check (sw v1015): einziger Leitname-Kandidat darf NICHT

@@ -1062,16 +1062,35 @@ function _eventPlaceId(ev) {
 // GRAMPS ptitle ist bereits hierarchisch ("Ochtrup, Kreis Steinfurt, NRW"), würde
 // sonst mit der enclosedBy-Kette doppelt erscheinen.
 // Fallback: resolveAsOf (atomarer Name) wenn keine enclosedBy-Kette vorhanden.
+//
+// ADR-026 (Höfe = Farm-placeObjects): wenn das Blatt-PO ein Farm/Building ist, wird
+// es aus dem PLAC-String AUSGESCHLOSSEN — der Hof IST eine Adresse, sein Titel
+// (z.B. "Wall 33 (Metelener Str. 18)") gehört in ev.addr (GEDCOM ADDR-Tag), nicht
+// in PLAC. PLAC trägt die geographische Hierarchie ab dem umschließenden Dorf.
+// Ohne diese Regel würde der Hof-Titel doppelt erscheinen (in ADDR + als 1. PLAC-Segment).
 function _buildFormString(placeId, year) {
   if (!placeId || typeof getPlaceRegistry !== 'function') return null;
   const reg = getPlaceRegistry();
   const _atomic = s => s ? s.split(',')[0].trim() : '';
-  // Ohne Datum: kein Periode bestimmbar → nur atomarer Name, keine Hierarchie
-  if (year == null) return _atomic(reg.resolveAsOf(placeId, null)) || null;
-  const chain = reg.enclosureChainAsOf(placeId, year)
-    .map(_atomic).filter(Boolean);
+  const _po = reg.byId[placeId];
+  const _isAddrLeaf = _po && (_po.type === 'Farm' || _po.type === 'Building');
+  // Ohne Datum: kein Periode bestimmbar → atomarer Name. Bei Adress-Blatt das
+  // umschließende Dorf nehmen, sonst wäre PLAC = Adresse (Duplikat zu ev.addr).
+  if (year == null) {
+    if (_isAddrLeaf) {
+      const encs = _po.enclosedBy || [];
+      const parent = (encs[0] && encs[0].placeId) || _po.parentId;
+      return parent ? (_atomic(reg.resolveAsOf(parent, null)) || null) : null;
+    }
+    return _atomic(reg.resolveAsOf(placeId, null)) || null;
+  }
+  let chain = reg.enclosureChainAsOf(placeId, year).map(_atomic).filter(Boolean);
+  // Adress-Blatt aus der Kette entfernen — das erste Segment IS die Adresse.
+  if (_isAddrLeaf && chain.length) chain = chain.slice(1);
   if (chain.length) return chain.join(', ');
-  return _atomic(reg.resolveAsOf(placeId, year)) || null;
+  // Fallback nur für nicht-Adress-Blätter; Farm/Building ohne enclosedBy ist
+  // ein Datenfehler (verwaister Hof) — eher null als die Adresse als Ort zu schreiben.
+  return _isAddrLeaf ? null : (_atomic(reg.resolveAsOf(placeId, year)) || null);
 }
 
 // Berechnet Ergebnis-Gruppen für den String→PlaceObject Link-Dialog.
