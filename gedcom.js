@@ -1063,21 +1063,29 @@ function _eventPlaceId(ev) {
 // sonst mit der enclosedBy-Kette doppelt erscheinen.
 // Fallback: resolveAsOf (atomarer Name) wenn keine enclosedBy-Kette vorhanden.
 //
-// ADR-026 (Höfe = Farm-placeObjects): wenn das Blatt-PO ein Farm/Building ist, wird
-// es aus dem PLAC-String AUSGESCHLOSSEN — der Hof IST eine Adresse, sein Titel
-// (z.B. "Wall 33 (Metelener Str. 18)") gehört in ev.addr (GEDCOM ADDR-Tag), nicht
-// in PLAC. PLAC trägt die geographische Hierarchie ab dem umschließenden Dorf.
-// Ohne diese Regel würde der Hof-Titel doppelt erscheinen (in ADDR + als 1. PLAC-Segment).
-function _buildFormString(placeId, year) {
+// ADR-026 (Höfe = Farm-placeObjects): zwei Kontexte mit unterschiedlichem Bedarf.
+//
+//   Display-Modus (Default, opts.includeAddrLeaf=false): wenn das Blatt-PO ein
+//   Farm/Building ist, wird es aus dem PLAC-String AUSGESCHLOSSEN — der Hof-Titel
+//   ("Wall 33 (Metelener Str. 18)") lebt parallel in ev.addr und würde sonst
+//   doppelt erscheinen (ADRESSE-Feld + ORT-Feld). Genutzt von Link-Pass-Kollaps
+//   und String-Link.
+//
+//   GEDCOM-Modus (opts.includeAddrLeaf=true): Hof-Blatt BLEIBT in der Kette,
+//   weil GEDCOM 2 MAP/3 LATI/3 LONG sich auf das PLAC bezieht. Ohne den Hof
+//   als Blatt würden Hof-Koords fälschlich an das umschließende Dorf gebunden.
+//   Genutzt vom Writer (_resolvedPlaceName).
+function _buildFormString(placeId, year, opts) {
   if (!placeId || typeof getPlaceRegistry !== 'function') return null;
   const reg = getPlaceRegistry();
   const _atomic = s => s ? s.split(',')[0].trim() : '';
   const _po = reg.byId[placeId];
   const _isAddrLeaf = _po && (_po.type === 'Farm' || _po.type === 'Building');
-  // Ohne Datum: kein Periode bestimmbar → atomarer Name. Bei Adress-Blatt das
-  // umschließende Dorf nehmen, sonst wäre PLAC = Adresse (Duplikat zu ev.addr).
+  const _skipLeaf = _isAddrLeaf && !(opts && opts.includeAddrLeaf);
+  // Ohne Datum: kein Periode bestimmbar → atomarer Name. Bei Display-Adress-Blatt
+  // das umschließende Dorf nehmen, sonst wäre PLAC = Adresse (Duplikat zu ev.addr).
   if (year == null) {
-    if (_isAddrLeaf) {
+    if (_skipLeaf) {
       const encs = _po.enclosedBy || [];
       const parent = (encs[0] && encs[0].placeId) || _po.parentId;
       return parent ? (_atomic(reg.resolveAsOf(parent, null)) || null) : null;
@@ -1085,12 +1093,11 @@ function _buildFormString(placeId, year) {
     return _atomic(reg.resolveAsOf(placeId, null)) || null;
   }
   let chain = reg.enclosureChainAsOf(placeId, year).map(_atomic).filter(Boolean);
-  // Adress-Blatt aus der Kette entfernen — das erste Segment IS die Adresse.
-  if (_isAddrLeaf && chain.length) chain = chain.slice(1);
+  if (_skipLeaf && chain.length) chain = chain.slice(1);
   if (chain.length) return chain.join(', ');
-  // Fallback nur für nicht-Adress-Blätter; Farm/Building ohne enclosedBy ist
-  // ein Datenfehler (verwaister Hof) — eher null als die Adresse als Ort zu schreiben.
-  return _isAddrLeaf ? null : (_atomic(reg.resolveAsOf(placeId, year)) || null);
+  // Fallback nur für nicht-skip-Blätter; verwaister Farm im Display-Modus → null
+  // (lieber leer als Adresse als Ort).
+  return _skipLeaf ? null : (_atomic(reg.resolveAsOf(placeId, year)) || null);
 }
 
 // Berechnet Ergebnis-Gruppen für den String→PlaceObject Link-Dialog.

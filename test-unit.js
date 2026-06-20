@@ -3970,6 +3970,21 @@ group('(ah) PLACE-HIST Stufe 2 Disambiguierung (sw v1006)');
   // Verwaister Hof ohne enclosedBy → null (lieber leer als Adresse als PLAC schreiben)
   eq(API._buildFormString('@ORPHAN@', 1819), null,
      'ah-2c: verwaister Farm ohne enclosedBy → null (kein Datenfehler-Workaround)');
+  // GEDCOM-Modus (includeAddrLeaf): Hof-Blatt MUSS drin sein, damit MAP/LATI/LONG
+  // den Hof-Punkt referenzieren, nicht das Dorf (v1018).
+  eq(API._buildFormString('@HOF@', 1819, { includeAddrLeaf: true }),
+     'Wall 33, Ochtrup, Kreis Steinfurt',
+     'ah-2c: GEDCOM-Modus → Hof-Blatt drin (Koord-Bindung für 2 MAP/LATI/LONG)');
+  eq(API._buildFormString('@BLD@', 1819, { includeAddrLeaf: true }),
+     'Rathaus, Ochtrup, Kreis Steinfurt',
+     'ah-2c: GEDCOM-Modus → Building-Blatt ebenfalls drin');
+  eq(API._buildFormString('@HOF@', null, { includeAddrLeaf: true }),
+     'Wall 33',
+     'ah-2c: GEDCOM-Modus ohne Jahr → atomarer Hof-Titel');
+  // Nicht-Adress-Blatt: includeAddrLeaf hat keinen Effekt (kein Skip)
+  eq(API._buildFormString('@OCH@', 1819, { includeAddrLeaf: true }),
+     'Ochtrup, Kreis Steinfurt',
+     'ah-2c: Dorf-Blatt unverändert (includeAddrLeaf no-op bei Town)');
 })();
 
 // (ah-2b) Hierarchie-Anker-Check (sw v1015): einziger Leitname-Kandidat darf NICHT

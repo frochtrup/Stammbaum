@@ -20,7 +20,10 @@ function _resolvedPlaceName(obj) {
   if (obj.placeId && typeof getPlaceRegistry === 'function') {
     const year = typeof _placeYear === 'function' ? _placeYear(obj.date) : null;
     if (typeof _buildFormString === 'function') {
-      const fs = _buildFormString(obj.placeId, year);
+      // GEDCOM-Konvention: Hof-Blatt MUSS in PLAC erscheinen, weil 2 MAP/LATI/LONG
+      // sich auf PLAC bezieht — ohne den Hof als Blatt würden Hof-spezifische
+      // Koordinaten fälschlich an das umschließende Dorf gebunden (v1018).
+      const fs = _buildFormString(obj.placeId, year, { includeAddrLeaf: true });
       if (fs) return fs;
     }
     const resolved = getPlaceRegistry().resolveAsOf(obj.placeId, year);
