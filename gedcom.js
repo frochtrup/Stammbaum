@@ -1168,14 +1168,42 @@ function _linkGedcomEventsToPlaceObjects(db) {
       ev.placeId = pid; linked++;
       if (proj !== ev.place) { ev.place = proj; recollapsed++; }
     } else {
-      // Fall 2: bereits Hierarchie-String → nur bei exaktem Projektions-Match verknüpfen.
+      // Fall 2a: bereits Hierarchie-String → bei exaktem Projektions-Match sicher verknüpfen.
       // Stufe 2: ALLE gleichnamigen Kandidaten des Blatts prüfen — die volle Kette
       // disambiguiert Stadt vs. Kreis (z.B. „Münster, Kreis Münster, …" trifft nur
       // die Stadt, deren Projektion exakt diesen String reproduziert).
       const first = ev.place.split(',').map(s => s.trim()).find(s => s) || '';
-      for (const cand of reg.findAllByName(first)) {
+      const cands = reg.findAllByName(first);
+      let exact = null;
+      for (const cand of cands) {
         const proj = _project(cand, year);
-        if (proj && proj === ev.place) { ev.placeId = cand; linked++; break; }
+        if (proj && proj === ev.place) { exact = cand; break; }
+      }
+      if (exact) { ev.placeId = exact; linked++; }
+      // Fall 2b: kein exakter Match, aber genau EIN Leitnamen-Kandidat → toleranter
+      // Link. Behebt den bare-vs-reich-Fall: GEDCOM-String trägt moderne Verwaltung
+      // („Ort, Stadt Sehnde, Region Hannover, NDS"), die nicht in die historische
+      // enclosedBy-Kette passt, aber der Leitname trifft eindeutig den reichen PO.
+      // Mutation: ev.place wird auf die periodengerechte Projektion neu kollabiert
+      // (Projektions-Invariante ADR-024), markChanged signalisiert das ehrlich.
+      // Existenz-Check schützt vor Anachronismen.
+      else if (cands.length === 1) {
+        const cand = cands[0], po = reg.byId[cand];
+        if (po) {
+          let ok = true;
+          if (year != null) {
+            const ef = _placeYear(po.existsFrom), et = _placeYear(po.existsTo);
+            if (ef != null && year < ef) ok = false;
+            else if (et != null && year > et) ok = false;
+          }
+          if (ok) {
+            const proj = _project(cand, year);
+            if (proj) {
+              ev.placeId = cand; linked++;
+              if (proj !== ev.place) { ev.place = proj; recollapsed++; }
+            }
+          }
+        }
       }
     }
   };
@@ -1435,6 +1463,28 @@ function findPlaceDuplicates(toleranceKm = 1) {
         && _placeDistKm(a.lat, a.long, b.lat, b.long) <= toleranceKm
         && _placeStringCoreFold(a.title) === _placeStringCoreFold(b.title)) {
         union(a.id, b.id);
+      }
+    }
+  }
+  // Cross-Achse bare↔reich: ein PO ohne enclosedBy/pnames mit Komma-Titel
+  // („Dolgen, Stadt Sehnde, …") und ein reicher PO mit passendem Leitsegment
+  // („Dolgen") sind faktisch dieselbe Identität, fielen aber durch den Fold-Pass
+  // (verschiedene Title-Keys) und den Koord-Pass (Titel-Fold ungleich). Wird hier
+  // als Dublettenvorschlag gemeldet, damit der User per Merge-UI verlustfrei
+  // konsolidieren kann (mergePlaceObjects hängt ev.placeId um, übernimmt Koords).
+  for (const bare of entries) {
+    if ((bare.enclosedBy || []).length) continue;
+    if (!bare.title || !bare.title.includes(',')) continue;
+    const lead = bare.title.split(',').map(s => s.trim()).find(s => s) || '';
+    const leadKey = _placeStringCoreFold(lead);
+    if (!leadKey) continue;
+    for (const rich of entries) {
+      if (rich.id === bare.id) continue;
+      if (find(rich.id) === find(bare.id)) continue;
+      if (!(rich.enclosedBy || []).length) continue;
+      if (_placeStringCoreFold(rich.title) === leadKey) {
+        union(bare.id, rich.id);
+        break;
       }
     }
   }

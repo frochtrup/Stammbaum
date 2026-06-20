@@ -3886,6 +3886,86 @@ group('(ah) PLACE-HIST Stufe 2 Disambiguierung (sw v1006)');
      'ah.link: "Münster, Westfalen" → Kreis @KR@ (Kette matcht)');
 })();
 
+// (ah-2) Link-Pass-Toleranz Fall 2b (sw v1014): bare-vs-reich-Auflösung.
+// Event trägt moderne Verwaltungshierarchie als String, reicher PO hat eine andere
+// (periodengerechte) Projektion. Wenn der Leitname EINDEUTIG einen Kandidaten
+// trifft und das Event-Jahr in dessen Existenzspanne liegt, wird verlinkt +
+// ev.place auf die periodengerechte Projektion neu kollabiert.
+(function() {
+  var db = {
+    extraPlaces:{}, families:{},
+    placeObjects: {
+      '@DOL@': { id:'@DOL@', title:'Dolgen', type:'Town', lat:52.3, long:10.0,
+                 pnames:[{ value:'Dolgen', lang:'deu', dateFrom:'1300', dateTo:null, dateType:null, _dateRaw:null }],
+                 enclosedBy:[
+                   { placeId:'@AI@', dateFrom:'1300', dateTo:'1810', dateType:null, _dateRaw:null },
+                   { placeId:'@SE@', dateFrom:'1974', dateTo:null,   dateType:null, _dateRaw:null },
+                 ],
+                 parentId:'@SE@', existsFrom:'1300', existsTo:null },
+      '@AI@': { id:'@AI@', title:'Amt Ilten', type:'District', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@SE@': { id:'@SE@', title:'Stadt Sehnde', type:'Municipality', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+    },
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ date:'1850', place:'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] },
+      '@I2@': { id:'@I2@', birth:{ date:'1200', place:'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] }, // vor existsFrom=1300 → NICHT linken
+    },
+  };
+  API.setDb(db);
+  API._linkGedcomEventsToPlaceObjects(db);
+  eq(db.individuals['@I1@'].birth.placeId, '@DOL@',
+     'ah-2: bare-Hierarchie 1850 → @DOL@ (Leitname eindeutig, in Existenzspanne)');
+  eq(db.individuals['@I1@'].birth.place !== 'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen', true,
+     'ah-2: ev.place auf periodengerechte Projektion neu kollabiert (Projektions-Invariante)');
+  eq(db.individuals['@I2@'].birth.placeId, null,
+     'ah-2: 1200 außerhalb existsFrom=1300 → NICHT verlinkt (Anachronismus-Schutz)');
+})();
+
+// (ah-3) Link-Pass-Toleranz: Mehrdeutigkeit blockiert tolerantes Linken.
+// Zwei Kandidaten mit gleichem Leitnamen → System rät nicht, lässt placeId null.
+(function() {
+  var db = {
+    extraPlaces:{}, families:{},
+    placeObjects: {
+      '@M1@': { id:'@M1@', title:'Münster', type:'Town',   lat:51.9, long:7.6, pnames:[],
+                enclosedBy:[{ placeId:'@DE@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }], parentId:'@DE@' },
+      '@M2@': { id:'@M2@', title:'Münster', type:'County', lat:51.9, long:7.6, pnames:[],
+                enclosedBy:[{ placeId:'@DE@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }], parentId:'@DE@' },
+      '@DE@': { id:'@DE@', title:'Deutschland', type:'Country', lat:51, long:10, pnames:[], enclosedBy:[], parentId:null },
+    },
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ date:'1850', place:'Münster, Irgendwas, NRW', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] },
+    },
+  };
+  API.setDb(db);
+  API._linkGedcomEventsToPlaceObjects(db);
+  eq(db.individuals['@I1@'].birth.placeId, null,
+     'ah-3: zwei "Münster"-Kandidaten → toleranter Link blockiert (Mehrdeutigkeit)');
+})();
+
+// (ah-4) findPlaceDuplicates Cross-Achse: bare-vs-reich (sw v1014).
+// Bare PO „Dolgen, Stadt Sehnde, …" muss mit reichem _po_dolgen geclustert werden,
+// damit der User per Merge-UI konsolidieren kann. Vorher: kein Vorschlag (verschiedene
+// Title-Folds, Koord-Pass scheitert ebenfalls).
+(function() {
+  var db = {
+    extraPlaces:{}, families:{}, individuals:{},
+    placeObjects: {
+      '@DOL@':  { id:'@DOL@', title:'Dolgen', type:'Town', lat:52.3, long:10.0, pnames:[],
+                  enclosedBy:[{ placeId:'@AI@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }], parentId:'@AI@' },
+      '@BARE@': { id:'@BARE@', title:'Dolgen, Stadt Sehnde, Region Hannover, Niedersachsen',
+                  type:null, lat:52.3185, long:10.0483, pnames:[], enclosedBy:[], parentId:null },
+      '@AI@':   { id:'@AI@', title:'Amt Ilten', type:'District', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+    },
+  };
+  API.setDb(db);
+  var dups = API.findPlaceDuplicates();
+  var grp = dups.find(function(g){ return g.ids.indexOf('@DOL@') >= 0 && g.ids.indexOf('@BARE@') >= 0; });
+  eq(!!grp, true, 'ah-4: findPlaceDuplicates clustert bare-vs-reich (Leitname-Match)');
+})();
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  (ai) PLACE-HIST — Stufe 3: Hof-Reconcile nach Dorf-Merge (Fehler #3)
 // ═══════════════════════════════════════════════════════════════════════════
