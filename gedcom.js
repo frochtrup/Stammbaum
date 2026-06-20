@@ -1035,6 +1035,13 @@ function _migrateHofObjectsToPlaceObjects(db) {
 // in alle Events kopieren muss.
 function _eventCoords(ev) {
   if (!ev) return { lati: null, long: null };
+  // ADR-027 P3: hofId hat Vorrang — Hof-Koords sind spezifischer als Dorf-Koords.
+  // Vor Migration kein-Op (kein ev.hofId), nach Migration Routing-Punkt.
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]
+      && typeof _isHofObjectV2 === 'function' && _isHofObjectV2(AppState.db.hofObjects[ev.hofId])) {
+    const hof = AppState.db.hofObjects[ev.hofId];
+    if (hof.lat != null) return { lati: hof.lat, long: hof.long };
+  }
   if (typeof getPlaceRegistry === 'function') {
     const reg = getPlaceRegistry();
     let pid = ev.placeId;
@@ -1616,6 +1623,177 @@ function upsertPlaceObject(id, makeNew, fn) {
   if (typeof markChanged      === 'function') markChanged();
   if (typeof savePlaceObjects === 'function') savePlaceObjects();
   return po.id;
+}
+
+// ─── ADR-027 Phase 3: Migration Farm/Building-placeObjects → V2-hofObjects ───
+// Destruktive (aber idempotente) Daten-Migration. Wird beim Load nach
+// _migrateHofObjectsToPlaceObjects (ADR-026) gerufen — ADR-026 hebt Legacy-Sidecar
+// in Farm-POs, ADR-027 hebt Farm-POs in V2-hofObjects + repointet Events auf
+// villageId. Endzustand: keine Farm/Building mehr in placeObjects, Hof-Identität
+// vollständig in hofObjects.
+//
+// Idempotenz: db._migration_pre_adr027-Flag verhindert Doppelläufe; ohne Flag
+// erkennt der Existenz-Match (norm(addr) + villageId) bestehende V2-Höfe und
+// repointet nur die Events. Damit ist die Funktion auch sicher bei „Migration
+// teilweise gelaufen, Tab geschlossen, neuer Load"-Szenarien.
+//
+// Returns { hofsCreated, eventsRepointed, posDeleted, alreadyDone }.
+function _migrateFarmPOsToHofObjects(db) {
+  if (!db) return { hofsCreated: 0, eventsRepointed: 0, posDeleted: 0 };
+  const pos  = db.placeObjects || (db.placeObjects = {});
+  const hofs = db.hofObjects   || (db.hofObjects   = {});
+  // 1. Existenz-Index der V2-Höfe nach (norm-addr, villageId) — für Idempotenz.
+  const existingByKey = {};
+  for (const [hid, h] of Object.entries(hofs)) {
+    if (!_isHofObjectV2(h) || !h.villageId) continue;
+    for (const a of h.addrs || []) {
+      const k = _normHofAddr(a.value) + '|' + h.villageId;
+      if (!existingByKey[k]) existingByKey[k] = hid;
+    }
+  }
+  // 2. Pass 1: Farm/Building-PO → hofObject (neu oder bestehend wiederverwenden).
+  const _farmIdToHofId = {};
+  let hofsCreated = 0;
+  for (const [pid, pl] of Object.entries(pos)) {
+    if (pl.type !== 'Farm' && pl.type !== 'Building') continue;
+    const villageId = (pl.enclosedBy && pl.enclosedBy[0] && pl.enclosedBy[0].placeId)
+      || pl.parentId || null;
+    if (!villageId) continue;                                  // ohne Dorf → nicht migrierbar
+    const normTitle  = _normHofAddr(pl.title || '');
+    const existKey   = normTitle + '|' + villageId;
+    let hofId = existingByKey[existKey];
+    if (!hofId) {
+      const slug  = normTitle.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+      const vSlug = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+      hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v');
+      let n = 1;
+      while (hofs[hofId]) hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v') + '_' + (++n);
+      const addrs = [{ value: pl.title || '', lang: 'deu',
+        dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }];
+      for (const pn of (pl.pnames || [])) {
+        if (pn.value && pn.value !== pl.title) {
+          addrs.push({ value: pn.value, lang: pn.lang || 'deu',
+            dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+            dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null });
+        }
+      }
+      hofs[hofId] = {
+        id: hofId, villageId, addrs,
+        lat: pl.lat ?? null, long: pl.long ?? null, note: pl.note || '',
+        existsFrom: pl.existsFrom || null, existsTo: pl.existsTo || null,
+        predecessor: null, successor: null,
+        _govId: pl._govId || null, _govTypes: pl._govTypes || null,
+        schemaVersion: 1,
+      };
+      existingByKey[existKey] = hofId;
+      hofsCreated++;
+    } else {
+      // Idempotenter Pfad: bestehender V2-Hof gewinnt fehlende Felder additiv.
+      const h = hofs[hofId];
+      if (h.lat == null && pl.lat != null) { h.lat = pl.lat; h.long = pl.long; }
+      if (!h.note && pl.note) h.note = pl.note;
+      if (!h.existsFrom && pl.existsFrom) h.existsFrom = pl.existsFrom;
+      if (!h.existsTo   && pl.existsTo)   h.existsTo   = pl.existsTo;
+    }
+    _farmIdToHofId[pid] = hofId;
+  }
+  // 3. Pass 2: Events repointen — placeId Farm-PO → villageId, hofId neu setzen.
+  let eventsRepointed = 0;
+  const _repoint = ev => {
+    if (!ev || !ev.placeId) return;
+    const newHofId = _farmIdToHofId[ev.placeId];
+    if (!newHofId) return;
+    ev.placeId = hofs[newHofId].villageId;
+    ev.hofId   = newHofId;
+    eventsRepointed++;
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_repoint);
+    (p.events || []).forEach(_repoint);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_repoint);
+    (f.events || []).forEach(_repoint);
+  }
+  // 4. Pass 3: Farm/Building-POs löschen (nur die mit erfolgreicher villageId-Migration).
+  // Farm/Building OHNE villageId bleiben absichtlich erhalten — keine Daten verlieren.
+  let posDeleted = 0;
+  for (const pid of Object.keys(_farmIdToHofId)) {
+    if (pos[pid]) { delete pos[pid]; posDeleted++; }
+  }
+  if (hofsCreated || eventsRepointed || posDeleted) {
+    UIState._placeRegistry = null;
+    UIState._hofRegistry   = null;
+    UIState._placesCache   = null;
+    UIState._hofCache      = null;
+  }
+  if (hofsCreated || eventsRepointed) db._migration_pre_adr027 = true;
+  return { hofsCreated, eventsRepointed, posDeleted };
+}
+
+// ─── ADR-027 Phase 3: Reverse-Migrator (Sicherheitsnetz für Rollback) ────────
+// Stellt aus V2-hofObjects wieder Farm-placeObjects her und repointet Events
+// zurück. VERLUSTIG: addrs-Historie (außer aktuellster Bezeichnung),
+// predecessor/successor, existsFrom/To als Felder am Farm-PO nur best-effort
+// (Farm-PO hat keine Lebenszyklus-Felder). Sichtbar nur als Debug-Pfad; nach
+// 2 Versionen ohne Rollback-Bedarf ersatzlos entfernen.
+function _migrateHofObjectsBackToFarmPOs(db) {
+  if (!db) return { posCreated: 0, eventsRepointed: 0, hofsDeleted: 0 };
+  const hofs = db.hofObjects || {};
+  const pos  = db.placeObjects || (db.placeObjects = {});
+  const _hofIdToFarmId = {};
+  let posCreated = 0;
+  for (const [hid, h] of Object.entries(hofs)) {
+    if (!_isHofObjectV2(h) || !h.villageId) continue;
+    // Aktuellste Bezeichnung (undatiert oder höchstes dateFrom) als Farm-PO-Titel
+    let title = '';
+    let bestFrom = -Infinity;
+    for (const a of h.addrs) {
+      const fromY = _placeYear(a.dateFrom);
+      if (a.dateFrom == null && a.dateTo == null) { title = a.value; break; }
+      if ((fromY ?? -Infinity) > bestFrom) { bestFrom = fromY ?? -Infinity; title = a.value; }
+    }
+    if (!title && h.addrs[0]) title = h.addrs[0].value;
+    if (!title) continue;
+    const farmId = '_po_farm_' + hid.replace(/^_hof_/, '');
+    if (pos[farmId]) continue;
+    pos[farmId] = {
+      id: farmId, title, type: 'Farm',
+      lat: h.lat ?? null, long: h.long ?? null,
+      note: h.note || '',
+      pnames: [],
+      enclosedBy: [{ placeId: h.villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
+      parentId: h.villageId,
+      _govId: h._govId || null, _govTypes: h._govTypes || null,
+    };
+    _hofIdToFarmId[hid] = farmId;
+    posCreated++;
+  }
+  let eventsRepointed = 0;
+  const _repointBack = ev => {
+    if (!ev || !ev.hofId) return;
+    const farmId = _hofIdToFarmId[ev.hofId];
+    if (!farmId) return;
+    ev.placeId = farmId;
+    delete ev.hofId;
+    eventsRepointed++;
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    [p.birth, p.chr, p.death, p.buri].forEach(_repointBack);
+    (p.events || []).forEach(_repointBack);
+  }
+  for (const f of Object.values(db.families || {})) {
+    [f.marr, f.engag, f.div, f.divf].forEach(_repointBack);
+    (f.events || []).forEach(_repointBack);
+  }
+  let hofsDeleted = 0;
+  for (const hid of Object.keys(_hofIdToFarmId)) { delete hofs[hid]; hofsDeleted++; }
+  delete db._migration_pre_adr027;
+  UIState._placeRegistry = null;
+  UIState._hofRegistry   = null;
+  UIState._placesCache   = null;
+  UIState._hofCache      = null;
+  return { posCreated, eventsRepointed, hofsDeleted };
 }
 
 // ─── ADR-027 Phase 1: Hof-Entität — Registry + Mutations-Helper ──────────────
@@ -2649,54 +2827,63 @@ function _isFarmPlaceId(placeId) {
   return !!po && (po.type === 'Farm' || po.type === 'Building');
 }
 
-// Koordinaten/Notiz eines Hofs: primär aus dem Farm-placeObject (hof.placeId,
-// geräteübergreifend via placeObjects-Sync), sonst aus dem hofObjects-Sidecar
-// (Legacy/localStorage). ADR-026 Phase 2C — Lese-Single-Source.
+// Koordinaten/Notiz eines Hofs: ADR-027 P3 erweitert um V2-hofObject-Lookup.
+// Reihenfolge: V2-hofObject (Phase 3+) > Farm-PO (Pre-Phase-3 ADR-026) > Legacy-
+// addr-keyed-Sidecar (ADR-026 vor Migration). Nach Phase-3-Migration sind die
+// Farm-POs entfernt; V2-Pfad ist single source.
+// hof = { addr, place?, placeId?, hofId? } aus buildHofIndex.
 function hofMeta(hof) {
+  // ADR-027 V2-Hof per ID (gesetzt durch Phase-3-Migration oder Phase-2-Backfill)
+  let v2 = null;
+  if (hof && hof.hofId && AppState.db?.hofObjects?.[hof.hofId]
+      && _isHofObjectV2(AppState.db.hofObjects[hof.hofId])) {
+    v2 = AppState.db.hofObjects[hof.hofId];
+  }
   const po   = hof && _isFarmPlaceId(hof.placeId) ? AppState.db.placeObjects[hof.placeId] : null;
   const side = hof && AppState.db.hofObjects?.[hof.addr];
+  // Legacy-Sidecar nur wenn nicht zufällig ein V2-Eintrag (Shape-Check) — verhindert
+  // Cross-Talk zwischen V2-id-Keys und Legacy-addr-Keys.
+  const sideOk = side && !_isHofObjectV2(side);
   return {
-    lat:  po && po.lat  != null ? po.lat  : (side && side.lat  != null ? side.lat  : null),
-    long: po && po.long != null ? po.long : (side && side.long != null ? side.long : null),
-    note: po && po.note ? po.note : (side && side.note ? side.note : ''),
+    lat:  v2 && v2.lat  != null ? v2.lat
+        : po && po.lat  != null ? po.lat
+        : sideOk && side.lat  != null ? side.lat  : null,
+    long: v2 && v2.long != null ? v2.long
+        : po && po.long != null ? po.long
+        : sideOk && side.long != null ? side.long : null,
+    note: v2 && v2.note ? v2.note
+        : po && po.note ? po.note
+        : sideOk && side.note ? side.note : '',
   };
 }
 
 function buildHofIndex() {
   if (UIState._hofCache) return UIState._hofCache;
-  const hoefe = new Map(); // addr → { addr, place, entries: [{pid, name, date, dateKey}], propEntries: [{pid, name, date, dateKey, desc}] }
+  const hoefe = new Map(); // addr → { addr, place, placeId, hofId, entries: [...], propEntries: [...] }
+  const _ensureHof = addr => {
+    if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', placeId: null, hofId: null, entries: [], propEntries: [] });
+    return hoefe.get(addr);
+  };
   for (const p of Object.values(AppState.db.individuals)) {
     for (const ev of (p.events || [])) {
-      if (ev.type === 'RESI' && ev.addr && ev.addr.trim()) {
+      if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.addr.trim()) {
         const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', placeId: null, entries: [], propEntries: [] });
-        const hof = hoefe.get(addr);
+        const hof = _ensureHof(addr);
         if (!hof.propEntries) hof.propEntries = [];
-        // Ersten nicht-leeren Ort aus RESI-Events übernehmen
+        // Ersten nicht-leeren Ort aus RESI/PROP-Events übernehmen
         if (!hof.place && ev.place) hof.place = ev.place.trim();
-        // Farm-placeObject-ID (ADR-026): aus dem Event übernehmen, falls migriert
+        // Farm-placeObject-ID (ADR-026, pre-Phase-3-Migration): aus dem Event übernehmen
         if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
-        hof.entries.push({
+        // ADR-027 P3: hofId aus dem Event (Post-Migration) — V2-Hof-Pointer
+        if (!hof.hofId && ev.hofId) hof.hofId = ev.hofId;
+        const entry = {
           pid:     p.id,
           name:    p.name || p.id,
           date:    ev.date || '',
           dateKey: evDateKey(ev.date || ''),
-        });
-      }
-      if (ev.type === 'PROP' && ev.addr && ev.addr.trim()) {
-        const addr = ev.addr.trim();
-        if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', placeId: null, entries: [], propEntries: [] });
-        const hof = hoefe.get(addr);
-        if (!hof.propEntries) hof.propEntries = [];
-        if (!hof.place && ev.place) hof.place = ev.place.trim();
-        if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
-        hof.propEntries.push({
-          pid:     p.id,
-          name:    p.name || p.id,
-          date:    ev.date || '',
-          dateKey: evDateKey(ev.date || ''),
-          desc:    ev.value || '',
-        });
+        };
+        if (ev.type === 'RESI') hof.entries.push(entry);
+        else { entry.desc = ev.value || ''; hof.propEntries.push(entry); }
       }
     }
   }

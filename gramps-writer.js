@@ -263,12 +263,18 @@ export function _grampsBuildXMLText(db) {
     const id       = `E${String(evCtr++).padStart(4,'0')}`;
     // Use original place ID if available (GRAMPS source with placeObjects), else string-based
     // Guard: placeId nur verwenden wenn das placeObject auch existiert (defekte Dateien)
+    // ADR-027 P3: hofId hat Vorrang vor placeId — bei einem Hof-Event soll der placeref im
+    // XML auf das Building-placeobj (V2-Hof) zeigen, nicht aufs Dorf. Building-placeobj
+    // referenziert seinerseits das Dorf via <placeref>, GRAMPS-Hierarchie bleibt korrekt.
     // Fallback: hofObjects via addr (RESI/PROP ohne place aber mit Koordinaten)
-    const plHandle = (db.placeObjects && evObj.placeId && db.placeObjects[evObj.placeId])
-      ? _entityHandle(evObj.placeId, 'pl')
-      : (evObj.addr && hofAddrToHandle[evObj.addr.trim()])
-        ? hofAddrToHandle[evObj.addr.trim()]
-        : _plHandle(evObj.place || null, evObj.lati, evObj.long);
+    const plHandle = (evObj.hofId && db.hofObjects && db.hofObjects[evObj.hofId]
+        && typeof _isHofObjectV2 === 'function' && _isHofObjectV2(db.hofObjects[evObj.hofId]))
+      ? _entityHandle(evObj.hofId, 'pl')
+      : (db.placeObjects && evObj.placeId && db.placeObjects[evObj.placeId])
+        ? _entityHandle(evObj.placeId, 'pl')
+        : (evObj.addr && hofAddrToHandle[evObj.addr.trim()])
+          ? hofAddrToHandle[evObj.addr.trim()]
+          : _plHandle(evObj.place || null, evObj.lati, evObj.long);
     const citHandles = (evObj.citations || [])
       .map(c => _citHandle(c.sid, c.page || '', c.quay ?? 0, c._grampsCitHandle, c._citExtra, c.eval))
       .filter(Boolean);
@@ -696,6 +702,10 @@ export function _grampsBuildXMLText(db) {
     }
     // Neue Hof-Einträge aus hofObjects die noch kein placeObject haben
     for (const [addr, hm] of Object.entries(db.hofObjects || {})) {
+      // ADR-027 P3: V2-Einträge (id-keyed, mit villageId/addrs) skippen — sie werden
+      // im V2-Block unten separat geschrieben. Legacy-addr-keyed-Einträge laufen wie
+      // bisher durch.
+      if (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(hm)) continue;
       if (hm.lat == null || hm.long == null) continue;
       const trimmed = addr.trim();
       const alreadyInPl = Object.values(db.placeObjects).some(pl => pl.title === trimmed);
@@ -709,6 +719,55 @@ export function _grampsBuildXMLText(db) {
       const coord = _decToGrampsCoord(hm.lat, hm.long);
       if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
       if (hm.note) { const nh = _noteHandle(hm.note, 'Hof Note'); if (nh) L.push(`      <noteref hlink="${_esc(nh)}"/>`); }
+      L.push('    </placeobj>');
+    }
+    // ADR-027 P3: V2-hofObjects als <placeobj type="Building"> mit allen Feldern.
+    // Erste addrs-Bezeichnung als ptitle (Haupttitel), alle als pname (mit daterange
+    // falls vorhanden). placeref hlink auf villageId; coord aus hof.lat/long; noteref
+    // wenn note vorhanden. predecessor/successor als placeref type="..." (GRAMPS-konform).
+    // Skip wenn ein Farm/Building-placeObject mit gleichem Titel existiert — das ist
+    // der Phase-2-Mirror-Fall (V2-Eintrag wurde aus Farm-PO derived, beide existieren
+    // parallel bis Phase-3-Migration läuft). Post-Migration sind die Farm-POs weg →
+    // V2-Loop schreibt die Hof-placeobj-Zeilen.
+    const _placeObjsList = Object.values(db.placeObjects || {});
+    for (const [hofId, h] of Object.entries(db.hofObjects || {})) {
+      if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
+      const mainTitle = (h.addrs && h.addrs[0] && h.addrs[0].value) || hofId;
+      const mirroredInPos = _placeObjsList.some(pl =>
+        (pl.type === 'Farm' || pl.type === 'Building') && pl.title === mainTitle);
+      if (mirroredInPos) continue;
+      const handle = _entityHandle(hofId, 'pl');
+      const gid = hofId.replace(/^_hof_/, 'HOF_');
+      L.push(`    <placeobj handle="${_esc(handle)}" id="${_esc(gid)}" type="Building">`);
+      L.push(`      <ptitle>${_esc(mainTitle)}</ptitle>`);
+      for (const a of h.addrs || []) {
+        if (!a.value) continue;
+        let attrs = ` value="${_esc(a.value)}"`;
+        if (a.lang) attrs += ` lang="${_esc(a.lang)}"`;
+        const dxml = _grampsPlaceDateXML(a);
+        if (dxml) { L.push(`      <pname${attrs}>`); L.push(`        ${dxml}`); L.push('      </pname>'); }
+        else      L.push(`      <pname${attrs}/>`);
+      }
+      if (h.lat != null && h.long != null) {
+        const coord = _decToGrampsCoord(h.lat, h.long);
+        if (coord) L.push(`      <coord lat="${_esc(coord.lat)}" long="${_esc(coord.long)}"/>`);
+      }
+      if (h.villageId) {
+        const parentH = _entityHandle(h.villageId, 'pl');
+        L.push(`      <placeref hlink="${_esc(parentH)}"/>`);
+      }
+      if (h.predecessor) {
+        const predH = _entityHandle(h.predecessor, 'pl');
+        L.push(`      <placeref hlink="${_esc(predH)}" type="predecessor"/>`);
+      }
+      if (h.successor) {
+        const succH = _entityHandle(h.successor, 'pl');
+        L.push(`      <placeref hlink="${_esc(succH)}" type="successor"/>`);
+      }
+      if (h.note) {
+        const nh = _noteHandle(h.note, 'Hof Note');
+        if (nh) L.push(`      <noteref hlink="${_esc(nh)}"/>`);
+      }
       L.push('    </placeobj>');
     }
     L.push('  </places>');

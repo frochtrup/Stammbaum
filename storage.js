@@ -40,6 +40,60 @@ async function _deriveHofAndMigrate() {
   if (typeof loadPlaceObjectsFromIDB === 'function') { try { await loadPlaceObjectsFromIDB(); } catch(_) {} }
   AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
   if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
+  // ADR-027 P3: Farm/Building-POs → V2-hofObjects + Events repointen + Farm-POs löschen.
+  // Idempotent — bei wiederholtem Lauf erkennt der Norm-Key-Match bestehende V2-Höfe
+  // und erzeugt keine Dubletten. Backup VOR der ersten Mutation (s. _backupPrePhase3).
+  if (typeof _migrateFarmPOsToHofObjects === 'function') {
+    try { await _backupPrePhase3(AppState.db); } catch(_) {}
+    const stats = _migrateFarmPOsToHofObjects(AppState.db);
+    if (stats.hofsCreated || stats.eventsRepointed || stats.posDeleted) {
+      if (typeof showToast === 'function') {
+        showToast('✓ ADR-027-Migration: ' + stats.hofsCreated + ' Höfe + '
+          + stats.eventsRepointed + ' Events umgehängt', 'success');
+      }
+      if (typeof savePlaceObjects === 'function') savePlaceObjects();
+    }
+  }
+}
+
+// ADR-027 P3: Snapshot von placeObjects + Event-place/addr-Mapping VOR der ersten
+// Migration. Im IDB unter Key stammbaum_orte_backup_pre_adr027_YYYYMMDD. Nur einmal
+// pro Datum geschrieben (Datums-Schlüssel + Existenz-Check). Plus Marker
+// AppState._adr027BackupKey für UI-Rollback-Button (Phase 5).
+async function _backupPrePhase3(db) {
+  if (!db) return;
+  if (db._migration_pre_adr027) return;          // bereits gelaufen, kein Backup nötig
+  // Hat die Datei überhaupt Farm/Building-POs zum Migrieren?
+  const hasFarm = Object.values(db.placeObjects || {})
+    .some(pl => pl.type === 'Farm' || pl.type === 'Building');
+  if (!hasFarm) return;
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const key = 'stammbaum_orte_backup_pre_adr027_' + today;
+  if (typeof idbGet === 'function') {
+    try { if (await idbGet(key)) return; } catch(_) {}     // schon gesichert heute
+  }
+  const placeObjectsSnap = JSON.parse(JSON.stringify(db.placeObjects || {}));
+  const eventsSnap = [];
+  const _snapEv = (pid, kind, evIdx, ev) => {
+    if (!ev || !ev.placeId) return;
+    const pl = placeObjectsSnap[ev.placeId];
+    if (!pl || (pl.type !== 'Farm' && pl.type !== 'Building')) return;
+    eventsSnap.push({ pid, kind, evIdx, placeId: ev.placeId, addr: ev.addr || null,
+      type: ev.type || null, date: ev.date || null, place: ev.place || null });
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    ['birth','chr','death','buri'].forEach(k => _snapEv(p.id, k, -1, p[k]));
+    (p.events || []).forEach((ev, i) => _snapEv(p.id, 'events', i, ev));
+  }
+  for (const f of Object.values(db.families || {})) {
+    ['marr','engag','div','divf'].forEach(k => _snapEv(f.id, k, -1, f[k]));
+    (f.events || []).forEach((ev, i) => _snapEv(f.id, 'events', i, ev));
+  }
+  const payload = { schemaVersion: 1, _ts: new Date().toISOString(),
+    placeObjects: placeObjectsSnap, events: eventsSnap };
+  if (typeof idbPut === 'function') {
+    try { await idbPut(key, JSON.stringify(payload)); AppState._adr027BackupKey = key; } catch(_) {}
+  }
 }
 
 async function revertToSaved() {

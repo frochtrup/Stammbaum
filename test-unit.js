@@ -582,6 +582,7 @@ if (IS_NODE) {
     'APP_KNOWN_SCHEMA_VERSION: APP_KNOWN_SCHEMA_VERSION, _normHofAddr: _normHofAddr, _isHofObjectV2: _isHofObjectV2, ' +
     'getHofRegistry: getHofRegistry, mutateHofObject: mutateHofObject, upsertHofObject: upsertHofObject, ' +
     'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
+    '_migrateFarmPOsToHofObjects: _migrateFarmPOsToHofObjects, _migrateHofObjectsBackToFarmPOs: _migrateHofObjectsBackToFarmPOs, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -4481,6 +4482,164 @@ group('(ak) ADR-027 P2 Mapping-Layer');
   var ev = API.AppState.db.individuals['@I1@'].events[0];
   eq(ev.placeId, '_po_berlin', 'ak-9a: Place-Link funktioniert ohne Hof-Daten');
   ok(!ev.hofId, 'ak-9b: ohne Hof-Daten → kein hofId');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (al) ADR-027 Phase 3 — Daten-Migration: Farm-PO → V2-hofObject
+// ═══════════════════════════════════════════════════════════════════════════
+group('(al) ADR-027 P3 Migration');
+
+// Migration: Farm-PO mit villageId → V2-hofObject + Events repointet
+(function() {
+  var db = {
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1850', addr:'Wall 33', placeId:'_po_farm' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_farm':    { id:'_po_farm', title:'Wall 33', type:'Farm', pnames:[], lat:52.21, long:7.19, note:'Erbhof',
+        enclosedBy:[{ placeId:'_po_ochtrup', dateFrom:null, dateTo:null }], parentId:'_po_ochtrup' },
+    },
+    hofObjects:{},
+  };
+  API.setDb(db);
+  var stats = API._migrateFarmPOsToHofObjects(API.AppState.db);
+  eq(stats.hofsCreated, 1, 'al-1a: 1 V2-Hof aus Farm-PO erzeugt');
+  eq(stats.eventsRepointed, 1, 'al-1b: 1 Event repointet');
+  eq(stats.posDeleted, 1, 'al-1c: 1 Farm-PO gelöscht');
+  ok(!API.AppState.db.placeObjects['_po_farm'], 'al-1d: Farm-PO ist weg');
+  var hofIds = Object.keys(API.AppState.db.hofObjects).filter(function(k){return k.indexOf('_hof_')===0;});
+  eq(hofIds.length, 1, 'al-1e: 1 V2-hofObject existiert');
+  var hof = API.AppState.db.hofObjects[hofIds[0]];
+  eq(hof.villageId, '_po_ochtrup', 'al-1f: villageId aus enclosedBy[0]');
+  eq(hof.lat, 52.21, 'al-1g: lat übernommen');
+  eq(hof.note, 'Erbhof', 'al-1h: note übernommen');
+  eq(hof.addrs[0].value, 'Wall 33', 'al-1i: title als undatierter addrs-Eintrag');
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.placeId, '_po_ochtrup', 'al-1j: Event placeId → villageId');
+  eq(ev.hofId, hofIds[0], 'al-1k: Event hofId gesetzt');
+  ok(API.AppState.db._migration_pre_adr027, 'al-1l: Migrations-Flag gesetzt');
+})();
+
+// Idempotenz: zweimaliger Lauf identischer Zustand
+(function() {
+  var db = {
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1850', addr:'Wall 33', placeId:'_po_farm' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_farm':    { id:'_po_farm', title:'Wall 33', type:'Farm', pnames:[], lat:52.21, long:7.19,
+        enclosedBy:[{ placeId:'_po_ochtrup', dateFrom:null, dateTo:null }], parentId:'_po_ochtrup' },
+    },
+    hofObjects:{},
+  };
+  API.setDb(db);
+  API._migrateFarmPOsToHofObjects(API.AppState.db);
+  var snapshot = JSON.stringify(API.AppState.db);
+  var stats2 = API._migrateFarmPOsToHofObjects(API.AppState.db);
+  eq(stats2.hofsCreated, 0, 'al-2a: Zweiter Lauf erzeugt keine neuen Höfe');
+  eq(stats2.eventsRepointed, 0, 'al-2b: Zweiter Lauf repointet keine Events');
+  eq(JSON.stringify(API.AppState.db), snapshot, 'al-2c: DB-Zustand identisch nach 2x Migration');
+})();
+
+// Farm-PO ohne villageId → NICHT migriert (Datenverlust verhindern)
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_orphan': { id:'_po_orphan', title:'Verwaister Hof', type:'Farm', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  var stats = API._migrateFarmPOsToHofObjects(API.AppState.db);
+  eq(stats.hofsCreated, 0, 'al-3a: Hof ohne villageId nicht migriert');
+  ok(!!API.AppState.db.placeObjects['_po_orphan'], 'al-3b: Verwaister Farm-PO bleibt');
+})();
+
+// Bestehende V2-Höfe: Match per (norm-addr, villageId) → kein Duplikat
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', addr:'Wall 33', placeId:'_po_farm' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_farm':    { id:'_po_farm', title:'Wall 33', type:'Farm', pnames:[], lat:52.21, long:7.19,
+        enclosedBy:[{ placeId:'_po_ochtrup', dateFrom:null, dateTo:null }], parentId:'_po_ochtrup' },
+    },
+    hofObjects:{
+      '_hof_existing': { id:'_hof_existing', villageId:'_po_ochtrup',
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }],
+        lat:99, long:99, note:'bestehend', schemaVersion:1 },
+    },
+  });
+  var stats = API._migrateFarmPOsToHofObjects(API.AppState.db);
+  eq(stats.hofsCreated, 0, 'al-4a: kein neuer Hof — bestehender Match');
+  eq(stats.eventsRepointed, 1, 'al-4b: Event auf bestehenden V2-Hof repointet');
+  ok(!API.AppState.db.placeObjects['_po_farm'], 'al-4c: Farm-PO trotzdem gelöscht');
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_existing', 'al-4d: Event auf bestehenden Hof gemappt');
+  eq(API.AppState.db.hofObjects['_hof_existing'].note, 'bestehend',
+     'al-4e: bestehender Note nicht überschrieben');
+})();
+
+// Reverse-Migrator: V2-Hof zurück zu Farm-PO
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', placeId:'_po_ochtrup', hofId:'_hof_wall_33' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_wall_33': { id:'_hof_wall_33', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }],
+        lat:52.21, long:7.19, note:'Hofnotiz' },
+    },
+    _migration_pre_adr027: true,
+  });
+  var stats = API._migrateHofObjectsBackToFarmPOs(API.AppState.db);
+  eq(stats.posCreated, 1, 'al-5a: 1 Farm-PO wiederhergestellt');
+  eq(stats.eventsRepointed, 1, 'al-5b: 1 Event zurückgemappt');
+  eq(stats.hofsDeleted, 1, 'al-5c: V2-Hof gelöscht');
+  ok(!API.AppState.db.hofObjects['_hof_wall_33'], 'al-5d: hofObject ist weg');
+  var farmIds = Object.keys(API.AppState.db.placeObjects).filter(function(k){
+    return API.AppState.db.placeObjects[k].type === 'Farm';
+  });
+  eq(farmIds.length, 1, 'al-5e: 1 Farm-PO existiert');
+  eq(API.AppState.db.placeObjects[farmIds[0]].title, 'Wall 33', 'al-5f: Title übernommen');
+  eq(API.AppState.db.placeObjects[farmIds[0]].lat, 52.21, 'al-5g: lat übernommen');
+  ok(!API.AppState.db._migration_pre_adr027, 'al-5h: Migrations-Flag gelöscht');
+})();
+
+// _eventCoords: hofId hat Vorrang vor placeId
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', lat:52.2, long:7.18, pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_x': { id:'_hof_x', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }],
+        lat:52.99, long:7.99 },
+    },
+  });
+  var c = API._eventCoords({ placeId:'_po_ochtrup', hofId:'_hof_x' });
+  eq(c.lati, 52.99, 'al-6a: _eventCoords: hofId-Koords gewinnen');
+  eq(c.long, 7.99,  'al-6b: _eventCoords: hofId-Koords gewinnen (long)');
+  var c2 = API._eventCoords({ placeId:'_po_ochtrup' });
+  eq(c2.lati, 52.2, 'al-6c: ohne hofId → village-Koords');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

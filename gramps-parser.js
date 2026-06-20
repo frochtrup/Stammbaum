@@ -1092,6 +1092,16 @@ export function _grampsParseXMLText(xmlText) {
     }
   }
 
+  // ADR-027 P3: Farm/Building-placeObjects direkt in V2-hofObjects migrieren —
+  // im Parser-Output dem finalen ADR-027-Modell entsprechen. Idempotent (kein zweites
+  // Mal beim Re-Parse derselben Datei). Repointet Events: placeId Farm-PO → villageId,
+  // hofId neu. Damit ist der GRAMPS-Roundtrip nach Phase 3 stable: parse → write →
+  // parse → write konvergiert, weil keine Farm-POs mehr im Output erscheinen können.
+  if (typeof _migrateFarmPOsToHofObjects === 'function') {
+    const _parsedDb = { placeObjects, hofObjects, individuals, families };
+    _migrateFarmPOsToHofObjects(_parsedDb);
+  }
+
   // ─── idCounter ────────────────────────────────────────────────────────────
   let maxId = 1000;
   for (const id of [
