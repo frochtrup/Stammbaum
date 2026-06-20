@@ -1536,7 +1536,7 @@ group('(l) PLACE-HIST Robustheit (sw v851)');
   ok(!!db.placeObjects[winnerId], 'B2: Winner-placeObject erhalten');
 })();
 
-// B2b: mergeStringPlaces ohne Winner-PO → ev.placeId auf null setzen, nicht Leiche lassen
+// B2b: mergeStringPlaces ohne Winner-PO → neues Winner-PO anlegen, Loser-Name als pname, kein null
 (function() {
   var loserId = API._epId('Hamburg loser');
   var db = {
@@ -1550,7 +1550,11 @@ group('(l) PLACE-HIST Robustheit (sw v851)');
   db.placeObjects[loserId] = { id:loserId, title:'Hamburg loser', type:'City', pnames:[], enclosedBy:[], parentId:null };
   API.setDb(db);
   API.mergeStringPlaces('Hamburg', ['Hamburg loser']);
-  eq(db.individuals['@I1@'].birth.placeId, null, 'B2b: kein Winner-PO → ev.placeId auf null gesetzt (statt Leiche)');
+  var winnerPo = Object.values(db.placeObjects).find(function(po){ return po.title === 'Hamburg'; });
+  eq(!!winnerPo, true, 'B2b: neues Winner-PO für "Hamburg" angelegt');
+  eq(db.individuals['@I1@'].birth.placeId, winnerPo && winnerPo.id, 'B2b: ev.placeId zeigt auf neues Winner-PO');
+  var hasAlias = winnerPo && winnerPo.pnames.some(function(pn){ return pn.value === 'Hamburg loser'; });
+  eq(hasAlias, true, 'B2b: Verlierer-Name "Hamburg loser" als pname im Winner-PO');
 })();
 
 // B11: _epId-Kollision → Suffix-Fallback, kein stilles continue

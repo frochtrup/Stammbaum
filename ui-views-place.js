@@ -1958,6 +1958,7 @@ function placeMergeGroup(gidx) {
     if (!losers.length) { showToast('⚠ Mindestens einen weiteren Ort einschließen'); return; }
     const res = mergeStringPlaces(winner, losers);
     markChanged();
+    if (typeof savePlaceObjects === 'function') savePlaceObjects(); // Winner-PO mit Alias-pnames in IDB sichern
     showToast(`✓ ${losers.length} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}`);
     _placeDupGroups = findStringPlaceDuplicates();
     _renderPlaceMergeList();

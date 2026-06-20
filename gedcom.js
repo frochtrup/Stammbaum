@@ -1829,6 +1829,39 @@ function mergeStringPlaces(winnerName, loserNames) {
     for (const id of losingIds) delete pos[id];
   }
 
+  // Durabilität über GEDCOM-Reload: Winner-PO anlegen (falls noch keiner existiert)
+  // und alle Verlierer-Namen als undatierte Alias-pnames eintragen.
+  // Beim nächsten Einlesen findet _linkGedcomEventsToPlaceObjects die Verlierer-Strings
+  // via findByName (matcht pnames) → setzt ev.place automatisch auf den Winner.
+  if (pos !== undefined) {
+    if (!winnerPoId) {
+      const newId = (typeof _epId === 'function') ? _epId(winnerName) : ('_ep_' + Math.random().toString(36).slice(2));
+      pos[newId] = { id: newId, title: winnerName, type: 'Unknown', lat: null, long: null, pnames: [], enclosedBy: [], parentId: null };
+      winnerPoId = newId;
+      // Events auf das neue PO zeigen lassen
+      const _setId = ev => { if (ev && ev.place === winnerName && !ev.placeId) ev.placeId = winnerPoId; };
+      for (const p of Object.values(AppState.db.individuals || {})) {
+        _setId(p.birth); _setId(p.chr); _setId(p.death); _setId(p.buri);
+        for (const ev of p.events || []) _setId(ev);
+      }
+      for (const f of Object.values(AppState.db.families || {})) {
+        _setId(f.marr); _setId(f.engag); _setId(f.div); _setId(f.divf);
+        for (const ev of f.events || []) _setId(ev);
+      }
+    }
+    const winnerPo = pos[winnerPoId];
+    if (winnerPo) {
+      if (!Array.isArray(winnerPo.pnames)) winnerPo.pnames = [];
+      const haveNorm = new Set([_normPlaceName(winnerPo.title), ...winnerPo.pnames.map(p => _normPlaceName(p.value))]);
+      for (const loser of loserNames) {
+        const k = _normPlaceName(loser);
+        if (!k || haveNorm.has(k)) continue;
+        haveNorm.add(k);
+        winnerPo.pnames.push({ value: loser, lang: '', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+      }
+    }
+  }
+
   UIState._placesCache  = null;
   UIState._placeRegistry = null; // Bug #2: Registry nach placeObjects-Änderung invalidieren
   return { repointed };
