@@ -3893,8 +3893,9 @@ html[data-theme="dark"] {
 .place-merge-hint { font-size: 11px; color: var(--text-muted, #888); margin-bottom: 6px; }
 
 .icon-btn--active { background: var(--accent, #6a8f3c) !important; color: #fff !important; }
-.place-var-badge { background: var(--accent-muted, #d4e6b5); color: var(--accent-dark, #3a5c1a); }
-.place-gov-badge { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.place-var-badge   { background: var(--accent-muted, #d4e6b5); color: var(--accent-dark, #3a5c1a); }
+.place-gov-badge   { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.place-unlink-badge { background: #f0f0f0; color: #777; border-color: #ccc; }
 
 /* String→PlaceObject Link-Modal */
 .slink-section { margin-bottom: 16px; }

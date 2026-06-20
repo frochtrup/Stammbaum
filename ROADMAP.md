@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v1009 · Cache: `stammbaum-v1009` · `test-unit.js` = **599 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
+**sw-Version:** v1010 · Cache: `stammbaum-v1010` · `test-unit.js` = **599 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
 
 **SCALE-TEST:** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort-Cache (v899) · Details: SCALE-TEST-BEFUNDE.md
 
@@ -100,8 +100,8 @@ Fünf Dimensionen leiten die Priorisierung:
 |---|---|---|---|---|
 | **Hoch** | **UX-NAV-ACTIVE** | Aktiver Bottom-Nav-Tab visuell kaum erkennbar: aktiv `rgb(110,78,24)` vs. inaktiv `rgb(107,82,50)` — beides Braun, **kein** Fettdruck/Hintergrund/Balken/Icon-Farbwechsel. Verstößt gegen „nicht nur Farbe" (WCAG 1.4.1). Fix: Akzentfarbe + Top-Balken oder Fettdruck. | computed styles + `::before/::after` geprüft | XS |
 | **Hoch** | **UX-I18N-UNKNOWN** | Englisches Typ-Badge `Unknown` im deutschen UI (6 Vorkommen) in der Orte-Liste. → „Unbekannt" oder ausblenden. | DOM-Zählung = 6 | XS |
-| **Mittel** | **UX-WOHNORT-FMT** | Wohnort-Zeile in Person-Detail redundant + roh: „Sonnenstraße 12, **FROM 1985 TO 2005**, Sonnenstraße 12, München, …" — Adresse doppelt, GEDCOM-Rohwörter `FROM…TO` unübersetzt. Betrifft alle Wohnort-Zeilen. → `_pdetLifeData`/Projektion entdoppeln + Datumsbereich lokalisieren. | Screenshot Anna Muster | S |
-| **Mittel** | **UX-ORTE-DEDUP** | Orte-Liste vermischt Verwaltungs-Ebenen (Bayern/Deutschland, je 0 Personen) und scheinbare Dubletten („Augsburg" `[Unknown]` 0 Pers. **vs.** „Augsburg, Bayern, Deutschland" 7 Pers.; „Leopoldstraße 44" Hof doppelt) ungefiltert. **Erst klären:** echte Dublette oder legitimer `enclosedBy`-Parent? → nach Ebene gruppieren / leere Verwaltungsebenen einklappen / echte Dubletten mergen. | Screenshot Orte-Tab | S–M |
+| ~~**Mittel**~~ ✅ | **UX-WOHNORT-FMT** | ✅ **v1010:** `_localizeGedDate()` (Display-Helper, nutzt `parseGedDate`) → `FROM 1985 TO 2005` → `1985–2005`, `BEF`/`AFT`/`ABT`/`BET`/`CAL`/`EST` ebenfalls lokalisiert. Farm-placeObject-Typ-Check → `ev.addr` wird unterdrückt wenn `placeId`→Farm/Building (architekt. sauber, kein String-Vergleich). | — | — |
+| ~~**Mittel**~~ ✅ | **UX-ORTE-DEDUP** | ✅ **v1010:** `_directRef`-Flag in `collectPlaces()` (event-getriebene Einträge), Admin-Filter in `filterPlaces()` (State/Country/District/County + Unknown ohne directRef standardmäßig ausgeblendet), Toggle-Button 🗂 mit Badge-Zähler. Badge „Nicht verknüpft" für 0-Personen-POs ohne directRef. `collectPlaces()` unverändert → alle POs bleiben editierbar via Toggle. | — | — |
 | **Mittel** | **UX-DETAIL-SCROLL** | Horizontal scrollende Button-Reihen in Person-Detail (LEBENSDATEN: `Karte/+Alias/+E…`; `+Wohnort/+B…`) am rechten Rand abgeschnitten ohne Scroll-Hinweis → versteckte Aktionen. → Umbruch oder Scroll-Schatten/Chevron. | Screenshot | S |
 | Niedrig | **UX-ICON-LABELS** | Reine Icon-Leisten ohne sichtbare Labels: Baum-Topbar (`↓ ⬡ ◠ ⇩ ⟷ 🌐`) + Orte-Toolbar (8 Glyphen). aria-labels vorhanden, visuell kryptisch. → Tooltip/Long-Press-Hint oder Mini-Labels. | Screenshot | M |
 | Niedrig | **UX-FAB-OVERLAP** | FAB „+" überlappt das Chevron der letzten Listenzeile (Personen/Orte). → unteres Listen-Padding. | Screenshot | XS |

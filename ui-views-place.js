@@ -18,6 +18,7 @@ const PLACE_TYPE_ICON = {
 let _placeTypeFilter   = '';
 let _placeGroupMode    = false; // true = nach PlaceObject gruppiert (aktueller Titel)
 let _placeGovFilter    = false; // true = nur unaufgelöste GOV-Platzhalter
+let _placeShowAdmin    = false; // true = Verwaltungsgebiete (0 Personen, kein directRef) einblenden
 let _placeDetailMap   = null;  // P5a-5: Leaflet-Instanz für Mini-Karte im Steckbrief
 
 // Item 12: Badge mit Anzahl Validator-Warnungen auf dem ⚠-Button
@@ -103,6 +104,14 @@ function togglePlaceGovFilter() {
   filterPlaces(q);
 }
 
+function togglePlaceAdminFilter() {
+  _placeShowAdmin = !_placeShowAdmin;
+  const btn = document.getElementById('placeAdminFilterBtn');
+  if (btn) btn.classList.toggle('icon-btn--active', _placeShowAdmin);
+  const q = document.getElementById('searchPlaces')?.value || '';
+  filterPlaces(q);
+}
+
 // Fasst alle place-Einträge mit derselben placeId unter dem PlaceObject-Titel zusammen.
 // Einträge ohne placeId bleiben einzeln erhalten.
 function _groupPlacesByObject(entries) {
@@ -148,6 +157,7 @@ function collectPlaces() {
     const key = placeName.trim();
     if (!places.has(key)) places.set(key, { name: key, personIds: new Set(), eventTypes: new Set(), lati: null, long: null });
     const pl = places.get(key);
+    pl._directRef = true; // direkt in einem Ereignis referenziert (nicht nur enclosedBy-Parent)
     if (personId) pl.personIds.add(personId);
     if (eventType) pl.eventTypes.add(eventType);
     // Koord-Paar-Invariante: nur als vollständiges Paar übernehmen
@@ -247,14 +257,17 @@ function renderPlaceList(sorted) {
                    : hasGeo ? '📍' : '·';
     const typeLbl  = place.type ? (PLACE_TYPE_LBL[place.type] || place.type) : '';
     const typeBadge = typeLbl ? `<span class="place-type-badge">${esc(typeLbl)}</span>` : '';
-    const varBadge  = (place._variantCount > 1)
+    const varBadge    = (place._variantCount > 1)
       ? `<span class="place-type-badge place-var-badge">${place._variantCount} Varianten</span>` : '';
-    const govBadge  = place._govUnresolved
+    const govBadge    = place._govUnresolved
       ? `<span class="place-type-badge place-gov-badge">GOV?</span>` : '';
+    // Nicht-verknüpfte placeObjects: existieren, aber kein Ereignis referenziert sie direkt
+    const unlinkBadge = (!place._directRef && count === 0)
+      ? `<span class="place-type-badge place-unlink-badge">Nicht verknüpft</span>` : '';
     html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.placeId || place.name)}">
       <div class="p-avatar p-avatar--md">${typeIcon}</div>
       <div class="p-info">
-        <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}${varBadge}${govBadge}</div>
+        <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}${varBadge}${govBadge}${unlinkBadge}</div>
         <div class="p-meta">${count} Person${count !== 1 ? 'en' : ''}${hasGeo ? ' · Karte' : ''}</div>
       </div>
       <span class="p-arrow">›</span>
@@ -265,12 +278,31 @@ function renderPlaceList(sorted) {
 
 function filterPlaces(q) {
   const lower = q.toLowerCase().trim();
+  // Verwaltungsgebiete = placeObjects ohne direkten Ereignisbezug (nur enclosedBy-Parent)
+  const _ADMIN_TYPES = new Set(['State','Country','District','County']);
+  const _isAdminOnly = pl => !pl._directRef && pl.personIds.size === 0
+    && (_ADMIN_TYPES.has(pl.type) || (!pl.type || pl.type === 'Unknown'));
+
   let all = [...collectPlaces().values()].sort((a, b) => compactPlace(a.name).localeCompare(compactPlace(b.name), 'de'));
   if (_placeTypeFilter) all = all.filter(pl => pl.type === _placeTypeFilter);
   if (_placeGovFilter)  all = all.filter(pl => pl._govUnresolved);
+
+  // Admin-Filter: standardmäßig versteckt, via Toggle einblendbar
+  const adminHidden = all.filter(_isAdminOnly);
+  if (!_placeShowAdmin) all = all.filter(pl => !_isAdminOnly(pl));
+  _refreshPlaceAdminBadge(adminHidden.length);
+
   if (_placeGroupMode) all = _groupPlacesByObject(all);
   if (!lower) { renderPlaceList(all); return; }
   renderPlaceList(all.filter(pl => pl.name.toLowerCase().includes(lower)));
+}
+
+function _refreshPlaceAdminBadge(count) {
+  const btn = document.getElementById('placeAdminFilterBtn');
+  if (!btn) return;
+  btn.hidden = count === 0 && !_placeShowAdmin;
+  const badge = btn.querySelector('.place-validator-btn-badge');
+  if (badge) { badge.textContent = count; badge.hidden = count === 0; }
 }
 
 // ─── P4: GOV-Text-Parser ─────────────────────────────────────────────────────

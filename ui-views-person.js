@@ -472,6 +472,26 @@ function filterPersons(q, yearFrom, yearTo, sex = '', birthPlace = '', flags = {
 //  DETAIL: PERSON
 // ─────────────────────────────────────
 
+// GEDCOM-Datumstring → lesbare deutsche Kurzform (nur Display, keine Daten-Mutation).
+// Nutzt parseGedDate() aus gedcom.js.
+function _localizeGedDate(raw) {
+  if (!raw) return raw;
+  const { qual, date1, date2 } = parseGedDate(raw);
+  const d1 = date1 || '';
+  const d2 = date2 || '';
+  switch (qual) {
+    case 'FROM': return d2 ? `${d1}–${d2}` : `ab ${d1}`;
+    case 'BET':  return d2 ? `${d1}–${d2}` : d1;
+    case 'BEF':  return `vor ${d1}`;
+    case 'AFT':  return `nach ${d1}`;
+    case 'ABT':  return `um ${d1}`;
+    case 'CAL':
+    case 'EST':  return `≈${d1}`;
+    case 'TO':   return `bis ${d1}`;
+    default:     return raw;
+  }
+}
+
 // Alter in Jahren zwischen zwei GEDCOM-Datumsstrings.
 // Gibt '<span class="age-tag">…</span>' zurück oder '' wenn nicht berechenbar.
 // ~ wenn mind. eines der Daten unscharf (ABT/BEF/AFT/CAL/EST/BET/FROM/TO).
@@ -630,7 +650,11 @@ function _pdetLifeData(p, id) {
           ? ev.eventType
           : (ev.eventType ? `${_evBase}: ${ev.eventType}` : _evBase);
         const geoBtn = evGeoLink(ev);
-        const parts = [ev.value, ev.addr, ev.date, _evFullPlace(ev)].filter(Boolean).join(', ');
+        const fullPlace = _evFullPlace(ev);
+        // Farm-placeObject: Titel = Adresse → ev.addr wäre Duplikat von fullPlace-Präfix
+        const _farmPo = ev.placeId ? AppState.db.placeObjects?.[ev.placeId] : null;
+        const _skipAddr = _farmPo && (_farmPo.type === 'Farm' || _farmPo.type === 'Building');
+        const parts = [ev.value, _skipAddr ? null : ev.addr, _localizeGedDate(ev.date), fullPlace].filter(Boolean).join(', ');
         const evAge = _ageAt(_refDate, ev.date);
         const mediaBadge = (ev.media?.length > 0) ? `<span class="p-media-ev-badge">📎${ev.media.length}</span>` : '';
         // Hof-Notiz: bei jedem RESI-Event mit passendem addr anzeigen (einmal pro Adresse)
