@@ -1806,14 +1806,16 @@ function _renderPlaceMergeList() {
           id.startsWith('_govp_')      ? 'GOV-Platzhalter' : '';
         const originSpan = origin
           ? `<span class="place-merge-origin" title="Herkunft des placeObject (id-Präfix)">${esc(origin)}</span>` : '';
-        opts += `<label class="place-merge-opt">
+        opts += `<div class="place-merge-opt">
+          <input type="checkbox" name="pmc-${gi}" value="${esc(id)}" checked>
           <input type="radio" name="pmw-${gi}" value="${esc(id)}"${id === suggested ? ' checked' : ''}>
           <span class="place-merge-name">${esc(po.title)}${originSpan}</span>
           <span class="place-merge-meta">${n} Verwendung${n !== 1 ? 'en' : ''}${geo}</span>
-        </label>`;
+        </div>`;
       }
       html += `<div class="place-merge-group">
         <div class="place-merge-title">${g.ids.length} mögliche Schreibweisen desselben Ortes</div>
+        <div class="place-merge-hint">☑ = einschließen · ◉ = Hauptort</div>
         ${opts}
         <button class="btn btn-save place-merge-btn" data-action="placeMergeGroup" data-gidx="${gi}">Zusammenführen</button>
       </div>`;
@@ -1855,7 +1857,10 @@ function placeMergeGroup(gidx) {
   const winner = sel.value;
 
   if (_placeDupMode === 'objects') {
-    const losers = g.ids.filter(id => id !== winner);
+    const checked = new Set([...document.querySelectorAll(`input[name="pmc-${gi}"]:checked`)].map(cb => cb.value));
+    checked.add(winner);
+    const losers = [...checked].filter(id => id !== winner);
+    if (!losers.length) { showToast('⚠ Mindestens einen weiteren Ort einschließen'); return; }
     const res = mergePlaceObjects(winner, losers);
     if (res.merged) {
       markChanged();
