@@ -3451,9 +3451,10 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   eq(byTitle['Sonnenstr 12'].enclosedBy[0].placeId, byTitle['München'].id, 'af.11: Farm enclosedBy feinstes Level (München)');
 })();
 
-// ── REGRESSION: Ortshistorie bleibt erhalten (ADR-024 ∩ ADR-026) ──
-// Gleicher Hof über verschiedene historische Ortsstrings → selbe Identität;
-// periodengerechte Ortsnamen lösen weiterhin korrekt auf (durch die Farm-Kette).
+// ── REGRESSION: Ortshistorie bleibt erhalten (ADR-024 ∩ ADR-027) ──
+// Gleicher Hof über verschiedene historische Ortsstrings → selbe V2-Hof-Identität;
+// _buildFormString liefert periodengerechte Dorf-Hierarchie (ohne Hof-Blatt; Hof
+// lebt nach ADR-027 in ev.hofId + hofObjects, nicht im PLAC-Leitsegment).
 (function() {
   var db = {
     individuals: {
@@ -3473,27 +3474,21 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
     hofObjects: { 'Hof Meyer': { addr:'Hof Meyer', lat:51.9, long:8.0 } },
   };
   API.setDb(db);
-  API._migrateHofObjectsToPlaceObjects(API.AppState.db);
+  API._migrateHofObjectsToPlaceObjects(API.AppState.db);  // ADR-026: Sidecar → Farm-PO
+  API._migrateFarmPOsToHofObjects(API.AppState.db);       // ADR-027 P3: Farm-PO → V2-hofObject
   var D = API.AppState.db, evs = D.individuals['@I1@'].events;
-  ok(evs[0].placeId && evs[0].placeId === evs[1].placeId,
-     'af.12: gleicher Hof über versch. historische Ortsstrings (Sassenbergk/Sassenberg) → selbe placeId');
-  var farm = D.placeObjects[evs[0].placeId];
-  eq(farm.type, 'Farm', 'af.12: Event zeigt auf Farm-PO');
-  eq(farm.enclosedBy[0].placeId, '@P0002@',
-     'af.12: Farm enclosedBy EXISTIERENDES Sassenberg-PO (per pname-Match erkannt, keine Dublette)');
-  eq(Object.values(D.placeObjects).filter(p => p.type !== 'Farm' && API._normPlaceName(p.title) === 'sassenberg').length, 1,
-     'af.12: kein doppeltes Sassenberg-PO angelegt');
-  // Reprojektion (db === AppState.db via setDb): ev.place ist die Hierarchie AB dem
-  // umschließenden Dorf — der Hof-Titel "Hof Meyer" lebt in ev.addr (ADDR), nicht in
-  // PLAC. Sonst doppelt sichtbar in Adresse + Ort (v1017, ADR-026-Trennung).
-  eq(evs[0].place, 'Sassenbergk, Fürstbistum Münster',
-     'af.12: ev.place ohne Farm-Blatt (Hof-Titel ist Adresse → ev.addr, nicht PLAC)');
-  eq(API._buildFormString(farm.id, 1700), 'Sassenbergk, Fürstbistum Münster',
-     'af.12: 1700 → historischer Ortsname Sassenbergk, ohne Farm-Blatt');
-  // 1850: enclosedBy Fürstbistum Münster endet 1803 (Säkularisation) → Parent fällt
-  // korrekt weg. Beweist: datierte Zugehörigkeit wirkt durch die Farm-Kette hindurch.
-  eq(API._buildFormString(farm.id, 1850), 'Sassenberg',
-     'af.12: 1850 → moderner Name Sassenberg, Parent (bis 1803 datiert) korrekt entfallen');
+  ok(evs[0].hofId && evs[0].hofId === evs[1].hofId,
+     'af.12: gleicher Hof über versch. historische Ortsstrings → selbe hofId');
+  eq(evs[0].placeId, '@P0002@', 'af.12: Event placeId zeigt auf Sassenberg-PO (Dorf)');
+  eq(Object.values(D.placeObjects).filter(p => p.type === 'Farm' || p.type === 'Building').length, 0,
+     'af.12: keine Farm/Building mehr in placeObjects (Phase 3 Migration komplett)');
+  var hof = D.hofObjects[evs[0].hofId];
+  eq(hof.villageId, '@P0002@', 'af.12: hofObject villageId = Sassenberg');
+  // _buildFormString liefert reine Dorf-Hierarchie (ohne Hof-Blatt; ADR-027 P4)
+  eq(API._buildFormString('@P0002@', 1700), 'Sassenbergk, Fürstbistum Münster',
+     'af.12: 1700 → historischer Name Sassenbergk + Parent-Region');
+  eq(API._buildFormString('@P0002@', 1850), 'Sassenberg',
+     'af.12: 1850 → moderner Name Sassenberg; Fürstbistum-Münster-Parent endet 1803');
 })();
 
 // ── hofMeta: Lese-Single-Source — Farm-PO primär, hofObjects-Sidecar Fallback ──
@@ -3935,64 +3930,9 @@ group('(ah) PLACE-HIST Stufe 2 Disambiguierung (sw v1006)');
      'ah-2: 1850 mit moderner Hierarchie → kein Anker in zeitgenössischer Kette → BLOCKIERT (User-Merge nötig)');
 })();
 
-// (ah-2c) _buildFormString schließt Farm/Building-Blatt aus (sw v1017): der Hof-Titel
-// IS die Adresse (ev.addr) und gehört nicht doppelt als 1. Segment in den PLAC-String.
-// PLAC trägt die geographische Hierarchie ab dem umschließenden Dorf.
-(function() {
-  var db = {
-    extraPlaces:{}, families:{}, individuals:{},
-    placeObjects: {
-      '@HOF@': { id:'@HOF@', title:'Wall 33', type:'Farm', lat:52.2, long:7.2, pnames:[],
-                 enclosedBy:[{ placeId:'@OCH@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
-                 parentId:'@OCH@' },
-      '@OCH@': { id:'@OCH@', title:'Ochtrup', type:'Town', lat:52.2, long:7.18, pnames:[],
-                 enclosedBy:[{ placeId:'@KR@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
-                 parentId:'@KR@' },
-      '@KR@':  { id:'@KR@', title:'Kreis Steinfurt', type:'County', lat:null, long:null, pnames:[],
-                 enclosedBy:[], parentId:null },
-      '@BLD@': { id:'@BLD@', title:'Rathaus', type:'Building', lat:52.2, long:7.18, pnames:[],
-                 enclosedBy:[{ placeId:'@OCH@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
-                 parentId:'@OCH@' },
-      '@ORPHAN@': { id:'@ORPHAN@', title:'Verwaister Hof', type:'Farm', lat:null, long:null, pnames:[],
-                    enclosedBy:[], parentId:null },
-    },
-  };
-  API.setDb(db);
-  // Hof als Blatt → PLAC startet beim Dorf, NICHT mit "Wall 33"
-  eq(API._buildFormString('@HOF@', 1819),
-     'Ochtrup, Kreis Steinfurt',
-     'ah-2c: Farm-Blatt aus PLAC ausgeschlossen (Hof-Titel wäre Duplikat zu ev.addr)');
-  // Building gleich behandeln
-  eq(API._buildFormString('@BLD@', 1819),
-     'Ochtrup, Kreis Steinfurt',
-     'ah-2c: Building-Blatt ebenfalls ausgeschlossen');
-  // Dorf direkt → komplette Kette ab Dorf
-  eq(API._buildFormString('@OCH@', 1819),
-     'Ochtrup, Kreis Steinfurt',
-     'ah-2c: Dorf-Blatt unverändert (kein Farm/Building → in Kette)');
-  // Ohne Jahr: Adress-Blatt → atomarer Name des Eltern-Dorfs
-  eq(API._buildFormString('@HOF@', null),
-     'Ochtrup',
-     'ah-2c: ohne Jahr → Farm-Blatt liefert atomares Eltern-Dorf, nicht Hof-Titel');
-  // Verwaister Hof ohne enclosedBy → null (lieber leer als Adresse als PLAC schreiben)
-  eq(API._buildFormString('@ORPHAN@', 1819), null,
-     'ah-2c: verwaister Farm ohne enclosedBy → null (kein Datenfehler-Workaround)');
-  // GEDCOM-Modus (includeAddrLeaf): Hof-Blatt MUSS drin sein, damit MAP/LATI/LONG
-  // den Hof-Punkt referenzieren, nicht das Dorf (v1018).
-  eq(API._buildFormString('@HOF@', 1819, { includeAddrLeaf: true }),
-     'Wall 33, Ochtrup, Kreis Steinfurt',
-     'ah-2c: GEDCOM-Modus → Hof-Blatt drin (Koord-Bindung für 2 MAP/LATI/LONG)');
-  eq(API._buildFormString('@BLD@', 1819, { includeAddrLeaf: true }),
-     'Rathaus, Ochtrup, Kreis Steinfurt',
-     'ah-2c: GEDCOM-Modus → Building-Blatt ebenfalls drin');
-  eq(API._buildFormString('@HOF@', null, { includeAddrLeaf: true }),
-     'Wall 33',
-     'ah-2c: GEDCOM-Modus ohne Jahr → atomarer Hof-Titel');
-  // Nicht-Adress-Blatt: includeAddrLeaf hat keinen Effekt (kein Skip)
-  eq(API._buildFormString('@OCH@', 1819, { includeAddrLeaf: true }),
-     'Ochtrup, Kreis Steinfurt',
-     'ah-2c: Dorf-Blatt unverändert (includeAddrLeaf no-op bei Town)');
-})();
+// (ah-2c entfernt) — ADR-027 P4: Farm/Building-Spezialfall in _buildFormString
+// entfällt vollständig. Höfe leben in hofObjects V2 + ev.hofId (siehe (al)+(ak));
+// _buildFormString ist wieder einargumentig und kennt nur Verwaltungs-Hierarchie.
 
 // (ah-2b) Hierarchie-Anker-Check (sw v1015): einziger Leitname-Kandidat darf NICHT
 // verlinken, wenn KEINES der weiteren Event-Segmente in der Ahnen-Hierarchie
@@ -4340,7 +4280,7 @@ group('(ak) ADR-027 P2 Mapping-Layer');
   });
   var ev = { placeId:'_po_farm_legacy', date:'1900' };
   eq(API.buildPlacForGedcom(ev, 1900), 'Alter Hof 5, Ochtrup',
-     'ak-2: Legacy Farm-PO → includeAddrLeaf preserves ADR-026-Verhalten');
+     'ak-2: Legacy Farm-PO ohne hofId → Hof-Blatt in PLAC (Pre-Phase-3-Verhalten)');
 })();
 
 // buildPlacForGedcom ohne placeId/hofId → null

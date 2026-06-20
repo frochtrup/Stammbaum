@@ -2119,10 +2119,24 @@ function _buildHofchronikHtml() {
     body += `<section class="hc-place" id="hc-ort-${_safeId(pl)}"><h2>${esc(pl)}</h2>`;
     const hoefe = byPlace.get(pl).slice().sort(sortFn);
     for (const hof of hoefe) {
-      const meta = db.hofObjects?.[hof.addr] || null;
+      // ADR-027 P4: hofMeta liest V2-hofObjects via hof.hofId mit Vorrang, fällt auf
+      // Legacy-Sidecar oder Farm-PO zurück. Damit zeigt die Chronik nach Phase-3-
+      // Migration die V2-Koords/Note ohne weiteren Codeumbau.
+      const meta = (typeof hofMeta === 'function') ? hofMeta(hof) : null;
       const addrLines = hof.addr.split('\n').map(s => s.trim()).filter(Boolean);
       const title = addrLines[0] || '(ohne Adresse)';
-      const sub = addrLines.slice(1).join(' · ');
+      let sub = addrLines.slice(1).join(' · ');
+      // ADR-027 P4: Adress-Historie aus V2-hofObject anzeigen (z.B. Umnummerierungen).
+      // Datierte addrs-Einträge werden als Sub-Zeilen "bis 1900: alter Name" angezeigt;
+      // der aktuelle Haupteintrag steht im H3-Titel.
+      if (hof.hofId && db.hofObjects?.[hof.hofId]?.addrs?.length > 1) {
+        const hist = db.hofObjects[hof.hofId].addrs
+          .filter(a => a.value && a.value !== title)
+          .map(a => a.dateTo ? `bis ${a.dateTo}: ${a.value}`
+                : a.dateFrom ? `ab ${a.dateFrom}: ${a.value}` : a.value)
+          .join(' · ');
+        if (hist) sub = sub ? sub + ' · ' + hist : hist;
+      }
       body += `<div class="hc-hof">`;
       body += `<h3>${esc(title)}</h3>`;
       if (sub) body += `<div class="hc-hof-sub">${esc(sub)}</div>`;

@@ -206,32 +206,20 @@ function collectPlaces() {
     }
     // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
     // (analog extraPlaces — damit manuell importierte Orte sichtbar sind).
-    // ADR-026: Farm-Einträge (Höfe) die via RESI/PROP-Events reingekommen sind,
-    // aus der Ortsliste entfernen — Höfe erscheinen im Höfe-Tab, nicht hier.
-    for (const [k, pl] of places) {
-      if (pl.type === 'Farm' || pl.type === 'Building') places.delete(k);
-    }
-    // Übergangsfix (v1013): bereits via Event-String repräsentierte placeIds
-    // sammeln und PO nicht erneut unter atomarem Titel listen. Strukturell sauberer
-    // wäre, collectPlaces über placeId statt String zu aggregieren (TODO PLACEID-AGG).
-    const _seenIds = new Set();
-    for (const pl of places.values()) if (pl.placeId) _seenIds.add(pl.placeId);
+    // ADR-027 P4: Farm/Building gibt es nach Phase-3-Migration nicht mehr in
+    // placeObjects — Höfe leben in db.hofObjects (Höfe-Tab). Der frühere v1013-
+    // _seenIds-Workaround für bare-vs-rich-Farm-Dubletten entfällt damit.
     for (const po of Object.values(AppState.db.placeObjects || {})) {
       const key = po.title;
       if (!key) continue;
-      if (po.type === 'Farm' || po.type === 'Building') continue;
-      if (_seenIds.has(po.id)) continue;
-      if (!places.has(key)) {
-        // Koord-Paar-Invariante: nur als vollständiges Paar — halbe Werte (lat ohne long
-        // o.ä., z.B. aus alten Save-Pfaden) sonst Render-Crash auf null.toFixed
-        const _pPair = (po.lat != null && po.long != null);
-        places.set(key, {
-          name: key, personIds: new Set(), eventTypes: new Set(),
-          lati: _pPair ? po.lat : null, long: _pPair ? po.long : null,
-          placeId: po.id, type: po.type || null,
-          _govUnresolved: po._govUnresolved || false,
-        });
-      }
+      if (places.has(key)) continue;
+      const _pPair = (po.lat != null && po.long != null);
+      places.set(key, {
+        name: key, personIds: new Set(), eventTypes: new Set(),
+        lati: _pPair ? po.lat : null, long: _pPair ? po.long : null,
+        placeId: po.id, type: po.type || null,
+        _govUnresolved: po._govUnresolved || false,
+      });
     }
   }
   UIState._placesCache = places;
@@ -2222,26 +2210,9 @@ function validatePlaces() {
       }
     }
 
-    // ADR-026 HOF-1: Hof/Gebäude ohne Koordinaten → auf der Karte nicht sichtbar
-    if ((po.type === 'Farm' || po.type === 'Building') && (po.lat == null || po.long == null)) {
-      warnings.push({ placeId: po.id, title, code: 'HOF_NO_COORD',
-        msg: `Hof ohne Koordinaten — auf der Karte nicht sichtbar` });
-    }
-
-    // ADR-026 HOF-2: Hof-Koordinaten zu weit vom umschließenden Ort entfernt
-    if ((po.type === 'Farm' || po.type === 'Building') && po.lat != null && po.long != null
-        && typeof _placeDistKm === 'function') {
-      for (const enc of (po.enclosedBy || [])) {
-        const parent = enc.placeId && pos[enc.placeId];
-        if (!parent || parent.lat == null || parent.long == null) continue;
-        const km = _placeDistKm(po.lat, po.long, parent.lat, parent.long);
-        if (km > _HOF_MAX_DIST_KM) {
-          warnings.push({ placeId: po.id, title, code: 'HOF_FAR',
-            msg: `Hof ${km.toFixed(0)} km vom Ort „${parent.title || parent.id}" entfernt — evtl. vertauschte/falsche Koordinaten` });
-        }
-        break;   // erster umschließender Ort mit Koordinaten genügt
-      }
-    }
+    // ADR-027 P4: HOF_NO_COORD / HOF_FAR operieren jetzt über V2-hofObjects
+    // (siehe Validierungs-Block unter dem placeObjects-Loop). Farm/Building in
+    // placeObjects existiert nach Phase-3-Migration nicht mehr.
 
     // P5d-2a: dateFrom > dateTo in pnames[]
     for (const pn of (po.pnames || [])) {
@@ -2299,6 +2270,27 @@ function validatePlaces() {
         warnings.push({ placeId: po.id, title, code: 'CYCLE',
           msg: `Zirkelreferenz in „Teil von"-Kette` });
         break;
+      }
+    }
+  }
+
+  // ADR-027 P4: HOF_NO_COORD / HOF_FAR auf V2-hofObjects (statt Farm-placeObjects).
+  // V2-Shape-Filter (_isHofObjectV2) verhindert Treffer auf Legacy-addr-keyed-Sidecar.
+  const hofs = AppState.db?.hofObjects || {};
+  for (const [hofId, h] of Object.entries(hofs)) {
+    if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
+    const hofTitle = (h.addrs && h.addrs[0] && h.addrs[0].value) || hofId;
+    if (h.lat == null || h.long == null) {
+      warnings.push({ placeId: hofId, title: hofTitle, code: 'HOF_NO_COORD',
+        msg: `Hof ohne Koordinaten — auf der Karte nicht sichtbar` });
+    } else if (typeof _placeDistKm === 'function' && h.villageId && pos[h.villageId]) {
+      const parent = pos[h.villageId];
+      if (parent.lat != null && parent.long != null) {
+        const km = _placeDistKm(h.lat, h.long, parent.lat, parent.long);
+        if (km > _HOF_MAX_DIST_KM) {
+          warnings.push({ placeId: hofId, title: hofTitle, code: 'HOF_FAR',
+            msg: `Hof ${km.toFixed(0)} km vom Ort „${parent.title || parent.id}" entfernt — evtl. vertauschte/falsche Koordinaten` });
+        }
       }
     }
   }

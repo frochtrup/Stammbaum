@@ -18,12 +18,13 @@ function _g7WriteSchma(lines) {
 // Nur aktiv wenn ev.placeId ODER ev.hofId gesetzt. GEDCOM-Roundtrip unberührt für
 // Events ohne placeId/hofId (atomarer Cache-String).
 //
-// ADR-027 P2: buildPlacForGedcom handhabt beide Pfade:
+// ADR-027 P4: buildPlacForGedcom handhabt beide Pfade:
 //   - ev.hofId + V2-Hof → Adresse (hof.addrs) + Dorf-Hierarchie (_buildFormString
 //     auf hof.villageId)
-//   - ev.placeId ohne hofId → Legacy-Pfad inkl. ADR-026 Farm-PO-includeAddrLeaf
+//   - ev.placeId ohne hofId → reine Dorf-Hierarchie (Höfe leben nach Phase 3
+//     ausschließlich in hofObjects, nicht mehr in placeObjects).
 // GEDCOM-Konvention: PLAC muss das Hof-Blatt enthalten, weil 2 MAP/LATI/LONG sich
-// auf PLAC bezieht — ohne Hof als Blatt würden Hof-Koords fälschlich am Dorf hängen.
+// auf PLAC bezieht — buildPlacForGedcom-Pfad-1 stellt das über hof.addrs sicher.
 function _resolvedPlaceName(obj) {
   if (!obj) return null;
   if (obj.hofId || obj.placeId) {

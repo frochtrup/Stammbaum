@@ -1080,53 +1080,28 @@ function _eventPlaceId(ev) {
 // sonst mit der enclosedBy-Kette doppelt erscheinen.
 // Fallback: resolveAsOf (atomarer Name) wenn keine enclosedBy-Kette vorhanden.
 //
-// ADR-026 (Höfe = Farm-placeObjects): zwei Kontexte mit unterschiedlichem Bedarf.
-//
-//   Display-Modus (Default, opts.includeAddrLeaf=false): wenn das Blatt-PO ein
-//   Farm/Building ist, wird es aus dem PLAC-String AUSGESCHLOSSEN — der Hof-Titel
-//   ("Wall 33 (Metelener Str. 18)") lebt parallel in ev.addr und würde sonst
-//   doppelt erscheinen (ADRESSE-Feld + ORT-Feld). Genutzt von Link-Pass-Kollaps
-//   und String-Link.
-//
-//   GEDCOM-Modus (opts.includeAddrLeaf=true): Hof-Blatt BLEIBT in der Kette,
-//   weil GEDCOM 2 MAP/3 LATI/3 LONG sich auf das PLAC bezieht. Ohne den Hof
-//   als Blatt würden Hof-Koords fälschlich an das umschließende Dorf gebunden.
-//   Genutzt vom Writer (_resolvedPlaceName).
-function _buildFormString(placeId, year, opts) {
+// ADR-027 P4: einargumentig. Farm/Building-Spezialfall entfällt — Höfe leben
+// nach Phase 3 nicht mehr in placeObjects, sondern in hofObjects V2.
+// `buildPlacForGedcom` handhabt Hof-Routing über ev.hofId.
+function _buildFormString(placeId, year) {
   if (!placeId || typeof getPlaceRegistry !== 'function') return null;
   const reg = getPlaceRegistry();
   const _atomic = s => s ? s.split(',')[0].trim() : '';
-  const _po = reg.byId[placeId];
-  const _isAddrLeaf = _po && (_po.type === 'Farm' || _po.type === 'Building');
-  const _skipLeaf = _isAddrLeaf && !(opts && opts.includeAddrLeaf);
-  // Ohne Datum: kein Periode bestimmbar → atomarer Name. Bei Display-Adress-Blatt
-  // das umschließende Dorf nehmen, sonst wäre PLAC = Adresse (Duplikat zu ev.addr).
   if (year == null) {
-    if (_skipLeaf) {
-      const encs = _po.enclosedBy || [];
-      const parent = (encs[0] && encs[0].placeId) || _po.parentId;
-      return parent ? (_atomic(reg.resolveAsOf(parent, null)) || null) : null;
-    }
     return _atomic(reg.resolveAsOf(placeId, null)) || null;
   }
-  let chain = reg.enclosureChainAsOf(placeId, year).map(_atomic).filter(Boolean);
-  if (_skipLeaf && chain.length) chain = chain.slice(1);
+  const chain = reg.enclosureChainAsOf(placeId, year).map(_atomic).filter(Boolean);
   if (chain.length) return chain.join(', ');
-  // Fallback nur für nicht-skip-Blätter; verwaister Farm im Display-Modus → null
-  // (lieber leer als Adresse als Ort).
-  return _skipLeaf ? null : (_atomic(reg.resolveAsOf(placeId, year)) || null);
+  return _atomic(reg.resolveAsOf(placeId, year)) || null;
 }
 
-// ADR-027 Phase 2: GEDCOM-PLAC-String aus (placeId, hofId, year) bauen.
+// ADR-027 P2/P4: GEDCOM-PLAC-String aus (placeId, hofId, year) bauen.
 // Zwei Pfade orthogonal nach Datenstand:
 //   1. ev.hofId gesetzt + V2-hofObject vorhanden (ADR-027-Welt nach Phase-3-Migration):
 //      Adresse aus hof.addrs (periodengerecht via resolveAddrAsOf) + Dorf-Hierarchie
 //      aus _buildFormString(hof.villageId) — Hof-Blatt erscheint genau einmal in PLAC.
-//   2. ev.hofId fehlt (Phase-2-Realität ohne migrierte Daten oder Events ohne Hof):
-//      Legacy-Pfad _buildFormString(ev.placeId, includeAddrLeaf:true) — preserviert
-//      das ADR-026-Verhalten byte-genau (Farm-PO als PLAC-Leitsegment).
-// Phase 4 wird Zweig 2 entfernen, sobald Migration garantiert hat dass Höfe nie mehr
-// in placeObjects.type=Farm stehen.
+//   2. ev.hofId fehlt: nur Dorf-Hierarchie. Post-Phase-3 enthält placeObjects keine
+//      Farm/Building-Einträge mehr; Hof-Adressen leben ausschließlich via ev.hofId.
 function buildPlacForGedcom(ev, year) {
   if (!ev) return null;
   // Pfad 1 — ADR-027: Hof + Dorf
@@ -1135,9 +1110,8 @@ function buildPlacForGedcom(ev, year) {
     if (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(hof)) {
       const reg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
       const hofAddr = reg ? reg.resolveAddrAsOf(ev.hofId, year) : '';
-      // Dorf-Hierarchie WITHOUT includeAddrLeaf — sauberer ADR-027-Pfad, weil das Dorf
-      // selbst keine Farm/Building ist. Wenn die villageId fehlt oder unauflösbar:
-      // nur Hof-Adresse zurückgeben (besser als nichts).
+      // Dorf-Hierarchie als reine Verwaltungs-Kette. Wenn villageId fehlt oder
+      // unauflösbar: nur Hof-Adresse zurückgeben (besser als nichts).
       let villagePart = null;
       if (hof.villageId && typeof _buildFormString === 'function') {
         villagePart = _buildFormString(hof.villageId, year);  // ohne opts → Default-Verhalten
@@ -1146,9 +1120,13 @@ function buildPlacForGedcom(ev, year) {
       return hofAddr || villagePart || null;
     }
   }
-  // Pfad 2 — Legacy ADR-026: includeAddrLeaf preserviert Farm-PO-als-Blatt-Verhalten.
+  // Pfad 2 — kein ev.hofId: nur Dorf-Hierarchie. Nach Phase 3 enthält placeObjects
+  // keine Farm/Building-Einträge mehr; Höfe werden ausschließlich über ev.hofId
+  // adressiert. Falls ein Restbestand-Farm-PO doch noch übrig ist (Migration noch
+  // nicht gelaufen), läuft die Kette inkl. Hof-Blatt durch — das ist akzeptable
+  // Übergangs-Semantik (Hof landet in PLAC, Adress-Duplikat zu ev.addr).
   if (ev.placeId && typeof _buildFormString === 'function') {
-    return _buildFormString(ev.placeId, year, { includeAddrLeaf: true });
+    return _buildFormString(ev.placeId, year);
   }
   return null;
 }
