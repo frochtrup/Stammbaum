@@ -782,13 +782,17 @@ function saveExtraPlaces() {
 // IDB-Key global (wie quickTemplates): Ortshierarchie ist appweit, nicht dateigebunden.
 //
 // Item 10: Wrapper-Format mit Revision + Geräte-ID für Konflikt-Erkennung.
-//   { schemaVersion: 1, _rev: N, _device: '<id>', _ts: ISO, placeObjects: {...} }
+//   v1: { schemaVersion: 1, _rev, _device, _ts, placeObjects }
+//   v2: { schemaVersion: 2, _rev, _device, _ts, placeObjects, hofObjects } (ADR-027)
 // Beim Laden: lokales _rev gegen remote vergleichen. Gleiche _rev + andere
 // _device + abweichender Content → Konflikt (Toast).
 //
 // Backwards-kompat: stored/odData ohne schemaVersion = altes Format
 // (nacktes placeObjects-Object) → unwrap als schemaVersion=0, _rev=0.
-const PLACES_SCHEMA_VERSION = 1;
+// v1-Dateien werden gelesen (hofObjects fehlt → leer); Save schreibt IMMER v2.
+// Schema-Refusal (ADR-027): wenn datei._schemaVersion > APP_KNOWN_SCHEMA_VERSION
+// → AppState._schemaLocked = true, Save gesperrt, Modal mit Update-Hinweis.
+const PLACES_SCHEMA_VERSION = APP_KNOWN_SCHEMA_VERSION;
 
 function _placeDeviceId() {
   let id = null;
@@ -800,19 +804,70 @@ function _placeDeviceId() {
   return id;
 }
 
-// Unwrappt das gespeicherte Format. Gibt { wrapper, pos } zurück.
-// wrapper = {schemaVersion, _rev, _device, _ts}; pos = placeObjects.
+// Unwrappt das gespeicherte Format. Gibt { wrapper, pos, hofs } zurück.
+// wrapper = {schemaVersion, _rev, _device, _ts}; pos = placeObjects; hofs = hofObjects.
+// Schema-Refusal (ADR-027 P1): wenn schemaVersion > APP_KNOWN_SCHEMA_VERSION,
+// markiert das Ergebnis als _refusal=true; der Caller setzt AppState._schemaLocked
+// und zeigt das Refusal-Modal, ohne die Datei in db zu mergen.
 function _unwrapPlacesData(raw) {
   if (!raw || typeof raw !== 'object') return null;
-  if (raw.schemaVersion === PLACES_SCHEMA_VERSION && raw.placeObjects && typeof raw.placeObjects === 'object') {
+  const sv = typeof raw.schemaVersion === 'number' ? raw.schemaVersion : null;
+  // v1/v2: Wrapper-Format mit placeObjects-Slot. v2 hat zusätzlich hofObjects.
+  if (sv != null && sv >= 1 && raw.placeObjects && typeof raw.placeObjects === 'object') {
+    const wrapper = { schemaVersion: sv, _rev: raw._rev || 0,
+      _device: raw._device || null, _ts: raw._ts || null };
+    if (sv > APP_KNOWN_SCHEMA_VERSION) {
+      return { wrapper, pos: raw.placeObjects, hofs: raw.hofObjects || {}, _refusal: true };
+    }
     return {
-      wrapper: { schemaVersion: raw.schemaVersion, _rev: raw._rev || 0,
-        _device: raw._device || null, _ts: raw._ts || null },
+      wrapper,
       pos: raw.placeObjects,
+      hofs: (raw.hofObjects && typeof raw.hofObjects === 'object') ? raw.hofObjects : {},
     };
   }
   // Altes Format: nacktes Object {id1: po1, id2: po2, ...}
-  return { wrapper: { schemaVersion: 0, _rev: 0, _device: null, _ts: null }, pos: raw };
+  return { wrapper: { schemaVersion: 0, _rev: 0, _device: null, _ts: null }, pos: raw, hofs: {} };
+}
+
+// ADR-027 P1: filtert hofObjects auf die V2-Shape (id-keyed, mit villageId + addrs).
+// Verhindert, dass Legacy-ADR-026-Einträge (addr-keyed {addr,lat,long,note}) in die
+// orte.json v2 oder den IDB-V2-Key gelangen. Phase 3 wird Legacy → V2 migrieren;
+// bis dahin koexistieren beide Shapes im Slot db.hofObjects, getrennt durch Filter.
+function _filterHofObjectsV2(hofs) {
+  const out = {};
+  if (!hofs || typeof hofs !== 'object') return out;
+  for (const [id, h] of Object.entries(hofs)) {
+    if (h && typeof h === 'object' && typeof h.villageId === 'string' && Array.isArray(h.addrs)) {
+      out[id] = h;
+    }
+  }
+  return out;
+}
+
+// ADR-027 P1: Schema-Refusal-Modal (Read-Only-Modus). Wird einmal pro Session
+// gezeigt. Sperrt savePlaceObjects + saveHofObjectsV2 hart gegen das versehent-
+// liche Zerschießen einer Datei aus „der Zukunft" durch ein offline-eingefrorenes
+// Gerät. Auto-Reload (sw v1019) bringt online genutzte Geräte ohnehin zeitnah
+// auf die neueste Version — die Refusal ist Schutz für den Offline-Fall.
+let _schemaRefusalShown = false;
+function _showSchemaRefusalModal(fileVersion) {
+  if (_schemaRefusalShown) return;
+  _schemaRefusalShown = true;
+  AppState._schemaLocked = true;
+  AppState._schemaLockedVersion = fileVersion;
+  const msg = '⚠ Die geladene Orts-/Hof-Datei wurde mit einer neueren App-Version erstellt '
+    + '(Schema v' + fileVersion + ', diese App kennt v' + APP_KNOWN_SCHEMA_VERSION + '). '
+    + 'Speichern ist gesperrt, bis du die App aktualisierst — sonst gingen neue Felder verloren.';
+  // Sichtbare, blockierende Meldung: bevorzugt confirmModal, sonst Toast als Fallback.
+  // (confirmModal hat aktuell keinen hideCancel-Schalter — User kann beliebigen Button drücken,
+  // die Sperre bleibt durch AppState._schemaLocked unabhängig vom Modal-Ergebnis bestehen.)
+  if (typeof confirmModal === 'function') {
+    try { confirmModal(msg, 'Verstanden').catch?.(() => {}); } catch(_) {}
+  } else if (typeof showToast === 'function') {
+    showToast(msg, 'error');
+  } else {
+    console.warn(msg);
+  }
 }
 
 // Track local revision in-memory (loaded from IDB at startup, bumped on save)
@@ -830,6 +885,18 @@ async function loadPlaceObjectsFromIDB() {
       odRaw = await _odReadAppData('stammbaum-orte.json').catch(() => null);
     }
     const remoteUnwrapped = _unwrapPlacesData(odRaw);
+
+    // ADR-027 P1: Schema-Refusal — wenn eine der Quellen aus der Zukunft kommt,
+    // App in Read-Only-Modus + Modal. Wir mergen NICHT, damit wir den User nicht
+    // versehentlich mit halben Daten konfrontieren.
+    if (localUnwrapped?._refusal || remoteUnwrapped?._refusal) {
+      const fileV = Math.max(
+        localUnwrapped?._refusal ? localUnwrapped.wrapper.schemaVersion : 0,
+        remoteUnwrapped?._refusal ? remoteUnwrapped.wrapper.schemaVersion : 0
+      );
+      _showSchemaRefusalModal(fileV);
+      return;
+    }
 
     // Konflikt-Erkennung: beide existieren, gleiche _rev, verschiedene _device
     // mit abweichendem Content → mehrere Geräte haben unabhängig geändert.
@@ -855,10 +922,17 @@ async function loadPlaceObjectsFromIDB() {
     }
 
     const pos = AppState.db.placeObjects || (AppState.db.placeObjects = {});
+    const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
     // Primary first
     if (primary) {
       for (const [id, po] of Object.entries(primary.pos)) {
         if (!pos[id]) pos[id] = po;
+      }
+      // ADR-027 P1: V2-hofObjects-Sektion aus dem Wrapper mergen (id-keyed Einträge).
+      // Legacy-addr-keyed-Einträge im Slot db.hofObjects bleiben unangetastet —
+      // sie existieren parallel bis zur Phase-3-Migration.
+      for (const [id, h] of Object.entries(primary.hofs || {})) {
+        if (!hofs[id]) hofs[id] = h;
       }
       _placesLocalRev = primary.wrapper._rev || 0;
     }
@@ -866,6 +940,9 @@ async function loadPlaceObjectsFromIDB() {
     if (conflict && secondary) {
       for (const [id, po] of Object.entries(secondary.pos)) {
         if (!pos[id]) pos[id] = po;
+      }
+      for (const [id, h] of Object.entries(secondary.hofs || {})) {
+        if (!hofs[id]) hofs[id] = h;
       }
       setTimeout(() => {
         if (typeof showToast === 'function')
@@ -881,25 +958,68 @@ async function loadPlaceObjectsFromIDB() {
     // daher muss _migratePlaceObjects hier nochmals laufen um Altdaten aus der JSON zu bereinigen).
     if (typeof _migratePlaceObjects === 'function') _migratePlaceObjects(AppState.db);
     UIState._placeRegistry = null;
+    UIState._hofRegistry   = null;
+    // ADR-027 P1: zusätzlicher IDB-V2-Key als zweite lokale Quelle für hofObjects.
+    // Mirrort die V2-Sektion (für künftige Phase-3-Migration eine bequeme separate
+    // Laderoute — heute reiner Pass-through). Failt nie hart (additiv).
+    if (typeof loadHofObjectsV2FromIDB === 'function') {
+      try { await loadHofObjectsV2FromIDB(); } catch(_) {}
+    }
   } catch(e) { console.warn('loadPlaceObjectsFromIDB:', e); }
+}
+
+// ADR-027 P1: Lädt die V2-hofObjects-Sektion aus dem dedizierten IDB-Key
+// `stammbaum_hofobjects_v2`. Mirror zum Wrapper-Pfad in loadPlaceObjectsFromIDB;
+// Phase-3-Migration wird diesen Pfad nutzen, um die migrierten Einträge separat
+// zu cachen. Heute additiv (existierende Einträge in db.hofObjects überschreibt nicht).
+async function loadHofObjectsV2FromIDB() {
+  try {
+    const raw = await idbGet('stammbaum_hofobjects_v2');
+    if (!raw) return;
+    const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const stored = (data && typeof data === 'object' && data.hofObjects) ? data.hofObjects : data;
+    if (!stored || typeof stored !== 'object') return;
+    const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+    for (const [id, h] of Object.entries(stored)) {
+      if (!hofs[id]) hofs[id] = h;
+    }
+    UIState._hofRegistry = null;
+  } catch(e) { console.warn('loadHofObjectsV2FromIDB:', e); }
 }
 
 // Item 11: Toast-Once-Flags — verhindern Spam bei wiederholten Fehlern (z.B. IDB-Quota).
 // Reset bei jedem Page-Reload (per Definition Session-scoped).
 let _savePoIDBErrored = false;
 let _savePoODErrored  = false;
+let _saveSchemaLockedToastShown = false;
 function savePlaceObjects() {
+  // ADR-027 P1: Schema-Refusal — wenn die geladene Datei aus der Zukunft ist,
+  // schreiben wir nichts, damit v1-Code keine v3-Datei zerschießt.
+  if (AppState._schemaLocked) {
+    if (!_saveSchemaLockedToastShown) {
+      _saveSchemaLockedToastShown = true;
+      if (typeof showToast === 'function')
+        showToast('⚠ Speichern gesperrt: Datei stammt aus neuerer App-Version (Schema v'
+          + (AppState._schemaLockedVersion || '?') + '). App-Update erforderlich.', 'error');
+    }
+    return;
+  }
   let payload;
   try {
-    const toSave = AppState.db.placeObjects || {};
+    const toSavePos  = AppState.db.placeObjects || {};
+    // ADR-027 P1: nur V2-Shape-hofObjects (id-keyed mit villageId/addrs) in den
+    // Wrapper. Legacy-addr-keyed-Einträge in db.hofObjects bleiben weiterhin via
+    // ihrem alten localStorage-Pfad (saveHofObjects) gespeichert und gelangen nicht
+    // in die orte.json v2.
+    const toSaveHofs = _filterHofObjectsV2(AppState.db.hofObjects || {});
     _placesLocalRev = (_placesLocalRev || 0) + 1;
-    // Item 10: Wrapper-Format mit Rev+Device für Konflikt-Erkennung
     payload = {
       schemaVersion: PLACES_SCHEMA_VERSION,
       _rev: _placesLocalRev,
       _device: _placeDeviceId(),
       _ts: new Date().toISOString(),
-      placeObjects: toSave,
+      placeObjects: toSavePos,
+      hofObjects:   toSaveHofs,
     };
   } catch(e) {
     if (!_savePoIDBErrored) {
@@ -916,6 +1036,21 @@ function savePlaceObjects() {
     if (typeof showToast === 'function')
       showToast('⚠ Orts-Daten lokal nicht speicherbar (IDB): ' + (err?.message || err), 'error');
   });
+  // ADR-027 P1: zusätzlicher IDB-Mirror der V2-hofObjects-Sektion in dediziertem Key.
+  // Same payload-Wrapper, aber nur die hofObjects-Sektion — Phase-3-Migration und
+  // künftige Hof-spezifische Lade-Pfade können diesen Key isoliert nutzen.
+  // Teilt _savePoIDBErrored-Flag mit dem placeobjects-Write: IDB-Quota/Permission-
+  // Probleme treffen beide Keys gleichzeitig, ein Toast genügt.
+  idbPut('stammbaum_hofobjects_v2', JSON.stringify({
+    schemaVersion: PLACES_SCHEMA_VERSION,
+    _rev: payload._rev, _device: payload._device, _ts: payload._ts,
+    hofObjects: payload.hofObjects,
+  })).catch(err => {
+    if (_savePoIDBErrored) return;
+    _savePoIDBErrored = true;
+    if (typeof showToast === 'function')
+      showToast('⚠ Hof-Daten lokal nicht speicherbar (IDB): ' + (err?.message || err), 'error');
+  });
   if (typeof _odWriteAppData === 'function') {
     _odWriteAppData('stammbaum-orte.json', payload).catch(err => {
       if (_savePoODErrored) return;
@@ -925,6 +1060,14 @@ function savePlaceObjects() {
     });
   }
 }
+
+// ADR-027 P1: Public-API für Mutationen, die nur hofObjects betreffen
+// (mutateHofObject/upsertHofObject). Funktional ein Alias auf savePlaceObjects,
+// weil die orte.json v2 BEIDE Sektionen atomar enthält und ein hofObjects-only-Save
+// dieselben Konflikt-Erkennungs-Garantien wie ein placeObjects-Save braucht.
+// Eigener Name macht die Aufruf-Intention an den Mutations-Helpern selbst-dokumentierend
+// und erlaubt späteres Debouncing/Splitting ohne API-Umbau.
+function saveHofObjectsV2() { savePlaceObjects(); }
 
 function exportPlaceData() {
   const pos = AppState.db.placeObjects || {};

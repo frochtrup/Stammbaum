@@ -448,12 +448,49 @@ export function _grampsParseXMLText(xmlText) {
   }
 
   // hofObjects aus placeObjects ableiten (type=Building/Farm → Hof-Ansicht)
+  // Legacy ADR-026 addr-keyed Sidecar: title→{addr,lat,long} für Read-Pfade die
+  // auf addr-Key zugreifen (z.B. Writer-geoLines, hofMeta).
   const _HOF_PLACE_TYPES = new Set(['Building', 'Farm', 'Neighborhood']);
   const hofObjects = {};
   for (const pl of Object.values(placeObjects)) {
     if (_HOF_PLACE_TYPES.has(pl.type) && pl.lat != null && pl.long != null) {
       hofObjects[pl.title] = { addr: pl.title, lat: pl.lat, long: pl.long };
     }
+  }
+  // ADR-027 P2: parallel V2-hofObjects (id-keyed) für getHofRegistry.
+  // Lebt im selben Slot db.hofObjects neben den Legacy-addr-keyed-Einträgen — der
+  // V2-Shape-Filter (_isHofObjectV2) trennt sie sauber. Phase 3 wird die Legacy-
+  // Einträge entfernen und Events von Farm-PO auf Village-PO+hofId umhängen; in
+  // Phase 2 koexistieren beide, um GRAMPS-Roundtrip xml1===xml2 stabil zu halten.
+  const _farmPidToHofId = {};
+  for (const pl of Object.values(placeObjects)) {
+    if (pl.type !== 'Building' && pl.type !== 'Farm') continue;
+    const villageId = (pl.enclosedBy && pl.enclosedBy[0] && pl.enclosedBy[0].placeId)
+      || pl.parentId || null;
+    if (!villageId) continue;
+    const norm = (typeof _normHofAddr === 'function' ? _normHofAddr(pl.title) : (pl.title||'').toLowerCase())
+      .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    const vNorm = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+    const hofId = '_hof_' + (norm || 'x') + '_' + (vNorm || 'v');
+    if (hofObjects[hofId]) continue;       // Idempotent: schon erzeugt
+    const addrs = [{ value: pl.title, lang: 'deu',
+      dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }];
+    for (const pn of (pl.pnames || [])) {
+      if (pn.value && pn.value !== pl.title) {
+        addrs.push({ value: pn.value, lang: pn.lang || 'deu',
+          dateFrom: pn.dateFrom || null, dateTo: pn.dateTo || null,
+          dateType: pn.dateType || null, _dateRaw: pn._dateRaw || null });
+      }
+    }
+    hofObjects[hofId] = {
+      id: hofId, villageId, addrs,
+      lat: pl.lat, long: pl.long, note: '',
+      existsFrom: null, existsTo: null,
+      predecessor: null, successor: null,
+      _govId: null, _govTypes: null,
+      schemaVersion: 1,
+    };
+    _farmPidToHofId[pl.id] = hofId;
   }
 
   // ─── Build db ────────────────────────────────────────────────────────────
@@ -1036,6 +1073,24 @@ export function _grampsParseXMLText(xmlText) {
   // ─── Rebuild source ref sets ───────────────────────────────────────────────
   for (const p of Object.values(individuals)) _rebuildPersonSourceRefs(p);
   for (const f of Object.values(families))    _rebuildFamilySourceRefs(f);
+
+  // ADR-027 P2: hofId-Backfill für Events, deren placeId auf eine Farm/Building-PO zeigt.
+  // Setzt ev.hofId parallel zu ev.placeId; ev.placeId bleibt auf die Farm-PO (Phase 3
+  // wird auf villageId umhängen). In Phase 2 dürfen beide Felder koexistieren — der
+  // Writer geoLines bevorzugt hofId-Koords vor placeId-Koords (siehe gedcom-writer.js).
+  if (Object.keys(_farmPidToHofId).length) {
+    const _setHofIdOnEv = ev => {
+      if (ev && ev.placeId && _farmPidToHofId[ev.placeId]) ev.hofId = _farmPidToHofId[ev.placeId];
+    };
+    for (const p of Object.values(individuals)) {
+      [p.birth, p.chr, p.death, p.buri].forEach(_setHofIdOnEv);
+      (p.events || []).forEach(_setHofIdOnEv);
+    }
+    for (const f of Object.values(families)) {
+      [f.marr, f.engag, f.div, f.divf].forEach(_setHofIdOnEv);
+      (f.events || []).forEach(_setHofIdOnEv);
+    }
+  }
 
   // ─── idCounter ────────────────────────────────────────────────────────────
   let maxId = 1000;

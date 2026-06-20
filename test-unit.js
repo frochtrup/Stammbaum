@@ -417,7 +417,7 @@ var _UI_SUFFIX = [
   // Block (z) Toast-Once: savePlaceObjects + Reset-Hooks
   '    savePlaceObjects: savePlaceObjects,',
   '    _setIdbPut: function(fn) { idbPut = fn; },',
-  '    _resetToastFlags: function() { _savePoIDBErrored = false; _savePoODErrored = false; _placesLocalRev = 0; },',
+  '    _resetToastFlags: function() { _savePoIDBErrored = false; _savePoODErrored = false; _saveSchemaLockedToastShown = false; _placesLocalRev = 0; },',
   '  };',
   '})();',
 ].join('\n');
@@ -578,12 +578,18 @@ if (IS_NODE) {
     '_migrateHofObjectsToPlaceObjects: _migrateHofObjectsToPlaceObjects, _hofVillageId: _hofVillageId, ' +
     '_hofVillageString: _hofVillageString, _findVillagePO: _findVillagePO, _buildFormString: _buildFormString, ' +
     'hofMeta: hofMeta, _isFarmPlaceId: _isFarmPlaceId, upsertHofPO: upsertHofPO, _ensureHofFarmPO: _ensureHofFarmPO, ' +
+    // ADR-027 Phase 1: Hof-Entität als eigenständiges Objekt
+    'APP_KNOWN_SCHEMA_VERSION: APP_KNOWN_SCHEMA_VERSION, _normHofAddr: _normHofAddr, _isHofObjectV2: _isHofObjectV2, ' +
+    'getHofRegistry: getHofRegistry, mutateHofObject: mutateHofObject, upsertHofObject: upsertHofObject, ' +
+    'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
     // sie als var aus window.X übernehmen kann.
     'window.AppState = AppState; window.UIState = UIState;' +
     'window.getPlaceRegistry = getPlaceRegistry; window.setDb = setDb;' +
+    // ADR-027 P1: APP_KNOWN_SCHEMA_VERSION wird vom UI-Slice (PLACES_SCHEMA_VERSION-Alias) gebraucht
+    'window.APP_KNOWN_SCHEMA_VERSION = APP_KNOWN_SCHEMA_VERSION;' +
     'window._normPlaceName = _normPlaceName;' +
     'window._buildFormString = _buildFormString;' +
     'window.applyStringPlaceLink = applyStringPlaceLink;' +
@@ -4118,6 +4124,363 @@ group('(ai) PLACE-HIST Stufe 3 Hof-Reconcile (sw v1008)');
   var res = API.mergePlaceObjects('@V1@', ['@V2@']);
   eq(res.farmsMerged, 0, 'ai.distinct: verschiedene Höfe NICHT zusammengeführt');
   ok(!!db.placeObjects['@F1@'] && !!db.placeObjects['@F2@'], 'ai.distinct: beide Höfe erhalten');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (aj) ADR-027 Phase 1 — Hof-Entität: Schema-Konstante, Registry, Helpers
+// ═══════════════════════════════════════════════════════════════════════════
+group('(aj) ADR-027 P1 Hof-Entität');
+
+// Schema-Konstante korrekt gesetzt (Phase 1 Gate).
+(function() {
+  eq(API.APP_KNOWN_SCHEMA_VERSION, 2, 'aj-1: APP_KNOWN_SCHEMA_VERSION === 2');
+})();
+
+// _normHofAddr: NFC + casefold + ws-Squeeze (analog _normPlaceName).
+(function() {
+  eq(API._normHofAddr('Wall 33'), 'wall 33', 'aj-2a: casefold');
+  eq(API._normHofAddr('  Wall  33  '), 'wall 33', 'aj-2b: trim + ws-squeeze');
+  eq(API._normHofAddr(null), '', 'aj-2c: null → leer');
+  eq(API._normHofAddr('Straße 5'), API._normHofAddr('Straße 5'), 'aj-2d: deterministisch');
+})();
+
+// _isHofObjectV2: Shape-Filter trennt V2-Einträge von Legacy.
+(function() {
+  ok(API._isHofObjectV2({ id:'_hof_x', villageId:'_po_v', addrs:[] }),
+     'aj-3a: V2-Eintrag mit villageId + addrs[] → true');
+  ok(!API._isHofObjectV2({ addr:'Wall 33', lat:1, long:2, note:'' }),
+     'aj-3b: Legacy-addr-keyed → false');
+  ok(!API._isHofObjectV2(null), 'aj-3c: null → false');
+  ok(!API._isHofObjectV2({ villageId:'_po_v' }), 'aj-3d: addrs[] fehlt → false');
+  ok(!API._isHofObjectV2({ addrs:[] }), 'aj-3e: villageId fehlt → false');
+})();
+
+// getHofRegistry: leer bei leerer DB; Legacy-Einträge werden ignoriert.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{}, hofObjects:{
+    'Legacy Wall 33': { addr:'Legacy Wall 33', lat:1, long:2, note:'' },  // ADR-026-Shape
+  }});
+  var reg = API.getHofRegistry();
+  eq(Object.keys(reg.byId).length, 0, 'aj-4a: Legacy-Einträge nicht in byId');
+  eq(Object.keys(reg.byVillageId).length, 0, 'aj-4b: Legacy-Einträge nicht in byVillageId');
+})();
+
+// getHofRegistry: byId, byVillageId, findByAddr für V2-Einträge.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{
+    '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[] },
+  }, hofObjects:{
+    '_hof_wall_33': { id:'_hof_wall_33', villageId:'_po_ochtrup',
+      addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }],
+      lat:52.2, long:7.1, schemaVersion:1 },
+    '_hof_metelener_18': { id:'_hof_metelener_18', villageId:'_po_ochtrup',
+      addrs:[{ value:'Metelener Str. 18', dateFrom:null, dateTo:null }],
+      lat:52.21, long:7.18, schemaVersion:1 },
+  }});
+  var reg = API.getHofRegistry();
+  eq(Object.keys(reg.byId).length, 2, 'aj-5a: byId enthält 2 V2-Höfe');
+  eq(reg.byVillageId['_po_ochtrup'].length, 2, 'aj-5b: byVillageId gruppiert nach Dorf');
+  eq(reg.findByAddr('Wall 33'), '_hof_wall_33', 'aj-5c: findByAddr exact');
+  eq(reg.findByAddr('  WALL  33 '), '_hof_wall_33', 'aj-5d: findByAddr norm-fold');
+  eq(reg.findByAddr('Heideweg 99'), null, 'aj-5e: findByAddr unbekannt → null');
+})();
+
+// findByAddr Mehrdeutigkeit: zwei Höfe gleicher Adresse, beide aktiv → null.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{
+    '_po_v': { id:'_po_v', title:'Welbergen', type:'Town', pnames:[], enclosedBy:[] },
+  }, hofObjects:{
+    '_hof_a': { id:'_hof_a', villageId:'_po_v',
+      addrs:[{ value:'Heideweg', dateFrom:null, dateTo:null }], schemaVersion:1 },
+    '_hof_b': { id:'_hof_b', villageId:'_po_v',
+      addrs:[{ value:'Heideweg', dateFrom:null, dateTo:null }], schemaVersion:1 },
+  }});
+  var reg = API.getHofRegistry();
+  eq(reg.findByAddr('Heideweg'), null, 'aj-6a: Mehrdeutigkeit → null (Review-Pfad)');
+  eq(reg.findAllByAddr('Heideweg').length, 2, 'aj-6b: findAllByAddr listet beide Kandidaten');
+})();
+
+// findByAddr mit existsFrom/existsTo: Adress-Wiederverwendung über Zeit löst sich.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{
+    '_po_v': { id:'_po_v', title:'Welbergen', type:'Town', pnames:[], enclosedBy:[] },
+  }, hofObjects:{
+    '_hof_alt': { id:'_hof_alt', villageId:'_po_v', existsFrom:'1700', existsTo:'1900',
+      addrs:[{ value:'Heideweg', dateFrom:null, dateTo:null }], schemaVersion:1 },
+    '_hof_neu': { id:'_hof_neu', villageId:'_po_v', existsFrom:'1910', existsTo:null,
+      addrs:[{ value:'Heideweg', dateFrom:null, dateTo:null }], schemaVersion:1 },
+  }});
+  var reg = API.getHofRegistry();
+  eq(reg.findByAddr('Heideweg', 1850), '_hof_alt',
+     'aj-7a: existsTo=1900 → 1850 löst auf _hof_alt');
+  eq(reg.findByAddr('Heideweg', 1920), '_hof_neu',
+     'aj-7b: existsFrom=1910 → 1920 löst auf _hof_neu');
+  eq(reg.findByAddr('Heideweg', 1905), null,
+     'aj-7c: Zwischenzeit (1905) → keiner existiert → null');
+  eq(reg.findByAddr('Heideweg'), null,
+     'aj-7d: ohne Jahr → strikt-eindeutig-Regel → null (2 Kandidaten)');
+})();
+
+// resolveAddrAsOf: periodengerechte Adress-Bezeichnung.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{
+    '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[] },
+  }, hofObjects:{
+    '_hof_x': { id:'_hof_x', villageId:'_po_o', schemaVersion:1, addrs:[
+      { value:'Schulze-Hof',                 dateFrom:null,   dateTo:'1900' },
+      { value:'Metelener Str. 18',           dateFrom:'1900', dateTo:'1970' },
+      { value:'Wall 33 (Metelener Str. 18)', dateFrom:'1970', dateTo:null },
+    ]},
+  }});
+  var reg = API.getHofRegistry();
+  eq(reg.resolveAddrAsOf('_hof_x', 1850), 'Schulze-Hof',
+     'aj-8a: 1850 → Schulze-Hof (dateTo=1900)');
+  eq(reg.resolveAddrAsOf('_hof_x', 1950), 'Metelener Str. 18',
+     'aj-8b: 1950 → Metelener Str. 18');
+  eq(reg.resolveAddrAsOf('_hof_x', 2020), 'Wall 33 (Metelener Str. 18)',
+     'aj-8c: 2020 → Wall 33');
+  eq(reg.resolveAddrAsOf('_hof_x'), 'Schulze-Hof',
+     'aj-8d: ohne Jahr + nur datierte → Fallback addrs[0] (Schulze-Hof)');
+})();
+
+// Cache-Invalidierung: setDb invalidiert _hofRegistry.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{}, hofObjects:{
+    '_hof_a': { id:'_hof_a', villageId:'_po_v', addrs:[{value:'A',dateFrom:null,dateTo:null}], schemaVersion:1 },
+  }});
+  var r1 = API.getHofRegistry();
+  eq(Object.keys(r1.byId).length, 1, 'aj-9a: erstes Registry hat 1 Eintrag');
+  API.setDb({ individuals:{}, families:{}, placeObjects:{}, hofObjects:{} });
+  ok(API.UIState._hofRegistry == null, 'aj-9b: setDb invalidiert _hofRegistry');
+  var r2 = API.getHofRegistry();
+  eq(Object.keys(r2.byId).length, 0, 'aj-9c: zweites Registry leer (neue DB)');
+})();
+
+// mutateHofObject: ändert Eintrag, invalidiert Registry, gibt true zurück.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{}, hofObjects:{
+    '_hof_a': { id:'_hof_a', villageId:'_po_v', addrs:[{value:'A',dateFrom:null,dateTo:null}], note:'', schemaVersion:1 },
+  }});
+  API.getHofRegistry();  // Cache aufbauen
+  ok(API.UIState._hofRegistry != null, 'aj-10a: Cache vor mutate aktiv');
+  var ok1 = API.mutateHofObject('_hof_a', function(h) { h.note = 'neu'; });
+  eq(ok1, true, 'aj-10b: mutateHofObject gibt true zurück');
+  eq(API.AppState.db.hofObjects['_hof_a'].note, 'neu', 'aj-10c: Note geändert');
+  ok(API.UIState._hofRegistry == null, 'aj-10d: Cache nach mutate invalidiert');
+  // Non-existent ID
+  var ok2 = API.mutateHofObject('_hof_does_not_exist', function() {});
+  eq(ok2, false, 'aj-10e: mutateHofObject auf fehlende ID → false');
+  // Legacy-Eintrag (kein V2-Shape) → ignoriert
+  API.AppState.db.hofObjects['LegacyAddr'] = { addr:'LegacyAddr', lat:1, long:2 };
+  var ok3 = API.mutateHofObject('LegacyAddr', function() {});
+  eq(ok3, false, 'aj-10f: mutateHofObject auf Legacy-Eintrag → false (Shape-Filter)');
+})();
+
+// upsertHofObject: legt neuen Eintrag mit Default-Shape an.
+(function() {
+  API.setDb({ individuals:{}, families:{}, placeObjects:{}, hofObjects:{} });
+  var hofId = API.upsertHofObject('_hof_new', null, function(h) {
+    h.villageId = '_po_v';
+    h.addrs.push({ value:'Neuer Hof 1', dateFrom:null, dateTo:null });
+  });
+  eq(hofId, '_hof_new', 'aj-11a: upsertHofObject gibt ID zurück');
+  var h = API.AppState.db.hofObjects['_hof_new'];
+  eq(h.id, '_hof_new', 'aj-11b: ID gesetzt');
+  eq(h.villageId, '_po_v', 'aj-11c: villageId via fn gesetzt');
+  eq(h.addrs.length, 1, 'aj-11d: addrs via fn gefüllt');
+  eq(h.lat, null, 'aj-11e: lat default null');
+  eq(h.predecessor, null, 'aj-11f: predecessor default null (Schema-Feld vorhanden)');
+  eq(h.schemaVersion, 1, 'aj-11g: schemaVersion default 1');
+  // Zweiter upsert auf gleiche ID: mutiert statt anlegt
+  var hofId2 = API.upsertHofObject('_hof_new', null, function(h) { h.note = 'mutiert'; });
+  eq(hofId2, '_hof_new', 'aj-11h: zweiter upsert gibt gleiche ID zurück');
+  eq(API.AppState.db.hofObjects['_hof_new'].note, 'mutiert', 'aj-11i: zweiter upsert mutiert bestehend');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (ak) ADR-027 Phase 2 — Mapping-Layer: Writer + Link-Pass
+// ═══════════════════════════════════════════════════════════════════════════
+group('(ak) ADR-027 P2 Mapping-Layer');
+
+// buildPlacForGedcom Pfad 1 (V2-Hof): Hof-Adresse + Dorf-Hierarchie
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null, lat:52.2, long:7.18 },
+    },
+    hofObjects:{
+      '_hof_wall_33': { id:'_hof_wall_33', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[
+          { value:'Schulze-Hof', dateFrom:null, dateTo:'1900' },
+          { value:'Wall 33', dateFrom:'1970', dateTo:null },
+        ],
+        lat:52.21, long:7.19 },
+    },
+  });
+  var ev1850 = { hofId:'_hof_wall_33', placeId:'_po_ochtrup', date:'15 MAY 1850' };
+  var ev2020 = { hofId:'_hof_wall_33', placeId:'_po_ochtrup', date:'15 MAY 2020' };
+  eq(API.buildPlacForGedcom(ev1850, 1850), 'Schulze-Hof, Ochtrup',
+     'ak-1a: 1850 → Schulze-Hof + Dorf');
+  eq(API.buildPlacForGedcom(ev2020, 2020), 'Wall 33, Ochtrup',
+     'ak-1b: 2020 → Wall 33 + Dorf');
+})();
+
+// buildPlacForGedcom Pfad 2 (Legacy ADR-026 fallback)
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_farm_legacy': { id:'_po_farm_legacy', title:'Alter Hof 5', type:'Farm', pnames:[],
+        enclosedBy:[{ placeId:'_po_ochtrup', dateFrom:null, dateTo:null }], parentId:'_po_ochtrup' },
+    },
+    hofObjects:{},  // keine V2-Daten
+  });
+  var ev = { placeId:'_po_farm_legacy', date:'1900' };
+  eq(API.buildPlacForGedcom(ev, 1900), 'Alter Hof 5, Ochtrup',
+     'ak-2: Legacy Farm-PO → includeAddrLeaf preserves ADR-026-Verhalten');
+})();
+
+// buildPlacForGedcom ohne placeId/hofId → null
+(function() {
+  API.setDb({ individuals:{}, families:{}, extraPlaces:{}, placeObjects:{}, hofObjects:{} });
+  eq(API.buildPlacForGedcom({}, 1900), null, 'ak-3a: leerer ev → null');
+  eq(API.buildPlacForGedcom(null, 1900), null, 'ak-3b: null ev → null');
+})();
+
+// Link-Pass Pfad A: PLAC-Leitsegment „Wall 33, Ochtrup" → eindeutig auf Hof + Dorf
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'15 MAY 1970', place:'Wall 33, Ochtrup' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_wall_33': { id:'_hof_wall_33', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }], lat:null, long:null },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_wall_33', 'ak-4a: Pfad A setzt hofId');
+  eq(ev.placeId, '_po_ochtrup', 'ak-4b: Pfad A setzt placeId auf villageId');
+})();
+
+// Link-Pass Pfad A: Mehrdeutigkeit ohne Anker-Match → blockiert (rest matcht nicht)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1900', place:'Schmiede, Welbergen' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_welbergen': { id:'_po_welbergen', title:'Welbergen', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_schmiede_ochtrup': { id:'_hof_schmiede_ochtrup', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+      '_hof_schmiede_welbergen': { id:'_hof_schmiede_welbergen', villageId:'_po_welbergen', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_schmiede_welbergen',
+     'ak-5: Anker-Match disambiguiert — rest=Welbergen → Welbergen-Hof');
+})();
+
+// Link-Pass Pfad A: zwei Höfe gleicher Adresse im SELBEN Dorf → blockiert
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1900', place:'Heideweg, Welbergen' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_welbergen': { id:'_po_welbergen', title:'Welbergen', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_heide_a': { id:'_hof_heide_a', villageId:'_po_welbergen', schemaVersion:1,
+        addrs:[{ value:'Heideweg', dateFrom:null, dateTo:null }] },
+      '_hof_heide_b': { id:'_hof_heide_b', villageId:'_po_welbergen', schemaVersion:1,
+        addrs:[{ value:'Heideweg', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!ev.hofId, 'ak-6a: Pfad A bei gleichzeitiger Mehrdeutigkeit → hofId bleibt unbesetzt');
+})();
+
+// Link-Pass Pfad B: Konvention 2 — PLAC=Dorf, ADDR=Hof → erkannt im Dorf-Scope
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1900', place:'Ochtrup', addr:'Wall 33' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_wall_33': { id:'_hof_wall_33', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.placeId, '_po_ochtrup', 'ak-7a: Pfad B nutzt aufgelöstes placeId');
+  eq(ev.hofId, '_hof_wall_33', 'ak-7b: Pfad B setzt hofId via ev.addr');
+})();
+
+// Link-Pass Pfad B: Adresse existiert im falschen Dorf → kein Link
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1900', place:'Welbergen', addr:'Wall 33' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup':   { id:'_po_ochtrup',   title:'Ochtrup',   type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_welbergen': { id:'_po_welbergen', title:'Welbergen', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_wall_33': { id:'_hof_wall_33', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.placeId, '_po_welbergen', 'ak-8a: Pfad B respektiert Dorf-Scope (Welbergen aufgelöst)');
+  ok(!ev.hofId, 'ak-8b: Hof in anderem Dorf → kein hofId-Set');
+})();
+
+// Phase 2 ohne hofObjects-Daten: bestehender Place-Link unverändert (Backward-Kompat)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1900', place:'Berlin' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_berlin': { id:'_po_berlin', title:'Berlin', type:'City', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.placeId, '_po_berlin', 'ak-9a: Place-Link funktioniert ohne Hof-Daten');
+  ok(!ev.hofId, 'ak-9b: ohne Hof-Daten → kein hofId');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

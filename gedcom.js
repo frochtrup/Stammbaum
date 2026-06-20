@@ -5,9 +5,17 @@
 // Backward-compat-Shims (unten) leiten bare Variablennamen zu den Namespaces um,
 // sodass bestehende Aufrufer ohne Änderung weiter funktionieren.
 
+// ADR-027 Phase 1: orte.json Schema-Version, die diese App schreibt + akzeptiert.
+// Eine Datei mit höherem _schemaVersion → Schema-Refusal (Read-Only-Modus, kein
+// Save), damit ein offline-eingefrorenes Gerät keine neuere Datei zerschießt.
+// Auto-Reload (sw v1019) sorgt für zeitnahe App-Aktualität auf aktiven Geräten.
+const APP_KNOWN_SCHEMA_VERSION = 2;
+
 const AppState = {
   db:               { individuals: {}, families: {}, sources: {}, extraPlaces: {}, hofObjects: {}, repositories: {}, notes: {}, placForm: '', extraRecords: [], headLines: [], gedVersion: 'unknown' },
   changed:          false,
+  _schemaLocked:    false,       // ADR-027 P1: true wenn geladene orte.json neuer als APP_KNOWN_SCHEMA_VERSION → Saves gesperrt
+  _schemaLockedVersion: null,    // ADR-027 P1: das Datei-Schema, das zur Sperre geführt hat (für User-Info)
   idCounter:        1000,
   currentPersonId:  null,
   currentFamilyId:  null,
@@ -37,6 +45,7 @@ const UIState = {
   _pendingFfState:  null,        // { slot, id, husb, wife, … } — gesetzt vor showPersonForm() aus Familienformular
   _placesCache:       null,      // Cache für collectPlaces(); wird in markChanged() geleert
   _placeRegistry:     null,      // PLACE-HIST (ADR-024): Cache für getPlaceRegistry(); in setDb geleert
+  _hofRegistry:       null,      // ADR-027 P1: Cache für getHofRegistry(); in setDb + mutateHofObject geleert
   _hofCache:          null,      // Cache für buildHofIndex(); wird in markChanged() geleert
   _personSortCache:   null,      // { mode, count, sorted } — ungefilterte Personenliste sortiert; in markChanged() + _finishLoad geleert
   _searchIndexDirty:  true,      // true = p._searchStr muss neu aufgebaut werden
@@ -72,6 +81,7 @@ function setDb(newDb) {
   _migratePlaceObjects(AppState.db);              // PLACE-HIST (ADR-024): Altdaten parentId→enclosedBy
   _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3: extraPlaces→placeObjects (idempotent)
   UIState._placeRegistry = null;                  // Registry beim DB-Wechsel invalidieren
+  UIState._hofRegistry   = null;                  // ADR-027 P1: Hof-Registry beim DB-Wechsel invalidieren
 }
 
 // Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
@@ -1100,6 +1110,42 @@ function _buildFormString(placeId, year, opts) {
   return _skipLeaf ? null : (_atomic(reg.resolveAsOf(placeId, year)) || null);
 }
 
+// ADR-027 Phase 2: GEDCOM-PLAC-String aus (placeId, hofId, year) bauen.
+// Zwei Pfade orthogonal nach Datenstand:
+//   1. ev.hofId gesetzt + V2-hofObject vorhanden (ADR-027-Welt nach Phase-3-Migration):
+//      Adresse aus hof.addrs (periodengerecht via resolveAddrAsOf) + Dorf-Hierarchie
+//      aus _buildFormString(hof.villageId) — Hof-Blatt erscheint genau einmal in PLAC.
+//   2. ev.hofId fehlt (Phase-2-Realität ohne migrierte Daten oder Events ohne Hof):
+//      Legacy-Pfad _buildFormString(ev.placeId, includeAddrLeaf:true) — preserviert
+//      das ADR-026-Verhalten byte-genau (Farm-PO als PLAC-Leitsegment).
+// Phase 4 wird Zweig 2 entfernen, sobald Migration garantiert hat dass Höfe nie mehr
+// in placeObjects.type=Farm stehen.
+function buildPlacForGedcom(ev, year) {
+  if (!ev) return null;
+  // Pfad 1 — ADR-027: Hof + Dorf
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]) {
+    const hof = AppState.db.hofObjects[ev.hofId];
+    if (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(hof)) {
+      const reg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
+      const hofAddr = reg ? reg.resolveAddrAsOf(ev.hofId, year) : '';
+      // Dorf-Hierarchie WITHOUT includeAddrLeaf — sauberer ADR-027-Pfad, weil das Dorf
+      // selbst keine Farm/Building ist. Wenn die villageId fehlt oder unauflösbar:
+      // nur Hof-Adresse zurückgeben (besser als nichts).
+      let villagePart = null;
+      if (hof.villageId && typeof _buildFormString === 'function') {
+        villagePart = _buildFormString(hof.villageId, year);  // ohne opts → Default-Verhalten
+      }
+      if (hofAddr && villagePart) return hofAddr + ', ' + villagePart;
+      return hofAddr || villagePart || null;
+    }
+  }
+  // Pfad 2 — Legacy ADR-026: includeAddrLeaf preserviert Farm-PO-als-Blatt-Verhalten.
+  if (ev.placeId && typeof _buildFormString === 'function') {
+    return _buildFormString(ev.placeId, year, { includeAddrLeaf: true });
+  }
+  return null;
+}
+
 // Berechnet Ergebnis-Gruppen für den String→PlaceObject Link-Dialog.
 // Gruppiert alle betroffenen Events nach ihrem resultierenden _buildFormString-Wert.
 // Gibt [{str, count, yearMin, yearMax, noDate}] sortiert nach Jahresminimum zurück.
@@ -1177,14 +1223,92 @@ function applyStringPlaceLink(sourceNames, targetPlaceId, confirmedStrs) {
 function _linkGedcomEventsToPlaceObjects(db) {
   if (!db) return 0;
   const reg = getPlaceRegistry();
+  // ADR-027 P2: HofRegistry parallel — kann leer sein in Phase 2 (vor Phase-3-Migration);
+  // dann sind alle Hof-Pfade No-Ops und Verhalten ist byte-identisch mit ADR-024.
+  const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
+  const hofRegHasData = hofReg && Object.keys(hofReg.byId).length > 0;
   if (!reg || !Object.keys(reg.byId).length) return 0;
-  let linked = 0, recollapsed = 0;
+  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0;
   const _project = (pid, year) =>
     (typeof _buildFormString === 'function' && _buildFormString(pid, year))
     || reg.resolveAsOf(pid, year) || null;
-  const _link = ev => {
-    if (!ev || ev.placeId || !ev.place) return;
-    const year = _placeYear(ev.date);
+  // ADR-027 P2: Anker-Check für Pfad A — mindestens ein rest-Segment muss in der
+  // Vorfahren-Hierarchie von hof.villageId auftauchen (Norm-Match). Verhindert
+  // Cross-Dorf-Fehlzuordnung (gleicher Hofname „Schmiede" in zwei Dörfern → ein
+  // Treffer pro Dorf, Anker disambiguiert).
+  const _villageAnchorMatches = (villageId, restSegs, year) => {
+    if (!villageId || !restSegs.length) return false;
+    const tokens = new Set();
+    const _addPo = pid => {
+      const _po = reg.byId[pid]; if (!_po) return;
+      if (_po.title) tokens.add(_normPlaceName(_po.title));
+      for (const pn of _po.pnames || []) if (pn.value) tokens.add(_normPlaceName(pn.value));
+    };
+    _addPo(villageId);                          // Dorf selbst zählt — rest-Segment darf Dorfname sein
+    const seen = new Set([villageId]);
+    let curId = villageId, hops = 0;
+    while (hops++ < 12) {
+      const _po = reg.byId[curId]; if (!_po) break;
+      let nextId = null;
+      if (year != null) {
+        const w = reg.enclosureWinnerAsOf(curId, year);
+        nextId = w.enc && w.enc.placeId;
+      }
+      if (!nextId) {
+        const encs = _po.enclosedBy || [];
+        nextId = (encs[0] && encs[0].placeId) || _po.parentId || null;
+      }
+      if (!nextId || seen.has(nextId)) break;
+      seen.add(nextId); _addPo(nextId); curId = nextId;
+    }
+    for (const seg of restSegs) {
+      if (tokens.has(_normPlaceName(seg))) return true;
+    }
+    return false;
+  };
+  // ADR-027 P2 Pfad A: PLAC-Leitsegment matcht hof.addrs[].value → Hof + Dorf erkannt.
+  // Voraussetzung: ev.place ist Komma-Hierarchie (sonst ist Pfad A nicht anwendbar —
+  // Fall 1 atomar greift im Hauptpfad). Eindeutigkeit: genau ein hofObject darf nach
+  // Anker-Check matchen. Mehrdeutigkeit (zwei Schmiede-Höfe, beide mit passendem Dorf)
+  // blockiert Auto-Link → bewusster Review-Pfad in Phase 5.
+  const _tryHofPlacLink = (ev, year) => {
+    if (!hofRegHasData || ev.placeId || ev.hofId || !ev.place || !ev.place.includes(',')) return false;
+    const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
+    if (segs.length < 2) return false;
+    const lead = segs[0], rest = segs.slice(1);
+    const cands = hofReg.findAllByAddr(lead, year);
+    if (!cands.length) return false;
+    let winner = null, multi = false;
+    for (const hofId of cands) {
+      const hof = hofReg.byId[hofId];
+      if (!hof) continue;
+      if (!_villageAnchorMatches(hof.villageId, rest, year)) continue;
+      if (winner) { multi = true; break; }
+      winner = hofId;
+    }
+    if (!winner || multi) return false;
+    ev.hofId = winner;
+    ev.placeId = hofReg.byId[winner].villageId;
+    linkedHofPlac++;
+    return true;
+  };
+  // ADR-027 P2 Pfad B: ev.addr matcht hof.addrs[].value innerhalb des bereits
+  // verlinkten ev.placeId-Dorfs → Hof erkannt ohne PLAC-Leitsegment.
+  // Konvention 2 (MyHeritage/GRAMPS-Export): „PLAC Dorf, … + ADDR Hof". Eindeutigkeit
+  // im Dorf-Scope ist die Regel.
+  const _tryHofAddrLink = (ev, year) => {
+    if (!hofRegHasData || ev.hofId || !ev.placeId || !ev.addr) return false;
+    const candsByAddr = hofReg.findAllByAddr(ev.addr, year);
+    if (!candsByAddr.length) return false;
+    // Intersect: nur Höfe deren villageId === ev.placeId
+    const inVillage = candsByAddr.filter(id => hofReg.byId[id]?.villageId === ev.placeId);
+    if (inVillage.length !== 1) return false;
+    ev.hofId = inVillage[0];
+    linkedHofAddr++;
+    return true;
+  };
+  const _placeLink = (ev, year) => {
+    if (ev.placeId || !ev.place) return;
     if (!ev.place.includes(',')) {
       // Fall 1: atomarer Cache-String → placeObject per Identität, dann kollabieren.
       const pid = reg.findByName(ev.place);
@@ -1281,6 +1405,18 @@ function _linkGedcomEventsToPlaceObjects(db) {
       }
     }
   };
+  // ADR-027 P2: Top-Level-Link-Funktion. Reihenfolge ist deterministisch:
+  //   1. Pfad A (PLAC-Leitsegment → Hof + Dorf in einem Schritt)
+  //   2. Bestehender Place-Link (Fall 1 / Fall 2a / Fall 2b)
+  //   3. Pfad B (ADDR im Dorf-Scope → Hof)
+  // In Phase 2 sind 1+3 No-Ops bis Phase-3-Migration Hof-Daten liefert.
+  const _link = ev => {
+    if (!ev) return;
+    const year = _placeYear(ev.date);
+    if (_tryHofPlacLink(ev, year)) return;     // Pfad A: setzt placeId + hofId
+    _placeLink(ev, year);                      // bestehender Place-Link
+    _tryHofAddrLink(ev, year);                 // Pfad B: setzt hofId wenn ev.addr matcht
+  };
   for (const p of Object.values(db.individuals || {})) {
     [p.birth, p.chr, p.death, p.buri].forEach(_link);
     (p.events || []).forEach(_link);
@@ -1290,15 +1426,19 @@ function _linkGedcomEventsToPlaceObjects(db) {
     (f.events || []).forEach(_link);
   }
   // JXA-Falle: console.info existiert nicht im Unit-Harness → Fallback (vgl. console.warn).
-  if (linked) {
+  if (linked || linkedHofPlac || linkedHofAddr) {
     const _info = (typeof console !== 'undefined' && console.info) ? console.info
                 : (typeof console !== 'undefined' && console.log) ? console.log : null;
-    _info && _info(`[PLACE] ${linked} GEDCOM-Events verknüpft, ${recollapsed} neu kollabiert`);
+    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofAddr} Höfe (ADDR), ${recollapsed} neu kollabiert`);
   }
-  if (recollapsed) {
+  if (recollapsed || linkedHofPlac || linkedHofAddr) {
     UIState._placesCache = null; UIState._placeRegistry = null;
+    UIState._hofRegistry = null;
     if (typeof markChanged === 'function') markChanged();
   }
+  // Total-Mutations-Counter für die Lade-Meldung; recollapsed bleibt im Bewertungs-Kanal,
+  // Hof-Treffer werden separat gezählt (storage-file.js liest diese Zähler aus AppState).
+  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofAddr, recollapsed };
   return recollapsed;
 }
 
@@ -1476,6 +1616,148 @@ function upsertPlaceObject(id, makeNew, fn) {
   if (typeof markChanged      === 'function') markChanged();
   if (typeof savePlaceObjects === 'function') savePlaceObjects();
   return po.id;
+}
+
+// ─── ADR-027 Phase 1: Hof-Entität — Registry + Mutations-Helper ──────────────
+// Hof-Adressen werden mit derselben Norm-Form wie Ortsnamen identifiziert,
+// damit „Wall 33" und „wall 33 " als gleich erkannt werden. Unicode-NFC +
+// casefold + ws-Squeeze; verlustfrei für Anzeige (Original bleibt in addrs[].value).
+function _normHofAddr(s) {
+  if (!s) return '';
+  return String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Phase-1-Shape-Filter: nur ADR-027-konforme Einträge (id-keyed mit villageId
+// + addrs[]). Legacy-ADR-026-Einträge (addr-keyed mit {addr,lat,long,note})
+// werden ignoriert, weil sie keine gültigen hofObject-IDs sind. Trennt die
+// neue Welt sauber, bis die Phase-3-Migration die Legacy-Einträge ersetzt.
+function _isHofObjectV2(o) {
+  return !!(o && typeof o === 'object' && typeof o.villageId === 'string' && Array.isArray(o.addrs));
+}
+
+// Lazy gecachte HofRegistry über AppState.db.hofObjects (nur V2-Shape):
+//   byId           : hofId → hofObject
+//   byVillageId    : villageId → [hofId, ...]
+//   byNorm         : norm(addr) → erste hofId (Rückwärtskompat)
+//   byNormAll      : norm(addr) → ALLE hofIds (Disambiguierung gleicher Adresse)
+//   findByAddr(addr, year)              → hofId | null (erste eindeutige Auflösung zum Jahr)
+//   findAllByAddr(addr, year)           → hofIds[] (alle Kandidaten mit zum Jahr passender addrs[]-Bezeichnung)
+//   resolveAddrAsOf(hofId, year)        → periodenkorrekte Adress-Bezeichnung (analog placeRegistry.resolveAsOf)
+function getHofRegistry() {
+  if (UIState._hofRegistry) return UIState._hofRegistry;
+  const hofs = (AppState.db && AppState.db.hofObjects) || {};
+  const byId = {}, byVillageId = {}, byNorm = {}, byNormAll = {};
+  for (const [id, h] of Object.entries(hofs)) {
+    if (!_isHofObjectV2(h)) continue;          // Legacy-Einträge ignorieren
+    byId[id] = h;
+    (byVillageId[h.villageId] || (byVillageId[h.villageId] = [])).push(id);
+    const seen = new Set();
+    for (const a of h.addrs) {
+      const k = _normHofAddr(a && a.value);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      if (!(k in byNorm)) byNorm[k] = id;
+      (byNormAll[k] || (byNormAll[k] = [])).push(id);
+    }
+  }
+  const _yearOf = y => (typeof y === 'number' ? y : _placeYear(y));
+  const _dateMatches = (from, to, y) =>
+    (from == null && to == null) ? true              // undatiert = jederzeit gültig
+    : (from == null || y >= from) && (to == null || y <= to);
+  // Existenzspanne-Check (analog placeRegistry-Knoten): Hof außerhalb seiner Lebenszeit
+  // matcht nicht — verhindert Auto-Link auf nicht-existente Höfe (ADR-027 „Was als
+  // mehrdeutig gilt", Adress-Wiederverwendung über Zeit).
+  const _hofAliveAt = (h, y) => {
+    if (y == null) return true;
+    const ef = _placeYear(h.existsFrom), et = _placeYear(h.existsTo);
+    if (ef != null && y < ef) return false;
+    if (et != null && y > et) return false;
+    return true;
+  };
+  const reg = {
+    byId, byVillageId, byNorm, byNormAll,
+    findByAddr(addr, year) {
+      const all = reg.findAllByAddr(addr, year);
+      return all.length === 1 ? all[0] : null;       // strikt eindeutig — Mehrdeutigkeit → Review-Pfad
+    },
+    findAllByAddr(addr, year) {
+      const k = _normHofAddr(addr);
+      const ids = (k && byNormAll[k]) ? byNormAll[k] : [];
+      if (!ids.length) return [];
+      const y = _yearOf(year);
+      const out = [];
+      for (const id of ids) {
+        const h = byId[id];
+        if (!_hofAliveAt(h, y)) continue;
+        // Wenn ein Jahr gefragt: addr-Eintrag muss zum Jahr passen (datiert oder undatiert)
+        if (y != null) {
+          const okAddr = h.addrs.some(a =>
+            _normHofAddr(a.value) === k && _dateMatches(_placeYear(a.dateFrom), _placeYear(a.dateTo), y));
+          if (!okAddr) continue;
+        }
+        out.push(id);
+      }
+      return out;
+    },
+    resolveAddrAsOf(hofId, year) {
+      const h = byId[hofId];
+      if (!h) return null;
+      const y = _yearOf(year);
+      if (y != null) {
+        // Bei Überlappungen: neuester Eintrag (höchstes dateFrom) gewinnt — analog placeRegistry.resolveAsOf
+        let bestFrom = -Infinity, bestVal = null;
+        for (const a of h.addrs) {
+          const fromY = _placeYear(a.dateFrom), toY = _placeYear(a.dateTo);
+          if (fromY == null && toY == null) continue;       // undatiert nur als Fallback
+          if (!_dateMatches(fromY, toY, y)) continue;
+          const f = fromY ?? -Infinity;
+          if (f > bestFrom) { bestFrom = f; bestVal = a.value; }
+        }
+        if (bestVal) return bestVal;
+      }
+      // Fallback: erste undatierte Bezeichnung, sonst erste überhaupt
+      const undated = h.addrs.find(a => a.dateFrom == null && a.dateTo == null);
+      return (undated && undated.value) || (h.addrs[0] && h.addrs[0].value) || '';
+    },
+  };
+  UIState._hofRegistry = reg;
+  return reg;
+}
+
+// Mutations-Helper analog mutatePlaceObject — verriegelt das 4-Schritt-Ritual
+// (mutate + Cache-Invalidate + markChanged + Persistenz). Gibt true zurück, wenn
+// fn ausgeführt wurde, false wenn hofObject fehlt oder nicht V2-Shape ist.
+function mutateHofObject(id, fn) {
+  const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+  if (!_isHofObjectV2(hofs[id])) return false;
+  fn(hofs[id]);
+  UIState._hofRegistry = null;
+  UIState._hofCache    = null;
+  if (typeof markChanged      === 'function') markChanged();
+  if (typeof saveHofObjectsV2 === 'function') saveHofObjectsV2();
+  return true;
+}
+
+// Pendant zu upsertPlaceObject — wenn id schon existiert, wie mutateHofObject;
+// sonst legt es ein neues hofObject an und übergibt es an fn. Gibt die hofId zurück.
+function upsertHofObject(id, makeNew, fn) {
+  const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+  let h = _isHofObjectV2(hofs[id]) ? hofs[id] : null;
+  if (!h) {
+    h = makeNew ? makeNew() : {
+      id, villageId: '', addrs: [], lat: null, long: null, note: '',
+      existsFrom: null, existsTo: null, predecessor: null, successor: null,
+      _govId: null, _govTypes: null, schemaVersion: 1,
+    };
+    hofs[h.id || id] = h;
+    if (!h.id) h.id = id;
+  }
+  if (typeof fn === 'function') fn(h);
+  UIState._hofRegistry = null;
+  UIState._hofCache    = null;
+  if (typeof markChanged      === 'function') markChanged();
+  if (typeof saveHofObjectsV2 === 'function') saveHofObjectsV2();
+  return h.id;
 }
 
 // ─── PLACE-HIST (ADR-024, P0b-2): Dubletten-Erkennung + Merge ────────────────

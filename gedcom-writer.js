@@ -14,20 +14,28 @@ function _g7WriteSchma(lines) {
     lines.push(`2 TAG ${t} ${_base}/${t}`);
 }
 
-// Periodenkorrekter Ortsname für GEDCOM-Export (ADR-024 resolveAsOf).
-// Nur aktiv wenn ev.placeId gesetzt (GRAMPS-Quelle); GEDCOM-Roundtrip unberührt (kein placeId).
+// Periodenkorrekter Ortsname für GEDCOM-Export (ADR-024 resolveAsOf, ADR-027 P2).
+// Nur aktiv wenn ev.placeId ODER ev.hofId gesetzt. GEDCOM-Roundtrip unberührt für
+// Events ohne placeId/hofId (atomarer Cache-String).
+//
+// ADR-027 P2: buildPlacForGedcom handhabt beide Pfade:
+//   - ev.hofId + V2-Hof → Adresse (hof.addrs) + Dorf-Hierarchie (_buildFormString
+//     auf hof.villageId)
+//   - ev.placeId ohne hofId → Legacy-Pfad inkl. ADR-026 Farm-PO-includeAddrLeaf
+// GEDCOM-Konvention: PLAC muss das Hof-Blatt enthalten, weil 2 MAP/LATI/LONG sich
+// auf PLAC bezieht — ohne Hof als Blatt würden Hof-Koords fälschlich am Dorf hängen.
 function _resolvedPlaceName(obj) {
-  if (obj.placeId && typeof getPlaceRegistry === 'function') {
+  if (!obj) return null;
+  if (obj.hofId || obj.placeId) {
     const year = typeof _placeYear === 'function' ? _placeYear(obj.date) : null;
-    if (typeof _buildFormString === 'function') {
-      // GEDCOM-Konvention: Hof-Blatt MUSS in PLAC erscheinen, weil 2 MAP/LATI/LONG
-      // sich auf PLAC bezieht — ohne den Hof als Blatt würden Hof-spezifische
-      // Koordinaten fälschlich an das umschließende Dorf gebunden (v1018).
-      const fs = _buildFormString(obj.placeId, year, { includeAddrLeaf: true });
+    if (typeof buildPlacForGedcom === 'function') {
+      const fs = buildPlacForGedcom(obj, year);
       if (fs) return fs;
     }
-    const resolved = getPlaceRegistry().resolveAsOf(obj.placeId, year);
-    if (resolved) return resolved;
+    if (obj.placeId && typeof getPlaceRegistry === 'function') {
+      const resolved = getPlaceRegistry().resolveAsOf(obj.placeId, year);
+      if (resolved) return resolved;
+    }
   }
   return obj.place;
 }
@@ -217,19 +225,34 @@ function writeCHAN(lines, obj, lv = 1) {
 //   zurückliest.
 function geoLines(lines, obj, indent, useExtraPlaces = true) {
   let lati = null, long = null, fromModel = false;
-  // 0. placeId → placeObject-Koordinaten (ADR-026: Farm-/Orts-PO ist single source).
+  // 0a. ADR-027 P2: ev.hofId → V2-hofObject-Koordinaten gewinnen über placeId, weil
+  //     ein Event am Hof per Definition Hof-spezifische Koords trägt. Nur wenn sie
+  //     von obj.lati abweichen oder obj.lati fehlt (analog 0b). V2-Shape-Check
+  //     verhindert, dass Legacy-addr-keyed-Einträge versehentlich getroffen werden.
+  if (obj?.hofId && AppState.db?.hofObjects?.[obj.hofId]
+      && typeof _isHofObjectV2 === 'function' && _isHofObjectV2(AppState.db.hofObjects[obj.hofId])) {
+    const hof = AppState.db.hofObjects[obj.hofId];
+    if (hof.lat != null && (obj.lati == null || hof.lat !== obj.lati || hof.long !== obj.long)) {
+      lati = hof.lat; long = hof.long; fromModel = true;
+    }
+  }
+  // 0b. placeId → placeObject-Koordinaten (ADR-026: Farm-/Orts-PO ist single source).
   //    Nur wenn sie von obj.lati ABWEICHEN (editierte Koord) oder obj.lati fehlt —
   //    bei Gleichheit fällt es auf Schritt 3 durch (byte-genauer _latiStr-Roundtrip).
-  if (obj?.placeId && AppState.db?.placeObjects?.[obj.placeId]) {
+  if (lati === null && obj?.placeId && AppState.db?.placeObjects?.[obj.placeId]) {
     const po = AppState.db.placeObjects[obj.placeId];
     if (po.lat != null && (obj.lati == null || po.lat !== obj.lati || po.long !== obj.long)) {
       lati = po.lat; long = po.long; fromModel = true;
     }
   }
-  // 1. Hof-Koordinaten (spezifischer als Ortsregister)
+  // 1. Legacy-Hof-Koordinaten (ADR-026 addr-keyed Sidecar; spezifischer als Ortsregister)
   if (lati === null && obj?.addr) {
     const hm = AppState.db?.hofObjects?.[obj.addr.trim()];
-    if (hm?.lat != null) { lati = hm.lat; long = hm.long; }
+    // V2-Shape-Filter: keinen V2-Hof zufällig per addr-Key matchen (verhindert
+    // Cross-Talk zwischen Phase-1-V2-Einträgen und Legacy-addr-Keys).
+    if (hm?.lat != null && (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(hm))) {
+      lati = hm.lat; long = hm.long;
+    }
   }
   // 2. Ortsregister (nur für strukturierte Events): placeObjects primär (P2 Item 7),
   //    extraPlaces als Legacy-Fallback für Altbestände vor erster Migration.
