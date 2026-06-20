@@ -537,7 +537,14 @@ if (IS_NODE) {
   API.grampsBuild = _ctx._grampsBuildXMLText;
 } else {
   window       = this;
-  localStorage = { getItem: function() { return null; }, setItem: function() {}, removeItem: function() {} };
+  localStorage = (function() {
+    var _m = {};
+    return {
+      getItem:    function(k) { return _m[k] == null ? null : _m[k]; },
+      setItem:    function(k, v) { _m[k] = String(v); },
+      removeItem: function(k) { delete _m[k]; },
+    };
+  })();
   performance  = { now: function() { return Date.now(); } };
   document     = _docStub;
   DOMParser    = _MiniDOMParser;
@@ -583,6 +590,9 @@ if (IS_NODE) {
     'getHofRegistry: getHofRegistry, mutateHofObject: mutateHofObject, upsertHofObject: upsertHofObject, ' +
     'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
     '_migrateFarmPOsToHofObjects: _migrateFarmPOsToHofObjects, _migrateHofObjectsBackToFarmPOs: _migrateHofObjectsBackToFarmPOs, ' +
+    '_findUnresolvedHofEvents: _findUnresolvedHofEvents, _countUnresolvedHofEvents: _countUnresolvedHofEvents, ' +
+    '_eventReviewKey: _eventReviewKey, _ignoreHofReviewEvent: _ignoreHofReviewEvent, ' +
+    '_unignoreHofReviewEvent: _unignoreHofReviewEvent, applyHofToEvent: applyHofToEvent, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -4580,6 +4590,85 @@ group('(al) ADR-027 P3 Migration');
   eq(c.long, 7.99,  'al-6b: _eventCoords: hofId-Koords gewinnen (long)');
   var c2 = API._eventCoords({ placeId:'_po_ochtrup' });
   eq(c2.lati, 52.2, 'al-6c: ohne hofId → village-Koords');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (am) ADR-027 Phase 5 — Hof-Review-Datenschicht
+// ═══════════════════════════════════════════════════════════════════════════
+group('(am) ADR-027 P5 Hof-Review');
+
+// _findUnresolvedHofEvents listet Events mit ev.addr und ohne ev.hofId
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Hans Test', birth:{}, chr:{}, death:{}, buri:{}, events:[
+        { type:'RESI', date:'1900', addr:'Wall 33', place:'Ochtrup', placeId:'_po_ochtrup', hofId:null },
+        { type:'PROP', date:'1910', addr:'Wall 33', place:'Ochtrup', placeId:'_po_ochtrup', hofId:'_hof_x' },  // bereits verknüpft
+        { type:'OCCU', date:'1900', addr:'', place:'Ochtrup' },  // kein addr
+      ]},
+    },
+    families:{}, extraPlaces:{}, placeObjects:{}, hofObjects:{},
+  });
+  var rows = API._findUnresolvedHofEvents(API.AppState.db);
+  eq(rows.length, 1, 'am-1a: nur Events mit ev.addr + ohne ev.hofId zählen');
+  eq(rows[0].pid, '@I1@', 'am-1b: pid korrekt');
+  eq(rows[0].addr, 'Wall 33', 'am-1c: addr korrekt');
+  eq(rows[0].evType, 'RESI', 'am-1d: evType korrekt');
+})();
+
+// _eventReviewKey: deterministisch + stabil
+(function() {
+  var k1 = API._eventReviewKey('@I1@', 'RESI', 'Wall 33', '1900');
+  var k2 = API._eventReviewKey('@I1@', 'RESI', '  Wall 33  ', '1900');  // trim
+  var k3 = API._eventReviewKey('@I2@', 'RESI', 'Wall 33', '1900');      // andere pid
+  eq(k1, k2, 'am-2a: addr wird getrimmt → gleicher Key');
+  ok(k1 !== k3, 'am-2b: andere pid → anderer Key');
+})();
+
+// Ignore-Mechanik: ignorierte Events fallen aus dem Review heraus
+(function() {
+  // Frische DB ohne Datei-Namen — Ignore-Speicher per Datei. Hier nutzen wir den
+  // synthetic-leeren-Namen-Modus (gleiche Schlüssel-Domain).
+  API.AppState._currentFilename = 'phase5_test_' + Date.now();
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'X', birth:{}, chr:{}, death:{}, buri:{}, events:[
+        { type:'RESI', date:'1900', addr:'Adresse A' },
+        { type:'RESI', date:'1900', addr:'Adresse B' },
+      ]},
+    },
+    families:{}, extraPlaces:{}, placeObjects:{}, hofObjects:{},
+  });
+  eq(API._countUnresolvedHofEvents(), 2, 'am-3a: 2 ungelöst');
+  var keyA = API._eventReviewKey('@I1@', 'RESI', 'Adresse A', '1900');
+  API._ignoreHofReviewEvent(keyA);
+  eq(API._countUnresolvedHofEvents(), 1, 'am-3b: nach Ignore → 1 ungelöst');
+  API._unignoreHofReviewEvent(keyA);
+  eq(API._countUnresolvedHofEvents(), 2, 'am-3c: nach Unignore → wieder 2');
+})();
+
+// applyHofToEvent: setzt hofId + placeId (wenn leer), markChanged
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_v': { id:'_po_v', title:'Welbergen', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_a': { id:'_hof_a', villageId:'_po_v', schemaVersion:1,
+        addrs:[{ value:'Heideweg 5', dateFrom:null, dateTo:null }], lat:52.1, long:7.2 },
+    },
+  });
+  var ev = { type:'RESI', addr:'Heideweg 5' };
+  var ok1 = API.applyHofToEvent(ev, '_hof_a');
+  eq(ok1, true, 'am-4a: applyHofToEvent returns true');
+  eq(ev.hofId, '_hof_a', 'am-4b: hofId gesetzt');
+  eq(ev.placeId, '_po_v', 'am-4c: placeId auf villageId nachgesetzt');
+  // Auf nicht-V2-Eintrag → false
+  API.AppState.db.hofObjects['Legacy'] = { addr:'Legacy', lat:1, long:2 };
+  var ev2 = { type:'RESI', addr:'Legacy' };
+  var ok2 = API.applyHofToEvent(ev2, 'Legacy');
+  eq(ok2, false, 'am-4d: non-V2 → false');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

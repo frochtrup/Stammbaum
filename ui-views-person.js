@@ -623,6 +623,9 @@ function _pdetLifeData(p, id) {
   );
   // Hof-Notiz-Dedup: pro Adresse nur einmal anzeigen
   const _shownAddrNotes = new Set();
+  // ADR-027 P5: Ignore-Set der Review-Funktion einmal laden (pro Render-Pass),
+  // damit der ⚠-Indikator beim Event nicht je Event neu in localStorage liest.
+  const _hofReviewIgnored = (typeof _ignoredHofKeysSet === 'function') ? _ignoredHofKeysSet() : new Set();
 
   // Group events: first by ev.type (first-seen order), then by ev.eventType within each type,
   // sort within each subgroup by date (undated last).
@@ -682,9 +685,19 @@ function _pdetLifeData(p, id) {
         const _evNoteKey = _combinedNote ? ((_addrKey ? `${_addrKey}\x00` : '\x00') + _combinedNote) : null;
         const _showEvNote = _combinedNote && (!_evNoteKey || !_shownAddrNotes.has(_evNoteKey));
         if (_evNoteKey && _showEvNote) _shownAddrNotes.add(_evNoteKey);
+        // ADR-027 P5: Event-Detail-Indikator — Adresse vorhanden, aber kein Hof
+        // verknüpft → ⚠ neben dem Event. Klick öffnet Review-Modal fokussiert auf
+        // diese Zeile. Ignorierte Events bekommen keinen Indikator.
+        let _hofReviewBadge = '';
+        if (ev.addr && !ev.hofId && typeof _eventReviewKey === 'function') {
+          const _revKey = _eventReviewKey(id, ev.type || '', ev.addr, ev.date || '');
+          if (!_hofReviewIgnored.has(_revKey)) {
+            _hofReviewBadge = ` <span class="hof-review-warn" data-action="openHofReviewModal" data-key="${esc(_revKey)}" title="Hof-Zuweisung prüfen" style="cursor:pointer;color:#c08020;font-weight:700">⚠</span>`;
+          }
+        }
         html += `<div class="fact-row fact-row--clickable" data-action="showEventForm" data-pid="${id}" data-ev="${idx}">
           <span class="fact-lbl">${esc(label)}</span>
-          <span class="fact-val">${esc(parts)}${_dpHtml(ev)}${_evPlaceNavBtn(ev)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_combinedNote)}</span>` : ''}</span>
+          <span class="fact-val">${esc(parts)}${_hofReviewBadge}${_dpHtml(ev)}${_evPlaceNavBtn(ev)}${evAge}${geoBtn}${citTagsHtml(ev.citations || [])}${mediaBadge}${_showHofNote ? `<span class="ev-note">${esc(_hofNote)}</span>` : ''}${_showEvNote ? `<span class="ev-note">${esc(_combinedNote)}</span>` : ''}</span>
         </div>`;
       }
     }

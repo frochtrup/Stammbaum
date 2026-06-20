@@ -189,6 +189,7 @@
       </div>
       <div id="place-search-hoefe" class="search-wrap" hidden>
         <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
+        <button type="button" class="icon-btn place-validator-btn" id="hofReviewBtn" data-action="openHofReviewModal" title="Hof-Zuweisungen prüfen — Events mit Adresse ohne Hof-Verknüpfung" aria-label="Hof-Zuweisungen prüfen">🔗<span id="hofReviewBadge" class="place-validator-btn-badge" hidden>0</span></button>
         <button type="button" class="icon-btn" data-action="exportHofchronik" title="Hofchronik exportieren (HTML)" aria-label="Hofchronik exportieren">📖</button>
       </div>
     </div>
@@ -2339,6 +2340,21 @@
       <div id="mapPersonList"></div>
       <div class="map-close-wrap">
         <button class="btn w-full" data-action="closeModal" data-modal="modalMapPerson">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADR-027 P5: Hof-Zuweisungen prüfen -->
+<div class="modal-overlay" id="modalHofReview" role="dialog" aria-modal="true" aria-labelledby="lbl-modalHofReview">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="lbl-modalHofReview">Hof-Zuweisungen prüfen</div>
+    <div class="sheet-body">
+      <p class="mb-12 hof-review-hint">Events mit Adresse, die keinem Hof zugewiesen sind. Hof wählen oder als nicht-Hof-relevant ignorieren.</p>
+      <div id="hofReviewBody"></div>
+      <div class="btn-row btn-row-col mt-12">
+        <button class="btn btn-cancel" data-action="closeModal" data-modal="modalHofReview">Schließen</button>
       </div>
     </div>
   </div>

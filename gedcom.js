@@ -1916,6 +1916,104 @@ function upsertHofObject(id, makeNew, fn) {
   return h.id;
 }
 
+// ─── ADR-027 P5: „Hof-Zuweisungen prüfen" — Datenqualitäts-Review ────────────
+// Permanente Sicht auf Events mit Adresse, aber ohne Hof-Verknüpfung. Wird vom
+// Höfe-Tab als Badge-Zähler + Tabellen-Modal angeboten. Pro-Datei persistierter
+// „Ignorieren"-Set, damit der User Briefkasten-/Krankenhaus-Adressen bewusst
+// als nicht-Hof-relevant markieren kann.
+const _IGNORED_HOF_STORAGE_KEY = 'stammbaum_hof_review_ignored';
+
+function _ignoredHofKeysSet() {
+  try {
+    const fname = (AppState._currentFilename || '').replace(/[^\w.\-]/g, '_');
+    const raw = localStorage.getItem(_IGNORED_HOF_STORAGE_KEY + '_' + fname);
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch(_) { return new Set(); }
+}
+
+function _saveIgnoredHofKeys(set) {
+  try {
+    const fname = (AppState._currentFilename || '').replace(/[^\w.\-]/g, '_');
+    localStorage.setItem(_IGNORED_HOF_STORAGE_KEY + '_' + fname, JSON.stringify([...set]));
+  } catch(_) {}
+}
+
+// Stabiler Event-Identifikator: pid + evType + addr + date. Bei größerer Editierung
+// (addr/date geändert) verfällt der Eintrag automatisch → Event taucht wieder im
+// Review auf. Bewusst nicht über eventIdx, damit Verschieben/Sortieren im Events-
+// Array den Ignore-Status nicht zerstört.
+function _eventReviewKey(pid, evType, addr, date) {
+  return [pid, evType || '', (addr || '').trim(), date || ''].join('|');
+}
+
+// Listet alle ungelösten Hof-Kandidaten (ev.addr gesetzt, ev.hofId leer, nicht
+// in Ignore-Set). Pro Eintrag: pid + person-Name + ev-Bezugsdaten + key (für Ignore).
+function _findUnresolvedHofEvents(db) {
+  if (!db) return [];
+  const ignored = _ignoredHofKeysSet();
+  const out = [];
+  const _check = (pid, personName, ev) => {
+    if (!ev || ev.hofId) return;
+    const addr = (ev.addr || '').trim();
+    if (!addr) return;
+    const key = _eventReviewKey(pid, ev.type || ev.eventType || '', addr, ev.date || '');
+    if (ignored.has(key)) return;
+    out.push({
+      pid, personName,
+      evType:    ev.type || ev.eventType || '',
+      evDate:    ev.date || '',
+      addr,
+      place:     ev.place || '',
+      placeId:   ev.placeId || null,
+      key, ev,
+    });
+  };
+  for (const p of Object.values(db.individuals || {})) {
+    const name = p.name || p.id;
+    [p.birth, p.chr, p.death, p.buri].forEach(ev => _check(p.id, name, ev));
+    (p.events || []).forEach(ev => _check(p.id, name, ev));
+  }
+  for (const f of Object.values(db.families || {})) {
+    const label = f.id;
+    [f.marr, f.engag, f.div, f.divf].forEach(ev => _check(label, label, ev));
+    (f.events || []).forEach(ev => _check(label, label, ev));
+  }
+  return out;
+}
+
+function _countUnresolvedHofEvents(db) {
+  return _findUnresolvedHofEvents(db || AppState.db).length;
+}
+
+function _ignoreHofReviewEvent(key) {
+  const s = _ignoredHofKeysSet();
+  s.add(key);
+  _saveIgnoredHofKeys(s);
+}
+
+function _unignoreHofReviewEvent(key) {
+  const s = _ignoredHofKeysSet();
+  s.delete(key);
+  _saveIgnoredHofKeys(s);
+}
+
+// Setzt ev.hofId auf einen bestehenden Hof (manuelle Review-Zuweisung).
+// Wenn ev.placeId leer ist (z.B. Event nur mit Adresse, ohne Dorf-Verlinkung),
+// wird ev.placeId zusätzlich auf hof.villageId gesetzt — die Hof-Auswahl
+// impliziert das Dorf. markChanged + Cache-Invalidate für sofortige UI-Aktualisierung.
+function applyHofToEvent(ev, hofId) {
+  if (!ev || !hofId) return false;
+  const hof = AppState.db.hofObjects?.[hofId];
+  if (!_isHofObjectV2(hof)) return false;
+  ev.hofId = hofId;
+  if (!ev.placeId) ev.placeId = hof.villageId;
+  UIState._placeRegistry = null;
+  UIState._hofRegistry   = null;
+  UIState._hofCache      = null;
+  if (typeof markChanged === 'function') markChanged();
+  return true;
+}
+
 // ─── PLACE-HIST (ADR-024, P0b-2): Dubletten-Erkennung + Merge ────────────────
 // Aggressive Normalisierung NUR für die Dubletten-KANDIDATEN-Suche (faltet
 // Umlaute/ae-oe-ue zusammen, wie der Validator _placeNorm). Strenger als

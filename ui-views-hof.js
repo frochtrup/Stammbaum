@@ -59,10 +59,10 @@ function renderHofList(sorted) {
   let html = '';
   let lastSep = '';
   for (const hof of sorted) {
-    // Alpha-Separator: erster Buchstabe des normalisierten Orts (oder Adresse als Fallback)
-    const sepSrc = _placeFirstPart(hof.place) || hof.addr;
-    const sep = sepSrc[0].toUpperCase();
-    if (sep !== lastSep) { html += `<div class="alpha-sep">${sep}</div>`; lastSep = sep; }
+    // ADR-027 P5: Höfe sind nach Dorf gruppiert (statt Alpha-Sortierung), weil das
+    // Dorf die geografische Trennachse ist. Höfe ohne Ortsangabe landen unter „—".
+    const sep = _placeFirstPart(hof.place) || '—';
+    if (sep !== lastSep) { html += `<div class="alpha-sep">${esc(sep)}</div>`; lastSep = sep; }
 
     const count      = new Set(hof.entries.map(e => e.pid)).size;
     const propCount  = new Set((hof.propEntries || []).map(e => e.pid)).size;
@@ -357,6 +357,26 @@ function showHofDetail(addr, pushHistory = true) {
     <div class="detail-name">${addrDisplay}</div>
     <div class="detail-id">${totalCount} Person${totalCount !== 1 ? 'en' : ''}</div>
   </div>`;
+
+  // ADR-027 P5: Adress-Historie aus V2-hofObject (z.B. „bis 1900: Schulze-Hof").
+  // Nur sichtbar, wenn der Hof migriert ist (hof.hofId) UND mehrere addrs-Einträge
+  // existieren. Reine 1-Adresse-Höfe zeigen die Section nicht (unnötiges Rauschen).
+  const _v2 = hof.hofId ? AppState.db.hofObjects?.[hof.hofId] : null;
+  if (_v2 && Array.isArray(_v2.addrs) && _v2.addrs.length > 1) {
+    const histLines = _v2.addrs.map(a => {
+      if (!a.value) return null;
+      if (a.dateFrom && a.dateTo) return `<li><b>${esc(a.dateFrom)}–${esc(a.dateTo)}:</b> ${esc(a.value)}</li>`;
+      if (a.dateTo)   return `<li><b>bis ${esc(a.dateTo)}:</b> ${esc(a.value)}</li>`;
+      if (a.dateFrom) return `<li><b>ab ${esc(a.dateFrom)}:</b> ${esc(a.value)}</li>`;
+      return `<li>${esc(a.value)}</li>`;
+    }).filter(Boolean).join('');
+    if (histLines) {
+      html += `<div class="section fade-up">
+        <div class="section-title">Adress-Historie</div>
+        <ul class="addrs-history" style="margin:0;padding:8px 0 8px 22px;line-height:1.5">${histLines}</ul>
+      </div>`;
+    }
+  }
 
   html += _renderHofRenameSection(addr);
   html += _renderHofCoordSection(addr);
@@ -685,4 +705,121 @@ function saveHofRename(oldAddr) {
   markChanged();
   showToast(`Adresse aktualisiert (${count} Ereignis${count !== 1 ? 'se' : ''})`, 'success');
   showHofDetail(newAddr, false);
+}
+
+// ─── ADR-027 P5: „Hof-Zuweisungen prüfen" — Review-UI ────────────────────────
+// Liest die Liste über _findUnresolvedHofEvents (data-layer in gedcom.js), rendert
+// als Tabelle. Pro Zeile drei Aktionen: bestehenden Hof aus Dropdown wählen,
+// neuen Hof aus diesem Event anlegen (legt V2-hofObject mit addrs[0]=ev.addr an),
+// oder Ignorieren (persistiert per Datei).
+
+function _updateHofReviewBadge() {
+  const el = document.getElementById('hofReviewBadge');
+  const btn = document.getElementById('hofReviewBtn');
+  if (!el || !btn) return;
+  const n = (typeof _countUnresolvedHofEvents === 'function') ? _countUnresolvedHofEvents() : 0;
+  if (n > 0) { el.textContent = String(n); el.hidden = false; btn.setAttribute('aria-label', `Hof-Zuweisungen prüfen (${n})`); }
+  else       { el.hidden = true; btn.setAttribute('aria-label', 'Hof-Zuweisungen prüfen'); }
+}
+
+function openHofReviewModal(focusKey) {
+  renderHofReview(focusKey);
+  openModal('modalHofReview');
+}
+
+function renderHofReview(focusKey) {
+  const body = document.getElementById('hofReviewBody');
+  if (!body) return;
+  const rows = (typeof _findUnresolvedHofEvents === 'function')
+    ? _findUnresolvedHofEvents(AppState.db) : [];
+  if (!rows.length) {
+    body.innerHTML = '<div class="empty empty-pad">✓ Alle Hof-Zuweisungen aufgelöst</div>';
+    return;
+  }
+  // Höfe nach Dorf indizieren — für das Pro-Zeile-Dropdown
+  const hofsByVillage = {};
+  for (const [hid, h] of Object.entries(AppState.db.hofObjects || {})) {
+    if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
+    (hofsByVillage[h.villageId] || (hofsByVillage[h.villageId] = [])).push({ id: hid, title: (h.addrs && h.addrs[0] && h.addrs[0].value) || hid });
+  }
+  let html = '<div class="hof-review-list" style="display:flex;flex-direction:column;gap:8px">';
+  for (const r of rows) {
+    const isFocus = focusKey && focusKey === r.key;
+    const cands = (r.placeId && hofsByVillage[r.placeId]) || [];
+    const opts = '<option value="">Hof wählen…</option>'
+      + cands.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
+    const placeLabel = r.place ? esc(compactPlace(r.place)) : '<em style="color:#aaa">— ohne Dorf —</em>';
+    html += `<div class="hof-review-row" data-key="${esc(r.key)}" style="border:1px solid var(--border,#ddd);border-radius:6px;padding:8px 10px;${isFocus ? 'box-shadow:0 0 0 2px var(--accent,#b88c2e)' : ''}">
+      <div style="font-weight:600">${esc(r.personName)}</div>
+      <div style="font-size:0.85rem;color:var(--text-dim,#666);margin:2px 0 6px">${esc(r.evType || 'Event')}${r.evDate ? ' · ' + esc(r.evDate) : ''} · 📍 ${esc(r.addr)} · ${placeLabel}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        ${cands.length ? `<select class="form-select" style="max-width:200px" data-change="hofReviewAssign" data-key="${esc(r.key)}">${opts}</select>` : '<span style="font-size:0.8rem;color:#aaa">Keine Höfe im Dorf</span>'}
+        <button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewCreateNew" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem">+ neu anlegen</button>
+        <button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewIgnore" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem">Ignorieren</button>
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+// Pro-Zeile-Aktion: bestehenden Hof via Dropdown wählen.
+function hofReviewAssign(selectEl) {
+  const key = selectEl.dataset.key;
+  const hofId = selectEl.value;
+  if (!key || !hofId) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  if (typeof applyHofToEvent === 'function' && applyHofToEvent(row.ev, hofId)) {
+    showToast('✓ Event mit Hof verknüpft', 'success');
+    renderHofReview();
+    _updateHofReviewBadge();
+  }
+}
+
+// Pro-Zeile-Aktion: neuen V2-Hof aus diesem Event anlegen. Nutzt ev.addr als
+// initialen addrs-Eintrag (undatiert), ev.placeId als villageId. Wenn ev.placeId
+// fehlt, kein Anlegen möglich (Dorf ist Pflicht im V2-Modell).
+function hofReviewCreateNew(btn) {
+  const key = btn.dataset.key;
+  if (!key) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  if (!row.placeId) {
+    showToast('⚠ Event hat kein Dorf — bitte zuerst Ort verknüpfen', 'warn');
+    return;
+  }
+  const villageId = row.placeId;
+  const slug  = (typeof _normHofAddr === 'function' ? _normHofAddr(row.addr) : row.addr.toLowerCase())
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const vSlug = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+  let hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v');
+  let n = 1;
+  while (AppState.db.hofObjects?.[hofId]) hofId = '_hof_' + slug + '_' + vSlug + '_' + (++n);
+  if (typeof upsertHofObject === 'function') {
+    upsertHofObject(hofId, () => ({
+      id: hofId, villageId,
+      addrs: [{ value: row.addr, lang: 'deu', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
+      lat: null, long: null, note: '',
+      existsFrom: null, existsTo: null,
+      predecessor: null, successor: null,
+      _govId: null, _govTypes: null,
+      schemaVersion: 1,
+    }), null);
+    if (typeof applyHofToEvent === 'function') applyHofToEvent(row.ev, hofId);
+    showToast('✓ Neuer Hof angelegt + Event verknüpft', 'success');
+    renderHofReview();
+    _updateHofReviewBadge();
+  }
+}
+
+// Pro-Zeile-Aktion: Event als nicht-Hof-relevant markieren (persistiert).
+function hofReviewIgnore(btn) {
+  const key = btn.dataset.key;
+  if (!key) return;
+  if (typeof _ignoreHofReviewEvent === 'function') {
+    _ignoreHofReviewEvent(key);
+    renderHofReview();
+    _updateHofReviewBadge();
+  }
 }

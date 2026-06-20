@@ -50,6 +50,10 @@ const _CLICK_MAP = {
   showHofRenameForm:       ()  => showHofRenameForm(),
   cancelHofRename:         ()  => cancelHofRename(),
   saveHofRename:           el  => saveHofRename(el.dataset.addr),
+  // ADR-027 P5: Hof-Zuweisungen prüfen
+  openHofReviewModal:      el  => openHofReviewModal(el?.dataset?.key),
+  hofReviewCreateNew:      el  => hofReviewCreateNew(el),
+  hofReviewIgnore:         el  => hofReviewIgnore(el),
   switchPlacesSubTab:      el => switchPlacesSubTab(el.dataset.subtab),
   switchMapMode:           el => switchMapMode(el.dataset.mode),
   toggleMigrAnim:          ()  => toggleMigrAnim(),
@@ -516,6 +520,7 @@ document.addEventListener('change', e => {
     citCamChange(el.files[0]);
     el.value = '';
   }
+  else if (action === 'hofReviewAssign')   hofReviewAssign(el);
   else if (action === 'photoImportChange') {
     _handlePhotoImport(el.files[0]).finally(() => { el.value = ''; });
   }
