@@ -86,8 +86,8 @@ const _CLICK_MAP = {
   exportOrtsbuch:          ()  => { _lazyScript('ui-print.js').then(() => exportOrtsbuch()).catch(() => showToast('⚠ Modul nicht ladbar', 'error')); },
   togglePlaceValidator:    ()  => togglePlaceValidator(),
   showPlaceByIdValidator:  el  => showPlaceByIdValidator(el.dataset.pid),
-  showPlaceByTitle:        el  => { const po = Object.values(AppState.db.placeObjects||{}).find(p=>p.title===el.dataset.title); if(po) showPlaceDetail(po.title); },
-  placeEvMode:             el  => { UIState._placeEvMode = el.dataset.mode; showPlaceDetail(AppState.currentPlaceName, false); },
+  showPlaceByTitle:        el  => { const po = Object.values(AppState.db.placeObjects||{}).find(p=>p.title===el.dataset.title); if(po) showPlaceDetail(po.id); },
+  placeEvMode:             el  => { UIState._placeEvMode = el.dataset.mode; showPlaceDetail(AppState.currentPlaceRef || AppState.currentPlaceName, false); },
   placeEvToggleAll:        el  => { const sec = document.getElementById(el.dataset.section); if (!sec) return; const dts = sec.querySelectorAll('details'); const anyOpen = [...dts].some(d => d.open); dts.forEach(d => d.open = !anyOpen); },
   treeShowProband:         ()  => {
     const id = getProbandId();

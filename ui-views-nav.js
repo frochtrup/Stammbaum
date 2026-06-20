@@ -94,7 +94,7 @@ function _navToHistoryItem(item) {
   else if (item.type === 'family')   showFamilyDetail(item.id, false);
   else if (item.type === 'source')   showSourceDetail(item.id, false);
   else if (item.type === 'repo')     showRepoDetail(item.id, false);
-  else if (item.type === 'place')    showPlaceDetail(item.name, false);
+  else if (item.type === 'place')    showPlaceDetail(item.ref || item.name, false);
   else if (item.type === 'tree')     showTree(item.id, false);
   else if (item.type === 'fanchart') { if (typeof showFanChart  === 'function') showFanChart(item.id); }
   else if (item.type === 'desctree') { if (typeof showDescTree  === 'function') showDescTree(item.id, false); }
@@ -117,7 +117,9 @@ function _captureCurrentNavState() {
   if (AppState.currentRepoId)   return { type: 'repo',   id: AppState.currentRepoId };
   if (AppState._detailActive) {
     const title = document.getElementById('detailTopTitle')?.textContent;
-    if (title) return { type: 'place', name: title };
+    // Stufe 2b: Identitäts-Ref mitführen → Back/Forward öffnet bei gleichnamigen
+    // Orten (Stadt vs. Kreis) wieder das richtige Detail.
+    if (title) return { type: 'place', name: title, ref: AppState.currentPlaceRef || title };
   }
   if (document.getElementById('v-tree')?.classList.contains('active') && currentTreeId) {
     const _ttype = document.body.classList.contains('fc-mode')       ? 'fanchart'  :

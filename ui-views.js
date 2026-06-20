@@ -515,10 +515,13 @@ const ViewState = (() => {
     persons:  'currentPersonId',
     families: 'currentFamilyId',
     sources:  'currentSourceId',
-    places:   'currentPlaceName',
+    // Stufe 2b: Identitäts-Ref (placeId || name) statt nur Name → ViewState/Persistenz
+    // identitätsbasiert. currentPlaceName (lesbarer Name) + currentPlaceId setzt
+    // showPlaceDetail separat; beide in _ALL_FIELDS für exklusiven Fokus-Reset.
+    places:   'currentPlaceRef',
   };
   // Alle exklusiven Fokus-Felder (werden beim Setzen eines Tabs auf null zurückgesetzt)
-  const _ALL_FIELDS = ['currentPersonId', 'currentFamilyId', 'currentSourceId', 'currentRepoId', 'currentPlaceName'];
+  const _ALL_FIELDS = ['currentPersonId', 'currentFamilyId', 'currentSourceId', 'currentRepoId', 'currentPlaceName', 'currentPlaceId', 'currentPlaceRef'];
 
   /**
    * Setzt aktuelle Auswahl für einen Tab.
@@ -710,8 +713,10 @@ function _desktopAutoSelect(tab) {
   } else if (tab === 'places') {
     const places = typeof collectPlaces === 'function' ? collectPlaces() : null;
     const saved  = ViewState.getCurrent('places');
-    const name   = (saved && places?.has(saved)) ? saved : _firstPlaceName();
-    if (name && !_dcAlreadyShows('places', name) && typeof showPlaceDetail === 'function') showPlaceDetail(name, false);
+    // saved ist Identitäts-Ref (Stufe 2b): placeId (objektifiziert) oder Name (String-Ort)
+    const valid  = saved && (((AppState.db.placeObjects || {})[saved]) || places?.has(saved));
+    const ref    = valid ? saved : _firstPlaceName();
+    if (ref && !_dcAlreadyShows('places', ref) && typeof showPlaceDetail === 'function') showPlaceDetail(ref, false);
   }
   // tasks / search / stats: kein Detail-View
 }

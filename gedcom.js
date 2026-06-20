@@ -13,7 +13,9 @@ const AppState = {
   currentFamilyId:  null,
   currentSourceId:  null,
   currentRepoId:    null,
-  currentPlaceName: null,
+  currentPlaceName: null,        // menschenlesbarer Name des aktuellen Orts (für Edit-Form)
+  currentPlaceId:   null,        // Stufe 2b: placeId des aktuellen Orts (Identität, null bei String-Ort)
+  currentPlaceRef:  null,        // Stufe 2b: Identitäts-Ref = placeId || name (für Re-Render/History/Listen-Sync)
   currentTab:       'persons',
   _detailActive:    false,       // true wenn v-detail echten Inhalt zeigt
   _currentFilename: '',          // Dateiname der aktuell geladenen Datei (für per-Datei extraPlaces)
@@ -633,6 +635,22 @@ function _normPlaceName(s) {
   return String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+// Stufe 2: Typ-Spezifität für die Disambiguierung gleichnamiger Orte.
+// Niedriger Rang = spezifischer (Siedlung, wo Ereignisse stattfinden); hoher Rang =
+// allgemeiner (Verwaltungs-Container). Bei reinem Blatt-String ("Münster" ohne
+// Hierarchie) bevorzugt findByName die Siedlung (Stadt) vor dem Kreis — denn
+// „geboren in Münster" meint die Ortschaft, nicht die Gebietskörperschaft.
+// Unknown/null liegt bewusst zwischen Siedlung und Verwaltung.
+const _PLACE_SPECIFICITY = {
+  Building:0, Farm:0, Cemetery:0, Church:1, Borough:1, Neighborhood:1, Locality:1,
+  Hamlet:2, Parish:2, Village:3, Town:4, City:4, Municipality:5,
+  District:7, County:7, Region:8, Province:8, State:9, Country:10,
+};
+function _placeTypeRank(type) {
+  const r = _PLACE_SPECIFICITY[type];
+  return r == null ? 6 : r;
+}
+
 // Erste 3–4-stellige Jahreszahl aus einem GEDCOM/ISO/Freitext-Datum.
 function _placeYear(d) {
   if (d == null) return null;
@@ -1020,6 +1038,24 @@ function _eventCoords(ev) {
   return { lati: ev.lati ?? null, long: ev.long ?? null };
 }
 
+// ─── Stufe 1 (Konzept-Materialisierung): zentraler placeId-Resolver ─────────
+// Spiegelt _eventCoords für die ORTS-IDENTITÄT: Zweig A liest die materialisierte
+// ev.placeId (Wahrheit, eindeutig); Zweig B löst aus dem Projektions-String auf
+// (findByName matcht Titel + alle pnames/Varianten). EIN Chokepoint, damit Liste,
+// Detail und UsageCounts dieselbe Identität sehen — sonst zählt die Liste über
+// Namens-Auflösung Personen, die das Detail (reiner placeId-Vergleich) nicht
+// wiederfindet. Ab Stufe 2 (ev.placeId-Backfill) feuert fast nur noch Zweig A;
+// Zweig B bleibt Auffanglinie für nicht-materialisierte (z.B. frisch importierte)
+// Events. Stadt/Kreis-Mehrdeutigkeit gleichnamiger POs löst erst Stufe 2 auf.
+function _eventPlaceId(ev) {
+  if (!ev) return null;
+  if (ev.placeId) return ev.placeId;                 // Zweig A: Wahrheit
+  if (ev.place && typeof getPlaceRegistry === 'function') {
+    return getPlaceRegistry().findByName(ev.place) || null;  // Zweig B: aus Projektion
+  }
+  return null;
+}
+
 // Baut periodenkorrekten, FORM-kompatiblen PLAC-String via enclosureChainAsOf (ADR-024).
 // Gibt "Ort, Amt, Fürstbistum" zurück (spezifisch→allgemein, keine Leer-Slots).
 // Wichtig: pro Knoten nur das erste Komma-Segment von resolveAsOf verwenden —
@@ -1133,11 +1169,14 @@ function _linkGedcomEventsToPlaceObjects(db) {
       if (proj !== ev.place) { ev.place = proj; recollapsed++; }
     } else {
       // Fall 2: bereits Hierarchie-String → nur bei exaktem Projektions-Match verknüpfen.
+      // Stufe 2: ALLE gleichnamigen Kandidaten des Blatts prüfen — die volle Kette
+      // disambiguiert Stadt vs. Kreis (z.B. „Münster, Kreis Münster, …" trifft nur
+      // die Stadt, deren Projektion exakt diesen String reproduziert).
       const first = ev.place.split(',').map(s => s.trim()).find(s => s) || '';
-      const cand  = reg.findByName(first);
-      if (!cand) return;
-      const proj = _project(cand, year);
-      if (proj && proj === ev.place) { ev.placeId = cand; linked++; }
+      for (const cand of reg.findAllByName(first)) {
+        const proj = _project(cand, year);
+        if (proj && proj === ev.place) { ev.placeId = cand; linked++; break; }
+      }
     }
   };
   for (const p of Object.values(db.individuals || {})) {
@@ -1148,7 +1187,12 @@ function _linkGedcomEventsToPlaceObjects(db) {
     [f.marr, f.engag, f.div, f.divf].forEach(_link);
     (f.events || []).forEach(_link);
   }
-  if (linked) console.info(`[PLACE] ${linked} GEDCOM-Events verknüpft, ${recollapsed} neu kollabiert`);
+  // JXA-Falle: console.info existiert nicht im Unit-Harness → Fallback (vgl. console.warn).
+  if (linked) {
+    const _info = (typeof console !== 'undefined' && console.info) ? console.info
+                : (typeof console !== 'undefined' && console.log) ? console.log : null;
+    _info && _info(`[PLACE] ${linked} GEDCOM-Events verknüpft, ${recollapsed} neu kollabiert`);
+  }
   if (recollapsed) {
     UIState._placesCache = null; UIState._placeRegistry = null;
     if (typeof markChanged === 'function') markChanged();
@@ -1165,25 +1209,45 @@ function _linkGedcomEventsToPlaceObjects(db) {
 function getPlaceRegistry() {
   if (UIState._placeRegistry) return UIState._placeRegistry;
   const pos = (AppState.db && AppState.db.placeObjects) || {};
-  const byId = {}, byNorm = {};
+  // byNorm: norm → erste id (Rückwärtskompatibilität, deterministisch).
+  // byNormAll: norm → ALLE ids (Stufe 2: Disambiguierung gleichnamiger POs).
+  const byId = {}, byNorm = {}, byNormAll = {};
   for (const [id, pl] of Object.entries(pos)) {
     byId[id] = pl;
     const names = [pl.title].concat((pl.pnames || []).map(p => p.value));
+    const seenForThis = new Set();   // ein PO zählt pro norm nur einmal
     for (const nm of names) {
       const k = _normPlaceName(nm);
-      if (k && !(k in byNorm)) byNorm[k] = id;
+      if (!k || seenForThis.has(k)) continue;
+      seenForThis.add(k);
+      if (!(k in byNorm)) byNorm[k] = id;
+      (byNormAll[k] || (byNormAll[k] = [])).push(id);
     }
   }
+  // Kandidaten eines Namens nach Spezifität sortiert (Siedlung vor Verwaltung),
+  // bei Gleichstand stabil in Einfüge-Reihenfolge. Leerer/unbekannter Name → [].
+  const _candidatesByName = str => {
+    const k = _normPlaceName(str);
+    const ids = (k && byNormAll[k]) ? byNormAll[k] : [];
+    if (ids.length < 2) return ids.slice();
+    return ids.slice().sort((a, b) =>
+      _placeTypeRank(byId[a] && byId[a].type) - _placeTypeRank(byId[b] && byId[b].type));
+  };
   const _yearOf = y => (typeof y === 'number' ? y : _placeYear(y));
   const _dateMatches = (from, to, y) =>
     (from == null && to == null) ? false
     : (from == null || y >= from) && (to == null || y <= to);
   const reg = {
-    byId, byNorm,
+    byId, byNorm, byNormAll,
+    // Stufe 2: bei Mehrdeutigkeit den spezifischsten (Siedlungs-)Ort wählen statt
+    // Einfüge-Zufall. Für Einzeltreffer identisch zum alten Verhalten.
     findByName(str) {
-      const k = _normPlaceName(str);
-      return (k && k in byNorm) ? byNorm[k] : null;
+      const c = _candidatesByName(str);
+      return c.length ? c[0] : null;
     },
+    // Alle POs gleichen Namens, spezifisch→allgemein. Erlaubt dem Aufrufer
+    // (z.B. Hierarchie-Link), per Kontext zu disambiguieren.
+    findAllByName(str) { return _candidatesByName(str); },
     resolveAsOf(placeId, year) {
       const pl = byId[placeId];
       if (!pl) return null;
@@ -1393,6 +1457,56 @@ function findPlaceDuplicates(toleranceKm = 1) {
   return out;
 }
 
+// Stufe 3 (Fehler #3): Gewinner-Hof unter mehreren gleichnamigen wählen.
+// Heuristik: meiste Event-Nutzung → hat Koords → hat Notiz → kleinste id
+// (deterministisch). So bleibt der „reichste"/meistgenutzte Hof erhalten.
+function _pickFarmWinner(ids, pos) {
+  const usage = {};
+  for (const id of ids) usage[id] = 0;
+  for (const p of Object.values(AppState.db.individuals || {})) {
+    for (const ev of (p.events || [])) if (ev.placeId && usage[ev.placeId] != null) usage[ev.placeId]++;
+  }
+  return ids.slice().sort((a, b) => {
+    const ua = usage[a] || 0, ub = usage[b] || 0;
+    if (ub !== ua) return ub - ua;
+    const ca = pos[a].lat != null ? 1 : 0, cb = pos[b].lat != null ? 1 : 0;
+    if (cb !== ca) return cb - ca;
+    const na = (pos[a].note ? 1 : 0), nb = (pos[b].note ? 1 : 0);
+    if (nb !== na) return nb - na;
+    return String(a).localeCompare(String(b));
+  })[0];
+}
+
+// Stufe 3 (Fehler #3): nach einem Dorf-Merge gleichnamige Höfe, die jetzt UNTER
+// DEMSELBEN (zusammengeführten) Dorf hängen, zusammenführen. Hof-Identität =
+// Blattname + Dorf-Identität. Beim Einlesen entstehen Hof-Dubletten, wenn dieselbe
+// Adresse je nach historischer Ortssicht (anderer Kreis-String) auf verschiedene
+// Dörfer auflöst → zwei Farm-POs. Werden die Dörfer gemergt, hängt enclosedBy
+// beider Höfe danach am Gewinner-Dorf (s. mergePlaceObjects-Repoint) — DANN sind
+// sie eindeutig dieselbe Identität und werden hier konsolidiert. Gibt die Anzahl
+// zusammengeführter Höfe zurück.
+function _reconcileFarmsUnderVillage(villageId) {
+  if (!villageId) return 0;
+  const pos = (AppState.db && AppState.db.placeObjects) || {};
+  const groups = {};   // normLeaf → [farmId, …]
+  for (const [id, po] of Object.entries(pos)) {
+    if (po.type !== 'Farm' && po.type !== 'Building') continue;
+    if (!(po.enclosedBy || []).some(en => en.placeId === villageId)) continue;
+    const k = _normPlaceName(po.title);
+    if (!k) continue;
+    (groups[k] || (groups[k] = [])).push(id);
+  }
+  let farmsMerged = 0;
+  for (const ids of Object.values(groups)) {
+    if (ids.length < 2) continue;
+    const winner = _pickFarmWinner(ids, pos);
+    const losers = ids.filter(x => x !== winner);
+    const r = mergePlaceObjects(winner, losers, /* _noReconcile = */ true);
+    farmsMerged += r.merged;
+  }
+  return farmsMerged;
+}
+
 // Führt loserIds in winnerId zusammen — VERLUSTFREI:
 //   • Titel + pnames der Verlierer werden zu winner.pnames (dedupliziert per
 //     _normPlaceName; behält Datierung/lang/_dateRaw der ersten Fundstelle).
@@ -1401,11 +1515,13 @@ function findPlaceDuplicates(toleranceKm = 1) {
 //   • Jede ev.placeId-Referenz (INDI birth/chr/death/buri/events, FAM marr/
 //     engag/div/divf) wird vom Verlierer auf den Gewinner umgehängt.
 //   • Verlierer-placeObjects werden gelöscht.
-// Gibt { merged, repointed } zurück. Invalidiert die Registry.
-function mergePlaceObjects(winnerId, loserIds) {
+//   • Stufe 3: Ist der Gewinner ein Dorf, werden danach gleichnamige Höfe darunter
+//     reconciled (_noReconcile unterdrückt das in der Rekursion).
+// Gibt { merged, repointed, farmsMerged } zurück. Invalidiert die Registry.
+function mergePlaceObjects(winnerId, loserIds, _noReconcile) {
   const pos = (AppState.db && AppState.db.placeObjects) || {};
   const winner = pos[winnerId];
-  if (!winner) return { merged: 0, repointed: 0 };
+  if (!winner) return { merged: 0, repointed: 0, farmsMerged: 0 };
   if (!Array.isArray(winner.pnames)) winner.pnames = [];
   if (!Array.isArray(winner.enclosedBy)) winner.enclosedBy = [];
   const haveName = new Set(winner.pnames.map(p => _normPlaceName(p.value)));
@@ -1461,7 +1577,14 @@ function mergePlaceObjects(winnerId, loserIds) {
     UIState._placeRegistry = null;
     UIState._placesCache = null;
   }
-  return { merged, repointed };
+  // Stufe 3: Höfe unter dem Gewinner-Dorf konsolidieren (nicht in der Rekursion,
+  // nicht wenn der Gewinner selbst ein Hof ist — dann gibt es keine Hof-Kinder).
+  let farmsMerged = 0;
+  if (merged && !_noReconcile && winner.type !== 'Farm' && winner.type !== 'Building') {
+    farmsMerged = _reconcileFarmsUnderVillage(winnerId);
+    if (farmsMerged) { UIState._placeRegistry = null; UIState._placesCache = null; UIState._hofCache = null; }
+  }
+  return { merged, repointed, farmsMerged };
 }
 
 // ─── PLACE-HIST (ADR-024, Item 15/B6): JSON-Import-Dedup ────────────────────

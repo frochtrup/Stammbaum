@@ -251,7 +251,7 @@ function renderPlaceList(sorted) {
       ? `<span class="place-type-badge place-var-badge">${place._variantCount} Varianten</span>` : '';
     const govBadge  = place._govUnresolved
       ? `<span class="place-type-badge place-gov-badge">GOV?</span>` : '';
-    html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.name)}">
+    html += `<div class="person-row" data-action="showPlaceDetail" data-name="${esc(place.placeId || place.name)}">
       <div class="p-avatar p-avatar--md">${typeIcon}</div>
       <div class="p-info">
         <div class="p-name">${esc(compactPlace(place.name))}${typeBadge}${varBadge}${govBadge}</div>
@@ -471,7 +471,7 @@ async function geocodeCurrentPlace() {
     if (!res) { showToast('⚠ Kein Ergebnis von Nominatim', 'warn'); return; }
     const typeLbl = PLACE_TYPE_LBL[res.type] || res.type;
     showToast(`✓ ${typeLbl} · ${res.lat.toFixed(4)}, ${res.lon.toFixed(4)}`, 'success');
-    showPlaceDetail(name, false);
+    showPlaceDetail(AppState.currentPlaceRef || name, false);
   } catch (e) {
     showToast('⚠ Geocoding-Fehler: ' + e.message, 'error');
   }
@@ -623,8 +623,12 @@ function _placeObjForName(name) {
   return id ? reg.byId[id] : null;
 }
 
-function showPlaceForm(placeName) {
-  const po = _placeObjForName(placeName);
+function showPlaceForm(placeName, placeId = null) {
+  // Stufe 2b: präzise Identität bevorzugen — sonst öffnet „Bearbeiten" auf dem Kreis
+  // Münster das Formular der gleichnamigen Stadt (findByName-Raten).
+  const _reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  const po = (placeId && _reg && _reg.byId[placeId]) ? _reg.byId[placeId] : _placeObjForName(placeName);
+  if (po && po.title) placeName = po.title;
   document.getElementById('pl-old').value     = placeName;
   document.getElementById('pl-placeId').value = po ? po.id : '';
   document.getElementById('pl-name').value    = po ? po.title : placeName;
@@ -695,8 +699,19 @@ function _renderEnclosedByList(po) {
   const opts = Object.values(AppState.db.placeObjects || {})
     .filter(p => p.id !== po.id)
     .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'de'));
+  // Stufe 2: gleichnamige Orte (z.B. Stadt vs. Kreis Münster) per Typ-Label
+  // unterscheidbar machen — sonst zeigt das Dropdown zwei identische Optionen
+  // und der Nutzer hängt den Ort unter das falsche „Münster".
+  const _titleFreq = {};
+  for (const p of opts) { const t = _normPlaceName ? _normPlaceName(p.title) : (p.title || ''); _titleFreq[t] = (_titleFreq[t] || 0) + 1; }
   sel.innerHTML = `<option value="">— Ort wählen —</option>`
-    + opts.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('');
+    + opts.map(p => {
+        const t = _normPlaceName ? _normPlaceName(p.title) : (p.title || '');
+        const amb = _titleFreq[t] > 1;
+        const typeLbl = p.type ? (PLACE_TYPE_LBL[p.type] || p.type) : '';
+        const label = amb && typeLbl ? `${p.title} (${typeLbl})` : p.title;
+        return `<option value="${esc(p.id)}">${esc(label)}</option>`;
+      }).join('');
 }
 
 function savePlace() {
@@ -770,7 +785,7 @@ function savePlace() {
   // Item 9: KEINE eager Propagation mehr — Render-Pfade lesen Koords via _eventCoords
   // direkt aus dem placeObject. Single source of truth.
   showToast('✓ Ort gespeichert');
-  showPlaceDetail(newName);
+  showPlaceDetail(_poId || newName);   // identitäts-primär (placeObject existiert nach upsert)
 }
 
 // ─── P2-UI: pnames / enclosedBy inline-Editor ────────────────────────────────
@@ -1266,17 +1281,38 @@ function _placeDetailHierarchyTimeline(po, placeId, reg) {
 // ─────────────────────────────────────
 //  DETAIL: ORT
 // ─────────────────────────────────────
-function showPlaceDetail(placeName, pushHistory = true) {
+// Stufe 2b: `ref` ist Identität-primär — eine placeId (wenn der Ort objektifiziert
+// ist) ODER ein Ortsname (String-Ort ohne placeObject). Spiegelt _eventPlaceId:
+// Identität schlägt Name. Damit öffnen zwei gleichnamige Orte (Stadt vs. Kreis
+// Münster) ihr JEWEILIGES Detail statt beide dasselbe. `ref` fließt als einheitliche
+// Währung durch Listen-Zeilen (data-name), ViewState, History und Re-Render.
+function showPlaceDetail(ref, pushHistory = true) {
+  const _reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  const _po  = (ref && _reg && _reg.byId[ref]) ? _reg.byId[ref] : null;  // ref ist placeId?
+  const placeId   = _po ? ref : null;
+  const placeName = _po ? _po.title : ref;                              // lesbarer Name
   const places = collectPlaces();
-  const place = places.get(placeName);
+  // Eintrag identitäts-primär: per placeId, sonst per Name, sonst aus dem PO
+  // synthetisieren (gleichnamige POs fehlen in der namens-gekeyten Map).
+  let place = null;
+  if (placeId) for (const pl of places.values()) { if (pl.placeId === placeId) { place = pl; break; } }
+  if (!place) place = places.get(placeName);
+  if (!place && _po) {
+    const _pair = (_po.lat != null && _po.long != null);
+    place = { name: _po.title, placeId, type: _po.type || null,
+      lati: _pair ? _po.lat : null, long: _pair ? _po.long : null,
+      personIds: new Set(), eventTypes: new Set() };
+  }
   if (!place) { showMain(); return; }
   if (pushHistory) _beforeDetailNavigate();
-  ViewState.setCurrent('places', placeName);
+  ViewState.setCurrent('places', ref);                 // Identitäts-Ref persistieren
+  AppState.currentPlaceName = placeName;               // lesbarer Name (Edit-Form)
+  AppState.currentPlaceId   = placeId;                 // Identität (Re-Render-Disambig.)
   // P6-B6: Listen-Sync — sonst bleibt der alte Ort in der placeList markiert wenn
   // der User in der Liste auf einen anderen Ort klickt. showDetail/showFamilyDetail
   // hatten dieses Muster schon; showPlaceDetail/showSourceDetail fehlten.
   if (document.body.classList.contains('desktop-mode')) {
-    if (AppState.currentTab === 'places') _updatePlaceListCurrent(placeName); else _updatePlaceListCurrent(null);
+    if (AppState.currentTab === 'places') _updatePlaceListCurrent(ref); else _updatePlaceListCurrent(null);
   }
   // P6-B5: Toolbar-Konfig zentral (siehe ui-views.js)
   _configureDetailToolbar('places', placeName);
@@ -1437,9 +1473,17 @@ function showPlaceDetail(placeName, pushHistory = true) {
     if (!_byType.has(typeLabel)) _byType.set(typeLabel, []);
     _byType.get(typeLabel).push({ person, date: date || '' });
   };
+  // Stufe 1: Identität über _eventPlaceId(ev) auflösen — deckt placeId-lose Events
+  // ab, deren Projektions-String via pname auf place.placeId zeigt (sonst zählt die
+  // Liste sie, das Detail aber nicht). Der exakte-String-Zweig bleibt für reine
+  // String-Orte ohne placeObject (kein placeId, kein findByName-Treffer).
   const _matchPlace = ev => {
-    if (ev && ev.place && ev.place.trim() === placeName) return true;
-    if (place.placeId && ev && ev.placeId && ev.placeId === place.placeId) return true;
+    if (!ev) return false;
+    if (ev.place && ev.place.trim() === placeName) return true;
+    if (place.placeId) {
+      const pid = (typeof _eventPlaceId === 'function') ? _eventPlaceId(ev) : ev.placeId;
+      if (pid && pid === place.placeId) return true;
+    }
     return false;
   };
   for (const p of Object.values(AppState.db.individuals)) {
@@ -1685,7 +1729,7 @@ function showPlaceDetail(placeName, pushHistory = true) {
   html += _placeDetailDeleteRow(place, placeName);
 
   document.getElementById('detailPlace').innerHTML = html;
-  _activateDetailContainer('detailPlace', placeName);
+  _activateDetailContainer('detailPlace', ref);   // Skip-Render-Check identitäts-gekeyt
   showView('v-detail');
   if (place.lati !== null && place.long !== null) _initPlaceDetailMap(place.lati, place.long, compactPlace(placeName));
 }
@@ -1699,7 +1743,9 @@ function addPlaceTrans() {
   const lang = document.getElementById('pl-tran-lang')?.value.trim() || '';
   // PlaceObject finden oder erzeugen (extraPlaces wird NICHT mehr beschrieben)
   const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
-  let poId = reg?.findByName(placeName);
+  // Stufe 2b: präzise Identität bevorzugen statt findByName (das bei gleichnamigen
+  // Orten raten würde).
+  let poId = AppState.currentPlaceId || reg?.findByName(placeName);
   if (!poId) {
     poId = (typeof _epId === 'function') ? _epId(placeName) : ('_ep_' + Date.now());
     upsertPlaceObject(poId, () => ({ id: poId, title: placeName, type: 'Unknown',
@@ -1710,7 +1756,7 @@ function addPlaceTrans() {
     p.pnames.push({ value: val, lang, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
   });
   showToast('✓ Übersetzung gespeichert');
-  showPlaceDetail(placeName, false);
+  showPlaceDetail(AppState.currentPlaceRef || poId || placeName, false);
 }
 
 // Legacy: Übersetzung aus extraPlaces.trans löschen (Altbestände vor Item 7)
@@ -1723,7 +1769,7 @@ function deletePlaceTrans(idx) {
   saveExtraPlaces();
   markChanged();
   UIState._placesCache = null;
-  showPlaceDetail(placeName, false);
+  showPlaceDetail(AppState.currentPlaceRef || placeName, false);
 }
 
 // Neue Übersetzung in placeObjects.pnames löschen (Index in pnames-Array)
@@ -1731,10 +1777,10 @@ function deletePlacePname(idx) {
   const placeName = AppState.currentPlaceName;
   if (!placeName) return;
   const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
-  const poId = reg?.findByName(placeName);
+  const poId = AppState.currentPlaceId || reg?.findByName(placeName);
   if (!poId) return;
   mutatePlaceObject(poId, p => { (p.pnames || []).splice(parseInt(idx, 10), 1); });
-  showPlaceDetail(placeName, false);
+  showPlaceDetail(AppState.currentPlaceRef || poId || placeName, false);
 }
 
 // ─── PLACE-HIST (ADR-024, P0b-2b): Orts-Dubletten-Merge UI ──────────────────
@@ -1745,14 +1791,18 @@ let _placeDupGroups = [];
 // Zählt Event-Referenzen je placeId (für den Gewinner-Vorschlag).
 function _placeUsageCounts() {
   const c = {};
-  const bump = id => { if (id) c[id] = (c[id] || 0) + 1; };
+  // Stufe 1: über _eventPlaceId zählen — sonst zählen placeId-lose Events (deren
+  // String via pname auf das PO zeigt) nicht mit, und der Gewinner-Vorschlag im
+  // Merge-Modal weicht von der angezeigten Personenzahl der Ortsliste ab.
+  const _pid = ev => (typeof _eventPlaceId === 'function') ? _eventPlaceId(ev) : ev?.placeId;
+  const bump = ev => { const id = _pid(ev); if (id) c[id] = (c[id] || 0) + 1; };
   for (const p of Object.values(AppState.db.individuals || {})) {
-    bump(p.birth?.placeId); bump(p.chr?.placeId); bump(p.death?.placeId); bump(p.buri?.placeId);
-    for (const ev of p.events || []) bump(ev.placeId);
+    bump(p.birth); bump(p.chr); bump(p.death); bump(p.buri);
+    for (const ev of p.events || []) bump(ev);
   }
   for (const f of Object.values(AppState.db.families || {})) {
-    bump(f.marr?.placeId); bump(f.engag?.placeId); bump(f.div?.placeId); bump(f.divf?.placeId);
-    for (const ev of f.events || []) bump(ev.placeId);
+    bump(f.marr); bump(f.engag); bump(f.div); bump(f.divf);
+    for (const ev of f.events || []) bump(ev);
   }
   return c;
 }
@@ -1865,7 +1915,7 @@ function placeMergeGroup(gidx) {
     if (res.merged) {
       markChanged();
       UIState._placesCache = null;
-      showToast(`✓ ${res.merged} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}`);
+      showToast(`✓ ${res.merged} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}${res.farmsMerged ? `, ${res.farmsMerged} Hof-Dublette${res.farmsMerged !== 1 ? 'n' : ''} konsolidiert` : ''}`);
       _placeDupGroups = findPlaceDuplicates();
       _renderPlaceMergeList();
       if (typeof renderPlaceList === 'function') renderPlaceList();
@@ -2222,5 +2272,5 @@ function _renderPlaceValidator() {
 function showPlaceByIdValidator(placeId) {
   const po = AppState.db?.placeObjects?.[placeId];
   if (!po) return;
-  showPlaceDetail(po.title || placeId);
+  showPlaceDetail(placeId);   // identitäts-primär
 }

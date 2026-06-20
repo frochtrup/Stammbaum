@@ -570,7 +570,9 @@ if (IS_NODE) {
     '_epId: _epId, _findOrCreatePO: _findOrCreatePO, ' +
     'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject, ' +
     '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport, ' +
-    '_eventCoords: _eventCoords, AppState: AppState, UIState: UIState,' +
+    '_eventCoords: _eventCoords, _eventPlaceId: _eventPlaceId, ' +
+    '_linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
+    '_placeTypeRank: _placeTypeRank, AppState: AppState, UIState: UIState,' +
     'buildHofIndex: buildHofIndex, _derivedHofObjectsFromDb: _derivedHofObjectsFromDb, ' +
     '_isHofNoteText: _isHofNoteText, _stripHofPrefix: _stripHofPrefix, HOF_NOTE_PREFIX: HOF_NOTE_PREFIX, ' +
     '_migrateHofObjectsToPlaceObjects: _migrateHofObjectsToPlaceObjects, _hofVillageId: _hofVillageId, ' +
@@ -2150,6 +2152,17 @@ group('(t) UI ViewState');
   // places werden NICHT gegen db validiert (Existenz wird erst bei Verwendung in collectPlaces geprüft)
   ui.ViewState.setCurrent('places', 'Berlin');
   eq(ui.ViewState.getCurrent('places'), 'Berlin', 't.getCurrent: places → ohne Validierung');
+
+  // Stufe 2b: places-Slot speichert die Identitäts-Ref (placeId | name) in currentPlaceRef.
+  ui.ViewState.setCurrent('places', '@P7@');
+  eq(W.AppState.currentPlaceRef, '@P7@', 't.places-ref: setCurrent schreibt currentPlaceRef');
+  eq(ui.ViewState.getCurrent('places'), '@P7@', 't.places-ref: getCurrent liefert die Ref');
+  // Exklusiver Fokus: currentPlaceId/Ref/Name werden beim Wechsel auf anderen Tab geleert.
+  W.AppState.currentPlaceId = '@P7@'; W.AppState.currentPlaceName = 'Münster';
+  ui.ViewState.setCurrent('persons', '@I9@');
+  eq(W.AppState.currentPlaceId,   null, 't.places-ref: Tab-Wechsel leert currentPlaceId');
+  eq(W.AppState.currentPlaceRef,  null, 't.places-ref: Tab-Wechsel leert currentPlaceRef');
+  eq(W.AppState.currentPlaceName, null, 't.places-ref: Tab-Wechsel leert currentPlaceName');
 })();
 
 (function() {
@@ -3699,6 +3712,185 @@ group('(ac) QT _qtSaveCustom');
   var p = inds[Object.keys(inds)[0]];
   eq(p.death && p.death.date, '1 JAN 1900', 'ac.6: Sterbedatum gesetzt');
   ok(p.birth && p.birth.date && p.birth.date.indexOf('1860') >= 0, 'ac.6: Geburtsjahr ~1860 berechnet');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (ag) PLACE-HIST — _eventPlaceId (Stufe 1: zentraler Identitäts-Resolver)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(ag) PLACE-HIST _eventPlaceId (Stufe 1)');
+
+// Zweig A: materialisierte ev.placeId gewinnt (auch wenn der String anders auflösen würde)
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@A@': { id:'@A@', title:'Münster', type:'Town',   lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@B@': { id:'@B@', title:'Münster', type:'County', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+    },
+  });
+  eq(API._eventPlaceId({ placeId:'@B@', place:'Münster' }), '@B@',
+     'ag.A: ev.placeId (Wahrheit) gewinnt, kein Namens-Raten');
+})();
+
+// Zweig B: kein ev.placeId → findByName matcht Titel
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@SB@': { id:'@SB@', title:'Sassenberg', type:'Town', lat:null, long:null,
+        pnames:[], enclosedBy:[], parentId:null },
+    },
+  });
+  eq(API._eventPlaceId({ placeId:null, place:'Sassenberg' }), '@SB@',
+     'ag.B1: ohne placeId → findByName(Titel)');
+})();
+
+// Zweig B: historische Schreibweise als pname → derselbe placeId (Kern von Fehler #2)
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@SB@': { id:'@SB@', title:'Sassenberg', type:'Town', lat:null, long:null,
+        pnames:[{ value:'Sassenbergk', lang:'', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }],
+        enclosedBy:[], parentId:null },
+    },
+  });
+  eq(API._eventPlaceId({ placeId:null, place:'Sassenbergk' }), '@SB@',
+     'ag.B2: pname-Variante löst auf denselben PO auf → Liste/Detail-Parität');
+})();
+
+// Fallback: kein PO, kein Treffer → null
+(function() {
+  API.setDb({ individuals:{}, families:{}, extraPlaces:{}, placeObjects:{} });
+  eq(API._eventPlaceId({ place:'Nirgendwo' }), null, 'ag.fallback: kein Treffer → null');
+  eq(API._eventPlaceId(null), null, 'ag.null: null-Event → null');
+  eq(API._eventPlaceId({}), null, 'ag.empty: weder placeId noch place → null');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (ah) PLACE-HIST — Stufe 2: Disambiguierung gleichnamiger Orte
+// ═══════════════════════════════════════════════════════════════════════════
+group('(ah) PLACE-HIST Stufe 2 Disambiguierung (sw v1006)');
+
+// Typ-Rang: Siedlung spezifischer (kleiner) als Verwaltung
+(function() {
+  ok(API._placeTypeRank('Town') < API._placeTypeRank('County'),
+     'ah.rank: Stadt spezifischer als Kreis');
+  ok(API._placeTypeRank('Farm') < API._placeTypeRank('Village'),
+     'ah.rank: Hof spezifischer als Dorf');
+  eq(API._placeTypeRank('Unknown'), API._placeTypeRank(null),
+     'ah.rank: Unknown == null (mittlerer Rang)');
+})();
+
+// findByName bevorzugt Siedlung; findAllByName liefert beide spezifisch→allgemein
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: {
+      '@KR@': { id:'@KR@', title:'Münster', type:'County', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@ST@': { id:'@ST@', title:'Münster', type:'Town',   lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+    },
+  });
+  var reg = API.getPlaceRegistry();
+  eq(reg.findByName('Münster'), '@ST@', 'ah.find: Stadt gewinnt über Kreis (kein Einfüge-Zufall)');
+  var all = reg.findAllByName('Münster');
+  eq(all.length, 2, 'ah.all: beide Kandidaten');
+  eq(all[0], '@ST@', 'ah.all: spezifischster (Stadt) zuerst');
+  eq(all[1], '@KR@', 'ah.all: Kreis danach');
+  eq(reg.findAllByName('Nirgendwo').length, 0, 'ah.all: unbekannt → []');
+})();
+
+// Einzeltreffer unverändert (Rückwärtskompatibilität)
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: { '@A@': { id:'@A@', title:'Borghorst', type:'Village', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null } },
+  });
+  eq(API.getPlaceRegistry().findByName('Borghorst'), '@A@', 'ah.single: Einzeltreffer wie bisher');
+})();
+
+// Link-Pass: volle Hierarchie disambiguiert Stadt vs. Kreis Münster
+(function() {
+  // Westfalen ⊃ Kreis Münster (@KR@, "Münster"/County) ⊃ Stadt Münster (@ST@, "Münster"/Town)
+  var db = {
+    extraPlaces:{}, families:{},
+    placeObjects: {
+      '@WF@': { id:'@WF@', title:'Westfalen', type:'State',  lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@KR@': { id:'@KR@', title:'Münster',   type:'County', lat:null, long:null, pnames:[],
+                enclosedBy:[{ placeId:'@WF@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }], parentId:'@WF@' },
+      '@ST@': { id:'@ST@', title:'Münster',   type:'Town',   lat:null, long:null, pnames:[],
+                enclosedBy:[{ placeId:'@KR@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }], parentId:'@KR@' },
+    },
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ date:'1850', place:'Münster, Münster, Westfalen', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] },                       // Stadt
+      '@I2@': { id:'@I2@', birth:{ date:'1850', place:'Münster, Westfalen', placeId:null },
+                chr:{}, death:{}, buri:{}, events:[] },                       // Kreis
+    },
+  };
+  API.setDb(db);
+  API._linkGedcomEventsToPlaceObjects(db);
+  eq(db.individuals['@I1@'].birth.placeId, '@ST@',
+     'ah.link: "Münster, Münster, Westfalen" → Stadt @ST@ (Kette matcht)');
+  eq(db.individuals['@I2@'].birth.placeId, '@KR@',
+     'ah.link: "Münster, Westfalen" → Kreis @KR@ (Kette matcht)');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (ai) PLACE-HIST — Stufe 3: Hof-Reconcile nach Dorf-Merge (Fehler #3)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(ai) PLACE-HIST Stufe 3 Hof-Reconcile (sw v1008)');
+
+// Zwei gleichnamige Dörfer mit je einem "Hof Meyer". Nach Dorf-Merge müssen die
+// beiden Höfe zu einem konsolidiert werden (Identität = Blatt + Dorf).
+(function() {
+  var db = {
+    extraPlaces:{}, families:{},
+    placeObjects: {
+      '@V1@': { id:'@V1@', title:'Sassenberg', type:'Town', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@V2@': { id:'@V2@', title:'Sassenberg', type:'Town', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@F1@': { id:'@F1@', title:'Hof Meyer', type:'Farm', lat:51.9, long:8.0, note:'', pnames:[],
+                enclosedBy:[{ placeId:'@V1@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }], parentId:'@V1@' },
+      '@F2@': { id:'@F2@', title:'Hof Meyer', type:'Farm', lat:null, long:null, note:'', pnames:[],
+                enclosedBy:[{ placeId:'@V2@', dateFrom:null, dateTo:null, dateType:null, _dateRaw:null }], parentId:'@V2@' },
+    },
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+                events:[ { type:'RESI', addr:'Hof Meyer', place:'Hof Meyer, Sassenberg', placeId:'@F1@' },
+                         { type:'PROP', addr:'Hof Meyer', place:'Hof Meyer, Sassenberg', placeId:'@F1@' } ] },
+      '@I2@': { id:'@I2@', birth:{}, chr:{}, death:{}, buri:{},
+                events:[ { type:'RESI', addr:'Hof Meyer', place:'Hof Meyer, Sassenberg', placeId:'@F2@' } ] },
+    },
+  };
+  API.setDb(db);
+  var res = API.mergePlaceObjects('@V1@', ['@V2@']);   // Dörfer zusammenführen
+  eq(res.farmsMerged, 1, 'ai.cascade: 1 Hof-Dublette nach Dorf-Merge konsolidiert');
+  ok(!db.placeObjects['@F2@'], 'ai.cascade: Verlierer-Hof @F2@ gelöscht');
+  ok(!!db.placeObjects['@F1@'], 'ai.cascade: Gewinner-Hof @F1@ (mehr Nutzung) erhalten');
+  ok((db.placeObjects['@F1@'].enclosedBy || []).some(function(e){return e.placeId==='@V1@';}),
+     'ai.cascade: Gewinner-Hof hängt am zusammengeführten Dorf @V1@');
+  eq(db.individuals['@I2@'].events[0].placeId, '@F1@',
+     'ai.cascade: @F2@-Event auf @F1@ umgehängt');
+  eq(db.individuals['@I1@'].events[0].placeId, '@F1@', 'ai.cascade: @F1@-Events unverändert');
+})();
+
+// Verschiedene Blattnamen unter demselben Dorf → KEIN Merge (keine Über-Konsolidierung)
+(function() {
+  var db = {
+    extraPlaces:{}, individuals:{}, families:{},
+    placeObjects: {
+      '@V1@': { id:'@V1@', title:'Borghorst', type:'Town', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@V2@': { id:'@V2@', title:'Borghorst', type:'Town', lat:null, long:null, pnames:[], enclosedBy:[], parentId:null },
+      '@F1@': { id:'@F1@', title:'Hof Meyer',  type:'Farm', lat:null, long:null, pnames:[],
+                enclosedBy:[{ placeId:'@V1@', dateFrom:null, dateTo:null }], parentId:'@V1@' },
+      '@F2@': { id:'@F2@', title:'Hof Schulze', type:'Farm', lat:null, long:null, pnames:[],
+                enclosedBy:[{ placeId:'@V2@', dateFrom:null, dateTo:null }], parentId:'@V2@' },
+    },
+  };
+  API.setDb(db);
+  var res = API.mergePlaceObjects('@V1@', ['@V2@']);
+  eq(res.farmsMerged, 0, 'ai.distinct: verschiedene Höfe NICHT zusammengeführt');
+  ok(!!db.placeObjects['@F1@'] && !!db.placeObjects['@F2@'], 'ai.distinct: beide Höfe erhalten');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

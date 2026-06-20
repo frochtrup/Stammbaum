@@ -10,7 +10,7 @@ function showEditSheet() {
   else if (AppState.currentFamilyId) showFamilyForm(AppState.currentFamilyId);
   else if (AppState.currentSourceId) showSourceForm(AppState.currentSourceId);
   else if (AppState.currentRepoId) showRepoForm(AppState.currentRepoId);
-  else if (AppState.currentPlaceName) showPlaceForm(AppState.currentPlaceName);
+  else if (AppState.currentPlaceName) showPlaceForm(AppState.currentPlaceName, AppState.currentPlaceId);
 }
 
 // _pfExtraNames lebt in UIState._formState.pfExtraNames (shimmiert als _pfExtraNames)
