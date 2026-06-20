@@ -1458,6 +1458,52 @@ eq(API._placeFold('  Köln '),  'koln',     '_placeFold ö→o + trim');
   eq(API.getPlaceRegistry().findByName('Muenchen'), '@P1@', 'merge: alte Schreibweise findet jetzt den Gewinner');
 })();
 
+(function() {
+  // gap-fill: strukturarmer Gewinner (viele Verweise) übernimmt fehlende Reichtums-
+  // Felder vom reichen Verlierer (Notiz/Typ/Existenz/GOV). Verhindert Datenverlust,
+  // wenn der Hauptort-Vorschlag nach Verwendungszahl statt Strukturtiefe rankt.
+  var db = {
+    individuals: {
+      '@I1@': { id:'@I1@', birth:{ place:'Dolgen, Stadt Sehnde', placeId:'_ep_poor' }, chr:{}, death:{}, buri:{}, events:[] },
+    },
+    families: {},
+    placeObjects: {
+      // Gewinner: viele Verweise, aber strukturarm (kein note/type/existsFrom/_govId)
+      '_ep_poor': { id:'_ep_poor', title:'Dolgen, Stadt Sehnde', pnames:[], enclosedBy:[], lat:52.3185, long:10.0483 },
+      // Verlierer: 0 Verweise, aber reich
+      '@RICH@':   { id:'@RICH@', title:'Dolgen', type:'City', note:'Heute Dolgen am See', existsFrom:'1300', existsTo:'', _govId:'GOV123', pnames:[], enclosedBy:[{ placeId:'@VOGTEI@', dateFrom:'1300', dateTo:'1809' }], parentId:'@PARENT@' },
+    },
+  };
+  API.setDb(db);
+  var res = API.mergePlaceObjects('_ep_poor', ['@RICH@']);
+  eq(res.merged, 1, 'gap-fill: 1 Verlierer zusammengeführt');
+  var w = API.getPlaceRegistry().byId['_ep_poor'];
+  eq(w.note,       'Heute Dolgen am See', 'gap-fill: Notiz vom Verlierer übernommen');
+  eq(w.type,       'City',                'gap-fill: Typ vom Verlierer übernommen');
+  eq(w.existsFrom, '1300',                'gap-fill: existsFrom vom Verlierer übernommen');
+  eq(w._govId,     'GOV123',              'gap-fill: GOV-ID vom Verlierer übernommen');
+  eq(w.parentId,   '@PARENT@',            'gap-fill: parentId vom Verlierer übernommen');
+  ok((w.enclosedBy || []).some(function(e){ return e.placeId === '@VOGTEI@'; }), 'gap-fill: Verwaltungsgeschichte (enclosedBy) unioniert');
+  ok((w.pnames || []).some(function(p){ return p.value === 'Dolgen'; }), 'gap-fill: Verlierer-Titel als pname erhalten');
+})();
+
+(function() {
+  // gap-fill darf vorhandene Gewinner-Felder NICHT überschreiben (kein Daten-Klobbern)
+  var db = {
+    individuals: {}, families: {},
+    placeObjects: {
+      '@KEEP@': { id:'@KEEP@', title:'Dolgen', type:'City', note:'Gewinner-Notiz', existsFrom:'1200', pnames:[], enclosedBy:[] },
+      '@OTHER@':{ id:'@OTHER@', title:'Dolgen alt', type:'Village', note:'Verlierer-Notiz', existsFrom:'1300', pnames:[], enclosedBy:[] },
+    },
+  };
+  API.setDb(db);
+  API.mergePlaceObjects('@KEEP@', ['@OTHER@']);
+  var w = API.getPlaceRegistry().byId['@KEEP@'];
+  eq(w.note,       'Gewinner-Notiz', 'gap-fill: vorhandene Gewinner-Notiz bleibt unangetastet');
+  eq(w.type,       'City',           'gap-fill: vorhandener Gewinner-Typ bleibt unangetastet');
+  eq(w.existsFrom, '1200',           'gap-fill: vorhandenes existsFrom bleibt unangetastet');
+})();
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  (l) PLACE-HIST — Robustheit-Fixes (B2 mergeStringPlaces, B11 _epId-Kollision)
 // ═══════════════════════════════════════════════════════════════════════════

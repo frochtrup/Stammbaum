@@ -1554,6 +1554,18 @@ function mergePlaceObjects(winnerId, loserIds, _noReconcile) {
     }
     // Koordinaten nur wenn Gewinner keine hat
     if (winner.lat == null && loser.lat != null) { winner.lat = loser.lat; winner.long = loser.long; }
+    // Skalar-Reichtum gap-fill: fehlende Felder des Gewinners aus dem Verlierer
+    // auffüllen (Notiz/Typ/Existenz-Spanne/GOV). Macht den Merge richtungs-
+    // unabhängig verlustfrei — sonst entscheidet die Hauptort-Wahl über
+    // Datenverlust, weil der Vorschlag nach Verwendungszahl rankt, nicht nach
+    // Strukturtiefe. Spiegelt _mergePlaceObjectsFromImport.
+    if ((!winner.type || winner.type === 'Unknown') && loser.type && loser.type !== 'Unknown') winner.type = loser.type;
+    if (!winner._govId        && loser._govId)        winner._govId        = loser._govId;
+    if (!winner.note          && loser.note)          winner.note          = loser.note;
+    if (!winner.existsFrom     && loser.existsFrom)    winner.existsFrom     = loser.existsFrom;
+    if (!winner.existsTo       && loser.existsTo)      winner.existsTo       = loser.existsTo;
+    if (!winner.parentId       && loser.parentId)      winner.parentId       = loser.parentId;
+    if (loser._govUnresolved && winner._govUnresolved !== false && !winner._govId) winner._govUnresolved = true;
     delete pos[lid];
     merged++;
   }
