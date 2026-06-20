@@ -3938,7 +3938,7 @@ html[data-theme="dark"] {
 .place-edit-section-title { font-weight: 600; font-size: 13px; color: var(--text, #333); margin-bottom: 8px; }
 /* P5a-5: Mini-Karte im Ort-Steckbrief */
 .place-map-wrap { height: 160px; border-radius: 8px; overflow: hidden; margin-bottom: 8px; }
-#place-mini-map { width: 100%; height: 100%; }
+#place-mini-map, #hof-mini-map { width: 100%; height: 100%; }
 .place-map-links { display: flex; gap: 8px; flex-wrap: wrap; }
 .place-map-links .place-maps-link { flex: 1; }
 .place-map-coords { margin-top: 4px; font-size: 11px; color: var(--text-muted, #888); }
