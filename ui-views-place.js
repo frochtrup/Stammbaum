@@ -211,10 +211,17 @@ function collectPlaces() {
     for (const [k, pl] of places) {
       if (pl.type === 'Farm' || pl.type === 'Building') places.delete(k);
     }
+    // Bereits via Event-String repräsentierte placeIds sammeln: ein PO darf NICHT
+    // erneut unter seinem atomaren Titel erscheinen, wenn ein Event es schon über
+    // einen hierarchischen Projektions-String referenziert (sonst Doppel-Eintrag —
+    // einer „Nicht verknüpft", einer mit Personen, beide auf dieselbe placeId).
+    const _seenIds = new Set();
+    for (const pl of places.values()) if (pl.placeId) _seenIds.add(pl.placeId);
     for (const po of Object.values(AppState.db.placeObjects || {})) {
       const key = po.title;
       if (!key) continue;
       if (po.type === 'Farm' || po.type === 'Building') continue;
+      if (_seenIds.has(po.id)) continue;
       if (!places.has(key)) {
         // Koord-Paar-Invariante: nur als vollständiges Paar — halbe Werte (lat ohne long
         // o.ä., z.B. aus alten Save-Pfaden) sonst Render-Crash auf null.toFixed
