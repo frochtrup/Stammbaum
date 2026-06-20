@@ -279,9 +279,38 @@ window.addEventListener('load', async () => {
 
   _initOfflineDiag();
 
-  // Service Worker registrieren
+  // Service Worker registrieren + Auto-Reload bei SW-Update (v1019).
+  // controllerchange feuert, wenn eine neu installierte SW per skipWaiting+claim
+  // die Kontrolle übernimmt. Wir laden die Seite dann automatisch neu, damit User
+  // nicht unbestimmt lange auf altem Code arbeiten. Dirty-Schutz: wenn ungespeicherte
+  // Änderungen vorliegen, wird der Reload zurückgestellt, bis der Stand sauber ist.
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+    let _pendingReload = false;
+    const _tryReload = () => {
+      if (!_pendingReload) return;
+      if (typeof AppState !== 'undefined' && AppState.changed) return; // ungespeicherte Änderungen → warten
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_pendingReload) return; // Mehrfach-Trigger / Reload-Schleifen vermeiden
+      _pendingReload = true;
+      if (typeof AppState !== 'undefined' && AppState.changed) {
+        if (typeof showToast === 'function') {
+          showToast('Neue App-Version installiert — wird nach dem nächsten Speichern aktiv', 'info');
+        }
+        // Polling alle 3s, bis sauberer Zustand erreicht
+        const _iv = setInterval(() => {
+          if (typeof AppState === 'undefined' || !AppState.changed) {
+            clearInterval(_iv);
+            window.location.reload();
+          }
+        }, 3000);
+      } else {
+        // Sauberer Zustand → kurz puffern (SW-Settle), dann reload
+        setTimeout(_tryReload, 500);
+      }
+    });
   }
 
   // Loader ausblenden, falls keiner der Auto-Load-Pfade ihn bereits geschlossen hat
