@@ -128,6 +128,14 @@ const HOF_NOTE_PREFIX = '[Hof] ';
 function _isHofNoteText(t)   { return typeof t === 'string' && t.startsWith(HOF_NOTE_PREFIX); }
 function _stripHofPrefix(t)  { return _isHofNoteText(t) ? t.slice(HOF_NOTE_PREFIX.length) : t; }
 
+// ADR-028 Phase 4: Event-Typen, deren Semantik „Person an stabiler Adresse =
+// Hof" eindeutig ist. Bei diesen Typen darf der Link-Pass aus (Dorf-Kontext +
+// ev.addr) einen neuen hofObject anlegen, sogar wenn keiner existiert — der
+// Event-Typ ist der Quell-Anker (analog rich-PLAC-Struktur bei Pfad C).
+// BIRT/DEAT/MARR/BURI tragen diese Semantik NICHT (Krankenhaus/Kirche/
+// Friedhof/Standesamt sind plausible Nicht-Hof-Adressen) → Review-Pfad.
+const HOF_BOOTSTRAP_EVENT_TYPES = new Set(['RESI', 'PROP', 'CENS', 'OCCU']);
+
 // Globale Label-Map für GEDCOM-Ereignis-Typen (DRY: wird in showDetail + showPlaceDetail genutzt)
 const EVENT_LABELS = {
   // Spezial-Schlüssel (intern)
@@ -1274,7 +1282,7 @@ function _linkGedcomEventsToPlaceObjects(db) {
   const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
   const hofRegHasData = hofReg && Object.keys(hofReg.byId).length > 0;
   if (!reg || !Object.keys(reg.byId).length) return 0;
-  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0, linkedHofBootstrap = 0, linkedHofAtomic = 0;
+  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0, linkedHofBootstrap = 0, linkedHofAtomic = 0, linkedHofTypeBootstrap = 0;
   const _project = (pid, year) =>
     (typeof _buildFormString === 'function' && _buildFormString(pid, year))
     || reg.resolveAsOf(pid, year) || null;
@@ -1360,6 +1368,37 @@ function _linkGedcomEventsToPlaceObjects(db) {
     // wird ev.place jetzt zur vollen Hof-Hierarchie „Hof, Dorf, …". Das ist
     // der sichtbare Konvention-2→1-Übergang (recollapsed → markChanged →
     // Toast); idempotent ab Iteration 2.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
+    return true;
+  };
+  // ADR-028 Phase 4 Pfad B' (Bootstrap aus Event-Typ-Semantik, Konvention 2
+  // ohne Hof): Wenn das Event ein RESI/PROP/CENS/OCCU ist, ev.placeId aufgelöst
+  // und ev.addr gesetzt ist, kann der Quell-Bezug eindeutig als Hof gelesen
+  // werden — der Event-Typ ist der Anker (analog rich-PLAC-Struktur bei
+  // Pfad C). Neue hofObjects werden via findOrCreateHofObject deterministisch
+  // angelegt; ID-Schema und Idempotenz wie bei Pfad C.
+  // Reihenfolge im _link: NACH _tryHofAddrLink (Pfad B) — bestehender Hof
+  // gewinnt vor Neuanlage. BIRT/DEAT/MARR/BURI tragen keine Hof-Semantik →
+  // landen ohne Auto-Bootstrap im Review-Pfad (Phase 5).
+  const _tryHofBootstrapFromAddr = (ev, year) => {
+    if (!hofReg || ev.hofId || !ev.placeId || !ev.addr) return false;
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
+    // Sicherheits-Check: wenn doch ein bestehender Hof matcht (z.B. weil
+    // hofRegHasData zwischenzeitlich befüllt wurde), darf Pfad B' nicht
+    // dazwischenfunken — Pfad B hat bei dieser Reihenfolge schon gegriffen.
+    if (hofRegHasData) {
+      const existing = hofReg.findAllByAddr(ev.addr, year)
+        .filter(id => hofReg.byId[id] && hofReg.byId[id].villageId === ev.placeId);
+      if (existing.length) return false;
+    }
+    const hofId = (typeof findOrCreateHofObject === 'function')
+      ? findOrCreateHofObject(ev.addr, ev.placeId) : null;
+    if (!hofId) return false;
+    ev.hofId = hofId;
+    linkedHofTypeBootstrap++;
+    // REPROJECT: ev.place wandert von Konvention 2 (Dorf-Hierarchie) auf
+    // Konvention 1 (Hof + Dorf-Hierarchie) — sichtbarer Übergang via
+    // recollapsed → markChanged → Toast, danach idempotent.
     if (_reprojectEvCache(ev, year)) recollapsed++;
     return true;
   };
@@ -1569,7 +1608,8 @@ function _linkGedcomEventsToPlaceObjects(db) {
     _placeLink(ev, year);                          // Fall 1/2a/2b: setzt placeId (skip wenn schon gesetzt)
     if (_tryHofAtomicLink(ev, year)) return;       // Pfad A' (Phase 2): atomar PLAC → globaler hofObject-Match
     if (_tryHofBootstrapFromPlac(ev, year)) return; // Pfad C: legt hofObject an, setzt placeId+hofId+addr
-    _tryHofAddrLink(ev, year);                     // Pfad B: setzt hofId wenn ev.addr matcht
+    if (_tryHofAddrLink(ev, year)) return;         // Pfad B: setzt hofId wenn ev.addr matcht (existing Hof)
+    _tryHofBootstrapFromAddr(ev, year);            // Pfad B' (Phase 4): Bootstrap aus Event-Typ-Semantik
   };
   for (const p of Object.values(db.individuals || {})) {
     [p.birth, p.chr, p.death, p.buri].forEach(_link);
@@ -1580,19 +1620,19 @@ function _linkGedcomEventsToPlaceObjects(db) {
     (f.events || []).forEach(_link);
   }
   // JXA-Falle: console.info existiert nicht im Unit-Harness → Fallback (vgl. console.warn).
-  if (linked || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic) {
+  if (linked || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic || linkedHofTypeBootstrap) {
     const _info = (typeof console !== 'undefined' && console.info) ? console.info
                 : (typeof console !== 'undefined' && console.log) ? console.log : null;
-    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofAtomic} Höfe (atomar), ${linkedHofBootstrap} Höfe (Bootstrap), ${linkedHofAddr} Höfe (ADDR), ${recollapsed} neu kollabiert`);
+    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofAtomic} Höfe (atomar), ${linkedHofBootstrap} Höfe (Bootstrap), ${linkedHofAddr} Höfe (ADDR), ${linkedHofTypeBootstrap} Höfe (TypeBootstrap), ${recollapsed} neu kollabiert`);
   }
-  if (recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic) {
+  if (recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic || linkedHofTypeBootstrap) {
     UIState._placesCache = null; UIState._placeRegistry = null;
     UIState._hofRegistry = null; UIState._hofCache = null;
     if (typeof markChanged === 'function') markChanged();
   }
   // Total-Mutations-Counter für die Lade-Meldung; recollapsed bleibt im Bewertungs-Kanal,
   // Hof-Treffer werden separat gezählt (storage-file.js liest diese Zähler aus AppState).
-  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofAtomic, linkedHofBootstrap, linkedHofAddr, recollapsed };
+  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofAtomic, linkedHofBootstrap, linkedHofAddr, linkedHofTypeBootstrap, recollapsed };
   return recollapsed;
 }
 

@@ -1,6 +1,6 @@
 # ADR-028 — Deterministische Identitäts-Auflösung Event→Ort/Hof: Persistenz durch Daten, nicht durch Annotationen
 
-> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phase 2 ✅ (sw v1027), Phase 3 ✅ (sw v1028), Phasen 4–6 ausstehend.
+> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phase 2 ✅ (sw v1027), Phase 3 ✅ (sw v1028), Phase 4 ✅ (sw v1029), Phasen 5–6 ausstehend.
 > Ergänzt ADR-024 (Orts-Entität) + ADR-027 (Hof-Entität).
 
 ## Kontext
@@ -205,7 +205,7 @@ Sign-Off erteilt. Implementation gestartet.
 - **Tests:** id-keyed Aggregation deduppt mehrere Cache-Strings auf eine Listen-Zeile; Hofchronik aggregiert über hofId, nicht addr.
 - **Gate:** alle bestehenden View-/Aggregator-Tests grün; Bug #1 in Realdaten-Browser-Test nicht mehr reproduzierbar.
 
-### Phase 4 — Pfad B' (Bootstrap aus Event-Typ-Semantik, Konvention 2a)
+### Phase 4 — Pfad B' (Bootstrap aus Event-Typ-Semantik, Konvention 2a) ✅ (sw v1029, 2026-06-21)
 
 - Konstante `HOF_BOOTSTRAP_EVENT_TYPES = {'RESI', 'PROP', 'CENS', 'OCCU'}` in `gedcom.js`.
 - `_tryHofBootstrapFromAddr(ev, year)` in `_linkGedcomEventsToPlaceObjects` *nach* `_tryHofAddrLink` (Pfad B): wenn `ev.type ∈ HOF_BOOTSTRAP_EVENT_TYPES`, `ev.placeId` gesetzt, `ev.addr` non-empty, kein Hof-Match → `findOrCreateHofObject(ev.addr, ev.placeId)`.
@@ -277,7 +277,7 @@ Vor Phase 6 (Cleanup) muss gelten:
 
 ## Status
 
-🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phase 2 ✅ (sw v1027, Pfad A' atomarer Hof-Lookup), Phase 3 ✅ (sw v1028, Lese-Seite konsolidiert), Phasen 4–6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
+🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phase 2 ✅ (sw v1027, Pfad A' atomarer Hof-Lookup), Phase 3 ✅ (sw v1028, Lese-Seite konsolidiert), Phase 4 ✅ (sw v1029, Pfad B' Bootstrap aus Event-Typ), Phasen 5–6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
 
 Bei Abnahme nach Phase 6: Status auf 🟢 (abgeschlossen).
 

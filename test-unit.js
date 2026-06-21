@@ -4415,7 +4415,14 @@ group('(ak) ADR-027 P2 Mapping-Layer');
   API._linkGedcomEventsToPlaceObjects(API.AppState.db);
   var ev = API.AppState.db.individuals['@I1@'].events[0];
   eq(ev.placeId, '_po_welbergen', 'ak-8a: Pfad B respektiert Dorf-Scope (Welbergen aufgelöst)');
-  ok(!ev.hofId, 'ak-8b: Hof in anderem Dorf → kein hofId-Set');
+  // ADR-028 Phase 4: Pfad B' legt jetzt einen neuen Hof in Welbergen an
+  // (Event-Typ RESI + Dorf-Scope = sicherer Bootstrap). Der bestehende Ochtrup-
+  // Hof darf NICHT verwendet werden — das war die ursprüngliche Aussage des
+  // Tests, jetzt schärfer formuliert.
+  ok(ev.hofId && ev.hofId !== '_hof_wall_33',
+    'ak-8b: Cross-Dorf-Schutz — Ochtrup-Hof wird nicht gepickt; neuer Hof in Welbergen via Pfad B\'');
+  eq(API.AppState.db.hofObjects[ev.hofId].villageId, '_po_welbergen',
+    'ak-8b: neuer Hof hängt am korrekten Dorf');
 })();
 
 // Phase 2 ohne hofObjects-Daten: bestehender Place-Link unverändert (Backward-Kompat)
@@ -5287,6 +5294,146 @@ group('(am) ADR-027 P5 Hof-Review');
   ok(hof, 'ar-3b: addr-keyed Fallback findbar');
   eq(hof.entries.length, 2, 'ar-3b: beide Events aggregiert');
   ok(!hof.hofId, 'ar-3b: kein hofId (Fallback-Pfad)');
+})();
+
+// ─── Gruppe (as) — ADR-028 Phase 4: Pfad B' Bootstrap aus Event-Typ-Semantik ─
+
+// as-1: Hof-tragende Event-Typen → Auto-Bootstrap bei Konvention 2 ohne Hof
+['RESI', 'PROP', 'CENS', 'OCCU'].forEach(function(t, ix) {
+  (function() {
+    API.setDb({
+      individuals:{
+        '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+          birth:{}, chr:{}, death:{}, buri:{},
+          events:[{ type:t, place:'Ochtrup', addr:'Wall 33', date:'1850' }] },
+      },
+      families:{}, extraPlaces:{},
+      placeObjects:{
+        '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      },
+      hofObjects:{},
+    });
+    API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+    var ev = API.AppState.db.individuals['@I1@'].events[0];
+    ok(ev.hofId && ev.hofId.indexOf('_hof_') === 0,
+      'as-1' + 'abcd'[ix] + ': ' + t + ' → Pfad B\' legt hofObject an');
+    eq(API.AppState._lastLinkPassStats.linkedHofTypeBootstrap, 1,
+      'as-1' + 'abcd'[ix] + ': linkedHofTypeBootstrap-Counter');
+  })();
+});
+
+// as-2: Nicht-Hof-Event-Typen → KEIN Bootstrap (Krankenhaus/Kirche/Friedhof
+// sind plausible Nicht-Hof-Adressen → Review-Pfad)
+['BIRT', 'DEAT', 'MARR', 'BURI'].forEach(function(t, ix) {
+  (function() {
+    API.setDb({
+      individuals:{
+        '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+          birth:{}, chr:{}, death:{}, buri:{},
+          events:[{ type:t, place:'Ochtrup', addr:'Krankenhaus St. Joseph', date:'1850' }] },
+      },
+      families:{}, extraPlaces:{},
+      placeObjects:{
+        '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      },
+      hofObjects:{},
+    });
+    API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+    var ev = API.AppState.db.individuals['@I1@'].events[0];
+    ok(!ev.hofId, 'as-2' + 'abcd'[ix] + ': ' + t + ' → kein Auto-Bootstrap (Event-Typ ohne Hof-Semantik)');
+  })();
+});
+
+// as-3: RESI mit ADDR + bestehendem Hof → Pfad B greift, kein doppelter Bootstrap
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Ochtrup', addr:'Wall 33', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_existing': { id:'_hof_existing', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_existing', 'as-3a: Pfad B linkt bestehenden Hof (kein doppelter Bootstrap)');
+  eq(API.AppState._lastLinkPassStats.linkedHofTypeBootstrap, 0,
+    'as-3a: linkedHofTypeBootstrap=0 — Bootstrap feuerte nicht');
+  eq(API.AppState._lastLinkPassStats.linkedHofAddr, 1,
+    'as-3a: linkedHofAddr=1 — Pfad B hat gegriffen');
+})();
+
+// as-4: RESI ohne ev.placeId (kein Dorf-Scope) → kein Bootstrap
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        // ev.place = 'Unbekanntes Dorf' — kein placeObject Match, kein ev.placeId
+        events:[{ type:'RESI', place:'Unbekanntes Dorf', addr:'Wall 33', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{}, hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!ev.hofId, 'as-4a: ohne Dorf-Scope kein Bootstrap (braucht villageId)');
+  ok(!ev.placeId, 'as-4a: placeId bleibt null');
+})();
+
+// as-5: REPROJECT nach B'-Bootstrap → ev.place wird zur Konvention-1-Hierarchie
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Ochtrup', addr:'Wall 33', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.place, 'Wall 33, Ochtrup', 'as-5a: REPROJECT erzeugt Konvention-1-PLAC');
+  eq(ev.addr, 'Wall 33', 'as-5a: ev.addr unverändert (User-Wire-Daten)');
+})();
+
+// as-6: Idempotenz — zweiter Link-Pass auf demselben db pickt via Pfad B auf
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Ochtrup', addr:'Wall 33', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var firstHofId = API.AppState.db.individuals['@I1@'].events[0].hofId;
+  // Zweiter Lauf: simuliert Reload, ev.hofId/placeId würden runtime-only
+  // verloren gehen. Wir clearen sie und prüfen, dass derselbe Hof wieder findbar ist.
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  delete ev.hofId; delete ev.placeId;
+  // Cache invalidieren, damit hofRegistry neu aufgebaut wird
+  API.UIState._hofRegistry = null; API.UIState._placeRegistry = null;
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  eq(ev.hofId, firstHofId, 'as-6a: zweiter Lauf findet denselben Hof (via Pfad B, kein doppelter Bootstrap)');
+  eq(API.AppState._lastLinkPassStats.linkedHofTypeBootstrap, 0,
+    'as-6a: keine Type-Bootstrap-Wiederholung (Pfad B greift)');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

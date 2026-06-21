@@ -9,6 +9,25 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — ADR-028 Phase 4: Pfad B' Bootstrap aus Event-Typ-Semantik (sw v1029)
+
+**Auslöser:** Konvention 2 ohne bestehenden Hof (MyHeritage-/GRAMPS-Export-Standard: `PLAC Dorf, … + ADDR Hof`) bleib bislang im Review-Pfad hängen, obwohl der Event-Typ (`RESI`/`PROP`/`CENS`/`OCCU`) den Hof-Charakter eindeutig deklariert — semantisch genauso unzweideutig wie rich-PLAC-Struktur bei Pfad C. Closes Bug-Klasse #2 für die häufigste verbleibende Eingabe-Klasse.
+
+**Implementierung (Phase 4):**
+- **Konstante `HOF_BOOTSTRAP_EVENT_TYPES = new Set(['RESI','PROP','CENS','OCCU'])` (gedcom.js):** definiert die Typen, deren Semantik „Person an stabiler Adresse = Hof" eindeutig ist. BIRT/DEAT/MARR/BURI tragen diese Semantik nicht (Krankenhaus/Kirche/Friedhof/Standesamt sind plausible Nicht-Hof-Adressen) → bleiben im Review-Pfad.
+- **`_tryHofBootstrapFromAddr(ev, year)` in `_linkGedcomEventsToPlaceObjects`:** Trigger: `ev.type ∈ HOF_BOOTSTRAP_EVENT_TYPES`, `ev.placeId` aufgelöst, `ev.addr` non-empty, kein hofId, kein bestehender Hof im Dorf-Scope. Auto-Anlage via `findOrCreateHofObject(ev.addr, ev.placeId)` + REPROJECT. Reihenfolge im `_link`: NACH `_tryHofAddrLink` (Pfad B greift bei bestehendem Hof), damit kein doppelter Bootstrap.
+- **Counter `linkedHofTypeBootstrap`** in `AppState._lastLinkPassStats`. Toast in storage-file.js erweitert: „N aus RESI/PROP-Adresse neu angelegt".
+- **+21 Tests Gruppe (as):** Auto-Bootstrap für RESI/PROP/CENS/OCCU (1a–d), KEIN Bootstrap für BIRT/DEAT/MARR/BURI (2a–d), Pfad B Vorrang bei bestehendem Hof (3a), kein Bootstrap ohne villageId-Scope (4a), REPROJECT-Konvention-2→1 (5a), Idempotenz beim zweiten Lauf (6a).
+- **ak-8b umformuliert:** Pre-Phase-4 hatte der Test geprüft, dass kein hofId gesetzt wird wenn nur falsch-Dorf-Hof matcht. Mit Pfad B' wird jetzt ein neuer Hof in Welbergen angelegt — die ursprüngliche Aussage („nicht falschen Cross-Dorf-Hof picken") bleibt erhalten, jetzt schärfer als „neuer Hof am korrekten Dorf".
+
+**Gates:** 819 Unit-Tests grün (+22 (as)+ak-8b-Erweiterung). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (343 ms). GRAMPS stable.
+
+**Effekt:** Bug-Klasse #2 algorithmisch geschlossen für die häufigsten Eingabe-Klassen. Verbleibend genuine Review-Klassen: (a) atomare PLAC ohne globalen Match (Konvention 3b), (b) Konvention 2 mit non-Hof-Event-Typ wie BIRT/DEAT ohne bestehenden Hof, (c) echte Mehrdeutigkeit (mehrere Höfe gleicher Adresse). Diese landen in Phase 5 als Review-Klassen mit drei Daten-Anreicherungs-Aktionen.
+
+**Lehre:** Event-Typ als zweiter Quell-Anker (parallel zu rich-PLAC bei Pfad C) hebt die Determinismus-Garantie auf den häufigen MyHeritage-Konvention-2-Fall. Akzeptierter false-positive: RESI mit `ADDR Krankenhaus St. Joseph` legt einen Pseudo-Hof an — bounded (sichtbar im Höfe-Tab, trivial korrigierbar als `placeObject` Typ `Hospital`), Preis für die viel häufigere true-positive-Quote bei rural-Höfen.
+
+---
+
 ### Session 2026-06-21 — ADR-028 Phase 3: Lese-Seite konsolidiert (sw v1028)
 
 **Auslöser:** Phase 3 des ADR-028-Migrationsplans — `_eventPlaceId`/`_eventHofId` als Chokepoints durchsetzen, Aggregatoren `collectPlaces` + `buildHofIndex` id-keyed statt string-keyed. Damit wird die Determinismus-Garantie auch lese-seitig materialisiert; Bug-Klasse #1 verschwindet strukturell (kein Cache-String-Drift mehr in der Ortsliste).
