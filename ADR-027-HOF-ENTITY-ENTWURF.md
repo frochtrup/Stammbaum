@@ -113,26 +113,35 @@ function buildPlacForGedcom(ev, year):
 **Lesen** (`gedcom-parser.js` + Link-Pass):
 
 1. Parser füllt `ev.place`, `ev.addr`, `ev.lati/long` wie heute. Kein `ev.hofId`/`ev.placeId` gesetzt.
-2. **Link-Pass-Erweiterung** (zwei Eingabe-Pfade, beide unter derselben Eindeutigkeits-Regel):
+2. **Link-Pass-Erweiterung** (drei Eingabe-Pfade, alle unter derselben Eindeutigkeits-Regel):
 
-   **Pfad A — PLAC-basiert** (Konvention 1 + 3, „Adresse als Leitsegment im PLAC"):
+   **Pfad A — PLAC-basiert gegen existierende hofObjects** (Konvention 1 + 3, „Adresse als Leitsegment im PLAC"):
    - Segmentiere `ev.place` per Komma in `[lead, ...rest]`.
    - Wenn `lead` per `_normPlaceName` eindeutig gegen `hofObjects.addrs[].value` zum Stichjahr matcht UND `rest` die Dorf-Hierarchie der `hof.villageId` matcht (Anker-Check analog ADR-024 v1015) → `ev.hofId = hofId`, `ev.placeId = hof.villageId`. Hof gilt als „aus PLAC erkannt".
 
-   **Pfad B — ADDR-basiert** (Konvention 2, „PLAC ist nur Dorfhierarchie, ADDR trägt die Adresse"):
+   **Pfad B — ADDR-basiert gegen existierende hofObjects** (Konvention 2, „PLAC ist nur Dorfhierarchie, ADDR trägt die Adresse"):
    - Nur ausgeführt, wenn Pfad A keinen Hof-Match lieferte UND `ev.addr` gesetzt ist.
    - Zuerst Dorf auflösen: `ev.placeId` wird über `_linkGedcomEventsToPlaceObjects` aus der vollen PLAC-Kette gesetzt (existierender Mechanismus).
    - Dann im Hof-Index nach `hofObjects` mit `villageId === ev.placeId` filtern, und ein eindeutiges `addrs[].value`-Match (per `_normPlaceName`, zum Stichjahr) auf `ev.addr` suchen.
    - Eindeutiger Treffer → `ev.hofId = hofId`. Hof gilt als „aus ADDR erkannt".
    - Mehrdeutig (mehrere Höfe gleicher Adresse im selben Dorf), kein hofObject vorhanden, oder Adress-Match scheitert (Tippfehler/Schreibvariante) → `ev.hofId` bleibt null; bewusste User-Aktion erforderlich.
 
-3. **`ev.place` bleibt unverändert** beim Linken (Wire-Treue). Der Writer rekonstruiert beim nächsten Save aus `(placeId, hofId, year)`. Bei Pfad-B-Treffern enthält der rekonstruierte PLAC dann das Adress-Präfix → bewusster Roundtrip-Bruch ggü. der Original-Quelle (Konvention 1 → Konvention 1, Konvention 2 → Konvention 1). Genau analog zum bestehenden ADR-024-Verhalten (`ev.place`-Re-Kollaps auf periodengerechte Projektion).
+   **Pfad C — PLAC-Bootstrap: hofObject aus rich-PLAC ableiten** (Konvention 1 + 3, wenn `hofObjects` für diese Adresse noch nicht modelliert ist):
+   - Nur ausgeführt, wenn Pfad A UND der bestehende Place-Link (Fall 1/2a/2b) keinen Match lieferten UND `ev.place` Komma-Hierarchie ist (mind. 2 Segmente) UND `ev.hofId`/`ev.placeId` noch leer. Reihenfolge im Link-Pass: A → Place-Link → C → B. Pfad C läuft *nach* dem Place-Link, damit legitime Verwaltungs-Hierarchien (z.B. „Münster, Münster, Westfalen" → Stadt Münster) nicht versehentlich als Hof gebootstrappt werden — Fall 2a hat dort schon exakt verlinkt.
+   - Greedy-shortest-prefix-Loop: für `i = 1 … min(N-1, maxHofSegs)` wird geprüft, ob `segs[i..N].join(', ')` **exakt** der periodengerechten Projektion `_buildFormString(cand, year)` eines `findAllByName(segs[i])`-Kandidaten entspricht. Erster Treffer gewinnt (kürzestes Hof-Präfix). `maxHofSegs = 2` (Höfe bestehen in der Praxis aus 1, selten 2 Segmenten).
+   - Mehrdeutigkeits-Schutz 1: mehrere `cands` an Position `i` mit exakter Projektion → blockieren, nicht weiterprobieren (Review-Pfad).
+   - Mehrdeutigkeits-Schutz 2: wenn ≥2 bestehende `hofObjects` an `(_normHofAddr(lead), winner-villageId)` matchen → blockieren. Das spiegelt Pfad As Mehrdeutigkeits-Block: wenn Pfad A wegen mehrerer existierender Höfe gleicher Adresse im selben Dorf nicht linken konnte, darf Pfad C nicht arbiträr einen Default picken.
+   - Treffer → `villageId = cand`, `hofAddr = segs[0..i].join(', ')`, dann `hofId = findOrCreateHofObject(hofAddr, villageId)` (deterministische ID, idempotent gegen vorherige Läufe; existing-1-Match wird wiederverwendet), `ev.placeId = villageId`, `ev.hofId = hofId`, `ev.addr = ev.addr || hofAddr`. Hof gilt als „aus PLAC gebootstrappt".
+   - **Begründung der Auto-Anlage:** Der Quell-Bezug ist eindeutig — die GED-Quelle benennt einen Hof als Leitsegment einer Dorf-Hierarchie, deren Restprojektion bit-genau matcht. Das ist semantisch dasselbe wie Pfad A, nur dass der Hof noch nicht modelliert war; der Auto-Link würde sonst nie firen, obwohl der Quell-Bezug eindeutig vorhanden ist. Die Eindeutigkeits-Regel ist sogar schärfer als bei Pfad A (exakte Projektion statt Anker-Token), weil ohne pre-existing hofObject keine Existenzspanne zur Disambiguierung verfügbar ist — die Projektions-Exaktheit ist der Ersatz.
+   - **Was Pfad C *nicht* tut:** keine Dorf-`placeObjects` anlegen (`villageId` muss existieren), kein Tolerieren von Teilprojektion (Anker-Match wie Fall 2b reicht nicht), kein Match bei atomarer `ev.place` (Fall 1 zuständig), kein Override von Fall-2a-Treffern (Place-Link hat Vorrang).
 
-4. **Toast + `markChanged` beim Load:** eine einzige Meldung summiert beide Pfade — z.B. *„N Orte verknüpft, M Höfe aus PLAC erkannt, K Höfe aus ADDR erkannt"*. `markChanged` aktiv, damit der User die strukturelle Anreicherung sieht und bewusst speichert. Analog zum heutigen ADR-024-Link-Pass-Toast (`recollapsed`).
+3. **`ev.place` bleibt unverändert** beim Linken (Wire-Treue). Der Writer rekonstruiert beim nächsten Save aus `(placeId, hofId, year)`. Bei Pfad-B-Treffern enthält der rekonstruierte PLAC dann das Adress-Präfix → bewusster Roundtrip-Bruch ggü. der Original-Quelle (Konvention 1 → Konvention 1, Konvention 2 → Konvention 1). Genau analog zum bestehenden ADR-024-Verhalten (`ev.place`-Re-Kollaps auf periodengerechte Projektion). Pfad C: `ev.place` bleibt unverändert, der Writer reproduziert byte-identisch aus dem frisch angelegten hofObject + Dorf-Projektion — `net_delta=0` ggü. Original (Konvention 1 → Konvention 1, weil die Exakt-Projektions-Bedingung garantiert, dass `hofAddr + ', ' + villagePart === ev.place`).
 
-**Konventions-Erhalt — präziser:** `ev.hofId` wird automatisch gesetzt **wenn und nur wenn** die Quelle eine eindeutige Hof-Identifikation trägt — sei es im PLAC (Pfad A) oder in ADDR + Dorf-Kontext (Pfad B). „Eindeutig" meint: genau ein Match im hofObjects-Index. Mehrdeutigkeit, fehlende Hof-Modellierung oder Schreibvarianten blockieren den Auto-Link → der User entscheidet im Hof-Zuweisen-Modal.
+4. **Toast + `markChanged` beim Load:** eine einzige Meldung summiert alle drei Pfade — z.B. *„N Orte verknüpft, M Höfe aus PLAC erkannt, K Höfe aus ADDR erkannt, J Höfe aus PLAC gebootstrappt"*. `markChanged` aktiv, damit der User die strukturelle Anreicherung sieht und bewusst speichert. Analog zum heutigen ADR-024-Link-Pass-Toast (`recollapsed`).
 
-Damit bleiben Konvention 1 + 3 byte-identisch im Roundtrip (`net_delta=0` ggü. Original). Konvention 2 wird beim ersten Save in Konvention 1 transformiert (Adress-Präfix kommt in PLAC) — ehrlicher Roundtrip-Bruch als Konsequenz der strukturellen Anreicherung, sichtbar in Toast + `markChanged`, danach idempotent (`out2===out3`).
+**Konventions-Erhalt — präziser:** `ev.hofId` wird automatisch gesetzt **wenn und nur wenn** die Quelle eine eindeutige Hof-Identifikation trägt — sei es als Match in vorhandenen hofObjects (Pfad A im PLAC, Pfad B in ADDR + Dorf-Kontext) oder als bit-exakt projizierbares Hof-Präfix in einer modellierten Dorf-Hierarchie (Pfad C im PLAC). „Eindeutig" meint bei A+B: genau ein Match im hofObjects-Index. Bei Pfad C: genau ein `findAllByName`-Kandidat dessen Projektion exakt das Rest-Segment-Suffix reproduziert. Mehrdeutigkeit, fehlende Dorf-Modellierung, atomare PLAC-Strings oder Schreibvarianten blockieren den Auto-Link → der User entscheidet im Hof-Zuweisen-Modal.
+
+Damit bleiben Konvention 1 + 3 byte-identisch im Roundtrip (`net_delta=0` ggü. Original) — unabhängig davon, ob das hofObject vor dem Load schon existierte (Pfad A) oder erst von Pfad C angelegt wurde. Konvention 2 wird beim ersten Save in Konvention 1 transformiert (Adress-Präfix kommt in PLAC) — ehrlicher Roundtrip-Bruch als Konsequenz der strukturellen Anreicherung, sichtbar in Toast + `markChanged`, danach idempotent (`out2===out3`).
 
 ### GRAMPS XML
 
@@ -161,18 +170,21 @@ Drei Quellkonventionen in der freien Wildbahn:
 
 Unter ADR-027 werden **alle drei** vom Link-Pass automatisch als Hof-Bezug erkannt, sofern eindeutig auflösbar:
 
-- (1) + (3) → Pfad A (PLAC-Leitsegment matcht `hofObjects.addrs`)
-- (2) → Pfad B (`ev.addr` matcht `hofObjects.addrs` im Kontext des aufgelösten Dorfs)
+- (1) + (3) → Pfad A (PLAC-Leitsegment matcht `hofObjects.addrs`) **oder** Pfad C (hofObject existiert noch nicht, aber die Rest-Segmente projizieren bit-exakt auf ein existierendes Dorf → hofObject wird aus dem Leitsegment angelegt).
+- (2) → Pfad B (`ev.addr` matcht `hofObjects.addrs` im Kontext des aufgelösten Dorfs).
+
+**Eindeutige hofId-Anlage als gemeinsame Regel:** Sobald die Quelle einen Hof eindeutig identifiziert — sei es als Match in vorhandenen hofObjects (A/B) oder als exakt projizierbares Leitsegment einer modellierten Dorf-Hierarchie (C) — wird `ev.hofId` automatisch gesetzt bzw. das hofObject deterministisch angelegt (ID-Schema `_hof_<normaddr>_<villageNormName>`, kollisionssicher). Es gibt keinen Auto-Pfad, der ohne eindeutige Quell-Identifikation einen Hof anlegt; und es gibt keinen Pfad mit eindeutiger Quell-Identifikation, der die Anlage / das Setzen verweigert. Damit ist die hofId-Zuweisung beim Load **vollständig** für die Schnittmenge „eindeutig auflösbar" — der Rest bleibt explizit dem Review-Modal vorbehalten.
 
 Roundtrip-Konsequenz:
-- (1) → (1) bit-identisch (`net_delta=0` ggü. Original).
+- (1) → (1) bit-identisch (`net_delta=0` ggü. Original) — gilt für Pfad A wie auch Pfad C, weil Pfad C die Auto-Anlage nur bei exakter Projektions-Reproduktion zulässt.
 - (3) → (1) ist möglich (Writer fügt fortan den Komma-Hierarchie-Rest hinzu) — analog dem heutigen `ev.place`-Re-Kollaps in ADR-024 ein gewollter Anreicherungs-Schritt, sichtbar in Toast + `markChanged`.
 - (2) → (1) wird auf Save vollzogen: Adress-Präfix kommt in PLAC dazu. Idempotent ab Iteration 2 (`out2===out3`).
 
 Sonderfälle bleiben bewusster User-Aktion vorbehalten:
 - **Mehrere Höfe gleicher Adresse im selben Dorf** (selten, aber möglich) — Modal listet alle Kandidaten.
 - **`ev.addr` mit Tippfehler / Schreibvariante** ggü. dem hofObject — Modal bietet „match per Norm-Fold" oder „neue addrs-Bezeichnung an Hof hinzufügen".
-- **Hof noch nicht modelliert** — Modal bietet „neuen Hof aus diesem Event anlegen", übernimmt addr/coords/villageId.
+- **Dorf noch nicht modelliert** (Pfad C kann mangels Anker nicht greifen) — Modal bietet „neuen Hof + neues Dorf aus diesem Event anlegen", übernimmt addr/coords + Komma-Hierarchie als enclosedBy-Kette.
+- **PLAC-Rest projiziert nicht exakt** auf eine modellierte Dorf-Hierarchie (z.B. fremde Verwaltungs-Schreibweise wie „Oldenburg, Franklin County, Indiana, USA" mit nur deutscher Oldenburg-Modellierung) — Pfad C blockiert bewusst, Modal entscheidet (anlegen / Tippfehler korrigieren / ignorieren).
 
 ## Tab-Trennung — Orte-Tab vs. Höfe-Tab
 
@@ -245,7 +257,7 @@ Echte Mehrdeutigkeit verbleibt nur bei:
 
 Diese Fälle sind real, aber Minderheit — die Review-Funktion ist gezielt dafür da, nicht der Haupt-Workflow.
 
-Prinzip — endgültig: **eindeutiger Quell-Bezug (PLAC-Präfix oder ADDR im Dorf-Kontext, disambiguiert per Existenzspanne) → automatischer Auto-Link mit Toast + `markChanged`. Echte Mehrdeutigkeit oder fehlende Modellierung → permanenter Review-Pfad im Höfe-Tab.** Symmetrisch zur ADR-024-Welt für Orte, aber UI-zentriert statt modal-zentriert.
+Prinzip — endgültig: **eindeutiger Quell-Bezug (PLAC-Präfix oder ADDR im Dorf-Kontext, disambiguiert per Existenzspanne; oder Pfad-C-Bootstrap aus rich-PLAC mit exakter Dorf-Projektion) → automatischer Auto-Link bzw. Auto-Anlage mit Toast + `markChanged`. Echte Mehrdeutigkeit, fehlendes Dorf-Modell oder nicht-projizierbare PLAC-Ketten → permanenter Review-Pfad im Höfe-Tab.** Symmetrisch zur ADR-024-Welt für Orte, aber UI-zentriert statt modal-zentriert.
 
 ## Migrationsplan
 
@@ -269,10 +281,11 @@ ADR vom Maintainer abgenickt. Section „Entscheidung" eingefroren. Implementati
 ### Phase 2 — Mapping-Layer (Parser + Writer)
 
 - **Writer**: `buildPlacForGedcom(ev, year)` — siehe Wire-Mapping oben. `_resolvedPlaceName` ruft `buildPlacForGedcom` statt direkt `_buildFormString`. `geoLines` wählt Koord-Quelle (`hofObjects[hofId]` oder `placeObjects[placeId]`).
-- **Link-Pass**: erweitert um die zwei Hof-Match-Pfade aus dem Wire-Mapping-Abschnitt.
-  - **Pfad A (PLAC-basiert):** läuft *vor* dem heutigen Place-Link, weil ein PLAC-Hof-Match das Dorf automatisch mit setzt.
+- **Link-Pass**: erweitert um die drei Hof-Match-Pfade aus dem Wire-Mapping-Abschnitt.
+  - **Pfad A (PLAC-basiert gegen existierende hofObjects):** läuft *vor* dem heutigen Place-Link, weil ein PLAC-Hof-Match das Dorf automatisch mit setzt.
+  - **Pfad C (PLAC-Bootstrap):** läuft *nach* Pfad A und *vor* dem Place-Link. Greift nur, wenn Pfad A nichts fand, das hofObject also noch nicht existiert; legt es bei exakter Rest-Projektion auf ein modelliertes Dorf-PO an. Eindeutigkeits-Regel: genau ein `findAllByName`-Kandidat mit exakter Projektion.
   - **Pfad B (ADDR-basiert):** läuft *nach* dem Place-Link (braucht aufgelöstes `ev.placeId` für den Dorf-Scope).
-  - Beide unter derselben Eindeutigkeits-Regel (genau ein Match im hofObjects-Index). Summierter Toast „N Orte, M Höfe (PLAC), K Höfe (ADDR)" + `markChanged`.
+  - Alle drei unter derselben Eindeutigkeits-Regel (genau ein Match). Summierter Toast „N Orte, M Höfe (PLAC), J Höfe (Bootstrap), K Höfe (ADDR)" + `markChanged`.
 - **GRAMPS-Parser**: `<placeobj type="Building"|"Farm">` → `db.hofObjects`. `<pname>` → `addrs[]`. `<placeref type="predecessor"|"successor">` → entsprechende Felder.
 - **GRAMPS-Writer**: hofObjects als `<placeobj type="Building">` mit allen Feldern.
 - **Tests:** PLAC-Roundtrip mit/ohne Präfix (Konvention pro Event erhalten), Hof-Match eindeutig/mehrdeutig/anker-fehlend, GRAMPS-Serialisierung.
@@ -371,6 +384,11 @@ Vor Phase 6 (Legacy entfernen) muss gelten:
    - Konvention 2 (ohne Präfix, ADDR vorhanden): `ev.hofId` aus Pfad B gesetzt, Toast + `markChanged` aktiv, Re-Save fügt Präfix in PLAC ein, `out2===out3` (Idempotenz ab Iteration 2).
    - Konvention 3 (nur PLAC-Adresse): `ev.hofId` aus Pfad A gesetzt, ggf. Komma-Hierarchie-Anreicherung im Re-Save (analog ADR-024 `ev.place`-Re-Kollaps), `out2===out3`.
    - **Negativ-Test:** zwei Höfe gleicher Adresse im selben Dorf → `ev.hofId` bleibt null (Mehrdeutigkeit blockiert Auto-Link), Modal-Pfad erforderlich.
+2a. **Pfad-C-Bootstrap (Konvention 1 + 3 ohne vorab modelliertes hofObject):** Fixture-Test mit RESI-Event mit rich-PLAC `"Wall 33 (Metelener Str. 18), Ochtrup, Amt Ochtrup, Kreis Steinfurt, Provinz Westfalen, …"`, modelliertem Dorf-PO „Ochtrup" mit voller enclosedBy-Kette, **keinem** hofObject vorab.
+   - Erster Load: Pfad C legt hofObject `_hof_wall_33_…_po_ochtrup` an mit `addrs[0].value = "Wall 33 (Metelener Str. 18)"`, `villageId = _po_ochtrup`; setzt `ev.hofId` + `ev.placeId = _po_ochtrup`; `ev.addr` wird aus Leitsegment gefüllt wenn leer.
+   - Re-Save: PLAC bit-identisch zum Original (`net_delta=0`), weil `buildPlacForGedcom` `hofAddr + ', ' + villagePart` reproduziert.
+   - Zweiter Load (Idempotenz): hofObject existiert, Pfad A greift, Pfad C tut nichts, `out2===out3`.
+   - **Negativ-Tests:** (a) atomarer ev.place ohne Komma → Pfad C tut nichts; (b) Rest-Projektion ungleich (z.B. fremde USA-Verwaltung mit nur deutscher Modellierung) → Pfad C blockiert, Event landet im Review; (c) zwei `findAllByName`-Kandidaten matchen exakt projektionsbasiert → Pfad C blockiert, Event landet im Review.
 3. **Idempotenz der Migration:** zweimaliges Ausführen von `_migrateFarmPOsToHofObjects` ergibt denselben DB-Zustand wie einmalige Ausführung.
 4. **Anreicherung über User-Aktion verifizierbar:** Browser-Test, in dem ein Event aus Konvention (b) per UI manuell einem Hof zugewiesen wird → `markChanged` aktiv → Re-Save schreibt PLAC mit Präfix (gewollter Roundtrip-Bruch ggü. Original).
 5. **`includeAddrLeaf` als String im Repo nicht mehr existent** (Code-Hygiene-Gate via `grep`).
@@ -396,5 +414,6 @@ Bei Abnahme nach Phase 6: Status auf 🟢 (abgeschlossen).
 7. **Auto-Link auch für Konvention 2** (PLAC ohne Adress-Präfix + ADDR vorhanden): zweiter Link-Pass-Pfad „ADDR-basiert" über den Dorf-Kontext, gleiche Eindeutigkeits-Regel. Häufiger Import-Fall (MyHeritage, GRAMPS) wird strukturell aufgelöst statt manuell. Toast + `markChanged` machen die Anreicherung sichtbar; Re-Save vollzieht den Konvention-2→1-Übergang einmalig, danach idempotent (`out2===out3`).
 8. **Tab-Trennung Orte ↔ Höfe** als Erstklassen-Architekturentscheidung: zwei orthogonale Domänen mit eigenen Listen, Validatoren, Merge-Modals, Link-Modals, Detail-Views, Filter-Toggles. Querverweise (Hof zeigt sein Dorf, Dorf zeigt seine Höfe) explizit verlinkt. Keine vermischten Buttons mehr.
 9. **„Hof-Zuweisungen prüfen" als permanente Review-Funktion im Höfe-Tab** statt einmaligem Import-Modal. Badge-Zähler, Tabellen-View mit Batch-Auflösung + „Ignorieren"-Pfad. Datenqualitäts-Sicht, in Etappen abarbeitbar. Mehrdeutigkeit präzisiert: nur wenn mehrere hofObjects gleichzeitig (per existsFrom/To) im selben Dorf eine matchende Adresse haben — Adress-Wiederverwendung über Zeit löst automatisch.
+10. **Pfad C (PLAC-Bootstrap) als dritter Auto-Pfad** parallel zu A+B. Ursprünglich war für „Hof noch nicht modelliert" ausschließlich der Review-Modal-Pfad mit „[+ neu anlegen]" vorgesehen. Bei Konvention-1-Quellen mit reichem PLAC-Hierarchie-Anhang (Hof, Dorf, Verwaltungs-Kette) ist der Quell-Bezug aber bereits eindeutig — der Modal-Klick wäre reine Bestätigung. Pfad C ist deshalb erlaubt, **wenn und nur wenn** die Eindeutigkeit ebenso scharf belegt ist wie bei A: exakte Reproduktion der Rest-Segment-Projektion durch genau einen Dorf-Kandidaten. Damit ist Pfad C semantisch eine Spezialisierung von Pfad A (gleicher Quell-Bezug, gleiche Auto-Link-Semantik, nur Reihenfolge verschoben: hofObject wird im selben Atemzug angelegt), nicht eine Aufweichung der „bewusste-User-Aktion"-Regel. Sonderfälle (fehlendes Dorf-PO, nicht-exakte Projektion, Mehrdeutigkeit) bleiben strikt im Review-Modal. Dokumentiert mit Begründung in Pfad-C-Spec oben.
 
 — Ende des Entwurfs —

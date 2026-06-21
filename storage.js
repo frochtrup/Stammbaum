@@ -54,6 +54,15 @@ async function _deriveHofAndMigrate() {
       if (typeof savePlaceObjects === 'function') savePlaceObjects();
     }
   }
+  // ADR-027 v1025: Link-Pass nach hofObjects-Aufbau + Migration. ev.placeId/hofId
+  // werden nicht ins GEDCOM serialisiert (runtime-only), müssen also auf jedem Load
+  // re-derived werden — vorher nur im File-Load-Pfad (_finishLoad), jetzt zentral
+  // damit Auto-Load/Revert/Demo dieselbe Pfad-A/B/C-Coverage bekommen.
+  // _finishLoad ruft danach nochmal link-pass auf (no-op, idempotent), um den
+  // recollapsed-Toast-Pfad sauber zu trennen.
+  if (typeof _linkGedcomEventsToPlaceObjects === 'function') {
+    try { _linkGedcomEventsToPlaceObjects(AppState.db); } catch(e) { console.warn('_deriveHofAndMigrate link-pass:', e); }
+  }
 }
 
 // ADR-027 P3: Snapshot von placeObjects + Event-place/addr-Mapping VOR der ersten

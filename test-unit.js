@@ -588,6 +588,7 @@ if (IS_NODE) {
     // ADR-027 Phase 1: Hof-Entität als eigenständiges Objekt
     'APP_KNOWN_SCHEMA_VERSION: APP_KNOWN_SCHEMA_VERSION, _normHofAddr: _normHofAddr, _isHofObjectV2: _isHofObjectV2, ' +
     'getHofRegistry: getHofRegistry, mutateHofObject: mutateHofObject, upsertHofObject: upsertHofObject, ' +
+    'findOrCreateHofObject: findOrCreateHofObject, ' +
     'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
     '_migrateFarmPOsToHofObjects: _migrateFarmPOsToHofObjects, _migrateHofObjectsBackToFarmPOs: _migrateHofObjectsBackToFarmPOs, ' +
     '_findUnresolvedHofEvents: _findUnresolvedHofEvents, _countUnresolvedHofEvents: _countUnresolvedHofEvents, ' +
@@ -4590,6 +4591,235 @@ group('(al) ADR-027 P3 Migration');
   eq(c.long, 7.99,  'al-6b: _eventCoords: hofId-Koords gewinnen (long)');
   var c2 = API._eventCoords({ placeId:'_po_ochtrup' });
   eq(c2.lati, 52.2, 'al-6c: ohne hofId → village-Koords');
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  (ao) ADR-027 Pfad C — PLAC-Bootstrap (sw v1025)
+// ═══════════════════════════════════════════════════════════════════════════
+group('(ao) ADR-027 Pfad C PLAC-Bootstrap');
+
+// findOrCreateHofObject: legt neuen V2-Hof an mit deterministischer ID
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  var hofId = API.findOrCreateHofObject('Wall 33', '_po_ochtrup');
+  ok(!!hofId, 'ao-1a: hofId zurückgegeben');
+  var h = API.AppState.db.hofObjects[hofId];
+  ok(!!h, 'ao-1b: hofObject existiert');
+  eq(h.villageId, '_po_ochtrup', 'ao-1c: villageId gesetzt');
+  eq(h.addrs[0].value, 'Wall 33', 'ao-1d: addrs[0].value = addr');
+  ok(API._isHofObjectV2(h), 'ao-1e: V2-Shape');
+})();
+
+// findOrCreateHofObject: Idempotenz — bestehender V2-Hof gleicher Adresse + villageId → ID wiederverwendet
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_existing': { id:'_hof_existing', villageId:'_po_ochtrup', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var hofId = API.findOrCreateHofObject('Wall 33', '_po_ochtrup');
+  eq(hofId, '_hof_existing', 'ao-2a: Bestehender Hof wiederverwendet');
+  eq(Object.keys(API.AppState.db.hofObjects).length, 1, 'ao-2b: kein Duplikat angelegt');
+})();
+
+// findOrCreateHofObject: Norm-Match (Casefold + Whitespace) → keine Schreibvariante-Dubletten
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{ '_po_x': { id:'_po_x', title:'X', type:'Town', pnames:[], enclosedBy:[], parentId:null } },
+    hofObjects:{
+      '_hof_a': { id:'_hof_a', villageId:'_po_x', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var id = API.findOrCreateHofObject('  WALL  33  ', '_po_x');  // Norm-äquivalent
+  eq(id, '_hof_a', 'ao-3: Norm-Variante matcht bestehenden Hof');
+})();
+
+// findOrCreateHofObject: leere/ungültige Eingaben → null
+(function() {
+  API.setDb({ individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{ '_po_x': { id:'_po_x', title:'X', type:'Town', pnames:[], enclosedBy:[], parentId:null } },
+    hofObjects:{} });
+  ok(!API.findOrCreateHofObject('', '_po_x'),         'ao-4a: leere addr → null');
+  ok(!API.findOrCreateHofObject('Wall 33', ''),       'ao-4b: leere villageId → null');
+  ok(!API.findOrCreateHofObject(null, '_po_x'),       'ao-4c: null addr → null');
+})();
+
+// Pfad C: rich-PLAC „Wall 33, Ochtrup" ohne pre-existing hofObject → Auto-Anlage
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'15 MAY 1970', place:'Wall 33, Ochtrup' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},   // KEIN hofObject vorab — Bootstrap-Fall
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!!ev.hofId,                       'ao-5a: Pfad C hat hofId gesetzt');
+  eq(ev.placeId, '_po_ochtrup',        'ao-5b: placeId = villageId');
+  eq(ev.addr, 'Wall 33',               'ao-5c: ev.addr aus Leitsegment ergänzt');
+  var hof = API.AppState.db.hofObjects[ev.hofId];
+  ok(!!hof,                            'ao-5d: hofObject existiert');
+  ok(API._isHofObjectV2(hof),          'ao-5e: V2-Shape');
+  eq(hof.villageId, '_po_ochtrup',     'ao-5f: villageId korrekt');
+  eq(hof.addrs[0].value, 'Wall 33',    'ao-5g: addrs aus Leitsegment');
+})();
+
+// Pfad C: ev.addr bereits gesetzt → wird NICHT überschrieben
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1970', place:'Wall 33, Ochtrup', addr:'Eigener ADDR-Wert' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.addr, 'Eigener ADDR-Wert', 'ao-6: bestehender ev.addr unverändert');
+})();
+
+// Pfad C: mehrere Events mit derselben rich-PLAC → idempotent, derselbe hofId
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1970', place:'Wall 33, Ochtrup' },
+                 { type:'RESI', date:'1980', place:'Wall 33, Ochtrup' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var evs = API.AppState.db.individuals['@I1@'].events;
+  ok(!!evs[0].hofId, 'ao-7a: Event 1 hat hofId');
+  ok(!!evs[1].hofId, 'ao-7b: Event 2 hat hofId');
+  eq(evs[0].hofId, evs[1].hofId, 'ao-7c: beide Events teilen denselben hofId');
+  var hofIds = Object.keys(API.AppState.db.hofObjects);
+  eq(hofIds.length, 1, 'ao-7d: nur 1 hofObject angelegt (kein Duplikat)');
+})();
+
+// Pfad C: kein Komma im PLAC → kein Bootstrap (atomarer Ort = Fall 1)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1970', place:'Berlin' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_berlin': { id:'_po_berlin', title:'Berlin', type:'City', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!ev.hofId, 'ao-8a: atomarer Ort → kein Pfad-C-Trigger');
+  eq(ev.placeId, '_po_berlin', 'ao-8b: Fall 1 (atomar) hat placeId gesetzt');
+  eq(Object.keys(API.AppState.db.hofObjects).length, 0, 'ao-8c: kein hofObject angelegt');
+})();
+
+// Pfad C: Rest-Projektion stimmt nicht exakt → kein Bootstrap (Schutz vor Fremd-Verwaltung)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        // PLAC enthält USA-Verwaltung, modelliert ist aber nur deutsche Oldenburg
+        events:[ { type:'RESI', date:'1970', place:'Wall 33, Oldenburg, Franklin County, Indiana, USA' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_oldenburg': { id:'_po_oldenburg', title:'Oldenburg', type:'City', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!ev.hofId, 'ao-9a: Rest-Projektion ungleich → Pfad C blockiert');
+  eq(Object.keys(API.AppState.db.hofObjects).length, 0, 'ao-9b: kein hofObject angelegt');
+})();
+
+// Pfad C: exakte Projektion gegen periodengerechte Hierarchie (Stichjahr-aware).
+// pname MUSS dateFrom haben — resolveAsOf wählt bei null-dateFrom nicht (intentional:
+// rein undatierte pnames sind Aliase, nicht historisch; siehe gedcom.js:1527-1531).
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1850', place:'Hof Schmidt, Sassenbergk' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_sassenberg': { id:'_po_sassenberg', title:'Sassenberg', type:'Town', enclosedBy:[], parentId:null,
+        pnames:[{ value:'Sassenbergk', dateFrom:'1700', dateTo:'1900' }] },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!!ev.hofId, 'ao-10a: Pfad C matcht periodengerechte pname „Sassenbergk"');
+  eq(ev.placeId, '_po_sassenberg', 'ao-10b: villageId = Sassenberg-PO');
+})();
+
+// Pfad C: idempotent über zwei Link-Pass-Läufe — zweiter Lauf ändert nichts
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1970', place:'Wall 33, Ochtrup' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var snap = JSON.stringify(API.AppState.db);
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  eq(JSON.stringify(API.AppState.db), snap, 'ao-11: 2x Link-Pass → identischer DB-Zustand');
+})();
+
+// Pfad C: ev.placeId schon gesetzt → Trigger blockiert (Pfad A/Fall 2a hat schon gegriffen)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
+        events:[ { type:'RESI', date:'1970', place:'Wall 33, Ochtrup', placeId:'_po_ochtrup' } ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!ev.hofId, 'ao-12: ev.placeId vorab gesetzt → Pfad C nicht aktiv (kein hofId)');
 })();
 
 // ═══════════════════════════════════════════════════════════════════════════

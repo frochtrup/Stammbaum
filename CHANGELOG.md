@@ -9,6 +9,27 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — ADR-027 Pfad C: Bootstrap aus rich-PLAC (sw v1025)
+
+**Auslöser:** User-Befund — Höfe werden in der Orte-Liste angezeigt + Hof-Prefix landet doppelt im ORT-Feld trotz ADR-027 Phase 1–5. Ursachenanalyse: Pfad A ([gedcom.js:1259-1260](gedcom.js:1259)) bricht bei `!hofRegHasData` ab — Pfad A matcht nur gegen *bestehende* hofObjects. Bei einer Datei mit Konvention-1-PLAC („Hof, Dorf, Verwaltung, …"), die nie ADR-026 mit Farm-POs samt `enclosedBy`-Dorf durchlaufen hat, existieren weder Farm-POs (Phase-3-Migration fasst nur welche mit `villageId` an) noch hofObjects → Pfad A fired nie, die rich-PLAC-Events bleiben unaufgelöst. „Migration null Ergebnis" beim User war kein Migrations-Bug, sondern eine Bootstrap-Lücke im Modell.
+
+**Entscheidung (ADR-027 erweitert):** Neuer **Pfad C — PLAC-Bootstrap** parallel zu A+B im Link-Pass. Greedy-shortest-prefix-Loop: für `i = 1 … 2` prüft, ob `segs[i..N].join(', ')` exakt der periodengerechten Projektion (`_buildFormString`) eines `findAllByName(segs[i])`-Kandidaten entspricht. Bei eindeutigem Treffer → `villageId = cand`, `hofAddr = segs[0..i]`, `hofId = findOrCreateHofObject(hofAddr, villageId)`, Event gepointet. Begründung der Auto-Anlage: Quell-Bezug ist eindeutig (exakte Projektions-Reproduktion ist semantisch schärfer als Pfad-A-Anker-Token); semantisch eine Spezialisierung von Pfad A, nicht eine Aufweichung der „bewusste-User-Aktion"-Regel. Reihenfolge: A → Place-Link (Fall 1/2a/2b) → C → B. Spec in `ADR-027-HOF-ENTITY-ENTWURF.md` (Pfad-C-Sektion + Akzeptanzkriterium 2a + Beschlossene Entscheidung Nr. 10 mit Begründung der Policy-Erweiterung).
+
+**Implementierung:**
+- **`findOrCreateHofObject(addr, villageId)` (gedcom.js):** neuer öffentlicher Helfer. Idempotenz gegen bestehende V2-Höfe (`_normHofAddr`-Match), deterministische ID `_hof_<addrSlug>_<vSlug>` mit Kollisions-Suffix, delegiert Anlage an bestehenden `upsertHofObject`. Migration `_migrateFarmPOsToHofObjects` nicht refactored (eigene reichere Logik mit pname→addrs).
+- **`_tryHofBootstrapFromPlac` (gedcom.js):** in `_linkGedcomEventsToPlaceObjects` eingefügt, läuft NACH `_placeLink`. Trigger: `!ev.placeId && !ev.hofId && ev.place.includes(',') && segs.length >= 2`. Schutz 1: mehrere village-Kandidaten mit exakter Projektion → blockieren. Schutz 2: ≥2 bestehende hofObjects an `(norm(lead), winner-villageId)` → blockieren (mirror Pfad A).
+- **Counter `linkedHofBootstrap`** in `AppState._lastLinkPassStats`. Toast-Meldung im File-Load-Pfad: „🏡 N Hof-Zuweisungen erkannt (M aus rich-PLAC neu angelegt) — bitte speichern, …".
+- **Reihenfolge-Fix in `_finishLoad` (storage-file.js):** hofObjects-Aufbau + ADR-026 P2 + ADR-027 P3 MÜSSEN vor dem Link-Pass laufen, sonst würden V2-Höfe aus Pfad C beim `_mergeHofObjects` weggeräumt. Inline-Duplikat durch `await _deriveHofAndMigrate()` ersetzt; ADR-027 P3 wurde im File-Load-Pfad zuvor versehentlich nie gerufen.
+- **Link-Pass in `_deriveHofAndMigrate` (storage.js):** `_linkGedcomEventsToPlaceObjects` wird jetzt zentral nach den Migrationen aufgerufen. `ev.placeId`/`ev.hofId` sind runtime-only (nicht GEDCOM-serialisiert) → Re-Derivation auf jedem Load. Vorher nur im File-Load-Pfad; jetzt für Auto-Load/Revert/Demo gleiche Pfad-A/B/C-Coverage.
+- **+12 Tests Gruppe (ao) in test-unit.js:** findOrCreateHofObject (4) + Pfad C (8). `findOrCreateHofObject` in API-Whitelist eingetragen.
+- **Diagnose-Script `test-pfadc-diagnose.js`** zählt vor/nach Link-Pass; Hinweis am Skript-Kopf: ohne IDB-geladene placeObjects sieht Headless nichts — Pfad C braucht modellierte Dörfer als Anker.
+
+**Tests + Gates:** 746 Unit-Tests grün (+12 (ao)). CSP-Gate (Ziel=0) erreicht. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (332ms), strict `out2===out3` stable. Konvention 1 byte-identisch in Wire-Treue (Pfad C legt hofObject NUR an, wenn `hofAddr + ', ' + villagePart === ev.place` — Re-Save reproduziert original PLAC).
+
+**Doku synchronisiert:** ADR-027-HOF-ENTITY-ENTWURF.md (Pfad-C-Sektion + Konvention-Vielfalt-Update + Sonderfälle-Liste + Akzeptanzkriterium 2a + Prinzip-Endgültig + Phase-2-Eintrag + Beschlossene Entscheidung Nr. 10). ARCHITECTURE.md ADR-027 Phase-2-Beschreibung um Pfad C erweitert. ROADMAP.md sw v1024→v1025, 714→746 Tests, Handbuch-Stand als „veraltet" markiert.
+
+---
+
 ### Session 2026-06-20 — ADR-027: Hof als eigenständige Entität (sw v1020–v1024)
 
 **Auslöser:** ADR-026 (Höfe als `placeObject` Typ `Farm`) hat in der Praxis vier strukturelle Schwächen offenbart: Adresse ohne Wahrheits-Anker (parallel in `po.title` + `ev.addr`), semantische Vermischung von Geografie und Adresse (Farm im selben Typ-Slot wie Town), `pnames` als Adress-Historie überlädt die Semantik (sprachliche Varianten ≠ Umnummerierung), Hof-Lebenszyklus nicht erstklassig modellierbar. v1011–v1018 waren Korrekturen entlang dieser Wurzel.

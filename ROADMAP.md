@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v1024 · Cache: `stammbaum-v1024` · `test-unit.js` = **714 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
+**sw-Version:** v1025 · Cache: `stammbaum-v1025` · `test-unit.js` = **746 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
 
 **SCALE-TEST:** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort-Cache (v899) · Details: SCALE-TEST-BEFUNDE.md
 
@@ -214,7 +214,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v1024 *(teilweise aktuell — ADR-027 P5 dokumentiert; v999–v1018 ADR-026-Folgepatches offen)*** — beide Versionsfelder auf v1024. **Dokumentiert (v1020–v1024, ADR-027 P1–5):** Höfe-Liste gruppiert nach Dorf, Adress-Historie im Hof-Detail, „🔗 Hof-Zuweisungen prüfen"-Modal mit Tabelle + Aktionen Hof wählen/+ neu anlegen/Ignorieren, ⚠-Indikator neben Adress-Events im Personen-Detail (Kap. 15). **Noch offen (v999–v1018):** 📷-Schnellzugriff-Button (1-Tap-Kamera) in Kap. 15 (Medien); OneDrive-Konflikt-Hinweis beim Speichern in Kap. 14 (OneDrive); Auto-Reload bei SW-Update (v1019, Kap. 14). Zuletzt dokumentiert: Geo-Validierung HOF_NO_COORD/HOF_FAR (Kap. 7); Hof-Picker + Ort/Hof-Trennung, geräteübergreifende Hof-Koordinaten (Kap. 15). Bewusst ohne Handbuch-Eintrag (intern/transparent): Farm-PO→V2-hofObject-Migration, GEDCOM-Konventions-Erhalt (Pfad A/B), Schema-Refusal-Mechanik, Reverse-Migrator. Offen: echte Screenshots statt Mockups → **DOC-SCREENS** (M).
+**Handbuch-Stand: sw v1024 *(veraltet — v1025 ADR-027 Pfad C Bootstrap nicht dokumentiert)**** — beide Versionsfelder auf v1024. **Dokumentiert (v1020–v1024, ADR-027 P1–5):** Höfe-Liste gruppiert nach Dorf, Adress-Historie im Hof-Detail, „🔗 Hof-Zuweisungen prüfen"-Modal mit Tabelle + Aktionen Hof wählen/+ neu anlegen/Ignorieren, ⚠-Indikator neben Adress-Events im Personen-Detail (Kap. 15). **Noch offen (v999–v1018):** 📷-Schnellzugriff-Button (1-Tap-Kamera) in Kap. 15 (Medien); OneDrive-Konflikt-Hinweis beim Speichern in Kap. 14 (OneDrive); Auto-Reload bei SW-Update (v1019, Kap. 14). Zuletzt dokumentiert: Geo-Validierung HOF_NO_COORD/HOF_FAR (Kap. 7); Hof-Picker + Ort/Hof-Trennung, geräteübergreifende Hof-Koordinaten (Kap. 15). Bewusst ohne Handbuch-Eintrag (intern/transparent): Farm-PO→V2-hofObject-Migration, GEDCOM-Konventions-Erhalt (Pfad A/B), Schema-Refusal-Mechanik, Reverse-Migrator. Offen: echte Screenshots statt Mockups → **DOC-SCREENS** (M).
 
 **DOC-SYNC** *(Pflicht bei jedem sw-Bump)*: Bewertungstabelle + Testanzahl + Priorisierung mitziehen, analog zur CLAUDE.md-Pflicht-Regel.
 

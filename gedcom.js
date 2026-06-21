@@ -1213,7 +1213,7 @@ function _linkGedcomEventsToPlaceObjects(db) {
   const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
   const hofRegHasData = hofReg && Object.keys(hofReg.byId).length > 0;
   if (!reg || !Object.keys(reg.byId).length) return 0;
-  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0;
+  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0, linkedHofBootstrap = 0;
   const _project = (pid, year) =>
     (typeof _buildFormString === 'function' && _buildFormString(pid, year))
     || reg.resolveAsOf(pid, year) || null;
@@ -1390,17 +1390,75 @@ function _linkGedcomEventsToPlaceObjects(db) {
       }
     }
   };
+  // ADR-027 Pfad C: PLAC-Bootstrap. Greedy-shortest-prefix-Loop für rich-PLAC
+  // Events ohne placeId-Auflösung durch Fall 1/2a/2b (= das Leitsegment ist kein
+  // bekanntes placeObject). Sucht den kürzesten Hof-Präfix [0..i], bei dem
+  // segs[i..N].join(', ') exakt der periodengerechten Projektion eines
+  // findAllByName(segs[i])-Kandidaten entspricht — dann ist segs[0..i] der Hof,
+  // der Kandidat das Dorf.
+  // Mehrdeutigkeits-Schutz (Spec):
+  //   1. Mehrere village-Kandidaten an Position i mit exakter Projektion → blockieren
+  //   2. ≥2 bestehende hofObjects an (norm(lead), winner-villageId) → blockieren
+  //      (mirror Pfad A: wenn Pfad A wegen Hof-Mehrdeutigkeit nicht linken konnte,
+  //      darf Pfad C auch keinen Default picken)
+  // Reihenfolge im _link unten: NACH _placeLink (Fall 2a/2b haben Vorrang für
+  // legitime Verwaltungs-Hierarchien wie „Münster, Münster, Westfalen").
+  // findOrCreateHofObject ist db-direkt + idempotent → keine hofReg-Sync nötig.
+  // maxHofSegs=2: Höfe sind in der Praxis 1, selten 2 Segmente.
+  const MAX_HOF_SEGS_BOOTSTRAP = 2;
+  const _tryHofBootstrapFromPlac = (ev, year) => {
+    if (ev.placeId || ev.hofId || !ev.place || !ev.place.includes(',')) return false;
+    const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
+    if (segs.length < 2) return false;
+    const maxI = Math.min(segs.length - 1, MAX_HOF_SEGS_BOOTSTRAP);
+    for (let i = 1; i <= maxI; i++) {
+      const villageStr = segs.slice(i).join(', ');
+      const cands = reg.findAllByName(segs[i]);
+      if (!cands.length) continue;
+      let winner = null, multi = false;
+      for (const cand of cands) {
+        const proj = _project(cand, year);
+        if (proj === villageStr) {
+          if (winner) { multi = true; break; }
+          winner = cand;
+        }
+      }
+      if (multi) return false;                 // Village-Mehrdeutigkeit blockiert (Spec)
+      if (!winner) continue;                   // an dieser Position kein exakter Match → nächstes i
+      const hofAddr = segs.slice(0, i).join(', ');
+      // Guard 2: Hof-Mehrdeutigkeit — wenn ≥2 bestehende Höfe (lead, winner) matchen,
+      // hat Pfad A bewusst blockiert; Pfad C darf nicht arbiträr einen wählen.
+      if (hofRegHasData) {
+        const existing = hofReg.findAllByAddr(hofAddr, year)
+          .filter(hid => hofReg.byId[hid] && hofReg.byId[hid].villageId === winner);
+        if (existing.length > 1) return false;
+      }
+      const hofId = (typeof findOrCreateHofObject === 'function')
+        ? findOrCreateHofObject(hofAddr, winner) : null;
+      if (!hofId) continue;
+      ev.placeId = winner;
+      ev.hofId   = hofId;
+      if (!ev.addr) ev.addr = hofAddr;
+      linkedHofBootstrap++;
+      return true;
+    }
+    return false;
+  };
   // ADR-027 P2: Top-Level-Link-Funktion. Reihenfolge ist deterministisch:
-  //   1. Pfad A (PLAC-Leitsegment → Hof + Dorf in einem Schritt)
-  //   2. Bestehender Place-Link (Fall 1 / Fall 2a / Fall 2b)
-  //   3. Pfad B (ADDR im Dorf-Scope → Hof)
-  // In Phase 2 sind 1+3 No-Ops bis Phase-3-Migration Hof-Daten liefert.
+  //   1. Pfad A (PLAC-Leitsegment → bestehendes hofObject + Dorf)
+  //   2. Bestehender Place-Link (Fall 1 / Fall 2a / Fall 2b) — legitime Verwaltungs-Hierarchien
+  //   3. Pfad C (PLAC-Bootstrap → neuer hofObject aus rich-PLAC bei exakter Dorf-Projektion);
+  //      greift NUR wenn 1+2 nichts fanden, damit „Münster, Münster, Westfalen" nicht als
+  //      Hof „Münster" im Kreis Münster bootstrapped wird (Fall 2a hat dort exakt @ST@ getroffen)
+  //   4. Pfad B (ADDR im Dorf-Scope → bestehendes hofObject)
+  // Vor Phase-3-Migration sind 1+4 No-Ops; 3 ist seit v1025 die Bootstrap-Quelle.
   const _link = ev => {
     if (!ev) return;
     const year = _placeYear(ev.date);
-    if (_tryHofPlacLink(ev, year)) return;     // Pfad A: setzt placeId + hofId
-    _placeLink(ev, year);                      // bestehender Place-Link
-    _tryHofAddrLink(ev, year);                 // Pfad B: setzt hofId wenn ev.addr matcht
+    if (_tryHofPlacLink(ev, year)) return;        // Pfad A: setzt placeId + hofId
+    _placeLink(ev, year);                          // Fall 1/2a/2b: setzt placeId (skip wenn schon gesetzt)
+    if (_tryHofBootstrapFromPlac(ev, year)) return; // Pfad C: legt hofObject an, setzt placeId+hofId+addr
+    _tryHofAddrLink(ev, year);                     // Pfad B: setzt hofId wenn ev.addr matcht
   };
   for (const p of Object.values(db.individuals || {})) {
     [p.birth, p.chr, p.death, p.buri].forEach(_link);
@@ -1411,19 +1469,19 @@ function _linkGedcomEventsToPlaceObjects(db) {
     (f.events || []).forEach(_link);
   }
   // JXA-Falle: console.info existiert nicht im Unit-Harness → Fallback (vgl. console.warn).
-  if (linked || linkedHofPlac || linkedHofAddr) {
+  if (linked || linkedHofPlac || linkedHofAddr || linkedHofBootstrap) {
     const _info = (typeof console !== 'undefined' && console.info) ? console.info
                 : (typeof console !== 'undefined' && console.log) ? console.log : null;
-    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofAddr} Höfe (ADDR), ${recollapsed} neu kollabiert`);
+    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofBootstrap} Höfe (Bootstrap), ${linkedHofAddr} Höfe (ADDR), ${recollapsed} neu kollabiert`);
   }
-  if (recollapsed || linkedHofPlac || linkedHofAddr) {
+  if (recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap) {
     UIState._placesCache = null; UIState._placeRegistry = null;
-    UIState._hofRegistry = null;
+    UIState._hofRegistry = null; UIState._hofCache = null;
     if (typeof markChanged === 'function') markChanged();
   }
   // Total-Mutations-Counter für die Lade-Meldung; recollapsed bleibt im Bewertungs-Kanal,
   // Hof-Treffer werden separat gezählt (storage-file.js liest diese Zähler aus AppState).
-  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofAddr, recollapsed };
+  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofBootstrap, linkedHofAddr, recollapsed };
   return recollapsed;
 }
 
@@ -1914,6 +1972,40 @@ function upsertHofObject(id, makeNew, fn) {
   if (typeof markChanged      === 'function') markChanged();
   if (typeof saveHofObjectsV2 === 'function') saveHofObjectsV2();
   return h.id;
+}
+
+// ADR-027 Pfad C: deterministische Hof-Anlage aus (Adresse, villageId).
+// Idempotent: bestehender V2-Hof mit gleicher norm(addr) im selben Dorf wird
+// wiederverwendet (gibt seine ID zurück). Sonst neuer hofObject mit ID-Schema
+// `_hof_<addrSlug>_<vSlug>` (Suffix bei Kollision). Dient als Bootstrap-Helfer
+// für Link-Pass Pfad C und als Extraktion aus `_migrateFarmPOsToHofObjects`,
+// damit dieselbe ID-Logik an beiden Stellen identisch greift.
+function findOrCreateHofObject(addr, villageId) {
+  if (!addr || !villageId) return null;
+  const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
+  const normAddr = _normHofAddr(addr);
+  if (!normAddr) return null;
+  // 1. Idempotenz: bestehenden V2-Hof mit gleicher norm(addr) im selben Dorf finden
+  for (const [hid, h] of Object.entries(hofs)) {
+    if (!_isHofObjectV2(h) || h.villageId !== villageId) continue;
+    for (const a of h.addrs || []) {
+      if (_normHofAddr(a && a.value) === normAddr) return hid;
+    }
+  }
+  // 2. Neue ID deterministisch erzeugen
+  const slug  = normAddr.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const vSlug = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+  let hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v');
+  let n = 1;
+  while (hofs[hofId]) hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v') + '_' + (++n);
+  // 3. Über upsertHofObject anlegen (verriegelt Cache + markChanged + Persistenz)
+  return upsertHofObject(hofId, () => ({
+    id: hofId, villageId,
+    addrs: [{ value: addr, lang: 'deu', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
+    lat: null, long: null, note: '',
+    existsFrom: null, existsTo: null, predecessor: null, successor: null,
+    _govId: null, _govTypes: null, schemaVersion: 1,
+  }));
 }
 
 // ─── ADR-027 P5: „Hof-Zuweisungen prüfen" — Datenqualitäts-Review ────────────

@@ -396,18 +396,33 @@ async function _finishLoad(db, text, filename) {
     }
     applyAllExtraPlaceCoords();
     if (typeof _migrateExtraPlacesToPlaceObjects === 'function') _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3
-    if (typeof loadPlaceObjectsFromIDB === 'function') await loadPlaceObjectsFromIDB(); // IDB vor UI-Render
+    // ADR-027 v1025: HofObjects-Aufbau + Migrationen MÜSSEN vor dem Link-Pass laufen.
+    // Reihenfolge:
+    //   1. loadPlaceObjectsFromIDB inkl. loadHofObjectsV2FromIDB
+    //   2. _mergeHofObjects (V1-derived + Legacy-Sidecar)  — historisch in _deriveHofAndMigrate
+    //   3. ADR-026 P2: _migrateHofObjectsToPlaceObjects
+    //   4. ADR-027 P3: _migrateFarmPOsToHofObjects (war hier vorher fälschlich nicht gerufen)
+    //   5. Link-Pass: A/B linken gegen aufgebaute hofObjects, C bootstrappt rich-PLAC ohne Hof
+    // Sonst würde Pfad C V2-Höfe anlegen, die Schritt 2 wegräumt — bzw. P3 würde nie laufen
+    // im File-Load-Pfad. _deriveHofAndMigrate (storage.js) bleibt für Auto-Load/Revert/Demo.
+    await _deriveHofAndMigrate();
     if (typeof _linkGedcomEventsToPlaceObjects === 'function') {
-      const _recollapsed = _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass
+      const _recollapsed = _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass + ADR-027 Pfad A/B/C
       // Ortsmodell war reicher als die gecachten GEDCOM-Strings → Events neu kollabiert.
       // Erklärende Meldung, damit der "ungespeichert"-Status nicht verwirrt.
       if (_recollapsed > 0) setTimeout(() => showToast(
         `🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst — bitte speichern, um die Historie in der Datei zu sichern.`,
         'info'), 2000);
+      // ADR-027 v1025: Hof-Treffer aus allen drei Pfaden zusammenfassen.
+      const _hs = AppState._lastLinkPassStats || {};
+      const _hofTotal = (_hs.linkedHofPlac || 0) + (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofAddr || 0);
+      if (_hofTotal > 0) setTimeout(() => showToast(
+        `🏡 ${_hofTotal} Hof-Zuweisung${_hofTotal === 1 ? '' : 'en'} erkannt`
+        + (_hs.linkedHofBootstrap ? ` (${_hs.linkedHofBootstrap} aus rich-PLAC neu angelegt)` : '')
+        + ' — bitte speichern, um die Verknüpfung in der Datei zu sichern.',
+        'info'), 2500);
     }
     _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen
-    AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
-    if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
     { let maxUsed = 0;
       const allIds = [...Object.keys(AppState.db.individuals), ...Object.keys(AppState.db.families),
                       ...Object.keys(AppState.db.sources), ...Object.keys(AppState.db.repositories), ...Object.keys(AppState.db.notes)];
