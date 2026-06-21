@@ -2217,82 +2217,60 @@ function _eventReviewKey(pid, evType, addr, date) {
   return [pid, evType || '', (addr || '').trim(), date || ''].join('|');
 }
 
-// ADR-028 P5: Klassifizierung der Daten-Lücke pro Review-Event. Fünf Klassen
-// mit je eigenem Anreicherungs-Pfad — Review-UI zeigt klassenspezifische
-// Aktionen statt eines undifferenzierten „Hof wählen"-Generikums.
+// ADR-028 P5: Klassifizierung der Hof-Daten-Lücke. Drei Klassen, alle mit
+// ev.addr (PLAC-ohne-Auflösung ist KEIN Hof-Thema → eigener Orts-Review).
 //
-//   A — Hof-tragendes Event ohne Hof-Modell + non-Hof-Event-Typ:
-//       BIRT/DEAT/MARR/BURI mit ADDR + aufgelöstem Dorf, kein Hof gefunden.
-//       Konnte nicht via Pfad B' bootstrapped werden (Event-Typ trägt keine
-//       Hof-Semantik). User: „Hof anlegen" oder „Quelle schärfen".
-//   B — Atomare PLAC ohne Match (Konvention 3b ohne globalen Hof):
-//       PLAC „Wall 33" allein, weder placeObject noch hofObject matcht
-//       global. User schärft Quelle (Komma-Hierarchie einfügen).
+//   A — Adresse mit non-Hof-Event-Typ + aufgelöstes Dorf + kein Hof-Match:
+//       BIRT/DEAT/MARR/BURI mit ADDR. Konnte nicht via Pfad B' bootstrapped
+//       werden (Event-Typ trägt keine Hof-Semantik — typisch Krankenhaus/
+//       Kirche/Friedhof). User: „Hof anlegen" wenn doch Hof, oder „Quelle
+//       schärfen" (PO Typ Hospital anlegen + PLAC anpassen).
 //   C — Mehrdeutigkeit: ≥2 Höfe gleicher addr-Norm im Dorf-Scope.
 //       User: „Hof wählen" oder Quelle schärfen.
 //   D — Norm-Drift: ADDR matcht kein hofObject im Dorf, aber Höfe existieren
-//       im Dorf. User: „Variante zum Hof hinzufügen" oder Hof wählen.
-//   E — Fremde Verwaltung im PLAC-Rest: Hierarchie-PLAC, Leitname matcht ein
-//       placeObject, aber Rest-Segmente passen nicht zur enclosedBy-Kette.
-//       User: pname am Verwaltungs-PO ergänzen oder Quelle schärfen.
+//       im Dorf — und Event-Typ ist hof-tragend. Die ADDR ist vermutlich eine
+//       Variante eines bestehenden Hofs.
+//       User: „Variante zum Hof hinzufügen" oder Hof wählen.
 function _classifyUnresolvedHofEvent(ev) {
   if (!ev) return 'A';
   const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
-  const reg    = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
   const addr   = (ev.addr  || '').trim();
-  const place  = (ev.place || '').trim();
   const year   = (typeof _placeYear === 'function') ? _placeYear(ev.date) : null;
 
-  // Dorf-aufgelöst + ADDR vorhanden → A/C/D
+  // Klassifizierung läuft ausschließlich auf Hof-Verdachts-Events (ev.addr).
   if (ev.placeId && addr && hofReg) {
     const cands = hofReg.findAllByAddr(addr, year)
       .filter(id => hofReg.byId[id] && hofReg.byId[id].villageId === ev.placeId);
-    if (cands.length >= 2) return 'C';           // Mehrdeutigkeit
-    if (cands.length === 1) return 'A';          // sollte eigentlich Pfad B gelinkt haben — defensiv
-    // Kein Hof matcht ADDR im Dorf. Event-Typ entscheidet:
-    //   - Hof-tragender Typ (RESI/PROP/…) + Höfe im Dorf vorhanden → Klasse D
-    //     (Norm-Drift): die ADDR ist vermutlich eine Variante eines bestehenden
-    //     Hofs → User kann sie als addrs[]-Variante anhängen.
-    //   - Non-Hof-Typ (BIRT/DEAT/MARR/BURI) → Klasse A (Krankenhaus/Kirche/…).
-    //     Auch wenn Höfe im Dorf existieren, ist die Adresse semantisch ein
-    //     Nicht-Hof — Variante anhängen wäre falsch.
+    if (cands.length >= 2) return 'C';
+    if (cands.length === 1) return 'A';          // defensiv — sollte Pfad B gelinkt haben
     const isHofType = ev.type && HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type);
     const hofsInVillage = (hofReg.byVillageId && hofReg.byVillageId[ev.placeId]) || [];
     if (isHofType && hofsInVillage.length > 0) return 'D';
     return 'A';
   }
-
-  // Atomare PLAC ohne Match (Konvention 3b)
-  if (!ev.placeId && place && !place.includes(',')) return 'B';
-
-  // Hierarchie-PLAC ohne Anker-Match (Konvention 1 ohne enclosedBy-Treffer)
-  if (!ev.placeId && place && place.includes(',')) return 'E';
-
-  // Default-Fallback (Event ohne Orts-Info — sollte nicht im Review sein)
   return 'A';
 }
 
-// Listet alle ungelösten Hof-Kandidaten. ADR-028 P5: ohne Ignore-Filter, plus
-// Erweiterung auf Events mit unaufgelöstem PLAC (Klasse B/E) — der Review-Badge
-// zeigt jede Daten-Lücke, nicht nur Konvention-2-Lücken.
+// Listet ungelöste Hof-Kandidaten. ADR-028 P5 (v1033): strikt auf Events mit
+// ev.addr eingegrenzt. Unaufgelöste PLAC-Strings (Klassen B/E) sind keine
+// Hof-Lücken — sie gehören in einen Orts-Review-Workflow (offen). User-Befund:
+// EDUC/GRAD/EVEN mit fremden PLAC-Hierarchien (Shenyang, Beijing, Paris …)
+// dominierten die Liste; das verfehlte den Hof-Fokus des Modals.
 function _findUnresolvedHofEvents(db) {
   if (!db) return [];
   const out = [];
   const _check = (pid, personName, ev) => {
     if (!ev || ev.hofId) return;
     const addr = (ev.addr || '').trim();
-    const place = (ev.place || '').trim();
-    const hasAddr = !!addr;
-    const hasUnresolvedPlace = !!place && !ev.placeId;
-    if (!hasAddr && !hasUnresolvedPlace) return;
+    if (!addr) return;                            // ohne ADDR kein Hof-Verdacht
     const key = _eventReviewKey(pid, ev.type || ev.eventType || '',
-      addr || place, ev.date || '');
+      addr, ev.date || '');
     out.push({
       pid, personName,
       evType:    ev.type || ev.eventType || '',
       evDate:    ev.date || '',
       addr,
-      place,
+      place:     ev.place || '',
       placeId:   ev.placeId || null,
       _class:    _classifyUnresolvedHofEvent(ev),
       key, ev,

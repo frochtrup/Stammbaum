@@ -746,20 +746,16 @@ function openHofReviewModal(focusKey) {
   openModal('modalHofReview');
 }
 
-// ADR-028 P5: Klassen-Definitionen für die Review-UI. Pro Klasse Kurzlabel +
-// Badge-Farbe + Tooltip + verfügbare Aktionen. Aktionen werden im Render-Pfad
-// kontextabhängig gefiltert (z.B. „Hof wählen" nur wenn Kandidaten existieren).
+// ADR-028 P5 (v1033): Klassen-Definitionen für Hof-Review. Nur drei Klassen,
+// alle mit ev.addr — PLAC-Lücken (frühere Klassen B/E) sind keine Hof-Themen
+// und gehören in einen separaten Orts-Review (offen).
 const _HOF_REVIEW_CLASS_META = {
-  A: { label: 'A',   color: '#999',
-       title: 'Hof-tragendes Event, aber Event-Typ ohne Hof-Semantik (BIRT/DEAT/MARR/BURI)' },
-  B: { label: 'B',   color: '#c87f30',
-       title: 'Atomare PLAC ohne globalen Hof-Match — Quelle schärfen oder Hof anlegen' },
-  C: { label: 'C',   color: '#b03030',
+  A: { label: 'A', color: '#999',
+       title: 'Event-Typ ohne Hof-Semantik (BIRT/DEAT/EDUC/GRAD/…). Vermutlich Krankenhaus, Kirche, Schule, Friedhof — nicht Hof.' },
+  C: { label: 'C', color: '#b03030',
        title: 'Mehrdeutig: mehrere Höfe gleicher Adresse im Dorf' },
-  D: { label: 'D',   color: '#3070b0',
-       title: 'Norm-Drift: Adresse matcht keinen Hof — Variante zum Hof hinzufügen oder Hof wählen' },
-  E: { label: 'E',   color: '#7050a0',
-       title: 'Fremde Verwaltung im PLAC-Rest — pname am Ort ergänzen oder Quelle schärfen' },
+  D: { label: 'D', color: '#3070b0',
+       title: 'Adresse matcht keinen Hof, Höfe existieren aber im Dorf — Variante zum Hof hinzufügen oder Hof wählen' },
 };
 
 function renderHofReview(focusKey) {

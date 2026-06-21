@@ -4852,18 +4852,14 @@ group('(am) ADR-027 P5 Hof-Review');
     families:{}, extraPlaces:{}, placeObjects:{}, hofObjects:{},
   });
   var rows = API._findUnresolvedHofEvents(API.AppState.db);
-  // ADR-028 P5: zählt Events mit unaufgelöster Orts-Info (ADDR ohne hofId
-  // ODER PLAC ohne placeId). Bereits verknüpfte Events fallen raus.
-  // Im Setup: Wall-33-RESI (ADDR, kein hofId) + OCCU mit „Ochtrup" ohne placeId
-  // (Setup hat kein _po_ochtrup im DB — Fall-2a findet nichts) → 2 Treffer.
-  // PROP mit hofId='_hof_x' bereits verknüpft → kein Treffer.
-  eq(rows.length, 2, 'am-1a: ADDR-Event + unaufgelöster-PLAC-Event zählen');
-  // Erster Eintrag sollte das Wall-33-RESI sein (Reihenfolge: events-Array)
-  var resi = rows.find(r => r.evType === 'RESI');
-  ok(resi, 'am-1b: RESI-Event gefunden');
-  eq(resi.pid, '@I1@', 'am-1b: pid korrekt');
-  eq(resi.addr, 'Wall 33', 'am-1c: addr korrekt');
-  eq(resi.evType, 'RESI', 'am-1d: evType korrekt');
+  // ADR-028 P5 (v1033): strikt nur Events mit ev.addr — unaufgelöste PLAC
+  // ohne ADDR sind keine Hof-Lücken (gehören in einen separaten Orts-Review).
+  // Im Setup: Wall-33-RESI (ADDR, kein hofId) → 1 Treffer. PROP mit hofId
+  // schon verknüpft → fällt raus. OCCU ohne addr → fällt raus.
+  eq(rows.length, 1, 'am-1a: nur Hof-Verdachts-Event mit ADDR zählt');
+  eq(rows[0].pid, '@I1@', 'am-1b: pid korrekt');
+  eq(rows[0].addr, 'Wall 33', 'am-1c: addr korrekt');
+  eq(rows[0].evType, 'RESI', 'am-1d: evType korrekt');
 })();
 
 // _eventReviewKey: deterministisch + stabil
@@ -5462,18 +5458,16 @@ group('(am) ADR-027 P5 Hof-Review');
   // Klasse A: BIRT mit ADDR, kein Hof matcht, keine Höfe für diese addr im Dorf
   eq(API._classifyUnresolvedHofEvent({ type:'BIRT', placeId:'_po_o', addr:'Krankenhaus' }), 'A',
     'at-1a: Klasse A — non-Hof-Event-Typ');
-  // Klasse B: atomare PLAC ohne Match
-  eq(API._classifyUnresolvedHofEvent({ type:'RESI', place:'Wall 9' }), 'B',
-    'at-1b: Klasse B — atomar ohne Match');
   // Klasse C: 2 Höfe gleicher addr im selben Dorf → Mehrdeutigkeit
   eq(API._classifyUnresolvedHofEvent({ type:'RESI', placeId:'_po_o', addr:'Schmiede' }), 'C',
     'at-1c: Klasse C — Mehrdeutigkeit (2 Schmiede-Höfe)');
   // Klasse D: addr matcht keinen Hof, aber Höfe existieren im Dorf → Norm-Drift
   eq(API._classifyUnresolvedHofEvent({ type:'RESI', placeId:'_po_o', addr:'Unbekannte Variante' }), 'D',
     'at-1d: Klasse D — Norm-Drift (Höfe da, aber addr matcht keinen)');
-  // Klasse E: Hierarchie-PLAC ohne Match
-  eq(API._classifyUnresolvedHofEvent({ type:'BIRT', place:'Fremdes Dorf, USA' }), 'E',
-    'at-1e: Klasse E — Hierarchie-PLAC ohne Anker');
+  // ADR-028 v1033: ehemalige Klassen B (atomar PLAC) + E (Hierarchie-PLAC)
+  // sind keine Hof-Themen mehr — PLAC-ohne-Auflösung gehört in den Orts-
+  // Review-Workflow (offen). _classifyUnresolvedHofEvent wird für solche
+  // Events gar nicht erst aufgerufen (Filter in _findUnresolvedHofEvents).
 })();
 
 // at-2: addHofAddrVariantAndLink — Variante zum Hof + Event-Link, idempotent
@@ -5501,13 +5495,15 @@ group('(am) ADR-027 P5 Hof-Review');
     'at-2b: idempotent — gleiche Variante nicht doppelt');
 })();
 
-// at-3: _findUnresolvedHofEvents trägt _class an jedem Eintrag
+// at-3: _findUnresolvedHofEvents trägt _class an jedem Eintrag + filtert nur
+// Events mit ev.addr (ADR-028 v1033 — PLAC-Lücken sind keine Hof-Lücken).
 (function() {
   API.setDb({
     individuals:{
       '@I1@': { id:'@I1@', name:'X', birth:{}, chr:{}, death:{}, buri:{}, events:[
         { type:'BIRT', placeId:'_po_o', addr:'Krankenhaus', date:'1900' },     // Klasse A
-        { type:'RESI', place:'Wall 9', date:'1850' },                          // Klasse B
+        { type:'GRAD', place:'Llantwit Major, The Vale of Glamorgan', date:'1986' }, // KEIN Hof — fällt raus
+        { type:'EVEN', place:'Shenyang, China', date:'2016' },                // KEIN Hof — fällt raus
       ]},
     },
     families:{}, extraPlaces:{},
@@ -5517,11 +5513,9 @@ group('(am) ADR-027 P5 Hof-Review');
     hofObjects:{},
   });
   var rows = API._findUnresolvedHofEvents(API.AppState.db);
-  eq(rows.length, 2, 'at-3a: zwei ungelöste Events (ADDR + PLAC)');
-  var byClass = {};
-  for (var i = 0; i < rows.length; i++) byClass[rows[i]._class] = (byClass[rows[i]._class] || 0) + 1;
-  eq(byClass.A, 1, 'at-3b: ein Eintrag Klasse A (BIRT-ADDR ohne Hof)');
-  eq(byClass.B, 1, 'at-3c: ein Eintrag Klasse B (atomar PLAC)');
+  eq(rows.length, 1, 'at-3a: nur Hof-Verdachts-Event (mit ev.addr) zählt');
+  eq(rows[0]._class, 'A', 'at-3b: Klassifizierung A (BIRT-ADDR ohne Hof)');
+  eq(rows[0].evType, 'BIRT', 'at-3c: GRAD/EVEN-PLAC-Lücken fallen aus dem Hof-Review');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
