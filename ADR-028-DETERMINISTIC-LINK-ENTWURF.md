@@ -1,6 +1,6 @@
 # ADR-028 — Deterministische Identitäts-Auflösung Event→Ort/Hof: Persistenz durch Daten, nicht durch Annotationen
 
-> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phasen 2–6 ausstehend.
+> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phase 2 ✅ (sw v1027), Phasen 3–6 ausstehend.
 > Ergänzt ADR-024 (Orts-Entität) + ADR-027 (Hof-Entität).
 
 ## Kontext
@@ -189,7 +189,7 @@ Sign-Off erteilt. Implementation gestartet.
 - **Tests:** REPROJECT-Idempotenz pro Pfad, kein Stale-Cache nach Link-Pass, Migration ohne villageId terminiert für alle realen Fixtures.
 - **Gate:** alle bestehenden Tests grün; `collectPlaces.size` auf `MeineDaten_ancestris.ged` sinkt (Zombie-POs verschwinden); GEDCOM `net_delta=0` + `out1===out2` stable; GRAMPS xml1===xml2 stable.
 
-### Phase 2 — Pfad A' (atomarer Hof-Lookup, Konvention 3a)
+### Phase 2 — Pfad A' (atomarer Hof-Lookup, Konvention 3a) ✅ (sw v1027, 2026-06-21)
 
 - Erweiterung in `_linkGedcomEventsToPlaceObjects`: vor `_placeLink`-Fall 1 (atomar) ein `hofReg.findAllByAddr(ev.place)`-Versuch ohne Village-Scope. Eindeutig → Link inkl. `ev.placeId = hof.villageId`. Mehrdeutig → blockieren (Review).
 - Reihenfolge gegen Fall 1: Village-Match in placeObjects gewinnt (ein PO „Berlin" als Stadt schlägt einen hofObject „Berlin" als Hof — unwahrscheinliche aber definierte Auflösung).
@@ -277,7 +277,7 @@ Vor Phase 6 (Cleanup) muss gelten:
 
 ## Status
 
-🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phasen 2–6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
+🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phase 2 ✅ (sw v1027, Pfad A' atomarer Hof-Lookup), Phasen 3–6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
 
 Bei Abnahme nach Phase 6: Status auf 🟢 (abgeschlossen).
 

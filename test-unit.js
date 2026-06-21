@@ -5082,6 +5082,127 @@ group('(am) ADR-027 P5 Hof-Review');
   eq(API.AppState.db.placeObjects['_po_farm_orphan']._orphan, true, 'ap-6b: _orphan-Flag gesetzt');
 })();
 
+// ─── Gruppe (aq) — ADR-028 Phase 2: Pfad A' (atomarer Hof-Lookup, Konv. 3a) ──
+
+// aq-1a: atomar PLAC + globaler Hof eindeutig → Link inkl. REPROJECT
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Wall 33', addr:'', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }], lat:null, long:null },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_w', 'aq-1a: Pfad A\' setzt hofId aus globalem atomar-Match');
+  eq(ev.placeId, '_po_o', 'aq-1a: Pfad A\' setzt placeId auf villageId');
+  eq(ev.place, 'Wall 33, Ochtrup', 'aq-1a: REPROJECT erzeugt Konvention-1-PLAC');
+  eq((API.AppState._lastLinkPassStats || {}).linkedHofAtomic, 1, 'aq-1a: linkedHofAtomic-Counter');
+})();
+
+// aq-1b: atomar PLAC, kein hofObject → unverlinkt (kein Hof, kein Ort)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Unbekannte Adresse', addr:'', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!ev.hofId, 'aq-1b: kein Hof-Match → ev.hofId bleibt null');
+  ok(!ev.placeId, 'aq-1b: kein PO-Match → ev.placeId bleibt null');
+  eq(ev.place, 'Unbekannte Adresse', 'aq-1b: ev.place unverändert');
+})();
+
+// aq-1c: atomar PLAC, 2 Höfe global gleicher addr-norm → blockiert (Mehrdeutigkeit)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Schmiede', addr:'', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_a': { id:'_po_a', title:'Ochtrup',  type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_b': { id:'_po_b', title:'Welbergen',type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_1': { id:'_hof_1', villageId:'_po_a', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+      '_hof_2': { id:'_hof_2', villageId:'_po_b', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(!ev.hofId, 'aq-1c: Mehrdeutigkeit (2 Höfe „Schmiede") → blockiert');
+  ok(!ev.placeId, 'aq-1c: kein Default-Pick');
+})();
+
+// aq-1d: gleichnamiges Village-PO existiert → Fall 1 gewinnt (kein A')
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'BIRT', place:'Berlin', addr:'', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_berlin': { id:'_po_berlin', title:'Berlin', type:'City', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_berlin': { id:'_hof_berlin', villageId:'_po_berlin', schemaVersion:1,
+        addrs:[{ value:'Berlin', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.placeId, '_po_berlin', 'aq-1d: Fall 1 (PO-Match) gewinnt vor Pfad A\'');
+  ok(!ev.hofId, 'aq-1d: kein hofId — Village-Match hat Vorrang');
+})();
+
+// aq-1e: hierarchie-PLAC mit Komma → A' tut nichts (Komma-Check)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Wall 33, Anderswo', addr:'', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  // Pfad A würde anker-blockieren (Rest „Anderswo" matcht kein Token in Ochtrup-Kette);
+  // A' wird gar nicht erst probiert (Komma-Check). Damit kein Auto-Link → korrekt.
+  ok(!ev.hofId, 'aq-1e: A\' tut nichts bei Hierarchie-PLAC');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {

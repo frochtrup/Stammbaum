@@ -413,12 +413,15 @@ async function _finishLoad(db, text, filename) {
       if (_recollapsed > 0) setTimeout(() => showToast(
         `🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst — bitte speichern, um die Historie in der Datei zu sichern.`,
         'info'), 2000);
-      // ADR-027 v1025: Hof-Treffer aus allen drei Pfaden zusammenfassen.
+      // ADR-027 v1025 + ADR-028 P2 v1027: Hof-Treffer aus allen vier Pfaden
+      // (A=PLAC, A'=atomar, B=ADDR, C=Bootstrap) zusammenfassen.
       const _hs = AppState._lastLinkPassStats || {};
-      const _hofTotal = (_hs.linkedHofPlac || 0) + (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofAddr || 0);
+      const _hofTotal = (_hs.linkedHofPlac || 0) + (_hs.linkedHofAtomic || 0)
+                      + (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofAddr || 0);
       if (_hofTotal > 0) setTimeout(() => showToast(
         `🏡 ${_hofTotal} Hof-Zuweisung${_hofTotal === 1 ? '' : 'en'} erkannt`
         + (_hs.linkedHofBootstrap ? ` (${_hs.linkedHofBootstrap} aus rich-PLAC neu angelegt)` : '')
+        + (_hs.linkedHofAtomic ? ` (${_hs.linkedHofAtomic} aus atomarer PLAC)` : '')
         + ' — bitte speichern, um die Verknüpfung in der Datei zu sichern.',
         'info'), 2500);
     }

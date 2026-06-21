@@ -9,6 +9,22 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — ADR-028 Phase 2: Pfad A' atomarer Hof-Lookup (sw v1027)
+
+**Auslöser:** Konvention-3-Lücke aus ADR-028 — `PLAC Wall 33` allein (kein ADDR, kein Komma) wurde vom Link-Pass nicht erfasst: Pfad A/C verlangen Komma, Pfad B verlangt bereits gesetzte `ev.placeId`, Fall 1 sucht in placeObjects (Farm-POs nach Phase 3 weg). Lücke schließt sich, wenn der Hof global eindeutig im hofObjects-Index liegt — dann ist der Quell-Bezug genauso sicher wie bei Pfad A.
+
+**Implementierung (Phase 2):**
+- **Pfad A' `_tryHofAtomicLink` (gedcom.js):** trifft auf atomare PLAC (`!ev.place.includes(',')`), `!ev.placeId`, `!ev.hofId`. Ruft `hofReg.findAllByAddr(ev.place, year)` global ohne Village-Scope; bei `length === 1` Link mit `ev.hofId` + `ev.placeId = hof.villageId` + REPROJECT. Mehrdeutig → blockieren (Review-Pfad).
+- **Reihenfolge im `_link`:** nach `_placeLink`, damit Fall 1 Vorrang hat (Village-Match in placeObjects schlägt hofObject — definierte Auflösung bei Namens-Kollision PO „Berlin" vs. hofObject „Berlin").
+- **Counter `linkedHofAtomic`** in `AppState._lastLinkPassStats`. Toast-Aggregation in `storage-file.js` um den neuen Pfad erweitert.
+- **+12 Tests Gruppe (aq) in test-unit.js:** atomar+eindeutig→Link inkl. REPROJECT (aq-1a), kein Hof→unverlinkt (aq-1b), Mehrdeutigkeit blockiert (aq-1c), gleichnamiges PO gewinnt (aq-1d), Hierarchie-PLAC skipped (aq-1e).
+
+**Gates:** 783 Unit-Tests grün (+12 (aq)). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (336 ms), strict `out2===out3` stable. GRAMPS-Roundtrip stable.
+
+**Bug-Klasse #2 weiter geschlossen:** Konvention 3a (atomar mit global eindeutigem Hof) löst jetzt automatisch auf. Verbleibt: Konvention 3b (atomar ohne Match) → Review-Pfad (Phase 5); Konvention 2 ohne Hof → Pfad B' (Phase 4). Phasen 3 (Lese-Seite-Konsolidierung), 4 (Pfad B'), 5 (Review-Modal) ausstehend.
+
+---
+
 ### Session 2026-06-21 — ADR-028 Phase 1: REPROJECT + Migration-ohne-Skip (sw v1026)
 
 **Auslöser:** Bei der konzeptionellen Analyse zur dritten Hof-/Orts-Session zeigten sich zwei strukturelle Bug-Klassen: (#1) Höfe tauchen in der Ortsliste auf — verursacht durch stale `ev.place`-Cache nach Pfad-A/B/C-Match plus Zombie-Farm-POs, die `_migrateFarmPOsToHofObjects` bei fehlendem `villageId` übersprang. (#2) RESI-Events verlieren Ortszuordnung — Lücken im Link-Pass (Konvention 3 atomar, Pfad-B-Bootstrap, Norm-Drift). Tiefe Design-Sitzung führte zu **ADR-028: Deterministische Identitäts-Auflösung — Persistenz durch Daten, nicht durch Annotationen**. Standalone-Spec `ADR-028-DETERMINISTIC-LINK-ENTWURF.md`.

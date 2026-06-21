@@ -1246,7 +1246,7 @@ function _linkGedcomEventsToPlaceObjects(db) {
   const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
   const hofRegHasData = hofReg && Object.keys(hofReg.byId).length > 0;
   if (!reg || !Object.keys(reg.byId).length) return 0;
-  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0, linkedHofBootstrap = 0;
+  let linked = 0, recollapsed = 0, linkedHofPlac = 0, linkedHofAddr = 0, linkedHofBootstrap = 0, linkedHofAtomic = 0;
   const _project = (pid, year) =>
     (typeof _buildFormString === 'function' && _buildFormString(pid, year))
     || reg.resolveAsOf(pid, year) || null;
@@ -1332,6 +1332,34 @@ function _linkGedcomEventsToPlaceObjects(db) {
     // wird ev.place jetzt zur vollen Hof-Hierarchie „Hof, Dorf, …". Das ist
     // der sichtbare Konvention-2→1-Übergang (recollapsed → markChanged →
     // Toast); idempotent ab Iteration 2.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
+    return true;
+  };
+  // ADR-028 Phase 2 Pfad A' (atomarer Hof-Lookup, Konvention 3a):
+  // `PLAC Wall 33` allein (kein Komma, kein ADDR) — Pfad A scheitert wegen
+  // Komma-Anforderung, Pfad B braucht placeId, Fall 1 sucht nur in placeObjects.
+  // Lücke: wenn der Hof global eindeutig im hofObjects-Index liegt, soll er
+  // direkt auflösen — keine Quell-Schärfung nötig.
+  // Auflösungs-Reihenfolge: läuft NACH _placeLink — Fall 1 hat Vorrang
+  // (Village-Match in placeObjects schlägt hofObject; ein PO „Berlin" als Stadt
+  // gewinnt gegen einen hypothetischen hofObject „Berlin"). Pfad A' feuert nur,
+  // wenn Fall 1 nichts gefunden hat (ev.placeId noch null).
+  // Eindeutigkeits-Regel: genau ein hofObject mit dieser Norm-Adresse im
+  // gesamten Wissen. Mehrdeutig → blockieren (Review-Pfad in Phase 5).
+  const _tryHofAtomicLink = (ev, year) => {
+    if (!hofRegHasData || ev.placeId || ev.hofId || !ev.place) return false;
+    if (ev.place.includes(',')) return false;        // atomar-Pfad nur für kommafreie PLAC
+    const cands = hofReg.findAllByAddr(ev.place, year);
+    if (cands.length !== 1) return false;            // strikt eindeutig (Mehrdeutigkeit blockiert)
+    const hofId = cands[0];
+    const hof = hofReg.byId[hofId];
+    if (!hof || !hof.villageId) return false;
+    ev.hofId = hofId;
+    ev.placeId = hof.villageId;
+    linkedHofAtomic++;
+    // REPROJECT: ev.place wandelt sich von atomarer Adresse zu voller Hof+Dorf-
+    // Hierarchie. Sichtbarer Konvention-3→1-Übergang (recollapsed → markChanged
+    // → Toast); idempotent ab Iteration 2.
     if (_reprojectEvCache(ev, year)) recollapsed++;
     return true;
   };
@@ -1511,6 +1539,7 @@ function _linkGedcomEventsToPlaceObjects(db) {
     if ((ev.placeId || ev.hofId) && _reprojectEvCache(ev, year)) recollapsed++;
     if (_tryHofPlacLink(ev, year)) return;        // Pfad A: setzt placeId + hofId
     _placeLink(ev, year);                          // Fall 1/2a/2b: setzt placeId (skip wenn schon gesetzt)
+    if (_tryHofAtomicLink(ev, year)) return;       // Pfad A' (Phase 2): atomar PLAC → globaler hofObject-Match
     if (_tryHofBootstrapFromPlac(ev, year)) return; // Pfad C: legt hofObject an, setzt placeId+hofId+addr
     _tryHofAddrLink(ev, year);                     // Pfad B: setzt hofId wenn ev.addr matcht
   };
@@ -1523,19 +1552,19 @@ function _linkGedcomEventsToPlaceObjects(db) {
     (f.events || []).forEach(_link);
   }
   // JXA-Falle: console.info existiert nicht im Unit-Harness → Fallback (vgl. console.warn).
-  if (linked || linkedHofPlac || linkedHofAddr || linkedHofBootstrap) {
+  if (linked || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic) {
     const _info = (typeof console !== 'undefined' && console.info) ? console.info
                 : (typeof console !== 'undefined' && console.log) ? console.log : null;
-    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofBootstrap} Höfe (Bootstrap), ${linkedHofAddr} Höfe (ADDR), ${recollapsed} neu kollabiert`);
+    _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofAtomic} Höfe (atomar), ${linkedHofBootstrap} Höfe (Bootstrap), ${linkedHofAddr} Höfe (ADDR), ${recollapsed} neu kollabiert`);
   }
-  if (recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap) {
+  if (recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic) {
     UIState._placesCache = null; UIState._placeRegistry = null;
     UIState._hofRegistry = null; UIState._hofCache = null;
     if (typeof markChanged === 'function') markChanged();
   }
   // Total-Mutations-Counter für die Lade-Meldung; recollapsed bleibt im Bewertungs-Kanal,
   // Hof-Treffer werden separat gezählt (storage-file.js liest diese Zähler aus AppState).
-  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofBootstrap, linkedHofAddr, recollapsed };
+  AppState._lastLinkPassStats = { linked, linkedHofPlac, linkedHofAtomic, linkedHofBootstrap, linkedHofAddr, recollapsed };
   return recollapsed;
 }
 
