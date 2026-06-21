@@ -1131,6 +1131,39 @@ function buildPlacForGedcom(ev, year) {
   return null;
 }
 
+// ADR-028 Phase 1: REPROJECT-Wrapper für die ev.place/ev.addr-Caches nach
+// erfolgreicher Identitäts-Auflösung. Setzt die ADR-024-Projektions-Invariante
+// strukturell durch — bei gesetztem ev.placeId/hofId ist ev.place IMMER die
+// periodengerechte Projektion (`buildPlacForGedcom` für Hof, `_buildFormString`
+// für nur-Ort). Damit verschwinden Stale-Cache-Phantom-Einträge in
+// `collectPlaces` (Bug-Klasse #1) strukturell.
+//
+// ev.addr wird NUR gefüllt wenn leer — User-Wire-Daten (ADDR im Original-GEDCOM)
+// bleiben byte-identisch, sonst Roundtrip-Bruch im ADDR-Feld. Die Hof-eigene
+// addrs[]-Form ist Metadaten; der Wire-ADDR bleibt was die Quelle sagt.
+//
+// Rückgabe: true wenn ev.place mutiert wurde (für recollapsed-Counter +
+// markChanged-Signal — analog Fall 1/2a/2b).
+function _reprojectEvCache(ev, year) {
+  if (!ev) return false;
+  let proj = null;
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]) {
+    proj = (typeof buildPlacForGedcom === 'function') ? buildPlacForGedcom(ev, year) : null;
+    if (!ev.addr && typeof getHofRegistry === 'function') {
+      const hofReg = getHofRegistry();
+      const a = hofReg && hofReg.resolveAddrAsOf && hofReg.resolveAddrAsOf(ev.hofId, year);
+      if (a) ev.addr = a;
+    }
+  } else if (ev.placeId && typeof _buildFormString === 'function') {
+    proj = _buildFormString(ev.placeId, year);
+  }
+  if (proj && proj !== ev.place) {
+    ev.place = proj;
+    return true;
+  }
+  return false;
+}
+
 // Berechnet Ergebnis-Gruppen für den String→PlaceObject Link-Dialog.
 // Gruppiert alle betroffenen Events nach ihrem resultierenden _buildFormString-Wert.
 // Gibt [{str, count, yearMin, yearMax, noDate}] sortiert nach Jahresminimum zurück.
@@ -1275,6 +1308,11 @@ function _linkGedcomEventsToPlaceObjects(db) {
     ev.hofId = winner;
     ev.placeId = hofReg.byId[winner].villageId;
     linkedHofPlac++;
+    // ADR-028 Phase 1: REPROJECT — ev.place auf periodengerechte Projektion
+    // (Hof + Dorf-Hierarchie) angleichen; ev.addr füllen wenn leer. Bei reichem
+    // Hof- oder Dorf-Modell ggü. Quell-Snapshot zählt das als recollapsed →
+    // markChanged signalisiert die ehrliche Anreicherung.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
     return true;
   };
   // ADR-027 P2 Pfad B: ev.addr matcht hof.addrs[].value innerhalb des bereits
@@ -1290,6 +1328,11 @@ function _linkGedcomEventsToPlaceObjects(db) {
     if (inVillage.length !== 1) return false;
     ev.hofId = inVillage[0];
     linkedHofAddr++;
+    // ADR-028 Phase 1: REPROJECT — bei Konvention 2 (PLAC=Dorf + ADDR=Hof)
+    // wird ev.place jetzt zur vollen Hof-Hierarchie „Hof, Dorf, …". Das ist
+    // der sichtbare Konvention-2→1-Übergang (recollapsed → markChanged →
+    // Toast); idempotent ab Iteration 2.
+    if (_reprojectEvCache(ev, year)) recollapsed++;
     return true;
   };
   const _placeLink = (ev, year) => {
@@ -1440,6 +1483,12 @@ function _linkGedcomEventsToPlaceObjects(db) {
       ev.hofId   = hofId;
       if (!ev.addr) ev.addr = hofAddr;
       linkedHofBootstrap++;
+      // ADR-028 Phase 1: REPROJECT — bei exakter Projektions-Reproduktion
+      // (Pfad-C-Voraussetzung) ist das eine No-Op und damit der Idempotenz-
+      // Beweis für die Wire-Treue der Konvention 1. Sollte das Modell
+      // nachträglich enriched werden (pname am Verwaltungs-Vorfahren), greift
+      // das wie bei Pfad A als legitime Anreicherung.
+      if (_reprojectEvCache(ev, year)) recollapsed++;
       return true;
     }
     return false;
@@ -1455,6 +1504,11 @@ function _linkGedcomEventsToPlaceObjects(db) {
   const _link = ev => {
     if (!ev) return;
     const year = _placeYear(ev.date);
+    // ADR-028 Phase 1: Durchreich-REPROJECT für bereits gelinkte Events
+    // (GRAMPS-Parser, IDB-Restore, vorige Loads). Pickt Anreicherungen am
+    // Orts-/Hof-Modell auf, ohne die Pfade unnötig durchlaufen zu lassen.
+    // Idempotent: identisches Modell → keine Mutation, kein recollapsed++.
+    if ((ev.placeId || ev.hofId) && _reprojectEvCache(ev, year)) recollapsed++;
     if (_tryHofPlacLink(ev, year)) return;        // Pfad A: setzt placeId + hofId
     _placeLink(ev, year);                          // Fall 1/2a/2b: setzt placeId (skip wenn schon gesetzt)
     if (_tryHofBootstrapFromPlac(ev, year)) return; // Pfad C: legt hofObject an, setzt placeId+hofId+addr
@@ -1692,9 +1746,32 @@ function _migrateFarmPOsToHofObjects(db) {
   let hofsCreated = 0;
   for (const [pid, pl] of Object.entries(pos)) {
     if (pl.type !== 'Farm' && pl.type !== 'Building') continue;
-    const villageId = (pl.enclosedBy && pl.enclosedBy[0] && pl.enclosedBy[0].placeId)
+    // ADR-028 Phase 1: Skip-Lücke schließen. Bei fehlendem villageId zuerst
+    // aus den Events promovieren (`_hofVillageString` liefert das häufigste
+    // ev.place der RESI/PROP-Events dieser Adresse), Enclosure-Kette
+    // aufbauen, villageId nachtragen → Migration läuft regulär weiter.
+    // Bisher war hier `continue` — das hinterließ Farm/Building-POs als
+    // Zombies in `placeObjects` (Quelle Bug #1, Teil 2).
+    let villageId = (pl.enclosedBy && pl.enclosedBy[0] && pl.enclosedBy[0].placeId)
       || pl.parentId || null;
-    if (!villageId) continue;                                  // ohne Dorf → nicht migrierbar
+    if (!villageId) {
+      const villageStr = _hofVillageString(db, pl.title || '');
+      if (villageStr) {
+        villageId = _ensureVillageChain(pos, villageStr);
+        if (villageId) {
+          pl.enclosedBy = [{ placeId: villageId, dateFrom: null, dateTo: null,
+                             dateType: null, _dateRaw: null }];
+        }
+      }
+    }
+    if (!villageId) {
+      // Echter Orphan: kein Event referenziert diesen PO → keine Dorf-
+      // Promotion möglich. Markieren statt überspringen, damit
+      // `collectPlaces` ihn aus der Ortsliste ausblendet (sichtbares Symptom
+      // verschwindet, Daten bleiben für späteren User-Eingriff erhalten).
+      pl._orphan = true;
+      continue;
+    }
     const normTitle  = _normHofAddr(pl.title || '');
     const existKey   = normTitle + '|' + villageId;
     let hofId = existingByKey[existKey];

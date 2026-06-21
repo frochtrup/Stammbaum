@@ -643,6 +643,25 @@ ev: { type:'RESI', placeId:'_po_ochtrup', hofId:'_hof_wall_33_ochtrup', addr:'Wa
 
 **Standalone-Spec:** `ADR-027-HOF-ENTITY-ENTWURF.md` (Verlauf/Diskussions-Archiv).
 
+### ADR-028: Deterministische Identitäts-Auflösung Event→Ort/Hof — Persistenz durch Daten, nicht durch Annotationen (HOF-DETERM, in Umsetzung 🟠)
+
+**Kontext:** Nach ADR-024/026/027 lebt die Auflösung `(ev.placeId, ev.hofId)` als runtime-only Funktion über den Link-Pass. Zwei strukturelle Bug-Klassen wurden sichtbar: (#1) Höfe in der Ortsliste — Pfad A/B/C setzen placeId/hofId aber lassen `ev.place`-Cache stale, plus Zombie-Farm-POs durch Migrations-Skip. (#2) RESI verliert Ortszuordnung — Lücken im Link-Pass für Konvention 3 atomar, Pfad-B-Bootstrap, Norm-Drift. Design-Diskussion zeigte: Sidecar (D1) bricht „orte.json ist Cross-Stammbaum-Referenz, GED ist Stammbaum-Genealogie"; Custom-Tags (D2) sind letzte Ausnahme; die korrekte Antwort ist die Auflösungs-Funktion *total* zu machen.
+
+**Architekturprinzip:** `(ev.placeId, ev.hofId)` ist eine **reine, totale, deterministische Funktion** über `(ev.type, ev.place, ev.addr, ev.date)` + `(placeObjects, hofObjects)`. Wo sie partial ist, schließen zwei Achsen die Lücken — beide kongruent zum Prinzip: Algorithmus-Vollständigung (jede deterministisch auflösbare Eingabeklasse MUSS aufgelöst werden — Pfad A erweitert für Konvention 3 atomar, Pfad B' Bootstrap aus Event-Typ-Semantik bei RESI/PROP/CENS/OCCU), und Daten-Anreicherung als ehrlicher Fallthrough (Review-Badge mit drei Aktionen: „Quelle schärfen" → GED/GRAMPS, „Hof anlegen"/„Wissen ergänzen" → orte.json). Re-Derivation beim Load **ist** die Persistenz.
+
+**Sechs-Phasen-Migration (1 abgeschlossen, 5 ausstehend):**
+
+- **Phase 1 ✅ (sw v1026):** REPROJECT + Migration-ohne-Skip — schließt Bug-Klasse #1 strukturell. `_reprojectEvCache(ev, year)` Helper setzt die ADR-024-Projektions-Invariante an allen Pfad-Enden (A, B, C, durchreichen) durch; `ev.place` ist nach jedem Match die periodengerechte Projektion (Pfad B löst sichtbaren Konvention-2→1-Übergang aus, Pfad C ist idempotent durch Exakt-Projektions-Voraussetzung). `_migrateFarmPOsToHofObjects` ohne Skip-Zweig: bei fehlendem `villageId` zuerst `_hofVillageString` → `_ensureVillageChain` → reguläre Migration; echte Orphans bekommen `_orphan: true`, `collectPlaces` blendet sie aus. +25 Tests Gruppe (ap).
+- **Phase 2 ausstehend:** Pfad A erweitert (atomarer Hof-Lookup für Konvention 3a, globaler `findAllByAddr` ohne Village-Scope, bei Eindeutigkeit Link).
+- **Phase 3 ausstehend:** Lese-Seite konsolidiert (`_eventPlaceId`/`_eventHofId` als einzige Chokepoints, `collectPlaces`/`buildHofIndex` id-keyed statt string-keyed, Grep-Gate auf Direkt-Reads in Aggregatoren).
+- **Phase 4 ausstehend:** Pfad B' (Bootstrap aus Event-Typ-Semantik für RESI/PROP/CENS/OCCU, schließt Konvention 2 ohne Hof für hof-typische Events; BIRT/DEAT/MARR/BURI ohne Hof bleiben Review-Pfad).
+- **Phase 5 ausstehend:** Review-Modal als Daten-Anreicherungs-UI (fünf Klassen A–E mit drei Aktions-Typen: Quelle schärfen, Hof anlegen, Wissen ergänzen — kein per-Event-Override-Pfad mehr, „Ignorieren" aus ADR-027 P5 entfällt).
+- **Phase 6 ausstehend:** Cleanup, Memory-Update.
+
+**Konventions-Erhalt (Wire-Treue):** Bit-identisch für Konvention 1 (`out1===out2`, `net_delta=0` vs. Ur-Quelle); Konvention 2/3 sichtbarer Konvention-2→1-Übergang beim ersten Save, danach idempotent (`out2===out3`). Selbes Muster wie ADR-024/027.
+
+**Standalone-Spec:** `ADR-028-DETERMINISTIC-LINK-ENTWURF.md` (Verlauf/Diskussions-Archiv).
+
 ---
 
 ## Passthrough-Mechanismen — Vollständige Analyse

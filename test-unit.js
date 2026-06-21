@@ -591,6 +591,8 @@ if (IS_NODE) {
     'findOrCreateHofObject: findOrCreateHofObject, ' +
     'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
     '_migrateFarmPOsToHofObjects: _migrateFarmPOsToHofObjects, _migrateHofObjectsBackToFarmPOs: _migrateHofObjectsBackToFarmPOs, ' +
+    // ADR-028 Phase 1: REPROJECT-Wrapper + Migration-ohne-Skip-Helfer
+    '_reprojectEvCache: _reprojectEvCache, _ensureVillageChain: _ensureVillageChain, ' +
     '_findUnresolvedHofEvents: _findUnresolvedHofEvents, _countUnresolvedHofEvents: _countUnresolvedHofEvents, ' +
     '_eventReviewKey: _eventReviewKey, _ignoreHofReviewEvent: _ignoreHofReviewEvent, ' +
     '_unignoreHofReviewEvent: _unignoreHofReviewEvent, applyHofToEvent: applyHofToEvent, ' +
@@ -4899,6 +4901,185 @@ group('(am) ADR-027 P5 Hof-Review');
   var ev2 = { type:'RESI', addr:'Legacy' };
   var ok2 = API.applyHofToEvent(ev2, 'Legacy');
   eq(ok2, false, 'am-4d: non-V2 → false');
+})();
+
+// ─── Gruppe (ap) — ADR-028 Phase 1: REPROJECT + Migration-ohne-Skip ───────────
+
+// ap-1: _reprojectEvCache — Basis-Semantik (mit hofId, mit placeId, no-op, Idempotenz)
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }], lat:null, long:null },
+    },
+  });
+  // (ap-1a) ev mit hofId → ev.place wird zur Hof+Dorf-Projektion
+  var evA = { type:'RESI', placeId:'_po_o', hofId:'_hof_w', place:'Ochtrup', date:'1850' };
+  var changedA = API._reprojectEvCache(evA, 1850);
+  eq(changedA, true, 'ap-1a: hofId-Event → mutiert (Konvention-2→1)');
+  eq(evA.place, 'Wall 33, Ochtrup', 'ap-1a: ev.place ist Hof+Dorf-Projektion');
+  // (ap-1b) ev mit nur placeId → ev.place wird zur Dorf-Projektion
+  var evB = { type:'BIRT', placeId:'_po_o', place:'Ochtrup (alte Schreibweise)', date:'1820' };
+  var changedB = API._reprojectEvCache(evB, 1820);
+  eq(changedB, true, 'ap-1b: placeId-Event mit Stale-Cache → mutiert');
+  eq(evB.place, 'Ochtrup', 'ap-1b: ev.place ist Dorf-Projektion');
+  // (ap-1c) ev ohne placeId/hofId → no-op
+  var evC = { type:'BIRT', place:'Unbekannt', date:'1900' };
+  eq(API._reprojectEvCache(evC, 1900), false, 'ap-1c: ohne Anker → kein Mutate');
+  eq(evC.place, 'Unbekannt', 'ap-1c: ev.place unverändert');
+  // (ap-1d) Idempotenz: zweiter Call ändert nichts
+  eq(API._reprojectEvCache(evA, 1850), false, 'ap-1d: zweiter Call → no-op (idempotent)');
+  // (ap-1e) ev.addr wird NICHT überschrieben wenn schon gesetzt
+  var evE = { type:'RESI', placeId:'_po_o', hofId:'_hof_w', place:'Ochtrup', addr:'User-Wire-Form', date:'1850' };
+  API._reprojectEvCache(evE, 1850);
+  eq(evE.addr, 'User-Wire-Form', 'ap-1e: User-Wire-ADDR bleibt unangetastet');
+  // (ap-1f) ev.addr wird gefüllt wenn leer
+  var evF = { type:'RESI', placeId:'_po_o', hofId:'_hof_w', place:'Ochtrup', date:'1850' };
+  API._reprojectEvCache(evF, 1850);
+  eq(evF.addr, 'Wall 33', 'ap-1f: leeres ev.addr → aus hof.addrs gefüllt');
+})();
+
+// ap-2: Link-Pass Pfad A (PLAC-Leitsegment) inkl. REPROJECT am Pfad-Ende
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Wall 33, Ochtrup', addr:'', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }], lat:null, long:null },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_w', 'ap-2a: Pfad A setzt hofId');
+  eq(ev.placeId, '_po_o', 'ap-2a: Pfad A setzt placeId auf villageId');
+  // REPROJECT: ev.place bleibt 'Wall 33, Ochtrup' (Projektion identisch → kein mutate)
+  eq(ev.place, 'Wall 33, Ochtrup', 'ap-2a: ev.place konsistent mit Projektion');
+})();
+
+// ap-3: Link-Pass Pfad B (Konvention 2) — REPROJECT transformiert PLAC zu Konvention 1
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Ochtrup', addr:'Wall 33', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }], lat:null, long:null },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_w', 'ap-3a: Pfad B setzt hofId (Konvention 2)');
+  eq(ev.placeId, '_po_o', 'ap-3a: Pfad B Dorf bereits aus Fall 2a');
+  // REPROJECT-Effekt: ev.place wird zur Hof-Hierarchie — sichtbarer Konvention-2→1-Übergang
+  eq(ev.place, 'Wall 33, Ochtrup', 'ap-3a: REPROJECT erzeugt Konvention-1-PLAC');
+})();
+
+// ap-4: Link-Pass Pfad C (Bootstrap aus rich-PLAC) — REPROJECT idempotent
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Wall 33, Ochtrup', addr:'', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(ev.hofId && ev.hofId.indexOf('_hof_') === 0, 'ap-4a: Pfad C legt hofObject an');
+  eq(ev.placeId, '_po_o', 'ap-4a: Pfad C setzt placeId aus Dorf-Projektion');
+  // REPROJECT: exakte Projektions-Voraussetzung → no-op, ev.place idempotent
+  eq(ev.place, 'Wall 33, Ochtrup', 'ap-4a: ev.place byte-identisch zur Quelle (Wire-Treue)');
+})();
+
+// ap-5: Durchreich-REPROJECT — bereits gelinktes Event picks up Modell-Anreicherung auf
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'BIRT', placeId:'_po_o', place:'Ochtrup (alte)', date:'1820' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  // Durchreich-REPROJECT: placeId war schon gesetzt, Pfade skippen, aber REPROJECT
+  // bringt ev.place auf die aktuelle Projektion (Stale-Cache 'Ochtrup (alte)' → 'Ochtrup')
+  eq(ev.place, 'Ochtrup', 'ap-5a: Durchreich-REPROJECT aktualisiert Stale-Cache');
+})();
+
+// ap-6: Migration ohne villageId — _hofVillageString-Promotion statt Skip
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Ochtrup', addr:'Hof Schulze', date:'1840' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      // Farm-PO ohne villageId (kein enclosedBy, kein parentId)
+      '_po_farm_x': { id:'_po_farm_x', title:'Hof Schulze', type:'Farm',
+        pnames:[], enclosedBy:[], parentId:null, lat:null, long:null },
+    },
+    hofObjects:{},
+  });
+  // Event muss ev.placeId auf das Farm-PO setzen, damit _hofVillageString die
+  // RESI-Events mit addr=='Hof Schulze' filtern kann
+  API.AppState.db.individuals['@I1@'].events[0].placeId = '_po_farm_x';
+  var stats = API._migrateFarmPOsToHofObjects(API.AppState.db);
+  eq(stats.hofsCreated, 1, 'ap-6a: Farm-PO ohne villageId → via _hofVillageString migriert');
+  ok(!API.AppState.db.placeObjects['_po_farm_x'], 'ap-6a: Farm-PO nach Migration gelöscht');
+  // Dorf-PO wurde als Promotion angelegt
+  var ochtrupExists = false;
+  for (var pid in API.AppState.db.placeObjects) {
+    if (API.AppState.db.placeObjects[pid].title === 'Ochtrup') { ochtrupExists = true; break; }
+  }
+  ok(ochtrupExists, 'ap-6a: Dorf-PO „Ochtrup" als Enclosure-Promotion angelegt');
+})();
+
+// ap-6b: Echter Orphan — Farm-PO ohne villageId UND ohne Event-Bezug → _orphan-Flag
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_farm_orphan': { id:'_po_farm_orphan', title:'Verwaister Hof', type:'Farm',
+        pnames:[], enclosedBy:[], parentId:null, lat:null, long:null },
+    },
+    hofObjects:{},
+  });
+  var stats = API._migrateFarmPOsToHofObjects(API.AppState.db);
+  eq(stats.hofsCreated, 0, 'ap-6b: Orphan-Farm-PO → kein hofObject angelegt');
+  ok(API.AppState.db.placeObjects['_po_farm_orphan'], 'ap-6b: Orphan-PO bleibt erhalten');
+  eq(API.AppState.db.placeObjects['_po_farm_orphan']._orphan, true, 'ap-6b: _orphan-Flag gesetzt');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

@@ -209,9 +209,14 @@ function collectPlaces() {
     // ADR-027 P4: Farm/Building gibt es nach Phase-3-Migration nicht mehr in
     // placeObjects — Höfe leben in db.hofObjects (Höfe-Tab). Der frühere v1013-
     // _seenIds-Workaround für bare-vs-rich-Farm-Dubletten entfällt damit.
+    // ADR-028 Phase 1: orphan-markierte Farm-POs (Migration ohne villageId-
+    // Promotion möglich, kein Event-Bezug) NICHT in der Ortsliste anzeigen —
+    // Daten bleiben für User-Eingriff erhalten, sichtbares Symptom (Höfe in
+    // Ortsliste) verschwindet.
     for (const po of Object.values(AppState.db.placeObjects || {})) {
       const key = po.title;
       if (!key) continue;
+      if (po._orphan) continue;
       if (places.has(key)) continue;
       const _pPair = (po.lat != null && po.long != null);
       places.set(key, {

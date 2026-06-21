@@ -9,6 +9,26 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — ADR-028 Phase 1: REPROJECT + Migration-ohne-Skip (sw v1026)
+
+**Auslöser:** Bei der konzeptionellen Analyse zur dritten Hof-/Orts-Session zeigten sich zwei strukturelle Bug-Klassen: (#1) Höfe tauchen in der Ortsliste auf — verursacht durch stale `ev.place`-Cache nach Pfad-A/B/C-Match plus Zombie-Farm-POs, die `_migrateFarmPOsToHofObjects` bei fehlendem `villageId` übersprang. (#2) RESI-Events verlieren Ortszuordnung — Lücken im Link-Pass (Konvention 3 atomar, Pfad-B-Bootstrap, Norm-Drift). Tiefe Design-Sitzung führte zu **ADR-028: Deterministische Identitäts-Auflösung — Persistenz durch Daten, nicht durch Annotationen**. Standalone-Spec `ADR-028-DETERMINISTIC-LINK-ENTWURF.md`.
+
+**Architekturprinzip:** `(ev.placeId, ev.hofId)` ist eine reine, totale, deterministische Funktion über `(ev.type, ev.place, ev.addr, ev.date)` + `(placeObjects, hofObjects)`. Wo die Funktion partial ist, schließen Algorithmus-Vollständigung und Daten-Anreicherungs-Pfade die Lücken — ohne event-lokale Annotationen, ohne Sidecar, ohne Custom-Tags. Die Re-Derivation beim Load **ist** die Persistenz.
+
+**Phase 1 (sw v1026)** — mechanische Determinismus-Korrekturen, schließt Bug-Klasse #1 strukturell:
+
+- **REPROJECT-Helper `_reprojectEvCache(ev, year)` (gedcom.js):** setzt die ADR-024-Projektions-Invariante strukturell durch. Bei `ev.hofId` → `ev.place = buildPlacForGedcom(ev, year)`, `ev.addr = resolveAddrAsOf(hofId, year)` *nur wenn leer* (User-Wire-ADDR bleibt byte-identisch). Bei nur `ev.placeId` → `ev.place = _buildFormString(placeId, year)`. Rückgabe: `true` bei Mutation → speist `recollapsed`-Counter (analog Fall 1/2a/2b).
+- **Verdrahtung in `_linkGedcomEventsToPlaceObjects`:** REPROJECT am Ende von Pfad A (PLAC-Leitsegment), Pfad B (ADDR im Dorf-Scope, sichtbarer Konvention-2→1-Übergang), Pfad C (Bootstrap, idempotent durch Exakt-Projektions-Voraussetzung). Plus Durchreich-REPROJECT für bereits gelinkte Events (GRAMPS-Parser/IDB-Restore/vorige Loads) — picks Modell-Anreicherungen am Orts-/Hof-Modell auf, ohne die Match-Pfade unnötig zu durchlaufen.
+- **Migration ohne Skip in `_migrateFarmPOsToHofObjects` (gedcom.js):** Bei fehlendem `villageId` zuerst `_hofVillageString(db, pl.title)` probieren → bei Treffer `_ensureVillageChain` aufrufen, `pl.enclosedBy` setzen, regulär migrieren. Echte Orphans (kein Event-Bezug) bekommen `_orphan: true`-Flag statt Skip.
+- **`collectPlaces` blendet Orphan-Farm-POs aus (ui-views-place.js):** `if (po._orphan) continue;` im Fallback-Block → sichtbares Symptom „Höfe in der Ortsliste" verschwindet, Daten bleiben für User-Eingriff erhalten.
+- **+25 Tests Gruppe (ap) in test-unit.js:** _reprojectEvCache-Basissemantik (mit/ohne hofId/placeId, Idempotenz, ADDR-Schutz) · Link-Pass-Integration für Pfade A/B/C inkl. Konvention-2→1-Übergang · Durchreich-REPROJECT für gelinkte Events · Migration mit `_hofVillageString`-Promotion · Orphan-Flag-Markierung. API-Whitelist um `_reprojectEvCache` + `_ensureVillageChain` erweitert.
+
+**Gates:** 771 Unit-Tests grün (+25 (ap)). CSP-Gate grün (Ziel=0). Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (345 ms), `strict` no _-tags stable. GRAMPS-Roundtrip `Unsere Familie_2026-04-11.gramps` stable. „Unsere Familie 2026.ged" REFN-Reordering präexistent (Diff identisch vor und nach den Edits — kein Regress durch ADR-028).
+
+**Lehre:** Der einfachste Determinismus-Garant ist die Reprojektion am Pfad-Ende. Pfad A/B/C haben den Cache `ev.place` *nicht* aktualisiert — Bug-Klasse #1 war die Folge. Eine 3-Zeilen-Helfer-Funktion in 4 Einsatzstellen schließt das strukturell, ohne neue Mechanik. Das Migrations-Skip ohne `villageId` war die zweite Hälfte: `_hofVillageString` existiert seit ADR-026 P2A, war aber an dieser Stelle nicht verdrahtet — Promotion statt Skip ist die korrekte Antwort auf „kein Dorf-Anker da". Phasen 2–6 (Pfad A' atomar, Lese-Seite konsolidiert, Pfad B' Bootstrap, Review-Modal-Refactor, Cleanup) sind in `ADR-028-DETERMINISTIC-LINK-ENTWURF.md` spezifiziert; ausstehend.
+
+---
+
 ### Session 2026-06-21 — ADR-027 Pfad C: Bootstrap aus rich-PLAC (sw v1025)
 
 **Auslöser:** User-Befund — Höfe werden in der Orte-Liste angezeigt + Hof-Prefix landet doppelt im ORT-Feld trotz ADR-027 Phase 1–5. Ursachenanalyse: Pfad A ([gedcom.js:1259-1260](gedcom.js:1259)) bricht bei `!hofRegHasData` ab — Pfad A matcht nur gegen *bestehende* hofObjects. Bei einer Datei mit Konvention-1-PLAC („Hof, Dorf, Verwaltung, …"), die nie ADR-026 mit Farm-POs samt `enclosedBy`-Dorf durchlaufen hat, existieren weder Farm-POs (Phase-3-Migration fasst nur welche mit `villageId` an) noch hofObjects → Pfad A fired nie, die rich-PLAC-Events bleiben unaufgelöst. „Migration null Ergebnis" beim User war kein Migrations-Bug, sondern eine Bootstrap-Lücke im Modell.
