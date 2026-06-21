@@ -1140,6 +1140,15 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
 .toast.toast-success { border-color: var(--gold); color: var(--gold-lt); }
 .toast.toast-warn    { border-color: var(--warn-dim); color: var(--warn); }
 .toast.toast-error   { border-color: var(--red-dim); color: var(--red); background: var(--red-bg); }
+/* ADR-028 v1030-fix: Mehrzeile + Length-Heuristik → kein nowrap-Overflow */
+.toast.toast-multi {
+  white-space: pre-line;
+  max-width: min(90vw, 520px);
+  padding: 12px 18px;
+  border-radius: 14px;
+  line-height: 1.4;
+  text-align: left;
+}
 
 /* ═══════════════════════════════════════
    SOURCES VIEW

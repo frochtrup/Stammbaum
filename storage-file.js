@@ -408,34 +408,34 @@ async function _finishLoad(db, text, filename) {
     await _deriveHofAndMigrate();
     if (typeof _linkGedcomEventsToPlaceObjects === 'function') {
       const _recollapsed = _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass + ADR-027 Pfad A/B/C
-      // Ortsmodell war reicher als die gecachten GEDCOM-Strings → Events neu kollabiert.
-      // Erklärende Meldung, damit der "ungespeichert"-Status nicht verwirrt.
-      if (_recollapsed > 0) setTimeout(() => showToast(
-        `🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst — bitte speichern, um die Historie in der Datei zu sichern.`,
-        'info'), 2000);
-      // ADR-027 v1025 + ADR-028 P2 v1027 + ADR-028 P4 v1029: Hof-Treffer aus
-      // allen fünf Pfaden zusammenfassen (A=PLAC, A'=atomar, B=ADDR, B'=Type-
-      // Bootstrap, C=PLAC-Bootstrap).
+      // ADR-028 v1030: Orts-/Hof-/Migrations-Meldungen in EINEN Toast zusammenfassen
+      // — vorher überschrieben sich drei setTimeout-Toasts (2000/2500/3500 ms).
+      // Mehrzeilig (\n) im showToast — User sieht alle Anreicherungen in einer Karte.
       const _hs = AppState._lastLinkPassStats || {};
       const _hofTotal = (_hs.linkedHofPlac || 0) + (_hs.linkedHofAtomic || 0)
                       + (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofAddr || 0)
                       + (_hs.linkedHofTypeBootstrap || 0);
-      if (_hofTotal > 0) setTimeout(() => showToast(
-        `🏡 ${_hofTotal} Hof-Zuweisung${_hofTotal === 1 ? '' : 'en'} erkannt`
-        + (_hs.linkedHofBootstrap ? ` (${_hs.linkedHofBootstrap} aus rich-PLAC neu angelegt)` : '')
-        + (_hs.linkedHofTypeBootstrap ? ` (${_hs.linkedHofTypeBootstrap} aus RESI/PROP-Adresse neu angelegt)` : '')
-        + (_hs.linkedHofAtomic ? ` (${_hs.linkedHofAtomic} aus atomarer PLAC)` : '')
-        + ' — bitte speichern, um die Verknüpfung in der Datei zu sichern.',
-        'info'), 2500);
-      // ADR-028 P5: alte „Ignorieren"-Markierungen aus ADR-027 P5 räumen.
-      // Im Determinismus-Modell verstecken wir keine Events mehr — Daten-
-      // Lücken werden via Quellen-Schärfung / Wissen-Anreicherung geschlossen.
-      if (typeof _migrateLegacyIgnoredHofKeys === 'function') {
-        const _ignoredCount = _migrateLegacyIgnoredHofKeys();
-        if (_ignoredCount > 0) setTimeout(() => showToast(
-          `ℹ ${_ignoredCount} zuvor markierte Hof-Reviews aufgehoben — bitte erneut sichten ` +
-          `(neues Modell: Quelle schärfen oder Wissen ergänzen statt ignorieren).`,
-          'info'), 3500);
+      const _ignoredCount = (typeof _migrateLegacyIgnoredHofKeys === 'function')
+        ? _migrateLegacyIgnoredHofKeys() : 0;
+      const _lines = [];
+      if (_recollapsed > 0) {
+        _lines.push(`🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst.`);
+      }
+      if (_hofTotal > 0) {
+        const _detail = [];
+        if (_hs.linkedHofBootstrap)     _detail.push(`${_hs.linkedHofBootstrap} aus rich-PLAC neu`);
+        if (_hs.linkedHofTypeBootstrap) _detail.push(`${_hs.linkedHofTypeBootstrap} aus RESI/PROP-Adresse neu`);
+        if (_hs.linkedHofAtomic)        _detail.push(`${_hs.linkedHofAtomic} aus atomarer PLAC`);
+        _lines.push(`🏡 ${_hofTotal} Hof-Zuweisung${_hofTotal === 1 ? '' : 'en'} erkannt`
+          + (_detail.length ? ` (${_detail.join(', ')})` : '') + '.');
+      }
+      if (_ignoredCount > 0) {
+        _lines.push(`ℹ ${_ignoredCount} zuvor markierte Hof-Reviews aufgehoben — bitte erneut sichten.`);
+      }
+      if (_lines.length > 0) {
+        _lines.push('Bitte speichern, um die Verknüpfungen + Anreicherungen in der Datei zu sichern.');
+        // showToast erkennt '\n' → schaltet auf toast-multi (pre-line + max-width).
+        setTimeout(() => showToast(_lines.join('\n'), 'info'), 2000);
       }
     }
     _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen

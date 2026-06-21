@@ -1162,8 +1162,14 @@ function showToast(msg, type) {
   const resolved = type
     || (msg.startsWith('✓') ? 'success' : msg.startsWith('⚠') ? 'warn' : 'info');
   if (resolved !== 'info') t.classList.add('toast-' + resolved);
+  // ADR-028 v1030-fix: mehrzeilige oder lange Toasts brauchen pre-line +
+  // max-width, sonst sprengt nowrap den Viewport (Beispiel: aggregierte
+  // Load-Meldung „Orte/Höfe/Reviews"). Heuristik: Newline-Char ODER >100 chars.
+  if (msg.includes('\n') || msg.length > 100) t.classList.add('toast-multi');
   t.classList.add('show');
-  const dur = { success: 2500, warn: 4000, error: 5000, info: 2800 }[resolved] ?? 2800;
+  // Lange Texte länger anzeigen — User muss sie lesen können.
+  const baseDur = { success: 2500, warn: 4000, error: 5000, info: 2800 }[resolved] ?? 2800;
+  const dur = (msg.length > 100) ? Math.max(baseDur, 5500) : baseDur;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), dur);
 }
