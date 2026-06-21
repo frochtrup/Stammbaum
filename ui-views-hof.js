@@ -25,25 +25,43 @@ function _placeFirstPart(place) {
   return place.split(',').map(s => s.trim()).find(s => s.length > 0) || '';
 }
 
-// Adress-Sortierkey: Straße + numerische Hausnummer trennen
-function _addrSortKey(addr) {
-  const line = (addr || '').split('\n')[0].trim();
-  const m = line.match(/^(.*?)\s+(\d+\S*)\s*$/);
-  if (m) return { street: m[1].trim(), nr: parseInt(m[2]) || 0, nrSuffix: m[2].replace(/^\d+/, '') };
-  return { street: line, nr: 0, nrSuffix: '' };
+// Kanonischer Gruppen-Label eines Hofs: bevorzugt PO-Titel des Dorfs via
+// villageId (V2-Höfe nach ADR-027 P3), Fallback auf _placeFirstPart(hof.place).
+// Damit gruppieren „Ochtrup" und „Ochtrup, Westfalen" als identische Sektion.
+function _hofGroupLabel(hof) {
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  // V2-Hof → villageId aus hofObjects[hofId]
+  let villageId = null;
+  if (hof && hof.hofId && AppState.db?.hofObjects?.[hof.hofId]) {
+    const h = AppState.db.hofObjects[hof.hofId];
+    villageId = h.villageId || null;
+  }
+  // Fallback: Farm-PO (ADR-026 pre-Phase-3)
+  if (!villageId && hof && hof.placeId && AppState.db?.placeObjects?.[hof.placeId]) {
+    const po = AppState.db.placeObjects[hof.placeId];
+    if (po.enclosedBy && po.enclosedBy[0]) villageId = po.enclosedBy[0].placeId;
+    if (!villageId) villageId = po.parentId || null;
+  }
+  if (reg && villageId && reg.byId[villageId]) return reg.byId[villageId].title || '';
+  // Fallback: String-Ort des Events
+  return _placeFirstPart(hof.place) || '';
 }
 
+// ADR-028 v1032: hausnummern-aware Sortierung via Intl.Collator(numeric:true).
+// „Wall 33" vor „Wall 100" (90 vor 100), „Hof 5a" vor „Hof 5b", funktioniert
+// auch wenn die Hausnummer nicht am Ende steht oder die Adresse mehrzeilig ist.
+const _ADDR_COLLATOR = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
+
 function _hofSortFn(a, b) {
-  // 1. Ort — nur erster Teil der Hierarchie, damit ", Ochtrup" = "Ochtrup"
-  const pc = _placeFirstPart(a.place).localeCompare(_placeFirstPart(b.place), 'de');
+  // 1. Gruppen-Label (Dorf — kanonisch via villageId/PO-Titel) als Primär-Sortierung
+  const ga = _hofGroupLabel(a), gb = _hofGroupLabel(b);
+  const pc = ga.localeCompare(gb, 'de');
   if (pc !== 0) return pc;
-  // 2. Straße
-  const sa = _addrSortKey(a.addr), sb = _addrSortKey(b.addr);
-  const sc = sa.street.localeCompare(sb.street, 'de');
-  if (sc !== 0) return sc;
-  // 3. Hausnummer numerisch
-  if (sa.nr !== sb.nr) return sa.nr - sb.nr;
-  return sa.nrSuffix.localeCompare(sb.nrSuffix, 'de');
+  // 2. Adresse — kollator-basiert numerisch korrekt
+  return _ADDR_COLLATOR.compare(
+    (a.addr || '').replace(/\n/g, ' ').trim(),
+    (b.addr || '').replace(/\n/g, ' ').trim()
+  );
 }
 
 function renderHofList(sorted) {
@@ -59,9 +77,10 @@ function renderHofList(sorted) {
   let html = '';
   let lastSep = '';
   for (const hof of sorted) {
-    // ADR-027 P5: Höfe sind nach Dorf gruppiert (statt Alpha-Sortierung), weil das
-    // Dorf die geografische Trennachse ist. Höfe ohne Ortsangabe landen unter „—".
-    const sep = _placeFirstPart(hof.place) || '—';
+    // ADR-027 P5 + ADR-028 v1032: Höfe sind nach Dorf-Identität gruppiert
+    // (kanonisch via villageId → po.title). Damit landen „Ochtrup" und
+    // „Ochtrup, Westfalen" in derselben Sektion. Höfe ohne Dorf unter „—".
+    const sep = _hofGroupLabel(hof) || '—';
     if (sep !== lastSep) { html += `<div class="alpha-sep">${esc(sep)}</div>`; lastSep = sep; }
 
     const count      = new Set(hof.entries.map(e => e.pid)).size;
