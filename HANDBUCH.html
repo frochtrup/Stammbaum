@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Juni 2026 · Stand: sw v998</p>
+  <p class="version">Version 8 · Juni 2026 · Stand: sw v1024</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -3048,7 +3048,24 @@ Die Timeline ist ideal, um nach einer Pause wieder anzuknüpfen oder um einer Fo
 
 <p>Wenn Sie viele Wohnorte (RESI-Einträge) erfasst haben, bündelt die App diese automatisch zu <strong>Höfen</strong> — also Adressen, an denen mehrere Personen zu verschiedenen Zeiten gelebt haben. Das ist besonders nützlich für die Bauernhof-Genealogie.</p>
 
-<p>Zu finden sind die Höfe im Bereich <span class="button-label">📍 Orte</span> → Tab <strong>Höfe</strong>. Tippen Sie auf einen Hof, um die Detailansicht zu öffnen.</p>
+<p>Zu finden sind die Höfe im Bereich <span class="button-label">📍 Orte</span> → Tab <strong>Höfe</strong>. Tippen Sie auf einen Hof, um die Detailansicht zu öffnen. <strong>Die Liste ist nach Dorf gruppiert (ab sw v1024)</strong> — alle Höfe eines Ortes erscheinen unter einer gemeinsamen Überschrift, was bei vielen Höfen die Übersicht deutlich erleichtert.</p>
+
+<h2>Hof-Zuweisungen prüfen <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1024)</span></h2>
+
+<p>Viele importierte GEDCOM-Dateien tragen die Hof-Adresse <em>nur im ADDR-Feld</em> eines RESI-Ereignisses, ohne dass eine Hof-Entität dahinterstünde. Die App erkennt das automatisch: Im Höfe-Tab erscheint oben rechts ein <span class="button-label">🔗</span>-Knopf mit einem kleinen Zähler — die Anzahl der Ereignisse mit Adresse, denen noch kein Hof zugewiesen ist. Ein Klick öffnet die <strong>Hof-Zuweisungen prüfen</strong>-Liste mit allen offenen Fällen, sortiert nach Person, Datum und Adresse.</p>
+
+<p>Pro Zeile haben Sie drei Optionen:</p>
+<ul>
+  <li><strong>Hof wählen</strong> — ein Dropdown bietet alle bereits angelegten Höfe im gleichen Dorf an. So lassen sich mehrere Ereignisse derselben Person (oder verschiedener Bewohner) demselben Hof zuordnen.</li>
+  <li><strong>+ neu anlegen</strong> — legt aus dem Ereignis einen neuen Hof an (die ADDR-Adresse wird zur ersten Hof-Bezeichnung, das aufgelöste Dorf zur villageId). Direkt danach ist das Ereignis verknüpft, und der neue Hof erscheint in der Höfe-Liste.</li>
+  <li><strong>Ignorieren</strong> — markiert das Ereignis dauerhaft als <em>nicht hof-relevant</em> (typisch: Briefkasten-Adresse, Krankenhaus, Sammeladresse). Solche Einträge zählen nicht mehr im Badge mit und verschwinden aus der Liste; die Markierung gilt pro Datei und überlebt App-Neustart.</li>
+</ul>
+
+<p>Außerdem erscheint im <strong>Personen-Detail</strong> direkt neben der Adresse eines unzugewiesenen Ereignisses ein dezentes <strong>⚠</strong>-Symbol. Ein Tipp darauf öffnet das Prüf-Modal direkt mit dieser Zeile fokussiert — Sie müssen den Höfe-Tab nicht extra besuchen.</p>
+
+<h2>Adress-Historie eines Hofes <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1024)</span></h2>
+
+<p>Wurde ein Hof im Laufe der Jahrhunderte umbenannt oder neu nummeriert (Straßenumbenennung 1970, Hausnummer-Reform 1985), zeigt die Hof-Detailansicht eine eigene Sektion <strong>Adress-Historie</strong> mit allen bekannten Bezeichnungen — datiert (z. B. „bis 1900: Schulze-Hof", „ab 1970: Wall 33") oder undatiert. Beim GEDCOM-Export greift die App pro Ereignis automatisch die zum Jahr passende Schreibweise auf, sodass Urkunden aus dem 18. Jahrhundert mit dem historischen Hofnamen erscheinen und neuere Einträge mit der aktuellen Adresse.</p>
 
 <h2>Bewohner und Eigentümer — der Unterschied</h2>
 
@@ -4095,7 +4112,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Juni 2026 · sw v998<br>
+  Stammbaum PWA · Version 8 · Juni 2026 · sw v1024<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 

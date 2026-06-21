@@ -546,7 +546,7 @@ Reist mit der Datei (gehört zur Person) → `_`-Tag mit Writer-Support (Faustre
 
 **Status:** ✅ P0–P5 abgeschlossen (sw v861–v869).
 
-### ADR-026: Höfe als geokodierte Orts-Objekte — eigenständige Hof-Koordinaten (HOF-GEO, geplant)
+### ADR-026: Höfe als geokodierte Orts-Objekte — eigenständige Hof-Koordinaten (HOF-GEO, ✅ abgelöst durch ADR-027)
 
 **Kontext:** Höfe sollen **geräteübergreifend eigene Geokoordinaten** tragen, damit **Binnenmigration** (Umzug zwischen Höfen innerhalb desselben Dorfes) auf Karte, Zeitstrahl und Story als distinkte Punkte sichtbar wird. Heute scheitert das an drei Stellen:
 - Hof-Identität = `ev.addr`-String; Koordinaten/Notiz in `db.hofObjects[addr]` → **nur localStorage**, kein Sync (im Gegensatz zu `placeObjects`, die seit Item 10/v858 über IDB + OneDrive + Konflikt-Erkennung synchronisieren).
@@ -611,6 +611,37 @@ Drei Mechanismen sichern die saubere Trennung: (1) **`type` trennt die Picker-In
 **Hartschnitt funktional komplett:** Koords **und** Notizen sind single-source im Farm-`placeObject` (geräteübergreifend via placeObjects-Sync). Der `hofObjects`-Sidecar (`stammbaum_hofobjects`) ist **write-frozen** — die Migration liest ihn nur noch für unmigrierte Altbestände, kein UI-Pfad schreibt ihn mehr (Ausnahme: Bereinigung beim Löschen, gegen Resurrektion). **Optionaler Rest:** den localStorage-Key endgültig löschen — erst sinnvoll, wenn alle Geräte-Altbestände durch die Migration in Farm-POs überführt sind (sonst Verlust auf Geräten mit Daten nur im Sidecar). Das ist reine Aufräum-Polish ohne Funktionswert; der Sidecar ist read-only harmlos.
 
 **QA (sw v998):** Zwei Geo-Validierungsregeln in `validatePlaces()` flankieren das Feature — `HOF_NO_COORD` (Hof ohne Koordinaten → auf der Karte unsichtbar) und `HOF_FAR` (Hof > 25 km vom umschließenden Ort, `_placeDistKm`-Haversine → vertauschte/falsche Koordinaten). Anzeige im Orte-Tab-Validator (⚠) + Badge-Zähler.
+
+### ADR-027: Hof-Entität als eigenständiges Objekt (HOF-ENT, in Umsetzung 🟠)
+
+**Kontext:** ADR-026 hat Höfe als `placeObject` Typ `Farm`/`Building` modelliert. In der Praxis seit v989 vier strukturelle Schwächen: Adresse ohne Wahrheits-Anker (parallel in `po.title` + `ev.addr`), semantische Vermischung von Geografie und Adresse (`Farm` im selben Typ-Slot wie `Town`/`State`), `pnames` als Adress-Historie überlädt die Semantik (sprachliche Varianten ≠ Umnummerierung), Hof-Lebenszyklus (Vorgänger/Nachfolger, Existenzspanne) nicht erstklassig modellierbar. v1011–v1018 waren Korrekturen entlang dieser Wurzel.
+
+**Entscheidung:** Ein Hof wird zur **eigenständigen Entität** `hofObject` mit Fremdschlüssel auf ein Dorf-`placeObject`. `placeObjects` enthält fortan ausschließlich Verwaltungseinheiten. Events tragen `ev.placeId` immer auf das Dorf, plus optional `ev.hofId` auf das Hof-Objekt. Adresse ist single source in `hofObject.addrs[]` mit Zeitfenstern (analog `placeObject.pnames`, aber semantisch sauber getrennt).
+
+```
+hofObjects:
+  _hof_wall_33_ochtrup {
+    villageId: '_po_ochtrup',
+    addrs: [{value:'Schulze-Hof', dateTo:'1900'},
+            {value:'Wall 33',     dateFrom:'1970'}],
+    lat: 52.2073, long: 7.1867, note: 'Erbhof seit ca. 1500',
+    existsFrom: '1500', existsTo: null,
+    predecessor: null, successor: null }
+ev: { type:'RESI', placeId:'_po_ochtrup', hofId:'_hof_wall_33_ochtrup', addr:'Wall 33' }
+```
+
+**Sechs-Phasen-Migration (5 abgeschlossen, 1 ausstehend):**
+
+- **Phase 1 ✅ (sw v1020):** Schema + Persistenz — `APP_KNOWN_SCHEMA_VERSION=2`, `orte.json` Wrapper v2 mit `hofObjects`-Sektion, IDB-Mirror `stammbaum_hofobjects_v2`, `getHofRegistry`/`mutateHofObject`/`upsertHofObject`, Schema-Refusal bei v3+-Datei. Auto-Reload aus v1019 als Vorbedingung.
+- **Phase 2 ✅ (sw v1021):** Mapping-Layer — `buildPlacForGedcom(ev, year)` baut PLAC aus Hof-Adresse + Dorf-Hierarchie; Writer `_resolvedPlaceName` + `geoLines` priorisieren `ev.hofId`; Link-Pass Pfad A (PLAC-Leitsegment → Hof+Dorf, Anker-Check ADR-024 v1015) + Pfad B (ADDR im Dorf-Scope → Hof, eindeutig); GRAMPS-Parser derived V2-hofObjects parallel zu Farm-POs (kein Roundtrip-Bruch).
+- **Phase 3 ✅ (sw v1022):** Daten-Migration — `_migrateFarmPOsToHofObjects(db)` idempotent; Events repointet (placeId → villageId, hofId neu); Farm/Building-POs gelöscht; Backup vor erstem Lauf; Reverse-Migrator `_migrateHofObjectsBackToFarmPOs` als Sicherheitsnetz; `_eventCoords`/`hofMeta`/`buildHofIndex` lesen V2 mit Vorrang; GRAMPS-Parser+Writer komplett umgestellt.
+- **Phase 4 ✅ (sw v1023):** Cleanup — `_buildFormString` wieder einargumentig (kein `opts.includeAddrLeaf`), Farm/Building-Spezialfälle in `collectPlaces` + `validatePlaces` entfernt, Validator HOF_NO_COORD/HOF_FAR auf V2-hofObjects, Hofchronik V2-aware. Code-Hygiene-Gate: `grep includeAddrLeaf` leer.
+- **Phase 5 ✅ (sw v1024):** UI-Trennung + Anreicherung — Höfe-Liste gruppiert nach Dorf; Hof-Detail zeigt Adress-Historie; **„Hof-Zuweisungen prüfen"-Review** als permanente Datenqualitäts-Funktion (Badge `🔗 [N]`, Modal mit Tabelle, Pro-Zeile-Aktionen Hof wählen / + neu anlegen / Ignorieren); Event-Detail ⚠-Indikator neben Adresse bei unresolved Events.
+- **Phase 6 ausstehend (≥ v1024+2):** Legacy entfernen — Reverse-Migrator, IDB-Key `stammbaum_hofobjects`, v1-Schema-Read.
+
+**Konventions-Erhalt (Wire-Treue):** GEDCOM-Roundtrip bit-identisch für Quellen mit Hof-im-PLAC (Konvention 1 + 3); MyHeritage/GRAMPS-Konvention 2 (PLAC=Dorf, ADDR=Hof) wird beim ersten Save in Konvention 1 transformiert (sichtbar via Toast + `markChanged`, danach idempotent). GRAMPS xml1===xml2 stable. Auf `MeineDaten_ancestris.ged` (83k Zeilen): `net_delta=0` + `out1===out2`.
+
+**Standalone-Spec:** `ADR-027-HOF-ENTITY-ENTWURF.md` (Verlauf/Diskussions-Archiv).
 
 ---
 
