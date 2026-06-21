@@ -727,6 +727,22 @@ function openHofReviewModal(focusKey) {
   openModal('modalHofReview');
 }
 
+// ADR-028 P5: Klassen-Definitionen für die Review-UI. Pro Klasse Kurzlabel +
+// Badge-Farbe + Tooltip + verfügbare Aktionen. Aktionen werden im Render-Pfad
+// kontextabhängig gefiltert (z.B. „Hof wählen" nur wenn Kandidaten existieren).
+const _HOF_REVIEW_CLASS_META = {
+  A: { label: 'A',   color: '#999',
+       title: 'Hof-tragendes Event, aber Event-Typ ohne Hof-Semantik (BIRT/DEAT/MARR/BURI)' },
+  B: { label: 'B',   color: '#c87f30',
+       title: 'Atomare PLAC ohne globalen Hof-Match — Quelle schärfen oder Hof anlegen' },
+  C: { label: 'C',   color: '#b03030',
+       title: 'Mehrdeutig: mehrere Höfe gleicher Adresse im Dorf' },
+  D: { label: 'D',   color: '#3070b0',
+       title: 'Norm-Drift: Adresse matcht keinen Hof — Variante zum Hof hinzufügen oder Hof wählen' },
+  E: { label: 'E',   color: '#7050a0',
+       title: 'Fremde Verwaltung im PLAC-Rest — pname am Ort ergänzen oder Quelle schärfen' },
+};
+
 function renderHofReview(focusKey) {
   const body = document.getElementById('hofReviewBody');
   if (!body) return;
@@ -745,18 +761,46 @@ function renderHofReview(focusKey) {
   let html = '<div class="hof-review-list" style="display:flex;flex-direction:column;gap:8px">';
   for (const r of rows) {
     const isFocus = focusKey && focusKey === r.key;
-    const cands = (r.placeId && hofsByVillage[r.placeId]) || [];
-    const opts = '<option value="">Hof wählen…</option>'
-      + cands.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
+    const cls = r._class || 'A';
+    const meta = _HOF_REVIEW_CLASS_META[cls] || _HOF_REVIEW_CLASS_META.A;
+    const hofsInVillage = (r.placeId && hofsByVillage[r.placeId]) || [];
     const placeLabel = r.place ? esc(compactPlace(r.place)) : '<em style="color:#aaa">— ohne Dorf —</em>';
+    const addrLabel  = r.addr  ? `📍 ${esc(r.addr)} · ` : '';
+
+    // ADR-028 P5: Klassen-bewusste Aktions-Matrix
+    //   A: + neu anlegen (wenn placeId) | Quelle schärfen
+    //   B: Quelle schärfen
+    //   C: Hof wählen | Quelle schärfen
+    //   D: Variante zum Hof hinzufügen (Dropdown) | Hof wählen | Quelle schärfen
+    //   E: Quelle schärfen
+    const opts = '<option value="">Hof wählen…</option>'
+      + hofsInVillage.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('');
+    const sharpBtn = `<button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewSharpenSource" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem" title="Event-Detail öffnen, um PLAC/ADDR zu schärfen">Quelle schärfen</button>`;
+    const newBtn   = (r.placeId)
+      ? `<button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewCreateNew" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem">+ Hof anlegen</button>` : '';
+    const pickSel  = (hofsInVillage.length)
+      ? `<select class="form-select" style="max-width:200px" data-change="hofReviewAssign" data-key="${esc(r.key)}">${opts}</select>` : '';
+    const variantSel = (cls === 'D' && hofsInVillage.length)
+      ? `<select class="form-select" style="max-width:240px" data-change="hofReviewAddVariant" data-key="${esc(r.key)}">
+           <option value="">Variante zum Hof…</option>
+           ${hofsInVillage.map(c => `<option value="${esc(c.id)}">${esc(c.title)}</option>`).join('')}
+         </select>` : '';
+
+    let actions = '';
+    if (cls === 'A') actions = newBtn + ' ' + sharpBtn;
+    else if (cls === 'B') actions = sharpBtn;
+    else if (cls === 'C') actions = pickSel + ' ' + sharpBtn;
+    else if (cls === 'D') actions = variantSel + ' ' + pickSel + ' ' + newBtn + ' ' + sharpBtn;
+    else if (cls === 'E') actions = sharpBtn;
+    else actions = sharpBtn;
+
     html += `<div class="hof-review-row" data-key="${esc(r.key)}" style="border:1px solid var(--border,#ddd);border-radius:6px;padding:8px 10px;${isFocus ? 'box-shadow:0 0 0 2px var(--accent,#b88c2e)' : ''}">
-      <div style="font-weight:600">${esc(r.personName)}</div>
-      <div style="font-size:0.85rem;color:var(--text-dim,#666);margin:2px 0 6px">${esc(r.evType || 'Event')}${r.evDate ? ' · ' + esc(r.evDate) : ''} · 📍 ${esc(r.addr)} · ${placeLabel}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        ${cands.length ? `<select class="form-select" style="max-width:200px" data-change="hofReviewAssign" data-key="${esc(r.key)}">${opts}</select>` : '<span style="font-size:0.8rem;color:#aaa">Keine Höfe im Dorf</span>'}
-        <button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewCreateNew" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem">+ neu anlegen</button>
-        <button type="button" class="btn btn-cancel btn-sm" data-action="hofReviewIgnore" data-key="${esc(r.key)}" style="padding:4px 10px;font-size:0.85rem">Ignorieren</button>
+      <div style="font-weight:600;display:flex;align-items:center;gap:8px">
+        <span class="hof-review-class" title="${esc(meta.title)}" style="background:${meta.color};color:#fff;font-size:0.7rem;padding:2px 6px;border-radius:3px;font-weight:700">${esc(meta.label)}</span>
+        <span>${esc(r.personName)}</span>
       </div>
+      <div style="font-size:0.85rem;color:var(--text-dim,#666);margin:2px 0 6px">${esc(r.evType || 'Event')}${r.evDate ? ' · ' + esc(r.evDate) : ''} · ${addrLabel}${placeLabel}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">${actions}</div>
     </div>`;
   }
   html += '</div>';
@@ -777,6 +821,40 @@ function hofReviewAssign(selectEl) {
   }
 }
 
+// ADR-028 P5 Pro-Zeile-Aktion (Klasse D): ev.addr als neue addrs[]-Variante an
+// einen bestehenden Hof anhängen + linken. Nächster Load: Pfad B matcht deter-
+// ministisch über die neue Variante; gleichartige Events anderer Personen
+// werden auto-aufgelöst (universelle Daten-Anreicherung in orte.json).
+function hofReviewAddVariant(selectEl) {
+  const key = selectEl.dataset.key;
+  const hofId = selectEl.value;
+  if (!key || !hofId) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  if (typeof addHofAddrVariantAndLink === 'function'
+      && addHofAddrVariantAndLink(row.ev, hofId)) {
+    showToast('✓ Adress-Variante am Hof gespeichert + Event verknüpft', 'success');
+    renderHofReview();
+    _updateHofReviewBadge();
+  }
+}
+
+// ADR-028 P5 Pro-Zeile-Aktion (alle Klassen): Event-Detail öffnen, damit der
+// User PLAC/ADDR direkt schärfen kann. Delegiert an showDetail(pid) — die
+// Personen-Ansicht zeigt das Event editierbar. Nach Schärfung + Save greift
+// der Link-Pass beim nächsten Load.
+function hofReviewSharpenSource(btn) {
+  const key = btn.dataset.key;
+  if (!key) return;
+  const row = _findUnresolvedHofEvents(AppState.db).find(r => r.key === key);
+  if (!row) return;
+  closeModal('modalHofReview');
+  if (typeof showDetail === 'function') {
+    showDetail(row.pid);
+    showToast('ℹ Event-Detail geöffnet — PLAC/ADDR schärfen, dann speichern', 'info');
+  }
+}
+
 // Pro-Zeile-Aktion: neuen V2-Hof aus diesem Event anlegen. Nutzt ev.addr als
 // initialen addrs-Eintrag (undatiert), ev.placeId als villageId. Wenn ev.placeId
 // fehlt, kein Anlegen möglich (Dorf ist Pflicht im V2-Modell).
@@ -789,37 +867,16 @@ function hofReviewCreateNew(btn) {
     showToast('⚠ Event hat kein Dorf — bitte zuerst Ort verknüpfen', 'warn');
     return;
   }
-  const villageId = row.placeId;
-  const slug  = (typeof _normHofAddr === 'function' ? _normHofAddr(row.addr) : row.addr.toLowerCase())
-    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-  const vSlug = villageId.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
-  let hofId = '_hof_' + (slug || 'x') + '_' + (vSlug || 'v');
-  let n = 1;
-  while (AppState.db.hofObjects?.[hofId]) hofId = '_hof_' + slug + '_' + vSlug + '_' + (++n);
-  if (typeof upsertHofObject === 'function') {
-    upsertHofObject(hofId, () => ({
-      id: hofId, villageId,
-      addrs: [{ value: row.addr, lang: 'deu', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
-      lat: null, long: null, note: '',
-      existsFrom: null, existsTo: null,
-      predecessor: null, successor: null,
-      _govId: null, _govTypes: null,
-      schemaVersion: 1,
-    }), null);
-    if (typeof applyHofToEvent === 'function') applyHofToEvent(row.ev, hofId);
-    showToast('✓ Neuer Hof angelegt + Event verknüpft', 'success');
-    renderHofReview();
-    _updateHofReviewBadge();
-  }
-}
-
-// Pro-Zeile-Aktion: Event als nicht-Hof-relevant markieren (persistiert).
-function hofReviewIgnore(btn) {
-  const key = btn.dataset.key;
-  if (!key) return;
-  if (typeof _ignoreHofReviewEvent === 'function') {
-    _ignoreHofReviewEvent(key);
-    renderHofReview();
-    _updateHofReviewBadge();
+  // ADR-028 P5: deterministische ID via findOrCreateHofObject — idempotent
+  // gegen bestehende V2-Höfe gleicher (norm-addr, villageId), gleiches ID-
+  // Schema wie Pfad C, weniger Duplikat-Logik vor Ort.
+  if (typeof findOrCreateHofObject === 'function') {
+    const hofId = findOrCreateHofObject(row.addr, row.placeId);
+    if (hofId && typeof applyHofToEvent === 'function') {
+      applyHofToEvent(row.ev, hofId);
+      showToast('✓ Hof angelegt + Event verknüpft', 'success');
+      renderHofReview();
+      _updateHofReviewBadge();
+    }
   }
 }

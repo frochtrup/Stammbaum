@@ -50,10 +50,10 @@ const _CLICK_MAP = {
   showHofRenameForm:       ()  => showHofRenameForm(),
   cancelHofRename:         ()  => cancelHofRename(),
   saveHofRename:           el  => saveHofRename(el.dataset.addr),
-  // ADR-027 P5: Hof-Zuweisungen prüfen
+  // ADR-027 P5 + ADR-028 P5: Hof-Zuweisungen prüfen
   openHofReviewModal:      el  => openHofReviewModal(el?.dataset?.key),
   hofReviewCreateNew:      el  => hofReviewCreateNew(el),
-  hofReviewIgnore:         el  => hofReviewIgnore(el),
+  hofReviewSharpenSource:  el  => hofReviewSharpenSource(el),
   switchPlacesSubTab:      el => switchPlacesSubTab(el.dataset.subtab),
   switchMapMode:           el => switchMapMode(el.dataset.mode),
   toggleMigrAnim:          ()  => toggleMigrAnim(),
@@ -521,6 +521,7 @@ document.addEventListener('change', e => {
     el.value = '';
   }
   else if (action === 'hofReviewAssign')   hofReviewAssign(el);
+  else if (action === 'hofReviewAddVariant') hofReviewAddVariant(el);
   else if (action === 'photoImportChange') {
     _handlePhotoImport(el.files[0]).finally(() => { el.value = ''; });
   }

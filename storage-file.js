@@ -427,6 +427,16 @@ async function _finishLoad(db, text, filename) {
         + (_hs.linkedHofAtomic ? ` (${_hs.linkedHofAtomic} aus atomarer PLAC)` : '')
         + ' — bitte speichern, um die Verknüpfung in der Datei zu sichern.',
         'info'), 2500);
+      // ADR-028 P5: alte „Ignorieren"-Markierungen aus ADR-027 P5 räumen.
+      // Im Determinismus-Modell verstecken wir keine Events mehr — Daten-
+      // Lücken werden via Quellen-Schärfung / Wissen-Anreicherung geschlossen.
+      if (typeof _migrateLegacyIgnoredHofKeys === 'function') {
+        const _ignoredCount = _migrateLegacyIgnoredHofKeys();
+        if (_ignoredCount > 0) setTimeout(() => showToast(
+          `ℹ ${_ignoredCount} zuvor markierte Hof-Reviews aufgehoben — bitte erneut sichten ` +
+          `(neues Modell: Quelle schärfen oder Wissen ergänzen statt ignorieren).`,
+          'info'), 3500);
+      }
     }
     _toastUnresolvedGov(); // Item 13: User auf offene GOV-Platzhalter hinweisen
     { let maxUsed = 0;

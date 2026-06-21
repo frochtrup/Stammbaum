@@ -9,6 +9,39 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — ADR-028 Phase 5: Review-Modal als Daten-Anreicherungs-UI (sw v1030)
+
+**Auslöser:** Phase 5 des ADR-028-Migrationsplans — Review-Badge bekommt seine konzeptuelle Rolle: nicht mehr Entscheidungs-Speicher für per-Event-Ignorier-Markierungen, sondern **Daten-Lücken-Anzeiger** mit drei Anreicherungs-Aktionen. Jeder Review-Eintrag wird in eine von fünf Klassen (A–E) eingeordnet, die Aktions-Matrix ist klassenspezifisch.
+
+**Implementierung (Phase 5):**
+- **Klassifizierung in 5 Klassen (`_classifyUnresolvedHofEvent` in gedcom.js):**
+  - **A** non-Hof-Event-Typ (BIRT/DEAT/MARR/BURI mit ADDR ohne matchenden Hof — vermutlich Krankenhaus/Kirche/etc., kein Auto-Bootstrap durch Pfad B')
+  - **B** atomare PLAC ohne globalen Match (Konvention 3b — Quelle braucht Hierarchie)
+  - **C** Mehrdeutigkeit (≥2 Höfe gleicher addr-Norm im Dorf-Scope)
+  - **D** Norm-Drift (RESI/PROP-ADDR matcht kein Hof, aber Höfe existieren im Dorf — Variante anhängen)
+  - **E** fremde Verwaltung im PLAC-Rest (Hierarchie-Anker scheitert)
+- **Listen-Erweiterung in `_findUnresolvedHofEvents`:** zählt jetzt auch Events ohne ADDR aber mit unaufgelöstem PLAC (Klasse B/E). Badge zeigt jede Daten-Lücke, nicht nur ADDR-Lücken.
+- **„Ignorieren"-Pfad strukturell entfernt:** `_ignoreHofReviewEvent`/`_unignoreHofReviewEvent`/`_saveIgnoredHofKeys`/`_ignoredHofKeysSet` gelöscht. Im Determinismus-Modell verstecken wir keine Events — wenn eine Adresse kein Hof ist, legt der User `placeObject` Typ `Hospital` an und schärft PLAC. Migrations-Helfer `_migrateLegacyIgnoredHofKeys` räumt alte localStorage-Markierungen + Toast „N Reviews aufgehoben — bitte erneut sichten".
+- **Neue Anreicherungs-Helfer `addHofAddrVariantAndLink(ev, hofId)`:** für Klasse D — fügt `ev.addr` als undatierte addrs[]-Variante an einen Hof, setzt `ev.hofId`. Nächster Load: Pfad B matcht deterministisch über die neue Variante. Anreicherung wandert in `orte.json` (cross-stammbaum-effective).
+- **Review-Modal UI (ui-views-hof.js):**
+  - Klassen-Badge pro Zeile (kleine farbige Markierung A–E mit Tooltip)
+  - Klassenspezifische Aktions-Matrix: A→[+ Hof anlegen, Quelle schärfen]; B→[Quelle schärfen]; C→[Hof wählen, Quelle schärfen]; D→[Variante zum Hof, Hof wählen, + Hof anlegen, Quelle schärfen]; E→[Quelle schärfen].
+  - `hofReviewSharpenSource(btn)` — schließt Modal + `showDetail(pid)` (User editiert Event direkt; nach Save greift Link-Pass beim nächsten Load).
+  - `hofReviewAddVariant(selectEl)` — Wrapper für `addHofAddrVariantAndLink`.
+  - `hofReviewCreateNew` nutzt jetzt `findOrCreateHofObject` (idempotent, gleiches ID-Schema wie Pfad C).
+- **Header-Text in index.html aktualisiert:** „Pro Zeile zeigt das Klassen-Badge (A–E) die Art der Daten-Lücke; Aktionen schließen sie durch Quellen-Schärfung oder Wissen-Anreicherung."
+- **am-1a-Test angepasst:** zählt jetzt auch unaufgelöste PLAC (nicht nur ADDR-Lücken). **am-3-Block umgebaut:** statt Ignore-Mechanik testet er den Migrations-Pfad (alte Legacy-Markierungen werden gezählt + gelöscht, idempotent).
+- **+12 Tests Gruppe (at):** Klassifizierung der fünf Klassen (1a–e), `addHofAddrVariantAndLink` Erfolg + Idempotenz (2a/2b), `_findUnresolvedHofEvents` trägt `_class` an jedem Eintrag (3a–c).
+- **Browser-verifiziert an Demo + künstlichen Klassen:** Modal zeigt 4 Zeilen (A/B/C/E), Aktions-Matrix klassenspezifisch korrekt (Buttons + Dropdown nur wo sinnvoll). Klasse D entsteht im normalen Flow praktisch nicht, weil Pfad B' (Phase 4) RESI/PROP/CENS/OCCU vorher schon bootstrappt.
+
+**Gates:** 832 Unit-Tests grün (+13 (at) − Ignore-Tests). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable. GRAMPS stable.
+
+**Effekt:** Daten-Lücken-Anzeige ist jetzt semantisch ehrlich — kein Verstecken, sondern aktiv schließen. Die Restklasse aus ADR-028 („Genealoge kennt die Antwort nicht") ist die einzige, die dauerhaft sichtbar bleibt — und das ist die korrekte Antwort des Systems auf Ungewissheit.
+
+**Verbleibt:** Phase 6 (Cleanup — Reverse-Migrator entfernen, Legacy-IDB-Key `stammbaum_hofobjects`, Memory-Update).
+
+---
+
 ### Session 2026-06-21 — ADR-028 Phase 4: Pfad B' Bootstrap aus Event-Typ-Semantik (sw v1029)
 
 **Auslöser:** Konvention 2 ohne bestehenden Hof (MyHeritage-/GRAMPS-Export-Standard: `PLAC Dorf, … + ADDR Hof`) bleib bislang im Review-Pfad hängen, obwohl der Event-Typ (`RESI`/`PROP`/`CENS`/`OCCU`) den Hof-Charakter eindeutig deklariert — semantisch genauso unzweideutig wie rich-PLAC-Struktur bei Pfad C. Closes Bug-Klasse #2 für die häufigste verbleibende Eingabe-Klasse.

@@ -1,6 +1,6 @@
 # ADR-028 — Deterministische Identitäts-Auflösung Event→Ort/Hof: Persistenz durch Daten, nicht durch Annotationen
 
-> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phase 2 ✅ (sw v1027), Phase 3 ✅ (sw v1028), Phase 4 ✅ (sw v1029), Phasen 5–6 ausstehend.
+> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phase 2 ✅ (sw v1027), Phase 3 ✅ (sw v1028), Phase 4 ✅ (sw v1029), Phase 5 ✅ (sw v1030), Phase 6 ausstehend.
 > Ergänzt ADR-024 (Orts-Entität) + ADR-027 (Hof-Entität).
 
 ## Kontext
@@ -213,7 +213,7 @@ Sign-Off erteilt. Implementation gestartet.
 - **Tests:** RESI/PROP/CENS/OCCU mit ADDR ohne Hof → Auto-Anlage; BIRT/DEAT mit ADDR ohne Hof → Review (keine Auto-Anlage); RESI mit ADDR und bestehendem Hof → Pfad B (kein Bootstrap).
 - **Gate:** `Unsere Familie 2026.ged` (MyHeritage-Export, Konvention-2-lastig) wird nach erstem Load ohne User-Touch vollständig verlinkt; Roundtrip: erster Save ist bewusster Konvention-2→1-Übergang (sichtbar via Toast + `markChanged`), `out2===out3` idempotent.
 
-### Phase 5 — Review-Modal als Daten-Anreicherungs-UI
+### Phase 5 — Review-Modal als Daten-Anreicherungs-UI ✅ (sw v1030, 2026-06-21)
 
 - Klassifizierung der unaufgelösten Events in die fünf Klassen A–E.
 - Aktions-Buttons pro Klasse (siehe Tabelle oben). „Quelle schärfen" öffnet Event-Edit-Form vorgefüllt; „Hof anlegen" öffnet Hof-Edit-Modal mit Vorbelegung; „Wissen ergänzen" öffnet das passende Sub-Modal (addrs / pnames / type).
@@ -277,7 +277,7 @@ Vor Phase 6 (Cleanup) muss gelten:
 
 ## Status
 
-🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phase 2 ✅ (sw v1027, Pfad A' atomarer Hof-Lookup), Phase 3 ✅ (sw v1028, Lese-Seite konsolidiert), Phase 4 ✅ (sw v1029, Pfad B' Bootstrap aus Event-Typ), Phasen 5–6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
+🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phase 2 ✅ (sw v1027, Pfad A' atomarer Hof-Lookup), Phase 3 ✅ (sw v1028, Lese-Seite konsolidiert), Phase 4 ✅ (sw v1029, Pfad B' Bootstrap aus Event-Typ), Phase 5 ✅ (sw v1030, Review-Modal als Daten-Anreicherungs-UI), Phase 6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
 
 Bei Abnahme nach Phase 6: Status auf 🟢 (abgeschlossen).
 

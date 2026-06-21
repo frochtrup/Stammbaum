@@ -2182,55 +2182,119 @@ function findOrCreateHofObject(addr, villageId) {
   }));
 }
 
-// ─── ADR-027 P5: „Hof-Zuweisungen prüfen" — Datenqualitäts-Review ────────────
-// Permanente Sicht auf Events mit Adresse, aber ohne Hof-Verknüpfung. Wird vom
-// Höfe-Tab als Badge-Zähler + Tabellen-Modal angeboten. Pro-Datei persistierter
-// „Ignorieren"-Set, damit der User Briefkasten-/Krankenhaus-Adressen bewusst
-// als nicht-Hof-relevant markieren kann.
-const _IGNORED_HOF_STORAGE_KEY = 'stammbaum_hof_review_ignored';
+// ─── ADR-027 P5 / ADR-028 P5: „Hof-Zuweisungen prüfen" — Daten-Anreicherungs-UI
+// Permanente Sicht auf Events mit Hof-Verdacht ohne Auflösung. Wird vom Höfe-Tab
+// als Badge-Zähler + Tabellen-Modal angeboten.
+//
+// ADR-028 P5: per-Event-„Ignorieren"-Pfad ENTFERNT. Im Determinismus-Modell ist
+// jeder Review-Eintrag eine Daten-Lücke, die durch Quell-Schärfung oder
+// Wissen-Anreicherung geschlossen wird — nicht durch Verstecken. Wenn eine
+// Adresse tatsächlich kein Hof ist (Krankenhaus etc.), legt der User ein
+// placeObject Typ Hospital an und schärft PLAC → Event landet in Fall 2a und
+// fällt automatisch aus dem Review heraus.
+const _IGNORED_HOF_STORAGE_KEY_LEGACY = 'stammbaum_hof_review_ignored';
 
-function _ignoredHofKeysSet() {
+// Migrations-Check: alte localStorage-Ignorier-Markierungen für die aktuelle
+// Datei detektieren und entfernen. Gibt die Anzahl der gelöschten Markierungen
+// zurück — der Aufrufer (storage-file.js Lade-Pfad) toast't dem User.
+function _migrateLegacyIgnoredHofKeys() {
   try {
     const fname = (AppState._currentFilename || '').replace(/[^\w.\-]/g, '_');
-    const raw = localStorage.getItem(_IGNORED_HOF_STORAGE_KEY + '_' + fname);
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch(_) { return new Set(); }
+    const k = _IGNORED_HOF_STORAGE_KEY_LEGACY + '_' + fname;
+    const raw = localStorage.getItem(k);
+    if (!raw) return 0;
+    const arr = JSON.parse(raw);
+    localStorage.removeItem(k);
+    return Array.isArray(arr) ? arr.length : 0;
+  } catch(_) { return 0; }
 }
 
-function _saveIgnoredHofKeys(set) {
-  try {
-    const fname = (AppState._currentFilename || '').replace(/[^\w.\-]/g, '_');
-    localStorage.setItem(_IGNORED_HOF_STORAGE_KEY + '_' + fname, JSON.stringify([...set]));
-  } catch(_) {}
-}
-
-// Stabiler Event-Identifikator: pid + evType + addr + date. Bei größerer Editierung
-// (addr/date geändert) verfällt der Eintrag automatisch → Event taucht wieder im
-// Review auf. Bewusst nicht über eventIdx, damit Verschieben/Sortieren im Events-
-// Array den Ignore-Status nicht zerstört.
+// Stabiler Event-Identifikator: pid + evType + addr/place + date. Bei größerer
+// Editierung (addr/date geändert) verfällt der Eintrag automatisch → Event
+// taucht wieder im Review auf. Bewusst nicht über eventIdx, damit Verschieben/
+// Sortieren im Events-Array den Status nicht zerstört.
 function _eventReviewKey(pid, evType, addr, date) {
   return [pid, evType || '', (addr || '').trim(), date || ''].join('|');
 }
 
-// Listet alle ungelösten Hof-Kandidaten (ev.addr gesetzt, ev.hofId leer, nicht
-// in Ignore-Set). Pro Eintrag: pid + person-Name + ev-Bezugsdaten + key (für Ignore).
+// ADR-028 P5: Klassifizierung der Daten-Lücke pro Review-Event. Fünf Klassen
+// mit je eigenem Anreicherungs-Pfad — Review-UI zeigt klassenspezifische
+// Aktionen statt eines undifferenzierten „Hof wählen"-Generikums.
+//
+//   A — Hof-tragendes Event ohne Hof-Modell + non-Hof-Event-Typ:
+//       BIRT/DEAT/MARR/BURI mit ADDR + aufgelöstem Dorf, kein Hof gefunden.
+//       Konnte nicht via Pfad B' bootstrapped werden (Event-Typ trägt keine
+//       Hof-Semantik). User: „Hof anlegen" oder „Quelle schärfen".
+//   B — Atomare PLAC ohne Match (Konvention 3b ohne globalen Hof):
+//       PLAC „Wall 33" allein, weder placeObject noch hofObject matcht
+//       global. User schärft Quelle (Komma-Hierarchie einfügen).
+//   C — Mehrdeutigkeit: ≥2 Höfe gleicher addr-Norm im Dorf-Scope.
+//       User: „Hof wählen" oder Quelle schärfen.
+//   D — Norm-Drift: ADDR matcht kein hofObject im Dorf, aber Höfe existieren
+//       im Dorf. User: „Variante zum Hof hinzufügen" oder Hof wählen.
+//   E — Fremde Verwaltung im PLAC-Rest: Hierarchie-PLAC, Leitname matcht ein
+//       placeObject, aber Rest-Segmente passen nicht zur enclosedBy-Kette.
+//       User: pname am Verwaltungs-PO ergänzen oder Quelle schärfen.
+function _classifyUnresolvedHofEvent(ev) {
+  if (!ev) return 'A';
+  const hofReg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
+  const reg    = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  const addr   = (ev.addr  || '').trim();
+  const place  = (ev.place || '').trim();
+  const year   = (typeof _placeYear === 'function') ? _placeYear(ev.date) : null;
+
+  // Dorf-aufgelöst + ADDR vorhanden → A/C/D
+  if (ev.placeId && addr && hofReg) {
+    const cands = hofReg.findAllByAddr(addr, year)
+      .filter(id => hofReg.byId[id] && hofReg.byId[id].villageId === ev.placeId);
+    if (cands.length >= 2) return 'C';           // Mehrdeutigkeit
+    if (cands.length === 1) return 'A';          // sollte eigentlich Pfad B gelinkt haben — defensiv
+    // Kein Hof matcht ADDR im Dorf. Event-Typ entscheidet:
+    //   - Hof-tragender Typ (RESI/PROP/…) + Höfe im Dorf vorhanden → Klasse D
+    //     (Norm-Drift): die ADDR ist vermutlich eine Variante eines bestehenden
+    //     Hofs → User kann sie als addrs[]-Variante anhängen.
+    //   - Non-Hof-Typ (BIRT/DEAT/MARR/BURI) → Klasse A (Krankenhaus/Kirche/…).
+    //     Auch wenn Höfe im Dorf existieren, ist die Adresse semantisch ein
+    //     Nicht-Hof — Variante anhängen wäre falsch.
+    const isHofType = ev.type && HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type);
+    const hofsInVillage = (hofReg.byVillageId && hofReg.byVillageId[ev.placeId]) || [];
+    if (isHofType && hofsInVillage.length > 0) return 'D';
+    return 'A';
+  }
+
+  // Atomare PLAC ohne Match (Konvention 3b)
+  if (!ev.placeId && place && !place.includes(',')) return 'B';
+
+  // Hierarchie-PLAC ohne Anker-Match (Konvention 1 ohne enclosedBy-Treffer)
+  if (!ev.placeId && place && place.includes(',')) return 'E';
+
+  // Default-Fallback (Event ohne Orts-Info — sollte nicht im Review sein)
+  return 'A';
+}
+
+// Listet alle ungelösten Hof-Kandidaten. ADR-028 P5: ohne Ignore-Filter, plus
+// Erweiterung auf Events mit unaufgelöstem PLAC (Klasse B/E) — der Review-Badge
+// zeigt jede Daten-Lücke, nicht nur Konvention-2-Lücken.
 function _findUnresolvedHofEvents(db) {
   if (!db) return [];
-  const ignored = _ignoredHofKeysSet();
   const out = [];
   const _check = (pid, personName, ev) => {
     if (!ev || ev.hofId) return;
     const addr = (ev.addr || '').trim();
-    if (!addr) return;
-    const key = _eventReviewKey(pid, ev.type || ev.eventType || '', addr, ev.date || '');
-    if (ignored.has(key)) return;
+    const place = (ev.place || '').trim();
+    const hasAddr = !!addr;
+    const hasUnresolvedPlace = !!place && !ev.placeId;
+    if (!hasAddr && !hasUnresolvedPlace) return;
+    const key = _eventReviewKey(pid, ev.type || ev.eventType || '',
+      addr || place, ev.date || '');
     out.push({
       pid, personName,
       evType:    ev.type || ev.eventType || '',
       evDate:    ev.date || '',
       addr,
-      place:     ev.place || '',
+      place,
       placeId:   ev.placeId || null,
+      _class:    _classifyUnresolvedHofEvent(ev),
       key, ev,
     });
   };
@@ -2251,16 +2315,35 @@ function _countUnresolvedHofEvents(db) {
   return _findUnresolvedHofEvents(db || AppState.db).length;
 }
 
-function _ignoreHofReviewEvent(key) {
-  const s = _ignoredHofKeysSet();
-  s.add(key);
-  _saveIgnoredHofKeys(s);
-}
-
-function _unignoreHofReviewEvent(key) {
-  const s = _ignoredHofKeysSet();
-  s.delete(key);
-  _saveIgnoredHofKeys(s);
+// ADR-028 P5: Anreicherungs-Helfer „Variante zum Hof hinzufügen" — für Klasse D
+// (Norm-Drift). Fügt ev.addr als neue undatierte addrs[]-Bezeichnung an einen
+// bestehenden Hof an + setzt ev.hofId. Nächster Load: Pfad B findet den Hof
+// deterministisch über die neue Variante.
+function addHofAddrVariantAndLink(ev, hofId) {
+  if (!ev || !hofId) return false;
+  const hofs = AppState.db.hofObjects || {};
+  const h = hofs[hofId];
+  if (!_isHofObjectV2(h)) return false;
+  const addr = (ev.addr || '').trim();
+  if (!addr) return false;
+  // Idempotenz: existiert die Variante schon (norm-Form)?
+  const norm = _normHofAddr(addr);
+  const exists = (h.addrs || []).some(a => _normHofAddr(a && a.value) === norm);
+  if (typeof mutateHofObject === 'function') {
+    mutateHofObject(hofId, fn => {
+      if (!exists) {
+        fn.addrs.push({ value: addr, lang: 'deu',
+          dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+      }
+    });
+  } else if (!exists) {
+    h.addrs.push({ value: addr, lang: 'deu',
+      dateFrom: null, dateTo: null, dateType: null, _dateRaw: null });
+  }
+  ev.hofId = hofId;
+  if (!ev.placeId) ev.placeId = h.villageId;
+  if (typeof markChanged === 'function') markChanged();
+  return true;
 }
 
 // Setzt ev.hofId auf einen bestehenden Hof (manuelle Review-Zuweisung).

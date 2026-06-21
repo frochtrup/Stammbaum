@@ -594,8 +594,11 @@ if (IS_NODE) {
     // ADR-028 Phase 1: REPROJECT-Wrapper + Migration-ohne-Skip-Helfer
     '_reprojectEvCache: _reprojectEvCache, _ensureVillageChain: _ensureVillageChain, ' +
     '_findUnresolvedHofEvents: _findUnresolvedHofEvents, _countUnresolvedHofEvents: _countUnresolvedHofEvents, ' +
-    '_eventReviewKey: _eventReviewKey, _ignoreHofReviewEvent: _ignoreHofReviewEvent, ' +
-    '_unignoreHofReviewEvent: _unignoreHofReviewEvent, applyHofToEvent: applyHofToEvent, ' +
+    '_eventReviewKey: _eventReviewKey, applyHofToEvent: applyHofToEvent, ' +
+    // ADR-028 P5: Klassifizierung + Anreicherungs-Helfer (Ignore-Pfad entfernt)
+    '_classifyUnresolvedHofEvent: _classifyUnresolvedHofEvent, ' +
+    '_migrateLegacyIgnoredHofKeys: _migrateLegacyIgnoredHofKeys, ' +
+    'addHofAddrVariantAndLink: addHofAddrVariantAndLink, ' +
     '_sliceByteLen: _sliceByteLen, pushCont: pushCont, writeGEDCOM: writeGEDCOM };' +
     // Brücke für die UI-Eval-Phase: const-Bindings (AppState, UIState…)
     // leaken nicht aus diesem eval — auf window kopieren, damit der UI-Eval
@@ -4849,10 +4852,18 @@ group('(am) ADR-027 P5 Hof-Review');
     families:{}, extraPlaces:{}, placeObjects:{}, hofObjects:{},
   });
   var rows = API._findUnresolvedHofEvents(API.AppState.db);
-  eq(rows.length, 1, 'am-1a: nur Events mit ev.addr + ohne ev.hofId zählen');
-  eq(rows[0].pid, '@I1@', 'am-1b: pid korrekt');
-  eq(rows[0].addr, 'Wall 33', 'am-1c: addr korrekt');
-  eq(rows[0].evType, 'RESI', 'am-1d: evType korrekt');
+  // ADR-028 P5: zählt Events mit unaufgelöster Orts-Info (ADDR ohne hofId
+  // ODER PLAC ohne placeId). Bereits verknüpfte Events fallen raus.
+  // Im Setup: Wall-33-RESI (ADDR, kein hofId) + OCCU mit „Ochtrup" ohne placeId
+  // (Setup hat kein _po_ochtrup im DB — Fall-2a findet nichts) → 2 Treffer.
+  // PROP mit hofId='_hof_x' bereits verknüpft → kein Treffer.
+  eq(rows.length, 2, 'am-1a: ADDR-Event + unaufgelöster-PLAC-Event zählen');
+  // Erster Eintrag sollte das Wall-33-RESI sein (Reihenfolge: events-Array)
+  var resi = rows.find(r => r.evType === 'RESI');
+  ok(resi, 'am-1b: RESI-Event gefunden');
+  eq(resi.pid, '@I1@', 'am-1b: pid korrekt');
+  eq(resi.addr, 'Wall 33', 'am-1c: addr korrekt');
+  eq(resi.evType, 'RESI', 'am-1d: evType korrekt');
 })();
 
 // _eventReviewKey: deterministisch + stabil
@@ -4864,26 +4875,20 @@ group('(am) ADR-027 P5 Hof-Review');
   ok(k1 !== k3, 'am-2b: andere pid → anderer Key');
 })();
 
-// Ignore-Mechanik: ignorierte Events fallen aus dem Review heraus
+// am-3 (ADR-028 P5): Ignore-Mechanik entfernt — Migrations-Pfad verifizieren.
+// Alte localStorage-Markierungen werden beim ersten Aufruf gelesen + gelöscht.
 (function() {
-  // Frische DB ohne Datei-Namen — Ignore-Speicher per Datei. Hier nutzen wir den
-  // synthetic-leeren-Namen-Modus (gleiche Schlüssel-Domain).
   API.AppState._currentFilename = 'phase5_test_' + Date.now();
-  API.setDb({
-    individuals:{
-      '@I1@': { id:'@I1@', name:'X', birth:{}, chr:{}, death:{}, buri:{}, events:[
-        { type:'RESI', date:'1900', addr:'Adresse A' },
-        { type:'RESI', date:'1900', addr:'Adresse B' },
-      ]},
-    },
-    families:{}, extraPlaces:{}, placeObjects:{}, hofObjects:{},
-  });
-  eq(API._countUnresolvedHofEvents(), 2, 'am-3a: 2 ungelöst');
-  var keyA = API._eventReviewKey('@I1@', 'RESI', 'Adresse A', '1900');
-  API._ignoreHofReviewEvent(keyA);
-  eq(API._countUnresolvedHofEvents(), 1, 'am-3b: nach Ignore → 1 ungelöst');
-  API._unignoreHofReviewEvent(keyA);
-  eq(API._countUnresolvedHofEvents(), 2, 'am-3c: nach Unignore → wieder 2');
+  var fname = API.AppState._currentFilename.replace(/[^\w.\-]/g, '_');
+  var key = 'stammbaum_hof_review_ignored_' + fname;
+  // Legacy-Marker setzen
+  try { localStorage.setItem(key, JSON.stringify(['k1','k2','k3'])); } catch(_) {}
+  var n = API._migrateLegacyIgnoredHofKeys();
+  eq(n, 3, 'am-3a: Migration zählt alte Markierungen');
+  var stillThere = null;
+  try { stillThere = localStorage.getItem(key); } catch(_) {}
+  eq(stillThere, null, 'am-3b: Legacy-Schlüssel wird entfernt');
+  eq(API._migrateLegacyIgnoredHofKeys(), 0, 'am-3c: zweiter Aufruf → 0 (idempotent)');
 })();
 
 // applyHofToEvent: setzt hofId + placeId (wenn leer), markChanged
@@ -5434,6 +5439,89 @@ group('(am) ADR-027 P5 Hof-Review');
   eq(ev.hofId, firstHofId, 'as-6a: zweiter Lauf findet denselben Hof (via Pfad B, kein doppelter Bootstrap)');
   eq(API.AppState._lastLinkPassStats.linkedHofTypeBootstrap, 0,
     'as-6a: keine Type-Bootstrap-Wiederholung (Pfad B greift)');
+})();
+
+// ─── Gruppe (at) — ADR-028 Phase 5: Review-Klassifizierung + Anreicherung ────
+
+// at-1: _classifyUnresolvedHofEvent — alle fünf Klassen werden korrekt vergeben
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_a': { id:'_hof_a', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+      '_hof_b': { id:'_hof_b', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+      '_hof_c': { id:'_hof_c', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  // Klasse A: BIRT mit ADDR, kein Hof matcht, keine Höfe für diese addr im Dorf
+  eq(API._classifyUnresolvedHofEvent({ type:'BIRT', placeId:'_po_o', addr:'Krankenhaus' }), 'A',
+    'at-1a: Klasse A — non-Hof-Event-Typ');
+  // Klasse B: atomare PLAC ohne Match
+  eq(API._classifyUnresolvedHofEvent({ type:'RESI', place:'Wall 9' }), 'B',
+    'at-1b: Klasse B — atomar ohne Match');
+  // Klasse C: 2 Höfe gleicher addr im selben Dorf → Mehrdeutigkeit
+  eq(API._classifyUnresolvedHofEvent({ type:'RESI', placeId:'_po_o', addr:'Schmiede' }), 'C',
+    'at-1c: Klasse C — Mehrdeutigkeit (2 Schmiede-Höfe)');
+  // Klasse D: addr matcht keinen Hof, aber Höfe existieren im Dorf → Norm-Drift
+  eq(API._classifyUnresolvedHofEvent({ type:'RESI', placeId:'_po_o', addr:'Unbekannte Variante' }), 'D',
+    'at-1d: Klasse D — Norm-Drift (Höfe da, aber addr matcht keinen)');
+  // Klasse E: Hierarchie-PLAC ohne Match
+  eq(API._classifyUnresolvedHofEvent({ type:'BIRT', place:'Fremdes Dorf, USA' }), 'E',
+    'at-1e: Klasse E — Hierarchie-PLAC ohne Anker');
+})();
+
+// at-2: addHofAddrVariantAndLink — Variante zum Hof + Event-Link, idempotent
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var ev = { type:'RESI', placeId:'_po_o', addr:'Wall 33a (Hinterhaus)' };
+  var ok1 = API.addHofAddrVariantAndLink(ev, '_hof_w');
+  eq(ok1, true, 'at-2a: addHofAddrVariantAndLink Erfolg');
+  eq(ev.hofId, '_hof_w', 'at-2a: ev.hofId gesetzt');
+  eq(API.AppState.db.hofObjects['_hof_w'].addrs.length, 2,
+    'at-2a: addrs-Liste erweitert auf 2 Einträge');
+  // Idempotenz: dieselbe Variante erneut → keine Verdopplung
+  var ev2 = { type:'RESI', placeId:'_po_o', addr:'Wall 33a (Hinterhaus)' };
+  API.addHofAddrVariantAndLink(ev2, '_hof_w');
+  eq(API.AppState.db.hofObjects['_hof_w'].addrs.length, 2,
+    'at-2b: idempotent — gleiche Variante nicht doppelt');
+})();
+
+// at-3: _findUnresolvedHofEvents trägt _class an jedem Eintrag
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'X', birth:{}, chr:{}, death:{}, buri:{}, events:[
+        { type:'BIRT', placeId:'_po_o', addr:'Krankenhaus', date:'1900' },     // Klasse A
+        { type:'RESI', place:'Wall 9', date:'1850' },                          // Klasse B
+      ]},
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  var rows = API._findUnresolvedHofEvents(API.AppState.db);
+  eq(rows.length, 2, 'at-3a: zwei ungelöste Events (ADDR + PLAC)');
+  var byClass = {};
+  for (var i = 0; i < rows.length; i++) byClass[rows[i]._class] = (byClass[rows[i]._class] || 0) + 1;
+  eq(byClass.A, 1, 'at-3b: ein Eintrag Klasse A (BIRT-ADDR ohne Hof)');
+  eq(byClass.B, 1, 'at-3c: ein Eintrag Klasse B (atomar PLAC)');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
