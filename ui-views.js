@@ -480,7 +480,10 @@ function _firstPlaceName() {
   if (typeof collectPlaces !== 'function') return null;
   const places = collectPlaces();
   if (!places.size) return null;
-  return [...places.keys()].sort((a, b) => a.localeCompare(b, 'de'))[0] || null;
+  // ADR-028 Phase 3: collectPlaces ist id-keyed → keys können IDs sein. Über
+  // .values() + .name sortieren, damit die Logik key-Typ-unabhängig bleibt.
+  return [...places.values()].map(p => p.name).filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, 'de'))[0] || null;
 }
 
 // Mobile: nach Tab-Tipp zur letzten Auswahl scrollen + highlighten (kein showDetail)

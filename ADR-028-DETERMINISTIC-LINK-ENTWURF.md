@@ -1,6 +1,6 @@
 # ADR-028 — Deterministische Identitäts-Auflösung Event→Ort/Hof: Persistenz durch Daten, nicht durch Annotationen
 
-> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phase 2 ✅ (sw v1027), Phasen 3–6 ausstehend.
+> **Status: 🟠 IN UMSETZUNG** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026), Phase 2 ✅ (sw v1027), Phase 3 ✅ (sw v1028), Phasen 4–6 ausstehend.
 > Ergänzt ADR-024 (Orts-Entität) + ADR-027 (Hof-Entität).
 
 ## Kontext
@@ -196,7 +196,7 @@ Sign-Off erteilt. Implementation gestartet.
 - **Tests:** atomar mit globalem Single-Match, atomar mit Multi-Match (Block), atomar mit Village-Konflikt (Village gewinnt).
 - **Gate:** Konvention-3-Fixture (Hof „Wall 33" global eindeutig) wird ohne User-Touch aufgelöst; bestehende Roundtrips stable.
 
-### Phase 3 — Lese-Seite konsolidiert
+### Phase 3 — Lese-Seite konsolidiert ✅ (sw v1028, 2026-06-21)
 
 - `_eventHofId(ev)` neu in `gedcom.js` analog `_eventPlaceId`. API-Whitelist + Tests.
 - `collectPlaces` umgestellt auf `Map<placeId | normString, …>`-Keyer; Fallback-Bucket für unverknüpfte Strings beibehalten.
@@ -277,7 +277,7 @@ Vor Phase 6 (Cleanup) muss gelten:
 
 ## Status
 
-🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phase 2 ✅ (sw v1027, Pfad A' atomarer Hof-Lookup), Phasen 3–6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
+🟠 **In Umsetzung** — Phase 0 (Sign-Off) erteilt 2026-06-21, Phase 1 ✅ (sw v1026, REPROJECT + Migration-ohne-Skip), Phase 2 ✅ (sw v1027, Pfad A' atomarer Hof-Lookup), Phase 3 ✅ (sw v1028, Lese-Seite konsolidiert), Phasen 4–6 ausstehend. ADR in ARCHITECTURE.md gefolded; Standalone-Datei dient als Verlauf/Diskussions-Archiv.
 
 Bei Abnahme nach Phase 6: Status auf 🟢 (abgeschlossen).
 

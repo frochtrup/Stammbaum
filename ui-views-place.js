@@ -150,85 +150,116 @@ function _groupPlacesByObject(entries) {
 
 function collectPlaces() {
   if (UIState._placesCache) return UIState._placesCache;
+  // ADR-028 Phase 3: id-keyed primary statt string-keyed. Map<placeId | string, Entry>:
+  //   - Wenn _eventPlaceId(ev) auflöst → Key = placeId (alle Cache-Varianten desselben
+  //     Orts kollabieren auf einen Eintrag, zwei POs gleichen Titels bleiben getrennt).
+  //   - Sonst → Key = Roh-String (Fallback-Bucket für unverknüpfte Events).
+  // byName-Index parallel für Lookup-Kompatibilität (showPlaceForm/-Detail rufen
+  // collectPlaces().get(placeName) mit dem lesbaren Titel).
   const places = new Map();
+  const byName = new Map();
 
-  function addPlace(placeName, personId, eventType, lati, long, placeId) {
-    if (!placeName || !placeName.trim()) return;
-    const key = placeName.trim();
-    if (!places.has(key)) places.set(key, { name: key, personIds: new Set(), eventTypes: new Set(), lati: null, long: null });
+  function addPlace(personId, eventType, ev) {
+    if (!ev) return;
+    const pid = (typeof _eventPlaceId === 'function') ? _eventPlaceId(ev) : null;
+    const rawName = (ev.place || '').trim();
+    if (!pid && !rawName) return;
+    const key = pid || rawName;
+    if (!places.has(key)) {
+      places.set(key, {
+        name: rawName || key, placeId: pid || null,
+        personIds: new Set(), eventTypes: new Set(),
+        lati: null, long: null,
+      });
+    }
     const pl = places.get(key);
-    pl._directRef = true; // direkt in einem Ereignis referenziert (nicht nur enclosedBy-Parent)
+    pl._directRef = true;
     if (personId) pl.personIds.add(personId);
     if (eventType) pl.eventTypes.add(eventType);
     // Koord-Paar-Invariante: nur als vollständiges Paar übernehmen
-    if (pl.lati === null && lati != null && long != null) { pl.lati = lati; pl.long = long; }
-    // placeId direkt aus ev.placeId — Vorrang vor findByName (deckt periodengerechte Hierarchie-Strings ab)
-    if (placeId && !pl.placeId) pl.placeId = placeId;
+    if (pl.lati === null && ev.lati != null && ev.long != null) {
+      pl.lati = ev.lati; pl.long = ev.long;
+    }
   }
 
   for (const p of Object.values(AppState.db.individuals)) {
-    addPlace(p.birth.place, p.id, 'Geburt',     p.birth.lati, p.birth.long, p.birth.placeId);
-    addPlace(p.death.place, p.id, 'Tod',        p.death.lati, p.death.long, p.death.placeId);
-    addPlace(p.chr.place,   p.id, 'Taufe',      p.chr.lati,   p.chr.long,   p.chr.placeId);
-    addPlace(p.buri.place,  p.id, 'Beerdigung', p.buri.lati,  p.buri.long,  p.buri.placeId);
-    for (const ev of p.events) addPlace(ev.place, p.id, ev.eventType || ev.type, ev.lati, ev.long, ev.placeId);
+    addPlace(p.id, 'Geburt',     p.birth);
+    addPlace(p.id, 'Tod',        p.death);
+    addPlace(p.id, 'Taufe',      p.chr);
+    addPlace(p.id, 'Beerdigung', p.buri);
+    for (const ev of p.events) addPlace(p.id, ev.eventType || ev.type, ev);
   }
   for (const f of Object.values(AppState.db.families)) {
-    addPlace(f.marr.place, f.husb, 'Heirat', f.marr.lati, f.marr.long, f.marr.placeId);
-    addPlace(f.marr.place, f.wife, 'Heirat', f.marr.lati, f.marr.long, f.marr.placeId);
+    addPlace(f.husb, 'Heirat', f.marr);
+    addPlace(f.wife, 'Heirat', f.marr);
   }
   // P2 Item 7: extraPlaces wird NICHT mehr eingemischt — `_migrateExtraPlacesToPlaceObjects`
   // bringt Altbestände bei jedem setDb in placeObjects, von wo der untenstehende
   // PlaceRegistry-Pass alles abdeckt (Koords, Titel, Aliase). Sollte je ein neuer
   // extraPlaces-Eintrag dazwischenrutschen (sollte nach P2 nicht passieren), zeigt er
   // beim nächsten Reload via Migration in placeObjects auf — kein Daten-Verlust.
-  // PLACE-HIST (ADR-024, P0b-1): jeden String-Ort additiv mit seiner Place-Entität
-  // verknüpfen (placeId + type) und fehlende Koordinaten aus dem placeObject ziehen.
-  // String-Key bleibt unverändert → keine Auswirkung auf bestehende Consumer.
+  // PLACE-HIST (ADR-024, P0b-1): id-keyed Einträge holen Display-Name + Koords aus
+  // dem PO; string-keyed Einträge (Fallback) suchen ein PO via findByName.
   const _reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
   if (_reg) {
-    for (const pl of places.values()) {
-      // placeId aus ev.placeId hat Vorrang; findByName als Fallback für reine String-Orte
-      const id = pl.placeId || _reg.findByName(pl.name);
+    for (const [key, pl] of places.entries()) {
+      // id-keyed: PO ist bekannt — name + type + Koords aus PO
+      if (pl.placeId) {
+        const po = _reg.byId[pl.placeId];
+        if (!po) continue;
+        pl.name = po.title;
+        if (!pl.type) pl.type = po.type || null;
+        // placeObjects = single source of truth (Item 9) — po gewinnt IMMER (auch null)
+        if (po.lat != null && po.long != null) { pl.lati = po.lat; pl.long = po.long; }
+        else                                    { pl.lati = null;  pl.long = null;  }
+        if (po._govUnresolved) pl._govUnresolved = true;
+        if (po.title) byName.set(po.title, pl);
+        continue;
+      }
+      // string-keyed Fallback: findByName-Anreicherung
+      const id = _reg.findByName(pl.name);
       if (!id) continue;
       const po = _reg.byId[id];
       if (!po) continue;
       pl.placeId = id;
       if (!pl.type) pl.type = po.type || null;
-      // Item 9: placeObjects ist single source of truth — po gewinnt IMMER (auch null).
-      // Sonst bleibt ev.lati/long stehen, wenn User die Koord am po löscht (Bug:
-      // „beide Felder geleert + Save → trotzdem Koord sichtbar"), weil addPlace()
-      // mit ev.lati gefüttert wurde und der null-po-Update den Block übersprang.
-      // Koord-Paar-Invariante: nur als vollständiges Paar — sonst null.toFixed-Crash.
       if (po.lat != null && po.long != null) { pl.lati = po.lat; pl.long = po.long; }
       else                                    { pl.lati = null;  pl.long = null;  }
       if (po._govUnresolved) pl._govUnresolved = true;
+      if (po.title) byName.set(po.title, pl);
     }
-    // Importierte placeObjects ohne GEDCOM-Entsprechung ebenfalls anzeigen
-    // (analog extraPlaces — damit manuell importierte Orte sichtbar sind).
-    // ADR-027 P4: Farm/Building gibt es nach Phase-3-Migration nicht mehr in
-    // placeObjects — Höfe leben in db.hofObjects (Höfe-Tab). Der frühere v1013-
-    // _seenIds-Workaround für bare-vs-rich-Farm-Dubletten entfällt damit.
-    // ADR-028 Phase 1: orphan-markierte Farm-POs (Migration ohne villageId-
-    // Promotion möglich, kein Event-Bezug) NICHT in der Ortsliste anzeigen —
-    // Daten bleiben für User-Eingriff erhalten, sichtbares Symptom (Höfe in
-    // Ortsliste) verschwindet.
+    // Importierte placeObjects ohne GEDCOM-Entsprechung: id-keyed dazu.
+    // ADR-027 P4: keine Farm/Building mehr in placeObjects.
+    // ADR-028 Phase 1: _orphan-markierte Farm-POs ausblenden.
     for (const po of Object.values(AppState.db.placeObjects || {})) {
-      const key = po.title;
-      if (!key) continue;
       if (po._orphan) continue;
-      if (places.has(key)) continue;
+      if (places.has(po.id)) continue;
       const _pPair = (po.lat != null && po.long != null);
-      places.set(key, {
-        name: key, personIds: new Set(), eventTypes: new Set(),
+      const entry = {
+        name: po.title || '', placeId: po.id,
+        personIds: new Set(), eventTypes: new Set(),
         lati: _pPair ? po.lat : null, long: _pPair ? po.long : null,
-        placeId: po.id, type: po.type || null,
+        type: po.type || null,
         _govUnresolved: po._govUnresolved || false,
-      });
+      };
+      places.set(po.id, entry);
+      if (po.title) byName.set(po.title, entry);
     }
   }
-  UIState._placesCache = places;
-  return places;
+  // Wrapper simuliert die alte Map-API für Konsumenten, ergänzt um byName-Lookup
+  // (collectPlaces().get(placeName) findet id-keyed Einträge via Title-Index).
+  const wrapper = {
+    get size() { return places.size; },
+    has(key) { return places.has(key) || byName.has(key); },
+    get(key) { return places.get(key) || byName.get(key); },
+    values() { return places.values(); },
+    keys() { return places.keys(); },
+    entries() { return places.entries(); },
+    forEach(fn, thisArg) { return places.forEach(fn, thisArg); },
+    [Symbol.iterator]() { return places[Symbol.iterator](); },
+  };
+  UIState._placesCache = wrapper;
+  return wrapper;
 }
 
 function renderPlaceList(sorted) {

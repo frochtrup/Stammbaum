@@ -9,6 +9,26 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — ADR-028 Phase 3: Lese-Seite konsolidiert (sw v1028)
+
+**Auslöser:** Phase 3 des ADR-028-Migrationsplans — `_eventPlaceId`/`_eventHofId` als Chokepoints durchsetzen, Aggregatoren `collectPlaces` + `buildHofIndex` id-keyed statt string-keyed. Damit wird die Determinismus-Garantie auch lese-seitig materialisiert; Bug-Klasse #1 verschwindet strukturell (kein Cache-String-Drift mehr in der Ortsliste).
+
+**Implementierung (Phase 3):**
+- **`_eventHofId(ev)` in gedcom.js** spiegelt `_eventPlaceId`: Zweig A `ev.hofId` (Wahrheit), Zweig B `hofReg.findByAddr(ev.addr, year)` im Dorf-Scope (eindeutig). Damit haben Aggregatoren eine einzige Chokepoint-API für „welcher Hof?".
+- **`collectPlaces` id-keyed (ui-views-place.js):** Primärschlüssel = `_eventPlaceId(ev)` wenn aufgelöst, sonst Roh-String (Fallback-Bucket). Zwei POs gleichen Titels bleiben distinct (Münster Stadt ≠ Münster Kreis); mehrere Cache-String-Varianten desselben Orts kollabieren auf einen Eintrag. byName-Index parallel für Lookup-Kompatibilität (`places.get(placeName)` aus showPlaceForm/showPlaceDetail funktioniert weiter via Title-Index). Map-API als Wrapper-Objekt mit `.values()/.get()/.has()/.size/.keys()/.entries()/.forEach()/[Symbol.iterator]`.
+- **`buildHofIndex` id-keyed (gedcom.js):** Primärschlüssel = `_eventHofId(ev)` wenn aufgelöst, sonst `ev.addr` (Fallback). Mehrere `addr`-Varianten desselben Hofs aggregieren auf einen Index-Eintrag. byAddr-Index für `buildHofIndex().get(addr)`-Lookups aus ui-views-hof (Detail/Rename/Statistik).
+- **`_firstPlaceName` (ui-views.js):** auf `.values().map(p => p.name)` umgestellt, key-Typ-unabhängig.
+- **`setDb` invalidiert jetzt auch `_placesCache` + `_hofCache`:** vorher nur Registries → stale Wrapper nach Datei-Wechsel ohne Mutation (von Tests aufgedeckt, behoben).
+- **+14 Tests Gruppe (ar):** _eventHofId-Basissemantik (5) + buildHofIndex id-keyed Aggregation + byAddr-Lookup (4) + Fallback ohne hofId (4) + setDb-Cache-Invalidierung implizit.
+
+**Gates:** 797 Unit-Tests grün (+14 (ar)). CSP grün. Snapshot grün. GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable (335ms). GRAMPS stable.
+
+**Effekt:** Lese-Seite hat jetzt einen einzigen Chokepoint pro Identitäts-Frage. Die Aggregatoren respektieren die Projektions-Invariante strukturell — auch wenn ein Pfad in Zukunft mal REPROJECT vergisst, würde die Liste keine Phantom-Einträge mehr zeigen. Konsumenten der Maps (`collectPlaces`/`buildHofIndex`) sind über Wrapper API-stabil; keine breitflächige Callsite-Anpassung nötig.
+
+**Verbleibt für Phase 4:** Pfad B' (Bootstrap aus Event-Typ-Semantik bei RESI/PROP/CENS/OCCU) schließt Konvention 2 ohne Hof. Phase 5: Review-Modal als Daten-Anreicherungs-UI.
+
+---
+
 ### Session 2026-06-21 — ADR-028 Phase 2: Pfad A' atomarer Hof-Lookup (sw v1027)
 
 **Auslöser:** Konvention-3-Lücke aus ADR-028 — `PLAC Wall 33` allein (kein ADDR, kein Komma) wurde vom Link-Pass nicht erfasst: Pfad A/C verlangen Komma, Pfad B verlangt bereits gesetzte `ev.placeId`, Fall 1 sucht in placeObjects (Farm-POs nach Phase 3 weg). Lücke schließt sich, wenn der Hof global eindeutig im hofObjects-Index liegt — dann ist der Quell-Bezug genauso sicher wie bei Pfad A.

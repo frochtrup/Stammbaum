@@ -577,7 +577,7 @@ if (IS_NODE) {
     '_epId: _epId, _findOrCreatePO: _findOrCreatePO, ' +
     'mutatePlaceObject: mutatePlaceObject, upsertPlaceObject: upsertPlaceObject, ' +
     '_mergePlaceObjectsFromImport: _mergePlaceObjectsFromImport, ' +
-    '_eventCoords: _eventCoords, _eventPlaceId: _eventPlaceId, ' +
+    '_eventCoords: _eventCoords, _eventPlaceId: _eventPlaceId, _eventHofId: _eventHofId, ' +
     '_linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
     '_placeTypeRank: _placeTypeRank, AppState: AppState, UIState: UIState,' +
     'buildHofIndex: buildHofIndex, _derivedHofObjectsFromDb: _derivedHofObjectsFromDb, ' +
@@ -5201,6 +5201,92 @@ group('(am) ADR-027 P5 Hof-Review');
   // Pfad A würde anker-blockieren (Rest „Anderswo" matcht kein Token in Ochtrup-Kette);
   // A' wird gar nicht erst probiert (Komma-Check). Damit kein Auto-Link → korrekt.
   ok(!ev.hofId, 'aq-1e: A\' tut nichts bei Hierarchie-PLAC');
+})();
+
+// ─── Gruppe (ar) — ADR-028 Phase 3: Lese-Seite konsolidiert ──────────────────
+
+// ar-1: _eventHofId Basissemantik
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_a': { id:'_po_a', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      '_po_b': { id:'_po_b', title:'Welbergen', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_a': { id:'_hof_a', villageId:'_po_a', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+      '_hof_b': { id:'_hof_b', villageId:'_po_b', schemaVersion:1,
+        addrs:[{ value:'Schmiede', dateFrom:null, dateTo:null }] },
+    },
+  });
+  // ar-1a: ev.hofId direkt → durchreichen
+  eq(API._eventHofId({ hofId:'_hof_a' }), '_hof_a', 'ar-1a: Zweig A — ev.hofId Wahrheit');
+  // ar-1b: ohne hofId, mit ev.addr + ev.placeId → findByAddr im Dorf-Scope
+  eq(API._eventHofId({ type:'RESI', addr:'Schmiede', placeId:'_po_a' }), '_hof_a',
+    'ar-1b: Zweig B — addr im Dorf-Scope findet eindeutigen Hof');
+  // ar-1c: ohne placeId-Scope → null (würde Cross-Dorf-Mehrdeutigkeit auslösen)
+  eq(API._eventHofId({ type:'RESI', addr:'Schmiede' }), null,
+    'ar-1c: ohne Dorf-Scope → null (kein Cross-Dorf-Raten)');
+  // ar-1d: Dorf-Scope grenzt distinct ab — _po_b → _hof_b, nicht _hof_a
+  eq(API._eventHofId({ type:'RESI', addr:'Schmiede', placeId:'_po_b' }), '_hof_b',
+    'ar-1d: Dorf-Scope wählt korrekten Hof');
+  // ar-1e: Adresse matcht keinen Hof → null
+  eq(API._eventHofId({ type:'RESI', addr:'Unbekannte Adresse', placeId:'_po_a' }), null,
+    'ar-1e: kein Adress-Match → null');
+})();
+
+// ar-2: buildHofIndex id-keyed — zwei addr-Varianten desselben Hofs → ein Index-Eintrag
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Schulze /Hermann/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[
+          { type:'RESI', addr:'Wall 33',                placeId:'_po_o', hofId:'_hof_w', date:'1850' },
+          { type:'RESI', addr:'Wall 33 (alte Schreibweise)', placeId:'_po_o', hofId:'_hof_w', date:'1860' },
+        ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var idx = API.buildHofIndex();
+  eq(idx.size, 1, 'ar-2a: zwei addr-Varianten + identischer hofId → 1 Index-Eintrag');
+  // Lookup via byAddr-Wrapper sollte beide Schreibweisen finden
+  ok(idx.get('Wall 33'), 'ar-2b: byAddr-Lookup „Wall 33" findet Eintrag');
+  ok(idx.get('Wall 33 (alte Schreibweise)'), 'ar-2b: byAddr-Lookup alte Schreibweise findet Eintrag');
+  // Beide Events landen in entries
+  var hof = idx.get('_hof_w');
+  eq(hof.entries.length, 2, 'ar-2c: beide RESI-Events im selben Hof-Eintrag aggregiert');
+  eq(hof.hofId, '_hof_w', 'ar-2c: hof.hofId korrekt gesetzt');
+})();
+
+// ar-3: buildHofIndex Fallback — ohne hofId aber gleiche addr → 1 Eintrag (Legacy-Pfad)
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /Person/', sex:'M',
+        birth:{}, chr:{}, death:{}, buri:{},
+        events:[
+          { type:'RESI', addr:'Legacy Adresse', date:'1850' },
+          { type:'RESI', addr:'Legacy Adresse', date:'1860' },
+        ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{}, hofObjects:{},
+  });
+  var idx = API.buildHofIndex();
+  eq(idx.size, 1, 'ar-3a: zwei Events ohne hofId aber gleiche addr → 1 Fallback-Eintrag');
+  var hof = idx.get('Legacy Adresse');
+  ok(hof, 'ar-3b: addr-keyed Fallback findbar');
+  eq(hof.entries.length, 2, 'ar-3b: beide Events aggregiert');
+  ok(!hof.hofId, 'ar-3b: kein hofId (Fallback-Pfad)');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

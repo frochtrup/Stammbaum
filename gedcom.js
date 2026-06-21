@@ -82,6 +82,12 @@ function setDb(newDb) {
   _migrateExtraPlacesToPlaceObjects(AppState.db); // P0b-3: extraPlaces→placeObjects (idempotent)
   UIState._placeRegistry = null;                  // Registry beim DB-Wechsel invalidieren
   UIState._hofRegistry   = null;                  // ADR-027 P1: Hof-Registry beim DB-Wechsel invalidieren
+  // ADR-028 Phase 3: auch die Aggregator-Caches invalidieren — sonst hängen
+  // collectPlaces/buildHofIndex-Wrapper vom vorigen db an. Vorher hatte das im
+  // produktiven Pfad keinen Effekt (markChanged/Link-Pass leerten sie meist
+  // implizit), aber nach Datei-Wechsel ohne Mutation blieben sie stale.
+  UIState._placesCache   = null;
+  UIState._hofCache      = null;
 }
 
 // Lesbarkeits-Shims für tief verschachtelte UIState._formState-Pfade.
@@ -1071,6 +1077,28 @@ function _eventPlaceId(ev) {
     return getPlaceRegistry().findByName(ev.place) || null;  // Zweig B: aus Projektion
   }
   return null;
+}
+
+// ADR-028 Phase 3: Lese-Chokepoint für die Frage „welcher Hof gehört zu diesem
+// Event?" Spiegelt _eventPlaceId — Wahrheit primär, Projektion als Fallback.
+// Damit haben Aggregatoren (Hof-Liste, Hofchronik, Map, Statistik) eine einzige
+// Auflösungs-Quelle und müssen nicht selbst findByAddr-Kombinationen bauen.
+//   Zweig A: ev.hofId (Wahrheit)
+//   Zweig B: ev.addr + ev.placeId-Scope → hofReg.findByAddr im Dorf-Scope
+//            (eindeutig, sonst null). Verhindert Cross-Dorf-Fehlzuordnung
+//            gleichnamiger Höfe (mehrere „Schmiede" in verschiedenen Dörfern).
+function _eventHofId(ev) {
+  if (!ev) return null;
+  if (ev.hofId) return ev.hofId;                      // Zweig A: Wahrheit
+  if (!ev.addr || typeof getHofRegistry !== 'function') return null;
+  const villageId = _eventPlaceId(ev);
+  if (!villageId) return null;
+  const year = (typeof _placeYear === 'function') ? _placeYear(ev.date) : null;
+  const hofReg = getHofRegistry();
+  if (!hofReg) return null;
+  const cands = hofReg.findAllByAddr(ev.addr, year)
+    .filter(hid => hofReg.byId[hid] && hofReg.byId[hid].villageId === villageId);
+  return cands.length === 1 ? cands[0] : null;       // strikt eindeutig
 }
 
 // Baut periodenkorrekten, FORM-kompatiblen PLAC-String via enclosureChainAsOf (ADR-024).
@@ -3133,40 +3161,69 @@ function hofMeta(hof) {
 
 function buildHofIndex() {
   if (UIState._hofCache) return UIState._hofCache;
-  const hoefe = new Map(); // addr → { addr, place, placeId, hofId, entries: [...], propEntries: [...] }
-  const _ensureHof = addr => {
-    if (!hoefe.has(addr)) hoefe.set(addr, { addr, place: '', placeId: null, hofId: null, entries: [], propEntries: [] });
-    return hoefe.get(addr);
+  // ADR-028 Phase 3: id-keyed primary. Map<hofId | addr-string, Entry>:
+  //   - _eventHofId(ev) auflöst → Key = hofId (mehrere addr-Varianten desselben
+  //     Hofs kollabieren auf einen Index-Eintrag, periodengerechte Adress-Anzeige
+  //     via hofRegistry.resolveAddrAsOf).
+  //   - Sonst → Key = ev.addr.trim() (Fallback-Bucket für Events ohne Hof-Link).
+  // byAddr-Index parallel für Lookup-Kompatibilität (ui-views-hof ruft
+  // buildHofIndex().get(addr) für Detail/Rename/Statistik).
+  const hoefe = new Map();
+  const byAddr = new Map();
+  const _ensureHof = (key, addr) => {
+    if (!hoefe.has(key)) hoefe.set(key, {
+      addr, place: '', placeId: null, hofId: null,
+      entries: [], propEntries: [],
+    });
+    return hoefe.get(key);
   };
   for (const p of Object.values(AppState.db.individuals)) {
     for (const ev of (p.events || [])) {
-      if ((ev.type === 'RESI' || ev.type === 'PROP') && ev.addr && ev.addr.trim()) {
-        const addr = ev.addr.trim();
-        const hof = _ensureHof(addr);
-        if (!hof.propEntries) hof.propEntries = [];
-        // Ersten nicht-leeren Ort aus RESI/PROP-Events übernehmen
-        if (!hof.place && ev.place) hof.place = ev.place.trim();
-        // Farm-placeObject-ID (ADR-026, pre-Phase-3-Migration): aus dem Event übernehmen
-        if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
-        // ADR-027 P3: hofId aus dem Event (Post-Migration) — V2-Hof-Pointer
-        if (!hof.hofId && ev.hofId) hof.hofId = ev.hofId;
-        const entry = {
-          pid:     p.id,
-          name:    p.name || p.id,
-          date:    ev.date || '',
-          dateKey: evDateKey(ev.date || ''),
-        };
-        if (ev.type === 'RESI') hof.entries.push(entry);
-        else { entry.desc = ev.value || ''; hof.propEntries.push(entry); }
-      }
+      if ((ev.type !== 'RESI' && ev.type !== 'PROP')) continue;
+      const addr = (ev.addr || '').trim();
+      const hofId = (typeof _eventHofId === 'function') ? _eventHofId(ev) : (ev.hofId || null);
+      // Skip wenn weder Adresse noch Hof-Link vorhanden — Event hat keinen Hof-Bezug.
+      if (!addr && !hofId) continue;
+      const key = hofId || addr;
+      const hof = _ensureHof(key, addr || key);
+      if (!hof.propEntries) hof.propEntries = [];
+      // Ersten nicht-leeren Ort aus RESI/PROP-Events übernehmen (Anzeige in Höfe-Liste)
+      if (!hof.place && ev.place) hof.place = ev.place.trim();
+      // Farm-placeObject-ID (ADR-026, pre-Phase-3-Migration): aus dem Event übernehmen
+      if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
+      // ADR-027 P3: hofId aus dem Event (Post-Migration) — V2-Hof-Pointer
+      if (!hof.hofId && hofId) hof.hofId = hofId;
+      // byAddr-Index: jede unterschiedliche ev.addr-Schreibweise mappen, damit
+      // alte Lookups buildHofIndex().get(addr) den Eintrag finden (auch wenn er
+      // intern hofId-keyed ist).
+      if (addr && !byAddr.has(addr)) byAddr.set(addr, hof);
+      const entry = {
+        pid:     p.id,
+        name:    p.name || p.id,
+        date:    ev.date || '',
+        dateKey: evDateKey(ev.date || ''),
+      };
+      if (ev.type === 'RESI') hof.entries.push(entry);
+      else { entry.desc = ev.value || ''; hof.propEntries.push(entry); }
     }
   }
   for (const hof of hoefe.values()) {
     hof.entries.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
     (hof.propEntries || []).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
   }
-  UIState._hofCache = hoefe;
-  return hoefe;
+  // Wrapper simuliert Map-API; .get(addr) findet id-keyed Einträge via byAddr.
+  const wrapper = {
+    get size() { return hoefe.size; },
+    has(key) { return hoefe.has(key) || byAddr.has(key); },
+    get(key) { return hoefe.get(key) || byAddr.get(key); },
+    values() { return hoefe.values(); },
+    keys() { return hoefe.keys(); },
+    entries() { return hoefe.entries(); },
+    forEach(fn, thisArg) { return hoefe.forEach(fn, thisArg); },
+    [Symbol.iterator]() { return hoefe[Symbol.iterator](); },
+  };
+  UIState._hofCache = wrapper;
+  return wrapper;
 }
 
 // ─────────────────────────────────────
