@@ -2347,9 +2347,14 @@ function validatePlaces(kind = 'places') {
 
   if (kind !== 'places') {
     // ADR-027 P4: HOF_NO_COORD / HOF_FAR auf V2-hofObjects.
+    // Nur hofObjects prüfen, die auch im buildHofIndex auftauchen — d.h. mindestens
+    // ein RESI- oder PROP-Event zeigt darauf. hofObjects aus CENS/OCCU/EDUC/EVEN/…
+    // haben keine Wohn-Semantik und sollen keinen Validator-Treffer erzeugen.
+    const hofIdx = typeof buildHofIndex === 'function' ? buildHofIndex() : null;
     const hofs = AppState.db?.hofObjects || {};
     for (const [hofId, h] of Object.entries(hofs)) {
       if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
+      if (hofIdx && !hofIdx.has(hofId)) continue;   // kein RESI/PROP-Event → überspringen
       const hofTitle = (h.addrs && h.addrs[0] && h.addrs[0].value) || hofId;
       if (h.lat == null || h.long == null) {
         warnings.push({ placeId: hofId, title: hofTitle, code: 'HOF_NO_COORD',
