@@ -21,11 +21,20 @@ let _placeGovFilter    = false; // true = nur unaufgelöste GOV-Platzhalter
 let _placeShowAdmin    = false; // true = Verwaltungsgebiete (0 Personen, kein directRef) einblenden
 let _placeDetailMap   = null;  // P5a-5: Leaflet-Instanz für Mini-Karte im Steckbrief
 
-// Item 12: Badge mit Anzahl Validator-Warnungen auf dem ⚠-Button
+// Item 12: Badge mit Anzahl Validator-Warnungen auf dem ⚠-Button (nur Orte)
 function _refreshPlaceValidatorBadge() {
   const badge = document.getElementById('placeValidatorBadge');
   if (!badge || typeof validatePlaces !== 'function') return;
-  const n = validatePlaces().length;
+  const n = validatePlaces('places').length;
+  if (n) { badge.textContent = String(n); badge.hidden = false; }
+  else   { badge.hidden = true; }
+}
+
+// Badge für den Hof-Validator-Button im Höfe-Tab (nur HOF_*)
+function _refreshHofValidatorBadge() {
+  const badge = document.getElementById('hofValidatorBadge');
+  if (!badge || typeof validatePlaces !== 'function') return;
+  const n = validatePlaces('farms').length;
   if (n) { badge.textContent = String(n); badge.hidden = false; }
   else   { badge.hidden = true; }
 }
@@ -2255,106 +2264,104 @@ const _GEO_BBOX = { minLat: 27, maxLat: 72, minLon: -25, maxLon: 50 };
 // nur grobe Fehler (vertauschte lat/long, Zahlendreher, falscher Ort) anschlagen.
 const _HOF_MAX_DIST_KM = 25;
 
-// Liefert Array von { placeId, title, code, msg } Warnungen
-function validatePlaces() {
+// Liefert Array von { placeId, title, code, msg } Warnungen.
+// kind='places' (default): nur placeObjects-Prüfungen (BBOX, PNAME_DATE, PNAME_OVERLAP, CYCLE).
+// kind='farms':            nur hofObjects-Prüfungen (HOF_NO_COORD, HOF_FAR).
+// kind='all':              beide (Rückwärtskompatibilität für Tests).
+function validatePlaces(kind = 'places') {
   const warnings = [];
   const pos = AppState.db?.placeObjects;
-  if (!pos) return warnings;
 
-  const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
+  if (kind !== 'farms') {
+    if (!pos) return warnings;
+    const parseY = s => { const m = s && s.match(/\d{4}/); return m ? +m[0] : null; };
 
-  for (const po of Object.values(pos)) {
-    const title = po.title || po.id;
+    for (const po of Object.values(pos)) {
+      const title = po.title || po.id;
 
-    // P5d-1: Koordinaten außerhalb Bounding-Box
-    if (po.lat != null && po.long != null) {
-      if (po.lat < _GEO_BBOX.minLat || po.lat > _GEO_BBOX.maxLat ||
-          po.long < _GEO_BBOX.minLon || po.long > _GEO_BBOX.maxLon) {
-        warnings.push({ placeId: po.id, title, code: 'BBOX',
-          msg: `Koordinaten außerhalb Europa: ${po.lat.toFixed(3)}, ${po.long.toFixed(3)}` });
+      // P5d-1: Koordinaten außerhalb Bounding-Box
+      if (po.lat != null && po.long != null) {
+        if (po.lat < _GEO_BBOX.minLat || po.lat > _GEO_BBOX.maxLat ||
+            po.long < _GEO_BBOX.minLon || po.long > _GEO_BBOX.maxLon) {
+          warnings.push({ placeId: po.id, title, code: 'BBOX',
+            msg: `Koordinaten außerhalb Europa: ${po.lat.toFixed(3)}, ${po.long.toFixed(3)}` });
+        }
       }
-    }
 
-    // ADR-027 P4: HOF_NO_COORD / HOF_FAR operieren jetzt über V2-hofObjects
-    // (siehe Validierungs-Block unter dem placeObjects-Loop). Farm/Building in
-    // placeObjects existiert nach Phase-3-Migration nicht mehr.
-
-    // P5d-2a: dateFrom > dateTo in pnames[]
-    for (const pn of (po.pnames || [])) {
-      const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
-      if (f && t && f > t) {
-        warnings.push({ placeId: po.id, title, code: 'PNAME_DATE',
-          msg: `Name „${pn.value}": Startjahr ${f} > Endjahr ${t}` });
+      // P5d-2a: dateFrom > dateTo in pnames[]
+      for (const pn of (po.pnames || [])) {
+        const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
+        if (f && t && f > t) {
+          warnings.push({ placeId: po.id, title, code: 'PNAME_DATE',
+            msg: `Name „${pn.value}": Startjahr ${f} > Endjahr ${t}` });
+        }
       }
-    }
 
-    // P5d-2b: Überlappende Perioden gleicher Sprache in pnames[]
-    const byLang = {};
-    for (const pn of (po.pnames || [])) {
-      const lang = pn.lang || '';
-      const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
-      if (!f && !t) continue;
-      if (!byLang[lang]) byLang[lang] = [];
-      byLang[lang].push({ f: f || 0, t: t || 9999, val: pn.value });
-    }
-    for (const [lang, spans] of Object.entries(byLang)) {
-      for (let i = 0; i < spans.length; i++) {
-        for (let j = i + 1; j < spans.length; j++) {
-          if (spans[i].f < spans[j].t && spans[j].f < spans[i].t) {
-            warnings.push({ placeId: po.id, title, code: 'PNAME_OVERLAP',
-              msg: `Namen „${spans[i].val}" und „${spans[j].val}"${lang ? ` (${lang})` : ''} überlappen zeitlich` });
+      // P5d-2b: Überlappende Perioden gleicher Sprache in pnames[]
+      const byLang = {};
+      for (const pn of (po.pnames || [])) {
+        const lang = pn.lang || '';
+        const f = parseY(pn.dateFrom), t = parseY(pn.dateTo);
+        if (!f && !t) continue;
+        if (!byLang[lang]) byLang[lang] = [];
+        byLang[lang].push({ f: f || 0, t: t || 9999, val: pn.value });
+      }
+      for (const [lang, spans] of Object.entries(byLang)) {
+        for (let i = 0; i < spans.length; i++) {
+          for (let j = i + 1; j < spans.length; j++) {
+            if (spans[i].f < spans[j].t && spans[j].f < spans[i].t) {
+              warnings.push({ placeId: po.id, title, code: 'PNAME_OVERLAP',
+                msg: `Namen „${spans[i].val}" und „${spans[j].val}"${lang ? ` (${lang})` : ''} überlappen zeitlich` });
+            }
           }
         }
       }
-    }
 
-    // P5d-2c: enclosedBy-Zirkel (A → … → A)
-    // Prüft ob man von enc.placeId aus den Startknoten po.id wieder erreichen
-    // kann — nur dann liegt ein echter Zirkel vor. Visited-Set verhindert
-    // Endlosschleifen, aber doppelte placeIds in verschiedenen Zeiträumen
-    // und gemeinsame Vorfahren lösen keinen false-positive mehr aus.
-    const _canReach = (startId, targetId) => {
-      const stack = [[startId, 0]];
-      const seen = new Set();
-      while (stack.length) {
-        const [pid, depth] = stack.pop();
-        if (pid === targetId) return true;
-        if (depth >= 15 || seen.has(pid)) continue;
-        seen.add(pid);
-        const p = pos[pid];
-        if (!p) continue;
-        for (const e of (p.enclosedBy || [])) {
-          if (e.placeId) stack.push([e.placeId, depth + 1]);
+      // P5d-2c: enclosedBy-Zirkel (A → … → A)
+      const _canReach = (startId, targetId) => {
+        const stack = [[startId, 0]];
+        const seen = new Set();
+        while (stack.length) {
+          const [pid, depth] = stack.pop();
+          if (pid === targetId) return true;
+          if (depth >= 15 || seen.has(pid)) continue;
+          seen.add(pid);
+          const p = pos[pid];
+          if (!p) continue;
+          for (const e of (p.enclosedBy || [])) {
+            if (e.placeId) stack.push([e.placeId, depth + 1]);
+          }
         }
-      }
-      return false;
-    };
-    for (const enc of (po.enclosedBy || [])) {
-      if (!enc.placeId) continue;
-      if (enc.placeId === po.id || _canReach(enc.placeId, po.id)) {
-        warnings.push({ placeId: po.id, title, code: 'CYCLE',
-          msg: `Zirkelreferenz in „Teil von"-Kette` });
-        break;
+        return false;
+      };
+      for (const enc of (po.enclosedBy || [])) {
+        if (!enc.placeId) continue;
+        if (enc.placeId === po.id || _canReach(enc.placeId, po.id)) {
+          warnings.push({ placeId: po.id, title, code: 'CYCLE',
+            msg: `Zirkelreferenz in „Teil von"-Kette` });
+          break;
+        }
       }
     }
   }
 
-  // ADR-027 P4: HOF_NO_COORD / HOF_FAR auf V2-hofObjects (statt Farm-placeObjects).
-  // V2-Shape-Filter (_isHofObjectV2) verhindert Treffer auf Legacy-addr-keyed-Sidecar.
-  const hofs = AppState.db?.hofObjects || {};
-  for (const [hofId, h] of Object.entries(hofs)) {
-    if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
-    const hofTitle = (h.addrs && h.addrs[0] && h.addrs[0].value) || hofId;
-    if (h.lat == null || h.long == null) {
-      warnings.push({ placeId: hofId, title: hofTitle, code: 'HOF_NO_COORD',
-        msg: `Hof ohne Koordinaten — auf der Karte nicht sichtbar` });
-    } else if (typeof _placeDistKm === 'function' && h.villageId && pos[h.villageId]) {
-      const parent = pos[h.villageId];
-      if (parent.lat != null && parent.long != null) {
-        const km = _placeDistKm(h.lat, h.long, parent.lat, parent.long);
-        if (km > _HOF_MAX_DIST_KM) {
-          warnings.push({ placeId: hofId, title: hofTitle, code: 'HOF_FAR',
-            msg: `Hof ${km.toFixed(0)} km vom Ort „${parent.title || parent.id}" entfernt — evtl. vertauschte/falsche Koordinaten` });
+  if (kind !== 'places') {
+    // ADR-027 P4: HOF_NO_COORD / HOF_FAR auf V2-hofObjects.
+    const hofs = AppState.db?.hofObjects || {};
+    for (const [hofId, h] of Object.entries(hofs)) {
+      if (typeof _isHofObjectV2 !== 'function' || !_isHofObjectV2(h)) continue;
+      const hofTitle = (h.addrs && h.addrs[0] && h.addrs[0].value) || hofId;
+      if (h.lat == null || h.long == null) {
+        warnings.push({ placeId: hofId, title: hofTitle, code: 'HOF_NO_COORD',
+          msg: `Hof ohne Koordinaten — auf der Karte nicht sichtbar` });
+      } else if (typeof _placeDistKm === 'function' && h.villageId && pos?.[h.villageId]) {
+        const parent = pos[h.villageId];
+        if (parent.lat != null && parent.long != null) {
+          const km = _placeDistKm(h.lat, h.long, parent.lat, parent.long);
+          if (km > _HOF_MAX_DIST_KM) {
+            warnings.push({ placeId: hofId, title: hofTitle, code: 'HOF_FAR',
+              msg: `Hof ${km.toFixed(0)} km vom Ort „${parent.title || parent.id}" entfernt — evtl. vertauschte/falsche Koordinaten` });
+          }
         }
       }
     }
@@ -2364,6 +2371,33 @@ function validatePlaces() {
 }
 
 let _placeValidatorOpen = false;
+let _hofValidatorOpen   = false;
+
+const _VALIDATOR_CODE_LBL = {
+  BBOX: '🌍 Koordinaten', PNAME_DATE: '📅 Datumsfeld',
+  PNAME_OVERLAP: '📅 Überlappung', CYCLE: '🔄 Zirkel',
+  HOF_NO_COORD: '🏡 Ohne Koordinaten', HOF_FAR: '🏡 Zu weit entfernt',
+};
+
+function _renderValidatorPanel(panelId, warnings, action = 'showPlaceByIdValidator') {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  if (warnings === null) { panel.hidden = true; return; }
+  if (!warnings.length) {
+    panel.innerHTML = `<div class="place-validator-ok">✓ Keine Plausibilitätsprobleme gefunden</div>`;
+  } else {
+    const rows = warnings.map(w =>
+      `<div class="place-validator-row fact-row--clickable" data-action="${action}" data-pid="${esc(w.placeId)}">
+        <span class="place-validator-code">${_VALIDATOR_CODE_LBL[w.code] || w.code}</span>
+        <span class="place-validator-title">${esc(w.title)}</span>
+        <span class="place-validator-msg">${esc(w.msg)}</span>
+        <span class="p-arrow">›</span>
+      </div>`
+    ).join('');
+    panel.innerHTML = `<div class="place-validator-header">⚠ ${warnings.length} Hinweis${warnings.length !== 1 ? 'e' : ''}</div>${rows}`;
+  }
+  panel.hidden = false;
+}
 
 function togglePlaceValidator() {
   _placeValidatorOpen = !_placeValidatorOpen;
@@ -2373,27 +2407,21 @@ function togglePlaceValidator() {
 }
 
 function _renderPlaceValidator() {
-  const panel = document.getElementById('placeValidatorPanel');
-  if (!panel) return;
-  if (!_placeValidatorOpen) { panel.hidden = true; return; }
+  _renderValidatorPanel('placeValidatorPanel',
+    _placeValidatorOpen ? validatePlaces('places') : null);
+}
 
-  const warnings = validatePlaces();
-  if (warnings.length === 0) {
-    panel.innerHTML = `<div class="place-validator-ok">✓ Keine Plausibilitätsprobleme gefunden</div>`;
-  } else {
-    const CODE_LBL = { BBOX: '🌍 Koordinaten', PNAME_DATE: '📅 Datumsfeld', PNAME_OVERLAP: '📅 Überlappung', CYCLE: '🔄 Zirkel',
-      HOF_NO_COORD: '🏡 Ohne Koordinaten', HOF_FAR: '🏡 Zu weit entfernt' };
-    let rows = warnings.map(w =>
-      `<div class="place-validator-row fact-row--clickable" data-action="showPlaceByIdValidator" data-pid="${esc(w.placeId)}">
-        <span class="place-validator-code">${CODE_LBL[w.code] || w.code}</span>
-        <span class="place-validator-title">${esc(w.title)}</span>
-        <span class="place-validator-msg">${esc(w.msg)}</span>
-        <span class="p-arrow">›</span>
-      </div>`
-    ).join('');
-    panel.innerHTML = `<div class="place-validator-header">⚠ ${warnings.length} Hinweis${warnings.length !== 1 ? 'e' : ''}</div>${rows}`;
-  }
-  panel.hidden = false;
+function toggleHofValidator() {
+  _hofValidatorOpen = !_hofValidatorOpen;
+  _renderHofValidator();
+  const btn = document.getElementById('hofValidatorBtn');
+  if (btn) btn.classList.toggle('icon-btn--active', _hofValidatorOpen);
+}
+
+function _renderHofValidator() {
+  _renderValidatorPanel('hofValidatorPanel',
+    _hofValidatorOpen ? validatePlaces('farms') : null,
+    'showPlaceByIdValidator');
 }
 
 function showPlaceByIdValidator(placeId) {

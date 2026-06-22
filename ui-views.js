@@ -232,18 +232,27 @@ function switchPlacesSubTab(sub) {
   ['toggle-orte', 'toggle-hoefe', 'toggle-karte'].forEach(id => {
     document.getElementById(id)?.classList.toggle('active', id === 'toggle-' + sub);
   });
+  // Validator-Panels beim Subtab-Wechsel ausblenden (nicht schließen — Toggle-State bleibt).
+  // Beim Wechsel zurück wird das Panel via _renderPlaceValidator/_renderHofValidator
+  // sofort wieder eingeblendet, falls es geöffnet war.
+  document.getElementById('placeValidatorPanel')?.setAttribute('hidden', '');
+  document.getElementById('hofValidatorPanel')?.setAttribute('hidden', '');
+
   if (sub === 'hoefe') {
     document.getElementById('detailPlace').innerHTML = '';
     document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     renderHofList();
-    if (typeof _updateHofReviewBadge === 'function') _updateHofReviewBadge();
-    if (typeof _refreshHofMergeBadge === 'function') _refreshHofMergeBadge();
+    if (typeof _updateHofReviewBadge  === 'function') _updateHofReviewBadge();
+    if (typeof _refreshHofMergeBadge  === 'function') _refreshHofMergeBadge();
+    if (typeof _refreshHofValidatorBadge === 'function') _refreshHofValidatorBadge();
+    if (typeof _renderHofValidator    === 'function') _renderHofValidator();  // offen? Panel wieder zeigen
   } else if (sub === 'orte') {
     document.getElementById('detailPlace').innerHTML = '';
     document.getElementById('detailPlace').dataset.viewInit = 'false';
     document.body.classList.remove('has-detail');
     renderPlaceList();
+    if (typeof _renderPlaceValidator  === 'function') _renderPlaceValidator(); // offen? Panel wieder zeigen
   } else if (sub === 'karte') {
     document.getElementById('detailPlace').innerHTML = '';
     document.getElementById('detailPlace').dataset.viewInit = 'false';

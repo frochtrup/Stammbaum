@@ -191,10 +191,12 @@
         <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
         <button type="button" class="icon-btn place-validator-btn" id="hofReviewBtn" data-action="openHofReviewModal" title="Hof-Zuweisungen prüfen — Events mit Adresse ohne Hof-Verknüpfung" aria-label="Hof-Zuweisungen prüfen">🔗<span id="hofReviewBadge" class="place-validator-btn-badge" hidden>0</span></button>
         <button type="button" class="icon-btn place-validator-btn" id="hofMergeBtn" data-action="openHofMergeModal" title="Hof-Dubletten zusammenführen" aria-label="Hof-Dubletten zusammenführen">⇉<span id="hofMergeBadge" class="place-validator-btn-badge" hidden>0</span></button>
+        <button type="button" class="icon-btn place-validator-btn" id="hofValidatorBtn" data-action="toggleHofValidator" title="Geo-Plausibilitäts-Validator (Höfe)" aria-label="Hof-Validator">⚠<span id="hofValidatorBadge" class="place-validator-btn-badge" hidden>0</span></button>
         <button type="button" class="icon-btn" data-action="exportHofchronik" title="Hofchronik exportieren (HTML)" aria-label="Hofchronik exportieren">📖</button>
       </div>
     </div>
     <div id="placeValidatorPanel" hidden></div>
+    <div id="hofValidatorPanel" hidden></div>
     <div id="placeList"></div>
     <div id="hofList" hidden></div>
   </div>

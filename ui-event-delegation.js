@@ -77,6 +77,7 @@ const _CLICK_MAP = {
   togglePlaceAdminFilter:  ()  => togglePlaceAdminFilter(),
   openPlaceMergeModal:     ()  => openPlaceMergeModal(),
   openHofMergeModal:       ()  => openHofMergeModal(),
+  toggleHofValidator:      ()  => toggleHofValidator(),
   deleteHofObject:         el  => deleteHofObject(el.dataset.hofid),
   placeMergeGroup:         el  => placeMergeGroup(el.dataset.gidx),
   openPlaceStringLinkModal: el => openPlaceStringLinkModal(el?.dataset?.preselect || null),
