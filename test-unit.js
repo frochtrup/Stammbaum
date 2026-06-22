@@ -5675,6 +5675,88 @@ group('(am) ADR-027 P5 Hof-Review');
   eq(rows[0].evType, 'BIRT', 'av-3b: BIRT-Krankenhaus bleibt, RESI-Redundanz fällt raus');
 })();
 
+// ─── Gruppe (aw) — ADR-024 v1036: Read-Tolerance für historische Komma-Höfe ─
+
+// aw-1: findAllByAddr findet Hof mit Komma im Namen über voll-Norm
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      // Historisch via Pfad C bootstrappt (vor v1034) — Hof mit Komma im Namen
+      '_hof_oster': { id:'_hof_oster', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Oster 82a, Wester 141', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var reg = API.getHofRegistry();
+  // Voll-Match: ev.addr identisch mit hof.addrs[0]
+  eq(reg.findAllByAddr('Oster 82a, Wester 141').length, 1,
+    'aw-1a: voll-Norm matcht historischen Komma-Hof');
+})();
+
+// aw-2: Extract-Fallback bei Stadt-Suffix funktioniert weiter
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var reg = API.getHofRegistry();
+  eq(reg.findAllByAddr('Wall 33, 48607 Ochtrup, Deutschland').length, 1,
+    'aw-2a: Extract-Fallback matcht „Wall 33" trotz Stadt-Suffix');
+  eq(reg.findAllByAddr('Wall 33').length, 1,
+    'aw-2b: einfache Adresse ohne Suffix matcht direkt');
+})();
+
+// aw-3: findOrCreateHofObject — kein Duplikat bei ev.addr=historischer Komma-Hof
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_oster': { id:'_hof_oster', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Oster 82a, Wester 141', dateFrom:null, dateTo:null }] },
+    },
+  });
+  // ev.addr identisch zum historischen Hof → Idempotenz greift, kein neuer Hof
+  var id = API.findOrCreateHofObject('Oster 82a, Wester 141', '_po_o');
+  eq(id, '_hof_oster', 'aw-3a: voll-Norm-Match liefert bestehende ID (kein Duplikat)');
+  eq(Object.keys(API.AppState.db.hofObjects).length, 1, 'aw-3b: nur ein Hof in DB');
+})();
+
+// aw-4: Pfad-B-Match findet historischen Komma-Hof, Pfad B' bootstrapt nichts
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'X /Y/', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Ochtrup', addr:'Oster 82a, Wester 141', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_oster': { id:'_hof_oster', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Oster 82a, Wester 141', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_oster', 'aw-4a: Pfad B linkt auf historischen Komma-Hof');
+  eq(Object.keys(API.AppState.db.hofObjects).length, 1, 'aw-4b: kein Pseudo-Hof angelegt');
+  eq(API.AppState._lastLinkPassStats.linkedHofTypeBootstrap, 0,
+    'aw-4c: Pfad B\' hat NICHT zusätzlich bootstrappt');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {

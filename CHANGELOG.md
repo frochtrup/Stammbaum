@@ -9,6 +9,29 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — Read-Tolerance für historische Komma-Höfe (sw v1036)
+
+**Auslöser:** User-Befund — typische Adresse „Oster 82a, Wester 141" in Ochtrup. Es existiert ein hofObject „Oster 82a, Wester 141" (historisch via Pfad C bootstrappt, vor Konvention α v1034). Mit Konvention α (Komma schneidet) findet `findAllByAddr` für `ev.addr='Oster 82a, Wester 141'` nur noch „Oster 82a" → Hof nicht gefunden → Pfad B' legt einen Pseudo-Hof „Oster 82a" an. Daten-Duplikat.
+
+**Fix — Read-Tolerance:**
+- `hofReg.findAllByAddr(addr, year)`: erst **voll-Norm** Lookup (matcht historische Höfe mit Komma in der Bezeichnung), bei leerem Treffer **Extract-Fallback** (matcht Adressbuch-Übernahmen mit Stadt/Land-Suffix). Ein einziger _lookup-Helfer dedupliziert die Such-Logik.
+- `findOrCreateHofObject` Idempotenz-Check: ebenfalls erst voll-Norm, dann Extract-Norm. Verhindert Pseudo-Hof-Duplikat bei eingehender Identität, die einen historischen Komma-Hof matcht.
+- **Konvention α bleibt strikt für Neu-Anlage**: wenn weder voll noch extract matchen, wird der neue Hof mit der extrahierten Form angelegt (Stadt-Suffix wird also weiterhin abgeschnitten).
+
+**+8 Tests Gruppe (aw):**
+- aw-1: voll-Norm matcht historischen Komma-Hof „Oster 82a, Wester 141".
+- aw-2: Extract-Fallback matcht „Wall 33" trotz Stadt-Suffix.
+- aw-3: findOrCreateHofObject voll-Norm-Match liefert bestehende ID (Idempotenz).
+- aw-4: Link-Pass-Integration — Pfad B linkt auf historischen Komma-Hof, Pfad B' bootstrapt nicht.
+
+**Browser-verifiziert** am exakten User-Szenario (Hof „Oster 82a, Wester 141" in Testdorf_AW + RESI-Event mit gleicher addr): `ev.hofId=_hof_oster_wester`, `linkedHofAddr=1`, `linkedHofTypeBootstrap=0`, ein Hof in DB.
+
+**Gates:** 866 Unit-Tests grün (+8 (aw)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+**Lehre:** Konvention α (strikt) ist gut für Neu-Anlage, aber Read-Seite muss tolerant gegen historische Daten sein, die vor der Konvention entstanden sind. „Schreibe streng, lies tolerant" — Robustness Principle.
+
+---
+
 ### Session 2026-06-21 — ADDR=Village-Redundanz filtern (sw v1035)
 
 **Auslöser:** Bei RESI ohne explizite Adresse schreiben einige Programme (MyHeritage u.a.) den Ortsnamen selbst in `ADDR` statt das Feld leer zu lassen. Pfad B' (Phase 4 Bootstrap aus Event-Typ-Semantik) bootstrappt daraus einen Pseudo-Hof namens „Ochtrup" im Dorf „Ochtrup" — Daten-Müll.

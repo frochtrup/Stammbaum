@@ -2124,26 +2124,35 @@ function getHofRegistry() {
       return all.length === 1 ? all[0] : null;       // strikt eindeutig — Mehrdeutigkeit → Review-Pfad
     },
     findAllByAddr(addr, year) {
-      // ADR-024 v1034: ev.addr aus Adressbüchern enthält oft PLZ/Stadt/Land —
-      // erst auf Hof-Identitäts-Teil extrahieren, dann Norm-Lookup. „Wall 33"
-      // matcht hof.addrs=["Wall 33"] auch bei ev.addr="Wall 33, 48607 Ochtrup".
-      const k = _normHofAddr(_extractHofAddr(addr));
-      const ids = (k && byNormAll[k]) ? byNormAll[k] : [];
-      if (!ids.length) return [];
-      const y = _yearOf(year);
-      const out = [];
-      for (const id of ids) {
-        const h = byId[id];
-        if (!_hofAliveAt(h, y)) continue;
-        // Wenn ein Jahr gefragt: addr-Eintrag muss zum Jahr passen (datiert oder undatiert)
-        if (y != null) {
-          const okAddr = h.addrs.some(a =>
-            _normHofAddr(a.value) === k && _dateMatches(_placeYear(a.dateFrom), _placeYear(a.dateTo), y));
-          if (!okAddr) continue;
+      // ADR-024 v1036: Read-Tolerance — erst voll-Norm Lookup (matcht
+      // historische Höfe mit Komma in der Bezeichnung wie „Oster 82a, Wester
+      // 141", entstanden via Pfad C vor Konvention α v1034), dann Extract als
+      // Fallback (matcht Adressbuch-Übernahmen mit Stadt/Land-Suffix wie
+      // „Wall 33, 48607 Ochtrup" gegen Hof „Wall 33"). Damit funktionieren
+      // Alt-Daten und neue Adressbuch-Daten beide.
+      const _lookup = (k) => {
+        const ids = (k && byNormAll[k]) ? byNormAll[k] : [];
+        if (!ids.length) return [];
+        const y = _yearOf(year);
+        const out = [];
+        for (const id of ids) {
+          const h = byId[id];
+          if (!_hofAliveAt(h, y)) continue;
+          if (y != null) {
+            const okAddr = h.addrs.some(a =>
+              _normHofAddr(a.value) === k && _dateMatches(_placeYear(a.dateFrom), _placeYear(a.dateTo), y));
+            if (!okAddr) continue;
+          }
+          out.push(id);
         }
-        out.push(id);
-      }
-      return out;
+        return out;
+      };
+      const fullKey = _normHofAddr(addr);
+      const fullHits = _lookup(fullKey);
+      if (fullHits.length) return fullHits;
+      const extractKey = _normHofAddr(_extractHofAddr(addr));
+      if (extractKey && extractKey !== fullKey) return _lookup(extractKey);
+      return [];
     },
     resolveAddrAsOf(hofId, year) {
       const h = byId[hofId];
@@ -2223,11 +2232,18 @@ function findOrCreateHofObject(addr, villageId) {
   const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
   const normAddr = _normHofAddr(cleanAddr);
   if (!normAddr) return null;
-  // 1. Idempotenz: bestehenden V2-Hof mit gleicher norm(addr) im selben Dorf finden
+  // 1. Idempotenz: ADR-024 v1036 Read-Tolerance — erst voll-Norm prüfen
+  //    (matcht historische Höfe mit Komma im Namen), dann extract-Norm.
+  //    Damit wird bei ev.addr=„Oster 82a, Wester 141" der bestehende Hof
+  //    „Oster 82a, Wester 141" wiedergefunden statt einen zweiten
+  //    „Oster 82a"-Hof anzulegen.
+  const fullNorm = _normHofAddr(addr);
   for (const [hid, h] of Object.entries(hofs)) {
     if (!_isHofObjectV2(h) || h.villageId !== villageId) continue;
     for (const a of h.addrs || []) {
-      if (_normHofAddr(a && a.value) === normAddr) return hid;
+      const aNorm = _normHofAddr(a && a.value);
+      if (aNorm === fullNorm) return hid;
+      if (aNorm === normAddr) return hid;
     }
   }
   // 2. Neue ID deterministisch erzeugen

@@ -562,6 +562,8 @@ event.lati/long     – Render-Fallback (single source: po/hof, ADR-024 Item 9)
 
 **ADDR=Village-Redundanz** (`_isAddrJustVillage`, sw v1035): Manche Programme (MyHeritage u.a.) schreiben bei RESI ohne explizite Adresse den Ortsnamen selbst in `ADDR`. `_isAddrJustVillage(ev)` erkennt das konservativ (Match nur gegen Village-Titel + `pnames`, nicht Vorfahren-Kette) und unterdrückt: (a) Pfad-B'-Auto-Bootstrap (kein Pseudo-Hof „Ochtrup" im Dorf „Ochtrup"); (b) den Hof-Review-Eintrag (semantisch kein Hof-Verdacht). Atypische Fälle wie „ADDR=Westfalen" bei Ort „Ochtrup" bleiben sichtbar — User-Entscheidung wert.
 
+**Read-Tolerance** (sw v1036): Daten vor Konvention α (sw v1034) können historisch entstandene Hof-Bezeichnungen mit Komma im Namen enthalten (z.B. „Oster 82a, Wester 141" — via Pfad C bootstrappt vor v1034). `findAllByAddr` und der Idempotenz-Check in `findOrCreateHofObject` versuchen daher **erst die voll-Norm**, **dann den Extract-Fallback** — der historische Komma-Hof wird über voll-Norm gefunden, Adressbuch-Übernahmen mit Stadt-Suffix über Extract. Konvention α bleibt strikt für **Neu-Anlage**: wenn weder voll noch extract matched, wird mit der extrahierten Form angelegt. Robustness Principle: „schreibe streng, lies tolerant".
+
 #### Identitäts-Auflösung (Link-Pass)
 
 Zentral: `_linkGedcomEventsToPlaceObjects(db)` in gedcom.js ist eine **reine, totale, deterministische Funktion** über `(ev.type, ev.place, ev.addr, ev.date)` + `(placeObjects, hofObjects)` → `(placeId, hofId, place', addr')`. Re-Derivation beim Load **ist** die Persistenz.
