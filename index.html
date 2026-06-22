@@ -190,6 +190,7 @@
       <div id="place-search-hoefe" class="search-wrap" hidden>
         <input class="search-input" type="search" id="searchHoefe" placeholder="Adresse…" data-input="filterHoefe">
         <button type="button" class="icon-btn place-validator-btn" id="hofReviewBtn" data-action="openHofReviewModal" title="Hof-Zuweisungen prüfen — Events mit Adresse ohne Hof-Verknüpfung" aria-label="Hof-Zuweisungen prüfen">🔗<span id="hofReviewBadge" class="place-validator-btn-badge" hidden>0</span></button>
+        <button type="button" class="icon-btn place-validator-btn" id="hofMergeBtn" data-action="openHofMergeModal" title="Hof-Dubletten zusammenführen" aria-label="Hof-Dubletten zusammenführen">⇉<span id="hofMergeBadge" class="place-validator-btn-badge" hidden>0</span></button>
         <button type="button" class="icon-btn" data-action="exportHofchronik" title="Hofchronik exportieren (HTML)" aria-label="Hofchronik exportieren">📖</button>
       </div>
     </div>
@@ -1566,7 +1567,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-title" id="lbl-modalPlaceMerge">Orts-Dubletten</div>
     <div class="sheet-body flex-1 ov-y-auto">
-      <p class="modal-hint">Gleiche Orte in verschiedenen Schreibweisen werden zusammengeführt. Der gewählte Hauptort behält Titel und Koordinaten; abweichende Schreibweisen bleiben als historische Namen erhalten.</p>
+      <p class="modal-hint" id="placeMergeHint">Gleiche Orte in verschiedenen Schreibweisen werden zusammengeführt. Der gewählte Hauptort behält Titel und Koordinaten; abweichende Schreibweisen bleiben als historische Namen erhalten.</p>
       <div id="placeMergeList"></div>
     </div>
     <div class="sheet-footer-safe">

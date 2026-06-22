@@ -238,6 +238,7 @@ function switchPlacesSubTab(sub) {
     document.body.classList.remove('has-detail');
     renderHofList();
     if (typeof _updateHofReviewBadge === 'function') _updateHofReviewBadge();
+    if (typeof _refreshHofMergeBadge === 'function') _refreshHofMergeBadge();
   } else if (sub === 'orte') {
     document.getElementById('detailPlace').innerHTML = '';
     document.getElementById('detailPlace').dataset.viewInit = 'false';

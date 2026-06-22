@@ -33,14 +33,29 @@ function _refreshPlaceValidatorBadge() {
 // Badge mit Anzahl Orts-Dubletten-Gruppen auf dem ⇉-Button. Macht stale/divergente
 // Ortsstrings (z.B. nach Ortsmodell-Anreicherung) proaktiv sichtbar — auflösbar per Merge.
 // Modus-Wahl analog openPlaceMergeModal: placeObjects bevorzugt, sonst String-Dedup.
+// kind='places' filtert Höfe (Farm/Building) aus, weil die im Höfe-Tab ihren eigenen
+// ⇉-Button + eigenes Modal haben.
 function _refreshPlaceMergeBadge() {
   const badge = document.getElementById('placeMergeBadge');
   if (!badge) return;
   let n = 0;
   const hasObjects = typeof findPlaceDuplicates === 'function'
     && Object.keys(AppState.db?.placeObjects || {}).length > 0;
-  if (hasObjects) n = findPlaceDuplicates().length;
+  if (hasObjects) n = findPlaceDuplicates(1, 'places').length;
   else if (typeof findStringPlaceDuplicates === 'function') n = findStringPlaceDuplicates().length;
+  if (n) { badge.textContent = String(n); badge.hidden = false; }
+  else   { badge.hidden = true; }
+}
+
+// Badge fürs Höfe-Tab: zählt nur Farm/Building-Dubletten.
+function _refreshHofMergeBadge() {
+  const badge = document.getElementById('hofMergeBadge');
+  if (!badge) return;
+  let n = 0;
+  if (typeof findPlaceDuplicates === 'function'
+      && Object.keys(AppState.db?.placeObjects || {}).length > 0) {
+    n = findPlaceDuplicates(1, 'farms').length;
+  }
   if (n) { badge.textContent = String(n); badge.hidden = false; }
   else   { badge.hidden = true; }
 }
@@ -1869,29 +1884,40 @@ function _placeUsageCounts() {
 
 // _placeDupMode: 'objects' (GRAMPS placeObjects) | 'strings' (GEDCOM Strings)
 let _placeDupMode = 'objects';
+// _placeDupKind: 'places' (Orte-Tab, ohne Höfe) | 'farms' (Höfe-Tab, nur Farm/Building)
+let _placeDupKind = 'places';
 
-function openPlaceMergeModal() {
+function openPlaceMergeModal(mode) {
+  _placeDupKind = (mode === 'farms') ? 'farms' : 'places';
+  const titleEl = document.getElementById('lbl-modalPlaceMerge');
+  const hintEl  = document.getElementById('placeMergeHint');
+  if (titleEl) titleEl.textContent = (_placeDupKind === 'farms') ? 'Hof-Dubletten' : 'Orts-Dubletten';
+  if (hintEl)  hintEl.textContent  = (_placeDupKind === 'farms')
+    ? 'Gleiche Höfe in verschiedenen Schreibweisen werden zusammengeführt. Der gewählte Haupt-Hof behält Titel und Koordinaten; abweichende Schreibweisen bleiben als historische Namen erhalten.'
+    : 'Gleiche Orte in verschiedenen Schreibweisen werden zusammengeführt. Der gewählte Hauptort behält Titel und Koordinaten; abweichende Schreibweisen bleiben als historische Namen erhalten.';
   const hasObjects = typeof findPlaceDuplicates === 'function'
     && Object.keys((AppState.db && AppState.db.placeObjects) || {}).length > 0;
   if (hasObjects) {
     _placeDupMode = 'objects';
-    _placeDupGroups = findPlaceDuplicates();
-  } else if (typeof findStringPlaceDuplicates === 'function') {
+    _placeDupGroups = findPlaceDuplicates(1, _placeDupKind);
+  } else if (_placeDupKind === 'places' && typeof findStringPlaceDuplicates === 'function') {
     _placeDupMode = 'strings';
     _placeDupGroups = findStringPlaceDuplicates();
   } else {
-    showToast('⚠ Keine Ortsdaten vorhanden');
+    showToast(_placeDupKind === 'farms' ? '⚠ Keine Höfe vorhanden' : '⚠ Keine Ortsdaten vorhanden');
     return;
   }
   _renderPlaceMergeList();
   openModal('modalPlaceMerge');
 }
 
+function openHofMergeModal() { openPlaceMergeModal('farms'); }
+
 function _renderPlaceMergeList() {
   const el = document.getElementById('placeMergeList');
   if (!el) return;
   if (!_placeDupGroups.length) {
-    el.innerHTML = '<div class="dedup-empty">Keine Orts-Dubletten gefunden</div>';
+    el.innerHTML = `<div class="dedup-empty">Keine ${_placeDupKind === 'farms' ? 'Hof' : 'Orts'}-Dubletten gefunden</div>`;
     return;
   }
   let html = '';
@@ -2009,9 +2035,12 @@ function placeMergeGroup(gidx) {
       if (typeof savePlaceObjects === 'function') savePlaceObjects(); // Merge-Ergebnis (pnames-Aliase) in IDB sichern
       UIState._placesCache = null;
       showToast(`✓ ${res.merged} zusammengeführt${res.repointed ? `, ${res.repointed} Verweise aktualisiert` : ''}${res.farmsMerged ? `, ${res.farmsMerged} Hof-Dublette${res.farmsMerged !== 1 ? 'n' : ''} konsolidiert` : ''}`);
-      _placeDupGroups = findPlaceDuplicates();
+      _placeDupGroups = findPlaceDuplicates(1, _placeDupKind);
       _renderPlaceMergeList();
       if (typeof renderPlaceList === 'function') renderPlaceList();
+      if (_placeDupKind === 'farms' && typeof renderHofList === 'function') renderHofList();
+      if (typeof _refreshHofMergeBadge === 'function') _refreshHofMergeBadge();
+      if (typeof _refreshPlaceMergeBadge === 'function') _refreshPlaceMergeBadge();
     }
   } else {
     // Nur angehakte Einträge (Checkboxen) zusammenführen; Winner immer dabei
@@ -2369,6 +2398,12 @@ function _renderPlaceValidator() {
 
 function showPlaceByIdValidator(placeId) {
   const po = AppState.db?.placeObjects?.[placeId];
-  if (!po) return;
-  showPlaceDetail(placeId);   // identitäts-primär
+  if (po) { showPlaceDetail(placeId); return; }
+  // HOF_NO_COORD / HOF_FAR: placeId ist ein hofObjects-Key, kein placeObject.
+  const ho = AppState.db?.hofObjects?.[placeId];
+  if (ho && typeof _isHofObjectV2 === 'function' && _isHofObjectV2(ho)) {
+    // In den Höfe-Tab wechseln und Hof-Detail öffnen (auch für Orphans).
+    if (typeof switchPlacesSubTab === 'function') switchPlacesSubTab('hoefe');
+    if (typeof showHofDetailById === 'function') showHofDetailById(placeId);
+  }
 }

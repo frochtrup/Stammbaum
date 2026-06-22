@@ -342,10 +342,30 @@ function _initHofPersonSearchFor(prefix) {
   });
 }
 
+// Öffnet das Hof-Detail direkt per hofId (z.B. aus dem Validator-Panel im Orte-Tab).
+// Leitet auf showHofDetail(addr) um wenn der Hof im buildHofIndex bekannt ist,
+// sonst zeigt es das Orphan-Detail (hofObject ohne Event-Bezug).
+function showHofDetailById(hofId) {
+  if (!hofId) return;
+  // Versuche den Hof über buildHofIndex zu finden (der byAddr-Wrapper greift auch auf hofId-keyed Einträge zu).
+  const hoefe = buildHofIndex();
+  const hof = hoefe.get(hofId);
+  if (hof) { showHofDetail(hof.addr || hofId, true); return; }
+  // Orphan-Pfad: hofObject existiert aber hat keine Events — Detail direkt zeigen.
+  showHofDetail(hofId, true);
+}
+
 function showHofDetail(addr, pushHistory = true) {
   const hoefe = buildHofIndex();
   const hof   = hoefe.get(addr);
-  if (!hof) return;
+
+  // Orphan-Pfad: hofObject vorhanden, aber kein Event referenziert diesen Hof mehr.
+  if (!hof) {
+    const ho = AppState.db?.hofObjects?.[addr];
+    if (!ho || (typeof _isHofObjectV2 === 'function' && !_isHofObjectV2(ho))) return;
+    _showOrphanHofDetail(addr, ho, pushHistory);
+    return;
+  }
   if (pushHistory) _beforeDetailNavigate();
   AppState.currentPersonId = null; AppState.currentFamilyId = null;
   AppState.currentSourceId = null; AppState.currentRepoId = null;
@@ -435,6 +455,81 @@ function showHofDetail(addr, pushHistory = true) {
   showView('v-detail');
   const meta = hofMeta(hof);
   if (meta.lat != null && meta.long != null) _initHofDetailMap(meta.lat, meta.long, addr.split('\n')[0]);
+}
+
+// Detail-View für orphaned hofObjects (kein Event referenziert diesen Hof mehr).
+// Zeigt Name, Dorf-Info und einen Löschen-Button.
+function _showOrphanHofDetail(hofId, ho, pushHistory) {
+  if (pushHistory) _beforeDetailNavigate();
+  AppState.currentPersonId = null; AppState.currentFamilyId = null;
+  AppState.currentSourceId = null; AppState.currentRepoId = null;
+
+  document.getElementById('detailTopTitle').textContent = 'Hof (verwaist)';
+  document.getElementById('editBtn').style.display = 'none';
+  document.getElementById('treeBtn').hidden        = true;
+  document.getElementById('timelineBtn').hidden    = true;
+  document.getElementById('storyBtn').hidden       = true;
+  document.getElementById('probandBtn').hidden     = true;
+  document.getElementById('probandSetBtn').hidden  = true;
+  document.getElementById('detailMapBtn')?.setAttribute('hidden', '');
+  document.getElementById('quickCamBtn')?.setAttribute('hidden', '');
+
+  const title = (ho.addrs && ho.addrs[0] && ho.addrs[0].value) || hofId;
+  const reg = (typeof getPlaceRegistry === 'function') ? getPlaceRegistry() : null;
+  const villageTitle = (reg && ho.villageId && reg.byId[ho.villageId])
+    ? reg.byId[ho.villageId].title : (ho.villageId || '');
+
+  const html = `<div class="detail-hero fade-up">
+    <div class="detail-avatar hof">🏠</div>
+    <div class="detail-name">${esc(title)}</div>
+    <div class="detail-id">${villageTitle ? esc(villageTitle) + ' · ' : ''}Keine Bewohner / Eigentümer in den Daten</div>
+  </div>
+  <div class="section fade-up">
+    <div class="section-title">Verwaister Hof-Eintrag</div>
+    <p class="modal-hint" style="margin:8px 0 16px">Dieser Hof ist in der Strukturdatei gespeichert, aber kein RESI- oder PROP-Event verweist mehr darauf. Er kann sicher gelöscht werden.</p>
+    <button type="button" class="btn btn-danger" data-action="deleteHofObject" data-hofid="${esc(hofId)}">🗑 Hof löschen</button>
+  </div>`;
+
+  document.getElementById('detailPlace').innerHTML = html;
+  _activateDetailContainer('detailPlace', hofId);
+  showView('v-detail');
+}
+
+// Löscht ein hofObject (inkl. zugehöriges Farm-placeObject) aus der Datenbank.
+function deleteHofObject(hofId) {
+  if (!hofId || !AppState.db?.hofObjects?.[hofId]) return;
+  const ho = AppState.db.hofObjects[hofId];
+  // Zugehöriges Farm-placeObject entfernen, falls vorhanden
+  const pos = AppState.db.placeObjects || {};
+  for (const [pid, po] of Object.entries(pos)) {
+    if ((po.type === 'Farm' || po.type === 'Building')
+        && (po.enclosedBy || []).some(en => en.placeId === ho.villageId)
+        && typeof _normPlaceName === 'function') {
+      const addrTitle = (ho.addrs && ho.addrs[0] && ho.addrs[0].value) || '';
+      if (addrTitle && _normPlaceName(po.title) === _normPlaceName(addrTitle)) {
+        delete pos[pid];
+        UIState._placeRegistry = null;
+        UIState._placesCache   = null;
+        break;
+      }
+    }
+  }
+  delete AppState.db.hofObjects[hofId];
+  UIState._hofCache    = null;
+  UIState._hofRegistry = null;
+  if (typeof saveHofObjects === 'function') saveHofObjects();
+  if (typeof savePlaceObjects === 'function') savePlaceObjects();
+  markChanged();
+  showToast('✓ Hof-Eintrag gelöscht');
+  // Zurück zur Höfe-Liste
+  if (typeof switchPlacesSubTab === 'function') {
+    switchPlacesSubTab('hoefe');
+  } else {
+    goBack();
+  }
+  if (typeof renderHofList === 'function') renderHofList();
+  if (typeof _updateHofReviewBadge === 'function') _updateHofReviewBadge();
+  if (typeof _refreshHofMergeBadge === 'function') _refreshHofMergeBadge();
 }
 
 // ── Koordinaten-Sektion ──────────────────────────────────────────────────────

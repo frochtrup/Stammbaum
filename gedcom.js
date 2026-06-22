@@ -2435,9 +2435,15 @@ function _placeDistKm(aLat, aLon, bLat, bLon) {
 // Kriterien (ODER): gleicher Fold-Key von title ODER irgendeinem pname;
 // oder Koordinaten < toleranceKm voneinander (nur bei vorhandenen Koords).
 // Liefert [{ key, ids:[…], titles:[…] }] mit ≥2 Mitgliedern. Rein lesend.
-function findPlaceDuplicates(toleranceKm = 1) {
+// kind: 'places' (default) → Farm/Building ausgeschlossen, Bare-PO-Cross-Axis aktiv
+//       'farms'             → nur Farm/Building (für Hof-Dubletten-UI im Höfe-Tab),
+//                             Bare-PO-Cross-Axis übersprungen (für Höfe irrelevant).
+//       'all'               → alle PlaceObjects (für Tests/Migrations-Tools).
+function findPlaceDuplicates(toleranceKm = 1, kind = 'places') {
   const pos = (AppState.db && AppState.db.placeObjects) || {};
-  const entries = Object.values(pos);
+  const isFarm = po => po && (po.type === 'Farm' || po.type === 'Building');
+  const inScope = po => kind === 'all' || (kind === 'farms' ? isFarm(po) : !isFarm(po));
+  const entries = Object.values(pos).filter(inScope);
   // 1) Gruppierung über Fold-Key (title + alle pnames)
   const byKey = new Map();   // foldKey → Set(id)
   for (const pl of entries) {
@@ -2477,7 +2483,9 @@ function findPlaceDuplicates(toleranceKm = 1) {
   // (verschiedene Title-Keys) und den Koord-Pass (Titel-Fold ungleich). Wird hier
   // als Dublettenvorschlag gemeldet, damit der User per Merge-UI verlustfrei
   // konsolidieren kann (mergePlaceObjects hängt ev.placeId um, übernimmt Koords).
-  for (const bare of entries) {
+  // Für 'farms'-Modus übersprungen — Hof-Identität läuft über Adresse + Dorf,
+  // nicht über Komma-Titel mit Verwaltungs-Suffix.
+  if (kind !== 'farms') for (const bare of entries) {
     if ((bare.enclosedBy || []).length) continue;
     if (!bare.title || !bare.title.includes(',')) continue;
     const lead = bare.title.split(',').map(s => s.trim()).find(s => s) || '';
