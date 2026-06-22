@@ -587,8 +587,8 @@ if (IS_NODE) {
     'hofMeta: hofMeta, _isFarmPlaceId: _isFarmPlaceId, upsertHofPO: upsertHofPO, _ensureHofFarmPO: _ensureHofFarmPO, ' +
     // ADR-027 Phase 1: Hof-Entität als eigenständiges Objekt
     'APP_KNOWN_SCHEMA_VERSION: APP_KNOWN_SCHEMA_VERSION, _normHofAddr: _normHofAddr, _isHofObjectV2: _isHofObjectV2, ' +
-    // ADR-024 v1034: Hof-Identitäts-Extraktion aus Adressbuch-Strings
-    '_extractHofAddr: _extractHofAddr, ' +
+    // ADR-024 v1034/v1035: Hof-Identitäts-Extraktion + Village-Redundanz
+    '_extractHofAddr: _extractHofAddr, _isAddrJustVillage: _isAddrJustVillage, ' +
     'getHofRegistry: getHofRegistry, mutateHofObject: mutateHofObject, upsertHofObject: upsertHofObject, ' +
     'findOrCreateHofObject: findOrCreateHofObject, ' +
     'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
@@ -5595,6 +5595,84 @@ group('(am) ADR-027 P5 Hof-Review');
   eq(h.addrs[0].value, 'Wall 33', 'au-4a: Hof bekommt extrahierte Bezeichnung');
   // ev.addr (Wire-Daten) bleibt unverändert — Roundtrip-Treue für ADDR
   eq(ev.addr, 'Wall 33, 48607 Ochtrup', 'au-4b: ev.addr Wire-Daten unverändert');
+})();
+
+// ─── Gruppe (av) — ADR-024 v1035: ADDR=Village-Redundanz erkennen ───────────
+
+// av-1: _isAddrJustVillage — Basis-Cases
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town',
+        pnames:[{ value:'Sassenbergk', lang:'deu', dateFrom:null, dateTo:'1900' }],
+        enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  // Match: ADDR === village title
+  ok(API._isAddrJustVillage({ placeId:'_po_o', addr:'Ochtrup' }),
+    'av-1a: ADDR=Village-Titel → true');
+  // Match: ADDR === pname-Variante
+  ok(API._isAddrJustVillage({ placeId:'_po_o', addr:'Sassenbergk' }),
+    'av-1b: ADDR=pname-Variante → true');
+  // No-Match: echte Hof-Adresse
+  ok(!API._isAddrJustVillage({ placeId:'_po_o', addr:'Wall 33' }),
+    'av-1c: echte Hof-Adresse → false');
+  // No-Match: kein placeId
+  ok(!API._isAddrJustVillage({ addr:'Ochtrup' }),
+    'av-1d: ohne placeId → false');
+  // No-Match: ADDR + Stadt-Suffix → Extract trimmt; nur „Wall 33" bleibt → kein Match
+  ok(!API._isAddrJustVillage({ placeId:'_po_o', addr:'Wall 33, 48607 Ochtrup' }),
+    'av-1e: Extract greift VOR Vergleich — ADDR „Wall 33, …" kein Village-Match');
+})();
+
+// av-2: Pfad B' skipt Village-Redundanz — kein Pseudo-Hof
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'X /Y/', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+        events:[
+          // RESI „nur Ort" — MyHeritage-Stil
+          { type:'RESI', place:'Ochtrup', addr:'Ochtrup', date:'1850' },
+          // Echtes RESI mit Hof-Adresse — soll bootstrappen
+          { type:'RESI', place:'Ochtrup', addr:'Wall 33', date:'1855' },
+        ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var evs = API.AppState.db.individuals['@I1@'].events;
+  ok(!evs[0].hofId, 'av-2a: ADDR=Ort → KEIN Pseudo-Hof');
+  ok(evs[1].hofId,  'av-2b: ADDR=Wall 33 → Hof bootstrapped');
+  eq(Object.keys(API.AppState.db.hofObjects).length, 1,
+    'av-2c: genau ein Hof angelegt (Wall 33), kein Pseudo-Ochtrup');
+})();
+
+// av-3: Review-Liste filtert Village-Redundanz aus
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'X /Y/', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+        events:[
+          { type:'RESI', place:'Ochtrup', addr:'Ochtrup', date:'1850' },       // Redundanz — fällt raus
+          { type:'BIRT', place:'Ochtrup', addr:'Krankenhaus', date:'1900' },   // echte Hof-Verdachts-Lücke (Klasse A)
+        ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var rows = API._findUnresolvedHofEvents(API.AppState.db);
+  eq(rows.length, 1, 'av-3a: nur echte Hof-Verdachts-Lücke im Review (Redundanz raus)');
+  eq(rows[0].evType, 'BIRT', 'av-3b: BIRT-Krankenhaus bleibt, RESI-Redundanz fällt raus');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────

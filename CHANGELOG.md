@@ -9,6 +9,22 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — ADDR=Village-Redundanz filtern (sw v1035)
+
+**Auslöser:** Bei RESI ohne explizite Adresse schreiben einige Programme (MyHeritage u.a.) den Ortsnamen selbst in `ADDR` statt das Feld leer zu lassen. Pfad B' (Phase 4 Bootstrap aus Event-Typ-Semantik) bootstrappt daraus einen Pseudo-Hof namens „Ochtrup" im Dorf „Ochtrup" — Daten-Müll.
+
+**Lösung:**
+- **`_isAddrJustVillage(ev)` Helper:** prüft konservativ, ob `_extractHofAddr(ev.addr)` semantisch dem aufgelösten `ev.placeId`-Village entspricht. Match-Quellen: Village-Titel + `pnames`-Varianten (auch historische Schreibweisen wie „Sassenbergk" für „Sassenberg"). Vorfahren-PO werden NICHT gematcht — „Westfalen" in ADDR bei Ort „Ochtrup" bleibt im Review (ungewöhnlich, User-Entscheidung wert).
+- **Pfad B' (`_tryHofBootstrapFromAddr`):** skipt Bootstrap bei `_isAddrJustVillage(ev)`.
+- **`_findUnresolvedHofEvents`:** filtert Redundanz-Events aus dem Review (kein Hof-Verdacht).
+- **+10 Tests Gruppe (av):** Helper-Basis (1a–e), Pfad B' skipt (2a–c), Review filtert (3a/b).
+
+**Browser-verifiziert** an Demo + Testdaten: drei RESI-Events mit `ADDR=Testberg` (Ortsname), `ADDR=Testbergk` (pname-Variante), `ADDR=Wall 33` (echter Hof) → nur der dritte bootstrapt einen Hof, die ersten zwei bleiben hofId-frei UND tauchen nicht im Review auf.
+
+**Gates:** 858 Unit-Tests grün (+10 (av)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+---
+
 ### Session 2026-06-21 — Hof-Identitäts-Konvention α (sw v1034)
 
 **Auslöser:** User-Frage zur Behandlung von Adressbuch-Übernahmen — was passiert mit mehrzeiligen Adressen (`CONT`-Fortsetzungen) und kommagetrennten Adressen (`Wall 33, 48607 Ochtrup, Deutschland`)? Diskussion legte zwei Lösungsklassen offen: (α) striktes Schneiden bei Komma/Zeilenumbruch — einfach, konsistent; (β) Heuristik mit drei Signalen (placeObject/PLZ/Land) + Pfad-A-Iteration — flexibler, aber komplexer. **Entscheidung: α**, weil mehrere Wohneinheiten an derselben Adresse genealogisch typisch derselbe Hof sind und Pfad A einfach bleibt.

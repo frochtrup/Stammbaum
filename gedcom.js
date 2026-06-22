@@ -1383,6 +1383,10 @@ function _linkGedcomEventsToPlaceObjects(db) {
   const _tryHofBootstrapFromAddr = (ev, year) => {
     if (!hofReg || ev.hofId || !ev.placeId || !ev.addr) return false;
     if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
+    // ADR-024 v1035: kein Pseudo-Hof, wenn ADDR semantisch dasselbe wie der
+    // aufgelöste Ort ist (manche Programme schreiben den Ortsnamen in ADDR
+    // statt der ADDR leer zu lassen).
+    if (_isAddrJustVillage(ev)) return false;
     // Sicherheits-Check: wenn doch ein bestehender Hof matcht (z.B. weil
     // hofRegHasData zwischenzeitlich befüllt wurde), darf Pfad B' nicht
     // dazwischenfunken — Pfad B hat bei dieser Reihenfolge schon gegriffen.
@@ -2037,6 +2041,35 @@ function _extractHofAddr(addr) {
   return m ? m[0].trim() : '';
 }
 
+// ADR-024 v1035: erkennt redundante ADDR-Einträge, in denen die Adresse
+// semantisch der bereits aufgelöste Ort ist. Manche Programme (MyHeritage u.a.)
+// schreiben bei leerer Adresse den Ortsnamen in ADDR — daraus darf KEIN Pseudo-
+// Hof entstehen.
+//
+//   ev.placeId='_po_ochtrup', ev.addr='Ochtrup'    → true  (Pseudo-Hof verhindern)
+//   ev.placeId='_po_ochtrup', ev.addr='Wall 33'    → false (echte Hof-Adresse)
+//   ev.placeId='_po_ochtrup', ev.addr='Sassenbergk' → true wenn pname-Variante
+//
+// Match-Quellen konservativ: nur Village-Titel + pnames des aufgelösten Dorfes.
+// Vorfahren-PO werden NICHT gematcht — „Westfalen" in ADDR bei Ort „Ochtrup"
+// bleibt im Review, weil semantisch ungewöhnlich und User-Entscheidung wert.
+function _isAddrJustVillage(ev) {
+  if (!ev || !ev.placeId || !ev.addr) return false;
+  if (typeof getPlaceRegistry !== 'function') return false;
+  const reg = getPlaceRegistry();
+  if (!reg) return false;
+  const po = reg.byId[ev.placeId];
+  if (!po) return false;
+  const cleanAddr = _extractHofAddr(ev.addr);
+  if (!cleanAddr) return false;
+  const addrNorm = _normPlaceName(cleanAddr);
+  if (po.title && _normPlaceName(po.title) === addrNorm) return true;
+  for (const pn of po.pnames || []) {
+    if (pn.value && _normPlaceName(pn.value) === addrNorm) return true;
+  }
+  return false;
+}
+
 // Phase-1-Shape-Filter: nur ADR-027-konforme Einträge (id-keyed mit villageId
 // + addrs[]). Legacy-ADR-026-Einträge (addr-keyed mit {addr,lat,long,note})
 // werden ignoriert, weil sie keine gültigen hofObject-IDs sind. Trennt die
@@ -2294,6 +2327,10 @@ function _findUnresolvedHofEvents(db) {
     if (!ev || ev.hofId) return;
     const addr = (ev.addr || '').trim();
     if (!addr) return;                            // ohne ADDR kein Hof-Verdacht
+    // ADR-024 v1035: ADDR=Village-Redundanz aus dem Hof-Review ausfiltern.
+    // Manche Programme schreiben den Ortsnamen in ADDR statt leerer ADDR;
+    // das ist kein Hof-Verdacht, sondern reine Daten-Redundanz.
+    if (_isAddrJustVillage(ev)) return;
     const key = _eventReviewKey(pid, ev.type || ev.eventType || '',
       addr, ev.date || '');
     out.push({

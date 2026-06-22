@@ -560,6 +560,8 @@ event.lati/long     – Render-Fallback (single source: po/hof, ADR-024 Item 9)
 
 `_extractHofAddr` wird intern in `findAllByAddr` (read-side) und `findOrCreateHofObject` (write-side) angewendet; UI-explizite Varianten (`addHofAddrVariantAndLink`) durchlaufen den Extract NICHT — User-Intent „diese Schreibweise speichern" bleibt erhalten.
 
+**ADDR=Village-Redundanz** (`_isAddrJustVillage`, sw v1035): Manche Programme (MyHeritage u.a.) schreiben bei RESI ohne explizite Adresse den Ortsnamen selbst in `ADDR`. `_isAddrJustVillage(ev)` erkennt das konservativ (Match nur gegen Village-Titel + `pnames`, nicht Vorfahren-Kette) und unterdrückt: (a) Pfad-B'-Auto-Bootstrap (kein Pseudo-Hof „Ochtrup" im Dorf „Ochtrup"); (b) den Hof-Review-Eintrag (semantisch kein Hof-Verdacht). Atypische Fälle wie „ADDR=Westfalen" bei Ort „Ochtrup" bleiben sichtbar — User-Entscheidung wert.
+
 #### Identitäts-Auflösung (Link-Pass)
 
 Zentral: `_linkGedcomEventsToPlaceObjects(db)` in gedcom.js ist eine **reine, totale, deterministische Funktion** über `(ev.type, ev.place, ev.addr, ev.date)` + `(placeObjects, hofObjects)` → `(placeId, hofId, place', addr')`. Re-Derivation beim Load **ist** die Persistenz.
