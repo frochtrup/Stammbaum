@@ -2015,6 +2015,28 @@ function _normHofAddr(s) {
   return String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+// ADR-024 v1034 (Konvention α): extrahiert aus einem Adress-String die
+// Hof-Identität — alles VOR dem ersten Komma ODER Zeilenumbruch.
+// Beispiele:
+//   „Wall 33"                                → „Wall 33"
+//   „Wall 33\nHinterhaus"                    → „Wall 33"
+//   „Wall 33, 48607 Ochtrup, Deutschland"    → „Wall 33"
+//   „Wall 33, Hinterhaus"                    → „Wall 33"
+//   „Schulze-Hof"                            → „Schulze-Hof"
+// Wer mehrere Wohneinheiten an derselben Adresse als distinkte Höfe trennen
+// will, nutzt einen anderen Separator (Klammer, Schrägstrich) oder mehrere
+// `addrs[]`-Varianten am Hof.
+//
+// Wire-Daten (`ev.addr`) bleiben unverändert — die Extraktion gilt NUR für
+// Hof-Identitäts-Operationen (Norm-Lookup + Bootstrap). User-explizite Varianten
+// via `addHofAddrVariantAndLink` durchlaufen den Extract NICHT — der Intent
+// „diese Schreibweise speichern" bleibt erhalten.
+function _extractHofAddr(addr) {
+  if (!addr) return '';
+  const m = String(addr).match(/^[^\n,]+/);
+  return m ? m[0].trim() : '';
+}
+
 // Phase-1-Shape-Filter: nur ADR-027-konforme Einträge (id-keyed mit villageId
 // + addrs[]). Legacy-ADR-026-Einträge (addr-keyed mit {addr,lat,long,note})
 // werden ignoriert, weil sie keine gültigen hofObject-IDs sind. Trennt die
@@ -2069,7 +2091,10 @@ function getHofRegistry() {
       return all.length === 1 ? all[0] : null;       // strikt eindeutig — Mehrdeutigkeit → Review-Pfad
     },
     findAllByAddr(addr, year) {
-      const k = _normHofAddr(addr);
+      // ADR-024 v1034: ev.addr aus Adressbüchern enthält oft PLZ/Stadt/Land —
+      // erst auf Hof-Identitäts-Teil extrahieren, dann Norm-Lookup. „Wall 33"
+      // matcht hof.addrs=["Wall 33"] auch bei ev.addr="Wall 33, 48607 Ochtrup".
+      const k = _normHofAddr(_extractHofAddr(addr));
       const ids = (k && byNormAll[k]) ? byNormAll[k] : [];
       if (!ids.length) return [];
       const y = _yearOf(year);
@@ -2156,8 +2181,14 @@ function upsertHofObject(id, makeNew, fn) {
 // damit dieselbe ID-Logik an beiden Stellen identisch greift.
 function findOrCreateHofObject(addr, villageId) {
   if (!addr || !villageId) return null;
+  // ADR-024 v1034: eingehende Adress-Strings aus Adressbüchern enthalten oft
+  // Stadt/PLZ/Land — extract zieht die hof-relevante Identität heraus, bevor
+  // Norm + ID + addrs[].value entstehen. „Wall 33, 48607 Ochtrup, Deutschland"
+  // → Hof bekommt addrs[0].value = „Wall 33", ID-Slug aus „wall 33".
+  const cleanAddr = _extractHofAddr(addr);
+  if (!cleanAddr) return null;
   const hofs = AppState.db.hofObjects || (AppState.db.hofObjects = {});
-  const normAddr = _normHofAddr(addr);
+  const normAddr = _normHofAddr(cleanAddr);
   if (!normAddr) return null;
   // 1. Idempotenz: bestehenden V2-Hof mit gleicher norm(addr) im selben Dorf finden
   for (const [hid, h] of Object.entries(hofs)) {
@@ -2175,7 +2206,7 @@ function findOrCreateHofObject(addr, villageId) {
   // 3. Über upsertHofObject anlegen (verriegelt Cache + markChanged + Persistenz)
   return upsertHofObject(hofId, () => ({
     id: hofId, villageId,
-    addrs: [{ value: addr, lang: 'deu', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
+    addrs: [{ value: cleanAddr, lang: 'deu', dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
     lat: null, long: null, note: '',
     existsFrom: null, existsTo: null, predecessor: null, successor: null,
     _govId: null, _govTypes: null, schemaVersion: 1,
@@ -3311,6 +3342,14 @@ function buildHofIndex() {
   for (const hof of hoefe.values()) {
     hof.entries.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
     (hof.propEntries || []).sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+    // ADR-024 v1034: Display-Adresse aus dem hofObject (kanonische, extrahierte
+    // Form) — nicht aus dem ersten rohen ev.addr, der Stadt/Land enthalten kann.
+    if (hof.hofId && AppState.db?.hofObjects?.[hof.hofId]) {
+      const h = AppState.db.hofObjects[hof.hofId];
+      if (_isHofObjectV2(h) && h.addrs && h.addrs[0] && h.addrs[0].value) {
+        hof.addr = h.addrs[0].value;
+      }
+    }
   }
   // Wrapper simuliert Map-API; .get(addr) findet id-keyed Einträge via byAddr.
   const wrapper = {

@@ -543,6 +543,23 @@ event.lati/long     – Render-Fallback (single source: po/hof, ADR-024 Item 9)
 
 **Architekturprinzip**: stammbaum-spezifische Genealogie bleibt in der GED/GRAMPS-Datei (User-Wire-Inhalte werden NIE in orte.json mitgespeichert). Cross-Stammbaum-Wissen lebt in orte.json. Auflösungs-Ergebnisse `ev.placeId/hofId` werden NICHT persistiert — sie sind reine Funktion über Eingaben.
 
+#### Hof-Identitäts-Konvention α (`_extractHofAddr`, sw v1034)
+
+**Regel:** Die Hof-Identität in `hof.addrs[]` endet beim **ersten Komma ODER Zeilenumbruch** der eingehenden Adresse. Wire-Daten in `ev.addr` bleiben unangetastet (GEDCOM-ADDR-Roundtrip).
+
+| `ev.addr` (Adressbuch-Übernahme) | Extract → `hof.addrs[0].value` |
+|---|---|
+| `Wall 33` | `Wall 33` |
+| `Wall 33, 48607 Ochtrup, Deutschland` | `Wall 33` |
+| `Wall 33\n48607 Ochtrup` (CONT-Mehrzeile) | `Wall 33` |
+| `Wall 33, Hinterhaus` | `Wall 33` |
+| `Schulze-Hof` | `Schulze-Hof` |
+| `Hof Schulze 33` | `Hof Schulze 33` |
+
+**Folgerung:** Komma hat klare semantische Trennung — in `PLAC` zwischen Hof und Verwaltungs-Hierarchie, in `ADDR` ausschließlich vor einem Stadt/Land-Suffix. Mehrere Wohneinheiten an derselben Hausnummer ergeben denselben Hof (semantisch typisch). Wer zwei distinkte Höfe an derselben Adresse modellieren will, nutzt anderen Separator (Klammer, Schrägstrich) oder mehrere `addrs[]`-Varianten.
+
+`_extractHofAddr` wird intern in `findAllByAddr` (read-side) und `findOrCreateHofObject` (write-side) angewendet; UI-explizite Varianten (`addHofAddrVariantAndLink`) durchlaufen den Extract NICHT — User-Intent „diese Schreibweise speichern" bleibt erhalten.
+
 #### Identitäts-Auflösung (Link-Pass)
 
 Zentral: `_linkGedcomEventsToPlaceObjects(db)` in gedcom.js ist eine **reine, totale, deterministische Funktion** über `(ev.type, ev.place, ev.addr, ev.date)` + `(placeObjects, hofObjects)` → `(placeId, hofId, place', addr')`. Re-Derivation beim Load **ist** die Persistenz.

@@ -9,6 +9,33 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — Hof-Identitäts-Konvention α (sw v1034)
+
+**Auslöser:** User-Frage zur Behandlung von Adressbuch-Übernahmen — was passiert mit mehrzeiligen Adressen (`CONT`-Fortsetzungen) und kommagetrennten Adressen (`Wall 33, 48607 Ochtrup, Deutschland`)? Diskussion legte zwei Lösungsklassen offen: (α) striktes Schneiden bei Komma/Zeilenumbruch — einfach, konsistent; (β) Heuristik mit drei Signalen (placeObject/PLZ/Land) + Pfad-A-Iteration — flexibler, aber komplexer. **Entscheidung: α**, weil mehrere Wohneinheiten an derselben Adresse genealogisch typisch derselbe Hof sind und Pfad A einfach bleibt.
+
+**Konvention α:** Hof-Identität endet beim **ersten Komma ODER Zeilenumbruch** der `ev.addr`. Stadt/PLZ/Land aus Adressbuch-Übernahmen + Adress-Details (Hinterhaus/Eingang B/…) werden für die Hof-Identität abgeschnitten. Wer wirklich zwei distinkte Höfe an derselben Hausnummer braucht, nutzt anderen Separator (Klammer, Schrägstrich) oder eine zweite `addrs[]`-Variante.
+
+**Implementierung:**
+- **`_extractHofAddr(addr)` in gedcom.js:** 1-Zeilen-Helper — `^[^\n,]+` match + trim.
+- **`hofReg.findAllByAddr` (read-side):** wendet `_extractHofAddr` intern an → "Wall 33, 48607 Ochtrup" matcht hof.addrs=["Wall 33"].
+- **`findOrCreateHofObject` (write-side):** extrahiert vor Norm + ID-Slug + addrs[0].value → neu angelegte Höfe bekommen saubere Bezeichnung.
+- **`buildHofIndex` (Display-Konsistenz):** bei V2-Höfen wird `hof.addr` aus `hofObjects.addrs[0].value` gesetzt — Höfe-Liste zeigt kanonische Form, nicht den rohen `ev.addr` des ersten Treffer-Events.
+- **Wire-Treue:** `ev.addr` selbst bleibt unverändert (Roundtrip für `ADDR`-Sub-Tags).
+- **User-explizite Pfade** (z.B. `addHofAddrVariantAndLink`) durchlaufen den Extract NICHT — User-Intent „diese Schreibweise speichern" bleibt erhalten.
+
+**+19 Tests Gruppe (au):** Extract-Basis (1a–k, alle Varianten), `findOrCreateHofObject` Extract + Idempotenz (2a/b), `findAllByAddr` Read-Robustheit (3a/b), Pfad-B'-Bootstrap aus verschmutzter Adresse (4a/b).
+
+**Browser-verifiziert:** drei RESI-Events mit „Wall 33, 48607 Ochtrup, Deutschland" / „Wall 33\n48607 Ochtrup" / „Wall 33, Hinterhaus" → alle drei auf denselben Hof `_hof_wall_33_po_ochtrup` mit `addrs[0].value = "Wall 33"`. Höfe-Tab-Anzeige zeigt schlichtweg „Wall 33" unter Gruppe „Ochtrup".
+
+**Gates:** 848 Unit-Tests grün (+19 (au)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+**Konzeptioneller Konflikt — Komma-Bedeutung in PLAC vs. ADDR:**
+- In `ev.place` (PLAC): Komma trennt Hof | Verwaltungs-Hierarchie (Konvention 1: „Hof, Dorf, Verwaltung").
+- In `ev.addr` (ADDR): Komma war ambig — entweder Stadt-Suffix oder Adress-Detail.
+- **Konvention α löst die Ambiguität**: Komma in ADDR ist IMMER Suffix-Trenner, niemals Detail-Trenner. Pfad A bleibt 1-segmentig (lead = `segs[0]`). Vereinfacht die Auflösungs-Funktion deutlich.
+
+---
+
 ### Session 2026-06-21 — ADR-028 Phase 5: Review-Modal als Daten-Anreicherungs-UI (sw v1030)
 
 **Auslöser:** Phase 5 des ADR-028-Migrationsplans — Review-Badge bekommt seine konzeptuelle Rolle: nicht mehr Entscheidungs-Speicher für per-Event-Ignorier-Markierungen, sondern **Daten-Lücken-Anzeiger** mit drei Anreicherungs-Aktionen. Jeder Review-Eintrag wird in eine von fünf Klassen (A–E) eingeordnet, die Aktions-Matrix ist klassenspezifisch.

@@ -587,6 +587,8 @@ if (IS_NODE) {
     'hofMeta: hofMeta, _isFarmPlaceId: _isFarmPlaceId, upsertHofPO: upsertHofPO, _ensureHofFarmPO: _ensureHofFarmPO, ' +
     // ADR-027 Phase 1: Hof-Entität als eigenständiges Objekt
     'APP_KNOWN_SCHEMA_VERSION: APP_KNOWN_SCHEMA_VERSION, _normHofAddr: _normHofAddr, _isHofObjectV2: _isHofObjectV2, ' +
+    // ADR-024 v1034: Hof-Identitäts-Extraktion aus Adressbuch-Strings
+    '_extractHofAddr: _extractHofAddr, ' +
     'getHofRegistry: getHofRegistry, mutateHofObject: mutateHofObject, upsertHofObject: upsertHofObject, ' +
     'findOrCreateHofObject: findOrCreateHofObject, ' +
     'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
@@ -5516,6 +5518,83 @@ group('(am) ADR-027 P5 Hof-Review');
   eq(rows.length, 1, 'at-3a: nur Hof-Verdachts-Event (mit ev.addr) zählt');
   eq(rows[0]._class, 'A', 'at-3b: Klassifizierung A (BIRT-ADDR ohne Hof)');
   eq(rows[0].evType, 'BIRT', 'at-3c: GRAD/EVEN-PLAC-Lücken fallen aus dem Hof-Review');
+})();
+
+// ─── Gruppe (au) — ADR-024 v1034: Hof-Identität aus Adressbuch-Strings ──────
+
+// au-1: _extractHofAddr — Konvention α (Komma ODER Zeilenumbruch schneidet)
+(function() {
+  eq(API._extractHofAddr('Wall 33'),                          'Wall 33',     'au-1a: einfache Adresse unverändert');
+  eq(API._extractHofAddr('Wall 33, 48607 Ochtrup'),           'Wall 33',     'au-1b: PLZ-Suffix abgeschnitten');
+  eq(API._extractHofAddr('Wall 33, 48607 Ochtrup, Deutschland'), 'Wall 33', 'au-1c: PLZ + Land-Suffix abgeschnitten');
+  eq(API._extractHofAddr('Wall 33, Hinterhaus'),              'Wall 33',     'au-1d: Adress-Detail mit Komma abgeschnitten (Konvention α)');
+  eq(API._extractHofAddr('Wall 33\nHinterhaus'),              'Wall 33',     'au-1e: Mehrzeilige Adresse — nur erste Zeile');
+  eq(API._extractHofAddr('Wall 33\n48607 Ochtrup\nDeutschland'), 'Wall 33', 'au-1f: CONT-Mehrzeile — nur erste Zeile');
+  eq(API._extractHofAddr('Schulze-Hof'),                      'Schulze-Hof', 'au-1g: Hofname ohne Hausnr');
+  eq(API._extractHofAddr('Hof Schulze 33'),                   'Hof Schulze 33', 'au-1h: Hofname mit Hausnr');
+  eq(API._extractHofAddr(''),                                  '',           'au-1i: leerer Input → leer');
+  eq(API._extractHofAddr(null),                                '',           'au-1j: null → leer');
+  eq(API._extractHofAddr('  Wall 33  , 48607  '),             'Wall 33',     'au-1k: Whitespace getrimmt');
+})();
+
+// au-2: findOrCreateHofObject extrahiert intern — Adress-Salat landet als saubere addrs[0]
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  var id = API.findOrCreateHofObject('Wall 33, 48607 Ochtrup, Deutschland', '_po_o');
+  ok(id, 'au-2a: Hof angelegt');
+  var h = API.AppState.db.hofObjects[id];
+  eq(h.addrs[0].value, 'Wall 33', 'au-2a: addrs[0].value = extrahierte Identität');
+  // Idempotenz: zweiter Aufruf mit anderem Adress-Suffix → derselbe Hof
+  var id2 = API.findOrCreateHofObject('Wall 33\nIrgendwas anderes', '_po_o');
+  eq(id2, id, 'au-2b: zweiter Aufruf mit anderem Suffix → selbe Hof-ID (Idempotenz)');
+})();
+
+// au-3: Read-Seite (findAllByAddr) findet Hof auch bei Adress-Salat
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_w': { id:'_hof_w', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var reg = API.getHofRegistry();
+  // Roh-Adresse aus Adressbuch matched den Hof
+  eq(reg.findAllByAddr('Wall 33, 48607 Ochtrup, Deutschland').length, 1,
+    'au-3a: PLZ+Land-Suffix wird beim Lookup ignoriert');
+  eq(reg.findAllByAddr('Wall 33\nHinterhaus').length, 1,
+    'au-3b: Mehrzeilig — Folgezeilen ignoriert beim Lookup');
+})();
+
+// au-4: Pfad B' Bootstrap aus „verschmutzter" RESI-ADDR → saubere Hof-Identität
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'Test /P/', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+        events:[{ type:'RESI', place:'Ochtrup', addr:'Wall 33, 48607 Ochtrup', date:'1850' }] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  ok(ev.hofId, 'au-4a: Pfad B\' bootstrapt Hof');
+  var h = API.AppState.db.hofObjects[ev.hofId];
+  eq(h.addrs[0].value, 'Wall 33', 'au-4a: Hof bekommt extrahierte Bezeichnung');
+  // ev.addr (Wire-Daten) bleibt unverändert — Roundtrip-Treue für ADDR
+  eq(ev.addr, 'Wall 33, 48607 Ochtrup', 'au-4b: ev.addr Wire-Daten unverändert');
 })();
 
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
