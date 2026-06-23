@@ -1088,7 +1088,24 @@ function _placeHierHtml(placeId) {
 // "Ort, Amt, Land" periodengerecht. Nur nutzen wenn das Ergebnis tatsächlich eine
 // Hierarchie enthält (Komma) — sonst ist die enclosedBy-Kette nicht modelliert und
 // compactPlace(ev.place) liefert mehr Information.
+//
+// ADR-024 v1041 fix: bei ev.hofId NIE auf compactPlace(ev.place) fallen — ev.place
+// enthält den Hof als Leitsegment ("Hof, Dorf, Verwaltung"), das wäre Duplikat zur
+// separat gezeigten ev.addr. Stattdessen Dorf-PO über hofObjects[hofId].villageId
+// auflösen wenn ev.placeId fehlt oder fälschlich auf Farm-PO zeigt.
 function _evFullPlace(ev) {
+  // Bei Hof-Event: Dorf-PO bestimmen, nur dessen Hierarchie zurückgeben.
+  if (ev.hofId && AppState.db?.hofObjects?.[ev.hofId]) {
+    const h = AppState.db.hofObjects[ev.hofId];
+    const villageId = (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(h))
+      ? h.villageId : null;
+    if (villageId && typeof _buildFormString === 'function') {
+      const year = typeof _placeYear === 'function' ? _placeYear(ev.date) : null;
+      return _buildFormString(villageId, year) || '';
+    }
+    // hofObject ohne villageId → leerer String statt Hof-im-Ortsfeld
+    return '';
+  }
   if (ev.placeId && typeof _buildFormString === 'function') {
     const year = typeof _placeYear === 'function' ? _placeYear(ev.date) : null;
     const full = _buildFormString(ev.placeId, year);

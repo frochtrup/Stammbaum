@@ -9,6 +9,25 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — _evFullPlace bei Hof-Events: nur Dorf (sw v1041)
+
+**Auslöser:** User-Befund — im Personendetail wird im Ortsfeld die volle PLAC-Projektion „Hof, Dorf, Verwaltung" angezeigt, statt nur das Dorf. Das ist Duplikat zur separat angezeigten `ev.addr` (Hof) und semantisch verwirrend.
+
+**Ursache:** `_evFullPlace` in ui-views.js fiel bei Hof-Events auf `compactPlace(ev.place)` als Fallback zurück. `ev.place` enthält bei Hof-Events die volle Projektion mit Hof als Leitsegment (durch REPROJECT aus Pfad B/B'). Damit landete der Hof im Ortsfeld.
+
+**Fix:**
+- Neuer Vorab-Zweig in `_evFullPlace(ev)`: wenn `ev.hofId` gesetzt ist + V2-hofObject existiert, wird das Dorf-PO direkt über `hofObjects[hofId].villageId` aufgelöst und `_buildFormString(villageId, year)` zurückgegeben. KEIN Fallback auf `ev.place` — das würde wieder den Hof enthalten.
+- `ev.place` bleibt als Wire-Daten unverändert (Roundtrip-Treue).
+
+**Browser-verifiziert:**
+- Setup: ev.place="Wall 33, Ochtrup, Westfalen", ev.addr="Wall 33", ev.placeId=_po_ot, ev.hofId=_hof_wall33
+- _evFullPlace(ev) = "Ochtrup, Westfalen" ✓ (nur Dorf-Hierarchie)
+- Im Personendetail wird damit angezeigt: "Wall 33, 1850, Ochtrup, Westfalen" — kein Hof-Duplikat mehr
+
+**Gates:** 866 Unit-Tests grün, CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+---
+
 ### Session 2026-06-21 — Read-Tolerance für historische Komma-Höfe (sw v1036)
 
 **Auslöser:** User-Befund — typische Adresse „Oster 82a, Wester 141" in Ochtrup. Es existiert ein hofObject „Oster 82a, Wester 141" (historisch via Pfad C bootstrappt, vor Konvention α v1034). Mit Konvention α (Komma schneidet) findet `findAllByAddr` für `ev.addr='Oster 82a, Wester 141'` nur noch „Oster 82a" → Hof nicht gefunden → Pfad B' legt einen Pseudo-Hof „Oster 82a" an. Daten-Duplikat.
