@@ -5757,6 +5757,105 @@ group('(am) ADR-027 P5 Hof-Review');
     'aw-4c: Pfad B\' hat NICHT zusätzlich bootstrappt');
 })();
 
+// ─── Gruppe (ax) — ADR-024 v1042: PLAC-Hof-Pfade auf hof-relevante Typen ────
+
+// ax-1: Pfad A skipt non-Hof-Event-Typen — kein Hof-Match bei BIRT/GRAD/EDUC
+['BIRT', 'GRAD', 'EDUC', 'EVEN', 'MARR', 'BURI'].forEach(function(t, ix) {
+  (function() {
+    API.setDb({
+      individuals:{
+        '@I1@': { id:'@I1@', name:'X /Y/', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+          events:[{ type:t, place:'Hof Schulze, Ochtrup', addr:'', date:'1900' }] },
+      },
+      families:{}, extraPlaces:{},
+      placeObjects:{
+        '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      },
+      hofObjects:{
+        '_hof_schulze': { id:'_hof_schulze', villageId:'_po_o', schemaVersion:1,
+          addrs:[{ value:'Hof Schulze', dateFrom:null, dateTo:null }] },
+      },
+    });
+    API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+    var ev = API.AppState.db.individuals['@I1@'].events[0];
+    ok(!ev.hofId, 'ax-1' + 'abcdef'[ix] + ': ' + t + ' → kein Hof-Match via Pfad A');
+  })();
+});
+
+// ax-2: Pfad A funktioniert für RESI/PROP weiterhin
+['RESI', 'PROP', 'CENS', 'OCCU'].forEach(function(t, ix) {
+  (function() {
+    API.setDb({
+      individuals:{
+        '@I1@': { id:'@I1@', name:'X /Y/', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+          events:[{ type:t, place:'Hof Schulze, Ochtrup', addr:'', date:'1900' }] },
+      },
+      families:{}, extraPlaces:{},
+      placeObjects:{
+        '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+      },
+      hofObjects:{
+        '_hof_schulze': { id:'_hof_schulze', villageId:'_po_o', schemaVersion:1,
+          addrs:[{ value:'Hof Schulze', dateFrom:null, dateTo:null }] },
+      },
+    });
+    API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+    var ev = API.AppState.db.individuals['@I1@'].events[0];
+    eq(ev.hofId, '_hof_schulze', 'ax-2' + 'abcd'[ix] + ': ' + t + ' → Pfad A linkt');
+  })();
+});
+
+// ax-3: Pfad A' (atomar) skipt non-Hof-Event-Typen
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'X', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+        events:[
+          { type:'GRAD', place:'Schule für Bauwesen', date:'1914' },     // skip
+          { type:'RESI', place:'Wall 33', date:'1850' },                 // linkt
+        ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_x': { id:'_po_x', title:'Testdorf', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{
+      '_hof_schule': { id:'_hof_schule', villageId:'_po_x', schemaVersion:1,
+        addrs:[{ value:'Schule für Bauwesen', dateFrom:null, dateTo:null }] },
+      '_hof_wall33': { id:'_hof_wall33', villageId:'_po_x', schemaVersion:1,
+        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }] },
+    },
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var evs = API.AppState.db.individuals['@I1@'].events;
+  ok(!evs[0].hofId, 'ax-3a: GRAD atomar → kein Pfad-A\'-Match');
+  eq(evs[1].hofId, '_hof_wall33', 'ax-3b: RESI atomar → Pfad A\' matcht');
+})();
+
+// ax-4: Pfad C (Bootstrap) skipt non-Hof-Event-Typen — KEIN Pseudo-Hof
+(function() {
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'X', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+        events:[
+          { type:'EDUC', place:'Schule für Bauwesen, Münster', date:'1914' }, // BIRT/EDUC → kein Bootstrap
+          { type:'RESI', place:'Wall 33, Münster', date:'1850' },             // RESI → bootstrap
+        ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects:{
+      '_po_m': { id:'_po_m', title:'Münster', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+    },
+    hofObjects:{},
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var evs = API.AppState.db.individuals['@I1@'].events;
+  ok(!evs[0].hofId, 'ax-4a: EDUC „Schule, Münster" → kein Pseudo-Hof angelegt');
+  ok(evs[1].hofId,  'ax-4b: RESI „Wall 33, Münster" → Hof bootstrapped');
+  var hofIds = Object.keys(API.AppState.db.hofObjects).filter(k => k.indexOf('_hof_') === 0);
+  eq(hofIds.length, 1, 'ax-4c: genau ein Hof — keine Pseudo-Schule');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {

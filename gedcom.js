@@ -1327,6 +1327,11 @@ function _linkGedcomEventsToPlaceObjects(db) {
   // blockiert Auto-Link → bewusster Review-Pfad in Phase 5.
   const _tryHofPlacLink = (ev, year) => {
     if (!hofRegHasData || ev.placeId || ev.hofId || !ev.place || !ev.place.includes(',')) return false;
+    // ADR-024 v1042: Hof-Pfade auf hof-relevante Event-Typen beschränken.
+    // BIRT/DEAT/MARR/BURI/EDUC/GRAD/EVEN mit rich-PLAC würden sonst Pseudo-
+    // Höfe matchen („Schule für Bauwesen, Münster" → Pfad A picked falschen
+    // Hof). Hof-Geburten/Tode am Hof bleiben via Pfad B (ADDR) möglich.
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
     const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
     if (segs.length < 2) return false;
     const lead = segs[0], rest = segs.slice(1);
@@ -1420,6 +1425,9 @@ function _linkGedcomEventsToPlaceObjects(db) {
   const _tryHofAtomicLink = (ev, year) => {
     if (!hofRegHasData || ev.placeId || ev.hofId || !ev.place) return false;
     if (ev.place.includes(',')) return false;        // atomar-Pfad nur für kommafreie PLAC
+    // ADR-024 v1042: nur hof-relevante Event-Typen — verhindert zufällige
+    // Hof-Matches bei GRAD/EDUC mit atomarem PLAC „Schule".
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
     const cands = hofReg.findAllByAddr(ev.place, year);
     if (cands.length !== 1) return false;            // strikt eindeutig (Mehrdeutigkeit blockiert)
     const hofId = cands[0];
@@ -1550,6 +1558,10 @@ function _linkGedcomEventsToPlaceObjects(db) {
   const MAX_HOF_SEGS_BOOTSTRAP = 2;
   const _tryHofBootstrapFromPlac = (ev, year) => {
     if (ev.placeId || ev.hofId || !ev.place || !ev.place.includes(',')) return false;
+    // ADR-024 v1042: nur hof-relevante Event-Typen bootstrappen. Sonst legt
+    // BIRT „Krankenhaus St. Joseph, Münster" einen Pseudo-Hof „Krankenhaus
+    // St. Joseph" an.
+    if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
     const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
     if (segs.length < 2) return false;
     const maxI = Math.min(segs.length - 1, MAX_HOF_SEGS_BOOTSTRAP);

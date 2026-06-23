@@ -9,6 +9,35 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-21 — PLAC-Hof-Pfade auf hof-relevante Events beschränkt (sw v1042)
+
+**Auslöser:** User-Befund — bei nicht-hofrelevanten Events (BIRT/DEAT/MARR/BURI/EDUC/GRAD/EVEN) entstanden immer wieder falsche Hof-Interpretationen, weil Pfad A (PLAC-Leitsegment), Pfad A' (atomar globaler Hof-Lookup) und Pfad C (rich-PLAC-Bootstrap) für ALLE Event-Typen feuerten. „Schule für Bauwesen, Münster" → Pfad C bootstrappte Pseudo-Hof „Schule für Bauwesen". „Krankenhaus St. Joseph, Münster" analog. Asymmetrie zu Pfad B' (war seit Phase 4 schon auf RESI/PROP/CENS/OCCU beschränkt).
+
+**Fix — symmetrische Beschränkung:**
+- **Pfad A** (`_tryHofPlacLink`): + check `HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)`. BIRT mit „Hof Schulze, Ochtrup" → kein Auto-Link mehr, auch wenn Hof existiert (User-Aktion über Review-Modal/Form möglich).
+- **Pfad A'** (`_tryHofAtomicLink`): + check. GRAD „Bonn" trifft nie mehr zufällig einen Hof „Bonn".
+- **Pfad C** (`_tryHofBootstrapFromPlac`): + check. Hauptrisiko-Pfad — keine Pseudo-Höfe mehr aus Schulen/Krankenhäusern/Universitäten.
+- **Pfad B** (`_tryHofAddrLink`): bleibt offen — ADDR ist expliziter User-Intent (BIRT mit `addr=Wall 33` ist bewusste Hof-Verknüpfung).
+- **Pfad B'** war schon beschränkt (Phase 4).
+
+**+15 Tests Gruppe (ax):**
+- ax-1a–f: Pfad A skipt BIRT/GRAD/EDUC/EVEN/MARR/BURI.
+- ax-2a–d: Pfad A linkt weiter RESI/PROP/CENS/OCCU.
+- ax-3a/b: Pfad A' atomar — GRAD skipt, RESI linkt.
+- ax-4a–c: Pfad C — EDUC „Schule, Münster" kein Pseudo-Hof, RESI „Wall 33, Münster" bootstrappt korrekt.
+
+**Browser-verifiziert** am Demo + vier synthetischen Events:
+- GRAD „Schule für Bauwesen, Münster" → kein Hof ✓
+- BIRT „Krankenhaus St. Joseph, Münster" → kein Hof ✓
+- EDUC „Universität, Münster" → kein Hof ✓
+- RESI „Wall 33, Münster" → Hof bootstrapped als „Wall 33" ✓
+
+**Gates:** 881 Unit-Tests grün (+15 (ax)), CSP grün, Snapshot grün, GEDCOM-Roundtrip `MeineDaten_ancestris.ged` `net_delta=0` stable.
+
+**Lehre:** Auto-Hof-Anlage braucht zwei Anker — entweder semantische Hof-Indikator (RESI/PROP/CENS/OCCU als Event-Typ, Pfad B/B'/C/A') ODER explizite User-Eingabe (ADDR-Feld, Pfad B). Bei beiden fehlend (BIRT/GRAD mit rich-PLAC) entsteht ohne Beschränkung Pseudo-Hof-Müll. Konsistent mit Pfad B'.
+
+---
+
 ### Session 2026-06-21 — _evFullPlace bei Hof-Events: nur Dorf (sw v1041)
 
 **Auslöser:** User-Befund — im Personendetail wird im Ortsfeld die volle PLAC-Projektion „Hof, Dorf, Verwaltung" angezeigt, statt nur das Dorf. Das ist Duplikat zur separat angezeigten `ev.addr` (Hof) und semantisch verwirrend.
