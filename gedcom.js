@@ -1351,6 +1351,8 @@ function _linkGedcomEventsToPlaceObjects(db) {
     // Höfe matchen („Schule für Bauwesen, Münster" → Pfad A picked falschen
     // Hof). Hof-Geburten/Tode am Hof bleiben via Pfad B (ADDR) möglich.
     if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
+    // Leeres erstes Segment = kein Hof-Präfix (s. Pfad C).
+    if (!ev.place.split(',')[0].trim()) return false;
     const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
     if (segs.length < 2) return false;
     const lead = segs[0], rest = segs.slice(1);
@@ -1581,7 +1583,12 @@ function _linkGedcomEventsToPlaceObjects(db) {
     // BIRT „Krankenhaus St. Joseph, Münster" einen Pseudo-Hof „Krankenhaus
     // St. Joseph" an.
     if (!ev.type || !HOF_BOOTSTRAP_EVENT_TYPES.has(ev.type)) return false;
-    const segs = ev.place.split(',').map(s => s.trim()).filter(Boolean);
+    // Leeres erstes PLAC-Segment („, Hildesheim, , Deutschland") = kein Hof-Präfix;
+    // die Person lebte direkt im Ort, nicht auf einem Hof. GEDCOM 5.5.1: Segment 0
+    // ist die Adresse/Hofstelle, leer = nicht vorhanden.
+    const rawSegs = ev.place.split(',');
+    if (!rawSegs[0].trim()) return false;
+    const segs = rawSegs.map(s => s.trim()).filter(Boolean);
     if (segs.length < 2) return false;
     const maxI = Math.min(segs.length - 1, MAX_HOF_SEGS_BOOTSTRAP);
     for (let i = 1; i <= maxI; i++) {
