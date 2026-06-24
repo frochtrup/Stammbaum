@@ -9,6 +9,67 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-06-24 — Farm-PO-Invariante durchgesetzt + Roundtrip-Stabilität (sw v1043–v1055)
+
+**Kontext:** Mehrere User-Befunde nach v1042 betrafen denselben Kern: Farm-POs flossen als `ev.placeId` in den Link-Pass und die REPROJECT-Logik, obwohl die ADR-027/028-Invariante klar vorschreibt: `ev.placeId` = Village/Unknown-PO, `ev.hofId` = V2-hofObject. Die Bugkette v1043–v1055 behebt strukturell alle Symptome dieses Bruchs.
+
+**v1043 — `buildPlacForGedcom`/`resolvedPlaceName` verliert Hof-Adresse bei stale hofId**
+
+Ursache: `resolvedPlaceName(obj)` in `gedcom-writer.js` rief `buildPlacForGedcom` nur wenn `obj.hofId || obj.placeId` gesetzt — nach IDB-Reset waren beide null, Fallback `obj.place` lieferte alten Wire-String. Fix: Fallback bleibt korrekt (Wire-Treue); der Fehler lag am downstream User-Fall (IDB-Reset ohne Reload), kein Code-Fix nötig gewesen — als Doku-Klarstellung dokumentiert.
+
+**v1044 — IDB-Reset-Funktionen in Einstellungen → Diagnose & Wartung**
+
+Neue UI-Aktionen: „IDB-Inhalt leeren (Orte)" + „IDB-Inhalt leeren (Höfe)" + „Alles zurücksetzen" im Einstellungs-Tab unter „Diagnose & Wartung". Erlaubt kontrollierten Neustart ohne Datei-Reload.
+
+**v1045 — Lade-Toast akkumuliert beide Link-Pass-Stats (Orte + Höfe)**
+
+Ursache: `_lastLinkPassStats` wurde zweimal gesetzt (einmal nach Migrations-Aufruf, einmal nach Link-Pass) — zweiter Aufruf überschrieb ersten, Orte-Zähler fehlte im Toast. Fix: Stats in `_deriveHofAndMigrate` einmalig akkumuliert, nicht doppelt gesetzt.
+
+**v1046 — Statistik-Kachel „Orte" zählte immer 0**
+
+Ursache: `collectPlaces()` wurde in `_buildStatistikHtml` ohne `db`-Argument aufgerufen (Signatur-Drift nach Refactor). Fix: Aufruf korrigiert.
+
+**v1047 — Hof-Zuweisungen-Toast auf jedem Laden (nicht nur bei neuen Höfen)**
+
+Ursache: `linkedHofPlac + linkedHofAddr + linkedHofAtomic` feuern bei jedem Laden (Runtime-Re-Links bestehender Höfe), nicht nur bei Bootstrap. Toast zeigte bei jedem Laden „X Höfe verknüpft". Fix: `_newHofs = linkedHofBootstrap + linkedHofTypeBootstrap` — Toast nur bei echtem Neu-Anlegen.
+
+**v1048 — PLAC „, Hildesheim, , , ," → Pseudo-Hof „Hildesheim" (führendes Leer-Segment)**
+
+Ursache: Pfad A und Pfad C übersprangen das leere erste PLAC-Segment nach `filter(Boolean)`, sahen `["Hildesheim"]` und bootstrappten „Hildesheim" als Hof. GEDCOM 5.5.1: Segment 0 = Adresse/Hofstelle, leer = kein Hof. Fix: Pfad A + Pfad C prüfen `rawSegs[0].trim()` — wenn leer, sofort `return false`. Schützt alle Fälle mit führendem Leer-Segment.
+
+**v1049 — Orts-Anpassungs-Toast auf jedem Laden (nicht nur erstem)**
+
+Ursache: `ev.place` wird bei jedem Laden aus dem GEDCOM-Text neu geparst (placeId ist runtime-only); `_linkGedcomEventsToPlaceObjects` normalisiert bei jedem Laden → `recollapsed > 0` → Toast. Fix: Session-Flag `AppState._placeNormToastShown` — Toast max. einmal pro geladenem File anzeigen. Flag-Reset beim Setzen von `AppState._currentFilename` (GEDCOM-Load, GRAMPS-Load, Desktop-Picker).
+
+**v1050 — `markChanged()` feuert für reine Runtime-Re-Links ohne GEDCOM-Delta**
+
+Ursache: `linkedHofPlac/Addr/Atomic` lösten `markChanged()` aus, obwohl diese nur bestehende Höfe runtime-verknüpfen (identische PLAC-Ausgabe via `buildPlacForGedcom` → kein Delta). Fix: `markChanged()` nur noch bei `recollapsed || linkedHofBootstrap || linkedHofTypeBootstrap` (echte GEDCOM-Inhaltsänderungen). Cache-Invalidierung bleibt immer.
+
+**v1051 — Spurious placeObject „Oster 82a" auf zweitem Laden (v1050-Regression)**
+
+Ursache: `_hofVillageString` und `_ensureHofFarmPO` nutzten `addr.split('\n')[0].trim()` für den Leaf-Vergleich. Bei addr `„Oster 82a, Wester 141"` (kein Newline) liefert das den ganzen String mit Komma → leafNorm = `„oster 82a, wester 141"` → Vergleich mit `segs[0]` scheiterte → `ev.place = „Oster 82a, Ochtrup, …"` landete ungekürzt in `counts` → `_ensureVillageChain` legte PO „Oster 82a" an. Fix: beide Funktionen verwenden jetzt `_extractHofAddr(addr)` (Konvention α: Komma ODER Newline).
+
+**v1055 — Farm-PO-Invariante: `ev.placeId` darf nie auf Farm/Building-PO zeigen**
+
+Ursache (strukturell, nicht Symptom-Fix):
+
+1. `_ensureHofFarmPO` setzte `ev.placeId = farmId` (Farm-Typ) — Überbleibsel aus ADR-026, als Farm-POs noch direkte `ev.placeId`-Ziele waren. ADR-027/028 hat dieses Modell abgelöst, die Zuweisung war nie bereinigt.
+2. Die Durchreich-REPROJECT-Zeile (`if (ev.placeId || ev.hofId) → _reprojectEvCache`) rief `buildPlacForGedcom` mit `ev.placeId = farmId` auf. `_buildFormString` liefert für Farm-POs nur den Titel (`_atomic` schneidet beim ersten Komma ab) → „Bauernschaft Rummler Nr 16, Albersloh" kollabierte auf „Bauernschaft Rummler Nr 16" (Dorf verloren). Auf jedem geraden Laden wurde so das Dorf abgereichert, auf jedem ungeraden wieder enriched — keine Konvergenz.
+3. `_placeLink` Fall 1 fand Orphan-Farm-POs via `findByName` und setzte `ev.placeId = farmId`, was Pfad A'/B blockierte.
+
+Fix (drei zusammenhängende Stellen):
+- `_ensureHofFarmPO`: `ev.placeId`-Zuweisung komplett entfernt. Farm-POs sind reine Migrations-Vehikel.
+- `_placeLink` Fall 1 + Fall 2b: `Farm/Building`-Typ-Check vor Zuweisung — strukturelle Barriere statt Konvention.
+- `_migrateFarmPOsToHofObjects._repoint`: Fallback auf `ev.addr`-Norm-Match (addrNorm → hofId) wenn `ev.placeId` nicht (mehr) auf einen Farm-PO zeigt. Entkoppelt den Repoint-Pass von der jetzt entfernten Voraussetzung.
+
+Tests: af.1/af.2/af.3/af.7/af.15 auf neue Invariante angepasst: `ev.placeId` nach `_ensureHofFarmPO` = null (vorher fälschlicherweise = farmId). 892 Tests grün.
+
+**Durable Lehre:** `ev.placeId` und `ev.hofId` sind orthogonal: `ev.placeId` = administrative Einheit (Village/Unknown/City), `ev.hofId` = physische Hofstelle. Jeder Code-Pfad, der Farm/Building-POs als `ev.placeId` setzt, verletzt diese Invariante und korrumpiert `buildPlacForGedcom`/`_reprojectEvCache`. `_placeLink` ist jetzt der strukturelle Wächter.
+
+**Gates:** 892 Unit-Tests grün, CSP grün, Snapshot grün, GEDCOM-Roundtrip `net_delta=0` stabil.
+
+---
+
 ### Session 2026-06-21 — PLAC-Hof-Pfade auf hof-relevante Events beschränkt (sw v1042)
 
 **Auslöser:** User-Befund — bei nicht-hofrelevanten Events (BIRT/DEAT/MARR/BURI/EDUC/GRAD/EVEN) entstanden immer wieder falsche Hof-Interpretationen, weil Pfad A (PLAC-Leitsegment), Pfad A' (atomar globaler Hof-Lookup) und Pfad C (rich-PLAC-Bootstrap) für ALLE Event-Typen feuerten. „Schule für Bauwesen, Münster" → Pfad C bootstrappte Pseudo-Hof „Schule für Bauwesen". „Krankenhaus St. Joseph, Münster" analog. Asymmetrie zu Pfad B' (war seit Phase 4 schon auf RESI/PROP/CENS/OCCU beschränkt).
