@@ -850,7 +850,12 @@ function _hofVillageId(db, addr) {
 // nach Reimport (PLAC="Hof Schulze, Ochtrup") wieder "Ochtrup" herauskommt →
 // idempotente Dorf-Bestimmung über den GEDCOM-Roundtrip hinweg.
 function _hofVillageString(db, addr) {
-  const leafNorm = _normPlaceName(addr.split('\n')[0].trim());
+  // Konvention α: Hof-Identität = alles vor dem ersten Komma ODER Zeilenumbruch.
+  // Wichtig wenn addr Komma enthält ("Oster 82a, Wester 141"): split('\n')[0] würde
+  // den ganzen String zurückgeben, sodass segs[0]-Vergleich unten nie matcht und
+  // ev.place ungekürzt in counts landet → _ensureVillageChain legt PO "Oster 82a" an.
+  const _leaf = typeof _extractHofAddr === 'function' ? _extractHofAddr(addr) : addr.split('\n')[0].trim();
+  const leafNorm = _normPlaceName(_leaf);
   const counts = {};
   for (const p of Object.values(db.individuals || {})) {
     for (const ev of (p.events || [])) {
@@ -940,7 +945,10 @@ function _ensureHofFarmPO(db, addr) {
     const vStr = _hofVillageString(db, addr);
     if (vStr) villageId = _ensureVillageChain(pos, vStr);
   }
-  const leaf = addr.split('\n')[0].trim() || addr;
+  // Konvention α: Hof-Identität endet vor erstem Komma ODER Zeilenumbruch.
+  // Sichert, dass Farm-PO-Titel ("Oster 82a") gleich dem V2-hof.addrs[].value ist,
+  // damit _migrateFarmPOsToHofObjects über normTitle-Key den bestehenden V2-Hof findet.
+  const leaf = (typeof _extractHofAddr === 'function' ? _extractHofAddr(addr) : addr.split('\n')[0].trim()) || addr;
 
   let farmId = _findFarmPO(pos, leaf, villageId);
   if (farmId) {
