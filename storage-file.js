@@ -407,11 +407,24 @@ async function _finishLoad(db, text, filename) {
     // im File-Load-Pfad. _deriveHofAndMigrate (storage.js) bleibt für Auto-Load/Revert/Demo.
     await _deriveHofAndMigrate();
     if (typeof _linkGedcomEventsToPlaceObjects === 'function') {
-      const _recollapsed = _linkGedcomEventsToPlaceObjects(AppState.db); // ADR-024 Link-Pass + ADR-027 Pfad A/B/C
-      // ADR-028 v1030: Orts-/Hof-/Migrations-Meldungen in EINEN Toast zusammenfassen
-      // — vorher überschrieben sich drei setTimeout-Toasts (2000/2500/3500 ms).
-      // Mehrzeilig (\n) im showToast — User sieht alle Anreicherungen in einer Karte.
-      const _hs = AppState._lastLinkPassStats || {};
+      // Ersten Pass (aus _deriveHofAndMigrate) sichern, bevor der zweite Pass die Stats überschreibt.
+      // Der zweite Pass ist idempotent (alles schon verlinkt) → seine Stats wären alle 0.
+      const _firstStats = { ...(AppState._lastLinkPassStats || {}) };
+      const _recollapsedFirst = _firstStats.recollapsed || 0;
+
+      const _recollapsedSecond = _linkGedcomEventsToPlaceObjects(AppState.db); // idempotenter zweiter Pass
+
+      // Akkumulierte Stats beider Pässe für den Toast
+      const _recollapsed = _recollapsedFirst + _recollapsedSecond;
+      const _s2 = AppState._lastLinkPassStats || {};
+      const _hs = {
+        linkedHofPlac:          (_firstStats.linkedHofPlac          || 0) + (_s2.linkedHofPlac          || 0),
+        linkedHofAtomic:        (_firstStats.linkedHofAtomic        || 0) + (_s2.linkedHofAtomic        || 0),
+        linkedHofBootstrap:     (_firstStats.linkedHofBootstrap     || 0) + (_s2.linkedHofBootstrap     || 0),
+        linkedHofAddr:          (_firstStats.linkedHofAddr          || 0) + (_s2.linkedHofAddr          || 0),
+        linkedHofTypeBootstrap: (_firstStats.linkedHofTypeBootstrap || 0) + (_s2.linkedHofTypeBootstrap || 0),
+      };
+      AppState._lastLinkPassStats = _hs;
       const _hofTotal = (_hs.linkedHofPlac || 0) + (_hs.linkedHofAtomic || 0)
                       + (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofAddr || 0)
                       + (_hs.linkedHofTypeBootstrap || 0);
