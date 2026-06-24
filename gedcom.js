@@ -1667,9 +1667,17 @@ function _linkGedcomEventsToPlaceObjects(db) {
                 : (typeof console !== 'undefined' && console.log) ? console.log : null;
     _info && _info(`[PLACE] ${linked} Orte, ${linkedHofPlac} Höfe (PLAC), ${linkedHofAtomic} Höfe (atomar), ${linkedHofBootstrap} Höfe (Bootstrap), ${linkedHofAddr} Höfe (ADDR), ${linkedHofTypeBootstrap} Höfe (TypeBootstrap), ${recollapsed} neu kollabiert`);
   }
-  if (recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic || linkedHofTypeBootstrap) {
+  // Cache immer invalidieren wenn Links gesetzt wurden (UI muss aktuellen Stand zeigen).
+  if (linked || recollapsed || linkedHofPlac || linkedHofAddr || linkedHofBootstrap || linkedHofAtomic || linkedHofTypeBootstrap) {
     UIState._placesCache = null; UIState._placeRegistry = null;
     UIState._hofRegistry = null; UIState._hofCache = null;
+  }
+  // markChanged NUR wenn der GEDCOM-Writer tatsächlich anderen Content erzeugen würde:
+  //   recollapsed      → ev.place geändert, Writer schreibt neuen PLAC
+  //   Bootstrap/TypeBootstrap → neues hofObject angelegt, hofId gesetzt, PLAC+ADDR neu
+  // linkedHofPlac/Addr/Atomic = reine Runtime-Re-Links (ev.hofId/placeId runtime-only);
+  // buildPlacForGedcom produziert mit denselben IDs denselben String → kein Delta.
+  if (recollapsed || linkedHofBootstrap || linkedHofTypeBootstrap) {
     if (typeof markChanged === 'function') markChanged();
   }
   // Total-Mutations-Counter für die Lade-Meldung; recollapsed bleibt im Bewertungs-Kanal,
