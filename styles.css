@@ -2240,6 +2240,7 @@ input.field-invalid, select.field-invalid, textarea.field-invalid { border-color
   background: var(--surface2); color: var(--text-muted);
   border: 1px solid var(--border); white-space: nowrap; border-radius: 8px;
 }
+.btn--danger-text { color: var(--c-danger, #c00) !important; }
 .btn-dim  { background: var(--surface2); color: var(--text-dim);  border: 1px solid var(--border); }
 .btn-sec  { background: var(--surface2); color: var(--text);      border: 1px solid var(--border); }
 .btn-gold { background: var(--gold);     color: var(--bg);        border: none; }

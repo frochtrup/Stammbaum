@@ -580,6 +580,84 @@ function openFileOrDir() {
 }
 
 // ─────────────────────────────────────
+//  IDB-RESET / DIAGNOSE
+// ─────────────────────────────────────
+
+// Stufe 1: Ortsdaten in IDB löschen (placeObjects + hofObjects).
+// GEDCOM-Text, File-Handle und App-Einstellungen bleiben erhalten.
+// Nützlich wenn stammbaum-orte.json korrupt oder inkonsistent ist.
+async function resetPlaceDataIDB() {
+  if (!confirm('Ortsdaten (stammbaum-orte.json) aus dem lokalen Speicher löschen?\n\nDas GEDCOM bleibt erhalten. Die App lädt danach frisch — Orts-Verknüpfungen werden aus dem GEDCOM neu aufgebaut.')) return;
+  try {
+    await Promise.all([
+      idbDel('stammbaum_placeobjects'),
+      idbDel('stammbaum_hofobjects_v2'),
+    ]);
+    // In-Memory-Caches leeren
+    if (typeof AppState !== 'undefined' && AppState.db) {
+      AppState.db.placeObjects = {};
+      AppState.db.hofObjects   = {};
+    }
+    if (typeof UIState !== 'undefined') {
+      UIState._placeRegistry = null;
+      UIState._hofRegistry   = null;
+      UIState._placesCache   = null;
+      UIState._hofCache      = null;
+    }
+    if (typeof showToast === 'function') showToast('✓ Ortsdaten gelöscht — Seite wird neu geladen', 'success');
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('⚠ Löschen fehlgeschlagen: ' + (e?.message || e), 'error');
+  }
+}
+
+// Stufe 2: Alle lokalen App-Daten löschen (GEDCOM + Ortsdaten + File-Handle).
+// Entspricht einem Neustart als ob die App nie geöffnet worden wäre.
+// OneDrive-Login und Theme-Einstellung bleiben erhalten.
+async function resetAllLocalData() {
+  if (!confirm('ALLE lokalen App-Daten löschen?\n\nDas betrifft: GEDCOM-Text (IDB), Ortsdaten, Datei-Zugriffs-Rechte.\nNicht betroffen: OneDrive-Login, Theme.\n\nNach dem Löschen erscheint wieder der Startbildschirm.')) return;
+  try {
+    const idbKeys = [
+      'stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename',
+      'stammbaum_placeobjects', 'stammbaum_hofobjects_v2', 'fileHandle',
+    ];
+    await Promise.all(idbKeys.map(k => idbDel(k).catch(() => {})));
+    // Auch den IDB-Backup-Pre-ADR027-Key (datumsgekeyt) via Enumeration löschen
+    try {
+      const db = await _getIDB();
+      await new Promise((res, rej) => {
+        const tx = db.transaction('kv', 'readwrite');
+        const store = tx.objectStore('kv');
+        const req = store.openCursor();
+        req.onsuccess = e => {
+          const cur = e.target.result;
+          if (!cur) { res(); return; }
+          if (cur.key && typeof cur.key === 'string' && cur.key.startsWith('stammbaum_orte_backup_')) {
+            cur.delete();
+          }
+          cur.continue();
+        };
+        req.onerror = rej;
+      });
+    } catch (_) {}
+    // localStorage-Einträge (Altbestände)
+    ['stammbaum_ged', 'stammbaum_ged_backup', 'stammbaum_filename',
+     'stammbaum_hofobjects', 'stammbaum_backup_date', 'stammbaum_device_id',
+     'dedup_ignored', 'last_tab_sel',
+    ].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    // extraPlaces-Key (dateiname-abhängig) — alle stammbaum_extra_* entfernen
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('stammbaum_extra')) { try { localStorage.removeItem(k); } catch (_) {} }
+    }
+    if (typeof showToast === 'function') showToast('✓ Lokale Daten gelöscht — Seite wird neu geladen', 'success');
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    if (typeof showToast === 'function') showToast('⚠ Löschen fehlgeschlagen: ' + (e?.message || e), 'error');
+  }
+}
+
+// ─────────────────────────────────────
 //  THEME-VERWALTUNG
 // ─────────────────────────────────────
 function applyTheme(pref) {
