@@ -33,7 +33,10 @@ function _resolvedPlaceName(obj) {
       const fs = buildPlacForGedcom(obj, year);
       if (fs) return fs;
     }
-    if (obj.placeId && typeof getPlaceRegistry === 'function') {
+    // Wenn hofId gesetzt aber hofObject fehlt (stale), placeId allein NICHT schreiben —
+    // das würde den Hof-Adressteil verlieren und nur die Village-Hierarchie hinterlassen.
+    // Stattdessen auf obj.place zurückfallen (enthält ggf. ursprünglichen PLAC-String).
+    if (!obj.hofId && obj.placeId && typeof getPlaceRegistry === 'function') {
       const resolved = getPlaceRegistry().resolveAsOf(obj.placeId, year);
       if (resolved) return resolved;
     }

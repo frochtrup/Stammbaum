@@ -1161,7 +1161,11 @@ function buildPlacForGedcom(ev, year) {
   // adressiert. Falls ein Restbestand-Farm-PO doch noch übrig ist (Migration noch
   // nicht gelaufen), läuft die Kette inkl. Hof-Blatt durch — das ist akzeptable
   // Übergangs-Semantik (Hof landet in PLAC, Adress-Duplikat zu ev.addr).
-  if (ev.placeId && typeof _buildFormString === 'function') {
+  // GUARD: wenn hofId gesetzt aber hofObject fehlt (stale nach _mergeHofObjects),
+  // NICHT nur placeId schreiben — das würde den Hof-Adressteil ('Gronau') verlieren
+  // und nur die Village-Hierarchie ('Nordrhein-Westfalen, Deutschland') hinterlassen.
+  // Stattdessen null → _resolvedPlaceName fällt auf ev.place zurück.
+  if (!ev.hofId && ev.placeId && typeof _buildFormString === 'function') {
     return _buildFormString(ev.placeId, year);
   }
   return null;

@@ -26,7 +26,7 @@ Fünf Dimensionen leiten die Priorisierung:
 | 4.0–7.0 | `main` | Abgeschlossen — Details: CHANGELOG.md |
 | 8.0 | `v8-dev` | **Aktiv** |
 
-**sw-Version:** v1042 · Cache: `stammbaum-v1042` · `test-unit.js` = **881 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
+**sw-Version:** v1043 · Cache: `stammbaum-v1043` · `test-unit.js` = **881 Tests** grün · `test-csp.js` grün · `test-snapshot-place.js` grün · GEDCOM Roundtrip `net_delta=0` stabil · GRAMPS stabil · **Pre-Commit-Gate aktiv** (test-csp + test-unit + test-snapshot-place)
 
 **SCALE-TEST:** 20k-GEDCOM Roundtrip net_delta=0 ✅ · Parse 688 ms · Sort-Cache (v899) · Details: SCALE-TEST-BEFUNDE.md
 
@@ -214,7 +214,7 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v1024 *(stark veraltet — v1025–v1042 nicht dokumentiert)****
+**Handbuch-Stand: sw v1024 *(stark veraltet — v1025–v1043 nicht dokumentiert)****
 
 User-sichtbare Änderungen seit v1024, die nachzuziehen wären:
 - **„Hof-Zuweisungen prüfen"-Modal** (v1030/v1033): Klassen-Badges A/C/D (statt undifferenziert) + klassenspezifische Aktions-Matrix („Quelle schärfen" / „Hof anlegen" / „Variante zum Hof") statt „Ignorieren"-Pfad. Strikt nur Hof-Verdacht (Events mit ADDR), nicht alle PLAC-Lücken.
