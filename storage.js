@@ -38,7 +38,14 @@ async function _deriveHofAndMigrate() {
   // weil sie nicht in den GEDCOM-Events stehen. Merge ist additiv-per-id (überschreibt
   // nichts); die Migration findet geladene Farm-POs via _findFarmPO wieder (keine Dubletten).
   if (typeof loadPlaceObjectsFromIDB === 'function') { try { await loadPlaceObjectsFromIDB(); } catch(_) {} }
+  // V2-hofObjects (id-keyed, Schema 1) VOR _mergeHofObjects sichern.
+  // _mergeHofObjects erzeugt addr-keyed Altformat + würde V2-Einträge verwerfen.
+  // Nach dem Merge werden die V2-Höfe aus IDB wieder eingesetzt.
+  const _savedV2Hofs = Object.fromEntries(
+    Object.entries(AppState.db.hofObjects || {}).filter(([, h]) => h && h.schemaVersion === 1)
+  );
   AppState.db.hofObjects = _mergeHofObjects(_derivedHofObjectsFromDb(AppState.db), loadHofObjects());
+  Object.assign(AppState.db.hofObjects, _savedV2Hofs);
   if (typeof _migrateHofObjectsToPlaceObjects === 'function') _migrateHofObjectsToPlaceObjects(AppState.db); // ADR-026 Phase 2
   // ADR-027 P3: Farm/Building-POs → V2-hofObjects + Events repointen + Farm-POs löschen.
   // Idempotent — bei wiederholtem Lauf erkennt der Norm-Key-Match bestehende V2-Höfe
