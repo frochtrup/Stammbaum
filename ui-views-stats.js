@@ -24,7 +24,7 @@ function renderStatsTab() {
   for (const s of sources)  (s.media  || []).forEach(m => m.file && mediaSet.add(m.file));
 
   const placesMap = collectPlaces ? collectPlaces() : new Map();
-  const nPlaces = placesMap instanceof Map ? placesMap.size : (placesMap.length || 0);
+  const nPlaces = (placesMap?.size ?? placesMap?.length) || 0;
 
   // ── Vollständigkeit ──
   const hasBirth  = persons.filter(p => p.birth?.date || p.birth?.place).length;
