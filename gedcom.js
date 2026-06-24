@@ -979,15 +979,6 @@ function _ensureHofFarmPO(db, addr) {
     farmId = id;
   }
 
-  // RESI/PROP-Events dieser Adresse auf den Farm-Ort umhängen (addr behalten).
-  for (const p of Object.values(db.individuals || {})) {
-    for (const ev of (p.events || [])) {
-      if ((ev.type === 'RESI' || ev.type === 'PROP') && (ev.addr || '').trim() === addr
-          && ev.placeId !== farmId) {
-        ev.placeId = farmId;
-      }
-    }
-  }
   return farmId;
 }
 
@@ -1467,8 +1458,12 @@ function _linkGedcomEventsToPlaceObjects(db) {
     if (ev.placeId || !ev.place) return;
     if (!ev.place.includes(',')) {
       // Fall 1: atomarer Cache-String → placeObject per Identität, dann kollabieren.
+      // Farm/Building-POs sind keine Verwaltungseinheiten und dürfen nie als
+      // ev.placeId landen — sie werden via hofId+Pfad A/A'/B referenziert.
       const pid = reg.findByName(ev.place);
       if (!pid) return;
+      const _po1 = reg.byId[pid];
+      if (_po1 && (_po1.type === 'Farm' || _po1.type === 'Building')) return;
       const proj = _project(pid, year);
       if (!proj) return;
       ev.placeId = pid; linked++;
@@ -1502,6 +1497,7 @@ function _linkGedcomEventsToPlaceObjects(db) {
       // (Projektions-Invariante ADR-024), markChanged signalisiert das ehrlich.
       else if (cands.length === 1) {
         const cand = cands[0], po = reg.byId[cand];
+        if (po && (po.type === 'Farm' || po.type === 'Building')) return;
         if (po) {
           let ok = true;
           // (2) Existenz-Check
@@ -1957,11 +1953,27 @@ function _migrateFarmPOsToHofObjects(db) {
     }
     _farmIdToHofId[pid] = hofId;
   }
-  // 3. Pass 2: Events repointen — placeId Farm-PO → villageId, hofId neu setzen.
+  // 3. Pass 2: Events repointen — hofId neu setzen, placeId auf villageId.
+  // Primärer Lookup über _farmIdToHofId[ev.placeId] (Farm-PO-ID → hofId).
+  // Fallback: ev.addr-Norm-Match, weil _ensureHofFarmPO ev.placeId bewusst
+  // nicht mehr setzt (Farm-PO darf nie als ev.placeId landen — ADR-027 P3).
+  const _addrNormToHofId = {};
+  for (const [farmPid, hofId] of Object.entries(_farmIdToHofId)) {
+    const farmPo = pos[farmPid];
+    if (farmPo) {
+      const n = _normHofAddr(farmPo.title || '');
+      if (n && !_addrNormToHofId[n]) _addrNormToHofId[n] = hofId;
+    }
+  }
   let eventsRepointed = 0;
   const _repoint = ev => {
-    if (!ev || !ev.placeId) return;
-    const newHofId = _farmIdToHofId[ev.placeId];
+    if (!ev) return;
+    let newHofId = ev.placeId ? _farmIdToHofId[ev.placeId] : null;
+    if (!newHofId && ev.addr) {
+      const n = _normHofAddr(typeof _extractHofAddr === 'function'
+        ? _extractHofAddr(ev.addr) : ev.addr);
+      if (n) newHofId = _addrNormToHofId[n];
+    }
     if (!newHofId) return;
     ev.placeId = hofs[newHofId].villageId;
     ev.hofId   = newHofId;

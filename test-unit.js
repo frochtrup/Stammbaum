@@ -3304,7 +3304,7 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   eq(farm.note,  'Erbhof seit 1700',   'af.1: Hof-Notiz übernommen');
   eq(farm.enclosedBy[0].placeId, '@V_OCH@', 'af.1: enclosedBy = Dorf Ochtrup');
   var allEv = db.individuals['@I1@'].events.concat(db.individuals['@I2@'].events);
-  ok(allEv.every(ev => ev.placeId === farm.id), 'af.1: alle RESI/PROP-Events auf Farm umgehängt');
+  ok(allEv.every(ev => ev.placeId === null), 'af.1: ev.placeId unverändert (Farm-PO ist kein ev.placeId-Ziel)');
   ok(allEv.every(ev => ev.addr === 'Hof Schulze'), 'af.1: ev.addr als Postdetail erhalten');
 })();
 
@@ -3323,7 +3323,7 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
      'af.2: existierendes Farm-Objekt wiederverwendet (keine Dublette)');
   eq(db.placeObjects['@F_EXIST@'].lat,  52.213, 'af.2: Koordinaten ins existierende Farm-Objekt gemerged');
   eq(db.placeObjects['@F_EXIST@'].note, 'Erbhof', 'af.2: Notiz gemerged');
-  eq(db.individuals['@I1@'].events[0].placeId, '@F_EXIST@', 'af.2: Event auf existierendes Farm-Objekt umgehängt');
+  ok(db.individuals['@I1@'].events[0].placeId == null, 'af.2: ev.placeId unverändert (Farm-PO ist kein ev.placeId-Ziel)');
 })();
 
 // ── Scope-Trennung: gleicher Farm-Name, anderes Dorf → richtiges Objekt getroffen ──
@@ -3341,7 +3341,7 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   API._migrateHofObjectsToPlaceObjects(db);
   eq(db.placeObjects['@F_B@'].lat, 52.1, 'af.3: Koords ins Borghorster Farm-Objekt (richtiger Scope)');
   eq(db.placeObjects['@F_A@'].lat, null, 'af.3: Ochtruper gleichnamiges Farm-Objekt unberührt');
-  eq(db.individuals['@I1@'].events[0].placeId, '@F_B@', 'af.3: Event auf Borghorster Farm umgehängt');
+  ok(db.individuals['@I1@'].events[0].placeId == null, 'af.3: ev.placeId unverändert (Farm-PO ist kein ev.placeId-Ziel)');
 })();
 
 // ── Idempotenz: zweiter Lauf erzeugt keine Dubletten, placeId stabil ──
@@ -3405,7 +3405,7 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   API._migrateHofObjectsToPlaceObjects(db);
   var farm = Object.values(db.placeObjects).filter(po => po.type === 'Farm')[0];
   eq(farm.enclosedBy[0].placeId, '@V_OCH@', 'af.7: Farm enclosedBy = häufigstes Dorf');
-  ok(db.individuals['@I1@'].events[0].placeId === farm.id, 'af.7: Event mit Dorf-placeId → auf Farm umgehängt');
+  ok(db.individuals['@I1@'].events[0].placeId === '@V_OCH@', 'af.7: bestehendes Village-placeId bleibt erhalten (Farm-PO überschreibt nicht)');
 })();
 
 // ── Dorf-Promotion: kein Dorf-placeObject (GEDCOM) → aus ev.place anlegen ──
@@ -3552,7 +3552,7 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   eq(po.lat,  52.1,     'af.15: Koordinaten gesetzt');
   eq(po.note, 'frisch', 'af.15: Notiz gesetzt');
   ok((po.enclosedBy || []).length === 1, 'af.15: Dorf (Greven) als Enclosure angelegt');
-  eq(API.AppState.db.individuals['@I1@'].events[0].placeId, fid, 'af.15: Event auf Farm-PO verknüpft');
+  ok(API.AppState.db.individuals['@I1@'].events[0].placeId == null, 'af.15: ev.placeId bleibt null (Farm-PO ist kein ev.placeId-Ziel; Link-Pass setzt villageId)');
   // Idempotent: zweiter Aufruf aktualisiert dasselbe PO
   var fid2 = API.upsertHofPO('Neuer Hof', { note: 'aktualisiert' });
   eq(fid2, fid, 'af.15: zweiter Aufruf → selbes Farm-PO (keine Dublette)');
