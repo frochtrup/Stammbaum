@@ -387,6 +387,7 @@ async function _finishLoad(db, text, filename) {
       setTimeout(() => showToast('GRAMPS-Export erkannt — Ortshierarchie und Tags nicht verfügbar; GRAMPS XML empfohlen'), 1200);
     }
     AppState._currentFilename = filename;
+    AppState._placeNormToastShown = false; // Toast einmal pro geladener Datei erlauben
     AppState.db.extraPlaces = loadExtraPlaces();
     { const _ppt = AppState.db.parsedPlaceTrans || {};
       for (const [_pp, _tt] of Object.entries(_ppt)) {
@@ -431,7 +432,13 @@ async function _finishLoad(db, text, filename) {
       const _ignoredCount = (typeof _migrateLegacyIgnoredHofKeys === 'function')
         ? _migrateLegacyIgnoredHofKeys() : 0;
       const _lines = [];
-      if (_recollapsed > 0) {
+      // Recollapse = Normalisierung bestehender PLAC-Strings gegen das Ortsmodell.
+      // Passiert auf JEDEM Laden der Originaldatei (ev.place kommt jedes Mal aus dem
+      // Rohtext; ev.placeId ist runtime-only). Kein separater User-Schritt nötig —
+      // beim nächsten Speichern wird die normalisierte Form automatisch geschrieben.
+      // Daher: einmal pro Session anzeigen (Session-Flag), nicht bei jedem Laden.
+      if (_recollapsed > 0 && !AppState._placeNormToastShown) {
+        AppState._placeNormToastShown = true;
         _lines.push(`🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst.`);
       }
       // Nur wenn neue Höfe ERSTELLT wurden (Bootstrap/TypeBootstrap) → Aktion nötig.
@@ -551,6 +558,7 @@ async function _loadGRAMPS(file) {
     const parsed = await parseGRAMPS(file);
     setDb(parsed);
     AppState._currentFilename = file.name;
+    AppState._placeNormToastShown = false;
     AppState.db.extraPlaces = loadExtraPlaces();
     // P2 Item 7: kein pname → extraPlaces.trans-Backfill mehr — placeObjects.pnames
     // ist single source of truth, Writer + UI lesen direkt von dort.
@@ -575,6 +583,7 @@ async function _loadGRAMPS(file) {
     // Persist filename in localStorage for display
     const filename = file.name;
     AppState._currentFilename = filename;
+    AppState._placeNormToastShown = false;
     idbPut('stammbaum_filename', filename).catch(() => {});
     updateSaveIndicator();
     updateTopbarTitle(filename, true);
