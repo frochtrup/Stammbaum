@@ -434,7 +434,11 @@ async function _finishLoad(db, text, filename) {
       if (_recollapsed > 0) {
         _lines.push(`🏘 ${_recollapsed} Ortsangabe${_recollapsed === 1 ? '' : 'n'} an das angereicherte Ortsmodell angepasst.`);
       }
-      if (_hofTotal > 0) {
+      // Nur wenn neue Höfe ERSTELLT wurden (Bootstrap/TypeBootstrap) → Aktion nötig.
+      // linkedHofPlac/Addr/Atomic sind reine Re-Links bestehender Höfe (jeder Lade-
+      // Vorgang, da ev.hofId runtime-only) — kein Toast, kein „Bitte speichern".
+      const _newHofs = (_hs.linkedHofBootstrap || 0) + (_hs.linkedHofTypeBootstrap || 0);
+      if (_hofTotal > 0 && _newHofs > 0) {
         const _detail = [];
         if (_hs.linkedHofBootstrap)     _detail.push(`${_hs.linkedHofBootstrap} aus rich-PLAC neu`);
         if (_hs.linkedHofTypeBootstrap) _detail.push(`${_hs.linkedHofTypeBootstrap} aus RESI/PROP-Adresse neu`);
