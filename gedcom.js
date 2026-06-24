@@ -1145,12 +1145,19 @@ function buildPlacForGedcom(ev, year) {
     const hof = AppState.db.hofObjects[ev.hofId];
     if (typeof _isHofObjectV2 === 'function' && _isHofObjectV2(hof)) {
       const reg = (typeof getHofRegistry === 'function') ? getHofRegistry() : null;
-      const hofAddr = reg ? reg.resolveAddrAsOf(ev.hofId, year) : '';
+      const hofAddrFull = reg ? reg.resolveAddrAsOf(ev.hofId, year) : '';
+      // Komma-Schutz: PLAC nutzt ',' als Hierarchie-Separator. Wenn die Hof-Adresse
+      // selbst ein Komma enthält (Altbestand „Oster 82a, Wester 141"), nur den Teil
+      // bis zum ersten Komma in PLAC schreiben. ADDR trägt den vollen Wert; beim
+      // Re-Import findet Pfad B (ADDR-basiert) den Hof wieder.
+      const hofAddr = hofAddrFull.includes(',')
+        ? (typeof _extractHofAddr === 'function' ? _extractHofAddr(hofAddrFull) : hofAddrFull.split(',')[0].trim())
+        : hofAddrFull;
       // Dorf-Hierarchie als reine Verwaltungs-Kette. Wenn villageId fehlt oder
       // unauflösbar: nur Hof-Adresse zurückgeben (besser als nichts).
       let villagePart = null;
       if (hof.villageId && typeof _buildFormString === 'function') {
-        villagePart = _buildFormString(hof.villageId, year);  // ohne opts → Default-Verhalten
+        villagePart = _buildFormString(hof.villageId, year);
       }
       if (hofAddr && villagePart) return hofAddr + ', ' + villagePart;
       return hofAddr || villagePart || null;
