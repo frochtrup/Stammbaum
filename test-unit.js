@@ -5856,6 +5856,93 @@ group('(am) ADR-027 P5 Hof-Review');
   eq(hofIds.length, 1, 'ax-4c: genau ein Hof — keine Pseudo-Schule');
 })();
 
+// ─── Gruppe (ay) — Komma-Hof Round-Trip: „Oster 82a, Wester 141" stabil ────
+// Fehlerfall: buildPlacForGedcom schrieb vollständige Adresse „Oster 82a, Wester 141"
+// in PLAC; Komma wurde beim Re-Import als Hierarchie-Separator geparst → Pseudo-PO
+// „Oster 82a" angelegt → zweiter Save: „Oster 82a, Oster 82a".
+
+// Ochtrup-Hierarchie (vereinfacht: 1 Ebene)
+var _ayBase = {
+  '_po_o': { id:'_po_o', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
+};
+
+// ay-1: buildPlacForGedcom Pfad 1 — Komma in hofAddr wird auf _extractHofAddr abgeschnitten
+(function() {
+  API.setDb({
+    individuals:{}, families:{}, extraPlaces:{},
+    placeObjects: JSON.parse(JSON.stringify(_ayBase)),
+    hofObjects:{
+      '_hof_oster': { id:'_hof_oster', villageId:'_po_o', schemaVersion:1,
+        addrs:[{ value:'Oster 82a', dateFrom:null, dateTo:null }] },
+    },
+  });
+  var ev = { type:'RESI', hofId:'_hof_oster', placeId:'_po_o', place:'Oster 82a, Ochtrup', addr:'Oster 82a, Wester 141', date:'1828' };
+  var plac = API.buildPlacForGedcom(ev, 1828);
+  ok(plac && !plac.startsWith('Oster 82a, Wester 141'), 'ay-1a: volle Komma-Adresse nicht in PLAC');
+  ok(plac && plac.startsWith('Oster 82a,'), 'ay-1b: extrahierte Adresse (ohne Wester) steht in PLAC');
+  ok(plac && plac.includes('Ochtrup'), 'ay-1c: Dorf-Teil ist noch vorhanden');
+})();
+
+// ay-2: Zweiter Link-Pass — V2-hofObjects bleiben erhalten; Pfad A linkt „Oster 82a, Ochtrup"
+//        korrekt auf bestehenden Hof (kein neues Pseudo-PO „Oster 82a")
+(function() {
+  var prevHofObjects = {
+    '_hof_oster': { id:'_hof_oster', villageId:'_po_o', schemaVersion:1,
+      addrs:[{ value:'Oster 82a', dateFrom:null, dateTo:null }] },
+  };
+  API.setDb({
+    individuals:{
+      '@I1@': { id:'@I1@', name:'T', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+        events:[
+          { type:'RESI', place:'Oster 82a, Ochtrup', addr:'Oster 82a, Wester 141', date:'1828' },
+        ] },
+    },
+    families:{}, extraPlaces:{},
+    placeObjects: JSON.parse(JSON.stringify(_ayBase)),
+    hofObjects: JSON.parse(JSON.stringify(prevHofObjects)),
+  });
+  API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+  var ev = API.AppState.db.individuals['@I1@'].events[0];
+  eq(ev.hofId, '_hof_oster', 'ay-2a: bestehender Hof via Pfad A gefunden');
+  eq(ev.placeId, '_po_o',    'ay-2b: Dorf-placeId korrekt');
+  // Kein Pseudo-PO „Oster 82a" angelegt
+  var newPos = Object.values(API.AppState.db.placeObjects).filter(p => p.title === 'Oster 82a');
+  eq(newPos.length, 0, 'ay-2c: kein Pseudo-placeObject „Oster 82a" angelegt');
+  // PLAC-Projektion stabil
+  var plac = API.buildPlacForGedcom(ev, 1828);
+  ok(plac && plac.startsWith('Oster 82a,'), 'ay-2d: PLAC beginnt mit Oster 82a');
+  ok(plac && plac.includes('Ochtrup'),      'ay-2e: PLAC enthält Ochtrup');
+  ok(!plac.includes('Oster 82a, Oster 82a'), 'ay-2f: kein doppeltes Oster 82a');
+})();
+
+// ay-3: Drei-Pass-Stabilität — PLAC nach Pass 2 und Pass 3 identisch
+(function() {
+  // Simuliert Zustand NACH erstem Save: PLAC = „Oster 82a, Ochtrup"
+  var hofs = {
+    '_hof_oster': { id:'_hof_oster', villageId:'_po_o', schemaVersion:1,
+      addrs:[{ value:'Oster 82a', dateFrom:null, dateTo:null }] },
+  };
+  function runPass(prevHofs) {
+    API.setDb({
+      individuals:{
+        '@I1@': { id:'@I1@', name:'T', sex:'M', birth:{}, chr:{}, death:{}, buri:{},
+          events:[{ type:'RESI', place:'Oster 82a, Ochtrup', addr:'Oster 82a, Wester 141', date:'1828' }],
+        },
+      },
+      families:{}, extraPlaces:{},
+      placeObjects: JSON.parse(JSON.stringify(_ayBase)),
+      hofObjects: JSON.parse(JSON.stringify(prevHofs)),
+    });
+    API._linkGedcomEventsToPlaceObjects(API.AppState.db);
+    var ev = API.AppState.db.individuals['@I1@'].events[0];
+    return { plac: API.buildPlacForGedcom(ev, 1828), hofs: API.AppState.db.hofObjects };
+  }
+  var r2 = runPass(hofs);
+  var r3 = runPass(r2.hofs);
+  eq(r2.plac, r3.plac, 'ay-3a: PLAC nach Pass 2 und Pass 3 identisch (stabil)');
+  ok(r3.plac && !r3.plac.includes('Oster 82a, Oster 82a'), 'ay-3b: kein „Oster 82a, Oster 82a" in Pass 3');
+})();
+
 // ── Zusammenfassung ───────────────────────────────────────────────────────────
 console.log('');
 if (_fail === 0) {
