@@ -9,6 +9,36 @@ Aktuelle Planung: `ROADMAP.md`
 
 ---
 
+### Session 2026-07-03 — ADR-028 Phase 6 Cleanup + Handbuch aktualisiert (sw v1057)
+
+**Kontext:** Abschluss der ADR-028-Nacharbeiten nach der Farm-PO-Invariante (v1055) — alle als „offen" markierten Cleanup-Punkte aus Phase 6 erledigt. Parallel: Handbuch-Update für alle user-relevanten Neuerungen seit v1024.
+
+**v1057 — ADR-028 Phase 6 Cleanup (refactor)**
+
+- **Reverse-Migrator `_migrateHofObjectsBackToFarmPOs` entfernt.** Das ADR-027-Rollback-Sicherheitsnetz wurde nie gebraucht; nach >50 Versionen ohne Rollback-Bedarf ersatzlos gelöscht. 8 zugehörige Tests (Gruppe al-5) mitentfernt. Testanzahl: 892 → 884.
+- **`_ensureHofFarmPO`-Docstring korrigiert.** Erwähnte fälschlich, die Funktion setze `ev.placeId` auf Farm-POs — das wurde in v1055 entfernt (Farm-PO-Invariante). Docstring beschreibt jetzt korrekt: kein ev.placeId-Repointing.
+- **`buildHofIndex` Z.3444: LEGACY-Kommentar ergänzt.** `if (!hof.placeId && _isFarmPlaceId(ev.placeId))` ist nach v1055 toter Code für GEDCOM- und GRAMPS-Daten (GRAMPS: Farm-POs vor buildHofIndex durch `_migrateFarmPOsToHofObjects` umgestellt). Zeile bleibt als Regressions-Guard für Altdaten-Snapshots.
+- **Test af.14 → af.14-legacy umbenannt.** Testfall setzt künstlich `placeId:'@F2@'` auf ein Event — nach v1055 in der Praxis nicht mehr möglich. Kommentar erklärt das ADR-026-Altformat.
+- **`_repoint`-Kommentar in `_migrateFarmPOsToHofObjects` präzisiert.** Primärer Lookup `_farmIdToHofId[ev.placeId]` ist für GEDCOM-Daten toter Code nach v1055, für GRAMPS-Daten (GRAMPS-Parser setzt ev.placeId direkt auf Farm-PO vor der Migration) noch aktiv — Dual-Pfad bleibt; Kommentar unterscheidet die zwei Pfade.
+
+**Doku-Commit (kein sw-Bump) — HANDBUCH.html auf sw v1057**
+
+Kap. 15 (Höfe und Wohnorte):
+- Hof-Zuweisungen-prüfen: Tabelle mit Klassen-Badges A/C/D und klassenspezifischen Aktionen — kein undifferenziertes „Ignorieren" mehr (v1033).
+- Numerische Sortierung der Höfe-Liste ergänzt (v1032).
+- Neuer Abschnitt „Wie erkennt die App eine Hof-Adresse?": Konvention α mit Beispieltabelle + Konvention für mehrere Höfe gleicher Hausnummer (v1034/v1035).
+- Neuer Abschnitt „Welche Ereignis-Typen erzeugen automatisch Höfe?": RESI/PROP/CENS/OCCU ja — BIRT/DEAT/MARR/BURI/EDUC/GRAD nein (v1042).
+- Personendetail: nur Dorf bei Hof-Events, kein Hof-Duplikat in der Ort-Hierarchie (v1041).
+- Lade-Toast: einmalig pro geladener Datei, Mehrzeilen-Zusammenfassung (v1047/v1049).
+
+Kap. 21 (FAQ):
+- Neuer Eintrag „Diagnose und Wartung" mit Beschreibungstabelle beider Reset-Aktionen in Einstellungen (v1044).
+- SW-Update-FAQ: Auto-Reload-Hinweis ergänzt (v1019).
+
+Beide Versionsfelder: v1024 → v1057, Juni → Juli 2026. ROADMAP Handbuch-Stand: veraltet → aktuell.
+
+---
+
 ### Session 2026-06-24 — Farm-PO-Invariante durchgesetzt + Roundtrip-Stabilität (sw v1043–v1055)
 
 **Kontext:** Mehrere User-Befunde nach v1042 betrafen denselben Kern: Farm-POs flossen als `ev.placeId` in den Link-Pass und die REPROJECT-Logik, obwohl die ADR-027/028-Invariante klar vorschreibt: `ev.placeId` = Village/Unknown-PO, `ev.hofId` = V2-hofObject. Die Bugkette v1043–v1055 behebt strukturell alle Symptome dieses Bruchs.
