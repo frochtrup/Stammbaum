@@ -9,17 +9,18 @@ Referenz-Katalog des erreichten v8-Umfangs. Prioritäten: **[K]**ern (muss), **[
 ## 1. Feature-Katalog
 
 ### 1.1 Navigation & Views
-- **[K]** Globale Bottom-Navigation, 6 Tabs: Baum · Personen · Familien · Quellen · Orte · Aufgaben (+ Suche).
+- **[K]** Rollenbasierte Navigation ([21 §1](21-UI-UX.md)): Entitäten · Ansichten (Lenses) · Arbeitsflächen. Mobile: Bottom-Nav **Baum · Personen · Suche · Aufgaben · Mehr** + Entitäts-Segment-Umschalter. Desktop: beschriftete Sidebar + Multi-Pane + Command-Palette (⌘K).
+- **[K]** Einheitlicher Lens-Umschalter (Baum/Karte/Zeitleiste/Statistik/Story) statt verstreuter Diagramm-Toggles ([21 §4](21-UI-UX.md)).
 - **[K]** History-Navigation (Zurück/Vorwärts, herkunftsbewusst), Swipe-Right auf Mobile.
-- **[K]** Globale Suche über Personen/Familien/Quellen/Orte, gruppierte Ergebnisse.
+- **[K]** Globale Suche (erstklassiges Ziel) über Personen/Familien/Quellen/Orte, gruppierte Ergebnisse.
 - **[S]** Proband (Startperson) konfigurierbar; „Zum Probanden"-Navigation.
 
 ### 1.2 Laden & Speichern
 - **[K]** GEDCOM lokal öffnen (iOS `accept="*/*"`, Chrome `showOpenFilePicker`).
 - **[K]** GRAMPS XML öffnen (read+write).
-- **[K]** Auto-Load der letzten Datei aus Browser-Speicher.
-- **[K]** Speichern: iOS Share-Sheet · Chrome direktes Datei-Schreiben · Safari/Firefox Download + Zeitstempel-Backup.
-- **[S]** OneDrive: verbinden (PKCE OAuth), öffnen, speichern (Konflikterkennung via ETag/If-Match), Foto-/Dokumente-Ordner.
+- **[K]** Speichern über ein Export-Rohr, zwei Tiers: in-place (Desktop/Android FS-Access) · Share-Sheet/Download (iOS/Safari/Firefox). Details: [14](14-Dateihandling.md).
+- **[K]** Auto-Load der Arbeitskopie beim Start (Absturz-Recovery, Offline).
+- **[S]** Geräte-Sync über OS-Sync-Ordner (iCloud/OneDrive-Ordner) — App-verwaltete Cloud entfällt ([14 §5](14-Dateihandling.md)); optionaler Cloud-Adapter später möglich.
 - **[K]** Offline-Betrieb (Service Worker + Manifest), Offline-Indikator.
 - **[S]** Demo-Modus.
 - **[S]** DSGVO-Export (Anonymisierung), GED7-Export, Strict-Export (je opt-in — [13](13-Interop-Roundtrip.md)).

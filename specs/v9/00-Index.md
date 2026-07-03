@@ -24,6 +24,7 @@ Dann je nach Arbeitsschwerpunkt.
 | **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |
 | **12** | [Forschungsdaten](12-Forschungsdaten.md) | Kern | Aufgaben, Protokoll, Evidenzmodell, Hypothesen, Projekte |
 | **13** | [Interoperabilität & Roundtrip](13-Interop-Roundtrip.md) | Kern | GEDCOM 5.5.1/7.0/Strict, GRAMPS, Anonymisierung, Passthrough-Prinzip, Roundtrip-Anforderung |
+| **14** | [Dateihandling](14-Dateihandling.md) | Kern/Betrieb | Arbeitskopie, ein Export-Rohr, FileService (2 Save-Tiers), OS-Sync statt App-Cloud, Medien |
 | **20** | [Funktionen](20-Funktionen.md) | App | Feature-Katalog, Formulare, Validierungsregeln, Ausgaben/Reports |
 | **21** | [UI/UX](21-UI-UX.md) | App | View-Hierarchie, View-State-/Lifecycle-Kontrakt, Responsive, Design-System, Symbolkonventionen |
 | **30** | [NFR & Persistenz](30-NFR-und-Persistenz.md) | Betrieb | Performance/Skalierung, Offline/PWA, Sicherheit, Datenschutz, Barrierefreiheit, Speicher-/Sync-/Konfigurationsmodell |
@@ -36,9 +37,9 @@ Dann je nach Arbeitsschwerpunkt.
 02 Zielarchitektur ───────────────┤
                                   │
 Kern:  10 Domänenmodell ──┬──► 11 Orte/Höfe ──┐
-                          └──► 12 Forschung   ├──► 13 Interop/Roundtrip
+                          └──► 12 Forschung   ├──► 13 Interop/Roundtrip ──► 14 Dateihandling
                                               │
-App:   20 Funktionen ◄── 10,11,12,13          │
+App:   20 Funktionen ◄── 10,11,12,13,14       │
        21 UI/UX      ◄── 20                    │
                                               │
 Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
@@ -53,7 +54,9 @@ Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
 |---|---|---|
 | 00–03 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt |
 | 10–13 | 🟢 Entwurf vollständig | aus v8-Stand extrahiert, invariant markiert |
-| 20–21 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |
+| 14 | 🟢 Entwurf vollständig | Dateihandling radikal vereinfacht (Arbeitskopie + OS-Sync) |
+| 20 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |
+| 21 | 🟢 Entwurf vollständig | Navigation neu (Rollenmodell); Mobile Bottom-Nav + Desktop Sidebar/Multi-Pane/⌘K; Konsistenz-Befunde B1–B7 |
 | 30 | 🟢 Entwurf vollständig | NFR-Baseline aus v8 |
 | 31 | 🟢 Entwurf vollständig | VS Code + GitHub + Actions; Framework-Wahl in 02 noch 🟡 |
 

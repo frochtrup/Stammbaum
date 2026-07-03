@@ -160,7 +160,7 @@ Note { id, type: 'NOTE' | 'SNOTE', text }
 MediaRef { file, title, /* + strukturierte Sub-Attribute wo relevant */ }
 ```
 
-`MediaRef.file` ist ein **relativer Pfad** (bezogen auf den Datei-Ordner bzw. `od_base_path`, siehe [30 §3](30-NFR-und-Persistenz.md)) — die einzige Wahrheitsquelle für Medien.
+`MediaRef.file` ist ein **relativer Pfad** (bezogen auf den Datei-Ordner / Sync-Ordner, siehe [14 §7](14-Dateihandling.md)) — die einzige Wahrheitsquelle für Medien.
 
 ---
 

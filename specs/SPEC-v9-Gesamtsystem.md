@@ -17,10 +17,11 @@ Die ursprüngliche Gesamtspezifikation (alle 20 Abschnitte in einer Datei) ist i
 | 11 | [Orte, Höfe & Identitätsauflösung](v9/11-Orte-Hoefe-Identitaet.md) | Kern |
 | 12 | [Forschungsdaten](v9/12-Forschungsdaten.md) | Kern |
 | 13 | [Interoperabilität & Roundtrip](v9/13-Interop-Roundtrip.md) | Kern |
+| 14 | [Dateihandling](v9/14-Dateihandling.md) | Kern/Betrieb |
 | 20 | [Funktionen](v9/20-Funktionen.md) | App |
 | 21 | [UI/UX](v9/21-UI-UX.md) | App |
 | 30 | [NFR & Persistenz](v9/30-NFR-und-Persistenz.md) | Betrieb |
 
-Neu gegenüber der Monolith-Fassung: **02 — Zielarchitektur v9** (Ansatz C: framework-freier Domänenkern + reaktive UI-Schale + imperative Diagramm-Inseln).
+Neu gegenüber der Monolith-Fassung: **02 — Zielarchitektur v9** (Ansatz C: framework-freier Domänenkern + reaktive UI-Schale + imperative Diagramm-Inseln), **31 — Dev-Umgebung** (VS Code + GitHub + Actions) und **14 — Dateihandling** (radikal vereinfacht: Arbeitskopie + ein Export-Rohr + OS-Sync statt App-Cloud).
 
 Referenz-Detailtiefe (Tag-Tabellen, ADR-Begründungen, Sprint-Historie des erreichten v8-Stands) bleibt in `GEDCOM.md`, `ARCHITECTURE.md`, `DATAMODEL.md`, `UI-DESIGN.md`, `ROADMAP.md`, `CHANGELOG.md`.

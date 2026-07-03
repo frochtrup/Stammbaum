@@ -36,6 +36,14 @@ v8: `stammbaum_hofobjects` (V1) parallel zu `hofObjects` V2 als Migrationsrest.
 v8: Rest-Bestand (`showDetail` ~275 Z., `_pdetLifeData` ~195 Z.) trotz mehrerer Split-Runden.
 → **v9:** Funktionsgrößen-Disziplin von Anfang an; Detail-Rendering datengetrieben komponieren.
 
+**§9 — App-verwaltete Cloud-Sync + komplexes Dateihandling.**
+v8: ~5 Module (`storage.js`, `storage-file.js`, `onedrive-auth.js`, `onedrive-import.js`, `onedrive.js`) mit OneDrive Graph API, OAuth/Token, `od_base_path`, ETag/If-Match, Ordner-Picker, `filemap`, automatischen Timestamp-Backups und mehreren Text-Caches — der komplexeste, am wenigsten essenzielle Teil.
+→ **v9:** **ein** `FileService` + Kern-Serializer. Arbeitskopie (IDB) + zwei Save-Tiers; Geräte-Sync macht das OS (Sync-Ordner). App-Cloud nur noch als optionaler Adapter hinter derselben Schnittstelle. Vollständig: [14 Dateihandling](14-Dateihandling.md).
+
+**§10 — Inkonsistente, evolutionär gewachsene Navigation.**
+v8: 6 Bottom-Nav-Slots für ~11 Ziele; Suche/Statistik ohne Nav-Button; Höfe/Karte als versteckte Sub-Modi des Orte-Tabs; Entität + Arbeitsfläche + Visualisierung in einer flachen Leiste vermischt; Diagramm-Toggles als verstreute Glyphen mit starren Ordnungsregeln; Desktop nur „Mobile + Spalten" mit `!important`-Vollbild-Hacks; Doku und Code driften (bnav-search vs. bnav-tasks).
+→ **v9:** Rollenmodell (Entitäten / Ansichten-Lenses / Arbeitsflächen), je Form-Faktor eigenständig designt (Mobile Bottom-Nav Baum·Personen·Suche·Aufgaben·Mehr; Desktop Sidebar + Multi-Pane + ⌘K), ein Lens-Umschalter. Vollständig: [21 §1–§4 + §9](21-UI-UX.md).
+
 ---
 
 ## Was bewusst erhalten bleibt (keine Altlast)

@@ -31,7 +31,7 @@ Akzeptanzkriterien für jede Änderung. Der Neuaufsatz wählt die *technische Um
 Parse → Edit → Write → Parse muss stabil sein: `out1 === out2` und `net_delta = 0` gegenüber der Ur-Quelle (bei idempotenten Speichervorgängen). Jede bewusste Abweichung (HEAD-Rewrite, Anonymisierung) ist explizit dokumentiert. Kein unbekanntes Feld darf verloren gehen (Passthrough-Prinzip, [13](13-Interop-Roundtrip.md)).
 
 **LP-2 — Lokal-First.**
-Vollständig funktionsfähig ohne Netzwerk und ohne Server. Alle Nutzerdaten lokal (Datei + Browser-Speicher). Cloud (OneDrive) ist optionaler Sync-Kanal, nie Voraussetzung.
+Vollständig funktionsfähig ohne Netzwerk und ohne Server. Alle Nutzerdaten lokal (Datei + Browser-Arbeitskopie). Geräte-Sync macht das OS (Sync-Ordner), nicht die App; ein optionaler Cloud-Adapter ([14 §5](14-Dateihandling.md)) ist möglich, nie Voraussetzung.
 
 **LP-3 — Datei ist die Wahrheit für Genealogie.**
 Genealogische Inhalte leben in der GEDCOM-/GRAMPS-Datei. App-interne Ableitungen (Auflösungsergebnisse, Caches) werden nicht in die Datei geschrieben, wenn sie deterministisch re-derivierbar sind.
@@ -52,7 +52,7 @@ Bedienung primär für Touch/Portrait; Desktop bietet zusätzliche Dichte (Zweis
 WCAG 2.1 AA (0 Violations). CSP ohne `unsafe-inline`/`eval`. Konsequentes Escaping aller Nutzerstrings. Keine Information nur über Farbe.
 
 **LP-9 — Kein Datenverlust bei Multi-Device.**
-Gleichzeitige Bearbeitung auf mehreren Geräten darf nicht zu stillem last-write-wins-Verlust führen. Konflikte werden erkannt (Revision/Device bzw. ETag/If-Match) und zur Auflösung vorgelegt (Union-Merge bzw. Überschreib-Dialog).
+Gleichzeitige Bearbeitung auf mehreren Geräten darf nicht zu stillem last-write-wins-Verlust führen. Für `orte.json`: Erkennung per Revision/Device → Union-Merge ([11 §2](11-Orte-Hoefe-Identitaet.md)). Für die Genealogie-Datei: Konflikte sind OS-Konflikte des Sync-Ordners; Milderung per Disk-Timestamp-Hinweis beim Öffnen ([14 §5](14-Dateihandling.md)).
 
 ---
 
@@ -62,16 +62,16 @@ Gleichzeitige Bearbeitung auf mehreren Geräten darf nicht zu stillem last-write
 
 **Unterstützte Umgebungen (verifiziert in v8):**
 
-| Plattform | Browser | Laden | Speichern |
+| Plattform | Browser | Laden | Speichern (Save-Tier, [14](14-Dateihandling.md)) |
 |---|---|---|---|
-| iPhone/iPad iOS 17+ | Safari, Chrome | ✅ | OneDrive (primär) / Share-Sheet (lokal) |
-| macOS | Safari | ✅ | OneDrive / Download + Backup |
-| macOS | Chrome | ✅ | OneDrive / direktes Datei-Schreiben |
-| macOS | Firefox | ✅ | OneDrive / Download + Backup |
-| Windows/Android | Chrome/Edge | ✅ | OneDrive (primär) |
+| iPhone/iPad iOS 17+ | Safari, Chrome | ✅ | Tier 2: Share-Sheet → „In Dateien sichern" |
+| macOS | Safari | ✅ | Tier 2: Share-Sheet / Download |
+| macOS | Chrome/Edge | ✅ | Tier 1: in-place (FS-Access) |
+| macOS | Firefox | ✅ | Tier 2: Download |
+| Windows/Android | Chrome/Edge | ✅ | Tier 1: in-place (FS-Access) |
 
 **Externe Abhängigkeiten (alle optional / lokal gebündelt):**
-- **Microsoft Graph API** — OneDrive-Sync (OAuth 2.0 PKCE, kein Backend).
+- **Geräte-Sync** — über OS-Sync-Ordner (iCloud/OneDrive-Ordner), *nicht* app-verwaltet ([14](14-Dateihandling.md)). Optionaler Cloud-Adapter später möglich.
 - **Nominatim (OSM)** — Geocoding (opt-in, Einzel + Batch).
 - **GOV (gov.genealogy.net)** — historische Verwaltungszugehörigkeiten.
 - **Kartenkacheln (OSM)** — Kartenansicht.

@@ -20,7 +20,7 @@
 **NFR-3 Sicherheit (LP-8):**
 - CSP `script-src 'self'` ohne `unsafe-inline`/`eval` (keine Inline-Styles/-Handler; Event-Delegation + CSSOM bzw. Framework-Bindings).
 - Konsequentes HTML-Escaping aller Nutzerstrings.
-- OAuth 2.0 PKCE (S256), Token in `sessionStorage` (bewusste Wahl ohne Backend; Restrisiko dokumentiert).
+- Kein OAuth/Token im Kern-Dateipfad (App-verwaltete Cloud entfällt, [14 §5](14-Dateihandling.md)). Nur falls ein optionaler Cloud-Adapter zugeschaltet wird: OAuth 2.0 PKCE (S256), Token in `sessionStorage`, Restrisiko isoliert auf dieses Modul.
 - Automatisiertes CSP-Test-Gate.
 
 **NFR-4 Datenschutz (LP-2):**
@@ -44,43 +44,42 @@
 
 | Schicht | Zweck |
 |---|---|
-| **Datei** (GEDCOM/GRAMPS) | Wahrheit für Genealogie (LP-3) |
-| **Browser-Storage (IndexedDB)** | Cache des Datei-**Texts** (Auto-Load), Foto-Cache (pfad-basiert), App-Konfiguration |
-| **`orte.json`** (lokal + OneDrive) | Cross-Stammbaum Orts-/Hofwissen (LP-4) mit Revision/Device-Konflikterkennung |
-| **OneDrive** (optional) | Sync-Kanal für Datei + Fotos + `orte.json` |
+| **Datei** (GEDCOM/GRAMPS) im **OS-Sync-Ordner** | Wahrheit für Genealogie (LP-3); Geräte-Sync macht das OS (iCloud/OneDrive-Ordner), nicht die App |
+| **Arbeitskopie (IndexedDB)** | *eine* kanonische Text-Kopie: Auto-Load, Absturz-Recovery, Offline; Foto-Cache (pfad-basiert), App-Konfiguration |
+| **`orte.json`** (im Sync-Ordner) | Cross-Stammbaum Orts-/Hofwissen (LP-4) mit Revision/Device-Konflikterkennung |
 
-> Es wird der **Datei-Text** gecacht, nicht das In-Memory-Modell (Sets/Referenzen nicht trivial serialisierbar; die Datei ist ohnehin die Wahrheit).
+> Es wird der **Datei-Text** gecacht (Arbeitskopie), nicht das In-Memory-Modell (Sets/Referenzen nicht trivial serialisierbar; die Datei ist ohnehin die Wahrheit). Vollständiges Dateihandling: [14](14-Dateihandling.md).
 
 ### 2.2 App-Konfiguration (geräteweit, reist NICHT mit Datei)
 
-Proband-ID · Theme (dark/light) · Anonymisierungs-Flag · GED-Version · Strict-Flag · Duplikat-Ignorierliste · Quick-Templates · Validierungs-Config · Projekte ([12 §5](12-Forschungsdaten.md)) · OneDrive-Ordner-Referenzen (relativ zu `od_base_path`).
+Proband-ID · Theme (dark/light) · Anonymisierungs-Flag · GED-Version · Strict-Flag · Duplikat-Ignorierliste · Quick-Templates · Validierungs-Config · Projekte ([12 §5](12-Forschungsdaten.md)) · letzter Dateiname + FS-Handle der Arbeitskopie ([14](14-Dateihandling.md)).
 
 ---
 
 ## 3. Medien-Pfad-Modell
 
-`media.file` = relativer Pfad ab `od_base_path` (dem Datei-Ordner). Vollpfad = `od_base_path + '/' + media.file`. Laden zweistufig: Download-URL beschaffen → fetchen → Base64 im Browser-Cache (`img:<relPath>`).
+`media.file` = relativer Pfad bezogen auf den Datei-Ordner (den Sync-Ordner). Auflösung: Desktop via optionalem Directory-Handle (FS-Access) direkt; sonst expliziter Import + IDB-Cache (`img:<relPath>`). Kein OneDrive-`downloadUrl`-Fetch. Detail: [14 §7](14-Dateihandling.md).
 
 ---
 
 ## 4. Multi-Device-Konfliktschutz (LP-9)
 
-- **`orte.json`:** Wrapper mit `_rev`/`_device`/`_ts`; gleiche Revision + verschiedenes Device + abweichender Inhalt → Union-Merge + Warn-Toast. Höhere `_schemaVersion` als bekannt → Read-Only-Schreibstopp ([11 §2](11-Orte-Hoefe-Identitaet.md)).
-- **Datei (OneDrive):** ETag-Erfassung bei Load/Save, `If-Match`-PUT; bei 412 → Überschreib-/Abbruch-Dialog statt stillem last-write-wins.
+- **`orte.json`:** Wrapper mit `_rev`/`_device`/`_ts`; gleiche Revision + verschiedenes Device + abweichender Inhalt → Union-Merge + Warn-Toast. Höhere `_schemaVersion` als bekannt → Read-Only-Schreibstopp ([11 §2](11-Orte-Hoefe-Identitaet.md)). Die Konflikterkennung bleibt, egal ob Sync per OS-Ordner oder optionalem Cloud-Adapter läuft.
+- **Genealogie-Datei:** Konflikte sind **OS-Konflikte** des Sync-Ordners („Datei (Konflikt).ged"), nicht App-Sache. Milderung beim Öffnen: Hinweis, wenn Disk-Timestamp neuer als Arbeitskopie ([14 §5](14-Dateihandling.md)). App-verwaltetes ETag/If-Match entfällt (war OneDrive-Graph, [03 §9](03-Altlasten.md)).
 
 ---
 
 ## 5. Speicher-/Backup-Verhalten (Zusammenfassung)
 
-```
-Speichern:
-  iOS:            navigator.share({ files: [main, backup] })   (Hauptdatei + Zeitstempel-Backup)
-  Chrome Desktop: FileSystemFileHandle.createWritable()        (direkt in Originaldatei)
-  Safari/Firefox: <a download> Hauptdatei + Zeitstempel-Backup
+Zwei Save-Tiers, an einer Stelle gekapselt ([14 §4](14-Dateihandling.md)):
 
-Wiederherstellung bei Reload:
-  FileHandle aus Browser-Speicher, Permission prüfen → restaurieren
-  Auto-Load des gecachten Datei-Texts, falls kein Handle
+```
+Speichern (exportToFile):
+  Tier 1 (Desktop Chrome/Edge, Android): FileSystemFileHandle.createWritable()  → in-place
+  Tier 2 (iOS/Safari, Firefox):          navigator.share({files}) | <a download>
+
+Jederzeit still:  saveWorkingCopy(text) → IndexedDB
+Start:            loadWorkingCopy() → Auto-Load; FS-Handle aus IDB, Permission-Reprompt
 ```
 
-Anonymisierter/Strict/GED7-Export: nie direktes Speichern (Suffix am Dateinamen), Original unberührt.
+Timestamp-Backup nur **optional/explizit** (nicht bei jedem Save). Anonymisierter/Strict/GED7-Export: nie in-place (Suffix am Dateinamen), Original unberührt.

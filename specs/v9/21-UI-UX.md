@@ -1,47 +1,94 @@
 # 21 — UI / UX
 
-> Schicht: App · Abhängig von: [20 Funktionen](20-Funktionen.md), [02 Zielarchitektur](02-Zielarchitektur-v9.md) · Referenz-Detail (Layout-Algorithmen, Symboltabellen): `UI-DESIGN.md`
+> Schicht: App · Abhängig von: [20 Funktionen](20-Funktionen.md), [02 Zielarchitektur](02-Zielarchitektur-v9.md) · Referenz-Detail (v8-Layout-Algorithmen, Symboltabellen): `UI-DESIGN.md`
+
+Das UI/UX von v8 ist evolutionär gewachsen und in der Navigation nicht mehr konsistent (Befunde in [§9](#9-konsistenz-befunde-v8--wie-v9-sie-löst)). v9 baut es auf einem klaren Rollenmodell neu — **je Form-Faktor eigenständig designt**, nicht „Mobile verbreitert".
 
 ---
 
-## 1. View-Hierarchie
+## 1. View-Rollen-Modell (Kern)
 
-```
-Landing (kein Back, keine Bottom-Nav)
-   ↓ Datei laden
-[Baum | Listen-Tabs]  (Bottom-Nav sichtbar)
-   ↓ Karte/Zeile
-Detail  (Bottom-Nav versteckt)
-   ↓ ← Zurück (herkunftsbewusst)
-[Baum | Listen-Tabs]
-```
+Jedes Navigations-Element hat **genau eine** von drei Rollen. Das ist die zentrale Ordnung, die v8 fehlte.
+
+| Rolle | Was | Elemente |
+|---|---|---|
+| **Entitäten** | Datenkategorien zum Browsen/Bearbeiten | Personen · Familien · Quellen · Orte · **Höfe** |
+| **Ansichten (Lenses)** | *dieselben* Daten anders betrachtet | **Baum** (Sanduhr/Nachkommen/Fächer) · Karte · Zeitleiste · Statistik · Story |
+| **Arbeitsflächen** | querschnittlich | **Suche** · Aufgaben/Forschung · Ausgaben · Einstellungen |
+
+**INV-UI-1:** Ansichten sind **Lenses, keine Nav-Ziele.** Der Wechsel zwischen ihnen läuft über *einen* einheitlichen Lens-Umschalter ([§4](#4-lens-umschalter)), nicht über verstreute Topbar-Glyphen.
+
+**INV-UI-2:** Jedes Ziel ist über **genau einen** kanonischen Weg erreichbar (kein „Karte als Sub-Modus des Orte-Tabs *und* als Diagramm-Toggle").
 
 ---
 
-## 2. View-State-Kontrakt (dauerhaft, aus v8-ADR-025)
+## 2. Mobile-Modell (primär)
 
-> **INV-VS:** Genau *eine* zentrale Instanz verwaltet die aktuelle Auswahl je Tab (`setCurrent(tab, id)` / `getCurrent(tab)`), inklusive Persistenz und Change-Event. Keine parallelen Auswahl-Quellen.
+**Bottom-Nav = 5 feste Ziele:** **⧖ Baum · 👤 Personen · 🔍 Suche · ☑ Aufgaben · ⋯ Mehr**
 
-- Selektion überlebt App-Resume (Browser-Speicher).
+- **Suche** ist erstklassig (in v8 versteckt) — das universelle „finde irgendwas".
+- **Personen** ist der Einstieg in die Entitäten; **Familien / Quellen / Orte / Höfe** über einen **Segment-Umschalter oben** auf der Listen-Fläche — eine *konsistente* Sub-Navigation statt versteckter Modi.
+- **Mehr** = Hub für die Lenses (Karte / Zeitleiste / Statistik / Story) + Ausgaben + Einstellungen.
+- **Baum** bleibt als Signatur-Ansicht eigener Slot (häufigster Einstieg).
+
+**Interaktion:**
+- Bottom-Sheets mit progressiver Offenlegung für alle Formulare (bewährt, bleibt).
+- Aktionsreihen **brechen um** statt horizontal aus dem Bild zu scrollen ([§9 B7](#9-konsistenz-befunde-v8--wie-v9-sie-löst)).
+- Swipe-Right = Zurück (herkunftsbewusst).
+- FAB „＋" mit Abstand zur letzten Listenzeile.
+
+**Aktiver Nav-Zustand:** deutlich (Balken/Fett/Akzentfarbe) — **nie nur Farbe** (WCAG 1.4.1, LP-8).
+
+---
+
+## 3. Desktop-Modell (eigenständig designt)
+
+Kein verbreitertes Mobile-Layout, sondern ein echtes Desktop-Muster.
+
+- **Persistente linke Sidebar** ersetzt die Bottom-Nav: **beschriftete** Abschnitte nach den drei Rollen —
+  - *Entitäten:* Personen · Familien · Quellen · Orte · Höfe
+  - *Ansichten:* Baum · Karte · Zeitleiste · Statistik · Story
+  - *Arbeit:* Suche · Aufgaben · Ausgaben · Einstellungen
+
+  Labels + Icons, immer sichtbar → löst „kryptische Icon-Leiste" und „aktiver Zustand" strukturell.
+- **Multi-Pane Master-Detail:** Navigations-/Listen-Pane + Detail-Pane dauerhaft nebeneinander; optionaler dritter Kontext-Pane (z. B. Quellen zum aktuellen Ereignis).
+- **Tastatur-first überall** (nicht nur im Baum): konsistente Shortcuts über alle Listen/Views.
+- **Command-Palette (⌘K)** = Desktop-Pendant zur Suche; nutzt denselben Such-Kern ([20](20-Funktionen.md)).
+- **Vollbild** ist ein sauberer Layout-Modus (eine State-Klasse), keine `!important`-Kaskade wie in v8.
+
+**Responsive-Grenze:** ab ~900px Desktop-Modell; darunter Mobile-Modell. Die Grenze schaltet *Layout und Navigation* um — nicht nur Spaltenbreiten.
+
+---
+
+## 4. Lens-Umschalter
+
+Ein **einziger**, überall identischer Umschalter ersetzt die v8-Diagramm-Toggle-Glyphen (`◑ ⇩ ⟷ 🗺`, deren starre Reihenfolge-Regeln entfallen).
+
+- Aus jedem Personen-/Kontext-Fokus: Ansicht wählen (Baum ▸ Karte ▸ Zeitleiste ▸ Statistik ▸ Story).
+- Segment-Control (Mobile) bzw. Sidebar-Abschnitt „Ansichten" (Desktop).
+- Der Fokus (welche Person/welcher Ort) bleibt beim Lens-Wechsel erhalten.
+
+**INV-UI-3:** Es gibt genau einen Lens-Umschalter-Mechanismus; kein Diagramm bringt eigene Wechsel-Buttons mit.
+
+---
+
+## 5. View-State- & Lifecycle-Kontrakt (aus v8-ADR-025, dauerhaft)
+
+> **INV-VS:** Genau *eine* zentrale Instanz verwaltet die aktuelle Auswahl je Ziel (`setCurrent(target, id)` / `getCurrent(target)`), inklusive Persistenz und Change-Event. Keine parallelen Auswahl-Quellen.
+
+- Selektion überlebt App-Resume (Arbeitskopie/Browser-Speicher).
 - Bei fehlender Entität → definierter Fallback (nie stiller Abbruch).
-- In v9 ist der View-State Teil der **UI-Schale** ([02](02-Zielarchitektur-v9.md)); er hält reaktive Referenzen und dispatcht Änderungen an abgeleitete Ansichten.
+- In v9 Teil der **UI-Schale** ([02](02-Zielarchitektur-v9.md)): hält reaktive Referenzen, dispatcht Änderungen an abgeleitete Ansichten.
 
-**PWA-Lifecycle-Kontrakt:** Ein zentraler Ort für `visibilitychange` (>60s → Views „dirty"), `pageshow` (BFCache-Guard), `pagehide` (Flush). Ein Dirty-Bit steuert Re-Render — kein unnötiges Neuzeichnen. In v9 ersetzt der zentrale Invalidierungspfad ([02 §3.2](02-Zielarchitektur-v9.md)) das v8-`markChanged(); renderTab()`-Muster.
+**PWA-Lifecycle:** ein zentraler Ort für `visibilitychange` (>60s → dirty), `pageshow` (BFCache-Guard), `pagehide` (Flush). Ein Dirty-Bit steuert Re-Render. Der zentrale Invalidierungspfad ([02 §3.2](02-Zielarchitektur-v9.md)) ersetzt das v8-`markChanged(); renderTab()`-Muster.
 
-**Detail-Container:** Separate Container je Entitätstyp mit per-Entität-Scroll-State (Desktop: Tab-Wechsel stellt Scroll-Position wieder her).
-
----
-
-## 3. Responsive
-
-- **Mobile (Portrait):** Bottom-Sheets, 2 Baum-Ebenen, Swipe-Back, FAB.
-- **Desktop (≥900px):** Zweispalten (Liste 360px + Detail/Baum), Tastaturnavigation, bis 4 Baum-Ebenen, Vollbild.
+**Detail-Zustand:** per-Entität-Scroll-State (Desktop: Wechsel Person→Familie→Person stellt Scroll-Position wieder her).
 
 ---
 
-## 4. Design-System
+## 6. Design-System
 
-Warme Dunkelbraun-Palette (Pergament-Ästhetik) + Gold als Primärfarbe. Dark/Light umschaltbar.
+Warme Dunkelbraun-Palette (Pergament-Ästhetik) + Gold als Primärfarbe. Dark/Light umschaltbar. (Bleibt aus v8 — konsistent, kein Umbau.)
 
 ```
 Hintergründe: #18140f → #211c14 → #2a2318 → #342c1e   (bg → surfaces)
@@ -54,33 +101,38 @@ Typografie:   Playfair Display (Titel/Namen) · Source Serif 4 (Body/UI)
 
 ---
 
-## 5. Symbol-Konventionen (streng, eindeutig)
+## 7. Symbol-Konventionen (verschlankt)
 
-Jedes Symbol hat **genau eine** Bedeutung. Invariante Regeln (Auszug):
+**Beibehaltene, gute Semantiken** (jede Bedeutung eindeutig):
 - `📎` = ausschließlich Medien/OBJE (nie Quellen).
 - `§N` (`.src-badge`) = Quellen-Zitat, N = numerischer ID-Teil; QUAY-Farbindikator q0–q3; Tooltip = Quellentitel.
-- `☰` (Menü) steht **immer ganz rechts** in jeder Topbar.
-- `✎` (Bearbeiten) steht **direkt links von** `☰` in Detail-Topbars.
-- Diagramm-Wechsel-Symbole (`◑ ⇩ ⟷ 🗺`) stehen immer nach dem Separator, vor `☰`.
 - Geschlecht im Baum: `data-sex` → Border-Farbe (M blau, F rosa, U keine).
-- Barrierefreiheit: nie Information nur über Farbe; alle Icon-Buttons mit aria-label (LP-8).
+- `☰` Menü, `✎` Bearbeiten, `＋` Neu.
 
-Vollständige Symbol- und Topbar-Layout-Tabellen: `UI-DESIGN.md`.
+**Verschlankt/entfallen ggü. v8:**
+- Die starren Reihenfolge-Regeln der Diagramm-Toggle-Glyphen (`◑ ⇩ ⟷ 🗺 nach Separator vor ☰`) entfallen — ersetzt durch den Lens-Umschalter ([§4](#4-lens-umschalter)).
+- Doppelbelegung von `⌂` (zwei Bedeutungen, nur per Stil unterschieden) wird aufgelöst: „Zum Probanden" und „Proband setzen" werden getrennte, beschriftete Aktionen.
 
----
-
-## 6. Bekannte UX-Defekte (aus v9 zu beheben)
-
-Aus dem v8-UX-Audit (relevant für einen sauberen Neustart):
-- Aktiver Bottom-Nav-Tab visuell zu schwach (nur Braunton-Nuance) → deutlicher Aktiv-Zustand (Balken/Fett/Akzentfarbe), WCAG 1.4.1.
-- Englische Typ-Badges (`Unknown`) im deutschen UI → lokalisieren.
-- Horizontal abgeschnittene Button-Reihen im Person-Detail → Umbruch/Scroll-Hinweis.
-- Reine Icon-Leisten ohne Labels → Mini-Labels/Tooltips.
-- FAB überlappt letzte Listenzeile → Listen-Padding.
-- Suchfeld ohne sichtbaren Lösch-Button.
+**Regel:** Jede Icon-only-Aktion trägt auf Desktop ein sichtbares Label (Sidebar/Tooltip), auf Mobile ein Label oder einen Long-Press-Hint (LP-8). Vollständige Alt-Symboltabellen: `UI-DESIGN.md` (als Referenz, nicht als Vorgabe).
 
 ---
 
-## 7. Layout-Algorithmen (imperative Inseln)
+## 8. Layout-Algorithmen (imperative Inseln)
 
-Sanduhr- und Nachkommen-Baum sind imperative SVG-Inseln ([02 §5](02-Zielarchitektur-v9.md)). Die konkreten Layout-Konstanten (Kartengrößen, GAPs, ancSpan-Slots, Kekule-Vergabe, Pinch/Drag/Tastatur-Verhalten, T-Linien) sind in `UI-DESIGN.md` dokumentiert und als *Algorithmus* aus v8 wiederverwendbar. Sie hängen nicht am View-State und werden bei jeder (Re-)Zentrierung vollständig neu berechnet.
+Sanduhr-, Nachkommen- und Fächer-Baum, Karte und Zeitleiste sind imperative SVG-Inseln ([02 §5](02-Zielarchitektur-v9.md)). Die konkreten Layout-Konstanten (Kartengrößen, GAPs, ancSpan-Slots, Kekule-Vergabe, Pinch/Drag/Tastatur, T-Linien) sind in `UI-DESIGN.md` dokumentiert und als *Algorithmus* aus v8 wiederverwendbar. Sie hängen nicht am View-State und werden bei jeder (Re-)Zentrierung vollständig neu berechnet.
+
+---
+
+## 9. Konsistenz-Befunde v8 & wie v9 sie löst
+
+Am v8-Code verifiziert (nicht nur an der Doku):
+
+| # | v8-Befund | v9-Auflösung |
+|---|---|---|
+| **B1** | 6 Bottom-Nav-Slots, aber ~11 Ziele; Suche/Statistik/Höfe/Karte/Zeitleiste/Story ohne Nav-Button | Rollenmodell ([§1](#1-view-rollen-modell-kern)): Entitäten via Segment/Sidebar, Lenses via Umschalter, Suche erstklassig |
+| **B2** | Höfe/Karte nur als versteckte Sub-Modi des Orte-Tabs | Höfe = Entität (Segment/Sidebar); Karte = Lens; INV-UI-2 (ein kanonischer Weg) |
+| **B3** | Doku nennt `bnav-search`, Code hat `bnav-tasks` — Drift | v9-Nav explizit spezifiziert; eine Quelle |
+| **B4** | Bottom-Nav mischt Entität + Arbeitsfläche + Visualisierung | drei Rollen strikt getrennt |
+| **B5** | Desktop = Mobile + Spalten, `!important`-Vollbild-Hacks | eigenständiges Desktop-Modell ([§3](#3-desktop-modell-eigenständig-designt)): Sidebar + Multi-Pane + ⌘K |
+| **B6** | Symbol-/Topbar-Wildwuchs, `⌂` doppelbelegt, Icon-only kryptisch | verschlankte Symbolik ([§7](#7-symbol-konventionen-verschlankt)), Labels, Lens-Umschalter |
+| **B7** | aktiver Tab kaum sichtbar · Icon-Leisten ohne Labels · Aktionsreihen scrollen weg · FAB-Überlappung · Suchfeld ohne ✕ · `Unknown`-Badge | als Baseline gefixt: deutlicher Aktiv-Zustand, Labels, Umbruch, FAB-Abstand, Such-✕, „Unbekannt" |
