@@ -592,7 +592,7 @@ if (IS_NODE) {
     'getHofRegistry: getHofRegistry, mutateHofObject: mutateHofObject, upsertHofObject: upsertHofObject, ' +
     'findOrCreateHofObject: findOrCreateHofObject, ' +
     'buildPlacForGedcom: buildPlacForGedcom, _linkGedcomEventsToPlaceObjects: _linkGedcomEventsToPlaceObjects, ' +
-    '_migrateFarmPOsToHofObjects: _migrateFarmPOsToHofObjects, _migrateHofObjectsBackToFarmPOs: _migrateHofObjectsBackToFarmPOs, ' +
+    '_migrateFarmPOsToHofObjects: _migrateFarmPOsToHofObjects, ' +
     // ADR-028 Phase 1: REPROJECT-Wrapper + Migration-ohne-Skip-Helfer
     '_reprojectEvCache: _reprojectEvCache, _ensureVillageChain: _ensureVillageChain, ' +
     '_findUnresolvedHofEvents: _findUnresolvedHofEvents, _countUnresolvedHofEvents: _countUnresolvedHofEvents, ' +
@@ -3526,7 +3526,11 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   ok(!API._isFarmPlaceId(null),   'af.13: _isFarmPlaceId(null) → false');
 })();
 
-// ── buildHofIndex führt die Farm-placeId aus den Events mit ──
+// ── af.14-legacy: buildHofIndex — Farm-placeId aus Event (ADR-026-Altformat) ──
+// Nach v1055 tritt dieses Szenario in der Praxis nicht mehr auf: ev.placeId
+// landet nie auf einem Farm-PO (GEDCOM: nie; GRAMPS: vor buildHofIndex durch
+// _migrateFarmPOsToHofObjects auf villageId umgestellt). Test bleibt als
+// Regressions-Guard für den LEGACY-Pfad in buildHofIndex erhalten.
 (function() {
   API.setDb({
     individuals: { '@I1@': { events:[ { type:'RESI', addr:'Hof B', place:'Dorf', placeId:'@F2@' } ] } },
@@ -3536,7 +3540,7 @@ function _PO(o) { return Object.assign({ id:'', title:'', type:'Unknown', lat:nu
   });
   API.UIState._hofCache = null;
   var hof = API.buildHofIndex().get('Hof B');
-  eq(hof.placeId, '@F2@', 'af.14: buildHofIndex übernimmt Farm-placeId aus dem Event');
+  eq(hof.placeId, '@F2@', 'af.14-legacy: buildHofIndex — Farm-placeId aus Event (ADR-026-Altformat, post-Migration nicht mehr möglich)');
 })();
 
 // ── upsertHofPO: UI-Schreibweg legt Farm-PO an + verknüpft Events ──
@@ -4553,38 +4557,6 @@ group('(al) ADR-027 P3 Migration');
   eq(ev.hofId, '_hof_existing', 'al-4d: Event auf bestehenden Hof gemappt');
   eq(API.AppState.db.hofObjects['_hof_existing'].note, 'bestehend',
      'al-4e: bestehender Note nicht überschrieben');
-})();
-
-// Reverse-Migrator: V2-Hof zurück zu Farm-PO
-(function() {
-  API.setDb({
-    individuals:{
-      '@I1@': { id:'@I1@', birth:{}, chr:{}, death:{}, buri:{},
-        events:[ { type:'RESI', placeId:'_po_ochtrup', hofId:'_hof_wall_33' } ] },
-    },
-    families:{}, extraPlaces:{},
-    placeObjects:{
-      '_po_ochtrup': { id:'_po_ochtrup', title:'Ochtrup', type:'Town', pnames:[], enclosedBy:[], parentId:null },
-    },
-    hofObjects:{
-      '_hof_wall_33': { id:'_hof_wall_33', villageId:'_po_ochtrup', schemaVersion:1,
-        addrs:[{ value:'Wall 33', dateFrom:null, dateTo:null }],
-        lat:52.21, long:7.19, note:'Hofnotiz' },
-    },
-    _migration_pre_adr027: true,
-  });
-  var stats = API._migrateHofObjectsBackToFarmPOs(API.AppState.db);
-  eq(stats.posCreated, 1, 'al-5a: 1 Farm-PO wiederhergestellt');
-  eq(stats.eventsRepointed, 1, 'al-5b: 1 Event zurückgemappt');
-  eq(stats.hofsDeleted, 1, 'al-5c: V2-Hof gelöscht');
-  ok(!API.AppState.db.hofObjects['_hof_wall_33'], 'al-5d: hofObject ist weg');
-  var farmIds = Object.keys(API.AppState.db.placeObjects).filter(function(k){
-    return API.AppState.db.placeObjects[k].type === 'Farm';
-  });
-  eq(farmIds.length, 1, 'al-5e: 1 Farm-PO existiert');
-  eq(API.AppState.db.placeObjects[farmIds[0]].title, 'Wall 33', 'al-5f: Title übernommen');
-  eq(API.AppState.db.placeObjects[farmIds[0]].lat, 52.21, 'al-5g: lat übernommen');
-  ok(!API.AppState.db._migration_pre_adr027, 'al-5h: Migrations-Flag gelöscht');
 })();
 
 // _eventCoords: hofId hat Vorrang vor placeId

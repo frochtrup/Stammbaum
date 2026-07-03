@@ -928,10 +928,10 @@ function _findFarmPO(pos, leaf, villageId) {
   return null;
 }
 
-// Stellt das Farm-placeObject für eine Hof-Adresse sicher (find-or-create) und
-// hängt alle RESI/PROP-Events dieser Adresse darauf um (ev.placeId). Löst das
-// Dorf auf (existierend oder neue Enclosure-Kette). Setzt KEINE Koords/Notiz —
-// das tun die Aufrufer (Migration aus hofObjects, upsertHofPO aus dem UI).
+// Stellt das Farm-placeObject für eine Hof-Adresse sicher (find-or-create).
+// Löst das Dorf auf (existierend oder neue Enclosure-Kette). Setzt KEINE
+// Koords/Notiz — das tun die Aufrufer (Migration aus hofObjects, upsertHofPO).
+// Setzt NICHT ev.placeId — Farm-PO darf nie als ev.placeId landen (ADR-027 P3).
 // Gibt die Farm-placeId zurück (oder null bei unauflösbarer Hash-Kollision).
 function _ensureHofFarmPO(db, addr) {
   addr = (addr || '').trim();
@@ -1954,9 +1954,10 @@ function _migrateFarmPOsToHofObjects(db) {
     _farmIdToHofId[pid] = hofId;
   }
   // 3. Pass 2: Events repointen — hofId neu setzen, placeId auf villageId.
-  // Primärer Lookup über _farmIdToHofId[ev.placeId] (Farm-PO-ID → hofId).
-  // Fallback: ev.addr-Norm-Match, weil _ensureHofFarmPO ev.placeId bewusst
-  // nicht mehr setzt (Farm-PO darf nie als ev.placeId landen — ADR-027 P3).
+  // Primärer Lookup über _farmIdToHofId[ev.placeId]: für GEDCOM-Daten toter
+  // Code nach v1055 (ev.placeId nie Farm), aber für GRAMPS-Daten aktiv
+  // (GRAMPS-Parser setzt ev.placeId direkt auf Farm-PO vor der Migration).
+  // Fallback: ev.addr-Norm-Match für GEDCOM-Events ohne ev.placeId-Farm-Link.
   const _addrNormToHofId = {};
   for (const [farmPid, hofId] of Object.entries(_farmIdToHofId)) {
     const farmPo = pos[farmPid];
@@ -2001,71 +2002,6 @@ function _migrateFarmPOsToHofObjects(db) {
   }
   if (hofsCreated || eventsRepointed) db._migration_pre_adr027 = true;
   return { hofsCreated, eventsRepointed, posDeleted };
-}
-
-// ─── ADR-027 Phase 3: Reverse-Migrator (Sicherheitsnetz für Rollback) ────────
-// Stellt aus V2-hofObjects wieder Farm-placeObjects her und repointet Events
-// zurück. VERLUSTIG: addrs-Historie (außer aktuellster Bezeichnung),
-// predecessor/successor, existsFrom/To als Felder am Farm-PO nur best-effort
-// (Farm-PO hat keine Lebenszyklus-Felder). Sichtbar nur als Debug-Pfad; nach
-// 2 Versionen ohne Rollback-Bedarf ersatzlos entfernen.
-function _migrateHofObjectsBackToFarmPOs(db) {
-  if (!db) return { posCreated: 0, eventsRepointed: 0, hofsDeleted: 0 };
-  const hofs = db.hofObjects || {};
-  const pos  = db.placeObjects || (db.placeObjects = {});
-  const _hofIdToFarmId = {};
-  let posCreated = 0;
-  for (const [hid, h] of Object.entries(hofs)) {
-    if (!_isHofObjectV2(h) || !h.villageId) continue;
-    // Aktuellste Bezeichnung (undatiert oder höchstes dateFrom) als Farm-PO-Titel
-    let title = '';
-    let bestFrom = -Infinity;
-    for (const a of h.addrs) {
-      const fromY = _placeYear(a.dateFrom);
-      if (a.dateFrom == null && a.dateTo == null) { title = a.value; break; }
-      if ((fromY ?? -Infinity) > bestFrom) { bestFrom = fromY ?? -Infinity; title = a.value; }
-    }
-    if (!title && h.addrs[0]) title = h.addrs[0].value;
-    if (!title) continue;
-    const farmId = '_po_farm_' + hid.replace(/^_hof_/, '');
-    if (pos[farmId]) continue;
-    pos[farmId] = {
-      id: farmId, title, type: 'Farm',
-      lat: h.lat ?? null, long: h.long ?? null,
-      note: h.note || '',
-      pnames: [],
-      enclosedBy: [{ placeId: h.villageId, dateFrom: null, dateTo: null, dateType: null, _dateRaw: null }],
-      parentId: h.villageId,
-      _govId: h._govId || null, _govTypes: h._govTypes || null,
-    };
-    _hofIdToFarmId[hid] = farmId;
-    posCreated++;
-  }
-  let eventsRepointed = 0;
-  const _repointBack = ev => {
-    if (!ev || !ev.hofId) return;
-    const farmId = _hofIdToFarmId[ev.hofId];
-    if (!farmId) return;
-    ev.placeId = farmId;
-    delete ev.hofId;
-    eventsRepointed++;
-  };
-  for (const p of Object.values(db.individuals || {})) {
-    [p.birth, p.chr, p.death, p.buri].forEach(_repointBack);
-    (p.events || []).forEach(_repointBack);
-  }
-  for (const f of Object.values(db.families || {})) {
-    [f.marr, f.engag, f.div, f.divf].forEach(_repointBack);
-    (f.events || []).forEach(_repointBack);
-  }
-  let hofsDeleted = 0;
-  for (const hid of Object.keys(_hofIdToFarmId)) { delete hofs[hid]; hofsDeleted++; }
-  delete db._migration_pre_adr027;
-  UIState._placeRegistry = null;
-  UIState._hofRegistry   = null;
-  UIState._placesCache   = null;
-  UIState._hofCache      = null;
-  return { posCreated, eventsRepointed, hofsDeleted };
 }
 
 // ─── ADR-027 Phase 1: Hof-Entität — Registry + Mutations-Helper ──────────────
@@ -3440,7 +3376,10 @@ function buildHofIndex() {
       if (!hof.propEntries) hof.propEntries = [];
       // Ersten nicht-leeren Ort aus RESI/PROP-Events übernehmen (Anzeige in Höfe-Liste)
       if (!hof.place && ev.place) hof.place = ev.place.trim();
-      // Farm-placeObject-ID (ADR-026, pre-Phase-3-Migration): aus dem Event übernehmen
+      // LEGACY ADR-026: Farm-placeId aus dem Event — nach v1055 toten Code, da
+      // ev.placeId nie mehr Farm-PO ist (GEDCOM: nie; GRAMPS: vor buildHofIndex
+      // durch _migrateFarmPOsToHofObjects auf villageId umgestellt). Behalten
+      // damit Altdaten-Snapshots in Tests weiterhin durchlaufen.
       if (!hof.placeId && _isFarmPlaceId(ev.placeId)) hof.placeId = ev.placeId;
       // ADR-027 P3: hofId aus dem Event (Post-Migration) — V2-Hof-Pointer
       if (!hof.hofId && hofId) hof.hofId = hofId;
