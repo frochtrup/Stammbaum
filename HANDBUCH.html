@@ -559,7 +559,7 @@
   <div class="tree-icon">⧖</div>
   <h1>Stammbaum PWA</h1>
   <p class="subtitle">Benutzerhandbuch</p>
-  <p class="version">Version 8 · Juni 2026 · Stand: sw v1024</p>
+  <p class="version">Version 8 · Juli 2026 · Stand: sw v1057</p>
   <p class="tagline">
     Eine einfache Anleitung für alle, die ihre Familiengeschichte
     erfassen und erkunden möchten — auf dem iPhone, iPad und Computer.
@@ -3048,24 +3048,80 @@ Die Timeline ist ideal, um nach einer Pause wieder anzuknüpfen oder um einer Fo
 
 <p>Wenn Sie viele Wohnorte (RESI-Einträge) erfasst haben, bündelt die App diese automatisch zu <strong>Höfen</strong> — also Adressen, an denen mehrere Personen zu verschiedenen Zeiten gelebt haben. Das ist besonders nützlich für die Bauernhof-Genealogie.</p>
 
-<p>Zu finden sind die Höfe im Bereich <span class="button-label">📍 Orte</span> → Tab <strong>Höfe</strong>. Tippen Sie auf einen Hof, um die Detailansicht zu öffnen. <strong>Die Liste ist nach Dorf gruppiert (ab sw v1024)</strong> — alle Höfe eines Ortes erscheinen unter einer gemeinsamen Überschrift, was bei vielen Höfen die Übersicht deutlich erleichtert.</p>
+<p>Zu finden sind die Höfe im Bereich <span class="button-label">📍 Orte</span> → Tab <strong>Höfe</strong>. Tippen Sie auf einen Hof, um die Detailansicht zu öffnen. <strong>Die Liste ist nach Dorf gruppiert (ab sw v1024)</strong> — alle Höfe eines Ortes erscheinen unter einer gemeinsamen Überschrift, was bei vielen Höfen die Übersicht deutlich erleichtert. Die Höfe innerhalb einer Dorf-Sektion sind <strong>numerisch sortiert (ab sw v1032)</strong>: „Wall 33" erscheint vor „Wall 100", „Hof 5a" vor „Hof 5b".</p>
 
-<h2>Hof-Zuweisungen prüfen <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1024)</span></h2>
+<h2>Hof-Zuweisungen prüfen <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1024, überarbeitet v1033)</span></h2>
 
-<p>Viele importierte GEDCOM-Dateien tragen die Hof-Adresse <em>nur im ADDR-Feld</em> eines RESI-Ereignisses, ohne dass eine Hof-Entität dahinterstünde. Die App erkennt das automatisch: Im Höfe-Tab erscheint oben rechts ein <span class="button-label">🔗</span>-Knopf mit einem kleinen Zähler — die Anzahl der Ereignisse mit Adresse, denen noch kein Hof zugewiesen ist. Ein Klick öffnet die <strong>Hof-Zuweisungen prüfen</strong>-Liste mit allen offenen Fällen, sortiert nach Person, Datum und Adresse.</p>
+<p>Viele importierte GEDCOM-Dateien tragen die Hof-Adresse <em>nur im ADDR-Feld</em> eines RESI-Ereignisses, ohne dass eine Hof-Entität dahinterstünde. Die App erkennt das automatisch: Im Höfe-Tab erscheint oben rechts ein <span class="button-label">🔗</span>-Knopf mit einem kleinen Zähler — die Anzahl der unzugewiesenen Ereignisse. Ein Klick öffnet die <strong>Hof-Zuweisungen prüfen</strong>-Liste mit allen offenen Fällen.</p>
 
-<p>Pro Zeile haben Sie drei Optionen:</p>
-<ul>
-  <li><strong>Hof wählen</strong> — ein Dropdown bietet alle bereits angelegten Höfe im gleichen Dorf an. So lassen sich mehrere Ereignisse derselben Person (oder verschiedener Bewohner) demselben Hof zuordnen.</li>
-  <li><strong>+ neu anlegen</strong> — legt aus dem Ereignis einen neuen Hof an (die ADDR-Adresse wird zur ersten Hof-Bezeichnung, das aufgelöste Dorf zur villageId). Direkt danach ist das Ereignis verknüpft, und der neue Hof erscheint in der Höfe-Liste.</li>
-  <li><strong>Ignorieren</strong> — markiert das Ereignis dauerhaft als <em>nicht hof-relevant</em> (typisch: Briefkasten-Adresse, Krankenhaus, Sammeladresse). Solche Einträge zählen nicht mehr im Badge mit und verschwinden aus der Liste; die Markierung gilt pro Datei und überlebt App-Neustart.</li>
-</ul>
+<p>Jede Zeile trägt ein farbiges <strong>Klassen-Badge</strong>, das anzeigt, welche Art von Unklarheit vorliegt:</p>
+
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Badge</th><th>Bedeutung</th><th>Typische Aktion</th></tr>
+  <tr>
+    <td><strong>A</strong></td>
+    <td>Event-Typ ohne Hof-Semantik (z. B. BIRT, DEAT, MARR, EDUC) — vermutlich Krankenhaus, Kirche, Schule oder Friedhof, kein Wohnhof</td>
+    <td>„Quelle schärfen" öffnet das Ereignis-Formular; alternativ <span class="button-label">+ Hof anlegen</span> falls es doch ein Hof ist</td>
+  </tr>
+  <tr>
+    <td><strong>C</strong></td>
+    <td>Mehrdeutig: die Adresse passt zu mehreren bereits vorhandenen Höfen im selben Dorf</td>
+    <td>„Hof wählen"-Dropdown: den richtigen Hof aus der Liste auswählen</td>
+  </tr>
+  <tr>
+    <td><strong>D</strong></td>
+    <td>Die Adresse ist im Dorf bisher unbekannt, aber andere Höfe existieren dort bereits</td>
+    <td>„Variante zum Hof hinzufügen" (Adresse als alternative Schreibweise eines bestehenden Hofes), „Hof wählen" oder <span class="button-label">+ Hof anlegen</span></td>
+  </tr>
+</table>
+
+<p>Die Schaltfläche <strong>Quelle schärfen</strong> öffnet das Ereignis-Formular der betreffenden Person — dort können Sie PLAC und ADDR nachschärfen oder den Event-Typ korrigieren, falls er falsch klassifiziert wurde.</p>
 
 <p>Außerdem erscheint im <strong>Personen-Detail</strong> direkt neben der Adresse eines unzugewiesenen Ereignisses ein dezentes <strong>⚠</strong>-Symbol. Ein Tipp darauf öffnet das Prüf-Modal direkt mit dieser Zeile fokussiert — Sie müssen den Höfe-Tab nicht extra besuchen.</p>
+
+<div class="tip">
+<strong>Ort-Anzeige bei Hof-Ereignissen (ab sw v1041).</strong> In der Personen-Detailansicht zeigt die Ort-Hierachie bei RESI- und PROP-Ereignissen nur noch das <em>Dorf</em> — der Hofname erscheint nicht doppelt, da er bereits im separaten ADDR-Feld steht. So bleibt die Anzeige kompakt und ohne Redundanz.
+</div>
+
+<div class="info">
+<strong>Lade-Toast nach dem Öffnen einer Datei.</strong> Wenn die App beim Laden Orts-Anpassungen oder Hof-Zuweisungen vornimmt (z. B. neue Höfe automatisch angelegt oder Ortsschreibweisen vereinheitlicht), erscheint einmalig ein Toast-Hinweis. Dieser fasst alle Meldungen zusammen — Orts-Anpassungen, Hof-Anlage, Migrations-Hinweise — in einer einzigen Karte (ab sw v1031) und wird für Orts-Anpassungen nur einmal pro geladener Datei angezeigt (ab sw v1049).
+</div>
 
 <h2>Adress-Historie eines Hofes <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1024)</span></h2>
 
 <p>Wurde ein Hof im Laufe der Jahrhunderte umbenannt oder neu nummeriert (Straßenumbenennung 1970, Hausnummer-Reform 1985), zeigt die Hof-Detailansicht eine eigene Sektion <strong>Adress-Historie</strong> mit allen bekannten Bezeichnungen — datiert (z. B. „bis 1900: Schulze-Hof", „ab 1970: Wall 33") oder undatiert. Beim GEDCOM-Export greift die App pro Ereignis automatisch die zum Jahr passende Schreibweise auf, sodass Urkunden aus dem 18. Jahrhundert mit dem historischen Hofnamen erscheinen und neuere Einträge mit der aktuellen Adresse.</p>
+
+<h2>Wie erkennt die App eine Hof-Adresse? <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1034/v1035)</span></h2>
+
+<p>Die App nutzt eine einfache Regel, um aus einem ADDR-Feld die eigentliche <strong>Hof-Identität</strong> zu extrahieren: Alles <em>vor dem ersten Komma oder Zeilenumbruch</em> gilt als Hof-Bezeichnung. Der Rest (PLZ, Stadt, Land) wird ignoriert.</p>
+
+<p>Beispiele:</p>
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>ADDR-Inhalt</th><th>Erkannte Hof-Bezeichnung</th></tr>
+  <tr><td><code>Wall 33</code></td><td>Wall 33</td></tr>
+  <tr><td><code>Wall 33, 48607 Ochtrup</code></td><td>Wall 33</td></tr>
+  <tr><td><code>Oster 12\nHinterhaus</code></td><td>Oster 12</td></tr>
+</table>
+
+<p><strong>Kein Pseudo-Hof für reine Ortsadressen:</strong> Wenn das ADDR-Feld nur den Ortsnamen selbst enthält (z. B. ADDR = „Ochtrup" und PLAC = „Ochtrup"), legt die App keinen separaten Hof an — es handelt sich erkennbar um eine ortsgleiche Redundanz, keinen echten Wohnhof.</p>
+
+<div class="tip">
+<strong>Konvention für mehrere Höfe gleicher Hausnummer:</strong> Wenn Sie zwei distinkte Höfe an derselben Adresse modellieren möchten (z. B. zwei getrennte Anwesen „Oster 12"), nutzen Sie eine Klammer oder einen Schrägstrich als Unterscheidung — z. B. <code>Oster 12 (Nord)</code> und <code>Oster 12 (Süd)</code>. Die Konvention endet beim ersten Komma/Zeilenumbruch, daher sind Klammern und Schrägstriche im ersten Segment erlaubt.
+</div>
+
+<h2>Welche Ereignis-Typen erzeugen automatisch Höfe? <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1042)</span></h2>
+
+<p>Nicht jedes Ereignis mit einer Adresse ist ein Hinweis auf einen Wohnhof. Ab sw v1042 legt die App automatische Hof-Zuordnungen nur noch bei Ereignis-Typen an, die tatsächlich Wohnen oder Besitz ausdrücken:</p>
+
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Erzeugt automatisch Hof-Eintrag</th><th>Kein automatischer Hof</th></tr>
+  <tr>
+    <td>RESI (Wohnort), PROP (Eigentum), CENS (Volkszählung), OCCU (Beruf mit Betriebsort)</td>
+    <td>BIRT, DEAT, MARR, BURI, EDUC, GRAD — und alle weiteren Ereignistypen</td>
+  </tr>
+</table>
+
+<p>Geburts- oder Sterbeorte in einem Krankenhaus erscheinen daher nicht mehr als Hof in der Höfe-Liste — auch wenn sie eine Adresse haben. Sie tauchen im Prüf-Modal mit dem Badge <strong>A</strong> auf, falls das ADDR-Feld gefüllt ist.</p>
 
 <h2>Bewohner und Eigentümer — der Unterschied</h2>
 
@@ -3658,12 +3714,34 @@ Fotos werden in der App als Verweise auf Dateien gespeichert — die Fotos selbs
 </ul>
 
 <h2>Die App funktioniert nach einem Update nicht mehr</h2>
-<p>Der Service Worker cacht die App. Nach einem Update kann es vorkommen, dass die alte Version noch im Cache ist:</p>
+<p>Der Service Worker cacht die App. Nach einem Update kann es vorkommen, dass die alte Version noch im Cache ist. Die App erkennt verfügbare Updates automatisch und lädt beim nächsten Start die neue Version nach — in der Regel ohne manuellen Eingriff. Falls das nicht klappt:</p>
 <ol class="steps">
   <li><div class="step-text">Seite hart neu laden: <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> (Mac) bzw. <kbd>Strg</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> (Windows)</div></li>
   <li><div class="step-text">Alternativ: Browser-Cache leeren → Einstellungen des Browsers → Verlauf und Cookies löschen</div></li>
   <li><div class="step-text">Daten gehen dabei <strong>nicht</strong> verloren — sie liegen in IndexedDB, nicht im Cache</div></li>
 </ol>
+
+<h2>Diagnose und Wartung — lokale Daten zurücksetzen <span style="font-weight:normal;color:var(--app-muted);">(ab sw v1044)</span></h2>
+
+<p>Unter <span class="button-label">☰ → Einstellungen</span> finden Sie im Abschnitt <strong>Diagnose &amp; Wartung</strong> zwei Aktionen für Problemfälle — wenn Orte oder der Stammbaum inkonsistent erscheinen, ohne dass ein manueller Browser-Eingriff nötig ist:</p>
+
+<table style="font-size:0.9em; margin: 0.8em 0;">
+  <tr><th>Aktion</th><th>Was sie tut</th><th>Wann sinnvoll</th></tr>
+  <tr>
+    <td><span class="button-label">Ortsdaten zurücksetzen</span></td>
+    <td>Löscht <em>stammbaum-orte.json</em> aus dem lokalen Speicher. Das GEDCOM bleibt erhalten; Orts-Verknüpfungen werden beim nächsten Laden neu aufgebaut.</td>
+    <td>Orte erscheinen doppelt, Hof-Zuordnungen sind durcheinander, oder die Karte zeigt falsche Punkte — und ein Neu-Laden ohne Reset hat nicht geholfen.</td>
+  </tr>
+  <tr>
+    <td><span class="button-label" style="color:#c0392b;">Alle lokalen Daten löschen</span></td>
+    <td>Löscht GEDCOM-Text, Ortsdaten und Datei-Zugriffsrechte. Die App startet danach wie beim allerersten Öffnen. OneDrive-Login und Theme bleiben erhalten.</td>
+    <td>Die App startet fehlerhaft oder zeigt nach mehreren Neu-Versuchen keine Daten an. Achtung: danach müssen Sie die GEDCOM-Datei erneut öffnen.</td>
+  </tr>
+</table>
+
+<div class="info">
+Wenn Sie OneDrive nutzen, sind Ihre GEDCOM-Datei und Ortsdaten in OneDrive gesichert. Ein lokales Zurücksetzen löscht nur den Gerätespeicher — beim nächsten Öffnen der OneDrive-Datei werden alle Daten wiederhergestellt.
+</div>
 
 <h2>Ich habe die App auf dem iPhone installiert — wie komme ich an meine Daten?</h2>
 <p>Als installierte PWA (über „Zum Home-Bildschirm hinzufügen") hat die App einen eigenen Datenspeicher. Ihre zuletzt geladene Datei ist dort automatisch verfügbar. Zum Synchronisieren mit dem Desktop:</p>
@@ -4112,7 +4190,7 @@ Ortsübersetzungen sind besonders nützlich für historische Grenzregionen: <em>
 <hr class="section-divider">
 
 <p style="text-align:center; color:var(--text-dim); font-size:0.85em; margin-top:2em;">
-  Stammbaum PWA · Version 8 · Juni 2026 · sw v1024<br>
+  Stammbaum PWA · Version 8 · Juli 2026 · sw v1057<br>
   Benutzerhandbuch — Erstellt für Anwender ohne IT-Kenntnisse mit Grundkenntnissen in der Genealogie
 </p>
 

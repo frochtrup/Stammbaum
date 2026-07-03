@@ -215,20 +215,21 @@ Alle neuen Features müssen den GEDCOM 5.5.1 Roundtrip (`out1===out2`, `net_delt
 
 ## Dokumentation
 
-**Handbuch-Stand: sw v1024 *(stark veraltet — v1025–v1055 nicht dokumentiert)****
+**Handbuch-Stand: sw v1057 *(aktuell)***
 
-User-sichtbare Änderungen seit v1024, die nachzuziehen wären:
-- **„Hof-Zuweisungen prüfen"-Modal** (v1030/v1033): Klassen-Badges A/C/D (statt undifferenziert) + klassenspezifische Aktions-Matrix („Quelle schärfen" / „Hof anlegen" / „Variante zum Hof") statt „Ignorieren"-Pfad. Strikt nur Hof-Verdacht (Events mit ADDR), nicht alle PLAC-Lücken.
-- **Höfe-Tab** (v1024/v1032): Liste nach Dorf gruppiert (kanonisch via villageId, „Ochtrup" und „Ochtrup, Westfalen" in derselben Sektion). Sortierung numerisch („Wall 33" vor „Wall 100", „Hof 5a" vor „Hof 5b").
-- **Personendetail-Ortsfeld** (v1041): bei Hof-Events nur das Dorf in der Ort-Hierarchie — kein Hof-Duplikat zur separaten ADDR-Anzeige mehr.
-- **Lade-Toast** (v1031/v1047): Orts-Anpassungen + Hof-Zuweisungen + Migrations-Hinweise in einem Mehrzeilen-Toast statt drei sich überschreibende Karten. Toast für Ortsanpassungen erscheint nur einmal pro geladener Datei (v1049), Hof-Toast nur bei neu angelegten Höfen (v1047).
-- **Hof-Identitäts-Konvention α** (v1034) + ADDR=Village-Redundanz (v1035): Adressbuch-Übernahmen mit Stadt/PLZ/Land werden auf saubere Hof-Bezeichnung extrahiert; redundante ADDR=Ortsname legt keine Pseudo-Höfe an. **Hinweis für User:** Hof-Identität endet beim ersten Komma/Zeilenumbruch der Adresse — wer mehrere distinkte Höfe an derselben Hausnummer modellieren will, nutzt anderen Separator (Klammer, Schrägstrich) oder mehrere addrs-Varianten.
-- **PLAC-Hof-Pfade auf hof-relevante Events beschränkt** (v1042): BIRT/DEAT/MARR/BURI/EDUC/GRAD mit rich-PLAC „Schule, Münster" erzeugen keine Pseudo-Höfe mehr. Auto-Hof-Anlage nur bei RESI/PROP/CENS/OCCU oder expliziter ADDR.
-- **Diagnose & Wartung** (v1044): neuer Unterabschnitt in Einstellungen mit IDB-Reset-Aktionen (Orte / Höfe / Alles) für Problemfälle ohne manuelles Browser-Debugging.
+Alle user-relevanten Features seit v1024 dokumentiert (Kap. 15 + Kap. 21 FAQ):
+- Hof-Zuweisungen-prüfen-Modal mit Klassen-Badges A/C/D + Aktions-Matrix (v1033)
+- Numerische Sortierung in der Höfe-Liste (v1032)
+- Hof-Identitäts-Konvention α + ADDR=Village-Redundanz (v1034/v1035)
+- PLAC-Hof-Pfade auf RESI/PROP/CENS/OCCU beschränkt (v1042)
+- Personendetail nur Dorf bei Hof-Events (v1041)
+- Lade-Toast einmalig pro Datei (v1047/v1049)
+- Diagnose & Wartung in Einstellungen + FAQ-Eintrag (v1044)
+- Auto-Update-Hinweis bei SW-Update in FAQ (v1019)
 
-**Bewusst ohne Handbuch-Eintrag (intern, kein User-Sichtbarkeits-Effekt):** ADR-024-Konsolidierung in ARCHITECTURE.md, ADR-028 Phasen 1–4 (REPROJECT, Pfade A'/B', Lese-Seite-Chokepoints, Read-Tolerance), Farm-PO-Invariante (v1055), `_eventHofId`-Helper, id-keyed `collectPlaces`/`buildHofIndex`, `setDb`-Cache-Invalidation-Fix, `_evFullPlace`-Refactor.
+**Bewusst ohne Handbuch-Eintrag (intern, kein User-Sichtbarkeits-Effekt):** ADR-024-Konsolidierung, ADR-028 Phasen 1–6 (REPROJECT, Pfade A'/B', Lese-Seite-Chokepoints, Read-Tolerance, Cleanup), Farm-PO-Invariante (v1055), Reverse-Migrator-Entfernung (v1057), `_eventHofId`-Helper, id-keyed `collectPlaces`/`buildHofIndex`, `setDb`-Cache-Invalidation-Fix.
 
-**Beide Versionsfelder im HANDBUCH.html auf v1024.** Update zu sw v1042 würde im Wesentlichen die fünf oben gelisteten User-Bereiche neu beschreiben (Höfe-Tab, Hof-Review, Personendetail, Lade-Toast, Hof-Identitäts-Regeln). — beide Versionsfelder auf v1024. **Dokumentiert (v1020–v1024, ADR-027 P1–5):** Höfe-Liste gruppiert nach Dorf, Adress-Historie im Hof-Detail, „🔗 Hof-Zuweisungen prüfen"-Modal mit Tabelle + Aktionen Hof wählen/+ neu anlegen/Ignorieren, ⚠-Indikator neben Adress-Events im Personen-Detail (Kap. 15). **Noch offen (v999–v1018):** 📷-Schnellzugriff-Button (1-Tap-Kamera) in Kap. 15 (Medien); OneDrive-Konflikt-Hinweis beim Speichern in Kap. 14 (OneDrive); Auto-Reload bei SW-Update (v1019, Kap. 14). Zuletzt dokumentiert: Geo-Validierung HOF_NO_COORD/HOF_FAR (Kap. 7); Hof-Picker + Ort/Hof-Trennung, geräteübergreifende Hof-Koordinaten (Kap. 15). Bewusst ohne Handbuch-Eintrag (intern/transparent): Farm-PO→V2-hofObject-Migration, GEDCOM-Konventions-Erhalt (Pfad A/B), Schema-Refusal-Mechanik, Reverse-Migrator. Offen: echte Screenshots statt Mockups → **DOC-SCREENS** (M).
+**Noch offen:** 📷-Schnellzugriff-Button (1-Tap-Kamera) in Kap. 16 (Medien); OneDrive-GEDCOM-Konflikterkennung via `If-Match`/412 (v1000) in Kap. 12. Echte Screenshots statt Mockups → **DOC-SCREENS** (M).
 
 **DOC-SYNC** *(Pflicht bei jedem sw-Bump)*: Bewertungstabelle + Testanzahl + Priorisierung mitziehen, analog zur CLAUDE.md-Pflicht-Regel.
 
