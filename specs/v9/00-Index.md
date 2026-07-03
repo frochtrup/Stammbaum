@@ -1,0 +1,68 @@
+# Stammbaum v9 — Spezifikations-Set
+
+Modulare, spezifikationsorientierte Neufassung. Ersetzt die monolithische `specs/SPEC-v9-Gesamtsystem.md` (dort bleibt nur ein Verweis). Jedes Dokument spezifiziert **ein Subsystem** und ist so geschnitten, dass es einer baubaren Einheit der Zielarchitektur (siehe `02`) entspricht.
+
+## Lesereihenfolge
+
+Neu im Projekt → in dieser Reihenfolge lesen:
+
+1. **01 — Vision & Prinzipien** — warum es das Produkt gibt, die 9 unverhandelbaren Leitprinzipien, Nicht-Ziele, Glossar.
+2. **02 — Zielarchitektur v9** — die Schichtung (Domänenkern / UI-Schale / imperative Inseln), an der sich alle anderen Specs ausrichten.
+3. **03 — Altlasten** — was aus v8 bewusst NICHT übernommen wird (der Grund für den Neuaufsatz).
+
+Dann je nach Arbeitsschwerpunkt.
+
+## Das Set
+
+| # | Dokument | Schicht | Inhalt |
+|---|---|---|---|
+| **00** | Index (dieses Dokument) | — | Übersicht, Status, Abhängigkeitsgraph |
+| **01** | [Vision & Prinzipien](01-Vision-und-Prinzipien.md) | Meta | Produktvision, Zielgruppe, Leitprinzipien LP-1…9, Systemkontext, Nicht-Ziele, Glossar |
+| **02** | [Zielarchitektur v9](02-Zielarchitektur-v9.md) | Meta | Schichtenmodell (Ansatz C), Kern-↔-Schale-Grenze, imperative Diagramm-Inseln, Framework-Wahl, Verzeichnis-Layout |
+| **03** | [Altlasten](03-Altlasten.md) | Meta | Inkonsistenzen aus v8, die der Neuaufsatz vermeidet |
+| **10** | [Domänenmodell](10-Domaenenmodell.md) | Kern | Person, Familie, Quelle, Archiv, Notiz, Medien; Ereignis- & Zitationsmodell; Invarianten |
+| **11** | [Orte, Höfe & Identitätsauflösung](11-Orte-Hoefe-Identitaet.md) | Kern | PlaceObject/HofObject, Zeitachse, Projektions-Invariante, deterministischer Link-Pass, Review-Workflow |
+| **12** | [Forschungsdaten](12-Forschungsdaten.md) | Kern | Aufgaben, Protokoll, Evidenzmodell, Hypothesen, Projekte |
+| **13** | [Interoperabilität & Roundtrip](13-Interop-Roundtrip.md) | Kern | GEDCOM 5.5.1/7.0/Strict, GRAMPS, Anonymisierung, Passthrough-Prinzip, Roundtrip-Anforderung |
+| **20** | [Funktionen](20-Funktionen.md) | App | Feature-Katalog, Formulare, Validierungsregeln, Ausgaben/Reports |
+| **21** | [UI/UX](21-UI-UX.md) | App | View-Hierarchie, View-State-/Lifecycle-Kontrakt, Responsive, Design-System, Symbolkonventionen |
+| **30** | [NFR & Persistenz](30-NFR-und-Persistenz.md) | Betrieb | Performance/Skalierung, Offline/PWA, Sicherheit, Datenschutz, Barrierefreiheit, Speicher-/Sync-/Konfigurationsmodell |
+| **31** | [Dev-Umgebung & Auslieferung](31-Dev-Umgebung.md) | Betrieb | VS Code + Git/GitHub, Repo-Layout, `ci.yml`, Vite/Pages, Branch-Modell, Migration aus v8 |
+
+## Abhängigkeitsgraph
+
+```
+01 Vision/Prinzipien ─────────────┐ (gilt für alle)
+02 Zielarchitektur ───────────────┤
+                                  │
+Kern:  10 Domänenmodell ──┬──► 11 Orte/Höfe ──┐
+                          └──► 12 Forschung   ├──► 13 Interop/Roundtrip
+                                              │
+App:   20 Funktionen ◄── 10,11,12,13          │
+       21 UI/UX      ◄── 20                    │
+                                              │
+Betrieb: 30 NFR/Persistenz ◄── 11 (orte.json), 13 (Datei)
+         31 Dev-Umgebung   ◄── 02 (Schichten/Invarianten), 30 (PWA/Cache)
+```
+
+**Regel:** App-Schicht (20/21) darf Kern-Schicht (10–13) referenzieren, nie umgekehrt. Der Kern kennt keine UI. Diese Richtung ist die zentrale Architektur-Invariante (siehe 02).
+
+## Status
+
+| Dokument | Reifegrad | Bemerkung |
+|---|---|---|
+| 00–03 | 🟢 Entwurf vollständig | Meta-Ebene festgelegt |
+| 10–13 | 🟢 Entwurf vollständig | aus v8-Stand extrahiert, invariant markiert |
+| 20–21 | 🟢 Entwurf vollständig | Feature-Katalog = erreichter v8-Umfang |
+| 30 | 🟢 Entwurf vollständig | NFR-Baseline aus v8 |
+| 31 | 🟢 Entwurf vollständig | VS Code + GitHub + Actions; Framework-Wahl in 02 noch 🟡 |
+
+**Legende Reifegrad:** 🟢 spezifiziert · 🟡 in Arbeit · 🔴 offen/TODO.
+
+## Konventionen dieser Specs
+
+- **Prioritäts-Tags:** **[K]**ern (muss), **[S]**tandard (soll), **[E]**rweitert (kann).
+- **INV-…** = harte Invariante (Akzeptanzkriterium, nicht optional).
+- **LP-…** = Leitprinzip (siehe 01), gilt dokumentübergreifend.
+- **„Neuaufsatz-Hinweis"** = Abgrenzung zur v8-Implementierung (was anders/besser wird).
+- Referenz-Detailtiefe (Tag-Tabellen, ADR-Begründungen, Sprint-Historie) bleibt in den v8-Dokumenten: `GEDCOM.md`, `ARCHITECTURE.md`, `DATAMODEL.md`, `UI-DESIGN.md`, `CHANGELOG.md`.
